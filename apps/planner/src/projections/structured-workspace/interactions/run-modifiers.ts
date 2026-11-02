@@ -22,11 +22,7 @@ import {
   type StartPointPublicationBlock,
 } from '@run-planner/engine/execution-plan';
 import { startPointDomain, type ProjectEvaluation } from '@run-planner/engine/simulation';
-import {
-  START_POINT_LABELS,
-  startPointLabel,
-  startPointOptionHint,
-} from '@planner/projections/startPointCopy';
+import { START_POINT_LABELS, startPointLabel } from '@planner/projections/startPointCopy';
 import type {
   WorkspaceRunModifierDraftResult,
   WorkspaceRunModifiersControl,
@@ -43,9 +39,6 @@ export function visibleRunModifierDeclarations<D extends RunModifierDeclaration>
     declarations.filter((declaration) => isRunModifierAuthored(declaration, devBuild)),
   );
 }
-
-const optionalHint = (hint: string | undefined) =>
-  hint === undefined ? {} : { unavailableHint: hint };
 
 function assertDeclared(declaration: RunModifierDeclaration): void {
   const declared: readonly RunModifierDeclaration[] = RUN_MODIFIER_DECLARATIONS;
@@ -143,12 +136,7 @@ function bindStartPoint(
                 point: option.point,
                 label: START_POINT_LABELS[option.point],
                 selected: current?.biomeKey === biomeKey && current.point === option.point,
-                ...(option.status.availability === 'available'
-                  ? { available: true }
-                  : {
-                      available: false,
-                      ...optionalHint(startPointOptionHint(option.status.reason)),
-                    }),
+                available: option.status.availability === 'available',
               }),
             ),
           ),

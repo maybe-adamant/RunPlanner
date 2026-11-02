@@ -454,15 +454,15 @@ describe('Run State presentation', () => {
       bags: [
         {
           storeKey: 'RunProgress',
-          remaining: { kind: 'exact', count: 1 },
+          remaining: 1,
           entries: [
             {
               rewardType: 'Boon',
               eligibility: 'eligible',
-              remaining: { kind: 'exact', count: 1 },
+              remaining: 1,
               conditions: [
                 {
-                  remaining: { kind: 'exact', count: 1 },
+                  remaining: 1,
                   requirement: { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 2 } },
                 },
               ],

@@ -1256,15 +1256,15 @@ describe('execution-plan compiler and codec', () => {
         ...biome,
         rewards: {
           ...biome.rewards,
-          branches: biome.rewards.branches.map((branch) => ({
-            ...branch,
-            events: branch.events.map((event) =>
+          frontier: biome.rewards.frontier && {
+            ...biome.rewards.frontier,
+            events: biome.rewards.frontier.events.map((event) =>
               event.kind === 'concreteAcquisition' &&
               semanticAddressKey(event.origin) === source.sourceOwner
                 ? { ...event, seaStarResult: { kind } }
                 : event,
             ),
-          })),
+          },
         },
       };
       const published = executionTimelineTransactions(room, withResult, facts);

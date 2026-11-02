@@ -37,6 +37,7 @@ import {
   materializeBiomePrefix,
   simulateProject,
 } from '@run-planner/engine/simulation';
+import { reachedFrontier } from '../support/reward-frontier';
 
 describe('completion Boss variants', () => {
   it('retains boss-owned Arcana outcomes through Rivals reconstruction and Undo', () => {
@@ -84,7 +85,7 @@ describe('completion Boss variants', () => {
       const f = evaluated.route.biomes[0]!;
       expect(
         'rewards' in f &&
-          f.rewards.branches.some((branch) =>
+          reachedFrontier(f.rewards).some((branch) =>
             branch.state.arcanaFear.events.some(
               (event) =>
                 event.kind === 'temporaryArcanaActivated' && event.owner.kind === 'figurineArcana',

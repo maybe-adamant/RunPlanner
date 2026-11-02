@@ -160,7 +160,7 @@ const shipFixture: BiomeFixture = {
 
 /**
  * Evaluates one fixture biome through the product path from its predecessor's
- * completed branches. The seed only adds run history the route did not acquire.
+ * completed state. The seed only adds run history the route did not acquire.
  */
 function evaluateBiome(
   fixture: BiomeFixture,
@@ -182,7 +182,7 @@ function evaluateBiome(
       routePosition: ordinaryRoutePosition(catalog, fixture.routeKey, fixture.biomeKey),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: route.loadout,
-      seed: { history: previous.history, rewardBranches: previous.rewards.branches.map(seed) },
+      seed: { history: previous.history, rewardFrontier: seed(previous.rewards.frontier!) },
     },
   );
   if (progressive === null) throw new Error('biome did not publish a progressive assembly');
@@ -294,7 +294,7 @@ describe('trait offers evaluate against the state their options were built from'
     const evaluation = evaluateH(project, curseMaturingAt(combat09, 'Cage02'));
     expect(rareChance(evaluation, hermesCage)).toEqual(baseline);
     // The acquisition still folds into the current history, after the matured curse.
-    const branch = evaluation.rewards.branches[0]!;
+    const branch = evaluation.rewards.frontier!;
     expect(branch.state.traitHistory.maturedChaosBlessings).toHaveLength(1);
     expect(branch.state.traitHistory.equippedTraits.HermesWeaponBoon).toBeDefined();
   });
@@ -325,7 +325,7 @@ describe('trait offers evaluate against the state their options were built from'
       favor(withSteadyGrowthDueAt(branch, ordinal)),
     );
     expect(rareChance(evaluation, hermesCage)).toEqual(matured);
-    expect(evaluation.rewards.branches[0]!.state.pendingTraitOffers).toEqual({});
+    expect(evaluation.rewards.frontier!.state.pendingTraitOffers).toEqual({});
   });
 
   it('keeps an ordinary room reward at its encounter completion; the next room sees the blessing', () => {

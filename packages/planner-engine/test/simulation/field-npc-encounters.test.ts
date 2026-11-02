@@ -110,6 +110,7 @@ import {
   nLocalOccurrenceId as nRoundTripLocalOccurrenceId,
 } from '../authored-project/support/complete-n-project';
 import { traitFrontierState } from '../support/simulation-state';
+import { reachedFrontier } from '../support/reward-frontier';
 
 function phase(biome: BiomeAddress, occurrenceId: OccurrenceId, phaseKey = 'Encounter') {
   return createEncounterPhaseAddress(biome, { kind: 'occurrence', occurrenceId }, phaseKey);
@@ -774,9 +775,7 @@ describe('field NPC encounter requirements', () => {
       (candidate) => semanticAddressKey(candidate.address.owner) === semanticAddressKey(fNpcPhase),
     );
     expect(trace, JSON.stringify(biome.findings)).toMatchObject({ acquisitionRole: 'selection' });
-    expect(
-      biome.rewards.branches[0]?.state.traitHistory?.equippedTraits.CritBonusBoon,
-    ).toBeDefined();
+    expect(biome.rewards.frontier?.state.traitHistory?.equippedTraits.CritBonusBoon).toBeDefined();
     expect(
       createPreparedProjectCandidateSession(
         catalog,
@@ -822,14 +821,12 @@ describe('field NPC encounter requirements', () => {
     expect(biome.rewards.selectedTraitOffers).toContainEqual(
       expect.objectContaining({ address: expect.objectContaining({ owner: storyPhase }) }),
     );
-    expect(biome.rewards.branches[0]?.state.traitHistory?.equippedTraits.ManaCostume).toMatchObject(
-      {
-        giverKey: 'Arachne',
-        providerKind: 'npc',
-      },
-    );
+    expect(biome.rewards.frontier?.state.traitHistory?.equippedTraits.ManaCostume).toMatchObject({
+      giverKey: 'Arachne',
+      providerKind: 'npc',
+    });
     expect(
-      biome.rewards.branches[0]?.state.traitHistory?.equippedTraits.ManaCostume?.rarity,
+      biome.rewards.frontier?.state.traitHistory?.equippedTraits.ManaCostume?.rarity,
     ).toBeUndefined();
     const arachneSnapshots = biome.rewards.runStateSnapshots.filter(
       (snapshot) => snapshot.traits.equippedTraits.ManaCostume !== undefined,
@@ -841,7 +838,7 @@ describe('field NPC encounter requirements', () => {
       ),
     ).toBe(true);
     expect(
-      biome.rewards.branches[0]?.state.traitHistory?.equippedTraits.VitalityCostume,
+      biome.rewards.frontier?.state.traitHistory?.equippedTraits.VitalityCostume,
     ).toBeUndefined();
   });
 
@@ -885,7 +882,7 @@ describe('field NPC encounter requirements', () => {
     });
     const { biome } = evaluatedSurfaceBiome(edited, 'N');
     if (!('rewards' in biome)) throw new Error('N reward evaluation is missing');
-    const branch = biome.rewards.branches[0];
+    const branch = biome.rewards.frontier;
     expect(branch?.state.traitHistory?.equippedTraits.DeathDefianceRetaliateCurse).toMatchObject({
       giverKey: 'Medea',
       providerKind: 'npc',
@@ -918,7 +915,7 @@ describe('field NPC encounter requirements', () => {
     });
     const { biome } = evaluatedSurfaceBiome(edited, 'N');
     if (!('rewards' in biome)) throw new Error('N reward evaluation is missing');
-    const history = biome.rewards.branches[0]!.state.traitHistory;
+    const history = biome.rewards.frontier!.state.traitHistory;
     const growth = history.equippedTraits.ManaOverTimeCurse?.roomsPerUpgradeGrowth;
     // N is the first Surface biome, so Medea's menu grants the Common amount.
     expect(growth).toMatchObject({ progress: 0, maxManaPerGrant: 5 });
@@ -995,14 +992,14 @@ describe('field NPC encounter requirements', () => {
       ],
     });
     expect(
-      biome.rewards.branches.some(
+      reachedFrontier(biome.rewards).some(
         (branch) =>
           branch.state.traitHistory?.equippedTraits.HadesDeathDefianceDamageBoon?.giverKey ===
           'Hades',
       ),
     ).toBe(true);
     expect(
-      biome.rewards.branches.every(
+      reachedFrontier(biome.rewards).every(
         (branch) =>
           branch.state.traitHistory?.equippedTraits.HadesDeathDefianceDamageBoon?.rarity ===
           undefined,
@@ -1105,7 +1102,7 @@ describe('field NPC encounter requirements', () => {
       }),
     ]);
     expect(trace?.branches).not.toHaveLength(0);
-    const history = biome.rewards.branches[0]?.state.traitHistory;
+    const history = biome.rewards.frontier?.state.traitHistory;
     const acquired = history?.events.find(
       (event) =>
         event.kind === 'traitOffer' &&
@@ -1146,7 +1143,7 @@ describe('field NPC encounter requirements', () => {
     if (qBiome?.authoring !== 'complete' || !('rewards' in qBiome))
       throw new Error('Q continuation must remain complete after P Personal Loan payout');
     expect(
-      qBiome.rewards.branches.some(
+      reachedFrontier(qBiome.rewards).some(
         (branch) => branch.state.traitHistory?.equippedTraits.BankBoon?.rarityBlockedInRun === true,
       ),
     ).toBe(true);
@@ -1257,9 +1254,7 @@ describe('field NPC encounter requirements', () => {
         createHubRoomAddress(nBiome, 'hub'),
       ]);
     }
-    expect(
-      biome.rewards.branches[0]?.state.traitHistory?.equippedTraits.CritBonusBoon,
-    ).toBeDefined();
+    expect(biome.rewards.frontier?.state.traitHistory?.equippedTraits.CritBonusBoon).toBeDefined();
     expect(
       biome.rewards.selectedTraitOffers.some(
         (candidate) =>
@@ -1677,14 +1672,13 @@ describe('field NPC encounter requirements', () => {
       ),
     ).toMatchObject({ acquisitionRole: 'selection', reached: true });
     expect(
-      selectedEvaluation.rewards.branches[0]?.state.traitHistory?.equippedTraits
+      selectedEvaluation.rewards.frontier?.state.traitHistory?.equippedTraits
         .FocusAttackDamageTrait,
     ).toMatchObject({ giverKey: 'Icarus', providerKind: 'npc' });
-    const ingeniousMutation =
-      selectedEvaluation.rewards.branches[0]?.state.traitHistory?.events.find(
-        (event) =>
-          event.kind === 'levelMutation' && event.sourceTraitKey === 'FocusAttackDamageTrait',
-      );
+    const ingeniousMutation = selectedEvaluation.rewards.frontier?.state.traitHistory?.events.find(
+      (event) =>
+        event.kind === 'levelMutation' && event.sourceTraitKey === 'FocusAttackDamageTrait',
+    );
     expect(ingeniousMutation).toMatchObject({
       kind: 'levelMutation',
       sourceTraitKey: 'FocusAttackDamageTrait',
@@ -1804,7 +1798,7 @@ describe('field NPC encounter requirements', () => {
       ),
     ).toMatchObject({ acquisitionRole: 'selection', reached: true });
     expect(
-      pEvaluation.rewards.branches[0]?.state.traitHistory?.equippedTraits.OmegaExplodeBoon,
+      pEvaluation.rewards.frontier?.state.traitHistory?.equippedTraits.OmegaExplodeBoon,
     ).toMatchObject({ giverKey: 'Icarus', providerKind: 'npc' });
   });
 
@@ -1847,9 +1841,7 @@ describe('field NPC encounter requirements', () => {
     ]);
     expect(events.some((event) => event.kind === 'encounterInteractionReached')).toBe(false);
     expect(events.some((event) => event.kind === 'roomCommitted')).toBe(true);
-    expect(
-      p.rewards.branches[0]?.state.traitHistory?.equippedTraits.OmegaExplodeBoon,
-    ).toBeUndefined();
+    expect(p.rewards.frontier?.state.traitHistory?.equippedTraits.OmegaExplodeBoon).toBeUndefined();
     expect(
       p.rewards.selectedTraitOffers.some(
         (offer) => semanticAddressKey(offer.address) === semanticAddressKey(traitAddress),
@@ -1877,7 +1869,7 @@ describe('field NPC encounter requirements', () => {
     const restored = evaluatedSurfaceBiome(skip(false, skipped), 'P').biome;
     expect(restored.validity).toBe('valid');
     expect(
-      restored.rewards.branches[0]?.state.traitHistory?.equippedTraits.OmegaExplodeBoon,
+      restored.rewards.frontier?.state.traitHistory?.equippedTraits.OmegaExplodeBoon,
     ).toMatchObject({ giverKey: 'Icarus' });
   });
 
@@ -1997,7 +1989,7 @@ describe('field NPC encounter requirements', () => {
         ]),
       },
     });
-    const history = evaluation.rewards.branches[0]?.state.traitHistory;
+    const history = evaluation.rewards.frontier?.state.traitHistory;
     if (history === undefined) throw new Error('O Latest Model trait history is missing');
     expect(history.equippedTraits.UpgradeHammerBoon).toMatchObject({
       giverKey: 'Icarus',
@@ -2158,7 +2150,7 @@ describe('field NPC encounter requirements', () => {
     const simulation = simulateProject(catalog, project);
     const mutations = simulation.route.biomes.flatMap((biome) =>
       'rewards' in biome
-        ? (biome.rewards.branches[0]?.state.traitHistory?.events ?? []).filter(
+        ? (biome.rewards.frontier?.state.traitHistory?.events ?? []).filter(
             (event): event is Extract<TraitHistoryEvent, { readonly kind: 'levelMutation' }> =>
               event.kind === 'levelMutation' &&
               event.owner.kind === 'levelResolution' &&
@@ -2179,7 +2171,7 @@ describe('field NPC encounter requirements', () => {
       simulation.route.biomes.some(
         (biome) =>
           'rewards' in biome &&
-          biome.rewards.branches.some((branch) =>
+          reachedFrontier(biome.rewards).some((branch) =>
             branch.state.traitHistory?.events.some(
               (event) =>
                 event.kind === 'levelMutation' &&
@@ -2251,7 +2243,7 @@ describe('field NPC encounter requirements', () => {
     if (!('rewards' in evaluation) || evaluation.validity !== 'valid') {
       throw new Error('P Athena fixture did not produce a valid reward evaluation');
     }
-    const traitHistory = evaluation.rewards.branches[0]?.state.traitHistory;
+    const traitHistory = evaluation.rewards.frontier?.state.traitHistory;
     if (traitHistory === undefined) throw new Error('P Athena trait history is missing');
     expect(traitHistory?.equippedTraits.InvulnerabilityDashBoon).toMatchObject({
       giverKey: 'Athena',

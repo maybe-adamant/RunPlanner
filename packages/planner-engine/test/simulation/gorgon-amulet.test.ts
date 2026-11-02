@@ -47,7 +47,6 @@ import {
   assessGorgonCandidate,
   assessGorgonChildSettlement,
   assessGorgonEligibility,
-  attestGorgonBranchState,
 } from '../../src/simulation/keepsakes/encounter-effects';
 import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { resolveGorgonCandidateRarity } from '../../src/simulation/rewards/biome/encounter-acquisition/gorgon-started';
@@ -71,6 +70,7 @@ import {
 import { createRouteStartKeepsakeSelectionAddress } from '../../src/authored-project';
 import { createEnteredNLocalProject } from '../authored-project/support/complete-n-project';
 import { nBiome } from '../authored-project/support/configured-projects';
+import { reachedFrontier } from '../support/reward-frontier';
 
 function athenaOffer() {
   return Object.freeze({
@@ -179,22 +179,23 @@ describe('Gorgon Amulet lifecycle', () => {
     )
       throw new Error('missing valid F-to-G Gorgon fixture');
     const traitHistory = seed.state.traitHistory ?? cherishedPrerequisiteHistory();
-    const initialBranches = previous.rewards.branches.map((branch) => ({
-      ...branch,
+    const terminal = previous.rewards.frontier!;
+    const rewardFrontier = {
+      ...terminal,
       state: Object.freeze({
-        ...branch.state,
-        rewardHistory: attachTraitHistory(branch.state.rewardHistory, traitHistory),
+        ...terminal.state,
+        rewardHistory: attachTraitHistory(terminal.state.rewardHistory, traitHistory),
         traitHistory: traitHistory,
         keepsakes: seed.state.keepsakes,
       }),
-    }));
+    };
     const progressive = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: route.loadout,
       seed: {
         history: previous.history,
-        rewardBranches: initialBranches,
+        rewardFrontier,
       },
     });
     if (progressive === null) throw new Error('G fixture did not publish a progressive assembly');
@@ -406,23 +407,6 @@ describe('Gorgon Amulet lifecycle', () => {
     ).toEqual({ naturalPossible: true, gorgonPossible: false, nextStatus: 'expired' });
   });
 
-  it('carries one lifecycle state across equivalent reward branches and rejects divergence', () => {
-    const pending = createKeepsakeState(catalog, 'AthenaEncounterKeepsake', fear);
-    expect(
-      attestGorgonBranchState([
-        { state: { keepsakes: pending } },
-        { state: { keepsakes: pending } },
-      ]),
-    ).toBe('pending');
-    const consumed = consumeGorgonAppearance(pending);
-    expect(() =>
-      attestGorgonBranchState([
-        { state: { keepsakes: pending } },
-        { state: { keepsakes: consumed } },
-      ]),
-    ).toThrow('Gorgon branch frontier is divergent');
-  });
-
   it('expires on replacement before activation and keeps replacement state', () => {
     const pending = createKeepsakeState(catalog, 'AthenaEncounterKeepsake', fear);
     const expired = expirePendingGorgon(pending);
@@ -442,7 +426,7 @@ describe('Gorgon Amulet lifecycle', () => {
     const g = evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     expect(g).toBeDefined();
     if (g === undefined || !('rewards' in g)) return;
-    expect(g.rewards.branches[0]?.state.keepsakes.gorgon).toBeDefined();
+    expect(g.rewards.frontier?.state.keepsakes.gorgon).toBeDefined();
   });
 
   it('exposes distinct Gorgon blocker facts', () => {
@@ -634,7 +618,7 @@ describe('Gorgon Amulet lifecycle', () => {
       const trait = createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena');
       const draft = unresolved.traitOfferArtifacts.at(trait)?.traitOfferStartingOutcome('Athena');
       expect(
-        unresolved.simulation.branches.every(
+        reachedFrontier(unresolved.simulation).every(
           (branch) => branch.state.keepsakes.gorgon?.status === 'pending',
         ),
       ).toBe(true);
@@ -657,19 +641,21 @@ describe('Gorgon Amulet lifecycle', () => {
       priorCherished ? 'self' : 'source',
     );
     const result = evaluateGWithGorgonSeed(project, acquired).simulation;
-    expect(result.branches, JSON.stringify(result.findings)).not.toHaveLength(0);
+    expect(reachedFrontier(result), JSON.stringify(result.findings)).not.toHaveLength(0);
     expect(
-      result.branches.every((branch) => branch.state.keepsakes.gorgon?.status === 'consumed'),
+      reachedFrontier(result).every(
+        (branch) => branch.state.keepsakes.gorgon?.status === 'consumed',
+      ),
       JSON.stringify(result.findings.map((f) => ({ c: f.code, o: f.origin, e: f.evidence }))),
     ).toBe(true);
     expect(
-      result.branches.every(
+      reachedFrontier(result).every(
         (branch) =>
           branch.state.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity === rarity,
       ),
     ).toBe(true);
     expect(
-      result.branches.every(
+      reachedFrontier(result).every(
         (branch) => branch.state.traitHistory?.equippedTraits.KeepsakeLevelBoon !== undefined,
       ),
     ).toBe(true);
@@ -856,7 +842,9 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(g).toBeDefined();
     if (g === undefined || !('rewards' in g)) return;
     expect(
-      g.rewards.branches.every((branch) => branch.state.keepsakes.gorgon?.status === 'pending'),
+      reachedFrontier(g.rewards).every(
+        (branch) => branch.state.keepsakes.gorgon?.status === 'pending',
+      ),
     ).toBe(true);
     expect(g.findings).toContainEqual(
       expect.objectContaining({
@@ -916,7 +904,7 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(missingG).toBeDefined();
     if (missingG === undefined || !('rewards' in missingG)) return;
     expect(
-      missingG.rewards.branches.every(
+      reachedFrontier(missingG.rewards).every(
         (branch) => branch.state.keepsakes.gorgon?.status === 'pending',
       ),
     ).toBe(true);
@@ -946,7 +934,7 @@ describe('Gorgon Amulet lifecycle', () => {
     const p = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     expect(p).toBeDefined();
     if (p === undefined || !('rewards' in p)) return;
-    expect(p.rewards.branches[0]?.state.keepsakes.gorgon?.status).toBe('consumed');
+    expect(p.rewards.frontier?.state.keepsakes.gorgon?.status).toBe('consumed');
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase)
         ?.candidateEncounterKeys,
@@ -1110,7 +1098,9 @@ describe('Gorgon Amulet lifecycle', () => {
       ),
     ).toHaveLength(1);
     expect(
-      p.rewards.branches.every((branch) => branch.state.keepsakes.gorgon?.status === 'pending'),
+      reachedFrontier(p.rewards).every(
+        (branch) => branch.state.keepsakes.gorgon?.status === 'pending',
+      ),
     ).toBe(true);
 
     const draft = createPreparedProjectCandidateSession(
@@ -1150,7 +1140,7 @@ describe('Gorgon Amulet lifecycle', () => {
     const p = naturalFirstAssembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     expect(p).toBeDefined();
     if (p === undefined || !('rewards' in p)) return;
-    expect(p.rewards.branches[0]?.state.keepsakes.gorgon?.status).toBe('expired');
+    expect(p.rewards.frontier?.state.keepsakes.gorgon?.status).toBe('expired');
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(naturalFirstAssembly, phase),
     ).toMatchObject({ selectedEncounterKey: 'AthenaCombatP', selectedPossible: true });
@@ -1190,30 +1180,29 @@ describe('Gorgon Amulet lifecycle', () => {
       !('rewards' in previous)
     )
       return;
-    const rewardBranches = previous.rewards.branches.map((branch) =>
-      Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          keepsakes: Object.freeze({
-            ...branch.state.keepsakes,
-            gorgon: { status: 'pending' as const, rarityLevel: 3 as const },
-            figLeaf: { remainingUses: 3, activatedThisBiome: false },
-          }),
+    const terminal = previous.rewards.frontier!;
+    const rewardFrontier = Object.freeze({
+      ...terminal,
+      state: Object.freeze({
+        ...terminal.state,
+        keepsakes: Object.freeze({
+          ...terminal.state.keepsakes,
+          gorgon: { status: 'pending' as const, rarityLevel: 3 as const },
+          figLeaf: { remainingUses: 3, activatedThisBiome: false },
         }),
       }),
-    );
+    });
     const progressive = evaluateProgressiveBiomeAssembly(catalog, pBiome, plan, {
       routePosition: ordinaryRoutePosition(catalog, 'Surface', 'P'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: createDefaultRouteLoadout(catalog),
       seed: {
         history: previous.history,
-        rewardBranches,
+        rewardFrontier,
       },
     });
     expect(progressive).not.toBeNull();
     const rewards = progressive?.evaluation.rewards;
-    expect(rewards?.branches[0]?.state.keepsakes.gorgon?.status).toBe('pending');
+    expect(rewards?.frontier?.state.keepsakes.gorgon?.status).toBe('pending');
   });
 });

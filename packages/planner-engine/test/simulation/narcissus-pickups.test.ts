@@ -77,6 +77,7 @@ import {
   traitFrontierState,
 } from '../support/simulation-state';
 import { withArcana, withGoldenUnderworldJudgments } from '../support/rerolls';
+import { reachedFrontier } from '../support/reward-frontier';
 
 function narcissusOccurrence(project: ProjectDocument) {
   const occurrence = project.route.biomes
@@ -245,7 +246,9 @@ describe('Narcissus pickup producer', () => {
       const g = evaluatedG(project);
       expect(g.findings).toEqual([]);
       return [
-        ...new Set(g.rewards.branches.map((branch) => branch.state.arcanaFear.arcana.rerollPool)),
+        ...new Set(
+          reachedFrontier(g.rewards).map((branch) => branch.state.arcanaFear.arcana.rerollPool),
+        ),
       ].map((pool) => pool.granted - pool.spent);
     };
     const [collected] = granted(taken);
@@ -535,7 +538,7 @@ describe('Narcissus pickup producer', () => {
       arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
     });
     project = replacePickupActions(project, replacementSite, [replacementKey]);
-    const branch = evaluatedG(project).rewards.branches[0];
+    const branch = evaluatedG(project).rewards.frontier;
     const replacement = createAcquisitionEntryAddress(replacementSite, replacementKey);
     expect(branch?.events).toContainEqual(
       expect.objectContaining({
@@ -548,7 +551,7 @@ describe('Narcissus pickup producer', () => {
     );
     project = replacePickupActions(project, ashes.site, []);
     expect(evaluatedG(project).findings).toEqual([]);
-    expect(evaluatedG(project).rewards.branches[0]?.events).not.toContainEqual(
+    expect(evaluatedG(project).rewards.frontier?.events).not.toContainEqual(
       expect.objectContaining({ kind: 'concreteAcquisition', origin: replacement }),
     );
   });
@@ -569,9 +572,9 @@ describe('Narcissus pickup producer', () => {
         'NarcissusG',
       ]);
       const entry = pickupEntry(normalProject, entryKey);
-      const before = evaluatedG(normalProject).rewards.branches[0];
+      const before = evaluatedG(normalProject).rewards.frontier;
       normalProject = replacePickupActions(normalProject, entry.site, [entryKey]);
-      const normal = evaluatedG(normalProject).rewards.branches[0];
+      const normal = evaluatedG(normalProject).rewards.frontier;
       expect(normal?.state.rewardHistory.useRecord[acquisitionGameName]).toBe(
         (before?.state.rewardHistory.useRecord[acquisitionGameName] ?? 0) + 1,
       );
@@ -600,7 +603,7 @@ describe('Narcissus pickup producer', () => {
         acquisition: createAcquisitionRoleAddress(entry, 'self'),
         value: { kind: 'timePiece' },
       });
-      const converted = evaluatedG(convertedProject).rewards.branches[0];
+      const converted = evaluatedG(convertedProject).rewards.frontier;
       expect(converted?.state.rewardHistory.useRecord[acquisitionGameName]).toBe(
         before?.state.rewardHistory.useRecord[acquisitionGameName],
       );
@@ -620,8 +623,7 @@ describe('Narcissus pickup producer', () => {
 
       convertedProject = replacePickupActions(convertedProject, entry.site, []);
       expect(
-        evaluatedG(convertedProject).rewards.branches[0]?.state.keepsakes.timePiece
-          ?.remainingCharges,
+        evaluatedG(convertedProject).rewards.frontier?.state.keepsakes.timePiece?.remainingCharges,
       ).toBe(4);
       convertedProject = applyProjectCommand(convertedProject, catalog, {
         kind: 'ReplaceStartingKeepsake',
@@ -753,7 +755,7 @@ describe('Narcissus pickup producer', () => {
     });
     project = replacePickupActions(project, site, ['lastStand']);
     const normal = evaluatedG(project);
-    expect(normal.rewards.branches[0]?.state.rewardHistory.consumableRecord.LastStandDrop).toBe(1);
+    expect(normal.rewards.frontier?.state.rewardHistory.consumableRecord.LastStandDrop).toBe(1);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
@@ -766,9 +768,9 @@ describe('Narcissus pickup producer', () => {
     });
     const converted = evaluatedG(project);
     expect(
-      converted.rewards.branches[0]?.state.rewardHistory.consumableRecord.LastStandDrop,
+      converted.rewards.frontier?.state.rewardHistory.consumableRecord.LastStandDrop,
     ).toBeUndefined();
-    expect(converted.rewards.branches[0]?.events).toContainEqual(
+    expect(converted.rewards.frontier?.events).toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold' }),
     );
     expect(absent.authoring).toBe('complete');
@@ -796,7 +798,7 @@ describe('Narcissus pickup producer', () => {
       },
     });
     project = authorLegalTraitOffers(project);
-    const normalBranch = evaluatedG(project).rewards.branches[0];
+    const normalBranch = evaluatedG(project).rewards.frontier;
     expect(normalBranch?.state.rewardHistory.consumableRecord.BlindBoxLoot).toBe(1);
     expect(normalBranch?.state.rewardHistory.lastRewardRecreation?.offer.rewardType).toBe(
       'HestiaUpgrade',
@@ -830,7 +832,7 @@ describe('Narcissus pickup producer', () => {
       });
 
       const g = evaluatedG(retainedInvalid);
-      const branch = g.rewards.branches[0];
+      const branch = g.rewards.frontier;
       expect(branch?.state.keepsakes.timePiece?.remainingCharges).toBe(4);
       expect(branch?.events.filter((event) => event.kind === 'conversionToGold')).toEqual([]);
       expect(
@@ -884,7 +886,7 @@ describe('Narcissus pickup producer', () => {
     const simulation = simulateProject(catalog, project);
     const g = simulation.route.biomes.find((biome) => biome.biomeKey === 'G');
     if (g?.authoring !== 'complete') throw new Error('Golden G did not simulate');
-    const histories = g.rewards.branches.map((branch) => branch.state.traitHistory);
+    const histories = reachedFrontier(g.rewards).map((branch) => branch.state.traitHistory);
     expect(histories[0]?.events.filter((event) => event.kind === 'elementContribution')).toEqual(
       [],
     );
@@ -916,7 +918,7 @@ describe('Narcissus pickup producer', () => {
         traitKey,
         ...options.slice(0, 2),
       ] as [string, string, string]);
-      const histories = evaluatedG(project).rewards.branches.map(
+      const histories = reachedFrontier(evaluatedG(project).rewards).map(
         (branch) => branch.state.traitHistory,
       );
       expect(histories).not.toHaveLength(0);
@@ -938,7 +940,7 @@ describe('Narcissus pickup producer', () => {
     });
 
     project = replacePickupActions(project, pickupSite(project), ['currency']);
-    const histories = evaluatedG(project).rewards.branches.map(
+    const histories = reachedFrontier(evaluatedG(project).rewards).map(
       (branch) => branch.state.rewardHistory,
     );
     expect(histories.length).toBeGreaterThan(0);
@@ -1175,7 +1177,7 @@ describe('Narcissus pickup producer', () => {
     let g = simulation.route.biomes.find((biome) => biome.biomeKey === 'G');
     if (g?.authoring !== 'complete') throw new Error('Golden G did not simulate');
     expect(
-      g.rewards.branches[0]?.state.traitHistory?.events.some(
+      g.rewards.frontier?.state.traitHistory?.events.some(
         (event) => event.kind === 'traitOffer' && event.owner.kind === 'acquisitionEntry',
       ),
     ).toBe(false);
@@ -1386,7 +1388,7 @@ describe('Narcissus pickup producer', () => {
       'NarcissusC',
     ]);
     expect(
-      evaluatedG(elemental).rewards.branches.every(
+      reachedFrontier(evaluatedG(elemental).rewards).every(
         (branch) =>
           !branch.events.some(
             (event) =>
@@ -1400,7 +1402,7 @@ describe('Narcissus pickup producer', () => {
       'elementalBoost1',
     ]);
     expect(
-      evaluatedG(pickedElemental).rewards.branches[0]?.state.traitHistory?.events.filter(
+      evaluatedG(pickedElemental).rewards.frontier?.state.traitHistory?.events.filter(
         (event) => event.kind === 'elementContribution',
       ),
     ).toEqual([
@@ -1428,7 +1430,7 @@ describe('Narcissus pickup producer', () => {
       levelResolution: pomResolution,
       value: { kind: 'random', targetTraitKey: pomTarget },
     });
-    const pomMutation = evaluatedG(pom).rewards.branches[0]?.state.traitHistory?.events.find(
+    const pomMutation = evaluatedG(pom).rewards.frontier?.state.traitHistory?.events.find(
       (event): event is Extract<TraitHistoryEvent, { readonly kind: 'levelMutation' }> =>
         event.kind === 'levelMutation' &&
         event.owner.kind === 'levelResolution' &&
@@ -1459,7 +1461,7 @@ describe('Narcissus pickup producer', () => {
     blindBox = authorLegalTraitOffers(blindBox);
     const blindBoxEvaluation = evaluatedG(blindBox);
     expect(
-      blindBoxEvaluation.rewards.branches
+      reachedFrontier(blindBoxEvaluation.rewards)
         .flatMap((branch) => branch.events)
         .find(
           (event) =>
@@ -1477,7 +1479,7 @@ describe('Narcissus pickup producer', () => {
         }),
       }),
     );
-    const blindBoxHistory = blindBoxEvaluation.rewards.branches[0]?.state.traitHistory;
+    const blindBoxHistory = blindBoxEvaluation.rewards.frontier?.state.traitHistory;
     const blindBoxOffer = blindBoxHistory?.events.find(
       (event): event is Extract<TraitHistoryEvent, { readonly kind: 'traitOffer' }> =>
         event.kind === 'traitOffer' &&
@@ -1503,7 +1505,7 @@ describe('Narcissus pickup producer', () => {
       'NarcissusC',
     ]);
     lastStand = replacePickupActions(lastStand, pickupSite(lastStand), ['lastStand']);
-    expect(evaluatedG(lastStand).rewards.branches[0]?.events).toContainEqual(
+    expect(evaluatedG(lastStand).rewards.frontier?.events).toContainEqual(
       expect.objectContaining({
         kind: 'concreteAcquisition',
         acquisition: expect.objectContaining({
@@ -1567,7 +1569,7 @@ describe('Narcissus pickup producer', () => {
     if (appliedG?.authoring !== 'complete') throw new Error('applied Narcissus G did not simulate');
     // Completing the exact entry-owned reward and fresh trait offer retains
     // the reachable acquisition product.
-    expect(appliedG.rewards.branches.length).toBeGreaterThan(0);
+    expect(appliedG.rewards.frontier).toBeDefined();
     expect(
       session.evaluate({
         kind: 'acquisitionEntryOffer',
@@ -1664,7 +1666,7 @@ describe('Narcissus pickup producer', () => {
     expect(
       evaluated !== undefined &&
         'rewards' in evaluated &&
-        evaluated.rewards.branches.some((branch) =>
+        reachedFrontier(evaluated.rewards).some((branch) =>
           branch.events.some(
             (event) =>
               event.kind === 'concreteAcquisition' &&

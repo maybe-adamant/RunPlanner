@@ -87,6 +87,7 @@ import {
   withInvestedHexOlympianTalent,
   openTimeTraitOfferContexts,
 } from '../support/simulation-state';
+import { reachedFrontier } from '../support/reward-frontier';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -802,19 +803,17 @@ describe('Echo Gate A direct choices', () => {
     if (!('rewards' in h)) throw new Error('H must be evaluated');
     const child = createEchoPomTargetAddress(echoOwner, 'option3');
     expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: child });
-    expect(h.rewards.branches).toHaveLength(1);
+    expect(h.rewards.frontier).toBeDefined();
     // The run-wide Run bag carries one Pom and F's earlier door takes
     // it, so the level-2 trait here is F's own Hestia pick, not an H cage's.
-    expect(h.rewards.branches[0]?.state.traitHistory?.equippedTraits).toMatchObject({
+    expect(h.rewards.frontier?.state.traitHistory?.equippedTraits).toMatchObject({
       HestiaWeaponBoon: { level: 2 },
       EchoDoubleLevelBoon: { traitKey: 'EchoDoubleLevelBoon' },
     });
     expect(
-      h.rewards.branches[0]?.state.traitHistory?.equippedTraits.EchoDoubleLevelBoon?.rarity,
+      h.rewards.frontier?.state.traitHistory?.equippedTraits.EchoDoubleLevelBoon?.rarity,
     ).toBeUndefined();
-    expect(
-      h.rewards.branches[0]?.state.traitHistory?.equippedTraits.ZeusWeaponBoon,
-    ).toBeUndefined();
+    expect(h.rewards.frontier?.state.traitHistory?.equippedTraits.ZeusWeaponBoon).toBeUndefined();
     expect(h.findings).toContainEqual(
       expect.objectContaining({ code: 'echoPomTargetUnavailable', origin: child }),
     );
@@ -835,7 +834,7 @@ describe('Echo Gate A direct choices', () => {
         ),
     ).toBe(true);
     expect(
-      h.rewards.branches[0]?.events.some(
+      h.rewards.frontier?.events.some(
         (event) =>
           'occurrenceId' in event.origin && event.origin.occurrenceId === 'golden-h-combat05',
       ),
@@ -2317,9 +2316,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
-    expect(h.rewards.branches.length).toBeGreaterThan(0);
+    expect(h.rewards.frontier).toBeDefined();
     expect(
-      h.rewards.branches.every(
+      reachedFrontier(h.rewards).every(
         (branch) =>
           branch.state.rewardHistory.lootTypeHistory.AphroditeUpgrade === 1 &&
           branch.state.traitHistory?.equippedTraits.EchoLastRunBoon?.rarity === undefined &&
@@ -2371,7 +2370,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     ).toHaveLength(1);
     expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: echoOwner });
     expect(
-      h.rewards.branches.every((branch) =>
+      reachedFrontier(h.rewards).every((branch) =>
         Object.keys(branch.state.traitHistory?.equippedTraits ?? {}).every(
           (traitKey) => !traitKey.startsWith('Echo'),
         ),
@@ -2417,7 +2416,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     if (!('rewards' in h)) throw new Error('H must be evaluated');
     expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: echoOwner });
     expect(
-      h.rewards.branches.every(
+      reachedFrontier(h.rewards).every(
         (branch) => branch.state.traitHistory?.equippedTraits.EchoRepeatKeepsakeBoon === undefined,
       ),
     ).toBe(true);
@@ -2448,11 +2447,11 @@ describe('Echo Gate B Boon Boon Boon', () => {
     if (!('rewards' in h)) throw new Error('H must be evaluated');
     const child = createEchoLastRunBoonAddress(echoOwner, 'option1');
     expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: child });
-    expect(h.rewards.branches).toHaveLength(1);
+    expect(h.rewards.frontier).toBeDefined();
     // The Apollo door fires once, and the run's single Pom upgrades F's Hestia
     // pick, so no Apollo weapon Boon stays equipped.
     expect(
-      h.rewards.branches.every(
+      reachedFrontier(h.rewards).every(
         (branch) =>
           branch.state.traitHistory?.equippedTraits.EchoLastRunBoon !== undefined &&
           branch.state.traitHistory.equippedTraits.HestiaWeaponBoon?.rarity === 'Rare' &&
@@ -2525,7 +2524,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     const replayEntry = echoReplayEntry();
     expect(h.findings).not.toContainEqual(expect.objectContaining({ origin: replayEntry }));
     expect(
-      h.rewards.branches.every((branch) =>
+      reachedFrontier(h.rewards).every((branch) =>
         branch.events.some(
           (event) =>
             event.kind === 'concreteAcquisition' &&
@@ -2535,7 +2534,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
       ),
     ).toBe(true);
     expect(
-      h.rewards.branches
+      reachedFrontier(h.rewards)
         .flatMap((branch) => branch.events)
         .find(
           (event) =>
@@ -2666,7 +2665,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
       expect.objectContaining({ origin: echoReplayEntry() }),
     );
     expect(
-      dormantH.rewards.branches.some((branch) =>
+      reachedFrontier(dormantH.rewards).some((branch) =>
         branch.events.some(
           (event) =>
             event.kind === 'concreteAcquisition' &&
@@ -2896,7 +2895,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
-    expect(h.rewards.branches[0]?.events).toContainEqual(
+    expect(h.rewards.frontier?.events).toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold', origin: echoReplayEntry() }),
     );
   });
@@ -2950,9 +2949,9 @@ describe('Echo Gate C Reward Reward Reward', () => {
     const h = assembly.evaluation.route!.biomes.find((biome) => biome.biomeKey === 'H')!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
     expect(h.findings).not.toContainEqual(expect.objectContaining({ origin: replayEntry }));
-    expect(h.rewards.branches.length).toBeGreaterThan(0);
+    expect(h.rewards.frontier).toBeDefined();
     expect(
-      h.rewards.branches.every((branch) =>
+      reachedFrontier(h.rewards).every((branch) =>
         branch.events.some(
           (event) =>
             event.kind === 'concreteAcquisition' &&
@@ -2962,7 +2961,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
       ),
     ).toBe(true);
     expect(
-      h.rewards.branches.every(
+      reachedFrontier(h.rewards).every(
         (branch) => branch.state.rewardHistory.lootTypeHistory.WeaponUpgrade === 3,
       ),
     ).toBe(true);
@@ -2973,7 +2972,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
           semanticAddressKey(createOccurrenceAddress(goldenHBiome, bridgeId)),
     );
     expect(outgoing).toBeDefined();
-    for (const branch of h.rewards.branches) {
+    for (const branch of reachedFrontier(h.rewards)) {
       const acquisitions = branch.events.filter(
         (event) =>
           event.kind === 'concreteAcquisition' &&

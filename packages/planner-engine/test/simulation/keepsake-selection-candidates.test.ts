@@ -90,7 +90,7 @@ function keepsakesAfter(project: ReturnType<typeof createGoldenFGHProject>, biom
   );
   if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
     throw new Error(`expected valid ${biomeKey} fixture`);
-  return biome.rewards.branches[0]?.state.keepsakes;
+  return biome.rewards.frontier?.state.keepsakes;
 }
 
 describe('keepsake selection candidates', () => {
@@ -125,16 +125,16 @@ describe('keepsake selection candidates', () => {
     if (n?.authoring !== 'complete' || o?.authoring !== 'complete') {
       throw new Error('expected the N rack and following O biome to be reached');
     }
-    expect(n.rewards.branches).toHaveLength(1);
-    expect(n.rewards.branches[0]?.state.hexProgress).toMatchObject({
+    expect(n.rewards.frontier).toBeDefined();
+    expect(n.rewards.frontier?.state.hexProgress).toMatchObject({
       spellTraitKey: 'SpellPolymorphTrait',
       godSentAdded: true,
     });
-    expect(o.rewards.branches[0]?.state.hexProgress).toMatchObject({
+    expect(o.rewards.frontier?.state.hexProgress).toMatchObject({
       spellTraitKey: 'SpellPolymorphTrait',
       godSentAdded: true,
     });
-    expect(n.rewards.branches[0]?.state.keepsakes.history).toContainEqual({
+    expect(n.rewards.frontier?.state.keepsakes.history).toContainEqual({
       key: 'ForceZeusBoonKeepsake',
       kind: 'replace',
       biomeNumber: 2,
@@ -363,7 +363,7 @@ describe('keepsake selection candidates', () => {
       expect.objectContaining({ code: 'keepsakeUnavailable', origin: gPostboss }),
     );
     if (g === undefined || !('rewards' in g)) throw new Error('expected reached G reward surface');
-    expect(g.rewards.branches[0]?.state.keepsakes).toMatchObject({
+    expect(g.rewards.frontier?.state.keepsakes).toMatchObject({
       currentKey: 'HadesAndPersephoneKeepsake',
       removedKeys: ['ManaOverTimeRefundKeepsake'],
       history: [
@@ -395,7 +395,7 @@ describe('keepsake selection candidates', () => {
       expect.objectContaining({ code: 'keepsakeUnavailable', origin: fPostboss }),
     );
     if (f === undefined || !('rewards' in f)) throw new Error('expected reached F reward surface');
-    expect(f.rewards.branches[0]?.state.keepsakes).toMatchObject({
+    expect(f.rewards.frontier?.state.keepsakes).toMatchObject({
       currentKey: 'ManaOverTimeRefundKeepsake',
       removedKeys: [],
       history: [{ key: 'ManaOverTimeRefundKeepsake', kind: 'start', biomeNumber: 1 }],
@@ -584,7 +584,7 @@ describe('keepsake selection candidates', () => {
     const resumedF = resumedStart?.biomes[0];
     if (resumedF === undefined || !('rewards' in resumedF))
       throw new Error('completed route-start Jeweled Pom did not resume F');
-    expect(resumedF.rewards.branches[0]?.state.traitHistory?.equippedTraits).toHaveProperty(
+    expect(resumedF.rewards.frontier?.state.traitHistory?.equippedTraits).toHaveProperty(
       'HadesLifestealBoon',
     );
     startProject = applyProjectCommand(
@@ -657,8 +657,8 @@ describe('keepsake selection candidates', () => {
     const g = underworld?.biomes.find((biome) => biome.biomeKey === 'G');
     if (f === undefined || g === undefined || !('rewards' in f) || !('rewards' in g))
       throw new Error('expected reached F/G rewards');
-    const retained = f.rewards.branches[0];
-    const unfated = g.rewards.branches[0];
+    const retained = f.rewards.frontier;
+    const unfated = g.rewards.frontier;
     expect(retained?.state.keepsakes.jeweledPom).toMatchObject({ active: true, levels: 3 });
     expect(retained?.state.traitHistory?.equippedTraits.HadesLifestealBoon).toBeDefined();
     const retainedBoost = Object.values(retained?.state.traitHistory?.equippedTraits ?? {}).find(

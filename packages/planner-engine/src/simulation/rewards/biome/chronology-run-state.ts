@@ -43,35 +43,35 @@ function runStateAt(
     state.hermesShrineAssessments.get(semanticAddressKey(source.origin))?.assessments,
   );
   // One token represents this exact rewardFacts closure: current/source room,
-  // declaration, immutable view, shop names and peer context. Branch-varying
-  // facts have separate cache identities, and the reached route position
-  // travels inside each snapshot. This token cannot alias a later checkpoint
-  // even when it retains the same history.
+  // declaration, immutable view, shop names and peer context. State facts have
+  // separate cache identities, and the reached route position travels inside
+  // each snapshot. This token cannot alias a later checkpoint even when it
+  // retains the same history.
   const factsContextToken = Object.freeze({});
   const snapshotFor = (checkpointBranches: readonly RewardBranchState[]) =>
-    createRunState({
-      catalog,
-      layout: context.prepared.layout,
-      owner,
-      states: checkpointBranches.map((branch) =>
-        reachSimulationHistory(branch.state, routePosition, view),
-      ),
-      derivationCache: context.runStateDerivationCache,
-      factsContextToken,
-      rewardFacts: (factState) =>
-        createBiomeRewardFacts({
+    checkpointBranches[0] === undefined
+      ? undefined
+      : createRunState({
           catalog,
-          state: factState,
-          source,
-          currentRoom: source,
-          sourceDeclaration: declaration,
-          view,
-          currentRoomShopOptionNames: currentShopNames,
-          peerParentOrigin: source.origin,
-          peerCreationSource: 'generatedTarget',
-          hubBoardLookups: 'consulted',
-        }),
-    });
+          layout: context.prepared.layout,
+          owner,
+          state: reachSimulationHistory(checkpointBranches[0].state, routePosition, view),
+          derivationCache: context.runStateDerivationCache,
+          factsContextToken,
+          rewardFacts: (factState) =>
+            createBiomeRewardFacts({
+              catalog,
+              state: factState,
+              source,
+              currentRoom: source,
+              sourceDeclaration: declaration,
+              view,
+              currentRoomShopOptionNames: currentShopNames,
+              peerParentOrigin: source.origin,
+              peerCreationSource: 'generatedTarget',
+              hubBoardLookups: 'consulted',
+            }),
+        });
   return snapshotFor;
 }
 
@@ -132,11 +132,7 @@ export function targetSlotHistory(
       checkpoint: Object.freeze({
         origin,
         historySequence,
-        states: Object.freeze(
-          checkpointBranches.map((branch) =>
-            reachSimulationHistory(branch.state, context.routePosition, view),
-          ),
-        ),
+        state: reachSimulationHistory(checkpointBranches[0]!.state, context.routePosition, view),
       }),
     },
   ];

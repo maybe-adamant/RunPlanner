@@ -93,7 +93,7 @@ function runProgressRemaining(project: ProjectDocument, owner: string): number |
     semanticAddressKey(candidate.owner).includes(owner),
   );
   const remaining = snapshot?.bags.find((bag) => bag.storeKey === 'RunProgress')?.remaining;
-  return remaining?.kind === 'exact' ? remaining.count : undefined;
+  return remaining;
 }
 
 function offerSupported(

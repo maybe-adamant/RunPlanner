@@ -33,7 +33,7 @@ it('exports the installed ordinary Hex and reached P Path allocation, then reloa
     (biome) => biome.biomeKey === 'P',
   );
   if (p === undefined || !('rewards' in p)) throw new Error('ordinary Hex P evaluation is missing');
-  expect(p.rewards.branches[0]?.state.hexProgress).toMatchObject({
+  expect(p.rewards.frontier?.state.hexProgress).toMatchObject({
     spellTraitKey: 'SpellPotionTrait',
     tree: {
       layoutKey: 'Lung',
@@ -80,7 +80,7 @@ it('exports Aspect of Selene Hex Path grants and reloads its tree edit', () => {
     (biome) => biome.biomeKey === 'P',
   );
   if (p === undefined || !('rewards' in p)) throw new Error('Selene Hex P evaluation is missing');
-  expect(p.rewards.branches[0]?.state.hexProgress).toMatchObject({
+  expect(p.rewards.frontier?.state.hexProgress).toMatchObject({
     spellTraitKey: 'SpellMoonBeamTrait',
     tree: {
       layoutKey: 'Lung',
@@ -176,7 +176,7 @@ it('exports the reached Epic Gorgon Athena child and reloads its condition edit'
     (biome) => biome.biomeKey === 'G',
   );
   if (g === undefined || !('rewards' in g)) throw new Error('Gorgon G evaluation is missing');
-  expect(g.rewards.branches[0]?.state.keepsakes.gorgon).toEqual({ status: 'consumed' });
+  expect(g.rewards.frontier?.state.keepsakes.gorgon).toEqual({ status: 'consumed' });
   expect(g.rewards.selectedTraitOffers).toContainEqual(
     expect.objectContaining({ acquisitionRole: 'gorgonAthena', reached: true }),
   );

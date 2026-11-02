@@ -321,9 +321,7 @@ describe('run-impacting trait checkpoint workflows', () => {
     const assembly = simulateProjectAssembly(catalog, createSurfaceNQueensRansomCheckpoint());
     expect(assembly.evaluation.findings).toEqual([]);
     const histories = assembly.evaluation.route.biomes.flatMap((biome) =>
-      'rewards' in biome
-        ? biome.rewards.branches.flatMap((branch) => branch.state.traitHistory ?? [])
-        : [],
+      'rewards' in biome ? (biome.rewards.frontier?.state.traitHistory ?? []) : [],
     );
     expect(
       histories.some((history) => {
@@ -349,9 +347,7 @@ describe('run-impacting trait checkpoint workflows', () => {
       (candidate) => candidate.code === 'steadyGrowthOutcomeMissing',
     );
     const histories = assembly.evaluation.route.biomes.flatMap((biome) =>
-      'rewards' in biome
-        ? biome.rewards.branches.flatMap((branch) => branch.state.traitHistory ?? [])
-        : [],
+      'rewards' in biome ? (biome.rewards.frontier?.state.traitHistory ?? []) : [],
     );
     expect(histories).toHaveLength(1);
     expect(findings).toHaveLength(1);

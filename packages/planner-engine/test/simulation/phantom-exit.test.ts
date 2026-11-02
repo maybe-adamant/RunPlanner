@@ -55,7 +55,7 @@ function settlements(project: ProjectDocument) {
 function bagCount(project: ProjectDocument, storeKey: string): number {
   const biome = simulateProjectAssembly(catalog, project).evaluation.route.biomes[0]!;
   if (!('rewards' in biome)) throw new Error('N was not evaluated');
-  const bag = biome.rewards.branches[0]!.state.bags[storeKey];
+  const bag = biome.rewards.frontier!.state.bags[storeKey];
   return bag?.remainingEntryCounts.reduce((sum, count) => sum + count, 0) ?? -1;
 }
 

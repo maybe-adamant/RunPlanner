@@ -223,8 +223,7 @@ export function draftBoonEntriesLeft(
     if (storeKeys.includes(bag.storeKey))
       for (const entry of bag.entries)
         if (entry.rewardType === 'Boon' && entry.eligibility === 'eligible')
-          remaining +=
-            entry.remaining.kind === 'exact' ? entry.remaining.count : entry.remaining.min;
+          remaining += entry.remaining;
   return remaining;
 }
 

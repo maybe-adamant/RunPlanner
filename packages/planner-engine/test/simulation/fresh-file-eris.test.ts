@@ -26,6 +26,7 @@ import { replaceSimulationTraitHistory } from '../../src/simulation/state/transi
 import { createTraitHistoryState } from '../../src/simulation/traits';
 import { recordFixedAcquisitionTraitGrant } from '../../src/simulation/traits/offers';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { reachedFrontier } from '../support/reward-frontier';
 
 let cached: ProjectDocument | undefined;
 const freshRoute = () => (cached ??= createFreshFileRouteProject());
@@ -176,7 +177,7 @@ describe('Fresh File Eris', () => {
       ),
     ).toBe(true);
     if (!('rewards' in h) || h.rewards === undefined) throw new Error('H has no rewards');
-    for (const branch of h.rewards.branches) {
+    for (const branch of reachedFrontier(h.rewards)) {
       expect(branch.state.rewardHistory.consumableRecord.MemPointsCommonDrop).toBeGreaterThan(0);
       expect('MemPointsCommon' in branch.state.rewardHistory.resourceGains).toBe(false);
     }

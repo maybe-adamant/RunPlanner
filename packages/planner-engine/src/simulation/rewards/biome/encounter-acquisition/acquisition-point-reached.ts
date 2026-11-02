@@ -57,7 +57,6 @@ import {
   type RewardProducerFrontier,
 } from '../../producer-frontiers';
 import type { SimulationState } from '../../../state/model';
-import { attestSharedRewardLookups } from '../../../state/reward-lookups';
 
 export interface AcquisitionPointReachedTransition {
   readonly generatedPickupPlacements: readonly GeneratedPickupPlacement[];
@@ -125,9 +124,6 @@ export function applyAcquisitionPointReachedTransition(
   // These are lower-level settlement inputs. The transition boundary itself
   // exposes only frozen arrays, so chronology cannot share a mutable collector.
   const authoredSeaStarDuplicateSiteKeys = new Set(inputs.authoredSeaStarDuplicateSiteKeys);
-  // Facts read each settling branch's own lookup substate; the cohort must
-  // still agree on the offered-reward history this contact consults.
-  attestSharedRewardLookups(inputs.sourceBranches.map((branch) => branch.state));
   const chronology = rewardFindingChronologyForRoom(
     snapshot,
     room.origin,

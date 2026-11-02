@@ -25,7 +25,7 @@ function predecessorBranch() {
 describe('reward frontier biome handoff', () => {
   it('starts the successor from the predecessor state without its biome-local events', () => {
     const base = predecessorBranch();
-    const next = initializeRewardBranches([
+    const next = initializeRewardBranches(
       Object.freeze({
         ...base,
         events: Object.freeze([
@@ -40,17 +40,10 @@ describe('reward frontier biome handoff', () => {
         ]),
         processedThroughHistorySequence: 12,
       }),
-    ]);
+    );
 
     expect(next).toHaveLength(1);
     expect(next[0]?.events).toEqual([]);
     expect(next[0]?.processedThroughHistorySequence).toBe(0);
-  });
-
-  it('rejects a predecessor that publishes more than one frontier state', () => {
-    const base = predecessorBranch();
-    expect(() => initializeRewardBranches([base, base])).toThrow(
-      'a completed predecessor publishes one frontier state',
-    );
   });
 });

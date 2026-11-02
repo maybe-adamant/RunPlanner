@@ -52,6 +52,7 @@ import {
   projectStygianWellLegality,
   type StygianWellRunState,
 } from '../../src/simulation/commerce/stygian-well';
+import { reachedFrontier } from '../support/reward-frontier';
 
 /** Assesses one purchase of the authored Well; the first purchase restocks under Travel Deal. */
 function assessPurchase(
@@ -293,7 +294,7 @@ describe('Stygian Well consequential purchase state', () => {
       expect(biome.rewards.findings).not.toContainEqual(
         expect.objectContaining({ code: 'stygianWellTravelDealRefillUnavailable' }),
       );
-      return biome.rewards.branches.map((branch) => branch.state.stygianWell);
+      return reachedFrontier(biome.rewards).map((branch) => branch.state.stygianWell);
     });
     expect(outcomes[0]).toEqual(outcomes[1]);
     expect(outcomes[0]?.every((state) => state?.yarnUses === 1)).toBe(true);
@@ -336,9 +337,9 @@ describe('Stygian Well consequential purchase state', () => {
     expect(f.rewards.findings).toContainEqual(
       expect.objectContaining({ code: 'stygianWellTravelDealRefillUnavailable' }),
     );
-    expect(f.rewards.branches.every((branch) => branch.state.stygianWell?.extendedUses !== 1)).toBe(
-      true,
-    );
+    expect(
+      reachedFrontier(f.rewards).every((branch) => branch.state.stygianWell?.extendedUses !== 1),
+    ).toBe(true);
   });
 
   it('materializes and consumes one Ixion use at the first reached host-capable Chaos room', () => {
@@ -364,9 +365,9 @@ describe('Stygian Well consequential purchase state', () => {
     );
     expect(g?.findings).not.toContainEqual(expect.objectContaining({ code: 'ixionChaosMissing' }));
     if (g?.authoring !== 'complete') throw new Error('expected complete G Ixion evaluation');
-    expect(g.rewards.branches.every((branch) => branch.state.stygianWell?.sparkUses === 0)).toBe(
-      true,
-    );
+    expect(
+      reachedFrontier(g.rewards).every((branch) => branch.state.stygianWell?.sparkUses === 0),
+    ).toBe(true);
   });
 
   it('places a G Postboss Ixion-generated gate at H Intro and removes it with the purchase', () => {
@@ -849,7 +850,7 @@ describe('Stygian Well consequential purchase state', () => {
     const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (f?.authoring !== 'complete') throw new Error('expected complete F Last Stand evaluation');
     expect(
-      f.rewards.branches.every(
+      reachedFrontier(f.rewards).every(
         (branch) => branch.state.rewardHistory.consumableRecord.LastStandShopItem === 1,
       ),
     ).toBe(true);
@@ -876,11 +877,11 @@ describe('Stygian Well consequential purchase state', () => {
     const assembly = simulateProjectAssembly(catalog, project);
     const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (f?.authoring !== 'complete') throw new Error('expected complete F Twist evaluation');
-    expect(f.rewards.branches.every((branch) => branch.state.stygianWell?.extendedUses === 1)).toBe(
-      true,
-    );
     expect(
-      f.rewards.branches.every(
+      reachedFrontier(f.rewards).every((branch) => branch.state.stygianWell?.extendedUses === 1),
+    ).toBe(true);
+    expect(
+      reachedFrontier(f.rewards).every(
         (branch) => branch.state.rewardHistory.consumableRecord.LastStandShopItem === 1,
       ),
     ).toBe(true);
@@ -929,7 +930,7 @@ describe('Stygian Well consequential purchase state', () => {
     const g = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     if (g?.authoring !== 'complete') throw new Error('expected complete G Boss evaluation');
     expect(
-      g.rewards.branches.every((branch) =>
+      reachedFrontier(g.rewards).every((branch) =>
         branch.state.stygianWell.timedInstances.some(
           (instance) =>
             instance.traitKey === 'TemporaryDiscountTrait' &&

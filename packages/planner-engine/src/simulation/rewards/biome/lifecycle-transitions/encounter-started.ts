@@ -10,7 +10,7 @@ import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { assessFigLeafSkip } from '../../../encounters';
 import { projectRoomEncounterRecords } from '../../../history/facts';
-import { attestFigLeafBranchState, consumeFigLeafUse } from '../../../keepsakes/encounter-effects';
+import { consumeFigLeafUse } from '../../../keepsakes/encounter-effects';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import type { RewardBranchState } from '../../branch-primitives';
 import { ownerRegion } from '../../../finding-regions';
@@ -71,7 +71,7 @@ export function applyEncounterStartedTransition(
       const nonLeadingCascadePhase =
         definition.skipEndEncounterEffects === true &&
         room.encounterPhases[0]?.slotKey !== phase.slotKey;
-      const figLeaf = attestFigLeafBranchState(next);
+      const figLeaf = next[0]?.state.keepsakes.figLeaf;
       const assessment = assessFigLeafSkip({
         selected: phase.figLeafSkip,
         canEncounterSkip: definition.canEncounterSkip === true,
@@ -126,7 +126,6 @@ export function applyEncounterStartedTransition(
     }
   }
   if (event.figLeafSkipOwner) {
-    attestFigLeafBranchState(next);
     next = Object.freeze(
       next.map((branch) =>
         Object.freeze({

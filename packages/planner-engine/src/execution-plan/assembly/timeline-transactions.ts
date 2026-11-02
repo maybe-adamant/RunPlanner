@@ -28,7 +28,7 @@ import {
   appendTranscendentEmbryoTimelineEffects,
 } from '../../simulation/room-actions';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
-import { agreement, executionRoomOwnerKey, stableJson } from './support';
+import { agreement, completeFrontier, executionRoomOwnerKey, stableJson } from './support';
 import { assembleLifecycleWindow } from './lifecycle';
 import {
   executionKeepsakeEquipResults,
@@ -908,12 +908,13 @@ export function executionTimelineTransactions(
         `unmapped acquisition owner ${semanticAddressKey(source)}`,
       );
     }
-    const branchRows = biome.rewards.branches.map((branch) => {
+    const frontier = completeFrontier(biome);
+    const row = (() => {
       const authoredRole =
         timeline.action.owner.kind === 'acquisitionRole'
           ? timeline.action.owner.acquisitionRole
           : undefined;
-      const events = branch.events.filter(
+      const events = frontier.events.filter(
         (
           candidate,
         ): candidate is Extract<
@@ -933,12 +934,9 @@ export function executionTimelineTransactions(
           'executionCoverageMissing',
           `${room.gameName} is missing acquisition ${semanticAddressKey(source)}`,
         );
-      return Object.freeze({ branch, events: Object.freeze(events) });
-    });
-    const row = agreement(
-      branchRows.map((candidate) => candidate.events),
-      `acquisition ${semanticAddressKey(source)}`,
-    );
+      return Object.freeze(events);
+    })();
+
     // A Time Piece conversion is a planner-side destruction event, not an
     // execution acquisition.  Artificer still needs the expected native
     // replacement to steer its source contact when that replacement child
@@ -957,44 +955,27 @@ export function executionTimelineTransactions(
         const replacement =
           event.kind === 'artificerConversion'
             ? (() => {
-                const materializations = branchRows.map(({ branch }) => {
-                  const consumedChildren = branch.events.filter(
-                    (
-                      candidate,
-                    ): candidate is Extract<RewardEvent, { readonly kind: 'conversionToGold' }> =>
-                      candidate.kind === 'conversionToGold' &&
-                      candidate.source.producer?.kind === 'artificerReplacement' &&
-                      semanticAddressKey(candidate.source.producer.sourceOwner) ===
-                        semanticAddressKey(event.origin) &&
-                      candidate.source.producer.sourceRole === role,
-                  );
-                  if (consumedChildren.length > 1)
-                    throw new CompilerError(
-                      'executionCoverageMissing',
-                      `ambiguous Time Piece Artificer materialization ${semanticAddressKey(event.origin)} ${role}`,
-                    );
-                  const child = consumedChildren[0];
-                  if (child === undefined) return undefined;
-                  return Object.freeze({
-                    reward: executionRewardFromOffer(
-                      event.replacement,
-                      'RoomReward',
-                      'RunProgress',
-                    ),
-                    gameName: child.acquisition.acquisition.gameName,
-                  });
-                });
-                if (materializations.every((candidate) => candidate === undefined))
-                  return undefined;
-                if (materializations.some((candidate) => candidate === undefined))
+                const consumedChildren = frontier.events.filter(
+                  (
+                    candidate,
+                  ): candidate is Extract<RewardEvent, { readonly kind: 'conversionToGold' }> =>
+                    candidate.kind === 'conversionToGold' &&
+                    candidate.source.producer?.kind === 'artificerReplacement' &&
+                    semanticAddressKey(candidate.source.producer.sourceOwner) ===
+                      semanticAddressKey(event.origin) &&
+                    candidate.source.producer.sourceRole === role,
+                );
+                if (consumedChildren.length > 1)
                   throw new CompilerError(
                     'executionCoverageMissing',
-                    `divergent Time Piece Artificer materialization ${semanticAddressKey(event.origin)} ${role}`,
+                    `ambiguous Time Piece Artificer materialization ${semanticAddressKey(event.origin)} ${role}`,
                   );
-                return agreement(
-                  materializations as readonly NonNullable<(typeof materializations)[number]>[],
-                  `Artificer materialization ${semanticAddressKey(event.origin)} ${role}`,
-                );
+                const child = consumedChildren[0];
+                if (child === undefined) return undefined;
+                return Object.freeze({
+                  reward: executionRewardFromOffer(event.replacement, 'RoomReward', 'RunProgress'),
+                  gameName: child.acquisition.acquisition.gameName,
+                });
               })()
             : undefined;
         return Object.freeze({

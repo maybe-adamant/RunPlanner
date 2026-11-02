@@ -22,13 +22,13 @@ export interface StartInstallationInputs {
   readonly startPoint: StartPoint;
   readonly startOccurrence?: OccurrenceAddress;
   readonly startRoomGameName: string;
-  /** Every reached branch at the start point, all at one history view and route position. */
-  readonly states: readonly SimulationState[];
+  /** The reached state at the start point; none when evaluation did not reach it. */
+  readonly state: SimulationState | undefined;
   readonly roomHistory: readonly StartRoomHistoryRecord[];
   readonly visitedBiomeKeys: readonly string[];
 }
 
-/** Key-order-independent identity for comparing one family across branches. */
+/** Key-order-independent identity used to order installed items. */
 function stable(value: unknown): string {
   if (value === undefined) return 'undefined';
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
@@ -412,89 +412,50 @@ function families(
   };
 }
 
-const FAMILY_ORDER: readonly StartInstallationFamily[] = Object.freeze([
-  'equipment',
-  'traits',
-  'essences',
-  'chaos',
-  'keepsake',
-  'arcana',
-  'fear',
-  'maxStats',
-  'itemArmor',
-  'stygianWell',
-  'hermesDeliveries',
-  'hex',
-  'rewardPriorities',
-  'runRecords',
-  'biomeRecords',
-  'counters',
-]);
-
 /** Reward stores exact across branches; a store no branch has drawn from stays native-fresh. */
 /** Store contents exact across branches, an untouched store at its initial counts. */
 export function exactRewardStoreContents(
   catalog: Catalog,
-  states: readonly Pick<SimulationState, 'bags' | 'reached'>[],
+  state: Pick<SimulationState, 'bags' | 'reached'>,
 ): StartRewardStores['stores'] {
-  const routeKey = states[0]!.reached.routePosition.routeKey;
-  const stores: StartRewardStores['stores'][number][] = [];
-  for (const store of catalog.rewards.stores.values) {
-    const initial = createRewardBagState(store, routeKey).remainingEntryCounts;
-    const counts = states.map((state) => state.bags[store.key]?.remainingEntryCounts ?? initial);
-    const first = counts[0]!;
-    if (counts.every((entry) => stable(entry) === stable(first)))
-      stores.push(Object.freeze({ storeKey: store.key, remainingEntryCounts: first }));
-  }
-  return Object.freeze(stores);
+  const routeKey = state.reached.routePosition.routeKey;
+  return Object.freeze(
+    catalog.rewards.stores.values.map((store) =>
+      Object.freeze({
+        storeKey: store.key,
+        remainingEntryCounts:
+          state.bags[store.key]?.remainingEntryCounts ??
+          createRewardBagState(store, routeKey).remainingEntryCounts,
+      }),
+    ),
+  );
 }
 
-/** A start leaves a store no branch has drawn from native-fresh. */
-function rewardStores(catalog: Catalog, states: readonly SimulationState[]): StartRewardStores {
-  const drawn = exactRewardStoreContents(catalog, states).filter((store) =>
-    states.some((state) => state.bags[store.storeKey] !== undefined),
+/** A start leaves a store the walk has not drawn from native-fresh. */
+function rewardStores(catalog: Catalog, state: SimulationState): StartRewardStores {
+  const drawn = exactRewardStoreContents(catalog, state).filter(
+    (store) => state.bags[store.storeKey] !== undefined,
   );
   return Object.freeze({ stores: Object.freeze(drawn) });
 }
 
-/**
- * Projects one start point's installation from its reached branches. Every
- * run-wide family must agree across branches, or the start is unavailable.
- */
+/** Projects one start point's installation from its reached state. */
 export function projectStartInstallation(
   catalog: Catalog,
   inputs: StartInstallationInputs,
 ): StartInstallationResult {
-  const [firstState] = inputs.states;
-  if (firstState === undefined)
+  const state = inputs.state;
+  if (state === undefined)
     return Object.freeze({
       availability: 'unavailable',
       reason: Object.freeze({ kind: 'notReached' }),
     });
-  for (const state of inputs.states) {
-    if (
-      state.reached.historyView !== firstState.reached.historyView ||
-      state.reached.routePosition !== firstState.reached.routePosition
-    )
-      throw new Error('start branches were not reached at one exact view and route position');
-  }
-  const kind = inputs.startPoint.kind;
-  const projected = inputs.states.map((state) => families(catalog, state, kind));
-  const first = projected[0]!;
-  const disagreeing = FAMILY_ORDER.filter((family) => {
-    const identity = stable(first[family]);
-    return projected.some((branch) => stable(branch[family]) !== identity);
-  });
-  if (disagreeing.length > 0)
-    return Object.freeze({
-      availability: 'unavailable',
-      reason: Object.freeze({ kind: 'branchesDisagree', families: Object.freeze(disagreeing) }),
-    });
-  if (inputs.roomHistory.length !== first.counters.roomHistoryOrdinal)
+  const installed = families(catalog, state, inputs.startPoint.kind);
+  if (inputs.roomHistory.length !== installed.counters.roomHistoryOrdinal)
     throw new Error(
-      `start room history has ${inputs.roomHistory.length} records for ordinal ${first.counters.roomHistoryOrdinal}`,
+      `start room history has ${inputs.roomHistory.length} records for ordinal ${installed.counters.roomHistoryOrdinal}`,
     );
-  const routePosition = firstState.reached.routePosition;
+  const routePosition = state.reached.routePosition;
   return Object.freeze({
     availability: 'available',
     installation: Object.freeze({
@@ -507,8 +468,8 @@ export function projectStartInstallation(
         visitedBiomeKeys: inputs.visitedBiomeKeys,
       }),
       roomHistory: inputs.roomHistory,
-      ...first,
-      rewardStores: rewardStores(catalog, inputs.states),
+      ...installed,
+      rewardStores: rewardStores(catalog, state),
     }),
   });
 }

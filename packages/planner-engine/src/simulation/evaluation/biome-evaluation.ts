@@ -1,6 +1,5 @@
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { Catalog } from '../../catalog-schema';
-import { sharedRewardLookups } from '../state/reward-lookups';
 import {
   createBiomeAddress,
   createRoomRunStateCheckpointAddress,
@@ -20,18 +19,13 @@ import {
   createEmptyBiomeCandidateArtifacts,
   type BiomeCandidateArtifacts,
 } from './candidate-artifacts';
-import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes/encounter-effects';
-import { initialFigLeafState } from '../keepsakes/state';
-import { attestPendingHermesSpellDrop } from '../commerce/hermes-shrine';
-import { attestTalentDropsClosed } from '../hex-progress';
-import { attestEffectiveShadowRank } from '../arcana-fear';
+import { effectiveShadowRank } from '../arcana-fear';
 import { assessmentRepairOwner, authoringRegion, findingIdentityKey } from '../finding-regions';
 import {
   composeBiomeHistoryWithEncounterValidation,
   type BiomeHistoryPrefix,
   type CanonicalBiomeHistory,
   type HistoryStateView,
-  type FigLeafLifecycleState,
 } from '../history';
 import {
   materializeBiome,
@@ -46,6 +40,10 @@ import type { FindingRegionEntry } from '../finding-regions';
 import {
   evaluateProgressiveBiomeAssembly,
   evaluateProgressiveBiomeAssemblyFromSelectedProducts,
+  figLeafLifecycleState,
+  pendingHermesSpellDropLifecycleState,
+  progressiveSeed,
+  talentDropClosureLifecycleState,
   type ProgressiveBiomeContext,
 } from '../progressive/biome';
 import { locateOwner } from '../progressive/finding-location';
@@ -217,15 +215,7 @@ function generation(
     carriedRewardLookups,
   );
   const hub = evaluateHubDecisionGenerationInternal(catalog, snapshot, history);
-  const gorgonStatus = (() => {
-    try {
-      return attestGorgonBranchState(rewards.branches);
-    } catch (error) {
-      throw new ProjectSimulationContractError(
-        error instanceof Error ? error.message : 'Gorgon branch frontier is divergent',
-      );
-    }
-  })();
+  const gorgonStatus = rewards.frontier?.state.keepsakes.gorgon?.status;
   const encounters = evaluateEncounterCandidatesInternal(
     catalog,
     structurallyActiveEncounterRooms(snapshot),
@@ -416,10 +406,7 @@ export function replayProjectBiomeFromEvaluatedPredecessor(
     ...(previous === undefined
       ? {}
       : {
-          seed: Object.freeze({
-            history: previous.history,
-            rewardBranches: previous.rewards.branches,
-          }),
+          seed: progressiveSeed(previous),
         }),
   });
 }
@@ -522,30 +509,9 @@ export function evaluateBiomeAssembly(
     plan.echoKeepsakeReplayResults,
   );
   const seed: HistoryStateView | undefined = context.seed?.history.afterTransition;
-  let figLeafState: FigLeafLifecycleState | undefined;
-  let pendingSpellDrop: boolean;
-  let allSpellInvested: boolean;
-  try {
-    figLeafState =
-      context.seed === undefined
-        ? initialFigLeafState(catalog, context.loadout.startingKeepsakeKey)
-        : (() => {
-            const state = attestFigLeafBranchState(context.seed.rewardBranches);
-            return state === undefined
-              ? undefined
-              : { remainingUses: state.remainingUses, activatedThisBiome: false };
-          })();
-    pendingSpellDrop =
-      context.seed === undefined
-        ? false
-        : attestPendingHermesSpellDrop(context.seed.rewardBranches);
-    allSpellInvested =
-      context.seed === undefined ? false : attestTalentDropsClosed(context.seed.rewardBranches);
-  } catch (error) {
-    throw new ProjectSimulationContractError(
-      error instanceof Error ? error.message : 'Fig Leaf branch frontier is divergent',
-    );
-  }
+  const figLeafState = figLeafLifecycleState(catalog, context);
+  const pendingSpellDrop = pendingHermesSpellDropLifecycleState(context);
+  const allSpellInvested = talentDropClosureLifecycleState(context);
   const composed = composeBiomeHistoryWithEncounterValidation(
     catalog,
     snapshot,
@@ -554,7 +520,7 @@ export function evaluateBiomeAssembly(
     figLeafState,
     pendingSpellDrop,
     allSpellInvested,
-    attestEffectiveShadowRank(context.loadout, context.seed?.rewardBranches),
+    effectiveShadowRank(context.loadout, context.seed?.rewardFrontier),
   );
   if (composed.kind !== 'complete') {
     const progressive = evaluateProgressiveBiomeAssembly(catalog, origin, plan, context);
@@ -621,7 +587,7 @@ export function evaluateBiomeAssembly(
     history,
     context.routePosition,
     context.loadout,
-    context.seed?.rewardBranches,
+    context.seed?.rewardFrontier,
     context.resourcePlacements,
     context.resourceFindings,
   );
@@ -637,9 +603,7 @@ export function evaluateBiomeAssembly(
     rewards.levelResolutionArtifacts,
     rewards.encounterEntryVowRanks,
     context.forcedChaosOccurrenceKeys,
-    context.seed === undefined
-      ? undefined
-      : sharedRewardLookups(context.seed.rewardBranches.map((branch) => branch.state)),
+    context.seed?.rewardFrontier.state.rewardLookups,
   );
   const nemesisByOwner = new Map(
     rewards.simulation.nemesisRandomEventCandidates.map((candidate) => [

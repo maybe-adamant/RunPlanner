@@ -22,7 +22,7 @@ import {
   keepsakeRankForEquip,
   keepsakeSelectionUnavailableReason,
 } from '../../src/simulation/keepsakes/state';
-import { attestGorgonBranchState } from '../../src/simulation/keepsakes/encounter-effects';
+import { pendingGorgonRarityLevel } from '../../src/simulation/keepsakes/encounter-effects';
 import { simulateProject } from '../../src/simulation/evaluation/project';
 import {
   applyExperimentalHammerEquipResult,
@@ -160,7 +160,7 @@ function evaluatedBiome(project: ReturnType<typeof createGoldenFGHProject>, biom
 function replayBiome(
   project: ReturnType<typeof createGoldenFGHProject>,
   biomeKey: 'F' | 'G',
-  initialBranches: readonly RewardBranch[],
+  seedFrontier: RewardBranch,
 ) {
   const biome = evaluatedBiome(project, biomeKey);
   const route = project.route;
@@ -171,7 +171,7 @@ function replayBiome(
     biome.history,
     ordinaryPositionFor(catalog, biome.snapshot),
     route.loadout,
-    initialBranches,
+    seedFrontier,
   ).simulation;
 }
 
@@ -254,8 +254,8 @@ describe('Cherished Heirloom later keepsake equips', () => {
       selection: rack,
       keepsakeKey: 'SkipEncounterKeepsake',
     });
-    const throughF = replayBiome(project, 'F', [cherishedBranch()]);
-    const afterRack = throughF.branches[0];
+    const throughF = replayBiome(project, 'F', cherishedBranch());
+    const afterRack = throughF.frontier;
     expect(afterRack?.state.keepsakes).toMatchObject({
       currentKey: 'SkipEncounterKeepsake',
       figLeaf: { remainingUses: 4, activatedThisBiome: false },
@@ -279,8 +279,8 @@ describe('Cherished Heirloom later keepsake equips', () => {
       selection: rack,
       keepsakeKey: 'SpellTalentKeepsake',
     });
-    const throughF = replayBiome(project, 'F', [cherishedBranch()]);
-    const afterRack = throughF.branches[0]!;
+    const throughF = replayBiome(project, 'F', cherishedBranch());
+    const afterRack = throughF.frontier!;
     expect(afterRack.state.keepsakes.currentKey).toBe('SpellTalentKeepsake');
     expect(afterRack.state.hexProgress).toEqual({ bankedPathPoints: 7, investedNodeKeys: [] });
     expect(afterRack.state.rewardPriorities).toEqual(['SpellDrop']);
@@ -295,7 +295,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
     expect(
-      replayBiome(gorgonProject, 'F', [cherishedBranch()]).branches[0]?.state.keepsakes,
+      replayBiome(gorgonProject, 'F', cherishedBranch()).frontier?.state.keepsakes,
     ).toMatchObject({
       currentKey: 'AthenaEncounterKeepsake',
       gorgon: { status: 'pending', rarityLevel: 4 },
@@ -311,12 +311,12 @@ describe('Cherished Heirloom later keepsake equips', () => {
       result: createKeepsakeEquipResultAddress(rack, 'jeweledPom'),
       value: { traitKey: 'HadesLifestealBoon' },
     });
-    expect(
-      replayBiome(pomProject, 'F', [cherishedBranch()]).branches[0]?.state.keepsakes,
-    ).toMatchObject({
-      currentKey: 'HadesAndPersephoneKeepsake',
-      jeweledPom: { active: true, levels: 4, grantedTraitKey: 'HadesLifestealBoon' },
-    });
+    expect(replayBiome(pomProject, 'F', cherishedBranch()).frontier?.state.keepsakes).toMatchObject(
+      {
+        currentKey: 'HadesAndPersephoneKeepsake',
+        jeweledPom: { active: true, levels: 4, grantedTraitKey: 'HadesLifestealBoon' },
+      },
+    );
 
     let hammerProject = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
@@ -328,9 +328,11 @@ describe('Cherished Heirloom later keepsake equips', () => {
       result: createKeepsakeEquipResultAddress(rack, 'experimentalHammer'),
       value: { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' },
     });
-    const hammer = replayBiome(hammerProject, 'F', [
+    const hammer = replayBiome(
+      hammerProject,
+      'F',
       cherishedBranch(),
-    ]).branches[0]?.state.keepsakes.experimentalHammers.at(-1);
+    ).frontier?.state.keepsakes.experimentalHammers.at(-1);
     expect(catalog.keepsakes.byKey.TempHammerKeepsake?.effect).toMatchObject({
       kind: 'experimentalHammer',
       qualifyingEncounterUsesByRank: { Heroic: 30 },
@@ -357,7 +359,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
         },
       }),
     };
-    const afterRack = replayBiome(unchangedProject, 'F', [unchanged]).branches[0]?.state.keepsakes;
+    const afterRack = replayBiome(unchangedProject, 'F', unchanged).frontier?.state.keepsakes;
     expect(afterRack?.callingCard?.remainingCharges).toBe(2);
     expect(afterRack?.history.at(-1)).toEqual({
       key: 'RarifyKeepsake',
@@ -389,8 +391,8 @@ describe('Cherished Heirloom later keepsake equips', () => {
       ...cherishedBranch(),
       state: Object.freeze({ ...cherishedBranch().state, keepsakes: removed }),
     };
-    const evaluated = replayBiome(project, 'F', [seeded]);
-    expect(evaluated.branches[0]?.state.keepsakes).toMatchObject({
+    const evaluated = replayBiome(project, 'F', seeded);
+    expect(evaluated.frontier?.state.keepsakes).toMatchObject({
       currentKey: 'BossPreDamageKeepsake',
       removedKeys: ['GoldifyKeepsake'],
       timePiece: { remainingCharges: 4 },
@@ -429,14 +431,10 @@ describe('Cherished Heirloom later keepsake equips', () => {
     expect(rejected.gorgon).toEqual({ status: 'pending', rarityLevel: 4 });
   });
 
-  it('attests both status and captured pending Gorgon source level across branches', () => {
+  it('captures the pending Gorgon source level with its status', () => {
     const heroic = directLaterEquip('AthenaEncounterKeepsake').keepsakes;
-    expect(
-      attestGorgonBranchState([{ state: { keepsakes: heroic } }, { state: { keepsakes: heroic } }]),
-    ).toBe('pending');
+    expect(heroic.gorgon?.status).toBe('pending');
     const epic = createKeepsakeState(catalog, 'AthenaEncounterKeepsake', arcanaFear);
-    expect(() =>
-      attestGorgonBranchState([{ state: { keepsakes: heroic } }, { state: { keepsakes: epic } }]),
-    ).toThrow('Gorgon branch frontier is divergent');
+    expect(pendingGorgonRarityLevel(heroic)).not.toBe(pendingGorgonRarityLevel(epic));
   });
 });

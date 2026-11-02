@@ -7,11 +7,9 @@ import { simulateProjectAssembly } from '../../src/simulation';
 import * as traitCapabilities from '../../src/simulation/candidates/trait-offer/capability';
 import { createTraitHistoryState } from '../../src/simulation/traits';
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
-import {
-  addHubBoardRewardLookup,
-  sharedRewardLookups,
-} from '../../src/simulation/state/reward-lookups';
+import { addHubBoardRewardLookup } from '../../src/simulation/state/reward-lookups';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { reachedFrontier } from '../support/reward-frontier';
 
 const baseline = {
   Underworld: {
@@ -44,7 +42,7 @@ const baseline = {
   },
 };
 
-it('retains old lookup snapshots and rejects divergent reservation states', () => {
+it('retains old lookup snapshots', () => {
   const base = initializeTestRewardBranches()[0]!;
   const added = addHubBoardRewardLookup(base.state, 'hubRewardLookup', ['SpellDrop']);
   expect(base.state.rewardLookups.hubRewardLookup).toEqual([]);
@@ -52,8 +50,6 @@ it('retains old lookup snapshots and rejects divergent reservation states', () =
   expect(addHubBoardRewardLookup(added, 'hubRewardLookup', ['SpellDrop']).rewardLookups).toEqual(
     added.rewardLookups,
   );
-  expect(() => sharedRewardLookups([base.state, added])).toThrow();
-  expect(sharedRewardLookups([added, added])).toBe(added.rewardLookups);
 });
 
 it('preserves route branch and candidate-context counts through state consolidation', () => {
@@ -72,7 +68,7 @@ it('preserves route branch and candidate-context counts through state consolidat
         for (const [owner, branches] of captured) contexts.set(owner, branches.length);
       const biomes = evaluation.route.biomes.map((biome) => {
         if (!('rewards' in biome)) throw new Error('fixture did not reach rewards');
-        for (const branch of biome.rewards.branches) {
+        for (const branch of reachedFrontier(biome.rewards)) {
           const state = branch.state;
           expect(Object.isFrozen(state)).toBe(true);
           expect(state.equipment).toEqual({
@@ -99,13 +95,12 @@ it('preserves route branch and candidate-context counts through state consolidat
           expect(replaceSimulationTraitHistory(state, state.traitHistory)).toBe(state);
         }
         for (const checkpoint of biome.rewards.targetHistory)
-          for (const state of checkpoint.states)
-            expect(state.reached.historyView).toBe(
-              biome.history.viewsBySequence[checkpoint.historySequence],
-            );
+          expect(checkpoint.state.reached.historyView).toBe(
+            biome.history.viewsBySequence[checkpoint.historySequence],
+          );
         return {
           biome: biome.biomeKey,
-          branches: biome.rewards.branches.length,
+          branches: reachedFrontier(biome.rewards).length,
           snapshots: biome.rewards.runStateSnapshots.length,
           offers: biome.rewards.selectedTraitOffers.length,
         };

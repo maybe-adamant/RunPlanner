@@ -244,7 +244,7 @@ describe('P core loop', () => {
             loadout: defaultRouteLoadout,
             seed: {
               history: previous.history,
-              rewardBranches: previous.rewards.branches,
+              rewardFrontier: previous.rewards.frontier!,
             },
           })
         : null;

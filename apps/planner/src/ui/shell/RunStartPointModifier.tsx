@@ -141,7 +141,6 @@ export function RunStartPointModifier({
                         aria-label={`${row.label} ${option.label}`}
                         aria-pressed={option.selected}
                         aria-disabled={option.available ? undefined : true}
-                        {...hintProps(option.unavailableHint)}
                         onClick={() => {
                           if (!option.available) return;
                           choose({ biomeKey: option.biomeKey, point: option.point });

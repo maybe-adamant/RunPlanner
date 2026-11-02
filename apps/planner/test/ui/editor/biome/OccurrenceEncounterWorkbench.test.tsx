@@ -1548,7 +1548,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       return (
         evaluated !== undefined &&
         'rewards' in evaluated &&
-        evaluated.rewards.branches.some((branch) =>
+        [evaluated.rewards.frontier!].some((branch) =>
           branch.events.some(
             (event) =>
               event.kind === 'concreteAcquisition' &&

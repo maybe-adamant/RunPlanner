@@ -72,7 +72,7 @@ describe('Nemesis random-event checkpoint workflows', () => {
     );
     if (f === undefined || !('rewards' in f)) throw new Error('F reward evaluation is missing');
     expect(
-      f.rewards.branches.every((branch) =>
+      [f.rewards.frontier!].every((branch) =>
         branch.events.every(
           (event) =>
             event.kind !== 'concreteAcquisition' ||

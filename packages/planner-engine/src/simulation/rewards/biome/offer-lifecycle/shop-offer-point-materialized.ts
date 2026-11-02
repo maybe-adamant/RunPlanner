@@ -31,7 +31,6 @@ import {
 } from '../../shop/slot-exclusions';
 import { processShopInventory } from '../../shop/inventory';
 import type { SimulationState } from '../../../state/model';
-import { attestSharedRewardLookups } from '../../../state/reward-lookups';
 
 export interface ShopOfferPointMaterializationInputs {
   readonly catalog: Catalog;
@@ -62,9 +61,6 @@ export function applyShopOfferPointMaterialization(
     throw new BiomeRewardSimulationContractError('Shop offer transition received a non-Shop point');
 
   const findings = new Map<string, FindingRegionEntry>();
-  // Shop inventory consults the completed hub board through each branch's own
-  // reached snapshot; the entering cohort must still agree on that board.
-  attestSharedRewardLookups(branches.map((branch) => branch.state));
   const frontierBranches = branches;
   const shopEntry = room.entryState?.kind === 'shop' ? room.entryState : undefined;
   const owners = Object.freeze([

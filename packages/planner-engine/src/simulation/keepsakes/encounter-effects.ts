@@ -1,11 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredGorgonAthenaOffer } from '../../authored-project/traits/state';
-import type {
-  FigLeafStateValue,
-  GorgonLifecycleStatus,
-  GorgonRarityLevel,
-  KeepsakeState,
-} from './state';
+import type { GorgonLifecycleStatus, GorgonRarityLevel, KeepsakeState } from './state';
 
 /** Athena's source-local sparse chance override derived from Gorgon's captured level. */
 export function gorgonSourceRarityOverride(
@@ -88,56 +83,9 @@ export function assessGorgonCandidate(input: GorgonCandidateInput): {
           : input.status,
   });
 }
-export function attestGorgonBranchState(
-  branches: readonly { readonly state: { readonly keepsakes: KeepsakeState } }[],
-): GorgonLifecycleStatus | undefined {
-  const states = branches.map((branch) => branch.state.keepsakes.gorgon);
-  const values = states.map((state) => state?.status);
-  const first = values[0];
-  const firstRarityLevel = states[0]?.status === 'pending' ? states[0].rarityLevel : undefined;
-  if (
-    values.some((value) => value !== first) ||
-    states.some((state) =>
-      state?.status === 'pending'
-        ? state.rarityLevel !== firstRarityLevel
-        : firstRarityLevel !== undefined,
-    )
-  )
-    throw new Error('Gorgon branch frontier is divergent');
-  return first;
-}
-
-export function attestPendingGorgonRarityLevel(
-  branches: readonly { readonly state: { readonly keepsakes: KeepsakeState } }[],
-): GorgonRarityLevel | undefined {
-  const status = attestGorgonBranchState(branches);
-  const first = branches[0]?.state.keepsakes.gorgon;
-  return status === 'pending' && first?.status === 'pending' ? first.rarityLevel : undefined;
-}
-
-/** Attest the branch frontier before lifecycle composition can consume it. */
-export function attestFigLeafBranchState(
-  branches: readonly { readonly state: { readonly keepsakes: KeepsakeState } }[],
-): FigLeafStateValue | undefined {
-  const values = branches.map((branch) => branch.state.keepsakes.figLeaf);
-  const first = values[0];
-  if (first === undefined) {
-    if (values.some((value) => value !== undefined)) {
-      throw new Error('Fig Leaf branch frontier is divergent');
-    }
-    return undefined;
-  }
-  if (
-    values.some(
-      (value) =>
-        value === undefined ||
-        value.remainingUses !== first.remainingUses ||
-        value.activatedThisBiome !== first.activatedThisBiome,
-    )
-  ) {
-    throw new Error('Fig Leaf branch frontier is divergent');
-  }
-  return Object.freeze({ ...first });
+/** The Gorgon rarity level a pending amulet will grant; none once it settled. */
+export function pendingGorgonRarityLevel(keepsakes: KeepsakeState): GorgonRarityLevel | undefined {
+  return keepsakes.gorgon?.status === 'pending' ? keepsakes.gorgon.rarityLevel : undefined;
 }
 
 export function expirePendingGorgon(state: KeepsakeState): KeepsakeState {

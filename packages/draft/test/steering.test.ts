@@ -76,7 +76,7 @@ describe('boon bag reading', () => {
     const entry = (eligibility: string, count: number) => ({
       rewardType: 'Boon',
       eligibility,
-      remaining: { kind: 'exact', count },
+      remaining: count,
     });
     const bags = [
       { storeKey: 'RunProgress', entries: [entry('eligible', 1), entry('ineligible', 2)] },

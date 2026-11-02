@@ -48,7 +48,6 @@ import type {
   DerivedAcquisitionEntryFrontier,
   FixedAcquisitionRealization,
 } from '../../acquisition/contracts';
-import { attestSharedRewardLookups } from '../../../state/reward-lookups';
 import { clearOfferedRewardTypes } from '../../../state/offered-rewards';
 
 export interface RoomEnteredTransition {
@@ -110,9 +109,6 @@ export function applyRoomEntryEffects(
     }),
   );
   const findings: LifecycleFinding[] = [];
-  // Shrine inventory consults the completed hub board through each branch's own
-  // reached snapshot; the entering cohort must still agree on that board.
-  attestSharedRewardLookups(branches.map((candidate) => candidate.state));
   const fixedAcquisitionRealizations: FixedAcquisitionRealization[] = [];
   if (room?.lifecycleProfileKey === 'FieldsCombatRoom') {
     for (const localReward of room.localRewards ?? []) {

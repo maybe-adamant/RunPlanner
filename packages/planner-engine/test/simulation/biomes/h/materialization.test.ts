@@ -350,7 +350,7 @@ function evaluateWithOlympianContactSeed(project: ProjectDocument, keepsakeKey: 
     composeBiomeHistory(catalog, snapshot, ordinaryPositionFor(catalog, snapshot)),
     ordinaryPositionFor(catalog, snapshot),
     traitContext(project),
-    [olympianContactSeed(project, keepsakeKey)],
+    olympianContactSeed(project, keepsakeKey),
   );
 }
 
@@ -741,7 +741,7 @@ describe('H Fields materialization', () => {
     });
 
     const rewards = evaluateWithOlympianContactSeed(project, 'ForceZeusBoonKeepsake');
-    const branch = rewards.branches[0];
+    const branch = rewards.frontier;
     const providerUses = (snapshot: (typeof rewards.runStateSnapshots)[number] | undefined) =>
       snapshot?.keepsakes.olympianSources.find((source) => source.providerKey === 'Zeus')
         ?.remainingForceUses;
@@ -1057,7 +1057,7 @@ describe('H Fields materialization', () => {
     if (selected?.authoring !== 'complete' || selected.validity !== 'valid') {
       throw new Error('selected optional fixture must be valid');
     }
-    const selectedBranch = selected.rewards.branches[0];
+    const selectedBranch = selected.rewards.frontier;
     if (selectedBranch === undefined) throw new Error('selected optional fixture has no branch');
     expect(
       selectedBranch.state.bags.FieldsOptionalRewards?.remainingEntryCounts.reduce(
@@ -1100,7 +1100,7 @@ describe('H Fields materialization', () => {
     if (noneBiome?.authoring !== 'complete' || noneBiome.validity !== 'valid') {
       throw new Error('zero optional fixture must be valid');
     }
-    const noneBranch = noneBiome.rewards.branches[0];
+    const noneBranch = noneBiome.rewards.frontier;
     expect(noneBranch?.state.bags.FieldsOptionalRewards).toBeUndefined();
     expect(noneBranch?.state.bags.RunProgress).toEqual(selectedBranch.state.bags.RunProgress);
   });
@@ -1151,8 +1151,8 @@ describe('H Fields materialization', () => {
     ) {
       throw new Error('Fields optional refill fixtures must be valid');
     }
-    const branch = evaluated.rewards.branches[0];
-    const baselineBranch = withoutOptionals.rewards.branches[0];
+    const branch = evaluated.rewards.frontier;
+    const baselineBranch = withoutOptionals.rewards.frontier;
     if (branch === undefined || baselineBranch === undefined) {
       throw new Error('Fields optional refill fixtures have no reward branch');
     }
@@ -1222,7 +1222,7 @@ describe('H Fields materialization', () => {
     if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
       throw new Error('ordered optional fixture must be valid');
     }
-    const acquisition = evaluated.rewards.branches[0]?.events.find(
+    const acquisition = evaluated.rewards.frontier?.events.find(
       (event) =>
         event.kind === 'concreteAcquisition' &&
         semanticAddressKey(event.origin) === semanticAddressKey(optional),
@@ -1277,7 +1277,7 @@ describe('H Fields materialization', () => {
     if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
       throw new Error('optional Time Piece fixture must be valid');
     }
-    const events = evaluated.rewards.branches[0]?.events ?? [];
+    const events = evaluated.rewards.frontier?.events ?? [];
     expect(events).toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold', origin: optional }),
     );
@@ -1311,7 +1311,7 @@ describe('H Fields materialization', () => {
       throw new Error('dormant optional disposition fixture must be valid');
     }
     expect(
-      evaluated.rewards.branches[0]?.events.some(
+      evaluated.rewards.frontier?.events.some(
         (event) =>
           (event.kind === 'conversionToGold' || event.kind === 'concreteAcquisition') &&
           semanticAddressKey(event.origin) === semanticAddressKey(optional),
@@ -1672,7 +1672,7 @@ describe('H Fields materialization', () => {
     if (minRoom?.origin.kind !== 'occurrence' || minRoom.localRewards === undefined) {
       throw new Error('fixture lost a two-cage Fields room');
     }
-    const events = h.rewards.branches[0]?.events ?? [];
+    const events = h.rewards.frontier?.events ?? [];
     for (const reward of minRoom.localRewards) {
       const site = createAcquisitionSiteAddress(
         reward.origin,
@@ -1725,7 +1725,7 @@ describe('H Fields materialization', () => {
     if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
       throw new Error('Time Piece fixture did not complete valid H');
     }
-    const events = evaluated.rewards.branches[0]?.events ?? [];
+    const events = evaluated.rewards.frontier?.events ?? [];
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: 'conversionToGold',

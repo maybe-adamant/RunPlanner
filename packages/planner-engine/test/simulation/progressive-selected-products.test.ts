@@ -30,6 +30,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/underworld';
+import { reachedFrontier } from '../support/reward-frontier';
 
 const {
   EMPTY_RESOURCE_PLACEMENTS,
@@ -471,7 +472,7 @@ describe('progressive selected and blocked products', () => {
     });
     expect(artifacts?.roomTargets.at(laterTarget)).toBeUndefined();
     expect(
-      blocked.rewards.branches
+      reachedFrontier(blocked.rewards)
         .flatMap((branch) => branch.state.traitHistory?.events ?? [])
         .some((event) => event.kind === 'traitOffer' && event.giverKey === 'Chaos'),
     ).toBe(false);
@@ -608,7 +609,7 @@ describe('progressive selected and blocked products', () => {
       },
     });
     expect(artifacts?.roomTargets.at(laterBatch.targets[0].origin)).toBeUndefined();
-    const traitEvents = blocked.rewards.branches
+    const traitEvents = reachedFrontier(blocked.rewards)
       .flatMap((branch) => branch.state.traitHistory?.events ?? [])
       .filter(
         (event) =>
@@ -622,7 +623,7 @@ describe('progressive selected and blocked products', () => {
     expect(traitEvents).toHaveLength(1);
     expect(traitEvent.targetedAcquisitionTransition).toBeUndefined();
     expect(
-      blocked.rewards.branches
+      reachedFrontier(blocked.rewards)
         .flatMap((branch) => branch.state.traitHistory?.events ?? [])
         .some(
           (event) => event.kind === 'levelMutation' && event.sourceTraitKey === 'BoonDecayBoon',
@@ -699,7 +700,7 @@ describe('progressive selected and blocked products', () => {
     expect(artifacts?.levelResolutions.at(level)).toBeDefined();
     expect(artifacts?.roomTargets.at(laterBatch.targets[0].origin)).toBeUndefined();
     expect(
-      blocked.rewards.branches
+      reachedFrontier(blocked.rewards)
         .flatMap((branch) => branch.state.traitHistory?.events ?? [])
         .some(
           (event) =>
@@ -958,7 +959,7 @@ describe('progressive selected and blocked products', () => {
     }
     const seed = {
       history: previous.history,
-      rewardBranches: previous.rewards.branches,
+      rewardFrontier: previous.rewards.frontier!,
     };
     const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
@@ -1020,7 +1021,7 @@ describe('progressive selected and blocked products', () => {
     }
     const blockedSeed = {
       history: blockedPrevious.history,
-      rewardBranches: blockedPrevious.rewards.branches,
+      rewardFrontier: blockedPrevious.rewards.frontier!,
     };
     const blockedClamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, blockedPlan, {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
@@ -1185,7 +1186,7 @@ describe('progressive selected and blocked products', () => {
     }
     const seed = {
       history: previous.history,
-      rewardBranches: previous.rewards.branches,
+      rewardFrontier: previous.rewards.frontier!,
     };
     const clamped = evaluateProgressiveBiomeAssembly(catalog, oBiome, plan, {
       routePosition: ordinaryRoutePosition(catalog, 'Surface', 'O'),
@@ -1312,7 +1313,7 @@ describe('progressive selected and blocked products', () => {
     expect(fields?.findings.map((finding) => finding.code)).toEqual(['traitOfferMissing']);
     expect(fields?.findings[0]?.origin).toMatchObject({ kind: 'traitOffer', owner: cage1 });
     const branch =
-      fields !== undefined && 'rewards' in fields ? fields.rewards.branches[0] : undefined;
+      fields !== undefined && 'rewards' in fields ? fields.rewards.frontier : undefined;
     const cage2Pickup = branch?.events.find(
       (event) =>
         event.kind === 'concreteAcquisition' &&

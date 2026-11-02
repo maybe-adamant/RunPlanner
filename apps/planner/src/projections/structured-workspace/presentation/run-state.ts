@@ -2,7 +2,6 @@ import type { Catalog, InRunTraitRarity, KeepsakeRank } from '@run-planner/engin
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type {
   Armor,
-  DecisionRewardBagCount,
   MaxStatSource,
   MaxStats,
   RunStateClock,
@@ -23,20 +22,12 @@ import type {
   WorkspaceRunStateSection,
 } from '../contracts/run-state';
 
-function count(value: DecisionRewardBagCount): string {
-  return value.kind === 'exact' ? `x${value.count}` : `x${value.min}–${value.max}`;
+function count(value: number): string {
+  return `x${value}`;
 }
 
-function sumCounts(values: readonly DecisionRewardBagCount[]): string {
-  const min = values.reduce(
-    (total, value) => total + (value.kind === 'exact' ? value.count : value.min),
-    0,
-  );
-  const max = values.reduce(
-    (total, value) => total + (value.kind === 'exact' ? value.count : value.max),
-    0,
-  );
-  return min === max ? `x${min}` : `x${min}–${max}`;
+function sumCounts(values: readonly number[]): string {
+  return count(values.reduce((total, value) => total + value, 0));
 }
 
 function rangeText(range: { readonly min?: number; readonly max?: number }): string {

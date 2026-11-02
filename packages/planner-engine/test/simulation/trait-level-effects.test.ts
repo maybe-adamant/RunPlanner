@@ -655,7 +655,7 @@ describe('Supply Chain lifecycle', () => {
       'encounterEndEffectsApplied',
     );
 
-    const afterBoss = initializeRewardBranches([publicRewardBranch(deferred.branches[0]!)]);
+    const afterBoss = initializeRewardBranches(publicRewardBranch(deferred.branches[0]!));
     expect(
       afterBoss[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
     ).toBe(6);

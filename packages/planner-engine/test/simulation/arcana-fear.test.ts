@@ -192,7 +192,7 @@ describe('progressive Arcana and Fear state', () => {
         arcanaFear: consumed.state,
       }),
     });
-    const nextBiome = initializeRewardBranches([publicRewardBranch(branch)])[0]!;
+    const nextBiome = initializeRewardBranches(publicRewardBranch(branch))[0]!;
     expect(nextBiome.state.arcanaFear.fear.forfeitConsumed).toBe(false);
     expect(forfeitStatus(nextBiome.state.arcanaFear)).toBe('available');
     expect(

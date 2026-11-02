@@ -9,10 +9,9 @@ import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import {
   assessGorgonEligibility,
-  attestGorgonBranchState,
-  attestPendingGorgonRarityLevel,
   expirePendingGorgon,
   gorgonSourceRarityOverride,
+  pendingGorgonRarityLevel,
 } from '../../../keepsakes/encounter-effects';
 import { deriveBoonRarityLedger } from '../../../traits/rarity';
 import { ownerRegion } from '../../../finding-regions';
@@ -90,8 +89,9 @@ export function applyGorgonStartedTransition(inputs: {
       eligiblePhaseKey: undefined,
       findings: Object.freeze([]),
     });
-  const status = attestGorgonBranchState(inputs.branches);
-  const rarityLevel = attestPendingGorgonRarityLevel(inputs.branches);
+  const keepsakes = inputs.branches[0]?.state.keepsakes;
+  const status = keepsakes?.gorgon?.status;
+  const rarityLevel = keepsakes === undefined ? undefined : pendingGorgonRarityLevel(keepsakes);
   const definition = catalog.encounterDefinitions.byKey[event.encounterKey]!;
   const effect = catalog.keepsakes.values.find(
     (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',

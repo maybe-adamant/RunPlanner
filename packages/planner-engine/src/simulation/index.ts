@@ -180,7 +180,6 @@ export {
   type CountedRewardOwnerAddress,
   type RewardBranch,
   type TargetRewardHistoryCheckpoint,
-  type DecisionRewardBagCount,
   type RunStateAvailability,
   type RunStateOwner,
   type RunStateSnapshot,

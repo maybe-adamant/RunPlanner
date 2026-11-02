@@ -77,7 +77,7 @@ export function createEchoHammerReplayMissingProject(): ProjectDocument {
   );
   if (reachedH === undefined || !('rewards' in reachedH) || reachedH.rewards === undefined)
     throw new Error('expected reached forced H miniboss frontier');
-  const before = reachedH.rewards.branches[0]?.state.traitHistory ?? createTraitHistoryState();
+  const before = reachedH.rewards.frontier?.state.traitHistory ?? createTraitHistoryState();
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),

@@ -9,33 +9,19 @@ import {
 
 export type ArcanaActivationOrigin = 'manual' | 'automatic' | 'temporary';
 
-/** F encounter preparation consumes the agreed effective Vow, including prior suppression. */
-export function attestEffectiveShadowRank(
+/** F encounter preparation consumes the effective Vow, including prior suppression. */
+export function effectiveShadowRank(
   loadout: Pick<RouteLoadout, 'fearRanks'>,
-  branches?: readonly { readonly state: { readonly arcanaFear: ArcanaFearState } }[],
+  seed?: { readonly state: { readonly arcanaFear: ArcanaFearState } },
 ): number {
-  if (branches === undefined) return loadout.fearRanks.MinibossCountShrineUpgrade ?? 0;
-  if (branches.length === 0) throw new Error('Shadow preparation frontier is empty');
-  const ranks = branches.map(
-    (branch) => branch.state.arcanaFear.fear.effectiveRanks.MinibossCountShrineUpgrade ?? 0,
-  );
-  const rank = ranks[0]!;
-  if (ranks.some((value) => value !== rank))
-    throw new Error('Shadow preparation frontier is divergent');
-  return rank;
+  return seed === undefined
+    ? (loadout.fearRanks.MinibossCountShrineUpgrade ?? 0)
+    : (seed.state.arcanaFear.fear.effectiveRanks.MinibossCountShrineUpgrade ?? 0);
 }
 
-/** One generated encounter may consume Hordes only from its reached reward state. */
-export function attestEffectiveHordesRank(
-  states: readonly { readonly arcanaFear: ArcanaFearState }[],
-): number {
-  if (states.length === 0) throw new Error('Hordes generation state is empty');
-  const ranks = states.map(
-    (state) => state.arcanaFear.fear.effectiveRanks.EnemyCountShrineUpgrade ?? 0,
-  );
-  if (ranks.some((value) => value !== ranks[0]))
-    throw new Error('Hordes preparation frontier is divergent');
-  return ranks[0]!;
+/** One generated encounter consumes Hordes from its reached reward state. */
+export function effectiveHordesRank(state: { readonly arcanaFear: ArcanaFearState }): number {
+  return state.arcanaFear.fear.effectiveRanks.EnemyCountShrineUpgrade ?? 0;
 }
 /** The effective Hordes, Fangs and Menace ranks a room's encounter compositions read. */
 export interface EncounterEntryVowRanks {
@@ -44,15 +30,15 @@ export interface EncounterEntryVowRanks {
   readonly menace: number;
 }
 
-/** Room entry fixes every phase's composition: one agreed Hordes rank, Fangs and Menace as captured. */
-export function attestEncounterEntryVowRanks(
-  states: readonly { readonly arcanaFear: ArcanaFearState }[],
-): EncounterEntryVowRanks {
-  const ranks = states[0]?.arcanaFear.fear.effectiveRanks;
+/** Room entry fixes every phase's composition: Hordes, Fangs and Menace as captured. */
+export function encounterEntryVowRanks(state: {
+  readonly arcanaFear: ArcanaFearState;
+}): EncounterEntryVowRanks {
+  const ranks = state.arcanaFear.fear.effectiveRanks;
   return Object.freeze({
-    hordes: attestEffectiveHordesRank(states),
-    fangs: ranks?.EnemyEliteShrineUpgrade ?? 0,
-    menace: ranks?.NextBiomeEnemyShrineUpgrade ?? 0,
+    hordes: effectiveHordesRank(state),
+    fangs: ranks.EnemyEliteShrineUpgrade ?? 0,
+    menace: ranks.NextBiomeEnemyShrineUpgrade ?? 0,
   });
 }
 export interface ActiveArcanaState {

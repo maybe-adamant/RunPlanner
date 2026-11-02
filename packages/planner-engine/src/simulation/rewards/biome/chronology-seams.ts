@@ -9,7 +9,7 @@ import {
 } from '../../../authored-project/addresses';
 import { resolveCompletionBoss } from '../../../authored-project/completion-boss';
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
-import { attestEncounterEntryVowRanks } from '../../arcana-fear';
+import { encounterEntryVowRanks } from '../../arcana-fear';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
 import type { HistoryEvent } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
@@ -1151,7 +1151,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
           ? state.encounterEntryVowRanks
           : new Map(state.encounterEntryVowRanks).set(
               semanticAddressKey(event.origin),
-              attestEncounterEntryVowRanks(entered.branches.map((branch) => branch.state)),
+              encounterEntryVowRanks(entered.branches[0]!.state),
             ),
       hermesShrineAssessments:
         shrine === undefined
@@ -1193,8 +1193,8 @@ function midBiomeStartPoint(
 }
 
 /**
- * A Preboss's or completion Boss's received states, after its predecessor's
- * departure and before its own preparation and entry, are a mid-biome start state.
+ * A Preboss's or completion Boss's received state, after its predecessor's
+ * departure and before its own preparation and entry, is a mid-biome start state.
  */
 function roomStartState(
   context: ChronologyWalkContext,
@@ -1211,7 +1211,7 @@ function roomStartState(
       capture: Object.freeze({
         owner: room.origin,
         gameName: room.gameName,
-        states: Object.freeze(state.branches.map((branch) => branch.state)),
+        state: state.branches[0]!.state,
       }),
     },
   ];

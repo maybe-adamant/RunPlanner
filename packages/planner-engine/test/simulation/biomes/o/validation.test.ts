@@ -36,6 +36,7 @@ import { describe, expect, it } from 'vitest';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import { reachedFrontier } from '../../../support/reward-frontier';
 
 function evaluateO(project = loadSurfaceNOProject()) {
   const evaluation = simulateProject(catalog, project);
@@ -51,7 +52,7 @@ function evaluateValidO(project = loadSurfaceNOProject()) {
       `O fixture did not complete-valid: ${JSON.stringify({
         findings: result.biome.findings,
         rewardFindings: result.biome.rewards.findings,
-        branchCount: result.biome.rewards.branches.length,
+        branchCount: reachedFrontier(result.biome.rewards).length,
       })}`,
     );
   }

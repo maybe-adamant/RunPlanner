@@ -309,7 +309,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
         candidate.origin.occurrenceId === reprieveId,
     );
     expect(event).toBeDefined();
-    expect(f.rewards.branches[0]?.state.keepsakes.phial).toEqual({ status: 'consumed' });
+    expect(f.rewards.frontier?.state.keepsakes.phial).toEqual({ status: 'consumed' });
   });
 
   it('emits the fixed-linked Postboss fountain lifecycle event after room creation', () => {
@@ -351,7 +351,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
     );
     expect(created).toBeDefined();
     expect(created!.sequence).toBeLessThan(postbossEvents[0]!.sequence);
-    expect(f.rewards.branches[0]?.state.keepsakes.phial).toEqual({ status: 'consumed' });
+    expect(f.rewards.frontier?.state.keepsakes.phial).toEqual({ status: 'consumed' });
   });
 
   it('publishes and resolves a Phial target after a Postboss rack is moved before its fountain', () => {
@@ -408,7 +408,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
         `expected valid Phial Postboss result: ${JSON.stringify(resolved?.findings)}`,
       );
     }
-    expect(resolved.rewards.branches[0]?.state.keepsakes.phial).toEqual({ status: 'consumed' });
+    expect(resolved.rewards.frontier?.state.keepsakes.phial).toEqual({ status: 'consumed' });
     expect(resolved.findings).not.toContainEqual(
       expect.objectContaining({ code: 'fountainRarityResultMissing' }),
     );

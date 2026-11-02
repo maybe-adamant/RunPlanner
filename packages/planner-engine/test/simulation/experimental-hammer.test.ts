@@ -41,6 +41,7 @@ import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycl
 import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
+import { reachedFrontier } from '../support/reward-frontier';
 
 function route(project: ReturnType<typeof createCompleteFGProject>) {
   const value = project.route;
@@ -126,7 +127,7 @@ function replayThroughRealLifecycle(
     evaluated.history,
     ordinaryPositionFor(catalog, evaluated.snapshot),
     route(project).loadout,
-    [equippedBranch(project, remainingUses)],
+    equippedBranch(project, remainingUses),
   ).simulation;
 }
 
@@ -256,7 +257,7 @@ describe('Experimental Hammer', () => {
     const resumedF = completedRoute?.biomes[0];
     if (resumedF === undefined || !('rewards' in resumedF))
       throw new Error('completed route-start Hammer did not resume F');
-    expect(resumedF.rewards.branches[0]?.state.traitHistory?.equippedTraits).toHaveProperty(
+    expect(resumedF.rewards.frontier?.state.traitHistory?.equippedTraits).toHaveProperty(
       'StaffOneWayAttackTrait',
     );
   });
@@ -274,7 +275,7 @@ describe('Experimental Hammer', () => {
   it('uses the production end-effects lifecycle hook to expire and remove the exact acquisition', () => {
     const project = createCompleteFGProject();
     const result = replayThroughRealLifecycle(project, 'F', 1);
-    const branch = result.branches[0]!;
+    const branch = result.frontier!;
     expect(branch.state.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       active: false,
       remainingUses: 0,
@@ -291,7 +292,7 @@ describe('Experimental Hammer', () => {
   it('consumes every qualifying end-effects checkpoint in the real room lifecycle, rather than a room counter', () => {
     const project = createCompleteFGProject();
     const result = replayThroughRealLifecycle(project, 'F', 2);
-    const branch = result.branches[0]!;
+    const branch = result.frontier!;
     expect(branch.state.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       active: false,
       remainingUses: 0,
@@ -323,7 +324,7 @@ describe('Experimental Hammer', () => {
     const g = evaluatedBiome(project, 'G');
     const branch = applyExperimentalHammerEquipResult(
       catalog,
-      g.rewards.branches[0]! as Parameters<typeof applyExperimentalHammerEquipResult>[1],
+      g.rewards.frontier! as Parameters<typeof applyExperimentalHammerEquipResult>[1],
       'TempHammerKeepsake',
       { experimentalHammer: { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' } },
       createKeepsakeEquipResultAddress(
@@ -338,10 +339,10 @@ describe('Experimental Hammer', () => {
       evaluatedBiome(project, 'H').history,
       ordinaryPositionFor(catalog, evaluatedBiome(project, 'H').snapshot),
       route(project).loadout,
-      [branch],
+      branch,
     ).simulation;
     expect(
-      result.branches.every(
+      reachedFrontier(result).every(
         (branch) =>
           branch.state.keepsakes.experimentalHammers.at(-1)?.remainingUses ===
           20 - endEffects.length,
@@ -372,10 +373,10 @@ describe('Experimental Hammer', () => {
       evaluated.history,
       ordinaryPositionFor(catalog, evaluated.snapshot),
       route(project).loadout,
-      [equippedBranch(project, 20)],
+      equippedBranch(project, 20),
     ).simulation;
     expect(
-      result.branches.every(
+      reachedFrontier(result).every(
         (branch) =>
           branch.state.keepsakes.experimentalHammers.at(-1)?.remainingUses ===
           20 - endEffects.length,
@@ -399,7 +400,7 @@ describe('Experimental Hammer', () => {
           event.origin.occurrenceId === 'golden-f-preboss-shop:postboss',
       ),
     ).toBe(false);
-    const branch = replayThroughRealLifecycle(project, 'F', bossIndex + 1).branches[0]!;
+    const branch = replayThroughRealLifecycle(project, 'F', bossIndex + 1).frontier!;
     expect(branch.state.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       active: false,
       remainingUses: 0,
@@ -419,7 +420,7 @@ describe('Experimental Hammer', () => {
   it('grants 20 uses at the Postboss rack after automatic completion has entered', () => {
     const project = withPostbossHammer(createGoldenFGHProject());
     const evaluated = evaluatedBiome(project, 'F');
-    const branch = evaluated.rewards.branches[0]!;
+    const branch = evaluated.rewards.frontier!;
     expect(branch.state.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       traitKey: 'StaffJumpSpecialTrait',
       active: true,
@@ -470,10 +471,10 @@ describe('Experimental Hammer', () => {
       evaluated.history,
       ordinaryPositionFor(catalog, evaluated.snapshot),
       routePlan.loadout,
-      [equippedBranch(createCompleteFGProject(), 20)],
+      equippedBranch(createCompleteFGProject(), 20),
     ).simulation;
     expect(
-      result.branches.every(
+      reachedFrontier(result).every(
         (branch) =>
           branch.state.keepsakes.experimentalHammers.at(-1)?.remainingUses ===
           20 - endEffects.length,
@@ -515,9 +516,7 @@ describe('Experimental Hammer', () => {
     if (n === undefined || !('rewards' in n) || o === undefined || !('rewards' in o)) {
       throw new Error('expected valid N/O reward lifecycle');
     }
-    expect(n.rewards.branches[0]?.state.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
-      20,
-    );
+    expect(n.rewards.frontier?.state.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(20);
     const oEndEffects = o.history.events.filter(
       (event) => event.kind === 'encounterEndEffectsApplied',
     );
@@ -530,7 +529,7 @@ describe('Experimental Hammer', () => {
           event.execution === 'skippedByFigLeaf',
       ),
     ).toBe(true);
-    expect(o.rewards.branches[0]?.state.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
+    expect(o.rewards.frontier?.state.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
       20 - oEndEffects.length,
     );
   });
@@ -583,7 +582,7 @@ describe('Experimental Hammer', () => {
           event.origin.occurrenceId === 'surface-p-1-1-p_combat03',
       );
       expect(selected.map((event) => event.phaseKey)).toEqual(['Combat']);
-      expect(p.rewards.branches[0]?.state.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
+      expect(p.rewards.frontier?.state.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
         20 - endEffects.length,
       );
       if (label === 'figLeaf') expect(selected[0]).toMatchObject({ execution: 'skippedByFigLeaf' });
@@ -625,12 +624,12 @@ describe('Experimental Hammer', () => {
         ...evaluated.snapshot,
       }),
       route(project).loadout,
-      [carried],
+      carried,
     );
     const selection = createPostbossKeepsakeSelectionAddress(
       automaticOccurrence(createBiomeAddress('Underworld', 'F'), 'postboss'),
     );
-    const branch = assembly.simulation.branches[0]!;
+    const branch = assembly.simulation.frontier!;
     expect(assembly.simulation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeUnavailable', origin: selection }),
     );
@@ -683,7 +682,7 @@ describe('Experimental Hammer', () => {
         ...evaluated.snapshot,
       }),
       route(project).loadout,
-      [carried],
+      carried,
     );
     const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
     expect(
@@ -747,8 +746,8 @@ describe('Experimental Hammer', () => {
         biome.history,
         ordinaryPositionFor(catalog, biome.snapshot),
         project.route!.loadout,
-        [seed],
-      ).simulation.branches[0]!.state.keepsakes.experimentalHammers.at(-1)?.remainingUses;
+        seed,
+      ).simulation.frontier!.state.keepsakes.experimentalHammers.at(-1)?.remainingUses;
     };
     expect(replay(base)).toBe(replay(withoutSide));
   });
@@ -761,8 +760,8 @@ describe('Experimental Hammer', () => {
       evaluatedBiome(unchangedProject, 'F').history,
       ordinaryPositionFor(catalog, evaluatedBiome(unchangedProject, 'F').snapshot),
       route(unchangedProject).loadout,
-      [equippedBranch(unchangedProject, 20)],
-    ).simulation.branches[0]!;
+      equippedBranch(unchangedProject, 20),
+    ).simulation.frontier!;
     const replacedProject = withPostbossNeutralReplacement(createGoldenFGHProject());
     const replaced = evaluateBiomeRewardsAssemblyInternal(
       catalog,
@@ -770,8 +769,8 @@ describe('Experimental Hammer', () => {
       evaluatedBiome(replacedProject, 'F').history,
       ordinaryPositionFor(catalog, evaluatedBiome(replacedProject, 'F').snapshot),
       route(replacedProject).loadout,
-      [equippedBranch(replacedProject, 20)],
-    ).simulation.branches[0]!;
+      equippedBranch(replacedProject, 20),
+    ).simulation.frontier!;
     expect(unchanged.state.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       active: true,
       acquisitionIdentity: expect.any(String),
@@ -783,7 +782,7 @@ describe('Experimental Hammer', () => {
   });
 
   it('permits the same ordinary Hammer again after its temporary acquisition expires', () => {
-    const expired = replayThroughRealLifecycle(createCompleteFGProject(), 'F', 1).branches[0]!;
+    const expired = replayThroughRealLifecycle(createCompleteFGProject(), 'F', 1).frontier!;
     expect(expired.state.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       active: false,
       remainingUses: 0,

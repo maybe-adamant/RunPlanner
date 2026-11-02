@@ -117,7 +117,7 @@ it('exports the reached Fig Leaf skip and reloads its addressed second-skip repa
     (biome) => biome.biomeKey === 'F',
   );
   if (f === undefined || !('rewards' in f)) throw new Error('Fig Leaf F evaluation is missing');
-  expect(f.rewards.branches[0]?.state.keepsakes.figLeaf).toEqual({
+  expect(f.rewards.frontier?.state.keepsakes.figLeaf).toEqual({
     remainingUses: 2,
     activatedThisBiome: true,
   });

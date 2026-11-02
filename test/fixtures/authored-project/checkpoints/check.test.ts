@@ -135,7 +135,7 @@ describe('authored-project checkpoint integrity', () => {
     expect(poolSnapshot('roomEntered')?.traits.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
     expect(poolSnapshot('beforeRoomExit')?.traits.equippedTraits.ApolloWeaponBoon).toBeUndefined();
     expect(
-      f.rewards.branches.every((branch) =>
+      [f.rewards.frontier!].every((branch) =>
         branch.state.traitHistory?.previouslyPickedTraitKeys.includes('ApolloWeaponBoon'),
       ),
     ).toBe(true);

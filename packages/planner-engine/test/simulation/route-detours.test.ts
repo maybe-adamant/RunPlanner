@@ -50,6 +50,8 @@ import {
   goldenGBiome,
   goldenGStartId,
 } from '@run-planner/test-fixtures/underworld';
+import { reachedFrontier } from '../support/reward-frontier';
+import type { RewardBranch } from '../../src/simulation/rewards/model';
 
 const fBiome = createBiomeAddress('Underworld', 'F');
 const gBiome = createBiomeAddress('Underworld', 'G');
@@ -310,7 +312,7 @@ function indexOfEvent(
 }
 
 function branchHasEvent(
-  branches: ReturnType<typeof evaluateBiomeRewards>['branches'],
+  branches: readonly RewardBranch[],
   kind: 'concreteAcquisition' | 'rewardOffered',
   origin: ReturnType<typeof createIncomingRewardAddress>,
 ): boolean {
@@ -991,7 +993,7 @@ describe('route-detour simulation', () => {
       ordinaryPositionFor(catalog, snapshot),
       traitContext(project, gBiome),
     );
-    expect(rewards.branches[0]?.state.traitHistory?.events).toContainEqual(
+    expect(rewards.frontier?.state.traitHistory?.events).toContainEqual(
       expect.objectContaining({
         giverKey: 'Hermes',
         bannedTraitKeys: ['HermesSpecialBoon', 'HermesCastDiscountBoon'],
@@ -1037,7 +1039,7 @@ describe('route-detour simulation', () => {
       ),
     ).toBe(true);
     const returnedOrigin = createIncomingRewardAddress(fBiome, returned);
-    for (const branch of rewards.branches) {
+    for (const branch of reachedFrontier(rewards)) {
       const acquisitions = branch.events.filter(
         (event) =>
           event.kind === 'concreteAcquisition' &&
@@ -1085,9 +1087,11 @@ describe('route-detour simulation', () => {
       expect(anomalyReturn?.targets.map((target) => target.room.occurrenceId)).not.toContain(
         returnedPeer,
       );
-      expect(branchHasEvent(rewards.branches, 'rewardOffered', incoming)).toBe(true);
-      expect(branchHasEvent(rewards.branches, 'concreteAcquisition', incoming)).toBe(success);
-      const anomalyAcquisitions = rewards.branches.flatMap((branch) =>
+      expect(branchHasEvent(reachedFrontier(rewards), 'rewardOffered', incoming)).toBe(true);
+      expect(branchHasEvent(reachedFrontier(rewards), 'concreteAcquisition', incoming)).toBe(
+        success,
+      );
+      const anomalyAcquisitions = reachedFrontier(rewards).flatMap((branch) =>
         branch.events.filter(
           (event) =>
             event.kind === 'concreteAcquisition' &&
@@ -1107,7 +1111,7 @@ describe('route-detour simulation', () => {
       }
       expect(
         branchHasEvent(
-          rewards.branches,
+          reachedFrontier(rewards),
           'rewardOffered',
           createIncomingRewardAddress(gBiome, returned),
         ),
@@ -1253,7 +1257,7 @@ describe('route-detour simulation', () => {
         findings: [{ code: 'offerContext', detail: 'blockGiftBoons', traitKey }],
       });
       expect(
-        rewards.branches.every(
+        reachedFrontier(rewards).every(
           (branch) => branch.state.traitHistory?.equippedTraits[traitKey] === undefined,
         ),
       ).toBe(true);
@@ -1310,7 +1314,7 @@ describe('route-detour simulation', () => {
       traitContext(project, fBiome),
     );
     expect(
-      rewards.branches.some(
+      reachedFrontier(rewards).some(
         (branch) =>
           branch.state.traitHistory?.equippedTraits.InfernalContractBoon?.traitKey ===
           'InfernalContractBoon',
@@ -1484,13 +1488,13 @@ describe('route-detour simulation', () => {
     ]);
     expect(
       branchHasEvent(
-        rewards.branches,
+        reachedFrontier(rewards),
         'rewardOffered',
         createIncomingRewardAddress(fBiome, normal1),
       ),
     ).toBe(true);
     const returnedOrigin = createIncomingRewardAddress(fBiome, returned);
-    for (const branch of rewards.branches) {
+    for (const branch of reachedFrontier(rewards)) {
       const acquisitions = branch.events.filter(
         (event) =>
           event.kind === 'concreteAcquisition' &&
@@ -1503,7 +1507,7 @@ describe('route-detour simulation', () => {
     }
     expect(
       branchHasEvent(
-        rewards.branches,
+        reachedFrontier(rewards),
         'concreteAcquisition',
         createIncomingRewardAddress(fBiome, contract),
       ),

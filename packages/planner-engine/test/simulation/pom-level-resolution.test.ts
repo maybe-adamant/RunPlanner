@@ -43,6 +43,7 @@ import {
   goldenFBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import { reachedFrontier } from '../support/reward-frontier';
 
 const owner = { kind: 'project' } as const;
 const levelAddress = createLevelResolutionAddress(
@@ -580,7 +581,7 @@ describe('Pom level resolutions', () => {
     const capability = levelResolutionCandidateForProjectEvaluationAssembly(assembly, address);
     expect(capability).toBeDefined();
     expect(
-      f.rewards.branches
+      reachedFrontier(f.rewards)
         .flatMap((branch) => branch.events)
         .some((event) => event.kind === 'concreteAcquisition'),
     ).toBe(true);
@@ -674,7 +675,7 @@ describe('Pom level resolutions', () => {
     };
     const entry = createAcquisitionEntryAddress(site, 'Minor');
     const settled = (assembly: ReturnType<typeof simulateProjectAssembly>) =>
-      rewardProduct(assembly).branches.flatMap((branch) =>
+      reachedFrontier(rewardProduct(assembly)).flatMap((branch) =>
         branch.events.filter(
           (event) =>
             event.kind === 'concreteAcquisition' &&
@@ -710,21 +711,23 @@ describe('Pom level resolutions', () => {
       levelResolutionCandidateForProjectEvaluationAssembly(assembly, level)?.surface;
     expect(capabilityState(frontierAssembly)).toEqual(capabilityState(continuedAssembly));
     expect(
-      rewardProduct(frontierAssembly).branches.map(
+      reachedFrontier(rewardProduct(frontierAssembly)).map(
         (branch) => branch.state.rewardHistory.lootTypeHistory,
       ),
     ).toEqual(
-      rewardProduct(continuedAssembly).branches.map(
+      reachedFrontier(rewardProduct(continuedAssembly)).map(
         (branch) => branch.state.rewardHistory.lootTypeHistory,
       ),
     );
     expect(
       unnumbered(
-        rewardProduct(frontierAssembly).branches.map((branch) => branch.state.traitHistory),
+        reachedFrontier(rewardProduct(frontierAssembly)).map((branch) => branch.state.traitHistory),
       ),
     ).toEqual(
       unnumbered(
-        rewardProduct(continuedAssembly).branches.map((branch) => branch.state.traitHistory),
+        reachedFrontier(rewardProduct(continuedAssembly)).map(
+          (branch) => branch.state.traitHistory,
+        ),
       ),
     );
   });

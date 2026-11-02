@@ -671,7 +671,7 @@ describe('Hub board rerolls', () => {
   const lookupOf = (project: ProjectDocument) => {
     const biome = evaluate(project).evaluation.route.biomes[0]!;
     if (!('rewards' in biome)) throw new Error('Surface N was not evaluated');
-    return biome.rewards.branches[0]!.state.rewardLookups.hubRewardLookup;
+    return biome.rewards.frontier!.state.rewardLookups.hubRewardLookup;
   };
 
   it('chain presses of one door across stays from the reward each stay assigned', () => {

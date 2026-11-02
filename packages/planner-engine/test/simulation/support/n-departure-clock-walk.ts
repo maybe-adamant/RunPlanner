@@ -147,11 +147,11 @@ export function walkWithDepartureClocks(
     history,
     routePosition,
     routeLoadout,
-    [seeded],
+    seeded,
     placements,
     findings,
   );
-  expect(result.simulation.branches.length).toBeGreaterThan(0);
+  expect(result.simulation.frontier).toBeDefined();
   const departures = history.events.filter(
     (event): event is Extract<HistoryEvent, { readonly kind: 'roomDeparted' }> =>
       event.kind === 'roomDeparted',

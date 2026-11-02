@@ -56,6 +56,7 @@ import {
   nVisitSlotKeys,
   withoutNFirstVisitSideRooms,
 } from '@run-planner/test-fixtures/surface';
+import { reachedFrontier } from '../../../support/reward-frontier';
 
 function completeN(project = loadSurfaceNProject()) {
   project = authorLegalTraitOffers(project);
@@ -117,10 +118,10 @@ describe('N Hub rewards, validation, and candidates', () => {
     const boardOrigins = new Set(
       hub.board.targets.map((target) => semanticAddressKey(target.room.incomingReward!.origin)),
     );
-    const offered = biome.rewards.branches.flatMap((branch) =>
+    const offered = reachedFrontier(biome.rewards).flatMap((branch) =>
       branch.events.filter((event) => event.kind === 'rewardOffered'),
     );
-    const acquired = biome.rewards.branches.flatMap((branch) =>
+    const acquired = reachedFrontier(biome.rewards).flatMap((branch) =>
       branch.events.filter((event) => event.kind === 'concreteAcquisition'),
     );
 
@@ -166,7 +167,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       ),
     ).toBe(false);
     expect(
-      biome.rewards.branches[0]?.state.bags.HubRewards?.remainingEntryCounts.reduce(
+      biome.rewards.frontier?.state.bags.HubRewards?.remainingEntryCounts.reduce(
         (total, count) => total + count,
         0,
       ),
@@ -479,7 +480,7 @@ describe('N Hub rewards, validation, and candidates', () => {
 
     const { biome } = validN(authorLegalTraitOffers(project));
     const acquiredSources = new Set(
-      biome.rewards.branches[0]?.events.flatMap((event) =>
+      biome.rewards.frontier?.events.flatMap((event) =>
         event.kind === 'concreteAcquisition' &&
         Object.values(hubSources).includes(
           event.acquisition.acquisition.gameName as (typeof hubSources)[keyof typeof hubSources],
@@ -576,7 +577,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       ),
     );
     expect(
-      biome.rewards.branches[0]?.events.filter(
+      biome.rewards.frontier?.events.filter(
         (event) =>
           event.kind === 'concreteAcquisition' &&
           zeusRewardOwners.has(semanticAddressKey(event.origin)),
@@ -823,7 +824,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       semanticAddressKey(slot.incomingReward!.origin),
     );
     const enteredOrigins = entered.map((slot) => semanticAddressKey(slot.incomingReward!.origin));
-    const branch = biome.rewards.branches[0];
+    const branch = biome.rewards.frontier;
     if (branch === undefined) throw new Error('fixture has no reward branch');
 
     expect(
@@ -1224,14 +1225,14 @@ describe('N Hub rewards, validation, and candidates', () => {
     const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
     if (hub?.kind !== 'hub') throw new Error('fixture lost Hub decision');
     const story = hub.board.targets.find((target) => target.hubSlotKey === 'story');
-    const branch = biome.rewards.branches[0];
+    const branch = biome.rewards.frontier;
     if (story?.room.incomingReward === undefined || branch === undefined) {
       throw new Error('fixture lost the Story reward');
     }
 
     expect(biome.validity).toBe('valid');
     expect(story.room).toMatchObject({ gameName: 'N_Story01', entered: true });
-    expect(biome.rewards.branches[0]!.state.rewardLookups.hubRewardLookup).toContain('Story');
+    expect(biome.rewards.frontier!.state.rewardLookups.hubRewardLookup).toContain('Story');
     expect(
       branch.events.filter(
         (event) =>
@@ -1254,7 +1255,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('validates the Preboss inventory from all open target offers and applies its purchase owner', () => {
-    const lookup = completeN().biome.rewards.branches[0]!.state.rewardLookups.hubRewardLookup;
+    const lookup = completeN().biome.rewards.frontier!.state.rewardLookups.hubRewardLookup;
     expect(lookup).toEqual([
       'MaxHealthDropBig',
       'MaxManaDropBig',
@@ -1294,7 +1295,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       ['Minor'],
     );
     expect(
-      completeN(purchasedProject).biome.rewards.branches.some((branch) =>
+      reachedFrontier(completeN(purchasedProject).biome.rewards).some((branch) =>
         branch.events.some(
           (event) =>
             event.kind === 'concreteAcquisition' &&
@@ -1659,7 +1660,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       createIncomingRewardAddress(nBiome, nOccurrenceIds.opening),
       createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub),
     ]) {
-      const acquisitions = biome.rewards.branches.flatMap((branch) =>
+      const acquisitions = reachedFrontier(biome.rewards).flatMap((branch) =>
         branch.events.filter(
           (event) =>
             event.kind === 'concreteAcquisition' &&
@@ -1695,7 +1696,7 @@ describe('N Hub rewards, validation, and candidates', () => {
 
     expect(biome.snapshot.decisions.find((decision) => decision.kind === 'hub')).toBeDefined();
     expect(
-      biome.rewards.branches.some((branch) =>
+      reachedFrontier(biome.rewards).some((branch) =>
         branch.events.some(
           (event) => semanticAddressKey(event.origin) === semanticAddressKey(owner),
         ),
@@ -1727,9 +1728,9 @@ describe('N Hub rewards, validation, and candidates', () => {
         }),
       }),
     );
-    const baseline = validN().biome.rewards.branches[0]?.state.bags.HubRewards;
+    const baseline = validN().biome.rewards.frontier?.state.bags.HubRewards;
     const converted = completeN(project).biome;
-    const branch = converted.rewards.branches[0];
+    const branch = converted.rewards.frontier;
     expect(converted.validity).toBe('valid');
     expect(branch?.events).toContainEqual(
       expect.objectContaining({ kind: 'artificerConversion', origin: owner }),

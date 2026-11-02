@@ -16,18 +16,6 @@ export interface HexProgressState {
   readonly investedNodeKeys: readonly string[];
 }
 
-/** Lifecycle composition may only consume a closure fact after every surviving branch agrees. */
-export function attestTalentDropsClosed(
-  branches: readonly { readonly state: { readonly hexProgress: HexProgressState } }[],
-): boolean {
-  const values = branches.map((branch) => branch.state.hexProgress.talentDropsClosed === true);
-  const first = values[0] ?? false;
-  if (values.some((value) => value !== first)) {
-    throw new Error('Hex Talent Drop closure frontier is divergent');
-  }
-  return first;
-}
-
 export function hexBaseCapacity(catalog: Catalog, progress: HexProgressState): number | undefined {
   const spellTraitKey = progress.spellTraitKey;
   const layoutKey = progress.tree?.layoutKey;

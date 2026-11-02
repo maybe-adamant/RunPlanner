@@ -44,6 +44,7 @@ import { assessAuthoredHexTree } from '../../authored-project/traits/hex-tree';
 import { hexTreeFindings } from '../rewards/trait-settlement/hex-settlement';
 import { authoringRegion } from '../finding-regions';
 import { resolveAuthoringBoundary } from '../progressive/authoring-boundary';
+import { progressiveSeed } from '../progressive/biome';
 import {
   deriveResourceExecutionPolicy,
   effectiveRouteResourcePlacements,
@@ -364,10 +365,7 @@ function evaluateRouteAssembly(
     }
     const seed =
       previous?.authoring === 'complete' && previous.validity === 'valid'
-        ? Object.freeze({
-            history: previous.history,
-            rewardBranches: previous.rewards.branches,
-          })
+        ? progressiveSeed(previous)
         : undefined;
     const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
     const context = Object.freeze({

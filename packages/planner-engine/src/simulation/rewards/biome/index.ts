@@ -18,7 +18,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
   history: BiomeRewardHistory,
   routePosition: ResolvedRoutePosition,
   routeLoadout: RouteLoadout,
-  initialBranches: readonly RewardBranch[] | undefined = undefined,
+  seedFrontier: RewardBranch | undefined = undefined,
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
   resourceFindings: readonly SemanticFinding[] = [],
 ): BiomeRewardEvaluationAssembly {
@@ -28,7 +28,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     history,
     routePosition,
     routeLoadout,
-    initialBranches,
+    seedFrontier,
     resourcePlacements,
     resourceFindings,
   );
@@ -40,7 +40,7 @@ export function evaluateBiomeRewards(
   history: BiomeRewardHistory,
   routePosition: ResolvedRoutePosition,
   routeLoadout: RouteLoadout,
-  initialBranches?: readonly RewardBranch[],
+  seedFrontier?: RewardBranch,
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
 ): BiomeRewardSimulation {
   return evaluateBiomeRewardsAssemblyInternal(
@@ -49,7 +49,7 @@ export function evaluateBiomeRewards(
     history,
     routePosition,
     routeLoadout,
-    initialBranches,
+    seedFrontier,
     resourcePlacements,
   ).simulation;
 }
@@ -60,7 +60,7 @@ export function evaluateBiomeRewardsAssembly(
   history: BiomeRewardHistory,
   routePosition: ResolvedRoutePosition,
   routeLoadout: RouteLoadout,
-  initialBranches?: readonly RewardBranch[],
+  seedFrontier?: RewardBranch,
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
 ): BiomeRewardSimulation {
   return evaluateBiomeRewardsAssemblyInternal(
@@ -69,7 +69,7 @@ export function evaluateBiomeRewardsAssembly(
     history,
     routePosition,
     routeLoadout,
-    initialBranches,
+    seedFrontier,
     resourcePlacements,
   ).simulation;
 }

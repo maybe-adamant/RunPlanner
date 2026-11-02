@@ -83,13 +83,11 @@ export function startInstallationAt(
     )
       return unavailable({ kind: 'notReached' });
     // The native Intro resets the biome records before anything reads them.
-    const states = predecessor.rewards.branches.map((branch) =>
-      beginBiomeSimulationState(branch.state),
-    );
+    const frontier = predecessor.rewards.frontier;
     return projectStartInstallation(catalog, {
       startPoint,
       startRoomGameName: entry.gameName,
-      states,
+      state: frontier === undefined ? undefined : beginBiomeSimulationState(frontier.state),
       roomHistory: stubRoomHistory(
         catalog,
         priorEvents,
@@ -100,13 +98,13 @@ export function startInstallationAt(
   }
   const rewards = start !== undefined && 'rewards' in start ? start.rewards : undefined;
   const capture = rewards?.midBiomeStartStates?.[startPoint.kind];
-  const sequence = capture?.states[0]?.reached.historyView.sequence;
+  const sequence = capture?.state.reached.historyView.sequence;
   if (capture === undefined || sequence === undefined) return unavailable({ kind: 'notReached' });
   return projectStartInstallation(catalog, {
     startPoint,
     startOccurrence: capture.owner,
     startRoomGameName: capture.gameName,
-    states: capture.states,
+    state: capture.state,
     roomHistory: stubRoomHistory(catalog, [...priorEvents, ...historyEvents(start)], sequence),
     visitedBiomeKeys: Object.freeze(itineraryBiomeKeys.slice(0, index + 1)),
   });

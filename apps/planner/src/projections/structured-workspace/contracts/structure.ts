@@ -776,8 +776,6 @@ export interface WorkspaceStartPointOption {
   readonly label: string;
   readonly selected: boolean;
   readonly available: boolean;
-  /** Hover reason for an unavailable start point whose cause is not evident from the plan. */
-  readonly unavailableHint?: string;
 }
 
 export interface WorkspaceStartPointRow {

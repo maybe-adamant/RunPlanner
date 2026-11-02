@@ -34,7 +34,7 @@ export function initializeTestRewardBranches(arcanaFear = createTestArcanaFearSt
  * retaining every explicit route/loadout input from a fixture.
  */
 export function initializeTestRewardBranchesForRoute(
-  initialBranches: readonly RewardBranch[] | undefined = undefined,
+  seedFrontier: RewardBranch | undefined = undefined,
   initialArcanaFear: ArcanaFearState | undefined = undefined,
   testCatalog: Catalog = catalog,
   startingKeepsakeKey: string | null | undefined = undefined,
@@ -43,7 +43,7 @@ export function initializeTestRewardBranchesForRoute(
   loadout: RouteLoadout | undefined = undefined,
   reached?: Parameters<typeof initializeRewardBranches>[7],
 ) {
-  const predecessor = initialBranches?.[0];
+  const predecessor = seedFrontier;
   const resolvedRouteKey =
     routeKey ?? predecessor?.state.reached.routePosition.routeKey ?? 'Underworld';
   const resolvedLoadout =
@@ -69,7 +69,7 @@ export function initializeTestRewardBranchesForRoute(
     throw new Error(`test route ${resolvedRouteKey} has no first biome`);
   }
   return initializeRewardBranches(
-    initialBranches,
+    seedFrontier,
     resolvedArcanaFear,
     testCatalog,
     startingKeepsakeKey === undefined

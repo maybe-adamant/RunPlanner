@@ -31,6 +31,7 @@ import type { SimulationState } from '../../src/simulation/state/model';
 import { createTraitHistoryState } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { baseFacts } from './shop-trait-purchase-support';
+import { reachedFrontier } from '../support/reward-frontier';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const facts = (state: SimulationState) =>
@@ -179,7 +180,7 @@ describe('item armor on authored routes', () => {
     );
     if (result?.authoring !== 'complete' || result.validity !== 'valid')
       throw new Error(`${biomeKey} did not evaluate validly`);
-    return result.rewards.branches.map((branch) => branch.state.rewardHistory);
+    return reachedFrontier(result.rewards).map((branch) => branch.state.rewardHistory);
   }
 
   it('credits a World Shop purchase', () => {

@@ -15,6 +15,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import { reachedFrontier } from '../../../../support/reward-frontier';
 
 const shops = [
   { label: 'Preboss Shop', biomeKey: 'F', occurrenceId: 'golden-f-preboss-shop' },
@@ -134,8 +135,8 @@ function shopAcquisitions(project: ProjectDocument, shop: Shop) {
   );
   if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid')
     throw new Error(`${shop.biomeKey} did not evaluate validly`);
-  expect(evaluated.rewards.branches.length).toBeGreaterThan(0);
-  return evaluated.rewards.branches.map((branch) =>
+  expect(evaluated.rewards.frontier).toBeDefined();
+  return reachedFrontier(evaluated.rewards).map((branch) =>
     branch.events.flatMap((event) => {
       if (event.kind !== 'concreteAcquisition') return [];
       const origin = event.origin;

@@ -25,6 +25,7 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
+import { reachedFrontier } from '../support/reward-frontier';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const occurrence = createOccurrenceAddress(
@@ -126,16 +127,14 @@ describe('Purging Pool sales', () => {
       'HeraCastBoon',
     ]);
     const beforeSale = fRewards(selected);
-    expect(beforeSale.branches.length).toBeGreaterThan(0);
-    expect(
-      beforeSale.branches[0]?.state.traitHistory.equippedTraits.ApolloWeaponBoon,
-    ).toMatchObject({
+    expect(beforeSale.frontier).toBeDefined();
+    expect(beforeSale.frontier?.state.traitHistory.equippedTraits.ApolloWeaponBoon).toMatchObject({
       rarity: 'Heroic',
     });
     const afterSale = fRewards(sell(selected, 'left'));
-    expect(afterSale.branches.length).toBeGreaterThan(0);
+    expect(afterSale.frontier).toBeDefined();
     expect(
-      afterSale.branches.every(
+      reachedFrontier(afterSale).every(
         (branch) => branch.state.traitHistory.equippedTraits.ApolloWeaponBoon === undefined,
       ),
     ).toBe(true);
@@ -164,7 +163,7 @@ describe('Purging Pool sales', () => {
     ).toEqual([]);
 
     const equipped = Object.keys(
-      fRewards(initial).branches[0]?.state.traitHistory?.equippedTraits ?? {},
+      fRewards(initial).frontier?.state.traitHistory?.equippedTraits ?? {},
     );
     if (equipped.length < 3) throw new Error('fixture has too few Pool candidates');
     const resolved = withPoolSlots(initial, [equipped[0]!, equipped[1]!, equipped[2]!]);
@@ -186,7 +185,7 @@ describe('Purging Pool sales', () => {
       slotKey: 'left',
     });
     expect(
-      fRewards(unsold).branches.every(
+      reachedFrontier(fRewards(unsold)).every(
         (branch) => branch.state.traitHistory?.equippedTraits[equipped[0]!] !== undefined,
       ),
     ).toBe(true);
@@ -195,29 +194,29 @@ describe('Purging Pool sales', () => {
   it('leaves zero sales neutral and removes only each selected displayed trait', () => {
     const initial = createGoldenFGHProject();
     const equipped = Object.keys(
-      fRewards(initial).branches[0]?.state.traitHistory?.equippedTraits ?? {},
+      fRewards(initial).frontier?.state.traitHistory?.equippedTraits ?? {},
     );
     if (equipped.length < 3) throw new Error('fixture has too few Pool candidates');
     const [left, middle, right] = equipped;
     const resolved = withPoolSlots(initial, [left!, middle!, right!]);
 
-    expect(
-      Object.keys(fRewards(resolved).branches[0]!.state.traitHistory!.equippedTraits),
-    ).toContain(left);
+    expect(Object.keys(fRewards(resolved).frontier!.state.traitHistory!.equippedTraits)).toContain(
+      left,
+    );
 
     const partial = fRewards(sell(resolved, 'middle'));
     expect(
-      partial.branches.every(
+      reachedFrontier(partial).every(
         (branch) => branch.state.traitHistory?.equippedTraits[middle!] === undefined,
       ),
     ).toBe(true);
     expect(
-      partial.branches.every(
+      reachedFrontier(partial).every(
         (branch) => branch.state.traitHistory?.equippedTraits[left!] !== undefined,
       ),
     ).toBe(true);
     expect(
-      partial.branches.every(
+      reachedFrontier(partial).every(
         (branch) => branch.state.traitHistory?.equippedTraits[right!] !== undefined,
       ),
     ).toBe(true);
@@ -225,12 +224,12 @@ describe('Purging Pool sales', () => {
     const all = fRewards(sell(sell(sell(resolved, 'left'), 'middle'), 'right'));
     for (const traitKey of [left!, middle!, right!]) {
       expect(
-        all.branches.every(
+        reachedFrontier(all).every(
           (branch) => branch.state.traitHistory?.equippedTraits[traitKey] === undefined,
         ),
       ).toBe(true);
       expect(
-        all.branches.every((branch) =>
+        reachedFrontier(all).every((branch) =>
           branch.state.traitHistory?.previouslyPickedTraitKeys.includes(traitKey),
         ),
       ).toBe(true);
@@ -281,7 +280,7 @@ describe('Purging Pool sales', () => {
       action: fountain,
       toIndex: 0,
     });
-    const credited = fRewards(initial).branches[0]?.state.traitHistory;
+    const credited = fRewards(initial).frontier?.state.traitHistory;
     expect(credited?.equippedTraits.BoonDecayBoon).toMatchObject({ rarity: 'Heroic' });
     expect(credited?.equippedTraits.ApolloWeaponBoon).toMatchObject({ rarity: 'Heroic', level: 6 });
     const creditedTarget = credited?.equippedTraits.ApolloWeaponBoon;
@@ -293,20 +292,20 @@ describe('Purging Pool sales', () => {
       'ZeusSpecialBoon',
     ]);
     const sold = fRewards(sell(configured, 'left'));
-    expect(sold.branches.length).toBeGreaterThan(0);
+    expect(sold.frontier).toBeDefined();
     expect(
-      sold.branches.every(
+      reachedFrontier(sold).every(
         (branch) => branch.state.traitHistory?.equippedTraits.BoonDecayBoon === undefined,
       ),
     ).toBe(true);
-    for (const branch of sold.branches)
+    for (const branch of reachedFrontier(sold))
       expect(branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon).toEqual(creditedTarget);
   });
 
   it('retains a stale sale and reports it without removing a different trait', () => {
     const initial = createGoldenFGHProject();
     const equipped = Object.keys(
-      fRewards(initial).branches[0]?.state.traitHistory?.equippedTraits ?? {},
+      fRewards(initial).frontier?.state.traitHistory?.equippedTraits ?? {},
     );
     if (equipped.length < 2) throw new Error('fixture has too few Pool candidates');
     const [left, middle] = equipped;
@@ -365,7 +364,7 @@ describe('Purging Pool sales', () => {
       ),
     ).toBe(true);
     expect(
-      evaluated.branches.every(
+      reachedFrontier(evaluated).every(
         (branch) => branch.state.traitHistory?.equippedTraits[middle!] !== undefined,
       ),
     ).toBe(true);
@@ -374,7 +373,7 @@ describe('Purging Pool sales', () => {
   it('keeps each sold name equipped until its own sale removes it', () => {
     const project = createCompleteFGProject();
     const poolTraitKeys = Object.keys(
-      fRewards(project).branches[0]?.state.traitHistory?.equippedTraits ?? {},
+      fRewards(project).frontier?.state.traitHistory?.equippedTraits ?? {},
     ).slice(0, 3);
     if (poolTraitKeys.length !== 3) throw new Error('fixture has too few Pool candidates');
     let sold = withPoolSlots(project, poolTraitKeys);
@@ -383,7 +382,7 @@ describe('Purging Pool sales', () => {
     const rewards = fRewards(sold);
     expect(rewards.findings).toEqual([]);
     expect(
-      rewards.branches.every((branch) =>
+      reachedFrontier(rewards).every((branch) =>
         poolTraitKeys.every((key) => branch.state.traitHistory?.equippedTraits[key] === undefined),
       ),
     ).toBe(true);
@@ -393,7 +392,7 @@ describe('Purging Pool sales', () => {
     const withG = createCompleteFGProject();
     const tail = asConfiguredTailF(createCompleteFGProject());
     const poolTraitKeys = Object.keys(
-      fRewards(withG).branches[0]?.state.traitHistory?.equippedTraits ?? {},
+      fRewards(withG).frontier?.state.traitHistory?.equippedTraits ?? {},
     ).slice(0, 3);
     const traitKey = poolTraitKeys[0];
     if (traitKey === undefined || poolTraitKeys.length !== 3)
@@ -402,12 +401,12 @@ describe('Purging Pool sales', () => {
       const sold = fRewards(sell(withPoolSlots(project, poolTraitKeys), 'left'));
       expect(sold.findings).toEqual([]);
       expect(
-        sold.branches.every(
+        reachedFrontier(sold).every(
           (branch) => branch.state.traitHistory?.equippedTraits[traitKey] === undefined,
         ),
       ).toBe(true);
       expect(
-        sold.branches.every((branch) =>
+        reachedFrontier(sold).every((branch) =>
           branch.state.traitHistory?.previouslyPickedTraitKeys.includes(traitKey),
         ),
       ).toBe(true);

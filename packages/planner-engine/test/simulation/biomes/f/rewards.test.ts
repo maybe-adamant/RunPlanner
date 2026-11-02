@@ -322,7 +322,7 @@ function withDenial(project: ProjectDocument): ProjectDocument {
 }
 
 function firstBranch(result: ReturnType<typeof evaluate>['rewards']) {
-  const branch = result.branches[0];
+  const branch = result.frontier;
   if (branch === undefined) {
     throw new Error(`reward fixture has no branch: ${JSON.stringify(result.findings)}`);
   }
@@ -923,9 +923,8 @@ describe('F reward-history simulation', () => {
   it('spends an Olympian provider at the entered ordinary post-combat Boon spawn', () => {
     const enteredProject = ratioBoundaryProject();
     const entered = firstBranch(
-      evaluate(enteredProject, true, [
-        olympianContactSeed(enteredProject, 'ForceApolloBoonKeepsake'),
-      ]).rewards,
+      evaluate(enteredProject, true, olympianContactSeed(enteredProject, 'ForceApolloBoonKeepsake'))
+        .rewards,
     );
     expect(
       entered.state.keepsakes.olympianSources.find((source) => source.providerKey === 'Apollo')

@@ -92,7 +92,7 @@ describe('Olympian reward pressure', () => {
     expect(currentBiome.state.rewardPriorities).toEqual(['Boon']);
     expect(currentBiome.state.bags.RunProgress).toBeUndefined();
 
-    const nextBiome = initializeRewardBranches([publicRewardBranch(currentBiome)])[0]!;
+    const nextBiome = initializeRewardBranches(publicRewardBranch(currentBiome))[0]!;
     expect(nextBiome.state.rewardPriorities).toEqual(['Boon']);
   });
 

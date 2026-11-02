@@ -275,7 +275,7 @@ describe('Echo Gift Gift Gift', () => {
       createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait'),
     );
     expect(beforeReplay.state.hexProgress.godSentAdded).toBe(false);
-    const afterReplay = replayBiome([beforeReplay]).simulation.branches[0]!;
+    const afterReplay = replayBiome(beforeReplay).simulation.frontier!;
     expect(afterReplay.state.hexProgress.godSentAdded).toBe(true);
   });
   it('owns the exact four source exclusions while every other keepsake remains capturable', () => {
@@ -352,7 +352,7 @@ describe('Echo Gift Gift Gift', () => {
         ]),
       },
     });
-    const replayed = replayBiome([swapped]).simulation.branches[0]!;
+    const replayed = replayBiome(swapped).simulation.frontier!;
     expect(replayed.state.keepsakes.timePiece?.remainingCharges).toBe(6);
     expect(replayed.state.keepsakes.callingCard).toBeUndefined();
     expect(replayed.state.traitHistory?.equippedTraits[giftTraitKey]?.echoRepeatedKeepsakeKey).toBe(
@@ -370,7 +370,7 @@ describe('Echo Gift Gift Gift', () => {
           figLeaf: { remainingUses, activatedThisBiome: true },
         },
       });
-      const once = replayBiome([initial]).simulation.branches[0]!;
+      const once = replayBiome(initial).simulation.frontier!;
       expect(once.state.keepsakes.figLeaf).toEqual({
         remainingUses: Math.max(remainingUses, 1),
         activatedThisBiome: false,
@@ -378,7 +378,7 @@ describe('Echo Gift Gift Gift', () => {
       expect(once.state.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(
         1,
       );
-      const twice = replayBiome([once]).simulation.branches[0]!;
+      const twice = replayBiome(once).simulation.frontier!;
       expect(twice.state.keepsakes.figLeaf?.remainingUses).toBe(Math.max(remainingUses, 1));
       expect(twice.state.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(
         1,
@@ -390,10 +390,10 @@ describe('Echo Gift Gift Gift', () => {
     ['RarifyKeepsake', 'callingCard', 6],
     ['GoldifyKeepsake', 'timePiece', 4],
   ] as const)('adds rank-I %s charges at every succeeding biome start', (key, ledger, initial) => {
-    const first = replayBiome([branchWithGift(key)]).simulation.branches[0]!;
+    const first = replayBiome(branchWithGift(key)).simulation.frontier!;
     expect(first.state.keepsakes[ledger]?.remainingCharges).toBe(initial + 2);
     expect(first.state.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(1);
-    const second = replayBiome([first]).simulation.branches[0]!;
+    const second = replayBiome(first).simulation.frontier!;
     expect(second.state.keepsakes[ledger]?.remainingCharges).toBe(initial + 4);
     expect(second.state.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(
       2,
@@ -414,7 +414,7 @@ describe('Echo Gift Gift Gift', () => {
           }),
         }),
       });
-      const replayed = replayBiomeAt(biomeKey, [afterSpell]).simulation.branches[0]!;
+      const replayed = replayBiomeAt(biomeKey, afterSpell).simulation.frontier!;
       expect(replayed.state.hexProgress.bankedPathPoints).toBe(3);
       expect(replayed.state.rewardPriorities).toEqual(['TalentBigDrop']);
       expect(
@@ -425,7 +425,7 @@ describe('Echo Gift Gift Gift', () => {
 
   it('defers Moon Beam Gift while ordinary Moon Beam remains equipped, then replays once at Common', () => {
     const ordinary = branchWithGift('SpellTalentKeepsake');
-    const deferred = replayBiome([ordinary]).simulation.branches[0]!;
+    const deferred = replayBiome(ordinary).simulation.frontier!;
     expect(deferred.state.hexProgress).toEqual({ bankedPathPoints: 0, investedNodeKeys: [] });
     expect(deferred.state.rewardPriorities).toEqual([]);
     expect(deferred.state.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(
@@ -435,14 +435,14 @@ describe('Echo Gift Gift Gift', () => {
     const unequipped = branchWithGift('SpellTalentKeepsake', 'GoldifyKeepsake', {
       keepsakes: retainedKeepsakeState('SpellTalentKeepsake', 'GoldifyKeepsake'),
     });
-    const replayed = replayBiome([unequipped]).simulation.branches[0]!;
+    const replayed = replayBiome(unequipped).simulation.frontier!;
     expect(replayed.state.hexProgress).toEqual({ bankedPathPoints: 3, investedNodeKeys: [] });
     expect(replayed.state.rewardPriorities).toEqual(['SpellDrop']);
     expect(replayed.state.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(
       1,
     );
 
-    const later = replayBiome([replayed]).simulation.branches[0]!;
+    const later = replayBiome(replayed).simulation.frontier!;
     expect(later.state.hexProgress).toEqual(replayed.state.hexProgress);
     expect(later.state.rewardPriorities).toEqual(replayed.state.rewardPriorities);
     expect(later.state.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(1);
@@ -452,7 +452,7 @@ describe('Echo Gift Gift Gift', () => {
     const fang = 'DecayingBoostKeepsake';
     const replayCount = (branch: { readonly state: RewardBranchState['state'] }) =>
       branch.state.traitHistory.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount;
-    const held = replayBiome([branchWithGift(fang)]).simulation.branches[0]!;
+    const held = replayBiome(branchWithGift(fang)).simulation.frontier!;
     expect(replayCount(held)).toBe(0);
     expect(held.state.keepsakes.lionFang).toMatchObject({ origin: 'ordinary' });
 
@@ -464,13 +464,13 @@ describe('Echo Gift Gift Gift', () => {
       arcanaFear,
     );
     expect(swapped.lionFang).toBeUndefined();
-    const replayed = replayBiome([branchWithGift(fang, 'GoldifyKeepsake', { keepsakes: swapped })])
-      .simulation.branches[0]!;
+    const replayed = replayBiome(branchWithGift(fang, 'GoldifyKeepsake', { keepsakes: swapped }))
+      .simulation.frontier!;
     expect(replayCount(replayed)).toBe(1);
     expect(replayed.state.keepsakes.lionFang).toMatchObject({ origin: 'echo' });
     expect(replayed.state.keepsakes.lionFang!.multiplier).toBeLessThanOrEqual(1.3);
 
-    const later = replayBiome([replayed]).simulation.branches[0]!;
+    const later = replayBiome(replayed).simulation.frontier!;
     expect(replayCount(later)).toBe(1);
     expect(later.state.keepsakes.lionFang?.origin).toBe('echo');
   });
@@ -478,7 +478,7 @@ describe('Echo Gift Gift Gift', () => {
   it('replays a Common Silken Sash at 30 once no Sash is held, and holds it unslotted', () => {
     const replayCount = (branch: { readonly state: RewardBranchState['state'] }) =>
       branch.state.traitHistory.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount;
-    const held = replayBiome([branchWithGift(sash)]).simulation.branches[0]!;
+    const held = replayBiome(branchWithGift(sash)).simulation.frontier!;
     expect(replayCount(held)).toBe(0);
     expect(held.state.keepsakes.silkenSash).toMatchObject({ origin: 'ordinary' });
 
@@ -489,22 +489,21 @@ describe('Echo Gift Gift Gift', () => {
       'GoldifyKeepsake',
       arcanaFear,
     );
-    const replayed = replayBiome([branchWithGift(sash, 'GoldifyKeepsake', { keepsakes: swapped })])
-      .simulation.branches[0]!;
+    const replayed = replayBiome(branchWithGift(sash, 'GoldifyKeepsake', { keepsakes: swapped }))
+      .simulation.frontier!;
     expect(replayCount(replayed)).toBe(1);
     expect(replayed.state.keepsakes.silkenSash).toEqual({
       origin: 'echo',
       rank: 'Common',
       currentArmor: 30,
     });
-    expect(replayBiome([replayed]).simulation.branches[0]!.state.keepsakes.silkenSash).toEqual(
+    expect(replayBiome(replayed).simulation.frontier!.state.keepsakes.silkenSash).toEqual(
       replayed.state.keepsakes.silkenSash,
     );
   });
 
   it('retains an eligible effect-neutral capture without inventing a replay mutation', () => {
-    const result = replayBiome([branchWithGift('ManaOverTimeRefundKeepsake')]).simulation
-      .branches[0]!;
+    const result = replayBiome(branchWithGift('ManaOverTimeRefundKeepsake')).simulation.frontier!;
     expect(result.state.keepsakes.currentKey).toBe('ManaOverTimeRefundKeepsake');
     expect(result.state.traitHistory?.equippedTraits[giftTraitKey]).toMatchObject({
       echoRepeatedKeepsakeKey: 'ManaOverTimeRefundKeepsake',
@@ -514,7 +513,7 @@ describe('Echo Gift Gift Gift', () => {
 
   describe('records the Common copy only when the captured keepsake is not held', () => {
     const replayed = (captured: string, current: string) =>
-      replayBiome([branchWithGift(captured, current)]).simulation.branches[0]!;
+      replayBiome(branchWithGift(captured, current)).simulation.frontier!;
 
     it.each(['ReincarnationKeepsake', 'BonusMoneyKeepsake', 'SkipEncounterKeepsake'])(
       'copies %s once after a swap and never while it is held',
@@ -526,7 +525,7 @@ describe('Echo Gift Gift Gift', () => {
         ).toBe(0);
         const once = replayed(captured, 'BlockDeathKeepsake');
         expect(once.state.keepsakes.echoCopyKey).toBe(captured);
-        const twice = replayBiome([once]).simulation.branches[0]!;
+        const twice = replayBiome(once).simulation.frontier!;
         expect(twice.state.traitHistory.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(
           1,
         );
@@ -545,7 +544,7 @@ describe('Echo Gift Gift Gift', () => {
   });
 
   it('pays a replayed Gold Purse its Common gold at the biome start', () => {
-    const replay = replayBiome([branchWithGift('BonusMoneyKeepsake', 'BlockDeathKeepsake')]);
+    const replay = replayBiome(branchWithGift('BonusMoneyKeepsake', 'BlockDeathKeepsake'));
     expect(replay.simulation.goldEvents).toContainEqual(
       expect.objectContaining({
         kind: 'gain',
@@ -563,11 +562,11 @@ describe('Echo Gift Gift Gift', () => {
     const retained = retainedKeepsakeState('BossMetaUpgradeKeepsake', 'GoldifyKeepsake');
     const { figurine: removed, ...withoutOrdinaryFigurine } = retained;
     if (removed === undefined) throw new Error('ordinary Figurine source is missing');
-    const first = replayBiome([
+    const first = replayBiome(
       branchWithGift('BossMetaUpgradeKeepsake', 'GoldifyKeepsake', {
         keepsakes: withoutOrdinaryFigurine,
       }),
-    ]).simulation.branches[0]!;
+    ).simulation.frontier!;
     expect(first.state.keepsakes.figurine).toEqual({
       origin: 'echo',
       status: 'pending',
@@ -579,7 +578,7 @@ describe('Echo Gift Gift Gift', () => {
       state: Object.freeze({ ...first.state, keepsakes: consumeFigurine(first.state.keepsakes) }),
     });
     expect(consumed.state.keepsakes.figurine).toBeUndefined();
-    const later = replayBiome([consumed]).simulation.branches[0]!;
+    const later = replayBiome(consumed).simulation.frontier!;
     expect(later.state.keepsakes.figurine).toEqual({
       origin: 'echo',
       status: 'pending',
@@ -588,7 +587,7 @@ describe('Echo Gift Gift Gift', () => {
   });
 
   it('waits for Experimental Hammer to be unequipped, then settles one selected rank-I replay', () => {
-    const waiting = replayBiome([branchWithGift('TempHammerKeepsake')]);
+    const waiting = replayBiome(branchWithGift('TempHammerKeepsake'));
     expect(waiting.simulation.volatileEchoKeepsakeReplay).toBeUndefined();
     expect(waiting.simulation.timelineFacts.nodes).not.toContainEqual(
       expect.objectContaining({ owner: replayOwner }),
@@ -597,17 +596,17 @@ describe('Echo Gift Gift Gift', () => {
       expect.objectContaining({ origin: expect.objectContaining({ kind: 'keepsakeEquipResult' }) }),
     );
     expect(
-      waiting.simulation.branches[0]?.state.traitHistory?.equippedTraits[giftTraitKey]
+      waiting.simulation.frontier?.state.traitHistory?.equippedTraits[giftTraitKey]
         ?.echoKeepsakeReplayCount,
     ).toBe(0);
 
     const switched = branchWithGift('TempHammerKeepsake', 'ManaOverTimeRefundKeepsake');
-    const missing = replayBiome([switched]);
+    const missing = replayBiome(switched);
     expect(missing.simulation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultMissing' }),
     );
-    const settled = replayBiome([switched], { kind: 'selected', traitKey: 'StaffLongAttackTrait' })
-      .simulation.branches[0]!;
+    const settled = replayBiome(switched, { kind: 'selected', traitKey: 'StaffLongAttackTrait' })
+      .simulation.frontier!;
     expect(settled.state.keepsakes.experimentalHammers).toContainEqual(
       expect.objectContaining({
         traitKey: 'StaffLongAttackTrait',
@@ -627,7 +626,7 @@ describe('Echo Gift Gift Gift', () => {
   it('publishes only the reached volatile result when authored replay fields retain a stale other kind', () => {
     const branch = branchWithGift('TempHammerKeepsake', 'ManaOverTimeRefundKeepsake');
     const result = replayBiome(
-      [branch],
+      branch,
       { kind: 'selected', traitKey: 'StaffLongAttackTrait' },
       { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     ).simulation.volatileEchoKeepsakeReplay;
@@ -657,7 +656,7 @@ describe('Echo Gift Gift Gift', () => {
       echoKeepsakeReplayCount: 0,
       acquisitionIdentity: giftIdentity,
     });
-    const replay = replayBiome([branch], { kind: 'exhausted' });
+    const replay = replayBiome(branch, { kind: 'exhausted' });
     expect(replay.simulation.findings).toEqual([]);
     expect(replay.simulation.volatileEchoKeepsakeReplay).toEqual({
       capturedKeepsakeKey: 'TempHammerKeepsake',
@@ -666,18 +665,18 @@ describe('Echo Gift Gift Gift', () => {
         value: { kind: 'exhausted' },
       },
     });
-    const result = replay.simulation.branches[0]!;
+    const result = replay.simulation.frontier!;
     expect(result.state.keepsakes.experimentalHammers).toEqual([]);
     expect(result.state.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(
       1,
     );
-    expect(replayBiome([result], { kind: 'exhausted' }).simulation.findings).toHaveLength(0);
+    expect(replayBiome(result, { kind: 'exhausted' }).simulation.findings).toHaveLength(0);
   });
 
   it('publishes the exact Common Transcendent Embryo result reached at biome start', () => {
     const blessing = { blessingKey: 'ChaosWeaponBlessing', blessingValues: { damageBonus: 0.2 } };
     const replay = replayBiome(
-      [branchWithGift('RandomBlessingKeepsake', 'ManaOverTimeRefundKeepsake')],
+      branchWithGift('RandomBlessingKeepsake', 'ManaOverTimeRefundKeepsake'),
       undefined,
       undefined,
       blessing,
@@ -712,8 +711,8 @@ describe('Echo Gift Gift Gift', () => {
         ]),
       },
     });
-    const replayed = replayBiome([branch], { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' })
-      .simulation.branches[0]!;
+    const replayed = replayBiome(branch, { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' })
+      .simulation.frontier!;
     expect(replayed.state.keepsakes.experimentalHammers).toHaveLength(2);
     const advanced = advanceExperimentalHammers(replayed.state.keepsakes);
     expect(advanced.expired).toEqual([
@@ -873,7 +872,7 @@ describe('Echo Gift Gift Gift', () => {
     });
     const h = evaluatedProject(project).route?.biomes.find((biome) => biome.biomeKey === 'H');
     if (h?.authoring !== 'complete') throw new Error('expected complete H');
-    expect(h.rewards.branches[0]?.state.traitHistory?.equippedTraits[giftTraitKey]).toMatchObject({
+    expect(h.rewards.frontier?.state.traitHistory?.equippedTraits[giftTraitKey]).toMatchObject({
       echoRepeatedKeepsakeKey: 'GoldifyKeepsake',
       echoKeepsakeReplayCount: 0,
     });
@@ -918,10 +917,10 @@ describe('Echo Gift Gift Gift', () => {
     if (
       reachedH === undefined ||
       !('rewards' in reachedH) ||
-      reachedH.rewards.branches[0] === undefined
+      reachedH.rewards.frontier === undefined
     )
       throw new Error('expected reached forced H miniboss frontier');
-    const before = reachedH.rewards.branches[0].state.traitHistory ?? createTraitHistoryState();
+    const before = reachedH.rewards.frontier.state.traitHistory ?? createTraitHistoryState();
     const loadout = project.route!.loadout;
     // Echo lengthens this characterized route into H's forced-miniboss window.
     // Reauthor only that target and its Boon leaf: retaining H_Combat05's old
@@ -1036,15 +1035,13 @@ describe('Echo Gift Gift Gift', () => {
     const i = evaluatedProject(project).route?.biomes.find((biome) => biome.biomeKey === 'I');
     if (i?.authoring !== 'complete' || i.validity !== 'valid')
       throw new Error(`expected valid I replay, got ${i?.validity ?? 'missing'}`);
-    expect(i.rewards.branches[0]?.state.traitHistory?.events).toContainEqual(
+    expect(i.rewards.frontier?.state.traitHistory?.events).toContainEqual(
       expect.objectContaining({
         kind: 'echoKeepsakeReplay',
         owner: createEchoKeepsakeReplayAddress(createBiomeAddress('Underworld', 'I')),
       }),
     );
-    expect(
-      i.rewards.branches[0]?.state.traitHistory?.equippedTraits[selectedTraitKey],
-    ).toMatchObject({
+    expect(i.rewards.frontier?.state.traitHistory?.equippedTraits[selectedTraitKey]).toMatchObject({
       hammerRank: 'RankI',
     });
     const replayResult = project.route.biomes.find(

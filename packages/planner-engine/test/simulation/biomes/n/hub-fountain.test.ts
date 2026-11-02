@@ -28,6 +28,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import type { CanonicalHubDecision } from '../../../../src/simulation/materialization';
 import type { HistoryEvent } from '../../../../src/simulation/history';
+import { reachedFrontier } from '../../../support/reward-frontier';
 
 const hub = createHubDecisionAddress(nBiome, 'hub');
 const fountain = createHubFountainAddress(nBiome, 'hub');
@@ -164,8 +165,8 @@ describe('Hub fountain settlement', () => {
         (event) => event.kind === 'roomCreated' && event.gameName === 'N_PreBoss01',
       );
       expect(preboss!.sequence).toBeGreaterThan(used);
-      expect(n.rewards.branches.every((branch) => branch.state.keepsakes.phial)).toBe(true);
-      expect(n.rewards.branches[0]?.state.keepsakes.phial).toEqual({ status: 'consumed' });
+      expect(reachedFrontier(n.rewards).every((branch) => branch.state.keepsakes.phial)).toBe(true);
+      expect(n.rewards.frontier?.state.keepsakes.phial).toEqual({ status: 'consumed' });
     },
   );
 

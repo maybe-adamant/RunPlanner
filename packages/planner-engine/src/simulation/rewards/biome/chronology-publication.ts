@@ -144,7 +144,7 @@ export function publishChronology(
     rerollSurfaces: accumulation.rerollSurfaces,
     storeSupport: accumulation.storeSupport,
     targetHistory: accumulation.targetHistory,
-    branches: Object.freeze(walk.branches.map(publicRewardBranch)),
+    frontier: walk.branches[0] === undefined ? undefined : publicRewardBranch(walk.branches[0]),
     findings: immutableFindings,
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,

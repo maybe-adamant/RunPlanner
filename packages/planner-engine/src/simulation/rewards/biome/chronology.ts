@@ -391,7 +391,7 @@ export function evaluateBiomeRewardChronology(
   history: BiomeRewardHistory,
   routePosition: ResolvedRoutePosition,
   routeLoadout: RouteLoadout,
-  initialBranches: readonly RewardBranch[] | undefined = undefined,
+  seedFrontier: RewardBranch | undefined = undefined,
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
   resourceFindings: readonly import('../../model').SemanticFinding[] = [],
 ): BiomeRewardEvaluationAssembly {
@@ -415,8 +415,8 @@ export function evaluateBiomeRewardChronology(
     context,
     createChronologyWalkState(
       initializeRewardBranches(
-        initialBranches,
-        initialBranches === undefined ? createArcanaFearState(catalog, routeLoadout) : undefined,
+        seedFrontier,
+        seedFrontier === undefined ? createArcanaFearState(catalog, routeLoadout) : undefined,
         catalog,
         routeLoadout.startingKeepsakeKey,
         routeLoadout.keepsakeEquipResults,
@@ -431,7 +431,7 @@ export function evaluateBiomeRewardChronology(
     entered,
     replayEchoKeepsake(context, accumulator, entered),
   );
-  if (initialBranches === undefined) walk = withRunStartGold(context, walk, routeLoadout);
+  if (seedFrontier === undefined) walk = withRunStartGold(context, walk, routeLoadout);
   const steps: WalkStep[] = [];
   for (const event of history.events) {
     if (walk.branches.length === 0) break;

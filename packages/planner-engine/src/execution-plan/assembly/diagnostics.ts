@@ -25,10 +25,8 @@ import {
 } from '../../simulation/traits/equipment-upgrades';
 import { keepsakeState } from './start-state';
 
-function executionCount(value: ExecutionRunStateCount): ExecutionRunStateCount {
-  return value.kind === 'exact'
-    ? Object.freeze({ kind: 'exact', count: value.count })
-    : Object.freeze({ kind: 'range', min: value.min, max: value.max });
+function executionCount(count: number): ExecutionRunStateCount {
+  return Object.freeze({ kind: 'exact', count });
 }
 
 const GORGON_SOURCE_RARITY_BY_LEVEL: Readonly<Record<GorgonRarityLevel, TraitRarity>> =

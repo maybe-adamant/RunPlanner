@@ -192,22 +192,20 @@ function evaluateNBossLifecycle(
       }),
     ),
     project.route!.loadout,
-    [
-      publicRewardBranch(
-        Object.freeze({
-          ...initializeTestRewardBranches(arcanaFear)[0]!,
-          state: Object.freeze({
-            ...initializeTestRewardBranches(arcanaFear)[0]!.state,
-            rewardHistory: attachTraitHistory(
-              initializeTestRewardBranches(arcanaFear)[0]!.state.rewardHistory,
-              traitHistory,
-            ),
-            traitHistory: traitHistory,
-            keepsakes: keepsakes,
-          }),
+    publicRewardBranch(
+      Object.freeze({
+        ...initializeTestRewardBranches(arcanaFear)[0]!,
+        state: Object.freeze({
+          ...initializeTestRewardBranches(arcanaFear)[0]!.state,
+          rewardHistory: attachTraitHistory(
+            initializeTestRewardBranches(arcanaFear)[0]!.state.rewardHistory,
+            traitHistory,
+          ),
+          traitHistory: traitHistory,
+          keepsakes: keepsakes,
         }),
-      ),
-    ],
+      }),
+    ),
   );
 }
 
@@ -336,7 +334,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       'TradeOff',
       ...safeJudgmentKeys,
     ]);
-    expect(invalidJudgment.simulation.branches).toHaveLength(0);
+    expect(invalidJudgment.simulation.frontier).toBeUndefined();
     expect(invalidJudgment.simulation.findings).toContainEqual(
       expect.objectContaining({
         code: 'judgmentOutcomeTargetUnavailable',
@@ -364,7 +362,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       ['TradeOff', 'ChanneledCast'],
       figurineKeepsake,
     );
-    expect(invalidFigurine.simulation.branches).toHaveLength(0);
+    expect(invalidFigurine.simulation.frontier).toBeUndefined();
     expect(invalidFigurine.simulation.findings).toContainEqual(
       expect.objectContaining({
         code: 'figurineOutcomeTargetUnavailable',
@@ -427,7 +425,7 @@ describe('Judgment fixed Boss lifecycle', () => {
     if (!seededJudgment.legal) throw new Error('Judgment test setup must be legal');
     const selected = inactive(['CardDraw'], 5);
     const result = evaluateNBossLifecycle(seededJudgment.state, selected);
-    const activation = result.simulation.branches[0]?.state.arcanaFear.events.find(
+    const activation = result.simulation.frontier?.state.arcanaFear.events.find(
       (event) => event.kind === 'temporaryArcanaActivated' && event.sequence === defeated.sequence,
     );
 
@@ -548,7 +546,7 @@ describe('Judgment fixed Boss lifecycle', () => {
         state,
         inactive(['CardDraw'], 5),
         barren,
-      ).simulation.branches[0]?.state.arcanaFear.events.filter(
+      ).simulation.frontier?.state.arcanaFear.events.filter(
         (event) => event.kind === 'temporaryArcanaActivated',
       );
     // Barren's acquire removed the held Judgment's trait.
@@ -570,7 +568,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       inactive(['CardDraw'], 5),
       barren,
     );
-    const branch = result.simulation.branches[0];
+    const branch = result.simulation.frontier;
     expect(branch?.state.traitHistory?.activeChaosCurses).toHaveLength(0);
     expect(branch?.state.traitHistory?.maturedChaosBlessings).toContainEqual(
       expect.objectContaining({ acquisitionIdentity: 'barren-final-boss-use' }),
@@ -659,7 +657,7 @@ describe('Judgment fixed Boss lifecycle', () => {
     const previous = evaluatedBiome(evaluation, 'P');
     const arcanaFear = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
     const keepsakes = createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', arcanaFear);
-    const priorBranch = previous.rewards.branches[0];
+    const priorBranch = previous.rewards.frontier;
     if (priorBranch === undefined) throw new Error('terminal Q needs a prior reward branch');
     const result = evaluateBiomeRewardsAssemblyInternal(
       catalog,
@@ -667,19 +665,17 @@ describe('Judgment fixed Boss lifecycle', () => {
       evaluated.history,
       ordinaryPositionFor(catalog, evaluated.snapshot),
       project.route!.loadout,
-      [
-        Object.freeze({
-          ...priorBranch,
-          state: Object.freeze({ ...priorBranch.state, keepsakes: keepsakes }),
-        }),
-      ],
+      Object.freeze({
+        ...priorBranch,
+        state: Object.freeze({ ...priorBranch.state, keepsakes: keepsakes }),
+      }),
     );
 
     expect(result.figurineArcanaArtifacts.at(figurine)).toBeUndefined();
     expect(result.simulation.findings).not.toContainEqual(
       expect.objectContaining({ origin: figurine, code: 'figurineOutcomeMissing' }),
     );
-    expect(result.simulation.branches[0]?.state.keepsakes.figurine).toEqual({
+    expect(result.simulation.frontier?.state.keepsakes.figurine).toEqual({
       origin: 'ordinary',
       status: 'pending',
       rarity: 'Epic',
@@ -700,7 +696,7 @@ describe('Judgment fixed Boss lifecycle', () => {
     expect(nBiome.validity).toBe('valid');
     expect(oBiome.validity).toBe('valid');
     if (oBiome.validity !== 'valid') throw new Error('O must be valid');
-    const active = oBiome.rewards.branches[0]!.state.arcanaFear.arcana.active;
+    const active = oBiome.rewards.frontier!.state.arcanaFear.arcana.active;
     expect(active.filter((card) => card.origin === 'temporary').map((card) => card.key)).toEqual([
       ...first,
       ...second,
@@ -763,7 +759,7 @@ describe('Judgment fixed Boss lifecycle', () => {
     const redKeys = inactive(['CardDraw'], 5);
     const red = evaluateNBossLifecycle(redActivated.state, redKeys);
     expect(red.simulation.validity).toBe('valid');
-    expect(red.simulation.branches[0]?.state.arcanaFear.arcana.active).toEqual(
+    expect(red.simulation.frontier?.state.arcanaFear.arcana.active).toEqual(
       expect.arrayContaining(
         redKeys.map((key) => expect.objectContaining({ key, origin: 'temporary' })),
       ),
@@ -773,7 +769,7 @@ describe('Judgment fixed Boss lifecycle', () => {
     const heroic = evaluateNBossLifecycle(promoted.state, heroicKeys);
     expect(heroic.simulation.validity).toBe('valid');
     expect(
-      heroic.simulation.branches[0]?.state.arcanaFear.arcana.active.filter((card) =>
+      heroic.simulation.frontier?.state.arcanaFear.arcana.active.filter((card) =>
         heroicKeys.includes(card.key),
       ),
     ).toHaveLength(6);
@@ -796,7 +792,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       figurineKeys,
       createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', seeded.state),
     );
-    const branch = result.simulation.branches[0];
+    const branch = result.simulation.frontier;
     if (branch === undefined) throw new Error('combined Boss transition should retain a branch');
     const activations = branch.state.arcanaFear.events.filter(
       (event) => event.kind === 'temporaryArcanaActivated',
@@ -849,7 +845,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       [sixInactive[5]!],
       createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', fewerState),
     );
-    const fewerBranch = fewer.simulation.branches[0];
+    const fewerBranch = fewer.simulation.frontier;
     expect(fewerBranch).toBeDefined();
     expect(fewerBranch?.state.arcanaFear.arcana.active.map((card) => card.key)).toContain(
       sixInactive[5],
@@ -865,7 +861,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       [],
       createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', emptyState),
     );
-    const emptyBranch = empty.simulation.branches[0];
+    const emptyBranch = empty.simulation.frontier;
     expect(emptyBranch).toBeDefined();
     expect(emptyBranch?.state.keepsakes.figurine?.status).toBe('consumed');
     expect(empty.simulation.bossArcanaOutcomes).toContainEqual(
@@ -903,7 +899,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       requiredCount: 2,
       inactiveArcanaKeys: safeRemainder,
     });
-    expect(partial.simulation.branches).toHaveLength(1);
+    expect(partial.simulation.frontier).toBeDefined();
     expect(partial.simulation.findings).not.toContainEqual(
       expect.objectContaining({ code: 'judgmentOutcomeWrongCardinality' }),
     );
@@ -920,7 +916,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       requiredCount: 0,
       inactiveArcanaKeys: [],
     });
-    expect(exhausted.simulation.branches).toHaveLength(1);
+    expect(exhausted.simulation.frontier).toBeDefined();
     expect(exhausted.simulation.findings).not.toContainEqual(
       expect.objectContaining({ code: 'judgmentOutcomeTargetUnavailable' }),
     );
@@ -949,7 +945,7 @@ describe('Judgment fixed Boss lifecycle', () => {
     expect(result.figurineArcanaArtifacts.at(figurine)?.inactiveArcanaKeys).not.toContain(
       'DoorReroll',
     );
-    expect(result.simulation.branches).toHaveLength(0);
+    expect(result.simulation.frontier).toBeUndefined();
     expect(result.simulation.findings).toContainEqual(
       expect.objectContaining({
         code: 'figurineOutcomeTargetUnavailable',
@@ -990,7 +986,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       selected,
       createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', seeded),
     );
-    expect(ordinary.simulation.branches[0]?.state.arcanaFear.arcana.active).toEqual(
+    expect(ordinary.simulation.frontier?.state.arcanaFear.arcana.active).toEqual(
       expect.arrayContaining(
         selected.map((key) =>
           expect.objectContaining({ key, origin: 'temporary', rarity: 'Epic' }),
@@ -1009,7 +1005,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       rarity: 'Heroic',
     });
     const heroic = evaluateNBossLifecycle(seeded, [], undefined, selected, advancedSource);
-    expect(heroic.simulation.branches[0]?.state.arcanaFear.arcana.active).toEqual(
+    expect(heroic.simulation.frontier?.state.arcanaFear.arcana.active).toEqual(
       expect.arrayContaining(
         selected.map((key) =>
           expect.objectContaining({ key, origin: 'temporary', rarity: 'Heroic' }),

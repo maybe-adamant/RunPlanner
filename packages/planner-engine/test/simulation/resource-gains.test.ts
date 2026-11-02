@@ -353,14 +353,12 @@ describe('resource gains in the Run State product', () => {
       next: at(owner('"golden-h-combat09","roomEntered"')),
       // Objects spawned at Fields entry but not yet collected at generation.
       pendingAtGeneration: generation.flatMap((checkpoint) =>
-        checkpoint.states.flatMap((state) =>
-          Object.values(state.pendingResourcePickups).flatMap((room) => Object.values(room)),
+        Object.values(checkpoint.state.pendingResourcePickups).flatMap((room) =>
+          Object.values(room),
         ),
       ),
       thresholdAtGeneration: generation.flatMap((checkpoint) =>
-        checkpoint.states.map((state) =>
-          evaluateRequirement(bonesAtThreshold, facts(state).requirements),
-        ),
+        evaluateRequirement(bonesAtThreshold, facts(checkpoint.state).requirements),
       ),
     };
   }

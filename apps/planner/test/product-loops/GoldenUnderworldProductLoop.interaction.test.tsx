@@ -934,7 +934,7 @@ describe('underworld product loop', () => {
       .flatMap((decision) => decision.targets)
       .find((target) => target.room.occurrenceId === anomaly)?.room;
     expect(anomalyRoom?.incomingReward?.offer).toBeDefined();
-    const hasConcreteAcquisition = gEvaluation.rewards.branches.some((branch) =>
+    const hasConcreteAcquisition = [gEvaluation.rewards.frontier!].some((branch) =>
       branch.events.some(
         (event) =>
           event.kind === 'concreteAcquisition' &&

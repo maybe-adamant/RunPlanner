@@ -50,6 +50,7 @@ import {
   initializeTestRewardBranchesForRoute,
 } from '../support/arcana-fear';
 import { ordinaryPositionFor } from '../support/route-position';
+import { reachedFrontier } from '../support/reward-frontier';
 
 const sash = 'ArmorGainKeepsake';
 const arcanaFear = createTestArcanaFearState();
@@ -163,7 +164,8 @@ function evaluated(project: ProjectDocument) {
     if (snapshot === undefined) throw new Error(`${occurrenceId} has no entry Run State`);
     return snapshot;
   };
-  const terminal = (biomeKey: string) => biome(biomeKey).rewards.branches.map((b) => b.state);
+  const terminal = (biomeKey: string) =>
+    reachedFrontier(biome(biomeKey).rewards).map((b) => b.state);
   return { evaluation, project, biome, entered, terminal };
 }
 
@@ -293,7 +295,7 @@ describe('Silken Sash at a biome start', () => {
         }),
       }),
     );
-    const replay = (biomeKey: 'F' | 'G', branches: readonly RewardBranch[]) => {
+    const replay = (biomeKey: 'F' | 'G', seedFrontier: RewardBranch | undefined) => {
       const biome = route.biome(biomeKey);
       return evaluateBiomeRewardsAssemblyInternal(
         catalog,
@@ -301,14 +303,14 @@ describe('Silken Sash at a biome start', () => {
         biome.history,
         ordinaryPositionFor(catalog, biome.snapshot),
         loadout,
-        branches,
+        seedFrontier,
       ).simulation;
     };
-    const f = replay('F', [seeded]);
-    const [fTerminal] = f.branches;
+    const f = replay('F', seeded);
+    const [fTerminal] = reachedFrontier(f);
     expect(fTerminal!.state.keepsakes.silkenSash).toBeUndefined();
     expect(fTerminal!.state.rewardHistory.itemArmor).toBeGreaterThan(30);
-    const g = replay('G', f.branches);
+    const g = replay('G', f.frontier);
     const gFirst = route.biome('G').snapshot.entryRoom.origin.occurrenceId;
     const entry = g.runStateSnapshots.find(
       (snapshot) =>

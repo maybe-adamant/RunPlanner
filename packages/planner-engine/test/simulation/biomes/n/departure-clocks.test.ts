@@ -20,7 +20,7 @@ import {
 describe('N room-departure clocks', () => {
   it('advances Fight Fight Fight decay and the Chaos rooms clock at every native departure', () => {
     const { result, departures, restored, curse } = walkWithDepartureClocks(0.8);
-    const events = result.simulation.branches[0]!.state.traitHistory.events;
+    const events = result.simulation.frontier!.state.traitHistory.events;
     const decay = events.filter(
       (event) =>
         (event.kind === 'roomDecayProgress' || event.kind === 'traitRemoval') &&
@@ -49,7 +49,7 @@ describe('N room-departure clocks', () => {
     expect(restores).toBeGreaterThan(0);
     expect(starts).toBeGreaterThan(5);
     expect(
-      result.simulation.branches[0]!.state.arcanaFear.arcana.roomEntryGrowth?.MaxHealthPerRoom,
+      result.simulation.frontier!.state.arcanaFear.arcana.roomEntryGrowth?.MaxHealthPerRoom,
     ).toMatchObject({ progress: starts % 5, grants: Math.floor(starts / 5) });
   });
 
@@ -61,7 +61,7 @@ describe('N room-departure clocks', () => {
       'ChaosMetaUpgradeCurse',
     );
     expect(curse.semanticTag).toBe('Barren');
-    const state = result.simulation.branches[0]!.state;
+    const state = result.simulation.frontier!.state;
     const expiry = state.traitHistory.events.filter(
       (event) => event.kind === 'chaosClock' && event.clock === 'encounters',
     )[curse.duration.maximum - 1]!.sequence;
@@ -84,7 +84,7 @@ describe('N room-departure clocks', () => {
     // Cleared at the first departure, then removed exactly at the first Hub departure.
     const fraction = 0.05 * firstHub - 0.01;
     const { result, departures } = walkWithDepartureClocks(fraction);
-    const removal = result.simulation.branches[0]!.state.traitHistory.events.find(
+    const removal = result.simulation.frontier!.state.traitHistory.events.find(
       (event) => event.kind === 'traitRemoval' && event.acquisitionRole === 'roomDecay',
     );
     expect(removal?.sequence).toBe(departures[firstHub]!.sequence);
@@ -108,7 +108,7 @@ describe('N room-departure clocks', () => {
     // The third native departure is the first Hub departure, a restored one.
     expect(restored.has(departures[2]!.sequence)).toBe(true);
     expectUsesAtSnapshots(result, 'rooms', 3, departures);
-    expect(result.simulation.branches[0]!.state.stygianWell.timedInstances).toEqual([
+    expect(result.simulation.frontier!.state.stygianWell.timedInstances).toEqual([
       // Only the N Boss defeat spends a boss use.
       wellInstance('TemporaryDoorHealTrait', 'bosses', 1),
     ]);
@@ -139,7 +139,7 @@ describe('N room-departure clocks', () => {
       wellHolding([wellInstance('TemporaryImprovedCastTrait', 'encounters', 5)]),
     );
     expectUsesAtSnapshots(result, 'encounters', 5, counted);
-    expect(result.simulation.branches[0]!.state.stygianWell.timedInstances).toEqual([]);
+    expect(result.simulation.frontier!.state.stygianWell.timedInstances).toEqual([]);
   });
 });
 

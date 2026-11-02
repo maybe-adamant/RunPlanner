@@ -48,6 +48,7 @@ import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
 
 import * as fixture from './support/progressive-biome-fixtures';
+import { reachedFrontier } from '../support/reward-frontier';
 
 const {
   applyProjectCommand,
@@ -297,7 +298,7 @@ describe('source room exit before a later block', () => {
           event.origin.occurrenceId === pCombat07,
       ),
     ).toBe(false);
-    for (const branch of p.rewards.branches)
+    for (const branch of reachedFrontier(p.rewards))
       expect(branch.state.traitHistory.events).toContainEqual(
         expect.objectContaining({
           kind: 'elementContribution',

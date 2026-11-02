@@ -233,7 +233,7 @@ describe('surface product loop', () => {
     if (pEvaluation === undefined || !('rewards' in pEvaluation)) {
       throw new Error('complete Surface Shop fixture did not evaluate P rewards');
     }
-    const branch = pEvaluation.rewards.branches[0];
+    const branch = pEvaluation.rewards.frontier;
     if (branch === undefined) throw new Error('complete Surface Shop fixture has no P branch');
     const event = branch.state.traitHistory?.events.find(
       (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(shopOffer),
@@ -591,7 +591,9 @@ describe('surface product loop', () => {
     const evaluation = currentEvaluation(application);
     const route = evaluation.route;
     const branches =
-      route?.biomes.flatMap((biome) => ('rewards' in biome ? biome.rewards.branches : [])) ?? [];
+      route?.biomes.flatMap((biome) =>
+        'rewards' in biome && biome.rewards.frontier !== undefined ? [biome.rewards.frontier] : [],
+      ) ?? [];
     const event = branches
       .flatMap((branch) => branch.state.traitHistory?.events ?? [])
       .find(

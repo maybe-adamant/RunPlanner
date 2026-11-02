@@ -1,5 +1,4 @@
 import type { Catalog } from '../../catalog-schema';
-import { sharedRewardLookups } from '../state/reward-lookups';
 import { isRequiredMissingInputFinding, type SemanticFinding } from '../model';
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import {
@@ -56,11 +55,10 @@ import type { BiomeRewardSimulation, RewardBranch } from '../rewards';
 import type { RerollSurfaceCandidateArtifacts } from '../rewards/biome/reroll-surfaces';
 import type { RewardProducerCandidateArtifacts } from '../rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
-import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes/encounter-effects';
 import { initialFigLeafState } from '../keepsakes/state';
-import { attestPendingHermesSpellDrop } from '../commerce/hermes-shrine';
-import { attestTalentDropsClosed } from '../hex-progress';
-import { attestEffectiveShadowRank } from '../arcana-fear';
+import { pendingHermesSpellDrop } from '../commerce/hermes-shrine';
+import { effectiveShadowRank } from '../arcana-fear';
+import { ProjectSimulationContractError } from '../evaluation/project-evaluation-assembly';
 import {
   firstUnsupportedFinding,
   findingsAtRegion,
@@ -77,8 +75,19 @@ import type {
 
 export interface ProgressiveSeed {
   readonly history: CanonicalBiomeHistory;
-  readonly rewardBranches: readonly RewardBranch[];
-  /** Run-persistent Hub offer inventory, captured at prior biome completion. */
+  /** The one state the predecessor's walk ended on, carrying its run-persistent offers. */
+  readonly rewardFrontier: RewardBranch;
+}
+
+/** A complete-valid predecessor seeds its successor with its history and its one reached state. */
+export function progressiveSeed(predecessor: {
+  readonly history: CanonicalBiomeHistory;
+  readonly rewards: BiomeRewardSimulation;
+}): ProgressiveSeed {
+  const rewardFrontier = predecessor.rewards.frontier;
+  if (rewardFrontier === undefined)
+    throw new ProjectSimulationContractError('a complete-valid biome has no reached state');
+  return Object.freeze({ history: predecessor.history, rewardFrontier });
 }
 
 export interface ProgressiveBiomeContext {
@@ -92,12 +101,12 @@ export interface ProgressiveBiomeContext {
   readonly seed?: ProgressiveSeed;
 }
 
-function figLeafLifecycleState(
+export function figLeafLifecycleState(
   catalog: Catalog,
   context: ProgressiveBiomeContext,
 ): FigLeafLifecycleState | undefined {
   if (context.seed !== undefined) {
-    const state = attestFigLeafBranchState(context.seed.rewardBranches);
+    const state = context.seed.rewardFrontier.state.keepsakes.figLeaf;
     return state === undefined
       ? undefined
       : { remainingUses: state.remainingUses, activatedThisBiome: false };
@@ -105,14 +114,14 @@ function figLeafLifecycleState(
   return initialFigLeafState(catalog, context.loadout.startingKeepsakeKey);
 }
 
-function pendingHermesSpellDropLifecycleState(context: ProgressiveBiomeContext): boolean {
+export function pendingHermesSpellDropLifecycleState(context: ProgressiveBiomeContext): boolean {
   return context.seed === undefined
     ? false
-    : attestPendingHermesSpellDrop(context.seed.rewardBranches);
+    : pendingHermesSpellDrop(context.seed.rewardFrontier.state);
 }
 
-function talentDropClosureLifecycleState(context: ProgressiveBiomeContext): boolean {
-  return context.seed === undefined ? false : attestTalentDropsClosed(context.seed.rewardBranches);
+export function talentDropClosureLifecycleState(context: ProgressiveBiomeContext): boolean {
+  return context.seed?.rewardFrontier.state.hexProgress.talentDropsClosed === true;
 }
 
 /** Classify only the exact active action that stopped lifecycle execution. */
@@ -224,7 +233,7 @@ function generation(
     new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room.preparation])),
     routePosition,
     rewards.figLeafPhaseCandidates,
-    attestGorgonBranchState(rewards.branches),
+    rewards.frontier?.state.keepsakes.gorgon?.status,
     rewards.gorgonPhaseCandidates,
     rewards.nemesisRandomEventCandidates,
     history.events,
@@ -301,7 +310,7 @@ function products(
     lifecycleFigLeafState,
     lifecyclePendingSpellDrop,
     lifecycleAllSpellInvested,
-    attestEffectiveShadowRank(context.loadout, context.seed?.rewardBranches),
+    effectiveShadowRank(context.loadout, context.seed?.rewardFrontier),
   );
   if (composed === null) {
     throw new Error(`${prefix.biomeKey} materialized prefix has no composable history`);
@@ -327,7 +336,7 @@ function products(
     history,
     context.routePosition,
     context.loadout,
-    context.seed?.rewardBranches,
+    context.seed?.rewardFrontier,
     context.resourcePlacements,
     context.resourceFindings,
   );
@@ -356,9 +365,7 @@ function products(
     rewards.objectInteractionArtifacts,
     rewards.encounterEntryVowRanks,
     context.forcedChaosOccurrenceKeys,
-    context.seed === undefined
-      ? undefined
-      : sharedRewardLookups(context.seed.rewardBranches.map((branch) => branch.state)),
+    context.seed?.rewardFrontier.state.rewardLookups,
   );
   return Object.freeze({
     evaluation: Object.freeze({

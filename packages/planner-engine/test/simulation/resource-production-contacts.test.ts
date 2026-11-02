@@ -239,9 +239,7 @@ describe('screen-produced pickup production', () => {
       loadout: project.route!.loadout,
       seed: {
         history: g.history,
-        rewardBranches: g.rewards.branches.map((branch) =>
-          withSteadyGrowthDueAt(branch, promotionOrdinal),
-        ),
+        rewardFrontier: withSteadyGrowthDueAt(g.rewards.frontier!, promotionOrdinal),
       },
     })?.evaluation.rewards;
     if (rewards === undefined) throw new Error('H published no reward assessment');

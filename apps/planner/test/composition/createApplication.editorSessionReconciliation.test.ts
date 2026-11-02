@@ -120,14 +120,14 @@ describe('application editor-session reconciliation', () => {
       if (baseline === undefined || !('rewards' in baseline)) {
         throw new Error('unvisited N Spell offer did not reach reward evaluation');
       }
-      expect(baseline.rewards.branches.length).toBeGreaterThan(0);
+      expect(baseline.rewards.frontier).toBeDefined();
       expect(
-        baseline.rewards.branches.every(
+        [baseline.rewards.frontier!].every(
           (branch) => branch.state.rewardHistory.useRecord.SpellDrop === undefined,
         ),
       ).toBe(true);
       expect(
-        baseline.rewards.branches.every((branch) =>
+        [baseline.rewards.frontier!].every((branch) =>
           Object.values(branch.state.pendingHermesShrineDeliveries ?? {}).every(
             (delivery) => delivery.rewardType !== 'SpellDrop',
           ),

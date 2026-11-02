@@ -34,7 +34,7 @@ function editAspect(project: ProjectDocument, ...edits: AuthoredHexTreeEdit[]): 
 function firstHexProgress(project: ProjectDocument) {
   const biome = simulateProject(catalog, project).route.biomes[0];
   if (biome === undefined || !('rewards' in biome)) throw new Error('first biome is unassessed');
-  return biome.rewards.branches[0]!.state.hexProgress;
+  return biome.rewards.frontier!.state.hexProgress;
 }
 
 describe('Hex tree settlement', () => {

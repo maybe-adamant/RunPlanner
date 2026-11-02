@@ -35,7 +35,11 @@ import {
 import type { CanonicalHubDecision } from '../materialization';
 import { isRequiredMissingInputFinding, type SemanticFinding } from '../model';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
-import { evaluateProgressiveBiome, evaluateSelectedProgressiveBiome } from '../progressive/biome';
+import {
+  evaluateProgressiveBiome,
+  evaluateSelectedProgressiveBiome,
+  progressiveSeed,
+} from '../progressive/biome';
 import { ownsOccurrence } from '../progressive/finding-location';
 import {
   effectiveRouteResourcePlacements,
@@ -198,10 +202,7 @@ function hubAlternativeContext(
     ...(previous === undefined
       ? {}
       : {
-          seed: Object.freeze({
-            history: previous.history,
-            rewardBranches: previous.rewards.branches,
-          }),
+          seed: progressiveSeed(previous),
         }),
   });
 }

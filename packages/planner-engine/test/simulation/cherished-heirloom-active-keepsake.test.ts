@@ -19,7 +19,6 @@ import {
   keepsakeRankForEquip,
   type KeepsakeState,
 } from '../../src/simulation/keepsakes/state';
-import { attestGorgonBranchState } from '../../src/simulation/keepsakes/encounter-effects';
 import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
@@ -30,6 +29,7 @@ import {
   foldTraitHistoryEvents,
   type TraitHistoryEvent,
 } from '../../src/simulation/traits';
+import { reachedFrontier } from '../support/reward-frontier';
 
 const loadout = createDefaultRouteLoadout(catalog);
 const arcanaFear = createArcanaFearState(catalog, loadout);
@@ -421,22 +421,13 @@ describe('Cherished Heirloom active keepsake advance', () => {
     },
   );
 
-  it('keeps equivalent branch advances attested and exposes a missed branch transition', () => {
+  it('advances the Gorgon state the same way for every giver and differs from a missed advance', () => {
     const initial = currentBranch('AthenaEncounterKeepsake');
     const demeter = acquireCherished(initial, 'Demeter');
     const hera = acquireCherished(initial, 'Hera');
-    expect(
-      attestGorgonBranchState([
-        { state: { keepsakes: demeter.state.keepsakes } },
-        { state: { keepsakes: hera.state.keepsakes } },
-      ]),
-    ).toBe('pending');
-    expect(() =>
-      attestGorgonBranchState([
-        { state: { keepsakes: demeter.state.keepsakes } },
-        { state: { keepsakes: initial.state.keepsakes } },
-      ]),
-    ).toThrow('Gorgon branch frontier is divergent');
+    expect(demeter.state.keepsakes.gorgon?.status).toBe('pending');
+    expect(hera.state.keepsakes.gorgon).toEqual(demeter.state.keepsakes.gorgon);
+    expect(initial.state.keepsakes.gorgon).not.toEqual(demeter.state.keepsakes.gorgon);
   });
 
   it.each(['Demeter', 'Hera'] as const)(
@@ -486,7 +477,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
         callingCard: { remainingCharges: 2 },
       }),
     );
-    const base = previous.rewards.branches[0];
+    const base = previous.rewards.frontier;
     if (base === undefined || active.state.traitHistory === undefined)
       throw new Error('missing progressive reward branch');
     const rewardBranch = Object.freeze({
@@ -504,7 +495,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
       loadout: route.loadout,
       seed: {
         history: previous.history,
-        rewardBranches: [rewardBranch],
+        rewardFrontier: rewardBranch,
       },
     } as const;
     const first = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, input);
@@ -512,12 +503,12 @@ describe('Cherished Heirloom active keepsake advance', () => {
     expect(first).not.toBeNull();
     expect(recomposed).not.toBeNull();
     expect(
-      first?.evaluation.rewards.branches.every(
+      reachedFrontier(first!.evaluation.rewards!).every(
         (branch) => branch.state.keepsakes.callingCard?.remainingCharges === 4,
       ),
     ).toBe(true);
     expect(
-      recomposed?.evaluation.rewards.branches.every(
+      reachedFrontier(recomposed!.evaluation.rewards!).every(
         (branch) => branch.state.keepsakes.callingCard?.remainingCharges === 4,
       ),
     ).toBe(true);

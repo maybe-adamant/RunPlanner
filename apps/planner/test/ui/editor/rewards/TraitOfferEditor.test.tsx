@@ -534,7 +534,7 @@ describe('trait offer editor entry and dialog', () => {
         for (const key of Object.values(payload!.allTogetherResult!)) {
           if (key !== null)
             expect(
-              evaluated.rewards.branches.every(
+              [evaluated.rewards.frontier!].every(
                 (branch) => branch.state.traitHistory?.equippedTraits[key] !== undefined,
               ),
             ).toBe(true);
@@ -542,7 +542,7 @@ describe('trait offer editor entry and dialog', () => {
       } else {
         expect(payload?.naturalSelectionTargets).toHaveLength(8);
         expect(
-          evaluated.rewards.branches.every(
+          [evaluated.rewards.frontier!].every(
             (branch) => branch.state.traitHistory?.equippedTraits.GoodStuffBoon !== undefined,
           ),
         ).toBe(true);
@@ -709,13 +709,13 @@ describe('trait offer editor entry and dialog', () => {
       ).evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
       if (evaluated === undefined || !('rewards' in evaluated))
         throw new Error('Stone room not evaluated');
-      expect(evaluated.rewards.branches.length).toBeGreaterThan(0);
+      expect(evaluated.rewards.frontier).toBeDefined();
       if (effect === 'All Together') {
         expect(payload.allTogetherResult).toBeDefined();
         for (const key of Object.values(payload.allTogetherResult!)) {
           if (key !== null)
             expect(
-              evaluated.rewards.branches.every(
+              [evaluated.rewards.frontier!].every(
                 (branch) => branch.state.traitHistory?.equippedTraits[key] !== undefined,
               ),
             ).toBe(true);
@@ -723,7 +723,7 @@ describe('trait offer editor entry and dialog', () => {
       } else {
         expect(payload.naturalSelectionTargets).toHaveLength(8);
         expect(
-          evaluated.rewards.branches.every(
+          [evaluated.rewards.frontier!].every(
             (branch) => branch.state.traitHistory?.equippedTraits.GoodStuffBoon !== undefined,
           ),
         ).toBe(true);

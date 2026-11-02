@@ -104,7 +104,7 @@ describe('Calling Card offer settlement', () => {
 
   it('consumes an unselected row action while acquiring a different selected option', () => {
     const result = rewards(projectWithCallingCard(['option2']));
-    const branch = result.branches[0]!;
+    const branch = result.frontier!;
     expect(branch.state.keepsakes.callingCard?.remainingCharges).toBe(5);
     expect(branch.state.traitHistory?.events).toContainEqual(
       expect.objectContaining({ kind: 'traitOffer', selectedOptionKey: 'option1' }),
@@ -116,7 +116,7 @@ describe('Calling Card offer settlement', () => {
 
   it('replays one row Common through Rare, Epic, and Heroic', () => {
     const result = rewards(projectWithCallingCard(['option1', 'option1', 'option1']));
-    const branch = result.branches[0]!;
+    const branch = result.frontier!;
     const event = branch.state.traitHistory?.events.find((entry) => entry.kind === 'traitOffer');
     expect(branch.state.keepsakes.callingCard?.remainingCharges).toBe(3);
     expect(event?.kind === 'traitOffer' ? event.options[0]?.rarity : undefined).toBe('Heroic');
@@ -126,7 +126,7 @@ describe('Calling Card offer settlement', () => {
     const result = rewards(
       projectWithCallingCard(['option1', 'option1', 'option1', 'option2', 'option2', 'option2']),
     );
-    const branch = result.branches[0]!;
+    const branch = result.frontier!;
     expect(branch.state.keepsakes.callingCard?.remainingCharges).toBe(0);
   });
 
@@ -138,7 +138,7 @@ describe('Calling Card offer settlement', () => {
       keepsakeKey: 'ManaOverTimeRefundKeepsake',
     });
     const inactiveResult = rewards(inactive);
-    expect(inactiveResult.branches[0]?.state.keepsakes.callingCard).toBeUndefined();
+    expect(inactiveResult.frontier?.state.keepsakes.callingCard).toBeUndefined();
     expect(inactiveResult.findings).toContainEqual(
       expect.objectContaining({
         code: 'callingCardRarificationUnavailable',
@@ -147,8 +147,8 @@ describe('Calling Card offer settlement', () => {
     );
 
     const valid = rewards(projectWithCallingCard(['option1']));
-    expect(valid.branches[0]?.state.keepsakes.callingCard?.remainingCharges).toBe(5);
-    expect(valid.branches[0]?.state.traitHistory?.events[0]).toEqual(
+    expect(valid.frontier?.state.keepsakes.callingCard?.remainingCharges).toBe(5);
+    expect(valid.frontier?.state.traitHistory?.events[0]).toEqual(
       expect.objectContaining({
         kind: 'traitOffer',
         options: expect.arrayContaining([expect.objectContaining({ rarity: 'Rare' })]),
@@ -179,7 +179,7 @@ describe('Calling Card offer settlement', () => {
       },
     });
     const result = rewards(project);
-    const branch = result.branches[0]!;
+    const branch = result.frontier!;
     expect(branch.state.keepsakes.callingCard?.remainingCharges).toBe(6);
     expect(branch.state.traitHistory?.events).toHaveLength(0);
     expect(result.findings).toContainEqual(

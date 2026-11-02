@@ -216,11 +216,11 @@ describe('finite Hex progress', () => {
       throw new Error('expected a complete valid F predecessor for the incoming-seed witness');
     }
     const seededBranch = Object.freeze({
-      ...f.rewards.branches[0]!,
+      ...f.rewards.frontier!,
       state: Object.freeze({
-        ...f.rewards.branches[0]!.state,
+        ...f.rewards.frontier!.state,
         hexProgress: Object.freeze({
-          ...f.rewards.branches[0]!.state.hexProgress,
+          ...f.rewards.frontier!.state.hexProgress,
           talentDropsClosed: true,
         }),
       }),
@@ -231,7 +231,7 @@ describe('finite Hex progress', () => {
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       seed: {
         history: f.history,
-        rewardBranches: [seededBranch],
+        rewardFrontier: seededBranch,
       },
     });
     if (evaluated.authoring !== 'complete' || evaluated.validity !== 'valid') {
@@ -239,10 +239,8 @@ describe('finite Hex progress', () => {
     }
     expect(evaluated.rewards.targetHistory).not.toHaveLength(0);
     expect(
-      evaluated.rewards.targetHistory.every((checkpoint) =>
-        checkpoint.states
-          .map((state) => state.hexProgress.talentDropsClosed === true)
-          .every(Boolean),
+      evaluated.rewards.targetHistory.every(
+        (checkpoint) => checkpoint.state.hexProgress.talentDropsClosed === true,
       ),
     ).toBe(true);
   });

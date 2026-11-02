@@ -1874,17 +1874,17 @@ describe('Chaos paired-trait history', () => {
         terminalHistory,
         ordinaryPositionFor(catalog, p.snapshot),
         route.loadout,
-        [branchWithHistory(oneUseRemaining)],
+        branchWithHistory(oneUseRemaining),
       ).simulation;
       const newEncounterClocks =
-        result.branches[0]?.state.traitHistory?.events.filter(
+        result.frontier?.state.traitHistory?.events.filter(
           (event) =>
             event.kind === 'chaosClock' && event.sequence > 3 && event.clock === 'encounters',
         ) ?? [];
       expect(newEncounterClocks).toEqual([
         expect.objectContaining({ sequence: terminal[0]?.sequence }),
       ]);
-      expect(result.branches[0]?.state.traitHistory?.activeChaosCurses).toHaveLength(0);
+      expect(result.frontier?.state.traitHistory?.activeChaosCurses).toHaveLength(0);
     }
   });
 });

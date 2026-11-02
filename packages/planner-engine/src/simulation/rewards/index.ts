@@ -31,7 +31,6 @@ export type {
 export type {
   DecisionCounterState,
   DecisionGodPoolState,
-  DecisionRewardBagCount,
   DecisionRewardBagConditionGroup,
   DecisionRewardBagEntryGroup,
   DecisionRewardBagState,

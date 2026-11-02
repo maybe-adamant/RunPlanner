@@ -83,7 +83,7 @@ describe('Fig Leaf state contract', () => {
     if (biome === undefined || !('rewards' in biome))
       throw new Error('F reward evaluation missing');
     expect(biome.rewards.validity).toBe('invalid');
-    expect(biome.rewards.branches[0]?.state.keepsakes.figLeaf).toEqual({
+    expect(biome.rewards.frontier?.state.keepsakes.figLeaf).toEqual({
       remainingUses: 2,
       activatedThisBiome: true,
     });
@@ -138,8 +138,7 @@ describe('Fig Leaf state contract', () => {
     expect(route).toBeDefined();
     expect(route?.biomes.every((biome) => 'rewards' in biome)).toBe(true);
     for (const biome of route?.biomes ?? []) {
-      if ('rewards' in biome)
-        expect(biome.rewards.branches[0]?.state.keepsakes.figLeaf).toBeDefined();
+      if ('rewards' in biome) expect(biome.rewards.frontier?.state.keepsakes.figLeaf).toBeDefined();
     }
   });
 
@@ -158,7 +157,7 @@ describe('Fig Leaf state contract', () => {
     if (p === undefined || q === undefined) throw new Error('P/Q reward evaluations missing');
     const pCandidates = p.rewards.figLeafPhaseCandidates;
     const qCandidates = q.rewards.figLeafPhaseCandidates;
-    expect(n?.rewards.branches[0]?.state.keepsakes.figLeaf).toEqual({
+    expect(n?.rewards.frontier?.state.keepsakes.figLeaf).toEqual({
       remainingUses: 3,
       activatedThisBiome: false,
     });
@@ -315,7 +314,7 @@ describe('Fig Leaf state contract', () => {
     expect(events).not.toHaveLength(0);
     expect(events.every((event) => event.execution === 'skippedByFigLeaf')).toBe(true);
     expect(events.every((event) => event.figLeafSkipOwner === true)).toBe(true);
-    expect(q.rewards.branches[0]?.state.keepsakes.figLeaf).toEqual({
+    expect(q.rewards.frontier?.state.keepsakes.figLeaf).toEqual({
       remainingUses: 2,
       activatedThisBiome: true,
     });
@@ -364,7 +363,7 @@ describe('Fig Leaf state contract', () => {
             semanticAddressKey(createFigLeafPhaseAddress(phase)),
       ),
     ).toBe(true);
-    expect(f.rewards.branches[0]?.state.keepsakes.figLeaf).toBeUndefined();
+    expect(f.rewards.frontier?.state.keepsakes.figLeaf).toBeUndefined();
   });
 
   it('stops at a fourth selected phase after three legal biome skips exhaust total uses', () => {
@@ -421,7 +420,7 @@ describe('Fig Leaf state contract', () => {
       ),
     ).toBe(true);
     if (!('rewards' in q)) throw new Error('Q rewards missing');
-    expect(q.rewards.branches[0]?.state.keepsakes.figLeaf).toEqual({
+    expect(q.rewards.frontier?.state.keepsakes.figLeaf).toEqual({
       remainingUses: 0,
       activatedThisBiome: false,
     });
@@ -453,11 +452,11 @@ describe('Fig Leaf state contract', () => {
     if (n === undefined || !('rewards' in n) || o === undefined || !('rewards' in o)) {
       throw new Error('N/O rewards missing');
     }
-    expect(n.rewards.branches[0]?.state.keepsakes.figLeaf).toEqual({
+    expect(n.rewards.frontier?.state.keepsakes.figLeaf).toEqual({
       remainingUses: 2,
       activatedThisBiome: true,
     });
-    expect(o.rewards.branches[0]?.state.keepsakes).toMatchObject({
+    expect(o.rewards.frontier?.state.keepsakes).toMatchObject({
       currentKey: 'GoldifyKeepsake',
       figLeaf: { remainingUses: 2, activatedThisBiome: false },
     });

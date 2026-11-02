@@ -604,7 +604,7 @@ describe('Shop trait acquisition processing', () => {
     expect(trace.address.owner).toEqual(shopOffer);
     expect(trace.acquisitionRole).toBe('weaponUpgrade');
 
-    const branch = pEvaluation.rewards.branches[0];
+    const branch = pEvaluation.rewards.frontier;
     if (branch === undefined) throw new Error('complete Surface fixture has no P reward branch');
     const event = branch.state.traitHistory?.events.find(
       (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(shopOffer),

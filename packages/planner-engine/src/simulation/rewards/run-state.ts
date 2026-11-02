@@ -30,7 +30,7 @@ import { echoShopDuplicateStatus, steadyGrowthInterval } from '../traits/history
 import type { SimulationState } from '../state/model';
 import {
   artificerStatus,
-  attestEffectiveHordesRank,
+  effectiveHordesRank,
   rerollKindEnabled,
   rerollPoolRemaining,
 } from '../arcana-fear';
@@ -103,25 +103,21 @@ export interface DecisionCounterState extends HistoryCounters {
   readonly lastDevotionDepth?: number;
 }
 
-export type DecisionRewardBagCount =
-  | { readonly kind: 'exact'; readonly count: number }
-  | { readonly kind: 'range'; readonly min: number; readonly max: number };
-
 export interface DecisionRewardBagConditionGroup {
   readonly requirement?: RequirementExpression;
-  readonly remaining: DecisionRewardBagCount;
+  readonly remaining: number;
 }
 
 export interface DecisionRewardBagEntryGroup {
   readonly rewardType: string;
   readonly eligibility: 'eligible' | 'ineligible';
-  readonly remaining: DecisionRewardBagCount;
+  readonly remaining: number;
   readonly conditions: readonly DecisionRewardBagConditionGroup[];
 }
 
 export interface DecisionRewardBagState {
   readonly storeKey: string;
-  readonly remaining: DecisionRewardBagCount;
+  readonly remaining: number;
   readonly entries: readonly DecisionRewardBagEntryGroup[];
 }
 
@@ -217,13 +213,11 @@ interface RunStateContext {
   readonly layout: BiomeLayout;
   readonly owner: RunStateOwner;
   /**
-   * The exact reached snapshots this checkpoint projects, in branch order. Each
-   * already carries the checkpoint's history view and route position, so the
-   * projection never receives a second copy of either. Every state must have
-   * been reached at the same view and position: one checkpoint has one history
-   * sequence, and the projection reads it from the first state.
+   * The exact reached state this checkpoint projects. It already carries the
+   * checkpoint's history view and route position, so the projection never
+   * receives a second copy of either.
    */
-  readonly states: readonly SimulationState[];
+  readonly state: SimulationState;
   readonly rewardFacts: (state: SimulationState) => RewardKernelFacts;
   readonly derivationCache?: RunStateDerivationCache;
   /** Exact source/view/shop/peer closure used by rewardFacts. Required with a shared cache. */
@@ -233,7 +227,7 @@ interface RunStateContext {
 interface RunStateDerivationCache {
   readonly objectIds: WeakMap<object, number>;
   readonly traitsByHistory: WeakMap<TraitHistoryState, DecisionTraitState>;
-  readonly bagsByBranchState: Map<string, readonly DecisionRewardBagState[]>;
+  readonly bagsByState: Map<string, readonly DecisionRewardBagState[]>;
   readonly bagCountsByState: WeakMap<SimulationState['bags'], string>;
   readonly factsByContextHistory: Map<string, RewardKernelFacts>;
   readonly godPoolByContextHistory: Map<string, DecisionGodPoolState>;
@@ -244,7 +238,7 @@ interface RunStateDerivationCache {
       readonly byStore: ReadonlyMap<string, readonly boolean[]>;
     }
   >;
-  readonly branchStateByIdentity: Map<
+  readonly derivedByIdentity: Map<
     string,
     {
       readonly godPool: DecisionGodPoolState;
@@ -270,12 +264,12 @@ export function createRunStateDerivationCache(): RunStateDerivationCache {
   return {
     objectIds: new WeakMap(),
     traitsByHistory: new WeakMap(),
-    bagsByBranchState: new Map(),
+    bagsByState: new Map(),
     bagCountsByState: new WeakMap(),
     factsByContextHistory: new Map(),
     godPoolByContextHistory: new Map(),
     bagEligibilityByContextHistory: new Map(),
-    branchStateByIdentity: new Map(),
+    derivedByIdentity: new Map(),
     nextObjectId: 1,
   };
 }
@@ -323,198 +317,82 @@ function rewardBagCountSignature(catalog: Catalog, bags: SimulationState['bags']
     .join('|');
 }
 
-export function aggregateDecisionRewardBag(
+function decisionRewardBag(
   store: RewardStoreDeclaration,
-  states: readonly Pick<SimulationState, 'bags'>[],
-  factsByBranch: readonly RewardKernelFacts[],
-  eligibilityByBranch?: readonly (readonly boolean[])[],
+  state: Pick<SimulationState, 'bags'>,
+  facts: RewardKernelFacts,
+  eligibility?: readonly boolean[],
 ): DecisionRewardBagState {
-  type BranchCondition = { readonly requirement?: RequirementExpression; count: number };
-  type BranchGroup = {
+  type Group = {
     readonly rewardType: string;
     readonly eligibility: 'eligible' | 'ineligible';
     total: number;
-    readonly conditions: Map<string, BranchCondition>;
+    readonly conditions: Map<
+      string,
+      { readonly requirement?: RequirementExpression; count: number }
+    >;
   };
   // Entries outside the route's bag are never filled and never projected.
-  const routeKey = factsByBranch[0]?.requirements.routeKey;
+  const routeKey = facts.requirements.routeKey;
   if (routeKey === undefined) throw new Error(`run-state store ${store.key} has no route identity`);
-  const initialCounts = createRewardBagState(store, routeKey).remainingEntryCounts;
-  const entryDescriptors = store.entries.flatMap((entry, entryIndex) =>
-    storeEntryOnRoute(entry, routeKey)
-      ? [
-          {
-            entry,
-            entryIndex,
-            conditionKey: JSON.stringify(entry.requirement),
-            eligibleKey: JSON.stringify([entry.rewardType, 'eligible']),
-            ineligibleKey: JSON.stringify([entry.rewardType, 'ineligible']),
-          },
-        ]
-      : [],
-  );
-  if (states.length === 1) {
-    const state = states[0];
-    const facts = factsByBranch[0];
-    if (state === undefined || facts === undefined) {
-      throw new Error(`run-state store ${store.key} has no branch facts`);
+  const counts =
+    state.bags[store.key]?.remainingEntryCounts ??
+    createRewardBagState(store, routeKey).remainingEntryCounts;
+  const groups = new Map<string, Group>();
+  let storeTotal = 0;
+  store.entries.forEach((entry, entryIndex) => {
+    if (!storeEntryOnRoute(entry, routeKey)) return;
+    const requirement = entry.requirement;
+    const entryEligibility =
+      eligibility?.[entryIndex] === true ||
+      (eligibility === undefined &&
+        (requirement === undefined || evaluateRequirement(requirement, facts.requirements)))
+        ? 'eligible'
+        : 'ineligible';
+    const key = JSON.stringify([entry.rewardType, entryEligibility]);
+    const conditionKey = JSON.stringify(requirement);
+    const remaining = counts[entryIndex] ?? 0;
+    storeTotal += remaining;
+    let group = groups.get(key);
+    if (group === undefined) {
+      group = {
+        rewardType: entry.rewardType,
+        eligibility: entryEligibility,
+        total: 0,
+        conditions: new Map(),
+      };
+      groups.set(key, group);
     }
-    const counts = state.bags[store.key]?.remainingEntryCounts ?? initialCounts;
-    const groups = new Map<string, BranchGroup>();
-    let storeTotal = 0;
-    for (const descriptor of entryDescriptors) {
-      const { entryIndex } = descriptor;
-      const { entry } = descriptor;
-      const requirement = entry.requirement;
-      const eligibility =
-        eligibilityByBranch?.[0]?.[entryIndex] === true ||
-        (eligibilityByBranch === undefined &&
-          (requirement === undefined || evaluateRequirement(requirement, facts.requirements)))
-          ? 'eligible'
-          : 'ineligible';
-      const key = eligibility === 'eligible' ? descriptor.eligibleKey : descriptor.ineligibleKey;
-      const conditionKey = descriptor.conditionKey;
-      const remaining = counts[entryIndex] ?? 0;
-      storeTotal += remaining;
-      let group = groups.get(key);
-      if (group === undefined) {
-        group = {
-          rewardType: entry.rewardType,
-          eligibility,
-          total: 0,
-          conditions: new Map(),
-        };
-        groups.set(key, group);
-      }
-      group.total += remaining;
-      const condition = group.conditions.get(conditionKey);
-      if (condition === undefined) {
-        group.conditions.set(conditionKey, {
-          ...(requirement === undefined ? {} : { requirement }),
-          count: remaining,
-        });
-      } else {
-        condition.count += remaining;
-      }
-    }
-    return Object.freeze({
-      storeKey: store.key,
-      remaining: Object.freeze({ kind: 'exact' as const, count: storeTotal }),
-      entries: Object.freeze(
-        [...groups.values()].map((group) =>
-          Object.freeze({
-            rewardType: group.rewardType,
-            eligibility: group.eligibility,
-            remaining: Object.freeze({ kind: 'exact' as const, count: group.total }),
-            conditions: Object.freeze(
-              [...group.conditions.values()].map((condition) =>
-                Object.freeze({
-                  ...(condition.requirement === undefined
-                    ? {}
-                    : { requirement: condition.requirement }),
-                  remaining: Object.freeze({ kind: 'exact' as const, count: condition.count }),
-                }),
-              ),
-            ),
-          }),
-        ),
-      ),
-    });
-  }
-  const groups = new Map<
-    string,
-    {
-      readonly rewardType: string;
-      readonly eligibility: 'eligible' | 'ineligible';
-      readonly totalsByBranch: Float64Array;
-      readonly conditions: Map<
-        string,
-        { readonly requirement?: RequirementExpression; countsByBranch: Float64Array }
-      >;
-    }
-  >();
-  const storeTotals = new Float64Array(states.length);
-  for (const [branchIndex, state] of states.entries()) {
-    const facts = factsByBranch[branchIndex];
-    if (facts === undefined) {
-      throw new Error(`run-state store ${store.key} has no facts for branch ${branchIndex}`);
-    }
-    const bag = state.bags[store.key];
-    const counts = bag?.remainingEntryCounts ?? initialCounts;
-    for (const descriptor of entryDescriptors) {
-      const { entryIndex } = descriptor;
-      const { entry } = descriptor;
-      const requirement = entry.requirement;
-      const eligibility =
-        eligibilityByBranch?.[branchIndex]?.[entryIndex] === true ||
-        (eligibilityByBranch === undefined &&
-          (requirement === undefined || evaluateRequirement(requirement, facts.requirements)))
-          ? 'eligible'
-          : 'ineligible';
-      const key = eligibility === 'eligible' ? descriptor.eligibleKey : descriptor.ineligibleKey;
-      const conditionKey = descriptor.conditionKey;
-      const remaining = counts[entryIndex] ?? 0;
-      storeTotals[branchIndex] = (storeTotals[branchIndex] ?? 0) + remaining;
-      let group = groups.get(key);
-      if (group === undefined) {
-        group = {
-          rewardType: entry.rewardType,
-          eligibility,
-          totalsByBranch: new Float64Array(states.length),
-          conditions: new Map(),
-        };
-        groups.set(key, group);
-      }
-      group.totalsByBranch[branchIndex] = (group.totalsByBranch[branchIndex] ?? 0) + remaining;
-      const condition = group.conditions.get(conditionKey);
-      if (condition === undefined) {
-        const countsByBranch = new Float64Array(states.length);
-        countsByBranch[branchIndex] = remaining;
-        group.conditions.set(conditionKey, {
-          ...(requirement === undefined ? {} : { requirement }),
-          countsByBranch,
-        });
-      } else {
-        condition.countsByBranch[branchIndex] =
-          (condition.countsByBranch[branchIndex] ?? 0) + remaining;
-      }
-    }
-  }
-
-  const count = (counts: ArrayLike<number>): DecisionRewardBagCount => {
-    let min = Number.POSITIVE_INFINITY;
-    let max = Number.NEGATIVE_INFINITY;
-    for (let index = 0; index < counts.length; index += 1) {
-      const value = counts[index] ?? 0;
-      if (value < min) min = value;
-      if (value > max) max = value;
-    }
-    return min === max
-      ? Object.freeze({ kind: 'exact' as const, count: min })
-      : Object.freeze({ kind: 'range' as const, min, max });
-  };
-
+    group.total += remaining;
+    const condition = group.conditions.get(conditionKey);
+    if (condition === undefined)
+      group.conditions.set(conditionKey, {
+        ...(requirement === undefined ? {} : { requirement }),
+        count: remaining,
+      });
+    else condition.count += remaining;
+  });
   return Object.freeze({
     storeKey: store.key,
-    remaining: count(storeTotals),
+    remaining: storeTotal,
     entries: Object.freeze(
-      [...groups.values()].map((group) => {
-        return Object.freeze({
+      [...groups.values()].map((group) =>
+        Object.freeze({
           rewardType: group.rewardType,
           eligibility: group.eligibility,
-          remaining: count(group.totalsByBranch),
+          remaining: group.total,
           conditions: Object.freeze(
             [...group.conditions.values()].map((condition) =>
               Object.freeze({
                 ...(condition.requirement === undefined
                   ? {}
                   : { requirement: condition.requirement }),
-                remaining: count(condition.countsByBranch),
+                remaining: condition.count,
               }),
             ),
           ),
-        });
-      }),
+        }),
+      ),
     ),
   });
 }
@@ -630,26 +508,13 @@ function sourcePool(
   });
 }
 
-export function createRunState(context: RunStateContext): RunStateSnapshot | undefined {
-  const firstState = context.states[0];
-  if (firstState === undefined) return undefined;
-  // One checkpoint has one history sequence and one route position, and the
-  // published snapshot reads both from the first state. The branch-agreement
-  // throw below compares derived counters, which carry the ledger counts and
-  // the entered-biome ordinal but not the view's sequence.
-  for (const state of context.states) {
-    if (
-      state.reached.historyView !== firstState.reached.historyView ||
-      state.reached.routePosition !== firstState.reached.routePosition
-    ) {
-      throw new Error('run-state branches were not reached at one exact view and route position');
-    }
-  }
+export function createRunState(context: RunStateContext): RunStateSnapshot {
+  const state = context.state;
   const derivationCache = context.derivationCache;
   if (derivationCache !== undefined && context.factsContextToken === undefined) {
     throw new Error('run-state shared derivation cache requires an exact facts context token');
   }
-  const contextHistoryKeys = context.states.map((state) =>
+  const contextHistoryKey =
     derivationCache === undefined
       ? undefined
       : [
@@ -658,181 +523,143 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
           objectId(derivationCache, state.pendingHermesShrineDeliveries),
           objectId(derivationCache, state.hexProgress),
           objectId(derivationCache, state.rewardLookups),
-        ].join(':'),
-  );
-  const factsByBranch = context.states.map((state, branchIndex) => {
-    const contextHistoryKey = contextHistoryKeys[branchIndex];
+        ].join(':');
+  const facts = (() => {
     const cached =
       contextHistoryKey === undefined
         ? undefined
         : derivationCache?.factsByContextHistory.get(contextHistoryKey);
     if (cached !== undefined) return cached;
-    const facts = context.rewardFacts(state);
-    if (contextHistoryKey !== undefined) {
-      derivationCache?.factsByContextHistory.set(contextHistoryKey, facts);
-    }
-    return facts;
-  });
-  const branchStates = context.states.map((state, index) => {
-    const facts = factsByBranch[index];
-    const contextHistoryKey = contextHistoryKeys[index];
-    if (facts === undefined) {
-      throw new Error('run-state branch has no reward facts');
-    }
-    const cache = context.derivationCache;
-    const identityKey =
-      cache === undefined
+    const computed = context.rewardFacts(state);
+    if (contextHistoryKey !== undefined)
+      derivationCache?.factsByContextHistory.set(contextHistoryKey, computed);
+    return computed;
+  })();
+  const cache = derivationCache;
+  const identityKey =
+    cache === undefined
+      ? undefined
+      : [
+          contextHistoryKey,
+          objectId(cache, state.traitHistory),
+          objectId(cache, state.arcanaFear),
+          objectId(cache, state.keepsakes),
+          objectId(cache, state.rewardPriorities),
+          objectId(cache, state.pendingHermesShrineDeliveries),
+          objectId(cache, state.stygianWell),
+          objectId(cache, state.hexProgress),
+          objectId(cache, state.equipment),
+        ].join(':');
+  let derived = identityKey === undefined ? undefined : cache?.derivedByIdentity.get(identityKey);
+  if (derived === undefined) {
+    const cachedGodPool =
+      contextHistoryKey === undefined
         ? undefined
-        : [
-            contextHistoryKey,
-            objectId(cache, state.traitHistory),
-            objectId(cache, state.arcanaFear),
-            objectId(cache, state.keepsakes),
-            objectId(cache, state.rewardPriorities),
-            objectId(cache, state.pendingHermesShrineDeliveries),
-            objectId(cache, state.stygianWell),
-            objectId(cache, state.hexProgress),
-            objectId(cache, state.equipment),
-          ].join(':');
-    let derived =
-      identityKey === undefined ? undefined : cache?.branchStateByIdentity.get(identityKey);
-    if (derived === undefined) {
-      const cachedGodPool =
-        contextHistoryKey === undefined
-          ? undefined
-          : cache?.godPoolByContextHistory.get(contextHistoryKey);
-      const godPool = cachedGodPool ?? sourcePool(context.catalog, facts);
-      if (cachedGodPool === undefined && contextHistoryKey !== undefined) {
-        cache?.godPoolByContextHistory.set(contextHistoryKey, godPool);
-      }
-      const cachedTraits = cache?.traitsByHistory.get(state.traitHistory);
-      const traits = cachedTraits ?? traitState(context.catalog, state.traitHistory);
-      if (cachedTraits === undefined) cache?.traitsByHistory.set(state.traitHistory, traits);
-      derived = Object.freeze({
-        godPool,
-        traits,
-        arcanaFear: state.arcanaFear,
-        keepsakes: state.keepsakes,
-        rewardPriorities: state.rewardPriorities,
-        pendingHermesShrineDeliveries: state.pendingHermesShrineDeliveries,
-        stygianWell: state.stygianWell,
-        stygianWellLegality: projectStygianWellLegality(context.catalog, state.stygianWell),
-        hexProgress: state.hexProgress,
-        forfeitStatus: forfeitStatus(state.arcanaFear),
-        resourceGains: state.rewardHistory.resourceGains,
-        maxStats: deriveMaxStats(context.catalog, state),
-        armor: deriveArmor(context.catalog, state),
-        effects: deriveRunStateEffects(context.catalog, state),
-      });
-      if (identityKey !== undefined) {
-        cache?.branchStateByIdentity.set(identityKey, derived);
-      }
+        : cache?.godPoolByContextHistory.get(contextHistoryKey);
+    const godPool = cachedGodPool ?? sourcePool(context.catalog, facts);
+    if (cachedGodPool === undefined && contextHistoryKey !== undefined) {
+      cache?.godPoolByContextHistory.set(contextHistoryKey, godPool);
     }
-    return Object.freeze({ ...derived, counters: historyCounters(state) });
-  });
-  const first = branchStates[0];
-  if (first === undefined) return undefined;
-  for (const state of branchStates.slice(1)) {
-    if (JSON.stringify(state) !== JSON.stringify(first)) {
-      throw new Error(
-        'run-state non-bag facts vary across exact reward branches and require an explicit product',
-      );
-    }
+    const cachedTraits = cache?.traitsByHistory.get(state.traitHistory);
+    const traits = cachedTraits ?? traitState(context.catalog, state.traitHistory);
+    if (cachedTraits === undefined) cache?.traitsByHistory.set(state.traitHistory, traits);
+    derived = Object.freeze({
+      godPool,
+      traits,
+      arcanaFear: state.arcanaFear,
+      keepsakes: state.keepsakes,
+      rewardPriorities: state.rewardPriorities,
+      pendingHermesShrineDeliveries: state.pendingHermesShrineDeliveries,
+      stygianWell: state.stygianWell,
+      stygianWellLegality: projectStygianWellLegality(context.catalog, state.stygianWell),
+      hexProgress: state.hexProgress,
+      forfeitStatus: forfeitStatus(state.arcanaFear),
+      resourceGains: state.rewardHistory.resourceGains,
+      maxStats: deriveMaxStats(context.catalog, state),
+      armor: deriveArmor(context.catalog, state),
+      effects: deriveRunStateEffects(context.catalog, state),
+    });
+    if (identityKey !== undefined) cache?.derivedByIdentity.set(identityKey, derived);
   }
-  const bagEligibilityByBranch = contextHistoryKeys.map((contextHistoryKey, index) => {
+  const projected = Object.freeze({ ...derived, counters: historyCounters(state) });
+  const bagEligibility = (() => {
     const cached =
       contextHistoryKey === undefined
         ? undefined
         : derivationCache?.bagEligibilityByContextHistory.get(contextHistoryKey);
     if (cached !== undefined) return cached;
-    const facts = factsByBranch[index];
-    if (facts === undefined) throw new Error('run-state branch has no reward facts');
     const signature = rewardBagEligibilitySignature(context.catalog, facts);
-    if (contextHistoryKey !== undefined) {
+    if (contextHistoryKey !== undefined)
       derivationCache?.bagEligibilityByContextHistory.set(contextHistoryKey, signature);
-    }
     return signature;
-  });
-  const bagCountsByBranch = context.states.map((state) => {
+  })();
+  const bagCounts = (() => {
     const cached = derivationCache?.bagCountsByState.get(state.bags);
     if (cached !== undefined) return cached;
     const signature = rewardBagCountSignature(context.catalog, state.bags);
     derivationCache?.bagCountsByState.set(state.bags, signature);
     return signature;
-  });
+  })();
   const bagCacheKey =
-    derivationCache === undefined
-      ? undefined
-      : context.states
-          .map(
-            (_state, index) =>
-              `${bagCountsByBranch[index] ?? ''}:${bagEligibilityByBranch[index]?.signature ?? ''}`,
-          )
-          .join('|');
-  let bags =
-    bagCacheKey === undefined ? undefined : derivationCache?.bagsByBranchState.get(bagCacheKey);
+    derivationCache === undefined ? undefined : `${bagCounts}:${bagEligibility.signature}`;
+  let bags = bagCacheKey === undefined ? undefined : derivationCache?.bagsByState.get(bagCacheKey);
   if (bags === undefined) {
     bags = Object.freeze(
       context.catalog.rewards.stores.values.map((store) =>
-        aggregateDecisionRewardBag(
-          store,
-          context.states,
-          factsByBranch,
-          bagEligibilityByBranch.map((eligibility) => eligibility.byStore.get(store.key) ?? []),
-        ),
+        decisionRewardBag(store, state, facts, bagEligibility.byStore.get(store.key) ?? []),
       ),
     );
-    if (bagCacheKey !== undefined) {
-      derivationCache?.bagsByBranchState.set(bagCacheKey, bags);
-    }
+    if (bagCacheKey !== undefined) derivationCache?.bagsByState.set(bagCacheKey, bags);
   }
-  const currentArtificerStatus = artificerStatus(context.catalog, first.arcanaFear);
+  const currentArtificerStatus = artificerStatus(context.catalog, projected.arcanaFear);
   const targetMetaRewardsRatio = rolledRewardStoreTargetRatio(context.layout);
   return Object.freeze({
     owner: context.owner,
-    historySequence: firstState.reached.historyView.sequence,
-    biomeKey: firstState.reached.routePosition.biomeKey,
+    historySequence: state.reached.historyView.sequence,
+    biomeKey: state.reached.routePosition.biomeKey,
     checkpoint:
       context.owner.kind === 'roomRunStateCheckpoint'
         ? context.owner.checkpoint.kind
         : 'beforeTargetGeneration',
-    godPool: first.godPool,
-    traits: first.traits,
-    counters: first.counters,
-    arcanaFear: first.arcanaFear,
-    effectiveHordesRank: attestEffectiveHordesRank(context.states),
-    keepsakes: first.keepsakes,
-    rewardPriorities: first.rewardPriorities,
-    pendingHermesShrineDeliveries: first.pendingHermesShrineDeliveries,
-    stygianWell: first.stygianWell,
-    stygianWellLegality: first.stygianWellLegality,
-    hexProgress: first.hexProgress,
+    godPool: projected.godPool,
+    traits: projected.traits,
+    counters: projected.counters,
+    arcanaFear: projected.arcanaFear,
+    effectiveHordesRank: effectiveHordesRank(state),
+    keepsakes: projected.keepsakes,
+    rewardPriorities: projected.rewardPriorities,
+    pendingHermesShrineDeliveries: projected.pendingHermesShrineDeliveries,
+    stygianWell: projected.stygianWell,
+    stygianWellLegality: projected.stygianWellLegality,
+    hexProgress: projected.hexProgress,
     hexObserver: Object.freeze({
-      ...(first.hexProgress.spellTraitKey === undefined
+      ...(projected.hexProgress.spellTraitKey === undefined
         ? {}
-        : { spellTraitKey: first.hexProgress.spellTraitKey }),
-      ...(first.hexProgress.tree === undefined
+        : { spellTraitKey: projected.hexProgress.spellTraitKey }),
+      ...(projected.hexProgress.tree === undefined
         ? {}
-        : { layoutKey: first.hexProgress.tree.layoutKey }),
+        : { layoutKey: projected.hexProgress.tree.layoutKey }),
       talentKeys: Object.freeze([
-        ...(first.hexProgress.godSentAdded === true && first.hexProgress.spellTraitKey !== undefined
+        ...(projected.hexProgress.godSentAdded === true &&
+        projected.hexProgress.spellTraitKey !== undefined
           ? (() => {
-              const godSent = context.catalog.hexes.byKey[first.hexProgress.spellTraitKey]?.godSent;
+              const godSent =
+                context.catalog.hexes.byKey[projected.hexProgress.spellTraitKey]?.godSent;
               return godSent === undefined
                 ? []
                 : [godSent.olympianTalentKey, godSent.lineageTalentKey];
             })()
           : []),
       ]),
-      closed: first.hexProgress.talentDropsClosed === true,
-      bankedPathPoints: first.hexProgress.bankedPathPoints,
-      investedPathPoints: first.hexProgress.investedNodeKeys.length,
-      olympianTalentInvested: hexOlympianTalentInvested(context.catalog, first.hexProgress),
+      closed: projected.hexProgress.talentDropsClosed === true,
+      bankedPathPoints: projected.hexProgress.bankedPathPoints,
+      investedPathPoints: projected.hexProgress.investedNodeKeys.length,
+      olympianTalentInvested: hexOlympianTalentInvested(context.catalog, projected.hexProgress),
     }),
     rerolls: Object.freeze({
-      remaining: rerollPoolRemaining(firstState),
-      doorsEnabled: rerollKindEnabled(context.catalog, firstState.arcanaFear, 'doors'),
-      screensEnabled: rerollKindEnabled(context.catalog, firstState.arcanaFear, 'screens'),
+      remaining: rerollPoolRemaining(state),
+      doorsEnabled: rerollKindEnabled(context.catalog, state.arcanaFear, 'doors'),
+      screensEnabled: rerollKindEnabled(context.catalog, state.arcanaFear, 'screens'),
     }),
     ...(currentArtificerStatus === undefined
       ? {}
@@ -842,20 +669,20 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
             remainingCount: currentArtificerStatus.remaining,
           }),
         }),
-    forfeitStatus: first.forfeitStatus,
-    resourceGains: first.resourceGains,
-    maxStats: first.maxStats,
-    armor: first.armor,
-    effects: first.effects,
+    forfeitStatus: projected.forfeitStatus,
+    resourceGains: projected.resourceGains,
+    maxStats: projected.maxStats,
+    armor: projected.armor,
+    effects: projected.effects,
     rewardStoreController: Object.freeze({
       // No `currentStoreKey`: a checkpoint reports the ledger at its own settled boundary.
-      ...enteredRewardStoreTally(firstState.reached.historyView),
+      ...enteredRewardStoreTally(state.reached.historyView),
       ...(targetMetaRewardsRatio === undefined
         ? { bankableStoreKeys: bankableRewardStoreKeys(context.catalog, context.layout) }
         : { targetMetaRewardsRatio }),
     }),
     bags,
-    rewardStores: exactRewardStoreContents(context.catalog, context.states),
+    rewardStores: exactRewardStoreContents(context.catalog, state),
   });
 }
 

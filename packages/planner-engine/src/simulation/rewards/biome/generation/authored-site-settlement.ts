@@ -43,7 +43,6 @@ import {
   type AuthoredSiteSettlementEmissions,
 } from './emissions';
 import type { SimulationState } from '../../../state/model';
-import { attestSharedRewardLookups } from '../../../state/reward-lookups';
 
 export interface AuthoredSiteSettlementResult {
   readonly branches: readonly RewardBranchState[];
@@ -92,12 +91,6 @@ export function settleAuthoredAcquisitionSite(
   // reached snapshot; the settling cohort must still agree on that board.
   // Attested only at the one facts contact that consults it, so a site whose
   // cohort has already been emptied never reaches the agreement check.
-  let cohortAttested = false;
-  const attestRewardLookupCohort = (): void => {
-    if (cohortAttested) return;
-    attestSharedRewardLookups(sourceBranches.map((branch) => branch.state));
-    cohortAttested = true;
-  };
   const acquisitionRoleFrontiers: import('../../acquisition/contracts').AcquisitionRoleFrontier[] =
     [];
   const derivedEntryFrontiers: import('../../acquisition/contracts').DerivedAcquisitionEntryFrontier[] =
@@ -594,7 +587,6 @@ export function settleAuthoredAcquisitionSite(
         'localRoomLifecycle',
       ),
       facts: (state, shopNames = new Set()) => {
-        attestRewardLookupCohort();
         return createBiomeRewardFacts({
           catalog,
           state,

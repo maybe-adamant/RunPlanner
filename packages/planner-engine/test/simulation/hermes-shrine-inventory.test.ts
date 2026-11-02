@@ -90,6 +90,7 @@ import {
   initializeTestRewardBranches,
   initializeTestRewardBranchesForRoute as initializeRewardBranches,
 } from '../support/arcana-fear';
+import { reachedFrontier } from '../support/reward-frontier';
 
 function branchesWithTravelDeal() {
   const traits = foldTraitHistoryEvents(catalog, [
@@ -264,7 +265,7 @@ function evaluateShrineOutgoingPrefix(
       snapshot as typeof snapshot & { readonly entryRoom: NonNullable<typeof snapshot.entryRoom> },
     ),
     route.loadout,
-    outgoingSeedBranches(rewardType),
+    outgoingSeedBranches(rewardType)[0]!,
   );
   const runState = rewards.runStateSnapshots.find(
     (candidate) =>
@@ -465,12 +466,12 @@ describe('Hermes Shrine entry inventory gate', () => {
       });
     }
     const withVisibleInventory = oResult(project);
-    expect(withVisibleInventory.rewards.branches.map((branch) => branch.state.bags)).toEqual(
-      baseline.rewards.branches.map((branch) => branch.state.bags),
-    );
+    expect(
+      reachedFrontier(withVisibleInventory.rewards).map((branch) => branch.state.bags),
+    ).toEqual(reachedFrontier(baseline.rewards).map((branch) => branch.state.bags));
     const hostKey = semanticAddressKey(host);
     expect(
-      withVisibleInventory.rewards.branches
+      reachedFrontier(withVisibleInventory.rewards)
         .flatMap((branch) => branch.events)
         .some(
           (event) =>
@@ -512,7 +513,7 @@ describe('Hermes Shrine entry inventory gate', () => {
       expect(outgoingEligibility(visible.runState, outgoingRewardType)).toBe('ineligible');
       expect(bagCounts(visible.runState)).toEqual(bagCounts(baseline.runState));
       expect(
-        visible.rewards.branches
+        reachedFrontier(visible.rewards)
           .flatMap((branch) => branch.events)
           .some(
             (event) =>
@@ -595,8 +596,8 @@ function observeDeliveryStop(
           event.kind === kind && semanticAddressKey(event.origin) === semanticAddressKey(owner),
       );
       if (stop === undefined) return;
-      expect(simulation.branches.length).toBeGreaterThan(0);
-      for (const branch of simulation.branches)
+      expect(simulation.frontier).toBeDefined();
+      for (const branch of reachedFrontier(simulation))
         expect(branch.state.reached.historyView).toBe(history.viewsBySequence[stop.sequence]);
       observed += 1;
     });
@@ -865,8 +866,8 @@ describe('Hermes Shrine delayed deliveries', () => {
       'rewardSourceUnavailable',
     );
     // The Boss exit leaves the obligation pending in every branch state.
-    expect(biome.rewards.branches.length).toBeGreaterThan(0);
-    for (const branch of biome.rewards.branches) {
+    expect(biome.rewards.frontier).toBeDefined();
+    for (const branch of reachedFrontier(biome.rewards)) {
       const pending = branch.state.pendingHermesShrineDeliveries[entryKey];
       expect(pending).toMatchObject({ entryKey });
       expect(pending).not.toHaveProperty('due');
@@ -1045,9 +1046,9 @@ describe('Hermes Shrine Travel Deal generation', () => {
     const n = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (n === undefined || !('rewards' in n)) throw new Error('fixture lost N rewards');
     expect(n.validity).toBe('valid');
-    expect(n.rewards.branches.length).toBeGreaterThan(0);
+    expect(n.rewards.frontier).toBeDefined();
     expect(
-      n.rewards.branches.every(
+      reachedFrontier(n.rewards).every(
         (branch) => branch.state.rewardHistory.useRecord.SpellDrop === undefined,
       ),
     ).toBe(true);
@@ -1132,21 +1133,21 @@ describe('Hermes Shrine Travel Deal generation', () => {
     const n = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (n === undefined || !('rewards' in n)) throw new Error('Dream fixture lost N rewards');
     expect(n.validity).toBe('valid');
-    expect(n.rewards.branches.length).toBeGreaterThan(0);
+    expect(n.rewards.frontier).toBeDefined();
     expect(
-      n.rewards.branches.every(
+      reachedFrontier(n.rewards).every(
         (branch) => branch.state.rewardHistory.useRecord.SpellDrop === undefined,
       ),
     ).toBe(true);
-    expect(n.rewards.branches[0]!.state.rewardLookups.hubRewardLookup).toContain('SpellDrop');
-    const history = n.rewards.branches[0]?.state.rewardHistory;
+    expect(n.rewards.frontier!.state.rewardLookups.hubRewardLookup).toContain('SpellDrop');
+    const history = n.rewards.frontier?.state.rewardHistory;
     if (history === undefined) throw new Error('Dream fixture lost its N branch history');
     const requirements = {
       ...rewardFacts(history).requirements,
       offeredRewardTypes: new Set<string>(),
       rewardLookups: Object.freeze(
         Object.fromEntries(
-          Object.entries(n.rewards.branches[0]!.state.rewardLookups).map(([key, values]) => [
+          Object.entries(n.rewards.frontier!.state.rewardLookups).map(([key, values]) => [
             key,
             new Set(values),
           ]),
@@ -1266,14 +1267,14 @@ describe('Hermes Shrine Travel Deal generation', () => {
       history,
       ordinaryPositionFor(catalog, completeSnapshot),
       route.loadout,
-      branchesWithTravelDeal(),
+      branchesWithTravelDeal()[0]!,
     );
     expect(result.findings.map((finding) => finding.code)).not.toContain(
       'hermesShrineTravelDealRefillUnavailable',
     );
     expect(result.findings.map((finding) => finding.code)).not.toContain('rewardSourceUnavailable');
     expect(
-      result.branches.some((branch) =>
+      reachedFrontier(result).some((branch) =>
         branch.events.some(
           (event) =>
             event.kind === 'concreteAcquisition' &&
@@ -1376,7 +1377,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
         },
       ),
       route.loadout,
-      branchesWithTravelDeal(),
+      branchesWithTravelDeal()[0]!,
     );
     expect(bothRushedResult.findings.map((finding) => finding.code)).not.toContain(
       'hermesShrineTravelDealRefillUnavailable',
@@ -1485,9 +1486,9 @@ describe('Hermes Shrine Travel Deal generation', () => {
         history,
         ordinaryPositionFor(catalog, completeSnapshot),
         route.loadout,
-        branchesWithTravelDeal(),
+        branchesWithTravelDeal()[0]!,
       );
-      const refillAcquired = result.branches.some((branch) =>
+      const refillAcquired = reachedFrontier(result).some((branch) =>
         branch.events.some(
           (event) =>
             event.kind === 'concreteAcquisition' &&
@@ -1821,7 +1822,7 @@ describe('Hermes Shrine Spell reservation lifecycle input', () => {
     expect(unpurchased.rewards.targetHistory).toContainEqual(
       expect.objectContaining({
         origin: target,
-        states: [expect.objectContaining({ pendingHermesShrineDeliveries: {} })],
+        state: expect.objectContaining({ pendingHermesShrineDeliveries: {} }),
       }),
     );
     expect(outgoingEligibility(unpurchased.runState, 'SpellDrop')).toBe('eligible');
@@ -1838,13 +1839,11 @@ describe('Hermes Shrine Spell reservation lifecycle input', () => {
     expect(purchased.rewards.targetHistory).toContainEqual(
       expect.objectContaining({
         origin: target,
-        states: [
-          expect.objectContaining({
-            pendingHermesShrineDeliveries: expect.objectContaining({
-              [sourceKey]: expect.objectContaining({ rewardType: 'SpellDrop' }),
-            }),
+        state: expect.objectContaining({
+          pendingHermesShrineDeliveries: expect.objectContaining({
+            [sourceKey]: expect.objectContaining({ rewardType: 'SpellDrop' }),
           }),
-        ],
+        }),
       }),
     );
     expect(outgoingEligibility(purchased.runState, 'SpellDrop')).toBe('ineligible');
@@ -1893,7 +1892,7 @@ describe('Hermes Shrine pickup settlement', () => {
     );
     const dueHost = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
     expect(
-      o.rewards.branches.some((branch) =>
+      reachedFrontier(o.rewards).some((branch) =>
         branch.events.some(
           (event) =>
             event.kind === 'concreteAcquisition' &&
@@ -2082,7 +2081,7 @@ describe('Hermes Shrine pickup settlement', () => {
       );
     }
     expect(
-      o?.rewards.branches.some((branch) =>
+      reachedFrontier(o?.rewards).some((branch) =>
         branch.events.some(
           (event) =>
             event.kind === 'conversionToGold' &&

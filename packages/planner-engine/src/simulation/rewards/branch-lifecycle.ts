@@ -14,7 +14,6 @@ import { beginBiomeKeepsakeState } from '../keepsakes/state';
 import { applyTranscendentEmbryoEquipResult } from '../keepsakes/branch-transitions';
 import { recordAspectStartingTrait } from '../traits';
 import type { RewardBranchState } from './branch-primitives';
-import { BiomeRewardSimulationContractError } from './biome/biome-contract';
 import type { RewardBranch } from './model';
 import { installHexTree, maybeAddGodSent } from '../hex-progress';
 import type { SimulationState } from '../state/model';
@@ -66,7 +65,7 @@ export function beginRewardRoom(
 }
 
 export function initializeRewardBranches(
-  initialBranches: readonly RewardBranch[] | undefined,
+  seedFrontier: RewardBranch | undefined,
   initialArcanaFear: ArcanaFearState | undefined,
   catalog: Catalog,
   startingKeepsakeKey: string | null,
@@ -78,7 +77,7 @@ export function initializeRewardBranches(
     readonly historyView: HistoryStateView;
   },
 ): readonly RewardBranchState[] {
-  if (initialBranches === undefined) {
+  if (seedFrontier === undefined) {
     if (initialArcanaFear === undefined || catalog === undefined)
       throw new Error('initial branch state is required');
     const state: SimulationState = createInitialSimulationState(
@@ -126,24 +125,18 @@ export function initializeRewardBranches(
           }),
     ]);
   }
-  if (initialBranches.length > 1)
-    throw new BiomeRewardSimulationContractError(
-      'a completed predecessor publishes one frontier state',
-    );
-  return Object.freeze(
-    initialBranches.map((branch) =>
-      Object.freeze({
-        state: Object.freeze({
-          ...beginBiomeSimulationState(branch.state),
-          reached: Object.freeze(reached),
-        }),
-        events: Object.freeze([]),
-        pendingShopContinuations: Object.freeze({}),
-        processedThroughHistorySequence: 0,
-        traitEvaluations: Object.freeze([]),
+  return Object.freeze([
+    Object.freeze({
+      state: Object.freeze({
+        ...beginBiomeSimulationState(seedFrontier.state),
+        reached: Object.freeze(reached),
       }),
-    ),
-  );
+      events: Object.freeze([]),
+      pendingShopContinuations: Object.freeze({}),
+      processedThroughHistorySequence: 0,
+      traitEvaluations: Object.freeze([]),
+    }),
+  ]);
 }
 
 /** The native biome-start reset (`EndBiomeRecords`) of biome-local state; run-wide state carries on. */

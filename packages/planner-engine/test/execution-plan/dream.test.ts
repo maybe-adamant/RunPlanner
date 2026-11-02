@@ -45,7 +45,7 @@ it('publishes the saved Dream mixed-handoff route through the strict execution c
   expect(
     nBiomeEvaluation.rewards.targetHistory.find(
       (checkpoint) => semanticAddressKey(checkpoint.origin) === semanticAddressKey(nTarget),
-    )?.states[0]!.rewardLookups.hubRewardLookup,
+    )?.state.rewardLookups.hubRewardLookup,
   ).toEqual([]);
   expect(
     candidates.evaluate({

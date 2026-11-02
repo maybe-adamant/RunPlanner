@@ -69,11 +69,67 @@ function withoutGoldGuidance(
   };
 }
 
+type Plain = Readonly<Record<string, unknown>>;
+const isPlain = (value: unknown): value is Plain =>
+  typeof value === 'object' &&
+  value !== null &&
+  !Array.isArray(value) &&
+  !(value instanceof Map) &&
+  !(value instanceof Set);
+const hasKeys = (value: Plain, keys: readonly string[]) =>
+  Object.keys(value).length === keys.length && keys.every((key) => key in value);
+const exactCount = (count: unknown) => ({ kind: 'exact', count });
+
+/**
+ * The recorded baseline predates the single-state frontier: it published each
+ * reached state as a one-entry branch list and each Run State bag count as an
+ * exact count. This maps current products onto that shape, so the baseline
+ * still witnesses unchanged semantics; it goes when the baseline is re-recorded.
+ */
+function branchListShape(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(branchListShape);
+  if (value instanceof Map)
+    return new Map([...value].map(([key, entry]) => [key, branchListShape(entry)]));
+  if (value instanceof Set) return new Set([...value].map(branchListShape));
+  if (!isPlain(value)) return value;
+  // Non-enumerable data properties are part of the digest, so copy descriptors.
+  const next: Record<string, unknown> = {};
+  for (const key of Object.getOwnPropertyNames(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
+    Object.defineProperty(next, key, {
+      ...descriptor,
+      writable: true,
+      configurable: true,
+      value: branchListShape(descriptor.value),
+    });
+  }
+  if ('frontier' in value && 'validity' in value && 'runStateSnapshots' in value) {
+    next.branches = value.frontier === undefined ? [] : [next.frontier];
+    delete next.frontier;
+  }
+  if (
+    hasKeys(value, ['origin', 'historySequence', 'state']) ||
+    hasKeys(value, ['owner', 'gameName', 'state'])
+  ) {
+    next.states = [next.state];
+    delete next.state;
+  }
+  if (
+    typeof value.remaining === 'number' &&
+    ('storeKey' in value ||
+      'conditions' in value ||
+      'requirement' in value ||
+      Object.keys(value).length === 1)
+  )
+    next.remaining = exactCount(value.remaining);
+  return next;
+}
+
 export function equivalenceProducts(entry: EquivalenceEntry): EquivalenceProducts {
   const project = entry.project();
   const assembly = simulateProjectAssembly(entry.catalog, project);
   // `simulateProject` publishes exactly this assembly's evaluation.
-  const simulation = canonicalDigest(withoutGoldGuidance(assembly.evaluation));
+  const simulation = canonicalDigest(branchListShape(withoutGoldGuidance(assembly.evaluation)));
   const plan = planSection(entry, assembly);
   const session = createPreparedProjectCandidateSession(entry.catalog, assembly);
   const candidates = canonicalDigest(probeCandidates(entry.catalog, project, session));

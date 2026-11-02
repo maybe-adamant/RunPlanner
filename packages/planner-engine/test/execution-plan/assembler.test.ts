@@ -100,6 +100,7 @@ import {
   type PlannerTimelineFacts,
 } from '../../src/simulation/timeline-facts';
 import { surfaceQShopCorrelationProject } from './support/surface-q-shop-correlation-fixture';
+import { reachedFrontier } from '../support/reward-frontier';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -1967,7 +1968,7 @@ describe('engine-owned F/G execution semantic product', () => {
         (candidate) => candidate.biomeKey === biomeKey,
       );
       if (biome?.authoring !== 'complete') throw new Error(`expected complete ${biomeKey}`);
-      return biome.rewards.branches.map(
+      return reachedFrontier(biome.rewards).map(
         (branch) =>
           branch.state.stygianWell.timedInstances.find(
             (instance) => instance.traitKey === 'TemporaryHealExpirationTrait',
@@ -2049,7 +2050,7 @@ describe('engine-owned F/G execution semantic product', () => {
     const assembly = simulateProjectAssembly(catalog, project);
     const g = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     if (g?.authoring !== 'complete') throw new Error('expected complete G');
-    const state = g.rewards.branches[0]!.state;
+    const state = g.rewards.frontier!.state;
     expect(state.keepsakes.discordantBell!.multiplier).toBeGreaterThan(1);
     expect(state.keepsakes.lionFang!.multiplier).toBeLessThan(1.5);
     expect(state.arcanaFear.arcana.roomEntryGrowth?.MaxHealthPerRoom?.grants).toBeGreaterThan(0);
@@ -2123,8 +2124,8 @@ describe('engine-owned F/G execution semantic product', () => {
     );
     if (n?.authoring !== 'complete') throw new Error('expected complete N');
     expect(
-      n.rewards.branches[0]!.state.traitHistory.equippedTraits.ManaOverTimeCurse
-        ?.roomsPerUpgradeGrowth?.grants,
+      n.rewards.frontier!.state.traitHistory.equippedTraits.ManaOverTimeCurse?.roomsPerUpgradeGrowth
+        ?.grants,
     ).toBeGreaterThan(0);
     unchanged(traces);
   });

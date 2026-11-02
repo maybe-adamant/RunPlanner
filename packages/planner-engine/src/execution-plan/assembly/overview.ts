@@ -32,7 +32,7 @@ import {
 import type { RewardEvent } from '../../simulation/rewards/model';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
-import { agreement, executionRoomOwnerKey } from './support';
+import { agreement, completeFrontier, executionRoomOwnerKey } from './support';
 import type {
   ExecutionFieldsLayout,
   ExecutionInfernalContract,
@@ -133,23 +133,16 @@ export function shopInventoryRows(
   if (entry === undefined)
     throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks Shop inventory`);
   const owner = executionRoomOwnerKey(room);
-  const rows = biome.rewards.branches.map((branch) =>
-    branch.events.filter(
-      (event): event is Extract<RewardEvent, { readonly kind: 'shopInventorySupported' }> =>
-        event.kind === 'shopInventorySupported' && semanticAddressKey(event.origin) === owner,
-    ),
+  const row = completeFrontier(biome).events.filter(
+    (event): event is Extract<RewardEvent, { readonly kind: 'shopInventorySupported' }> =>
+      event.kind === 'shopInventorySupported' && semanticAddressKey(event.origin) === owner,
   );
-  if (rows.length === 0 || rows.some((row) => row.length !== 1))
+  if (row.length !== 1)
     throw new CompilerError(
       'executionCoverageMissing',
       `${room.gameName} lacks Shop inventory evidence`,
     );
-  const witness = agreement(
-    rows.map((row) =>
-      Object.freeze({ slotKeys: row[0]!.slotKeys, optionKeys: row[0]!.optionKeys }),
-    ),
-    `${room.gameName} Shop option order`,
-  )!;
+  const witness = row[0]!;
   const offersByKey = new Map(entry.offers.map((offer) => [offer.offerKey, offer] as const));
   if (
     witness.slotKeys.length !== witness.optionKeys.length ||
@@ -230,27 +223,19 @@ export function travelDealRefill(
       'executionCoverageMissing',
       `${room.gameName} lacks Travel Deal source action ${row.sourceOfferKey}`,
     );
-  const groupRows = biome.rewards.branches.map((branch) =>
-    branch.events
-      .filter(
-        (event): event is Extract<RewardEvent, { readonly kind: 'shopInventorySupported' }> =>
-          event.kind === 'shopInventorySupported' &&
-          semanticAddressKey(event.origin) === semanticAddressKey(room.origin),
-      )
-      .map((event) => event.slotGroupIndexes[row.slotIndex!]),
-  );
-  const groupIndex = agreement(
-    groupRows.map((groups) => {
-      const value = groups[0];
-      if (groups.length !== 1 || value === undefined)
-        throw new CompilerError(
-          'executionCoverageMissing',
-          `${room.gameName} lacks Travel Deal native group`,
-        );
-      return value;
-    }),
-    `${room.gameName} Travel Deal native group`,
-  );
+  const groups = completeFrontier(biome)
+    .events.filter(
+      (event): event is Extract<RewardEvent, { readonly kind: 'shopInventorySupported' }> =>
+        event.kind === 'shopInventorySupported' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(room.origin),
+    )
+    .map((event) => event.slotGroupIndexes[row.slotIndex!]);
+  const groupIndex = groups[0];
+  if (groups.length !== 1 || groupIndex === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks Travel Deal native group`,
+    );
   const optionKey = entry.optionKey;
   if (optionKey === null)
     throw new CompilerError(
@@ -362,7 +347,7 @@ function executionShop(
   });
 }
 
-/** The entered Preboss's pedestal item, published only where every branch spawned it. */
+/** The entered Preboss's pedestal item, published only where the walk spawned it. */
 function executionInfernalContractPedestal(
   room: CanonicalAuthoredRoom,
   biome: CompleteValidBiomeProjectEvaluation,
@@ -372,10 +357,8 @@ function executionInfernalContractPedestal(
   if (pedestal === undefined || pedestal === null) return undefined;
   const ownerKey = semanticAddressKey(pedestal.offerOrigin);
   if (
-    !biome.rewards.branches.every((branch) =>
-      branch.events.some(
-        (event) => event.kind === 'rewardOffered' && semanticAddressKey(event.origin) === ownerKey,
-      ),
+    !completeFrontier(biome).events.some(
+      (event) => event.kind === 'rewardOffered' && semanticAddressKey(event.origin) === ownerKey,
     )
   )
     return undefined;

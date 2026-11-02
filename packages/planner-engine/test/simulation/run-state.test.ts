@@ -55,7 +55,6 @@ import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
 import {
-  aggregateDecisionRewardBag,
   createRunState,
   createRunStateDerivationCache,
 } from '../../src/simulation/rewards/run-state';
@@ -68,19 +67,18 @@ import {
   type TraitOfferEvent,
 } from '../../src/simulation/traits';
 import { matureGodHistoryRecords } from '../support/god-history';
+import { reachedFrontier } from '../support/reward-frontier';
 
 /** Every direct adapter below projects the first Underworld biome. */
 const runStatePosition = ordinaryRoutePosition(catalog, 'Underworld', 'F');
 const fLayout = catalog.biomeLayouts.byKey.F!;
 
 /** The exact reached snapshots a checkpoint projection receives, in branch order. */
-function reachedTestStates(
-  branches: readonly { readonly state: SimulationState }[],
+function reachedTestState(
+  branch: { readonly state: SimulationState },
   historyView: SimulationState['reached']['historyView'],
-): readonly SimulationState[] {
-  return branches.map((branch) =>
-    reachSimulationHistory(branch.state, runStatePosition, historyView),
-  );
+): SimulationState {
+  return reachSimulationHistory(branch.state, runStatePosition, historyView);
 }
 
 function decisionSnapshots(snapshots: readonly RunStateSnapshot[]): readonly RunStateSnapshot[] {
@@ -306,7 +304,7 @@ describe('decision run-state snapshots', () => {
         catalog,
         layout: fLayout,
         owner: createRoomRunStateCheckpointAddress(occurrence, { kind: checkpoint }),
-        states: reachedTestStates([branch], historyView),
+        state: reachedTestState(branch, historyView),
         rewardFacts: () => requirementFacts(0),
       })!;
     const enteredBase = snapshot('roomEntered', beforeBranch);
@@ -375,16 +373,13 @@ describe('decision run-state snapshots', () => {
     const base = initializeTestRewardBranches()[0]!;
     const snapshot = (
       checkpoint: 'roomEntered' | 'beforeRoomExit',
-      ...states: readonly State[]
+      state: State,
     ): RunStateSnapshot =>
       createRunState({
         catalog,
         layout: fLayout,
         owner: createRoomRunStateCheckpointAddress(occurrence, { kind: checkpoint }),
-        states: reachedTestStates(
-          states.map((state) => Object.freeze({ ...base, state })),
-          historyView,
-        ),
+        state: reachedTestState(Object.freeze({ ...base, state }), historyView),
         rewardFacts: () => requirementFacts(0),
       })!;
     const facts = (after: State, before: State = base.state) => {
@@ -466,7 +461,7 @@ describe('decision run-state snapshots', () => {
       ]);
     });
 
-    it('publishes reward stores exact across branches, untouched ones at initial counts', () => {
+    it('publishes every reward store, untouched ones at initial counts', () => {
       const store = catalog.rewards.stores.values[0]!;
       const initial = createRewardBagState(store, 'Underworld').remainingEntryCounts;
       const drawn = (count: number): State => ({
@@ -482,10 +477,9 @@ describe('decision run-state snapshots', () => {
       const counts = (snapshot: RunStateSnapshot) =>
         snapshot.rewardStores.find((row) => row.storeKey === store.key)?.remainingEntryCounts;
       expect(counts(snapshot('roomEntered', base.state))).toEqual(initial);
-      expect(counts(snapshot('roomEntered', drawn(0), drawn(0)))?.[0]).toBe(0);
-      expect(counts(snapshot('roomEntered', drawn(0), drawn(1)))).toBeUndefined();
-      expect(snapshot('roomEntered', drawn(0), drawn(1)).rewardStores.length).toBe(
-        catalog.rewards.stores.values.length - 1,
+      expect(counts(snapshot('roomEntered', drawn(0)))?.[0]).toBe(0);
+      expect(snapshot('roomEntered', drawn(0)).rewardStores.length).toBe(
+        catalog.rewards.stores.values.length,
       );
     });
 
@@ -566,7 +560,7 @@ describe('decision run-state snapshots', () => {
         catalog,
         layout: fLayout,
         owner,
-        states: reachedTestStates([branch], view),
+        state: reachedTestState(branch, view),
         rewardFacts: () => facts,
         ...(cached
           ? {
@@ -628,20 +622,18 @@ describe('decision run-state snapshots', () => {
         catalog,
         layout: fLayout,
         owner,
-        states: reachedTestStates(
-          [
-            Object.freeze({
-              ...base,
-              state: Object.freeze({
-                ...base.state,
-                hexProgress: Object.freeze({
-                  bankedPathPoints,
-                  investedNodeKeys: [],
-                  ...(talentDropsClosed ? { talentDropsClosed: true as const } : {}),
-                }),
+        state: reachedTestState(
+          Object.freeze({
+            ...base,
+            state: Object.freeze({
+              ...base.state,
+              hexProgress: Object.freeze({
+                bankedPathPoints,
+                investedNodeKeys: [],
+                ...(talentDropsClosed ? { talentDropsClosed: true as const } : {}),
               }),
             }),
-          ],
+          }),
           historyView,
         ),
         rewardFacts: (state) => {
@@ -677,27 +669,25 @@ describe('decision run-state snapshots', () => {
         catalog,
         layout: fLayout,
         owner,
-        states: reachedTestStates(
-          [
-            {
-              ...base,
-              state: Object.freeze({
-                ...base.state,
-                pendingHermesShrineDeliveries: pending
-                  ? {
-                      spell: {
-                        entryKey: 'spell',
-                        source: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
-                        generationKey: 'initial:secondLeft' as const,
-                        rewardType: 'SpellDrop',
-                        rushed: false,
-                        remainingUses: 8,
-                      },
-                    }
-                  : base.state.pendingHermesShrineDeliveries,
-              }),
-            },
-          ],
+        state: reachedTestState(
+          {
+            ...base,
+            state: Object.freeze({
+              ...base.state,
+              pendingHermesShrineDeliveries: pending
+                ? {
+                    spell: {
+                      entryKey: 'spell',
+                      source: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+                      generationKey: 'initial:secondLeft' as const,
+                      rewardType: 'SpellDrop',
+                      rushed: false,
+                      remainingUses: 8,
+                    },
+                  }
+                : base.state.pendingHermesShrineDeliveries,
+            }),
+          },
           historyView,
         ),
         rewardFacts: (state) => {
@@ -739,7 +729,7 @@ describe('decision run-state snapshots', () => {
         catalog,
         layout: fLayout,
         owner,
-        states: reachedTestStates([branch], historyView),
+        state: reachedTestState(branch, historyView),
         derivationCache: lookupCache,
         factsContextToken: token,
         rewardFacts: (current) => {
@@ -843,18 +833,14 @@ describe('decision run-state snapshots', () => {
     const runProgress = first.bags.find((bag) => bag.storeKey === 'RunProgress')!;
     expect(runProgress.entries.find((entry) => entry.rewardType === 'Boon')).toMatchObject({
       eligibility: 'eligible',
-      remaining: { kind: 'exact', count: 3 },
+      remaining: 3,
     });
     const hubBag = first.bags.find((bag) => bag.storeKey === 'HubRewards')!;
     const hubDeclaration = catalog.rewards.stores.byKey.HubRewards!;
-    expect(
-      hubBag.entries.reduce(
-        (total, entry) =>
-          total + (entry.remaining.kind === 'exact' ? entry.remaining.count : entry.remaining.max),
-        0,
-      ),
-    ).toBe(hubDeclaration.entries.length);
-    expect(biome.rewards.branches[0]?.state.bags.HubRewards).toBeUndefined();
+    expect(hubBag.entries.reduce((total, entry) => total + entry.remaining, 0)).toBe(
+      hubDeclaration.entries.length,
+    );
+    expect(biome.rewards.frontier?.state.bags.HubRewards).toBeUndefined();
   });
 
   it('publishes every outer N decision while excluding Hub visits', () => {
@@ -994,7 +980,7 @@ describe('decision run-state snapshots', () => {
     expect(generation?.checkpoint).toBe('beforeTargetGeneration');
     expect(exit?.checkpoint).toBe('beforeRoomExit');
     expect(exit?.historySequence).toBeGreaterThan(generation?.historySequence ?? 0);
-    const settledShopAcquisitions = biome.rewards.branches.flatMap((branch) =>
+    const settledShopAcquisitions = reachedFrontier(biome.rewards).flatMap((branch) =>
       branch.events.filter(
         (event) =>
           event.kind === 'concreteAcquisition' &&
@@ -1275,7 +1261,7 @@ describe('decision run-state snapshots', () => {
       g.validity !== 'valid'
     )
       throw new Error('expected valid FG route');
-    const expected = f.rewards.branches[0]?.state.arcanaFear;
+    const expected = f.rewards.frontier?.state.arcanaFear;
     const fSnapshot = f.rewards.runStateSnapshots[0];
     const gSnapshot = g.rewards.runStateSnapshots[0];
     expect(expected).toBeDefined();
@@ -1313,31 +1299,6 @@ describe('decision run-state snapshots', () => {
     );
   });
 
-  it('consolidates correlated branch bag totals before deriving ranges', () => {
-    const store = catalog.rewards.stores.byKey.RunProgress!;
-    const firstTwoOnly = (base: number, qualified: number) =>
-      Object.freeze([base, qualified, ...store.entries.slice(2).map(() => 0)]);
-    const bag = aggregateDecisionRewardBag(
-      store,
-      [
-        { bags: { RunProgress: { remainingEntryCounts: firstTwoOnly(0, 1) } } },
-        { bags: { RunProgress: { remainingEntryCounts: firstTwoOnly(1, 0) } } },
-      ],
-      [requirementFacts(1), requirementFacts(0)],
-    );
-    expect(bag.remaining).toEqual({ kind: 'exact', count: 1 });
-    expect(bag.entries).toContainEqual(
-      expect.objectContaining({
-        rewardType: 'MaxHealthDrop',
-        eligibility: 'eligible',
-        remaining: { kind: 'exact', count: 1 },
-        conditions: expect.arrayContaining([
-          expect.objectContaining({ remaining: { kind: 'range', min: 0, max: 1 } }),
-        ]),
-      }),
-    );
-  });
-
   it('retains offer-time depletion and transitions Hammer eligibility at the declared boundary', () => {
     const f = simulateProject(catalog, createCompleteFGProject()).route?.biomes.find(
       (biome) => biome.biomeKey === 'F',
@@ -1355,15 +1316,9 @@ describe('decision run-state snapshots', () => {
       snapshot.bags
         .find((bag) => bag.storeKey === 'RunProgress')!
         .entries.filter((entry) => entry.rewardType === rewardType);
-    expect(runEntries(f.rewards.runStateSnapshots[1]!, 'MaxHealthDrop')[0]?.remaining).toEqual({
-      kind: 'exact',
-      count: 2,
-    });
+    expect(runEntries(f.rewards.runStateSnapshots[1]!, 'MaxHealthDrop')[0]?.remaining).toBe(2);
     // F batch 2 offers the unpicked peer's MaxHealthDrop at generation time.
-    expect(runEntries(f.rewards.runStateSnapshots[2]!, 'MaxHealthDrop')[0]?.remaining).toEqual({
-      kind: 'exact',
-      count: 1,
-    });
+    expect(runEntries(f.rewards.runStateSnapshots[2]!, 'MaxHealthDrop')[0]?.remaining).toBe(1);
     expect(
       runEntries(f.rewards.runStateSnapshots[0]!, 'WeaponUpgrade').map(
         (entry) => entry.eligibility,
@@ -1397,7 +1352,7 @@ describe('decision run-state snapshots', () => {
         kind: 'occurrence',
         occurrenceId: goldenFStartId,
       }),
-      states: reachedTestStates([branch], {
+      state: reachedTestState(branch, {
         sequence: 0,
         ledgers: {
           roomCreations: [],
@@ -1445,16 +1400,14 @@ describe('decision run-state snapshots', () => {
         kind: 'occurrence',
         occurrenceId: goldenFStartId,
       }),
-      states: reachedTestStates(
-        [
-          Object.freeze({
-            ...initializeTestRewardBranches()[0]!,
-            state: Object.freeze({
-              ...initializeTestRewardBranches()[0]!.state,
-              rewardHistory: history,
-            }),
+      state: reachedTestState(
+        Object.freeze({
+          ...initializeTestRewardBranches()[0]!,
+          state: Object.freeze({
+            ...initializeTestRewardBranches()[0]!.state,
+            rewardHistory: history,
           }),
-        ],
+        }),
         {
           sequence: 0,
           ledgers: {
@@ -1536,7 +1489,7 @@ describe('decision run-state snapshots', () => {
       catalog,
       layout: fLayout,
       owner,
-      states: reachedTestStates([branch], {
+      state: reachedTestState(branch, {
         sequence: traits.events.length,
         ledgers: {
           roomCreations: [],

@@ -20,7 +20,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/preparation';
 import {
-  attestEffectiveShadowRank,
+  effectiveShadowRank,
   createArcanaFearState,
   suppressFearVows,
 } from '../../src/simulation/arcana-fear';
@@ -77,13 +77,6 @@ describe('encounter choice identity context', () => {
       });
       if (!suppressed.legal) throw new Error('Shadow suppression is unavailable');
       expect(suppressed.state.fear.configuredRanks.MinibossCountShrineUpgrade).toBe(1);
-      expect(() =>
-        attestEffectiveShadowRank(loadout, [
-          { state: { arcanaFear: active } },
-          { state: { arcanaFear: suppressed.state } },
-        ]),
-      ).toThrow(/divergent/);
-      expect(() => attestEffectiveShadowRank(loadout, [])).toThrow(/empty/);
       {
         const room = biome.snapshot.decisions
           .flatMap((decision) =>
@@ -97,10 +90,7 @@ describe('encounter choice identity context', () => {
         if (room === undefined || preparation === undefined)
           throw new Error('Missing miniboss preparation');
         for (const state of [active, suppressed.state]) {
-          const rank = attestEffectiveShadowRank(loadout, [
-            { state: { arcanaFear: state } },
-            { state: { arcanaFear: state } },
-          ]);
+          const rank = effectiveShadowRank(loadout, { state: { arcanaFear: state } });
           const prepared = prepareRoomEncounterPhases(
             catalog,
             room,

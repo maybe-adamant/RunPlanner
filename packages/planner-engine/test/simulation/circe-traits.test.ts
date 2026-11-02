@@ -179,7 +179,7 @@ describe('Circe selected trait acquisition', () => {
         (snapshot) => snapshot.traits.equippedTraits.RandomArcanaTrait !== undefined,
       ),
     ).toBe(true);
-    const branch = biome.rewards.branches[0]!;
+    const branch = biome.rewards.frontier!;
     expect(branch.state.arcanaFear.arcana.active).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ key: 'ChanneledCast', origin: 'temporary', rarity: 'Epic' }),
@@ -280,11 +280,9 @@ describe('Circe selected trait acquisition', () => {
       expect.arrayContaining([expect.objectContaining({ code: 'offerContext' })]),
     );
     const removable = oEvaluation(withCirce(black, [], { EnemyDamageShrineUpgrade: 1 }));
-    expect(removable.biome.rewards.branches[0]!.state.arcanaFear.fear.effectiveRanks).toMatchObject(
-      {
-        EnemyDamageShrineUpgrade: 0,
-      },
-    );
+    expect(removable.biome.rewards.frontier!.state.arcanaFear.fear.effectiveRanks).toMatchObject({
+      EnemyDamageShrineUpgrade: 0,
+    });
 
     const configured = createArcanaFearState(catalog, {
       ...createDefaultRouteLoadout(catalog),
@@ -357,7 +355,7 @@ describe('Circe selected trait acquisition', () => {
       routePosition: ordinaryRoutePosition(catalog, 'Surface', 'O'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: suppressedProject.route.loadout,
-      seed: { history: previous.history, rewardBranches: previous.rewards.branches },
+      seed: { history: previous.history, rewardFrontier: previous.rewards.frontier! },
     });
     expect(
       progressive?.candidateArtifacts.encounters.generationAt(phase)?.assess({
@@ -430,7 +428,7 @@ describe('Circe selected trait acquisition', () => {
       biome.findings.find((finding) => finding.code === 'circeResolutionMissing')?.origin,
     ).toEqual(createCirceResolutionAddress(circeOwner, 'option1'));
     expect(
-      biome.rewards.branches[0]?.state.traitHistory?.equippedTraits.RandomArcanaTrait,
+      biome.rewards.frontier?.state.traitHistory?.equippedTraits.RandomArcanaTrait,
     ).toMatchObject({ giverKey: 'Circe', providerKind: 'npc' });
     expect(biome.coverage).toMatchObject({ kind: 'prefix' });
     const domain = createPreparedProjectCandidateSession(catalog, assembly).evaluate({

@@ -68,15 +68,16 @@ function replayEnteredFieldsForfeit(rank: 0 | 1) {
     loadout: route.loadout,
     seed: {
       history: previous.history,
-      rewardBranches: previous.rewards.branches.map((branch) =>
-        Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            arcanaFear: Object.freeze({ ...branch.state.arcanaFear, fear: arcanaFear.fear }),
+      rewardFrontier: Object.freeze({
+        ...previous.rewards.frontier!,
+        state: Object.freeze({
+          ...previous.rewards.frontier!.state,
+          arcanaFear: Object.freeze({
+            ...previous.rewards.frontier!.state.arcanaFear,
+            fear: arcanaFear.fear,
           }),
         }),
-      ),
+      }),
     },
   });
   if (progressive === null) throw new Error('Fields fixture did not publish progressive assembly');
@@ -131,7 +132,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
     'substitutes the first ordinary %s acquisition with a required Red Onion',
     (rewardType) => {
       const rewards = simulated(rewardType);
-      const branch = rewards.branches[0];
+      const branch = rewards.frontier;
       if (branch === undefined) throw new Error('expected reward branch');
       expect(branch.state.arcanaFear.fear.forfeitConsumed).toBe(true);
       expect(branch.events).toContainEqual(
@@ -162,7 +163,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
 
   it('fixes the first qualifying entered Fields cage before its later pickup', () => {
     const replay = replayEnteredFieldsForfeit(1);
-    const branch = replay.evaluation.rewards.branches[0];
+    const branch = replay.evaluation.rewards.frontier;
     if (branch === undefined) throw new Error('expected Fields reward branch');
     const forfeited = branch.events.find(
       (event) =>
@@ -248,7 +249,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
     );
     expect(fieldsEntrySnapshot?.forfeitStatus).toBe('consumed');
 
-    const inactiveBranch = replayEnteredFieldsForfeit(0).evaluation.rewards.branches[0];
+    const inactiveBranch = replayEnteredFieldsForfeit(0).evaluation.rewards.frontier;
     if (inactiveBranch === undefined) throw new Error('expected inactive Fields reward branch');
     expect(
       inactiveBranch.events.some(
@@ -344,7 +345,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
     const result = simulateProject(catalog, project);
     const o = result.route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (o?.authoring !== 'complete') throw new Error('expected complete O simulation');
-    const branch = o.rewards.branches[0];
+    const branch = o.rewards.frontier;
     if (branch === undefined) throw new Error('expected reward branch');
 
     expect(branch.state.arcanaFear.fear.forfeitConsumed).toBe(true);
@@ -422,7 +423,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
     const forfeitEvents = (assembly: ReturnType<typeof simulateProjectAssembly>) => {
       const o = assembly.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'O');
       if (o === undefined || !('rewards' in o)) throw new Error('expected O reward evaluation');
-      return o.rewards.branches[0]!.events.filter(
+      return o.rewards.frontier!.events.filter(
         (event) =>
           event.kind === 'rewardForfeited' &&
           semanticAddressKey(event.origin) === semanticAddressKey(offer1),
@@ -531,7 +532,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
     const result = simulateProject(catalog, project);
     const o = result.route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (o?.authoring !== 'complete') throw new Error('expected complete O simulation');
-    const branch = o.rewards.branches[0];
+    const branch = o.rewards.frontier;
     if (branch === undefined) throw new Error('expected reward branch');
 
     expect(branch.events).toContainEqual(
@@ -602,7 +603,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       }),
     );
     const rewards = rewardsFor(project);
-    const branch = rewards.branches[0]!;
+    const branch = rewards.frontier!;
     expect(branch.state.bags.RunProgress?.remainingEntryCounts).toBeDefined();
     expect(
       branch.events.some(

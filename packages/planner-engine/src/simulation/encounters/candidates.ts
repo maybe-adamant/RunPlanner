@@ -31,7 +31,7 @@ import {
 import type { MaterializedEncounterPhase, ResolvedGeneratedPhase } from './model';
 import type { Catalog } from '../../catalog-schema';
 import type { FigLeafPhaseCandidateSupport, TargetRewardHistoryCheckpoint } from '../rewards/model';
-import { attestEffectiveHordesRank, type EncounterEntryVowRanks } from '../arcana-fear';
+import { effectiveHordesRank, type EncounterEntryVowRanks } from '../arcana-fear';
 import { assessGorgonCandidate } from '../keepsakes/encounter-effects';
 import { type GorgonLifecycleStatus } from '../keepsakes/state';
 import type { GorgonPhaseCandidateSupport } from '../rewards/model';
@@ -141,9 +141,7 @@ export function evaluateEncounterCandidatesInternal(
             generation === undefined
               ? undefined
               : rewardHistoryByOrigin.get(semanticAddressKey(generation.targetOrigin));
-          return checkpoint === undefined
-            ? undefined
-            : attestEffectiveHordesRank(checkpoint.states);
+          return checkpoint === undefined ? undefined : effectiveHordesRank(checkpoint.state);
         }
         return entryRanks?.hordes;
       },

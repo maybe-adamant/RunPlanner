@@ -17,9 +17,9 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
-import { beginBiomeSimulationState } from '../../../src/simulation/rewards/branch-lifecycle';
 import { projectStartInstallation } from '../../../src/simulation/start-installation/projection';
 import type { SimulationState } from '../../../src/simulation/state/model';
+import { reachedFrontier } from '../../support/reward-frontier';
 
 function evaluated(project: ProjectDocument) {
   const evaluation = simulateProject(catalog, project);
@@ -46,7 +46,7 @@ describe('mid-run start installation', () => {
   it('installs an Opening from its predecessor terminal state with post-reset biome records', () => {
     const installation = golden.installed({ biomeKey: 'G', kind: 'opening' });
     const f = golden.biome('F');
-    const [terminal] = f.rewards.branches.map((branch) => branch.state);
+    const [terminal] = reachedFrontier(f.rewards).map((branch) => branch.state);
     expect(Object.keys(terminal!.rewardHistory.biomeUseRecord).length).toBeGreaterThan(0);
     expect(installation).toMatchObject({
       startRoomGameName: 'G_Intro',
@@ -89,7 +89,7 @@ describe('mid-run start installation', () => {
   it('installs a Preboss from its captured start state with current biome records', () => {
     const installation = golden.installed({ biomeKey: 'G', kind: 'preboss' });
     const capture = golden.biome('G').rewards.midBiomeStartStates!.preboss!;
-    const [state] = capture.states;
+    const state = capture.state;
     expect(installation).toMatchObject({
       startOccurrence: capture.owner,
       startRoomGameName: 'G_PreBoss01',
@@ -202,170 +202,10 @@ describe('mid-run start installation', () => {
     });
   });
 
-  describe('branch agreement', () => {
-    const startPoint: StartPoint = { biomeKey: 'G', kind: 'preboss' };
-    const base = golden.installed(startPoint);
-    const [state] = golden.biome('G').rewards.midBiomeStartStates!.preboss!.states;
-    const project = (states: readonly SimulationState[], kind: StartPoint['kind'] = 'preboss') =>
-      projectStartInstallation(catalog, {
-        startPoint: { biomeKey: 'G', kind },
-        startRoomGameName: base.startRoomGameName,
-        states,
-        roomHistory: base.roomHistory,
-        visitedBiomeKeys: base.route.visitedBiomeKeys,
-      });
-    const withRewardHistory = (patch: Partial<SimulationState['rewardHistory']>): SimulationState =>
-      Object.freeze({
-        ...state!,
-        rewardHistory: Object.freeze({ ...state!.rewardHistory, ...patch }),
-      });
-    /** Another branch that recorded one fewer use of an existing key. */
-    const oneFewer = (record: Readonly<Record<string, number>>) => {
-      const [key, count] = Object.entries(record).find(([, value]) => value > 1)!;
-      return Object.freeze({ ...record, [key]: count - 1 });
-    };
-    const wellInstance = (itemKey: string, clock: 'rooms' | 'encounters', remainingUses: number) =>
-      Object.freeze({
-        itemKey,
-        traitKey: itemKey,
-        clock,
-        remainingUses,
-        source: Object.freeze({
-          occurrence: golden.biome('G').rewards.midBiomeStartStates!.preboss!.owner,
-          generationKey: 'initial:healing' as const,
-        }),
-      });
-
-    it('omits only the reward stores that differ by branch', () => {
-      const [ranged, ...exact] = base.rewardStores.stores;
-      const drawn = ranged!.remainingEntryCounts.findIndex((count) => count > 0);
-      // Another branch drew one more of an entry the store still holds.
-      const counts = ranged!.remainingEntryCounts.map((count, index) =>
-        index === drawn ? count - 1 : count,
-      );
-      const other = Object.freeze({
-        ...state!,
-        bags: Object.freeze({
-          ...state!.bags,
-          [ranged!.storeKey]: { ...state!.bags[ranged!.storeKey]!, remainingEntryCounts: counts },
-        }),
-      });
-      const result = project([state!, other]);
-      expect(result).toMatchObject({
-        availability: 'available',
-        installation: {
-          rewardStores: { stores: exact },
-        },
-      });
-    });
-
-    it('is unavailable when a run-wide family differs by branch', () => {
-      const other = withRewardHistory({ useRecord: oneFewer(state!.rewardHistory.useRecord) });
-      expect(project([state!, other])).toEqual({
-        availability: 'unavailable',
-        reason: { kind: 'branchesDisagree', families: ['runRecords'] },
-      });
-    });
-
-    it('requires item armor to agree by branch', () => {
-      const other = withRewardHistory({ itemArmor: state!.rewardHistory.itemArmor + 20 });
-      expect(project([state!, other])).toEqual({
-        availability: 'unavailable',
-        reason: { kind: 'branchesDisagree', families: ['itemArmor'] },
-      });
-    });
-
-    it('carries collected essences, which must agree by branch', () => {
-      expect(base.essences).toEqual(state!.traitHistory.essenceElements);
-      const other = Object.freeze({
-        ...state!,
-        traitHistory: Object.freeze({
-          ...state!.traitHistory,
-          essenceElements: Object.freeze({
-            ...state!.traitHistory.essenceElements,
-            Fire: state!.traitHistory.essenceElements.Fire + 1,
-          }),
-        }),
-      });
-      expect(project([state!, other])).toEqual({
-        availability: 'unavailable',
-        reason: { kind: 'branchesDisagree', families: ['essences'] },
-      });
-    });
-
-    it('compares records by content, not by key order', () => {
-      const reordered = withRewardHistory({
-        useRecord: Object.freeze(
-          Object.fromEntries(Object.entries(state!.rewardHistory.useRecord).reverse()),
-        ),
-      });
-      expect(project([state!, reordered]).availability).toBe('available');
-    });
-
-    it('compares unordered collections by content, not by acquisition order', () => {
-      const equipped = Object.entries(state!.traitHistory.equippedTraits);
-      expect(equipped.length).toBeGreaterThan(1);
-      const holding = (instances: readonly ReturnType<typeof wellInstance>[]) =>
-        Object.freeze({ ...state!.stygianWell, timedInstances: Object.freeze(instances) });
-      const first = Object.freeze({
-        ...state!,
-        stygianWell: holding([
-          wellInstance('TemporaryDoorHealTrait', 'rooms', 3),
-          wellInstance('TemporaryImprovedCastTrait', 'encounters', 2),
-        ]),
-      });
-      const reordered = Object.freeze({
-        ...state!,
-        traitHistory: Object.freeze({
-          ...state!.traitHistory,
-          equippedTraits: Object.freeze(Object.fromEntries([...equipped].reverse())),
-        }),
-        stygianWell: holding([
-          wellInstance('TemporaryImprovedCastTrait', 'encounters', 2),
-          wellInstance('TemporaryDoorHealTrait', 'rooms', 3),
-        ]),
-      });
-      const result = project([first, reordered]);
-      expect(result.availability).toBe('available');
-      if (result.availability !== 'available') return;
-      expect(result.installation.traits.map((trait) => trait.traitKey)).toEqual(
-        equipped.map(([traitKey]) => traitKey).sort(),
-      );
-      // Installed without the planner's purchase provenance.
-      expect(result.installation.stygianWell.timedInstances).toEqual([
-        {
-          itemKey: 'TemporaryDoorHealTrait',
-          traitKey: 'TemporaryDoorHealTrait',
-          clock: 'rooms',
-          remainingUses: 3,
-        },
-        {
-          itemKey: 'TemporaryImprovedCastTrait',
-          traitKey: 'TemporaryImprovedCastTrait',
-          clock: 'encounters',
-          remainingUses: 2,
-        },
-      ]);
-    });
-
-    it('requires biome records to agree only where they are installed', () => {
-      const other = withRewardHistory({
-        biomeUseRecord: oneFewer(state!.rewardHistory.biomeUseRecord),
-      });
-      expect(project([state!, other])).toMatchObject({
-        reason: { kind: 'branchesDisagree', families: ['biomeRecords'] },
-      });
-      // An Opening installs the native biome-start reset of each branch.
-      expect(project([state!, other].map(beginBiomeSimulationState), 'opening').availability).toBe(
-        'available',
-      );
-    });
-  });
-
   describe('held keepsakes and max-stat grants', () => {
     const startPoint: StartPoint = { biomeKey: 'G', kind: 'preboss' };
     const base = golden.installed(startPoint);
-    const [state] = golden.biome('G').rewards.midBiomeStartStates!.preboss!.states;
+    const state = golden.biome('G').rewards.midBiomeStartStates!.preboss!.state;
     const wheel = 'ManaOverTimeRefundKeepsake';
     const installed = (
       keepsakes: Partial<SimulationState['keepsakes']>,
@@ -391,13 +231,11 @@ describe('mid-run start installation', () => {
       const result = projectStartInstallation(catalog, {
         startPoint,
         startRoomGameName: base.startRoomGameName,
-        states: [
-          Object.freeze({
-            ...state!,
-            traitHistory: traitHistory as SimulationState['traitHistory'],
-            keepsakes: Object.freeze({ ...state!.keepsakes, ...keepsakes }),
-          }),
-        ],
+        state: Object.freeze({
+          ...state!,
+          traitHistory: traitHistory as SimulationState['traitHistory'],
+          keepsakes: Object.freeze({ ...state!.keepsakes, ...keepsakes }),
+        }),
         roomHistory: base.roomHistory,
         visitedBiomeKeys: base.route.visitedBiomeKeys,
       });

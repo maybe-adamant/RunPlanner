@@ -31,7 +31,8 @@ import type {
   MaterializedBiomePrefix,
 } from '../materialization';
 import type { TargetRewardHistoryCheckpoint } from '../rewards';
-import { rewardLookupSets, sharedRewardLookups } from '../state/reward-lookups';
+import { rewardLookupSets } from '../state/reward-lookups';
+import { pendingHermesSpellDrop } from '../commerce/hermes-shrine';
 import { requirementEvidence } from '../../requirements/evidence';
 import type { RoomGenerationExclusionEvidence, RoomGenerationExclusionReason } from './model';
 import type { FindingEvidence, SemanticFinding } from '../model';
@@ -565,14 +566,6 @@ function targetGenerationViews(
   return new Map(entries.map((view) => [semanticAddressKey(view.targetOrigin), view]));
 }
 
-function sameRecord(
-  left: Readonly<Record<string, number>>,
-  right: Readonly<Record<string, number>>,
-): boolean {
-  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
-  return [...keys].every((key) => left[key] === right[key]);
-}
-
 interface TargetRewardRequirementFacts {
   readonly history: RewardHistoryState;
   readonly pendingSpellDrop: boolean;
@@ -585,40 +578,14 @@ function targetRewardHistories(
 ): ReadonlyMap<string, TargetRewardRequirementFacts> {
   const result = new Map<string, TargetRewardRequirementFacts>();
   for (const checkpoint of checkpoints ?? []) {
-    const first = checkpoint.states[0];
-    if (first === undefined) {
-      continue;
-    }
-    const firstHistory = first.rewardHistory;
-    const firstPendingSpellDrop = Object.values(first.pendingHermesShrineDeliveries).some(
-      (delivery) => delivery.rewardType === 'SpellDrop',
-    );
-    const firstAllSpellInvested = first.hexProgress.talentDropsClosed === true;
-    if (
-      checkpoint.states.some(
-        (state) =>
-          !sameRecord(state.rewardHistory.useRecord, firstHistory.useRecord) ||
-          !sameRecord(state.rewardHistory.biomeUseRecord, firstHistory.biomeUseRecord) ||
-          !sameRecord(state.rewardHistory.lootTypeHistory, firstHistory.lootTypeHistory) ||
-          state.rewardHistory.traitFacts.upgradableTraitCount !==
-            firstHistory.traitFacts.upgradableTraitCount ||
-          Object.values(state.pendingHermesShrineDeliveries).some(
-            (delivery) => delivery.rewardType === 'SpellDrop',
-          ) !== firstPendingSpellDrop ||
-          (state.hexProgress.talentDropsClosed === true) !== firstAllSpellInvested,
-      )
-    ) {
-      throw new BiomeRoomGenerationContractError(
-        `target ${semanticAddressKey(checkpoint.origin)} has divergent reward-history eligibility facts`,
-      );
-    }
+    const state = checkpoint.state;
     result.set(
       semanticAddressKey(checkpoint.origin),
       Object.freeze({
-        history: firstHistory,
-        pendingSpellDrop: firstPendingSpellDrop,
-        allSpellInvested: firstAllSpellInvested,
-        rewardLookups: rewardLookupSets(sharedRewardLookups(checkpoint.states)),
+        history: state.rewardHistory,
+        pendingSpellDrop: pendingHermesSpellDrop(state),
+        allSpellInvested: state.hexProgress.talentDropsClosed === true,
+        rewardLookups: rewardLookupSets(state.rewardLookups),
       }),
     );
   }

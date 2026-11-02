@@ -26,7 +26,7 @@ import {
   executionHubs,
 } from './assembly/route';
 import { hubBySource, hubExitByRoom } from './assembly/hub';
-import { executionRoomOwnerKey } from './assembly/support';
+import { completeFrontier, executionRoomOwnerKey } from './assembly/support';
 import { executionOccurrence } from './assembly/occurrence';
 import { validateExecutionProduct } from './assembly/validation';
 import { executionTimelineTransactions } from './assembly/timeline-transactions';
@@ -104,8 +104,8 @@ export function assembleExecutionProduct({
   const biomes = completeExecutionBiomes(assembly);
   // Reroll wire appears only for plans that spend from the run's reroll pool,
   // which carries every earlier biome's spends.
-  const publishesRerollPool = biomes.some((biome) =>
-    biome.rewards.branches.some((branch) => branch.state.arcanaFear.arcana.rerollPool.spent > 0),
+  const publishesRerollPool = biomes.some(
+    (biome) => completeFrontier(biome).state.arcanaFear.arcana.rerollPool.spent > 0,
   );
   const rooms = orderedExecutionRooms(biomes);
   if (rooms.length === 0 || rooms.length > 256) {

@@ -195,30 +195,31 @@ export interface RewardBranch {
 export interface TargetRewardHistoryCheckpoint {
   readonly origin: TargetAddress;
   readonly historySequence: number;
-  /** Exact full branch snapshots at this generation contact. */
-  readonly states: readonly import('../state/model').SimulationState[];
+  /** The exact reached state at this generation contact. */
+  readonly state: import('../state/model').SimulationState;
 }
 
 interface RewardSimulationBase {
   readonly biomeKey: string;
   readonly validity: 'invalid' | 'valid';
-  readonly branches: readonly RewardBranch[];
+  /** The one reached state the walk ended on; none when a block stopped it. */
+  readonly frontier: RewardBranch | undefined;
   readonly findings: readonly SemanticFinding[];
 }
 
-/**
- * The exact states a room's preparation received: after its predecessor's
- * departure and before its own preparation and entry effects. They already
- * include the room's own creation (its incoming offer and bag effects). Raw
- * states, never a Run State checkpoint.
- */
 /** A start inside its biome, at its Preboss or completion Boss. */
 export type MidBiomeStartPoint = 'preboss' | 'boss';
 
+/**
+ * The exact state a room's preparation received: after its predecessor's
+ * departure and before its own preparation and entry effects. It already
+ * includes the room's own creation (its incoming offer and bag effects). A raw
+ * state, never a Run State checkpoint.
+ */
 export interface RoomStartStateCapture {
   readonly owner: import('../../authored-project/addresses').OccurrenceAddress;
   readonly gameName: string;
-  readonly states: readonly import('../state/model').SimulationState[];
+  readonly state: import('../state/model').SimulationState;
 }
 
 /** Canonical Run State when the Hub is left after `precedingVisitCount` completed visits. */

@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/acquisition/site-settlement';
 
 import { loadSurfaceNOProject } from '@run-planner/test-fixtures/surface';
+import { reachedFrontier } from '../../../support/reward-frontier';
 
 function fixture() {
   const project = loadSurfaceNOProject();
@@ -128,7 +129,7 @@ describe('O canonical materialization and lifecycle', () => {
     expect(o.rewards.validity).toBe('valid');
     for (const offer of offers) {
       expect(
-        o.rewards.branches.some((branch) =>
+        reachedFrontier(o.rewards).some((branch) =>
           branch.events.some(
             (event) =>
               event.kind === 'rewardOffered' &&
@@ -137,7 +138,7 @@ describe('O canonical materialization and lifecycle', () => {
         ),
       ).toBe(true);
       expect(
-        o.rewards.branches.some((branch) =>
+        reachedFrontier(o.rewards).some((branch) =>
           branch.events.some(
             (event) =>
               event.kind === 'concreteAcquisition' &&
@@ -152,7 +153,7 @@ describe('O canonical materialization and lifecycle', () => {
       if (picked === undefined) throw new Error('fixture lost wheel selection');
       const site = createAcquisitionSiteAddress(wheel.origin, wheel.wheelKey);
       expect(
-        o.rewards.branches[0]!.events.find(
+        o.rewards.frontier!.events.find(
           (event) =>
             event.kind === 'concreteAcquisition' &&
             semanticAddressKey(event.origin) === semanticAddressKey(picked.origin),

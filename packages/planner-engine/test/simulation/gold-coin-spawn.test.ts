@@ -92,7 +92,7 @@ function withQuickBuck(second: 'buriedTreasure' | 'money'): ProjectDocument {
 function combat09GoldEvents(
   project: ProjectDocument,
   order: readonly Action[],
-  seed: (branches: readonly RewardBranch[]) => readonly RewardBranch[] = (branches) => branches,
+  seed: (frontier: RewardBranch) => RewardBranch = (frontier) => frontier,
 ) {
   const ordered = replaceTestRoomActionOrder(project, catalog, goldenHBiome, combat09, order);
   const g = simulateProject(catalog, createGoldenFGHProject()).route!.biomes.find(
@@ -110,7 +110,7 @@ function combat09GoldEvents(
       seed: {
         history: g.history,
         // Hera leaves this run's loot history so Poseidon can appear in H.
-        rewardBranches: seed(g.rewards.branches).map((branch: RewardBranch) => {
+        rewardFrontier: ((branch: RewardBranch) => {
           const { HeraUpgrade: _hera, ...lootTypeHistory } =
             branch.state.rewardHistory.lootTypeHistory;
           void _hera;
@@ -121,7 +121,7 @@ function combat09GoldEvents(
               rewardHistory: Object.freeze({ ...branch.state.rewardHistory, lootTypeHistory }),
             }),
           });
-        }),
+        })(seed(g.rewards.frontier!)),
       },
     },
   )?.evaluation.rewards;
@@ -213,7 +213,7 @@ describe('coin spawn valuation', () => {
       (biome) => biome.biomeKey === 'G',
     );
     if (g?.authoring !== 'complete') throw new Error('G is incomplete');
-    const state = g.rewards.branches[0]!.state;
+    const state = g.rewards.frontier!.state;
     const held = Object.values(state.traitHistory.equippedTraits)[0]!;
     const withQuickBuckHeld = Object.freeze({
       ...state,

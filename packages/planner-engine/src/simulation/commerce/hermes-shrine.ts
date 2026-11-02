@@ -25,30 +25,15 @@ export interface DerivedHermesShrineDelivery extends HermesDeliveryObligation {
   readonly remainingUses: number;
 }
 
-/**
- * Lifecycle composition needs one unbranched requirement input. Delayed
- * delivery may carry several independent items, but the Spell reservation is
- * a single boolean that must agree across the seed frontier.
- */
-export function attestPendingHermesSpellDrop(
-  branches: readonly {
-    readonly state: {
-      readonly pendingHermesShrineDeliveries?: Readonly<
-        Record<string, { readonly rewardType: string }>
-      >;
-    };
-  }[],
-): boolean {
-  const values = branches.map((branch) =>
-    Object.values(branch.state.pendingHermesShrineDeliveries ?? {}).some(
-      (delivery) => delivery.rewardType === 'SpellDrop',
-    ),
+/** Delayed delivery may carry several items; lifecycle reads only whether one is the Spell. */
+export function pendingHermesSpellDrop(state: {
+  readonly pendingHermesShrineDeliveries?: Readonly<
+    Record<string, { readonly rewardType: string }>
+  >;
+}): boolean {
+  return Object.values(state.pendingHermesShrineDeliveries ?? {}).some(
+    (delivery) => delivery.rewardType === 'SpellDrop',
   );
-  const first = values[0] ?? false;
-  if (values.some((value) => value !== first)) {
-    throw new Error('Hermes Shrine Spell reservation frontier is divergent');
-  }
-  return first;
 }
 
 export type HermesShrineInventoryIssue =

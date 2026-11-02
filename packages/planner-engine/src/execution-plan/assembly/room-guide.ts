@@ -15,7 +15,7 @@ import type {
   ExecutionTimelineTransaction,
 } from '../model';
 import { executionRewardFromOffer } from './overview';
-import { agreement } from './support';
+import { completeFrontier } from './support';
 
 function rewardFor(transaction: ExecutionTimelineTransaction | undefined) {
   return transaction?.kind === 'acquisition' ? transaction.reward : undefined;
@@ -211,24 +211,17 @@ export function assembleExecutionRoomGuide(
   const timePiecedReward = (actionOwner: (typeof room.roomActionRoster.rows)[number]['owner']) => {
     const source = actionOwner.kind === 'acquisitionRole' ? actionOwner.owner : actionOwner;
     const role = actionOwner.kind === 'acquisitionRole' ? actionOwner.acquisitionRole : undefined;
-    const events = biome.rewards.branches.map((branch) =>
-      branch.events.find(
-        (event) =>
-          event.kind === 'conversionToGold' &&
-          semanticAddressKey(event.origin) === semanticAddressKey(source) &&
-          (role === undefined || event.acquisition.role === role),
-      ),
+    const event = completeFrontier(biome).events.find(
+      (candidate) =>
+        candidate.kind === 'conversionToGold' &&
+        semanticAddressKey(candidate.origin) === semanticAddressKey(source) &&
+        (role === undefined || candidate.acquisition.role === role),
     );
-    if (!events.every((event) => event?.kind === 'conversionToGold')) return undefined;
-    return agreement(
-      events.map((event) =>
-        executionRewardFromOffer(
-          event.source.offer,
-          event.source.producerLifecycleKey,
-          event.source.resolvedStoreKey,
-        ),
-      ),
-      `room guide Time Piece target ${semanticAddressKey(actionOwner)}`,
+    if (event?.kind !== 'conversionToGold') return undefined;
+    return executionRewardFromOffer(
+      event.source.offer,
+      event.source.producerLifecycleKey,
+      event.source.resolvedStoreKey,
     );
   };
   return Object.freeze(

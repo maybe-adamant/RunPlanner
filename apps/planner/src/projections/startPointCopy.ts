@@ -1,29 +1,7 @@
 import type { RunStartPoint } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { StartPointPublicationBlock } from '@run-planner/engine/execution-plan';
-import type {
-  StartInstallationFamily,
-  StartInstallationUnavailableReason,
-} from '@run-planner/engine/simulation';
-
-const FAMILY_LABELS: Readonly<Record<StartInstallationFamily, string>> = Object.freeze({
-  equipment: 'equipment',
-  traits: 'boons and traits',
-  essences: 'collected Essences',
-  chaos: 'Chaos effects',
-  keepsake: 'keepsake',
-  arcana: 'Arcana',
-  fear: 'Fear',
-  maxStats: 'max Health or Magick',
-  itemArmor: 'armor',
-  stygianWell: 'Well of Charon items',
-  hermesDeliveries: 'Hermes deliveries',
-  hex: 'Hex progress',
-  rewardPriorities: 'reward priorities',
-  runRecords: 'run records',
-  biomeRecords: 'biome records',
-  counters: 'progress counters',
-});
+import type { StartInstallationUnavailableReason } from '@run-planner/engine/simulation';
 
 export const START_POINT_LABELS = Object.freeze({
   opening: 'Opening',
@@ -46,18 +24,7 @@ export function describeStartPointUnavailable(reason: StartInstallationUnavailab
       return 'The run already starts here.';
     case 'notReached':
       return 'Plan the route up to this point first.';
-    case 'branchesDisagree':
-      return `The planned outcomes before this point differ in ${reason.families
-        .map((family) => FAMILY_LABELS[family])
-        .join(', ')}.`;
   }
-}
-
-/** A picker option's hover: only a reason the plan does not already make evident. */
-export function startPointOptionHint(
-  reason: StartInstallationUnavailableReason,
-): string | undefined {
-  return reason.kind === 'branchesDisagree' ? describeStartPointUnavailable(reason) : undefined;
 }
 
 /** Why the authored start point keeps the plan from being sent. */

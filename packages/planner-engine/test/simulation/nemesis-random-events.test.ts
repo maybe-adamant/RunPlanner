@@ -36,6 +36,7 @@ import {
   goldenHBiome,
   replaceNemesisRandomEventInteraction,
 } from '@run-planner/test-fixtures/underworld';
+import { reachedFrontier } from '../support/reward-frontier';
 
 const nemesisRandomEventFamilies = [
   'freeItem',
@@ -190,7 +191,7 @@ describe('Nemesis random events', () => {
       const f = evaluated.route.biomes.find((biome) => biome.origin.biomeKey === 'F');
       if (f === undefined || !('rewards' in f)) throw new Error('missing evaluated F rewards');
       expect(
-        f.rewards.branches.every((branch) =>
+        reachedFrontier(f.rewards).every((branch) =>
           branch.events.some(
             (event) =>
               event.kind === 'concreteAcquisition' &&
@@ -202,7 +203,7 @@ describe('Nemesis random events', () => {
       ).toBe(true);
       if (removedTraitKey !== undefined) {
         expect(
-          f.rewards.branches.every(
+          reachedFrontier(f.rewards).every(
             (branch) =>
               branch.state.traitHistory !== undefined &&
               branch.state.traitHistory.equippedTraits[removedTraitKey] === undefined &&
@@ -225,7 +226,7 @@ describe('Nemesis random events', () => {
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (biome?.authoring !== 'complete') throw new Error('Nemesis F evaluation is incomplete');
-    expect(biome.rewards.branches).toHaveLength(1);
+    expect(biome.rewards.frontier).toBeDefined();
   });
 
   it('reuses Time Piece and Sea Star capability while forbidding Artificer on the event result', () => {
@@ -388,7 +389,7 @@ describe('Nemesis random events', () => {
     if (f === undefined || !('rewards' in f)) throw new Error('missing evaluated F rewards');
     const incoming = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(5, 1));
     expect(
-      f.rewards.branches.some((branch) =>
+      reachedFrontier(f.rewards).some((branch) =>
         branch.events.some(
           (event) =>
             event.kind === 'rewardOffered' &&
@@ -397,7 +398,7 @@ describe('Nemesis random events', () => {
       ),
     ).toBe(true);
     expect(
-      f.rewards.branches.some((branch) =>
+      reachedFrontier(f.rewards).some((branch) =>
         branch.events.some(
           (event) =>
             event.kind === 'concreteAcquisition' &&
@@ -431,7 +432,7 @@ describe('Nemesis random events', () => {
     const f = evaluation.route.biomes.find((biome) => biome.origin.biomeKey === 'F');
     if (f === undefined || !('rewards' in f)) throw new Error('missing evaluated F rewards');
     expect(
-      f.rewards.branches.some((branch) =>
+      reachedFrontier(f.rewards).some((branch) =>
         branch.events.some(
           (event) =>
             event.kind === 'concreteAcquisition' &&

@@ -48,6 +48,7 @@ import {
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import { traitFrontierState } from '../support/simulation-state';
+import { reachedFrontier } from '../support/reward-frontier';
 
 const none = (): ResourcePlacements => ({
   Pickaxe: null,
@@ -521,10 +522,10 @@ describe('selected resource success legality', () => {
       history,
       ordinaryPositionFor(catalog, snapshot),
       route.loadout,
-      initializeTestRewardBranches().map((branch) => ({
-        ...branch,
-        state: Object.freeze({ ...branch.state, traitHistory: before }),
-      })),
+      {
+        ...initializeTestRewardBranches()[0]!,
+        state: Object.freeze({ ...initializeTestRewardBranches()[0]!.state, traitHistory: before }),
+      },
     );
     const withResource = evaluateBiomeRewards(
       catalog,
@@ -532,10 +533,10 @@ describe('selected resource success legality', () => {
       history,
       ordinaryPositionFor(catalog, snapshot),
       route.loadout,
-      initializeTestRewardBranches().map((branch) => ({
-        ...branch,
-        state: Object.freeze({ ...branch.state, traitHistory: before }),
-      })),
+      {
+        ...initializeTestRewardBranches()[0]!,
+        state: Object.freeze({ ...initializeTestRewardBranches()[0]!.state, traitHistory: before }),
+      },
       { ...none(), Pickaxe: at('F', host.occurrenceId) },
     );
     const throughHostWithResource = evaluateBiomeRewards(
@@ -544,10 +545,10 @@ describe('selected resource success legality', () => {
       throughHostExit,
       ordinaryPositionFor(catalog, snapshot),
       route.loadout,
-      initializeTestRewardBranches().map((branch) => ({
-        ...branch,
-        state: Object.freeze({ ...branch.state, traitHistory: before }),
-      })),
+      {
+        ...initializeTestRewardBranches()[0]!,
+        state: Object.freeze({ ...initializeTestRewardBranches()[0]!.state, traitHistory: before }),
+      },
       { ...none(), Pickaxe: at('F', host.occurrenceId) },
     );
     // The host's already-resolved offer is identical. The added exit effect
@@ -574,7 +575,7 @@ describe('selected resource success legality', () => {
 
     // The real selected placement emits at the room-exit boundary. That makes
     // the fourth matching element visible only to the following room's offer.
-    const after = throughHostWithResource.branches[0]?.state.traitHistory;
+    const after = throughHostWithResource.frontier?.state.traitHistory;
     if (after === undefined) throw new Error('selected resource did not publish trait history');
     expect(after.events).toContainEqual(
       expect.objectContaining({
@@ -659,7 +660,7 @@ describe('selected resource success legality', () => {
     expect(underworld?.summary.eligibleForExecutionPlan).toBe(false);
     expect(evaluated.summary.eligibleForExecutionPlan).toBe(false);
     expect(
-      f?.rewards.branches
+      reachedFrontier(f?.rewards)
         .flatMap((branch) => branch.state.traitHistory?.events ?? [])
         .filter(
           (event) =>

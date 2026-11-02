@@ -20,7 +20,7 @@ describe('Preboss start state capture', () => {
   it('captures the Hub-sourced Preboss after the Hub departure and before its own preparation', () => {
     const probe = walkWithDepartureClocks(0.8, undefined, [centaurKey]);
     const probeSequence =
-      probe.result.simulation.midBiomeStartStates!.preboss!.states[0]!.reached.historyView.sequence;
+      probe.result.simulation.midBiomeStartStates!.preboss!.state.reached.historyView.sequence;
     const departuresBefore = probe.departures.filter(
       (event) => event.sequence <= probeSequence,
     ).length;
@@ -37,7 +37,7 @@ describe('Preboss start state capture', () => {
         event.kind === 'roomPrepared' &&
         semanticAddressKey(event.origin) === semanticAddressKey(capture.owner),
     )!;
-    const [state] = capture.states;
+    const state = capture.state;
     const sequence = state!.reached.historyView.sequence;
     expect(sequence).toBe(prepared.sequence - 1);
     // The deferred Hub departure follows the Handoff generation and precedes the Preboss.
@@ -106,7 +106,7 @@ describe('Boss start state capture', () => {
     const capture = rewards.midBiomeStartStates!.boss!;
     const preboss = rewards.midBiomeStartStates!.preboss!;
     expect(capture.gameName).toBe('G_Boss01');
-    const sequence = capture.states[0]!.reached.historyView.sequence;
+    const sequence = capture.state.reached.historyView.sequence;
     const at = (offset: number) => events.find((event) => event.sequence === sequence + offset);
     const ownedBy = (event: HistoryEvent | undefined, owner: typeof capture.owner) =>
       event !== undefined && semanticAddressKey(event.origin) === semanticAddressKey(owner);

@@ -945,7 +945,7 @@ describe('trait legality and derived facts', () => {
       if (finalBiome === undefined || !('rewards' in finalBiome)) {
         throw new Error(`${routeKey} final biome reward product is missing`);
       }
-      const finalBranch = finalBiome.rewards.branches[0];
+      const finalBranch = finalBiome.rewards.frontier;
       if (finalBranch === undefined || finalBranch.state.traitHistory === undefined) {
         throw new Error(`${routeKey} trait history is missing`);
       }
@@ -1092,7 +1092,7 @@ describe('reached trait offer chronology', () => {
         traitKeys: ['ApolloWeaponBoon', 'ApolloSpecialBoon'],
       },
     });
-    const branch = f.rewards.branches[0];
+    const branch = f.rewards.frontier;
     if (branch === undefined) throw new Error('F reward branch is missing');
     const firstTrace = f.rewards.selectedTraitOffers.find(
       (trace) =>

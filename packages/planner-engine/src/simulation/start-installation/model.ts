@@ -15,7 +15,7 @@ export interface StartPoint {
   readonly kind: 'opening' | MidBiomeStartPoint;
 }
 
-/** The install families that must agree across every reached branch. */
+/** The install families a start point installs. */
 export type StartInstallationFamily =
   | 'equipment'
   | 'traits'
@@ -39,11 +39,7 @@ export type StartInstallationUnavailableReason =
   /** The first biome's Opening is a normal run. */
   | { readonly kind: 'routeStart' }
   /** Evaluation did not reach the start state: a blocked or unauthored predecessor. */
-  | { readonly kind: 'notReached' }
-  | {
-      readonly kind: 'branchesDisagree';
-      readonly families: readonly StartInstallationFamily[];
-    };
+  | { readonly kind: 'notReached' };
 
 export type StartInstallationResult =
   | { readonly availability: 'available'; readonly installation: StartInstallation }
