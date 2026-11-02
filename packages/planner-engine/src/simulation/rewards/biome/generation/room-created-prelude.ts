@@ -80,7 +80,8 @@ export function prepareRoomCreatedPrelude(
             candidate: Object.freeze({
               state: branch.state.keepsakes,
               encounterBlockedKeepsakeKeys,
-              // An unchanged rack emits no rack event, so a drafted keepsake is judged here.
+              // An unchanged rack emits no rack event, so a drafted keepsake is judged here;
+              // nothing in a Postboss room before the rack changes an equip outcome.
               equipResultFor: rackKeepsakeEquipResultFor(
                 catalog,
                 selection,
