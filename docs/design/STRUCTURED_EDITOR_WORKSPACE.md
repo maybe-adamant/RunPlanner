@@ -109,7 +109,10 @@ its authored data nor its workspace node, findings, contextual controls, focus
 destination, or editability. Room rewards, encounter phases, and any future
 features, items, or other room-local products remain available through the containing
 decision or fixed-stage inspector unless a separate player-facing navigation
-need justifies another rail highlight.
+need justifies another rail highlight. A decision's doors are repaired on its
+source room's Room Doors, so once the decision opens its selected room, the
+stop that opens the source room carries the doors' finding marks and selection;
+a decision still choosing its room keeps them on its own stop.
 
 ### Run State Launchers
 

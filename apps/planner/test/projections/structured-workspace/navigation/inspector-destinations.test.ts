@@ -116,6 +116,28 @@ function railKeyForNode(biome: WorkspaceBiome, nodeKey: string): string {
   return entry.marker.focusKey;
 }
 
+/** The rail stop that opens a decision's source room, whose Doors tab repairs the decision. */
+function sourceRoomRailKey(
+  biome: WorkspaceBiome,
+  decision: Extract<
+    WorkspaceBiome['nodes'][number],
+    { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
+  >,
+): string {
+  if (decision.source.kind !== 'occurrence') throw new Error(`${decision.key} has no source room`);
+  const sourceId = decision.source.occurrenceId;
+  const entry = biome.rail.find(
+    (candidate) =>
+      candidate.kind === 'node' &&
+      (candidate.node.kind === 'occurrenceWorkbench'
+        ? candidate.node.room.occurrenceId === sourceId
+        : candidate.node.kind !== 'hubDecision' &&
+          candidate.node.selectedContinuation?.door.room.occurrenceId === sourceId),
+  );
+  if (entry === undefined) throw new Error(`${sourceId} has no rendered rail stop`);
+  return entry.marker.focusKey;
+}
+
 function occurrenceWorkbenchFor(
   biome: WorkspaceBiome,
   occurrenceId: string,
@@ -414,13 +436,18 @@ describe('workspace inspector destinations', () => {
     const workspace = structuredWorkspace.project(assembled);
     const focus = destination(workspace, finding.origin);
     const decision = biome(workspace, 'H').nodes.find((node) => node.key === focus.nodeKey);
-    if (decision === undefined) throw new Error('Missing cage decision');
+    if (
+      decision?.kind !== 'ordinaryBatch' &&
+      decision?.kind !== 'mixedBatch' &&
+      decision?.kind !== 'takeoverBatch'
+    )
+      throw new Error('Missing cage decision');
     expect(focus).toMatchObject({
       ownerAddress: finding.origin,
       focusAddress: finding.origin,
       focusKey: semanticAddressKey(finding.origin),
       roomTab: 'doors',
-      selectedRailKey: decision.marker.focusKey,
+      selectedRailKey: sourceRoomRailKey(biome(workspace, 'H'), decision),
       inspectorSubject: { kind: 'node', nodeKey: decision.key },
     });
   });
@@ -1130,7 +1157,7 @@ describe('workspace inspector destinations', () => {
       ...(decision.rewardStore === undefined ? [] : [decision.rewardStore.address]),
       target.marker.address,
     ]) {
-      expectNodeRailDestination(complete, owner, decision.key, decisionRail.marker.focusKey);
+      expectNodeRailDestination(complete, owner, decision.key, sourceRoomRailKey(f, decision));
     }
     const targetWorkbench = occurrenceWorkbenchFor(f, target.room.occurrenceId);
     expect(destination(complete, target.room.marker.address)).toMatchObject({
@@ -1144,11 +1171,21 @@ describe('workspace inspector destinations', () => {
     const selectedTarget = decision.targets.find((candidate) => candidate.selected);
     if (selectedTarget === undefined) throw new Error('F selected target is missing');
     const selectedWorkbench = occurrenceWorkbenchFor(f, selectedTarget.room.occurrenceId);
-    for (const owner of [
+    // The selected room's door reward repairs beside the decision's doors.
+    const doorRewardKeys = new Set(
+      selectedTarget.door.offerRewardSurface.rewards.map(
+        (doorReward) => doorReward.marker.focusKey,
+      ),
+    );
+    for (const marker of [
       ...workspaceOccurrenceOwnedMarkers(selectedTarget.room),
       ...selectedTarget.room.localDetailMarkers,
-    ].map((marker) => marker.address)) {
-      expect(destination(complete, owner).selectedRailKey).toBe(decisionRail.marker.focusKey);
+    ]) {
+      expect(destination(complete, marker.address).selectedRailKey).toBe(
+        doorRewardKeys.has(marker.focusKey)
+          ? sourceRoomRailKey(f, decision)
+          : decisionRail.marker.focusKey,
+      );
     }
     for (const owner of [
       selectedTarget.room.marker.address,
@@ -1294,7 +1331,8 @@ describe('workspace inspector destinations', () => {
     );
     if (preHubWorkbench === undefined) throw new Error('complete N PreHub workbench is missing');
     const preHubSource = destination(complete, preHubDecision.marker.address);
-    const preHubRailKey = railKeyForNode(n, preHubDecision.key);
+    // PreHub's doors repair on the Opening's Doors tab.
+    const preHubRailKey = railKeyForNode(n, n.entry?.key ?? '');
     expect(preHubSource.inspectorSubject).toEqual({ kind: 'node', nodeKey: preHubDecision.key });
     expect(preHubSource.selectedRailKey).toBe(preHubRailKey);
     expectNodeRailDestination(
@@ -1601,7 +1639,7 @@ describe('workspace inspector destinations', () => {
         focusAddress: owner,
         focusKey: semanticAddressKey(owner),
         roomTab: 'doors',
-        selectedRailKey: fieldsDecision.marker.focusKey,
+        selectedRailKey: sourceRoomRailKey(h, fieldsDecision),
       });
     }
 

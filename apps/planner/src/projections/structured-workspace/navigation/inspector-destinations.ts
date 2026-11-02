@@ -133,9 +133,12 @@ function selectedRailKeysByFocusKey(
       case 'frontier':
         registerRailFocusKey(result, entry.marker.focusKey, entry.marker.focusKey);
         break;
-      case 'node':
-        for (const focusKey of nodeOwnedFocusKeys(entry.node)) {
-          registerRailFocusKey(result, focusKey, entry.marker.focusKey);
+      case 'node': {
+        // A decision's doors, including its selected room's door reward, repair
+        // on its source room's Doors tab.
+        const doorFocusKeys = new Set(nodeOwnedFocusKeys(entry.node));
+        for (const focusKey of doorFocusKeys) {
+          registerRailFocusKey(result, focusKey, entry.doorsRailKey ?? entry.marker.focusKey);
         }
         if (
           (entry.node.kind === 'ordinaryBatch' ||
@@ -144,11 +147,13 @@ function selectedRailKeysByFocusKey(
           entry.node.selectedContinuation !== undefined
         ) {
           for (const focusKey of roomOwnedFocusKeys(entry.node.selectedContinuation.door.room)) {
+            if (doorFocusKeys.has(focusKey)) continue;
             registerRailFocusKey(result, focusKey, entry.marker.focusKey);
           }
         }
         registerRailFocusKey(result, entry.focusMarker.focusKey, entry.marker.focusKey);
         break;
+      }
       case 'hubGroup':
         for (const focusKey of nodeOwnedFocusKeys(entry.node)) {
           registerRailFocusKey(result, focusKey, entry.marker.focusKey);

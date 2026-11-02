@@ -9,7 +9,10 @@ import { StructuredWorkspaceProjectionContractError, type WorkspaceRoomSummary }
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import { bindWorkspaceInspectorDestinations } from '../navigation/inspector-destinations';
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
-import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
+import {
+  workspaceDecisionOwnedMarkers,
+  type WorkspaceDecisionBatchNode,
+} from '../navigation/marker-ownership';
 import type { WorkspaceBiomeSemanticAssembly } from '../assembly/biome-semantic-assembly';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 import type {
@@ -102,18 +105,30 @@ function railMarkerForNode(node: WorkspaceNode): WorkspaceMarker {
   return node.kind === 'occurrenceWorkbench' ? (node.railMarker ?? node.marker) : node.marker;
 }
 
-function decisionRailMarker(
-  node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode,
-): WorkspaceMarker {
+function decisionDoorFindingCount(node: WorkspaceDecisionBatchNode): number {
   const markers = new Map<string, WorkspaceMarker>();
   for (const value of workspaceDecisionOwnedMarkers(node)) markers.set(value.focusKey, value);
-  const findingCount = [...markers.values()].reduce(
-    (total, marker) => total + marker.findingCount,
-    0,
+  return [...markers.values()].reduce((total, marker) => total + marker.findingCount, 0);
+}
+
+function withRailFindingCount(marker: WorkspaceMarker, findingCount: number): WorkspaceMarker {
+  return findingCount === marker.findingCount ? marker : Object.freeze({ ...marker, findingCount });
+}
+
+function isDecisionBatchNode(node: WorkspaceNode): node is WorkspaceDecisionBatchNode {
+  return (
+    node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch' || node.kind === 'takeoverBatch'
   );
-  return findingCount === node.marker.findingCount
-    ? node.marker
-    : Object.freeze({ ...node.marker, findingCount });
+}
+
+/** The room a stop opens: its own room, or the one room its decision selects. */
+function railRoomOccurrenceId(node: WorkspaceNode): OccurrenceId | undefined {
+  if (node.kind === 'occurrenceWorkbench') return node.room.occurrenceId;
+  if (!isDecisionBatchNode(node)) return undefined;
+  if (node.selectedContinuation !== undefined)
+    return node.selectedContinuation.door.room.occurrenceId;
+  const selectedTargets = node.targets.filter((target) => target.selected);
+  return selectedTargets.length === 1 ? selectedTargets[0]?.room.occurrenceId : undefined;
 }
 
 function nodeRailPresentation(
@@ -289,13 +304,7 @@ function selectedTargetRailPresentation(
 
 function railFocusMarkerForNode(node: WorkspaceNode, marker: WorkspaceMarker): WorkspaceMarker {
   if (node.kind === 'occurrenceWorkbench') return node.room.marker;
-  if (
-    node.kind !== 'ordinaryBatch' &&
-    node.kind !== 'mixedBatch' &&
-    node.kind !== 'takeoverBatch'
-  ) {
-    return marker;
-  }
+  if (!isDecisionBatchNode(node)) return marker;
   if (node.selectedContinuation !== undefined) return node.selectedContinuation.marker;
   const selectedTargets = node.targets.filter((target) => target.selected);
   return selectedTargets.length === 1 && selectedTargets[0] !== undefined
@@ -481,6 +490,40 @@ export function presentWorkspaceBiome(
     (frontier?.kind === 'exitDecision' && frontier.owner.source.kind !== 'hubDecision')
       ? frontier
       : undefined;
+  // A decision that opens its selected room repairs its own doors on its source
+  // room's Doors tab, so the stop opening that source room owns their marks.
+  const railKeyByRoom = new Map<OccurrenceId, string>();
+  for (const node of railNodes) {
+    const room = railRoomOccurrenceId(node);
+    if (room !== undefined && !railKeyByRoom.has(room))
+      railKeyByRoom.set(room, railMarkerForNode(node).focusKey);
+  }
+  const doorsRailKeyByDecision = new Map<string, string>();
+  const hostedDoorFindingCount = new Map<string, number>();
+  for (const node of railNodes) {
+    if (!isDecisionBatchNode(node) || node.source.kind !== 'occurrence') continue;
+    if (railRoomOccurrenceId(node) === undefined) continue;
+    const doorsRailKey = railKeyByRoom.get(node.source.occurrenceId);
+    if (doorsRailKey === undefined || doorsRailKey === node.marker.focusKey) continue;
+    doorsRailKeyByDecision.set(node.key, doorsRailKey);
+    hostedDoorFindingCount.set(
+      doorsRailKey,
+      (hostedDoorFindingCount.get(doorsRailKey) ?? 0) + decisionDoorFindingCount(node),
+    );
+  }
+  const railMarker = (node: WorkspaceNode): WorkspaceMarker => {
+    const base = railMarkerForNode(node);
+    const ownCount = !isDecisionBatchNode(node)
+      ? base.findingCount
+      : doorsRailKeyByDecision.has(node.key)
+        ? 0
+        : decisionDoorFindingCount(node);
+    return withRailFindingCount(base, ownCount + (hostedDoorFindingCount.get(base.focusKey) ?? 0));
+  };
+  const doorsRailKeyFor = (node: WorkspaceNode) => {
+    const doorsRailKey = doorsRailKeyByDecision.get(node.key);
+    return doorsRailKey === undefined ? {} : { doorsRailKey };
+  };
   let decisionIndex = 0;
   const railEntryForNode = (node: WorkspaceNode): WorkspaceRailEntry => {
     if (node.kind === 'hubDecision') return projectHubRailEntry(catalog, node, structuralNodes);
@@ -488,8 +531,9 @@ export function presentWorkspaceBiome(
       decisionIndex += 1;
       const presentation = nodeRailPresentation(node, decisionIndex, node.key === entry?.key);
       const selectedTarget = selectedTargetRailPresentation(catalog, node);
-      const marker = decisionRailMarker(node);
+      const marker = railMarker(node);
       return Object.freeze({
+        ...doorsRailKeyFor(node),
         focusMarker: railFocusMarkerForNode(node, marker),
         kind: 'node' as const,
         key: node.key,
@@ -500,8 +544,7 @@ export function presentWorkspaceBiome(
       });
     }
     const presentation = nodeRailPresentation(node, undefined, node.key === entry?.key);
-    const marker =
-      node.kind === 'takeoverBatch' ? decisionRailMarker(node) : railMarkerForNode(node);
+    const marker = railMarker(node);
     const mainReward =
       node.kind !== 'occurrenceWorkbench'
         ? undefined
@@ -526,6 +569,7 @@ export function presentWorkspaceBiome(
           ? roomRailPresentation(catalog, node.room, undefined)
           : undefined;
     return Object.freeze({
+      ...doorsRailKeyFor(node),
       kind: 'node' as const,
       focusMarker: railFocusMarkerForNode(node, marker),
       key: node.key,
@@ -657,6 +701,7 @@ export function presentWorkspaceBiome(
       switch (entry.node.kind) {
         case 'ordinaryBatch':
           return Object.freeze({
+            ...(entry.doorsRailKey === undefined ? {} : { doorsRailKey: entry.doorsRailKey }),
             focusMarker: entry.focusMarker,
             kind: 'node' as const,
             key: entry.key,
@@ -667,6 +712,7 @@ export function presentWorkspaceBiome(
           });
         case 'mixedBatch':
           return Object.freeze({
+            ...(entry.doorsRailKey === undefined ? {} : { doorsRailKey: entry.doorsRailKey }),
             focusMarker: entry.focusMarker,
             kind: 'node' as const,
             key: entry.key,
@@ -677,6 +723,7 @@ export function presentWorkspaceBiome(
           });
         case 'takeoverBatch':
           return Object.freeze({
+            ...(entry.doorsRailKey === undefined ? {} : { doorsRailKey: entry.doorsRailKey }),
             focusMarker: entry.focusMarker,
             kind: 'node' as const,
             key: entry.key,

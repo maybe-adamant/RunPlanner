@@ -40,7 +40,6 @@ import {
   surfaceEncounterShowcaseProject,
 } from '@run-planner/test-fixtures/surface';
 import type { WorkspaceBiome } from '@planner/projections/structured-workspace/contracts/structure';
-import { workspaceDecisionOwnedMarkers } from '@planner/projections/structured-workspace/navigation/marker-ownership';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 import { presentWorkspaceBiome } from '@planner/projections/structured-workspace/presentation/biome-presentation';
 import { assembleWorkspaceBiomeSemantics } from '@planner/projections/structured-workspace/assembly/biome-semantic-assembly';
@@ -400,12 +399,13 @@ describe('structured workspace biome presentation', () => {
 
     expect(assembly.progressionKind).toBe('generated');
     expect(rail.label).toBe('Decision 1');
-    const ownedMarkers = new Map(
-      workspaceDecisionOwnedMarkers(decision).map((marker) => [marker.focusKey, marker]),
+    // Decision 1's doors repair on the Opening's Doors tab.
+    const opening = presentation.biome.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' && entry.node.key === presentation.biome.entry?.key,
     );
-    expect(rail.marker.findingCount).toBe(
-      [...ownedMarkers.values()].reduce((total, marker) => total + marker.findingCount, 0),
-    );
+    if (opening === undefined) throw new Error('F Opening rail entry is missing');
+    expect(rail.doorsRailKey).toBe(opening.marker.focusKey);
     const selectedTarget = decision.targets.find((target) => target.selected);
     if (selectedTarget === undefined) throw new Error('F selected continuation is missing');
     const selectedWorkbench = presentation.biome.nodes.find(
@@ -421,7 +421,50 @@ describe('structured workspace biome presentation', () => {
     });
     expect(presentation.focusDestinations.get(decision.selection.focusKey)).toMatchObject({
       inspectorSubject: { kind: 'node', nodeKey: decision.key },
-      selectedRailKey: rail.marker.focusKey,
+      selectedRailKey: opening.marker.focusKey,
+    });
+  });
+
+  it("marks a door finding on the stop whose room's Doors tab repairs it", () => {
+    // Offering Zeus again at Decision 2's unselected door repeats its sibling's source.
+    const repeated = applyProjectCommand(goldenProject, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, createOccurrenceId('golden-f-b2-e2')),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    const { presentation } = present(repeated, 'Underworld', 'F');
+    const decisions = presentation.biome.rail.filter(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' && entry.node.kind === 'ordinaryBatch',
+    );
+    const [first, second] = decisions;
+    if (first === undefined || second?.node.kind !== 'ordinaryBatch')
+      throw new Error('F Decisions 1 and 2 are missing');
+    const doorReward = second.node.targets.find(
+      (target) => target.room.occurrenceId === createOccurrenceId('golden-f-b2-e2'),
+    )?.door.offerRewardSurface.rewards[0];
+    if (doorReward === undefined) throw new Error('F Decision 2 repeated door reward is missing');
+    expect(doorReward.marker.findingCount).toBe(1);
+    // Decision 2's doors leave Decision 1's room, so Decision 1 carries the mark.
+    expect(second.doorsRailKey).toBe(first.marker.focusKey);
+    expect(first.marker.findingCount).toBe(1);
+    expect(second.marker.findingCount).toBe(0);
+    expect(presentation.focusDestinations.get(doorReward.marker.focusKey)).toMatchObject({
+      inspectorSubject: { kind: 'node', nodeKey: second.node.key },
+      roomTab: 'doors',
+      selectedRailKey: first.marker.focusKey,
+    });
+    // That inspector opens on Decision 1's room.
+    const firstRoom =
+      first.node.kind === 'ordinaryBatch' ? first.node.selectedContinuation : undefined;
+    const firstRoomNode = presentation.biome.nodes.find(
+      (node) =>
+        node.kind === 'occurrenceWorkbench' &&
+        node.room.occurrenceId === firstRoom?.door.room.occurrenceId,
+    );
+    expect(presentation.biome.occurrenceStages).toContainEqual({
+      outgoing: { kind: 'authoredDecision', decisionNodeKey: second.node.key },
+      sourceOccurrenceNodeKey: firstRoomNode?.key,
     });
   });
 

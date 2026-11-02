@@ -689,6 +689,11 @@ export interface WorkspaceRailSelectedTarget {
 export interface WorkspaceDecisionRailEntry {
   readonly kind: 'node';
   /**
+   * Present when this decision opens its selected room, so its doors repair on
+   * the source room's Doors tab: the stop opening that room owns their marks.
+   */
+  readonly doorsRailKey?: string;
+  /**
    * A selected decision continues into its target occurrence stage. The rail
    * keeps the decision marker for assessment while navigation uses this exact
    * occurrence marker.
@@ -705,6 +710,11 @@ export interface WorkspaceDecisionRailEntry {
 
 export interface WorkspaceStageRailEntry {
   readonly kind: 'node';
+  /**
+   * Present when this Preboss takeover opens its selected room, so its doors repair on
+   * the source room's Doors tab: the stop opening that room owns their marks.
+   */
+  readonly doorsRailKey?: string;
   /** Exact occurrence or stage owner opened by this presentation stop. */
   readonly focusMarker: WorkspaceMarker;
   readonly key: string;

@@ -1314,8 +1314,8 @@ describe('BiomeWorkspace', () => {
     );
   });
 
-  it('keeps the owning decision rail selected when the next physical target takes focus', async () => {
-    const { owner, project } = fTwoDoorBatchProject();
+  it('keeps the stop opening the source room selected when its next physical target takes focus', async () => {
+    const { owner, project, start } = fTwoDoorBatchProject();
     const view = renderWorkspace(project, 'Underworld', 'F');
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
 
@@ -1329,12 +1329,13 @@ describe('BiomeWorkspace', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       createTargetAddress(goldenFBiome, owner.source, 'exit1'),
     );
+    // Decision 2's doors are edited on Combat 03's Room Doors, which Decision 1 opens.
     const structure = screen.getByRole('region', { name: /route structure$/ });
-    const decisionRail = Array.from(
-      structure.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
-    ).find((button) => button.dataset.workspaceNode === semanticAddressKey(owner));
-    if (decisionRail === undefined) throw new Error('F authored decision rail stop is missing');
-    expect(decisionRail.dataset.selected).toBe('true');
+    expect(selectedRailMarkerKeys(structure)).toEqual([
+      semanticAddressKey(
+        createExitDecisionAddress(goldenFBiome, { kind: 'occurrence', occurrenceId: start }),
+      ),
+    ]);
   });
 
   it('authors the first outgoing edit atomically and undo restores provisional doors', async () => {
@@ -1838,7 +1839,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.queryByText('Add Preboss doors')).toBeNull();
   });
 
-  it('aggregates a target-owned finding onto its decision rail stop', async () => {
+  it('marks a target-owned finding on the stop whose Room Doors repair it', async () => {
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat03', 1, 1)),
@@ -1854,12 +1855,31 @@ describe('BiomeWorkspace', () => {
       structure.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
     ).find((button) => button.dataset.workspaceNode === semanticAddressKey(decision));
     if (railDecision === undefined) throw new Error('P invalid target decision is missing');
+    const introKey = semanticAddressKey(createOccurrenceAddress(pBiome, pOccurrenceIds.intro));
+    const railIntro = Array.from(
+      structure.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
+    ).find((button) => button.dataset.workspaceNode === introKey);
+    if (railIntro === undefined) throw new Error('P Intro rail stop is missing');
 
-    expect(railDecision.dataset.findings).toBe('true');
-    expect(railDecision.textContent).toContain('1 finding');
+    // The invalid target is repaired on the Intro's Room Doors, so the Intro carries the mark.
+    expect(railIntro.dataset.findings).toBe('true');
+    expect(railIntro.textContent).toContain('1 finding');
+    expect(railDecision.dataset.findings).toBe('false');
     expect(railDecision.querySelector('.biome-rail-selection')?.textContent).toContain('Combat 02');
     expect(railDecision.querySelector('.biome-rail-summary')).toBeNull();
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
+
+    const issue = view.application.store.getState().projectWorkspace.assembly!.evaluation.issue;
+    if (issue === undefined) throw new Error('P invalid target issue is missing');
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: issue.regionKey, origin: issue.owner }),
+      ),
+    );
+    expect(selectedRailMarkerKeys(structure)).toEqual([introKey]);
+    expect(screen.getByRole('tab', { name: 'Room Doors' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
 
     expect(railDecision.getAttribute('aria-current')).toBeNull();
     await view.user.click(railDecision);
