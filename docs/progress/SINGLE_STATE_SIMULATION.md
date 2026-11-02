@@ -72,8 +72,8 @@ happen", never as alternative states carried forward or offered as a choice.
      `allOffers` ordering, its permutation fan-out and the unordered
      explanation are gone. A loader migration exchanges a saved wheel's offers
      (rerolled offers, picked index, reroll targets, embedded offer addresses)
-     when the plan's block names it and the exchange clears it; folded into
-     unreleased schema 100. Draft authors through candidates and the run
+     when the plan's block names it and the exchange clears it; done by the
+     catalog-aware schema 100→101 migration step. Draft authors through candidates and the run
      import already maps Left to offer 1.
    - The level-resolution capability publishes one surface and asserts every
      reached context agrees on it; a disagreement is a
