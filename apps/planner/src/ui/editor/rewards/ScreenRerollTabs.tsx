@@ -136,12 +136,14 @@ export function ScreenRerollTabs({
             <span aria-hidden="true">{`−${rerolls.nextCost(earlierCount)}`}</span>
           </button>
           <button
-            className="secondary-action action-compact"
+            aria-label="Undo last reroll"
+            className="secondary-action action-compact screen-reroll-action"
             disabled={earlierCount === 0}
             onClick={onRemove}
             type="button"
           >
-            Remove last reroll
+            <span aria-hidden="true">Undo</span>
+            <img alt="" src={rerollDieArtwork} />
           </button>
         </div>
       </div>
