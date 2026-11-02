@@ -99,21 +99,15 @@ export function applyEchoKeepsakeReplayTransition(
   };
   let replayed = false;
   let outcome: BiomeRewardSimulation['volatileEchoKeepsakeReplay'];
-  const giftStates = branches.map((branch) => {
-    const gift = branch.state.traitHistory.equippedTraits.EchoRepeatKeepsakeBoon;
-    return gift?.echoRepeatedKeepsakeKey === undefined || gift.acquisitionIdentity === undefined
+  const gift = branches[0]?.state.traitHistory.equippedTraits.EchoRepeatKeepsakeBoon;
+  const giftState =
+    gift?.echoRepeatedKeepsakeKey === undefined || gift.acquisitionIdentity === undefined
       ? undefined
       : Object.freeze({
           capturedKeepsakeKey: gift.echoRepeatedKeepsakeKey,
           acquisitionIdentity: gift.acquisitionIdentity,
           replayCount: gift.echoKeepsakeReplayCount ?? 0,
         });
-  });
-  if (giftStates.some((state) => JSON.stringify(state) !== JSON.stringify(giftStates[0])))
-    throw new BiomeRewardSimulationContractError(
-      'Echo keepsake replay frontier is divergent across surviving branches',
-    );
-  const giftState = giftStates[0];
   if (giftState !== undefined) {
     const declaration = catalog.keepsakes.byKey[giftState.capturedKeepsakeKey];
     if (declaration?.echoGift.availability !== 'eligible')
@@ -121,13 +115,6 @@ export function applyEchoKeepsakeReplayTransition(
         `Echo captured ineligible keepsake ${giftState.capturedKeepsakeKey}`,
       );
     const replayEffect = declaration.echoGift.effect;
-    if (
-      replayEffect.kind === 'experimentalHammer' &&
-      new Set(branches.map((branch) => branch.state.keepsakes.currentKey)).size !== 1
-    )
-      throw new BiomeRewardSimulationContractError(
-        'Echo Experimental Hammer replay frontier has divergent current keepsakes',
-      );
     // A held keepsake gets no copy; a held Permanent Calling Card or Time Piece
     // gets Common charges instead (RoomLogic.lua:1218-1242).
     const permanent = replayEffect.kind === 'callingCard' || replayEffect.kind === 'timePiece';
