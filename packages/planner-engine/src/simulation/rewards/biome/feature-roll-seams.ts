@@ -71,7 +71,7 @@ import {
 } from './chronology-walk';
 import { rewardFindingChronologyForRoom } from './finding-chronology';
 import { wellOccurrenceView } from './encounter-acquisition/well-purchase';
-import { lowestRerollPool } from './lifecycle-transitions/reward-rerolled';
+import { reachedRerollPool } from './lifecycle-transitions/reward-rerolled';
 
 function authoredRoom(
   context: ChronologyWalkContext,
@@ -530,7 +530,7 @@ function rerollOption(
       rerollKindEnabled(context.catalog, branch.state.arcanaFear, 'screens'),
     ),
     available,
-    poolRemaining: lowestRerollPool(branches),
+    poolRemaining: reachedRerollPool(branches),
   });
 }
 

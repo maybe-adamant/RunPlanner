@@ -314,29 +314,19 @@ describe('phantom exits', () => {
     expect(firstSideDoor).toBeGreaterThan(combat05Phantom);
   });
 
-  it('settles one reward type on every branch, the one least scarce on its scarcest branch', () => {
-    const branch = (entries: Record<string, number>) => new Map(Object.entries(entries));
+  it('settles the drawable reward type with the most entries left', () => {
+    const remaining = (entries: Record<string, number>) => new Map(Object.entries(entries));
     const declared = ['MaxManaDrop', 'RoomMoneyDrop', 'MaxHealthDrop'];
-    // Branches disagree on their richest type, so each would settle differently alone.
     expect(
-      settlePhantomRewardType(declared, [
-        branch({ MaxManaDrop: 3, RoomMoneyDrop: 2, MaxHealthDrop: 1 }),
-        branch({ MaxManaDrop: 1, RoomMoneyDrop: 2, MaxHealthDrop: 3 }),
-      ]),
-    ).toBe('RoomMoneyDrop');
-    // A type one branch cannot draw is never settled, however plentiful elsewhere.
-    expect(
-      settlePhantomRewardType(declared, [
-        branch({ MaxManaDrop: 9, MaxHealthDrop: 1 }),
-        branch({ RoomMoneyDrop: 2, MaxHealthDrop: 1 }),
-      ]),
+      settlePhantomRewardType(
+        declared,
+        remaining({ MaxManaDrop: 1, RoomMoneyDrop: 2, MaxHealthDrop: 3 }),
+      ),
     ).toBe('MaxHealthDrop');
-    // Ties keep declaration order; no common type leaves the exit unsettled.
-    expect(settlePhantomRewardType(declared, [branch({ MaxHealthDrop: 2, MaxManaDrop: 2 })])).toBe(
+    // Ties keep declaration order; no drawable type leaves the exit unsettled.
+    expect(settlePhantomRewardType(declared, remaining({ MaxHealthDrop: 2, MaxManaDrop: 2 }))).toBe(
       'MaxManaDrop',
     );
-    expect(
-      settlePhantomRewardType(declared, [branch({ MaxManaDrop: 1 }), branch({ RoomMoneyDrop: 1 })]),
-    ).toBeUndefined();
+    expect(settlePhantomRewardType(declared, remaining({}))).toBeUndefined();
   });
 });

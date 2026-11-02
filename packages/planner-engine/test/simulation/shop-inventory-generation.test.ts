@@ -33,7 +33,6 @@ import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject, qBiome, qOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { simulateProject } from '../../src/simulation';
 import { deriveTravelRefill } from '../../src/simulation/rewards/shop/derived-rewards';
-import { cohortSlotAssessment } from '../../src/simulation/rewards/shop/inventory';
 
 describe('Shop trait acquisition processing', () => {
   it('projects only Purchased initial offers and gives them movement without generic membership proposals', () => {
@@ -307,17 +306,6 @@ describe('World Shop refill reads its own reached contact', () => {
     expect([inventory, entered, outgoing].every((value) => value !== undefined)).toBe(true);
     expect(inventory!).toBeLessThan(entered!);
     expect(entered!).toBeLessThan(outgoing!);
-  });
-});
-
-describe('Shop slot assessment across a branch cohort', () => {
-  it('is validly empty only when every branch agrees and incomplete when any branch has options', () => {
-    expect(cohortSlotAssessment(['validEmpty', 'validEmpty'])).toBe('validEmpty');
-    expect(cohortSlotAssessment(['validEmpty', 'incomplete'])).toBe('incomplete');
-    expect(cohortSlotAssessment(['incomplete', 'validEmpty'])).toBe('incomplete');
-    expect(cohortSlotAssessment(['selectedInvalid', 'complete'])).toBe('complete');
-    expect(cohortSlotAssessment(['selectedInvalid', 'selectedInvalid'])).toBe('selectedInvalid');
-    expect(cohortSlotAssessment([])).not.toBe('validEmpty');
   });
 });
 

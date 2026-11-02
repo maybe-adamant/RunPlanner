@@ -35,19 +35,19 @@ import type { SimulationState } from '../../../state/model';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 
 /**
- * The one reward type an unpinned phantom exit settles on every reached
- * branch: among the types each branch can draw, the one with the most entries
- * left on its scarcest branch (ties in declaration order), so it least often
- * exhausts a type a later door draws. Undefined when no type is common.
+ * The one reward type an unpinned phantom exit settles on: among the types the
+ * reached state can draw, the one with the most entries left (ties in
+ * declaration order), so it least often exhausts a type a later door draws.
+ * Undefined when none can be drawn.
  */
 export function settlePhantomRewardType(
   declaredTypes: readonly string[],
-  remainingByBranch: readonly ReadonlyMap<string, number>[],
+  remainingByType: ReadonlyMap<string, number>,
 ): string | undefined {
   let best: { readonly rewardType: string; readonly remaining: number } | undefined;
   for (const rewardType of declaredTypes) {
-    if (!remainingByBranch.every((remaining) => remaining.has(rewardType))) continue;
-    const remaining = Math.min(...remainingByBranch.map((byType) => byType.get(rewardType) ?? 0));
+    const remaining = remainingByType.get(rewardType);
+    if (remaining === undefined) continue;
     if (best === undefined || remaining > best.remaining) best = { rewardType, remaining };
   }
   return best?.rewardType;
@@ -60,10 +60,6 @@ export interface PhantomExitTransition {
   readonly findings: readonly FindingRegionEntry[];
   readonly producerFrontiers: readonly RewardProducerFrontier[];
   readonly settlement: PhantomExitSettlement;
-}
-
-function sameOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 /**
@@ -169,7 +165,7 @@ export function applyPhantomExitTransition(inputs: {
     });
   const declaredTypes = phantomPlaceholderRewardTypes(catalog, placeholder);
   const store = catalog.rewards.stores.byKey[draw.storeKey];
-  /** Each type's first surviving offer on one branch, with the entries it has left. */
+  /** Each type's first surviving offer at the reached state, with the entries it has left. */
   const branchOptions = (branch: RewardBranchState) => {
     const bag = withBag(catalog, branch, draw.storeKey)?.bag;
     const types = phantom.rewardType === null ? declaredTypes : [phantom.rewardType];
@@ -192,20 +188,19 @@ export function applyPhantomExitTransition(inputs: {
       }),
     );
   };
-  const perBranch = inputs.branches.map(branchOptions);
+  const reached = inputs.branches[0];
+  const options = reached === undefined ? undefined : branchOptions(reached);
   const next: RewardBranchState[] = [];
   const offers: ResolvedRewardOffer[] = [];
   const settle = (rewardType: string) => {
-    for (const options of perBranch) {
-      const option = options.get(rewardType);
-      if (option === undefined) continue;
-      next.push(...option.survivors);
-      if (!offers.some((known) => sameOffer(known, option.offer))) offers.push(option.offer);
-    }
+    const option = options?.get(rewardType);
+    if (option === undefined) return;
+    next.push(...option.survivors);
+    offers.push(option.offer);
   };
   if (phantom.rewardType !== null) {
-    // Like any authored reward, a pinned type drops the branches that cannot draw it.
-    if (perBranch.some((options) => options.has(phantom.rewardType!))) settle(phantom.rewardType);
+    // Like any authored reward, a pinned type the state cannot draw blocks.
+    if (options?.has(phantom.rewardType) === true) settle(phantom.rewardType);
     else
       addRewardFinding(
         findings,
@@ -217,12 +212,13 @@ export function applyPhantomExitTransition(inputs: {
         chronology,
       );
   } else {
-    const settled = settlePhantomRewardType(
-      declaredTypes,
-      perBranch.map(
-        (options) => new Map([...options].map(([type, option]) => [type, option.remaining])),
-      ),
-    );
+    const settled =
+      options === undefined
+        ? declaredTypes[0]
+        : settlePhantomRewardType(
+            declaredTypes,
+            new Map([...options].map(([type, option]) => [type, option.remaining])),
+          );
     if (settled !== undefined) settle(settled);
     else
       addRewardFinding(

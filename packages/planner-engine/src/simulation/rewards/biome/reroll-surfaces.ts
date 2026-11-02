@@ -33,7 +33,7 @@ import {
 } from './chronology-walk';
 import {
   hubTargetContext,
-  lowestRerollPool,
+  reachedRerollPool,
   rerollOfferEvaluator,
   roomTargetContext,
   type RerollTargetContext,
@@ -108,7 +108,7 @@ function surfaceCapture(
 ): RerollSurfaceCapture | undefined {
   const view = context.history.viewsBySequence[event.sequence];
   if (view === undefined) return undefined;
-  const pool = lowestRerollPool(state.branches);
+  const pool = reachedRerollPool(state.branches);
   const enabled = state.rerollsFlagged.get(inputs.flagKey) === true;
   const settle = (poolRemainingAtStart: number): RerollSurfaceSettlement =>
     Object.freeze({

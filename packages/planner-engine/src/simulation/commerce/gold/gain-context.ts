@@ -245,21 +245,6 @@ export function goldSpawnReading(
 }
 
 /**
- * One spawn contact's reading over the reached branches' states: divergent
- * where they disagree, a gold-input divergence the walk refuses.
- */
-export function goldSpawnReadingAcross(
-  catalog: Catalog,
-  states: readonly SimulationState[],
-): GoldSpawnReading | 'divergent' | 'unresolved' {
-  const readings = states.map((state) => goldSpawnReading(catalog, state));
-  if (readings.some((reading) => reading === undefined)) return 'unresolved';
-  return new Set(readings.map((reading) => JSON.stringify(reading))).size > 1
-    ? 'divergent'
-    : readings[0]!;
-}
-
-/**
  * Wealth from the Dead as a held trait pays it: gold per drop at its
  * acquisition ordinal, the per-kill chance times the summed luck multipliers
  * (`LuckMultiplier`, additive like every `IsMultiplier` total), and its cap.

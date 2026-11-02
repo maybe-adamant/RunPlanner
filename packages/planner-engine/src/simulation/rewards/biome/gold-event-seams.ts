@@ -17,7 +17,7 @@ import {
   goldGainPublication,
   goldMultipliers,
   goldOnKillFacts,
-  goldSpawnReadingAcross,
+  goldSpawnReading,
   moneyMultiplierSources,
   type GoldSpawnReading,
   type GoldEventPublication,
@@ -465,12 +465,7 @@ export function withGoldEvents(
     received.branches.length > 0
   ) {
     // Native draws every store of the room at the door into it, before entry.
-    const readings = received.branches.map((branch) => goldMultipliers(catalog, branch.state));
-    const entry = readings.some((reading) => reading === undefined)
-      ? ('unresolved' as const)
-      : new Set(readings.map((reading) => JSON.stringify(reading))).size > 1
-        ? ('divergent' as const)
-        : readings[0]!;
+    const entry = goldMultipliers(catalog, received.branches[0]!.state) ?? ('unresolved' as const);
     state = Object.freeze({
       ...state,
       goldRoomEntryMultipliers: new Map(state.goldRoomEntryMultipliers).set(
@@ -492,26 +487,23 @@ export function withGoldEvents(
       ...state,
       goldSpawnReadings: new Map(state.goldSpawnReadings).set(
         `${roomKey}::${event.kind === 'roomEntered' ? 'entry' : 'encounterEnd'}`,
-        goldSpawnReadingAcross(
-          catalog,
-          next.branches.map((branch) => branch.state),
-        ),
+        goldSpawnReading(catalog, next.branches[0]!.state) ?? 'unresolved',
       ),
     });
   if (next.branches.length > 0) {
     // A selected trait's own coins spawn as its screen closes, after it is equipped.
-    const screens = new Map<string, SimulationState[]>();
+    const screens = new Map<string, SimulationState>();
     for (const branch of next.branches)
       for (const evaluation of branch.traitEvaluations ?? []) {
         if (received.branches.some((prior) => prior.traitEvaluations?.includes(evaluation)))
           continue;
         const key = `trait::${semanticAddressKey(evaluation.address)}::${evaluation.acquisitionRole}`;
-        screens.set(key, [...(screens.get(key) ?? []), branch.state]);
+        screens.set(key, branch.state);
       }
     if (screens.size > 0) {
       const readings = new Map(state.goldSpawnReadings);
-      for (const [key, states] of screens)
-        readings.set(key, goldSpawnReadingAcross(catalog, states));
+      for (const [key, screenState] of screens)
+        readings.set(key, goldSpawnReading(catalog, screenState) ?? 'unresolved');
       state = Object.freeze({ ...state, goldSpawnReadings: readings });
     }
   }
@@ -616,12 +608,11 @@ export function withGoldEvents(
     after: SimulationState,
   ):
     | { readonly multipliers: GoldSpawnReading['multipliers']; readonly remultipliers: number[] }
-    | 'divergent'
     | 'unresolved'
     | undefined => {
     if (room === undefined || roomKey === undefined) return undefined;
     const producerKey = rewardEvent.source.producerLifecycleKey;
-    let reading: GoldSpawnReading | 'divergent' | 'unresolved' | undefined;
+    let reading: GoldSpawnReading | 'unresolved' | undefined;
     let roomObject = false;
     if (SCREEN_SPAWNED_COIN_PRODUCERS.has(producerKey)) {
       const pointKey = rewardEvent.settlement?.site.pointKey;
@@ -641,8 +632,7 @@ export function withGoldEvents(
             state.goldSpawnReadings.get(`${roomKey}::entry`))
           : state.goldSpawnReadings.get(`${roomKey}::entry`);
     }
-    if (reading === undefined || reading === 'divergent' || reading === 'unresolved')
-      return reading;
+    if (reading === undefined || reading === 'unresolved') return reading;
     if (!roomObject) return { multipliers: reading.multipliers, remultipliers: [] };
     const now = moneyMultiplierSources(catalog, after);
     if (now === undefined) return 'unresolved';
@@ -691,25 +681,23 @@ export function withGoldEvents(
           index,
           key,
           owner,
-          spawned === 'divergent'
-            ? { unpriced: { kind: 'contractFailure', detail: `${key} spawned divergently` } }
-            : spawned === 'unresolved'
-              ? { unpriced: { kind: 'itemUnresolved' } }
-              : {
-                  gain: {
-                    kind: 'moneyPickup',
-                    gold: declaration.goldGrant,
-                    npcDrop: producer?.resourceBonusExempt === true,
-                    ...(spawned === undefined
-                      ? {}
-                      : {
-                          spawn: spawned.multipliers,
-                          ...(spawned.remultipliers.length === 0
-                            ? {}
-                            : { remultipliers: spawned.remultipliers }),
-                        }),
-                  },
+          spawned === 'unresolved'
+            ? { unpriced: { kind: 'itemUnresolved' } }
+            : {
+                gain: {
+                  kind: 'moneyPickup',
+                  gold: declaration.goldGrant,
+                  npcDrop: producer?.resourceBonusExempt === true,
+                  ...(spawned === undefined
+                    ? {}
+                    : {
+                        spawn: spawned.multipliers,
+                        ...(spawned.remultipliers.length === 0
+                          ? {}
+                          : { remultipliers: spawned.remultipliers }),
+                      }),
                 },
+              },
         );
       } else if (gameName === 'Currency') {
         const gold = currencyGold(
@@ -726,17 +714,15 @@ export function withGoldEvents(
             ? {
                 unpriced: { kind: 'contractFailure', detail: 'a Currency pickup declares no gold' },
               }
-            : spawned === 'divergent'
-              ? { unpriced: { kind: 'contractFailure', detail: `${key} spawned divergently` } }
-              : spawned === 'unresolved'
-                ? { unpriced: { kind: 'itemUnresolved' } }
-                : {
-                    gain: {
-                      kind: 'currencyPickup',
-                      gold,
-                      ...(spawned === undefined ? {} : { spawn: spawned.multipliers }),
-                    },
+            : spawned === 'unresolved'
+              ? { unpriced: { kind: 'itemUnresolved' } }
+              : {
+                  gain: {
+                    kind: 'currencyPickup',
+                    gold,
+                    ...(spawned === undefined ? {} : { spawn: spawned.multipliers }),
                   },
+                },
         );
       }
     }
@@ -855,11 +841,11 @@ export function withGoldEvents(
                 }
               : paid.record !== undefined && 'fault' in paid.record
                 ? { unpriced: { kind: 'contractFailure', detail: paid.record.fault } }
-                : entry === undefined || entry === 'divergent'
+                : entry === undefined
                   ? {
                       unpriced: {
                         kind: 'contractFailure',
-                        detail: `${paidKey} has no agreed gold multiplier at its room's door`,
+                        detail: `${paidKey} has no gold multiplier at its room's door`,
                       },
                     }
                   : entry === 'unresolved'

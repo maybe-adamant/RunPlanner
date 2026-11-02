@@ -75,7 +75,7 @@ import { applyRoomPreparedTransition } from './lifecycle-transitions/room-prepar
 import {
   applyRewardRerolledTransition,
   hubTargetContext,
-  lowestRerollPool,
+  reachedRerollPool,
   roomTargetContext,
 } from './lifecycle-transitions/reward-rerolled';
 import { captureRerollSurfaces } from './reroll-surfaces';
@@ -1479,7 +1479,7 @@ export function walkHistoryEvent(
         kind: 'rerollPool',
         point: Object.freeze({
           historySequence: event.sequence,
-          remaining: lowestRerollPool(reached.branches),
+          remaining: reachedRerollPool(reached.branches),
         }),
       },
       ...captureRerollSurfaces(context, reached, event).map((capture) => ({

@@ -276,9 +276,10 @@ export function hubTargetContext(
   });
 }
 
-/** The lowest reroll pool remainder over reached branches. */
-export function lowestRerollPool(branches: readonly RewardBranchState[]): number {
-  return Math.min(...branches.map((branch) => rerollPoolRemaining(branch.state)));
+/** The reroll pool left at the reached state; unbounded where nothing is reached. */
+export function reachedRerollPool(branches: readonly RewardBranchState[]): number {
+  const reached = branches[0];
+  return reached === undefined ? Number.POSITIVE_INFINITY : rerollPoolRemaining(reached.state);
 }
 
 /**
@@ -408,7 +409,7 @@ export function applyRewardRerolledTransition(inputs: {
       `${semanticAddressKey(owner)} has no history view`,
     );
   // The game refuses a press the pool cannot pay for, so nothing past it happens.
-  const remaining = lowestRerollPool(inputs.branches);
+  const remaining = reachedRerollPool(inputs.branches);
   if (remaining < 1) return blocked('rerollPoolExceeded', { cost: 1, remaining });
   const frontierBranches = inputs.branches;
   const evaluator = rerollOfferEvaluator({
@@ -471,7 +472,7 @@ export function applyRewardRerolledTransition(inputs: {
       historySequence,
       reward: inputs.reward,
       poolRemainingBefore: remaining,
-      ...(settled ? { poolRemainingAfter: lowestRerollPool(branches) } : {}),
+      ...(settled ? { poolRemainingAfter: reachedRerollPool(branches) } : {}),
     }),
   });
 }

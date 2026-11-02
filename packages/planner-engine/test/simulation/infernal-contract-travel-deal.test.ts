@@ -42,7 +42,6 @@ import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findin
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
-import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition/artifacts';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { installHexTree } from '../../src/simulation/hex-progress';
 import { matureGodHistoryRecords } from '../support/god-history';
@@ -1246,21 +1245,6 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
     expect(
       result.settlement.branches[0]?.state.traitHistory?.equippedTraits.ZeusSpecialBoon,
     ).toBeDefined();
-  });
-
-  it('withholds a derived refill capability when reached branches disagree', () => {
-    const result = settle({ order: ['MajorNonBoon'], divergentTravel: true });
-    const frontiers =
-      result.settlement.derivedEntryFrontiers?.filter(
-        (entry) => entry.kind === 'travelDealRefill',
-      ) ?? [];
-    expect(frontiers).toHaveLength(1);
-    const address = frontiers[0]?.address;
-    if (address === undefined) throw new Error('missing divergent Travel frontier');
-    const artifacts = createDerivedAcquisitionEntryCandidateArtifacts(
-      new Map([[semanticAddressKey(address), frontiers]]),
-    );
-    expect(artifacts.at(address)).toBeUndefined();
   });
 
   it('does not retroactively refill when the first paid purchase grants Travel Deal', () => {

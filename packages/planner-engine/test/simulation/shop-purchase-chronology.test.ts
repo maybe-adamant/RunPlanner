@@ -20,7 +20,6 @@ import {
   initializeTestRewardBranches,
   createKeepsakeState,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-  createDerivedAcquisitionEntryCandidateArtifacts,
   selectedTraitOfferProducts,
   attachTraitHistory,
   foldTraitHistoryEvents,
@@ -28,11 +27,9 @@ import {
   goldenFBiome,
   pomTargetHistory,
   echoGoldHistory,
-  allTogetherReward,
   shopPomReward,
   shopBoonReward,
   blindBoxReward,
-  divergentAllTogetherBranches,
   echoGoldShop,
 } from './shop-trait-purchase-support';
 import type { TraitOfferEvent } from './shop-trait-purchase-support';
@@ -125,44 +122,6 @@ describe('Gold Gold Gold Shop pickups', () => {
       level: 3,
       rarity: 'Rare',
     });
-  });
-
-  it('settles paid All Together atomically across the complete divergent Shop cohort', () => {
-    const reward = allTogetherReward();
-    const result = echoGoldShop(['Boon'], {
-      initialBranches: divergentAllTogetherBranches(false, ['HeraUpgrade']),
-      offerOverrides: { Boon: reward.offer },
-      rewardOverrides: { Boon: reward },
-    });
-    expect([...result.inventoryFindings.values()].map((entry) => entry.finding)).toEqual([]);
-    expect(result.inventory).toHaveLength(2);
-    expect(result.settlement.branches).toHaveLength(2);
-    expect(result.settlement.traitChildSettlements).toEqual([]);
-    for (const branch of result.settlement.branches) {
-      expect(branch.state.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
-      expect(
-        branch.state.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
-      ).toHaveLength(4);
-    }
-  });
-
-  it('settles an Echo-derived All Together duplicate atomically across its divergent cohort', () => {
-    const duplicate = allTogetherReward();
-    const result = echoGoldShop(['Boon'], {
-      includeDuplicate: true,
-      initialBranches: divergentAllTogetherBranches(true, ['ApolloUpgrade', 'HeraUpgrade']),
-      rewardOverrides: { Boon: duplicate },
-    });
-    expect([...result.inventoryFindings.values()].map((entry) => entry.finding)).toEqual([]);
-    expect(result.inventory).toHaveLength(2);
-    expect(result.settlement.branches).toHaveLength(2);
-    expect(result.settlement.traitChildSettlements).toEqual([]);
-    for (const branch of result.settlement.branches) {
-      expect(branch.state.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
-      expect(
-        branch.state.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
-      ).toHaveLength(4);
-    }
   });
 
   it('rebuilds a materialized Gold Pom at every later completed Shop screen', () => {
@@ -554,48 +513,6 @@ describe('Gold Gold Gold Shop pickups', () => {
       rewardTypes: ['GiftDrop'],
     });
     expect([...result.findings.values()]).toEqual([]);
-  });
-
-  it('publishes one agreed derived capability across branches and withholds disagreement', () => {
-    const pending = echoGoldShop([], {
-      occurrenceId: createOccurrenceId('echo-gold-frontier-seed'),
-    }).settlement.branches[0];
-    if (pending === undefined) throw new Error('missing pending Echo branch');
-    const reached = echoGoldShop(['Minor'], {
-      initialBranches: [pending, pending],
-      occurrenceId: createOccurrenceId('echo-gold-frontier-agreement'),
-    });
-    const frontiers = reached.settlement.derivedEntryFrontiers ?? [];
-    expect(frontiers).toHaveLength(2);
-    const address = frontiers[0]?.address;
-    if (address === undefined) throw new Error('missing derived frontier address');
-    const key = semanticAddressKey(address);
-    const agreed = createDerivedAcquisitionEntryCandidateArtifacts(new Map([[key, frontiers]]));
-    expect(agreed.at(address)).toMatchObject({
-      sourceOfferKey: 'Minor',
-      sourceOfferGeneration: 'initial',
-      sourceFamily: { kind: 'echo', effect: 'doubleShop' },
-    });
-    expect(agreed.entriesAt(address.site)).toHaveLength(1);
-    // A duplicate of the Travel Deal refill names that stock.
-    const refillSourced = createDerivedAcquisitionEntryCandidateArtifacts(
-      new Map([
-        [key, frontiers.map((frontier) => ({ ...frontier, sourceOfferKey: 'travelDealRefill' }))],
-      ]),
-    );
-    expect(refillSourced.at(address)?.sourceOfferGeneration).toBe('travelDealRefill');
-
-    const second = frontiers[1];
-    if (second === undefined) throw new Error('missing second derived frontier');
-    const divergent = Object.freeze({
-      ...second,
-      rewardTypes: Object.freeze(['MaxHealthDrop']),
-    });
-    const withheld = createDerivedAcquisitionEntryCandidateArtifacts(
-      new Map([[key, Object.freeze([frontiers[0]!, divergent])]]),
-    );
-    expect(withheld.at(address)).toBeUndefined();
-    expect(withheld.entriesAt(address.site)).toEqual([]);
   });
 
   it('explains a duplicate offer that differs from the Echo Gold source', () => {

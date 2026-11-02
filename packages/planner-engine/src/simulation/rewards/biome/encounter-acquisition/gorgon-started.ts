@@ -41,33 +41,27 @@ export function resolveGorgonCandidateRarity(inputs: {
 }): TraitRarity | undefined {
   const sourceOverride = gorgonSourceRarityOverride(inputs.rarityLevel);
   const suppressTemporaryBoonRarity = inputs.rarityLevel > 1;
-  const rarities = inputs.branches.map((branch) => {
-    const context = offerGenerationAdjustedGiverSource(
-      inputs.catalog,
-      branch.state,
-      inputs.providerKey,
-      {
-        resolvedProviderKey: inputs.providerKey,
-        boonRarityItemOverride: sourceOverride,
-        ...(inputs.roomOverride === undefined
-          ? {}
-          : { boonRarityRoomOverride: inputs.roomOverride }),
-        ...(suppressTemporaryBoonRarity ? { suppressTemporaryBoonRarity: true } : {}),
-      },
-    );
-    const facts = boonRarityFactsForOffer(inputs.catalog, branch.state, context);
-    return (
-      context.freshRarityOverride ??
-      (facts === undefined
-        ? undefined
-        : deriveBoonRarityLedger(facts, ['Common', 'Rare', 'Epic', 'Heroic'])
-            .possibleFreshRarities[0])
-    );
-  });
-  const first = rarities[0];
-  if (rarities.some((rarity) => rarity !== first))
-    throw new Error('Gorgon rarity frontier is divergent');
-  return first;
+  const branch = inputs.branches[0];
+  if (branch === undefined) return undefined;
+  const context = offerGenerationAdjustedGiverSource(
+    inputs.catalog,
+    branch.state,
+    inputs.providerKey,
+    {
+      resolvedProviderKey: inputs.providerKey,
+      boonRarityItemOverride: sourceOverride,
+      ...(inputs.roomOverride === undefined ? {} : { boonRarityRoomOverride: inputs.roomOverride }),
+      ...(suppressTemporaryBoonRarity ? { suppressTemporaryBoonRarity: true } : {}),
+    },
+  );
+  const facts = boonRarityFactsForOffer(inputs.catalog, branch.state, context);
+  return (
+    context.freshRarityOverride ??
+    (facts === undefined
+      ? undefined
+      : deriveBoonRarityLedger(facts, ['Common', 'Rare', 'Epic', 'Heroic'])
+          .possibleFreshRarities[0])
+  );
 }
 
 /** Evaluates the additive Gorgon appearance after Fig Leaf has settled. */

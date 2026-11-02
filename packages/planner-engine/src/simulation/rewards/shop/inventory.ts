@@ -15,23 +15,8 @@ import { shopRequirements, type ShopProcessingContext } from './context';
 export interface ShopInventoryProduct {
   readonly branches: readonly RewardBranchState[];
   readonly findingEmissions: readonly FindingRegionEntry[];
-  /** Declared-slot standing across the entering cohort, keyed by slot key. */
+  /** Declared-slot standing at the entering state, keyed by slot key. */
   readonly slotAssessments: ReadonlyMap<string, ShopSlotAssessment>;
-}
-
-/**
- * Cohort agreement: valid emptiness needs every branch to have an empty group;
- * one eligible branch leaves an unset slot incomplete; a selection is invalid
- * only when no branch supports it.
- */
-export function cohortSlotAssessment(
-  assessments: readonly ShopSlotAssessment[],
-): ShopSlotAssessment {
-  if (assessments.length > 0 && assessments.every((assessment) => assessment === 'validEmpty'))
-    return 'validEmpty';
-  if (assessments.some((assessment) => assessment === 'incomplete')) return 'incomplete';
-  if (assessments.some((assessment) => assessment === 'complete')) return 'complete';
-  return 'selectedInvalid';
 }
 
 export function processShopInventory(
@@ -48,8 +33,9 @@ export function processShopInventory(
     return fail(`unknown shop profile ${entry.profileKey}`);
   }
   const requirements = shopRequirements(declaration, entry.profileKey, fail);
-  // An unreached cohort proves nothing about any slot.
-  if (branches.length === 0)
+  // An unreached Shop proves nothing about any slot.
+  const branch = branches[0];
+  if (branch === undefined)
     return Object.freeze({
       branches: Object.freeze([]),
       findingEmissions: Object.freeze([]),
@@ -69,23 +55,15 @@ export function processShopInventory(
     const offer = offersByKey.get(slot.key);
     return offer === undefined ? null : { optionKey: offer.optionKey, offer: offer.offer };
   });
-  const assessments = branches.map((branch) =>
-    assessShopInventory(
-      catalog.rewards,
-      profile,
-      authored,
-      context.facts(branch.state, new Set()),
-      requirements,
-    ),
+  const assessment = assessShopInventory(
+    catalog.rewards,
+    profile,
+    authored,
+    context.facts(branch.state, new Set()),
+    requirements,
   );
   const slotAssessments = new Map(
-    profile.slots.values.map(
-      (slot, index) =>
-        [
-          slot.key,
-          cohortSlotAssessment(assessments.map((assessment) => assessment.slots[index]!)),
-        ] as const,
-    ),
+    profile.slots.values.map((slot, index) => [slot.key, assessment.slots[index]!] as const),
   );
   const findings = new Map<string, FindingRegionEntry>();
   const incompleteIndexes = profile.slots.values.flatMap((slot, index) =>
@@ -113,56 +91,54 @@ export function processShopInventory(
       Array.from({ length: group.offerCount }, () => groupIndex),
     ),
   );
-  branches.forEach((branch, branchIndex) => {
-    for (const witness of assessments[branchIndex]!.witnesses) {
-      let candidate = branch;
-      // Validly empty slots emit no item and therefore no offer.
-      for (const offer of entry.offers) {
-        const offerFacts = context.facts(candidate.state, new Set());
-        const history = applyOfferProjection(
-          catalog.rewards,
-          candidate.state.rewardHistory,
-          offer.offer,
-          offerFacts,
-        );
-        candidate = appendRewardEvent(
-          Object.freeze({
-            ...candidate,
-            state: Object.freeze({ ...candidate.state, rewardHistory: history }),
-          }),
-          historySequence,
-          {
-            kind: 'rewardOffered',
-            origin: offer.offerOrigin,
-            offer: offer.offer,
-          },
-        );
-      }
-      candidate = appendRewardEvent(candidate, historySequence, {
-        kind: 'shopInventorySupported',
-        origin: room.origin,
-        profileKey: profile.key,
-        slotKeys,
-        optionKeys: witness.optionKeys,
-        slotGroupIndexes,
-      });
-      next.push(
+  for (const witness of assessment.witnesses) {
+    let candidate = branch;
+    // Validly empty slots emit no item and therefore no offer.
+    for (const offer of entry.offers) {
+      const offerFacts = context.facts(candidate.state, new Set());
+      const history = applyOfferProjection(
+        catalog.rewards,
+        candidate.state.rewardHistory,
+        offer.offer,
+        offerFacts,
+      );
+      candidate = appendRewardEvent(
         Object.freeze({
           ...candidate,
-          state: Object.freeze({
-            ...candidate.state,
-            pendingShops: freezeRecord({
-              ...candidate.state.pendingShops,
-              [semanticAddressKey(room.origin)]: Object.freeze({
-                profileKey: profile.key,
-                witness,
-              }),
+          state: Object.freeze({ ...candidate.state, rewardHistory: history }),
+        }),
+        historySequence,
+        {
+          kind: 'rewardOffered',
+          origin: offer.offerOrigin,
+          offer: offer.offer,
+        },
+      );
+    }
+    candidate = appendRewardEvent(candidate, historySequence, {
+      kind: 'shopInventorySupported',
+      origin: room.origin,
+      profileKey: profile.key,
+      slotKeys,
+      optionKeys: witness.optionKeys,
+      slotGroupIndexes,
+    });
+    next.push(
+      Object.freeze({
+        ...candidate,
+        state: Object.freeze({
+          ...candidate.state,
+          pendingShops: freezeRecord({
+            ...candidate.state.pendingShops,
+            [semanticAddressKey(room.origin)]: Object.freeze({
+              profileKey: profile.key,
+              witness,
             }),
           }),
         }),
-      );
-    }
-  });
+      }),
+    );
+  }
   if (next.length === 0) {
     const unsupportedIndexes = profile.slots.values.flatMap((slot, index) =>
       slotAssessments.get(slot.key) === 'selectedInvalid' ? [index] : [],
@@ -184,18 +160,12 @@ export function processShopInventory(
     }
     if (unsupportedIndexes.length === 0) {
       const repeated = new Map(
-        assessments.flatMap((assessment) =>
-          assessment.repeatedSlots.map((slot) => [slot.slotIndex, slot] as const),
-        ),
+        assessment.repeatedSlots.map((slot) => [slot.slotIndex, slot] as const),
       );
-      // Branches that disagree on which slot fails mark every slot one rejects.
-      const branchRejected = profile.slots.values.flatMap((slot, index) =>
-        repeated.size === 0 &&
-        assessments.some((assessment) => assessment.slots[index] === 'selectedInvalid')
-          ? [index]
-          : [],
+      const rejected = profile.slots.values.flatMap((_slot, index) =>
+        repeated.size === 0 && assessment.slots[index] === 'selectedInvalid' ? [index] : [],
       );
-      for (const index of branchRejected) {
+      for (const index of rejected) {
         const offer = offersByKey.get(profile.slots.values[index]!.key)!;
         addRewardFinding(
           findings,
@@ -204,7 +174,7 @@ export function processShopInventory(
           context.findingChronology ?? historyChronology(historySequence),
         );
       }
-      if (repeated.size === 0 && branchRejected.length === 0)
+      if (repeated.size === 0 && rejected.length === 0)
         return fail(`${room.gameName} Shop has no generation and no rejected slot`);
       for (const slot of repeated.values()) {
         const offer = offersByKey.get(profile.slots.values[slot.slotIndex]!.key)!;

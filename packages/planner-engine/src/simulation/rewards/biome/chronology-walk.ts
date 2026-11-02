@@ -117,20 +117,17 @@ export interface ChronologyWalkState {
   readonly goldEncounterKeys: ReadonlyMap<string, string>;
   /**
    * The gold multipliers held at the door into each entered room, which native
-   * reads when it draws the room's encounter stores; by room. Reached branches
-   * that disagree, or hold an unauthored multiplier, keep that reason instead.
+   * reads when it draws the room's encounter stores; by room. A state holding
+   * an unauthored multiplier keeps that reason instead.
    */
-  readonly goldRoomEntryMultipliers: ReadonlyMap<
-    string,
-    GoldMultipliers | 'divergent' | 'unresolved'
-  >;
+  readonly goldRoomEntryMultipliers: ReadonlyMap<string, GoldMultipliers | 'unresolved'>;
   /**
    * What a coin object spawning now would read, at each spawn contact: a
    * room's entry and latest encounter end (`room::entry`, `room::encounterEnd`)
-   * and a trait screen's close (`trait::<offer>`). Reached branches that
-   * disagree, or hold an unauthored multiplier, keep that reason instead.
+   * and a trait screen's close (`trait::<offer>`). A state holding an
+   * unauthored multiplier keeps that reason instead.
    */
-  readonly goldSpawnReadings: ReadonlyMap<string, GoldSpawnReading | 'divergent' | 'unresolved'>;
+  readonly goldSpawnReadings: ReadonlyMap<string, GoldSpawnReading | 'unresolved'>;
   /** Shared stores already paid by a phase that drains them; by `room::slot`. */
   readonly goldPaidSharedStores: ReadonlySet<string>;
   /** The fully determined roster each recorded phase fields, with its identity; by `room::phase`. */

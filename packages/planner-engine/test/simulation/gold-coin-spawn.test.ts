@@ -14,10 +14,7 @@ import { replaceTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 import { simulateProject } from '../../src/simulation';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
-import {
-  goldSpawnReadingAcross,
-  type GoldGain,
-} from '../../src/simulation/commerce/gold/gain-context';
+import { type GoldGain } from '../../src/simulation/commerce/gold/gain-context';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
 import type { RewardBranch } from '../../src/simulation/rewards';
 import { ordinaryRoutePosition } from '../support/route-position';
@@ -205,33 +202,5 @@ describe('coin spawn valuation', () => {
     const [early] = combat09MoneyGains(project, [...openCage(2), ...openCage(1)]);
     expect(early).toEqual([expect.objectContaining({ gold: 100, spawn: spawn(1, 1) })]);
     expect(early![0]!.remultipliers).toBeUndefined();
-  });
-
-  it('marks a spawn contact whose reached branches disagree as divergent', () => {
-    // The walk publishes a coin from a divergent contact as a contract failure.
-    const g = simulateProject(catalog, createGoldenFGHProject()).route!.biomes.find(
-      (biome) => biome.biomeKey === 'G',
-    );
-    if (g?.authoring !== 'complete') throw new Error('G is incomplete');
-    const state = g.rewards.frontier!.state;
-    const held = Object.values(state.traitHistory.equippedTraits)[0]!;
-    const withQuickBuckHeld = Object.freeze({
-      ...state,
-      traitHistory: Object.freeze({
-        ...state.traitHistory,
-        equippedTraits: Object.freeze({
-          ...state.traitHistory.equippedTraits,
-          MoneyMultiplierBoon: Object.freeze({
-            ...held,
-            traitKey: 'MoneyMultiplierBoon',
-            rarity: 'Common' as const,
-          }),
-        }),
-      }),
-    });
-    expect(goldSpawnReadingAcross(catalog, [state, state])).toMatchObject({
-      multipliers: { moneyMultiplier: 1 },
-    });
-    expect(goldSpawnReadingAcross(catalog, [state, withQuickBuckHeld])).toBe('divergent');
   });
 });

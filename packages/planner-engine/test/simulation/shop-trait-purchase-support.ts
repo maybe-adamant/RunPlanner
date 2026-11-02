@@ -246,26 +246,6 @@ export function allTogetherOffer() {
   });
 }
 
-export function allTogetherReward() {
-  const offer = Object.freeze({
-    rewardType: 'RandomLoot' as const,
-    payload: Object.freeze({ kind: 'BoonSource' as const, source: 'HeraUpgrade' }),
-  });
-  const base = createUnresolvedAcquisitionRewardState(
-    catalog,
-    offer,
-    {
-      kind: 'shopProfile',
-      key: 'WorldShop',
-    },
-    'Underworld',
-  );
-  return Object.freeze({
-    ...base,
-    traitOffersByAcquisitionRole: Object.freeze({ source: allTogetherOffer() }),
-  });
-}
-
 export function shopPomReward(targetTraitKey: string) {
   const offer = Object.freeze({ rewardType: 'StackUpgrade' as const });
   const base = createUnresolvedAcquisitionRewardState(
@@ -442,45 +422,6 @@ export function completeWorldShopOffers(
       }),
     ),
   ) as typeof shop.offers;
-}
-
-export function allTogetherHistory(withEarth: boolean, withEcho: boolean): TraitHistoryState {
-  const event = (sequence: number, giverKey: string, traitKey: string): TraitOfferEvent =>
-    Object.freeze({
-      kind: 'traitOffer',
-      owner: { kind: 'project' as const },
-      acquisitionRole: 'seed',
-      sequence,
-      giverKey,
-      options: Object.freeze([{ traitKey, rarity: 'Common' }]) as TraitOfferEvent['options'],
-      selectedOptionKey: 'option1',
-      acquisitionPoint: `seed:${sequence}`,
-    });
-  return foldTraitHistoryEvents(catalog, [
-    ...(withEcho ? echoGoldHistory().events : []),
-    event(2, 'Hera', 'HeraWeaponBoon'),
-    event(3, 'Hera', 'CommonGlobalDamageBoon'),
-    event(4, 'Hera', 'DamageSharePotencyBoon'),
-    ...(withEarth ? [event(5, 'Hephaestus', 'HephaestusManaBoon')] : []),
-  ]);
-}
-
-export function divergentAllTogetherBranches(withEcho: boolean, lootSources: readonly string[]) {
-  const initial = initializeTestRewardBranches()[0]!;
-  return [allTogetherHistory(false, withEcho), allTogetherHistory(true, withEcho)].map((traits) => {
-    const rewardHistory = lootSources.reduce(
-      (history, source) => recordLootTypeHistorySource(history, source),
-      initial.state.rewardHistory,
-    );
-    return Object.freeze({
-      ...initial,
-      state: Object.freeze({
-        ...initial.state,
-        rewardHistory: attachTraitHistory(rewardHistory, traits),
-        traitHistory: traits,
-      }),
-    });
-  });
 }
 
 export function echoGoldShop(
