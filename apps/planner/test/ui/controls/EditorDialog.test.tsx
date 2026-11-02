@@ -198,7 +198,10 @@ describe('editor dialog contract', () => {
     await draft.user.click(screen.getByRole('button', { name: 'Open editor' }));
     const draftFooter = screen.getByRole('dialog').querySelector('footer')!;
     expect(
-      Array.from(draftFooter.querySelectorAll('button'), (button) => button.textContent),
+      Array.from(
+        draftFooter.querySelectorAll('button'),
+        (button) => button.ariaLabel ?? button.textContent,
+      ),
     ).toEqual(['Cancel', 'Save']);
     await draft.user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -209,7 +212,7 @@ describe('editor dialog contract', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog.querySelector('footer')).toBeNull();
     expect(
-      Array.from(dialog.querySelectorAll('header button'), (button) => button.textContent),
+      Array.from(dialog.querySelectorAll('header button'), (button) => button.ariaLabel),
     ).toEqual(['Close']);
     await view.user.click(within(dialog).getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('dialog')).toBeNull();

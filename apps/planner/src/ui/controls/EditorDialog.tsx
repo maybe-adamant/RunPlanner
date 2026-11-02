@@ -11,10 +11,42 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 
+import { ActionIcon, type ActionIconName } from './ActionIcon';
+import { hintProps } from './hint';
 import { draftEditorClosed, draftEditorOpened } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { ModalDialog, type ModalSurfaceProps } from './ModalDialog';
 import { showTruncatedTitle } from './truncatedTitle';
+
+/** A title-bar icon action, hinted with its name since the glyph alone may mislead. */
+function EditorDialogIconAction({
+  dismiss = false,
+  disabled = false,
+  icon,
+  label,
+  onClick,
+}: {
+  /** The dialog's dismiss action, the focus fallback while the body loads. */
+  readonly dismiss?: boolean;
+  readonly disabled?: boolean;
+  readonly icon: ActionIconName;
+  readonly label: string;
+  readonly onClick: () => void;
+}) {
+  return (
+    <button
+      aria-label={label}
+      className="icon-action editor-dialog-icon-action"
+      {...(dismiss ? { 'data-editor-dismiss': true } : {})}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+      {...hintProps(label, undefined, label)}
+    >
+      <ActionIcon name={icon} />
+    </button>
+  );
+}
 
 /**
  * A draft editor saves once and Cancel discards; a view edits nothing and
@@ -186,14 +218,12 @@ export function EditorDialog({
             </div>
             <div className="editor-dialog-header-actions" ref={setActionsElement}>
               {model.kind === 'view' ? (
-                <button
-                  className="quiet-action"
-                  data-editor-dismiss
+                <EditorDialogIconAction
+                  dismiss
+                  icon="close"
+                  label="Close"
                   onClick={model.onClose}
-                  type="button"
-                >
-                  Close
-                </button>
+                />
               ) : null}
             </div>
           </header>
@@ -333,14 +363,17 @@ function EditorDialogFinding({
 }
 
 /**
- * The draft actions: Cancel discards and Save commits the complete draft once.
- * In a header-layout dialog they join the title bar after the first finding,
- * and secondary actions stay in the body; otherwise they form the footer.
+ * The draft actions: Reset restarts the whole draft, Cancel discards it and
+ * Save commits it once. In a header-layout dialog they join the title bar
+ * after the first finding, and secondary actions stay in the body; otherwise
+ * they form the footer.
  */
 export function EditorDialogDraftActions({
   issues = [],
   onCancel,
+  onReset,
   onSave,
+  resetDisabled = false,
   saveDisabled,
   saveName,
   secondary,
@@ -348,18 +381,28 @@ export function EditorDialogDraftActions({
   /** The draft's findings, first one shown; blocking while Save is disabled. */
   readonly issues?: readonly EditorDialogIssue[];
   readonly onCancel?: () => void;
+  /** Replaces the whole draft with its starting point; a part's own reset stays in the body. */
+  readonly onReset?: () => void;
   readonly onSave: () => void;
+  readonly resetDisabled?: boolean;
   readonly saveDisabled: boolean;
   /** Accessible name that names what Save commits, when the title alone does not. */
   readonly saveName?: string;
   readonly secondary?: ReactNode;
 }) {
   const slot = useContext(actionsSlot);
+  const reset =
+    onReset === undefined ? null : (
+      <EditorDialogIconAction
+        disabled={resetDisabled}
+        icon="reset"
+        label="Reset"
+        onClick={onReset}
+      />
+    );
   const cancel =
     onCancel === undefined ? null : (
-      <button className="quiet-action" data-editor-dismiss onClick={onCancel} type="button">
-        Cancel
-      </button>
+      <EditorDialogIconAction dismiss icon="close" label="Cancel" onClick={onCancel} />
     );
   const save = (
     <button
@@ -380,6 +423,7 @@ export function EditorDialogDraftActions({
           : createPortal(
               <>
                 <EditorDialogFinding blocking={saveDisabled} issues={issues} />
+                {reset}
                 {cancel}
                 {save}
               </>,
@@ -392,6 +436,7 @@ export function EditorDialogDraftActions({
     );
   return (
     <EditorDialogFooter secondary={secondary}>
+      {reset}
       {cancel}
       {save}
     </EditorDialogFooter>

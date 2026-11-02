@@ -99,20 +99,17 @@ export function ArcanaActivationEditor({
             : [['incomplete', `Choose ${requiredCount - draft.length} more`] as const]
         }
         onCancel={onClose}
+        onReset={() => setDraft([])}
         onSave={() => {
           executeIntent(control.intentFor(draft));
           onClose();
         }}
+        resetDisabled={draft.length === 0}
         // An incomplete draw or a finding this draft introduced blocks Save; inherited findings do not.
         saveDisabled={
           domain === undefined ||
           draft.length < requiredCount ||
           introducesIssue(draftEntries, entriesOf(domain.findings))
-        }
-        secondary={
-          <button className="quiet-action" onClick={() => setDraft([])} type="button">
-            Clear
-          </button>
         }
       />
       <p className="route-loadout-summary">

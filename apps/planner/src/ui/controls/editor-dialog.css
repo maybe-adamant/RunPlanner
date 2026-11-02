@@ -155,7 +155,7 @@
   min-width: 7rem;
 }
 
-/* Header layout: icon, title and help, then the first finding, Cancel and Save on one bar. */
+/* Header layout: icon, title and help, then the first finding, Reset, Cancel and Save on one bar. */
 .editor-dialog-header[data-layout='header'] {
   align-items: center;
   container-type: inline-size;
@@ -164,7 +164,7 @@
 }
 
 .editor-dialog-header[data-layout='header'] .editor-dialog-title-line {
-  flex: 1 1 0;
+  flex: 0 1 auto;
   justify-content: flex-start;
   min-width: 3rem;
 }
@@ -200,10 +200,11 @@
   padding: 0 1rem 0.75rem;
 }
 
+/* The actions take the width the title leaves, so the finding truncates only when it must. */
 .editor-dialog-header-actions {
   align-items: center;
   display: flex;
-  flex: 0 1 auto;
+  flex: 1 1 0;
   gap: 0.5rem;
   justify-content: flex-end;
   min-width: 0;
@@ -218,10 +219,17 @@
   min-width: 6rem;
 }
 
-/* The finding slot keeps its width whether or not a finding shows. */
+/* Reset, Cancel and Close as icons, outlined like the help button beside the title. */
+.editor-dialog-header .editor-dialog-icon-action {
+  border-color: var(--border);
+  height: 1.75rem;
+  width: 1.75rem;
+}
+
+/* The finding slot fills the bar, so the title never shifts as findings come and go. */
 .editor-dialog-finding-slot {
   display: flex;
-  flex: 0 1 26rem;
+  flex: 1 1 0;
   justify-content: flex-end;
   min-width: 2.75rem;
 }

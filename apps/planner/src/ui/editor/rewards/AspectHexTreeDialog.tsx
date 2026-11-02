@@ -56,10 +56,15 @@ export function AspectHexTreeDialog({
       <EditorDialogDraftActions
         issues={issues}
         onCancel={onClose}
+        // Reset restores the chosen layout's default tree.
+        onReset={() => {
+          if (domain !== undefined) setDraft(domain.edit({ kind: 'reset' }));
+        }}
         onSave={() => {
           executeIntent(control.intentFor(draft));
           onClose();
         }}
+        resetDisabled={domain === undefined}
         // A conflict this draft introduced blocks Save; inherited conflicts do not.
         saveDisabled={
           atRest || domain === undefined || introducesIssue(issues, saved.result?.treeIssues ?? [])
@@ -68,7 +73,11 @@ export function AspectHexTreeDialog({
       {domain === undefined ? (
         <p>Loading Hex tree…</p>
       ) : (
-        <HexTreeBoard domain={domain} onEdit={(edit) => setDraft(domain.edit(edit))} />
+        <HexTreeBoard
+          domain={domain}
+          onEdit={(edit) => setDraft(domain.edit(edit))}
+          resettable={false}
+        />
       )}
     </EditorDialog>
   );

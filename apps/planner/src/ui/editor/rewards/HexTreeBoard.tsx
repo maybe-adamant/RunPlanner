@@ -34,9 +34,12 @@ interface OpenPicker {
 export function HexTreeBoard({
   domain,
   onEdit,
+  resettable = true,
 }: {
   readonly domain: WorkspaceHexTreeDomain;
   readonly onEdit: (edit: AuthoredHexTreeEdit) => void;
+  /** Whether the board offers its own Reset; a dialog whose draft is the tree resets from its header. */
+  readonly resettable?: boolean;
 }) {
   const findingTarget = useFindingTarget();
   const [open, setOpen] = useState<OpenPicker>();
@@ -91,9 +94,16 @@ export function HexTreeBoard({
           }}
           placeholder="Choose a layout"
         />
-        <button className="quiet-action" onClick={() => onEdit({ kind: 'reset' })} type="button">
-          Reset
-        </button>
+        {resettable ? (
+          <button
+            aria-label="Reset tree"
+            className="quiet-action"
+            onClick={() => onEdit({ kind: 'reset' })}
+            type="button"
+          >
+            Reset
+          </button>
+        ) : null}
         <HexTreeRulesHelp />
       </div>
       <HexBoard

@@ -45,7 +45,7 @@ describe('Fresh File retained encounter customization', () => {
         .getAllByRole('button')
         .filter((button) => !(button as HTMLButtonElement).disabled)
         .map((button) => button.getAttribute('aria-label') ?? button.textContent),
-    ).toEqual(['Encounter composition help', 'Cancel', 'Reset']);
+    ).toEqual(['Encounter composition help', 'Reset', 'Cancel']);
     // Removal-only: the fixed wave count and no budget controls are offered.
     expect((within(dialog).getByRole('radio', { name: '4' }) as HTMLInputElement).disabled).toBe(
       true,

@@ -521,8 +521,7 @@ function EncounterCompositionHelp({
           ) : null}
         </>
       ) : null}
-      <h4>Reset</h4>
-      <p>Reset removes the customization and returns the encounter to game control.</p>
+      <p>Reset returns the encounter to game control.</p>
     </EditorDialogHelp>
   );
 }
@@ -966,18 +965,7 @@ export function EncounterCompositionControl({
             ))}
           </div>
         </div>
-        {value === undefined ? null : (
-          <>
-            <EncounterCompositionHelp composition={composition} />
-            <button
-              className="quiet-action action-compact encounter-composition-reset"
-              onClick={() => onValue?.(undefined)}
-              type="button"
-            >
-              Reset
-            </button>
-          </>
-        )}
+        {value === undefined ? null : <EncounterCompositionHelp composition={composition} />}
         {composition.sharedEnemy ? (
           <div
             className="encounter-customization-row encounter-shared-enemy"

@@ -193,7 +193,15 @@ function EncounterCustomizationDialog({
       <EditorDialogDraftActions
         issues={issues}
         onCancel={onClose}
+        // Reset returns every customization of the encounter to game control.
+        onReset={() =>
+          setDraftState({
+            identity: savedIdentity,
+            values: Object.fromEntries(Object.keys(values).map((key) => [key, undefined])),
+          })
+        }
         onSave={save}
+        resetDisabled={Object.values(values).every((value) => value === undefined)}
         saveDisabled={atRest || introduced}
       />
       <div className="encounter-customization-fields">
@@ -202,13 +210,6 @@ function EncounterCustomizationDialog({
             <section className="encounter-generated-customization">
               <div className="encounter-generated-heading">
                 <h3>Encounter Composition</h3>
-                <button
-                  className="quiet-action action-compact"
-                  onClick={() => setValue(generatedDecision.key, null)}
-                  type="button"
-                >
-                  Reset
-                </button>
               </div>
             </section>
           )
@@ -239,6 +240,7 @@ function EncounterCustomizationDialog({
                 id={`encounter-customization-${customizationId}-${decision.key}`}
                 key={decision.key}
                 onValue={onValue}
+                resettable={decisions.length > 1}
               />
             );
           }
@@ -260,6 +262,7 @@ function EncounterCustomizationDialog({
                 id={`encounter-customization-${customizationId}-${decision.key}`}
                 key={decision.key}
                 onValue={onValue}
+                resettable={decisions.length > 1}
                 supported={draftView.infiniteRosterSupported}
               />
             );

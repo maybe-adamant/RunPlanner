@@ -654,10 +654,7 @@ describe('Biome inspector controls', () => {
     }
     await waitFor(() => expect(dialogFinding(judgmentPopup)).toBeUndefined());
     expect(save().disabled).toBe(false);
-    const closeJudgment = within(judgmentPopup).getByRole('button', {
-      name: 'Cancel',
-    });
-    expect(closeJudgment.classList.contains('quiet-action')).toBe(true);
+    expect(within(judgmentPopup).getByRole('button', { name: 'Cancel' })).toBeTruthy();
     act(() => within(judgmentPopup).getByRole('button', { name: 'Save' }).click());
     expect(within(inspector).queryByRole('dialog', { name: 'Judgment editor' })).toBeNull();
     act(() =>
@@ -666,7 +663,7 @@ describe('Biome inspector controls', () => {
         .click(),
     );
     const reopenedJudgment = within(inspector).getByRole('dialog', { name: 'Judgment editor' });
-    act(() => within(reopenedJudgment).getByRole('button', { name: 'Clear' }).click());
+    act(() => within(reopenedJudgment).getByRole('button', { name: 'Reset' }).click());
     expect(within(reopenedJudgment).queryAllByRole('button', { pressed: true })).toHaveLength(0);
     act(() => within(reopenedJudgment).getByRole('button', { name: 'Cancel' }).click());
     const updatedWorkspace = workspaceProjection(view.application);

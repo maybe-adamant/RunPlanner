@@ -24,9 +24,12 @@ export function InfiniteRosterControl({
   draftFor,
   id,
   onValue,
+  resettable,
   supported,
 }: {
   readonly decision: Decision;
+  /** Whether the roster offers its own Reset; as a dialog's only setting, the dialog's Reset covers it. */
+  readonly resettable: boolean;
   readonly draftFor: WorkspaceEncounterCustomizationInteraction['infiniteRosterDraftFor'];
   readonly id: string;
   readonly onValue: (value: AuthoredEncounterCustomization | null) => void;
@@ -73,14 +76,17 @@ export function InfiniteRosterControl({
             })}
         {...(needsRepair ? { invalid: true } : {})}
       />
-      <button
-        className="quiet-action"
-        disabled={typeKeys === undefined}
-        onClick={() => onValue(null)}
-        type="button"
-      >
-        Reset
-      </button>
+      {resettable ? (
+        <button
+          aria-label={`Reset ${decision.label}`}
+          className="quiet-action"
+          disabled={typeKeys === undefined}
+          onClick={() => onValue(null)}
+          type="button"
+        >
+          Reset
+        </button>
+      ) : null}
     </div>
   );
 }

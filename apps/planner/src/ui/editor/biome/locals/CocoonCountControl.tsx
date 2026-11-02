@@ -24,9 +24,12 @@ export function CocoonCountControl({
   decision,
   id,
   onValue,
+  resettable,
 }: {
   readonly decision: Decision;
   readonly id: string;
+  /** Whether the count offers its own Reset; as a dialog's only setting, the dialog's Reset covers it. */
+  readonly resettable: boolean;
   /** Writes the decision's next value into the dialog draft; null restores Default. */
   readonly onValue: (value: AuthoredEncounterCustomization | null) => void;
 }) {
@@ -88,14 +91,17 @@ export function CocoonCountControl({
             ? `${count} (unavailable)`
             : shownText}
         </output>
-        <button
-          className="quiet-action"
-          disabled={count === undefined}
-          onClick={() => onValue(null)}
-          type="button"
-        >
-          Reset
-        </button>
+        {resettable ? (
+          <button
+            aria-label={`Reset ${decision.label}`}
+            className="quiet-action"
+            disabled={count === undefined}
+            onClick={() => onValue(null)}
+            type="button"
+          >
+            Reset
+          </button>
+        ) : null}
       </div>
     </div>
   );

@@ -713,7 +713,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(pointSelector);
     await view.user.click(screen.getByRole('option', { name: '1' }));
     expect(pointSelector.textContent).toContain('1');
-    const reset = () => within(dialog).getByRole('button', { name: 'Reset' }) as HTMLButtonElement;
+    const reset = () =>
+      within(dialog).getByRole('button', { name: 'Reset Cocoons' }) as HTMLButtonElement;
     expect(reset().disabled).toBe(true);
 
     fireEvent.change(slider, { target: { value: '4' } });
@@ -795,6 +796,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     let dialog = await screen.findByRole('dialog');
+    // The roster is the dialog's only setting, so the dialog's Reset alone resets it.
+    expect(within(dialog).queryByRole('button', { name: 'Reset Enemy roster' })).toBeNull();
     expect(within(dialog).getByRole('button', { name: 'Reset' }).hasAttribute('disabled')).toBe(
       true,
     );

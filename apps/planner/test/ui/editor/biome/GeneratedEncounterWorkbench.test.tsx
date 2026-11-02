@@ -880,9 +880,7 @@ describe('generated encounter customization workflows', () => {
     expect(help.textContent).toContain(
       'Fixed waves cannot be edited. Customize the remaining waves.',
     );
-    expect(help.textContent).toContain(
-      'Reset removes the customization and returns the encounter to game control.',
-    );
+    expect(help.textContent).toContain('Reset returns the encounter to game control.');
     expect(within(help).queryByRole('heading', { name: 'Fangs' })).toBeNull();
     expect(within(help).queryByRole('heading', { name: 'Menace' })).toBeNull();
   });
@@ -946,7 +944,9 @@ describe('generated encounter customization workflows', () => {
       screen.getByRole('button', { name: 'Customize encounter' }).getAttribute('data-has-findings'),
     ).toBe('false');
     expect(dialogFinding(view.dialog)).toBeUndefined();
-    expect(within(view.dialog).queryByRole('button', { name: 'Reset' })).toBeNull();
+    expect(
+      (within(view.dialog).getByRole('button', { name: 'Reset' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
     expect(within(view.dialog).getByRole('button', { name: 'Edit' })).toBeTruthy();
     expect(within(view.dialog).queryByRole('button', { name: 'Wave 2 enemies' })).toBeNull();
     expect(within(view.dialog).getByText('The game generates this wave’s enemies.')).toBeTruthy();

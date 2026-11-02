@@ -11,7 +11,11 @@ import type {
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { hexNodeArtwork } from '@planner/ui/artwork/hex-nodes/hexNodeArtwork';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
-import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
+import {
+  EditorDialog,
+  EditorDialogDraftActions,
+  EditorDialogTitleAction,
+} from '@planner/ui/controls/EditorDialog';
 import { introducesIssue } from '@planner/ui/controls/introducesIssue';
 import {
   hexActivationDialogClosed,
@@ -31,28 +35,16 @@ const taken = new Set(['invested', 'selected']);
 /** The plain tree at one Path screen; clicking a node adds or removes it from the draft. */
 function HexActivationBoard({
   board,
-  cleared,
   onSelect,
 }: {
   readonly board: WorkspaceHexActivationBoard;
-  /** Whether the draft is already empty. */
-  readonly cleared: boolean;
   readonly onSelect: (selection: readonly string[]) => void;
 }) {
   return (
     <div className="hex-tree-editor">
-      <div className="hex-tree-toolbar">
-        <p className="hex-activation-points">{board.pointsLabel}</p>
-        {/* Clears nodes the board cannot show, such as a lost God Sent pair. */}
-        <button
-          className="quiet-action"
-          disabled={cleared}
-          onClick={() => onSelect([])}
-          type="button"
-        >
-          Clear selection
-        </button>
-      </div>
+      <EditorDialogTitleAction>
+        <span className="hex-activation-points">{board.pointsLabel}</span>
+      </EditorDialogTitleAction>
       <HexBoard
         boardProps={{ 'aria-label': board.treeLabel }}
         linkProps={(from, to) => ({
@@ -149,6 +141,8 @@ function HexActivationDialog({
       <EditorDialogDraftActions
         issues={issues}
         onCancel={onClose}
+        // Reset also clears nodes the board cannot show, such as a lost God Sent pair.
+        onReset={() => setDraft([])}
         onSave={() => {
           executeIntent(interaction.intentFor(draft));
           onClose();
@@ -160,11 +154,10 @@ function HexActivationDialog({
           issues.some(([key]) => key === 'selectionCount') ||
           introducesIssue(issues, savedIssues)
         }
+        resetDisabled={draft.length === 0}
         saveName="Save Path of Stars nodes"
       />
-      {board === undefined ? null : (
-        <HexActivationBoard board={board} cleared={draft.length === 0} onSelect={setDraft} />
-      )}
+      {board === undefined ? null : <HexActivationBoard board={board} onSelect={setDraft} />}
     </EditorDialog>
   );
 }

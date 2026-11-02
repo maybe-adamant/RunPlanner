@@ -213,7 +213,7 @@ describe('Path of Stars screen editor', () => {
     application.dispose();
   });
 
-  it('removes saved nodes that conflict: an invested node from the board, the rest by clearing', async () => {
+  it('removes saved nodes that conflict: an invested node from the board, the rest by resetting', async () => {
     const { application, history, selection, user } = renderScreen((project, owner) =>
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceHexActivation',
@@ -228,9 +228,9 @@ describe('Path of Stars screen editor', () => {
     expect(marked).toHaveLength(1);
     await user.click(marked[0]!);
     expect(points().textContent).toBe('2 of 3 points');
-    await user.click(within(dialog()).getByRole('button', { name: 'Clear selection' }));
+    await user.click(within(dialog()).getByRole('button', { name: 'Reset' }));
     expect(points().textContent).toBe('0 of 3 points');
-    expect(within(dialog()).getByRole('button', { name: 'Clear selection' })).toHaveProperty(
+    expect(within(dialog()).getByRole('button', { name: 'Reset' })).toHaveProperty(
       'disabled',
       true,
     );
