@@ -85,7 +85,8 @@ export type BiomeStatusEvaluation =
 const embryoBlessingMissing = Object.freeze({ title: 'Choose Embryo blessing' });
 const embryoBlessingUnavailable = Object.freeze({ title: 'Embryo blessing unavailable' });
 
-const findingCopy = {
+/** Each finding code's default copy; evidence-aware presenters refine some. */
+export const findingCopy = {
   batchRewardStoreMissing: {
     title: 'Choose a reward pool',
   },
@@ -166,7 +167,7 @@ const findingCopy = {
     title: 'Hidden door reward unavailable',
   },
   rerolledRewardMismatch: {
-    title: 'Rerolled reward no longer matches its last reroll',
+    title: 'Rerolled reward no longer matches last reroll',
   },
   rerollUnavailable: {
     title: 'Rerolls are not available here',
@@ -537,7 +538,7 @@ const findingCopy = {
     title: 'Persephone roll unavailable',
   },
   traitOfferGenerationUnavailable: {
-    title: 'Trait choices cannot appear together',
+    title: "These choices can't be drawn together",
   },
   unsupportedSparseTraitOffer: {
     title: 'Offer requires three choices',
@@ -612,7 +613,155 @@ function count(value: unknown): number | undefined {
   return typeof value === 'number' ? value : undefined;
 }
 
-export function presentFinding(finding: SemanticFinding): FindingPresentation {
+/** A finding title stays within this many characters, interpolated names included. */
+export const findingTitleLimit = 48;
+
+/** Names a trait key; titles fall back to nameless wording without it. */
+export type FindingTraitLabel = (traitKey: string) => string;
+
+/** The catalog's trait names for finding titles. */
+export function catalogTraitLabel(catalog: Catalog): FindingTraitLabel {
+  return (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey;
+}
+
+/** Why the game cannot show a trait offer screen, as its finding or candidate finding carries it. */
+export interface TraitOfferGenerationFacts {
+  readonly reason?: string;
+  readonly traitKey?: string;
+  readonly traitKeys?: readonly string[];
+  readonly rarity?: string;
+  readonly rarityCause?: string;
+  readonly requiredRarity?: string;
+}
+
+/** The first title within the limit; the last is the shortest wording and always stands. */
+function fittingTitle(titles: readonly (string | undefined)[]): string {
+  const present = titles.filter((title): title is string => title !== undefined);
+  return present.find((title) => title.length <= findingTitleLimit) ?? present.at(-1)!;
+}
+
+function rarityUnavailableTitle(
+  facts: TraitOfferGenerationFacts,
+  named: (wording: (trait: string) => string) => string | undefined,
+): string | undefined {
+  const { rarity, requiredRarity } = facts;
+  if (rarity === undefined) return undefined;
+  switch (facts.rarityCause) {
+    case 'guaranteed':
+      return requiredRarity === undefined
+        ? undefined
+        : fittingTitle([
+            named((trait) => `${trait} can't be ${rarity}: ${requiredRarity} guaranteed`),
+            named((trait) => `${trait}: ${requiredRarity} is guaranteed`),
+            `This choice can't be ${rarity}: ${requiredRarity} guaranteed`,
+            `${requiredRarity} is guaranteed here`,
+          ]);
+    case 'replacement':
+      return requiredRarity === undefined
+        ? undefined
+        : fittingTitle([
+            named((trait) => `${trait} must be ${requiredRarity} here`),
+            `This replacement must be ${requiredRarity}`,
+          ]);
+    case 'notInTrait':
+      return fittingTitle([
+        named((trait) => `${trait} is never offered ${rarity}`),
+        `This choice is never offered ${rarity}`,
+      ]);
+    case 'forcedCommon':
+      return 'This screen offers only Common';
+    case 'devotion':
+      return `${rarity} can't roll under Devotion`;
+    default:
+      return `${rarity} can't be offered here`;
+  }
+}
+
+/** Why a trait offer screen cannot be shown, naming its rows where the title has room. */
+export function presentTraitOfferGenerationFinding(
+  facts: TraitOfferGenerationFacts,
+  traitLabel?: FindingTraitLabel,
+): FindingPresentation {
+  const named = (wording: (trait: string) => string): string | undefined =>
+    facts.traitKey === undefined || traitLabel === undefined
+      ? undefined
+      : wording(traitLabel(facts.traitKey));
+  const [first, second] = facts.traitKeys ?? [];
+  const title = (() => {
+    switch (facts.reason) {
+      case 'duplicateTrait':
+        return fittingTitle([
+          named((trait) => `${trait} is offered twice`),
+          'A choice is offered twice',
+        ]);
+      case 'traitUnavailable':
+        return fittingTitle([
+          named((trait) => `${trait} can't be offered here`),
+          "This choice can't be offered here",
+        ]);
+      case 'rarityUnavailable':
+        return rarityUnavailableTitle(facts, named);
+      case 'coreTraitsFirst':
+        return fittingTitle([
+          facts.traitKeys?.length === 1 && traitLabel !== undefined
+            ? `This screen needs ${traitLabel(first!)}`
+            : undefined,
+          'This screen needs a core boon',
+        ]);
+      case 'pairConflict':
+        return fittingTitle([
+          ...(first === undefined || second === undefined || traitLabel === undefined
+            ? []
+            : [
+                `${traitLabel(first)} and ${traitLabel(second)} never appear together`,
+                `${traitLabel(first)} never appears with ${traitLabel(second)}`,
+              ]),
+          'These two choices never appear together',
+        ]);
+      case 'screenSize':
+        return 'This screen needs another choice';
+      default:
+        return undefined;
+    }
+  })();
+  if (title === undefined) return findingCopy.traitOfferGenerationUnavailable;
+  // A short screen names the trait that could fill it: the alternative repair.
+  const filler =
+    facts.reason === 'screenSize' ? named((trait) => `${trait} can fill it.`) : undefined;
+  return Object.freeze(filler === undefined ? { title } : { title, description: filler });
+}
+
+function evidenceString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function traitOfferGenerationEvidence(
+  evidence: SemanticFinding['evidence'],
+): TraitOfferGenerationFacts {
+  const facts = {
+    reason: evidenceString(evidence.reason),
+    traitKey: evidenceString(evidence.traitKey),
+    traitKeys: Array.isArray(evidence.traitKeys)
+      ? evidence.traitKeys.filter((key): key is string => typeof key === 'string')
+      : undefined,
+    rarity: evidenceString(evidence.rarity),
+    rarityCause: evidenceString(evidence.rarityCause),
+    requiredRarity: evidenceString(evidence.requiredRarity),
+  };
+  return Object.fromEntries(
+    Object.entries(facts).filter(([, value]) => value !== undefined),
+  ) as TraitOfferGenerationFacts;
+}
+
+export function presentFinding(
+  finding: SemanticFinding,
+  traitLabel?: FindingTraitLabel,
+): FindingPresentation {
+  if (finding.code === 'traitOfferGenerationUnavailable')
+    return presentTraitOfferGenerationFinding(
+      traitOfferGenerationEvidence(finding.evidence),
+      traitLabel,
+    );
   if (finding.code === 'hubOpenSetIncomplete') {
     const min = count(finding.evidence.minimumCount);
     const max = count(finding.evidence.maximumCount);
@@ -752,7 +901,7 @@ const dialogKindCopy = {
 
 /** Leading words that are ordinary language rather than game names. */
 const ordinaryLead =
-  /^(?:Choose|Customize|Wrong|Trait|One-time|Missing|Conflicting|Not|No|Target|Initial|Rarity|Heroic|Invalid|Encounter|Enemy|Offer|Duplicate|Boon(?! Boon Boon))\b/;
+  /^(?:This|These|A|Choose|Customize|Wrong|Trait|One-time|Missing|Conflicting|Not|No|Target|Initial|Rarity|Heroic|Invalid|Encounter|Enemy|Offer|Duplicate|Boon(?! Boon Boon))\b/;
 
 /** An inner finding's title continuing its dialog's name, e.g. "Trait offer: wrong replacement rarity". */
 /** Dialog card titles for inner findings whose own title already names the dialog's action. */
@@ -764,10 +913,20 @@ const dialogTitleByCode: {
   },
 };
 
-function dialogTitle(kind: FindingDialogKind, finding: SemanticFinding): string {
+function dialogTitle(
+  kind: FindingDialogKind,
+  finding: SemanticFinding,
+  traitLabel: FindingTraitLabel | undefined,
+): string {
   const mapped = dialogTitleByCode[kind]?.[finding.code];
   if (mapped !== undefined) return mapped;
-  const title = presentFinding(finding).title;
+  const title = presentFinding(finding, traitLabel).title;
+  // An unshowable screen's row cause names its trait, so it reads without the dialog's name.
+  if (
+    finding.code === 'traitOfferGenerationUnavailable' &&
+    ('optionKey' in finding.evidence || 'optionKeys' in finding.evidence)
+  )
+    return title;
   const inner = ordinaryLead.test(title) ? `${title[0]!.toLowerCase()}${title.slice(1)}` : title;
   return `${dialogKindCopy[kind]}: ${inner}`;
 }
@@ -832,6 +991,7 @@ export function findingDialogOwner(
 export function presentAssessmentIssue(
   issue: AssessmentIssue,
   repairTarget: (finding: SemanticFinding) => string,
+  traitLabel?: FindingTraitLabel,
 ): RepairEntryPresentation {
   const reason = issue.reasons[0];
   if (reason === undefined) {
@@ -845,15 +1005,17 @@ export function presentAssessmentIssue(
   if (first !== undefined) {
     const more = inner.length - 1;
     const description =
-      more === 0 ? presentFinding(first.finding).description : `+${more} more in its editor`;
+      more === 0
+        ? presentFinding(first.finding, traitLabel).description
+        : `+${more} more in its editor`;
     return Object.freeze({
-      title: dialogTitle(first.dialog.kind, first.finding),
+      title: dialogTitle(first.dialog.kind, first.finding, traitLabel),
       ...(description === undefined ? {} : { description }),
       dialog: first.dialog,
       innerFindingCount: inner.length,
     });
   }
-  const copy = presentFinding(reason);
+  const copy = presentFinding(reason, traitLabel);
   const targets = new Set(issue.reasons.map(repairTarget));
   if (targets.size === 1) return copy;
   // One code repaired at several controls reads as a count where its title has a plural.

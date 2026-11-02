@@ -135,7 +135,7 @@ describe('ordinary offer shell', () => {
     await waitFor(() => expect(save.hasAttribute('disabled')).toBe(true));
     expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(false);
     await waitFor(() =>
-      expect(dialogFinding(document.body)).toMatch(/Trait choices cannot appear together/),
+      expect(dialogFinding(document.body)).toMatch(/This screen needs a core boon/),
     );
     await user.click(screen.getByRole('button', { name: 'Remove last option' }));
     await user.click(screen.getByRole('button', { name: 'Remove last option' }));
@@ -360,10 +360,13 @@ describe('ordinary offer shell', () => {
     const offerTab = screen.getByRole('tab', { name: 'Offer' });
     await waitFor(() => expect(offerTab.getAttribute('data-has-findings')).toBe('true'));
     expect(save.hasAttribute('disabled')).toBe(true);
-    expect(feedbackText()).not.toContain('Trait choices cannot appear together');
+    expect(feedbackText()).not.toContain('This screen needs a core boon');
     expect(feedbackText()).toContain('Offer needs a fix.');
     await user.click(offerTab);
-    expect(feedbackText()).toContain('Trait choices cannot appear together');
+    // The screen's cause, then the row's own finding, which names the row once.
+    expect(feedbackText()).toBe('This screen needs a core boon (1 more)');
+    const row = screen.getByLabelText('option3 trait').closest('[data-has-findings]');
+    expect(row?.getAttribute('data-has-findings')).toBe('true');
     application.dispose();
   });
 

@@ -117,6 +117,98 @@ describe('evaluation presentation', () => {
     ).toEqual({ title: 'Anomaly cannot occur here' });
   });
 
+  it('says why the game cannot show a trait offer screen, naming its traits', () => {
+    const traitLabel = (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey;
+    const title = (evidence: Record<string, FindingEvidenceValue>) =>
+      presentFinding({ ...finding('traitOfferGenerationUnavailable'), evidence }, traitLabel).title;
+    const buried = { traitKey: 'RoomRewardBonusBoon', optionKey: 'option2' };
+    const rarity = (rarityCause: string, extra: Record<string, FindingEvidenceValue> = {}) =>
+      title({ reason: 'rarityUnavailable', ...buried, rarity: 'Common', rarityCause, ...extra });
+    expect(rarity('guaranteed', { requiredRarity: 'Rare', requiredChance: 1.1 })).toBe(
+      "Buried Treasure can't be Common: Rare guaranteed",
+    );
+    expect(
+      title({
+        reason: 'rarityUnavailable',
+        traitKey: 'RendBloodDropBoon',
+        rarity: 'Common',
+        rarityCause: 'guaranteed',
+        requiredRarity: 'Rare',
+      }),
+    ).toBe('Profuse Bleeding: Rare is guaranteed');
+    expect(rarity('replacement', { requiredRarity: 'Epic' })).toBe(
+      'Buried Treasure must be Epic here',
+    );
+    expect(rarity('notInTrait')).toBe('Buried Treasure is never offered Common');
+    expect(rarity('forcedCommon')).toBe('This screen offers only Common');
+    expect(
+      title({ reason: 'rarityUnavailable', ...buried, rarity: 'Duo', rarityCause: 'devotion' }),
+    ).toBe("Duo can't roll under Devotion");
+    expect(
+      title({ reason: 'rarityUnavailable', ...buried, rarity: 'Epic', rarityCause: 'noChance' }),
+    ).toBe("Epic can't be offered here");
+    expect(title({ reason: 'traitUnavailable', ...buried })).toBe(
+      "Buried Treasure can't be offered here",
+    );
+    expect(title({ reason: 'duplicateTrait', ...buried })).toBe('Buried Treasure is offered twice');
+    expect(title({ reason: 'coreTraitsFirst', traitKeys: ['PoseidonWeaponBoon'] })).toBe(
+      'This screen needs Wave Strike',
+    );
+    expect(
+      title({
+        reason: 'coreTraitsFirst',
+        traitKeys: ['PoseidonWeaponBoon', 'PoseidonSpecialBoon'],
+      }),
+    ).toBe('This screen needs a core boon');
+    expect(
+      title({ reason: 'pairConflict', traitKeys: ['PoseidonWeaponBoon', 'RoomRewardBonusBoon'] }),
+    ).toBe('Wave Strike never appears with Buried Treasure');
+    expect(
+      presentFinding(
+        {
+          ...finding('traitOfferGenerationUnavailable'),
+          evidence: { reason: 'pairConflict', traitKeys: ['A', 'B'] },
+        },
+        (traitKey) => `${traitKey} Boon`,
+      ).title,
+    ).toBe('A Boon and B Boon never appear together');
+    expect(
+      presentFinding(
+        {
+          ...finding('traitOfferGenerationUnavailable'),
+          evidence: { reason: 'screenSize', traitKey: 'RoomRewardBonusBoon' },
+        },
+        traitLabel,
+      ),
+    ).toEqual({
+      title: 'This screen needs another choice',
+      description: 'Buried Treasure can fill it.',
+    });
+    expect(title({ reason: 'generic' })).toBe("These choices can't be drawn together");
+    expect(title({})).toBe("These choices can't be drawn together");
+  });
+
+  it('falls back to nameless trait offer titles without names or room for them', () => {
+    expect(
+      presentFinding({
+        ...finding('traitOfferGenerationUnavailable'),
+        evidence: { reason: 'traitUnavailable', traitKey: 'RoomRewardBonusBoon' },
+      }).title,
+    ).toBe("This choice can't be offered here");
+    expect(
+      presentFinding(
+        {
+          ...finding('traitOfferGenerationUnavailable'),
+          evidence: {
+            reason: 'pairConflict',
+            traitKeys: ['RoomRewardBonusBoon', 'RoomRewardBonusBoon'],
+          },
+        },
+        () => 'Primal Psychic Connection',
+      ).title,
+    ).toBe('These two choices never appear together');
+  });
+
   it('names a screen reroll with nothing left to draw apart from a missing card', () => {
     expect(
       presentFinding({
@@ -611,6 +703,22 @@ describe('outer finding collapse', () => {
     );
     expect(entry).toEqual({ title: 'Choose a trait offer' });
     expect(entry.dialog).toBeUndefined();
+  });
+
+  it('lets an unshowable screen’s row cause read without the dialog’s name', () => {
+    const rowCause = traitFinding('traitOfferGenerationUnavailable', offer, {
+      reason: 'rarityUnavailable',
+      traitKey: 'RoomRewardBonusBoon',
+      optionKey: 'option2',
+      rarity: 'Common',
+      rarityCause: 'guaranteed',
+      requiredRarity: 'Rare',
+    });
+    expect(
+      presentAssessmentIssue(issueOf(offer, [rowCause]), byOrigin, (traitKey) =>
+        traitKey === 'RoomRewardBonusBoon' ? 'Buried Treasure' : traitKey,
+      ).title,
+    ).toBe("Buried Treasure can't be Common: Rare guaranteed");
   });
 
   it('folds customization decisions under their encounter phase but not the selector', () => {

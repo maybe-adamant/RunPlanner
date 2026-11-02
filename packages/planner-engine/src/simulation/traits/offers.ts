@@ -46,6 +46,7 @@ import {
   assessInitialOfferSupport,
   assessRerolledScreensSupport,
   firstScreenRerollRefused,
+  reportedRowTraitKeys,
   stagedTraitGeneration,
   type InitialOfferSupport,
 } from './authoring/initial-composition';
@@ -604,8 +605,56 @@ export function assessRerolledScreens(
     generationState,
     source,
   );
+  const rowSource = { ...source, resolvedProviderKey: offer.giverKey };
+  const screenRows = screens.map((screen) =>
+    screen === null
+      ? undefined
+      : screen.options.map((option) => {
+          const assessment = assessTraitOptionAgainstRarityDomain(
+            catalog,
+            option.traitKey,
+            generationState,
+            rowSource,
+            option.rarity,
+          );
+          const rowAssessment =
+            limitedSwapUses(generationState) === 0 || assessment.replacementTransition === undefined
+              ? assessment
+              : Object.freeze({
+                  ...assessment,
+                  replacementTransition: Object.freeze({
+                    ...assessment.replacementTransition,
+                    levelBonus: 2,
+                  }),
+                });
+          const level = resolveTraitOfferOptionLevel({
+            catalog,
+            state,
+            source,
+            option,
+            assessment: rowAssessment,
+          });
+          return {
+            level,
+            unleveled: assessment,
+            assessment:
+              level.findings.length === 0
+                ? rowAssessment
+                : Object.freeze({
+                    ...rowAssessment,
+                    legal: false,
+                    findings: Object.freeze([...rowAssessment.findings, ...level.findings]),
+                  }),
+          };
+        }),
+  );
   const supports = staged
-    ? assessRerolledScreensSupport(generationInput, screens, explainFailure)
+    ? assessRerolledScreensSupport(generationInput, screens, explainFailure, (index) =>
+        reportedRowTraitKeys(
+          screens[index]?.options ?? [],
+          (screenRows[index] ?? []).map((row) => row.unleveled),
+        ),
+      )
     : [];
   const first = screens[0];
   const rerollRefused =
@@ -615,7 +664,6 @@ export function assessRerolledScreens(
     firstScreenRerollRefused(generationInput, first);
   const godScreen = isChaosGodScreenGiver(catalog, offer.giverKey);
   const rejectedActive = hasActiveChaosSemanticTag(state.traitHistory, 'Rejected');
-  const rowSource = { ...source, resolvedProviderKey: offer.giverKey };
   return Object.freeze(
     screens.map((screen, index) => {
       if (screen === null)
@@ -626,43 +674,7 @@ export function assessRerolledScreens(
           levelResolutions: Object.freeze([]),
           composition: valid,
         });
-      const rows = screen.options.map((option) => {
-        const assessment = assessTraitOptionAgainstRarityDomain(
-          catalog,
-          option.traitKey,
-          generationState,
-          rowSource,
-          option.rarity,
-        );
-        const rowAssessment =
-          limitedSwapUses(generationState) === 0 || assessment.replacementTransition === undefined
-            ? assessment
-            : Object.freeze({
-                ...assessment,
-                replacementTransition: Object.freeze({
-                  ...assessment.replacementTransition,
-                  levelBonus: 2,
-                }),
-              });
-        const level = resolveTraitOfferOptionLevel({
-          catalog,
-          state,
-          source,
-          option,
-          assessment: rowAssessment,
-        });
-        return {
-          level,
-          assessment:
-            level.findings.length === 0
-              ? rowAssessment
-              : Object.freeze({
-                  ...rowAssessment,
-                  legal: false,
-                  findings: Object.freeze([...rowAssessment.findings, ...level.findings]),
-                }),
-        };
-      });
+      const rows = screenRows[index]!;
       const findings = godScreen
         ? rejectedRowFindings(rejectedActive, screen.options, screen.rejectedOptionKey, undefined)
         : [];
@@ -748,19 +760,6 @@ function evaluateReachedTraitOfferWithAssessments(
   // three-choice offer-composition contract.
   const legalityOffer = rarificationBaseOffer ?? offer;
   const staged = stagedTraitGeneration(catalog, legalityOffer);
-  const generation =
-    directAcquisition || frozenAcquisition || !staged
-      ? undefined
-      : assessInitialOfferSupport({
-          ...traitOfferGenerationInput(
-            catalog,
-            legalityOffer.giverKey,
-            generationState,
-            effectiveSource,
-          ),
-          offer: legalityOffer,
-          explainFailure: true,
-        });
   const baseComposition = directAcquisition
     ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
     : assessTraitOfferComposition(catalog, legalityOffer);
@@ -818,6 +817,23 @@ function evaluateReachedTraitOfferWithAssessments(
             assessChaosPairRarity(catalog, generationState, legalityOffer, effectiveSource),
           ])
         : assessTraitOffer(catalog, legalityOffer, generationState, effectiveSource)));
+  const generation =
+    directAcquisition || frozenAcquisition || !staged
+      ? undefined
+      : assessInitialOfferSupport({
+          ...traitOfferGenerationInput(
+            catalog,
+            legalityOffer.giverKey,
+            generationState,
+            effectiveSource,
+          ),
+          offer: legalityOffer,
+          explainFailure: true,
+          reportedTraitKeys: reportedRowTraitKeys(
+            legalityOffer.kind === 'traits' ? legalityOffer.options : [],
+            rawAssessments,
+          ),
+        });
   const levelResolutions =
     frozenLevelResolutions ??
     (offer.kind !== 'traits'

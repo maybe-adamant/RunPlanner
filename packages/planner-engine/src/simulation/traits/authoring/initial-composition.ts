@@ -435,9 +435,13 @@ function screenSupport(
   options: readonly ScreenRow[],
   previous: AuthoredRerolledTraitScreen | null | undefined,
   explainFailure: boolean,
+  reportedTraitKeys: ReadonlySet<string>,
 ): InitialOfferSupport {
-  const unshown = (bans: readonly (string | undefined)[]) =>
-    support(false, explainFailure ? explainScreenFailure(pools, options, bans) : undefined);
+  const unshown = (bans: readonly (string | undefined)[]) => {
+    if (!explainFailure) return support(false);
+    const cause = explainScreenFailure(pools, options, bans, reportedTraitKeys);
+    return cause === undefined ? reportedOnly() : support(false, cause);
+  };
   const wanted = new Map(options.map((option) => [option.traitKey, option.rarity]));
   if (wanted.size !== options.length || options.length > 3) return unshown([undefined]);
   const shown = (banned: string | undefined) =>
@@ -461,13 +465,17 @@ function screenSupport(
  * Why the staged search found no outcome for these rows under any of these
  * bans: exact local rules first, in a fixed order, then probes of the same
  * search over subsets of the rows. Called only after the search failed.
+ * A row whose own finding already reports it is never the named cause;
+ * undefined when nothing beyond such rows is wrong.
  */
 function explainScreenFailure(
   pools: InitialOfferPools,
   rows: readonly ScreenRow[],
   bans: readonly (string | undefined)[],
-): TraitOfferGenerationCause {
+  reportedTraitKeys: ReadonlySet<string>,
+): TraitOfferGenerationCause | undefined {
   const keys = rows.map((row) => row.traitKey);
+  const reported = (index: number) => reportedTraitKeys.has(keys[index]!);
   for (const [index, row] of rows.entries()) {
     const optionKeys = OPTION_KEYS.filter((_, at) => keys[at] === row.traitKey);
     if (optionKeys.length > 1)
@@ -481,6 +489,7 @@ function explainScreenFailure(
   const { chances, rarityOrder } = pools;
   const seedable = new Set([...pools.linked, ...pools.coreSeeds.flat()]);
   for (const [index, row] of rows.entries()) {
+    if (reported(index)) continue;
     const optionKey = OPTION_KEYS[index]!;
     const traitKey = row.traitKey;
     const replacement = pools.replacements.find((option) => option.traitKey === traitKey);
@@ -577,7 +586,7 @@ function explainScreenFailure(
     return undefined;
   };
   for (const [index, row] of rows.entries()) {
-    if (witness([index]) !== undefined) continue;
+    if (reported(index) || witness([index]) !== undefined) continue;
     const optionKey = OPTION_KEYS[index]!;
     const rarity = row.rarity;
     if (pools.rarityFree || rarity === undefined)
@@ -608,7 +617,7 @@ function explainScreenFailure(
   for (let i = 0; i < rows.length; i += 1)
     for (let j = i + 1; j < rows.length; j += 1) pairs.push([i, j]);
   // With at most three rows, dropping one row leaves a pair.
-  const conflict = pairs.find((pair) => witness(pair) === undefined);
+  const conflict = pairs.find((pair) => !pair.some(reported) && witness(pair) === undefined);
   if (conflict !== undefined)
     return {
       reason: 'pairConflict',
@@ -619,7 +628,7 @@ function explainScreenFailure(
   const fuller = rows.length < 3 ? witness(rows.map((_, index) => index)) : undefined;
   const filler = fuller?.find((option) => !keys.includes(option.traitKey));
   if (filler !== undefined) return { reason: 'screenSize', traitKey: filler.traitKey };
-  return { reason: 'generic' };
+  return keys.some((_, index) => reported(index)) ? undefined : { reason: 'generic' };
 }
 
 /** Why a rarity with no positive chance is unavailable. */
@@ -658,6 +667,21 @@ function support(legal: boolean, cause?: TraitOfferGenerationCause): InitialOffe
   });
 }
 
+/** Unshowable only through rows whose own findings already report them. */
+function reportedOnly(): InitialOfferSupport {
+  return Object.freeze({ applies: true, legal: false, findings: Object.freeze([]) });
+}
+
+/** The rows whose own assessment already reports them unavailable. */
+export function reportedRowTraitKeys(
+  rows: readonly { readonly traitKey: string }[],
+  assessments: readonly { readonly legal: boolean }[],
+): ReadonlySet<string> {
+  return new Set(
+    rows.flatMap((row, index) => (assessments[index]?.legal === false ? [row.traitKey] : [])),
+  );
+}
+
 function repeatsAllOffers(): InitialOfferSupport {
   return Object.freeze({
     applies: true,
@@ -672,6 +696,8 @@ export function assessInitialOfferSupport(
     readonly offer: AuthoredTraitOffer;
     /** Whether an unshowable screen names why; focused row queries do not ask. */
     readonly explainFailure: boolean;
+    /** Final-screen rows whose own findings already report them; never named again. */
+    readonly reportedTraitKeys?: ReadonlySet<string>;
   },
 ): InitialOfferSupport {
   const pools = stagedTraitGeneration(input.catalog, input.offer)
@@ -685,6 +711,7 @@ export function assessInitialOfferSupport(
     offer.kind === 'traits' ? offer.options : [],
     offer.kind === 'chaos' ? undefined : offer.rerolledScreens?.at(-1),
     input.explainFailure,
+    input.reportedTraitKeys ?? new Set(),
   );
 }
 
@@ -698,6 +725,8 @@ export function assessRerolledScreensSupport(
   screens: RerolledScreens<AuthoredRerolledTraitScreen>,
   /** Whether an unshowable screen names why; focused row queries do not ask. */
   explainFailure: boolean,
+  /** Each screen's rows whose own findings already report them; never named again. */
+  reportedTraitKeys: (screen: number) => ReadonlySet<string> = () => new Set(),
 ): readonly (InitialOfferSupport | undefined)[] {
   const pools = preparePools(input);
   return Object.freeze(
@@ -709,6 +738,7 @@ export function assessRerolledScreensSupport(
             screen.options,
             index === 0 ? undefined : screens[index - 1],
             explainFailure,
+            reportedTraitKeys(index),
           ),
     ),
   );

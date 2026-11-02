@@ -26,6 +26,7 @@ import {
   initialOfferStartingOptions,
 } from '../../../../src/simulation/traits/authoring/initial-composition';
 import { traitOfferGenerationInput } from '../../../../src/simulation/traits/authoring/assessment';
+import { assessRerolledScreens } from '../../../../src/simulation/traits/offers';
 import { isPomEligibleTrait } from '../../../../src/simulation/traits/history/upgrades';
 import { createLevelResolutionCandidateArtifacts } from '../../../../src/simulation/candidates/trait-offer/capability';
 import { traitFrontierState } from '../../../support/simulation-state';
@@ -237,6 +238,66 @@ describe('rerolled screen chain', () => {
         reason: 'coreTraitsFirst',
         traitKeys: ['ApolloSpecialBoon', 'ApolloSprintBoon', 'ApolloManaBoon'],
       },
+    ]);
+  });
+
+  it('never names a row its own finding already reports as the screen’s cause', () => {
+    const coreless = screen(
+      ['ApolloRetaliateBoon', 'Common'],
+      ['PerfectDamageBonusBoon', 'Common'],
+      ['BlindChanceBoon', 'Common'],
+    );
+    const support = (value: AuthoredRerolledTraitScreen, reported: readonly string[]) =>
+      assessRerolledScreensSupport(
+        input(createTraitHistoryState()),
+        [value],
+        true,
+        () => new Set(reported),
+      )[0];
+    expect(support(coreless, [])?.findings).toEqual([
+      {
+        code: 'traitOfferGenerationUnavailable',
+        reason: 'traitUnavailable',
+        traitKey: 'BlindChanceBoon',
+        optionKey: 'option3',
+      },
+    ]);
+    expect(support(coreless, ['BlindChanceBoon'])?.findings).toEqual([
+      expect.objectContaining({ reason: 'coreTraitsFirst' }),
+    ]);
+    // After a ban nothing else is wrong: the row's own finding stands alone.
+    const afterBan = screen(
+      ['ApolloWeaponBoon', 'Common'],
+      ['ApolloCastBoon', 'Common'],
+      ['BlindChanceBoon', 'Common'],
+    );
+    expect(
+      assessRerolledScreensSupport(
+        input(createTraitHistoryState()),
+        [screen(...cores), afterBan],
+        true,
+        (index) => new Set(index === 1 ? ['BlindChanceBoon'] : []),
+      )[1],
+    ).toEqual({
+      applies: true,
+      legal: false,
+      findings: [],
+    });
+    // Settlement and candidates pass the rows their own assessments report.
+    const state = traitFrontierState(createTraitHistoryState(), { catalog });
+    const [assessed] = assessRerolledScreens(
+      catalog,
+      offer(cores, [coreless]),
+      state,
+      state,
+      {},
+      true,
+    );
+    expect(assessed?.assessments[2]?.findings).toEqual([
+      expect.objectContaining({ code: 'missingPrerequisite', traitKey: 'BlindChanceBoon' }),
+    ]);
+    expect(assessed?.generation?.findings).toEqual([
+      expect.objectContaining({ reason: 'coreTraitsFirst' }),
     ]);
   });
 

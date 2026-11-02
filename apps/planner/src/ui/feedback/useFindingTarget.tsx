@@ -11,6 +11,7 @@ import {
   formatFindingSentence,
   presentFinding,
   semanticFindingKey,
+  type FindingTraitLabel,
 } from '@planner/projections/evaluationProjection';
 import { findingScreenTab, type ScreenTab } from '@planner/projections/rewards/screenRerollTabs';
 import { useAppSelector } from '@planner/state/store';
@@ -26,6 +27,8 @@ interface TargetFeedback {
   readonly revision: number;
   /** Set inside an open dialog whose findings map holds only that dialog's findings. */
   readonly dialog?: true;
+  /** Names traits in finding copy. */
+  readonly traitLabel?: FindingTraitLabel;
 }
 const emptyFindings: StructuredWorkspaceProjection['findingsByRepairTarget'] = new Map();
 const feedback = createContext<TargetFeedback>({
@@ -41,10 +44,12 @@ export function FindingTargetScope({
   authoringReadiness,
   children,
   findings,
+  traitLabel,
 }: {
   readonly authoringReadiness?: StructuredWorkspaceProjection['authoringReadiness'];
   readonly children: ReactNode;
   readonly findings: StructuredWorkspaceProjection['findingsByRepairTarget'] | undefined;
+  readonly traitLabel?: FindingTraitLabel;
 }) {
   const selected = useAppSelector((state) => state.editorSession.selectedFinding);
   const focused = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
@@ -60,8 +65,9 @@ export function FindingTargetScope({
       issueSelected: selected != null && selected.key === issueKey,
       focusKey: focused == null ? undefined : semanticAddressKey(focused),
       revision,
+      ...(traitLabel === undefined ? {} : { traitLabel }),
     }),
-    [authoringReadiness, findings, selected, focused, revision, issueKey],
+    [authoringReadiness, findings, selected, focused, revision, issueKey, traitLabel],
   );
   return <feedback.Provider value={value}>{children}</feedback.Provider>;
 }
@@ -98,10 +104,13 @@ export type FindingTargetFilter = (finding: { readonly code: string }) => boolea
 export function useFindingFeedbackEntries(
   address: SemanticAddress,
 ): readonly (readonly [key: string, message: string])[] {
-  const { findings } = useContext(feedback);
+  const { findings, traitLabel } = useContext(feedback);
   return (findings.get(semanticAddressKey(address)) ?? []).map(
     (finding) =>
-      [semanticFindingKey(finding), formatFindingExplanation(presentFinding(finding))] as const,
+      [
+        semanticFindingKey(finding),
+        formatFindingExplanation(presentFinding(finding, traitLabel)),
+      ] as const,
   );
 }
 
@@ -114,7 +123,7 @@ export function useDialogFindingEntries(
   owner?: SemanticAddress,
   screen?: ScreenTab,
 ): readonly (readonly [key: string, message: string])[] | undefined {
-  const { dialog, findings } = useContext(feedback);
+  const { dialog, findings, traitLabel } = useContext(feedback);
   if (dialog !== true) return undefined;
   const ownerKey = owner === undefined ? undefined : semanticAddressKey(owner);
   const entries = new Map<string, string>();
@@ -124,7 +133,10 @@ export function useDialogFindingEntries(
         (ownerKey === undefined || semanticAddressKey(finding.origin) === ownerKey) &&
         (screen === undefined || semanticFindingScreen(finding) === screen)
       )
-        entries.set(semanticFindingKey(finding), formatFindingExplanation(presentFinding(finding)));
+        entries.set(
+          semanticFindingKey(finding),
+          formatFindingExplanation(presentFinding(finding, traitLabel)),
+        );
   return [...entries];
 }
 
@@ -221,6 +233,7 @@ function useTargetBinder() {
     issueSelected,
     focusKey,
     revision,
+    traitLabel,
   } = useContext(feedback);
   const handledRequest = useRef<string | undefined>(undefined);
   return (
@@ -254,7 +267,9 @@ function useTargetBinder() {
       'aria-description':
         findings.length === 0
           ? undefined
-          : findings.map((finding) => formatFindingSentence(presentFinding(finding))).join(' '),
+          : findings
+              .map((finding) => formatFindingSentence(presentFinding(finding, traitLabel)))
+              .join(' '),
       ref: (element) => {
         if (element === null || !selectedAtTarget || handledRequest.current === request) return;
         handledRequest.current = request;
@@ -319,7 +334,7 @@ export interface FindingMarkProps {
 /** Marks a control with its owner's findings without making it a navigation target. */
 // eslint-disable-next-line react-refresh/only-export-components -- The scope and hook form one feedback boundary.
 export function useFindingMark() {
-  const { findings: findingsByTarget } = useContext(feedback);
+  const { findings: findingsByTarget, traitLabel } = useContext(feedback);
   return (address: SemanticAddress, control?: WorkspaceFindingControl): FindingMarkProps => {
     const key = findingControlKey(address, control);
     const findings = findingsByTarget.get(key) ?? [];
@@ -329,7 +344,9 @@ export function useFindingMark() {
       'aria-description':
         findings.length === 0
           ? undefined
-          : findings.map((finding) => formatFindingSentence(presentFinding(finding))).join(' '),
+          : findings
+              .map((finding) => formatFindingSentence(presentFinding(finding, traitLabel)))
+              .join(' '),
     };
   };
 }

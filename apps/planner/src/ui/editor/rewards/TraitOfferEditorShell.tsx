@@ -321,11 +321,14 @@ export function TraitOfferEditorShell({
     atRestEntries === undefined
       ? feedback.options
       : feedback.options.map((option) => ({ ...option, reasons: [] }));
-  const optionIssues = optionFeedback.flatMap((option, index) =>
-    option.reasons.map(
-      (reason) => [`${OPTION_KEYS[index]}:${reason}`, `Option ${index + 1}: ${reason}`] as const,
+  // The row itself is marked, so its reason reads alone; one reason naming two rows shows once.
+  const optionIssues = [
+    ...new Map(
+      optionFeedback.flatMap((option, index) =>
+        option.reasons.map((reason) => [reason, `${OPTION_KEYS[index]}:${reason}`] as const),
+      ),
     ),
-  );
+  ].map(([reason, key]) => [key, reason] as const);
   const replacements = optionFeedback.flatMap((option, index) =>
     option.replacement === undefined
       ? []

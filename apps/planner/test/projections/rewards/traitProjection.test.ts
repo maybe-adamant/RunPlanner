@@ -1,5 +1,6 @@
 import {
   simulateProjectAssembly,
+  type EvaluatedTraitOfferCandidate,
   type ProjectEvaluation,
   type TraitOfferGenerationState,
 } from '@run-planner/engine/simulation';
@@ -388,7 +389,73 @@ describe('route trait projection', () => {
     });
     expect(feedback.options[2]?.reasons).toEqual([expect.stringContaining('banned')]);
     expect(feedback.options[0]?.reasons).toEqual([]);
-    expect(feedback.contextMessage).toBe('Trait choices cannot appear together');
+    expect(feedback.contextMessage).toBe("These choices can't be drawn together");
+  });
+
+  it('marks the rows an unshowable screen names, and names its traits', () => {
+    const offer: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Poseidon',
+      options: [
+        { traitKey: 'PoseidonWeaponBoon', rarity: 'Rare' as const },
+        { traitKey: 'RoomRewardBonusBoon', rarity: 'Common' as const },
+        { traitKey: 'PoseidonSpecialBoon', rarity: 'Rare' as const },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+    };
+    const traitLabel = (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey;
+    const project = (finding: EvaluatedTraitOfferCandidate['result']['findings'][number]) =>
+      projectTraitOfferFeedback(
+        offer,
+        {
+          value: offer,
+          evaluation: {
+            kind: 'traitOffer',
+            result: {
+              supported: false,
+              branches: [],
+              persephoneLevelBonusMaximums: [],
+              persephoneBaseLevels: [],
+              jeweledPomLevels: [],
+              effectiveLevels: [],
+              assessments: [],
+              findings: [finding],
+            },
+          },
+        },
+        traitLabel,
+      );
+    const rarity = project({
+      code: 'traitOfferGenerationUnavailable',
+      reason: 'rarityUnavailable',
+      traitKey: 'RoomRewardBonusBoon',
+      optionKey: 'option2',
+      rarity: 'Common',
+      rarityCause: 'guaranteed',
+      requiredRarity: 'Rare',
+      requiredChance: 1.1,
+    });
+    expect(rarity.options.map((option) => option.reasons)).toEqual([
+      [],
+      ["Buried Treasure can't be Common: Rare guaranteed"],
+      [],
+    ]);
+    expect(rarity.contextMessage).toBeUndefined();
+    const pair = project({
+      code: 'traitOfferGenerationUnavailable',
+      reason: 'pairConflict',
+      traitKeys: ['PoseidonWeaponBoon', 'PoseidonSpecialBoon'],
+      optionKeys: ['option1', 'option3'],
+    });
+    expect(pair.options.map((option) => option.reasons.length)).toEqual([1, 0, 1]);
+    // A short screen's filler is not a row: the finding stays with the screen.
+    const short = project({
+      code: 'traitOfferGenerationUnavailable',
+      reason: 'screenSize',
+      traitKey: 'PoseidonSprintBoon',
+    });
+    expect(short.options.every((option) => option.reasons.length === 0)).toBe(true);
+    expect(short.contextMessage).toMatch(/^This screen needs another choice: /);
   });
 
   it('previews an earlier screen row replacement, level and rolls from that screen only', () => {

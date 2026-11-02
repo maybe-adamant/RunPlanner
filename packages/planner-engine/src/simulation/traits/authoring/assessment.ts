@@ -29,6 +29,7 @@ import {
 import type { SimulationState } from '../../state/model';
 import {
   assessInitialOfferSupport,
+  reportedRowTraitKeys,
   stagedTraitGeneration,
   type InitialOfferInput,
 } from './initial-composition';
@@ -568,6 +569,10 @@ export function assessTraitOfferBeforeRarification(
         ...traitOfferGenerationInput(catalog, offer.giverKey, state, source),
         offer,
         explainFailure,
+        reportedTraitKeys: reportedRowTraitKeys(
+          offer.kind === 'traits' ? offer.options : [],
+          assessments,
+        ),
       })
     : undefined;
   const composition = assessTraitOfferComposition(catalog, offer);

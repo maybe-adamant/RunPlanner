@@ -16,7 +16,7 @@ import {
   type CandidateOptionProjection,
   type CandidateProjectionEvaluation,
 } from '../candidates/candidateProjection';
-import { formatFindingSentence, presentFinding } from '../evaluationProjection';
+import { catalogTraitLabel, formatFindingSentence, presentFinding } from '../evaluationProjection';
 import { inactiveEncounterPhaseMessage, rangeLabel } from '../encounterPickerProjection';
 import { roomPickerCandidateCategory } from '../roomSelectorProjection';
 import { summarizeRewardOffer } from '../rewards/rewardOfferSummary';
@@ -669,7 +669,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
   if (sibling !== undefined) return sibling;
   switch (finding.code) {
     case 'traitOfferGenerationUnavailable':
-      return { kind: 'trait', message: 'This trait offer cannot occur at the current frontier.' };
+      return {
+        kind: 'trait',
+        message: formatFindingSentence(presentFinding(finding, catalogTraitLabel(catalog))),
+      };
     case 'unsupportedSparseTraitOffer':
       return { kind: 'trait', message: 'This provider needs three choices.' };
     case 'encounterCustomizationUnavailable':

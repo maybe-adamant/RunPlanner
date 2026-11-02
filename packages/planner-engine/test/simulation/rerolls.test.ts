@@ -1028,7 +1028,8 @@ describe('screen rerolls', () => {
       false,
       [['rerolledScreenMissing', 0]],
     ]);
-    // An earlier screen that no first draw shows: three Zeus boons without a core.
+    // An earlier screen that no first draw shows: its rows' own findings say why,
+    // and the screen does not name those rows again.
     const noCores = {
       options: [
         { traitKey: 'ZeusManaBoon', rarity: 'Common' as const },
@@ -1038,7 +1039,10 @@ describe('screen rerolls', () => {
     };
     const [supported, findings] = candidate({ ...offer, rerolledScreens: [noCores] });
     expect(supported).toBe(false);
-    expect(findings).toContainEqual(['traitOfferGenerationUnavailable', 0]);
+    expect(findings).toEqual([
+      ['missingPrerequisite', 0],
+      ['elementThreshold', 0],
+    ]);
     expect(candidate(withGuessedRerolledScreens(project, trait, offer, 2))).toEqual([true, []]);
   });
 

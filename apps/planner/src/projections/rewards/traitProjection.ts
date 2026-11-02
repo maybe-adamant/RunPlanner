@@ -20,7 +20,12 @@ import type {
   CandidateProjectionEvaluation,
 } from '../candidates/candidateProjection';
 import { candidateSupport } from '../candidates/candidateProjection';
-import { formatFindingExplanation, presentTraitCandidateFinding } from '../evaluationProjection';
+import {
+  formatFindingExplanation,
+  presentTraitCandidateFinding,
+  presentTraitOfferGenerationFinding,
+  type TraitOfferGenerationFacts,
+} from '../evaluationProjection';
 import type { WorkspaceInteractionCatalog } from '../structured-workspace';
 
 export interface TraitOfferOptionFeedback {
@@ -138,14 +143,15 @@ function formatAlternativeLabels(labels: readonly string[]): string {
 }
 
 function presentTraitCandidateReason(
-  finding: {
+  finding: TraitOfferGenerationFacts & {
     readonly code: Parameters<typeof presentTraitCandidateFinding>[0];
     readonly detail?: string;
-    readonly reason?: string;
     readonly requirementTraitKeys?: readonly string[];
   },
   traitLabel: (traitKey: string) => string,
 ): string {
+  if (finding.code === 'traitOfferGenerationUnavailable')
+    return formatFindingExplanation(presentTraitOfferGenerationFinding(finding, traitLabel));
   const copy = presentTraitCandidateFinding(finding.code, finding.reason);
   const requirementLabels = finding.requirementTraitKeys?.map(traitLabel);
   if (requirementLabels !== undefined && requirementLabels.length > 0) {
@@ -219,13 +225,24 @@ export function projectTraitOfferFeedback(
   const findingsByTrait = new Map<string, string[]>();
   const findingsByOption = new Map<string, string[]>();
   const contextMessages = new Set<string>();
+  const addOptionReason = (optionKey: string, reason: string) => {
+    const reasons = findingsByOption.get(optionKey) ?? [];
+    if (!reasons.includes(reason)) reasons.push(reason);
+    findingsByOption.set(optionKey, reasons);
+  };
   for (const finding of evaluation.result.findings.filter(onScreen)) {
     const reason = presentTraitCandidateReason(finding, traitLabel);
+    // An unshowable screen marks the rows its cause names; its trait may be a filler off the screen.
+    if (finding.code === 'traitOfferGenerationUnavailable') {
+      const rows =
+        finding.optionKeys ?? (finding.optionKey === undefined ? [] : [finding.optionKey]);
+      if (rows.length === 0) contextMessages.add(reason);
+      for (const optionKey of rows) addOptionReason(optionKey, reason);
+      continue;
+    }
     if (finding.traitKey === undefined) {
       if (finding.optionKey !== undefined) {
-        const reasons = findingsByOption.get(finding.optionKey) ?? [];
-        if (!reasons.includes(reason)) reasons.push(reason);
-        findingsByOption.set(finding.optionKey, reasons);
+        addOptionReason(finding.optionKey, reason);
         continue;
       }
       contextMessages.add(reason);
