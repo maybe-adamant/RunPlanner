@@ -34,6 +34,7 @@ import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contr
 import type { PendingHubBoardGeneration } from './generation/emissions';
 import type { TargetGenerationFrontier } from './generation/target-generation-completed';
 import type { PreparedRewardEvaluationInputs } from './prepared-inputs';
+import { BiomeRewardSimulationContractError } from './biome-contract';
 
 /** The fixed inputs every seam handler of one biome walk reads. */
 export interface ChronologyWalkContext {
@@ -216,7 +217,7 @@ export function createChronologyWalkState(
   branches: readonly RewardBranchState[],
 ): ChronologyWalkState {
   return Object.freeze({
-    branches,
+    branches: singleStateFrontier(branches),
     halted: false,
     stygianWellAssessments: new Map(),
     wellRefillRealizations: new Map(),
@@ -282,7 +283,7 @@ export function withBranches(
   state: ChronologyWalkState,
   branches: readonly RewardBranchState[],
 ): ChronologyWalkState {
-  return Object.freeze({ ...state, branches });
+  return Object.freeze({ ...state, branches: singleStateFrontier(branches) });
 }
 
 export interface RunStateCheckpointRequest {
@@ -323,4 +324,13 @@ export type ChronologySeamHandler<K extends HistoryEvent['kind']> = (
 /** The key a reroll's flagging is recorded under: the doors' room, a wheel, or the Hub. */
 export function rerollFlagKey(ownerKey: string, wheelKey?: string): string {
   return wheelKey === undefined ? ownerKey : `${ownerKey}::${wheelKey}`;
+}
+
+/** The walk carries one reached state, or none once a block stops it. */
+function singleStateFrontier(branches: readonly RewardBranchState[]): readonly RewardBranchState[] {
+  if (branches.length > 1)
+    throw new BiomeRewardSimulationContractError(
+      'settlement produced more than one frontier state',
+    );
+  return branches;
 }

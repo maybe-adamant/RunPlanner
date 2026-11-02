@@ -269,21 +269,3 @@ export function closePendingResourcePickupRoom(
 ): SimulationState {
   return state.pendingResourcePickups[room] === undefined ? state : withRoom(state, room, {});
 }
-
-/** Serializable projection used for branch equivalence. */
-export function pendingResourcePickupsProjection(state: SimulationState): readonly unknown[] {
-  return Object.keys(state.pendingResourcePickups)
-    .sort()
-    .map((room) => {
-      const records = state.pendingResourcePickups[room]!;
-      return [
-        room,
-        Object.keys(records)
-          .sort()
-          .map((key) => [
-            key,
-            Object.entries(records[key]!).sort(([a], [b]) => a.localeCompare(b)),
-          ]),
-      ];
-    });
-}

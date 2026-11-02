@@ -244,7 +244,7 @@ export function traitOfferGenerationState(
     : Object.freeze({ ...state, ...record.context });
 }
 
-/** Serializable semantic projection used for branch equivalence and context identity. */
+/** Serializable semantic projection used for trait offer context identity. */
 export function traitOfferContextProjection(context: PendingTraitOfferContext): readonly unknown[] {
   return Object.freeze([
     context.traitHistory,
@@ -256,25 +256,4 @@ export function traitOfferContextProjection(context: PendingTraitOfferContext): 
     context.stygianWell.yarnUses,
     context.stygianWell.hymnUses,
   ]);
-}
-
-export function pendingTraitOffersProjection(state: SimulationState): readonly unknown[] {
-  return Object.keys(state.pendingTraitOffers)
-    .sort()
-    .map((room) => {
-      const records = state.pendingTraitOffers[room]!;
-      return [
-        room,
-        Object.keys(records)
-          .sort()
-          .map((key) => {
-            const record = records[key]!;
-            return [
-              key,
-              record.stale,
-              record.stale ? null : traitOfferContextProjection(record.context),
-            ];
-          }),
-      ];
-    });
 }

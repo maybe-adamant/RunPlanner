@@ -27,11 +27,7 @@ import {
 import { isAcquisitionAuthorshipMissingFinding } from '../../model';
 import { ownerRegion, type FindingRegionEntry } from '../../finding-regions';
 
-import {
-  freezeRecord,
-  mergeEquivalentRewardBranches,
-  type RewardBranchState,
-} from '../branch-primitives';
+import { freezeRecord, type RewardBranchState } from '../branch-primitives';
 import type { PendingShopGoldMaterialization, PendingShopPaidOffer } from '../../state/model';
 import { type ReachedTraitChildCheckpoint } from '../trait-settlement/coordinator';
 import {
@@ -888,7 +884,7 @@ export function settleShopAcquisitionSite(
         });
       }),
     ),
-    branches: mergeEquivalentRewardBranches(next),
+    branches: Object.freeze(next),
     findingEmissions: Object.freeze([...findings.values()]),
     roleFrontiers: Object.freeze(roleFrontiers),
     derivedEntryFrontiers: Object.freeze(derivedEntryFrontiers),

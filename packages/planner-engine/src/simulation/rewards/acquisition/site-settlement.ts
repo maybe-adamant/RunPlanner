@@ -28,7 +28,7 @@ import {
 } from '../../finding-regions';
 import type { HistoryEvent } from '../../history';
 import type { CanonicalResolvedIncomingReward } from '../../materialization';
-import { mergeEquivalentRewardBranches, type RewardBranchState } from '../branch-primitives';
+import type { RewardBranchState } from '../branch-primitives';
 import {
   addRewardFinding,
   historyChronology,
@@ -282,9 +282,7 @@ export function settleOwnedAcquisitionSite(
             }),
       });
       mergeRewardFindingEmissions(findingEmissions, replacement.findingEmissions);
-      current = mergeEquivalentRewardBranches(
-        Object.freeze([...untouched, ...replacement.branches]),
-      );
+      current = Object.freeze([...untouched, ...replacement.branches]);
       entries.push(...replacement.entries);
       roleFrontiers.push(...(replacement.roleFrontiers ?? []));
       traitChildSettlements.push(...(replacement.traitChildSettlements ?? []));
@@ -511,7 +509,7 @@ export function settleArtificerReplacementAcquisition(
           participation: request.participation,
         }),
       ]),
-      branches: mergeEquivalentRewardBranches(untouched),
+      branches: untouched,
       findingEmissions: Object.freeze([...findingEmissions.values()]),
       roleFrontiers: Object.freeze([]),
       traitChildSettlements: Object.freeze([]),
@@ -593,7 +591,7 @@ export function settleArtificerReplacementAcquisition(
         participation: request.participation,
       }),
     ]),
-    branches: mergeEquivalentRewardBranches(Object.freeze([...untouched, ...current])),
+    branches: Object.freeze([...untouched, ...current]),
     findingEmissions: Object.freeze([...findingEmissions.values()]),
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),

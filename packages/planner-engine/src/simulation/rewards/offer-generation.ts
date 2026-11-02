@@ -30,7 +30,6 @@ import {
 import {
   appendRewardEvent,
   freezeRecord,
-  mergeEquivalentRewardBranches,
   offerEvidence,
   type RewardBranchState,
 } from './branch-primitives';
@@ -820,7 +819,7 @@ export function processOfferGenerationCohort(
       );
     }
   }
-  return mergeEquivalentRewardBranches(supported);
+  return Object.freeze(supported);
 }
 
 /**
@@ -850,7 +849,7 @@ export function processFocusedOfferAfterAuthoredPeers(
       peerFindings,
     );
     if (next.length === 0) continue;
-    reached = mergeEquivalentRewardBranches(next);
+    reached = next;
     acceptedPeers.push(
       Object.freeze({ origin: context.reward.origin, offer: context.reward.offer }),
     );

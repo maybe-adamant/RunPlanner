@@ -11,7 +11,6 @@ import {
   addHubBoardRewardLookup,
   sharedRewardLookups,
 } from '../../src/simulation/state/reward-lookups';
-import { mergeEquivalentRewardBranches } from '../../src/simulation/rewards/branch-primitives';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 
 const baseline = {
@@ -45,7 +44,7 @@ const baseline = {
   },
 };
 
-it('retains old lookup snapshots and does not merge divergent reservation states', () => {
+it('retains old lookup snapshots and rejects divergent reservation states', () => {
   const base = initializeTestRewardBranches()[0]!;
   const added = addHubBoardRewardLookup(base.state, 'hubRewardLookup', ['SpellDrop']);
   expect(base.state.rewardLookups.hubRewardLookup).toEqual([]);
@@ -53,7 +52,6 @@ it('retains old lookup snapshots and does not merge divergent reservation states
   expect(addHubBoardRewardLookup(added, 'hubRewardLookup', ['SpellDrop']).rewardLookups).toEqual(
     added.rewardLookups,
   );
-  expect(mergeEquivalentRewardBranches([base, { ...base, state: added }])).toHaveLength(2);
   expect(() => sharedRewardLookups([base.state, added])).toThrow();
   expect(sharedRewardLookups([added, added])).toBe(added.rewardLookups);
 });

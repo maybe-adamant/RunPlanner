@@ -1,6 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import { createBiomeAddress } from '@run-planner/engine/authored-project';
-import { createRewardBagState } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
@@ -24,51 +23,34 @@ function predecessorBranch() {
 }
 
 describe('reward frontier biome handoff', () => {
-  it('coalesces predecessor paths after discarding their biome-local event evidence', () => {
+  it('starts the successor from the predecessor state without its biome-local events', () => {
     const base = predecessorBranch();
-    const duplicatePath = Object.freeze({
-      ...base,
-      events: Object.freeze([
-        Object.freeze({
-          kind: 'rewardOffered' as const,
-          rewardSequence: 1,
-          historySequence: 12,
-          origin: createBiomeAddress('Underworld', 'F'),
-          offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
-          storeKey: 'RunProgress',
-        }),
-      ]),
-      processedThroughHistorySequence: 12,
-    });
-
-    const next = initializeRewardBranches([base, duplicatePath]);
+    const next = initializeRewardBranches([
+      Object.freeze({
+        ...base,
+        events: Object.freeze([
+          Object.freeze({
+            kind: 'rewardOffered' as const,
+            rewardSequence: 1,
+            historySequence: 12,
+            origin: createBiomeAddress('Underworld', 'F'),
+            offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+            storeKey: 'RunProgress',
+          }),
+        ]),
+        processedThroughHistorySequence: 12,
+      }),
+    ]);
 
     expect(next).toHaveLength(1);
     expect(next[0]?.events).toEqual([]);
     expect(next[0]?.processedThroughHistorySequence).toBe(0);
   });
 
-  it('retains distinct counted-bag states across the biome handoff', () => {
+  it('rejects a predecessor that publishes more than one frontier state', () => {
     const base = predecessorBranch();
-    const store = catalog.rewards.stores.byKey.RunProgress;
-    if (store === undefined) throw new Error('RunProgress store is missing');
-    const full = createRewardBagState(store, 'Underworld');
-    const remainingEntryCounts = [...full.remainingEntryCounts];
-    remainingEntryCounts[0] = (remainingEntryCounts[0] ?? 0) - 1;
-    const depleted = Object.freeze({ remainingEntryCounts: Object.freeze(remainingEntryCounts) });
-
-    const next = initializeRewardBranches([
-      Object.freeze({
-        ...base,
-        state: Object.freeze({ ...base.state, bags: Object.freeze({ RunProgress: full }) }),
-      }),
-      Object.freeze({
-        ...base,
-        state: Object.freeze({ ...base.state, bags: Object.freeze({ RunProgress: depleted }) }),
-      }),
-    ]);
-
-    expect(next).toHaveLength(2);
-    expect(next.map((branch) => branch.state.bags.RunProgress)).toEqual([full, depleted]);
+    expect(() => initializeRewardBranches([base, base])).toThrow(
+      'a completed predecessor publishes one frontier state',
+    );
   });
 });

@@ -16,7 +16,7 @@ import {
   mergeRewardFindingEmissions,
   rewardFinding,
 } from '../../findings';
-import { mergeEquivalentRewardBranches, type RewardBranchState } from '../../branch-primitives';
+import type { RewardBranchState } from '../../branch-primitives';
 import {
   settleAcquisitionResolvedReward,
   settleOwnedAcquisitionSite,
@@ -197,5 +197,5 @@ export function settleInfernalContractPedestalPickup(inputs: {
     traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
     if (settled.branches.length === 1) next.push(settled.branches[0]!);
   }
-  return result(mergeEquivalentRewardBranches(next));
+  return result(Object.freeze(next));
 }

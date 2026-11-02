@@ -13,7 +13,8 @@ import { beginBiomeArcanaFearState } from '../arcana-fear';
 import { beginBiomeKeepsakeState } from '../keepsakes/state';
 import { applyTranscendentEmbryoEquipResult } from '../keepsakes/branch-transitions';
 import { recordAspectStartingTrait } from '../traits';
-import { mergeEquivalentRewardBranches, type RewardBranchState } from './branch-primitives';
+import type { RewardBranchState } from './branch-primitives';
+import { BiomeRewardSimulationContractError } from './biome/biome-contract';
 import type { RewardBranch } from './model';
 import { installHexTree, maybeAddGodSent } from '../hex-progress';
 import type { SimulationState } from '../state/model';
@@ -125,12 +126,11 @@ export function initializeRewardBranches(
           }),
     ]);
   }
-  // A completed predecessor publishes every concrete path that reached its
-  // frontier. Begin-biome resets can erase the last forward distinction
-  // between several of those paths, so canonicalize only after applying every
-  // reset. This keeps distinct bags and persistent run state while preventing
-  // historical path multiplicity from multiplying the successor chronology.
-  return mergeEquivalentRewardBranches(
+  if (initialBranches.length > 1)
+    throw new BiomeRewardSimulationContractError(
+      'a completed predecessor publishes one frontier state',
+    );
+  return Object.freeze(
     initialBranches.map((branch) =>
       Object.freeze({
         state: Object.freeze({

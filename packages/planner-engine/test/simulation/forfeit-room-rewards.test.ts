@@ -38,11 +38,6 @@ import {
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
-import {
-  appendRewardEvent,
-  mergeEquivalentRewardBranches,
-} from '../../src/simulation/rewards/branch-primitives';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createPreparedProjectCandidateSession } from '../../src/simulation/candidates';
 import { simulateProjectAssembly } from '../../src/simulation/evaluation/project';
 
@@ -312,24 +307,6 @@ describe('Vow of Forfeit Red Onion substitution', () => {
         acquisition: cage1Role,
       }),
     ).toMatchObject({ kind: 'unavailable' });
-  });
-
-  it('keeps entry-fixed Forfeit owners distinct during branch equivalence', () => {
-    const seed = initializeTestRewardBranches()[0]!;
-    const first = appendRewardEvent(seed, 1, {
-      kind: 'rewardForfeited',
-      origin: fieldsCage1,
-      rewardType: 'HermesUpgrade',
-      replacementRewardType: 'RoomRewardConsolationPrize',
-    });
-    const second = appendRewardEvent(seed, 1, {
-      kind: 'rewardForfeited',
-      origin: fieldsCage2,
-      rewardType: 'HermesUpgrade',
-      replacementRewardType: 'RoomRewardConsolationPrize',
-    });
-
-    expect(mergeEquivalentRewardBranches([first, second])).toHaveLength(2);
   });
 
   it('substitutes the picked Thessaly Ship-wheel Boon while keeping its trait child dormant', () => {

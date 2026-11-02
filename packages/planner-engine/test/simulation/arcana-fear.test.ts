@@ -26,7 +26,6 @@ import {
   rerollPoolRemaining,
 } from '../../src/simulation/arcana-fear';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
-import { mergeEquivalentRewardBranches } from '../../src/simulation/rewards/branch-primitives';
 import { forfeitStatus } from '../../src/simulation/rewards/run-state';
 
 describe('progressive Arcana and Fear state', () => {
@@ -298,20 +297,6 @@ describe('progressive Arcana and Fear state', () => {
       legal: false,
       reason: 'staleChronology',
     });
-  });
-
-  it('keeps branches distinct when their explicit progressive state differs', () => {
-    const state = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
-    const evidence = { owner: createBiomeAddress('Underworld', 'F'), sequence: 1 };
-    const base = initializeTestRewardBranches(state)[0]!;
-    const distinct = Object.freeze({
-      ...base,
-      state: Object.freeze({
-        ...base.state,
-        arcanaFear: activateTemporaryArcana(catalog, state, ['ChanneledCast'], evidence).state,
-      }),
-    });
-    expect(mergeEquivalentRewardBranches([base, distinct])).toHaveLength(2);
   });
 
   it('derives the complete Circe target product and catalog-owned Judgment count once', () => {

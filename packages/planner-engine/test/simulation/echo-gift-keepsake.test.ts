@@ -559,21 +559,6 @@ describe('Echo Gift Gift Gift', () => {
     );
   });
 
-  it('refuses Echo keepsake gold that only some reached branches replay', () => {
-    // The branch already holding the Gold Purse gets no copy (RoomLogic.lua:1218-1242).
-    const replay = replayBiome([
-      branchWithGift('BonusMoneyKeepsake'),
-      branchWithGift('BonusMoneyKeepsake', 'BlockDeathKeepsake'),
-    ]);
-    expect(replay.simulation.goldEvents).toContainEqual(
-      expect.objectContaining({
-        kind: 'gain',
-        contexts: [],
-        unpriced: expect.objectContaining({ kind: 'contractFailure' }),
-      }),
-    );
-  });
-
   it('replays Crystal Figurine at Common, removes the Echo source at Boss, and replays later', () => {
     const retained = retainedKeepsakeState('BossMetaUpgradeKeepsake', 'GoldifyKeepsake');
     const { figurine: removed, ...withoutOrdinaryFigurine } = retained;
@@ -757,19 +742,6 @@ describe('Echo Gift Gift Gift', () => {
     ]);
     expect(removed.equippedTraits.StaffLongAttackTrait).toBeUndefined();
     expect(removed.equippedTraits.StaffJumpSpecialTrait).toBeDefined();
-  });
-
-  it('rejects divergent captured Gift state and divergent current keys before Hammer publication', () => {
-    expect(() =>
-      replayBiome([branchWithGift('SkipEncounterKeepsake'), branchWithGift('GoldifyKeepsake')]),
-    ).toThrow('Echo keepsake replay frontier is divergent');
-    const history = giftHistory('TempHammerKeepsake');
-    expect(() =>
-      replayBiome([
-        branchWithGift('TempHammerKeepsake', 'ManaOverTimeRefundKeepsake', { history }),
-        branchWithGift('TempHammerKeepsake', 'BossPreDamageKeepsake', { history }),
-      ]),
-    ).toThrow('divergent current keepsakes');
   });
 
   it('publishes the biome-owned exhausted option only when the shared domain is empty', () => {

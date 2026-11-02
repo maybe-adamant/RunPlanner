@@ -1,5 +1,4 @@
 import type { Catalog } from '../../catalog-schema';
-import { semanticAddressKey } from '../../authored-project/addresses';
 import {
   createRewardBagState,
   type ResolvedRewardOffer,
@@ -7,14 +6,8 @@ import {
 } from '../../reward-kernel';
 import type { FindingEvidence } from '../model';
 import type { RewardEvent } from './model';
-import {
-  traitOfferAssessmentIdentity,
-  type ReachedLevelResolutionEvaluation,
-  type ReachedTraitOfferEvaluation,
-} from '../traits';
+import type { ReachedLevelResolutionEvaluation, ReachedTraitOfferEvaluation } from '../traits';
 import type { SimulationState } from '../state/model';
-import { pendingResourcePickupsProjection } from '../state/pending-resource-pickups';
-import { pendingTraitOffersProjection } from '../state/pending-trait-offers';
 
 export interface PendingShopTravelRefillCapability {
   readonly evaluateOffer: (
@@ -75,148 +68,6 @@ export function withBag(
     }),
     bag,
   };
-}
-
-function orderedRecord<T>(value: Readonly<Record<string, T>>): readonly (readonly [string, T])[] {
-  return Object.freeze(
-    Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, entry]) => Object.freeze([key, entry] as const)),
-  );
-}
-
-function equivalentBranchStateKey(branch: RewardBranchState): string {
-  const state = branch.state;
-  const history = state.rewardHistory;
-  return JSON.stringify({
-    state: {
-      equipment: state.equipment,
-      reached: {
-        routeKey: state.reached.routePosition.routeKey,
-        ordinal: state.reached.routePosition.ordinal,
-      },
-      bags: orderedRecord(state.bags),
-      rewardPriorities: state.rewardPriorities,
-      hexProgress: state.hexProgress,
-      history: {
-        offerHistory: history.offerHistory,
-        useRecord: orderedRecord(history.useRecord),
-        biomeUseRecord: orderedRecord(history.biomeUseRecord),
-        currentRoomUseRecord: orderedRecord(history.currentRoomUseRecord),
-        lootTypeHistory: orderedRecord(history.lootTypeHistory),
-        lootBiomeRecord: orderedRecord(history.lootBiomeRecord),
-        consumableRecord: orderedRecord(history.consumableRecord),
-        lifetimeGodUseRecord: orderedRecord(history.lifetimeGodUseRecord),
-        lifetimeGodPickupRecord: orderedRecord(history.lifetimeGodPickupRecord),
-        resourceGains: orderedRecord(history.resourceGains),
-        maxStatGains: history.maxStatGains,
-        itemArmor: history.itemArmor,
-        lastRewardRecreation: history.lastRewardRecreation,
-        traitFacts: history.traitFacts,
-        lastDevotionDepth: history.lastDevotionDepth,
-      },
-      pendingShops: orderedRecord(state.pendingShops),
-      pendingHermesShrineDeliveries: orderedRecord(state.pendingHermesShrineDeliveries),
-      stygianWell: state.stygianWell,
-      traitHistory: state.traitHistory,
-      arcanaFear: state.arcanaFear,
-      keepsakes: state.keepsakes,
-      rewardLookups: orderedRecord(state.rewardLookups),
-      offeredRewardTypes: state.offeredRewardTypes,
-      pendingTraitOffers: pendingTraitOffersProjection(state),
-      pendingResourcePickups: pendingResourcePickupsProjection(state),
-    },
-    rewardForfeited: branch.events
-      .filter((event) => event.kind === 'rewardForfeited')
-      .map((event) =>
-        Object.freeze({
-          origin: semanticAddressKey(event.origin),
-          rewardType: event.rewardType,
-          replacementRewardType: event.replacementRewardType,
-        }),
-      ),
-    ...(branch.seaStarDuplicateEligibilityBySource === undefined
-      ? {}
-      : {
-          seaStarDuplicateEligibilityBySource: orderedRecord(
-            branch.seaStarDuplicateEligibilityBySource,
-          ),
-        }),
-    processedThroughHistorySequence: branch.processedThroughHistorySequence,
-  });
-}
-
-function mergeTraitEvaluations(
-  left: readonly ReachedTraitOfferEvaluation[] | undefined,
-  right: readonly ReachedTraitOfferEvaluation[] | undefined,
-): readonly ReachedTraitOfferEvaluation[] | undefined {
-  const values = [...(left ?? []), ...(right ?? [])];
-  if (values.length === 0) return undefined;
-  const unique = new Map<string, ReachedTraitOfferEvaluation>();
-  for (const value of values) {
-    const key = JSON.stringify([
-      semanticAddressKey(value.address),
-      value.acquisitionRole,
-      value.chronologicalIndex,
-      ...traitOfferAssessmentIdentity(value),
-    ]);
-    unique.set(key, value);
-  }
-  return Object.freeze([...unique.values()]);
-}
-
-function mergeLevelResolutionEvaluations(
-  left: readonly ReachedLevelResolutionEvaluation[] | undefined,
-  right: readonly ReachedLevelResolutionEvaluation[] | undefined,
-): readonly ReachedLevelResolutionEvaluation[] | undefined {
-  const values = [...(left ?? []), ...(right ?? [])];
-  if (values.length === 0) return undefined;
-  const unique = new Map<string, ReachedLevelResolutionEvaluation>();
-  for (const value of values) {
-    unique.set(
-      JSON.stringify([
-        semanticAddressKey(value.address),
-        value.chronologicalIndex,
-        value.before,
-        value.value,
-      ]),
-      value,
-    );
-  }
-  return Object.freeze([...unique.values()]);
-}
-
-export function mergeEquivalentRewardBranches(
-  branches: readonly RewardBranchState[],
-): readonly RewardBranchState[] {
-  const merged = new Map<string, RewardBranchState>();
-  for (const branch of branches) {
-    const key = equivalentBranchStateKey(branch);
-    const previous = merged.get(key);
-    if (previous === undefined) {
-      merged.set(key, branch);
-    } else {
-      const traitEvaluations = mergeTraitEvaluations(
-        previous.traitEvaluations,
-        branch.traitEvaluations,
-      );
-      const levelResolutionEvaluations = mergeLevelResolutionEvaluations(
-        previous.levelResolutionEvaluations,
-        branch.levelResolutionEvaluations,
-      );
-      merged.set(
-        key,
-        traitEvaluations === undefined && levelResolutionEvaluations === undefined
-          ? previous
-          : Object.freeze({
-              ...previous,
-              ...(traitEvaluations === undefined ? {} : { traitEvaluations }),
-              ...(levelResolutionEvaluations === undefined ? {} : { levelResolutionEvaluations }),
-            }),
-      );
-    }
-  }
-  return Object.freeze([...merged.values()]);
 }
 
 export function appendRewardEvent(

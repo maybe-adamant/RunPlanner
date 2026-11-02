@@ -54,7 +54,7 @@ const child = createTargetAddress(biome, occurrence, 'exit1');
 const context = {} as ChronologyWalkContext;
 const branch = {} as RewardBranchState;
 const received = createChronologyWalkState([branch]);
-const next = createChronologyWalkState([branch, branch]);
+const next = createChronologyWalkState([{} as RewardBranchState]);
 const checkpoint = {
   owner,
   room: { origin: occurrence } as never,

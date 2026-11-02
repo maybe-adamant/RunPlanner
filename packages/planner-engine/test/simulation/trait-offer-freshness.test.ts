@@ -58,14 +58,10 @@ import {
   traitOfferContextIdentity,
 } from '../../src/simulation/traits';
 import {
-  applyTraitOfferContextTransition,
   spawnPendingTraitOffers,
   traitOfferGenerationState,
 } from '../../src/simulation/state/pending-trait-offers';
-import {
-  mergeEquivalentRewardBranches,
-  type RewardBranchState,
-} from '../../src/simulation/rewards/branch-primitives';
+import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import { applyEncounterStartedTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-started';
 import { applyEncounterSettlementTransition } from '../../src/simulation/rewards/biome/encounter-acquisition/encounter-settlement';
@@ -796,19 +792,11 @@ describe('invalidation products', () => {
     );
   });
 
-  it('keeps two branches with equal equipment but different spawn contexts distinct', () => {
+  it('distinguishes trait offer contexts with equal equipment but different spawn states', () => {
     const base = initializeTestRewardBranches()[0]! as RewardBranchState;
     const fresh = Object.freeze({
       ...base,
       state: spawnPendingTraitOffers(catalog, base.state, [waiting]),
-    }) as RewardBranchState;
-    const stale = Object.freeze({
-      ...fresh,
-      state: applyTraitOfferContextTransition(fresh.state, {
-        kind: 'invalidated',
-        room: roomKey,
-        source: 'steadyGrowthInterval',
-      }),
     }) as RewardBranchState;
     const olderContext = Object.freeze({
       ...fresh,
@@ -818,8 +806,6 @@ describe('invalidation products', () => {
         rewardHistory: base.state.rewardHistory,
       }),
     }) as RewardBranchState;
-    expect(mergeEquivalentRewardBranches([fresh, stale, olderContext])).toHaveLength(3);
-    expect(mergeEquivalentRewardBranches([fresh, fresh])).toHaveLength(1);
     const identity = (state: RewardBranchState['state']) =>
       JSON.stringify(
         traitOfferContextIdentity({

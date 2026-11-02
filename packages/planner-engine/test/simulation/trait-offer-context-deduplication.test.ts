@@ -9,11 +9,9 @@ import {
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 
-import { mergeEquivalentRewardBranches } from '../../src/simulation/rewards/branch-primitives';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
-import { evaluateReachedTraitOffer, traitOfferContextIdentity } from '../../src/simulation/traits';
-import { createRewardBagState } from '../../src/reward-kernel';
+import { traitOfferContextIdentity } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import {
   arcanaFearWithActive,
@@ -56,71 +54,6 @@ function heraOffer(): AuthoredTraitOfferTraits {
 }
 
 describe('trait offer context deduplication', () => {
-  it('merges retained evaluations whose snapshots differ only outside trait assessment', () => {
-    const branch = initializeTestRewardBranches()[0]!;
-    const source = Object.freeze({ resolvedProviderKey: 'Apollo' });
-    const store = catalog.rewards.stores.byKey.RunProgress;
-    if (store === undefined) throw new Error('missing RunProgress store');
-    // Counted bags and pending Shop work are branch state, but no trait
-    // eligibility, rarity or level rule consults them.
-    const unrelated = Object.freeze({
-      ...branch.state,
-      bags: Object.freeze({ RunProgress: createRewardBagState(store, 'Underworld') }),
-      rewardPriorities: Object.freeze(['Boon']),
-    });
-    const left = Object.freeze({
-      ...branch,
-      traitEvaluations: Object.freeze([
-        evaluateReachedTraitOffer(catalog, owner, 'self', apolloOffer(), branch.state, source, 0),
-      ]),
-    });
-    const right = Object.freeze({
-      ...branch,
-      traitEvaluations: Object.freeze([
-        evaluateReachedTraitOffer(catalog, owner, 'self', apolloOffer(), unrelated, source, 0),
-      ]),
-    });
-    const merged = mergeEquivalentRewardBranches([left, right]);
-    expect(merged).toHaveLength(1);
-    expect(merged[0]?.traitEvaluations).toHaveLength(1);
-  });
-
-  it('retains divergent evaluations whose snapshots change the assessment they consume', () => {
-    const branch = initializeTestRewardBranches()[0]!;
-    const source = Object.freeze({ resolvedProviderKey: 'Apollo' });
-    const yarned = Object.freeze({
-      ...branch.state,
-      stygianWell: Object.freeze({ ...branch.state.stygianWell, yarnUses: 1 }),
-    });
-    const plain = evaluateReachedTraitOffer(
-      catalog,
-      owner,
-      'self',
-      apolloOffer(),
-      branch.state,
-      source,
-      0,
-    );
-    const boosted = evaluateReachedTraitOffer(
-      catalog,
-      owner,
-      'self',
-      apolloOffer(),
-      yarned,
-      source,
-      0,
-    );
-    expect(plain.source.boonRarityFacts?.contributions).not.toEqual(
-      boosted.source.boonRarityFacts?.contributions,
-    );
-    const merged = mergeEquivalentRewardBranches([
-      Object.freeze({ ...branch, traitEvaluations: Object.freeze([plain]) }),
-      Object.freeze({ ...branch, traitEvaluations: Object.freeze([boosted]) }),
-    ]);
-    expect(merged).toHaveLength(1);
-    expect(merged[0]?.traitEvaluations).toHaveLength(2);
-  });
-
   it('leaves an earlier candidate context untouched by a later acquisition', () => {
     const initial = initializeTestRewardBranches()[0]!;
     const first = settleEncounterTraitOffer(
