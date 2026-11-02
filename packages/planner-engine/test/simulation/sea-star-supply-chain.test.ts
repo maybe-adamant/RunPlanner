@@ -99,8 +99,8 @@ function repairReached(project: ProjectDocument): ProjectDocument {
       current = repaired;
     } else if (origin.kind === 'levelResolution') {
       const keys =
-        levelResolutionCandidateForProjectEvaluationAssembly(assembly, origin)?.branches[0]
-          ?.eligibleTargetTraitKeys ?? [];
+        levelResolutionCandidateForProjectEvaluationAssembly(assembly, origin)?.surface
+          .eligibleTargetTraitKeys ?? [];
       if (keys[0] === undefined) break;
       try {
         current = applyProjectCommand(current, catalog, {
@@ -250,7 +250,7 @@ describe('Sea Star on a Supply Chain Pom Slice', () => {
       levelResolutionCandidateForProjectEvaluationAssembly(
         assembly,
         createLevelResolutionAddress(entry, 'self'),
-      )?.branches[0]?.eligibleTargetTraitKeys.length,
+      )?.surface.eligibleTargetTraitKeys.length,
     ).toBeGreaterThan(0);
   });
 

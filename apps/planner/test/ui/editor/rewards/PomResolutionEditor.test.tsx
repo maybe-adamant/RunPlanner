@@ -21,10 +21,7 @@ import {
   authoredProjectReplaced,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
-import type {
-  LevelResolutionCandidateGroup,
-  LevelResolutionCandidateProjection,
-} from '@planner/projections/candidates/candidateProjection';
+import type { LevelResolutionCandidateProjection } from '@planner/projections/candidates/candidateProjection';
 import type {
   WorkspaceInteractionCatalog,
   WorkspaceLevelResolutionInteraction,
@@ -192,8 +189,7 @@ describe('Pom resolution editor', () => {
     createIncomingRewardAddress(goldenFBiome, createOccurrenceId('pom-editor-test')),
     'selected',
   );
-  const group = (
-    key: string,
+  const candidate = (
     effectKind: 'choice' | 'random',
     targets: readonly string[],
     supported: boolean,
@@ -203,21 +199,16 @@ describe('Pom resolution editor', () => {
     engine: {
       readonly available?: readonly string[];
       readonly start?: AuthoredLevelResolution;
-      readonly rerolledScreenFindings?: LevelResolutionCandidateGroup['evaluations'][number]['rerolledScreenFindings'];
+      readonly rerolledScreenFindings?: LevelResolutionCandidateProjection['evaluation']['rerolledScreenFindings'];
     } = {},
-  ): LevelResolutionCandidateGroup =>
+  ): LevelResolutionCandidateProjection =>
     Object.freeze({
-      branchIndices: Object.freeze([Number(key.replace(/\D/g, '')) || 0]),
-      evaluations: Object.freeze([
-        Object.freeze({
-          availableTargetTraitKeys: Object.freeze([...(engine.available ?? targets)]),
-          branchIndex: 0,
-          findings: Object.freeze(findings),
-          rerolledScreenFindings: Object.freeze([...(engine.rerolledScreenFindings ?? [])]),
-          supported,
-        }),
-      ]),
-      key,
+      evaluation: Object.freeze({
+        availableTargetTraitKeys: Object.freeze([...(engine.available ?? targets)]),
+        findings: Object.freeze(findings),
+        rerolledScreenFindings: Object.freeze([...(engine.rerolledScreenFindings ?? [])]),
+        supported,
+      }),
       surface: Object.freeze({
         effectKind,
         eligibleTargetTraitKeys: Object.freeze([...targets]),
@@ -311,20 +302,15 @@ describe('Pom resolution editor', () => {
           new Set(value.offeredTraitKeys).size === 2 &&
           value.selectedTraitKey !== null &&
           value.offeredTraitKeys.includes(value.selectedTraitKey);
-        return Object.freeze({
-          groups: Object.freeze([
-            group(
-              'branch-0',
-              'choice',
-              ['A', 'B', 'C'],
-              valid,
-              valid ? [] : ['missingTarget'],
-              2,
-              false,
-              { available: valid ? ['C'] : ['A', 'B', 'C'], start: choice(['A', 'B']) },
-            ),
-          ]),
-        });
+        return candidate(
+          'choice',
+          ['A', 'B', 'C'],
+          valid,
+          valid ? [] : ['missingTarget'],
+          2,
+          false,
+          { available: valid ? ['C'] : ['A', 'B', 'C'], start: choice(['A', 'B']) },
+        );
       },
     });
 
@@ -359,10 +345,7 @@ describe('Pom resolution editor', () => {
     const editorInteraction: WorkspaceLevelResolutionInteraction = {
       ...interaction({
         value: choice(['A', 'B']),
-        load: () =>
-          Object.freeze({
-            groups: Object.freeze([group('branch-0', 'choice', ['A', 'B', 'C'], true, [], 2)]),
-          }),
+        load: () => candidate('choice', ['A', 'B', 'C'], true, [], 2),
       }),
       screenRerolls: {
         count: 0,
@@ -421,10 +404,7 @@ describe('Pom resolution editor', () => {
           selectedTraitKey: 'A',
           rerolledScreens: [{ offeredTraitKeys: ['A'] }],
         },
-        load: () =>
-          Object.freeze({
-            groups: Object.freeze([group('branch-0', 'choice', ['A', 'B', 'C', 'D'], true, [], 3)]),
-          }),
+        load: () => candidate('choice', ['A', 'B', 'C', 'D'], true, [], 3),
       }),
       screenRerolls: { count: 1, maxCount: 1, lockAtMax: 'poolEmpty', nextCost },
     };
@@ -452,15 +432,11 @@ describe('Pom resolution editor', () => {
         },
         load: (value) => {
           evaluatedScreens.push(value.kind === 'choice' ? value.rerolledScreens : undefined);
-          return Object.freeze({
-            groups: Object.freeze([
-              group('branch-0', 'choice', ['A', 'B', 'C'], false, [], 2, false, {
-                rerolledScreenFindings: [
-                  { code: 'pomTargetUnavailable', screen: 0 },
-                  { code: 'rollRepeatsAllOffers' },
-                ],
-              }),
-            ]),
+          return candidate('choice', ['A', 'B', 'C'], false, [], 2, false, {
+            rerolledScreenFindings: [
+              { code: 'pomTargetUnavailable', screen: 0 },
+              { code: 'rollRepeatsAllOffers' },
+            ],
           });
         },
       }),
@@ -497,12 +473,8 @@ describe('Pom resolution editor', () => {
           rerolledScreens: [{ offeredTraitKeys: ['A', 'C'] }, null],
         },
         load: () =>
-          Object.freeze({
-            groups: Object.freeze([
-              group('branch-0', 'choice', ['A', 'B', 'C'], false, [], 2, false, {
-                rerolledScreenFindings: [{ code: 'rerolledScreenMissing', screen: 1 }],
-              }),
-            ]),
+          candidate('choice', ['A', 'B', 'C'], false, [], 2, false, {
+            rerolledScreenFindings: [{ code: 'rerolledScreenMissing', screen: 1 }],
           }),
       }),
       screenRerolls: { count: 2, maxCount: 3, lockAtMax: 'poolShort', nextCost },
@@ -518,8 +490,7 @@ describe('Pom resolution editor', () => {
     const user = userEvent.setup();
     const editorInteraction = interaction({
       value: { kind: 'random', targetTraitKey: 'A' },
-      load: () =>
-        Object.freeze({ groups: Object.freeze([group('branch-0', 'random', ['A', 'B'], true)]) }),
+      load: () => candidate('random', ['A', 'B'], true),
     });
     const view = renderInHeaderDialog(
       <PomResolutionEditor interaction={editorInteraction} onCommit={vi.fn()} />,
@@ -549,22 +520,17 @@ describe('Pom resolution editor', () => {
           rerolledScreens: [{ offeredTraitKeys: ['A', 'D'] }],
         },
         load: (value) =>
-          Object.freeze({
-            groups: Object.freeze([
-              group(
-                'branch-0',
-                'choice',
-                ['A', 'B', 'C'],
-                false,
-                value.kind === 'choice' && value.offeredTraitKeys.includes('C')
-                  ? ['duplicateTargets']
-                  : [],
-                2,
-                false,
-                { rerolledScreenFindings: [{ code: 'pomTargetUnavailable', screen: 0 }] },
-              ),
-            ]),
-          }),
+          candidate(
+            'choice',
+            ['A', 'B', 'C'],
+            false,
+            value.kind === 'choice' && value.offeredTraitKeys.includes('C')
+              ? ['duplicateTargets']
+              : [],
+            2,
+            false,
+            { rerolledScreenFindings: [{ code: 'pomTargetUnavailable', screen: 0 }] },
+          ),
       }),
       screenRerolls: { count: 1, maxCount: 2, lockAtMax: 'poolShort', nextCost },
     };
@@ -593,12 +559,7 @@ describe('Pom resolution editor', () => {
   it('preserves a retained partial visible Pom instead of replacing it with defaults', async () => {
     const editorInteraction = interaction({
       value: { kind: 'choice', offeredTraitKeys: ['C'], selectedTraitKey: null },
-      load: () =>
-        Object.freeze({
-          groups: Object.freeze([
-            group('branch-0', 'choice', ['A', 'B', 'C'], false, ['missingTarget'], 2),
-          ]),
-        }),
+      load: () => candidate('choice', ['A', 'B', 'C'], false, ['missingTarget'], 2),
     });
 
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={vi.fn()} />);
@@ -610,26 +571,6 @@ describe('Pom resolution editor', () => {
     );
   });
 
-  it('reports a Pom reached in more than one state as a fault', async () => {
-    const editorInteraction = interaction({
-      value: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null },
-      load: () =>
-        Object.freeze({
-          groups: Object.freeze([
-            group('branch-1', 'choice', ['A'], false, ['missingTarget'], 1, false, {
-              start: choice(['A']),
-            }),
-            group('branch-2', 'choice', ['B'], false, ['missingTarget'], 1, false, {
-              start: choice(['B']),
-            }),
-          ]),
-        }),
-    });
-
-    render(<PomResolutionEditor interaction={editorInteraction} onCommit={vi.fn()} />);
-    expect((await screen.findByRole('alert')).textContent).toContain('more than one state');
-  });
-
   it('pins a stale random target until the author selects an eligible replacement', async () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
@@ -637,11 +578,7 @@ describe('Pom resolution editor', () => {
       value: { kind: 'random', targetTraitKey: 'Stale' },
       load: (value) => {
         const supported = value.kind === 'random' && value.targetTraitKey === 'A';
-        return Object.freeze({
-          groups: Object.freeze([
-            group('branch-0', 'random', ['A'], supported, supported ? [] : ['targetUnavailable']),
-          ]),
-        });
+        return candidate('random', ['A'], supported, supported ? [] : ['targetUnavailable']);
       },
     });
 
@@ -673,9 +610,7 @@ describe('Pom resolution editor', () => {
         value: { kind: 'random', targetTraitKey: 'A' },
         load: (value) => {
           loads(context, value);
-          return Object.freeze({
-            groups: Object.freeze([group('branch-0', 'random', ['A', 'B'], true)]),
-          });
+          return candidate('random', ['A', 'B'], true);
         },
       });
     const view = render(
@@ -699,10 +634,7 @@ describe('Pom resolution editor', () => {
   it('presents a supported empty random domain as a no-op without a picker', () => {
     const editorInteraction = interaction({
       value: { kind: 'random', targetTraitKey: null },
-      load: () =>
-        Object.freeze({
-          groups: Object.freeze([group('empty', 'random', [], true, [], undefined, true)]),
-        }),
+      load: () => candidate('random', [], true, [], undefined, true),
     });
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={vi.fn()} />);
     // The message occupies the picker's control slot rather than collapsing the dialog body.
@@ -724,19 +656,14 @@ describe('Pom resolution editor', () => {
     const editorInteraction = interaction({
       value: { kind: 'random', targetTraitKey: 'Stale' },
       load: (value) =>
-        Object.freeze({
-          groups: Object.freeze([
-            group(
-              'empty',
-              'random',
-              [],
-              value.kind === 'random' && value.targetTraitKey === null,
-              ['targetUnavailable'],
-              undefined,
-              true,
-            ),
-          ]),
-        }),
+        candidate(
+          'random',
+          [],
+          value.kind === 'random' && value.targetTraitKey === null,
+          ['targetUnavailable'],
+          undefined,
+          true,
+        ),
     });
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={onCommit} />);
     const placeholder = screen

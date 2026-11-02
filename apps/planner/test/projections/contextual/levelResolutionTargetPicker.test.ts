@@ -1,36 +1,31 @@
 import { describe, expect, it } from 'vitest';
 
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
-import type { LevelResolutionCandidateGroup } from '@planner/projections/candidates/candidateProjection';
+import type { LevelResolutionCandidateProjection } from '@planner/projections/candidates/candidateProjection';
 import { projectLevelResolutionTargetPicker } from '@planner/projections/contextual/levelResolutionTargetPicker';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 
-function group(
+function candidate(
   available: readonly string[],
   findings: readonly string[] = [],
-): LevelResolutionCandidateGroup {
+): LevelResolutionCandidateProjection {
   return {
-    key: 'branch-0',
-    branchIndices: [0],
     surface: {
       effectKind: 'choice',
       levelCount: 1,
       requiredOfferCount: 2,
       eligibleTargetTraitKeys: ['A', 'B', 'C'],
     },
-    evaluations: [
-      {
-        branchIndex: 0,
-        supported: findings.length === 0,
-        findings,
-        rerolledScreenFindings: [],
-        availableTargetTraitKeys: available,
-      },
-    ],
+    evaluation: {
+      supported: findings.length === 0,
+      findings,
+      rerolledScreenFindings: [],
+      availableTargetTraitKeys: available,
+    },
   };
 }
 
-const picker = (input: { group: LevelResolutionCandidateGroup; current: string | null }) =>
+const picker = (input: { candidate: LevelResolutionCandidateProjection; current: string | null }) =>
   projectLevelResolutionTargetPicker({
     ...input,
     traitLabel: (key) => `Trait ${key}`,
@@ -43,7 +38,7 @@ const items = (model: ReturnType<typeof picker>) =>
 
 describe('Pom target picker projection', () => {
   it('lets a slot keep its own target and disables targets another slot holds', () => {
-    expect(items(picker({ group: group(['C']), current: 'B' }))).toEqual([
+    expect(items(picker({ candidate: candidate(['C']), current: 'B' }))).toEqual([
       ['category', 'A', true, false],
       ['category', 'B', false, true],
       ['category', 'C', false, false],
@@ -52,7 +47,7 @@ describe('Pom target picker projection', () => {
 
   it('pins a retained ineligible current target with its finding copy', () => {
     const model = picker({
-      group: group(['A', 'B', 'C'], ['targetUnavailable']),
+      candidate: candidate(['A', 'B', 'C'], ['targetUnavailable']),
       current: 'Stale',
     });
     expect(model.sections[0]).toMatchObject({
@@ -80,11 +75,11 @@ describe('Pom target picker projection', () => {
       offeredTraitKeys: [],
       selectedTraitKey: null,
     });
-    const start = loaded?.groups[0]?.surface.startingResolution;
+    const start = loaded?.surface.startingResolution;
     if (start?.kind !== 'choice') throw new Error('choice Pom has no starting draft');
-    const startGroup = interaction.load(start)?.groups[0];
-    expect(startGroup?.evaluations[0]).toMatchObject({ supported: true });
-    const available = startGroup?.evaluations[0]?.availableTargetTraitKeys;
+    const started = interaction.load(start);
+    expect(started?.evaluation).toMatchObject({ supported: true });
+    const available = started?.evaluation.availableTargetTraitKeys;
     expect(available).toBeDefined();
     expect(start.offeredTraitKeys.some((key) => available?.includes(key))).toBe(false);
   });

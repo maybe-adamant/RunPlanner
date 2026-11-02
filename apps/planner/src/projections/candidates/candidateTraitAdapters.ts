@@ -151,41 +151,7 @@ export function createTraitCandidateAdapters(
     levelResolution: (owner, value) => {
       const capability = levelResolutionCandidateForProjectEvaluationAssembly(core.assembly, owner);
       if (capability === undefined) return undefined;
-      const evaluations = capability.evaluate(value);
-      const groups = new Map<
-        string,
-        {
-          surface: import('./candidateProjection').LevelResolutionCandidateSurface;
-          branchIndices: number[];
-          evaluations: (typeof evaluations)[number][];
-        }
-      >();
-      for (const [branchIndex, surface] of capability.branches.entries()) {
-        const key = JSON.stringify([
-          surface.effectKind,
-          surface.emptyTargetAllowed ?? false,
-          surface.levelCount,
-          surface.requiredOfferCount,
-          surface.eligibleTargetTraitKeys,
-        ]);
-        const entry = groups.get(key) ?? { surface, branchIndices: [], evaluations: [] };
-        entry.branchIndices.push(branchIndex);
-        const evaluation = evaluations.find((candidate) => candidate.branchIndex === branchIndex);
-        if (evaluation !== undefined) entry.evaluations.push(evaluation);
-        groups.set(key, entry);
-      }
-      return Object.freeze({
-        groups: Object.freeze(
-          [...groups.entries()].map(([key, group]) =>
-            Object.freeze({
-              key,
-              surface: group.surface,
-              branchIndices: Object.freeze(group.branchIndices),
-              evaluations: Object.freeze(group.evaluations),
-            }),
-          ),
-        ),
-      });
+      return Object.freeze({ surface: capability.surface, evaluation: capability.evaluate(value) });
     },
     judgmentArcana: (owner, arcanaKeys) =>
       aggregateEvaluation(core, {

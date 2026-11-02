@@ -169,21 +169,20 @@ export function sampleLevelResolution(
     levelResolution,
   );
   if (capability === undefined) return false;
-  for (const [branchIndex, branch] of capability.branches.entries()) {
-    const targets = context.shuffle(branch.eligibleTargetTraitKeys);
-    const offered = targets.slice(0, branch.requiredOfferCount);
-    for (const targetTraitKey of branch.effectKind === 'choice' ? offered : targets) {
-      const value =
-        branch.effectKind === 'random'
-          ? ({ kind: 'random', targetTraitKey } as const)
-          : ({
-              kind: 'choice',
-              offeredTraitKeys: offered,
-              selectedTraitKey: targetTraitKey,
-            } as const);
-      if (capability.evaluate(value)[branchIndex]?.supported !== true) continue;
-      if (context.apply({ kind: 'ReplaceLevelResolution', levelResolution, value })) return true;
-    }
+  const { surface } = capability;
+  const targets = context.shuffle(surface.eligibleTargetTraitKeys);
+  const offered = targets.slice(0, surface.requiredOfferCount);
+  for (const targetTraitKey of surface.effectKind === 'choice' ? offered : targets) {
+    const value =
+      surface.effectKind === 'random'
+        ? ({ kind: 'random', targetTraitKey } as const)
+        : ({
+            kind: 'choice',
+            offeredTraitKeys: offered,
+            selectedTraitKey: targetTraitKey,
+          } as const);
+    if (!capability.evaluate(value).supported) continue;
+    if (context.apply({ kind: 'ReplaceLevelResolution', levelResolution, value })) return true;
   }
   return false;
 }

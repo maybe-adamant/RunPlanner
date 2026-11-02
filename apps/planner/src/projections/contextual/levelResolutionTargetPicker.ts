@@ -1,4 +1,4 @@
-import type { LevelResolutionCandidateGroup } from '../candidates/candidateProjection';
+import type { LevelResolutionCandidateProjection } from '../candidates/candidateProjection';
 import {
   formatFindingExplanation,
   presentLevelResolutionCandidateFinding,
@@ -10,13 +10,13 @@ import type { ContextualPickerItem, ContextualPickerModel } from './contextualPi
  * slot holds disabled, and a retained ineligible current target pinned first.
  */
 export function projectLevelResolutionTargetPicker(input: {
-  readonly group: LevelResolutionCandidateGroup | undefined;
+  readonly candidate: LevelResolutionCandidateProjection | undefined;
   readonly current: string | null;
   readonly traitLabel: (traitKey: string) => string;
 }): ContextualPickerModel<string> {
-  const { group, current } = input;
-  const eligible = group?.surface.eligibleTargetTraitKeys ?? [];
-  const available = group?.evaluations[0]?.availableTargetTraitKeys ?? eligible;
+  const { candidate, current } = input;
+  const eligible = candidate?.surface.eligibleTargetTraitKeys ?? [];
+  const available = candidate?.evaluation.availableTargetTraitKeys ?? eligible;
   const targets = new Set(eligible);
   if (current !== null) targets.add(current);
   const items: ContextualPickerItem<string>[] = [...targets].map((target) => {
@@ -34,8 +34,8 @@ export function projectLevelResolutionTargetPicker(input: {
             explanations: Object.freeze(
               [
                 ...new Set(
-                  (group?.evaluations[0]?.findings.length
-                    ? group.evaluations[0].findings
+                  (candidate?.evaluation.findings.length
+                    ? candidate.evaluation.findings
                     : ['targetUnavailable']
                   ).map((code) =>
                     formatFindingExplanation(presentLevelResolutionCandidateFinding(code)),

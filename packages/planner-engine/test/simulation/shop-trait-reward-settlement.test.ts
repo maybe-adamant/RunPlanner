@@ -469,13 +469,11 @@ describe('Shop trait acquisition processing', () => {
         ],
       ]),
     ).at(address);
-    expect(capability?.branches).toEqual([
-      {
-        effectKind: 'random',
-        levelCount: 1,
-        eligibleTargetTraitKeys: ['ApolloWeaponBoon'],
-      },
-    ]);
+    expect(capability?.surface).toEqual({
+      effectKind: 'random',
+      levelCount: 1,
+      eligibleTargetTraitKeys: ['ApolloWeaponBoon'],
+    });
   });
 
   it.each([

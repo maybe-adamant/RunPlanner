@@ -610,6 +610,9 @@ Only active selected effects require complete detail; retained incomplete
 siblings are not erased. Source availability and acquisition targets stay
 distinct where the game makes them so, and products never union targets from
 incompatible histories. Missing or stale targets remain pinned and repairable.
+A Pom level resolution publishes one surface, its target domain, level count,
+required offer count and effect kind, which every reached context must agree
+on; a disagreement is an engine contract error, never a choice for the user.
 
 Trait-specific child capabilities follow the effect facts in the
 [run-impacting trait audit](../audits/traits/RUN_IMPACTING_TRAIT_EFFECTS_GAME_DATA_AUDIT.md):

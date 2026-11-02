@@ -7,7 +7,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import type { LevelResolutionCandidateGroup } from '@planner/projections/candidates/candidateProjection';
+import type { LevelResolutionCandidateProjection } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { projectLevelResolutionTargetPicker } from '@planner/projections/contextual/levelResolutionTargetPicker';
 import {
@@ -62,18 +62,6 @@ function pomDomKey(address: LevelResolutionAddress): string {
   return encodeURIComponent(semanticAddressKey(address));
 }
 
-/** The group a draft resolves against: the chosen one, else the first with a supported pick. */
-function candidateGroup(
-  groups: readonly LevelResolutionCandidateGroup[],
-  key: string | null | undefined,
-): LevelResolutionCandidateGroup | undefined {
-  return (
-    groups.find((group) => group.key === key) ??
-    groups.find((group) => group.evaluations.some((evaluation) => evaluation.supported)) ??
-    groups[0]
-  );
-}
-
 /** A rerolled-screen finding's stable key, independent of its copy. */
 function screenFindingKey(finding: {
   readonly code: string;
@@ -83,14 +71,18 @@ function screenFindingKey(finding: {
   return `screen:${finding.screen ?? 'final'}:${finding.code}:${finding.reason ?? ''}`;
 }
 
-/** Every finding of a group's evaluations by stable key, across the whole screen chain. */
-function groupIssueKeys(group: LevelResolutionCandidateGroup | undefined): EditorDialogIssue[] {
-  return (group?.evaluations ?? []).flatMap((evaluation) => [
+/** Every finding of a candidate's evaluation by stable key, across the whole screen chain. */
+function candidateIssueKeys(
+  candidate: LevelResolutionCandidateProjection | undefined,
+): EditorDialogIssue[] {
+  if (candidate === undefined) return [];
+  const { evaluation } = candidate;
+  return [
     ...evaluation.findings.map((code) => [`final:${code}`, code] as const),
     ...evaluation.rerolledScreenFindings.map(
       (finding) => [screenFindingKey(finding), finding.code] as const,
     ),
-  ]);
+  ];
 }
 
 function levelResolutionLoadable(
@@ -206,8 +198,7 @@ export function PomResolutionEditor({
   const [earlierSlotPlacements, setEarlierSlotPlacements] = useState<
     Readonly<Record<number, readonly (string | null)[]>>
   >({});
-  const [activeGroupKey, setActiveGroupKey] = useState<string | null>(null);
-  const [seededGroupKey, setSeededGroupKey] = useState<string | null>(null);
+  const [seeded, setSeeded] = useState(false);
   const draft: AuthoredLevelResolution =
     interaction.value.kind === 'choice'
       ? Object.freeze({
@@ -247,8 +238,6 @@ export function PomResolutionEditor({
   };
   const evaluateDraft = (next: AuthoredLevelResolution): void => setEvaluated(withScreens(next));
   const candidate = loaded.result;
-  const groups = candidate?.groups ?? [];
-  const activeGroup = candidateGroup(groups, activeGroupKey);
   // The saved value's own assessment tells inherited findings from introduced ones.
   const savedController =
     useWorkspaceInteractionController<ReturnType<WorkspaceLevelResolutionInteraction['load']>>();
@@ -260,12 +249,12 @@ export function PomResolutionEditor({
   useEffect(() => {
     savedController.activate(savedLoadable);
   }, [savedController, savedLoadable]);
-  const findings = activeGroup?.evaluations.flatMap((entry) => entry.findings) ?? [];
-  const supported = activeGroup?.evaluations.some((entry) => entry.supported) ?? false;
-  const requiredCount = activeGroup?.surface.requiredOfferCount;
+  const findings = candidate?.evaluation.findings ?? [];
+  const supported = candidate?.evaluation.supported ?? false;
+  const requiredCount = candidate?.surface.requiredOfferCount;
   const emptyNoOp =
-    activeGroup?.surface.emptyTargetAllowed === true &&
-    activeGroup.surface.eligibleTargetTraitKeys.length === 0 &&
+    candidate?.surface.emptyTargetAllowed === true &&
+    candidate.surface.eligibleTargetTraitKeys.length === 0 &&
     randomTarget === null &&
     supported;
   const count = interaction.value.kind === 'choice' ? (requiredCount ?? choiceSlots.length) : 1;
@@ -276,20 +265,18 @@ export function PomResolutionEditor({
     authoredChoice !== undefined &&
     authoredChoice.offeredTraitKeys.length === 0 &&
     authoredChoice.selectedTraitKey === null;
-  const seedChoice = (group: LevelResolutionCandidateGroup): void => {
-    const start = group.surface.startingResolution;
+  const seedChoice = (seed: LevelResolutionCandidateProjection): void => {
+    const start = seed.surface.startingResolution;
     if (start?.kind !== 'choice') return;
-    setSeededGroupKey(group.key);
-    setActiveGroupKey(group.key);
+    setSeeded(true);
     setChoiceSlots(start.offeredTraitKeys);
     setSelectedChoice(start.selectedTraitKey);
     setEvaluated(withScreens(start));
   };
-  if (authoredChoiceUnresolved && activeGroup !== undefined && seededGroupKey !== activeGroup.key)
-    seedChoice(activeGroup);
+  if (authoredChoiceUnresolved && candidate !== undefined && !seeded) seedChoice(candidate);
   const targetPicker = (current: string | null): ContextualPickerModel<string> =>
     projectLevelResolutionTargetPicker({
-      group: activeGroup,
+      candidate,
       current,
       traitLabel: interaction.traitLabel,
     });
@@ -379,8 +366,7 @@ export function PomResolutionEditor({
         (rerolledScreens ?? []).map((current, at) => (at === index ? screen : current)),
       ),
     );
-  const screenFindings =
-    activeGroup?.evaluations.flatMap((entry) => entry.rerolledScreenFindings) ?? [];
+  const screenFindings = candidate?.evaluation.rerolledScreenFindings ?? [];
   const activeScreen: ScreenTab = earlierIndex ?? 'final';
   // Each tab carries the draft's own findings; before evaluation, the route's.
   const markedScreens =
@@ -424,10 +410,10 @@ export function PomResolutionEditor({
         draft.selectedTraitKey === null ||
         (draft.rerolledScreens ?? []).some((screen) => screen === null)
       : draft.targetTraitKey === null &&
-        (activeGroup?.surface.eligibleTargetTraitKeys.length ?? 1) > 0;
+        (candidate?.surface.eligibleTargetTraitKeys.length ?? 1) > 0;
   const introduced = introducesIssue(
-    groupIssueKeys(activeGroup),
-    groupIssueKeys(candidateGroup(savedCandidate?.groups ?? [], activeGroup?.key)),
+    candidateIssueKeys(candidate),
+    candidateIssueKeys(savedCandidate),
   );
   // A screen stores its targets in order; the rows keep each one where it was chosen.
   const earlierSlots = (screenIndex: number): readonly (string | null)[] => {
@@ -488,12 +474,6 @@ export function PomResolutionEditor({
     );
   return (
     <div className="trait-offer-editor pom-resolution-editor">
-      {groups.length > 1 ? (
-        // A pick resolves against one settled state; diverging Pom contexts are an engine fault.
-        <p className="pom-resolution-fault" role="alert">
-          The planner reached this Pom in more than one state. Report this plan.
-        </p>
-      ) : null}
       {interaction.value.kind === 'choice' ? (
         withScreenTabs(
           earlierIndex === undefined ? (
@@ -548,8 +528,8 @@ export function PomResolutionEditor({
           <span className="fixed-room-state">No eligible traits; no level is gained.</span>
         </div>
       ) : interaction.value.kind === 'random' &&
-        activeGroup?.surface.emptyTargetAllowed === true &&
-        activeGroup.surface.eligibleTargetTraitKeys.length === 0 ? (
+        candidate?.surface.emptyTargetAllowed === true &&
+        candidate.surface.eligibleTargetTraitKeys.length === 0 ? (
         <div className="field-control field-control-inline control-placeholder">
           <span>Recorded target</span>
           <span className="fixed-room-state">

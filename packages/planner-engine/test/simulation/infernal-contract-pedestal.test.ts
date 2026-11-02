@@ -376,14 +376,14 @@ describe('Infernal Contract pedestal acquisition and publication', () => {
       expect.objectContaining({ code: 'missingPomTarget', origin: resolution }),
     );
     const capability = levelResolutionCandidateForProjectEvaluationAssembly(missing, resolution);
-    const branch = capability?.branches[0];
+    const branch = capability?.surface;
     if (branch === undefined) throw new Error('pedestal Pom has no reached target capability');
     expect(branch.levelCount).toBe(levelCount);
     const offeredTraitKeys = branch.eligibleTargetTraitKeys.slice(0, branch.requiredOfferCount);
     const selectedTraitKey = offeredTraitKeys[0];
     if (selectedTraitKey === undefined) throw new Error('pedestal Pom has no eligible target');
     const value = { kind: 'choice', offeredTraitKeys, selectedTraitKey } as const;
-    expect(capability?.evaluate(value)[0]?.supported).toBe(true);
+    expect(capability?.evaluate(value).supported).toBe(true);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceLevelResolution',
       levelResolution: resolution,

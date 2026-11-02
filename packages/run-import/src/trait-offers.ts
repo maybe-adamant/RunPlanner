@@ -180,35 +180,29 @@ export function answerLevelResolution(context: RunImportContext, reason: Semanti
       const key = `screen:${roomIndex}:${position}`;
       const chosen = screen.options.find((option) => option.chosen)?.name;
       if (context.used.has(key) || !POM_GIVERS.has(screen.giver) || chosen === undefined) continue;
-      for (const [branchIndex, branch] of capability.branches.entries()) {
-        const value =
-          branch.effectKind === 'random'
-            ? ({ kind: 'random', targetTraitKey: chosen } as const)
-            : ({
-                kind: 'choice',
-                offeredTraitKeys: screen.options.map((option) => option.name),
-                selectedTraitKey: chosen,
-              } as const);
-        if (capability.evaluate(value)[branchIndex]?.supported !== true) continue;
-        if (context.apply({ kind: 'ReplaceLevelResolution', levelResolution, value })) {
-          context.used.add(key);
-          if (value.kind === 'choice')
-            applyScreenRerolls(context, roomIndex, position, levelResolution, (count) => {
-              const screens = capability.rerolledScreensGuess(
-                branchIndex,
-                value.offeredTraitKeys,
-                count,
-              );
-              return screens === undefined
-                ? undefined
-                : {
-                    kind: 'ReplaceLevelResolution',
-                    levelResolution,
-                    value: { ...value, rerolledScreens: screens },
-                  };
-            });
-          return true;
-        }
+      const value =
+        capability.surface.effectKind === 'random'
+          ? ({ kind: 'random', targetTraitKey: chosen } as const)
+          : ({
+              kind: 'choice',
+              offeredTraitKeys: screen.options.map((option) => option.name),
+              selectedTraitKey: chosen,
+            } as const);
+      if (!capability.evaluate(value).supported) continue;
+      if (context.apply({ kind: 'ReplaceLevelResolution', levelResolution, value })) {
+        context.used.add(key);
+        if (value.kind === 'choice')
+          applyScreenRerolls(context, roomIndex, position, levelResolution, (count) => {
+            const screens = capability.rerolledScreensGuess(value.offeredTraitKeys, count);
+            return screens === undefined
+              ? undefined
+              : {
+                  kind: 'ReplaceLevelResolution',
+                  levelResolution,
+                  value: { ...value, rerolledScreens: screens },
+                };
+          });
+        return true;
       }
     }
   // A random level-up without a screen leaves only its upgraded trait in the record.
@@ -217,16 +211,15 @@ export function answerLevelResolution(context: RunImportContext, reason: Semanti
       const key = `upgrade:${roomIndex}:${position}`;
       if (context.used.has(key)) continue;
       const value = { kind: 'random', targetTraitKey: upgrade.name } as const;
-      const branchIndex = capability.branches.findIndex((branch) => branch.effectKind === 'random');
-      if (branchIndex < 0 || capability.evaluate(value)[branchIndex]?.supported !== true) continue;
+      if (capability.surface.effectKind !== 'random' || !capability.evaluate(value).supported)
+        continue;
       if (context.apply({ kind: 'ReplaceLevelResolution', levelResolution, value })) {
         context.used.add(key);
         return true;
       }
     }
   // A trait acquired and raised in one room shows only as a level rise between entry saves.
-  const branchIndex = capability.branches.findIndex((branch) => branch.effectKind === 'random');
-  if (branchIndex < 0) return false;
+  if (capability.surface.effectKind !== 'random') return false;
   const states = recordedEntryStates(context.record);
   for (const roomIndex of context.occurrences.visitsOf(occurrenceId)) {
     const before = states[roomIndex];
@@ -241,11 +234,7 @@ export function answerLevelResolution(context: RunImportContext, reason: Semanti
         );
       })
       .map(([name]) => name)
-      .filter(
-        (name) =>
-          capability.evaluate({ kind: 'random', targetTraitKey: name })[branchIndex]?.supported ===
-          true,
-      );
+      .filter((name) => capability.evaluate({ kind: 'random', targetTraitKey: name }).supported);
     const target = supported[0];
     if (target === undefined) continue;
     const command = {

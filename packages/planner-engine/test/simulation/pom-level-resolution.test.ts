@@ -20,7 +20,6 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   foldTraitHistoryEvents,
-  attachTraitHistory,
   recordReachedLevelResolution,
   levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
@@ -32,6 +31,7 @@ import {
   type RewardKernelFacts,
 } from '@run-planner/engine/reward-kernel';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
+import { CandidateEvaluationContractError } from '../../src/simulation/candidates/contract';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
@@ -408,19 +408,45 @@ describe('Pom level resolutions', () => {
     expect(triple.history.equippedTraits.ApolloWeaponBoon?.level).toBe(6);
   });
 
-  it('keeps divergent Pom branch domains and choice counts correlated', () => {
+  it('reports reached Pom contexts that disagree on the surface as a contract failure', () => {
+    const context = (before: ReturnType<typeof equippedHistory>) => ({
+      address: levelAddress,
+      before,
+      levelCount: 1,
+      effectKind: 'choice' as const,
+    });
     const artifacts = createLevelResolutionCandidateArtifacts(
       catalog,
       new Map([
         [
           semanticAddressKey(levelAddress),
+          [context(equippedHistory()), context(twoTargetHistory())],
+        ],
+      ]),
+    );
+    expect(() => artifacts.at(levelAddress)).toThrow(CandidateEvaluationContractError);
+    const agreeing = createLevelResolutionCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(levelAddress),
+          [context(twoTargetHistory()), context(twoTargetHistory())],
+        ],
+      ]),
+    ).at(levelAddress);
+    expect(agreeing?.surface.eligibleTargetTraitKeys).toEqual([
+      'ApolloWeaponBoon',
+      'HestiaSpecialBoon',
+    ]);
+  });
+
+  it('publishes one Pom surface and evaluates choices against it', () => {
+    const capability = createLevelResolutionCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(levelAddress),
           [
-            {
-              address: levelAddress,
-              before: equippedHistory(),
-              levelCount: 1,
-              effectKind: 'choice' as const,
-            },
             {
               address: levelAddress,
               before: twoTargetHistory(),
@@ -430,100 +456,52 @@ describe('Pom level resolutions', () => {
           ],
         ],
       ]),
-    );
-    const capability = artifacts.at(levelAddress);
-    expect(capability?.branches).toEqual([
-      {
-        effectKind: 'choice',
-        levelCount: 1,
-        requiredOfferCount: 1,
-        eligibleTargetTraitKeys: ['ApolloWeaponBoon'],
-        startingResolution: {
-          kind: 'choice',
-          offeredTraitKeys: ['ApolloWeaponBoon'],
-          selectedTraitKey: 'ApolloWeaponBoon',
-        },
+    ).at(levelAddress);
+    expect(capability?.surface).toEqual({
+      effectKind: 'choice',
+      levelCount: 1,
+      requiredOfferCount: 2,
+      eligibleTargetTraitKeys: ['ApolloWeaponBoon', 'HestiaSpecialBoon'],
+      startingResolution: {
+        kind: 'choice',
+        offeredTraitKeys: ['ApolloWeaponBoon', 'HestiaSpecialBoon'],
+        selectedTraitKey: 'ApolloWeaponBoon',
       },
-      {
-        effectKind: 'choice',
-        levelCount: 1,
-        requiredOfferCount: 2,
-        eligibleTargetTraitKeys: ['ApolloWeaponBoon', 'HestiaSpecialBoon'],
-        startingResolution: {
-          kind: 'choice',
-          offeredTraitKeys: ['ApolloWeaponBoon', 'HestiaSpecialBoon'],
-          selectedTraitKey: 'ApolloWeaponBoon',
-        },
-      },
-    ]);
-    for (const [index, branch] of capability!.branches.entries())
-      expect(capability!.evaluate(branch.startingResolution!)[index]).toMatchObject({
-        supported: true,
-      });
+    });
+    expect(capability!.evaluate(capability!.surface.startingResolution!)).toMatchObject({
+      supported: true,
+    });
     const value = {
       kind: 'choice' as const,
       offeredTraitKeys: ['ApolloWeaponBoon'],
       selectedTraitKey: 'ApolloWeaponBoon',
     };
-    expect(capability?.evaluate(value)).toEqual([
-      {
-        branchIndex: 0,
-        supported: true,
-        findings: [],
-        availableTargetTraitKeys: [],
-        rerolledScreenFindings: [],
-      },
-      {
-        branchIndex: 1,
-        supported: false,
-        findings: ['wrongOfferCount'],
-        availableTargetTraitKeys: ['HestiaSpecialBoon'],
-        rerolledScreenFindings: [],
-      },
-    ]);
+    expect(capability?.evaluate(value)).toEqual({
+      supported: false,
+      findings: ['wrongOfferCount'],
+      availableTargetTraitKeys: ['HestiaSpecialBoon'],
+      rerolledScreenFindings: [],
+    });
     expect(
       capability?.evaluate({
         kind: 'choice',
         offeredTraitKeys: ['ApolloWeaponBoon', 'ApolloWeaponBoon'],
         selectedTraitKey: 'ApolloWeaponBoon',
       }),
-    ).toEqual([
-      {
-        branchIndex: 0,
-        supported: false,
-        findings: ['wrongOfferCount', 'duplicateTargets'],
-        availableTargetTraitKeys: [],
-        rerolledScreenFindings: [],
-      },
-      {
-        branchIndex: 1,
-        supported: false,
-        findings: ['duplicateTargets'],
-        availableTargetTraitKeys: ['HestiaSpecialBoon'],
-        rerolledScreenFindings: [],
-      },
-    ]);
+    ).toEqual({
+      supported: false,
+      findings: ['duplicateTargets'],
+      availableTargetTraitKeys: ['HestiaSpecialBoon'],
+      rerolledScreenFindings: [],
+    });
     // Every rerolled screen is required, and with three or fewer boons nothing is left to draw.
-    expect(
-      capability
-        ?.evaluate({ ...value, rerolledScreens: [null] })
-        .map((branch) => [branch.supported, branch.rerolledScreenFindings]),
-    ).toEqual([
-      [
-        false,
-        [
-          { code: 'screenRerollUnavailable', reason: 'nothingLeft' },
-          { code: 'rerolledScreenMissing', screen: 0 },
-        ],
+    expect(capability?.evaluate({ ...value, rerolledScreens: [null] })).toMatchObject({
+      supported: false,
+      rerolledScreenFindings: [
+        { code: 'screenRerollUnavailable', reason: 'nothingLeft' },
+        { code: 'rerolledScreenMissing', screen: 0 },
       ],
-      [
-        false,
-        [
-          { code: 'screenRerollUnavailable', reason: 'nothingLeft' },
-          { code: 'rerolledScreenMissing', screen: 0 },
-        ],
-      ],
-    ]);
+    });
   });
 
   it('gives a random Pom its whole eligible domain and no starting choice', () => {
@@ -543,10 +521,10 @@ describe('Pom level resolutions', () => {
         ],
       ]),
     ).at(levelAddress);
-    expect(capability?.branches[0]?.startingResolution).toBeUndefined();
+    expect(capability?.surface.startingResolution).toBeUndefined();
     expect(
-      capability?.evaluate({ kind: 'random', targetTraitKey: 'ApolloWeaponBoon' })[0]
-        ?.availableTargetTraitKeys,
+      capability?.evaluate({ kind: 'random', targetTraitKey: 'ApolloWeaponBoon' })
+        .availableTargetTraitKeys,
     ).toEqual(['ApolloWeaponBoon', 'HestiaSpecialBoon']);
   });
 
@@ -607,7 +585,7 @@ describe('Pom level resolutions', () => {
         .some((event) => event.kind === 'concreteAcquisition'),
     ).toBe(true);
 
-    const targetTraitKey = capability?.branches[0]?.eligibleTargetTraitKeys[0];
+    const targetTraitKey = capability?.surface.eligibleTargetTraitKeys[0];
     if (targetTraitKey === undefined) throw new Error('frontier Pom has no eligible target');
     const repaired = applyProjectCommand(project, catalog, {
       kind: 'ReplaceLevelResolution',
@@ -729,14 +707,7 @@ describe('Pom level resolutions', () => {
       ),
     );
     const capabilityState = (assembly: ReturnType<typeof simulateProjectAssembly>) =>
-      levelResolutionCandidateForProjectEvaluationAssembly(assembly, level)?.branches.map(
-        (branch) =>
-          Object.freeze({
-            eligibleTargetTraitKeys: branch.eligibleTargetTraitKeys,
-            emptyTargetAllowed: branch.emptyTargetAllowed,
-            levelCount: branch.levelCount,
-          }),
-      );
+      levelResolutionCandidateForProjectEvaluationAssembly(assembly, level)?.surface;
     expect(capabilityState(frontierAssembly)).toEqual(capabilityState(continuedAssembly));
     expect(
       rewardProduct(frontierAssembly).branches.map(
@@ -772,7 +743,7 @@ describe('Pom level resolutions', () => {
     );
     const prepared = simulateProjectAssembly(catalog, project);
     const targetTraitKey = levelResolutionCandidateForProjectEvaluationAssembly(prepared, address)
-      ?.branches[0]?.eligibleTargetTraitKeys[0];
+      ?.surface.eligibleTargetTraitKeys[0];
     if (targetTraitKey === undefined) throw new Error('Midshop Pom has no initial target');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceLevelResolution',
@@ -824,59 +795,5 @@ describe('Pom level resolutions', () => {
         levelResolutionCandidateForProjectEvaluationAssembly(assembly, finding.origin),
       ).toBeDefined();
     }
-  });
-
-  it('retains every divergent Pom surface within and across eliminated fold cohorts', () => {
-    const oneTarget = equippedHistory();
-    const twoTargets = twoTargetHistory();
-    const base = initializeTestRewardBranches()[0];
-    if (base === undefined) throw new Error('divergent Pom fixture has no initial branch');
-    const branchesFor = (history: ReturnType<typeof equippedHistory>) =>
-      Object.freeze([
-        Object.freeze({
-          ...base,
-          state: Object.freeze({
-            ...base.state,
-            rewardHistory: attachTraitHistory(base.state.rewardHistory, history),
-            traitHistory: history,
-          }),
-        }),
-      ]);
-    const source = {
-      origin: levelAddress.owner,
-      offer: { rewardType: 'StackUpgrade' as const },
-      producerLifecycleKey: 'RoomReward',
-      instanceProvenance: 'free' as const,
-      presentsMaterializedScreen: false,
-      levelResolutionsByAcquisitionRole: {
-        self: { kind: 'choice' as const, offeredTraitKeys: [], selectedTraitKey: null },
-      },
-    };
-    const settleMissingPom = (
-      branches: ReturnType<typeof branchesFor>,
-      findings: Parameters<typeof settleTestRoomReward>[4],
-    ) =>
-      settleTestRoomReward(
-        branches,
-        source,
-        1,
-        (state) => factsWithHistory(rewardFacts(), state.rewardHistory, new Set()),
-        findings,
-      );
-    const retainedCount = (findings: Parameters<typeof settleTestRoomReward>[4]) =>
-      [...findings.values()].find((entry) => entry.finding.code === 'missingPomTarget')
-        ?.levelResolutionEvaluations?.length;
-
-    const sameFoldFindings = new Map();
-    settleMissingPom(
-      Object.freeze([...branchesFor(oneTarget), ...branchesFor(twoTargets)]),
-      sameFoldFindings,
-    );
-    expect(retainedCount(sameFoldFindings)).toBe(2);
-
-    const sequentialProductFindings = new Map();
-    settleMissingPom(branchesFor(oneTarget), sequentialProductFindings);
-    settleMissingPom(branchesFor(twoTargets), sequentialProductFindings);
-    expect(retainedCount(sequentialProductFindings)).toBe(2);
   });
 });

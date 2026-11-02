@@ -20,6 +20,7 @@ import type {
   AuthoredTraitOfferTraits,
 } from '../../../authored-project/traits/state';
 import { optionIndex, type TraitOptionKey } from '../../../authored-project/traits/state';
+import { CandidateEvaluationContractError } from '../contract';
 import { circeResolutionDomain, type CirceResolutionDomain } from '../../arcana-fear';
 import {
   assessTraitOffer,
@@ -241,21 +242,20 @@ export interface TraitOfferCandidateArtifacts {
   readonly at: (address: TraitOfferAddress) => TraitOfferCandidateCapability | undefined;
 }
 
-export interface LevelResolutionCandidateBranch {
+/** The one Pom level-resolution surface every reached context agrees on. */
+export interface LevelResolutionCandidateSurface {
   readonly effectKind: 'choice' | 'random';
   readonly emptyTargetAllowed?: boolean;
   readonly levelCount: number;
   /** Defined only for a declaration-owned visible Pom choice. */
   readonly requiredOfferCount?: number;
-  /** Exact pre-acquisition target domain for this simulation branch. */
+  /** Exact pre-acquisition target domain. */
   readonly eligibleTargetTraitKeys: readonly string[];
   /** An unresolved choice's starting draft: the first required targets, the first selected. */
   readonly startingResolution?: AuthoredLevelResolution;
 }
 
 export interface LevelResolutionCandidateEvaluation {
-  /** Stable index into the capability's branch-correlated surfaces. */
-  readonly branchIndex: number;
   readonly supported: boolean;
   readonly findings: readonly string[];
   /** Findings of the rerolled-away screens and their link to the final one, by tab. */
@@ -265,13 +265,10 @@ export interface LevelResolutionCandidateEvaluation {
 }
 
 export interface LevelResolutionCandidateCapability {
-  readonly branches: readonly LevelResolutionCandidateBranch[];
-  readonly evaluate: (
-    value: AuthoredLevelResolution,
-  ) => readonly LevelResolutionCandidateEvaluation[];
-  /** A guessed legal chain of the branch's Pom screens rerolled away before these final targets. */
+  readonly surface: LevelResolutionCandidateSurface;
+  readonly evaluate: (value: AuthoredLevelResolution) => LevelResolutionCandidateEvaluation;
+  /** A guessed legal chain of Pom screens rerolled away before these final targets. */
   readonly rerolledScreensGuess: (
-    branchIndex: number,
     offeredTraitKeys: readonly string[],
     count: number,
   ) => readonly { readonly offeredTraitKeys: readonly string[] }[] | undefined;
@@ -307,92 +304,89 @@ function rerolledLevelScreensGuess(
   );
 }
 
+interface LevelResolutionCandidateContext {
+  readonly address: LevelResolutionAddress;
+  readonly before: TraitHistoryState;
+  readonly levelCount: number;
+  readonly effectKind: 'choice' | 'random';
+  readonly emptyTargetAllowed?: boolean;
+}
+
+function levelResolutionSurface(
+  catalog: Catalog,
+  context: LevelResolutionCandidateContext,
+): LevelResolutionCandidateSurface {
+  const eligibleTargetTraitKeys = pomEligibleTargetKeys(catalog, context.before);
+  const common = {
+    effectKind: context.effectKind,
+    ...(context.emptyTargetAllowed ? { emptyTargetAllowed: true } : {}),
+    levelCount: context.levelCount,
+  };
+  if (context.effectKind !== 'choice') return Object.freeze({ ...common, eligibleTargetTraitKeys });
+  const requiredOfferCount = Math.min(3, context.before.upgradableTraitCount);
+  const offeredTraitKeys = Object.freeze(eligibleTargetTraitKeys.slice(0, requiredOfferCount));
+  return Object.freeze({
+    ...common,
+    requiredOfferCount,
+    eligibleTargetTraitKeys,
+    startingResolution: Object.freeze({
+      kind: 'choice' as const,
+      offeredTraitKeys,
+      selectedTraitKey: offeredTraitKeys[0] ?? null,
+    }),
+  });
+}
+
+/**
+ * Publishes one surface per reached Pom. Every reached context must agree on
+ * it, since the editor resolves the choice against one state; a divergence is
+ * an engine contract failure, never a choice offered to the user.
+ */
 export function createLevelResolutionCandidateArtifacts(
   catalog: Catalog,
-  contexts: ReadonlyMap<
-    string,
-    readonly {
-      readonly address: LevelResolutionAddress;
-      readonly before: TraitHistoryState;
-      readonly levelCount: number;
-      readonly effectKind: 'choice' | 'random';
-      readonly emptyTargetAllowed?: boolean;
-    }[]
-  >,
+  contexts: ReadonlyMap<string, readonly LevelResolutionCandidateContext[]>,
 ): LevelResolutionCandidateArtifacts {
   const privateContexts = new Map(contexts);
   return Object.freeze({
     at: (address: LevelResolutionAddress) => {
-      const branches = privateContexts.get(semanticAddressKey(address));
-      if (branches === undefined) return undefined;
-      const surfaces = Object.freeze(
-        branches.map((branch) => {
-          const eligibleTargetTraitKeys = pomEligibleTargetKeys(catalog, branch.before);
-          if (branch.effectKind !== 'choice')
-            return Object.freeze({
-              effectKind: branch.effectKind,
-              ...(branch.emptyTargetAllowed ? { emptyTargetAllowed: true } : {}),
-              levelCount: branch.levelCount,
-              eligibleTargetTraitKeys,
-            });
-          const requiredOfferCount = Math.min(3, branch.before.upgradableTraitCount);
-          const offeredTraitKeys = Object.freeze(
-            eligibleTargetTraitKeys.slice(0, requiredOfferCount),
-          );
-          return Object.freeze({
-            effectKind: branch.effectKind,
-            ...(branch.emptyTargetAllowed ? { emptyTargetAllowed: true } : {}),
-            levelCount: branch.levelCount,
-            requiredOfferCount,
-            eligibleTargetTraitKeys,
-            startingResolution: Object.freeze({
-              kind: 'choice' as const,
-              offeredTraitKeys,
-              selectedTraitKey: offeredTraitKeys[0] ?? null,
-            }),
-          });
-        }),
-      );
+      const key = semanticAddressKey(address);
+      const reached = privateContexts.get(key);
+      const context = reached?.[0];
+      if (context === undefined) return undefined;
+      const surface = levelResolutionSurface(catalog, context);
+      const agreed = JSON.stringify(surface);
+      if (
+        reached!.some((other) => JSON.stringify(levelResolutionSurface(catalog, other)) !== agreed)
+      )
+        throw new CandidateEvaluationContractError(
+          `level resolution ${key} reached contexts disagree on its surface`,
+        );
       return Object.freeze({
-        branches: surfaces,
-        evaluate: (value: AuthoredLevelResolution) =>
-          Object.freeze(
-            branches.map((branch, branchIndex) => {
-              const evaluation = evaluateReachedLevelResolution(
-                catalog,
-                branch.address,
-                value,
-                branch.levelCount,
-                branch.before,
-                0,
-                branch.effectKind,
-                branch.emptyTargetAllowed ?? false,
-              );
-              const offered = value.kind === 'choice' ? value.offeredTraitKeys : [];
-              const rerolledScreens = rerolledLevelScreenFindings(catalog, value, branch.before);
-              return Object.freeze({
-                branchIndex,
-                supported: evaluation.findings.length === 0 && rerolledScreens.length === 0,
-                findings: evaluation.findings,
-                rerolledScreenFindings: rerolledScreens,
-                availableTargetTraitKeys: Object.freeze(
-                  surfaces[branchIndex]!.eligibleTargetTraitKeys.filter(
-                    (traitKey) => !offered.includes(traitKey),
-                  ),
-                ),
-              });
-            }),
-          ),
-        rerolledScreensGuess: (
-          branchIndex: number,
-          offeredTraitKeys: readonly string[],
-          count: number,
-        ) => {
-          const surface = surfaces[branchIndex];
-          return surface === undefined
-            ? undefined
-            : rerolledLevelScreensGuess(surface.eligibleTargetTraitKeys, offeredTraitKeys, count);
+        surface,
+        evaluate: (value: AuthoredLevelResolution) => {
+          const evaluation = evaluateReachedLevelResolution(
+            catalog,
+            context.address,
+            value,
+            context.levelCount,
+            context.before,
+            0,
+            context.effectKind,
+            context.emptyTargetAllowed ?? false,
+          );
+          const offered = value.kind === 'choice' ? value.offeredTraitKeys : [];
+          const rerolledScreens = rerolledLevelScreenFindings(catalog, value, context.before);
+          return Object.freeze({
+            supported: evaluation.findings.length === 0 && rerolledScreens.length === 0,
+            findings: evaluation.findings,
+            rerolledScreenFindings: rerolledScreens,
+            availableTargetTraitKeys: Object.freeze(
+              surface.eligibleTargetTraitKeys.filter((traitKey) => !offered.includes(traitKey)),
+            ),
+          });
         },
+        rerolledScreensGuess: (offeredTraitKeys: readonly string[], count: number) =>
+          rerolledLevelScreensGuess(surface.eligibleTargetTraitKeys, offeredTraitKeys, count),
       });
     },
   });

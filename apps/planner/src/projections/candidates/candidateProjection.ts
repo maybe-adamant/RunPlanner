@@ -378,8 +378,10 @@ export interface CandidateProjectionSession {
   ) => import('@run-planner/engine/simulation').HexActivationCandidateCapability | undefined;
 }
 
+/** The one surface a reached Pom resolves against, and the draft judged on it. */
 export interface LevelResolutionCandidateProjection {
-  readonly groups: readonly LevelResolutionCandidateGroup[];
+  readonly surface: LevelResolutionCandidateSurface;
+  readonly evaluation: LevelResolutionCandidateEvaluation;
 }
 
 export interface LevelResolutionCandidateSurface {
@@ -392,28 +394,22 @@ export interface LevelResolutionCandidateSurface {
   readonly startingResolution?: AuthoredLevelResolution;
 }
 
-export interface LevelResolutionCandidateGroup {
-  readonly key: string;
-  readonly branchIndices: readonly number[];
-  readonly surface: LevelResolutionCandidateSurface;
-  readonly evaluations: readonly {
-    readonly branchIndex: number;
-    readonly supported: boolean;
-    readonly findings: readonly string[];
-    /** Findings of the rerolled-away screens and their link to the final one. */
-    readonly rerolledScreenFindings: readonly {
-      readonly code:
-        | 'rerolledScreenMissing'
-        | 'pomWrongOfferCount'
-        | 'pomTargetUnavailable'
-        | 'rollRepeatsAllOffers'
-        | 'screenRerollUnavailable';
-      readonly screen?: number;
-      readonly reason?: 'nothingLeft';
-    }[];
-    /** Eligible targets no offered slot holds. */
-    readonly availableTargetTraitKeys: readonly string[];
+export interface LevelResolutionCandidateEvaluation {
+  readonly supported: boolean;
+  readonly findings: readonly string[];
+  /** Findings of the rerolled-away screens and their link to the final one. */
+  readonly rerolledScreenFindings: readonly {
+    readonly code:
+      | 'rerolledScreenMissing'
+      | 'pomWrongOfferCount'
+      | 'pomTargetUnavailable'
+      | 'rollRepeatsAllOffers'
+      | 'screenRerollUnavailable';
+    readonly screen?: number;
+    readonly reason?: 'nothingLeft';
   }[];
+  /** Eligible targets no offered slot holds. */
+  readonly availableTargetTraitKeys: readonly string[];
 }
 
 export interface CandidateSessionFactory {

@@ -2148,7 +2148,7 @@ describe('field NPC encounter requirements', () => {
     const targetTraitKey = levelResolutionCandidateForProjectEvaluationAssembly(
       placedAssembly,
       levelResolution,
-    )?.branches[0]?.eligibleTargetTraitKeys[0];
+    )?.surface.eligibleTargetTraitKeys[0];
     if (targetTraitKey === undefined) throw new Error('Supply Chain Pom has no eligible target');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceLevelResolution',

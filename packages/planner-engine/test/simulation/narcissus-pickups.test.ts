@@ -1421,7 +1421,7 @@ describe('Narcissus pickup producer', () => {
     const pomTarget = levelResolutionCandidateForProjectEvaluationAssembly(
       pomAssembly,
       pomResolution,
-    )?.branches[0]?.eligibleTargetTraitKeys[0];
+    )?.surface.eligibleTargetTraitKeys[0];
     if (pomTarget === undefined) throw new Error('Narcissus Pom has no eligible target');
     pom = applyProjectCommand(pom, catalog, {
       kind: 'ReplaceLevelResolution',
@@ -1598,7 +1598,7 @@ describe('Narcissus pickup producer', () => {
       expect.objectContaining({ code: 'missingPomTarget', origin: resolution }),
     );
     const candidate = levelResolutionCandidateForProjectEvaluationAssembly(picked, resolution);
-    const target = candidate?.branches[0]?.eligibleTargetTraitKeys[0];
+    const target = candidate?.surface.eligibleTargetTraitKeys[0];
     if (target === undefined) throw new Error('Narcissus Pom has no repair target');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceLevelResolution',
@@ -1629,8 +1629,8 @@ describe('Narcissus pickup producer', () => {
       expect.objectContaining({ code: 'pomTargetUnavailable', origin: resolution }),
     );
     expect(
-      levelResolutionCandidateForProjectEvaluationAssembly(stale, resolution)?.branches[0]
-        ?.eligibleTargetTraitKeys,
+      levelResolutionCandidateForProjectEvaluationAssembly(stale, resolution)?.surface
+        .eligibleTargetTraitKeys,
     ).toContain(target);
   });
 

@@ -600,15 +600,13 @@ describe('Pom level screens', () => {
       ['Apollo', 'ApolloManaBoon', 'Common'],
     ];
     const four = pomCapability(history(held));
-    expect(four.branches[0]!.eligibleTargetTraitKeys).toHaveLength(4);
-    const final = four.branches[0]!.eligibleTargetTraitKeys.slice(0, 3);
-    const guess = four.rerolledScreensGuess(0, final, 3);
+    expect(four.surface.eligibleTargetTraitKeys).toHaveLength(4);
+    const final = four.surface.eligibleTargetTraitKeys.slice(0, 3);
+    const guess = four.rerolledScreensGuess(final, 3);
     const screens = [...guess!.map((screen) => screen.offeredTraitKeys), final];
     for (let index = 1; index < screens.length; index += 1)
       expect([...screens[index]!].sort()).not.toEqual([...screens[index - 1]!].sort());
     const three = pomCapability(history(held.slice(0, 3)));
-    expect(
-      three.rerolledScreensGuess(0, three.branches[0]!.eligibleTargetTraitKeys, 1),
-    ).toBeUndefined();
+    expect(three.rerolledScreensGuess(three.surface.eligibleTargetTraitKeys, 1)).toBeUndefined();
   });
 });

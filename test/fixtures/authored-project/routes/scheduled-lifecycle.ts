@@ -184,7 +184,7 @@ function acceptOneSupplyChainSlice(project: ProjectDocument): ProjectDocument {
     simulateProjectAssembly(catalog, next),
     levelResolution,
   );
-  const targetTraitKey = levelCandidate?.branches[0]?.eligibleTargetTraitKeys[0];
+  const targetTraitKey = levelCandidate?.surface.eligibleTargetTraitKeys[0];
   if (targetTraitKey === undefined)
     throw new Error('scheduled lifecycle fixture lacks a Supply Chain Pom target');
   next = applyProjectCommand(next, catalog, {
@@ -211,7 +211,7 @@ function acceptSupplyChainSliceAtAddress(
     simulateProjectAssembly(catalog, next),
     levelResolution,
   );
-  const targetTraitKey = levelCandidate?.branches[0]?.eligibleTargetTraitKeys[0];
+  const targetTraitKey = levelCandidate?.surface.eligibleTargetTraitKeys[0];
   if (targetTraitKey === undefined)
     throw new Error(
       `scheduled lifecycle fixture lacks a Supply Chain Pom target for ${entry.entryKey}`,

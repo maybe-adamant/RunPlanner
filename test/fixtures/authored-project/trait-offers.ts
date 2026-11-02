@@ -297,27 +297,25 @@ function normalizePomResolutions(
       resolution.address,
     );
     if (capability === undefined) continue;
-    for (const [branchIndex, branch] of capability.branches.entries()) {
-      const targetKeys = branch.eligibleTargetTraitKeys;
-      const offeredTraitKeys = targetKeys.slice(0, branch.requiredOfferCount);
-      for (const targetTraitKey of branch.effectKind === 'choice' ? offeredTraitKeys : targetKeys) {
-        const value: AuthoredLevelResolution =
-          branch.effectKind === 'random'
-            ? Object.freeze({ kind: 'random', targetTraitKey })
-            : Object.freeze({
-                kind: 'choice',
-                offeredTraitKeys: Object.freeze(offeredTraitKeys),
-                selectedTraitKey: targetTraitKey,
-              });
-        if (capability.evaluate(value)[branchIndex]?.supported !== true) continue;
-        current = applyProjectCommand(current, catalog, {
-          kind: 'ReplaceLevelResolution',
-          levelResolution: resolution.address,
-          value,
-        });
-        break;
-      }
-      if (current !== project) break;
+    const branch = capability.surface;
+    const targetKeys = branch.eligibleTargetTraitKeys;
+    const offeredTraitKeys = targetKeys.slice(0, branch.requiredOfferCount);
+    for (const targetTraitKey of branch.effectKind === 'choice' ? offeredTraitKeys : targetKeys) {
+      const value: AuthoredLevelResolution =
+        branch.effectKind === 'random'
+          ? Object.freeze({ kind: 'random', targetTraitKey })
+          : Object.freeze({
+              kind: 'choice',
+              offeredTraitKeys: Object.freeze(offeredTraitKeys),
+              selectedTraitKey: targetTraitKey,
+            });
+      if (!capability.evaluate(value).supported) continue;
+      current = applyProjectCommand(current, catalog, {
+        kind: 'ReplaceLevelResolution',
+        levelResolution: resolution.address,
+        value,
+      });
+      break;
     }
   }
   return current;
