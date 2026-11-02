@@ -6,6 +6,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createTargetAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -283,7 +284,12 @@ describe('workspace inspector defaults', () => {
     );
     if (postboss === undefined) throw new Error('complete N fixed-linked Postboss is missing');
     expectNode(complete.defaultInspectorDestination, postboss.key);
-    expect(complete.defaultInspectorDestination?.selectedRailKey).toBeUndefined();
+    // Postboss has no stop of its own; the Preboss stop hosts its fixed exit.
+    expect(complete.defaultInspectorDestination?.selectedRailKey).toBe(
+      semanticAddressKey(
+        createTargetAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }, 'preboss'),
+      ),
+    );
   });
 
   it('selects the stop opening the room whose doors a default decision shows', () => {
@@ -310,6 +316,30 @@ describe('workspace inspector defaults', () => {
     });
     expect(decisionRail.focusMarker.focusKey).not.toBe(decisionRail.node.marker.focusKey);
     expect(defaultDestination.selectedRailKey).toBe(retained.entry?.marker.focusKey);
+  });
+
+  it('selects the Preboss stop when a completed biome defaults to its Boss or Postboss', () => {
+    for (const [biomeKey, roomKind] of [
+      ['F', 'PostBoss'],
+      ['I', 'Boss'],
+    ] as const) {
+      const value = requireWorkspaceBiome(completeWorkspace, biomeKey);
+      const defaultDestination = value.defaultInspectorDestination;
+      if (defaultDestination?.kind !== 'node') throw new Error(`${biomeKey} default is missing`);
+      expect(nodeByKey(value, defaultDestination.nodeKey)).toMatchObject({
+        kind: 'occurrenceWorkbench',
+        room: { kind: roomKind },
+      });
+      const prebossStop = value.rail.find(
+        (entry) =>
+          entry.kind === 'node' &&
+          entry.node.kind !== 'hubDecision' &&
+          entry.node.kind !== 'occurrenceWorkbench' &&
+          entry.node.selectedContinuation?.door.room.kind === 'Preboss',
+      );
+      if (prebossStop === undefined) throw new Error(`${biomeKey} Preboss stop is missing`);
+      expect(defaultDestination.selectedRailKey).toBe(prebossStop.marker.focusKey);
+    }
   });
 
   it('keeps defensive matching-exit, entry, first-node, and empty defaults explicit', () => {
