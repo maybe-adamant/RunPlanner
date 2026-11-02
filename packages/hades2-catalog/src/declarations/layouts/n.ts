@@ -29,8 +29,7 @@ export const nBiomeLayout = {
         slotKey: 'combat01',
         roomGameName: 'N_Combat01',
         physicalDoorId: 617113,
-        // Provisional: the probes have not yet ordered Combat01 against Combat12.
-        offeredExitInsertionRank: 9,
+        offeredExitInsertionRank: 10,
       },
       {
         slotKey: 'combat02',
@@ -96,8 +95,7 @@ export const nBiomeLayout = {
         slotKey: 'combat12',
         roomGameName: 'N_Combat12',
         physicalDoorId: 561389,
-        // Provisional: the probes have not yet ordered Combat12 against Combat01.
-        offeredExitInsertionRank: 10,
+        offeredExitInsertionRank: 9,
       },
       {
         slotKey: 'combat13',
@@ -121,8 +119,7 @@ export const nBiomeLayout = {
         slotKey: 'combat16',
         roomGameName: 'N_Combat16',
         physicalDoorId: 561354,
-        // Provisional: unpinned against Combat05, 10, 11, 13, 14 and MiniBoss01.
-        offeredExitInsertionRank: 22,
+        offeredExitInsertionRank: 21,
       },
       {
         slotKey: 'combat17',
@@ -170,7 +167,7 @@ export const nBiomeLayout = {
         slotKey: 'miniBoss01',
         roomGameName: 'N_MiniBoss01',
         physicalDoorId: 617043,
-        offeredExitInsertionRank: 21,
+        offeredExitInsertionRank: 22,
       },
       {
         slotKey: 'miniBoss02',

@@ -203,9 +203,7 @@ pivot swaps move it. Each door draws its reward in that order, after the doors
 before it. The catalog declares each slot's door ObjectId (`PredeterminedDoorRooms`,
 RoomDataN.lua:1260) and its insertion rank; the engine emulates the Lua 5.2
 table and `auxsort` to derive the order, which reproduces all 19 boards of an
-in-game probe. The ranks of Combat01 against Combat12, and of Combat16 against
-Combat05, 10, 11, 13, 14 and MiniBoss01, are not yet pinned by probe data and
-are marked provisional in the declarations.
+in-game probe; repeated boards with the same open doors keep the same order.
 
 Order-sensitive offer facts, including ordinary-god peer support and singleton
 entries, are validated in exactly that order: a board that another order would
