@@ -514,6 +514,82 @@ describe('Pom resolution editor', () => {
     view.application.dispose();
   });
 
+  it('saves only a draft that differs from the saved resolution', async () => {
+    const user = userEvent.setup();
+    const editorInteraction = interaction({
+      value: { kind: 'random', targetTraitKey: 'A' },
+      load: () =>
+        Object.freeze({ groups: Object.freeze([group('branch-0', 'random', ['A', 'B'], true)]) }),
+    });
+    const view = renderInHeaderDialog(
+      <PomResolutionEditor interaction={editorInteraction} onCommit={vi.fn()} />,
+    );
+    const save = () => screen.getByRole('button', { name: 'Save Pom' }) as HTMLButtonElement;
+    const pick = async (name: string) => {
+      await user.click(screen.getByRole('button', { name: 'Recorded random Pom target' }));
+      await user.click(await screen.findByRole('option', { name }));
+    };
+    expect(save().disabled).toBe(true);
+    await pick('Trait B');
+    await waitFor(() => expect(save().disabled).toBe(false));
+    await pick('Trait A');
+    await waitFor(() => expect(save().disabled).toBe(true));
+    view.application.dispose();
+  });
+
+  it('lets an edit save past an inherited earlier-screen finding but not an introduced one', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    const editorInteraction: WorkspaceLevelResolutionInteraction = {
+      ...interaction({
+        value: {
+          kind: 'choice',
+          offeredTraitKeys: ['A', 'B'],
+          selectedTraitKey: 'A',
+          rerolledScreens: [{ offeredTraitKeys: ['A', 'D'] }],
+        },
+        load: (value) =>
+          Object.freeze({
+            groups: Object.freeze([
+              group(
+                'branch-0',
+                'choice',
+                ['A', 'B', 'C'],
+                false,
+                value.kind === 'choice' && value.offeredTraitKeys.includes('C')
+                  ? ['duplicateTargets']
+                  : [],
+                2,
+                false,
+                { rerolledScreenFindings: [{ code: 'pomTargetUnavailable', screen: 0 }] },
+              ),
+            ]),
+          }),
+      }),
+      screenRerolls: { count: 1, maxCount: 2, lockAtMax: 'poolShort', nextCost },
+    };
+    const view = renderInHeaderDialog(
+      <PomResolutionEditor interaction={editorInteraction} onCommit={onCommit} />,
+    );
+    const save = () => screen.getByRole('button', { name: 'Save Pom' }) as HTMLButtonElement;
+    await user.click(screen.getAllByRole('radio', { name: 'Selected' })[1]!);
+    await waitFor(() => expect(save().disabled).toBe(false));
+    await user.click(screen.getByRole('button', { name: 'Pom target 1' }));
+    await user.click(await screen.findByRole('option', { name: 'Trait C' }));
+    await waitFor(() => expect(save().disabled).toBe(true));
+    await user.click(screen.getByRole('button', { name: 'Pom target 1' }));
+    await user.click(await screen.findByRole('option', { name: 'Trait A' }));
+    await waitFor(() => expect(save().disabled).toBe(false));
+    await user.click(save());
+    expect(onCommit).toHaveBeenCalledWith({
+      kind: 'choice',
+      offeredTraitKeys: ['A', 'B'],
+      selectedTraitKey: 'B',
+      rerolledScreens: [{ offeredTraitKeys: ['A', 'D'] }],
+    });
+    view.application.dispose();
+  });
+
   it('preserves a retained partial visible Pom instead of replacing it with defaults', async () => {
     const editorInteraction = interaction({
       value: { kind: 'choice', offeredTraitKeys: ['C'], selectedTraitKey: null },
@@ -611,7 +687,7 @@ describe('Pom resolution editor', () => {
       <PomResolutionEditor interaction={contextInteraction('second')} onCommit={onCommit} />,
     );
     await waitFor(() =>
-      expect(loads).toHaveBeenLastCalledWith('second', { kind: 'random', targetTraitKey: 'B' }),
+      expect(loads).toHaveBeenCalledWith('second', { kind: 'random', targetTraitKey: 'B' }),
     );
     expect(
       screen.getByRole('button', { name: 'Recorded random Pom target' }).textContent,
@@ -636,8 +712,9 @@ describe('Pom resolution editor', () => {
     expect(placeholder?.classList.contains('field-control-inline')).toBe(true);
     expect(placeholder?.textContent).toContain('Recorded target');
     expect(screen.queryByRole('button', { name: 'Recorded random Pom target' })).toBeNull();
+    // The saved no-op is unchanged, so there is nothing to save.
     expect((screen.getByRole('button', { name: 'Save Pom' }) as HTMLButtonElement).disabled).toBe(
-      false,
+      true,
     );
   });
 

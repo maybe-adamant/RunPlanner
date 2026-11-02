@@ -36,7 +36,12 @@ import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
+import {
+  EditorDialog,
+  EditorDialogDraftActions,
+  type EditorDialogIssue,
+} from '@planner/ui/controls/EditorDialog';
+import { introducesIssue } from '@planner/ui/controls/introducesIssue';
 import { ScreenRerollTabs, UnsetScreen } from './ScreenRerollTabs';
 import { useScreenTab } from './useScreenTab';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
@@ -55,6 +60,37 @@ function launcherId(address: LevelResolutionAddress): string {
 
 function pomDomKey(address: LevelResolutionAddress): string {
   return encodeURIComponent(semanticAddressKey(address));
+}
+
+/** The group a draft resolves against: the chosen one, else the first with a supported pick. */
+function candidateGroup(
+  groups: readonly LevelResolutionCandidateGroup[],
+  key: string | null | undefined,
+): LevelResolutionCandidateGroup | undefined {
+  return (
+    groups.find((group) => group.key === key) ??
+    groups.find((group) => group.evaluations.some((evaluation) => evaluation.supported)) ??
+    groups[0]
+  );
+}
+
+/** A rerolled-screen finding's stable key, independent of its copy. */
+function screenFindingKey(finding: {
+  readonly code: string;
+  readonly screen?: number;
+  readonly reason?: string;
+}): string {
+  return `screen:${finding.screen ?? 'final'}:${finding.code}:${finding.reason ?? ''}`;
+}
+
+/** Every finding of a group's evaluations by stable key, across the whole screen chain. */
+function groupIssueKeys(group: LevelResolutionCandidateGroup | undefined): EditorDialogIssue[] {
+  return (group?.evaluations ?? []).flatMap((evaluation) => [
+    ...evaluation.findings.map((code) => [`final:${code}`, code] as const),
+    ...evaluation.rerolledScreenFindings.map(
+      (finding) => [screenFindingKey(finding), finding.code] as const,
+    ),
+  ]);
 }
 
 function levelResolutionLoadable(
@@ -212,10 +248,18 @@ export function PomResolutionEditor({
   const evaluateDraft = (next: AuthoredLevelResolution): void => setEvaluated(withScreens(next));
   const candidate = loaded.result;
   const groups = candidate?.groups ?? [];
-  const activeGroup =
-    groups.find((group) => group.key === activeGroupKey) ??
-    groups.find((group) => group.evaluations.some((evaluation) => evaluation.supported)) ??
-    groups[0];
+  const activeGroup = candidateGroup(groups, activeGroupKey);
+  // The saved value's own assessment tells inherited findings from introduced ones.
+  const savedController =
+    useWorkspaceInteractionController<ReturnType<WorkspaceLevelResolutionInteraction['load']>>();
+  const savedLoadable = useMemo(
+    () => levelResolutionLoadable(interaction, interaction.value),
+    [interaction],
+  );
+  const savedCandidate = savedController.observe(savedLoadable).result;
+  useEffect(() => {
+    savedController.activate(savedLoadable);
+  }, [savedController, savedLoadable]);
   const findings = activeGroup?.evaluations.flatMap((entry) => entry.findings) ?? [];
   const supported = activeGroup?.evaluations.some((entry) => entry.supported) ?? false;
   const requiredCount = activeGroup?.surface.requiredOfferCount;
@@ -346,16 +390,45 @@ export function PomResolutionEditor({
           ...screenFindings.map(findingScreenTab),
           ...(findings.length > 0 ? (['final'] as const) : []),
         ]);
-  const feedbackMessages = [
-    ...(activeScreen === 'final'
-      ? findings.map((finding) =>
-          formatFindingExplanation(presentLevelResolutionCandidateFinding(finding)),
-        )
-      : []),
-    ...screenFindings
-      .filter((finding) => findingScreenTab(finding) === activeScreen)
-      .map((finding) => formatFindingExplanation(presentRerolledLevelScreenFinding(finding))),
+  const feedbackEntries: EditorDialogIssue[] = [
+    ...new Map([
+      ...(activeScreen === 'final'
+        ? findings.map(
+            (finding) =>
+              [
+                `final:${finding}`,
+                formatFindingExplanation(presentLevelResolutionCandidateFinding(finding)),
+              ] as const,
+          )
+        : []),
+      ...screenFindings
+        .filter((finding) => findingScreenTab(finding) === activeScreen)
+        .map(
+          (finding) =>
+            [
+              screenFindingKey(finding),
+              formatFindingExplanation(presentRerolledLevelScreenFinding(finding)),
+            ] as const,
+        ),
+    ]),
   ];
+  const atRest = draftValueIdentity(draft) === draftValueIdentity(interaction.value);
+  // The candidate judged is the current draft once its evaluation has caught up with it.
+  const draftAssessed =
+    candidate !== undefined &&
+    draftValueIdentity(withScreens(draft)) === draftValueIdentity(evaluated);
+  const incomplete =
+    draft.kind === 'choice'
+      ? requiredCount === undefined ||
+        draft.offeredTraitKeys.length < requiredCount ||
+        draft.selectedTraitKey === null ||
+        (draft.rerolledScreens ?? []).some((screen) => screen === null)
+      : draft.targetTraitKey === null &&
+        (activeGroup?.surface.eligibleTargetTraitKeys.length ?? 1) > 0;
+  const introduced = introducesIssue(
+    groupIssueKeys(activeGroup),
+    groupIssueKeys(candidateGroup(savedCandidate?.groups ?? [], activeGroup?.key)),
+  );
   // A screen stores its targets in order; the rows keep each one where it was chosen.
   const earlierSlots = (screenIndex: number): readonly (string | null)[] => {
     const keys = rerolledScreens?.[screenIndex]?.offeredTraitKeys ?? [];
@@ -508,22 +581,23 @@ export function PomResolutionEditor({
       )}
       <EditorDialogDraftActions
         issues={(() => {
-          const entries = [
-            ...new Set(
-              feedbackMessages.length === 0 && activeScreen === 'final' && !supported
-                ? [earlierScreenFixLine(markedScreens)].filter(
-                    (line): line is string => line !== undefined,
-                  )
-                : feedbackMessages,
-            ),
-          ].map((message) => [message, message] as const);
-          return entries.length > 0 || supported
+          const fixLine =
+            feedbackEntries.length === 0 && activeScreen === 'final' && !supported
+              ? earlierScreenFixLine(markedScreens)
+              : undefined;
+          const entries: readonly EditorDialogIssue[] =
+            fixLine === undefined ? feedbackEntries : [['earlier-screen', fixLine]];
+          return entries.length > 0 || !incomplete
             ? entries
             : [['incomplete', 'Choose a target'] as const];
         })()}
         {...(onCancel === undefined ? {} : { onCancel })}
         onSave={() => onCommit(draft)}
-        saveDisabled={!supported}
+        // An unchanged, incomplete or unassessed draft, or a finding it introduced, blocks
+        // Save; inherited findings, even on an earlier screen, do not.
+        saveDisabled={
+          atRest || incomplete || !draftAssessed || savedCandidate === undefined || introduced
+        }
         saveName="Save Pom"
       />
     </div>
@@ -563,7 +637,6 @@ export function PomResolutionDialog({
           )}
         />
       }
-      layout="header"
       model={{ kind: 'draft', onCancel: close }}
       returnFocusId={launcherId(target)}
       title={interaction.value.kind === 'random' ? 'Random Pom' : 'Pom of Power'}

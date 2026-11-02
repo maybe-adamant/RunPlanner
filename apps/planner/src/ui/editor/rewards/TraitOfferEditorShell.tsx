@@ -291,7 +291,6 @@ export function TraitOfferEditorShell({
             source={traitGiverArtwork[interaction.giver.key] ?? undefined}
           />
         }
-        layout="header"
         model={{ kind: 'draft', onCancel: () => setView('outer') }}
         title={`${interaction.giver.label} › Boon Boon Boon`}
       >

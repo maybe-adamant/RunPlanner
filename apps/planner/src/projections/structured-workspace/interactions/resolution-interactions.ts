@@ -150,8 +150,14 @@ function projectKeepsakeEquipResultDomain(
     (value) => value,
   );
   const selected = options.find((option) => option.value === selectedValue);
+  const selectedReasons = selected === undefined ? [] : equipResultReasons(resultKind, selected);
   return Object.freeze({
     picker,
+    selectedFindings: Object.freeze(
+      (selected?.findings ?? []).map((code, at) =>
+        Object.freeze({ code, message: selectedReasons[at]!.message }),
+      ),
+    ),
     ...(selected?.transcendentEmbryoSummary === undefined
       ? {}
       : { transcendentEmbryoSummary: selected.transcendentEmbryoSummary }),

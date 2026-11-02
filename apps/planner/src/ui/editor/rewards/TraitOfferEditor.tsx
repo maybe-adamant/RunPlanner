@@ -145,7 +145,6 @@ export function TraitOfferDialog({
           source={traitGiverArtwork[interaction.giver.key] ?? undefined}
         />
       }
-      layout="header"
       {...(interaction.giver.providerKind === 'spell' ? { size: 'hexTree' as const } : {})}
       {...(exactChild === undefined
         ? {}

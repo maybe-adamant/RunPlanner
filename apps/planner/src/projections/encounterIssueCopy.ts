@@ -90,7 +90,7 @@ export function compositionIssueCopy(
       }
     case 'baseRoll':
       return {
-        message: `Stored budget ${issue.actual} is unavailable. Choose a supported budget.`,
+        message: `Chosen budget ${issue.actual} is unavailable. Choose a supported budget.`,
         titles: [`Encounter budget ${issue.actual} is unavailable`],
       };
     case 'waveCount':
@@ -183,13 +183,13 @@ export function compositionIssueCopy(
         case 'typeUnavailable':
           return {
             message:
-              'The stored Fangs elite is not in the active encounter composition. Choose an available elite.',
+              'The chosen Fangs elite is not in the active encounter composition. Choose an available elite.',
             titles: ["Fangs elite isn't in this encounter"],
           };
         case 'perkUnavailable':
           return {
             message:
-              'The stored Fangs perks are no longer a legal native pick order. Repair the selection.',
+              'The chosen Fangs perks are no longer a legal native pick order. Repair the selection.',
             titles: ["Fangs perks can't be picked in this order"],
           };
         default:
@@ -211,7 +211,7 @@ export function compositionIssueCopy(
           };
         case 'targetUnavailable':
           return {
-            message: `The stored Menace replacement for ${enemyLabel} is unavailable. Choose another replacement.`,
+            message: `The chosen Menace replacement for ${enemyLabel} is unavailable. Choose another replacement.`,
             titles: namedTitles(
               enemy,
               [(name) => inWave(`${name} Menace replacement unavailable`)],

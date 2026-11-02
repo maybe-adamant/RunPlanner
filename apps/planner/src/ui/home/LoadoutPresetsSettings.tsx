@@ -69,7 +69,6 @@ function PresetEditorDialog({
   const title = `${editing.preset === null ? 'New' : 'Edit'} ${editing.kind === 'arcana' ? 'Arcana' : 'Vow'} preset`;
   return (
     <EditorDialog
-      layout="header"
       model={{ kind: 'draft', onCancel }}
       size="cards"
       title={

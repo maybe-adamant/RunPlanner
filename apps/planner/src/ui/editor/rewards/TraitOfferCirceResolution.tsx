@@ -135,7 +135,6 @@ export function TraitOfferCirceResolution({
               source={traitGiverArtwork.Circe ?? undefined}
             />
           }
-          layout="header"
           model={{ kind: 'draft', onCancel: () => close() }}
           returnFocusId={controlId}
           size="cards"

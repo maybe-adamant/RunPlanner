@@ -85,7 +85,6 @@ export function LoadoutBoardDialog({
       : [];
   return (
     <EditorDialog
-      layout="header"
       model={{ kind: 'draft', onCancel: onClose }}
       returnFocusId={returnFocusId}
       size="cards"

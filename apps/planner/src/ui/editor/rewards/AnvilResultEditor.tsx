@@ -79,7 +79,6 @@ function AnvilResultDialog({
       icon={
         <ArtworkIcon className="artwork-label-icon" source={rewardIcon('ChaosWeaponUpgrade')} />
       }
-      layout="header"
       model={{ kind: 'draft', onCancel: onClose }}
       returnFocusId={launcherId}
       title="Anvil of Fates"
@@ -131,7 +130,7 @@ export function AnvilResultEditor({
           );
   const draftEntries = atRest ? [] : assessedEntries(result);
   const feedbackEntries = atRest ? findingEntries : draftEntries;
-  // A finding this draft introduced blocks Save; inherited findings do not.
+  // An unchanged draft or a finding it introduced blocks Save; inherited findings do not.
   const introduced = introducesIssue(draftEntries, assessedEntries(interaction.value));
   return (
     <>
@@ -223,7 +222,7 @@ export function AnvilResultEditor({
         onSave={() => {
           if (result !== undefined) onCommit(result);
         }}
-        saveDisabled={result === undefined || introduced}
+        saveDisabled={atRest || result === undefined || introduced}
         saveName="Save Anvil result"
       />
     </>

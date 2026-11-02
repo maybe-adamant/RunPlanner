@@ -23,7 +23,6 @@ export function RoomMapDialog({
 }) {
   return (
     <EditorDialog
-      layout="header"
       model={{ kind: 'view', onClose }}
       returnFocusId={returnFocusId}
       size="cards"

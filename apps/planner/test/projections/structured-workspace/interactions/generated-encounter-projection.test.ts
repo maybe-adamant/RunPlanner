@@ -152,7 +152,7 @@ describe('generated enemy presentation', () => {
       { message: 'Choose a Menace replacement before converting Wastrel.', waveIndex: 2 },
       {
         message:
-          'The stored Menace replacement for Elite Whisper is unavailable. Choose another replacement.',
+          'The chosen Menace replacement for Elite Whisper is unavailable. Choose another replacement.',
         waveIndex: 2,
       },
     ]);

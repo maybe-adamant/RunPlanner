@@ -45,6 +45,8 @@ export type WorkspaceKeepsakeEquipResultInteraction =
 
 export interface WorkspaceKeepsakeEquipResultDomain {
   readonly picker: ContextualPickerModel<string>;
+  /** The selected result's findings by stable code, in the keepsake's words. */
+  readonly selectedFindings: readonly { readonly code: string; readonly message: string }[];
   readonly transcendentEmbryoSummary?: {
     readonly rarity: InRunTraitRarity;
     readonly operands: readonly ChaosNumericOperand[];

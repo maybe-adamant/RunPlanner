@@ -132,7 +132,6 @@ function HexActivationDialog({
   return (
     <EditorDialog
       icon={<ArtworkIcon className="artwork-label-icon" source={rewardIcon('TalentDrop')} />}
-      layout="header"
       model={{ kind: 'draft', onCancel: onClose }}
       returnFocusId={launcherId}
       size="hexTree"

@@ -53,6 +53,7 @@ describe('KeepsakeEquipResultPicker', () => {
       value,
       load: () => ({
         picker: { sections: [] },
+        selectedFindings: [],
         transcendentEmbryoSummary: {
           rarity: 'Epic',
           operands: revelationOperands,
@@ -69,7 +70,7 @@ describe('KeepsakeEquipResultPicker', () => {
       ...interaction,
       value: undefined,
       selectedLabel: 'Choose Chaos blessing',
-      load: () => ({ picker: { sections: [] } }),
+      load: () => ({ picker: { sections: [] }, selectedFindings: [] }),
     };
     const view = render(
       <Provider store={application.store}>
@@ -107,6 +108,7 @@ describe('KeepsakeEquipResultPicker', () => {
       value: nextValue,
       load: () => ({
         picker: { sections: [] },
+        selectedFindings: [],
         transcendentEmbryoSummary: {
           rarity: 'Epic',
           operands: revelationOperands,

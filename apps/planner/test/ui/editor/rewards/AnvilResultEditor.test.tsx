@@ -153,6 +153,36 @@ describe('Anvil result editor', () => {
     view.application.dispose();
   });
 
+  it('saves only a draft that differs from the saved result', async () => {
+    const interaction = anvilInteraction({
+      contextReached: true,
+      value: {
+        kind: 'anvilOfFates',
+        removedTraitKey: 'OldHammer',
+        addedTraitKeys: ['FirstHammer', 'SecondHammer'],
+      },
+      removedTraitKeys: ['OldHammer'],
+      addedTraitKeysFor: (_removed, prior) =>
+        prior.length === 0 ? ['FirstHammer', 'SecondHammer'] : ['SecondHammer', 'ThirdHammer'],
+      intentFor: () => {
+        throw new Error('the pure editor must not bind commands');
+      },
+    });
+    const user = userEvent.setup();
+    const view = renderInHeaderDialog(
+      <AnvilResultEditor interaction={interaction} onCommit={vi.fn()} />,
+    );
+    const save = () => screen.getByRole('button', { name: 'Save Anvil result' });
+    expect(save()).toHaveProperty('disabled', true);
+    await user.click(screen.getByRole('button', { name: 'Added Hammer 2' }));
+    await user.click(screen.getByRole('option', { name: 'ThirdHammer' }));
+    expect(save()).toHaveProperty('disabled', false);
+    await user.click(screen.getByRole('button', { name: 'Added Hammer 2' }));
+    await user.click(screen.getByRole('option', { name: 'SecondHammer' }));
+    expect(save()).toHaveProperty('disabled', true);
+    view.application.dispose();
+  });
+
   it('closes its open dialog and clears the session target when the context is lost', async () => {
     const application = createApplication();
     const owner = createAcquisitionRoleAddress(

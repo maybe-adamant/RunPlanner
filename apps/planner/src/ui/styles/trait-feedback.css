@@ -724,14 +724,12 @@ button.hex-column-deal[data-has-findings='true'] {
 }
 
 .trait-option-feedback li,
-.trait-option-replacement,
-.editor-dialog-feedback .feedback-text {
+.trait-option-replacement {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.trait-option-replacement,
-.editor-dialog-feedback .feedback-text {
+.trait-option-replacement {
   color: var(--attention);
   font-size: 0.82rem;
 }

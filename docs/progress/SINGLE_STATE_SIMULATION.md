@@ -27,10 +27,10 @@ happen", never as alternative states carried forward or offered as a choice.
      vs late small Ash and Bones);
    - differing only by a condition that only ever turns true (Pom's "has a
      boon").
-   The one condition that can turn false mid-run (lifetime totals crossing a
-   threshold) applies to a whole group at once, so it cannot split branches.
-   Bag-entry branching can therefore collapse to one state per draw with no
-   change in what is valid.
+     The one condition that can turn false mid-run (lifetime totals crossing a
+     threshold) applies to a whole group at once, so it cannot split branches.
+     Bag-entry branching can therefore collapse to one state per draw with no
+     change in what is valid.
 3. **Offer sets do not come from the bag's identity choice.** What matters is
    that an activated entry of the type is drawn, not which one.
 4. **Draw order is lookahead only.** It applies to reward wheels (Hub boards

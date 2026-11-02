@@ -114,28 +114,23 @@ export function EditorDialogHelp({
   );
 }
 
-/** The header bar's action slot; undefined outside a header-layout dialog. */
+/** The title bar's action slot; undefined outside an editor dialog. */
 const actionsSlot = createContext<HTMLElement | null | undefined>(undefined);
 
 const focusableControls =
   'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
- * The shared popup editor. The footer layout pins findings and actions under a
- * scrolling body; the header layout carries the first finding, Cancel and Save
- * on one sticky title bar.
+ * The shared popup editor: one sticky title bar carries the icon, title, first
+ * finding and the draft's Reset, Cancel and Save, or a view's Close, above a
+ * scrolling body.
  */
 export function EditorDialog({
   anchorProps,
   children,
-  eyebrow,
-  feedback,
-  footer,
-  headerAction,
   headerBelow,
   icon,
   initialFocusId,
-  layout = 'footer',
   model,
   returnFocusId,
   size = 'standard',
@@ -145,21 +140,12 @@ export function EditorDialog({
   /** Finding anchor attributes for the dialog surface. */
   readonly anchorProps?: ModalSurfaceProps;
   readonly children: ReactNode;
-  /** The line above the title; a dialog with its own controls under the title omits it. */
-  readonly eyebrow?: string;
-  /** The findings region when the dialog, not its content, owns it. */
-  readonly feedback?: ReactNode;
-  /** A draft footer when the dialog, not its content, owns the draft. */
-  readonly footer?: ReactNode;
-  /** A control beside the title, such as a help reference. */
-  readonly headerAction?: ReactNode;
   /** Controls pinned under the title, such as tabs. */
   readonly headerBelow?: ReactNode;
   /** The portrait or icon before the title. */
   readonly icon?: ReactNode;
   /** The exact repair control a navigation targets. */
   readonly initialFocusId?: string;
-  readonly layout?: 'footer' | 'header';
   readonly model: EditorDialogModel;
   /** The launcher that regains focus after the dialog unmounts. */
   readonly returnFocusId?: string;
@@ -173,8 +159,6 @@ export function EditorDialog({
   const bodyRef = useRef<HTMLDivElement>(null);
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
   const [actionsElement, setActionsElement] = useState<HTMLElement | null>(null);
-  // A view's Close lives on the title bar, so a view always takes the header layout.
-  const bar = layout === 'header' || model.kind === 'view';
   const close = model.kind === 'draft' ? model.onCancel : model.onClose;
   const draft = model.kind === 'draft';
   useEffect(() => {
@@ -185,20 +169,21 @@ export function EditorDialog({
     };
   }, [dispatch, draft]);
   const initialFocusIdRef = useRef(initialFocusId);
+  const focusedRef = useRef(false);
+  // Initial focus waits for the title bar's action slot, where the dismiss action mounts.
   useEffect(() => {
     const body = bodyRef.current;
-    if (body === null) return;
+    if (body === null || actionsElement === null || focusedRef.current) return;
+    focusedRef.current = true;
     const id = initialFocusIdRef.current;
     const exact = id === undefined ? null : document.getElementById(id);
-    // Footer actions take initial focus only as the dismiss action of a body still loading.
-    const first = Array.from(body.querySelectorAll<HTMLElement>(focusableControls)).find(
-      (control) => control.closest('.editor-dialog-footer') === null,
-    );
+    const first = body.querySelector<HTMLElement>(focusableControls);
+    // The dismiss action takes initial focus only while the body has no enabled control.
     const dismiss = (body.parentElement ?? body).querySelector<HTMLElement>(
       '[data-editor-dismiss]',
     );
     (exact !== null && body.contains(exact) ? exact : (first ?? dismiss))?.focus();
-  }, []);
+  }, [actionsElement]);
   return (
     <ModalDialog
       backdropClassName="editor-dialog-backdrop"
@@ -208,111 +193,32 @@ export function EditorDialog({
       {...(returnFocusId === undefined ? {} : { returnFocusId })}
       {...(anchorProps === undefined ? {} : { surfaceProps: anchorProps })}
     >
-      {bar ? (
-        <>
-          <header className="editor-dialog-header" data-layout="header">
-            <div className="editor-dialog-title-line">
-              {icon}
-              <h2 id={titleId} onMouseEnter={showTruncatedTitle}>
-                {title}
-              </h2>
-              {titleExtra === undefined ? null : (
-                <span className="editor-dialog-title-extra">{titleExtra}</span>
-              )}
-              <span className="editor-dialog-title-action" ref={setTitleSlot} />
-              {headerAction}
-            </div>
-            <div className="editor-dialog-header-actions" ref={setActionsElement}>
-              {model.kind === 'view' ? (
-                <EditorDialogIconAction
-                  dismiss
-                  icon="close"
-                  label="Close"
-                  onClick={model.onClose}
-                />
-              ) : null}
-            </div>
-          </header>
-          {headerBelow === undefined ? null : (
-            <div className="editor-dialog-header-below">{headerBelow}</div>
+      <header className="editor-dialog-header">
+        <div className="editor-dialog-title-line">
+          {icon}
+          <h2 id={titleId} onMouseEnter={showTruncatedTitle}>
+            {title}
+          </h2>
+          {titleExtra === undefined ? null : (
+            <span className="editor-dialog-title-extra">{titleExtra}</span>
           )}
-        </>
-      ) : (
-        <header className="editor-dialog-header">
-          <div>
-            {eyebrow === undefined ? null : <p className="eyebrow">{eyebrow}</p>}
-            <div className="editor-dialog-title-line">
-              <h2 id={titleId}>{title}</h2>
-              {titleExtra === undefined ? null : (
-                <span className="editor-dialog-title-extra">{titleExtra}</span>
-              )}
-              <span className="editor-dialog-title-action" ref={setTitleSlot} />
-            </div>
-            {headerBelow}
-          </div>
-          {headerAction}
-        </header>
+          <span className="editor-dialog-title-action" ref={setTitleSlot} />
+        </div>
+        <div className="editor-dialog-header-actions" ref={setActionsElement}>
+          {model.kind === 'view' ? (
+            <EditorDialogIconAction dismiss icon="close" label="Close" onClick={model.onClose} />
+          ) : null}
+        </div>
+      </header>
+      {headerBelow === undefined ? null : (
+        <div className="editor-dialog-header-below">{headerBelow}</div>
       )}
       <div className="editor-dialog-body" ref={bodyRef}>
         <headerSlot.Provider value={titleSlot}>
-          <actionsSlot.Provider value={bar ? actionsElement : undefined}>
-            {children}
-          </actionsSlot.Provider>
+          <actionsSlot.Provider value={actionsElement}>{children}</actionsSlot.Provider>
         </headerSlot.Provider>
-        {feedback}
-        {model.kind === 'draft' ? footer : null}
       </div>
     </ModalDialog>
-  );
-}
-
-/**
- * The dialog's one findings region: always mounted with the visible heading
- * "Feedback"; its accessible name tells coexisting regions apart.
- */
-export function EditorDialogFeedback({
-  children,
-  entries = [],
-  name,
-  notes,
-}: {
-  /** Owner-specific rows; when present they replace the empty state. */
-  readonly children?: ReactNode;
-  readonly entries?: readonly (readonly [key: string, message: string])[];
-  readonly name: string;
-  /** Display-only notes after every finding; they never replace the empty state. */
-  readonly notes?: ReactNode;
-}) {
-  return (
-    <section aria-label={name} className="editor-dialog-feedback" role="status">
-      <h3>Feedback</h3>
-      {children === undefined && entries.length === 0 ? (
-        <p className="editor-dialog-feedback-empty">No current findings.</p>
-      ) : null}
-      {children}
-      {entries.map(([key, message]) => (
-        <p className="feedback-text" key={key}>
-          {message}
-        </p>
-      ))}
-      {notes}
-    </section>
-  );
-}
-
-/** The sticky footer row; secondary actions sit before the closing actions. */
-export function EditorDialogFooter({
-  children,
-  secondary,
-}: {
-  readonly children: ReactNode;
-  readonly secondary?: ReactNode;
-}) {
-  return (
-    <footer className="editor-dialog-footer">
-      <div className="editor-dialog-footer-secondary">{secondary}</div>
-      <div className="editor-dialog-footer-primary">{children}</div>
-    </footer>
   );
 }
 
@@ -372,10 +278,10 @@ function EditorDialogFinding({
 }
 
 /**
- * The draft actions: Reset restarts the whole draft, Cancel discards it and
- * Save commits it once. In a header-layout dialog they join the title bar
- * after the first finding, and secondary actions stay in the body; otherwise
- * they form the footer.
+ * The draft actions on the title bar after the first finding: Reset returns the
+ * draft to its default (empty, the game's control or the layout default), not to
+ * the saved value; Cancel discards the draft and Save commits it once. Outside
+ * an editor dialog they render in place.
  */
 export function EditorDialogDraftActions({
   issues = [],
@@ -385,69 +291,44 @@ export function EditorDialogDraftActions({
   resetDisabled = false,
   saveDisabled,
   saveName,
-  secondary,
 }: {
   /** The draft's findings, first one shown; blocking while Save is disabled. */
   readonly issues?: readonly EditorDialogIssue[];
   readonly onCancel?: () => void;
-  /** Replaces the whole draft with its starting point; a part's own reset stays in the body. */
+  /** Returns the whole draft to its default; a part's own reset stays in the body. */
   readonly onReset?: () => void;
   readonly onSave: () => void;
   readonly resetDisabled?: boolean;
   readonly saveDisabled: boolean;
   /** Accessible name that names what Save commits, when the title alone does not. */
   readonly saveName?: string;
-  readonly secondary?: ReactNode;
 }) {
   const slot = useContext(actionsSlot);
-  const reset =
-    onReset === undefined ? null : (
-      <EditorDialogIconAction
-        disabled={resetDisabled}
-        icon="reset"
-        label="Reset"
-        onClick={onReset}
-      />
-    );
-  const cancel =
-    onCancel === undefined ? null : (
-      <EditorDialogIconAction dismiss icon="close" label="Cancel" onClick={onCancel} />
-    );
-  const save = (
-    <button
-      {...(saveName === undefined ? {} : { 'aria-label': saveName })}
-      className="primary-action"
-      disabled={saveDisabled}
-      onClick={onSave}
-      type="button"
-    >
-      Save
-    </button>
+  const actions = (
+    <>
+      <EditorDialogFinding blocking={saveDisabled} issues={issues} />
+      {onReset === undefined ? null : (
+        <EditorDialogIconAction
+          disabled={resetDisabled}
+          icon="reset"
+          label="Reset"
+          onClick={onReset}
+        />
+      )}
+      {onCancel === undefined ? null : (
+        <EditorDialogIconAction dismiss icon="close" label="Cancel" onClick={onCancel} />
+      )}
+      <button
+        {...(saveName === undefined ? {} : { 'aria-label': saveName })}
+        className="primary-action"
+        disabled={saveDisabled}
+        onClick={onSave}
+        type="button"
+      >
+        Save
+      </button>
+    </>
   );
-  if (slot !== undefined)
-    return (
-      <>
-        {slot === null
-          ? null
-          : createPortal(
-              <>
-                <EditorDialogFinding blocking={saveDisabled} issues={issues} />
-                {reset}
-                {cancel}
-                {save}
-              </>,
-              slot,
-            )}
-        {secondary === undefined ? null : (
-          <div className="editor-dialog-secondary-actions">{secondary}</div>
-        )}
-      </>
-    );
-  return (
-    <EditorDialogFooter secondary={secondary}>
-      {reset}
-      {cancel}
-      {save}
-    </EditorDialogFooter>
-  );
+  if (slot === undefined) return actions;
+  return slot === null ? null : createPortal(actions, slot);
 }

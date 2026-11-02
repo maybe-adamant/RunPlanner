@@ -224,7 +224,6 @@ export function DraftBasketDialog({
           ))}
         </div>
       }
-      layout="header"
       model={{ kind: 'draft', onCancel: onClose }}
       returnFocusId={returnFocusId}
       size="cards"

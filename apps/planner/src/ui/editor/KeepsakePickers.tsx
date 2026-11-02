@@ -257,7 +257,7 @@ function KeepsakeSelectionDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedAssessmentLoadable]);
   const issuesOf = (domain: EquipDomain | undefined): EditorDialogIssue[] =>
-    (domain?.picker.selected?.explanations ?? []).map((reason) => [reason, reason] as const);
+    (domain?.selectedFindings ?? []).map(({ code, message }) => [code, message] as const);
   const draftIssues = issuesOf(draftAssessment.result);
   // A drafted keepsake that opens an outcome is incomplete until the outcome is chosen.
   const incomplete = !keepsSaved && outcome !== undefined && outcomeValue === undefined;

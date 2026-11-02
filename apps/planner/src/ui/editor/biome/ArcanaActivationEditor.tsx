@@ -79,14 +79,14 @@ export function ArcanaActivationEditor({
       (finding) =>
         [semanticFindingKey(finding), formatFindingExplanation(presentFinding(finding))] as const,
     );
-  const draftEntries =
+  const draftAssessed =
     !atRest && (assessed?.kind === 'judgmentArcana' || assessed?.kind === 'figurineArcana')
-      ? entriesOf(assessed.result.findings)
-      : [];
+      ? assessed.result
+      : undefined;
+  const draftEntries = entriesOf(draftAssessed?.findings);
   const feedbackEntries = atRest ? findingEntries : draftEntries;
   return (
     <EditorDialog
-      layout="header"
       model={{ kind: 'draft', onCancel: onClose }}
       {...(returnFocusId === undefined ? {} : { returnFocusId })}
       size="cards"
@@ -105,9 +105,12 @@ export function ArcanaActivationEditor({
           onClose();
         }}
         resetDisabled={draft.length === 0}
-        // An incomplete draw or a finding this draft introduced blocks Save; inherited findings do not.
+        // An unchanged, incomplete or still-assessing draw, or a finding it introduced, blocks
+        // Save; inherited findings do not.
         saveDisabled={
+          atRest ||
           domain === undefined ||
+          draftAssessed === undefined ||
           draft.length < requiredCount ||
           introducesIssue(draftEntries, entriesOf(domain.findings))
         }

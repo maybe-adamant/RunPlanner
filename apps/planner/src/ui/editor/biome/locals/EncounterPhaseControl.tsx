@@ -184,7 +184,6 @@ function EncounterCustomizationDialog({
   const savedComposition = interaction.generatedComposition ?? phase.composition;
   return (
     <EditorDialog
-      layout="header"
       model={{ kind: 'draft', onCancel: onClose }}
       returnFocusId={customizationId}
       size="narrow"
@@ -446,7 +445,6 @@ function EncounterCustomizationControl({
       ) : composition === undefined ? null : (
         // A fixed roster has nothing to edit: a read-only view that closes from its title row.
         <EditorDialog
-          layout="header"
           model={{ kind: 'view', onClose: close }}
           returnFocusId={customizationId}
           size="narrow"

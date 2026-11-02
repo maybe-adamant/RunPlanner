@@ -111,7 +111,6 @@ export function KeepsakeRackDialog({
               />
             ),
           })}
-      layout="header"
       model={{ kind: 'draft', onCancel }}
       returnFocusId={returnFocusId}
       size="cards"

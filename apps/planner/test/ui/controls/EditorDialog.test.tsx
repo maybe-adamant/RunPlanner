@@ -15,7 +15,6 @@ import {
 import {
   EditorDialog,
   EditorDialogDraftActions,
-  EditorDialogFeedback,
   type EditorDialogModel,
 } from '@planner/ui/controls/EditorDialog';
 import { ProjectHistoryControls } from '@planner/ui/project/ProjectHistoryControls';
@@ -47,13 +46,14 @@ function Host({
       <button type="button">Elsewhere</button>
       {open ? (
         <EditorDialog
-          eyebrow="Eyebrow"
-          footer={<EditorDialogDraftActions onCancel={close} onSave={close} saveDisabled={false} />}
           {...(initialFocusId === undefined ? {} : { initialFocusId })}
           model={kind === 'draft' ? { kind, onCancel: close } : { kind, onClose: close }}
           returnFocusId="editor-launcher"
           title="Editor"
         >
+          {kind === 'draft' ? (
+            <EditorDialogDraftActions onCancel={close} onSave={close} saveDisabled={false} />
+          ) : null}
           <button disabled type="button">
             Waiting control
           </button>
@@ -109,45 +109,35 @@ describe('editor dialog contract', () => {
     },
   );
 
-  it('focuses the footer dismiss action, never Save or Clear, while the body has no enabled control', () => {
+  it('focuses the title-bar dismiss action, never Save, while the body has no enabled control', () => {
     const application = createApplication();
     render(
       <Provider store={application.store}>
-        <EditorDialog
-          eyebrow="Eyebrow"
-          footer={
-            <EditorDialogDraftActions
-              onCancel={() => undefined}
-              onSave={() => undefined}
-              saveDisabled={false}
-              secondary={<button type="button">Clear</button>}
-            />
-          }
-          model={{ kind: 'draft', onCancel: () => undefined }}
-          title="Editor"
-        >
+        <EditorDialog model={{ kind: 'draft', onCancel: () => undefined }} title="Editor">
+          <EditorDialogDraftActions
+            onCancel={() => undefined}
+            onSave={() => undefined}
+            saveDisabled={false}
+          />
           <p>Loading choices…</p>
         </EditorDialog>
       </Provider>,
     );
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }));
-    // The footer is the only visible exit; the header carries no Close.
-    expect(screen.getByRole('dialog').querySelector('header button')).toBeNull();
     application.dispose();
   });
 
-  it('puts the first finding, its count of more, Cancel and Save on a header-layout title bar', async () => {
+  it('puts the first finding, its count of more, Cancel and Save on the title bar', async () => {
     const application = createApplication();
     const onCancel = vi.fn();
     const actions = (issues: readonly (readonly [string, string])[]) => (
       <Provider store={application.store}>
-        <EditorDialog layout="header" model={{ kind: 'draft', onCancel }} title="Editor">
+        <EditorDialog model={{ kind: 'draft', onCancel }} title="Editor">
           <EditorDialogDraftActions
             issues={issues}
             onCancel={onCancel}
             onSave={() => undefined}
             saveDisabled={issues.length > 0}
-            secondary={<button type="button">Clear</button>}
           />
         </EditorDialog>
       </Provider>
@@ -163,9 +153,6 @@ describe('editor dialog contract', () => {
     const finding = within(header).getByRole('button', { name: 'First issue (2 more)' });
     expect(finding.textContent).toContain('+2');
     expect(within(header).getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
-    // Secondary actions stay in the body.
-    expect(within(header).queryByRole('button', { name: 'Clear' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Clear' })).toBeTruthy();
     await userEvent.setup().click(within(header).getByRole('button', { name: 'Cancel' }));
     expect(onCancel).toHaveBeenCalledTimes(1);
     view.rerender(actions([]));
@@ -174,32 +161,12 @@ describe('editor dialog contract', () => {
     application.dispose();
   });
 
-  it('titles every findings region Feedback and names coexisting regions apart', () => {
-    render(
-      <>
-        <EditorDialogFeedback name="Offer feedback" />
-        <EditorDialogFeedback
-          entries={[['stone', 'Choose a Stone target.']]}
-          name="Circe feedback"
-        />
-      </>,
-    );
-    const outer = screen.getByRole('status', { name: 'Offer feedback' });
-    const inner = screen.getByRole('status', { name: 'Circe feedback' });
-    expect(outer.querySelector('h3')?.textContent).toBe('Feedback');
-    expect(inner.querySelector('h3')?.textContent).toBe('Feedback');
-    expect(outer.textContent).toContain('No current findings.');
-    expect(inner.textContent).not.toContain('No current findings.');
-    expect(inner.textContent).toContain('Choose a Stone target.');
-  });
-
   it('offers Save and Cancel for a draft and only Close for a view', async () => {
     const draft = renderHost('draft');
     await draft.user.click(screen.getByRole('button', { name: 'Open editor' }));
-    const draftFooter = screen.getByRole('dialog').querySelector('footer')!;
     expect(
       Array.from(
-        draftFooter.querySelectorAll('button'),
+        screen.getByRole('dialog').querySelectorAll('header button'),
         (button) => button.ariaLabel ?? button.textContent,
       ),
     ).toEqual(['Cancel', 'Save']);
@@ -210,7 +177,6 @@ describe('editor dialog contract', () => {
     const view = renderHost('view');
     await view.user.click(screen.getByRole('button', { name: 'Open editor' }));
     const dialog = screen.getByRole('dialog');
-    expect(dialog.querySelector('footer')).toBeNull();
     expect(
       Array.from(dialog.querySelectorAll('header button'), (button) => button.ariaLabel),
     ).toEqual(['Close']);

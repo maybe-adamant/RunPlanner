@@ -25,8 +25,16 @@ export function AspectHexTreeDialog({
   readonly returnFocusId: string;
 }) {
   const executeIntent = useCommandIntent();
-  const [draft, setDraft] = useState(control.value);
-  const atRest = draftValueIdentity(draft) === draftValueIdentity(control.value);
+  // A changed saved tree replaces the draft; a changed context keeps it.
+  const valueIdentity = draftValueIdentity(control.value);
+  const [draftState, setDraftState] = useState(() => ({
+    identity: valueIdentity,
+    tree: control.value,
+  }));
+  const draft = draftState.identity === valueIdentity ? draftState.tree : control.value;
+  const setDraft = (tree: typeof control.value): void =>
+    setDraftState({ identity: valueIdentity, tree });
+  const atRest = draftValueIdentity(draft) === valueIdentity;
   const saved = useWorkspaceInteraction(control);
   const activateSaved = saved.activate;
   useEffect(() => {
@@ -56,7 +64,6 @@ export function AspectHexTreeDialog({
   return (
     <EditorDialog
       icon={<ArtworkIcon className="artwork-label-icon" source={traitIcon('SpellMoonBeamTrait')} />}
-      layout="header"
       model={{ kind: 'draft', onCancel: onClose }}
       returnFocusId={returnFocusId}
       size="hexTree"
@@ -86,9 +93,13 @@ export function AspectHexTreeDialog({
           onClose();
         }}
         resetDisabled={domain === undefined}
-        // A conflict this draft introduced blocks Save; inherited conflicts do not.
+        // Save waits for both trees to load; a conflict this draft introduced blocks it,
+        // inherited conflicts do not.
         saveDisabled={
-          atRest || domain === undefined || introducesIssue(issues, saved.result?.treeIssues ?? [])
+          atRest ||
+          domain === undefined ||
+          saved.result === undefined ||
+          introducesIssue(issues, saved.result.treeIssues)
         }
       />
       {domain === undefined ? (

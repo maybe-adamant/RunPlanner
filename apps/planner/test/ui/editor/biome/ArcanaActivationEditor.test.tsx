@@ -137,4 +137,84 @@ describe('Arcana activation editor', () => {
     await waitFor(() => expect(save().disabled).toBe(true));
     application.dispose();
   });
+
+  function twoCardControl(
+    loadDraft: (draft: readonly string[]) => unknown,
+  ): WorkspaceJudgmentArcanaInteraction {
+    const owner = createJudgmentArcanaAddress(
+      createOccurrenceAddress(createBiomeAddress('Underworld', 'F'), createOccurrenceId('boss')),
+      'Encounter',
+    );
+    const evaluation = {
+      kind: 'judgmentArcana',
+      result: {
+        activeArcana: [],
+        inactiveArcanaKeys: ['ArcanaA', 'ArcanaB'],
+        rarity: 'Common',
+        selectedPossible: true,
+        findings: [],
+      },
+    } as unknown as CandidateProjectionEvaluation;
+    return {
+      choices: [
+        { value: 'ArcanaA', label: 'Arcana A' },
+        { value: 'ArcanaB', label: 'Arcana B' },
+      ],
+      intentFor: () => ({ command: { kind: 'ReplaceJudgmentArcana' } }) as never,
+      key: 'judgment',
+      // The saved draw loads without an argument; an edited draw passes itself.
+      load: ((draft?: readonly string[]) =>
+        draft === undefined ? evaluation : loadDraft(draft)) as never,
+      owner,
+      value: ['ArcanaA'],
+    };
+  }
+
+  function renderEditor(control: WorkspaceJudgmentArcanaInteraction) {
+    const application = createApplication();
+    render(
+      <Provider store={application.store}>
+        <ArcanaActivationEditor
+          control={control}
+          onClose={() => undefined}
+          requiredCount={1}
+          title="Judgment editor"
+        />
+      </Provider>,
+    );
+    return application;
+  }
+
+  it('saves only a draw that differs from the saved one', async () => {
+    const application = renderEditor(
+      twoCardControl(() => ({
+        kind: 'judgmentArcana',
+        result: {
+          activeArcana: [],
+          inactiveArcanaKeys: ['ArcanaA', 'ArcanaB'],
+          rarity: 'Common',
+          selectedPossible: true,
+          findings: [],
+        },
+      })),
+    );
+    const user = userEvent.setup();
+    const save = () => screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement;
+    await user.click(await screen.findByRole('button', { name: /Arcana A/ }));
+    await user.click(screen.getByRole('button', { name: /Arcana B/ }));
+    await waitFor(() => expect(save().disabled).toBe(false));
+    await user.click(screen.getByRole('button', { name: /Arcana B/ }));
+    await user.click(screen.getByRole('button', { name: /Arcana A/ }));
+    await waitFor(() => expect(save().disabled).toBe(true));
+    application.dispose();
+  });
+
+  it('keeps Save disabled while the edited draw is still being assessed', async () => {
+    const application = renderEditor(twoCardControl(() => new Promise(() => undefined)));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /Arcana A/ }));
+    await user.click(screen.getByRole('button', { name: /Arcana B/ }));
+    expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(true);
+    application.dispose();
+  });
 });
