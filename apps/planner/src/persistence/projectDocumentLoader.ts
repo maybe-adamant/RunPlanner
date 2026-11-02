@@ -1,4 +1,5 @@
 import {
+  fillSchema100NemesisBetOutcomes,
   parseProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
@@ -87,7 +88,7 @@ export function loadProjectDocument(
         `Project schema ${envelope.schemaVersion}.${revision} is newer than supported schema ${PROJECT_DOCUMENT_SCHEMA_VERSION}.${PROJECT_DOCUMENT_SCHEMA_REVISION}.`,
       );
     }
-    const normalized = normalizeUnpushedSchema100(parsed);
+    const normalized = fillSchema100NemesisBetOutcomes(normalizeUnpushedSchema100(parsed), catalog);
     return currentProject(normalized === parsed ? json : JSON.stringify(normalized), catalog);
   }
 
@@ -115,7 +116,7 @@ export function loadProjectDocument(
     transitions: productionTransitions,
     context: options.legacyName === undefined ? {} : { name: options.legacyName },
   });
-  const migratedJson = JSON.stringify(migrated.document);
+  const migratedJson = JSON.stringify(fillSchema100NemesisBetOutcomes(migrated.document, catalog));
   if (migratedJson === undefined) {
     throw new Error('Project migration result must be JSON serializable.');
   }

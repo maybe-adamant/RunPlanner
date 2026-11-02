@@ -10,6 +10,7 @@ import {
   createRouteAddress,
   DEFAULT_PROJECT_NAME,
   encodeProjectDocument,
+  fillSchema100NemesisBetOutcomes,
   parseProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_REVISION,
 } from '@run-planner/engine/authored-project';
@@ -79,6 +80,58 @@ describe('project document loader', () => {
       const json = JSON.stringify({ ...project, schemaRevision: revision });
       expect(loadProjectDocument(json, catalog)).toEqual({ migrationProvenance: [], project });
     }
+  });
+
+  it('fills each unstored Nemesis kill race of a schema-100 or migrated document with a win', () => {
+    const phase = (occurrenceId: ReturnType<typeof goldenFOccurrenceId>) =>
+      createEncounterPhaseAddress(goldenFBiome, { kind: 'occurrence', occurrenceId }, 'Encounter');
+    let current = createGoldenFGHIProject();
+    for (const [occurrenceId, value] of [
+      [goldenFOccurrenceId(5, 1), 'tie'],
+      [goldenFOccurrenceId(4, 1), 'win'],
+    ] as const) {
+      current = applyProjectCommand(current, catalog, {
+        kind: 'SelectEncounter',
+        phase: phase(occurrenceId),
+        encounterKey: 'NemesisCombatF',
+      });
+      current = applyProjectCommand(current, catalog, {
+        kind: 'ReplaceNemesisBetOutcome',
+        phase: phase(occurrenceId),
+        value,
+      });
+    }
+    // Earlier schema-100 saves stored a win by omission.
+    const sparse = JSON.parse(encodeProjectDocument(current), (key, value: unknown) => {
+      if (key !== 'nemesisBetOutcomeByPhase') return value;
+      const kept = Object.entries(value as Record<string, string>).filter(
+        ([, outcome]) => outcome !== 'win',
+      );
+      return kept.length === 0 ? undefined : Object.fromEntries(kept);
+    }) as Record<string, unknown>;
+    expect(JSON.stringify(sparse)).toContain('"nemesisBetOutcomeByPhase":{"Encounter":"tie"}');
+    expect(() => parseProjectDocument(JSON.stringify(sparse), catalog)).toThrow(
+      /nemesisBetOutcomeByPhase: must be an object/,
+    );
+    expect(loadProjectDocument(JSON.stringify(sparse), catalog)).toEqual({
+      migrationProvenance: [],
+      project: current,
+    });
+
+    const won = applyProjectCommand(current, catalog, {
+      kind: 'ReplaceNemesisBetOutcome',
+      phase: phase(goldenFOccurrenceId(5, 1)),
+      value: 'win',
+    });
+    const legacy = legacySchema99Body(JSON.parse(encodeProjectDocument(won))) as Record<
+      string,
+      unknown
+    >;
+    expect(JSON.stringify(legacy)).not.toContain('nemesisBetOutcomeByPhase');
+    legacy.schemaVersion = 99;
+    const migrated = loadProjectDocument(JSON.stringify(legacy), catalog);
+    expect(migrated.migrationProvenance).toHaveLength(1);
+    expect(migrated.project).toEqual(won);
   });
 
   it('runs transitions across majors without carrying an older major revision forward', () => {
@@ -565,7 +618,10 @@ describe('project document loader', () => {
       }),
     ) as Record<string, unknown>;
     expect(() =>
-      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 100 }), catalog),
+      parseProjectDocument(
+        JSON.stringify(fillSchema100NemesisBetOutcomes({ ...legacy, schemaVersion: 100 }, catalog)),
+        catalog,
+      ),
     ).toThrow(/weights/);
     const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
 

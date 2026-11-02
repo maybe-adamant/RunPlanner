@@ -234,7 +234,7 @@ describe('gold ledger walk', () => {
     const project = fixture('fg-npc-shopping-protection');
     const g = createBiomeAddress('Underworld', 'G');
     const nemesisRoom = createOccurrenceAddress(g, 'golden-g-b4-e1' as never);
-    const betWith = (value: 'win' | 'tie' | 'loss' | null) =>
+    const betWith = (value: 'win' | 'tie' | 'loss') =>
       gains(
         ledger(
           applyProjectCommand(project, catalog, {
@@ -249,9 +249,9 @@ describe('gold ledger walk', () => {
         ),
         nemesisRoom,
       ).find(([kind]) => kind === 'nemesisBet')?.[1] as number;
-    const unauthored = gains(ledger(project), nemesisRoom).find(([kind]) => kind === 'nemesisBet');
-    expect(unauthored?.[1]).toBeGreaterThan(0);
-    expect(betWith('win')).toBe(unauthored?.[1]);
+    const defaulted = gains(ledger(project), nemesisRoom).find(([kind]) => kind === 'nemesisBet');
+    expect(defaulted?.[1]).toBeGreaterThan(0);
+    expect(betWith('win')).toBe(defaulted?.[1]);
     expect(betWith('tie')).toBe(0);
     expect(betWith('loss')).toBeLessThan(0);
     expect(betWith('loss')).toBeGreaterThanOrEqual(-100);

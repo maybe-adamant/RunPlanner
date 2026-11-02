@@ -18,6 +18,7 @@ describe('encounter reconciliation', () => {
       }),
       figLeafSkipByPhase: previousDefault.figLeafSkipByPhase,
       gorgonResultByPhase: previousDefault.gorgonResultByPhase,
+      nemesisBetOutcomeByPhase: previousDefault.nemesisBetOutcomeByPhase,
     });
 
     expect(
@@ -44,6 +45,7 @@ describe('encounter reconciliation', () => {
         Combat: false,
       },
       gorgonResultByPhase: replacementDefault.gorgonResultByPhase,
+      nemesisBetOutcomeByPhase: replacementDefault.nemesisBetOutcomeByPhase,
     });
   });
 });

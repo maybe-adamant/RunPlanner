@@ -9,12 +9,18 @@ function record(value: unknown): Json | undefined {
 const ENTRY_KEY = 'infernalContractReward';
 
 /**
- * One occurrence in its schema-99 shape: no phantom exit, and a Shop-form
- * pedestal returns to the Shop inventory.
+ * One occurrence in its schema-99 shape: no phantom exit, no Nemesis kill-race
+ * outcomes, and a Shop-form pedestal returns to the Shop inventory.
  */
 function legacyOccurrence(occurrence: Json): Json {
   const copy: Json = { ...occurrence };
   delete copy.phantomExit;
+  const encounters = record(copy.encounters);
+  if (encounters !== undefined) {
+    const legacyEncounters = { ...encounters };
+    delete legacyEncounters.nemesisBetOutcomeByPhase;
+    copy.encounters = legacyEncounters;
+  }
   const pedestal = copy.infernalContractPedestal;
   delete copy.infernalContractPedestal;
   const state = record(copy.state);

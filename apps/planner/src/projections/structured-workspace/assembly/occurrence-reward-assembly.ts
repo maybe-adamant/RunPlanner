@@ -1,4 +1,7 @@
-import type { ResolvedRoutePosition } from '@run-planner/engine/authored-project';
+import type {
+  AuthoredNemesisBetOutcome,
+  ResolvedRoutePosition,
+} from '@run-planner/engine/authored-project';
 import { generatedEnemyLabel } from '@planner/projections/encounterIssueCopy';
 import {
   projectEncounterComposition,
@@ -1263,9 +1266,7 @@ export function activeEncounterPhasesForOwner(
           : {
               nemesisBet: Object.freeze({
                 interactionKey: semanticAddressKey(address),
-                ...(encounters.nemesisBetOutcomeByPhase?.[domain.slotKey] === undefined
-                  ? {}
-                  : { outcome: encounters.nemesisBetOutcomeByPhase[domain.slotKey] }),
+                outcome: requiredNemesisBetOutcome(encounters, domain.slotKey),
               }),
             }),
         // Fig Leaf appears where the engine supports a skip or a skip is authored.
@@ -1306,4 +1307,16 @@ export function activeEncounterPhasesForOwner(
     );
   }
   return Object.freeze(phases);
+}
+
+function requiredNemesisBetOutcome(
+  encounters: RoomOccurrence['encounters'],
+  phaseKey: string,
+): AuthoredNemesisBetOutcome {
+  const outcome = encounters.nemesisBetOutcomeByPhase[phaseKey];
+  if (outcome === undefined)
+    throw new StructuredWorkspaceProjectionContractError(
+      `${phaseKey} authors a Nemesis bet without an authored outcome`,
+    );
+  return outcome;
 }

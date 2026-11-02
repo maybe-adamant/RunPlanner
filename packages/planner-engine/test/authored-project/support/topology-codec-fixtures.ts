@@ -314,6 +314,7 @@ export function incompleteZagreusEnvelopeProject(): ProjectDocument {
       encounterKeyByPhase: {},
       figLeafSkipByPhase: { Encounter: false },
       gorgonResultByPhase: {},
+      nemesisBetOutcomeByPhase: {},
     },
     roomActions: { order: [] },
     additionalExits: [],

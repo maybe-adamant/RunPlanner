@@ -90,7 +90,8 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
-                }
+                },
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": []
@@ -129,7 +130,8 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
-                }
+                },
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": []

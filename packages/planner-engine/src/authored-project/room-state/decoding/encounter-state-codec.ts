@@ -54,10 +54,10 @@ export function decodeRoomEncounterState(
       'encounterKeyByPhase',
       'figLeafSkipByPhase',
       'gorgonResultByPhase',
+      'nemesisBetOutcomeByPhase',
       ...(state.aetosWaveByPhase === undefined ? [] : ['aetosWaveByPhase']),
       ...(state.traitOffersByPhase === undefined ? [] : ['traitOffersByPhase']),
       ...(state.nemesisRandomEventByPhase === undefined ? [] : ['nemesisRandomEventByPhase']),
-      ...(state.nemesisBetOutcomeByPhase === undefined ? [] : ['nemesisBetOutcomeByPhase']),
       ...(state.customizationByPhase === undefined ? [] : ['customizationByPhase']),
       ...(state.judgmentArcanaKeysByPhase === undefined ? [] : ['judgmentArcanaKeysByPhase']),
       ...(state.figurineArcanaKeysByPhase === undefined ? [] : ['figurineArcanaKeysByPhase']),
@@ -109,22 +109,27 @@ export function decodeRoomEncounterState(
       );
     }
   }
-  const nemesisBetOutcomeByPhase: Record<string, Exclude<AuthoredNemesisBetOutcome, 'win'>> = {};
-  if (state.nemesisBetOutcomeByPhase !== undefined) {
-    for (const [phaseKey, outcome] of Object.entries(
-      expectRecord(state.nemesisBetOutcomeByPhase, `${path}.nemesisBetOutcomeByPhase`),
-    )) {
-      const label = `${path}.nemesisBetOutcomeByPhase.${phaseKey}`;
-      const binding = bindings.get(phaseKey);
-      if (binding === undefined) failProjectDocument(label, 'unknown encounter phase');
-      if (!encounterBindingHostsNemesisBet(catalog, binding, label))
-        failProjectDocument(label, 'phase cannot host a Nemesis bet combat');
-      const value = expectString(outcome, label);
-      if (value === 'win') failProjectDocument(label, 'must omit the default win');
-      if (!(NEMESIS_BET_OUTCOMES as readonly string[]).includes(value))
-        failProjectDocument(label, 'must be tie or loss');
-      nemesisBetOutcomeByPhase[phaseKey] = value as Exclude<AuthoredNemesisBetOutcome, 'win'>;
-    }
+  const rawBetOutcomes = expectRecord(
+    state.nemesisBetOutcomeByPhase,
+    `${path}.nemesisBetOutcomeByPhase`,
+  );
+  const betHostingPhaseKeys = [...bindings.values()]
+    .filter((binding) =>
+      encounterBindingHostsNemesisBet(
+        catalog,
+        binding,
+        `${path}.nemesisBetOutcomeByPhase.${binding.slotKey}`,
+      ),
+    )
+    .map((binding) => binding.slotKey);
+  expectExactKeys(rawBetOutcomes, betHostingPhaseKeys, `${path}.nemesisBetOutcomeByPhase`);
+  const nemesisBetOutcomeByPhase: Record<string, AuthoredNemesisBetOutcome> = {};
+  for (const phaseKey of betHostingPhaseKeys) {
+    const label = `${path}.nemesisBetOutcomeByPhase.${phaseKey}`;
+    const value = expectString(rawBetOutcomes[phaseKey], label);
+    if (!(NEMESIS_BET_OUTCOMES as readonly string[]).includes(value))
+      failProjectDocument(label, 'must be win, tie or loss');
+    nemesisBetOutcomeByPhase[phaseKey] = value as AuthoredNemesisBetOutcome;
   }
   const judgmentArcanaKeysByPhase: Record<string, readonly string[]> = {};
   if (state.judgmentArcanaKeysByPhase !== undefined) {
@@ -468,15 +473,13 @@ export function decodeRoomEncounterState(
       ? {}
       : { figurineArcanaKeysByPhase: Object.freeze(figurineArcanaKeysByPhase) }),
     gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
+    nemesisBetOutcomeByPhase: Object.freeze(nemesisBetOutcomeByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}
       : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),
     ...(Object.keys(nemesisRandomEventByPhase).length === 0
       ? {}
       : { nemesisRandomEventByPhase: Object.freeze(nemesisRandomEventByPhase) }),
-    ...(Object.keys(nemesisBetOutcomeByPhase).length === 0
-      ? {}
-      : { nemesisBetOutcomeByPhase: Object.freeze(nemesisBetOutcomeByPhase) }),
     ...(Object.keys(customizationByPhase).length === 0
       ? {}
       : { customizationByPhase: Object.freeze(customizationByPhase) }),

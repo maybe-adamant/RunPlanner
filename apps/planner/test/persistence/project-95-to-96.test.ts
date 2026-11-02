@@ -6,6 +6,7 @@ import {
   createProjectDocument,
   decodeProjectDocument,
   encodeProjectDocument,
+  fillSchema100NemesisBetOutcomes,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
@@ -67,8 +68,11 @@ function withoutChain(project: ProjectDocument): Encoded {
 
 function migrated(project: ProjectDocument): ProjectDocument {
   return decodeProjectDocument(
-    migrate99To100(
-      migrate98To99(migrate97To98(migrate96To97(migrateProjectDocument(withoutChain(project))))),
+    fillSchema100NemesisBetOutcomes(
+      migrate99To100(
+        migrate98To99(migrate97To98(migrate96To97(migrateProjectDocument(withoutChain(project))))),
+      ),
+      catalog,
     ) as never,
     catalog,
   );
@@ -195,7 +199,10 @@ describe('schema 95 to 96 completed-Hub chain migration', () => {
     expect(
       encodeProjectDocument(
         decodeProjectDocument(
-          migrate99To100(migrate98To99(migrate97To98(migrate96To97(result)))) as never,
+          fillSchema100NemesisBetOutcomes(
+            migrate99To100(migrate98To99(migrate97To98(migrate96To97(result)))),
+            catalog,
+          ) as never,
           catalog,
         ),
       ),

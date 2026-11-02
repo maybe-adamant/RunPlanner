@@ -75,6 +75,7 @@ export {
   parseProjectDocument,
   ProjectDocumentContractError,
 } from './codec';
+export { fillSchema100NemesisBetOutcomes } from './room-state/decoding/nemesis-bet-outcome-fill';
 export {
   createEmptyProjectDocument,
   createProjectDocument,

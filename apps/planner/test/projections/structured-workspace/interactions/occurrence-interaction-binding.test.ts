@@ -100,20 +100,20 @@ describe('structured workspace interaction binding', () => {
       phase,
       encounterKey: 'NemesisCombatF',
     });
-    const unstored = bind(nemesis, 'Underworld', 'F');
+    const defaulted = bind(nemesis, 'Underworld', 'F');
     expect(
-      [...unstored.assembly.occurrenceInteractionRequirements.values()].some(
+      [...defaulted.assembly.occurrenceInteractionRequirements.values()].some(
         (requirement) =>
           requirement.kind === 'encounterPhases' &&
           requirement.phases.some(
             (entry) =>
               semanticAddressKey(entry.owner) === key &&
               entry.nemesisBet !== undefined &&
-              entry.nemesisBet.outcome === undefined,
+              entry.nemesisBet.outcome === 'win',
           ),
       ),
     ).toBe(true);
-    const interaction = unstored.interactions.nemesisBets.get(key);
+    const interaction = defaulted.interactions.nemesisBets.get(key);
     expect(interaction?.outcome).toBe('win');
     expect(interaction?.choices.map((choice) => choice.label)).toEqual(['Win', 'Tie', 'Loss']);
     expect(interaction?.intentFor('loss').command).toEqual({

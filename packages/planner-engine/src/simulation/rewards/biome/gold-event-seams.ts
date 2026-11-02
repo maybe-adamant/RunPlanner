@@ -954,7 +954,11 @@ export function withGoldEvents(
           encounterKey === undefined
             ? undefined
             : catalog.encounterDefinitions.byKey[encounterKey]?.goldBet;
-        if (bet !== undefined)
+        const outcome =
+          bet === undefined ? undefined : room.encounters.nemesisBetOutcomeByPhase[event.phaseKey];
+        if (bet !== undefined && outcome === undefined)
+          throw new Error(`${event.phaseKey} fielded a Nemesis bet without an authored outcome`);
+        if (bet !== undefined && outcome !== undefined)
           detect(
             index,
             `nemesisBet:${event.phaseKey}`,
@@ -967,7 +971,7 @@ export function withGoldEvents(
               gain: {
                 kind: 'nemesisBet',
                 maxBet: bet.maxBet,
-                outcome: room.encounters.nemesisBetOutcomeByPhase?.[event.phaseKey] ?? 'win',
+                outcome,
               },
             },
           );

@@ -10,7 +10,7 @@ import { routeBindsRunStartReward, routeRoomDeclaration } from '../route-profile
  */
 export function resolveEntryDeclaration(
   declaration: RoomDeclaration,
-  routePosition: ResolvedRoutePosition,
+  routePosition: Pick<ResolvedRoutePosition, 'routeKey' | 'isFirst'>,
 ): RoomDeclaration {
   const routed = routeRoomDeclaration(declaration, routePosition.routeKey);
   const contextualEncounter = routed.entryContextualEncounterRules?.find(

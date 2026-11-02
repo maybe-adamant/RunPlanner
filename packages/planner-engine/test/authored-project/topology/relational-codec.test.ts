@@ -323,7 +323,12 @@ describe('topology relational closure codec', () => {
       occurrenceId: 'f-width-one-target',
       gameName: 'F_Combat02',
       state: { kind: 'counted', offer: { rewardType: 'Boon' } },
-      encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {}, gorgonResultByPhase: {} },
+      encounters: {
+        encounterKeyByPhase: {},
+        figLeafSkipByPhase: {},
+        gorgonResultByPhase: {},
+        nemesisBetOutcomeByPhase: {},
+      },
       roomActions: { order: [] },
       additionalExits: [],
     });
@@ -386,7 +391,12 @@ describe('topology relational closure codec', () => {
       occurrenceId: 'orphan',
       gameName: 'F_Combat02',
       state: { kind: 'counted', offer: { rewardType: 'Boon' } },
-      encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {}, gorgonResultByPhase: {} },
+      encounters: {
+        encounterKeyByPhase: {},
+        figLeafSkipByPhase: {},
+        gorgonResultByPhase: {},
+        nemesisBetOutcomeByPhase: {},
+      },
       roomActions: { order: [] },
       additionalExits: [],
     });

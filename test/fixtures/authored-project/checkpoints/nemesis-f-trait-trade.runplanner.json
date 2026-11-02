@@ -105,7 +105,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -146,6 +147,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -212,6 +216,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -253,6 +260,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -294,6 +304,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -335,6 +348,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -386,6 +402,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -427,6 +446,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -468,6 +490,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 },
                 "nemesisRandomEventByPhase": {
                   "Encounter": {
@@ -537,6 +562,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -597,7 +625,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -638,7 +667,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -679,6 +709,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -738,6 +771,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -781,6 +817,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -822,6 +861,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -869,6 +911,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -910,6 +955,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -990,6 +1038,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -1067,7 +1118,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": []
@@ -1112,7 +1164,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -1140,7 +1193,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -1162,7 +1216,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -1532,7 +1587,8 @@
               "encounters": {
                 "encounterKeyByPhase": {},
                 "figLeafSkipByPhase": {},
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": []
@@ -1567,6 +1623,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -1613,6 +1672,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -1654,6 +1716,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -1686,6 +1751,7 @@
                   "Encounter": false
                 },
                 "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {},
                 "traitOffersByPhase": {
                   "Encounter": {
                     "Story_Narcissus_01": {
@@ -1769,6 +1835,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -1810,6 +1879,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -1851,6 +1923,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -1928,7 +2003,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": []
@@ -1973,6 +2049,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -2033,7 +2112,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -2074,7 +2154,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -2140,6 +2221,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -2181,6 +2265,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -2258,7 +2345,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": []
@@ -2303,7 +2391,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -2331,7 +2420,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -2353,7 +2443,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -2641,7 +2732,8 @@
               "encounters": {
                 "encounterKeyByPhase": {},
                 "figLeafSkipByPhase": {},
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": []
@@ -2761,6 +2853,11 @@
                   "Cage03": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Cage01": "win",
+                  "Cage02": "win",
+                  "Cage03": "win"
                 }
               },
               "roomActions": {
@@ -2937,6 +3034,11 @@
                   "Cage03": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Cage01": "win",
+                  "Cage02": "win",
+                  "Cage03": "win"
                 }
               },
               "roomActions": {
@@ -3097,6 +3199,11 @@
                   "Cage03": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Cage01": "win",
+                  "Cage02": "win",
+                  "Cage03": "win"
                 }
               },
               "roomActions": {
@@ -3170,7 +3277,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -3202,6 +3310,7 @@
                   "Encounter": false
                 },
                 "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {},
                 "traitOffersByPhase": {
                   "Encounter": {
                     "Story_Echo_01": null
@@ -3377,6 +3486,11 @@
                   "Cage03": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Cage01": "win",
+                  "Cage02": "win",
+                  "Cage03": "win"
                 }
               },
               "roomActions": {
@@ -3508,6 +3622,11 @@
                   "Cage03": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Cage01": "win",
+                  "Cage02": "win",
+                  "Cage03": "win"
                 }
               },
               "roomActions": {
@@ -3607,7 +3726,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": []
@@ -3652,7 +3772,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -3680,7 +3801,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -3702,7 +3824,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -3908,7 +4031,8 @@
               "encounters": {
                 "encounterKeyByPhase": {},
                 "figLeafSkipByPhase": {},
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": []
@@ -3933,6 +4057,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -3958,6 +4085,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -3984,6 +4114,7 @@
                   "Encounter": false
                 },
                 "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {},
                 "traitOffersByPhase": {
                   "Encounter": {
                     "Story_Hades_01": null
@@ -4018,6 +4149,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -4053,6 +4187,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -4084,6 +4221,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -4109,6 +4249,9 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
+                },
+                "nemesisBetOutcomeByPhase": {
+                  "Encounter": "win"
                 }
               },
               "roomActions": {
@@ -4209,7 +4352,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": []
@@ -4253,7 +4397,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [
@@ -4277,7 +4422,8 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "gorgonResultByPhase": {}
+                "gorgonResultByPhase": {},
+                "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
                 "order": [

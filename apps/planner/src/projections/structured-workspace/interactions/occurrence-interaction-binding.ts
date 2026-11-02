@@ -822,9 +822,9 @@ export function bindOccurrenceLocalInteractions(
               Object.freeze({
                 key,
                 owner: phase.owner,
-                outcome: phase.nemesisBet.outcome ?? 'win',
+                outcome: phase.nemesisBet.outcome,
                 choices: nemesisBetChoices,
-                intentFor: (value: AuthoredNemesisBetOutcome | null) =>
+                intentFor: (value: AuthoredNemesisBetOutcome) =>
                   Object.freeze({
                     command: Object.freeze({
                       kind: 'ReplaceNemesisBetOutcome' as const,

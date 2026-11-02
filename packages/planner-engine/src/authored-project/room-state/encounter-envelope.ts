@@ -217,8 +217,11 @@ export function createDefaultRoomEncounterState(
   const values: Record<string, string> = {};
   const figLeafSkipByPhase: Record<string, boolean> = {};
   const gorgonResultByPhase: Record<string, import('../model').AuthoredGorgonPhaseResult> = {};
+  const nemesisBetOutcomeByPhase: Record<string, import('../model').AuthoredNemesisBetOutcome> = {};
   for (const binding of bindings.values()) {
     figLeafSkipByPhase[binding.slotKey] = false;
+    if (encounterBindingHostsNemesisBet(catalog, binding, `${path}.${binding.slotKey}`))
+      nemesisBetOutcomeByPhase[binding.slotKey] = 'win';
     if (binding.kind === 'fixed') {
       encounterDefinitionForKey(
         catalog,
@@ -287,6 +290,7 @@ export function createDefaultRoomEncounterState(
     encounterKeyByPhase: Object.freeze(values),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
     gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
+    nemesisBetOutcomeByPhase: Object.freeze(nemesisBetOutcomeByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}
       : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),

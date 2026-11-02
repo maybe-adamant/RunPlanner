@@ -334,14 +334,14 @@ export interface WorkspaceAetosInteraction {
   readonly waves: readonly number[];
 }
 
-/** A Nemesis combat's kill race; Win is the unstored outcome. */
+/** A Nemesis combat's kill race. */
 export interface WorkspaceNemesisBetInteraction {
   readonly choices: readonly {
     readonly label: string;
     readonly value: AuthoredNemesisBetOutcome;
   }[];
   readonly intentFor: (
-    value: AuthoredNemesisBetOutcome | null,
+    value: AuthoredNemesisBetOutcome,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceNemesisBetOutcome' }>
   >;
@@ -495,7 +495,7 @@ export interface WorkspaceEncounterPhase {
   /** Present while the phase resolves to a Nemesis combat with a kill race. */
   readonly nemesisBet?: {
     readonly interactionKey: string;
-    readonly outcome?: AuthoredNemesisBetOutcome;
+    readonly outcome: AuthoredNemesisBetOutcome;
   };
   /** Selected encounter-local trait offer, when this phase owns one. */
   readonly traitOffer?: WorkspaceTraitOfferControl;

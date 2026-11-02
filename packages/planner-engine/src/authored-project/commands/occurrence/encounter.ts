@@ -256,11 +256,9 @@ function updatedSelections(
       ? {}
       : { aetosWaveByPhase: current.aetosWaveByPhase }),
     gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
+    nemesisBetOutcomeByPhase: current.nemesisBetOutcomeByPhase,
     ...(traitOffersByPhase === undefined ? {} : { traitOffersByPhase }),
     ...(nemesisRandomEventByPhase === undefined ? {} : { nemesisRandomEventByPhase }),
-    ...(current.nemesisBetOutcomeByPhase === undefined
-      ? {}
-      : { nemesisBetOutcomeByPhase: current.nemesisBetOutcomeByPhase }),
     ...(current.customizationByPhase === undefined
       ? {}
       : { customizationByPhase: current.customizationByPhase }),
@@ -435,30 +433,25 @@ function updatedNemesisBetOutcome(
   command: EncounterOccurrenceCommand,
 ): RoomEncounterState {
   if (command.kind !== 'ReplaceNemesisBetOutcome') return current;
-  const binding = encounterBindingsBySlot(catalog, room, room.gameName).get(phase.phaseKey);
-  if (binding === undefined)
+  if (!encounterBindingsBySlot(catalog, room, room.gameName).has(phase.phaseKey))
     failCommand(command, `${room.gameName} has no encounter phase ${phase.phaseKey}`);
-  if (
-    command.value !== null &&
-    !(NEMESIS_BET_OUTCOMES as readonly string[]).includes(command.value)
-  )
+  const prior = current.nemesisBetOutcomeByPhase[phase.phaseKey];
+  if (prior === undefined)
+    failCommand(command, `${phase.phaseKey} cannot host a Nemesis bet combat`);
+  if (!(NEMESIS_BET_OUTCOMES as readonly string[]).includes(command.value))
     failCommand(command, 'Nemesis bet outcome must be win, tie or loss');
-  // The default win is stored by omission.
-  const value = command.value === 'win' ? null : command.value;
   if (
-    value !== null &&
+    command.value !== 'win' &&
     !encounterPhaseAuthorsNemesisBet(catalog, room, current, phase.phaseKey, room.gameName)
   )
     failCommand(command, `${phase.phaseKey} has not selected a Nemesis bet combat`);
-  if (current.nemesisBetOutcomeByPhase?.[phase.phaseKey] === (value ?? undefined)) return current;
-  const next = { ...current.nemesisBetOutcomeByPhase };
-  if (value === null) delete next[phase.phaseKey];
-  else next[phase.phaseKey] = value;
-  const { nemesisBetOutcomeByPhase: _previous, ...rest } = current;
-  void _previous;
+  if (prior === command.value) return current;
   return Object.freeze({
-    ...rest,
-    ...(Object.keys(next).length === 0 ? {} : { nemesisBetOutcomeByPhase: Object.freeze(next) }),
+    ...current,
+    nemesisBetOutcomeByPhase: Object.freeze({
+      ...current.nemesisBetOutcomeByPhase,
+      [phase.phaseKey]: command.value,
+    }),
   });
 }
 
