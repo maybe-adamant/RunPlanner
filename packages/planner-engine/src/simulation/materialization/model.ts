@@ -28,21 +28,22 @@ import type {
   TargetAddress,
 } from '../../authored-project/addresses';
 import type {
-  AuthoredEncounterCustomization,
   OccurrenceId,
   RoomActionState,
   RoomEncounterState,
   FieldsSpatialState,
   RouteLoadout,
 } from '../../authored-project/model';
-import type { EncounterCustomizationDecision } from '../../catalog-schema';
 import type {
   AuthoredLevelResolution,
   AuthoredTraitOffer,
 } from '../../authored-project/traits/state';
 import type { TraitOfferSourceContext } from '../traits/offer-domain';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
-import type { MaterializedEncounterPhase } from '../encounters/model';
+import type {
+  MaterializedEncounterPhase,
+  ResolvedEncounterCustomizationDecision,
+} from '../encounters/model';
 import type { StygianWellGenerationKey } from '../../authored-project/model';
 import type { StygianWellEffect } from '../commerce/stygian-well';
 
@@ -242,10 +243,7 @@ export interface CanonicalAuthoredRoom {
     readonly encounterKey: string;
     readonly kind: import('../../catalog-schema').EncounterPhaseKind;
     /** Resolved concrete customization product for execution publication. */
-    readonly customization?: readonly (EncounterCustomizationDecision & {
-      readonly value?: AuthoredEncounterCustomization;
-      readonly valueSupported: boolean;
-    })[];
+    readonly customization?: readonly ResolvedEncounterCustomizationDecision[];
   }[];
   /** Native Encounter carriers intentionally omitted from simulated phases. */
   readonly unmodeledEncounterKeys?: readonly string[];

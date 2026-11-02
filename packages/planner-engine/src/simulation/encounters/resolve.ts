@@ -5,7 +5,10 @@ import type {
   RoomDeclaration,
 } from '../../catalog-schema';
 import { cocoonRewardPointSupported } from './cocoon-reward-point';
-import type { RoomEncounterState } from '../../authored-project/model';
+import type {
+  AuthoredEncounterCustomization,
+  RoomEncounterState,
+} from '../../authored-project/model';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
   encounterEnvelopeSlots,
@@ -14,7 +17,13 @@ import {
   selectedEncounterAuthoringProfileKey,
   fixedEncounterDefinitionKey,
 } from '../../authored-project/room-state/encounter-envelope';
-import type { MaterializedEncounterPhase, ResolvedEncounterPhase } from './model';
+import {
+  withUnsupportedCustomization,
+  type EncounterCustomizationUnsupportedReason,
+  type MaterializedEncounterPhase,
+  type ResolvedEncounterCustomizationDecision,
+  type ResolvedEncounterPhase,
+} from './model';
 import {
   contextuallyReplacedCustomizationDecisions,
   customizationValueKnown,
@@ -31,6 +40,23 @@ export class EncounterResolutionContractError extends Error {
 
 function fail(detail: string): never {
   throw new EncounterResolutionContractError(detail);
+}
+
+/** Why a value outside the resolved decision's declared domain is unsupported. */
+function undeclaredCustomizationValue(
+  decision: EncounterCustomizationDecision,
+  value: AuthoredEncounterCustomization,
+): EncounterCustomizationUnsupportedReason {
+  return Object.freeze(
+    value.kind === 'cocoonCount' && decision.selection.kind === 'cocoonCount'
+      ? {
+          reason: 'cocoonCountOutOfRange' as const,
+          count: value.count,
+          minimum: decision.selection.minimum,
+          maximum: decision.selection.maximum,
+        }
+      : { reason: 'valueNotDeclared' as const },
+  );
 }
 
 export function resolvedEncounterPhaseForDefinition(
@@ -54,7 +80,15 @@ export function resolvedEncounterPhaseForDefinition(
     const value = phase.customizationByDecision?.[decision.key];
     return value === undefined
       ? []
-      : [Object.freeze({ ...decision, valueSupported: false, value, replaced: true as const })];
+      : [
+          Object.freeze({
+            ...decision,
+            valueSupported: false as const,
+            unsupported: Object.freeze({ reason: 'contextuallyReplaced' as const }),
+            value,
+            replaced: true as const,
+          }),
+        ];
   });
   return Object.freeze({
     slotKey: phase.slotKey,
@@ -76,16 +110,22 @@ export function resolvedEncounterPhaseForDefinition(
       ? {}
       : {
           customization: Object.freeze([
-            ...(definition.customization ?? []).map((decision) => {
-              const value = phase.customizationByDecision?.[decision.key];
-              const valueSupported =
-                value === undefined || customizationValueKnown([decision], decision.key, value);
-              return Object.freeze({
-                ...decision,
-                valueSupported,
-                ...(value === undefined ? {} : { value }),
-              });
-            }),
+            ...(definition.customization ?? []).map(
+              (decision): ResolvedEncounterCustomizationDecision => {
+                const value = phase.customizationByDecision?.[decision.key];
+                const supported = Object.freeze({
+                  ...decision,
+                  valueSupported: true as const,
+                  ...(value === undefined ? {} : { value }),
+                });
+                if (value === undefined || customizationValueKnown([decision], decision.key, value))
+                  return supported;
+                return withUnsupportedCustomization(
+                  supported,
+                  undeclaredCustomizationValue(decision, value),
+                );
+              },
+            ),
             ...retained,
           ]),
         }),
@@ -288,11 +328,14 @@ export function resolveMaterializedEncounterPhase(
             supportsGeneratedEncounterCustomization(room),
         )
         .map((decision) =>
-          Object.freeze({
-            ...decision,
-            valueSupported:
-              decision.valueSupported && cocoonRewardPointSupported(room, decision.value),
-          }),
+          decision.valueSupported &&
+          decision.value?.kind === 'cocoonRewardPoint' &&
+          !cocoonRewardPointSupported(room, decision.value)
+            ? withUnsupportedCustomization(decision, {
+                reason: 'cocoonRewardPointAbsent',
+                spawnPointId: decision.value.spawnPointId,
+              })
+            : decision,
         ),
     ),
   });

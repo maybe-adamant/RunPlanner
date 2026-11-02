@@ -216,7 +216,7 @@ describe('Fresh File first sequence', () => {
       expect.objectContaining({
         code: 'encounterCustomizationUnavailable',
         origin: phase,
-        evidence: expect.objectContaining({ decisionKey }),
+        evidence: expect.objectContaining({ decisionKey, reason: 'contextuallyReplaced' }),
       }),
     );
     expect(() =>

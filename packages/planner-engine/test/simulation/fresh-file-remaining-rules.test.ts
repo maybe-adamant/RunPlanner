@@ -248,7 +248,11 @@ describe('Fresh File forced biome intros', () => {
       value: { kind: 'generated', waveCount: 1 },
     });
     expect(simulateProject(catalog, project).findings).toContainEqual(
-      expect.objectContaining({ code: 'encounterCustomizationUnavailable', origin: phase }),
+      expect.objectContaining({
+        code: 'encounterCustomizationUnavailable',
+        origin: phase,
+        evidence: expect.objectContaining({ reason: 'contextuallyReplaced' }),
+      }),
     );
   });
 });

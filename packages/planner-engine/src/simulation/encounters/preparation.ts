@@ -1,5 +1,5 @@
 import { routeInitialProfile } from '../../authored-project/route-profile';
-import { customizationValueRouteExcluded } from '../../authored-project/room-state/encounter-customization';
+import { routeExcludedCustomizationChoiceKey } from '../../authored-project/room-state/encounter-customization';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import { resolveEntryDeclaration } from '../../authored-project/room-state/entry-resolution';
 import type {
@@ -37,7 +37,13 @@ import {
 import type { HistoryStateView } from '../history/model';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
-import type { GeneratedNativeRollFacts, ResolvedEncounterPhase } from './model';
+import {
+  withUnsupportedCustomization,
+  type EncounterCustomizationUnsupportedReason,
+  type GeneratedNativeRollFacts,
+  type ResolvedEncounterCustomizationDecision,
+  type ResolvedEncounterPhase,
+} from './model';
 import {
   generationAdmissionContext,
   prepareGeneratedEncounter,
@@ -267,25 +273,20 @@ function withoutRouteExcludedChoices(
   routeKey: string,
 ): ResolvedEncounterPhase {
   if (phase.customization === undefined) return phase;
-  if (
-    !phase.customization.some(
-      (decision) =>
-        decision.valueSupported &&
-        decision.value !== undefined &&
-        customizationValueRouteExcluded(decision, decision.value, routeKey),
-    )
-  )
-    return phase;
+  const excludedKey = (decision: ResolvedEncounterCustomizationDecision) =>
+    decision.valueSupported && decision.value !== undefined
+      ? routeExcludedCustomizationChoiceKey(decision, decision.value, routeKey)
+      : undefined;
+  if (!phase.customization.some((decision) => excludedKey(decision) !== undefined)) return phase;
   return Object.freeze({
     ...phase,
     customization: Object.freeze(
-      phase.customization.map((decision) =>
-        decision.valueSupported &&
-        decision.value !== undefined &&
-        customizationValueRouteExcluded(decision, decision.value, routeKey)
-          ? Object.freeze({ ...decision, valueSupported: false })
-          : decision,
-      ),
+      phase.customization.map((decision) => {
+        const choiceKey = excludedKey(decision);
+        return choiceKey === undefined
+          ? decision
+          : withUnsupportedCustomization(decision, { reason: 'routeExcluded', choiceKey });
+      }),
     ),
   });
 }
@@ -294,12 +295,13 @@ function customizationFinding(
   origin: EncounterPhaseAddress,
   beforeSequence: number,
   decisionKey: string,
+  unsupported: EncounterCustomizationUnsupportedReason,
 ): SemanticFinding {
   return Object.freeze({
     code: 'encounterCustomizationUnavailable',
     phase: 'encounterResolution',
     origin,
-    evidence: Object.freeze({ beforeSequence, decisionKey }),
+    evidence: Object.freeze({ beforeSequence, decisionKey, ...unsupported }),
   });
 }
 
@@ -324,7 +326,9 @@ function appendCustomizationFindings(
         }),
       );
     if (!decision.valueSupported && generated?.onlyIntroductionIssues !== true)
-      findings.push(customizationFinding(origin, beforeSequence, decision.key));
+      findings.push(
+        customizationFinding(origin, beforeSequence, decision.key, decision.unsupported),
+      );
   }
 }
 

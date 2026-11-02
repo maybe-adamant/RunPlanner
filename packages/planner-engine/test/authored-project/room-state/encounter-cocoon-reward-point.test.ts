@@ -149,7 +149,11 @@ describe('cocoon reward point authorship', () => {
     ).toEqual([
       expect.objectContaining({
         origin: phase,
-        evidence: expect.objectContaining({ decisionKey: 'cocoonRewardPoint' }),
+        evidence: expect.objectContaining({
+          decisionKey: 'cocoonRewardPoint',
+          reason: 'cocoonRewardPointAbsent',
+          spawnPointId: 1,
+        }),
       }),
     ]);
     const host = catalog.rooms.byKey[occurrence(invalid).gameName]!;
@@ -198,7 +202,11 @@ describe('cocoon reward point authorship', () => {
     ).toEqual([
       expect.objectContaining({
         origin: phase,
-        evidence: expect.objectContaining({ decisionKey: 'cocoonRewardPoint' }),
+        evidence: expect.objectContaining({
+          decisionKey: 'cocoonRewardPoint',
+          reason: 'cocoonRewardPointAbsent',
+          spawnPointId: point,
+        }),
       }),
     ]);
     expect(undoProjectHistory(replaced).present).toBe(saved);

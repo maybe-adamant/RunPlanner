@@ -18,6 +18,58 @@ export interface MaterializedEncounterPhase {
   readonly rewardAttachment?: EncounterSlotRewardAttachment;
 }
 
+/** Why the resolved encounter cannot steer with a phase's authored customization value. */
+export type EncounterCustomizationUnsupportedReason =
+  /** The resolved encounter does not declare the decision its authored owner did. */
+  | { readonly reason: 'contextuallyReplaced' }
+  /** The value names a choice or shape the resolved encounter does not declare. */
+  | { readonly reason: 'valueNotDeclared' }
+  | {
+      readonly reason: 'cocoonCountOutOfRange';
+      readonly count: number;
+      readonly minimum: number;
+      readonly maximum: number;
+    }
+  /** The host room has no cocoon reward anchor with this native ID. */
+  | { readonly reason: 'cocoonRewardPointAbsent'; readonly spawnPointId: number }
+  /** The first chosen value this route cannot produce. */
+  | { readonly reason: 'routeExcluded'; readonly choiceKey: string }
+  /** The first issue of the generated composition's assessment at its checkpoint. */
+  | {
+      readonly reason: 'compositionInvalid';
+      readonly compositionIssue: import('./generation').GeneratedEncounterIssue;
+    }
+  /** The first issue of the infinite roster's assessment at its checkpoint. */
+  | {
+      readonly reason: 'infiniteRosterInvalid';
+      readonly rosterIssue: import('./infinite-roster').InfiniteRosterIssue;
+    };
+
+/** One declared decision of a resolved phase with its sparse authored value and support. */
+export type ResolvedEncounterCustomizationDecision = EncounterCustomizationDecision & {
+  readonly value?: AuthoredEncounterCustomization;
+  /** Retained from a binding an entry-contextual rule replaced; removal-only. */
+  readonly replaced?: true;
+} & (
+    | { readonly valueSupported: true; readonly unsupported?: never }
+    | {
+        readonly valueSupported: false;
+        readonly unsupported: EncounterCustomizationUnsupportedReason;
+      }
+  );
+
+/** The decision with its value marked unsupported for `unsupported`. */
+export function withUnsupportedCustomization(
+  decision: ResolvedEncounterCustomizationDecision,
+  unsupported: EncounterCustomizationUnsupportedReason,
+): ResolvedEncounterCustomizationDecision {
+  return Object.freeze({
+    ...decision,
+    valueSupported: false as const,
+    unsupported: Object.freeze(unsupported),
+  });
+}
+
 /**
  * One structurally active envelope position resolved to its concrete authored
  * or direct declaration identity. The envelope owns the stable slot; the
@@ -41,12 +93,7 @@ export interface ResolvedEncounterPhase {
   /** Persisted phase-local positive disposition, when authored. */
   readonly figLeafSkip: boolean;
   /** Concrete declaration domain and sparse authored value for this exact resolved encounter. */
-  readonly customization?: readonly (EncounterCustomizationDecision & {
-    readonly value?: AuthoredEncounterCustomization;
-    readonly valueSupported: boolean;
-    /** Retained from a binding an entry-contextual rule replaced; removal-only. */
-    readonly replaced?: true;
-  })[];
+  readonly customization?: readonly ResolvedEncounterCustomizationDecision[];
   /** Evaluated generation operands, owned by the concrete preparation checkpoint. */
   readonly generatedCustomization?: {
     readonly decisionKey: string;

@@ -116,16 +116,28 @@ export function customizationValueRouteExcluded(
   value: AuthoredEncounterCustomization,
   routeKey: string,
 ): boolean {
+  return routeExcludedCustomizationChoiceKey(decision, value, routeKey) !== undefined;
+}
+
+/** The first chosen key of a single or ordered-prefix value that its route excludes. */
+export function routeExcludedCustomizationChoiceKey(
+  decision: EncounterCustomizationDecision,
+  value: AuthoredEncounterCustomization,
+  routeKey: string,
+): string | undefined {
   if (decision.selection.kind !== 'single' && decision.selection.kind !== 'orderedPrefix')
-    return false;
+    return undefined;
   const keys =
     value.kind === 'single'
       ? [value.choiceKey]
       : value.kind === 'orderedPrefix'
         ? value.choiceKeys
         : [];
-  return decision.selection.choices.some(
-    (choice) => keys.includes(choice.key) && choice.excludedRouteKeys?.includes(routeKey) === true,
+  const choices = decision.selection.choices;
+  return keys.find((key) =>
+    choices.some(
+      (choice) => choice.key === key && choice.excludedRouteKeys?.includes(routeKey) === true,
+    ),
   );
 }
 

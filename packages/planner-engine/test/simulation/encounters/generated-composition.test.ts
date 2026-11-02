@@ -840,23 +840,24 @@ describe('generated wave budget allocations', () => {
         ),
       };
     };
-    const finding = {
+    const finding = (compositionIssue: object) => ({
       code: 'encounterCustomizationUnavailable',
       phase: 'encounterResolution',
       origin: phase,
-      evidence: { beforeSequence: expect.any(Number), decisionKey: 'generatedComposition' },
-    };
-    const missing = phaseFindings();
-    const stale = phaseFindings({ Guard: 65, Mage: 5 });
-    expect(missing).toEqual({
-      issues: [{ reason: 'required', field: 'allocations', waveIndex: 1 }],
-      findings: [finding],
+      evidence: {
+        beforeSequence: expect.any(Number),
+        decisionKey: 'generatedComposition',
+        reason: 'compositionInvalid',
+        compositionIssue,
+      },
     });
-    expect(stale).toEqual({
-      issues: [{ reason: 'allocationMembers', waveIndex: 1 }],
-      findings: [finding],
+    const required = { reason: 'required', field: 'allocations', waveIndex: 1 };
+    const members = { reason: 'allocationMembers', waveIndex: 1 };
+    expect(phaseFindings()).toEqual({ issues: [required], findings: [finding(required)] });
+    expect(phaseFindings({ Guard: 65, Mage: 5 })).toEqual({
+      issues: [members],
+      findings: [finding(members)],
     });
-    expect(stale.findings).toEqual(missing.findings);
     expect(phaseFindings({ Guard: 65 })).toEqual({ issues: [], findings: [] });
   });
 });

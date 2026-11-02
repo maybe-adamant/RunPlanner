@@ -130,7 +130,13 @@ describe('Arachne combat cocoon count', () => {
     expect(cocoonFindings(decoded)).toEqual([
       expect.objectContaining({
         origin: fPhase,
-        evidence: expect.objectContaining({ decisionKey: 'cocoonCount' }),
+        evidence: expect.objectContaining({
+          decisionKey: 'cocoonCount',
+          reason: 'cocoonCountOutOfRange',
+          count: 20,
+          minimum: 8,
+          maximum: 14,
+        }),
       }),
     ]);
     expect(simulateProject(catalog, decoded).route.summary.eligibleForExecutionPlan).toBe(false);

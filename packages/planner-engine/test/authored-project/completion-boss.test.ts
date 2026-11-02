@@ -339,7 +339,10 @@ describe('completion Boss variants', () => {
       expect.objectContaining({
         code: 'encounterCustomizationUnavailable',
         origin: phase,
-        evidence: expect.objectContaining({ decisionKey: 'lateSummon' }),
+        evidence: expect.objectContaining({
+          decisionKey: 'lateSummon',
+          reason: 'valueNotDeclared',
+        }),
       }),
     );
   });

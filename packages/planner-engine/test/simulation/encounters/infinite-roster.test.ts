@@ -212,7 +212,11 @@ describe('Anomaly infinite roster authoring', () => {
     expect(rosterFindings(invalid)).toEqual([
       expect.objectContaining({
         origin: anomalyRosterPhase,
-        evidence: expect.objectContaining({ decisionKey: 'infiniteRoster' }),
+        evidence: expect.objectContaining({
+          decisionKey: 'infiniteRoster',
+          reason: 'infiniteRosterInvalid',
+          rosterIssue: { reason: 'enemyUnavailable', position: 2, key: 'SpreadShotUnit_Elite' },
+        }),
       }),
     ]);
     expect(simulateProject(catalog, invalid).route.summary.eligibleForExecutionPlan).toBe(false);

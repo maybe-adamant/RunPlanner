@@ -1,7 +1,7 @@
 import type { EncounterPhaseAddress } from '../../authored-project/addresses';
 import type { InfiniteRosterSelection } from '../../catalog-schema';
 import type { HistoryStateView } from '../history/model';
-import type { ResolvedEncounterPhase } from './model';
+import { withUnsupportedCustomization, type ResolvedEncounterPhase } from './model';
 
 export interface InfiniteRosterContext {
   readonly biomeDepthCache: number;
@@ -108,14 +108,18 @@ export function prepareInfiniteRoster(
   });
   if (decision.value?.kind !== 'infiniteRoster' || !decision.valueSupported)
     return { phase, capability };
-  if (capability.assess(decision.value.typeKeys).supported) return { phase, capability };
+  const assessment = capability.assess(decision.value.typeKeys);
+  const rosterIssue = assessment.issues[0];
+  if (assessment.supported || rosterIssue === undefined) return { phase, capability };
   return {
     capability,
     phase: Object.freeze({
       ...phase,
       customization: Object.freeze(
         phase.customization!.map((entry) =>
-          entry === decision ? Object.freeze({ ...entry, valueSupported: false }) : entry,
+          entry === decision
+            ? withUnsupportedCustomization(entry, { reason: 'infiniteRosterInvalid', rosterIssue })
+            : entry,
         ),
       ),
     }),

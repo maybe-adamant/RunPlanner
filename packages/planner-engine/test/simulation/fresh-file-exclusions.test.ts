@@ -4,6 +4,8 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
   createProjectDocument,
+  decodeProjectDocument,
+  encodeProjectDocument,
   resolveRoutePosition,
   routeHasKeepsakeRack,
   routePurgingPool,
@@ -33,7 +35,10 @@ import {
   simulateProject,
   type RunStateSnapshot,
 } from '@run-planner/engine/simulation';
-import { createFreshFileGeneratedComposition } from '@run-planner/test-fixtures/fresh-file';
+import {
+  createFreshFileGeneratedComposition,
+  createFreshFileRouteProject,
+} from '@run-planner/test-fixtures/fresh-file';
 import { customizationValueRouteExcluded } from '../../src/authored-project/room-state/encounter-customization';
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounter-envelope';
 import { defaultOccurrence } from '../../src/authored-project/topology/construction';
@@ -257,6 +262,34 @@ describe('Fresh File blanket exclusions', () => {
     const rings = { kind: 'single', choiceKey: 'rings' } as const;
     expect(customizationValueRouteExcluded(hecate, rings, 'FreshFile')).toBe(true);
     expect(customizationValueRouteExcluded(hecate, rings, 'Underworld')).toBe(false);
+  });
+
+  it('reports a retained route-excluded boss choice with the excluded choice', () => {
+    const wire = JSON.parse(encodeProjectDocument(createFreshFileRouteProject()));
+    const boss = wire.route.biomes
+      .find((biome: { biomeKey: string }) => biome.biomeKey === 'F')
+      .topology.occurrences.find(
+        (occurrence: { gameName: string }) => occurrence.gameName === 'F_Boss01',
+      );
+    boss.encounters.customizationByPhase = {
+      Encounter: { interlude: { kind: 'single', choiceKey: 'rings' } },
+    };
+    const findings = simulateProject(catalog, decodeProjectDocument(wire, catalog)).findings;
+    expect(
+      findings.filter((finding) => finding.code === 'encounterCustomizationUnavailable'),
+    ).toEqual([
+      expect.objectContaining({
+        origin: expect.objectContaining({
+          owner: expect.objectContaining({ occurrenceId: boss.occurrenceId }),
+        }),
+        evidence: {
+          beforeSequence: expect.any(Number),
+          decisionKey: 'interlude',
+          reason: 'routeExcluded',
+          choiceKey: 'rings',
+        },
+      }),
+    ]);
   });
 
   it('fills the mature MetaProgress bag with its thirteen entries and a fresh one with all nineteen', () => {

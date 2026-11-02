@@ -3,7 +3,12 @@ import { semanticAddressKey, type EncounterPhaseAddress } from '../../authored-p
 import type { GeneratedEncounterSelection } from '../../catalog-schema';
 import type { HistoryStateView, ProgressiveRoomHistoryViews } from '../history/model';
 import type { RoomHistoryOrigin } from '../lifecycle';
-import type { GeneratedNativeRollFacts, ResolvedEncounterPhase } from './model';
+import {
+  withUnsupportedCustomization,
+  type GeneratedNativeRollFacts,
+  type ResolvedEncounterCustomizationDecision,
+  type ResolvedEncounterPhase,
+} from './model';
 import {
   assessGeneratedEncounter,
   admissibleEnemyKeys,
@@ -67,6 +72,30 @@ export function generationAdmissionContext(
     ]),
     ...facts,
   });
+}
+
+/**
+ * The assessment decides the value's support. A value already unsupported keeps
+ * its earlier cause; otherwise the first issue that is not an unfinished
+ * introduction names it, since introductions report on their own.
+ */
+function assessedGeneratedDecision(
+  decision: ResolvedEncounterCustomizationDecision,
+  assessment: GeneratedEncounterAssessment,
+): ResolvedEncounterCustomizationDecision {
+  if (assessment.supported) {
+    if (decision.valueSupported) return decision;
+    const { unsupported: _unsupported, ...rest } = decision;
+    void _unsupported;
+    return Object.freeze({ ...rest, valueSupported: true as const });
+  }
+  if (!decision.valueSupported) return decision;
+  const compositionIssue =
+    assessment.issues.find((issue) => issue.reason !== 'introductionRequired') ??
+    assessment.issues[0];
+  if (compositionIssue === undefined)
+    throw new Error(`${decision.key} generated assessment is unsupported without an issue`);
+  return withUnsupportedCustomization(decision, { reason: 'compositionInvalid', compositionIssue });
 }
 
 export function prepareGeneratedEncounter(
@@ -163,9 +192,7 @@ export function prepareGeneratedEncounter(
       ...phase,
       customization: Object.freeze(
         phase.customization!.map((entry) =>
-          entry === decision
-            ? Object.freeze({ ...entry, valueSupported: assessment.supported })
-            : entry,
+          entry === decision ? assessedGeneratedDecision(entry, assessment) : entry,
         ),
       ),
       generatedCustomization: Object.freeze({
