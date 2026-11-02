@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 
 import type { FindingAnchorProps } from '@planner/ui/feedback/useFindingTarget';
 
@@ -36,7 +36,8 @@ export function ModalDialog({
   const cancelRef = useRef(onCancel);
   const pendingRef = useRef(pending);
   const returnFocusIdRef = useRef(returnFocusId);
-  useEffect(() => {
+  // Updated in the commit itself, so an Escape right after a render sees its props.
+  useLayoutEffect(() => {
     cancelRef.current = onCancel;
     pendingRef.current = pending;
     returnFocusIdRef.current = returnFocusId;

@@ -706,10 +706,13 @@
   gap: 10px;
 }
 
-.encounter-generated-wave-heading > .contextual-picker,
-.encounter-generated-wave-heading > .encounter-wave-readonly {
-  grid-template-columns: 8rem minmax(0, 1fr);
-  flex: 1 1 14rem;
+/* The wave line opens from a room overview but takes the dialog's width, not an overview row's:
+ * the enemies keep their full names and the wave budget wraps below when they need the room. */
+.encounter-generated-wave-heading > .contextual-picker.field-control-inline,
+.encounter-generated-wave-heading > .encounter-wave-readonly.field-control-inline {
+  grid-template-columns: auto minmax(0, 1fr);
+  flex: 1 1 auto;
+  width: auto;
   min-width: 0;
   max-width: 100%;
 }
@@ -727,12 +730,17 @@
   text-transform: none;
 }
 
-.encounter-wave-readonly-value {
+/* A fixed wave's value reads as plain text at a picker trigger's height and inset. */
+.encounter-wave-readonly > .encounter-wave-readonly-value {
   display: flex;
   align-items: center;
-  min-height: 36px;
-  padding: 6px 9px;
-  border: 1px solid transparent;
+  min-height: 30px;
+  padding: 3px 7px;
+  color: #f2ede5;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .encounter-generated-customization
@@ -800,6 +808,8 @@
   flex: 1;
   min-width: 5rem;
   max-width: 12rem;
+  margin: 0;
+  accent-color: var(--selection-accent);
 }
 
 .encounter-budget-control:has(input[type='range']) {

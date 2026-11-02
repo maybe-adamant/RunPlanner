@@ -119,6 +119,16 @@ function nHub(project: ReturnType<typeof currentProject>) {
   return hub;
 }
 
+/** Home's Library action, not a plan row the listing may already show under the same name. */
+function libraryAction(name: string): HTMLElement {
+  const library = screen.getByRole('region', { name: 'Library' });
+  const [action] = screen
+    .getAllByRole('button', { name })
+    .filter((button) => !library.contains(button));
+  if (action === undefined) throw new Error(`Library action ${name} is missing`);
+  return action;
+}
+
 function hubRailButton(): HTMLElement {
   return screen.getByRole('button', { name: /Hub.*visits/ });
 }
@@ -175,7 +185,7 @@ describe('surface product loop', () => {
 
     // Home creates and imports plans; the open plan stays open until another opens.
     await view.user.click(screen.getByRole('button', { name: 'Home' }));
-    await view.user.click(screen.getByRole('button', { name: 'New plan' }));
+    await view.user.click(libraryAction('New plan'));
     expect(currentEvaluation(application).status).toBe('valid');
     await view.user.click(await screen.findByRole('button', { name: 'Create Surface plan' }));
     await waitFor(() => expect(currentEvaluation(application).status).toBe('incomplete'));
