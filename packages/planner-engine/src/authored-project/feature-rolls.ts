@@ -108,6 +108,27 @@ export function stygianWellGenerationItemKey(
   return reroll === undefined ? undefined : (reroll.offerKeyBySlot[parsed.slotKey] ?? null);
 }
 
+/**
+ * Where a Well generation was stocked: its slot and its roll's number in the
+ * room, the initial stock being roll 1. Undefined for the Travel Deal refill;
+ * the number is absent once its reroll is no longer authored.
+ */
+export function stygianWellGenerationSlot(
+  occurrence: { readonly roomActions: RoomOccurrence['roomActions'] },
+  generationKey: StygianWellGenerationKey,
+): { readonly slotKey: StygianWellSlotKey; readonly rollNumber?: number } | undefined {
+  const parsed = parseStygianWellGenerationKey(generationKey);
+  if (parsed === undefined) return undefined;
+  if (parsed.rollKey === INITIAL_ROLL_KEY)
+    return Object.freeze({ slotKey: parsed.slotKey, rollNumber: 1 });
+  const index = stygianWellRerolls(occurrence.roomActions.order).findIndex(
+    (reroll) => reroll.rerollId === parsed.rollKey,
+  );
+  return Object.freeze(
+    index < 0 ? { slotKey: parsed.slotKey } : { slotKey: parsed.slotKey, rollNumber: index + 2 },
+  );
+}
+
 /** The authored Fateful Twist result of one Well generation. */
 export function stygianWellGenerationTwistResultKey(
   occurrence: {

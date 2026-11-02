@@ -14,6 +14,8 @@ import {
 import { locateBiome } from '../../src/authored-project/commands/contract';
 import {
   stygianWellGenerationItemKey,
+  stygianWellGenerationKey,
+  stygianWellGenerationSlot,
   stygianWellGenerationTwistResultKey,
 } from '../../src/authored-project/feature-rolls';
 import type {
@@ -114,6 +116,30 @@ const withDiscount = (remainingUses: number): StygianWellRunState => ({
       source: purchaseSource,
     },
   ],
+});
+
+describe('Stygian Well generation slot', () => {
+  it('names the slot and the roll number a generation was stocked by', () => {
+    const roomActions = {
+      order: [
+        { kind: 'rerollStygianWell' as const, rerollId: 'a', offerKeyBySlot: {} },
+        { kind: 'rerollStygianWell' as const, rerollId: 'b', offerKeyBySlot: {} },
+      ],
+    };
+    const slot = (generationKey: StygianWellGenerationKey) =>
+      stygianWellGenerationSlot({ roomActions }, generationKey);
+    expect(slot(stygianWellGenerationKey('initial', 'healing'))).toEqual({
+      slotKey: 'healing',
+      rollNumber: 1,
+    });
+    expect(slot(stygianWellGenerationKey('b', 'secondRight'))).toEqual({
+      slotKey: 'secondRight',
+      rollNumber: 3,
+    });
+    // A dropped reroll keeps its slot without a number.
+    expect(slot(stygianWellGenerationKey('gone', 'secondLeft'))).toEqual({ slotKey: 'secondLeft' });
+    expect(slot('travelDealRefill')).toBeUndefined();
+  });
 });
 
 describe('Stygian Well consequential purchase state', () => {

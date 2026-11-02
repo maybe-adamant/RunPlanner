@@ -4,7 +4,6 @@ import {
   createRoomActionAddress,
   createRoomFeatureAddress,
   featureRerolls,
-  parseStygianWellGenerationKey,
   purgingPoolRollTraitKey,
   roomActionKey,
   semanticAddressKey,
@@ -120,7 +119,6 @@ export function assembleFeatureRollActions(input: {
     for (const offer of wellInteraction.offers) {
       const key = `buy:${offer.generationKey}`;
       const refill = offer.generationKey === 'travelDealRefill';
-      const roll = parseStygianWellGenerationKey(offer.generationKey);
       // A blank slot, the Travel Deal restock included, is bought with the item chosen then.
       const blank = offer.itemKey === null;
       const subject = blank
@@ -140,11 +138,10 @@ export function assembleFeatureRollActions(input: {
         ? []
         : refill
           ? (well.travelDealRefill?.candidateItemKeys ?? [])
-          : roll === undefined
-            ? []
-            : roll.rollKey === INITIAL_ROLL_KEY
-              ? well.candidateItemKeysBySlot[roll.slotKey]
-              : (well.rolls[roll.rollKey]?.candidateItemKeysBySlot[roll.slotKey] ?? []);
+          : // Every bought slot but the refill is in the roll on show.
+            wellInteraction.rollKey === INITIAL_ROLL_KEY
+            ? well.candidateItemKeysBySlot[offer.slotKey]
+            : (well.rolls[wellInteraction.rollKey]?.candidateItemKeysBySlot[offer.slotKey] ?? []);
       bound.push(
         Object.freeze({
           key,

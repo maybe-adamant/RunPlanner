@@ -334,6 +334,7 @@ export {
   purgingPoolRerolls,
   purgingPoolRollTraitKey,
   stygianWellGenerationItemKey,
+  stygianWellGenerationSlot,
   stygianWellGenerationKey,
   stygianWellGenerationTwistResultKey,
   stygianWellRerolls,

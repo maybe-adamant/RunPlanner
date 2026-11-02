@@ -7,10 +7,9 @@ import {
   type Catalog,
 } from '@run-planner/engine/catalog-schema';
 import {
-  INITIAL_ROLL_KEY,
-  parseStygianWellGenerationKey,
   purgingPoolRerolls,
   stygianWellGenerationItemKey,
+  stygianWellGenerationSlot,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { encounterNpcKey } from '@planner/projections/encounterPickerProjection';
@@ -87,12 +86,12 @@ function wellPurchaseLabel(
   readonly rewardType?: string;
   readonly itemKey?: string;
 } {
-  const roll = parseStygianWellGenerationKey(generationKey);
-  const slotKey = roll?.slotKey;
-  const rollNumber =
-    roll === undefined || roll.rollKey === INITIAL_ROLL_KEY
-      ? undefined
-      : featureRollNumber(occurrence.roomActions?.order ?? [], 'stygianWell', roll.rollKey);
+  const stocked = stygianWellGenerationSlot(
+    { roomActions: occurrence.roomActions ?? { order: [] } },
+    generationKey,
+  );
+  const slotKey = stocked?.slotKey;
+  const rollNumber = stocked?.rollNumber === 1 ? undefined : stocked?.rollNumber;
   const profile = catalog.rewards.shops.byKey.RoomShop;
   const slotIndex = profile?.slots.values.findIndex((slot) => slot.key === slotKey) ?? -1;
   const subject = slotKey === undefined ? 'Travel Deal Offer' : 'Well Offer';
@@ -364,22 +363,19 @@ export function occurrenceActionLabelParts(
         : withReward(parts, Object.freeze({ rewardType: well.rewardType }), false, well.itemKey);
     }
     case 'purchaseHermesShrineOffer': {
+      const slotKey = hermesShrineInitialSlotKey(reference.generationKey);
       const slot =
-        reference.generationKey === 'travelDealRefill'
+        slotKey === undefined
           ? undefined
-          : reference.generationKey === 'initial:first'
+          : slotKey === 'first'
             ? 1
-            : reference.generationKey === 'initial:secondLeft'
+            : slotKey === 'secondLeft'
               ? 2
               : 3;
       const offer =
-        reference.generationKey === 'travelDealRefill'
+        slotKey === undefined
           ? occurrence.hermesShrine?.travelDealRefill?.offer
-          : occurrence.hermesShrine?.offerBySlot[
-              reference.generationKey.slice(
-                'initial:'.length,
-              ) as import('@run-planner/engine/authored-project').HermesShrineSlotKey
-            ];
+          : occurrence.hermesShrine?.offerBySlot[slotKey];
       // A rushed item is delivered in the Shrine room.
       const verb = reference.rushed ? 'Rush' : 'Buy';
       const item =

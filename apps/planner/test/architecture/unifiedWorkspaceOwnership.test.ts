@@ -53,9 +53,11 @@ describe('unified workspace ownership boundary', () => {
     }
   });
 
-  it('reads generated pickup facts from engine products, never by decoding their keys', () => {
+  it('reads pickup and generation facts from engine products, never by decoding their keys', () => {
     for (const path of productionSources(plannerSourceRoot)) {
-      const decoders = readFileSync(path, 'utf8').match(/\bparse[A-Za-z]*(?:EntryKey|SiteKey)\b/g);
+      const decoders = readFileSync(path, 'utf8').match(
+        /\bparse[A-Za-z]*(?:EntryKey|SiteKey|GenerationKey)\b|'initial:'\.length|slice\('initial:/g,
+      );
       expect(decoders, `${relative(plannerSourceRoot, path)} decodes a key`).toBeNull();
     }
   });

@@ -7,6 +7,7 @@ import {
   createAdditionalExitAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
+  hermesShrineInitialSlotKey,
   routeRoomShop,
   semanticAddressKey,
   type BiomeAddress,
@@ -191,13 +192,13 @@ function roomFeatures(
   // Each stocked item carries the delay rolled with it.
   const shrineDelay = (
     generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
-  ) =>
-    (generationKey === 'travelDealRefill'
-      ? shrine?.travelDealRefill?.offer
-      : shrine?.offerBySlot[
-          generationKey.slice('initial:'.length) as 'first' | 'secondLeft' | 'secondRight'
-        ]
-    )?.delay ?? null;
+  ) => {
+    const slotKey = hermesShrineInitialSlotKey(generationKey);
+    return (
+      (slotKey === undefined ? shrine?.travelDealRefill?.offer : shrine?.offerBySlot[slotKey])
+        ?.delay ?? null
+    );
+  };
   const shrineRefillBought = input.occurrence.roomActions.order.some(
     (reference) =>
       reference.kind === 'purchaseHermesShrineOffer' &&
