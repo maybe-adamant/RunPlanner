@@ -55,10 +55,8 @@ export interface HermesShrineInteraction {
 
 /** Why the Pedestal cannot be collected there. */
 export type ChampionItemCollectLock =
-  /** The pedestal holds no item yet. */
-  | 'itemUnchosen'
   /** The pedestal did not spawn on every reached branch: Champion of Elysium is not held. */
-  | 'inactive';
+  'inactive';
 
 /** Whether the Contract pedestal's item can be collected at the end of the room's sequence. */
 export interface ChampionItemInteraction {

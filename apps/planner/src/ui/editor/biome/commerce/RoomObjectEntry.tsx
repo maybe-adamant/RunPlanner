@@ -39,8 +39,6 @@ function roomObjectLockHint(lock: WorkspaceRoomObjectLock): string {
       return 'Everything here is bought.';
     case 'collected':
       return 'Already collected.';
-    case 'itemUnchosen':
-      return 'Choose the Pedestal item first.';
     case 'inactive':
       return 'Needs Champion of Elysium.';
   }

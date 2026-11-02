@@ -343,8 +343,7 @@ export interface WorkspaceChaosSpawnInteraction {
 export type WorkspaceRoomObject = 'worldShop' | 'hermesShrine' | 'championItem';
 
 /** Why a room object's entry, or one of its options, cannot be picked. */
-export type WorkspaceRoomObjectLock =
-  'unreached' | 'allBought' | 'collected' | 'itemUnchosen' | 'inactive';
+export type WorkspaceRoomObjectLock = 'unreached' | 'allBought' | 'collected' | 'inactive';
 
 /** One thing a Shop, Shrine or Pedestal can do next, named as its timeline row. */
 export interface WorkspaceRoomObjectOption {

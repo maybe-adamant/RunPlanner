@@ -31,7 +31,6 @@ import type { RewardBranchState } from '../branch-primitives';
 import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
 import type { DerivedAcquisitionEntryFrontier } from '../acquisition/contracts';
 import type { ChronologyWalkContext, ChronologyWalkState } from './chronology-walk';
-import { infernalContractHeld } from './offer-lifecycle/infernal-contract-pedestal';
 
 const SHRINE_SLOT_KEYS: readonly HermesShrineSlotKey[] = ['first', 'secondLeft', 'secondRight'];
 
@@ -266,21 +265,19 @@ function championItemInteraction(
       (event) => event.kind === 'rewardOffered' && semanticAddressKey(event.origin) === ownerKey,
     ),
   );
-  const held = branches.every((branch) => infernalContractHeld(branch.state));
+  // An unchosen item of a spawned pedestal blocks its room's Overview, so it never reaches here.
   return Object.freeze({
     historySequence,
     collect: Object.freeze(
-      pedestal === null
-        ? { locked: held ? ('itemUnchosen' as const) : ('inactive' as const) }
-        : spawned
-          ? {
-              command: Object.freeze({
-                kind: 'SetInfernalContractPedestalCollected' as const,
-                pedestal: address,
-                collected: true,
-              }),
-            }
-          : { locked: 'inactive' as const },
+      pedestal !== null && spawned
+        ? {
+            command: Object.freeze({
+              kind: 'SetInfernalContractPedestalCollected' as const,
+              pedestal: address,
+              collected: true,
+            }),
+          }
+        : { locked: 'inactive' as const },
     ),
   });
 }

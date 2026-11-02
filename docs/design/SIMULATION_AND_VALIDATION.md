@@ -246,7 +246,10 @@ Producing authorities attach exact semantic owners to findings, and aggregate
 evaluators attach an internal atomic-region key while producing them.
 Progressive retention uses existing materialization, generation and lifecycle
 chronology to locate them; the locator never infers grouping from finding
-codes, finding-array order or UI sections. Every finding in the first region is
+codes, finding-array order or UI sections. One regrouping is central: every
+finding chronology locates inside a room's Overview joins that room's one
+Overview region, whatever region its producer attached, because the Overview's
+facets are simultaneous facts of entry. Every finding in the first region is
 retained, and later-region findings are withheld.
 
 An incomplete or invalid configured route publishes exactly one assessment
