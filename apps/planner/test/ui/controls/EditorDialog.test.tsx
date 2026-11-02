@@ -50,7 +50,7 @@ function Host({
           eyebrow="Eyebrow"
           footer={<EditorDialogDraftActions onCancel={close} onSave={close} saveDisabled={false} />}
           {...(initialFocusId === undefined ? {} : { initialFocusId })}
-          model={kind === 'draft' ? { kind, onCancel: close } : { kind, onDone: close }}
+          model={kind === 'draft' ? { kind, onCancel: close } : { kind, onClose: close }}
           returnFocusId="editor-launcher"
           title="Editor"
         >
@@ -95,7 +95,7 @@ describe('editor dialog contract', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Repair control' }));
   });
 
-  it.each(['draft', 'live'] as const)(
+  it.each(['draft', 'view'] as const)(
     'focuses the first enabled control of a %s editor and returns focus to its launcher after Escape',
     async (kind) => {
       const { onClose, user } = renderHost(kind);
@@ -193,7 +193,7 @@ describe('editor dialog contract', () => {
     expect(inner.textContent).toContain('Choose a Stone target.');
   });
 
-  it('offers Save and Cancel for a draft and only Done for a live editor', async () => {
+  it('offers Save and Cancel for a draft and only Close for a view', async () => {
     const draft = renderHost('draft');
     await draft.user.click(screen.getByRole('button', { name: 'Open editor' }));
     const draftFooter = screen.getByRole('dialog').querySelector('footer')!;
@@ -204,20 +204,21 @@ describe('editor dialog contract', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     cleanup();
 
-    const live = renderHost('live');
-    await live.user.click(screen.getByRole('button', { name: 'Open editor' }));
-    const liveFooter = screen.getByRole('dialog').querySelector('footer')!;
+    const view = renderHost('view');
+    await view.user.click(screen.getByRole('button', { name: 'Open editor' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.querySelector('footer')).toBeNull();
     expect(
-      Array.from(liveFooter.querySelectorAll('button'), (button) => button.textContent),
-    ).toEqual(['Done']);
-    await live.user.click(screen.getByRole('button', { name: 'Done' }));
+      Array.from(dialog.querySelectorAll('header button'), (button) => button.textContent),
+    ).toEqual(['Close']);
+    await view.user.click(within(dialog).getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Open editor' }));
   });
 
   it.each([
     ['draft', 0],
-    ['live', 1],
+    ['view', 1],
   ] as const)('a %s editor lets history shortcuts undo %i edits', async (kind, undone) => {
     const { application, user } = renderHost(kind);
     const past = () => application.store.getState().projectWorkspace.history!.past.length;

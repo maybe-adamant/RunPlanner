@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react';
-import { EditorDialog } from '@planner/ui/controls/EditorDialog';
+import {
+  EditorDialog,
+  EditorDialogDraftActions,
+  type EditorDialogIssue,
+} from '@planner/ui/controls/EditorDialog';
 import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { hintProps } from '@planner/ui/controls/hint';
 import { showTruncatedTitle } from '@planner/ui/controls/truncatedTitle';
@@ -8,7 +12,6 @@ import { keepsakeArtwork } from './keepsakeArtwork';
 export interface KeepsakeRackEntry {
   readonly key: string;
   readonly label: string;
-  readonly selected: boolean;
   readonly disabled: boolean;
   /** Shown on hover only where the reason a keepsake is dimmed isn't obvious. */
   readonly hint?: string | undefined;
@@ -58,36 +61,68 @@ export function KeepsakeLauncher({
   );
 }
 
-/** The in-game keepsake rack as a dialog; `detail` holds the selected keepsake's own controls. */
+/**
+ * The in-game keepsake rack as a draft dialog: a card chooses the draft keepsake, `detail` holds
+ * its own controls, and Save commits the draft.
+ */
 export function KeepsakeRackDialog({
   detail,
+  draftKey,
   entries,
+  issues,
   loading,
-  onClose,
-  onSelect,
+  onCancel,
+  onChoose,
+  onSave,
   returnFocusId,
+  saveDisabled,
   title,
 }: {
   readonly detail?: ReactNode;
+  /** The drafted keepsake; the card it names shows as chosen. */
+  readonly draftKey: string | undefined;
   readonly entries: readonly KeepsakeRackEntry[];
+  readonly issues?: readonly EditorDialogIssue[];
   readonly loading?: boolean;
-  readonly onClose: () => void;
-  readonly onSelect: (keepsakeKey: string) => void;
+  readonly onCancel: () => void;
+  readonly onChoose: (keepsakeKey: string) => void;
+  readonly onSave: () => void;
   readonly returnFocusId: string;
+  readonly saveDisabled: boolean;
   readonly title: string;
 }) {
   const ordered = [...entries].sort(
     (a, b) => (rackOrder.get(a.key) ?? rackOrder.size) - (rackOrder.get(b.key) ?? rackOrder.size),
   );
-  const selected = ordered.find((entry) => entry.selected);
+  const chosen = ordered.find((entry) => entry.key === draftKey);
+  const chosenArtwork = draftKey === undefined ? undefined : keepsakeArtwork[draftKey];
   return (
     <EditorDialog
-      eyebrow="Keepsake"
-      model={{ kind: 'live', onDone: onClose }}
+      {...(chosenArtwork === undefined
+        ? {}
+        : {
+            icon: (
+              <img
+                alt=""
+                className="artwork-label-icon"
+                height={150}
+                src={chosenArtwork}
+                width={150}
+              />
+            ),
+          })}
+      layout="header"
+      model={{ kind: 'draft', onCancel }}
       returnFocusId={returnFocusId}
       size="cards"
       title={title}
     >
+      <EditorDialogDraftActions
+        {...(issues === undefined ? {} : { issues })}
+        onCancel={onCancel}
+        onSave={onSave}
+        saveDisabled={saveDisabled}
+      />
       {loading === true && ordered.length === 0 ? (
         <p className="contextual-picker-loading" role="status">
           Loading keepsakes…
@@ -96,17 +131,18 @@ export function KeepsakeRackDialog({
         <div className="keepsake-rack" role="group" aria-label="Keepsakes">
           {ordered.map((entry) => {
             const artwork = keepsakeArtwork[entry.key];
+            const selected = entry.key === draftKey;
             return (
               <button
-                aria-disabled={entry.disabled || undefined}
-                aria-pressed={entry.selected}
+                aria-disabled={(entry.disabled && !selected) || undefined}
+                aria-pressed={selected}
                 className="keepsake-card"
                 key={entry.key}
                 onClick={() => {
-                  if (!entry.disabled && !entry.selected) onSelect(entry.key);
+                  if (!entry.disabled && !selected) onChoose(entry.key);
                 }}
                 type="button"
-                {...hintProps(entry.disabled ? entry.hint : undefined)}
+                {...hintProps(entry.disabled && !selected ? entry.hint : undefined)}
               >
                 {artwork === undefined ? (
                   <span className="keepsake-card-icon" aria-hidden="true" />
@@ -126,7 +162,7 @@ export function KeepsakeRackDialog({
         </div>
       )}
       <div className="keepsake-rack-detail">
-        <p className="keepsake-rack-detail-name">{selected?.label ?? 'No keepsake'}</p>
+        <p className="keepsake-rack-detail-name">{chosen?.label ?? 'No keepsake'}</p>
         {detail}
       </div>
     </EditorDialog>

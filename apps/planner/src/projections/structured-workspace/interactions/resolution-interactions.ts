@@ -10,6 +10,7 @@ import type {
   KeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import {
   transcendentEmbryoBlessingValues,
   type KeepsakeSelectionUnavailableReason,
@@ -154,6 +155,169 @@ function projectKeepsakeEquipResultDomain(
     ...(selected?.transcendentEmbryoSummary === undefined
       ? {}
       : { transcendentEmbryoSummary: selected.transcendentEmbryoSummary }),
+  });
+}
+
+/**
+ * One keepsake equip result's interaction: the saved result, or with `keepsakeKey` the result a
+ * drafted keepsake would open, judged as if that keepsake were chosen.
+ */
+function bindKeepsakeEquipResultInteraction(
+  catalog: Catalog,
+  candidates: CandidateProjectionSession,
+  contextualPicker: ContextualPickerProjectionService,
+  key: string,
+  control: {
+    readonly address: KeepsakeEquipResultAddress;
+    readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults];
+  },
+  keepsakeKey?: string,
+): WorkspaceKeepsakeEquipResultInteraction | undefined {
+  const effect = catalog.keepsakes.values.find(
+    (keepsake) => keepsake.effect?.kind === control.address.resultKind,
+  )?.effect;
+  if (effect === undefined)
+    throw new Error(`Missing ${control.address.resultKind} keepsake descriptor`);
+  if (effect.kind === 'experimentalHammer') {
+    const value =
+      control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer'];
+    return Object.freeze({
+      key,
+      owner: control.address as KeepsakeEquipResultAddress & {
+        readonly resultKind: 'experimentalHammer';
+      },
+      ...(control.value === undefined
+        ? {}
+        : {
+            value:
+              control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer'],
+          }),
+      load: (nextValue = value) =>
+        projectKeepsakeEquipResultDomain(
+          contextualPicker,
+          catalog,
+          'experimentalHammer',
+          candidates.keepsakeEquipResult(control.address, nextValue, keepsakeKey),
+          nextValue?.kind === 'selected'
+            ? nextValue.traitKey
+            : nextValue?.kind === 'exhausted'
+              ? '__exhausted'
+              : undefined,
+        ),
+      selectedLabel:
+        value?.kind === 'selected'
+          ? equipResultLabel(catalog, 'experimentalHammer', value.traitKey)
+          : value?.kind === 'exhausted'
+            ? 'No compatible Hammer'
+            : 'Choose compatible Hammer',
+      intentFor: (
+        value: NonNullable<
+          import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer']
+        >,
+      ) =>
+        Object.freeze({
+          command: Object.freeze({
+            kind: 'ReplaceExperimentalHammerEquipResult' as const,
+            result: control.address as KeepsakeEquipResultAddress & {
+              readonly resultKind: 'experimentalHammer';
+            },
+            value,
+          }),
+        }),
+    });
+  }
+  if (effect.kind === 'transcendentEmbryo') {
+    const value =
+      control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'];
+    return Object.freeze({
+      key,
+      owner: control.address as KeepsakeEquipResultAddress & {
+        readonly resultKind: 'transcendentEmbryo';
+      },
+      ...(control.value === undefined
+        ? {}
+        : {
+            value:
+              control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'],
+          }),
+      load: (nextValue = value) =>
+        projectKeepsakeEquipResultDomain(
+          contextualPicker,
+          catalog,
+          'transcendentEmbryo',
+          candidates.keepsakeEquipResult(control.address, nextValue, keepsakeKey),
+          nextValue?.blessingKey,
+        ),
+      selectedLabel:
+        value?.blessingKey === undefined
+          ? 'Choose Chaos blessing'
+          : equipResultLabel(catalog, 'transcendentEmbryo', value.blessingKey),
+      outcomeFor: (blessingKey: string) => {
+        const option = candidates
+          .keepsakeEquipResult(control.address, undefined, keepsakeKey)
+          .find((candidate) => candidate.value === blessingKey);
+        if (option?.resultValue !== undefined && 'blessingKey' in option.resultValue)
+          return option.resultValue as NonNullable<
+            import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']
+          >;
+        throw new Error(`No Embryo outcome candidate for ${blessingKey}`);
+      },
+      intentFor: (
+        value: NonNullable<
+          import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']
+        >,
+      ) =>
+        Object.freeze({
+          command: Object.freeze({
+            kind: 'ReplaceTranscendentEmbryoEquipResult' as const,
+            result: control.address as KeepsakeEquipResultAddress & {
+              readonly resultKind: 'transcendentEmbryo';
+            },
+            value,
+          }),
+        }),
+    });
+  }
+  if (effect.kind !== 'jeweledPom') return undefined;
+  const value =
+    control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'];
+  return Object.freeze({
+    key,
+    owner: control.address as KeepsakeEquipResultAddress & {
+      readonly resultKind: 'jeweledPom';
+    },
+    ...(control.value === undefined
+      ? {}
+      : {
+          value:
+            control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
+        }),
+    load: (nextValue = value) =>
+      projectKeepsakeEquipResultDomain(
+        contextualPicker,
+        catalog,
+        'jeweledPom',
+        candidates.keepsakeEquipResult(control.address, nextValue, keepsakeKey),
+        nextValue?.traitKey,
+      ),
+    selectedLabel:
+      value?.traitKey === undefined
+        ? 'Choose Hades trait'
+        : equipResultLabel(catalog, 'jeweledPom', value.traitKey),
+    intentFor: (
+      value: NonNullable<
+        import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom']
+      >,
+    ) =>
+      Object.freeze({
+        command: Object.freeze({
+          kind: 'ReplaceJeweledPomEquipResult' as const,
+          result: control.address as KeepsakeEquipResultAddress & {
+            readonly resultKind: 'jeweledPom';
+          },
+          value,
+        }),
+      }),
   });
 }
 
@@ -498,6 +662,21 @@ export function bindResolutionInteractions(input: {
             selectedKey,
           ),
         owner: control.address,
+        draftOutcomeFor: (keepsakeKey: string) => {
+          const equipResult = candidates
+            .keepsakeSelections(control.address)
+            .find((option) => option.value === keepsakeKey)?.equipResult;
+          return equipResult === undefined
+            ? undefined
+            : bindKeepsakeEquipResultInteraction(
+                catalog,
+                candidates,
+                contextualPicker,
+                semanticAddressKey(equipResult),
+                { address: equipResult },
+                keepsakeKey,
+              );
+        },
         selectedLabel:
           catalog.keepsakes.byKey[selectedKey ?? '']?.label ??
           (postboss ? 'Unchanged' : (selectedKey ?? 'Choose keepsake')),
@@ -546,163 +725,14 @@ export function bindResolutionInteractions(input: {
   }
   const keepsakeEquipResults = new Map<string, WorkspaceKeepsakeEquipResultInteraction>();
   for (const [key, control] of keepsakeEquipResultControls ?? []) {
-    const effect = catalog.keepsakes.values.find(
-      (keepsake) => keepsake.effect?.kind === control.address.resultKind,
-    )?.effect;
-    if (effect === undefined)
-      throw new Error(`Missing ${control.address.resultKind} keepsake descriptor`);
-    if (effect.kind === 'experimentalHammer') {
-      const value =
-        control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer'];
-      keepsakeEquipResults.set(
-        key,
-        Object.freeze({
-          key,
-          owner: control.address as KeepsakeEquipResultAddress & {
-            readonly resultKind: 'experimentalHammer';
-          },
-          ...(control.value === undefined
-            ? {}
-            : {
-                value:
-                  control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer'],
-              }),
-          load: (nextValue = value) =>
-            projectKeepsakeEquipResultDomain(
-              contextualPicker,
-              catalog,
-              'experimentalHammer',
-              candidates.keepsakeEquipResult(control.address, nextValue),
-              nextValue?.kind === 'selected'
-                ? nextValue.traitKey
-                : nextValue?.kind === 'exhausted'
-                  ? '__exhausted'
-                  : undefined,
-            ),
-          selectedLabel:
-            value?.kind === 'selected'
-              ? equipResultLabel(catalog, 'experimentalHammer', value.traitKey)
-              : value?.kind === 'exhausted'
-                ? 'No compatible Hammer'
-                : 'Choose compatible Hammer',
-          intentFor: (
-            value: NonNullable<
-              import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer']
-            >,
-          ) =>
-            Object.freeze({
-              command: Object.freeze({
-                kind: 'ReplaceExperimentalHammerEquipResult' as const,
-                result: control.address as KeepsakeEquipResultAddress & {
-                  readonly resultKind: 'experimentalHammer';
-                },
-                value,
-              }),
-            }),
-        }),
-      );
-      continue;
-    }
-    if (effect.kind === 'transcendentEmbryo') {
-      const value =
-        control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'];
-      keepsakeEquipResults.set(
-        key,
-        Object.freeze({
-          key,
-          owner: control.address as KeepsakeEquipResultAddress & {
-            readonly resultKind: 'transcendentEmbryo';
-          },
-          ...(control.value === undefined
-            ? {}
-            : {
-                value:
-                  control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'],
-              }),
-          load: (nextValue = value) =>
-            projectKeepsakeEquipResultDomain(
-              contextualPicker,
-              catalog,
-              'transcendentEmbryo',
-              candidates.keepsakeEquipResult(control.address, nextValue),
-              nextValue?.blessingKey,
-            ),
-          selectedLabel:
-            value?.blessingKey === undefined
-              ? 'Choose Chaos blessing'
-              : equipResultLabel(catalog, 'transcendentEmbryo', value.blessingKey),
-          outcomeFor: (blessingKey: string) => {
-            const option = candidates
-              .keepsakeEquipResult(control.address)
-              .find((candidate) => candidate.value === blessingKey);
-            if (option?.resultValue !== undefined && 'blessingKey' in option.resultValue)
-              return option.resultValue as NonNullable<
-                import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']
-              >;
-            throw new Error(`No Embryo outcome candidate for ${blessingKey}`);
-          },
-          intentFor: (
-            value: NonNullable<
-              import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']
-            >,
-          ) =>
-            Object.freeze({
-              command: Object.freeze({
-                kind: 'ReplaceTranscendentEmbryoEquipResult' as const,
-                result: control.address as KeepsakeEquipResultAddress & {
-                  readonly resultKind: 'transcendentEmbryo';
-                },
-                value,
-              }),
-            }),
-        }),
-      );
-      continue;
-    }
-    if (effect.kind !== 'jeweledPom') continue;
-    const value =
-      control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'];
-    keepsakeEquipResults.set(
+    const interaction = bindKeepsakeEquipResultInteraction(
+      catalog,
+      candidates,
+      contextualPicker,
       key,
-      Object.freeze({
-        key,
-        owner: control.address as KeepsakeEquipResultAddress & {
-          readonly resultKind: 'jeweledPom';
-        },
-        ...(control.value === undefined
-          ? {}
-          : {
-              value:
-                control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
-            }),
-        load: (nextValue = value) =>
-          projectKeepsakeEquipResultDomain(
-            contextualPicker,
-            catalog,
-            'jeweledPom',
-            candidates.keepsakeEquipResult(control.address, nextValue),
-            nextValue?.traitKey,
-          ),
-        selectedLabel:
-          value?.traitKey === undefined
-            ? 'Choose Hades trait'
-            : equipResultLabel(catalog, 'jeweledPom', value.traitKey),
-        intentFor: (
-          value: NonNullable<
-            import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom']
-          >,
-        ) =>
-          Object.freeze({
-            command: Object.freeze({
-              kind: 'ReplaceJeweledPomEquipResult' as const,
-              result: control.address as KeepsakeEquipResultAddress & {
-                readonly resultKind: 'jeweledPom';
-              },
-              value,
-            }),
-          }),
-      }),
+      control,
     );
+    if (interaction !== undefined) keepsakeEquipResults.set(key, interaction);
   }
   return Object.freeze({
     levelResolutions,

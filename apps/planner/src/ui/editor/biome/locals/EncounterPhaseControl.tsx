@@ -423,10 +423,10 @@ function EncounterCustomizationControl({
           savedDecisions={phase.customization}
         />
       ) : composition === undefined ? null : (
-        // A fixed roster has nothing to edit: a view that closes with Done.
+        // A fixed roster has nothing to edit: a read-only view that closes from its title row.
         <EditorDialog
-          eyebrow="Encounter"
-          model={{ kind: 'live', onDone: close }}
+          layout="header"
+          model={{ kind: 'view', onClose: close }}
           returnFocusId={customizationId}
           size="narrow"
           title={encounterDialogTitle(composition.label, phase)}

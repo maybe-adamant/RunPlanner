@@ -69,7 +69,14 @@ describe('Settings presets', () => {
     expect(within(dialog).getByRole('button', { name: 'Death' }).getAttribute('aria-pressed')).toBe(
       'true',
     );
+    const save = () => within(dialog).getByRole<HTMLButtonElement>('button', { name: 'Save' });
+    // An unchanged or unnamed preset has nothing to save.
+    expect(save().disabled).toBe(true);
+    const field = within(dialog).getByRole('textbox', { name: 'Preset name' });
+    await user.clear(field);
     await user.click(within(dialog).getByRole('button', { name: 'Death' }));
+    expect(save().disabled).toBe(true);
+    await user.type(field, 'Arcana preset 2');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
     expect(controller.getSnapshot().arcana[1]!.cardKeys).toEqual(['BonusHealth']);
 

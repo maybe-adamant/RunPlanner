@@ -90,7 +90,7 @@ export function HexTreeBoard({
           placeholder="Choose a layout"
         />
         <button className="quiet-action" onClick={() => onEdit({ kind: 'reset' })} type="button">
-          Reset to default
+          Reset
         </button>
         <p className="hex-tree-note">Choosing a layout generates its default tree.</p>
       </div>

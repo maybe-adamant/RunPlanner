@@ -100,8 +100,9 @@ describe('OccurrenceWorkbench', () => {
 
     await view.user.click(screen.getByRole('button', { name: `View map of ${node.room.label}` }));
 
-    expect(screen.getByRole('heading', { name: `${node.room.label} map` })).toBeTruthy();
-    expect(screen.getByText(node.room.gameName)).toBeTruthy();
+    const mapDialog = screen.getByRole('dialog');
+    expect(within(mapDialog).getByRole('heading', { name: node.room.label })).toBeTruthy();
+    expect(mapDialog.querySelector(`[data-hint="${node.room.gameName}"]`)).toBeTruthy();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );

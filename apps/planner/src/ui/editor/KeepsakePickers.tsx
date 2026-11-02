@@ -1,16 +1,24 @@
+import type { AuthoredKeepsakeEquipResultValue } from '@run-planner/engine/authored-project';
 import type {
   WorkspaceCommandIntent,
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceKeepsakeSelectionInteraction,
 } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { dispatchCommandIntent, useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import {
+  useOptionalWorkspaceInteraction,
   useWorkspaceInteraction,
   useWorkspaceInteractionController,
 } from '@planner/ui/controls/useWorkspaceInteraction';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { authoredProjectCommandsDispatched } from '@planner/state/projectWorkspaceSlice';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { useAppDispatch } from '@planner/state/store';
+import type { EditorDialogIssue } from '@planner/ui/controls/EditorDialog';
+import { introducesIssue } from '@planner/ui/controls/introducesIssue';
+import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { TranscendentEmbryoOutcomeFields } from './rewards/TranscendentEmbryoOutcomeFields';
 import {
@@ -35,29 +43,54 @@ type TranscendentEmbryoInteraction = Extract<
 /** The rack card that leaves the held keepsake in place. */
 const UNCHANGED = '__unchanged';
 
+type EquipDomain = ReturnType<WorkspaceKeepsakeEquipResultInteraction['load']>;
+
 const emptyModel: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
 
-function commitEquipResult(
-  executeIntent: (intent: WorkspaceCommandIntent) => void,
+type EquipResultValue = NonNullable<AuthoredKeepsakeEquipResultValue>;
+
+/** The authored value a picker selection names, from the result's current value. */
+function equipResultValue(
   interaction: WorkspaceKeepsakeEquipResultInteraction,
-  value: string,
-): void {
-  if (interaction.owner.resultKind === 'experimentalHammer') {
-    const typed = interaction as ExperimentalHammerInteraction;
-    executeIntent(
-      typed.intentFor(
-        value === '__exhausted' ? { kind: 'exhausted' } : { kind: 'selected', traitKey: value },
-      ),
+  current: AuthoredKeepsakeEquipResultValue,
+  selection: string,
+): EquipResultValue {
+  if (interaction.owner.resultKind === 'experimentalHammer')
+    return selection === '__exhausted'
+      ? { kind: 'exhausted' }
+      : { kind: 'selected', traitKey: selection };
+  if (interaction.owner.resultKind === 'jeweledPom')
+    return {
+      ...((current as JeweledPomInteraction['value']) ?? {}),
+      traitKey: selection,
+    };
+  return (interaction as TranscendentEmbryoInteraction).outcomeFor(selection);
+}
+
+/** The picker item a value selects. */
+function equipResultSelection(value: EquipResultValue): string {
+  if ('blessingKey' in value) return value.blessingKey;
+  if ('kind' in value) return value.kind === 'exhausted' ? '__exhausted' : value.traitKey;
+  return value.traitKey;
+}
+
+function equipResultIntent(
+  interaction: WorkspaceKeepsakeEquipResultInteraction,
+  value: EquipResultValue,
+): WorkspaceCommandIntent {
+  if (interaction.owner.resultKind === 'experimentalHammer')
+    return (interaction as ExperimentalHammerInteraction).intentFor(
+      value as NonNullable<ExperimentalHammerInteraction['value']>,
     );
-  } else if (interaction.owner.resultKind === 'jeweledPom') {
-    const typed = interaction as JeweledPomInteraction;
-    executeIntent(typed.intentFor({ ...(typed.value ?? {}), traitKey: value }));
-  } else {
-    const typed = interaction as TranscendentEmbryoInteraction;
-    executeIntent(typed.intentFor(typed.outcomeFor(value)));
-  }
+  if (interaction.owner.resultKind === 'jeweledPom')
+    return (interaction as JeweledPomInteraction).intentFor(
+      value as NonNullable<JeweledPomInteraction['value']>,
+    );
+  return (interaction as TranscendentEmbryoInteraction).intentFor(
+    value as NonNullable<TranscendentEmbryoInteraction['value']>,
+  );
 }
 
 /** A rack launcher whose dialog also holds the held keepsake's equip-result controls. */
@@ -81,50 +114,8 @@ export function KeepsakeSelectionLauncher({
   readonly unavailableHint?: (keepsakeKey: string) => string | undefined;
 }) {
   const findingTarget = useFindingTarget();
-  const executeIntent = useCommandIntent();
-  const projection = useWorkspaceInteraction(interaction);
   const [open, setOpen] = useState(false);
-  const { activate } = projection;
-  useEffect(() => {
-    // A selection replaces the interaction; reload the rack while the dialog stays open.
-    if (open) activate();
-  }, [activate, open]);
   const shownKey = interaction.selectedKeepsakeKey ?? held?.key;
-  const entries = new Map<string, KeepsakeRackEntry>();
-  for (const section of projection.result?.sections ?? [])
-    for (const item of section.items) {
-      if (entries.has(item.value)) continue;
-      const refused = unavailableHint?.(item.value);
-      // The held keepsake stays choosable: choosing it keeps it.
-      const keeps = item.value === held?.key;
-      entries.set(item.value, {
-        key: item.value,
-        label: item.label,
-        selected: item.value === shownKey,
-        disabled: !keeps && (item.disabled || refused !== undefined),
-        hint: refused ?? item.explanations?.join(' '),
-      });
-    }
-  if (held !== undefined && projection.result !== undefined && !entries.has(held.key))
-    entries.set(held.key, { ...held, selected: held.key === shownKey, disabled: false });
-  // Without a known held keepsake, a Postboss rack offers Unchanged as its own card.
-  if (
-    held === undefined &&
-    interaction.owner.owner !== 'routeStart' &&
-    projection.result !== undefined
-  )
-    entries.set(UNCHANGED, {
-      key: UNCHANGED,
-      label: 'Unchanged',
-      selected: interaction.selectedKeepsakeKey === undefined,
-      disabled: false,
-    });
-  const select = (keepsakeKey: string) => {
-    if (keepsakeKey !== held?.key && keepsakeKey !== UNCHANGED)
-      executeIntent(interaction.replaceIntent(keepsakeKey));
-    else if (interaction.unchangedIntent !== undefined)
-      executeIntent(interaction.unchangedIntent());
-  };
   const shownLabel =
     interaction.selectedKeepsakeKey === undefined && held !== undefined
       ? `${held.label} (Unchanged)`
@@ -148,31 +139,217 @@ export function KeepsakeSelectionLauncher({
         text={`${shownLabel}${target === undefined ? '' : ` → ${target}`}`}
       />
       {open ? (
-        <KeepsakeRackDialog
-          detail={equipResults.map((result) => (
-            <KeepsakeEquipResultPicker
-              id={`${id}-${result.owner.resultKind}`}
-              interaction={result}
-              key={result.owner.resultKind}
-            />
-          ))}
-          entries={[...entries.values()]}
-          loading={projection.pending}
+        <KeepsakeSelectionDialog
+          equipResults={equipResults}
+          {...(held === undefined ? {} : { held })}
+          id={id}
+          interaction={interaction}
+          label={label}
           onClose={() => setOpen(false)}
-          onSelect={select}
-          returnFocusId={id}
-          title={label}
+          {...(unavailableHint === undefined ? {} : { unavailableHint })}
         />
       ) : null}
     </>
   );
 }
 
+/**
+ * The rack as one draft: the chosen keepsake and, while it stays the saved one, its equip
+ * results. Save commits every change as one edit.
+ */
+function KeepsakeSelectionDialog({
+  equipResults,
+  held,
+  id,
+  interaction,
+  label,
+  onClose,
+  unavailableHint,
+}: {
+  readonly equipResults: readonly WorkspaceKeepsakeEquipResultInteraction[];
+  readonly held?: { readonly key: string; readonly label: string };
+  readonly id: string;
+  readonly interaction: WorkspaceKeepsakeSelectionInteraction;
+  readonly label: string;
+  readonly onClose: () => void;
+  readonly unavailableHint?: (keepsakeKey: string) => string | undefined;
+}) {
+  const dispatch = useAppDispatch();
+  const projection = useWorkspaceInteraction(interaction);
+  const { activate } = projection;
+  useEffect(() => {
+    // A saved selection replaces the interaction; reload the rack.
+    activate();
+  }, [activate]);
+  // Without a known held keepsake, a Postboss rack offers Unchanged as its own card.
+  const unchangedCard = held === undefined && interaction.owner.owner !== 'routeStart';
+  const savedChoice =
+    interaction.selectedKeepsakeKey ?? held?.key ?? (unchangedCard ? UNCHANGED : undefined);
+  const [draftChoice, setDraftChoice] = useState(savedChoice);
+  const [draftResults, setDraftResults] = useState<
+    Readonly<Partial<Record<string, EquipResultValue>>>
+  >({});
+  const entries = new Map<string, KeepsakeRackEntry>();
+  for (const section of projection.result?.sections ?? [])
+    for (const item of section.items) {
+      if (entries.has(item.value)) continue;
+      const refused = unavailableHint?.(item.value);
+      // The held keepsake stays choosable: choosing it keeps it.
+      const keeps = item.value === held?.key;
+      entries.set(item.value, {
+        key: item.value,
+        label: item.label,
+        disabled: !keeps && (item.disabled || refused !== undefined),
+        hint: refused ?? item.explanations?.join(' '),
+      });
+    }
+  if (held !== undefined && projection.result !== undefined && !entries.has(held.key))
+    entries.set(held.key, { ...held, disabled: false });
+  if (unchangedCard && projection.result !== undefined)
+    entries.set(UNCHANGED, { key: UNCHANGED, label: 'Unchanged', disabled: false });
+  const keepsSaved = draftChoice === savedChoice;
+  // Leaving the held keepsake in place opens nothing new.
+  const swaps =
+    !keepsSaved &&
+    draftChoice !== undefined &&
+    draftChoice !== held?.key &&
+    draftChoice !== UNCHANGED;
+  // A drafted keepsake's outcome is judged as if that keepsake were chosen here.
+  const draftedOutcome = useMemo(
+    () =>
+      swaps && draftChoice !== undefined ? interaction.draftOutcomeFor(draftChoice) : undefined,
+    [interaction, draftChoice, swaps],
+  );
+  const outcomes = keepsSaved ? equipResults : draftedOutcome === undefined ? [] : [draftedOutcome];
+  const outcome = outcomes[0];
+  const outcomeValue =
+    outcome === undefined
+      ? undefined
+      : (draftResults[outcome.owner.resultKind] ?? (keepsSaved ? outcome.value : undefined));
+  const outcomeIdentity = draftValueIdentity(outcomeValue);
+  const draftAssessmentLoadable = useMemo(
+    () =>
+      outcome === undefined || outcomeValue === undefined
+        ? undefined
+        : { load: () => loadOutcome(outcome, outcomeValue) },
+    // The assessment follows the drafted outcome's identity, not each render's object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [outcome, outcomeIdentity],
+  );
+  const savedAssessmentLoadable = useMemo(
+    () =>
+      !keepsSaved || outcome?.value === undefined
+        ? undefined
+        : { load: () => loadOutcome(outcome, outcome.value) },
+    [keepsSaved, outcome],
+  );
+  const draftAssessment = useOptionalWorkspaceInteraction(draftAssessmentLoadable);
+  const savedAssessment = useOptionalWorkspaceInteraction(savedAssessmentLoadable);
+  const activateDraftAssessment = draftAssessment.activate;
+  const activateSavedAssessment = savedAssessment.activate;
+  useEffect(() => {
+    activateDraftAssessment();
+    // Activation follows the assessed outcome, not each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftAssessmentLoadable]);
+  useEffect(() => {
+    activateSavedAssessment();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedAssessmentLoadable]);
+  const issuesOf = (domain: EquipDomain | undefined): EditorDialogIssue[] =>
+    (domain?.picker.selected?.explanations ?? []).map((reason) => [reason, reason] as const);
+  const draftIssues = issuesOf(draftAssessment.result);
+  // A drafted keepsake that opens an outcome is incomplete until the outcome is chosen.
+  const incomplete = !keepsSaved && outcome !== undefined && outcomeValue === undefined;
+  const issues: EditorDialogIssue[] =
+    outcome !== undefined && outcomeValue === undefined
+      ? [['outcome', equipResultPlaceholder[outcome.owner.resultKind]], ...draftIssues]
+      : draftIssues;
+  const intents: WorkspaceCommandIntent[] = [];
+  if (!keepsSaved && draftChoice !== undefined) {
+    if (swaps) intents.push(interaction.replaceIntent(draftChoice));
+    else if (interaction.unchangedIntent !== undefined) intents.push(interaction.unchangedIntent());
+  }
+  // The outcome follows its keepsake in the same edit.
+  for (const result of outcomes) {
+    const value = draftResults[result.owner.resultKind];
+    if (value !== undefined && draftValueIdentity(value) !== draftValueIdentity(result.value))
+      intents.push(equipResultIntent(result, value));
+  }
+  const chooseKeepsake = (keepsakeKey: string): void => {
+    setDraftChoice(keepsakeKey);
+    setDraftResults({});
+  };
+  return (
+    <KeepsakeRackDialog
+      detail={outcomes.map((result) => (
+        <KeepsakeEquipResultPicker
+          draft={{
+            value: draftResults[result.owner.resultKind],
+            onChange: (value) =>
+              setDraftResults({ ...draftResults, [result.owner.resultKind]: value }),
+            incomplete: incomplete && result === outcome,
+          }}
+          id={`${id}-${result.owner.resultKind}`}
+          interaction={result}
+          key={`${draftChoice ?? ''}:${result.owner.resultKind}`}
+        />
+      ))}
+      draftKey={draftChoice}
+      entries={[...entries.values()]}
+      issues={issues}
+      loading={projection.pending}
+      onCancel={onClose}
+      onChoose={chooseKeepsake}
+      onSave={() => {
+        const [only] = intents;
+        if (intents.length === 1 && only !== undefined) dispatchCommandIntent(dispatch, only);
+        else if (intents.length > 1) {
+          dispatch(authoredProjectCommandsDispatched(intents.map((intent) => intent.command)));
+          const focus = intents.find((intent) => intent.focus !== undefined)?.focus;
+          if (focus !== undefined) dispatch(semanticOwnerFocused(focus.owner));
+        }
+        onClose();
+      }}
+      returnFocusId={id}
+      // An incomplete outcome or a finding this draft introduced blocks Save; inherited ones do not.
+      saveDisabled={
+        intents.length === 0 ||
+        incomplete ||
+        introducesIssue(draftIssues, issuesOf(savedAssessment.result))
+      }
+      title={label}
+    />
+  );
+}
+
+function loadOutcome(
+  result: WorkspaceKeepsakeEquipResultInteraction,
+  value: AuthoredKeepsakeEquipResultValue,
+): EquipDomain {
+  return (result.load as (value?: AuthoredKeepsakeEquipResultValue) => EquipDomain)(value);
+}
+
+/** What an equip result's picker asks for while it is empty. */
+const equipResultPlaceholder = {
+  experimentalHammer: 'Choose compatible Hammer',
+  jeweledPom: 'Choose Hades trait',
+  transcendentEmbryo: 'Choose Chaos blessing',
+} as const;
+
 export function KeepsakeEquipResultPicker({
+  draft,
   id,
   interaction: requestedInteraction,
   label: labelOverride,
 }: {
+  /** Inside a draft dialog: the drafted value, undefined while unchanged, and its setter. */
+  readonly draft?: {
+    readonly value: EquipResultValue | undefined;
+    readonly onChange: (value: EquipResultValue) => void;
+    /** The outcome is still missing, so the header's finding focuses this picker. */
+    readonly incomplete?: boolean;
+  };
   readonly id: string;
   readonly interaction: WorkspaceKeepsakeEquipResultInteraction;
   readonly label?: string;
@@ -184,7 +361,29 @@ export function KeepsakeEquipResultPicker({
     useWorkspaceInteractionController<
       ReturnType<WorkspaceKeepsakeEquipResultInteraction['load']>
     >();
-  const { pending, result: domain } = controller.observe(interaction);
+  const drafting = draft !== undefined;
+  const current: AuthoredKeepsakeEquipResultValue = draft?.value ?? interaction.value;
+  const currentIdentity = draftValueIdentity(current);
+  // A draft's domain follows the drafted value; the saved interaction stays fixed meanwhile.
+  const draftLoadable = useMemo(
+    () => (drafting ? { load: () => loadOutcome(interaction, current) } : undefined),
+    // The loadable follows the drafted value's identity, not each render's object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [drafting, interaction, currentIdentity],
+  );
+  const loadable = draftLoadable ?? interaction;
+  const { pending, result: domain } = controller.observe(loadable);
+  const draftChanged = draft?.value !== undefined;
+  useEffect(() => {
+    if (draftLoadable === undefined) return;
+    if (
+      draftChanged ||
+      (interaction.owner.resultKind === 'transcendentEmbryo' && current !== undefined)
+    )
+      controller.activate(draftLoadable);
+    // Activation follows the drafted value, not each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftLoadable]);
   useLayoutEffect(() => {
     // Publish the binding and its numeric domain together, without unmounting
     // the slider between consecutive updates during a native drag.
@@ -201,8 +400,19 @@ export function KeepsakeEquipResultPicker({
   const resultKind = interaction.owner.resultKind;
   const embryoValue =
     resultKind === 'transcendentEmbryo'
-      ? (interaction as TranscendentEmbryoInteraction).value
+      ? (current as TranscendentEmbryoInteraction['value'])
       : undefined;
+  const select = (value: EquipResultValue): void => {
+    if (draft !== undefined) draft.onChange(value);
+    else executeIntent(equipResultIntent(interaction, value));
+  };
+  const draftSelection = draft?.value === undefined ? undefined : equipResultSelection(draft.value);
+  const triggerLabel =
+    draftSelection === undefined
+      ? interaction.selectedLabel
+      : (domain?.picker.sections
+          .flatMap((section) => section.items)
+          .find((item) => item.value === draftSelection)?.label ?? interaction.selectedLabel);
   const label =
     resultKind === 'transcendentEmbryo'
       ? 'Target'
@@ -210,12 +420,7 @@ export function KeepsakeEquipResultPicker({
         (resultKind === 'experimentalHammer'
           ? 'Experimental Hammer result'
           : 'Jeweled Pom result'));
-  const placeholder =
-    resultKind === 'experimentalHammer'
-      ? 'Choose compatible Hammer'
-      : resultKind === 'jeweledPom'
-        ? 'Choose Hades trait'
-        : 'Choose Chaos blessing';
+  const placeholder = equipResultPlaceholder[resultKind];
 
   return (
     <div
@@ -226,26 +431,21 @@ export function KeepsakeEquipResultPicker({
       <ContextualPicker
         findingTarget={findingTarget(interaction.owner, id)}
         id={id}
+        {...(draft?.incomplete === true ? { invalid: true } : {})}
         label={label}
         layout="inline"
         loading={pending}
         model={domain?.picker ?? emptyModel}
         onOpenChange={(open) => {
-          if (open) controller.activate(interaction);
+          if (open) controller.activate(loadable);
         }}
-        onSelect={(value) => commitEquipResult(executeIntent, interaction, value)}
+        onSelect={(value) => select(equipResultValue(interaction, current, value))}
         placeholder={placeholder}
-        {...(interaction.selectedLabel === undefined
-          ? {}
-          : { triggerLabel: interaction.selectedLabel })}
+        {...(triggerLabel === undefined ? {} : { triggerLabel })}
       />
       {domain?.transcendentEmbryoSummary === undefined || embryoValue === undefined ? null : (
         <TranscendentEmbryoOutcomeFields
-          onChange={(blessingValues) => {
-            const typed = interaction as TranscendentEmbryoInteraction;
-            if (typed.value === undefined) return;
-            executeIntent(typed.intentFor({ ...typed.value, blessingValues }));
-          }}
+          onChange={(blessingValues) => select({ ...embryoValue, blessingValues })}
           operands={domain.transcendentEmbryoSummary.operands}
           rarity={domain.transcendentEmbryoSummary.rarity}
           values={embryoValue.blessingValues}

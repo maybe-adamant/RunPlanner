@@ -188,6 +188,18 @@
   display: none;
 }
 
+/* Controls pinned under a header-layout title bar, such as tabs. */
+.editor-dialog-header[data-layout='header']:has(+ .editor-dialog-header-below) {
+  border-bottom: 0;
+  padding-bottom: 0.25rem;
+}
+
+.editor-dialog-header-below {
+  border-bottom: 1px solid var(--border, #ccd3df);
+  flex: none;
+  padding: 0 1rem 0.75rem;
+}
+
 .editor-dialog-header-actions {
   align-items: center;
   display: flex;

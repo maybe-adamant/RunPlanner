@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import {
   DRAFT_OPTIONS,
   createRouteAddress,
@@ -30,8 +30,6 @@ import {
   type DraftRuleTag,
   projectDraftBasket,
   projectDraftSpec,
-  withDraftBasketGiverCleared,
-  withDraftBasketTraitToggled,
   withDraftFieldNpcToggled,
   withDraftGodToggled,
   projectDraftBudget,
@@ -292,24 +290,61 @@ function DraftRackKeepsake({
         }
       />
       {open ? (
-        <KeepsakeRackDialog
-          entries={catalog.keepsakes.values.map((keepsake) => {
-            const allowed = slot.keepsakeKeys.includes(keepsake.key);
-            return {
-              key: keepsake.key,
-              label: keepsake.label,
-              selected: keepsake.key === held,
-              disabled: !allowed,
-              hint: allowed ? undefined : godKeepsakeReason,
-            };
-          })}
+        <DraftRackDialog
+          catalog={catalog}
+          held={held ?? undefined}
+          id={id}
+          label={label}
           onClose={() => setOpen(false)}
           onSelect={onSelect}
-          returnFocusId={id}
-          title={label}
+          slot={slot}
         />
       ) : null}
     </>
+  );
+}
+
+/** The rack's keepsake as a draft: Save replaces the slot's keepsake once. */
+function DraftRackDialog({
+  catalog,
+  held,
+  id,
+  label,
+  onClose,
+  onSelect,
+  slot,
+}: {
+  readonly catalog: Catalog;
+  readonly held: string | undefined;
+  readonly id: string;
+  readonly label: string;
+  readonly onClose: () => void;
+  readonly onSelect: (keepsakeKey: string) => void;
+  readonly slot: DraftRackSlot;
+}) {
+  const [draftKey, setDraftKey] = useState(held);
+  return (
+    <KeepsakeRackDialog
+      draftKey={draftKey}
+      entries={catalog.keepsakes.values.map((keepsake) => {
+        const allowed = slot.keepsakeKeys.includes(keepsake.key);
+        return {
+          key: keepsake.key,
+          label: keepsake.label,
+          disabled: !allowed,
+          hint: allowed ? undefined : godKeepsakeReason,
+        };
+      })}
+      onCancel={onClose}
+      onChoose={setDraftKey}
+      onSave={() => {
+        if (draftKey !== undefined) onSelect(draftKey);
+        onClose();
+      }}
+      returnFocusId={id}
+      saveDisabled={draftKey === undefined || draftKey === held}
+      title={label}
+    />
   );
 }
 
@@ -437,6 +472,17 @@ export function RouteDraftPanel({
     () =>
       spec === undefined ? undefined : projectDraftBasket(catalog, project, spec, worldOptions),
     [catalog, project, spec, worldOptions],
+  );
+  // The basket another Draft settings value would show, for the basket dialog's draft.
+  const projectBasketFor = useCallback(
+    (next: AuthoredDraftSpec) => {
+      const drafted = { ...project, route: { ...project.route, draft: next } };
+      const nextProjection = projectDraftSpec(catalog, drafted);
+      return nextProjection.spec === undefined
+        ? undefined
+        : projectDraftBasket(catalog, drafted, nextProjection.spec, nextProjection.worldOptions);
+    },
+    [catalog, project],
   );
   const running = run.kind === 'running';
   const elapsed = useElapsedSeconds(run);
@@ -1045,14 +1091,12 @@ export function RouteDraftPanel({
       </div>
       {basketOpen !== null && basket !== undefined ? (
         <DraftBasketDialog
+          draft={draft}
           initialGiverKey={basketOpen.giverKey}
           initialTab={basketOpen.tab}
           onClose={() => setBasketOpen(null)}
-          onClear={(giverKey) => replaceDraft(withDraftBasketGiverCleared(draft, giverKey))}
-          onToggle={(row) =>
-            replaceDraft(withDraftBasketTraitToggled(draft, row.traitKey, row.giverKey))
-          }
-          projection={basket}
+          onSave={replaceDraft}
+          projectBasket={projectBasketFor}
           returnFocusId="draft-basket-edit"
         />
       ) : null}

@@ -24,6 +24,13 @@ export interface WorkspaceKeepsakeSelectionInteraction {
       { readonly kind: 'ReplaceStartingKeepsake' | 'ReplacePostbossKeepsake' }
     >
   >;
+  /**
+   * The equip result a drafted keepsake opens, judged as if it were chosen here; undefined for a
+   * keepsake without one.
+   */
+  readonly draftOutcomeFor: (
+    keepsakeKey: string,
+  ) => WorkspaceKeepsakeEquipResultInteraction | undefined;
   /** Returns a swapped Postboss rack to leaving the held keepsake unchanged. */
   readonly unchangedIntent?: () => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplacePostbossKeepsake' }>

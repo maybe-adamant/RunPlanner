@@ -18,8 +18,10 @@ import {
   ArcanaBoard,
   ArcanaDialogTitle,
   FearBoard,
+  FearBoardHelp,
   FearDialogTitle,
 } from '../controls/arcana-fear/ArcanaFearBoards';
+import { draftValueIdentity } from '../controls/draftValueIdentity';
 import { EditorDialog, EditorDialogDraftActions } from '../controls/EditorDialog';
 import { IconActionButton } from '../controls/IconActionButton';
 import { useLoadoutPresets } from '../shell/loadoutPresetsContext';
@@ -61,17 +63,13 @@ function PresetEditorDialog({
     ),
   }));
   const editor = projectPresetLoadoutEditor(catalog, loadout);
+  // A new preset saves even unchanged; an edited one only once it differs.
+  const [initial] = useState(() => draftValueIdentity({ name, loadout }));
+  const unchanged = editing.preset !== null && draftValueIdentity({ name, loadout }) === initial;
   const title = `${editing.preset === null ? 'New' : 'Edit'} ${editing.kind === 'arcana' ? 'Arcana' : 'Vow'} preset`;
   return (
     <EditorDialog
-      eyebrow="Presets"
-      footer={
-        <EditorDialogDraftActions
-          onCancel={onCancel}
-          onSave={() => onSave(name, loadout)}
-          saveDisabled={presetName(name) === ''}
-        />
-      }
+      layout="header"
       model={{ kind: 'draft', onCancel }}
       size="cards"
       title={
@@ -87,6 +85,13 @@ function PresetEditorDialog({
         )
       }
     >
+      {editing.kind === 'vows' ? <FearBoardHelp /> : null}
+      <EditorDialogDraftActions
+        issues={presetName(name) === '' ? [['name', 'Name the preset']] : []}
+        onCancel={onCancel}
+        onSave={() => onSave(name, loadout)}
+        saveDisabled={presetName(name) === '' || unchanged}
+      />
       <label className="library-dialog-field preset-name-field">
         Preset name
         <input

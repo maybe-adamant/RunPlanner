@@ -27,7 +27,7 @@ const HEAVY = ['StartingGold', 'RarityBoost', 'ManaOverTime'];
 describe('editor preset chips', () => {
   afterEach(cleanup);
 
-  it('replaces the Arcana or Vows in one undoable step, and says why a preset does not fit', async () => {
+  it('replaces the drafted Arcana or Vows, saved as one undoable step, and says why a preset does not fit', async () => {
     const application = createOpenTestApplication();
     const { user } = renderPlannerForInteraction({
       application,
@@ -46,30 +46,35 @@ describe('editor preset chips', () => {
       }),
     });
     const loadout = () => selectPresentProject(application.store.getState())!.route.loadout;
+    const save = () => within(screen.getByRole('dialog')).getByRole('button', { name: 'Save' });
     await user.click(screen.getByRole('button', { name: 'Loadout' }));
 
     await user.click(screen.getByRole('button', { name: 'Edit Fear' }));
     let chips = screen.getByRole('group', { name: 'Vow presets' });
     await user.click(within(chips).getByRole('button', { name: 'Void practice' }));
+    // A chip changes only the draft.
+    expect(loadout().fearRanks.EnemyDamageShrineUpgrade).toBe(0);
+    expect(
+      within(chips).getByRole('button', { name: 'Void practice' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    await user.click(save());
     expect(loadout().fearRanks).toMatchObject({
       EnemyDamageShrineUpgrade: 2,
       LimitGraspShrineUpgrade: 2,
     });
-    expect(
-      within(chips).getByRole('button', { name: 'Void practice' }).getAttribute('aria-pressed'),
-    ).toBe('true');
-    await user.click(screen.getByRole('button', { name: 'Done' }));
 
     await user.click(screen.getByRole('button', { name: 'Edit Arcana' }));
     chips = screen.getByRole('group', { name: 'Arcana presets' });
     await user.click(within(chips).getByRole('button', { name: 'Heavy' }));
     expect(screen.getByText('Heavy: Needs 15 Grasp; your Vows allow 12.')).toBeTruthy();
-    expect(loadout().manualArcanaKeys).toEqual([]);
+    expect((save() as HTMLButtonElement).disabled).toBe(true);
     await user.click(within(chips).getByRole('button', { name: 'Light' }));
-    expect(loadout().manualArcanaKeys).toEqual(['BonusHealth', 'LastStand']);
     expect(document.querySelector('.preset-chip-reason')?.textContent).toBe('');
+    expect(loadout().manualArcanaKeys).toEqual([]);
+    await user.click(save());
+    expect(loadout().manualArcanaKeys).toEqual(['BonusHealth', 'LastStand']);
 
-    // Each preset was one step: two Undos return to the plan as it started.
+    // Each saved dialog was one step: two Undos return to the plan as it started.
     application.store.dispatch(authoredProjectUndoRequested());
     expect(loadout().manualArcanaKeys).toEqual([]);
     application.store.dispatch(authoredProjectUndoRequested());

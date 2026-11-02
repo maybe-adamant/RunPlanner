@@ -37,11 +37,11 @@ it('keeps draft settings in the project through Undo, save and reload', async ()
   await user.click(screen.getByRole('button', { name: 'Edit basket' }));
   const zeusBoon = catalog.traits.byKey.ZeusWeaponBoon!.label;
   await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: zeusBoon }));
-  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Done' }));
+  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save' }));
   const rack = () => screen.getByRole('button', { name: 'After Oceanus' });
   await user.click(rack());
   await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Lion Fang' }));
-  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Done' }));
+  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save' }));
   expect(rack().textContent).toBe('Lion Fang');
 
   // Each settings edit is one Undo step.

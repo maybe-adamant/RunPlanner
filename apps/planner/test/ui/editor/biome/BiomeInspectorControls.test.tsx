@@ -759,36 +759,40 @@ describe('Biome inspector controls', () => {
         'button',
         { name },
       );
+    const save = () => within(dialog()).getByRole<HTMLButtonElement>('button', { name: 'Save' });
     expect((await card(held)).getAttribute('aria-pressed')).toBe('true');
     // Choosing the held keepsake while unchanged changes nothing.
     fireEvent.click(await card(held));
-    expect(postboss()?.keepsakeRack).toEqual({ keepsakeKey: null });
+    expect(save().disabled).toBe(true);
     await waitFor(async () =>
       expect((await card('Knuckle Bones')).getAttribute('aria-disabled')).toBeNull(),
     );
     fireEvent.click(await card('Knuckle Bones'));
+    // The rack drafts the swap; Save commits it.
+    expect(postboss()?.keepsakeRack).toEqual({ keepsakeKey: null });
+    expect((await card('Knuckle Bones')).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(save());
     expect(postboss()?.keepsakeRack).toEqual({ keepsakeKey: 'BossPreDamageKeepsake' });
     expect(postboss()?.roomActions.order).toEqual(order);
-    // The row never unmounts, so its dialog stays open across the change.
-    expect(dialog()).toBeTruthy();
-    await waitFor(async () =>
-      expect((await card('Knuckle Bones')).getAttribute('aria-pressed')).toBe('true'),
-    );
     expect(launcher().textContent).toBe('Knuckle Bones');
 
+    fireEvent.click(launcher());
     fireEvent.click(await card(held));
+    fireEvent.click(save());
     expect(postboss()?.keepsakeRack).toEqual({ keepsakeKey: null });
     expect(postboss()?.roomActions.order).toEqual(order);
-    expect(dialog()).toBeTruthy();
     expect(launcher().textContent).toBe(unchanged);
 
-    // A swap with an equip result shows its target picker in the dialog.
+    // A swap with an equip result shows its outcome picker in the draft; Save waits for it.
+    fireEvent.click(launcher());
+    await waitFor(async () =>
+      expect((await card('Jeweled Pom')).getAttribute('aria-disabled')).toBeNull(),
+    );
     fireEvent.click(await card('Jeweled Pom'));
-    expect(
-      await within(dialog()).findByRole('button', { name: 'Jeweled Pom result' }),
-    ).toBeTruthy();
-    fireEvent.click(within(dialog()).getByRole('button', { name: 'Done' }));
-    expect(launcher().textContent).toBe('Jeweled Pom');
+    expect(within(dialog()).getByRole('button', { name: 'Jeweled Pom result' })).toBeTruthy();
+    expect(save().disabled).toBe(true);
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Cancel' }));
+    expect(launcher().textContent).toBe(unchanged);
     expect(postboss()?.roomActions.order).toEqual(order);
     fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
     expect(screen.queryByText('Keepsake Rack')).toBeNull();
@@ -823,7 +827,7 @@ describe('Biome inspector controls', () => {
     fireEvent.click(within(keepsakes).getByRole('button', { name: 'Aromatic Phial' }));
     fireEvent.click(
       within(screen.getByRole('dialog', { name: 'Choose Keepsake' })).getByRole('button', {
-        name: 'Done',
+        name: 'Save',
       }),
     );
     await within(timeline).findByRole('button', { name: 'Reorder Keepsake Rack' });

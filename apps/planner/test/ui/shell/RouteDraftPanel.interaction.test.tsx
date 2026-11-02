@@ -17,6 +17,7 @@ import {
 import type { DraftRunner, DraftRunRequest } from '@planner/workspace/draftRun';
 import type { DraftRunEvent } from '@planner/workspace/draftWorkerProtocol';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
+import { dialogFinding } from '@planner-test/support/editor-dialog';
 import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
@@ -158,7 +159,7 @@ describe('Draft panel', () => {
     expect(castRow.getAttribute('aria-disabled')).toBe('true');
     expect(hintOf(castRow)).toBeNull();
     fireEvent.click(within(dialog).getByRole('button', { name: sprint! }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
     expect(basketTag().hasAttribute('data-active')).toBe(false);
   });
 
@@ -222,7 +223,7 @@ describe('Draft panel', () => {
     fireEvent.click(ringRow());
     // Unpicking the core leaves a non-core first: the tag turns active and the draft is blocked.
     fireEvent.click(within(dialog).getByRole('button', { name: cast! }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
     expect(tag().hasAttribute('data-active')).toBe(true);
     expect(lineChips('God')).toEqual([expect.objectContaining({ hint: ring, refused: false })]);
     expect(draftButton().getAttribute('aria-disabled')).toBe('true');
@@ -311,7 +312,7 @@ describe('Draft panel', () => {
     expect(hintOf(held)).toBe('In Apollo.');
     fireEvent.click(held);
     expect(apollo().getByRole('button', { name: duo! }).getAttribute('aria-pressed')).toBe('true');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
     // The Duo sits in Apollo's order on the god line, marked with its other god.
     expect(lineChips('God')).toEqual([
       expect.objectContaining({ hint: ring, order: '1', partner: false }),
@@ -338,6 +339,35 @@ describe('Draft panel', () => {
     const excluded = within(dialog).getByRole('button', { name: coal! });
     expect(excluded.getAttribute('aria-disabled')).toBe('true');
     expect(hintOf(excluded)).toBe(`Excludes ${lance}.`);
+  });
+
+  it('edits the basket as a draft that Cancel discards and Save commits as one Undo step', () => {
+    const { application, catalog } = open();
+    chooseGods(['Zeus']);
+    const basket = () =>
+      application.store.getState().projectWorkspace.history!.present.route.draft.basketByGiver;
+    const past = () => application.store.getState().projectWorkspace.history!.past.length;
+    const [attack, cast] = ['ZeusWeaponBoon', 'ZeusCastBoon'].map(
+      (key) => catalog.traits.byKey[key]!.label,
+    );
+    let dialog = openBasket();
+    const save = () => within(dialog).getByRole<HTMLButtonElement>('button', { name: 'Save' });
+    expect(save().disabled).toBe(true);
+    fireEvent.click(within(dialog).getByRole('button', { name: attack! }));
+    expect(save().disabled).toBe(false);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(basket()).toEqual({});
+
+    const before = past();
+    dialog = openBasket();
+    fireEvent.click(within(dialog).getByRole('button', { name: attack! }));
+    fireEvent.click(within(dialog).getByRole('button', { name: cast! }));
+    expect(basket()).toEqual({});
+    fireEvent.click(save());
+    expect(basket()).toEqual({ Zeus: ['ZeusWeaponBoon', 'ZeusCastBoon'] });
+    expect(past()).toBe(before + 1);
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(basket()).toEqual({});
   });
 
   it('adds basket traits, refuses a second trait for a held slot, and lists the selected NPCs', () => {
@@ -375,7 +405,7 @@ describe('Draft panel', () => {
         .getAllByRole('region')
         .map((s) => s.getAttribute('aria-label')),
     ).toEqual(['Field', catalog.traitGivers.byKey.Artemis!.label]);
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
     expect(lineChips('God')).toEqual([expect.objectContaining({ hint: zeusAttack, order: '1' })]);
   });
 
@@ -396,7 +426,7 @@ describe('Draft panel', () => {
     fireEvent.click(within(dialog).getByRole('tab', { name: /^NPCs/ }));
     const npcTrait = label(artemis.traitKeys[0]!);
     fireEvent.click(within(dialog).getByRole('button', { name: npcTrait }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 
     expect(basketLine('God')?.getAttribute('aria-label')).toBe(
       `God traits: ${label('ZeusWeaponBoon')}`,
@@ -494,21 +524,29 @@ describe('Draft panel', () => {
       'true',
     );
 
-    // Unpicking Storm Ring leaves Double Strike first: refused, with a visible note.
-    fireEvent.click(within(dialog).getByRole('tab', { name: /^Gods/ }));
-    fireEvent.click(within(dialog).getByRole('button', { name: cast! }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    // Unpicking Storm Ring leaves Double Strike first: refused, with a visible note, and a
+    // refusal the draft introduces holds Save.
+    const reopened = openBasket();
+    fireEvent.click(within(reopened).getByRole('button', { name: cast! }));
     const note = `${strike} needs ${rush} first.`;
-    expect(within(dialog).getByText(note)).toBeTruthy();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
-    expect(screen.getByText(note)).toBeTruthy();
+    expect(within(reopened).getByText(note, { selector: '.draft-chip-group-note' })).toBeTruthy();
+    expect(dialogFinding(reopened)).toBe(note);
+    expect(
+      (within(reopened).getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    fireEvent.click(within(reopened).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByText(note)).toBeNull();
     expect(lineChips('God').map((chip) => [chip.hint, chip.refused])).toEqual([
-      [strike, true],
+      [cast, false],
+      [strike, false],
       [rush, false],
     ]);
 
     const zeus = within(openBasket()).getByRole('region', { name: 'Zeus' });
     fireEvent.click(within(zeus).getByRole('button', { name: 'Clear Zeus picks' }));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Done' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save' }));
     expect(basketLine('God')).toBeNull();
     expect(screen.queryByText(note)).toBeNull();
   });
@@ -741,6 +779,7 @@ describe('Draft panel', () => {
     ).not.toBe(god.key);
     fireEvent.click(within(rack).getByRole('button', { name: 'Gold Purse' }));
     expect(within(dialog).getByText('Gold Purse', { selector: 'p' })).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
     expect(
       application.store.getState().projectWorkspace.history!.present.route.loadout
         .startingKeepsakeKey,
@@ -756,7 +795,7 @@ describe('Draft panel', () => {
       fireEvent.click(launcher(biomeKey));
       const dialog = screen.getByRole('dialog', { name: rackLabel(biomeKey) });
       fireEvent.click(within(dialog).getByRole('button', { name: keepsake }));
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
     };
     const shown = () => ['F', 'G', 'H'].map((biomeKey) => launcher(biomeKey).textContent);
     const stored = () =>

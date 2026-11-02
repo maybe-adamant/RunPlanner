@@ -1,5 +1,7 @@
+import * as Popover from '@radix-ui/react-popover';
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useId,
@@ -15,12 +17,12 @@ import { ModalDialog, type ModalSurfaceProps } from './ModalDialog';
 import { showTruncatedTitle } from './truncatedTitle';
 
 /**
- * A draft editor saves once and Cancel discards; a live editor commits per
- * control and closes with Done. Escape and Close act as Cancel or Done.
+ * A draft editor saves once and Cancel discards; a view edits nothing and
+ * closes from its title bar. Escape acts as Cancel or Close.
  */
 export type EditorDialogModel =
   | { readonly kind: 'draft'; readonly onCancel: () => void }
-  | { readonly kind: 'live'; readonly onDone: () => void };
+  | { readonly kind: 'view'; readonly onClose: () => void };
 
 /** The title line's trailing slot, which dialog content can fill. */
 const headerSlot = createContext<HTMLElement | null | undefined>(undefined);
@@ -33,6 +35,51 @@ export function EditorDialogTitleAction({ children }: { readonly children: React
   const slot = useContext(headerSlot);
   if (slot === undefined) return children;
   return slot === null ? null : createPortal(children, slot);
+}
+
+/**
+ * The dialog's help, an info button on the title line that opens a popover;
+ * long guidance lives here rather than in the body.
+ */
+export function EditorDialogHelp({
+  children,
+  className,
+  label,
+}: {
+  readonly children: ReactNode;
+  /** Extra popover classes for help with its own layout. */
+  readonly className?: string;
+  /** Names both the button and its popover, such as "Fear help". */
+  readonly label: string;
+}) {
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+  const captureTrigger = useCallback((node: HTMLElement | null): void => {
+    const container = node?.closest<HTMLElement>('dialog') ?? null;
+    setPortalContainer((current) => (current === container ? current : container));
+  }, []);
+  return (
+    <EditorDialogTitleAction>
+      <Popover.Root>
+        <Popover.Trigger asChild ref={captureTrigger}>
+          <button aria-label={label} className="trait-offer-state-button" type="button">
+            i
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal container={portalContainer ?? undefined}>
+          <Popover.Content
+            align="end"
+            aria-label={label}
+            className={`trait-offer-state-popover editor-dialog-help${className === undefined ? '' : ` ${className}`}`}
+            collisionPadding={12}
+            side="bottom"
+            sideOffset={6}
+          >
+            {children}
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    </EditorDialogTitleAction>
+  );
 }
 
 /** The header bar's action slot; undefined outside a header-layout dialog. */
@@ -91,8 +138,9 @@ export function EditorDialog({
   const bodyRef = useRef<HTMLDivElement>(null);
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
   const [actionsElement, setActionsElement] = useState<HTMLElement | null>(null);
-  const bar = layout === 'header';
-  const close = model.kind === 'draft' ? model.onCancel : model.onDone;
+  // A view's Close lives on the title bar, so a view always takes the header layout.
+  const bar = layout === 'header' || model.kind === 'view';
+  const close = model.kind === 'draft' ? model.onCancel : model.onClose;
   const draft = model.kind === 'draft';
   useEffect(() => {
     if (!draft) return;
@@ -126,17 +174,33 @@ export function EditorDialog({
       {...(anchorProps === undefined ? {} : { surfaceProps: anchorProps })}
     >
       {bar ? (
-        <header className="editor-dialog-header" data-layout="header">
-          <div className="editor-dialog-title-line">
-            {icon}
-            <h2 id={titleId} onMouseEnter={showTruncatedTitle}>
-              {title}
-            </h2>
-            <span className="editor-dialog-title-action" ref={setTitleSlot} />
-            {headerAction}
-          </div>
-          <div className="editor-dialog-header-actions" ref={setActionsElement} />
-        </header>
+        <>
+          <header className="editor-dialog-header" data-layout="header">
+            <div className="editor-dialog-title-line">
+              {icon}
+              <h2 id={titleId} onMouseEnter={showTruncatedTitle}>
+                {title}
+              </h2>
+              <span className="editor-dialog-title-action" ref={setTitleSlot} />
+              {headerAction}
+            </div>
+            <div className="editor-dialog-header-actions" ref={setActionsElement}>
+              {model.kind === 'view' ? (
+                <button
+                  className="quiet-action"
+                  data-editor-dismiss
+                  onClick={model.onClose}
+                  type="button"
+                >
+                  Close
+                </button>
+              ) : null}
+            </div>
+          </header>
+          {headerBelow === undefined ? null : (
+            <div className="editor-dialog-header-below">{headerBelow}</div>
+          )}
+        </>
       ) : (
         <header className="editor-dialog-header">
           <div>
@@ -157,20 +221,7 @@ export function EditorDialog({
           </actionsSlot.Provider>
         </headerSlot.Provider>
         {feedback}
-        {model.kind === 'live' ? (
-          <EditorDialogFooter>
-            <button
-              className="primary-action"
-              data-editor-dismiss
-              onClick={model.onDone}
-              type="button"
-            >
-              Done
-            </button>
-          </EditorDialogFooter>
-        ) : (
-          footer
-        )}
+        {model.kind === 'draft' ? footer : null}
       </div>
     </ModalDialog>
   );

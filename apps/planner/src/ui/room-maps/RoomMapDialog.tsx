@@ -1,99 +1,46 @@
 import { hintProps } from '@planner/ui/controls/hint';
 import { ActionIcon } from '@planner/ui/controls/ActionIcon';
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+
+import { EditorDialog } from '@planner/ui/controls/EditorDialog';
 
 import { roomMapAssetFor } from './roomMapAssets';
 import { roomMapOverlayFor } from './HubMapAnnotations';
 import { RoomMapViewport } from './RoomMapViewport';
 
+/** A room's map as a read-only dialog: its readable name, the code name on hover. */
 export function RoomMapDialog({
   gameName,
-  launcherRef,
   onClose,
+  returnFocusId,
   title,
 }: {
   readonly gameName: string;
-  readonly launcherRef: RefObject<HTMLButtonElement | null>;
   readonly onClose: () => void;
+  /** The launcher that regains focus after the dialog closes. */
+  readonly returnFocusId: string;
   readonly title: string;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
-  const close = useCallback(() => {
-    const dialog = dialogRef.current;
-    // A native modal keeps background controls inert until it leaves the top
-    // layer. Release it before returning focus to the launcher.
-    if (dialog?.open && typeof dialog.close === 'function') dialog.close();
-    onClose();
-    const launcher = launcherRef.current;
-    (launcher?.isConnected ? launcher : previousFocusRef.current)?.focus();
-  }, [launcherRef, onClose]);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
-    previousFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    if (typeof dialog.showModal === 'function' && !dialog.open) {
-      try {
-        dialog.showModal();
-      } catch {
-        dialog.setAttribute('open', '');
-      }
-    } else if (!dialog.open) {
-      dialog.setAttribute('open', '');
-    }
-    dialog.querySelector<HTMLButtonElement>('[data-room-map-close]')?.focus();
-    const cancel = (event: Event) => {
-      event.preventDefault();
-      close();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented) return;
-      event.preventDefault();
-      close();
-    };
-    dialog.addEventListener('cancel', cancel);
-    dialog.addEventListener('keydown', onKeyDown);
-    return () => {
-      dialog.removeEventListener('cancel', cancel);
-      dialog.removeEventListener('keydown', onKeyDown);
-      if (dialog.open && typeof dialog.close === 'function') dialog.close();
-    };
-  }, [close]);
-
   return (
-    <dialog
-      aria-labelledby="room-map-dialog-title"
-      aria-modal="true"
-      className="room-map-dialog-backdrop"
-      ref={dialogRef}
+    <EditorDialog
+      layout="header"
+      model={{ kind: 'view', onClose }}
+      returnFocusId={returnFocusId}
+      size="cards"
+      title={
+        <span className="room-map-dialog-title" {...hintProps(gameName)}>
+          {title}
+        </span>
+      }
     >
-      <section className="room-map-dialog">
-        <header className="room-map-dialog-heading">
-          <div>
-            <p className="eyebrow">Room reference</p>
-            <h2 id="room-map-dialog-title">{title} map</h2>
-            <p className="room-map-game-name">{gameName}</p>
-          </div>
-          <button
-            aria-label="Close map"
-            className="quiet-action action-compact"
-            data-room-map-close
-            onClick={close}
-            type="button"
-          >
-            Close
-          </button>
-        </header>
-        <RoomMapViewport
-          asset={roomMapAssetFor(gameName)}
-          key={gameName}
-          overlay={roomMapOverlayFor(gameName)}
-          title={title}
-        />
-      </section>
-    </dialog>
+      <RoomMapViewport
+        asset={roomMapAssetFor(gameName)}
+        controlsPlacement="collapsible-overlay"
+        key={gameName}
+        overlay={roomMapOverlayFor(gameName)}
+        title={title}
+      />
+    </EditorDialog>
   );
 }
 
@@ -108,7 +55,7 @@ export function RoomMapLauncher({
   readonly hostId: string;
   readonly title: string;
 }) {
-  const launcherRef = useRef<HTMLButtonElement>(null);
+  const launcherId = useId();
   const previousHostIdRef = useRef(hostId);
   const [open, setOpen] = useState(false);
   const closeDialog = useCallback(() => setOpen(false), []);
@@ -126,7 +73,7 @@ export function RoomMapLauncher({
         aria-label={`View map of ${title}`}
         className="room-map-launcher icon-action"
         onClick={() => setOpen(true)}
-        ref={launcherRef}
+        id={launcherId}
         type="button"
         {...hintProps('View map', undefined, `View map of ${title}`)}
       >
@@ -135,8 +82,8 @@ export function RoomMapLauncher({
       {open ? (
         <RoomMapDialog
           gameName={gameName}
-          launcherRef={launcherRef}
           onClose={closeDialog}
+          returnFocusId={launcherId}
           title={title}
         />
       ) : null}

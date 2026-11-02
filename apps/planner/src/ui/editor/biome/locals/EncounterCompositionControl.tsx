@@ -1,7 +1,6 @@
-import * as Popover from '@radix-ui/react-popover';
-import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engine/authored-project';
-import { EditorDialogTitleAction, type EditorDialogIssue } from '@planner/ui/controls/EditorDialog';
+import { EditorDialogHelp, type EditorDialogIssue } from '@planner/ui/controls/EditorDialog';
 import type {
   WorkspaceEncounterComposition,
   WorkspaceEncounterCustomizationDraft,
@@ -483,80 +482,48 @@ function EncounterCompositionHelp({
 }: {
   readonly composition: WorkspaceEncounterComposition;
 }) {
-  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-  const captureTrigger = useCallback((node: HTMLElement | null): void => {
-    const container = node?.closest<HTMLElement>('dialog') ?? null;
-    setPortalContainer((current) => (current === container ? current : container));
-  }, []);
   return (
-    <EditorDialogTitleAction>
-      <Popover.Root>
-        <Popover.Trigger asChild ref={captureTrigger}>
-          <button
-            aria-label="Encounter composition help"
-            className="trait-offer-state-button"
-            type="button"
-          >
-            i
-          </button>
-        </Popover.Trigger>
-        <Popover.Portal container={portalContainer ?? undefined}>
-          <Popover.Content
-            align="end"
-            aria-label="Encounter composition help"
-            className="trait-offer-state-popover encounter-composition-help"
-            collisionPadding={12}
-            side="bottom"
-            sideOffset={6}
-          >
-            <h4>Waves and enemies</h4>
-            <p>Choose the number of waves and use each wave’s picker to select its enemies.</p>
-            {composition.waves.some((wave) => wave.source === 'fixed') ? (
-              <p>Fixed waves cannot be edited. Customize the remaining waves.</p>
-            ) : null}
-            {composition.sharedEnemy ? (
-              <p>The shared enemy appears in every generated wave.</p>
-            ) : null}
-            <h4>Budgets</h4>
-            <p>Allocate a budget to each enemy type. The last type uses what remains.</p>
+    <EditorDialogHelp className="encounter-composition-help" label="Encounter composition help">
+      <h4>Waves and enemies</h4>
+      <p>Choose the number of waves and use each wave’s picker to select its enemies.</p>
+      {composition.waves.some((wave) => wave.source === 'fixed') ? (
+        <p>Fixed waves cannot be edited. Customize the remaining waves.</p>
+      ) : null}
+      {composition.sharedEnemy ? <p>The shared enemy appears in every generated wave.</p> : null}
+      <h4>Budgets</h4>
+      <p>Allocate a budget to each enemy type. The last type uses what remains.</p>
+      <p>
+        Counts round up, with at least one of each selected type, so the resulting cost can exceed
+        the allocation.
+      </p>
+      {composition.fangs ? (
+        <>
+          <h4>Fangs</h4>
+          <p>Choose one elite enemy type and its perks. This selection applies across all waves.</p>
+        </>
+      ) : null}
+      {composition.menace ? (
+        <>
+          <h4>Menace</h4>
+          <p>
+            Set how many enemies to replace. Some replacement types are fixed; others can be
+            selected. For grouped enemies, each conversion replaces one whole group.
+          </p>
+          <p>
+            The table’s counts and costs describe the original enemies. Menace does not recalculate
+            them.
+          </p>
+          {composition.fangs ? (
             <p>
-              Counts round up, with at least one of each selected type, so the resulting cost can
-              exceed the allocation.
+              Replacements do not inherit the original enemy’s Fangs perks. If every instance of the
+              Fangs target is replaced, those perks go unused.
             </p>
-            {composition.fangs ? (
-              <>
-                <h4>Fangs</h4>
-                <p>
-                  Choose one elite enemy type and its perks. This selection applies across all
-                  waves.
-                </p>
-              </>
-            ) : null}
-            {composition.menace ? (
-              <>
-                <h4>Menace</h4>
-                <p>
-                  Set how many enemies to replace. Some replacement types are fixed; others can be
-                  selected. For grouped enemies, each conversion replaces one whole group.
-                </p>
-                <p>
-                  The table’s counts and costs describe the original enemies. Menace does not
-                  recalculate them.
-                </p>
-                {composition.fangs ? (
-                  <p>
-                    Replacements do not inherit the original enemy’s Fangs perks. If every instance
-                    of the Fangs target is replaced, those perks go unused.
-                  </p>
-                ) : null}
-              </>
-            ) : null}
-            <h4>Reset</h4>
-            <p>Reset removes the customization and returns the encounter to game control.</p>
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
-    </EditorDialogTitleAction>
+          ) : null}
+        </>
+      ) : null}
+      <h4>Reset</h4>
+      <p>Reset removes the customization and returns the encounter to game control.</p>
+    </EditorDialogHelp>
   );
 }
 

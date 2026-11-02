@@ -1,11 +1,10 @@
 import { useState } from 'react';
 
-import type { ProjectCommand } from '@run-planner/engine/authored-project';
 import type { PresetChip } from '@planner/projections/loadoutPresets';
 
 /**
  * The planner's presets of one kind, atop the editor's Arcana or Fear picker while any exist. A chip replaces the
- * selection in one step; one that does not fit says why and changes nothing.
+ * drafted selection; one that does not fit says why and changes nothing.
  */
 export function PresetChips({
   chips,
@@ -15,7 +14,8 @@ export function PresetChips({
   readonly chips: readonly PresetChip[];
   /** Such as "Arcana presets". */
   readonly label: string;
-  readonly onApply: (commands: readonly ProjectCommand[]) => void;
+  /** Receives the chip of a preset that fits and changes the selection. */
+  readonly onApply: (chip: PresetChip) => void;
 }) {
   const [refused, setRefused] = useState<{ readonly id: string; readonly reason: string } | null>(
     null,
@@ -37,7 +37,7 @@ export function PresetChips({
                 return;
               }
               setRefused(null);
-              if (outcome.kind === 'apply') onApply(outcome.commands);
+              if (outcome.kind === 'apply') onApply(chip);
             }}
             type="button"
           >

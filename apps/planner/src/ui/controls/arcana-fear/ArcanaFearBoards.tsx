@@ -4,6 +4,7 @@ import type {
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
+import { EditorDialogHelp } from '../EditorDialog';
 import { ArcanaCard } from './ArcanaCard';
 import { FearCard } from './FearCard';
 import { fearVowsInGridOrder, maximumFear } from './fearVowOrder';
@@ -110,6 +111,15 @@ export function ArcanaBoard({
   );
 }
 
+/** How the Vow ranks respond to clicks, on the dialog's title line. */
+export function FearBoardHelp() {
+  return (
+    <EditorDialogHelp label="Fear help">
+      <p>Click to cycle ranks · Right-click to reset</p>
+    </EditorDialogHelp>
+  );
+}
+
 /** The Vow ranks over the engine's edit domain: click cycles a rank, right-click resets it. */
 export function FearBoard({
   catalog,
@@ -129,7 +139,6 @@ export function FearBoard({
       aria-label={`Fear, ${derived.fearTotal} total`}
       className="route-loadout-section"
     >
-      <p className="panel-description">Click to cycle ranks · Right-click to reset</p>
       <div className="fear-rank-list">
         {fearVowsInGridOrder(catalog).map((vow) => {
           const { rank, maximum, legalRanks } = vowRanks.get(vow.key)!;

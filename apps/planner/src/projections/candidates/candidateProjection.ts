@@ -169,6 +169,11 @@ export interface CandidateOptionProjection<
 }
 
 /** Engine-derived immediate Embryo grant facts, retained beside its candidate option. */
+/** A rack keepsake option, with the equip result choosing it opens. */
+export type KeepsakeSelectionOptionProjection = CandidateOptionProjection<string> & {
+  readonly equipResult?: KeepsakeEquipResultAddress;
+};
+
 export interface KeepsakeEquipResultOptionProjection extends CandidateOptionProjection<string> {
   readonly resultValue: AuthoredKeepsakeEquipResultValue;
   /** The engine's finding codes for this one result value. */
@@ -351,10 +356,12 @@ export interface CandidateProjectionSession {
   /** Exact engine-captured keepsake frontier, projected one option at a time for controls. */
   readonly keepsakeSelections: (
     owner: KeepsakeSelectionAddress,
-  ) => readonly CandidateOptionProjection<string>[];
+  ) => readonly KeepsakeSelectionOptionProjection[];
+  /** A result's options; `keepsakeKey` judges them as if that keepsake were drafted there. */
   readonly keepsakeEquipResult: (
     owner: KeepsakeEquipResultAddress,
     value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResultValue,
+    keepsakeKey?: string,
   ) => readonly KeepsakeEquipResultOptionProjection[];
   readonly acquisitionConversion: (owner: AcquisitionRoleAddress) => CandidateProjectionEvaluation;
   /** Exact Anvil domain carried by the existing acquisition frontier. */

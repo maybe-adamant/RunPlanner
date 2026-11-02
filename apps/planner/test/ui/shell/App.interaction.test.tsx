@@ -2206,7 +2206,7 @@ describe('route loadout interaction', () => {
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(document.activeElement).toBe(launcher);
       await user.click(launcher);
-      await user.click(screen.getByRole('button', { name: 'Done' }));
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(document.activeElement).toBe(launcher);
     }
     expect(screen.getByRole('button', { name: 'Starting weapon' })).toBeTruthy();
@@ -2244,7 +2244,7 @@ describe('route loadout interaction', () => {
     expect(screen.getByRole('dialog').querySelector('h2')?.textContent).toContain('30 / 30 Grasp');
     expect(screen.getByRole('button', { name: 'The Sorceress' })).toHaveProperty('disabled', true);
 
-    await user.click(screen.getByRole('button', { name: 'Done' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     await user.click(screen.getByRole('button', { name: 'Edit Fear' }));
     const fear = screen.getByRole('group', { name: 'Fear, 0 total' });
     expect(
@@ -2287,8 +2287,8 @@ describe('route loadout interaction', () => {
     const launcher = screen.getByRole('button', { name: 'Starting keepsake' });
 
     await user.click(launcher);
-    const dialog = screen.getByRole('dialog', { name: 'Starting keepsake' });
-    const rack = await within(dialog).findByRole('group', { name: 'Keepsakes' });
+    let dialog = screen.getByRole('dialog', { name: 'Starting keepsake' });
+    let rack = await within(dialog).findByRole('group', { name: 'Keepsakes' });
     // The rack lists every keepsake in its in-game grid order, with its icon.
     expect(within(rack).getAllByRole('button')).toHaveLength(catalog.keepsakes.values.length);
     expect(within(rack).getAllByRole('button')[0]!.textContent).toBe('Silver Wheel');
@@ -2296,16 +2296,29 @@ describe('route loadout interaction', () => {
       within(rack).getByRole('button', { name: 'Silver Wheel' }).getAttribute('aria-pressed'),
     ).toBe('true');
 
+    const save = () => within(dialog).getByRole<HTMLButtonElement>('button', { name: 'Save' });
+    expect(save().disabled).toBe(true);
+    await user.click(within(rack).getByRole('button', { name: 'Time Piece' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(launcher.textContent).not.toContain('Time Piece');
+    await user.click(launcher);
+    dialog = screen.getByRole('dialog', { name: 'Starting keepsake' });
+    rack = await within(dialog).findByRole('group', { name: 'Keepsakes' });
     await user.click(within(rack).getByRole('button', { name: 'Time Piece' }));
 
+    // The rack drafts the choice; Save commits it.
+    expect(
+      application.store.getState().projectWorkspace.history!.present.route?.loadout
+        .startingKeepsakeKey,
+    ).not.toBe('GoldifyKeepsake');
+    expect(
+      within(rack).getByRole('button', { name: 'Time Piece' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout
         .startingKeepsakeKey,
     ).toBe('GoldifyKeepsake');
-    expect(
-      within(rack).getByRole('button', { name: 'Time Piece' }).getAttribute('aria-pressed'),
-    ).toBe('true');
-    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
     expect(launcher.textContent).toContain('Time Piece');
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
@@ -2346,9 +2359,16 @@ describe('route loadout interaction', () => {
     );
     await openLoadout(user);
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
-    await user.click(startingKeepsake);
-    const dialog = screen.getByRole('dialog', { name: 'Starting keepsake' });
-    await user.click(await within(dialog).findByRole('button', { name: 'Jeweled Pom' }));
+    // A saved keepsake without its outcome, as an older plan or an import leaves it.
+    act(() => {
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceStartingKeepsake',
+          selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+          keepsakeKey: 'HadesAndPersephoneKeepsake',
+        }),
+      );
+    });
 
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout
@@ -2362,8 +2382,10 @@ describe('route loadout interaction', () => {
     });
 
     // The target control sits in the dialog's detail strip.
-    await within(dialog).findByRole('button', { name: 'Jeweled Pom result' });
-    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
+    await user.click(startingKeepsake);
+    const reopened = screen.getByRole('dialog', { name: 'Starting keepsake' });
+    await within(reopened).findByRole('button', { name: 'Jeweled Pom result' });
+    await user.click(within(reopened).getByRole('button', { name: 'Cancel' }));
     const missingFinding = application.store
       .getState()
       .projectWorkspace.assembly!.evaluation.findings.find(
@@ -2396,6 +2418,15 @@ describe('route loadout interaction', () => {
     const resultList = screen.getByRole('listbox');
     await waitFor(() => expect(within(resultList).getByText('Last Gasp')).toBeTruthy());
     await user.click(within(resultList).getByText('Last Gasp'));
+    expect(
+      application.store.getState().projectWorkspace.history!.present.route?.loadout
+        .keepsakeEquipResults?.jeweledPom,
+    ).toBeUndefined();
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Starting keepsake' })).getByRole('button', {
+        name: 'Save',
+      }),
+    );
 
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout
@@ -2412,6 +2443,53 @@ describe('route loadout interaction', () => {
     expect(screen.queryByRole('checkbox', { name: 'Death Defiance condition met' })).toBeNull();
   });
 
+  it('drafts Experimental Hammer with its outcome and saves both as one Undo step', async () => {
+    const { application, user } = renderPlannerForInteraction();
+    await openLoadout(user);
+    const loadout = () =>
+      application.store.getState().projectWorkspace.history!.present.route!.loadout;
+    const before = loadout();
+    const past = () => application.store.getState().projectWorkspace.history!.past.length;
+    const pastBefore = past();
+    const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
+    await user.click(startingKeepsake);
+    const dialog = screen.getByRole('dialog', { name: 'Starting keepsake' });
+    const save = () => within(dialog).getByRole<HTMLButtonElement>('button', { name: 'Save' });
+    await user.click(await within(dialog).findByRole('button', { name: 'Experimental Hammer' }));
+    // The drafted keepsake's outcome picker shows before Save, and Save waits for an outcome.
+    const result = within(dialog).getByRole('button', { name: 'Experimental Hammer result' });
+    expect(save().disabled).toBe(true);
+    expect(dialogFinding(dialog)).toBe('Choose compatible Hammer');
+    // The header finding leads to the picker that repairs it.
+    await user.click(within(dialog).getByRole('button', { name: 'Choose compatible Hammer' }));
+    expect(document.activeElement).toBe(result);
+    await user.click(result);
+    const resultList = screen.getByRole('listbox');
+    await waitFor(() =>
+      expect(
+        within(resultList)
+          .getByText('Wicked Thrasher')
+          .closest('[cmdk-item]')
+          ?.getAttribute('data-candidate-state'),
+      ).toBe('possible'),
+    );
+    await user.click(within(resultList).getByText('Wicked Thrasher'));
+    await waitFor(() => expect(result.textContent).toContain('Wicked Thrasher'));
+    expect(loadout()).toBe(before);
+    expect(save().disabled).toBe(false);
+    await user.click(save());
+
+    expect(loadout().startingKeepsakeKey).toBe('TempHammerKeepsake');
+    expect(loadout().keepsakeEquipResults?.experimentalHammer).toEqual({
+      kind: 'selected',
+      traitKey: 'StaffDoubleAttackTrait',
+    });
+    expect(past()).toBe(pastBefore + 1);
+    expect(startingKeepsake.textContent).toBe('Experimental Hammer → Wicked Thrasher');
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(loadout()).toEqual(before);
+  });
+
   it('repairs the route-start Experimental Hammer result through its projected control', async () => {
     const { application, user } = renderPlannerForInteraction();
     await user.click(
@@ -2421,9 +2499,16 @@ describe('route loadout interaction', () => {
     );
     await openLoadout(user);
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
-    await user.click(startingKeepsake);
-    const dialog = screen.getByRole('dialog', { name: 'Starting keepsake' });
-    await user.click(await within(dialog).findByRole('button', { name: 'Experimental Hammer' }));
+    // A saved keepsake without its outcome, as an older plan or an import leaves it.
+    act(() => {
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceStartingKeepsake',
+          selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+          keepsakeKey: 'TempHammerKeepsake',
+        }),
+      );
+    });
 
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout
@@ -2436,6 +2521,8 @@ describe('route loadout interaction', () => {
       summary: { evaluatedBiomeCount: 0, blockedBiomeCount: 1, eligibleForExecutionPlan: false },
     });
 
+    await user.click(startingKeepsake);
+    const dialog = screen.getByRole('dialog', { name: 'Starting keepsake' });
     const result = await within(dialog).findByRole('button', {
       name: 'Experimental Hammer result',
     });
@@ -2457,6 +2544,8 @@ describe('route loadout interaction', () => {
       ).toBe('possible'),
     );
     await user.click(within(resultList).getByText('Wicked Thrasher'));
+    await waitFor(() => expect(result.textContent).toContain('Wicked Thrasher'));
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout
         .keepsakeEquipResults?.experimentalHammer,
@@ -2464,8 +2553,6 @@ describe('route loadout interaction', () => {
     expect(
       application.store.getState().projectWorkspace.assembly!.evaluation.route?.biomes,
     ).toHaveLength(0);
-    expect(result.textContent).toContain('Wicked Thrasher');
-    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
     expect(startingKeepsake.textContent).toBe('Experimental Hammer → Wicked Thrasher');
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
@@ -2575,9 +2662,13 @@ describe('route loadout interaction', () => {
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout
         .manualArcanaKeys,
-    ).toEqual(['ChanneledCast']);
+    ).toEqual([]);
     expect(screen.getByRole('group', { name: 'Arcana, 3 active' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Done' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(
+      application.store.getState().projectWorkspace.history!.present.route?.loadout
+        .manualArcanaKeys,
+    ).toEqual(['ChanneledCast']);
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(
@@ -2607,12 +2698,12 @@ describe('route loadout interaction', () => {
     await user.click(pain);
     await user.click(pain);
 
+    expect(screen.getByRole('group', { name: 'Fear, 5 total' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout.fearRanks
         .EnemyDamageShrineUpgrade,
     ).toBe(3);
-    expect(screen.getByRole('group', { name: 'Fear, 5 total' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Done' }));
     expect(screen.getByRole('button', { name: 'Edit Fear' }).textContent).toBe(
       '1 active · 5/67 Fear',
     );

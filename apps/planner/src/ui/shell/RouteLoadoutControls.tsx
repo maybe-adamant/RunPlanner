@@ -7,10 +7,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
-import {
-  authoredProjectCommandDispatched,
-  authoredProjectCommandsDispatched,
-} from '@planner/state/projectWorkspaceSlice';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 import type {
   WorkspaceInteractionCatalog,
@@ -22,21 +19,9 @@ import { AspectHexTreeDialog } from '@planner/ui/editor/rewards/AspectHexTreeDia
 import { useFindingTarget } from '../feedback/useFindingTarget';
 import { RouteFamiliarPicker } from './RouteFamiliarPicker';
 import { RouteWeaponPicker } from './RouteWeaponPicker';
-import {
-  ArcanaBoard,
-  ArcanaDialogTitle,
-  FearBoard,
-  FearDialogTitle,
-} from '@planner/ui/controls/arcana-fear/ArcanaFearBoards';
 import { fearVowsInGridOrder, maximumFear } from '@planner/ui/controls/arcana-fear/fearVowOrder';
-import { PresetChips } from '@planner/ui/controls/arcana-fear/PresetChips';
-import {
-  projectArcanaPresetChips,
-  projectVowPresetChips,
-} from '@planner/projections/loadoutPresets';
 import { useLoadoutPresets } from './loadoutPresetsContext';
-
-import { EditorDialog } from '@planner/ui/controls/EditorDialog';
+import { LoadoutBoardDialog } from './LoadoutBoardDialog';
 import { showTruncatedTitle } from '@planner/ui/controls/truncatedTitle';
 
 /** Weapon, Arcana, Fear, starting keepsake, Hex and familiar, edited as the project's loadout. */
@@ -207,88 +192,19 @@ export function RouteLoadoutControls({
           returnFocusId={`${workspaceRoute.routeKey}-aspect-hex`}
         />
       ) : null}
-      {dialog === 'Arcana' ? (
-        <EditorDialog
-          eyebrow="Loadout"
-          model={{ kind: 'live', onDone: () => setDialog(undefined) }}
-          returnFocusId={`${workspaceRoute.routeKey}-arcana`}
-          size="cards"
-          title={<ArcanaDialogTitle derived={derivedLoadout} title="Arcana" />}
-        >
-          {presets.snapshot.arcana.length === 0 ? null : (
-            <PresetChips
-              chips={projectArcanaPresetChips(
-                catalog,
-                workspaceRoute.routeKey,
-                authoredRoute.loadout,
-                presets.snapshot.arcana,
-              )}
-              label="Arcana presets"
-              onApply={(commands) => dispatch(authoredProjectCommandsDispatched(commands))}
-            />
-          )}
-          <ArcanaBoard
-            catalog={catalog}
-            derived={derivedLoadout}
-            domain={workspaceRoute.loadoutEditDomain}
-            onReplace={(arcanaKeys) =>
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'ReplaceManualArcanaSelection',
-                  route: createRouteAddress(workspaceRoute.routeKey),
-                  arcanaKeys,
-                }),
-              )
-            }
-            rarityOf={(cardKey) =>
-              workspaceRoute.startingArcana.find((active) => active.key === cardKey)?.rarity
-            }
-          />
-        </EditorDialog>
-      ) : null}
-      {dialog === 'Fear' ? (
-        <EditorDialog
-          eyebrow="Loadout"
-          model={{ kind: 'live', onDone: () => setDialog(undefined) }}
-          returnFocusId={`${workspaceRoute.routeKey}-fear`}
-          size="cards"
-          title={
-            <FearDialogTitle
-              catalog={catalog}
-              derived={derivedLoadout}
-              fearRanks={fearRanks}
-              title="Fear"
-            />
+      {dialog === 'Arcana' || dialog === 'Fear' ? (
+        <LoadoutBoardDialog
+          board={dialog === 'Arcana' ? 'arcana' : 'fear'}
+          catalog={catalog}
+          loadout={authoredRoute.loadout}
+          onClose={() => setDialog(undefined)}
+          presets={presets.snapshot}
+          rarityOf={(cardKey) =>
+            workspaceRoute.startingArcana.find((active) => active.key === cardKey)?.rarity
           }
-        >
-          {presets.snapshot.vows.length === 0 ? null : (
-            <PresetChips
-              chips={projectVowPresetChips(
-                catalog,
-                workspaceRoute.routeKey,
-                authoredRoute.loadout,
-                presets.snapshot.vows,
-              )}
-              label="Vow presets"
-              onApply={(commands) => dispatch(authoredProjectCommandsDispatched(commands))}
-            />
-          )}
-          <FearBoard
-            catalog={catalog}
-            derived={derivedLoadout}
-            domain={workspaceRoute.loadoutEditDomain}
-            onRank={(vowKey, rank) =>
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'ReplaceFearVowRank',
-                  route: createRouteAddress(workspaceRoute.routeKey),
-                  vowKey,
-                  rank,
-                }),
-              )
-            }
-          />
-        </EditorDialog>
+          returnFocusId={`${workspaceRoute.routeKey}-${dialog === 'Arcana' ? 'arcana' : 'fear'}`}
+          routeKey={workspaceRoute.routeKey}
+        />
       ) : null}
     </div>
   );

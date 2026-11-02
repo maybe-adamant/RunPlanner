@@ -1122,8 +1122,9 @@ describe('DecisionWorkbench', () => {
       within(card).getByRole('button', { name: `View map of ${target.room.label}` }),
     );
 
-    expect(screen.getByRole('heading', { name: `${target.room.label} map` })).toBeTruthy();
-    expect(screen.getByText(target.room.gameName)).toBeTruthy();
+    const mapDialog = screen.getByRole('dialog');
+    expect(within(mapDialog).getByRole('heading', { name: target.room.label })).toBeTruthy();
+    expect(mapDialog.querySelector(`[data-hint="${target.room.gameName}"]`)).toBeTruthy();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );

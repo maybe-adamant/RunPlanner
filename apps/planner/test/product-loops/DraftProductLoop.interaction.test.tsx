@@ -32,7 +32,7 @@ it('drafts a zero-finding route as one undoable edit, and rerolls as one more', 
       name: catalog.traits.byKey.ZeusWeaponBoon!.label,
     }),
   );
-  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Done' }));
+  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save' }));
 
   const run = async (name: 'Draft' | 'Reroll') => {
     const settled = new Promise<void>((resolve) => {

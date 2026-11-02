@@ -923,6 +923,10 @@ describe('generated encounter customization workflows', () => {
     expect(within(table).getByRole('row', { name: /^Count/ }).textContent).toBe('Count131');
     expect(within(table).queryByRole('row', { name: /^Allocated/ })).toBeNull();
     expect(within(dialog).queryByRole('button', { name: 'Wave 4 enemies' })).toBeNull();
+    // A read-only roster closes from its title row; it has no draft actions.
+    expect(within(dialog).queryByRole('button', { name: 'Save' })).toBeNull();
+    await view.user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
   it('shows native placeholders without a finding on an uncustomized fresh phase', async () => {
     const owner = createEncounterPhaseAddress(

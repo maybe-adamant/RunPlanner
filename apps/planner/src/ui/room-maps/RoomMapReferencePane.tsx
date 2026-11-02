@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type RefObject } from 'react';
 
 import { RoomMapDialog } from './RoomMapDialog';
 import { roomMapOverlayFor } from './HubMapAnnotations';
@@ -23,7 +23,7 @@ export function RoomMapReferencePane({
   /** An owning workbench may retain reference visibility across its local views. */
   readonly visible?: boolean;
 }) {
-  const expandRef = useRef<HTMLButtonElement>(null);
+  const expandId = useId();
   const reopenRef = useRef<HTMLButtonElement>(null);
   const [referenceState, setReferenceState] = useState({
     expanded: false,
@@ -100,7 +100,7 @@ export function RoomMapReferencePane({
                     : { expanded: true, focusReopen: false, hostId, visible: false },
                 )
               }
-              ref={expandRef}
+              id={expandId}
               type="button"
             >
               Expand
@@ -119,8 +119,8 @@ export function RoomMapReferencePane({
       {currentState.expanded ? (
         <RoomMapDialog
           gameName={gameName}
-          launcherRef={expandRef}
           onClose={closeDialog}
+          returnFocusId={expandId}
           title={title}
         />
       ) : null}

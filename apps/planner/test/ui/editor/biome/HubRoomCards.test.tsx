@@ -43,9 +43,13 @@ describe('HubRoomCards', () => {
     await view.user.click(
       within(closedCard).getByRole('button', { name: 'View map of Combat 04' }),
     );
-    expect(screen.getByRole('heading', { name: 'Combat 04 map' })).toBeTruthy();
-    expect(screen.getByText('N_Combat04')).toBeTruthy();
-    await view.user.click(screen.getByRole('button', { name: 'Close map' }));
+    expect(
+      within(screen.getByRole('dialog')).getByRole('heading', { name: 'Combat 04' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('dialog').querySelector('[data-hint="N_Combat04"]')).toBeTruthy();
+    await view.user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Close' }),
+    );
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforeMap,
     );
@@ -65,8 +69,12 @@ describe('HubRoomCards', () => {
     await view.user.click(
       within(openedCard).getByRole('button', { name: 'View map of Combat 04' }),
     );
-    expect(screen.getByRole('heading', { name: 'Combat 04 map' })).toBeTruthy();
-    await view.user.click(screen.getByRole('button', { name: 'Close map' }));
+    expect(
+      within(screen.getByRole('dialog')).getByRole('heading', { name: 'Combat 04' }),
+    ).toBeTruthy();
+    await view.user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Close' }),
+    );
     expect(within(openedCard).getByLabelText('Reward')).toBeTruthy();
     expect(openedCard.querySelector('.hub-main-reward .control-placeholder')).toBeNull();
     expect(within(openedCard).queryByText(/Closing this slot removes/)).toBeNull();

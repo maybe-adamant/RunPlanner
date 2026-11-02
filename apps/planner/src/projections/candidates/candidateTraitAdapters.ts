@@ -220,6 +220,7 @@ export function createTraitCandidateAdapters(
         evaluation.result.options.map((option) =>
           Object.freeze({
             value: option.key,
+            ...(option.equipResult === undefined ? {} : { equipResult: option.equipResult }),
             evaluation: Object.freeze({
               ...evaluation,
               result: Object.freeze({
@@ -236,11 +237,16 @@ export function createTraitCandidateAdapters(
         kind: 'acquisitionConversion',
         acquisition: owner,
       }) as EvaluatedAcquisitionConversionCandidate,
-    keepsakeEquipResult: (owner, value?: AuthoredKeepsakeEquipResultValue) => {
+    keepsakeEquipResult: (
+      owner,
+      value?: AuthoredKeepsakeEquipResultValue,
+      keepsakeKey?: string,
+    ) => {
       const evaluation = aggregateEvaluation(core, {
         kind: 'keepsakeEquipResult',
         result: owner,
         ...(value === undefined ? {} : { value }),
+        ...(keepsakeKey === undefined ? {} : { keepsakeKey }),
       });
       if (evaluation.kind === 'unavailable') return Object.freeze([]);
       if (evaluation.kind !== 'keepsakeEquipResult')

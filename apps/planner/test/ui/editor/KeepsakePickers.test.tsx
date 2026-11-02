@@ -16,7 +16,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import type { WorkspaceTranscendentEmbryoEquipResultInteraction } from '@planner/projections/structured-workspace';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceKeepsakeSelectionInteraction } from '@planner/projections/structured-workspace';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { draftEditorClosed, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import {
   KeepsakeEquipResultPicker,
@@ -139,7 +139,7 @@ describe('KeepsakeEquipResultPicker', () => {
 });
 
 describe('KeepsakeSelectionLauncher', () => {
-  it('dispatches its selection through the bound intent, including its declared focus', async () => {
+  it('saves its drafted selection through the bound intent, including its declared focus', async () => {
     const application = createApplication();
     const dispatch = vi
       .spyOn(application.store, 'dispatch')
@@ -158,6 +158,7 @@ describe('KeepsakeSelectionLauncher', () => {
           '',
         ),
       owner,
+      draftOutcomeFor: () => undefined,
       selectedLabel: 'Choose keepsake',
       replaceIntent: () => ({ command, focus: { owner, timing: 'after' } }) as never,
     };
@@ -173,12 +174,15 @@ describe('KeepsakeSelectionLauncher', () => {
     );
     const user = userEvent.setup();
     await user.click(document.getElementById('keepsake')!);
-    dispatch.mockClear();
     await user.click(await screen.findByRole('button', { name: 'Silver Wheel' }));
-    expect(dispatch.mock.calls.map(([action]) => action)).toEqual([
-      authoredProjectCommandDispatched(command as never),
-      semanticOwnerFocused(owner),
-    ]);
+    dispatch.mockClear();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    // Closing the draft dialog is session bookkeeping, not part of the edit.
+    expect(
+      dispatch.mock.calls
+        .map(([action]) => action)
+        .filter((action) => !draftEditorClosed.match(action)),
+    ).toEqual([authoredProjectCommandDispatched(command as never), semanticOwnerFocused(owner)]);
     application.dispose();
   });
 });

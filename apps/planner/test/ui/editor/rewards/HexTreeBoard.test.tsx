@@ -110,7 +110,7 @@ describe('Hex tree board', () => {
     // The saved tree names its conflict by talent; Cancel discards a draft.
     await user.click(launcher());
     expect(feedback().textContent).toContain(`${rare2} appears on two Rare nodes`);
-    await user.click(within(dialog()).getByRole('button', { name: 'Reset to default' }));
+    await user.click(within(dialog()).getByRole('button', { name: 'Reset' }));
     await user.click(within(dialog()).getByRole('button', { name: 'Cancel' }));
     expect(history().past).toHaveLength(before + 1);
 
