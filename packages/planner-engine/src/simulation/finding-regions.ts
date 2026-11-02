@@ -84,6 +84,11 @@ export function ownerRegion(origin: SemanticAddress): string {
   return `owner:${semanticAddressKey(origin)}`;
 }
 
+/** A room's Overview: every facet fixed on its entry is one repair region. */
+export function overviewRegion(room: SemanticAddress): string {
+  return `overview:${semanticAddressKey(room)}`;
+}
+
 /** Nested trait repairs belong to their offer without replacing the blocked leaf. */
 export function assessmentRepairOwner(origin: SemanticAddress): SemanticAddress {
   switch (origin.kind) {

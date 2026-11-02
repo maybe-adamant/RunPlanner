@@ -107,12 +107,9 @@ describe('Fresh File retained content', () => {
         finding.code,
         finding.evidence.reason ?? null,
       ]);
-    expect(codesOf(retained)).toEqual(
-      expect.arrayContaining([
-        ['stygianWellPlacementUnavailable', null],
-        ['purgingPoolUnavailable', null],
-      ]),
-    );
+    // The Well blocks the room's Overview, so the Pool's use on its Timeline waits.
+    expect(codesOf(retained)).toContainEqual(['stygianWellPlacementUnavailable', null]);
+    expect(codesOf(retained)).not.toContainEqual(['purgingPoolUnavailable', null]);
 
     const owner = createOccurrenceAddress(biome, postboss);
     const withoutWell = applyProjectCommand(retained, catalog, {
@@ -120,6 +117,7 @@ describe('Fresh File retained content', () => {
       occurrence: owner,
     });
     expect(codesOf(withoutWell)).not.toContainEqual(['stygianWellPlacementUnavailable', null]);
+    expect(codesOf(withoutWell)).toContainEqual(['purgingPoolUnavailable', null]);
     const poolClosed = applyProjectCommand(withoutWell, catalog, {
       kind: 'RemoveRoomAction',
       action: createRoomActionAddress(

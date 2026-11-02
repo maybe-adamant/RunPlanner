@@ -459,6 +459,7 @@ describe('room Overview block', () => {
   });
 });
 
+const goldenFWellHost = fixture.createOccurrenceId('golden-f-b2-e1');
 const goldenFLaterWell = fixture.createOccurrenceId('golden-f-b4-e1');
 
 /** A Stygian Well whose second-right item may duplicate its second-left one. */
@@ -497,6 +498,54 @@ describe('room Overview block withholds its Timeline interactions', () => {
 
     expect(interaction('TemporaryImprovedCastTrait')?.offers).toHaveLength(3);
     expect(interaction('TemporaryForcedSecretDoorTrait')).toBeUndefined();
+  });
+});
+
+describe('room Overview block is one region', () => {
+  it('publishes every Overview reason in one issue and leaves the Timeline unreached', () => {
+    let project = withStygianWell(
+      loadUnderworldFGProject(),
+      goldenFWellHost,
+      'TemporaryForcedSecretDoorTrait',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceResourcePlacement',
+      route: createRouteAddress('Underworld'),
+      family: 'Fishing',
+      value: { biomeKey: 'F', occurrenceId: goldenFWellHost },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: createEncounterPhaseAddress(
+        goldenFBiome,
+        { kind: 'occurrence', occurrenceId: goldenFWellHost },
+        'Encounter',
+      ),
+      decisionKey: 'generatedComposition',
+      value: {
+        kind: 'generated',
+        baseRoll: 9999,
+        waveCount: 1,
+        waves: [
+          { waveIndex: 1, typeKeys: ['SentryBot', 'Dragon'], allocations: { SentryBot: 206 } },
+        ],
+      },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const f = biomeEvaluation(project, 'F');
+
+    expect(f.issue?.reasons.map((reason) => reason.code).sort()).toEqual([
+      'encounterCustomizationUnavailable',
+      'resourcePlacementUnavailable',
+      'stygianWellDuplicate',
+      'stygianWellPlacementUnavailable',
+    ]);
+    expect(f.coverage.roomTimeline).toBeUndefined();
+    const room = createOccurrenceAddress(goldenFBiome, goldenFWellHost);
+    // The Overview stays repairable; nothing appends to its unreached Timeline.
+    const well = stygianWellCandidateForProjectEvaluationAssembly(assembly, room);
+    expect(well).toBeDefined();
+    expect(well?.interaction).toBeUndefined();
   });
 });
 

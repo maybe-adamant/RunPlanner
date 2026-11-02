@@ -68,7 +68,7 @@ import {
   mergedFindings,
   type ProgressiveBiomeSelectedProducts,
 } from './finding-location';
-import { publishSelectedCut } from './selected-cut';
+import { publishSelectedCut, withRoomOverviewRegions } from './selected-cut';
 import type {
   BiomeGenerationValidation,
   ProgressiveBiomeEvaluation,
@@ -368,7 +368,7 @@ function products(
       findings: lifecycleFindings,
     }),
     candidateArtifacts: roomGeneration.candidateArtifacts,
-    findingRegions: Object.freeze([
+    findingRegions: withRoomOverviewRegions(catalog, prefix, history, [
       ...lifecycleFindings.map((finding) => findingRegion(finding, undefined, lifecycleStop)),
       ...roomGeneration.findingRegions,
       ...rewards.findingRegions,
@@ -535,7 +535,16 @@ export function evaluateProgressiveBiomeAssemblyFromSelectedProducts(
   }) as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
-  const unsupported = firstUnsupportedFinding(authoredPrefix, selectedProducts.findingRegions);
+  const selected = Object.freeze({
+    ...selectedProducts,
+    findingRegions: withRoomOverviewRegions(
+      catalog,
+      authoredPrefix,
+      selectedProducts.history,
+      selectedProducts.findingRegions,
+    ),
+  });
+  const unsupported = firstUnsupportedFinding(authoredPrefix, selected.findingRegions);
   if (unsupported === undefined) {
     return Object.freeze({
       evaluation: Object.freeze({
@@ -548,5 +557,5 @@ export function evaluateProgressiveBiomeAssemblyFromSelectedProducts(
       candidateArtifacts: selectedProducts.candidateArtifacts,
     });
   }
-  return publishSelectedCut(catalog, authoredPrefix, selectedProducts, unsupported);
+  return publishSelectedCut(catalog, authoredPrefix, selected, unsupported);
 }

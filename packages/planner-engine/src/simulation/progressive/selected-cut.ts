@@ -15,6 +15,7 @@ import type { EncounterCandidateArtifacts } from '../encounters/candidates';
 import { createBiomeCandidateArtifacts } from '../evaluation/candidate-artifacts';
 import {
   assessmentRepairOwner,
+  overviewRegion,
   type FindingRegionEntry,
   type HistoryFindingChronology,
 } from '../finding-regions';
@@ -214,18 +215,22 @@ function blockPosition(located: LocatedFinding): HistoryFindingChronology {
   });
 }
 
-/**
- * The selected attempt's stop for a block. A block in a room's
- * Overview stops after the whole Overview, its entry and the continuations
- * created on entry; a later block stops at its blocking product.
- */
-function selectedCut(
+/** The room a chronology position lies in, with its Overview's lifecycle events. */
+interface PositionRoom {
+  readonly roomKey: string;
+  readonly owner: Exclude<CutOwner, { readonly kind: 'start' }>;
+  readonly roomEvents: readonly LifecycleEvent[];
+  readonly overviewEnd: number;
+  /** The first event of the room's Timeline, when reached. */
+  readonly timelineStart?: LifecycleEvent;
+}
+
+function positionRoom(
   catalog: Catalog,
   prefix: AuthoredPrefix,
   history: BiomeHistoryPrefix,
-  located: LocatedFinding,
-): SelectedCut {
-  const position = blockPosition(located);
+  position: Pick<HistoryFindingChronology, 'sequence' | 'boundary'>,
+): PositionRoom | undefined {
   const event = history.events.find((candidate) => candidate.sequence === position.sequence);
   // A lifecycle contact belongs to its room; any other to the room the run is in,
   // including a restore the contact follows.
@@ -238,24 +243,10 @@ function selectedCut(
             (candidate.sequence < position.sequence ||
               (candidate.sequence === position.sequence && position.boundary !== 'before')),
         );
-  const roomKey = room === undefined ? undefined : key(room.origin);
+  if (room === undefined) return undefined;
+  const roomKey = key(room.origin);
   const owner = cutOwner(prefix, roomKey);
-  const atPosition = Object.freeze({
-    owner,
-    timeline: true,
-    cut: position,
-    through: position.boundary === 'after' ? position.sequence : position.sequence - 1,
-  });
-  // A block at the biome start keeps the start itself, before any room exists.
-  if (owner.kind === 'start' || roomKey === undefined)
-    return Object.freeze({
-      ...atPosition,
-      through: Math.max(
-        atPosition.through,
-        history.events.find((candidate) => candidate.kind === 'biomeStarted')?.sequence ??
-          atPosition.through,
-      ),
-    });
+  if (owner.kind === 'start') return undefined;
   const profile = catalog.roomLifecycleProfiles.byKey[owner.room.lifecycleProfileKey];
   if (profile === undefined)
     throw new BiomeMaterializationContractError(
@@ -267,7 +258,82 @@ function selectedCut(
       lifecycleEvent(candidate) && key(candidate.origin) === roomKey,
   );
   const timelineStart = roomEvents.find((candidate) => candidate.operationIndex >= overviewEnd);
-  if (timelineStart === undefined || position.sequence < timelineStart.sequence) {
+  return Object.freeze({
+    roomKey,
+    owner,
+    roomEvents,
+    overviewEnd,
+    ...(timelineStart === undefined ? {} : { timelineStart }),
+  });
+}
+
+function inOverview(room: PositionRoom, sequence: number): boolean {
+  return room.timelineStart === undefined || sequence < room.timelineStart.sequence;
+}
+
+/**
+ * Every finding positioned in a room's Overview belongs to that room's one
+ * Overview region: its parts are simultaneous facets of entry, so one stop
+ * publishes all their reasons.
+ */
+export function withRoomOverviewRegions(
+  catalog: Catalog,
+  prefix: AuthoredPrefix,
+  history: BiomeHistoryPrefix,
+  findingRegions: readonly FindingRegionEntry[],
+): readonly FindingRegionEntry[] {
+  return Object.freeze(
+    findingRegions.map((entry) => {
+      const located = locateFinding(
+        prefix,
+        entry.finding,
+        entry.atomicRegion,
+        entry.chronology,
+        entry.aggregate,
+      );
+      if (located?.historySequence === undefined || located.historyBoundary === undefined)
+        return entry;
+      const room = positionRoom(catalog, prefix, history, {
+        sequence: located.historySequence,
+        boundary: located.historyBoundary,
+      });
+      if (room === undefined || !inOverview(room, located.historySequence)) return entry;
+      return Object.freeze({ ...entry, atomicRegion: overviewRegion(room.owner.room.origin) });
+    }),
+  );
+}
+
+/**
+ * The selected attempt's stop for a block. A block in a room's
+ * Overview stops after the whole Overview, its entry and the continuations
+ * created on entry; a later block stops at its blocking product.
+ */
+function selectedCut(
+  catalog: Catalog,
+  prefix: AuthoredPrefix,
+  history: BiomeHistoryPrefix,
+  located: LocatedFinding,
+): SelectedCut {
+  const position = blockPosition(located);
+  const room = positionRoom(catalog, prefix, history, position);
+  const atPosition = Object.freeze({
+    owner: room?.owner ?? Object.freeze({ kind: 'start' as const }),
+    timeline: true,
+    cut: position,
+    through: position.boundary === 'after' ? position.sequence : position.sequence - 1,
+  });
+  // A block at the biome start keeps the start itself, before any room exists.
+  if (room === undefined)
+    return Object.freeze({
+      ...atPosition,
+      through: Math.max(
+        atPosition.through,
+        history.events.find((candidate) => candidate.kind === 'biomeStarted')?.sequence ??
+          atPosition.through,
+      ),
+    });
+  const { owner, roomKey, roomEvents, overviewEnd } = room;
+  if (inOverview(room, position.sequence)) {
     const overviewEnded = Math.max(
       position.sequence,
       roomEvents.findLast((candidate) => candidate.operationIndex < overviewEnd)?.sequence ??
