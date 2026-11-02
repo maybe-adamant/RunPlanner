@@ -8,6 +8,7 @@ import type { HistoryEvent, HistoryStateView } from '../../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materialization';
 import { type KeepsakeSelectionCandidateCapability } from '../../../keepsakes/candidate-artifacts';
 import type { RewardBranchState } from '../../branch-primitives';
+import { rackKeepsakeEquipResultFor } from '../lifecycle-transitions/keepsake-rack-used';
 import type { RunStateOwner } from '../../run-state';
 
 type CanonicalRewardSource = CanonicalAuthoredRoom | CanonicalHubRoom;
@@ -53,6 +54,7 @@ export function prepareRoomCreatedPrelude(
     }
   >,
   branches: readonly RewardBranchState[],
+  effectiveBiomeNumber: number,
 ): RoomCreatedPrelude {
   const room = rooms.get(semanticAddressKey(event.origin));
   const keepsakeSelectionCandidate =
@@ -64,19 +66,30 @@ export function prepareRoomCreatedPrelude(
           const historyAtRack = views.get(semanticAddressKey(event.origin))?.entry;
           const branch = branches[0];
           if (branch === undefined) return undefined;
+          const encounterBlockedKeepsakeKeys = Object.freeze([
+            ...new Set(
+              historyAtRack?.ledgers.encounterRecords.flatMap(
+                (encounter) =>
+                  catalog.encounterDefinitions.byKey[encounter.encounterKey]
+                    ?.blocksKeepsakeSelectionKeys ?? [],
+              ) ?? [],
+            ),
+          ]);
           return Object.freeze({
             key: semanticAddressKey(selection),
             candidate: Object.freeze({
               state: branch.state.keepsakes,
-              encounterBlockedKeepsakeKeys: Object.freeze([
-                ...new Set(
-                  historyAtRack?.ledgers.encounterRecords.flatMap(
-                    (encounter) =>
-                      catalog.encounterDefinitions.byKey[encounter.encounterKey]
-                        ?.blocksKeepsakeSelectionKeys ?? [],
-                  ) ?? [],
-                ),
-              ]),
+              encounterBlockedKeepsakeKeys,
+              // An unchanged rack emits no rack event, so a drafted keepsake is judged here.
+              equipResultFor: rackKeepsakeEquipResultFor(
+                catalog,
+                selection,
+                event.sequence,
+                room.gameName,
+                branches,
+                encounterBlockedKeepsakeKeys,
+                effectiveBiomeNumber,
+              ),
             }),
           });
         })()

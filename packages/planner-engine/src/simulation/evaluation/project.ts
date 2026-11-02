@@ -24,13 +24,16 @@ import {
   createProjectCandidateArtifacts,
   type BiomeCandidateArtifacts,
 } from './candidate-artifacts';
-import { type KeepsakeSelectionCandidateCapability } from '../keepsakes/candidate-artifacts';
+import {
+  type KeepsakeDraftEquipResult,
+  type KeepsakeSelectionCandidateCapability,
+} from '../keepsakes/candidate-artifacts';
 import {
   assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,
   assessTranscendentEmbryoBlessing,
 } from '../keepsakes/trait-effects';
-import { createKeepsakeState } from '../keepsakes/state';
+import { createKeepsakeState, keepsakeEquipResultKind } from '../keepsakes/state';
 import { createArcanaFearState } from '../arcana-fear';
 import { createStartingRewardCandidateCapability } from '../candidates/reward-producer';
 import { createInitialSimulationState } from '../state/construction';
@@ -195,39 +198,49 @@ function evaluateRouteAssembly(
   const routeStart = createRouteStartKeepsakeSelectionAddress(route.routeKey);
   const runStartReward = routeBindsRunStartReward(catalog, route.routeKey);
   const startArcanaFear = createArcanaFearState(catalog, route.loadout);
-  const routeStartKeepsake =
+  // The reached route-start snapshot for a starting keepsake with an equip result: declared
+  // loadout identity and the configured Arcana/Fear frontier, before the result applies.
+  const routeStartEquipResult = (keepsakeKey: string): KeepsakeDraftEquipResult | undefined => {
+    const keepsake = catalog.keepsakes.byKey[keepsakeKey];
+    const resultKind = keepsakeEquipResultKind(catalog, keepsakeKey);
+    if (keepsake === undefined || resultKind === undefined) return undefined;
+    const effect = keepsake.effect;
+    const state = createInitialSimulationState(
+      catalog,
+      route.loadout,
+      keepsakeKey,
+      startArcanaFear,
+      Object.freeze({
+        routePosition: resolveRoutePosition(catalog, route, route.itineraryBiomeKeys[0]!),
+        historyView: createRouteStartHistoryView(),
+      }),
+    );
+    return Object.freeze({
+      result: createKeepsakeEquipResultAddress(routeStart, resultKind),
+      capability: Object.freeze({
+        frontiers: Object.freeze([
+          Object.freeze({
+            state,
+            ...(effect?.kind === 'transcendentEmbryo'
+              ? { transcendentEmbryoRarity: effect.blessingRarityByRank[keepsake.rank] }
+              : {}),
+          }),
+        ]),
+      }),
+    });
+  };
+  const routeStartResult =
     route.loadout.startingKeepsakeKey === null
       ? undefined
-      : catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey];
-  const declaredEffect = routeStartKeepsake?.effect;
-  const routeStartEffect =
-    declaredEffect?.kind === 'jeweledPom' ||
-    declaredEffect?.kind === 'experimentalHammer' ||
-    declaredEffect?.kind === 'transcendentEmbryo'
-      ? declaredEffect
-      : undefined;
-  // The reached route-start snapshot: declared loadout identity and the
-  // configured Arcana/Fear frontier, before any equip result is applied.
-  const routeStartState =
-    routeStartKeepsake === undefined || routeStartEffect === undefined
-      ? undefined
-      : createInitialSimulationState(
-          catalog,
-          route.loadout,
-          routeStartKeepsake.key,
-          startArcanaFear,
-          Object.freeze({
-            routePosition: resolveRoutePosition(catalog, route, route.itineraryBiomeKeys[0]!),
-            historyView: createRouteStartHistoryView(),
-          }),
-        );
+      : routeStartEquipResult(route.loadout.startingKeepsakeKey);
   routeStartKeepsakes.set(
     semanticAddressKey(routeStart),
     Object.freeze({
       state:
-        routeStartState?.keepsakes ??
+        routeStartResult?.capability.frontiers[0]!.state.keepsakes ??
         createKeepsakeState(catalog, route.loadout.startingKeepsakeKey, startArcanaFear),
       encounterBlockedKeepsakeKeys: Object.freeze([]),
+      equipResultFor: routeStartEquipResult,
     }),
   );
   // Aspect of Selene's Sky Fall tree is installed before any route-start effect.
@@ -247,14 +260,12 @@ function evaluateRouteAssembly(
     const origin = aspectHexFindings[0]!.origin;
     routeStartIssue = createAssessmentIssue(origin, authoringRegion(origin), findings);
   }
-  if (
-    routeStartKeepsake !== undefined &&
-    routeStartEffect !== undefined &&
-    routeStartState !== undefined
-  ) {
-    const result = createKeepsakeEquipResultAddress(routeStart, routeStartEffect.kind);
-    const authoredResult = route.loadout.keepsakeEquipResults?.[routeStartEffect.kind];
-    if (authoredResult === undefined) {
+  if (routeStartResult !== undefined) {
+    const { result, capability } = routeStartResult;
+    const frontier = capability.frontiers[0]!;
+    const keepsakeKey = route.loadout.startingKeepsakeKey!;
+    const authored = route.loadout.keepsakeEquipResults;
+    if (authored?.[result.resultKind] === undefined) {
       if (routeStartBlock === null) {
         routeStartBlock = 'incomplete';
         authoringHorizon = Object.freeze({
@@ -267,31 +278,31 @@ function evaluateRouteAssembly(
           code: 'keepsakeEquipResultMissing',
           phase: 'rewardGeneration',
           origin: result,
-          evidence: Object.freeze({ keepsakeKey: routeStartKeepsake.key }),
+          evidence: Object.freeze({ keepsakeKey }),
         }),
       );
     } else if (
-      !(routeStartEffect.kind === 'jeweledPom'
+      !(result.resultKind === 'jeweledPom'
         ? assessJeweledPomEquipResult(
             catalog,
-            route.loadout.keepsakeEquipResults!.jeweledPom!,
-            routeStartState,
-            routeStartState.keepsakes.fatedStatus,
+            authored.jeweledPom!,
+            frontier.state,
+            frontier.state.keepsakes.fatedStatus,
           ).legal
-        : routeStartEffect.kind === 'experimentalHammer'
+        : result.resultKind === 'experimentalHammer'
           ? assessExperimentalHammerEquipResult(
               catalog,
-              route.loadout.keepsakeEquipResults!.experimentalHammer!,
-              routeStartState,
+              authored.experimentalHammer!,
+              frontier.state,
             ).legal
           : assessTranscendentEmbryoBlessing(
               catalog,
-              route.loadout.keepsakeEquipResults!.transcendentEmbryo!,
-              routeStartState.traitHistory,
-              routeStartEffect.blessingRarityByRank[routeStartKeepsake.rank],
+              authored.transcendentEmbryo!,
+              frontier.state.traitHistory,
+              frontier.transcendentEmbryoRarity!,
               {
-                aspectKey: routeStartState.equipment.aspectKey,
-                routeKey: routeStartState.reached.routePosition.routeKey,
+                aspectKey: frontier.state.equipment.aspectKey,
+                routeKey: frontier.state.reached.routePosition.routeKey,
               },
             ).legal)
     ) {
@@ -301,28 +312,13 @@ function evaluateRouteAssembly(
           code: 'keepsakeEquipResultUnavailable',
           phase: 'rewardGeneration',
           origin: result,
-          evidence: Object.freeze({ keepsakeKey: routeStartKeepsake.key }),
+          evidence: Object.freeze({ keepsakeKey }),
         }),
       );
     }
     if (routeStartBlock !== null && routeStartIssue === undefined)
       routeStartIssue = createAssessmentIssue(result, authoringRegion(result), findings);
-    routeStartKeepsakeEquipResults.set(
-      semanticAddressKey(result),
-      Object.freeze({
-        frontiers: Object.freeze([
-          Object.freeze({
-            state: routeStartState,
-            ...(routeStartEffect.kind === 'transcendentEmbryo'
-              ? {
-                  transcendentEmbryoRarity:
-                    routeStartEffect.blessingRarityByRank[routeStartKeepsake.rank],
-                }
-              : {}),
-          }),
-        ]),
-      }),
-    );
+    routeStartKeepsakeEquipResults.set(semanticAddressKey(result), capability);
   }
   if (runStartReward && routeStartBlock === null) {
     routeStartRewards.set(

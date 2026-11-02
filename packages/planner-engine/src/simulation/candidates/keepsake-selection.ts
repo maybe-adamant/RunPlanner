@@ -1,9 +1,14 @@
-import type { KeepsakeSelectionAddress } from '../../authored-project/addresses';
+import {
+  createKeepsakeEquipResultAddress,
+  type KeepsakeEquipResultAddress,
+  type KeepsakeSelectionAddress,
+} from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import { type KeepsakeSelectionCandidateArtifacts } from '../keepsakes/candidate-artifacts';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import {
+  keepsakeEquipResultKind,
   keepsakeSelectionUnavailableReason,
   type KeepsakeSelectionUnavailableReason,
 } from '../keepsakes/state';
@@ -21,6 +26,8 @@ export interface KeepsakeSelectionCandidateOption {
   readonly label: string;
   readonly selectedPossible: boolean;
   readonly unavailableReason?: KeepsakeSelectionUnavailableReason;
+  /** The equip result choosing this keepsake here opens; query it with this keepsake drafted. */
+  readonly equipResult?: KeepsakeEquipResultAddress;
 }
 
 export interface EvaluatedKeepsakeSelectionCandidate {
@@ -62,11 +69,15 @@ export function evaluateKeepsakeSelectionCandidate(
               declaration.key,
               capability.encounterBlockedKeepsakeKeys,
             );
+      const resultKind = keepsakeEquipResultKind(catalog, declaration.key);
       return Object.freeze({
         key: declaration.key,
         label: declaration.label,
         selectedPossible: reason === undefined,
         ...(reason === undefined ? {} : { unavailableReason: reason }),
+        ...(resultKind === undefined
+          ? {}
+          : { equipResult: createKeepsakeEquipResultAddress(query.selection, resultKind) }),
       });
     }),
   );

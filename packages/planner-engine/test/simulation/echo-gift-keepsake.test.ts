@@ -773,6 +773,7 @@ describe('Echo Gift Gift Gift', () => {
   });
 
   it('publishes the biome-owned exhausted option only when the shared domain is empty', () => {
+    const noKeepsakeSelections = { at: () => undefined, entries: () => Object.freeze([]) };
     const { project, value } = route();
     const resultAddress = createKeepsakeEquipResultAddress(replayOwner, 'experimentalHammer');
     const history = createTraitHistoryState();
@@ -786,6 +787,7 @@ describe('Echo Gift Gift Gift', () => {
       project,
       evaluatedProject(project),
       { at: () => context, entries: () => Object.freeze([]) },
+      noKeepsakeSelections,
       { kind: 'keepsakeEquipResult', result: resultAddress, value: { kind: 'exhausted' } },
     );
     expect(result).toMatchObject({ kind: 'keepsakeEquipResult' });
@@ -809,6 +811,7 @@ describe('Echo Gift Gift Gift', () => {
         }),
         entries: () => Object.freeze([]),
       },
+      noKeepsakeSelections,
       { kind: 'keepsakeEquipResult', result: resultAddress, value: { kind: 'exhausted' } },
     );
     expect(exhausted).toMatchObject({ kind: 'keepsakeEquipResult' });

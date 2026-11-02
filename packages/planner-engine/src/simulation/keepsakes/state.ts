@@ -553,6 +553,17 @@ export function jeweledPomEffectForKey(
   return effect?.kind === 'jeweledPom' ? effect : undefined;
 }
 
+/** The equip result a keepsake opens when equipped, if its effect has a chosen outcome. */
+export function keepsakeEquipResultKind(
+  catalog: import('../../catalog-schema').Catalog,
+  key: string,
+): import('../../authored-project/addresses').KeepsakeEquipResultAddress['resultKind'] | undefined {
+  const kind = catalog.keepsakes.byKey[key]?.effect?.kind;
+  return kind === 'jeweledPom' || kind === 'experimentalHammer' || kind === 'transcendentEmbryo'
+    ? kind
+    : undefined;
+}
+
 export function keepsakeEffectByKind<
   K extends NonNullable<import('../../catalog-schema').KeepsakeDeclaration['effect']>['kind'],
 >(

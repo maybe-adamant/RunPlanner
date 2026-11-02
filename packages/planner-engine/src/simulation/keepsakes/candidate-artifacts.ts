@@ -20,6 +20,17 @@ import {
 export interface KeepsakeSelectionCandidateCapability {
   readonly state: KeepsakeState;
   readonly encounterBlockedKeepsakeKeys: readonly string[];
+  /**
+   * The equip result a keepsake chosen here would open, with its pre-result frontiers from
+   * this same frontier; undefined when the keepsake has none or no branch can equip it here.
+   */
+  readonly equipResultFor: (keepsakeKey: string) => KeepsakeDraftEquipResult | undefined;
+}
+
+/** An equip result opened by a keepsake drafted at a selection, before it is authored. */
+export interface KeepsakeDraftEquipResult {
+  readonly result: KeepsakeEquipResultAddress;
+  readonly capability: KeepsakeEquipResultCandidateCapability;
 }
 export interface KeepsakeSelectionCandidateArtifacts {
   readonly at: (

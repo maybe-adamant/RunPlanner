@@ -702,6 +702,7 @@ describe('Experimental Hammer', () => {
       project,
       simulateProjectAssembly(catalog, project).evaluation,
       rewards.keepsakeEquipResultArtifacts,
+      { at: () => undefined, entries: () => Object.freeze([]) },
       { kind: 'keepsakeEquipResult', result, value: authoredResult },
     );
     expect(candidates).toMatchObject({

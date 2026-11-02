@@ -67,6 +67,7 @@ export function applyRoomCreatedTransition(
     views,
     batchesByParent,
     branches,
+    enteredBiomeCount + 1,
   );
   const contextResult = prepareRoomCreatedRewardContext(catalog, event, {
     rooms,

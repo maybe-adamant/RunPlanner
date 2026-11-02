@@ -459,6 +459,7 @@ function evaluateCandidateQuery(
         project,
         evaluation,
         candidateArtifacts.keepsakeEquipResults,
+        candidateArtifacts.keepsakeSelections,
         query,
       );
     case 'keepsakeSelection':

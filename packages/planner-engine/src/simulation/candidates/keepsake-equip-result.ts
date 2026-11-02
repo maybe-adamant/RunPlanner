@@ -5,7 +5,11 @@ import type {
   ProjectDocument,
 } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
-import { type KeepsakeEquipResultCandidateArtifacts } from '../keepsakes/candidate-artifacts';
+import {
+  type KeepsakeEquipResultCandidateArtifacts,
+  type KeepsakeEquipResultCandidateCapability,
+  type KeepsakeSelectionCandidateArtifacts,
+} from '../keepsakes/candidate-artifacts';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import {
   assessExperimentalHammerEquipResult,
@@ -13,13 +17,22 @@ import {
   assessTranscendentEmbryoBlessing,
   transcendentEmbryoBlessingValues,
 } from '../keepsakes/trait-effects';
-import { keepsakeEffectByKind } from '../keepsakes/state';
-import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
+import { keepsakeEffectByKind, keepsakeEquipResultKind } from '../keepsakes/state';
+import {
+  unavailable,
+  unavailableForBiome,
+  type CandidateContextUnavailable,
+} from './availability';
 
 export interface KeepsakeEquipResultCandidateQuery {
   readonly kind: 'keepsakeEquipResult';
   readonly result: KeepsakeEquipResultAddress;
   readonly value?: AuthoredKeepsakeEquipResultValue;
+  /**
+   * A keepsake drafted at the result's selection but not yet authored: the result is judged
+   * at that selection's frontier as if the keepsake were chosen, and only `value` is selected.
+   */
+  readonly keepsakeKey?: string;
 }
 
 export interface EvaluatedKeepsakeEquipResultCandidate {
@@ -71,6 +84,23 @@ function authoredValue(
     )?.keepsakeRack?.equipResults?.[address.resultKind];
 }
 
+/** The keepsake authored at a result's selection, or null when it leaves the held one. */
+function authoredKeepsakeKey(
+  project: ProjectDocument,
+  address: KeepsakeEquipResultAddress,
+): string | null | undefined {
+  const { selection } = address;
+  if (selection.kind === 'echoKeepsakeReplay') return undefined;
+  const route = project.route.routeKey === address.routeKey ? project.route : undefined;
+  if (selection.owner === 'routeStart') return route?.loadout.startingKeepsakeKey;
+  const postbossOwner = selection.owner;
+  return route?.biomes
+    .find((biome) => biome.biomeKey === address.biomeKey)
+    ?.topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === postbossOwner.occurrenceId,
+    )?.keepsakeRack?.keepsakeKey;
+}
+
 /**
  * A Jeweled Pom result is a single source-random acquisition. This evaluates
  * its one selected Hades trait at the captured pre-equip frontier; it does not
@@ -81,9 +111,25 @@ export function evaluateKeepsakeEquipResultCandidate(
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   artifacts: KeepsakeEquipResultCandidateArtifacts,
+  selections: KeepsakeSelectionCandidateArtifacts,
   query: KeepsakeEquipResultCandidateQuery,
 ): CandidateContextUnavailable | EvaluatedKeepsakeEquipResultCandidate {
-  const capability = artifacts.at(query.result);
+  const drafted =
+    query.keepsakeKey !== undefined &&
+    query.keepsakeKey !== authoredKeepsakeKey(project, query.result);
+  let capability: KeepsakeEquipResultCandidateCapability | undefined;
+  if (drafted) {
+    const { selection } = query.result;
+    if (selection.kind === 'echoKeepsakeReplay')
+      throw new Error('an Echo keepsake replay has no drafted keepsake');
+    if (keepsakeEquipResultKind(catalog, query.keepsakeKey!) !== query.result.resultKind)
+      throw new Error(`${query.keepsakeKey} does not open a ${query.result.resultKind} result`);
+    const site = selections.at(selection);
+    capability = site?.equipResultFor(query.keepsakeKey!)?.capability;
+    // A reached selection that cannot equip the drafted keepsake opens no result.
+    if (site !== undefined && capability === undefined)
+      return unavailable({ kind: 'targetNotReachable', target: query.result });
+  } else capability = artifacts.at(query.result);
   if (capability === undefined)
     return unavailableForBiome(
       evaluation,
@@ -92,7 +138,8 @@ export function evaluateKeepsakeEquipResultCandidate(
       query.result,
       'afterRoomLifecycle',
     );
-  const value = query.value ?? authoredValue(project, query.result);
+  // A drafted keepsake has no authored result yet; the saved one belongs to another keepsake.
+  const value = drafted ? query.value : (query.value ?? authoredValue(project, query.result));
   const effect = keepsakeEffectByKind(catalog, query.result.resultKind);
   if (effect === undefined) throw new Error(`missing ${query.result.resultKind} descriptor`);
   if (effect.kind === 'transcendentEmbryo') {
