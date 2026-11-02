@@ -96,7 +96,7 @@ describe('ship wheel tabs', () => {
         ?.targets(undefined)
         .sections.flatMap((section) => section.items)
         .map((item) => item.label),
-    ).toEqual(['Offer 1']);
+    ).toEqual(['Offer']);
   });
 
   it('appends a press before the pick and shows the offer first to final', async () => {
@@ -123,7 +123,7 @@ describe('ship wheel tabs', () => {
       applyProjectCommand(base, catalog, intent.command),
     );
     const phase = wheelPhase(projected);
-    expect(phase.wheelRerolls?.rows.map((row) => row.targetLabel)).toEqual(['Offer 1']);
+    expect(phase.wheelRerolls?.rows.map((row) => row.targetLabel)).toEqual(['Offer']);
     expect(phase.wheelRerolls?.poolRemaining).toBe(9);
     expect(phase.wheel?.offers[0]).toMatchObject({ rerolledOffer: reward });
     // The picked offer is collected as the reward its rerolls left.
@@ -137,6 +137,6 @@ describe('ship wheel tabs', () => {
       (candidate) =>
         press.address.kind === 'roomAction' && candidate.key === press.address.actionKey,
     );
-    expect(row?.label).toMatch(/^Reroll Offer 1 → \S/);
+    expect(row?.label).toMatch(/^Reroll Offer → \S/);
   });
 });

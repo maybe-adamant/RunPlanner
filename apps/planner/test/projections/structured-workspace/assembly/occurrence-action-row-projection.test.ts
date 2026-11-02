@@ -1134,8 +1134,8 @@ describe('structured workspace actions assembly', () => {
         offer.active,
       ]),
     ).toEqual([
-      ['offer1', 'Offer 1', true],
-      ['offer2', 'Offer 2', false],
+      ['offer1', 'Offer', true],
+      ['offer2', 'Right Offer', false],
     ]);
     expect(
       ship.node.room.roomLocal.wheels.every(

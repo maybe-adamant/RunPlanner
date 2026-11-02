@@ -2663,7 +2663,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(offerRows()).toHaveLength(1);
     expect(offerRows()[0]?.getAttribute('data-picked')).toBe('true');
     expect(within(offerGrid).queryByRole('radio')).toBeNull();
-    expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull();
+    expect(within(rewardWheel).queryByLabelText('Right Offer')).toBeNull();
 
     act(() =>
       view.application.store.dispatch(
@@ -2674,7 +2674,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       ),
     );
-    await waitFor(() => expect(within(rewardWheel).getByLabelText('Offer 2')).toBeTruthy());
+    await waitFor(() => expect(within(rewardWheel).getByLabelText('Right Offer')).toBeTruthy());
     expect(offerRows()).toHaveLength(2);
     expect(offerRows()[1]?.getAttribute('data-picked')).not.toBe('true');
     expect(within(offerGrid).getAllByRole('radio')).toHaveLength(2);
@@ -2690,7 +2690,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     await view.user.click(
       within(rewardWheel).getByRole('radio', {
-        name: 'Pick Offer 2 from Combat 1 reward',
+        name: 'Pick Right Offer from Combat 1 reward',
       }),
     );
     expect(
@@ -2716,7 +2716,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       ),
     );
-    await waitFor(() => expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull());
+    await waitFor(() => expect(within(rewardWheel).queryByLabelText('Right Offer')).toBeNull());
     expect(
       shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
         .offers.offer2,
@@ -2735,12 +2735,14 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       ),
     );
-    const restoredOffer = await within(rewardWheel).findByLabelText('Offer 2');
+    const restoredOffer = await within(rewardWheel).findByLabelText('Right Offer');
     expect(within(restoredOffer).getByRole('button', { name: 'Reward' }).textContent).toContain(
       'Hermes',
     );
     expect(screen.queryByRole('combobox', { name: 'Picked offer' })).toBeNull();
-    expect(within(rewardWheel).getAllByRole('radio', { name: /Pick Offer/ })).toHaveLength(2);
+    expect(
+      within(rewardWheel).getAllByRole('radio', { name: /Pick (Left|Right) Offer/ }),
+    ).toHaveLength(2);
   });
 
   it('authors an active O wheel through pool, count, offers, and picked offer controls', async () => {
@@ -2793,11 +2795,11 @@ describe('OccurrenceEncounterWorkbench', () => {
       );
     };
 
-    await authorOffer('Offer 1', 'Big Bones');
-    await authorOffer('Offer 2', 'Big Ashes');
-    const offer2 = within(screen.getByLabelText('Combat 1 reward')).getByLabelText('Offer 2');
+    await authorOffer('Left Offer', 'Big Bones');
+    await authorOffer('Right Offer', 'Big Ashes');
+    const offer2 = within(screen.getByLabelText('Combat 1 reward')).getByLabelText('Right Offer');
     await view.user.click(
-      within(offer2).getByRole('radio', { name: 'Pick Offer 2 from Combat 1 reward' }),
+      within(offer2).getByRole('radio', { name: 'Pick Right Offer from Combat 1 reward' }),
     );
     await waitFor(() =>
       expect(

@@ -26,6 +26,7 @@ import { roomPickerCandidateCategory } from '../roomSelectorProjection';
 import { summarizeRewardOffer } from '../rewards/rewardOfferSummary';
 import { biomeFieldLabel } from '../structured-workspace/assembly/biome-field-labels';
 import { workspaceRewardStoreLabel } from '../structured-workspace/assembly/reward-labels';
+import { rewardWheelOfferLabel } from '../rewards/wheelOfferLabel';
 
 export type ContextualOptionState = 'forced' | 'possible' | 'impossible' | 'unassessed';
 
@@ -492,8 +493,9 @@ function rewardPeerLabel(catalog: Catalog, value: FindingEvidenceValue | undefin
         ? numberedLabel(origin.exitKey, 'Door')
         : 'another offer';
     case 'rewardWheelOffer':
+      // A peer conflict needs two offers, so the peer is one side of the wheel.
       return typeof origin.offerKey === 'string'
-        ? numberedLabel(origin.offerKey, 'Wheel slot')
+        ? rewardWheelOfferLabel(origin.offerKey, 2)
         : 'another offer';
     case 'shopOffer':
       return typeof origin.offerKey === 'string'

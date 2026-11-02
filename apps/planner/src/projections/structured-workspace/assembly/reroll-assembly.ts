@@ -47,6 +47,7 @@ import type { WorkspaceBiomeSource } from '../source-index';
 import { requireWorkspaceRoom } from './catalog-room';
 import { normalExitOrdinal } from './ordering';
 import { workspaceDeclaredPhysicalExits } from './topology-presentation';
+import { rewardWheelOfferLabel } from '@planner/projections/rewards/wheelOfferLabel';
 
 type DoorRerollTarget = Exclude<RerollTarget, { readonly kind: 'wheelOffer' }>;
 
@@ -379,7 +380,7 @@ export function assembleHubStayRerolls(input: {
     target.kind === 'hubSlot'
       ? (input.slots.get(target.hubSlotKey)?.label ?? target.hubSlotKey)
       : target.kind === 'wheelOffer'
-        ? target.offerKey
+        ? rewardWheelOfferLabel(target.offerKey, 2)
         : target.exitKey;
   const rows: WorkspacePreparedRerollRow[] = [];
   for (const row of input.stayRows) {
@@ -463,7 +464,7 @@ export function assembleRoomRerolls(input: {
                   target,
                 )
               : target.kind === 'wheelOffer'
-                ? target.offerKey
+                ? rewardWheelOfferLabel(target.offerKey, 2)
                 : target.hubSlotKey;
           const rewardTypes = (owner: RerolledRewardOwner) =>
             rewardTypesByOwner.get(semanticAddressKey(owner)) ?? noRewardTypes;
@@ -525,7 +526,8 @@ export function assembleWheelRerolls(input: {
   );
   const targetLabel = (target: RerollPressTarget) =>
     target.kind === 'wheelOffer'
-      ? (wheel.offers.find((offer) => offer.key === target.offerKey)?.label ?? target.offerKey)
+      ? (wheel.offers.find((offer) => offer.key === target.offerKey)?.label ??
+        rewardWheelOfferLabel(target.offerKey, wheel.offerCount))
       : target.kind === 'hubSlot'
         ? target.hubSlotKey
         : target.exitKey;

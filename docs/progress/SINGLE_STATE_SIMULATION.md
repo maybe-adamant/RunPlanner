@@ -16,8 +16,8 @@ happen", never as alternative states carried forward or offered as a choice.
    row) always resolves against one state. Two branches disagreeing at an
    editable surface is an engine contract failure, treated like gold-ledger
    divergence, not a choice for the user. The Pom "Route state" picker was
-   removed on that basis (2026-11-01); the dialog now shows a fault line if it
-   ever receives more than one group.
+   removed on that basis (2026-11-01); the capability now publishes one
+   surface and throws a contract error if reached contexts disagree.
 2. **Drawn bag-entry identity does not matter in today's catalog.** Drawing an
    offer consumes one canonical eligible same-item entry, which is sound
    because every same-item group in every counted store is one of:
@@ -33,11 +33,11 @@ happen", never as alternative states carried forward or offered as a choice.
      change in what is valid.
 3. **Offer sets do not come from the bag's identity choice.** What matters is
    that an activated entry of the type is drawn, not which one.
-4. **Draw order is lookahead only.** It applies to reward wheels (Hub boards
-   use a fixed order). Every valid order leaves the same bag, and the engine
-   already merges them, but order can decide whether a combination is possible
-   at all (an empty-bag refill reached in one order and not another). The
-   wheel cohort order search stays, as a validity check only.
+4. **Wheels have a fixed draw order.** `ShipsEncounterSetup`
+   (`RoomLogic.lua:1411`) loops the wheels left then right, threading
+   `rewardsChosen`, so offer 1 is the Left wheel and is drawn first. The wheel
+   cohort order search is gone (owner, 2026-11-03); Hub boards keep their
+   source-offer order search.
 
 ## Work
 
@@ -66,13 +66,35 @@ happen", never as alternative states carried forward or offered as a choice.
    rejects the rest naming store, item and entries. Every current group passes
    on its requirements alone, so RunProgress no longer declares the
    interchangeable list; the declaration remains as an escape hatch.
-3. **Pom single-state contract.** The level-resolution capability publishes one
-   surface plus an agreement check instead of a per-branch array; divergence
-   reports a contract failure. The app drops its group adapter and the fault
-   line becomes the contract-failure presentation.
-4. **Trait offer state inspector.** With one state per draw, the offer-state
+3. **Wheel side order and Pom single-state contract** (owner-approved
+   2026-11-03).
+   - Wheels draw offer 1 (Left) then offer 2 (Right) with no permutation; the
+     `allOffers` ordering, its permutation fan-out and the unordered
+     explanation are gone. A loader migration exchanges a saved wheel's offers
+     (rerolled offers, picked index, reroll targets, embedded offer addresses)
+     when the plan's block names it and the exchange clears it; folded into
+     unreleased schema 100. Draft authors through candidates and the run
+     import already maps Left to offer 1.
+   - The level-resolution capability publishes one surface and asserts every
+     reached context agrees on it; a disagreement is a
+     `CandidateEvaluationContractError`. Draft, the run import and the Pom
+     editor read the one surface; the editor's fault line is gone.
+   - The editor labels a one-offer wheel's offer "Offer" and a two-offer
+     wheel's "Left Offer" / "Right Offer".
+     _Status: done._ Equivalence 157/157 unchanged; the migration swaps no wheel
+     in any checked-in or catalog plan (4 two-offer wheels, all valid in side
+     order).
+4. **Single-state frontier.** Replace the branch list with one state or
+   impossible; delete `mergeEquivalentRewardBranches` /
+   `equivalentBranchStateKey` and the existential aggregation (trait-offer
+   `branchContexts` flatMap and `branchAgreement`, including the run import's
+   carrier-children check; Shop every/some; the run-state divergence throw;
+   phantom-exit per-branch pick) and per-branch evaluations, including the
+   selected Pom assessment's `branches`. Equivalence identical throughout;
+   performance measured.
+5. **Trait offer state inspector.** With one state per draw, the offer-state
    popover's "Possible state N" blocks collapse to one; simplify it.
-5. **Docs.** `SIMULATION_AND_VALIDATION.md` gains the rule: anything the user
+6. **Docs.** `SIMULATION_AND_VALIDATION.md` gains the rule: anything the user
    sees resolves against one state, branching is lookahead only. Revise the
    "existential over reachable latent branches" wording in
    `CANDIDATE_EVALUATION_MODEL.md` and `CONTEXTUAL_EDITOR_UX.md` to match.
@@ -85,8 +107,8 @@ happen", never as alternative states carried forward or offered as a choice.
   faster; record the delta.
 - Engine witnesses: a store with interchangeable same-item entries draws one
   state; the catalog guard rejects a divergent same-item pair; a wheel whose
-  combination is possible in only one order is still accepted; Pom
-  divergence reports a contract failure.
+  combination is valid only right-to-left is rejected and the migration
+  exchanges it; Pom divergence reports a contract failure.
 
 ## Open
 

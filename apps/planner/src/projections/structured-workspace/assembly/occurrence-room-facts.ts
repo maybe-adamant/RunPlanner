@@ -47,6 +47,7 @@ import {
 } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceExplicitRewardControl, WorkspaceRewardControl } from '../contracts/rewards';
+import { rewardWheelOfferLabel } from '@planner/projections/rewards/wheelOfferLabel';
 
 export interface WorkspaceOccurrenceRoomInput extends WorkspaceOccurrenceRewardAssemblyInput {
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
@@ -636,7 +637,7 @@ function roomLocalForOccurrence(
             active: active && offerIndex < wheel.offerCount,
             control: requireProjectedRewardControl(controls, offerAddress, 'countedReward'),
             key: offerKey,
-            label: `Offer ${offerIndex + 1}`,
+            label: rewardWheelOfferLabel(offerKey, wheel.offerCount),
           });
         });
         return [
