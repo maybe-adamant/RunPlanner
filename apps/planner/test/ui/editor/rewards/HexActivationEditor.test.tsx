@@ -25,6 +25,7 @@ import { hexActivationDialogOpened } from '@planner/state/editorSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
 import { HexActivationLauncher } from '@planner/ui/editor/rewards/HexActivationEditor';
+import { dialogFinding } from '@planner-test/support/editor-dialog';
 
 /** A room's reward, where its state carries one. */
 function roomReward(state: AuthoredRoomState | undefined) {
@@ -92,6 +93,17 @@ const launcher = () => screen.getByRole('button', { name: /^Edit Path of Stars/ 
 const dialog = () => screen.getByRole('dialog', { name: 'Choose Path of Stars nodes' });
 const board = () => within(dialog()).getByRole('group', { name: /Hex tree$/ });
 const points = () => within(dialog()).getByText(/ of 3 points$/);
+const save = () =>
+  within(dialog()).getByRole('button', { name: 'Save Path of Stars nodes' }) as HTMLButtonElement;
+/** Adds the first addable node until the screen's points are spent. */
+async function fillPoints(user: ReturnType<typeof userEvent.setup>) {
+  while (points().textContent !== '3 of 3 points')
+    await user.click(
+      within(board())
+        .getAllByRole('button')
+        .find((button) => button.getAttribute('aria-pressed') === 'false')!,
+    );
+}
 const selectedButtons = () =>
   within(board())
     .getAllByRole('button')
@@ -108,6 +120,7 @@ describe('Path of Stars screen editor', () => {
     await user.click(launcher());
     expect(application.store.getState().editorSession.hexActivationDialogTarget).toEqual(owner);
     expect(points().textContent).toBe('3 of 3 points');
+    expect(save().disabled).toBe(true);
     // A spent screen offers only its own nodes, which stay removable.
     expect(within(board()).getAllByRole('button')).toEqual(selectedButtons());
     expect(selectedButtons()).toHaveLength(3);
@@ -118,9 +131,9 @@ describe('Path of Stars screen editor', () => {
       .getAllByRole('button')
       .filter((button) => button.getAttribute('aria-pressed') === 'false');
     expect(addable.length).toBeGreaterThan(0);
-    expect(
-      within(dialog()).getByRole('status', { name: 'Path of Stars feedback' }).textContent,
-    ).toContain('Choose 3 Path of Stars nodes');
+    // Unspent points leave the draft incomplete.
+    expect(dialogFinding(dialog())).toBe('Choose 3 Path of Stars nodes');
+    expect(save().disabled).toBe(true);
     await user.click(within(dialog()).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(history().past).toHaveLength(before);
@@ -139,7 +152,8 @@ describe('Path of Stars screen editor', () => {
       )!;
     await user.click(added);
     expect(points().textContent).toBe('3 of 3 points');
-    await user.click(within(dialog()).getByRole('button', { name: 'Save Path of Stars nodes' }));
+    expect(dialogFinding(dialog())).toBeUndefined();
+    await user.click(save());
     expect(history().past).toHaveLength(before + 1);
     expect(selection()).not.toEqual(saved);
     expect(selection()).toHaveLength(3);
@@ -189,9 +203,12 @@ describe('Path of Stars screen editor', () => {
     await user.click(launcher());
     expect(points().textContent).toBe('0 of 3 points');
     expect(selectedButtons()).toEqual([]);
-    // Saving the empty draft authors the screen, which had no saved selection.
+    expect(dialogFinding(dialog())).toBe('Choose 3 Path of Stars nodes');
+    expect(save().disabled).toBe(true);
+    // Spending every point authors the screen, which had no saved selection.
     const before = history().past.length;
-    await user.click(within(dialog()).getByRole('button', { name: 'Save Path of Stars nodes' }));
+    await fillPoints(user);
+    await user.click(save());
     expect(history().past).toHaveLength(before + 1);
     application.dispose();
   });
@@ -217,9 +234,14 @@ describe('Path of Stars screen editor', () => {
       'disabled',
       true,
     );
-    await user.click(within(dialog()).getByRole('button', { name: 'Save Path of Stars nodes' }));
+    // The saved conflicts are inherited; only the unspent points block Save.
+    expect(save().disabled).toBe(true);
+    await fillPoints(user);
+    expect(dialogFinding(dialog())).toBeUndefined();
+    await user.click(save());
     expect(history().past).toHaveLength(before + 1);
-    expect(selection()).toEqual([]);
+    expect(selection()).toHaveLength(3);
+    expect(selection()).not.toContain('9:9');
     application.dispose();
   });
 });

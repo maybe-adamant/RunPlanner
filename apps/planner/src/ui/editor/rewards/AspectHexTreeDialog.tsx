@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { WorkspaceAspectHexTreeControl } from '@planner/projections/structured-workspace';
-import {
-  EditorDialog,
-  EditorDialogDraftActions,
-  EditorDialogFeedback,
-} from '@planner/ui/controls/EditorDialog';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
+import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
+import { introducesIssue } from '@planner/ui/controls/introducesIssue';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import {
+  useOptionalWorkspaceInteraction,
+  useWorkspaceInteraction,
+} from '@planner/ui/controls/useWorkspaceInteraction';
 import { HexTreeBoard } from './HexTreeBoard';
-import { HexTreeRulesHelp } from './HexTreeRulesHelp';
 
 /** Aspect of Selene's Sky Fall tree, edited as one draft that Save commits. */
 export function AspectHexTreeDialog({
@@ -25,38 +26,45 @@ export function AspectHexTreeDialog({
   const executeIntent = useCommandIntent();
   const [draft, setDraft] = useState(control.value);
   const atRest = draftValueIdentity(draft) === draftValueIdentity(control.value);
-  const loadable = useMemo(
-    () => (atRest ? control : control.forDraft(draft)),
+  const saved = useWorkspaceInteraction(control);
+  const activateSaved = saved.activate;
+  useEffect(() => {
+    activateSaved();
+  }, [activateSaved]);
+  const draftLoadable = useMemo(
+    () => (atRest ? undefined : control.forDraft(draft)),
     [atRest, control, draft],
   );
-  const { activate, result: domain } = useWorkspaceInteraction(loadable);
+  const drafted = useOptionalWorkspaceInteraction(draftLoadable);
+  const activateDrafted = drafted.activate;
   useEffect(() => {
-    activate();
+    activateDrafted();
     // Activation follows the projected draft, not each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadable]);
-  // The region names the board's conflicts by talent, saved or drafted alike.
-  const entries = domain?.treeIssue === undefined ? [] : [['hex-tree', domain.treeIssue] as const];
+  }, [draftLoadable]);
+  const domain = atRest ? saved.result : drafted.result;
+  const issues = domain?.treeIssues ?? [];
   return (
     <EditorDialog
-      eyebrow="Loadout"
-      feedback={<EditorDialogFeedback entries={entries} name="Hex tree feedback" />}
-      footer={
-        <EditorDialogDraftActions
-          onCancel={onClose}
-          onSave={() => {
-            if (!atRest) executeIntent(control.intentFor(draft));
-            onClose();
-          }}
-          saveDisabled={domain === undefined}
-        />
-      }
+      icon={<ArtworkIcon className="artwork-label-icon" source={traitIcon('SpellMoonBeamTrait')} />}
+      layout="header"
       model={{ kind: 'draft', onCancel: onClose }}
       returnFocusId={returnFocusId}
       size="hexTree"
-      headerAction={<HexTreeRulesHelp />}
       title="Sky Fall Hex tree"
     >
+      <EditorDialogDraftActions
+        issues={issues}
+        onCancel={onClose}
+        onSave={() => {
+          executeIntent(control.intentFor(draft));
+          onClose();
+        }}
+        // A conflict this draft introduced blocks Save; inherited conflicts do not.
+        saveDisabled={
+          atRest || domain === undefined || introducesIssue(issues, saved.result?.treeIssues ?? [])
+        }
+      />
       {domain === undefined ? (
         <p>Loading Hex tree…</p>
       ) : (

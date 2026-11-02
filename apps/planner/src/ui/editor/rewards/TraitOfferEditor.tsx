@@ -26,7 +26,6 @@ import {
   useFindingTarget,
 } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { HexTreeRulesHelp } from './HexTreeRulesHelp';
 import { LauncherButton } from './LauncherButton';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
 
@@ -147,9 +146,7 @@ export function TraitOfferDialog({
         />
       }
       layout="header"
-      {...(interaction.giver.providerKind === 'spell'
-        ? { headerAction: <HexTreeRulesHelp />, size: 'hexTree' as const }
-        : {})}
+      {...(interaction.giver.providerKind === 'spell' ? { size: 'hexTree' as const } : {})}
       {...(exactChild === undefined
         ? {}
         : { initialFocusId: semanticOwnerControlElementId(exactChild) })}

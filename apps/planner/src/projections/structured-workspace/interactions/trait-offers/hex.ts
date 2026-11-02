@@ -37,6 +37,7 @@ import type {
   HexLayoutNodeDeclaration,
   HexNodeKind,
 } from '@run-planner/engine/catalog-schema';
+import { findingTitleLimit } from '@planner/projections/evaluationProjection';
 import { projectDirectTraitOutcomePicker } from '@planner/projections/contextual/directTraitOutcomeProjection';
 import { StructuredWorkspaceProjectionContractError } from '@planner/projections/structured-workspace/contract';
 
@@ -101,12 +102,12 @@ function treeIssue(
 ): string {
   if (violation.kind === 'repeatedTalent') {
     const kind = kindLabels[layout.nodes.byKey[violation.nodeKeys[0]!]!.kind];
-    return `${talentLabel(hex, violation.talentKey)} appears on ${counts[violation.nodeKeys.length] ?? violation.nodeKeys.length} ${kind} nodes; each Rare and Epic talent appears once.`;
+    return `${talentLabel(hex, violation.talentKey)} on ${counts[violation.nodeKeys.length] ?? violation.nodeKeys.length} ${kind} nodes`;
   }
   const talents = [...new Set(violation.nodeKeys.map((key) => talentLabel(hex, tree[key]!)))];
-  return talents.length === 1
-    ? `${talents[0]} is placed where the refill cycle can't draw it.`
-    : `${listed(talents)} are placed where the refill cycle can't draw them.`;
+  const named = `${listed(talents)} can't be dealt here`;
+  // The marked nodes name the talents a longer list would.
+  return named.length <= findingTitleLimit ? named : "Common talents can't be dealt here";
 }
 
 const groupLabels: Readonly<Record<AuthoredHexNodeEditGroup['kind'], string>> = {
@@ -290,7 +291,16 @@ export function projectHexTreeDomain(
           }),
     });
   });
-  const treeIssues = violations.map((violation) => treeIssue(hex, layout, tree.nodes, violation));
+  // A repeated talent is its own issue; the refill cycle's issue stays one however its nodes change.
+  const treeIssues = violations.map(
+    (violation) =>
+      [
+        violation.kind === 'repeatedTalent'
+          ? `${violation.kind}:${violation.talentKey}`
+          : violation.kind,
+        treeIssue(hex, layout, tree.nodes, violation),
+      ] as const,
+  );
   return Object.freeze({
     value: tree,
     address: createHexTreeAddress(owner),
@@ -306,7 +316,7 @@ export function projectHexTreeDomain(
     ),
     nodes: Object.freeze(nodes),
     decks: deckTable(catalog, hex, commonDecks),
-    ...(treeIssues.length === 0 ? {} : { treeIssue: treeIssues.join(' ') }),
+    treeIssues: Object.freeze(treeIssues),
     edit: (edit: AuthoredHexTreeEdit) =>
       applyAuthoredHexTreeEdit(catalog, spellTraitKey, tree, edit),
   });

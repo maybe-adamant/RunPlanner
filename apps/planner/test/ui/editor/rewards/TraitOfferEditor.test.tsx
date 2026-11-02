@@ -734,11 +734,11 @@ describe('trait offer editor entry and dialog', () => {
           <TraitOfferDialog interactions={reopened.interactions} target={trait} />
         </Provider>,
       );
-      await waitFor(() =>
-        expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
-          'disabled',
-          false,
-        ),
+      // The reopened saved offer is at rest, so Save waits for an edit.
+      await screen.findByRole('checkbox', { name: 'Concave Stone Activated' });
+      expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+        'disabled',
+        true,
       );
       if (effect === 'Natural Selection') {
         // A saved result reopens as editable first-pass rows, not the read-only fallback.
@@ -1041,8 +1041,8 @@ describe('trait offer editor entry and dialog', () => {
     await user.click(screen.getByRole('option', { name: 'Maze' }));
     const board = screen.getByRole('group', { name: 'Maze Hex tree' });
     // The Spell Drop dialog explains common nodes like the Aspect dialog.
-    await user.click(screen.getByRole('button', { name: 'How common nodes work' }));
-    expect(await screen.findByRole('dialog', { name: 'How common nodes work' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Hex tree help' }));
+    expect(await screen.findByRole('dialog', { name: 'Hex tree help' })).toBeTruthy();
     await user.keyboard('{Escape}');
     const transform = application.catalog.hexes.byKey['SpellTransformTrait']!;
     const mazeRare = createDefaultAuthoredHexTree(
@@ -1616,9 +1616,10 @@ describe('trait offer editor entry and dialog', () => {
 
     await waitFor(() => expect(screen.getAllByRole('radio', { name: 'Selected' })).toHaveLength(3));
     expect(screen.queryByRole('button', { name: /^Reject/ })).toBeNull();
+    // The unchanged offer is at rest.
     expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
       'disabled',
-      false,
+      true,
     );
     application.dispose();
   });

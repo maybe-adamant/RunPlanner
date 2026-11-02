@@ -226,9 +226,12 @@ describe('trait-offers/bind', () => {
     expect(
       conflicting.nodes.find((node) => node.nodeKey === otherKeystone.nodeKey)?.talentLabel,
     ).toBe(keystone.talentLabel);
-    expect(conflicting.treeIssue).toBe(
-      `${keystone.talentLabel} appears on two Rare nodes; each Rare and Epic talent appears once.`,
-    );
+    expect(conflicting.treeIssues).toEqual([
+      [
+        `repeatedTalent:${domain.value.nodes[keystone.nodeKey]}`,
+        `${keystone.talentLabel} on two Rare nodes`,
+      ],
+    ]);
     expect(conflicting.nodes.filter((node) => node.conflict).map((node) => node.nodeKey)).toEqual([
       keystone.nodeKey,
       otherKeystone.nodeKey,

@@ -88,6 +88,8 @@ export function TraitOfferCirceResolution({
   const disabled = domain === undefined || unavailable !== undefined;
   const findingEntries = useFindingFeedbackEntries(address);
   const complete = draft?.keys.length === domain?.requiredCount;
+  const atRest =
+    current !== undefined && draftValueIdentity(draft?.keys) === draftValueIdentity(currentKeys);
   const candidates =
     domain === undefined || draft === null
       ? []
@@ -162,7 +164,7 @@ export function TraitOfferCirceResolution({
               );
               close();
             }}
-            saveDisabled={disabled || !complete}
+            saveDisabled={atRest || disabled || !complete}
           />
           <div className="trait-choice-region">
             {domain === undefined ? (

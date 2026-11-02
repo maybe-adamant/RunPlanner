@@ -34,7 +34,9 @@ import {
   hexEffectiveCapacity,
   installHexTree,
   maybeAddGodSent,
+  pathScreenContext,
 } from '../../src/simulation/hex-progress';
+import { validateHexActivation } from '../../src/simulation/hex-activation';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import {
   attachTraitHistory,
@@ -507,6 +509,28 @@ describe('finite Hex progress', () => {
     ]);
     expect(invalid.findingEmissions[0]?.finding.evidence.nodeKeys).toEqual(['9:9', '3:1']);
     expect(settle(['1:2', '1:4', '2:2']).branches).toHaveLength(1);
+  });
+
+  it('requires only the eligible nodes a nearly full tree has left, an inactive God Sent pair excluded', () => {
+    const initial = withTree(
+      initializeRewardBranches(
+        undefined,
+        createTestArcanaFearState(),
+        catalog,
+        'ManaOverTimeRefundKeepsake',
+      )[0]!,
+    );
+    const nodes = everyHexNode('SpellPolymorphTrait', 'Lung');
+    const progress = { ...initial.state.hexProgress, investedNodeKeys: nodes.slice(0, -1) };
+    const screen = pathScreenContext(catalog, progress, 3);
+    expect(screen.count).toBe(1);
+    // The last eligible node completes the tree; the leftover points need no node.
+    expect(validateHexActivation(screen, [nodes.at(-1)!])).toEqual([]);
+    expect(validateHexActivation(screen, [])).toEqual([
+      { kind: 'selectionCount', expected: 1, actual: 0 },
+    ]);
+    // An active God Sent pair is eligible too.
+    expect(pathScreenContext(catalog, { ...progress, godSentAdded: true }, 3).count).toBe(3);
   });
 
   it('settles a Path screen on a full tree without a selection, since it has no choice', () => {

@@ -12,9 +12,11 @@ import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { hexNodeArtwork } from '@planner/ui/artwork/hex-nodes/hexNodeArtwork';
 import { ContextualPicker, ContextualPickerPopover } from '@planner/ui/controls/ContextualPicker';
 import { hintProps } from '@planner/ui/controls/hint';
+import { showTruncatedTitle } from '@planner/ui/controls/truncatedTitle';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { HexBoard } from './HexBoard';
+import { HexTreeRulesHelp } from './HexTreeRulesHelp';
 
 /** Pickers with more options than this offer a search box. */
 const SEARCH_THRESHOLD = 8;
@@ -92,7 +94,7 @@ export function HexTreeBoard({
         <button className="quiet-action" onClick={() => onEdit({ kind: 'reset' })} type="button">
           Reset
         </button>
-        <p className="hex-tree-note">Choosing a layout generates its default tree.</p>
+        <HexTreeRulesHelp />
       </div>
       <HexBoard
         boardProps={{
@@ -122,7 +124,9 @@ export function HexTreeBoard({
                 {...hintProps(`${node.talentLabel} appears once God Sent is eligible.`)}
               >
                 <ArtworkIcon className="hex-tree-node-icon" source={hexNodeIcon(node.talentKey)} />
-                {node.talentLabel}
+                <span className="hex-tree-node-label" onMouseEnter={showTruncatedTitle}>
+                  {node.talentLabel}
+                </span>
               </span>
             );
           return picker(
@@ -140,7 +144,9 @@ export function HexTreeBoard({
               {...marks}
             >
               <ArtworkIcon className="hex-tree-node-icon" source={hexNodeIcon(node.talentKey)} />
-              {node.talentLabel}
+              <span className="hex-tree-node-label" onMouseEnter={showTruncatedTitle}>
+                {node.talentLabel}
+              </span>
             </button>,
           );
         }}

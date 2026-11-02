@@ -414,8 +414,9 @@ export function TraitOfferEditorShell({
         earlierScreens.map((current, at) => (at === index ? screen : current)),
       ),
     );
+  const unsaveable = support === 'impossible' || !selectedOutcomeComplete;
   const save = {
-    disabled: support === 'impossible' || !selectedOutcomeComplete,
+    disabled: unsaveable || draftValueIdentity(value) === draftValueIdentity(interaction.value),
     label: value.kind === 'chaos' ? 'Save Chaos outcome' : 'Save trait offer',
     onClick: () => onCommit?.(value),
   };
@@ -425,7 +426,7 @@ export function TraitOfferEditorShell({
     ...optionIssues,
   ];
   const issues: readonly (readonly [string, string])[] =
-    draftIssues.length > 0 || !save.disabled
+    draftIssues.length > 0 || !unsaveable
       ? draftIssues
       : [
           [

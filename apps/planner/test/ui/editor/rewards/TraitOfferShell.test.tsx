@@ -129,8 +129,13 @@ describe('ordinary offer shell', () => {
       </Provider>,
     );
     const save = await screen.findByRole('button', { name: 'Save trait offer' });
-    await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
-    expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(true);
+    // The saved offer opens at rest.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(
+        true,
+      ),
+    );
+    expect(save.hasAttribute('disabled')).toBe(true);
     await user.click(screen.getByRole('button', { name: 'Remove last option' }));
     await waitFor(() => expect(save.hasAttribute('disabled')).toBe(true));
     expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(false);
@@ -150,8 +155,9 @@ describe('ordinary offer shell', () => {
     expect(screen.queryByLabelText('option2 trait')).toBeNull();
     expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(false);
     await user.click(await screen.findByRole('button', { name: 'Start over' }));
-    await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
-    expect(screen.getByLabelText('option3 trait')).toBeTruthy();
+    // A fresh legal draft: complete and free of findings.
+    await waitFor(() => expect(screen.getByLabelText('option3 trait')).toBeTruthy());
+    expect(dialogFinding(document.body)).toBeUndefined();
     application.dispose();
   });
 
@@ -620,7 +626,7 @@ describe('ordinary offer shell', () => {
     application.dispose();
   });
 
-  it('keeps a preferred Medea draft saveable and notes its Death Defiance offer condition', async () => {
+  it("notes a preferred Medea draft's Death Defiance offer condition without a finding", async () => {
     const application = createApplication();
     const project = loadSurfaceNStoryBoardProject();
     application.store.dispatch(authoredProjectReplaced(project));
@@ -654,9 +660,11 @@ describe('ordinary offer shell', () => {
       </Provider>,
     );
 
+    // At rest, with no finding the note could add.
     expect(
       (screen.getByRole('button', { name: 'Save trait offer' }) as HTMLButtonElement).disabled,
-    ).toBe(false);
+    ).toBe(true);
+    expect(dialogFinding(document.body)).toBeUndefined();
     const note = screen
       .getByText("Malice in Kind's offer depends on Death Defiance")
       .closest('.trait-offer-note');
@@ -1417,9 +1425,9 @@ describe('ordinary offer shell', () => {
     expect(screen.getAllByText('N/A')).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: /Persephone roll/ })).toHaveLength(1);
     const bonus = screen.getByRole('button', { name: 'option1 Persephone roll' });
-    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
-    const defaultCommit = onCommit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits | undefined;
-    expect(defaultCommit?.options[0]).not.toHaveProperty('persephoneLevelBonus');
+    expect(
+      (screen.getByRole('button', { name: 'Save trait offer' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
     await user.click(bonus);
     expect(screen.getAllByRole('option')).toHaveLength(6);
     await user.click(screen.getByRole('option', { name: /^Roll 5 · / }));
@@ -1438,12 +1446,10 @@ describe('ordinary offer shell', () => {
     );
     await user.click(screen.getByRole('button', { name: 'option1 Persephone roll' }));
     await user.click(screen.getByRole('option', { name: 'Roll 0 · +0' }));
-    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
-
-    const zeroCommit = onCommit.mock.calls.at(-1)?.[0] as AuthoredTraitOfferTraits | undefined;
-    expect(zeroCommit?.options[0]).not.toHaveProperty('persephoneLevelBonus');
-    expect(zeroCommit?.options[0]).toEqual(value.options[0]);
-    expect(zeroCommit?.options.slice(1)).toEqual(value.options.slice(1));
+    // Roll 0 drops the bonus, restoring the saved offer exactly: the draft is at rest.
+    expect(
+      (screen.getByRole('button', { name: 'Save trait offer' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
     application.dispose();
   });
 

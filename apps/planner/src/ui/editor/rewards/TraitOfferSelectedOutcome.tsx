@@ -328,7 +328,11 @@ export function TraitOfferSelectedOutcome({
     'circeResolution',
     circeChild === undefined ? undefined : circeUnavailableMessage(circeDomain.result),
   );
-  useReportedFeedback(onFeedback, 'hexTree', hexTreeDomain.result?.treeIssue);
+  useReportedFeedback(
+    onFeedback,
+    'hexTree',
+    hexTreeDomain.result?.treeIssues.map(([, message]) => message).join(' ') || undefined,
+  );
   useReportedFeedback(
     onFeedback,
     'concaveStone',

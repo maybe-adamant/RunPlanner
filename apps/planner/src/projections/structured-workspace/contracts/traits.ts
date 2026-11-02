@@ -250,8 +250,8 @@ export interface WorkspaceHexTreeDomain {
   readonly layoutPicker: ContextualPickerModel<HexLayoutKey>;
   readonly nodes: readonly WorkspaceHexTreeNode[];
   readonly decks: WorkspaceHexDeckTable;
-  /** Why the nodes cannot form one tree together. */
-  readonly treeIssue?: string;
+  /** Why the nodes cannot form one tree together, one keyed entry per conflict. */
+  readonly treeIssues: readonly (readonly [key: string, message: string])[];
   /** The engine's transition of this tree under one edit. */
   readonly edit: (edit: AuthoredHexTreeEdit) => AuthoredHexTreeConfiguration;
 }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   createDefaultAuthoredHexTree,
   createProjectDocument,
@@ -15,6 +15,7 @@ import {
 import { routePanelSelected } from '@planner/state/editorSessionSlice';
 import { createApplication } from '@planner/composition/createApplication';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
+import { dialogFinding } from '@planner-test/support/editor-dialog';
 
 /** A configured biome lets the route-start tree findings reach the assessment. */
 function seleneApplication() {
@@ -57,16 +58,17 @@ describe('Hex tree board', () => {
     const dialog = () => screen.getByRole('dialog', { name: 'Sky Fall Hex tree' });
     const board = () => within(dialog()).getByRole('group', { name: /Hex tree$/ });
     const node = (name: string) => within(board()).getByRole('button', { name });
-    const feedback = () => within(dialog()).getByRole('status', { name: 'Hex tree feedback' });
+    const save = () => within(dialog()).getByRole('button', { name: 'Save' }) as HTMLButtonElement;
     const before = history().past.length;
 
     await user.click(launcher());
+    expect(save().disabled).toBe(true);
     // Sixteen authored nodes; the God Sent pair is shown but not authored.
     expect(within(board()).getAllByRole('button')).toHaveLength(16);
     expect(within(board()).getAllByRole('note')).toHaveLength(2);
     expect(within(dialog()).queryByRole('button', { name: 'Rebalance' })).toBeNull();
 
-    // A Rare picker marks the talent on the other Rare node; choosing it keeps the repeat.
+    // A Rare picker marks the talent on the other Rare node; choosing it draws a conflict that blocks Save.
     const rare2 = label(lung.nodes['4:5']!);
     await user.click(node(`Rare ${label(lung.nodes['4:1']!)}, depth 4`));
     const held = within(screen.getByRole('listbox')).getByRole('option', {
@@ -74,13 +76,28 @@ describe('Hex tree board', () => {
     });
     expect(held.textContent).toContain('On another Rare node');
     await user.click(held);
-    expect(history().past).toHaveLength(before);
-    expect(feedback().textContent).toContain(
-      `${rare2} appears on two Rare nodes; each Rare and Epic talent appears once.`,
-    );
+    expect(dialogFinding(dialog())).toBe(`${rare2} on two Rare nodes`);
+    expect(save().disabled).toBe(true);
     expect(node(`Rare ${rare2}, depth 4, first`).dataset.hasFindings).toBe('true');
     expect(node(`Rare ${rare2}, depth 4, second`).dataset.hasFindings).toBe('true');
     expect(node(`Common ${label(lung.nodes['1:2']!)}, depth 1`).dataset.hasFindings).toBe('false');
+    await user.click(within(dialog()).getByRole('button', { name: 'Cancel' }));
+    expect(history().past).toHaveLength(before);
+
+    // A saved conflict marks the launcher and is inherited, so it never blocks Save.
+    const conflicted = { ...lung, nodes: { ...lung.nodes, '4:1': lung.nodes['4:5']! } };
+    act(() => {
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceAspectHexTree',
+          route: createRouteAddress('Underworld'),
+          value: conflicted,
+        }),
+      );
+    });
+    await waitFor(() => expect(launcher().dataset.hasFindings).toBe('true'));
+    await user.click(launcher());
+    expect(dialogFinding(dialog())).toBe(`${rare2} on two Rare nodes`);
 
     // A Common node swaps in its column or trades with its deck; nodes are coloured by column.
     const common = node(`Common ${label(lung.nodes['1:4']!)}, depth 1`);
@@ -94,36 +111,33 @@ describe('Hex tree board', () => {
       name: new RegExp(`^${label(lung.nodes['1:2']!)}`),
     });
     await user.click(swap);
-    expect(history().past).toHaveLength(before);
-
-    await user.click(within(dialog()).getByRole('button', { name: 'Save' }));
     expect(history().past).toHaveLength(before + 1);
+    expect(save().disabled).toBe(false);
+    await user.click(save());
+    expect(history().past).toHaveLength(before + 2);
     expect(tree().nodes).toEqual({
-      ...lung.nodes,
-      '4:1': lung.nodes['4:5'],
+      ...conflicted.nodes,
       '1:2': lung.nodes['1:4'],
       '1:4': lung.nodes['1:2'],
     });
-    // The saved conflict is the tree's finding; the Loadout launcher carries its mark.
-    await waitFor(() => expect(launcher().dataset.hasFindings).toBe('true'));
 
-    // The saved tree names its conflict by talent; Cancel discards a draft.
+    // Cancel discards a draft.
     await user.click(launcher());
-    expect(feedback().textContent).toContain(`${rare2} appears on two Rare nodes`);
     await user.click(within(dialog()).getByRole('button', { name: 'Reset' }));
     await user.click(within(dialog()).getByRole('button', { name: 'Cancel' }));
-    expect(history().past).toHaveLength(before + 1);
+    expect(history().past).toHaveLength(before + 2);
 
     // Choosing the current layout keeps the edits; another layout regenerates its default.
     await user.click(launcher());
     await user.click(within(dialog()).getByRole('button', { name: 'Hex talent layout' }));
     await user.click(screen.getByRole('option', { name: 'Lung' }));
     expect(node(`Rare ${rare2}, depth 4, first`)).toBeTruthy();
+    expect(save().disabled).toBe(true);
     await user.click(within(dialog()).getByRole('button', { name: 'Hex talent layout' }));
     await user.click(screen.getByRole('option', { name: 'Nacelle' }));
     expect(within(board()).getAllByRole('button')).toHaveLength(18);
-    await user.click(within(dialog()).getByRole('button', { name: 'Save' }));
-    expect(history().past).toHaveLength(before + 2);
+    await user.click(save());
+    expect(history().past).toHaveLength(before + 3);
     expect(tree()).toEqual(
       createDefaultAuthoredHexTree(application.catalog, 'SpellMoonBeamTrait', 'Nacelle'),
     );
@@ -234,17 +248,16 @@ describe('Hex tree board', () => {
       }),
     ).toBeTruthy();
     // The trade keeps the tree legal.
-    expect(within(dialog).getByRole('status', { name: 'Hex tree feedback' }).textContent).toContain(
-      'No current findings.',
-    );
+    expect(dialogFinding(dialog)).toBeUndefined();
   });
 
-  it('explains common nodes from the dialog header', async () => {
+  it('explains layouts and common nodes from the dialog header', async () => {
     const { user } = renderPlannerForInteraction({ application: seleneApplication() });
     await user.click(screen.getByRole('button', { name: 'Edit Sky Fall Hex tree' }));
     const dialog = screen.getByRole('dialog', { name: 'Sky Fall Hex tree' });
-    await user.click(within(dialog).getByRole('button', { name: 'How common nodes work' }));
-    const help = await screen.findByRole('dialog', { name: 'How common nodes work' });
+    await user.click(within(dialog).getByRole('button', { name: 'Hex tree help' }));
+    const help = await screen.findByRole('dialog', { name: 'Hex tree help' });
+    expect(help.textContent).toContain('Choosing a layout generates its default tree');
     expect(help.textContent).toContain('fill in order');
     expect(help.textContent).toContain('a column that empties a deck draws from the next one');
     expect(help.textContent).toContain('Rare and Epic nodes pick from their pool');

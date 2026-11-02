@@ -2,7 +2,7 @@ import {
   semanticAddressKey,
   type AcquisitionRoleAddress,
 } from '@run-planner/engine/authored-project';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type {
   WorkspaceHexActivationBoard,
@@ -10,17 +10,16 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { hexNodeArtwork } from '@planner/ui/artwork/hex-nodes/hexNodeArtwork';
-import {
-  EditorDialog,
-  EditorDialogDraftActions,
-  EditorDialogFeedback,
-} from '@planner/ui/controls/EditorDialog';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
+import { introducesIssue } from '@planner/ui/controls/introducesIssue';
 import {
   hexActivationDialogClosed,
   hexActivationDialogOpened,
 } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { hintProps } from '@planner/ui/controls/hint';
+import { showTruncatedTitle } from '@planner/ui/controls/truncatedTitle';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
@@ -84,7 +83,9 @@ function HexActivationBoard({
                   className="hex-tree-node-icon"
                   source={hexNodeArtwork[node.talentKey] ?? undefined}
                 />
-                {node.talentLabel}
+                <span className="hex-tree-node-label" onMouseEnter={showTruncatedTitle}>
+                  {node.talentLabel}
+                </span>
               </span>
             );
           return (
@@ -102,7 +103,9 @@ function HexActivationBoard({
                 className="hex-tree-node-icon"
                 source={hexNodeArtwork[node.talentKey] ?? undefined}
               />
-              {node.talentLabel}
+              <span className="hex-tree-node-label" onMouseEnter={showTruncatedTitle}>
+                {node.talentLabel}
+              </span>
             </button>
           );
         }}
@@ -124,34 +127,41 @@ function HexActivationDialog({
   const saved = interaction.selectedNodeKeys;
   const [draft, setDraft] = useState<readonly string[]>(saved ?? []);
   const board = interaction.boardFor(draft);
+  const savedIssues = useMemo(
+    () => interaction.boardFor(saved ?? [])?.issues ?? [],
+    [interaction, saved],
+  );
+  // The selection is a set; an unsaved screen is never at rest.
+  const atRest =
+    saved !== undefined &&
+    saved.length === draft.length &&
+    draft.every((key) => saved.includes(key));
+  const issues = board?.issues ?? [];
   return (
     <EditorDialog
-      eyebrow="Path of Stars"
-      feedback={
-        <EditorDialogFeedback entries={board?.issues ?? []} name="Path of Stars feedback" />
-      }
-      footer={
-        <EditorDialogDraftActions
-          onCancel={onClose}
-          onSave={() => {
-            // The selection is a set; an empty draft still settles an unsaved screen.
-            if (
-              saved === undefined ||
-              saved.length !== draft.length ||
-              draft.some((key) => !saved.includes(key))
-            )
-              executeIntent(interaction.intentFor(draft));
-            onClose();
-          }}
-          saveDisabled={board === undefined}
-          saveName="Save Path of Stars nodes"
-        />
-      }
+      icon={<ArtworkIcon className="artwork-label-icon" source={rewardIcon('TalentDrop')} />}
+      layout="header"
       model={{ kind: 'draft', onCancel: onClose }}
       returnFocusId={launcherId}
       size="hexTree"
       title="Choose Path of Stars nodes"
     >
+      <EditorDialogDraftActions
+        issues={issues}
+        onCancel={onClose}
+        onSave={() => {
+          executeIntent(interaction.intentFor(draft));
+          onClose();
+        }}
+        // A wrong point count is incomplete; any other issue blocks only when this draft introduced it.
+        saveDisabled={
+          atRest ||
+          board === undefined ||
+          issues.some(([key]) => key === 'selectionCount') ||
+          introducesIssue(issues, savedIssues)
+        }
+        saveName="Save Path of Stars nodes"
+      />
       {board === undefined ? null : (
         <HexActivationBoard board={board} cleared={draft.length === 0} onSelect={setDraft} />
       )}
