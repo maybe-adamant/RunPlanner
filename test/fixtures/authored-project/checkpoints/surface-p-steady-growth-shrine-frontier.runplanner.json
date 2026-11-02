@@ -253,7 +253,7 @@
                     "rewardType": "Boon",
                     "payload": {
                       "kind": "BoonSource",
-                      "source": "ZeusUpgrade"
+                      "source": "AphroditeUpgrade"
                     }
                   },
                   "traitOffersByAcquisitionRole": {

@@ -478,6 +478,7 @@ export interface CanonicalHubTarget {
   readonly origin: HubSlotAddress;
   readonly hubSlotKey: string;
   readonly physicalDoorId: number;
+  readonly offeredExitInsertionRank: number;
   readonly room: CanonicalAuthoredRoom;
 }
 

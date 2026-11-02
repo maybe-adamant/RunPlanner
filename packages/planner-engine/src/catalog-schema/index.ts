@@ -1439,7 +1439,13 @@ export interface CompletionDescriptor {
 interface HubSlotDescriptor {
   readonly slotKey: string;
   readonly roomGameName: string;
+  /** The door's map ObjectId, its key in the game's offered-exit table. */
   readonly physicalDoorId: number;
+  /**
+   * Zero-based position at which the Hub map's door setup inserts this door
+   * into the offered-exit table; the slots' ranks are a total order.
+   */
+  readonly offeredExitInsertionRank: number;
 }
 
 interface HubOpenSlotConstraint {

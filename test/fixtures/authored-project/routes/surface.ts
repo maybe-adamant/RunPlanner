@@ -297,13 +297,33 @@ export function createSurfaceOSameRoomHermesDeliveriesCheckpoint(): {
 }
 
 /**
+ * Swaps the unvisited Combat10 Aphrodite onto Combat01, which the game assigns
+ * first, so Combat05 repeats Combat11's Ares only after four distinct board gods.
+ */
+export function withFourthBoardGodBeforeCombat05(project: ProjectDocument): ProjectDocument {
+  return applyProjectCommand(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat01')),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' } },
+    }),
+    catalog,
+    {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
+      value: { rewardType: 'MaxHealthDropBig' },
+    },
+  );
+}
+
+/**
  * Complete N/O route with a purchased N Shrine Travel Deal and its placed O
  * Combat1 delivery.
  */
 export function surfaceShrineTravelDealProject(): ProjectDocument {
   const shrine = createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-preboss:postboss'));
   const travelDealSource = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
-  let project = loadSurfaceNOProject();
+  let project = withFourthBoardGodBeforeCombat05(loadSurfaceNOProject());
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
@@ -819,11 +839,15 @@ export function surfaceTravelDealRefillAnvilProject(): ProjectDocument {
   const travelDealSource = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
   const shop = createOccurrenceAddress(qBiome, qOccurrenceIds.preboss);
   const refill = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'travelDealRefill');
-  let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
-    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
-  });
+  let project = applyProjectCommand(
+    withFourthBoardGodBeforeCombat05(loadSurfaceNOPQProject()),
+    catalog,
+    {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+    },
+  );
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: travelDealSource,

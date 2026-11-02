@@ -312,17 +312,11 @@
                 "kind": "ephyraCombat",
                 "reward": {
                   "offer": {
-                    "rewardType": "Boon",
-                    "payload": {
-                      "kind": "BoonSource",
-                      "source": "AphroditeUpgrade"
-                    }
+                    "rewardType": "MaxHealthDropBig"
                   },
-                  "traitOffersByAcquisitionRole": {
-                    "source": null
-                  },
+                  "traitOffersByAcquisitionRole": {},
                   "dispositionByAcquisitionRole": {
-                    "source": {
+                    "self": {
                       "kind": "normal"
                     }
                   }
@@ -1005,11 +999,17 @@
                 "kind": "ephyraCombat",
                 "reward": {
                   "offer": {
-                    "rewardType": "MaxHealthDropBig"
+                    "rewardType": "Boon",
+                    "payload": {
+                      "kind": "BoonSource",
+                      "source": "AphroditeUpgrade"
+                    }
                   },
-                  "traitOffersByAcquisitionRole": {},
+                  "traitOffersByAcquisitionRole": {
+                    "source": null
+                  },
                   "dispositionByAcquisitionRole": {
-                    "self": {
+                    "source": {
                       "kind": "normal"
                     }
                   }

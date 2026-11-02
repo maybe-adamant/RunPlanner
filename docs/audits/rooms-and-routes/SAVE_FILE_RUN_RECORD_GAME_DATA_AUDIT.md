@@ -498,7 +498,9 @@ counters without order.
   walks `CollapseTableOrdered(MapState.OfferedExitDoors)`, whose
   `CompareGameDataTables` ties on doors sharing an obstacle name and falls
   back to `next()` table order; `MapState` is not saved. The order decides
-  which door draws from the reward bag first.
+  which door draws from the reward bag first. For the Ephyra board it is
+  derivable from the open doors alone
+  ([Persistent board generation](../../biomes/N_GAME_RULES.md#persistent-board-generation)).
 - The World Shop Travel Deal refill item's identity, and the Hermes Shrine
   refill's when it was itself rushed.
 - Which pickups Sea Star duplicated, and the phase and wave Aetos joined.

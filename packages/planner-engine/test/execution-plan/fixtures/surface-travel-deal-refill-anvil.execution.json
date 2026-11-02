@@ -908,9 +908,10 @@
               "physicalDoorId": 617113,
               "room": { "id": "surface-n-combat01", "biomeKey": "N", "gameName": "N_Combat01" },
               "reward": {
-                "rewardType": "MaxHealthDropBig",
+                "rewardType": "Boon",
                 "producerLifecycleKey": "RoomReward",
-                "resolvedStoreKey": "HubRewards"
+                "resolvedStoreKey": "HubRewards",
+                "source": "AphroditeUpgrade"
               }
             },
             {
@@ -959,10 +960,9 @@
               "physicalDoorId": 617151,
               "room": { "id": "surface-n-combat10", "biomeKey": "N", "gameName": "N_Combat10" },
               "reward": {
-                "rewardType": "Boon",
+                "rewardType": "MaxHealthDropBig",
                 "producerLifecycleKey": "RoomReward",
-                "resolvedStoreKey": "HubRewards",
-                "source": "AphroditeUpgrade"
+                "resolvedStoreKey": "HubRewards"
               }
             },
             {
@@ -8433,9 +8433,10 @@
       "kind": "SingleEncounter",
       "overview": {
         "incomingReward": {
-          "rewardType": "MaxHealthDropBig",
+          "rewardType": "Boon",
           "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "HubRewards"
+          "resolvedStoreKey": "HubRewards",
+          "source": "AphroditeUpgrade"
         },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedN_Bigger", "kind": "combat" }
@@ -8481,10 +8482,9 @@
       "kind": "SingleEncounter",
       "overview": {
         "incomingReward": {
-          "rewardType": "Boon",
+          "rewardType": "MaxHealthDropBig",
           "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "HubRewards",
-          "source": "AphroditeUpgrade"
+          "resolvedStoreKey": "HubRewards"
         },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedN_Bigger", "kind": "combat" }
@@ -8821,5 +8821,5 @@
       }
     }
   ],
-  "planFingerprint": "8fe4b1cc"
+  "planFingerprint": "cfb3d8f4"
 }

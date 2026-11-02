@@ -192,9 +192,7 @@ describe('Olympian reward pressure', () => {
     });
     const maxHealth = context({ rewardType: 'MaxHealthDrop' });
 
-    const cohort = processOfferGenerationCohort([initial], [boon, maxHealth], new Map(), {
-      ordering: 'listed',
-    });
+    const cohort = processOfferGenerationCohort([initial], [boon, maxHealth], new Map());
     expect(cohort).toHaveLength(1);
     expect(cohort[0]?.state.rewardPriorities).toEqual([]);
 
@@ -211,7 +209,7 @@ describe('Olympian reward pressure', () => {
       payload: { kind: 'BoonSource', source: 'AresUpgrade' },
     });
     const listed = (contexts: readonly (typeof boon)[]) =>
-      processOfferGenerationCohort([initial], contexts, new Map(), { ordering: 'listed' });
+      processOfferGenerationCohort([initial], contexts, new Map());
     expect(listed([boon, ares])).toHaveLength(1);
     expect(listed([ares, boon])).toHaveLength(0);
   });

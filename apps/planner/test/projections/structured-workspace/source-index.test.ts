@@ -756,7 +756,8 @@ describe('structured workspace source index', () => {
       value: { rewardType: 'WeaponUpgrade' },
     });
     const source = biomeSource(sourceIndexForExactProject(project), 'Surface', 'N');
-    const reward = createIncomingRewardAddress(nBiome, combat);
+    // Combat03 already offers the singleton Weapon and is assigned after Combat10.
+    const reward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat03'));
     const firstDecision = source.exitDecisions[0];
     if (firstDecision === undefined) throw new Error('N has no authored exit decision');
     const firstOwner = createExitDecisionAddress(source.biome, firstDecision.source);

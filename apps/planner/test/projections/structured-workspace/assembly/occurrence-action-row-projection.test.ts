@@ -4,7 +4,11 @@ import {
   testHermesShrinePurchaseAction,
 } from '@run-planner/test-fixtures/shared';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
-import { loadSurfaceNOProject as loadSurfaceNO, nBiome } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOProject as loadSurfaceNO,
+  nBiome,
+  withFourthBoardGodBeforeCombat05,
+} from '@run-planner/test-fixtures/surface';
 import {
   loadUnderworldFStygianWellCheckpoint,
   underworldCheckpointArtifacts,
@@ -1464,7 +1468,7 @@ describe('shop-like purchase rows', () => {
   const shrineOwner = createOccurrenceAddress(nBiome, shrineId);
 
   function travelDealShrine(rushed: boolean): ProjectDocument {
-    let project = applyProjectCommand(loadSurfaceNO(), catalog, {
+    let project = applyProjectCommand(withFourthBoardGodBeforeCombat05(loadSurfaceNO()), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat05')),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },

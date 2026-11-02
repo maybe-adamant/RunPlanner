@@ -114,6 +114,9 @@ function branchListShape(value: unknown): unknown {
     next.states = [next.state];
     delete next.state;
   }
+  // The baseline also predates the Hub board's declared door insertion ranks.
+  if ('hubSlotKey' in value && 'offeredExitInsertionRank' in value)
+    delete next.offeredExitInsertionRank;
   if (
     typeof value.remaining === 'number' &&
     ('storeKey' in value ||

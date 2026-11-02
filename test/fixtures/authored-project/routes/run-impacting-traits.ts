@@ -218,7 +218,13 @@ export function createSurfaceNNaturalSelectionFrontier(): ProjectDocument {
     'PoseidonUpgrade',
     poseidonRarePassiveOffer,
   );
-  project = replaceUnvisitedBoonSource(project, nOccurrenceId('combat10'), 'ApolloUpgrade');
+  // Combat01 is assigned first, so Combat05 repeats Demeter after four distinct board gods.
+  project = replaceUnvisitedBoonSource(project, nOccurrenceId('combat01'), 'ApolloUpgrade');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
+    value: { rewardType: 'MaxHealthDropBig' },
+  });
   project = replaceBoon(
     project,
     nOccurrenceId('combat05'),

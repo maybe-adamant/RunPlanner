@@ -178,8 +178,9 @@ continuation, so its exact order, entry children, findings, and candidates remai
 assessable without a downstream room. That bounded product cannot advance route
 history or retroactively affect outgoing-target candidates.
 
-N's open Hub board and any jointly unordered reward producer are such atomic
-regions. They do not acquire a false slot- or sibling-order coverage prefix.
+N's open Hub board and any jointly generated reward producer are such atomic
+regions. They do not acquire a slot- or sibling-order coverage prefix, even
+where the game assigns the board's rewards in a derived order.
 Their declaration-ordered physical creations and reward lookup still remain
 facts once the board reaches outgoing generation; a board-owned invalid value
 blocks every later visit and parent-local candidate rather than erasing that

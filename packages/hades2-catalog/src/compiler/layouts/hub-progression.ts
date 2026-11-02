@@ -18,6 +18,7 @@ import {
   createCollection,
   freezeUniqueStrings,
   requireNonEmpty,
+  requireNonNegativeInteger,
   requirePositiveInteger,
 } from '../common';
 import { normalizeAuthoredFields } from '../descriptors';
@@ -272,6 +273,7 @@ export function normalizeHubDecision(
     `${path}.slots.slotKeys`,
   );
   const physicalDoorIds = new Set<number>();
+  const insertionRanks = new Set<number>();
   const slots = raw.slots.map((slot, index) => {
     const slotPath = `${path}.slots[${index}]`;
     const room = requireLayoutRoom(slot.roomGameName, biomeKey, rooms, `${slotPath}.roomGameName`);
@@ -286,14 +288,32 @@ export function normalizeHubDecision(
       fail(`${slotPath}.physicalDoorId`, `duplicates ${physicalDoorId}`);
     }
     physicalDoorIds.add(physicalDoorId);
+    const offeredExitInsertionRank = requireNonNegativeInteger(
+      slot.offeredExitInsertionRank,
+      `${slotPath}.offeredExitInsertionRank`,
+    );
+    if (insertionRanks.has(offeredExitInsertionRank)) {
+      fail(`${slotPath}.offeredExitInsertionRank`, `duplicates ${offeredExitInsertionRank}`);
+    }
+    insertionRanks.add(offeredExitInsertionRank);
     return Object.freeze({
       slotKey: slotKeys[index] as string,
       roomGameName: room.gameName,
       physicalDoorId,
+      offeredExitInsertionRank,
     });
   });
   if (slots.length === 0) {
     fail(`${path}.slots`, 'must not be empty');
+  }
+  // Every slot can open, so the insertion ranks order all of them.
+  for (const [index, slot] of slots.entries()) {
+    if (slot.offeredExitInsertionRank >= slots.length) {
+      fail(
+        `${path}.slots[${index}].offeredExitInsertionRank`,
+        `must be below the declared slot count ${slots.length}`,
+      );
+    }
   }
   const min = requirePositiveInteger(raw.openCount.min, `${path}.openCount.min`);
   const max = requirePositiveInteger(raw.openCount.max, `${path}.openCount.max`);

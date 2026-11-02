@@ -244,6 +244,7 @@ function materializeBoard(
             origin: createHubSlotAddress(biome, descriptor.hubKey, slot.slotKey),
             hubSlotKey: slot.slotKey,
             physicalDoorId: slot.physicalDoorId,
+            offeredExitInsertionRank: slot.offeredExitInsertionRank,
             room: materializeAuthoredRoom({
               catalog,
               biome,

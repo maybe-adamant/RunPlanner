@@ -191,13 +191,29 @@ identity, physical-door evidence, target game name, incoming reward, pylon
 requirements, and side-slot descriptors remain catalog facts. The UI must not
 offer arbitrary room replacement for one of those slots.
 
-The game's internal order for resolving the already-open board is not authored
-state. Order-sensitive offer facts, including ordinary-god peer support, are
-validated against the complete board by requiring one supported hidden
-generation ordering. The engine then publishes offers in stable declaration
-order. It must not substitute the six-room visit list for that hidden ordering:
-all board offers exist before the first visit, while only visited targets add
-their acquisitions in authored visit order.
+Which doors open is order-free, so the authored open set is the board's only
+door input. Rewards are then assigned in one order the game fixes, derived
+rather than authored. `SetupDefaultDoor` (RoomLogic.lua:5844-5856) inserts each
+open door into `MapState.OfferedExitDoors`, keyed by its ObjectId, in the
+`N_Hub` map's fixed door-setup order. `DoUnlockRoomExits`
+(RoomLogic.lua:3840-3940) walks `CollapseTableOrdered` of that table, which is
+its Lua 5.2 `pairs()` order, and `table.sort`s the result with a comparator
+under which every board door ties (one obstacle name), so only the sort's
+pivot swaps move it. Each door draws its reward in that order, after the doors
+before it. The catalog declares each slot's door ObjectId (`PredeterminedDoorRooms`,
+RoomDataN.lua:1260) and its insertion rank; the engine emulates the Lua 5.2
+table and `auxsort` to derive the order, which reproduces all 19 boards of an
+in-game probe. The ranks of Combat01 against Combat12, and of Combat16 against
+Combat05, 10, 11, 13, 14 and MiniBoss01, are not yet pinned by probe data and
+are marked provisional in the declarations.
+
+Order-sensitive offer facts, including ordinary-god peer support and singleton
+entries, are validated in exactly that order: a board that another order would
+admit is invalid. The draws happen once every open door exists, so the board's
+reward findings share that history position and repair proceeds door by door
+in assignment order. The six-room visit list never stands in for it: all board
+offers exist before the first visit, while only visited targets add their
+acquisitions in authored visit order.
 
 The board may contain five `HubRewards` Boons plus the miniboss's forced
 `RunProgress` Boon. Because source fallback is resolved while offers are
@@ -219,16 +235,17 @@ minibosses, side rooms and completion rooms—records entered-store history
 State reports neither a target nor a banked key for N.
 
 Complete selected validation remains atomic across that board. For incremental
-authoring, one changed reward is assessed after every other currently authored
-peer that can contribute once from the board's pre-generation frontier, with
-the proposed reward evaluated last against those identities as one unordered
-prior-offer set. Thus a singleton counted reward selected on one door, and an
-ordinary god-source peer exclusion, apply to the next door immediately, without
-waiting for board completion. An independently invalid
+authoring, one changed reward is assessed at its place in the assignment
+order: the authored peers assigned before it draw first from the board's
+pre-generation frontier, then the proposed reward, and every later authored
+peer that draws without it must still draw after it, or the reward conflicts
+with that peer. Thus a singleton counted reward selected on one door, and an
+ordinary god-source peer exclusion, apply to the other doors immediately,
+without waiting for board completion. An independently invalid
 peer remains a precise board finding but is omitted from this focused fold so
 unrelated repair stays available. The current selected value retains its
 complete-board finding, and visits remain withheld until the authored board as
-a whole admits a supported hidden ordering.
+a whole is valid in the assignment order.
 
 All open Hub offers contribute to the
 [Hub reward lookup](../design/REWARD_MODEL.md#offered-reward-lookups) before the
