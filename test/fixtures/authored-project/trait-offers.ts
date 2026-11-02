@@ -101,8 +101,7 @@ export function traitCandidateOptions(
       });
       const evaluation = session.evaluate({ kind: 'traitOffer', trait: address, value });
       if (evaluation.kind !== 'traitOffer') continue;
-      const assessments = evaluation.result.branches.flatMap((branch) => branch.assessments);
-      const assessment = assessments.find((candidate) => candidate.legal);
+      const assessment = evaluation.result.assessments.find((candidate) => candidate.legal);
       if (assessment === undefined) continue;
       result.push(Object.freeze({ option, assessment }));
       break;

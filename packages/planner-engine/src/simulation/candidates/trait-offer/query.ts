@@ -18,7 +18,7 @@ import {
 import type { AuthoredTraitCarrierChild } from '../../../authored-project/traits/carrier-children';
 import type { ProjectDocument } from '../../../authored-project/model';
 import type {
-  ConcaveStoneCandidateBranch,
+  ConcaveStoneCandidate,
   TraitOfferGenerationState,
   TraitOfferCandidateArtifacts,
 } from './capability';
@@ -92,7 +92,7 @@ export interface TraitOfferFocusedOptionCandidateQuery {
 
 /**
  * Requests the exact-target domain for one selected targeted acquisition.
- * The engine enumerates it from retained pre-offer branches; consumers do not
+ * The engine enumerates it from the retained pre-offer state; consumers do not
  * inspect or reconstruct trait history.
  */
 export interface TraitAcquisitionTargetDomainQuery {
@@ -122,18 +122,16 @@ export type DirectTraitOutcomeSupport = 'forced' | 'possible' | 'impossible';
 export interface EvaluatedDirectTraitOutcomeCandidate<T> {
   readonly value: T;
   readonly support: DirectTraitOutcomeSupport;
-  readonly branchSupport: readonly boolean[];
   readonly selected: boolean;
-  readonly reason?: 'branchDivergence' | 'duplicateTrait' | 'unavailable';
+  readonly reason?: 'duplicateTrait' | 'unavailable';
 }
 export interface EvaluatedCirceResolutionDomain {
   readonly kind: 'circeResolutionDomain';
   readonly result: {
     readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear';
     readonly resultRarity: 'Epic' | 'Heroic' | null;
-    readonly activeArcanaByBranch: readonly (readonly CurrentArcanaCard[])[];
+    readonly activeArcana: readonly CurrentArcanaCard[];
     readonly requiredCount: number;
-    readonly branchAgreement: boolean;
     readonly arcanaCandidates: readonly EvaluatedDirectTraitOutcomeCandidate<string>[];
     readonly vowCandidates: readonly EvaluatedDirectTraitOutcomeCandidate<string>[];
     readonly outerAvailable: boolean;
@@ -166,8 +164,7 @@ export interface RansomAssessmentCandidateQuery {
 export interface EvaluatedRansomAssessmentCandidate {
   readonly kind: 'ransomAssessment';
   readonly result: {
-    readonly assessments: readonly import('../../traits').RansomAssessment[];
-    readonly branchAgreement: boolean;
+    readonly assessment: import('../../traits').RansomAssessment;
   };
 }
 export type RansomAssessmentCandidateEvaluation =
@@ -178,12 +175,11 @@ export interface EvaluatedNaturalSelectionResultCandidate {
     readonly supported: boolean;
     readonly complete: boolean;
     readonly nextTargetTraitKeys: readonly string[];
-    readonly branchSupport: readonly boolean[];
     readonly findings: readonly TraitOfferCandidateFinding[];
   } & NaturalSelectionDraftShape;
 }
 
-/** First-pass rows and the completed allocation, published only where every branch agrees. */
+/** First-pass rows and the completed allocation. */
 export type NaturalSelectionDraftShape = Pick<
   import('../../traits').NaturalSelectionTargetAssessment,
   'firstPassRows' | 'completedTargets' | 'levelCountsByTraitKey'
@@ -211,8 +207,7 @@ export interface EvaluatedEchoLastRunBoonCandidate {
   readonly effectiveRarity?: import('../../../catalog-schema').TraitRarity;
   readonly effectiveLevel?: number;
   readonly support: DirectTraitOutcomeSupport;
-  readonly branchSupport: readonly boolean[];
-  readonly reason?: 'branchDivergence' | 'unavailable';
+  readonly reason?: 'unavailable';
   readonly targetRequired: boolean;
   readonly targetCandidates: readonly EvaluatedDirectTraitOutcomeCandidate<string>[];
 }
@@ -263,7 +258,6 @@ export interface EvaluatedTraitAcquisitionTargetCandidate {
   readonly result: {
     readonly traitKey: string;
     readonly supported: boolean;
-    readonly branchSupport: readonly boolean[];
     readonly findings: readonly TraitOfferCandidateFinding[];
   };
 }
@@ -292,7 +286,6 @@ export interface EvaluatedLatestModelTargetsDomain {
   readonly result: {
     readonly sourceTraitKey: string;
     readonly requiredCount: number;
-    readonly branchAgreement: boolean;
     readonly candidates: readonly EvaluatedTraitAcquisitionTargetCandidate[];
     /** One row per required or retained target. */
     readonly rows: readonly LatestModelHammerRow[];
@@ -335,7 +328,8 @@ export function latestModelHammerRows(
   );
 }
 
-export interface TraitOfferCandidateBranch {
+/** The complete offer assessed at its one reached pre-offer state. */
+export interface TraitOfferCandidateState {
   readonly assessments: readonly TraitAssessment[];
   readonly generation?: import('../../traits/authoring/initial-composition').InitialOfferSupport;
   readonly composition: TraitOfferCompositionAssessment;
@@ -349,8 +343,8 @@ export interface TraitOfferCandidateBranch {
   readonly rerolledScreens?: readonly RerolledScreenAssessment[];
 }
 
-/** Exact Calling Card replay product for one surviving pre-offer branch. */
-export interface CallingCardOfferCandidateBranch {
+/** Exact Calling Card replay product at the offer's pre-offer state. */
+export interface CallingCardOfferCandidate {
   readonly effectiveRarities: readonly (
     import('../../../catalog-schema').TraitRarity | undefined
   )[];
@@ -380,16 +374,12 @@ export interface EvaluatedTraitOfferCandidate {
   readonly result: {
     readonly supported: boolean;
     readonly assessments: readonly TraitAssessment[];
-    readonly branches: readonly TraitOfferCandidateBranch[];
-    readonly callingCard?: readonly CallingCardOfferCandidateBranch[];
-    readonly concaveStone?: readonly ConcaveStoneCandidateBranch[];
-    /** Branch-correlated active Chaos restrictions at this complete offer. */
-    readonly chaosOfferRules?: readonly {
-      readonly rejectedBlockRequired: boolean;
-      readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
-      readonly rejectedBlockNeedsRepair: boolean;
-    }[];
-    /** Published only when every surviving branch agrees for each option. */
+    /** Absent without a reached pre-offer state (a duplicate alone answers). */
+    readonly state?: TraitOfferCandidateState;
+    readonly callingCard?: CallingCardOfferCandidate;
+    readonly concaveStone?: ConcaveStoneCandidate;
+    /** Active Chaos restrictions at this complete offer. */
+    readonly chaosOfferRules?: ChaosOfferRules;
     readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
     readonly persephoneBaseLevels: readonly (number | undefined)[];
     readonly jeweledPomLevels: readonly (number | undefined)[];
@@ -408,9 +398,11 @@ export interface TraitOfferFocusedOptionEvidence {
   readonly finding: TraitOfferCandidateFinding;
 }
 
-export interface TraitOfferFocusedOptionBranch {
-  readonly supported: boolean;
-  readonly evidence: readonly TraitOfferFocusedOptionEvidence[];
+export interface ChaosOfferRules {
+  readonly rejectedBlockRequired: boolean;
+  readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
+  /** A retained block is missing, stale, or targets the selected row. */
+  readonly rejectedBlockNeedsRepair: boolean;
 }
 
 export interface EvaluatedTraitOfferFocusedOptionCandidate {
@@ -418,7 +410,6 @@ export interface EvaluatedTraitOfferFocusedOptionCandidate {
   readonly result: {
     readonly optionKey: TraitOptionKey;
     readonly supported: boolean;
-    readonly branches: readonly TraitOfferFocusedOptionBranch[];
     readonly evidence: readonly TraitOfferFocusedOptionEvidence[];
   };
 }
@@ -444,13 +435,14 @@ export type TraitCarrierChildDomainEvaluation =
 
 export interface EvaluatedConcaveStoneCarrierDomain {
   readonly kind: 'concaveStone';
-  readonly result: { readonly branches: readonly ConcaveStoneCandidateBranch[] };
+  /** Absent where the offer has no Stone result to author. */
+  readonly result: { readonly stone?: ConcaveStoneCandidate };
 }
 export type ConcaveStoneCarrierDomainEvaluation =
   CandidateContextUnavailable | EvaluatedConcaveStoneCarrierDomain;
 
 interface TraitOfferCandidateAssessment {
-  readonly branches: readonly TraitOfferCandidateBranch[];
+  readonly state?: TraitOfferCandidateState;
   readonly assessments: readonly TraitAssessment[];
   readonly duplicateFindings: readonly TraitOfferCandidateFinding[];
   readonly findings: readonly TraitOfferCandidateFinding[];
@@ -524,164 +516,140 @@ function duplicateOfferedTraitFindings(
  * focused path reevaluates trait legality or whole-screen support.
  */
 function assessTraitOfferCandidate(
-  reached: readonly {
-    readonly assessments: readonly TraitAssessment[];
-    readonly generation?: import('../../traits/authoring/initial-composition').InitialOfferSupport;
-    readonly composition: TraitOfferCompositionAssessment;
-    readonly offerGenerationState?: TraitOfferGenerationState;
-    readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
-    readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
-    readonly persephoneBaseLevels: readonly (number | undefined)[];
-    readonly jeweledPomLevels: readonly (number | undefined)[];
-    readonly effectiveLevels: readonly (number | undefined)[];
-    readonly rerolledScreens?: readonly RerolledScreenAssessment[];
-  }[],
+  reached:
+    | {
+        readonly assessments: readonly TraitAssessment[];
+        readonly generation?: import('../../traits/authoring/initial-composition').InitialOfferSupport;
+        readonly composition: TraitOfferCompositionAssessment;
+        readonly offerGenerationState?: TraitOfferGenerationState;
+        readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
+        readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+        readonly persephoneBaseLevels: readonly (number | undefined)[];
+        readonly jeweledPomLevels: readonly (number | undefined)[];
+        readonly effectiveLevels: readonly (number | undefined)[];
+        readonly rerolledScreens?: readonly RerolledScreenAssessment[];
+      }
+    | undefined,
   duplicateFindings: readonly TraitOfferCandidateFinding[],
-  callingCard: readonly CallingCardOfferCandidateBranch[] = Object.freeze([]),
+  callingCard?: CallingCardOfferCandidate,
   value?: AuthoredTraitOffer,
 ): TraitOfferCandidateAssessment {
-  const branches = Object.freeze(
-    reached.map((branch) =>
-      Object.freeze({
-        assessments: branch.assessments,
-        ...(branch.generation === undefined ? {} : { generation: branch.generation }),
-        composition: branch.composition,
-        ...(branch.offerGenerationState === undefined
-          ? {}
-          : { offerGenerationState: branch.offerGenerationState }),
-        ...(branch.targetedAcquisition.applies
-          ? { targetedAcquisition: branch.targetedAcquisition }
-          : {}),
-        persephoneLevelBonusMaximums: branch.persephoneLevelBonusMaximums,
-        persephoneBaseLevels: branch.persephoneBaseLevels,
-        jeweledPomLevels: branch.jeweledPomLevels,
-        effectiveLevels: branch.effectiveLevels,
-        ...(branch.rerolledScreens === undefined
-          ? {}
-          : { rerolledScreens: branch.rerolledScreens }),
-      }),
-    ),
-  );
-  const assessments = Object.freeze(branches.flatMap((branch) => branch.assessments));
+  const state: TraitOfferCandidateState | undefined =
+    reached === undefined
+      ? undefined
+      : Object.freeze({
+          assessments: reached.assessments,
+          ...(reached.generation === undefined ? {} : { generation: reached.generation }),
+          composition: reached.composition,
+          ...(reached.offerGenerationState === undefined
+            ? {}
+            : { offerGenerationState: reached.offerGenerationState }),
+          ...(reached.targetedAcquisition.applies
+            ? { targetedAcquisition: reached.targetedAcquisition }
+            : {}),
+          persephoneLevelBonusMaximums: reached.persephoneLevelBonusMaximums,
+          persephoneBaseLevels: reached.persephoneBaseLevels,
+          jeweledPomLevels: reached.jeweledPomLevels,
+          effectiveLevels: reached.effectiveLevels,
+          ...(reached.rerolledScreens === undefined
+            ? {}
+            : { rerolledScreens: reached.rerolledScreens }),
+        });
   const findings = Object.freeze([
-    ...branches.flatMap((branch) => [
-      ...branch.assessments.flatMap((entry) => entry.findings.map(candidateFinding)),
-      // The candidate's own duplicate finding names a repeated row.
-      ...(branch.generation?.findings
-        .filter(
-          (finding) =>
-            !('reason' in finding && finding.reason === 'duplicateTrait') ||
-            duplicateFindings.length === 0,
-        )
-        .map(candidateFinding) ?? []),
-      ...branch.composition.findings.map(candidateFinding),
-      ...(branch.targetedAcquisition?.findings.map(candidateFinding) ?? []),
-      ...rerolledScreenCandidateFindings(branch.rerolledScreens ?? []),
-    ]),
+    ...(state === undefined
+      ? []
+      : [
+          ...state.assessments.flatMap((entry) => entry.findings.map(candidateFinding)),
+          // The candidate's own duplicate finding names a repeated row.
+          ...(state.generation?.findings
+            .filter(
+              (finding) =>
+                !('reason' in finding && finding.reason === 'duplicateTrait') ||
+                duplicateFindings.length === 0,
+            )
+            .map(candidateFinding) ?? []),
+          ...state.composition.findings.map(candidateFinding),
+          ...(state.targetedAcquisition?.findings.map(candidateFinding) ?? []),
+          ...rerolledScreenCandidateFindings(state.rerolledScreens ?? []),
+        ]),
     ...duplicateFindings,
-    ...callingCard.flatMap((branch) =>
-      (branch.rerolledScreens ?? []).flatMap((screen, screenIndex) =>
-        screen.invalidActionIndexes.map((index) => {
-          const optionKey =
-            value?.kind === 'chaos'
-              ? undefined
-              : value?.rerolledScreens?.[screenIndex]?.rarificationActions?.[index];
-          return Object.freeze({
-            code: 'callingCardRarificationUnavailable' as const,
-            actionIndex: index,
-            ...(optionKey === undefined ? {} : { optionKey }),
-            detail: `rarification action ${index + 1} is unavailable at this offer frontier`,
-            screen: screenIndex,
-          });
-        }),
-      ),
-    ),
-    ...callingCard.flatMap((branch) =>
-      branch.invalidActionIndexes.map((index) =>
-        Object.freeze({
+    ...(callingCard?.rerolledScreens ?? []).flatMap((screen, screenIndex) =>
+      screen.invalidActionIndexes.map((index) => {
+        const optionKey =
+          value?.kind === 'chaos'
+            ? undefined
+            : value?.rerolledScreens?.[screenIndex]?.rarificationActions?.[index];
+        return Object.freeze({
           code: 'callingCardRarificationUnavailable' as const,
           actionIndex: index,
-          ...(value?.kind === 'traits' && value.rarificationActions?.[index] === undefined
-            ? {}
-            : value?.kind === 'traits'
-              ? { optionKey: value.rarificationActions![index] }
-              : {}),
+          ...(optionKey === undefined ? {} : { optionKey }),
           detail: `rarification action ${index + 1} is unavailable at this offer frontier`,
-        }),
-      ),
+          screen: screenIndex,
+        });
+      }),
+    ),
+    ...(callingCard?.invalidActionIndexes ?? []).map((index) =>
+      Object.freeze({
+        code: 'callingCardRarificationUnavailable' as const,
+        actionIndex: index,
+        ...(value?.kind === 'traits' && value.rarificationActions?.[index] === undefined
+          ? {}
+          : value?.kind === 'traits'
+            ? { optionKey: value.rarificationActions![index] }
+            : {}),
+        detail: `rarification action ${index + 1} is unavailable at this offer frontier`,
+      }),
     ),
   ]);
   return Object.freeze({
-    branches,
-    assessments,
+    ...(state === undefined ? {} : { state }),
+    assessments: state?.assessments ?? Object.freeze([]),
     duplicateFindings,
     findings,
     supported:
       duplicateFindings.length === 0 &&
-      branches.some(
-        (branch) =>
-          (branch.generation?.legal ?? true) &&
-          branch.composition.legal &&
-          (branch.targetedAcquisition?.legal ?? true) &&
-          rerolledScreensLegal(branch.rerolledScreens) &&
-          branch.assessments.every((entry) => entry.legal),
-      ),
+      state !== undefined &&
+      (state.generation?.legal ?? true) &&
+      state.composition.legal &&
+      (state.targetedAcquisition?.legal ?? true) &&
+      rerolledScreensLegal(state.rerolledScreens) &&
+      state.assessments.every((entry) => entry.legal),
   });
 }
 
 function evaluatedTraitOfferCandidate(
   assessment: TraitOfferCandidateAssessment,
-  callingCard: readonly CallingCardOfferCandidateBranch[],
-  concaveStone: readonly ConcaveStoneCandidateBranch[] = Object.freeze([]),
-  chaosOfferRules: readonly {
-    readonly rejectedBlockRequired: boolean;
-    readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
-    readonly rejectedBlockNeedsRepair: boolean;
-  }[] = Object.freeze([]),
+  callingCard: CallingCardOfferCandidate | undefined,
+  concaveStone: ConcaveStoneCandidate | undefined,
+  chaosOfferRules: ChaosOfferRules | undefined,
 ): EvaluatedTraitOfferCandidate {
-  const agreeingBranchValues = (
-    key:
-      | 'persephoneLevelBonusMaximums'
-      | 'persephoneBaseLevels'
-      | 'jeweledPomLevels'
-      | 'effectiveLevels',
-  ): readonly (number | undefined)[] => {
-    const width = assessment.branches[0]?.[key].length ?? 0;
-    return Object.freeze(
-      Array.from({ length: width }, (_, index) => {
-        const values = assessment.branches.map((branch) => branch[key][index]);
-        return values.length > 0 && values.every((value) => value === values[0])
-          ? values[0]
-          : undefined;
-      }),
-    );
-  };
+  const state = assessment.state;
   return Object.freeze({
     kind: 'traitOffer',
     result: Object.freeze({
       supported: assessment.supported,
-      branches: assessment.branches,
+      ...(state === undefined ? {} : { state }),
       assessments: assessment.assessments,
       findings: assessment.findings,
-      callingCard: Object.freeze(callingCard),
-      concaveStone: Object.freeze(concaveStone),
-      chaosOfferRules: Object.freeze(chaosOfferRules),
-      persephoneLevelBonusMaximums: agreeingBranchValues('persephoneLevelBonusMaximums'),
-      persephoneBaseLevels: agreeingBranchValues('persephoneBaseLevels'),
-      jeweledPomLevels: agreeingBranchValues('jeweledPomLevels'),
-      effectiveLevels: agreeingBranchValues('effectiveLevels'),
+      ...(callingCard === undefined ? {} : { callingCard }),
+      ...(concaveStone === undefined ? {} : { concaveStone }),
+      ...(chaosOfferRules === undefined ? {} : { chaosOfferRules }),
+      persephoneLevelBonusMaximums: state?.persephoneLevelBonusMaximums ?? Object.freeze([]),
+      persephoneBaseLevels: state?.persephoneBaseLevels ?? Object.freeze([]),
+      jeweledPomLevels: state?.jeweledPomLevels ?? Object.freeze([]),
+      effectiveLevels: state?.effectiveLevels ?? Object.freeze([]),
     }),
   });
 }
 
-function focusedEvidenceForBranch(
-  branch: TraitOfferCandidateBranch,
+function focusedEvidence(
+  state: TraitOfferCandidateState | undefined,
   duplicateFindings: readonly TraitOfferCandidateFinding[],
   optionKey: TraitOptionKey,
-): TraitOfferFocusedOptionBranch {
+): readonly TraitOfferFocusedOptionEvidence[] {
   const focusIndex = optionIndex(optionKey);
   const evidence: TraitOfferFocusedOptionEvidence[] = [];
-  for (const [index, assessment] of branch.assessments.entries()) {
+  for (const [index, assessment] of (state?.assessments ?? []).entries()) {
     const focused = index === focusIndex;
     for (const finding of assessment.findings) {
       evidence.push(
@@ -702,7 +670,7 @@ function focusedEvidenceForBranch(
       }),
     );
   }
-  for (const finding of branch.targetedAcquisition?.findings ?? []) {
+  for (const finding of state?.targetedAcquisition?.findings ?? []) {
     evidence.push(
       Object.freeze({
         source: 'targetedAcquisition',
@@ -713,39 +681,20 @@ function focusedEvidenceForBranch(
       }),
     );
   }
-  const frozenEvidence = Object.freeze(evidence);
-  return Object.freeze({
-    supported: frozenEvidence.every((entry) => !entry.blocksFocusedOption),
-    evidence: frozenEvidence,
-  });
+  return Object.freeze(evidence);
 }
 
 function evaluatedFocusedTraitOfferOptionCandidate(
   assessment: TraitOfferCandidateAssessment,
   optionKey: TraitOptionKey,
 ): EvaluatedTraitOfferFocusedOptionCandidate {
-  const branches = Object.freeze(
-    assessment.branches.map((branch) =>
-      focusedEvidenceForBranch(branch, assessment.duplicateFindings, optionKey),
-    ),
-  );
-  const evidence = Object.freeze(
-    branches.length > 0
-      ? branches.flatMap((branch) => branch.evidence)
-      : assessment.duplicateFindings.map((finding) =>
-          Object.freeze({
-            source: 'duplicate' as const,
-            blocksFocusedOption: finding.optionKeys?.includes(optionKey) ?? false,
-            finding,
-          }),
-        ),
-  );
+  const evidence = focusedEvidence(assessment.state, assessment.duplicateFindings, optionKey);
   return Object.freeze({
     kind: 'traitOfferFocusedOption',
     result: Object.freeze({
       optionKey,
-      supported: branches.some((branch) => branch.supported),
-      branches,
+      supported:
+        assessment.state !== undefined && evidence.every((entry) => !entry.blocksFocusedOption),
       evidence,
     }),
   });
@@ -762,50 +711,53 @@ export function evaluateTraitOfferCandidate(
   const capability = candidateArtifacts?.at(query.trait);
   if (capability === undefined && duplicateFindings.length === 0)
     return unavailableForTraitOffer(evaluation, query.trait);
-  const callingCard = Object.freeze(
-    (capability?.callingCard(query.value) ?? []).map((branch) =>
-      Object.freeze({
-        effectiveRarities:
-          branch.effectiveOffer.kind !== 'traits'
-            ? Object.freeze([])
-            : Object.freeze(branch.effectiveOffer.options.map((option) => option.rarity)),
-        ...(branch.remainingCharges === undefined
-          ? {}
-          : { remainingCharges: branch.remainingCharges }),
-        ...(branch.rarifySource === undefined ? {} : { rarifySource: branch.rarifySource }),
-        invalidActionIndexes: branch.invalidActions,
-        rarifiableOptionKeys: branch.rarifiableOptionKeys,
-        ...(branch.rerolledScreens.length === 0
-          ? {}
-          : {
-              rerolledScreens: Object.freeze(
-                branch.rerolledScreens.map((screen, index) => {
-                  const effective =
-                    branch.effectiveOffer.kind === 'chaos'
-                      ? undefined
-                      : branch.effectiveOffer.rerolledScreens?.[index];
-                  return Object.freeze({
-                    effectiveRarities: Object.freeze(
-                      (effective?.options ?? []).map((option) => option.rarity),
-                    ),
-                    invalidActionIndexes: screen.invalidActions,
-                    rarifiableOptionKeys: screen.rarifiableOptionKeys,
-                  });
-                }),
-              ),
-            }),
-      }),
-    ),
-  );
-  const concaveStone = Object.freeze(capability?.concaveStone(query.value) ?? []);
-  const chaosOfferRules = Object.freeze(capability?.chaosOfferRules(query.value) ?? []);
+  const replay = capability?.callingCard(query.value);
+  const callingCard: CallingCardOfferCandidate | undefined =
+    replay === undefined
+      ? undefined
+      : Object.freeze({
+          effectiveRarities:
+            replay.effectiveOffer.kind !== 'traits'
+              ? Object.freeze([])
+              : Object.freeze(replay.effectiveOffer.options.map((option) => option.rarity)),
+          ...(replay.remainingCharges === undefined
+            ? {}
+            : { remainingCharges: replay.remainingCharges }),
+          ...(replay.rarifySource === undefined ? {} : { rarifySource: replay.rarifySource }),
+          invalidActionIndexes: replay.invalidActions,
+          rarifiableOptionKeys: replay.rarifiableOptionKeys,
+          ...(replay.rerolledScreens.length === 0
+            ? {}
+            : {
+                rerolledScreens: Object.freeze(
+                  replay.rerolledScreens.map((screen, index) => {
+                    const effective =
+                      replay.effectiveOffer.kind === 'chaos'
+                        ? undefined
+                        : replay.effectiveOffer.rerolledScreens?.[index];
+                    return Object.freeze({
+                      effectiveRarities: Object.freeze(
+                        (effective?.options ?? []).map((option) => option.rarity),
+                      ),
+                      invalidActionIndexes: screen.invalidActions,
+                      rarifiableOptionKeys: screen.rarifiableOptionKeys,
+                    });
+                  }),
+                ),
+              }),
+        });
   const assessment = assessTraitOfferCandidate(
-    capability === undefined ? Object.freeze([]) : capability.evaluateOffer(query.value, true),
+    capability?.evaluateOffer(query.value, true),
     duplicateFindings,
     callingCard,
     query.value,
   );
-  return evaluatedTraitOfferCandidate(assessment, callingCard, concaveStone, chaosOfferRules);
+  return evaluatedTraitOfferCandidate(
+    assessment,
+    callingCard,
+    capability?.concaveStone(query.value),
+    capability?.chaosOfferRules(query.value),
+  );
 }
 
 export function evaluateTraitOfferFocusedOptionCandidate(
@@ -824,7 +776,7 @@ export function evaluateTraitOfferFocusedOptionCandidate(
   if (capability === undefined && !focusedDuplicate)
     return unavailableForTraitOffer(evaluation, query.trait);
   const assessment = assessTraitOfferCandidate(
-    capability === undefined ? Object.freeze([]) : capability.evaluateOffer(query.value, false),
+    capability?.evaluateOffer(query.value, false),
     duplicateFindings,
   );
   return evaluatedFocusedTraitOfferOptionCandidate(assessment, query.optionKey);
@@ -842,10 +794,8 @@ export function evaluateTraitAcquisitionTargetDomain(
   if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
   const option = query.value.options[optionIndex(query.optionKey)];
   if (option === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-  const branchTargets = capability.targetedAcquisitionTargets(query.value, query.optionKey);
-  const supportedKeys = new Set(
-    branchTargets.flatMap((branch) => (branch.sourceSupported ? branch.targetTraitKeys : [])),
-  );
+  const targets = capability.targetedAcquisitionTargets(query.value, query.optionKey);
+  const supportedKeys = new Set(targets.sourceSupported ? targets.targetTraitKeys : []);
   const orderedKeys = catalog.traits.values
     .map((trait) => trait.key)
     .filter((traitKey) => supportedKeys.has(traitKey));
@@ -861,18 +811,12 @@ export function evaluateTraitAcquisitionTargetDomain(
       sourceTraitKey: option.traitKey,
       candidates: Object.freeze(
         orderedKeys.map((traitKey) => {
-          const branchSupport = Object.freeze(
-            branchTargets.map(
-              (branch) => branch.sourceSupported && branch.targetTraitKeys.includes(traitKey),
-            ),
-          );
-          const supported = branchSupport.length > 0 && branchSupport.every(Boolean);
+          const supported = supportedKeys.has(traitKey);
           return Object.freeze({
             kind: 'traitAcquisitionTarget' as const,
             result: Object.freeze({
               traitKey,
               supported,
-              branchSupport,
               findings: Object.freeze(
                 supported
                   ? []
@@ -880,7 +824,7 @@ export function evaluateTraitAcquisitionTargetDomain(
                       Object.freeze({
                         code: 'targetedAcquisitionTargetUnavailable' as const,
                         traitKey,
-                        detail: branchSupport.some(Boolean) ? 'branchDivergence' : traitKey,
+                        detail: traitKey,
                       }),
                     ],
               ),
@@ -949,12 +893,10 @@ export function evaluateTraitCarrierChildDomain(
         },
       );
       if (domain.kind !== 'traitAcquisitionTargetDomain') return domain;
-      const branches = candidateArtifacts
+      const requiredCount = candidateArtifacts
         ?.at(query.trait)
-        ?.targetedAcquisitionTargets(query.value, query.child.optionKey);
-      const requiredCount = branches?.[0]?.requiredCount;
+        ?.targetedAcquisitionTargets(query.value, query.child.optionKey).requiredCount;
       if (requiredCount === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-      const branchAgreement = branches!.every((branch) => branch.requiredCount === requiredCount);
       const retained = targeted?.icarusHammerTargets ?? [];
       const candidates = [...domain.result.candidates];
       for (const traitKey of retained) {
@@ -965,7 +907,6 @@ export function evaluateTraitCarrierChildDomain(
             result: Object.freeze({
               traitKey,
               supported: false,
-              branchSupport: Object.freeze(branches!.map(() => false)),
               findings: Object.freeze([
                 { code: 'targetedAcquisitionTargetUnavailable' as const, traitKey },
               ]),
@@ -978,7 +919,6 @@ export function evaluateTraitCarrierChildDomain(
         result: Object.freeze({
           sourceTraitKey: targeted?.traitKey ?? query.child.traitKey,
           requiredCount,
-          branchAgreement,
           candidates: Object.freeze(candidates),
           rows: latestModelHammerRows(
             candidates.map((candidate) => candidate.result.traitKey),
@@ -1036,9 +976,13 @@ export function evaluateTraitCarrierChildDomain(
         optionKey: query.child.optionKey,
       });
     case 'concaveStone': {
-      const branches = candidateArtifacts?.at(query.trait)?.concaveStone(query.value);
-      if (branches === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-      return Object.freeze({ kind: 'concaveStone', result: Object.freeze({ branches }) });
+      const capability = candidateArtifacts?.at(query.trait);
+      if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+      const stone = capability.concaveStone(query.value);
+      return Object.freeze({
+        kind: 'concaveStone',
+        result: Object.freeze(stone === undefined ? {} : { stone }),
+      });
     }
     case 'hexTree':
       return unavailableForTraitOffer(evaluation, query.trait);

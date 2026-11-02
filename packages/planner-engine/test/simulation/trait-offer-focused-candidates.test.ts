@@ -35,13 +35,16 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import type { TraitOfferCandidateContext } from '../../src/simulation/traits';
 import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
 import {
-  evaluateTraitAcquisitionTargetDomain,
   evaluateTraitOfferCandidate,
   evaluateTraitOfferFocusedOptionCandidate,
   type TraitOfferFocusedOptionCandidateQuery,
   latestModelHammerRows,
 } from '../../src/simulation/candidates/trait-offer/query';
-import { traitFrontierState, openTimeTraitOfferContext } from '../support/simulation-state';
+import {
+  traitFrontierState,
+  openTimeTraitOfferContext,
+  traitOfferContacts,
+} from '../support/simulation-state';
 
 const project = createGoldenFGHIProject();
 const evaluation = simulateProject(catalog, project);
@@ -80,7 +83,7 @@ function historyWith(giverKey: string, traitKey: string, rarity: string) {
 function artifacts(contexts: readonly TraitOfferCandidateContext[]) {
   return createTraitOfferCandidateArtifacts(
     catalog,
-    new Map([[semanticAddressKey(trait), Object.freeze([...contexts])]]),
+    traitOfferContacts(new Map([[semanticAddressKey(trait), Object.freeze([...contexts])]])),
   );
 }
 
@@ -194,46 +197,6 @@ describe('focused trait offer candidates', () => {
     );
   });
 
-  it('publishes branch-aware targets without combining support and pins a stale target', () => {
-    const targetDomain = evaluateTraitAcquisitionTargetDomain(
-      catalog,
-      project,
-      evaluation,
-      artifacts([
-        reachedContext(historyWith('Demeter', 'DemeterWeaponBoon', 'Common')),
-        reachedContext(historyWith('Apollo', 'ApolloCastBoon', 'Rare')),
-      ]),
-      {
-        kind: 'traitAcquisitionTargetDomain',
-        trait,
-        value: offer(
-          'Hera',
-          Object.freeze([
-            { traitKey: 'BoonDecayBoon', rarity: 'Common' },
-            { traitKey: 'HeraWeaponBoon', rarity: 'Common' },
-            { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
-          ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
-        ),
-        optionKey: 'option1',
-        retainedTargetTraitKey: 'ZeusWeaponBoon',
-      },
-    );
-    if (targetDomain.kind !== 'traitAcquisitionTargetDomain') {
-      throw new Error('target domain was unavailable');
-    }
-    expect(
-      targetDomain.result.candidates.map((candidate) => ({
-        traitKey: candidate.result.traitKey,
-        supported: candidate.result.supported,
-        branchSupport: candidate.result.branchSupport,
-      })),
-    ).toEqual([
-      { traitKey: 'ApolloCastBoon', supported: false, branchSupport: [false, true] },
-      { traitKey: 'DemeterWeaponBoon', supported: false, branchSupport: [true, false] },
-      { traitKey: 'ZeusWeaponBoon', supported: false, branchSupport: [false, false] },
-    ]);
-  });
-
   it('isolates a focused option from sibling prerequisites while retaining its own failure', () => {
     const value = offer(
       'Aphrodite',
@@ -329,57 +292,6 @@ describe('focused trait offer candidates', () => {
     ).toMatchObject({ kind: 'traitOffer', result: { supported: false } });
   });
 
-  it('publishes exact branch-correlated rarity state', () => {
-    const qOverride = catalog.rooms.byKey.Q_MiniBoss02?.boonRarityOverride;
-    if (qOverride === undefined) throw new Error('missing Q Miniboss rarity override');
-    const value = offer(
-      'Apollo',
-      Object.freeze([
-        { traitKey: 'ApolloWeaponBoon', rarity: 'Rare' },
-        { traitKey: 'ApolloSpecialBoon', rarity: 'Rare' },
-        { traitKey: 'ApolloCastBoon', rarity: 'Rare' },
-      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
-    );
-    const result = evaluateTraitOfferCandidate(
-      catalog,
-      project,
-      evaluation,
-      artifacts([
-        openTimeTraitOfferContext({
-          state: traitFrontierState(createTraitHistoryState()),
-          source: Object.freeze({ resolvedProviderKey: 'Apollo' }),
-        }),
-        openTimeTraitOfferContext({
-          state: traitFrontierState(createTraitHistoryState()),
-          source: Object.freeze({
-            resolvedProviderKey: 'Apollo',
-            boonRarityRoomOverride: qOverride,
-            limitedSwapUses: 1,
-          }),
-        }),
-      ]),
-      { kind: 'traitOffer', trait, value },
-    );
-    if (result.kind !== 'traitOffer') throw new Error('offer candidate was unavailable');
-
-    expect(result.result.branches.map((branch) => branch.offerGenerationState)).toEqual([
-      expect.objectContaining({
-        rarity: {
-          kind: 'orderedChecks',
-          values: catalog.boonRarityBases.olympian,
-          rollOrder: catalog.boonRarityRollOrder,
-        },
-      }),
-      expect.objectContaining({
-        rarity: {
-          kind: 'orderedChecks',
-          values: { ...catalog.boonRarityBases.olympian, ...qOverride },
-          rollOrder: catalog.boonRarityRollOrder,
-        },
-      }),
-    ]);
-  });
-
   it('attributes duplicate offers to every participating focus without poisoning siblings', () => {
     const focusedDuplicate = offer(
       'Apollo',
@@ -439,7 +351,7 @@ describe('focused trait offer candidates', () => {
       'duplicateOfferedTrait',
     ]);
     expect(
-      artifacts([reachedContext()]).at(trait)!.evaluateOffer(siblingDuplicate, true)[0]?.generation
+      artifacts([reachedContext()]).at(trait)!.evaluateOffer(siblingDuplicate, true)?.generation
         ?.findings,
     ).toEqual([
       {
@@ -464,7 +376,7 @@ describe('focused trait offer candidates', () => {
     if (focusedResult.kind !== 'traitOfferFocusedOption') {
       throw new Error('context-free duplicate was incorrectly unassessed');
     }
-    expect(focusedResult.result).toMatchObject({ supported: false, branches: [] });
+    expect(focusedResult.result).toMatchObject({ supported: false });
     expect(focusedResult.result.evidence).toContainEqual({
       source: 'duplicate',
       blocksFocusedOption: true,
@@ -545,7 +457,7 @@ describe('focused trait offer candidates', () => {
     });
     // Only the complete question names the cause; a focused row query never asks.
     const capability = artifacts([reachedContext()]).at(trait)!;
-    expect(capability.evaluateOffer(noAttackOrSpecial, false)[0]?.generation?.findings).toEqual([
+    expect(capability.evaluateOffer(noAttackOrSpecial, false)?.generation?.findings).toEqual([
       { code: 'traitOfferGenerationUnavailable' },
     ]);
 
@@ -661,30 +573,6 @@ describe('focused trait offer candidates', () => {
         { kind: 'traitOffer', trait, value },
       ),
     ).toMatchObject({ kind: 'traitOffer', result: { supported: false } });
-  });
-
-  it('keeps focused eligibility correlated with its branch', () => {
-    const value = offer(
-      'Apollo',
-      Object.freeze([
-        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-        { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
-        { traitKey: 'ApolloManaBoon', rarity: 'Common' },
-      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
-    );
-    const occupiedFocus = historyWith('Apollo', 'ApolloCastBoon', 'Common');
-    const result = focused(value, 'option1', [reachedContext(), reachedContext(occupiedFocus)]);
-    if (result.kind !== 'traitOfferFocusedOption') {
-      throw new Error('focused candidate was unavailable');
-    }
-    expect(result.result.supported).toBe(true);
-    expect(result.result.branches).toHaveLength(2);
-    expect(result.result.branches[0]).toMatchObject({ supported: true, evidence: [] });
-    expect(result.result.branches[1]?.evidence).toContainEqual({
-      source: 'focusedOption',
-      blocksFocusedOption: true,
-      finding: expect.objectContaining({ code: 'alreadyEquipped', traitKey: 'ApolloCastBoon' }),
-    });
   });
 
   it('retains Hammer loadout and acquired-Hammer exclusions in focused evidence', () => {

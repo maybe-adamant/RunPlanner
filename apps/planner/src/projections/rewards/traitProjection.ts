@@ -32,7 +32,7 @@ export interface TraitOfferOptionFeedback {
   readonly legal: boolean;
   readonly reasons: readonly string[];
   readonly traitKey: string;
-  /** Engine-published row products; omitted when branches do not agree. */
+  /** Engine-published row products. */
   readonly effectiveLevel?: number;
   readonly persephoneLevelRolls?: readonly PersephoneLevelRoll[];
   /** Installed level at Persephone roll zero; present with the rolls. */
@@ -59,62 +59,39 @@ export interface TraitOfferFeedback {
 }
 
 export interface TraitOfferStatePresentation {
-  readonly states: readonly {
-    readonly rarity:
-      | {
-          readonly kind: 'orderedChecks';
-          readonly checks: readonly { readonly label: string; readonly value: string }[];
-        }
-      | { readonly kind: 'fixed'; readonly rarity: string };
-  }[];
+  readonly rarity:
+    | {
+        readonly kind: 'orderedChecks';
+        readonly checks: readonly { readonly label: string; readonly value: string }[];
+      }
+    | { readonly kind: 'fixed'; readonly rarity: string };
 }
 
 function formatCheckValue(value: number): string {
   return `${Number((value * 100).toFixed(6))}%`;
 }
 
-/** Presents exact branch-correlated offer-generation facts without recomputing policy. */
+/** Presents the offer's exact generation facts without recomputing policy. */
 export function projectTraitOfferState(
   candidate: CandidateOptionProjection<AuthoredTraitOffer> | undefined,
 ): TraitOfferStatePresentation | undefined {
   if (candidate?.evaluation.kind !== 'traitOffer') return undefined;
-  const distinct = new Map<
-    string,
-    NonNullable<(typeof candidate.evaluation.result.branches)[number]['offerGenerationState']>
-  >();
-  for (const branch of candidate.evaluation.result.branches) {
-    const state = branch.offerGenerationState;
-    if (state !== undefined) distinct.set(JSON.stringify(state), state);
-  }
-  if (distinct.size === 0) return undefined;
+  const rarity = candidate.evaluation.result.state?.offerGenerationState?.rarity;
+  if (rarity === undefined) return undefined;
   return Object.freeze({
-    states: Object.freeze(
-      [...distinct.values()].map((state) =>
-        (() => {
-          const rarity = state.rarity;
-          return Object.freeze({
-            rarity:
-              rarity.kind === 'fixed'
-                ? Object.freeze({ kind: 'fixed' as const, rarity: rarity.rarity })
-                : Object.freeze({
-                    kind: 'orderedChecks' as const,
-                    checks: Object.freeze(
-                      rarity.rollOrder.flatMap((label) =>
-                        label === 'Common'
-                          ? []
-                          : [
-                              Object.freeze({
-                                label,
-                                value: formatCheckValue(rarity.values[label]),
-                              }),
-                            ],
-                      ),
-                    ),
-                  }),
-          });
-        })(),
-      ),
-    ),
+    rarity:
+      rarity.kind === 'fixed'
+        ? Object.freeze({ kind: 'fixed' as const, rarity: rarity.rarity })
+        : Object.freeze({
+            kind: 'orderedChecks' as const,
+            checks: Object.freeze(
+              rarity.rollOrder.flatMap((label) =>
+                label === 'Common'
+                  ? []
+                  : [Object.freeze({ label, value: formatCheckValue(rarity.values[label]) })],
+              ),
+            ),
+          }),
   });
 }
 
@@ -264,33 +241,20 @@ export function projectTraitOfferFeedback(
         const replacement = uniformReplacement(
           final
             ? evaluation.result.assessments
-            : evaluation.result.branches.flatMap(
-                (branch) =>
-                  branch.rerolledScreens?.find((entry) => entry.screen === screen)?.assessments ??
-                  [],
-              ),
-          evaluation.result.branches.length,
+            : (evaluation.result.state?.rerolledScreens?.find((entry) => entry.screen === screen)
+                ?.assessments ?? []),
+          evaluation.result.state === undefined ? 0 : 1,
           option.traitKey,
         );
-        // An earlier screen's row values are published only when every branch agrees.
         const screenLevel = (
           field:
             | 'effectiveLevel'
             | 'persephoneLevelBonusMaximum'
             | 'persephoneBaseLevel'
             | 'jeweledPomLevels',
-        ): number | undefined => {
-          const values = evaluation.result.branches.map(
-            (branch) =>
-              branch.rerolledScreens?.find((entry) => entry.screen === screen)?.levelResolutions[
-                index
-              ]?.[field],
-          );
-          const first = values[0];
-          return first !== undefined && values.every((value) => value === first)
-            ? first
-            : undefined;
-        };
+        ): number | undefined =>
+          evaluation.result.state?.rerolledScreens?.find((entry) => entry.screen === screen)
+            ?.levelResolutions[index]?.[field];
         const effectiveLevel = final
           ? evaluation.result.effectiveLevels[index]
           : screenLevel('effectiveLevel');

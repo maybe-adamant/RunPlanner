@@ -147,7 +147,7 @@ export type {
   EchoLastRunBoonTraitIdentity,
 } from './trait-offer/echo-draft';
 export type {
-  ConcaveStoneCandidateBranch,
+  ConcaveStoneCandidate,
   TraitOfferGenerationState,
   ChaosOfferDomain,
   ChaosOfferCurseOptionDomain,

@@ -286,7 +286,7 @@ export interface CandidateProjectionSession {
   readonly chaosOfferDomain: (
     owner: TraitOfferAddress,
     value?: AuthoredTraitOffer,
-  ) => readonly ChaosOfferDomain[];
+  ) => ChaosOfferDomain | undefined;
   /**
    * Evaluates one declaration-compatible concrete domain at one focused offer
    * position. Every query still carries the complete draft into engine offer

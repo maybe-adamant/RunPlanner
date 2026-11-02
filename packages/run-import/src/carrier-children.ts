@@ -378,8 +378,8 @@ function naturalSelection(question: ChildQuestion<'naturalSelectionResult'>): Ch
 function circeResolution(question: ChildQuestion<'circeResolution'>): ChildAnswer {
   const { context, trait, value, child, room, at, domain } = question;
   if (domain.kind !== 'circeResolutionDomain' || at === undefined) return undefined;
-  const { effect, requiredCount, branchAgreement } = domain.result;
-  if (effect === 'disableFear' || !branchAgreement) return undefined;
+  const { effect, requiredCount } = domain.result;
+  if (effect === 'disableFear') return undefined;
   const cards = context.catalog.arcanaCards.values;
   const recorded =
     effect === 'activateArcana'
@@ -473,16 +473,13 @@ function echoPomTarget(question: ChildQuestion<'echoPomTarget'>): ChildAnswer {
 function concaveStone(question: ChildQuestion<'concaveStone'>): ChildAnswer {
   const { context, value, child, room, roomIndex, at, domain } = question;
   if (domain.kind !== 'concaveStone') return undefined;
-  const branches = domain.result.branches;
+  const stone = domain.result.stone;
   const residuals = question.stoneFromRecord
     ? stoneResiduals(context, value, room, roomIndex, at)
     : [];
-  if (residuals.length === 0)
-    return branches.some((branch) => branch.required) ? undefined : { value };
+  if (residuals.length === 0) return stone?.required === true ? undefined : { value };
   const admitted = residuals.filter(
-    (optionKey) =>
-      branches.length > 0 &&
-      branches.every((branch) => branch.residualOptionKeys.includes(optionKey)),
+    (optionKey) => stone?.residualOptionKeys.includes(optionKey) === true,
   );
   if (admitted.length === 0) return 'refused';
   return {

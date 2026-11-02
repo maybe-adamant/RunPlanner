@@ -19,7 +19,10 @@ import { createStygianWellCandidateArtifacts } from '../../commerce/stygian-well
 import {
   createLevelResolutionCandidateArtifacts,
   createTraitOfferCandidateArtifacts,
+  type TraitOfferCandidateContacts,
 } from '../../candidates/trait-offer/capability';
+import type { TraitOfferCandidateContext } from '../../traits';
+import { BiomeRewardSimulationContractError } from './biome-contract';
 import { publishRunStateThroughCoverage } from '../run-state';
 import { createRoomLifecycleCandidateArtifacts } from '../lifecycle-artifacts';
 import { selectedTraitOfferProducts } from './selected-trait-products';
@@ -39,6 +42,73 @@ import {
   createKeepsakeSelectionCandidateArtifacts,
   createKeepsakeEquipResultCandidateArtifacts,
 } from '../../keepsakes/candidate-artifacts';
+
+function oneContext(
+  key: string,
+  contexts: readonly TraitOfferCandidateContext[] | undefined,
+): TraitOfferCandidateContext | undefined {
+  if (contexts !== undefined && contexts.length > 1)
+    throw new BiomeRewardSimulationContractError(
+      `trait offer ${key} reached more than one context`,
+    );
+  return contexts?.[0];
+}
+
+/**
+ * Each reached trait offer's contacts. The offer's own context comes from its
+ * selected assessment, else its reached contact, else the blocked child that
+ * stopped it; a blocked target or All Together child also keeps its own
+ * pre-effect context under its address.
+ */
+function traitOfferCandidateContacts(
+  selected: ReadonlyMap<string, readonly TraitOfferCandidateContext[]>,
+  accumulation: ChronologyAccumulation,
+): ReadonlyMap<string, TraitOfferCandidateContacts> {
+  const offers = new Map<string, TraitOfferCandidateContext>();
+  const children = new Map<string, Map<string, TraitOfferCandidateContext>>();
+  for (const [key, contexts] of selected) {
+    const context = oneContext(key, contexts);
+    if (context !== undefined) offers.set(key, context);
+  }
+  for (const [key, contexts] of accumulation.reachedTraitOfferCandidateContexts) {
+    const context = oneContext(key, contexts);
+    if (context !== undefined && !offers.has(key)) offers.set(key, context);
+  }
+  const blockedOffers = new Map<string, TraitOfferCandidateContext>();
+  for (const [childKey, checkpoint] of accumulation.traitChildSettlements) {
+    const context = oneContext(childKey, checkpoint.candidateContexts);
+    if (context === undefined) continue;
+    const address = checkpoint.address;
+    switch (address.kind) {
+      case 'traitOffer':
+      case 'naturalSelectionResult': {
+        // A missing offer, a Concave Stone result or Natural Selection blocks at the offer's own contact.
+        const key = address.kind === 'traitOffer' ? childKey : semanticAddressKey(address.trait);
+        if (!blockedOffers.has(key)) blockedOffers.set(key, context);
+        break;
+      }
+      case 'traitAcquisitionTarget':
+      case 'allTogetherSet': {
+        const key = semanticAddressKey(address.trait);
+        const keyed = children.get(key) ?? new Map<string, TraitOfferCandidateContext>();
+        keyed.set(childKey, context);
+        children.set(key, keyed);
+        if (!blockedOffers.has(key)) blockedOffers.set(key, context);
+        break;
+      }
+      default:
+        // Other selected children are queried through their offer, never by their own address.
+        break;
+    }
+  }
+  for (const [key, context] of blockedOffers) if (!offers.has(key)) offers.set(key, context);
+  return new Map(
+    [...offers].map(([key, offer]) => [
+      key,
+      Object.freeze({ offer, children: children.get(key) ?? new Map() }),
+    ]),
+  );
+}
 
 /** Publishes one biome's reward evaluation from its frozen walk and finished accumulation. */
 export function publishChronology(
@@ -73,30 +143,10 @@ export function publishChronology(
     ),
     catalog,
   );
-  const traitCandidateContexts = new Map(traitProducts.candidateContexts);
-  for (const [key, contexts] of accumulation.reachedTraitOfferCandidateContexts) {
-    if (!traitCandidateContexts.has(key))
-      traitCandidateContexts.set(key, Object.freeze([...contexts]));
-  }
-  for (const [childKey, checkpoint] of accumulation.traitChildSettlements) {
-    if (checkpoint.candidateContexts.length === 0) continue;
-    if (checkpoint.address.kind === 'naturalSelectionResult') {
-      // Its context is the offer's own pre-acquisition contact, published once under the offer.
-      const key = semanticAddressKey(checkpoint.address.trait);
-      if (!traitCandidateContexts.has(key))
-        traitCandidateContexts.set(key, Object.freeze([...checkpoint.candidateContexts]));
-      continue;
-    }
-    const key =
-      checkpoint.address.kind === 'traitAcquisitionTarget' ||
-      checkpoint.address.kind === 'allTogetherSet'
-        ? semanticAddressKey(checkpoint.address.trait)
-        : childKey;
-    traitCandidateContexts.set(
-      key,
-      Object.freeze([...(traitCandidateContexts.get(key) ?? []), ...checkpoint.candidateContexts]),
-    );
-  }
+  const traitCandidateContacts = traitOfferCandidateContacts(
+    traitProducts.candidateContexts,
+    accumulation,
+  );
   const levelCandidateContexts = new Map(traitProducts.levelCandidateContexts);
   const discoveredRunStateSnapshots = Object.freeze(
     [...accumulation.runStateSnapshots].sort((left, right) => {
@@ -247,7 +297,7 @@ export function publishChronology(
       reachedThrough,
     ),
     lifecycleArtifacts: createRoomLifecycleCandidateArtifacts(walk.shipLifecycleContexts),
-    traitOfferArtifacts: createTraitOfferCandidateArtifacts(catalog, traitCandidateContexts),
+    traitOfferArtifacts: createTraitOfferCandidateArtifacts(catalog, traitCandidateContacts),
     levelResolutionArtifacts: createLevelResolutionCandidateArtifacts(
       catalog,
       levelCandidateContexts,

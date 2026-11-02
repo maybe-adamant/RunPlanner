@@ -67,7 +67,6 @@ describe('ordinary offer shell', () => {
               kind: 'traitOffer',
               result: {
                 supported: value === gold,
-                branches: [],
                 assessments: [],
                 effectiveLevels: [],
                 persephoneLevelBonusMaximums: [],
@@ -856,7 +855,6 @@ describe('ordinary offer shell', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
                 persephoneBaseLevels: [],
                 jeweledPomLevels: [],
@@ -1048,7 +1046,6 @@ describe('ordinary offer shell', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
                 persephoneBaseLevels: [],
                 jeweledPomLevels: [],
@@ -1122,7 +1119,6 @@ describe('ordinary offer shell', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
                 persephoneBaseLevels: [],
                 jeweledPomLevels: [],
@@ -1259,7 +1255,6 @@ describe('ordinary offer shell', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
                 persephoneBaseLevels: [],
                 jeweledPomLevels: [],
@@ -1383,14 +1378,11 @@ describe('ordinary offer shell', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
-                callingCard: Object.freeze([
-                  Object.freeze({
-                    effectiveRarities: Object.freeze(['Common', 'Common', 'Common'] as const),
-                    invalidActionIndexes: Object.freeze([]),
-                    rarifiableOptionKeys: Object.freeze([]),
-                  }),
-                ]),
+                callingCard: Object.freeze({
+                  effectiveRarities: Object.freeze(['Common', 'Common', 'Common'] as const),
+                  invalidActionIndexes: Object.freeze([]),
+                  rarifiableOptionKeys: Object.freeze([]),
+                }),
                 effectiveLevels: Object.freeze([6, undefined, 2]),
                 findings: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
@@ -1488,7 +1480,6 @@ describe('ordinary offer shell', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
                 effectiveLevels: Object.freeze([6, 4, 2]),
                 findings: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),

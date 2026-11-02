@@ -13,8 +13,6 @@ import {
 import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
-import { evaluateAllTogetherSetDomain } from '../../src/simulation/candidates/trait-offer/query';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
@@ -28,7 +26,6 @@ import {
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { installHexTree } from '../../src/simulation/hex-progress';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
-import { traitFrontierState, openTimeTraitOfferContexts } from '../support/simulation-state';
 
 const owner = createTraitOfferAddress(
   createEncounterPhaseAddress(
@@ -459,78 +456,5 @@ describe('All Together direct trait settlement', () => {
       result.findingEntries.find((entry) => entry.finding.origin.kind === 'allTogetherSet')?.finding
         .evidence.detail,
     ).toBe('branchDivergence');
-  });
-
-  it('branch-attests each candidate instead of combining divergent histories', () => {
-    const first = requiredHistory();
-    const forced = requiredHistory([acquired(4, 'Hephaestus', 'ElementalDamageBoon')]);
-    const single = createTraitOfferCandidateArtifacts(
-      catalog,
-      openTimeTraitOfferContexts(
-        new Map([
-          [
-            semanticAddressKey(owner),
-            [
-              Object.freeze({
-                state: traitFrontierState(first),
-                source: Object.freeze({ resolvedProviderKey: 'Hera' }),
-              }),
-            ],
-          ],
-        ]),
-      ),
-    ).at(owner)!;
-    expect(single.allTogetherSet(offer(), 'option1', 'earth')).toEqual([
-      ['ElementalDamageBoon', 'ElementalOlympianDamageBoon'],
-    ]);
-
-    const divergentArtifacts = createTraitOfferCandidateArtifacts(
-      catalog,
-      openTimeTraitOfferContexts(
-        new Map([
-          [
-            semanticAddressKey(owner),
-            [
-              Object.freeze({
-                state: traitFrontierState(first),
-                source: Object.freeze({ resolvedProviderKey: 'Hera' }),
-              }),
-              Object.freeze({
-                state: traitFrontierState(forced),
-                source: Object.freeze({ resolvedProviderKey: 'Hera' }),
-              }),
-            ],
-          ],
-        ]),
-      ),
-    );
-    const evaluated = evaluateAllTogetherSetDomain(
-      catalog,
-      {} as never,
-      { route: {} } as never,
-      divergentArtifacts,
-      {
-        kind: 'allTogetherSetDomain',
-        trait: owner,
-        value: offer(),
-        optionKey: 'option1',
-        setKey: 'earth',
-      },
-    );
-    expect(evaluated.kind).toBe('allTogetherSetDomain');
-    if (evaluated.kind !== 'allTogetherSetDomain') throw new Error('missing All Together domain');
-    expect(evaluated.result.candidates).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          value: 'ElementalDamageBoon',
-          support: 'impossible',
-          reason: 'branchDivergence',
-        }),
-        expect.objectContaining({
-          value: 'ElementalOlympianDamageBoon',
-          support: 'possible',
-        }),
-      ]),
-    );
   });
 });

@@ -395,7 +395,7 @@ export interface ProjectCandidateSession {
   readonly chaosOfferDomain: (
     owner: TraitOfferAddress,
     value?: AuthoredTraitOffer,
-  ) => readonly import('./trait-offer/capability').ChaosOfferDomain[];
+  ) => import('./trait-offer/capability').ChaosOfferDomain | undefined;
 }
 
 function assertNever(value: never): never {
@@ -870,6 +870,6 @@ export function createPreparedProjectCandidateSession(
     removeTraitOfferDraft: (owner: TraitOfferAddress, value: AuthoredTraitOfferTraits) =>
       traitCapability(owner)?.removeTraitOptionDraft(value),
     chaosOfferDomain: (owner: TraitOfferAddress, value?: AuthoredTraitOffer) =>
-      traitCapability(owner)?.chaosOfferDomain(value) ?? Object.freeze([]),
+      traitCapability(owner)?.chaosOfferDomain(value),
   });
 }

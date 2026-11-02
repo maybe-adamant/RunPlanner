@@ -1972,7 +1972,6 @@ describe('field NPC encounter requirements', () => {
       kind: 'latestModelTargetsDomain',
       result: {
         requiredCount: 1,
-        branchAgreement: true,
         rows: [
           expect.objectContaining({
             requiresEarlierRow: false,

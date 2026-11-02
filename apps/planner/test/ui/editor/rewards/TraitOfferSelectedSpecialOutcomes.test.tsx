@@ -379,7 +379,6 @@ describe('selected outcomes', () => {
     const label = (key: string) => application.catalog.traits.byKey[key]!.label;
     const domainFor = (offer: AuthoredTraitOfferTraits) => ({
       requiredCount: 2,
-      branchAgreement: true,
       hammers: [
         {
           picker: pickerModel([{ value: first, label: label(first) }]),
@@ -454,7 +453,6 @@ describe('selected outcomes', () => {
         ],
         arcanaPicker,
         arcanaPickerFor: () => arcanaPicker,
-        branchAgreement: true,
         effect: 'activateArcana' as const,
         outerAvailable: true,
         requiredCount: 2,
@@ -535,7 +533,6 @@ describe('selected outcomes', () => {
       ],
       arcanaPicker,
       arcanaPickerFor: () => arcanaPicker,
-      branchAgreement: true,
       effect: 'activateArcana' as const,
       outerAvailable: true,
       requiredCount: 2,
@@ -678,7 +675,6 @@ describe('selected outcomes', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
                 persephoneBaseLevels: [],
                 jeweledPomLevels: [],
@@ -883,7 +879,6 @@ describe('selected outcomes', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
                 persephoneBaseLevels: [],
                 jeweledPomLevels: [],
@@ -1051,7 +1046,6 @@ describe('selected outcomes', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
                 persephoneBaseLevels: [],
                 jeweledPomLevels: [],
@@ -1189,7 +1183,6 @@ describe('selected outcomes', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
                 persephoneBaseLevels: [],
                 jeweledPomLevels: [],
@@ -1388,7 +1381,6 @@ describe('selected outcomes', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
                 persephoneBaseLevels: [],
                 jeweledPomLevels: [],
@@ -1480,7 +1472,6 @@ describe('selected outcomes', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
                 persephoneBaseLevels: [],
                 jeweledPomLevels: [],
@@ -1498,7 +1489,6 @@ describe('selected outcomes', () => {
               Object.freeze({
                 kind: 'ransom' as const,
                 assessment: Object.freeze({
-                  branchAgreement: true as const,
                   buffedTraitKeys: Object.freeze(['ZeusWeaponBoon']),
                   levelBonus: 4,
                   removedCount: 1,
@@ -1534,82 +1524,6 @@ describe('selected outcomes', () => {
     application.dispose();
   });
 
-  it('renders only the branch-variation message for a selected Ransom', () => {
-    const application = createApplication();
-    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
-    const base = [...workspace.interactions.traitOffers.values()].find(
-      (candidate) => candidate.giver.providerKind !== 'hammer',
-    );
-    if (base === undefined) throw new Error('Ransom editor fixture is missing');
-    const value: AuthoredTraitOfferTraits = Object.freeze({
-      kind: 'traits',
-      giverKey: base.giver.key,
-      options: Object.freeze([
-        Object.freeze({ traitKey: 'SuperSacrificeBoonZeus', rarity: 'Duo' as const }),
-        Object.freeze({ traitKey: 'DemeterSpecialBoon', rarity: 'Common' as const }),
-        Object.freeze({ traitKey: 'DemeterCastBoon', rarity: 'Common' as const }),
-      ]) as AuthoredTraitOfferTraits['options'],
-      selectedOptionKey: 'option1',
-      rarificationActions: Object.freeze([]),
-    });
-    const interaction = Object.freeze({
-      ...base,
-      value,
-      load: () =>
-        Object.freeze([
-          Object.freeze({
-            value,
-            evaluation: Object.freeze({
-              kind: 'traitOffer' as const,
-              result: Object.freeze({
-                assessments: Object.freeze([]),
-                branches: Object.freeze([]),
-                persephoneLevelBonusMaximums: Object.freeze([]),
-                persephoneBaseLevels: [],
-                jeweledPomLevels: [],
-                effectiveLevels: Object.freeze([]),
-                findings: Object.freeze([]),
-                supported: true,
-              }),
-            }),
-          }),
-        ]),
-      feedbackFor: () =>
-        Object.freeze([
-          Object.freeze({
-            kind: 'ransom' as const,
-            assessment: Object.freeze({ branchAgreement: false as const }),
-          }),
-        ]),
-      traitLabel: (traitKey: string) => traitKey,
-    });
-    render(
-      <Provider store={application.store}>
-        <HeaderDialog>
-          <TraitOfferEditor
-            address={base.owner}
-            interactions={
-              Object.freeze({
-                ...workspace.interactions,
-                traitOffers: new Map([[base.key, interaction]]),
-              }) as unknown as WorkspaceInteractionCatalog
-            }
-            onCommit={() => undefined}
-          />
-        </HeaderDialog>
-      </Provider>,
-    );
-    // Branch disagreement is dialog feedback; the preview keeps its static shape.
-    const message = 'Ransom result differs across current route branches.';
-    expect(dialogFinding(document.body)).toContain(message);
-    const preview = screen.getByRole('group', { name: 'Ransom preview' });
-    expect(preview.textContent).not.toContain(message);
-    expect(within(preview).getByLabelText('Not applicable').textContent).toBe('—');
-    expect(screen.queryByText(/Removes .* opposing traits/)).toBeNull();
-    application.dispose();
-  });
-
   it.each([
     ['activateArcana', 'Red Citrine Arcana', 'The Sorceress'],
     ['promoteArcana', 'Lapis Arcana (2)', 'The Sorceress'],
@@ -1635,12 +1549,7 @@ describe('selected outcomes', () => {
         optionKey: 'option1' as const,
       });
       const domain = Object.freeze({
-        resultRarity:
-          effect === 'disableFear'
-            ? null
-            : effect === 'promoteArcana'
-              ? ('Heroic' as const)
-              : ('Epic' as const),
+        resultRarity: effect === 'disableFear' ? null : ('Epic' as const),
         arcanaCards: [
           { key: 'ArcanaSorceress', label: 'The Sorceress', rarity: null },
           { key: 'ArcanaTitan', label: 'The Titan', rarity: null },
@@ -1656,7 +1565,6 @@ describe('selected outcomes', () => {
               Object.freeze({ label: 'The Titan', value: 'ArcanaTitan' }),
             ].filter((entry) => !selectedKeys.includes(entry.value)),
           ),
-        branchAgreement: true,
         effect,
         outerAvailable: true,
         requiredCount: effect === 'promoteArcana' ? 2 : 1,
@@ -1818,7 +1726,6 @@ describe('selected outcomes', () => {
       'disableFear',
       Object.freeze({ kind: 'disableFear' as const, vowKeys: Object.freeze(['VowRivals']) }),
       false,
-      true,
       0,
       'Black Night Vow',
       'Vow of Rivals',
@@ -1831,23 +1738,9 @@ describe('selected outcomes', () => {
         arcanaKeys: Object.freeze(['ArcanaSorceress']),
       }),
       true,
-      true,
       0,
       'Red Citrine Arcana',
       'The Sorceress',
-    ],
-    [
-      'branch-divergent Lapis',
-      'promoteArcana',
-      Object.freeze({
-        kind: 'promoteArcana' as const,
-        arcanaKeys: Object.freeze(['ArcanaSorceress', 'ArcanaTitan']),
-      }),
-      true,
-      false,
-      2,
-      'Promoted Arcana',
-      'The Sorceress · The Titan',
     ],
   ] as const)(
     'retains the authored %s outcome through the engine-projected unavailable UI',
@@ -1856,7 +1749,6 @@ describe('selected outcomes', () => {
       effect,
       resolution,
       outerAvailable,
-      branchAgreement,
       requiredCount,
       controlLabel,
       retainedText,
@@ -1902,18 +1794,12 @@ describe('selected outcomes', () => {
             );
       const domain = Object.freeze({
         arcanaPicker: arcanaEntries,
-        resultRarity:
-          effect === 'disableFear'
-            ? null
-            : effect === 'promoteArcana'
-              ? ('Heroic' as const)
-              : ('Epic' as const),
+        resultRarity: effect === 'disableFear' ? null : ('Epic' as const),
         arcanaCards: [
           { key: 'ArcanaSorceress', label: 'The Sorceress', rarity: null },
           { key: 'ArcanaTitan', label: 'The Titan', rarity: null },
         ],
         arcanaPickerFor: () => arcanaEntries,
-        branchAgreement,
         effect,
         outerAvailable,
         requiredCount,
@@ -1976,13 +1862,7 @@ describe('selected outcomes', () => {
         </Provider>,
       );
 
-      if (effect === 'promoteArcana') {
-        expect(screen.getAllByText(retainedText).length).toBeGreaterThan(0);
-        await userEvent.setup().click(screen.getByRole('button', { name: 'Promoted Arcana' }));
-        expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(
-          true,
-        );
-      } else if (effect !== 'activateArcana') {
+      if (effect !== 'activateArcana') {
         const retained = screen.getByLabelText(controlLabel);
         expect(retained.textContent).toContain(retainedText);
         expect(retained.getAttribute('aria-invalid')).toBe('true');
@@ -2009,105 +1889,9 @@ describe('selected outcomes', () => {
         expect(offerFinding()).toContain(message);
         expect(circeGroup?.textContent).not.toContain(message);
       }
-      if (!branchAgreement) {
-        const message = 'No outcome is supported across every route branch.';
-        expect(offerFinding()).toContain(message);
-        expect(circeGroup?.textContent).not.toContain(message);
-        // An open Circe dialog repeats the reason its Save is disabled.
-        if (effect === 'promoteArcana')
-          expect(dialogFinding(screen.getByRole('dialog', { name: /^Circe › / }))).toContain(
-            message,
-          );
-      }
       application.dispose();
     },
   );
-
-  it('reports Latest Model branch disagreement in the dialog header, not above its picker', async () => {
-    const application = createApplication();
-    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
-    const base = [...workspace.interactions.traitOffers.values()].find(
-      (candidate) => candidate.giver.providerKind !== 'hammer',
-    )!;
-    const value: AuthoredTraitOfferTraits = {
-      kind: 'traits',
-      giverKey: 'Icarus',
-      selectedOptionKey: 'option1',
-      options: [
-        { traitKey: 'UpgradeHammerBoon' },
-        { traitKey: 'OmegaExplodeBoon' },
-        { traitKey: 'CastHazardBoon' },
-      ],
-    };
-    const child = base
-      .optionDomain(value, 'option1')
-      .children.find((entry) => entry.child.kind === 'latestModelTargets');
-    if (child?.child.kind !== 'latestModelTargets') throw new Error('Latest Model child missing');
-    const domain = {
-      requiredCount: 2,
-      branchAgreement: false,
-      hammers: [pickerModel([]), pickerModel([])].map((picker) => ({
-        picker,
-        requiresEarlierRow: false,
-        valueByTraitKey: {},
-      })),
-    };
-    const interaction = {
-      ...base,
-      value,
-      load: () =>
-        Object.freeze([
-          Object.freeze({
-            value,
-            evaluation: Object.freeze({
-              kind: 'traitOffer' as const,
-              result: Object.freeze({
-                assessments: Object.freeze([]),
-                branches: Object.freeze([]),
-                persephoneLevelBonusMaximums: Object.freeze([]),
-                persephoneBaseLevels: [],
-                jeweledPomLevels: [],
-                effectiveLevels: Object.freeze([]),
-                findings: Object.freeze([]),
-                supported: true,
-              }),
-            }),
-          }),
-        ]),
-      optionDomain: (
-        offer: AuthoredTraitOfferTraits,
-        key: Parameters<typeof base.optionDomain>[1],
-      ) => ({
-        ...base.optionDomain(offer, key),
-        children: [{ ...child, forOffer: () => ({ load: () => domain }) }],
-      }),
-    } as typeof base;
-    render(
-      <Provider store={application.store}>
-        <HeaderDialog>
-          <TraitOfferEditor
-            address={base.owner}
-            interactions={
-              Object.freeze({
-                ...workspace.interactions,
-                traitOffers: new Map([[base.key, interaction]]),
-              }) as unknown as WorkspaceInteractionCatalog
-            }
-            onCommit={() => undefined}
-          />
-        </HeaderDialog>
-      </Provider>,
-    );
-    const picker = await screen.findByLabelText('Latest Model Hammer 1');
-    expect((picker as HTMLButtonElement).disabled).toBe(true);
-    const message = 'No target count is supported across every route branch.';
-    expect(dialogFinding(document.body)).toContain(message);
-    expect(
-      screen.getByRole('region', { name: 'Selected trait outcome' }).textContent,
-    ).not.toContain(message);
-    application.dispose();
-  });
 
   it('reports an unassessable retained Stone outcome in the dialog header and keeps its clear action', async () => {
     const application = createApplication();

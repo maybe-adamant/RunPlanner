@@ -107,7 +107,7 @@ describe('trait-offers/bind', () => {
     });
   });
 
-  it('conservatively projects Rejected repair and mixed-branch rules through a bound ordinary interaction', () => {
+  it('projects Rejected repair rules through a bound ordinary interaction', () => {
     const { interactions } = bind(createGoldenFGHIProject(), 'Underworld', 'F');
     const interaction = [...interactions.traitOffers.values()].find(
       (candidate) =>
@@ -120,35 +120,21 @@ describe('trait-offers/bind', () => {
       rejectedBlockableOptionKeys: Object.freeze(['option2', 'option3'] as const),
       rejectedBlockNeedsRepair: true,
     });
-    expect(interaction.rejectedBlockDomain([required])).toEqual({
+    expect(interaction.rejectedBlockDomain(required)).toEqual({
       required: true,
       canClear: false,
       needsRepair: true,
       optionKeys: ['option2', 'option3'],
     });
     expect(
-      interaction.rejectedBlockDomain([
+      interaction.rejectedBlockDomain(
         Object.freeze({ ...required, rejectedBlockNeedsRepair: false }),
-      ]),
+      ),
     ).toEqual({
       required: true,
       canClear: false,
       needsRepair: false,
       optionKeys: ['option2', 'option3'],
-    });
-    expect(
-      interaction.rejectedBlockDomain([
-        Object.freeze({
-          ...required,
-          rejectedBlockableOptionKeys: Object.freeze(['option3'] as const),
-        }),
-        Object.freeze({ ...required, rejectedBlockRequired: false }),
-      ]),
-    ).toEqual({
-      required: false,
-      canClear: false,
-      needsRepair: true,
-      optionKeys: ['option3'],
     });
   });
 
@@ -663,13 +649,11 @@ describe('trait-offers/bind', () => {
                   Object.freeze({
                     value: 'ElementalDamageBoon',
                     support: 'possible' as const,
-                    branchSupport: Object.freeze([true]),
                     selected: true,
                   }),
                   Object.freeze({
                     value: 'ElementalOlympianDamageBoon',
                     support: 'possible' as const,
-                    branchSupport: Object.freeze([true]),
                     selected: false,
                   }),
                 ])
@@ -776,7 +760,6 @@ describe('trait-offers/bind', () => {
         return Object.freeze({
           kind: 'naturalSelectionResult' as const,
           result: Object.freeze({
-            branchSupport: Object.freeze([true]),
             complete: false,
             findings: Object.freeze([]),
             firstPassRows: Object.freeze([
@@ -1162,7 +1145,6 @@ describe('trait-offers/bind', () => {
             Object.freeze({
               kind: 'traitAcquisitionTarget' as const,
               result: Object.freeze({
-                branchSupport: Object.freeze([true]),
                 findings: Object.freeze([]),
                 supported: true,
                 traitKey: 'ApolloCastBoon',
@@ -1234,10 +1216,9 @@ describe('trait-offers/bind', () => {
       result: {
         sourceTraitKey: 'UpgradeHammerBoon',
         requiredCount: 2,
-        branchAgreement: true,
         candidates: ['StaffDoubleAttackTrait', 'StaffFastSpecialTrait'].map((traitKey) => ({
           kind: 'traitAcquisitionTarget' as const,
-          result: { traitKey, supported: true, branchSupport: [true], findings: [] },
+          result: { traitKey, supported: true, findings: [] },
         })),
         rows: [
           {
@@ -1285,7 +1266,6 @@ describe('trait-offers/bind', () => {
     const latest = child as Extract<typeof child, { child: { kind: 'latestModelTargets' } }>;
     expect(latest.forOffer(draft).load()).toMatchObject({
       requiredCount: 2,
-      branchAgreement: true,
     });
     expect(
       latest.update(draft, ['StaffFastSpecialTrait', 'StaffDoubleAttackTrait']).options[0]

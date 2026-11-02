@@ -38,7 +38,11 @@ import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-se
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
-import { testRewardBranchesAtOrdinal, traitFrontierState } from '../support/simulation-state';
+import {
+  testRewardBranchesAtOrdinal,
+  traitFrontierState,
+  traitOfferContacts,
+} from '../support/simulation-state';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 
 const owner = { kind: 'project' } as SemanticAddress;
@@ -1486,21 +1490,23 @@ describe('Latest Model targets at a waiting screen', () => {
     });
     const capability = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(address),
+      traitOfferContacts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(current, { acquisitionOrdinal: 1 }),
-              generationState: traitFrontierState(built, { acquisitionOrdinal: 1 }),
-              source: Object.freeze({}),
-            }),
+            semanticAddressKey(address),
+            [
+              Object.freeze({
+                state: traitFrontierState(current, { acquisitionOrdinal: 1 }),
+                generationState: traitFrontierState(built, { acquisitionOrdinal: 1 }),
+                source: Object.freeze({}),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     ).at(address);
-    expect(capability?.targetedAcquisitionTargets(value, 'option1')).toEqual([
+    expect(capability?.targetedAcquisitionTargets(value, 'option1')).toEqual(
       expect.objectContaining({ targetTraitKeys: ['StaffDoubleAttackTrait'] }),
-    ]);
+    );
   });
 });

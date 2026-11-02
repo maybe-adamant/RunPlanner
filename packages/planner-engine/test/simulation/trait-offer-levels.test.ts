@@ -24,7 +24,11 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { applyTraitOfferForAcquisition } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import type { TraitOfferCandidateContext } from '../../src/simulation/traits';
-import { traitFrontierState, openTimeTraitOfferContext } from '../support/simulation-state';
+import {
+  traitFrontierState,
+  openTimeTraitOfferContext,
+  traitOfferContacts,
+} from '../support/simulation-state';
 
 /** The Persephone aspect this suite assesses every offer level against. */
 const persephoneLoadout = Object.freeze({
@@ -240,19 +244,23 @@ describe('Persephone effective offer levels', () => {
   it('defaults an omitted active contribution to zero while publishing its range', () => {
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(address),
-          Object.freeze([
-            openTimeTraitOfferContext({
-              state: traitFrontierState(createTraitHistoryState(), { loadout: persephoneLoadout }),
-              source: Object.freeze({}),
-            }),
-          ]),
-        ],
-      ]),
+      traitOfferContacts(
+        new Map([
+          [
+            semanticAddressKey(address),
+            Object.freeze([
+              openTimeTraitOfferContext({
+                state: traitFrontierState(createTraitHistoryState(), {
+                  loadout: persephoneLoadout,
+                }),
+                source: Object.freeze({}),
+              }),
+            ]),
+          ],
+        ]),
+      ),
     );
-    const candidate = artifacts.at(address)?.evaluateOffer(offer(), true)[0];
+    const candidate = artifacts.at(address)?.evaluateOffer(offer(), true);
     if (candidate === undefined) throw new Error('missing candidate branch');
 
     expect(candidate).toMatchObject({
@@ -349,10 +357,10 @@ describe('Persephone effective offer levels', () => {
 
     const candidate = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([[semanticAddressKey(address), Object.freeze([context()])]]),
+      traitOfferContacts(new Map([[semanticAddressKey(address), Object.freeze([context()])]])),
     )
       .at(address)
-      ?.evaluateOffer(offer(5), true)[0];
+      ?.evaluateOffer(offer(5), true);
     expect(candidate?.jeweledPomLevels).toEqual([3, 3, 3]);
 
     const replacement = evaluateReachedTraitOffer(
@@ -551,9 +559,11 @@ describe('Persephone effective offer levels', () => {
     const candidateContext = context();
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([[semanticAddressKey(address), Object.freeze([candidateContext])]]),
+      traitOfferContacts(
+        new Map([[semanticAddressKey(address), Object.freeze([candidateContext])]]),
+      ),
     );
-    const candidate = artifacts.at(address)?.evaluateOffer(offer(5), true)[0];
+    const candidate = artifacts.at(address)?.evaluateOffer(offer(5), true);
     if (candidate === undefined) throw new Error('missing candidate branch');
     expect(candidate.effectiveLevels).toEqual([10, 10, 10]);
 

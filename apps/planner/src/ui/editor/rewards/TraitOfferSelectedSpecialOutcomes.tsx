@@ -23,11 +23,6 @@ import {
 } from '@planner/ui/feedback/useFindingTarget';
 import { SelectedOutcomeRow } from './SelectedOutcomeBlock';
 import { AllTogetherOutcomeRows, NaturalSelectionOutcomeRows } from './TraitOfferOutcomeRows';
-import {
-  ignoreOutcomeFeedback,
-  useReportedFeedback,
-  type OutcomeFeedbackReporter,
-} from './TraitOfferForm';
 import { naturalSelectionOptionWithTargets, replaceTraitOfferOption } from './traitOfferOptions';
 
 export function ConcaveStoneOutcomeEditor({
@@ -166,27 +161,18 @@ export function TraitOfferSelectedSpecialOutcomes({
   offer,
   carrierChildren,
   feedback,
-  onFeedback = ignoreOutcomeFeedback,
   onUpdate,
 }: {
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly offer: AuthoredTraitOfferTraits;
   readonly carrierChildren: readonly WorkspaceTraitCarrierChildInteraction[];
   readonly feedback: readonly import('@planner/projections/structured-workspace').WorkspaceTraitOfferFeedback[];
-  readonly onFeedback?: OutcomeFeedbackReporter;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
   const findingTarget = useFindingTarget();
   const findingAnchor = useFindingAnchor();
   const findingMark = useFindingMark();
   const ransomAssessment = feedback.find((entry) => entry.kind === 'ransom')?.assessment;
-  useReportedFeedback(
-    onFeedback,
-    'ransom',
-    ransomAssessment !== undefined && !ransomAssessment.branchAgreement
-      ? 'Ransom result differs across current route branches.'
-      : undefined,
-  );
   const allTogetherGroups = useMemo(() => {
     const allTogetherSets = carrierChildren.filter(
       (
@@ -311,20 +297,16 @@ export function TraitOfferSelectedSpecialOutcomes({
       {ransomAssessment === undefined ? null : (
         <div role="group" aria-label="Ransom preview">
           <SelectedOutcomeRow label="Effect">
-            {!ransomAssessment.branchAgreement ? (
-              <span aria-label="Not applicable">—</span>
-            ) : (
-              <span>
-                Removes{' '}
-                {ransomAssessment.removedTraitKeys.length === 0
-                  ? `${ransomAssessment.removedCount} opposing traits`
-                  : ransomAssessment.removedTraitKeys.map(interaction.traitLabel).join(', ')}{' '}
-                · +{ransomAssessment.levelBonus} levels to{' '}
-                {ransomAssessment.buffedTraitKeys.length === 0
-                  ? 'no retained traits'
-                  : ransomAssessment.buffedTraitKeys.map(interaction.traitLabel).join(', ')}
-              </span>
-            )}
+            <span>
+              Removes{' '}
+              {ransomAssessment.removedTraitKeys.length === 0
+                ? `${ransomAssessment.removedCount} opposing traits`
+                : ransomAssessment.removedTraitKeys.map(interaction.traitLabel).join(', ')}{' '}
+              · +{ransomAssessment.levelBonus} levels to{' '}
+              {ransomAssessment.buffedTraitKeys.length === 0
+                ? 'no retained traits'
+                : ransomAssessment.buffedTraitKeys.map(interaction.traitLabel).join(', ')}
+            </span>
           </SelectedOutcomeRow>
         </div>
       )}

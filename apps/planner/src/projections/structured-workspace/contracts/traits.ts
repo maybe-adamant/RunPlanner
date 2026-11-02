@@ -313,7 +313,7 @@ export interface WorkspaceNaturalSelectionRow {
 
 export interface WorkspaceNaturalSelectionDomain {
   readonly complete: boolean;
-  /** One row per eligible core in first-pass order; empty when route branches disagree. */
+  /** One row per eligible core in first-pass order. */
   readonly rows: readonly WorkspaceNaturalSelectionRow[];
   /** The persisted target list once the first-pass order is chosen. */
   readonly completedTargets?: readonly string[];
@@ -331,7 +331,6 @@ export interface WorkspaceLatestModelHammerRow {
 
 export interface WorkspaceLatestModelTargetsDomain {
   readonly requiredCount: number;
-  readonly branchAgreement: boolean;
   readonly hammers: readonly WorkspaceLatestModelHammerRow[];
 }
 
@@ -420,15 +419,12 @@ export interface WorkspaceConcaveStoneInteraction {
   };
 }
 
-export type WorkspaceRansomAssessment =
-  | { readonly branchAgreement: false }
-  | {
-      readonly branchAgreement: true;
-      readonly buffedTraitKeys: readonly string[];
-      readonly levelBonus: number;
-      readonly removedCount: number;
-      readonly removedTraitKeys: readonly string[];
-    };
+export interface WorkspaceRansomAssessment {
+  readonly buffedTraitKeys: readonly string[];
+  readonly levelBonus: number;
+  readonly removedCount: number;
+  readonly removedTraitKeys: readonly string[];
+}
 
 export interface WorkspaceCirceResolutionDomain {
   readonly arcanaCards: readonly {
@@ -439,7 +435,6 @@ export interface WorkspaceCirceResolutionDomain {
   readonly resultRarity: 'Epic' | 'Heroic' | null;
   readonly arcanaPicker: ContextualPickerModel<string>;
   readonly arcanaPickerFor: (selectedKeys: readonly string[]) => ContextualPickerModel<string>;
-  readonly branchAgreement: boolean;
   readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear';
   readonly outerAvailable: boolean;
   readonly requiredCount: number;
@@ -637,8 +632,8 @@ export interface WorkspaceTraitOfferInteraction {
   ) => WorkspaceTraitOptionDomainInteraction;
   /** Conservative Rejected domain from the editor's complete candidate result. */
   readonly rejectedBlockDomain?: (
-    rules: readonly WorkspaceRejectedBlockRule[],
-  ) => WorkspaceRejectedBlockDomain | undefined;
+    rules: WorkspaceRejectedBlockRule,
+  ) => WorkspaceRejectedBlockDomain;
   /** Application-owned labels for trait keys carried by engine evidence. */
   readonly traitLabel: (traitKey: string) => string;
   /** Display-only notes for listed traits whose offer condition the planner cannot check. */

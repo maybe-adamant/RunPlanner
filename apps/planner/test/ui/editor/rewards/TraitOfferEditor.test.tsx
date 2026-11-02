@@ -1387,39 +1387,37 @@ describe('trait offer editor entry and dialog', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([
-                  Object.freeze({
-                    assessments: Object.freeze([]),
-                    composition: Object.freeze({
-                      applies: true,
-                      legal: true,
-                      findings: Object.freeze([]),
-                    }),
-                    offerGenerationState: Object.freeze({
-                      rarity: Object.freeze({
-                        kind: 'orderedChecks' as const,
-                        values: Object.freeze({
-                          Rare: forced ? 0.3 : 0.2,
-                          Epic: 0.05,
-                          Heroic: 0,
-                          Duo: 0,
-                          Legendary: 0,
-                        }),
-                        rollOrder: Object.freeze([
-                          'Common',
-                          'Rare',
-                          'Epic',
-                          'Duo',
-                          'Legendary',
-                        ] as const),
-                      }),
-                    }),
-                    persephoneLevelBonusMaximums: Object.freeze([]),
-                    persephoneBaseLevels: [],
-                    jeweledPomLevels: [],
-                    effectiveLevels: Object.freeze([]),
+                state: Object.freeze({
+                  assessments: Object.freeze([]),
+                  composition: Object.freeze({
+                    applies: true,
+                    legal: true,
+                    findings: Object.freeze([]),
                   }),
-                ]),
+                  offerGenerationState: Object.freeze({
+                    rarity: Object.freeze({
+                      kind: 'orderedChecks' as const,
+                      values: Object.freeze({
+                        Rare: forced ? 0.3 : 0.2,
+                        Epic: 0.05,
+                        Heroic: 0,
+                        Duo: 0,
+                        Legendary: 0,
+                      }),
+                      rollOrder: Object.freeze([
+                        'Common',
+                        'Rare',
+                        'Epic',
+                        'Duo',
+                        'Legendary',
+                      ] as const),
+                    }),
+                  }),
+                  persephoneLevelBonusMaximums: Object.freeze([]),
+                  persephoneBaseLevels: [],
+                  jeweledPomLevels: [],
+                  effectiveLevels: Object.freeze([]),
+                }),
                 persephoneLevelBonusMaximums: Object.freeze([]),
                 persephoneBaseLevels: [],
                 jeweledPomLevels: [],
@@ -1492,21 +1490,16 @@ describe('trait offer editor entry and dialog', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
-                callingCard: Object.freeze([
-                  Object.freeze({
-                    effectiveRarities: Object.freeze([]),
-                    invalidActionIndexes: Object.freeze([]),
-                    rarifiableOptionKeys: Object.freeze(['option1', 'option2', 'option3'] as const),
-                  }),
-                ]),
-                chaosOfferRules: Object.freeze([
-                  Object.freeze({
-                    rejectedBlockRequired: true,
-                    rejectedBlockableOptionKeys: Object.freeze(['option2', 'option3'] as const),
-                    rejectedBlockNeedsRepair: !supported,
-                  }),
-                ]),
+                callingCard: Object.freeze({
+                  effectiveRarities: Object.freeze([]),
+                  invalidActionIndexes: Object.freeze([]),
+                  rarifiableOptionKeys: Object.freeze(['option1', 'option2', 'option3'] as const),
+                }),
+                chaosOfferRules: Object.freeze({
+                  rejectedBlockRequired: true,
+                  rejectedBlockableOptionKeys: Object.freeze(['option2', 'option3'] as const),
+                  rejectedBlockNeedsRepair: !supported,
+                }),
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
@@ -1601,15 +1594,11 @@ describe('trait offer editor entry and dialog', () => {
               kind: 'traitOffer' as const,
               result: Object.freeze({
                 assessments: Object.freeze([]),
-                branches: Object.freeze([]),
-                callingCard: Object.freeze([]),
-                chaosOfferRules: Object.freeze([
-                  Object.freeze({
-                    rejectedBlockRequired: false,
-                    rejectedBlockableOptionKeys: Object.freeze(['option2', 'option3'] as const),
-                    rejectedBlockNeedsRepair: false,
-                  }),
-                ]),
+                chaosOfferRules: Object.freeze({
+                  rejectedBlockRequired: false,
+                  rejectedBlockableOptionKeys: Object.freeze(['option2', 'option3'] as const),
+                  rejectedBlockNeedsRepair: false,
+                }),
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
@@ -1680,7 +1669,6 @@ describe('trait offer editor entry and dialog', () => {
                 kind: 'traitOffer' as const,
                 result: Object.freeze({
                   assessments: Object.freeze([]),
-                  branches: Object.freeze([]),
                   effectiveLevels: Object.freeze([6, 4, 2]),
                   findings: Object.freeze([]),
                   persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
@@ -1809,7 +1797,6 @@ describe('trait offer editor entry and dialog', () => {
             kind: 'traitOffer' as const,
             result: Object.freeze({
               assessments: Object.freeze([]),
-              branches: Object.freeze([]),
               effectiveLevels: Object.freeze([effectiveLevel, 4, 2]),
               findings: Object.freeze([]),
               persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),

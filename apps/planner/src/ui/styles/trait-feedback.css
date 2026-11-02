@@ -128,22 +128,11 @@
   margin: 0.6rem 0;
 }
 
-.trait-offer-state-list {
-  display: grid;
-  gap: 0.65rem;
-}
-
 .trait-offer-state {
   display: grid;
   gap: 0.55rem;
 }
 
-.trait-offer-state + .trait-offer-state {
-  border-top: 1px solid var(--border, #ccd3df);
-  padding-top: 0.65rem;
-}
-
-.trait-offer-state h3,
 .trait-offer-state p,
 .trait-offer-state dl {
   margin: 0;

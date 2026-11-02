@@ -153,7 +153,7 @@ describe('Fresh File first sequence', () => {
       });
       const result = offerSupported(project, value);
       expect(result.supported).toBe(false);
-      expect(result.branches.flatMap((branch) => branch.assessments[0]!.findings)).toContainEqual(
+      expect(result.state?.assessments[0]?.findings).toContainEqual(
         expect.objectContaining({
           code: 'offerContext',
           traitKey: excluded,

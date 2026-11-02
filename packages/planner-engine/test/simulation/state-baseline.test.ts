@@ -21,14 +21,12 @@ const baseline = {
     // window would allow.
     offers: [4, 3, 5, 0],
     owners: 12,
-    contexts: 12,
   },
   Surface: {
     branches: [1, 1, 1, 1],
     snapshots: [33, 31, 33, 25],
     offers: [7, 3, 3, 2],
     owners: 15,
-    contexts: 15,
   },
   Dream: {
     branches: [1, 1, 1],
@@ -38,7 +36,6 @@ const baseline = {
     // its last batch; the N prehub holds a Hammer rather than a Pom.
     offers: [3, 3, 5],
     owners: 11,
-    contexts: 11,
   },
 };
 
@@ -52,7 +49,7 @@ it('retains old lookup snapshots', () => {
   );
 });
 
-it('preserves route branch and candidate-context counts through state consolidation', () => {
+it('preserves route branch and candidate-contact counts through state consolidation', () => {
   for (const build of [
     createGoldenFGHIProject,
     loadSurfaceNOPQProject,
@@ -63,9 +60,9 @@ it('preserves route branch and candidate-context counts through state consolidat
     try {
       const { evaluation } = simulateProjectAssembly(catalog, project);
       expect(evaluation.findings).toEqual([]);
-      const contexts = new Map<string, number>();
+      const owners = new Set<string>();
       for (const [, captured] of observer.mock.calls)
-        for (const [owner, branches] of captured) contexts.set(owner, branches.length);
+        for (const [owner] of captured) owners.add(owner);
       const biomes = evaluation.route.biomes.map((biome) => {
         if (!('rewards' in biome)) throw new Error('fixture did not reach rewards');
         for (const branch of reachedFrontier(biome.rewards)) {
@@ -110,8 +107,7 @@ it('preserves route branch and candidate-context counts through state consolidat
           branches: biomes.map((biome) => biome.branches),
           snapshots: biomes.map((biome) => biome.snapshots),
           offers: biomes.map((biome) => biome.offers),
-          owners: contexts.size,
-          contexts: [...contexts.values()].reduce((sum, count) => sum + count, 0),
+          owners: owners.size,
         },
         project.route.routeKey,
       ).toEqual(baseline[project.route.routeKey as keyof typeof baseline]);

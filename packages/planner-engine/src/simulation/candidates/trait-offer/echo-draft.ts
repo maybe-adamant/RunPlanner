@@ -143,30 +143,17 @@ export function echoLastRunBoonTraitCandidatesForRow(
           candidate.option.giverKey === identity.giverKey &&
           candidate.option.traitKey === identity.traitKey,
       );
-      const branchCount = variants[0]?.branchSupport.length ?? 0;
-      const branchSupport = Object.freeze(
-        Array.from({ length: branchCount }, (_, index) =>
-          variants.some((candidate) => candidate.branchSupport[index] === true),
-        ),
-      );
       const duplicate = occupiedTraitKeys.includes(identity.traitKey);
-      // One exact persisted rarity must survive every branch. Do not make a
-      // trait selectable by combining different rarity variants per branch.
       const universallySupported =
         !duplicate && variants.some((candidate) => candidate.support !== 'impossible');
       return Object.freeze({
         value: identity,
         support: universallySupported ? ('possible' as const) : ('impossible' as const),
-        branchSupport,
         selected:
           selected?.giverKey === identity.giverKey && selected.traitKey === identity.traitKey,
         ...(!universallySupported
           ? {
-              reason: duplicate
-                ? ('duplicateTrait' as const)
-                : branchSupport.some(Boolean)
-                  ? ('branchDivergence' as const)
-                  : ('unavailable' as const),
+              reason: duplicate ? ('duplicateTrait' as const) : ('unavailable' as const),
             }
           : {}),
       });
@@ -191,7 +178,6 @@ export function echoLastRunBoonRarityCandidates(
         Object.freeze({
           value: candidate.option.rarity,
           support: candidate.support,
-          branchSupport: candidate.branchSupport,
           selected: candidate.option.rarity === selectedRarity,
           ...(candidate.reason === undefined ? {} : { reason: candidate.reason }),
         }),

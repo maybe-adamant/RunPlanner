@@ -310,7 +310,6 @@ describe('resolution outcomes', () => {
                               identities.map((identity) => ({
                                 option: { ...identity, rarity: 'Common' as const },
                                 support: 'possible' as const,
-                                branchSupport: [true],
                                 targetRequired: false,
                                 targetCandidates: [],
                               })),

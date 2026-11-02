@@ -36,12 +36,8 @@ export function evaluateCirceResolutionDomain(
 ): CirceResolutionDomainEvaluation {
   const capability = candidateArtifacts?.at(query.trait);
   if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-  const values = capability.circeResolution(query.value, query.optionKey);
-  const first = values[0];
-  if (first === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-  const branchAgreement = values.every(
-    (value) => value.effect === first.effect && value.requiredCount === first.requiredCount,
-  );
+  const value = capability.circeResolution(query.value, query.optionKey);
+  if (value === undefined) return unavailableForTraitOffer(evaluation, query.trait);
   const option =
     query.value.kind === 'traits' ? query.value.options[optionIndex(query.optionKey)] : undefined;
   const selectedArcanaKeys =
@@ -53,7 +49,7 @@ export function evaluateCirceResolutionDomain(
     option?.circeResolution?.kind === 'disableFear'
       ? option.circeResolution.vowKeys
       : Object.freeze([]);
-  const arcanaDomains = values.map((value) =>
+  const arcanaDomain =
     value.effect !== 'activateArcana'
       ? value.arcanaKeys
       : Object.freeze(
@@ -64,47 +60,38 @@ export function evaluateCirceResolutionDomain(
                 key,
               ]).length === 0,
           ),
-        ),
-  );
+        );
   const arcanaKeys = catalog.arcanaCards.values
     .map((card) => card.key)
-    .filter(
-      (key) =>
-        selectedArcanaKeys.includes(key) || arcanaDomains.some((domain) => domain.includes(key)),
-    );
+    .filter((key) => selectedArcanaKeys.includes(key) || arcanaDomain.includes(key));
   const vowKeys = catalog.fearVows.values
     .map((vow) => vow.key)
-    .filter(
-      (key) => values.some((value) => value.vowKeys.includes(key)) || selectedVowKeys.includes(key),
-    );
+    .filter((key) => value.vowKeys.includes(key) || selectedVowKeys.includes(key));
   return Object.freeze({
     kind: 'circeResolutionDomain',
     result: Object.freeze({
-      effect: first.effect,
-      activeArcanaByBranch: Object.freeze(values.map((value) => value.activeArcana)),
+      effect: value.effect,
+      activeArcana: value.activeArcana,
       resultRarity:
-        first.effect === 'disableFear'
+        value.effect === 'disableFear'
           ? null
-          : first.effect === 'promoteArcana'
+          : value.effect === 'promoteArcana'
             ? PROMOTED_ARCANA_RARITY
             : TEMPORARY_ARCANA_RARITY,
-      requiredCount: branchAgreement ? first.requiredCount : 0,
-      branchAgreement,
+      requiredCount: value.requiredCount,
       arcanaCandidates: outcomeCandidates(
         arcanaKeys,
-        arcanaDomains,
+        arcanaDomain,
         (key) => selectedArcanaKeys.includes(key),
-        branchAgreement,
-        first.requiredCount,
+        value.requiredCount,
       ),
       vowCandidates: outcomeCandidates(
         vowKeys,
-        values.map((value) => value.vowKeys),
+        value.vowKeys,
         (key) => selectedVowKeys.includes(key),
-        branchAgreement,
-        first.requiredCount,
+        value.requiredCount,
       ),
-      outerAvailable: values.every((value) => value.outerAvailable),
+      outerAvailable: value.outerAvailable,
     }),
   });
 }
@@ -118,27 +105,22 @@ export function evaluateEchoPomTargetDomain(
 ): EchoPomTargetDomainEvaluation {
   const capability = candidateArtifacts?.at(query.trait);
   if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-  const values = capability.echoPomTargets(query.value, query.optionKey);
-  const first = values[0];
-  if (first === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const value = capability.echoPomTargets(query.value, query.optionKey);
+  if (value === undefined) return unavailableForTraitOffer(evaluation, query.trait);
   const option =
     query.value.kind === 'traits' ? query.value.options[optionIndex(query.optionKey)] : undefined;
   const selected =
     option !== undefined && 'echoPomTarget' in option ? option.echoPomTarget : undefined;
   const traitKeys: string[] = catalog.traits.values
     .map((trait) => trait.key)
-    .filter((key) => values.some((value) => value.includes(key)) || selected === key);
-  const noTargetDomains = values.map((value) => (value.length === 0 ? [null] : []));
+    .filter((key) => value.includes(key) || selected === key);
   const candidates = outcomeCandidates<string | null>(
-    [
-      ...traitKeys,
-      ...(values.some((value) => value.length === 0) || selected === null ? [null] : []),
-    ],
-    values.map((value, index) =>
-      Object.freeze([...(value as readonly (string | null)[]), ...noTargetDomains[index]!]),
-    ),
-    (value) => value === selected,
-    true,
+    [...traitKeys, ...(value.length === 0 || selected === null ? [null] : [])],
+    Object.freeze([
+      ...(value as readonly (string | null)[]),
+      ...(value.length === 0 ? [null] : []),
+    ]),
+    (candidate) => candidate === selected,
     1,
   );
   return Object.freeze({
@@ -152,25 +134,18 @@ export function evaluateEchoPomTargetDomain(
   });
 }
 
-/** Publishes the draft shape only where every branch agrees on it. */
 function naturalSelectionDraftShape(
-  assessments: readonly NaturalSelectionTargetAssessment[],
+  assessment: NaturalSelectionTargetAssessment,
 ): NaturalSelectionDraftShape {
-  const shape = (assessment: NaturalSelectionTargetAssessment): NaturalSelectionDraftShape =>
-    Object.freeze({
-      firstPassRows: assessment.firstPassRows,
-      ...(assessment.completedTargets === undefined
-        ? {}
-        : {
-            completedTargets: assessment.completedTargets,
-            levelCountsByTraitKey: assessment.levelCountsByTraitKey,
-          }),
-    });
-  const [first, ...rest] = assessments.map(shape);
-  return first !== undefined &&
-    rest.every((other) => JSON.stringify(other) === JSON.stringify(first))
-    ? first
-    : Object.freeze({ firstPassRows: Object.freeze([]) });
+  return Object.freeze({
+    firstPassRows: assessment.firstPassRows,
+    ...(assessment.completedTargets === undefined
+      ? {}
+      : {
+          completedTargets: assessment.completedTargets,
+          levelCountsByTraitKey: assessment.levelCountsByTraitKey,
+        }),
+  });
 }
 
 export function evaluateNaturalSelectionResultCandidate(
@@ -192,34 +167,22 @@ export function evaluateNaturalSelectionResultCandidate(
       : _catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
   if (disposition?.kind !== 'naturalSelection')
     return unavailableForTraitOffer(evaluation, query.result.trait);
-  const assessments = capability.naturalSelectionTargets(
+  const assessment = capability.naturalSelectionTargets(
     query.value,
     query.result.optionKey,
     disposition.levelCount,
     disposition.slots,
     query.targets,
   );
-  const first = assessments[0];
-  if (first === undefined) return unavailableForTraitOffer(evaluation, query.result.trait);
-  const branchSupport = Object.freeze(
-    assessments.map((assessment) => assessment.legal && assessment.complete),
-  );
-  const supported = branchSupport.length > 0 && branchSupport.every(Boolean);
-  const complete = assessments.every((assessment) => assessment.complete);
-  const nextTargetTraitKeys = assessments.every(
-    (assessment) =>
-      JSON.stringify(assessment.nextTargetTraitKeys) === JSON.stringify(first.nextTargetTraitKeys),
-  )
-    ? first.nextTargetTraitKeys
-    : Object.freeze([]);
+  if (assessment === undefined) return unavailableForTraitOffer(evaluation, query.result.trait);
+  const supported = assessment.legal && assessment.complete;
   return Object.freeze({
     kind: 'naturalSelectionResult',
     result: Object.freeze({
       supported,
-      complete,
-      nextTargetTraitKeys,
-      ...naturalSelectionDraftShape(assessments),
-      branchSupport,
+      complete: assessment.complete,
+      nextTargetTraitKeys: assessment.nextTargetTraitKeys,
+      ...naturalSelectionDraftShape(assessment),
       findings: Object.freeze(
         supported
           ? []
@@ -229,9 +192,7 @@ export function evaluateNaturalSelectionResultCandidate(
                   query.targets === undefined
                     ? ('naturalSelectionResultMissing' as const)
                     : ('naturalSelectionResultUnavailable' as const),
-                detail: assessments.some((assessment) => assessment.legal)
-                  ? 'incomplete'
-                  : 'unavailable',
+                detail: assessment.legal ? 'incomplete' : 'unavailable',
               }),
             ],
       ),
@@ -246,32 +207,9 @@ export function evaluateRansomAssessmentCandidate(
   candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
   query: RansomAssessmentCandidateQuery,
 ): RansomAssessmentCandidateEvaluation {
-  const capability = candidateArtifacts?.at(query.trait);
-  if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-  const assessments = capability.ransom(query.value);
-  if (assessments.length === 0) return unavailableForTraitOffer(evaluation, query.trait);
-  const first = assessments[0]!;
-  return Object.freeze({
-    kind: 'ransomAssessment',
-    result: Object.freeze({
-      assessments,
-      branchAgreement: assessments.every(
-        (assessment) =>
-          JSON.stringify({
-            removedTraitKeys: assessment.removedTraitKeys,
-            removedCount: assessment.removedCount,
-            levelBonus: assessment.levelBonus,
-            buffedTraitKeys: assessment.buffedTraitKeys,
-          }) ===
-          JSON.stringify({
-            removedTraitKeys: first.removedTraitKeys,
-            removedCount: first.removedCount,
-            levelBonus: first.levelBonus,
-            buffedTraitKeys: first.buffedTraitKeys,
-          }),
-      ),
-    }),
-  });
+  const assessment = candidateArtifacts?.at(query.trait)?.ransom(query.value);
+  if (assessment === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  return Object.freeze({ kind: 'ransomAssessment', result: Object.freeze({ assessment }) });
 }
 
 export function evaluateEchoLastRunBoonDomain(
@@ -283,26 +221,20 @@ export function evaluateEchoLastRunBoonDomain(
 ): EchoLastRunBoonDomainEvaluation {
   const capability = candidateArtifacts?.at(query.trait);
   if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-  const branches = capability.echoLastRunBoon(query.value, query.optionKey);
-  const first = branches[0];
-  if (first === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const outcomes = capability.echoLastRunBoon(query.value, query.optionKey);
+  if (outcomes === undefined) return unavailableForTraitOffer(evaluation, query.trait);
   const candidates = Object.freeze(
-    first.map((outcome) => {
-      const branchSupport = Object.freeze(
-        branches.map((branch) => {
-          const candidate = branch.find(
-            (candidate) =>
-              candidate.option.giverKey === outcome.option.giverKey &&
-              candidate.option.traitKey === outcome.option.traitKey &&
-              candidate.option.rarity === outcome.option.rarity,
-          );
-          const targeted = _catalog.traits.byKey[outcome.option.traitKey]?.targetedAcquisition;
-          return (
-            candidate?.assessment.legal === true &&
-            (targeted === undefined || candidate.targetTraitKeys.length > 0)
-          );
-        }),
-      );
+    outcomes.map((outcome) => {
+      const candidate = outcomes.find(
+        (entry) =>
+          entry.option.giverKey === outcome.option.giverKey &&
+          entry.option.traitKey === outcome.option.traitKey &&
+          entry.option.rarity === outcome.option.rarity,
+      )!;
+      const targeted = _catalog.traits.byKey[outcome.option.traitKey]?.targetedAcquisition;
+      const legal =
+        candidate.assessment.legal &&
+        (targeted === undefined || candidate.targetTraitKeys.length > 0);
       const retainedTarget =
         query.value.kind === 'traits'
           ? query.value.options[optionIndex(query.optionKey)]?.echoLastRunBoon?.options.find(
@@ -312,66 +244,22 @@ export function evaluateEchoLastRunBoonDomain(
                 option.rarity === outcome.option.rarity,
             )?.targetTraitKey
           : undefined;
-      const targetTraitKeys = [
-        ...new Set(
-          branches.flatMap(
-            (branch) =>
-              branch.find(
-                (candidate) =>
-                  candidate.option.giverKey === outcome.option.giverKey &&
-                  candidate.option.traitKey === outcome.option.traitKey &&
-                  candidate.option.rarity === outcome.option.rarity,
-              )?.targetTraitKeys ?? [],
-          ),
-        ),
-      ];
+      const targetTraitKeys = [...new Set(candidate.targetTraitKeys)];
       if (retainedTarget !== undefined && !targetTraitKeys.includes(retainedTarget))
         targetTraitKeys.push(retainedTarget);
-      const branchUniversallySupported = branchSupport.length > 0 && branchSupport.every(Boolean);
-      const effectiveRarities = branches.flatMap((branch) => {
-        const candidate = branch.find(
-          (entry) =>
-            entry.option.giverKey === outcome.option.giverKey &&
-            entry.option.traitKey === outcome.option.traitKey &&
-            entry.option.rarity === outcome.option.rarity,
-        );
-        return candidate === undefined ? [] : [candidate.effectiveRarity];
-      });
-      const effectiveRarity =
-        effectiveRarities.length > 0 &&
-        effectiveRarities.every((rarity) => rarity === effectiveRarities[0])
-          ? effectiveRarities[0]
-          : undefined;
-      const universallySupported = branchUniversallySupported && effectiveRarity !== undefined;
-      const targetRequired =
-        _catalog.traits.byKey[outcome.option.traitKey]?.targetedAcquisition !== undefined;
+      const effectiveRarity = candidate.effectiveRarity;
+      const supported = legal && effectiveRarity !== undefined;
       return Object.freeze({
         option: outcome.option,
         ...(effectiveRarity === undefined ? {} : { effectiveRarity }),
         ...(outcome.effectiveLevel === undefined ? {} : { effectiveLevel: outcome.effectiveLevel }),
-        support: universallySupported ? ('possible' as const) : ('impossible' as const),
-        branchSupport,
-        ...(!universallySupported
-          ? {
-              reason: branchSupport.some(Boolean)
-                ? ('branchDivergence' as const)
-                : ('unavailable' as const),
-            }
-          : {}),
-        targetRequired,
+        support: supported ? ('possible' as const) : ('impossible' as const),
+        ...(supported ? {} : { reason: 'unavailable' as const }),
+        targetRequired: targeted !== undefined,
         targetCandidates: outcomeCandidates(
           targetTraitKeys,
-          branches.map((branch) => {
-            const candidate = branch.find(
-              (candidate) =>
-                candidate.option.giverKey === outcome.option.giverKey &&
-                candidate.option.traitKey === outcome.option.traitKey &&
-                candidate.option.rarity === outcome.option.rarity,
-            );
-            return candidate?.assessment.legal === true ? candidate.targetTraitKeys : [];
-          }),
+          candidate.assessment.legal ? candidate.targetTraitKeys : [],
           (traitKey) => traitKey === retainedTarget,
-          true,
           1,
         ),
       });
@@ -424,29 +312,25 @@ export function evaluateEchoLastRunBoonDomain(
       });
     }
     if (selectedDisposition.kind === 'naturalSelection') {
-      const assessments = capability.naturalSelectionTargets(
+      const assessment = capability.naturalSelectionTargets(
         query.value,
         query.optionKey,
         selectedDisposition.levelCount,
         selectedDisposition.slots,
         selectedChild.naturalSelectionTargets,
       );
-      const first = assessments[0];
-      if (first === undefined) return undefined;
-      const nextKeys = [
-        ...new Set(assessments.flatMap((assessment) => assessment.nextTargetTraitKeys)),
-      ];
+      if (assessment === undefined) return undefined;
+      const nextKeys = [...new Set(assessment.nextTargetTraitKeys)];
       return Object.freeze({
         kind: 'naturalSelection' as const,
         slotCount: selectedDisposition.levelCount,
-        complete: assessments.every((assessment) => assessment.complete),
-        supported: assessments.every((assessment) => assessment.legal),
-        ...naturalSelectionDraftShape(assessments),
+        complete: assessment.complete,
+        supported: assessment.legal,
+        ...naturalSelectionDraftShape(assessment),
         nextTargetCandidates: outcomeCandidates(
           nextKeys,
-          assessments.map((assessment) => assessment.nextTargetTraitKeys),
+          assessment.nextTargetTraitKeys,
           () => false,
-          true,
           1,
         ),
       });
@@ -469,8 +353,8 @@ function allTogetherSetResult(
   optionKey: import('../../../authored-project/traits/state').TraitOptionKey,
   setKey: import('../../../catalog-schema').DirectTraitSetKey,
 ) {
-  const branches = capability.allTogetherSet(value, optionKey, setKey);
-  if (branches[0] === undefined) return undefined;
+  const domain = capability.allTogetherSet(value, optionKey, setKey);
+  if (domain === undefined) return undefined;
   const option = value.options[optionIndex(optionKey)];
   const selected = option?.allTogetherResult?.[setKey];
   const declaration = option === undefined ? undefined : catalog.traits.byKey[option.traitKey];
@@ -480,15 +364,14 @@ function allTogetherSetResult(
       : undefined;
   const values: (string | null)[] = [
     ...(set?.traitKeys ?? []),
-    ...(branches.some((branch) => branch.includes(null)) || selected === null ? [null] : []),
+    ...(domain.includes(null) || selected === null ? [null] : []),
   ].filter(
     (candidate, index, all) =>
-      all.indexOf(candidate) === index &&
-      (branches.some((branch) => branch.includes(candidate)) || candidate === selected),
+      all.indexOf(candidate) === index && (domain.includes(candidate) || candidate === selected),
   );
   return Object.freeze({
     setKey,
-    candidates: outcomeCandidates(values, branches, (candidate) => candidate === selected, true, 1),
+    candidates: outcomeCandidates(values, domain, (candidate) => candidate === selected, 1),
   });
 }
 
@@ -516,44 +399,26 @@ export function evaluateAllTogetherSetDomain(
   });
 }
 
+/** Each value's support in the one reached domain; a domain no larger than the count forces it. */
 function outcomeCandidates<T>(
   values: readonly T[],
-  branchDomains: readonly (readonly T[])[],
+  domain: readonly T[],
   selected: (value: T) => boolean,
-  branchAgreement: boolean,
   requiredCount: number,
 ): readonly EvaluatedDirectTraitOutcomeCandidate<T>[] {
   return Object.freeze(
     values.map((value) => {
-      const branchSupport = Object.freeze(
-        branchDomains.map((domain) => domain.some((candidate) => Object.is(candidate, value))),
-      );
-      const universallySupported =
-        branchAgreement && branchSupport.length > 0 && branchSupport.every(Boolean);
-      const forced =
-        universallySupported &&
-        requiredCount > 0 &&
-        branchDomains.every(
-          (domain) =>
-            domain.some((candidate) => Object.is(candidate, value)) &&
-            domain.length <= requiredCount,
-        );
+      const supported = domain.some((candidate) => Object.is(candidate, value));
+      const forced = supported && requiredCount > 0 && domain.length <= requiredCount;
       return Object.freeze({
         value,
         support: forced
           ? ('forced' as const)
-          : universallySupported
+          : supported
             ? ('possible' as const)
             : ('impossible' as const),
-        branchSupport,
         selected: selected(value),
-        ...(!universallySupported
-          ? {
-              reason: branchSupport.some(Boolean)
-                ? ('branchDivergence' as const)
-                : ('unavailable' as const),
-            }
-          : {}),
+        ...(supported ? {} : { reason: 'unavailable' as const }),
       });
     }),
   );

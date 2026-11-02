@@ -2148,7 +2148,7 @@ describe('Hermes Shrine pickup settlement', () => {
       value,
     });
     if (evaluation.kind !== 'traitOffer') throw new Error('delivery child candidate unavailable');
-    return evaluation.result.branches.map((branch) => branch.offerGenerationState?.rarity);
+    return [evaluation.result.state?.offerGenerationState?.rarity];
   }
 
   /** O Postboss Shrine countdown purchase placed at the P host it falls due in. */

@@ -128,7 +128,6 @@ function LatestModelTargetsOutcome({
   child,
   findingTarget,
   interaction,
-  onFeedback,
   onUpdate,
   value,
 }: {
@@ -138,7 +137,6 @@ function LatestModelTargetsOutcome({
   >;
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly findingTarget: FindingTargetProps;
-  readonly onFeedback: OutcomeFeedbackReporter;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
   readonly value: AuthoredTraitOfferTraits;
 }) {
@@ -151,13 +149,6 @@ function LatestModelTargetsOutcome({
   useEffect(() => {
     controller.activate(loadable);
   }, [controller, loadable]);
-  useReportedFeedback(
-    onFeedback,
-    'latestModelTargets',
-    domain.result !== undefined && !domain.result.branchAgreement
-      ? 'No target count is supported across every route branch.'
-      : undefined,
-  );
   if (domain.result === undefined) return null;
   const result = domain.result;
   return (
@@ -170,7 +161,6 @@ function LatestModelTargetsOutcome({
           id={`${semanticOwnerControlElementId(child.child.address)}${index === 0 ? '' : `-${index + 1}`}`}
           label={`Hammer ${index + 1}`}
           layout="inline"
-          disabled={!result.branchAgreement}
           locked={row.requiresEarlierRow}
           model={row.picker}
           onSelect={(target: string) => {
@@ -425,7 +415,6 @@ export function TraitOfferSelectedOutcome({
           child={latestModelChild}
           findingTarget={findingTarget(latestModelChild.child.address)}
           interaction={interaction}
-          onFeedback={onFeedback}
           onUpdate={onUpdate}
           value={value}
         />
@@ -493,7 +482,6 @@ export function TraitOfferSelectedOutcome({
         feedback={feedback}
         interaction={interaction}
         offer={value}
-        onFeedback={onFeedback}
         onUpdate={onUpdate}
       />
     </SelectedOutcomeBlock>
@@ -528,7 +516,6 @@ export function TraitOfferSelectedOutcome({
                 feedback={[]}
                 interaction={interaction}
                 offer={value}
-                onFeedback={onFeedback}
                 onUpdate={onUpdate}
               />
             </>

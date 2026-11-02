@@ -256,11 +256,9 @@ function rareChance(
   );
   const capability = evaluation.artifacts.traitOffers.at(address);
   if (offer === undefined || capability === undefined) throw new Error('offer was not reached');
-  return capability.evaluateOffer(offer.offer, true).map((branch) => {
-    const rarity = branch.offerGenerationState?.rarity;
-    if (rarity?.kind !== 'orderedChecks') throw new Error('offer has no rolled rarity');
-    return rarity.values.Rare;
-  });
+  const rarity = capability.evaluateOffer(offer.offer, true).offerGenerationState?.rarity;
+  if (rarity?.kind !== 'orderedChecks') throw new Error('offer has no rolled rarity');
+  return [rarity.values.Rare];
 }
 
 /** Moves one Fields cage pickup to an explicit position in the room's action order. */

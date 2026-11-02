@@ -211,13 +211,13 @@ describe('Calling Card offer settlement', () => {
       value,
     });
     if (result.kind !== 'traitOffer') throw new Error('expected trait offer candidate');
-    expect(result.result.callingCard).toEqual([
+    expect(result.result.callingCard).toEqual(
       expect.objectContaining({
         effectiveRarities: ['Common', 'Rare', 'Common'],
         remainingCharges: 5,
         rarifiableOptionKeys: ['option1', 'option2', 'option3'],
       }),
-    ]);
+    );
   });
 
   it('attributes fourth-row-ceiling and seventh-charge actions exactly in the candidate product', () => {
@@ -247,7 +247,7 @@ describe('Calling Card offer settlement', () => {
       },
     });
     if (result.kind !== 'traitOffer') throw new Error('expected trait offer candidate');
-    expect(result.result.callingCard?.[0]).toMatchObject({
+    expect(result.result.callingCard).toMatchObject({
       effectiveRarities: ['Heroic', 'Heroic', 'Common'],
       remainingCharges: 0,
       invalidActionIndexes: [3],
@@ -275,7 +275,7 @@ describe('Calling Card offer settlement', () => {
       selectedOptionKey: 'option1',
       rarificationActions: actions,
     });
-    expect(callingCardCandidate().callingCard(value(['option2']))[0]?.rarifySource).toEqual({
+    expect(callingCardCandidate().callingCard(value(['option2']))?.rarifySource).toEqual({
       keepsakeKey: 'RarifyKeepsake',
       remainingUses: 5,
     });
@@ -285,11 +285,11 @@ describe('Calling Card offer settlement', () => {
       callingCard: { remainingCharges: 6 },
     };
     const olympian = callingCardCandidate(createTraitHistoryState(), both);
-    expect(olympian.callingCard(value([]))[0]?.rarifySource).toEqual({
+    expect(olympian.callingCard(value([]))?.rarifySource).toEqual({
       keepsakeKey: 'ForceApolloBoonKeepsake',
       remainingUses: 1,
     });
-    const spent = olympian.callingCard(value(['option1']))[0]!;
+    const spent = olympian.callingCard(value(['option1']))!;
     expect(spent.rarifySource).toEqual({
       keepsakeKey: 'ForceApolloBoonKeepsake',
       remainingUses: 0,
@@ -341,8 +341,8 @@ describe('Calling Card offer settlement', () => {
       selectedOptionKey: 'option1',
       rarificationActions: ['option1', 'option1', 'option1'],
     };
-    const result = callingCardCandidate().evaluateOffer(value, true)[0]!;
-    const callingCard = callingCardCandidate().callingCard(value)[0]!;
+    const result = callingCardCandidate().evaluateOffer(value, true)!;
+    const callingCard = callingCardCandidate().callingCard(value)!;
 
     expect(result.assessments.every((assessment) => assessment.legal)).toBe(true);
     expect(result.composition.legal).toBe(true);
@@ -380,8 +380,8 @@ describe('Calling Card offer settlement', () => {
       rarificationActions: ['option1'],
     };
     const candidate = callingCardCandidate(before);
-    const result = candidate.evaluateOffer(value, true)[0]!;
-    const callingCard = candidate.callingCard(value)[0]!;
+    const result = candidate.evaluateOffer(value, true)!;
+    const callingCard = candidate.callingCard(value)!;
 
     expect(result.assessments[0]).toMatchObject({ legal: true });
     expect(result.generation?.legal).toBe(true);

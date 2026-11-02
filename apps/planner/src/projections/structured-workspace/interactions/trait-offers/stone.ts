@@ -33,34 +33,21 @@ export function bindConcaveStoneInteraction(input: {
         completeFor: (offer: AuthoredTraitOfferTraits) => {
           const evaluated = candidates.traitCarrierChildDomain(owner, offer, child);
           if (evaluated.kind !== 'concaveStone') return false;
-          const branches = evaluated.result.branches;
-          const first = branches[0];
-          if (first === undefined) return true;
-          if (!branches.every((branch) => branch.required === first.required)) return false;
-          return !first.required || offer.concaveStoneResult !== undefined;
+          const stone = evaluated.result.stone;
+          return stone?.required !== true || offer.concaveStoneResult !== undefined;
         },
         forOffer: (offer: AuthoredTraitOfferTraits) =>
           Object.freeze({
             load: () => {
               const evaluated = candidates.traitCarrierChildDomain(owner, offer, child);
               if (evaluated.kind !== 'concaveStone') return undefined;
-              const branches = evaluated.result.branches;
-              const first = branches[0];
-              if (first === undefined) return undefined;
-              const sameDomain = branches.every(
-                (branch) =>
-                  branch.procSupport === first.procSupport &&
-                  branch.required === first.required &&
-                  branch.resultSupport === first.resultSupport &&
-                  JSON.stringify(branch.residualOptionKeys) ===
-                    JSON.stringify(first.residualOptionKeys),
-              );
-              if (!sameDomain) return undefined;
+              const stone = evaluated.result.stone;
+              if (stone === undefined) return undefined;
               return Object.freeze({
-                procSupport: first.procSupport,
-                required: first.required,
-                residualOptionKeys: first.residualOptionKeys,
-                resultSupport: first.resultSupport,
+                procSupport: stone.procSupport,
+                required: stone.required,
+                residualOptionKeys: stone.residualOptionKeys,
+                resultSupport: stone.resultSupport,
               });
             },
           }),

@@ -194,7 +194,7 @@ describe('Chaos TrialUpgrade authored child', () => {
       .biomeAt(createBiomeAddress('Underworld', 'F'))
       ?.traitOffers.at(chaosTrait);
     expect(capability).toBeDefined();
-    const domain = capability?.chaosOfferDomain(pair())[0];
+    const domain = capability?.chaosOfferDomain(pair());
     expect(domain?.blessingKeys).toEqual(
       expect.arrayContaining(['ChaosWeaponBlessing', 'ChaosHealthBlessing']),
     );
@@ -219,7 +219,7 @@ describe('Chaos TrialUpgrade authored child', () => {
         }),
       ]),
     );
-    const defaultDomain = capability?.chaosOfferDomain()[0];
+    const defaultDomain = capability?.chaosOfferDomain();
     expect(defaultDomain?.selectedCurseKey).toBe(defaultDomain?.curseOptions[0]?.curseKeys[0]);
     expect(defaultDomain?.blessingKeys[0]).toBeDefined();
     expect(defaultDomain?.rarities).toEqual(['Common', 'Rare', 'Epic']);
@@ -231,7 +231,7 @@ describe('Chaos TrialUpgrade authored child', () => {
           { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
         ],
       }),
-    )[0];
+    );
     expect(retainedUnavailablePeer?.curseOptions[0]?.curseKeys).toContain('ChaosMetaUpgradeCurse');
     expect(retainedUnavailablePeer?.curseOptions[0]?.availableCurseKeys).not.toContain(
       'ChaosMetaUpgradeCurse',
@@ -251,7 +251,7 @@ describe('Chaos TrialUpgrade authored child', () => {
             { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
           ],
         }),
-      )[0]?.rarities,
+      )?.rarities,
     ).toEqual(['Common', 'Rare', 'Epic']);
     expect(
       capability?.chaosOfferDomain(
@@ -262,7 +262,7 @@ describe('Chaos TrialUpgrade authored child', () => {
             { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
           ],
         }),
-      )[0]?.rarities,
+      )?.rarities,
     ).toEqual(['Heroic']);
     expect(
       capability?.chaosOfferDomain(
@@ -276,7 +276,7 @@ describe('Chaos TrialUpgrade authored child', () => {
           rarity: 'Legendary',
           blessingValues: {},
         }),
-      )[0]?.rarities,
+      )?.rarities,
     ).toEqual(['Legendary']);
   });
 
@@ -291,7 +291,7 @@ describe('Chaos TrialUpgrade authored child', () => {
       .biomeAt(createBiomeAddress('Underworld', 'F'))
       ?.traitOffers.at(chaosTrait);
     expect(capability).toBeDefined();
-    const domain = capability?.chaosOfferDomain()[0];
+    const domain = capability?.chaosOfferDomain();
     expect(domain?.curseOptions[0]?.curseKeys).toContain('ChaosNoMoneyCurse');
     expect(domain?.curseOptions[0]?.curseKeys).not.toContain('ChaosHealthCurse');
   });

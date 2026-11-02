@@ -40,7 +40,6 @@ export function projectNaturalSelectionDomain(
                 support: row.availableTraitKeys.includes(traitKey)
                   ? ('possible' as const)
                   : ('impossible' as const),
-                branchSupport: Object.freeze([]),
                 selected: traitKey === own,
                 ...(row.availableTraitKeys.includes(traitKey)
                   ? {}

@@ -40,24 +40,15 @@ import {
   initializeTestRewardBranches,
   initializeTestRewardBranchesForRoute,
 } from '../support/arcana-fear';
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
-import {
-  evaluateTraitOfferCandidate,
-  type TraitOfferCandidateQuery,
-} from '../../src/simulation/candidates/trait-offer/query';
 import {
   createPreparedProjectCandidateSession,
   simulateProject,
   simulateProjectAssembly,
 } from '../../src/simulation';
-import {
-  traitFrontierState,
-  withInvestedHexOlympianTalent,
-  openTimeTraitOfferContexts,
-} from '../support/simulation-state';
+import { traitFrontierState, withInvestedHexOlympianTalent } from '../support/simulation-state';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 
 const owner = { kind: 'project' } as SemanticAddress;
@@ -1132,114 +1123,6 @@ describe('reached trait offer chronology', () => {
         },
       }),
     ).toMatchObject({ kind: 'traitOffer', result: { supported: true, findings: [] } });
-  });
-
-  it('keeps first-offer candidate support and evidence grouped by reached branch', () => {
-    const project = createGoldenFGHIProject();
-    const baseline = simulateProject(catalog, project);
-    const owner = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
-    const trait = createTraitOfferAddress(owner, 'source');
-    const value: AuthoredTraitOffer = Object.freeze({
-      kind: 'traits',
-      giverKey: 'Apollo',
-      options: Object.freeze([
-        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-        { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
-        { traitKey: 'ApolloManaBoon', rarity: 'Common' },
-      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
-      selectedOptionKey: 'option1',
-    });
-    const occupiedBefore = foldTraitHistoryEvents(catalog, [
-      {
-        kind: 'traitOffer',
-        owner,
-        acquisitionRole: 'seed',
-        sequence: 0,
-        giverKey: 'Apollo',
-        options: Object.freeze([
-          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
-          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
-          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-        ]) as TraitOfferEvent['options'],
-        selectedOptionKey: 'option1',
-        acquisitionPoint: 'test',
-      },
-    ]);
-    const legalBranchTrace = evaluateReachedTraitOffer(
-      catalog,
-      owner,
-      'source',
-      value,
-      traitFrontierState(occupiedBefore),
-      {},
-      0,
-    );
-    const invalidBranchTrace = evaluateReachedTraitOffer(
-      catalog,
-      owner,
-      'source',
-      value,
-      traitFrontierState(createTraitHistoryState()),
-      {},
-      0,
-    );
-    const candidateArtifacts = createTraitOfferCandidateArtifacts(
-      catalog,
-      openTimeTraitOfferContexts(
-        new Map([
-          [
-            semanticAddressKey(trait),
-            Object.freeze([
-              Object.freeze({ state: legalBranchTrace.state, source: legalBranchTrace.source }),
-              Object.freeze({ state: invalidBranchTrace.state, source: invalidBranchTrace.source }),
-            ]),
-          ],
-        ]),
-      ),
-    );
-    const query: TraitOfferCandidateQuery = { kind: 'traitOffer', trait, value };
-    const result = evaluateTraitOfferCandidate(
-      catalog,
-      project,
-      baseline,
-      candidateArtifacts,
-      query,
-    );
-    if (result.kind !== 'traitOffer') throw new Error('trait offer candidate was unavailable');
-
-    expect(result.result.supported).toBe(true);
-    expect(result.result.branches).toHaveLength(2);
-    expect(result.result.branches[0]).toMatchObject({
-      assessments: [
-        { legal: true, findings: [] },
-        { legal: true, findings: [] },
-        { legal: true, findings: [] },
-      ],
-      composition: { applies: false, legal: true, findings: [] },
-      persephoneLevelBonusMaximums: [undefined, undefined, undefined],
-      persephoneBaseLevels: [undefined, undefined, undefined],
-      effectiveLevels: [1, 1, 1],
-    });
-    expect(result.result.branches[1]).toMatchObject({
-      assessments: [
-        { legal: true, findings: [] },
-        { legal: true, findings: [] },
-        { legal: true, findings: [] },
-      ],
-      generation: {
-        applies: true,
-        legal: false,
-        findings: [{ code: 'traitOfferGenerationUnavailable' }],
-      },
-      persephoneLevelBonusMaximums: [undefined, undefined, undefined],
-      persephoneBaseLevels: [undefined, undefined, undefined],
-      effectiveLevels: [1, 1, 1],
-    });
-    expect(result.result.findings).toContainEqual({
-      code: 'traitOfferGenerationUnavailable',
-      reason: 'coreTraitsFirst',
-      traitKeys: ['ApolloWeaponBoon', 'ApolloSpecialBoon'],
-    });
   });
 
   it('keeps naturally surviving same-owner traces on one pre-offer state and context', () => {

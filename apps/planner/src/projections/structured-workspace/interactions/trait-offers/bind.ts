@@ -48,19 +48,13 @@ export function bindTraitOfferInteractions(input: {
     const chaosInteraction = bindChaosOfferInteraction({ catalog, candidates, control });
     const load = (value = control.offer ?? startingOutcome()) =>
       value === undefined ? Object.freeze([]) : candidates.traitOffer(control.address, value);
-    const rejectedBlockDomain = (rules: readonly WorkspaceRejectedBlockRule[]) => {
-      if (rules.length === 0) return undefined;
-      return Object.freeze({
-        required: rules.every((rule) => rule.rejectedBlockRequired),
-        canClear: rules.every((rule) => !rule.rejectedBlockRequired),
-        needsRepair: rules.some((rule) => rule.rejectedBlockNeedsRepair),
-        optionKeys: Object.freeze(
-          rules[0]!.rejectedBlockableOptionKeys.filter((optionKey) =>
-            rules.every((rule) => rule.rejectedBlockableOptionKeys.includes(optionKey)),
-          ),
-        ),
+    const rejectedBlockDomain = (rule: WorkspaceRejectedBlockRule) =>
+      Object.freeze({
+        required: rule.rejectedBlockRequired,
+        canClear: !rule.rejectedBlockRequired,
+        needsRepair: rule.rejectedBlockNeedsRepair,
+        optionKeys: rule.rejectedBlockableOptionKeys,
       });
-    };
     const optionDomain = bindTraitOfferOptionDomain({ catalog, candidates, control, traitDomain });
     traitOffers.set(
       key,
@@ -79,23 +73,17 @@ export function bindTraitOfferInteractions(input: {
           if (value.kind === 'traits') {
             const evaluated = candidates.ransomAssessment(control.address, value);
             if (evaluated.kind === 'ransomAssessment') {
-              const first = evaluated.result.assessments[0];
+              const assessment = evaluated.result.assessment;
               feedback.push(
-                !evaluated.result.branchAgreement || first === undefined
-                  ? Object.freeze({
-                      kind: 'ransom' as const,
-                      assessment: Object.freeze({ branchAgreement: false as const }),
-                    })
-                  : Object.freeze({
-                      kind: 'ransom' as const,
-                      assessment: Object.freeze({
-                        branchAgreement: true as const,
-                        buffedTraitKeys: first.buffedTraitKeys,
-                        levelBonus: first.levelBonus,
-                        removedCount: first.removedCount,
-                        removedTraitKeys: first.removedTraitKeys,
-                      }),
-                    }),
+                Object.freeze({
+                  kind: 'ransom' as const,
+                  assessment: Object.freeze({
+                    buffedTraitKeys: assessment.buffedTraitKeys,
+                    levelBonus: assessment.levelBonus,
+                    removedCount: assessment.removedCount,
+                    removedTraitKeys: assessment.removedTraitKeys,
+                  }),
+                }),
               );
             }
           }

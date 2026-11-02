@@ -258,9 +258,10 @@ describe('Concave Stone trait settlement', () => {
         ]),
       ),
     ).at(trait)!;
-    expect(capability.targetedAcquisitionTargets(value, 'option2')).toEqual([
-      { sourceSupported: true, targetTraitKeys: ['HeraWeaponBoon', 'BoonDecayBoon'] },
-    ]);
+    expect(capability.targetedAcquisitionTargets(value, 'option2')).toEqual({
+      sourceSupported: true,
+      targetTraitKeys: ['HeraWeaponBoon', 'BoonDecayBoon'],
+    });
     const stale = settle(
       {
         ...value,
@@ -356,7 +357,7 @@ describe('Concave Stone trait settlement', () => {
         ]),
       ),
     ).at(trait)!;
-    expect(capability.allTogetherSet(value, 'option2', 'earth')[0]).toContain(result.earth);
+    expect(capability.allTogetherSet(value, 'option2', 'earth')).toContain(result.earth);
     const unresolvedPrimary: AuthoredTraitOfferTraits = {
       ...value,
       options: [
@@ -365,7 +366,7 @@ describe('Concave Stone trait settlement', () => {
         value.options[2]!,
       ],
     };
-    expect(capability.allTogetherSet(unresolvedPrimary, 'option2', 'earth')).toEqual([]);
+    expect(capability.allTogetherSet(unresolvedPrimary, 'option2', 'earth')).toBeUndefined();
     const repaired = settle(
       {
         ...value,
@@ -448,7 +449,7 @@ describe('Concave Stone trait settlement', () => {
         disposition.levelCount,
         disposition.slots,
         targets,
-      )[0]!;
+      )!;
     const targets: string[] = [];
     expect(assess().nextTargetTraitKeys).toContain('DemeterCastBoon');
     for (let index = 0; index < 8; index++) {
@@ -784,18 +785,18 @@ describe('Concave Stone candidate capability', () => {
     );
     const capability = artifacts.at(trait);
     if (capability === undefined) throw new Error('missing Stone candidate capability');
-    expect(capability.concaveStone(offer())).toMatchObject([
-      { required: false, resultSupport: 'possible', supported: true },
-    ]);
-    expect(capability.concaveStone(offer({ kind: 'noProc' }))).toMatchObject([
-      {
-        procSupport: 75,
-        residualOptionKeys: ['option2', 'option3'],
-        required: false,
-        resultSupport: 'possible',
-        supported: true,
-      },
-    ]);
+    expect(capability.concaveStone(offer())).toMatchObject({
+      required: false,
+      resultSupport: 'possible',
+      supported: true,
+    });
+    expect(capability.concaveStone(offer({ kind: 'noProc' }))).toMatchObject({
+      procSupport: 75,
+      residualOptionKeys: ['option2', 'option3'],
+      required: false,
+      resultSupport: 'possible',
+      supported: true,
+    });
     const heroicState = Object.freeze({
       ...state,
       stone: Object.freeze({ ...state.stone!, rank: 'Heroic' as const }),
@@ -817,9 +818,12 @@ describe('Concave Stone candidate capability', () => {
       ),
     ).at(trait);
     if (heroic === undefined) throw new Error('missing Stone candidate capability');
-    expect(heroic.concaveStone(offer())).toMatchObject([
-      { procSupport: 100, required: true, resultSupport: 'impossible', supported: false },
-    ]);
+    expect(heroic.concaveStone(offer())).toMatchObject({
+      procSupport: 100,
+      required: true,
+      resultSupport: 'impossible',
+      supported: false,
+    });
   });
 
   it('retains a Stone result as unavailable after the source is gone', () => {
@@ -843,9 +847,12 @@ describe('Concave Stone candidate capability', () => {
     );
     const capability = artifacts.at(trait);
     if (capability === undefined) throw new Error('missing retained Stone candidate capability');
-    expect(capability.concaveStone(offer({ kind: 'proc', optionKey: 'option2' }))).toMatchObject([
-      { procSupport: 0, residualOptionKeys: [], resultSupport: 'impossible', supported: false },
-    ]);
+    expect(capability.concaveStone(offer({ kind: 'proc', optionKey: 'option2' }))).toMatchObject({
+      procSupport: 0,
+      residualOptionKeys: [],
+      resultSupport: 'impossible',
+      supported: false,
+    });
   });
 });
 
@@ -918,9 +925,12 @@ describe('Concave Stone giver eligibility', () => {
       ),
     ).at(trait);
     if (capability === undefined) throw new Error('missing Hades Stone candidate capability');
-    expect(capability.concaveStone(hadesOffer())).toEqual([]);
-    expect(capability.concaveStone(stale)).toMatchObject([
-      { procSupport: 0, required: false, resultSupport: 'impossible', supported: false },
-    ]);
+    expect(capability.concaveStone(hadesOffer())).toBeUndefined();
+    expect(capability.concaveStone(stale)).toMatchObject({
+      procSupport: 0,
+      required: false,
+      resultSupport: 'impossible',
+      supported: false,
+    });
   });
 });

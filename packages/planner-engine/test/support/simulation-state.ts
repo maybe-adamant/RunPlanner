@@ -22,6 +22,8 @@ import type { RewardBranchState } from '../../src/simulation/rewards/branch-prim
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import { projectEncounterRecordPreparation } from '../../src/simulation/history/facts';
 import { resolvedEncounterPhaseForDefinition } from '../../src/simulation/encounters/resolve';
+import type { TraitOfferCandidateContext } from '../../src/simulation/traits';
+import type { TraitOfferCandidateContacts } from '../../src/simulation/candidates/trait-offer/capability';
 
 /** Supplies a declared prepared identity to a direct lifecycle-transition fixture. */
 export function withTestEncounterRecord(
@@ -194,15 +196,31 @@ export function openTimeTraitOfferContext<
   return Object.freeze({ ...context, generationState: context.state });
 }
 
+/** Each offer's one reached context as its contact, the shape the walk publishes. */
+export function traitOfferContacts(
+  contexts: ReadonlyMap<string, readonly TraitOfferCandidateContext[]>,
+): ReadonlyMap<string, TraitOfferCandidateContacts> {
+  return new Map(
+    [...contexts].map(([key, values]) => {
+      if (values.length !== 1) throw new Error(`trait offer ${key} needs exactly one context`);
+      return [key, Object.freeze({ offer: values[0]!, children: new Map() })];
+    }),
+  );
+}
+
 export function openTimeTraitOfferContexts<
   Context extends { readonly state: SimulationState; readonly source: object },
 >(
   contexts: ReadonlyMap<string, readonly Context[]>,
-): ReadonlyMap<string, readonly (Context & { readonly generationState: SimulationState })[]> {
-  return new Map(
-    [...contexts].map(([key, values]) => [
-      key,
-      Object.freeze(values.map((value) => openTimeTraitOfferContext(value))),
-    ]),
+): ReadonlyMap<string, TraitOfferCandidateContacts> {
+  return traitOfferContacts(
+    new Map(
+      [...contexts].map(([key, values]) => [
+        key,
+        Object.freeze(
+          values.map((value) => openTimeTraitOfferContext(value) as TraitOfferCandidateContext),
+        ),
+      ]),
+    ),
   );
 }

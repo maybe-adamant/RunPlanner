@@ -325,7 +325,6 @@ export function projectHexTreeDomain(
       hex.layouts.values.map((candidate) => ({
         value: candidate.key,
         support: 'possible' as const,
-        branchSupport: Object.freeze([true]),
         selected: candidate.key === tree.layoutKey,
       })),
       (key) => hex.layouts.byKey[key]?.label ?? key,

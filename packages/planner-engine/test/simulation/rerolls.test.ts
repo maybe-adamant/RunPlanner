@@ -908,7 +908,7 @@ describe('screen rerolls', () => {
     const result = session.evaluate({ kind: 'traitOffer', trait: forceApolloStartTrait, value });
     if (result.kind !== 'traitOffer') throw new Error('expected a trait offer candidate');
     expect(
-      result.result.callingCard?.[0]?.rerolledScreens?.map((screen) => [
+      result.result.callingCard?.rerolledScreens?.map((screen) => [
         screen.effectiveRarities,
         screen.rarifiableOptionKeys,
       ]),
@@ -916,7 +916,7 @@ describe('screen rerolls', () => {
       [['Common', 'Rare', 'Common'], []],
       [['Common', 'Common', 'Common'], []],
     ]);
-    expect(result.result.callingCard?.[0]?.rarifiableOptionKeys).toEqual([]);
+    expect(result.result.callingCard?.rarifiableOptionKeys).toEqual([]);
     const unclicked = forceApolloRerolledStartProject([[], []]);
     const freshValue = occurrence(unclicked, goldenFStartId).startingRewardAcquisition
       ?.traitOffersByAcquisitionRole.source;
@@ -927,9 +927,7 @@ describe('screen rerolls', () => {
     ).evaluate({ kind: 'traitOffer', trait: forceApolloStartTrait, value: freshValue });
     if (freshResult.kind !== 'traitOffer') throw new Error('expected a trait offer candidate');
     expect(
-      freshResult.result.callingCard?.[0]?.rerolledScreens?.map(
-        (screen) => screen.rarifiableOptionKeys,
-      ),
+      freshResult.result.callingCard?.rerolledScreens?.map((screen) => screen.rarifiableOptionKeys),
     ).toEqual([
       ['option1', 'option2', 'option3'],
       ['option1', 'option2', 'option3'],
@@ -944,11 +942,9 @@ describe('screen rerolls', () => {
       evaluate(finalClicked),
     ).evaluate({ kind: 'traitOffer', trait: forceApolloStartTrait, value: finalValue });
     if (finalResult.kind !== 'traitOffer') throw new Error('expected a trait offer candidate');
-    expect(finalResult.result.callingCard?.[0]?.invalidActionIndexes).toEqual([]);
+    expect(finalResult.result.callingCard?.invalidActionIndexes).toEqual([]);
     expect(
-      finalResult.result.callingCard?.[0]?.rerolledScreens?.map(
-        (screen) => screen.rarifiableOptionKeys,
-      ),
+      finalResult.result.callingCard?.rerolledScreens?.map((screen) => screen.rarifiableOptionKeys),
     ).toEqual([[], []]);
     // A candidate click on the second screen is judged and reported as settlement does.
     const extra = session.evaluate({

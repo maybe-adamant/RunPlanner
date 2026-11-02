@@ -43,7 +43,6 @@ function focused(
     result: Object.freeze({
       optionKey: 'option1' as const,
       supported,
-      branches: Object.freeze([]),
       evidence,
     }),
   });
@@ -62,7 +61,6 @@ function targetCandidate(traitKey: string, supported: boolean) {
     evaluation: Object.freeze({
       kind: 'traitAcquisitionTarget' as const,
       result: Object.freeze({
-        branchSupport: Object.freeze([supported]),
         findings: Object.freeze(
           supported
             ? []

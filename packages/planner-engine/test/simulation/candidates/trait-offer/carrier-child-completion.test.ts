@@ -39,7 +39,7 @@ describe('carrier-child completion choice', () => {
         ? { kind: 'traitOffer', result: { supported: true, findings: [] } }
         : {
             kind: 'concaveStone',
-            result: { branches: [{ required: true, residualOptionKeys: ['option2', 'option3'] }] },
+            result: { stone: { required: true, residualOptionKeys: ['option2', 'option3'] } },
           },
   } as unknown as ProjectCandidateSession;
   const procRow = (choice: CarrierChildChoice) => {

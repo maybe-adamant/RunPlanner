@@ -153,16 +153,13 @@ function evaluated(
   return evaluation.kind === 'traitOffer' ? evaluation : undefined;
 }
 
-/** Every branch replays every click of the offer. */
+/** The replay accepts every click of the offer. */
 function clicksHold(evaluation: EvaluatedTraitOfferCandidate | undefined): boolean {
-  const branches = evaluation?.result.callingCard ?? [];
+  const replay = evaluation?.result.callingCard;
   return (
-    branches.length > 0 &&
-    branches.every(
-      (branch) =>
-        branch.invalidActionIndexes.length === 0 &&
-        (branch.rerolledScreens ?? []).every((screen) => screen.invalidActionIndexes.length === 0),
-    )
+    replay !== undefined &&
+    replay.invalidActionIndexes.length === 0 &&
+    (replay.rerolledScreens ?? []).every((screen) => screen.invalidActionIndexes.length === 0)
   );
 }
 
@@ -265,12 +262,10 @@ export function rarifyRerolledScreens(
   for (let screen = screens.length - 1; screen >= 0; screen -= 1)
     while (unplacedCharges(context, roomIndex, value.giverKey) > 0) {
       const shown = current.rerolledScreens?.[screen];
-      const branches = evaluated(context, trait, current)?.result.callingCard ?? [];
-      if (shown === null || shown === undefined || branches.length === 0) break;
+      const replay = evaluated(context, trait, current)?.result.callingCard;
+      if (shown === null || shown === undefined || replay === undefined) break;
       const rarifiable = (key: TraitOptionKey) =>
-        branches.every((branch) =>
-          branch.rerolledScreens?.[screen]?.rarifiableOptionKeys.includes(key),
-        );
+        replay.rerolledScreens?.[screen]?.rarifiableOptionKeys.includes(key) === true;
       const key = OPTION_KEYS.find(rarifiable);
       if (key === undefined) break;
       const next: AuthoredTraitOfferTraits = {

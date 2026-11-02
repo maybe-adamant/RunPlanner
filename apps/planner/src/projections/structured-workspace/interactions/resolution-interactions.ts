@@ -442,7 +442,6 @@ export function bindResolutionInteractions(input: {
                       support: evaluated.result.eligibleTargetKeys.includes(traitKey)
                         ? ('possible' as const)
                         : ('impossible' as const),
-                      branchSupport: evaluated.result.branchSupport,
                       selected: traitKey === (targetTraitKey ?? undefined),
                       ...(evaluated.result.eligibleTargetKeys.includes(traitKey)
                         ? {}
@@ -506,7 +505,6 @@ export function bindResolutionInteractions(input: {
                       support: evaluated.result.eligibleBlessingKeys.includes(candidate)
                         ? ('possible' as const)
                         : ('impossible' as const),
-                      branchSupport: evaluated.result.branchSupport,
                       selected: candidate === (blessingKey ?? undefined),
                       ...(evaluated.result.eligibleBlessingKeys.includes(candidate)
                         ? {}
@@ -573,18 +571,13 @@ export function bindResolutionInteractions(input: {
                     (() => {
                       const targetIndex = evaluated.result.mutationTargetKeys.indexOf(traitKey);
                       const available = targetIndex >= 0;
-                      const branchSupported =
+                      const supported =
                         available && evaluated.result.branchSupport[targetIndex] === true;
                       return Object.freeze({
                         value: traitKey,
-                        support: branchSupported ? ('possible' as const) : ('impossible' as const),
-                        branchSupport: evaluated.result.branchSupport,
+                        support: supported ? ('possible' as const) : ('impossible' as const),
                         selected: traitKey === (targetTraitKey ?? undefined),
-                        ...(available
-                          ? branchSupported
-                            ? {}
-                            : { reason: 'branchDivergence' as const }
-                          : { reason: 'unavailable' as const }),
+                        ...(supported ? {} : { reason: 'unavailable' as const }),
                       });
                     })(),
                   ),

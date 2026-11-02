@@ -368,11 +368,10 @@ function withoutHoverRarify(
     .candidates()
     .evaluate({ kind: 'traitOffer', trait, value: withoutClicks(lowered) });
   if (retry.kind !== 'traitOffer') return undefined;
-  const branches = retry.result.callingCard ?? [];
+  const replay = retry.result.callingCard;
   const confirmed = lowering.every(
     (index) =>
-      branches.length > 0 &&
-      branches.every((branch) => branch.rarifiableOptionKeys.includes(OPTION_KEYS[index]!)) &&
+      replay?.rarifiableOptionKeys.includes(OPTION_KEYS[index]!) === true &&
       (index === selected || retry.result.assessments[index]?.legal === true),
   );
   return confirmed ? { value: lowered, lowered: lowering } : undefined;
@@ -443,9 +442,8 @@ function withRejectedRow(
       .candidates()
       .evaluate({ kind: 'traitOffer', trait, value: synthesized });
     if (evaluation.kind !== 'traitOffer') return value;
-    const rules = evaluation.result.chaosOfferRules ?? [];
-    // Only a screen every branch restricts held a blocked row.
-    if (rules.length === 0 || !rules.every((rule) => rule.rejectedBlockRequired)) return value;
+    // Only a restricted screen held a blocked row.
+    if (evaluation.result.chaosOfferRules?.rejectedBlockRequired !== true) return value;
     if (evaluation.result.supported && evaluation.result.findings.length === 0) return synthesized;
   }
   return value;

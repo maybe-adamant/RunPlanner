@@ -695,7 +695,7 @@ describe('execution-plan compiler and codec', () => {
           throw new Error(`missing trait draft ${semanticAddressKey(trait)}`);
         const candidate = session.evaluate({ kind: 'traitOffer', trait, value: draft });
         if (candidate.kind !== 'traitOffer') throw new Error('missing wheel candidate');
-        const rarity = candidate.result.branches[0]?.offerGenerationState?.rarity;
+        const rarity = candidate.result.state?.offerGenerationState?.rarity;
         if (rarity?.kind !== 'orderedChecks') throw new Error('missing wheel rarity state');
         return rarity.values.Rare;
       });

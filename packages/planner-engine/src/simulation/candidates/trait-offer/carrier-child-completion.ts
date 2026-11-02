@@ -210,12 +210,10 @@ export function completeTraitCarrierChild(
     case 'concaveStone': {
       const evaluated = domain(value);
       if (evaluated.kind !== 'concaveStone') return undefined;
-      const branches = evaluated.result.branches;
+      const stone = evaluated.result.stone;
       // Below a certain proc the Stone may stay unresolved.
-      if (!branches.some((branch) => branch.required)) return value;
-      const residual = (branches[0]?.residualOptionKeys ?? []).filter((key) =>
-        branches.every((branch) => branch.residualOptionKeys.includes(key)),
-      );
+      if (stone?.required !== true) return value;
+      const residual = stone.residualOptionKeys;
       const traitOf = (key: (typeof residual)[number]) =>
         value.options[optionIndex(key)]?.traitKey ?? '';
       const ordered = preferredFirst(

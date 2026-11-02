@@ -28,12 +28,15 @@ import { ordinaryRoutePosition } from '../support/route-position';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
-import { evaluateCirceResolutionDomain } from '../../src/simulation/candidates/trait-offer/query';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { createTraitHistoryState, evaluateReachedTraitOffer } from '../../src/simulation/traits';
-import { testRewardBranchesAtOrdinal, traitFrontierState } from '../support/simulation-state';
+import {
+  testRewardBranchesAtOrdinal,
+  traitFrontierState,
+  traitOfferContacts,
+} from '../support/simulation-state';
 
 const surface = createRouteAddress('Surface');
 const circeOwner = createTraitOfferAddress(
@@ -142,19 +145,17 @@ describe('Circe selected trait acquisition', () => {
     ]);
     const capability = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([[semanticAddressKey(circeOwner), [context]]]),
+      traitOfferContacts(new Map([[semanticAddressKey(circeOwner), [context]]])),
     ).at(circeOwner);
     if (capability === undefined) throw new Error('Circe candidate capability is missing');
     expect(
-      capability
-        .evaluateOffer(value, true)
-        .every((evaluation) => evaluation.assessments.every((assessment) => assessment.legal)),
+      capability.evaluateOffer(value, true).assessments.every((assessment) => assessment.legal),
     ).toBe(true);
-    expect(capability.circeResolution(value, 'option1')[0]).toMatchObject({
+    expect(capability.circeResolution(value, 'option1')).toMatchObject({
       effect: 'promoteArcana',
       outerAvailable: true,
     });
-    expect(capability.circeResolution(value, 'option2')[0]).toMatchObject({
+    expect(capability.circeResolution(value, 'option2')).toMatchObject({
       effect: 'disableFear',
       outerAvailable: true,
       vowKeys: ['EnemyDamageShrineUpgrade'],
@@ -588,96 +589,6 @@ describe('Circe selected trait acquisition', () => {
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow('distinct known Vow');
   });
 
-  it('retains divergent Arcana frontiers through trace grouping for atomic-domain rejection', () => {
-    const offer = circeOffer('option1', [
-      { traitKey: 'RandomArcanaTrait' },
-      { traitKey: 'CirceShrinkTrait' },
-      { traitKey: 'CirceEnlargeTrait' },
-    ]);
-    const heroic = activateTemporaryArcana(
-      catalog,
-      createArcanaFearState(catalog, createDefaultRouteLoadout(catalog)),
-      ['HealthRegen'],
-      { owner: circeOwner, sequence: 1 },
-      'Heroic',
-    );
-    if (!heroic.legal) throw new Error('Heroic Circe frontier fixture must be legal');
-    const initial = heroic.state;
-    const changed = activateTemporaryArcana(
-      catalog,
-      initial,
-      ['ChanneledCast'],
-      {
-        owner: circeOwner,
-        sequence: 2,
-      },
-      'Common',
-    );
-    if (!changed.legal) throw new Error('divergent Circe frontier fixture must be legal');
-    const history = createTraitHistoryState();
-    const context = Object.freeze({ resolvedProviderKey: 'Circe' });
-    const branches = [initial, changed.state].map((arcanaFear) => {
-      const branch = initializeTestRewardBranches(arcanaFear)[0]!;
-      return Object.freeze({
-        ...branch,
-        traitEvaluations: Object.freeze([
-          evaluateReachedTraitOffer(
-            catalog,
-            circeOwner.owner,
-            'selection',
-            offer,
-            traitFrontierState(history, { arcanaFear }),
-            context,
-            0,
-          ),
-        ]),
-      });
-    });
-    const products = selectedTraitOfferProducts(Object.freeze(branches));
-    const domains = createTraitOfferCandidateArtifacts(catalog, products.candidateContexts)
-      .at(circeOwner)
-      ?.circeResolution(offer, 'option1');
-    expect(domains).toHaveLength(2);
-    expect(domains?.map((domain) => domain.arcanaKeys.includes('ChanneledCast'))).toEqual([
-      true,
-      false,
-    ]);
-    const evaluated = evaluateCirceResolutionDomain(
-      catalog,
-      {} as never,
-      { route: {} } as never,
-      createTraitOfferCandidateArtifacts(catalog, products.candidateContexts),
-      {
-        kind: 'circeResolutionDomain',
-        trait: circeOwner,
-        value: offer,
-        optionKey: 'option1',
-      },
-    );
-    expect(evaluated.kind).toBe('circeResolutionDomain');
-    if (evaluated.kind !== 'circeResolutionDomain') throw new Error('missing Circe domain');
-    expect(evaluated.result.resultRarity).toBe('Epic');
-    expect(evaluated.result.activeArcanaByBranch).toEqual([
-      initial.arcana.active.map(({ key, rarity }) => ({ key, rarity })),
-      changed.state.arcana.active.map(({ key, rarity }) => ({ key, rarity })),
-    ]);
-    expect(evaluated.result.activeArcanaByBranch[0]).toContainEqual({
-      key: 'HealthRegen',
-      rarity: 'Heroic',
-    });
-    expect(evaluated.result.activeArcanaByBranch[1]).toContainEqual({
-      key: 'ChanneledCast',
-      rarity: 'Common',
-    });
-    expect(
-      evaluated.result.arcanaCandidates.find((candidate) => candidate.value === 'ChanneledCast'),
-    ).toMatchObject({
-      branchSupport: [true, false],
-      reason: 'branchDivergence',
-      support: 'impossible',
-    });
-  });
-
   it('offers a Fated Red Citrine no Fated-incompatible card', () => {
     const offer = circeOffer('option1', [
       { traitKey: 'RandomArcanaTrait' },
@@ -704,13 +615,12 @@ describe('Circe selected trait acquisition', () => {
           ),
         ]),
       });
-      const [domain] =
-        createTraitOfferCandidateArtifacts(
-          catalog,
-          selectedTraitOfferProducts(Object.freeze([fated])).candidateContexts,
-        )
-          .at(circeOwner)
-          ?.circeResolution(offer, 'option1') ?? [];
+      const domain = createTraitOfferCandidateArtifacts(
+        catalog,
+        traitOfferContacts(selectedTraitOfferProducts(Object.freeze([fated])).candidateContexts),
+      )
+        .at(circeOwner)
+        ?.circeResolution(offer, 'option1');
       expect(domain?.effect).toBe('activateArcana');
       return domain?.arcanaKeys;
     };

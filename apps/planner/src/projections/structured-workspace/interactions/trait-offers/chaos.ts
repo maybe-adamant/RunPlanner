@@ -22,7 +22,6 @@ function chaosDomainFromCandidate(
     keys.map((key) => ({
       value: key,
       support: availableKeys.includes(key) ? ('possible' as const) : ('impossible' as const),
-      branchSupport: Object.freeze([availableKeys.includes(key)]),
       selected: key === selectedKey,
       ...(availableKeys.includes(key) ? {} : { reason: 'unavailable' as const }),
     }));
@@ -71,14 +70,14 @@ export function bindChaosOfferInteraction(input: {
   const { catalog, candidates, control } = input;
   if (control.giver.providerKind !== 'chaos') return undefined;
   const chaosDomainFor = (value: AuthoredChaosTraitOffer) => {
-    const candidate = candidates.chaosOfferDomain(control.address, value)[0];
+    const candidate = candidates.chaosOfferDomain(control.address, value);
     return candidate === undefined
       ? undefined
       : chaosDomainFromCandidate(candidate, catalog, value);
   };
   const chaosStartingDraft = (): AuthoredChaosTraitOffer | undefined => {
     if (control.giver.providerKind !== 'chaos') return undefined;
-    const candidate = candidates.chaosOfferDomain(control.address)[0];
+    const candidate = candidates.chaosOfferDomain(control.address);
     const firstBlessingKey = candidate?.blessingKeys[0];
     const firstOptions:
       readonly (AuthoredChaosTraitOffer['curseOptions'][number] | undefined)[] | undefined =

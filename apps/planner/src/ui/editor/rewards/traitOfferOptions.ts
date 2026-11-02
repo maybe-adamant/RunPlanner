@@ -16,9 +16,7 @@ export function circeUnavailableMessage(
     ? undefined
     : !domain.outerAvailable
       ? 'This Circe trait has no available outcome here.'
-      : !domain.branchAgreement
-        ? 'No outcome is supported across every route branch.'
-        : undefined;
+      : undefined;
 }
 
 export function replaceTraitOfferOption(

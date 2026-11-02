@@ -125,6 +125,78 @@ function branchListShape(value: unknown): unknown {
   return next;
 }
 
+const supportList = (support: unknown) => [support !== 'impossible'];
+const listOf = (value: unknown) => (value === undefined ? [] : [value]);
+
+/**
+ * The recorded candidate baseline published every trait-offer product per
+ * reached branch, with branch support lists and agreement flags. Each offer
+ * now answers at its one reached state; this maps those single products onto
+ * the recorded one-entry lists.
+ */
+function candidateBranchShape(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(candidateBranchShape);
+  if (!isPlain(value)) return value;
+  const next: Record<string, unknown> = {};
+  for (const key of Object.getOwnPropertyNames(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
+    Object.defineProperty(next, key, {
+      ...descriptor,
+      writable: true,
+      configurable: true,
+      value: candidateBranchShape(descriptor.value),
+    });
+  }
+  const result = next.result as Record<string, unknown> | undefined;
+  if (isPlain(result)) {
+    switch (value.kind) {
+      case 'traitOffer':
+        if ('assessments' in result && 'findings' in result) {
+          const shaped: Record<string, unknown> = { ...result };
+          shaped.branches = listOf(shaped.state);
+          delete shaped.state;
+          shaped.callingCard = listOf(shaped.callingCard);
+          shaped.concaveStone = listOf(shaped.concaveStone);
+          shaped.chaosOfferRules = listOf(shaped.chaosOfferRules);
+          next.result = shaped;
+        }
+        break;
+      case 'traitOfferFocusedOption':
+        next.result = {
+          ...result,
+          branches: [{ supported: result.supported, evidence: result.evidence }],
+        };
+        break;
+      case 'traitAcquisitionTarget':
+      case 'naturalSelectionResult':
+        next.result = { ...result, branchSupport: [result.supported] };
+        break;
+      case 'latestModelTargetsDomain':
+        next.result = { ...result, branchAgreement: true };
+        break;
+      case 'circeResolutionDomain': {
+        const { activeArcana, ...rest } = result;
+        next.result = { ...rest, activeArcanaByBranch: [activeArcana], branchAgreement: true };
+        break;
+      }
+      case 'ransomAssessment':
+        next.result = { assessments: [result.assessment], branchAgreement: true };
+        break;
+      case 'concaveStone':
+        next.result = { branches: listOf(result.stone) };
+        break;
+    }
+  }
+  if (
+    hasKeys(value, ['value', 'support', 'selected']) ||
+    hasKeys(value, ['value', 'support', 'selected', 'reason'])
+  )
+    next.branchSupport = supportList(value.support);
+  if ('option' in value && 'support' in value && 'targetRequired' in value)
+    next.branchSupport = supportList(value.support);
+  return next;
+}
+
 export function equivalenceProducts(entry: EquivalenceEntry): EquivalenceProducts {
   const project = entry.project();
   const assembly = simulateProjectAssembly(entry.catalog, project);
@@ -132,7 +204,15 @@ export function equivalenceProducts(entry: EquivalenceEntry): EquivalenceProduct
   const simulation = canonicalDigest(branchListShape(withoutGoldGuidance(assembly.evaluation)));
   const plan = planSection(entry, assembly);
   const session = createPreparedProjectCandidateSession(entry.catalog, assembly);
-  const candidates = canonicalDigest(probeCandidates(entry.catalog, project, session));
+  const candidates = canonicalDigest(
+    probeCandidates(entry.catalog, project, session).map((record) => ({
+      ...record,
+      outcome:
+        record.probe === 'chaosOfferDomain' && isPlain(record.outcome) && 'value' in record.outcome
+          ? { value: listOf(record.outcome.value) }
+          : candidateBranchShape(record.outcome),
+    })),
+  );
   return Object.freeze({
     simulation: { digest: simulation.root, canonical: simulation },
     plan,

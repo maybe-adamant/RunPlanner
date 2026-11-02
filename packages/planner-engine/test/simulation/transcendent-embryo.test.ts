@@ -720,7 +720,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       blessingKey: 'ChaosWeaponBlessing',
       rarity: 'Common',
       blessingValues: { damageBonus: 0.2 },
-    })[0];
+    });
     expect(
       domain?.curseOptions.every((option) => option.curseKeys.includes('ChaosMetaUpgradeCurse')),
     ).toBe(true);

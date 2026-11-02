@@ -190,49 +190,24 @@ export function TraitOfferEditorShell({
         : activeScreen === 'final'
           ? earlierScreenFixLine(markedScreens)
           : undefined);
+  const callingCard =
+    candidate?.evaluation.kind === 'traitOffer'
+      ? candidate.evaluation.result.callingCard
+      : undefined;
   // Calling Card replay of the final screen, or of one earlier screen.
-  const callingCardScreens = (screen: ScreenTab) =>
-    candidate?.evaluation.kind !== 'traitOffer'
-      ? []
-      : (candidate.evaluation.result.callingCard ?? []).map((branch) =>
-          screen === 'final' ? branch : branch.rerolledScreens?.[screen],
-        );
+  const callingCardScreen = (screen: ScreenTab) =>
+    screen === 'final' ? callingCard : callingCard?.rerolledScreens?.[screen];
   const rarifySupported = (
     optionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
     screen: ScreenTab = 'final',
-  ): boolean => {
-    const branches = callingCardScreens(screen);
-    return (
-      branches.length > 0 &&
-      branches.every((branch) => branch?.rarifiableOptionKeys.includes(optionKey) === true)
-    );
-  };
-  // The keepsake Rarify draws on and its uses left after the draft's clicks, when every branch agrees.
-  const rarifySource = (() => {
-    const sources =
-      candidate?.evaluation.kind !== 'traitOffer'
-        ? []
-        : (candidate.evaluation.result.callingCard ?? []).map((branch) => branch.rarifySource);
-    const first = sources[0];
-    return first !== undefined &&
-      sources.every(
-        (source) =>
-          source?.keepsakeKey === first.keepsakeKey && source.remainingUses === first.remainingUses,
-      )
-      ? first
-      : undefined;
-  })();
+  ): boolean => callingCardScreen(screen)?.rarifiableOptionKeys.includes(optionKey) === true;
+  // The keepsake Rarify draws on and its uses left after the draft's clicks.
+  const rarifySource = callingCard?.rarifySource;
   const effectiveRarity = (
     optionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
     screen: ScreenTab = 'final',
-  ): TraitRarity | undefined => {
-    const values = callingCardScreens(screen)
-      .map((branch) => branch?.effectiveRarities[OPTION_KEYS.indexOf(optionKey)])
-      .filter((value): value is TraitRarity => value !== undefined);
-    return values.length > 0 && values.every((value) => value === values[0])
-      ? values[0]
-      : undefined;
-  };
+  ): TraitRarity | undefined =>
+    callingCardScreen(screen)?.effectiveRarities[OPTION_KEYS.indexOf(optionKey)];
   const spellOffer = interaction.giver.providerKind === 'spell';
   const rejectedRules =
     candidate?.evaluation.kind === 'traitOffer'

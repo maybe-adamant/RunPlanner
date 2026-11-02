@@ -266,7 +266,7 @@ describe('Chaos paired-trait history', () => {
         ).composition.legal,
       ).toBe(routeKey !== 'Dream');
       expect(
-        capability.chaosOfferDomain()[0]?.availableBlessingKeys.includes('ChaosHarvestBlessing'),
+        capability.chaosOfferDomain()?.availableBlessingKeys.includes('ChaosHarvestBlessing'),
       ).toBe(routeKey !== 'Dream');
     },
   );
@@ -820,13 +820,13 @@ describe('Chaos paired-trait history', () => {
         ]),
       ),
     ).at(address);
-    const domain = capability?.chaosOfferDomain(common)[0];
+    const domain = capability?.chaosOfferDomain(common);
     expect(domain?.rarities).toEqual(['Rare', 'Epic']);
-    expect(capability?.evaluateOffer(common, true)[0]?.assessments).toContainEqual(
+    expect(capability?.evaluateOffer(common, true)?.assessments).toContainEqual(
       expect.objectContaining({ legal: false }),
     );
     const rare = chaos('ChaosNoMoneyCurse', 'ChaosElementalBlessing', 'Rare');
-    expect(capability?.evaluateOffer(rare, true)[0]?.assessments).toEqual([
+    expect(capability?.evaluateOffer(rare, true)?.assessments).toEqual([
       { legal: true, findings: [] },
     ]);
     expect(
@@ -1058,7 +1058,7 @@ describe('Chaos paired-trait history', () => {
         .filter((option) => option.rarity !== 'Rare')
         .every((option) => option.rarity === 'Common'),
     ).toBe(true);
-    expect(capability?.evaluateOffer(replacement, true)[0]?.offerGenerationState).toMatchObject({
+    expect(capability?.evaluateOffer(replacement, true)?.offerGenerationState).toMatchObject({
       rarity: { kind: 'fixed', rarity: 'Common' },
     });
 
@@ -1389,13 +1389,11 @@ describe('Chaos paired-trait history', () => {
     for (const count of [1, 2] as const) {
       expect(assess(count)).toEqual({
         composition: expect.objectContaining({ legal: true, findings: [] }),
-        rules: [
-          {
-            rejectedBlockRequired: false,
-            rejectedBlockableOptionKeys: [],
-            rejectedBlockNeedsRepair: false,
-          },
-        ],
+        rules: {
+          rejectedBlockRequired: false,
+          rejectedBlockableOptionKeys: [],
+          rejectedBlockNeedsRepair: false,
+        },
       });
     }
     expect(assess(2, Object.freeze({ ...screen(2), rejectedOptionKey: 'option2' }))).toEqual({
@@ -1403,13 +1401,11 @@ describe('Chaos paired-trait history', () => {
         legal: false,
         findings: [{ code: 'chaosRejectedBlockUnavailable', optionKey: 'option2' }],
       }),
-      rules: [
-        {
-          rejectedBlockRequired: false,
-          rejectedBlockableOptionKeys: [],
-          rejectedBlockNeedsRepair: true,
-        },
-      ],
+      rules: {
+        rejectedBlockRequired: false,
+        rejectedBlockableOptionKeys: [],
+        rejectedBlockNeedsRepair: true,
+      },
     });
 
     expect(assess(3)).toEqual({
@@ -1417,25 +1413,21 @@ describe('Chaos paired-trait history', () => {
         legal: false,
         findings: [{ code: 'chaosRejectedBlockMissing' }],
       }),
-      rules: [
-        {
-          rejectedBlockRequired: true,
-          rejectedBlockableOptionKeys: ['option2', 'option3'],
-          rejectedBlockNeedsRepair: true,
-        },
-      ],
+      rules: {
+        rejectedBlockRequired: true,
+        rejectedBlockableOptionKeys: ['option2', 'option3'],
+        rejectedBlockNeedsRepair: true,
+      },
     });
     expect(assess(3, Object.freeze({ ...screen(3), rejectedOptionKey: 'option3' }))).toEqual({
       composition: expect.objectContaining({ legal: true, findings: [] }),
-      rules: [
-        {
-          rejectedBlockRequired: true,
-          rejectedBlockableOptionKeys: ['option2', 'option3'],
-          rejectedBlockNeedsRepair: false,
-        },
-      ],
+      rules: {
+        rejectedBlockRequired: true,
+        rejectedBlockableOptionKeys: ['option2', 'option3'],
+        rejectedBlockNeedsRepair: false,
+      },
     });
-    expect(assess(3, Object.freeze({ ...screen(3), giverKey: 'SpellDrop' })).rules).toEqual([]);
+    expect(assess(3, Object.freeze({ ...screen(3), giverKey: 'SpellDrop' })).rules).toBeUndefined();
   });
 
   it('settles a two-option screen under Rejected without a blocked row', () => {

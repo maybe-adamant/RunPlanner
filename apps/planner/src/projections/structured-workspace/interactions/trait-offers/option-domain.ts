@@ -141,19 +141,15 @@ export function bindTraitOfferOptionDomain(input: {
                       catalog.arcanaCards.byKey[key]?.label ?? key;
                     const vowLabel = (key: string) => catalog.fearVows.byKey[key]?.label ?? key;
                     return Object.freeze({
-                      arcanaCards: catalog.arcanaCards.values.map((card) => {
-                        const rarities = new Set(
-                          result.activeArcanaByBranch.map(
-                            (active) =>
-                              active.find((entry) => entry.key === card.key)?.rarity ?? null,
-                          ),
-                        );
-                        return Object.freeze({
+                      arcanaCards: catalog.arcanaCards.values.map((card) =>
+                        Object.freeze({
                           key: card.key,
                           label: card.label,
-                          rarity: rarities.size === 1 ? [...rarities][0]! : 'mixed',
-                        });
-                      }),
+                          rarity:
+                            result.activeArcana.find((entry) => entry.key === card.key)?.rarity ??
+                            null,
+                        }),
+                      ),
                       arcanaPicker: projectDirectTraitOutcomePicker(
                         result.arcanaCandidates,
                         arcanaLabel,
@@ -186,7 +182,6 @@ export function bindTraitOfferOptionDomain(input: {
                           (key) => key,
                         );
                       },
-                      branchAgreement: result.branchAgreement,
                       resultRarity: result.resultRarity,
                       effect: result.effect,
                       outerAvailable: result.outerAvailable,
@@ -278,7 +273,6 @@ export function bindTraitOfferOptionDomain(input: {
                               support: candidate.result.supported
                                 ? ('possible' as const)
                                 : ('impossible' as const),
-                              branchSupport: candidate.result.branchSupport,
                               selected:
                                 candidate.result.traitKey ===
                                 offer.options[optionIndex(child.optionKey)]?.targetTraitKey,
@@ -317,7 +311,6 @@ export function bindTraitOfferOptionDomain(input: {
                           support: candidate.result.supported
                             ? ('possible' as const)
                             : ('impossible' as const),
-                          branchSupport: candidate.result.branchSupport,
                           selected: false,
                         }),
                       );
@@ -339,7 +332,6 @@ export function bindTraitOfferOptionDomain(input: {
                       );
                       return Object.freeze({
                         requiredCount: evaluated.result.requiredCount,
-                        branchAgreement: evaluated.result.branchAgreement,
                         hammers: Object.freeze(hammers),
                       });
                     },

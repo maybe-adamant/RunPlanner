@@ -39,7 +39,6 @@ describe('route trait projection', () => {
         kind: 'traitOffer',
         result: {
           supported: true,
-          branches: [],
           assessments: [],
           findings: [],
           persephoneLevelBonusMaximums: [5, undefined, undefined],
@@ -66,7 +65,7 @@ describe('route trait projection', () => {
     expect(feedback.options[1]).not.toHaveProperty('persephoneLevelRolls');
   });
 
-  it('deduplicates equivalent offer states while preserving distinct branch tables', () => {
+  it('presents the offer generation state as its ordered rarity checks', () => {
     const offer: AuthoredTraitOfferTraits = {
       kind: 'traits',
       giverKey: 'Apollo',
@@ -90,7 +89,7 @@ describe('route trait projection', () => {
         rollOrder: Object.freeze(['Common', 'Rare', 'Epic', 'Duo', 'Legendary'] as const),
       }),
     });
-    const branch = (offerGenerationState: TraitOfferGenerationState) =>
+    const candidateState = (offerGenerationState: TraitOfferGenerationState) =>
       Object.freeze({
         assessments: Object.freeze([]),
         composition: Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) }),
@@ -106,16 +105,7 @@ describe('route trait projection', () => {
         kind: 'traitOffer',
         result: {
           supported: true,
-          branches: [
-            branch(baseState),
-            branch(baseState),
-            branch(
-              Object.freeze({
-                ...baseState,
-                rarity: Object.freeze({ kind: 'fixed' as const, rarity: 'Common' as const }),
-              }),
-            ),
-          ],
+          state: candidateState(baseState),
           assessments: [],
           findings: [],
           persephoneLevelBonusMaximums: [],
@@ -126,8 +116,7 @@ describe('route trait projection', () => {
       },
     });
 
-    expect(presentation?.states).toHaveLength(2);
-    expect(presentation?.states[0]).toMatchObject({
+    expect(presentation).toMatchObject({
       rarity: {
         kind: 'orderedChecks',
         checks: [
@@ -137,9 +126,6 @@ describe('route trait projection', () => {
           { label: 'Legendary', value: '10%' },
         ],
       },
-    });
-    expect(presentation?.states[1]).toMatchObject({
-      rarity: { kind: 'fixed', rarity: 'Common' },
     });
   });
 
@@ -250,7 +236,6 @@ describe('route trait projection', () => {
         kind: 'traitOffer',
         result: {
           supported: false,
-          branches: [],
           persephoneLevelBonusMaximums: [],
           persephoneBaseLevels: [],
           jeweledPomLevels: [],
@@ -370,7 +355,6 @@ describe('route trait projection', () => {
         kind: 'traitOffer',
         result: {
           supported: false,
-          branches: [],
           persephoneLevelBonusMaximums: [],
           persephoneBaseLevels: [],
           jeweledPomLevels: [],
@@ -413,7 +397,6 @@ describe('route trait projection', () => {
             kind: 'traitOffer',
             result: {
               supported: false,
-              branches: [],
               persephoneLevelBonusMaximums: [],
               persephoneBaseLevels: [],
               jeweledPomLevels: [],
@@ -478,33 +461,31 @@ describe('route trait projection', () => {
         kind: 'traitOffer' as const,
         result: {
           supported: true,
-          branches: [
-            {
-              assessments: [],
-              composition: {} as never,
-              persephoneLevelBonusMaximums: [],
-              persephoneBaseLevels: [],
-              jeweledPomLevels: [],
-              effectiveLevels: [],
-              rerolledScreens: [
-                {
-                  screen: 0,
-                  missing: false,
-                  assessments: [{ legal: true, findings: [], replacementTransition: transition }],
-                  levelResolutions: [
-                    {
-                      effectiveLevel: 3,
-                      persephoneLevelBonusMaximum: 2,
-                      persephoneBaseLevel: 1,
-                      findings: [],
-                    },
-                  ],
-                  composition: {} as never,
-                  // Only the rows' assessments matter to the preview.
-                } as never,
-              ],
-            },
-          ],
+          state: {
+            assessments: [],
+            composition: {} as never,
+            persephoneLevelBonusMaximums: [],
+            persephoneBaseLevels: [],
+            jeweledPomLevels: [],
+            effectiveLevels: [],
+            rerolledScreens: [
+              {
+                screen: 0,
+                missing: false,
+                assessments: [{ legal: true, findings: [], replacementTransition: transition }],
+                levelResolutions: [
+                  {
+                    effectiveLevel: 3,
+                    persephoneLevelBonusMaximum: 2,
+                    persephoneBaseLevel: 1,
+                    findings: [],
+                  },
+                ],
+                composition: {} as never,
+                // Only the rows' assessments matter to the preview.
+              } as never,
+            ],
+          },
           persephoneLevelBonusMaximums: [],
           persephoneBaseLevels: [],
           jeweledPomLevels: [],
@@ -541,7 +522,6 @@ describe('route trait projection', () => {
         kind: 'traitOffer',
         result: {
           supported: false,
-          branches: [],
           persephoneLevelBonusMaximums: [],
           persephoneBaseLevels: [],
           jeweledPomLevels: [],
@@ -576,7 +556,6 @@ describe('route trait projection', () => {
         kind: 'traitOffer',
         result: {
           supported: false,
-          branches: [],
           persephoneLevelBonusMaximums: [],
           persephoneBaseLevels: [],
           jeweledPomLevels: [],
@@ -608,7 +587,6 @@ describe('route trait projection', () => {
           kind: 'traitOffer',
           result: {
             supported: false,
-            branches: [],
             persephoneLevelBonusMaximums: [],
             persephoneBaseLevels: [],
             jeweledPomLevels: [],
@@ -659,7 +637,6 @@ describe('route trait projection', () => {
           kind: 'traitOffer',
           result: {
             supported: false,
-            branches: [],
             persephoneLevelBonusMaximums: [],
             persephoneBaseLevels: [],
             jeweledPomLevels: [],
