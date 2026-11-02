@@ -438,7 +438,8 @@ export function applyProducerRoleHistory(
         settlement,
       );
       mergeRewardFindingEmissions(findingEmissions, conversion.findingEmissions);
-      unresolvedArtificerReplacement ||= conversion.status === 'missing';
+      // A missing or unavailable conversion blocks the role; the source is not acquired.
+      unresolvedArtificerReplacement ||= conversion.status !== 'converted';
       for (const generated of conversion.generatedReplacements) {
         // The conversion spawns the replacement loot, whose options are built now.
         const spawned = Object.freeze({
@@ -475,7 +476,7 @@ export function applyProducerRoleHistory(
         }
         next.push(...replacementBranches);
       }
-      if (conversion.status !== 'unavailable') continue;
+      continue;
     }
     const concreteDeclaration =
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName];

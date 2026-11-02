@@ -190,7 +190,10 @@ export interface ArtificerGenerationProduct {
     readonly roles: readonly AcquisitionSettlementRole[];
   }[];
   readonly findingEmissions: readonly FindingRegionEntry[];
-  /** Unavailable conversions retain ordinary acquisition repair evidence. */
+  /**
+   * An unavailable conversion is one the game cannot make: it blocks at its
+   * role, and the source is neither converted nor acquired normally.
+   */
   readonly status: 'missing' | 'converted' | 'unavailable';
 }
 
@@ -236,8 +239,19 @@ export function generateArtificerReplacement(
     ];
   const runProgress = catalog.rewards.stores.byKey.RunProgress;
   const prepared = withBag(catalog, branch, 'RunProgress');
+  const arcanaFear = artificer.supported
+    ? consumeArtificerUse(catalog, branch.state.arcanaFear, {
+        owner: incoming.origin,
+        acquisitionRole: resolution.role,
+        sequence: resolution.historySequence,
+        roleOrdinal:
+          catalog.rewards.rewardTypes.byKey[
+            incoming.offer.rewardType
+          ]?.acquisitionRoles.values.findIndex((role) => role.key === resolution.role) ?? 0,
+      })
+    : undefined;
   if (
-    artificer.supported &&
+    arcanaFear !== undefined &&
     replacementLifecycle !== undefined &&
     runProgress !== undefined &&
     prepared !== undefined
@@ -251,28 +265,6 @@ export function generateArtificerReplacement(
       { ineligibleRewardTypes: new Set(['Devotion', 'SpellDrop']) },
     );
     for (const bag of bags) {
-      const arcanaFear = consumeArtificerUse(catalog, branch.state.arcanaFear, {
-        owner: incoming.origin,
-        acquisitionRole: resolution.role,
-        sequence: resolution.historySequence,
-        roleOrdinal:
-          catalog.rewards.rewardTypes.byKey[
-            incoming.offer.rewardType
-          ]?.acquisitionRoles.values.findIndex((role) => role.key === resolution.role) ?? 0,
-      });
-      if (arcanaFear === undefined) {
-        addRewardFinding(
-          findingEmissions,
-          rewardFinding(
-            'artificerConversionUnavailable',
-            createAcquisitionRoleAddress(incoming.origin, resolution.role),
-            { ...artificer.evidence, replacement: offerEvidence(artificerReplacement.offer) },
-          ),
-          atomicRegion,
-          findingChronology ?? historyChronology(resolution.historySequence),
-        );
-        continue;
-      }
       const generatedHistory = applyOfferProjection(
         catalog.rewards,
         prepared.branch.state.rewardHistory,
@@ -357,7 +349,9 @@ export function generateArtificerReplacement(
   addRewardFinding(
     findingEmissions,
     rewardFinding(
-      artificer.supported ? 'artificerReplacementUnavailable' : 'artificerConversionUnavailable',
+      arcanaFear !== undefined
+        ? 'artificerReplacementUnavailable'
+        : 'artificerConversionUnavailable',
       createAcquisitionRoleAddress(incoming.origin, resolution.role),
       { ...artificer.evidence, replacement: offerEvidence(artificerReplacement.offer) },
     ),

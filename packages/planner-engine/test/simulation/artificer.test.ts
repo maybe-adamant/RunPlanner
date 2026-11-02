@@ -20,6 +20,23 @@ import {
   type RewardKernelFacts,
 } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
+import {
+  applyProjectCommand,
+  type ProjectCommand,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
+  createPreparedProjectCandidateSession,
+  settleProjectEdit,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestArtificerReplacement,
+  createCompleteFGProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
@@ -678,15 +695,12 @@ describe('The Artificer', () => {
     expect(branch.events.filter((event) => event.kind === 'artificerConversion')).toHaveLength(3);
     expect(branch.state.bags.RunProgress).toBeDefined();
 
-    const exhausted = convert(branches, 4, 'MaxHealthDrop');
-    expect([...exhausted.findings.values()]).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          finding: expect.objectContaining({ code: 'artificerConversionUnavailable' }),
-        }),
-      ]),
-    );
-    expect(exhausted.product.branches[0]?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
+    // With no use left the game cannot convert, so the role blocks without acquiring its source.
+    const exhausted = convert(branches, 4, 'MaxHealthDrop', true);
+    expect([...exhausted.findings.values()].map((entry) => entry.finding.code)).toEqual([
+      'artificerConversionUnavailable',
+    ]);
+    expect(exhausted.product.branches).toEqual([]);
   });
 
   it('does not restore an exhausted uncollected RunProgress entry for a sibling conversion', () => {
@@ -741,20 +755,8 @@ describe('The Artificer', () => {
         }),
       ]),
     );
-    const branch = second.product.branches[0];
-    if (branch === undefined) throw new Error('Artificer sibling branch is missing');
-    expect(artificerStatus(catalog, branch.state.arcanaFear)).toMatchObject({
-      spent: 1,
-      remaining: 2,
-    });
-    expect(branch.state.bags.RunProgress?.remainingEntryCounts[maxHealthIndex]).toBe(0);
-    expect(branch.state.bags.RunProgress?.remainingEntryCounts[maxManaIndex]).toBe(1);
-    expect(branch.events.filter((event) => event.kind === 'artificerConversion')).toHaveLength(1);
-    expect(
-      branch.events.filter(
-        (event) => event.kind === 'rewardOffered' && event.offer.rewardType === 'MaxHealthDrop',
-      ),
-    ).toHaveLength(1);
+    // The spent entry is not restored: the conversion blocks its role with no branch.
+    expect(second.product.branches).toEqual([]);
 
     const frontier = second.product.roleFrontiers?.find(
       (candidate) =>
@@ -1123,14 +1125,8 @@ describe('The Artificer', () => {
         finding: expect.objectContaining({ code: 'artificerReplacementUnavailable' }),
       }),
     );
-    expect(denied.product.branches[0]?.state.rewardHistory.lootTypeHistory.WeaponUpgrade).toBe(1);
-    expect(
-      denied.product.branches[0]?.events.filter(
-        (event) =>
-          event.kind === 'concreteAcquisition' &&
-          event.acquisition.acquisition.gameName === 'WeaponUpgrade',
-      ),
-    ).toEqual([]);
+    // The game cannot make the conversion, so the role blocks: nothing is acquired.
+    expect(denied.product.branches).toEqual([]);
   });
 
   it('separates generation from a later dependent pickup checkpoint', () => {
@@ -1223,5 +1219,69 @@ describe('The Artificer', () => {
     expect(noScreen?.artificerReplacementCandidate?.rewardTypes).toEqual(
       screen?.artificerReplacementCandidate?.rewardTypes,
     );
+  });
+});
+
+describe('An authored Artificer conversion the game cannot make', () => {
+  const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
+  const settle = (project: ProjectDocument, command: ProjectCommand) =>
+    settleProjectEdit({ catalog, before: evaluate(project), command, evaluate }).assembly;
+  const occurrenceId = goldenFOccurrenceId(1, 1);
+  const role = createAcquisitionRoleAddress(
+    createIncomingRewardAddress(goldenFBiome, occurrenceId),
+    'self',
+  );
+  const arcana = (withArtificer: boolean): ProjectCommand => ({
+    kind: 'ReplaceManualArcanaSelection',
+    route: { kind: 'route', routeKey: 'Underworld' },
+    arcanaKeys: [
+      'ChanneledCast',
+      'HealthRegen',
+      'BonusDodge',
+      ...(withArtificer ? ['MetaToRunUpgrade'] : []),
+    ],
+  });
+  const actions = (project: ProjectDocument) =>
+    project.route.biomes[0]!.topology!.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === occurrenceId,
+    )!.roomActions.order;
+  const blockedAt = (assembly: ReturnType<typeof evaluate>) => {
+    const biome = assembly.evaluation.route!.biomes[0]!;
+    return 'coverage' in biome && biome.coverage.kind === 'prefix'
+      ? biome.coverage.blockedAt
+      : undefined;
+  };
+
+  /** The F biome alone, converting the first room's reward into a Zeus Boon. */
+  function converted(): ProjectDocument {
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, arcana(true));
+    project = authorTestArtificerReplacement(project, catalog, role, {
+      offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+      traitOffersByAcquisitionRole: { source: null },
+      dispositionByAcquisitionRole: { source: { kind: 'normal' } },
+    } as never);
+    project = authorLegalTraitOffers(project);
+    return { ...project, route: { ...project.route, biomes: project.route.biomes.slice(0, 1) } };
+  }
+
+  it('keeps its rows, blocks at its role and settles again once the Arcana returns', () => {
+    const project = converted();
+    expect(evaluate(project).evaluation.findings).toEqual([]);
+    const disabled = settle(project, arcana(false));
+    expect(actions(disabled.project)).toEqual(actions(project));
+    expect(disabled.evaluation.findings.map((finding) => finding.code)).toEqual([
+      'artificerConversionUnavailable',
+    ]);
+    expect(blockedAt(disabled)).toEqual(role);
+    // The role's disposition stays repairable at the block.
+    expect(
+      createPreparedProjectCandidateSession(catalog, disabled).evaluate({
+        kind: 'acquisitionConversion',
+        acquisition: role,
+      }),
+    ).toMatchObject({ kind: 'acquisitionConversion', result: { artificerSupported: false } });
+    const restored = settle(disabled.project, arcana(true));
+    expect(restored.project).toEqual(project);
+    expect(restored.evaluation.findings).toEqual([]);
   });
 });

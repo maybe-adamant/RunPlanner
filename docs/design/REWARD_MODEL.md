@@ -1138,6 +1138,10 @@ folding its acquisition history. The complete replacement remains a separate
 source-owned entry and reaches this same concrete-acquisition fold only at its
 later required or optional checkpoint, within the declaration-owned lifecycle
 window. No pending registry, private order, or second bag transition exists.
+A conversion the game cannot make, with no usable Artificer, an ineligible
+source or no reachable replacement entry, blocks at its role: the source is
+neither converted nor acquired normally, and the authored disposition and
+replacement stay for repair.
 
 A retained Sea Star consumable/resource duplicate keeps the exact source
 participation, producer-lifecycle conversion capabilities, and concrete
