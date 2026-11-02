@@ -1,5 +1,6 @@
 import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
 import type { Catalog, InRunTraitRarity } from '../../catalog-schema';
+import { acquisitionOrdinalValue, type TraitPickupDeclaration } from '../../catalog-schema/traits';
 import {
   resolveAcquisitionRole,
   type MaxStatGrant,
@@ -85,6 +86,56 @@ export function resolveProducedMaxStatGrant(
   )
     return Object.freeze({ stat: runProgress.stat, amount: runProgress.amount });
   return acquisition?.maxStatGrant;
+}
+
+/**
+ * The held trait whose dropped pickups include `entryKey` under this producer,
+ * with the acquisition ordinal its ordinal-scaled amounts read.
+ */
+export function producingTraitPickup(
+  catalog: Catalog,
+  traitHistory: TraitHistoryState,
+  producerLifecycleKey: string,
+  entryKey: string | undefined,
+): { readonly pickup: TraitPickupDeclaration; readonly acquisitionOrdinal: number } | undefined {
+  if (entryKey === undefined) return undefined;
+  for (const equipped of Object.values(traitHistory.equippedTraits)) {
+    const disposition = catalog.traits.byKey[equipped.traitKey]?.selectedDisposition;
+    if (
+      disposition?.kind !== 'producePickups' ||
+      disposition.producerLifecycleKey !== producerLifecycleKey
+    )
+      continue;
+    const pickup = disposition.pickups.find((candidate) => candidate.key === entryKey);
+    if (pickup !== undefined)
+      return {
+        pickup,
+        acquisitionOrdinal: Math.min(Math.max(equipped.acquisitionOrdinal ?? 1, 1), 4),
+      };
+  }
+  return undefined;
+}
+
+/**
+ * Rerolls one collected object adds to the pool: its producing trait's amount
+ * at that trait's acquisition ordinal, else the declaration's `AddRerolls`.
+ */
+export function resolveProducedRerollGrant(
+  catalog: Catalog,
+  traitHistory: TraitHistoryState,
+  acquisitionGameName: string,
+  producerLifecycleKey: string,
+  entryKey: string | undefined,
+): number {
+  const base = catalog.rewards.acquisitions.byKey[acquisitionGameName]?.rerollGrant;
+  if (base === undefined) return 0;
+  const produced = producingTraitPickup(catalog, traitHistory, producerLifecycleKey, entryKey);
+  return produced?.pickup.rerollsByAcquisitionOrdinal === undefined
+    ? base
+    : acquisitionOrdinalValue(
+        produced.pickup.rerollsByAcquisitionOrdinal,
+        produced.acquisitionOrdinal,
+      );
 }
 
 /** One spawned object whose resource roles store their amount now. */

@@ -32,6 +32,7 @@ import { keepsakeRankForEquip } from '../../keepsakes/state';
 import type { CanonicalAuthoredRoom } from '../../materialization';
 import type { RoomActionRow } from '../../room-actions';
 import type { SimulationState } from '../../state/model';
+import { producingTraitPickup } from '../../state/pending-resource-pickups';
 import type { RewardBranchState } from '../branch-primitives';
 import type { RewardEvent } from '../model';
 import type {
@@ -335,21 +336,13 @@ function currencyGold(
   producerLifecycleKey: string,
   entryKey: string | undefined,
 ): number | undefined {
-  for (const equipped of Object.values(state.traitHistory.equippedTraits)) {
-    const disposition = catalog.traits.byKey[equipped.traitKey]?.selectedDisposition;
-    if (
-      disposition?.kind !== 'producePickups' ||
-      disposition.producerLifecycleKey !== producerLifecycleKey
-    )
-      continue;
-    const pickup = disposition.pickups.find(
-      (candidate) => candidate.key === entryKey && candidate.goldByAcquisitionOrdinal !== undefined,
-    );
-    const ordinal = Math.min(Math.max(equipped.acquisitionOrdinal ?? 1, 1), 4);
-    if (pickup?.goldByAcquisitionOrdinal !== undefined)
-      return pickup.goldByAcquisitionOrdinal[ordinal - 1];
-  }
-  return undefined;
+  const produced = producingTraitPickup(
+    catalog,
+    state.traitHistory,
+    producerLifecycleKey,
+    entryKey,
+  );
+  return produced?.pickup.goldByAcquisitionOrdinal?.[produced.acquisitionOrdinal - 1];
 }
 
 /** Native spawns a selected trait's coins (`GiveRandomConsumables`) as its screen closes. */

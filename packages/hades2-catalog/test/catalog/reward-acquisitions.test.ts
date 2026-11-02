@@ -191,6 +191,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
         'MetaCurrencyBigDrop',
         'MetaCurrencyDrop',
         'MinorTalentDrop',
+        'RerollDrop',
         'RoomMoneyDrop',
         'RoomMoneySmallDrop',
         'RoomMoneyTinyDrop',
@@ -544,6 +545,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       ElementalBoost: 'Elemental Essence',
       StoreRewardRandomStack: 'Pom Slice',
       LastStandDrop: 'Death Defiance',
+      RerollDrop: 'Reroll',
       ChaosWeaponUpgrade: 'Anvil of Fates',
       InfernalContractBoon: 'Champion of Elysium',
       TrialUpgrade: 'Chaos Blessing',
@@ -787,6 +789,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       'ElementalBoost',
       'StoreRewardRandomStack',
       'LastStandDrop',
+      'RerollDrop',
       'LastStandShopItem',
       'ArmorBoostStore',
       'EmptyMaxHealthShopItem',
@@ -808,7 +811,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       'CardUpgradePointsDrop',
       'CharonPointsDrop',
     ]);
-    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(61);
+    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(62);
   });
 
   it('rejects incomplete source contracts at catalog construction', () => {

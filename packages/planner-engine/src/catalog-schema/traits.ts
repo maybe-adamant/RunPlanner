@@ -382,6 +382,8 @@ export interface TraitPickupDeclaration {
   readonly excludeStorySource?: true;
   /** Gold this `Currency` pickup pays before the money multiplier, by the trait's acquisition ordinal. */
   readonly goldByAcquisitionOrdinal?: TraitAcquisitionOrdinalValues;
+  /** Rerolls this `RerollDrop` pickup adds when collected (`AddRerolls`), by the trait's acquisition ordinal. */
+  readonly rerollsByAcquisitionOrdinal?: TraitAcquisitionOrdinalValues;
 }
 
 /** The only acquisition-ordinal matrix supported for the audited NPC effects. */
@@ -727,11 +729,6 @@ export interface TraitDeclaration {
     /** Dream menus grant the entered-biome rarity; ordinary routes reach only the first. */
     readonly maxManaByAcquisitionOrdinal: TraitAcquisitionOrdinalValues;
   };
-  /**
-   * Source `RerollDrop` `AddRerolls`: rerolls the dropped pickup adds to the
-   * pool when collected. Dream menus grant the entered-biome rarity.
-   */
-  readonly rerollPickupByAcquisitionOrdinal?: TraitAcquisitionOrdinalValues;
   /**
    * Source `GrantRandomMaxHealth`: an integer max-health roll from the acquired
    * rarity's minimum through that minimum plus `width`, equal at every rarity.

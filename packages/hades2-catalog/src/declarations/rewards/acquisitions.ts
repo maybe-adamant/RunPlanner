@@ -53,6 +53,7 @@ const CAN_DUPLICATE = new Set<string>([
   'ElementalBoost',
   'StoreRewardRandomStack',
   'LastStandDrop',
+  'RerollDrop',
   'LastStandShopItem',
   'EmptyMaxHealthShopItem',
   'ArmorBoostStore',
@@ -403,6 +404,13 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
     goldifyValue: 400,
+  },
+  // ConsumableData `AddRerolls`; a producer may declare its own amount.
+  {
+    gameName: 'RerollDrop',
+    kind: 'consumable',
+    historyProjection: 'consumableAndUse',
+    rerollGrant: 1,
   },
   // Stygian Well consumables, acquired under their own names when purchased.
   { gameName: 'LastStandShopItem', kind: 'consumable', historyProjection: 'consumableAndUse' },

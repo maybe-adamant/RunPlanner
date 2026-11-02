@@ -127,33 +127,61 @@ describe('trait dispositions and requirements compiler owner', () => {
     ).toThrow('must declare four acquisition ordinals');
   });
 
-  it("declares the reroll pickup only on Fates' Trimmings", () => {
+  it("declares the reroll drop's amounts only on Fates' Trimmings' RerollDrop pickup", () => {
     expect(
-      catalog.traits.values
-        .filter((trait) => trait.rerollPickupByAcquisitionOrdinal !== undefined)
-        .map((trait) => [trait.key, trait.rerollPickupByAcquisitionOrdinal]),
-    ).toEqual([['NarcissusF', [2, 2, 3, 5]]]);
-    const withPickup = (key: string, amounts: unknown) =>
+      catalog.traits.values.flatMap((trait) =>
+        trait.selectedDisposition?.kind !== 'producePickups'
+          ? []
+          : trait.selectedDisposition.pickups
+              .filter((pickup) => pickup.rerollsByAcquisitionOrdinal !== undefined)
+              .map((pickup) => [trait.key, pickup.key, pickup.rerollsByAcquisitionOrdinal]),
+      ),
+    ).toEqual([['NarcissusF', 'reroll', [2, 2, 3, 5]]]);
+    expect(catalog.rewards.acquisitions.byKey.RerollDrop).toMatchObject({
+      kind: 'consumable',
+      rerollGrant: 1,
+      canDuplicate: true,
+    });
+    const withPickup = (pickup: Record<string, unknown>) =>
       createCatalog({
         ...declarations,
         traitCatalog: {
           ...declarations.traitCatalog,
           traits: declarations.traitCatalog.traits.map((trait) =>
-            trait.key === key
-              ? ({ ...trait, rerollPickupByAcquisitionOrdinal: amounts } as RawTraitDeclaration)
+            trait.key === 'NarcissusF'
+              ? ({
+                  ...trait,
+                  selectedDisposition: {
+                    kind: 'producePickups',
+                    producerLifecycleKey: 'NarcissusPickup',
+                    pickups: [pickup],
+                  },
+                } as unknown as RawTraitDeclaration)
               : trait,
           ),
         },
       });
-    expect(() => withPickup('ZeusWeaponBoon', [2, 2, 3, 5])).toThrow(
-      'is declared only for rarityless traits',
-    );
-    expect(() => withPickup('NarcissusF', [2, 2, 3])).toThrow(
-      'must declare four acquisition ordinals',
-    );
-    expect(() => withPickup('NarcissusF', [2, 0, 3, 5])).toThrow(
-      'rerollPickupByAcquisitionOrdinal[1]',
-    );
+    expect(() =>
+      withPickup({
+        key: 'reroll',
+        rewardType: 'Currency',
+        rerollsByAcquisitionOrdinal: [2, 2, 3, 5],
+      }),
+    ).toThrow('must give a RerollDrop pickup four ordinal amounts');
+    expect(() =>
+      withPickup({
+        key: 'reroll',
+        rewardType: 'RerollDrop',
+        rerollsByAcquisitionOrdinal: [2, 2, 3],
+      }),
+    ).toThrow('must give a RerollDrop pickup four ordinal amounts');
+    expect(() =>
+      withPickup({
+        key: 'reroll',
+        rewardType: 'RerollDrop',
+        rerollsByAcquisitionOrdinal: [2, 0, 3, 5],
+      }),
+    ).toThrow('rerollsByAcquisitionOrdinal[1]');
   });
 
   it('declares lasting trait armor by rarity, Pom level and Dream acquisition ordinal', () => {
@@ -536,7 +564,12 @@ describe('trait dispositions and requirements compiler owner', () => {
           { key: 'maxHealth', rewardType: 'MaxHealthDrop' },
         ]),
       }),
-      F: { kind: 'equip' },
+      F: expect.objectContaining({
+        kind: 'producePickups',
+        pickups: [
+          { key: 'reroll', rewardType: 'RerollDrop', rerollsByAcquisitionOrdinal: [2, 2, 3, 5] },
+        ],
+      }),
       G: expect.objectContaining({
         kind: 'producePickups',
         pickups: expect.arrayContaining([

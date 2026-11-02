@@ -228,13 +228,22 @@ function addRerollGrant(pool: RerollPoolState, amount: number): RerollPoolState 
   return amount === 0 ? pool : Object.freeze({ ...pool, granted: pool.granted + amount });
 }
 
-/** The pool's remainder: Arcana grants and acquired reroll drops, less every spend. */
-export function rerollPoolRemaining(state: {
-  readonly arcanaFear: ArcanaFearState;
-  readonly traitHistory: { readonly rerollPickupGrant?: number };
-}): number {
+/** The pool's remainder: Arcana grants and collected reroll drops, less every spend. */
+export function rerollPoolRemaining(state: { readonly arcanaFear: ArcanaFearState }): number {
   const pool = state.arcanaFear.arcana.rerollPool;
-  return pool.granted + (state.traitHistory.rerollPickupGrant ?? 0) - pool.spent;
+  return pool.granted - pool.spent;
+}
+
+/** A collected reroll drop adds its rerolls to the pool (`AddRerolls`). */
+export function grantPickupRerolls(state: ArcanaFearState, amount: number): ArcanaFearState {
+  if (amount === 0) return state;
+  return Object.freeze({
+    ...state,
+    arcana: Object.freeze({
+      ...state.arcana,
+      rerollPool: addRerollGrant(state.arcana.rerollPool, amount),
+    }),
+  });
 }
 
 /** Records a spend; the remainder may go negative and the caller reports it. */

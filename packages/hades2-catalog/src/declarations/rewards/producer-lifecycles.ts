@@ -240,6 +240,7 @@ export const producerLifecycles = [
       'MetaCardPointsCommonDrop',
       'MemPointsCommonDrop',
       'MetaCurrencyDrop',
+      'RerollDrop',
     ],
     defaultLifecyclePoint: 'roomExit',
     overrides: [

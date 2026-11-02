@@ -267,6 +267,7 @@ describe('reward compiler acquisition and producer lifecycle normalizers', () =>
         'MetaCardPointsCommonDrop',
         'MemPointsCommonDrop',
         'MetaCurrencyDrop',
+        'RerollDrop',
       ].map((rewardType) => [
         rewardType,
         rewardType === 'BlindBoxLoot'

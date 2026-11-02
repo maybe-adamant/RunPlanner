@@ -429,6 +429,14 @@ export function normalizeAcquisitions(
                 `acquisitions[${index}].armorGrant`,
               ),
             }),
+        ...(acquisition.rerollGrant === undefined
+          ? {}
+          : {
+              rerollGrant: requirePositiveInteger(
+                acquisition.rerollGrant,
+                `acquisitions[${index}].rerollGrant`,
+              ),
+            }),
         ...(acquisition.runProgressMaxStatGrant === undefined
           ? {}
           : {

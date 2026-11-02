@@ -59,6 +59,7 @@ export const rewardTypes = [
   directReward('ElementalBoost', 'Elemental Essence', 'consumable'),
   directReward('StoreRewardRandomStack', 'Pom Slice', 'consumable'),
   directReward('LastStandDrop', 'Death Defiance', 'consumable'),
+  directReward('RerollDrop', 'Reroll', 'consumable'),
   directReward('ChaosWeaponUpgrade', 'Anvil of Fates', 'consumable'),
   directReward('InfernalContractBoon', 'Champion of Elysium', 'loot'),
   {

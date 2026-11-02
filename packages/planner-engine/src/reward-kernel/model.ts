@@ -106,6 +106,8 @@ export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddre
   readonly maxStatGrant?: MaxStatGrant;
   /** Source `AddArmor`: armor added to the hidden `MinorArmorBoon`. */
   readonly armorGrant?: number;
+  /** Source `AddRerolls`: rerolls added to the run's pool when collected, unless its producer declares its own. */
+  readonly rerollGrant?: number;
   /**
    * Source `RunProgress.PropertyChanges`: replaces `maxStatGrant` when a
    * run-progress-eligible producer spawns it on a route with the unlock.

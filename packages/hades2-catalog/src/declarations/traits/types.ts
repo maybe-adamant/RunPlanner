@@ -51,7 +51,6 @@ export interface RawTraitDeclaration {
     'supportsRankII'
   >;
   readonly roomsPerUpgradeGrowth?: TraitDeclaration['roomsPerUpgradeGrowth'];
-  readonly rerollPickupByAcquisitionOrdinal?: TraitDeclaration['rerollPickupByAcquisitionOrdinal'];
   /**
    * Source `RoomRewardBonus` with `SourceIsMultiplier`: each rarity scales the
    * base's excess over one by that rarity's `RarityLevels` multiplier.

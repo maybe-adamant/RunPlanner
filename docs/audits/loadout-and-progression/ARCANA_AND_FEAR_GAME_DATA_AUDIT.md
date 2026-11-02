@@ -246,9 +246,11 @@ applies. A mid-run grant (Judgment, the Crystal Figurine, Circe) adds the
 granted card's full count through `GrantMetaUpgradeRerolls`; a Circe rarity
 upgrade adds the difference. Permanent ranks stop at Epic, so Heroic comes only
 from a Circe rarity upgrade (Lapis Lazuli Insight) or grant. Narcissus's Fates' Trimmings
-(`NarcissusF`, offered only while one of the three cards is active) drops a
-reroll pickup worth 2, 2, 3 or 5 by its rarity (`RerollDrop` base 2 times 1,
-1, 1.5, 2.5; Common outside Dream) when collected. While Barren removes an
+(`NarcissusF`, offered only while one of the three cards is active) drops an
+optional `RerollDrop` beside its Fate Fabric that adds 2, 2, 3 or 5 rerolls by
+its rarity (`AddRerolls` 2 times 1, 1, 1.5, 2.5; Common outside Dream) when
+collected (`UseConsumableItem`); it inherits `CanDuplicate`, so a Sea Star
+duplicate adds them again. While Barren removes an
 enabling card's trait, its reroll kind is disabled; the pool is unchanged.
 
 Door, wheel, cage and Hub presses cost 1 each; the n-th reroll of one offer

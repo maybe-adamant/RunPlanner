@@ -101,9 +101,14 @@ export const narcissusTraits = [
         traitKeys: ['PanelRerollMetaUpgrade', 'RerollTradeOffMetaUpgrade', 'DoorRerollMetaUpgrade'],
       },
     ],
-    selectedDisposition: { kind: 'equip' },
-    // RerollDrop AddRerolls BaseValue 2 x rarity 1, 1, 1.5, 2.5.
-    rerollPickupByAcquisitionOrdinal: [2, 2, 3, 5],
+    selectedDisposition: {
+      kind: 'producePickups',
+      producerLifecycleKey: 'NarcissusPickup',
+      // TraitData_Narcissus.lua:283-286 RerollDrop AddRerolls 2 by rarity 1 / 1 / 1.5 / 2.5.
+      pickups: [
+        { key: 'reroll', rewardType: 'RerollDrop', rerollsByAcquisitionOrdinal: [2, 2, 3, 5] },
+      ],
+    },
   },
   {
     ...raritylessNpcTrait,

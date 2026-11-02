@@ -28,7 +28,7 @@ import {
   creditMaxStatGain,
   recordGodLootPickup,
 } from '../../../reward-kernel/history';
-import { consumeRoomRewardForfeit } from '../../arcana-fear';
+import { consumeRoomRewardForfeit, grantPickupRerolls } from '../../arcana-fear';
 import type { FindingChronology, FindingRegionEntry } from '../../finding-regions';
 import { bankPathPoints } from '../../hex-progress';
 import type { HexActivationContext } from '../../hex-activation';
@@ -87,6 +87,7 @@ import {
 import {
   collectPendingResourcePickup,
   resolveProducedMaxStatGrant,
+  resolveProducedRerollGrant,
   spawnPickups,
 } from '../../state/pending-resource-pickups';
 import {
@@ -582,10 +583,26 @@ export function applyProducerRoleHistory(
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.grantedTraitKey;
     const contributions =
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.elementContributions;
+    // A Sea Star duplicate is the same object used again, granting its source's rerolls.
+    const rerolls = resolveProducedRerollGrant(
+      catalog,
+      materializedBranch.state.traitHistory,
+      acquisition.acquisition.gameName,
+      incoming.producerLifecycleKey,
+      duplicateSource === undefined
+        ? settlement.entry.entryKey
+        : duplicateSource.sourceOwner.kind === 'acquisitionEntry'
+          ? duplicateSource.sourceOwner.entryKey
+          : undefined,
+    );
     let acquisitionBranch: RewardBranchState = Object.freeze({
       ...materializedBranch,
       state: replaceSimulationTraitHistory(
-        Object.freeze({ ...collected.state, rewardHistory: history }),
+        Object.freeze({
+          ...collected.state,
+          rewardHistory: history,
+          arcanaFear: grantPickupRerolls(collected.state.arcanaFear, rerolls),
+        }),
         acquisitionTraitHistory,
       ),
     });

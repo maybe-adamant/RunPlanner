@@ -347,18 +347,20 @@ export function normalizeSelectedDisposition(
       readonly excludeStorySource?: unknown;
       readonly minimumAcquisitionOrdinal?: unknown;
       readonly goldByAcquisitionOrdinal?: unknown;
+      readonly rerollsByAcquisitionOrdinal?: unknown;
     };
     if (
       Object.keys(entry).length !==
         2 +
           (entry.excludeStorySource === undefined ? 0 : 1) +
           (entry.minimumAcquisitionOrdinal === undefined ? 0 : 1) +
-          (entry.goldByAcquisitionOrdinal === undefined ? 0 : 1) ||
+          (entry.goldByAcquisitionOrdinal === undefined ? 0 : 1) +
+          (entry.rerollsByAcquisitionOrdinal === undefined ? 0 : 1) ||
       (entry.excludeStorySource !== undefined && entry.excludeStorySource !== true)
     )
       fail(
         `${path}.pickups[${index}]`,
-        'must contain key, rewardType, and optional minimum ordinal/excludeStorySource/gold',
+        'must contain key, rewardType, and optional minimum ordinal/excludeStorySource/gold/rerolls',
       );
     if (typeof entry.key !== 'string' || typeof entry.rewardType !== 'string')
       fail(`${path}.pickups[${index}]`, 'key and rewardType must be strings');
@@ -384,6 +386,29 @@ export function normalizeSelectedDisposition(
                   requirePositiveInteger(
                     amount as number,
                     `${path}.pickups[${index}].goldByAcquisitionOrdinal[${ordinal}]`,
+                  ),
+                ),
+              ) as unknown as readonly [number, number, number, number],
+            };
+          })()),
+      ...(entry.rerollsByAcquisitionOrdinal === undefined
+        ? {}
+        : (() => {
+            const rerolls = requireArray(
+              entry.rerollsByAcquisitionOrdinal,
+              `${path}.pickups[${index}].rerollsByAcquisitionOrdinal`,
+            );
+            if (entry.rewardType !== 'RerollDrop' || rerolls.length !== 4)
+              fail(
+                `${path}.pickups[${index}].rerollsByAcquisitionOrdinal`,
+                'must give a RerollDrop pickup four ordinal amounts',
+              );
+            return {
+              rerollsByAcquisitionOrdinal: Object.freeze(
+                rerolls.map((amount, ordinal) =>
+                  requirePositiveInteger(
+                    amount as number,
+                    `${path}.pickups[${index}].rerollsByAcquisitionOrdinal[${ordinal}]`,
                   ),
                 ),
               ) as unknown as readonly [number, number, number, number],

@@ -85,6 +85,8 @@ export interface RawConcreteAcquisitionDeclaration {
   readonly maxStatGrant?: MaxStatGrant;
   /** Source ConsumableData `AddArmor`. */
   readonly armorGrant?: number;
+  /** Source ConsumableData `AddRerolls`. */
+  readonly rerollGrant?: number;
   /** Source ConsumableData `RunProgress.PropertyChanges`, gated by its world upgrade. */
   readonly runProgressMaxStatGrant?: MaxStatGrant & {
     readonly excludedRouteKeys: readonly string[];

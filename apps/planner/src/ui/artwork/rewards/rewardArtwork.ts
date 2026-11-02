@@ -49,6 +49,7 @@ import iconStackUpgradeTriplePreview from './assets/StackUpgradeTriplePreview.we
 import iconStory from './assets/Story.webp';
 import iconWater from './assets/Water.webp';
 import iconZeus from './assets/Zeus.webp';
+import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
 
 /** Reward icons by catalog reward type; `null` marks a key with no icon yet. */
 export const rewardArtwork: Readonly<Record<string, string | null>> = {
@@ -97,6 +98,7 @@ export const rewardArtwork: Readonly<Record<string, string | null>> = {
   ElementalBoost: iconAllElements,
   StoreRewardRandomStack: iconPomSlice,
   LastStandDrop: iconKissOfStyx,
+  RerollDrop: rerollDieArtwork,
   ChaosWeaponUpgrade: iconAnvil,
   InfernalContractBoon: iconChampionOfElysium,
   TrialUpgrade: iconChaos,

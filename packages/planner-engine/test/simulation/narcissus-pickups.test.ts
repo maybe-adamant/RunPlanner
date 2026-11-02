@@ -58,11 +58,14 @@ import { createCompleteNProject } from '../authored-project/support/complete-n-p
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
+import { resolveProducedRerollGrant } from '../../src/simulation/state/pending-resource-pickups';
+import { foldTraitHistoryEvents } from '../../src/simulation/traits/history/fold';
 import {
   arcanaFearWithActive,
   testRewardBranchesAtOrdinal,
   traitFrontierState,
 } from '../support/simulation-state';
+import { withArcana, withGoldenUnderworldJudgments } from '../support/rerolls';
 
 function narcissusOccurrence(project: ProjectDocument) {
   const occurrence = project.route.biomes
@@ -210,6 +213,57 @@ describe('Narcissus pickup producer', () => {
         ).findings,
       ).toEqual([expect.objectContaining({ code: 'missingPrerequisite' })]);
     }
+  });
+
+  it('adds Fates’ Trimmings’ rerolls to the pool only when its reroll drop is collected', () => {
+    const withCard = withGoldenUnderworldJudgments(
+      withArcana(createCompleteFGProject(), ['DoorReroll']),
+    );
+    const taken = takeNarcissus(withCard, ['NarcissusF', 'NarcissusB', 'NarcissusC']);
+    const entry = pickupEntry(taken, 'reroll');
+    expect(
+      narcissusOccurrence(taken).roomActions.order.filter(
+        (reference) =>
+          reference.kind === 'interactAcquisitionEntry' &&
+          reference.siteKey === entry.site.pointKey,
+      ),
+    ).toEqual([
+      { kind: 'interactAcquisitionEntry', siteKey: entry.site.pointKey, entryKey: 'reroll' },
+    ]);
+    const granted = (project: ProjectDocument) => {
+      const g = evaluatedG(project);
+      expect(g.findings).toEqual([]);
+      return [
+        ...new Set(g.rewards.branches.map((branch) => branch.state.arcanaFear.arcana.rerollPool)),
+      ].map((pool) => pool.granted - pool.spent);
+    };
+    const [collected] = granted(taken);
+    const [skipped] = granted(withoutTraitDrops(taken));
+    expect(collected! - skipped!).toBe(2);
+  });
+
+  it('reads the reroll drop’s amount at its producing trait’s acquisition ordinal', () => {
+    const history = foldTraitHistoryEvents(catalog, []);
+    const at = (acquisitionOrdinal: number) =>
+      resolveProducedRerollGrant(
+        catalog,
+        {
+          ...history,
+          equippedTraits: {
+            NarcissusF: { traitKey: 'NarcissusF', acquisitionOrdinal } as never,
+          },
+        },
+        'RerollDrop',
+        'NarcissusPickup',
+        'reroll',
+      );
+    expect([1, 2, 3, 4].map(at)).toEqual([2, 2, 3, 5]);
+    expect(resolveProducedRerollGrant(catalog, history, 'RerollDrop', 'RoomReward', 'reroll')).toBe(
+      1,
+    );
+    expect(
+      resolveProducedRerollGrant(catalog, history, 'MaxManaDrop', 'NarcissusPickup', 'maxMana'),
+    ).toBe(0);
   });
 
   it('shares the reached Arcana state between Narcissus candidates and selected offer findings', () => {
