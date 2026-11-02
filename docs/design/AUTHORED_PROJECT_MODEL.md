@@ -724,7 +724,13 @@ acquisition entry only when its hidden source must be resolved on collection.
 Trait-generated and Sea Star duplicate sites are closed source-scoped site
 keys, not new site variants. A selected Quick Buck, Buried Treasure, or
 equipping Narcissus trait owns its exact generated entries after its normal
-trait acquisition. A Sea Star result owns at most one non-recursive duplicate
+trait acquisition. The command that takes such a trait also takes its optional
+same-room drops: their actions go right after the source acquisition (after
+any of its drops already in the order), or into the room-exit window for drops
+that settle there. Only drops the command newly makes active are added, so
+earlier drops keep their authored choice; clocked drops stay manual, and a
+whole-route replacement keeps exactly the pickups it carries. Removing or
+replacing the source removes its drops with it. A Sea Star result owns at most one non-recursive duplicate
 entry at its normal source acquisition role; toggling that result adds or
 removes the entry and its ordinary Room Action as one semantic command and one
 undo step. A retained result that becomes inactive remains authored for repair
@@ -926,8 +932,8 @@ encounter-owned offers.
 ### Encounter Choices
 
 `RoomOccurrence.encounters` persists per-phase encounter choices, sparse
-customization, Aetos requests, Nemesis kill-race outcomes and encounter trait
-offers.
+customization and Aetos requests, complete Nemesis kill-race outcomes and
+encounter trait offers.
 [Encounter Preparation](ENCOUNTER_PREPARATION.md) owns their authored shape,
 commands, identity resolution and repair.
 
@@ -986,7 +992,8 @@ explicit semantic command changes or removes it.
 
 Before decoding a successful proposal, the command boundary closes it in one
 explicit command-local order: newly required source actions, then generated
-pickup sites, then the newly active generated actions, with resource topology
+pickup sites, then a newly taken trait's dropped pickups, then the newly active
+generated actions, with resource topology
 cleanup, Shrine-source and inactive clocked-pickup retraction and Chaos
 topology reconciliation in the same pass. Each closure compares the
 structurally active Room Action domains before and after its step and closes

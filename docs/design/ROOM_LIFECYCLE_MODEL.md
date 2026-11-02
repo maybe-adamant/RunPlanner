@@ -545,7 +545,10 @@ consequential pickup remains optional and independently ordered.
 The same acquisition-entry seam hosts every current generated pickup. A normal
 Quick Buck, Buried Treasure, equipping Narcissus acquisition, or selected
 Nemesis random-event result activates its declaration-owned entries at its
-declared pickup window; source selection alone does not. Sea Star adds one
+declared pickup window; source selection alone does not. A trait source's
+optional same-room entries are taken with the trait, right after its
+acquisition or, for Narcissus, in its `roomExit` window; a deferred, clocked
+entry is not ([acquisition sites](AUTHORED_PROJECT_MODEL.md#acquisition-sites)). Sea Star adds one
 later source-scoped entry after an eligible normal free pickup. Nemesis
 event-family selection configures the encounter separately from its required
 interaction. Concrete offer and response detail is authored at that interaction
@@ -747,7 +750,9 @@ fountain observes the old or new keepsake according to the authored order and
 later acquisitions observe the resulting state. Only a selected replacement
 emits `keepsakeRackUsed`; an unchanged rack produces no window, order
 dependency or execution transaction, and changing or clearing the selection
-keeps the row's position. Cleanup follows the fountain, and the purchases
+keeps the row's position. Nothing in a Postboss room before the rack changes
+an equip outcome, so a keepsake drafted at an unchanged rack is judged with
+the room's creation instead. Cleanup follows the fountain, and the purchases
 follow Cleanup. The occurrence lifecycle still runs its noncombat entry
 sequence after `roomEntered` and before the first ranked player action, but
 those internal boundaries are not rendered as encounter rows.
@@ -1034,25 +1039,25 @@ next state, a possible Run State capture or target-slot history checkpoint, and
 ordered accumulator emissions. Events with no reward seam only advance the
 branches to their sequence.
 
-| Walk seam                                               | Reward handling                                                                                                                       |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Biome start                                             | The Echo keepsake replay transition, before the first event.                                                                          |
-| Room prepared                                           | Opens the room's reward lifecycle; Fields optional reward counts; a Preboss first captures its received start state.                  |
-| Room entered                                            | Room entry with The Centaur's cycle, Shrine and Well assessments, the room-entry Run State capture; halts for a delivery placement.   |
-| Encounter started                                       | Fig Leaf and Gorgon start; the Ship pre-encounter Run State capture.                                                                  |
-| Encounter completed, boss defeated, interaction reached | One settlement handler, shared by encounter completion and the cleanup-window encounter Room Actions.                                 |
-| Encounter ended                                         | End effects; halts when a Shrine delivery needs placement.                                                                            |
-| Offer point materialized, acquired; role advanced       | Offer materialization and reached-offer settlement.                                                                                   |
-| Acquisition point reached                               | Acquisition settlement and Purging Pool sale nodes.                                                                                   |
-| Outgoing generation, room created, target generated     | Batch generation, the pre-outgoing Run State capture and target-slot history; the Hub board flushes once every Hub slot participates. |
-| Room exited                                             | Room exit and its Run State capture.                                                                                                  |
-| Room departed                                           | The Chaos rooms clock, Fight Fight Fight decay and room-clocked Well uses; a Hub departure first captures its Run State.              |
-| Fountain used (Room Action)                             | Fountain rarity and the Purging Pool assessment.                                                                                      |
-| Keepsake rack used (Room Action)                        | Rack equip and its equip results.                                                                                                     |
-| Eris interacted (Room Action)                           | Eris's curse.                                                                                                                         |
-| Well purchase (Room Action)                             | Stygian Well purchase and refill realization.                                                                                         |
-| Shrine deliveries scheduled (Room Action)               | Hermes Shrine initial delivery scheduling.                                                                                            |
-| Shrine purchase reached (Room Action)                   | The Travel Deal refill realization at a rush made with the trait, and the refill purchase's delivery.                                 |
+| Walk seam                                               | Reward handling                                                                                                                                                                                                   |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Biome start                                             | The Echo keepsake replay transition, before the first event.                                                                                                                                                      |
+| Room prepared                                           | Opens the room's reward lifecycle; Fields optional reward counts; a Preboss first captures its received start state.                                                                                              |
+| Room entered                                            | Room entry with The Centaur's cycle, Shrine and Well assessments, the room-entry Run State capture; halts for a delivery placement.                                                                               |
+| Encounter started                                       | Fig Leaf and Gorgon start; the Ship pre-encounter Run State capture.                                                                                                                                              |
+| Encounter completed, boss defeated, interaction reached | One settlement handler, shared by encounter completion and the cleanup-window encounter Room Actions.                                                                                                             |
+| Encounter ended                                         | End effects; halts when a Shrine delivery needs placement.                                                                                                                                                        |
+| Offer point materialized, acquired; role advanced       | Offer materialization and reached-offer settlement.                                                                                                                                                               |
+| Acquisition point reached                               | Acquisition settlement and Purging Pool sale nodes.                                                                                                                                                               |
+| Outgoing generation, room created, target generated     | Batch generation, the pre-outgoing Run State capture and target-slot history; the Hub board flushes once every Hub slot participates; a Postboss room's creation judges a keepsake drafted at its unchanged rack. |
+| Room exited                                             | Room exit and its Run State capture.                                                                                                                                                                              |
+| Room departed                                           | The Chaos rooms clock, Fight Fight Fight decay and room-clocked Well uses; a Hub departure first captures its Run State.                                                                                          |
+| Fountain used (Room Action)                             | Fountain rarity and the Purging Pool assessment.                                                                                                                                                                  |
+| Keepsake rack used (Room Action)                        | Rack equip and its equip results.                                                                                                                                                                                 |
+| Eris interacted (Room Action)                           | Eris's curse.                                                                                                                                                                                                     |
+| Well purchase (Room Action)                             | Stygian Well purchase and refill realization.                                                                                                                                                                     |
+| Shrine deliveries scheduled (Room Action)               | Hermes Shrine initial delivery scheduling.                                                                                                                                                                        |
+| Shrine purchase reached (Room Action)                   | The Travel Deal refill realization at a rush made with the trait, and the refill purchase's delivery.                                                                                                             |
 
 After the last event the walk captures the Hub frontier's Run State,
 evaluates every boss-door store, then records the blank exit-decision

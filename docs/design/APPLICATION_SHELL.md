@@ -34,9 +34,9 @@ Edit, Rename and Delete (Undo restores a deleted preset in place). Add and
 Edit open the Loadout's Arcana or Fear board on a loadout of the preset's own
 through the engine's edit domain. On load, cards and Vows the catalog does not
 declare are dropped and Settings says so. While presets of a kind exist, the
-editor's Arcana or Fear picker shows them as chips above the board; choosing
-one applies it as one undoable step, or refuses with the reason in visible
-text when the plan's starting Grasp could not hold it. Fresh File has no
+editor's Arcana or Fear board shows them as chips; choosing one puts it in the
+board's draft, or refuses with the reason in visible text when the plan's
+starting Grasp could not hold it. Fresh File has no
 pickers and so no presets.
 
 ### Library screen
@@ -165,6 +165,8 @@ parses the result; each transition declares its source and target identities,
 so an old catalog identity is never blindly replaced. Within the current
 major, the current or an earlier revision loads as is; a later revision, an
 unsupported older schema or a future one is refused and left untouched.
+Before the strict parse, the loader fills the default Nemesis kill-race wins
+that a schema 100 document saved or migrated without them lacks.
 
 A migrated plan opens in memory in the current schema and names the repairs
 its migrations may need. Its file is untouched until the first edit is saved;

@@ -428,6 +428,14 @@ finding names earlier hidden return doors of the biome that drew from the same
 store on a reached branch, as an alternative repair. A rerolled screen's
 candidates judge the offer's whole screen chain exactly as settlement does.
 
+A keepsake selection works the same way. A keepsake chosen in a route-start or
+Postboss rack draft but not yet saved opens the equip result it would have
+(Jeweled Pom, Experimental Hammer, Transcendent Embryo), judged at that
+selection's frontier on the branches that equip it, exactly as an authored
+choice would be, so its candidates and findings are known before Save. An
+unchanged rack emits no rack event, so its drafted keepsake is judged at the
+Postboss room's [creation](ROOM_LIFECYCLE_MODEL.md#boss-and-postboss).
+
 The application may aggregate complete offer results into reward-type,
 Boon-source, and Devotion-source steps. It does not implement reward support.
 
@@ -554,7 +562,10 @@ constructible and whether its selected acquisition detail is valid. The engine
 uses the exact reached source, provider, chance ledger, trait history and
 Denial state in its staged generation solver. A constructibility failure is
 owned by the complete offer (`traitOfferGenerationUnavailable`), not invented
-as a prerequisite on each row. Declaration-invalid rarity remains a distinct
+as a prerequisite on each row. Only complete assessment, and only after the
+search has failed, asks why: the finding carries the
+[cause](TRAIT_OFFERS.md#ordinary-initial-screen-support) and the rows it
+involves, while focused row queries never pay for it. Declaration-invalid rarity remains a distinct
 structural or individual failure. Specialized provider rarity checks retain
 their own contracts.
 

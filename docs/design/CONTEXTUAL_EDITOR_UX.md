@@ -426,26 +426,42 @@ lazy query boundary wherever a real candidate query exists.
 
 ## Popup Editors
 
-A popup editor keeps a local draft and saves once when it edits one atomic
-authored value whose intermediate states are not meaningful plans (trait
-offers and their nested outcomes, Pom, Anvil, Judgment, Crystal Figurine,
-Path of Stars). Otherwise each control commits immediately (encounter
-customization, Loadout Arcana and Fear, Hub room popover, keepsake equip
-results). A nested editor saves into its parent draft; only the outer Save
-commits.
+Every popup editor is either a draft or a read-only view. A draft (trait
+offers and their nested outcomes, Pom, Anvil, Judgment, Crystal Figurine, Hex
+trees, Path of Stars, encounter customization, the Loadout Arcana and Fear
+boards, keepsake selections with their equip results, the
+Draft basket, loadout presets) keeps a local copy of its value: Cancel
+discards it and Save commits it as one Undo step. A view (the room map, a
+fixed encounter roster) edits nothing and only closes. A nested editor saves
+into its parent draft; only the outer Save commits. A popover menu such as the
+Hub room popover is not a popup editor: each choice commits at once.
 
-Every popup editor uses one dialog shell: a title, the always-mounted
-[feedback region](EDITOR_MODEL.md#inner-layer-and-stable-rows), and a footer
-with Cancel and Save for drafts or Done for live editors; Escape is Cancel or
-Done, and an open nested picker is dismissed before its dialog. Initial focus
-lands on the exact repair control, else the first enabled control; focus
-returns to the launcher after close. A draft editor's open state lives in the
-editor session; its draft is replaced when the authored value changes and
-kept when only context changes; it closes when its owner leaves reached
-context; and history shortcuts are off while it is open. Its feedback region
-reflects the draft through the engine's draft assessment and matches the
-launcher at rest. A reset that only clears the draft is distinct from one that
-commits a reset to unresolved or to the default.
+Every popup editor uses one dialog shell with one title row: the title and
+any title extras (such as a layout or variant picker), an (i) help popover
+for longer guidance, the draft's first finding (with a count of the rest,
+shown as blocking while Save is disabled; choosing it focuses the control it
+marks), a reset of the whole draft,
+then Cancel and Save; a view shows Close instead. Escape is Cancel or Close,
+and an open nested picker is dismissed before its dialog. Initial focus lands
+on the exact repair control, else the first enabled control; focus returns to
+the launcher after close. A draft editor's open state lives in the editor
+session; its draft is replaced when the authored value changes and kept when
+only context changes; it closes when its owner leaves reached context; and
+history shortcuts are off while it is open. Its findings come from the
+engine's assessment of the draft and match the launcher at rest.
+
+Save is disabled while the draft is unchanged, incomplete or not yet assessed,
+or when it introduces a finding: one whose stable key the saved value's
+assessment lacks. Findings the saved value already had never block Save, even
+when the draft rewords or partly repairs them. A trait offer instead saves only
+a complete offer the engine supports ([Trait Offer
+Domains](#trait-offer-domains)). The title row's reset returns the draft to
+its default (empty, the game's control, or a layout's default tree), not to
+the saved value, and commits nothing; a reset of one part of the draft stays
+beside that part in the body. A trait offer's reset to unresolved is instead a
+body action that commits at once and closes the dialog. A fixed budget (an
+offer's three slots, a Path screen's points) blocks adding past its cap rather
+than admitting the excess as a finding.
 
 Trait, Hex, Chaos, Pom, Anvil and Path of Stars launchers share one label
 form, `{Verb} {kind} · {value}`: the chosen trait or Hex, the Pom target and
@@ -502,7 +518,7 @@ For ordinary Olympian/Hermes drafts they are always present and obey structural
 limits: Add is disabled at three rows or when no unused individually eligible
 identity remains; Remove is disabled at zero. Removing the last row means
 Fallback Gold, and adding from Gold restores one row. There is no separate
-Gold button. A short or Gold draft may be invalid; complete-offer feedback
+Gold button. A short or Gold draft may be invalid; the complete-offer finding
 explains why while the repair controls remain usable.
 
 The focused picker does not filter by whole-screen composition. Individual
@@ -536,7 +552,7 @@ dialog rendering perform no focused trait queries. Query caching and its
 bounds are [application contracts](EDITOR_MODEL.md#drafts-and-contextual-queries).
 
 Trait and rarity changes remain local modal edits. The complete-offer candidate
-continues to own the consolidated feedback and Save support, and Save dispatches
+continues to own the draft's findings and Save support, and Save dispatches
 one complete semantic replacement command. Escape dismisses an open nested
 picker before it dismisses the containing trait dialog, preserving the local
 draft and restoring focus at each boundary.
@@ -567,14 +583,18 @@ trait, slot and promoted rarity without React deriving the transition. Rarity
 checks and replacement chance may appear in a read-only Offer State popover,
 opened from an info button on the dialog's title line, as branch-correlated
 engine facts, not normalized outcome probabilities or a
-global rarity ledger.
+global rarity ledger. A row shows Rarify only where the engine accepts a
+click, and Undo wherever a click was made. The offer's [Rarify
+source](TRAIT_OFFERS.md#generation-time-context) with its remaining uses, each
+Persephone roll's level and the levels Jeweled Pom adds are published per
+option, not derived in React.
 
 Selected child controls follow the live draft immediately. Targeted traits use
 the shared target picker; Natural Selection uses one ordered compound result;
 Circe uses the engine-provided Arcana or Vow domain. Loadout, Circe, Judgment
 and Figurine share artwork cards and accessible dialogs, not selection policy.
-Loadout changes apply immediately; effect dialogs keep a local selection until
-Save, and Close discards only unsaved changes. Arcana cards show rank and
+Loadout boards and effect dialogs keep a local selection until Save, and
+Cancel discards it. Arcana cards show rank and
 selection; current ranks come from the exact engine context, selected effect
 targets preview the granted rank, and branch-varying ranks are not collapsed
 to one. Ransom effects have a read-only preview, not invented authored
@@ -596,7 +616,7 @@ the game would refuse is a finding instead. Earlier tabs show every control in
 place, disabled until their Edit, and are judged by the draft's whole screen
 chain; under Edit their Rarify buttons follow that screen's own remaining
 uses, and each row shows its rarity after the screen's clicks; an unauthored
-earlier screen offers to copy the final one, and an empty one shows as Gold. When only an earlier screen blocks Save, the feedback names
+earlier screen offers to copy the final one, and an empty one shows as Gold. When only an earlier screen blocks Save, the dialog's finding names
 that tab. Without an enabling card the reroll controls are hidden unless the
 offer already holds rerolls.
 
@@ -604,21 +624,21 @@ offer already holds rerolls.
 
 A normal Spell Drop uses the shared three-row rarityless editor as Edit Hex.
 Position-owned Moonglow/Path bonuses remain per-row metadata, and the selected
-spell's Hex tree is editable from the initial live draft: a layout picker over
-the tree drawn on the native talent grid. Each editable node is its own picker.
-A Rare or Epic node lists its pool and marks a talent another node holds. A
-Common node offers swaps within its column (with the node holding that
-talent), trades with its deck's talents in other columns and, in the partial
-last deck, swaps for an unused talent; every Common edit keeps a legal tree
-legal. A Common decks table below the board lists, per deck and Common
-column, the talents that deck dealt there; each entry also opens its node's
-picker, and a tree no deck sequence deals says so instead. The node being
-edited and the other node an option involves are marked; these relations are
+spell's Hex tree is editable from the initial live draft: a layout picker on
+the title line over the tree drawn on the native talent grid. A Rare or Epic
+node is its own picker: it lists its pool and marks a talent another node
+holds. Common nodes are edited by column, a draw band of one depth's Commons:
+each column shows the deck it deals from, and dealing it fills its slots top
+to bottom, card by card, from the cards the earlier columns left, in draw
+order. Columns take precedence left to right: a column past one its deck
+cannot deal waits on that column, and there is no per-node Common edit. The nodes an open
+picker's choice or a hovered talent involves are marked; these relations are
 projected, not derived in React. God Sent nodes are fixed. Choosing a layout
-generates its default tree, and Reset to default restores it. An edit is kept
-as made: a tree-wide conflict is reported in the dialog feedback and marks its
-nodes, with no save-and-reopen step. Both tree dialogs explain how Common
-nodes are dealt. Aspect of Selene instead edits its Sky Fall tree in a loadout
+generates its default tree, and the title row's reset returns to that
+layout's default. An edit is kept as made: a repeated talent is a finding on
+its nodes, and a draw-sequence conflict marks the first column its deck
+cannot deal, with no save-and-reopen step. Both tree dialogs explain the deal
+in their help. Aspect of Selene instead edits its Sky Fall tree in a loadout
 draft dialog whose launcher carries the tree's finding; a later Path
 acquisition does not expose a false replacement spell editor.
 
@@ -633,7 +653,7 @@ inserted. A points counter heads the board. Nothing is preselected: a reached
 screen without a choice opens at zero points and its required-choice finding
 marks the launcher. The screen's points are a budget like a trait offer's
 slots: once spent no node can be added, while removal always stays possible.
-Removing a node a selected dependant needs is allowed; the draft feedback then
+Removing a node a selected dependant needs is allowed; the draft's finding then
 names the cut-off nodes and the wrong count, the cut-off nodes carry the
 finding mark, and a saved conflict marks the launcher.
 

@@ -90,6 +90,13 @@ for already-resolved identities; it does not revisit authored policy or obtain
 facts by executing interactions. Binding owns executable command adapters; it
 does not depend on presentation to decide their semantics.
 
+Semantic keys are identities, never data: the projection parses no address,
+entry, site or generation key. Any fact it needs the engine publishes beside
+the product, such as a generated entry's source family, Echo's replay effect
+(the room's last reward or a doubled World Shop purchase) and the stock that
+purchase came from, a Shrine delivery's selling room and stock, where a moved
+Room Action lands, and a Well generation's slot and roll number.
+
 Occurrence assembly joins complete local reward, workbench, action and feature
 products. The final service composes those products rather than constructing
 another occurrence/decision/Hub model. Generic markers cannot substitute for
@@ -356,14 +363,15 @@ React. A finding never hides or disables its control.
 
 ### Inner layer and stable rows
 
-Every visible dialog body (trait offer and its nested Echo choice, Pom, Circe,
-Chaos, Anvil, encounter composition and customization, Arcana activation) has
-one always-mounted feedback region at its bottom with an empty state. Draft
-feedback (branch disagreement, an unassessable retained outcome, a carrier not
-yet complete) is reported there by reporter and never between controls.
-Controls carry only an invalid marker and a hint; region entries navigate to
-the control they correct. Feedback text therefore never moves a control while
-the user edits.
+Every popup editor reports its draft's findings (branch disagreement, an
+unassessable retained outcome, a carrier not yet complete) on its [title
+row](CONTEXTUAL_EDITOR_UX.md#popup-editors): the first finding with a count of
+the rest, in a slot that stays reserved when there is none, never between
+controls. Controls carry only an invalid marker and a hint; the title-row
+finding focuses the first control it marks. Finding text therefore never moves
+a control while the user edits. A finding title is descriptive on its own and
+short enough for that one row; the planner tests hold every finding title to
+one length limit.
 
 A control whose declaration exists stays mounted and is only enabled by
 evaluation; a pending control says on hover whether it waits on an earlier
@@ -386,8 +394,8 @@ context applies at that point, or where an authored value exists; a retained
 value whose context no longer applies stays visible and editable with its
 finding, quietly marked, with a hint naming the engine-published reason (such
 as a phase skipped with Fig Leaf). A Nemesis combat's Outcome choice is the
-exception: it shows only while that combat is selected, always with a value
-(Win when none is stored), and a dormant outcome stays hidden. The application
+exception: it shows only while that combat is selected, always with its
+complete value, and a dormant outcome stays hidden. The application
 never computes applicability itself. Explanatory notes sit beneath their owning
 control, except a door batch's batch-wide facts, which sit in Room Doors' Notes
 column, candidate explanations stay inside the picker (its trigger keeps its

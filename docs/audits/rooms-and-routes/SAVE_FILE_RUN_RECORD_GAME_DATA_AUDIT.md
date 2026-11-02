@@ -627,8 +627,10 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   object for a consumable (`InteractLogic.lua:1098-1121`) or of a fresh loot
   object (`UpgradeChoiceLogic.lua:1031-1059`). A selected trait's optional
   pickups, such as Narcissus's gifts (`TraitData_Narcissus.lua`) and Buried
-  Treasure's gold, are collected first while their object has unexplained
-  uses; each duplicate the room counted then goes on a pickup the engine lets
+  Treasure's gold, arrive collected with their trait and are kept only while
+  their object has unexplained uses: the last ones past those uses are removed,
+  and one not collected is added for a use nothing else explains. Each
+  duplicate the room counted then goes on a pickup the engine lets
   Sea Star duplicate whose object still has one (surface victory
   `Q_PreBoss01`: Buried Treasure's two tiny and one small gold collected, the
   two leftover uses its duplicates). A duplicate among several pickups of one

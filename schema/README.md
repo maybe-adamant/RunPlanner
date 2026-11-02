@@ -58,6 +58,13 @@ names a reroll's list in `rollKey` (absent for the initial list). The feature
 state holds the initial stock and no `interacted` flag; the transition drops it,
 keeping an interacted feature's slots and clearing an uninteracted one's. The transition writes none of them.
 
+Each phase whose binding can field a Nemesis bet combat owns a complete
+`nemesisBetOutcomeByPhase` entry (`win`, `tie` or `loss`). A schema 100
+document saved before this entry was required stored a win by omission. The
+application loader fills those wins before strict parsing, both for such a
+file and for a document it migrated from an earlier schema; the offline
+transitions do not write them.
+
 The migration moves a Shop-owned pedestal item, its collect action and its
 source entry to the room unchanged, and gives every other pedestal-declaring
 Preboss occurrence an unset item.

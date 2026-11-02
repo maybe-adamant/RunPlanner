@@ -242,10 +242,12 @@ presentation has a visible picker.
 The resolved definition's customization domain supplies a separate **Customize
 encounter** control, including for fixed identities. One dialog renders declared
 single choices, bounded ordered prefixes and generated compositions; it does not switch on Boss names
-or calculate Rivals. Changes dispatch immediately through bound commands and
-Undo. Unsupported retained choices remain visible for repair. Boss decisions
-retain their declared defaults; generated customization can reset wholly to
-native control. Identity and customization are fixed on entry, so every
+or calculate Rivals. It is a [popup draft](CONTEXTUAL_EDITOR_UX.md#popup-editors):
+Save commits every changed decision through bound commands as one Undo step.
+Unsupported retained choices remain visible for repair. Boss decisions retain
+their declared defaults; the title row's reset returns every decision of the
+encounter to native control. A phase with a roster but nothing to customize
+opens it as a read-only view instead. Identity and customization are fixed on entry, so every
 phase's selector and launcher render in Room Overview; finding navigation
 selects Overview and focuses/highlights the launcher without automatically
 opening the dialog.
@@ -287,24 +289,26 @@ engine publishes one (a phase the engine settled as skipped with Fig Leaf). An
 inapplicable event without a value is not shown. A retained Aetos wave whose
 context waits on an earlier choice can still be cleared.
 
-Opening generated composition is read-only. Edit initializes a complete value
-through the exact engine capability; Reset removes that value. Customized controls
-have no inner native defaults. Wave tabs contain staged whole-wave pickers and
-budget tables showing allocations, derived counts and final cost. Variable budget
-sliders map through the engine; fixed budgets remain labels. Intermediate picker
-choices and input drafts are local. Finish Wave allows an early stop while more
-enemies are eligible; a selection that completes a valid wave with no eligible
-continuation commits immediately and closes the picker. Both publish one replacement
-and one Undo entry, while Cancel is inert. Opening or reassessing a draft never
-commits it. Completion depends on composition validity, not
-unrelated retained Menace count findings.
+Opening generated composition shows it read-only. Edit initializes a complete
+value in the draft through the exact engine capability; the title row's reset
+removes it. Customized controls have no inner native defaults. Wave tabs
+contain staged whole-wave pickers and budget tables showing allocations,
+derived counts and final cost; a count the engine capped carries a mark whose
+hint names the cap and any counts it passed to another type. Variable budget
+sliders map through the engine; fixed budgets remain labels. Intermediate
+picker choices are local to the picker. Finish Wave allows an early stop while
+more enemies are eligible; a selection that completes a valid wave with no
+eligible continuation finishes it and closes the picker. Either writes the
+wave into the dialog's draft, while the picker's Cancel leaves the draft as it
+was. Completion depends on composition validity, not unrelated retained
+Menace count findings.
 
-Fangs uses adjacent Target and Perks controls: target edits persist immediately,
-while ordered perk prefixes remain local until Finish. Active Menace adds aligned
-Menace Target and Menace Count rows under Count; inactive values remain dormant.
-The application renders engine-owned domains/counts and does not calculate budget,
-perk or conversion legality. Retained invalid values and per-control repair
-messages stay visible. The dialog itself is not another saved draft.
+Fangs uses adjacent Target and Perks controls: a target choice enters the
+draft at once, while ordered perk prefixes stay in the picker until Finish.
+Active Menace adds aligned Menace Target and Menace Count rows under Count;
+inactive values remain dormant. The application renders engine-owned
+domains/counts and does not calculate budget, perk or conversion legality.
+Retained invalid values stay visible and marked for repair.
 
 P uses the same exact-phase presentation. Its phases are **Opening** for
 `Intro` and **Follow-up** for `Combat`; their encounter controls read **Opening

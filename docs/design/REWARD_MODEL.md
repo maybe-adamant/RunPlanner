@@ -925,8 +925,8 @@ over one (Quick Buck, Chaos Affluence's authored value), at the contact:
   its return at the next non-final boss; a rarity change adjusts the return.
 - A Nemesis trade costs an even roll over its range. A Nemesis combat's bet
   stakes the balance's mean up to the cap and settles by the phase's authored
-  kill race, a win when unauthored: a win pays the bet times the money
-  multiplier, a tie nothing, and a loss takes the bet.
+  kill race: a win pays the bet times the money multiplier, a tie nothing, and
+  a loss takes the bet.
 - While a held curse blocks gold (Pauper's), every gain the game pays as
   collected coins pays nothing: money pickups, Heracles's bounty, Medea's
   drops, Narcissus's and fallback gold, kill and urn drops, and a loan's
@@ -1066,7 +1066,8 @@ source owner, lifecycle binding, and requiredness; each generated entry is
 still one ordinary concrete acquisition. Nemesis's free-item and contest
 results are optional, while an accepted trade result is required after its
 required encounter interaction. Quick Buck and Buried Treasure entries are
-optional. Artificer replacements and fresh full-Pom Sea Star duplicates are
+optional, and taking their trait adds them to the room's order
+([acquisition sites](AUTHORED_PROJECT_MODEL.md#acquisition-sites)). Artificer replacements and fresh full-Pom Sea Star duplicates are
 required. A spawned pickup owns its exact authored reward and acquisition-time
 children at the site; the action row references that payload owner and does
 not duplicate its editor. Its roster row and derived-entry capability name its

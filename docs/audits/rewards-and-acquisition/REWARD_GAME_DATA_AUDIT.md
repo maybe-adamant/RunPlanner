@@ -1116,7 +1116,7 @@ CostResourceMax)`: heart 105-130 / 230-255, Magick 80-105 / 180-205, Pom
   (`EncounterData_Nemesis.lua:3-53`) bet `min(100, held)` on kills; a win
   pays `round(bet × Σ)`, a loss takes the bet and a tie pays nothing
   (`InteractLogic.lua:545-590`); `BlockMoney` stops only the win. The ledger
-  reads the authored outcome, a win when absent.
+  reads the authored outcome.
 - **Pauper's** (`ChaosNoMoneyCurse`, `TraitData_Chaos.lua:756-760`) sets
   `BlockMoney`. Every coin collected through `DropMoney` → `UseMoneyDrop`
   pays nothing (`RoomLogic.lua:2602-2652`). That covers every gushed amount

@@ -108,7 +108,7 @@ Cells are `buff / use spent` where both apply. Y = yes, N = no.
   requires Fated and a source without `ExcludeFromLastRunBoon`; a provider
   keepsake matches its loot name and takes precedence (UCL:1215–1230,
   `TraitData_Keepsake.lua:2338`). Rows need no `BlockMenuRarify` and a
-  declared next rarity (UCL:1282).
+  declared next rarity (UCL:1275).
 - (g) `ForceLootTableFirstRun`/`ForceCommonLootFirstRun` on `F_Combat01` with
   zero completed runs (RL:2095, TL:1794).
 - (h) A row rolls `MaxBonusBoonRankWeighted` (Aspect of Persephone,

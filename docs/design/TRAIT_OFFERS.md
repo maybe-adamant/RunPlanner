@@ -63,14 +63,19 @@ refill-cycle draw sequence—is a finding naming its nodes, so a conflicting
 tree stays representable. The `hexTree` address names the tree under its Spell
 Drop offer or the route.
 
-Edits are kind specific: a Rare or Epic node takes any talent of its pool; a
-Common node swaps with a node at its depth, trades with its refill deck's
-talent in another column, or, in the partial last deck, takes a talent that
-deck left undealt—each keeps a legal tree legal. Changing the layout
-regenerates its default tree; choosing the current layout keeps the tree.
-Nothing reflows and nothing is repaired automatically: a repeat names every
-node holding it, and a broken draw sequence names the nodes of the smallest
-changes that restore it. The Spell Drop tree edits in its offer's draft; the
+Edits are kind specific: a Rare or Epic node takes any talent of its pool,
+while Common nodes change only by column. A column is one depth's Common
+nodes, drawn together from the refill decks the columns before it leave, so
+columns take precedence in draw order from left to right. A column is dealt
+card by card into its slots in map order from the decks it reaches: every
+deck it empties is dealt whole, only its last deck is a choice among distinct
+talents, and each card offered keeps the column completable as a legal draw.
+The order within a column is unobservable. A deal replaces only that column; later columns keep their
+talents. Past a column no draw yields, later columns cannot be dealt. Changing
+the layout regenerates its default tree; choosing the current layout keeps the
+tree. Nothing reflows and nothing is repaired automatically: a repeat names
+every node holding it, and a broken draw sequence names the nodes of the
+smallest changes that restore it. The Spell Drop tree edits in its offer's draft; the
 Aspect tree edits in its own draft, saved as one `ReplaceAspectHexTree` step.
 The [Hex layout
 audit](../audits/loadout-and-progression/HEX_TALENT_LAYOUT_GAME_DATA_AUDIT.md)
@@ -229,7 +234,13 @@ The generation-time context supplies identity eligibility, base rarity from
 held rarity sources, replacement support and whether Hymn seeded a swap. The
 current state supplies Rejected, Denial, Calling Card, level and keepsake
 calculations, targeted acquisition, charge consumption and the history
-append, so events between generation and open are never discarded. Offer
+append, so events between generation and open are never discarded. An offer's
+Rarify draws on one source chosen at open: a held keepsake matching the
+Olympian giver, else Calling Card, which spends only while Fated; the two
+never combine, since a god keepsake makes the run Unfated. The engine
+publishes per option whether a Rarify click applies, that source with its
+uses left after the offer's clicks, the level each Aspect of Persephone roll
+installs and the levels Jeweled Pom adds. Offer
 contexts are replaceable simulation state, never persisted authored data;
 opening an offer or leaving its room discards its record.
 
@@ -254,6 +265,20 @@ finite ordinary bucket draws, replacement vacancy rescue and—only when
 effective Denial is off—final rarity rescue. Empty terminal output means Gold.
 Short screens must also be terminally reachable; no ordinary/high-tier count
 quota stands in for construction.
+
+When no outcome yields the screen, `traitOfferGenerationUnavailable` names a
+cause with the rows it involves. Exact local rules are checked first, in a
+fixed order: a repeated trait, a trait this screen can never show, a row's
+rarity that cannot roll here (never offered fresh at it, no chance, forced
+Common, no Duo from Devotion, a guaranteed later rarity, or a replacement
+keeping the replaced boon's rarity, with the rarity it would have instead), a
+screen that must start with a core or exchange boon these rows lack, or a
+short screen another trait would still fill. Probes of the same staged search
+over subsets of the rows then find a single row or a pair that never appear
+together; only otherwise is the cause generic (attempt limits, depleted
+buckets, seeding). A row whose own finding already reports it is never named
+again, and a screen unshowable only through such rows adds no generation
+finding. A rerolled screen's cause is found the same way under its bans.
 
 A selected identity is removed from every generation bucket, but is never
 equipped while assembling alternatives. Provider-eligible priority state

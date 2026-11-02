@@ -818,8 +818,8 @@ stolen alternative.
 After a clean Nemesis combat kill race, `HandleNemesisEncounterReward` compares
 Melinoe and Nemesis kills. It can add or remove a wager of up to 100 Gold; a tie
 does nothing. The encounter and ordinary reward timing are modeled; the
-wager outcome is an optional authored kill race (absent = won) read only by the
-gold estimate.
+wager outcome is an authored kill race (won by default) read only by the gold
+estimate.
 
 ### Settled Planner disposition
 

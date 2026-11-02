@@ -198,6 +198,14 @@ route (a GeneratedF customization on Fresh File `F_Combat01`) decodes, reports
 removed.
 
 The exact phase owns each finding, with the decision identified in evidence.
+`encounterCustomizationUnavailable` also carries why the resolved encounter
+cannot steer with the value: the decision was contextually replaced, the value
+names a choice or shape the encounter does not declare, a cocoon count lies
+outside its range, the host room lacks the cocoon reward point, the route
+excludes the first such choice, or the first issue of the generated
+composition's (other than an unfinished introduction, which reports on its
+own) or infinite roster's assessment at its checkpoint. A value already
+unsupported for an earlier reason keeps that reason.
 Valid resolved choices travel with that phase into execution publication, not
 as room features or additional Timeline actions. A choice steers a native
 decision if reached; it does not oblige an attack, advance a clock or create a
@@ -210,7 +218,10 @@ allocation requests for sampled branches. Fixed seeds and remainder
 allocations remain declaration/engine-owned. The engine resolves native-order
 clamping, minimum-one, ceilings, count caps and redistribution into complete
 generated counts; allocations need not sum to the wave budget and are not
-relative weights or direct counts.
+relative weights or direct counts. The assessment's per-wave count preview,
+for an exactly known budget, gives each type its count, the native per-wave
+cap a clamped count was held to, and the counts a type took up from later
+capped types' spare difficulty.
 
 An infinite roster is native or one ordered list of distinct declared types
 within the declared type bounds, for an encounter whose native counts are
@@ -234,9 +245,9 @@ Native perk application, spawn timing, positions and combat remain outside
 authored state.
 
 Opening the editor is read-only. Explicit customization initialization uses
-the exact reached engine capability and commits a complete starting value as
-one semantic edit. Reset removes the whole customization; there are no inner
-native defaults. Upstream edits and migration preserve structurally
+the exact reached engine capability to start the editor's draft from a
+complete value, saved with the rest of the draft as one semantic edit. Reset
+removes the whole customization; there are no inner native defaults. Upstream edits and migration preserve structurally
 representable choices, including dormant values; missing or incompatible
 active choices remain repairable and prevent publication instead of requesting
 partial native generation.
@@ -326,12 +337,14 @@ its native runtime outcome is best-effort and is not folded back into planner
 history.
 
 `encounters.nemesisBetOutcomeByPhase[phaseKey]` owns the kill race of a
-Nemesis combat whose declaration carries a bet: `win`, `tie` or `loss`, stored
-only when it differs from the default win. `ReplaceNemesisBetOutcome` authors a
-tie or loss only while the phase resolves to such a combat; a win or a removal
-deletes the value at any time. A phase whose binding can never field one owns
-none. Selecting another encounter, such as a random event, keeps the value
-dormant, and structural phase reconciliation treats it like an Aetos request.
+Nemesis combat whose declaration carries a bet: `win`, `tie` or `loss`. It is
+a complete leaf over every phase whose binding can field such a combat,
+defaulting to a win; a phase whose binding can never field one owns none.
+`ReplaceNemesisBetOutcome` sets a tie or loss only while the phase resolves to
+the bet combat, a win at any time, and never removes the value. Selecting
+another encounter, such as a random event, keeps the value dormant, and
+structural phase reconciliation gives a newly hosting phase the default and
+drops a phase that no longer hosts.
 The outcome feeds only the [gold ledger](REWARD_MODEL.md#gold-ledger): it
 creates no finding, history or execution field.
 
