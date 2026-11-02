@@ -533,11 +533,12 @@ substitute for the outer prepared capability.
 The [Candidate Evaluation Model](CANDIDATE_EVALUATION_MODEL.md#trait-offer-candidate-boundary)
 owns the full contract.
 
-### Branch equivalence
+### One reached state
 
-Merge only states equivalent to every downstream consumer. Distinct active
-Arcana, keepsake history, pending effects, pending trait-offer contexts or
-stale marks, or future bag support remain distinct.
+The walk carries one reached state, or none once a block stops it; settlement
+that would yield a second state is an engine contract failure, and nothing
+merges states. A biome publishes the state its walk ended on, and checkpoints
+and start captures carry one state each.
 A counted draw resolves to one bag state: the last eligible same-item entry is
 canonical, because the catalog compiler rejects any store whose same-item
 entries could both be eligible and later diverge
@@ -623,9 +624,9 @@ prevent adding the action that repairs the room.
 ## Run-State Snapshots
 
 Run State is a read-only projection of captured `SimulationState` snapshots,
-not a second simulation. All branches at a checkpoint share its exact reached
-history view and route position; sequence and counters derive from those
-snapshots rather than separately supplied values. It publishes semantic owner,
+not a second simulation. A checkpoint projects its one reached state, which
+carries the exact history view and route position; sequence and counters
+derive from that state rather than separately supplied values. It publishes semantic owner,
 checkpoint, counters, bags and ledgers without exposing the internal state.
 
 Projection caches account for both the source/view/store/peer contact and the
@@ -642,8 +643,7 @@ owns their precise timing.
 
 A retained owner beyond coverage is unavailable with an explicit coverage
 reason; it receives no fabricated state. A later failure cannot erase an
-already-reached snapshot. Presentation may group equivalent branches and show
-ranges for real differences, but must preserve correlated condition groups.
+already-reached snapshot. Presentation preserves correlated condition groups.
 Lazy bags show their declared initial contents without materializing a branch.
 
 The snapshot type is the field catalogue. Every field is derived from the
