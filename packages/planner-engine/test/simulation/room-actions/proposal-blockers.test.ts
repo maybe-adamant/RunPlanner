@@ -113,6 +113,23 @@ describe('room action proposal blockers', () => {
       blockers: [{ kind: 'dependency', reference: first, dependency }],
     });
   });
+  it('anchors each move at the current-order index it lands in front of', () => {
+    const roster = assembleRoomActionRoster({
+      owner,
+      lifecycleStructure: structure,
+      order: [first, second, other],
+      contributions: [action(first), action(second), action(other)],
+    });
+    const anchors = roster.proposals
+      .filter((p) => p.kind === 'move' && p.reference === second)
+      .map((p) => [p.toIndex, p.anchorIndex, p.order]);
+    // An earlier move lands in front of the action at its target index; a later
+    // one in front of the action after it, or past the end.
+    expect(anchors).toEqual([
+      [0, 0, [second, first, other]],
+      [2, 3, [first, other, second]],
+    ]);
+  });
   it('retains all dependency and timing evidence, and no evidence for a legal move', () => {
     const roster = assembleRoomActionRoster({
       owner,

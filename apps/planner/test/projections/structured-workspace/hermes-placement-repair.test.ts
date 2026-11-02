@@ -11,7 +11,6 @@ import {
   createAcquisitionSiteAddress,
   createOccurrenceAddress,
   createBiomeAddress,
-  parseHermesShrineDeliveryEntryKey,
   parseClockedTraitGeneratedPickupEntryKey,
   applyProjectHistoryCommand,
   createProjectHistory,
@@ -49,7 +48,10 @@ it('routes a loaded stale delivery finding to its bound unplacement repair and r
       row.reference.kind === 'interactAcquisitionEntry' && row.reference.entryKey === entryKey,
   );
   if (row === undefined) throw new Error('retained delivery missing');
-  expect(row.placementAssessment).toMatchObject({ kind: 'invalid', source });
+  expect(row.placementAssessment).toMatchObject({
+    kind: 'invalid',
+    source: { kind: 'hermesShrineDelivery', shrine: source },
+  });
   expect(row.rewardPayload).toBeUndefined();
   expect(projected.workspace.focusByOwner.get(semanticAddressKey(finding!.origin))).toMatchObject({
     focusKey: row.marker.focusKey,
@@ -164,11 +166,8 @@ it.each([true, false])(
         reference.siteKey === 'hermesShrineDelivery',
     );
     if (reference?.kind !== 'interactAcquisitionEntry') throw new Error('delivery missing');
-    const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey)!;
-    const source = createOccurrenceAddress(
-      createBiomeAddress(parsed.routeKey, parsed.biomeKey),
-      parsed.sourceOccurrenceId,
-    );
+    // The checkpoint's Shrine sold the delayed item.
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceHermesShrineOffer',
       occurrence: source,

@@ -571,8 +571,19 @@ describe('Gold Gold Gold Shop pickups', () => {
     if (address === undefined) throw new Error('missing derived frontier address');
     const key = semanticAddressKey(address);
     const agreed = createDerivedAcquisitionEntryCandidateArtifacts(new Map([[key, frontiers]]));
-    expect(agreed.at(address)).toMatchObject({ sourceOfferKey: 'Minor' });
+    expect(agreed.at(address)).toMatchObject({
+      sourceOfferKey: 'Minor',
+      sourceOfferGeneration: 'initial',
+      sourceFamily: { kind: 'echo', effect: 'doubleShop' },
+    });
     expect(agreed.entriesAt(address.site)).toHaveLength(1);
+    // A duplicate of the Travel Deal refill names that stock.
+    const refillSourced = createDerivedAcquisitionEntryCandidateArtifacts(
+      new Map([
+        [key, frontiers.map((frontier) => ({ ...frontier, sourceOfferKey: 'travelDealRefill' }))],
+      ]),
+    );
+    expect(refillSourced.at(address)?.sourceOfferGeneration).toBe('travelDealRefill');
 
     const second = frontiers[1];
     if (second === undefined) throw new Error('missing second derived frontier');

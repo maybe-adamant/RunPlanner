@@ -1,5 +1,5 @@
 import type { OccurrenceAddress } from './addresses';
-import type { AuthoredRoutePlan, RoomActionReference } from './model';
+import type { AuthoredRoutePlan, HermesShrineGenerationKey, RoomActionReference } from './model';
 import {
   HERMES_SHRINE_DELIVERY_SITE_KEY,
   hermesShrineDeliverySourceAddress,
@@ -9,7 +9,13 @@ import {
 } from './hermes-shrine-delivery';
 
 export type GeneratedPickupSource =
-  | OccurrenceAddress
+  | {
+      readonly kind: 'hermesShrineDelivery';
+      /** The Shrine room that sold the item. */
+      readonly shrine: OccurrenceAddress;
+      /** The Shrine stock the item was bought from. */
+      readonly generationKey: HermesShrineGenerationKey;
+    }
   | {
       readonly kind: 'clockedTraitPickup';
       readonly acquisitionIdentity: string;
@@ -25,6 +31,13 @@ export type GeneratedPickupPlacementAssessment =
       readonly reason: 'sourceInactive' | 'dueContactMismatch';
     };
 
+export function hermesShrineDeliveryPickupSource(
+  shrine: OccurrenceAddress,
+  generationKey: HermesShrineGenerationKey,
+): GeneratedPickupSource {
+  return Object.freeze({ kind: 'hermesShrineDelivery', shrine, generationKey });
+}
+
 /** Structural proof requires no reached lifecycle context; live timing remains unassessed. */
 export function assessGeneratedPickupPlacement(
   route: AuthoredRoutePlan,
@@ -38,8 +51,9 @@ export function assessGeneratedPickupPlacement(
     return undefined;
   const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey);
   if (parsed === undefined) return undefined;
-  const source = hermesShrineDeliverySourceAddress(parsed);
-  if (isSameRoomDelivery(source, host)) return undefined;
+  const shrine = hermesShrineDeliverySourceAddress(parsed);
+  if (isSameRoomDelivery(shrine, host)) return undefined;
+  const source = hermesShrineDeliveryPickupSource(shrine, parsed.generationKey);
   return hermesShrineDeliverySourceIsStructurallyActive(route, parsed)
     ? Object.freeze({ kind: 'unassessed', source })
     : Object.freeze({ kind: 'invalid', source, reason: 'sourceInactive' });

@@ -331,6 +331,7 @@ export function assembleRoomActionRoster(options: {
           reference,
           fromIndex,
           toIndex,
+          anchorIndex: toIndex < fromIndex ? toIndex : toIndex + 1,
           order: frozen(order),
           structurallyAuthorable: blockers.length === 0,
           blockers,
@@ -498,8 +499,8 @@ export function assessRoomActionPlacements(
         (row) =>
           row.placementAssessment?.kind === 'invalid' &&
           (row.placementAssessment.source.kind === 'clockedTraitPickup' ||
-            row.placementAssessment.source.occurrenceId !== owner.occurrenceId ||
-            row.placementAssessment.source.biomeKey !== owner.biomeKey),
+            row.placementAssessment.source.shrine.occurrenceId !== owner.occurrenceId ||
+            row.placementAssessment.source.shrine.biomeKey !== owner.biomeKey),
       )
       .map((row) => row.key),
   );

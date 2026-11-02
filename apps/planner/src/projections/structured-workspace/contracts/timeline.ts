@@ -60,6 +60,8 @@ export interface WorkspaceRoomActionProposal {
   /** One relevant placement explanation, or none for an authorable proposal. */
   readonly explanations: readonly string[];
   readonly toIndex?: number;
+  /** For a move, the current-order index it lands in front of, as the engine publishes it. */
+  readonly anchorIndex?: number;
 }
 
 /** A gold amount as shown: one number, or the range of a rolled price. */

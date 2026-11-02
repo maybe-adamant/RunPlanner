@@ -22,6 +22,7 @@ import {
   defaultHermesShrineDeliveryReward,
   encodeProjectDocument,
   hermesShrineDeliveryEntryKey,
+  isSameRoomHermesShrineDeliveryEntry,
   parseHermesShrineDeliveryEntryKey,
   publishProjectHistoryEdit,
   roomActionDomainForOccurrence,
@@ -1389,7 +1390,14 @@ describe('explicit generated delivery unplacement', () => {
     );
     expect(
       assessGeneratedPickupPlacement(loaded.route, host, deliveryAction(entryKey)),
-    ).toMatchObject({ kind: 'invalid', source: missingSource });
+    ).toMatchObject({
+      kind: 'invalid',
+      source: {
+        kind: 'hermesShrineDelivery',
+        shrine: missingSource,
+        generationKey: 'initial:first',
+      },
+    });
     const removed = applyProjectCommand(loaded, catalog, {
       kind: 'UnplaceGeneratedDelivery',
       action: createRoomActionAddress(
@@ -1930,5 +1938,25 @@ describe('Hermes Shrine purchase actions', () => {
         index: 1,
       }),
     ).toThrow(/Shrine purchases use SetHermesShrinePurchase/);
+  });
+});
+
+describe('same-room Shrine delivery entry', () => {
+  it('names only a delivery hosted in the Shrine room that sold it', () => {
+    const shrine = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+    const other = createOccurrenceAddress(oBiome, createOccurrenceId('later-host'));
+    const entry = (host: OccurrenceAddress, siteKey: string, entryKey: string) =>
+      createAcquisitionEntryAddress(createAcquisitionSiteAddress(host, siteKey), entryKey);
+    const rushed = hermesShrineDeliveryEntryKey(shrine, 'initial:first');
+    expect(isSameRoomHermesShrineDeliveryEntry(entry(shrine, 'hermesShrineDelivery', rushed))).toBe(
+      true,
+    );
+    expect(isSameRoomHermesShrineDeliveryEntry(entry(other, 'hermesShrineDelivery', rushed))).toBe(
+      false,
+    );
+    expect(isSameRoomHermesShrineDeliveryEntry(entry(shrine, 'roomExit', rushed))).toBe(false);
+    expect(
+      isSameRoomHermesShrineDeliveryEntry(entry(shrine, 'hermesShrineDelivery', 'unowned')),
+    ).toBe(false);
   });
 });

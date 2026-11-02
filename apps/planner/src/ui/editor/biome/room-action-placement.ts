@@ -4,26 +4,24 @@ import type {
 } from '@planner/projections/structured-workspace';
 import type { TimelineReorderPosition } from './useTimelineReorder';
 
-/** Names an authored-order destination and the row it stands against, without deciding whether it is allowed. */
+/**
+ * Names the destination at an anchor index in the current order, and the row it
+ * stands against, without deciding whether it is allowed.
+ */
 function roomActionDestination(
   rows: readonly WorkspaceRoomActionRow[],
-  toIndex: number,
-  movingRow?: WorkspaceRoomActionRow,
+  anchorIndex: number,
+  movingRow: WorkspaceRoomActionRow,
 ): { readonly label: string; readonly row?: string; readonly edge: 'before' | 'after' } {
   const remaining = rows
-    .filter((row) => row.rank !== null && row.key !== movingRow?.key)
-    .map((row) => ({
-      row,
-      index: row.rank! - 1 - (movingRow?.rank != null && movingRow.rank < row.rank! ? 1 : 0),
-    }))
-    .sort((left, right) => left.index - right.index);
-  const next = remaining.find((entry) => entry.index >= toIndex);
-  if (next !== undefined)
-    return { label: `Before ${next.row.label}`, row: next.row.key, edge: 'before' };
+    .filter((row) => row.rank !== null && row.key !== movingRow.key)
+    .sort((left, right) => left.rank! - right.rank!);
+  const next = remaining.find((row) => row.rank! - 1 >= anchorIndex);
+  if (next !== undefined) return { label: `Before ${next.label}`, row: next.key, edge: 'before' };
   const previous = remaining.at(-1);
   return previous === undefined
     ? { label: 'First action', edge: 'before' }
-    : { label: `After ${previous.row.label}`, row: previous.row.key, edge: 'after' };
+    : { label: `After ${previous.label}`, row: previous.key, edge: 'after' };
 }
 
 /** A lifecycle banner a section starts at, with the order index right after it. */
@@ -40,14 +38,10 @@ export interface RoomActionReorderBanner {
  */
 function bannerDestination(
   banners: readonly RoomActionReorderBanner[],
-  toIndex: number,
-  movingRow: WorkspaceRoomActionRow,
+  anchorIndex: number,
 ): { readonly label: string; readonly row: string; readonly edge: 'after' } | undefined {
-  const moving = movingRow.rank === null ? Number.POSITIVE_INFINITY : movingRow.rank - 1;
   const matches = banners.filter(
-    (banner) =>
-      banner.kind !== 'encounterStart' &&
-      banner.dropIndex - (moving < banner.dropIndex ? 1 : 0) === toIndex,
+    (banner) => banner.kind !== 'encounterStart' && banner.dropIndex === anchorIndex,
   );
   const banner = matches.find((candidate) => candidate.kind === 'cleanup') ?? matches[0];
   return banner === undefined
@@ -70,8 +64,8 @@ export function roomActionReorderPositions(
   const own = { at: row.rank - 1, label: row.label, anchor: row.key, edge: 'self' as const };
   const moves = proposals.flatMap((proposal) => {
     if (proposal.kind !== 'move') return [];
-    const at = proposal.toIndex ?? 0;
-    const destination = bannerDestination(banners, at, row) ?? roomActionDestination(rows, at, row);
+    const at = proposal.anchorIndex ?? 0;
+    const destination = bannerDestination(banners, at) ?? roomActionDestination(rows, at, row);
     const phase = destination.row === undefined ? undefined : phaseOf?.(destination.row);
     return [
       {

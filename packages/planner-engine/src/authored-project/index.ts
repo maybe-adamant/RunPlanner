@@ -8,6 +8,7 @@ export {
 export {
   defaultHermesShrineDeliveryReward,
   hermesShrineDeliveryEntryKey,
+  isSameRoomHermesShrineDeliveryEntry,
   parseHermesShrineDeliveryEntryKey,
 } from './hermes-shrine-delivery';
 export type {
@@ -288,6 +289,7 @@ export {
   activeSelectedPickupProducers,
 } from './acquisition/pickup-producers';
 export type { AcquisitionEntrySourceFamily } from './acquisition/entry-source-family';
+export type { ShopOfferGeneration } from './shop';
 export {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
@@ -517,6 +519,7 @@ export {
 } from './draft-spec';
 
 export { structurallyInvalidGeneratedPickupPlacements } from './generated-pickup-placement';
+export type { GeneratedPickupSource } from './generated-pickup-placement';
 export {
   decodeDraftShareCode,
   draftShareCommands,

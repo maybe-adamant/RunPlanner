@@ -14,7 +14,8 @@ import {
   defaultHermesShrineDeliveryReward,
   hermesShrineDeliveryEntryKey,
   INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
-  parseHermesShrineDeliveryEntryKey,
+  hermesShrineInitialSlotKey,
+  isSameRoomHermesShrineDeliveryEntry,
   semanticAddressKey,
   createFieldsSpatialAddress,
   createRoomFeatureAddress,
@@ -178,16 +179,8 @@ export function assembleOccurrenceRewardLocal(
                   )
                     return [];
                 }
-                const shrineDelivery =
-                  siteKey === 'hermesShrineDelivery'
-                    ? parseHermesShrineDeliveryEntryKey(key)
-                    : undefined;
-                if (
-                  shrineDelivery !== undefined &&
-                  shrineDelivery.routeKey === address.routeKey &&
-                  shrineDelivery.biomeKey === address.biomeKey &&
-                  shrineDelivery.sourceOccurrenceId === address.occurrenceId
-                )
+                // A rushed delivery's control is its Shrine purchase's own, below.
+                if (isSameRoomHermesShrineDeliveryEntry(createAcquisitionEntryAddress(site, key)))
                   return [];
                 if (
                   siteKey === 'roomExit' &&
@@ -325,14 +318,11 @@ export function assembleOccurrenceRewardLocal(
       : input.occurrence.roomActions.order.flatMap((reference) => {
           if (reference.kind !== 'purchaseHermesShrineOffer' || !reference.rushed) return [];
           const generationKey = reference.generationKey;
+          const slotKey = hermesShrineInitialSlotKey(generationKey);
           const inventoryOffer =
-            generationKey === 'travelDealRefill'
+            slotKey === undefined
               ? input.occurrence.hermesShrine?.travelDealRefill?.offer
-              : input.occurrence.hermesShrine?.offerBySlot[
-                  generationKey.slice(
-                    'initial:'.length,
-                  ) as import('@run-planner/engine/authored-project').HermesShrineSlotKey
-                ];
+              : input.occurrence.hermesShrine?.offerBySlot[slotKey];
           if (inventoryOffer === null || inventoryOffer === undefined) return [];
           const entry = createAcquisitionEntryAddress(
             createAcquisitionSiteAddress(address, 'hermesShrineDelivery'),

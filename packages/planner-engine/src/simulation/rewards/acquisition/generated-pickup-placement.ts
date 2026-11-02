@@ -11,9 +11,10 @@ import {
   parseHermesShrineDeliveryEntryKey,
 } from '../../../authored-project/hermes-shrine-delivery';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../../../authored-project/acquisition/pickup-producers';
-import type {
-  GeneratedPickupPlacementAssessment,
-  GeneratedPickupSource,
+import {
+  hermesShrineDeliveryPickupSource,
+  type GeneratedPickupPlacementAssessment,
+  type GeneratedPickupSource,
 } from '../../../authored-project/generated-pickup-placement';
 import type { RewardBranchState } from '../branch-primitives';
 import type { DerivedAcquisitionEntryFrontier, GeneratedPickupPlacement } from './contracts';
@@ -53,8 +54,10 @@ export function assessReachedHermesDeliveryPlacement(
   branches: readonly RewardBranchState[],
   sequence: number,
 ): GeneratedPickupPlacement {
-  const source = hermesShrineDeliverySourceAddress(
-    parseHermesShrineDeliveryEntryKey(reference.entryKey)!,
+  const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey)!;
+  const source = hermesShrineDeliveryPickupSource(
+    hermesShrineDeliverySourceAddress(parsed),
+    parsed.generationKey,
   );
   return placement(
     owner,

@@ -9,6 +9,13 @@ import { acquisitionSiteStorageKey } from './acquisition/artificer';
 export const TRAVEL_DEAL_REFILL_ENTRY_KEY = 'travelDealRefill' as const;
 export const ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY = 'echoDoubleShopReward' as const;
 
+/** The World Shop stock an offer belongs to: its entry inventory or the Travel Deal refill. */
+export type ShopOfferGeneration = 'initial' | 'travelDealRefill';
+
+export function shopOfferGeneration(offerKey: string): ShopOfferGeneration {
+  return offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ? 'travelDealRefill' : 'initial';
+}
+
 /** The one persisted Shop-owner lookup for declared offers and Travel's dynamic refill slot. */
 export function authoredShopOffer(
   occurrence: RoomOccurrence,

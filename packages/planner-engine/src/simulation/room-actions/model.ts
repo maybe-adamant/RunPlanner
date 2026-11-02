@@ -67,6 +67,11 @@ export interface RoomActionProposal {
   readonly reference: RoomActionReference;
   readonly fromIndex?: number;
   readonly toIndex?: number;
+  /**
+   * For a move, where it lands in the current order: the index of the action it
+   * lands in front of, or the order's length when it lands last.
+   */
+  readonly anchorIndex?: number;
   readonly order: readonly RoomActionReference[];
   readonly structurallyAuthorable: boolean;
   readonly blockers: readonly Extract<RoomActionRosterIssue, { kind: 'dependency' | 'window' }>[];

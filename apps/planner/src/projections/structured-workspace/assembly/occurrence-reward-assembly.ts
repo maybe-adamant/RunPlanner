@@ -136,6 +136,8 @@ export type WorkspaceDerivedAcquisitionEntry = {
   readonly participation?: 'required' | 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
+  /** The Shop stock an Echo Gold duplicate's source purchase came from. */
+  readonly sourceOfferGeneration?: import('@run-planner/engine/authored-project').ShopOfferGeneration;
   /** What creates a derived pickup, as the engine publishes it. */
   readonly sourceFamily?: import('@run-planner/engine/authored-project').AcquisitionEntrySourceFamily;
 };

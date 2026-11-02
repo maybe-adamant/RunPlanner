@@ -1,5 +1,5 @@
 import {
-  parseHermesShrineDeliveryEntryKey,
+  hermesShrineInitialSlotKey,
   type AcquisitionEntrySourceFamily,
 } from '@run-planner/engine/authored-project';
 import {
@@ -464,7 +464,11 @@ export function occurrenceActionLabelParts(
         );
       }
       // Echo's duplicate of a Shop purchase is named by the Shop's own supplemental offer.
-      if (sourceFamily?.kind === 'echo' && supplemental !== undefined) {
+      if (
+        sourceFamily?.kind === 'echo' &&
+        sourceFamily.effect === 'doubleShop' &&
+        supplemental !== undefined
+      ) {
         return actionLabel(supplemental.label);
       }
       const explicitRewardType =
@@ -618,25 +622,29 @@ export function occurrenceActionAddGroup(
 export function generatedPickupPlacementRepairLabel(
   catalog: Catalog,
   reference: import('@run-planner/engine/authored-project').RoomActionReference,
-  source: import('@run-planner/engine/authored-project').RoomOccurrence | undefined,
+  source: import('@run-planner/engine/authored-project').GeneratedPickupSource,
+  sourceRoom: import('@run-planner/engine/authored-project').RoomOccurrence | undefined,
   host: import('@run-planner/engine/authored-project').RoomOccurrence | undefined,
 ): string {
-  if (reference.kind !== 'interactAcquisitionEntry') return 'Delivery';
-  const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey);
-  const generation = parsed?.generationKey;
-  const slot =
-    generation === 'travelDealRefill'
-      ? 'Travel Deal'
-      : generation === 'initial:first'
-        ? 'Slot 1'
-        : generation === 'initial:secondLeft'
-          ? 'Slot 2'
-          : 'Slot 3';
+  if (reference.kind !== 'interactAcquisitionEntry' || source.kind !== 'hermesShrineDelivery')
+    return 'Delivery';
+  const slot = (() => {
+    switch (hermesShrineInitialSlotKey(source.generationKey)) {
+      case undefined:
+        return 'Travel Deal';
+      case 'first':
+        return 'Slot 1';
+      case 'secondLeft':
+        return 'Slot 2';
+      case 'secondRight':
+        return 'Slot 3';
+    }
+  })();
   const offer =
     host?.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[reference.entryKey]?.offer;
   const roomLabel =
-    source === undefined
+    sourceRoom === undefined
       ? 'Hermes Shrine'
-      : (catalog.rooms.byKey[source.gameName]?.label ?? source.gameName);
+      : (catalog.rooms.byKey[sourceRoom.gameName]?.label ?? sourceRoom.gameName);
   return `${roomLabel} · ${slot}${offer === undefined ? '' : ` · ${timelineRewardLabel(catalog, offer)}`}`;
 }

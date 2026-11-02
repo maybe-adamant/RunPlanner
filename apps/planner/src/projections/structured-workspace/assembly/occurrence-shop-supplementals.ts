@@ -96,7 +96,7 @@ function derivedRewardSupplementalOffer(
   const eligibleSourceOfferKeys = capability.eligibleSourceOfferKeys;
   const sourceOfferLabel =
     context.offers.find((offer) => offer.key === capability.sourceOfferKey)?.label ??
-    (gold && capability.sourceOfferKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+    (gold && capability.sourceOfferGeneration === 'travelDealRefill'
       ? 'Travel Deal refill'
       : capability.sourceOfferKey);
   const travelInventory =

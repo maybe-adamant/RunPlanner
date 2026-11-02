@@ -53,6 +53,13 @@ describe('unified workspace ownership boundary', () => {
     }
   });
 
+  it('reads generated pickup facts from engine products, never by decoding their keys', () => {
+    for (const path of productionSources(plannerSourceRoot)) {
+      const decoders = readFileSync(path, 'utf8').match(/\bparse[A-Za-z]*(?:EntryKey|SiteKey)\b/g);
+      expect(decoders, `${relative(plannerSourceRoot, path)} decodes a key`).toBeNull();
+    }
+  });
+
   it('keeps workspace presentation models out of the pure planner engine', () => {
     const presentationModels = [
       'ContextualOption',

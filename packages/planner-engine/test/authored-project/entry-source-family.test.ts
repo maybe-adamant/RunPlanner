@@ -121,7 +121,7 @@ describe('acquisition entry source family', () => {
     ).toBeUndefined();
   });
 
-  it('names Echo’s replay and Gold duplicate as Echo', () => {
+  it('names Echo’s last-reward replay and its Gold duplicate apart', () => {
     const echoTraitKey = declaredTraitKey(
       (disposition) => disposition.kind === 'echo' && disposition.effect === 'lastReward',
     );
@@ -138,6 +138,11 @@ describe('acquisition entry source family', () => {
     };
     expect(acquisitionEntrySourceFamily(catalog, 'roomExit', entryKey, producer)).toEqual({
       kind: 'echo',
+      effect: 'lastReward',
+    });
+    expect(acquisitionEntrySourceFamily(catalog, 'roomExit', entryKey, undefined)).toEqual({
+      kind: 'echo',
+      effect: 'lastReward',
     });
     expect(
       acquisitionEntrySourceFamily(
@@ -146,7 +151,7 @@ describe('acquisition entry source family', () => {
         ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
         undefined,
       ),
-    ).toEqual({ kind: 'echo' });
+    ).toEqual({ kind: 'echo', effect: 'doubleShop' });
   });
 
   it('names an Artificer replacement wherever its site is', () => {
@@ -282,7 +287,7 @@ describe('stale room-action row source family', () => {
     });
     expect(row(travelDealRefill)?.sourceFamily).toEqual({ kind: 'shopTravelDealRefill' });
     expect(row(delivery)?.sourceFamily).toEqual({ kind: 'hermesShrineDelivery' });
-    expect(row(echoReplay)?.sourceFamily).toEqual({ kind: 'echo' });
+    expect(row(echoReplay)?.sourceFamily).toEqual({ kind: 'echo', effect: 'lastReward' });
     expect(row(unowned)?.sourceFamily).toBeUndefined();
   });
 });

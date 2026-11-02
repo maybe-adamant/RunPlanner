@@ -1,4 +1,9 @@
-import { createBiomeAddress, createOccurrenceAddress, type OccurrenceAddress } from './addresses';
+import {
+  createBiomeAddress,
+  createOccurrenceAddress,
+  type AcquisitionEntryAddress,
+  type OccurrenceAddress,
+} from './addresses';
 import type { Catalog, RoomDeclaration } from '../catalog-schema';
 import { locallyValidRewardOffers } from '../reward-kernel';
 import {
@@ -53,6 +58,17 @@ export function isSameRoomDelivery(source: OccurrenceAddress, host: OccurrenceAd
     source.routeKey === host.routeKey &&
     source.biomeKey === host.biomeKey &&
     source.occurrenceId === host.occurrenceId
+  );
+}
+
+/** Whether an acquisition entry is a Shrine delivery rushed in the Shrine room that sold it. */
+export function isSameRoomHermesShrineDeliveryEntry(entry: AcquisitionEntryAddress): boolean {
+  const host = entry.site.owner;
+  if (entry.site.pointKey !== HERMES_SHRINE_DELIVERY_SITE_KEY || host.kind !== 'occurrence')
+    return false;
+  const parsed = parseHermesShrineDeliveryEntryKey(entry.entryKey);
+  return (
+    parsed !== undefined && isSameRoomDelivery(hermesShrineDeliverySourceAddress(parsed), host)
   );
 }
 

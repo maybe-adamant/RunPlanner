@@ -2470,12 +2470,14 @@ it('retains reached placement rejection at the first due phase stop', () => {
   expect(evaluation.findings.map((finding) => finding.code)).toContain(
     'hermesShrineDeliveryPlacementRequired',
   );
-  expect(evaluation.rewards.generatedPickupPlacements).toContainEqual(
-    expect.objectContaining({
-      address: entry,
-      assessment: expect.objectContaining({ kind: 'invalid', reason: 'dueContactMismatch' }),
-    }),
+  const placement = evaluation.rewards.generatedPickupPlacements?.find(
+    (candidate) => candidate.address.entryKey === entry.entryKey,
   );
+  expect(placement?.assessment).toMatchObject({ kind: 'invalid', reason: 'dueContactMismatch' });
+  // The placement names the Shrine and the stock the item was bought from.
+  const source = placement?.assessment.source;
+  if (source?.kind !== 'hermesShrineDelivery') throw new Error('delivery source missing');
+  expect(hermesShrineDeliveryEntryKey(source.shrine, source.generationKey)).toBe(entry.entryKey);
 });
 
 it('keeps an earlier proven same-room placement when a later sibling blocks', () => {

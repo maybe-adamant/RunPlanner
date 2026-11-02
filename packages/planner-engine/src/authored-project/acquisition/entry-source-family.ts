@@ -17,8 +17,11 @@ import { ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, TRAVEL_DEAL_REFILL_ENTRY_KEY } from 
 export type AcquisitionEntrySourceFamily =
   /** A selected trait's own pickups, including a clocked producer's matured drops. */
   | { readonly kind: 'trait'; readonly traitKey: string }
-  /** Echo's last-reward replay or its Gold duplicate of a Shop purchase. */
-  | { readonly kind: 'echo' }
+  /**
+   * Echo's replay of the room's last reward (`lastReward`) or Gold Gold Gold's
+   * duplicate of a World Shop purchase (`doubleShop`).
+   */
+  | { readonly kind: 'echo'; readonly effect: 'lastReward' | 'doubleShop' }
   /** The Artificer's replacement of a converted reward. */
   | { readonly kind: 'artificer' }
   /** Sea Star's duplicate of an acquired reward. */
@@ -32,7 +35,8 @@ export type AcquisitionEntrySourceFamily =
   /** The World Shop's Travel Deal restock. */
   | { readonly kind: 'shopTravelDealRefill' };
 
-const ECHO = Object.freeze({ kind: 'echo' as const });
+const ECHO_LAST_REWARD = Object.freeze({ kind: 'echo' as const, effect: 'lastReward' as const });
+const ECHO_DOUBLE_SHOP = Object.freeze({ kind: 'echo' as const, effect: 'doubleShop' as const });
 const ARTIFICER = Object.freeze({ kind: 'artificer' as const });
 const SEA_STAR = Object.freeze({ kind: 'seaStar' as const });
 const NEMESIS_EVENT = Object.freeze({ kind: 'nemesisEvent' as const });
@@ -84,8 +88,8 @@ export function acquisitionEntrySourceFamily(
     return SEA_STAR;
   if (siteKey === 'roomExit') {
     if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) return SHOP_TRAVEL_DEAL_REFILL;
-    if (entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY) return ECHO;
-    if (parseEchoLastRewardPickupEntryKey(entryKey) !== undefined) return ECHO;
+    if (entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY) return ECHO_DOUBLE_SHOP;
+    if (parseEchoLastRewardPickupEntryKey(entryKey) !== undefined) return ECHO_LAST_REWARD;
     const clocked = parseClockedTraitGeneratedPickupEntryKey(entryKey);
     if (clocked !== undefined) {
       const traitKey = clockedPickupTraitKey(catalog, clocked.pickupKey);
@@ -101,7 +105,7 @@ export function acquisitionEntrySourceFamily(
     case 'traitOffer': {
       if (producer.traitKey === undefined) return undefined;
       const disposition = catalog.traits.byKey[producer.traitKey]?.selectedDisposition;
-      return disposition?.kind === 'echo' ? ECHO : traitFamily(producer.traitKey);
+      return disposition?.kind === 'echo' ? ECHO_LAST_REWARD : traitFamily(producer.traitKey);
     }
   }
 }

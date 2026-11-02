@@ -316,7 +316,7 @@ describe('timeline action labels', () => {
     // The engine's source family tells a Travel Deal restock from an Echo duplicate.
     const families = {
       [TRAVEL_DEAL_REFILL_ENTRY_KEY]: { kind: 'shopTravelDealRefill' },
-      [ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]: { kind: 'echo' },
+      [ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]: { kind: 'echo', effect: 'doubleShop' },
     } as const;
     expect(
       roomLocal.supplementalOffers.map(({ key }) => {
@@ -336,6 +336,22 @@ describe('timeline action labels', () => {
       ['Buy Demeter', true],
       ['Collect Demeter · Gold Gold Gold duplicate of Offer 1', false],
     ]);
+    // Echo's last-reward replay is not named by the Shop's Gold duplicate offer.
+    const replay = occurrenceActionLabelParts(
+      catalog,
+      {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      },
+      roomLocal,
+      [],
+      control,
+      {},
+      undefined,
+      { kind: 'echo', effect: 'lastReward' },
+    );
+    expect(replay.shownLabel ?? replay.label).toBe('Collect Demeter');
   });
 
   it('names the Pedestal collect by its item', () => {

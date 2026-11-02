@@ -5,6 +5,7 @@ import {
   type AcquisitionSiteAddress,
 } from '../../../authored-project/addresses';
 import type { AuthoredRewardState } from '../../../authored-project/model';
+import { shopOfferGeneration, type ShopOfferGeneration } from '../../../authored-project/shop';
 import type { AcquisitionEntrySourceFamily } from '../../../authored-project/acquisition/entry-source-family';
 import type { Catalog } from '../../../catalog-schema';
 import type { ConcreteAcquisitionEvent } from '../../../reward-kernel';
@@ -36,6 +37,11 @@ export interface DerivedAcquisitionEntryCandidateCapability {
   readonly participation?: 'required' | 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
+  /**
+   * Which World Shop stock the duplicated purchase came from: the entry
+   * inventory or the Travel Deal refill. Present with an Echo Gold duplicate's source.
+   */
+  readonly sourceOfferGeneration?: ShopOfferGeneration;
   /** What creates a derived pickup; absent for Shop inventory placeholders and resolved items. */
   readonly sourceFamily?: AcquisitionEntrySourceFamily;
 }
@@ -49,8 +55,9 @@ function derivedPickupSourceFamily(
         ? undefined
         : Object.freeze({ kind: 'trait', traitKey: frontier.traitKey });
     case 'echoDoubleShopReward':
+      return Object.freeze({ kind: 'echo', effect: 'doubleShop' });
     case 'echoLastReward':
-      return Object.freeze({ kind: 'echo' });
+      return Object.freeze({ kind: 'echo', effect: 'lastReward' });
     case 'hermesShrineDelivery':
       return Object.freeze({ kind: 'hermesShrineDelivery' });
     case 'travelDealRefill':
@@ -115,6 +122,9 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
     ...(first.eligibleSourceOfferKeys === undefined
       ? {}
       : { eligibleSourceOfferKeys: first.eligibleSourceOfferKeys }),
+    ...(first.kind === 'echoDoubleShopReward' && first.sourceOfferKey !== undefined
+      ? { sourceOfferGeneration: shopOfferGeneration(first.sourceOfferKey) }
+      : {}),
     ...(sourceFamily === undefined ? {} : { sourceFamily }),
   });
 }

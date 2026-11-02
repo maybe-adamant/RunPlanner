@@ -27,7 +27,12 @@ import {
   appendTranscendentEmbryoTimelineEffects,
   scopeRoomLifecycleTimeline,
 } from '@run-planner/engine/simulation';
-import type { GoldAmount, GoldLedger, GoldMoments } from '@run-planner/engine/simulation';
+import type {
+  GoldAmount,
+  GoldLedger,
+  GoldMoments,
+  RoomActionRow,
+} from '@run-planner/engine/simulation';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
@@ -163,12 +168,9 @@ function roomActionsForOccurrence(
   const goldCapability = input
     .derivedAcquisitionEntries?.(createAcquisitionSiteAddress(owner, 'roomExit'))
     .find((entry) => entry.kind === 'echoDoubleShopReward');
-  const isGoldPickup = (reference: RoomActionReference) =>
-    reference.kind === 'interactAcquisitionEntry' &&
-    reference.siteKey === 'roomExit' &&
-    reference.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
-  const goldNeedsPlacement =
-    goldCapability !== undefined && !input.occurrence.roomActions.order.some(isGoldPickup);
+  const isGoldPickup = (row: Pick<RoomActionRow, 'sourceFamily'>) =>
+    row.sourceFamily?.kind === 'echo' && row.sourceFamily.effect === 'doubleShop';
+  const goldNeedsPlacement = goldCapability !== undefined && !roster.rows.some(isGoldPickup);
   const skippedInteractionKeys = new Set(
     roster.rows.flatMap((row) => {
       if (row.reference.kind !== 'interactEncounter') return [];
@@ -182,8 +184,7 @@ function roomActionsForOccurrence(
     }),
   );
   const presentedRows = roster.rows.filter(
-    (row) =>
-      !skippedInteractionKeys.has(row.key) && (!goldNeedsPlacement || !isGoldPickup(row.reference)),
+    (row) => !skippedInteractionKeys.has(row.key) && (!goldNeedsPlacement || !isGoldPickup(row)),
   );
   const presentedActionKeys = new Set(presentedRows.map((row) => row.key));
   const goldGains = roomGoldGains(input.gold, owner);
@@ -375,6 +376,7 @@ function roomActionsForOccurrence(
         structurallyAuthorable: proposal.structurallyAuthorable,
         explanations: explanationFor(proposal),
         ...(proposal.toIndex === undefined ? {} : { toIndex: proposal.toIndex }),
+        ...(proposal.anchorIndex === undefined ? {} : { anchorIndex: proposal.anchorIndex }),
       }),
     );
   const controlAt = (address: SemanticAddress): WorkspaceRewardControl | undefined =>
@@ -563,7 +565,7 @@ function roomActionsForOccurrence(
         ...(row.requiredScope === undefined ? {} : { requiredScope: row.requiredScope }),
         proposalKeys: Object.freeze(proposalKeysByAction.get(row.key) ?? []),
         reference: row.reference,
-        participation: isGoldPickup(row.reference)
+        participation: isGoldPickup(row)
           ? (goldCapability?.participation ?? row.participation)
           : row.participation,
         participationOwnedByOverview,
@@ -797,8 +799,8 @@ function roomActionsForOccurrence(
       ? (() => {
           const reference = Object.freeze({
             kind: 'interactAcquisitionEntry' as const,
-            siteKey: 'roomExit',
-            entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+            siteKey: goldCapability.address.site.pointKey,
+            entryKey: goldCapability.address.entryKey,
           });
           const actionAddress = createRoomActionAddress(
             input.biome,

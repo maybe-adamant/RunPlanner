@@ -223,6 +223,7 @@ export interface WorkspaceBiomeSource {
     readonly participation?: 'required' | 'optional';
     readonly retainedSourceMismatch?: boolean;
     readonly eligibleSourceOfferKeys?: readonly string[];
+    readonly sourceOfferGeneration?: import('@run-planner/engine/authored-project').ShopOfferGeneration;
   }[];
   readonly runState: (owner: RunStateOwner) =>
     | { readonly availability: 'available'; readonly snapshot: RunStateSnapshot }
@@ -887,17 +888,20 @@ function createWorkspaceBiomeSource(
         (repair) => {
           const source = repair.assessment.source;
           const sourceRoom =
-            source.kind !== 'occurrence'
+            source.kind !== 'hermesShrineDelivery'
               ? undefined
               : project.route.biomes
-                  .find((biome) => biome.biomeKey === source.biomeKey)
-                  ?.topology?.occurrences.find((room) => room.occurrenceId === source.occurrenceId);
+                  .find((biome) => biome.biomeKey === source.shrine.biomeKey)
+                  ?.topology?.occurrences.find(
+                    (room) => room.occurrenceId === source.shrine.occurrenceId,
+                  );
           return Object.freeze({
             ...repair,
             proposalKey: `structuralUnplace:${roomActionKey(repair.reference)}`,
             label: generatedPickupPlacementRepairLabel(
               catalog,
               repair.reference,
+              source,
               sourceRoom,
               occurrencesById.get(owner.occurrenceId),
             ),
@@ -910,7 +914,7 @@ function createWorkspaceBiomeSource(
             ? repair
             : Object.freeze({
                 ...repair,
-                label: `${repair.label} · ${repair.assessment.source.kind === 'occurrence' ? repair.assessment.source.occurrenceId : repair.assessment.source.acquisitionIdentity}`,
+                label: `${repair.label} · ${repair.assessment.source.kind === 'hermesShrineDelivery' ? repair.assessment.source.shrine.occurrenceId : repair.assessment.source.acquisitionIdentity}`,
               }),
         ),
       );
