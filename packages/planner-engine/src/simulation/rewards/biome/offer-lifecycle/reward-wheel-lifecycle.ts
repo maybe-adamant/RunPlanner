@@ -277,7 +277,7 @@ export function prepareShipLifecycleCandidateContext(
             }),
         })),
         candidateFindings,
-        { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
+        { ordering: 'listed', atomicRegion: ownerRegion(wheel.origin) },
       );
       const picked = wheel.offers.find((offer) => offer.picked);
       if (picked === undefined) {

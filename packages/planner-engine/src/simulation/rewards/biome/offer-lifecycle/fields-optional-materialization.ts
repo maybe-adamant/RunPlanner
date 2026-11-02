@@ -251,12 +251,14 @@ export function materializeFieldsOptionalOfferPoint(
         : explainCohortOfferExclusions(
             frontierBranches,
             contextFor(focusedReward(selectedReward.slotKey)),
-            orderedSlots
-              .slice(0, orderedSlots.indexOf(selectedReward.slotKey))
-              .flatMap((slotKey) => {
-                const concrete = concreteBySlot.get(slotKey);
-                return concrete === undefined ? [] : [contextFor(concrete)];
-              }),
+            {
+              earlier: orderedSlots
+                .slice(0, orderedSlots.indexOf(selectedReward.slotKey))
+                .flatMap((slotKey) => {
+                  const concrete = concreteBySlot.get(slotKey);
+                  return concrete === undefined ? [] : [contextFor(concrete)];
+                }),
+            },
             'peersFirst',
           );
     return Object.freeze({

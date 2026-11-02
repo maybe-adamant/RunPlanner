@@ -151,7 +151,7 @@ describe('Olympian reward pressure', () => {
     expect(unsupported.state.rewardPriorities).toEqual(['Boon']);
   });
 
-  it("keeps an unordered cohort's consumed priority out of a later counted offer", () => {
+  it("keeps a listed cohort's consumed priority out of a later counted offer and draws it in order", () => {
     const initial = initializeRewardBranches(
       undefined,
       createTestArcanaFearState(),
@@ -193,7 +193,7 @@ describe('Olympian reward pressure', () => {
     const maxHealth = context({ rewardType: 'MaxHealthDrop' });
 
     const cohort = processOfferGenerationCohort([initial], [boon, maxHealth], new Map(), {
-      ordering: 'allOffers',
+      ordering: 'listed',
     });
     expect(cohort).toHaveLength(1);
     expect(cohort[0]?.state.rewardPriorities).toEqual([]);
@@ -204,6 +204,16 @@ describe('Olympian reward pressure', () => {
       new Map(),
     );
     expect(later).toHaveLength(1);
+
+    // ShipsEncounterSetup draws the left wheel first: the forced Zeus Boon must lead.
+    const ares = context({
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'AresUpgrade' },
+    });
+    const listed = (contexts: readonly (typeof boon)[]) =>
+      processOfferGenerationCohort([initial], contexts, new Map(), { ordering: 'listed' });
+    expect(listed([boon, ares])).toHaveLength(1);
+    expect(listed([ares, boon])).toHaveLength(0);
   });
 
   it('uses ordinary acquisition order for Boons, Devotion last-source ordering, and preserves a paid source use', () => {

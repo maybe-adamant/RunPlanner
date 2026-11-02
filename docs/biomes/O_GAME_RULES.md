@@ -63,14 +63,18 @@ reachable controls can repair them.
 Each active wheel owns one RunProgress or MetaProgress store, one or two
 complete resolved offers, and one picked offer index. Unpicked wheel options
 remain real offered values and consume their compatible support, while only
-the picked option acquires. `wheel2` remains a dormant retained leaf when the
+the picked option acquires. A two-offer wheel's offers are its sides: offer 1
+is the Left wheel and offer 2 the Right. `ShipsEncounterSetup` draws them in
+that order, threading the rewards already chosen, so the Right offer is
+generated after the Left one's bag draw and peer exclusions; no other order is
+assessed. `wheel2` remains a dormant retained leaf when the
 third phase is absent. Replacing a wheel offer replaces the resolved value at
 that wheel key directly; it never wraps it in another offer object.
 
 Authoring follows those lifecycle boundaries: the wheel's pre-offer history
 determines its Run/Meta support, the declaration determines its active offer
-count, the selected store and count constrain the complete simultaneous offer
-cohort, and only then does the player select one generated offer. Unresolved or
+count, the selected store and count constrain the offers drawn left then
+right, and only then does the player select one generated offer. Unresolved or
 incompatible retained offers remain explicit repair evidence; they do not make
 a supported store or offer count unauthorable. A retained wheel store outside
 its pre-offer support remains authored and receives a wheel-owned finding.

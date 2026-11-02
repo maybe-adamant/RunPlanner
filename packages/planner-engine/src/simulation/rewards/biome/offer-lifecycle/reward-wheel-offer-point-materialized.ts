@@ -225,7 +225,8 @@ export function applyRewardWheelOfferPointMaterialization(
     .get(semanticAddressKey(room.origin))
     ?.find((candidate) => candidate.offerPoint === wheel.wheelKey);
   const producerFrontier: RewardProducerFrontier = Object.freeze({
-    generationPolicy: 'jointUnordered',
+    // ShipsEncounterSetup draws the wheels left then right, threading rewardsChosen.
+    generationPolicy: 'sequential',
     generationHistorySequence: event.sequence,
     reachableBranchCount: frontierBranches.length,
     acquisitionHorizon:
@@ -306,7 +307,7 @@ export function applyRewardWheelOfferPointMaterialization(
             frontierBranches,
             [...values, candidate].map(contextForWheel),
             trialFindings,
-            { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
+            { ordering: 'listed', atomicRegion: ownerRegion(wheel.origin) },
           );
           if (trial.length === 0) continue;
           build(index + 1, [...values, candidate]);
@@ -318,7 +319,7 @@ export function applyRewardWheelOfferPointMaterialization(
         frontierBranches,
         (proposals[0] ?? []).map(contextForWheel),
         candidateFindings,
-        { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
+        { ordering: 'listed', atomicRegion: ownerRegion(wheel.origin) },
       );
       const selectedOffer = (proposals[0] ?? []).find(
         (candidate) => semanticAddressKey(candidate.origin) === ownerKey,
@@ -363,10 +364,15 @@ export function applyRewardWheelOfferPointMaterialization(
           : explainCohortOfferExclusions(
               frontierBranches,
               contextForWheel(focusedCandidate()),
-              wheel.offers
-                .filter((candidate) => candidate.offerKey !== focused.offerKey)
-                .map(contextForWheel),
-              'unordered',
+              {
+                earlier: wheel.offers
+                  .filter((candidate) => candidate.offerKey < focused.offerKey)
+                  .map(contextForWheel),
+                later: wheel.offers
+                  .filter((candidate) => candidate.offerKey > focused.offerKey)
+                  .map(contextForWheel),
+              },
+              'listed',
             );
       return Object.freeze({
         findings: Object.freeze(
@@ -384,7 +390,7 @@ export function applyRewardWheelOfferPointMaterialization(
     wheel.unresolvedOffers.length > 0
       ? Object.freeze([])
       : processOfferGenerationCohort(branches, contexts, findings, {
-          ordering: 'allOffers',
+          ordering: 'listed',
           atomicRegion: ownerRegion(wheel.origin),
         });
   if (wheel.unresolvedOffers.length > 0) {

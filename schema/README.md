@@ -67,6 +67,14 @@ through the engine's catalog-aware fill; the transitions themselves do not
 write them. The tool loads the engine and catalog through Vite's module runner
 (`current-schema.js`).
 
+A two-offer Ship wheel's `offer1` is the Left wheel, drawn before `offer2`, the
+Right. A plan saved while either draw order was admitted may hold a wheel
+valid only the other way round. After the Nemesis fill, the loader and the
+tool evaluate the plan and, for each such wheel its block names, exchange its
+two offers with their rerolled rewards, picked index, reroll targets and every
+key that embeds an offer's address, keeping the exchange only when it clears
+that wheel's block.
+
 The migration moves a Shop-owned pedestal item, its collect action and its
 source entry to the room unchanged, and gives every other pedestal-declaring
 Preboss occurrence an unset item.

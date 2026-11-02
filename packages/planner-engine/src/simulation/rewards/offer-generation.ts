@@ -135,18 +135,6 @@ export interface OfferProcessingPeer {
   readonly offer: ResolvedRewardOffer;
 }
 
-function permutations<T>(values: readonly T[]): readonly (readonly T[])[] {
-  if (values.length <= 1) {
-    return [values];
-  }
-  return values.flatMap((value, index) =>
-    permutations([...values.slice(0, index), ...values.slice(index + 1)]).map((tail) => [
-      value,
-      ...tail,
-    ]),
-  );
-}
-
 interface SourceOrderingFailure {
   readonly blocked: OfferProcessingContext;
   readonly prior: readonly OfferProcessingContext[];
@@ -502,28 +490,41 @@ export function explainRewardOfferExclusions(
 }
 
 /**
- * Explains a cohort member the existential search rejected: its own cause
- * alone, or the authored peers it cannot be generated beside.
+ * Explains a cohort member its ordered cohort rejected: its own cause alone,
+ * or the authored peers it cannot be generated beside. `peersFirst` assesses
+ * each earlier peer before the focused offer as Fields does; `listed` draws
+ * the pair in source order, earlier peers before it and later peers after.
  */
 export function explainCohortOfferExclusions(
   branches: readonly RewardBranchState[],
   focused: OfferProcessingContext,
-  peers: readonly OfferProcessingContext[],
-  ordering: 'unordered' | 'peersFirst',
+  peers: {
+    readonly earlier: readonly OfferProcessingContext[];
+    readonly later?: readonly OfferProcessingContext[];
+  },
+  ordering: 'peersFirst' | 'listed',
 ): readonly RewardOfferExclusionEvidence[] | undefined {
   if (processRewardOffer(branches, focused, new Map()).length === 0)
     return explainRewardOfferExclusions(branches, focused);
-  const conflicting = peers.filter((peer) => {
-    const afterPeer = processRewardOffer(branches, peer, new Map());
-    // An independently invalid peer is its own repair, not this offer's conflict.
-    if (afterPeer.length === 0) return false;
-    return ordering === 'peersFirst'
-      ? processRewardOffer(afterPeer, focused, new Map()).length === 0
-      : processOfferGenerationCohort(branches, [peer, focused], new Map(), {
-          ordering: 'allOffers',
-        }).length === 0;
-  });
-  const cited = conflicting.length > 0 ? conflicting : peers;
+  // An independently invalid peer is its own repair, not this offer's conflict.
+  const peerAloneValid = (peer: OfferProcessingContext) =>
+    processRewardOffer(branches, peer, new Map()).length > 0;
+  const pairFails = (pair: readonly OfferProcessingContext[]) =>
+    processOfferGenerationCohort(branches, pair, new Map(), { ordering: 'listed' }).length === 0;
+  const conflicting = [
+    ...peers.earlier.filter(
+      (peer) =>
+        peerAloneValid(peer) &&
+        (ordering === 'peersFirst'
+          ? processRewardOffer(processRewardOffer(branches, peer, new Map()), focused, new Map())
+              .length === 0
+          : pairFails([peer, focused])),
+    ),
+    ...(ordering === 'listed' ? (peers.later ?? []) : []).filter(
+      (peer) => peerAloneValid(peer) && pairFails([focused, peer]),
+    ),
+  ];
+  const cited = conflicting.length > 0 ? conflicting : [...peers.earlier, ...(peers.later ?? [])];
   return cited.length === 0
     ? undefined
     : aggregateRewardOfferExclusions([
@@ -739,7 +740,8 @@ export function processOfferGenerationCohort(
   contexts: readonly OfferProcessingContext[],
   findings: Map<string, FindingRegionEntry>,
   policy: {
-    readonly ordering: 'allOffers' | 'sourceOffers';
+    /** `listed` draws in the given source order; `sourceOffers` searches an order of source offers. */
+    readonly ordering: 'listed' | 'sourceOffers';
     readonly atomicRegion?: string;
   },
 ): readonly RewardBranchState[] {
@@ -772,45 +774,40 @@ export function processOfferGenerationCohort(
       }
       continue;
     }
-    const orderings =
-      policy.ordering === 'allOffers'
-        ? permutations(contexts)
-        : Object.freeze([sourceResult ?? contexts]);
-    for (const ordering of orderings) {
-      let candidates: readonly RewardBranchState[] = Object.freeze([branch]);
-      const localFindings = new Map<string, FindingRegionEntry>();
-      const priorOffers: OfferProcessingPeer[] = [];
-      for (const context of ordering) {
-        candidates = processRewardOffer(
-          candidates,
-          { ...context, peers: Object.freeze([...priorOffers]) },
-          localFindings,
-        );
-        if (candidates.length === 0) {
-          break;
-        }
-        priorOffers.push({ origin: context.reward.origin, offer: context.reward.offer });
-      }
+    const ordering = sourceResult ?? contexts;
+    let candidates: readonly RewardBranchState[] = Object.freeze([branch]);
+    const localFindings = new Map<string, FindingRegionEntry>();
+    const priorOffers: OfferProcessingPeer[] = [];
+    for (const context of ordering) {
+      candidates = processRewardOffer(
+        candidates,
+        { ...context, peers: Object.freeze([...priorOffers]) },
+        localFindings,
+      );
       if (candidates.length === 0) {
-        if (representativeFailures.length === 0) {
-          representativeFailures = Object.freeze([...localFindings.values()]);
-        }
-        continue;
+        break;
       }
-      for (const candidate of candidates) {
-        let canonical: RewardBranchState = Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            bags: candidate.state.bags,
-            rewardPriorities: candidate.state.rewardPriorities,
-          }),
-        });
-        for (const context of contexts) {
-          canonical = recordCanonicalOffer(canonical, context);
-        }
-        supported.push(canonical);
+      priorOffers.push({ origin: context.reward.origin, offer: context.reward.offer });
+    }
+    if (candidates.length === 0) {
+      if (representativeFailures.length === 0) {
+        representativeFailures = Object.freeze([...localFindings.values()]);
       }
+      continue;
+    }
+    for (const candidate of candidates) {
+      let canonical: RewardBranchState = Object.freeze({
+        ...branch,
+        state: Object.freeze({
+          ...branch.state,
+          bags: candidate.state.bags,
+          rewardPriorities: candidate.state.rewardPriorities,
+        }),
+      });
+      for (const context of contexts) {
+        canonical = recordCanonicalOffer(canonical, context);
+      }
+      supported.push(canonical);
     }
   }
   if (supported.length === 0) {

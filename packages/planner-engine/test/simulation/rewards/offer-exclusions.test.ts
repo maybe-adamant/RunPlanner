@@ -505,14 +505,14 @@ describe('door and local reward offer exclusions', () => {
 describe('cohort reward offer exclusions', () => {
   const peer = (offer: ResolvedRewardOffer) => context(offer, { origin: peerOrigin });
 
-  it('names the unordered peer an offer supported alone cannot share the cohort with', () => {
+  it('names the later listed peer an offer supported alone leaves without an entry', () => {
     const duplicate = peer({ rewardType: 'MaxHealthDrop' });
     expect(
       explainCohortOfferExclusions(
         [branch()],
         context({ rewardType: 'MaxHealthDrop' }),
-        [duplicate, peer({ rewardType: 'StackUpgrade' })],
-        'unordered',
+        { earlier: [], later: [duplicate, peer({ rewardType: 'StackUpgrade' })] },
+        'listed',
       ),
     ).toEqual([
       {
@@ -528,7 +528,7 @@ describe('cohort reward offer exclusions', () => {
       explainCohortOfferExclusions(
         [branch()],
         context({ rewardType: 'MaxHealthDrop' }),
-        [peer({ rewardType: 'MaxHealthDrop' })],
+        { earlier: [peer({ rewardType: 'MaxHealthDrop' })] },
         'peersFirst',
       ),
     ).toEqual([
@@ -545,8 +545,8 @@ describe('cohort reward offer exclusions', () => {
       explainCohortOfferExclusions(
         [branch()],
         context({ rewardType: 'MetaCurrencyDrop' }),
-        [peer({ rewardType: 'MaxHealthDrop' })],
-        'unordered',
+        { earlier: [peer({ rewardType: 'MaxHealthDrop' })] },
+        'listed',
       ),
     ).toEqual([
       {

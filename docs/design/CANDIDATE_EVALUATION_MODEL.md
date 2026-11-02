@@ -465,8 +465,8 @@ publishes the same product:
   at two. `allBranches` marks a reason held in every reached branch.
 - **Peers.** Wheel and Shop offers are first assessed alone against the
   frontier: a cause alone is reported as such, and only an offer supported
-  alone reports the authored peers it cannot be generated beside, so the
-  existential search is unchanged.
+  alone reports the authored peers it cannot be generated beside: for a wheel,
+  the Left offer before it or the Right offer after it in draw order.
 - **Cohorts.** A capability that requires every cohort merges their reasons;
   a supported cohort cites nothing, so no merged reason holds in all branches.
 - **Cost.** The explanation runs only on the failure path, after the unchanged

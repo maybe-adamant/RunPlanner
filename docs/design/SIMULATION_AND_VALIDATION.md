@@ -541,8 +541,8 @@ stale marks, or future bag support remain distinct.
 A counted draw resolves to one bag state: the last eligible same-item entry is
 canonical, because the catalog compiler rejects any store whose same-item
 entries could both be eligible and later diverge
-([Reward Model](REWARD_MODEL.md#counted-stores-and-bags)). Wheel draw-order
-search remains lookahead for existence, not alternative carried states.
+([Reward Model](REWARD_MODEL.md#counted-stores-and-bags)). A Ship wheel's
+offers draw in side order, Left then Right, so no draw order is searched.
 
 Reward-generation contacts require agreement on the history families they
 consume. If those exact inputs diverge where the contract requires agreement,

@@ -1,11 +1,13 @@
 import {
   fillSchema100NemesisBetOutcomes,
+  migrateRewardWheelOffersToSideOrder,
   parseProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { PROJECT_TRANSITION_STEPS } from './project-transitions.js';
 import { normalizeUnpushedSchema100 } from './project-99-to-100.js';
 
@@ -88,7 +90,7 @@ export function loadProjectDocument(
         `Project schema ${envelope.schemaVersion}.${revision} is newer than supported schema ${PROJECT_DOCUMENT_SCHEMA_VERSION}.${PROJECT_DOCUMENT_SCHEMA_REVISION}.`,
       );
     }
-    const normalized = fillSchema100NemesisBetOutcomes(normalizeUnpushedSchema100(parsed), catalog);
+    const normalized = completeSchema100(normalizeUnpushedSchema100(parsed), catalog);
     return currentProject(normalized === parsed ? json : JSON.stringify(normalized), catalog);
   }
 
@@ -116,7 +118,7 @@ export function loadProjectDocument(
     transitions: productionTransitions,
     context: options.legacyName === undefined ? {} : { name: options.legacyName },
   });
-  const migratedJson = JSON.stringify(fillSchema100NemesisBetOutcomes(migrated.document, catalog));
+  const migratedJson = JSON.stringify(completeSchema100(migrated.document, catalog));
   if (migratedJson === undefined) {
     throw new Error('Project migration result must be JSON serializable.');
   }
@@ -165,6 +167,15 @@ export function applyProjectDocumentTransitions(options: {
 
   throw new Error(
     `Project schema ${options.source.schemaVersion} with catalog ${options.source.catalogVersion} has no supported migration.`,
+  );
+}
+
+/** Every unstored Nemesis kill race becomes a win, then wheel offers take their side order. */
+function completeSchema100(document: unknown, catalog: Catalog): unknown {
+  return migrateRewardWheelOffersToSideOrder(
+    fillSchema100NemesisBetOutcomes(document, catalog),
+    catalog,
+    (project) => simulateProject(catalog, project).issue,
   );
 }
 
