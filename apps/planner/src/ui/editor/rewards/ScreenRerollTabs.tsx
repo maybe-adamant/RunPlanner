@@ -6,6 +6,7 @@ import type {
 import { hintProps } from '@planner/ui/controls/hint';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { screenTabLabel } from '@planner/projections/rewards/screenRerollTabs';
+import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
 import { useGrowOnlyHeight } from './useGrowOnlyHeight';
 
 function lockHint(lock: WorkspaceScreenRerollLock): string {
@@ -53,8 +54,8 @@ export function ScreenRerollTabs({
   readonly rerolls: WorkspaceScreenRerolls;
 }) {
   const tabList = useRef<HTMLDivElement>(null);
-  // Switching screens never shrinks the dialog: the tabs keep the tallest screen's height.
-  const holdHeight = useGrowOnlyHeight(true);
+  // Switching screens never shrinks the dialog: the panel keeps the tallest screen's height.
+  const [holdFrame, measureContent] = useGrowOnlyHeight(active);
   const count = earlierCount + 1;
   const atMax = earlierCount >= rerolls.maxCount;
   const hint = atMax ? lockHint(rerolls.lockAtMax) : undefined;
@@ -80,7 +81,7 @@ export function ScreenRerollTabs({
     focusTab(next);
   };
   return (
-    <div className="screen-reroll-tabs" ref={holdHeight}>
+    <div className="screen-reroll-tabs">
       <div className="screen-reroll-tab-row">
         <div
           aria-label="Screens"
@@ -124,13 +125,15 @@ export function ScreenRerollTabs({
             Edit
           </button>
           <button
-            className="secondary-action action-compact"
+            aria-label={`Reroll, costs ${rerolls.nextCost(earlierCount)}`}
+            className="secondary-action action-compact screen-reroll-action"
             disabled={atMax}
             onClick={onReroll}
             {...hintProps(hint)}
             type="button"
           >
-            {`Reroll · costs ${rerolls.nextCost(earlierCount)}`}
+            <img alt="" src={rerollDieArtwork} />
+            <span aria-hidden="true">{`−${rerolls.nextCost(earlierCount)}`}</span>
           </button>
           <button
             className="secondary-action action-compact"
@@ -146,9 +149,12 @@ export function ScreenRerollTabs({
         aria-labelledby={`${idPrefix}-screen-tab-${active}`}
         className="screen-reroll-panel"
         id={`${idPrefix}-screen-panel`}
+        ref={holdFrame}
         role="tabpanel"
       >
-        {children}
+        <div className="screen-reroll-content" ref={measureContent}>
+          {children}
+        </div>
       </div>
     </div>
   );

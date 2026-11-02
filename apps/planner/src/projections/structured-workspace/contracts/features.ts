@@ -164,6 +164,8 @@ export interface WorkspaceFeatureRollOption {
   readonly key: string;
   readonly kind: 'offer' | 'reroll';
   readonly label: string;
+  /** The spoken name where the label is terse, as a reroll's cost. */
+  readonly ariaLabel?: string;
   /** An unpinned reroll slot: picking it first chooses its item or trait. */
   readonly needsChoice?: true;
   readonly locked?: WorkspaceFeatureRollLock;

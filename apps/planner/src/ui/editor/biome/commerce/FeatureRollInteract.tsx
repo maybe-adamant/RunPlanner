@@ -8,6 +8,7 @@ import {
   type WorkspaceFeatureRollSlot,
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
+import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
@@ -90,6 +91,7 @@ export function FeatureRollEntry({
                     disabled: option.locked !== undefined,
                     key: option.key,
                     label: option.label,
+                    ...(option.ariaLabel === undefined ? {} : { ariaLabel: option.ariaLabel }),
                     selected: false,
                     state:
                       option.locked === undefined ? ('possible' as const) : ('impossible' as const),
@@ -117,6 +119,7 @@ export function FeatureRollEntry({
             ? {}
             : { disabledHint: featureRollLockHint(actions.locked) })}
           id={`${idPrefix}-action`}
+          itemIcon={(item) => (item.value === 'reroll' ? rerollDieArtwork : undefined)}
           label=""
           model={model}
           onSelect={(optionKey) => {

@@ -220,7 +220,8 @@ export function assembleFeatureRollActions(input: {
       Object.freeze({
         key: 'reroll',
         kind: 'reroll' as const,
-        label: `Reroll · costs ${interaction.reroll.cost}`,
+        label: `−${interaction.reroll.cost}`,
+        ariaLabel: `Reroll, costs ${interaction.reroll.cost}`,
         ...(locked === undefined ? {} : { locked }),
       }),
     );
