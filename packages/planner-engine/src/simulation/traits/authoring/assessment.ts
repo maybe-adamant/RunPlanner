@@ -554,6 +554,8 @@ export function assessTraitOfferBeforeRarification(
   offer: AuthoredTraitOffer,
   state: SimulationState,
   source: ResolvedTraitOfferSource,
+  /** Whether an unshowable screen names why; legality-only callers do not ask. */
+  explainFailure: boolean,
 ): {
   readonly assessments: readonly TraitAssessment[];
   readonly generation?: InitialOfferSupport;
@@ -565,6 +567,7 @@ export function assessTraitOfferBeforeRarification(
     ? assessInitialOfferSupport({
         ...traitOfferGenerationInput(catalog, offer.giverKey, state, source),
         offer,
+        explainFailure,
       })
     : undefined;
   const composition = assessTraitOfferComposition(catalog, offer);

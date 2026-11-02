@@ -252,7 +252,7 @@ describe('Persephone effective offer levels', () => {
         ],
       ]),
     );
-    const candidate = artifacts.at(address)?.evaluateOffer(offer())[0];
+    const candidate = artifacts.at(address)?.evaluateOffer(offer(), true)[0];
     if (candidate === undefined) throw new Error('missing candidate branch');
 
     expect(candidate).toMatchObject({
@@ -352,7 +352,7 @@ describe('Persephone effective offer levels', () => {
       new Map([[semanticAddressKey(address), Object.freeze([context()])]]),
     )
       .at(address)
-      ?.evaluateOffer(offer(5))[0];
+      ?.evaluateOffer(offer(5), true)[0];
     expect(candidate?.jeweledPomLevels).toEqual([3, 3, 3]);
 
     const replacement = evaluateReachedTraitOffer(
@@ -553,7 +553,7 @@ describe('Persephone effective offer levels', () => {
       catalog,
       new Map([[semanticAddressKey(address), Object.freeze([candidateContext])]]),
     );
-    const candidate = artifacts.at(address)?.evaluateOffer(offer(5))[0];
+    const candidate = artifacts.at(address)?.evaluateOffer(offer(5), true)[0];
     if (candidate === undefined) throw new Error('missing candidate branch');
     expect(candidate.effectiveLevels).toEqual([10, 10, 10]);
 

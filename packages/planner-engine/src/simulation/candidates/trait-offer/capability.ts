@@ -121,6 +121,8 @@ function traitOfferCandidateSource(
 export interface TraitOfferCandidateCapability {
   readonly evaluateOffer: (
     value: AuthoredTraitOffer,
+    /** Whether an unshowable screen names why; focused row queries do not ask. */
+    explainFailure: boolean,
   ) => readonly TraitOfferCandidateBranchAssessment[];
   readonly callingCard: (value: AuthoredTraitOffer) => readonly {
     readonly effectiveOffer: AuthoredTraitOffer;
@@ -429,6 +431,7 @@ export function createTraitOfferCandidateArtifacts(
           primaryOffer,
           context.generationState,
           traitOfferCandidateSource(catalog, context, primaryOffer),
+          false,
         );
         const callingCard = evaluateCallingCardOffer(
           catalog,
@@ -495,7 +498,7 @@ export function createTraitOfferCandidateArtifacts(
         value.concaveStoneResult.optionKey === optionKey &&
         value.selectedOptionKey !== optionKey;
       return Object.freeze({
-        evaluateOffer: (value: AuthoredTraitOffer) =>
+        evaluateOffer: (value: AuthoredTraitOffer, explainFailure: boolean) =>
           Object.freeze(
             branchContexts.map((context) => {
               const resolvedContext = traitOfferCandidateSource(catalog, context, value);
@@ -504,6 +507,7 @@ export function createTraitOfferCandidateArtifacts(
                 value,
                 context.generationState,
                 resolvedContext,
+                explainFailure,
               );
               const rarityFacts = boonRarityFactsForOffer(
                 catalog,
@@ -577,6 +581,7 @@ export function createTraitOfferCandidateArtifacts(
                 context.state,
                 context.generationState,
                 resolvedContext,
+                explainFailure,
               );
               return Object.freeze({
                 assessments,
@@ -613,6 +618,7 @@ export function createTraitOfferCandidateArtifacts(
                 value,
                 context.generationState,
                 traitOfferCandidateSource(catalog, context, value),
+                false,
               );
               const result = evaluateCallingCardOffer(catalog, keepsakes, value, base.legal);
               // A row is rarifiable where one more click on it, after the
@@ -628,6 +634,7 @@ export function createTraitOfferCandidateArtifacts(
                   attempted,
                   context.generationState,
                   traitOfferCandidateSource(catalog, context, attempted),
+                  false,
                 );
                 return !invalidAt(
                   evaluateCallingCardOffer(catalog, keepsakes, attempted, attemptedBase.legal),
@@ -901,6 +908,7 @@ export function createTraitOfferCandidateArtifacts(
                 value,
                 context.generationState,
                 traitOfferCandidateSource(catalog, context, value),
+                false,
               );
               const replacementOptionKeys =
                 value.kind === 'traits'

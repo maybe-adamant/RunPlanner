@@ -147,7 +147,7 @@ describe('Circe selected trait acquisition', () => {
     if (capability === undefined) throw new Error('Circe candidate capability is missing');
     expect(
       capability
-        .evaluateOffer(value)
+        .evaluateOffer(value, true)
         .every((evaluation) => evaluation.assessments.every((assessment) => assessment.legal)),
     ).toBe(true);
     expect(capability.circeResolution(value, 'option1')[0]).toMatchObject({

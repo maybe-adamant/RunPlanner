@@ -1084,7 +1084,13 @@ describe('reached trait offer chronology', () => {
       code: 'traitOfferGenerationUnavailable',
       phase: 'rewardGeneration',
       origin: traitAddress,
-      evidence: { acquisitionRole: 'source', lifecyclePoint: 'roomRewardPickup' },
+      // A fresh Apollo screen starts with three cores, one of them Attack or Special.
+      evidence: {
+        acquisitionRole: 'source',
+        lifecyclePoint: 'roomRewardPickup',
+        reason: 'coreTraitsFirst',
+        traitKeys: ['ApolloWeaponBoon', 'ApolloSpecialBoon'],
+      },
     });
     const branch = f.rewards.branches[0];
     if (branch === undefined) throw new Error('F reward branch is missing');
@@ -1229,7 +1235,11 @@ describe('reached trait offer chronology', () => {
       persephoneBaseLevels: [undefined, undefined, undefined],
       effectiveLevels: [1, 1, 1],
     });
-    expect(result.result.findings).toContainEqual({ code: 'traitOfferGenerationUnavailable' });
+    expect(result.result.findings).toContainEqual({
+      code: 'traitOfferGenerationUnavailable',
+      reason: 'coreTraitsFirst',
+      traitKeys: ['ApolloWeaponBoon', 'ApolloSpecialBoon'],
+    });
   });
 
   it('keeps naturally surviving same-owner traces on one pre-offer state and context', () => {

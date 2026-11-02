@@ -85,7 +85,11 @@ function finalSupported(
   context: ResolvedTraitOfferSource = {},
   testCatalog = catalog,
 ): boolean {
-  return assessInitialOfferSupport({ ...input(before, context, testCatalog), offer: value }).legal;
+  return assessInitialOfferSupport({
+    ...input(before, context, testCatalog),
+    offer: value,
+    explainFailure: true,
+  }).legal;
 }
 
 /** Smaller declaration domains isolate generation stages, not a copied oracle. */
@@ -125,7 +129,11 @@ describe('rerolled screen chain', () => {
     // Every ban removes one of the repeated rows, which nothing re-offers.
     expect(finalSupported(offer(cores, [screen(...cores)]))).toBe(false);
     const findings = (value: AuthoredTraitOfferTraits) =>
-      assessInitialOfferSupport({ ...input(createTraitHistoryState()), offer: value }).findings;
+      assessInitialOfferSupport({
+        ...input(createTraitHistoryState()),
+        offer: value,
+        explainFailure: true,
+      }).findings;
     expect(findings(offer(cores, [screen(...cores)]))).toEqual([{ code: 'rollRepeatsAllOffers' }]);
     // Not a first screen either way, but a ban of Weapon admits it.
     expect(
@@ -153,7 +161,7 @@ describe('rerolled screen chain', () => {
           [screen(...cores)],
         ),
       ),
-    ).toEqual([{ code: 'traitOfferGenerationUnavailable' }]);
+    ).toEqual([{ code: 'traitOfferGenerationUnavailable', reason: 'screenSize' }]);
   });
 
   it('accept after an unauthored screen either a first screen or any single ban', () => {
@@ -205,19 +213,31 @@ describe('rerolled screen chain', () => {
       screen(...cores),
     ]);
     expect(
-      assessRerolledScreensSupport(input(createTraitHistoryState()), value.rerolledScreens!).map(
-        (support) => support?.legal,
-      ),
+      assessRerolledScreensSupport(
+        input(createTraitHistoryState()),
+        value.rerolledScreens!,
+        true,
+      ).map((support) => support?.legal),
     ).toEqual([true, true, undefined, true]);
     expect(
-      assessRerolledScreensSupport(input(createTraitHistoryState()), [
-        screen(
-          ['ApolloWeaponBoon', 'Common'],
-          ['ApolloCastBoon', 'Common'],
-          ['PerfectDamageBonusBoon', 'Common'],
-        ),
-      ])[0]?.legal,
-    ).toBe(false);
+      assessRerolledScreensSupport(
+        input(createTraitHistoryState()),
+        [
+          screen(
+            ['ApolloWeaponBoon', 'Common'],
+            ['ApolloCastBoon', 'Common'],
+            ['PerfectDamageBonusBoon', 'Common'],
+          ),
+        ],
+        true,
+      )[0]?.findings,
+    ).toEqual([
+      {
+        code: 'traitOfferGenerationUnavailable',
+        reason: 'coreTraitsFirst',
+        traitKeys: ['ApolloSpecialBoon', 'ApolloSprintBoon', 'ApolloManaBoon'],
+      },
+    ]);
   });
 
   // Source reading (TraitLogic.lua SetTraitsOnLoot: the exclusion prunes seeds and
@@ -260,7 +280,7 @@ describe('rerolled screen chain', () => {
     expect(guessed).toHaveLength(2);
     expect(finalSupported(offer(final, guessed!))).toBe(true);
     expect(
-      assessRerolledScreensSupport(input(createTraitHistoryState()), guessed!).map(
+      assessRerolledScreensSupport(input(createTraitHistoryState()), guessed!, true).map(
         (support) => support?.legal,
       ),
     ).toEqual([true, true]);
@@ -331,7 +351,11 @@ describe('Fallback Gold screen rerolls', () => {
     rerolledScreens: earlier,
   });
   const supported = (value: import('@run-planner/engine/authored-project').AuthoredTraitOffer) =>
-    assessInitialOfferSupport({ ...input(before, denial, testCatalog), offer: value }).legal;
+    assessInitialOfferSupport({
+      ...input(before, denial, testCatalog),
+      offer: value,
+      explainFailure: true,
+    }).legal;
 
   it('reroll a Gold screen into the Duo it failed to roll, or into Gold again', () => {
     expect(supported(offer([['ApolloSecondStageCastBoon', 'Duo']], [gold]))).toBe(true);
@@ -422,17 +446,25 @@ describe('NPC rerolled screens', () => {
     expect(rows).toHaveLength(3);
     const shown = { options: rows.map(({ traitKey }) => ({ traitKey, rarity: 'Common' })) };
     // An unrerolled NPC screen keeps its row checks only.
-    expect(assessInitialOfferSupport({ ...npcInput(), offer: npcOffer(rows, []) }).applies).toBe(
-      false,
-    );
     expect(
-      assessInitialOfferSupport({ ...npcInput(), offer: npcOffer(rows, [shown as never]) })
-        .findings,
+      assessInitialOfferSupport({ ...npcInput(), offer: npcOffer(rows, []), explainFailure: true })
+        .applies,
+    ).toBe(false);
+    expect(
+      assessInitialOfferSupport({
+        ...npcInput(),
+        offer: npcOffer(rows, [shown as never]),
+        explainFailure: true,
+      }).findings,
     ).toEqual([{ code: 'rollRepeatsAllOffers' }]);
     const chain = guessRerolledScreens(npcInput(), rows, 1)!;
-    expect(assessInitialOfferSupport({ ...npcInput(), offer: npcOffer(rows, chain) }).legal).toBe(
-      true,
-    );
+    expect(
+      assessInitialOfferSupport({
+        ...npcInput(),
+        offer: npcOffer(rows, chain),
+        explainFailure: true,
+      }).legal,
+    ).toBe(true);
   });
 
   it('refuse the reroll of a first screen that shows every fresh trait', () => {

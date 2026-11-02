@@ -61,6 +61,7 @@ function supports(
       context,
     ),
     offer: value,
+    explainFailure: false,
   }).legal;
 }
 
@@ -456,12 +457,220 @@ describe('native initial offer construction', () => {
       },
     };
     expect(
-      assessInitialOfferSupport({ ...input, catalog: noPriorityCatalog, offer: value }).legal,
+      assessInitialOfferSupport({
+        ...input,
+        catalog: noPriorityCatalog,
+        offer: value,
+        explainFailure: false,
+      }).legal,
     ).toBe(false);
     // Below guaranteed pressure the same linked identity can enter normal fill.
     expect(supports(value, before, {}, noPriorityCatalog)).toBe(true);
     expect(
       supports(offer([value.options[2]!, value.options[0]!, value.options[1]!]), before, context),
     ).toBe(true);
+  });
+});
+
+describe('why the game cannot show a screen', () => {
+  function cause(
+    value: AuthoredTraitOffer,
+    before = fresh,
+    context: ResolvedTraitOfferSource = {},
+    testCatalog = catalog,
+  ) {
+    return assessInitialOfferSupport({
+      ...traitOfferGenerationInput(
+        testCatalog,
+        value.giverKey,
+        traitFrontierState(before, { catalog: testCatalog }),
+        context,
+      ),
+      offer: value,
+      explainFailure: true,
+    }).findings;
+  }
+  const screen = (
+    giverKey: string,
+    options: readonly (readonly [string, string])[],
+  ): AuthoredTraitOfferTraits => ({
+    kind: 'traits',
+    giverKey,
+    options: options.map(([traitKey, rarity]) => ({
+      traitKey,
+      rarity,
+    })) as unknown as AuthoredTraitOfferTraits['options'],
+    selectedOptionKey: 'option1',
+  });
+  const rarityFacts = (providerBase: Record<string, number>): ResolvedTraitOfferSource =>
+    ({
+      boonRarityFacts: {
+        providerBase: { Rare: 0, Epic: 0, Heroic: 0, Duo: 0, Legendary: 0, ...providerBase },
+        rollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
+        contributions: [],
+      },
+    }) as ResolvedTraitOfferSource;
+  // Natural Selection and Beach Ball are both offered by Poseidon here.
+  const twoDuos = history([
+    ['Poseidon', 'PoseidonWeaponBoon', 'Common'],
+    ['Poseidon', 'PoseidonSprintBoon', 'Common'],
+    ['Poseidon', 'DoubleRewardBoon', 'Common'],
+    ['Demeter', 'DemeterSpecialBoon', 'Common'],
+    ['Apollo', 'ApolloCastBoon', 'Common'],
+  ]);
+  const twoDuoScreen = screen('Poseidon', [
+    ['GoodStuffBoon', 'Duo'],
+    ['RoomRewardBonusBoon', 'Common'],
+    ['PoseidonSplashSprintBoon', 'Duo'],
+  ]);
+
+  it('names a Common row that a guaranteed Rare supersedes', () => {
+    const rareGuaranteed = rarityFacts({ Rare: 1.1, Epic: 0.05, Duo: 0.12, Legendary: 0.1 });
+    expect(cause(twoDuoScreen, twoDuos, rareGuaranteed)).toEqual([
+      {
+        code: 'traitOfferGenerationUnavailable',
+        reason: 'rarityUnavailable',
+        traitKey: 'RoomRewardBonusBoon',
+        optionKey: 'option2',
+        rarity: 'Common',
+        rarityCause: 'guaranteed',
+        requiredRarity: 'Rare',
+        requiredChance: 1.1,
+      },
+    ]);
+    // Without the guarantee the same two Duos still need a vacant core.
+    expect(cause(twoDuoScreen, twoDuos, rarityFacts({ Rare: 0.1, Duo: 0.12 }))).toEqual([
+      {
+        code: 'traitOfferGenerationUnavailable',
+        reason: 'coreTraitsFirst',
+        traitKeys: ['PoseidonSpecialBoon', 'PoseidonCastBoon', 'PoseidonManaBoon'],
+      },
+    ]);
+  });
+
+  it('names a repeated row before any generation rule', () => {
+    expect(
+      cause(
+        screen('Apollo', [
+          ['ApolloWeaponBoon', 'Common'],
+          ['ApolloSpecialBoon', 'Common'],
+          ['ApolloWeaponBoon', 'Common'],
+        ]),
+      ),
+    ).toEqual([
+      {
+        code: 'traitOfferGenerationUnavailable',
+        reason: 'duplicateTrait',
+        traitKey: 'ApolloWeaponBoon',
+        optionKeys: ['option1', 'option3'],
+      },
+    ]);
+  });
+
+  it('names a row whose trait this god cannot offer now', () => {
+    expect(
+      cause(
+        screen('Apollo', [
+          ['ApolloWeaponBoon', 'Common'],
+          ['ZeusWeaponBoon', 'Common'],
+          ['ApolloCastBoon', 'Common'],
+        ]),
+      ),
+    ).toEqual([
+      {
+        code: 'traitOfferGenerationUnavailable',
+        reason: 'traitUnavailable',
+        traitKey: 'ZeusWeaponBoon',
+        optionKey: 'option2',
+      },
+    ]);
+  });
+
+  it('names each rarity rule with the row it blocks', () => {
+    const cores = (first: string) =>
+      screen('Apollo', [
+        ['ApolloWeaponBoon', first],
+        ['ApolloSpecialBoon', 'Common'],
+        ['ApolloCastBoon', 'Common'],
+      ]);
+    const rarityCause = (
+      value: AuthoredTraitOffer,
+      ...rest: [TraitHistoryState?, ResolvedTraitOfferSource?]
+    ) =>
+      cause(value, ...rest).map((finding) =>
+        'rarityCause' in finding
+          ? [finding.traitKey, finding.rarityCause, finding.requiredRarity]
+          : finding,
+      );
+    expect(rarityCause(cores('Duo'))).toEqual([['ApolloWeaponBoon', 'notInTrait', undefined]]);
+    expect(rarityCause(cores('Rare'), fresh, { freshRarityOverride: 'Common' })).toEqual([
+      ['ApolloWeaponBoon', 'forcedCommon', undefined],
+    ]);
+    // Present-zero Duo can still be rescued unless Denial turns rescue off.
+    expect(
+      rarityCause(twoDuoScreen, twoDuos, {
+        ...rarityFacts({ Rare: 0.1, Duo: 0.12 }),
+        devotionNoDuo: true,
+        finalRarityRescueDisabled: true,
+      }),
+    ).toEqual([['GoodStuffBoon', 'devotion', undefined]]);
+    // An exchange keeps the promoted rarity of the boon it replaces.
+    const exchanged = history([['Poseidon', 'PoseidonWeaponBoon', 'Common']]);
+    expect(rarityCause(cores('Common'), exchanged)).toEqual([
+      ['ApolloWeaponBoon', 'replacement', 'Rare'],
+    ]);
+  });
+
+  it('names a short screen and a trait that would still fill it', () => {
+    const coresHeld = history([
+      ['Apollo', 'ApolloWeaponBoon', 'Common'],
+      ['Apollo', 'ApolloSpecialBoon', 'Common'],
+      ['Apollo', 'ApolloCastBoon', 'Common'],
+      ['Apollo', 'ApolloSprintBoon', 'Common'],
+      ['Apollo', 'ApolloManaBoon', 'Common'],
+    ]);
+    const [finding] = cause(screen('Apollo', [['ApolloRetaliateBoon', 'Common']]), coresHeld);
+    expect(finding).toMatchObject({ reason: 'screenSize', traitKey: expect.any(String) });
+    expect(finding).not.toMatchObject({ traitKey: 'ApolloRetaliateBoon' });
+  });
+
+  it('names two rows that never appear together, or no single rule', () => {
+    const exchanges = history([
+      ['Poseidon', 'PoseidonWeaponBoon', 'Common'],
+      ['Demeter', 'DemeterSpecialBoon', 'Common'],
+    ]);
+    expect(
+      cause(
+        screen('Apollo', [
+          ['ApolloSpecialBoon', 'Rare'],
+          ['PerfectDamageBonusBoon', 'Epic'],
+          ['ApolloWeaponBoon', 'Rare'],
+        ]),
+        exchanges,
+      ),
+    ).toEqual([
+      {
+        code: 'traitOfferGenerationUnavailable',
+        reason: 'pairConflict',
+        traitKeys: ['ApolloSpecialBoon', 'ApolloWeaponBoon'],
+        optionKeys: ['option1', 'option3'],
+      },
+    ]);
+    const duoGuaranteed = rarityFacts({ Rare: 0.2, Epic: 0.1, Duo: 1 });
+    expect(
+      cause(
+        screen('Poseidon', [
+          ['PoseidonCastBoon', 'Rare'],
+          ['PoseidonManaBoon', 'Epic'],
+          ['PoseidonExCastBoon', 'Epic'],
+        ]),
+        history([
+          ['Poseidon', 'PoseidonWeaponBoon', 'Common'],
+          ['Zeus', 'ZeusCastBoon', 'Common'],
+          ['Apollo', 'ApolloSprintBoon', 'Common'],
+        ]),
+        duoGuaranteed,
+      ),
+    ).toEqual([{ code: 'traitOfferGenerationUnavailable', reason: 'generic' }]);
   });
 });

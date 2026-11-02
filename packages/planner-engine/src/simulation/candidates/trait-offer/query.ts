@@ -1,4 +1,9 @@
-import type { Catalog } from '../../../catalog-schema';
+import type { Catalog, TraitRarity } from '../../../catalog-schema';
+import type {
+  InitialOfferFinding,
+  TraitOfferGenerationReason,
+  TraitOfferRarityCause,
+} from '../../traits/authoring/initial-composition';
 import type { CurrentArcanaCard } from '../../arcana-fear';
 import {
   semanticAddressKey,
@@ -40,6 +45,8 @@ import {
 export type TraitOfferCandidateFindingCode =
   TraitFindingCode | 'duplicateOfferedTrait' | 'screenRerollUnavailable';
 
+export type { TraitOfferGenerationReason, TraitOfferRarityCause };
+
 export interface TraitOfferCandidateFinding {
   readonly code: TraitOfferCandidateFindingCode;
   readonly traitKey?: string;
@@ -53,8 +60,16 @@ export interface TraitOfferCandidateFinding {
   readonly actionIndex?: number;
   /** The rerolled-away screen's tab index; absent for the final screen. */
   readonly screen?: number;
-  /** Why a reroll is refused. */
-  readonly reason?: 'nothingLeft';
+  /** Why a reroll is refused, or why the game cannot show the screen. */
+  readonly reason?: 'nothingLeft' | TraitOfferGenerationReason;
+  /** The traits a screen cause names beyond its one row: core boons or a pair. */
+  readonly traitKeys?: readonly string[];
+  /** A rarity cause: the row's authored rarity, why it cannot roll, and what it would roll. */
+  readonly rarity?: TraitRarity;
+  readonly rarityCause?: TraitOfferRarityCause;
+  readonly requiredRarity?: TraitRarity;
+  /** The guaranteed rarity's chance, as a fraction (1.1 is 110%). */
+  readonly requiredChance?: number;
 }
 
 export interface TraitOfferCandidateQuery {
@@ -446,6 +461,7 @@ function candidateFinding(
   finding:
     | TraitAssessmentFinding
     | TraitOfferCompositionFinding
+    | InitialOfferFinding
     | { readonly code: TraitFindingCode; readonly detail?: string },
 ): TraitOfferCandidateFinding {
   return Object.freeze({ ...finding });
@@ -550,7 +566,14 @@ function assessTraitOfferCandidate(
   const findings = Object.freeze([
     ...branches.flatMap((branch) => [
       ...branch.assessments.flatMap((entry) => entry.findings.map(candidateFinding)),
-      ...(branch.generation?.findings.map(candidateFinding) ?? []),
+      // The candidate's own duplicate finding names a repeated row.
+      ...(branch.generation?.findings
+        .filter(
+          (finding) =>
+            !('reason' in finding && finding.reason === 'duplicateTrait') ||
+            duplicateFindings.length === 0,
+        )
+        .map(candidateFinding) ?? []),
       ...branch.composition.findings.map(candidateFinding),
       ...(branch.targetedAcquisition?.findings.map(candidateFinding) ?? []),
       ...rerolledScreenCandidateFindings(branch.rerolledScreens ?? []),
@@ -777,7 +800,7 @@ export function evaluateTraitOfferCandidate(
   const concaveStone = Object.freeze(capability?.concaveStone(query.value) ?? []);
   const chaosOfferRules = Object.freeze(capability?.chaosOfferRules(query.value) ?? []);
   const assessment = assessTraitOfferCandidate(
-    capability === undefined ? Object.freeze([]) : capability.evaluateOffer(query.value),
+    capability === undefined ? Object.freeze([]) : capability.evaluateOffer(query.value, true),
     duplicateFindings,
     callingCard,
     query.value,
@@ -801,7 +824,7 @@ export function evaluateTraitOfferFocusedOptionCandidate(
   if (capability === undefined && !focusedDuplicate)
     return unavailableForTraitOffer(evaluation, query.trait);
   const assessment = assessTraitOfferCandidate(
-    capability === undefined ? Object.freeze([]) : capability.evaluateOffer(query.value),
+    capability === undefined ? Object.freeze([]) : capability.evaluateOffer(query.value, false),
     duplicateFindings,
   );
   return evaluatedFocusedTraitOfferOptionCandidate(assessment, query.optionKey);

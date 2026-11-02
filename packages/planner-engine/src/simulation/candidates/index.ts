@@ -125,6 +125,8 @@ export type {
   TraitOfferCandidateFinding,
   TraitOfferCandidateFindingCode,
   TraitOfferCandidateQuery,
+  TraitOfferGenerationReason,
+  TraitOfferRarityCause,
   TraitAcquisitionTargetDomainEvaluation,
   TraitAcquisitionTargetDomainQuery,
   TraitCarrierChildDomainEvaluation,

@@ -822,11 +822,11 @@ describe('Chaos paired-trait history', () => {
     ).at(address);
     const domain = capability?.chaosOfferDomain(common)[0];
     expect(domain?.rarities).toEqual(['Rare', 'Epic']);
-    expect(capability?.evaluateOffer(common)[0]?.assessments).toContainEqual(
+    expect(capability?.evaluateOffer(common, true)[0]?.assessments).toContainEqual(
       expect.objectContaining({ legal: false }),
     );
     const rare = chaos('ChaosNoMoneyCurse', 'ChaosElementalBlessing', 'Rare');
-    expect(capability?.evaluateOffer(rare)[0]?.assessments).toEqual([
+    expect(capability?.evaluateOffer(rare, true)[0]?.assessments).toEqual([
       { legal: true, findings: [] },
     ]);
     expect(
@@ -1058,7 +1058,7 @@ describe('Chaos paired-trait history', () => {
         .filter((option) => option.rarity !== 'Rare')
         .every((option) => option.rarity === 'Common'),
     ).toBe(true);
-    expect(capability?.evaluateOffer(replacement)[0]?.offerGenerationState).toMatchObject({
+    expect(capability?.evaluateOffer(replacement, true)[0]?.offerGenerationState).toMatchObject({
       rarity: { kind: 'fixed', rarity: 'Common' },
     });
 

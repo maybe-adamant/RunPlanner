@@ -305,7 +305,7 @@ describe('Calling Card offer settlement', () => {
       selectedOptionKey: 'option1',
       rarificationActions: ['option1', 'option1', 'option1'],
     };
-    const result = callingCardCandidate().evaluateOffer(value)[0]!;
+    const result = callingCardCandidate().evaluateOffer(value, true)[0]!;
     const callingCard = callingCardCandidate().callingCard(value)[0]!;
 
     expect(result.assessments.every((assessment) => assessment.legal)).toBe(true);
@@ -344,7 +344,7 @@ describe('Calling Card offer settlement', () => {
       rarificationActions: ['option1'],
     };
     const candidate = callingCardCandidate(before);
-    const result = candidate.evaluateOffer(value)[0]!;
+    const result = candidate.evaluateOffer(value, true)[0]!;
     const callingCard = candidate.callingCard(value)[0]!;
 
     expect(result.assessments[0]).toMatchObject({ legal: true });

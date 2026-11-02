@@ -426,6 +426,29 @@ describe('focused trait offer candidates', () => {
         traitKey: 'ApolloCastBoon',
       }),
     });
+    // The repeated row is named once, by the candidate's own duplicate finding.
+    const complete = evaluateTraitOfferCandidate(
+      catalog,
+      project,
+      evaluation,
+      artifacts([reachedContext()]),
+      { kind: 'traitOffer', trait, value: siblingDuplicate },
+    );
+    if (complete.kind !== 'traitOffer') throw new Error('complete candidate was unavailable');
+    expect(complete.result.findings.map((finding) => finding.code)).toEqual([
+      'duplicateOfferedTrait',
+    ]);
+    expect(
+      artifacts([reachedContext()]).at(trait)!.evaluateOffer(siblingDuplicate, true)[0]?.generation
+        ?.findings,
+    ).toEqual([
+      {
+        code: 'traitOfferGenerationUnavailable',
+        reason: 'duplicateTrait',
+        traitKey: 'ApolloCastBoon',
+        optionKeys: ['option2', 'option3'],
+      },
+    ]);
   });
 
   it('closes a focused duplicate before lifecycle candidate coverage exists', () => {
@@ -511,9 +534,20 @@ describe('focused trait offer candidates', () => {
       kind: 'traitOffer',
       result: {
         supported: false,
-        findings: [expect.objectContaining({ code: 'traitOfferGenerationUnavailable' })],
+        findings: [
+          {
+            code: 'traitOfferGenerationUnavailable',
+            reason: 'coreTraitsFirst',
+            traitKeys: ['ApolloWeaponBoon', 'ApolloSpecialBoon'],
+          },
+        ],
       },
     });
+    // Only the complete question names the cause; a focused row query never asks.
+    const capability = artifacts([reachedContext()]).at(trait)!;
+    expect(capability.evaluateOffer(noAttackOrSpecial, false)[0]?.generation?.findings).toEqual([
+      { code: 'traitOfferGenerationUnavailable' },
+    ]);
 
     const repaired = focused(
       offer(

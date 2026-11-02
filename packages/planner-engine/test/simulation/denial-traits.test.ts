@@ -178,9 +178,19 @@ describe('Vow of Denial trait history', () => {
       },
       1,
     );
-    expect(rarityInvalid.generation?.findings).toContainEqual({
-      code: 'traitOfferGenerationUnavailable',
-    });
+    // A guaranteed Rare supersedes every Common draw, seed and rescue.
+    expect(rarityInvalid.generation?.findings).toEqual([
+      {
+        code: 'traitOfferGenerationUnavailable',
+        reason: 'rarityUnavailable',
+        traitKey: 'ApolloWeaponBoon',
+        optionKey: 'option1',
+        rarity: 'Common',
+        rarityCause: 'guaranteed',
+        requiredRarity: 'Rare',
+        requiredChance: 1,
+      },
+    ]);
     expect(recordReachedTraitOffer(catalog, rarityInvalid, 1, 'test')).toEqual({
       history: createTraitHistoryState(),
     });

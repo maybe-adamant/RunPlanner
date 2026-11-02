@@ -57,6 +57,7 @@ import type {
   TraitOfferSourceContext,
 } from '../../traits/offer-domain';
 import { temporaryBoonRarityUses, limitedSwapUses } from '../../traits/offer-domain';
+import type { InitialOfferFinding } from '../../traits/authoring/initial-composition';
 import {
   optionIndex,
   traitGiverForAcquisitionRole,
@@ -393,7 +394,7 @@ function applyCallingCard(
   const baseOffer =
     authored === undefined || authoredContext === undefined || mode.kind !== 'ordinary'
       ? undefined
-      : assessTraitOfferBeforeRarification(catalog, authored, generation, authoredContext);
+      : assessTraitOfferBeforeRarification(catalog, authored, generation, authoredContext, false);
   const callingCard =
     authored === undefined || mode.kind !== 'ordinary'
       ? undefined
@@ -684,7 +685,18 @@ function evaluateAuthoredOffer(
       for (const assessment of screen.assessments)
         for (const finding of assessment.findings)
           emit(finding.code, finding.traitKey, finding.detail, finding.requirementTraitKeys);
-      for (const finding of screen.generation?.findings ?? []) emit(finding.code);
+      for (const finding of screen.generation?.findings ?? [])
+        findingEmissions.push(
+          generationFindingEmission(
+            owner,
+            role,
+            lifecyclePoint,
+            sequence,
+            finding,
+            findingChronology,
+            screen.screen,
+          ),
+        );
       for (const finding of screen.composition.findings)
         emit(finding.code, finding.traitKey, undefined, undefined, finding.optionKey);
     }
@@ -713,15 +725,12 @@ function evaluateAuthoredOffer(
     );
     evaluation.generation?.findings.forEach((finding) => {
       findingEmissions.push(
-        traitFindingEmission(
+        generationFindingEmission(
           owner,
           role,
           lifecyclePoint,
           sequence,
-          finding.code,
-          undefined,
-          undefined,
-          undefined,
+          finding,
           findingChronology,
         ),
       );
@@ -1860,6 +1869,33 @@ function traitFindingEmission(
       ...(requirementTraitKeys === undefined ? {} : { requirementTraitKeys }),
       ...(actionIndex === undefined ? {} : { actionIndex }),
       ...(optionKey === undefined ? {} : { optionKey }),
+      ...(screen === undefined ? {} : { screen }),
+    }),
+    findingChronology,
+  );
+}
+
+/** A screen the game cannot show carries its cause's keys and rarity facts as evidence. */
+function generationFindingEmission(
+  owner: TraitOfferOwnerAddress,
+  acquisitionRole: string,
+  lifecyclePoint: string,
+  sequence: number,
+  finding: InitialOfferFinding,
+  findingChronology: FindingChronology | undefined,
+  /** The rerolled-away screen's tab index; absent for the final screen. */
+  screen?: number,
+): TraitFindingEmission {
+  const { code, ...cause } = finding;
+  return traitOwnerFindingEmission(
+    owner,
+    acquisitionRole,
+    sequence,
+    code,
+    Object.freeze({
+      acquisitionRole,
+      lifecyclePoint,
+      ...cause,
       ...(screen === undefined ? {} : { screen }),
     }),
     findingChronology,

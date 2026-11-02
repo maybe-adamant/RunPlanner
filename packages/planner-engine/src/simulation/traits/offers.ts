@@ -570,6 +570,8 @@ export function assessRerolledScreens(
   state: SimulationState,
   generationState: SimulationState,
   source: ResolvedTraitOfferSource,
+  /** Whether an unshowable screen names why; focused row queries do not ask. */
+  explainFailure: boolean,
 ): readonly RerolledScreenAssessment[] {
   const valid = Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
   if (offer.kind === 'chaos')
@@ -602,7 +604,9 @@ export function assessRerolledScreens(
     generationState,
     source,
   );
-  const supports = staged ? assessRerolledScreensSupport(generationInput, screens) : [];
+  const supports = staged
+    ? assessRerolledScreensSupport(generationInput, screens, explainFailure)
+    : [];
   const first = screens[0];
   const rerollRefused =
     staged &&
@@ -755,6 +759,7 @@ function evaluateReachedTraitOfferWithAssessments(
             effectiveSource,
           ),
           offer: legalityOffer,
+          explainFailure: true,
         });
   const baseComposition = directAcquisition
     ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
@@ -849,7 +854,14 @@ function evaluateReachedTraitOfferWithAssessments(
   const rerolledScreens =
     directAcquisition || frozenAcquisition
       ? undefined
-      : assessRerolledScreens(catalog, legalityOffer, state, generationState, effectiveSource);
+      : assessRerolledScreens(
+          catalog,
+          legalityOffer,
+          state,
+          generationState,
+          effectiveSource,
+          true,
+        );
   return Object.freeze({
     address,
     acquisitionRole,

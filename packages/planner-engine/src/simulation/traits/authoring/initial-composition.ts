@@ -3,6 +3,7 @@ import type {
   AuthoredRerolledTraitScreen,
   AuthoredTraitOffer,
   RerolledScreens,
+  TraitOptionKey,
 } from '../../../authored-project/traits/state';
 import type { TraitHistoryState } from '../history/model';
 import type { ResolvedTraitOfferSource } from '../offer-domain';
@@ -25,13 +26,83 @@ export interface InitialOfferInput {
   readonly replacementFor: (traitKey: string) => InitialOfferOption | undefined;
 }
 
+/** Why a fresh-rarity row cannot hold its rarity. */
+export type TraitOfferRarityCause =
+  /** The trait is never offered fresh at this rarity. */
+  | 'notInTrait'
+  /** This rarity has no chance at this offer. */
+  | 'noChance'
+  /** The offer forces Common. */
+  | 'forcedCommon'
+  /** A Devotion offer rolls no Duo. */
+  | 'devotion'
+  /** A later rarity of the trait is guaranteed, so it rolls that one. */
+  | 'guaranteed'
+  /** A replacement keeps the rarity of the boon it replaces. */
+  | 'replacement';
+
+/**
+ * Why the game cannot show a screen. Exact local rules are checked first;
+ * single-row and pair conflicts come from the same staged search; `generic`
+ * names no single violated rule (attempt limits, bucket depletion, seeds).
+ */
+export type TraitOfferGenerationCause =
+  | {
+      readonly reason: 'duplicateTrait';
+      readonly traitKey: string;
+      readonly optionKeys: readonly TraitOptionKey[];
+    }
+  | {
+      /** The row's trait cannot appear on this screen at all. */
+      readonly reason: 'traitUnavailable';
+      readonly traitKey: string;
+      readonly optionKey: TraitOptionKey;
+    }
+  | {
+      readonly reason: 'rarityUnavailable';
+      readonly traitKey: string;
+      readonly optionKey: TraitOptionKey;
+      /** The row's authored rarity. */
+      readonly rarity: TraitRarity;
+      readonly rarityCause: TraitOfferRarityCause;
+      /** The guaranteed or replacement rarity the row would have instead. */
+      readonly requiredRarity?: TraitRarity;
+      /** The guaranteed rarity's chance, as a fraction (1.1 is 110%). */
+      readonly requiredChance?: number;
+    }
+  | {
+      /** Each way this screen can start needs a core or exchange boon these rows lack. */
+      readonly reason: 'coreTraitsFirst';
+      readonly traitKeys: readonly string[];
+    }
+  | {
+      /** A short screen while this trait could still fill it; absent past three rows. */
+      readonly reason: 'screenSize';
+      readonly traitKey?: string;
+    }
+  | {
+      /** These two rows never appear together. */
+      readonly reason: 'pairConflict';
+      readonly traitKeys: readonly string[];
+      readonly optionKeys: readonly TraitOptionKey[];
+    }
+  | { readonly reason: 'generic' };
+
+export type TraitOfferGenerationReason = TraitOfferGenerationCause['reason'];
+
+export type InitialOfferFinding =
+  | ({ readonly code: 'traitOfferGenerationUnavailable' } & (
+      | TraitOfferGenerationCause
+      /** Unexplained: the caller did not ask why. */
+      | { readonly reason?: never }
+    ))
+  /** A rerolled screen legal only without its ban needs an item of the previous screen gone. */
+  | { readonly code: 'rollRepeatsAllOffers' };
+
 export interface InitialOfferSupport {
   readonly applies: boolean;
   readonly legal: boolean;
-  readonly findings: readonly {
-    /** A rerolled screen legal only without its ban needs an item of the previous screen gone. */
-    readonly code: 'traitOfferGenerationUnavailable' | 'rollRepeatsAllOffers';
-  }[];
+  readonly findings: readonly InitialOfferFinding[];
 }
 
 interface InitialOfferPools {
@@ -48,6 +119,8 @@ interface InitialOfferPools {
   readonly rarityFree: boolean;
   /** No priority traits: a first screen showing every fresh trait refuses its reroll. */
   readonly blocksRerollWhenExhausted: boolean;
+  readonly forcedCommon: boolean;
+  readonly devotionNoDuo: boolean;
 }
 
 /**
@@ -148,6 +221,8 @@ function preparePools(input: InitialOfferInput): InitialOfferPools | undefined {
       finalRescue: true,
       rarityFree: true,
       blocksRerollWhenExhausted: true,
+      forcedCommon: false,
+      devotionNoDuo: false,
     };
   const fresh = eligible.filter((key) => {
     const slot = catalog.traits.byKey[key]!.equipmentSlot;
@@ -198,6 +273,8 @@ function preparePools(input: InitialOfferInput): InitialOfferPools | undefined {
     finalRescue: offerSource.finalRarityRescueDisabled !== true,
     rarityFree: false,
     blocksRerollWhenExhausted: giver.priorityTraitKeys.length === 0,
+    forcedCommon: forceCommon,
+    devotionNoDuo: offerSource.devotionNoDuo === true,
   };
 }
 
@@ -208,7 +285,7 @@ type Selection = readonly InitialOfferOption[];
  * stops at the first supported terminal through the same stage policy. */
 function findOutcome(
   pools: InitialOfferPools,
-  acceptsOption: (option: InitialOfferOption) => boolean,
+  acceptsOption: (option: InitialOfferOption, selected: Selection) => boolean,
   acceptsOutcome: (options: Selection) => boolean,
   /** A reroll's one banned item of the previous screen, excluded after seeding. */
   banned?: string,
@@ -224,7 +301,9 @@ function findOutcome(
         key !== banned && !used(selected, key) && pools.membership.get(key)!.includes(rarity),
     );
   const append = (selected: Selection, option: InitialOfferOption): Selection | undefined =>
-    used(selected, option.traitKey) || !acceptsOption(option) ? undefined : [...selected, option];
+    used(selected, option.traitKey) || !acceptsOption(option, selected)
+      ? undefined
+      : [...selected, option];
   const terminal = (selected: Selection) => (acceptsOutcome(selected) ? selected : undefined);
 
   function finalRescue(selected: Selection): Selection | undefined {
@@ -342,6 +421,10 @@ function findOutcome(
   return undefined;
 }
 
+type ScreenRow = { readonly traitKey: string; readonly rarity?: TraitRarity };
+
+const OPTION_KEYS: readonly TraitOptionKey[] = ['option1', 'option2', 'option3'];
+
 /**
  * Whether native generation can show these rows. A rerolled screen follows a
  * previous one: some item of it is banned for this generation. After an
@@ -349,11 +432,14 @@ function findOutcome(
  */
 function screenSupport(
   pools: InitialOfferPools,
-  options: readonly { readonly traitKey: string; readonly rarity?: TraitRarity }[],
+  options: readonly ScreenRow[],
   previous: AuthoredRerolledTraitScreen | null | undefined,
+  explainFailure: boolean,
 ): InitialOfferSupport {
+  const unshown = (bans: readonly (string | undefined)[]) =>
+    support(false, explainFailure ? explainScreenFailure(pools, options, bans) : undefined);
   const wanted = new Map(options.map((option) => [option.traitKey, option.rarity]));
-  if (wanted.size !== options.length || options.length > 3) return support(false);
+  if (wanted.size !== options.length || options.length > 3) return unshown([undefined]);
   const shown = (banned: string | undefined) =>
     findOutcome(
       pools,
@@ -364,10 +450,182 @@ function screenSupport(
       banned,
     ) !== undefined;
   if (previous === undefined || (previous !== null && previous.options.length === 0))
-    return support(shown(undefined));
+    return shown(undefined) ? support(true) : unshown([undefined]);
   const bans = previous === null ? poolKeys(pools) : previous.options.map((row) => row.traitKey);
   if ((previous === null && shown(undefined)) || bans.some(shown)) return support(true);
-  return support(false, shown(undefined) ? 'rollRepeatsAllOffers' : undefined);
+  if (shown(undefined)) return repeatsAllOffers();
+  return unshown(previous === null ? [undefined, ...bans] : bans);
+}
+
+/**
+ * Why the staged search found no outcome for these rows under any of these
+ * bans: exact local rules first, in a fixed order, then probes of the same
+ * search over subsets of the rows. Called only after the search failed.
+ */
+function explainScreenFailure(
+  pools: InitialOfferPools,
+  rows: readonly ScreenRow[],
+  bans: readonly (string | undefined)[],
+): TraitOfferGenerationCause {
+  const keys = rows.map((row) => row.traitKey);
+  for (const [index, row] of rows.entries()) {
+    const optionKeys = OPTION_KEYS.filter((_, at) => keys[at] === row.traitKey);
+    if (optionKeys.length > 1)
+      return {
+        reason: 'duplicateTrait',
+        traitKey: row.traitKey,
+        optionKeys: Object.freeze(optionKeys),
+      };
+    if (index >= 3) return { reason: 'screenSize' };
+  }
+  const { chances, rarityOrder } = pools;
+  const seedable = new Set([...pools.linked, ...pools.coreSeeds.flat()]);
+  for (const [index, row] of rows.entries()) {
+    const optionKey = OPTION_KEYS[index]!;
+    const traitKey = row.traitKey;
+    const replacement = pools.replacements.find((option) => option.traitKey === traitKey);
+    if (!pools.fresh.includes(traitKey)) {
+      if (replacement === undefined) return { reason: 'traitUnavailable', traitKey, optionKey };
+      if (!pools.rarityFree && row.rarity !== undefined && row.rarity !== replacement.rarity)
+        return {
+          reason: 'rarityUnavailable',
+          traitKey,
+          optionKey,
+          rarity: row.rarity,
+          rarityCause: 'replacement',
+          requiredRarity: replacement.rarity,
+        };
+      continue;
+    }
+    const rarity = row.rarity;
+    if (pools.rarityFree || rarity === undefined) continue;
+    const rarityUnavailable = (
+      rarityCause: TraitOfferRarityCause,
+      required?: TraitRarity,
+    ): TraitOfferGenerationCause => ({
+      reason: 'rarityUnavailable',
+      traitKey,
+      optionKey,
+      rarity,
+      rarityCause,
+      ...(required === undefined
+        ? {}
+        : { requiredRarity: required, requiredChance: chances[required]! }),
+    });
+    const membership = pools.membership.get(traitKey) ?? [];
+    // A seed may show Common outside its fresh rarities when nothing is guaranteed.
+    if (!membership.includes(rarity) && !(rarity === 'Common' && seedable.has(traitKey)))
+      return rarityUnavailable('notInTrait');
+    // Absent chances never roll or rescue; present zero only rescues.
+    if (rarity !== 'Common' && (chances[rarity] === undefined || !pools.finalRescue)) {
+      if (chances[rarity] === undefined)
+        return rarityUnavailable(pools.forcedCommon ? 'forcedCommon' : 'noChance');
+      if (chances[rarity]! <= 0) return rarityUnavailable(zeroChanceCause(pools, rarity));
+    }
+    // A guaranteed later rarity of this trait wins every draw, seed and rescue.
+    const later =
+      rarity === 'Common' ? rarityOrder : rarityOrder.slice(rarityOrder.indexOf(rarity) + 1);
+    const guaranteed = later.filter(
+      (check) => check !== rarity && membership.includes(check) && (chances[check] ?? 0) >= 1,
+    );
+    if (guaranteed.length > 0) return rarityUnavailable('guaranteed', guaranteed.at(-1));
+  }
+  // Every generation starts from one of these seeds; the banned item is dropped from it.
+  const seeds = [
+    ...(pools.replacementChance > 0 ? pools.replacements.map((option) => [option.traitKey]) : []),
+    ...(pools.replacementChance < 1 || pools.replacements.length === 0 ? pools.coreSeeds : []),
+  ];
+  const missingSeedKeys = (banned: string | undefined) =>
+    seeds.map((seed) => seed.filter((key) => key !== banned && !keys.includes(key)));
+  if (bans.every((banned) => missingSeedKeys(banned).every((missing) => missing.length > 0)))
+    return {
+      reason: 'coreTraitsFirst',
+      traitKeys: Object.freeze([
+        ...new Set(bans.flatMap((banned) => missingSeedKeys(banned).flat())),
+      ]),
+    };
+  // Final rescue fills a short screen while any fresh trait has a rescuable rarity.
+  if (rows.length < 3 && pools.finalRescue) {
+    const fillers = (banned: string | undefined) =>
+      pools.fresh.filter(
+        (key) =>
+          key !== banned &&
+          !keys.includes(key) &&
+          (pools.rarityFree ||
+            pools.membership
+              .get(key)!
+              .some((rarity) => rarity === 'Common' || chances[rarity] !== undefined)),
+      );
+    if (bans.every((banned) => fillers(banned).length > 0))
+      return { reason: 'screenSize', traitKey: fillers(bans[0])[0]! };
+  }
+  // Probes: which rows appear together, with the screen's other positions free.
+  const witness = (indexes: readonly number[]) => {
+    const subset = new Map(indexes.map((index) => [keys[index]!, rows[index]!.rarity]));
+    for (const banned of bans) {
+      const outcome = findOutcome(
+        pools,
+        (option, selected) =>
+          subset.has(option.traitKey)
+            ? pools.rarityFree || subset.get(option.traitKey) === option.rarity
+            : selected.filter((entry) => !subset.has(entry.traitKey)).length < 3 - subset.size,
+        (selected) => [...subset.keys()].every((key) => selected.some((o) => o.traitKey === key)),
+        banned,
+      );
+      if (outcome !== undefined) return outcome;
+    }
+    return undefined;
+  };
+  for (const [index, row] of rows.entries()) {
+    if (witness([index]) !== undefined) continue;
+    const optionKey = OPTION_KEYS[index]!;
+    const rarity = row.rarity;
+    if (pools.rarityFree || rarity === undefined)
+      return { reason: 'traitUnavailable', traitKey: row.traitKey, optionKey };
+    const unavailable = {
+      reason: 'rarityUnavailable' as const,
+      traitKey: row.traitKey,
+      optionKey,
+      rarity,
+    };
+    if (rarity !== 'Common' && (chances[rarity] ?? 0) <= 0)
+      return { ...unavailable, rarityCause: zeroChanceCause(pools, rarity) };
+    // A guaranteed later rarity skips this draw while any trait can roll it.
+    const later =
+      rarity === 'Common' ? rarityOrder : rarityOrder.slice(rarityOrder.indexOf(rarity) + 1);
+    const guaranteed = later.filter((check) => check !== rarity && (chances[check] ?? 0) >= 1);
+    const required = guaranteed.at(-1);
+    return required === undefined
+      ? { reason: 'traitUnavailable', traitKey: row.traitKey, optionKey }
+      : {
+          ...unavailable,
+          rarityCause: 'guaranteed',
+          requiredRarity: required,
+          requiredChance: chances[required]!,
+        };
+  }
+  const pairs: (readonly [number, number])[] = [];
+  for (let i = 0; i < rows.length; i += 1)
+    for (let j = i + 1; j < rows.length; j += 1) pairs.push([i, j]);
+  // With at most three rows, dropping one row leaves a pair.
+  const conflict = pairs.find((pair) => witness(pair) === undefined);
+  if (conflict !== undefined)
+    return {
+      reason: 'pairConflict',
+      traitKeys: Object.freeze(conflict.map((index) => keys[index]!)),
+      optionKeys: Object.freeze(conflict.map((index) => OPTION_KEYS[index]!)),
+    };
+  // The rows appear together only beside more traits.
+  const fuller = rows.length < 3 ? witness(rows.map((_, index) => index)) : undefined;
+  const filler = fuller?.find((option) => !keys.includes(option.traitKey));
+  if (filler !== undefined) return { reason: 'screenSize', traitKey: filler.traitKey };
+  return { reason: 'generic' };
+}
+
+/** Why a rarity with no positive chance is unavailable. */
+function zeroChanceCause(pools: InitialOfferPools, rarity: TraitRarity): TraitOfferRarityCause {
+  if (pools.forcedCommon) return 'forcedCommon';
+  return rarity === 'Duo' && pools.devotionNoDuo ? 'devotion' : 'noChance';
 }
 
 function poolKeys(pools: InitialOfferPools): readonly string[] {
@@ -388,20 +646,33 @@ export function firstScreenRerollRefused(
   return pools.fresh.every((traitKey) => shown.has(traitKey));
 }
 
-function support(
-  legal: boolean,
-  code: InitialOfferSupport['findings'][number]['code'] = 'traitOfferGenerationUnavailable',
-): InitialOfferSupport {
+function support(legal: boolean, cause?: TraitOfferGenerationCause): InitialOfferSupport {
   return Object.freeze({
     applies: true,
     legal,
-    findings: legal ? Object.freeze([]) : Object.freeze([Object.freeze({ code })]),
+    findings: legal
+      ? Object.freeze([])
+      : Object.freeze([
+          Object.freeze({ code: 'traitOfferGenerationUnavailable' as const, ...cause }),
+        ]),
+  });
+}
+
+function repeatsAllOffers(): InitialOfferSupport {
+  return Object.freeze({
+    applies: true,
+    legal: false,
+    findings: Object.freeze([Object.freeze({ code: 'rollRepeatsAllOffers' as const })]),
   });
 }
 
 /** The final screen's support, after its last rerolled screen when it has one. */
 export function assessInitialOfferSupport(
-  input: Omit<InitialOfferInput, 'giverKey'> & { readonly offer: AuthoredTraitOffer },
+  input: Omit<InitialOfferInput, 'giverKey'> & {
+    readonly offer: AuthoredTraitOffer;
+    /** Whether an unshowable screen names why; focused row queries do not ask. */
+    readonly explainFailure: boolean;
+  },
 ): InitialOfferSupport {
   const pools = stagedTraitGeneration(input.catalog, input.offer)
     ? preparePools({ ...input, giverKey: input.offer.giverKey })
@@ -413,6 +684,7 @@ export function assessInitialOfferSupport(
     pools,
     offer.kind === 'traits' ? offer.options : [],
     offer.kind === 'chaos' ? undefined : offer.rerolledScreens?.at(-1),
+    input.explainFailure,
   );
 }
 
@@ -424,13 +696,20 @@ export function assessInitialOfferSupport(
 export function assessRerolledScreensSupport(
   input: InitialOfferInput,
   screens: RerolledScreens<AuthoredRerolledTraitScreen>,
+  /** Whether an unshowable screen names why; focused row queries do not ask. */
+  explainFailure: boolean,
 ): readonly (InitialOfferSupport | undefined)[] {
   const pools = preparePools(input);
   return Object.freeze(
     screens.map((screen, index) =>
       pools === undefined || screen === null
         ? undefined
-        : screenSupport(pools, screen.options, index === 0 ? undefined : screens[index - 1]),
+        : screenSupport(
+            pools,
+            screen.options,
+            index === 0 ? undefined : screens[index - 1],
+            explainFailure,
+          ),
     ),
   );
 }
