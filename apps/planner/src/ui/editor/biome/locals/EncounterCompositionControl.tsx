@@ -1,31 +1,34 @@
-import { useRef, useState } from 'react';
+import * as Popover from '@radix-ui/react-popover';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engine/authored-project';
-import { EditorDialogFeedback } from '@planner/ui/controls/EditorDialog';
+import { EditorDialogTitleAction } from '@planner/ui/controls/EditorDialog';
 import type {
-  WorkspaceCommandIntent,
   WorkspaceEncounterComposition,
-  WorkspaceEncounterCustomizationInteraction,
+  WorkspaceEncounterCustomizationDraft,
   WorkspaceEncounterPhase,
   WorkspaceGeneratedEncounterAssessment,
   WorkspaceGeneratedWaveDraftChoice,
   WorkspaceGeneratedFangsDraftChoice,
 } from '@planner/projections/structured-workspace';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
-import type { FeedbackEntry } from '@planner/ui/editor/rewards/TraitOfferForm';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { NavigationStatusMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { enemyIcon, fangsPerkIcon } from '@planner/ui/artwork/encounterArtwork';
 
-type GeneratedEdits = NonNullable<WorkspaceEncounterCustomizationInteraction['generatedEdits']>;
+type GeneratedEdits = NonNullable<WorkspaceEncounterCustomizationDraft['generatedEdits']>;
+type GeneratedEdit = (
+  build: (edits: GeneratedEdits) => AuthoredGeneratedEncounterCustomization,
+) => void;
 
-/** Dispatches one bound generated-composition edit when the interaction publishes them. */
-function useGeneratedEdit(interaction: WorkspaceEncounterCustomizationInteraction | undefined) {
-  const execute = useCommandIntent();
-  return (build: (edits: GeneratedEdits) => WorkspaceCommandIntent) => {
-    if (interaction?.generatedEdits !== undefined) execute(build(interaction.generatedEdits));
+/** Writes one bound generated-composition edit into the dialog draft when the draft publishes them. */
+function generatedEdit(
+  draft: WorkspaceEncounterCustomizationDraft | undefined,
+  onValue: (value: AuthoredGeneratedEncounterCustomization | undefined) => void,
+): GeneratedEdit {
+  return (build) => {
+    if (draft?.generatedEdits !== undefined) onValue(build(draft.generatedEdits));
   };
 }
 
@@ -209,11 +212,15 @@ const emptyFangsPicker: ContextualPickerModel<WorkspaceGeneratedFangsDraftChoice
 });
 
 function GeneratedFangsPicker({
-  interaction,
+  draft,
+  edit,
+  idKey,
   presentation,
   value,
 }: {
-  readonly interaction: WorkspaceEncounterCustomizationInteraction;
+  readonly draft: WorkspaceEncounterCustomizationDraft;
+  readonly edit: GeneratedEdit;
+  readonly idKey: string;
   readonly presentation: {
     readonly choices: readonly { readonly key: string; readonly label: string }[];
     readonly perks: Readonly<
@@ -222,13 +229,12 @@ function GeneratedFangsPicker({
   };
   readonly value: AuthoredGeneratedEncounterCustomization;
 }) {
-  const edit = useGeneratedEdit(interaction);
   const [perkDraft, setPerkDraft] = useState<readonly string[] | undefined>();
-  const targetProduct = interaction.generatedFangsDraftFor?.(undefined);
+  const targetProduct = draft.generatedFangsDraftFor?.(undefined);
   const perkProduct =
     value.fangs === undefined || perkDraft === undefined
       ? undefined
-      : interaction.generatedFangsDraftFor?.({ typeKey: value.fangs.typeKey, perkKeys: perkDraft });
+      : draft.generatedFangsDraftFor?.({ typeKey: value.fangs.typeKey, perkKeys: perkDraft });
   const display =
     value.fangs === undefined
       ? 'Select target'
@@ -239,8 +245,8 @@ function GeneratedFangsPicker({
       <ContextualPicker<WorkspaceGeneratedFangsDraftChoice>
         ariaLabel="Fangs target"
         choiceLabel={targetProduct?.stepLabel ?? 'Fangs target'}
-        disabled={interaction.generatedFangsDraftFor === undefined}
-        id={`generated-fangs-target-${interaction.key}`}
+        disabled={draft.generatedFangsDraftFor === undefined}
+        id={`generated-fangs-target-${idKey}`}
         itemIcon={(item) => (item.value.kind === 'type' ? enemyIcon(item.value.key) : undefined)}
         label="Fangs target"
         layout="inline"
@@ -257,8 +263,8 @@ function GeneratedFangsPicker({
         cancelLabel="Cancel"
         choiceLabel={perkProduct?.stepLabel ?? 'Fangs perks'}
         closeOnSelect={false}
-        disabled={value.fangs === undefined || interaction.generatedFangsDraftFor === undefined}
-        id={`generated-fangs-perks-${interaction.key}`}
+        disabled={value.fangs === undefined || draft.generatedFangsDraftFor === undefined}
+        id={`generated-fangs-perks-${idKey}`}
         itemIcon={(item) =>
           item.value.kind === 'perk'
             ? fangsPerkIcon(item.value.key)
@@ -301,13 +307,18 @@ function GeneratedFangsPicker({
 }
 
 function GeneratedEncounterWaveDraftPicker({
-  interaction,
+  draft: customizationDraft,
+  edit,
+  idKey,
   hasIssues,
   hasAuthoredEnemies,
   selection,
+  trailing,
   wave,
 }: {
-  readonly interaction: WorkspaceEncounterCustomizationInteraction;
+  readonly draft: WorkspaceEncounterCustomizationDraft;
+  readonly edit: GeneratedEdit;
+  readonly idKey: string;
   readonly hasIssues: boolean;
   readonly hasAuthoredEnemies: boolean;
   readonly selection: readonly {
@@ -316,15 +327,16 @@ function GeneratedEncounterWaveDraftPicker({
     readonly kind?: 'fixed' | 'template' | 'highlight';
   }[];
   readonly wave: WorkspaceGeneratedEncounterAssessment['waves'][number];
+  /** Read-only figures at the right end of the picker line. */
+  readonly trailing?: ReactNode;
 }) {
-  const edit = useGeneratedEdit(interaction);
   const [draft, setDraft] = useState<
     { readonly confirmedSeedCount: number; readonly typeKeys: readonly string[] } | undefined
   >();
   const product =
     draft === undefined
       ? undefined
-      : interaction.generatedWaveDraftFor?.(
+      : customizationDraft.generatedWaveDraftFor?.(
           wave.waveIndex,
           draft.confirmedSeedCount,
           draft.typeKeys,
@@ -338,8 +350,8 @@ function GeneratedEncounterWaveDraftPicker({
           cancelLabel="Cancel"
           choiceLabel={product?.stepLabel ?? `Wave ${wave.waveIndex} enemies`}
           closeOnSelect={false}
-          disabled={interaction.generatedWaveDraftFor === undefined}
-          id={`generated-wave-${interaction.key}-${wave.waveIndex}`}
+          disabled={customizationDraft.generatedWaveDraftFor === undefined}
+          id={`generated-wave-${idKey}-${wave.waveIndex}`}
           itemIcon={(item) =>
             item.value.kind === 'finish' ? undefined : enemyIcon(item.value.key)
           }
@@ -366,7 +378,7 @@ function GeneratedEncounterWaveDraftPicker({
               choice.kind === 'confirmSeed'
                 ? { ...draft, confirmedSeedCount: draft.confirmedSeedCount + 1 }
                 : { ...draft, typeKeys: Object.freeze([...draft.typeKeys, choice.key]) };
-            const nextProduct = interaction.generatedWaveDraftFor?.(
+            const nextProduct = customizationDraft.generatedWaveDraftFor?.(
               wave.waveIndex,
               next.confirmedSeedCount,
               next.typeKeys,
@@ -394,6 +406,7 @@ function GeneratedEncounterWaveDraftPicker({
             icon: enemyIcon(member.key),
           }))}
         />
+        {trailing}
       </div>
     </div>
   );
@@ -464,6 +477,89 @@ function ReadOnlyWavePanel({
   );
 }
 
+/** The composition's editing help, opened from an info button on the dialog's title line. */
+function EncounterCompositionHelp({
+  composition,
+}: {
+  readonly composition: WorkspaceEncounterComposition;
+}) {
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+  const captureTrigger = useCallback((node: HTMLElement | null): void => {
+    const container = node?.closest<HTMLElement>('dialog') ?? null;
+    setPortalContainer((current) => (current === container ? current : container));
+  }, []);
+  return (
+    <EditorDialogTitleAction>
+      <Popover.Root>
+        <Popover.Trigger asChild ref={captureTrigger}>
+          <button
+            aria-label="Encounter composition help"
+            className="trait-offer-state-button"
+            type="button"
+          >
+            i
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal container={portalContainer ?? undefined}>
+          <Popover.Content
+            align="end"
+            aria-label="Encounter composition help"
+            className="trait-offer-state-popover encounter-composition-help"
+            collisionPadding={12}
+            side="bottom"
+            sideOffset={6}
+          >
+            <h4>Waves and enemies</h4>
+            <p>Choose the number of waves and use each wave’s picker to select its enemies.</p>
+            {composition.waves.some((wave) => wave.source === 'fixed') ? (
+              <p>Fixed waves cannot be edited. Customize the remaining waves.</p>
+            ) : null}
+            {composition.sharedEnemy ? (
+              <p>The shared enemy appears in every generated wave.</p>
+            ) : null}
+            <h4>Budgets</h4>
+            <p>Allocate a budget to each enemy type. The last type uses what remains.</p>
+            <p>
+              Counts round up, with at least one of each selected type, so the resulting cost can
+              exceed the allocation.
+            </p>
+            {composition.fangs ? (
+              <>
+                <h4>Fangs</h4>
+                <p>
+                  Choose one elite enemy type and its perks. This selection applies across all
+                  waves.
+                </p>
+              </>
+            ) : null}
+            {composition.menace ? (
+              <>
+                <h4>Menace</h4>
+                <p>
+                  Set how many enemies to replace. Some replacement types are fixed; others can be
+                  selected. For grouped enemies, each conversion replaces one whole group.
+                </p>
+                <p>
+                  The table’s counts and costs describe the original enemies. Menace does not
+                  recalculate them.
+                </p>
+                {composition.fangs ? (
+                  <p>
+                    Replacements do not inherit the original enemy’s Fangs perks. If every instance
+                    of the Fangs target is replaced, those perks go unused.
+                  </p>
+                ) : null}
+              </>
+            ) : null}
+            <h4>Reset</h4>
+            <p>Reset removes the customization and returns the encounter to game control.</p>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    </EditorDialogTitleAction>
+  );
+}
+
 /**
  * One stable composition editor for every combat phase: the engine view owns
  * each wave's source and editability; generated edits bind only authored waves.
@@ -471,23 +567,27 @@ function ReadOnlyWavePanel({
 export function EncounterCompositionControl({
   composition,
   decision,
+  draft,
   idKey,
-  interaction,
+  initializeGenerated,
   onInitializationFailure,
+  onValue,
 }: {
   readonly composition: WorkspaceEncounterComposition;
   readonly decision?: Decision;
+  /** The dialog draft's products; absent for a read-only composition. */
+  readonly draft?: WorkspaceEncounterCustomizationDraft;
   readonly idKey: string;
-  readonly interaction?: WorkspaceEncounterCustomizationInteraction;
+  readonly initializeGenerated?: () => AuthoredGeneratedEncounterCustomization | undefined;
   /** Reports whether the last Edit attempt found no supported composition. */
   readonly onInitializationFailure?: (failed: boolean) => void;
+  /** Writes the generated decision's next value into the dialog draft. */
+  readonly onValue?: (value: AuthoredGeneratedEncounterCustomization | undefined) => void;
 }) {
-  const execute = useCommandIntent();
-  const edit = useGeneratedEdit(interaction);
+  const edit = generatedEdit(draft, (next) => onValue?.(next));
   const [selectedWave, setSelectedWave] = useState<number>();
-  const [helpOpen, setHelpOpen] = useState(false);
   const value = decision?.value === undefined ? undefined : authored(decision);
-  const assessment = value === undefined ? undefined : interaction?.generatedAssessment;
+  const assessment = value === undefined ? undefined : draft?.generatedAssessment;
   // A retained removal-only value on a non-editable composition authors nothing.
   const authorable = value !== undefined && composition.editable;
   const waveCountUnavailable =
@@ -531,10 +631,6 @@ export function EncounterCompositionControl({
   const groupSize = (key: string) =>
     decision?.selection.choices.find((choice) => choice.key === key)?.unitGroupSize ??
     decision?.selection.fixedEnemies.find((choice) => choice.key === key)?.unitGroupSize;
-  const replace = (next: AuthoredGeneratedEncounterCustomization | null) => {
-    if (decision !== undefined && interaction !== undefined)
-      execute(interaction.intentFor(decision.key, next));
-  };
   const retainedWaves = (value?.waves ?? []).filter(
     (row) =>
       !composition.waves.some(
@@ -546,7 +642,7 @@ export function EncounterCompositionControl({
   const authoredPanel = (
     wave: WorkspaceGeneratedEncounterAssessment['waves'][number],
     active: WorkspaceGeneratedEncounterAssessment,
-    bound: WorkspaceEncounterCustomizationInteraction,
+    bound: WorkspaceEncounterCustomizationDraft,
   ) => {
     const current = value?.waves?.find((entry) => entry.waveIndex === wave.waveIndex);
     const selected = current?.typeKeys ?? [];
@@ -565,6 +661,10 @@ export function EncounterCompositionControl({
         preview?.count === undefined || unitCost === undefined
           ? 'NA'
           : budgetNumber.format(preview.count * unitCost);
+      const costHint =
+        finalCost === 'NA'
+          ? undefined
+          : `${name} takes ${finalCost} of this wave’s ${waveBudget(wave.waveIndex)} budget.`;
       if (!enabled)
         return (
           <span className="encounter-budget-input encounter-generated-context">
@@ -575,10 +675,7 @@ export function EncounterCompositionControl({
                   ? 'NA'
                   : budgetNumber.format(remainder)}
             </span>
-            <span
-              className="encounter-budget-result"
-              {...hintProps('Resulting cost after rounding and minimum counts.')}
-            >
+            <span className="encounter-budget-result" {...hintProps(costHint)}>
               → {finalCost}
             </span>
           </span>
@@ -590,10 +687,7 @@ export function EncounterCompositionControl({
             onCommit={(next) => edit((edits) => edits.setAllocation(wave.waveIndex, key, next))}
             value={allocation}
           />
-          <span
-            className="encounter-budget-result encounter-generated-context"
-            {...hintProps('Resulting cost after rounding and minimum counts.')}
-          >
+          <span className="encounter-budget-result" {...hintProps(costHint)}>
             → {finalCost}
           </span>
         </label>
@@ -612,7 +706,9 @@ export function EncounterCompositionControl({
             (issue) => issue.waveIndex === wave.waveIndex && issue.field === 'enemies',
           )}
           hasAuthoredEnemies={current !== undefined}
-          interaction={bound}
+          draft={bound}
+          edit={edit}
+          idKey={idKey}
           selection={[
             ...wave.seeds.map((seed) => ({
               key: seed.key,
@@ -621,6 +717,11 @@ export function EncounterCompositionControl({
             })),
             ...(current?.typeKeys ?? []).map((key) => ({ key, label: label(key) })),
           ]}
+          trailing={
+            <span className="encounter-wave-budget-ratio encounter-wave-budget">
+              Wave budget {waveBudget(wave.waveIndex)}/{encounterBudget}
+            </span>
+          }
           wave={wave}
         />
         {current === undefined && wave.seeds.length === 0 ? (
@@ -633,35 +734,21 @@ export function EncounterCompositionControl({
             >
               <thead>
                 <tr>
-                  <th
-                    scope="col"
-                    {...hintProps('Wave budget / total encounter budget.')}
-                    aria-label={`Wave budget ${waveBudget(wave.waveIndex)} / encounter budget ${encounterBudget}`}
-                  >
-                    Budget
-                    <br />
-                    <span className="encounter-wave-budget-ratio">
-                      {waveBudget(wave.waveIndex)} / {encounterBudget}
-                    </span>
-                  </th>
+                  <th scope="col" />
                   {tableKeys.map((key, index) => (
                     <th scope="col" key={`${index}-${key}`}>
-                      <span className="encounter-enemy-label">
+                      <span className="encounter-enemy-label encounter-enemy-heading">
                         <ArtworkIcon className="artwork-label-icon" source={enemyIcon(key)} />
                         {label(key)}
+                        {cost(key) === undefined ? null : ` · ${budgetNumber.format(cost(key)!)}`}
                       </span>
-                      {cost(key) === undefined ? null : (
-                        <>
-                          <br /> ({budgetNumber.format(cost(key)!)})
-                        </>
-                      )}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <th scope="row">Budget</th>
+                  <th scope="row">Allocated</th>
                   {tableKeys.map((key, index) => (
                     <td key={`${index}-${key}`}>{allocationsFor(key, index)}</td>
                   ))}
@@ -669,15 +756,34 @@ export function EncounterCompositionControl({
                 <tr>
                   <th scope="row">Count</th>
                   {tableKeys.map((key, index) => {
-                    const count = wave.countPreview?.find((entry) => entry.key === key)?.count;
+                    const preview = wave.countPreview?.find((entry) => entry.key === key);
+                    const count = preview?.count;
                     const size = groupSize(key);
+                    // A type's per-wave cap and the counts it absorbed from later capped types.
+                    const capNotes = [
+                      ...(preview?.cap === undefined ? [] : [`Capped at ${preview.cap} per wave`]),
+                      ...(preview?.capOverflow ?? []).map(
+                        (spill) => `+${spill.count} from ${label(spill.fromKey)}’s cap`,
+                      ),
+                    ];
                     return (
                       <td key={`${index}-${key}`}>
-                        {count === undefined
-                          ? 'NA'
-                          : size === undefined
-                            ? count
-                            : `${count} (${count * size})`}
+                        {count === undefined ? (
+                          'NA'
+                        ) : capNotes.length === 0 ? (
+                          size === undefined ? (
+                            count
+                          ) : (
+                            `${count} (${count * size})`
+                          )
+                        ) : (
+                          <span
+                            className="encounter-count-capped"
+                            {...hintProps(capNotes.join('\n'))}
+                          >
+                            {size === undefined ? count : `${count} (${count * size})`}*
+                          </span>
+                        )}
                       </td>
                     );
                   })}
@@ -805,124 +911,51 @@ export function EncounterCompositionControl({
       assessment?.composition === 'active'
         ? assessment.waves.find((entry) => entry.waveIndex === row.waveIndex)
         : undefined;
-    return wave === undefined || assessment === undefined || interaction === undefined
+    return wave === undefined || assessment === undefined || draft === undefined
       ? null
-      : authoredPanel(wave, assessment, interaction);
+      : authoredPanel(wave, assessment, draft);
   };
   return (
     <section className="encounter-generated-customization">
-      <div className="encounter-generated-heading">
-        <span className="encounter-generated-context encounter-composition-status">
-          {composition.dispositionLabel}
-        </span>
-        {value === undefined ? (
-          decision === undefined || interaction === undefined ? null : (
+      {value === undefined ? (
+        <div className="encounter-generated-heading">
+          {composition.statusLabel === undefined ? null : (
+            <span className="encounter-generated-context encounter-composition-status">
+              {composition.statusLabel}
+            </span>
+          )}
+          {decision === undefined || draft === undefined ? null : (
             <button
               className="secondary-action action-compact encounter-composition-edit"
-              disabled={interaction.initializeGenerated === undefined}
+              disabled={initializeGenerated === undefined}
               onClick={() => {
-                const initial = interaction.initializeGenerated?.();
+                const initial = initializeGenerated?.();
                 onInitializationFailure?.(initial === undefined);
                 if (initial === undefined) return;
-                execute(interaction.intentFor(decision.key, initial));
+                onValue?.(initial);
               }}
               type="button"
             >
               Edit
             </button>
-          )
-        ) : (
-          <>
-            <button
-              className="secondary-action action-compact"
-              type="button"
-              aria-expanded={helpOpen}
-              aria-controls={`encounter-help-${idKey}`}
-              onClick={() => setHelpOpen(!helpOpen)}
-            >
-              Help
-            </button>
-            <button
-              className="danger-action action-compact"
-              onClick={() => replace(null)}
-              type="button"
-            >
-              Reset to default
-            </button>
-          </>
-        )}
-      </div>
-      {value === undefined && decision !== undefined && interaction !== undefined ? (
-        <>
-          <p className="encounter-customization-explanation">
-            The game chooses these enemies unless you select Edit.
-          </p>
-        </>
+          )}
+        </div>
       ) : null}
-      {helpOpen ? (
-        <section
-          id={`encounter-help-${idKey}`}
-          className="encounter-composition-help"
-          aria-label="Encounter composition help"
-        >
-          <h4>Waves and enemies</h4>
-          <p>Choose the number of waves and use each wave’s picker to select its enemies.</p>
-          {composition.waves.some((wave) => wave.source === 'fixed') ? (
-            <p>Fixed waves cannot be edited. Customize the remaining waves.</p>
-          ) : null}
-          {composition.sharedEnemy ? (
-            <p>The shared enemy appears in every generated wave.</p>
-          ) : null}
-          <h4>Budgets</h4>
-          <p>Allocate a budget to each enemy type. The last type uses what remains.</p>
-          <p>
-            Counts round up, with at least one of each selected type, so the resulting cost can
-            exceed the allocation.
-          </p>
-          {composition.fangs ? (
-            <>
-              <h4>Fangs</h4>
-              <p>
-                Choose one elite enemy type and its perks. This selection applies across all waves.
-              </p>
-            </>
-          ) : null}
-          {composition.menace ? (
-            <>
-              <h4>Menace</h4>
-              <p>
-                Set how many enemies to replace. Some replacement types are fixed; others can be
-                selected. For grouped enemies, each conversion replaces one whole group.
-              </p>
-              <p>
-                The table’s counts and costs describe the original enemies. Menace does not
-                recalculate them.
-              </p>
-              {composition.fangs ? (
-                <p>
-                  Replacements do not inherit the original enemy’s Fangs perks. If every instance of
-                  the Fangs target is replaced, those perks go unused.
-                </p>
-              ) : null}
-            </>
-          ) : null}
-          <h4>Editing</h4>
-          <p>
-            Changes apply immediately. Undo reverses edits. Reset removes the customization and
-            returns the encounter to game control.
-          </p>
-        </section>
+      {value === undefined && decision !== undefined && draft !== undefined ? (
+        <p className="encounter-customization-explanation">
+          The game chooses these enemies unless you select Edit.
+        </p>
       ) : null}
       <div className="encounter-summary-controls">
         {authorable && budgetDomain === undefined ? (
           <div className="encounter-budget-control">
-            <span>Budget</span>
+            <span>Encounter budget</span>
             <span>{encounterBudget}</span>
           </div>
         ) : null}
         {authorable && budgetDomain !== undefined ? (
           <div className="encounter-budget-control">
-            <label htmlFor={`generated-base-roll-${idKey}`}>Budget</label>
+            <label htmlFor={`generated-base-roll-${idKey}`}>Encounter budget</label>
             <span>{budgetNumber.format(budgetDomain.total.min)}</span>
             <EncounterBudgetSlider
               hasIssues={assessment?.issues.some((issue) => issue.field === 'baseRoll')}
@@ -966,6 +999,18 @@ export function EncounterCompositionControl({
             ))}
           </div>
         </div>
+        {value === undefined ? null : (
+          <>
+            <EncounterCompositionHelp composition={composition} />
+            <button
+              className="quiet-action action-compact encounter-composition-reset"
+              onClick={() => onValue?.(undefined)}
+              type="button"
+            >
+              Reset
+            </button>
+          </>
+        )}
         {composition.sharedEnemy ? (
           <div
             className="encounter-customization-row encounter-shared-enemy"
@@ -975,15 +1020,15 @@ export function EncounterCompositionControl({
               ariaLabel="Shared Enemy"
               hasIssues={assessment?.issues.some((issue) => issue.field === 'highlight') === true}
               choiceLabel="Shared Enemy"
-              disabled={interaction?.generatedHighlightPicker === undefined}
+              disabled={draft?.generatedHighlightPicker === undefined}
               id={`generated-highlight-${idKey}`}
               itemIcon={(item) => enemyIcon(item.value)}
               label="Shared Enemy"
               layout="inline"
-              model={interaction?.generatedHighlightPicker ?? emptyHighlightPicker}
+              model={draft?.generatedHighlightPicker ?? emptyHighlightPicker}
               onSelect={(highlightKey) => edit((edits) => edits.setSharedEnemy(highlightKey))}
               placeholder="Select shared enemy"
-              triggerIcon={enemyIcon(interaction?.generatedHighlightPicker?.selected?.value)}
+              triggerIcon={enemyIcon(draft?.generatedHighlightPicker?.selected?.value)}
             />
           </div>
         ) : null}
@@ -1001,7 +1046,7 @@ export function EncounterCompositionControl({
                   aria-selected={activeWave === wave.waveIndex}
                   tabIndex={activeWave === wave.waveIndex ? 0 : -1}
                   role="tab"
-                  aria-label={`Wave ${wave.waveIndex}${issuesAt(wave.waveIndex) ? ', needs attention' : ''}`}
+                  aria-label={`Wave ${wave.waveIndex}${wave.source === 'fixed' ? ', fixed' : ''}${issuesAt(wave.waveIndex) ? ', needs attention' : ''}`}
                   type="button"
                   onClick={() => setSelectedWave(wave.waveIndex)}
                   onKeyDown={(event) => {
@@ -1026,6 +1071,11 @@ export function EncounterCompositionControl({
                   }}
                 >
                   Wave {wave.waveIndex}
+                  {wave.source === 'fixed' ? (
+                    <span aria-hidden="true" className="encounter-wave-fixed-tag">
+                      Fixed
+                    </span>
+                  ) : null}
                   {issuesAt(wave.waveIndex) ? (
                     <NavigationStatusMarker
                       status={{ tone: 'invalid', label: 'Needs attention' }}
@@ -1038,12 +1088,11 @@ export function EncounterCompositionControl({
           {rows.filter((wave) => wave.waveIndex === activeWave).map((wave) => panelFor(wave))}
         </div>
       )}
-      {composition.fangs &&
-      value !== undefined &&
-      interaction !== undefined &&
-      decision !== undefined ? (
+      {composition.fangs && value !== undefined && draft !== undefined && decision !== undefined ? (
         <GeneratedFangsPicker
-          interaction={interaction}
+          draft={draft}
+          edit={edit}
+          idKey={idKey}
           presentation={{
             choices: [...decision.selection.choices, ...decision.selection.fixedEnemies],
             perks: decision.selection.fangs?.perks ?? {},
@@ -1069,7 +1118,7 @@ export function EncounterCompositionControl({
 /** Issue messages of an assessed composition, each named by its field or wave. */
 // eslint-disable-next-line react-refresh/only-export-components -- Formats the control's own assessment for the dialog region.
 export function compositionIssueMessages(
-  assessment: WorkspaceEncounterCustomizationInteraction['generatedAssessment'] | undefined,
+  assessment: WorkspaceEncounterCustomizationDraft['generatedAssessment'] | undefined,
 ): readonly string[] {
   return (
     assessment?.issues.map(
@@ -1088,20 +1137,5 @@ export function compositionIssueMessages(
             : `Wave ${issue.waveIndex}`
         }: ${issue.message}`,
     ) ?? []
-  );
-}
-
-/** The dialog's one feedback region: always mounted, with an empty state. */
-export function CustomizationFindings({ entries }: { readonly entries: readonly FeedbackEntry[] }) {
-  return (
-    <EditorDialogFeedback name="Encounter feedback">
-      {entries.length === 0
-        ? undefined
-        : entries.map(([key, message]) => (
-            <p className="encounter-customization-repair" key={key}>
-              {message}
-            </p>
-          ))}
-    </EditorDialogFeedback>
   );
 }

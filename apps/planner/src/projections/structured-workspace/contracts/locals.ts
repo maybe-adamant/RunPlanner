@@ -104,40 +104,47 @@ export interface WorkspaceEncounterCustomizationInteraction {
   readonly key: string;
   readonly owner: EncounterPhaseAddress;
   /**
-   * Current exact-assembly assessment, published atomically with the bound
-   * intent and authored choices. Absent only when context is genuinely unavailable.
+   * Current exact-assembly assessment of the saved value, published atomically with
+   * the bound intent and authored choices. Absent only when context is genuinely unavailable.
    */
   readonly generatedAssessment?: WorkspaceGeneratedEncounterAssessment;
-  /** The phase composition with this exact assessment's counts and control applicability. */
+  /** The phase composition with the saved value's counts and control applicability. */
   readonly generatedComposition?: WorkspaceEncounterComposition;
   /** Lazily requests the engine-built complete Customize result for this exact reached phase. */
   readonly initializeGenerated?: () => AuthoredGeneratedEncounterCustomization | undefined;
-  /** Complete generated-composition edits built from the current authored value. */
+  /** Engine-assessed staged roster draft for this exact reached infinite-spawn phase. */
+  readonly infiniteRosterDraftFor?: (typeKeys: readonly string[]) => WorkspaceInfiniteRosterDraft;
+  /** Every decision's products for a dialog draft holding each decision's value. */
+  readonly draftFor: (
+    values: Readonly<Record<string, AuthoredEncounterCustomization | undefined>>,
+  ) => WorkspaceEncounterCustomizationDraft;
+}
+
+/** One phase's customization products assessed against a dialog draft. */
+export interface WorkspaceEncounterCustomizationDraft {
+  /** The decisions with the draft's values, support and ordered-prefix use domains. */
+  readonly decisions: readonly WorkspaceEncounterCustomizationDecision[];
+  readonly generatedAssessment?: WorkspaceGeneratedEncounterAssessment;
+  readonly generatedComposition?: WorkspaceEncounterComposition;
+  /** Complete generated values built from the draft value. */
   readonly generatedEdits?: WorkspaceGeneratedEncounterEdits;
-  /** Contextual generated-highlight domain for the exact active customization. */
+  /** Contextual generated-highlight domain for the draft customization. */
   readonly generatedHighlightPicker?: ContextualPickerModel<string>;
-  /**
-   * Assesses a local whole-wave draft against this exact phase without
-   * publishing intermediate authored state.
-   */
+  /** Assesses a local whole-wave draft against the draft value without publishing it. */
   readonly generatedWaveDraftFor?: (
     waveIndex: number,
     confirmedSeedCount: number,
     typeKeys: readonly string[],
   ) => WorkspaceGeneratedWaveDraft;
-  /** Engine-backed Fangs target/perk picker products; perks commit only on Finish. */
+  /** Engine-backed Fangs target/perk picker products for the draft value. */
   readonly generatedFangsDraftFor?: (
     value: { readonly typeKey: string; readonly perkKeys: readonly string[] } | undefined,
   ) => WorkspaceGeneratedFangsDraft;
-  /** Engine-assessed staged roster draft for this exact reached infinite-spawn phase. */
-  readonly infiniteRosterDraftFor?: (typeKeys: readonly string[]) => WorkspaceInfiniteRosterDraft;
-  /** Exact-context support for the retained roster; absent when none is authored or reached. */
+  /** Exact-context support for the draft roster; absent when none is drafted or reached. */
   readonly infiniteRosterSupported?: boolean;
 }
 
-type WorkspaceEncounterCustomizationIntent = WorkspaceCommandIntent<
-  Extract<ProjectCommand, { readonly kind: 'ReplaceEncounterCustomization' }>
->;
+type Generated = AuthoredGeneratedEncounterCustomization;
 
 export interface WorkspaceGeneratedEncounterEdits {
   /** `sampledBudgetKeys` is the finished wave draft's engine product. */
@@ -145,28 +152,16 @@ export interface WorkspaceGeneratedEncounterEdits {
     waveIndex: number,
     typeKeys: readonly string[],
     sampledBudgetKeys: readonly string[],
-  ) => WorkspaceEncounterCustomizationIntent;
-  readonly setSharedEnemy: (highlightKey: string) => WorkspaceEncounterCustomizationIntent;
-  readonly setWaveCount: (waveCount: number) => WorkspaceEncounterCustomizationIntent;
-  readonly setBaseRoll: (baseRoll: number) => WorkspaceEncounterCustomizationIntent;
-  readonly setAllocation: (
-    waveIndex: number,
-    key: string,
-    allocation: number,
-  ) => WorkspaceEncounterCustomizationIntent;
-  readonly removeLastEnemy: (waveIndex: number) => WorkspaceEncounterCustomizationIntent;
-  readonly setFangsTarget: (typeKey: string) => WorkspaceEncounterCustomizationIntent;
-  readonly setFangsPerks: (perkKeys: readonly string[]) => WorkspaceEncounterCustomizationIntent;
-  readonly setMenaceTarget: (
-    waveIndex: number,
-    sourceKey: string,
-    targetKey: string,
-  ) => WorkspaceEncounterCustomizationIntent;
-  readonly setMenaceCount: (
-    waveIndex: number,
-    sourceKey: string,
-    count: number,
-  ) => WorkspaceEncounterCustomizationIntent;
+  ) => Generated;
+  readonly setSharedEnemy: (highlightKey: string) => Generated;
+  readonly setWaveCount: (waveCount: number) => Generated;
+  readonly setBaseRoll: (baseRoll: number) => Generated;
+  readonly setAllocation: (waveIndex: number, key: string, allocation: number) => Generated;
+  readonly removeLastEnemy: (waveIndex: number) => Generated;
+  readonly setFangsTarget: (typeKey: string) => Generated;
+  readonly setFangsPerks: (perkKeys: readonly string[]) => Generated;
+  readonly setMenaceTarget: (waveIndex: number, sourceKey: string, targetKey: string) => Generated;
+  readonly setMenaceCount: (waveIndex: number, sourceKey: string, count: number) => Generated;
 }
 
 export type WorkspaceInfiniteRosterDraftChoice =
@@ -241,6 +236,8 @@ export interface WorkspaceGeneratedEncounterAssessment {
       readonly remainder?: number;
       readonly effective?: number;
       readonly count?: number;
+      readonly cap?: number;
+      readonly capOverflow?: readonly { readonly fromKey: string; readonly count: number }[];
     }[];
   }[];
 }
@@ -248,7 +245,8 @@ export interface WorkspaceGeneratedEncounterAssessment {
 /** Render-ready engine composition view of one combat phase. */
 export interface WorkspaceEncounterComposition {
   readonly label: string;
-  readonly dispositionLabel: string;
+  /** Shown beside the start action while the game still chooses the enemies. */
+  readonly statusLabel?: string;
   readonly editable: boolean;
   readonly waveCount: { readonly min: number; readonly max: number; readonly value?: number };
   readonly waves: readonly {

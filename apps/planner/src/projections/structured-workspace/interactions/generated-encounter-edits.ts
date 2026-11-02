@@ -1,9 +1,4 @@
-import type {
-  AuthoredEncounterCustomization,
-  AuthoredGeneratedEncounterCustomization,
-  ProjectCommand,
-} from '@run-planner/engine/authored-project';
-import type { WorkspaceCommandIntent } from '../contract';
+import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engine/authored-project';
 import type {
   WorkspaceGeneratedEncounterAssessment,
   WorkspaceGeneratedEncounterEdits,
@@ -238,15 +233,10 @@ export function setMenaceCount(
   });
 }
 
-/** Binds every edit to the current authored value; highlight seeds come from the assessment. */
+/** Binds every edit to the draft value; highlight seeds come from its assessment. */
 export function bindGeneratedEncounterEdits(
   value: Generated,
   assessment: WorkspaceGeneratedEncounterAssessment | undefined,
-  intentFor: (
-    value: AuthoredEncounterCustomization,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceEncounterCustomization' }>
-  >,
 ): WorkspaceGeneratedEncounterEdits {
   const highlightKeys = (waveIndex: number) =>
     (assessment?.waves.find((wave) => wave.waveIndex === waveIndex)?.seeds ?? [])
@@ -258,20 +248,18 @@ export function bindGeneratedEncounterEdits(
       typeKeys: readonly string[],
       sampledBudgetKeys: readonly string[],
     ) =>
-      intentFor(
-        replaceWaveEnemies(value, waveIndex, typeKeys, highlightKeys(waveIndex), sampledBudgetKeys),
-      ),
-    setSharedEnemy: (highlightKey: string) => intentFor(setSharedEnemy(value, highlightKey)),
-    setWaveCount: (waveCount: number) => intentFor(setWaveCount(value, waveCount)),
-    setBaseRoll: (baseRoll: number) => intentFor(setBaseRoll(value, baseRoll)),
+      replaceWaveEnemies(value, waveIndex, typeKeys, highlightKeys(waveIndex), sampledBudgetKeys),
+    setSharedEnemy: (highlightKey: string) => setSharedEnemy(value, highlightKey),
+    setWaveCount: (waveCount: number) => setWaveCount(value, waveCount),
+    setBaseRoll: (baseRoll: number) => setBaseRoll(value, baseRoll),
     setAllocation: (waveIndex: number, key: string, allocation: number) =>
-      intentFor(setAllocation(value, waveIndex, key, allocation)),
-    removeLastEnemy: (waveIndex: number) => intentFor(removeLastEnemy(value, waveIndex)),
-    setFangsTarget: (typeKey: string) => intentFor(setFangsTarget(value, typeKey)),
-    setFangsPerks: (perkKeys: readonly string[]) => intentFor(setFangsPerks(value, perkKeys)),
+      setAllocation(value, waveIndex, key, allocation),
+    removeLastEnemy: (waveIndex: number) => removeLastEnemy(value, waveIndex),
+    setFangsTarget: (typeKey: string) => setFangsTarget(value, typeKey),
+    setFangsPerks: (perkKeys: readonly string[]) => setFangsPerks(value, perkKeys),
     setMenaceTarget: (waveIndex: number, sourceKey: string, targetKey: string) =>
-      intentFor(setMenaceTarget(value, waveIndex, sourceKey, targetKey)),
+      setMenaceTarget(value, waveIndex, sourceKey, targetKey),
     setMenaceCount: (waveIndex: number, sourceKey: string, count: number) =>
-      intentFor(setMenaceCount(value, waveIndex, sourceKey, count)),
+      setMenaceCount(value, waveIndex, sourceKey, count),
   });
 }

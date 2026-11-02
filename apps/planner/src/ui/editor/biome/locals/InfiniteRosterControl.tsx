@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { AuthoredEncounterCustomization } from '@run-planner/engine/authored-project';
 import type {
   WorkspaceEncounterCustomizationInteraction,
   WorkspaceEncounterPhase,
@@ -6,7 +7,6 @@ import type {
 } from '@planner/projections/structured-workspace';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { enemyIcon } from '@planner/ui/artwork/encounterArtwork';
 
 type Decision = Extract<
@@ -18,27 +18,29 @@ const emptyPicker: ContextualPickerModel<WorkspaceInfiniteRosterDraftChoice> = O
   sections: Object.freeze([]),
 });
 
-/** A staged ordered roster; the draft commits only on Finish, and Reset restores Default. */
+/** A staged ordered roster; Finish writes it into the dialog draft, and Reset restores Default. */
 export function InfiniteRosterControl({
   decision,
+  draftFor,
   id,
-  interaction,
+  onValue,
+  supported,
 }: {
   readonly decision: Decision;
+  readonly draftFor: WorkspaceEncounterCustomizationInteraction['infiniteRosterDraftFor'];
   readonly id: string;
-  readonly interaction: WorkspaceEncounterCustomizationInteraction;
+  readonly onValue: (value: AuthoredEncounterCustomization | null) => void;
+  /** Exact-context support for the dialog draft's roster. */
+  readonly supported: boolean | undefined;
 }) {
-  const executeIntent = useCommandIntent();
   const [draft, setDraft] = useState<readonly string[] | undefined>();
-  const product = draft === undefined ? undefined : interaction.infiniteRosterDraftFor?.(draft);
+  const product = draft === undefined ? undefined : draftFor?.(draft);
   const typeKeys = decision.value?.kind === 'infiniteRoster' ? decision.value.typeKeys : undefined;
   const labelFor = (key: string) =>
     decision.selection.choices.find((choice) => choice.key === key)?.label ??
     decision.retainedChoiceLabels?.find((choice) => choice.key === key)?.label ??
     'Unavailable enemy';
-  const needsRepair =
-    typeKeys !== undefined &&
-    (!decision.valueSupported || interaction.infiniteRosterSupported === false);
+  const needsRepair = typeKeys !== undefined && (!decision.valueSupported || supported === false);
   return (
     <div className="encounter-customization-row" data-invalid={needsRepair || undefined}>
       <span>{decision.label}</span>
@@ -47,7 +49,7 @@ export function InfiniteRosterControl({
         cancelLabel="Cancel"
         choiceLabel={product?.stepLabel ?? decision.label}
         closeOnSelect={false}
-        disabled={interaction.infiniteRosterDraftFor === undefined}
+        disabled={draftFor === undefined}
         id={id}
         itemIcon={(item) => (item.value.kind === 'enemy' ? enemyIcon(item.value.key) : undefined)}
         label={decision.label}
@@ -57,9 +59,7 @@ export function InfiniteRosterControl({
         onSelect={(choice) => {
           if (draft === undefined) return;
           if (choice.kind === 'finish') {
-            executeIntent(
-              interaction.intentFor(decision.key, { kind: 'infiniteRoster', typeKeys: draft }),
-            );
+            onValue({ kind: 'infiniteRoster', typeKeys: draft });
             setDraft(undefined);
           } else setDraft(Object.freeze([...draft, choice.key]));
         }}
@@ -76,10 +76,10 @@ export function InfiniteRosterControl({
       <button
         className="quiet-action"
         disabled={typeKeys === undefined}
-        onClick={() => executeIntent(interaction.intentFor(decision.key, null))}
+        onClick={() => onValue(null)}
         type="button"
       >
-        Reset to default
+        Reset
       </button>
     </div>
   );

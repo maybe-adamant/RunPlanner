@@ -1,7 +1,10 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import type { AuthoredEncounterCustomization } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
+  type WorkspaceEncounterCustomizationDraft,
+  type WorkspaceEncounterCustomizationInteraction,
   type WorkspaceEncounterInteraction,
   type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
@@ -10,14 +13,19 @@ import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFind
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { EditorDialog } from '@planner/ui/controls/EditorDialog';
-import type { FeedbackEntry } from '@planner/ui/editor/rewards/TraitOfferForm';
+import {
+  EditorDialog,
+  EditorDialogDraftActions,
+  type EditorDialogIssue,
+} from '@planner/ui/controls/EditorDialog';
+import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
+import { authoredProjectCommandsDispatched } from '@planner/state/projectWorkspaceSlice';
+import { useAppDispatch } from '@planner/state/store';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { NemesisEventSelector } from '../NemesisEventEditor';
 import {
   compositionIssueMessages,
-  CustomizationFindings,
   EncounterCompositionControl,
 } from './EncounterCompositionControl';
 import { CocoonCountControl } from './CocoonCountControl';
@@ -43,6 +51,313 @@ function isGeneratedEncounterDecision(
   return decision.selection.kind === 'generated';
 }
 
+type CustomizationDecision = NonNullable<WorkspaceEncounterPhase['customization']>[number];
+type DraftValues = Readonly<Record<string, AuthoredEncounterCustomization | undefined>>;
+
+const retainedLabel = (decision: CustomizationDecision, key: string) =>
+  decision.retainedChoiceLabels?.find((choice) => choice.key === key)?.label ??
+  'Unavailable choice';
+
+/**
+ * Retained decision values the context cannot produce, then the composition's own
+ * issues; a generated value is named only when no composition exists.
+ */
+function customizationIssues(
+  decisions: readonly CustomizationDecision[],
+  draft: WorkspaceEncounterCustomizationDraft,
+  hasComposition: boolean,
+): readonly EditorDialogIssue[] {
+  const generated = decisions.find(isGeneratedEncounterDecision);
+  return [
+    ...decisions.flatMap((decision) =>
+      decision.value !== undefined &&
+      (!decision.valueSupported ||
+        (decision.selection.kind === 'infiniteRoster' &&
+          draft.infiniteRosterSupported === false)) &&
+      (!hasComposition || !isGeneratedEncounterDecision(decision))
+        ? [
+            [
+              decision.key,
+              `${decision.label}: The chosen value can't occur in this room. Choose another or reset it.`,
+            ] as const,
+          ]
+        : [],
+    ),
+    ...compositionIssueMessages(
+      generated?.value === undefined ? undefined : draft.generatedAssessment,
+    ).map((message, index) => [`composition-${index}`, message] as const),
+  ];
+}
+
+/** The dialog title names the encounter; its engine key is the title's hint. */
+function encounterDialogTitle(label: string, phase: WorkspaceEncounterPhase): ReactNode {
+  return (
+    <span
+      className="encounter-dialog-title"
+      {...hintProps(
+        phase.selectedEncounter.nativeEncounterDefinitionKey ?? phase.selectedEncounter.key,
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+/** The phase's decisions as one draft: Save commits every changed decision as one edit. */
+function EncounterCustomizationDialog({
+  customizationId,
+  interaction,
+  interactionKey,
+  onClose,
+  phase,
+  savedDecisions,
+}: {
+  readonly customizationId: string;
+  readonly interaction: WorkspaceEncounterCustomizationInteraction;
+  readonly interactionKey: string;
+  readonly onClose: () => void;
+  readonly phase: WorkspaceEncounterPhase;
+  readonly savedDecisions: readonly CustomizationDecision[];
+}) {
+  const dispatch = useAppDispatch();
+  const [initializationFailure, setInitializationFailure] = useState(false);
+  const saved = useMemo<DraftValues>(
+    () => Object.fromEntries(savedDecisions.map((decision) => [decision.key, decision.value])),
+    [savedDecisions],
+  );
+  // A changed authored value replaces the draft; a changed context keeps it.
+  const savedIdentity = draftValueIdentity(saved);
+  const [draftState, setDraftState] = useState(() => ({ identity: savedIdentity, values: saved }));
+  const values = draftState.identity === savedIdentity ? draftState.values : saved;
+  const setValue = (decisionKey: string, value: AuthoredEncounterCustomization | null): void =>
+    setDraftState({
+      identity: savedIdentity,
+      values: { ...values, [decisionKey]: value ?? undefined },
+    });
+  const atRest = draftValueIdentity(values) === savedIdentity;
+  const restView = useMemo(() => interaction.draftFor(saved), [interaction, saved]);
+  const draftView = useMemo(
+    () => (atRest ? restView : interaction.draftFor(values)),
+    [atRest, interaction, restView, values],
+  );
+  const decisions = draftView.decisions;
+  const composition = draftView.generatedComposition ?? phase.composition;
+  const generatedDecision = decisions.find(isGeneratedEncounterDecision);
+  const restIssues = customizationIssues(
+    restView.decisions,
+    restView,
+    (restView.generatedComposition ?? phase.composition) !== undefined,
+  );
+  const draftIssues = customizationIssues(decisions, draftView, composition !== undefined);
+  const issues: readonly EditorDialogIssue[] = [
+    ...(initializationFailure
+      ? [['initialization', 'No supported composition is available here.'] as const]
+      : []),
+    ...(atRest ? restIssues : draftIssues),
+  ];
+  // A finding this draft introduced blocks Save; inherited findings do not.
+  const introduced = draftIssues.some(
+    ([, message]) => !restIssues.some(([, inherited]) => inherited === message),
+  );
+  const save = (): void => {
+    const commands = savedDecisions
+      .filter(
+        (decision) =>
+          draftValueIdentity(values[decision.key]) !== draftValueIdentity(decision.value),
+      )
+      .map((decision) => interaction.intentFor(decision.key, values[decision.key] ?? null).command);
+    if (commands.length > 0) dispatch(authoredProjectCommandsDispatched(commands));
+    onClose();
+  };
+  const savedComposition = interaction.generatedComposition ?? phase.composition;
+  return (
+    <EditorDialog
+      layout="header"
+      model={{ kind: 'draft', onCancel: onClose }}
+      returnFocusId={customizationId}
+      size="narrow"
+      title={encounterDialogTitle(savedComposition?.label ?? phase.selectedEncounter.label, phase)}
+    >
+      <EditorDialogDraftActions
+        issues={issues}
+        onCancel={onClose}
+        onSave={save}
+        saveDisabled={atRest || introduced}
+      />
+      <div className="encounter-customization-fields">
+        {composition === undefined ? (
+          generatedDecision?.value === undefined ? null : (
+            <section className="encounter-generated-customization">
+              <div className="encounter-generated-heading">
+                <h3>Encounter Composition</h3>
+                <button
+                  className="quiet-action action-compact"
+                  onClick={() => setValue(generatedDecision.key, null)}
+                  type="button"
+                >
+                  Reset
+                </button>
+              </div>
+            </section>
+          )
+        ) : (
+          <EncounterCompositionControl
+            onInitializationFailure={setInitializationFailure}
+            composition={composition}
+            {...(generatedDecision === undefined ? {} : { decision: generatedDecision })}
+            draft={draftView}
+            idKey={interactionKey}
+            {...(interaction.initializeGenerated === undefined
+              ? {}
+              : { initializeGenerated: interaction.initializeGenerated })}
+            onValue={(value) => {
+              if (generatedDecision !== undefined) setValue(generatedDecision.key, value ?? null);
+            }}
+          />
+        )}
+        {decisions.map((decision) => {
+          const value = decision.value;
+          const onValue = (next: AuthoredEncounterCustomization | null) =>
+            setValue(decision.key, next);
+          if (isGeneratedEncounterDecision(decision)) return null;
+          if (decision.selection.kind === 'cocoonCount') {
+            return (
+              <CocoonCountControl
+                decision={{ ...decision, selection: decision.selection }}
+                id={`encounter-customization-${customizationId}-${decision.key}`}
+                key={decision.key}
+                onValue={onValue}
+              />
+            );
+          }
+          if (decision.selection.kind === 'cocoonRewardPoint') {
+            return (
+              <CocoonRewardPointControl
+                key={decision.key}
+                decision={{ ...decision, selection: decision.selection }}
+                id={`encounter-customization-${customizationId}-${decision.key}`}
+                onValue={onValue}
+              />
+            );
+          }
+          if (decision.selection.kind === 'infiniteRoster') {
+            return (
+              <InfiniteRosterControl
+                decision={{ ...decision, selection: decision.selection }}
+                draftFor={interaction.infiniteRosterDraftFor}
+                id={`encounter-customization-${customizationId}-${decision.key}`}
+                key={decision.key}
+                onValue={onValue}
+                supported={draftView.infiniteRosterSupported}
+              />
+            );
+          }
+          if (decision.selection.kind === 'single') {
+            const selected = value?.kind === 'single' ? value.choiceKey : '';
+            return (
+              <div key={decision.key}>
+                <ContextualPicker
+                  label={decision.label}
+                  layout="inline"
+                  ariaLabel={decision.label}
+                  placeholder="Default"
+                  {...(!decision.valueSupported && value !== undefined ? { invalid: true } : {})}
+                  model={declaredChoicesPicker(
+                    [
+                      { key: 'default', value: '', label: 'Default' },
+                      ...(!decision.valueSupported &&
+                      selected !== '' &&
+                      !decision.selection.choices.some((choice) => choice.key === selected)
+                        ? [
+                            {
+                              key: selected,
+                              value: selected,
+                              label: `${retainedLabel(decision, selected)} (unavailable)`,
+                              disabled: true,
+                            },
+                          ]
+                        : []),
+                      ...decision.selection.choices.map((choice) => ({
+                        ...choice,
+                        value: choice.key,
+                      })),
+                    ],
+                    selected,
+                  )}
+                  id={`encounter-customization-${customizationId}-${decision.key}`}
+                  onSelect={(choiceKey) =>
+                    onValue(choiceKey === '' ? null : { kind: 'single', choiceKey })
+                  }
+                />
+              </div>
+            );
+          }
+          const prefixSelection = decision.selection;
+          const selected = value?.kind === 'orderedPrefix' ? value.choiceKeys : [];
+          return (
+            <section
+              aria-labelledby={`encounter-customization-group-${customizationId}-${decision.key}`}
+              className="encounter-customization-group"
+              key={decision.key}
+            >
+              <h3 id={`encounter-customization-group-${customizationId}-${decision.key}`}>
+                {decision.label}
+              </h3>
+              {prefixSelection.uses.map((use, index) => (
+                <ContextualPicker
+                  key={index}
+                  id={`encounter-customization-${customizationId}-${decision.key}${index === 0 ? '' : `-${index}`}`}
+                  label={`Use ${index + 1}`}
+                  layout="inline"
+                  ariaLabel={`${decision.label} use ${index + 1}`}
+                  {...(use.requiresEarlierUse
+                    ? { locked: true }
+                    : !decision.valueSupported && selected[index] !== undefined
+                      ? { invalid: true }
+                      : {})}
+                  placeholder="Default"
+                  model={declaredChoicesPicker(
+                    [
+                      { key: 'default', value: '', label: 'Default' },
+                      ...(!decision.valueSupported &&
+                      selected[index] !== undefined &&
+                      !prefixSelection.choices.some((choice) => choice.key === selected[index])
+                        ? [
+                            {
+                              key: selected[index]!,
+                              value: selected[index]!,
+                              label: `${retainedLabel(decision, selected[index]!)} (unavailable)`,
+                              disabled: true,
+                            },
+                          ]
+                        : []),
+                      ...prefixSelection.choices.map((choice) => {
+                        const held = !use.availableChoiceKeys.includes(choice.key);
+                        return {
+                          ...choice,
+                          value: choice.key,
+                          disabled: held,
+                          ...(held ? { explanations: ['Already chosen for another use'] } : {}),
+                        };
+                      }),
+                    ],
+                    selected[index] ?? '',
+                  )}
+                  onSelect={(choiceKey) => {
+                    const next =
+                      choiceKey === '' ? use.defaultValue : use.valueByChoiceKey[choiceKey];
+                    if (next !== undefined) onValue(next);
+                  }}
+                />
+              ))}
+            </section>
+          );
+        })}
+      </div>
+    </EditorDialog>
+  );
+}
+
 function EncounterCustomizationControl({
   interactions,
   phase,
@@ -50,9 +365,7 @@ function EncounterCustomizationControl({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly phase: WorkspaceEncounterPhase;
 }) {
-  const executeIntent = useCommandIntent();
   const [manualOpen, setManualOpen] = useState(false);
-  const [initializationFailure, setInitializationFailure] = useState(false);
   const interactionKey = workspaceInteractionKey(phase.address);
   const interaction =
     phase.customization === undefined
@@ -86,35 +399,6 @@ function EncounterCustomizationControl({
   };
   // The system closes the dialog when its context is lost; a later reach needs a reopen.
   if (contextUnreached && manualOpen) setManualOpen(false);
-  const retainedLabel = (decision: NonNullable<typeof phase.customization>[number], key: string) =>
-    decision.retainedChoiceLabels?.find((choice) => choice.key === key)?.label ??
-    'Unavailable choice';
-  // Retained decision values the current context cannot produce; the composition's own
-  // issues are listed by its control, so it is named only when no composition exists.
-  const assessment =
-    generatedDecision?.value === undefined ? undefined : interaction?.generatedAssessment;
-  const findingEntries: readonly FeedbackEntry[] = [
-    ...(initializationFailure
-      ? [['initialization', 'No supported composition is available here.'] as const]
-      : []),
-    ...(phase.customization ?? []).flatMap((decision) =>
-      decision.value !== undefined &&
-      (!decision.valueSupported ||
-        (decision.selection.kind === 'infiniteRoster' &&
-          interaction?.infiniteRosterSupported === false)) &&
-      (composition === undefined || !isGeneratedEncounterDecision(decision))
-        ? [
-            [
-              decision.key,
-              `${decision.label}: The chosen value can't occur in this room. Choose another or reset it.`,
-            ] as const,
-          ]
-        : [],
-    ),
-    ...compositionIssueMessages(assessment).map(
-      (message, index) => [`composition-${index}`, message] as const,
-    ),
-  ];
   return (
     <>
       <button
@@ -135,191 +419,29 @@ function EncounterCustomizationControl({
       >
         {editable ? 'Customize' : 'View roster'}
       </button>
-      {manualOpen ? (
+      {!manualOpen ? null : interaction !== undefined && phase.customization !== undefined ? (
+        <EncounterCustomizationDialog
+          customizationId={customizationId}
+          interaction={interaction}
+          interactionKey={interactionKey}
+          onClose={close}
+          phase={phase}
+          savedDecisions={phase.customization}
+        />
+      ) : composition === undefined ? null : (
+        // A fixed roster has nothing to edit: a view that closes with Done.
         <EditorDialog
           eyebrow="Encounter"
-          feedback={<CustomizationFindings entries={findingEntries} />}
           model={{ kind: 'live', onDone: close }}
           returnFocusId={customizationId}
           size="narrow"
-          title={
-            composition === undefined
-              ? 'Customize'
-              : `${composition.label} (${phase.selectedEncounter.nativeEncounterDefinitionKey ?? phase.selectedEncounter.key})`
-          }
+          title={encounterDialogTitle(composition.label, phase)}
         >
           <div className="encounter-customization-fields">
-            {composition === undefined ? (
-              generatedDecision?.value === undefined || interaction === undefined ? null : (
-                <section className="encounter-generated-customization">
-                  <div className="encounter-generated-heading">
-                    <h3>Encounter Composition</h3>
-                    <button
-                      className="danger-action action-compact"
-                      onClick={() =>
-                        executeIntent(interaction.intentFor(generatedDecision.key, null))
-                      }
-                      type="button"
-                    >
-                      Reset to default
-                    </button>
-                  </div>
-                </section>
-              )
-            ) : (
-              <EncounterCompositionControl
-                onInitializationFailure={setInitializationFailure}
-                composition={composition}
-                {...(generatedDecision === undefined ? {} : { decision: generatedDecision })}
-                idKey={interactionKey}
-                {...(interaction === undefined ? {} : { interaction })}
-              />
-            )}
-            {phase.customization?.map((decision) => {
-              const value = decision.value;
-              if (interaction === undefined || isGeneratedEncounterDecision(decision)) return null;
-              if (decision.selection.kind === 'cocoonCount') {
-                return (
-                  <CocoonCountControl
-                    decision={{ ...decision, selection: decision.selection }}
-                    id={`encounter-customization-${customizationId}-${decision.key}`}
-                    interaction={interaction}
-                    key={decision.key}
-                  />
-                );
-              }
-              if (decision.selection.kind === 'cocoonRewardPoint') {
-                return (
-                  <CocoonRewardPointControl
-                    key={decision.key}
-                    decision={{ ...decision, selection: decision.selection }}
-                    id={`encounter-customization-${customizationId}-${decision.key}`}
-                    interaction={interaction}
-                  />
-                );
-              }
-              if (decision.selection.kind === 'infiniteRoster') {
-                return (
-                  <InfiniteRosterControl
-                    decision={{ ...decision, selection: decision.selection }}
-                    id={`encounter-customization-${customizationId}-${decision.key}`}
-                    interaction={interaction}
-                    key={decision.key}
-                  />
-                );
-              }
-              if (decision.selection.kind === 'single') {
-                const selected = value?.kind === 'single' ? value.choiceKey : '';
-                return (
-                  <div key={decision.key}>
-                    <ContextualPicker
-                      label={decision.label}
-                      layout="inline"
-                      ariaLabel={decision.label}
-                      placeholder="Default"
-                      {...(!decision.valueSupported && value !== undefined
-                        ? { invalid: true }
-                        : {})}
-                      model={declaredChoicesPicker(
-                        [
-                          { key: 'default', value: '', label: 'Default' },
-                          ...(!decision.valueSupported &&
-                          selected !== '' &&
-                          !decision.selection.choices.some((choice) => choice.key === selected)
-                            ? [
-                                {
-                                  key: selected,
-                                  value: selected,
-                                  label: `${retainedLabel(decision, selected)} (unavailable)`,
-                                  disabled: true,
-                                },
-                              ]
-                            : []),
-                          ...decision.selection.choices.map((choice) => ({
-                            ...choice,
-                            value: choice.key,
-                          })),
-                        ],
-                        selected,
-                      )}
-                      id={`encounter-customization-${customizationId}-${decision.key}`}
-                      onSelect={(choiceKey) =>
-                        executeIntent(
-                          interaction.intentFor(
-                            decision.key,
-                            choiceKey === '' ? null : { kind: 'single', choiceKey },
-                          ),
-                        )
-                      }
-                    />
-                  </div>
-                );
-              }
-              const prefixSelection = decision.selection;
-              const selected = value?.kind === 'orderedPrefix' ? value.choiceKeys : [];
-              return (
-                <section
-                  aria-labelledby={`encounter-customization-group-${customizationId}-${decision.key}`}
-                  className="encounter-customization-group"
-                  key={decision.key}
-                >
-                  <h3 id={`encounter-customization-group-${customizationId}-${decision.key}`}>
-                    {decision.label}
-                  </h3>
-                  {prefixSelection.uses.map((use, index) => (
-                    <ContextualPicker
-                      key={index}
-                      id={`encounter-customization-${customizationId}-${decision.key}${index === 0 ? '' : `-${index}`}`}
-                      label={`Use ${index + 1}`}
-                      layout="inline"
-                      ariaLabel={`${decision.label} use ${index + 1}`}
-                      {...(use.requiresEarlierUse
-                        ? { locked: true }
-                        : !decision.valueSupported && selected[index] !== undefined
-                          ? { invalid: true }
-                          : {})}
-                      placeholder="Default"
-                      model={declaredChoicesPicker(
-                        [
-                          { key: 'default', value: '', label: 'Default' },
-                          ...(!decision.valueSupported &&
-                          selected[index] !== undefined &&
-                          !prefixSelection.choices.some((choice) => choice.key === selected[index])
-                            ? [
-                                {
-                                  key: selected[index]!,
-                                  value: selected[index]!,
-                                  label: `${retainedLabel(decision, selected[index]!)} (unavailable)`,
-                                  disabled: true,
-                                },
-                              ]
-                            : []),
-                          ...prefixSelection.choices.map((choice) => {
-                            const held = !use.availableChoiceKeys.includes(choice.key);
-                            return {
-                              ...choice,
-                              value: choice.key,
-                              disabled: held,
-                              ...(held ? { explanations: ['Already chosen for another use'] } : {}),
-                            };
-                          }),
-                        ],
-                        selected[index] ?? '',
-                      )}
-                      onSelect={(choiceKey) => {
-                        const next =
-                          choiceKey === '' ? use.defaultValue : use.valueByChoiceKey[choiceKey];
-                        if (next !== undefined)
-                          executeIntent(interaction.intentFor(decision.key, next));
-                      }}
-                    />
-                  ))}
-                </section>
-              );
-            })}
+            <EncounterCompositionControl composition={composition} idKey={interactionKey} />
           </div>
         </EditorDialog>
-      ) : null}
+      )}
     </>
   );
 }

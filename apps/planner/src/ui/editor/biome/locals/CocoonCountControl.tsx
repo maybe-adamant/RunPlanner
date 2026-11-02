@@ -1,9 +1,6 @@
 import { useRef, useState } from 'react';
-import type {
-  WorkspaceEncounterCustomizationInteraction,
-  WorkspaceEncounterPhase,
-} from '@planner/projections/structured-workspace';
-import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import type { AuthoredEncounterCustomization } from '@run-planner/engine/authored-project';
+import type { WorkspaceEncounterPhase } from '@planner/projections/structured-workspace';
 
 type Decision = Extract<
   NonNullable<WorkspaceEncounterPhase['customization']>[number],
@@ -26,13 +23,13 @@ const commitKeys = [
 export function CocoonCountControl({
   decision,
   id,
-  interaction,
+  onValue,
 }: {
   readonly decision: Decision;
   readonly id: string;
-  readonly interaction: WorkspaceEncounterCustomizationInteraction;
+  /** Writes the decision's next value into the dialog draft; null restores Default. */
+  readonly onValue: (value: AuthoredEncounterCustomization | null) => void;
 }) {
-  const executeIntent = useCommandIntent();
   const { minimum, maximum } = decision.selection;
   const count = decision.value?.kind === 'cocoonCount' ? decision.value.count : undefined;
   const position =
@@ -50,12 +47,7 @@ export function CocoonCountControl({
     pending.current = undefined;
     setDraft(undefined);
     if (next === undefined || next === persisted) return;
-    executeIntent(
-      interaction.intentFor(
-        decision.key,
-        next === 0 ? null : { kind: 'cocoonCount', count: minimum + next - 1 },
-      ),
-    );
+    onValue(next === 0 ? null : { kind: 'cocoonCount', count: minimum + next - 1 });
   };
   const shown = draft ?? position;
   const unavailable = count !== undefined && !decision.valueSupported;
@@ -99,10 +91,10 @@ export function CocoonCountControl({
         <button
           className="quiet-action"
           disabled={count === undefined}
-          onClick={() => executeIntent(interaction.intentFor(decision.key, null))}
+          onClick={() => onValue(null)}
           type="button"
         >
-          Reset to default
+          Reset
         </button>
       </div>
     </div>

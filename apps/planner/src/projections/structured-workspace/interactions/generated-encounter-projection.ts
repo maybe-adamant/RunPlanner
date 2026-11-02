@@ -37,7 +37,7 @@ function enemyPickerLabel(key: string, labels: readonly ChoiceLabel[]): string {
   const name = generatedEnemyLabel(choice?.label ?? 'Unavailable enemy');
   return choice?.difficultyRating === undefined
     ? name
-    : `${name} (${enemyCostNumber.format(choice.difficultyRating)})`;
+    : `${name} · ${enemyCostNumber.format(choice.difficultyRating)}`;
 }
 
 export function projectGeneratedMenace(
@@ -238,28 +238,19 @@ function issueMessage(
   }
 }
 
-function dispositionLabel(disposition: EncounterCompositionView['disposition']): string {
-  switch (disposition.key) {
-    case 'fixed':
-      return 'This encounter is fixed';
-    case 'fixedWavePrefix':
-      return disposition.fixedWaveCount === 1
-        ? 'This encounter’s first wave is fixed'
-        : `This encounter’s first ${disposition.fixedWaveCount} waves are fixed`;
-    case 'generated':
-      return 'This encounter is generated';
-    case 'nativeGenerated':
-      return 'Not customized';
-  }
+/** The one status the dialog states; fixed waves are marked on their own rows. */
+function statusLabel(disposition: EncounterCompositionView['disposition']): string | undefined {
+  return disposition.key === 'nativeGenerated' ? 'Not customized' : undefined;
 }
 
-/** Adapts the engine composition view with player-facing enemy and disposition labels. */
+/** Adapts the engine composition view with player-facing enemy labels and its status. */
 export function projectEncounterComposition(
   view: EncounterCompositionView,
 ): WorkspaceEncounterComposition {
+  const status = statusLabel(view.disposition);
   return Object.freeze({
     label: view.label,
-    dispositionLabel: dispositionLabel(view.disposition),
+    ...(status === undefined ? {} : { statusLabel: status }),
     editable: view.editable,
     waveCount: view.waveCount,
     waves: Object.freeze(

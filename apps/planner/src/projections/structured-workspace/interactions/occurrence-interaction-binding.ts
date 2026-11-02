@@ -9,7 +9,9 @@ import {
   type AuthoredNemesisBetOutcome,
   type AuthoredNemesisRandomEventKind,
   type AuthoredNemesisRandomEventOutcome,
+  type AuthoredEncounterCustomization,
   type AuthoredGeneratedEncounterCustomization,
+  orderedPrefixUseDomains,
   type OccurrenceId,
   type SideRoomGeneration,
 } from '@run-planner/engine/authored-project';
@@ -514,7 +516,8 @@ export function bindOccurrenceLocalInteractions(
             );
           }
           if (phase.customization !== undefined) {
-            const generatedDecision = phase.customization.find(
+            const customization = phase.customization;
+            const generatedDecision = customization.find(
               (decision) => decision.selection.kind === 'generated',
             );
             const generatedSelection =
@@ -525,10 +528,12 @@ export function bindOccurrenceLocalInteractions(
               generatedDecision === undefined
                 ? undefined
                 : generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase.owner);
-            const generatedValue =
-              generatedDecision?.value?.kind === 'generated'
-                ? generatedDecision.value
-                : { kind: 'generated' as const };
+            const generatedBound =
+              generatedDecision === undefined ||
+              generatedSelection === undefined ||
+              generatedCapability?.decisionKey !== generatedDecision.key
+                ? undefined
+                : { capability: generatedCapability, selection: generatedSelection };
             const generatedLabels =
               generatedSelection === undefined
                 ? []
@@ -539,126 +544,93 @@ export function bindOccurrenceLocalInteractions(
                   ];
             const introductionLabel = (encounterKey: string) =>
               catalog.encounterDefinitions.byKey[encounterKey]?.label ?? encounterKey;
-            const generatedEngineAssessment =
-              generatedDecision === undefined ||
-              generatedSelection === undefined ||
-              generatedCapability?.decisionKey !== generatedDecision.key
-                ? undefined
-                : generatedCapability.assess(generatedValue);
-            const generatedAssessment =
-              generatedEngineAssessment === undefined
-                ? undefined
-                : projectGeneratedEncounterAssessment(
-                    generatedEngineAssessment,
-                    generatedLabels,
-                    introductionLabel,
-                    generatedValue,
-                  );
-            const generatedCompositionView =
-              generatedDecision === undefined
-                ? undefined
-                : encounterCompositionView(
-                    catalog,
-                    {
-                      ...(phase.encounterDefinitionKey === undefined
-                        ? {}
-                        : { selectedEncounterDefinitionKey: phase.encounterDefinitionKey }),
-                      customization: phase.customization,
-                    },
-                    generatedEngineAssessment,
-                  );
-            const generatedComposition =
-              generatedCompositionView === undefined
-                ? undefined
-                : projectEncounterComposition(generatedCompositionView);
-            const generatedHighlightPicker =
-              generatedDecision === undefined ||
-              generatedSelection === undefined ||
-              generatedEngineAssessment === undefined
-                ? undefined
-                : projectGeneratedEncounterHighlightPicker(
-                    generatedEngineAssessment,
-                    generatedValue.highlightKey,
-                    generatedLabels,
-                    generatedSelection.choices.map((choice) => choice.key),
-                    introductionLabel,
-                  );
-            const generatedWaveDraftFor =
-              generatedDecision === undefined ||
-              generatedSelection === undefined ||
-              generatedCapability?.decisionKey !== generatedDecision.key
-                ? undefined
-                : (waveIndex: number, confirmedSeedCount: number, typeKeys: readonly string[]) => {
-                    const waves = [
-                      ...(generatedValue.waves?.filter((wave) => wave.waveIndex !== waveIndex) ??
-                        []),
-                      Object.freeze({ waveIndex, typeKeys: Object.freeze([...typeKeys]) }),
-                    ].sort((left, right) => left.waveIndex - right.waveIndex);
-                    const draft: AuthoredGeneratedEncounterCustomization = Object.freeze({
-                      kind: 'generated',
-                      ...(generatedValue.baseRoll === undefined
-                        ? {}
-                        : { baseRoll: generatedValue.baseRoll }),
-                      ...(generatedValue.waveCount === undefined
-                        ? {}
-                        : { waveCount: generatedValue.waveCount }),
-                      ...(generatedValue.highlightKey === undefined
-                        ? {}
-                        : { highlightKey: generatedValue.highlightKey }),
-                      ...(generatedValue.fangs === undefined
-                        ? {}
-                        : { fangs: generatedValue.fangs }),
-                      ...(generatedValue.menace === undefined
-                        ? {}
-                        : { menace: generatedValue.menace }),
-                      waves: Object.freeze(waves),
-                    });
-                    return projectGeneratedEncounterWaveDraft(
-                      generatedCapability.assess(draft),
-                      waveIndex,
-                      confirmedSeedCount,
-                      typeKeys,
+            // Every generated product follows one value: the saved one, or a dialog draft.
+            const generatedProductsFor = (decisions: NonNullable<typeof phase.customization>) => {
+              const decision = decisions.find((entry) => entry.selection.kind === 'generated');
+              const generatedValue: AuthoredGeneratedEncounterCustomization =
+                decision?.value?.kind === 'generated' ? decision.value : { kind: 'generated' };
+              const engineAssessment = generatedBound?.capability.assess(generatedValue);
+              const assessment =
+                engineAssessment === undefined
+                  ? undefined
+                  : projectGeneratedEncounterAssessment(
+                      engineAssessment,
                       generatedLabels,
                       introductionLabel,
+                      generatedValue,
                     );
-                  };
-            const generatedFangsDraftFor =
-              generatedDecision === undefined ||
-              generatedSelection === undefined ||
-              generatedCapability?.decisionKey !== generatedDecision.key
-                ? undefined
-                : (
-                    fangs:
-                      | { readonly typeKey: string; readonly perkKeys: readonly string[] }
-                      | undefined,
-                  ) =>
-                    projectGeneratedFangsDraft(
-                      generatedCapability.assess(
-                        Object.freeze({
-                          kind: 'generated',
-                          ...(generatedValue.baseRoll === undefined
-                            ? {}
-                            : { baseRoll: generatedValue.baseRoll }),
-                          ...(generatedValue.waveCount === undefined
-                            ? {}
-                            : { waveCount: generatedValue.waveCount }),
-                          ...(generatedValue.highlightKey === undefined
-                            ? {}
-                            : { highlightKey: generatedValue.highlightKey }),
-                          ...(generatedValue.waves === undefined
-                            ? {}
-                            : { waves: generatedValue.waves }),
-                          ...(generatedValue.menace === undefined
-                            ? {}
-                            : { menace: generatedValue.menace }),
-                          ...(fangs === undefined ? {} : { fangs }),
-                        }),
-                      ),
-                      fangs,
-                      generatedLabels,
-                      generatedSelection.fangs?.perks ?? {},
+              const compositionView =
+                decision === undefined
+                  ? undefined
+                  : encounterCompositionView(
+                      catalog,
+                      {
+                        ...(phase.encounterDefinitionKey === undefined
+                          ? {}
+                          : { selectedEncounterDefinitionKey: phase.encounterDefinitionKey }),
+                        customization: decisions,
+                      },
+                      engineAssessment,
                     );
-            const rosterDecision = phase.customization.find(
+              const composition =
+                compositionView === undefined
+                  ? undefined
+                  : projectEncounterComposition(compositionView);
+              if (generatedBound === undefined || engineAssessment === undefined)
+                return { generatedValue, assessment, composition };
+              const { capability, selection } = generatedBound;
+              const { fangs: _fangs, ...withoutFangs } = generatedValue;
+              void _fangs;
+              return {
+                generatedValue,
+                assessment,
+                composition,
+                highlightPicker: projectGeneratedEncounterHighlightPicker(
+                  engineAssessment,
+                  generatedValue.highlightKey,
+                  generatedLabels,
+                  selection.choices.map((choice) => choice.key),
+                  introductionLabel,
+                ),
+                waveDraftFor: (
+                  waveIndex: number,
+                  confirmedSeedCount: number,
+                  typeKeys: readonly string[],
+                ) => {
+                  const waves = [
+                    ...(generatedValue.waves?.filter((wave) => wave.waveIndex !== waveIndex) ?? []),
+                    Object.freeze({ waveIndex, typeKeys: Object.freeze([...typeKeys]) }),
+                  ].sort((left, right) => left.waveIndex - right.waveIndex);
+                  return projectGeneratedEncounterWaveDraft(
+                    capability.assess(
+                      Object.freeze({ ...generatedValue, waves: Object.freeze(waves) }),
+                    ),
+                    waveIndex,
+                    confirmedSeedCount,
+                    typeKeys,
+                    generatedLabels,
+                    introductionLabel,
+                  );
+                },
+                fangsDraftFor: (
+                  fangs:
+                    { readonly typeKey: string; readonly perkKeys: readonly string[] } | undefined,
+                ) =>
+                  projectGeneratedFangsDraft(
+                    capability.assess(
+                      Object.freeze({
+                        ...withoutFangs,
+                        ...(fangs === undefined ? {} : { fangs }),
+                      }),
+                    ),
+                    fangs,
+                    generatedLabels,
+                    selection.fangs?.perks ?? {},
+                  ),
+              };
+            };
+            const savedGenerated = generatedProductsFor(customization);
+            const rosterDecision = customization.find(
               (decision) => decision.selection.kind === 'infiniteRoster',
             );
             const rosterCapability =
@@ -670,13 +642,62 @@ export function bindOccurrenceLocalInteractions(
               rosterCapability?.decisionKey === rosterDecision.key
                 ? { capability: rosterCapability, choices: rosterDecision.selection.choices }
                 : undefined;
-            const rosterValue =
-              rosterDecision?.value?.kind === 'infiniteRoster' ? rosterDecision.value : undefined;
+            const declaredDecisions =
+              phase.encounterDefinitionKey === undefined
+                ? undefined
+                : catalog.encounterDefinitions.byKey[phase.encounterDefinitionKey]?.customization;
+            // A drafted value differs from the saved one; its use domains follow the draft.
+            const draftDecision = (
+              decision: (typeof customization)[number],
+              value: AuthoredEncounterCustomization | undefined,
+            ): (typeof customization)[number] => {
+              if (JSON.stringify(value) === JSON.stringify(decision.value)) return decision;
+              const { value: _saved, ...rest } = decision;
+              void _saved;
+              // Draft values are chosen from the published domains, except retained ordered-prefix uses.
+              const valueSupported =
+                value?.kind !== 'orderedPrefix' ||
+                value.choiceKeys.every((key) =>
+                  decision.selection.kind === 'orderedPrefix'
+                    ? decision.selection.choices.some((choice) => choice.key === key)
+                    : false,
+                );
+              if (decision.selection.kind !== 'orderedPrefix')
+                return Object.freeze({
+                  ...rest,
+                  valueSupported,
+                  ...(value === undefined ? {} : { value }),
+                } as (typeof customization)[number]);
+              const onRouteKeys = decision.selection.choices.map((choice) => choice.key);
+              const declared = declaredDecisions?.find((entry) => entry.key === decision.key);
+              const uses =
+                declared?.selection.kind === 'orderedPrefix'
+                  ? orderedPrefixUseDomains(
+                      {
+                        ...declared,
+                        selection: {
+                          ...declared.selection,
+                          choices: declared.selection.choices.filter((choice) =>
+                            onRouteKeys.includes(choice.key),
+                          ),
+                        },
+                      },
+                      value,
+                    )
+                  : undefined;
+              return Object.freeze({
+                ...rest,
+                valueSupported,
+                ...(value === undefined ? {} : { value }),
+                selection: Object.freeze({
+                  ...decision.selection,
+                  uses: uses ?? decision.selection.uses,
+                }),
+              } as (typeof customization)[number]);
+            };
             const customizationIntentFor = (
               decisionKey: string,
-              value:
-                | import('@run-planner/engine/authored-project').AuthoredEncounterCustomization
-                | null,
+              value: AuthoredEncounterCustomization | null,
             ) =>
               Object.freeze({
                 command: Object.freeze({
@@ -686,12 +707,6 @@ export function bindOccurrenceLocalInteractions(
                   value,
                 }),
               });
-            const generatedEdits =
-              generatedDecision === undefined || generatedAssessment === undefined
-                ? undefined
-                : bindGeneratedEncounterEdits(generatedValue, generatedAssessment, (value) =>
-                    customizationIntentFor(generatedDecision.key, value),
-                  );
             encounterCustomizations.set(
               key,
               Object.freeze({
@@ -706,24 +721,61 @@ export function bindOccurrenceLocalInteractions(
                           typeKeys,
                           rosterBound.choices,
                         ),
-                      ...(rosterValue === undefined
-                        ? {}
-                        : {
-                            infiniteRosterSupported: rosterBound.capability.assess(
-                              rosterValue.typeKeys,
-                            ).supported,
-                          }),
                     }),
                 intentFor: customizationIntentFor,
-                ...(generatedAssessment === undefined ? {} : { generatedAssessment }),
-                ...(generatedComposition === undefined ? {} : { generatedComposition }),
-                ...(generatedEdits === undefined ? {} : { generatedEdits }),
-                ...(generatedDecision?.value === undefined && generatedCapability !== undefined
-                  ? { initializeGenerated: generatedCapability.initialize }
-                  : {}),
-                ...(generatedHighlightPicker === undefined ? {} : { generatedHighlightPicker }),
-                ...(generatedWaveDraftFor === undefined ? {} : { generatedWaveDraftFor }),
-                ...(generatedFangsDraftFor === undefined ? {} : { generatedFangsDraftFor }),
+                ...(savedGenerated.assessment === undefined
+                  ? {}
+                  : { generatedAssessment: savedGenerated.assessment }),
+                ...(savedGenerated.composition === undefined
+                  ? {}
+                  : { generatedComposition: savedGenerated.composition }),
+                ...(generatedCapability === undefined
+                  ? {}
+                  : { initializeGenerated: generatedCapability.initialize }),
+                draftFor: (
+                  values: Readonly<Record<string, AuthoredEncounterCustomization | undefined>>,
+                ) => {
+                  const decisions = Object.freeze(
+                    customization.map((decision) => draftDecision(decision, values[decision.key])),
+                  );
+                  const generated = decisions.every(
+                    (decision, index) => decision === customization[index],
+                  )
+                    ? savedGenerated
+                    : generatedProductsFor(decisions);
+                  const roster =
+                    rosterDecision === undefined ? undefined : values[rosterDecision.key];
+                  return Object.freeze({
+                    decisions,
+                    ...(generated.assessment === undefined
+                      ? {}
+                      : {
+                          generatedAssessment: generated.assessment,
+                          generatedEdits: bindGeneratedEncounterEdits(
+                            generated.generatedValue,
+                            generated.assessment,
+                          ),
+                        }),
+                    ...(generated.composition === undefined
+                      ? {}
+                      : { generatedComposition: generated.composition }),
+                    ...(generated.highlightPicker === undefined
+                      ? {}
+                      : { generatedHighlightPicker: generated.highlightPicker }),
+                    ...(generated.waveDraftFor === undefined
+                      ? {}
+                      : { generatedWaveDraftFor: generated.waveDraftFor }),
+                    ...(generated.fangsDraftFor === undefined
+                      ? {}
+                      : { generatedFangsDraftFor: generated.fangsDraftFor }),
+                    ...(rosterBound === undefined || roster?.kind !== 'infiniteRoster'
+                      ? {}
+                      : {
+                          infiniteRosterSupported: rosterBound.capability.assess(roster.typeKeys)
+                            .supported,
+                        }),
+                  });
+                },
               }),
             );
           }

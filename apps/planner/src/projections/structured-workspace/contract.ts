@@ -26,6 +26,7 @@ export type {
 export type {
   WorkspaceEncounterInteraction,
   WorkspaceEncounterCustomizationInteraction,
+  WorkspaceEncounterCustomizationDraft,
   WorkspaceEncounterPhase,
   WorkspaceGeneratedEncounterAssessment,
   WorkspaceEncounterComposition,

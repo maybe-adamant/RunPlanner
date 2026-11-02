@@ -1,9 +1,6 @@
 import { useRef } from 'react';
-import type {
-  WorkspaceEncounterCustomizationInteraction,
-  WorkspaceEncounterPhase,
-} from '@planner/projections/structured-workspace';
-import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import type { AuthoredEncounterCustomization } from '@run-planner/engine/authored-project';
+import type { WorkspaceEncounterPhase } from '@planner/projections/structured-workspace';
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { cocoonMapFor } from '@planner/ui/room-maps/cocoons/cocoonMapAssets';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
@@ -65,21 +62,16 @@ function CocoonMarker({
 export function CocoonRewardPointControl({
   decision,
   id,
-  interaction,
+  onValue,
 }: {
   readonly decision: Decision;
   readonly id: string;
-  readonly interaction: WorkspaceEncounterCustomizationInteraction;
+  /** Writes the decision's next value into the dialog draft; null restores Any. */
+  readonly onValue: (value: AuthoredEncounterCustomization | null) => void;
 }) {
-  const executeIntent = useCommandIntent();
   const selected = decision.value?.kind === 'cocoonRewardPoint' ? decision.value.spawnPointId : '';
   const select = (spawnPointId: number | null) =>
-    executeIntent(
-      interaction.intentFor(
-        decision.key,
-        spawnPointId === null ? null : { kind: 'cocoonRewardPoint', spawnPointId },
-      ),
-    );
+    onValue(spawnPointId === null ? null : { kind: 'cocoonRewardPoint', spawnPointId });
   const map = cocoonMapFor(decision.selection.gameName);
   return (
     <section className="encounter-cocoon-position" aria-label="Cocoon reward position">

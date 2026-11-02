@@ -79,6 +79,7 @@ export type {
   WorkspaceCommandIntent,
   WorkspaceEncounterInteraction,
   WorkspaceEncounterCustomizationInteraction,
+  WorkspaceEncounterCustomizationDraft,
   WorkspaceGeneratedEncounterAssessment,
   WorkspaceEncounterComposition,
   WorkspaceGeneratedWaveDraftChoice,

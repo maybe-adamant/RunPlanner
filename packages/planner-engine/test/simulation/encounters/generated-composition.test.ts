@@ -353,6 +353,48 @@ describe('native generated composition possibility', () => {
       { key: 'FogEmitter2' },
     ]);
   });
+  it('reports each capped count and the spill it pushes into the earlier uncapped type', () => {
+    const source = policy('GeneratedF');
+    const guard = source.choices.find((choice) => choice.key === 'Guard')!;
+    const fog = policy('GeneratedH').choices.find((choice) => choice.key === 'FogEmitter2')!;
+    const wave = (base: number, typeKeys: readonly string[], allocations = {}) =>
+      assessGeneratedEncounter(
+        {
+          ...source,
+          waveCount: { min: 1, max: 1 },
+          types: {
+            ...source.types,
+            min: typeKeys.length,
+            max: typeKeys.length,
+            depthRamp: 0,
+            cap: typeKeys.length,
+          },
+          choices: [guard, fog],
+          budget: { ...source.budget, base, depthRamp: 0 },
+        },
+        { kind: 'generated', waves: [{ waveIndex: 1, typeKeys: [...typeKeys], allocations }] },
+        { biomeDepthCache: 0, biomeEncounterDepth: 0, knownRunBlacklist: [] },
+      ).waves[0]?.countPreview;
+    expect(wave(110, ['Guard', 'FogEmitter2'], { Guard: 20 })).toEqual([
+      {
+        key: 'Guard',
+        requested: 20,
+        effective: 20,
+        count: 6,
+        capOverflow: [{ fromKey: 'FogEmitter2', count: 2 }],
+      },
+      { key: 'FogEmitter2', remainder: 90, effective: 90, count: 1, cap: 1 },
+    ]);
+    // A capped count within its limit carries no cap, and absorbs nothing.
+    expect(wave(100, ['Guard', 'FogEmitter2'], { Guard: 20 })).toEqual([
+      { key: 'Guard', requested: 20, effective: 20, count: 4 },
+      { key: 'FogEmitter2', remainder: 80, effective: 80, count: 1 },
+    ]);
+    // Without an earlier uncapped type the spare difficulty is simply lost.
+    expect(wave(200, ['FogEmitter2'])).toEqual([
+      { key: 'FogEmitter2', remainder: 200, effective: 200, count: 1, cap: 1 },
+    ]);
+  });
   it.each([
     [160, 15],
     [180, 0],

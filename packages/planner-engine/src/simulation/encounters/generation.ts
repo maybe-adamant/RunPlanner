@@ -119,6 +119,10 @@ export interface GeneratedEncounterAssessment {
       readonly remainder?: number;
       readonly effective?: number;
       readonly count?: number;
+      /** The native maxCount this entry's count was clamped to. */
+      readonly cap?: number;
+      /** Spare difficulty from later capped types that native added to this entry's count. */
+      readonly capOverflow?: readonly { readonly fromKey: string; readonly count: number }[];
     }[];
   }[];
   readonly operands?: GeneratedEncounterOperands;
@@ -386,6 +390,8 @@ export function assessGeneratedEncounter(
         readonly remainder?: number;
         readonly effective?: number;
         readonly count?: number;
+        readonly cap?: number;
+        readonly capOverflow?: readonly { readonly fromKey: string; readonly count: number }[];
       }[]
     | undefined => {
     if (budget?.kind !== 'exact') return undefined;
@@ -398,6 +404,8 @@ export function assessGeneratedEncounter(
       remainder?: number;
       effective?: number;
       count?: number;
+      cap?: number;
+      capOverflow?: { fromKey: string; count: number }[];
     }[] = [];
     let accumulatedDifficulty = 0;
     for (const fixed of policy.fixedEnemies) {
@@ -436,15 +444,19 @@ export function assessGeneratedEncounter(
       let effective = isSampled ? Math.min(requested!, remaining) : Math.max(0, remaining);
       if (effective < enemy.difficultyRating) effective = enemy.difficultyRating;
       let count = Math.ceil(effective / enemy.difficultyRating);
+      let cap: number | undefined;
       if (enemy.maxCount !== undefined) {
-        if (count > enemy.maxCount) count = enemy.maxCount;
+        if (count > enemy.maxCount) count = cap = enemy.maxCount;
         const earlier = uncapped.at(-1);
         const spareDifficulty = effective - count * enemy.difficultyRating;
         if (earlier !== undefined && spareDifficulty > earlier.difficultyRating) {
           const additionalCount = Math.ceil(spareDifficulty / earlier.difficultyRating);
           earlier.count += additionalCount;
           const earlierResult = result[earlier.index];
-          if (earlierResult !== undefined) earlierResult.count = earlier.count;
+          if (earlierResult !== undefined) {
+            earlierResult.count = earlier.count;
+            (earlierResult.capOverflow ??= []).push({ fromKey: key, count: additionalCount });
+          }
         }
       } else
         uncapped.push({ index: result.length, count, difficultyRating: enemy.difficultyRating });
@@ -456,9 +468,21 @@ export function assessGeneratedEncounter(
         ...(isSampled ? {} : { remainder: Math.max(0, remaining) }),
         effective,
         count,
+        ...(cap === undefined ? {} : { cap }),
       });
     }
-    return Object.freeze(result.map((entry) => Object.freeze(entry)));
+    return Object.freeze(
+      result.map(({ capOverflow, ...entry }) =>
+        Object.freeze(
+          capOverflow === undefined
+            ? entry
+            : {
+                ...entry,
+                capOverflow: Object.freeze(capOverflow.map((spill) => Object.freeze(spill))),
+              },
+        ),
+      ),
+    );
   };
   const usesHighlight = waveCount !== undefined && waveCount > 1 && fixedWaveCount === 0;
   const choices = new Map(

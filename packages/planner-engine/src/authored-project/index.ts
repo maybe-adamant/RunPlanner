@@ -29,7 +29,10 @@ export {
   routeRoomShop,
   routeSaveFileGodHistory,
 } from './route-profile';
-export { customizationDecisionOnRoute } from './room-state/encounter-customization';
+export {
+  customizationDecisionOnRoute,
+  orderedPrefixUseDomains,
+} from './room-state/encounter-customization';
 export { assessPublicDreamItinerary, type DreamItineraryAssessment } from './dream-itinerary';
 export {
   dreamItineraryReplacementDroppedBiomeKeys,
