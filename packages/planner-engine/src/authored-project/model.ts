@@ -9,7 +9,7 @@ import type {
 import type { RunModifiersRecord } from './run-modifiers';
 import type { RunStartPoint } from './practice-start';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 100 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 101 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
 export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 0;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;

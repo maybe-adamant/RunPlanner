@@ -1,7 +1,10 @@
 export interface ProjectSchemaTransition {
   readonly source: number;
   readonly target: number;
-  readonly migrate: (document: unknown, context: { readonly name?: string }) => unknown;
+  readonly migrate: (
+    document: unknown,
+    context: { readonly name?: string; readonly catalog: unknown },
+  ) => unknown;
 }
 export const TRANSITIONS: readonly ProjectSchemaTransition[];
 export const OLDEST_SCHEMA_VERSION: number;
@@ -12,10 +15,3 @@ export function migrateProjectDocumentTo(
   document: unknown,
   options?: { readonly target?: number; readonly context?: { readonly name?: string } },
 ): unknown;
-export function loadSchema100Completion(): Promise<
-  (document: unknown, sourceSchemaVersion: number) => unknown
->;
-export function migrateProjectDocumentToComplete(
-  document: unknown,
-  options?: { readonly target?: number; readonly context?: { readonly name?: string } },
-): Promise<unknown>;

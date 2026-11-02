@@ -6,7 +6,6 @@ import {
   createProjectDocument,
   decodeProjectDocument,
   encodeProjectDocument,
-  fillSchema100NemesisBetOutcomes,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
@@ -29,6 +28,7 @@ import { migrateProjectDocument as migrate96To97 } from '@planner/persistence/pr
 import { migrateProjectDocument as migrate97To98 } from '@planner/persistence/project-97-to-98.js';
 import { migrateProjectDocument as migrate98To99 } from '@planner/persistence/project-98-to-99.js';
 import { migrateProjectDocument as migrate99To100 } from '@planner/persistence/project-99-to-100.js';
+import { migrateProjectDocument as migrate100To101 } from '@planner/persistence/project-100-to-101.js';
 
 type Encoded = {
   schemaVersion: number;
@@ -68,11 +68,11 @@ function withoutChain(project: ProjectDocument): Encoded {
 
 function migrated(project: ProjectDocument): ProjectDocument {
   return decodeProjectDocument(
-    fillSchema100NemesisBetOutcomes(
+    migrate100To101(
       migrate99To100(
         migrate98To99(migrate97To98(migrate96To97(migrateProjectDocument(withoutChain(project))))),
       ),
-      catalog,
+      { catalog },
     ) as never,
     catalog,
   );
@@ -199,10 +199,9 @@ describe('schema 95 to 96 completed-Hub chain migration', () => {
     expect(
       encodeProjectDocument(
         decodeProjectDocument(
-          fillSchema100NemesisBetOutcomes(
-            migrate99To100(migrate98To99(migrate97To98(migrate96To97(result)))),
+          migrate100To101(migrate99To100(migrate98To99(migrate97To98(migrate96To97(result)))), {
             catalog,
-          ) as never,
+          }) as never,
           catalog,
         ),
       ),

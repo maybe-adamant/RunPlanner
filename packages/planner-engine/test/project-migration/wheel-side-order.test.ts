@@ -7,10 +7,12 @@ import {
   createRewardWheelOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
-  migrateRewardWheelOffersToSideOrder,
   type ProjectDocument,
-  type WheelSideOrderBlock,
 } from '@run-planner/engine/authored-project';
+import {
+  exchangeBlockedWheelOffers,
+  type WheelSideOrderBlock,
+} from '@run-planner/engine/project-migration';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
@@ -65,9 +67,9 @@ const blockWhileLeading =
       ? { kind: 'invalid', owner: wheel, reasons: [{ origin: offer('offer1') }] }
       : undefined;
 
-describe('reward wheel side-order migration', () => {
+describe('blocked wheel offer exchange', () => {
   it('exchanges a wheel valid only the other way round, with its pick', () => {
-    const migrated = migrateRewardWheelOffersToSideOrder(
+    const migrated = exchangeBlockedWheelOffers(
       raw(twoOfferProject()),
       catalog,
       blockWhileLeading(left),
@@ -77,23 +79,21 @@ describe('reward wheel side-order migration', () => {
     expect(state?.offers.offer2?.offer).toEqual(left);
     expect(state?.pickedOfferIndex).toBe(1);
     // Once side-ordered, the plan no longer names the wheel and stays as it is.
-    expect(migrateRewardWheelOffersToSideOrder(migrated, catalog, blockWhileLeading(left))).toBe(
-      migrated,
-    );
+    expect(exchangeBlockedWheelOffers(migrated, catalog, blockWhileLeading(left))).toBe(migrated);
   });
 
   it('returns the document itself when nothing blocks or the exchange does not clear the block', () => {
     const document = raw(twoOfferProject());
-    expect(
-      migrateRewardWheelOffersToSideOrder(document, catalog, blockWhileLeading(undefined)),
-    ).toBe(document);
+    expect(exchangeBlockedWheelOffers(document, catalog, blockWhileLeading(undefined))).toBe(
+      document,
+    );
     const alwaysBlocked = (): WheelSideOrderBlock => ({
       kind: 'invalid',
       owner: wheel,
       reasons: [{ origin: offer('offer2') }],
     });
-    expect(migrateRewardWheelOffersToSideOrder(document, catalog, alwaysBlocked)).toBe(document);
-    expect(migrateRewardWheelOffersToSideOrder('not a document', catalog, alwaysBlocked)).toBe(
+    expect(exchangeBlockedWheelOffers(document, catalog, alwaysBlocked)).toBe(document);
+    expect(exchangeBlockedWheelOffers('not a document', catalog, alwaysBlocked)).toBe(
       'not a document',
     );
   });

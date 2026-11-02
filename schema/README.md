@@ -14,18 +14,39 @@ npm run schema:migrate -- path/to/project.runplanner.json
 npm run schema:migrate -- --to 98 path/to/project.runplanner.json
 ```
 
-A new schema adds its browser-safe transform beside the others in
+A new schema adds its transform beside the others in
 `apps/planner/src/persistence/project-<from>-to-<to>.js` (with its `.d.ts`),
 appends it to `PROJECT_TRANSITION_STEPS` in
 `apps/planner/src/persistence/project-transitions.js`, which both the
 application loader and `migrate-project.js` read, and owns its behavior in a sibling
-`migrate-project-<from>-to-<to>.test.js` here. Run the boundary tests with:
+`migrate-project-<from>-to-<to>.test.js` here. A transform receives the catalog
+the document opens against; one that needs engine facts imports them from the
+engine's `project-migration` entry, and the tool loads the transitions and the
+catalog through Vite's module runner (`current-schema.js`), so it runs the
+same steps as the loader. Run the boundary tests with:
 
 ```bash
 npm run test:schema:migrate
 ```
 
 ## History
+
+Schema 101 makes each phase whose binding can field a Nemesis bet combat own
+a complete `nemesisBetOutcomeByPhase` entry (`win`, `tie` or `loss`), and
+gives a two-offer Ship wheel its sides: `offer1` is the Left wheel, drawn
+before `offer2`, the Right.
+
+The migration first reshapes a schema 100 document saved before that shape
+settled: a Well or Pool `rerollCount` becomes that many unpinned reroll
+actions at the end of the room (only on an interacted feature), a trait, Chaos
+or Pom screen's `rerollCount` becomes that many unauthored `rerolledScreens`,
+and Well and Pool `interacted` flags and Shrine purchase delays take the
+schema 100 shape. It then fills a `win` for every hosting phase without an
+outcome, keeping a stored tie or loss. Last, it evaluates the plan with the
+engine: for each two-offer wheel the plan's block names, it exchanges the two
+offers with their rerolled rewards, picked index, reroll targets and every key
+that embeds an offer's address, keeping the exchange only when it clears that
+wheel's block. This transition needs the catalog.
 
 Schema 100 makes the Zagreus Contract pedestal a Preboss room feature in
 either reward form: every Preboss that declares a pedestal destination owns
@@ -58,22 +79,12 @@ names a reroll's list in `rollKey` (absent for the initial list). The feature
 state holds the initial stock and no `interacted` flag; the transition drops it,
 keeping an interacted feature's slots and clearing an uninteracted one's. The transition writes none of them.
 
-Each phase whose binding can field a Nemesis bet combat owns a complete
-`nemesisBetOutcomeByPhase` entry (`win`, `tie` or `loss`). A schema 100
-document saved before this entry was required stored a win by omission. The
-application loader and the offline tool fill those wins before strict parsing,
-both for such a file and for a document migrated from an earlier schema,
-through the engine's catalog-aware fill; the transitions themselves do not
-write them. The tool loads the engine and catalog through Vite's module runner
-(`current-schema.js`).
+Each Hermes Shrine item carries its own `delay`: the transition moves a
+purchase's delay onto its item, gives an unbought item the default, and drops
+`purchaseBySlot` and the Travel Deal refill's `purchase`.
 
-A two-offer Ship wheel's `offer1` is the Left wheel, drawn before `offer2`, the
-Right. A plan saved while either draw order was admitted may hold a wheel
-valid only the other way round. After the Nemesis fill, the loader and the
-tool evaluate the plan and, for each such wheel its block names, exchange its
-two offers with their rerolled rewards, picked index, reroll targets and every
-key that embeds an offer's address, keeping the exchange only when it clears
-that wheel's block.
+A Nemesis kill race stores `nemesisBetOutcomeByPhase` sparsely, a win by
+omission, and a two-offer Ship wheel's offers carry no side.
 
 The migration moves a Shop-owned pedestal item, its collect action and its
 source entry to the room unchanged, and gives every other pedestal-declaring

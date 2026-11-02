@@ -1,13 +1,13 @@
-import type { Catalog } from '../../../catalog-schema';
+import type { Catalog } from '../catalog-schema';
 import {
   createBiomeAddress,
   createRewardWheelOfferAddress,
   semanticAddressKey,
   type RewardWheelAddress,
   type SemanticAddress,
-} from '../../addresses';
-import { decodeProjectDocument } from '../../codec';
-import type { ProjectDocument } from '../../model';
+} from '../authored-project/addresses';
+import { decodeProjectDocument } from '../authored-project/codec';
+import type { ProjectDocument } from '../authored-project/model';
 
 type RawRecord = Record<string, unknown>;
 
@@ -174,7 +174,7 @@ function swapWheelOffers(document: RawRecord, wheel: RewardWheelAddress): RawRec
  * the input itself when nothing changes; a document strict decoding rejects is
  * left for it to reject.
  */
-export function migrateRewardWheelOffersToSideOrder(
+export function exchangeBlockedWheelOffers(
   value: unknown,
   catalog: Catalog,
   blockOf: (project: ProjectDocument) => WheelSideOrderBlock | undefined,

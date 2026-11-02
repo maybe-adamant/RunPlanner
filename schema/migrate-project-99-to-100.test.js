@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import {
-  migrateProjectDocument,
-  normalizeUnpushedSchema100,
-} from '../apps/planner/src/persistence/project-99-to-100.js';
+import { migrateProjectDocument } from '../apps/planner/src/persistence/project-99-to-100.js';
 
 const offer = (rewardType) => ({ optionKey: null, reward: { offer: { rewardType } } });
 const document = (occurrences) => ({
@@ -173,107 +170,60 @@ describe('schema 99 Well and Pool interaction', () => {
   });
 });
 
-describe('unpushed schema 100 reroll counts', () => {
-  it('turns Well and Pool counts into unpinned rerolls at the end of the room', () => {
-    const room = {
-      occurrenceId: 'postboss',
-      gameName: 'F_PostBoss01',
-      stygianWell: {
-        interacted: true,
-        offerKeyBySlot: { healing: 'HealDropRange' },
-        rerollCount: 2,
-      },
-      purgingPool: {
-        interacted: false,
-        traitKeyBySlot: { left: 'ApolloWeaponBoon', middle: null },
-        rerollCount: 1,
-      },
-      roomActions: { order: [{ kind: 'useFountain' }] },
-    };
-    const source = { ...document([room]), schemaVersion: 100 };
-    const normalized = normalizeUnpushedSchema100(source);
-    const [migrated] = normalized.route.biomes[0].topology.occurrences;
-    // An interacted Well keeps its stock; an uninteracted Pool's slots go native.
-    assert.deepEqual(migrated.stygianWell, { offerKeyBySlot: { healing: 'HealDropRange' } });
-    assert.deepEqual(migrated.purgingPool, { traitKeyBySlot: { left: null, middle: null } });
-    assert.deepEqual(migrated.roomActions.order, [
-      { kind: 'useFountain' },
-      { kind: 'rerollStygianWell', rerollId: 'r1', offerKeyBySlot: {} },
-      { kind: 'rerollStygianWell', rerollId: 'r2', offerKeyBySlot: {} },
-    ]);
-    assert.equal(room.stygianWell.rerollCount, 2);
-    const plain = { ...document([]), schemaVersion: 100 };
-    assert.equal(normalizeUnpushedSchema100(plain), plain);
-  });
-
-  it('turns trait, Chaos and Pom screen counts into unauthored earlier screens', () => {
-    const traits = { kind: 'traits', giverKey: 'Zeus', options: [], rerollCount: 2 };
-    const chaos = { kind: 'chaos', giverKey: 'Chaos', curseOptions: [], rerollCount: 1 };
-    const pom = { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null, rerollCount: 3 };
-    const room = {
-      occurrenceId: 'combat',
-      gameName: 'F_Combat01',
-      state: {
-        kind: 'counted',
-        reward: {
-          traitOffersByAcquisitionRole: { source: traits, chaos },
-          levelResolutionsByAcquisitionRole: { self: pom },
-        },
-      },
-      roomActions: { order: [] },
-    };
-    const normalized = normalizeUnpushedSchema100({ ...document([room]), schemaVersion: 100 });
-    const [migrated] = normalized.route.biomes[0].topology.occurrences;
-    const reward = migrated.state.reward;
-    assert.deepEqual(reward.traitOffersByAcquisitionRole.source, {
-      kind: 'traits',
-      giverKey: 'Zeus',
-      options: [],
-      rerolledScreens: [null, null],
-    });
-    assert.deepEqual(reward.traitOffersByAcquisitionRole.chaos.rerolledScreens, [null]);
-    assert.deepEqual(reward.levelResolutionsByAcquisitionRole.self.rerolledScreens, [
-      null,
-      null,
-      null,
-    ]);
-    assert.equal(traits.rerollCount, 2);
-  });
-
+describe('schema 99 Shrine delays', () => {
   it('moves each Shrine purchase delay onto its item and gives unbought items the default', () => {
-    const shrineRoom = () => ({
-      occurrenceId: 'shrine',
-      gameName: 'N_Combat01',
-      hermesShrine: {
-        offerBySlot: {
-          first: { rewardType: 'HealBigDrop' },
-          secondLeft: { rewardType: 'MaxHealthDrop' },
-          secondRight: null,
+    const migrated = migrateProjectDocument(
+      document([
+        {
+          occurrenceId: 'shrine',
+          gameName: 'N_Combat01',
+          hermesShrine: {
+            offerBySlot: {
+              first: { rewardType: 'HealBigDrop' },
+              secondLeft: { rewardType: 'MaxHealthDrop' },
+              secondRight: null,
+            },
+            purchaseBySlot: { first: { delay: 6 } },
+            travelDealRefill: { offer: { rewardType: 'MaxManaDrop' }, purchase: { delay: 4 } },
+          },
+          roomActions: {
+            order: [
+              { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first', rushed: true },
+            ],
+          },
         },
-        purchaseBySlot: { first: { delay: 6 } },
-        travelDealRefill: { offer: { rewardType: 'MaxManaDrop' }, purchase: { delay: 4 } },
-      },
-      roomActions: {
-        order: [
-          { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first', rushed: true },
-        ],
-      },
-    });
-    const expected = {
+      ]),
+    );
+    assert.deepEqual(migrated.route.biomes[0].topology.occurrences[0].hermesShrine, {
       offerBySlot: {
         first: { rewardType: 'HealBigDrop', delay: 6 },
         secondLeft: { rewardType: 'MaxHealthDrop', delay: 2 },
         secondRight: null,
       },
       travelDealRefill: { offer: { rewardType: 'MaxManaDrop', delay: 4 } },
+    });
+  });
+});
+
+describe('the schema 100 shape', () => {
+  it('stores no Nemesis kill race and keeps each wheel as stored', () => {
+    const wheels = {
+      wheel1: {
+        storeKey: 'RunProgress',
+        offerCount: 2,
+        offers: { offer1: offer('RoomMoneyDrop'), offer2: offer('MaxHealthDrop') },
+        pickedOfferIndex: 2,
+      },
     };
-    const migrated = migrateProjectDocument(document([shrineRoom()]));
-    assert.deepEqual(migrated.route.biomes[0].topology.occurrences[0].hermesShrine, expected);
-    const source = { ...document([shrineRoom()]), schemaVersion: 100 };
-    const normalized = normalizeUnpushedSchema100(source);
-    const [room] = normalized.route.biomes[0].topology.occurrences;
-    assert.deepEqual(room.hermesShrine, expected);
-    assert.deepEqual(room.roomActions, shrineRoom().roomActions);
-    assert.equal(normalizeUnpushedSchema100(normalized), normalized);
+    const encounters = { encounterKeyByPhase: { Encounter: 'NemesisCombatF' } };
+    const migrated = migrateProjectDocument(
+      document([
+        { occurrenceId: 'combat', gameName: 'F_Combat01', encounters },
+        { occurrenceId: 'ship', gameName: 'O_Combat01', state: { kind: 'shipCombat', wheels } },
+      ]),
+    );
+    const [combat, ship] = migrated.route.biomes[0].topology.occurrences;
+    assert.deepEqual(combat.encounters, encounters);
+    assert.deepEqual(ship.state.wheels, wheels);
   });
 });

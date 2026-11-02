@@ -6,7 +6,15 @@
 import { access, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { PROJECT_TRANSITION_STEPS } from '../apps/planner/src/persistence/project-transitions.js';
+import { runnerImport } from 'vite';
+
+// The transitions and the catalog they open against, as the application loader runs them.
+const {
+  module: { PROJECT_TRANSITION_STEPS, catalog },
+} = await runnerImport(fileURLToPath(new URL('./current-schema.js', import.meta.url)), {
+  configFile: false,
+  logLevel: 'silent',
+});
 
 const PROJECT_SUFFIX = '.runplanner.json';
 
@@ -48,8 +56,8 @@ export function outputPath(inputPath, schemaVersion = CURRENT_SCHEMA_VERSION) {
 
 /**
  * Migrates a document from its own `schemaVersion` to `target` (the current schema by
- * default), applying each transition in order. `context.name` names the plan when the
- * chain crosses schema 98.
+ * default), applying each transition in order against the current catalog. `context.name`
+ * names the plan when the chain crosses schema 98.
  */
 export function migrateProjectDocumentTo(
   document,
@@ -68,30 +76,9 @@ export function migrateProjectDocumentTo(
   for (const transition of TRANSITIONS) {
     if (transition.source < source) continue;
     if (transition.target > target) break;
-    migrated = transition.migrate(migrated, context);
+    migrated = transition.migrate(migrated, { ...context, catalog });
   }
   return migrated;
-}
-
-/** The engine's catalog-aware completion of a schema-100 document (`current-schema.js`). */
-export async function loadSchema100Completion() {
-  const { runnerImport } = await import('vite');
-  const { module } = await runnerImport(
-    fileURLToPath(new URL('./current-schema.js', import.meta.url)),
-    { configFile: false, logLevel: 'silent' },
-  );
-  return module.completeSchema100Document;
-}
-
-/**
- * Migrates like `migrateProjectDocumentTo` and, when the result is schema 100, completes it
- * as the application loader does, so strict decoding accepts the written file.
- */
-export async function migrateProjectDocumentToComplete(document, options = {}) {
-  const migrated = migrateProjectDocumentTo(document, options);
-  if (migrated.schemaVersion !== 100) return migrated;
-  const complete = await loadSchema100Completion();
-  return complete(migrated, document.schemaVersion);
 }
 
 function parseArguments(argv) {
@@ -123,7 +110,7 @@ async function main(argv) {
     if (error?.code !== 'ENOENT') throw error;
   }
   const source = JSON.parse(await readFile(inputPath, 'utf8'));
-  const migrated = await migrateProjectDocumentToComplete(source, {
+  const migrated = migrateProjectDocumentTo(source, {
     target,
     context: { name: planNameFromPath(inputPath) },
   });

@@ -4,4 +4,7 @@ export const CATALOG_VERSION: string;
 export function migrateProjectDocument(value: unknown): unknown;
 export const PEDESTAL_ROOMS: ReadonlySet<string>;
 export const PHANTOM_EXIT_ROOMS: ReadonlySet<string>;
-export function normalizeUnpushedSchema100(value: unknown): unknown;
+/** Drops a Well or Pool interaction flag in place; true when the occurrence changed. */
+export function dropFeatureInteraction(occurrence: unknown): boolean;
+/** Moves each Shrine purchase delay onto its item in place; true when the occurrence changed. */
+export function moveShrineDelays(occurrence: unknown): boolean;

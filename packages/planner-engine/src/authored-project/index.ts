@@ -76,11 +76,6 @@ export {
   parseProjectDocument,
   ProjectDocumentContractError,
 } from './codec';
-export { fillSchema100NemesisBetOutcomes } from './room-state/decoding/nemesis-bet-outcome-fill';
-export {
-  migrateRewardWheelOffersToSideOrder,
-  type WheelSideOrderBlock,
-} from './room-state/decoding/reward-wheel-side-order-migration';
 export {
   createEmptyProjectDocument,
   createProjectDocument,

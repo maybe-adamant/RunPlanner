@@ -163,4 +163,37 @@ describe('workspace package boundaries', () => {
       expect(test.filter((name) => declared[name] === undefined)).toEqual([]);
     },
   );
+
+  it('runs the engine project-migration transformations only from a schema transition', () => {
+    const migrationRoot = join(repositoryRoot, 'packages/planner-engine/src/project-migration');
+    const productionFiles = (directory: string): readonly string[] =>
+      readdirSync(directory, { withFileTypes: true })
+        .flatMap((entry) => {
+          const path = join(directory, entry.name);
+          return entry.isDirectory()
+            ? productionFiles(path)
+            : /\.(?:tsx?|js)$/.test(entry.name) && !entry.name.endsWith('.d.ts')
+              ? [path]
+              : [];
+        })
+        .sort();
+    const importers = relativeImportRoots
+      .flatMap((directory) => productionFiles(join(repositoryRoot, directory, 'src')))
+      .filter((path) => !path.startsWith(migrationRoot + sep))
+      .filter((path) =>
+        moduleSpecifiers(path).some((specifier) =>
+          specifier.startsWith('.')
+            ? resolve(dirname(path), specifier).startsWith(migrationRoot)
+            : specifier === '@run-planner/engine/project-migration',
+        ),
+      )
+      .map((path) => relative(repositoryRoot, path).split(sep).join('/'));
+
+    expect(importers.length).toBeGreaterThan(0);
+    expect(
+      importers.filter(
+        (path) => !/^apps\/planner\/src\/persistence\/project-\d+-to-\d+\.js$/.test(path),
+      ),
+    ).toEqual([]);
+  });
 });

@@ -10,7 +10,8 @@
     "./reward-kernel": "./src/reward-kernel/index.ts",
     "./simulation": "./src/simulation/index.ts",
     "./authoring": "./src/simulation/authoring/index.ts",
-    "./execution-plan": "./src/execution-plan/index.ts"
+    "./execution-plan": "./src/execution-plan/index.ts",
+    "./project-migration": "./src/project-migration/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --project tsconfig.json"

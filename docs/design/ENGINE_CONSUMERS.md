@@ -38,9 +38,10 @@ entries, never a deep path.
 | Read-only queries      | `./simulation`                      | What an authored snapshot means: evaluation, assemblies, findings and readiness, the candidate session, run-state snapshots and named queries     |
 | Programmatic authoring | `./authoring`                       | How a consumer builds a plan command by command: the authoring session and carrier-child completion                                               |
 | Publication            | `./execution-plan`                  | The execution document published to the game module and its codec                                                                                 |
+| Project migration      | `./project-migration`               | Pure document transformations a schema transition needs from engine facts; only the application's project migration imports it                    |
 
-Only the application publishes; Draft and the run import stop at an authored
-project. The catalog never reaches past the contract tiers.
+Only the application publishes and migrates saved projects; Draft and the run
+import stop at an authored project. The catalog never reaches past the contract tiers.
 
 ## Building Plans
 

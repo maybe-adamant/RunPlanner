@@ -1,5 +1,6 @@
 // Every supported major schema transition in order; a new schema appends its step here.
-// The loader and the offline schema:migrate runner both read this list.
+// The loader and the offline schema:migrate runner both read this list; a step from
+// schema 100 on reads the catalog from its context.
 import * as step86To87 from './project-86-to-87.js';
 import * as step87To88 from './project-87-to-88.js';
 import * as step88To89 from './project-88-to-89.js';
@@ -14,6 +15,7 @@ import * as step96To97 from './project-96-to-97.js';
 import * as step97To98 from './project-97-to-98.js';
 import * as step98To99 from './project-98-to-99.js';
 import * as step99To100 from './project-99-to-100.js';
+import * as step100To101 from './project-100-to-101.js';
 
 export const PROJECT_TRANSITION_STEPS = Object.freeze([
   step86To87,
@@ -30,4 +32,5 @@ export const PROJECT_TRANSITION_STEPS = Object.freeze([
   step97To98,
   step98To99,
   step99To100,
+  step100To101,
 ]);

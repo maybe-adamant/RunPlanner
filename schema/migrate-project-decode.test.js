@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { runnerImport } from 'vite';
-import { migrateProjectDocumentToComplete, outputPath } from './migrate-project.js';
+import { migrateProjectDocumentTo, outputPath } from './migrate-project.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const checkpoint = JSON.parse(
@@ -46,7 +46,7 @@ function sparse(kept) {
   return copy;
 }
 
-describe('offline migration to a complete schema 100', () => {
+describe('offline migration to the current schema', () => {
   let engine;
   let directory;
   before(async () => {
@@ -71,32 +71,31 @@ describe('offline migration to a complete schema 100', () => {
     });
     assert.equal(run.status, 0, run.stderr);
     const written = JSON.parse(readFileSync(outputPath(input), 'utf8'));
-    assert.equal(written.schemaVersion, 100);
+    assert.equal(written.schemaVersion, 101);
     assert.doesNotThrow(() => decode(written));
     const filled = outcomes(written);
     assert.deepEqual(Object.keys(filled).sort(), Object.keys(outcomes(checkpoint)).sort());
     assert.ok(Object.values(filled).every((outcome) => outcome === 'win'));
   });
 
-  it('keeps a stored tie or loss and fills only the omitted wins of a schema-100 document', async () => {
+  it('migrates a schema-100 document with a stored tie or loss to a decodable one', () => {
     const [tie, loss] = Object.keys(outcomes(checkpoint));
-    const document = sparse({ [tie]: 'tie', [loss]: 'loss' });
-    assert.throws(() => decode(document), /nemesisBetOutcomeByPhase/);
-    const completed = await migrateProjectDocumentToComplete(document);
-    assert.doesNotThrow(() => decode(completed));
-    assert.deepEqual(outcomes(completed), {
+    const document = { ...sparse({ [tie]: 'tie', [loss]: 'loss' }), schemaVersion: 100 };
+    assert.throws(() => decode(document));
+    const migrated = migrateProjectDocumentTo(document);
+    assert.equal(migrated.schemaVersion, 101);
+    assert.doesNotThrow(() => decode(migrated));
+    assert.deepEqual(outcomes(migrated), {
       ...outcomes(checkpoint),
       [tie]: 'tie',
       [loss]: 'loss',
     });
   });
 
-  it('leaves a document migrated to an older schema without completion', async () => {
+  it('writes the settled schema 100 shape when stopping at 100', () => {
     const legacy = { ...engine.legacySchema99Body(checkpoint), schemaVersion: 99 };
-    delete legacy.name;
-    legacy.schemaVersion = 97;
-    const migrated = await migrateProjectDocumentToComplete(legacy, { target: 98 });
-    assert.equal(migrated.schemaVersion, 98);
+    const migrated = migrateProjectDocumentTo(legacy, { target: 100 });
+    assert.equal(migrated.schemaVersion, 100);
     assert.deepEqual(outcomes(migrated), {});
   });
 });

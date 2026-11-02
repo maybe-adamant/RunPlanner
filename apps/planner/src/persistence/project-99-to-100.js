@@ -72,7 +72,7 @@ const FEATURE_SLOTS = [
   ['purgingPool', 'traitKeyBySlot'],
 ];
 
-function dropFeatureInteraction(occurrence) {
+export function dropFeatureInteraction(occurrence) {
   let changed = false;
   for (const [field, slots] of FEATURE_SLOTS) {
     const feature = occurrence?.[field];
@@ -100,7 +100,7 @@ function withShrineDelay(offer, purchase) {
   return { ...offer, delay: purchase?.delay ?? SHRINE_DEFAULT_DELAY };
 }
 
-function moveShrineDelays(occurrence) {
+export function moveShrineDelays(occurrence) {
   const shrine = occurrence?.hermesShrine;
   if (shrine === null || typeof shrine !== 'object') return false;
   const before = JSON.stringify(shrine);
@@ -121,78 +121,6 @@ function migrateOccurrence(occurrence) {
   migratePhantomExit(occurrence);
   dropFeatureInteraction(occurrence);
   moveShrineDelays(occurrence);
-}
-
-// Schema 100 is unpushed: a local plan saved while a Well or Pool held a reroll
-// count gains that many unpinned reroll actions at the end of its room's actions.
-const FEATURE_REROLLS = [
-  ['stygianWell', 'rerollStygianWell', 'offerKeyBySlot'],
-  ['purgingPool', 'rerollPurgingPool', 'traitKeyBySlot'],
-];
-
-function normalizeOccurrenceRerollCounts(occurrence) {
-  let changed = false;
-  for (const [field, kind, slots] of FEATURE_REROLLS) {
-    const feature = occurrence?.[field];
-    if (feature === null || typeof feature !== 'object' || !Object.hasOwn(feature, 'rerollCount'))
-      continue;
-    const count = feature.rerollCount;
-    delete feature.rerollCount;
-    changed = true;
-    const order = occurrence.roomActions?.order;
-    if (!Array.isArray(order) || !Number.isInteger(count) || feature.interacted !== true) continue;
-    const used = new Set(
-      order.flatMap((action) => (action?.kind === kind ? [action.rerollId] : [])),
-    );
-    for (let index = 1, added = 0; added < count; index += 1) {
-      if (used.has(`r${index}`)) continue;
-      order.push({ kind, rerollId: `r${index}`, [slots]: {} });
-      added += 1;
-    }
-  }
-  return changed;
-}
-
-// A trait, Chaos or Pom screen saved with a reroll count gains that many
-// earlier screens, each left unauthored: what they showed is not guessed.
-const SCREEN_KINDS = new Set(['traits', 'chaos', 'choice']);
-
-function normalizeScreenRerollCounts(value) {
-  if (Array.isArray(value)) return value.map(normalizeScreenRerollCounts).some(Boolean);
-  if (value === null || typeof value !== 'object') return false;
-  let changed = false;
-  if (SCREEN_KINDS.has(value.kind) && Object.hasOwn(value, 'rerollCount')) {
-    const count = value.rerollCount;
-    delete value.rerollCount;
-    if (Number.isInteger(count) && count > 0)
-      value.rerolledScreens = Array.from({ length: count }, () => null);
-    changed = true;
-  }
-  for (const entry of Object.values(value)) if (normalizeScreenRerollCounts(entry)) changed = true;
-  return changed;
-}
-
-/**
- * Reshapes a schema 100 document saved with reroll counts, Well and Pool
- * interaction flags or Shrine purchase delays; returns the input itself when
- * it holds none.
- */
-export function normalizeUnpushedSchema100(value) {
-  const source = record(value, 'project document');
-  const copy = JSON.parse(JSON.stringify(source));
-  let changed = false;
-  for (const biome of copy.route?.biomes ?? [])
-    for (const occurrence of biome?.topology?.occurrences ?? [])
-      if (
-        [
-          normalizeOccurrenceRerollCounts(occurrence),
-          dropFeatureInteraction(occurrence),
-          moveShrineDelays(occurrence),
-        ].some(Boolean)
-      )
-        changed = true;
-  if (normalizeScreenRerollCounts(copy.route)) changed = true;
-  return changed ? copy : source;
 }
 
 // Browser-safe transform: the Contract pedestal becomes a Preboss room feature in either form,

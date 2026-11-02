@@ -162,11 +162,12 @@ loader. It inspects the source schema and catalog identity, applies the
 registered ordered transitions, one per major from the support floor to the
 current schema ([schema history](../../schema/README.md)), and strictly
 parses the result; each transition declares its source and target identities,
-so an old catalog identity is never blindly replaced. Within the current
-major, the current or an earlier revision loads as is; a later revision, an
-unsupported older schema or a future one is refused and left untouched.
-Before the strict parse, the loader fills the default Nemesis kill-race wins
-that a schema 100 document saved or migrated without them lacks.
+so an old catalog identity is never blindly replaced. A transition may read
+the catalog the document opens against; the offline tool runs the same
+transitions with it. Within the current major, the current or an earlier
+revision loads as is; a later revision, an unsupported older schema or a
+future one is refused and left untouched. No schema version has a path of its
+own: every older document reaches the strict parse only through the chain.
 
 A migrated plan opens in memory in the current schema and names the repairs
 its migrations may need. Its file is untouched until the first edit is saved;

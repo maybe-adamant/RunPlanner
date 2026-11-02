@@ -1,7 +1,13 @@
-import type { Catalog } from '../../../catalog-schema';
-import { resolveRoutePosition, type ResolvedRoutePosition } from '../../route-context';
-import { encounterBindingHostsNemesisBet, encounterBindingsBySlot } from '../encounter-envelope';
-import { resolveEntryDeclaration } from '../entry-resolution';
+import type { Catalog } from '../catalog-schema';
+import {
+  resolveRoutePosition,
+  type ResolvedRoutePosition,
+} from '../authored-project/route-context';
+import {
+  encounterBindingHostsNemesisBet,
+  encounterBindingsBySlot,
+} from '../authored-project/room-state/encounter-envelope';
+import { resolveEntryDeclaration } from '../authored-project/room-state/entry-resolution';
 
 type RawRecord = Record<string, unknown>;
 
@@ -50,18 +56,16 @@ function rawOccurrences(route: RawRecord, biomeIndex: number): readonly unknown[
 }
 
 /**
- * Schema 100 documents saved before the Nemesis kill race became a complete
- * leaf stored a win by omission. Fills a win for each phase whose binding can
- * field a bet combat and has no outcome, keeping an authored tie or loss, and
- * returns the input itself when nothing is missing. Malformed structure is
- * left for strict decoding to reject.
+ * A stored document whose Nemesis kill race was sparse held a win by omission.
+ * Fills a win for each phase whose binding can field a bet combat and has no
+ * outcome, keeping an authored tie or loss, and returns the input itself when
+ * nothing is missing. Malformed structure is left for strict decoding to reject.
  */
-export function fillSchema100NemesisBetOutcomes(value: unknown, catalog: Catalog): unknown {
+export function fillNemesisBetOutcomeWins(value: unknown, catalog: Catalog): unknown {
   const document = rawRecord(value);
   const route = rawRecord(document?.route);
   const routeKey = route?.routeKey;
-  if (document?.schemaVersion !== 100 || route === undefined || typeof routeKey !== 'string')
-    return value;
+  if (document === undefined || route === undefined || typeof routeKey !== 'string') return value;
   const missing: MissingOutcomes[] = [];
   const biomeCount = Array.isArray(route.biomes) ? route.biomes.length : 0;
   for (let biomeIndex = 0; biomeIndex < biomeCount; biomeIndex += 1) {
