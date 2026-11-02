@@ -3,7 +3,7 @@ import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type AssessmentIssue } from '@run-planner/engine/simulation';
 
 import {
-  catalogTraitLabel,
+  catalogFindingLabels,
   findingDestinationLabel,
   nextRepairSelection,
   presentAssessmentIssue,
@@ -93,7 +93,7 @@ export function ProjectFindings({
   const copy = presentAssessmentIssue(
     issue,
     (finding) => findingRepairTarget(finding, focusByOwner) ?? semanticAddressKey(finding.origin),
-    catalogTraitLabel(catalog),
+    catalogFindingLabels(catalog),
   );
 
   return (

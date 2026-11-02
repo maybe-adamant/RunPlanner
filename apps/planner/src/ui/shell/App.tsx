@@ -3,7 +3,7 @@ import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import { useMemo } from 'react';
 
 import {
-  catalogTraitLabel,
+  catalogFindingLabels,
   nextRepairSelection,
   projectFeedbackHierarchy,
 } from '@planner/projections/evaluationProjection';
@@ -108,7 +108,7 @@ export function App({
     (state) => state.editorSession.levelResolutionDialogTarget ?? null,
   );
   const feedback = evaluation === undefined ? undefined : projectFeedbackHierarchy(evaluation);
-  const findingTraitLabel = useMemo(() => catalogTraitLabel(catalog), [catalog]);
+  const findingLabels = useMemo(() => catalogFindingLabels(catalog), [catalog]);
   const activeRouteNavigation =
     project === undefined ? undefined : projectRouteNavigation(catalog, project.route);
   const activeRouteFeedback = feedback?.route;
@@ -137,7 +137,7 @@ export function App({
       <FindingTargetScope
         {...(workspace === undefined ? {} : { authoringReadiness: workspace.authoringReadiness })}
         findings={workspace?.findingsByRepairTarget}
-        traitLabel={findingTraitLabel}
+        labels={findingLabels}
       >
         <main className="app-shell" data-view={showEditor ? 'editor' : 'home'}>
           {showEditor &&

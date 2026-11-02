@@ -32,6 +32,7 @@ import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbenc
 import { TraitOfferDialog } from '@planner/ui/editor/rewards/TraitOfferEditor';
 import { PomResolutionDialog } from '@planner/ui/editor/rewards/PomResolutionEditor';
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
+import { catalogFindingLabels } from '@planner/projections/evaluationProjection';
 import { projectStructuredWorkspaceFixture } from '../fixtures/structuredWorkspace';
 
 interface ProjectedHarnessProps {
@@ -59,6 +60,7 @@ function ProjectedHarness({ application, biomeKey, renderBiome, routeKey }: Proj
     <FindingTargetScope
       authoringReadiness={workspace.authoringReadiness}
       findings={workspace.findingsByRepairTarget}
+      labels={catalogFindingLabels(catalog)}
     >
       {renderBiome(biome, workspace)}
       {traitDialogTarget === null ? null : (
@@ -244,6 +246,7 @@ export function renderStaticHubDecisionWorkbench(
       <FindingTargetScope
         authoringReadiness={workspace.authoringReadiness}
         findings={workspace.findingsByRepairTarget}
+        labels={catalogFindingLabels(catalog)}
       >
         <HubDecisionWorkbench
           {...(next.navigationRevision === undefined
@@ -334,6 +337,7 @@ export function renderStaticOccurrenceWorkbench(
       <FindingTargetScope
         authoringReadiness={workspace.authoringReadiness}
         findings={workspace.findingsByRepairTarget}
+        labels={catalogFindingLabels(catalog)}
       >
         <OccurrenceWorkbench
           {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
@@ -371,6 +375,7 @@ export function renderStaticDecisionWorkbench(
       <FindingTargetScope
         authoringReadiness={workspace.authoringReadiness}
         findings={workspace.findingsByRepairTarget}
+        labels={catalogFindingLabels(catalog)}
       >
         {workbench}
       </FindingTargetScope>

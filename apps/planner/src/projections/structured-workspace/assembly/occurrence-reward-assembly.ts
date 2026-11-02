@@ -1,6 +1,6 @@
 import type { ResolvedRoutePosition } from '@run-planner/engine/authored-project';
+import { generatedEnemyLabel } from '@planner/projections/encounterIssueCopy';
 import {
-  generatedEnemyLabel,
   projectEncounterComposition,
   projectGeneratedMenace,
 } from '../interactions/generated-encounter-projection';

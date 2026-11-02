@@ -6,8 +6,16 @@ import {
   type LevelResolutionFindingCode,
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
+  type ResolvedEncounterPhase,
   type SemanticFinding,
 } from '@run-planner/engine/simulation';
+
+import {
+  compositionIssueCopy,
+  generatedEnemyLabel,
+  rosterIssueTitles,
+  type EncounterIssueNames,
+} from './encounterIssueCopy';
 
 import type { FindingSelection } from '@planner/state/editorSessionSlice';
 
@@ -128,7 +136,6 @@ export const findingCopy = {
   },
   encounterCustomizationUnavailable: {
     title: 'Encounter customization unavailable',
-    description: 'Fix it or reset the customization.',
   },
   encounterIntroductionRequired: {
     title: 'Enemy not introduced',
@@ -624,6 +631,63 @@ export function catalogTraitLabel(catalog: Catalog): FindingTraitLabel {
   return (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey;
 }
 
+/** Catalog names finding titles interpolate; an unknown key leaves the title nameless. */
+export interface FindingLabels extends EncounterIssueNames {
+  readonly trait: FindingTraitLabel;
+  /** An authored encounter choice or encounter definition. */
+  readonly encounter: (encounterKey: string) => string | undefined;
+  readonly customizationDecision: (decisionKey: string) => string | undefined;
+  readonly customizationChoice: (decisionKey: string, choiceKey: string) => string | undefined;
+}
+
+const labelsByCatalog = new WeakMap<Catalog, FindingLabels>();
+
+/** The catalog's names for finding titles, built once per catalog. */
+export function catalogFindingLabels(catalog: Catalog): FindingLabels {
+  const cached = labelsByCatalog.get(catalog);
+  if (cached !== undefined) return cached;
+  const encounters = new Map<string, string>();
+  const enemies = new Map<string, string>();
+  const decisions = new Map<string, string>();
+  const choices = new Map<string, string>();
+  for (const definition of catalog.encounterDefinitions.values) {
+    encounters.set(definition.key, definition.label);
+    for (const decision of definition.customization ?? []) {
+      if (!decisions.has(decision.key)) decisions.set(decision.key, decision.label);
+      const selection = decision.selection;
+      if (selection.kind === 'single' || selection.kind === 'orderedPrefix')
+        for (const choice of selection.choices)
+          choices.set(`${decision.key}\u0000${choice.key}`, choice.label);
+      const enemyChoices =
+        selection.kind === 'generated'
+          ? [
+              ...selection.choices,
+              ...selection.fixedEnemies,
+              ...(selection.generatedSeeds ?? []),
+              ...(selection.fixedWaves ?? []).flat(),
+            ]
+          : selection.kind === 'infiniteRoster'
+            ? selection.choices
+            : [];
+      for (const enemy of enemyChoices)
+        if (!enemies.has(enemy.key)) enemies.set(enemy.key, generatedEnemyLabel(enemy.label));
+    }
+  }
+  for (const set of catalog.encounterSets.values)
+    for (const profile of set.authoringProfiles) encounters.set(profile.key, profile.label);
+  const labels: FindingLabels = Object.freeze({
+    trait: catalogTraitLabel(catalog),
+    encounter: (key: string) => encounters.get(key),
+    introduction: (key: string) => catalog.encounterDefinitions.byKey[key]?.label,
+    enemy: (key: string) => enemies.get(key),
+    customizationDecision: (key: string) => decisions.get(key),
+    customizationChoice: (decisionKey: string, choiceKey: string) =>
+      choices.get(`${decisionKey}\u0000${choiceKey}`),
+  });
+  labelsByCatalog.set(catalog, labels);
+  return labels;
+}
+
 /** Why the game cannot show a trait offer screen, as its finding or candidate finding carries it. */
 export interface TraitOfferGenerationFacts {
   readonly reason?: string;
@@ -753,15 +817,97 @@ function traitOfferGenerationEvidence(
   ) as TraitOfferGenerationFacts;
 }
 
+/** Why an encounter customization value is unavailable, as its finding evidence carries it. */
+export type EncounterCustomizationUnavailableFacts = NonNullable<
+  NonNullable<ResolvedEncounterPhase['customization']>[number]['unsupported']
+> & { readonly decisionKey?: string };
+
+const nameless: EncounterIssueNames = { enemy: () => undefined, introduction: () => undefined };
+
+/** Why an encounter customization value is unavailable, naming its choice or enemy where it fits. */
+export function presentEncounterCustomizationFinding(
+  facts: EncounterCustomizationUnavailableFacts,
+  labels?: FindingLabels,
+): FindingPresentation {
+  const decision =
+    facts.decisionKey === undefined ? undefined : labels?.customizationDecision(facts.decisionKey);
+  const presentation = ((): FindingPresentation => {
+    switch (facts.reason) {
+      case 'contextuallyReplaced':
+        // Another choice cannot repair it, though the control still offers some.
+        return { title: 'This encounter is fixed here', description: 'Only Reset repairs it.' };
+      case 'valueNotDeclared':
+        return {
+          title: fittingTitle([
+            decision === undefined ? undefined : `${decision} choice isn't available here`,
+            "This choice isn't available here",
+          ]),
+        };
+      case 'cocoonCountOutOfRange':
+        return {
+          title: `Cocoons must be ${facts.minimum === facts.maximum ? facts.minimum : `${facts.minimum}–${facts.maximum}`}`,
+        };
+      case 'cocoonRewardPointAbsent':
+        return { title: 'This room has no such reward position' };
+      case 'routeExcluded': {
+        const choice =
+          facts.decisionKey === undefined
+            ? undefined
+            : labels?.customizationChoice(facts.decisionKey, facts.choiceKey);
+        return {
+          title: fittingTitle([
+            choice === undefined ? undefined : `${choice} can't occur on this route`,
+            "This choice can't occur on this route",
+          ]),
+        };
+      }
+      case 'compositionInvalid': {
+        const copy = compositionIssueCopy(facts.compositionIssue, labels ?? nameless);
+        return {
+          title: fittingTitle(copy.titles),
+          ...(copy.description === undefined ? {} : { description: copy.description }),
+        };
+      }
+      case 'infiniteRosterInvalid':
+        return { title: fittingTitle(rosterIssueTitles(facts.rosterIssue, labels ?? nameless)) };
+    }
+  })();
+  return Object.freeze(presentation);
+}
+
+function encounterCustomizationEvidence(
+  evidence: SemanticFinding['evidence'],
+): EncounterCustomizationUnavailableFacts | undefined {
+  // The engine spreads its closed unsupported reason into the finding evidence.
+  return typeof evidence.reason === 'string'
+    ? (evidence as unknown as EncounterCustomizationUnavailableFacts)
+    : undefined;
+}
+
 export function presentFinding(
   finding: SemanticFinding,
-  traitLabel?: FindingTraitLabel,
+  labels?: FindingLabels,
 ): FindingPresentation {
   if (finding.code === 'traitOfferGenerationUnavailable')
     return presentTraitOfferGenerationFinding(
       traitOfferGenerationEvidence(finding.evidence),
-      traitLabel,
+      labels?.trait,
     );
+  if (finding.code === 'encounterCustomizationUnavailable') {
+    const facts = encounterCustomizationEvidence(finding.evidence);
+    if (facts !== undefined) return presentEncounterCustomizationFinding(facts, labels);
+  }
+  if (finding.code === 'encounterUnavailable') {
+    const key = evidenceString(finding.evidence.selectedEncounterKey);
+    const encounter = key === undefined ? undefined : labels?.encounter(key);
+    if (encounter !== undefined)
+      return Object.freeze({
+        title: fittingTitle([
+          `${encounter} can't occur here`,
+          findingCopy.encounterUnavailable.title,
+        ]),
+      });
+  }
   if (finding.code === 'hubOpenSetIncomplete') {
     const min = count(finding.evidence.minimumCount);
     const max = count(finding.evidence.maximumCount);
@@ -904,27 +1050,18 @@ const ordinaryLead =
   /^(?:This|These|A|Choose|Customize|Wrong|Trait|One-time|Missing|Conflicting|Not|No|Target|Initial|Rarity|Heroic|Invalid|Encounter|Enemy|Offer|Duplicate|Boon(?! Boon Boon))\b/;
 
 /** An inner finding's title continuing its dialog's name, e.g. "Trait offer: wrong replacement rarity". */
-/** Dialog card titles for inner findings whose own title already names the dialog's action. */
-const dialogTitleByCode: {
-  readonly [Kind in FindingDialogKind]?: Partial<Record<FindingCode, string>>;
-} = {
-  encounterCustomization: {
-    encounterCustomizationUnavailable: 'Encounter customization unavailable',
-  },
-};
-
 function dialogTitle(
   kind: FindingDialogKind,
   finding: SemanticFinding,
-  traitLabel: FindingTraitLabel | undefined,
+  labels: FindingLabels | undefined,
 ): string {
-  const mapped = dialogTitleByCode[kind]?.[finding.code];
-  if (mapped !== undefined) return mapped;
-  const title = presentFinding(finding, traitLabel).title;
-  // An unshowable screen's row cause names its trait, so it reads without the dialog's name.
+  const title = presentFinding(finding, labels).title;
+  // An unshowable screen's row cause names its trait, and an unavailable customization
+  // names its cause, so each reads without the dialog's name.
   if (
-    finding.code === 'traitOfferGenerationUnavailable' &&
-    ('optionKey' in finding.evidence || 'optionKeys' in finding.evidence)
+    (finding.code === 'traitOfferGenerationUnavailable' &&
+      ('optionKey' in finding.evidence || 'optionKeys' in finding.evidence)) ||
+    finding.code === 'encounterCustomizationUnavailable'
   )
     return title;
   const inner = ordinaryLead.test(title) ? `${title[0]!.toLowerCase()}${title.slice(1)}` : title;
@@ -991,7 +1128,7 @@ export function findingDialogOwner(
 export function presentAssessmentIssue(
   issue: AssessmentIssue,
   repairTarget: (finding: SemanticFinding) => string,
-  traitLabel?: FindingTraitLabel,
+  labels?: FindingLabels,
 ): RepairEntryPresentation {
   const reason = issue.reasons[0];
   if (reason === undefined) {
@@ -1006,16 +1143,16 @@ export function presentAssessmentIssue(
     const more = inner.length - 1;
     const description =
       more === 0
-        ? presentFinding(first.finding, traitLabel).description
+        ? presentFinding(first.finding, labels).description
         : `+${more} more in its editor`;
     return Object.freeze({
-      title: dialogTitle(first.dialog.kind, first.finding, traitLabel),
+      title: dialogTitle(first.dialog.kind, first.finding, labels),
       ...(description === undefined ? {} : { description }),
       dialog: first.dialog,
       innerFindingCount: inner.length,
     });
   }
-  const copy = presentFinding(reason, traitLabel);
+  const copy = presentFinding(reason, labels);
   const targets = new Set(issue.reasons.map(repairTarget));
   if (targets.size === 1) return copy;
   // One code repaired at several controls reads as a count where its title has a plural.

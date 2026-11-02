@@ -22,6 +22,8 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
   createTraitOfferAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   semanticAddressKey,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -33,12 +35,15 @@ import {
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
   type SemanticFinding,
+  simulateProject,
 } from '@run-planner/engine/simulation';
+import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
+  catalogFindingLabels,
   findingDestinationLabel,
   indexFindingsByOwner,
   isChaosGatePositionFinding,
@@ -82,6 +87,9 @@ const allFindingCodes = [
 ] as const satisfies readonly FindingCode[];
 
 const biome = createBiomeAddress('Underworld', 'F');
+const labels = catalogFindingLabels(catalog);
+/** The catalog's finding labels with trait names replaced. */
+const traitNames = (trait: (traitKey: string) => string) => ({ ...labels, trait });
 
 function finding(code: FindingCode, origin: SemanticAddress = biome): SemanticFinding {
   return {
@@ -118,9 +126,8 @@ describe('evaluation presentation', () => {
   });
 
   it('says why the game cannot show a trait offer screen, naming its traits', () => {
-    const traitLabel = (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey;
     const title = (evidence: Record<string, FindingEvidenceValue>) =>
-      presentFinding({ ...finding('traitOfferGenerationUnavailable'), evidence }, traitLabel).title;
+      presentFinding({ ...finding('traitOfferGenerationUnavailable'), evidence }, labels).title;
     const buried = { traitKey: 'RoomRewardBonusBoon', optionKey: 'option2' };
     const rarity = (rarityCause: string, extra: Record<string, FindingEvidenceValue> = {}) =>
       title({ reason: 'rarityUnavailable', ...buried, rarity: 'Common', rarityCause, ...extra });
@@ -169,7 +176,7 @@ describe('evaluation presentation', () => {
           ...finding('traitOfferGenerationUnavailable'),
           evidence: { reason: 'pairConflict', traitKeys: ['A', 'B'] },
         },
-        (traitKey) => `${traitKey} Boon`,
+        traitNames((traitKey) => `${traitKey} Boon`),
       ).title,
     ).toBe('A Boon and B Boon never appear together');
     expect(
@@ -178,7 +185,7 @@ describe('evaluation presentation', () => {
           ...finding('traitOfferGenerationUnavailable'),
           evidence: { reason: 'screenSize', traitKey: 'RoomRewardBonusBoon' },
         },
-        traitLabel,
+        labels,
       ),
     ).toEqual({
       title: 'This screen needs another choice',
@@ -204,7 +211,7 @@ describe('evaluation presentation', () => {
             traitKeys: ['RoomRewardBonusBoon', 'RoomRewardBonusBoon'],
           },
         },
-        () => 'Primal Psychic Connection',
+        traitNames(() => 'Primal Psychic Connection'),
       ).title,
     ).toBe('These two choices never appear together');
   });
@@ -715,8 +722,12 @@ describe('outer finding collapse', () => {
       requiredRarity: 'Rare',
     });
     expect(
-      presentAssessmentIssue(issueOf(offer, [rowCause]), byOrigin, (traitKey) =>
-        traitKey === 'RoomRewardBonusBoon' ? 'Buried Treasure' : traitKey,
+      presentAssessmentIssue(
+        issueOf(offer, [rowCause]),
+        byOrigin,
+        traitNames((traitKey) =>
+          traitKey === 'RoomRewardBonusBoon' ? 'Buried Treasure' : traitKey,
+        ),
       ).title,
     ).toBe("Buried Treasure can't be Common: Rare guaranteed");
   });
@@ -744,6 +755,106 @@ describe('outer finding collapse', () => {
         byOrigin,
       ),
     ).toEqual({ title: 'Encounter unavailable' });
+  });
+
+  it('says why an encounter customization is unavailable, naming its choice or enemy', () => {
+    const customization = (decisionKey: string, evidence: Record<string, FindingEvidenceValue>) =>
+      presentFinding(
+        traitFinding('encounterCustomizationUnavailable', phase, { decisionKey, ...evidence }),
+        labels,
+      );
+    // Fresh F_Combat01 replaces GeneratedF with its intro.
+    expect(customization('generatedComposition', { reason: 'contextuallyReplaced' })).toEqual({
+      title: 'This encounter is fixed here',
+      description: 'Only Reset repairs it.',
+    });
+    // Chronos's late summon names a choice I_Boss01 does not declare.
+    expect(customization('lateSummon', { reason: 'valueNotDeclared' })).toEqual({
+      title: "Late summon choice isn't available here",
+    });
+    expect(
+      customization('cocoonCount', {
+        reason: 'cocoonCountOutOfRange',
+        count: 20,
+        minimum: 8,
+        maximum: 14,
+      }),
+    ).toEqual({ title: 'Cocoons must be 8–14' });
+    expect(
+      customization('cocoonRewardPoint', { reason: 'cocoonRewardPointAbsent', spawnPointId: 1 }),
+    ).toEqual({ title: 'This room has no such reward position' });
+    const composition = (compositionIssue: FindingEvidenceValue) =>
+      customization('generatedComposition', { reason: 'compositionInvalid', compositionIssue });
+    expect(composition({ reason: 'required', field: 'allocations', waveIndex: 1 })).toEqual({
+      title: 'Set each editable enemy budget',
+    });
+    expect(composition({ reason: 'allocationMembers', waveIndex: 1 })).toEqual({
+      title: 'Wave 1: edit its enemy budgets',
+    });
+    expect(
+      composition({ reason: 'typeCount', waveIndex: 2, actual: 4, allowed: { min: 1, max: 2 } }),
+    ).toEqual({ title: 'Wave 2: allows 2 enemy types; remove 2' });
+    expect(
+      composition({
+        reason: 'introductionRequired',
+        key: 'Guard',
+        introductionEncounterKey: 'FIntroFight',
+        admitted: true,
+        waveIndex: 1,
+        position: 1,
+      }),
+    ).toEqual({
+      title: `Wave 1: ${labels.enemy('Guard')} isn't introduced yet`,
+      description: 'Select Intro combat for this encounter, or remove the enemy.',
+    });
+    expect(
+      customization('infiniteRoster', {
+        reason: 'infiniteRosterInvalid',
+        rosterIssue: { reason: 'enemyUnavailable', position: 2, key: 'SpreadShotUnit_Elite' },
+      }),
+    ).toEqual({ title: `${labels.enemy('SpreadShotUnit_Elite')} can't be drawn here` });
+    expect(
+      presentFinding(
+        traitFinding('encounterCustomizationUnavailable', phase, {
+          decisionKey: 'infiniteRoster',
+          reason: 'infiniteRosterInvalid',
+          rosterIssue: { reason: 'enemyUnavailable', position: 2, key: 'SpreadShotUnit_Elite' },
+        }),
+      ),
+    ).toEqual({ title: "Roster enemy 2 can't be drawn here" });
+  });
+
+  it('names the route-excluded choice of a retained boss customization', () => {
+    const wire = JSON.parse(encodeProjectDocument(createFreshFileRouteProject()));
+    const boss = wire.route.biomes
+      .find((entry: { biomeKey: string }) => entry.biomeKey === 'F')
+      .topology.occurrences.find(
+        (occurrence: { gameName: string }) => occurrence.gameName === 'F_Boss01',
+      );
+    boss.encounters.customizationByPhase = {
+      Encounter: { interlude: { kind: 'single', choiceKey: 'rings' } },
+    };
+    const unavailable = simulateProject(
+      catalog,
+      decodeProjectDocument(wire, catalog),
+    ).findings.find((entry) => entry.code === 'encounterCustomizationUnavailable')!;
+    expect(presentFinding(unavailable, labels)).toEqual({
+      title: "Expanding Ring can't occur on this route",
+    });
+    expect(presentFinding(unavailable)).toEqual({ title: "This choice can't occur on this route" });
+    // Its title reads alone in the findings panel, without the dialog's name.
+    expect(
+      presentAssessmentIssue(issueOf(unavailable.origin, [unavailable]), byOrigin, labels).title,
+    ).toBe("Expanding Ring can't occur on this route");
+  });
+
+  it('names an unavailable encounter from its evidence', () => {
+    const unavailable = traitFinding('encounterUnavailable', phase, {
+      selectedEncounterKey: 'GeneratedF',
+      candidateEncounterKeys: ['FIntroFight'],
+    });
+    expect(presentFinding(unavailable, labels)).toEqual({ title: "Combat can't occur here" });
+    expect(presentFinding(unavailable)).toEqual({ title: 'Encounter unavailable' });
   });
 
   it('folds Pom targets under their level resolution', () => {

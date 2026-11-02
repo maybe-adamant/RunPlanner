@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { catalogFindingLabels } from '@planner/projections/evaluationProjection';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -859,7 +860,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
-    expect(dialogFinding(dialog)).toContain("The chosen value can't occur in this room.");
+    expect(dialogFinding(dialog)).toContain(
+      `${catalogFindingLabels(catalog).enemy('SpreadShotUnit_Elite')} can't be drawn here`,
+    );
     expect(
       view.application.store
         .getState()
@@ -919,7 +922,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       screen.getByRole('option', { name: '1 (unavailable)' }).getAttribute('aria-disabled'),
     ).toBe('true');
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
-    expect(dialogFinding(dialog)).toContain("The chosen value can't occur in this room.");
+    expect(dialogFinding(dialog)).toContain('This room has no such reward position');
     const point = () =>
       view.application.store
         .getState()
@@ -934,7 +937,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         )!.gameName
       ]!.cocoonRewardPointIds![0]!;
     await view.user.click(screen.getByRole('option', { name: '1' }));
-    expect(dialogFinding(dialog) ?? '').not.toContain("The chosen value can't occur in this room.");
+    expect(dialogFinding(dialog) ?? '').not.toContain('reward position');
     expect(hintOf(selector)).toBeNull();
     await view.user.click(selector);
     expect(screen.queryByRole('option', { name: '1 (unavailable)' })).toBeNull();
@@ -976,7 +979,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Overview');
     const dialog = await reopenEncounter(view.user);
     const save = within(dialog).getByRole('button', { name: 'Save' }) as HTMLButtonElement;
-    const unavailable = "The chosen value can't occur in this room.";
+    const unavailable = 'This room has no such reward position';
     expect(dialogFinding(dialog)).toContain(unavailable);
     expect(save.disabled).toBe(true);
     const slider = within(dialog).getByRole('slider', { name: 'Cocoons' });
@@ -1042,15 +1045,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(slider.getAttribute('aria-invalid')).toBe('true');
     expect(hintOf(slider)).toBeNull();
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
-    expect(dialogFinding(dialog)).toContain("The chosen value can't occur in this room.");
+    expect(dialogFinding(dialog)).toContain('Cocoons must be 8–14');
 
     fireEvent.keyDown(slider, { key: 'End' });
     fireEvent.keyUp(slider, { key: 'End' });
-    await waitFor(() =>
-      expect(dialogFinding(dialog) ?? '').not.toContain(
-        "The chosen value can't occur in this room.",
-      ),
-    );
+    await waitFor(() => expect(dialogFinding(dialog) ?? '').not.toContain('Cocoons must be'));
     expect(slider.getAttribute('aria-invalid')).toBeNull();
     await saveEncounter(view.user, dialog);
     expect(cocoonCount()).toEqual({ kind: 'cocoonCount', count: 14 });

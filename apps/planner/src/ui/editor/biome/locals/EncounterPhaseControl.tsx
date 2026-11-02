@@ -9,7 +9,11 @@ import {
   type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
-import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import {
+  useCustomizationFindingExplanations,
+  useFindingAnchor,
+  useFindingTarget,
+} from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
@@ -58,12 +62,14 @@ const retainedLabel = (decision: CustomizationDecision, key: string) =>
 
 /**
  * Retained decision values the context cannot produce, then the composition's own
- * issues; a generated value is named only when no composition exists.
+ * issues; a generated value is named only when no composition exists. A saved
+ * value keeps its finding's explanation.
  */
 function customizationIssues(
   decisions: readonly CustomizationDecision[],
   draft: WorkspaceEncounterCustomizationDraft,
   hasComposition: boolean,
+  savedExplanation: (decision: CustomizationDecision) => string | undefined,
 ): readonly EditorDialogIssue[] {
   const generated = decisions.find(isGeneratedEncounterDecision);
   return [
@@ -76,7 +82,8 @@ function customizationIssues(
         ? [
             [
               decision.key,
-              `${decision.label}: The chosen value can't occur in this room. Choose another or reset it.`,
+              savedExplanation(decision) ??
+                `${decision.label}: The chosen value can't occur in this room. Choose another or reset it.`,
             ] as const,
           ]
         : [],
@@ -139,12 +146,23 @@ function EncounterCustomizationDialog({
   const decisions = draftView.decisions;
   const composition = draftView.generatedComposition ?? phase.composition;
   const generatedDecision = decisions.find(isGeneratedEncounterDecision);
+  const findingExplanations = useCustomizationFindingExplanations(phase.address);
+  const savedExplanation = (decision: CustomizationDecision) =>
+    draftValueIdentity(decision.value) === draftValueIdentity(saved[decision.key])
+      ? findingExplanations.get(decision.key)
+      : undefined;
   const restIssues = customizationIssues(
     restView.decisions,
     restView,
     (restView.generatedComposition ?? phase.composition) !== undefined,
+    savedExplanation,
   );
-  const draftIssues = customizationIssues(decisions, draftView, composition !== undefined);
+  const draftIssues = customizationIssues(
+    decisions,
+    draftView,
+    composition !== undefined,
+    savedExplanation,
+  );
   const issues: readonly EditorDialogIssue[] = [
     ...(initializationFailure
       ? [['initialization', 'No supported composition is available here.'] as const]

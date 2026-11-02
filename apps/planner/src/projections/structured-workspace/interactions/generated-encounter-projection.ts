@@ -13,6 +13,12 @@ import type {
 } from '@run-planner/engine/simulation';
 import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engine/authored-project';
 
+import {
+  compositionIssueCopy,
+  generatedEnemyLabel,
+  introductionExclusionMessage,
+} from '@planner/projections/encounterIssueCopy';
+
 import { projectStableIdentityPicker } from './room-feature-picker-model';
 
 type ChoiceLabel = {
@@ -22,10 +28,6 @@ type ChoiceLabel = {
   readonly fangsCaveat?: 'squad';
   readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
 };
-
-export function generatedEnemyLabel(label: string): string {
-  return label.endsWith(' (Elite)') ? `Elite ${label.slice(0, -8)}` : label;
-}
 
 const enemyCostNumber = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 2,
@@ -62,17 +64,6 @@ export function projectGeneratedMenace(
 
 /** Resolves an introduction encounter key to its player-facing label. */
 export type IntroductionLabel = (encounterKey: string) => string;
-
-/** Why an unintroduced enemy is excluded, naming its repair. */
-export function introductionExclusionMessage(
-  enemyLabel: string,
-  introductionLabel: string,
-  admitted: boolean,
-): string {
-  return admitted
-    ? `${enemyLabel} is not introduced yet: select ${introductionLabel} for this encounter, or remove ${enemyLabel}.`
-    : `${enemyLabel} is not introduced yet and cannot appear here until ${introductionLabel} is completed; remove it.`;
-}
 
 function introductionExclusionItems<T>(
   assessment: GeneratedEncounterAssessment,
@@ -165,10 +156,6 @@ function draftItem(
   });
 }
 
-function plural(count: number, singular: string) {
-  return `${count} ${singular}${count === 1 ? '' : 's'}`;
-}
-
 function issueWaveIndex(issue: GeneratedEncounterAssessment['issues'][number]) {
   return 'waveIndex' in issue ? issue.waveIndex : undefined;
 }
@@ -187,62 +174,11 @@ function issueMessage(
   introductionLabel: IntroductionLabel,
 ): string {
   const waveIndex = issueWaveIndex(issue);
-  switch (issue.reason) {
-    case 'required':
-      return issue.field === 'waveCount'
-        ? 'Choose the number of waves.'
-        : issue.field === 'baseRoll'
-          ? 'Choose an encounter budget.'
-          : issue.field === 'highlight'
-            ? 'Choose the shared enemy.'
-            : issue.field === 'wave'
-              ? 'Choose its enemies.'
-              : 'Set each editable enemy budget.';
-    case 'baseRoll':
-      return `Stored budget ${issue.actual} is unavailable. Choose a supported budget.`;
-    case 'waveCount':
-      return `Wave count ${issue.actual} is outside ${issue.allowed.min}–${issue.allowed.max}.`;
-    case 'highlight':
-      return `Shared enemy ${labelFor(issue.key)} is not available in this encounter context.`;
-    case 'enemyUnavailable':
-      return `Enemy ${issue.position} (${labelFor(issue.key)}) is not available.`;
-    case 'introductionRequired':
-      return introductionExclusionMessage(
-        labelFor(issue.key),
-        introductionLabel(issue.introductionEncounterKey),
-        issue.admitted,
-      );
-    case 'typeCount': {
-      const seeds = assessment.waves.find((entry) => entry.waveIndex === waveIndex)?.seeds ?? [];
-      const excess = Math.max(0, issue.actual - issue.allowed.max);
-      const missing = Math.max(0, issue.allowed.min - issue.actual);
-      if (missing > 0)
-        return `Needs at least ${plural(issue.allowed.min, 'total type')}; add ${plural(missing, 'type')}.`;
-      if (issue.allowed.min === issue.allowed.max && seeds.length === issue.allowed.max)
-        return `Allows only ${seeds.map((seed) => (seed.kind === 'highlight' ? 'the shared enemy' : labelFor(seed.key))).join(' and ')}; remove ${plural(excess, 'additional type')}.`;
-      return `Allows ${plural(issue.allowed.max, 'total type')}${
-        seeds.some((seed) => seed.kind === 'highlight') ? ' including the shared enemy' : ''
-      }; remove ${plural(excess, 'type')}.`;
-    }
-    case 'placeholderCount':
-      return `Needs ${issue.allowed} generated companion; found ${issue.actual}.`;
-    case 'allocationMembers':
-      return 'Budgets include an enemy that no longer has an editable budget. Edit the affected wave.';
-    case 'fangs':
-      return issue.issue === 'typeUnavailable'
-        ? 'The stored Fangs elite is not in the active encounter composition. Choose an available elite.'
-        : issue.issue === 'perkUnavailable'
-          ? 'The stored Fangs perks are no longer a legal native pick order. Repair the selection.'
-          : 'Choose the next available Fangs perk.';
-    case 'menace':
-      return issue.issue === 'targetRequired'
-        ? `Choose a Menace replacement before converting ${labelFor(issue.key)}.`
-        : issue.issue === 'targetUnavailable'
-          ? `The stored Menace replacement for ${labelFor(issue.key)} is unavailable. Choose another replacement.`
-          : `Converted ${labelFor(issue.key)} requests exceed its current count. Reduce Menace Count.`;
-    default:
-      return 'This customization needs repair for the current encounter context.';
-  }
+  return compositionIssueCopy(
+    issue,
+    { enemy: labelFor, introduction: introductionLabel },
+    assessment.waves.find((entry) => entry.waveIndex === waveIndex)?.seeds,
+  ).message;
 }
 
 /** The one status the dialog states; fixed waves are marked on their own rows. */

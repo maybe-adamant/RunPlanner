@@ -16,7 +16,11 @@ import {
   type CandidateOptionProjection,
   type CandidateProjectionEvaluation,
 } from '../candidates/candidateProjection';
-import { catalogTraitLabel, formatFindingSentence, presentFinding } from '../evaluationProjection';
+import {
+  catalogFindingLabels,
+  formatFindingSentence,
+  presentFinding,
+} from '../evaluationProjection';
 import { inactiveEncounterPhaseMessage, rangeLabel } from '../encounterPickerProjection';
 import { roomPickerCandidateCategory } from '../roomSelectorProjection';
 import { summarizeRewardOffer } from '../rewards/rewardOfferSummary';
@@ -671,12 +675,15 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'traitOfferGenerationUnavailable':
       return {
         kind: 'trait',
-        message: formatFindingSentence(presentFinding(finding, catalogTraitLabel(catalog))),
+        message: formatFindingSentence(presentFinding(finding, catalogFindingLabels(catalog))),
       };
     case 'unsupportedSparseTraitOffer':
       return { kind: 'trait', message: 'This provider needs three choices.' };
     case 'encounterCustomizationUnavailable':
-      return { kind: 'generic', message: presentFinding(finding).description! };
+      return {
+        kind: 'generic',
+        message: formatFindingSentence(presentFinding(finding, catalogFindingLabels(catalog))),
+      };
     case 'encounterIntroductionRequired': {
       const introductionKey = String(finding.evidence.introductionEncounterKey);
       const introduction =
