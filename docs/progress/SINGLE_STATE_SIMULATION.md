@@ -92,6 +92,30 @@ happen", never as alternative states carried forward or offered as a choice.
    phantom-exit per-branch pick) and per-branch evaluations, including the
    selected Pom assessment's `branches`. Equivalence identical throughout;
    performance measured.
+   _Status: in progress._ Done: the walk carries one state or none (a second
+   state is a `BiomeRewardSimulationContractError`); the merge and
+   equivalence key are gone; the biome publishes `frontier`, target
+   checkpoints and start captures carry one `state`, and Run State, start
+   installation, seeds and execution assembly read it, deleting the run-state
+   divergence throw, bag ranges, the start point's `branchesDisagree` and
+   every seed/frontier agreement attestation (Gorgon, Fig Leaf, Shadow,
+   Hordes, Spell reservation, talent closure, reward lookups, Echo replay).
+   A probe over the equivalence corpus and the engine, Draft, run-import and
+   planner suites found no production path with more than one state. The
+   equivalence digest maps the new products onto the recorded branch-list
+   shape until the baseline is next recorded. Equivalence 157/157 and the
+   Draft corpus unchanged; performance flat. Hub boards keep their
+   source-offer order search inside board settlement (one state out): the
+   game assigns board rewards over `CollapseTableOrdered` doors that tie on
+   one obstacle name, an order no authored or catalog fact carries.
+   Remaining: settlement internals still pass zero-or-one lists; the
+   trait-offer capability keys an offer's own context and its
+   `traitAcquisitionTarget` child's pre-effect context under one address, so
+   `branchContexts`, `branchAgreement`, `branchSupport` and the run import's
+   check need a per-contact capability first; the selected Pom and trait
+   offer assessments' `branches`, Shop inventory cohort agreement, the
+   phantom-exit per-branch pick, Nemesis and Shrine per-branch assessments,
+   gold `divergent` readings and exclusions' `allBranches`.
 5. **Trait offer state inspector.** With one state per draw, the offer-state
    popover's "Possible state N" blocks collapse to one; simplify it.
 6. **Docs.** `SIMULATION_AND_VALIDATION.md` gains the rule: anything the user
