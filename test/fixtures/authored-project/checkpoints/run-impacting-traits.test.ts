@@ -9,7 +9,6 @@ import {
   createAcquisitionSiteAddress,
   createOccurrenceId,
   createOccurrenceAddress,
-  createRoomActionAddress,
   createIncomingRewardAddress,
   createProjectHistory,
   createStartingRewardAddress,
@@ -178,16 +177,8 @@ describe('run-impacting trait checkpoint workflows', () => {
       siteKey,
       entryKey: 'smallGold',
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'InsertRoomAction',
-      action: createRoomActionAddress(
-        nBiome,
-        nOccurrenceIds.preHub,
-        roomActionKey(sourceReference),
-      ),
-      reference: sourceReference,
-      index: occurrence().roomActions.order.length,
-    });
+    // Taking Buried Treasure took its small Gold.
+    expect(occurrence().roomActions.order).toContainEqual(sourceReference);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceSeaStarResult',
       acquisition: source,

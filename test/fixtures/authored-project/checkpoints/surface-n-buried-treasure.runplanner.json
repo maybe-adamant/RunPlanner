@@ -183,6 +183,36 @@
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
                     "acquisitionRole": "source"
+                  },
+                  {
+                    "kind": "interactAcquisitionEntry",
+                    "siteKey": "traitGenerated:%5B%22traitOffer%22%2C%22Surface%22%2C%22N%22%2C%22%5B%5C%22incomingReward%5C%22%2C%5C%22Surface%5C%22%2C%5C%22N%5C%22%2C%5C%22surface-n-prehub%5C%22%5D%22%2C%22source%22%5D:option1",
+                    "entryKey": "smallGold"
+                  },
+                  {
+                    "kind": "interactAcquisitionEntry",
+                    "siteKey": "traitGenerated:%5B%22traitOffer%22%2C%22Surface%22%2C%22N%22%2C%22%5B%5C%22incomingReward%5C%22%2C%5C%22Surface%5C%22%2C%5C%22N%5C%22%2C%5C%22surface-n-prehub%5C%22%5D%22%2C%22source%22%5D:option1",
+                    "entryKey": "tinyGold1"
+                  },
+                  {
+                    "kind": "interactAcquisitionEntry",
+                    "siteKey": "traitGenerated:%5B%22traitOffer%22%2C%22Surface%22%2C%22N%22%2C%22%5B%5C%22incomingReward%5C%22%2C%5C%22Surface%5C%22%2C%5C%22N%5C%22%2C%5C%22surface-n-prehub%5C%22%5D%22%2C%22source%22%5D:option1",
+                    "entryKey": "tinyGold2"
+                  },
+                  {
+                    "kind": "interactAcquisitionEntry",
+                    "siteKey": "traitGenerated:%5B%22traitOffer%22%2C%22Surface%22%2C%22N%22%2C%22%5B%5C%22incomingReward%5C%22%2C%5C%22Surface%5C%22%2C%5C%22N%5C%22%2C%5C%22surface-n-prehub%5C%22%5D%22%2C%22source%22%5D:option1",
+                    "entryKey": "minorHeal1"
+                  },
+                  {
+                    "kind": "interactAcquisitionEntry",
+                    "siteKey": "traitGenerated:%5B%22traitOffer%22%2C%22Surface%22%2C%22N%22%2C%22%5B%5C%22incomingReward%5C%22%2C%5C%22Surface%5C%22%2C%5C%22N%5C%22%2C%5C%22surface-n-prehub%5C%22%5D%22%2C%22source%22%5D:option1",
+                    "entryKey": "minorHeal2"
+                  },
+                  {
+                    "kind": "interactAcquisitionEntry",
+                    "siteKey": "traitGenerated:%5B%22traitOffer%22%2C%22Surface%22%2C%22N%22%2C%22%5B%5C%22incomingReward%5C%22%2C%5C%22Surface%5C%22%2C%5C%22N%5C%22%2C%5C%22surface-n-prehub%5C%22%5D%22%2C%22source%22%5D:option1",
+                    "entryKey": "bones"
                   }
                 ]
               },

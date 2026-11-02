@@ -14,6 +14,7 @@ import {
   loadSurfaceNOProject,
   oBiome,
   oOccurrenceIds,
+  nBiome,
   nOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNQuickBuckCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
@@ -22,7 +23,11 @@ import {
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import { renderOccurrenceWorkbench, workspaceBiome } from '@planner-test/support/biome-workbench';
-import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
+import {
+  occurrenceById,
+  openRoomTab,
+  withoutTraitDrops,
+} from '@planner-test/support/occurrence-workbench';
 import { addGroupButton, openAddGroup, timelineRow } from '@planner-test/support/timeline-rows';
 
 afterEach(cleanup);
@@ -45,6 +50,11 @@ function addArea(): HTMLElement {
 
 function lineList(label: string): HTMLElement {
   return within(addArea()).getByRole('list', { name: label });
+}
+
+/** The Quick Buck checkpoint with its gold not yet taken, so the Add area offers it. */
+function untakenQuickBuck() {
+  return withoutTraitDrops(loadSurfaceNQuickBuckCheckpoint(), nBiome, nOccurrenceIds.opening);
 }
 
 function shrineProject() {
@@ -83,7 +93,7 @@ describe('Room Add area', () => {
 
   it('groups optional pickups by source family and appends a pick at its last legal position', async () => {
     const view = renderOccurrenceWorkbench(
-      loadSurfaceNQuickBuckCheckpoint(),
+      untakenQuickBuck(),
       'Surface',
       'N',
       occurrenceById(nOccurrenceIds.opening),
@@ -129,7 +139,7 @@ describe('Room Add area', () => {
 
   it('opens the family list of an optional action that navigation focuses', async () => {
     const view = renderOccurrenceWorkbench(
-      loadSurfaceNQuickBuckCheckpoint(),
+      untakenQuickBuck(),
       'Surface',
       'N',
       occurrenceById(nOccurrenceIds.opening),
