@@ -18,6 +18,7 @@ import {
   validateResourceGainKeys,
 } from '../requirements';
 import type { RawRewardKernelInput } from '../../declarations/rewards/types';
+import { rejectDivergentSameItemEntries } from './same-item-entries';
 
 function validateRequirementRewardReferences(
   requirement: RequirementExpression,
@@ -144,6 +145,7 @@ export function normalizeStores(
           fail(rewardTypePath, `requires matching allowDuplicates values for ${rewardType}`);
         }
       });
+      rejectDivergentSameItemEntries(store.key, entries, seenInterchangeableRewardTypes, path);
       return Object.freeze({ key: store.key, entries: Object.freeze(entries) });
     }),
     'stores',

@@ -59,6 +59,13 @@ happen", never as alternative states carried forward or offered as a choice.
    Today only a hand-maintained interchangeable list prevents that. The catalog
    compiler rejects such a declaration so real branching cannot return
    silently.
+   _Status: done._ Store normalization classifies every same-item pair as
+   identical, declared interchangeable, mutually exclusive (disjoint ranges,
+   flags, routes or route keys) or a monotonic difference (closed switch over
+   requirement kinds; unknown or reversible kinds are not monotonic) and
+   rejects the rest naming store, item and entries. Every current group passes
+   on its requirements alone, so RunProgress no longer declares the
+   interchangeable list; the declaration remains as an escape hatch.
 3. **Pom single-state contract.** The level-resolution capability publishes one
    surface plus an agreement check instead of a per-branch array; divergence
    reports a contract failure. The app drops its group adapter and the fault

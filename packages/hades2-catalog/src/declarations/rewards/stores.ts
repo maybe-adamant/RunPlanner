@@ -81,11 +81,7 @@ const runProgressEntries = [
 ] as const;
 
 export const stores = [
-  {
-    key: 'RunProgress',
-    entries: runProgressEntries,
-    interchangeableRewardTypes: ['MaxHealthDrop', 'MaxManaDrop', 'RoomMoneyDrop', 'StackUpgrade'],
-  },
+  { key: 'RunProgress', entries: runProgressEntries },
   {
     // The native store with its lifetime-resource tiers. A mature save is past
     // every tier, so the low tier's late entries sit only in a fresh bag.
