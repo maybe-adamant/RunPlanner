@@ -1241,15 +1241,14 @@ const anvilDraftCopy = {
   additionUnavailable: { title: 'Added Hammer unavailable' },
 } as const satisfies Readonly<Record<string, FindingPresentation>>;
 
-/** Present an Anvil draft assessment code; an unavailable addition names its Hammer. */
+/** Present an Anvil draft assessment issue; an unavailable addition names its Hammer. */
 export function presentAnvilDraftFinding(
-  code: string,
+  issue: { readonly kind: string; readonly traitKey?: string },
   traitLabel: (traitKey: string) => string,
 ): FindingPresentation {
-  const [kind, traitKey] = code.split(':');
-  const copy = (anvilDraftCopy as Readonly<Record<string, FindingPresentation>>)[kind ?? ''];
-  if (copy === undefined) return { title: code };
-  return traitKey === undefined ? copy : { ...copy, description: traitLabel(traitKey) };
+  const copy = (anvilDraftCopy as Readonly<Record<string, FindingPresentation>>)[issue.kind];
+  if (copy === undefined) return { title: issue.kind };
+  return issue.traitKey === undefined ? copy : { ...copy, description: traitLabel(issue.traitKey) };
 }
 
 /** One Path screen violation as finding evidence carries it. */

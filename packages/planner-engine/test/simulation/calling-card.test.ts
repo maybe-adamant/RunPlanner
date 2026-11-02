@@ -22,7 +22,11 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
-import { evaluateCallingCardOffer } from '../../src/simulation/keepsakes/reward-effects';
+import {
+  evaluateCallingCardOffer,
+  rarifySourceAfterOffer,
+  rarifySourceForGiver,
+} from '../../src/simulation/keepsakes/reward-effects';
 import { simulateProject } from '../../src/simulation';
 import { traitFrontierState, openTimeTraitOfferContexts } from '../support/simulation-state';
 
@@ -291,6 +295,38 @@ describe('Calling Card offer settlement', () => {
       remainingUses: 0,
     });
     expect(spent.remainingCharges).toBe(6);
+  });
+
+  it('reads Calling Card past an Olympian source spent before the offer opens', () => {
+    const olympian = createKeepsakeState(catalog, 'ForceApolloBoonKeepsake');
+    const spentOlympian = {
+      ...olympian,
+      olympianSources: olympian.olympianSources.map((source) => ({
+        ...source,
+        remainingRarificationUses: 0 as const,
+      })),
+    };
+    expect(spentOlympian.olympianSources).not.toHaveLength(0);
+    const fated = { ...spentOlympian, fatedStatus: 'Fated' as const };
+    const withCard = { ...fated, callingCard: { remainingCharges: 6 } };
+    expect(rarifySourceForGiver(catalog, withCard, 'Apollo')).toEqual({
+      keepsakeKey: 'RarifyKeepsake',
+      remainingUses: 6,
+    });
+    const afterClicks = { ...withCard, callingCard: { remainingCharges: 4 } };
+    expect(rarifySourceAfterOffer(catalog, withCard, afterClicks, 'Apollo')).toEqual({
+      keepsakeKey: 'RarifyKeepsake',
+      remainingUses: 4,
+    });
+    // Unfated, the card is still the source but spends nothing.
+    expect(
+      rarifySourceForGiver(catalog, { ...withCard, fatedStatus: 'Unfated' }, 'Apollo'),
+    ).toEqual({ keepsakeKey: 'RarifyKeepsake', remainingUses: 0 });
+    // Without the card the spent Olympian source is named, with no uses.
+    expect(rarifySourceForGiver(catalog, fated, 'Apollo')).toEqual({
+      keepsakeKey: 'ForceApolloBoonKeepsake',
+      remainingUses: 0,
+    });
   });
 
   it('keeps a Calling Card-derived Heroic row candidate-legal through its base offer', () => {

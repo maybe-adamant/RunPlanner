@@ -562,14 +562,17 @@ describe('Anvil draft finding copy', () => {
       ),
       'utf8',
     );
-    const codes = [
-      ...source.matchAll(/findings\.push\(\s*[`']([A-Za-z]+)(:\$\{[^}]+\})?[`']/g),
-    ].map((match) => (match[2] === undefined ? match[1]! : `${match[1]!}:SomeHammer`));
-    expect(codes.length).toBeGreaterThan(0);
-    for (const code of codes) {
-      const copy = presentAnvilDraftFinding(code, (traitKey) => `label ${traitKey}`);
-      expect(copy.title, code).not.toBe(code);
-      if (code.includes(':')) expect(copy.description, code).toBe('label SomeHammer');
+    const issues = [
+      ...source.matchAll(/issues\.push\((?:anvilIssue\('([A-Za-z]+)'\)|(additionUnavailable)\()/g),
+    ].map((match) =>
+      match[2] === undefined ? { kind: match[1]! } : { kind: match[2], traitKey: 'SomeHammer' },
+    );
+    expect(issues.length).toBeGreaterThan(0);
+    for (const issue of issues) {
+      const copy = presentAnvilDraftFinding(issue, (traitKey) => `label ${traitKey}`);
+      expect(copy.title, issue.kind).not.toBe(issue.kind);
+      if (issue.traitKey !== undefined)
+        expect(copy.description, issue.kind).toBe('label SomeHammer');
     }
   });
 });

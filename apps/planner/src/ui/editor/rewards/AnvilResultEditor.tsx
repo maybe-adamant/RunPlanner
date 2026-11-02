@@ -122,11 +122,11 @@ export function AnvilResultEditor({
       ? []
       : interaction
           .assess(value)
-          .findings.map(
-            (code) =>
+          .issues.map(
+            (issue) =>
               [
-                code,
-                formatFindingExplanation(presentAnvilDraftFinding(code, interaction.traitLabel)),
+                issue.key,
+                formatFindingExplanation(presentAnvilDraftFinding(issue, interaction.traitLabel)),
               ] as const,
           );
   const draftEntries = atRest ? [] : assessedEntries(result);

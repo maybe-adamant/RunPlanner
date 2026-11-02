@@ -1,4 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
+import { resolveRoutePosition, type ResolvedRoutePosition } from '../../route-context';
 import { encounterBindingHostsNemesisBet, encounterBindingsBySlot } from '../encounter-envelope';
 import { resolveEntryDeclaration } from '../entry-resolution';
 
@@ -14,6 +15,31 @@ function rawRecord(value: unknown): RawRecord | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? (value as RawRecord)
     : undefined;
+}
+
+/** The biome's route position as strict decoding resolves it, or undefined where it would reject. */
+function rawRoutePosition(
+  catalog: Catalog,
+  route: RawRecord,
+  routeKey: string,
+  biomeIndex: number,
+): ResolvedRoutePosition | undefined {
+  const itinerary = route.itineraryBiomeKeys;
+  if (!Array.isArray(itinerary) || !itinerary.every((key) => typeof key === 'string'))
+    return undefined;
+  const biomeKey = itinerary[biomeIndex] as string | undefined;
+  const biomes = route.biomes as readonly unknown[];
+  if (biomeKey === undefined || rawRecord(biomes[biomeIndex])?.biomeKey !== biomeKey)
+    return undefined;
+  try {
+    return resolveRoutePosition(
+      catalog,
+      { routeKey, itineraryBiomeKeys: itinerary as readonly string[] },
+      biomeKey,
+    );
+  } catch {
+    return undefined;
+  }
 }
 
 function rawOccurrences(route: RawRecord, biomeIndex: number): readonly unknown[] | undefined {
@@ -39,6 +65,8 @@ export function fillSchema100NemesisBetOutcomes(value: unknown, catalog: Catalog
   const missing: MissingOutcomes[] = [];
   const biomeCount = Array.isArray(route.biomes) ? route.biomes.length : 0;
   for (let biomeIndex = 0; biomeIndex < biomeCount; biomeIndex += 1) {
+    const routePosition = rawRoutePosition(catalog, route, routeKey, biomeIndex);
+    if (routePosition === undefined) continue;
     (rawOccurrences(route, biomeIndex) ?? []).forEach((rawOccurrence, occurrenceIndex) => {
       const occurrence = rawRecord(rawOccurrence);
       const encounters = rawRecord(occurrence?.encounters);
@@ -49,7 +77,7 @@ export function fillSchema100NemesisBetOutcomes(value: unknown, catalog: Catalog
       const stored = encounters.nemesisBetOutcomeByPhase;
       const storedOutcomes = rawRecord(stored);
       if (stored !== undefined && storedOutcomes === undefined) return;
-      const declaration = resolveEntryDeclaration(room, { routeKey, isFirst: biomeIndex === 0 });
+      const declaration = resolveEntryDeclaration(room, routePosition);
       const path = `rooms.${gameName}.encounters`;
       const phaseKeys = [...encounterBindingsBySlot(catalog, declaration, path).values()]
         .filter((binding) => encounterBindingHostsNemesisBet(catalog, binding, path))

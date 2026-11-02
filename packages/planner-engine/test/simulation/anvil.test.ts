@@ -248,7 +248,9 @@ describe('Anvil of Fates acquisition settlement', () => {
       }),
     ).toMatchObject({
       legal: false,
-      findings: expect.arrayContaining(['removedHammerUnavailable']),
+      issues: expect.arrayContaining([
+        { kind: 'removedHammerUnavailable', key: 'removedHammerUnavailable' },
+      ]),
     });
   });
 
@@ -303,7 +305,7 @@ describe('Anvil of Fates acquisition settlement', () => {
       'StaffLongAttackTrait',
       'StaffJumpSpecialTrait',
     ]);
-    expect(capability?.assess(legal)).toEqual({ legal: true, findings: [] });
+    expect(capability?.assess(legal)).toEqual({ legal: true, issues: [] });
     expect(settledFindings(legal)).toEqual([]);
 
     const illegal = result('StaffLongAttackTrait', [
@@ -312,14 +314,19 @@ describe('Anvil of Fates acquisition settlement', () => {
     ]);
     const assessment = capability?.assess(illegal);
     expect(assessment).toMatchObject({ legal: false });
-    expect(assessment?.findings).toEqual(
+    expect(assessment?.issues).toEqual(
       expect.arrayContaining([
-        'removedHammerUnavailable',
-        'additionsMustBeDistinct',
-        'additionUnavailable:StaffDoubleAttackTrait',
+        { kind: 'removedHammerUnavailable', key: 'removedHammerUnavailable' },
+        { kind: 'additionsMustBeDistinct', key: 'additionsMustBeDistinct' },
+        {
+          kind: 'additionUnavailable',
+          key: 'additionUnavailable:StaffDoubleAttackTrait',
+          traitKey: 'StaffDoubleAttackTrait',
+        },
       ]),
     );
-    expect(settledFindings(illegal)).toEqual(assessment?.findings);
+    // Settlement's finding evidence carries each issue's stable key.
+    expect(settledFindings(illegal)).toEqual(assessment?.issues.map((issue) => issue.key));
   });
 
   it('rebuilds its candidate domains from an earlier Hammer frontier edit', () => {

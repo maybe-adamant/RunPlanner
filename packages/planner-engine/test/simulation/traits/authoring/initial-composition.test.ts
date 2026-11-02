@@ -18,6 +18,7 @@ import {
   assessInitialOfferSupport,
   initialOfferCoreOnlyKeys,
   initialOfferStartingOptions,
+  reportedRowTraitKeys,
 } from '../../../../src/simulation/traits/authoring/initial-composition';
 import { traitOfferGenerationInput } from '../../../../src/simulation/traits/authoring/assessment';
 import { createTestArcanaFearState } from '../../../support/arcana-fear';
@@ -672,5 +673,59 @@ describe('why the game cannot show a screen', () => {
         duoGuaranteed,
       ),
     ).toEqual([{ code: 'traitOfferGenerationUnavailable', reason: 'generic' }]);
+  });
+
+  it('names a conflicting exchange pair of another god at later positions', () => {
+    expect(
+      cause(
+        screen('Zeus', [
+          ['ZeusSpecialBoon', 'Common'],
+          ['ZeusWeaponBoon', 'Rare'],
+          ['ZeusCastBoon', 'Rare'],
+        ]),
+        history([
+          ['Poseidon', 'PoseidonWeaponBoon', 'Common'],
+          ['Apollo', 'ApolloCastBoon', 'Common'],
+        ]),
+      ),
+    ).toEqual([
+      {
+        code: 'traitOfferGenerationUnavailable',
+        reason: 'pairConflict',
+        traitKeys: ['ZeusWeaponBoon', 'ZeusCastBoon'],
+        optionKeys: ['option2', 'option3'],
+      },
+    ]);
+  });
+
+  it('never names a cause through a row its own finding already reports', () => {
+    expect(
+      reportedRowTraitKeys(
+        [{ traitKey: 'A' }, { traitKey: 'B' }, { traitKey: 'C' }],
+        [{ legal: true }, { legal: false }, { legal: false }],
+      ),
+    ).toEqual(new Set(['B', 'C']));
+    expect(reportedRowTraitKeys([{ traitKey: 'A' }], [])).toEqual(new Set());
+
+    const exchanges = history([
+      ['Poseidon', 'PoseidonWeaponBoon', 'Common'],
+      ['Demeter', 'DemeterSpecialBoon', 'Common'],
+    ]);
+    const conflicting = screen('Apollo', [
+      ['ApolloSpecialBoon', 'Rare'],
+      ['PerfectDamageBonusBoon', 'Epic'],
+      ['ApolloWeaponBoon', 'Rare'],
+    ]);
+    const support = (reported: readonly string[]) =>
+      assessInitialOfferSupport({
+        ...traitOfferGenerationInput(catalog, 'Apollo', traitFrontierState(exchanges, {}), {}),
+        offer: conflicting,
+        explainFailure: true,
+        reportedTraitKeys: new Set(reported),
+      });
+    expect(support([]).findings).toEqual([expect.objectContaining({ reason: 'pairConflict' })]);
+    // Either row of the conflicting pair, once reported, leaves the screen unshowable unnamed.
+    for (const reported of ['ApolloSpecialBoon', 'ApolloWeaponBoon'])
+      expect(support([reported])).toEqual({ applies: true, legal: false, findings: [] });
   });
 });

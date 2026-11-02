@@ -14,6 +14,9 @@ import {
   assessGeneratedEncounter,
   initializeGeneratedEncounter,
 } from '../../../src/simulation/encounters/generation';
+import type { HistoryStateView } from '../../../src/simulation/history/model';
+import { prepareGeneratedEncounter } from '../../../src/simulation/encounters/generation-preparation';
+import type { ResolvedEncounterPhase } from '../../../src/simulation/encounters/model';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
@@ -859,5 +862,48 @@ describe('generated wave budget allocations', () => {
       findings: [finding(members)],
     });
     expect(phaseFindings({ Guard: 65 })).toEqual({ issues: [], findings: [] });
+  });
+});
+
+describe('generated customization preparation', () => {
+  it('keeps an earlier unsupported cause when the composition itself assesses supported', () => {
+    const decision = catalog.encounterDefinitions.byKey.GeneratedF!.customization!.find(
+      (entry) => entry.selection.kind === 'generated',
+    )!;
+    const context = { biomeDepthCache: 8, biomeEncounterDepth: 8, knownRunBlacklist: [] };
+    const value = initializeGeneratedEncounter(policy('GeneratedF'), context)!;
+    expect(assessGeneratedEncounter(policy('GeneratedF'), value, context).supported).toBe(true);
+    const preparation = {
+      ledgers: { counters: { biomeDepthCache: 8, biomeEncounterDepth: 8 }, encounterRecords: [] },
+    } as unknown as HistoryStateView;
+    const prepare = (unsupported: boolean) =>
+      prepareGeneratedEncounter(
+        {
+          encounterKey: 'GeneratedF',
+          customization: [
+            unsupported
+              ? {
+                  ...decision,
+                  value,
+                  valueSupported: false,
+                  unsupported: { reason: 'valueNotDeclared' },
+                }
+              : { ...decision, value, valueSupported: true },
+          ],
+        } as unknown as ResolvedEncounterPhase,
+        createEncounterPhaseAddress(
+          goldenFBiome,
+          { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+          'Combat1',
+        ),
+        preparation,
+        preparation,
+      ).phase.customization![0];
+    expect(prepare(true)).toMatchObject({
+      valueSupported: false,
+      unsupported: { reason: 'valueNotDeclared' },
+    });
+    expect(prepare(false)).toMatchObject({ valueSupported: true });
+    expect(prepare(false)).not.toHaveProperty('unsupported');
   });
 });

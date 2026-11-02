@@ -518,7 +518,7 @@ export function applyProducerRoleHistory(
               createAcquisitionRoleAddress(incoming.origin, resolution.role),
               {
                 pickupEffect: pickupEffect.kind,
-                findings: assessment.findings,
+                findings: assessment.issues.map((issue) => issue.key),
               },
             ),
             atomicRegion,

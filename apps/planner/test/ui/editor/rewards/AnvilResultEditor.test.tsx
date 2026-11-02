@@ -40,7 +40,7 @@ function anvilInteraction(
   const domain = {
     ...input,
     launcher: input.launcher ?? { label: 'Edit Anvil' },
-    assess: input.assess ?? (() => ({ legal: true, findings: [] })),
+    assess: input.assess ?? (() => ({ legal: true, issues: [] })),
     traitLabel: input.traitLabel ?? ((traitKey: string) => traitKey),
   };
   return { ...domain, pickersFor: (draft) => projectAnvilResultPickers(domain, draft) };
@@ -118,8 +118,14 @@ describe('Anvil result editor', () => {
         prior.length === 0 ? ['FirstHammer', 'SecondHammer'] : ['SecondHammer', 'ThirdHammer'],
       assess: (result) => ({
         legal: false,
-        findings: result.addedTraitKeys.includes('ThirdHammer')
-          ? ['additionUnavailable:ThirdHammer']
+        issues: result.addedTraitKeys.includes('ThirdHammer')
+          ? [
+              {
+                kind: 'additionUnavailable' as const,
+                key: 'additionUnavailable:ThirdHammer',
+                traitKey: 'ThirdHammer',
+              },
+            ]
           : [],
       }),
       traitLabel: (traitKey) => traitKey.replace('Hammer', ' Hammer'),

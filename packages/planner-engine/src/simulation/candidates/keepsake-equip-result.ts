@@ -18,11 +18,7 @@ import {
   transcendentEmbryoBlessingValues,
 } from '../keepsakes/trait-effects';
 import { keepsakeEffectByKind, keepsakeEquipResultKind } from '../keepsakes/state';
-import {
-  unavailable,
-  unavailableForBiome,
-  type CandidateContextUnavailable,
-} from './availability';
+import { unavailable, unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
 export interface KeepsakeEquipResultCandidateQuery {
   readonly kind: 'keepsakeEquipResult';

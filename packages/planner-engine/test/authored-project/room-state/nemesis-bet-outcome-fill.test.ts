@@ -13,6 +13,8 @@ import {
   createCompleteFGProject,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenGBiome,
+  goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 
 const occurrenceId = goldenFOccurrenceId(5, 1);
@@ -25,6 +27,7 @@ const phase = createEncounterPhaseAddress(
 interface Raw {
   readonly schemaVersion: number;
   readonly route: {
+    itineraryBiomeKeys: string[];
     readonly biomes: readonly {
       readonly topology: {
         readonly occurrences: readonly {
@@ -58,12 +61,11 @@ function sparse(project: ProjectDocument): Raw {
   return raw;
 }
 
-function bets(raw: Raw): unknown {
+function bets(raw: Raw, owner: string = occurrenceId): unknown {
   for (const biome of raw.route.biomes)
     for (const occurrence of biome.topology?.occurrences ?? [])
-      if (occurrence.occurrenceId === occurrenceId)
-        return occurrence.encounters.nemesisBetOutcomeByPhase;
-  throw new Error(`missing ${occurrenceId}`);
+      if (occurrence.occurrenceId === owner) return occurrence.encounters.nemesisBetOutcomeByPhase;
+  throw new Error(`missing ${owner}`);
 }
 
 describe('schema 100 Nemesis bet outcome fill', () => {
@@ -96,5 +98,31 @@ describe('schema 100 Nemesis bet outcome fill', () => {
     const older = { ...sparse(nemesisCombat('win')), schemaVersion: 99 };
     expect(fillSchema100NemesisBetOutcomes(older, catalog)).toBe(older);
     expect(fillSchema100NemesisBetOutcomes('not a document', catalog)).toBe('not a document');
+  });
+
+  it('resolves a later biome’s position from the itinerary as strict decoding does', () => {
+    const gOccurrenceId = goldenGOccurrenceId(1, 1);
+    const gPhase = createEncounterPhaseAddress(
+      goldenGBiome,
+      { kind: 'occurrence', occurrenceId: gOccurrenceId },
+      'Encounter',
+    );
+    const project = applyProjectCommand(nemesisCombat('loss'), catalog, {
+      kind: 'SelectEncounter',
+      phase: gPhase,
+      encounterKey: 'NemesisCombatG',
+    });
+    const raw = sparse(project);
+    expect(bets(raw, gOccurrenceId)).toBeUndefined();
+    const filled = fillSchema100NemesisBetOutcomes(raw, catalog) as Raw;
+    expect(bets(filled, gOccurrenceId)).toEqual({ Encounter: 'win' });
+    expect(bets(filled)).toEqual({ Encounter: 'loss' });
+    expect(decodeProjectDocument(filled, catalog)).toEqual(project);
+
+    // A biome off its itinerary position is left for strict decoding to reject.
+    const reordered = sparse(project);
+    reordered.route.itineraryBiomeKeys = ['G', 'F', 'H', 'I'];
+    expect(fillSchema100NemesisBetOutcomes(reordered, catalog)).toBe(reordered);
+    expect(() => decodeProjectDocument(reordered, catalog)).toThrow();
   });
 });

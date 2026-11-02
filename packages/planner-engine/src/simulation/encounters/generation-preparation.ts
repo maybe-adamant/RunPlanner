@@ -83,13 +83,7 @@ function assessedGeneratedDecision(
   decision: ResolvedEncounterCustomizationDecision,
   assessment: GeneratedEncounterAssessment,
 ): ResolvedEncounterCustomizationDecision {
-  if (assessment.supported) {
-    if (decision.valueSupported) return decision;
-    const { unsupported: _unsupported, ...rest } = decision;
-    void _unsupported;
-    return Object.freeze({ ...rest, valueSupported: true as const });
-  }
-  if (!decision.valueSupported) return decision;
+  if (assessment.supported || !decision.valueSupported) return decision;
   const compositionIssue =
     assessment.issues.find((issue) => issue.reason !== 'introductionRequired') ??
     assessment.issues[0];

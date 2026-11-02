@@ -16,6 +16,7 @@ import {
   createProjectDocument,
   createProjectHistory,
   createRoomActionAddress,
+  createRouteAddress,
   createTargetAddress,
   createTraitOfferAddress,
   roomActionKey,
@@ -235,6 +236,33 @@ describe('trait-dropped pickups', () => {
       value: { rewardType: 'RoomMoneySmallDrop' },
     });
     expect(occurrence(project, 'F', combatId).roomActions.order).not.toContainEqual(bones);
+  });
+
+  it('installs a route whose Buried Treasure drops were removed without taking them again', () => {
+    let authored = applyProjectCommand(poseidonBoonRoom(), catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: boonTrait,
+      value: poseidonOffer('option1'),
+    });
+    const siteKey = traitGeneratedPickupSiteKey(boonTrait, 'option1');
+    for (const drop of drops(siteKey, buriedTreasureDrops))
+      authored = applyProjectCommand(authored, catalog, {
+        kind: 'RemoveRoomAction',
+        action: createRoomActionAddress(goldenF, combatId, roomActionKey(drop)),
+      });
+    const authoredOrder = occurrence(authored, 'F', combatId).roomActions.order;
+    expect(authoredOrder).not.toEqual(expect.arrayContaining(drops(siteKey, ['smallGold'])));
+
+    const { runModifiers: _runModifiers, ...loadout } = authored.route.loadout;
+    void _runModifiers;
+    const installed = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceRoute',
+      route: createRouteAddress(authored.route.routeKey),
+      loadout,
+      biomes: authored.route.biomes,
+    });
+    expect(occurrence(installed, 'F', combatId).roomActions.order).toEqual(authoredOrder);
+    expect(installed.route.biomes).toEqual(authored.route.biomes);
   });
 
   it('takes no clocked Supply Chain drop', () => {

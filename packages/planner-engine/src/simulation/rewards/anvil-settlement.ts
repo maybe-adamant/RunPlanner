@@ -12,9 +12,35 @@ import type { RewardBranchState } from './branch-primitives';
 import { type ResolvedRewardOffer } from '../../reward-kernel';
 import { pickupEffectForOffer } from '../../reward-kernel/history';
 
+/** One reason an Anvil result is illegal; `key` is its stable identity and finding code. */
+export type AnvilResultIssue =
+  | {
+      readonly kind:
+        | 'resultMissing'
+        | 'removedHammerUnavailable'
+        | 'exactlyTwoAdditionsRequired'
+        | 'additionsMustBeDistinct';
+      readonly key: string;
+    }
+  | { readonly kind: 'additionUnavailable'; readonly key: string; readonly traitKey: string };
+
 export interface AnvilResultAssessment {
   readonly legal: boolean;
-  readonly findings: readonly string[];
+  readonly issues: readonly AnvilResultIssue[];
+}
+
+function anvilIssue(
+  kind: Exclude<AnvilResultIssue['kind'], 'additionUnavailable'>,
+): AnvilResultIssue {
+  return Object.freeze({ kind, key: kind });
+}
+
+function additionUnavailable(traitKey: string): AnvilResultIssue {
+  return Object.freeze({
+    kind: 'additionUnavailable',
+    key: `additionUnavailable:${traitKey}`,
+    traitKey,
+  });
 }
 
 export interface AnvilCandidateCapability {
@@ -164,15 +190,15 @@ export function assessAnvilResult(
     state.traitHistory,
     temporaryHammerTraitKeys,
   );
-  const findings: string[] = [];
-  if (result === undefined || result === null) findings.push('resultMissing');
+  const issues: AnvilResultIssue[] = [];
+  if (result === undefined || result === null) issues.push(anvilIssue('resultMissing'));
   const removed = result?.removedTraitKey ?? null;
   if (
     removableTraitKeys.length === 0
       ? removed !== null
       : removed === null || !removableTraitKeys.includes(removed)
   ) {
-    findings.push('removedHammerUnavailable');
+    issues.push(anvilIssue('removedHammerUnavailable'));
   }
   const firstAddedTraitKeys = anvilAdditionCandidates(
     catalog,
@@ -183,12 +209,12 @@ export function assessAnvilResult(
     [],
   );
   const additions = result?.addedTraitKeys ?? [];
-  if (additions.length !== 2) findings.push('exactlyTwoAdditionsRequired');
+  if (additions.length !== 2) issues.push(anvilIssue('exactlyTwoAdditionsRequired'));
   if (additions.length === 2 && additions[0] === additions[1])
-    findings.push('additionsMustBeDistinct');
+    issues.push(anvilIssue('additionsMustBeDistinct'));
   const first = additions[0];
   if (first !== undefined && !firstAddedTraitKeys.includes(first)) {
-    findings.push(`additionUnavailable:${first}`);
+    issues.push(additionUnavailable(first));
   }
   const secondAddedTraitKeys = anvilAdditionCandidates(
     catalog,
@@ -200,11 +226,11 @@ export function assessAnvilResult(
   );
   const second = additions[1];
   if (second !== undefined && !secondAddedTraitKeys.includes(second)) {
-    findings.push(`additionUnavailable:${second}`);
+    issues.push(additionUnavailable(second));
   }
   return Object.freeze({
-    legal: findings.length === 0,
-    findings: Object.freeze(findings),
+    legal: issues.length === 0,
+    issues: Object.freeze(issues),
   });
 }
 
@@ -277,16 +303,22 @@ export function createAnvilCandidateCapability(
     const [first] = assessments;
     const agreed = assessments.every(
       (assessment) =>
-        assessment.findings.length === first?.findings.length &&
-        assessment.findings.every((finding, index) => finding === first.findings[index]),
+        assessment.issues.length === first?.issues.length &&
+        assessment.issues.every((issue, index) => issue.key === first.issues[index]!.key),
     );
     return Object.freeze({
       legal: assessments.every((assessment) => assessment.legal),
-      // Agreeing branches keep settlement's exact list; divergent ones publish each code once.
-      findings:
+      // Agreeing branches keep settlement's exact list; divergent ones publish each issue once.
+      issues:
         agreed && first !== undefined
-          ? first.findings
-          : Object.freeze([...new Set(assessments.flatMap((assessment) => assessment.findings))]),
+          ? first.issues
+          : Object.freeze([
+              ...new Map(
+                assessments.flatMap((assessment) =>
+                  assessment.issues.map((issue) => [issue.key, issue] as const),
+                ),
+              ).values(),
+            ]),
     });
   };
   return Object.freeze({

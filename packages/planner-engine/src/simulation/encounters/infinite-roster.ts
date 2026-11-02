@@ -110,7 +110,9 @@ export function prepareInfiniteRoster(
     return { phase, capability };
   const assessment = capability.assess(decision.value.typeKeys);
   const rosterIssue = assessment.issues[0];
-  if (assessment.supported || rosterIssue === undefined) return { phase, capability };
+  if (assessment.supported) return { phase, capability };
+  if (rosterIssue === undefined)
+    throw new Error(`${decision.key} infinite roster assessment is unsupported without an issue`);
   return {
     capability,
     phase: Object.freeze({

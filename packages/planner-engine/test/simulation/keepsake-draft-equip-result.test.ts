@@ -115,9 +115,7 @@ describe('drafted keepsake equip results', () => {
   it('opens no equip result for a keepsake without one', () => {
     const base = createGoldenFGHProject();
     for (const selection of [routeStart, fPostboss])
-      expect(selectionOption(base, selection, plainKeepsakeKey)).not.toHaveProperty(
-        'equipResult',
-      );
+      expect(selectionOption(base, selection, plainKeepsakeKey)).not.toHaveProperty('equipResult');
     const pomResult = selectionOption(base, fPostboss, keepsakeWith('jeweledPom')).equipResult!;
     expect(() =>
       session(base).evaluate({
