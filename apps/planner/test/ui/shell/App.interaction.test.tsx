@@ -74,6 +74,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceSeleneHexPathCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
+import { dialogFinding } from '@planner-test/support/editor-dialog';
 
 afterEach(cleanup);
 
@@ -1719,7 +1720,7 @@ describe('planner history interaction', () => {
     expect(within(dialog).getAllByText(/Hammer incompatible with loadout/).length).toBeGreaterThan(
       0,
     );
-    expect(within(dialog).getByRole('status')).toBeTruthy();
+    expect(dialogFinding(dialog)).toMatch(/^Hammer incompatible with loadout/);
 
     const interaction = application
       .selectStructuredWorkspace(application.store.getState())!

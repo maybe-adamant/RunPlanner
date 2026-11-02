@@ -173,6 +173,13 @@ function issueWaveIndex(issue: GeneratedEncounterAssessment['issues'][number]) {
   return 'waveIndex' in issue ? issue.waveIndex : undefined;
 }
 
+/** An issue's identity, stable while its wording follows the counts it reports. */
+function issueKey(issue: GeneratedEncounterAssessment['issues'][number]): string {
+  const part = (name: string) =>
+    name in issue ? String((issue as Readonly<Record<string, unknown>>)[name]) : '';
+  return [issue.reason, part('waveIndex'), part('field'), part('key'), part('issue')].join(':');
+}
+
 function issueMessage(
   issue: GeneratedEncounterAssessment['issues'][number],
   assessment: GeneratedEncounterAssessment,
@@ -287,6 +294,7 @@ export function projectGeneratedEncounterAssessment(
       assessment.issues.map((issue) => {
         const waveIndex = issueWaveIndex(issue);
         return Object.freeze({
+          key: issueKey(issue),
           message: issueMessage(issue, assessment, labelFor, introductionLabel),
           ...(waveIndex === undefined ? {} : { waveIndex }),
           ...(issue.reason === 'enemyUnavailable' ||

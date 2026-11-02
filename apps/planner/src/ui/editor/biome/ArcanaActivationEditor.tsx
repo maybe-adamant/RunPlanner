@@ -10,6 +10,7 @@ import {
 } from '@planner/projections/evaluationProjection';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
+import { introducesIssue } from '@planner/ui/controls/introducesIssue';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import {
@@ -73,17 +74,16 @@ export function ArcanaActivationEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftLoadable]);
   const assessed = draftAssessment.result;
-  const feedbackEntries = atRest
-    ? findingEntries
-    : assessed?.kind === 'judgmentArcana' || assessed?.kind === 'figurineArcana'
-      ? assessed.result.findings.map(
-          (finding) =>
-            [
-              semanticFindingKey(finding),
-              formatFindingExplanation(presentFinding(finding)),
-            ] as const,
-        )
+  const entriesOf = (findings: NonNullable<typeof domain>['findings'] | undefined) =>
+    (findings ?? []).map(
+      (finding) =>
+        [semanticFindingKey(finding), formatFindingExplanation(presentFinding(finding))] as const,
+    );
+  const draftEntries =
+    !atRest && (assessed?.kind === 'judgmentArcana' || assessed?.kind === 'figurineArcana')
+      ? entriesOf(assessed.result.findings)
       : [];
+  const feedbackEntries = atRest ? findingEntries : draftEntries;
   return (
     <EditorDialog
       layout="header"
@@ -107,7 +107,7 @@ export function ArcanaActivationEditor({
         saveDisabled={
           domain === undefined ||
           draft.length < requiredCount ||
-          (!atRest && feedbackEntries.length > 0)
+          introducesIssue(draftEntries, entriesOf(domain.findings))
         }
         secondary={
           <button className="quiet-action" onClick={() => setDraft([])} type="button">

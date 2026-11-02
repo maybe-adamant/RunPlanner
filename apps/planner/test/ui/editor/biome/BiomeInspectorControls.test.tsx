@@ -66,6 +66,7 @@ import {
   workspaceBiome,
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
+import { dialogFinding } from '@planner-test/support/editor-dialog';
 
 afterEach(() => {
   cleanup();
@@ -627,28 +628,32 @@ describe('Biome inspector controls', () => {
     const judgmentPopup = within(inspector).getByRole('dialog', { name: 'Judgment editor' });
     // The board renders inside the fixed-height choice region the loader also fills.
     expect(judgmentPopup.querySelector('.trait-choice-region .arcana-board')).toBeTruthy();
-    const arcanaFeedback = within(judgmentPopup).getByRole('status', { name: 'Arcana feedback' });
-    // At rest the region lists the Judgment's own findings, as its launcher marks them.
+    // At rest the header shows the Judgment's own findings, as its launcher marks them.
     const launcherDescription = within(inspector)
       .getByRole('button', { name: /Judgment — choose 5 inactive Arcana cards/ })
       .getAttribute('aria-description');
     expect(launcherDescription).toBe('Choose Judgment cards: Choose inactive Arcana.');
-    expect(arcanaFeedback.textContent).toContain(launcherDescription);
-    // The feedback region closes the dialog body, directly above its footer.
-    expect(arcanaFeedback.nextElementSibling?.tagName).toBe('FOOTER');
+    const atRest = dialogFinding(judgmentPopup);
+    expect(atRest).toBeDefined();
+    expect(launcherDescription).toContain(atRest);
+    const save = () =>
+      within(judgmentPopup).getByRole<HTMLButtonElement>('button', { name: 'Save' });
     for (let index = 0; index < 5; index += 1) {
       const next = within(judgmentPopup)
         .getAllByRole<HTMLButtonElement>('button', { pressed: false })
         .find((button) => !button.disabled);
       if (next === undefined) throw new Error('Judgment picker has too few inactive cards');
       act(() => next.click());
-      // An edited draft shows its own assessment.
-      if (index === 0)
+      // An edited draft shows its own assessment, and an incomplete draw cannot be saved.
+      if (index === 0) {
         await waitFor(() =>
-          expect(arcanaFeedback.textContent).toContain('Wrong Judgment card count'),
+          expect(dialogFinding(judgmentPopup)).toMatch(/Wrong Judgment card count/),
         );
+        expect(save().disabled).toBe(true);
+      }
     }
-    await waitFor(() => expect(arcanaFeedback.textContent).toContain('No current findings.'));
+    await waitFor(() => expect(dialogFinding(judgmentPopup)).toBeUndefined());
+    expect(save().disabled).toBe(false);
     const closeJudgment = within(judgmentPopup).getByRole('button', {
       name: 'Cancel',
     });

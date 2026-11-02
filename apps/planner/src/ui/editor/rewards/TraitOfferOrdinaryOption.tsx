@@ -190,7 +190,8 @@ export function TraitOfferOrdinaryOption({
       persephoneAriaLabel={`${optionKey} Persephone roll`}
       pickable={!pickless}
       readOnly={readOnly}
-      reserveRarify={rarifiable}
+      rarifiable={rarifiable && rarifySupported}
+      rarified={(value.rarificationActions ?? []).includes(optionKey)}
       {...(rarifySource === undefined ? {} : { rarifySource })}
       {...(headerAction === undefined ? {} : { headerAction })}
       showPersephoneBonus={interaction.showPersephoneBonus}
@@ -217,7 +218,7 @@ export function TraitOfferOrdinaryOption({
       traitLabel={interaction.traitLabel(option.traitKey)}
       traitPicker={traitPicker}
       rarityAriaLabel={`${optionKey} rarity`}
-      rarifyDisabled={rejected || !rarifySupported}
+      rarifyDisabled={rejected}
     />
   );
 }

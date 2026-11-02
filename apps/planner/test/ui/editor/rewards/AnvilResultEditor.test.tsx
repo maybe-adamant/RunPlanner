@@ -22,6 +22,7 @@ import { Provider } from 'react-redux';
 import { createApplication } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
+import { dialogFinding, renderInHeaderDialog } from '@planner-test/support/editor-dialog';
 import { projectAnvilResultPickers } from '@planner/projections/contextual/anvilResultPickers';
 import type { WorkspaceAcquisitionConversionInteraction } from '@planner/projections/structured-workspace';
 
@@ -71,12 +72,15 @@ describe('Anvil result editor', () => {
       },
     });
     const user = userEvent.setup();
-    render(<AnvilResultEditor interaction={interaction} onCommit={onCommit} />);
-
-    const feedback = screen.getByRole('status', { name: 'Anvil feedback' });
-    expect(feedback.textContent).toContain('No current findings.');
-    // The feedback region closes the editor body, directly above its footer.
-    expect(feedback.nextElementSibling?.tagName).toBe('FOOTER');
+    const view = renderInHeaderDialog(
+      <AnvilResultEditor interaction={interaction} onCommit={onCommit} />,
+    );
+    // An incomplete draft names its next choice and cannot be saved.
+    expect(dialogFinding(document.body)).toBe('Choose the removed Hammer');
+    expect(screen.getByRole('button', { name: 'Save Anvil result' })).toHaveProperty(
+      'disabled',
+      true,
+    );
 
     expect(
       (screen.getByRole('button', { name: 'Added Hammer 1' }) as HTMLButtonElement).disabled,
@@ -97,6 +101,7 @@ describe('Anvil result editor', () => {
       removedTraitKey: 'OldHammer',
       addedTraitKeys: ['FirstHammer', 'SecondHammer'],
     });
+    view.application.dispose();
   });
 
   it('shows the authored findings at rest and an edited draft its own assessment', async () => {
@@ -123,24 +128,23 @@ describe('Anvil result editor', () => {
       },
     });
     const user = userEvent.setup();
-    render(
+    const view = renderInHeaderDialog(
       <AnvilResultEditor
         findingEntries={[['authored', 'Reward unavailable']]}
         interaction={interaction}
         onCommit={vi.fn()}
       />,
     );
-    const feedback = screen.getByRole('status', { name: 'Anvil feedback' });
-    expect(feedback.textContent).toContain('Reward unavailable');
+    expect(dialogFinding(document.body)).toBe('Reward unavailable');
     await user.click(screen.getByRole('button', { name: 'Added Hammer 2' }));
     await user.click(screen.getByRole('option', { name: 'Third Hammer' }));
-    expect(feedback.textContent).not.toContain('Reward unavailable');
-    expect(feedback.textContent).toContain('Added Hammer unavailable: Third Hammer');
-    // Findings never lock the draft; Save waits only on completeness.
+    expect(dialogFinding(document.body)).toBe('Added Hammer unavailable: Third Hammer');
+    // A complete draft that introduces a finding cannot be saved.
     expect(screen.getByRole('button', { name: 'Save Anvil result' })).toHaveProperty(
       'disabled',
-      false,
+      true,
     );
+    view.application.dispose();
   });
 
   it('closes its open dialog and clears the session target when the context is lost', async () => {
@@ -217,9 +221,9 @@ describe('Anvil result editor', () => {
     const marked = launcher.getAttribute('aria-description') ?? '';
     if (marked === '') throw new Error('the missing Anvil result marks no launcher finding');
     await userEvent.setup().click(launcher);
-    const feedback = screen.getByRole('status', { name: 'Anvil feedback' });
-    expect(feedback.textContent).not.toContain('No current findings.');
-    expect(feedback.textContent).toContain(marked.replace(/\.$/, ''));
+    const first = dialogFinding(document.body)?.replace(/ \(\d+ more\)$/, '');
+    expect(first).toBeDefined();
+    expect(marked).toContain(first);
     application.dispose();
   });
 });

@@ -106,7 +106,7 @@ describe('Stygian Well Interact', () => {
     ]);
     expect(actions.options).toEqual([
       { key: 'buy:initial:healing', kind: 'offer', label: 'Buy Splintered Shield' },
-      { key: 'reroll', kind: 'reroll', label: 'Reroll · costs 1' },
+      { key: 'reroll', kind: 'reroll', label: '−1', ariaLabel: 'Reroll, costs 1' },
     ]);
     expect(interaction.intentFor('reroll').command).toEqual({
       kind: 'InsertStygianWellReroll',
@@ -157,7 +157,7 @@ describe('Stygian Well Interact', () => {
     const { node, actions, interaction } = wellOf(projected);
     expect(actions.options).toEqual([
       { key: 'buy:r1:healing', kind: 'offer', label: 'Buy Offer 1…', needsChoice: true },
-      { key: 'reroll', kind: 'reroll', label: 'Reroll · costs 2' },
+      { key: 'reroll', kind: 'reroll', label: '−2', ariaLabel: 'Reroll, costs 2' },
     ]);
     const items = interaction
       .choices('buy:r1:healing')
@@ -257,7 +257,8 @@ describe('Stygian Well Interact', () => {
     const reroll = wellOf(projectStructuredWorkspaceFixture(project)).actions.options.at(-1);
     expect(reroll).toMatchObject({
       kind: 'reroll',
-      label: 'Reroll · costs 5',
+      label: '−5',
+      ariaLabel: 'Reroll, costs 5',
       locked: 'poolEmpty',
     });
   });

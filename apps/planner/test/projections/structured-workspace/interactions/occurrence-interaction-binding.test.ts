@@ -37,7 +37,7 @@ describe('structured workspace interaction binding', () => {
     const reached = bind(createCompleteFGProject(), 'Underworld', 'F').interactions;
     const reachedPhase = reached.encounterCustomizations.get(semanticAddressKey(phase));
     expect(reachedPhase?.generatedAssessment).toBeDefined();
-    expect(reachedPhase?.generatedEdits).toBeDefined();
+    expect(reachedPhase?.draftFor({}).generatedEdits).toBeDefined();
     const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'SelectEncounter',
       phase: createEncounterPhaseAddress(
@@ -51,15 +51,17 @@ describe('structured workspace interaction binding', () => {
       semanticAddressKey(phase),
     );
     expect(withheld?.generatedComposition?.editable).toBe(true);
+    for (const key of ['generatedAssessment', 'initializeGenerated'])
+      expect(withheld).not.toHaveProperty(key);
+    const withheldDraft = withheld?.draftFor({});
     for (const key of [
       'generatedAssessment',
       'generatedEdits',
       'generatedHighlightPicker',
-      'initializeGenerated',
       'generatedWaveDraftFor',
       'generatedFangsDraftFor',
     ])
-      expect(withheld).not.toHaveProperty(key);
+      expect(withheldDraft).not.toHaveProperty(key);
   });
 
   it('binds the exact Gorgon condition replacement command', () => {

@@ -197,6 +197,8 @@ export interface WorkspaceGeneratedFangsDraft {
 
 export interface WorkspaceGeneratedEncounterAssessment {
   readonly issues: readonly {
+    /** Identity across drafts; the message wording may change with its counts. */
+    readonly key: string;
     readonly message: string;
     readonly waveIndex?: number;
     readonly field?: 'baseRoll' | 'waveCount' | 'highlight' | 'fangs' | 'enemies';

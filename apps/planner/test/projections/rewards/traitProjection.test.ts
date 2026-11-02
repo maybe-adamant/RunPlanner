@@ -42,6 +42,8 @@ describe('route trait projection', () => {
           assessments: [],
           findings: [],
           persephoneLevelBonusMaximums: [5, undefined, undefined],
+          persephoneBaseLevels: [1, undefined, undefined],
+          jeweledPomLevels: [],
           effectiveLevels: [6, undefined, undefined],
         },
       },
@@ -49,6 +51,7 @@ describe('route trait projection', () => {
 
     expect(feedback.options[0]).toMatchObject({
       effectiveLevel: 6,
+      persephoneBaseLevel: 1,
       persephoneLevelRolls: [
         { levelBonus: 0, roll: 0 },
         { levelBonus: 1, roll: 2 },
@@ -92,6 +95,8 @@ describe('route trait projection', () => {
         composition: Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) }),
         offerGenerationState,
         persephoneLevelBonusMaximums: Object.freeze([]),
+        persephoneBaseLevels: [],
+        jeweledPomLevels: [],
         effectiveLevels: Object.freeze([]),
       });
     const presentation = projectTraitOfferState({
@@ -113,6 +118,8 @@ describe('route trait projection', () => {
           assessments: [],
           findings: [],
           persephoneLevelBonusMaximums: [],
+          persephoneBaseLevels: [],
+          jeweledPomLevels: [],
           effectiveLevels: [],
         },
       },
@@ -244,6 +251,8 @@ describe('route trait projection', () => {
           supported: false,
           branches: [],
           persephoneLevelBonusMaximums: [],
+          persephoneBaseLevels: [],
+          jeweledPomLevels: [],
           effectiveLevels: [],
           assessments: invalidTrace.branches.flatMap((branch) => branch.assessments),
           findings: [duplicateFinding, duplicateFinding, secondFinding],
@@ -362,6 +371,8 @@ describe('route trait projection', () => {
           supported: false,
           branches: [],
           persephoneLevelBonusMaximums: [],
+          persephoneBaseLevels: [],
+          jeweledPomLevels: [],
           effectiveLevels: [],
           assessments: [],
           findings: [
@@ -405,6 +416,8 @@ describe('route trait projection', () => {
               assessments: [],
               composition: {} as never,
               persephoneLevelBonusMaximums: [],
+              persephoneBaseLevels: [],
+              jeweledPomLevels: [],
               effectiveLevels: [],
               rerolledScreens: [
                 {
@@ -412,7 +425,12 @@ describe('route trait projection', () => {
                   missing: false,
                   assessments: [{ legal: true, findings: [], replacementTransition: transition }],
                   levelResolutions: [
-                    { effectiveLevel: 3, persephoneLevelBonusMaximum: 2, findings: [] },
+                    {
+                      effectiveLevel: 3,
+                      persephoneLevelBonusMaximum: 2,
+                      persephoneBaseLevel: 1,
+                      findings: [],
+                    },
                   ],
                   composition: {} as never,
                   // Only the rows' assessments matter to the preview.
@@ -421,6 +439,8 @@ describe('route trait projection', () => {
             },
           ],
           persephoneLevelBonusMaximums: [],
+          persephoneBaseLevels: [],
+          jeweledPomLevels: [],
           effectiveLevels: [],
           assessments: [],
           findings: [],
@@ -456,6 +476,8 @@ describe('route trait projection', () => {
           supported: false,
           branches: [],
           persephoneLevelBonusMaximums: [],
+          persephoneBaseLevels: [],
+          jeweledPomLevels: [],
           effectiveLevels: [],
           assessments: [],
           findings: [
@@ -489,6 +511,8 @@ describe('route trait projection', () => {
           supported: false,
           branches: [],
           persephoneLevelBonusMaximums: [],
+          persephoneBaseLevels: [],
+          jeweledPomLevels: [],
           effectiveLevels: [],
           assessments: [],
           findings: [{ code: 'traitOfferSelectionUnavailable' }],
@@ -519,6 +543,8 @@ describe('route trait projection', () => {
             supported: false,
             branches: [],
             persephoneLevelBonusMaximums: [],
+            persephoneBaseLevels: [],
+            jeweledPomLevels: [],
             effectiveLevels: [],
             assessments: [],
             findings: [
@@ -568,6 +594,8 @@ describe('route trait projection', () => {
             supported: false,
             branches: [],
             persephoneLevelBonusMaximums: [],
+            persephoneBaseLevels: [],
+            jeweledPomLevels: [],
             effectiveLevels: [],
             assessments: [],
             findings: [

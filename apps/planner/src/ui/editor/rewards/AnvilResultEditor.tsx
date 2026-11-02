@@ -24,6 +24,7 @@ import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
+import { introducesIssue } from '@planner/ui/controls/introducesIssue';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingFeedbackEntries, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
@@ -116,12 +117,11 @@ export function AnvilResultEditor({
   const result = resultFor(draft);
   // At rest the region matches the launcher; a complete edited draft shows its assessment.
   const atRest = draftValueIdentity(result ?? null) === draftValueIdentity(interaction.value);
-  const feedbackEntries = atRest
-    ? findingEntries
-    : result === undefined
+  const assessedEntries = (value: AuthoredAnvilResult | null | undefined) =>
+    value === null || value === undefined
       ? []
       : interaction
-          .assess(result)
+          .assess(value)
           .findings.map(
             (code) =>
               [
@@ -129,6 +129,10 @@ export function AnvilResultEditor({
                 formatFindingExplanation(presentAnvilDraftFinding(code, interaction.traitLabel)),
               ] as const,
           );
+  const draftEntries = atRest ? [] : assessedEntries(result);
+  const feedbackEntries = atRest ? findingEntries : draftEntries;
+  // A finding this draft introduced blocks Save; inherited findings do not.
+  const introduced = introducesIssue(draftEntries, assessedEntries(interaction.value));
   return (
     <>
       <div className="anvil-result-pickers">
@@ -219,7 +223,7 @@ export function AnvilResultEditor({
         onSave={() => {
           if (result !== undefined) onCommit(result);
         }}
-        saveDisabled={result === undefined}
+        saveDisabled={result === undefined || introduced}
         saveName="Save Anvil result"
       />
     </>

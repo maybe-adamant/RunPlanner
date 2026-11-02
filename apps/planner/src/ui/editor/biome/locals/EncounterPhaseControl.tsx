@@ -18,16 +18,14 @@ import {
   EditorDialogDraftActions,
   type EditorDialogIssue,
 } from '@planner/ui/controls/EditorDialog';
+import { introducesIssue } from '@planner/ui/controls/introducesIssue';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { authoredProjectCommandsDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { NemesisEventSelector } from '../NemesisEventEditor';
-import {
-  compositionIssueMessages,
-  EncounterCompositionControl,
-} from './EncounterCompositionControl';
+import { compositionIssues, EncounterCompositionControl } from './EncounterCompositionControl';
 import { CocoonCountControl } from './CocoonCountControl';
 import { CocoonRewardPointControl } from './CocoonRewardPointControl';
 import { InfiniteRosterControl } from './InfiniteRosterControl';
@@ -83,9 +81,7 @@ function customizationIssues(
           ]
         : [],
     ),
-    ...compositionIssueMessages(
-      generated?.value === undefined ? undefined : draft.generatedAssessment,
-    ).map((message, index) => [`composition-${index}`, message] as const),
+    ...compositionIssues(generated?.value === undefined ? undefined : draft.generatedAssessment),
   ];
 }
 
@@ -156,9 +152,7 @@ function EncounterCustomizationDialog({
     ...(atRest ? restIssues : draftIssues),
   ];
   // A finding this draft introduced blocks Save; inherited findings do not.
-  const introduced = draftIssues.some(
-    ([, message]) => !restIssues.some(([, inherited]) => inherited === message),
-  );
+  const introduced = introducesIssue(draftIssues, restIssues);
   const save = (): void => {
     const commands = savedDecisions
       .filter(

@@ -34,6 +34,7 @@ import {
   forceApolloRerolledStartProject,
   forceApolloStartTrait,
 } from '@planner-test/support/force-apollo-rerolls';
+import { dialogFinding, HeaderDialog } from '@planner-test/support/editor-dialog';
 
 /** The published cost schedule a fixture screen hands the tabs. */
 const nextCost = (fromCount: number): number => fromCount + 1;
@@ -70,6 +71,8 @@ describe('ordinary offer shell', () => {
                 assessments: [],
                 effectiveLevels: [],
                 persephoneLevelBonusMaximums: [],
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 findings: value === gold ? [] : [{ code: 'traitOfferGenerationUnavailable' }],
               },
             },
@@ -78,14 +81,16 @@ describe('ordinary offer shell', () => {
       };
       render(
         <Provider store={application.store}>
-          <TraitOfferEditor
-            address={interaction.owner}
-            interactions={{
-              ...workspace.interactions,
-              traitOffers: new Map([[interaction.key, interaction]]),
-            }}
-            onCommit={onCommit}
-          />
+          <HeaderDialog>
+            <TraitOfferEditor
+              address={interaction.owner}
+              interactions={{
+                ...workspace.interactions,
+                traitOffers: new Map([[interaction.key, interaction]]),
+              }}
+              onCommit={onCommit}
+            />
+          </HeaderDialog>
         </Provider>,
       );
       if (state === 'invalid')
@@ -118,7 +123,9 @@ describe('ordinary offer shell', () => {
       throw new Error('expected a complete ordinary offer');
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor address={interaction.owner} interactions={workspace.interactions} />
+        <HeaderDialog>
+          <TraitOfferEditor address={interaction.owner} interactions={workspace.interactions} />
+        </HeaderDialog>
       </Provider>,
     );
     const save = await screen.findByRole('button', { name: 'Save trait offer' });
@@ -127,7 +134,9 @@ describe('ordinary offer shell', () => {
     await user.click(screen.getByRole('button', { name: 'Remove last option' }));
     await waitFor(() => expect(save.hasAttribute('disabled')).toBe(true));
     expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(false);
-    expect(await screen.findByText(/Trait choices cannot appear together/)).toBeTruthy();
+    await waitFor(() =>
+      expect(dialogFinding(document.body)).toMatch(/Trait choices cannot appear together/),
+    );
     await user.click(screen.getByRole('button', { name: 'Remove last option' }));
     await user.click(screen.getByRole('button', { name: 'Remove last option' }));
     expect(screen.getByText('Fallback Gold')).toBeTruthy();
@@ -143,6 +152,47 @@ describe('ordinary offer shell', () => {
     await user.click(await screen.findByRole('button', { name: 'Start over' }));
     await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
     expect(screen.getByLabelText('option3 trait')).toBeTruthy();
+    application.dispose();
+  });
+
+  it('offers a rarity picker on a real Infusion row with a ranked rarity domain', async () => {
+    const application = createApplication();
+    const golden = createGoldenFGHIProject();
+    application.store.dispatch(authoredProjectReplaced(golden));
+    const offer = [
+      ...application
+        .selectStructuredWorkspace(application.store.getState())!
+        .interactions.traitOffers.values(),
+    ].find((entry) => entry.giver.key === 'Apollo' && entry.value?.kind === 'traits')!;
+    if (offer.value?.kind !== 'traits') throw new Error('expected an Apollo offer');
+    application.store.dispatch(
+      authoredProjectReplaced(
+        applyProjectCommand(golden, application.catalog, {
+          kind: 'ReplaceTraitOffer',
+          trait: offer.owner,
+          value: {
+            ...offer.value,
+            options: [
+              { traitKey: 'ElementalRallyBoon', rarity: 'Rare' },
+              offer.value.options[1]!,
+              offer.value.options[2]!,
+            ] as AuthoredTraitOfferTraits['options'],
+          },
+        }),
+      ),
+    );
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    render(
+      <Provider store={application.store}>
+        <HeaderDialog>
+          <TraitOfferEditor address={offer.owner} interactions={workspace.interactions} />
+        </HeaderDialog>
+      </Provider>,
+    );
+    const rarity = await screen.findByRole('button', { name: 'option1 rarity' });
+    expect(rarity.getAttribute('aria-haspopup')).toBe('listbox');
+    expect(screen.queryByLabelText('option1 fixed rarity')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Rarify Option 1' })).toBeNull();
     application.dispose();
   });
 
@@ -163,14 +213,16 @@ describe('ordinary offer shell', () => {
     const onCommit = vi.fn();
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={interaction.owner}
-          interactions={{
-            ...workspace.interactions,
-            traitOffers: new Map([[interaction.key, interaction]]),
-          }}
-          onCommit={onCommit}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={interaction.owner}
+            interactions={{
+              ...workspace.interactions,
+              traitOffers: new Map([[interaction.key, interaction]]),
+            }}
+            onCommit={onCommit}
+          />
+        </HeaderDialog>
       </Provider>,
     );
     const tabs = await screen.findByRole('tablist', { name: 'Screens' });
@@ -179,10 +231,10 @@ describe('ordinary offer shell', () => {
         .getAllByRole('tab')
         .map((tab) => tab.textContent),
     ).toEqual(['Offer']);
-    expect(
-      screen.getByRole('button', { name: 'Remove last reroll' }).hasAttribute('disabled'),
-    ).toBe(true);
-    await user.click(screen.getByRole('button', { name: 'Reroll · costs 1' }));
+    expect(screen.getByRole('button', { name: 'Undo last reroll' }).hasAttribute('disabled')).toBe(
+      true,
+    );
+    await user.click(screen.getByRole('button', { name: 'Reroll, costs 1' }));
     expect(
       within(tabs)
         .getAllByRole('tab')
@@ -203,7 +255,7 @@ describe('ordinary offer shell', () => {
     ).toBe(true);
     expect(
       screen
-        .getAllByRole('button', { name: 'Rarify' })
+        .queryAllByRole('button', { name: /^Rarify / })
         .every((button) => button.hasAttribute('disabled')),
     ).toBe(true);
     expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(true);
@@ -239,12 +291,12 @@ describe('ordinary offer shell', () => {
       saved.rerolledScreens?.map((entry) => entry?.options.map((row) => row.traitKey)),
     ).toEqual([finalTraits]);
     expect(saved.options[0]?.traitKey).not.toBe(finalTraits[0]);
-    await user.click(screen.getByRole('button', { name: 'Reroll · costs 2' }));
-    const atMax = screen.getByRole('button', { name: 'Reroll · costs 3' });
+    await user.click(screen.getByRole('button', { name: 'Reroll, costs 2' }));
+    const atMax = screen.getByRole('button', { name: 'Reroll, costs 3' });
     expect(atMax.hasAttribute('disabled')).toBe(true);
     expect(hintOf(atMax)).toBe('Not enough rerolls left.');
-    await user.click(screen.getByRole('button', { name: 'Remove last reroll' }));
-    await user.click(screen.getByRole('button', { name: 'Remove last reroll' }));
+    await user.click(screen.getByRole('button', { name: 'Undo last reroll' }));
+    await user.click(screen.getByRole('button', { name: 'Undo last reroll' }));
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Offer']);
     await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
     await user.click(save);
@@ -274,18 +326,20 @@ describe('ordinary offer shell', () => {
     };
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={interaction.owner}
-          interactions={{
-            ...workspace.interactions,
-            traitOffers: new Map([[interaction.key, interaction]]),
-          }}
-          onCommit={() => undefined}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={interaction.owner}
+            interactions={{
+              ...workspace.interactions,
+              traitOffers: new Map([[interaction.key, interaction]]),
+            }}
+            onCommit={() => undefined}
+          />
+        </HeaderDialog>
       </Provider>,
     );
     const save = await screen.findByRole('button', { name: 'Save trait offer' });
-    const feedbackText = () => screen.getByRole('status', { name: 'Offer feedback' }).textContent;
+    const feedbackText = () => dialogFinding(document.body) ?? '';
     return { application, save, feedbackText };
   }
 
@@ -377,19 +431,21 @@ describe('ordinary offer shell', () => {
     };
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={interaction.owner}
-          interactions={{
-            ...workspace.interactions,
-            traitOffers: new Map([[interaction.key, interaction]]),
-          }}
-          onCommit={() => undefined}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={interaction.owner}
+            interactions={{
+              ...workspace.interactions,
+              traitOffers: new Map([[interaction.key, interaction]]),
+            }}
+            onCommit={() => undefined}
+          />
+        </HeaderDialog>
       </Provider>,
     );
     expect(await screen.findByText('Fallback Gold')).toBeTruthy();
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Offer', 'Reroll 1']);
-    await user.click(screen.getByRole('button', { name: 'Reroll · costs 2' }));
+    await user.click(screen.getByRole('button', { name: 'Reroll, costs 2' }));
     await user.click(screen.getByRole('tab', { name: 'Reroll 1' }));
     expect(screen.getByText('Fallback Gold')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'option1 trait' })).toBeNull();
@@ -425,31 +481,39 @@ describe('ordinary offer shell', () => {
     const onCommit = vi.fn();
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={forceApolloStartTrait}
-          interactions={workspace.interactions}
-          onCommit={onCommit}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={forceApolloStartTrait}
+            interactions={workspace.interactions}
+            onCommit={onCommit}
+          />
+        </HeaderDialog>
       </Provider>,
     );
     const save = await screen.findByRole('button', { name: 'Save trait offer' });
     const rarify = () =>
-      screen.getAllByRole('button', { name: 'Rarify' }) as readonly HTMLButtonElement[];
+      screen.getAllByRole('button', { name: /^Rarify / }) as readonly HTMLButtonElement[];
+    // Without a use left Rarify is hidden or disabled.
+    const rarifyLocked = () =>
+      (screen.queryAllByRole('button', { name: /^Rarify / }) as HTMLButtonElement[]).every(
+        (button) => button.disabled,
+      );
     const effective = (index: number) =>
-      screen.getAllByLabelText('Effective trait values')[index]?.textContent;
-    return { application, effective, interaction, onCommit, project, rarify, save };
+      screen.getAllByLabelText('Final trait values')[index]?.textContent;
+    return { application, effective, interaction, onCommit, project, rarify, rarifyLocked, save };
   }
 
   it("moves the final screen's Rarify clicks to the screen a reroll leaves behind", async () => {
     const user = userEvent.setup();
-    const { application, effective, onCommit, rarify, save } = await openForceApolloOffer([]);
+    const { application, effective, onCommit, rarify, rarifyLocked, save } =
+      await openForceApolloOffer([]);
     await waitFor(() => expect(rarify()[1]!.disabled).toBe(false));
     await user.click(rarify()[1]!);
-    await waitFor(() => expect(effective(1)).toContain('Effective rarityRare'));
-    await user.click(screen.getByRole('button', { name: 'Reroll · costs 1' }));
+    await waitFor(() => expect(effective(1)).toContain('· Rare'));
+    await user.click(screen.getByRole('button', { name: 'Reroll, costs 1' }));
     // The final screen starts unclicked; the keepsake's one use went to the earlier screen.
-    await waitFor(() => expect(effective(1)).toContain('Effective rarityCommon'));
-    expect(rarify().every((button) => button.disabled)).toBe(true);
+    await waitFor(() => expect(effective(1)).toContain('· Common'));
+    expect(rarifyLocked()).toBe(true);
     // A reroll bans one shown row, so the final screen needs a row of the earlier one gone.
     await user.click(screen.getByLabelText('option1 trait'));
     const replacement = (await screen.findAllByRole('option')).find(
@@ -460,8 +524,8 @@ describe('ordinary offer shell', () => {
     await user.click(replacement);
     await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
     await user.click(screen.getByRole('tab', { name: 'Offer' }));
-    await waitFor(() => expect(effective(1)).toContain('Effective rarityRare'));
-    expect(rarify().every((button) => button.disabled)).toBe(true);
+    await waitFor(() => expect(effective(1)).toContain('· Rare'));
+    expect(rarifyLocked()).toBe(true);
     await user.click(save);
     const saved = onCommit.mock.lastCall?.[0] as AuthoredTraitOfferTraits;
     expect(saved.rarificationActions).toEqual([]);
@@ -473,19 +537,19 @@ describe('ordinary offer shell', () => {
 
   it('rarifies a row of an earlier screen under Edit and saves the click with that screen', async () => {
     const user = userEvent.setup();
-    const { application, effective, interaction, onCommit, project, rarify, save } =
+    const { application, effective, interaction, onCommit, project, rarify, rarifyLocked, save } =
       await openForceApolloOffer([[]]);
     await waitFor(() => expect(rarify()[1]!.disabled).toBe(false));
     await user.click(screen.getByRole('tab', { name: 'Offer' }));
-    expect(rarify().every((button) => button.disabled)).toBe(true);
+    expect(rarifyLocked()).toBe(true);
     await user.click(screen.getByRole('button', { name: 'Edit' }));
     await waitFor(() => expect(rarify()[1]!.disabled).toBe(false));
     await user.click(rarify()[1]!);
-    await waitFor(() => expect(effective(1)).toContain('Effective rarityRare'));
+    await waitFor(() => expect(effective(1)).toContain('· Rare'));
     // The keepsake's one use is spent.
-    await waitFor(() => expect(rarify().every((button) => button.disabled)).toBe(true));
+    await waitFor(() => expect(rarifyLocked()).toBe(true));
     await user.click(screen.getByRole('tab', { name: 'Reroll 1' }));
-    await waitFor(() => expect(rarify().every((button) => button.disabled)).toBe(true));
+    await waitFor(() => expect(rarifyLocked()).toBe(true));
     await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
     await user.click(save);
     const saved = onCommit.mock.lastCall?.[0] as AuthoredTraitOfferTraits;
@@ -514,7 +578,9 @@ describe('ordinary offer shell', () => {
 
     renderToStaticMarkup(
       <Provider store={application.store}>
-        <TraitOfferEditor address={interaction.owner} interactions={workspace.interactions} />
+        <HeaderDialog>
+          <TraitOfferEditor address={interaction.owner} interactions={workspace.interactions} />
+        </HeaderDialog>
       </Provider>,
     );
 
@@ -537,11 +603,13 @@ describe('ordinary offer shell', () => {
     }) as WorkspaceInteractionCatalog;
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={interaction.owner}
-          interactions={interactions}
-          onCommit={vi.fn()}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={interaction.owner}
+            interactions={interactions}
+            onCommit={vi.fn()}
+          />
+        </HeaderDialog>
       </Provider>,
     );
 
@@ -577,22 +645,22 @@ describe('ordinary offer shell', () => {
     if (interaction === undefined) throw new Error('edited Medea trait interaction is missing');
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor address={interaction.owner} interactions={workspace.interactions} />
+        <HeaderDialog>
+          <TraitOfferEditor address={interaction.owner} interactions={workspace.interactions} />
+        </HeaderDialog>
       </Provider>,
     );
 
     expect(
       (screen.getByRole('button', { name: 'Save trait offer' }) as HTMLButtonElement).disabled,
     ).toBe(false);
-    const region = screen.getByRole('status', { name: 'Offer feedback' });
-    const note = within(region)
+    const note = screen
       .getByText("Malice in Kind's offer depends on Death Defiance")
       .closest('.trait-offer-note');
     expect(note).not.toBeNull();
     expect(note?.textContent).toContain('Make sure you meet its offer condition.');
-    // A note is not a finding: the empty state stays and the note comes last.
-    expect(within(region).getByText('No current findings.')).toBeTruthy();
-    expect(region.lastElementChild).toBe(note);
+    // A note is not a finding.
+    expect(dialogFinding(document.body)).toBeUndefined();
     expect(document.querySelector('[data-has-findings="true"]')).toBeNull();
     expect(workspace.marker.findingCount).toBe(initialWorkspace.marker.findingCount);
     application.dispose();
@@ -613,7 +681,9 @@ describe('ordinary offer shell', () => {
     const user = userEvent.setup();
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor address={interaction.owner} interactions={workspace.interactions} />
+        <HeaderDialog>
+          <TraitOfferEditor address={interaction.owner} interactions={workspace.interactions} />
+        </HeaderDialog>
       </Provider>,
     );
     events.length = 0;
@@ -712,10 +782,12 @@ describe('ordinary offer shell', () => {
     const user = userEvent.setup();
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={interaction.owner}
-          interactions={interactions as WorkspaceInteractionCatalog}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={interaction.owner}
+            interactions={interactions as WorkspaceInteractionCatalog}
+          />
+        </HeaderDialog>
       </Provider>,
     );
 
@@ -775,6 +847,8 @@ describe('ordinary offer shell', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze(
                   value.kind === 'traits' && value.options[0]?.targetTraitKey === undefined
@@ -875,11 +949,13 @@ describe('ordinary offer shell', () => {
     const user = userEvent.setup();
     const { rerender } = render(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={interaction.owner}
-          interactions={interactions}
-          onCommit={vi.fn()}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={interaction.owner}
+            interactions={interactions}
+            onCommit={vi.fn()}
+          />
+        </HeaderDialog>
       </Provider>,
     );
 
@@ -892,11 +968,13 @@ describe('ordinary offer shell', () => {
     const rerenderCommit = vi.fn();
     rerender(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={interaction.owner}
-          interactions={interactions}
-          onCommit={rerenderCommit}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={interaction.owner}
+            interactions={interactions}
+            onCommit={rerenderCommit}
+          />
+        </HeaderDialog>
       </Provider>,
     );
     expect(targetLoadableCount).toBe(1);
@@ -961,6 +1039,8 @@ describe('ordinary offer shell', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -988,10 +1068,12 @@ describe('ordinary offer shell', () => {
 
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={interaction.owner}
-          interactions={interactions as WorkspaceInteractionCatalog}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={interaction.owner}
+            interactions={interactions as WorkspaceInteractionCatalog}
+          />
+        </HeaderDialog>
       </Provider>,
     );
 
@@ -1031,6 +1113,8 @@ describe('ordinary offer shell', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: draft.kind !== 'fallbackGold',
@@ -1057,7 +1141,9 @@ describe('ordinary offer shell', () => {
 
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+        <HeaderDialog>
+          <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+        </HeaderDialog>
       </Provider>,
     );
 
@@ -1099,7 +1185,9 @@ describe('ordinary offer shell', () => {
     }) as unknown as WorkspaceInteractionCatalog;
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+        <HeaderDialog>
+          <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+        </HeaderDialog>
       </Provider>,
     );
 
@@ -1162,6 +1250,8 @@ describe('ordinary offer shell', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -1180,7 +1270,9 @@ describe('ordinary offer shell', () => {
     const user = userEvent.setup();
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+        <HeaderDialog>
+          <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+        </HeaderDialog>
       </Provider>,
     );
 
@@ -1215,7 +1307,7 @@ describe('ordinary offer shell', () => {
   });
 
   it.each([false, true])(
-    'renders bonus rows from the equipped aspect without candidate feedback (Persephone: %s)',
+    'shows an unknown level on each Olympian row without candidate feedback (Persephone: %s)',
     (persephoneEquipped) => {
       const application = createApplication();
       const project = createGoldenFGHIProject();
@@ -1240,19 +1332,20 @@ describe('ordinary offer shell', () => {
       const interaction = { ...base, load: () => [] };
       render(
         <Provider store={application.store}>
-          <TraitOfferEditor
-            address={interaction.owner}
-            interactions={{
-              ...workspace.interactions,
-              traitOffers: new Map([[interaction.key, interaction]]),
-            }}
-          />
+          <HeaderDialog>
+            <TraitOfferEditor
+              address={interaction.owner}
+              interactions={{
+                ...workspace.interactions,
+                traitOffers: new Map([[interaction.key, interaction]]),
+              }}
+            />
+          </HeaderDialog>
         </Provider>,
       );
 
-      expect(screen.queryAllByText('Persephone Roll')).toHaveLength(persephoneEquipped ? 3 : 0);
-      expect(screen.queryAllByText('N/A')).toHaveLength(persephoneEquipped ? 3 : 0);
-      expect(screen.queryByRole('combobox', { name: /Persephone roll/ })).toBeNull();
+      expect(screen.queryAllByText('N/A')).toHaveLength(3);
+      expect(screen.queryByRole('button', { name: /Persephone roll/ })).toBeNull();
       application.dispose();
     },
   );
@@ -1290,6 +1383,8 @@ describe('ordinary offer shell', () => {
                 effectiveLevels: Object.freeze([6, undefined, 2]),
                 findings: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
+                persephoneBaseLevels: Object.freeze([1, undefined, undefined]),
+                jeweledPomLevels: [],
                 supported: true,
               }),
             }),
@@ -1304,36 +1399,27 @@ describe('ordinary offer shell', () => {
     const user = userEvent.setup();
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={interaction.owner}
-          interactions={interactions}
-          onCommit={onCommit}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={interaction.owner}
+            interactions={interactions}
+            onCommit={onCommit}
+          />
+        </HeaderDialog>
       </Provider>,
     );
 
-    const effectiveSummary = (await screen.findAllByLabelText('Effective trait values'))[0];
-    if (effectiveSummary === undefined) {
-      throw new Error('effective trait summary is missing');
-    }
-    expect(effectiveSummary.textContent).toContain('Effective level6');
-    const summaries = screen.getAllByLabelText('Effective trait values');
-    expect(summaries).toHaveLength(3);
-    expect(summaries[1]?.querySelectorAll('dd')[1]?.textContent).toBe('—');
-    expect(screen.getAllByText('Persephone Roll')).toHaveLength(3);
-    expect(screen.getAllByText('N/A')).toHaveLength(2);
-    expect(screen.getAllByRole('combobox', { name: /Persephone roll/ })).toHaveLength(1);
-    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone roll' });
-    expect(
-      within(bonus)
-        .getAllByRole('option')
-        .map((option) => option.textContent),
-    ).toEqual(['0', '2', '3', '4', '5', '6']);
-    expect((bonus as HTMLSelectElement).value).toBe('0');
+    const summaries = await screen.findAllByLabelText('Final trait values');
+    expect(summaries[0]?.textContent).toContain('Lvl 6');
+    expect(screen.getAllByText('N/A')).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /Persephone roll/ })).toHaveLength(1);
+    const bonus = screen.getByRole('button', { name: 'option1 Persephone roll' });
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     const defaultCommit = onCommit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits | undefined;
     expect(defaultCommit?.options[0]).not.toHaveProperty('persephoneLevelBonus');
-    await user.selectOptions(bonus, within(bonus).getByRole('option', { name: '6' }));
+    await user.click(bonus);
+    expect(screen.getAllByRole('option')).toHaveLength(6);
+    await user.click(screen.getByRole('option', { name: /^Roll 5 · / }));
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
 
     expect(onCommit).toHaveBeenCalledWith(
@@ -1347,7 +1433,8 @@ describe('ordinary offer shell', () => {
         ],
       }),
     );
-    await user.selectOptions(bonus, '0');
+    await user.click(screen.getByRole('button', { name: 'option1 Persephone roll' }));
+    await user.click(screen.getByRole('option', { name: 'Roll 0 · +0' }));
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
 
     const zeroCommit = onCommit.mock.calls.at(-1)?.[0] as AuthoredTraitOfferTraits | undefined;
@@ -1396,6 +1483,8 @@ describe('ordinary offer shell', () => {
                 effectiveLevels: Object.freeze([6, 4, 2]),
                 findings: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
+                persephoneBaseLevels: Object.freeze([1, undefined, undefined]),
+                jeweledPomLevels: [],
                 supported: true,
               }),
             }),
@@ -1458,29 +1547,22 @@ describe('ordinary offer shell', () => {
     const user = userEvent.setup();
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+        <HeaderDialog>
+          <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+        </HeaderDialog>
       </Provider>,
     );
 
+    const roll = () => screen.getByRole('button', { name: 'option1 Persephone roll' }).textContent;
+    const authoredRoll = roll();
+    expect(authoredRoll).not.toBe('+0');
     const traitPicker = screen.getByLabelText('option1 trait');
     await user.click(traitPicker);
     await user.click(await screen.findByRole('option', { name: alternative.label }));
-    expect(
-      (
-        screen.getByRole('combobox', {
-          name: 'option1 Persephone roll',
-        }) as HTMLSelectElement
-      ).value,
-    ).toBe('5');
+    expect(roll()).toBe(authoredRoll);
     await user.click(traitPicker);
     await user.click(await screen.findByRole('option', { name: original.label }));
-    expect(
-      (
-        screen.getByRole('combobox', {
-          name: 'option1 Persephone roll',
-        }) as HTMLSelectElement
-      ).value,
-    ).toBe('5');
+    expect(roll()).toBe(authoredRoll);
     application.dispose();
   });
 });

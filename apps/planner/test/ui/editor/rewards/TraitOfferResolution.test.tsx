@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { StrictMode } from 'react';
@@ -535,11 +535,11 @@ describe('resolution outcomes', () => {
     );
     expect(screen.queryByRole('region', { name: 'Boon Boon Boon choice' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Boon Boon Boon choice' }));
-    expect(screen.getByRole('heading', { name: 'Boon Boon Boon choice' })).toBeDefined();
-    expect(rendered.container.querySelectorAll('input[name$="-selected"]')).toHaveLength(1);
+    const echo = () => screen.getByRole('dialog', { name: /› Boon Boon Boon$/ });
+    expect(echo().querySelectorAll('input[name$="-selected"]')).toHaveLength(1);
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 1'));
     await user.click(await screen.findByText('Aphrodite · Heart Breaker'));
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(within(echo()).getByRole('button', { name: 'Cancel' }));
     expect(commit).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Boon Boon Boon choice' }));
     expect(screen.getByLabelText('Boon Boon Boon outcome 1').textContent).toContain(
@@ -549,22 +549,22 @@ describe('resolution outcomes', () => {
     await user.click(await screen.findByText('Aphrodite · Heart Breaker'));
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 1 rarity'));
     await user.click(await screen.findByText('Common'));
-    expect(screen.getByLabelText('Effective trait values').textContent).toBe(
-      'Effective rarityCommonEffective level1',
+    expect(within(echo()).getByLabelText('Final trait values').textContent).toContain(
+      'Lvl 1 · Common',
     );
-    await user.click(screen.getByRole('button', { name: 'Add option' }));
+    await user.click(within(echo()).getByRole('button', { name: 'Add option' }));
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 2'));
     await user.click(await screen.findByText('Hera · Bridal Glow'));
     expect(screen.queryByLabelText('Boon Boon Boon outcome 2 rarity')).toBeNull();
-    const nestedRadios = rendered.container.querySelectorAll('input[name$="-selected"]');
+    const nestedRadios = echo().querySelectorAll('input[name$="-selected"]');
     expect(nestedRadios).toHaveLength(2);
     await user.click(nestedRadios[1]!);
     await user.click(screen.getByLabelText('Boon Boon Boon selected trait target'));
     await user.click(await screen.findByText('Melting Point'));
-    await user.click(screen.getByRole('button', { name: 'Add option' }));
+    await user.click(within(echo()).getByRole('button', { name: 'Add option' }));
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 3'));
     await user.click(await screen.findByText('Hera · All Together'));
-    const selectedAfterAppend = rendered.container.querySelectorAll('input[name$="-selected"]');
+    const selectedAfterAppend = echo().querySelectorAll('input[name$="-selected"]');
     await user.click(selectedAfterAppend[2]!);
     for (const set of ['Earth', 'Fire', 'Air', 'Water']) {
       await user.click(screen.getByRole('button', { name: `All Together ${set}` }));
@@ -577,7 +577,7 @@ describe('resolution outcomes', () => {
     await user.click(screen.getByRole('button', { name: 'Boon Boon Boon choice' }));
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 1'));
     await user.click(await screen.findByText('Demeter · Natural Selection'));
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(within(echo()).getByRole('button', { name: 'Cancel' }));
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     expect(commit).toHaveBeenCalledTimes(1);
     const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;

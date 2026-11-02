@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -69,6 +69,7 @@ import {
   reachedEchoProject,
 } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import { hintOf } from '@planner-test/support/hints';
+import { dialogFinding } from '@planner-test/support/editor-dialog';
 
 afterEach(cleanup);
 
@@ -107,6 +108,23 @@ function findTraitOfferControl(
             if (semanticAddressKey(control.address) === key) return control;
     }
   throw new Error('Trait offer control is not projected');
+}
+
+const rollName = 'option1 Persephone roll';
+
+/** Opens the first row's Persephone roll picker and reads its selected roll. */
+async function selectedRoll(user: UserEvent): Promise<string | undefined> {
+  await user.click(await screen.findByRole('button', { name: rollName }));
+  const selected = screen
+    .getAllByRole('option')
+    .find((option) => option.getAttribute('data-selected-value') === 'true');
+  await user.keyboard('{Escape}');
+  return selected?.textContent?.match(/Roll (\d+)/)?.[1];
+}
+
+async function chooseRoll(user: UserEvent, levelBonus: number): Promise<void> {
+  await user.click(await screen.findByRole('button', { name: rollName }));
+  await user.click(screen.getByRole('option', { name: new RegExp(`^Roll ${levelBonus} · `) }));
 }
 
 describe('trait offer editor entry and dialog', () => {
@@ -351,18 +369,16 @@ describe('trait offer editor entry and dialog', () => {
     await user.click(await screen.findByRole('button', { name: 'Boon Boon Boon choice' }));
     const targetName = 'Boon Boon Boon selected trait target';
     expect(screen.getByRole('button', { name: targetName })).toBeTruthy();
-    const nestedFeedback = within(
-      screen.getByRole('region', { name: 'Boon Boon Boon choice' }),
-    ).getByRole('status', { name: 'Choice feedback' });
-    expect(nestedFeedback.textContent).toContain('No current findings.');
-    await user.click(screen.getByRole('button', { name: 'Add option' }));
-    await user.click(screen.getByRole('button', { name: 'Add option' }));
-    await user.click(screen.getAllByRole('radio')[2]!);
-    await user.click(screen.getByRole('button', { name: 'Remove last option' }));
-    expect(screen.getAllByRole('radio')[1]).toHaveProperty('checked', true);
-    await user.click(screen.getByRole('button', { name: 'Remove last option' }));
-    expect(screen.getAllByRole('radio')[0]).toHaveProperty('checked', true);
-    await user.click(screen.getByRole('button', { name: 'Add option' }));
+    const echo = () => screen.getByRole('dialog', { name: /› Boon Boon Boon$/ });
+    expect(dialogFinding(echo())).toBe('Finish the choice');
+    await user.click(within(echo()).getByRole('button', { name: 'Add option' }));
+    await user.click(within(echo()).getByRole('button', { name: 'Add option' }));
+    await user.click(within(echo()).getAllByRole('radio')[2]!);
+    await user.click(within(echo()).getByRole('button', { name: 'Remove last option' }));
+    expect(within(echo()).getAllByRole('radio')[1]).toHaveProperty('checked', true);
+    await user.click(within(echo()).getByRole('button', { name: 'Remove last option' }));
+    expect(within(echo()).getAllByRole('radio')[0]).toHaveProperty('checked', true);
+    await user.click(within(echo()).getByRole('button', { name: 'Add option' }));
     expect(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' })).toHaveProperty(
       'disabled',
       true,
@@ -995,7 +1011,7 @@ describe('trait offer editor entry and dialog', () => {
     expect(screen.getByText('+2 Path of Stars')).toBeTruthy();
     expect(
       screen.getByRole('heading', {
-        name: `Selected outcome · ${initialInteraction.traitLabel(initialSelected.traitKey)}`,
+        name: initialInteraction.traitLabel(initialSelected.traitKey),
       }),
     ).toBeTruthy();
     expect(screen.queryByText('Selected trait outcome')).toBeNull();
@@ -1008,13 +1024,9 @@ describe('trait offer editor entry and dialog', () => {
       '.trait-selected-outcome .hex-tree-node[data-kind="olympianSpell"]',
     );
     expect(godSent?.textContent).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Rarify' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Rarify / })).toBeNull();
     expect(screen.queryByText(/^Rarity:/)).toBeNull();
-    // Spell offers keep the one fixed feedback region and mounted effective-value lists.
-    expect(screen.getByRole('status', { name: 'Offer feedback' }).textContent).toContain(
-      'No current findings.',
-    );
-    expect(document.querySelectorAll('[aria-label="Effective trait values"]')).toHaveLength(3);
+    expect(dialogFinding(document.body)).toBeUndefined();
     expect(screen.queryByRole('button', { name: 'Add option' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Select Fallback Gold' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Start over' })).toBeNull();
@@ -1281,13 +1293,12 @@ describe('trait offer editor entry and dialog', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getAllByRole('button', { name: 'Rarify' })[0]).toHaveProperty(
+      expect(screen.getAllByRole('button', { name: /^Rarify / })[0]).toHaveProperty(
         'disabled',
         false,
       ),
     );
-    const rarify = screen.getAllByRole('button', { name: 'Rarify' })[0]!;
-    expect(rarify.classList.contains('secondary-action')).toBe(true);
+    const rarify = screen.getAllByRole('button', { name: /^Rarify / })[0]!;
     await user.click(rarify);
     const save = screen.getByRole('button', { name: 'Save trait offer' });
     expect(save).toHaveProperty('disabled', false);
@@ -1296,15 +1307,16 @@ describe('trait offer editor entry and dialog', () => {
     const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
     expect(saved.options[0]?.rarity).toBe('Common');
     expect(saved.rarificationActions).toEqual(['option1']);
-    await user.click(screen.getAllByRole('button', { name: 'Rarify' })[0]!);
-    await user.click(screen.getAllByRole('button', { name: 'Rarify' })[0]!);
-    const effectiveSummary = screen.getAllByLabelText('Effective trait values')[0];
+    await user.click(screen.getAllByRole('button', { name: /^Rarify / })[0]!);
+    await user.click(screen.getAllByRole('button', { name: /^Rarify / })[0]!);
+    const effectiveSummary = screen.getAllByLabelText('Final trait values')[0];
     if (effectiveSummary === undefined) {
-      throw new Error('effective trait summary is missing');
+      throw new Error('final trait summary is missing');
     }
-    expect(effectiveSummary.textContent).toContain('Effective rarityHeroic');
-    expect(effectiveSummary.textContent).toContain('Effective level');
-    expect(screen.getAllByRole('button', { name: 'Rarify' })[0]).toHaveProperty('disabled', true);
+    expect(effectiveSummary.textContent).toMatch(/Lvl \d+ · Heroic/);
+    // At Heroic the engine accepts no further click, so only the undo remains.
+    expect(screen.queryByRole('button', { name: 'Rarify Option 1' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Undo rarify Option 1' })).toBeTruthy();
     application.dispose();
   });
 
@@ -1386,10 +1398,14 @@ describe('trait offer editor entry and dialog', () => {
                       }),
                     }),
                     persephoneLevelBonusMaximums: Object.freeze([]),
+                    persephoneBaseLevels: [],
+                    jeweledPomLevels: [],
                     effectiveLevels: Object.freeze([]),
                   }),
                 ]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -1477,6 +1493,8 @@ describe('trait offer editor entry and dialog', () => {
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 supported,
               }),
             }),
@@ -1507,7 +1525,11 @@ describe('trait offer editor entry and dialog', () => {
       screen.getByRole('button', { name: 'Reject Option 2' }).getAttribute('aria-pressed'),
     ).toBe('false');
     await user.click(screen.getByRole('button', { name: 'Reject Option 2' }));
-    expect(screen.getAllByRole('button', { name: 'Rarify' })[1]).toHaveProperty('disabled', true);
+    // A rejected row cannot be rarified: its Rarify is hidden or disabled.
+    expect(
+      (screen.queryByRole('button', { name: 'Rarify Option 2' }) as HTMLButtonElement | null)
+        ?.disabled ?? true,
+    ).toBe(true);
     expect(screen.getAllByRole('radio', { name: 'Blocked by Rejected' })[0]).toHaveProperty(
       'disabled',
       true,
@@ -1574,6 +1596,8 @@ describe('trait offer editor entry and dialog', () => {
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 supported: true,
               }),
             }),
@@ -1642,6 +1666,8 @@ describe('trait offer editor entry and dialog', () => {
                   effectiveLevels: Object.freeze([6, 4, 2]),
                   findings: Object.freeze([]),
                   persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
+                  persephoneBaseLevels: Object.freeze([1, undefined, undefined]),
+                  jeweledPomLevels: [],
                   supported: true,
                 }),
               }),
@@ -1661,23 +1687,16 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
 
-    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone roll' });
-    expect((bonus as HTMLSelectElement).value).toBe('1');
-    await user.selectOptions(bonus, within(bonus).getByRole('option', { name: '3' }));
-    expect((bonus as HTMLSelectElement).value).toBe('2');
+    expect(await selectedRoll(user)).toBe('1');
+    await chooseRoll(user, 2);
+    expect(await selectedRoll(user)).toBe('2');
 
     view.rerender(
       <Provider store={application.store}>
         <TraitOfferEditor address={base.owner} interactions={interactionsFor(updatedValue)} />
       </Provider>,
     );
-    expect(
-      (
-        screen.getByRole('combobox', {
-          name: 'option1 Persephone roll',
-        }) as HTMLSelectElement
-      ).value,
-    ).toBe('5');
+    expect(await selectedRoll(user)).toBe('5');
     application.dispose();
   });
 
@@ -1776,6 +1795,8 @@ describe('trait offer editor entry and dialog', () => {
               effectiveLevels: Object.freeze([effectiveLevel, 4, 2]),
               findings: Object.freeze([]),
               persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
+              persephoneBaseLevels: Object.freeze([1, undefined, undefined]),
+              jeweledPomLevels: [],
               supported: true,
             }),
           }),
@@ -1815,9 +1836,8 @@ describe('trait offer editor entry and dialog', () => {
         />
       </Provider>,
     );
-    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone roll' });
-    await user.selectOptions(bonus, within(bonus).getByRole('option', { name: '3' }));
-    expect((bonus as HTMLSelectElement).value).toBe('2');
+    await chooseRoll(user, 2);
+    expect(await selectedRoll(user)).toBe('2');
 
     view.rerender(
       <Provider store={application.store}>
@@ -1827,13 +1847,7 @@ describe('trait offer editor entry and dialog', () => {
         />
       </Provider>,
     );
-    expect(
-      (
-        screen.getByRole('combobox', {
-          name: 'option1 Persephone roll',
-        }) as HTMLSelectElement
-      ).value,
-    ).toBe('2');
+    expect(await selectedRoll(user)).toBe('2');
     await waitFor(() =>
       expect(refreshedLoad).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1842,9 +1856,7 @@ describe('trait offer editor entry and dialog', () => {
       ),
     );
     await waitFor(() =>
-      expect(screen.getAllByLabelText('Effective trait values')[0]?.textContent).toContain(
-        'Effective level9',
-      ),
+      expect(screen.getAllByLabelText('Final trait values')[0]?.textContent).toContain('Lvl 9'),
     );
     application.dispose();
   });

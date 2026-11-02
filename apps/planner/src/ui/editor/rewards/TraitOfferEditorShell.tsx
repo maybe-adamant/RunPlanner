@@ -654,6 +654,7 @@ export function TraitOfferEditorShell({
                 return acquiredRarity === undefined ? {} : { acquiredRarity };
               })()}
               interaction={interaction}
+              echoLastRunBoonOpen={view === 'echoLastRunBoon'}
               onFeedback={reportOutcomeFeedback}
               onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}
               onUpdate={updateValue}

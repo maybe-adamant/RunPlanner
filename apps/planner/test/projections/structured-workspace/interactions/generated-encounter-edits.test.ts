@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  AuthoredEncounterCustomization,
-  AuthoredGeneratedEncounterCustomization,
-} from '@run-planner/engine/authored-project';
+import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engine/authored-project';
 import {
   bindGeneratedEncounterEdits,
   removeLastEnemy,
@@ -305,34 +302,25 @@ describe('bound generated encounter edits', () => {
       },
     ],
   };
-  const bind = (value: Generated, published: WorkspaceGeneratedEncounterAssessment | undefined) => {
-    const values: AuthoredEncounterCustomization[] = [];
-    const edits = bindGeneratedEncounterEdits(value, published, (next) => {
-      values.push(next);
-      return {
-        command: {
-          kind: 'ReplaceEncounterCustomization',
-          phase: undefined as never,
-          decisionKey: 'generatedComposition',
-          value: next,
-        },
-      };
-    });
-    return { edits, values };
-  };
   it('binds each edit to the current authored value', () => {
-    const { edits } = bind(complete, assessment);
-    expect(edits.setWaveCount(2).command.value).toEqual({ ...complete, waveCount: 2 });
-    expect(edits.setMenaceCount(3, 'Brawler', 4).command.value).toEqual(
+    const edits = bindGeneratedEncounterEdits(complete, assessment);
+    expect(edits.setWaveCount(2)).toEqual({ ...complete, waveCount: 2 });
+    expect(edits.setMenaceCount(3, 'Brawler', 4)).toEqual(
       setMenaceCount(complete, 3, 'Brawler', 4),
     );
   });
   it('reads wave highlight seeds from the published assessment', () => {
-    const { edits, values } = bind(composed, assessment);
-    edits.replaceWaveEnemies(3, ['Radiator', 'Casket'], ['Guard', 'Radiator']);
-    expect(wave(values[0] as Generated, 3)?.allocations).toEqual({ Guard: 2, Radiator: 3 });
-    const unassessed = bind(composed, undefined);
-    unassessed.edits.replaceWaveEnemies(3, ['Radiator', 'Casket'], ['Guard', 'Radiator']);
-    expect(wave(unassessed.values[0] as Generated, 3)?.allocations).toEqual({ Radiator: 3 });
+    const assessed = bindGeneratedEncounterEdits(composed, assessment).replaceWaveEnemies(
+      3,
+      ['Radiator', 'Casket'],
+      ['Guard', 'Radiator'],
+    );
+    expect(wave(assessed, 3)?.allocations).toEqual({ Guard: 2, Radiator: 3 });
+    const unassessed = bindGeneratedEncounterEdits(composed, undefined).replaceWaveEnemies(
+      3,
+      ['Radiator', 'Casket'],
+      ['Guard', 'Radiator'],
+    );
+    expect(wave(unassessed, 3)?.allocations).toEqual({ Radiator: 3 });
   });
 });

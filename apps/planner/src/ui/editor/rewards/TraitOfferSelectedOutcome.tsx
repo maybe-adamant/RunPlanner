@@ -191,6 +191,7 @@ export function TraitOfferSelectedOutcome({
   interaction,
   value,
   onFeedback = ignoreOutcomeFeedback,
+  echoLastRunBoonOpen = false,
   onOpenEchoLastRunBoon,
   onUpdate,
 }: {
@@ -199,6 +200,8 @@ export function TraitOfferSelectedOutcome({
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly value: AuthoredTraitOfferTraits;
   readonly onFeedback?: OutcomeFeedbackReporter;
+  /** The nested Boon Boon Boon dialog is open and owns the choice's control id. */
+  readonly echoLastRunBoonOpen?: boolean;
   readonly onOpenEchoLastRunBoon: () => void;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
@@ -427,7 +430,10 @@ export function TraitOfferSelectedOutcome({
       {echoLastRunChild === undefined ? null : (
         <SelectedOutcomeRow label="Boon Boon Boon">
           <button
-            {...findingTarget(echoLastRunChild.child.address)}
+            {...findingTarget(
+              echoLastRunChild.child.address,
+              `${semanticOwnerControlElementId(echoLastRunChild.child.address)}${echoLastRunBoonOpen ? '-launcher' : ''}`,
+            )}
             aria-label="Boon Boon Boon choice"
             className="contextual-picker-trigger"
             onClick={onOpenEchoLastRunBoon}

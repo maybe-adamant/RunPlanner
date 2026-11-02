@@ -1,7 +1,7 @@
 import * as Popover from '@radix-ui/react-popover';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engine/authored-project';
-import { EditorDialogTitleAction } from '@planner/ui/controls/EditorDialog';
+import { EditorDialogTitleAction, type EditorDialogIssue } from '@planner/ui/controls/EditorDialog';
 import type {
   WorkspaceEncounterComposition,
   WorkspaceEncounterCustomizationDraft,
@@ -1117,25 +1117,28 @@ export function EncounterCompositionControl({
 
 /** Issue messages of an assessed composition, each named by its field or wave. */
 // eslint-disable-next-line react-refresh/only-export-components -- Formats the control's own assessment for the dialog region.
-export function compositionIssueMessages(
+export function compositionIssues(
   assessment: WorkspaceEncounterCustomizationDraft['generatedAssessment'] | undefined,
-): readonly string[] {
+): readonly EditorDialogIssue[] {
   return (
     assessment?.issues.map(
       (issue) =>
-        `${
-          issue.waveIndex === undefined
-            ? issue.field === undefined
-              ? 'Composition'
-              : {
-                  baseRoll: 'Budget',
-                  waveCount: 'Waves',
-                  highlight: 'Shared Enemy',
-                  fangs: 'Fangs',
-                  enemies: 'Enemies',
-                }[issue.field]
-            : `Wave ${issue.waveIndex}`
-        }: ${issue.message}`,
+        [
+          `composition-${issue.key}`,
+          `${
+            issue.waveIndex === undefined
+              ? issue.field === undefined
+                ? 'Composition'
+                : {
+                    baseRoll: 'Budget',
+                    waveCount: 'Waves',
+                    highlight: 'Shared Enemy',
+                    fangs: 'Fangs',
+                    enemies: 'Enemies',
+                  }[issue.field]
+              : `Wave ${issue.waveIndex}`
+          }: ${issue.message}`,
+        ] as const,
     ) ?? []
   );
 }

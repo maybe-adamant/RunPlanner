@@ -47,7 +47,8 @@ export function TraitOfferOption<TraitValue>({
   onTraitOpenChange,
   pickable = true,
   readOnly = false,
-  reserveRarify = false,
+  rarifiable = false,
+  rarified = false,
   persephoneLevelBonus,
   persephoneLevelRolls,
   jeweledPomLevels,
@@ -100,8 +101,10 @@ export function TraitOfferOption<TraitValue>({
   readonly pickable?: boolean;
   /** Shows the row's values without editing them. */
   readonly readOnly?: boolean;
-  /** Shows a disabled Rarify on a row of a screen rerolled away. */
-  readonly reserveRarify?: boolean;
+  /** The engine accepts a Rarify click on this row now, uses left included. */
+  readonly rarifiable?: boolean;
+  /** The row has a Rarify click to undo. */
+  readonly rarified?: boolean;
   readonly persephoneLevelBonus?: number;
   readonly persephoneLevelRolls?: TraitOfferOptionFeedback['persephoneLevelRolls'];
   /** Levels Jeweled Pom adds to this row. */
@@ -154,15 +157,6 @@ export function TraitOfferOption<TraitValue>({
   const fixedRarityPresentation =
     fixedRarity === undefined ? undefined : traitRarityPresentation(infusion, fixedRarity);
   const shownOnly = !pickable;
-  // Duo, Legendary and Infusion rows cannot be rarified; without uses left only an undo is worth showing.
-  const shownRarity = fixedRarity ?? rarityValue;
-  const showRarify =
-    (onRarify !== undefined || (shownOnly && reserveRarify)) &&
-    fixedRarity === undefined &&
-    !infusion &&
-    shownRarity !== 'Duo' &&
-    shownRarity !== 'Legendary' &&
-    (onUnrarify !== undefined || (rarifySource !== undefined && rarifySource.remainingUses > 0));
   // The base level is roll 0's; the badge shows the levels the chosen roll adds over it.
   const rollShown =
     showPersephoneBonus &&
@@ -252,38 +246,37 @@ export function TraitOfferOption<TraitValue>({
             </div>
           </div>
         )}
-        {showRarify ? (
-          <>
-            <button
-              aria-label={`Rarify ${legend}`}
-              className="trait-option-rarify"
-              disabled={
-                onRarify === undefined || rarifyDisabled || rarifySource?.remainingUses === 0
-              }
-              onClick={onRarify}
-              type="button"
-            >
-              <img alt="" src={rarifyIcon} />
-              <span aria-hidden="true" className="trait-option-rarify-arrow" data-direction="up">
-                ▲
-              </span>
-              {rarifySource === undefined ? null : (
-                <span className="trait-option-rarify-charges">{rarifySource.remainingUses}</span>
-              )}
-            </button>
-            <button
-              aria-label={`Undo rarify ${legend}`}
-              className="trait-option-rarify"
-              disabled={onUnrarify === undefined}
-              onClick={onUnrarify}
-              type="button"
-            >
-              <img alt="" src={rarifyIcon} />
-              <span aria-hidden="true" className="trait-option-rarify-arrow" data-direction="down">
-                ▼
-              </span>
-            </button>
-          </>
+        {/* Rarify shows only where the engine accepts a click; Undo, wherever a click was made. */}
+        {rarifiable ? (
+          <button
+            aria-label={`Rarify ${legend}`}
+            className="trait-option-rarify"
+            disabled={onRarify === undefined || rarifyDisabled}
+            onClick={onRarify}
+            type="button"
+          >
+            <img alt="" src={rarifyIcon} />
+            <span aria-hidden="true" className="trait-option-rarify-arrow" data-direction="up">
+              ▲
+            </span>
+            {rarifySource === undefined ? null : (
+              <span className="trait-option-rarify-charges">{rarifySource.remainingUses}</span>
+            )}
+          </button>
+        ) : null}
+        {rarified ? (
+          <button
+            aria-label={`Undo rarify ${legend}`}
+            className="trait-option-rarify"
+            disabled={onUnrarify === undefined}
+            onClick={onUnrarify}
+            type="button"
+          >
+            <img alt="" src={rarifyIcon} />
+            <span aria-hidden="true" className="trait-option-rarify-arrow" data-direction="down">
+              ▼
+            </span>
+          </button>
         ) : null}
       </div>
       {!levelLine ? null : (

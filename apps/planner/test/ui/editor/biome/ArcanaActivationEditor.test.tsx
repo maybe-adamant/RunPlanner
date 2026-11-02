@@ -81,4 +81,60 @@ describe('Arcana activation editor', () => {
     );
     application.dispose();
   });
+
+  it('blocks Save only on a finding the draft introduces, never an inherited one', async () => {
+    const application = createApplication();
+    const owner = createJudgmentArcanaAddress(
+      createOccurrenceAddress(createBiomeAddress('Underworld', 'F'), createOccurrenceId('boss')),
+      'Encounter',
+    );
+    const unavailable = new Set(['ArcanaX', 'ArcanaB']);
+    const keys = ['ArcanaA', 'ArcanaB', 'ArcanaC', 'ArcanaX'];
+    const control: WorkspaceJudgmentArcanaInteraction = {
+      choices: keys.map((value) => ({ value, label: value.replace('Arcana', 'Arcana ') })),
+      intentFor: () => ({ command: { kind: 'ReplaceJudgmentArcana' } }) as never,
+      key: 'judgment',
+      load: (draft: readonly string[] = ['ArcanaX', 'ArcanaA']) =>
+        ({
+          kind: 'judgmentArcana',
+          result: {
+            activeArcana: [],
+            inactiveArcanaKeys: keys,
+            rarity: 'Common',
+            selectedPossible: true,
+            findings: draft
+              .filter((key) => unavailable.has(key))
+              .map((key) => ({
+                code: 'judgmentOutcomeTargetUnavailable',
+                phase: 'rewardGeneration',
+                origin: owner,
+                evidence: { key, reason: 'unavailable' },
+              })),
+          },
+        }) as unknown as CandidateProjectionEvaluation,
+      owner,
+      value: ['ArcanaX', 'ArcanaA'],
+    };
+    render(
+      <Provider store={application.store}>
+        <ArcanaActivationEditor
+          control={control}
+          onClose={() => undefined}
+          requiredCount={2}
+          title="Judgment editor"
+        />
+      </Provider>,
+    );
+    const user = userEvent.setup();
+    const save = () => screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement;
+    // Swapping the valid card keeps only the inherited finding.
+    await user.click(await screen.findByRole('button', { name: /Arcana A/ }));
+    await user.click(screen.getByRole('button', { name: /Arcana C/ }));
+    await waitFor(() => expect(save().disabled).toBe(false));
+    // Drawing another unavailable card introduces a finding.
+    await user.click(screen.getByRole('button', { name: /Arcana C/ }));
+    await user.click(screen.getByRole('button', { name: /Arcana B/ }));
+    await waitFor(() => expect(save().disabled).toBe(true));
+    application.dispose();
+  });
 });

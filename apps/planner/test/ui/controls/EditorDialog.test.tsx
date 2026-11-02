@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { Provider } from 'react-redux';
@@ -133,6 +133,44 @@ describe('editor dialog contract', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }));
     // The footer is the only visible exit; the header carries no Close.
     expect(screen.getByRole('dialog').querySelector('header button')).toBeNull();
+    application.dispose();
+  });
+
+  it('puts the first finding, its count of more, Cancel and Save on a header-layout title bar', async () => {
+    const application = createApplication();
+    const onCancel = vi.fn();
+    const actions = (issues: readonly (readonly [string, string])[]) => (
+      <Provider store={application.store}>
+        <EditorDialog layout="header" model={{ kind: 'draft', onCancel }} title="Editor">
+          <EditorDialogDraftActions
+            issues={issues}
+            onCancel={onCancel}
+            onSave={() => undefined}
+            saveDisabled={issues.length > 0}
+            secondary={<button type="button">Clear</button>}
+          />
+        </EditorDialog>
+      </Provider>
+    );
+    const view = render(
+      actions([
+        ['a', 'First issue'],
+        ['b', 'Second issue'],
+        ['c', 'Third issue'],
+      ]),
+    );
+    const header = screen.getByRole('dialog').querySelector('header')!;
+    const finding = within(header).getByRole('button', { name: 'First issue (2 more)' });
+    expect(finding.textContent).toContain('+2');
+    expect(within(header).getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
+    // Secondary actions stay in the body.
+    expect(within(header).queryByRole('button', { name: 'Clear' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeTruthy();
+    await userEvent.setup().click(within(header).getByRole('button', { name: 'Cancel' }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    view.rerender(actions([]));
+    expect(header.querySelector('.editor-dialog-finding')).toBeNull();
+    expect(within(header).getByRole('button', { name: 'Save' })).toHaveProperty('disabled', false);
     application.dispose();
   });
 

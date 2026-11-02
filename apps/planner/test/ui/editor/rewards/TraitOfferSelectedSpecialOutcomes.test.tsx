@@ -66,6 +66,7 @@ import {
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { hintOf } from '@planner-test/support/hints';
+import { dialogFinding, HeaderDialog } from '@planner-test/support/editor-dialog';
 
 afterEach(cleanup);
 
@@ -679,6 +680,8 @@ describe('selected outcomes', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -882,6 +885,8 @@ describe('selected outcomes', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -1048,6 +1053,8 @@ describe('selected outcomes', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -1184,6 +1191,8 @@ describe('selected outcomes', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -1381,6 +1390,8 @@ describe('selected outcomes', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -1471,6 +1482,8 @@ describe('selected outcomes', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -1553,6 +1566,8 @@ describe('selected outcomes', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -1571,23 +1586,25 @@ describe('selected outcomes', () => {
     });
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={base.owner}
-          interactions={
-            Object.freeze({
-              ...workspace.interactions,
-              traitOffers: new Map([[base.key, interaction]]),
-            }) as unknown as WorkspaceInteractionCatalog
-          }
-          onCommit={() => undefined}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={base.owner}
+            interactions={
+              Object.freeze({
+                ...workspace.interactions,
+                traitOffers: new Map([[base.key, interaction]]),
+              }) as unknown as WorkspaceInteractionCatalog
+            }
+            onCommit={() => undefined}
+          />
+        </HeaderDialog>
       </Provider>,
     );
     // Branch disagreement is dialog feedback; the preview keeps its static shape.
-    const message = screen.getByText('Ransom result differs across current route branches.');
-    expect(screen.getByRole('status', { name: 'Offer feedback' }).contains(message)).toBe(true);
+    const message = 'Ransom result differs across current route branches.';
+    expect(dialogFinding(document.body)).toContain(message);
     const preview = screen.getByRole('group', { name: 'Ransom preview' });
-    expect(preview.contains(message)).toBe(false);
+    expect(preview.textContent).not.toContain(message);
     expect(within(preview).getByLabelText('Not applicable').textContent).toBe('—');
     expect(screen.queryByText(/Removes .* opposing traits/)).toBeNull();
     application.dispose();
@@ -1953,7 +1970,9 @@ describe('selected outcomes', () => {
       });
       render(
         <Provider store={application.store}>
-          <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+          <HeaderDialog>
+            <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+          </HeaderDialog>
         </Provider>,
       );
 
@@ -1971,41 +1990,40 @@ describe('selected outcomes', () => {
       if (effect === 'activateArcana') {
         const user = userEvent.setup();
         await user.click(screen.getByRole('button', { name: 'Red Citrine Arcana' }));
-        const popup = screen.getByRole('dialog', { name: 'Red Citrine Arcana' });
+        const popup = screen.getByRole('dialog', { name: /^Circe › / });
         for (const selected of within(popup).getAllByRole('button', { pressed: true })) {
           await user.click(selected);
         }
         await user.click(within(popup).getByRole('button', { name: 'Save' }));
-        expect(screen.queryByRole('dialog', { name: 'Red Citrine Arcana' })).toBeNull();
+        expect(screen.queryByRole('dialog', { name: /^Circe › / })).toBeNull();
         expect(screen.queryByText(retainedText)).toBeNull();
       }
       // Unavailability is dialog feedback, not text inside the Circe control group.
-      const feedback = screen.getByRole('status', { name: 'Offer feedback' });
+      const offerFinding = () => dialogFinding(screen.getAllByRole('dialog')[0]!) ?? '';
       const circeGroup = screen
         .getByRole('button', { name: controlLabel })
         .closest<HTMLElement>('.trait-outcome-row');
       expect(circeGroup?.hidden).toBe(false);
       if (!outerAvailable) {
-        const message = screen.getByText('This Circe trait has no available outcome here.');
-        expect(feedback.contains(message)).toBe(true);
-        expect(circeGroup?.contains(message)).toBe(false);
+        const message = 'This Circe trait has no available outcome here.';
+        expect(offerFinding()).toContain(message);
+        expect(circeGroup?.textContent).not.toContain(message);
       }
       if (!branchAgreement) {
-        const message = within(feedback).getByText(
-          'No outcome is supported across every route branch.',
-        );
-        expect(circeGroup?.contains(message)).toBe(false);
+        const message = 'No outcome is supported across every route branch.';
+        expect(offerFinding()).toContain(message);
+        expect(circeGroup?.textContent).not.toContain(message);
         // An open Circe dialog repeats the reason its Save is disabled.
         if (effect === 'promoteArcana')
-          expect(screen.getByRole('status', { name: 'Circe feedback' }).textContent).toContain(
-            'No outcome is supported across every route branch.',
+          expect(dialogFinding(screen.getByRole('dialog', { name: /^Circe › / }))).toContain(
+            message,
           );
       }
       application.dispose();
     },
   );
 
-  it('reports Latest Model branch disagreement in the offer feedback region, not above its picker', async () => {
+  it('reports Latest Model branch disagreement in the dialog header, not above its picker', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState())!;
@@ -2048,6 +2066,8 @@ describe('selected outcomes', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneBaseLevels: [],
+                jeweledPomLevels: [],
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -2065,31 +2085,31 @@ describe('selected outcomes', () => {
     } as typeof base;
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={base.owner}
-          interactions={
-            Object.freeze({
-              ...workspace.interactions,
-              traitOffers: new Map([[base.key, interaction]]),
-            }) as unknown as WorkspaceInteractionCatalog
-          }
-          onCommit={() => undefined}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={base.owner}
+            interactions={
+              Object.freeze({
+                ...workspace.interactions,
+                traitOffers: new Map([[base.key, interaction]]),
+              }) as unknown as WorkspaceInteractionCatalog
+            }
+            onCommit={() => undefined}
+          />
+        </HeaderDialog>
       </Provider>,
     );
     const picker = await screen.findByLabelText('Latest Model Hammer 1');
     expect((picker as HTMLButtonElement).disabled).toBe(true);
-    const message = screen.getByText('No target count is supported across every route branch.');
-    const feedback = screen.getByRole('status', { name: 'Offer feedback' });
-    expect(feedback.contains(message)).toBe(true);
-    expect(feedback.textContent).not.toContain('No current findings.');
-    expect(screen.getByRole('region', { name: 'Selected trait outcome' }).contains(message)).toBe(
-      false,
-    );
+    const message = 'No target count is supported across every route branch.';
+    expect(dialogFinding(document.body)).toContain(message);
+    expect(
+      screen.getByRole('region', { name: 'Selected trait outcome' }).textContent,
+    ).not.toContain(message);
     application.dispose();
   });
 
-  it('reports an unassessable retained Stone outcome in the offer feedback region and keeps its clear action', async () => {
+  it('reports an unassessable retained Stone outcome in the dialog header and keeps its clear action', async () => {
     const application = createApplication();
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(2, 1));
     const address = createTraitOfferAddress(reward, 'source');
@@ -2142,38 +2162,29 @@ describe('selected outcomes', () => {
     const user = userEvent.setup();
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor
-          address={base.owner}
-          interactions={
-            Object.freeze({
-              ...workspace.interactions,
-              traitOffers: new Map([[base.key, interaction]]),
-            }) as unknown as WorkspaceInteractionCatalog
-          }
-          onCommit={() => undefined}
-        />
+        <HeaderDialog>
+          <TraitOfferEditor
+            address={base.owner}
+            interactions={
+              Object.freeze({
+                ...workspace.interactions,
+                traitOffers: new Map([[base.key, interaction]]),
+              }) as unknown as WorkspaceInteractionCatalog
+            }
+            onCommit={() => undefined}
+          />
+        </HeaderDialog>
       </Provider>,
     );
     const stone = await screen.findByRole('group', { name: 'Concave Stone outcome' });
-    const message = await screen.findByText(
-      'This retained Stone outcome cannot be assessed in the current route context.',
-    );
-    expect(screen.getByRole('status', { name: 'Offer feedback' }).contains(message)).toBe(true);
-    expect(stone.contains(message)).toBe(false);
+    const message = 'This retained Stone outcome cannot be assessed in the current route context.';
+    await waitFor(() => expect(dialogFinding(document.body)).toContain(message));
+    expect(stone.textContent).not.toContain(message);
     const clear = within(stone).getByRole('button', {
       name: 'Clear retained Concave Stone result',
     });
     await user.click(clear);
-    await waitFor(() =>
-      expect(
-        screen.queryByText(
-          'This retained Stone outcome cannot be assessed in the current route context.',
-        ),
-      ).toBeNull(),
-    );
-    expect(screen.getByRole('status', { name: 'Offer feedback' }).textContent).toContain(
-      'No current findings.',
-    );
+    await waitFor(() => expect(dialogFinding(document.body) ?? '').not.toContain(message));
     application.dispose();
   });
 });

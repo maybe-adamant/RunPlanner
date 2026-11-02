@@ -90,12 +90,12 @@ describe('generated enemy presentation', () => {
       introductionLabel,
     );
     expect(items(shared).map((item) => [item.value, item.label])).toEqual([
-      ['Guard', 'Whisper (5)'],
-      ['Guard_Elite', 'Elite Whisper (12)'],
-      ['Brawler', 'Wastrel (18)'],
-      ['Brawler_Elite', 'Elite Wastrel (28)'],
+      ['Guard', 'Whisper · 5'],
+      ['Guard_Elite', 'Elite Whisper · 12'],
+      ['Brawler', 'Wastrel · 18'],
+      ['Brawler_Elite', 'Elite Wastrel · 28'],
     ]);
-    expect(shared.selected?.label).toBe('Elite Whisper (12)');
+    expect(shared.selected?.label).toBe('Elite Whisper · 12');
     const assessment = {
       ...baseAssessment,
       waves: [
@@ -122,12 +122,12 @@ describe('generated enemy presentation', () => {
       ).picker.sections.flatMap((section) => section.items);
     expect(draft(0)).toEqual([
       expect.objectContaining({
-        label: 'Whisper (5)',
+        label: 'Whisper · 5',
         value: { kind: 'confirmSeed', key: 'Guard' },
       }),
     ]);
     expect(draft(1)).toContainEqual(
-      expect.objectContaining({ label: 'Wastrel (18)', value: { kind: 'enemy', key: 'Brawler' } }),
+      expect.objectContaining({ label: 'Wastrel · 18', value: { kind: 'enemy', key: 'Brawler' } }),
     );
   });
 
@@ -144,7 +144,7 @@ describe('generated enemy presentation', () => {
       labels,
       introductionLabel,
     ).issues;
-    expect(messages).toEqual([
+    expect(messages).toMatchObject([
       {
         message: 'Converted Whisper requests exceed its current count. Reduce Menace Count.',
         waveIndex: 1,
@@ -222,7 +222,7 @@ describe('generated enemy presentation', () => {
       'Spindle is not introduced yet: select Spindle introduction for this encounter, or remove Spindle.';
     expect(
       projectGeneratedEncounterAssessment(assessment, introductionLabels, introductionLabel).issues,
-    ).toEqual([{ message: repair, waveIndex: 1, field: 'enemies' }]);
+    ).toMatchObject([{ message: repair, waveIndex: 1, field: 'enemies' }]);
     const excluded = { label: 'Spindle', disabled: true, explanations: [repair] };
     expect(
       projectGeneratedEncounterHighlightPicker(
@@ -371,14 +371,14 @@ describe('encounter composition presentation', () => {
     if (value === undefined) throw new Error(`${key} has no composition`);
     return projectEncounterComposition(value);
   };
-  it('names each disposition and presents elite spawns', () => {
+  it('marks only an uncustomized generated phase and presents elite spawns', () => {
     const mourner = view('MournerIntro');
-    expect(mourner.dispositionLabel).toBe('This encounter is fixed');
+    expect(mourner.statusLabel).toBeUndefined();
     expect(mourner.waves.at(-1)?.spawns).toEqual([
       { enemyKey: 'Mourner_Elite', label: 'Elite Mourner', count: 1 },
     ]);
-    expect(view('RadiatorIntro').dispositionLabel).toBe('This encounter’s first wave is fixed');
-    expect(view('GeneratedF').dispositionLabel).toBe('Not customized');
+    expect(view('RadiatorIntro').statusLabel).toBeUndefined();
+    expect(view('GeneratedF').statusLabel).toBe('Not customized');
     expect(encounterCompositionView(catalog, { selectedEncounterDefinitionKey: 'Shop' })).toBe(
       undefined,
     );
@@ -400,7 +400,6 @@ describe('encounter composition presentation', () => {
       ).workspace.interactions.encounterCustomizations.get(semanticAddressKey(phase))
         ?.generatedComposition;
     expect(composed(3)).toMatchObject({
-      dispositionLabel: 'This encounter is generated',
       editable: true,
       sharedEnemy: true,
       waveCount: { value: 3 },

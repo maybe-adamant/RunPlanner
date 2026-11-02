@@ -14,6 +14,7 @@ import {
 } from '@planner-test/support/finding-states';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { forceApolloRerolledStartProject } from '@planner-test/support/force-apollo-rerolls';
+import { dialogFinding } from '@planner-test/support/editor-dialog';
 
 afterEach(cleanup);
 
@@ -40,8 +41,9 @@ async function openMarkedTraitDialog(project: ProjectDocument) {
   return { application, dialog: await screen.findByRole('dialog'), launcher, view };
 }
 
-function feedback(name: string): string {
-  return within(screen.getByRole('dialog')).getByRole('status', { name }).textContent ?? '';
+/** The topmost dialog's header finding. */
+function feedback(): string {
+  return dialogFinding(screen.getAllByRole('dialog').at(-1)!) ?? '';
 }
 
 /** Picks the first offered choice of each named picker in order. */
@@ -81,9 +83,9 @@ it.each([
     );
     await waitFor(() => expect(marked(dialog)).toEqual([control]));
     expect(launcher.getAttribute('data-has-findings')).toBe('true');
-    expect(feedback('Offer feedback')).toContain(message);
+    expect(feedback()).toContain(message);
     await pickFirst(view.user, pickers);
-    await waitFor(() => expect(feedback('Offer feedback')).not.toContain(message));
+    await waitFor(() => expect(feedback()).not.toContain(message));
     application.dispose();
   },
 );
@@ -94,14 +96,15 @@ it('marks an unavailable Boon Boon Boon row on its nested launcher, then on the 
     unavailableEchoOptionProject(),
   );
   await waitFor(() => expect(marked(dialog)).toEqual(['Boon Boon Boon choice']));
-  expect(feedback('Offer feedback')).toContain(message);
+  expect(feedback()).toContain(message);
   await view.user.click(within(dialog).getByRole('button', { name: 'Boon Boon Boon choice' }));
-  await waitFor(() => expect(marked(dialog)).toEqual(['Boon Boon Boon outcome 1']));
+  const nested = await screen.findByRole('dialog', { name: /› Boon Boon Boon$/ });
+  await waitFor(() => expect(marked(nested)).toEqual(['Boon Boon Boon outcome 1']));
   expect(launcher.getAttribute('data-has-findings')).toBe('true');
-  expect(feedback('Choice feedback')).toContain(message);
+  expect(feedback()).toContain(message);
   await view.user.click(screen.getByLabelText('Boon Boon Boon outcome 1'));
   await view.user.click(await screen.findByRole('option', { name: /^Passion Rush/ }));
-  await waitFor(() => expect(feedback('Choice feedback')).not.toContain(message));
+  await waitFor(() => expect(feedback()).not.toContain(message));
   application.dispose();
 });
 
@@ -147,8 +150,8 @@ it('opens on the earlier screen whose Rarify click no use is left for', async ()
   const tab = within(dialog).getByRole('tab', { name: 'Offer' });
   expect(tab.getAttribute('aria-selected')).toBe('true');
   expect(tab.getAttribute('data-has-findings')).toBe('true');
-  expect(feedback('Offer feedback')).toContain('Calling Card rarification unavailable');
+  expect(feedback()).toContain('Calling Card rarification unavailable');
   await userEvent.setup().click(within(dialog).getByRole('tab', { name: 'Reroll 1' }));
-  expect(feedback('Offer feedback')).not.toContain('Calling Card rarification unavailable');
+  expect(feedback()).not.toContain('Calling Card rarification unavailable');
   application.dispose();
 });

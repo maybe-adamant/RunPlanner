@@ -37,6 +37,7 @@ import {
   PomResolutionLauncher,
 } from '@planner/ui/editor/rewards/PomResolutionEditor';
 import { hintOf } from '@planner-test/support/hints';
+import { dialogFinding, renderInHeaderDialog } from '@planner-test/support/editor-dialog';
 
 /** The published cost schedule a fixture screen hands the tabs. */
 const nextCost = (fromCount: number): number => fromCount + 1;
@@ -371,9 +372,9 @@ describe('Pom resolution editor', () => {
       },
     };
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={onCommit} />);
-    await user.click(screen.getByRole('button', { name: 'Reroll · costs 10' }));
+    await user.click(screen.getByRole('button', { name: 'Reroll, costs 10' }));
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Offer', 'Reroll 1']);
-    const atMax = screen.getByRole('button', { name: 'Reroll · costs 20' });
+    const atMax = screen.getByRole('button', { name: 'Reroll, costs 20' });
     expect((atMax as HTMLButtonElement).disabled).toBe(true);
     expect(hintOf(atMax)).toBe('No rerolls left.');
     expect(screen.getAllByRole('radio')).toHaveLength(2);
@@ -395,7 +396,7 @@ describe('Pom resolution editor', () => {
       selectedTraitKey: 'A',
       rerolledScreens: [{ offeredTraitKeys: ['C', 'B'] }],
     });
-    await user.click(screen.getByRole('button', { name: 'Remove last reroll' }));
+    await user.click(screen.getByRole('button', { name: 'Undo last reroll' }));
     await user.click(screen.getByRole('button', { name: 'Save Pom' }));
     expect(onCommit).toHaveBeenLastCalledWith({
       kind: 'choice',
@@ -404,7 +405,7 @@ describe('Pom resolution editor', () => {
       rerolledScreens: [],
     });
     // A screen rerolled again opens read-only.
-    await user.click(screen.getByRole('button', { name: 'Reroll · costs 10' }));
+    await user.click(screen.getByRole('button', { name: 'Reroll, costs 10' }));
     await user.click(screen.getByRole('tab', { name: 'Offer' }));
     expect(screen.getByRole('button', { name: 'Edit' }).getAttribute('aria-pressed')).toBe('false');
   });
@@ -465,8 +466,10 @@ describe('Pom resolution editor', () => {
       }),
       screenRerolls: { count: 1, maxCount: 2, lockAtMax: 'poolShort', nextCost },
     };
-    render(<PomResolutionEditor interaction={editorInteraction} onCommit={() => undefined} />);
-    const feedback = () => screen.getByRole('status', { name: 'Pom feedback' }).textContent;
+    const view = renderInHeaderDialog(
+      <PomResolutionEditor interaction={editorInteraction} onCommit={() => undefined} />,
+    );
+    const feedback = () => dialogFinding(document.body) ?? '';
     await waitFor(() =>
       expect(feedback()).toContain('One of the previous items is always replaced'),
     );
@@ -481,6 +484,7 @@ describe('Pom resolution editor', () => {
     await user.click(screen.getByRole('tab', { name: 'Offer' }));
     expect(feedback()).not.toContain('One of the previous items is always replaced');
     expect(feedback()).toContain('Pom target unavailable');
+    view.application.dispose();
   });
 
   it('names the earlier screen to fix when only it blocks Save', async () => {
@@ -503,12 +507,11 @@ describe('Pom resolution editor', () => {
       }),
       screenRerolls: { count: 2, maxCount: 3, lockAtMax: 'poolShort', nextCost },
     };
-    render(<PomResolutionEditor interaction={editorInteraction} onCommit={() => undefined} />);
-    await waitFor(() =>
-      expect(screen.getByRole('status', { name: 'Pom feedback' }).textContent).toContain(
-        'Reroll 1 needs a fix.',
-      ),
+    const view = renderInHeaderDialog(
+      <PomResolutionEditor interaction={editorInteraction} onCommit={() => undefined} />,
     );
+    await waitFor(() => expect(dialogFinding(document.body)).toContain('Reroll 1 needs a fix.'));
+    view.application.dispose();
   });
 
   it('preserves a retained partial visible Pom instead of replacing it with defaults', async () => {
@@ -529,14 +532,9 @@ describe('Pom resolution editor', () => {
     expect(screen.getByRole('button', { name: 'Pom target 2' }).textContent).toContain(
       'Choose a trait',
     );
-    const routeState = screen.getByRole('button', { name: 'Route state' });
-    expect(routeState).toHaveProperty('disabled', true);
-    expect(hintOf(routeState)).toBe('One route state applies to this Pom.');
-    expect(routeState.textContent).toContain('Route state 1');
   });
 
-  it('switches correlated route-state surfaces without unioning their target domains', async () => {
-    const user = userEvent.setup();
+  it('reports a Pom reached in more than one state as a fault', async () => {
     const editorInteraction = interaction({
       value: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null },
       load: () =>
@@ -553,13 +551,7 @@ describe('Pom resolution editor', () => {
     });
 
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={vi.fn()} />);
-    await screen.findByLabelText('Route state');
-    await user.click(screen.getByRole('button', { name: 'Route state' }));
-    await user.click(screen.getByRole('option', { name: 'Route state 2' }));
-    expect(screen.getByRole('button', { name: 'Pom target 1' }).textContent).toContain('Trait B');
-    await user.click(screen.getByRole('button', { name: 'Pom target 1' }));
-    expect(screen.getByRole('option', { name: 'Trait B' })).not.toBeNull();
-    expect(screen.queryByRole('option', { name: 'Trait A' })).toBeNull();
+    expect((await screen.findByRole('alert')).textContent).toContain('more than one state');
   });
 
   it('pins a stale random target until the author selects an eligible replacement', async () => {
@@ -577,13 +569,11 @@ describe('Pom resolution editor', () => {
       },
     });
 
-    render(<PomResolutionEditor interaction={editorInteraction} onCommit={onCommit} />);
-    // The region uses the shared Pom finding copy.
-    await waitFor(() =>
-      expect(screen.getByRole('status', { name: 'Pom feedback' }).textContent).toContain(
-        'Pom target unavailable',
-      ),
+    const view = renderInHeaderDialog(
+      <PomResolutionEditor interaction={editorInteraction} onCommit={onCommit} />,
     );
+    // The header uses the shared Pom finding copy.
+    await waitFor(() => expect(dialogFinding(document.body)).toContain('Pom target unavailable'));
     await user.click(screen.getByRole('button', { name: 'Recorded random Pom target' }));
     expect(screen.getByRole('option', { name: /Trait Stale/ })).not.toBeNull();
     await user.click(screen.getByRole('option', { name: 'Trait A' }));
@@ -594,6 +584,7 @@ describe('Pom resolution editor', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Save Pom' }));
     expect(onCommit).toHaveBeenCalledWith({ kind: 'random', targetTraitKey: 'A' });
+    view.application.dispose();
   });
 
   it('keeps its draft and rebinds evaluation when only the context changes', async () => {

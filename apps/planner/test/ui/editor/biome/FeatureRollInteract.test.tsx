@@ -68,7 +68,7 @@ it('rerolls the Well from its Timeline entry and buys a restocked slot with its 
 
   await view.user.click(interact());
   await view.user.click(
-    within(await screen.findByRole('listbox')).getByRole('option', { name: /^Reroll · costs 1/ }),
+    within(await screen.findByRole('listbox')).getByRole('option', { name: /^Reroll, costs 1/ }),
   );
   await waitFor(() =>
     expect(roomOrder(view.application).at(-1)).toMatchObject({ kind: 'rerollStygianWell' }),
@@ -111,7 +111,7 @@ it('drops an abandoned blank-slot pick and disables the entry once everything is
   const interact = () => screen.getByRole('button', { name: 'Stygian Well' });
   await view.user.click(interact());
   await view.user.click(
-    within(await screen.findByRole('listbox')).getByRole('option', { name: /^Reroll · costs 1/ }),
+    within(await screen.findByRole('listbox')).getByRole('option', { name: /^Reroll, costs 1/ }),
   );
   await view.user.click(interact());
   await view.user.click(

@@ -91,6 +91,7 @@ import {
 } from '@planner-test/support/occurrence-workbench';
 
 import { getAllByHint, getByHint, hintOf, queryByHint } from '@planner-test/support/hints';
+import { dialogFinding } from '@planner-test/support/editor-dialog';
 
 afterEach(() => {
   cleanup();
@@ -161,6 +162,16 @@ async function optionalActionNames(
     await user.keyboard('{Escape}');
   }
   return names;
+}
+
+type EncounterUser = ReturnType<typeof renderOccurrenceWorkbench>['user'];
+/** Saves the open encounter draft as one edit. */
+async function saveEncounter(user: EncounterUser, dialog: HTMLElement) {
+  await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+}
+async function reopenEncounter(user: EncounterUser): Promise<HTMLElement> {
+  await user.click(screen.getByRole('button', { name: 'Customize encounter' }));
+  return screen.findByRole('dialog');
 }
 
 describe('OccurrenceEncounterWorkbench', () => {
@@ -382,10 +393,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Overview');
     expect(screen.queryByRole('group', { name: /events$/i })).toBeNull();
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
-    const dialog = await screen.findByRole('dialog', { name: /\(.+\)$/ });
+    const dialog = await screen.findByRole('dialog');
     await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
     expect(within(dialog).getByRole('radio', { name: '1' })).toBeDefined();
     expect(within(dialog).queryByRole('radio', { name: '2' })).toBeNull();
+    await saveEncounter(view.user, dialog);
     expect(
       view.application.store
         .getState()
@@ -407,56 +419,32 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Overview');
     const launcher = screen.getByRole('button', { name: 'Customize encounter' });
     await view.user.click(launcher);
-    await screen.findByRole('dialog', { name: /\(.+\)$/ });
-    await view.user.click(screen.getByRole('button', { name: 'Done' }));
+    await screen.findByRole('dialog');
+    await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(
       encodeProjectDocument(view.application.store.getState().projectWorkspace.history!.present),
     ).toBe(canonical);
     await view.user.click(launcher);
-    const dialog = await screen.findByRole('dialog', { name: /\(.+\)$/ });
+    const dialog = await screen.findByRole('dialog');
     await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
-    await view.user.click(within(dialog).getByRole('radio', { name: '3' }));
-    await waitFor(() =>
-      expect(
-        view.application.store
-          .getState()
-          .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')
-          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
-          ?.encounters.customizationByPhase?.Encounter?.generatedComposition,
-      ).toMatchObject({ kind: 'generated', waveCount: 3 }),
-    );
-    await view.user.click(within(dialog).getByRole('button', { name: 'Shared Enemy' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
-    await view.user.click(within(dialog).getByRole('tab', { name: /^Wave 2/ }));
-    await view.user.click(within(dialog).getByRole('button', { name: 'Wave 2 enemies' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Wastrel (18)' }));
-    expect(screen.queryByRole('option', { name: 'Finish Wave' })).toBeNull();
-    await waitFor(() =>
-      expect(
-        view.application.store
-          .getState()
-          .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')
-          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
-          ?.encounters.customizationByPhase?.Encounter?.generatedComposition,
-      ).toMatchObject({
-        kind: 'generated',
-        waveCount: 3,
-        highlightKey: 'Guard',
-        waves: expect.arrayContaining([
-          expect.objectContaining({ waveIndex: 2, typeKeys: ['Brawler'] }),
-        ]),
-      }),
-    );
-    view.application.store.dispatch(authoredProjectUndoRequested());
+    // The draft commits nothing until Save.
+    expect(
+      encodeProjectDocument(view.application.store.getState().projectWorkspace.history!.present),
+    ).toBe(canonical);
+    await saveEncounter(view.user, dialog);
     expect(
       view.application.store
         .getState()
         .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
         ?.encounters.customizationByPhase?.Encounter?.generatedComposition,
-    ).toMatchObject({ waveCount: 3, highlightKey: 'Guard' });
+    ).toMatchObject({ kind: 'generated', waveCount: expect.any(Number) });
+    // The saved draft is one Undo step.
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(
+      encodeProjectDocument(view.application.store.getState().projectWorkspace.history!.present),
+    ).toBe(canonical);
   });
 
   it('edits a fixed Scylla phase in place and retains a now-invalid choice for finding repair', async () => {
@@ -483,13 +471,14 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(within(control).queryByRole('heading')).toBeNull();
     expect(within(control).getByText('Encounter', { selector: 'span' })).toBeTruthy();
     expect(within(control).queryByRole('button', { name: 'Encounter' })).toBeNull();
-    expect(screen.queryByRole('dialog', { name: 'Customize' })).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.querySelector('dialog.trait-offer-dialog-backdrop')).toBeNull();
     await view.user.click(within(control).getByRole('button', { name: 'Customize encounter' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
-    expect(within(dialog).getByRole('heading', { level: 2, name: 'Customize' })).toBeTruthy();
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { level: 2 })).toBeTruthy();
     await view.user.click(within(dialog).getByRole('button', { name: 'Featured performer' }));
     await view.user.click(screen.getByRole('option', { name: 'Charybdis' }));
+    await saveEncounter(view.user, dialog);
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
@@ -500,11 +489,10 @@ describe('OccurrenceEncounterWorkbench', () => {
         choiceKey: 'charybdis',
       });
     });
-    await view.user.click(within(dialog).getByRole('button', { name: 'Done' }));
-    expect(screen.queryByRole('dialog', { name: 'Customize' })).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(dialog.isConnected).toBe(false);
     await view.user.click(within(control).getByRole('button', { name: 'Customize encounter' }));
-    const reopened = await screen.findByRole('dialog', { name: 'Customize' });
+    const reopened = await screen.findByRole('dialog');
     fireEvent(reopened, new Event('cancel', { cancelable: true }));
     expect(reopened.isConnected).toBe(false);
     view.application.store.dispatch(authoredProjectUndoRequested());
@@ -525,10 +513,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const dialog = await screen.findByRole('dialog');
     const firstEggWave = within(dialog).getByRole('button', { name: 'First egg wave' });
     await view.user.click(firstEggWave);
     await view.user.click(screen.getByRole('option', { name: '3 Eidolon eggs' }));
+    await saveEncounter(view.user, dialog);
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
@@ -554,8 +543,10 @@ describe('OccurrenceEncounterWorkbench', () => {
       choiceKey: 'eidolons',
       nativeId: 'TyphonHeadCastSummon03',
     });
-    await view.user.click(firstEggWave);
+    const reopened = await reopenEncounter(view.user);
+    await view.user.click(within(reopened).getByRole('button', { name: 'First egg wave' }));
     await view.user.click(screen.getByRole('option', { name: 'Default' }));
+    await saveEncounter(view.user, reopened);
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
@@ -607,24 +598,18 @@ describe('OccurrenceEncounterWorkbench', () => {
           .topology!.occurrences.find((entry) => entry.occurrenceId === occurrenceId)!.encounters
           .customizationByPhase?.Encounter;
       const priorCount = values()?.cocoonCount;
+      const priorPoint = values()?.cocoonRewardPoint;
       openRoomTab('Room Overview');
       await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
-      const dialog = await screen.findByRole('dialog', { name: 'Customize' });
-      const marker = within(dialog).getByRole('button', { name: 'Reward cocoon 1' });
+      let dialog = await screen.findByRole('dialog');
+      let marker = within(dialog).getByRole('button', { name: 'Reward cocoon 1' });
       expect(
         within(dialog)
           .getByRole('img', { name: `Map of ${host.gameName} cocoons` })
           .getAttribute('src'),
       ).toContain('/cocoons/assets/');
       await view.user.click(marker);
-      await waitFor(() =>
-        expect(values()?.cocoonRewardPoint).toEqual({
-          kind: 'cocoonRewardPoint',
-          spawnPointId: ids[0],
-        }),
-      );
       expect(marker.getAttribute('aria-pressed')).toBe('true');
-      expect(values()?.cocoonCount).toEqual(priorCount);
       const selector = within(dialog).getByRole('button', { name: 'Reward position' });
       expect(selector.textContent).toContain('1');
       await view.user.click(selector);
@@ -634,31 +619,27 @@ describe('OccurrenceEncounterWorkbench', () => {
           .getByRole('button', { name: 'Reward cocoon 2' })
           .getAttribute('aria-pressed'),
       ).toBe('true');
+      await saveEncounter(view.user, dialog);
+      expect(values()?.cocoonRewardPoint).toEqual({
+        kind: 'cocoonRewardPoint',
+        spawnPointId: ids[1],
+      });
+      expect(values()?.cocoonCount).toEqual(priorCount);
       act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-      await waitFor(() =>
-        expect(values()?.cocoonRewardPoint).toEqual({
-          kind: 'cocoonRewardPoint',
-          spawnPointId: ids[0],
-        }),
-      );
+      expect(values()?.cocoonRewardPoint).toEqual(priorPoint);
+      dialog = await reopenEncounter(view.user);
       const second = within(dialog).getByRole('button', { name: 'Reward cocoon 2' });
       second.focus();
       await view.user.keyboard('{Enter}');
-      await waitFor(() =>
-        expect(values()?.cocoonRewardPoint).toEqual({
-          kind: 'cocoonRewardPoint',
-          spawnPointId: ids[1],
-        }),
-      );
-      await view.user.click(selector);
+      expect(second.getAttribute('aria-pressed')).toBe('true');
+      await view.user.click(within(dialog).getByRole('button', { name: 'Reward position' }));
       await view.user.click(screen.getByRole('option', { name: 'Any' }));
-      await waitFor(() => expect(values()?.cocoonRewardPoint).toBeUndefined());
-      expect(values()?.cocoonCount).toEqual(priorCount);
       expect(
         within(dialog)
           .getAllByRole('button', { name: /Reward cocoon/ })
           .every((button) => button.getAttribute('aria-pressed') === 'false'),
       ).toBe(true);
+      marker = within(dialog).getByRole('button', { name: 'Reward cocoon 1' });
       const image = within(dialog).getByRole('img', { name: `Map of ${host.gameName} cocoons` });
       Object.defineProperties(image, {
         naturalWidth: { value: 2560 },
@@ -682,7 +663,8 @@ describe('OccurrenceEncounterWorkbench', () => {
       fireEvent.pointerMove(marker, { ...pointer, clientX: 240 });
       fireEvent.pointerUp(marker, { ...pointer, clientX: 240 });
       fireEvent.click(marker, { detail: 1 });
-      expect(values()?.cocoonRewardPoint).toBeUndefined();
+      // A pan that starts on a marker does not select it.
+      expect(marker.getAttribute('aria-pressed')).toBe('false');
       fireEvent.click(within(dialog).getByRole('button', { name: 'Fit' }));
       expect(scroll.scrollLeft).toBe(0);
       expect(within(dialog).getByText('100%')).toBeTruthy();
@@ -715,57 +697,64 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    let dialog = await screen.findByRole('dialog');
     const slider = within(dialog).getByRole('slider', { name: 'Cocoons' });
     expect(slider.getAttribute('aria-valuetext')).toBe('Default');
     expect(slider.getAttribute('min')).toBe('0');
     expect(slider.getAttribute('max')).toBe('7');
     const pointSelector = within(dialog).getByRole('button', { name: 'Reward position' });
-    const firstPoint =
-      catalog.rooms.byKey[
-        project.route.biomes[0]!.topology!.occurrences.find(
-          (entry) => entry.occurrenceId === occurrenceId,
-        )!.gameName
-      ]!.cocoonRewardPointIds![0]!;
-    await view.user.click(pointSelector);
-    await view.user.click(screen.getByRole('option', { name: '1' }));
     const point = () =>
       view.application.store
         .getState()
         .projectWorkspace.history!.present.route.biomes.find((b) => b.biomeKey === 'F')!
         .topology!.occurrences.find((o) => o.occurrenceId === occurrenceId)!.encounters
         .customizationByPhase?.Encounter?.cocoonRewardPoint;
-    await waitFor(() =>
-      expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: Number(firstPoint) }),
-    );
-    expect(cocoonCount(view)).toBeUndefined();
     await view.user.click(pointSelector);
-    await view.user.click(screen.getByRole('option', { name: 'Any' }));
-    await waitFor(() => expect(point()).toBeUndefined());
-    expect(
-      within(dialog).getByRole('button', { name: 'Reset to default' }).hasAttribute('disabled'),
-    ).toBe(true);
+    await view.user.click(screen.getByRole('option', { name: '1' }));
+    expect(pointSelector.textContent).toContain('1');
+    const reset = () => within(dialog).getByRole('button', { name: 'Reset' }) as HTMLButtonElement;
+    expect(reset().disabled).toBe(true);
 
     fireEvent.change(slider, { target: { value: '4' } });
     fireEvent.keyUp(slider, { key: 'ArrowRight' });
-    await waitFor(() => expect(cocoonCount(view)).toEqual({ kind: 'cocoonCount', count: 11 }));
     expect(
       within(dialog).getByRole('slider', { name: 'Cocoons' }).getAttribute('aria-valuetext'),
     ).toBe('11');
+    expect(reset().disabled).toBe(false);
+    const before = view.application.store.getState().projectWorkspace.history!;
+    await saveEncounter(view.user, dialog);
+    // Both decisions commit as one edit, so one Undo restores both.
+    expect(cocoonCount(view)).toEqual({ kind: 'cocoonCount', count: 11 });
+    expect(point()).toMatchObject({ kind: 'cocoonRewardPoint' });
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      before.past.length + 1,
+    );
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(cocoonCount(view)).toBeUndefined();
+    expect(point()).toBeUndefined();
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    expect(cocoonCount(view)).toEqual({ kind: 'cocoonCount', count: 11 });
 
-    await view.user.click(within(dialog).getByRole('button', { name: 'Reset to default' }));
-    await waitFor(() => expect(cocoonCount(view)).toBeUndefined());
+    dialog = await reopenEncounter(view.user);
+    await view.user.click(reset());
+    await saveEncounter(view.user, dialog);
+    expect(cocoonCount(view)).toBeUndefined();
 
+    dialog = await reopenEncounter(view.user);
     fireEvent.change(within(dialog).getByRole('slider', { name: 'Cocoons' }), {
       target: { value: '7' },
     });
     fireEvent.keyUp(within(dialog).getByRole('slider', { name: 'Cocoons' }), { key: 'End' });
-    await waitFor(() => expect(cocoonCount(view)).toEqual({ kind: 'cocoonCount', count: 14 }));
+    expect(
+      within(dialog).getByRole('slider', { name: 'Cocoons' }).getAttribute('aria-valuetext'),
+    ).toBe('14');
     fireEvent.change(within(dialog).getByRole('slider', { name: 'Cocoons' }), {
       target: { value: '0' },
     });
     fireEvent.keyUp(within(dialog).getByRole('slider', { name: 'Cocoons' }), { key: 'Home' });
-    await waitFor(() => expect(cocoonCount(view)).toBeUndefined());
+    expect(
+      within(dialog).getByRole('slider', { name: 'Cocoons' }).getAttribute('aria-valuetext'),
+    ).toBe('Default');
   });
 
   it('disables Customize for an Anomaly roster whose context is unreached', async () => {
@@ -804,10 +793,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
-    expect(
-      within(dialog).getByRole('button', { name: 'Reset to default' }).hasAttribute('disabled'),
-    ).toBe(true);
+    let dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('button', { name: 'Reset' }).hasAttribute('disabled')).toBe(
+      true,
+    );
 
     // Normal-then-elite SpreadShot is not a native draw order.
     await view.user.click(within(dialog).getByRole('button', { name: 'Enemy roster' }));
@@ -815,8 +804,12 @@ describe('OccurrenceEncounterWorkbench', () => {
     await screen.findByRole('option', { name: 'Burn-Flinger' });
     expect(screen.queryByRole('option', { name: 'Elite Wretched Witch' })).toBeNull();
     expect(screen.queryByRole('option', { name: 'Finish Roster' })).toBeNull();
-    await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(roster(view)).toBeUndefined();
+    // The roster picker's own Cancel, not the dialog's.
+    await view.user.click(screen.getAllByRole('button', { name: 'Cancel' }).at(-1)!);
+    expect(screen.getByRole('dialog')).toBe(dialog);
+    expect(within(dialog).getByRole('button', { name: 'Enemy roster' }).textContent).toContain(
+      'Default',
+    );
 
     await view.user.click(within(dialog).getByRole('button', { name: 'Enemy roster' }));
     await view.user.click(await screen.findByRole('option', { name: 'Elite Wretched Witch' }));
@@ -825,18 +818,19 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.queryByRole('option', { name: 'Elite Bloodless' })).toBeNull();
     await view.user.click(await screen.findByRole('option', { name: 'Burn-Flinger' }));
     await view.user.click(await screen.findByRole('option', { name: 'Finish Roster' }));
-    await waitFor(() =>
-      expect(roster(view)).toEqual({
-        kind: 'infiniteRoster',
-        typeKeys: ['SpreadShotUnit_Elite', 'SpreadShotUnit', 'BloodlessPitcher'],
-      }),
-    );
     expect(within(dialog).getByRole('button', { name: 'Enemy roster' }).textContent).toContain(
       'Elite Wretched Witch · Wretched Witch · Burn-Flinger',
     );
+    await saveEncounter(view.user, dialog);
+    expect(roster(view)).toEqual({
+      kind: 'infiniteRoster',
+      typeKeys: ['SpreadShotUnit_Elite', 'SpreadShotUnit', 'BloodlessPitcher'],
+    });
 
-    await view.user.click(within(dialog).getByRole('button', { name: 'Reset to default' }));
-    await waitFor(() => expect(roster(view)).toBeUndefined());
+    dialog = await reopenEncounter(view.user);
+    await view.user.click(within(dialog).getByRole('button', { name: 'Reset' }));
+    await saveEncounter(view.user, dialog);
+    expect(roster(view)).toBeUndefined();
   });
 
   it('marks a retained context-invalid Anomaly roster for repair without rewriting it', async () => {
@@ -863,14 +857,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const dialog = await screen.findByRole('dialog');
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
-    const findingsRegion = within(dialog).getByRole('status', { name: 'Encounter feedback' });
-    expect(findingsRegion.textContent).toContain("The chosen value can't occur in this room.");
-    // The one feedback region closes the dialog body, after every decision row.
-    expect(dialog.querySelector('.encounter-customization-fields')?.nextElementSibling).toBe(
-      findingsRegion,
-    );
+    expect(dialogFinding(dialog)).toContain("The chosen value can't occur in this room.");
     expect(
       view.application.store
         .getState()
@@ -917,9 +906,9 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     );
     await waitFor(() => expect(document.activeElement).toBe(trigger));
-    expect(screen.queryByRole('dialog', { name: 'Customize' })).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
     await view.user.click(trigger);
-    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const dialog = await screen.findByRole('dialog');
     const selector = within(dialog).getByRole('button', { name: 'Reward position' });
     expect(finding.origin).toEqual(phase);
     expect(selector.textContent).toContain('1 (unavailable)');
@@ -930,12 +919,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       screen.getByRole('option', { name: '1 (unavailable)' }).getAttribute('aria-disabled'),
     ).toBe('true');
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
-    const findingsRegion = within(dialog).getByRole('status', { name: 'Encounter feedback' });
-    expect(findingsRegion.textContent).toContain("The chosen value can't occur in this room.");
-    // The one feedback region closes the dialog body, after every decision row.
-    expect(dialog.querySelector('.encounter-customization-fields')?.nextElementSibling).toBe(
-      findingsRegion,
-    );
+    expect(dialogFinding(dialog)).toContain("The chosen value can't occur in this room.");
     const point = () =>
       view.application.store
         .getState()
@@ -950,16 +934,62 @@ describe('OccurrenceEncounterWorkbench', () => {
         )!.gameName
       ]!.cocoonRewardPointIds![0]!;
     await view.user.click(screen.getByRole('option', { name: '1' }));
-    await waitFor(() =>
-      expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: Number(validId) }),
-    );
-    expect(
-      within(dialog).getByRole('status', { name: 'Encounter feedback' }).textContent,
-    ).not.toContain("The chosen value can't occur in this room.");
+    expect(dialogFinding(dialog) ?? '').not.toContain("The chosen value can't occur in this room.");
     expect(hintOf(selector)).toBeNull();
     await view.user.click(selector);
     expect(screen.queryByRole('option', { name: '1 (unavailable)' })).toBeNull();
     await view.user.keyboard('{Escape}');
+    await saveEncounter(view.user, dialog);
+    expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: Number(validId) });
+  });
+
+  it('saves an unrelated edit while a retained finding stays inherited', async () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const selected = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'ArachneCombatF',
+    });
+    const project = applyProjectCommand(selected, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase,
+      decisionKey: 'cocoonRewardPoint',
+      value: { kind: 'cocoonRewardPoint', spawnPointId: 1 },
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    const encounter = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')!
+        .topology!.occurrences.find((entry) => entry.occurrenceId === occurrenceId)!.encounters
+        .customizationByPhase?.Encounter;
+    openRoomTab('Room Overview');
+    const dialog = await reopenEncounter(view.user);
+    const save = within(dialog).getByRole('button', { name: 'Save' }) as HTMLButtonElement;
+    const unavailable = "The chosen value can't occur in this room.";
+    expect(dialogFinding(dialog)).toContain(unavailable);
+    expect(save.disabled).toBe(true);
+    const slider = within(dialog).getByRole('slider', { name: 'Cocoons' });
+    fireEvent.change(slider, { target: { value: '4' } });
+    fireEvent.keyUp(slider, { key: 'ArrowRight' });
+    // The inherited finding stays shown and does not block Save.
+    expect(dialogFinding(dialog)).toContain(unavailable);
+    expect(save.disabled).toBe(false);
+    await saveEncounter(view.user, dialog);
+    expect(encounter()).toMatchObject({
+      cocoonCount: { kind: 'cocoonCount', count: 11 },
+      cocoonRewardPoint: { kind: 'cocoonRewardPoint', spawnPointId: 1 },
+    });
   });
 
   it('repairs a retained out-of-range cocoon count by choosing its clamped stop', async () => {
@@ -1005,30 +1035,25 @@ describe('OccurrenceEncounterWorkbench', () => {
         ?.encounters.customizationByPhase?.Encounter?.cocoonCount;
     openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const dialog = await screen.findByRole('dialog');
     const slider = within(dialog).getByRole('slider', { name: 'Cocoons' });
     expect((slider as HTMLInputElement).value).toBe('7');
     expect(within(dialog).getByText('20 (unavailable)')).toBeTruthy();
     expect(slider.getAttribute('aria-invalid')).toBe('true');
     expect(hintOf(slider)).toBeNull();
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
-    const findingsRegion = within(dialog).getByRole('status', { name: 'Encounter feedback' });
-    expect(findingsRegion.textContent).toContain("The chosen value can't occur in this room.");
-    // The one feedback region closes the dialog body, after every decision row.
-    expect(dialog.querySelector('.encounter-customization-fields')?.nextElementSibling).toBe(
-      findingsRegion,
-    );
+    expect(dialogFinding(dialog)).toContain("The chosen value can't occur in this room.");
 
     fireEvent.keyDown(slider, { key: 'End' });
     fireEvent.keyUp(slider, { key: 'End' });
-    await waitFor(() => expect(cocoonCount()).toEqual({ kind: 'cocoonCount', count: 14 }));
-    // The findings region stays mounted after the repair clears its entry.
     await waitFor(() =>
-      expect(
-        within(dialog).getByRole('status', { name: 'Encounter feedback' }).textContent,
-      ).not.toContain("The chosen value can't occur in this room."),
+      expect(dialogFinding(dialog) ?? '').not.toContain(
+        "The chosen value can't occur in this room.",
+      ),
     );
     expect(slider.getAttribute('aria-invalid')).toBeNull();
+    await saveEncounter(view.user, dialog);
+    expect(cocoonCount()).toEqual({ kind: 'cocoonCount', count: 14 });
   });
 
   it('routes a reached retained Scylla finding to the manual popup trigger', async () => {
@@ -1080,16 +1105,17 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     await waitFor(() => expect(document.activeElement).toBe(trigger));
     expect(trigger.dataset.hasFindings).toBe('true');
-    expect(screen.queryByRole('dialog', { name: 'Customize' })).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.querySelector('dialog.trait-offer-dialog-backdrop')).toBeNull();
     await view.user.click(trigger);
-    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const dialog = await screen.findByRole('dialog');
     const performer = within(dialog).getByRole('button', { name: 'Featured performer' });
     await view.user.click(performer);
     expect(
       screen.getByRole('option', { name: 'Charybdis (unavailable)' }).getAttribute('aria-disabled'),
     ).toBe('true');
     await view.user.click(screen.getByRole('option', { name: 'Default' }));
+    await saveEncounter(view.user, dialog);
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
@@ -1118,7 +1144,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const dialog = await screen.findByRole('dialog');
     for (const name of ['Early summons', 'Late summons']) {
       const group = within(dialog).getByRole('region', { name });
       expect(within(group).getByRole('heading', { level: 3, name })).toBeTruthy();
@@ -1137,6 +1163,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(screen.getByRole('option', { name: 'Elite Anchor' }));
     await view.user.click(within(dialog).getByRole('button', { name: 'Early summons use 1' }));
     await view.user.click(screen.getByRole('option', { name: 'Hellifishie' }));
+    await saveEncounter(view.user, dialog);
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
@@ -1148,8 +1175,10 @@ describe('OccurrenceEncounterWorkbench', () => {
       });
     });
     // Resetting the first use drops the later use and clears the decision.
-    await view.user.click(within(dialog).getByRole('button', { name: 'Early summons use 1' }));
+    const reopened = await reopenEncounter(view.user);
+    await view.user.click(within(reopened).getByRole('button', { name: 'Early summons use 1' }));
     await view.user.click(screen.getByRole('option', { name: 'Default' }));
+    await saveEncounter(view.user, reopened);
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()

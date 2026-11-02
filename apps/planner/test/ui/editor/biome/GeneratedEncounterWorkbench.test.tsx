@@ -45,7 +45,8 @@ import {
   authoredProjectCommandDispatched,
 } from '@planner/state/projectWorkspaceSlice';
 import { simulateProject } from '@run-planner/engine/simulation';
-import { getAllByHint, getByHint, hintOf } from '@planner-test/support/hints';
+import { hintOf } from '@planner-test/support/hints';
+import { dialogFinding } from '@planner-test/support/editor-dialog';
 
 afterEach(cleanup);
 const phase = createEncounterPhaseAddress(
@@ -87,7 +88,7 @@ async function open(project: ProjectDocument, owner = phase) {
     .getAllByRole('button', { name: /^Customize .*encounter$/ })
     .find((button) => button.dataset.semanticOwner === semanticAddressKey(owner))!;
   await view.user.click(trigger);
-  return { ...view, dialog: await screen.findByRole('dialog', { name: /\(.+\)$/ }) };
+  return { ...view, dialog: await screen.findByRole('dialog') };
 }
 function customizeTrigger(project: ProjectDocument, owner = phase): HTMLButtonElement {
   renderOccurrenceWorkbench(
@@ -105,6 +106,21 @@ function customizeTrigger(project: ProjectDocument, owner = phase): HTMLButtonEl
 }
 async function initialize(view: Awaited<ReturnType<typeof open>>) {
   await view.user.click(within(view.dialog).getByRole('button', { name: 'Edit' }));
+}
+type OpenView = Awaited<ReturnType<typeof open>>;
+function saveButton(view: OpenView): HTMLButtonElement {
+  return within(view.dialog).getByRole('button', { name: 'Save' }) as HTMLButtonElement;
+}
+/** Saves the draft, committing every changed decision as one edit. */
+async function save(view: OpenView) {
+  await view.user.click(saveButton(view));
+}
+async function reopen(view: OpenView, owner = phase) {
+  const trigger = screen
+    .getAllByRole('button', { name: /^Customize .*encounter$/ })
+    .find((button) => button.dataset.semanticOwner === semanticAddressKey(owner))!;
+  await view.user.click(trigger);
+  view.dialog = await screen.findByRole('dialog');
 }
 async function selectBudgetWave(view: Awaited<ReturnType<typeof open>>, index: number) {
   await view.user.click(
@@ -129,7 +145,7 @@ describe('generated encounter customization workflows', () => {
       }),
     );
     const table = within(view.dialog).getByRole('table', { name: 'Wave 1 enemy budgets' });
-    const row = within(table).getByRole('row', { name: /^Budget/ });
+    const row = within(table).getByRole('row', { name: /^Allocated/ });
     expect(within(row).getAllByRole('cell').at(-1)?.textContent).toBe('0→ 18');
     expect(within(within(row).getAllByRole('cell').at(-1)!).queryByRole('textbox')).toBeNull();
   });
@@ -155,10 +171,43 @@ describe('generated encounter customization workflows', () => {
     );
     const table = within(view.dialog).getByRole('table', { name: 'Wave 1 enemy budgets' });
     expect(within(table).getByText('2 (10)')).toBeTruthy();
-    expect(getByHint(table, 'Wave budget / total encounter budget.')).toBeTruthy();
-    expect(getAllByHint(table, 'Resulting cost after rounding and minimum counts.')).toHaveLength(
-      2,
+    expect(within(view.dialog).getByText(/^Wave budget \S+\/\S+$/)).toBeTruthy();
+    // Each resulting cost names its share of the wave budget on hover.
+    expect(
+      [...table.querySelectorAll('[data-hint]')].filter((cell) =>
+        /takes .* of this wave’s .* budget\./.test(hintOf(cell) ?? ''),
+      ),
+    ).toHaveLength(2);
+  });
+  it('marks a capped count and the count its overflow adds to an earlier type', async () => {
+    const owner = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-combat05') },
+      'Cage01',
     );
+    const project = customize(
+      applyProjectCommand(createGoldenFGHIProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase: owner,
+        encounterKey: 'GeneratedH',
+      }),
+      owner,
+      {
+        kind: 'generated',
+        waveCount: 1,
+        waves: [{ waveIndex: 1, typeKeys: ['Lamia', 'FogEmitter2'], allocations: { Lamia: 1 } }],
+      },
+    );
+    const view = await open(project, owner);
+    const counts = within(
+      within(view.dialog).getByRole('table', { name: 'Wave 1 enemy budgets' }),
+    ).getByRole('row', { name: /^Count/ });
+    const capped = [...counts.querySelectorAll<HTMLElement>('.encounter-count-capped')];
+    expect(capped.map((cell) => cell.textContent?.endsWith('*'))).toEqual([true, true]);
+    expect(capped.map((cell) => hintOf(cell))).toEqual([
+      expect.stringMatching(/^\+10 from .+ cap$/),
+      'Capped at 1 per wave',
+    ]);
   });
   it('removes excess enemies without creating blank allocation keys', async () => {
     const view = await open(
@@ -180,12 +229,15 @@ describe('generated encounter customization workflows', () => {
         .closest('[data-has-issues]')
         ?.getAttribute('data-has-issues'),
     ).toBe('true');
-    const findings = within(view.dialog).getByRole('status', { name: 'Encounter feedback' });
-    expect(findings.textContent).toContain('Wave 1: Allows');
-    expect(findings.textContent).not.toContain('Wave 1: Wave 1:');
+    expect(dialogFinding(view.dialog)).toMatch(/^Wave 1: Allows/);
+    expect(dialogFinding(view.dialog)).not.toContain('Wave 1: Wave 1:');
     await view.user.click(
       within(view.dialog).getByRole('button', { name: 'Remove Wave 1 Enemy 5' }),
     );
+    // The inherited type-count finding is only partly repaired, so it does not block Save.
+    expect(dialogFinding(view.dialog)).toMatch(/^Wave 1: Allows .*remove 1 type/);
+    expect(saveButton(view).disabled).toBe(false);
+    await save(view);
     const removed = current(view);
     expect(removed?.kind === 'generated' && removed.waves?.[0]).toEqual({
       waveIndex: 1,
@@ -216,13 +268,17 @@ describe('generated encounter customization workflows', () => {
     expect(within(view.dialog).getByRole('rowheader', { name: 'Menace Target' })).toBeTruthy();
     expect(within(view.dialog).getByRole('rowheader', { name: 'Menace Count' })).toBeTruthy();
     expect(within(view.dialog).queryByText('Guard2')).toBeNull();
-    const input = within(view.dialog).getByRole('textbox', { name: 'Wave 1 Whisper converted' });
-    fireEvent.change(input, { target: { value: '1.5' } });
-    fireEvent.blur(input);
-    expect(current(view)).not.toHaveProperty('menace');
-    fireEvent.change(input, { target: { value: '14' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    expect(current(view)).toMatchObject({ menace: [{ conversions: { Guard: { count: 14 } } }] });
+    const converted = () =>
+      within(view.dialog).getByRole('textbox', {
+        name: 'Wave 1 Whisper converted',
+      }) as HTMLInputElement;
+    fireEvent.change(converted(), { target: { value: '1.5' } });
+    fireEvent.blur(converted());
+    // A fractional count is not a draft edit.
+    expect(saveButton(view).disabled).toBe(true);
+    fireEvent.change(converted(), { target: { value: '14' } });
+    fireEvent.keyDown(converted(), { key: 'Enter' });
+    expect(saveButton(view).disabled).toBe(false);
     for (const rank of [0, 2]) {
       act(() =>
         view.application.store.dispatch(
@@ -240,34 +296,32 @@ describe('generated encounter customization workflows', () => {
       expect(within(view.dialog).queryByRole('rowheader', { name: 'Menace Count' }) !== null).toBe(
         rank > 0,
       );
-      expect(current(view)).toMatchObject({ menace: [{ conversions: { Guard: { count: 14 } } }] });
     }
+    // A changed context keeps the draft.
+    expect(converted().value).toBe('14');
     const budget = within(view.dialog).getByRole('textbox', { name: 'Wave 1 Whisper budget' });
     fireEvent.change(budget, { target: { value: '5' } });
     fireEvent.blur(budget);
-    expect(current(view)).toMatchObject({ menace: [{ conversions: { Guard: { count: 14 } } }] });
-    expect(view.dialog.textContent).toContain('Converted Whisper requests exceed');
-    const findings = within(view.dialog).getByRole('status', { name: 'Encounter feedback' });
-    expect(findings.textContent).toContain('Wave 1: Converted Whisper requests exceed');
+    expect(dialogFinding(view.dialog)).toContain('Wave 1: Converted Whisper requests exceed');
+    // A finding the draft introduced blocks Save.
+    expect(saveButton(view).disabled).toBe(true);
     const invalidTab = within(view.dialog).getByRole('tab', { name: 'Wave 1, needs attention' });
     expect(invalidTab.textContent).toContain('!');
     expect(invalidTab.textContent).not.toContain('Needs attention');
     await view.user.click(within(view.dialog).getByRole('button', { name: 'Wave 1 enemies' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Wastrel (18)' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper · 5' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Wastrel · 18' }));
     await view.user.click(await screen.findByRole('option', { name: 'Finish Wave' }));
-    expect(current(view)).toMatchObject({ menace: [{ conversions: { Guard: { count: 14 } } }] });
-    expect(view.dialog.textContent).toContain('Converted Whisper requests exceed');
-    fireEvent.change(
-      within(view.dialog).getByRole('textbox', { name: 'Wave 1 Whisper converted' }),
-      { target: { value: '1' } },
-    );
-    fireEvent.blur(within(view.dialog).getByRole('textbox', { name: 'Wave 1 Whisper converted' }));
-    expect(current(view)).toMatchObject({ menace: [{ conversions: { Guard: { count: 1 } } }] });
-    // The findings region stays mounted while the composition is active.
-    const cleared = within(view.dialog).getByRole('status', { name: 'Encounter feedback' });
-    expect(cleared.textContent).toContain('No current findings.');
-    expect(cleared.textContent).not.toContain('Converted Whisper requests exceed');
+    expect(converted().value).toBe('14');
+    expect(dialogFinding(view.dialog)).toContain('Wave 1: Converted Whisper requests exceed');
+    fireEvent.change(converted(), { target: { value: '1' } });
+    fireEvent.blur(converted());
+    expect(dialogFinding(view.dialog) ?? '').not.toContain('Converted Whisper requests exceed');
+    await save(view);
+    expect(current(view)).toMatchObject({
+      waves: [{ allocations: { Guard: 5 } }],
+      menace: [{ conversions: { Guard: { count: 1 } } }],
+    });
   });
 
   it('uses the contextual Menace replacement picker with full friendly Tartarus pool', async () => {
@@ -312,10 +366,11 @@ describe('generated encounter customization workflows', () => {
     fireEvent.blur(
       within(view.dialog).getByRole('textbox', { name: 'Wave 1 Brush-Stalker converted' }),
     );
+    expect(within(view.dialog).getAllByText('NA').length).toBeGreaterThanOrEqual(2);
+    await save(view);
     expect(current(view, owner)).toMatchObject({
       menace: [{ conversions: { Treant2: { count: 1, targetKey: 'GoldElemental' } } }],
     });
-    expect(within(view.dialog).getAllByText('NA').length).toBeGreaterThanOrEqual(2);
   });
   it('keeps typed budget over-requests authored exactly like saved ones', async () => {
     const view = await open(
@@ -337,9 +392,9 @@ describe('generated encounter customization workflows', () => {
     const waveBudget = assessment.budget!.waveBudgets[0] as number;
     const table = within(view.dialog).getByRole('table', { name: 'Wave 1 enemy budgets' });
     const costHeader = within(table).getByRole('columnheader', {
-      name: /^Whisper \(/,
+      name: /^Whisper · /,
     }).textContent!;
-    const unitCost = Number(costHeader.match(/\(([\d.]+)\)/)![1]);
+    const unitCost = Number(costHeader.match(/· ([\d.]+)/)![1]);
     const count = assessment.waves[0]!.countPreview!.find((entry) => entry.key === 'Guard')!.count!;
     expect(input.closest('td')!.textContent).toBe(
       '→ ' +
@@ -352,12 +407,12 @@ describe('generated encounter customization workflows', () => {
     fireEvent.change(input, { target: { value: '10000' } });
     fireEvent.blur(input);
     expect(waveBudget).toBeLessThan(10000);
-    expect(current(view)).toMatchObject({ waves: [{ allocations: { Guard: 10000 } }] });
     const typed = within(view.dialog).getByRole('textbox', { name: 'Wave 1 Whisper budget' });
     expect((typed as HTMLInputElement).value).toBe('10000');
     expect(typed.closest('td')!.textContent).toBe(savedResult);
     fireEvent.change(typed, { target: { value: '12x' } });
     fireEvent.blur(typed);
+    await save(view);
     expect(current(view)).toMatchObject({ waves: [{ allocations: { Guard: 10000 } }] });
   });
   it('creates the complete composition only through Customize and resets it atomically', async () => {
@@ -365,29 +420,24 @@ describe('generated encounter customization workflows', () => {
     expect(current(view)).toBeUndefined();
     const explanation = 'The game chooses these enemies unless you select Edit.';
     expect(within(view.dialog).getByText(explanation)).toBeTruthy();
+    const before = view.application.store.getState().projectWorkspace.history!;
     await initialize(view);
+    // Edit builds the draft only; Save commits it.
+    expect(view.application.store.getState().projectWorkspace.history).toBe(before);
+    expect(within(view.dialog).getByText(/^Wave budget /)).toBeTruthy();
+    await save(view);
     expect(current(view)).toMatchObject({
       kind: 'generated',
       waveCount: expect.any(Number),
       waves: expect.any(Array),
     });
     const created = view.application.store.getState().projectWorkspace.history!;
-    expect(
-      within(view.dialog).getByRole('columnheader', { name: /Wave budget .* encounter budget/ }),
-    ).toBeTruthy();
-    await view.user.click(within(view.dialog).getByRole('button', { name: 'Help' }));
-    expect(
-      within(view.dialog).getByRole('region', { name: 'Encounter composition help' }).textContent,
-    ).toContain('Changes apply immediately. Undo reverses edits.');
-    expect(within(view.dialog).queryByRole('heading', { name: 'Menace' })).toBeNull();
-    await view.user.click(within(view.dialog).getByRole('button', { name: 'Help' }));
-    expect(
-      within(view.dialog).queryByRole('region', { name: 'Encounter composition help' }),
-    ).toBeNull();
-    expect(view.application.store.getState().projectWorkspace.history).toBe(created);
-    await view.user.click(within(view.dialog).getByRole('button', { name: 'Reset to default' }));
-    expect(current(view)).toBeUndefined();
+    expect(created.past).toHaveLength(before.past.length + 1);
+    await reopen(view);
+    await view.user.click(within(view.dialog).getByRole('button', { name: 'Reset' }));
     expect(within(view.dialog).getByText(explanation)).toBeTruthy();
+    await save(view);
+    expect(current(view)).toBeUndefined();
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(view.application.store.getState().projectWorkspace.history!.present).toBe(
       created.present,
@@ -412,9 +462,7 @@ describe('generated encounter customization workflows', () => {
     await view.user.click(await screen.findByRole('option', { name: 'Elite Whisper' }));
     await view.user.click(within(view.dialog).getByRole('button', { name: 'Fangs perks' }));
     await view.user.click(await screen.findByRole('option', { name: 'Shifter' }));
-    expect(current(view)).toMatchObject({ fangs: { perkKeys: [] } });
     await view.user.click(await screen.findByRole('option', { name: 'Finish' }));
-    expect(current(view)).toMatchObject({ fangs: { perkKeys: ['Blink'] } });
     for (const rank of [0, 1]) {
       act(() =>
         view.application.store.dispatch(
@@ -432,9 +480,12 @@ describe('generated encounter customization workflows', () => {
       expect(within(view.dialog).queryByRole('button', { name: 'Fangs perks' }) !== null).toBe(
         rank > 0,
       );
-      expect(current(view)).toMatchObject({ fangs: { perkKeys: ['Blink'] } });
     }
-    await view.user.click(within(view.dialog).getByRole('button', { name: 'Reset to default' }));
+    await save(view);
+    expect(current(view)).toMatchObject({ fangs: { perkKeys: ['Blink'] } });
+    await reopen(view);
+    await view.user.click(within(view.dialog).getByRole('button', { name: 'Reset' }));
+    await save(view);
     expect(current(view)).toBeUndefined();
   });
   it('commits the visually-minimum P roll when a retained partial customization has no roll', async () => {
@@ -453,6 +504,7 @@ describe('generated encounter customization workflows', () => {
     expect(slider.parentElement?.hasAttribute('data-has-issues')).toBe(false);
     fireEvent.keyDown(slider, { key: 'Home' });
     fireEvent.keyUp(slider, { key: 'Home' });
+    await save(view);
     expect(current(view, owner)).toMatchObject({ baseRoll: 340, waveCount: 2 });
   });
   it('keeps the base-roll slider as local draft state until the gesture commits', async () => {
@@ -476,15 +528,20 @@ describe('generated encounter customization workflows', () => {
     fireEvent.change(slider, { target: { value: '414' } });
     expect(view.application.store.getState().projectWorkspace.history).toBe(history);
     fireEvent.pointerUp(slider, { pointerId: 1 });
-    await waitFor(() => expect(current(view, owner)).toMatchObject({ baseRoll: 414 }));
+    await waitFor(() => expect(saveButton(view).disabled).toBe(false));
+    expect(view.application.store.getState().projectWorkspace.history).toBe(history);
+    await save(view);
+    expect(current(view, owner)).toMatchObject({ baseRoll: 414 });
   });
   it('commits a seed-only wave only after its final confirmation', async () => {
     const view = await open(customize(createCompleteFGProject(), phase, composed));
     const before = view.application.store.getState().projectWorkspace.history!;
     await view.user.click(within(view.dialog).getByRole('button', { name: 'Wave 1 enemies' }));
     expect(view.application.store.getState().projectWorkspace.history).toBe(before);
-    await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper · 5' }));
     expect(screen.queryByRole('option', { name: 'Finish Wave' })).toBeNull();
+    expect(view.application.store.getState().projectWorkspace.history).toBe(before);
+    await save(view);
     expect(current(view)).toMatchObject({
       waves: expect.arrayContaining([expect.objectContaining({ waveIndex: 1, typeKeys: [] })]),
     });
@@ -499,11 +556,12 @@ describe('generated encounter customization workflows', () => {
     await selectBudgetWave(view, 3);
     const before = view.application.store.getState().projectWorkspace.history!;
     await view.user.click(within(view.dialog).getByRole('button', { name: 'Wave 3 enemies' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Spindle (7)' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper · 5' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Spindle · 7' }));
     expect(view.application.store.getState().projectWorkspace.history).toBe(before);
-    await view.user.click(await screen.findByRole('option', { name: 'Casket (12)' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Casket · 12' }));
     expect(screen.queryByRole('option', { name: 'Finish Wave' })).toBeNull();
+    await save(view);
     expect(current(view)).toMatchObject({ waves: [{ allocations: { Guard: 2, Radiator: 3 } }] });
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(view.application.store.getState().projectWorkspace.history!.present).toBe(
@@ -610,8 +668,9 @@ describe('generated encounter customization workflows', () => {
     expect(current(view, owner)).toBeUndefined();
     expect(trigger.dataset.hasFindings).toBe('false');
     await view.user.click(trigger);
-    const dialog = await screen.findByRole('dialog', { name: /\(.+\)$/ });
+    const dialog = await screen.findByRole('dialog');
     await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
+    await view.user.click(within(dialog).getByRole('button', { name: 'Save' }));
     expect(current(view, owner)).toBeDefined();
   });
   it('keeps every phase of its room editable while a later phase composition is the issue', async () => {
@@ -702,9 +761,14 @@ describe('generated encounter customization workflows', () => {
       expect.stringMatching(/Select shared enemy|no longer available/),
     );
     expect(screen.queryByText('This current choice is no longer available here.')).toBeNull();
-    await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
-    expect(current(view)).toMatchObject({ waveCount: 3, highlightKey: 'Guard' });
-    expect(screen.getByRole('dialog', { name: /\(.+\)$/ })).toBeTruthy();
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper · 5' }));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(within(view.dialog).getByRole('button', { name: 'Shared Enemy' }).textContent).toContain(
+      'Whisper',
+    );
+    // The shared enemy activates the waves, so the draft is incomplete until each has enemies.
+    expect(dialogFinding(view.dialog)).toMatch(/^Wave 1: Choose its enemies\./);
+    expect(saveButton(view).disabled).toBe(true);
     cleanup();
     const unassessed = applyProjectCommand(
       customize(createCompleteFGProject(), phase, { kind: 'generated', waveCount: 3 }),
@@ -734,13 +798,10 @@ describe('generated encounter customization workflows', () => {
         ],
       }),
     );
-    const findings = within(view.dialog).getByRole('status', {
-      name: 'Encounter feedback',
-    }).textContent;
-    expect(findings).toContain('Wave 3: Set each editable enemy budget.');
-    expect(findings).toContain(
-      'Wave 3: Budgets include an enemy that no longer has an editable budget. Edit the affected wave.',
-    );
+    // The header shows the first finding and how many more.
+    expect(dialogFinding(view.dialog)).toMatch(/^Wave 3: .+ \(\d+ more\)$/);
+    const more = Number(dialogFinding(view.dialog)!.match(/\((\d+) more\)$/)![1]);
+    expect(view.dialog.querySelector('.editor-dialog-finding')?.textContent).toContain(`+${more}`);
   });
   it('keeps waves, shared enemy, Fangs and Menace across a wave-count edit', async () => {
     const value = {
@@ -750,6 +811,7 @@ describe('generated encounter customization workflows', () => {
     } as const;
     const view = await open(customize(createCompleteFGProject(), phase, value));
     await view.user.click(within(view.dialog).getByRole('radio', { name: '2' }));
+    await save(view);
     expect(current(view)).toEqual({ ...value, waveCount: 2 });
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(current(view)).toEqual(value);
@@ -757,12 +819,26 @@ describe('generated encounter customization workflows', () => {
   it('hides the shared enemy for one wave without deleting the retained choice', async () => {
     const view = await open(customize(createCompleteFGProject(), phase, composed));
     expect(within(view.dialog).getByRole('button', { name: 'Shared Enemy' })).toBeTruthy();
+    expect(saveButton(view).disabled).toBe(true);
     await view.user.click(within(view.dialog).getByRole('radio', { name: '1' }));
     expect(within(view.dialog).queryByRole('button', { name: 'Shared Enemy' })).toBeNull();
-    expect(current(view)).toEqual({ ...composed, waveCount: 1 });
+    expect(saveButton(view).disabled).toBe(false);
     await view.user.click(within(view.dialog).getByRole('radio', { name: '3' }));
     expect(within(view.dialog).getByRole('button', { name: 'Shared Enemy' })).toBeTruthy();
-    expect(current(view)).toEqual(composed);
+    // Back at the saved value there is nothing to save.
+    expect(saveButton(view).disabled).toBe(true);
+  });
+  it('discards the draft on Cancel', async () => {
+    const view = await open(customize(createCompleteFGProject(), phase, composed));
+    const history = view.application.store.getState().projectWorkspace.history;
+    await view.user.click(within(view.dialog).getByRole('radio', { name: '1' }));
+    await view.user.click(within(view.dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(view.application.store.getState().projectWorkspace.history).toBe(history);
+    await reopen(view);
+    expect(
+      (within(view.dialog).getByRole('radio', { name: '3' }) as HTMLInputElement).checked,
+    ).toBe(true);
   });
   it('shows a mixed introduction fixed first wave as a disabled row beside its suffix', async () => {
     const owner = createEncounterPhaseAddress(
@@ -774,11 +850,10 @@ describe('generated encounter customization workflows', () => {
     expect(
       within(view.dialog).getByRole('heading', {
         level: 2,
-        name: 'Spindle introduction (RadiatorIntro)',
+        name: 'Spindle introduction',
       }),
     ).toBeTruthy();
     expect(within(view.dialog).queryByRole('heading', { name: 'Wave 1' })).toBeNull();
-    expect(within(view.dialog).getByText('This encounter’s first wave is fixed')).toBeTruthy();
     expect(within(view.dialog).queryByRole('button', { name: 'Shared Enemy' })).toBeNull();
     // The editable suffix opens first; the fixed wave keeps its own row.
     expect(
@@ -794,12 +869,14 @@ describe('generated encounter customization workflows', () => {
     expect(within(view.dialog).queryByRole('button', { name: 'Wave 1 enemies' })).toBeNull();
     const table = within(view.dialog).getByRole('table', { name: 'Wave 1 enemies' });
     expect(within(table).getByRole('row', { name: /^Count/ }).textContent).toBe('Count5');
-    expect(within(table).queryByRole('row', { name: /^Budget/ })).toBeNull();
+    expect(within(table).queryByRole('row', { name: /^Allocated/ })).toBeNull();
     // A fresh profile has no Fear, so neither Fangs nor Menace controls appear.
     expect(within(view.dialog).queryByRole('rowheader', { name: /Menace/ })).toBeNull();
     expect(within(view.dialog).queryByRole('button', { name: /Fangs/ })).toBeNull();
-    await view.user.click(within(view.dialog).getByRole('button', { name: 'Help' }));
-    const help = within(view.dialog).getByRole('region', { name: 'Encounter composition help' });
+    await view.user.click(
+      within(view.dialog).getByRole('button', { name: 'Encounter composition help' }),
+    );
+    const help = screen.getByRole('dialog', { name: 'Encounter composition help' });
     expect(help.textContent).toContain(
       'Fixed waves cannot be edited. Customize the remaining waves.',
     );
@@ -826,18 +903,17 @@ describe('generated encounter customization workflows', () => {
     const viewRoster = screen.getByRole('button', { name: /^View roster for .*encounter$/ });
     expect(viewRoster.textContent).toBe('View roster');
     await view.user.click(viewRoster);
-    const dialog = await screen.findByRole('dialog', { name: 'Intro combat (FIntroFight)' });
-    expect(within(dialog).getByText('This encounter is fixed')).toBeTruthy();
-    expect(within(dialog).queryByRole('button', { name: 'Reset to default' })).toBeNull();
+    const dialog = await screen.findByRole('dialog', { name: 'Intro combat' });
+    expect(within(dialog).queryByRole('button', { name: 'Reset' })).toBeNull();
     expect(within(dialog).queryByRole('button', { name: 'Edit' })).toBeNull();
     const four = within(dialog).getByRole('radio', { name: '4' }) as HTMLInputElement;
     expect([four.checked, four.disabled]).toEqual([true, true]);
     expect(
       within(dialog)
         .getAllByRole('tab')
-        .map((tab) => tab.textContent),
-    ).toEqual(['Wave 1', 'Wave 2', 'Wave 3', 'Wave 4']);
-    await view.user.click(within(dialog).getByRole('tab', { name: 'Wave 4' }));
+        .map((tab) => tab.getAttribute('aria-label')),
+    ).toEqual(['Wave 1, fixed', 'Wave 2, fixed', 'Wave 3, fixed', 'Wave 4, fixed']);
+    await view.user.click(within(dialog).getByRole('tab', { name: 'Wave 4, fixed' }));
     const table = within(dialog).getByRole('table', { name: 'Wave 4 enemies' });
     expect(
       within(table)
@@ -845,7 +921,7 @@ describe('generated encounter customization workflows', () => {
         .map((cell) => cell.textContent),
     ).toEqual(['Fixed', 'Wastrel', 'Whisper', 'Casket']);
     expect(within(table).getByRole('row', { name: /^Count/ }).textContent).toBe('Count131');
-    expect(within(table).queryByRole('row', { name: /^Budget/ })).toBeNull();
+    expect(within(table).queryByRole('row', { name: /^Allocated/ })).toBeNull();
     expect(within(dialog).queryByRole('button', { name: 'Wave 4 enemies' })).toBeNull();
   });
   it('shows native placeholders without a finding on an uncustomized fresh phase', async () => {
@@ -865,10 +941,8 @@ describe('generated encounter customization workflows', () => {
     expect(
       screen.getByRole('button', { name: 'Customize encounter' }).getAttribute('data-has-findings'),
     ).toBe('false');
-    expect(
-      within(view.dialog).getByRole('status', { name: 'Encounter feedback' }).textContent,
-    ).toContain('No current findings.');
-    expect(within(view.dialog).queryByRole('button', { name: 'Reset to default' })).toBeNull();
+    expect(dialogFinding(view.dialog)).toBeUndefined();
+    expect(within(view.dialog).queryByRole('button', { name: 'Reset' })).toBeNull();
     expect(within(view.dialog).getByRole('button', { name: 'Edit' })).toBeTruthy();
     expect(within(view.dialog).queryByRole('button', { name: 'Wave 2 enemies' })).toBeNull();
     expect(within(view.dialog).getByText('The game generates this wave’s enemies.')).toBeTruthy();
@@ -880,19 +954,17 @@ describe('generated encounter customization workflows', () => {
     const view = await open(
       customize(createCompleteFGProject(), phase, { kind: 'generated', waveCount: 3 }),
     );
-    expect(
-      within(view.dialog).getByRole('status', { name: 'Encounter feedback' }).textContent,
-    ).toContain('Shared Enemy');
+    expect(dialogFinding(view.dialog)).toContain('Shared Enemy');
     expect(within(view.dialog).queryByRole('tab')).toBeNull();
     expect(within(view.dialog).queryByRole('tabpanel')).toBeNull();
   });
-  it('labels a mature native phase and an authored one by disposition', async () => {
+  it('marks only an uncustomized native phase', async () => {
     const native = await open(createCompleteFGProject());
     expect(within(native.dialog).getByText('Not customized')).toBeTruthy();
     expect(within(native.dialog).queryByRole('tab')).toBeNull();
     await initialize(native);
-    expect(within(native.dialog).getByText('This encounter is generated')).toBeTruthy();
-    expect(within(native.dialog).getByRole('button', { name: 'Reset to default' })).toBeTruthy();
+    expect(within(native.dialog).queryByText('Not customized')).toBeNull();
+    expect(within(native.dialog).getByRole('button', { name: 'Reset' })).toBeTruthy();
   });
   it('initializes reward-owned Devotion at its exact phase', async () => {
     const owner = createEncounterPhaseAddress(
@@ -903,6 +975,7 @@ describe('generated encounter customization workflows', () => {
     const view = await open(loadSurfaceNOPQProject(), owner);
     await initialize(view);
     expect(within(view.dialog).getByRole('radiogroup', { name: 'Waves' })).toBeTruthy();
+    await save(view);
     expect(
       projectStructuredWorkspaceFixture(
         view.application.store.getState().projectWorkspace.history!.present,

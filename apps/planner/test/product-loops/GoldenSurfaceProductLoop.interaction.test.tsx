@@ -610,7 +610,7 @@ describe('surface product loop', () => {
     }
     await view.user.click(launcher);
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(new RegExp(`Replaces ${replacedTraitLabel}`))).toBeTruthy();
+    expect(within(dialog).getByText(new RegExp(`replaces ${replacedTraitLabel}`))).toBeTruthy();
     const interaction = application
       .selectStructuredWorkspace(application.store.getState())!
       .interactions.traitOffers.get(semanticAddressKey(traitAddress));
