@@ -7,7 +7,10 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 import { StructuredWorkspaceProjectionContractError, type WorkspaceRoomSummary } from '../contract';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
-import { bindWorkspaceInspectorDestinations } from '../navigation/inspector-destinations';
+import {
+  bindWorkspaceInspectorDestinations,
+  workspaceRailSelection,
+} from '../navigation/inspector-destinations';
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
 import {
   workspaceDecisionOwnedMarkers,
@@ -520,10 +523,6 @@ export function presentWorkspaceBiome(
         : decisionDoorFindingCount(node);
     return withRailFindingCount(base, ownCount + (hostedDoorFindingCount.get(base.focusKey) ?? 0));
   };
-  const doorsRailKeyFor = (node: WorkspaceNode) => {
-    const doorsRailKey = doorsRailKeyByDecision.get(node.key);
-    return doorsRailKey === undefined ? {} : { doorsRailKey };
-  };
   let decisionIndex = 0;
   const railEntryForNode = (node: WorkspaceNode): WorkspaceRailEntry => {
     if (node.kind === 'hubDecision') return projectHubRailEntry(catalog, node, structuralNodes);
@@ -533,7 +532,6 @@ export function presentWorkspaceBiome(
       const selectedTarget = selectedTargetRailPresentation(catalog, node);
       const marker = railMarker(node);
       return Object.freeze({
-        ...doorsRailKeyFor(node),
         focusMarker: railFocusMarkerForNode(node, marker),
         kind: 'node' as const,
         key: node.key,
@@ -569,7 +567,6 @@ export function presentWorkspaceBiome(
           ? roomRailPresentation(catalog, node.room, undefined)
           : undefined;
     return Object.freeze({
-      ...doorsRailKeyFor(node),
       kind: 'node' as const,
       focusMarker: railFocusMarkerForNode(node, marker),
       key: node.key,
@@ -701,7 +698,6 @@ export function presentWorkspaceBiome(
       switch (entry.node.kind) {
         case 'ordinaryBatch':
           return Object.freeze({
-            ...(entry.doorsRailKey === undefined ? {} : { doorsRailKey: entry.doorsRailKey }),
             focusMarker: entry.focusMarker,
             kind: 'node' as const,
             key: entry.key,
@@ -712,7 +708,6 @@ export function presentWorkspaceBiome(
           });
         case 'mixedBatch':
           return Object.freeze({
-            ...(entry.doorsRailKey === undefined ? {} : { doorsRailKey: entry.doorsRailKey }),
             focusMarker: entry.focusMarker,
             kind: 'node' as const,
             key: entry.key,
@@ -723,7 +718,6 @@ export function presentWorkspaceBiome(
           });
         case 'takeoverBatch':
           return Object.freeze({
-            ...(entry.doorsRailKey === undefined ? {} : { doorsRailKey: entry.doorsRailKey }),
             focusMarker: entry.focusMarker,
             kind: 'node' as const,
             key: entry.key,
@@ -739,17 +733,26 @@ export function presentWorkspaceBiome(
       }
     }),
   );
-  const inspectorDefaults = Object.freeze({
+  const defaultSubject = defaultInspectorDestination({
     ...(entry === undefined ? {} : { entry }),
-    ...(semantic.echoKeepsakeReplay === undefined
-      ? {}
-      : { echoKeepsakeReplay: semantic.echoKeepsakeReplay }),
+    frontier,
+    nodes,
+  });
+  const railSelectionInput = {
+    defaultInspectorDestination: defaultSubject,
     frontier,
     nodes,
     occurrenceStages,
     rail,
-  });
-  const defaultInspector = defaultInspectorDestination(inspectorDefaults);
+  };
+  const defaultRailKey = workspaceRailSelection(
+    railSelectionInput,
+    semantic.preliminaryFocusDestinations,
+  )(defaultSubject ?? undefined);
+  const defaultInspector =
+    defaultSubject === null || defaultRailKey === undefined
+      ? defaultSubject
+      : Object.freeze({ ...defaultSubject, selectedRailKey: defaultRailKey });
   const biome = Object.freeze({
     biomeKey: semantic.biomeKey,
     completionOutline: semantic.completionOutline,

@@ -1151,7 +1151,7 @@ describe('BiomeWorkspace', () => {
     );
   });
 
-  it('keeps Hub visit and board focus represented by the nested rail', async () => {
+  it('selects the Hub rail stop whenever a Hub visit or board owner opens the Hub', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
     const railVisit = screen.getByRole('button', { name: /Visit 3.*Combat 02/ });
@@ -1164,8 +1164,8 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    expect(railVisit.dataset.selected).toBe('true');
-    expect(hubRailButton().dataset.selected).toBe('false');
+    expect(railVisit.dataset.selected).toBe('false');
+    expect(hubRailButton().dataset.selected).toBe('true');
 
     act(() =>
       view.application.store.dispatch(
@@ -1223,10 +1223,21 @@ describe('BiomeWorkspace', () => {
     }
   });
 
-  it('keeps a stale explicit biome owner on the projected default without selecting the rail', () => {
-    const view = renderWorkspace(createCompleteFGProject(), 'Underworld', 'F');
+  it('selects the rail stop opening the default inspector room, also for a stale explicit owner', () => {
+    // The retained Decision 1 default shows the Opening's Room Doors.
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+      gameName: 'F_Combat01',
+    });
+    const view = renderWorkspace(project, 'Underworld', 'F');
     const projected = workspaceBiome(view.application, 'Underworld', 'F');
-    expect(projected.defaultInspectorDestination?.kind).toBe('node');
+    const opening = projected.entry?.marker.focusKey;
+    if (opening === undefined) throw new Error('F Opening is missing');
+    expectDefaultRailSelection(view.application, view.container, opening);
+    expect(screen.getByRole('tab', { name: 'Room Doors' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
 
     act(() =>
       view.application.store.dispatch(
@@ -1236,7 +1247,7 @@ describe('BiomeWorkspace', () => {
       ),
     );
 
-    expect(selectedRailMarkerKeys(view.container)).toEqual([]);
+    expect(selectedRailMarkerKeys(view.container)).toEqual([opening]);
     expect(
       screen
         .getByRole('complementary', { name: 'Details' })
@@ -1761,7 +1772,14 @@ describe('BiomeWorkspace', () => {
     await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(preboss);
 
+    const prebossRailKey = semanticAddressKey(
+      createTargetAddress(nBiome, handoff.source, 'preboss'),
+    );
+    expect(selectedRailMarkerKeys(view.container)).toEqual([prebossRailKey]);
+
+    // The completed-Hub exit opens Preboss, so the Preboss stop is selected.
     act(() => view.application.store.dispatch(semanticOwnerFocused(handoff)));
+    expect(selectedRailMarkerKeys(view.container)).toEqual([prebossRailKey]);
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(within(inspector).getByRole('heading', { name: 'Preboss' })).toBeTruthy();
     expect(within(inspector).queryByRole('button', { name: 'Remove Preboss' })).toBeNull();

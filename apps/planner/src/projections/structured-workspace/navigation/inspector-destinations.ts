@@ -1,14 +1,13 @@
-import { StructuredWorkspaceProjectionContractError, type WorkspaceRoomSummary } from '../contract';
-import {
-  workspaceHubMainRewardAcquisitionMarkers,
-  workspaceHubMainRewardMarkers,
-  workspaceOccurrenceOwnedMarkers,
-} from './marker-ownership';
 import type {
   WorkspaceInspectorDestination,
   WorkspaceInspectorSubject,
 } from '../contracts/navigation';
 import type { WorkspaceBiome, WorkspaceNode, WorkspaceRailEntry } from '../contracts/structure';
+
+type RailSelectionBiome = Pick<
+  WorkspaceBiome,
+  'defaultInspectorDestination' | 'frontier' | 'nodes' | 'occurrenceStages' | 'rail'
+>;
 
 /** Final workspace products needed to bind exact semantic focus for one biome. */
 export interface WorkspaceInspectorDestinationBindingInput {
@@ -16,7 +15,7 @@ export interface WorkspaceInspectorDestinationBindingInput {
   readonly destinationsByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>;
 }
 
-function subjectForDefault(biome: WorkspaceBiome): WorkspaceInspectorSubject | undefined {
+function subjectForDefault(biome: RailSelectionBiome): WorkspaceInspectorSubject | undefined {
   const destination = biome.defaultInspectorDestination;
   if (destination === null) return undefined;
   return destination.kind === 'node'
@@ -28,7 +27,7 @@ function subjectForDefault(biome: WorkspaceBiome): WorkspaceInspectorSubject | u
 }
 
 function hubNode(
-  biome: WorkspaceBiome,
+  biome: RailSelectionBiome,
 ): Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> | undefined {
   return biome.nodes.find(
     (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
@@ -42,7 +41,7 @@ function hubNode(
  * and coarse fallback owners after the complete biome products exist.
  */
 function subjectForDestination(
-  biome: WorkspaceBiome,
+  biome: RailSelectionBiome,
   destination: WorkspaceInspectorDestination,
 ): WorkspaceInspectorSubject | undefined {
   if (biome.nodes.some((node) => node.key === destination.nodeKey)) {
@@ -67,158 +66,103 @@ function subjectForDestination(
   return subjectForDefault(biome);
 }
 
-function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
-  return [...workspaceOccurrenceOwnedMarkers(room), ...room.localDetailMarkers].map(
-    (marker) => marker.focusKey,
+/** The marker each rendered rail stop focuses when it is chosen, with the stop it selects. */
+function railStopClicks(
+  rail: readonly WorkspaceRailEntry[],
+): readonly { readonly clickKey: string; readonly railKey: string }[] {
+  return rail.flatMap((entry) => {
+    switch (entry.kind) {
+      case 'frontier':
+        return [{ clickKey: entry.marker.focusKey, railKey: entry.marker.focusKey }];
+      case 'node':
+        return [{ clickKey: entry.focusMarker.focusKey, railKey: entry.marker.focusKey }];
+      case 'hubGroup':
+        return [
+          { clickKey: entry.marker.focusKey, railKey: entry.marker.focusKey },
+          ...entry.visits.flatMap((visit) => [
+            { clickKey: visit.marker.focusKey, railKey: visit.marker.focusKey },
+            ...visit.sideVisits.map((sideVisit) => ({
+              clickKey: sideVisit.marker.focusKey,
+              railKey: sideVisit.marker.focusKey,
+            })),
+          ]),
+        ];
+    }
+  });
+}
+
+function subjectKey(subject: WorkspaceInspectorSubject): string {
+  return subject.kind === 'node'
+    ? `node:${subject.nodeKey}`
+    : `frontier:${subject.frontierFocusKey}`;
+}
+
+/** The room the inspector shows for a subject: its occurrence stage, else the subject itself. */
+function openedRoomKey(biome: RailSelectionBiome, subject: WorkspaceInspectorSubject): string {
+  const stage = biome.occurrenceStages.find((candidate) =>
+    subject.kind === 'node'
+      ? candidate.sourceOccurrenceNodeKey === subject.nodeKey ||
+        (candidate.outgoing.kind === 'authoredDecision' &&
+          candidate.outgoing.decisionNodeKey === subject.nodeKey)
+      : candidate.outgoing.kind === 'frontier' &&
+        candidate.outgoing.frontier.marker.focusKey === subject.frontierFocusKey,
   );
-}
-
-/** Marker ownership used by a top-level rail node, not semantic lookup in React. */
-function nodeOwnedFocusKeys(node: WorkspaceNode): readonly string[] {
-  switch (node.kind) {
-    case 'occurrenceWorkbench':
-      return Object.freeze([
-        node.marker.focusKey,
-        ...(node.railMarker === undefined ? [] : [node.railMarker.focusKey]),
-        ...roomOwnedFocusKeys(node.room),
-      ]);
-    case 'ordinaryBatch':
-    case 'mixedBatch':
-    case 'takeoverBatch':
-      return Object.freeze([
-        node.marker.focusKey,
-        node.selection.focusKey,
-        ...(node.rewardStore === undefined ? [] : [node.rewardStore.focusKey]),
-        ...node.targets.map((target) => target.marker.focusKey),
-        ...node.targets.flatMap((target) =>
-          target.door.offerRewardSurface.rewards.map((reward) => reward.marker.focusKey),
-        ),
-        ...node.missingTargets.map((target) => target.marker.focusKey),
-      ]);
-    case 'hubDecision':
-      return Object.freeze([
-        node.marker.focusKey,
-        node.openSet.focusKey,
-        ...node.slots.map((slot) => slot.marker.focusKey),
-      ]);
-  }
-}
-
-function registerRailFocusKey(
-  railByFocusKey: Map<string, string>,
-  focusKey: string,
-  selectedRailKey: string,
-): void {
-  const existing = railByFocusKey.get(focusKey);
-  if (existing !== undefined && existing !== selectedRailKey) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${focusKey} maps to multiple workspace rail stops.`,
-    );
-  }
-  railByFocusKey.set(focusKey, selectedRailKey);
+  return stage === undefined ? subjectKey(subject) : `stage:${stage.sourceOccurrenceNodeKey}`;
 }
 
 /**
- * The rail is a presentation product, so it owns the exact mapping from a
- * focused semantic marker to its selected rendered marker key. This preserves
- * intentionally unselected hidden sources instead of deriving selection from
- * an inspector node.
+ * Selects the rail stop that opens the room the inspector opens for a subject.
+ * Among stops opening that room it prefers the focused marker's (or frontier's) own stop, then
+ * the stop opening that exact subject, then the first. A decision with a
+ * selected room therefore selects the stop opening its source room, whose Room
+ * Doors repair the decision.
  */
-function selectedRailKeysByFocusKey(
-  rail: readonly WorkspaceRailEntry[],
-): ReadonlyMap<string, string> {
-  const result = new Map<string, string>();
-  for (const entry of rail) {
-    switch (entry.kind) {
-      case 'frontier':
-        registerRailFocusKey(result, entry.marker.focusKey, entry.marker.focusKey);
-        break;
-      case 'node': {
-        // A decision's doors, including its selected room's door reward, repair
-        // on its source room's Doors tab.
-        const doorFocusKeys = new Set(nodeOwnedFocusKeys(entry.node));
-        for (const focusKey of doorFocusKeys) {
-          registerRailFocusKey(result, focusKey, entry.doorsRailKey ?? entry.marker.focusKey);
-        }
-        if (
-          (entry.node.kind === 'ordinaryBatch' ||
-            entry.node.kind === 'mixedBatch' ||
-            entry.node.kind === 'takeoverBatch') &&
-          entry.node.selectedContinuation !== undefined
-        ) {
-          for (const focusKey of roomOwnedFocusKeys(entry.node.selectedContinuation.door.room)) {
-            if (doorFocusKeys.has(focusKey)) continue;
-            registerRailFocusKey(result, focusKey, entry.marker.focusKey);
-          }
-        }
-        registerRailFocusKey(result, entry.focusMarker.focusKey, entry.marker.focusKey);
-        break;
-      }
-      case 'hubGroup':
-        for (const focusKey of nodeOwnedFocusKeys(entry.node)) {
-          registerRailFocusKey(result, focusKey, entry.marker.focusKey);
-        }
-        for (const visit of entry.visits) {
-          for (const focusKey of [
-            visit.visitMarker.focusKey,
-            visit.node.marker.focusKey,
-            ...visit.node.localDetailMarkers.map((marker) => marker.focusKey),
-            ...workspaceHubMainRewardAcquisitionMarkers(visit.node.room).map(
-              (marker) => marker.focusKey,
-            ),
-          ]) {
-            registerRailFocusKey(result, focusKey, visit.marker.focusKey);
-          }
-          for (const marker of workspaceHubMainRewardMarkers(visit.node.room)) {
-            registerRailFocusKey(result, marker.focusKey, entry.marker.focusKey);
-          }
-          if (visit.node.localVisit !== undefined) {
-            const parentMarkers = [
-              visit.node.localVisit.marker,
-              visit.node.localVisit.orderMarker,
-              ...visit.node.localVisit.slots.flatMap((slot) => {
-                if (slot.generation !== 'generated') return [slot.marker];
-                return [slot.marker, ...workspaceHubMainRewardMarkers(slot.room)];
-              }),
-            ];
-            for (const marker of parentMarkers) {
-              registerRailFocusKey(result, marker.focusKey, visit.marker.focusKey);
-            }
-          }
-          for (const sideVisit of visit.sideVisits) {
-            for (const focusKey of [
-              sideVisit.node.marker.focusKey,
-              ...sideVisit.node.localDetailMarkers.map((marker) => marker.focusKey),
-              ...workspaceHubMainRewardAcquisitionMarkers(sideVisit.node.room).map(
-                (marker) => marker.focusKey,
-              ),
-            ]) {
-              registerRailFocusKey(result, focusKey, sideVisit.marker.focusKey);
-            }
-            for (const marker of workspaceHubMainRewardMarkers(sideVisit.node.room)) {
-              registerRailFocusKey(result, marker.focusKey, visit.marker.focusKey);
-            }
-          }
-        }
-        break;
+export function workspaceRailSelection(
+  biome: RailSelectionBiome,
+  destinationsByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>,
+): (subject: WorkspaceInspectorSubject | undefined, focusKey?: string) => string | undefined {
+  const stopByMarker = new Map<string, { readonly railKey: string; readonly room: string }>();
+  const railBySubject = new Map<string, string>();
+  const railByRoom = new Map<string, string>();
+  for (const { clickKey, railKey } of railStopClicks(biome.rail)) {
+    const destination = destinationsByOwner.get(clickKey);
+    const subject =
+      destination === undefined ? undefined : subjectForDestination(biome, destination);
+    if (subject === undefined) continue;
+    const room = openedRoomKey(biome, subject);
+    for (const markerKey of [railKey, clickKey]) {
+      if (!stopByMarker.has(markerKey)) stopByMarker.set(markerKey, { railKey, room });
     }
+    const exact = subjectKey(subject);
+    if (!railBySubject.has(exact)) railBySubject.set(exact, railKey);
+    if (!railByRoom.has(room)) railByRoom.set(room, railKey);
   }
-  return result;
+  return (subject, focusKey) => {
+    if (subject === undefined) return undefined;
+    const room = openedRoomKey(biome, subject);
+    const focused =
+      focusKey ?? (subject.kind === 'frontier' ? subject.frontierFocusKey : undefined);
+    const focusedStop = focused === undefined ? undefined : stopByMarker.get(focused);
+    if (focusedStop?.room === room) return focusedStop.railKey;
+    const exact = railBySubject.get(subjectKey(subject));
+    return exact ?? railByRoom.get(room);
+  };
 }
 
 /**
  * Decorates biome-local exact focus destinations from final, already-published
- * nodes, rail, frontier, and no-focus default products. No authored topology,
+ * nodes, rail, frontier, and no-focus default products. Each destination
+ * selects the rail stop that opens the room its inspector opens. No authored topology,
  * source index, catalog, candidate, or UI-session state is consulted here.
  */
 export function bindWorkspaceInspectorDestinations(
   input: WorkspaceInspectorDestinationBindingInput,
 ): ReadonlyMap<string, WorkspaceInspectorDestination> {
-  const railByFocusKey = selectedRailKeysByFocusKey(input.biome.rail);
+  const selectRail = workspaceRailSelection(input.biome, input.destinationsByOwner);
   const result = new Map<string, WorkspaceInspectorDestination>();
   for (const [ownerKey, destination] of input.destinationsByOwner) {
     const inspectorSubject = subjectForDestination(input.biome, destination);
-    const selectedRailKey = railByFocusKey.get(destination.focusKey);
+    const selectedRailKey = selectRail(inspectorSubject, destination.focusKey);
     result.set(
       ownerKey,
       Object.freeze({

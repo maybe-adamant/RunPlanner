@@ -1,19 +1,14 @@
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 
 import type { WorkspaceAuthoringFrontier } from '../contracts/structure';
-import type {
-  WorkspaceNode,
-  WorkspaceOccurrenceWorkbenchNode,
-  WorkspaceRailEntry,
-} from '../contracts/structure';
-import type { WorkspaceDefaultInspectorDestination } from '../contracts/navigation';
+import type { WorkspaceNode, WorkspaceOccurrenceWorkbenchNode } from '../contracts/structure';
+import type { WorkspaceInspectorSubject } from '../contracts/navigation';
 
 /** The completed products needed to select a no-focus inspector subject. */
 export interface WorkspaceInspectorDefaultsInput {
   readonly entry?: WorkspaceOccurrenceWorkbenchNode;
   readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly nodes: readonly WorkspaceNode[];
-  readonly rail: readonly WorkspaceRailEntry[];
 }
 
 type WorkspaceDecisionNode = Extract<
@@ -27,48 +22,14 @@ function isDecisionNode(node: WorkspaceNode): node is WorkspaceDecisionNode {
   );
 }
 
-function selectedRailKeyForNode(
-  rail: readonly WorkspaceRailEntry[],
-  nodeKey: string,
-): string | undefined {
-  for (const entry of rail) {
-    switch (entry.kind) {
-      case 'frontier':
-        break;
-      case 'node':
-        if (entry.node.key === nodeKey) return entry.marker.focusKey;
-        break;
-      case 'hubGroup': {
-        if (entry.node.key === nodeKey) return entry.marker.focusKey;
-        const visit = entry.visits.find((candidate) => candidate.node.key === nodeKey);
-        if (visit !== undefined) return visit.marker.focusKey;
-        break;
-      }
-    }
-  }
-  return undefined;
+function nodeSubject(node: WorkspaceNode): WorkspaceInspectorSubject {
+  return Object.freeze({ kind: 'node' as const, nodeKey: node.key });
 }
 
-function nodeDestination(
-  input: WorkspaceInspectorDefaultsInput,
-  node: WorkspaceNode,
-): WorkspaceDefaultInspectorDestination {
-  const selectedRailKey = selectedRailKeyForNode(input.rail, node.key);
-  return Object.freeze({
-    kind: 'node' as const,
-    nodeKey: node.key,
-    ...(selectedRailKey === undefined ? {} : { selectedRailKey }),
-  });
-}
-
-function frontierDestination(
+function frontierSubject(
   frontier: Extract<WorkspaceAuthoringFrontier, { readonly kind: 'start' | 'exitDecision' }>,
-): WorkspaceDefaultInspectorDestination {
-  return Object.freeze({
-    frontierFocusKey: frontier.marker.focusKey,
-    kind: 'frontier' as const,
-    selectedRailKey: frontier.marker.focusKey,
-  });
+): WorkspaceInspectorSubject {
+  return Object.freeze({ frontierFocusKey: frontier.marker.focusKey, kind: 'frontier' as const });
 }
 
 function hubNode(input: WorkspaceInspectorDefaultsInput): WorkspaceNode | undefined {
@@ -97,7 +58,7 @@ function incompleteDecision(
  */
 export function defaultInspectorDestination(
   input: WorkspaceInspectorDefaultsInput,
-): WorkspaceDefaultInspectorDestination | null {
+): WorkspaceInspectorSubject | null {
   const { frontier, nodes } = input;
   if (frontier?.kind === 'start' || frontier?.kind === 'exitDecision') {
     if (frontier.kind === 'exitDecision') {
@@ -107,20 +68,20 @@ export function defaultInspectorDestination(
           node.source.kind !== 'hubDecision' &&
           semanticAddressKey(node.owner) === semanticAddressKey(frontier.owner),
       );
-      if (matchingDecision !== undefined) return nodeDestination(input, matchingDecision);
+      if (matchingDecision !== undefined) return nodeSubject(matchingDecision);
       if (frontier.owner.source.kind === 'hubDecision') {
         const hub = hubNode(input);
-        if (hub !== undefined) return nodeDestination(input, hub);
+        if (hub !== undefined) return nodeSubject(hub);
       }
     }
-    return frontierDestination(frontier);
+    return frontierSubject(frontier);
   }
   if (frontier?.kind === 'hubVisit' || frontier?.kind === 'hubOpenSet') {
     const hub = hubNode(input);
-    if (hub !== undefined) return nodeDestination(input, hub);
+    if (hub !== undefined) return nodeSubject(hub);
   }
   const incomplete = incompleteDecision(input);
-  if (incomplete !== undefined) return nodeDestination(input, incomplete);
+  if (incomplete !== undefined) return nodeSubject(incomplete);
   const activeDetails = nodes
     .filter(
       (node): node is WorkspaceOccurrenceWorkbenchNode =>
@@ -129,23 +90,23 @@ export function defaultInspectorDestination(
     .at(-1);
   if (activeDetails !== undefined) {
     if (activeDetails.completedHubExitStage === true) {
-      return nodeDestination(input, activeDetails);
+      return nodeSubject(activeDetails);
     }
     const containingDecision = nodes.find(
       (node): node is WorkspaceDecisionNode =>
         isDecisionNode(node) &&
         node.targets.some((target) => target.room.occurrenceId === activeDetails.room.occurrenceId),
     );
-    if (containingDecision !== undefined) return nodeDestination(input, containingDecision);
+    if (containingDecision !== undefined) return nodeSubject(containingDecision);
     const containingHub = nodes.find(
       (node) =>
         node.kind === 'hubDecision' &&
         node.slots.some((slot) => slot.room?.occurrenceId === activeDetails.room.occurrenceId),
     );
-    if (containingHub !== undefined) return nodeDestination(input, containingHub);
-    return nodeDestination(input, activeDetails);
+    if (containingHub !== undefined) return nodeSubject(containingHub);
+    return nodeSubject(activeDetails);
   }
-  if (input.entry !== undefined) return nodeDestination(input, input.entry);
+  if (input.entry !== undefined) return nodeSubject(input.entry);
   const first = nodes[0];
-  return first === undefined ? null : nodeDestination(input, first);
+  return first === undefined ? null : nodeSubject(first);
 }

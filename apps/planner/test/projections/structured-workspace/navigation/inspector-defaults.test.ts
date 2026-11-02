@@ -107,7 +107,6 @@ function defaultsInput(
     ...(value.entry === undefined ? {} : { entry: value.entry }),
     frontier: value.frontier,
     nodes: value.nodes,
-    rail: value.rail,
     ...overrides,
   };
 }
@@ -287,6 +286,32 @@ describe('workspace inspector defaults', () => {
     expect(complete.defaultInspectorDestination?.selectedRailKey).toBeUndefined();
   });
 
+  it('selects the stop opening the room whose doors a default decision shows', () => {
+    // A retained Decision 1 is the default, shown on the Opening's Room Doors,
+    // while its own rail stop opens the room it selected.
+    const retained = biome(
+      applyProjectCommand(completeProject, catalog, {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+        gameName: 'F_Combat01',
+      }),
+      'F',
+    );
+    const defaultDestination = retained.defaultInspectorDestination;
+    if (defaultDestination?.kind !== 'node') throw new Error('F default node is missing');
+    const decisionRail = retained.rail.find(
+      (entry) => entry.kind === 'node' && entry.node.key === defaultDestination.nodeKey,
+    );
+    if (decisionRail?.kind !== 'node' || decisionRail.node.kind !== 'ordinaryBatch')
+      throw new Error('F default Decision 1 rail stop is missing');
+    expect(decisionRail.node.source).toEqual({
+      kind: 'occurrence',
+      occurrenceId: retained.entry?.room.occurrenceId,
+    });
+    expect(decisionRail.focusMarker.focusKey).not.toBe(decisionRail.node.marker.focusKey);
+    expect(defaultDestination.selectedRailKey).toBe(retained.entry?.marker.focusKey);
+  });
+
   it('keeps defensive matching-exit, entry, first-node, and empty defaults explicit', () => {
     const start = createOccurrenceId('default-inspector-matching-exit-start');
     const startedProject = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
@@ -340,9 +365,9 @@ describe('workspace inspector defaults', () => {
     const completion = complete.completionOutline[0];
     if (completion === undefined) throw new Error('complete F fixed-linked occurrence is missing');
     expectNode(
-      defaultInspectorDestination({ frontier: null, nodes: [completion], rail: [] }),
+      defaultInspectorDestination({ frontier: null, nodes: [completion] }),
       completion.key,
     );
-    expect(defaultInspectorDestination({ frontier: null, nodes: [], rail: [] })).toBeNull();
+    expect(defaultInspectorDestination({ frontier: null, nodes: [] })).toBeNull();
   });
 });

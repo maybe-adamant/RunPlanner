@@ -405,7 +405,6 @@ describe('structured workspace biome presentation', () => {
         entry.kind === 'node' && entry.node.key === presentation.biome.entry?.key,
     );
     if (opening === undefined) throw new Error('F Opening rail entry is missing');
-    expect(rail.doorsRailKey).toBe(opening.marker.focusKey);
     const selectedTarget = decision.targets.find((target) => target.selected);
     if (selectedTarget === undefined) throw new Error('F selected continuation is missing');
     const selectedWorkbench = presentation.biome.nodes.find(
@@ -446,7 +445,6 @@ describe('structured workspace biome presentation', () => {
     if (doorReward === undefined) throw new Error('F Decision 2 repeated door reward is missing');
     expect(doorReward.marker.findingCount).toBe(1);
     // Decision 2's doors leave Decision 1's room, so Decision 1 carries the mark.
-    expect(second.doorsRailKey).toBe(first.marker.focusKey);
     expect(first.marker.findingCount).toBe(1);
     expect(second.marker.findingCount).toBe(0);
     expect(presentation.focusDestinations.get(doorReward.marker.focusKey)).toMatchObject({

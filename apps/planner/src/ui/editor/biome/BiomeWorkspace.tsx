@@ -464,14 +464,14 @@ export function BiomeWorkspace({
     biome,
     biome.defaultInspectorDestination ?? undefined,
   );
-  const subject =
+  const explicitSubject =
     destinationOwner === undefined
-      ? defaultSubject
-      : (resolveInspectorSubject(biome, explicitDestination?.inspectorSubject) ?? defaultSubject);
-  // An explicit semantic owner intentionally suppresses default rail selection
-  // when it resolves through a coarse fallback or is stale after a removal.
+      ? undefined
+      : resolveInspectorSubject(biome, explicitDestination?.inspectorSubject);
+  const subject = explicitSubject ?? defaultSubject;
+  // The rail selection comes from whichever destination supplied the inspector.
   const selectedRailKey =
-    destinationOwner === undefined
+    explicitSubject === undefined
       ? biome.defaultInspectorDestination?.selectedRailKey
       : explicitDestination?.selectedRailKey;
   const inspectorTitle =

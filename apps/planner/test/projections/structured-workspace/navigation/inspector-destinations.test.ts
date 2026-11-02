@@ -1101,7 +1101,7 @@ describe('workspace inspector destinations', () => {
     expect([...labels]).toEqual(expect.arrayContaining(['Chosen God', 'Spurned God']));
   });
 
-  it('binds exact frontier and ordinary nested focus while leaving coarse fallback unselected', () => {
+  it('binds exact frontier and ordinary nested focus, and a coarse fallback to the default rail stop', () => {
     const empty = project(emptyProject('Underworld', 1));
     const emptyF = biome(empty, 'F');
     if (emptyF.frontier?.kind !== 'start') throw new Error('empty F start frontier is missing');
@@ -1203,7 +1203,7 @@ describe('workspace inspector destinations', () => {
     for (const owner of [i.marker.address, field.marker.address]) {
       const fallback = destination(complete, owner);
       expect(fallback.inspectorSubject).toEqual(defaultSubject(i));
-      expect(fallback.selectedRailKey).toBeUndefined();
+      expect(fallback.selectedRailKey).toBe(i.defaultInspectorDestination?.selectedRailKey);
     }
   });
 
@@ -1352,10 +1352,11 @@ describe('workspace inspector destinations', () => {
 
     const visit = hubRail.visits.find((candidate) => candidate.visitIndex === 3);
     if (visit === undefined) throw new Error('N authored Hub visit 3 is missing');
+    // The visit's Timeline row opens the Hub, so the Hub stop is selected.
     expect(destination(complete, createHubVisitAddress(nBiome, 'hub', 3))).toMatchObject({
       hubTab: 'timeline',
       inspectorSubject: { kind: 'node', nodeKey: hub.key },
-      selectedRailKey: visit.marker.focusKey,
+      selectedRailKey: hubRail.marker.focusKey,
     });
     expect(destination(complete, createHubSlotAddress(nBiome, 'hub', 'combat02'))).toMatchObject({
       hubTab: 'overview',
@@ -1490,10 +1491,11 @@ describe('workspace inspector destinations', () => {
     );
     const prebossTarget = createTargetAddress(nBiome, handoffOwner.source, 'preboss');
     if (preboss === undefined) throw new Error('N fixed Preboss workbench is missing');
+    // The completed-Hub exit opens Preboss, so the Preboss stop is selected.
     expect(destination(complete, handoffOwner)).toMatchObject({
       inspectorSubject: { kind: 'node', nodeKey: preboss.key },
+      selectedRailKey: railKeyForNode(n, preboss.key),
     });
-    expect(destination(complete, handoffOwner).selectedRailKey).toBeUndefined();
     expect(destination(complete, prebossTarget)).toMatchObject({
       inspectorSubject: { kind: 'node', nodeKey: preboss.key },
       selectedRailKey: semanticAddressKey(prebossTarget),
@@ -1535,7 +1537,7 @@ describe('workspace inspector destinations', () => {
     const unroomedVisit = destination(truncated, createHubVisitAddress(nBiome, 'hub', 4));
     expect(unroomedVisit.hubTab).toBe('timeline');
     expect(unroomedVisit.inspectorSubject).toEqual({ kind: 'node', nodeKey: truncatedHub.key });
-    expect(unroomedVisit.selectedRailKey).toBeUndefined();
+    expect(unroomedVisit.selectedRailKey).toBe(truncatedHub.marker.focusKey);
 
     // The completed-Hub exit always owns its Preboss, so its owner routes to that stage.
     const handoff = project(loadSurfaceNCompleteHubFrontierProject());
@@ -1550,7 +1552,7 @@ describe('workspace inspector destinations', () => {
       kind: 'node',
       nodeKey: handoffPreboss.key,
     });
-    expect(handoffDestination.selectedRailKey).toBeUndefined();
+    expect(handoffDestination.selectedRailKey).toBe(railKeyForNode(handoffN, handoffPreboss.key));
   });
 
   it('routes Hub fountain placement and its Phial outcome to the Hub Timeline', () => {

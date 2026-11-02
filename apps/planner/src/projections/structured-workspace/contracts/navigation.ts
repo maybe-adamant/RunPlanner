@@ -101,8 +101,8 @@ export interface WorkspaceInspectorDestination {
   readonly region: 'inspector' | 'routeRail' | 'structure';
   readonly routeKey?: string;
   /**
-   * The selected rendered rail marker key for this exact focus. Absence is
-   * intentional for coarse fallback owners and hidden structural sources.
+   * The rail stop opening the room this destination's inspector opens. Omitted
+   * only when no rail stop opens that room.
    */
   readonly selectedRailKey?: string;
 }
@@ -113,11 +113,7 @@ export interface WorkspaceInspectorDestination {
  * exact owner navigation may redirect a leaf into its containing workbench,
  * while a default may be the active authoring frontier itself.
  */
-export type WorkspaceDefaultInspectorDestination =
-  | (Extract<WorkspaceInspectorSubject, { readonly kind: 'frontier' }> & {
-      readonly selectedRailKey: string;
-    })
-  | (Extract<WorkspaceInspectorSubject, { readonly kind: 'node' }> & {
-      /** Omitted only when the chosen structural node has no rail entry. */
-      readonly selectedRailKey?: string;
-    });
+export type WorkspaceDefaultInspectorDestination = WorkspaceInspectorSubject & {
+  /** The rail stop opening the same room; omitted only when no stop opens it. */
+  readonly selectedRailKey?: string;
+};
