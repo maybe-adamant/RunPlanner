@@ -8,6 +8,10 @@ import type {
 
 import {
   defaultHexTalentTree,
+  hexCommonColumnDeal,
+  type HexCommonColumnDeal,
+  hexCommonColumns,
+  type HexCommonColumnDeckSegment,
   hexCommonDecks,
   type HexCommonDecks,
   hexNodeTalentDomain,
@@ -28,6 +32,8 @@ export type AuthoredHexTreeEdit =
   | { readonly kind: 'setNode'; readonly nodeKey: string; readonly talentKey: string }
   /** Exchanges the talents of two Common nodes. */
   | { readonly kind: 'swapNodes'; readonly nodeKey: string; readonly otherNodeKey: string }
+  /** Sets a Common column's talents, by its slots in map order; later columns keep theirs. */
+  | { readonly kind: 'setColumn'; readonly depth: number; readonly talentKeys: readonly string[] }
   /** Regenerates the default tree on another layout. */
   | { readonly kind: 'changeLayout'; readonly layoutKey: HexLayoutKey }
   | { readonly kind: 'reset' };
@@ -167,6 +173,31 @@ function swapNodes(
   });
 }
 
+function setColumn(
+  catalog: Catalog,
+  spellTraitKey: string,
+  value: AuthoredHexTreeConfiguration,
+  depth: number,
+  talentKeys: readonly string[],
+): AuthoredHexTreeConfiguration {
+  const hex = hexFor(catalog, spellTraitKey);
+  const column = hexCommonColumns(
+    hex,
+    value.layoutKey,
+    fullTree(hex, layoutFor(hex, value.layoutKey), value.nodes),
+  ).find((candidate) => candidate.depth === depth);
+  if (column === undefined) throw new Error(`Hex depth ${depth} has no Common column`);
+  if (talentKeys.length !== column.slots.length)
+    throw new Error(`Hex column ${depth} has ${column.slots.length} slots`);
+  return normalizeAuthoredHexTree(catalog, spellTraitKey, {
+    layoutKey: value.layoutKey,
+    nodes: {
+      ...value.nodes,
+      ...Object.fromEntries(column.slots.map((slot, index) => [slot.nodeKey, talentKeys[index]!])),
+    },
+  });
+}
+
 /** Applies one edit; nothing else reflows. */
 export function applyAuthoredHexTreeEdit(
   catalog: Catalog,
@@ -184,6 +215,8 @@ export function applyAuthoredHexTreeEdit(
       });
     case 'swapNodes':
       return swapNodes(catalog, spellTraitKey, value, edit.nodeKey, edit.otherNodeKey);
+    case 'setColumn':
+      return setColumn(catalog, spellTraitKey, value, edit.depth, edit.talentKeys);
     case 'changeLayout':
       return edit.layoutKey === value.layoutKey
         ? value
@@ -298,6 +331,102 @@ export function authoredHexCommonDecks(
   const hex = hexFor(catalog, spellTraitKey);
   const layout = layoutFor(hex, value.layoutKey);
   return hexCommonDecks(hex, layout.key, fullTree(hex, layout, value.nodes));
+}
+
+/** One talent a Common column slot can take, and the column edit that places it. */
+export interface AuthoredHexColumnSlotOption {
+  readonly talentKey: string;
+  readonly selected: boolean;
+  readonly edit: Extract<AuthoredHexTreeEdit, { readonly kind: 'setColumn' }>;
+}
+
+export interface AuthoredHexColumnSlot {
+  readonly nodeKey: string;
+  readonly talentKey: string;
+  readonly options: readonly AuthoredHexColumnSlotOption[];
+}
+
+/** One Common column, read against the earlier columns as authored. */
+export interface AuthoredHexColumn {
+  readonly depth: number;
+  /** Map order, top to bottom. */
+  readonly slots: readonly AuthoredHexColumnSlot[];
+  /** The decks the column draws from; absent past an undrawable column. */
+  readonly deck?: readonly HexCommonColumnDeckSegment[];
+  readonly drawable: boolean;
+}
+
+/**
+ * The tree's Common columns in draw order: what each draws from and the
+ * column edit each slot choice makes. From a drawable column every choice
+ * keeps it drawable; later columns are not reflowed.
+ */
+export function authoredHexColumns(
+  catalog: Catalog,
+  spellTraitKey: string,
+  value: AuthoredHexTreeConfiguration,
+): readonly AuthoredHexColumn[] {
+  const hex = hexFor(catalog, spellTraitKey);
+  const layout = layoutFor(hex, value.layoutKey);
+  return Object.freeze(
+    hexCommonColumns(hex, layout.key, fullTree(hex, layout, value.nodes)).map((column) =>
+      Object.freeze({
+        ...column,
+        slots: Object.freeze(
+          column.slots.map((slot) =>
+            Object.freeze({
+              ...slot,
+              options: Object.freeze(
+                slot.options.map((option) =>
+                  Object.freeze({
+                    talentKey: option.talentKey,
+                    selected: option.selected,
+                    edit: Object.freeze({
+                      kind: 'setColumn' as const,
+                      depth: column.depth,
+                      talentKeys: option.talentKeys,
+                    }),
+                  }),
+                ),
+              ),
+            }),
+          ),
+        ),
+      }),
+    ),
+  );
+}
+
+/** A column's deal so far; once complete, the column edit that places it. */
+export interface AuthoredHexColumnDeal extends HexCommonColumnDeal {
+  readonly edit?: Extract<AuthoredHexTreeEdit, { readonly kind: 'setColumn' }>;
+}
+
+/**
+ * Deals one Common column slot by slot in map order, reading the decks the
+ * earlier columns as authored left; absent past an undrawable column.
+ */
+export function authoredHexColumnDeal(
+  catalog: Catalog,
+  spellTraitKey: string,
+  value: AuthoredHexTreeConfiguration,
+  depth: number,
+  dealt: readonly string[],
+): AuthoredHexColumnDeal | undefined {
+  const hex = hexFor(catalog, spellTraitKey);
+  const layout = layoutFor(hex, value.layoutKey);
+  const deal = hexCommonColumnDeal(
+    hex,
+    layout.key,
+    fullTree(hex, layout, value.nodes),
+    depth,
+    dealt,
+  );
+  if (deal === undefined || !deal.complete) return deal;
+  return Object.freeze({
+    ...deal,
+    edit: Object.freeze({ kind: 'setColumn' as const, depth, talentKeys: deal.dealt }),
+  });
 }
 
 /** Strict per-node decoding; tree-wide policy stays a finding. */

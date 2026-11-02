@@ -457,3 +457,287 @@ export function defaultHexTalentTree(hex: HexDeclaration, layoutKey: HexLayoutKe
     Object.fromEntries(layout.nodes.values.map((node) => [node.key, tree[node.key]!])),
   );
 }
+
+/** The talents one deck offers a Common column, and how many the column draws from it. */
+export interface HexCommonColumnDeckSegment {
+  /** The refill cycle; 0 is the first deck. */
+  readonly deckIndex: number;
+  /** The deck's talents not yet drawn when the column reaches it, in declared order. */
+  readonly talentKeys: readonly string[];
+  /** All of them, except possibly in the column's last segment. */
+  readonly draws: number;
+}
+
+/** One talent a Common column slot can take, and the column it yields. */
+export interface HexCommonColumnSlotOption {
+  readonly talentKey: string;
+  readonly selected: boolean;
+  /** The column's talents by slot with this choice. */
+  readonly talentKeys: readonly string[];
+}
+
+export interface HexCommonColumnSlot {
+  readonly nodeKey: string;
+  readonly talentKey: string;
+  readonly options: readonly HexCommonColumnSlotOption[];
+}
+
+/** The Common nodes of one depth, drawn together from the decks the earlier depths left. */
+export interface HexCommonColumn {
+  readonly depth: number;
+  /** Map order, top to bottom. */
+  readonly slots: readonly HexCommonColumnSlot[];
+  /** What the column draws from; absent when an earlier column is not drawable. */
+  readonly deck?: readonly HexCommonColumnDeckSegment[];
+  /** Whether the column's talents are a draw from `deck`. */
+  readonly drawable: boolean;
+}
+
+/** Screen position, top to bottom, then left to right. */
+function mapOrder(nodes: readonly HexLayoutNodeDeclaration[]): readonly HexLayoutNodeDeclaration[] {
+  const y = (node: HexLayoutNodeDeclaration) => node.slot + node.gridOffsetY;
+  const x = (node: HexLayoutNodeDeclaration) => node.depth + node.gridOffsetX;
+  return [...nodes].sort((a, b) => y(a) - y(b) || x(a) - x(b) || a.slot - b.slot);
+}
+
+/** The decks a column of `need` draws reaches from `state`. */
+function columnDeck(
+  cycles: readonly HexRepeatableCycle[],
+  state: DrawState,
+  need: number,
+): readonly HexCommonColumnDeckSegment[] {
+  const segments: HexCommonColumnDeckSegment[] = [];
+  let current = state;
+  while (need > 0) {
+    if (current.left.length === 0)
+      current = { cycle: current.cycle + 1, left: cycles[current.cycle + 1]?.talentKeys ?? [] };
+    if (current.left.length === 0) throw new Error('Hex repeatable draws exceed the tree');
+    const draws = Math.min(need, current.left.length);
+    segments.push(
+      Object.freeze({
+        deckIndex: current.cycle,
+        talentKeys: Object.freeze([...current.left]),
+        draws,
+      }),
+    );
+    need -= draws;
+    current = { cycle: current.cycle, left: [] };
+  }
+  return Object.freeze(segments);
+}
+
+/** The draw state after a column holding exactly `talents`, or undefined when no draw yields them. */
+function drawColumn(
+  cycles: readonly HexRepeatableCycle[],
+  state: DrawState,
+  talents: readonly string[],
+): DrawState | undefined {
+  const remaining = countValues(talents);
+  let need = talents.length;
+  let current = state;
+  while (need > 0) {
+    if (current.left.length === 0)
+      current = { cycle: current.cycle + 1, left: cycles[current.cycle + 1]?.talentKeys ?? [] };
+    if (current.left.length === 0) return undefined;
+    if (need >= current.left.length) {
+      for (const key of current.left) {
+        const count = remaining.get(key) ?? 0;
+        if (count === 0) return undefined;
+        remaining.set(key, count - 1);
+      }
+      need -= current.left.length;
+      current = { cycle: current.cycle, left: [] };
+    } else {
+      const drawn = [...remaining].filter(([, count]) => count > 0);
+      if (drawn.some(([key, count]) => count > 1 || !current.left.includes(key))) return undefined;
+      current = {
+        cycle: current.cycle,
+        left: current.left.filter((key) => (remaining.get(key) ?? 0) === 0),
+      };
+      need = 0;
+    }
+  }
+  return current;
+}
+
+/**
+ * Per slot, the talents it can take: from a drawable column, each choice
+ * keeps the column drawable, swapping with the slot holding the talent when
+ * only that does; otherwise every talent the column's deck holds, or, past an
+ * undrawable column, the node's own domain.
+ */
+function columnSlotOptions(
+  hex: HexDeclaration,
+  layoutKey: HexLayoutKey,
+  cycles: readonly HexRepeatableCycle[],
+  state: DrawState | undefined,
+  deck: readonly HexCommonColumnDeckSegment[] | undefined,
+  drawable: boolean,
+  nodes: readonly HexLayoutNodeDeclaration[],
+  talents: readonly string[],
+): readonly HexCommonColumnSlot[] {
+  const pool = hex.repeatableCandidates.values.map((candidate) => candidate.key);
+  const deckTalents = new Set(deck?.flatMap((segment) => segment.talentKeys));
+  return nodes.map((node, index) => {
+    const current = talents[index]!;
+    const domain =
+      deck === undefined
+        ? hexNodeTalentDomain(hex, layoutKey, node.key)
+        : pool.filter((key) => key === current || deckTalents.has(key));
+    const options = domain.flatMap((talentKey): HexCommonColumnSlotOption[] => {
+      const option = (column: readonly string[]) => [
+        Object.freeze({
+          talentKey,
+          selected: talentKey === current,
+          talentKeys: Object.freeze([...column]),
+        }),
+      ];
+      if (talentKey === current) return option(talents);
+      const set = talents.map((key, slot) => (slot === index ? talentKey : key));
+      if (!drawable || drawColumn(cycles, state!, set) !== undefined) return option(set);
+      const holder = talents.indexOf(talentKey);
+      if (holder < 0) return [];
+      return option(
+        talents.map((key, slot) => (slot === index ? talentKey : slot === holder ? current : key)),
+      );
+    });
+    return Object.freeze({
+      nodeKey: node.key,
+      talentKey: current,
+      options: Object.freeze(options),
+    });
+  });
+}
+
+/**
+ * The Common columns in draw order, each read against the earlier columns as
+ * they are: what it draws from, whether its talents are such a draw, and what
+ * each slot can take. A column's order is unobservable, so any arrangement of
+ * a drawable column is drawable.
+ */
+export function hexCommonColumns(
+  hex: HexDeclaration,
+  layoutKey: HexLayoutKey,
+  tree: HexTalentTree,
+): readonly HexCommonColumn[] {
+  const cycles = hexRepeatableCycles(hex, layoutKey);
+  let state: DrawState | undefined = initialState(cycles);
+  return Object.freeze(
+    repeatableDepths(layoutFor(hex, layoutKey)).map((group) => {
+      const nodes = mapOrder(group.nodes);
+      const talents = nodes.map((node) => tree[node.key]!);
+      const deck = state === undefined ? undefined : columnDeck(cycles, state, nodes.length);
+      const next = state === undefined ? undefined : drawColumn(cycles, state, talents);
+      const drawable = next !== undefined;
+      const slots = columnSlotOptions(
+        hex,
+        layoutKey,
+        cycles,
+        state,
+        deck,
+        drawable,
+        nodes,
+        talents,
+      );
+      state = next;
+      return Object.freeze({
+        depth: group.depth,
+        slots: Object.freeze(slots),
+        ...(deck === undefined ? {} : { deck }),
+        drawable,
+      });
+    }),
+  );
+}
+
+/** One deck of a column's deal and what the deal has not yet taken from it. */
+export interface HexCommonColumnDealSegment extends HexCommonColumnDeckSegment {
+  /** Talents still to deal from this deck, in declared order. */
+  readonly remainingTalentKeys: readonly string[];
+  /** How many more this deck deals into the column. */
+  readonly drawsLeft: number;
+}
+
+/** A column dealt slot by slot in map order; order within a column is unobservable. */
+export interface HexCommonColumnDeal {
+  readonly depth: number;
+  readonly nodeKeys: readonly string[];
+  readonly dealt: readonly string[];
+  readonly segments: readonly HexCommonColumnDealSegment[];
+  /** Talents the next slot can take so that the column can still complete as a draw. */
+  readonly nextTalentKeys: readonly string[];
+  readonly complete: boolean;
+}
+
+/**
+ * The deal of one Common column from the decks the earlier columns as
+ * authored left; absent past an undrawable column. Every deck the column
+ * empties must be dealt whole; only the last deck it reaches is a choice of
+ * distinct talents.
+ */
+export function hexCommonColumnDeal(
+  hex: HexDeclaration,
+  layoutKey: HexLayoutKey,
+  tree: HexTalentTree,
+  depth: number,
+  dealt: readonly string[],
+): HexCommonColumnDeal | undefined {
+  const column = hexCommonColumns(hex, layoutKey, tree).find(
+    (candidate) => candidate.depth === depth,
+  );
+  if (column === undefined) throw new Error(`Hex depth ${depth} has no Common column`);
+  if (column.deck === undefined) return undefined;
+  const need = column.slots.length;
+  if (dealt.length > need) throw new Error(`Hex column ${depth} has ${need} slots`);
+  const deck = column.deck;
+  /** Allocates a deal to whole decks first, earliest first; the rest to the last, partial deck. */
+  const allocate = (cards: readonly string[]) => {
+    const left = countValues(cards);
+    const taken = deck.map((segment, index) => {
+      const partial = index === deck.length - 1 && segment.draws < segment.talentKeys.length;
+      if (partial) return [] as string[];
+      return segment.talentKeys.filter((key) => {
+        const count = left.get(key) ?? 0;
+        if (count === 0) return false;
+        left.set(key, count - 1);
+        return true;
+      });
+    });
+    const last = deck[deck.length - 1]!;
+    const excess = [...left].filter(([, count]) => count > 0);
+    const partial = last.draws < last.talentKeys.length;
+    const fits = partial
+      ? excess.every(([key, count]) => count === 1 && last.talentKeys.includes(key)) &&
+        excess.length <= last.draws
+      : excess.length === 0;
+    if (partial) taken[deck.length - 1] = excess.map(([key]) => key);
+    return { fits, taken };
+  };
+  const current = allocate(dealt);
+  if (!current.fits) throw new Error(`Hex column ${depth} cannot be dealt ${dealt.join(', ')}`);
+  const pool = hex.repeatableCandidates.values.map((candidate) => candidate.key);
+  const offered = new Set(deck.flatMap((segment) => segment.talentKeys));
+  const nextTalentKeys =
+    dealt.length === need
+      ? []
+      : pool.filter((key) => offered.has(key) && allocate([...dealt, key]).fits);
+  return Object.freeze({
+    depth,
+    nodeKeys: Object.freeze(column.slots.map((slot) => slot.nodeKey)),
+    dealt: Object.freeze([...dealt]),
+    segments: Object.freeze(
+      deck.map((segment, index) => {
+        const taken = current.taken[index]!;
+        return Object.freeze({
+          ...segment,
+          remainingTalentKeys: Object.freeze(
+            segment.talentKeys.filter((key) => !taken.includes(key)),
+          ),
+          drawsLeft: segment.draws - taken.length,
+        });
+      }),
+    ),
+    nextTalentKeys: Object.freeze(nextTalentKeys),
+    complete: dealt.length === need,
+  });
+}
