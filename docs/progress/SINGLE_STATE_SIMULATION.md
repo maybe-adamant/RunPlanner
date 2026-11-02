@@ -19,14 +19,14 @@ happen", never as alternative states carried forward or offered as a choice.
    removed on that basis (2026-11-01); the dialog now shows a fault line if it
    ever receives more than one group.
 2. **Drawn bag-entry identity does not matter in today's catalog.** Drawing an
-   offer branches over every eligible same-item entry, but every same-item
-   group in every counted store is one of:
-   - identical conditions, or the item is declared interchangeable (Health,
-     Mana and Gold drops, Pom, Boon, side-room rewards);
+   offer consumes one canonical eligible same-item entry, which is sound
+   because every same-item group in every counted store is one of:
+   - identical conditions (Boon, side-room rewards; no store declares an
+     interchangeable item any more);
    - mutually exclusive, never drawable together (early vs late Hammer; early
      vs late small Ash and Bones);
-   - differing only by a condition that only ever turns true (Pom's "has a
-     boon").
+   - differing only by a condition that only ever turns true (Health, Mana
+     and Gold drops' ordinary-loot count; Pom's "has a boon").
      The one condition that can turn false mid-run (lifetime totals crossing a
      threshold) applies to a whole group at once, so it cannot split branches.
      Bag-entry branching can therefore collapse to one state per draw with no

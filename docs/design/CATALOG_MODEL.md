@@ -133,6 +133,13 @@ single-choice boss customization choices and the ordinary boon replacement
 roll (`boonReplacement`). A counted store entry may name the `routeKeys` whose
 bag holds it. Every listed route key must be a declared route.
 
+Normalization rejects a counted store whose entries of one reward type could
+both be eligible at a draw and later diverge: each such pair must have
+identical requirements and duplicate permission, be mutually exclusive, or
+differ only by conditions that never turn false. The
+[Reward Model](REWARD_MODEL.md#counted-stores-and-bags) owns why a draw may
+then consume one canonical entry.
+
 Content a fresh profile does reach uses the same ordinary facts plus a few
 route-scoped declarations: a `routeKeyEquals` force, a room's `firstRunOffer`,
 `firstBiomeEncounterDefinitionKeyByRoute` on a combat choice (each key a member

@@ -538,8 +538,11 @@ owns the full contract.
 Merge only states equivalent to every downstream consumer. Distinct active
 Arcana, keepsake history, pending effects, pending trait-offer contexts or
 stale marks, or future bag support remain distinct.
-Declaration-certified interchangeable entries may collapse; arbitrary
-first-entry selection cannot replace possibility branching.
+A counted draw resolves to one bag state: the last eligible same-item entry is
+canonical, because the catalog compiler rejects any store whose same-item
+entries could both be eligible and later diverge
+([Reward Model](REWARD_MODEL.md#counted-stores-and-bags)). Wheel draw-order
+search remains lookahead for existence, not alternative carried states.
 
 Reward-generation contacts require agreement on the history families they
 consume. If those exact inputs diverge where the contract requires agreement,

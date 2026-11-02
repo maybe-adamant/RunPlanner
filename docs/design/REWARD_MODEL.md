@@ -348,13 +348,16 @@ types are separate from source selection, which follows the offer's
 
 Repeated bag entries do not duplicate editor options. Their multiplicity and
 requirements remain available to simulation. When several eligible entries can
-produce one authored value, possibility simulation preserves every distinct
-reachable post-consumption bag state. A store may explicitly certify repeated
-same-name entries as interchangeable when their simultaneous eligibility makes
-their remaining exact identity permanently future-neutral; those transition
-results collapse by aggregate count. Uncertified entries remain distinct. This
-canonical representative does not invent a deterministic declaration-order
-tie-breaker for the game's random choice.
+produce one authored value, the draw consumes the last eligible entry of that
+reward type and simulation carries that one bag state. This is sound because
+catalog normalization classifies every same-item pair in a store and rejects
+the store unless each pair has identical requirements and duplicate
+permission, can never be eligible together (disjoint ranges, flags, route keys
+or bag routes), or differs only by conditions that never turn false once true.
+A store may declare a reward type interchangeable as an explicit escape hatch
+when its entries' remaining identity is otherwise known to be future-neutral.
+The canonical entry is an equivalence-class representative, not a claim about
+which entry the game's random choice removed.
 
 When no entry in the entire bag is eligible, the game appends a complete base
 set without discarding ineligible leftovers. It can do this twice. If no entry

@@ -122,8 +122,7 @@ counted producer with a `lifetimeGodUseRecord` requirement, so it applies on
 Multiplicity entries are not interchangeable merely because they share a
 reward name. Once `ordinaryLootCount` is satisfied, for example, both the base
 and qualified `MaxHealthDrop` entries are eligible and the game may remove
-either exact entry. The planner must not choose declaration order as a hidden
-tie-breaker.
+either exact entry; which one is a random game choice.
 
 That exact internal split does **not** currently imply two behaviorally
 different supported futures. A fresh audit of the normalized stores found:
@@ -140,15 +139,14 @@ different supported futures. A fresh audit of the normalized stores found:
   requirement as its peers.
 
 The planner disposition keeps every exact ordered entry and requirement in the
-normalized store, then lets a store declaration certify same-name entries as
-interchangeable when simultaneous eligibility makes their future behavior
-identical. `RunProgress` certifies the Health, Magick, Gold, and Pom pairs. Bag
-transition canonicalization aggregates only those certified pairs; this is an
-equivalence-class representative, not an assertion about which random game
-index was removed. Hammer remains uncertified, and every undeclared
-different-requirement pair retains its exact latent branches. Diagnostic bag
-projection likewise exposes effective aggregate counts rather than presenting
-certified exact-entry identity as multiple run histories.
+normalized store. A draw consumes the last eligible entry of the drawn reward
+type as an equivalence-class representative, not an assertion about which
+random game index was removed. The catalog compiler makes that sound by
+rejecting any store whose same-item entries could both be eligible and later
+diverge ([Reward Model](../../design/REWARD_MODEL.md#counted-stores-and-bags)),
+so every pair above passes on its requirements alone and no store declares an
+interchangeable reward type. Diagnostic bag projection exposes aggregate
+counts by reward type and eligibility rather than exact-entry identity.
 
 ## Generated Base-Store Ratio Controller
 

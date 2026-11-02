@@ -1,7 +1,10 @@
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import { describe, expect, it } from 'vitest';
 
-import { classifySameItemEntries } from '../../src/compiler/rewards/same-item-entries';
+import {
+  classifySameItemEntries,
+  type SameItemEntryRelation,
+} from '../../src/compiler/rewards/same-item-entries';
 import {
   createRewardKernelCatalog,
   rawInput,
@@ -121,30 +124,105 @@ describe('counted store same-item entries', () => {
     ).toThrow(/store Secrets declares TrialUpgrade entries 0 and 1/);
   });
 
+  it.each<[string, RequirementExpression]>([
+    [
+      'a Biome-scoped use record, cleared at each Biome',
+      { kind: 'recordCount', record: 'biomeUseRecord', keys: ['ZeusUpgrade'], range: { min: 1 } },
+    ],
+    [
+      'a rooms-entered record, which is Biome-scoped',
+      { kind: 'recordCount', record: 'roomsEntered', keys: ['P_MiniBoss02'], range: { min: 1 } },
+    ],
+    [
+      'an upgradable trait count, which can fall',
+      { kind: 'counterRange', axis: 'upgradableTraitCount', range: { min: 1 } },
+    ],
+    [
+      'a Biome encounter depth, reset at each Biome',
+      { kind: 'counterRange', axis: 'biomeEncounterDepth', range: { min: 2 } },
+    ],
+    ['a negated requirement that can turn true', { kind: 'not', requirement: lootAcquired }],
+    [
+      'a monotonic counter capped by a maximum',
+      { kind: 'counterRange', axis: 'enteredBiomes', range: { min: 2, max: 3 } },
+    ],
+    [
+      'a monotonic record capped by a maximum',
+      { ...lootAcquired, range: { min: 1, max: 2 } } as RequirementExpression,
+    ],
+    [
+      'a flag present in one entry only',
+      { kind: 'flagEquals', flag: 'pendingSpellDrop', value: false },
+    ],
+  ])('rejects a same-item difference by %s', (_name, requirement) => {
+    expect(() =>
+      createRewardKernelCatalog(withSecretsEntries([{ rewardType: 'TrialUpgrade', requirement }])),
+    ).toThrow(/store Secrets declares TrialUpgrade entries 0 and 1 that can both be eligible/);
+  });
+
   it('accepts identical, exclusive, monotonic and declared-interchangeable same-item entries', () => {
-    const accepted: readonly (readonly [readonly RawEntry[], (readonly string[])?])[] = [
-      [[{ rewardType: 'TrialUpgrade' }]],
-      [[{ rewardType: 'TrialUpgrade', requirement: lootAcquired }]],
-      [
-        [
+    const accepted: readonly {
+      readonly entries: readonly RawEntry[];
+      readonly interchangeable?: readonly string[];
+      readonly relation: SameItemEntryRelation;
+    }[] = [
+      { entries: [{ rewardType: 'TrialUpgrade' }], relation: 'identical' },
+      {
+        entries: [{ rewardType: 'TrialUpgrade', requirement: lootAcquired }],
+        relation: 'monotonicDifference',
+      },
+      {
+        entries: [
           { rewardType: 'Boon', requirement: firstBiome },
           {
             rewardType: 'Boon',
             requirement: { kind: 'counterRange', axis: 'enteredBiomes', range: { min: 2 } },
           },
         ],
-      ],
-      [
-        [
+        relation: 'mutuallyExclusive',
+      },
+      {
+        entries: [
           { rewardType: 'Boon', routeKeys: ['FreshFile'] },
           { rewardType: 'Boon', requirement: firstBiome, routeKeys: ['Underworld'] },
         ],
-      ],
-      [[{ rewardType: 'TrialUpgrade', requirement: firstBiome }], ['TrialUpgrade']],
+        relation: 'mutuallyExclusive',
+      },
+      {
+        entries: [
+          {
+            rewardType: 'Boon',
+            requirement: { kind: 'flagEquals', flag: 'pendingSpellDrop', value: true },
+          },
+          {
+            rewardType: 'Boon',
+            requirement: { kind: 'flagEquals', flag: 'pendingSpellDrop', value: false },
+          },
+        ],
+        relation: 'mutuallyExclusive',
+      },
+      {
+        entries: [{ rewardType: 'TrialUpgrade', requirement: firstBiome }],
+        interchangeable: ['TrialUpgrade'],
+        relation: 'declaredInterchangeable',
+      },
     ];
-    for (const [entries, interchangeable] of accepted)
-      expect(() =>
-        createRewardKernelCatalog(withSecretsEntries(entries, interchangeable)),
-      ).not.toThrow();
+    for (const { entries, interchangeable, relation } of accepted) {
+      const rewardType = entries[0]!.rewardType;
+      const store = createRewardKernelCatalog(
+        withSecretsEntries(entries, interchangeable),
+      ).stores.values.find((candidate) => candidate.key === 'Secrets')!;
+      const sameItem = store.entries.filter((entry) => entry.rewardType === rewardType);
+      const relations = new Set(
+        sameItem.flatMap((left, index) =>
+          sameItem
+            .slice(index + 1)
+            .map((right) =>
+              classifySameItemEntries(left, right, interchangeable?.includes(rewardType) ?? false),
+            ),
+        ),
+      );
+      expect([...relations]).toEqual([relation]);
+    }
   });
 });
