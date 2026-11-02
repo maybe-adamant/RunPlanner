@@ -356,8 +356,8 @@ export function rerollOfferEvaluator(inputs: {
  * One reroll press at its authored rank: legal while a held card enables
  * door rerolls and the target was rerollable when its doors unlocked; a real
  * draw from the target's own store against every door's (wheel's, cage's)
- * current reward and the target's original; one spent from the pool. The
- * target's current reward becomes the pressed reward.
+ * current reward and the target's original; one spent from the pool, which
+ * must cover it. The target's current reward becomes the pressed reward.
  */
 export function applyRewardRerolledTransition(inputs: {
   readonly catalog: Catalog;
@@ -407,15 +407,9 @@ export function applyRewardRerolledTransition(inputs: {
     throw new BiomeRewardSimulationContractError(
       `${semanticAddressKey(owner)} has no history view`,
     );
-  // An over-spend is spent and reported, like a screen's; the timeline continues.
+  // The game refuses a press the pool cannot pay for, so nothing past it happens.
   const remaining = lowestRerollPool(inputs.branches);
-  if (remaining < 1)
-    addRewardFinding(
-      findings,
-      rewardFinding('rerollPoolExceeded', owner, { cost: 1, remaining }),
-      region,
-      chronology,
-    );
+  if (remaining < 1) return blocked('rerollPoolExceeded', { cost: 1, remaining });
   const frontierBranches = inputs.branches;
   const evaluator = rerollOfferEvaluator({
     catalog,

@@ -189,7 +189,7 @@ function poolAt(
 /**
  * Whether a new spend fits the run's reroll pool at its own point, the fixed
  * budget the edit settlement enforces. An earlier spend takes precedence: one
- * that starves later spends is allowed, and those report the over-spend. A
+ * that starves later spends is allowed, and the first of those blocks. A
  * press of a target the game refuses spends nothing; that is the surface's
  * question. A screen is placed at its room's entry, so a pool grant later in
  * that room before the screen can only make the answer stricter.

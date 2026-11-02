@@ -190,6 +190,14 @@ function snapshotAt(
   return snapshot;
 }
 
+/** Where the first biome's evaluation stopped. */
+function blockedAt(project: ProjectDocument) {
+  const biome = evaluate(project).evaluation.route!.biomes[0]!;
+  if (!('coverage' in biome) || biome.coverage.kind !== 'prefix')
+    throw new Error('the biome did not block');
+  return biome.coverage.blockedAt;
+}
+
 function remaining(snapshot: ReturnType<typeof snapshotAt>, storeKey: string): readonly number[] {
   return snapshot.rewardStores.find((store) => store.storeKey === storeKey)!.remainingEntryCounts;
 }
@@ -246,7 +254,7 @@ describe('door rerolls', () => {
     ).toContainEqual(['rerollUnavailable', { kind: 'doors' }]);
   });
 
-  it('spend and report a press past the pool', () => {
+  it('block at a preserved press past the pool', () => {
     let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
     for (let count = 0; count < 3; count += 1) project = press(project, door('exit2', otherTarget));
     expect(rerollFindings(project)).toEqual([]);
@@ -254,14 +262,27 @@ describe('door rerolls', () => {
       'the reroll pool has nothing left for this spend',
     );
 
-    // A preserved over-spend still draws, so the timeline continues past it.
-    const over = press(project, door('exit2', otherTarget));
+    // The game refuses the press, so it neither draws nor spends and nothing after it is reached.
+    const over = applyProjectCommand(
+      project,
+      catalog,
+      insertReroll(project, door('exit2', otherTarget), { rewardType: 'MaxHealthDrop' }),
+    );
     expect(rerollFindings(over).map((finding) => [finding.code, finding.evidence])).toEqual([
       ['rerollPoolExceeded', { cost: 1, remaining: 0 }],
     ]);
-    const settled = rerollSettlementForProjectEvaluationAssembly(evaluate(over), pressAt('r4'));
-    expect(settled?.poolRemainingAfter).toBe(-1);
-    expect(occurrence(over, otherTarget).rerolledIncomingReward?.offer).toEqual(settled?.reward);
+    expect(rerollSettlementForProjectEvaluationAssembly(evaluate(over), pressAt('r4'))).toBe(
+      undefined,
+    );
+    const blocked = evaluate(over).evaluation.route!.biomes[0]!;
+    if (!('coverage' in blocked) || blocked.coverage.kind !== 'prefix')
+      throw new Error('the over-spend did not block');
+    expect(blockedAt(over)).toEqual(pressAt('r4'));
+    expect(blocked.coverage.roomTimeline).toEqual({
+      room: createOccurrenceAddress(f, source as never),
+      blockingRowKeys: [JSON.stringify(['reroll', 'r4'])],
+    });
+    expect(() => snapshotAt(over, source, 'beforeRoomExit')).toThrow('was not reached');
 
     // An upstream edit that empties the pool keeps the presses.
     const shrunk = settle(project, {
@@ -1082,6 +1103,9 @@ describe('screen rerolls', () => {
     expect(evaluate(disabled).evaluation.findings.map((finding) => finding.code)).toEqual(
       expect.arrayContaining(['screenRerollUnavailable', 'rerollPoolExceeded']),
     );
+    // The game refuses the rerolls, so the screen stays open and the room is never left.
+    expect(blockedAt(disabled)).toEqual(address);
+    expect(() => snapshotAt(disabled, source, 'beforeRoomExit')).toThrow('was not reached');
   });
 
   it('refuse raising a count that already over-spends the pool', () => {
@@ -1151,6 +1175,10 @@ describe('screen rerolls', () => {
         expect.objectContaining({ reason: 'nothingLeft', acquisitionRole: 'self' }),
       ],
     ]);
+    expect(blockedAt(project)).toEqual(
+      createLevelResolutionAddress(createIncomingRewardAddress(f, pom as never), 'self'),
+    );
+    expect(() => snapshotAt(project, pom, 'beforeRoomExit')).toThrow('was not reached');
   });
 
   it('spend Stygian Well and Purging Pool rerolls, each costing one more than the last', () => {

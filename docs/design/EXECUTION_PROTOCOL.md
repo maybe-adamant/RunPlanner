@@ -116,8 +116,9 @@ across its stays. Every target still generates its published first draw. Each
 native press draws the target's next planned reroll; a press the plan does not
 make is a mismatch. Each room publishes the planned `NumRerolls` at its entry
 once the plan spends any reroll: the module enters a planned room with that
-pool, floored at zero because a preserved over-spend is the plan's own
-finding, and a Practice start installs it.
+pool, and a Practice start installs it. A spend past the pool blocks the plan,
+so a published pool is never negative; the module's floor at zero is only a
+guard.
 
 Door destinations carry explicit `zagreusContractPresent` for both batch and
 fixed navigation. This is the same canonical additional-exit presence published

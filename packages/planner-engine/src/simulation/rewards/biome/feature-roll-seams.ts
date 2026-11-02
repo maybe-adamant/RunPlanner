@@ -174,6 +174,11 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
       owner: event.owner,
       chronology,
     });
+    if (settled.branches.length === 0)
+      return {
+        state: Object.freeze({ ...state, branches: settled.branches }),
+        emissions: [settledFindings(settled.findings), timeline],
+      };
     const offered = stygianWellRestockedSlots(walk);
     const pins = reference?.kind === 'rerollStygianWell' ? reference.offerKeyBySlot : {};
     const view = wellOccurrenceView(room);
@@ -255,6 +260,11 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
     owner: event.owner,
     chronology,
   });
+  if (settled.branches.length === 0)
+    return {
+      state: Object.freeze({ ...state, branches: settled.branches }),
+      emissions: [settledFindings(settled.findings), timeline],
+    };
   const pins = reference?.kind === 'rerollPurgingPool' ? reference.traitKeyBySlot : {};
   // The ban applies only when the previous draw left eligible traits unshown.
   if (walk.eligibleCount > walk.offeredSlotKeys.length) {

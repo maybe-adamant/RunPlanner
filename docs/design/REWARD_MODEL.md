@@ -600,7 +600,7 @@ Narcissus's collected reroll pickup, less every spend: door presses, screen
 rerolls and Well and Pool rerolls. While Barren removes the enabling card no
 reroll kind is enabled; the pool is unchanged. A new spend that the pool at
 its own point cannot pay is refused as a fixed budget; an earlier spend takes
-precedence, and later spends it starves are kept and reported over the pool.
+precedence, and the first later spend it starves is kept and blocks there.
 Screen rerolls draw nothing from any store. The
 [arcana audit](../audits/loadout-and-progression/ARCANA_AND_FEAR_GAME_DATA_AUDIT.md)
 owns card amounts.

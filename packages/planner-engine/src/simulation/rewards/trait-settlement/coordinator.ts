@@ -439,6 +439,18 @@ function settleLevelResolution(
     ...(findingChronology === undefined ? {} : { findingChronology }),
   });
   if (levelResolution === undefined) return undefined;
+  const owner = traitOwnerAddress(reward.origin);
+  if (levelResolution.blocked === true && owner !== undefined)
+    return {
+      findingEmissions: entryEmissions(levelResolution.findingEntries),
+      settled: {
+        branch: levelResolution.branch,
+        blockedChild: Object.freeze({
+          address: createLevelResolutionAddress(owner, role),
+          branch: levelResolution.branch,
+        }),
+      },
+    };
   // Only a Pom screen this settlement reached closes; a skipped effect appends nothing.
   const priorCount = branch.levelResolutionEvaluations?.length ?? 0;
   const evaluations = levelResolution.branch.levelResolutionEvaluations ?? [];
@@ -1289,6 +1301,31 @@ export function applyTraitOfferForAcquisition(
           sequence,
           findingChronology,
         );
+  // A reroll the game refuses leaves the screen open: nothing on it settles and
+  // the walk stops there, keeping the screen's evaluation for its repair.
+  if (
+    screenOwner !== undefined &&
+    (rerolled?.blocked === true || rerollRefused(findingEntries, screenOwner))
+  ) {
+    const region = ownerRegion(screenOwner);
+    const checkpoint = Object.freeze({
+      ...branch,
+      ...(settlement.branch.traitEvaluations === undefined
+        ? {}
+        : { traitEvaluations: settlement.branch.traitEvaluations }),
+    });
+    return Object.freeze({
+      branch: checkpoint,
+      blockedChild: Object.freeze({ address: screenOwner, branch: checkpoint }),
+      ...(settlement.candidateContact === undefined
+        ? {}
+        : { candidateContact: settlement.candidateContact }),
+      findingEntries: Object.freeze([
+        ...findingEntries.filter((entry) => entry.atomicRegion === region),
+        ...(rerolled?.findings ?? []),
+      ]),
+    });
+  }
   const completed = complete({
     ...settlement,
     ...(priorTraitMutations === undefined ? {} : { priorTraitMutations }),
@@ -1303,6 +1340,19 @@ export function applyTraitOfferForAcquisition(
         ...completed,
         findingEntries: Object.freeze([...completed.findingEntries, ...rerolled.findings]),
       });
+}
+
+/** Whether the screen's own evaluation found a reroll with nothing left to show. */
+function rerollRefused(
+  entries: readonly FindingRegionEntry[],
+  screenOwner: TraitOfferAddress,
+): boolean {
+  const key = semanticAddressKey(screenOwner);
+  return entries.some(
+    (entry) =>
+      entry.finding.code === 'screenRerollUnavailable' &&
+      semanticAddressKey(entry.finding.origin) === key,
+  );
 }
 
 /** Whether this screen used one Ordinary curse use, read from the settled history. */
@@ -1708,8 +1758,14 @@ function settleTraitsEncounterOffer(
   const choiceApplied =
     applied.state.traitHistory !== undefined &&
     applied.state.traitHistory !== branch.state.traitHistory;
-  const child: EncounterChildResult =
-    disposition?.kind === 'circe' && selected !== undefined
+  // A screen blocked at its own offer applied no selection, so no child settles.
+  const screenBlocked =
+    appliedSettlement.blockedChild !== undefined &&
+    semanticAddressKey(appliedSettlement.blockedChild.address) ===
+      semanticAddressKey(selection.owner);
+  const child: EncounterChildResult = screenBlocked
+    ? acceptApplied(selection)
+    : disposition?.kind === 'circe' && selected !== undefined
       ? settleCirce(selection, disposition, selected)
       : disposition?.kind === 'echo' &&
           disposition.effect === 'lastRunBoon' &&
@@ -1786,7 +1842,7 @@ export function settleEncounterTraitOffer(
           directTraitSetBranchHistories,
         )
       : (() => {
-          // Gold and Chaos screens have no authored child to block on.
+          // Gold and Chaos screens have no authored child; only a refused reroll blocks them.
           const settlement = applyTraitOfferForAcquisition(
             catalog,
             branch,
@@ -1803,7 +1859,7 @@ export function settleEncounterTraitOffer(
           return {
             branch: settlement.branch,
             findingEmissions: entryEmissions(settlement.findingEntries),
-            blockedChild: undefined,
+            blockedChild: settlement.blockedChild,
             candidateContact: settlement.candidateContact,
             completion: settlement.completion,
           };

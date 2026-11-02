@@ -488,11 +488,14 @@ the earlier screens are judged against the final screen's generation context
 and spend once, when the screen closes. Well and Pool rolls settle at their
 reroll actions.
 
-The run's reroll pool is part of the folded Arcana state. A spend past the
-pool is still spent and reported, so a preserved over-spend never stops later
-settlement; adding one is refused by edit settlement under the fixed-budget
-rule, judged by the pool at the new spend's own point, so an earlier spend
-takes precedence over the later spends it starves. Engine-owned authoring
+The run's reroll pool is part of the folded Arcana state. The game refuses a
+reroll it cannot make, so a press, roll or screen reroll past the pool, or one
+refused because rerolls are disabled or nothing is left to show, blocks at its
+spend: it spends and draws nothing, and nothing after it is reached. Such a
+state survives only as preserved authorship, such as an upstream edit that
+shrinks the pool; adding a spend past the pool is refused by edit settlement
+under the fixed-budget rule, judged by the pool at the new spend's own point, so an
+earlier spend takes precedence over the later spends it starves. Engine-owned authoring
 queries publish, at each reached reroll surface, the pool there, whether a
 held card enables it, each target's settled current reward and why a press
 would be refused, candidates for a press not yet inserted, and each Hub

@@ -74,7 +74,7 @@ export function currentArcanaCards(state: ArcanaFearState): readonly CurrentArca
 }
 /**
  * The run's shared native `NumRerolls`: every grant so far and every spend.
- * Remaining is always derived; a negative remainder is an authored over-spend.
+ * Remaining is always derived; a spend past it is refused before it is made.
  */
 export interface RerollPoolState {
   readonly granted: number;

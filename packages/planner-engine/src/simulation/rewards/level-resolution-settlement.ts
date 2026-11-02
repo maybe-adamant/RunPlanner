@@ -41,6 +41,8 @@ export interface LevelResolutionSettlementInput {
 export interface LevelResolutionSettlementProduct {
   readonly branch: RewardBranchState;
   readonly findingEntries: readonly FindingRegionEntry[];
+  /** A reroll the game refuses left the Pom screen open; nothing on it settled. */
+  readonly blocked?: true;
 }
 
 /**
@@ -152,7 +154,8 @@ export function settleReachedLevelResolution(
       );
     }
   }
-  for (const finding of rerolledLevelScreenFindings(catalog, levelResolution, generationBefore))
+  const rerolledFindings = rerolledLevelScreenFindings(catalog, levelResolution, generationBefore);
+  for (const finding of rerolledFindings)
     addRewardFinding(
       localFindings,
       Object.freeze({
@@ -180,13 +183,25 @@ export function settleReachedLevelResolution(
     sequence,
     input.findingChronology,
   );
+  const evaluated = Object.freeze({
+    ...branch,
+    levelResolutionEvaluations: Object.freeze([
+      ...(branch.levelResolutionEvaluations ?? []),
+      evaluation,
+    ]),
+  });
+  if (
+    rerolled.blocked ||
+    rerolledFindings.some((finding) => finding.code === 'screenRerollUnavailable')
+  )
+    return Object.freeze({
+      branch: evaluated,
+      findingEntries: Object.freeze([...localFindings.values(), ...rerolled.findings]),
+      blocked: true,
+    });
   return Object.freeze({
     branch: Object.freeze({
-      ...branch,
-      levelResolutionEvaluations: Object.freeze([
-        ...(branch.levelResolutionEvaluations ?? []),
-        evaluation,
-      ]),
+      ...evaluated,
       state: replaceSimulationTraitHistory(rerolled.branch.state, appliedHistory),
     }),
     findingEntries: Object.freeze([...localFindings.values(), ...rerolled.findings]),

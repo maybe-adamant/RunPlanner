@@ -345,6 +345,11 @@ describe('Stygian Well rolls', () => {
       origin: semanticAddressKey(wellReroll('r1')),
       evidence: { reason: 'disabled' },
     });
+    // The game refuses the press, so nothing after it is reached.
+    const blocked = evaluate(disabled).evaluation.route!.biomes[0]!;
+    expect(
+      'coverage' in blocked && blocked.coverage.kind === 'prefix' && blocked.coverage.blockedAt,
+    ).toEqual(wellReroll('r1'));
   });
 });
 

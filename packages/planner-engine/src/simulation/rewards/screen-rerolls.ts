@@ -11,7 +11,8 @@ import { addRewardFinding, historyChronology, rewardFinding } from './findings';
  * Settles a screen's authored rerolls before its final rows: each costs one
  * more than the last on the same screen, needs screen rerolls enabled when the
  * screen opens, and is spent from the run's pool. Screen rerolls touch no
- * reward store. An over-spend is spent and reported on the screen's owner.
+ * reward store. The game refuses a reroll it cannot make, so a refused one
+ * spends nothing and blocks the screen.
  */
 export function settleScreenRerolls(
   catalog: Catalog,
@@ -20,9 +21,13 @@ export function settleScreenRerolls(
   owner: SemanticAddress,
   sequence: number,
   findingChronology: FindingChronology | undefined,
-): { readonly branch: RewardBranchState; readonly findings: readonly FindingRegionEntry[] } {
+): {
+  readonly branch: RewardBranchState;
+  readonly findings: readonly FindingRegionEntry[];
+  readonly blocked: boolean;
+} {
   if (count === undefined || count === 0)
-    return Object.freeze({ branch, findings: Object.freeze([]) });
+    return Object.freeze({ branch, findings: Object.freeze([]), blocked: false });
   const findings = new Map<string, FindingRegionEntry>();
   const region = ownerRegion(owner);
   const chronology = findingChronology ?? historyChronology(sequence);
@@ -42,6 +47,12 @@ export function settleScreenRerolls(
       region,
       chronology,
     );
+  if (findings.size > 0)
+    return Object.freeze({
+      branch,
+      findings: Object.freeze([...findings.values()]),
+      blocked: true,
+    });
   return Object.freeze({
     branch: Object.freeze({
       ...branch,
@@ -50,14 +61,16 @@ export function settleScreenRerolls(
         arcanaFear: spendRerolls(branch.state.arcanaFear, cost),
       }),
     }),
-    findings: Object.freeze([...findings.values()]),
+    findings: Object.freeze([]),
+    blocked: false,
   });
 }
 
 /**
  * Settles one Well or Pool reroll press of the given cost: it needs screen
  * rerolls enabled and something left to reroll, and spends from the run's
- * pool. A refused press spends nothing; an over-spend is spent and reported.
+ * pool. The game refuses a press it cannot make, so a refused press spends
+ * and draws nothing and nothing past it happens: no branch continues.
  */
 export function settleFeatureReroll(
   catalog: Catalog,
@@ -84,25 +97,31 @@ export function settleFeatureReroll(
       region,
       input.chronology,
     );
-  if (!input.somethingLeft) {
-    report('screenRerollUnavailable', { reason: 'nothingLeft' });
-    return Object.freeze({ branches, findings: Object.freeze([...findings.values()]) });
-  }
-  const next = branches.map((branch) => {
-    if (!rerollKindEnabled(catalog, branch.state.arcanaFear, 'screens'))
-      report('screenRerollUnavailable', { reason: 'disabled' });
-    const remaining = rerollPoolRemaining(branch.state);
-    if (remaining < input.cost) report('rerollPoolExceeded', { cost: input.cost, remaining });
+  if (!input.somethingLeft) report('screenRerollUnavailable', { reason: 'nothingLeft' });
+  else
+    for (const branch of branches) {
+      if (!rerollKindEnabled(catalog, branch.state.arcanaFear, 'screens'))
+        report('screenRerollUnavailable', { reason: 'disabled' });
+      const remaining = rerollPoolRemaining(branch.state);
+      if (remaining < input.cost) report('rerollPoolExceeded', { cost: input.cost, remaining });
+    }
+  if (findings.size > 0)
     return Object.freeze({
-      ...branch,
-      state: Object.freeze({
-        ...branch.state,
-        arcanaFear: spendRerolls(branch.state.arcanaFear, input.cost),
-      }),
+      branches: Object.freeze([]),
+      findings: Object.freeze([...findings.values()]),
     });
-  });
   return Object.freeze({
-    branches: Object.freeze(next),
-    findings: Object.freeze([...findings.values()]),
+    branches: Object.freeze(
+      branches.map((branch) =>
+        Object.freeze({
+          ...branch,
+          state: Object.freeze({
+            ...branch.state,
+            arcanaFear: spendRerolls(branch.state.arcanaFear, input.cost),
+          }),
+        }),
+      ),
+    ),
+    findings: Object.freeze([]),
   });
 }
