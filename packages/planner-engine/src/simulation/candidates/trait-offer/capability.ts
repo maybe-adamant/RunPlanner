@@ -22,7 +22,6 @@ import type {
   AuthoredTraitOfferTraits,
 } from '../../../authored-project/traits/state';
 import { optionIndex, type TraitOptionKey } from '../../../authored-project/traits/state';
-import { CandidateEvaluationContractError } from '../contract';
 import { circeResolutionDomain, type CirceResolutionDomain } from '../../arcana-fear';
 import {
   assessTraitOffer,
@@ -308,7 +307,7 @@ function rerolledLevelScreensGuess(
   );
 }
 
-interface LevelResolutionCandidateContext {
+export interface LevelResolutionCandidateContext {
   readonly address: LevelResolutionAddress;
   readonly before: TraitHistoryState;
   readonly levelCount: number;
@@ -341,30 +340,17 @@ function levelResolutionSurface(
   });
 }
 
-/**
- * Publishes one surface per reached Pom. Every reached context must agree on
- * it, since the editor resolves the choice against one state; a divergence is
- * an engine contract failure, never a choice offered to the user.
- */
+/** Publishes each reached Pom's one surface, resolved against its one reached state. */
 export function createLevelResolutionCandidateArtifacts(
   catalog: Catalog,
-  contexts: ReadonlyMap<string, readonly LevelResolutionCandidateContext[]>,
+  contexts: ReadonlyMap<string, LevelResolutionCandidateContext>,
 ): LevelResolutionCandidateArtifacts {
   const privateContexts = new Map(contexts);
   return Object.freeze({
     at: (address: LevelResolutionAddress) => {
-      const key = semanticAddressKey(address);
-      const reached = privateContexts.get(key);
-      const context = reached?.[0];
+      const context = privateContexts.get(semanticAddressKey(address));
       if (context === undefined) return undefined;
       const surface = levelResolutionSurface(catalog, context);
-      const agreed = JSON.stringify(surface);
-      if (
-        reached!.some((other) => JSON.stringify(levelResolutionSurface(catalog, other)) !== agreed)
-      )
-        throw new CandidateEvaluationContractError(
-          `level resolution ${key} reached contexts disagree on its surface`,
-        );
       return Object.freeze({
         surface,
         evaluate: (value: AuthoredLevelResolution) => {

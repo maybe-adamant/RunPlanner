@@ -1098,7 +1098,7 @@ describe('reached trait offer chronology', () => {
         trace.acquisitionRole === 'source',
     );
     if (firstTrace === undefined) throw new Error('first-offer repair trace is missing');
-    expect(firstTrace.branches[0]?.generation).toMatchObject({ applies: true, legal: false });
+    expect(firstTrace.assessment.generation).toMatchObject({ applies: true, legal: false });
     expect(laterTrace).toBeUndefined();
     expect(branch.state.traitHistory?.events).not.toContainEqual(
       expect.objectContaining({ owner, acquisitionRole: 'source' }),
@@ -1137,7 +1137,7 @@ describe('reached trait offer chronology', () => {
       const traces = reachedTraitOffers(simulateProject(catalog, createProject())).filter(
         (trace) => trace.address.routeKey === routeKey,
       );
-      expect(traces.every((trace) => trace.branches.length > 0)).toBe(true);
+      expect(traces.every((trace) => trace.assessment !== undefined)).toBe(true);
     }
   });
 

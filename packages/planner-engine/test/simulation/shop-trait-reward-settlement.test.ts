@@ -458,14 +458,12 @@ describe('Shop trait acquisition processing', () => {
       new Map([
         [
           semanticAddressKey(address),
-          [
-            {
-              address,
-              before: evaluation.before,
-              levelCount: evaluation.levelCount,
-              effectKind: evaluation.effectKind,
-            },
-          ],
+          {
+            address,
+            before: evaluation.before,
+            levelCount: evaluation.levelCount,
+            effectKind: evaluation.effectKind,
+          },
         ],
       ]),
     ).at(address);

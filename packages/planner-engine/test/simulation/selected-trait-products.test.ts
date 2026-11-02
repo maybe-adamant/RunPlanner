@@ -6,10 +6,10 @@ import {
   createIncomingRewardAddress,
   createLevelResolutionAddress,
   createOccurrenceId,
-  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
+import { BiomeRewardSimulationContractError } from '../../src/simulation/rewards/biome/biome-contract';
 import {
   attachTraitHistory,
   createTraitHistoryState,
@@ -74,7 +74,7 @@ describe('selected trait products', () => {
 
     expect(
       selectedTraitOfferProducts([settled], Object.freeze([]), catalog).selectedTraitOffers[0]
-        ?.branches[0]?.effectiveEchoLastRunBoon?.options[0]?.rarity,
+        ?.assessment.effectiveEchoLastRunBoon?.options[0]?.rarity,
     ).toBe('Rare');
   });
 
@@ -168,7 +168,7 @@ describe('selected trait products', () => {
       catalog,
     ).selectedTraitOffers;
     expect(published.map((entry) => entry.offer.giverKey)).toEqual(['Echo']);
-    const published0 = published[0]?.branches[0];
+    const published0 = published[0]?.assessment;
     expect(published0?.screenExpectation).toBeUndefined();
     expect(published0?.effectiveEchoLastRunBoon?.rarityFloor).toBe(false);
   });
@@ -216,11 +216,11 @@ describe('selected trait products', () => {
     });
     expect(late.state.hexProgress.godSentAdded).toBe(true);
     expect(
-      selectedTraitOfferProducts([late]).selectedTraitOffers[0]?.branches[0]?.settledHexTree,
+      selectedTraitOfferProducts([late]).selectedTraitOffers[0]?.assessment.settledHexTree,
     ).not.toHaveProperty('godSent');
   });
 
-  it('retains divergent reached level-resolution publication and candidate contexts', () => {
+  it('rejects a Pom assessed at two different reached states', () => {
     const address = createLevelResolutionAddress(
       {
         kind: 'incomingReward',
@@ -262,23 +262,8 @@ describe('selected trait products', () => {
         reached: true,
       }),
     ]);
-    const products = selectedTraitOfferProducts(Object.freeze([]), retained);
-    expect(products.selectedLevelResolutions).toEqual([
-      expect.objectContaining({
-        address,
-        chronologicalIndex: 1,
-        branches: [
-          expect.objectContaining({ findings: ['missingTarget'], eligibleTargetCount: 1 }),
-          expect.objectContaining({
-            findings: ['missingTarget', 'wrongOfferCount'],
-            eligibleTargetCount: 2,
-          }),
-        ],
-      }),
-    ]);
-    expect(products.levelCandidateContexts.get(semanticAddressKey(address))).toEqual([
-      expect.objectContaining({ address, levelCount: 1, effectKind: 'choice' }),
-      expect.objectContaining({ address, levelCount: 2, effectKind: 'choice' }),
-    ]);
+    expect(() => selectedTraitOfferProducts(Object.freeze([]), retained)).toThrow(
+      BiomeRewardSimulationContractError,
+    );
   });
 });

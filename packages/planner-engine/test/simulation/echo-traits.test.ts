@@ -1786,7 +1786,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     });
     const selected = selectedTraitOfferProducts([withSpellDrop.branch], [], catalog);
     expect(
-      selected.candidateContexts.get(semanticAddressKey(echoOwner))?.[0]?.state.hexProgress
+      selected.candidateContexts.get(semanticAddressKey(echoOwner))?.state.hexProgress
         .investedNodeKeys,
     ).toEqual(invested.state.hexProgress.investedNodeKeys);
   });

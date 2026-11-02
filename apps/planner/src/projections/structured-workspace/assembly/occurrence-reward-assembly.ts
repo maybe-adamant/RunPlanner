@@ -272,22 +272,14 @@ function levelResolutionControls(
       const address = createLevelResolutionAddress(owner.address, acquisitionRole);
       const assessment = input.levelResolutionAssessment(address);
       if (assessment === undefined) return [];
-      const levelCount = assessment.branches[0]?.levelCount;
-      if (levelCount === undefined) {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${semanticAddressKey(address)} has a reached Pom assessment without a level count`,
-        );
-      }
+      const levelCount = assessment.assessment.levelCount;
       const marker = input.markerDestinations.marker(address);
       const settledEmptyNoOp =
         value.kind === 'random' &&
         value.targetTraitKey === null &&
-        assessment.branches.some(
-          (branch) =>
-            branch.emptyTargetAllowed &&
-            branch.eligibleTargetCount === 0 &&
-            branch.findings.length === 0,
-        );
+        assessment.assessment.emptyTargetAllowed &&
+        assessment.assessment.eligibleTargetCount === 0 &&
+        assessment.assessment.findings.length === 0;
       const screenRerolls =
         value.kind === 'choice'
           ? input.screenRerolls?.(

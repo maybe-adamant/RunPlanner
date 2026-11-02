@@ -14,27 +14,19 @@ import type {
   ReachedTraitOfferEvaluation,
   SelectedLevelResolutionAssessment,
   SelectedTraitOfferAssessment,
-  TraitHistoryState,
   TraitOfferCandidateContext,
 } from '../../traits';
 import { echoLastRunBoonOutcomes, traitOfferAssessmentIdentity } from '../../traits';
 import { orderRandomArcanaSelection } from '../../arcana-fear';
 import { traitScreenExpectation } from '../trait-settlement/screen-expectation';
+import type { LevelResolutionCandidateContext } from '../../candidates/trait-offer/capability';
+import { BiomeRewardSimulationContractError } from './biome-contract';
 
 export interface SelectedTraitOfferProducts {
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
-  readonly candidateContexts: ReadonlyMap<string, readonly TraitOfferCandidateContext[]>;
-  readonly levelCandidateContexts: ReadonlyMap<
-    string,
-    readonly {
-      readonly address: LevelResolutionAddress;
-      readonly before: TraitHistoryState;
-      readonly levelCount: number;
-      readonly effectKind: 'choice' | 'random';
-      readonly emptyTargetAllowed?: boolean;
-    }[]
-  >;
+  readonly candidateContexts: ReadonlyMap<string, TraitOfferCandidateContext>;
+  readonly levelCandidateContexts: ReadonlyMap<string, LevelResolutionCandidateContext>;
 }
 
 function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | undefined {
@@ -65,7 +57,7 @@ export function selectedTraitOfferProducts(
       readonly address: TraitOfferAddress;
       readonly acquisitionRole: string;
       readonly offer: ReachedTraitOfferEvaluation['offer'];
-      readonly branches: ReachedTraitOfferEvaluation[];
+      readonly trace: ReachedTraitOfferEvaluation;
       chronologicalIndex: number;
     }
   >();
@@ -83,15 +75,17 @@ export function selectedTraitOfferProducts(
           address,
           acquisitionRole: trace.acquisitionRole,
           offer: trace.offer,
-          branches: [trace],
+          trace,
           chronologicalIndex: trace.chronologicalIndex,
         });
       } else {
-        const traceIdentity = JSON.stringify(traitOfferAssessmentIdentity(trace));
-        const duplicate = current.branches.some(
-          (candidate) => JSON.stringify(traitOfferAssessmentIdentity(candidate)) === traceIdentity,
-        );
-        if (!duplicate) current.branches.push(trace);
+        if (
+          JSON.stringify(traitOfferAssessmentIdentity(trace)) !==
+          JSON.stringify(traitOfferAssessmentIdentity(current.trace))
+        )
+          throw new BiomeRewardSimulationContractError(
+            `trait offer ${key} was assessed at two different states`,
+          );
         current.chronologicalIndex = Math.min(current.chronologicalIndex, trace.chronologicalIndex);
       }
     }
@@ -108,128 +102,115 @@ export function selectedTraitOfferProducts(
           address: entry.address,
           acquisitionRole: entry.acquisitionRole,
           offer: entry.offer,
-          branches: Object.freeze(
-            entry.branches.map((trace) =>
-              Object.freeze({
-                assessments: trace.assessments,
-                ...(trace.generation === undefined ? {} : { generation: trace.generation }),
-                composition: trace.composition,
-                targetedAcquisition: trace.targetedAcquisition,
-                persephoneLevelBonusMaximums: Object.freeze(
-                  trace.levelResolutions.map(
-                    (resolution) => resolution.persephoneLevelBonusMaximum,
+          assessment: ((trace) =>
+            Object.freeze({
+              assessments: trace.assessments,
+              ...(trace.generation === undefined ? {} : { generation: trace.generation }),
+              composition: trace.composition,
+              targetedAcquisition: trace.targetedAcquisition,
+              persephoneLevelBonusMaximums: Object.freeze(
+                trace.levelResolutions.map((resolution) => resolution.persephoneLevelBonusMaximum),
+              ),
+              persephoneBaseLevels: Object.freeze(
+                trace.levelResolutions.map((resolution) => resolution.persephoneBaseLevel),
+              ),
+              jeweledPomLevels: Object.freeze(
+                trace.levelResolutions.map((resolution) => resolution.jeweledPomLevels),
+              ),
+              effectiveLevels: Object.freeze(
+                trace.levelResolutions.map((resolution) => resolution.effectiveLevel),
+              ),
+              baseRarities: trace.baseRarities,
+              ...(trace.rerolledScreenBaseRarities === undefined
+                ? {}
+                : { rerolledScreenBaseRarities: trace.rerolledScreenBaseRarities }),
+              ...(trace.rerolledScreens === undefined
+                ? {}
+                : { rerolledScreens: trace.rerolledScreens }),
+              ...(() => {
+                const screenExpectation =
+                  catalog === undefined ? undefined : traitScreenExpectation(catalog, trace);
+                return screenExpectation === undefined ? {} : { screenExpectation };
+              })(),
+              ...(() => {
+                if (trace.offer.kind !== 'traits' || catalog === undefined) return {};
+                const selected =
+                  trace.offer.options[Number(trace.offer.selectedOptionKey.slice(-1)) - 1];
+                const resolution = selected?.circeResolution;
+                if (resolution?.kind !== 'activateArcana') return {};
+                return {
+                  orderedCirceActivationKeys: orderRandomArcanaSelection(
+                    catalog,
+                    trace.state.arcanaFear.arcana.active.map((card) => card.key),
+                    resolution.arcanaKeys,
                   ),
-                ),
-                persephoneBaseLevels: Object.freeze(
-                  trace.levelResolutions.map((resolution) => resolution.persephoneBaseLevel),
-                ),
-                jeweledPomLevels: Object.freeze(
-                  trace.levelResolutions.map((resolution) => resolution.jeweledPomLevels),
-                ),
-                effectiveLevels: Object.freeze(
-                  trace.levelResolutions.map((resolution) => resolution.effectiveLevel),
-                ),
-                baseRarities: trace.baseRarities,
-                ...(trace.rerolledScreenBaseRarities === undefined
-                  ? {}
-                  : { rerolledScreenBaseRarities: trace.rerolledScreenBaseRarities }),
-                ...(trace.rerolledScreens === undefined
-                  ? {}
-                  : { rerolledScreens: trace.rerolledScreens }),
-                ...(() => {
-                  const screenExpectation =
-                    catalog === undefined ? undefined : traitScreenExpectation(catalog, trace);
-                  return screenExpectation === undefined ? {} : { screenExpectation };
-                })(),
-                ...(() => {
-                  if (trace.offer.kind !== 'traits' || catalog === undefined) return {};
-                  const selected =
-                    trace.offer.options[Number(trace.offer.selectedOptionKey.slice(-1)) - 1];
-                  const resolution = selected?.circeResolution;
-                  if (resolution?.kind !== 'activateArcana') return {};
-                  return {
-                    orderedCirceActivationKeys: orderRandomArcanaSelection(
-                      catalog,
-                      trace.state.arcanaFear.arcana.active.map((card) => card.key),
-                      resolution.arcanaKeys,
-                    ),
-                  };
-                })(),
-                ...(() => {
-                  if (trace.offer.kind !== 'traits') return {};
-                  const selected =
-                    trace.offer.options[Number(trace.offer.selectedOptionKey.slice(-1)) - 1];
-                  const child = selected?.echoLastRunBoon;
-                  if (
-                    selected?.traitKey !== 'EchoLastRunBoon' ||
-                    child === undefined ||
-                    catalog === undefined
-                  )
-                    return {};
-                  const outcomes = echoLastRunBoonOutcomes(catalog, trace.state, trace.source);
-                  const resolveOption = (
-                    option: AuthoredEchoLastRunBoonOffer['options'][number],
-                  ) => {
-                    const outcome = outcomes.find(
-                      (candidate) =>
-                        candidate.option.giverKey === option.giverKey &&
-                        candidate.option.traitKey === option.traitKey &&
-                        candidate.option.rarity === option.rarity,
-                    );
-                    const variant =
-                      catalog.echoLastRunBoon.variants.byKey[
-                        `${option.giverKey}:${option.traitKey}`
-                      ];
-                    return Object.freeze({
-                      ...option,
-                      rarity: outcome?.effectiveRarity ?? option.rarity,
-                      ...(variant?.lootHistorySource === undefined
-                        ? {}
-                        : { lootHistorySource: variant.lootHistorySource }),
-                    });
-                  };
-                  const first = resolveOption(child.options[0]);
-                  const second = child.options[1];
-                  const third = child.options[2];
-                  const options =
-                    second === undefined
-                      ? Object.freeze([first])
-                      : third === undefined
-                        ? Object.freeze([first, resolveOption(second)])
-                        : Object.freeze([first, resolveOption(second), resolveOption(third)]);
-                  return {
-                    effectiveEchoLastRunBoon: Object.freeze({
-                      options,
-                      selectedOptionKey: child.selectedOptionKey,
-                      rarityFloor: trace.state.traitHistory.properUpbringingActive === true,
-                    }),
-                  };
-                })(),
-                ...(trace.settledHexTree === undefined
-                  ? {}
-                  : { settledHexTree: trace.settledHexTree }),
-              }),
-            ),
-          ),
+                };
+              })(),
+              ...(() => {
+                if (trace.offer.kind !== 'traits') return {};
+                const selected =
+                  trace.offer.options[Number(trace.offer.selectedOptionKey.slice(-1)) - 1];
+                const child = selected?.echoLastRunBoon;
+                if (
+                  selected?.traitKey !== 'EchoLastRunBoon' ||
+                  child === undefined ||
+                  catalog === undefined
+                )
+                  return {};
+                const outcomes = echoLastRunBoonOutcomes(catalog, trace.state, trace.source);
+                const resolveOption = (option: AuthoredEchoLastRunBoonOffer['options'][number]) => {
+                  const outcome = outcomes.find(
+                    (candidate) =>
+                      candidate.option.giverKey === option.giverKey &&
+                      candidate.option.traitKey === option.traitKey &&
+                      candidate.option.rarity === option.rarity,
+                  );
+                  const variant =
+                    catalog.echoLastRunBoon.variants.byKey[`${option.giverKey}:${option.traitKey}`];
+                  return Object.freeze({
+                    ...option,
+                    rarity: outcome?.effectiveRarity ?? option.rarity,
+                    ...(variant?.lootHistorySource === undefined
+                      ? {}
+                      : { lootHistorySource: variant.lootHistorySource }),
+                  });
+                };
+                const first = resolveOption(child.options[0]);
+                const second = child.options[1];
+                const third = child.options[2];
+                const options =
+                  second === undefined
+                    ? Object.freeze([first])
+                    : third === undefined
+                      ? Object.freeze([first, resolveOption(second)])
+                      : Object.freeze([first, resolveOption(second), resolveOption(third)]);
+                return {
+                  effectiveEchoLastRunBoon: Object.freeze({
+                    options,
+                    selectedOptionKey: child.selectedOptionKey,
+                    rarityFloor: trace.state.traitHistory.properUpbringingActive === true,
+                  }),
+                };
+              })(),
+              ...(trace.settledHexTree === undefined
+                ? {}
+                : { settledHexTree: trace.settledHexTree }),
+            }))(entry.trace),
           reached: true as const,
           chronologicalIndex: entry.chronologicalIndex,
         }),
       ),
   );
-  const candidateContexts = new Map<string, readonly TraitOfferCandidateContext[]>();
+  const candidateContexts = new Map<string, TraitOfferCandidateContext>();
   for (const entry of grouped.values()) {
     const address = createTraitOfferAddress(entry.address.owner, entry.acquisitionRole);
     candidateContexts.set(
       semanticAddressKey(address),
-      Object.freeze(
-        entry.branches.map((trace) =>
-          Object.freeze({
-            state: trace.state,
-            generationState: trace.generationState,
-            source: trace.source,
-          }),
-        ),
-      ),
+      Object.freeze({
+        state: entry.trace.state,
+        generationState: entry.trace.generationState,
+        source: entry.trace.source,
+      }),
     );
   }
   const levels = new Map<
@@ -237,7 +218,7 @@ export function selectedTraitOfferProducts(
     {
       address: LevelResolutionAddress;
       value: ReachedLevelResolutionEvaluation['value'];
-      branches: ReachedLevelResolutionEvaluation[];
+      trace: ReachedLevelResolutionEvaluation;
       chronologicalIndex: number;
     }
   >();
@@ -251,19 +232,16 @@ export function selectedTraitOfferProducts(
       levels.set(key, {
         address: trace.address,
         value: trace.value,
-        branches: [trace],
+        trace,
         chronologicalIndex: trace.chronologicalIndex,
       });
     else if (
-      !current.branches.some(
-        (candidate) =>
-          JSON.stringify([candidate.before, candidate.value]) ===
-          JSON.stringify([trace.before, trace.value]),
-      )
-    ) {
-      current.branches.push(trace);
-      current.chronologicalIndex = Math.min(current.chronologicalIndex, trace.chronologicalIndex);
-    }
+      JSON.stringify([current.trace.before, current.trace.value]) !==
+      JSON.stringify([trace.before, trace.value])
+    )
+      throw new BiomeRewardSimulationContractError(
+        `level resolution ${key} was assessed at two different states`,
+      );
   }
   const selectedLevelResolutions = Object.freeze(
     [...levels.values()]
@@ -272,45 +250,28 @@ export function selectedTraitOfferProducts(
         Object.freeze({
           address: entry.address,
           value: entry.value,
-          branches: Object.freeze(
-            entry.branches.map((trace) =>
-              Object.freeze({
-                findings: trace.findings,
-                levelCount: trace.levelCount,
-                emptyTargetAllowed: trace.emptyTargetAllowed,
-                eligibleTargetCount: trace.before.upgradableTraitCount,
-              }),
-            ),
-          ),
+          assessment: Object.freeze({
+            findings: entry.trace.findings,
+            levelCount: entry.trace.levelCount,
+            emptyTargetAllowed: entry.trace.emptyTargetAllowed,
+            eligibleTargetCount: entry.trace.before.upgradableTraitCount,
+          }),
           reached: true as const,
           chronologicalIndex: entry.chronologicalIndex,
         }),
       ),
   );
-  const levelCandidateContexts = new Map<
-    string,
-    readonly {
-      readonly address: LevelResolutionAddress;
-      readonly before: TraitHistoryState;
-      readonly levelCount: number;
-      readonly effectKind: 'choice' | 'random';
-      readonly emptyTargetAllowed?: boolean;
-    }[]
-  >();
-  for (const [key, entry] of levels) {
+  const levelCandidateContexts = new Map<string, LevelResolutionCandidateContext>();
+  for (const [key, { trace }] of levels) {
     levelCandidateContexts.set(
       key,
-      Object.freeze(
-        entry.branches.map((trace) =>
-          Object.freeze({
-            address: trace.address,
-            before: trace.before,
-            levelCount: trace.levelCount,
-            effectKind: trace.effectKind,
-            ...(trace.emptyTargetAllowed ? { emptyTargetAllowed: true } : {}),
-          }),
-        ),
-      ),
+      Object.freeze({
+        address: trace.address,
+        before: trace.before,
+        levelCount: trace.levelCount,
+        effectKind: trace.effectKind,
+        ...(trace.emptyTargetAllowed ? { emptyTargetAllowed: true } : {}),
+      }),
     );
   }
   return Object.freeze({

@@ -234,14 +234,12 @@ export function authorLegalTraitOffers(
     }
     const invalids = evaluation.route.biomes.flatMap((biome) =>
       'rewards' in biome
-        ? biome.rewards.selectedTraitOffers.filter((offer) =>
-            offer.branches.some(
-              (branch) =>
-                branch.assessments.some((assessment) => !assessment.legal) ||
-                !branch.composition.legal ||
-                branch.generation?.legal === false ||
-                !branch.targetedAcquisition.legal,
-            ),
+        ? biome.rewards.selectedTraitOffers.filter(
+            ({ assessment }) =>
+              assessment.assessments.some((entry) => !entry.legal) ||
+              !assessment.composition.legal ||
+              assessment.generation?.legal === false ||
+              !assessment.targetedAcquisition.legal,
           )
         : [],
     );
@@ -290,7 +288,7 @@ function normalizePomResolutions(
   );
   let current = project;
   for (const resolution of resolutions) {
-    if (!resolution.branches.some((branch) => branch.findings.length > 0)) continue;
+    if (resolution.assessment.findings.length === 0) continue;
     const capability = levelResolutionCandidateForProjectEvaluationAssembly(
       assembly,
       resolution.address,

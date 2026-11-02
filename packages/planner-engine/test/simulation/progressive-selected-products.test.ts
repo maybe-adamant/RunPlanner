@@ -837,9 +837,7 @@ describe('progressive selected and blocked products', () => {
     const trace = assembly.evaluation.route.biomes
       .flatMap((biome) => ('rewards' in biome ? biome.rewards.selectedTraitOffers : []))
       .find((candidate) =>
-        candidate.branches.every((branch) =>
-          branch.assessments.every((assessment) => assessment.legal),
-        ),
+        candidate.assessment.assessments.every((assessment) => assessment.legal),
       );
     if (trace === undefined) throw new Error('fixture has no reached legal trait offer');
     if (trace.offer.kind !== 'traits') throw new Error('fixture has no materialized trait offer');

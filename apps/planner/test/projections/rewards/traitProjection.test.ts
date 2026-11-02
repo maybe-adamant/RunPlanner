@@ -129,7 +129,7 @@ describe('route trait projection', () => {
     });
   });
 
-  it('aggregates divergent branch evidence and sorts rows by engine chronology', () => {
+  it('projects invalid offer evidence and sorts rows by engine chronology', () => {
     const source = createGoldenFGHIProject();
     const assembly = simulateProjectAssembly(catalog, source);
     const route = assembly.evaluation.route;
@@ -166,11 +166,11 @@ describe('route trait projection', () => {
       legal: false,
       findings: Object.freeze([duplicateFinding, duplicateFinding, secondFinding]),
     });
-    const invalidBranch = Object.freeze({
-      ...firstTrace.branches[0]!,
+    const invalidAssessmentState = Object.freeze({
+      ...firstTrace.assessment,
       assessments: Object.freeze([
         invalidAssessment,
-        ...firstTrace.branches[0]!.assessments.slice(1),
+        ...firstTrace.assessment.assessments.slice(1),
       ]),
       generation: Object.freeze({
         applies: true,
@@ -180,10 +180,9 @@ describe('route trait projection', () => {
     });
     const invalidTrace = Object.freeze({
       ...firstTrace,
-      branches: Object.freeze([invalidBranch]),
+      assessment: invalidAssessmentState,
       chronologicalIndex: 5,
     });
-    const validTrace = Object.freeze({ ...firstTrace, chronologicalIndex: 10 });
     const otherTrace = Object.freeze({ ...secondTrace, chronologicalIndex: 7 });
     const modifiedEvaluation = Object.freeze({
       ...assembly.evaluation,
@@ -198,7 +197,7 @@ describe('route trait projection', () => {
                 ...biome.rewards,
                 selectedTraitOffers: Object.freeze(
                   biome.biomeKey === 'F'
-                    ? [validTrace, otherTrace, invalidTrace]
+                    ? [otherTrace, invalidTrace]
                     : biome.rewards.selectedTraitOffers,
                 ),
               }),
@@ -240,7 +239,7 @@ describe('route trait projection', () => {
           persephoneBaseLevels: [],
           jeweledPomLevels: [],
           effectiveLevels: [],
-          assessments: invalidTrace.branches.flatMap((branch) => branch.assessments),
+          assessments: invalidTrace.assessment.assessments,
           findings: [duplicateFinding, duplicateFinding, secondFinding],
         },
       },

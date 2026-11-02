@@ -637,7 +637,7 @@ describe('Nemesis random events', () => {
       );
       if (offer?.offer.kind !== 'traits') throw new Error('Hestia cage was not reached');
       const row = offer.offer.options.findIndex((option) => option.traitKey === 'HestiaCastBoon');
-      return offer.branches.map((branch) => branch.assessments[row]?.replacementTransition);
+      return [offer.assessment.assessments[row]?.replacementTransition];
     };
     // Declined, the cage keeps its room-entry options: Hestia replaces the held Hera cast.
     expect(withTrade('decline')).toEqual([

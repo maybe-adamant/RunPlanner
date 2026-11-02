@@ -61,15 +61,12 @@ function oneContext(
  * pre-effect context under its address.
  */
 function traitOfferCandidateContacts(
-  selected: ReadonlyMap<string, readonly TraitOfferCandidateContext[]>,
+  selected: ReadonlyMap<string, TraitOfferCandidateContext>,
   accumulation: ChronologyAccumulation,
 ): ReadonlyMap<string, TraitOfferCandidateContacts> {
   const offers = new Map<string, TraitOfferCandidateContext>();
   const children = new Map<string, Map<string, TraitOfferCandidateContext>>();
-  for (const [key, contexts] of selected) {
-    const context = oneContext(key, contexts);
-    if (context !== undefined) offers.set(key, context);
-  }
+  for (const [key, context] of selected) offers.set(key, context);
   for (const [key, contexts] of accumulation.reachedTraitOfferCandidateContexts) {
     const context = oneContext(key, contexts);
     if (context !== undefined && !offers.has(key)) offers.set(key, context);

@@ -531,7 +531,7 @@ describe('Circe selected trait acquisition', () => {
       [Object.freeze({ ...preEffect, traitEvaluations: Object.freeze([trace]) })],
       Object.freeze([]),
       catalog,
-    ).selectedTraitOffers[0]?.branches[0]?.orderedCirceActivationKeys;
+    ).selectedTraitOffers[0]?.assessment.orderedCirceActivationKeys;
     expect(published).toEqual(['DoorReroll', 'TradeOff']);
   });
 
@@ -617,7 +617,13 @@ describe('Circe selected trait acquisition', () => {
       });
       const domain = createTraitOfferCandidateArtifacts(
         catalog,
-        traitOfferContacts(selectedTraitOfferProducts(Object.freeze([fated])).candidateContexts),
+        traitOfferContacts(
+          new Map(
+            [...selectedTraitOfferProducts(Object.freeze([fated])).candidateContexts].map(
+              ([key, context]) => [key, [context]],
+            ),
+          ),
+        ),
       )
         .at(circeOwner)
         ?.circeResolution(offer, 'option1');

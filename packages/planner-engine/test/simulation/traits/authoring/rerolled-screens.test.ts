@@ -589,7 +589,7 @@ describe('Pom level screens', () => {
         new Map([
           [
             semanticAddressKey(address),
-            [{ address, before, levelCount: 1, effectKind: 'choice' as const }],
+            { address, before, levelCount: 1, effectKind: 'choice' as const },
           ],
         ]),
       ).at(address)!;

@@ -362,12 +362,10 @@ function ownerLocationForAddress(
 
 interface AggregatedTraitTrace {
   readonly trace: SelectedTraitOfferAssessment;
-  readonly assessments: SelectedTraitOfferAssessment['branches'][number]['assessments'][number][];
-  readonly generations: NonNullable<
-    SelectedTraitOfferAssessment['branches'][number]['generation']
-  >[];
-  readonly compositions: SelectedTraitOfferAssessment['branches'][number]['composition'][];
-  readonly targetedAcquisitions: SelectedTraitOfferAssessment['branches'][number]['targetedAcquisition'][];
+  readonly assessments: SelectedTraitOfferAssessment['assessment']['assessments'][number][];
+  readonly generations: NonNullable<SelectedTraitOfferAssessment['assessment']['generation']>[];
+  readonly compositions: SelectedTraitOfferAssessment['assessment']['composition'][];
+  readonly targetedAcquisitions: SelectedTraitOfferAssessment['assessment']['targetedAcquisition'][];
   biomeOrder: number;
   chronologicalIndex: number;
 }
@@ -409,7 +407,7 @@ function aggregateTraceEvidence(traces: readonly AggregatedTraitTrace[]): {
 }
 
 function uniformReplacement(
-  assessments: readonly SelectedTraitOfferAssessment['branches'][number]['assessments'][number][],
+  assessments: readonly SelectedTraitOfferAssessment['assessment']['assessments'][number][],
   branchCount: number,
   traitKey: string,
 ): TraitReplacementTransition | undefined {
@@ -448,12 +446,7 @@ function presentReplacement(
   });
 }
 
-/*
- * Route evaluation branches are alternate reachable histories, not separate
- * authored offers. Keep one row per exact semantic owner while retaining all
- * assessment evidence so a single invalid branch cannot be hidden by the
- * first branch encountered.
- */
+/* One row per exact semantic owner, ordered by engine chronology. */
 function groupedTraitTraces(route: ProjectEvaluation['route']): readonly AggregatedTraitTrace[] {
   const grouped = new Map<string, AggregatedTraitTrace>();
   for (const [biomeOrder, biome] of route.biomes.entries()) {
@@ -463,27 +456,21 @@ function groupedTraitTraces(route: ProjectEvaluation['route']): readonly Aggrega
       const existing = grouped.get(key);
       if (existing === undefined) {
         grouped.set(key, {
-          assessments: trace.branches.flatMap((branch) => [...branch.assessments]),
-          generations: trace.branches.flatMap((branch) =>
-            branch.generation === undefined ? [] : [branch.generation],
-          ),
-          compositions: trace.branches.map((branch) => branch.composition),
-          targetedAcquisitions: trace.branches.map((branch) => branch.targetedAcquisition),
+          assessments: [...trace.assessment.assessments],
+          generations:
+            trace.assessment.generation === undefined ? [] : [trace.assessment.generation],
+          compositions: [trace.assessment.composition],
+          targetedAcquisitions: [trace.assessment.targetedAcquisition],
           biomeOrder,
           chronologicalIndex: trace.chronologicalIndex,
           trace,
         });
       } else {
-        existing.assessments.push(...trace.branches.flatMap((branch) => [...branch.assessments]));
-        existing.generations.push(
-          ...trace.branches.flatMap((branch) =>
-            branch.generation === undefined ? [] : [branch.generation],
-          ),
-        );
-        existing.compositions.push(...trace.branches.map((branch) => branch.composition));
-        existing.targetedAcquisitions.push(
-          ...trace.branches.map((branch) => branch.targetedAcquisition),
-        );
+        existing.assessments.push(...trace.assessment.assessments);
+        if (trace.assessment.generation !== undefined)
+          existing.generations.push(trace.assessment.generation);
+        existing.compositions.push(trace.assessment.composition);
+        existing.targetedAcquisitions.push(trace.assessment.targetedAcquisition);
         existing.chronologicalIndex = Math.min(
           existing.chronologicalIndex,
           trace.chronologicalIndex,

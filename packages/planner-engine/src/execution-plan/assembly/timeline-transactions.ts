@@ -28,7 +28,7 @@ import {
   appendTranscendentEmbryoTimelineEffects,
 } from '../../simulation/room-actions';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
-import { agreement, completeFrontier, executionRoomOwnerKey, stableJson } from './support';
+import { agreement, completeFrontier, executionRoomOwnerKey } from './support';
 import { assembleLifecycleWindow } from './lifecycle';
 import {
   executionKeepsakeEquipResults,
@@ -55,23 +55,19 @@ const SCREEN_EXPECTATION_KEYS = [
   'rarityFloor',
 ] as const satisfies readonly (keyof ExecutionTraitScreenExpectation)[];
 
-/** The expectation fields every reached branch agrees on; a divergent field is not published. */
-function agreedScreenExpectation(
-  values: readonly (ExecutionTraitScreenExpectation | undefined)[],
+/** The screen's published expectation fields, absent when it sets none. */
+function publishedScreenExpectation(
+  value: ExecutionTraitScreenExpectation | undefined,
 ): ExecutionTraitScreenExpectation | undefined {
-  const agreed: Record<string, unknown> = {};
+  const published: Record<string, unknown> = {};
   for (const key of SCREEN_EXPECTATION_KEYS) {
-    const fieldValues = values.map((value) => value?.[key]);
-    const first = fieldValues[0];
-    if (
-      first !== undefined &&
-      fieldValues.every((value) => value !== undefined && stableJson(value) === stableJson(first))
-    )
-      agreed[key] = typeof first === 'object' ? Object.freeze({ ...first }) : first;
+    const field = value?.[key];
+    if (field !== undefined)
+      published[key] = typeof field === 'object' ? Object.freeze({ ...field }) : field;
   }
-  return Object.keys(agreed).length === 0
+  return Object.keys(published).length === 0
     ? undefined
-    : (Object.freeze(agreed) as ExecutionTraitScreenExpectation);
+    : (Object.freeze(published) as ExecutionTraitScreenExpectation);
 }
 
 /** Build typed execution transactions directly from lifecycle actions and outcomes. */
@@ -125,35 +121,17 @@ export function executionTimelineTransactions(
       );
     const selected = matches[0];
     if (selected === undefined) return undefined;
-    const expectation = agreedScreenExpectation(
-      selected.branches.map((branch) => branch.screenExpectation),
+    const assessment = selected.assessment;
+    const expectation = publishedScreenExpectation(assessment.screenExpectation);
+    // Each rerolled-away row's installed level.
+    const rerolledScreenLevels = (assessment.rerolledScreens ?? []).map((screen) =>
+      screen.levelResolutions.map((resolution) => resolution.effectiveLevel),
     );
-    // Each rerolled-away row's installed level, the same in every branch.
-    const rerolledScreenLevels = agreement(
-      selected.branches.map((branch) =>
-        (branch.rerolledScreens ?? []).map((screen) =>
-          screen.levelResolutions.map((resolution) => resolution.effectiveLevel),
-        ),
-      ),
-      `rerolled screen levels ${semanticAddressKey(selected.address)}`,
+    const rerolledScreenReplacements = (assessment.rerolledScreens ?? []).map((screen) =>
+      screen.assessments.map((entry) => entry.replacementTransition),
     );
-    const rerolledScreenReplacements = agreement(
-      selected.branches.map((branch) =>
-        (branch.rerolledScreens ?? []).map((screen) =>
-          screen.assessments.map((assessment) => assessment.replacementTransition),
-        ),
-      ),
-      `rerolled screen replacements ${semanticAddressKey(selected.address)}`,
-    );
-    // Each rerolled-away row's rarity before its screen's Rarify clicks, the same in every branch.
-    const rerolledScreenBaseRarities = selected.branches.every(
-      (branch) => branch.rerolledScreenBaseRarities === undefined,
-    )
-      ? undefined
-      : agreement(
-          selected.branches.map((branch) => branch.rerolledScreenBaseRarities),
-          `rerolled screen base rarities ${semanticAddressKey(selected.address)}`,
-        );
+    // Each rerolled-away row's rarity before its screen's Rarify clicks.
+    const rerolledScreenBaseRarities = assessment.rerolledScreenBaseRarities;
     const traitScreens =
       selected.offer.kind === 'chaos'
         ? {}
@@ -225,29 +203,15 @@ export function executionTimelineTransactions(
         `unsupported trait offer ${semanticAddressKey(selected.address)}`,
       );
     const selectedTraitOffer = selected.offer;
-    const levels = agreement(
-      selected.branches.map((branch) => branch.effectiveLevels),
-      `trait effective levels ${semanticAddressKey(selected.address)}`,
-    );
-    const baseRarities = agreement(
-      selected.branches.map((branch) => branch.baseRarities),
-      `trait base rarities ${semanticAddressKey(selected.address)}`,
-    );
-    const replacements = agreement(
-      selected.branches.map((branch) =>
-        branch.assessments.map((assessment) => assessment.replacementTransition),
-      ),
-      `trait replacements ${semanticAddressKey(selected.address)}`,
-    );
+    const levels = assessment.effectiveLevels;
+    const baseRarities = assessment.baseRarities;
+    const replacements = assessment.assessments.map((entry) => entry.replacementTransition);
     const selectedOptionIndex = Number(selected.offer.selectedOptionKey.slice(-1)) - 1;
     const selectedOption = selected.offer.options[selectedOptionIndex];
     const authoredCirceResolution = selectedOption?.circeResolution;
     const orderedCirceActivationKeys =
       authoredCirceResolution?.kind === 'activateArcana'
-        ? agreement(
-            selected.branches.map((branch) => branch.orderedCirceActivationKeys),
-            `Circe activation order ${semanticAddressKey(selected.address)}`,
-          )
+        ? assessment.orderedCirceActivationKeys
         : undefined;
     const circeResolution =
       authoredCirceResolution === undefined
@@ -279,17 +243,7 @@ export function executionTimelineTransactions(
                   : authoredCirceResolution.arcanaKeys),
               ]),
             });
-    const targetedAcquisitionTransitions = selected.branches.map(
-      (branch) => branch.targetedAcquisition.transition,
-    );
-    const targetedAcquisition = targetedAcquisitionTransitions.every(
-      (transition) => transition === undefined,
-    )
-      ? undefined
-      : agreement(
-          targetedAcquisitionTransitions,
-          `trait targeted acquisition ${semanticAddressKey(selected.address)}`,
-        );
+    const targetedAcquisition = assessment.targetedAcquisition.transition;
     const icarusHammerTargets =
       selected.offer.giverKey === 'Icarus' &&
       selectedOption?.traitKey === 'UpgradeHammerBoon' &&
@@ -310,36 +264,17 @@ export function executionTimelineTransactions(
         : undefined;
     const echoLastRunBoon =
       selected.offer.giverKey === 'Echo' && selectedOption?.traitKey === 'EchoLastRunBoon'
-        ? agreement(
-            selected.branches.map((branch) =>
-              branch.effectiveEchoLastRunBoon === undefined
-                ? undefined
-                : {
-                    options: branch.effectiveEchoLastRunBoon.options,
-                    selectedOptionKey: branch.effectiveEchoLastRunBoon.selectedOptionKey,
-                  },
-            ),
-            `Echo last-run boon ${semanticAddressKey(selected.address)}`,
-          )
+        ? assessment.effectiveEchoLastRunBoon
         : undefined;
     const echoLastRunExpectation =
       echoLastRunBoon === undefined
         ? undefined
-        : agreedScreenExpectation(
-            selected.branches.map((branch) =>
-              branch.effectiveEchoLastRunBoon === undefined
-                ? undefined
-                : { rarityFloor: branch.effectiveEchoLastRunBoon.rarityFloor },
-            ),
-          );
+        : publishedScreenExpectation({ rarityFloor: echoLastRunBoon.rarityFloor });
     const publishedHexTree =
       selected.offer.giverKey !== 'SpellDrop' || selected.offer.hexTree === undefined
         ? undefined
         : (() => {
-            const progress = agreement(
-              selected.branches.map((branch) => branch.settledHexTree),
-              `Spell Hex settlement ${semanticAddressKey(selected.address)}`,
-            );
+            const progress = assessment.settledHexTree;
             if (
               progress === undefined ||
               selectedOption === undefined ||
@@ -498,10 +433,7 @@ export function executionTimelineTransactions(
       );
     const selected = matches[0];
     if (selected === undefined) return undefined;
-    const levelCount = agreement(
-      selected.branches.map((branch) => branch.levelCount),
-      `level count ${semanticAddressKey(selected.address)}`,
-    );
+    const levelCount = selected.assessment.levelCount;
     return Object.freeze({
       offeredTargets: Object.freeze(
         selected.value.kind === 'choice' ? [...selected.value.offeredTraitKeys] : [],

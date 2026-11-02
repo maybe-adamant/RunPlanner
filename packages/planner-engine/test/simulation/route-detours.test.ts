@@ -1252,7 +1252,7 @@ describe('route-detour simulation', () => {
         (trace) => semanticAddressKey(trace.address.owner) === semanticAddressKey(incoming),
       );
       const trace = traces?.[0];
-      expect(trace?.branches[0]?.assessments[0]).toMatchObject({
+      expect(trace?.assessment.assessments[0]).toMatchObject({
         legal: false,
         findings: [{ code: 'offerContext', detail: 'blockGiftBoons', traitKey }],
       });

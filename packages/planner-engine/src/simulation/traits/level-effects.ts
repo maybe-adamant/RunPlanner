@@ -99,10 +99,10 @@ export interface ReachedLevelResolutionEvaluation {
 export interface SelectedLevelResolutionAssessment {
   readonly address: LevelResolutionAddress;
   readonly value: AuthoredLevelResolution;
-  readonly branches: readonly (Pick<
+  readonly assessment: Pick<
     ReachedLevelResolutionEvaluation,
     'findings' | 'levelCount' | 'emptyTargetAllowed'
-  > & { readonly eligibleTargetCount: number })[];
+  > & { readonly eligibleTargetCount: number };
   readonly reached: true;
   readonly chronologicalIndex: number;
 }

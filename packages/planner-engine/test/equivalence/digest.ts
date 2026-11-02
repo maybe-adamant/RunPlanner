@@ -107,6 +107,11 @@ function branchListShape(value: unknown): unknown {
     next.branches = value.frontier === undefined ? [] : [next.frontier];
     delete next.frontier;
   }
+  // A selected trait offer or Pom published its one assessment as a branch list.
+  if ('assessment' in value && value.reached === true && 'chronologicalIndex' in value) {
+    next.branches = [next.assessment];
+    delete next.assessment;
+  }
   if (
     hasKeys(value, ['origin', 'historySequence', 'state']) ||
     hasKeys(value, ['owner', 'gameName', 'state'])

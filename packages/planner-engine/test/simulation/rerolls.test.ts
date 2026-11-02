@@ -888,7 +888,7 @@ describe('screen rerolls', () => {
       offer?.offer.kind === 'traits' &&
         offer.offer.rerolledScreens?.[0]?.options.map((option) => option.rarity),
     ).toEqual(['Common', 'Rare', 'Common']);
-    expect(offer?.branches[0]?.rerolledScreenBaseRarities?.[0]).toEqual([
+    expect(offer?.assessment.rerolledScreenBaseRarities?.[0]).toEqual([
       'Common',
       'Common',
       'Common',

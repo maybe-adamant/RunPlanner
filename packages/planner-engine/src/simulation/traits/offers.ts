@@ -423,7 +423,7 @@ export interface TraitScreenExpectation {
 }
 
 /** Execution input retained only after one authored offer is selected. */
-export interface SelectedTraitOfferBranchAssessment extends TraitOfferBranchAssessment {
+export interface SelectedTraitOfferStateAssessment extends TraitOfferBranchAssessment {
   readonly screenExpectation?: TraitScreenExpectation;
   readonly baseRarities: readonly (TraitRarity | undefined)[];
   readonly rerolledScreenBaseRarities?: ReachedTraitOfferEvaluation['rerolledScreenBaseRarities'];
@@ -450,7 +450,8 @@ export interface SelectedTraitOfferAssessment {
   readonly address: TraitOfferAddress;
   readonly acquisitionRole: string;
   readonly offer: AuthoredTraitOffer;
-  readonly branches: readonly SelectedTraitOfferBranchAssessment[];
+  /** The offer assessed at its one reached state. */
+  readonly assessment: SelectedTraitOfferStateAssessment;
   readonly reached: true;
   readonly chronologicalIndex: number;
 }

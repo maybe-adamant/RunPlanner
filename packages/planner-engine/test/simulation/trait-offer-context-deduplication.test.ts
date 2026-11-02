@@ -85,10 +85,10 @@ describe('trait offer context deduplication', () => {
     const products = selectedTraitOfferProducts([second.branch], [], catalog);
     const firstContext = products.candidateContexts.get(
       semanticAddressKey(createTraitOfferAddress(owner, 'first')),
-    )?.[0];
+    );
     const secondContext = products.candidateContexts.get(
       semanticAddressKey(createTraitOfferAddress(owner, 'second')),
-    )?.[0];
+    );
     if (firstContext === undefined || secondContext === undefined)
       throw new Error('both offers must retain a candidate context');
     expect(firstContext.state.traitHistory.equippedTraits.ApolloWeaponBoon).toBeUndefined();

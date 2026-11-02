@@ -311,28 +311,24 @@ function bridalGlowProjection() {
             ? Object.freeze({
                 ...candidate,
                 offer,
-                branches: Object.freeze(
-                  candidate.branches.map((branch) =>
-                    Object.freeze({
-                      ...branch,
-                      targetedAcquisition: Object.freeze({
-                        applies: true,
-                        legal: true,
-                        sourceTraitKey: 'BoonDecayBoon',
-                        targetTraitKey,
-                        findings: Object.freeze([]),
-                        transition: Object.freeze({
-                          kind: 'promoteGodTraitToHeroic' as const,
-                          sourceTraitKey: 'BoonDecayBoon',
-                          targetTraitKey,
-                          oldRarity: 'Epic' as const,
-                          newRarity: 'Heroic' as const,
-                          levelChange: { oldLevel: 1, newLevel: 4 },
-                        }),
-                      }),
+                assessment: Object.freeze({
+                  ...candidate.assessment,
+                  targetedAcquisition: Object.freeze({
+                    applies: true,
+                    legal: true,
+                    sourceTraitKey: 'BoonDecayBoon',
+                    targetTraitKey,
+                    findings: Object.freeze([]),
+                    transition: Object.freeze({
+                      kind: 'promoteGodTraitToHeroic' as const,
+                      sourceTraitKey: 'BoonDecayBoon',
+                      targetTraitKey,
+                      oldRarity: 'Epic' as const,
+                      newRarity: 'Heroic' as const,
+                      levelChange: { oldLevel: 1, newLevel: 4 },
                     }),
-                  ),
-                ),
+                  }),
+                }),
               })
             : candidate,
         ),
@@ -480,14 +476,10 @@ function echoCarrierProjection(echoLastRunBoon: AuthoredEchoLastRunBoonOffer, ra
             ? Object.freeze({
                 ...candidate,
                 offer,
-                branches: Object.freeze(
-                  candidate.branches.map((branch) =>
-                    Object.freeze({
-                      ...branch,
-                      effectiveEchoLastRunBoon: Object.freeze({ ...echoLastRunBoon, rarityFloor }),
-                    }),
-                  ),
-                ),
+                assessment: Object.freeze({
+                  ...candidate.assessment,
+                  effectiveEchoLastRunBoon: Object.freeze({ ...echoLastRunBoon, rarityFloor }),
+                }),
               })
             : candidate,
         ),
@@ -1509,68 +1501,6 @@ describe('execution-plan compiler and codec', () => {
         .find((candidate) => candidate.giver === 'Echo');
       expect(offer?.options[0]?.echoLastRunBoon?.expectation).toEqual({ rarityFloor });
     }
-  });
-
-  it('publishes only the screen expectation fields every reached branch agrees on', () => {
-    const assembly = simulateProjectAssembly(
-      catalog,
-      authorLegalTraitOffers(createCompleteFGProject()),
-    );
-    const biome = assembly.evaluation.route.biomes[0];
-    if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
-      throw new Error('fixture lacks a complete-valid execution biome');
-    const source = biome.rewards.selectedTraitOffers.find(
-      (candidate) => candidate.offer.kind === 'traits',
-    );
-    const branch = source?.branches[0];
-    if (source === undefined || branch === undefined)
-      throw new Error('fixture lacks an ordinary selected trait offer');
-    const shared = {
-      hymnUses: 1,
-      consumesOrdinary: false,
-      concaveStone: { uses: 1, giverProcs: true },
-      rarifyUses: 2,
-    };
-    const projected = Object.freeze({
-      ...biome,
-      rewards: Object.freeze({
-        ...biome.rewards,
-        selectedTraitOffers: Object.freeze(
-          biome.rewards.selectedTraitOffers.map((candidate) =>
-            candidate === source
-              ? Object.freeze({
-                  ...candidate,
-                  branches: Object.freeze([
-                    Object.freeze({
-                      ...branch,
-                      screenExpectation: { ...shared, yarnUses: 1, consumesYarn: true },
-                    }),
-                    Object.freeze({
-                      ...branch,
-                      screenExpectation: { ...shared, yarnUses: 0, consumesYarn: true },
-                    }),
-                  ]),
-                })
-              : candidate,
-          ),
-        ),
-      }),
-    });
-    const offer = orderedExecutionRooms([projected])
-      .flatMap((room) =>
-        executionTimelineTransactions(
-          room,
-          projected,
-          mergePlannerTimelineFacts(
-            room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
-            projected.rewards.timelineFacts,
-          ),
-        ),
-      )
-      .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
-      .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
-      .find((candidate) => candidate.expectation?.rarifyUses === 2);
-    expect(offer?.expectation).toEqual({ ...shared, consumesYarn: true });
   });
 
   it('decodes screen expectation blocks strictly by the screen that reads them', () => {

@@ -981,15 +981,13 @@ describe('field NPC encounter requirements', () => {
     );
     expect(trace).toMatchObject({
       acquisitionRole: 'selection',
-      branches: [
-        expect.objectContaining({
-          assessments: [
-            expect.objectContaining({ legal: true }),
-            expect.objectContaining({ legal: true }),
-            expect.objectContaining({ legal: true }),
-          ],
-        }),
-      ],
+      assessment: expect.objectContaining({
+        assessments: [
+          expect.objectContaining({ legal: true }),
+          expect.objectContaining({ legal: true }),
+          expect.objectContaining({ legal: true }),
+        ],
+      }),
     });
     expect(
       reachedFrontier(biome.rewards).some(
@@ -1096,12 +1094,11 @@ describe('field NPC encounter requirements', () => {
     const trace = biome.rewards.selectedTraitOffers.find(
       (candidate) => semanticAddressKey(candidate.address.owner) === semanticAddressKey(storyPhase),
     );
-    expect(trace?.branches).toEqual([
+    expect(trace?.assessment).toEqual(
       expect.objectContaining({
         composition: { applies: false, legal: true, findings: [] },
       }),
-    ]);
-    expect(trace?.branches).not.toHaveLength(0);
+    );
     const history = biome.rewards.frontier?.state.traitHistory;
     const acquired = history?.events.find(
       (event) =>
@@ -1944,7 +1941,7 @@ describe('field NPC encounter requirements', () => {
     const trace = evaluation.rewards.selectedTraitOffers.find(
       (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(traitAddress),
     );
-    expect(trace?.branches[0]?.targetedAcquisition).toMatchObject({
+    expect(trace?.assessment.targetedAcquisition).toMatchObject({
       applies: true,
       legal: true,
       sourceTraitKey: 'UpgradeHammerBoon',

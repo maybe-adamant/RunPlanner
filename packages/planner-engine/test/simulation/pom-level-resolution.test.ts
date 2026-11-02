@@ -31,7 +31,6 @@ import {
   type RewardKernelFacts,
 } from '@run-planner/engine/reward-kernel';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
-import { CandidateEvaluationContractError } from '../../src/simulation/candidates/contract';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
@@ -409,52 +408,18 @@ describe('Pom level resolutions', () => {
     expect(triple.history.equippedTraits.ApolloWeaponBoon?.level).toBe(6);
   });
 
-  it('reports reached Pom contexts that disagree on the surface as a contract failure', () => {
-    const context = (before: ReturnType<typeof equippedHistory>) => ({
-      address: levelAddress,
-      before,
-      levelCount: 1,
-      effectKind: 'choice' as const,
-    });
-    const artifacts = createLevelResolutionCandidateArtifacts(
-      catalog,
-      new Map([
-        [
-          semanticAddressKey(levelAddress),
-          [context(equippedHistory()), context(twoTargetHistory())],
-        ],
-      ]),
-    );
-    expect(() => artifacts.at(levelAddress)).toThrow(CandidateEvaluationContractError);
-    const agreeing = createLevelResolutionCandidateArtifacts(
-      catalog,
-      new Map([
-        [
-          semanticAddressKey(levelAddress),
-          [context(twoTargetHistory()), context(twoTargetHistory())],
-        ],
-      ]),
-    ).at(levelAddress);
-    expect(agreeing?.surface.eligibleTargetTraitKeys).toEqual([
-      'ApolloWeaponBoon',
-      'HestiaSpecialBoon',
-    ]);
-  });
-
   it('publishes one Pom surface and evaluates choices against it', () => {
     const capability = createLevelResolutionCandidateArtifacts(
       catalog,
       new Map([
         [
           semanticAddressKey(levelAddress),
-          [
-            {
-              address: levelAddress,
-              before: twoTargetHistory(),
-              levelCount: 1,
-              effectKind: 'choice' as const,
-            },
-          ],
+          {
+            address: levelAddress,
+            before: twoTargetHistory(),
+            levelCount: 1,
+            effectKind: 'choice' as const,
+          },
         ],
       ]),
     ).at(levelAddress);
@@ -511,14 +476,12 @@ describe('Pom level resolutions', () => {
       new Map([
         [
           semanticAddressKey(levelAddress),
-          [
-            {
-              address: levelAddress,
-              before: twoTargetHistory(),
-              levelCount: 1,
-              effectKind: 'random' as const,
-            },
-          ],
+          {
+            address: levelAddress,
+            before: twoTargetHistory(),
+            levelCount: 1,
+            effectKind: 'random' as const,
+          },
         ],
       ]),
     ).at(levelAddress);
@@ -546,7 +509,7 @@ describe('Pom level resolutions', () => {
     const o = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
     if (o === undefined || !('rewards' in o)) throw new Error('missing evaluated O reward product');
     expect(o.rewards.selectedLevelResolutions).toContainEqual(
-      expect.objectContaining({ address, branches: expect.any(Array) }),
+      expect.objectContaining({ address, assessment: expect.any(Object) }),
     );
     expect(levelResolutionCandidateForProjectEvaluationAssembly(assembly, address)).toBeDefined();
   });
