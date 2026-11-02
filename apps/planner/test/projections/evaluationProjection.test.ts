@@ -765,8 +765,7 @@ describe('outer finding collapse', () => {
       );
     // Fresh F_Combat01 replaces GeneratedF with its intro.
     expect(customization('generatedComposition', { reason: 'contextuallyReplaced' })).toEqual({
-      title: 'This encounter is fixed here',
-      description: 'Only Reset repairs it.',
+      title: 'Saved customization no longer applies',
     });
     // Chronos's late summon names a choice I_Boss01 does not declare.
     expect(customization('lateSummon', { reason: 'valueNotDeclared' })).toEqual({
@@ -782,7 +781,7 @@ describe('outer finding collapse', () => {
     ).toEqual({ title: 'Cocoons must be 8–14' });
     expect(
       customization('cocoonRewardPoint', { reason: 'cocoonRewardPointAbsent', spawnPointId: 1 }),
-    ).toEqual({ title: 'This room has no such reward position' });
+    ).toEqual({ title: "Reward cocoon's spot isn't in this room" });
     const composition = (compositionIssue: FindingEvidenceValue) =>
       customization('generatedComposition', { reason: 'compositionInvalid', compositionIssue });
     expect(composition({ reason: 'required', field: 'allocations', waveIndex: 1 })).toEqual({
@@ -839,13 +838,17 @@ describe('outer finding collapse', () => {
       decodeProjectDocument(wire, catalog),
     ).findings.find((entry) => entry.code === 'encounterCustomizationUnavailable')!;
     expect(presentFinding(unavailable, labels)).toEqual({
-      title: "Expanding Ring can't occur on this route",
+      title: "Hecate's Expanding Ring can't occur here",
     });
+    // A decision several encounters declare, or a long name, drops the owner.
+    expect(
+      presentFinding(unavailable, { ...labels, customizationOwner: () => undefined }).title,
+    ).toBe("Expanding Ring can't occur on this route");
     expect(presentFinding(unavailable)).toEqual({ title: "This choice can't occur on this route" });
     // Its title reads alone in the findings panel, without the dialog's name.
     expect(
       presentAssessmentIssue(issueOf(unavailable.origin, [unavailable]), byOrigin, labels).title,
-    ).toBe("Expanding Ring can't occur on this route");
+    ).toBe("Hecate's Expanding Ring can't occur here");
   });
 
   it('names an unavailable encounter from its evidence', () => {

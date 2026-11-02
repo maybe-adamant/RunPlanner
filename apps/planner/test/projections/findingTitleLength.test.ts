@@ -241,6 +241,7 @@ const longestLabels: FindingLabels = {
   enemy: () => longestNames.enemy,
   customizationDecision: () => longestNames.decision,
   customizationChoice: () => longestNames.choice,
+  customizationOwner: () => longestNames.encounter,
 };
 
 describe('encounter finding title length', () => {

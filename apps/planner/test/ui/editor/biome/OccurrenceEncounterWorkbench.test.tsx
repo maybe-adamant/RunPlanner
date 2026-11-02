@@ -922,7 +922,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       screen.getByRole('option', { name: '1 (unavailable)' }).getAttribute('aria-disabled'),
     ).toBe('true');
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
-    expect(dialogFinding(dialog)).toContain('This room has no such reward position');
+    expect(dialogFinding(dialog)).toContain("Reward cocoon's spot isn't in this room");
     const point = () =>
       view.application.store
         .getState()
@@ -979,7 +979,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Overview');
     const dialog = await reopenEncounter(view.user);
     const save = within(dialog).getByRole('button', { name: 'Save' }) as HTMLButtonElement;
-    const unavailable = 'This room has no such reward position';
+    const unavailable = "Reward cocoon's spot isn't in this room";
     expect(dialogFinding(dialog)).toContain(unavailable);
     expect(save.disabled).toBe(true);
     const slider = within(dialog).getByRole('slider', { name: 'Cocoons' });

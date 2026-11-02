@@ -638,6 +638,8 @@ export interface FindingLabels extends EncounterIssueNames {
   readonly encounter: (encounterKey: string) => string | undefined;
   readonly customizationDecision: (decisionKey: string) => string | undefined;
   readonly customizationChoice: (decisionKey: string, choiceKey: string) => string | undefined;
+  /** The encounter every declaration of this decision presents, e.g. its boss. */
+  readonly customizationOwner: (decisionKey: string) => string | undefined;
 }
 
 const labelsByCatalog = new WeakMap<Catalog, FindingLabels>();
@@ -649,11 +651,17 @@ export function catalogFindingLabels(catalog: Catalog): FindingLabels {
   const encounters = new Map<string, string>();
   const enemies = new Map<string, string>();
   const decisions = new Map<string, string>();
+  const owners = new Map<string, string | null>();
   const choices = new Map<string, string>();
   for (const definition of catalog.encounterDefinitions.values) {
     encounters.set(definition.key, definition.label);
     for (const decision of definition.customization ?? []) {
       if (!decisions.has(decision.key)) decisions.set(decision.key, decision.label);
+      const owner = owners.get(decision.key);
+      owners.set(
+        decision.key,
+        owner === undefined || owner === definition.label ? definition.label : null,
+      );
       const selection = decision.selection;
       if (selection.kind === 'single' || selection.kind === 'orderedPrefix')
         for (const choice of selection.choices)
@@ -681,6 +689,7 @@ export function catalogFindingLabels(catalog: Catalog): FindingLabels {
     introduction: (key: string) => catalog.encounterDefinitions.byKey[key]?.label,
     enemy: (key: string) => enemies.get(key),
     customizationDecision: (key: string) => decisions.get(key),
+    customizationOwner: (key: string) => owners.get(key) ?? undefined,
     customizationChoice: (decisionKey: string, choiceKey: string) =>
       choices.get(`${decisionKey}\u0000${choiceKey}`),
   });
@@ -834,8 +843,7 @@ export function presentEncounterCustomizationFinding(
   const presentation = ((): FindingPresentation => {
     switch (facts.reason) {
       case 'contextuallyReplaced':
-        // Another choice cannot repair it, though the control still offers some.
-        return { title: 'This encounter is fixed here', description: 'Only Reset repairs it.' };
+        return { title: 'Saved customization no longer applies' };
       case 'valueNotDeclared':
         return {
           title: fittingTitle([
@@ -848,14 +856,21 @@ export function presentEncounterCustomizationFinding(
           title: `Cocoons must be ${facts.minimum === facts.maximum ? facts.minimum : `${facts.minimum}–${facts.maximum}`}`,
         };
       case 'cocoonRewardPointAbsent':
-        return { title: 'This room has no such reward position' };
+        return { title: "Reward cocoon's spot isn't in this room" };
       case 'routeExcluded': {
         const choice =
           facts.decisionKey === undefined
             ? undefined
             : labels?.customizationChoice(facts.decisionKey, facts.choiceKey);
+        const owner =
+          facts.decisionKey === undefined
+            ? undefined
+            : labels?.customizationOwner(facts.decisionKey);
         return {
           title: fittingTitle([
+            choice === undefined || owner === undefined
+              ? undefined
+              : `${owner}'s ${choice} can't occur here`,
             choice === undefined ? undefined : `${choice} can't occur on this route`,
             "This choice can't occur on this route",
           ]),
