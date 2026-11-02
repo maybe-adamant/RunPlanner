@@ -1,7 +1,7 @@
 import { purgingPoolInteractions, stygianWellInteractions } from './feature-roll-seams';
 import { roomObjectInteractions } from './object-interaction-seams';
 import { createRoomObjectInteractionArtifacts } from '../../commerce/object-interactions';
-import { semanticAddressKey } from '../../../authored-project/addresses';
+import { semanticAddressKey, type SemanticAddress } from '../../../authored-project/addresses';
 import type { BiomeRewardSimulation } from '../model';
 import { createAcquisitionConversionCandidateArtifacts } from '../acquisition/artifacts';
 import {
@@ -48,8 +48,22 @@ export function publishChronology(
   through: BiomeRewardEvaluationAssembly['through'],
   /** The last history sequence the published walk reached; producer acquisitions stop there. */
   reachedThrough = Number.POSITIVE_INFINITY,
+  /** The room whose Overview the cut stops: its Timeline is unreached. */
+  overviewStopped?: SemanticAddress,
 ): BiomeRewardEvaluationAssembly {
   const { catalog, snapshot } = context;
+  // Object interactions append to a Timeline, so a room stopped at its Overview offers none.
+  const interactionWalk: ChronologyWalkState =
+    overviewStopped === undefined
+      ? walk
+      : Object.freeze({
+          ...walk,
+          roomActionEnds: new Map(
+            [...walk.roomActionEnds].filter(
+              ([roomKey]) => roomKey !== semanticAddressKey(overviewStopped),
+            ),
+          ),
+        });
   const immutableFindingRegions = accumulation.findingRegions;
   const immutableFindings = Object.freeze(immutableFindingRegions.map((entry) => entry.finding));
   const traitProducts = selectedTraitOfferProducts(
@@ -270,7 +284,7 @@ export function publishChronology(
       accumulation.fountainRarityCandidateContexts,
     ),
     purgingPoolArtifacts: (() => {
-      const interactions = purgingPoolInteractions(context, walk);
+      const interactions = purgingPoolInteractions(context, interactionWalk);
       return createPurgingPoolCandidateArtifacts(
         new Map(
           [...walk.purgingPoolAssessments.values()].map((room) => {
@@ -299,10 +313,14 @@ export function publishChronology(
           assessments,
         ]),
       ),
-      stygianWellInteractions(context, walk),
+      stygianWellInteractions(context, interactionWalk),
     ),
     objectInteractionArtifacts: createRoomObjectInteractionArtifacts(
-      roomObjectInteractions(context, walk, accumulation.derivedAcquisitionEntryContexts),
+      roomObjectInteractions(
+        context,
+        interactionWalk,
+        accumulation.derivedAcquisitionEntryContexts,
+      ),
     ),
     findingRegions: Object.freeze(immutableFindingRegions),
     encounterEntryVowRanks: walk.encounterEntryVowRanks,

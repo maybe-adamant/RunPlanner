@@ -845,7 +845,11 @@ export function publishSelectedCut(
 ): ProgressiveBiomeEvaluationAssembly {
   const block = selectedCut(catalog, authoredPrefix, selected.history, located);
   const history = biomeHistoryThrough(selected.history, block.through);
-  const rewards = selected.rewardsThrough(block.cut, located.finding.origin);
+  const rewards = selected.rewardsThrough(
+    block.cut,
+    located.finding.origin,
+    block.timeline || block.owner.kind === 'start' ? undefined : block.owner.room.origin,
+  );
   const roomGeneration = generationThrough(
     selected.roomGeneration,
     selected.history,

@@ -60,7 +60,8 @@ describe('Pedestal panel', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
     const entry = screen.getByRole('button', { name: 'Pedestal' });
     expect(entry).toHaveProperty('disabled', true);
-    expect(hintOf(entry)).toBe('Choose the Pedestal item first.');
+    // The missing item stops the room's Overview, so its Timeline entry waits.
+    expect(hintOf(entry)).toBe('Waits on an earlier choice.');
 
     await view.user.click(within(pedestal()).getByRole('button', { name: /^Pedestal/ }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Big Pom of Power'));

@@ -20,6 +20,8 @@ import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   generatedEncounterSupportForProjectEvaluationAssembly,
+  roomObjectInteractionsForProjectEvaluationAssembly,
+  stygianWellCandidateForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import {
   createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
@@ -39,6 +41,7 @@ import {
 import {
   createCompleteFGProject,
   createUnderworldFPoolCheckpoint,
+  loadUnderworldFGProject,
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
@@ -439,6 +442,61 @@ describe('room Overview block', () => {
         },
       }),
     ).toMatchObject({ kind: 'shopOffer', result: { supported: true } });
+    // Purchases append to the unreached Timeline; a settled inventory offers them.
+    const shop = createOccurrenceAddress(pBiome, prebossShop);
+    expect(
+      roomObjectInteractionsForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, project),
+        shop,
+      ),
+    ).toBeUndefined();
+    expect(
+      roomObjectInteractionsForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, surfaceEncounterShowcaseProject()),
+        shop,
+      )?.worldShop?.offers.length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+const goldenFLaterWell = fixture.createOccurrenceId('golden-f-b4-e1');
+
+/** A Stygian Well whose second-right item may duplicate its second-left one. */
+function withStygianWell(
+  project: ProjectDocument,
+  occurrenceId: OccurrenceId,
+  secondRight: string,
+): ProjectDocument {
+  const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
+  let next = applyProjectCommand(project, catalog, { kind: 'AddStygianWell', occurrence });
+  for (const [slotKey, itemKey] of [
+    ['healing', 'ArmorBoostStore'],
+    ['secondLeft', 'TemporaryForcedSecretDoorTrait'],
+    ['secondRight', secondRight],
+  ] as const)
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence,
+      slotKey,
+      itemKey,
+    });
+  return next;
+}
+
+describe('room Overview block withholds its Timeline interactions', () => {
+  it("offers a Well's purchases only once its Overview is settled", () => {
+    const room = createOccurrenceAddress(goldenFBiome, goldenFLaterWell);
+    const interaction = (secondRight: string) =>
+      stygianWellCandidateForProjectEvaluationAssembly(
+        simulateProjectAssembly(
+          catalog,
+          withStygianWell(loadUnderworldFGProject(), goldenFLaterWell, secondRight),
+        ),
+        room,
+      )?.interaction;
+
+    expect(interaction('TemporaryImprovedCastTrait')?.offers).toHaveLength(3);
+    expect(interaction('TemporaryForcedSecretDoorTrait')).toBeUndefined();
   });
 });
 

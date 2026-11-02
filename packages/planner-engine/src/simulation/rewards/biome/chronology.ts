@@ -458,6 +458,7 @@ export function evaluateBiomeRewardChronology(
   const through = (
     cut: HistoryFindingChronology,
     blockedAt?: SemanticAddress,
+    overviewStopped?: SemanticAddress,
   ): BiomeRewardEvaluationAssembly => {
     const { received, emissionCount, settled } = walkThrough(steps, walked, cut);
     const replay = createChronologyAccumulator(prepared.rooms);
@@ -474,6 +475,7 @@ export function evaluateBiomeRewardChronology(
       accumulation,
       through,
       cut.boundary === 'before' ? cut.sequence - 1 : cut.sequence,
+      overviewStopped,
     );
   };
   return publishChronology(context, walk, accumulator.finish(), through);

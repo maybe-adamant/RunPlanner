@@ -50,11 +50,14 @@ export interface BiomeRewardEvaluationAssembly {
   readonly encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>;
   /**
    * This walk's products published through an earlier chronology cut, without
-   * walking again; the blocked owner names the contact's reached checkpoint.
+   * walking again; the blocked owner names the contact's reached checkpoint,
+   * and a cut that stops a room's Overview names that room, whose Timeline is
+   * unreached.
    */
   readonly through: (
     cut: HistoryFindingChronology,
     blockedAt?: SemanticAddress,
+    overviewStopped?: SemanticAddress,
   ) => BiomeRewardEvaluationAssembly;
 }
 

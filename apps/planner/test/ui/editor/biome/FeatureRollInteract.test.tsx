@@ -8,8 +8,13 @@ import { createBiomeAddress, createOccurrenceAddress } from '@run-planner/engine
 
 import type { PlannerApplication } from '@planner/composition/createApplication';
 import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
-import { completionOccurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
+import {
+  completionOccurrenceById,
+  occurrenceById,
+  openRoomTab,
+} from '@planner-test/support/occurrence-workbench';
 import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
@@ -144,4 +149,26 @@ it('drops an abandoned blank-slot pick and disables the entry once everything is
   const entry = interact() as HTMLButtonElement;
   expect(entry.disabled).toBe(true);
   expect(hintOf(entry)).toBe('Everything here is bought.');
+});
+
+it("waits on the room's Overview before the Well can be interacted with", () => {
+  // A duplicate offer keeps the host's Overview unsettled, so its Timeline is unreached.
+  const hostId = createOccurrenceId('golden-f-b2-e1');
+  const host = createOccurrenceAddress(createBiomeAddress('Underworld', 'F'), hostId);
+  let project = applyProjectCommand(loadUnderworldFGProject(), catalog, {
+    kind: 'AddStygianWell',
+    occurrence: host,
+  });
+  for (const slotKey of ['secondLeft', 'secondRight'] as const)
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: host,
+      slotKey,
+      itemKey: 'TemporaryForcedSecretDoorTrait',
+    });
+  renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(hostId));
+  openRoomTab('Room Timeline');
+  const entry = screen.getByRole('button', { name: 'Stygian Well' }) as HTMLButtonElement;
+  expect(entry.disabled).toBe(true);
+  expect(hintOf(entry)).toBe('Waits on an earlier choice.');
 });

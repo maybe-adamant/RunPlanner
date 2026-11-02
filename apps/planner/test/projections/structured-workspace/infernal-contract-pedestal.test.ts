@@ -86,7 +86,8 @@ describe('Contract pedestal editor', () => {
     const feature = pedestalFeature(room(missing, peerId));
     if (feature?.kind !== 'infernalContractPedestal') throw new Error('pedestal missing');
     expect(feature.rewardControl.offer).toBeNull();
-    expect(championEntry(room(missing, peerId))).toMatchObject({ locked: 'itemUnchosen' });
+    // The missing item stops the room's Overview, so its Timeline entry waits.
+    expect(championEntry(room(missing, peerId))).toMatchObject({ locked: 'unreached' });
 
     const picker = missing.workspace.interactions.shopOffers.get(semanticAddressKey(peerPedestal));
     if (picker === undefined) throw new Error('pedestal item picker missing');
