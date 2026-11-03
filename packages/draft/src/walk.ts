@@ -57,7 +57,7 @@ import {
   assessmentRepairOwner,
   type SemanticFinding,
   type SettlementFault,
-  type RewardOfferExclusionEvidence,
+  type RewardOfferExclusionReason,
   prepareRouteStartTraitRequirements,
   routeResourceAuthoring,
 } from '@run-planner/engine/simulation';
@@ -1423,10 +1423,9 @@ export class DraftWalk {
     return latestRunState(this.assembly)?.godPool.acquiredSourceKeys.length ?? 0;
   }
 
-  /** Stops chasing what an offer exclusion holding in every branch rules out. */
-  private noteExclusions(exclusions: readonly RewardOfferExclusionEvidence[]): void {
+  /** Stops chasing what an offer exclusion rules out. */
+  private noteExclusions(exclusions: readonly RewardOfferExclusionReason[]): void {
     for (const exclusion of exclusions) {
-      if (!exclusion.allBranches) continue;
       if (exclusion.kind === 'godCap' || exclusion.kind === 'godNotInteracted') {
         const giverKey = this.catalog.traitGiverByAcquisitionGameName[exclusion.source];
         if (giverKey !== undefined) this.stoppedGods.add(giverKey);

@@ -15,11 +15,7 @@ import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { ShopOptionSelection, ShopSlotAssessment } from '../../reward-kernel';
 import type { SemanticFinding } from '../model';
 import type { FindingRegionEntry } from '../finding-regions';
-import {
-  staticRewardOfferExclusion,
-  type RewardOfferExclusionEvidence,
-  type RewardOfferExclusionReason,
-} from './offer-exclusions';
+import { staticRewardOfferExclusion, type RewardOfferExclusionReason } from './offer-exclusions';
 
 export type RewardProducerGenerationPolicy = 'jointShopInventory' | 'jointUnordered' | 'sequential';
 
@@ -27,14 +23,14 @@ export interface RewardProducerCandidateResult {
   readonly findings: readonly SemanticFinding[];
   readonly supported: boolean;
   /** Why the offer is impossible; present only when unsupported and explained. */
-  readonly exclusions?: readonly RewardOfferExclusionEvidence[];
+  readonly exclusions?: readonly RewardOfferExclusionReason[];
 }
 
 /** Freezes the only public result shape produced by an exact offer frontier. */
 export function createRewardProducerCandidateResult(
   findings: ReadonlyMap<string, FindingRegionEntry>,
   branches: readonly unknown[],
-  exclusions?: readonly RewardOfferExclusionEvidence[],
+  exclusions?: readonly RewardOfferExclusionReason[],
 ): RewardProducerCandidateResult {
   const supported = branches.length > 0;
   return Object.freeze({

@@ -1,7 +1,7 @@
 import type {
   FindingEvidenceValue,
   ForcePressureLedgerEntry,
-  RewardOfferExclusionEvidence,
+  RewardOfferExclusionReason,
   ProjectCandidateEvaluation,
   RequirementEvaluationEvidence,
   RoomGenerationExclusionEvidence,
@@ -33,8 +33,8 @@ export type ContextualOptionState = 'forced' | 'possible' | 'impossible' | 'unas
 export interface CandidateExplanation {
   readonly kind: string;
   readonly message: string;
-  /** The engine reward exclusion this reason words, with its `allBranches` scope. */
-  readonly exclusion?: RewardOfferExclusionEvidence;
+  /** The engine reward exclusion this reason words. */
+  readonly exclusion?: RewardOfferExclusionReason;
 }
 
 export interface ContextualOption<T> {
@@ -546,7 +546,7 @@ function namesList(names: readonly string[]): string {
 /** One engine reason a reward offer is impossible, in game words. */
 function rewardExclusionMessages(
   catalog: Catalog,
-  exclusion: RewardOfferExclusionEvidence,
+  exclusion: RewardOfferExclusionReason,
 ): readonly string[] {
   switch (exclusion.kind) {
     case 'notInStore':
@@ -619,24 +619,21 @@ function rewardExclusionMessages(
   }
 }
 
-/** Leads a reason that holds only in some reached branches. */
-const alternativePrefix = 'Depending on earlier rolls: ';
-
-/** Words one engine reward exclusion; one held only in some branches reads as an alternative. */
+/** Words one engine reward exclusion. */
 export function rewardExclusionExplanation(
-  exclusion: RewardOfferExclusionEvidence,
+  exclusion: RewardOfferExclusionReason,
   message: string,
 ): CandidateExplanation {
   return {
     kind: exclusion.kind,
-    message: exclusion.allBranches ? message : `${alternativePrefix}${message}`,
+    message,
     exclusion,
   };
 }
 
 function rewardExclusionExplanations(
   catalog: Catalog,
-  exclusions: readonly RewardOfferExclusionEvidence[],
+  exclusions: readonly RewardOfferExclusionReason[],
 ): readonly CandidateExplanation[] {
   return exclusions.flatMap((exclusion) =>
     rewardExclusionMessages(catalog, exclusion).map((message) =>
@@ -1260,7 +1257,7 @@ const summaryFindingCodes: ReadonlySet<string> = new Set([
 
 function rewardOfferExclusions(
   evaluation: Exclude<ProjectCandidateEvaluation, { readonly kind: 'unavailable' }>,
-): readonly RewardOfferExclusionEvidence[] {
+): readonly RewardOfferExclusionReason[] {
   switch (evaluation.kind) {
     case 'incomingReward':
     case 'startingReward':

@@ -2029,7 +2029,7 @@ describe('Hermes Shrine pickup settlement', () => {
       result: {
         findings: [],
         supported: false,
-        exclusions: [{ kind: 'rewardTypeFixed', rewardType: 'BlindBoxLoot', allBranches: true }],
+        exclusions: [{ kind: 'rewardTypeFixed', rewardType: 'BlindBoxLoot' }],
       },
     });
   });

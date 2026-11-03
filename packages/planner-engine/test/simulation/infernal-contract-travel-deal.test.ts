@@ -871,12 +871,12 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
     expect(refill.evaluateOffer({ rewardType: 'MaxHealthDrop' })).toEqual({
       findings: [],
       supported: false,
-      exclusions: [{ kind: 'shopExcluded', name: 'MaxHealthDrop', allBranches: true }],
+      exclusions: [{ kind: 'shopExcluded', name: 'MaxHealthDrop' }],
     });
     expect(refill.evaluateOffer({ rewardType: 'MaxManaDrop' })).toEqual({
       findings: [],
       supported: false,
-      exclusions: [{ kind: 'notInShop', profileKey: 'WorldShop', slotIndex: 1, allBranches: true }],
+      exclusions: [{ kind: 'notInShop', profileKey: 'WorldShop', slotIndex: 1 }],
     });
   });
 

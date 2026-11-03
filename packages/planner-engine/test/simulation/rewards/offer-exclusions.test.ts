@@ -159,60 +159,15 @@ describe('reward offer exclusion aggregation', () => {
     rewardType: 'MaxHealthDrop',
     storeKey: 'RunProgress',
   };
-  const priority: RewardOfferExclusionReason = {
-    kind: 'priorityRequired',
-    rewardType: 'Boon',
-    storeKey: 'RunProgress',
-  };
-  const cap: RewardOfferExclusionReason = {
-    kind: 'godCap',
-    source: 'ZeusUpgrade',
-    acquiredSources: [],
-    cap: 4,
-  };
-  const fixed: RewardOfferExclusionReason = { kind: 'rewardTypeFixed', rewardType: 'Boon' };
-
-  it('reports a static cause alone only when every branch cites it', () => {
-    expect(aggregateRewardOfferExclusions([fixed, fixed])).toEqual([
-      { ...fixed, allBranches: true },
-    ]);
-    expect(aggregateRewardOfferExclusions([spent, fixed, spent])).toEqual([
-      { ...spent, allBranches: false },
-    ]);
-  });
-
-  it('ranks by branch count, breaks ties by gate order and caps at two', () => {
-    expect(aggregateRewardOfferExclusions([spent, cap, priority, spent])).toEqual([
-      { ...spent, allBranches: false },
-      { ...cap, allBranches: false },
-    ]);
-  });
-
-  it('de-duplicates by identifying params, keeping the first citation', () => {
-    const capOf = (acquiredSources: readonly string[]): RewardOfferExclusionReason => ({
-      ...cap,
-      acquiredSources,
-    });
-    expect(
-      aggregateRewardOfferExclusions([
-        capOf(['HeraUpgrade']),
-        capOf(['HeraUpgrade', 'AresUpgrade']),
-      ]),
-    ).toEqual([{ ...capOf(['HeraUpgrade']), allBranches: true }]);
-  });
-
-  it('de-duplicates by canonical key and marks reasons held in every branch', () => {
-    expect(aggregateRewardOfferExclusions([{ ...spent }, { ...spent }])).toEqual([
-      { ...spent, allBranches: true },
-    ]);
-    expect(aggregateRewardOfferExclusions([spent, undefined])).toEqual([
-      { ...spent, allBranches: false },
-    ]);
+  it("reports the reached state's one reason, or none", () => {
+    expect(aggregateRewardOfferExclusions([spent])).toEqual([spent]);
     expect(aggregateRewardOfferExclusions([undefined])).toBeUndefined();
+    expect(aggregateRewardOfferExclusions([])).toBeUndefined();
+    expect(() => aggregateRewardOfferExclusions([spent, spent])).toThrow();
   });
 
   it('publishes exclusions only on an unsupported result', () => {
-    const exclusions = [{ ...spent, allBranches: true }];
+    const exclusions = [spent];
     expect(createRewardProducerCandidateResult(new Map(), [branch()], exclusions)).toEqual({
       findings: [],
       supported: true,
@@ -232,7 +187,6 @@ describe('door and local reward offer exclusions', () => {
         kind: 'notInStore',
         rewardType: 'MetaCurrencyDrop',
         storeKey: 'RunProgress',
-        allBranches: true,
       },
     ]);
   });
@@ -248,7 +202,7 @@ describe('door and local reward offer exclusions', () => {
           },
         ),
       ),
-    ).toEqual([{ kind: 'excludedByProducer', rewardType: 'MaxHealthDrop', allBranches: true }]);
+    ).toEqual([{ kind: 'excludedByProducer', rewardType: 'MaxHealthDrop' }]);
   });
 
   it('names a type whose store entries exist only on other routes', () => {
@@ -287,9 +241,7 @@ describe('door and local reward offer exclusions', () => {
           },
         ),
       ),
-    ).toEqual([
-      { kind: 'forcedReward', offer: { rewardType: 'MaxHealthDrop' }, allBranches: true },
-    ]);
+    ).toEqual([{ kind: 'forcedReward', offer: { rewardType: 'MaxHealthDrop' } }]);
   });
 
   it('names the provider an Olympian keepsake forces', () => {
@@ -297,22 +249,19 @@ describe('door and local reward offer exclusions', () => {
     expect(reason).toEqual({
       kind: 'olympianProviderForced',
       providerKey: catalog.traitGiverByAcquisitionGameName.ZeusUpgrade,
-      allBranches: true,
     });
   });
 
   it('names the queued reward priority', () => {
     expect(
       explain([branch('ForceZeusBoonKeepsake')], context({ rewardType: 'MaxHealthDrop' })),
-    ).toEqual([
-      { kind: 'priorityRequired', rewardType: 'Boon', storeKey: 'RunProgress', allBranches: true },
-    ]);
+    ).toEqual([{ kind: 'priorityRequired', rewardType: 'Boon', storeKey: 'RunProgress' }]);
   });
 
   it('names an earlier door offering the same god', () => {
     const peer = { origin: peerOrigin, offer: boon('ZeusUpgrade') };
     expect(explain([branch()], context(boon('ZeusUpgrade'), { peers: [peer] }))).toEqual([
-      { kind: 'peerConflict', peers: [peer], allBranches: true },
+      { kind: 'peerConflict', peers: [peer] },
     ]);
   });
 
@@ -320,7 +269,7 @@ describe('door and local reward offer exclusions', () => {
     const peer = { origin: peerOrigin, offer: { rewardType: 'MaxHealthDrop' } };
     expect(
       explain([branch()], context({ rewardType: 'MaxHealthDrop' }, { peers: [peer] })),
-    ).toEqual([{ kind: 'peerConflict', peers: [peer], allBranches: true }]);
+    ).toEqual([{ kind: 'peerConflict', peers: [peer] }]);
   });
 
   it('names the god cap with the gods already taken', () => {
@@ -334,7 +283,6 @@ describe('door and local reward offer exclusions', () => {
         source: 'ApolloUpgrade',
         acquiredSources: expect.arrayContaining(acquired),
         cap: 4,
-        allBranches: true,
       },
     ]);
   });
@@ -353,7 +301,6 @@ describe('door and local reward offer exclusions', () => {
           actual: 0,
           expected: { min: 1 },
         },
-        allBranches: true,
       },
     ]);
   });
@@ -370,7 +317,7 @@ describe('door and local reward offer exclusions', () => {
           },
         ),
       ),
-    ).toEqual([{ kind: 'godNotInteracted', source: 'HeraUpgrade', allBranches: true }]);
+    ).toEqual([{ kind: 'godNotInteracted', source: 'HeraUpgrade' }]);
   });
 
   it('checks Trial gods before the store entry rule', () => {
@@ -413,7 +360,6 @@ describe('door and local reward offer exclusions', () => {
         sources: ['HeraUpgrade'],
         acquiredSources: ['ZeusUpgrade'],
         required: 2,
-        allBranches: true,
       },
     ]);
   });
@@ -431,7 +377,6 @@ describe('door and local reward offer exclusions', () => {
           actual: 0,
           expected: { min: 1 },
         },
-        allBranches: true,
       },
     ]);
   });
@@ -447,7 +392,6 @@ describe('door and local reward offer exclusions', () => {
         kind: 'entriesSpent',
         rewardType: 'MaxHealthDrop',
         storeKey: 'RunProgress',
-        allBranches: true,
       },
     ]);
   });
@@ -468,25 +412,6 @@ describe('door and local reward offer exclusions', () => {
         kind: 'storeExhausted',
         storeKey: 'RunProgress',
         fallbackRewardType: catalog.rewards.countedStoreFallbackRewardType,
-        allBranches: true,
-      },
-    ]);
-  });
-
-  it('reads a reason held in only some branches as depending on earlier rolls', () => {
-    const offer = context({ rewardType: 'MaxHealthDrop' });
-    expect(
-      explain(
-        [branch('ForceZeusBoonKeepsake'), withSpentEntries(branch(), 'MaxHealthDrop')],
-        offer,
-      ),
-    ).toEqual([
-      { kind: 'priorityRequired', rewardType: 'Boon', storeKey: 'RunProgress', allBranches: false },
-      {
-        kind: 'entriesSpent',
-        rewardType: 'MaxHealthDrop',
-        storeKey: 'RunProgress',
-        allBranches: false,
       },
     ]);
   });
@@ -508,7 +433,6 @@ describe('cohort reward offer exclusions', () => {
       {
         kind: 'peerConflict',
         peers: [{ origin: peerOrigin, offer: { rewardType: 'MaxHealthDrop' } }],
-        allBranches: true,
       },
     ]);
   });
@@ -525,7 +449,6 @@ describe('cohort reward offer exclusions', () => {
       {
         kind: 'peerConflict',
         peers: [{ origin: peerOrigin, offer: { rewardType: 'MaxHealthDrop' } }],
-        allBranches: true,
       },
     ]);
   });
@@ -543,7 +466,6 @@ describe('cohort reward offer exclusions', () => {
         kind: 'notInStore',
         rewardType: 'MetaCurrencyDrop',
         storeKey: 'RunProgress',
-        allBranches: true,
       },
     ]);
   });
@@ -620,19 +542,5 @@ describe('Shop slot exclusions', () => {
       rewardType: 'TalentDrop',
       evaluation: { satisfied: false },
     });
-  });
-});
-
-describe('Shop-only aggregation kinds', () => {
-  it('ranks Contract and Shop exclusions by the fixed gate order', () => {
-    expect(
-      aggregateRewardOfferExclusions([
-        { kind: 'shopExcluded', name: 'MaxHealthDrop' },
-        { kind: 'contractNotEquipped' },
-      ]),
-    ).toEqual([
-      { kind: 'contractNotEquipped', allBranches: false },
-      { kind: 'shopExcluded', name: 'MaxHealthDrop', allBranches: false },
-    ]);
   });
 });

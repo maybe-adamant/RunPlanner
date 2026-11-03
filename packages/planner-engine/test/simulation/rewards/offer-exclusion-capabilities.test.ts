@@ -55,7 +55,6 @@ describe('reward wheel offer exclusions', () => {
           {
             kind: 'peerConflict',
             peers: [{ origin: offer1, offer: { rewardType: 'MaxHealthDrop' } }],
-            allBranches: true,
           },
         ],
       },
@@ -77,7 +76,6 @@ describe('reward wheel offer exclusions', () => {
             kind: 'notInStore',
             rewardType: 'MetaCurrencyDrop',
             storeKey: 'RunProgress',
-            allBranches: true,
           },
         ],
       },
@@ -101,9 +99,7 @@ describe('Shop offer exclusions', () => {
       result: {
         findings: [],
         supported: false,
-        exclusions: [
-          { kind: 'notInShop', profileKey: 'WorldShop', slotIndex: 2, allBranches: true },
-        ],
+        exclusions: [{ kind: 'notInShop', profileKey: 'WorldShop', slotIndex: 2 }],
       },
     });
   });
@@ -124,7 +120,6 @@ describe('Shop offer exclusions', () => {
             optionKey: 'SpellDrop',
             rewardType: 'SpellDrop',
             evaluation: { kind: 'all', satisfied: false },
-            allBranches: true,
           },
         ],
       },

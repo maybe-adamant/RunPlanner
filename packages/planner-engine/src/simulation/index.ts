@@ -374,5 +374,5 @@ export {
   type SettlementFault,
 } from './edit-settlement';
 export type { RequirementEvaluationEvidence } from '../requirements/evidence';
-export type { RewardOfferExclusionEvidence } from './rewards/offer-exclusions';
+export type { RewardOfferExclusionReason } from './rewards/offer-exclusions';
 export type { PhantomPlaceholderExclusion } from './generation/phantom-exit';

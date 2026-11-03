@@ -530,7 +530,7 @@ describe('Gold Gold Gold Shop pickups', () => {
     ).toEqual({
       findings: [],
       supported: false,
-      exclusions: [{ kind: 'replayFixed', offer: reward.offer, allBranches: true }],
+      exclusions: [{ kind: 'replayFixed', offer: reward.offer }],
     });
   });
 

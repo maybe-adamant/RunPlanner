@@ -242,6 +242,12 @@ function candidateBranchShape(value: unknown): unknown {
         break;
     }
   }
+  // Offer exclusions marked each reason held in every reached branch.
+  if (Array.isArray(value.exclusions))
+    next.exclusions = (next.exclusions as readonly Plain[]).map((exclusion) => ({
+      ...exclusion,
+      allBranches: true,
+    }));
   if (
     hasKeys(value, ['value', 'support', 'selected']) ||
     hasKeys(value, ['value', 'support', 'selected', 'reason'])

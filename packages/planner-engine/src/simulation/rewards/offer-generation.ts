@@ -44,7 +44,6 @@ import {
   sourceSupportReason,
   staticCountedOfferExclusion,
   staticRewardOfferExclusion,
-  type RewardOfferExclusionEvidence,
   type RewardOfferExclusionReason,
 } from './offer-exclusions';
 
@@ -477,7 +476,7 @@ function processRewardOfferBranches(
 export function explainRewardOfferExclusions(
   branches: readonly RewardBranchState[],
   context: OfferProcessingContext,
-): readonly RewardOfferExclusionEvidence[] | undefined {
+): readonly RewardOfferExclusionReason[] | undefined {
   const fixed = staticOfferExclusion(branches, context);
   if (fixed !== undefined) return staticRewardOfferExclusion(fixed);
   const rejected: RejectedOfferBranch[] = [];
@@ -502,7 +501,7 @@ export function explainCohortOfferExclusions(
     readonly later?: readonly OfferProcessingContext[];
   },
   ordering: 'peersFirst' | 'listed',
-): readonly RewardOfferExclusionEvidence[] | undefined {
+): readonly RewardOfferExclusionReason[] | undefined {
   if (processRewardOffer(branches, focused, new Map()).length === 0)
     return explainRewardOfferExclusions(branches, focused);
   // An independently invalid peer is its own repair, not this offer's conflict.
@@ -837,7 +836,7 @@ export function processFocusedOfferAfterAuthoredPeers(
   findings: Map<string, FindingRegionEntry>,
 ): {
   readonly branches: readonly RewardBranchState[];
-  readonly exclusions?: readonly RewardOfferExclusionEvidence[];
+  readonly exclusions?: readonly RewardOfferExclusionReason[];
 } {
   let reached = branches;
   const acceptedPeers: OfferProcessingPeer[] = [];

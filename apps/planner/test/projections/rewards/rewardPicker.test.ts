@@ -22,9 +22,6 @@ function trialDomain() {
         payload?.kind === 'DevotionPair'
           ? [payload.chosenSource, payload.spurnedSource].filter((key) => key !== 'ZeusUpgrade')
           : [];
-      const allBranches = !(
-        payload?.kind === 'DevotionPair' && payload.chosenSource === 'ApolloUpgrade'
-      );
       const evaluation: ProjectCandidateEvaluation = {
         kind: 'incomingReward',
         result: {
@@ -36,7 +33,6 @@ function trialDomain() {
               sources,
               acquiredSources: ['ZeusUpgrade'],
               required: 2,
-              allBranches,
             },
           ],
         },
@@ -67,10 +63,7 @@ describe('reward picker projection', () => {
       payload: { kind: 'DevotionPair', chosenSource: 'ZeusUpgrade', spurnedSource: 'HeraUpgrade' },
     } as const;
     const chosen = pickers.project(trialDomain(), 'chosen', selected);
-    // A reason held only in some branches keeps its scope on the row rule.
-    expect(reasonsFor(chosen, 'Apollo')).toEqual([
-      'Depending on earlier rolls: Requires a boon from Apollo earlier this run.',
-    ]);
+    expect(reasonsFor(chosen, 'Apollo')).toEqual(['Requires a boon from Apollo earlier this run.']);
     expect(reasonsFor(chosen, 'Zeus')).toEqual(['Requires a boon from a second god this run.']);
     // A specific pair names its own missing god.
     expect(reasonsFor(pickers.project(trialDomain(), 'spurned', selected), 'Hera')).toEqual([

@@ -774,27 +774,25 @@ describe('The Artificer', () => {
           kind: 'entriesSpent',
           rewardType: 'MaxHealthDrop',
           storeKey: 'RunProgress',
-          allBranches: true,
         },
       ],
     });
     const reasons = (offer: ResolvedRewardOffer) =>
       frontier.artificerReplacementCandidate!.evaluateOffer(offer).exclusions;
     expect(reasons({ rewardType: 'Devotion' })).toEqual([
-      { kind: 'excludedByProducer', rewardType: 'Devotion', allBranches: true },
+      { kind: 'excludedByProducer', rewardType: 'Devotion' },
     ]);
     expect(reasons({ rewardType: 'MetaCurrencyDrop' })).toEqual([
       {
         kind: 'notInStore',
         rewardType: 'MetaCurrencyDrop',
         storeKey: 'RunProgress',
-        allBranches: true,
       },
     ]);
     // Source support is checked before the Boon entries, which are also spent.
     expect(
       reasons({ rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' } }),
-    ).toMatchObject([{ kind: 'godCap', source: 'AphroditeUpgrade', allBranches: true }]);
+    ).toMatchObject([{ kind: 'godCap', source: 'AphroditeUpgrade' }]);
   });
 
   it('spends each legitimate RunProgress copy for deferred sibling conversions', () => {

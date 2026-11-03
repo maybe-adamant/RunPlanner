@@ -12,7 +12,7 @@ import {
 import type {
   ProjectCandidateEvaluation,
   RequirementEvaluationEvidence,
-  RewardOfferExclusionEvidence,
+  RewardOfferExclusionReason,
   RoomGenerationExclusionEvidence,
   SemanticFinding,
 } from '@run-planner/engine/simulation';
@@ -732,19 +732,11 @@ describe('contextual option projection', () => {
 
   describe('reward offer exclusions', () => {
     const excluded = (
-      ...exclusions: readonly RewardOfferExclusionEvidence[]
+      ...exclusions: readonly RewardOfferExclusionReason[]
     ): ProjectCandidateEvaluation => ({
       kind: 'incomingReward',
       result: { supported: false, findings: [], exclusions },
     });
-    // Every fixture reason holds in all branches unless a test says otherwise.
-    type Reason = RewardOfferExclusionEvidence extends infer Each
-      ? Each extends unknown
-        ? Omit<Each, 'allBranches'>
-        : never
-      : never;
-    const everywhere = (reason: Reason) =>
-      ({ ...reason, allBranches: true }) as RewardOfferExclusionEvidence;
     const unmet: RequirementEvaluationEvidence = {
       kind: 'counterRange',
       satisfied: false,
@@ -757,60 +749,60 @@ describe('contextual option projection', () => {
       const shopSlot = createShopOfferAddress(biome, createOccurrenceId('shop'), 'offer2');
       expect(
         [
-          everywhere({ kind: 'notInStore', rewardType: 'MaxHealthDrop', storeKey: 'MetaProgress' }),
-          everywhere({ kind: 'notInStore', rewardType: 'MaxHealthDrop', storeKey: null }),
-          everywhere({ kind: 'notInShop', profileKey: 'WorldShop', slotIndex: 0 }),
-          everywhere({
+          { kind: 'notInStore', rewardType: 'MaxHealthDrop', storeKey: 'MetaProgress' },
+          { kind: 'notInStore', rewardType: 'MaxHealthDrop', storeKey: null },
+          { kind: 'notInShop', profileKey: 'WorldShop', slotIndex: 0 },
+          {
             kind: 'offRoute',
             rewardType: 'MaxHealthDrop',
             storeKey: 'RunProgress',
             routeKey: 'Underworld',
-          }),
-          everywhere({ kind: 'rewardTypeFixed', rewardType: 'MaxHealthDrop' }),
-          everywhere({ kind: 'excludedByProducer', rewardType: 'MaxHealthDrop' }),
-          everywhere({ kind: 'forcedReward', offer: { rewardType: 'MaxHealthDrop' } }),
-          everywhere({
+          },
+          { kind: 'rewardTypeFixed', rewardType: 'MaxHealthDrop' },
+          { kind: 'excludedByProducer', rewardType: 'MaxHealthDrop' },
+          { kind: 'forcedReward', offer: { rewardType: 'MaxHealthDrop' } },
+          {
             kind: 'priorityRequired',
             rewardType: 'MaxHealthDrop',
             storeKey: 'RunProgress',
-          }),
-          everywhere({
+          },
+          {
             kind: 'peerConflict',
             peers: [{ origin: shopSlot, offer: { rewardType: 'MaxHealthDrop' } }],
-          }),
-          everywhere({
+          },
+          {
             kind: 'godCap',
             source: 'ZeusUpgrade',
             acquiredSources: ['ApolloUpgrade', 'HeraUpgrade'],
             cap: 2,
-          }),
-          everywhere({ kind: 'godNotInteracted', source: 'ZeusUpgrade' }),
-          everywhere({
+          },
+          { kind: 'godNotInteracted', source: 'ZeusUpgrade' },
+          {
             kind: 'devotionSourceNotAcquired',
             sources: ['ZeusUpgrade', 'HeraUpgrade'],
             acquiredSources: [],
             required: 2,
-          }),
-          everywhere({
+          },
+          {
             kind: 'entriesSpent',
             rewardType: 'MaxHealthDrop',
             storeKey: 'RunProgress',
-          }),
-          everywhere({ kind: 'entriesSpent', rewardType: 'MaxHealthDrop', storeKey: 'HubRewards' }),
-          everywhere({ kind: 'shopExcluded', name: 'MaxHealthDrop' }),
-          everywhere({ kind: 'contractNotEquipped' }),
-          everywhere({
+          },
+          { kind: 'entriesSpent', rewardType: 'MaxHealthDrop', storeKey: 'HubRewards' },
+          { kind: 'shopExcluded', name: 'MaxHealthDrop' },
+          { kind: 'contractNotEquipped' },
+          {
             kind: 'storeExhausted',
             storeKey: 'RunProgress',
             fallbackRewardType: 'MaxHealthDrop',
-          }),
-          everywhere({
+          },
+          {
             kind: 'entryRequirement',
             rewardType: 'MaxHealthDrop',
             storeKey: 'RunProgress',
             evaluation: unmet,
-          }),
-        ].map((exclusion) => reasons(excluded(exclusion))),
+          },
+        ].map((exclusion) => reasons(excluded(exclusion as RewardOfferExclusionReason))),
       ).toEqual([
         'Not in the Minor Reward pool.',
         'Not in this reward pool.',
@@ -838,12 +830,12 @@ describe('contextual option projection', () => {
       if (domain?.kind !== 'oneOf') throw new Error('god domain fixture');
       expect(
         [
-          everywhere({
+          {
             kind: 'replayFixed',
             offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
-          }),
-          everywhere({ kind: 'olympianProviderForced', providerKey: 'ZeusUpgrade' }),
-          everywhere({
+          },
+          { kind: 'olympianProviderForced', providerKey: 'ZeusUpgrade' },
+          {
             kind: 'godRequirement',
             source: 'HeraUpgrade',
             evaluation: {
@@ -854,14 +846,14 @@ describe('contextual option projection', () => {
               actual: 0,
               expected: { min: 1 },
             },
-          }),
-          everywhere({
+          },
+          {
             kind: 'devotionSourceNotAcquired',
             sources: ['HeraUpgrade'],
             acquiredSources: ['ZeusUpgrade'],
             required: 2,
-          }),
-        ].map((exclusion) => reasons(excluded(exclusion))),
+          },
+        ].map((exclusion) => reasons(excluded(exclusion as RewardOfferExclusionReason))),
       ).toEqual([
         'Echo repeats Boon · Zeus exactly.',
         'Zeus must be the god here.',
@@ -870,17 +862,17 @@ describe('contextual option projection', () => {
       ]);
     });
 
-    it('reads a reason that holds only in some branches as an alternative, capped at two', () => {
+    it('words at most two reasons', () => {
       expect(
         reasons(
           excluded(
-            { kind: 'godNotInteracted', source: 'ZeusUpgrade', allBranches: false },
-            everywhere({ kind: 'excludedByProducer', rewardType: 'MaxHealthDrop' }),
-            everywhere({ kind: 'contractNotEquipped' }),
+            { kind: 'godNotInteracted', source: 'ZeusUpgrade' },
+            { kind: 'excludedByProducer', rewardType: 'MaxHealthDrop' },
+            { kind: 'contractNotEquipped' },
           ),
         ),
       ).toBe(
-        'Depending on earlier rolls: The Shop offers only gods already picked up on this save file. | This source never gives this reward.',
+        'The Shop offers only gods already picked up on this save file. | This source never gives this reward.',
       );
     });
 
@@ -898,7 +890,7 @@ describe('contextual option projection', () => {
                 evidence: {},
               },
             ],
-            exclusions: [everywhere({ kind: 'excludedByProducer', rewardType: 'MaxHealthDrop' })],
+            exclusions: [{ kind: 'excludedByProducer', rewardType: 'MaxHealthDrop' }],
           },
         }),
       ).toBe('This source never gives this reward.');
@@ -907,14 +899,12 @@ describe('contextual option projection', () => {
     it('names each reward requirement condition', () => {
       const requirement = (evaluation: RequirementEvaluationEvidence) =>
         reasons(
-          excluded(
-            everywhere({
-              kind: 'shopOptionRequirement',
-              optionKey: 'MaxHealthDrop',
-              rewardType: 'MaxHealthDrop',
-              evaluation,
-            }),
-          ),
+          excluded({
+            kind: 'shopOptionRequirement',
+            optionKey: 'MaxHealthDrop',
+            rewardType: 'MaxHealthDrop',
+            evaluation,
+          }),
         );
       expect(
         [

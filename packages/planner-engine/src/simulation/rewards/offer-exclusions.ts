@@ -93,149 +93,24 @@ export type RewardOfferExclusionReason =
       readonly fallbackRewardType: string;
     };
 
-/** `allBranches`: the reason holds in every reached branch, not only some earlier rolls. */
-export type RewardOfferExclusionEvidence = RewardOfferExclusionReason & {
-  readonly allBranches: boolean;
-};
-
-export type RewardOfferExclusionKind = RewardOfferExclusionReason['kind'];
-
-/** Tie-break order among equally cited reasons, following the offer gates. */
-const KIND_PRECEDENCE: readonly RewardOfferExclusionKind[] = [
-  'notInStore',
-  'notInShop',
-  'offRoute',
-  'rewardTypeFixed',
-  'excludedByProducer',
-  'replayFixed',
-  'contractNotEquipped',
-  'shopExcluded',
-  'forcedReward',
-  'olympianProviderForced',
-  'peerConflict',
-  'godCap',
-  'godRequirement',
-  'godNotInteracted',
-  'devotionSourceNotAcquired',
-  'priorityRequired',
-  'shopOptionRequirement',
-  'entryRequirement',
-  'entriesSpent',
-  'storeExhausted',
-];
-
-const STATIC_KINDS: ReadonlySet<RewardOfferExclusionKind> = new Set([
-  'notInStore',
-  'notInShop',
-  'offRoute',
-  'rewardTypeFixed',
-  'excludedByProducer',
-  'replayFixed',
-]);
-
-const MAXIMUM_EXCLUSIONS = 2;
-
-/** A cause that holds in every branch and is the whole answer. */
+/** A cause that is the whole answer, such as one the producer fixes. */
 export function staticRewardOfferExclusion(
   reason: RewardOfferExclusionReason,
-): readonly RewardOfferExclusionEvidence[] {
-  return Object.freeze([Object.freeze({ ...reason, allBranches: true })]);
-}
-
-interface Tally {
-  readonly reason: RewardOfferExclusionReason;
-  cited: number;
-  everywhere: number;
-}
-
-function ranked(
-  tallies: ReadonlyMap<string, Tally>,
-  groups: number,
-): readonly RewardOfferExclusionEvidence[] | undefined {
-  // A static fact is the whole answer only when every branch cites it; a branch
-  // citing it beside others only reached its gate, so it is never roll-dependent copy.
-  const all = [...tallies.values()];
-  const everywhere = all.filter(
-    (entry) => STATIC_KINDS.has(entry.reason.kind) && entry.everywhere === groups,
-  );
-  const entries =
-    everywhere.length > 0
-      ? everywhere
-      : all.filter((entry) => !STATIC_KINDS.has(entry.reason.kind));
-  if (entries.length === 0) return undefined;
-  entries.sort(
-    (left, right) =>
-      right.cited - left.cited ||
-      KIND_PRECEDENCE.indexOf(left.reason.kind) - KIND_PRECEDENCE.indexOf(right.reason.kind),
-  );
-  return Object.freeze(
-    entries
-      .slice(0, MAXIMUM_EXCLUSIONS)
-      .map((entry) => Object.freeze({ ...entry.reason, allBranches: entry.everywhere === groups })),
-  );
-}
-
-/** Identifying params only; branch-local counts and evaluations keep the first citation. */
-function exclusionKey(reason: RewardOfferExclusionReason): string {
-  switch (reason.kind) {
-    case 'notInStore':
-    case 'entriesSpent':
-    case 'priorityRequired':
-    case 'entryRequirement':
-      return JSON.stringify([reason.kind, reason.rewardType, reason.storeKey]);
-    case 'offRoute':
-      return JSON.stringify([reason.kind, reason.rewardType, reason.storeKey, reason.routeKey]);
-    case 'rewardTypeFixed':
-    case 'excludedByProducer':
-      return JSON.stringify([reason.kind, reason.rewardType]);
-    case 'replayFixed':
-    case 'forcedReward':
-      return JSON.stringify([reason.kind, reason.offer]);
-    case 'olympianProviderForced':
-      return JSON.stringify([reason.kind, reason.providerKey]);
-    case 'peerConflict':
-      return JSON.stringify([reason.kind, reason.peers.map((peer) => peer.origin)]);
-    case 'godCap':
-    case 'godRequirement':
-    case 'godNotInteracted':
-      return JSON.stringify([reason.kind, reason.source]);
-    case 'devotionSourceNotAcquired':
-      return JSON.stringify([reason.kind, reason.sources]);
-    case 'notInShop':
-      return JSON.stringify([reason.kind, reason.profileKey, reason.slotIndex]);
-    case 'shopOptionRequirement':
-      return JSON.stringify([reason.kind, reason.optionKey, reason.rewardType]);
-    case 'shopExcluded':
-      return JSON.stringify([reason.kind, reason.name]);
-    case 'contractNotEquipped':
-      return JSON.stringify([reason.kind]);
-    case 'storeExhausted':
-      return JSON.stringify([reason.kind, reason.storeKey]);
-  }
-}
-
-function tally(
-  tallies: Map<string, Tally>,
-  reason: RewardOfferExclusionReason,
-  everywhere: boolean,
-): void {
-  const key = exclusionKey(reason);
-  const entry = tallies.get(key) ?? { reason, cited: 0, everywhere: 0 };
-  entry.cited += 1;
-  if (everywhere) entry.everywhere += 1;
-  tallies.set(key, entry);
+): readonly RewardOfferExclusionReason[] {
+  return Object.freeze([Object.freeze({ ...reason })]);
 }
 
 /**
- * Aggregates each reached branch's first failing gate; an unexplained branch
- * still counts as reached.
+ * The first failing gate at the reached state, the one entry of `reasons`;
+ * none when the state explains nothing or no state is reached.
  */
 export function aggregateRewardOfferExclusions(
-  branchReasons: readonly (RewardOfferExclusionReason | undefined)[],
-): readonly RewardOfferExclusionEvidence[] | undefined {
-  const tallies = new Map<string, Tally>();
-  for (const reason of branchReasons) if (reason !== undefined) tally(tallies, reason, true);
-  return ranked(tallies, branchReasons.length);
+  reasons: readonly (RewardOfferExclusionReason | undefined)[],
+): readonly RewardOfferExclusionReason[] | undefined {
+  if (reasons.length > 1)
+    throw new Error(`an offer exclusion read ${reasons.length} reached states`);
+  const reason = reasons[0];
+  return reason === undefined ? undefined : staticRewardOfferExclusion(reason);
 }
 
 /** God-source reasons for a locally valid offer unsupported without peers. */
