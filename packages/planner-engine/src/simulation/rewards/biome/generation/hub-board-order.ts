@@ -11,6 +11,8 @@ import { offeredExitDoorOrder } from '../../../../catalog-schema/exit-door-order
 export interface HubBoardDoor {
   readonly physicalDoorId: number;
   readonly offeredExitInsertionRank: number;
+  /** The door's obstacle name in the Hub room's door-setup order. */
+  readonly obstacleName: string;
 }
 
 /** Returns the doors in the order the game assigns their rewards. */
@@ -21,9 +23,8 @@ export function hubBoardRewardAssignmentOrder<Door extends HubBoardDoor>(
     (left, right) => left.offeredExitInsertionRank - right.offeredExitInsertionRank,
   );
   const byId = new Map(inserted.map((door) => [door.physicalDoorId, door]));
-  // The catalog checks that every board door has one obstacle name, so they all tie in the sort.
   const walked = offeredExitDoorOrder(
-    inserted.map((door) => ({ doorId: door.physicalDoorId, obstacleName: 'EphyraExitDoor' })),
+    inserted.map((door) => ({ doorId: door.physicalDoorId, obstacleName: door.obstacleName })),
   );
   return Object.freeze(walked.map((id) => byId.get(id)!));
 }

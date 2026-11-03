@@ -4,10 +4,15 @@ import { describe, expect, it } from 'vitest';
 import { hubBoardRewardAssignmentOrder } from '../../../../../src/simulation/rewards/biome/generation/hub-board-order';
 import { hubBoardProbes } from '../../../../support/hub-board-probe';
 
+/** The Ephyra board doors, each named as the N_Hub door-setup order declares it. */
 function ephyraSlots() {
   const progression = catalog.biomeLayouts.byKey.N?.progression;
   if (progression?.kind !== 'hub') throw new Error('missing the Ephyra Hub');
-  return progression.slots;
+  const setup = catalog.rooms.byKey.N_Hub?.exitDoorSetupOrder ?? [];
+  return progression.slots.map((slot) => ({
+    ...slot,
+    obstacleName: setup.find((door) => door.doorId === slot.physicalDoorId)!.obstacleName,
+  }));
 }
 
 describe('Hub board reward-assignment order', () => {
@@ -29,7 +34,11 @@ describe('Hub board reward-assignment order', () => {
   );
 
   it('rejects a board that repeats a door', () => {
-    const door = { physicalDoorId: 560705, offeredExitInsertionRank: 0 };
+    const door = {
+      physicalDoorId: 560705,
+      offeredExitInsertionRank: 0,
+      obstacleName: 'EphyraExitDoor',
+    };
     expect(() => hubBoardRewardAssignmentOrder([door, door])).toThrow(/repeat/);
   });
 });

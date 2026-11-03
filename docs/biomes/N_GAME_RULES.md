@@ -195,12 +195,14 @@ Which doors open is order-free, so the authored open set is the board's only
 door input. Rewards are then assigned in one order the game fixes, derived
 rather than authored. `SetupDefaultDoor` (RoomLogic.lua:5844-5856) inserts each
 open door into `MapState.OfferedExitDoors`, keyed by its ObjectId, in the
-`N_Hub` map's fixed door-setup order. `DoUnlockRoomExits`
+`N_Hub` map's fixed door-setup order. Only board doors are in that table when
+the board draws its rewards: a non-slot door such as the boss door is not
+offered then, as the probe confirmed. `DoUnlockRoomExits`
 (RoomLogic.lua:3840-3940) walks `CollapseTableOrdered` of that table, which is
-its Lua 5.2 `pairs()` order, and `table.sort`s the result with a comparator
-under which every board door ties (one obstacle name), so only the sort's
-pivot swaps move it. Each door draws its reward in that order, after the doors
-before it. The catalog declares each slot's door ObjectId (`PredeterminedDoorRooms`,
+its Lua 5.2 `pairs()` order, and `table.sort`s the result by obstacle name;
+every board door is declared an `EphyraExitDoor`, so they tie and only the
+sort's pivot swaps move them. Each door draws its reward in that order, after
+the doors before it. The catalog declares each slot's door ObjectId (`PredeterminedDoorRooms`,
 RoomDataN.lua:1260) and the `N_Hub` map's door-setup order, which ranks the
 board doors; the engine emulates the Lua 5.2 table and `auxsort` to derive the
 order, which reproduces all 19 boards of an in-game probe; repeated boards with

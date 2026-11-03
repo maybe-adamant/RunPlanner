@@ -230,9 +230,17 @@ export function prepareRoomCreatedRewardContext(
     )?.before;
     peerParentOrigin = parent.origin;
     peerCreationSource = 'hubTarget';
+    const obstacleName = catalog.rooms.byKey[parent.gameName]?.exitDoorSetupOrder?.find(
+      (door) => door.doorId === target.physicalDoorId,
+    )?.obstacleName;
+    if (obstacleName === undefined)
+      throw new BiomeRewardSimulationContractError(
+        `${parent.gameName} declares no setup-order door ${target.physicalDoorId}`,
+      );
     hubDoor = Object.freeze({
       physicalDoorId: target.physicalDoorId,
       offeredExitInsertionRank: target.offeredExitInsertionRank,
+      obstacleName,
     });
   } else if (event.source === 'localVisit') {
     const parent = inputs.rooms.get(semanticAddressKey(event.parentOrigin));

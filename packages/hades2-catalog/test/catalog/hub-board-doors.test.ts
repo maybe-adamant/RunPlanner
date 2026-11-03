@@ -72,11 +72,4 @@ describe('Hub board door declarations', () => {
     const input = withHubDoors((doors) => doors.filter(([doorId]) => doorId !== 560705));
     expect(() => createCatalog(input)).toThrow(/560705 is not in N_Hub's door-setup order/);
   });
-
-  it('rejects board doors with two obstacle names', () => {
-    const input = withHubDoors((doors) =>
-      doors.map(([doorId, name]) => [doorId, doorId === 560705 ? 'EphyraExitDoorB' : name]),
-    );
-    expect(() => createCatalog(input)).toThrow(/every board door one obstacle name/);
-  });
 });

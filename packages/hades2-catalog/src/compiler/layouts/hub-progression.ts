@@ -273,13 +273,11 @@ export function normalizeHubDecision(
   );
   const physicalDoorIds = new Set<number>();
   const hubDoors = hubRoom.exitDoorSetupOrder ?? [];
+  // Only board doors are in the offered-exit table when the board draws its
+  // rewards; a non-slot door such as the boss door is not offered then.
   const boardDoors = hubDoors.filter((door) =>
     raw.slots.some((slot) => slot.physicalDoorId === door.doorId),
   );
-  // The engine orders the board by the table walk alone, so its doors must tie in the sort.
-  if (new Set(boardDoors.map((door) => door.obstacleName)).size > 1) {
-    fail(`exitDoorSetupOrders.${hubRoom.gameName}`, 'must give every board door one obstacle name');
-  }
   const slots = raw.slots.map((slot, index) => {
     const slotPath = `${path}.slots[${index}]`;
     const room = requireLayoutRoom(slot.roomGameName, biomeKey, rooms, `${slotPath}.roomGameName`);
