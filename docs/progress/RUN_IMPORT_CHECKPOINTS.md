@@ -150,6 +150,11 @@ reproduces is reported with its nearest miss and the plan stops there.
      the room's optional-reward declaration. Raw 930 → 25/0/0; fx
      underworld-1010 mismatch 1 → 0, carried 2 → 0 (bound tightened); fx
      underworld's r30 optional store difference gone.
+   - Mystery Boon: a trait pickup entry the plan holds at its default is
+     named from its trait's declared pickup, so Narcissus's box is collected,
+     and the box opens on the god of the room's otherwise unused screen
+     (there was no such answer before; the screen is then consumed). Raw 933a
+     11/4/19 → 23/0/0; fixtures unchanged.
 
 3. **One bounded search.** Replace the four solvers with one per-room search
    over the remaining unknowns, pinned by markers (trait timestamps, upgrade

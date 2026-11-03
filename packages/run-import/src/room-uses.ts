@@ -12,7 +12,7 @@ import type { RunImportContext } from './import';
 /** The object a pickup of `role` uses, by the name the record counts its uses under. */
 export function pickupObjectName(
   context: RunImportContext,
-  reward: AuthoredRewardState,
+  reward: Pick<AuthoredRewardState, 'offer'>,
   role: string,
 ): string | undefined {
   try {

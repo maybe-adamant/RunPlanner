@@ -18,6 +18,7 @@ import {
   chaosOperandsAtRarity,
   type AuthoredChaosTraitOffer,
   roomActionDomainForOccurrence,
+  type AcquisitionEntrySourceFamily,
 } from '@run-planner/engine/authored-project';
 import type {
   Catalog,
@@ -29,6 +30,10 @@ import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   type SemanticFinding,
 } from '@run-planner/engine/simulation';
+import {
+  locallyValidRewardOffers,
+  type ResolvedRewardOffer,
+} from '@run-planner/engine/reward-kernel';
 import type {
   RunRecordSpell,
   RunRecordTraitAcquisition,
@@ -38,6 +43,7 @@ import { insertRoomAction, removeRoomAction, roomActionAddress } from './actions
 import type { RunImportContext } from './import';
 import { authoredOccurrence, deliveredIncomingReward, occurrenceIdOf } from './occurrences';
 import { collectedSources, pickupObjectName, unexplainedRoomUses } from './room-uses';
+import { isQuestionFinding } from './areas';
 import { wheelAuthoringWaits, wheelsSolved } from './wheels';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
@@ -75,6 +81,8 @@ export function answerFeatures(context: RunImportContext, reason: SemanticFindin
     origin.kind === 'fountainRarityOutcome'
   )
     return answerFountainRarity(context, origin);
+  if (reason.code === 'rewardMissing' && origin.kind === 'acquisitionEntry')
+    return answerTraitPickupOffer(context, origin);
   return false;
 }
 
@@ -852,6 +860,109 @@ function placeSeaStarDuplicate(
   });
 }
 
+/** The reward type a selected trait declares for one of its pickups. */
+function declaredPickupType(
+  context: RunImportContext,
+  family: AcquisitionEntrySourceFamily | undefined,
+  entryKey: string,
+): string | undefined {
+  const disposition =
+    family?.kind === 'trait'
+      ? context.catalog.traits.byKey[family.traitKey]?.selectedDisposition
+      : undefined;
+  return disposition?.kind === 'producePickups'
+    ? disposition.pickups.find((pickup) => pickup.key === entryKey)?.rewardType
+    : undefined;
+}
+
+/** The object a declared pickup uses, for an entry the plan holds at its default. */
+function declaredPickupName(
+  context: RunImportContext,
+  family: AcquisitionEntrySourceFamily | undefined,
+  entryKey: string,
+): string | undefined {
+  const rewardType = declaredPickupType(context, family, entryKey);
+  const role =
+    rewardType === undefined
+      ? undefined
+      : context.catalog.rewards.rewardTypes.byKey[rewardType]?.acquisitionRoles.values[0]?.key;
+  return role === undefined
+    ? undefined
+    : pickupObjectName(context, { offer: { rewardType: rewardType! } }, role);
+}
+
+/**
+ * A selected trait's pickup, such as Narcissus's Mystery Boon: its declared
+ * reward type, opened on the god of a screen its room recorded that no other
+ * answer took; several such gods take the first and are reported.
+ */
+function answerTraitPickupOffer(
+  context: RunImportContext,
+  entry: Origin<'acquisitionEntry'>,
+): boolean {
+  const site = entry.site;
+  if (site.owner.kind !== 'occurrence' || !site.pointKey.startsWith('traitGenerated:'))
+    return false;
+  const occurrenceId = site.owner.occurrenceId;
+  const project = context.assembly().project;
+  const host = roomActionDomainForOccurrence(
+    project,
+    context.catalog,
+    createBiomeAddress(project.route.routeKey, entry.biomeKey),
+    occurrenceId,
+  );
+  const contribution = host?.domain.contributions.find(
+    (candidate) =>
+      candidate.kind === 'action' &&
+      candidate.reference.kind === 'interactAcquisitionEntry' &&
+      candidate.reference.siteKey === site.pointKey &&
+      candidate.reference.entryKey === entry.entryKey,
+  );
+  const rewardType =
+    contribution?.kind === 'action'
+      ? declaredPickupType(context, contribution.sourceFamily, entry.entryKey)
+      : undefined;
+  const roomIndex = context.occurrences.visitsOf(occurrenceId)[0];
+  if (rewardType === undefined || roomIndex === undefined) return false;
+  const room = context.record.rooms[roomIndex]!;
+  const givers = new Set(
+    room.traitScreens.flatMap((screen, position) =>
+      context.used.has(`screen:${roomIndex}:${position}`) || (room.uses[screen.giver] ?? 0) === 0
+        ? []
+        : [screen.giver],
+    ),
+  );
+  const offers = locallyValidRewardOffers(context.catalog.rewards, rewardType);
+  const sourceOf = (offer: ResolvedRewardOffer) =>
+    offer.payload?.kind === 'BoonSource' ? offer.payload.source : undefined;
+  const recorded = offers.filter((offer) => givers.has(sourceOf(offer) ?? ''));
+  for (const value of recorded) {
+    const evaluation = context
+      .candidates()
+      .evaluate({ kind: 'acquisitionEntryOffer', entry, value });
+    const command: ProjectCommand = { kind: 'ReplaceAcquisitionEntryOffer', entry, value };
+    if (
+      evaluation.kind !== 'acquisitionEntryOffer' ||
+      !evaluation.result.supported ||
+      // Its loot's trait screen is the next question.
+      !evaluation.result.findings.every(isQuestionFinding) ||
+      !context.applyValid(command)
+    )
+      continue;
+    if (recorded.length > 1)
+      context.note({
+        area: 'reward',
+        reason: 'assumption',
+        address: entry,
+        applied: command,
+        record: record(roomIndex),
+      });
+    return true;
+  }
+  if (recorded.length > 0) context.refuse();
+  return false;
+}
+
 /**
  * Keeps the optional pickups a selected trait drops (Narcissus's gifts, Buried
  * Treasure's gold) only while the room's uses explain their object. Taking the
@@ -886,11 +997,10 @@ function importTraitPickups(
     if (context.used.has(used)) return [];
     const entry =
       host.occurrence.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[reference.entryKey];
-    const role =
+    const name =
       entry === undefined || entry === null
-        ? undefined
-        : Object.keys(entry.dispositionByAcquisitionRole)[0];
-    const name = role === undefined ? undefined : pickupObjectName(context, entry!, role);
+        ? declaredPickupName(context, contribution.sourceFamily, reference.entryKey)
+        : pickupObjectName(context, entry, Object.keys(entry.dispositionByAcquisitionRole)[0]!);
     return [{ owner: contribution.owner, reference, used, name }];
   });
   if (drops.length === 0) return;

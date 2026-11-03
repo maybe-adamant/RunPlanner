@@ -182,6 +182,65 @@ describe('run import of the Underworld capture', () => {
     });
   });
 
+  it("opens Narcissus's Mystery Boon on the god whose screen its room recorded", () => {
+    // G_Story01 as if Narcissus had given Mixed Blessings and its box opened on Apollo.
+    const story = record.rooms[17]!;
+    const mixed = projectFromRunRecord(catalog, {
+      ...record,
+      rooms: [
+        ...record.rooms.slice(0, 17),
+        {
+          ...story,
+          uses: {
+            OceanusExitDoor: 1,
+            NPC_Narcissus_01: 1,
+            BlindBoxLoot: 1,
+            ApolloUpgrade: 1,
+            Mixer5CommonDrop: 1,
+          },
+          traitScreens: [
+            {
+              giver: 'NPC_Narcissus_01',
+              options: story.traitScreens[0]!.options.map((option) =>
+                option.name === 'NarcissusG'
+                  ? { ...option, name: 'NarcissusI', chosen: true }
+                  : { ...option, chosen: false },
+              ),
+            },
+            {
+              giver: 'ApolloUpgrade',
+              options: [
+                { name: 'ApolloManaBoon', rarity: 'Common', chosen: true },
+                { name: 'ApolloExCastBoon', rarity: 'Common', chosen: false },
+                { name: 'ApolloCastBoon', rarity: 'Common', chosen: false },
+              ],
+            },
+          ],
+          traits: {
+            ...story.traits,
+            acquired: [
+              { name: 'NarcissusI', rarity: 'Common', worldTime: 406.45391821291 },
+              { name: 'ApolloManaBoon', rarity: 'Common', worldTime: 408.38725164707 },
+            ],
+          },
+        },
+        record.rooms[18]!,
+      ],
+    });
+    const room = occurrence(mixed.project, 'G-r17');
+    const box = room.roomActions.order.find(
+      (action) => action.kind === 'interactAcquisitionEntry' && action.entryKey === 'mysteryBoon',
+    );
+    expect(box).toBeDefined();
+    expect(
+      box?.kind === 'interactAcquisitionEntry' &&
+        room.acquisitionSites?.[box.siteKey]?.pickupEntries?.['mysteryBoon']?.offer,
+    ).toEqual({
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    });
+  });
+
   it("collects Narcissus's gifts and aims G_PreBoss01's random Pom at the boon it raised", () => {
     // Heavenly Splendor drops two Elemental Essences; the room's uses picked up both.
     expect(
