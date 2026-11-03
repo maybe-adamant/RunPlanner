@@ -217,7 +217,8 @@ describe('run import of the Underworld capture', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
         conversion: 3,
-        doors: 11,
+        // A Chaos room declares no door-setup order: ascending id pairs its return doors.
+        doors: 1,
         encounter: 1,
         fields: 3,
         npc: 1,
@@ -237,22 +238,12 @@ describe('run import of the Underworld capture', () => {
     expect(entryLines(imported.report)).toEqual([
       'assumption traitOffer r1 traitOffer@F-r1:self -> ReplaceTraitOffer(F-r1 chaos)',
       'assumption conversion r2 acquisitionEntry@F-r2 -> ReplaceAcquisitionEntryOffer(F-r2 StackUpgrade)',
-      'assumption doors r2 exitDecision@F-r2',
-      'assumption doors r3 exitDecision@F-r3',
       'assumption encounter r4 encounterPhase@F-r4:Encounter -> SelectEncounter(F-r4 ArtemisCombatF)',
       'assumption conversion r4 acquisitionEntry@F-r4 -> ReplaceAcquisitionEntryOffer(F-r4 RoomMoneyDrop)',
-      'assumption doors r4 exitDecision@F-r4',
-      'assumption doors r5 exitDecision@F-r5',
       'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 WeaponUpgrade)',
-      'assumption doors r8 exitDecision@F-r8',
-      'assumption doors r9 exitDecision@F-r9',
       'assumption traitOffer r15 traitOffer@G:start:chaos:self -> ReplaceTraitOffer(G:start:chaos chaos)',
       'assumption doors r15 exitDecision@G:start:chaos',
-      'assumption doors r16 exitDecision@G-r16',
       'assumption npc r18 nemesisRandomEvent@G-r18 -> ReplaceNemesisRandomEventInteraction(G-r18 freeItem)',
-      'assumption doors r20 exitDecision@G-r20',
-      'assumption doors r21 exitDecision@G-r21',
-      'assumption doors r26 exitDecision@H-r26',
       'assumption fields r26 localReward@H-r26-d621199:cage1',
       'assumption fields r27 exitDecision@H-r27 -> InitializeExitDecision(H-r27)',
       'assumption fields r27 localReward@H-r27-d621470:cage1',

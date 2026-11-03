@@ -44,8 +44,10 @@ export interface RawCatalogInput {
   readonly exitCompatibilityPolicies: readonly ExitCompatibilityPolicy[];
   readonly exitTypes: readonly RawExitTypeDeclaration[];
   readonly rooms: readonly RawRoomDeclaration[];
-  /** Map door ids in native processing order, by room game name. */
-  readonly nativeExitDoorOrders: Readonly<Record<string, readonly number[]>>;
+  /** Map exit doors in door-setup order, as [ObjectId, obstacle name], by room game name. */
+  readonly exitDoorSetupOrders: Readonly<
+    Record<string, readonly (readonly [doorId: number, obstacleName: string])[]>
+  >;
   /** Golden-urn swap candidates on each room's map, by room game name. */
   readonly swappableBreakables: Readonly<Record<string, number>>;
   readonly biomeLayouts: readonly RawBiomeLayoutDeclaration[];

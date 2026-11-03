@@ -70,6 +70,7 @@ export {
   concaveStoneProcGiver,
   resolveTraitAcquisitionOrdinalEffect,
 } from './traits';
+export { nativeExitDoorOrder, type OpenExitDoor } from './exit-door-order';
 import type {
   AspectDeclaration,
   TraitDeclaration,
@@ -895,12 +896,20 @@ export type ExitCompatibilityPolicy =
       readonly targetTag: RoomStructuralTag;
     };
 
+/** A map exit door: its ObjectId and the obstacle name the native door sort compares. */
+export interface ExitDoorSetup {
+  readonly doorId: number;
+  readonly obstacleName: string;
+}
+
 export interface ExitTypeDeclaration {
   readonly key: string;
   readonly compatibilityPolicyKey: string;
   readonly behavior: ExitBehavior;
   /** Native door `AllowReroll`; the destination's `ForceDoorAllowReroll` can still grant it. */
   readonly allowReroll: boolean;
+  /** The obstacle name of a door of this type spawned at runtime rather than placed on the map. */
+  readonly spawnedObstacleName?: string;
 }
 
 export type ExitBehavior =
@@ -1107,11 +1116,12 @@ export interface RoomDeclaration {
   readonly exits: readonly RoomExit[];
   readonly additionalExits: readonly AdditionalExitDeclaration[];
   /**
-   * Map door ids in the order native `DoUnlockRoomExits` processes them, for a
-   * room whose exit doors share an obstacle name, where that order falls back
-   * to unsaved table order. Read by save import only.
+   * The room's map exit doors in its door-setup order, the order open doors
+   * enter the game's offered-exit table; with the obstacle names it decides
+   * the native processing order of any open set. A room with exits lists one
+   * door per exit; the Hub lists every map exit door.
    */
-  readonly nativeExitDoorOrder?: readonly number[];
+  readonly exitDoorSetupOrder?: readonly ExitDoorSetup[];
   readonly incomingReward: RewardProducerBinding;
   /** Entry-only contextual encounter differences; reward ownership remains route-start owned. */
   readonly entryContextualEncounterRules?: readonly EntryContextualEncounterRule[];
@@ -1443,7 +1453,8 @@ interface HubSlotDescriptor {
   readonly physicalDoorId: number;
   /**
    * Zero-based position at which the Hub map's door setup inserts this door
-   * into the offered-exit table; the slots' ranks are a total order.
+   * into the offered-exit table among the board doors, read from the Hub
+   * room's door-setup order.
    */
   readonly offeredExitInsertionRank: number;
 }

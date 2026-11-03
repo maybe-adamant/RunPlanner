@@ -38,7 +38,20 @@ export function normalizeExitTypes(
     }
     const behavior = normalizeExitBehavior(exitType.behavior, `${path}.behavior`);
     const allowReroll = requireBoolean(exitType.allowReroll, `${path}.allowReroll`);
-    return Object.freeze({ key, compatibilityPolicyKey, behavior, allowReroll });
+    return Object.freeze({
+      key,
+      compatibilityPolicyKey,
+      behavior,
+      allowReroll,
+      ...(exitType.spawnedObstacleName === undefined
+        ? {}
+        : {
+            spawnedObstacleName: requireNonEmpty(
+              exitType.spawnedObstacleName,
+              `${path}.spawnedObstacleName`,
+            ),
+          }),
+    });
   });
   return createCollection(exitTypes, 'exitTypes', (exitType) => exitType.key, 'key');
 }

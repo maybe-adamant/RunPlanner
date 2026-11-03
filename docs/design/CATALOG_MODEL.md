@@ -208,6 +208,14 @@ Physical exit types select explicit source/target constraints. An unconstrained
 type still has a normalized policy; a missing policy is not permissive.
 Room-set identity is not route placement or ordinary candidate eligibility.
 
+A room's exits are listed in native processing order: by door obstacle name,
+same-name doors in the order the game's offered-exit table leaves them. Rooms
+with several exits, and the Hub, declare their map doors' setup order with
+each door's obstacle name, and an additional exit's type names the obstacle of
+the door it spawns; with the doors a run saw open, they fix which door is which
+exit (the [save-file audit](../audits/rooms-and-routes/SAVE_FILE_RUN_RECORD_GAME_DATA_AUDIT.md#never-saved)
+owns the evidence).
+
 Chaos uses one gate kind with distinct `canHost` and `canSpawn` facts. Chaos
 and Zagreus Contract exits may each declare a source-local `requirement`,
 evaluated at the reached source's placement assessment.

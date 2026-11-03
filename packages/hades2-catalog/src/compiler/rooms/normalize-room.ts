@@ -44,7 +44,7 @@ export function normalizeRoom(
   encounterDefinitions: CatalogCollection<EncounterDefinition>,
   encounterSets: CatalogCollection<EncounterSet>,
   exitTypes: CatalogCollection<ExitTypeDeclaration>,
-  nativeExitDoorOrder: readonly number[] | undefined,
+  exitDoorSetupOrder: readonly (readonly [number, string])[] | undefined,
   swappableBreakables: number | undefined,
 ): RoomDeclaration {
   const path = `rooms[${roomIndex}]`;
@@ -63,7 +63,7 @@ export function normalizeRoom(
     encounter,
     exitTypes,
     rewards,
-    nativeExitDoorOrder,
+    exitDoorSetupOrder,
     path,
   );
   const eligibility = normalizeRoomEligibility(room, rewards, path);
@@ -108,9 +108,9 @@ export function normalizeRoom(
     structuralTags: core.structuralTags,
     exits: exits.exits,
     additionalExits: exits.additionalExits,
-    ...(exits.nativeExitDoorOrder === undefined
+    ...(exits.exitDoorSetupOrder === undefined
       ? {}
-      : { nativeExitDoorOrder: exits.nativeExitDoorOrder }),
+      : { exitDoorSetupOrder: exits.exitDoorSetupOrder }),
     incomingReward: reward.incomingReward,
     ...entryContextualEncounterRules,
     effectNeutralRequiredReward: room.effectNeutralRequiredReward ?? false,
@@ -193,7 +193,7 @@ export function normalizeRoom(
           encounterDefinitions,
           encounterSets,
           exitTypes,
-          nativeExitDoorOrder,
+          exitDoorSetupOrder,
           swappableBreakables,
         ),
       `${path}.routeOverlays[${overlayIndex}]`,

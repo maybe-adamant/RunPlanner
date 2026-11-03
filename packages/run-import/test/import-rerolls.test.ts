@@ -133,11 +133,11 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
       {
         kind: 'reroll',
         rerollId: 'r1',
-        target: { kind: 'door', exitKey: 'exit1', occurrenceId: 'G-r20-d609579' },
-        reward: { rewardType: 'RoomMoneyDrop' },
+        target: { kind: 'door', exitKey: 'exit1', occurrenceId: 'G-r20-d609581' },
+        reward: { rewardType: 'StackUpgrade' },
       },
     ]);
-    expect(reward(imported.project, 'G-r20-d609579').offer).toEqual({
+    expect(reward(imported.project, 'G-r20-d609581').offer).toEqual({
       rewardType: 'MaxHealthDrop',
     });
   });

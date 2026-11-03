@@ -1,11 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
-import {
-  hubBoardRewardAssignmentOrder,
-  luaPairsOrder,
-  luaSort,
-} from '../../../../../src/simulation/rewards/biome/generation/hub-board-order';
+import { hubBoardRewardAssignmentOrder } from '../../../../../src/simulation/rewards/biome/generation/hub-board-order';
 import { hubBoardProbes } from '../../../../support/hub-board-probe';
 
 function ephyraSlots() {
@@ -15,15 +11,6 @@ function ephyraSlots() {
 }
 
 describe('Hub board reward-assignment order', () => {
-  it.each(hubBoardProbes.map((probe, index) => [index, probe] as const))(
-    'reproduces probe board %i',
-    (_, probe) => {
-      const pairs = luaPairsOrder(probe.insertion);
-      expect(pairs).toEqual(probe.pairs);
-      expect(luaSort(pairs, () => false)).toEqual(probe.assignment);
-    },
-  );
-
   it.each(hubBoardProbes.map((probe, index) => [index, probe] as const))(
     'derives probe board %i from the declared Ephyra doors',
     (_, probe) => {

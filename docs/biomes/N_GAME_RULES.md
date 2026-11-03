@@ -201,9 +201,10 @@ its Lua 5.2 `pairs()` order, and `table.sort`s the result with a comparator
 under which every board door ties (one obstacle name), so only the sort's
 pivot swaps move it. Each door draws its reward in that order, after the doors
 before it. The catalog declares each slot's door ObjectId (`PredeterminedDoorRooms`,
-RoomDataN.lua:1260) and its insertion rank; the engine emulates the Lua 5.2
-table and `auxsort` to derive the order, which reproduces all 19 boards of an
-in-game probe; repeated boards with the same open doors keep the same order.
+RoomDataN.lua:1260) and the `N_Hub` map's door-setup order, which ranks the
+board doors; the engine emulates the Lua 5.2 table and `auxsort` to derive the
+order, which reproduces all 19 boards of an in-game probe; repeated boards with
+the same open doors keep the same order.
 
 Order-sensitive offer facts, including ordinary-god peer support and singleton
 entries, are validated in exactly that order: a board that another order would

@@ -18,7 +18,6 @@ import {
   createCollection,
   freezeUniqueStrings,
   requireNonEmpty,
-  requireNonNegativeInteger,
   requirePositiveInteger,
 } from '../common';
 import { normalizeAuthoredFields } from '../descriptors';
@@ -273,7 +272,14 @@ export function normalizeHubDecision(
     `${path}.slots.slotKeys`,
   );
   const physicalDoorIds = new Set<number>();
-  const insertionRanks = new Set<number>();
+  const hubDoors = hubRoom.exitDoorSetupOrder ?? [];
+  const boardDoors = hubDoors.filter((door) =>
+    raw.slots.some((slot) => slot.physicalDoorId === door.doorId),
+  );
+  // The engine orders the board by the table walk alone, so its doors must tie in the sort.
+  if (new Set(boardDoors.map((door) => door.obstacleName)).size > 1) {
+    fail(`exitDoorSetupOrders.${hubRoom.gameName}`, 'must give every board door one obstacle name');
+  }
   const slots = raw.slots.map((slot, index) => {
     const slotPath = `${path}.slots[${index}]`;
     const room = requireLayoutRoom(slot.roomGameName, biomeKey, rooms, `${slotPath}.roomGameName`);
@@ -288,14 +294,13 @@ export function normalizeHubDecision(
       fail(`${slotPath}.physicalDoorId`, `duplicates ${physicalDoorId}`);
     }
     physicalDoorIds.add(physicalDoorId);
-    const offeredExitInsertionRank = requireNonNegativeInteger(
-      slot.offeredExitInsertionRank,
-      `${slotPath}.offeredExitInsertionRank`,
-    );
-    if (insertionRanks.has(offeredExitInsertionRank)) {
-      fail(`${slotPath}.offeredExitInsertionRank`, `duplicates ${offeredExitInsertionRank}`);
+    const offeredExitInsertionRank = boardDoors.findIndex((door) => door.doorId === physicalDoorId);
+    if (offeredExitInsertionRank < 0) {
+      fail(
+        `${slotPath}.physicalDoorId`,
+        `${physicalDoorId} is not in ${hubRoom.gameName}'s door-setup order`,
+      );
     }
-    insertionRanks.add(offeredExitInsertionRank);
     return Object.freeze({
       slotKey: slotKeys[index] as string,
       roomGameName: room.gameName,
@@ -305,15 +310,6 @@ export function normalizeHubDecision(
   });
   if (slots.length === 0) {
     fail(`${path}.slots`, 'must not be empty');
-  }
-  // Every slot can open, so the insertion ranks order all of them.
-  for (const [index, slot] of slots.entries()) {
-    if (slot.offeredExitInsertionRank >= slots.length) {
-      fail(
-        `${path}.slots[${index}].offeredExitInsertionRank`,
-        `must be below the declared slot count ${slots.length}`,
-      );
-    }
   }
   const min = requirePositiveInteger(raw.openCount.min, `${path}.openCount.min`);
   const max = requirePositiveInteger(raw.openCount.max, `${path}.openCount.max`);

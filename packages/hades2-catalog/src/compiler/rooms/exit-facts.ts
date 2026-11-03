@@ -1,6 +1,7 @@
 import type {
   AdditionalExitDeclaration,
   CatalogCollection,
+  ExitDoorSetup,
   ExitTypeDeclaration,
   RoomDeclaration,
   RoomExit,
@@ -25,35 +26,47 @@ import {
 
 export type RoomExitFacts = Pick<
   RoomDeclaration,
-  'exits' | 'additionalExits' | 'nativeExitDoorOrder'
+  'exits' | 'additionalExits' | 'exitDoorSetupOrder'
 >;
 
 /**
- * The catalog keeps no map door ids for room exits, so a declared order is
- * checked for shape, uniqueness and the room's same-type exit count only.
+ * A room with exits declares one map door per exit; sorted by obstacle name, as
+ * the game processes them, its doors fall on exits of matching types. The Hub,
+ * which has no exits of its own, declares every map exit door.
  */
-function normalizeNativeExitDoorOrder(
-  raw: readonly number[],
+function normalizeExitDoorSetupOrder(
+  raw: readonly (readonly [number, string])[],
   exits: readonly RoomExit[],
+  hub: boolean,
   path: string,
-): readonly number[] {
-  if (!Array.isArray(raw)) fail(path, 'must be an array of door ids');
-  const sharedTypeCount = Math.max(
-    0,
-    ...exits.map((exit) => exits.filter((other) => other.type === exit.type).length),
-  );
-  if (sharedTypeCount < 2) fail(path, 'requires at least two exits of one type');
+): readonly ExitDoorSetup[] {
+  if (!Array.isArray(raw)) fail(path, 'must be an array of [door id, obstacle name]');
   if (raw.length < 2) fail(path, 'must order at least two doors');
-  if (raw.length > exits.length) fail(path, `orders more doors than the ${exits.length} exits`);
+  if (!hub && raw.length !== exits.length)
+    fail(path, `declares ${raw.length} doors for the room's ${exits.length} exits`);
   const seen = new Set<number>();
-  return Object.freeze(
-    raw.map((value, index) => {
-      const door = requirePositiveInteger(value, `${path}[${index}]`);
-      if (seen.has(door)) fail(`${path}[${index}]`, `duplicates ${door}`);
-      seen.add(door);
-      return door;
-    }),
-  );
+  const doors = raw.map(([doorId, obstacleName], index): ExitDoorSetup => {
+    const door = requirePositiveInteger(doorId, `${path}[${index}][0]`);
+    if (seen.has(door)) fail(`${path}[${index}]`, `duplicates ${door}`);
+    seen.add(door);
+    return Object.freeze({
+      doorId: door,
+      obstacleName: requireNonEmpty(obstacleName, `${path}[${index}][1]`),
+    });
+  });
+  if (!hub) {
+    const names = doors.map((door) => door.obstacleName).sort();
+    const typeOf = new Map<string, string>();
+    const nameOf = new Map<string, string>();
+    for (const [index, exit] of exits.entries()) {
+      const name = names[index]!;
+      if ((typeOf.get(name) ?? exit.type) !== exit.type || (nameOf.get(exit.type) ?? name) !== name)
+        fail(path, `puts a ${name} door on exit ${exit.index} of type ${exit.type}`);
+      typeOf.set(name, exit.type);
+      nameOf.set(exit.type, name);
+    }
+  }
+  return Object.freeze(doors);
 }
 
 function normalizeAdditionalExits(
@@ -80,6 +93,8 @@ function normalizeAdditionalExits(
       const exitType = exitTypes.byKey[exitTypeKey];
       if (exitType === undefined)
         fail(`${exitPath}.exitType`, `unknown physical exit type ${exitTypeKey}`);
+      if (exitType.spawnedObstacleName === undefined)
+        fail(`${exitPath}.exitType`, `${exitTypeKey} must name its spawned door obstacle`);
       const requirement =
         raw.requirement === undefined
           ? undefined
@@ -161,7 +176,7 @@ export function normalizeRoomExitFacts(
   encounter: RoomEncounterFacts,
   exitTypes: CatalogCollection<ExitTypeDeclaration>,
   rewards: RewardKernelCatalog,
-  rawNativeExitDoorOrder: readonly number[] | undefined,
+  rawExitDoorSetupOrder: readonly (readonly [number, string])[] | undefined,
   path: string,
 ): RoomExitFacts {
   if (
@@ -287,13 +302,14 @@ export function normalizeRoomExitFacts(
   return Object.freeze({
     exits: Object.freeze(exits),
     additionalExits,
-    ...(rawNativeExitDoorOrder === undefined
+    ...(rawExitDoorSetupOrder === undefined
       ? {}
       : {
-          nativeExitDoorOrder: normalizeNativeExitDoorOrder(
-            rawNativeExitDoorOrder,
+          exitDoorSetupOrder: normalizeExitDoorSetupOrder(
+            rawExitDoorSetupOrder,
             exits,
-            `nativeExitDoorOrders.${identity.gameName}`,
+            identity.mode.kind === 'derived' && identity.mode.classification === 'hub',
+            `exitDoorSetupOrders.${identity.gameName}`,
           ),
         }),
   });

@@ -4,10 +4,12 @@ import { catalog, createCatalog } from '@run-planner/hades2-catalog';
 
 import { cloneCatalogInput } from './support/catalog-input';
 
-function hubSlots(input: ReturnType<typeof cloneCatalogInput>) {
-  const n = input.biomeLayouts.find((layout) => layout.biomeKey === 'N');
-  if (n?.progression.kind !== 'hub') throw new Error('missing N Hub fixture');
-  return n.progression.slots as unknown as { offeredExitInsertionRank: number }[];
+function withHubDoors(
+  change: (doors: readonly (readonly [number, string])[]) => (readonly [number, string])[],
+) {
+  const input = cloneCatalogInput();
+  const doors = input.exitDoorSetupOrders.N_Hub!;
+  return { ...input, exitDoorSetupOrders: { ...input.exitDoorSetupOrders, N_Hub: change(doors) } };
 }
 
 describe('Hub board door declarations', () => {
@@ -51,16 +53,30 @@ describe('Hub board door declarations', () => {
     ]);
   });
 
-  it.each([
-    ['a repeated rank', (ranks: number[]) => ranks.with(1, ranks[0]!), /duplicates/],
-    ['a rank past the slots', (ranks: number[]) => ranks.with(0, ranks.length), /slot count/],
-    ['a fractional rank', (ranks: number[]) => ranks.with(0, 0.5), /non-negative integer/],
-    ['a negative rank', (ranks: number[]) => ranks.with(0, -1), /non-negative integer/],
-  ])('rejects %s', (_, change, message) => {
-    const input = cloneCatalogInput();
-    const slots = hubSlots(input);
-    const ranks = change(slots.map((slot) => slot.offeredExitInsertionRank));
-    for (const [index, slot] of slots.entries()) slot.offeredExitInsertionRank = ranks[index]!;
-    expect(() => createCatalog(input)).toThrow(message);
+  it('ranks the board doors in the Hub map door-setup order', () => {
+    const progression = catalog.biomeLayouts.byKey.N?.progression;
+    if (progression?.kind !== 'hub') throw new Error('missing N Hub');
+    const boardDoors = new Set(progression.slots.map((slot) => slot.physicalDoorId));
+    expect(
+      [...progression.slots]
+        .sort((left, right) => left.offeredExitInsertionRank - right.offeredExitInsertionRank)
+        .map((slot) => slot.physicalDoorId),
+    ).toEqual(
+      catalog.rooms.byKey
+        .N_Hub!.exitDoorSetupOrder!.map((door) => door.doorId)
+        .filter((doorId) => boardDoors.has(doorId)),
+    );
+  });
+
+  it('rejects a board door missing from the Hub door-setup order', () => {
+    const input = withHubDoors((doors) => doors.filter(([doorId]) => doorId !== 560705));
+    expect(() => createCatalog(input)).toThrow(/560705 is not in N_Hub's door-setup order/);
+  });
+
+  it('rejects board doors with two obstacle names', () => {
+    const input = withHubDoors((doors) =>
+      doors.map(([doorId, name]) => [doorId, doorId === 560705 ? 'EphyraExitDoorB' : name]),
+    );
+    expect(() => createCatalog(input)).toThrow(/every board door one obstacle name/);
   });
 });

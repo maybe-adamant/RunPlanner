@@ -32,8 +32,13 @@ export interface RawCompletedHubExitDeclaration extends Omit<
 
 export interface RawHubDecisionDeclaration extends Omit<
   HubDecisionDescriptor,
-  'fields' | 'completedExit' | 'phantomExits'
+  'slots' | 'fields' | 'completedExit' | 'phantomExits'
 > {
+  /** Insertion ranks come from the Hub room's door-setup order. */
+  readonly slots: readonly Omit<
+    HubDecisionDescriptor['slots'][number],
+    'offeredExitInsertionRank'
+  >[];
   readonly fields?: readonly AuthoredFieldDescriptor[];
   readonly completedExit: RawCompletedHubExitDeclaration;
   readonly phantomExits: {
