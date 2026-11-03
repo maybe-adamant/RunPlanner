@@ -938,7 +938,7 @@ function executionExcludedEnemies(
   );
 }
 
-/** The settled phantom exit; branches that drew different gods publish only the type. */
+/** The settled phantom exit with the reward its reached state drew. */
 function executionPhantomExit(
   room: CanonicalAuthoredRoom,
   biome: CompleteValidBiomeProjectEvaluation,
@@ -950,19 +950,14 @@ function executionPhantomExit(
   );
   if (settlement === undefined)
     throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks its phantom exit`);
-  const [first, ...rest] = settlement.offers;
-  if (first === undefined || settlement.storeKey === undefined)
+  const offer = settlement.offer;
+  if (offer === undefined || settlement.storeKey === undefined)
     return Object.freeze({ placeholderRoomGameName: settlement.placeholderRoomGameName });
-  if (rest.some((offer) => offer.rewardType !== first.rewardType))
-    throw new CompilerError(
-      'executionCoverageMissing',
-      `${room.gameName} phantom exit drew different rewards across branches`,
-    );
-  const payload = rest.length === 0 ? first.payload : undefined;
+  const payload = offer.payload;
   return Object.freeze({
     placeholderRoomGameName: settlement.placeholderRoomGameName,
     reward: Object.freeze({
-      rewardType: first.rewardType,
+      rewardType: offer.rewardType,
       storeKey: settlement.storeKey,
       ...(payload?.kind === 'BoonSource' ? { source: payload.source } : {}),
       ...(payload?.kind === 'DevotionPair'

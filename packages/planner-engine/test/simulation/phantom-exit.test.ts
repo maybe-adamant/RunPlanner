@@ -124,13 +124,14 @@ describe('phantom exits', () => {
   it('settles an unpinned main room to a no-draw placeholder that leaves every store alone', () => {
     const project = loadSurfaceNProject();
     const { at } = settlements(project);
-    for (const exit of [combat05, combat02, miniBoss01])
+    for (const exit of [combat05, combat02, miniBoss01]) {
       expect(at(exit)).toMatchObject({
         placeholderRoomGameName: 'N_PreBoss01',
         placeholderPinned: false,
         rewardPinned: false,
-        offers: [],
       });
+      expect(at(exit).offer).toBeUndefined();
+    }
     expect(at(combat05).storeKey).toBeUndefined();
     expect(at(combat05).placeholderCandidates).toContainEqual({
       roomGameName: 'N_MiniBoss01',
@@ -148,7 +149,7 @@ describe('phantom exits', () => {
     expect(at(side05)).toMatchObject({
       placeholderRoomGameName: 'N_Sub01',
       storeKey: 'SubRoomRewards',
-      offers: [{ rewardType: 'MetaCurrencyDrop' }],
+      offer: { rewardType: 'MetaCurrencyDrop' },
     });
     // A side room never fills its door with itself.
     expect(at(side02).placeholderRoomGameName).toBe('N_Sub02');
@@ -167,9 +168,9 @@ describe('phantom exits', () => {
       rewardPinned: true,
       storeKey: 'HubRewards',
     });
-    expect(settled.offers).toEqual([
+    expect(settled.offer).toEqual(
       expect.objectContaining({ rewardType: 'Boon', payload: expect.anything() }),
-    ]);
+    );
     expect(bagCount(project, 'HubRewards')).toBe(bagCount(before, 'HubRewards') - 1);
   });
 
@@ -180,7 +181,7 @@ describe('phantom exits', () => {
     });
     const settledFirst = settlements(first).at(combat05);
     expect(settledFirst).toMatchObject({ storeKey: 'RunProgress' });
-    expect(settledFirst.offers[0]?.rewardType).toBe('Boon');
+    expect(settledFirst.offer?.rewardType).toBe('Boon');
     const second = pin(first, combat02, {
       placeholderRoomGameName: 'N_MiniBoss02',
       rewardType: null,
@@ -259,7 +260,7 @@ describe('phantom exits', () => {
     const session = createPreparedProjectCandidateSession(catalog, assembly);
     const settled = phantomExitSettlementForProjectEvaluationAssembly(assembly, combat05)!;
     expect(
-      session.evaluate({ kind: 'phantomExitReward', exit: combat05, value: settled.offers[0]! }),
+      session.evaluate({ kind: 'phantomExitReward', exit: combat05, value: settled.offer! }),
     ).toMatchObject({ kind: 'phantomExitReward', result: { supported: true } });
     expect(
       session.evaluate({
@@ -277,7 +278,7 @@ describe('phantom exits', () => {
     expect(occurrence?.overview.phantomExit).toEqual({
       placeholderRoomGameName: 'N_Combat13',
       reward: expect.objectContaining({
-        rewardType: settled.offers[0]!.rewardType,
+        rewardType: settled.offer!.rewardType,
         storeKey: 'HubRewards',
       }),
     });

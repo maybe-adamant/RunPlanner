@@ -149,6 +149,11 @@ function branchListShape(value: unknown): unknown {
     next.states = [next.state];
     delete next.state;
   }
+  // A phantom exit published its drawn offer as a list of at most one.
+  if ('placeholderCandidates' in value && 'rewardPinned' in value) {
+    next.offers = next.offer === undefined ? [] : [next.offer];
+    delete next.offer;
+  }
   if (
     typeof value.remaining === 'number' &&
     ('storeKey' in value ||

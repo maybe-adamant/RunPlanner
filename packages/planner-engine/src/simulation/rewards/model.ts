@@ -229,9 +229,9 @@ export interface HubDepartureRunState {
 
 /**
  * One reached phantom exit as the simulation settled it: the placeholder room
- * (pinned or first eligible) and the offer drawn for it on every reached
- * branch. Execution publication and the editor's effective value read this
- * product; neither settles the draw again.
+ * (pinned or first eligible) and the offer the reached state drew for it.
+ * Execution publication and the editor's effective value read this product;
+ * neither settles the draw again.
  */
 export interface PhantomExitSettlement {
   readonly owner: import('../../authored-project/addresses').PhantomExitAddress;
@@ -243,8 +243,8 @@ export interface PhantomExitSettlement {
   /** The placeholder's own store; absent when its fixed or Shop reward draws nothing. */
   readonly storeKey?: string;
   readonly rewardPinned: boolean;
-  /** The offer the reached state drew; empty when nothing is drawn. */
-  readonly offers: readonly import('../../reward-kernel').ResolvedRewardOffer[];
+  /** The offer the reached state drew; absent when nothing is drawn. */
+  readonly offer?: import('../../reward-kernel').ResolvedRewardOffer;
 }
 
 /**

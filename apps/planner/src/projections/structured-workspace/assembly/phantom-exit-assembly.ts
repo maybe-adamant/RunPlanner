@@ -67,7 +67,7 @@ export function assemblePhantomExit(input: {
       : pinnedRoom === null
         ? undefined
         : phantomPlaceholderDraw(catalog, pinnedRoom) !== undefined;
-  const settledReward = settled?.offers[0]?.rewardType;
+  const settledReward = settled?.offer?.rewardType;
   const rewardLocked =
     settled === undefined
       ? draws === false

@@ -125,7 +125,7 @@ export function applyPhantomExitTransition(inputs: {
       peers: Object.freeze([]),
       findings: Object.freeze([...findings.values()]),
       producerFrontiers: Object.freeze([]),
-      settlement: Object.freeze({ ...baseSettlement, offers: Object.freeze([]) }),
+      settlement: Object.freeze(baseSettlement),
     });
   }
   if (draw === undefined)
@@ -134,7 +134,7 @@ export function applyPhantomExitTransition(inputs: {
       peers: Object.freeze([]),
       findings: Object.freeze([]),
       producerFrontiers: Object.freeze([]),
-      settlement: Object.freeze({ ...baseSettlement, offers: Object.freeze([]) }),
+      settlement: Object.freeze(baseSettlement),
     });
 
   const facts = (state: SimulationState) =>
@@ -191,12 +191,12 @@ export function applyPhantomExitTransition(inputs: {
   const reached = inputs.branch;
   const options = reached === undefined ? undefined : reachedOptions(reached);
   let next: RewardBranchState | undefined;
-  const offers: ResolvedRewardOffer[] = [];
+  let settledOffer: ResolvedRewardOffer | undefined;
   const settle = (rewardType: string) => {
     const option = options?.get(rewardType);
     if (option === undefined) return;
     next = option.survivor;
-    offers.push(option.offer);
+    settledOffer = option.offer;
   };
   if (phantom.rewardType !== null) {
     // Like any authored reward, a pinned type the state cannot draw blocks.
@@ -255,15 +255,16 @@ export function applyPhantomExitTransition(inputs: {
       },
     }),
   ]);
-  const settledOffers = Object.freeze(offers);
   return Object.freeze({
     branch,
     peers:
-      branch === undefined
+      branch === undefined || settledOffer === undefined
         ? Object.freeze([])
-        : Object.freeze(settledOffers.map((offer) => Object.freeze({ origin: owner, offer }))),
+        : Object.freeze([Object.freeze({ origin: owner, offer: settledOffer })]),
     findings: Object.freeze([...findings.values()]),
     producerFrontiers,
-    settlement: Object.freeze({ ...baseSettlement, offers: settledOffers }),
+    settlement: Object.freeze(
+      settledOffer === undefined ? baseSettlement : { ...baseSettlement, offer: settledOffer },
+    ),
   });
 }
