@@ -332,20 +332,21 @@ when its source type occurs in one wave.
 
 ### Shops and the Hermes Shrine
 
-| Fact                          | Save source                                                                                                                            | Status   |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| World Shop and Well stock     | entry-save `CurrentRoom.Store.StoreOptions`; a room whose map lacks a `ChallengeSwitchBase` still rolls Well stock                     | exact    |
-| Purchases                     | departure record: bought options removed from `StoreOptions` (`StoreLogic.lua:326`), `StoreItemsPurchased`, `UseRecord`                | exact    |
-| Final prices of unsold items  | departure record `Store.SpawnedStoreItems[*].ResourceCosts`                                                                            | exact    |
-| Price paid                    | base cost times the multiplier below                                                                                                   | inferred |
-| Purchase order                | none                                                                                                                                   | lost     |
-| Hermes Shrine stock           | entry-save `Store.StoreOptions` with `SurfaceShopChanceSuccess`, outside a Shop room: every room rolls the chance (`RunLogic.lua:636`) | exact    |
-| Hermes Shrine purchases       | `CurrentRun.SurfaceShopPurchases` and `UseRecord.SurfaceShop` counts, `UseRecord` item names                                           | exact    |
-| Hermes Shrine rush or delay   | departure record: a rushed option leaves `StoreOptions`, a delayed one stays `Purchased` (`SurfaceShopLogic.lua:317`)                  | exact    |
-| Shrine Travel Deal refill     | departure record: the first rush restocks its slot (`SurfaceShopLogic.lua:450-474`); lost when the refill is rushed                    | exact    |
-| Hermes delivery delay         | pending `StorePendingDeliveryItem` trait (`RoomDelay`, costs) while undelivered                                                        | exact    |
-| Hermes delivery room          | the room whose `UseRecord` gains the pending item                                                                                      | inferred |
-| World Shop Travel Deal refill | departure record `SpawnedStoreItems` holds the refill's kit id and cost but no name                                                    | lost     |
+| Fact                          | Save source                                                                                                                                                                                                | Status   |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| World Shop and Well stock     | entry-save `CurrentRoom.Store.StoreOptions`; a room whose map lacks a `ChallengeSwitchBase` still rolls Well stock                                                                                         | exact    |
+| Purchases                     | departure record: bought options removed from `StoreOptions` (`StoreLogic.lua:326`), `StoreItemsPurchased`, `UseRecord`                                                                                    | exact    |
+| Final prices of unsold items  | departure record `Store.SpawnedStoreItems[*].ResourceCosts`                                                                                                                                                | exact    |
+| Price paid                    | base cost times the multiplier below                                                                                                                                                                       | inferred |
+| Purchase order                | none                                                                                                                                                                                                       | lost     |
+| Hermes Shrine stock           | entry-save `Store.StoreOptions` with `SurfaceShopChanceSuccess`, outside a Shop room: every room rolls the chance (`RunLogic.lua:636`)                                                                     | exact    |
+| Well or Shrine spawned        | PostReward or departure record: `CurrentRoom.WellShop` / `.SurfaceShop` obstacle, placed only on a free `ChallengeSwitchBase` (`RoomLogic.lua:4892-4925`); stock without it was never offered (Boss rooms) | exact    |
+| Hermes Shrine purchases       | `CurrentRun.SurfaceShopPurchases` and `UseRecord.SurfaceShop` counts, `UseRecord` item names                                                                                                               | exact    |
+| Hermes Shrine rush or delay   | departure record: a rushed option leaves `StoreOptions`, a delayed one stays `Purchased` (`SurfaceShopLogic.lua:317`)                                                                                      | exact    |
+| Shrine Travel Deal refill     | departure record: the first rush restocks its slot (`SurfaceShopLogic.lua:450-474`); lost when the refill is rushed                                                                                        | exact    |
+| Hermes delivery delay         | pending `StorePendingDeliveryItem` trait (`RoomDelay`, costs) while undelivered                                                                                                                            | exact    |
+| Hermes delivery room          | the room whose `UseRecord` gains the pending item                                                                                                                                                          | inferred |
+| World Shop Travel Deal refill | departure record `SpawnedStoreItems` holds the refill's kit id and cost but no name                                                                                                                        | lost     |
 
 Base costs: Boon options carry `Args.ResourceCosts`, some consumables carry
 `CostOverride`, the rest come from `ConsumableData.lua`. The multiplier

@@ -482,6 +482,17 @@ reproduces is reported with its nearest miss and the plan stops there.
    and stops the plan (`pool`/`unexplainedSale`); the first-eligible-trait
    fallback is gone. Corpus: never fires.
 
+   **Phantom stock** (owner rule; study: Boss-room store). Every room rolls
+   Well and Shrine stock with no anchor check; the object spawns only on a
+   free challenge base. The record now carries each store's `spawned` flag
+   from the settled save (obstacle, or a Shop's spawned items). Stock no one
+   used is ignored quietly where the catalog declares no host for its kind
+   or the save shows nothing spawned; any use of stock on a room the catalog
+   cannot host stops the plan (`stockOnNonHost`). Raw 1013 P_Boss01's stock
+   is ignored (accepted), P_PostBoss01 keeps its own ArmorBoost/BlindBoxLoot/
+   MaxHealthDrop Shrine; the Dream fixture's P_Boss01 no longer reports a
+   refused Shrine.
+
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.
 6. **Recorded room** (authored outcome replayed as canonical events) only for

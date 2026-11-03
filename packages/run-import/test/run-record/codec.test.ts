@@ -292,6 +292,13 @@ describe('run record codec', () => {
         (room(record, 1).store = { kind: 'worldShop', stock, unstockedPurchases: ['HealDrop'] }),
       /unstockedPurchases belongs to the Stygian Well/,
     );
+    rejects(
+      (record) => (room(record, 1).store = { kind: 'well', stock, spawned: 'yes' }),
+      /spawned must be a boolean/,
+    );
+    const unspawned = minimal();
+    room(unspawned, 1).store = { kind: 'hermesShrine', stock, spawned: false };
+    expect(decodeRunRecord(unspawned).rooms[1]?.store?.spawned).toBe(false);
     const refill = (purchases: unknown[], purchase?: unknown) => ({
       kind: 'hermesShrine',
       stock,

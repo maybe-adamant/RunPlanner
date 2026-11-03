@@ -50,5 +50,26 @@ describe('run import of a Dream run', () => {
           .map((entry) => entry.gameName),
       ),
     ).toEqual(['Dream_PostBoss01', 'Dream_PostBoss02', 'Dream_PostBoss03']);
+    // P_Boss01 rolled Shrine stock it has no anchor to offer; it is ignored, not refused.
+    expect(
+      imported.report.entries.filter(
+        (entry) => entry.record?.roomIndex === 21 && entry.area === 'shop',
+      ),
+    ).toEqual([]);
+  });
+
+  it('stops where stock on a room that cannot host it was used', () => {
+    const record = fixture('dream');
+    const rooms = record.rooms.map((room, index) =>
+      index === 21 && room.store !== undefined
+        ? { ...room, store: { ...room.store, purchaseCount: 1 } }
+        : room,
+    );
+    const imported = projectFromRunRecord(catalog, { ...record, rooms });
+    expect(imported.kind === 'stopped' && imported.stop).toEqual({
+      area: 'shop',
+      code: 'stockOnNonHost',
+      record: { roomIndex: 21, visit: 0 },
+    });
   });
 });

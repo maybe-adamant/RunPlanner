@@ -72,7 +72,7 @@ interface StoreVisit {
   readonly store: RunRecordStore;
 }
 
-/** The occurrence's record visit that holds a store of this kind. */
+/** The occurrence's record visit that holds an offered store of this kind. */
 function storeVisit(
   context: RunImportContext,
   occurrenceId: string,
@@ -80,9 +80,51 @@ function storeVisit(
 ): StoreVisit | undefined {
   for (const roomIndex of context.occurrences.visitsOf(occurrenceId)) {
     const room = context.record.rooms[roomIndex]!;
-    if (room.store?.kind === kind) return { roomIndex, room, store: room.store };
+    if (room.store?.kind !== kind) continue;
+    return offeredStore(context, room, room.store, roomIndex)
+      ? { roomIndex, room, store: room.store }
+      : undefined;
   }
   return undefined;
+}
+
+/** The record use and reroll name of a store's own screen. */
+const STORE_SCREEN = { well: 'WellShop', hermesShrine: 'SurfaceShop', worldShop: undefined };
+
+/**
+ * Every room rolls Well and Shrine stock with no anchor check (RunLogic.lua
+ * 630-636), so stock the player never touched may never have spawned: it is
+ * ignored where the catalog declares no host for its kind or the settled save
+ * shows no spawned object. Any use of stock on a room that cannot host it is
+ * a break in the catalog's host declarations, and the plan stops there.
+ */
+function offeredStore(
+  context: RunImportContext,
+  room: RunRecordRoom,
+  store: RunRecordStore,
+  roomIndex: number,
+): boolean {
+  const declaration = context.catalog.rooms.byKey[room.name];
+  const hosted =
+    store.kind === 'well'
+      ? declaration?.roomShop !== undefined
+      : store.kind === 'hermesShrine'
+        ? declaration?.surfaceShop !== undefined
+        : true;
+  const screen = STORE_SCREEN[store.kind];
+  const used =
+    (store.purchases?.length ?? 0) > 0 ||
+    (store.unstockedPurchases?.length ?? 0) > 0 ||
+    (store.purchaseCount ?? 0) > 0 ||
+    (screen !== undefined &&
+      ((room.uses[screen] ?? 0) > 0 || (room.spentRerolls?.[screen] ?? 0) > 0));
+  if (!hosted && used)
+    context.halt({
+      area: store.kind === 'well' ? 'well' : 'shop',
+      code: 'stockOnNonHost',
+      record: record(roomIndex),
+    });
+  return hosted && (used || store.spawned !== false);
 }
 
 /** Every entered occurrence that changed since the last sweep, in plan order. */
@@ -1102,12 +1144,7 @@ function importShrinePurchase(
 
 function importWell(context: RunImportContext, biomeKey: string, occurrence: RoomOccurrence) {
   const visit = storeVisit(context, occurrence.occurrenceId, 'well');
-  // A room whose map has no Well anchor rolls Well stock that no Well offers.
-  if (
-    visit === undefined ||
-    context.catalog.rooms.byKey[occurrence.gameName]?.roomShop === undefined
-  )
-    return;
+  if (visit === undefined) return;
   const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
   const address = createOccurrenceAddress(biome, occurrence.occurrenceId);
   const presence = `wellPresence:${occurrence.occurrenceId}`;

@@ -323,6 +323,12 @@ export interface RunRecordStore {
   /** Hermes Shrine purchase counter gained here; a rush counts twice. */
   readonly purchaseCount?: number;
   /**
+   * Whether the store's Well, Shrine or Shop items spawned, as the room's
+   * settled save shows; absent when no save after its entry was kept. Stock is
+   * rolled without an anchor check, so stock alone does not mean it was offered.
+   */
+  readonly spawned?: boolean;
+  /**
    * Hermes Shrine: the Travel Deal option the room's first rush restocked into
    * the rushed slot, as left on leaving. Absent when nothing was left there.
    */

@@ -783,7 +783,22 @@ function store(room: RoomSaves, entered: SavedRoom): RunRecordStore | undefined 
         : entered.wellShop
           ? 'well'
           : 'worldShop';
-  const base = { kind, stock: stock.map(stockOption) } as const;
+  // The settled copy of the room shows whether the store's object spawned.
+  const settled = (room.departure ?? room.postReward?.currentRoom)?.spawnedStore;
+  const base = {
+    kind,
+    stock: stock.map(stockOption),
+    ...optional(
+      'spawned',
+      settled === undefined
+        ? undefined
+        : kind === 'well'
+          ? settled.well
+          : kind === 'hermesShrine'
+            ? settled.shrine
+            : settled.items,
+    ),
+  } as const;
   const closing = room.closing;
   if (kind === 'well') {
     if (closing === undefined) return base;

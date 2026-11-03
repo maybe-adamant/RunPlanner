@@ -89,6 +89,33 @@ describe('save checkpoint extraction', () => {
     expect(checkpoint.hero?.slotted.Keepsake).toBe('RandomBlessingKeepsake');
   });
 
+  it("reads a spawned Well or Shrine from the room's obstacle, not its stock", () => {
+    const save = sample('underworld-062');
+    const run = save.globals.CurrentRun as LuaTable;
+    const history = run.RoomHistory as readonly LuaTable[];
+    const spawned = {
+      ...save,
+      globals: {
+        ...save.globals,
+        CurrentRun: {
+          ...run,
+          RoomHistory: [...history.slice(0, -1), { ...history.at(-1)!, WellShop: {} }],
+        },
+      },
+    };
+    // The entered room's entry save is written before its secrets spawn.
+    expect(extractSaveCheckpoint(save, true, NO_SAVED_VALUES).currentRoom.spawnedStore).toEqual({
+      well: false,
+      shrine: false,
+      items: false,
+    });
+    expect(extractSaveCheckpoint(spawned, true, NO_SAVED_VALUES).departure?.spawnedStore).toEqual({
+      well: true,
+      shrine: false,
+      items: false,
+    });
+  });
+
   it('marks a save without a next map as the PostReward checkpoint', () => {
     const checkpoint = extractSaveCheckpoint(sample('surface-004'), true, NO_SAVED_VALUES);
     expect(checkpoint.kind).toBe('postReward');

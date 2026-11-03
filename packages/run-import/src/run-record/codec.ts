@@ -429,7 +429,7 @@ function store(value: unknown, label: string): RunRecordStore {
   exact(
     record,
     ['kind', 'stock'],
-    ['purchases', 'unstockedPurchases', 'purchaseCount', 'refill'],
+    ['purchases', 'unstockedPurchases', 'purchaseCount', 'refill', 'spawned'],
     label,
   );
   if (record.unstockedPurchases !== undefined && record.kind !== 'well')
@@ -472,6 +472,7 @@ function store(value: unknown, label: string): RunRecordStore {
     ...optional(record, 'unstockedPurchases', label, (entry, path) => list(entry, path, text, 16)),
     ...optional(record, 'purchaseCount', label, (entry, path) => integer(entry, path)),
     ...(refill === undefined ? {} : { refill }),
+    ...optional(record, 'spawned', label, bool),
   });
 }
 

@@ -234,6 +234,27 @@ describe('run record builder', () => {
     });
   });
 
+  it("records whether a store's object spawned, from the room's settled save", () => {
+    const stock = [{ slot: 1, name: 'MaxManaDrop', boosted: false, purchased: false }];
+    const visit = (spawned: boolean | undefined) =>
+      buildRunRecord([
+        save({ history: [], current: room('P_Boss01', { surfaceShop: true, store: stock }) }),
+        save({
+          history: ['P_Boss01'],
+          current: room('P_PostBoss01'),
+          departure: room('P_Boss01', {
+            surfaceShop: true,
+            store: stock,
+            ...(spawned === undefined
+              ? {}
+              : { spawnedStore: { well: false, shrine: spawned, items: false } }),
+          }),
+        }),
+      ]).rooms[0]?.store?.spawned;
+    // Stock is rolled with no anchor check: a room with no Shrine anchor holds stock it never offers.
+    expect([visit(false), visit(true), visit(undefined)]).toEqual([false, true, undefined]);
+  });
+
   it('places World Shop purchases by the slots their options leave empty', () => {
     const boon = (slot: number, lootName: string) => ({
       slot,

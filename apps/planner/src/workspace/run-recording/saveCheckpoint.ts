@@ -174,6 +174,15 @@ export interface SavedRoom {
   readonly wellShop: boolean;
   readonly surfaceShop: boolean;
   readonly sellShop: boolean;
+  /**
+   * The store's object spawned: the `WellShop` or `SurfaceShop` obstacle, or a
+   * Shop's `Store.SpawnedStoreItems`. Stock alone is rolled with no anchor check.
+   */
+  readonly spawnedStore?: {
+    readonly well: boolean;
+    readonly shrine: boolean;
+    readonly items: boolean;
+  };
   /** `SpentRerolls`: screen rerolls by the rerolled screen's id. */
   readonly spentRerolls?: Readonly<Record<string, number>>;
   /** `OlympusEagleSpawn`: Aetos appeared in the room. */
@@ -413,6 +422,11 @@ function room(value: LuaValue | undefined): SavedRoom | undefined {
     wellShop: value.WellShopChanceSuccess === true,
     surfaceShop: value.SurfaceShopChanceSuccess === true,
     sellShop: value.SellShopChanceSuccess === true,
+    spawnedStore: {
+      well: isTable(value.WellShop),
+      shrine: isTable(value.SurfaceShop),
+      items: isTable(value.Store) && isTable(value.Store.SpawnedStoreItems),
+    },
     olympusEagleSpawn: value.OlympusEagleSpawn === true,
     ...optional(
       'spentRerolls',
