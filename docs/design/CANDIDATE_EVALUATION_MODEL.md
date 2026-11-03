@@ -154,10 +154,8 @@ capability exposes its ordered inactive Arcana domain, required count, grant
 rarity, and current active card rarities. A selected Circe option exposes the
 domain its declaration needs: inactive cards for Red, active non-Heroic cards
 plus the clamped cardinality for Lapis, or effectively active removable Vows
-for Black Night. Its current active card rarities remain branch-correlated,
-separate from its resulting rarity. Candidate grouping may merge branch
-products only when those exact domains agree; otherwise it withholds a false
-unified domain. The exact resolution/completion owner retains its repair
+for Black Night. Its current active card rarities stay separate from its
+resulting rarity. The exact resolution/completion owner retains its repair
 domain at the first blocking point, while later state remains unassessed.
 
 The decision point immediately before a selected invalid value is covered. Its
@@ -402,7 +400,8 @@ and invokes the existing reward authorities:
 - jointly unordered producers reevaluate the complete sibling group and every
   supported generation order required by policy;
 - counted rewards preserve every reachable bag transition;
-- support is existential over reachable latent branches, never probabilistic;
+- support is judged at the one reached state, never probabilistic; a Hub
+  board's source-offer order search stays inside board settlement;
 - Boon sources and complete Devotion pairs use the ordinary source rules;
 - shop inventory candidates use the joint inventory authority;
 - Q shared-store shop slots retain no-duplicate behavior;
@@ -520,14 +519,16 @@ same reached reward walk:
 
 - `BiomeRewardSimulation.selectedTraitOffers` publishes data-only
   `SelectedTraitOfferAssessment` values at exact `TraitOfferAddress` owners,
-  with branch-correlated option, generation and selected-effect assessments.
+  each with the option, generation and selected-effect assessment at its one
+  reached state.
 - `BiomeCandidateArtifacts.traitOffers.at(address)` returns opaque operations
   over the captured current and generation-time `SimulationState` and source
   context: complete assessment, starting outcome, structural append/removal
   and selected child queries.
 
-The capability captures each branch before selected settlement or equivalent
-post-state merging. Selected assessment and alternatives read the same
+The capability captures the offer's one pre-offer contact before selected
+settlement, and a blocked target or All Together child's pre-effect contact
+under that child's address. Selected assessment and alternatives read the same
 state-based predicates; source context carries offer policy rather than copies
 of equipment, Arcana/Fear or keepsake facts. Neither the snapshots nor
 generation domains escape to React. A query supplies a complete proposed

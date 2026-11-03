@@ -108,20 +108,39 @@ happen", never as alternative states carried forward or offered as a choice.
    source-offer order search inside board settlement (one state out): the
    game assigns board rewards over `CollapseTableOrdered` doors that tie on
    one obstacle name, an order no authored or catalog fact carries.
-   Remaining: settlement internals still pass zero-or-one lists; the
-   trait-offer capability keys an offer's own context and its
-   `traitAcquisitionTarget` child's pre-effect context under one address, so
-   `branchContexts`, `branchAgreement`, `branchSupport` and the run import's
-   check need a per-contact capability first; the selected Pom and trait
-   offer assessments' `branches`, Shop inventory cohort agreement, the
-   phantom-exit per-branch pick, Nemesis and Shrine per-branch assessments,
-   gold `divergent` readings and exclusions' `allBranches`.
+   Then (2026-11-02): each trait offer keeps one contact, its own pre-offer
+   context plus a blocked target or All Together child's context keyed by
+   the child's address, and every candidate product answers at that state;
+   `branchContexts` aggregation, `branchAgreement`, `branchSupport`,
+   `activeArcanaByBranch`, the `branchDivergence` reason and the run
+   import's agreement check are gone (a probe over every suite and the
+   equivalence corpus found no offer with two distinct contexts). Selected
+   trait-offer and Pom assessments publish one `assessment` (a second
+   differing one is a contract error) and execution assembly reads it
+   without `agreement()`. Shop inventory, the phantom exit's settled type,
+   Gorgon rarity, the reroll pool, gold spawn and door readings and Nemesis
+   random-event support read the one state; the Shop cohort agreement, the
+   scarcest-branch phantom pick, the Gorgon divergence throw and the gold
+   `divergent` reading are gone. Equivalence 157/157 after every commit.
+   Remaining: Steady Growth and Transcendent Embryo thresholds
+   (`requiredIntervals`, `progressBefore`, candidate `branchSupport`, the
+   divergent-landing fault), fountain rarity frontiers and its per-target
+   `branchSupport`, keepsake equip-result frontiers, Hermes Shrine, Stygian
+   Well and Purging Pool assessment lists, derived-entry `branchCohortSize`,
+   offer exclusions' `allBranches`, gold purchase price contexts, the All
+   Together settlement's per-history domains, and the settlement internals'
+   zero-or-one lists.
 5. **Trait offer state inspector.** With one state per draw, the offer-state
    popover's "Possible state N" blocks collapse to one; simplify it.
+   _Status: done._ The presentation carries one rarity state and the
+   popover shows it without per-state headings.
 6. **Docs.** `SIMULATION_AND_VALIDATION.md` gains the rule: anything the user
    sees resolves against one state, branching is lookahead only. Revise the
    "existential over reachable latent branches" wording in
    `CANDIDATE_EVALUATION_MODEL.md` and `CONTEXTUAL_EDITOR_UX.md` to match.
+   _Status: in progress._ The trait-offer candidate boundary, the
+   existential-support bullet, the Circe domain note, the screen-expectation
+   publication and the Offer State popover sentence now describe one state.
 
 ## Verification
 

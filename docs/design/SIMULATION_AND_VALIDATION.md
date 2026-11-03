@@ -521,12 +521,12 @@ Acquisition settlement records on each screen's evaluation the one-use effects
 it spent when the screen closed (Hymn, Yarn, an Ordinary curse use) and orders
 the screen only after the latest earlier screen in its room from the same
 giver. The screen's expectation joins those spends with the uses, Concave Stone
-and rarify state held when the screen opens; execution publication copies the
-fields every reached branch agrees on and never derives a spend again.
+and rarify state held when the screen opens; execution publication copies
+those fields and never derives a spend again.
 
-Candidate artifacts capture branch-local context before selected settlement
-and before equivalent post-states merge. A target cannot borrow its eligibility
-from one branch and its prerequisite from another. An invalid selected child
+Candidate artifacts capture the one reached pre-offer context before selected
+settlement, and a blocked child's pre-effect context under its own address. An
+invalid selected child
 must not destroy its repair domain, and a child address must not be used as a
 substitute for the outer prepared capability.
 
