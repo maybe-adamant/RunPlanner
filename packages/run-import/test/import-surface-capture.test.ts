@@ -114,6 +114,31 @@ describe('run import of the Surface capture', () => {
     });
   });
 
+  it('generates every side room its main room offered, entered or not', () => {
+    // N_Combat06 as if its save had also offered N_Sub10's door.
+    const offered = projectFromRunRecord(catalog, {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index === 9
+          ? {
+              ...room,
+              doors: [
+                ...room.doors,
+                { door: 558378, room: 'N_Sub10', reward: { type: 'RoomMoneyDrop' } },
+              ],
+            }
+          : room,
+      ),
+    });
+    const sideRooms = offered.project.route.biomes
+      .flatMap((biome) => biome.topology?.decisions ?? [])
+      .find((decision) => decision.kind === 'localVisit' && decision.sourceOccurrenceId === 'N-r9');
+    expect(sideRooms?.kind === 'localVisit' && sideRooms.targetsBySlot).toMatchObject({
+      sideDoor1: { generation: 'generated' },
+      sideDoor2: { generation: 'notGenerated' },
+    });
+  });
+
   it('takes the Trial god whose screen opened first as the chosen one', () => {
     // The door lists Poseidon then Apollo; Apollo's screen opened before the fight.
     expect(reward(imported.project, 'O-r26').offer).toEqual({

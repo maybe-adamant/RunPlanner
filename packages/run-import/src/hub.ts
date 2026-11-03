@@ -313,16 +313,16 @@ export function importSideRoomVisits(context: RunImportContext): void {
   for (const biome of project.route.biomes) {
     for (const decision of biome.topology?.decisions ?? []) {
       if (decision.kind !== 'localVisit') continue;
-      // A side room the record entered was generated, though the route never asks.
+      // Each visited main room's saves show which side doors it offered, though the route never asks.
       for (const [slotKey, target] of Object.entries(decision.targetsBySlot)) {
         const used = `sideGeneration:${decision.sourceOccurrenceId}:${slotKey}`;
-        if (
-          target.generation === 'generated' ||
-          context.used.has(used) ||
-          context.occurrences.visitsOf(target.occurrenceId).length === 0 ||
-          recordedGeneration(context, biome.biomeKey, decision.sourceOccurrenceId, slotKey) !==
-            'generated'
-        )
+        const generation = recordedGeneration(
+          context,
+          biome.biomeKey,
+          decision.sourceOccurrenceId,
+          slotKey,
+        );
+        if (generation === undefined || target.generation === generation || context.used.has(used))
           continue;
         context.used.add(used);
         const slot = createLocalVisitSlotAddress(
@@ -331,12 +331,17 @@ export function importSideRoomVisits(context: RunImportContext): void {
           decision.groupKey,
           slotKey,
         );
-        if (!context.apply({ kind: 'SetLocalVisitGeneration', slot, generation: 'generated' }))
+        if (!context.apply({ kind: 'SetLocalVisitGeneration', slot, generation }))
           context.note({
             area: 'hub',
             reason: 'refused',
             address: slot,
-            record: { roomIndex: context.occurrences.visitsOf(target.occurrenceId)[0]!, visit: 0 },
+            record: {
+              roomIndex:
+                context.occurrences.visitsOf(target.occurrenceId)[0] ??
+                context.occurrences.visitsOf(decision.sourceOccurrenceId)[0]!,
+              visit: 0,
+            },
           });
       }
       const current = context

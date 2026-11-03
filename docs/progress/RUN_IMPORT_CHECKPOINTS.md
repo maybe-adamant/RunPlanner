@@ -139,6 +139,11 @@ reproduces is reported with its nearest miss and the plan stops there.
      only the declaration fills the gap. Raw 930 mismatch 4 → 1 (first r28 →
      r29), 933b 19/3/9 → 27/0/0; fixtures unchanged (fx underworld's Bridge
      has twin doors to one room, the taken one not told apart).
+   - N side rooms: every visited main room's side slots take the generation
+     its saves show, asked or not. Raw 334 7/15/26 → 16/13/15, first mismatch
+     r7 → r20; r11's refused `sideDoor2` generation was downstream of r7 (the
+     side-room store still held what r7's ungenerated rooms should have
+     drawn) and no longer refuses. Fixtures unchanged.
 
 3. **One bounded search.** Replace the four solvers with one per-room search
    over the remaining unknowns, pinned by markers (trait timestamps, upgrade
