@@ -14,6 +14,7 @@ import {
   type SemanticFinding,
 } from '@run-planner/engine/simulation';
 import { isQuestionFinding } from './areas';
+import { carrierChildAnswers } from './carrier-children';
 import { countedCageOutcome } from './fields';
 import type { RunImportContext } from './import';
 import { nemesisEventOf } from './nemesis';
@@ -24,6 +25,9 @@ import { searchRoom } from './room-search';
  * A question the record does not answer: the engine-legal answers its domain
  * holds are each authored on a probe and judged at the room's next entry save.
  * The first the save accepts is authored; without one the question stays open.
+ * Domains: a Shop slot's or refill's options, a Fields cage roll, a batch
+ * store, a fountain, Steady Growth or random level-up target, a Fields point,
+ * Nemesis's family and interaction, and a carrier child's values.
  */
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
@@ -40,10 +44,22 @@ export function answerByAcceptance(
 ): AcceptedAnswer | undefined {
   const roomIndex = context.occurrences.locationOf(reason.origin)?.roomIndex;
   if (roomIndex === undefined) return undefined;
+  return authorAcceptedAnswer(context, roomIndex, candidateAnswers(context, reason));
+}
+
+/**
+ * Authors the first candidate the room's next entry save accepts, each
+ * candidate's later questions in any room answered until that save is
+ * reached; undefined, authoring nothing, when none is accepted.
+ */
+export function authorAcceptedAnswer(
+  context: RunImportContext,
+  roomIndex: number,
+  candidates: Iterable<readonly ProjectCommand[]>,
+): AcceptedAnswer | undefined {
   const search = searchRoom(context, {
     roomIndex,
-    candidates: candidateAnswers(context, reason),
-    // An answer's later questions in any room are answered until the next entry save is reached.
+    candidates,
     settles: 'all',
     sweep: true,
     author: (commands: readonly ProjectCommand[]) =>
@@ -135,7 +151,7 @@ function* candidateAnswers(
   } else if (reason.code.startsWith('nemesis') || origin.kind === 'nemesisRandomEvent') {
     const event = nemesisEventOf(context, origin);
     if (event !== undefined) yield* nemesisAnswers(context, event);
-  }
+  } else yield* carrierChildAnswers(context, reason);
 }
 
 /** A Shop slot's or Travel Deal refill's options the engine admits there. */

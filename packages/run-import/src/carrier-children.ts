@@ -16,15 +16,13 @@ import {
   authoredTraitOfferAt,
   traitMaxHealthRollWidth,
 } from '@run-planner/engine/authored-project';
-import {
-  completeTraitCarrierChild,
-  FIRST_ELIGIBLE_CARRIER_CHILD_CHOICE,
-} from '@run-planner/engine/authoring';
+import { completeTraitCarrierChild, type CarrierChildChoice } from '@run-planner/engine/authoring';
 import { concaveStoneProcGiver, type DirectTraitSetKey } from '@run-planner/engine/catalog-schema';
 import type {
   TraitCarrierChildDomainEvaluation,
   SemanticFinding,
 } from '@run-planner/engine/simulation';
+import type { ProjectCommand } from '@run-planner/engine/authored-project';
 import type { RunRecordRoom, RunRecordTraitAcquisition } from './run-record/model';
 import { entrySnapshot } from './conformance';
 import type { RunImportContext } from './import';
@@ -61,15 +59,23 @@ interface ChildQuestion<K extends AuthoredTraitCarrierChild['kind']> {
 type ChildAnswer =
   { readonly value: AuthoredTraitOfferTraits; readonly assumed?: boolean } | 'refused' | undefined;
 
-/** A child the record did not answer exactly. */
+/** A child whose record answer rests on a tie the record cannot break. */
 export interface RecordedCarrierChildReport {
   readonly address: SemanticAddress;
-  readonly reason: Extract<RunImportReason, 'notInRecord' | 'refused' | 'assumption'>;
+  readonly reason: Extract<RunImportReason, 'assumption'>;
+}
+
+/** A child the record does not answer, or whose recorded value the engine refuses. */
+export interface OpenCarrierChild {
+  readonly address: SemanticAddress;
+  readonly refused: boolean;
 }
 
 export interface RecordedCarrierChildren {
   readonly value: AuthoredTraitOffer;
   readonly reports: readonly RecordedCarrierChildReport[];
+  /** Children left unauthored: each stays a question the walk answers by acceptance. */
+  readonly open: readonly OpenCarrierChild[];
 }
 
 /** Every child an offer can raise is at most a few nested picks deep. */
@@ -92,8 +98,7 @@ const acquiredAt = (room: RunRecordRoom, traitKey: string | undefined) =>
  * Authors every selected-outcome child of a screen's offer from the record,
  * each from what the room acquired at its own carrier's acquisition time and
  * only where the engine's domain admits it. A child the record does not answer,
- * or whose recorded value the engine refuses, takes Draft's first eligible
- * value and is reported.
+ * or whose recorded value the engine refuses, stays open.
  */
 export function completeRecordedCarrierChildren(
   context: RunImportContext,
@@ -102,11 +107,12 @@ export function completeRecordedCarrierChildren(
   roomIndex: number,
   stoneFromRecord = true,
 ): RecordedCarrierChildren {
-  if (value.kind !== 'traits') return { value, reports: [] };
+  if (value.kind !== 'traits') return { value, reports: [], open: [] };
   const room = context.record.rooms[roomIndex]!;
   let current = value;
   const settled = new Set<string>();
   const reports: RecordedCarrierChildReport[] = [];
+  const open: OpenCarrierChild[] = [];
   for (let pick = 0; pick < MAX_CHILD_PICKS; pick += 1) {
     const child = discoverAuthoredTraitCarrierChildren(context.catalog, trait, current).find(
       (candidate) =>
@@ -133,27 +139,35 @@ export function completeRecordedCarrierChildren(
         .evaluate({ kind: 'traitCarrierChildDomain', trait, value: current, child }),
       stoneFromRecord,
     });
-    let next: AuthoredTraitOfferTraits | undefined;
-    if (answer !== undefined && answer !== 'refused') {
-      next = answer.value;
-      if (answer.assumed === true) reports.push({ address: child.address, reason: 'assumption' });
-    } else {
-      next = completeTraitCarrierChild(
-        context.catalog,
-        context.candidates(),
-        trait,
-        current,
-        child,
-        FIRST_ELIGIBLE_CARRIER_CHILD_CHOICE,
-      );
-      if (answer === 'refused') reports.push({ address: child.address, reason: 'refused' });
-      else if (next !== undefined && next !== current)
-        reports.push({ address: child.address, reason: 'notInRecord' });
+    if (answer === undefined || answer === 'refused') {
+      settled.add(childKey(child));
+      open.push({ address: child.address, refused: answer === 'refused' });
+      continue;
     }
-    if (next === undefined || next === current) settled.add(childKey(child));
-    else current = next;
+    if (answer.assumed === true) reports.push({ address: child.address, reason: 'assumption' });
+    if (answer.value === current) settled.add(childKey(child));
+    else current = answer.value;
   }
-  return { value: current, reports };
+  return { value: current, reports, open };
+}
+
+/** The findings an offer's evaluation raises for a child left unauthored. */
+const OPEN_CHILD_CODES: ReadonlySet<string> = new Set([
+  'targetedAcquisitionTargetMissing',
+  'allTogetherResultMissing',
+  'naturalSelectionResultMissing',
+  'concaveStoneResultMissing',
+  'circeResolutionMissing',
+  'echoPomTargetMissing',
+  'echoLastRunBoonMissing',
+]);
+
+/** Whether an offer's evaluation finds nothing beyond the children left open. */
+export function onlyOpenChildQuestions(
+  findings: readonly { readonly code: string }[],
+  open: readonly OpenCarrierChild[],
+): boolean {
+  return findings.every((finding) => open.length > 0 && OPEN_CHILD_CODES.has(finding.code));
 }
 
 function recordedAnswer(question: ChildQuestion<AuthoredTraitCarrierChild['kind']>): ChildAnswer {
@@ -561,25 +575,49 @@ function childTrait(finding: SemanticFinding): TraitOfferAddress | undefined {
   }
 }
 
-/**
- * Answers a carrier child an earlier change left missing or unavailable on an
- * offer already authored: the child is cleared and answered again from the
- * room whose screen the offer's pick came from.
- */
-export function answerCarrierChild(context: RunImportContext, reason: SemanticFinding): boolean {
+/** The offer a child question belongs to, its value and the room its pick came from. */
+function childQuestion(
+  context: RunImportContext,
+  reason: SemanticFinding,
+):
+  | {
+      readonly trait: TraitOfferAddress;
+      readonly offer: AuthoredTraitOfferTraits;
+      readonly roomIndex: number;
+    }
+  | undefined {
   const trait = childTrait(reason);
-  if (trait === undefined) return false;
+  if (trait === undefined) return undefined;
   const offer = authoredTraitOfferAt(context.assembly().project, context.catalog, trait);
   const occurrenceId = occurrenceIdOf(trait.owner);
-  if (offer?.kind !== 'traits' || occurrenceId === undefined) return false;
+  if (offer?.kind !== 'traits' || occurrenceId === undefined) return undefined;
   const picked = offer.options[optionIndex(offer.selectedOptionKey)]?.traitKey;
   const visits = context.occurrences.visitsOf(occurrenceId);
   const roomIndex =
     visits.find((index) => acquiredAt(context.record.rooms[index]!, picked) !== undefined) ??
     visits[0];
-  if (roomIndex === undefined) return false;
+  return roomIndex === undefined ? undefined : { trait, offer, roomIndex };
+}
+
+/**
+ * Answers a carrier child an earlier change left missing or unavailable on an
+ * offer already authored: the child is cleared and answered again from the
+ * room whose screen the offer's pick came from. A child the record leaves
+ * open is not answered here; a refused recorded value is marked refused.
+ */
+export function answerCarrierChild(context: RunImportContext, reason: SemanticFinding): boolean {
+  const question = childQuestion(context, reason);
+  if (question === undefined) return false;
+  const { trait, offer, roomIndex } = question;
   const cleared = withoutTraitCarrierChild(context.catalog, trait, offer, reason.origin);
   const completed = completeRecordedCarrierChildren(context, trait, cleared, roomIndex);
+  const own = completed.open.find(
+    (child) => semanticAddressKey(child.address) === semanticAddressKey(reason.origin),
+  );
+  if (own !== undefined) {
+    if (own.refused) context.refuse();
+    return false;
+  }
   if (completed.value === offer) return false;
   const command = { kind: 'ReplaceTraitOffer', trait, value: completed.value } as const;
   if (!context.applyValid(command)) return false;
@@ -593,6 +631,87 @@ export function answerCarrierChild(context: RunImportContext, reason: SemanticFi
       record,
     });
   return true;
+}
+
+/**
+ * A child question's engine-legal answers: each value its domain allows,
+ * nested picks included, as the offer with the child authored, in domain order.
+ */
+export function* carrierChildAnswers(
+  context: RunImportContext,
+  reason: SemanticFinding,
+): Generator<readonly ProjectCommand[]> {
+  const question = childQuestion(context, reason);
+  if (question === undefined) return;
+  const { trait, offer, roomIndex } = question;
+  const key = semanticAddressKey(reason.origin);
+  // Boon Boon Boon's replayed boon is acquired with its pick: rows the room acquired then.
+  const room = context.record.rooms[roomIndex]!;
+  const picked = offer.options[optionIndex(offer.selectedOptionKey)]?.traitKey;
+  const at = acquiredAt(room, picked);
+  const rarityWithPick = new Map(
+    room.traits.acquired
+      .filter((entry) => at !== undefined && entry.worldTime === at && entry.name !== picked)
+      .map((entry) => [entry.name, entry.rarity] as const),
+  );
+  const withPick = new Set(rarityWithPick.keys());
+  const replayedAsRecorded = (value: AuthoredTraitOfferTraits, of: AuthoredTraitCarrierChild) => {
+    if (of.kind !== 'echoLastRunBoon') return true;
+    const row = value.options[optionIndex(of.optionKey)]?.echoLastRunBoon?.options[0];
+    const rarity = row === undefined ? undefined : rarityWithPick.get(row.traitKey);
+    return rarity === undefined || row?.rarity === undefined || row.rarity === rarity;
+  };
+  const cleared = withoutTraitCarrierChild(context.catalog, trait, offer, reason.origin);
+  if (cleared.kind !== 'traits') return;
+  const child = discoverAuthoredTraitCarrierChildren(context.catalog, trait, cleared).find(
+    (candidate) =>
+      !candidate.authoredComplete &&
+      candidate.kind !== 'hexTree' &&
+      semanticAddressKey(candidate.address) === key,
+  );
+  if (child === undefined) return;
+  // Every domain choice the completion makes is one digit of an odometer over its options.
+  const path: number[] = [];
+  const seen = new Set<string>();
+  for (;;) {
+    const widths: number[] = [];
+    const choice: CarrierChildChoice = {
+      order: <T>(values: readonly T[]): readonly T[] => {
+        const at = path[widths.length] ?? 0;
+        widths.push(values.length);
+        return at < values.length
+          ? [values[at]!, ...values.filter((_value, index) => index !== at)]
+          : values;
+      },
+      allowsTrait: (traitKey) =>
+        child.kind !== 'echoLastRunBoon' || withPick.size === 0 || withPick.has(traitKey),
+      prefersTrait: () => false,
+    };
+    const value = completeTraitCarrierChild(
+      context.catalog,
+      context.candidates(),
+      trait,
+      cleared,
+      child,
+      choice,
+    );
+    const valueKey = JSON.stringify(value);
+    if (
+      value !== undefined &&
+      value !== cleared &&
+      !seen.has(valueKey) &&
+      replayedAsRecorded(value, child)
+    ) {
+      seen.add(valueKey);
+      yield [{ kind: 'ReplaceTraitOffer', trait, value }];
+    }
+    let digit = widths.length - 1;
+    while (digit >= 0 && (path[digit] ?? 0) + 1 >= widths[digit]!) digit -= 1;
+    if (digit < 0) return;
+    for (let index = 0; index < digit; index += 1) path[index] ??= 0;
+    path[digit] = (path[digit] ?? 0) + 1;
+    path.length = digit + 1;
+  }
 }
 
 /** A picked max-health roll waiting for its room's next entry save. */

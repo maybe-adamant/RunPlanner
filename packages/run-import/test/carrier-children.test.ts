@@ -133,22 +133,20 @@ describe("run import of Latest Model's Hammers", () => {
     expect(completed.reports).toEqual([]);
   });
 
-  it("takes the engine's first Hammers, reported, when no Hammer rose at the pick", () => {
+  it('leaves the Hammers open when no Hammer rose at the pick', () => {
     const context = contextFor({
       acquired: [{ name: 'UpgradeHammerBoon', worldTime: 10 }],
       removed: [],
       upgraded: [],
     });
     const completed = completeRecordedCarrierChildren(context, trait, offer, 0);
-    expect(completed.value.kind === 'traits' && completed.value.options[0]).toEqual({
-      traitKey: 'UpgradeHammerBoon',
-      icarusHammerTargets: ['StaffDashAttackTrait', 'StaffOneWayAttackTrait'],
-    });
-    expect(completed.reports).toEqual([
-      expect.objectContaining({
-        reason: 'notInRecord',
+    expect(completed.value).toBe(offer);
+    expect(completed.reports).toEqual([]);
+    expect(completed.open).toEqual([
+      {
         address: expect.objectContaining({ kind: 'traitAcquisitionTarget' }),
-      }),
+        refused: false,
+      },
     ]);
   });
 });

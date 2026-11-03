@@ -39,8 +39,8 @@ describe('run import of selected-outcome children', () => {
       simulateProjectAssembly(catalog, project),
       entries,
     );
-    walk.run();
-    return { project: walk.assembly.project, entries };
+    const stop = walk.run();
+    return { project: walk.assembly.project, entries, stop };
   }
 
   /** A record with one room's trait rows edited. */
@@ -74,7 +74,7 @@ describe('run import of selected-outcome children', () => {
     ).toEqual([]);
   });
 
-  it("takes the first eligible Bridal Glow target when an older record shows no upgrade at the pick's time", () => {
+  it("takes the Bridal Glow target the next entry save accepts when an older record shows no upgrade at the pick's time", () => {
     const record = withRoomTraits(fixture('underworld'), 6, (traits) => ({
       ...traits,
       acquired: traits.acquired.map((trait) => {
@@ -95,19 +95,17 @@ describe('run import of selected-outcome children', () => {
     ]);
   });
 
-  it('takes the first eligible Echo Pom target when no level doubled at the pick', () => {
+  it('leaves the Echo Pom target open when no level doubled at the pick and no entry save judges it', () => {
     const record = withRoomTraits(fixture('underworld-live'), 28, (traits) => ({
       ...traits,
       upgraded: [],
     }));
     const imported = livePastUnseenRoll(record);
-    expect(
-      imported.entries
-        .filter((entry) => entry.area === 'traitOffer' && entry.record?.roomIndex === 28)
-        .map(describeEntry),
-    ).toEqual([
-      'notInRecord traitOffer r28 echoPomTarget@H-r28 -> ReplaceTraitOffer(H-r28 DiminishingDodgeBoon|EchoDoubleLevelBoon|DiminishingHealthAndManaBoon#option2)',
-    ]);
+    expect(imported.stop).toMatchObject({
+      code: 'echoPomTargetMissing',
+      address: { kind: 'echoPomTarget' },
+      record: { roomIndex: 28 },
+    });
   });
 
   it("reports Concave Stone's extra pick as assumed when two unpicked rows were acquired after the pick", () => {

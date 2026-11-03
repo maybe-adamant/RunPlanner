@@ -234,7 +234,7 @@ describe('run import of selected-outcome children', () => {
     expect(mismatchLines(imported.report)).toEqual([]);
   });
 
-  it("refuses Natural Selection's recorded gains when no order reaches them, taking the first eligible order", () => {
+  it('stops at Natural Selection when no order reaches its recorded gains and the next entry save accepts none', () => {
     const record = naturalSelectionRun((worldTime) => [
       {
         name: 'DemeterWeaponBoon',
@@ -268,18 +268,16 @@ describe('run import of selected-outcome children', () => {
       },
     ]);
     const imported = projectFromRunRecord(catalog, record);
-    // The refused gains leave r27 unaccepted, so its untaken door's cages stay open.
+    // The refused gains leave the result open, and no order the search tries is accepted.
     expect(imported).toMatchObject({
       kind: 'stopped',
-      stop: { record: { roomIndex: 27 }, address: { occurrenceId: 'H-r27-d621470' } },
+      stop: { code: 'naturalSelectionResultMissing', record: { roomIndex: 27 } },
     });
-    expect(roomLines(imported.report, 27)).toEqual([
-      expect.stringMatching(/^refused traitOffer r27 naturalSelectionResult@H-r27 /),
-    ]);
     // Answered again, the refused search visits each first-round order of the five cores once.
-    const child = imported.report.entries.find(
-      (entry) => entry.address?.kind === 'naturalSelectionResult',
-    )!.address as Extract<SemanticAddress, { kind: 'naturalSelectionResult' }>;
+    const child = (imported.kind === 'stopped' ? imported.stop.address : undefined) as Extract<
+      SemanticAddress,
+      { kind: 'naturalSelectionResult' }
+    >;
     const state = occurrence(imported.project, 'H-r27').state;
     const offer =
       'reward' in state ? state.reward?.traitOffersByAcquisitionRole['source'] : undefined;
@@ -311,8 +309,8 @@ describe('run import of selected-outcome children', () => {
         return { ...session, evaluate };
       },
     };
-    expect(answerCarrierChild(counting, reason!)).toBe(true);
-    // 686 nodes at most (120 orders, each forced to eight targets), with the fallback's few.
+    expect(answerCarrierChild(counting, reason!)).toBe(false);
+    // 686 nodes at most (120 orders, each forced to eight targets).
     expect(evaluations).toBeLessThan(700);
   });
 
@@ -378,7 +376,7 @@ describe('run import of selected-outcome children', () => {
     expect(mismatchesFrom(imported.report, 25)).toEqual([]);
   });
 
-  it("takes Black Night's first eligible vows, reported, since its disabled vows are not saved", () => {
+  it("takes Black Night's vows the next entry save accepts, reported, since its disabled vows are not saved", () => {
     const imported = projectFromRunRecord(
       catalog,
       circeRun('RemoveShrineTrait', (room) => ({
@@ -403,8 +401,7 @@ describe('run import of selected-outcome children', () => {
     expect(mismatchesFrom(imported.report, 25)).toEqual([]);
   });
 
-  it("takes Boon Boon Boon's first eligible boon, reported, since the previous run's boons are not saved", () => {
-    // The record acquires the boon the engine offers first, so the run states agree.
+  it("takes Boon Boon Boon's boon acquired with its pick, reported, since the previous run's boons are not saved", () => {
     let record = renamed(fixture('underworld-1010'), 28, {
       EchoDoubleLevelBoon: 'EchoLastRunBoon',
     });

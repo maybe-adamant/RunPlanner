@@ -28,6 +28,7 @@ import { fountainRarityRise, POM_GIVERS } from './vocabulary';
 import {
   awaitMaxHealthRolls,
   completeRecordedCarrierChildren,
+  onlyOpenChildQuestions,
   type RecordedCarrierChildReport,
 } from './carrier-children';
 
@@ -586,7 +587,11 @@ function applyScreenOffer(
   // An unpicked row's rarity lowered from the logged one is an assumption.
   const assumed = ambiguous || corrected.lowered.length > 0;
   const command = { kind: 'ReplaceTraitOffer', trait, value } as const;
-  if (evaluation.result.supported && evaluation.result.findings.length === 0) {
+  // A child left open is the evaluation's only finding, and its only reason for no support.
+  if (
+    (evaluation.result.supported || children.open.length > 0) &&
+    onlyOpenChildQuestions(evaluation.result.findings, children.open)
+  ) {
     if (!apply(command)) return failed;
     if (assumed)
       context.note({
@@ -630,8 +635,8 @@ function applyScreenOffer(
   const reducedCommand = { kind: 'ReplaceTraitOffer', trait, value: reduced } as const;
   if (
     retry.kind !== 'traitOffer' ||
-    !retry.result.supported ||
-    retry.result.findings.length > 0 ||
+    !(retry.result.supported || reducedChildren.open.length > 0) ||
+    !onlyOpenChildQuestions(retry.result.findings, reducedChildren.open) ||
     !apply(reducedCommand)
   )
     return { stone: failed.stone || stoneProc(reduced) };
