@@ -159,13 +159,32 @@ happen", never as alternative states carried forward or offered as a choice.
    A gold contact publishes one `context` from the reached state, so the
    seams' per-branch detection, divergent-prior and "settled in only some
    reached branches" faults are gone. Equivalence 157/157 after every commit.
-   Remaining: the deeper settlement layer still passes zero-or-one lists
-   across `branchList` / `singleBranch` (`singleBranch` throws on a second
-   state): lifecycle transitions (Eris, keepsake rack, room entry, exit,
-   departure, preparation, encounter start/settlement/end effects, fountain,
-   rerolls, Shrine purchase, offer points), site, role, Shop and offer
-   settlement, `branchesBeforeEntry` / `branchesBeforeRole` frontiers and
-   `selectedTraitOfferProducts`.
+   Then (2026-11-03, deeper layer): every lifecycle transition, offer
+   processing (`processRewardOffer`, the generation cohort, exclusions),
+   generation, site, role, Shop, pedestal and reached-offer settlement takes
+   and returns one optional state; frontiers carry one `beforeEntry` /
+   `beforeRole` state with one `realizedAcquisition` and Path context, and
+   `selectedTraitOfferProducts` reads the one state. `branchList` /
+   `singleBranch` are gone. Where settlement could still yield more than one
+   state it throws: a Shop inventory with more than one generation witness,
+   and the Hub board's source-order search returns one cohort state. The Eris
+   and Figurine/Arcana divergence throws, the pickup-maturity leak guard and
+   the pending-Shop divergence fault are gone; an Artificer replacement keeps
+   the one state that spent its use. A seam reaching an acquisition point
+   requires the reached state (`reachedBranch`), so the Shrine delivery's
+   `hermesDeliveryContextDisagreement` reason is gone; the clocked pickup's
+   remaining unassessed case is `clockedPickupMaturityUnpublished` (the state
+   matured the trait here, but no pickup frontier was published at that
+   maturity). A gold gain publishes a reading or an unpriced reason by type,
+   so the ledger's "no gold reading" fault is gone. Identifiers asserting
+   agreement or plurality were renamed (`directTraitSetBranch`, `OfferGate`,
+   `overviewEntry`); `RewardBranchState` and the `branch` field stay as the
+   reached state's name. Equivalence 157/157 after every commit; Draft and
+   run-import lanes deferred (no call sites changed).
+   Remaining: the Anvil and conversion candidate artifacts still aggregate
+   over several recorded frontiers of one role address; a phantom exit's
+   `offers` list and the execution overview's divergence check stay
+   list-shaped; test support keeps `initializeTestRewardBranches`.
 5. **Trait offer state inspector.** With one state per draw, the offer-state
    popover's "Possible state N" blocks collapse to one; simplify it.
    _Status: done._ The presentation carries one rarity state and the
