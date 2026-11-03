@@ -76,12 +76,17 @@ describe('run import of synthetic Erebus variants', () => {
     ]);
   });
 
-  it('reports an unexplained Pool sale and keeps the first eligible trait', () => {
+  // A Pool room grants no trait, so a sale its lost traits do not explain is a real break.
+  it('stops at a Pool sale no lost trait explains, its slot left open', () => {
     const imported = projectFromRunRecord(catalog, erebusWithUnexplainedSale());
-    expect(imported.kind).toBe('complete');
-    expect(entryLines(imported.report).filter((line) => line.includes(' pool '))).toEqual([
-      'refused pool r13 roomFeature@F-r11:postboss -> ReplacePurgingPoolSlot(F-r11:postboss)',
-    ]);
+    expect(imported.kind === 'stopped' && imported.stop).toMatchObject({
+      area: 'pool',
+      code: 'unexplainedSale',
+      record: { roomIndex: 13 },
+    });
+    expect(occurrence(imported.project, 'F-r11:postboss').purgingPool?.traitKeyBySlot['left']).toBe(
+      null,
+    );
     // The Mystery Boon's hidden god is the god whose screen its Shop opened.
     const shop = occurrence(imported.project, 'F-r6');
     expect(shop.acquisitionSites?.['roomExit']?.pickupEntries?.['Boon']?.offer).toEqual({

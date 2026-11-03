@@ -1474,31 +1474,15 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
       const sold = room.traits.removed.filter((name) => eligible.has(name) && !claimed.has(name));
       traitKey = sold[0];
       ambiguous = sold.length > 1;
+      // A Pool room grants no trait, so every sale shows among the room's lost
+      // traits; a sale they do not explain leaves its slot open and stops the plan.
       if (traitKey === undefined) {
-        // A sale the room's lost traits do not explain keeps the first eligible unclaimed trait.
-        const fallback = capability.candidateTraitKeysBySlot[slotKey].find(
-          (key) => !claimed.has(key),
-        );
-        const command: ProjectCommand | undefined =
-          fallback === undefined
-            ? undefined
-            : { kind: 'ReplacePurgingPoolSlot', occurrence: address, slotKey, traitKey: fallback };
-        const applied = command !== undefined && context.applyValid(command);
-        if (applied) claimed.add(fallback!);
-        context.note({
+        context.halt({
           area: 'pool',
-          reason: 'refused',
+          code: 'unexplainedSale',
           address: feature,
-          ...(applied ? { applied: command } : {}),
           record: record(roomIndex),
         });
-        if (applied && !sell(slotKey))
-          context.note({
-            area: 'pool',
-            reason: 'refused',
-            address: feature,
-            record: record(roomIndex),
-          });
         continue;
       }
       claimed.add(traitKey);

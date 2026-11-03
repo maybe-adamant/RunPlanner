@@ -140,6 +140,8 @@ export interface RunImportContext {
   readonly acceptance: (roomIndex: number) => RunImportRoomAcceptance;
   /** Marks that the record answered the current question but the engine refused the value. */
   readonly refuse: () => void;
+  /** Ends the walk at a record fact no answer can explain; the plan stops before it. */
+  readonly halt: (stop: RunImportStop) => void;
   /**
    * Registers how to withdraw optional authorship whose finding only a later
    * stop reveals; the withdrawal is reported as refused under `entry`.
@@ -253,6 +255,7 @@ function recordItinerary(
 export class RunImportWalk {
   private readonly authoring: AuthoringSession;
   private refusedAnswer = false;
+  private halted: RunImportStop | undefined;
   private readonly retractions = new Map<
     string,
     { readonly undo: ProjectCommand; readonly entry: RunImportReportEntry }
@@ -293,6 +296,9 @@ export class RunImportWalk {
       acceptance: (roomIndex) => this.judge(roomIndex),
       refuse: () => {
         this.refusedAnswer = true;
+      },
+      halt: (stop) => {
+        this.halted ??= stop;
       },
       retractable: (owners, undo, entry) => {
         for (const owner of owners)
@@ -439,6 +445,7 @@ export class RunImportWalk {
     const entries = this.entries.length;
     const retractions = new Map(this.retractions);
     const refusedAnswer = this.refusedAnswer;
+    const halted = this.halted;
     const used = new Set(this.context.used);
     const maxHealthRolls = new Map(this.context.maxHealthRolls);
     const dirty = this.dirty;
@@ -451,6 +458,7 @@ export class RunImportWalk {
       this.retractions.clear();
       for (const [key, retraction] of retractions) this.retractions.set(key, retraction);
       this.refusedAnswer = refusedAnswer;
+      this.halted = halted;
       this.context.used.clear();
       for (const key of used) this.context.used.add(key);
       this.context.maxHealthRolls.clear();
@@ -634,6 +642,7 @@ export class RunImportWalk {
     for (;;) {
       this.sweep();
       this.acceptReachedRooms();
+      if (this.halted !== undefined) return this.halted;
       const issue = this.assembly.evaluation.issue;
       // A ship window still open as the walk ends never closes; its waiting pickups are authored.
       if (issue === undefined && releaseOpenWheelWindows(this.context)) continue;

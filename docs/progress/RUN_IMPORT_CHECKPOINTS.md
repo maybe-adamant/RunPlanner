@@ -468,6 +468,12 @@ reproduces is reported with its nearest miss and the plan stops there.
    (inert, noted only as the unsaved durations). The rotating
    unbanned-curse fallback is gone.
 
+   **Purging Pool sales** (owner rule). The Pool stands only in F/G/H
+   PostBoss rooms, where no trait can be gained, so every sale shows among
+   the room's lost traits. A sale they do not explain leaves its slot open
+   and stops the plan (`pool`/`unexplainedSale`); the first-eligible-trait
+   fallback is gone. Corpus: never fires.
+
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.
 6. **Recorded room** (authored outcome replayed as canonical events) only for
