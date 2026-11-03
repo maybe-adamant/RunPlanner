@@ -1,13 +1,15 @@
 import {
+  acquisitionSiteStorageKey,
   createAcquisitionRoleAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
+  type AcquisitionEntryAddress,
   type AcquisitionRoleAddress,
   type ProjectCommand,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { RunImportContext } from './import';
-import { authoredOccurrence, deliveredIncomingReward } from './occurrences';
+import { authoredOccurrence, deliveredIncomingReward, occurrenceIdOf } from './occurrences';
 
 export type ConversionKind = 'artificer' | 'timePiece';
 
@@ -130,6 +132,65 @@ export function convertAcquisition(
     record,
   });
   return true;
+}
+
+/** A room reward's placed Artificer replacement: its entry, its reward, and the types the engine admits there. */
+export interface RoomArtificer {
+  readonly entry: AcquisitionEntryAddress;
+  readonly current: ResolvedRewardOffer;
+  readonly rewardTypes: readonly string[];
+}
+
+/** The room reward's Artificer replacement once the conversion placed one; undefined otherwise. */
+export function roomRewardArtificer(
+  context: RunImportContext,
+  roomIndex: number,
+): RoomArtificer | undefined {
+  if (!recordedConversions(context, roomIndex).includes('artificer')) return undefined;
+  const project = context.assembly().project;
+  const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
+  const acquisition = createAcquisitionRoleAddress(
+    createIncomingRewardAddress(
+      createBiomeAddress(project.route.routeKey, biomeKey),
+      context.occurrences.occurrenceOf(roomIndex),
+    ),
+    'self',
+  );
+  const evaluation = context.candidates().evaluate({ kind: 'acquisitionConversion', acquisition });
+  const entry =
+    evaluation.kind === 'acquisitionConversion'
+      ? evaluation.result.artificerReplacementAddress
+      : undefined;
+  const hostId = entry === undefined ? undefined : occurrenceIdOf(entry);
+  const current =
+    entry === undefined || hostId === undefined
+      ? undefined
+      : authoredOccurrence(project, entry.biomeKey, hostId)?.acquisitionSites?.[
+          acquisitionSiteStorageKey(entry.site)
+        ]?.pickupEntries?.[entry.entryKey]?.offer;
+  if (entry === undefined || current === undefined || evaluation.kind !== 'acquisitionConversion')
+    return undefined;
+  return {
+    entry,
+    current,
+    rewardTypes: evaluation.result.artificerReplacementRewardTypes ?? [],
+  };
+}
+
+/** Replaces a placed Artificer replacement with one of `rewardType`; a boon takes a god the room used. */
+export function pinArtificerReplacement(
+  context: RunImportContext,
+  roomIndex: number,
+  artificer: RoomArtificer,
+  rewardType: string,
+): boolean {
+  if (artificer.current.rewardType === rewardType) return true;
+  const values = rewardType === 'Boon' ? replacementBoons(context, roomIndex) : [{ rewardType }];
+  return values.some((value) =>
+    context.transaction(() =>
+      context.apply({ kind: 'ReplaceAcquisitionEntryOffer', entry: artificer.entry, value }),
+    ),
+  );
 }
 
 /**

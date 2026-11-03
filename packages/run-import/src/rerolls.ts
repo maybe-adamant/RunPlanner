@@ -34,7 +34,13 @@ import {
   poolSpends,
   type Replaced,
 } from './store-brackets';
-import { searchRoom } from './room-search';
+import { chooseRoomFit, searchRoom } from './room-search';
+import {
+  ARTIFICER_STORE,
+  pinArtificerReplacement,
+  roomRewardArtificer,
+  type RoomArtificer,
+} from './dispositions';
 import { POM_GIVERS, recordedOffer } from './vocabulary';
 
 /** `SpentRerolls` ids of the store screens the plan holds counts for. */
@@ -571,6 +577,16 @@ export function importRerolls(context: RunImportContext): void {
             )
           : prependReplaced(context, targets, entry),
       );
+    // A room reward's Artificer replacement is one more draw of the window: searched with the presses.
+    const artificer =
+      hub === undefined && room.wheels === undefined && room.fields === undefined
+        ? roomRewardArtificer(context, roomIndex)
+        : undefined;
+    if (artificer !== undefined) {
+      if (!solveRerollsWithArtificer(context, roomIndex, rerolls, artificer, place))
+        unsupported(Math.max(rerolls, recorded));
+      continue;
+    }
     const draws = bracketDraws(context, roomIndex, rerolls, []);
     const solutions = draws?.solutions ?? [];
     // Several multisets the stores explain: the one the next entry save accepts, if any.
@@ -646,6 +662,73 @@ export function importRerolls(context: RunImportContext): void {
         record,
       });
   }
+}
+
+/**
+ * A bracket's presses and its room reward's Artificer replacement together:
+ * the stores lost the presses' replaced rewards and the replacement, the plan's
+ * own replacement added back. Each multiset, with each of its run-store draws
+ * as the replacement, is authored and fits when the stores then change as
+ * saved; the first fit the next entry save accepts is kept, or the first fit.
+ * A replacement other fits leave otherwise is an assumption.
+ */
+function solveRerollsWithArtificer(
+  context: RunImportContext,
+  roomIndex: number,
+  rerolls: number,
+  artificer: RoomArtificer,
+  place: (replaced: readonly Replaced[]) => boolean,
+): boolean {
+  const planned: Replaced = { storeKey: ARTIFICER_STORE, rewardType: artificer.current.rewardType };
+  const solutions = bracketDraws(context, roomIndex, rerolls + 1, [planned])?.solutions ?? [];
+  const search = searchRoom(context, {
+    roomIndex,
+    candidates: (function* () {
+      for (const solution of solutions)
+        for (const [index, draw] of solution.entries())
+          if (
+            draw.storeKey === ARTIFICER_STORE &&
+            artificer.rewardTypes.includes(draw.rewardType) &&
+            solution.findIndex((other) => other.rewardType === draw.rewardType) === index
+          )
+            yield {
+              replacement: draw.rewardType,
+              presses: solution.filter((_, other) => other !== index),
+            };
+    })(),
+    author: (candidate) =>
+      pinArtificerReplacement(context, roomIndex, artificer, candidate.replacement) &&
+      place(candidate.presses)
+        ? candidate
+        : undefined,
+    fits: () => bracketStoresMatch(context, roomIndex),
+  });
+  const choice = chooseRoomFit(search.fits);
+  if (choice === undefined) return false;
+  const chosen = choice.chosen.choice;
+  const placed = context.transaction(
+    () =>
+      pinArtificerReplacement(context, roomIndex, artificer, chosen.replacement) &&
+      place(chosen.presses),
+  );
+  if (!placed) return false;
+  const record = { roomIndex, visit: 0 };
+  const others = search.fits.filter(
+    (fit) =>
+      fit.accepted === choice.chosen.accepted && fit.choice.replacement !== chosen.replacement,
+  );
+  if (others.length > 0 || search.capped)
+    context.note({ area: 'conversion', reason: 'assumption', address: artificer.entry, record });
+  context.note({
+    area: 'reroll',
+    reason: 'assumption',
+    address: createOccurrenceAddress(
+      createBiomeAddress(context.assembly().project.route.routeKey, artificer.entry.biomeKey),
+      context.occurrences.occurrenceOf(roomIndex),
+    ),
+    record,
+  });
+  return true;
 }
 
 /** Well and Pool rerolls of rooms whose plan holds no such screen to carry them. */

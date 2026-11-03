@@ -282,8 +282,16 @@ reproduces is reported with its nearest miss and the plan stops there.
        replacement together, judged at the next entry save. The window's
        known draws now include the source's recorded door rewards (a
        MiniBoss door's boon), without which no bracket balanced.
-     - Bracket rerolls in a room that also converts: not joined yet (open);
-       the reroll solve counts an unplaced replacement as a reroll draw.
+     - Bracket rerolls in a room whose room reward converts: the placed
+       replacement is one more draw of the bracket, added back to the loss,
+       and each multiset is tried with each of its run-store draws as the
+       replacement (re-pinned) and the rest as presses; the first fit the
+       next entry save accepts is kept. Before, the replacement the room's
+       uses named first stood, and the press solve then found no balanced
+       bracket. Ship rooms join through the wheel solve and Fields rooms
+       through the cage solve. No corpus room has both; synthetic witness:
+       the 1010 capture's F_Combat22 with The Enchantress, a door press and
+       a misleading Max Health use (`import-rerolls`). Corpus unchanged.
      - Shops (own stores, purchases never convert) and N side rooms
        (`SubRoomRewards`) share no store with a replacement.
        Synthetic witness: the 1010 capture's first Fields room converting its

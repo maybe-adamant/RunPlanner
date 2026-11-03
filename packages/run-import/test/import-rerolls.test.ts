@@ -151,6 +151,62 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     expect(pressesOf(imported.project, 'G-r20')).toHaveLength(1);
   });
 
+  /**
+   * Erebus of run 1010 through F_MiniBoss02 with The Enchantress held from
+   * the start in Channeled Cast's place, its three rerolls kept in every
+   * entry save.
+   */
+  function erebusWithEnchantress(): RunRecord {
+    const record = fixture('underworld-1010');
+    const rooms = record.rooms.slice(0, 6).map((room) => ({
+      ...room,
+      entry: { ...room.entry, numRerolls: 3 },
+    }));
+    const { exit: _exit, ...last } = rooms[5]!;
+    void _exit;
+    return {
+      ...record,
+      loadout: {
+        ...record.loadout,
+        arcana: record.loadout.arcana.map((card) =>
+          card.name === 'ChanneledCast' ? { name: 'DoorReroll', level: 3 } : card,
+        ),
+      },
+      route: { biomes: ['F'], dream: false },
+      outcome: { kind: 'abandoned', endingRoom: last.name },
+      rooms: [...rooms.slice(0, 5), last],
+    };
+  }
+
+  it("searches a room's door press with its Artificer replacement, not the room's first used type", () => {
+    // F_Combat22's Artificer replaced its Gift with Magick; a Max Health use the
+    // room also shows would otherwise take the replacement.
+    const base = withReroll(erebusWithEnchantress(), 3, 'RunProgress', { MaxHealthDrop: -1 });
+    const record: RunRecord = {
+      ...base,
+      rooms: base.rooms.map((room, index) =>
+        index === 3 ? { ...room, uses: { MaxHealthDrop: 1, ...room.uses } } : room,
+      ),
+    };
+    const imported = projectFromRunRecord(catalog, record);
+    expect(rerollLines(imported, 3)).toEqual(['assumption reroll r3 occurrence@F-r3']);
+    expect(pressesOf(imported.project, 'F-r3')).toEqual([
+      {
+        kind: 'reroll',
+        rerollId: 'r1',
+        target: { kind: 'door', exitKey: 'exit1', occurrenceId: 'F-r3-d786704' },
+        reward: { rewardType: 'MaxManaDrop' },
+      },
+    ]);
+    expect(
+      Object.values(occurrence(imported.project, 'F-r3').acquisitionSites ?? {}).flatMap((site) =>
+        Object.values(site?.pickupEntries ?? {}).map((entry) => entry?.offer.rewardType),
+      ),
+    ).toEqual(['MaxManaDrop']);
+    expect(imported.report.rooms?.[3]).toMatchObject({ verdict: 'accepted' });
+    expect(mismatchLines(imported.report)).toEqual([]);
+  });
+
   it('reports a pool spend the stores do not show, and the pool it leaves ahead', () => {
     const record = oceanus();
     const imported = projectFromRunRecord(catalog, {
