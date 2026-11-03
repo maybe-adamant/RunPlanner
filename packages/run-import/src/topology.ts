@@ -141,10 +141,21 @@ function doorOccurrence(
 
 const twinPin = (roomIndex: number, door: RunRecordDoor) => `twinTaken:${roomIndex}:${door.door}`;
 
+/** The source visit's door the entered room was taken through, once known. */
+export function takenDoor(context: RunImportContext, roomIndex: number): RunRecordDoor | undefined {
+  const entered = context.record.rooms[roomIndex + 1]?.name;
+  const named = context.record.rooms[roomIndex]!.doors.filter((door) => door.room === entered);
+  if (named.length <= 1) return named[0];
+  const tied = tiedTwins(context, roomIndex, ordinaryDoors(context, roomIndex));
+  return tied.length === 1
+    ? tied[0]
+    : tied.find((candidate) => context.used.has(twinPin(roomIndex, candidate)));
+}
+
 /**
  * The doors to the entered room the taken one may be, in native order. Twin
- * doors can lead to one room: the taken one offered the collected reward, god
- * included, and only doors alike in both remain tied.
+ * doors can lead to one room: the taken one offered the entered room's
+ * reward type, then its god; doors alike in both, or none alike, stay tied.
  */
 function tiedTwins(
   context: RunImportContext,
@@ -159,15 +170,17 @@ function tiedTwins(
   const sameGod = sameType.filter(
     (candidate) => candidate.reward?.lootName === next?.reward?.lootName,
   );
-  return sameGod.length > 0 ? sameGod : sameType.slice(0, 1);
+  return sameGod.length > 0 ? sameGod : sameType.length > 0 ? sameType : sameRoom;
 }
 
 /**
  * Chooses the taken door among tied twins once, as the source's first exit
- * is placed: each twin is placed as taken and the source judged at its next
- * entry save, which draws both doors' rewards in door order. The first
- * accepted twin is taken and several accepted are reported; without one the
- * source's doors stay open. False while they are open.
+ * is placed. Twins with no reward and no cages leave one state whichever is
+ * taken: the first in native order is. Otherwise each twin is placed as taken
+ * and the source judged at its next entry save, which draws both doors'
+ * rewards in door order: the first accepted twin is taken and several
+ * accepted are reported; without one, or without that save, the source's
+ * doors stay open. False while they are open.
  */
 function chooseTakenTwin(
   context: RunImportContext,
@@ -181,6 +194,14 @@ function chooseTakenTwin(
     return true;
   if (context.used.has(searched)) return false;
   context.used.add(searched);
+  const entered = context.record.rooms[sourceIndex + 1];
+  if (
+    tied.every((door) => door.reward === undefined && door.cageRewards === undefined) &&
+    (entered?.fields?.cages.length ?? 0) === 0
+  ) {
+    context.used.add(twinPin(sourceIndex, tied[0]!));
+    return true;
+  }
   if (recordedEntryStates(context.record)[sourceIndex + 1] === undefined) return false;
   const search = searchRoom(context, {
     roomIndex: sourceIndex,

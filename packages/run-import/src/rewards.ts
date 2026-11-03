@@ -9,7 +9,7 @@ import {
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { SemanticFinding } from '@run-planner/engine/simulation';
 import type { RunImportContext } from './import';
-import { placeBatchDoors } from './topology';
+import { placeBatchDoors, takenDoor } from './topology';
 import { recordedOffer } from './vocabulary';
 
 const rewardCodes: ReadonlySet<string> = new Set([
@@ -42,10 +42,9 @@ export function recordedRoomOffer(
     const source = context.record.rooms[index - 1];
     const offer =
       recordedOffer(context.catalog, context.record.rooms[index]!.reward) ??
-      recordedOffer(
-        context.catalog,
-        source?.doors.find((door) => door.room === context.record.rooms[index]!.name)?.reward,
-      );
+      (source === undefined
+        ? undefined
+        : recordedOffer(context.catalog, takenDoor(context, index - 1)?.reward));
     return offer === undefined ? undefined : devotionByPick(context, offer, index);
   }
   const offered =

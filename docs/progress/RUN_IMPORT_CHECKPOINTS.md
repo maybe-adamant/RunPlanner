@@ -436,6 +436,20 @@ reproduces is reported with its nearest miss and the plan stops there.
    PostBoss ordinals and the Chaos room inside P import with no Dream
    special case.
 
+   **Twin doors** (owner rule; study: duplicate door targets). Any of 223
+   rooms can be offered twice in one batch. The taken door among doors to
+   the entered room is the one offering its reward type, then its god: one
+   left is exact (no search, no note). Doors alike in both, or none alike
+   (a reward the record lost), are searched at the next entry save: one
+   accepted is pinned, several are reported and the first in native order
+   taken, none accepted or no next entry state leaves the source's doors
+   open and the plan stops. Twins with no reward and no cages leave one
+   state either way and take the first in native order silently. A room
+   entered without its reward reads the taken twin's, not the first door by
+   name. Synthetic witnesses on the surface-victory Q_Combat14 twins and
+   the underworld Bridge (`import-twin-doors`); corpus unchanged (every
+   corpus twin separates by reward, the Bridge's search accepts).
+
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.
 6. **Recorded room** (authored outcome replayed as canonical events) only for
