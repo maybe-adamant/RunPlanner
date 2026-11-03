@@ -158,7 +158,12 @@ this start never reaches `ChooseStartingRoom` and never visits `Hub_PreRun`.
 `F_Opening01` is the `GameStart` room (`RoomDataF.lua:372`); `F_Opening02/03`
 need `RoomCountCache.F_Opening01 >= 2` (`RoomDataF.lua:910-913,981-990`), and
 `OpeningEmpty` is forced while Apollo is unused, spawning no reward
-(`EncounterData.lua:435-450`). `CompletedRunsCache` is nil, read as 0
+(`EncounterData.lua:435-450`). `CreateRoom` still rolls the opening's reward
+(`RunLogic.lua:618-622`, `ForcedRewardStore` RunProgress under
+`OpeningRoomBans`): the roll removes its entry from the RunProgress store and
+the room keeps it as `ChosenRewardType` and `RewardStoreName`, though nothing
+spawns. Two fresh captures (2026-11-03) each rolled a Boon (Poseidon,
+Demeter): RunProgress held three Boons at the first save. `CompletedRunsCache` is nil, read as 0
 (`RequirementsLogic.lua:633`), until `EndRun` (`RunLogic.lua:1848-1850`).
 
 Fixed for the whole attempt: the Staff with the no-effect `DummyWeaponStaff`
@@ -177,7 +182,9 @@ caches, `RoomsEntered`/`RoomCountCache`, `LifetimeResourcesGained`,
 
 Planner disposition: the `FreshFile` route stores no weapon aspect, starting
 keepsake or Arcana, starts with empty god-use, god-pickup and resource-gain
-history, and has no run-start reward. The Executor realizes the opening at the
+history, and has no run-start reward. It does not yet model the opening's
+unspawned RunProgress roll, so its RunProgress store and entered-store counts
+differ from the game's by that roll from the first room on. The Executor realizes the opening at the
 nested `CreateRoom` contact
 ([execution protocol](../../design/EXECUTION_PROTOCOL.md#room-content)). A
 brand-new profile run on 2026-09-30 (module source as of `0d65c432`) bound the opening under

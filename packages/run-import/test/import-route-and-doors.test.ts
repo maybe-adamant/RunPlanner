@@ -45,6 +45,19 @@ describe('run import route support', () => {
     expect(imported.report.entries.filter((entry) => entry.area === 'loadout')).toEqual([]);
   });
 
+  // Engine gap: CreateRoom rolls the fresh opening's reward from RunProgress
+  // (a Boon OpeningEmpty never spawns), drawing a Boon and counting a
+  // RunProgress room; the Fresh File route binds no opening roll, so the plan's
+  // store keeps one Boon more and F_Combat07's MetaProgress doors are refused.
+  it.fails('imports the recorded fresh first attempt as the saves show it', () => {
+    const imported = projectFromRunRecord(catalog, fixture('fresh'));
+    expect(imported.report.rooms?.slice(0, 2).map((room) => room.verdict)).toEqual([
+      'accepted',
+      'accepted',
+    ]);
+    expectReachesLastRoom(imported);
+  });
+
   it('stops a run on a route the catalog does not declare', () => {
     const record = fixture('surface');
     const result = projectFromRunRecord(catalog, {
