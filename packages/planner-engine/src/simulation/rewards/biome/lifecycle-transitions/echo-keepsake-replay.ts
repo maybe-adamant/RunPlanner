@@ -282,19 +282,14 @@ export function applyEchoKeepsakeReplayTransition(
         throw new BiomeRewardSimulationContractError(
           'Echo Transcendent Embryo replay has no rank data',
         );
-      keepsakeEquipResultCandidates.push({
-        key: semanticAddressKey(echoEmbryoResult),
-        candidate: Object.freeze({
-          frontiers: Object.freeze(
-            branches.map((branch) =>
-              Object.freeze({
-                state: branch.state,
-                transcendentEmbryoRarity: effect.blessingRarityByRank.Common,
-              }),
-            ),
-          ),
-        }),
-      });
+      if (branches[0] !== undefined)
+        keepsakeEquipResultCandidates.push({
+          key: semanticAddressKey(echoEmbryoResult),
+          candidate: Object.freeze({
+            state: branches[0].state,
+            transcendentEmbryoRarity: effect.blessingRarityByRank.Common,
+          }),
+        });
       const authored = snapshot.echoKeepsakeReplayResults?.transcendentEmbryo;
       if (authored === undefined) {
         addFinding(
@@ -355,14 +350,11 @@ export function applyEchoKeepsakeReplayTransition(
       giftState.replayCount === 0 &&
       branches[0]?.state.keepsakes.currentKey !== giftState.capturedKeepsakeKey
     ) {
-      keepsakeEquipResultCandidates.push({
-        key: semanticAddressKey(echoHammerResult),
-        candidate: Object.freeze({
-          frontiers: Object.freeze(
-            branches.map((branch) => Object.freeze({ state: branch.state })),
-          ),
-        }),
-      });
+      if (branches[0] !== undefined)
+        keepsakeEquipResultCandidates.push({
+          key: semanticAddressKey(echoHammerResult),
+          candidate: Object.freeze({ state: branches[0].state }),
+        });
       const authored = snapshot.echoKeepsakeReplayResults?.experimentalHammer;
       if (authored === undefined) {
         addFinding(

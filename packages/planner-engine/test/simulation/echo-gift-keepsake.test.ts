@@ -748,11 +748,7 @@ describe('Echo Gift Gift Gift', () => {
     const { project, value } = route();
     const resultAddress = createKeepsakeEquipResultAddress(replayOwner, 'experimentalHammer');
     const history = createTraitHistoryState();
-    const context = {
-      frontiers: Object.freeze([
-        { state: traitFrontierState(history, { loadout: value.loadout }) },
-      ]),
-    };
+    const context = { state: traitFrontierState(history, { loadout: value.loadout }) };
     const result = evaluateKeepsakeEquipResultCandidate(
       catalog,
       project,
@@ -775,11 +771,7 @@ describe('Echo Gift Gift Gift', () => {
       project,
       evaluatedProject(project),
       {
-        at: () => ({
-          frontiers: Object.freeze([
-            { state: traitFrontierState(saturated, { loadout: value.loadout }) },
-          ]),
-        }),
+        at: () => ({ state: traitFrontierState(saturated, { loadout: value.loadout }) }),
         entries: () => Object.freeze([]),
       },
       noKeepsakeSelections,

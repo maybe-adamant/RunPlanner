@@ -219,14 +219,10 @@ function evaluateRouteAssembly(
     return Object.freeze({
       result: createKeepsakeEquipResultAddress(routeStart, resultKind),
       capability: Object.freeze({
-        frontiers: Object.freeze([
-          Object.freeze({
-            state,
-            ...(effect?.kind === 'transcendentEmbryo'
-              ? { transcendentEmbryoRarity: effect.blessingRarityByRank[keepsake.rank] }
-              : {}),
-          }),
-        ]),
+        state,
+        ...(effect?.kind === 'transcendentEmbryo'
+          ? { transcendentEmbryoRarity: effect.blessingRarityByRank[keepsake.rank] }
+          : {}),
       }),
     });
   };
@@ -238,7 +234,7 @@ function evaluateRouteAssembly(
     semanticAddressKey(routeStart),
     Object.freeze({
       state:
-        routeStartResult?.capability.frontiers[0]!.state.keepsakes ??
+        routeStartResult?.capability.state.keepsakes ??
         createKeepsakeState(catalog, route.loadout.startingKeepsakeKey, startArcanaFear),
       encounterBlockedKeepsakeKeys: Object.freeze([]),
       equipResultFor: routeStartEquipResult,
@@ -263,7 +259,7 @@ function evaluateRouteAssembly(
   }
   if (routeStartResult !== undefined) {
     const { result, capability } = routeStartResult;
-    const frontier = capability.frontiers[0]!;
+    const frontier = capability;
     const keepsakeKey = route.loadout.startingKeepsakeKey!;
     const authored = route.loadout.keepsakeEquipResults;
     if (authored?.[result.resultKind] === undefined) {

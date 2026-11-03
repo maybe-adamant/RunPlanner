@@ -138,36 +138,31 @@ export function evaluateKeepsakeEquipResultCandidate(
   const value = drafted ? query.value : (query.value ?? authoredValue(project, query.result));
   const effect = keepsakeEffectByKind(catalog, query.result.resultKind);
   if (effect === undefined) throw new Error(`missing ${query.result.resultKind} descriptor`);
+  const { state } = capability;
   if (effect.kind === 'transcendentEmbryo') {
+    const rarity = capability.transcendentEmbryoRarity ?? 'Epic';
+    const assessEmbryo = (
+      candidate: NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>,
+    ) =>
+      assessTranscendentEmbryoBlessing(catalog, candidate, state.traitHistory, rarity, {
+        aspectKey: state.equipment.aspectKey,
+        routeKey: state.reached.routePosition.routeKey,
+      });
     const options = Object.freeze(
       catalog.chaos.blessings.values
         .filter((blessing) => blessing.fixedRarity === undefined)
         .map((blessing) => {
-          const rarity = capability.frontiers[0]?.transcendentEmbryoRarity ?? 'Epic';
           const values = transcendentEmbryoBlessingValues(catalog, blessing.key, rarity);
           const candidateValue = Object.freeze({
             blessingKey: blessing.key,
             blessingValues: values,
           });
-          const assessments = capability.frontiers.map((frontier) =>
-            assessTranscendentEmbryoBlessing(
-              catalog,
-              candidateValue,
-              frontier.state.traitHistory,
-              frontier.transcendentEmbryoRarity ?? 'Epic',
-              {
-                aspectKey: frontier.state.equipment.aspectKey,
-                routeKey: frontier.state.reached.routePosition.routeKey,
-              },
-            ),
-          );
+          const assessment = assessEmbryo(candidateValue);
           return Object.freeze({
             resultKind: 'transcendentEmbryo' as const,
             value: candidateValue,
-            selectedPossible: assessments.every((assessment) => assessment.legal),
-            findings: Object.freeze([
-              ...new Set(assessments.flatMap((assessment) => assessment.findings)),
-            ]),
+            selectedPossible: assessment.legal,
+            findings: Object.freeze([...new Set(assessment.findings)]),
             transcendentEmbryoSummary: Object.freeze({
               rarity,
               operands: blessing.operands,
@@ -185,19 +180,8 @@ export function evaluateKeepsakeEquipResultCandidate(
     // itself rather than require byte equality with the default option.
     const authoredSelectedPossible =
       value !== undefined && 'blessingKey' in value
-        ? capability.frontiers.every(
-            (frontier) =>
-              assessTranscendentEmbryoBlessing(
-                catalog,
-                value as NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>,
-                frontier.state.traitHistory,
-                frontier.transcendentEmbryoRarity ?? 'Epic',
-                {
-                  aspectKey: frontier.state.equipment.aspectKey,
-                  routeKey: frontier.state.reached.routePosition.routeKey,
-                },
-              ).legal,
-          )
+        ? assessEmbryo(value as NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>)
+            .legal
         : undefined;
     return Object.freeze({
       kind: 'keepsakeEquipResult',
@@ -219,30 +203,30 @@ export function evaluateKeepsakeEquipResultCandidate(
         effect.kind === 'experimentalHammer'
           ? ({ kind: 'selected' as const, traitKey } as const)
           : ({ ...(value ?? {}), traitKey } as const);
-      const assessments = capability.frontiers.map((frontier) =>
+      const assessment =
         effect.kind === 'jeweledPom'
           ? assessJeweledPomEquipResult(
               catalog,
               candidateValue as NonNullable<AuthoredKeepsakeEquipResults['jeweledPom']>,
-              frontier.state,
-              frontier.state.keepsakes.fatedStatus,
+              state,
+              state.keepsakes.fatedStatus,
             )
           : assessExperimentalHammerEquipResult(
               catalog,
               candidateValue as NonNullable<AuthoredKeepsakeEquipResults['experimentalHammer']>,
-              frontier.state,
-            ),
-      );
+              state,
+            );
       return Object.freeze({
         resultKind: effect.kind,
         value: candidateValue,
-        selectedPossible: assessments.every((assessment) => assessment.legal),
-        findings: Object.freeze([
-          ...new Set(assessments.flatMap((assessment) => assessment.findings)),
-        ]),
+        selectedPossible: assessment.legal,
+        findings: Object.freeze([...new Set(assessment.findings)]),
       });
     }),
   );
+  const exhaustedPossible =
+    effect.kind === 'experimentalHammer' &&
+    assessExperimentalHammerEquipResult(catalog, { kind: 'exhausted' }, state).legal;
   const completedOptions =
     effect.kind !== 'experimentalHammer'
       ? options
@@ -251,23 +235,8 @@ export function evaluateKeepsakeEquipResultCandidate(
           Object.freeze({
             resultKind: 'experimentalHammer' as const,
             value: Object.freeze({ kind: 'exhausted' as const }),
-            selectedPossible: capability.frontiers.every(
-              (frontier) =>
-                assessExperimentalHammerEquipResult(catalog, { kind: 'exhausted' }, frontier.state)
-                  .legal,
-            ),
-            findings: Object.freeze(
-              capability.frontiers.every(
-                (frontier) =>
-                  assessExperimentalHammerEquipResult(
-                    catalog,
-                    { kind: 'exhausted' },
-                    frontier.state,
-                  ).legal,
-              )
-                ? []
-                : ['keepsakeEquipResultUnavailable'],
-            ),
+            selectedPossible: exhaustedPossible,
+            findings: Object.freeze(exhaustedPossible ? [] : ['keepsakeEquipResultUnavailable']),
           }),
         ]);
   const selected =

@@ -22,7 +22,7 @@ export interface KeepsakeSelectionCandidateCapability {
   readonly encounterBlockedKeepsakeKeys: readonly string[];
   /**
    * The equip result a keepsake chosen here would open, with its pre-result frontiers from
-   * this same frontier; undefined when the keepsake has none or no branch can equip it here.
+   * this same frontier; undefined when the keepsake has none or cannot be equipped here.
    */
   readonly equipResultFor: (keepsakeKey: string) => KeepsakeDraftEquipResult | undefined;
 }
@@ -48,13 +48,10 @@ export function createKeepsakeSelectionCandidateArtifacts(
   });
 }
 
-/** Exact pre-equip trait state retained for one closed keepsake result. */
+/** The exact pre-equip state retained for one closed keepsake result. */
 export interface KeepsakeEquipResultCandidateCapability {
-  readonly frontiers: readonly {
-    /** Exact pre-equip snapshot this closed result is assessed against. */
-    readonly state: SimulationState;
-    readonly transcendentEmbryoRarity?: import('../../catalog-schema').InRunTraitRarity;
-  }[];
+  readonly state: SimulationState;
+  readonly transcendentEmbryoRarity?: import('../../catalog-schema').InRunTraitRarity;
 }
 export interface KeepsakeEquipResultCandidateArtifacts {
   readonly at: (

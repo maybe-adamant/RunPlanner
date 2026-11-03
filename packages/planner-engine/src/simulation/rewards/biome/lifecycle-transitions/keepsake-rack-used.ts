@@ -170,7 +170,7 @@ function fatedJeweledPomCleanup(
   });
 }
 
-/** The equip result a rack keepsake opens, assessed on the branches that equipped it. */
+/** The equip result a rack keepsake opens, assessed on the state that equipped it. */
 function rackEquipResult(
   catalog: Catalog,
   keepsakeKey: string,
@@ -178,26 +178,18 @@ function rackEquipResult(
   equipped: readonly RackEquip[],
 ): KeepsakeDraftEquipResult | undefined {
   const resultKind = keepsakeEquipResultKind(catalog, keepsakeKey);
-  const successful = equipped
-    .filter((transition) => transition.replacementSucceeded)
-    .map((transition) => transition.branch);
-  if (resultKind === undefined || successful.length === 0) return undefined;
+  const successful = equipped.find((transition) => transition.replacementSucceeded)?.branch;
+  if (resultKind === undefined || successful === undefined) return undefined;
   const effect = catalog.keepsakes.byKey[keepsakeKey]?.effect;
   const rarity =
     effect?.kind === 'transcendentEmbryo'
       ? effect.blessingRarityByRank[
-          keepsakeRankForEquip(catalog, keepsakeKey, successful[0]!.state.traitHistory)
+          keepsakeRankForEquip(catalog, keepsakeKey, successful.state.traitHistory)
         ]
       : undefined;
   const capability: KeepsakeEquipResultCandidateCapability = Object.freeze({
-    frontiers: Object.freeze(
-      successful.map((branch) =>
-        Object.freeze({
-          state: branch.state,
-          ...(rarity === undefined ? {} : { transcendentEmbryoRarity: rarity }),
-        }),
-      ),
-    ),
+    state: successful.state,
+    ...(rarity === undefined ? {} : { transcendentEmbryoRarity: rarity }),
   });
   return Object.freeze({
     result: createKeepsakeEquipResultAddress(selection, resultKind),
@@ -366,7 +358,7 @@ export function applyKeepsakeRackUsedTransition(
         ? ownerRegion(selection)
         : ownerRegion(selection.owner);
     const authored = rack.equipResults;
-    const legalAt = (frontier: KeepsakeEquipResultCandidateCapability['frontiers'][number]) =>
+    const legalAt = (frontier: KeepsakeEquipResultCandidateCapability) =>
       result.resultKind === 'jeweledPom'
         ? assessJeweledPomEquipResult(
             catalog,
@@ -395,7 +387,7 @@ export function applyKeepsakeRackUsedTransition(
           chronology,
         }),
       );
-    else if (!capability.frontiers.every(legalAt))
+    else if (!legalAt(capability))
       findings.push(
         Object.freeze({
           finding: rewardFinding('keepsakeEquipResultUnavailable', result, { keepsakeKey }),
