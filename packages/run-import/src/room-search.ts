@@ -1,6 +1,7 @@
+import type { OccurrenceId } from '@run-planner/engine/authored-project';
 import { introducesNothing } from './acceptance';
 import { orderRoomActions } from './action-order';
-import { entrySnapshot } from './conformance';
+import { entrySnapshot, occurrenceSnapshot, storeCounts } from './conformance';
 import type { RunImportContext } from './import';
 
 /*
@@ -119,3 +120,40 @@ export function chooseRoomFit<Choice>(
     ),
   };
 }
+
+/**
+ * The run state a later room reads from an occurrence at `moment`: its stores,
+ * reward priorities, god pool and rerolls. Undefined before the plan reaches it.
+ */
+export function stateFingerprint(
+  context: RunImportContext,
+  occurrence: { readonly biomeKey: string; readonly occurrenceId: string },
+  moment: 'roomEntered' | 'beforeRoomExit',
+): string | undefined {
+  const assembly = context.assembly();
+  const snapshot = occurrenceSnapshot(
+    assembly,
+    { biomeKey: occurrence.biomeKey, occurrenceId: occurrence.occurrenceId as OccurrenceId },
+    moment,
+  );
+  if (snapshot === undefined) return undefined;
+  return JSON.stringify([
+    [...storeCounts(context.catalog, assembly.project.route.routeKey, snapshot)].map(
+      ([storeKey, { counts }]) => [storeKey, counts],
+    ),
+    snapshot.rewardPriorities,
+    snapshot.godPool,
+    snapshot.rerolls.remaining,
+  ]);
+}
+
+/** A record room's exit state, which fits sharing are interchangeable for later rooms. */
+export const exitFingerprint = (context: RunImportContext, roomIndex: number): string =>
+  stateFingerprint(
+    context,
+    {
+      biomeKey: context.occurrences.biomeOfRoom[roomIndex]!,
+      occurrenceId: context.occurrences.occurrenceOf(roomIndex),
+    },
+    'beforeRoomExit',
+  ) ?? '';

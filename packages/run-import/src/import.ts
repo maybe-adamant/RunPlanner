@@ -684,7 +684,8 @@ export class RunImportWalk {
         this.chooseByAcceptance(reason, refused.has(key) ? 'refused' : 'notInRecord')
       )
         continue;
-      if (releaseOpenWheelWindows(this.context)) continue;
+      const record = this.occurrences.locationOf(reason.origin);
+      if (releaseOpenWheelWindows(this.context, record?.roomIndex)) continue;
       // Rooms before the stop take their stamped action order too.
       if (!ordered) {
         ordered = true;
@@ -692,7 +693,6 @@ export class RunImportWalk {
         importRoomActionOrders(this.context);
         if (this.assembly !== before) continue;
       }
-      const record = this.occurrences.locationOf(reason.origin);
       return {
         area: areaOfFinding(reason),
         code: reason.code,

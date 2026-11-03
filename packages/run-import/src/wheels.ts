@@ -18,7 +18,7 @@ import {
 } from '@run-planner/engine/reward-kernel';
 import { countedRewardTypeDomain, type SemanticFinding } from '@run-planner/engine/simulation';
 import type { RunRecordRoom, RunRecordWheel } from './run-record/model';
-import { entrySnapshot, occurrenceSnapshot, recordedEntryStates, storeCounts } from './conformance';
+import { entrySnapshot, recordedEntryStates, storeCounts } from './conformance';
 import {
   ARTIFICER_STORE,
   convertAcquisition,
@@ -26,7 +26,8 @@ import {
   type ConversionKind,
   type ConversionReplacement,
 } from './dispositions';
-import { chooseRoomFit, searchRoom } from './room-search';
+import { authorAcceptedAnswer } from './open-questions';
+import { chooseRoomFit, exitFingerprint, searchRoom } from './room-search';
 import type { RunImportContext } from './import';
 import { authoredOccurrence } from './occurrences';
 import type { RunImportReportEntry } from './report';
@@ -201,7 +202,8 @@ function importShipWheels(
 
 /**
  * A wheel offer from the record: the picked one is the setup's pick; a god
- * the save never names takes the first eligible one. The other offer of a
+ * the save never names is the one its room names, else the one the room's
+ * next entry save accepts, else it stays open. The other offer of a
  * two-offer wheel whose side is known is not saved: it takes a provisional
  * value that `solveWheelOffers` settles from the room's saved stores.
  */
@@ -233,28 +235,45 @@ export function answerWheels(context: RunImportContext, reason: SemanticFinding)
     visit.room.traitScreens.some((screen) => screen.giver === source);
   const values = locallyValidRewardOffers(context.catalog.rewards, type)
     .filter((value) => lootName === undefined || boonSource(value) === lootName)
+    .filter((value) => wheelOfferSupported(context, offer, value))
     .sort(
       (left, right) =>
         Number(boonSource(right) !== undefined && named(boonSource(right)!)) -
         Number(boonSource(left) !== undefined && named(boonSource(left)!)),
     );
-  for (const value of values) {
-    if (!wheelOfferSupported(context, offer, value)) continue;
-    const command: ProjectCommand = { kind: 'ReplaceRewardWheelOffer', offer, value };
-    if (!context.applyValid(command)) continue;
+  const commands = values.map((value): ProjectCommand => ({
+    kind: 'ReplaceRewardWheelOffer',
+    offer,
+    value,
+  }));
+  // A boon's god is the saved one, else the one god the room's screens or uses name.
+  const namedGods = values.filter((value) => {
     const god = boonSource(value);
-    if (god !== undefined && god !== lootName && !named(god))
-      context.note({
-        area: 'wheel',
-        reason: 'notInRecord',
-        address: offer,
-        applied: command,
-        record: record(visit.roomIndex),
-      });
-    return true;
+    return god !== undefined && named(god);
+  });
+  const godOpen = lootName === undefined && values.some((value) => boonSource(value) !== undefined);
+  if (!godOpen || namedGods.length === 1) {
+    if ((godOpen ? [commands[0]!] : commands).some((command) => context.applyValid(command)))
+      return true;
+    context.refuse();
+    return false;
   }
-  context.refuse();
-  return false;
+  // Otherwise each god is judged at the room's next entry save.
+  const answer = authorAcceptedAnswer(
+    context,
+    visit.roomIndex,
+    commands.map((command) => [command]),
+  );
+  if (answer === undefined) return false;
+  context.note({
+    area: 'wheel',
+    reason: 'notInRecord',
+    address: offer,
+    applied: answer.commands[0]!,
+    ...(answer.alternatives.length === 0 ? {} : { alternatives: answer.alternatives }),
+    record: record(visit.roomIndex),
+  });
+  return true;
 }
 
 const boonSource = (value: ResolvedRewardOffer) =>
@@ -488,18 +507,34 @@ export const wheelsSolved = (context: RunImportContext, roomIndex: number) =>
 /**
  * Releases what entered ship rooms still hold for a window that can no longer
  * close, once the walk would end: it is authored on the canonical split, as
- * the provisional sides stand. Returns whether any room was released.
+ * the provisional sides stand. A ship room before `stopRoom` whose unpicked
+ * offers hold provisional values no save judged, its window open or never
+ * closing, stops the plan there instead. Returns whether any room was
+ * released or stopped.
  */
-export function releaseOpenWheelWindows(context: RunImportContext): boolean {
+export function releaseOpenWheelWindows(context: RunImportContext, stopRoom?: number): boolean {
   let released = false;
-  for (const roomIndex of context.record.rooms.keys())
+  const saved = recordedEntryStates(context.record);
+  for (const [roomIndex, room] of context.record.rooms.entries()) {
+    if (room.wheels === undefined || !context.entered(context.occurrences.occurrenceOf(roomIndex)))
+      continue;
+    const waits = wheelAuthoringWaits(context, roomIndex) || conversionWaits(context, roomIndex);
+    const neverCloses = saved[roomIndex + 1] === undefined && !wheelsSolved(context, roomIndex);
     if (
-      (wheelAuthoringWaits(context, roomIndex) || conversionWaits(context, roomIndex)) &&
-      context.entered(context.occurrences.occurrenceOf(roomIndex))
+      (waits || neverCloses) &&
+      roomIndex < (stopRoom ?? Infinity) &&
+      (unknownOffers(context, roomIndex)?.offers ?? []).some(
+        (offer) => offerValue(context, offer.address) !== undefined,
+      )
     ) {
+      haltUnsolved(context, roomIndex);
+      released = true;
+    }
+    if (waits) {
       context.used.add(`wheelOpen:${roomIndex}`);
       released = true;
     }
+  }
   return released;
 }
 
@@ -569,16 +604,20 @@ function solveShip(
 ): ConversionReplacement | undefined {
   const room = context.record.rooms[roomIndex]!;
   const unknown = unknownOffers(context, roomIndex);
-  if (unknown === undefined || !unknown.complete) return undefined;
+  if (unknown === undefined) return undefined;
   const { offers } = unknown;
+  const provisional = offers.map((offer) => offerValue(context, offer.address));
+  // A window the solve cannot read leaves no provisional offer standing.
+  if (!unknown.complete || provisional.some((value) => value === undefined)) {
+    if (provisional.some((value) => value !== undefined)) haltUnsolved(context, roomIndex);
+    return undefined;
+  }
   const solved = `wheelSolved:${roomIndex}`;
   const artificer = deferred.includes('artificer');
   if (offers.length === 0 && !artificer) {
     context.used.add(solved);
     return undefined;
   }
-  const provisional = offers.map((offer) => offerValue(context, offer.address));
-  if (provisional.some((value) => value === undefined)) return undefined;
   const planned = offers.map((offer, index) => ({
     storeKey: offer.wheel.store,
     rewardType: provisional[index]!.rewardType,
@@ -594,7 +633,11 @@ function solveShip(
     offers.length + rerolls + (artificer ? 1 : 0),
     planned,
   );
-  if (draws === undefined) return undefined;
+  // No draws explain the saved stores: the provisional offers cannot stand.
+  if (draws === undefined) {
+    haltUnsolved(context, roomIndex);
+    return undefined;
+  }
   context.used.add(solved);
   const stores = new Set([
     ...offers.map((offer) => offer.wheel.store),
@@ -658,6 +701,7 @@ function solveShip(
       });
     for (const entry of sideGuesses(context, roomIndex, offers)) context.note(entry);
     for (const entry of provisionalOffers(context, roomIndex, offers)) context.note(entry);
+    haltUnsolved(context, roomIndex);
     return undefined;
   }
   const { split, values, replacement } = choice.chosen.choice;
@@ -722,7 +766,24 @@ function solveShip(
   return { rewardType: replacement, assumed: !settled };
 }
 
-/** The store an Artificer replacement draws from. */
+/**
+ * Stops the plan at a ship room whose unpicked offers no draw the next entry
+ * save accepts explains: their provisional values cannot be withdrawn.
+ */
+function haltUnsolved(context: RunImportContext, roomIndex: number): void {
+  context.halt({
+    area: 'wheel',
+    code: 'wheelOffersUnaccepted',
+    address: createOccurrenceAddress(
+      createBiomeAddress(
+        context.assembly().project.route.routeKey,
+        context.occurrences.biomeOfRoom[roomIndex]!,
+      ),
+      context.occurrences.occurrenceOf(roomIndex) as OccurrenceId,
+    ),
+    record: record(roomIndex),
+  });
+}
 
 /**
  * The search's candidates in canonical order: by split, by the offers'
@@ -887,28 +948,6 @@ function assignments(
     pick(0, [], draws);
   }
   return found;
-}
-
-/** The ship's exit state a later room reads from the draws: stores, priorities, god pool and rerolls. */
-function exitFingerprint(context: RunImportContext, roomIndex: number): string {
-  const assembly = context.assembly();
-  const snapshot = occurrenceSnapshot(
-    assembly,
-    {
-      biomeKey: context.occurrences.biomeOfRoom[roomIndex]!,
-      occurrenceId: context.occurrences.occurrenceOf(roomIndex) as OccurrenceId,
-    },
-    'beforeRoomExit',
-  );
-  if (snapshot === undefined) return '';
-  return JSON.stringify([
-    [...storeCounts(context.catalog, assembly.project.route.routeKey, snapshot)].map(
-      ([storeKey, { counts }]) => [storeKey, counts],
-    ),
-    snapshot.rewardPriorities,
-    snapshot.godPool,
-    snapshot.rerolls.remaining,
-  ]);
 }
 
 /** What the saved store and the plan's lost across a room, by the names they differ on. */

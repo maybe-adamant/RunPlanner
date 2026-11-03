@@ -352,11 +352,11 @@ describe('run import of the Surface victory', () => {
       }),
     };
     const result = projectFromRunRecord(catalog, altered);
-    // The carried store difference leaves O_Combat05's recorded wheel offer refused, with no
-    // answer its next save accepts.
+    // No assignment fits, and the provisional offers cannot be withdrawn: the plan stops at the ship.
     expect(result.kind === 'stopped' && result.stop).toMatchObject({
       area: 'wheel',
-      record: { roomIndex: 26 },
+      code: 'wheelOffersUnaccepted',
+      record: { roomIndex: 23 },
     });
     expect(
       result.report.entries
@@ -364,9 +364,10 @@ describe('run import of the Surface victory', () => {
         .map(describeEntry),
     ).toEqual([
       'mismatch wheel r23 rewardWheel@O-r23',
-      // The provisional values stay, each a guess.
+      // The provisional values are reported where the plan stops.
       'notInRecord wheel r23 rewardWheelOffer@O-r23 -> ReplaceRewardWheelOffer(O-r23 MaxManaDrop)',
       'notInRecord wheel r23 rewardWheelOffer@O-r23 -> ReplaceRewardWheelOffer(O-r23 StackUpgrade)',
+      'stopped wheel r23 occurrence@O-r23',
     ]);
     const ship = occurrence(result.project, 'O-r23').state;
     expect(

@@ -8,7 +8,7 @@ describe('run import of unpicked ship-wheel offers the saved stores cannot settl
   const wheelLines = (imported: RunImport) =>
     imported.report.entries.filter((entry) => entry.area === 'wheel').map(describeEntry);
 
-  it('reports each unpicked offer of a record without entry saves', () => {
+  it('stops at the first ship of a record without entry saves, whose unpicked offers no save judges', () => {
     const record = fixture('surface');
     const imported = projectFromRunRecord(catalog, {
       ...record,
@@ -18,15 +18,18 @@ describe('run import of unpicked ship-wheel offers the saved stores cannot settl
         return rest;
       }),
     });
-    // Each takes the first type of its wheel's store the engine supports.
+    // The provisional offer cannot be withdrawn, so the plan stops at its ship.
+    expect(imported).toMatchObject({
+      kind: 'stopped',
+      stop: { area: 'wheel', code: 'wheelOffersUnaccepted', record: { roomIndex: 21 } },
+    });
     expect(wheelLines(imported)).toEqual([
       'notInRecord wheel r21 rewardWheelOffer@O-r21 -> ReplaceRewardWheelOffer(O-r21 GiftDrop)',
-      'notInRecord wheel r25 rewardWheelOffer@O-r25 -> ReplaceRewardWheelOffer(O-r25 MetaCurrencyBigDrop)',
-      'notInRecord wheel r25 rewardWheelOffer@O-r25 -> ReplaceRewardWheelOffer(O-r25 MaxHealthDrop)',
+      'stopped wheel r21 occurrence@O-r21',
     ]);
   });
 
-  it('reports each unpicked offer of a ship that is the last room', () => {
+  it('reports each unpicked offer of a ship that is the last room, where the plan stops', () => {
     const record = fixture('surface');
     const rooms = record.rooms.slice(0, 26);
     const { exit: _exit, ...last } = rooms[25]!;
@@ -36,6 +39,8 @@ describe('run import of unpicked ship-wheel offers the saved stores cannot settl
       outcome: { kind: 'abandoned', endingRoom: last.name },
       rooms: [...rooms.slice(0, 25), last],
     });
+    // Its picked Spell asks a screen no save judges, so the plan stops in the ship itself.
+    expect(imported).toMatchObject({ kind: 'stopped', stop: { record: { roomIndex: 25 } } });
     expect(wheelLines(imported)).toEqual([
       'notInRecord wheel r25 rewardWheelOffer@O-r25 -> ReplaceRewardWheelOffer(O-r25 GiftDrop)',
       'notInRecord wheel r25 rewardWheelOffer@O-r25 -> ReplaceRewardWheelOffer(O-r25 MaxHealthDrop)',
