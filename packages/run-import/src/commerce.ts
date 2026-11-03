@@ -14,6 +14,7 @@ import {
   type HermesShrineSlotKey,
   type OccurrenceId,
   type ProjectCommand,
+  roomActionKey,
   type RoomActionReference,
   type RoomOccurrence,
   type SemanticAddress,
@@ -291,18 +292,20 @@ function answerTravelDealRefill(
       continue;
     const command: ProjectCommand = { kind: 'ReplaceShopOfferOption', offer, value };
     const biomeKey = offer.biomeKey;
+    const refill: RoomActionReference = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'roomExit',
+      entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+    };
     if (
       !context.transaction(
         () =>
           context.apply(command) &&
-          insertRoomAction(context, biomeKey, occurrence.occurrenceId, {
-            kind: 'interactAcquisitionEntry',
-            siteKey: 'roomExit',
-            entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
-          }),
+          insertRoomAction(context, biomeKey, occurrence.occurrenceId, refill),
       )
     )
       continue;
+    placeRefillByStamp(context, biomeKey, occurrence.occurrenceId, visit.room, refill);
     context.note({
       area: 'shop',
       reason: 'assumption',
@@ -313,6 +316,45 @@ function answerTravelDealRefill(
     return true;
   }
   return false;
+}
+
+/**
+ * A bought refill is an ordinary purchase once restocked: it goes before the
+ * first later purchase whose stamp follows its own, kept where it was when the
+ * engine refuses the move.
+ */
+function placeRefillByStamp(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrenceId: string,
+  room: RunRecordRoom,
+  refill: RoomActionReference,
+): void {
+  const occurrence = authoredOccurrence(context.assembly().project, biomeKey, occurrenceId);
+  const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  if (occurrence === undefined || shop === undefined) return;
+  const order = occurrence.roomActions.order;
+  const purchases = order.flatMap((action) =>
+    action.kind === 'interactShopOffer' ? [action.offerKey] : [],
+  );
+  const stampOf = purchaseStamps(context, shop, room, [...purchases, TRAVEL_DEAL_REFILL_ENTRY_KEY]);
+  const own = stampOf(TRAVEL_DEAL_REFILL_ENTRY_KEY);
+  const from = order.findIndex((action) => roomActionKey(action) === roomActionKey(refill));
+  if (own === undefined || from < 0) return;
+  // The refill restocks after the first purchase, so it never precedes it.
+  const first = order.findIndex((action) => action.kind === 'interactShopOffer');
+  const toIndex = order.findIndex(
+    (action, index) =>
+      index > first &&
+      action.kind === 'interactShopOffer' &&
+      (stampOf(action.offerKey) ?? -Infinity) > own,
+  );
+  if (toIndex < 0 || toIndex > from) return;
+  context.applyValid({
+    kind: 'MoveRoomAction',
+    action: roomActionAddress(context, biomeKey, occurrenceId, refill),
+    toIndex,
+  });
 }
 
 /**
@@ -763,10 +805,71 @@ function importShopPurchases(
   }
 }
 
+/** Each giver's earliest stamped screen pick in a room: an acquired trait, or the one a level-up raised. */
+function giverStamps(room: RunRecordRoom): ReadonlyMap<string, number> {
+  const stamps = new Map<string, number>();
+  for (const screen of room.traitScreens) {
+    const chosen = screen.options.find((option) => option.chosen)?.name;
+    const time = [...room.traits.acquired, ...room.traits.upgraded].find(
+      (trait) => trait.name === chosen,
+    )?.worldTime;
+    if (time !== undefined && time < (stamps.get(screen.giver) ?? Infinity))
+      stamps.set(screen.giver, time);
+  }
+  return stamps;
+}
+
 /**
- * The record keeps purchases in slot order; a purchase whose giver's screen
- * picked a stamped trait is ordered by its giver's earliest stamp, so Echo's
- * duplicate follows the first purchase. Unstamped purchases keep their positions.
+ * The stamp of each bought Shop item, by slot key: its giver's earliest
+ * stamp, and for a blind box the earliest stamp of a giver no other purchase
+ * names (its god's screen). Undefined for an item no screen stamps.
+ */
+function purchaseStamps(
+  context: RunImportContext,
+  shop: ShopState,
+  room: RunRecordRoom,
+  slotKeys: readonly string[],
+): (slotKey: string) => number | undefined {
+  const profile = context.catalog.rewards.shops.byKey[shop.profileKey];
+  const stamps = giverStamps(room);
+  const bought = (slotKey: string) => {
+    const state =
+      slotKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ? shop.travelDealRefill : shop.offers[slotKey];
+    const groupKey =
+      slotKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+        ? undefined
+        : profile?.slots.byKey[slotKey]?.groupKey;
+    const option =
+      state?.optionKey == null || profile === undefined
+        ? undefined
+        : groupKey !== undefined
+          ? profile.groups.byKey[groupKey]?.options.byKey[state.optionKey]
+          : profile.groups.values
+              .map((group) => group.options.byKey[state.optionKey!])
+              .find((entry) => entry !== undefined);
+    return option === undefined || state?.reward == null
+      ? undefined
+      : {
+          name: purchaseInteractionName(option, state.reward.offer),
+          hidden: resolvesByAcquisition(context, state.reward.offer),
+        };
+  };
+  const named = new Set(slotKeys.map((slotKey) => bought(slotKey)?.name));
+  const hidden = Math.min(
+    ...[...stamps].flatMap(([giver, time]) => (named.has(giver) ? [] : [time])),
+  );
+  return (slotKey) => {
+    const item = bought(slotKey);
+    const stamp = item?.name === undefined ? undefined : stamps.get(item.name);
+    return stamp ?? (item?.hidden === true && Number.isFinite(hidden) ? hidden : undefined);
+  };
+}
+
+/**
+ * The record keeps purchases in slot order; a purchase a screen stamps goes
+ * in stamp order, so Echo's duplicate follows the first purchase and a
+ * Travel Deal refill can be placed between them. Unstamped purchases keep
+ * their positions.
  */
 function purchaseOrder<Purchase extends { readonly slot: number }>(
   context: RunImportContext,
@@ -776,32 +879,15 @@ function purchaseOrder<Purchase extends { readonly slot: number }>(
 ): readonly Purchase[] {
   const profile = context.catalog.rewards.shops.byKey[shop.profileKey];
   if (profile === undefined) return purchases;
-  const stamps = new Map<string, number>();
-  for (const screen of room.traitScreens) {
-    const chosen = screen.options.find((option) => option.chosen)?.name;
-    const time = room.traits.acquired.find((trait) => trait.name === chosen)?.worldTime;
-    if (time !== undefined && time < (stamps.get(screen.giver) ?? Infinity))
-      stamps.set(screen.giver, time);
-  }
-  const stampOf = (purchase: Purchase) => {
-    const slot = profile.slots.values[purchase.slot - 1];
-    const bought = slot === undefined ? undefined : shop.offers[slot.key];
-    const option =
-      slot === undefined || bought?.optionKey == null
-        ? undefined
-        : profile.groups.byKey[slot.groupKey]?.options.byKey[bought.optionKey];
-    const name =
-      option === undefined || bought?.reward == null
-        ? undefined
-        : purchaseInteractionName(option, bought.reward.offer);
-    return name === undefined ? undefined : stamps.get(name);
-  };
+  const slotKey = (purchase: Purchase) => profile.slots.values[purchase.slot - 1]?.key ?? '';
+  const stampOf = purchaseStamps(context, shop, room, purchases.map(slotKey));
+  const stamp = (purchase: Purchase) => stampOf(slotKey(purchase));
   const timed = purchases.flatMap((purchase, index) =>
-    stampOf(purchase) === undefined ? [] : [index],
+    stamp(purchase) === undefined ? [] : [index],
   );
   const sorted = timed
     .map((index) => purchases[index]!)
-    .sort((left, right) => stampOf(left)! - stampOf(right)!);
+    .sort((left, right) => stamp(left)! - stamp(right)!);
   const ordered = [...purchases];
   timed.forEach((position, index) => (ordered[position] = sorted[index]!));
   return ordered;
