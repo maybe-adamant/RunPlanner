@@ -368,6 +368,39 @@ reproduces is reported with its nearest miss and the plan stops there.
      Raws 333, 334, 931, 933 a/b, 1010-1330, 1012 and 1013, and fx
      underworld and surface-victory, complete.
 
+   **Patience audit** (a decision group is judged only once every piece
+   that can override it is authored):
+
+   - Unrecorded untaken-door cages (changed): the solve pinned the entered
+     Fields room's recorded cages inside its author, before that room
+     exists, so its fit test was vacuous and no fit could be accepted (fx
+     underworld's Bridge sibling: 0 of 2 accepted, first fit taken). It now
+     answers the entered room's questions and runs the walk's sweep on the
+     probe, fits only when that room holds its recorded cages, and searches
+     a boon cage's god as the recorded untaken door does. Fx underworld's
+     fits are now accepted (2 of 2); corpus rooms unchanged.
+   - Batch door peers: `authorNewGodsFirst` authors every peer bringing a
+     new god before a door repeating one, and a door's reward waits for
+     every batch door (forced stores); no change. An untaken Trial's god
+     order leaves no trace (equivalent, reported).
+   - Ship wheels: offers carry no peers (`peers: []`), so an unpicked
+     offer's provisional god cannot refuse a pick; the solve replaces it
+     after the window closes. No change.
+   - Forced rewards: forced Boon draws skip the peer check by design, and
+     forced stores are read once every batch door is placed (above). No
+     change.
+   - Takeover Preboss doors: the batch is created at once, doors paired in
+     native order, its rewards answered with every batch door placed. No
+     change.
+   - Fields rolls: an unseen earlier roll is switched when a later recorded
+     roll needs it (above). Entered-room cages take the first slot order
+     the plan draws, re-placed on every probe that depends on them. No
+     change.
+   - Remaining canonical-first answers (strictness, not patience; left as
+     is): an unrecorded cage the solve cannot place (`answerUnrecordedCage`,
+     notInRecord), an optional reward's boon god, and the solvers' first-fit
+     fallback when no fit is accepted.
+
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.
 6. **Recorded room** (authored outcome replayed as canonical events) only for

@@ -348,45 +348,52 @@ function permutations<T>(values: readonly T[]): T[][] {
 type CageValues = readonly { readonly slotKey: string; readonly value: ResolvedRewardOffer }[];
 
 /**
- * Each roll order of the recorded types, with each offer the engine admits
- * at a slot once the earlier slots hold theirs.
+ * Each way to author `types` on `slots` in order: every offer of a slot's
+ * type the engine admits once the earlier slots hold theirs.
  */
-function* untakenCageCandidates(
+function expandCageOffers(
   context: RunImportContext,
   reward: Origin<'localReward'>,
   slots: readonly string[],
-  rewards: readonly string[],
-): Generator<CageValues> {
-  const orders = permutations(rewards).filter(
+  types: readonly string[],
+  prefix: CageValues = [],
+): CageValues[] {
+  const slotKey = slots[prefix.length];
+  if (slotKey === undefined) return [prefix];
+  const target = { ...reward, slotKey };
+  const admitted = context.probe(() =>
+    prefix.every(({ slotKey: held, value }) =>
+      context.apply({ kind: 'ReplaceLocalReward', reward: { ...reward, slotKey: held }, value }),
+    )
+      ? locallyValidRewardOffers(context.catalog.rewards, types[prefix.length]!).filter((value) => {
+          const evaluation = context
+            .candidates()
+            .evaluate({ kind: 'localReward', reward: target, value });
+          return (
+            evaluation.kind === 'localReward' &&
+            evaluation.result.supported &&
+            evaluation.result.findings.length === 0
+          );
+        })
+      : [],
+  );
+  return admitted.flatMap((value) =>
+    expandCageOffers(context, reward, slots, types, [...prefix, { slotKey, value }]),
+  );
+}
+
+/** Each distinct order of `types`. */
+const distinctOrders = (types: readonly string[]) =>
+  permutations(types).filter(
     (order, index, all) => all.findIndex((other) => other.join() === order.join()) === index,
   );
-  const expand = (order: readonly string[], prefix: CageValues): CageValues[] => {
-    const slotKey = slots[prefix.length];
-    if (slotKey === undefined) return [prefix];
-    const target = { ...reward, slotKey };
-    const admitted = context.probe(() =>
-      prefix.every(({ slotKey: held, value }) =>
-        context.apply({ kind: 'ReplaceLocalReward', reward: { ...reward, slotKey: held }, value }),
-      )
-        ? locallyValidRewardOffers(
-            context.catalog.rewards,
-            order[cageIndexOfSlot(slotKey)]!,
-          ).filter((value) => {
-            const evaluation = context
-              .candidates()
-              .evaluate({ kind: 'localReward', reward: target, value });
-            return (
-              evaluation.kind === 'localReward' &&
-              evaluation.result.supported &&
-              evaluation.result.findings.length === 0
-            );
-          })
-        : [],
-    );
-    return admitted.flatMap((value) => expand(order, [...prefix, { slotKey, value }]));
-  };
-  for (const order of orders) yield* expand(order, []);
-}
+
+/** The offers a choice draws, ignoring their order: another order is the same saved state. */
+const drawnOffers = (values: CageValues) =>
+  values
+    .map(({ value }) => JSON.stringify(value))
+    .sort()
+    .join();
 
 /** Whether the Fields room a source visit entered holds every cage the record gives it. */
 function takenCagesHeld(context: RunImportContext, biomeKey: string, sourceIndex: number): boolean {
@@ -426,7 +433,15 @@ function answerUntakenCages(
   const sourceIndex = recorded.roomIndex;
   const search = searchRoom(context, {
     roomIndex: sourceIndex,
-    candidates: untakenCageCandidates(context, reward, slots, recorded.rewards),
+    candidates: (function* () {
+      for (const order of distinctOrders(recorded.rewards))
+        yield* expandCageOffers(
+          context,
+          reward,
+          slots,
+          slots.map((slotKey) => order[cageIndexOfSlot(slotKey)]!),
+        );
+    })(),
     author: (values: CageValues) => {
       const commands = values.map(({ slotKey, value }): ProjectCommand => ({
         kind: 'ReplaceLocalReward',
@@ -434,13 +449,7 @@ function answerUntakenCages(
         value,
       }));
       if (!commands.every((command) => context.apply(command))) return undefined;
-      return {
-        commands,
-        drawn: values
-          .map(({ value }) => JSON.stringify(value))
-          .sort()
-          .join(),
-      };
+      return { commands, drawn: drawnOffers(values) };
     },
     // The entered room's recorded cages, and a reroll redrawing a cage, are authored on the probe as the walk would.
     settles: [context.occurrences.occurrenceOf(sourceIndex + 1)],
@@ -471,23 +480,6 @@ function answerUntakenCages(
       record: record(sourceIndex),
     });
   return true;
-}
-
-/** The first offer of `type` the engine admits at a cage slot, applied. */
-function placeCage(
-  context: RunImportContext,
-  reward: Origin<'localReward'>,
-  type: string,
-): ResolvedRewardOffer | undefined {
-  return locallyValidRewardOffers(context.catalog.rewards, type).find((value) => {
-    const evaluation = context.candidates().evaluate({ kind: 'localReward', reward, value });
-    return (
-      evaluation.kind === 'localReward' &&
-      evaluation.result.supported &&
-      evaluation.result.findings.length === 0 &&
-      context.apply({ kind: 'ReplaceLocalReward', reward, value })
-    );
-  });
 }
 
 /**
@@ -594,29 +586,6 @@ function sameCage(
   );
 }
 
-/**
- * Places the recorded cages of the Fields room the source visit entered,
- * beside an untaken door; false when the plan does not hold that room yet.
- */
-function placeTakenCages(
-  context: RunImportContext,
-  reward: Origin<'localReward'>,
-  sourceIndex: number,
-): boolean {
-  const taken = context.record.rooms[sourceIndex + 1];
-  if (
-    taken?.fields === undefined ||
-    context.occurrences.biomeOfRoom[sourceIndex + 1] !== reward.biomeKey
-  )
-    return false;
-  const occurrenceId = context.occurrences.occurrenceOf(sourceIndex + 1);
-  const state = fieldsState(context, reward.biomeKey, occurrenceId);
-  if (occurrenceId === reward.occurrenceId || state === undefined) return false;
-  if (Object.values(state.cages).every((cage) => cage === null))
-    placeRecordedCages(context, { ...reward, occurrenceId, slotKey: 'cage1' }, taken.fields);
-  return true;
-}
-
 /** The occurrence's cage slots the plan still asks a reward for. */
 function missingCageSlots(context: RunImportContext, occurrenceId: string): readonly string[] {
   return context
@@ -631,14 +600,20 @@ function missingCageSlots(context: RunImportContext, occurrenceId: string): read
     );
 }
 
-/** One way to author an untaken door's cages: their types in slot order, and the source's Artificer replacement. */
+/** One way to author an untaken door's cages: an offer per slot, and the source's Artificer replacement. */
 interface CageCandidate {
-  readonly order: readonly string[];
+  readonly values: CageValues;
   readonly replacement: string | undefined;
 }
 
-/** The candidates of one bracket solution: each replacement type the source's Artificer may take, then each cage order. */
+/**
+ * The candidates of one bracket solution: each replacement type the source's
+ * Artificer may take, then each cage order with each offer the engine admits.
+ */
 function* cageCandidates(
+  context: RunImportContext,
+  reward: Origin<'localReward'>,
+  slots: readonly string[],
   solution: readonly string[],
   artificer: boolean,
 ): Generator<CageCandidate> {
@@ -646,10 +621,9 @@ function* cageCandidates(
   for (const replacement of replacements) {
     const cages = [...solution];
     if (replacement !== undefined) cages.splice(cages.indexOf(replacement), 1);
-    const orders = permutations(cages).filter(
-      (order, index, all) => all.findIndex((other) => other.join() === order.join()) === index,
-    );
-    for (const order of orders) yield { order, replacement };
+    for (const order of distinctOrders(cages))
+      for (const values of expandCageOffers(context, reward, slots, order))
+        yield { values, replacement };
   }
 }
 
@@ -658,11 +632,13 @@ function* cageCandidates(
  * refilled, take the reward types the stores lost across the source room
  * beyond the plan's other draws. The source room's waiting Artificer
  * replacement is one more of those draws, searched with the cages. Each
- * multiset that bracket explains is authored in each order with the entered
- * Fields room's recorded cages pinned after it, and fits when the source room
- * then adds no store difference at the next entry save; the first fit that
- * save accepts is kept, or the first fit. Several fits are reported, as is
- * any boon's god, which no save shows.
+ * multiset that bracket explains is authored in each order, a boon with each
+ * god the engine admits, with the entered Fields room's questions answered
+ * and the walk's sweep run after it (its recorded cages are drawn with the
+ * same batch), and fits when that room holds its recorded cages and the
+ * source room adds no store difference at the next entry save; the first fit
+ * that save accepts is kept, or the first fit. Several fits are reported, as
+ * is any boon's god, which no save shows.
  */
 function solveUnrecordedCages(context: RunImportContext, reward: Origin<'localReward'>): boolean {
   const offered = context.occurrences.offeredDoor(reward.occurrenceId);
@@ -723,30 +699,27 @@ function solveUnrecordedCages(context: RunImportContext, reward: Origin<'localRe
     measured.length + (artificer ? 1 : 0),
   );
   const slots = [...measured].sort((left, right) => cageIndexOfSlot(left) - cageIndexOfSlot(right));
-  let judged = true;
   const search = searchRoom(context, {
     roomIndex: sourceIndex,
     candidates: (function* () {
       for (const solution of solutions)
         if (solution.every((draw) => draw.storeKey === storeKey))
           yield* cageCandidates(
+            context,
+            reward,
+            slots,
             solution.map((draw) => draw.rewardType),
             artificer,
           );
     })(),
-    author: ({ order, replacement }) => {
-      const commands: ProjectCommand[] = [];
-      let boons = 0;
-      const placed = slots.every((slotKey, index) => {
-        const target = { ...reward, slotKey };
-        const value = placeCage(context, target, order[index]!);
-        if (value === undefined) return false;
-        if (value.payload?.kind === 'BoonSource') boons += 1;
-        commands.push({ kind: 'ReplaceLocalReward', reward: target, value });
-        return true;
-      });
+    author: ({ values, replacement }) => {
+      const commands = values.map(({ slotKey, value }): ProjectCommand => ({
+        kind: 'ReplaceLocalReward',
+        reward: { ...reward, slotKey },
+        value,
+      }));
       if (
-        !placed ||
+        !commands.every((command) => context.apply(command)) ||
         (replacement !== undefined &&
           !convertFieldsPickups(context, sourceIndex, {
             kinds: ['artificer'],
@@ -754,16 +727,19 @@ function solveUnrecordedCages(context: RunImportContext, reward: Origin<'localRe
           }))
       )
         return undefined;
-      // Before the walk authors the entered room, its draws are missing from any judgement.
-      judged = placeTakenCages(context, reward, sourceIndex);
-      return { commands, boons, replacement, drawn: [...order].sort().join() };
+      const boons = values.filter(({ value }) => value.payload?.kind === 'BoonSource').length;
+      return { commands, boons, replacement, drawn: drawnOffers(values) };
     },
+    settles: [context.occurrences.occurrenceOf(sourceIndex + 1)],
+    sweep: true,
     fits: () => {
-      if (!judged) return true;
       const acceptance = context.acceptance(sourceIndex);
+      // A next save the candidate never reaches refuses it; one the record lacks judges nothing.
       return (
-        acceptance.verdict !== 'unchecked' &&
-        acceptance.introduced.every((difference) => difference.area !== 'stores')
+        takenCagesHeld(context, reward.biomeKey, sourceIndex) &&
+        (acceptance.verdict === 'unchecked'
+          ? acceptance.reason !== 'unreached'
+          : acceptance.introduced.every((difference) => difference.area !== 'stores'))
       );
     },
   });
