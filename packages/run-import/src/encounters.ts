@@ -421,9 +421,6 @@ function customizeEncounter(
     );
 }
 
-/** Next-biome kills not yet claimed by a Menace conversion, per record room. */
-const unclaimedKills = new WeakMap<RunImportContext, Map<number, Map<string, number>>>();
-
 /**
  * Vow of Menace swaps spawn requests without rewriting the saved waves, so a
  * conversion shows as a rolled type killed fewer times than rolled, matched by
@@ -467,10 +464,8 @@ function importMenace(
   const choices = new Map(
     [...policy.choices, ...policy.fixedEnemies].map((choice) => [choice.key, choice]),
   );
-  const byRoom = unclaimedKills.get(context) ?? new Map<number, Map<string, number>>();
-  unclaimedKills.set(context, byRoom);
-  const unclaimed = byRoom.get(record.roomIndex) ?? new Map<string, number>();
-  byRoom.set(record.roomIndex, unclaimed);
+  const unclaimed = context.unclaimedKills.get(record.roomIndex) ?? new Map<string, number>();
+  context.unclaimedKills.set(record.roomIndex, unclaimed);
   // Only next-biome kills no wave rolled can be replacements; summons and props never qualify.
   const surplusOf = (target: string) =>
     unclaimed.get(target) ?? Math.max(0, (kills[target] ?? 0) - (rolled.get(target) ?? 0));

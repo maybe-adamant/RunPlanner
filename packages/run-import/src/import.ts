@@ -111,8 +111,8 @@ export interface RunImportContext {
   readonly transaction: (run: () => boolean) => boolean;
   /**
    * Runs `run` against the plan and then undoes all of it, its authorship,
-   * report entries, used record facts and withdrawn retractions included,
-   * returning its result.
+   * report entries, used record facts, claimed kills, occurrence bindings and
+   * withdrawn retractions included, returning its result.
    */
   readonly probe: <Result>(run: () => Result) => Result;
   /**
@@ -133,6 +133,8 @@ export interface RunImportContext {
   readonly used: Set<string>;
   /** Picked max-health rolls waiting for their room's next entry save, by offer and row. */
   readonly maxHealthRolls: Map<string, MaxHealthRollQuestion>;
+  /** Next-biome kills not yet claimed by a Menace conversion, per record room. */
+  readonly unclaimedKills: Map<number, Map<string, number>>;
   /**
    * Judges a record room at its next entry save against the plan as it
    * stands; inside `probe`, it tests a candidate authoring of the room.
@@ -293,6 +295,7 @@ export class RunImportWalk {
       note: (entry) => this.entries.push(entry),
       used: new Set(),
       maxHealthRolls: new Map(),
+      unclaimedKills: new Map(),
       acceptance: (roomIndex) => this.judge(roomIndex),
       refuse: () => {
         this.refusedAnswer = true;
@@ -448,6 +451,10 @@ export class RunImportWalk {
     const halted = this.halted;
     const used = new Set(this.context.used);
     const maxHealthRolls = new Map(this.context.maxHealthRolls);
+    const unclaimedKills = [...this.context.unclaimedKills].map(
+      ([roomIndex, kills]) => [roomIndex, new Map(kills)] as const,
+    );
+    const restoreBindings = this.occurrences.savepoint();
     const dirty = this.dirty;
     const seen = new Map(this.seen);
     const seenBindings = this.seenBindings;
@@ -463,6 +470,10 @@ export class RunImportWalk {
       for (const key of used) this.context.used.add(key);
       this.context.maxHealthRolls.clear();
       for (const [key, roll] of maxHealthRolls) this.context.maxHealthRolls.set(key, roll);
+      this.context.unclaimedKills.clear();
+      for (const [roomIndex, kills] of unclaimedKills)
+        this.context.unclaimedKills.set(roomIndex, new Map(kills));
+      restoreBindings();
       this.dirty = dirty;
       this.seen.clear();
       for (const [key, marker] of seen) this.seen.set(key, marker);
@@ -642,7 +653,16 @@ export class RunImportWalk {
     for (;;) {
       this.sweep();
       this.acceptReachedRooms();
-      if (this.halted !== undefined) return this.halted;
+      if (this.halted !== undefined) {
+        // Rooms before a stop take their stamped action order too.
+        if (!ordered) {
+          ordered = true;
+          const before = this.assembly;
+          importRoomActionOrders(this.context);
+          if (this.assembly !== before) continue;
+        }
+        return this.halted;
+      }
       const issue = this.assembly.evaluation.issue;
       // A ship window still open as the walk ends never closes; its waiting pickups are authored.
       if (issue === undefined && releaseOpenWheelWindows(this.context)) continue;

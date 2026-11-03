@@ -107,6 +107,21 @@ export class RecordOccurrences {
     return this.occurrenceOfRoom[roomIndex]!;
   }
 
+  /** Saves the bindings; the returned function restores them, as after a probe. */
+  savepoint(): () => void {
+    const occurrenceOfRoom = [...this.occurrenceOfRoom];
+    const roomsOfOccurrence = [...this.roomsOfOccurrence].map(
+      ([id, visits]) => [id, [...visits]] as const,
+    );
+    const bindings = this.bindings;
+    return () => {
+      this.occurrenceOfRoom.splice(0, this.occurrenceOfRoom.length, ...occurrenceOfRoom);
+      this.roomsOfOccurrence.clear();
+      for (const [id, visits] of roomsOfOccurrence) this.roomsOfOccurrence.set(id, [...visits]);
+      this.bindings = bindings;
+    };
+  }
+
   /** Record room indices of every visit to the occurrence, in order. */
   visitsOf(occurrenceId: string): readonly number[] {
     return this.roomsOfOccurrence.get(occurrenceId) ?? [];
