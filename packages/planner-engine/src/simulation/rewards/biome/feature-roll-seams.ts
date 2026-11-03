@@ -63,6 +63,7 @@ import { addRewardFinding, rewardFinding } from '../findings';
 import { settleFeatureReroll } from '../screen-rerolls';
 import { settledFindings, type ChronologyEmission } from './chronology-accumulator';
 import {
+  withBranch,
   withKeyed,
   type ChronologySeamHandler,
   type ChronologyWalkContext,
@@ -148,7 +149,8 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
     (event.feature === 'stygianWell'
       ? room.stygianWell !== undefined && state.stygianWellAssessments.has(roomKey)
       : room.purgingPool !== undefined && state.purgingPoolAssessments.has(roomKey));
-  if (!reached || state.branches.length === 0) return { state, emissions: [timeline] };
+  const { branch } = state;
+  if (!reached || branch === undefined) return { state, emissions: [timeline] };
   const chronology = rewardFindingChronologyForRoom(
     context.snapshot,
     room.origin,
@@ -162,15 +164,15 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
   const region = ownerRegion(event.owner);
   if (event.feature === 'stygianWell') {
     const walk = stygianWellWalk(state, roomKey);
-    const settled = settleFeatureReroll(context.catalog, state.branches, {
+    const settled = settleFeatureReroll(context.catalog, branch, {
       cost: walk.rerollCount + 1,
       somethingLeft: stygianWellSomethingLeft(walk),
       owner: event.owner,
       chronology,
     });
-    if (settled.branches.length === 0)
+    if (settled.branch === undefined)
       return {
-        state: Object.freeze({ ...state, branches: settled.branches }),
+        state: withBranch(state, undefined),
         emissions: [settledFindings(settled.findings), timeline],
       };
     const offered = stygianWellRestockedSlots(walk);
@@ -193,55 +195,49 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
       region,
       chronology,
     );
-    const rolls = settled.branches.map((branch) =>
-      assessStygianWellRoll(
-        context.catalog,
-        room.origin.routeKey,
-        event.rerollId,
-        pins,
-        offered,
-        branch.state.stygianWell,
-        branch.state.traitHistory,
-      ),
+    const roll = assessStygianWellRoll(
+      context.catalog,
+      room.origin.routeKey,
+      event.rerollId,
+      pins,
+      offered,
+      settled.branch.state.stygianWell,
+      settled.branch.state.traitHistory,
     );
-    for (const roll of rolls)
-      for (const issue of roll.issues)
-        addRewardFinding(
-          findings,
-          rewardFinding(
-            issue.kind === 'notOffered'
-              ? 'rollOfferUnavailable'
-              : issue.kind === 'duplicate'
-                ? 'stygianWellDuplicate'
-                : 'stygianWellWrongGroup',
-            createRoomFeatureAddress(room.origin, {
-              kind: 'stygianWellOffer',
-              generationKey: stygianWellGenerationKey(event.rerollId, issue.slotKey),
-            }),
-            issue.kind === 'notOffered'
-              ? { reason: 'slotNotOffered' }
-              : issue.kind === 'duplicate'
-                ? { reason: issue.kind, slotKey: issue.slotKey }
-                : { reason: issue.kind },
-          ),
-          region,
-          chronology,
-        );
+    for (const issue of roll.issues)
+      addRewardFinding(
+        findings,
+        rewardFinding(
+          issue.kind === 'notOffered'
+            ? 'rollOfferUnavailable'
+            : issue.kind === 'duplicate'
+              ? 'stygianWellDuplicate'
+              : 'stygianWellWrongGroup',
+          createRoomFeatureAddress(room.origin, {
+            kind: 'stygianWellOffer',
+            generationKey: stygianWellGenerationKey(event.rerollId, issue.slotKey),
+          }),
+          issue.kind === 'notOffered'
+            ? { reason: 'slotNotOffered' }
+            : issue.kind === 'duplicate'
+              ? { reason: issue.kind, slotKey: issue.slotKey }
+              : { reason: issue.kind },
+        ),
+        region,
+        chronology,
+      );
     const existing = state.stygianWellAssessments.get(roomKey)!;
     return {
       state: Object.freeze({
         ...state,
-        branches: settled.branches,
+        branch: settled.branch,
         featureRolls: withWalk(state, roomKey, stygianWellAfterReroll(walk, event.rerollId)),
         stygianWellAssessments: new Map(state.stygianWellAssessments).set(
           roomKey,
           Object.freeze({
             origin: existing.origin,
             entry: existing.entry,
-            actions: Object.freeze([
-              ...existing.actions,
-              ...rolls.map((roll) => Object.freeze({ roll })),
-            ]),
+            actions: Object.freeze([...existing.actions, Object.freeze({ roll })]),
           }),
         ),
       }),
@@ -249,15 +245,15 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
     };
   }
   const walk = purgingPoolWalk(state, roomKey, room)!;
-  const settled = settleFeatureReroll(context.catalog, state.branches, {
+  const settled = settleFeatureReroll(context.catalog, branch, {
     cost: walk.rerollCount + 1,
     somethingLeft: purgingPoolOfferedSlots(walk).length > 0,
     owner: event.owner,
     chronology,
   });
-  if (settled.branches.length === 0)
+  if (settled.branch === undefined)
     return {
-      state: Object.freeze({ ...state, branches: settled.branches }),
+      state: withBranch(state, undefined),
       emissions: [settledFindings(settled.findings), timeline],
     };
   const pins = reference?.kind === 'rerollPurgingPool' ? reference.traitKeyBySlot : {};
@@ -278,7 +274,7 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
   const assessment = assessPurgingPoolList(
     context.catalog,
     pins,
-    settled.branches[0]!.state.traitHistory.equippedTraits,
+    settled.branch.state.traitHistory.equippedTraits,
   );
   for (const finding of assessment.findings)
     addRewardFinding(
@@ -300,7 +296,7 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
   return {
     state: Object.freeze({
       ...state,
-      branches: settled.branches,
+      branch: settled.branch,
       featureRolls: withWalk(
         state,
         roomKey,
@@ -398,11 +394,7 @@ export function wellPurchaseRoll(
         : undefined;
   const first = walk.purchaseCount === 0;
   const restocked =
-    first &&
-    state.branches.length > 0 &&
-    state.branches.every(
-      (branch) => branch.state.traitHistory.equippedTraits.RestockBoon !== undefined,
-    );
+    first && state.branch?.state.traitHistory.equippedTraits.RestockBoon !== undefined;
   const view = wellOccurrenceView(room);
   const rollItemKeys = STYGIAN_WELL_SLOT_KEYS.flatMap((slotKey) => {
     const itemKey = stygianWellGenerationItemKey(
@@ -498,10 +490,11 @@ export function purgingPoolSale(
     rollKey === INITIAL_ROLL_KEY ? assessment.assessment : assessment.rolls?.[rollKey]?.assessment;
   const listed =
     list !== undefined && !list.findings.some((finding) => finding.slotKey === sale.slotKey);
-  const equipped = state.branches.every((branch) => {
-    const trait = branch.state.traitHistory.equippedTraits[traitKey];
-    return trait !== undefined && isPurgingPoolEligibleTrait(context.catalog, trait);
-  });
+  const { branch } = state;
+  const trait = branch?.state.traitHistory.equippedTraits[traitKey];
+  const equipped =
+    branch === undefined ||
+    (trait !== undefined && isPurgingPoolEligibleTrait(context.catalog, trait));
   return listed && equipped
     ? { sold: { traitKey, owner }, findings: Object.freeze([]), featureRolls }
     : { findings: Object.freeze([]), featureRolls };
@@ -509,17 +502,15 @@ export function purgingPoolSale(
 
 function rerollOption(
   context: ChronologyWalkContext,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState,
   rerollCount: number,
   available: boolean,
 ): FeatureRerollOption {
   return Object.freeze({
     cost: rerollCount + 1,
-    enabled: branches.every((branch) =>
-      rerollKindEnabled(context.catalog, branch.state.arcanaFear, 'screens'),
-    ),
+    enabled: rerollKindEnabled(context.catalog, branch.state.arcanaFear, 'screens'),
     available,
-    poolRemaining: reachedRerollPool(branches),
+    poolRemaining: reachedRerollPool(branch),
   });
 }
 
@@ -553,13 +544,11 @@ export function stygianWellInteractions(
           itemKey: room.stygianWell.travelDealRefillKey ?? null,
         }),
       );
-    const candidates = end.branches.map((branch) =>
-      stygianWellRestockCandidates(
-        context.catalog,
-        room.origin.routeKey,
-        branch.state.stygianWell,
-        branch.state.traitHistory,
-      ),
+    const candidates = stygianWellRestockCandidates(
+      context.catalog,
+      room.origin.routeKey,
+      end.branch.state.stygianWell,
+      end.branch.state.traitHistory,
     );
     interactions.set(
       roomKey,
@@ -567,29 +556,10 @@ export function stygianWellInteractions(
         historySequence: end.historySequence,
         rollKey: walk.rollKey,
         offers: Object.freeze(offers),
-        reroll: rerollOption(
-          context,
-          end.branches,
-          walk.rerollCount,
-          stygianWellSomethingLeft(walk),
-        ),
+        reroll: rerollOption(context, end.branch, walk.rerollCount, stygianWellSomethingLeft(walk)),
         pendingRoll: Object.freeze({
           offeredSlotKeys: stygianWellRestockedSlots(walk),
-          candidateItemKeysBySlot: Object.freeze(
-            Object.fromEntries(
-              STYGIAN_WELL_SLOT_KEYS.map((slotKey) => {
-                const [first, ...rest] = candidates;
-                return [
-                  slotKey,
-                  Object.freeze(
-                    (first?.[slotKey] ?? []).filter((key) =>
-                      rest.every((record) => record[slotKey].includes(key)),
-                    ),
-                  ),
-                ];
-              }),
-            ),
-          ) as StygianWellInteraction['pendingRoll']['candidateItemKeysBySlot'],
+          candidateItemKeysBySlot: candidates,
         }),
       }),
     );
@@ -611,7 +581,7 @@ export function purgingPoolInteractions(
     const pending = assessPurgingPoolList(
       context.catalog,
       {},
-      end.branches[0]!.state.traitHistory.equippedTraits,
+      end.branch.state.traitHistory.equippedTraits,
     );
     interactions.set(
       roomKey,
@@ -633,7 +603,7 @@ export function purgingPoolInteractions(
         ),
         reroll: rerollOption(
           context,
-          end.branches,
+          end.branch,
           walk.rerollCount,
           purgingPoolOfferedSlots(walk).length > 0,
         ),

@@ -53,8 +53,8 @@ const owner = createExitDecisionAddress(biome, occurrence);
 const child = createTargetAddress(biome, occurrence, 'exit1');
 const context = {} as ChronologyWalkContext;
 const branch = {} as RewardBranchState;
-const received = createChronologyWalkState([branch]);
-const next = createChronologyWalkState([{} as RewardBranchState]);
+const received = createChronologyWalkState(branch);
+const next = createChronologyWalkState({} as RewardBranchState);
 const checkpoint = {
   owner,
   room: { origin: occurrence } as never,
@@ -106,7 +106,7 @@ describe('seam step ordering', () => {
     const accumulator = createChronologyAccumulator(new Map());
     applySeamStep(context, accumulator, received, {
       runStateCheckpoint: { ...checkpoint, against: 'received' },
-      targetHistoryCheckpoint: { origin: child, historySequence: 1, branches: [branch] },
+      targetHistoryCheckpoint: { origin: child, historySequence: 1, branch },
       state: next,
       emissions: [],
     });

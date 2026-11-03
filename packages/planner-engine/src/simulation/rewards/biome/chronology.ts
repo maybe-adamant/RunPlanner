@@ -36,14 +36,15 @@ import { gainSilkenSashDoorArmor } from '../../keepsakes/state';
 import { rewardFindingChronologyForRoom } from './finding-chronology';
 import {
   createChronologyWalkState,
-  withBranches,
+  withBranch,
   type ChronologyWalkContext,
   type ChronologyWalkState,
 } from './chronology-walk';
 import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
 import { type BiomeRewardEvaluationAssembly } from './publication';
 
-import { initializeRewardBranches } from '../branch-lifecycle';
+import { initializeRewardBranch } from '../branch-lifecycle';
+import { branchList, singleBranch } from '../branch-primitives';
 import { rewardFinding } from '../findings';
 import { assessAuthoredBossDoorRewardStore } from './reward-store-support';
 import { createArcanaFearState } from '../../arcana-fear';
@@ -152,17 +153,15 @@ function enterThroughDreamIntroDoor(
 ): ChronologyWalkState {
   const { catalog, routePosition } = context;
   if (!routePosition.isFirst || routePosition.routeKey !== 'Dream') return walk;
-  return withBranches(
-    walk,
-    Object.freeze(
-      walk.branches.map((branch) => {
-        const keepsakes = gainSilkenSashDoorArmor(catalog, branch.state.keepsakes);
-        return keepsakes === branch.state.keepsakes
-          ? branch
-          : Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes }) });
-      }),
-    ),
-  );
+  const { branch } = walk;
+  if (branch === undefined) return walk;
+  const keepsakes = gainSilkenSashDoorArmor(catalog, branch.state.keepsakes);
+  return keepsakes === branch.state.keepsakes
+    ? walk
+    : withBranch(
+        walk,
+        Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes }) }),
+      );
 }
 
 /** Echo replays its captured keepsake at the biome start, before the first event. */
@@ -177,7 +176,7 @@ function replayEchoKeepsake(
     snapshot,
     routePosition,
     routeLoadout,
-    walk.branches,
+    branchList(walk.branch),
     history.events[0]?.sequence ?? 0,
   );
   accumulator.mergeEmissions([
@@ -189,7 +188,7 @@ function replayEchoKeepsake(
     { kind: 'timelineFacts', facts: echoReplay.timelineFacts },
     { kind: 'echoKeepsakeReplayOutcome', outcome: echoReplay.outcome },
   ]);
-  return withBranches(walk, echoReplay.branches);
+  return withBranch(walk, singleBranch(echoReplay.branches));
 }
 
 /** A prefix's blank exit decision records history for its next unauthored target slot. */
@@ -236,11 +235,11 @@ function blankFrontierTargetHistory(
   );
   return accumulator.hasTargetHistory(semanticAddressKey(origin))
     ? []
-    : targetSlotHistory(context, origin, historySequence, walk.branches);
+    : targetSlotHistory(context, origin, historySequence, walk.branch);
 }
 
 /**
- * An entered room whose Overview product no branch supports stops the walk
+ * An entered room whose Overview product the reached state does not support stops the walk
  * with an empty cohort; its entry Run State is the prepared cohort with the
  * room's entry effects, without the unsettled product.
  */
@@ -250,7 +249,7 @@ function captureFailedOverviewEntry(
   walk: ChronologyWalkState,
 ): void {
   const cohort = walk.overviewCohort;
-  if (walk.branches.length > 0 || cohort === undefined || cohort.branches.length === 0) return;
+  if (walk.branch !== undefined || cohort?.branch === undefined) return;
   const room = context.rooms.get(cohort.roomKey);
   const entry = context.views.get(cohort.roomKey)?.entry;
   const entered = context.history.events.find(
@@ -270,7 +269,7 @@ function captureFailedOverviewEntry(
     room,
     context.chaosGateSourceOccurrenceIds,
     context.ixionGeneratedChaosSourceOccurrenceIds,
-    cohort.branches,
+    branchList(cohort.branch),
     rewardFindingChronologyForRoom(
       context.snapshot,
       room.origin,
@@ -279,7 +278,7 @@ function captureFailedOverviewEntry(
     ),
     context.routePosition,
   );
-  captureRunState(context, withBranches(walk, effects.branches), accumulator, {
+  captureRunState(context, withBranch(walk, singleBranch(effects.branches)), accumulator, {
     owner: createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' }),
     room,
     view: entry,
@@ -414,7 +413,7 @@ export function evaluateBiomeRewardChronology(
   const entered = enterThroughDreamIntroDoor(
     context,
     createChronologyWalkState(
-      initializeRewardBranches(
+      initializeRewardBranch(
         seedFrontier,
         seedFrontier === undefined ? createArcanaFearState(catalog, routeLoadout) : undefined,
         catalog,
@@ -434,7 +433,7 @@ export function evaluateBiomeRewardChronology(
   if (seedFrontier === undefined) walk = withRunStartGold(context, walk, routeLoadout);
   const steps: WalkStep[] = [];
   for (const event of history.events) {
-    if (walk.branches.length === 0) break;
+    if (walk.branch === undefined) break;
     steps.push({
       sequence: event.sequence,
       received: walk,
@@ -471,7 +470,7 @@ export function evaluateBiomeRewardChronology(
         : accumulation.traitChildSettlements.get(semanticAddressKey(blockedAt));
     return publishChronology(
       context,
-      child === undefined ? received : withBranches(received, child.branches),
+      child === undefined ? received : withBranch(received, child.branch),
       accumulation,
       through,
       cut.boundary === 'before' ? cut.sequence - 1 : cut.sequence,
@@ -491,8 +490,8 @@ interface WalkStep {
 /**
  * The selected walk through a chronology cut. Unless the cut lies before it,
  * the cut event is the blocking contact: its emissions and the state it
- * settles are reached. A contact that leaves no branch, or the last event of a
- * walk that stopped before the cut, keeps the branches it received.
+ * settles are reached. A contact that leaves no state, or the last event of a
+ * walk that stopped before the cut, keeps the state it received.
  */
 function walkThrough(
   steps: readonly WalkStep[],
@@ -501,18 +500,18 @@ function walkThrough(
 ): {
   readonly received: ChronologyWalkState;
   readonly emissionCount: number;
-  /** Whether the reached state settled every branch it received. */
+  /** Whether the reached state settled the state it received. */
   readonly settled: boolean;
 } {
   const index = steps.findIndex((step) => step.sequence >= cut.sequence);
   if (index < 0) {
-    const settled = walked.received.branches.length > 0;
+    const settled = walked.received.branch !== undefined;
     const last = steps.at(-1);
     return {
       received:
         settled || last === undefined
           ? walked.received
-          : withBranches(walked.received, last.received.branches),
+          : withBranch(walked.received, last.received.branch),
       emissionCount: walked.emissionCount,
       settled,
     };
@@ -520,9 +519,9 @@ function walkThrough(
   const step = steps[index]!;
   if (step.sequence > cut.sequence || cut.boundary === 'before') return { ...step, settled: true };
   const next = steps[index + 1] ?? walked;
-  const settled = next.received.branches.length > 0;
+  const settled = next.received.branch !== undefined;
   return {
-    received: settled ? next.received : withBranches(next.received, step.received.branches),
+    received: settled ? next.received : withBranch(next.received, step.received.branch),
     emissionCount: next.emissionCount,
     settled,
   };

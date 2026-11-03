@@ -33,13 +33,12 @@ export interface RunStateCheckpointEmission {
   readonly owner: RunStateOwner;
   readonly source: CanonicalLifecycleRoom;
   readonly view: HistoryStateView;
-  readonly branches: readonly RewardBranchState[];
 }
 
 export interface TargetHistoryCheckpointEmission {
   readonly origin: TargetAddress;
   readonly historySequence: number;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
 }
 
 export function createAuthoredSiteSettlementEmissions(input: {

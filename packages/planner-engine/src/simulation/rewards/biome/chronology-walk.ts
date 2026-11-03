@@ -37,7 +37,6 @@ import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contr
 import type { PendingHubBoardGeneration } from './generation/emissions';
 import type { TargetGenerationFrontier } from './generation/target-generation-completed';
 import type { PreparedRewardEvaluationInputs } from './prepared-inputs';
-import { BiomeRewardSimulationContractError } from './biome-contract';
 
 /** The fixed inputs every seam handler of one biome walk reads. */
 export interface ChronologyWalkContext {
@@ -107,7 +106,8 @@ export type GoldRecordedRoster =
 
 /** The walk state carried between seams; replaced, never mutated. */
 export interface ChronologyWalkState {
-  readonly branches: readonly RewardBranchState[];
+  /** The one reached state, or none once a block stopped the walk. */
+  readonly branch: RewardBranchState | undefined;
   /** A seam stopped the walk at its own sequence. */
   readonly halted: boolean;
   readonly stygianWellAssessments: ReadonlyMap<string, StygianWellRoomAssessment>;
@@ -151,11 +151,11 @@ export interface ChronologyWalkState {
   /**
    * The last reached point of each interactive object room's actions (Well,
    * Pool, World Shop, Shrine, Contract pedestal), where a new action is
-   * appended, with the branches there; by room.
+   * appended, with the state there; by room.
    */
   readonly roomActionEnds: ReadonlyMap<
     string,
-    { readonly historySequence: number; readonly branches: readonly RewardBranchState[] }
+    { readonly historySequence: number; readonly branch: RewardBranchState }
   >;
   /** Shrine-keyed Travel Deal refill domain, captured at the first rush made with the trait. */
   readonly hermesShrineTravelDealRefills: ReadonlyMap<string, RealizedHermesShrineTravelDealRefill>;
@@ -191,7 +191,7 @@ export interface ChronologyWalkState {
     | undefined;
   /**
    * One persistent Ephyra board-generation region. It starts from the
-   * post-Hub-entry reward branches and contains every open physical door,
+   * post-Hub-entry reward state and contains every open physical door,
    * independently from the later six-room visit chronology.
    */
   readonly pendingHubBoard: PendingHubBoardGeneration | undefined;
@@ -207,16 +207,16 @@ export interface ChronologyWalkState {
   readonly shipLifecycleContexts: ReadonlyMap<string, ShipLifecycleCandidateContext>;
   /** The prepared cohort entering the current room's Overview. */
   readonly overviewCohort:
-    { readonly roomKey: string; readonly branches: readonly RewardBranchState[] } | undefined;
+    { readonly roomKey: string; readonly branch: RewardBranchState | undefined } | undefined;
   /** Each entered room's vow ranks, which every phase's encounter composition reads. */
   readonly encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>;
 }
 
 export function createChronologyWalkState(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
 ): ChronologyWalkState {
   return Object.freeze({
-    branches: singleStateFrontier(branches),
+    branch,
     halted: false,
     stygianWellAssessments: new Map(),
     wellRefillRealizations: new Map(),
@@ -278,19 +278,19 @@ export function withMember(
   return next;
 }
 
-export function withBranches(
+export function withBranch(
   state: ChronologyWalkState,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
 ): ChronologyWalkState {
-  return Object.freeze({ ...state, branches: singleStateFrontier(branches) });
+  return branch === state.branch ? state : Object.freeze({ ...state, branch });
 }
 
 export interface RunStateCheckpointRequest {
   readonly owner: RunStateSnapshot['owner'];
   readonly room: CanonicalAuthoredRoom | CanonicalHubRoom;
   readonly view: HistoryStateView;
-  /** Defaults to the branches of the state the capture runs against. */
-  readonly branches?: readonly RewardBranchState[];
+  /** Defaults to the state the capture runs against. */
+  readonly branch?: RewardBranchState;
 }
 
 /**
@@ -306,7 +306,7 @@ export interface ChronologySeamStep {
   readonly targetHistoryCheckpoint?: {
     readonly origin: TargetAddress;
     readonly historySequence: number;
-    readonly branches: readonly RewardBranchState[];
+    readonly branch: RewardBranchState | undefined;
   };
   readonly state: ChronologyWalkState;
   readonly emissions: readonly ChronologyEmission[];
@@ -323,13 +323,4 @@ export type ChronologySeamHandler<K extends HistoryEvent['kind']> = (
 /** The key a reroll's flagging is recorded under: the doors' room, a wheel, or the Hub. */
 export function rerollFlagKey(ownerKey: string, wheelKey?: string): string {
   return wheelKey === undefined ? ownerKey : `${ownerKey}::${wheelKey}`;
-}
-
-/** The walk carries one reached state, or none once a block stops it. */
-function singleStateFrontier(branches: readonly RewardBranchState[]): readonly RewardBranchState[] {
-  if (branches.length > 1)
-    throw new BiomeRewardSimulationContractError(
-      'settlement produced more than one frontier state',
-    );
-  return branches;
 }

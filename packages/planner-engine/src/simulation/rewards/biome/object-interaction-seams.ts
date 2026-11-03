@@ -69,7 +69,7 @@ export function captureRoomActionEnd(
   state: ChronologyWalkState,
   event: HistoryEvent,
 ): ChronologyWalkState {
-  if (!('origin' in event) || SEQUENCE_CLOSED_BY.has(event.kind) || state.branches.length === 0)
+  if (!('origin' in event) || SEQUENCE_CLOSED_BY.has(event.kind) || state.branch === undefined)
     return state;
   const roomKey = semanticAddressKey(event.origin);
   const room = authoredRoom(context, roomKey);
@@ -78,7 +78,7 @@ export function captureRoomActionEnd(
     ...state,
     roomActionEnds: new Map(state.roomActionEnds).set(
       roomKey,
-      Object.freeze({ historySequence: event.sequence, branches: state.branches }),
+      Object.freeze({ historySequence: event.sequence, branch: state.branch }),
     ),
   });
 }
@@ -233,7 +233,7 @@ function hermesShrineInteraction(
 function championItemInteraction(
   room: CanonicalAuthoredRoom,
   historySequence: number,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState,
 ): ChampionItemInteraction | undefined {
   const pedestal = room.infernalContractPedestal;
   if (pedestal === undefined) return undefined;
@@ -248,11 +248,9 @@ function championItemInteraction(
     room.origin.occurrenceId,
   );
   const ownerKey = semanticAddressKey(address);
-  // The item spawns with the room on each branch holding Champion of Elysium.
-  const spawned = branches.every((branch) =>
-    branch.events.some(
-      (event) => event.kind === 'rewardOffered' && semanticAddressKey(event.origin) === ownerKey,
-    ),
+  // The item spawns with the room when the state holds Champion of Elysium.
+  const spawned = branch.events.some(
+    (event) => event.kind === 'rewardOffered' && semanticAddressKey(event.origin) === ownerKey,
   );
   // An unchosen item of a spawned pedestal blocks its room's Overview, so it never reaches here.
   return Object.freeze({
@@ -292,7 +290,7 @@ export function roomObjectInteractions(
       end.historySequence,
       state.hermesShrineTravelDealRefills.get(roomKey),
     );
-    const championItem = championItemInteraction(room, end.historySequence, end.branches);
+    const championItem = championItemInteraction(room, end.historySequence, end.branch);
     if (worldShop === undefined && hermesShrine === undefined && championItem === undefined)
       continue;
     interactions.set(

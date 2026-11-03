@@ -22,7 +22,8 @@ import {
 } from '../../state/offered-rewards';
 import { reachSimulationHistory } from '../../state/transitions';
 import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
-import { advanceRewardBranches } from '../branch-lifecycle';
+import { advanceRewardBranch } from '../branch-lifecycle';
+import { branchList, singleBranch, type RewardBranchState } from '../branch-primitives';
 import type { MidBiomeStartPoint } from '../model';
 import { BiomeRewardSimulationContractError } from './biome-contract';
 import {
@@ -37,7 +38,7 @@ import {
 import { captureRunState, hubDepartureEmissions, targetSlotHistory } from './chronology-run-state';
 import {
   rerollFlagKey,
-  withBranches,
+  withBranch,
   withKeyed,
   withMember,
   type ChronologySeamHandler,
@@ -89,18 +90,23 @@ import { spawnInfernalContractPedestal } from './offer-lifecycle/infernal-contra
 import { createBiomeRewardFacts } from '../facts';
 import { rerollKindEnabled } from '../../arcana-fear';
 
-/** Records whether the cohort holds a door-reroll card as doors, wheels or the board are flagged. */
+/** Records whether the state holds a door-reroll card as doors, wheels or the board are flagged. */
 function flagRerolls(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
   key: string,
 ): ChronologyWalkState['rerollsFlagged'] {
   const enabled =
-    state.branches.length > 0 &&
-    state.branches.every((branch) =>
-      rerollKindEnabled(context.catalog, branch.state.arcanaFear, 'doors'),
-    );
+    state.branch !== undefined &&
+    rerollKindEnabled(context.catalog, state.branch.state.arcanaFear, 'doors');
   return withKeyed(state.rerollsFlagged, key, enabled);
+}
+
+function advanceReached(
+  branch: RewardBranchState | undefined,
+  historySequence: number,
+): RewardBranchState | undefined {
+  return branch === undefined ? undefined : advanceRewardBranch(branch, historySequence);
 }
 
 function authoredRoom(
@@ -116,9 +122,9 @@ const erisInteracted: ChronologySeamHandler<'erisInteracted'> = (context, state,
     context.catalog,
     event,
     authoredRoom(context, event.origin),
-    state.branches,
+    branchList(state.branch),
   );
-  return { state: withBranches(state, transition.branches), emissions: [] };
+  return { state: withBranch(state, singleBranch(transition.branches)), emissions: [] };
 };
 
 /** One door, cage or wheel reroll press at its authored rank. */
@@ -150,13 +156,13 @@ const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state,
       ) === true,
     historySequence: event.sequence,
     view: context.history.viewsBySequence[event.sequence - 1],
-    branches: state.branches,
+    branches: branchList(state.branch),
     rerolledOffers: state.rerolledOffers,
   });
   return {
     state: Object.freeze({
       ...state,
-      branches: transition.branches,
+      branch: singleBranch(transition.branches),
       rerolledOffers: transition.rerolledOffers,
     }),
     emissions: [
@@ -203,7 +209,7 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
       kind: 'hubBoard' as const,
       history: historyFindingChronology(event.sequence),
     }),
-    branches: state.branches,
+    branches: branchList(state.branch),
     rerolledOffers: state.rerolledOffers,
   });
   const { progression } = context.prepared.layout;
@@ -222,19 +228,18 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
   // one, so only a press before the first departure replaces a first draw.
   const updateLookup =
     reroll.precedingVisitCount === 0 ? replaceHubBoardRewardLookup : addHubBoardRewardLookup;
-  const branches =
-    progression.kind !== 'hub' || transition.settlement?.poolRemainingAfter === undefined
-      ? transition.branches
-      : Object.freeze(
-          transition.branches.map((branch) =>
-            Object.freeze({
-              ...branch,
-              state: updateLookup(branch.state, progression.rewardLookup.key, boardTypes),
-            }),
-          ),
-        );
+  const settled = singleBranch(transition.branches);
+  const branch =
+    progression.kind !== 'hub' ||
+    transition.settlement?.poolRemainingAfter === undefined ||
+    settled === undefined
+      ? settled
+      : Object.freeze({
+          ...settled,
+          state: updateLookup(settled.state, progression.rewardLookup.key, boardTypes),
+        });
   return {
-    state: Object.freeze({ ...state, branches, rerolledOffers: transition.rerolledOffers }),
+    state: Object.freeze({ ...state, branch, rerolledOffers: transition.rerolledOffers }),
     emissions: [
       generationFindings(transition.findings),
       { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
@@ -247,7 +252,7 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
 
 /** A restored Hub re-assigns its open board doors, flagging them again (AssignRoomToExitDoor). */
 const roomRestored: ChronologySeamHandler<'roomRestored'> = (context, state, event) => {
-  const advanced = withBranches(state, advanceRewardBranches(state.branches, event.sequence));
+  const advanced = withBranch(state, advanceReached(state.branch, event.sequence));
   if (event.restoreKind !== 'hub') return { state: advanced, emissions: [] };
   const hub = context.snapshot.decisions.find((decision) => decision.kind === 'hub');
   if (event.after.kind !== 'hubVisit')
@@ -281,11 +286,11 @@ const keepsakeRackUsed: ChronologySeamHandler<'keepsakeRackUsed'> = (context, st
     authoredRoom(context, event.origin),
     context.views.get(semanticAddressKey(event.origin))?.entry,
     context.routeLoadout,
-    state.branches,
+    branchList(state.branch),
     context.enteredBiomeCount + 1,
   );
   return {
-    state: withBranches(state, transition.branches),
+    state: withBranch(state, singleBranch(transition.branches)),
     emissions: [
       { kind: 'timelineFacts', facts: transition.timelineFacts },
       ...(transition.keepsakeSelectionCandidate === undefined
@@ -313,10 +318,10 @@ const roomExited: ChronologySeamHandler<'roomExited'> = (context, state, event) 
     authoredRoom(context, event.origin),
     context.views.get(semanticAddressKey(event.origin)),
     context.resourcePlacements,
-    state.branches,
+    branchList(state.branch),
   );
   return {
-    state: withBranches(state, exited.branches),
+    state: withBranch(state, singleBranch(exited.branches)),
     emissions: [],
     ...(exited.runStateCheckpoint === undefined
       ? {}
@@ -330,7 +335,10 @@ const roomDeparted: ChronologySeamHandler<'roomDeparted'> = (context, state, eve
     ? { leadingEmissions: hubDepartureEmissions(context, state, event.origin, event.sequence) }
     : {}),
   state: Object.freeze({
-    ...withBranches(state, applyRoomDepartedTransition(context.catalog, event, state.branches)),
+    ...withBranch(
+      state,
+      singleBranch(applyRoomDepartedTransition(context.catalog, event, branchList(state.branch))),
+    ),
     ...(event.origin.kind === 'hubRoom' ? { hubStay: undefined } : {}),
   }),
   emissions: [],
@@ -346,12 +354,12 @@ const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsAppl
     context.catalog,
     event,
     authoredRoom(context, event.origin),
-    state.branches,
+    branchList(state.branch),
   );
   return {
     state: Object.freeze({
       ...state,
-      branches: transition.branches,
+      branch: singleBranch(transition.branches),
       halted: transition.hermesShrineDeliveryPlacementRequired,
     }),
     emissions: [
@@ -387,7 +395,7 @@ const wellPurchase: ChronologySeamHandler<'wellPurchase'> = (context, received, 
     snapshot: context.snapshot,
     event,
     room: wellRoom,
-    branches: state.branches,
+    branches: branchList(state.branch),
     refillGenerationSupported:
       wellOrigin !== undefined &&
       state.wellRefillRealizations.has(
@@ -425,7 +433,7 @@ const wellPurchase: ChronologySeamHandler<'wellPurchase'> = (context, received, 
   return {
     state: Object.freeze({
       ...state,
-      branches: transition.branches,
+      branch: singleBranch(transition.branches),
       stygianWellAssessments,
       wellRefillRealizations,
       featureRolls: rolled.featureRolls,
@@ -477,11 +485,11 @@ const hermesShrineDeliveriesScheduled: ChronologySeamHandler<'hermesShrineDelive
     room,
     declaration: roomDeclaration(context, room),
     roomView: context.views.get(semanticAddressKey(event.origin)),
-    sourceBranches: state.branches,
+    sourceBranches: branchList(state.branch),
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
   });
   return {
-    state: withBranches(state, transition.branches),
+    state: withBranch(state, singleBranch(transition.branches)),
     emissions: acquisitionEmissions(transition, room),
   };
 };
@@ -501,17 +509,17 @@ const hermesShrinePurchaseReached: ChronologySeamHandler<'hermesShrinePurchaseRe
     room,
     declaration: roomDeclaration(context, room),
     roomView: context.views.get(key),
-    branches: state.branches,
+    branches: branchList(state.branch),
     realized: state.hermesShrineTravelDealRefills.get(key),
   });
   const refills = transition.travelDealRefill;
   return {
     state:
       refills === undefined
-        ? withBranches(state, transition.branches)
+        ? withBranch(state, singleBranch(transition.branches))
         : Object.freeze({
             ...state,
-            branches: transition.branches,
+            branch: singleBranch(transition.branches),
             hermesShrineTravelDealRefills: withKeyed(
               state.hermesShrineTravelDealRefills,
               key,
@@ -552,7 +560,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
       room,
       declaration: roomDeclaration(context, room),
       roomView: context.views.get(semanticAddressKey(event.origin)),
-      sourceBranches: state.branches,
+      sourceBranches: branchList(state.branch),
       authoredSeaStarDuplicateSiteKeys: Object.freeze([
         ...context.authoredSeaStarDuplicateSiteKeys,
       ]),
@@ -564,7 +572,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     return {
       state: Object.freeze({
         ...sold,
-        branches: transition.branches,
+        branch: singleBranch(transition.branches),
         featureRolls: settled.featureRolls,
       }),
       emissions,
@@ -588,7 +596,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     room,
     declaration: roomDeclaration(context, room),
     roomView: context.views.get(semanticAddressKey(event.origin)),
-    sourceBranches: state.branches,
+    sourceBranches: branchList(state.branch),
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
     ...(derivedFrontier === undefined ? {} : { derivedAcquisitionEntryFrontier: derivedFrontier }),
     ...(derivedCapability === undefined
@@ -599,7 +607,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
   if (transition.authoredSiteSettlement !== undefined && room !== undefined)
     emissions.push(...siteSettlementEmissions(transition.authoredSiteSettlement, room.origin));
   return {
-    state: withBranches(state, transition.branches),
+    state: withBranch(state, singleBranch(transition.branches)),
     emissions,
   };
 };
@@ -633,7 +641,7 @@ const encounterStarted: ChronologySeamHandler<'encounterStarted'> = (context, st
     context.snapshot,
     event,
     room,
-    state.branches,
+    branchList(state.branch),
   );
   const gorgon = applyGorgonStartedTransition({
     catalog: context.catalog,
@@ -649,7 +657,7 @@ const encounterStarted: ChronologySeamHandler<'encounterStarted'> = (context, st
   return {
     state: Object.freeze({
       ...state,
-      branches: gorgon.branches,
+      branch: singleBranch(gorgon.branches),
       eligibleGorgonPhases:
         gorgon.eligiblePhaseKey === undefined
           ? state.eligibleGorgonPhases
@@ -698,7 +706,7 @@ const encounterSettled: ChronologySeamHandler<
     event,
     room,
     view: context.views.get(semanticAddressKey(event.origin)),
-    branches: state.branches,
+    branches: branchList(state.branch),
     enteredBiomeCount: context.enteredBiomeCount,
     fullRunBiomeCount: context.fullRunBiomeCount,
     authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
@@ -710,7 +718,7 @@ const encounterSettled: ChronologySeamHandler<
   return {
     state: Object.freeze({
       ...state,
-      branches: transition.branches,
+      branch: singleBranch(transition.branches),
       blockedGorgonPhases:
         transition.blockGorgonPhaseKey === undefined
           ? state.blockedGorgonPhases
@@ -788,7 +796,7 @@ const roomCreated: ChronologySeamHandler<'roomCreated'> = (context, state, event
     hermesShrineAssessments: state.hermesShrineAssessments,
     batchesByParent: prepared.batchesByParent,
     ...('current' in context.history ? { historyCurrent: context.history.current } : {}),
-    branches: state.branches,
+    branches: branchList(state.branch),
     peers: state.peers,
     ...(state.pendingHubBoard === undefined ? {} : { pendingHubBoard: state.pendingHubBoard }),
     lifecycle: prepared.lifecycle,
@@ -821,7 +829,7 @@ const roomCreated: ChronologySeamHandler<'roomCreated'> = (context, state, event
         }),
     state: Object.freeze({
       ...state,
-      branches: transition.branches,
+      branch: singleBranch(transition.branches),
       peers: transition.peers,
       pendingHubBoard: transition.pendingHubBoard,
     }),
@@ -843,7 +851,7 @@ const phantomExitCreated: ChronologySeamHandler<'phantomExitCreated'> = (context
     event,
     room,
     view: context.history.viewsBySequence[event.sequence - 1],
-    branches: state.branches,
+    branches: branchList(state.branch),
   });
   const opensSideDoors =
     room !== undefined &&
@@ -851,7 +859,7 @@ const phantomExitCreated: ChronologySeamHandler<'phantomExitCreated'> = (context
   return {
     state: Object.freeze({
       ...state,
-      branches: transition.branches,
+      branch: singleBranch(transition.branches),
       peers: opensSideDoors ? transition.peers : state.peers,
     }),
     emissions: [
@@ -871,29 +879,26 @@ function flushPendingHubBoard(
   const flushed = flushHubBoard(context.catalog, pendingHubBoard);
   if (flushed === undefined) return { state, emissions: [] };
   const { progression } = context.prepared.layout;
-  const branches =
+  const settled = singleBranch(flushed.branches);
+  const branch =
     progression.kind === 'hub' &&
     pendingHubBoard !== undefined &&
     flushed.peers.length === pendingHubBoard.participants.length &&
-    flushed.branches.length > 0
-      ? Object.freeze(
-          flushed.branches.map((branch) =>
-            Object.freeze({
-              ...branch,
-              state: addHubBoardRewardLookup(
-                branch.state,
-                progression.rewardLookup.key,
-                flushed.peers.map((peer) => peer.offer.rewardType),
-              ),
-            }),
+    settled !== undefined
+      ? Object.freeze({
+          ...settled,
+          state: addHubBoardRewardLookup(
+            settled.state,
+            progression.rewardLookup.key,
+            flushed.peers.map((peer) => peer.offer.rewardType),
           ),
-        )
-      : flushed.branches;
+        })
+      : settled;
   const hub = context.snapshot.decisions.find((decision) => decision.kind === 'hub');
   return {
     state: Object.freeze({
       ...state,
-      branches,
+      branch,
       peers: flushed.peers,
       pendingHubBoard: undefined,
       rerollsFlagged:
@@ -930,7 +935,7 @@ const targetGenerationCompleted: ChronologySeamHandler<'targetGenerationComplete
       ? batch.frontier
       : undefined;
   const transition = applyTargetGenerationCompletedTransition(event, targetGeneration);
-  let branches = advanceRewardBranches(current.branches, event.sequence);
+  let branch = advanceReached(current.branch, event.sequence);
   // The game rebuilds its offered-reward set once, when the whole batch
   // has rooms and its exits unlock. The completed batch's own generated
   // offers are that set, so nothing reconstructs the rule here: the last
@@ -957,14 +962,11 @@ const targetGenerationCompleted: ChronologySeamHandler<'targetGenerationComplete
     const offeredRewardTypes = normalizeOfferedRewardTypes(
       current.peers.map((peer) => peer.offer.rewardType),
     );
-    branches = Object.freeze(
-      branches.map((branch) =>
-        Object.freeze({
-          ...branch,
-          state: publishOfferedRewardTypes(branch.state, offeredRewardTypes),
-        }),
-      ),
-    );
+    if (branch !== undefined)
+      branch = Object.freeze({
+        ...branch,
+        state: publishOfferedRewardTypes(branch.state, offeredRewardTypes),
+      });
   }
   return {
     leadingEmissions: flushed.emissions,
@@ -974,10 +976,10 @@ const targetGenerationCompleted: ChronologySeamHandler<'targetGenerationComplete
           targetHistoryCheckpoint: {
             origin: transition.nextTargetHistory,
             historySequence: event.sequence,
-            branches: current.branches,
+            branch: current.branch,
           },
         }),
-    state: withBranches(current, branches),
+    state: withBranch(current, branch),
     emissions: [],
   };
 };
@@ -1016,7 +1018,7 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
     emptyOutgoing: prepared.lifecycle.emptyOutgoingOwnerKeys.has(ownerKey),
     hubTakeover: context.hubTakeoverSources.has(ownerKey),
     hubRestoring: context.hubRestoringSources.has(ownerKey),
-    branches: state.branches,
+    branches: branchList(state.branch),
     authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
   });
   const checkpoint = transition.runStateCheckpoint;
@@ -1033,7 +1035,6 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
             owner: checkpoint.owner,
             room: checkpoint.source,
             view: checkpoint.view,
-            branches: checkpoint.branches,
           },
         }),
     ...(transition.targetHistoryCheckpoint === undefined
@@ -1041,7 +1042,7 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
       : { targetHistoryCheckpoint: transition.targetHistoryCheckpoint }),
     state: Object.freeze({
       ...state,
-      branches: transition.branches,
+      branch: singleBranch(transition.branches),
       peers: transition.peers,
       // AssignRoomToExitDoor flags each door as the doors unlock.
       rerollsFlagged: flagRerolls(context, state, ownerKey),
@@ -1075,7 +1076,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     historySequence: event.sequence,
     room,
     declaration: pedestalDeclaration,
-    branches: state.branches,
+    branches: branchList(state.branch),
     facts: (branchState, shopNames) => {
       if (room === undefined || pedestalDeclaration === undefined || roomView === undefined)
         throw new BiomeRewardSimulationContractError('pedestal spawn has no authored room');
@@ -1093,13 +1094,13 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     findingChronology,
   });
   // An unauthored or impossible pedestal item blocks the Overview before entry.
-  if (pedestal.branches.length === 0 && state.branches.length > 0)
+  if (pedestal.branches.length === 0 && state.branch !== undefined)
     return {
       leadingEmissions: [
         generationFindings(pedestal.findings),
         { kind: 'producerFrontiers', frontiers: pedestal.producerFrontiers },
       ],
-      state: withBranches(state, pedestal.branches),
+      state: withBranch(state, singleBranch(pedestal.branches)),
       emissions: [],
     };
   const entered = applyRoomEnteredTransition(
@@ -1119,6 +1120,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
         room !== undefined && state.stygianWellAssessments.has(semanticAddressKey(room.origin)),
     }),
   );
+  const enteredBranch = singleBranch(entered.branches);
   const shrine = entered.hermesShrineAssessment;
   const well = entered.stygianWellAssessment;
   const checkpoint = entered.runStateCheckpoint;
@@ -1141,14 +1143,14 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     ],
     state: Object.freeze({
       ...state,
-      branches: entered.branches,
+      branch: enteredBranch,
       halted: entered.hermesShrineDeliveryPlacementRequired,
       encounterEntryVowRanks:
-        room === undefined || entered.branches.length === 0
+        room === undefined || enteredBranch === undefined
           ? state.encounterEntryVowRanks
           : new Map(state.encounterEntryVowRanks).set(
               semanticAddressKey(event.origin),
-              encounterEntryVowRanks(entered.branches[0]!.state),
+              encounterEntryVowRanks(enteredBranch.state),
             ),
       hermesShrineAssessments:
         shrine === undefined
@@ -1201,7 +1203,7 @@ function roomStartState(
   state: ChronologyWalkState,
   room: CanonicalAuthoredRoom | undefined,
 ): readonly ChronologyEmission[] {
-  if (room === undefined || state.branches.length === 0) return [];
+  if (room === undefined || state.branch === undefined) return [];
   const point = midBiomeStartPoint(context, room);
   if (point === undefined) return [];
   return [
@@ -1211,7 +1213,7 @@ function roomStartState(
       capture: Object.freeze({
         owner: room.origin,
         gameName: room.gameName,
-        state: state.branches[0]!.state,
+        state: state.branch.state,
       }),
     },
   ];
@@ -1224,17 +1226,15 @@ const roomPrepared: ChronologySeamHandler<'roomPrepared'> = (context, state, eve
     context.snapshot,
     event,
     room,
-    state.branches,
+    branchList(state.branch),
   );
+  const branch = singleBranch(transition.branches);
   return {
     leadingEmissions: roomStartState(context, state, room),
     state: Object.freeze({
       ...state,
-      branches: transition.branches,
-      overviewCohort: Object.freeze({
-        roomKey: semanticAddressKey(event.origin),
-        branches: transition.branches,
-      }),
+      branch,
+      overviewCohort: Object.freeze({ roomKey: semanticAddressKey(event.origin), branch }),
     }),
     emissions: [lifecycleFindings(transition.findings)],
   };
@@ -1252,14 +1252,14 @@ const fountainUsed: ChronologySeamHandler<'fountainUsed'> = (context, state, eve
             decision.kind === 'hub' && decision.origin.hubKey === owner.hubKey,
         )?.fountain?.fountainRarityResult
       : room?.fountainRarityResult,
-    state.branches,
+    branchList(state.branch),
     room,
   );
   const pool = transition.purgingPoolAssessment;
   return {
     state: Object.freeze({
       ...state,
-      branches: transition.branches,
+      branch: singleBranch(transition.branches),
       purgingPoolAssessments:
         pool === undefined
           ? state.purgingPoolAssessments
@@ -1294,7 +1294,7 @@ const offerPointMaterialized: ChronologySeamHandler<'offerPointMaterialized'> = 
     rooms: context.rooms,
     views: context.views,
     lifecycle: context.prepared.lifecycle,
-    branches: state.branches,
+    branches: branchList(state.branch),
     routeLoadout: context.routeLoadout,
     authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
     shipLifecycleCandidateAlreadyPublished: state.shipLifecycleContexts.has(roomKey),
@@ -1302,7 +1302,7 @@ const offerPointMaterialized: ChronologySeamHandler<'offerPointMaterialized'> = 
   return {
     state: Object.freeze({
       ...state,
-      branches: transition.branches,
+      branch: singleBranch(transition.branches),
       // A ship wheel's offers are flagged rerollable as they spawn.
       rerollsFlagged: flagRerolls(context, state, rerollFlagKey(roomKey, event.offerPoint)),
       shipLifecycleContexts:
@@ -1333,12 +1333,12 @@ const reachedOfferSettled: ChronologySeamHandler<'offerPointAcquired' | 'produce
     event,
     rooms: context.rooms,
     views: context.views,
-    branches: state.branches,
+    branches: branchList(state.branch),
     priorFindings: context.accumulated.findingEntries(),
     authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
   });
   return {
-    state: withBranches(state, settlement.branches),
+    state: withBranch(state, singleBranch(settlement.branches)),
     emissions: [
       settledFindings(settlement.findings),
       { kind: 'acquisitionRoleFrontiers', frontiers: settlement.roleFrontiers },
@@ -1351,9 +1351,9 @@ const reachedOfferSettled: ChronologySeamHandler<'offerPointAcquired' | 'produce
   };
 };
 
-/** Events with no reward seam only advance the branch cohort to their sequence. */
+/** Events with no reward seam only advance the reached state to their sequence. */
 const advanceOnly: ChronologySeamHandler<HistoryEvent['kind']> = (_context, state, event) => ({
-  state: withBranches(state, advanceRewardBranches(state.branches, event.sequence)),
+  state: withBranch(state, advanceReached(state.branch, event.sequence)),
   emissions: [],
 });
 
@@ -1414,7 +1414,7 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     roomDeparted: { step: roomDeparted },
   });
 
-/** Brings every branch to the reached history view at this sequence. */
+/** Brings the reached state to the history view at this sequence. */
 function reachHistorySequence(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
@@ -1424,17 +1424,16 @@ function reachHistorySequence(
   if (view === undefined) {
     throw new BiomeRewardSimulationContractError(`No history view for event ${sequence}`);
   }
-  return withBranches(
-    state,
-    Object.freeze(
-      state.branches.map((branch) =>
+  const { branch } = state;
+  return branch === undefined
+    ? state
+    : withBranch(
+        state,
         Object.freeze({
           ...branch,
           state: reachSimulationHistory(branch.state, context.routePosition, view),
         }),
-      ),
-    ),
-  );
+      );
 }
 
 /** Applies one seam step in its fixed order. */
@@ -1451,7 +1450,7 @@ export function applySeamStep(
   const target = step.targetHistoryCheckpoint;
   if (target !== undefined)
     accumulator.mergeEmissions(
-      targetSlotHistory(context, target.origin, target.historySequence, target.branches),
+      targetSlotHistory(context, target.origin, target.historySequence, target.branch),
     );
   if (checkpoint?.against === 'next') captureRunState(context, step.state, accumulator, checkpoint);
   accumulator.mergeEmissions(step.emissions);
@@ -1473,13 +1472,13 @@ export function walkHistoryEvent(
     reachHistorySequence(context, next, event.sequence),
     event,
   );
-  if (reached.branches.length > 0)
+  if (reached.branch !== undefined)
     accumulator.mergeEmissions([
       {
         kind: 'rerollPool',
         point: Object.freeze({
           historySequence: event.sequence,
-          remaining: reachedRerollPool(reached.branches),
+          remaining: reachedRerollPool(reached.branch),
         }),
       },
       ...captureRerollSurfaces(context, reached, event).map((capture) => ({

@@ -48,7 +48,7 @@ function rankedRow(
 }
 
 /**
- * Records one purchase's price context against the branches it settles from.
+ * Records one purchase's price context against the state it settles from.
  * Every paid purchase sets the room's first-purchase flag, priced or not.
  */
 function withPurchasePrice(
@@ -62,7 +62,8 @@ function withPurchasePrice(
     readonly resolution: PurchaseResolution;
   },
 ): ChronologyWalkState {
-  if (state.branches.length === 0) return state;
+  const { branch } = state;
+  if (branch === undefined) return state;
   const roomKey = semanticAddressKey(inputs.room);
   const resolution =
     inputs.owner === undefined
@@ -74,7 +75,7 @@ function withPurchasePrice(
     ...(inputs.owner === undefined ? {} : { owner: inputs.owner }),
     room: inputs.room,
     firstPaidPurchase: inputs.paid && !state.paidPurchaseRooms.has(roomKey),
-    state: state.branches[0]!.state,
+    state: branch.state,
     ...(resolution.kind === 'priced'
       ? { venue: resolution.venue }
       : { unpriced: resolution as PurchasePriceUnpriced }),

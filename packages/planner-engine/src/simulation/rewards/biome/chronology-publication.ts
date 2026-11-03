@@ -36,6 +36,7 @@ import {
 
 import { createRewardProducerCandidateArtifacts } from '../producer-frontiers';
 import { publicRewardBranch } from '../branch-lifecycle';
+import { branchList } from '../branch-primitives';
 import { createJudgmentArcanaCandidateArtifacts } from '../../arcana-fear';
 import {
   createFigurineArcanaCandidateArtifacts,
@@ -134,7 +135,7 @@ export function publishChronology(
   const immutableFindingRegions = accumulation.findingRegions;
   const immutableFindings = Object.freeze(immutableFindingRegions.map((entry) => entry.finding));
   const traitProducts = selectedTraitOfferProducts(
-    walk.branches,
+    branchList(walk.branch),
     immutableFindingRegions.flatMap((entry) =>
       entry.levelResolutionEvaluations === undefined ? [] : entry.levelResolutionEvaluations,
     ),
@@ -175,7 +176,7 @@ export function publishChronology(
       ? {}
       : { generatedPickupPlacements: accumulation.generatedPickupPlacements }),
     biomeKey: snapshot.biomeKey,
-    validity: immutableFindings.length === 0 && walk.branches.length > 0 ? 'valid' : 'invalid',
+    validity: immutableFindings.length === 0 && walk.branch !== undefined ? 'valid' : 'invalid',
     ...(accumulation.echoKeepsakeReplayOutcome === undefined
       ? {}
       : { volatileEchoKeepsakeReplay: accumulation.echoKeepsakeReplayOutcome }),
@@ -190,7 +191,7 @@ export function publishChronology(
     rerollSurfaces: accumulation.rerollSurfaces,
     storeSupport: accumulation.storeSupport,
     targetHistory: accumulation.targetHistory,
-    frontier: walk.branches[0] === undefined ? undefined : publicRewardBranch(walk.branches[0]),
+    frontier: walk.branch === undefined ? undefined : publicRewardBranch(walk.branch),
     findings: immutableFindings,
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,
@@ -203,19 +204,17 @@ export function publishChronology(
     stygianWellAssessments: Object.freeze([...walk.stygianWellAssessments.values()]),
     hermesShrineDeliveries: Object.freeze([
       ...new Map(
-        walk.branches
-          .flatMap((branch) => Object.values(branch.state.pendingHermesShrineDeliveries))
-          .map(
-            (delivery) =>
-              [
-                delivery.entryKey,
-                Object.freeze({
-                  ...delivery,
-                  deliveryKind:
-                    delivery.due === undefined ? ('pending' as const) : ('countdown' as const),
-                }),
-              ] as const,
-          ),
+        Object.values(walk.branch?.state.pendingHermesShrineDeliveries ?? {}).map(
+          (delivery) =>
+            [
+              delivery.entryKey,
+              Object.freeze({
+                ...delivery,
+                deliveryKind:
+                  delivery.due === undefined ? ('pending' as const) : ('countdown' as const),
+              }),
+            ] as const,
+        ),
       ).values(),
     ]),
     selectedTraitOffers: traitProducts.selectedTraitOffers,

@@ -5,7 +5,7 @@ import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { resolveRoutePosition } from '../../src/authored-project/route-context';
 import { createArcanaFearState, type ArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createRouteStartHistoryView } from '../../src/simulation/history/fold';
-import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
+import { initializeRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
 import type { RewardBranch } from '../../src/simulation/rewards/model';
 
 /** Explicit low-level branch seed for tests that intentionally bypass a route. */
@@ -41,7 +41,7 @@ export function initializeTestRewardBranchesForRoute(
   startingKeepsakeEquipResults: AuthoredKeepsakeEquipResults | undefined = undefined,
   routeKey: string | undefined = undefined,
   loadout: RouteLoadout | undefined = undefined,
-  reached?: Parameters<typeof initializeRewardBranches>[7],
+  reached?: Parameters<typeof initializeRewardBranch>[7],
 ) {
   const predecessor = seedFrontier;
   const resolvedRouteKey =
@@ -68,7 +68,7 @@ export function initializeTestRewardBranchesForRoute(
   ) {
     throw new Error(`test route ${resolvedRouteKey} has no first biome`);
   }
-  return initializeRewardBranches(
+  const initialized = initializeRewardBranch(
     seedFrontier,
     resolvedArcanaFear,
     testCatalog,
@@ -89,4 +89,5 @@ export function initializeTestRewardBranchesForRoute(
       historyView: predecessor?.state.reached.historyView ?? createRouteStartHistoryView(),
     },
   );
+  return Object.freeze([initialized]);
 }

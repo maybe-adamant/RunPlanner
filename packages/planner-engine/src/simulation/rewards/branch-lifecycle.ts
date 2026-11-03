@@ -64,7 +64,7 @@ export function beginRewardRoom(
   );
 }
 
-export function initializeRewardBranches(
+export function initializeRewardBranch(
   seedFrontier: RewardBranch | undefined,
   initialArcanaFear: ArcanaFearState | undefined,
   catalog: Catalog,
@@ -76,7 +76,7 @@ export function initializeRewardBranches(
     readonly routePosition: ResolvedRoutePosition;
     readonly historyView: HistoryStateView;
   },
-): readonly RewardBranchState[] {
+): RewardBranchState {
   if (seedFrontier === undefined) {
     if (initialArcanaFear === undefined || catalog === undefined)
       throw new Error('initial branch state is required');
@@ -116,27 +116,23 @@ export function initializeRewardBranches(
       loadout,
     );
     const withGodSent = maybeAddGodSent(catalog, initialized);
-    return Object.freeze([
-      traitHistory === withGodSent.state.traitHistory
-        ? withGodSent
-        : Object.freeze({
-            ...withGodSent,
-            state: replaceSimulationTraitHistory(withGodSent.state, traitHistory),
-          }),
-    ]);
+    return traitHistory === withGodSent.state.traitHistory
+      ? withGodSent
+      : Object.freeze({
+          ...withGodSent,
+          state: replaceSimulationTraitHistory(withGodSent.state, traitHistory),
+        });
   }
-  return Object.freeze([
-    Object.freeze({
-      state: Object.freeze({
-        ...beginBiomeSimulationState(seedFrontier.state),
-        reached: Object.freeze(reached),
-      }),
-      events: Object.freeze([]),
-      pendingShopContinuations: Object.freeze({}),
-      processedThroughHistorySequence: 0,
-      traitEvaluations: Object.freeze([]),
+  return Object.freeze({
+    state: Object.freeze({
+      ...beginBiomeSimulationState(seedFrontier.state),
+      reached: Object.freeze(reached),
     }),
-  ]);
+    events: Object.freeze([]),
+    pendingShopContinuations: Object.freeze({}),
+    processedThroughHistorySequence: 0,
+    traitEvaluations: Object.freeze([]),
+  });
 }
 
 /** The native biome-start reset (`EndBiomeRecords`) of biome-local state; run-wide state carries on. */

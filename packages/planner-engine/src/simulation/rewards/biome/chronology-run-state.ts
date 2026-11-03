@@ -48,30 +48,28 @@ function runStateAt(
   // each snapshot. This token cannot alias a later checkpoint even when it
   // retains the same history.
   const factsContextToken = Object.freeze({});
-  const snapshotFor = (checkpointBranches: readonly RewardBranchState[]) =>
-    checkpointBranches[0] === undefined
-      ? undefined
-      : createRunState({
+  const snapshotFor = (checkpointBranch: RewardBranchState) =>
+    createRunState({
+      catalog,
+      layout: context.prepared.layout,
+      owner,
+      state: reachSimulationHistory(checkpointBranch.state, routePosition, view),
+      derivationCache: context.runStateDerivationCache,
+      factsContextToken,
+      rewardFacts: (factState) =>
+        createBiomeRewardFacts({
           catalog,
-          layout: context.prepared.layout,
-          owner,
-          state: reachSimulationHistory(checkpointBranches[0].state, routePosition, view),
-          derivationCache: context.runStateDerivationCache,
-          factsContextToken,
-          rewardFacts: (factState) =>
-            createBiomeRewardFacts({
-              catalog,
-              state: factState,
-              source,
-              currentRoom: source,
-              sourceDeclaration: declaration,
-              view,
-              currentRoomShopOptionNames: currentShopNames,
-              peerParentOrigin: source.origin,
-              peerCreationSource: 'generatedTarget',
-              hubBoardLookups: 'consulted',
-            }),
-        });
+          state: factState,
+          source,
+          currentRoom: source,
+          sourceDeclaration: declaration,
+          view,
+          currentRoomShopOptionNames: currentShopNames,
+          peerParentOrigin: source.origin,
+          peerCreationSource: 'generatedTarget',
+          hubBoardLookups: 'consulted',
+        }),
+    });
   return snapshotFor;
 }
 
@@ -87,26 +85,23 @@ export function captureRunState(
 ): void {
   const { owner, room: source, view } = checkpoint;
   const ownerKey = semanticAddressKey(owner);
-  if (accumulator.hasRunStateSnapshot(ownerKey) || state.branches.length === 0) return;
+  if (accumulator.hasRunStateSnapshot(ownerKey) || state.branch === undefined) return;
   const snapshotFor = runStateAt(context, state, owner, source, view);
-  const snapshot = snapshotFor(checkpoint.branches ?? state.branches);
-  if (snapshot !== undefined)
-    accumulator.mergeEmissions([{ kind: 'runStateSnapshot', ownerKey, snapshot }]);
+  const snapshot = snapshotFor(checkpoint.branch ?? state.branch);
+  accumulator.mergeEmissions([{ kind: 'runStateSnapshot', ownerKey, snapshot }]);
   // Trait-child candidate checkpoints retain only generation snapshots. Room
   // lifecycle diagnostics are occurrence-local and never become a later
   // candidate-generation authority.
   if (owner.kind === 'roomRunStateCheckpoint') return;
   for (const child of accumulator.traitChildCheckpointsAwaiting(source.origin, ownerKey)) {
-    const childSnapshot = snapshotFor(child.branches);
-    if (childSnapshot !== undefined)
-      accumulator.mergeEmissions([
-        {
-          kind: 'traitChildRunStateSnapshot',
-          childKey: child.key,
-          ownerKey,
-          snapshot: childSnapshot,
-        },
-      ]);
+    accumulator.mergeEmissions([
+      {
+        kind: 'traitChildRunStateSnapshot',
+        childKey: child.key,
+        ownerKey,
+        snapshot: snapshotFor(child.branch),
+      },
+    ]);
   }
 }
 
@@ -115,9 +110,9 @@ export function targetSlotHistory(
   context: ChronologyWalkContext,
   origin: TargetAddress,
   historySequence: number,
-  checkpointBranches: readonly RewardBranchState[],
+  checkpointBranch: RewardBranchState | undefined,
 ): readonly ChronologyEmission[] {
-  if (checkpointBranches.length === 0) {
+  if (checkpointBranch === undefined) {
     return [];
   }
   const view = context.history.viewsBySequence[historySequence];
@@ -132,7 +127,7 @@ export function targetSlotHistory(
       checkpoint: Object.freeze({
         origin,
         historySequence,
-        state: reachSimulationHistory(checkpointBranches[0]!.state, context.routePosition, view),
+        state: reachSimulationHistory(checkpointBranch.state, context.routePosition, view),
       }),
     },
   ];
@@ -147,12 +142,11 @@ export function hubDepartureEmissions(
 ): readonly ChronologyEmission[] {
   const room = context.rooms.get(semanticAddressKey(origin));
   const view = context.history.viewsBySequence[sequence];
-  if (room?.kind !== 'hub' || view === undefined || state.branches.length === 0) return [];
+  if (room?.kind !== 'hub' || view === undefined || state.branch === undefined) return [];
   const hub = createHubDecisionAddress(
     createBiomeAddress(origin.routeKey, origin.biomeKey),
     origin.hubKey,
   );
-  const departure = runStateAt(context, state, hub, room, view)(state.branches);
-  if (departure === undefined) return [];
+  const departure = runStateAt(context, state, hub, room, view)(state.branch);
   return [{ kind: 'hubDeparture', hub, departure }];
 }

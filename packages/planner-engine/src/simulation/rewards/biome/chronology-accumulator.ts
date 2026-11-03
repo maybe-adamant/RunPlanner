@@ -235,7 +235,7 @@ export type ChronologyEmission =
 export interface TraitChildSettlementAccumulation {
   readonly address: SemanticAddress;
   readonly occurrenceOwner: SemanticAddress;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState;
   readonly candidateContexts: readonly TraitOfferCandidateContext[];
   readonly runStateSnapshots: ReadonlyMap<string, RunStateSnapshot>;
 }
@@ -305,7 +305,7 @@ export interface ChronologyAccumulator {
   traitChildCheckpointsAwaiting(
     occurrenceOwner: SemanticAddress,
     ownerKey: string,
-  ): readonly { readonly key: string; readonly branches: readonly RewardBranchState[] }[];
+  ): readonly { readonly key: string; readonly branch: RewardBranchState }[];
   finish(): ChronologyAccumulation;
 }
 
@@ -383,7 +383,7 @@ function traitMutationTimelineOwner(
 interface TraitChildSettlementBuilder {
   readonly address: SemanticAddress;
   readonly occurrenceOwner: SemanticAddress;
-  readonly branches: RewardBranchState[];
+  readonly branch: RewardBranchState;
   readonly candidateContexts: TraitOfferCandidateContext[];
   readonly runStateSnapshots: Map<string, RunStateSnapshot>;
 }
@@ -658,13 +658,16 @@ export function createChronologyAccumulator(
         traitChildSettlementBuilders.set(key, {
           address: checkpoint.address,
           occurrenceOwner,
-          branches: [checkpoint.branch],
+          branch: checkpoint.branch,
           candidateContexts:
             checkpoint.candidateContext === undefined ? [] : [checkpoint.candidateContext],
           runStateSnapshots: new Map(),
         });
       else {
-        current.branches.push(checkpoint.branch);
+        if (current.branch !== checkpoint.branch)
+          throw new BiomeRewardSimulationContractError(
+            `trait child ${key} settled at more than one state`,
+          );
         if (checkpoint.candidateContext !== undefined)
           current.candidateContexts.push(checkpoint.candidateContext);
       }
@@ -880,7 +883,7 @@ export function createChronologyAccumulator(
               semanticAddressKey(builder.occurrenceOwner) === occurrenceKey &&
               !builder.runStateSnapshots.has(ownerKey),
           )
-          .map(([key, builder]) => Object.freeze({ key, branches: builder.branches })),
+          .map(([key, builder]) => Object.freeze({ key, branch: builder.branch })),
       );
     },
     finish(): ChronologyAccumulation {

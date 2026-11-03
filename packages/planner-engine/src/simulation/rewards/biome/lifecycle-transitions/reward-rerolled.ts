@@ -27,7 +27,7 @@ import {
   type FindingRegionEntry,
 } from '../../../finding-regions';
 import type { SimulationState } from '../../../state/model';
-import type { RewardBranchState } from '../../branch-primitives';
+import { singleBranch, type RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, rewardFinding } from '../../findings';
@@ -277,9 +277,8 @@ export function hubTargetContext(
 }
 
 /** The reroll pool left at the reached state; unbounded where nothing is reached. */
-export function reachedRerollPool(branches: readonly RewardBranchState[]): number {
-  const reached = branches[0];
-  return reached === undefined ? Number.POSITIVE_INFINITY : rerollPoolRemaining(reached.state);
+export function reachedRerollPool(branch: RewardBranchState | undefined): number {
+  return branch === undefined ? Number.POSITIVE_INFINITY : rerollPoolRemaining(branch.state);
 }
 
 /**
@@ -409,7 +408,7 @@ export function applyRewardRerolledTransition(inputs: {
       `${semanticAddressKey(owner)} has no history view`,
     );
   // The game refuses a press the pool cannot pay for, so nothing past it happens.
-  const remaining = reachedRerollPool(inputs.branches);
+  const remaining = reachedRerollPool(singleBranch(inputs.branches));
   if (remaining < 1) return blocked('rerollPoolExceeded', { cost: 1, remaining });
   const frontierBranches = inputs.branches;
   const evaluator = rerollOfferEvaluator({
@@ -471,7 +470,7 @@ export function applyRewardRerolledTransition(inputs: {
       historySequence,
       reward: inputs.reward,
       poolRemainingBefore: remaining,
-      ...(settled ? { poolRemainingAfter: reachedRerollPool(branches) } : {}),
+      ...(settled ? { poolRemainingAfter: reachedRerollPool(singleBranch(branches)) } : {}),
     }),
   });
 }

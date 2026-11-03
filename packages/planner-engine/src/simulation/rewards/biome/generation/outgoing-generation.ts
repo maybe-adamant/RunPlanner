@@ -9,7 +9,7 @@ import type {
 } from '../../../materialization';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import type { RewardStoreSupportEntry } from '../../model';
-import type { RewardBranchState } from '../../branch-primitives';
+import { singleBranch, type RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import type { OfferProcessingPeer } from '../../offer-generation';
 import { assessAuthoredBatchRewardStore } from '../reward-store-support';
@@ -175,7 +175,6 @@ export function applyOutgoingGenerationTransition(
           owner: checkpointOwner,
           source,
           view: checkpointView,
-          branches: Object.freeze(branches),
         });
   const targetSet = batch?.targets;
   if (targetSet === undefined) {
@@ -208,7 +207,7 @@ export function applyOutgoingGenerationTransition(
       : Object.freeze({
           origin: firstTarget.origin,
           historySequence: event.sequence,
-          branches: Object.freeze(branches),
+          branch: singleBranch(branches),
         });
 
   let sharedStore: string | undefined;

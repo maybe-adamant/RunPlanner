@@ -8,6 +8,7 @@ import type { FindingEvidence } from '../model';
 import type { RewardEvent } from './model';
 import type { ReachedLevelResolutionEvaluation, ReachedTraitOfferEvaluation } from '../traits';
 import type { SimulationState } from '../state/model';
+import { BiomeRewardSimulationContractError } from './biome/biome-contract';
 
 export interface PendingShopTravelRefillCapability {
   readonly evaluateOffer: (
@@ -37,6 +38,22 @@ export interface RewardBranchState {
   readonly seaStarDuplicateEligibilityBySource?: Readonly<
     Record<string, { readonly supported: boolean; readonly evidence: FindingEvidence }>
   >;
+}
+
+/** The zero-or-one state list a list-shaped settlement takes. */
+export function branchList(branch: RewardBranchState | undefined): readonly RewardBranchState[] {
+  return branch === undefined ? Object.freeze([]) : Object.freeze([branch]);
+}
+
+/** The one state a list-shaped settlement leaves, or none; a second is a contract failure. */
+export function singleBranch(
+  branches: readonly RewardBranchState[],
+): RewardBranchState | undefined {
+  if (branches.length > 1)
+    throw new BiomeRewardSimulationContractError(
+      'settlement produced more than one frontier state',
+    );
+  return branches[0];
 }
 
 export type RewardEventData<Event extends RewardEvent = RewardEvent> = Event extends RewardEvent

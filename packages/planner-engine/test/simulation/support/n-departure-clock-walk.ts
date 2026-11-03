@@ -16,7 +16,7 @@ import {
 } from '../../../src/simulation/arcana-fear';
 import type { HistoryEvent } from '../../../src/simulation/history';
 import * as rewardChronology from '../../../src/simulation/rewards/biome/chronology';
-import { initializeRewardBranches } from '../../../src/simulation/rewards/branch-lifecycle';
+import { initializeRewardBranch } from '../../../src/simulation/rewards/branch-lifecycle';
 import { replaceSimulationTraitHistory } from '../../../src/simulation/state/transitions';
 import { foldTraitHistoryEvents } from '../../../src/simulation/traits';
 import type { StygianWellRunState } from '../../../src/simulation/commerce/stygian-well';
@@ -66,7 +66,7 @@ export function walkWithDepartureClocks(
           sequence: 0,
         });
   if (activated !== undefined && !activated.legal) throw new Error('seed Arcana must activate');
-  const [start] = initializeRewardBranches(
+  const start = initializeRewardBranch(
     undefined,
     activated?.state ?? seededArcana,
     catalog,

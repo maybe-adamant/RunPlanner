@@ -26,6 +26,7 @@ import type { FindingChronology } from '../../finding-regions';
 import type { RerollSurfaceSettlement, RerollSurfaceTarget } from '../model';
 import type { RewardProducerCandidateResult } from '../producer-frontiers';
 import { historyFindingChronology } from './finding-chronology';
+import { branchList } from '../branch-primitives';
 import {
   rerollFlagKey,
   type ChronologyWalkContext,
@@ -71,7 +72,7 @@ export function createEmptyRerollSurfaceCandidateArtifacts(): RerollSurfaceCandi
  */
 export interface RerollSurfaceCapture {
   readonly key: string;
-  /** The run's pool at this append point, lowest over reached branches. */
+  /** The run's pool at this append point. */
   readonly poolRemaining: number;
   readonly settle: (poolRemainingAtStart: number) => RerollSurfaceSettlement;
   readonly capability: RerollSurfaceCapability;
@@ -108,7 +109,7 @@ function surfaceCapture(
 ): RerollSurfaceCapture | undefined {
   const view = context.history.viewsBySequence[event.sequence];
   if (view === undefined) return undefined;
-  const pool = reachedRerollPool(state.branches);
+  const pool = reachedRerollPool(state.branch);
   const enabled = state.rerollsFlagged.get(inputs.flagKey) === true;
   const settle = (poolRemainingAtStart: number): RerollSurfaceSettlement =>
     Object.freeze({
@@ -154,7 +155,7 @@ function surfaceCapture(
             historySequence: event.sequence + 1,
             view,
             chronology: inputs.chronology,
-            branches: state.branches,
+            branches: branchList(state.branch),
             rerolledOffers: state.rerolledOffers,
           }).evaluateOffer;
           evaluators.set(key, evaluate);
@@ -325,7 +326,7 @@ export function captureRerollSurfaces(
   state: ChronologyWalkState,
   event: HistoryEvent,
 ): readonly RerollSurfaceCapture[] {
-  if (state.branches.length === 0) return [];
+  if (state.branch === undefined) return [];
   const captures: (RerollSurfaceCapture | undefined)[] = [];
   const origin = event.origin;
   // A batch's rooms are created as its source's doors unlock; its presses follow them.

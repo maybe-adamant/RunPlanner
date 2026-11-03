@@ -22,7 +22,8 @@ import {
   type RewardProducerCandidateResult,
   type RewardProducerOwnerAddress,
 } from '../rewards/producer-frontiers';
-import { initializeRewardBranches } from '../rewards/branch-lifecycle';
+import { initializeRewardBranch } from '../rewards/branch-lifecycle';
+import { branchList } from '../rewards/branch-primitives';
 import { createArcanaFearState } from '../arcana-fear';
 import { createRouteStartRewardFacts } from '../rewards/facts';
 import {
@@ -157,15 +158,17 @@ export function createStartingRewardCandidateCapability(
   routePosition: ResolvedRoutePosition,
 ): StartingRewardCandidateCapability {
   const binding = catalog.runStartReward.incomingReward;
-  const branches = initializeRewardBranches(
-    undefined,
-    createArcanaFearState(catalog, loadout),
-    catalog,
-    loadout.startingKeepsakeKey,
-    loadout.keepsakeEquipResults,
-    routeKey,
-    loadout,
-    { routePosition, historyView: createRouteStartHistoryView() },
+  const branches = branchList(
+    initializeRewardBranch(
+      undefined,
+      createArcanaFearState(catalog, loadout),
+      catalog,
+      loadout.startingKeepsakeKey,
+      loadout.keepsakeEquipResults,
+      routeKey,
+      loadout,
+      { routePosition, historyView: createRouteStartHistoryView() },
+    ),
   );
   return Object.freeze({
     evaluateOffer: (offer: ResolvedRewardOffer) => {

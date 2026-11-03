@@ -202,14 +202,14 @@ describe('chronology accumulator', () => {
     const biome = createBiomeAddress('Underworld', 'F');
     const occurrence = createOccurrenceAddress(biome, createOccurrenceId('shop'));
     const other = createOccurrenceAddress(biome, createOccurrenceId('other'));
-    const [first, second, third] = [{}, {}, {}] as unknown as RewardBranchState[];
+    const [first, third] = [{}, {}] as unknown as RewardBranchState[];
     const accumulator = createChronologyAccumulator(new Map());
     accumulator.mergeEmissions([
       {
         kind: 'traitChildSettlements',
         checkpoints: [
           { address: hammer, branch: first! },
-          { address: hammer, branch: second! },
+          { address: hammer, branch: first! },
         ],
         occurrenceOwner: occurrence,
       },
@@ -220,7 +220,7 @@ describe('chronology accumulator', () => {
       },
     ]);
     const awaiting = accumulator.traitChildCheckpointsAwaiting(occurrence, 'owner');
-    expect(awaiting.map((entry) => entry.branches)).toEqual([[first, second]]);
+    expect(awaiting.map((entry) => entry.branch)).toEqual([first]);
     const childKey = awaiting[0]!.key;
     accumulator.mergeEmissions([
       { kind: 'traitChildRunStateSnapshot', childKey, ownerKey: 'owner', snapshot: snapshot('a') },
@@ -231,6 +231,27 @@ describe('chronology accumulator', () => {
     expect([
       ...accumulator.finish().traitChildSettlements.get(childKey)!.runStateSnapshots.values(),
     ]).toEqual([snapshot('a')]);
+  });
+
+  it('refuses a trait child settled at a second state', () => {
+    const occurrence = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('shop'),
+    );
+    const [first, second] = [{}, {}] as unknown as RewardBranchState[];
+    const accumulator = createChronologyAccumulator(new Map());
+    expect(() =>
+      accumulator.mergeEmissions([
+        {
+          kind: 'traitChildSettlements',
+          checkpoints: [
+            { address: hammer, branch: first! },
+            { address: hammer, branch: second! },
+          ],
+          occurrenceOwner: occurrence,
+        },
+      ]),
+    ).toThrow(/more than one state/);
   });
 
   it('counts Hub departures in order', () => {

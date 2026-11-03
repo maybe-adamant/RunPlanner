@@ -33,7 +33,7 @@ import type { CanonicalAuthoredRoom } from '../../materialization';
 import type { RoomActionRow } from '../../room-actions';
 import type { SimulationState } from '../../state/model';
 import { producingTraitPickup } from '../../state/pending-resource-pickups';
-import type { RewardBranchState } from '../branch-primitives';
+import { branchList, type RewardBranchState } from '../branch-primitives';
 import type { RewardEvent } from '../model';
 import type {
   ChronologyWalkContext,
@@ -222,14 +222,16 @@ export function withEchoKeepsakeGold(
   before: ChronologyWalkState,
   after: ChronologyWalkState,
 ): ChronologyWalkState {
-  if (after.branches.length === 0) return after;
-  const seen = new Set(before.branches.flatMap((branch) => branch.state.traitHistory.events));
+  if (branchList(after.branch).length === 0) return after;
+  const seen = new Set(
+    branchList(before.branch).flatMap((branch) => branch.state.traitHistory.events),
+  );
   const firstEntered = context.history.events.find((event) => event.kind === 'roomEntered');
   const firstRoom =
     firstEntered === undefined
       ? undefined
       : context.rooms.get(semanticAddressKey(firstEntered.origin));
-  const replays = after.branches.map((branch) =>
+  const replays = branchList(after.branch).map((branch) =>
     branch.state.traitHistory.events.filter(
       (traitEvent): traitEvent is Extract<typeof traitEvent, { kind: 'echoKeepsakeReplay' }> =>
         !seen.has(traitEvent) && traitEvent.kind === 'echoKeepsakeReplay',
@@ -255,7 +257,7 @@ export function withEchoKeepsakeGold(
       ...(firstRoom?.origin.kind === 'occurrence' ? { room: firstRoom.origin } : {}),
       owner: first.replay.owner,
       readings: agree
-        ? after.branches.map((branch) => ({
+        ? branchList(after.branch).map((branch) => ({
             gain: Object.freeze({ kind: 'keepsakeGold' as const, gold: first.gold }),
             multipliers: goldMultipliers(context.catalog, branch.state),
           }))
@@ -354,8 +356,8 @@ export function withRunStartGold(
   walk: ChronologyWalkState,
   loadout: Pick<RouteLoadout, 'startingKeepsakeKey'>,
 ): ChronologyWalkState {
-  if (walk.branches.length === 0) return walk;
-  const readings = walk.branches.map((branch) => {
+  if (branchList(walk.branch).length === 0) return walk;
+  const readings = branchList(walk.branch).map((branch) => {
     const keepsake =
       loadout.startingKeepsakeKey === null
         ? undefined
@@ -380,8 +382,8 @@ export function withPoolSaleGold(
   sold: { readonly traitKey: string; readonly owner: SemanticAddress },
 ): ChronologyWalkState {
   const room = authoredRoom(context, event.origin);
-  if (room === undefined || state.branches.length === 0) return state;
-  const readings = state.branches.map((branch) => {
+  if (room === undefined || branchList(state.branch).length === 0) return state;
+  const readings = branchList(state.branch).map((branch) => {
     const equipped = branch.state.traitHistory.equippedTraits[sold.traitKey];
     const infusion = context.catalog.traits.byKey[sold.traitKey]?.unityTrait === true;
     const rarity =
@@ -462,10 +464,11 @@ export function withGoldEvents(
   if (
     event.kind === 'roomEntered' &&
     enteredRoom?.origin.kind === 'occurrence' &&
-    received.branches.length > 0
+    branchList(received.branch).length > 0
   ) {
     // Native draws every store of the room at the door into it, before entry.
-    const entry = goldMultipliers(catalog, received.branches[0]!.state) ?? ('unresolved' as const);
+    const entry =
+      goldMultipliers(catalog, branchList(received.branch)[0]!.state) ?? ('unresolved' as const);
     state = Object.freeze({
       ...state,
       goldRoomEntryMultipliers: new Map(state.goldRoomEntryMultipliers).set(
@@ -481,21 +484,23 @@ export function withGoldEvents(
     (event.kind === 'roomEntered' ||
       (event.kind === 'encounterCompleted' && event.execution === 'normal')) &&
     roomKey !== undefined &&
-    next.branches.length > 0
+    branchList(next.branch).length > 0
   )
     state = Object.freeze({
       ...state,
       goldSpawnReadings: new Map(state.goldSpawnReadings).set(
         `${roomKey}::${event.kind === 'roomEntered' ? 'entry' : 'encounterEnd'}`,
-        goldSpawnReading(catalog, next.branches[0]!.state) ?? 'unresolved',
+        goldSpawnReading(catalog, branchList(next.branch)[0]!.state) ?? 'unresolved',
       ),
     });
-  if (next.branches.length > 0) {
+  if (branchList(next.branch).length > 0) {
     // A selected trait's own coins spawn as its screen closes, after it is equipped.
     const screens = new Map<string, SimulationState>();
-    for (const branch of next.branches)
+    for (const branch of branchList(next.branch))
       for (const evaluation of branch.traitEvaluations ?? []) {
-        if (received.branches.some((prior) => prior.traitEvaluations?.includes(evaluation)))
+        if (
+          branchList(received.branch).some((prior) => prior.traitEvaluations?.includes(evaluation))
+        )
           continue;
         const key = `trait::${semanticAddressKey(evaluation.address)}::${evaluation.acquisitionRole}`;
         screens.set(key, branch.state);
@@ -555,14 +560,14 @@ export function withGoldEvents(
   const doorsOpen: readonly GoldEventPublication[] = doorsOpenHere
     ? [Object.freeze({ kind: 'doorsOpen' as const, sequence: event.sequence, room: roomOrigin! })]
     : [];
-  if (received.branches.length === 0 || next.branches.length === 0)
+  if (branchList(received.branch).length === 0 || branchList(next.branch).length === 0)
     return withGoldPublications(state, doorsOpen);
 
-  const receivedStates = received.branches.map((branch) => branch.state);
+  const receivedStates = branchList(received.branch).map((branch) => branch.state);
   const before = receivedStates.map((received) => goldMultipliers(catalog, received));
-  const receivedEvents = new Set(received.branches.flatMap((branch) => branch.events));
+  const receivedEvents = new Set(branchList(received.branch).flatMap((branch) => branch.events));
   const receivedEvaluations = new Set(
-    received.branches.flatMap((branch) => branch.traitEvaluations ?? []),
+    branchList(received.branch).flatMap((branch) => branch.traitEvaluations ?? []),
   );
   const detected = new Map<string, Detected>();
   const detect = (
@@ -643,7 +648,7 @@ export function withGoldEvents(
     };
   };
 
-  next.branches.forEach((branch: RewardBranchState, index) => {
+  branchList(next.branch).forEach((branch: RewardBranchState, index) => {
     const after = branch.state;
     for (const rewardEvent of branch.events) {
       if (receivedEvents.has(rewardEvent)) continue;
@@ -990,7 +995,7 @@ export function withGoldEvents(
 
   const publications: GoldEventPublication[] = [];
   for (const [key, entry] of detected) {
-    const detections = next.branches.map((_, index) => entry.byBranch[index]);
+    const detections = branchList(next.branch).map((_, index) => entry.byBranch[index]);
     const common = {
       sequence: event.sequence,
       ...(roomOrigin === undefined ? {} : { room: roomOrigin }),
