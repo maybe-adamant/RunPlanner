@@ -790,7 +790,6 @@ describe('contextual option projection', () => {
           },
           { kind: 'entriesSpent', rewardType: 'MaxHealthDrop', storeKey: 'HubRewards' },
           { kind: 'shopExcluded', name: 'MaxHealthDrop' },
-          { kind: 'contractNotEquipped' },
           {
             kind: 'storeExhausted',
             storeKey: 'RunProgress',
@@ -819,7 +818,6 @@ describe('contextual option projection', () => {
         'The Major Reward pool has no Max Health left.',
         'This reward pool has no Max Health left.',
         'The restock leaves out Max Health.',
-        'Requires Champion of Elysium equipped.',
         'The Major Reward pool is exhausted, so only Max Health is offered.',
         'Appears from the second biome on.',
       ]);
@@ -868,7 +866,7 @@ describe('contextual option projection', () => {
           excluded(
             { kind: 'godNotInteracted', source: 'ZeusUpgrade' },
             { kind: 'excludedByProducer', rewardType: 'MaxHealthDrop' },
-            { kind: 'contractNotEquipped' },
+            { kind: 'shopExcluded', name: 'MaxHealthDrop' },
           ),
         ),
       ).toBe(

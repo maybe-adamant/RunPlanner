@@ -608,10 +608,6 @@ function rewardExclusionMessages(
       ];
     case 'shopExcluded':
       return [`The restock leaves out ${rewardTypeLabel(catalog, exclusion.name)}.`];
-    case 'contractNotEquipped':
-      return [
-        `Requires ${catalog.traits.byKey.InfernalContractBoon?.label ?? 'its boon'} equipped.`,
-      ];
     case 'storeExhausted':
       return [
         `${capitalized(storeLabel(exclusion.storeKey))} is exhausted, so only ${rewardTypeLabel(catalog, exclusion.fallbackRewardType)} is offered.`,

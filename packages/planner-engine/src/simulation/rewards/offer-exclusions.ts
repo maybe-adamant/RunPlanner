@@ -84,8 +84,6 @@ export type RewardOfferExclusionReason =
     }
   /** Travel Deal or Echo removes this purchase from the restock. */
   | { readonly kind: 'shopExcluded'; readonly name: string }
-  /** The Infernal Contract item needs its boon equipped. */
-  | { readonly kind: 'contractNotEquipped' }
   /** Both refills found nothing eligible, so only the fallback reward is offered. */
   | {
       readonly kind: 'storeExhausted';
