@@ -31,6 +31,7 @@ import {
 import { authoredOccurrence, deliveredCageReward } from './occurrences';
 import { chooseRoomFit, searchRoom } from './room-search';
 import { recordedOffer } from './vocabulary';
+import { challengeSwitchPickups } from './room-uses';
 import { recordedEntryStates } from './conformance';
 import { savedBracketDraws } from './store-brackets';
 
@@ -87,10 +88,12 @@ function optionalRewards(
   for (const entry of visit.fields.optionalRewards)
     if (entry.collected === true)
       collectedListed.set(entry.reward, (collectedListed.get(entry.reward) ?? 0) + 1);
-  // A use no cage and no listed optional explains is an optional collected in combat.
+  // A use no cage, listed optional or used switch explains is an optional collected in combat.
+  const switched = challengeSwitchPickups(visit.room);
   const unlisted = Object.entries(visit.room.uses).flatMap(([name, count]) => {
     if (!rewardTypes.has(name)) return [];
-    const extra = count - (cages.get(name) ?? 0) - (collectedListed.get(name) ?? 0);
+    const extra =
+      count - (cages.get(name) ?? 0) - (collectedListed.get(name) ?? 0) - (switched.get(name) ?? 0);
     return Array.from({ length: Math.max(0, extra) }, () => ({ reward: name, collected: true }));
   });
   return [...listed, ...unlisted];

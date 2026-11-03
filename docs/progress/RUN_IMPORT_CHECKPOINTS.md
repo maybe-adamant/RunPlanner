@@ -438,7 +438,15 @@ reproduces is reported with its nearest miss and the plan stops there.
   adds the switch name to the room's `UseRecord` and, later,
   `StartedChallengeEncounter`/`Completed`. The catalog and engine declare
   none of it, so the import reports a room whose uses name a switch
-  (`other`, unsupported). Corpus: spawned in 14 rooms across 11 raw runs; used in
+  (`other`, unsupported). The switch's own uses and its pickups
+  (`HandleChallengeLoot`: the reward object, or a hit Perfect Clear's
+  `RoomRewardConsolationPrize`, and the challenge's 5% `GiftDrop`) are
+  left out of the uses the import must explain: no save says which
+  dropped, so each absorbs at most one use the plan's pickups leave, in the
+  Sea Star and generated-drop count and the Fields optional count (a
+  Trove's Nectar was read as an optional collected in combat; synthetic
+  witness on fx underworld's H_Combat15). A Fields optional Nectar
+  collected in combat beside a used switch is read as the switch's. Corpus: spawned in 14 rooms across 11 raw runs; used in
   only two: raw 1013 r48 Q_Combat09 (Elite, max Magick; the room compares
   exact because no compared fact moves) and the live capture / record 1008
   r27 H_Combat07 (Perfect Clear, max health; no entry saves).
