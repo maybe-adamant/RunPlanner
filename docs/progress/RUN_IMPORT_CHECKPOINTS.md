@@ -237,6 +237,12 @@ reproduces is reported with its nearest miss and the plan stops there.
      Max required there, refused the recorded Min and drew a third cage per
      door. Raw 333 17/11/4/8 → 17/13/2/8, first mismatch r28 → r30.
      Fixtures unchanged.
+   - Shop rooms (R): every room rolls the Well and Shrine chances, so the
+     recorder now keeps a Shop room's stock as its World Shop even when the
+     Shrine chance succeeded, as it already did for the Well. Raw 334's
+     Typhon shop had been recorded as a Shrine, its presence refused and its
+     six offers guessed, so the Mystery box was never bought. Raw 334
+     33/14/1/0 → 34/14/0/0, no mismatch left. Fixtures unchanged.
    - Conversions that share a solver's store (owner request). An Artificer
      replacement is one `RunProgress` draw, so it is searched with any solver
      reading that store across the same save window:

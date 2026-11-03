@@ -775,12 +775,15 @@ function untakenDoorCageRewards(
 function store(room: RoomSaves, entered: SavedRoom): RunRecordStore | undefined {
   const stock = entered.store;
   if (stock === undefined || stock.length === 0) return undefined;
-  // A Shop room keeps its own stock even where a Well also rolled.
-  const kind = entered.surfaceShop
-    ? 'hermesShrine'
-    : entered.wellShop && entered.chosenRewardType !== 'Shop'
-      ? 'well'
-      : 'worldShop';
+  // Every room rolls the Well and Shrine chances (RunLogic.lua:630-636); a Shop room keeps its own stock.
+  const kind =
+    entered.chosenRewardType === 'Shop'
+      ? 'worldShop'
+      : entered.surfaceShop
+        ? 'hermesShrine'
+        : entered.wellShop
+          ? 'well'
+          : 'worldShop';
   const base = { kind, stock: stock.map(stockOption) } as const;
   const closing = room.closing;
   if (kind === 'well') {

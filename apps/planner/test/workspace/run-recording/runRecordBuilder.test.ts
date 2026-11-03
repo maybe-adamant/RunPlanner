@@ -264,21 +264,28 @@ describe('run record builder', () => {
     expect(disagreeing?.purchases).toBeUndefined();
   });
 
-  it("keeps a Shop room's stock as World Shop stock when a Well also rolled", () => {
-    const stock = [{ slot: 1, name: 'MaxManaDrop', boosted: false, purchased: false }];
-    const record = buildRunRecord([
-      save({
-        history: [],
-        current: room('H_PreBoss01', { wellShop: true, chosenRewardType: 'Shop', store: stock }),
-      }),
-      save({
-        history: ['H_PreBoss01'],
-        current: room('H_Boss01'),
-        departure: room('H_PreBoss01', { store: [] }),
-      }),
-    ]);
-    expect(record.rooms[0]!.store).toMatchObject({ kind: 'worldShop', purchases: [{ slot: 1 }] });
-  });
+  it.each([
+    ['H_PreBoss01', 'H_Boss01', { wellShop: true }],
+    // Raw 334's Typhon shop rolled the Shrine chance every room rolls.
+    ['Q_PreBoss01', 'Q_Boss01', { surfaceShop: true }],
+  ] as const)(
+    "keeps %s's stock as World Shop stock when another chance also rolled",
+    (name, next, rolled) => {
+      const stock = [{ slot: 1, name: 'MaxManaDrop', boosted: false, purchased: false }];
+      const record = buildRunRecord([
+        save({
+          history: [],
+          current: room(name, { ...rolled, chosenRewardType: 'Shop', store: stock }),
+        }),
+        save({
+          history: [name],
+          current: room(next),
+          departure: room(name, { store: [] }),
+        }),
+      ]);
+      expect(record.rooms[0]!.store).toMatchObject({ kind: 'worldShop', purchases: [{ slot: 1 }] });
+    },
+  );
 
   it("records each gathering tool's element in its room and Tartarus's non-goal cap", () => {
     const record = buildRunRecord([
