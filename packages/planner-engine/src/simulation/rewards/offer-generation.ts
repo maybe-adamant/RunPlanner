@@ -35,11 +35,11 @@ import {
 } from './branch-primitives';
 import { historyChronology } from './findings';
 import type { RewardFactsFactory } from './acquisition/contracts';
-import { withBag } from './branch-primitives';
+import { branchList, singleBranch, withBag } from './branch-primitives';
 
 import { addRewardFinding, rewardFinding } from './findings';
 import {
-  aggregateRewardOfferExclusions,
+  reachedRewardOfferExclusion,
   countedBagReason,
   sourceSupportReason,
   staticCountedOfferExclusion,
@@ -470,21 +470,22 @@ function processRewardOfferBranches(
 }
 
 /**
- * Explains an offer that `processRewardOffer` rejected in every branch by
+ * Explains an offer that `processRewardOffer` rejected at the reached state by
  * replaying its gates; callers run it only on that failure path.
  */
 export function explainRewardOfferExclusions(
   branches: readonly RewardBranchState[],
   context: OfferProcessingContext,
 ): readonly RewardOfferExclusionReason[] | undefined {
+  const branch = singleBranch(branches);
   const fixed = staticOfferExclusion(branches, context);
   if (fixed !== undefined) return staticRewardOfferExclusion(fixed);
   const rejected: RejectedOfferBranch[] = [];
-  processRewardOfferBranches(branches, context, new Map(), rejected);
-  if (rejected.length === 0) return undefined;
-  return aggregateRewardOfferExclusions(
-    rejected.map((entry) => rejectedBranchExclusion(context, entry)),
-  );
+  processRewardOfferBranches(branchList(branch), context, new Map(), rejected);
+  const entry = rejected[0];
+  return entry === undefined
+    ? undefined
+    : reachedRewardOfferExclusion(rejectedBranchExclusion(context, entry));
 }
 
 /**
@@ -525,12 +526,10 @@ export function explainCohortOfferExclusions(
   const cited = conflicting.length > 0 ? conflicting : [...peers.earlier, ...(peers.later ?? [])];
   return cited.length === 0
     ? undefined
-    : aggregateRewardOfferExclusions([
-        {
-          kind: 'peerConflict',
-          peers: cited.map((peer) => ({ origin: peer.reward.origin, offer: peer.reward.offer })),
-        },
-      ]);
+    : reachedRewardOfferExclusion({
+        kind: 'peerConflict',
+        peers: cited.map((peer) => ({ origin: peer.reward.origin, offer: peer.reward.offer })),
+      });
 }
 
 function staticOfferExclusion(

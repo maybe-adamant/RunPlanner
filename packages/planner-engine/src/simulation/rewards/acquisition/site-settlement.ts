@@ -1,5 +1,5 @@
 import { staticallyExcludedCandidateResult } from '../producer-frontiers';
-import { aggregateRewardOfferExclusions, sourceSupportReason } from '../offer-exclusions';
+import { reachedRewardOfferExclusion, sourceSupportReason } from '../offer-exclusions';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -28,7 +28,7 @@ import {
 } from '../../finding-regions';
 import type { HistoryEvent } from '../../history';
 import type { CanonicalResolvedIncomingReward } from '../../materialization';
-import type { RewardBranchState } from '../branch-primitives';
+import { singleBranch, type RewardBranchState } from '../branch-primitives';
 import {
   addRewardFinding,
   historyChronology,
@@ -242,7 +242,7 @@ export function settleOwnedAcquisitionSite(
       atomicRegion,
       findingChronology,
       Object.freeze({ site, entry: entry.address }),
-      request.directTraitAgreementBranches,
+      request.directTraitAgreementBranch,
       true,
       false,
       request.authoredSeaStarDuplicateSiteKeys,
@@ -323,7 +323,7 @@ export function settleAcquisitionResolvedReward(
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
     readonly timelineOwner?: SemanticAddress;
     readonly historySequence: number;
-    readonly directTraitAgreementBranches?: readonly RewardBranchState[];
+    readonly directTraitAgreementBranch?: RewardBranchState;
     readonly roleBindings?: readonly AcquisitionSettlementRole[];
     readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
   },
@@ -433,9 +433,9 @@ export function settleAcquisitionResolvedReward(
       ...(request.timelineOwner === undefined ? {} : { timelineOwner: request.timelineOwner }),
       historySequence: request.historySequence,
       ...(request.roleBindings === undefined ? {} : { roleBindings: request.roleBindings }),
-      ...(request.directTraitAgreementBranches === undefined
+      ...(request.directTraitAgreementBranch === undefined
         ? {}
-        : { directTraitAgreementBranches: request.directTraitAgreementBranches }),
+        : { directTraitAgreementBranch: request.directTraitAgreementBranch }),
       ...(request.authoredSeaStarDuplicateSiteKeys === undefined
         ? {}
         : { authoredSeaStarDuplicateSiteKeys: request.authoredSeaStarDuplicateSiteKeys }),
@@ -952,7 +952,7 @@ export function settlePickupAcquisitionSite(
   });
 }
 
-/** Every branch must resolve the source; supported branches cite nothing. */
+/** The reached state must resolve the source; a supported state cites nothing. */
 function acquisitionSourceExclusionResult(
   catalog: Catalog,
   branches: readonly RewardBranchState[],
@@ -960,10 +960,11 @@ function acquisitionSourceExclusionResult(
   facts: RewardFactsFactory,
   acquisitionRole: string,
 ) {
-  const exclusions = aggregateRewardOfferExclusions(
-    branches.map((branch) =>
-      sourceSupportReason(catalog.rewards, offer, facts(branch.state), { acquisitionRole }),
-    ),
+  const branch = singleBranch(branches);
+  const exclusions = reachedRewardOfferExclusion(
+    branch === undefined
+      ? undefined
+      : sourceSupportReason(catalog.rewards, offer, facts(branch.state), { acquisitionRole }),
   );
   return Object.freeze({
     findings: Object.freeze([]),

@@ -23,7 +23,7 @@ import {
   type OfferProcessingPeer,
 } from '../../../src/simulation/rewards/offer-generation';
 import {
-  aggregateRewardOfferExclusions,
+  reachedRewardOfferExclusion,
   sourceSupportReason,
   staticCountedOfferExclusion,
   type RewardOfferExclusionReason,
@@ -160,10 +160,8 @@ describe('reward offer exclusion aggregation', () => {
     storeKey: 'RunProgress',
   };
   it("reports the reached state's one reason, or none", () => {
-    expect(aggregateRewardOfferExclusions([spent])).toEqual([spent]);
-    expect(aggregateRewardOfferExclusions([undefined])).toBeUndefined();
-    expect(aggregateRewardOfferExclusions([])).toBeUndefined();
-    expect(() => aggregateRewardOfferExclusions([spent, spent])).toThrow();
+    expect(reachedRewardOfferExclusion(spent)).toEqual([spent]);
+    expect(reachedRewardOfferExclusion(undefined)).toBeUndefined();
   });
 
   it('publishes exclusions only on an unsupported result', () => {

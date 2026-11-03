@@ -395,7 +395,7 @@ const wellPurchase: ChronologySeamHandler<'wellPurchase'> = (context, received, 
     snapshot: context.snapshot,
     event,
     room: wellRoom,
-    branches: branchList(state.branch),
+    branch: state.branch,
     refillGenerationSupported:
       wellOrigin !== undefined &&
       state.wellRefillRealizations.has(
@@ -409,7 +409,7 @@ const wellPurchase: ChronologySeamHandler<'wellPurchase'> = (context, received, 
   });
   let stygianWellAssessments = state.stygianWellAssessments;
   const existingWell = stygianWellAssessments.get(semanticAddressKey(event.origin));
-  if (transition.candidateContexts.length > 0 && wellRoom?.kind === 'authored') {
+  if (transition.candidateContext !== undefined && wellRoom?.kind === 'authored') {
     if (existingWell === undefined)
       throw new BiomeRewardSimulationContractError(
         `${wellRoom.gameName} has a Well purchase before its entry`,
@@ -418,7 +418,7 @@ const wellPurchase: ChronologySeamHandler<'wellPurchase'> = (context, received, 
       semanticAddressKey(event.origin),
       Object.freeze({
         ...existingWell,
-        actions: Object.freeze([...existingWell.actions, ...transition.candidateContexts]),
+        actions: Object.freeze([...existingWell.actions, transition.candidateContext]),
       }),
     );
   }
@@ -433,7 +433,7 @@ const wellPurchase: ChronologySeamHandler<'wellPurchase'> = (context, received, 
   return {
     state: Object.freeze({
       ...state,
-      branch: singleBranch(transition.branches),
+      branch: transition.branch,
       stygianWellAssessments,
       wellRefillRealizations,
       featureRolls: rolled.featureRolls,
@@ -485,11 +485,11 @@ const hermesShrineDeliveriesScheduled: ChronologySeamHandler<'hermesShrineDelive
     room,
     declaration: roomDeclaration(context, room),
     roomView: context.views.get(semanticAddressKey(event.origin)),
-    sourceBranches: branchList(state.branch),
+    sourceBranch: state.branch,
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
   });
   return {
-    state: withBranch(state, singleBranch(transition.branches)),
+    state: withBranch(state, transition.branch),
     emissions: acquisitionEmissions(transition, room),
   };
 };
@@ -560,7 +560,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
       room,
       declaration: roomDeclaration(context, room),
       roomView: context.views.get(semanticAddressKey(event.origin)),
-      sourceBranches: branchList(state.branch),
+      sourceBranch: state.branch,
       authoredSeaStarDuplicateSiteKeys: Object.freeze([
         ...context.authoredSeaStarDuplicateSiteKeys,
       ]),
@@ -572,7 +572,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     return {
       state: Object.freeze({
         ...sold,
-        branch: singleBranch(transition.branches),
+        branch: transition.branch,
         featureRolls: settled.featureRolls,
       }),
       emissions,
@@ -596,7 +596,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     room,
     declaration: roomDeclaration(context, room),
     roomView: context.views.get(semanticAddressKey(event.origin)),
-    sourceBranches: branchList(state.branch),
+    sourceBranch: state.branch,
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
     ...(derivedFrontier === undefined ? {} : { derivedAcquisitionEntryFrontier: derivedFrontier }),
     ...(derivedCapability === undefined
@@ -607,7 +607,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
   if (transition.authoredSiteSettlement !== undefined && room !== undefined)
     emissions.push(...siteSettlementEmissions(transition.authoredSiteSettlement, room.origin));
   return {
-    state: withBranch(state, singleBranch(transition.branches)),
+    state: withBranch(state, transition.branch),
     emissions,
   };
 };
@@ -1018,7 +1018,7 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
     emptyOutgoing: prepared.lifecycle.emptyOutgoingOwnerKeys.has(ownerKey),
     hubTakeover: context.hubTakeoverSources.has(ownerKey),
     hubRestoring: context.hubRestoringSources.has(ownerKey),
-    branches: branchList(state.branch),
+    branch: state.branch,
     authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
   });
   const checkpoint = transition.runStateCheckpoint;
@@ -1042,7 +1042,7 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
       : { targetHistoryCheckpoint: transition.targetHistoryCheckpoint }),
     state: Object.freeze({
       ...state,
-      branch: singleBranch(transition.branches),
+      branch: transition.branch,
       peers: transition.peers,
       // AssignRoomToExitDoor flags each door as the doors unlock.
       rerollsFlagged: flagRerolls(context, state, ownerKey),

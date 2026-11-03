@@ -41,7 +41,7 @@ import type {
   AcquisitionRoleFrontier,
 } from '../../acquisition/contracts';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
-import type { RewardBranchState } from '../../branch-primitives';
+import { branchList, singleBranch, type RewardBranchState } from '../../branch-primitives';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import { createBiomeRewardFacts } from '../../facts';
@@ -60,7 +60,7 @@ import type { SimulationState } from '../../../state/model';
 
 export interface AcquisitionPointReachedTransition {
   readonly generatedPickupPlacements: readonly GeneratedPickupPlacement[];
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: readonly FindingRegionEntry[];
   readonly producerFrontiers: readonly RewardProducerFrontier[];
   readonly roleFrontiers: readonly AcquisitionRoleFrontier[];
@@ -78,7 +78,7 @@ export interface AcquisitionPointReachedInputs {
   readonly room: CanonicalAuthoredRoom | undefined;
   readonly declaration: RoomDeclaration | undefined;
   readonly roomView: ProgressiveRoomHistoryViews | undefined;
-  readonly sourceBranches: readonly RewardBranchState[];
+  readonly sourceBranch: RewardBranchState | undefined;
   readonly authoredSeaStarDuplicateSiteKeys: readonly string[];
   /** A Pool sale's settled trait; absent when the sale has no effect. */
   readonly purgingPoolSale?: {
@@ -91,7 +91,7 @@ export interface AcquisitionPointReachedInputs {
 
 function transitionResult(input: {
   readonly generatedPickupPlacements?: readonly GeneratedPickupPlacement[];
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: ReadonlyMap<string, FindingRegionEntry>;
   readonly producerFrontiers?: readonly RewardProducerFrontier[] | undefined;
   readonly roleFrontiers?: readonly AcquisitionRoleFrontier[] | undefined;
@@ -100,7 +100,7 @@ function transitionResult(input: {
 }): AcquisitionPointReachedTransition {
   return Object.freeze({
     generatedPickupPlacements: Object.freeze(input.generatedPickupPlacements ?? []),
-    branches: Object.freeze(input.branches),
+    branch: input.branch,
     findings: Object.freeze([...input.findings.values()]),
     producerFrontiers: Object.freeze(input.producerFrontiers ?? []),
     roleFrontiers: Object.freeze(input.roleFrontiers ?? []),
@@ -166,24 +166,26 @@ export function applyAcquisitionPointReachedTransition(
         ),
       ),
     );
+    const { sourceBranch } = inputs;
     return publish({
-      branches: inputs.sourceBranches.map((branch) =>
-        spawnDueHermesDeliveries(
-          catalog,
-          room,
-          Object.freeze({
-            ...branch,
-            state: Object.freeze({
-              ...branch.state,
-              pendingHermesShrineDeliveries: Object.freeze({
-                ...branch.state.pendingHermesShrineDeliveries,
-                ...scheduled,
+      branch:
+        sourceBranch === undefined
+          ? undefined
+          : spawnDueHermesDeliveries(
+              catalog,
+              room,
+              Object.freeze({
+                ...sourceBranch,
+                state: Object.freeze({
+                  ...sourceBranch.state,
+                  pendingHermesShrineDeliveries: Object.freeze({
+                    ...sourceBranch.state.pendingHermesShrineDeliveries,
+                    ...scheduled,
+                  }),
+                }),
               }),
-            }),
-          }),
-          event.sequence,
-        ),
-      ),
+              event.sequence,
+            ),
       findings,
     });
   }
@@ -279,7 +281,7 @@ export function applyAcquisitionPointReachedTransition(
       catalog,
       room,
       declaration,
-      sourceBranches: inputs.sourceBranches,
+      sourceBranch: inputs.sourceBranch,
       historySequence: event.sequence,
       facts: (state) =>
         factsAt(roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry!, state),
@@ -287,10 +289,10 @@ export function applyAcquisitionPointReachedTransition(
       authoredSeaStarDuplicateSiteKeys,
     });
     return publish({
-      branches: pickup.branches,
+      branch: pickup.branch,
       findings,
       authoredSiteSettlement: Object.freeze({
-        branches: pickup.branches,
+        branch: pickup.branch,
         producerFrontiers: Object.freeze([]),
         emissions: pickup.emissions,
       }),
@@ -299,9 +301,10 @@ export function applyAcquisitionPointReachedTransition(
   if (event.point.startsWith('purgingPool:')) {
     const sale = inputs.purgingPoolSale;
     // A refused or invalid sale is its own finding; the sale has no effect.
-    if (sale === undefined) return publish({ branches: inputs.sourceBranches, findings });
+    const { sourceBranch: branch } = inputs;
+    if (sale === undefined || branch === undefined) return publish({ branch, findings });
     return publish({
-      branches: inputs.sourceBranches.map((branch) => {
+      branch: (() => {
         const before = branch.state.traitHistory;
         const traitHistory = foldTraitHistoryEvents(catalog, [
           ...before.events,
@@ -319,7 +322,7 @@ export function applyAcquisitionPointReachedTransition(
           ...branch,
           state: replaceSimulationTraitHistory(branch.state, traitHistory),
         });
-      }),
+      })(),
       findings,
     });
   }
@@ -351,7 +354,7 @@ export function applyAcquisitionPointReachedTransition(
     )?.owner;
     const settled = settleOwnedAcquisitionSite(
       catalog,
-      inputs.sourceBranches,
+      branchList(inputs.sourceBranch),
       {
         siteOwner: localReward.origin,
         pointKey: event.point,
@@ -376,7 +379,7 @@ export function applyAcquisitionPointReachedTransition(
     );
     mergeRewardFindingEmissions(findings, settled.findingEmissions);
     return publish({
-      branches: settled.branches,
+      branch: singleBranch(settled.branches),
       findings,
       roleFrontiers: settled.roleFrontiers,
       traitChildSettlements: settled.traitChildSettlements,
@@ -402,7 +405,7 @@ export function applyAcquisitionPointReachedTransition(
           : assessReachedClockedPickupPlacement(
               room.origin,
               pickupReference,
-              inputs.sourceBranches,
+              inputs.sourceBranch,
               inputs.derivedAcquisitionEntryFrontier,
               event.sequence,
             );
@@ -427,7 +430,7 @@ export function applyAcquisitionPointReachedTransition(
                 ? 'clockedPickupContextDisagreement'
                 : 'retainedSourceMismatch',
         });
-        return publish({ branches: inputs.sourceBranches, findings });
+        return publish({ branch: inputs.sourceBranch, findings });
       }
       const acquisitionView =
         roomView.acquisitionPoints?.find((point) => point.point === event.point)?.before ??
@@ -440,7 +443,7 @@ export function applyAcquisitionPointReachedTransition(
           candidate.reference.siteKey === event.siteKey &&
           candidate.reference.entryKey === event.entryKey,
       )?.owner;
-      const settled = settlePickupAcquisitionSite(catalog, inputs.sourceBranches, {
+      const settled = settlePickupAcquisitionSite(catalog, branchList(inputs.sourceBranch), {
         siteOwner: room.origin,
         site: site.address,
         entries: Object.freeze({ [event.entryKey]: retained }),
@@ -456,7 +459,7 @@ export function applyAcquisitionPointReachedTransition(
       });
       mergeRewardFindingEmissions(findings, settled.findingEmissions);
       return publish({
-        branches: settled.branches,
+        branch: singleBranch(settled.branches),
         findings,
         roleFrontiers: settled.roleFrontiers,
         traitChildSettlements: settled.traitChildSettlements,
@@ -473,7 +476,7 @@ export function applyAcquisitionPointReachedTransition(
           : assessReachedHermesDeliveryPlacement(
               room.origin,
               pickupReference,
-              inputs.sourceBranches,
+              inputs.sourceBranch,
               event.sequence,
             );
       if (placement !== undefined) generatedPickupPlacements.push(placement);
@@ -484,23 +487,13 @@ export function applyAcquisitionPointReachedTransition(
         occurrenceId: shrineDelivery.sourceOccurrenceId,
       };
       const sourceKey = hermesShrineDeliveryEntryKey(sourceOrigin, shrineDelivery.generationKey);
-      const due = inputs.sourceBranches.map(
-        (branch) => branch.state.pendingHermesShrineDeliveries[sourceKey],
-      );
-      const firstDue = due[0];
-      // Branch agreement checks the host only; the placement assessment above already
-      // proved the exact phase for every branch.
+      const due = inputs.sourceBranch?.state.pendingHermesShrineDeliveries[sourceKey];
+      // The host is checked here; the placement assessment above already proved the exact phase.
       const agreedDue =
         placement?.assessment.kind === 'valid' &&
-        firstDue !== undefined &&
-        due.length === inputs.sourceBranches.length &&
-        due.every(
-          (delivery) =>
-            delivery !== undefined &&
-            dueContactMatches(delivery, room.origin) &&
-            delivery.rewardType === firstDue.rewardType,
-        )
-          ? firstDue
+        due !== undefined &&
+        dueContactMatches(due, room.origin)
+          ? due
           : undefined;
       const retained = site.entries[event.entryKey];
       const entry = createAcquisitionEntryAddress(site.address, event.entryKey);
@@ -517,7 +510,7 @@ export function applyAcquisitionPointReachedTransition(
                 ? 'hermesDeliveryContextDisagreement'
                 : 'retainedSourceMismatch',
         });
-        return publish({ branches: inputs.sourceBranches, findings });
+        return publish({ branch: inputs.sourceBranch, findings });
       }
       const acquisitionView =
         roomView.acquisitionPoints?.find((point) => point.point === event.point)?.before ??
@@ -530,7 +523,7 @@ export function applyAcquisitionPointReachedTransition(
           candidate.reference.siteKey === event.siteKey &&
           candidate.reference.entryKey === event.entryKey,
       )?.owner;
-      const settled = settlePickupAcquisitionSite(catalog, inputs.sourceBranches, {
+      const settled = settlePickupAcquisitionSite(catalog, branchList(inputs.sourceBranch), {
         siteOwner: room.origin,
         site: site.address,
         entries: Object.freeze({ [event.entryKey]: retained }),
@@ -547,7 +540,9 @@ export function applyAcquisitionPointReachedTransition(
       });
       mergeRewardFindingEmissions(findings, settled.findingEmissions);
       const settledEntryKey = semanticAddressKey(entry);
-      const branches = settled.branches.map((branch) => {
+      const settledBranch = singleBranch(settled.branches);
+      const branch = settledBranch === undefined ? undefined : deliver(settledBranch);
+      function deliver(branch: RewardBranchState): RewardBranchState {
         const settledThisEntry = branch.events.some(
           (candidate) =>
             (candidate.kind === 'concreteAcquisition' ||
@@ -566,15 +561,15 @@ export function applyAcquisitionPointReachedTransition(
             pendingHermesShrineDeliveries: Object.freeze(remaining),
           }),
         });
-      });
+      }
       return publish({
-        branches,
+        branch,
         findings,
         producerFrontiers: Object.freeze([
           hermesDeliveryProducerFrontier({
             address: entry,
             rewardType: agreedDue.rewardType,
-            branchesBeforeEntry: inputs.sourceBranches,
+            branchesBeforeEntry: branchList(inputs.sourceBranch),
             acquisitionView,
             atomicRegion: ownerRegion(entry),
           }),
@@ -601,25 +596,29 @@ export function applyAcquisitionPointReachedTransition(
           candidate.reference.siteKey === event.siteKey &&
           candidate.reference.entryKey === event.entryKey,
       );
-      const settled = settleArtificerReplacementAcquisition(catalog, inputs.sourceBranches, {
-        siteOwner: site.address.owner,
-        pointKey: site.address.pointKey,
-        sourceEntryKey: parsed.sourceKey,
-        sourceOrigin: source.owner,
-        sourceReward: source.reward,
-        replacement,
-        acquisitionRole: parsed.acquisitionRole,
-        participation: row?.participation === 'required' ? 'mandatory' : 'optional',
-        ...(row?.owner === undefined ? {} : { timelineOwner: row.owner }),
-        historySequence: event.sequence,
-        facts: (state) => factsAt(acquisitionView, state),
-        presentsMaterializedScreen: true,
-        findingChronology: chronology,
-        authoredSeaStarDuplicateSiteKeys,
-      });
+      const settled = settleArtificerReplacementAcquisition(
+        catalog,
+        branchList(inputs.sourceBranch),
+        {
+          siteOwner: site.address.owner,
+          pointKey: site.address.pointKey,
+          sourceEntryKey: parsed.sourceKey,
+          sourceOrigin: source.owner,
+          sourceReward: source.reward,
+          replacement,
+          acquisitionRole: parsed.acquisitionRole,
+          participation: row?.participation === 'required' ? 'mandatory' : 'optional',
+          ...(row?.owner === undefined ? {} : { timelineOwner: row.owner }),
+          historySequence: event.sequence,
+          facts: (state) => factsAt(acquisitionView, state),
+          presentsMaterializedScreen: true,
+          findingChronology: chronology,
+          authoredSeaStarDuplicateSiteKeys,
+        },
+      );
       mergeRewardFindingEmissions(findings, settled.findingEmissions);
       return publish({
-        branches: settled.branches,
+        branch: singleBranch(settled.branches),
         findings,
         roleFrontiers: settled.roleFrontiers,
         traitChildSettlements: settled.traitChildSettlements,
@@ -660,7 +659,7 @@ export function applyAcquisitionPointReachedTransition(
     room,
     declaration,
     roomView,
-    sourceBranches: inputs.sourceBranches,
+    sourceBranch: inputs.sourceBranch,
     historySequence: event.sequence,
     authoredSeaStarDuplicateSiteKeys,
     ...(onlyEntry === undefined ? {} : { onlyEntry }),
@@ -670,7 +669,7 @@ export function applyAcquisitionPointReachedTransition(
       : { derivedAcquisitionEntryCapability: inputs.derivedAcquisitionEntryCapability }),
   });
   return publish({
-    branches: authoredSiteSettlement.branches,
+    branch: authoredSiteSettlement.branch,
     findings,
     authoredSiteSettlement,
   });

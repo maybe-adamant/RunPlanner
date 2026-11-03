@@ -24,17 +24,11 @@ function placement(
   owner: OccurrenceAddress,
   reference: PickupReference,
   source: GeneratedPickupSource,
-  statuses: readonly ('valid' | 'invalid' | 'unassessed')[],
+  /** The reached state's status; none is reached when the state is absent. */
+  status: 'valid' | 'invalid' | 'unassessed' | undefined,
   sequence: number,
 ): GeneratedPickupPlacement {
-  const kind =
-    statuses.length === 0
-      ? 'unassessed'
-      : statuses.every((status) => status === 'valid')
-        ? 'valid'
-        : statuses.every((status) => status === 'invalid')
-          ? 'invalid'
-          : 'unassessed';
+  const kind = status ?? 'unassessed';
   const assessment: GeneratedPickupPlacementAssessment =
     kind === 'invalid' ? { kind, source, reason: 'dueContactMismatch' } : { kind, source };
   return Object.freeze({
@@ -51,7 +45,7 @@ function placement(
 export function assessReachedHermesDeliveryPlacement(
   owner: OccurrenceAddress,
   reference: PickupReference,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   sequence: number,
 ): GeneratedPickupPlacement {
   const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey)!;
@@ -63,48 +57,59 @@ export function assessReachedHermesDeliveryPlacement(
     owner,
     reference,
     source,
-    branches.map((branch) => {
-      const delivery = branch.state.pendingHermesShrineDeliveries[reference.entryKey];
-      return delivery !== undefined && dueContactMatches(delivery, owner, reference)
-        ? 'valid'
-        : 'invalid';
-    }),
+    branch === undefined
+      ? undefined
+      : (() => {
+          const delivery = branch.state.pendingHermesShrineDeliveries[reference.entryKey];
+          return delivery !== undefined && dueContactMatches(delivery, owner, reference)
+            ? 'valid'
+            : 'invalid';
+        })(),
     sequence,
   );
 }
 
-/** Branch-local matured progress proves contact; absent capability alone proves nothing. */
+/** The state's matured progress proves contact; absent capability alone proves nothing. */
 export function assessReachedClockedPickupPlacement(
   owner: OccurrenceAddress,
   reference: PickupReference,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   frontier: DerivedAcquisitionEntryFrontier | undefined,
   sequence: number,
 ): GeneratedPickupPlacement {
   const parsed = parseClockedTraitGeneratedPickupEntryKey(reference.entryKey)!;
+  const maturity =
+    branch === undefined
+      ? undefined
+      : branch.state.traitHistory.events
+          .filter(
+            (event) =>
+              event.kind === 'pickupProducerProgress' &&
+              event.acquisitionIdentity === parsed.acquisitionIdentity &&
+              event.matured &&
+              semanticAddressKey(event.owner) === semanticAddressKey(owner),
+          )
+          .at(-1);
+  const reached =
+    maturity !== undefined &&
+    frontier?.kind === 'clockedTraitPickup' &&
+    frontier.historySequence === maturity.sequence &&
+    frontier.branchesBeforeEntry.some((before) =>
+      before.state.traitHistory.events.includes(maturity),
+    );
   return placement(
     owner,
     reference,
     { kind: 'clockedTraitPickup', acquisitionIdentity: parsed.acquisitionIdentity },
-    branches.map((branch) => {
-      const maturities = branch.state.traitHistory.events.filter(
-        (event) =>
-          event.kind === 'pickupProducerProgress' &&
-          event.acquisitionIdentity === parsed.acquisitionIdentity &&
-          event.matured &&
-          semanticAddressKey(event.owner) === semanticAddressKey(owner),
-      );
-      const maturity = maturities.at(-1);
-      if (maturity === undefined) return 'invalid';
-      const reached =
-        frontier?.kind === 'clockedTraitPickup' &&
-        frontier.historySequence === maturity.sequence &&
-        frontier.branchesBeforeEntry.some((before) =>
-          before.state.traitHistory.events.includes(maturity),
-        );
-      if (!reached) return 'unassessed';
-      return frontier.encounterPhaseKey === reference.encounterPhaseKey ? 'valid' : 'invalid';
-    }),
+    branch === undefined
+      ? undefined
+      : maturity === undefined
+        ? 'invalid'
+        : !reached
+          ? 'unassessed'
+          : frontier.encounterPhaseKey === reference.encounterPhaseKey
+            ? 'valid'
+            : 'invalid',
     sequence,
   );
 }

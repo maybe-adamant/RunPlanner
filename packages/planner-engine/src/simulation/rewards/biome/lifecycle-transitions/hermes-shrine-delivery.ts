@@ -58,7 +58,7 @@ export function dueHermesShrineDeliveryFrontier(
       if (retainedReference?.kind === 'interactAcquisitionEntry')
         placements.set(
           entryKey,
-          assessReachedHermesDeliveryPlacement(deliveryHost, retainedReference, branches, sequence),
+          assessReachedHermesDeliveryPlacement(deliveryHost, retainedReference, branch, sequence),
         );
       const fixedReward = defaultHermesShrineDeliveryReward(
         catalog,

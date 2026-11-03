@@ -19,7 +19,7 @@ import {
   type ResolvedRewardOffer,
   type ShopProfileDeclaration,
 } from '../../../reward-kernel';
-import { aggregateRewardOfferExclusions, staticRewardOfferExclusion } from '../offer-exclusions';
+import { reachedRewardOfferExclusion, staticRewardOfferExclusion } from '../offer-exclusions';
 import { notInShopReason, shopSlotReason, type ShopSlotExclusionInput } from './slot-exclusions';
 import { foldTraitHistoryEvents } from '../../traits';
 import { spawnPickups } from '../../state/pending-resource-pickups';
@@ -107,7 +107,7 @@ export function deriveTravelRefill(input: {
     const fixed = notInShopReason(input);
     const exclusions =
       fixed === undefined
-        ? aggregateRewardOfferExclusions([shopSlotReason(input, generationFacts)])
+        ? reachedRewardOfferExclusion(shopSlotReason(input, generationFacts))
         : staticRewardOfferExclusion(fixed);
     return Object.freeze({
       findings: Object.freeze([]),

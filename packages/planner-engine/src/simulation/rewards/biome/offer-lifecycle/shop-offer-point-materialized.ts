@@ -21,9 +21,9 @@ import { mergeRewardFindingEmissions } from '../../findings';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { spawnPickups } from '../../../state/pending-resource-pickups';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
-import type { RewardBranchState } from '../../branch-primitives';
+import { singleBranch, type RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
-import { aggregateRewardOfferExclusions, staticRewardOfferExclusion } from '../../offer-exclusions';
+import { reachedRewardOfferExclusion, staticRewardOfferExclusion } from '../../offer-exclusions';
 import {
   notInShopReason,
   shopSlotReason,
@@ -182,10 +182,11 @@ export function applyShopOfferPointMaterialization(
       };
       const fixed = notInShopReason(input);
       if (fixed !== undefined) return staticRewardOfferExclusion(fixed);
-      return aggregateRewardOfferExclusions(
-        frontierBranches.map((branch) =>
-          !hasWitnesses(branch, inputs) ? shopSlotReason(input, facts(branch.state)) : undefined,
-        ),
+      const reached = singleBranch(frontierBranches);
+      return reachedRewardOfferExclusion(
+        reached === undefined || hasWitnesses(reached, inputs)
+          ? undefined
+          : shopSlotReason(input, facts(reached.state)),
       );
     };
     const selectionResult = (owner: SemanticAddress, selection: AuthoredShopOffer) => {

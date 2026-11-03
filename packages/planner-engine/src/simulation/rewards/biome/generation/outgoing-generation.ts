@@ -9,8 +9,8 @@ import type {
 } from '../../../materialization';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import type { RewardStoreSupportEntry } from '../../model';
-import { singleBranch, type RewardBranchState } from '../../branch-primitives';
-import { advanceRewardBranches } from '../../branch-lifecycle';
+import type { RewardBranchState } from '../../branch-primitives';
+import { advanceRewardBranch } from '../../branch-lifecycle';
 import type { OfferProcessingPeer } from '../../offer-generation';
 import { assessAuthoredBatchRewardStore } from '../reward-store-support';
 import { addRewardFinding, rewardFinding } from '../../findings';
@@ -28,7 +28,7 @@ import type { TargetGenerationFrontier } from './target-generation-completed';
 type CanonicalRewardSource = CanonicalAuthoredRoom | CanonicalHubRoom;
 
 export interface OutgoingGenerationTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly peers: readonly OfferProcessingPeer[];
   readonly siteSettlements: readonly AuthoredSiteSettlementResult[];
   readonly findings: readonly FindingRegionEntry[];
@@ -59,7 +59,7 @@ export interface OutgoingGenerationInputs {
   readonly emptyOutgoing: boolean;
   readonly hubTakeover: boolean;
   readonly hubRestoring: boolean;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
 }
 
@@ -106,14 +106,14 @@ export function applyOutgoingGenerationTransition(
     hubRestoring,
     authoredSeaStarDuplicateSiteKeys,
   } = inputs;
-  let branches = inputs.branches;
+  let { branch } = inputs;
   const findings = new Map<string, FindingRegionEntry>();
   const siteSettlements: AuthoredSiteSettlementResult[] = [];
   const storeSupportEntries: RewardStoreSupportEntry[] = [];
 
   if (event.origin.kind === 'hubRoom')
     return Object.freeze({
-      branches: advanceRewardBranches(branches, event.sequence),
+      branch: branch === undefined ? undefined : advanceRewardBranch(branch, event.sequence),
       peers: Object.freeze([]),
       siteSettlements: Object.freeze([]),
       findings: Object.freeze([]),
@@ -139,7 +139,7 @@ export function applyOutgoingGenerationTransition(
         room: source,
         declaration,
         roomView: sourceViews,
-        sourceBranches: branches,
+        sourceBranch: branch,
         historySequence: event.sequence,
         authoredSeaStarDuplicateSiteKeys,
         ...(options.onlyEntry === undefined ? {} : { onlyEntry: options.onlyEntry }),
@@ -149,7 +149,7 @@ export function applyOutgoingGenerationTransition(
         activationOnly: true,
       });
       siteSettlements.push(settlement);
-      branches = settlement.branches;
+      branch = settlement.branch;
     };
     const shopRoom = source.entryState?.kind === 'shop';
     if (shopRoom) settleSite({ completeShopAfterOrder: false });
@@ -180,7 +180,7 @@ export function applyOutgoingGenerationTransition(
   if (targetSet === undefined) {
     if (emptyOutgoing || hubTakeover || hubRestoring || frontierOwner !== undefined)
       return Object.freeze({
-        branches: advanceRewardBranches(branches, event.sequence),
+        branch: branch === undefined ? undefined : advanceRewardBranch(branch, event.sequence),
         peers: Object.freeze([]),
         siteSettlements: Object.freeze(siteSettlements),
         findings: Object.freeze([...findings.values()]),
@@ -207,7 +207,7 @@ export function applyOutgoingGenerationTransition(
       : Object.freeze({
           origin: firstTarget.origin,
           historySequence: event.sequence,
-          branch: singleBranch(branches),
+          branch,
         });
 
   let sharedStore: string | undefined;
@@ -259,7 +259,7 @@ export function applyOutgoingGenerationTransition(
   }
 
   return Object.freeze({
-    branches: advanceRewardBranches(branches, event.sequence),
+    branch: branch === undefined ? undefined : advanceRewardBranch(branch, event.sequence),
     peers: Object.freeze([]),
     siteSettlements: Object.freeze(siteSettlements),
     findings: Object.freeze([...findings.values()]),

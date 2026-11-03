@@ -209,8 +209,8 @@ describe('Fresh File Eris', () => {
       gameName: 'G_Intro',
       origin: createOccurrenceAddress(freshFileGBiome, freshFileGIntroId),
     } as CanonicalAuthoredRoom;
-    expect(erisGiftDropped(catalog, gIntro, gTalk, [cursedAt])).toBe(true);
-    expect(erisGiftDropped(catalog, hIntro, hTalk, [cursedAt])).toBe(false);
-    expect(erisGiftDropped(catalog, hIntro, hTalk, [branch])).toBe(false);
+    expect(erisGiftDropped(catalog, gIntro, gTalk, cursedAt)).toBe(true);
+    expect(erisGiftDropped(catalog, hIntro, hTalk, cursedAt)).toBe(false);
+    expect(erisGiftDropped(catalog, hIntro, hTalk, branch)).toBe(false);
   });
 });

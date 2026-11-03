@@ -119,17 +119,9 @@ export function erisGiftDropped(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
   interaction: RoomActionSemanticAddress,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
 ): boolean {
   const host = routeErisHost(catalog.rooms.byKey[room.gameName], room.origin.routeKey);
-  if (host === undefined) return false;
-  const ownerKey = semanticAddressKey(interaction);
-  const dropped = branches.map(
-    (branch) => curseGrantOwnerKey(branch, host.curseTraitKey) === ownerKey,
-  );
-  if (dropped.some((value) => value !== dropped[0]))
-    throw new BiomeRewardSimulationContractError(
-      `${room.gameName} branches disagree on the Eris gift`,
-    );
-  return dropped[0] === true;
+  if (host === undefined || branch === undefined) return false;
+  return curseGrantOwnerKey(branch, host.curseTraitKey) === semanticAddressKey(interaction);
 }

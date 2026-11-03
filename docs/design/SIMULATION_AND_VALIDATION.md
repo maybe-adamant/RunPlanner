@@ -569,8 +569,8 @@ Three responsibilities stay separate:
 Generated pickup placement assessment is separate from required participation
 and reward completeness. Hermes deliveries and clocked trait pickups publish
 exact source, entry and reached-contact evidence as valid, invalid or unassessed.
-Universal rejection across reached branches proves invalidity; mixed or empty
-cohorts do not. Missing candidate capability is not evidence of a stale source.
+Rejection at the reached state proves invalidity; with no reached state the
+placement is unassessed. Missing candidate capability is not evidence of a stale source.
 A valid placement with missing or mismatched reward details retains its reward
 repair instead of becoming an obsolete placement.
 

@@ -50,6 +50,7 @@ import {
   appendRewardEvent,
   freezeRecord,
   offerEvidence,
+  singleBranch,
   withBag,
   type RewardBranchState,
 } from '../branch-primitives';
@@ -157,7 +158,7 @@ import type { RewardEvent } from '../model';
 import type { CountedRewardBinding } from '../../../reward-kernel/bindings';
 import { staticallyExcludedCandidateResult } from '../producer-frontiers';
 import {
-  aggregateRewardOfferExclusions,
+  reachedRewardOfferExclusion,
   peerlessCountedOfferReason,
   staticCountedOfferExclusion,
 } from '../offer-exclusions';
@@ -185,7 +186,7 @@ export function applyProducerRoleHistory(
   atomicRegion: string | undefined,
   findingChronology: FindingChronology | undefined,
   settlement: { readonly site: AcquisitionSiteAddress; readonly entry: AcquisitionEntryAddress },
-  directTraitAgreementBranches?: readonly RewardBranchState[],
+  directTraitAgreementBranch?: RewardBranchState,
   deferArtificerReplacement = false,
   offerAlreadyGenerated = false,
   authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>,
@@ -676,7 +677,7 @@ export function applyProducerRoleHistory(
       });
     }
     const traitEventCountBeforeSettlement = acquisitionBranch.state.traitHistory.events.length ?? 0;
-    const directTraitSetHistory = (directTraitAgreementBranches ?? branches)[0]?.state.traitHistory;
+    const directTraitSetHistory = (directTraitAgreementBranch ?? branches[0])?.state.traitHistory;
     const traitSettlement = applyTraitOfferForAcquisition(
       catalog,
       acquisitionBranch,
@@ -853,26 +854,28 @@ export function applyProducerRoleHistory(
                         routeKey,
                       );
                 if (fixed !== undefined) return staticallyExcludedCandidateResult(fixed);
-                // Every branch must redraw it; a supported branch cites nothing.
-                const exclusions = aggregateRewardOfferExclusions(
-                  branches.map((branch) => {
-                    if (!assessArtificerConversion(catalog, branch, incoming, resolution).supported)
-                      return undefined;
-                    const prepared = withBag(catalog, branch, 'RunProgress');
-                    if (prepared === undefined) return undefined;
-                    try {
-                      return peerlessCountedOfferReason(
-                        catalog.rewards,
-                        store,
-                        prepared.bag,
-                        offer,
-                        facts(prepared.branch.state),
-                        ARTIFICER_REDRAW_OPTIONS,
-                      );
-                    } catch {
-                      return undefined;
-                    }
-                  }),
+                // The reached state must redraw it; a supported state cites nothing.
+                const redrawReason = (branch: RewardBranchState) => {
+                  if (!assessArtificerConversion(catalog, branch, incoming, resolution).supported)
+                    return undefined;
+                  const prepared = withBag(catalog, branch, 'RunProgress');
+                  if (prepared === undefined) return undefined;
+                  try {
+                    return peerlessCountedOfferReason(
+                      catalog.rewards,
+                      store,
+                      prepared.bag,
+                      offer,
+                      facts(prepared.branch.state),
+                      ARTIFICER_REDRAW_OPTIONS,
+                    );
+                  } catch {
+                    return undefined;
+                  }
+                };
+                const reached = singleBranch(branches);
+                const exclusions = reachedRewardOfferExclusion(
+                  reached === undefined ? undefined : redrawReason(reached),
                 );
                 return Object.freeze({
                   findings: Object.freeze([]),

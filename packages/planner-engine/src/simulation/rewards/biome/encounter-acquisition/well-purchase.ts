@@ -33,11 +33,12 @@ import type { PlannerTimelineFacts } from '../../../timeline-facts';
 import type { WellRefillRealization } from '../../model';
 
 export interface WellPurchaseTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: readonly FindingRegionEntry[];
   readonly timelineFacts: PlannerTimelineFacts;
   readonly refillRealization?: WellRefillRealization;
-  readonly candidateContexts: readonly StygianWellActionCandidateContext[];
+  /** The purchase's assessment at the reached state, when it settles. */
+  readonly candidateContext?: StygianWellActionCandidateContext;
 }
 
 /** Applies one reached Stygian Well purchase. */
@@ -46,7 +47,7 @@ export function applyWellPurchaseTransition(inputs: {
   readonly snapshot: BiomeRewardSnapshot;
   readonly event: Extract<HistoryEvent, { readonly kind: 'wellPurchase' }>;
   readonly room: CanonicalAuthoredRoom | CanonicalHubRoom | undefined;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly refillGenerationSupported: boolean;
   /** Where the purchase stands against the Well's rolls at its point. */
   readonly roll: {
@@ -139,9 +140,9 @@ export function applyWellPurchaseTransition(inputs: {
         : Object.freeze([Object.freeze({ owner: row.owner, afterOwner: extendedSourceOwner })]),
   });
   const sourceOwner = inputs.roll.firstPurchase === undefined ? undefined : row?.owner;
-  const refillSupported = inputs.branches.every(
-    (branch) => branch.state.traitHistory.equippedTraits.RestockBoon !== undefined,
-  );
+  const { branch } = inputs;
+  const refillSupported =
+    branch === undefined || branch.state.traitHistory.equippedTraits.RestockBoon !== undefined;
   const refillRealization = (() => {
     if (
       row === undefined ||
@@ -199,7 +200,7 @@ export function applyWellPurchaseTransition(inputs: {
         });
   if (inputs.roll.refused !== undefined && row !== undefined && authoredRoom !== undefined) {
     return Object.freeze({
-      branches: inputs.branches,
+      branch,
       findings: Object.freeze([
         findingRegion(
           rewardFinding('rollOfferUnavailable', row.owner, { reason: inputs.roll.refused }),
@@ -214,7 +215,6 @@ export function applyWellPurchaseTransition(inputs: {
         ),
       ]),
       timelineFacts: factsWithRefill,
-      candidateContexts: Object.freeze([]),
     });
   }
   if (
@@ -229,7 +229,7 @@ export function applyWellPurchaseTransition(inputs: {
       well !== undefined &&
       (itemKey === null || event.generationKey === 'travelDealRefill');
     return Object.freeze({
-      branches: inputs.branches,
+      branch,
       findings: Object.freeze([
         findingRegion(
           unpinned
@@ -255,13 +255,12 @@ export function applyWellPurchaseTransition(inputs: {
         ),
       ]),
       timelineFacts: factsWithRefill,
-      candidateContexts: Object.freeze([]),
       ...(refillRealization === undefined ? {} : { refillRealization }),
     });
   }
   if (event.generationKey === 'travelDealRefill' && !inputs.refillGenerationSupported) {
     return Object.freeze({
-      branches: inputs.branches,
+      branch,
       findings: Object.freeze([
         findingRegion(
           rewardFinding(
@@ -283,111 +282,100 @@ export function applyWellPurchaseTransition(inputs: {
         ),
       ]),
       timelineFacts: factsWithRefill,
-      candidateContexts: Object.freeze([]),
       ...(refillRealization === undefined ? {} : { refillRealization }),
     });
   }
-  const candidateContexts = inputs.branches.map((branch) =>
-    Object.freeze({
-      purchase: assessStygianWellPurchase(
-        catalog,
-        authoredRoom.origin.routeKey,
-        {
-          generationKey: event.generationKey,
-          itemKey,
-          twistResultKey,
-          ...(inputs.roll.firstPurchase === undefined
-            ? {}
-            : {
-                firstPurchase: {
-                  ...inputs.roll.firstPurchase,
-                  travelDealRefillKey: well.travelDealRefillKey,
-                },
-              }),
-        },
-        branch.state.stygianWell,
-        branch.state.traitHistory,
-      ),
-    }),
-  );
-  const findings = candidateContexts.flatMap(({ purchase }) =>
-    purchase.issues.map((issue) =>
-      findingRegion(
-        rewardFinding(
-          issue.kind.startsWith('twist')
-            ? 'stygianWellTwistInvalid'
-            : 'stygianWellTravelDealRefillUnavailable',
-          createRoomFeatureAddress(authoredRoom.origin, {
-            kind: issue.kind.startsWith('twist') ? 'stygianWellTwist' : 'stygianWellOffer',
-            generationKey: issue.generationKey,
+  if (branch === undefined)
+    return Object.freeze({
+      branch,
+      findings: Object.freeze([]),
+      timelineFacts: factsWithRefill,
+      ...(refillRealization === undefined ? {} : { refillRealization }),
+    });
+  const purchase = assessStygianWellPurchase(
+    catalog,
+    authoredRoom.origin.routeKey,
+    {
+      generationKey: event.generationKey,
+      itemKey,
+      twistResultKey,
+      ...(inputs.roll.firstPurchase === undefined
+        ? {}
+        : {
+            firstPurchase: {
+              ...inputs.roll.firstPurchase,
+              travelDealRefillKey: well.travelDealRefillKey,
+            },
           }),
-          { reason: issue.kind },
-        ),
-        undefined,
-        rewardFindingChronologyForRoom(
-          snapshot,
-          authoredRoom.origin,
-          event.sequence,
-          'localRoomLifecycle',
-        ),
-        'reward',
+    },
+    branch.state.stygianWell,
+    branch.state.traitHistory,
+  );
+  const findings = purchase.issues.map((issue) =>
+    findingRegion(
+      rewardFinding(
+        issue.kind.startsWith('twist')
+          ? 'stygianWellTwistInvalid'
+          : 'stygianWellTravelDealRefillUnavailable',
+        createRoomFeatureAddress(authoredRoom.origin, {
+          kind: issue.kind.startsWith('twist') ? 'stygianWellTwist' : 'stygianWellOffer',
+          generationKey: issue.generationKey,
+        }),
+        { reason: issue.kind },
       ),
+      undefined,
+      rewardFindingChronologyForRoom(
+        snapshot,
+        authoredRoom.origin,
+        event.sequence,
+        'localRoomLifecycle',
+      ),
+      'reward',
     ),
   );
+  const source = Object.freeze({
+    occurrence: authoredRoom.origin,
+    generationKey: event.generationKey,
+  });
+  const direct = applyStygianWellPurchase(catalog, branch.state.stygianWell, itemKey, source, true);
+  const nestedResultIsValid =
+    purchase.twistCandidateItemKeys !== undefined &&
+    twistResultKey !== undefined &&
+    twistResultKey !== null &&
+    purchase.twistCandidateItemKeys.includes(twistResultKey);
+  let history = branch.state.rewardHistory;
+  for (const grant of [
+    stygianWellGrant(catalog, itemKey),
+    nestedResultIsValid ? stygianWellGrant(catalog, twistResultKey) : undefined,
+  ])
+    if (grant?.kind === 'consumable') {
+      const declaration = catalog.rewards.acquisitions.byKey[grant.acquisitionGameName];
+      history = creditItemArmor(
+        creditMaxStatGain(
+          applyConcreteAcquisition(catalog.rewards, history, {
+            kind: 'consumable',
+            gameName: grant.acquisitionGameName,
+          }),
+          declaration?.maxStatGrant,
+        ),
+        declaration?.armorGrant,
+      );
+    }
   return Object.freeze({
-    branches: Object.freeze(
-      inputs.branches.map((branch, index) => {
-        const assessment = candidateContexts[index]?.purchase;
-        const source = Object.freeze({
-          occurrence: authoredRoom.origin,
-          generationKey: event.generationKey,
-        });
-        const direct = applyStygianWellPurchase(
-          catalog,
-          branch.state.stygianWell,
-          itemKey,
-          source,
-          true,
-        );
-        const nestedResultIsValid =
-          assessment?.twistCandidateItemKeys !== undefined &&
-          twistResultKey !== undefined &&
-          twistResultKey !== null &&
-          assessment.twistCandidateItemKeys.includes(twistResultKey);
-        let history = branch.state.rewardHistory;
-        for (const grant of [
-          stygianWellGrant(catalog, itemKey),
-          nestedResultIsValid ? stygianWellGrant(catalog, twistResultKey) : undefined,
-        ])
-          if (grant?.kind === 'consumable') {
-            const declaration = catalog.rewards.acquisitions.byKey[grant.acquisitionGameName];
-            history = creditItemArmor(
-              creditMaxStatGain(
-                applyConcreteAcquisition(catalog.rewards, history, {
-                  kind: 'consumable',
-                  gameName: grant.acquisitionGameName,
-                }),
-                declaration?.maxStatGrant,
-              ),
-              declaration?.armorGrant,
-            );
-          }
-        return Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            rewardHistory: history,
-            stygianWell:
-              !nestedResultIsValid || twistResultKey === undefined || twistResultKey === null
-                ? direct
-                : applyStygianWellPurchase(catalog, direct, twistResultKey, source, false),
-          }),
-        });
+    branch: Object.freeze({
+      ...branch,
+      state: Object.freeze({
+        ...branch.state,
+        rewardHistory: history,
+        stygianWell:
+          !nestedResultIsValid || twistResultKey === undefined || twistResultKey === null
+            ? direct
+            : applyStygianWellPurchase(catalog, direct, twistResultKey, source, false),
       }),
-    ),
+    }),
     findings: Object.freeze(findings),
     timelineFacts: factsWithRefill,
-    candidateContexts: Object.freeze(candidateContexts),
+    candidateContext: Object.freeze({ purchase }),
     ...(refillRealization === undefined ? {} : { refillRealization }),
   });
 }

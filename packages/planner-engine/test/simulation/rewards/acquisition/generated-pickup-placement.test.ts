@@ -53,25 +53,24 @@ function delivery(
     },
   };
 }
-it('requires universal reached rejection and distinguishes exact Hermes host and phase from payload', () => {
-  const assess = (branches: readonly RewardBranchState[]) =>
-    assessReachedHermesDeliveryPlacement(host, reference, branches, 9).assessment.kind;
-  expect(assess([])).toBe('unassessed');
-  expect(assess([delivery()])).toBe('valid');
-  expect(assess([delivery(source)])).toBe('invalid');
-  expect(assess([delivery(host, 'combat2')])).toBe('invalid');
-  expect(assess([delivery(), delivery(source)])).toBe('unassessed');
-  expect(assess([seed])).toBe('invalid');
+it('judges the reached state and distinguishes exact Hermes host and phase from payload', () => {
+  const assess = (branch: RewardBranchState | undefined) =>
+    assessReachedHermesDeliveryPlacement(host, reference, branch, 9).assessment.kind;
+  expect(assess(undefined)).toBe('unassessed');
+  expect(assess(delivery())).toBe('valid');
+  expect(assess(delivery(source))).toBe('invalid');
+  expect(assess(delivery(host, 'combat2'))).toBe('invalid');
+  expect(assess(seed)).toBe('invalid');
   expect(
     assessReachedHermesDeliveryPlacement(
       host,
       { kind: reference.kind, siteKey: reference.siteKey, entryKey: reference.entryKey },
-      [delivery(host, null)],
+      delivery(host, null),
       9,
     ).assessment.kind,
   ).toBe('valid');
 });
-it('matches clocked evidence to each branch maturity instead of temporally accumulated cohort sizes', () => {
+it('matches clocked evidence to the reached maturity instead of temporally accumulated cohort sizes', () => {
   const clocked = {
     kind: 'interactAcquisitionEntry' as const,
     siteKey: 'roomExit',
@@ -113,14 +112,13 @@ it('matches clocked evidence to each branch maturity instead of temporally accum
     branchesBeforeEntry: [branch],
   };
   const assess = (
-    branches: readonly RewardBranchState[],
+    reached: RewardBranchState | undefined,
     contact: DerivedAcquisitionEntryFrontier | undefined,
-  ) => assessReachedClockedPickupPlacement(host, clocked, branches, contact, 9).assessment.kind;
-  expect(assess([], undefined)).toBe('unassessed');
-  expect(assess([branch], undefined)).toBe('unassessed');
-  expect(assess([branch], frontier)).toBe('valid');
-  expect(assess([branch], { ...frontier, encounterPhaseKey: 'combat2' })).toBe('invalid');
-  expect(assess([branch], { ...frontier, historySequence: 6 })).toBe('unassessed');
-  expect(assess([branch, seed], frontier)).toBe('unassessed');
-  expect(assess([seed], frontier)).toBe('invalid');
+  ) => assessReachedClockedPickupPlacement(host, clocked, reached, contact, 9).assessment.kind;
+  expect(assess(undefined, undefined)).toBe('unassessed');
+  expect(assess(branch, undefined)).toBe('unassessed');
+  expect(assess(branch, frontier)).toBe('valid');
+  expect(assess(branch, { ...frontier, encounterPhaseKey: 'combat2' })).toBe('invalid');
+  expect(assess(branch, { ...frontier, historySequence: 6 })).toBe('unassessed');
+  expect(assess(seed, frontier)).toBe('invalid');
 });

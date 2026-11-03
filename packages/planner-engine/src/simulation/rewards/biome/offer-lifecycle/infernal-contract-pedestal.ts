@@ -16,9 +16,9 @@ import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import type { RewardFactsFactory } from '../../acquisition/contracts';
 import { addRewardFinding, historyChronology, offerEvidence, rewardFinding } from '../../findings';
-import { appendRewardEvent, type RewardBranchState } from '../../branch-primitives';
+import { appendRewardEvent, singleBranch, type RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
-import { aggregateRewardOfferExclusions, staticRewardOfferExclusion } from '../../offer-exclusions';
+import { reachedRewardOfferExclusion, staticRewardOfferExclusion } from '../../offer-exclusions';
 import {
   notInShopReason,
   shopSlotReason,
@@ -179,18 +179,19 @@ export function spawnInfernalContractPedestal(inputs: {
         peerAt: () => undefined,
       };
       const fixed = notInShopReason(input);
+      const reached = singleBranch(branches);
       const exclusions =
         fixed !== undefined
           ? staticRewardOfferExclusion(fixed)
-          : aggregateRewardOfferExclusions(
+          : reachedRewardOfferExclusion(
               // Inventory witnesses are checked before the Contract boon.
-              branches.map((branch) =>
-                !supported(branch, selection)
-                  ? shopSlotReason(input, facts(branch.state))
-                  : !infernalContractHeld(branch.state)
+              reached === undefined
+                ? undefined
+                : !supported(reached, selection)
+                  ? shopSlotReason(input, facts(reached.state))
+                  : !infernalContractHeld(reached.state)
                     ? { kind: 'contractNotEquipped' as const }
                     : undefined,
-              ),
             );
       return Object.freeze({
         findings: Object.freeze([]),

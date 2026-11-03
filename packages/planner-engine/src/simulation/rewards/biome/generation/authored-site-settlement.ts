@@ -28,7 +28,7 @@ import { assessSeaStarDuplication } from '../../acquisition/conversions';
 import { settlePickupAcquisitionSite } from '../../acquisition/site-settlement';
 import { settleShopAcquisitionSite } from '../../shop/settlement';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
-import type { RewardBranchState } from '../../branch-primitives';
+import { branchList, singleBranch, type RewardBranchState } from '../../branch-primitives';
 import {
   staticallyExcludedCandidateResult,
   type RewardProducerFrontier,
@@ -45,7 +45,7 @@ import {
 import type { SimulationState } from '../../../state/model';
 
 export interface AuthoredSiteSettlementResult {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly producerFrontiers: readonly RewardProducerFrontier[];
   readonly emissions: AuthoredSiteSettlementEmissions;
 }
@@ -56,7 +56,7 @@ export interface AuthoredSiteSettlementInputs {
   readonly room: CanonicalAuthoredRoom;
   readonly declaration: RoomDeclaration;
   readonly roomView: ProgressiveRoomHistoryViews;
-  readonly sourceBranches: readonly RewardBranchState[];
+  readonly sourceBranch: RewardBranchState | undefined;
   readonly historySequence: number;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
   readonly onlyEntry?: { readonly siteKey: string; readonly entryKey: string };
@@ -79,7 +79,7 @@ export function settleAuthoredAcquisitionSite(
     room,
     declaration,
     roomView,
-    sourceBranches,
+    sourceBranch,
     historySequence,
     authoredSeaStarDuplicateSiteKeys,
     onlyEntry,
@@ -87,10 +87,6 @@ export function settleAuthoredAcquisitionSite(
     activationOnly = false,
   } = inputs;
   const targetFindings = new Map<string, FindingRegionEntry>();
-  // Generation consults the completed hub board through each branch's own
-  // reached snapshot; the settling cohort must still agree on that board.
-  // Attested only at the one facts contact that consults it, so a site whose
-  // cohort has already been emptied never reaches the agreement check.
   const acquisitionRoleFrontiers: import('../../acquisition/contracts').AcquisitionRoleFrontier[] =
     [];
   const derivedEntryFrontiers: import('../../acquisition/contracts').DerivedAcquisitionEntryFrontier[] =
@@ -100,9 +96,9 @@ export function settleAuthoredAcquisitionSite(
   let timelineFacts: import('../../../timeline-facts').PlannerTimelineFacts | undefined;
   const producerFrontiers: RewardProducerFrontier[] = [];
 
-  function settle(): readonly RewardBranchState[] {
+  function settle(): RewardBranchState | undefined {
     if (Object.keys(room.acquisitionSites).length === 0 && room.entryState?.kind !== 'shop') {
-      return sourceBranches;
+      return sourceBranch;
     }
     const selectedSiteKey = onlyEntry?.siteKey ?? Object.keys(room.acquisitionSites)[0];
     const selectedSite =
@@ -150,7 +146,7 @@ export function settleAuthoredAcquisitionSite(
       selectedSiteKey === undefined ? undefined : parseSeaStarDuplicateSiteKey(selectedSiteKey);
     if (selectedSite !== undefined && seaStarDuplicate !== undefined) {
       const duplicateEntry = selectedSite.entries[SEA_STAR_DUPLICATE_ENTRY_KEY];
-      if (duplicateEntry === undefined || duplicateEntry === null) return sourceBranches;
+      if (duplicateEntry === undefined || duplicateEntry === null) return sourceBranch;
       const source = canonicalArtificerSource(room, seaStarDuplicate.sourceKey);
       if (source === undefined)
         throw new BiomeRewardSimulationContractError(
@@ -164,7 +160,7 @@ export function settleAuthoredAcquisitionSite(
       // A direct Shop offer is paid and therefore remains a repair-only
       // authored result. A free acquisition entry generated in a Shop uses
       // its own lifecycle and settles like any other free source.
-      if (source.owner.kind === 'shopOffer') return sourceBranches;
+      if (source.owner.kind === 'shopOffer') return sourceBranch;
       const duplicateUsesFreshObject = seaStarDuplicateUsesFreshObject(
         catalog,
         source.reward,
@@ -177,14 +173,14 @@ export function settleAuthoredAcquisitionSite(
         throw new BiomeRewardSimulationContractError(
           `${room.gameName} lost Sea Star producer lifecycle for ${selectedSiteKey}`,
         );
-      const forfeitApplied = sourceBranches.every((branch) =>
-        branch.events.some(
+      const forfeitApplied =
+        sourceBranch === undefined ||
+        sourceBranch.events.some(
           (event) =>
             event.kind === 'rewardForfeited' &&
             semanticAddressKey(event.origin) === semanticAddressKey(source.owner) &&
             event.replacementRewardType === 'RoomRewardConsolationPrize',
-        ),
-      );
+        );
       const effectiveDuplicateEntry = forfeitApplied
         ? createUnresolvedPickupRewardState(
             catalog,
@@ -196,33 +192,26 @@ export function settleAuthoredAcquisitionSite(
       // The duplicate can be placed after other room actions. Its eligibility
       // is nevertheless the source's own pre-acquisition attestation, not
       // whatever traits happen to be equipped at this later action.
-      const supportedBranches = sourceBranches.filter(
-        (branch) => branch.seaStarDuplicateEligibilityBySource?.[sourceAddressKey]?.supported,
-      );
-      if (supportedBranches.length !== sourceBranches.length) {
-        const unsupported = sourceBranches.find(
-          (branch) => !branch.seaStarDuplicateEligibilityBySource?.[sourceAddressKey]?.supported,
+      if (sourceBranch === undefined) return sourceBranch;
+      if (!sourceBranch.seaStarDuplicateEligibilityBySource?.[sourceAddressKey]?.supported) {
+        addRewardFinding(
+          targetFindings,
+          rewardFinding(
+            'seaStarDuplicationUnavailable',
+            sourceAddress,
+            sourceBranch.seaStarDuplicateEligibilityBySource?.[sourceAddressKey]?.evidence ??
+              Object.freeze({ reason: 'sourceFrontierNotReached' }),
+          ),
+          ownerRegion(sourceAddress),
+          rewardFindingChronologyForRoom(
+            snapshot,
+            room.origin,
+            historySequence,
+            'localRoomLifecycle',
+          ),
         );
-        if (unsupported !== undefined) {
-          addRewardFinding(
-            targetFindings,
-            rewardFinding(
-              'seaStarDuplicationUnavailable',
-              sourceAddress,
-              unsupported.seaStarDuplicateEligibilityBySource?.[sourceAddressKey]?.evidence ??
-                Object.freeze({ reason: 'sourceFrontierNotReached' }),
-            ),
-            ownerRegion(sourceAddress),
-            rewardFindingChronologyForRoom(
-              snapshot,
-              room.origin,
-              historySequence,
-              'localRoomLifecycle',
-            ),
-          );
-        }
+        return sourceBranch;
       }
-      if (supportedBranches.length === 0) return sourceBranches;
       const pickupFacts = (state: SimulationState) =>
         createBiomeRewardFacts({
           catalog,
@@ -233,7 +222,7 @@ export function settleAuthoredAcquisitionSite(
           view: roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
           hubBoardLookups: 'notConsulted',
         });
-      const settled = settlePickupAcquisitionSite(catalog, supportedBranches, {
+      const settled = settlePickupAcquisitionSite(catalog, branchList(sourceBranch), {
         siteOwner: room.origin,
         site: selectedSite.address,
         timelineOwnerByEntryKey,
@@ -270,10 +259,7 @@ export function settleAuthoredAcquisitionSite(
       mergeRewardFindingEmissions(targetFindings, settled.findingEmissions);
       acquisitionRoleFrontiers.push(...(settled.roleFrontiers ?? []));
       traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
-      return Object.freeze([
-        ...sourceBranches.filter((branch) => !supportedBranches.includes(branch)),
-        ...settled.branches,
-      ]);
+      return singleBranch(settled.branches);
     }
     // The Shop owns only its roomExit site (offers, Echo Gold, Travel Deal
     // refill); a trait-generated pickup in a Shop room is an ordinary pickup.
@@ -281,19 +267,19 @@ export function settleAuthoredAcquisitionSite(
       room.entryState?.kind === 'shop' &&
       (onlyEntry === undefined || selectedSiteKey === 'roomExit');
     if (!shopOwnsSite) {
-      if (selectedSite === undefined || selectedSiteKey === undefined) return sourceBranches;
-      if (producer === undefined) return sourceBranches;
+      if (selectedSite === undefined || selectedSiteKey === undefined) return sourceBranch;
+      if (producer === undefined) return sourceBranch;
       const sourceWasNormallyAcquired = producer.sourceNormal;
       // A selected producer is structural authoring detail. Its pickup site
       // becomes live only for that exact normal participating acquisition;
       // Time Piece, Artificer, and an unpicked optional source do not create it.
-      if (!sourceWasNormallyAcquired) return sourceBranches;
+      if (!sourceWasNormallyAcquired) return sourceBranch;
       if (
         producer.sourceAction.kind === 'interactEris' &&
         producer.source.kind === 'roomAction' &&
-        !erisGiftDropped(catalog, room, producer.source, sourceBranches)
+        !erisGiftDropped(catalog, room, producer.source, sourceBranch)
       )
-        return sourceBranches;
+        return sourceBranch;
       const requiredEntryKeys = new Set(
         producer.pickups.filter((pickup) => pickup.required).map((pickup) => pickup.key),
       );
@@ -301,18 +287,9 @@ export function settleAuthoredAcquisitionSite(
       const replayEntryKey = echoReplay ? producer.pickups[0]?.key : undefined;
       const replayEntry =
         replayEntryKey === undefined ? undefined : selectedSite.entries[replayEntryKey];
-      const replaySources = echoReplay
-        ? sourceBranches.map((branch) => branch.state.rewardHistory.lastRewardRecreation)
-        : Object.freeze([]);
-      const firstReplay = replaySources[0];
-      const agreedReplayFromHistory =
-        firstReplay !== undefined &&
-        replaySources.length === sourceBranches.length &&
-        replaySources.every(
-          (candidate) => JSON.stringify(candidate) === JSON.stringify(firstReplay),
-        )
-          ? firstReplay
-          : undefined;
+      const agreedReplayFromHistory = echoReplay
+        ? sourceBranch?.state.rewardHistory.lastRewardRecreation
+        : undefined;
       const derivedReplayOffer =
         inputs.derivedAcquisitionEntryCapability?.kind === 'echoLastReward'
           ? inputs.derivedAcquisitionEntryCapability.fixedReward?.offer
@@ -362,8 +339,8 @@ export function settleAuthoredAcquisitionSite(
           { kind: 'producerLifecycle', key: 'EchoLastReward' },
           room.origin.routeKey,
         );
-        derivedEntryFrontiers.push(
-          ...sourceBranches.map((branch) =>
+        if (sourceBranch !== undefined)
+          derivedEntryFrontiers.push(
             Object.freeze({
               address: replayAddress,
               kind: 'echoLastReward' as const,
@@ -373,10 +350,9 @@ export function settleAuthoredAcquisitionSite(
                 replayEntry !== undefined &&
                 replayEntry !== null &&
                 JSON.stringify(replayEntry.offer) !== JSON.stringify(agreedReplay.offer),
-              branchesBeforeEntry: Object.freeze([branch]),
+              branchesBeforeEntry: Object.freeze([sourceBranch]),
             }),
-          ),
-        );
+          );
       }
       if (replaySourceMismatch && replayEntryKey !== undefined) {
         const replayAddress = createAcquisitionEntryAddress(selectedSite.address, replayEntryKey);
@@ -404,7 +380,7 @@ export function settleAuthoredAcquisitionSite(
         replayEntryKey === undefined || effectiveReplayEntry === undefined
           ? authoredPickupEntries
           : Object.freeze({ ...authoredPickupEntries, [replayEntryKey]: effectiveReplayEntry });
-      const settled = settlePickupAcquisitionSite(catalog, sourceBranches, {
+      const settled = settlePickupAcquisitionSite(catalog, branchList(sourceBranch), {
         siteOwner: room.origin,
         site: selectedSite.address,
         timelineOwnerByEntryKey,
@@ -559,10 +535,10 @@ export function settleAuthoredAcquisitionSite(
           }),
         );
       }
-      return replaySourceMismatch ? Object.freeze([]) : settled.branches;
+      return replaySourceMismatch ? undefined : singleBranch(settled.branches);
     }
     const settlementRoom = room;
-    const settled = settleShopAcquisitionSite(sourceBranches, {
+    const settled = settleShopAcquisitionSite(branchList(sourceBranch), {
       catalog,
       room: settlementRoom,
       order: activationOnly
@@ -641,7 +617,7 @@ export function settleAuthoredAcquisitionSite(
       const unsupported =
         unsupportedFromFrontier ??
         (sourceWasPurchased
-          ? sourceBranches
+          ? branchList(sourceBranch)
               .map((branch) =>
                 assessSeaStarDuplication(
                   catalog,
@@ -677,12 +653,11 @@ export function settleAuthoredAcquisitionSite(
     timelineFacts = settled.timelineFacts;
     derivedEntryFrontiers.push(...(settled.derivedEntryFrontiers ?? []));
     traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
-    return settled.branches;
+    return singleBranch(settled.branches);
   }
 
-  const branches = settle();
   return Object.freeze({
-    branches: Object.freeze(branches),
+    branch: settle(),
     producerFrontiers: Object.freeze(producerFrontiers),
     emissions: createAuthoredSiteSettlementEmissions({
       acquisitionRoleFrontiers,

@@ -27,7 +27,7 @@ import {
 import { isAcquisitionAuthorshipMissingFinding } from '../../model';
 import { ownerRegion, type FindingRegionEntry } from '../../finding-regions';
 
-import { freezeRecord, type RewardBranchState } from '../branch-primitives';
+import { freezeRecord, singleBranch, type RewardBranchState } from '../branch-primitives';
 import type { PendingShopGoldMaterialization, PendingShopPaidOffer } from '../../state/model';
 import { type ReachedTraitChildCheckpoint } from '../trait-settlement/coordinator';
 import {
@@ -206,7 +206,7 @@ export function settleShopAcquisitionSite(
       readonly role: string;
       readonly lifecyclePoint: ProducerLifecyclePointKey;
     }[],
-    agreementBranches: readonly RewardBranchState[],
+    agreementBranch: RewardBranchState | undefined,
   ): boolean => {
     const purchaseActionOwner = actionOwnerForOffer(offer.offerKey);
     const source: AcquisitionSource = withRoomStoredSourceProducts(
@@ -246,7 +246,7 @@ export function settleShopAcquisitionSite(
       entryKey: offer.offerKey,
       historySequence,
       roleBindings,
-      directTraitAgreementBranches: agreementBranches,
+      ...(agreementBranch === undefined ? {} : { directTraitAgreementBranch: agreementBranch }),
       ...(purchaseActionOwner === undefined ? {} : { timelineOwner: purchaseActionOwner }),
       ...(context.authoredSeaStarDuplicateSiteKeys === undefined
         ? {}
@@ -303,7 +303,7 @@ export function settleShopAcquisitionSite(
           derivedEntryFrontiers.splice(index, 1);
       }
     }
-    const agreementBranches = Object.freeze(executions.map(({ candidate }) => candidate));
+    const agreementBranch = singleBranch(executions.map(({ candidate }) => candidate));
     const survivors: ShopExecution[] = [];
     for (const execution of executions) {
       if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) {
@@ -395,7 +395,7 @@ export function settleShopAcquisitionSite(
               profile.key,
               'paid',
               bindings,
-              agreementBranches,
+              agreementBranch,
             )
           ) {
             survivors.push(refillExecution);
@@ -636,7 +636,7 @@ export function settleShopAcquisitionSite(
       execution.candidate = gold.branch;
       if (gold.materialization !== undefined) execution.goldMaterialization = gold.materialization;
       derivedEntryFrontiers.push(...gold.derivedEntryFrontiers);
-      if (!settleOffer(execution, paidOffer, profile.key, 'paid', bindings, agreementBranches)) {
+      if (!settleOffer(execution, paidOffer, profile.key, 'paid', bindings, agreementBranch)) {
         entryPurchaseFailureRecorded = true;
         continue;
       }

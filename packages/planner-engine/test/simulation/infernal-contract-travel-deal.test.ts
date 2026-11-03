@@ -39,7 +39,11 @@ import {
   settleShopAcquisitionSite,
 } from '../../src/simulation/rewards/shop/settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
-import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
+import {
+  branchList,
+  singleBranch,
+  type RewardBranchState,
+} from '../../src/simulation/rewards/branch-primitives';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
@@ -589,7 +593,7 @@ function settleOrder(
     catalog,
     room,
     declaration,
-    sourceBranches: current,
+    sourceBranch: singleBranch(current),
     historySequence: 4,
     facts,
   });
@@ -599,7 +603,7 @@ function settleOrder(
     derivedEntryFrontiers: pickup.emissions.derivedEntryFrontiers,
     traitChildSettlements: pickup.emissions.traitChildSettlements,
   });
-  current = pickup.branches;
+  current = branchList(pickup.branch);
   const last = shop(current, after, options.partial !== true);
   parts.push(last);
   return Object.freeze({
@@ -722,12 +726,12 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       catalog,
       room: first.canonical,
       declaration,
-      sourceBranches: first.settlement.branches,
+      sourceBranch: singleBranch(first.settlement.branches),
       historySequence: 5,
       facts,
     });
     const interleaved = {
-      branches: pickup.branches,
+      branches: branchList(pickup.branch),
       roleFrontiers: pickup.emissions.acquisitionRoleFrontiers,
     };
     const interleavedPending = interleaved.branches[0]?.state.pendingShops[shopKey];

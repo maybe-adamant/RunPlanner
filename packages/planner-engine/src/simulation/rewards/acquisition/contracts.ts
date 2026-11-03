@@ -187,8 +187,8 @@ export interface OwnedAcquisitionSettlementRequest {
   readonly timelineOwner?: SemanticAddress;
   readonly historySequence: number;
   readonly roleBindings?: readonly AcquisitionSettlementRole[];
-  /** Exact peer branches used to attest one directly selected trait screen. */
-  readonly directTraitAgreementBranches?: readonly RewardBranchState[];
+  /** The state whose trait history judges one directly selected trait screen's set. */
+  readonly directTraitAgreementBranch?: RewardBranchState;
   /** Exact authored Sea Star result sites whose source frontier must be retained. */
   readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
   /** Ordered sites publish a distinct dependent action instead of settling immediately. */

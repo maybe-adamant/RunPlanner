@@ -100,16 +100,10 @@ export function staticRewardOfferExclusion(
   return Object.freeze([Object.freeze({ ...reason })]);
 }
 
-/**
- * The first failing gate at the reached state, the one entry of `reasons`;
- * none when the state explains nothing or no state is reached.
- */
-export function aggregateRewardOfferExclusions(
-  reasons: readonly (RewardOfferExclusionReason | undefined)[],
+/** The reached state's first failing gate; none when it explains nothing or no state is reached. */
+export function reachedRewardOfferExclusion(
+  reason: RewardOfferExclusionReason | undefined,
 ): readonly RewardOfferExclusionReason[] | undefined {
-  if (reasons.length > 1)
-    throw new Error(`an offer exclusion read ${reasons.length} reached states`);
-  const reason = reasons[0];
   return reason === undefined ? undefined : staticRewardOfferExclusion(reason);
 }
 
