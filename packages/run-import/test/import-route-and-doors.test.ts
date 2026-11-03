@@ -183,11 +183,12 @@ describe('run import door assignment', () => {
     expect(entered.state).toMatchObject({ kind: 'anomaly', success: true });
     expect(occurrence(imported.project, 'G-r20-d558528').gameName).toBe('B_Combat05');
     expect(occurrence(imported.project, 'G-r22').gameName).toBe('G_PreBoss01');
-    // The displaced G room is no save fact: each door's is reported.
-    const displaced = imported.report.entries.filter(
-      (entry) => entry.area === 'doors' && entry.record?.roomIndex === 20,
-    );
-    expect(displaced.map((entry) => entry.reason)).toEqual(['assumption', 'assumption']);
+    // The displaced G room is never created and leaves no trace, so it goes unreported.
+    expect(
+      imported.report.entries.filter(
+        (entry) => entry.area === 'doors' && entry.record?.roomIndex === 20,
+      ),
+    ).toEqual([]);
   });
 
   it("fails the entered Anomaly's challenge when its reward was not picked up", () => {

@@ -394,9 +394,8 @@ function replaceableRooms(context: RunImportContext, target: TargetAddress): rea
 /**
  * An Anomaly door is a G target the game swapped for the Anomaly map, so it is
  * authored as the first G room the engine admits there and switched to the
- * recorded map. No save names the displaced room, which leaves no trace in the
- * run: the first admitted one stands for any, reported. The entered map's
- * challenge succeeded when its reward was picked up.
+ * recorded map. The entered map's challenge succeeded when its reward was
+ * picked up.
  */
 function placeAnomaly(
   context: RunImportContext,
@@ -406,17 +405,11 @@ function placeAnomaly(
   occurrenceId: OccurrenceId,
   door: RunRecordDoor,
 ): ProjectCommand | undefined {
+  // Silent: the displaced room is never created, and every replaceable room shares one incoming reward.
   for (const gameName of replaceableRooms(context, target)) {
     if (roomRefusedAt(context, target, gameName)) continue;
     const applied = placeRoom(context, target, decision, occurrenceId, gameName);
     if (applied === undefined) continue;
-    context.note({
-      area: 'doors',
-      reason: 'assumption',
-      address: target,
-      applied,
-      record: { roomIndex: sourceIndex, visit: 0, door: door.door },
-    });
     switchAnomaly(context, target, sourceIndex, occurrenceId, door);
     return applied;
   }
