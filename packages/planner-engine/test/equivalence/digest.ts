@@ -215,6 +215,14 @@ function candidateBranchShape(value: unknown): unknown {
       case 'transcendentEmbryoOutcome':
         next.result = { ...result, branchSupport: [result.selectedPossible] };
         break;
+      case 'fountainRarityOutcome':
+        next.result = {
+          ...result,
+          branchSupport: (result.mutationTargetKeys as readonly string[]).map(
+            () => result.targetRequired,
+          ),
+        };
+        break;
       case 'concaveStone':
         next.result = { branches: listOf(result.stone) };
         break;

@@ -25,10 +25,8 @@ const action = createRoomActionAddress(
 );
 const outcome = createFountainRarityOutcomeAddress(action);
 
-function candidateArtifacts(frontiers: FountainRarityCandidateCapability['frontiers']) {
-  return createFountainRarityCandidateArtifacts(
-    new Map([[semanticAddressKey(outcome), { frontiers }]]),
-  );
+function candidateArtifacts(frontier: FountainRarityCandidateCapability) {
+  return createFountainRarityCandidateArtifacts(new Map([[semanticAddressKey(outcome), frontier]]));
 }
 
 function query(targetTraitKey: string | null | undefined): FountainRarityOutcomeCandidateQuery {
@@ -36,31 +34,23 @@ function query(targetTraitKey: string | null | undefined): FountainRarityOutcome
 }
 
 describe('Aromatic Phial candidate frontier', () => {
-  it('unions divergent branch domains while requiring support in every pending branch', () => {
+  it('rejects a target outside the pending frontier', () => {
     const result = evaluateFountainRarityOutcomeCandidate(
       catalog,
       createCompleteFGProject(),
       {} as ProjectEvaluation,
-      candidateArtifacts([
-        {
-          status: 'pending',
-          consumptionTargetKeys: ['ApolloWeaponBoon'],
-          mutationTargetKeys: ['ApolloWeaponBoon'],
-        },
-        {
-          status: 'pending',
-          consumptionTargetKeys: ['ZeusWeaponBoon'],
-          mutationTargetKeys: ['ZeusWeaponBoon'],
-        },
-      ]),
+      candidateArtifacts({
+        status: 'pending',
+        consumptionTargetKeys: ['ZeusWeaponBoon'],
+        mutationTargetKeys: ['ZeusWeaponBoon'],
+      }),
       query('ApolloWeaponBoon'),
     );
     if (result.kind !== 'fountainRarityOutcome') throw new Error('expected candidate result');
     expect(result.result).toMatchObject({
-      mutationTargetKeys: ['ApolloWeaponBoon', 'ZeusWeaponBoon'],
+      mutationTargetKeys: ['ZeusWeaponBoon'],
       targetRequired: true,
       selectedPossible: false,
-      branchSupport: [false, false],
     });
   });
 
@@ -69,13 +59,11 @@ describe('Aromatic Phial candidate frontier', () => {
       catalog,
       createCompleteFGProject(),
       {} as ProjectEvaluation,
-      candidateArtifacts([
-        {
-          status: 'pending',
-          consumptionTargetKeys: ['ApolloWeaponBoon'],
-          mutationTargetKeys: ['ApolloWeaponBoon'],
-        },
-      ]),
+      candidateArtifacts({
+        status: 'pending',
+        consumptionTargetKeys: ['ApolloWeaponBoon'],
+        mutationTargetKeys: ['ApolloWeaponBoon'],
+      }),
       query(undefined),
     );
     if (result.kind !== 'fountainRarityOutcome') throw new Error('expected candidate result');
@@ -95,13 +83,11 @@ describe('Aromatic Phial candidate frontier', () => {
       catalog,
       project,
       {} as ProjectEvaluation,
-      candidateArtifacts([
-        {
-          status: 'pending',
-          consumptionTargetKeys: ['ApolloWeaponBoon'],
-          mutationTargetKeys: ['ApolloWeaponBoon'],
-        },
-      ]),
+      candidateArtifacts({
+        status: 'pending',
+        consumptionTargetKeys: ['ApolloWeaponBoon'],
+        mutationTargetKeys: ['ApolloWeaponBoon'],
+      }),
       query('ApolloWeaponBoon'),
     );
     if (result.kind !== 'fountainRarityOutcome') throw new Error('expected candidate result');

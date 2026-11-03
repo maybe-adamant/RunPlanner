@@ -96,7 +96,7 @@ describe('an unchanged Postboss rack', () => {
       simulateProjectAssembly(catalog, project),
     )
       .biomeAt(goldenFBiome)
-      ?.fountainRarity.at(outcome)?.frontiers[0]?.mutationTargetKeys[0];
+      ?.fountainRarity.at(outcome)?.mutationTargetKeys[0];
     if (targetTraitKey === undefined) throw new Error('expected a pending Phial target');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceFountainRarityTarget',

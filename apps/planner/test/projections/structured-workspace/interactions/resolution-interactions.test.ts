@@ -191,7 +191,6 @@ describe('resolution-interactions', () => {
           kind: 'transcendentEmbryoOutcome' as const,
           result: Object.freeze({
             eligibleBlessingKeys: Object.freeze(['ChaosElementalBlessing']),
-            branchSupport: Object.freeze([true]),
             emptyNoOp: false,
             selectedPossible: true,
             rarity: 'Epic' as const,

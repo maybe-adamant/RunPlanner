@@ -392,7 +392,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
     const capability = candidateArtifactsForProjectEvaluationAssembly(missing)
       .biomeAt(goldenFBiome)
       ?.fountainRarity.at(outcome);
-    const targetTraitKey = capability?.frontiers[0]?.mutationTargetKeys[0];
+    const targetTraitKey = capability?.mutationTargetKeys[0];
     expect(targetTraitKey).toBeDefined();
 
     project = applyProjectCommand(project, catalog, {

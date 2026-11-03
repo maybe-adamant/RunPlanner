@@ -72,14 +72,11 @@ export function createKeepsakeEquipResultCandidateArtifacts(
   });
 }
 
-/** Exact pre-fountain Phial frontiers retained by the reached action. */
-export interface FountainRarityCandidateFrontier {
+/** The exact pre-fountain Phial frontier retained by the reached action. */
+export interface FountainRarityCandidateCapability {
   readonly status: PhialLifecycleStatus | undefined;
   readonly consumptionTargetKeys: readonly string[];
   readonly mutationTargetKeys: readonly string[];
-}
-export interface FountainRarityCandidateCapability {
-  readonly frontiers: readonly FountainRarityCandidateFrontier[];
 }
 export interface FountainRarityCandidateArtifacts {
   readonly at: (

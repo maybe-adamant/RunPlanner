@@ -567,20 +567,18 @@ export function bindResolutionInteractions(input: {
                         ? []
                         : [targetTraitKey]),
                     ]),
-                  ].map((traitKey) =>
-                    (() => {
-                      const targetIndex = evaluated.result.mutationTargetKeys.indexOf(traitKey);
-                      const available = targetIndex >= 0;
-                      const supported =
-                        available && evaluated.result.branchSupport[targetIndex] === true;
-                      return Object.freeze({
-                        value: traitKey,
-                        support: supported ? ('possible' as const) : ('impossible' as const),
-                        selected: traitKey === (targetTraitKey ?? undefined),
-                        ...(supported ? {} : { reason: 'unavailable' as const }),
-                      });
-                    })(),
-                  ),
+                  ].map((traitKey) => {
+                    // Only a pending Phial with mutation targets takes one.
+                    const supported =
+                      evaluated.result.targetRequired &&
+                      evaluated.result.mutationTargetKeys.includes(traitKey);
+                    return Object.freeze({
+                      value: traitKey,
+                      support: supported ? ('possible' as const) : ('impossible' as const),
+                      selected: traitKey === (targetTraitKey ?? undefined),
+                      ...(supported ? {} : { reason: 'unavailable' as const }),
+                    });
+                  }),
                   (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
                   (traitKey) => traitKey,
                 ),

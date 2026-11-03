@@ -126,11 +126,14 @@ happen", never as alternative states carried forward or offered as a choice.
    publish one threshold's interval, progress and rarity; their candidates
    answer at it without `branchSupport`, and a second landing is a contract
    error, so the divergent-landing settlement fault is gone.
-   Remaining: fountain rarity frontiers and its per-target
-   `branchSupport`, keepsake equip-result frontiers, Hermes Shrine, Stygian
-   Well and Purging Pool assessment lists, derived-entry `branchCohortSize`,
-   offer exclusions' `allBranches`, gold purchase price contexts, the All
-   Together settlement's per-history domains, and the settlement internals'
+   A fountain use keeps its one Phial frontier; its candidate answers there
+   and the editor marks a target possible only while that Phial is pending.
+   A fountain use keeps its one Phial frontier; its candidate answers there
+   and the editor marks a target possible only while that Phial is pending.
+   Remaining: keepsake equip-result frontiers, Hermes Shrine, Stygian Well
+   and Purging Pool assessment lists, derived-entry `branchCohortSize`, offer
+   exclusions' `allBranches`, gold purchase price contexts, the All Together
+   settlement's per-history domains, and the settlement internals'
    zero-or-one lists.
 5. **Trait offer state inspector.** With one state per draw, the offer-state
    popover's "Possible state N" blocks collapse to one; simplify it.
