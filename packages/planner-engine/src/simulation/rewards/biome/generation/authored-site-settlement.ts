@@ -467,7 +467,6 @@ export function settleAuthoredAcquisitionSite(
           Object.freeze({
             generationPolicy: 'sequential',
             generationHistorySequence: historySequence,
-            reachableBranchCount: frontier.branchesBeforeEntry.length,
             acquisitionHorizon: 'ownEnteredLifecycle',
             owners: Object.freeze([frontier.address]),
             evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) => {

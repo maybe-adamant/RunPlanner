@@ -281,7 +281,6 @@ export function materializeFieldsOptionalOfferPoint(
       Object.freeze({
         generationPolicy: 'sequential',
         generationHistorySequence: event.sequence,
-        reachableBranchCount: frontierBranches.length,
         acquisitionHorizon:
           acquisitionEvent === undefined
             ? ('generationOnly' as const)

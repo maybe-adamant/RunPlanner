@@ -202,7 +202,6 @@ export function spawnInfernalContractPedestal(inputs: {
       Object.freeze({
         generationPolicy: 'jointShopInventory',
         generationHistorySequence: historySequence,
-        reachableBranchCount: branches.length,
         acquisitionHorizon: 'generationOnly',
         owners: Object.freeze([owner]),
         evaluateOffer: (candidate: SemanticAddress, offer: AuthoredShopOffer['offer']) =>

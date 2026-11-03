@@ -514,7 +514,6 @@ export function createChronologyAccumulator(
           Object.freeze({
             generationPolicy: 'sequential',
             generationHistorySequence: frontier.historySequence,
-            reachableBranchCount: frontier.branchesBeforeRole.length,
             acquisitionHorizon: 'ownEnteredLifecycle',
             owners: Object.freeze([frontier.artificerReplacementAddress]),
             evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) =>
@@ -626,7 +625,6 @@ export function createChronologyAccumulator(
           generationHistorySequence: Math.max(
             ...first.branchesBeforeEntry.map((branch) => branch.processedThroughHistorySequence),
           ),
-          reachableBranchCount: 1,
           acquisitionHorizon:
             first.kind === 'travelDealRefill' ||
             (first.kind === 'echoDoubleShopReward' && first.fixedReward !== undefined)

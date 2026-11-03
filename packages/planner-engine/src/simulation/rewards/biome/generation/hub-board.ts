@@ -121,7 +121,6 @@ export function flushHubBoard(
     Object.freeze({
       generationPolicy: 'jointUnordered' as const,
       generationHistorySequence: historySequence,
-      reachableBranchCount: pending.frontierBranches.length,
       acquisitionHorizon: 'generationOnly' as const,
       owners: Object.freeze([entry.incoming.origin]),
       ...(entry.incoming.resolvedStoreKey === undefined

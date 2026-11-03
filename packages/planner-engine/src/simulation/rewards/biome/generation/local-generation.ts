@@ -149,7 +149,6 @@ export function generateLocalRewards(
       Object.freeze({
         generationPolicy: 'sequential',
         generationHistorySequence: event.sequence,
-        reachableBranchCount: frontierBranches.length,
         acquisitionHorizon:
           acquisition.event === undefined || acquisition.view === undefined
             ? 'generationOnly'
@@ -248,7 +247,6 @@ export function generateLocalRewards(
       Object.freeze({
         generationPolicy: 'sequential',
         generationHistorySequence: event.sequence,
-        reachableBranchCount: frontierBranches.length,
         acquisitionHorizon:
           acquisition.event === undefined || acquisition.view === undefined
             ? 'generationOnly'

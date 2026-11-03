@@ -238,7 +238,6 @@ export function applyPhantomExitTransition(inputs: {
     Object.freeze({
       generationPolicy: 'sequential' as const,
       generationHistorySequence: event.sequence,
-      reachableBranchCount: frontierBranches.length,
       acquisitionHorizon: 'generationOnly' as const,
       owners: Object.freeze([owner]),
       resolvedStoreKey: draw.storeKey,

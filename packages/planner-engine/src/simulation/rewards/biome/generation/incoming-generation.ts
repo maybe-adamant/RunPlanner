@@ -280,7 +280,6 @@ export function generateIncomingReward(
       Object.freeze({
         generationPolicy: 'sequential',
         generationHistorySequence: event.sequence,
-        reachableBranchCount: inputs.branches.length,
         acquisitionHorizon:
           acquisitionView === undefined ? 'generationOnly' : 'ownEnteredLifecycle',
         owners: Object.freeze([offerOrigin]),
@@ -395,7 +394,6 @@ export function generateIncomingReward(
     Object.freeze({
       generationPolicy: 'sequential',
       generationHistorySequence: event.sequence,
-      reachableBranchCount: inputs.branches.length,
       acquisitionHorizon: acquisitionView === undefined ? 'generationOnly' : 'ownEnteredLifecycle',
       owners: Object.freeze([offerOrigin]),
       ...(binding === undefined || incoming.resolvedStoreKey === undefined

@@ -202,7 +202,6 @@ export function applyShopOfferPointMaterialization(
       Object.freeze({
         generationPolicy: 'jointShopInventory',
         generationHistorySequence: event.sequence,
-        reachableBranchCount: frontierBranches.length,
         acquisitionHorizon: 'generationOnly',
         owners,
         evaluateOffer: (

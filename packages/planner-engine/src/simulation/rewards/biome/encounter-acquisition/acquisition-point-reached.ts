@@ -208,7 +208,6 @@ export function applyAcquisitionPointReachedTransition(
     return Object.freeze({
       generationPolicy: 'sequential' as const,
       generationHistorySequence: event.sequence,
-      reachableBranchCount: input.branchesBeforeEntry.length,
       acquisitionHorizon: 'ownEnteredLifecycle' as const,
       owners: Object.freeze([input.address]),
       evaluateOffer: (owner: RewardProducerOwnerAddress, offer: ResolvedRewardOffer) => {

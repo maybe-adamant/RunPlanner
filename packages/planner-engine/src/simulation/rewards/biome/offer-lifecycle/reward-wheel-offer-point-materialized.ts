@@ -228,7 +228,6 @@ export function applyRewardWheelOfferPointMaterialization(
     // ShipsEncounterSetup draws the wheels left then right, threading rewardsChosen.
     generationPolicy: 'sequential',
     generationHistorySequence: event.sequence,
-    reachableBranchCount: frontierBranches.length,
     acquisitionHorizon:
       acquisitionEvent?.kind !== 'offerPointAcquired' || acquisitionView === undefined
         ? 'generationOnly'

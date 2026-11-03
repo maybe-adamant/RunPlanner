@@ -98,7 +98,6 @@ export interface RewardProducerFrontier extends Omit<
   ) => RewardProducerCandidateResult;
   readonly generationPolicy: RewardProducerGenerationPolicy;
   readonly generationHistorySequence: number;
-  readonly reachableBranchCount: number;
   readonly acquisitionHorizon: 'generationOnly' | 'ownEnteredLifecycle';
   readonly owners: readonly RewardProducerOwnerAddress[];
 }

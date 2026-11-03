@@ -445,7 +445,6 @@ export function applyRewardRerolledTransition(inputs: {
     Object.freeze({
       generationPolicy: 'sequential' as const,
       generationHistorySequence: historySequence,
-      reachableBranchCount: frontierBranches.length,
       acquisitionHorizon: 'generationOnly' as const,
       owners: Object.freeze([owner]),
       ...(target.resolvedStoreKey === undefined
