@@ -314,7 +314,10 @@ reproduces is reported with its nearest miss and the plan stops there.
      - Shops (own stores, purchases never convert) and N side rooms
        (`SubRoomRewards`) share no store with a replacement.
        Synthetic witness: the 1010 capture's first Fields room converting its
-       Bone optional (an F conversion moved there). Corpus buckets unchanged.
+       Bone optional (F_Combat22's use moved there, its Nectar then raising
+       its one boon a level, the unspent use and undrawn Magick carried in
+       the saves between); it fails without the join. Corpus buckets
+       unchanged.
 
 4. **No manufactured outcomes.** Remove the two Draft guesses; run import no
    longer depends on Draft. An unreachable room ends the plan with its nearest

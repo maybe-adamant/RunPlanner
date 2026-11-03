@@ -62,17 +62,64 @@ describe('run import of Fields cages', () => {
   /**
    * The 1010 capture through its first Fields room, which converts its left-behind
    * Bone optional reward with an Artificer use moved from F_Combat22 and picks the
-   * replacement Magick up; its untaken door's cages are unattributed. The next entry
-   * save is the capture's with that replacement drawn.
+   * replacement Magick up; its untaken door's cages are unattributed. F_Combat22's
+   * Nectar then stays, raising its one boon a level.
    */
   function fieldsArtificer(): RunRecord {
     const record = fixture('underworld-1010');
+    const NECTAR = 3;
     const rooms = record.rooms.slice(0, FIELDS + 2).map((room, index) => {
-      if (index === 3) {
+      if (index === NECTAR) {
         const { conversions: _moved, ...rest } = room;
         void _moved;
-        return rest;
+        const worldTime = room.traits.acquired[0]!.worldTime;
+        return {
+          ...rest,
+          uses: { ErebusExitDoor: 1, GiftDrop: 1 },
+          traits: {
+            acquired: [],
+            removed: [],
+            upgraded: [
+              {
+                name: 'FocusLightningBoon',
+                from: { rarity: 'Rare' },
+                to: { rarity: 'Rare', level: 2 },
+                ...(worldTime === undefined ? {} : { worldTime }),
+              },
+            ],
+          },
+        };
       }
+      if (index === NECTAR + 1) {
+        const entry = room.entry!;
+        return {
+          ...room,
+          traits: {
+            ...room.traits,
+            upgraded: room.traits.upgraded.map((upgrade) =>
+              upgrade.name === 'FocusLightningBoon'
+                ? {
+                    ...upgrade,
+                    from: { rarity: 'Rare', level: 2 },
+                    to: { rarity: 'Rare', level: 3 },
+                  }
+                : upgrade,
+            ),
+          },
+          entry: {
+            ...entry,
+            traits: { FocusLightningBoon: { rarity: 'Rare', level: 2 } },
+          },
+        };
+      }
+      if (index === NECTAR + 2)
+        return {
+          ...room,
+          entry: {
+            ...room.entry!,
+            traits: { ...room.entry!.traits, FocusLightningBoon: { rarity: 'Rare', level: 3 } },
+          },
+        };
       if (index === FIELDS)
         return {
           ...room,
@@ -93,33 +140,80 @@ describe('run import of Fields cages', () => {
       if (index === FIELDS + 1) {
         const { exit: _exit, ...last } = room;
         void _exit;
-        const entry = room.entry!;
-        const stores = entry.rewardStores!['RunProgress']!;
-        return {
-          ...last,
-          doors: [],
-          entry: {
-            ...entry,
-            rewardStores: {
-              ...entry.rewardStores,
-              RunProgress: { ...stores, MaxManaDrop: stores['MaxManaDrop']! - 1 },
-            },
-          },
-        };
+        return { ...last, doors: [] };
       }
       return room;
     });
-    return { ...record, outcome: { kind: 'abandoned', endingRoom: 'H_MiniBoss01' }, rooms };
+    // Until the Fields room, the moved use stays unspent and RunProgress keeps the Magick its
+    // replacement drew: a refill keeps a leftover.
+    const unspent = rooms.map((room, index) => {
+      const entry = room.entry;
+      if (index <= NECTAR || index > FIELDS || entry === undefined) return room;
+      const stores = entry.rewardStores?.['RunProgress'];
+      return {
+        ...room,
+        entry: {
+          ...entry,
+          ...(entry.metaConversionUses === undefined
+            ? {}
+            : { metaConversionUses: entry.metaConversionUses - 1 }),
+          ...(stores === undefined
+            ? {}
+            : {
+                rewardStores: {
+                  ...entry.rewardStores,
+                  RunProgress: { ...stores, MaxManaDrop: (stores['MaxManaDrop'] ?? 0) + 1 },
+                },
+              }),
+        },
+      };
+    });
+    return {
+      ...record,
+      outcome: { kind: 'abandoned', endingRoom: 'H_MiniBoss01' },
+      rooms: unspent,
+    };
   }
   const FIELDS = 26;
 
-  it("stops at F_Combat22's Nectar once its Artificer use moves to the Fields room", () => {
-    // The moved use leaves F_Combat22's Nectar unconverted: its random level-up has no rise in
-    // the next save, so no answer is accepted and the plan stops before the Fields room.
+  it("searches a Fields room's Artificer replacement with its untaken door's cages", () => {
+    // The window lost two Magick and a Gold beyond the MiniBoss door's boon: the replacement
+    // the room's uses name takes one Magick, the untaken cages the rest.
     const converted = projectFromRunRecord(catalog, fieldsArtificer());
+    // The last room's cage roll has no next save to accept it.
     expect(converted.kind === 'stopped' && converted.stop).toMatchObject({
-      code: 'missingPomTarget',
-      record: { roomIndex: 3 },
+      code: 'batchStateMissing',
+      record: { roomIndex: FIELDS + 1 },
     });
+    const fields = occurrence(converted.project, 'H-r26');
+    expect(
+      fields.state.kind === 'fieldsCombat' &&
+        fields.state.optionalRewards['optional2']?.dispositionByAcquisitionRole,
+    ).toEqual({ self: { kind: 'artificer' } });
+    expect(
+      Object.values(fields.acquisitionSites ?? {}).flatMap((site) =>
+        Object.values(site.pickupEntries ?? {}).map((entry) => entry?.offer),
+      ),
+    ).toEqual([{ rewardType: 'MaxManaDrop' }]);
+    const untaken = occurrence(converted.project, 'H-r26-d564448').state;
+    expect(
+      untaken.kind === 'fieldsCombat'
+        ? Object.values(untaken.cages)
+            .flatMap((cage) => (cage === null ? [] : [cage.offer.rewardType]))
+            .sort()
+        : [],
+    ).toEqual(['MaxManaDrop', 'RoomMoneyDrop']);
+    expect(
+      converted.report.entries.filter(
+        (entry) =>
+          entry.record?.roomIndex === FIELDS &&
+          (entry.area === 'conversion' || occurrenceOf(entry.address) === 'H-r26-d564448'),
+      ),
+    ).toEqual([]);
+    for (const roomIndex of [3, 4, FIELDS])
+      expect(converted.report.rooms![roomIndex]).toMatchObject({
+        verdict: 'accepted',
+        introduced: [],
+      });
   });
 });
