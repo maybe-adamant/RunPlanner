@@ -94,7 +94,7 @@ describe('run import of the live Underworld recording', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
         conversion: 3,
-        doors: 16,
+        doors: 14,
         encounter: 3,
         traitOffer: 1,
         reward: 1,
@@ -108,12 +108,12 @@ describe('run import of the live Underworld recording', () => {
     });
     // Fig Leaf, racked at F_PostBoss01, skipped one encounter in each of G, H and I: the record
     // predates the skip mark, so each is inferred from a rolled phase with no kills.
-    // H_Combat05 declares its native door order, so its batch carries no door-order assumption.
+    // F_Combat13, H_Combat05 and H_Bridge01 declare their native door order, so their batches carry
+    // no door-order assumption.
     // H_PreBoss01's Shop stock was recorded as a Well, so its purchases are unknown.
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r1 acquisitionEntry@F-r1 -> ReplaceAcquisitionEntryOffer(F-r1 RoomMoneyDrop)',
       'assumption doors r1 exitDecision@F-r1',
-      'assumption doors r2 exitDecision@F-r2',
       'assumption doors r3 exitDecision@F-r3',
       'assumption doors r5 exitDecision@F-r5',
       'assumption doors r6 exitDecision@F-r6',
@@ -131,7 +131,6 @@ describe('run import of the live Underworld recording', () => {
       'assumption reward r20 incomingReward@G-r20-d737226 -> ReplaceIncomingReward(G-r20-d737226 Devotion)',
       'assumption encounter r26 encounterPhase@H-r26:Cage02 -> ReplaceFigLeafSkip(H-r26)',
       'assumption doors r27 exitDecision@H-r27',
-      'assumption doors r28 exitDecision@H-r28',
       'assumption fields r28 localReward@H-r28-d564300:cage1',
       'refused traitOffer r30 traitOffer@H-r30:hiddenSource -> ReplaceTraitOffer(H-r30 CoverRegenerationBoon|DoubleExManaBoon#option1)',
       'refused pool r32 roomFeature@H-r30:postboss -> ReplacePurgingPoolSlot(H-r30:postboss)',
@@ -255,7 +254,7 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       // G_PreBoss01's Travel Deal refill is the Poseidon boon its room used beyond its stock.
       assumption: {
         conversion: 3,
-        doors: 12,
+        doors: 10,
         fields: 3,
         reroll: 1,
         roomActionOrder: 10,
@@ -280,7 +279,6 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       'assumption doors r1 exitDecision@F-r1',
       'assumption conversion r3 acquisitionEntry@F-r3 -> ReplaceAcquisitionEntryOffer(F-r3 MaxManaDrop)',
       'assumption doors r3 exitDecision@F-r3',
-      'assumption doors r4 exitDecision@F-r4',
       'assumption doors r7 exitDecision@F-r7',
       'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 Boon)',
       'assumption doors r8 exitDecision@F-r8',
@@ -296,7 +294,6 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       'assumption doors r26 exitDecision@H-r26',
       'assumption fields r26 localReward@H-r26-d564448:cage1',
       'assumption fields r27 localReward@H-r27-d621470:cage1',
-      'assumption doors r28 exitDecision@H-r28',
       'assumption fields r28 localReward@H-r28-d565616:cage1',
       'assumption roomActionOrder r1 occurrence@F-r1',
       'assumption roomActionOrder r3 occurrence@F-r3',

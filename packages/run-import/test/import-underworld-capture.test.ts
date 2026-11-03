@@ -217,7 +217,7 @@ describe('run import of the Underworld capture', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
         conversion: 3,
-        doors: 13,
+        doors: 11,
         encounter: 1,
         fields: 3,
         npc: 1,
@@ -250,14 +250,12 @@ describe('run import of the Underworld capture', () => {
       'assumption doors r15 exitDecision@G:start:chaos',
       'assumption doors r16 exitDecision@G-r16',
       'assumption npc r18 nemesisRandomEvent@G-r18 -> ReplaceNemesisRandomEventInteraction(G-r18 freeItem)',
-      'assumption doors r18 exitDecision@G-r18',
       'assumption doors r20 exitDecision@G-r20',
       'assumption doors r21 exitDecision@G-r21',
       'assumption doors r26 exitDecision@H-r26',
       'assumption fields r26 localReward@H-r26-d621199:cage1',
       'assumption fields r27 exitDecision@H-r27 -> InitializeExitDecision(H-r27)',
       'assumption fields r27 localReward@H-r27-d621470:cage1',
-      'assumption doors r28 exitDecision@H-r28',
       'refused fields r29 localReward@H-r29:cage1 -> ReplaceLocalReward(H-r29 StackUpgrade)',
       'refused fields r29 localReward@H-r29:cage2 -> ReplaceLocalReward(H-r29 MaxManaDrop)',
       'refused pool r32 roomFeature@H-r30:postboss -> ReplacePurgingPoolSlot(H-r30:postboss)',
