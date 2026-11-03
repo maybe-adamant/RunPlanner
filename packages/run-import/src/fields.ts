@@ -19,6 +19,7 @@ import type { RunRecordFields, RunRecordRoom } from './run-record/model';
 import type { RunImportContext } from './import';
 import { authoredOccurrence } from './occurrences';
 import { recordedOffer } from './vocabulary';
+import { savedBracketDraws } from './store-brackets';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
 
@@ -179,10 +180,17 @@ function answerFieldsReward(context: RunImportContext, reward: Origin<'localRewa
   if (visit === undefined)
     return (
       reward.groupKey === 'cages' &&
-      (answerUntakenCages(context, reward) || answerUnrecordedCage(context, reward))
+      (answerUntakenCages(context, reward) ||
+        solveUnrecordedCages(context, reward) ||
+        answerUnrecordedCage(context, reward))
     );
   let offers: readonly ResolvedRewardOffer[];
   if (reward.groupKey === 'cages') {
+    const placed = `cagesPlaced:${reward.occurrenceId}`;
+    if (!context.used.has(placed)) {
+      context.used.add(placed);
+      if (placeRecordedCages(context, reward, visit.fields)) return true;
+    }
     const cage = visit.fields.cages[cageIndexOfSlot(reward.slotKey)];
     const offer = recordedOffer(context.catalog, cage?.reward);
     offers = offer === undefined ? [] : [offer];
@@ -300,12 +308,280 @@ function answerUntakenCages(context: RunImportContext, reward: Origin<'localRewa
   return false;
 }
 
+/** The first offer of `type` the engine admits at a cage slot, applied. */
+function placeCage(
+  context: RunImportContext,
+  reward: Origin<'localReward'>,
+  type: string,
+): ResolvedRewardOffer | undefined {
+  return locallyValidRewardOffers(context.catalog.rewards, type).find((value) => {
+    const evaluation = context.candidates().evaluate({ kind: 'localReward', reward, value });
+    return (
+      evaluation.kind === 'localReward' &&
+      evaluation.result.supported &&
+      evaluation.result.findings.length === 0 &&
+      context.apply({ kind: 'ReplaceLocalReward', reward, value })
+    );
+  });
+}
+
+/**
+ * The record cage each slot holds. Slots follow the game's draw order, which
+ * the record does not keep: a slot whose delivered reward is a recorded cage's
+ * holds it, and the rest take the cages left in opening order.
+ */
+function recordCageOfSlots(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrenceId: string,
+  fields: RunRecordFields,
+): readonly number[] {
+  const state = fieldsState(context, biomeKey, occurrenceId);
+  const offers = fields.cages.map((cage) =>
+    JSON.stringify(recordedOffer(context.catalog, cage.reward)),
+  );
+  const held = fields.cages.map((_cage, index) => {
+    const slotKey = `cage${index + 1}`;
+    const delivered = state?.rerolledCages?.[slotKey] ?? state?.cages[slotKey];
+    return delivered === null || delivered === undefined
+      ? undefined
+      : JSON.stringify(delivered.offer);
+  });
+  const free = new Set(fields.cages.keys());
+  const indices: (number | undefined)[] = held.map((offer) => {
+    const match = [...free].find((index) => offers[index] === offer);
+    if (match !== undefined) free.delete(match);
+    return match;
+  });
+  return indices.map((index) => {
+    if (index !== undefined) return index;
+    const next = [...free][0]!;
+    free.delete(next);
+    return next;
+  });
+}
+
+/**
+ * Places a Fields room's recorded cages on its slots in the first order the
+ * plan draws them: the record keeps opening order, and a draw a refill makes
+ * possible fails in another order. Kept only when every cage places.
+ */
+function placeRecordedCages(
+  context: RunImportContext,
+  reward: Origin<'localReward'>,
+  fields: RunRecordFields,
+): boolean {
+  const offers = fields.cages.map((cage) => recordedOffer(context.catalog, cage.reward));
+  const state = fieldsState(context, reward.biomeKey, reward.occurrenceId);
+  if (
+    state === undefined ||
+    offers.some((offer) => offer === undefined) ||
+    fields.cages.some((_cage, index) => !(`cage${index + 1}` in state.cages))
+  )
+    return false;
+  const target = (slot: number) => ({ ...reward, slotKey: `cage${slot + 1}` });
+  // A slot already holding the cage takes it without a change.
+  const place = (slot: number, index: number) =>
+    context.apply({ kind: 'ReplaceLocalReward', reward: target(slot), value: offers[index]! }) ||
+    sameCage(context, target(slot), offers[index]!);
+  const search = (slot: number, left: readonly number[]): readonly number[] | undefined => {
+    if (left.length === 0) return [];
+    for (const index of left) {
+      const evaluation = context
+        .candidates()
+        .evaluate({ kind: 'localReward', reward: target(slot), value: offers[index]! });
+      if (
+        evaluation.kind === 'localReward' &&
+        (!evaluation.result.supported || evaluation.result.findings.length > 0)
+      )
+        continue;
+      const rest = context.probe(() =>
+        place(slot, index)
+          ? search(
+              slot + 1,
+              left.filter((other) => other !== index),
+            )
+          : undefined,
+      );
+      if (rest !== undefined) return [index, ...rest];
+    }
+    return undefined;
+  };
+  const order = search(
+    0,
+    fields.cages.map((_cage, index) => index),
+  );
+  return (
+    order !== undefined &&
+    context.transaction(() => order.every((index, slot) => place(slot, index)))
+  );
+}
+
+/** Whether a cage slot already holds the value, so placing it changes nothing. */
+function sameCage(
+  context: RunImportContext,
+  reward: Origin<'localReward'>,
+  value: ResolvedRewardOffer,
+): boolean {
+  const held = fieldsState(context, reward.biomeKey, reward.occurrenceId)?.cages[reward.slotKey];
+  return (
+    held !== null && held !== undefined && JSON.stringify(held.offer) === JSON.stringify(value)
+  );
+}
+
+/**
+ * Places the recorded cages of the Fields room the source visit entered,
+ * beside an untaken door; false when the plan does not hold that room yet.
+ */
+function placeTakenCages(
+  context: RunImportContext,
+  reward: Origin<'localReward'>,
+  sourceIndex: number,
+): boolean {
+  const taken = context.record.rooms[sourceIndex + 1];
+  if (
+    taken?.fields === undefined ||
+    context.occurrences.biomeOfRoom[sourceIndex + 1] !== reward.biomeKey
+  )
+    return false;
+  const occurrenceId = context.occurrences.occurrenceOf(sourceIndex + 1);
+  const state = fieldsState(context, reward.biomeKey, occurrenceId);
+  if (occurrenceId === reward.occurrenceId || state === undefined) return false;
+  if (Object.values(state.cages).every((cage) => cage === null))
+    placeRecordedCages(context, { ...reward, occurrenceId, slotKey: 'cage1' }, taken.fields);
+  return true;
+}
+
+/** The occurrence's cage slots the plan still asks a reward for. */
+function missingCageSlots(context: RunImportContext, occurrenceId: string): readonly string[] {
+  return context
+    .assembly()
+    .evaluation.findings.flatMap((finding) =>
+      finding.code === 'rewardMissing' &&
+      finding.origin.kind === 'localReward' &&
+      finding.origin.occurrenceId === occurrenceId &&
+      finding.origin.groupKey === 'cages'
+        ? [finding.origin.slotKey]
+        : [],
+    );
+}
+
+/**
+ * An untaken door's cages the record cannot attribute, as when a store
+ * refilled, take the reward types the stores lost across the source room
+ * beyond the plan's other draws. Each multiset that bracket explains is tried
+ * with the entered Fields room's recorded cages pinned after it, and one is
+ * kept when the source room then adds no store difference at the next entry
+ * save; equal fits take the first and are reported, as is any boon's god,
+ * which no save shows.
+ */
+function solveUnrecordedCages(context: RunImportContext, reward: Origin<'localReward'>): boolean {
+  const offered = context.occurrences.offeredDoor(reward.occurrenceId);
+  const occurrence = authoredOccurrence(
+    context.assembly().project,
+    reward.biomeKey,
+    reward.occurrenceId,
+  );
+  const group =
+    occurrence === undefined
+      ? undefined
+      : context.catalog.rooms.byKey[occurrence.gameName]?.localChildren.find(
+          (child) => child.kind === 'boundedRewardSlots' && child.key === 'cages',
+        );
+  const solved = `untakenCages:${reward.occurrenceId}`;
+  if (
+    offered === undefined ||
+    context.used.has(solved) ||
+    group?.kind !== 'boundedRewardSlots' ||
+    group.reward.kind !== 'countedChoice' ||
+    group.reward.storeKeys.length !== 1
+  )
+    return false;
+  context.used.add(solved);
+  const storeKey = group.reward.storeKeys[0]!;
+  const sourceIndex = offered.roomIndex;
+  // A provisional fill shows how many cages the door holds.
+  const measured = context.probe(() => {
+    const slots: string[] = [];
+    for (let slotKey: string | undefined = reward.slotKey; slotKey !== undefined;) {
+      if (!guessUnrecordedCage(context, { ...reward, slotKey }, false)) return undefined;
+      const value = fieldsState(context, reward.biomeKey, reward.occurrenceId)?.cages[slotKey];
+      if (value === null || value === undefined) return undefined;
+      slots.push(slotKey);
+      slotKey = missingCageSlots(context, reward.occurrenceId)[0];
+    }
+    return slots;
+  });
+  if (measured === undefined) return false;
+  const known = (context.record.rooms[sourceIndex + 1]?.fields?.cages ?? []).map(
+    (cage) => cage.reward.type,
+  );
+  const solutions = savedBracketDraws(context, sourceIndex, storeKey, known, measured.length);
+  const slots = [...measured].sort((left, right) => cageIndexOfSlot(left) - cageIndexOfSlot(right));
+  const fits: { readonly commands: readonly ProjectCommand[]; readonly boons: number }[] = [];
+  for (const solution of solutions) {
+    if (solution.some((draw) => draw.storeKey !== storeKey)) continue;
+    const orders = permutations(solution.map((draw) => draw.rewardType)).filter(
+      (order, index, all) => all.findIndex((other) => other.join() === order.join()) === index,
+    );
+    for (const order of orders) {
+      const fit = context.probe(() => {
+        const commands: ProjectCommand[] = [];
+        let boons = 0;
+        const placed = context.transaction(() =>
+          slots.every((slotKey, index) => {
+            const target = { ...reward, slotKey };
+            const value = placeCage(context, target, order[index]!);
+            if (value === undefined) return false;
+            if (value.payload?.kind === 'BoonSource') boons += 1;
+            commands.push({ kind: 'ReplaceLocalReward', reward: target, value });
+            return true;
+          }),
+        );
+        if (!placed) return undefined;
+        // Before the walk authors the entered room, its draws are missing from any judgement.
+        if (!placeTakenCages(context, reward, sourceIndex)) return { commands, boons };
+        const acceptance = context.acceptance(sourceIndex);
+        return acceptance.verdict !== 'unchecked' &&
+          acceptance.introduced.every((difference) => difference.area !== 'stores')
+          ? { commands, boons }
+          : undefined;
+      });
+      if (fit === undefined) continue;
+      fits.push(fit);
+      break;
+    }
+  }
+  const chosen = fits[0];
+  if (chosen === undefined) return false;
+  if (!context.transaction(() => chosen.commands.every((command) => context.apply(command))))
+    return false;
+  if (fits.length > 1 || chosen.boons > 0)
+    context.note({
+      area: 'fields',
+      reason: 'assumption',
+      address: reward,
+      applied: chosen.commands[0]!,
+      ...(fits.length > 1 ? { alternatives: fits.slice(1).flatMap((fit) => fit.commands) } : {}),
+      record: record(sourceIndex),
+    });
+  return true;
+}
+
 /**
  * A cage the save never shows takes the first eligible reward, preferring
  * types the record's later rooms of the biome do not need, so the guess does
  * not spend a later recorded pick's store entry.
  */
 function answerUnrecordedCage(context: RunImportContext, reward: Origin<'localReward'>): boolean {
+  return guessUnrecordedCage(context, reward, true);
+}
+
+function guessUnrecordedCage(
+  context: RunImportContext,
+  reward: Origin<'localReward'>,
+  report: boolean,
+): boolean {
   const occurrence = authoredOccurrence(
     context.assembly().project,
     reward.biomeKey,
@@ -354,13 +630,14 @@ function answerUnrecordedCage(context: RunImportContext, reward: Origin<'localRe
         continue;
       const command: ProjectCommand = { kind: 'ReplaceLocalReward', reward, value };
       if (!context.applyValid(command)) continue;
-      context.note({
-        area: 'fields',
-        reason: 'notInRecord',
-        address: reward,
-        applied: command,
-        record: record(sourceIndex),
-      });
+      if (report)
+        context.note({
+          area: 'fields',
+          reason: 'notInRecord',
+          address: reward,
+          applied: command,
+          record: record(sourceIndex),
+        });
       return true;
     }
   return false;
@@ -405,6 +682,30 @@ export function importFieldsRooms(context: RunImportContext): void {
           area: 'fields',
           reason: 'refused',
           address: createRoomFeatureAddress(address, { kind: 'fieldsOptionalRewardCount' }),
+          record: record(visit.roomIndex),
+        });
+      // Cages complete in opening order, which the slots' draw order need not follow.
+      const slotsOfCages = recordCageOfSlots(
+        context,
+        biome.biomeKey,
+        occurrence.occurrenceId,
+        visit.fields,
+      );
+      if (
+        visit.fields.cageOrder === 'opening' &&
+        slotsOfCages.some((cage, slot) => cage !== slot) &&
+        !context.applyValid({
+          kind: 'ReplaceFieldsCageOrder',
+          occurrence: address,
+          phaseKeys: visit.fields.cages.map(
+            (_cage, cage) => `Cage${String(slotsOfCages.indexOf(cage) + 1).padStart(2, '0')}`,
+          ),
+        })
+      )
+        context.note({
+          area: 'fields',
+          reason: 'refused',
+          address,
           record: record(visit.roomIndex),
         });
       // Without every cage's opening time the cages' order is the default.
@@ -458,7 +759,9 @@ function answerSpatialPoint(context: RunImportContext, spatial: FieldsSpatialAdd
       return declaration.cageSpawnRepresentatives.find((entry) => ids.has(entry.spawnPointId))
         ?.cagePointId;
     };
-    const index = cageIndexOfSlot(target.slotKey);
+    const index = recordCageOfSlots(context, spatial.biomeKey, spatial.occurrenceId, visit.fields)[
+      cageIndexOfSlot(target.slotKey)
+    ]!;
     pointId = pointOf(index);
     if (pointId === undefined) {
       // The one cage point no other cage's spawn group names.
@@ -520,7 +823,17 @@ export function recordedCageEncounter(
   phaseKey: string,
 ) {
   const visit = fieldsVisit(context, occurrenceId);
-  const cage = visit?.fields.cages[cageIndexOfPhase(phaseKey)];
+  const cage =
+    visit === undefined
+      ? undefined
+      : visit.fields.cages[
+          recordCageOfSlots(
+            context,
+            context.occurrences.biomeOfRoom[visit.roomIndex]!,
+            occurrenceId,
+            visit.fields,
+          )[cageIndexOfPhase(phaseKey)]!
+        ];
   return visit === undefined || cage === undefined
     ? undefined
     : { encounter: cage.encounter, roomIndex: visit.roomIndex };

@@ -130,6 +130,15 @@ reproduces is reported with its nearest miss and the plan stops there.
      corpus removal coincides with `LastBrokenArmorTraitName`). fx underworld
      mismatch 3 → 2; raw 333 mismatch 8 → 7, 933a 5 → 4, 933b 5/4/27 → 19/3/9
      with its first mismatch r9 → r28.
+   - Fields cages: an entered room's recorded cages take the first slot order
+     the plan draws (slots are draw order; the record keeps opening order,
+     and completion follows it), and an untaken door the record cannot
+     attribute takes the cages its source room's two entry saves explain,
+     kept when the room adds no store difference. The record builder is
+     unchanged: no save holds an untaken door's cages, and after a refill
+     only the declaration fills the gap. Raw 930 mismatch 4 → 1 (first r28 →
+     r29), 933b 19/3/9 → 27/0/0; fixtures unchanged (fx underworld's Bridge
+     has twin doors to one room, the taken one not told apart).
 
 3. **One bounded search.** Replace the four solvers with one per-room search
    over the remaining unknowns, pinned by markers (trait timestamps, upgrade

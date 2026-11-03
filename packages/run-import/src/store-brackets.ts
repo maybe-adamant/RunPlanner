@@ -236,6 +236,41 @@ export function bracketDraws(
   return input === undefined ? undefined : solveBracketDraws({ ...input, planned, draws });
 }
 
+/**
+ * The draws a record room's window made from one store beyond `known`, read
+ * from its two entry saves alone, for a window the plan cannot yet reach: what
+ * the store lost between them less the known draws, for each refill choice
+ * that leaves exactly `draws` entries.
+ */
+export function savedBracketDraws(
+  context: RunImportContext,
+  roomIndex: number,
+  storeKey: string,
+  known: readonly string[],
+  draws: number,
+): readonly (readonly Replaced[])[] {
+  const saved = recordedEntryStates(context.record);
+  const before = saved[roomIndex]?.rewardStores.get(storeKey);
+  const after = saved[roomIndex + 1]?.rewardStores.get(storeKey);
+  if (before === undefined || after === undefined) return [];
+  const lost: Record<string, number> = {};
+  for (const name of new Set([...Object.keys(before), ...Object.keys(after)]))
+    lost[name] = (before[name] ?? 0) - (after[name] ?? 0);
+  for (const name of known) lost[name] = (lost[name] ?? 0) - 1;
+  const routeKey = context.assembly().project.route.routeKey;
+  return solveBracketDraws({
+    before: new Map(),
+    after: new Map([[storeKey, lost]]),
+    fill: (key) => fill(context.catalog, routeKey, key),
+    order: (key) => [
+      ...new Set(
+        context.catalog.rewards.stores.byKey[key]?.entries.map((entry) => entry.rewardType),
+      ),
+    ],
+    draws,
+  }).solutions;
+}
+
 export function replacedRewards(
   context: RunImportContext,
   roomIndex: number,
