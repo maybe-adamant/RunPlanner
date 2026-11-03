@@ -9,6 +9,7 @@ import {
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { SemanticFinding } from '@run-planner/engine/simulation';
 import type { RunImportContext } from './import';
+import { placeBatchDoors } from './topology';
 import { recordedOffer } from './vocabulary';
 
 const rewardCodes: ReadonlySet<string> = new Set([
@@ -219,6 +220,8 @@ export function answerReward(context: RunImportContext, reason: SemanticFinding)
     const recorded = recordedRoomOffer(context, origin.occurrenceId);
     if (recorded === undefined) return false;
     const value = recorded.offer;
+    // A later door's room may force the batch's store, so every door is placed first.
+    placeBatchDoors(context, origin.occurrenceId);
     authorNewGodsFirst(context, origin, value);
     const evaluation = context
       .candidates()

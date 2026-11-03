@@ -493,6 +493,43 @@ function acceptedPairings(
   return accepted;
 }
 
+/**
+ * Places the record's other doors of the batch that offers `occurrenceId`
+ * before one door's reward is judged: a later door's room may force the
+ * store every door of the batch draws from. Doors the engine refuses stay
+ * open for the walk to ask.
+ */
+export function placeBatchDoors(context: RunImportContext, occurrenceId: string): void {
+  const project = context.assembly().project;
+  for (const biome of project.route.biomes) {
+    const topology = biome.topology;
+    if (topology === undefined || topology === null) continue;
+    const decision = topology.decisions.find(
+      (entry) =>
+        entry.kind === 'exit' &&
+        entry.normal.kind === 'batch' &&
+        entry.normal.targets.some((target) => target.occurrenceId === occurrenceId),
+    );
+    if (decision?.kind !== 'exit' || decision.normal.kind !== 'batch') continue;
+    const layout = context.catalog.biomeLayouts.byKey[biome.biomeKey];
+    if (layout === undefined) return;
+    const placed = new Set(decision.normal.targets.map((target) => target.exitKey));
+    for (const exit of declaredPhysicalExits(context.catalog, layout, topology, decision.source) ??
+      [])
+      if (exit.kind === 'normal' && !placed.has(exit.exitKey))
+        context.transaction(() =>
+          createTarget(context, {
+            kind: 'target',
+            routeKey: project.route.routeKey,
+            biomeKey: biome.biomeKey,
+            source: decision.source,
+            exitKey: exit.exitKey,
+          }),
+        );
+    return;
+  }
+}
+
 function createTarget(context: RunImportContext, target: TargetAddress): boolean {
   if (target.source.kind !== 'occurrence') return false;
   const sourceIndex = sourceVisit(context, target.source.occurrenceId);
@@ -745,14 +782,21 @@ function batchRewardStore(context: RunImportContext, store: Origin<'batchRewardS
   const holding = supported.filter((key) =>
     offered.every((type) => stores.byKey[key]?.entries.some((item) => item.rewardType === type)),
   );
-  const storeKey =
+  // A door to a room that forces its store replaces the roll for every door, so doors no
+  // supported store holds show the override: the roll is then the one store the engine supports.
+  const overridden = ordinaryDoors(context, sourceIndex).some((door) => {
+    const room = context.catalog.rooms.byKey[door.room];
+    return room?.forcedRewardStoreKey !== undefined || room?.individualRewardStoreKey !== undefined;
+  });
+  const shown =
     entered !== undefined && supported.includes(entered)
       ? entered
       : holding.length === 1
         ? holding[0]
         : undefined;
+  const storeKey = shown ?? (overridden && supported.length === 1 ? supported[0] : undefined);
   if (storeKey === undefined) {
-    if (entered !== undefined) context.refuse();
+    if (entered !== undefined && !overridden) context.refuse();
     return false;
   }
   const decision = createExitDecisionAddress(

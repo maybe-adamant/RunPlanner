@@ -264,6 +264,25 @@ reproduces is reported with its nearest miss and the plan stops there.
      as a Pom screen, so raw 931's r46 level-up took the first eligible
      target. Raw 931 32/14/2/0 → 33/14/1/0, first mismatch r46 → r47.
      Neither 931 r46/r47 nor 333 r30 involved a challenge switch (see Open).
+   - Bought Travel Deal refill and blind box (I): a bought refill is an
+     ordinary purchase once restocked, so it goes before the first later
+     purchase its giver's screen stamp precedes (never before the purchase
+     that restocked it), and a blind box takes the earliest stamp of a giver
+     no purchase names; level-up screens stamp the trait they raised. Raw
+     931's Q_PreBoss01 bought the box and the Ares refill (1844, 1849)
+     before the Big Pom (1853), whose screen offered the refill's boon; the
+     refill had been appended last, so the Pom's recorded answer was refused
+     and its target guessed. Raw 931 33/14/1/0 → 33/15/0/0, no mismatch
+     left. Fixtures unchanged.
+   - Store roll behind a forced-store door (I): a door to a room that
+     forces its store (F_Combat01 `ForcedRewardStore = "RunProgress"`)
+     overrides the batch's roll for every door (`DoUnlockRoomExits`), so the
+     doors do not show the roll. Where no supported store holds the doors'
+     rewards, the roll is the one store the engine supports (raw 1012
+     Chaos_05: the save's `NextRewardStoreName` is MetaProgress, ratio 0/2).
+     A door's reward is judged only once every door of its batch is placed,
+     since a later door's room may force the store. Raw 1012's r1 no longer
+     needs a guess. Fixtures unchanged.
    - Echo's last-reward replay (I): the engine fixes the replayed reward
      and asks its trait offer, but the pickup entry itself was never
      authored, so the screen's answer was refused and the walk stopped (the
