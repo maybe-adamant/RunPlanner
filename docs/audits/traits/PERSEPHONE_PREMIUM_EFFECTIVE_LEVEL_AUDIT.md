@@ -153,8 +153,7 @@ detail remains repairable rather than being destructively erased.
 The final effective level is derived, never persisted. The engine combines the
 pre-offer trait history, replacement transition, retained Jeweled Pom state,
 route aspect, prior Premium Service acquisition, and the authored Persephone
-outcome. The application may display the result only when all surviving
-simulation branches agree.
+outcome at the one reached state, and the application displays that result.
 
 No general aspect-rank ledger, random-effect registry, weighted probability
 simulator, or React-owned level formula is implied.

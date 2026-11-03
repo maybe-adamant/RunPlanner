@@ -306,13 +306,12 @@ impossible reward. An unavailable candidate distinguishes at least:
 
 - outside the resolved store;
 - excluded by a bag-entry requirement;
-- depleted from every reachable bag state;
+- depleted from the reached bag;
 - blocked by a jointly generated peer;
 - blocked by Boon or Devotion source support.
 
-The simulator models possibility and may preserve several reachable latent
-bag states. The ordinary UI therefore must not invent a deterministic
-`remaining / total` counter when no single remaining bag exists.
+A reward picker does not show a `remaining / total` bag counter; bag contents
+belong to the [Run State snapshot](SIMULATION_AND_VALIDATION.md#run-state-snapshots).
 
 A safe compact summary is based on candidate support, for example:
 
@@ -320,9 +319,8 @@ A safe compact summary is based on candidate support, for example:
 Major Reward · 6 reward types currently supported
 ```
 
-An optional diagnostic disclosure may explain unavailable entries and whether
-a possible reward is supported by at least one reachable bag state. Exact bag
-branches remain simulation evidence, not ordinary editor rows.
+An optional diagnostic disclosure may explain unavailable entries. Exact bag
+contents remain simulation evidence, not ordinary editor rows.
 
 ## Compact Compound Reward Picker
 
@@ -596,8 +594,7 @@ and Figurine share artwork cards and accessible dialogs, not selection policy.
 Loadout boards and effect dialogs keep a local selection until Save, and
 Cancel discards it. Arcana cards show rank and
 selection; current ranks come from the exact engine context, selected effect
-targets preview the granted rank, and branch-varying ranks are not collapsed
-to one. Ransom effects have a read-only preview, not invented authored
+targets preview the granted rank. Ransom effects have a read-only preview, not invented authored
 targets. A missing or stale selected child remains repairable and prevents
 saving the incomplete outcome.
 

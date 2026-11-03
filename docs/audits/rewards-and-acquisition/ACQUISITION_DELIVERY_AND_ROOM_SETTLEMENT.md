@@ -329,8 +329,8 @@ was picked up, buying and rushing `BlindBoxLoot` (slot 2) set
 `FirstSpeedUpPurchase` and refilled slot 2. Travel Deal held on entry also
 refills at the first rush. An earlier report of no refill in the same scenario
 was a misread. The planner realizes the refill at the first rushed initial
-purchase, in authored timeline order, made while every branch holds Travel
-Deal, and refills that purchase's slot.
+purchase, in authored timeline order, made while Travel Deal is held, and
+refills that purchase's slot.
 
 The game permits a rush after later purchases, such as buy 3, buy 1, rush 3.
 The planner authors rush on each Shrine purchase action and orders those
@@ -744,7 +744,7 @@ path.
 When a Midshop's next decision is incomplete, canonical simulation stops at
 the already-generated outgoing frontier, then reaches the declared `roomExit`
 settlement point through the normal prefix lifecycle. Its public frontier
-branches therefore retain the concrete purchases and post-settlement history
+state therefore retains the concrete purchases and post-settlement history
 needed to assess and repair purchased leaves, without rewriting the already
 generated outgoing offers. This is the same settlement product used once a
 continuation is selected; no Shop-private or discarded replay exists.
@@ -856,7 +856,7 @@ one generic trait-outcome mechanism:
   later pickup behavior. `UseLoot` and `UseConsumableItem` call
   `RemoveStoreItem` before the purchased item's own acquisition effect settles,
   so Gold consumption and duplicate generation observe the pre-acquisition
-  branch even though the paid source identity is already known. The duplicate
+  state even though the paid source identity is already known. The duplicate
   loot's options are then rebuilt when the source screen closes, like every
   other live loot in the room; the
   [composition audit](../traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md#generation-position-and-option-rebuild)

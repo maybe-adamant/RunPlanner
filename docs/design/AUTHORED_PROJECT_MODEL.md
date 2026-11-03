@@ -985,7 +985,7 @@ is structurally representable. Command handlers may enforce exact semantic
 ownership and address contact, catalog membership and declaration-owned static
 domains, topology closure and bounds, fixed-versus-selectable slots, declared
 set membership, and complete declaration-owned defaults. They do not consume a
-project evaluation, candidate capability, history or reward branch, encounter
+project evaluation, candidate capability, history or reward state, encounter
 activation result, or contextual trait assessment. Contextual impossibility is
 derived validation truth, so an authored value remains persisted until an
 explicit semantic command changes or removes it.

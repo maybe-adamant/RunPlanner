@@ -515,8 +515,8 @@ available for repair.
 The prepared trait-offer candidate also publishes the active Ordinary/Rejected
 consequences only for ordinary Olympian and Hermes screens; Rejected requires
 and accepts a blocked row only when the screen has three options. The workspace
-intersects branch-local legal Rejected rows and React renders the resulting
-single blocked-row control; that row remains visible but cannot be selected or
+binds the engine's legal Rejected rows and React renders the single
+blocked-row control; that row remains visible but cannot be selected or
 Rarified. This preserves both Rejected's generated-screen history and its Vow
 of Denial contact without moving Chaos eligibility or rule reconstruction into
 the application.

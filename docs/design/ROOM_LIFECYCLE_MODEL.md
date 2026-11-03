@@ -124,7 +124,7 @@ already the game's current room at that point.
 | Incoming and room-owned authored reward values          | Room Occurrence leaf state        |
 | Acquisition roles emitted at lifecycle points           | Reward producer/type declarations |
 | Counter and ledger effect implementations               | Pure simulator registries         |
-| Event folding and possibility branching                 | Simulator                         |
+| Event folding and possibility support                   | Simulator                         |
 | Legality at an operation's pre-state                    | Validator                         |
 | Rendered controls and sequencing explanation            | Editor projection                 |
 
@@ -339,8 +339,7 @@ structural, preserves the relative order of retained participants, and never
 requires the current chronology to settle. New participants append until the
 author uses the separate move controls. The simulator applies the one authored
 order, evaluates each action against history from earlier authored actions,
-and never retries another permutation; it retains ordinary reward-source
-possibility branches within that fixed order. A later plan compiler consumes
+and never retries another permutation. A later plan compiler consumes
 the same order without choosing a different witness order.
 
 Mandatory entries derive their required classification and legal lifecycle
@@ -1037,7 +1036,7 @@ The biome reward chronology applies each history event through one seam table.
 A seam reads the fixed walk context and the current walk state and returns the
 next state, a possible Run State capture or target-slot history checkpoint, and
 ordered accumulator emissions. Events with no reward seam only advance the
-branches to their sequence.
+state to their sequence.
 
 | Walk seam                                               | Reward handling                                                                                                                                                                                                   |
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1066,16 +1065,16 @@ history loop, and their findings publish last, although each store belongs to
 its source room's exit boundary.
 
 Trait settlement within these seams settles a level-resolution role from the
-opened branch. A selected offer's settled branch takes reward history from the
-opened branch and keepsakes from the Calling-Card-adjusted branch.
+opened state. A selected offer's settled state takes reward history from the
+opened state and keepsakes from the Calling-Card-adjusted state.
 
 ## Possibility and Validation
 
-An operation may branch when several outcomes have positive support, including
-counted-bag explanations, generated-store outcomes, or reward-source outcomes
-within one authored `roomActions.order`. Each branch still has one total event
-order. Equivalent post-operation states may be merged while retaining at least
-one witness.
+An operation applies its one authored outcome at the
+[one reached state](SIMULATION_AND_VALIDATION.md#one-reached-state). Counted-bag,
+generated-store and reward-source outcomes with positive support validate that
+choice; they are never alternative states carried forward, and the walk keeps
+one total event order.
 
 Validation occurs at contact points in that order:
 

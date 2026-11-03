@@ -178,7 +178,7 @@ room as the route declares it, route overlays included.
   doors and make a wanted god's reward likelier. Resource points roll at the
   spec's resource room chance, preferring an element a waiting trait needs;
   Dream buys elemental boosts instead.
-- **Exclusions.** Offer exclusions that hold in every branch stop the walk
+- **Exclusions.** An offer exclusion stops the walk
   chasing that god or source for the biome rather than retrying it.
 - **Encounters.** Each reached encounter phase where the engine offers the Fig
   Leaf skip rolls the native flat skip chance (luck ignored) and is skipped on

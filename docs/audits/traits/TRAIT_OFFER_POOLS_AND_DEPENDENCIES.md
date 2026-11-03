@@ -586,7 +586,7 @@ a separate free duplicate before the paid entry's acquisition roles;
 the duplicate may be interacted with later among other room acquisitions.
 `SpellDrop` neither triggers nor consumes it. With no later eligible World Shop
 purchase, the trait remains equipped. The duplicate is created from the
-pre-source-acquisition branch: the paid source identity is known, but its boon
+pre-source-acquisition state: the paid source identity is known, but its boon
 choice or consumable effect has not yet entered history. Wells use separate
 purchase paths and are not part of this effect. The current planner represents
 the materialized duplicate as the stable `echoDoubleShopReward` pickup.

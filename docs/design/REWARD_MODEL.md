@@ -11,8 +11,8 @@ acquisitions and history.
 Lifecycle Model](ROOM_LIFECYCLE_MODEL.md) owns when a room invokes offer,
 purchase and acquisition transitions. [Trait Offers](TRAIT_OFFERS.md) owns the
 trait screens that acquisition roles open. [Simulation and
-Validation](SIMULATION_AND_VALIDATION.md) owns transition evaluation, branch
-composition and findings. The [reward
+Validation](SIMULATION_AND_VALIDATION.md) owns transition evaluation, the one
+reached state and findings. The [reward
 audit](../audits/rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md) records the
 game evidence and the disposition of each audited mechanic; the biome
 documents own their cage, wheel, Clockwork and Hub reward structures.
@@ -624,9 +624,9 @@ is a legal placeholder; bosses and `N_PostBoss01` never are.
 
 An unpinned placeholder settles to the first eligible room in declared set
 order, the no-draw `N_PreBoss01` first for main rooms, so it needs no profile
-predicate; an unpinned reward settles to the type every branch can draw with
-the most entries left in the placeholder's store on its scarcest branch, ties
-in declaration order. Board doors left unopened are not modelled as
+predicate; an unpinned reward settles to the type the reached state can draw
+with the most entries left in the placeholder's store, ties in declaration
+order. Board doors left unopened are not modelled as
 creations.
 
 ## Offered-Reward Lookups
@@ -645,7 +645,7 @@ Hermes Shrine consult it; I/Q Spell entries do not.
 
 The transient per-map offered set is its short-lived neighbor. The transition
 into a room offers reward types on every door of its batch, chosen or not,
-including Fields cage identities; the branch state publishes that set when the
+including Fields cage identities; the reached state publishes that set when the
 batch's last target completes generation and clears it at room entry, before
 the entered room generates anything of its own. Its only consumer is the
 ordinary World Shop Spell entry. A shop's own outgoing offers may constrain a
@@ -768,8 +768,8 @@ creates the acquisition entry where the eventual `BoonSource` and trait screen
 are authored. Shop settlement owns only inventory membership, purchase
 requirements and purchase order; after that gate succeeds, ordinary acquisition
 settlement resolves the Mystery source and trait outcome, evaluating the source
-against history from earlier authored actions within the one fixed order and
-retaining ordinary source possibility branches. Removing the purchase clears
+against history from earlier authored actions within the one fixed order.
+Removing the purchase clears
 that child atomically and retains inventory.
 
 Payload and order are deliberately separate. For fixed Shop, Shrine and Well
@@ -941,8 +941,8 @@ coins whose spawn the walk does not see (Hermes deliveries, Nemesis and Echo
 results), read the multipliers at collection. Arachne's costume, Selene's per-cast gold and challenge switches are not
 counted.
 
-Each walked contact publishes its gain facts the way purchases publish price
-facts, with the same agreement rule. A later balance is unavailable after an
+Each walked contact publishes its gain facts from the reached state, the way
+purchases publish price facts. A later balance is unavailable after an
 entry whose item the plan leaves unresolved or whose facts broke a contract.
 
 #### Enemy gold
@@ -1113,7 +1113,7 @@ items at entry, a Gold Gold Gold duplicate or Travel Deal restock, or the
 generated pickups of a completed screen (Buried Treasure's gift, Echo's last
 reward), after that screen's selection is equipped—its amount is resolved from
 the declared grant, the producer's override or `NPCDrop` exemption, and the
-resource bonuses equipped then, rounded per object. The branch keeps that
+resource bonuses equipped then, rounded per object. The state keeps that
 amount by room until the object is collected or the room is exited. Only
 producers with no earlier native spawn contact resolve at collection: Hermes
 deliveries, Nemesis results, Artificer replacements and Blind Box hidden loot,
@@ -1205,8 +1205,8 @@ is effective without a separate authored confirmation. If earlier history
 changes it, the new identity replaces a retained stale payload in evaluation;
 its children start unresolved rather than carrying choices from a different
 reward. The first child edit atomically saves the current identity and its
-outcome. Only a replay source that cannot be agreed across branches blocks at
-this contact. `SpellDrop` has no last-reward recreation descriptor, so a settled
+outcome. Echo with no replay source is its offer's own finding, so a reached
+replay always has one. `SpellDrop` has no last-reward recreation descriptor, so a settled
 spell selection never becomes the replay source; `TalentDrop` retains its
 declaration-owned descriptor. This is an acquisition-catalog and reward-history
 boundary, not an Echo presentation filter.
@@ -1218,7 +1218,7 @@ materializes before that paid entry's acquisition roles run; a pre-kernel
 rejection leaves Gold armed. Materialization does not acquire the duplicate,
 and Gold may retain its complete free-pickup payload before participation. A
 duplicated Anvil is a second Anvil use with its own result, assessed against
-the branch after the paid Anvil settles. A native loot duplicate (Boon, Hermes,
+the state after the paid Anvil settles. A native loot duplicate (Boon, Hermes,
 Hammer, or full Pom) requires pickup; a consumable duplicate, including an
 unopened Mystery Boon, may remain unpicked. An edit that newly makes the pickup
 required inserts its Timeline membership even before the paid source's child is

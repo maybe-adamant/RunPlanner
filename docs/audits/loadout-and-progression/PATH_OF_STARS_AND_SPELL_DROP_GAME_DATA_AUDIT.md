@@ -270,7 +270,7 @@ and keepsake declarations.
 
 The simulation carries the installed frozen Hex tree, banked and invested Path
 points, persistent God Sent state, and the latched ordinary-Talent-Drop closure
-on the chronological branch. Concrete Minor/ordinary/Big Talent acquisition
+in the reached state. Concrete Minor/ordinary/Big Talent acquisition
 always adds its raw `grant - 1` to the shared bank before attempting the
 implicit first selection; investment and bank spending are capacity-limited, so
 a screen reached on a full tree retains that raw overflow. An ordinary

@@ -218,9 +218,9 @@ applies effects in this order:
 6. Steady Growth progress and resolved rarity target;
 7. Transcendent Embryo progress and resolved replacement; and
 8. publication of Supply Chain and Shrine acquisition frontiers from the final
-   surviving branches.
+   post-automatic state.
 
-The last step is important. A generated pickup cannot expose a branch which a
+The last step is important. A generated pickup cannot expose a frontier which a
 same-seam automatic effect has already invalidated. It also means a pickup
 which materializes during native `CheckChamberTraits` cannot be acquired early
 enough to change another automatic effect at that same encounter end.
@@ -261,7 +261,7 @@ Planner disposition for the lifecycle seams these effects consume:
 - One encounter-end checkpoint settles every fixed automatic outcome, in the
   order above, before it publishes any pickup created by a matured clock.
   Supply Chain and Shrine pickup frontiers observe the final post-automatic
-  branches and become ordinary acquisitions only after the checkpoint; their
+  state and become ordinary acquisitions only after the checkpoint; their
   rows may interleave with other pickups permitted in that interval, and
   acquiring one can never affect an automatic outcome of the checkpoint that
   created it.
@@ -281,10 +281,10 @@ position:
 - Shrine delivery uses source occurrence plus exact Shrine generation key,
   then records its due host and phase.
 
-Candidates are derived from the exact simulation assembly. Branches must agree
-on the same reachable frontier before the application can issue a placement or
-resolution command. A retained authored value may be invalid, but the picker
-must never fabricate support from a different branch or later occurrence.
+Candidates are derived from the exact simulation assembly at the one reached
+frontier before the application can issue a placement or resolution command. A
+retained authored value may be invalid, but the picker must never fabricate
+support from a different state or later occurrence.
 
 ### Fixed effects and pickups publish differently
 

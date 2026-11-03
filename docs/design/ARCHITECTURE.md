@@ -124,8 +124,8 @@ For a targeted acquisition:
 2. Authored state persists only the user's choices; commands maintain their
    structural ownership atomically.
 3. Lifecycle determines when settlement runs.
-4. Settlement returns branch effects, findings and exact repair frontiers
-   together.
+4. Settlement returns the state it leaves, findings and exact repair
+   frontiers together.
 5. Candidates consume those frontiers; the application binds the child and
    its finding to one repair interaction.
 6. React renders the supported control and submits a complete intent.

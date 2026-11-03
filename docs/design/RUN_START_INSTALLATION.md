@@ -152,9 +152,8 @@ and rejects a malformed value rather than healing it.
 Its eligibility is the engine's start-installation availability
 (`authoredStartPointEligibility`): the biome is on the itinerary
 (`notOnItinerary`), the point is not the route-start biome's Opening, which is
-a normal run (`routeStart`), the simulation reaches it (`notReached`), and its
-installed state agrees across every reached branch (`branchesDisagree`, naming
-the families). The picker offers every itinerary biome's Opening, Preboss and
+a normal run (`routeStart`), and the simulation reaches it (`notReached`). The
+picker offers every itinerary biome's Opening, Preboss and
 Boss with that availability; it does not consult project validity. A start
 point publishes only from a valid project, through the ordinary publication
 gate: an ineligible one blocks publication with its reason and an eligible one
@@ -166,17 +165,15 @@ editable. Neither changes simulation, candidates, or encounter eligibility.
 
 A start installation is the pure projection of a Practice mode start point from
 folded states; it adds no simulation. An Opening installs its predecessor
-biome's terminal branches in post-reset biome form, since the native Intro
+biome's terminal state in post-reset biome form, since the native Intro
 resets the biome records before anything reads them; it requires a complete,
 valid predecessor. A Preboss or Boss installs the states its start room's
 preparation received, captured for every Preboss and completion Boss (the
 Rivals map where Rivals applies) in every simulation, so they already include
 the room's own creation effects; a Boss's follow its Preboss's departure. Biome
 records are installed in current form for both, and I's Clockwork counters only
-at the Preboss. Every installed family must agree across the reached branches,
-or the start point is unavailable and names the disagreeing families. Reward
-stores are the one exception: a store exact across branches is installed, and
-one that differs by branch is left native-fresh. The stub room history has one
+at the Preboss. Every installed family is read from that one reached state; a
+reward store the walk never drew from is left native-fresh. The stub room history has one
 record per room-history ordinal advance, carrying its room's declared
 `NextRoomSet`; execution assembly adds a Dream route's `Dream_Intro` prologue,
 and the visited biomes are the itinerary prefix before the start (including its
@@ -270,8 +267,7 @@ state; assembly translates it, selecting and renaming fields. It carries:
   points and closure. The module adds the Spell unless native `StartNewRun`
   already installed it from the aspect;
 - `RewardPriorities`, `UseRecord`, `LootTypeHistory`, `ConsumableRecord`,
-  Denial's `BannedTraits`, and the `RewardStores` drawn from and exact across
-  every planned branch, as counts aligned with `RewardStoreData`.
+  Denial's `BannedTraits`, and the `RewardStores` the plan drew from, as counts aligned with `RewardStoreData`.
 
 The decoders check that the start occurrence is selected and matches the point,
 its biome and room name: an Opening's occurrence is its biome's first selected
