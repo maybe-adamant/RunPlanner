@@ -110,9 +110,8 @@ destination, or editability. Room rewards, encounter phases, and any future
 features, items, or other room-local products remain available through the containing
 decision or fixed-stage inspector unless a separate player-facing navigation
 need justifies another rail highlight. Whatever opens the inspector, the rail
-selects the stop that opens the same room; a Boss or Postboss reached through a
-fixed exit counts as opened by the stop that opens the room hosting that exit.
-A decision's doors are repaired on its source room's Room Doors,
+selects the stop that opens the same room, and selects nothing only when no
+stop opens it. A decision's doors are repaired on its source room's Room Doors,
 so once the decision opens its selected room, the stop that opens the source
 room carries the doors' finding marks and selection; a decision still choosing
 its room keeps them on its own stop.

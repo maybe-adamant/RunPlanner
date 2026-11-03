@@ -110,29 +110,12 @@ function openedRoomKey(biome: RailSelectionBiome, subject: WorkspaceInspectorSub
   return stage === undefined ? subjectKey(subject) : `stage:${stage.sourceOccurrenceNodeKey}`;
 }
 
-/** Rooms reached only through a fixed exit (Boss, Postboss), keyed to the room that hosts them. */
-function fixedHostRooms(biome: RailSelectionBiome): ReadonlyMap<string, string> {
-  const result = new Map<string, string>();
-  for (const stage of biome.occurrenceStages) {
-    const { outgoing } = stage;
-    if (outgoing.kind !== 'fixedRoom' || outgoing.destination.kind !== 'room') continue;
-    const { occurrenceId } = outgoing.destination;
-    const target = biome.nodes.find(
-      (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
-    );
-    if (target !== undefined)
-      result.set(`stage:${target.key}`, `stage:${stage.sourceOccurrenceNodeKey}`);
-  }
-  return result;
-}
-
 /**
  * Selects the rail stop that opens the room the inspector opens for a subject.
  * Among stops opening that room it prefers the focused marker's (or frontier's) own stop, then
  * the stop opening that exact subject, then the first. A decision with a
  * selected room therefore selects the stop opening its source room, whose Room
- * Doors repair the decision. A room without a stop of its own, reached through
- * a fixed exit, is opened by the stop opening the room that hosts that exit.
+ * Doors repair the decision.
  */
 export function workspaceRailSelection(
   biome: RailSelectionBiome,
@@ -141,7 +124,6 @@ export function workspaceRailSelection(
   const stopByMarker = new Map<string, { readonly railKey: string; readonly room: string }>();
   const railBySubject = new Map<string, string>();
   const railByRoom = new Map<string, string>();
-  const fixedHosts = fixedHostRooms(biome);
   for (const { clickKey, railKey } of railStopClicks(biome.rail)) {
     const destination = destinationsByOwner.get(clickKey);
     const subject =
@@ -163,16 +145,7 @@ export function workspaceRailSelection(
     const focusedStop = focused === undefined ? undefined : stopByMarker.get(focused);
     if (focusedStop?.room === room) return focusedStop.railKey;
     const exact = railBySubject.get(subjectKey(subject));
-    if (exact !== undefined) return exact;
-    const visited = new Set<string>();
-    let host: string | undefined = room;
-    while (host !== undefined && !visited.has(host)) {
-      const railKey = railByRoom.get(host);
-      if (railKey !== undefined) return railKey;
-      visited.add(host);
-      host = fixedHosts.get(host);
-    }
-    return undefined;
+    return exact ?? railByRoom.get(room);
   };
 }
 
