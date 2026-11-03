@@ -250,8 +250,20 @@ function answerTravelDealRefill(
     if (bought?.reward != null && resolvesByAcquisition(context, bought.reward.offer))
       hiddenGods += 1;
   }
-  // A bought blind box's god is not saved: it opens the room's first boon
-  // screen, ahead of the refill its purchase made room for.
+  // A bought blind box's god is not saved: it opens on the god its pickup was
+  // answered with, or else the room's first boon screen, ahead of the refill
+  // its purchase made room for.
+  for (const site of Object.values(occurrence.acquisitionSites ?? {}))
+    for (const state of Object.values(site?.pickupEntries ?? {})) {
+      const payload = state?.offer.payload;
+      if (hiddenGods === 0 || payload?.kind !== 'BoonSource') continue;
+      // Only a blind box hides its god behind a `hiddenSource` role.
+      if (state?.dispositionByAcquisitionRole['hiddenSource'] === undefined) continue;
+      const left = unexplained.get(payload.source) ?? 0;
+      if (left <= 0) continue;
+      unexplained.set(payload.source, left - 1);
+      hiddenGods -= 1;
+    }
   for (const screen of visit.room.traitScreens) {
     if (hiddenGods === 0) break;
     const left = unexplained.get(screen.giver) ?? 0;
@@ -511,9 +523,10 @@ function shrineDeliveryRewardTypes(
 }
 
 /**
- * The givers of the host's recorded screens no answer has taken yet, less the
- * hidden gods its other pickups already opened on and whose screens are still
- * to be answered: two boxes in one room open on two screens' gods.
+ * The givers of the host's recorded screens no answer has taken yet, in the
+ * order of their first such screen, less the hidden gods its other pickups
+ * already opened on and whose screens are still to be answered: two boxes in
+ * one room open on two screens' gods.
  */
 function unclaimedScreenGivers(
   context: RunImportContext,
@@ -571,8 +584,12 @@ function answerAcquisitionEntry(
     locallyValidRewardOffers(context.catalog.rewards, rewardType),
   );
   const unclaimed = unclaimedScreenGivers(context, entry, visits);
+  // A box opens on the giver of the earliest screen still unclaimed, in the record's order.
+  const screenOrder = [...unclaimed.keys()];
   const ordered = [
-    ...values.filter((value) => (unclaimed.get(boon(value) ?? '') ?? 0) > 0),
+    ...values
+      .filter((value) => (unclaimed.get(boon(value) ?? '') ?? 0) > 0)
+      .sort((left, right) => screenOrder.indexOf(boon(left)!) - screenOrder.indexOf(boon(right)!)),
     ...values.filter(
       (value) =>
         (unclaimed.get(boon(value) ?? '') ?? 0) <= 0 &&

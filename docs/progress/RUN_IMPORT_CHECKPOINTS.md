@@ -243,6 +243,15 @@ reproduces is reported with its nearest miss and the plan stops there.
      Typhon shop had been recorded as a Shrine, its presence refused and its
      six offers guessed, so the Mystery box was never bought. Raw 334
      33/14/1/0 → 34/14/0/0, no mismatch left. Fixtures unchanged.
+   - Travel Deal refill beside a box: a box now opens on the giver of the
+     room's earliest unclaimed screen (record order), and the refill's god
+     reads the god the box was answered with before falling back to the
+     first screen. Raw 931's Preboss box had opened on Ares (catalog order)
+     while the refill assumed the box took the first (Hera) screen, so both
+     were Ares and the Hera screen went unanswered. Raw 931 26/11/4/7 →
+     32/14/2/0, first mismatch r37 → r46. Fixture underworld-live's H Preboss
+     box now opens on its screen's god: four screen refusals and a Pool
+     refusal gone (bound tightened).
    - Conversions that share a solver's store (owner request). An Artificer
      replacement is one `RunProgress` draw, so it is searched with any solver
      reading that store across the same save window:

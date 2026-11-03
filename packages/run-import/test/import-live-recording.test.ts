@@ -95,15 +95,14 @@ describe('run import of the live Underworld recording', () => {
       assumption: {
         conversion: 3,
         encounter: 3,
-        traitOffer: 1,
+        traitOffer: 2,
         reward: 1,
         fields: 1,
         roomActionOrder: 12,
       },
       notInRecord: { traitOffer: 1, fields: 2, shop: 3, route: 1 },
-      refused: { traitOffer: 4, pool: 1 },
       // H_PreBoss01's purchases are unknown.
-      unsupportedArea: { traitOffer: 2 },
+      unsupportedArea: { traitOffer: 1 },
     });
     // Fig Leaf, racked at F_PostBoss01, skipped one encounter in each of G, H and I: the record
     // predates the skip mark, so each is inferred from a rolled phase with no kills.
@@ -119,8 +118,7 @@ describe('run import of the live Underworld recording', () => {
       'assumption reward r20 incomingReward@G-r20-d737226 -> ReplaceIncomingReward(G-r20-d737226 Devotion)',
       'assumption encounter r26 encounterPhase@H-r26:Cage02 -> ReplaceFigLeafSkip(H-r26)',
       'assumption fields r28 localReward@H-r28-d564300:cage1',
-      'refused traitOffer r30 traitOffer@H-r30:hiddenSource -> ReplaceTraitOffer(H-r30 CoverRegenerationBoon|DoubleExManaBoon#option1)',
-      'refused pool r32 roomFeature@H-r30:postboss -> ReplacePurgingPoolSlot(H-r30:postboss)',
+      'assumption traitOffer r30 traitOffer@H-r30:hiddenSource -> ReplaceTraitOffer(H-r30 PlantHealthBoon|ReserveManaHitShieldBoon|CastNovaBoon#option3)',
       'assumption encounter r34 encounterPhase@I-r34:Encounter -> ReplaceFigLeafSkip(I-r34)',
       'assumption roomActionOrder r1 occurrence@F-r1',
       'assumption roomActionOrder r2 occurrence@F-r2',
@@ -134,9 +132,6 @@ describe('run import of the live Underworld recording', () => {
       'assumption roomActionOrder r27 occurrence@H-r27',
       'assumption roomActionOrder r29 occurrence@H-r29',
       'assumption roomActionOrder r32 occurrence@H-r30:postboss',
-      'refused traitOffer r30 -',
-      'refused traitOffer r30 -',
-      'refused traitOffer r- -',
     ]);
   });
 });
