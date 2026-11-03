@@ -511,6 +511,38 @@ function shrineDeliveryRewardTypes(
 }
 
 /**
+ * The givers of the host's recorded screens no answer has taken yet, less the
+ * hidden gods its other pickups already opened on and whose screens are still
+ * to be answered: two boxes in one room open on two screens' gods.
+ */
+function unclaimedScreenGivers(
+  context: RunImportContext,
+  entry: Origin<'acquisitionEntry'>,
+  visits: readonly number[],
+): ReadonlyMap<string, number> {
+  const counts = new Map<string, number>();
+  for (const roomIndex of visits)
+    for (const [position, screen] of context.record.rooms[roomIndex]!.traitScreens.entries())
+      if (!context.used.has(`screen:${roomIndex}:${position}`))
+        counts.set(screen.giver, (counts.get(screen.giver) ?? 0) + 1);
+  const hostId = occurrenceIdOf(entry);
+  const host =
+    hostId === undefined
+      ? undefined
+      : authoredOccurrence(context.assembly().project, entry.biomeKey, hostId);
+  for (const site of Object.values(host?.acquisitionSites ?? {}))
+    for (const [entryKey, state] of Object.entries(site?.pickupEntries ?? {})) {
+      if (entryKey === entry.entryKey) continue;
+      const payload = state?.offer.payload;
+      if (payload?.kind !== 'BoonSource') continue;
+      // A box whose god's screen is answered already took it from the counts.
+      if (state?.traitOffersByAcquisitionRole['hiddenSource'] != null) continue;
+      counts.set(payload.source, (counts.get(payload.source) ?? 0) - 1);
+    }
+  return counts;
+}
+
+/**
  * A derived pickup's payload, such as a Shrine delivery or a Mystery Boon's
  * hidden god: its reward type, and for a boon the god whose loot its room's
  * uses or screens name.
@@ -538,8 +570,15 @@ function answerAcquisitionEntry(
   const values = rewardTypes.flatMap((rewardType) =>
     locallyValidRewardOffers(context.catalog.rewards, rewardType),
   );
+  const unclaimed = unclaimedScreenGivers(context, entry, visits);
   const ordered = [
-    ...values.filter((value) => boon(value) !== undefined && named(boon(value)!)),
+    ...values.filter((value) => (unclaimed.get(boon(value) ?? '') ?? 0) > 0),
+    ...values.filter(
+      (value) =>
+        (unclaimed.get(boon(value) ?? '') ?? 0) <= 0 &&
+        boon(value) !== undefined &&
+        named(boon(value)!),
+    ),
     ...values.filter((value) => !(boon(value) !== undefined && named(boon(value)!))),
   ];
   for (const value of ordered) {

@@ -390,6 +390,66 @@ describe('run import of the Surface victory', () => {
     ).toEqual(['refused conversion r21 occurrence@O-r21']);
   });
 
+  it('opens two Shrine boxes delivered to one room on the gods of its two screens', () => {
+    // P_PostBoss01's rushed box delayed to land beside P_Combat09's in Q_Combat15.
+    const postBoss = record.rooms[41]!;
+    const combat = record.rooms[44]!;
+    const poseidon = postBoss.traitScreens[0]!;
+    const { exit: _exit, ...last } = record.rooms[45]!;
+    void _exit;
+    const result = projectFromRunRecord(catalog, {
+      ...record,
+      outcome: { kind: 'abandoned', endingRoom: last.name },
+      rooms: [
+        ...record.rooms.slice(0, 41),
+        {
+          ...postBoss,
+          uses: {
+            GiftRack: 1,
+            SurfaceShop: 3,
+            HealthFountainP: 1,
+            OlympusOutdoorExitDoor: 1,
+            TalentDrop: 1,
+          },
+          traitScreens: [],
+          traits: {
+            ...postBoss.traits,
+            acquired: postBoss.traits.acquired.filter(
+              (trait) => trait.name !== 'FocusDamageShaveBoon',
+            ),
+          },
+          store: {
+            ...postBoss.store!,
+            purchases: postBoss.store!.purchases!.map((purchase) =>
+              purchase.slot === 2 ? { slot: 2, delivery: 'delayed', delay: 2 } : purchase,
+            ),
+          },
+        },
+        ...record.rooms.slice(42, 44),
+        {
+          ...combat,
+          uses: { ...combat.uses, BlindBoxLoot: 2, PoseidonUpgrade: 1 },
+          traitScreens: [...combat.traitScreens, poseidon],
+          traits: {
+            ...combat.traits,
+            acquired: [
+              ...combat.traits.acquired,
+              { name: 'FocusDamageShaveBoon', rarity: 'Rare', worldTime: 1631 },
+            ],
+          },
+        },
+        last,
+      ],
+    });
+    const sites = occurrence(result.project, 'Q-r44').acquisitionSites ?? {};
+    const gods = Object.values(sites).flatMap((site) =>
+      Object.values(site?.pickupEntries ?? {}).flatMap((entry) =>
+        entry?.offer.payload?.kind === 'BoonSource' ? [entry.offer.payload.source] : [],
+      ),
+    );
+    expect(gods.sort()).toEqual(['ApolloUpgrade', 'PoseidonUpgrade']);
+  });
+
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {

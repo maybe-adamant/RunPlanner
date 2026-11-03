@@ -201,6 +201,13 @@ reproduces is reported with its nearest miss and the plan stops there.
      13/8/7/8 → 17/11/4/8, first mismatch r25 → r28; r21–24 reached and
      accepted. Fixtures unchanged (none crosses an Anomaly).
 
+   - Hidden gods: a box's god prefers a giver of the room's screens that no
+     answer has taken and no other box of the room already opened on, so two
+     Shrine boxes delivered to one room open on its two screens' gods (both
+     took the first named god in catalog order, leaving a screen unused and
+     the ship's wheel search without an accepted fit). Raw 334 16/5/10/17 →
+     33/14/1/0, first mismatch r21 → r47. Fixtures unchanged.
+
 4. **No manufactured outcomes.** Remove the two Draft guesses; run import no
    longer depends on Draft. An unreachable room ends the plan with its nearest
    miss.
