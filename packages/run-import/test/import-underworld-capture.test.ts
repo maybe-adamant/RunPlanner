@@ -295,7 +295,6 @@ describe('run import of the Underworld capture', () => {
         fields: 5,
         npc: 1,
         roomActionOrder: 10,
-        traitOffer: 3,
       },
       // The three Chaos screens stay: their unpicked curses' durations are never saved.
       // The H and I Preboss Travel Deal refills were never bought.
@@ -303,12 +302,10 @@ describe('run import of the Underworld capture', () => {
     });
     // The Bridge's taken twin door is the one whose sibling's cages the saved stores explain.
     expect(entryLines(imported.report)).toEqual([
-      'assumption traitOffer r1 traitOffer@F-r1:self -> ReplaceTraitOffer(F-r1 chaos)',
       'assumption conversion r2 acquisitionEntry@F-r2 -> ReplaceAcquisitionEntryOffer(F-r2 StackUpgrade)',
       'assumption encounter r4 encounterPhase@F-r4:Encounter -> SelectEncounter(F-r4 ArtemisCombatF)',
       'assumption conversion r4 acquisitionEntry@F-r4 -> ReplaceAcquisitionEntryOffer(F-r4 RoomMoneyDrop)',
       'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 WeaponUpgrade)',
-      'assumption traitOffer r15 traitOffer@G:start:chaos:self -> ReplaceTraitOffer(G:start:chaos chaos)',
       'assumption npc r18 nemesisRandomEvent@G-r18 -> ReplaceNemesisRandomEventInteraction(G-r18 freeItem)',
       'assumption fields r26 localReward@H-r26-d621199:cage1 -> ReplaceLocalReward(H-r26-d621199 MaxHealthDrop)',
       'assumption fields r27 exitDecision@H-r27 -> InitializeExitDecision(H-r27)',
@@ -316,7 +313,6 @@ describe('run import of the Underworld capture', () => {
       // Two optional rewards collected in combat have no saved point.
       'assumption fields r29 fieldsSpatial@H-r29 -> ReplaceFieldsSpatialPoint(H-r29)',
       'assumption fields r29 fieldsSpatial@H-r29 -> ReplaceFieldsSpatialPoint(H-r29)',
-      'assumption traitOffer r39 traitOffer@I-r38:chaos:self -> ReplaceTraitOffer(I-r38:chaos chaos)',
       'assumption roomActionOrder r2 occurrence@F-r2',
       'assumption roomActionOrder r4 occurrence@F-r4',
       'assumption roomActionOrder r8 occurrence@F-r8',

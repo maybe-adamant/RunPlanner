@@ -72,7 +72,6 @@ describe('run import of synthetic Erebus variants', () => {
     ).toEqual([
       'notInRecord traitOffer r1 traitOffer@F-r1:self -> ReplaceTraitOffer(F-r1 chaos)',
       'refused traitOffer r1 traitOffer@F-r1:self -> ReplaceTraitOffer(F-r1 chaos)',
-      'assumption traitOffer r1 traitOffer@F-r1:self -> ReplaceTraitOffer(F-r1 chaos)',
       'refused embryo r13 keepsakeEquipResult@F-r11:postboss -> ReplaceTranscendentEmbryoEquipResult(F-r11:postboss)',
     ]);
   });

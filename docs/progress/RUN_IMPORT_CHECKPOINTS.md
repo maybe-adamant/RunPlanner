@@ -460,6 +460,14 @@ reproduces is reported with its nearest miss and the plan stops there.
    on the Fresh File route, which fixes it. Synthetic witnesses only; no real
    fresh capture yet.
 
+   **Chaos unpicked curses** (owner rule). They matter only under Vow of
+   Denial, which bans both into `BannedTraits`. Under Denial the room's two
+   banned curses are the unpicked pair, in catalog order, the other order
+   reported as the alternative; any other banned count leaves the screen
+   open and the plan stops. Without Denial the first legal pair stands
+   (inert, noted only as the unsaved durations). The rotating
+   unbanned-curse fallback is gone.
+
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.
 6. **Recorded room** (authored outcome replayed as canonical events) only for

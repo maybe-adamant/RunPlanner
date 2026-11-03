@@ -589,58 +589,33 @@ function answerEmbryoTransformation(
 }
 
 /**
- * A Chaos screen as its complete pair offer. The picked curse is the one its
- * room gained; under Vow of Denial the unpicked buttons' curses are the names
- * the room banned. The picked curse's duration is its saved remaining uses and
- * the pair's rolled values its saved fields; unpicked durations are not saved.
+ * A Chaos screen as its complete pair offer, with `unpicked` the curses of its
+ * two unpicked buttons in button order. The picked curse is the one its room
+ * gained; its duration is its saved remaining uses and the pair's rolled
+ * values its saved fields; unpicked durations are not saved.
  */
 export function chaosOffer(
   context: RunImportContext,
   screen: RunRecordTraitScreen,
   roomIndex: number,
-  attempt: number,
+  unpicked: readonly [string, string],
 ):
   | {
       readonly value: AuthoredChaosTraitOffer;
-      readonly assumedOptions: number;
       readonly read: SavedChaosValues['read'];
     }
   | undefined {
-  const room = context.record.rooms[roomIndex]!;
+  const picked = chaosPick(context, screen, roomIndex);
+  if (picked === undefined) return undefined;
+  const { selected, chosen, blessing, gained } = picked;
   const curses = context.catalog.chaos.curses;
-  const selected = screen.options.findIndex((option) => option.chosen);
-  const chosen = screen.options[selected];
-  const blessing =
-    chosen === undefined ? undefined : context.catalog.chaos.blessings.byKey[chosen.name];
-  const picked = room.traits.acquired.filter((trait) => curses.byKey[trait.name] !== undefined);
-  if (selected < 0 || selected > 2 || blessing === undefined || picked.length !== 1)
-    return undefined;
-  const curse = curses.byKey[picked[0]!.name]!;
-  // Denial bans the unpicked buttons' curses in button order, up to its ban count.
-  const denial = context.catalog.fearVows.byKey['BanUnpickedBoonsShrineUpgrade'];
-  const numBans =
-    denial?.effect?.kind === 'banUnselectedTraits' &&
-    (context.record.loadout.vows[denial.key] ?? 0) > 0
-      ? denial.effect.count
-      : 0;
-  const banned = (room.bannedTraits ?? [])
-    .filter((name) => curses.byKey[name] !== undefined && name !== curse.key)
-    .slice(0, numBans);
-  const unbanned = curses.values
-    .map((entry) => entry.key)
-    .filter((key) => key !== curse.key && !banned.includes(key));
-  // One banned curse belongs to the first unpicked button; several are not saved by button.
-  let assumedOptions = banned.length > 1 ? 1 : 0;
-  let fallback = attempt;
+  const curse = curses.byKey[gained.name]!;
+  const others = [...unpicked];
   const curseOptions = OPTION_KEYS.map((_key, index) => {
-    const key =
-      index === selected
-        ? curse.key
-        : (banned.shift() ??
-          (assumedOptions++, unbanned[fallback++ % Math.max(1, unbanned.length)]!));
+    const key = index === selected ? curse.key : others.shift()!;
     const duration = curses.byKey[key]!.duration;
     // The picked curse's saved remaining uses are its rolled duration.
-    const saved = index === selected ? picked[0]!.remainingUses : undefined;
+    const saved = index === selected ? gained.remainingUses : undefined;
     return {
       curseKey: key,
       requirementCount:
@@ -657,11 +632,11 @@ export function chaosOffer(
         : chosen!.rarity === 'Rare' || chosen!.rarity === 'Epic'
           ? chosen!.rarity
           : 'Common';
-  const curseValues = savedChaosValues(curse.operands, undefined, picked[0]);
+  const curseValues = savedChaosValues(curse.operands, undefined, gained);
   const blessingValues = savedChaosValues(
     blessing.operands,
     rarity,
-    picked[0],
+    gained,
     context.catalog.chaos.pendingBlessingSavePath,
   );
   const reads = [curseValues.read, blessingValues.read];
@@ -676,12 +651,73 @@ export function chaosOffer(
       rarity,
       blessingValues: blessingValues.values,
     },
-    assumedOptions,
     read: reads.includes('refused')
       ? 'refused'
       : reads.includes('notInRecord')
         ? 'notInRecord'
         : 'exact',
+  };
+}
+
+/** The screen's picked button, blessing and the one curse its room gained. */
+function chaosPick(context: RunImportContext, screen: RunRecordTraitScreen, roomIndex: number) {
+  const room = context.record.rooms[roomIndex]!;
+  const selected = screen.options.findIndex((option) => option.chosen);
+  const chosen = screen.options[selected];
+  const blessing =
+    chosen === undefined ? undefined : context.catalog.chaos.blessings.byKey[chosen.name];
+  const gained = room.traits.acquired.filter(
+    (trait) => context.catalog.chaos.curses.byKey[trait.name] !== undefined,
+  );
+  if (selected < 0 || selected > 2 || blessing === undefined || gained.length !== 1)
+    return undefined;
+  return { selected, chosen: chosen!, blessing, gained: gained[0]! };
+}
+
+/**
+ * The unpicked buttons' curses a Chaos screen admits, in canonical order. They
+ * matter only under Vow of Denial, which bans both; the save keeps the banned
+ * names but not their buttons, so either order fits. Without Denial they leave
+ * no run state, so any pair of curses the screen offers fits. `undefined` when
+ * the record cannot name them: Denial banned other than two curses here.
+ */
+export function chaosUnpickedCurses(
+  context: RunImportContext,
+  screen: RunRecordTraitScreen,
+  roomIndex: number,
+  available: readonly string[],
+):
+  { readonly pairs: readonly (readonly [string, string])[]; readonly denial: boolean } | undefined {
+  const picked = chaosPick(context, screen, roomIndex);
+  if (picked === undefined) return undefined;
+  const curses = context.catalog.chaos.curses;
+  const denial = context.catalog.fearVows.byKey['BanUnpickedBoonsShrineUpgrade'];
+  const numBans =
+    denial?.effect?.kind === 'banUnselectedTraits' &&
+    (context.record.loadout.vows[denial.key] ?? 0) > 0
+      ? denial.effect.count
+      : 0;
+  const order = (key: string) => curses.values.findIndex((entry) => entry.key === key);
+  if (numBans > 0) {
+    const banned = (context.record.rooms[roomIndex]!.bannedTraits ?? [])
+      .filter((name) => curses.byKey[name] !== undefined && name !== picked.gained.name)
+      .sort((left, right) => order(left) - order(right));
+    if (numBans < OPTION_KEYS.length - 1 || banned.length !== OPTION_KEYS.length - 1)
+      return undefined;
+    return {
+      pairs: [
+        [banned[0]!, banned[1]!],
+        [banned[1]!, banned[0]!],
+      ],
+      denial: true,
+    };
+  }
+  const keys = available.filter((key) => key !== picked.gained.name);
+  return {
+    pairs: keys.flatMap((first, index) =>
+      keys.slice(index + 1).map((second) => [first, second] as const),
+    ),
+    denial: false,
   };
 }
 

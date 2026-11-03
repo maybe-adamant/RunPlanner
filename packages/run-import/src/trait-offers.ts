@@ -21,7 +21,7 @@ import {
   occurrenceIdOf,
 } from './occurrences';
 import { recordedEntryStates } from './conformance';
-import { chaosOffer } from './features';
+import { chaosOffer, chaosUnpickedCurses } from './features';
 import { applyScreenRerolls } from './rerolls';
 import { rarifyRerolledScreens, takeRarifyCharges, withRarifyClicks } from './rarify';
 import { fountainRarityRise, POM_GIVERS } from './vocabulary';
@@ -779,8 +779,9 @@ function answerTraitOfferScreens(context: RunImportContext, trait: TraitOfferAdd
 }
 
 /**
- * A Chaos screen's pair offer; an unpicked curse the record does not name
- * takes the next candidate the engine admits.
+ * A Chaos screen's pair offer. Its unpicked curses take the first pair the
+ * engine admits; the other admitted orders of Denial's banned pair leave the
+ * same state and are reported as alternatives.
  */
 function answerChaosScreen(
   context: RunImportContext,
@@ -791,45 +792,58 @@ function answerChaosScreen(
   position: number,
 ): boolean {
   const record = { roomIndex, visit: 0 };
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const built = chaosOffer(context, screen, roomIndex, attempt);
-    if (built === undefined) return false;
+  const domain = context.candidates().chaosOfferDomain(trait);
+  const unpicked = chaosUnpickedCurses(
+    context,
+    screen,
+    roomIndex,
+    domain?.curseOptions[0].availableCurseKeys ?? [],
+  );
+  if (unpicked === undefined) {
+    context.refuse();
+    return false;
+  }
+  const admitted = (pair: readonly [string, string]) => {
+    const built = chaosOffer(context, screen, roomIndex, pair);
+    if (built === undefined) return undefined;
     const evaluation = context
       .candidates()
       .evaluate({ kind: 'traitOffer', trait, value: built.value });
-    const command = { kind: 'ReplaceTraitOffer', trait, value: built.value } as const;
-    if (
-      evaluation.kind !== 'traitOffer' ||
-      !evaluation.result.supported ||
-      evaluation.result.findings.length > 0 ||
-      !context.applyValid(command)
-    ) {
-      // Only an assumed curse can change; a refused recorded pair is final.
-      if (built.assumedOptions === 0) break;
-      continue;
-    }
+    return evaluation.kind === 'traitOffer' &&
+      evaluation.result.supported &&
+      evaluation.result.findings.length === 0
+      ? built
+      : undefined;
+  };
+  // The screen's domain already admits each unpicked curse, so a refusal past a
+  // few pairs is the recorded pick's own.
+  for (const [index, pair] of unpicked.pairs.slice(0, 8).entries()) {
+    const built = admitted(pair);
+    const command = built && ({ kind: 'ReplaceTraitOffer', trait, value: built.value } as const);
+    if (built === undefined || command === undefined || !context.applyValid(command)) continue;
     context.used.add(key);
     applyTraitScreenRerolls(context, trait, built.value, roomIndex, position);
+    // Denial's other button order is the one alternative worth naming; without
+    // Denial every legal pair is inert, so none is listed.
+    const alternatives = unpicked.denial
+      ? unpicked.pairs.slice(index + 1).flatMap((other): ProjectCommand[] => {
+          const value = admitted(other)?.value;
+          return value === undefined ? [] : [{ kind: 'ReplaceTraitOffer', trait, value }];
+        })
+      : [];
     // Unpicked durations are never saved.
     context.note({
       area: 'traitOffer',
       reason: 'notInRecord',
       address: trait,
       applied: command,
+      ...(alternatives.length === 0 ? {} : { alternatives }),
       record,
     });
     if (built.read === 'refused')
       context.note({
         area: 'traitOffer',
         reason: 'refused',
-        address: trait,
-        applied: command,
-        record,
-      });
-    if (built.assumedOptions > 0)
-      context.note({
-        area: 'traitOffer',
-        reason: 'assumption',
         address: trait,
         applied: command,
         record,
