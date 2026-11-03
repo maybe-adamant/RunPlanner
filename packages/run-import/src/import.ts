@@ -109,9 +109,16 @@ export interface RunImportContext {
   readonly transaction: (run: () => boolean) => boolean;
   /**
    * Runs `run` against the plan and then undoes all of it, its authorship,
-   * report entries and withdrawn retractions included, returning its result.
+   * report entries, used record facts and withdrawn retractions included,
+   * returning its result.
    */
   readonly probe: <Result>(run: () => Result) => Result;
+  /**
+   * Answers from the record each question the plan asks inside one
+   * occurrence, as the walk would, until one is not answered; inside `probe`
+   * it completes a candidate authoring of a room so the room can be judged.
+   */
+  readonly settleQuestions: (occurrenceId: string) => void;
   /** Whether evaluation has entered the occurrence. */
   readonly entered: (occurrenceId: string) => boolean;
   /** Whether an entered occurrence changed, or was entered, since the previous sweep. */
@@ -239,6 +246,7 @@ export class RunImportWalk {
       applyValid: (command) => this.transaction(() => this.apply(command)),
       transaction: (run) => this.transaction(run),
       probe: (run) => this.probe(run),
+      settleQuestions: (occurrenceId) => this.settleQuestions(occurrenceId),
       entered: (occurrenceId) => this.enteredOccurrences().has(occurrenceId),
       pending: (occurrenceId) =>
         this.dirty.has(occurrenceId) && this.enteredOccurrences().has(occurrenceId),
@@ -394,6 +402,8 @@ export class RunImportWalk {
     const entries = this.entries.length;
     const retractions = new Map(this.retractions);
     const refusedAnswer = this.refusedAnswer;
+    const used = new Set(this.context.used);
+    const maxHealthRolls = new Map(this.context.maxHealthRolls);
     try {
       return this.authoring.probe(run);
     } finally {
@@ -401,6 +411,28 @@ export class RunImportWalk {
       this.retractions.clear();
       for (const [key, retraction] of retractions) this.retractions.set(key, retraction);
       this.refusedAnswer = refusedAnswer;
+      this.context.used.clear();
+      for (const key of used) this.context.used.add(key);
+      this.context.maxHealthRolls.clear();
+      for (const [key, roll] of maxHealthRolls) this.context.maxHealthRolls.set(key, roll);
+    }
+  }
+
+  private settleQuestions(occurrenceId: string): void {
+    const asked = new Set<string>();
+    for (;;) {
+      const reason = this.assembly.evaluation.issue?.reasons[0];
+      if (
+        reason === undefined ||
+        !isQuestionFinding(reason) ||
+        occurrenceIdOf(reason.origin) !== occurrenceId
+      )
+        return;
+      // Each question is answered once; one that survives its answer stays open.
+      const key = `${reason.code} ${semanticAddressKey(reason.origin)}`;
+      if (asked.has(key)) return;
+      asked.add(key);
+      if (!this.answer(reason)) return;
     }
   }
 

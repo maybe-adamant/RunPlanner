@@ -6,6 +6,7 @@ import {
   createRewardWheelOfferAddress,
   type OccurrenceId,
   type ProjectCommand,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { projectFromRunRecord, type RunImport } from '../src/import';
@@ -23,6 +24,13 @@ import {
   enteredRooms,
   generatedCustomizations,
 } from './support/run-import';
+
+/** The reward types an occurrence's Artificer replacements hold. */
+const artificerReplacements = (project: ProjectDocument, occurrenceId: string) =>
+  Object.entries(occurrence(project, occurrenceId).acquisitionSites ?? {})
+    .filter(([siteKey]) => siteKey.includes('artificerSource:'))
+    .flatMap(([, site]) => Object.values(site.pickupEntries ?? {}))
+    .map((entry) => entry?.offer.rewardType);
 
 describe('run import of the Surface capture', () => {
   const record = fixture('surface');
@@ -209,6 +217,9 @@ describe('run import of the Surface capture', () => {
       offer: { rewardType: 'SpellDrop' },
       dispositionByAcquisitionRole: { self: { kind: 'timePiece' } },
     });
+    // The Artificer replacement is the RunProgress draw the next entry save accepts.
+    expect(artificerReplacements(imported.project, 'O-r21')).toEqual(['StackUpgrade']);
+    expect(artificerReplacements(imported.project, 'O-r25')).toEqual(['MaxHealthDrop']);
     // N_PreHub01: 10 Carrion and 2 Mudmen rolled, 4 and 1 of them replaced.
     expect(
       occurrence(imported.project, 'N-r1').encounters.customizationByPhase?.['Encounter']?.[
@@ -217,6 +228,25 @@ describe('run import of the Surface capture', () => {
     ).toMatchObject({
       menace: [{ waveIndex: 1, conversions: { Carrion: { count: 4 }, Mudman: { count: 1 } } }],
     });
+  });
+
+  it("takes the Artificer replacement the saved stores and next entry save accept, not the room's first used type", () => {
+    // O_Combat01's Artificer replaced its Meta pickup with StackUpgrade; a Gold use the room
+    // also shows comes first in RunProgress order, but the stores lost no Gold.
+    const withGold: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index === 21 ? { ...room, uses: { ...room.uses, RoomMoneyDrop: 1 } } : room,
+      ),
+    };
+    const result = projectFromRunRecord(catalog, withGold);
+    expect(artificerReplacements(result.project, 'O-r21')).toEqual(['StackUpgrade']);
+    expect(
+      result.report.entries
+        .filter((entry) => entry.record?.roomIndex === 21 && entry.area === 'conversion')
+        .map(describeEntry),
+    ).toEqual([]);
+    expect(result.report.rooms?.[21]).toMatchObject({ verdict: 'accepted' });
   });
 
   /** O_Combat05 as if its wheels, in `order`, had used one side each: the record no longer says which. */
@@ -281,13 +311,13 @@ describe('run import of the Surface capture', () => {
           [`offer${3 - runPick}`]: { offer: { rewardType: 'MaxManaDrop' } },
         },
       });
+      // The next entry save accepts only the MaxHealthDrop replacement, so it is no assumption.
       expect(
         result.report.entries
           .filter((entry) => entry.area === 'conversion' && entry.record?.roomIndex === 25)
           .map(describeEntry),
-      ).toEqual([
-        'assumption conversion r25 acquisitionEntry@O-r25 -> ReplaceAcquisitionEntryOffer(O-r25 MaxHealthDrop)',
-      ]);
+      ).toEqual([]);
+      expect(artificerReplacements(result.project, 'O-r25')).toEqual(['MaxHealthDrop']);
     },
   );
 
@@ -313,7 +343,7 @@ describe('run import of the Surface capture', () => {
 
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
-      assumption: { conversion: 2, menace: 14, roomActionOrder: 5 },
+      assumption: { menace: 14, roomActionOrder: 5 },
       notInRecord: { menace: 17, shop: 8 },
     });
     expect(entryLines(imported.report)).toEqual([
@@ -327,11 +357,9 @@ describe('run import of the Surface capture', () => {
       'assumption menace r13 encounterPhase@N-r13:Encounter -> ReplaceEncounterCustomization(N-r13 generated)',
       'assumption menace r13 encounterPhase@N-r13:Encounter -> ReplaceEncounterCustomization(N-r13 generated)',
       'assumption menace r21 encounterPhase@O-r21:Combat1 -> ReplaceEncounterCustomization(O-r21 generated)',
-      'assumption conversion r21 acquisitionEntry@O-r21 -> ReplaceAcquisitionEntryOffer(O-r21 StackUpgrade)',
       'assumption menace r22 encounterPhase@O-r22:Combat1 -> ReplaceEncounterCustomization(O-r22 generated)',
       'assumption menace r25 encounterPhase@O-r25:Combat1 -> ReplaceEncounterCustomization(O-r25 generated)',
       'assumption menace r25 encounterPhase@O-r25:Combat2 -> ReplaceEncounterCustomization(O-r25 generated)',
-      'assumption conversion r25 acquisitionEntry@O-r25 -> ReplaceAcquisitionEntryOffer(O-r25 MaxHealthDrop)',
       'assumption menace r26 encounterPhase@O-r26:Encounter -> ReplaceEncounterCustomization(O-r26 generated)',
       'assumption roomActionOrder r19 occurrence@N-r17:postboss',
       'assumption roomActionOrder r21 occurrence@O-r21',

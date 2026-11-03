@@ -85,12 +85,6 @@ export interface Replaced {
   readonly rewardType: string;
 }
 
-/** What the stores say a bracket's rerolls replaced. */
-export type ReplacedRewardsSolution =
-  | { readonly kind: 'solved'; readonly replaced: readonly Replaced[] }
-  /** No refill choice gives exactly the expected count; `smallest` is the least loss any explains. */
-  | { readonly kind: 'unsolved'; readonly smallest?: number };
-
 interface BracketInput {
   /** Plan less saved store counts at the bracket's first and last entry saves. */
   readonly before: ReadonlyMap<string, Counts>;
@@ -196,18 +190,6 @@ function drawsOf(
   return draws;
 }
 
-/**
- * The rewards a bracket's door, wheel, cage or Hub rerolls replaced: the one
- * multiset of `rerolls` draws its stores explain.
- */
-export function solveReplacedRewards(
-  input: BracketInput & { readonly rerolls: number },
-): ReplacedRewardsSolution {
-  const { solutions, smallest } = solveBracketDraws({ ...input, draws: input.rerolls });
-  if (solutions.length === 1) return { kind: 'solved', replaced: solutions[0]! };
-  return smallest === undefined ? { kind: 'unsolved' } : { kind: 'unsolved', smallest };
-}
-
 /** A record room's bracket, or undefined when either entry save has no plan state. */
 function bracketInput(context: RunImportContext, roomIndex: number): BracketInput | undefined {
   const before = storeOffsets(context, roomIndex);
@@ -269,15 +251,6 @@ export function savedBracketDraws(
     ],
     draws,
   }).solutions;
-}
-
-export function replacedRewards(
-  context: RunImportContext,
-  roomIndex: number,
-  rerolls: number,
-): ReplacedRewardsSolution {
-  const input = bracketInput(context, roomIndex);
-  return input === undefined ? { kind: 'unsolved' } : solveReplacedRewards({ ...input, rerolls });
 }
 
 /**

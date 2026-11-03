@@ -11,6 +11,12 @@ import { authoredOccurrence, deliveredIncomingReward } from './occurrences';
 
 export type ConversionKind = 'artificer' | 'timePiece';
 
+/** An Artificer replacement a search pinned; `assumed` unless the next entry save settled it. */
+export interface ConversionReplacement {
+  readonly rewardType: string;
+  readonly assumed: boolean;
+}
+
 export function recordedConversions(
   context: RunImportContext,
   roomIndex: number,
@@ -54,8 +60,9 @@ export function importDispositions(context: RunImportContext): void {
 
 /**
  * Applies a recorded conversion to one acquisition. Artificer's replacement is
- * the reward the room's uses name that the converted pickup is not. False when
- * the acquisition has no conversion context yet.
+ * the first reward the room's uses name that the converted pickup is not, of
+ * the type a search pinned. False when the acquisition has no
+ * conversion context yet, or the pinned replacement does not place.
  */
 export function convertAcquisition(
   context: RunImportContext,
@@ -63,6 +70,7 @@ export function convertAcquisition(
   kind: ConversionKind,
   convertedRewardType: string,
   roomIndex: number,
+  pinned?: ConversionReplacement,
 ): boolean {
   const room = context.record.rooms[roomIndex]!;
   const evaluation = context.candidates().evaluate({ kind: 'acquisitionConversion', acquisition });
@@ -92,8 +100,13 @@ export function convertAcquisition(
     .flatMap((type) =>
       type === 'Boon' ? replacementBoons(context, roomIndex) : [{ rewardType: type }],
     )
-    .find((offer) => offer.rewardType === 'Boon' || (room.uses[offer.rewardType] ?? 0) > 0);
+    .find(
+      (offer) =>
+        (pinned === undefined || offer.rewardType === pinned.rewardType) &&
+        (offer.rewardType === 'Boon' || (room.uses[offer.rewardType] ?? 0) > 0),
+    );
   if (entry === undefined || replacement === undefined) {
+    if (pinned !== undefined) return false;
     context.note({ area: 'conversion', reason: 'notInRecord', address: acquisition, record });
     return true;
   }
@@ -102,10 +115,13 @@ export function convertAcquisition(
     entry,
     value: replacement,
   };
+  const applied = context.apply(command);
+  if (!applied && pinned !== undefined) return false;
+  if (applied && pinned?.assumed === false) return true;
   // The replacement is inferred from the room's uses, not recorded as such.
   context.note({
     area: 'conversion',
-    reason: context.apply(command) ? 'assumption' : 'refused',
+    reason: applied ? 'assumption' : 'refused',
     address: entry,
     applied: command,
     record,

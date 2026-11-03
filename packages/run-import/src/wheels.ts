@@ -19,8 +19,13 @@ import {
 import { countedRewardTypeDomain, type SemanticFinding } from '@run-planner/engine/simulation';
 import type { RunRecordRoom, RunRecordWheel } from './run-record/model';
 import { entrySnapshot, occurrenceSnapshot, recordedEntryStates, storeCounts } from './conformance';
-import { introducesNothing } from './acceptance';
-import { convertAcquisition, recordedConversions } from './dispositions';
+import {
+  convertAcquisition,
+  recordedConversions,
+  type ConversionKind,
+  type ConversionReplacement,
+} from './dispositions';
+import { chooseRoomFit, searchRoom } from './room-search';
 import type { RunImportContext } from './import';
 import { authoredOccurrence } from './occurrences';
 import type { RunImportReportEntry } from './report';
@@ -395,52 +400,30 @@ function offerValue(
 const sameOffer = (left: ResolvedRewardOffer | undefined, right: ResolvedRewardOffer) =>
   JSON.stringify(left) === JSON.stringify(right);
 
-/** One assignment that reproduces the saved wheel stores, with the ship's exit state. */
-export interface WheelFit<Value> {
-  readonly values: readonly Value[];
-  /** The ship's exit stores, priorities, god pool and rerolls; equal fits are interchangeable. */
-  readonly fingerprint: string;
-}
-
 /**
- * The fit to author, the first in canonical order, and per offer the values
- * the first fit of each other exit state holds instead; undefined when none fits.
+ * Per position, the values other fits hold instead of `chosen`'s, each once:
+ * what the record leaves open beside the authored choice.
  */
-export function chooseWheelFit<Value>(
-  fits: readonly WheelFit<Value>[],
+export function alternativeValues<Value>(
+  chosen: readonly Value[],
+  others: readonly (readonly Value[])[],
   same: (left: Value, right: Value) => boolean,
-):
-  | { readonly chosen: readonly Value[]; readonly alternatives: readonly (readonly Value[])[] }
-  | undefined {
-  const chosen = fits[0];
-  if (chosen === undefined) return undefined;
-  const others = fits.filter(
-    (fit, index) =>
-      fit.fingerprint !== chosen.fingerprint &&
-      fits.findIndex((first) => first.fingerprint === fit.fingerprint) === index,
+): readonly (readonly Value[])[] {
+  return chosen.map((value, index) =>
+    others
+      .map((other) => other[index]!)
+      .filter(
+        (other, position, all) =>
+          !same(other, value) && all.findIndex((entry) => same(entry, other)) === position,
+      ),
   );
-  return {
-    chosen: chosen.values,
-    alternatives: chosen.values.map((value, index) =>
-      others
-        .map((fit) => fit.values[index]!)
-        .filter(
-          (other, position, all) =>
-            !same(other, value) && all.findIndex((entry) => same(entry, other)) === position,
-        ),
-    ),
-  };
 }
 
 /**
  * Settles each ship room's unpicked offers once its save-to-save window
- * closes: the next room entered, every draw authored and any conversion
- * applied. The saved stores give the multiset of draws the plan does not know;
- * each way to give the unpicked offers their types from it, the rest left to
- * the room's rerolls, is simulated, and those reproducing the saved wheel
- * stores fit. Fits with one exit state are interchangeable and the first in
- * canonical order is authored; otherwise each differing offer is reported with
- * its alternatives. Returns whether any room's window closed.
+ * closes: the next room entered and every draw authored. A recorded
+ * conversion waits for the solve, which searches its Artificer replacement
+ * with the offers. Returns whether any room's window closed.
  */
 export function solveWheelOffers(context: RunImportContext): boolean {
   let closed = false;
@@ -453,22 +436,48 @@ export function solveWheelOffers(context: RunImportContext): boolean {
     const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
     const targets = roomPressTargets(context, biome, sourceId);
     if (!bracketDrawsAuthored(context, biomeKey, sourceId, targets)) continue;
-    const unconverted =
+    const kinds = deferredConversions(context, roomIndex);
+    // A conversion the walk places before the solve is part of the window it reads.
+    if (
       recordedConversions(context, roomIndex).length > 0 &&
-      !context.used.has(`conversion:${roomIndex}`);
-    // A room whose sides are open converts once its split is chosen; any other first.
-    const deferred = unconverted && wheelAuthoringWaits(context, roomIndex);
-    if (unconverted && !deferred) continue;
+      !isConverted(context, roomIndex) &&
+      kinds.length === 0
+    )
+      continue;
     context.used.add(used);
     closed = true;
-    solveShip(context, roomIndex, targets, deferred);
-    // The conversions follow the authored split: the fit's, or the canonical one.
-    if (deferred) {
+    const replacement = solveShip(context, roomIndex, targets, kinds);
+    if (kinds.length > 0) {
       context.used.add(`conversion:${roomIndex}`);
-      convertWheelPickups(context, roomIndex, true);
+      if (
+        replacement === undefined ||
+        !convertWheelPickups(context, roomIndex, true, { kinds, replacement })
+      )
+        convertWheelPickups(context, roomIndex, true, { kinds });
     }
   }
   return closed;
+}
+
+const isConverted = (context: RunImportContext, roomIndex: number) =>
+  context.used.has(`conversion:${roomIndex}`);
+
+/**
+ * The conversions a ship room authors with its solve: all of them while its
+ * sides are open, its Artificer while the solve searches the replacement and
+ * the walk has placed the others, none otherwise.
+ */
+function deferredConversions(
+  context: RunImportContext,
+  roomIndex: number,
+): readonly ConversionKind[] {
+  const recorded = recordedConversions(context, roomIndex);
+  if (isConverted(context, roomIndex)) return [];
+  if (wheelAuthoringWaits(context, roomIndex)) return recorded;
+  if (!conversionWaits(context, roomIndex)) return [];
+  return recorded.length === 1 || context.used.has(`conversionEarly:${roomIndex}`)
+    ? ['artificer']
+    : [];
 }
 
 /** Whether the solve has taken up a ship room's window, or the walk ended with it open. */
@@ -484,7 +493,7 @@ export function releaseOpenWheelWindows(context: RunImportContext): boolean {
   let released = false;
   for (const roomIndex of context.record.rooms.keys())
     if (
-      wheelAuthoringWaits(context, roomIndex) &&
+      (wheelAuthoringWaits(context, roomIndex) || conversionWaits(context, roomIndex)) &&
       context.entered(context.occurrences.occurrenceOf(roomIndex))
     ) {
       context.used.add(`wheelOpen:${roomIndex}`);
@@ -509,23 +518,65 @@ export function wheelAuthoringWaits(context: RunImportContext, roomIndex: number
   );
 }
 
+/**
+ * Whether a ship room's recorded Artificer conversion waits for the solve: its
+ * replacement is one more draw of the window, chosen with the unpicked offers.
+ */
+function conversionWaits(context: RunImportContext, roomIndex: number): boolean {
+  const room = context.record.rooms[roomIndex];
+  return (
+    room?.wheels !== undefined &&
+    recordedConversions(context, roomIndex).includes('artificer') &&
+    !isConverted(context, roomIndex) &&
+    !wheelsSolved(context, roomIndex) &&
+    recordedEntryStates(context.record)[roomIndex + 1] !== undefined
+  );
+}
+
+/** One way to author a ship room's open draws: the split, the unpicked offers' types, the replacement. */
+interface ShipCandidate {
+  readonly split: readonly number[] | undefined;
+  readonly types: readonly string[];
+  /** The Artificer replacement's reward type, one of the window's RunProgress draws. */
+  readonly replacement: string | undefined;
+  /** Draws left to the room's rerolls. */
+  readonly remainder: readonly Replaced[];
+}
+
+interface ShipChoice {
+  readonly split: readonly number[] | undefined;
+  readonly values: readonly ResolvedRewardOffer[];
+  readonly replacement: string | undefined;
+}
+
+/**
+ * Searches a ship room's unpicked offers, with its deferred Artificer
+ * replacement, once its window closes. The saved stores give the multiset of
+ * draws the plan does not know; each way to give the unpicked offers their
+ * types from it, a RunProgress draw to the replacement and the rest to the
+ * room's rerolls is authored, and those reproducing the saved stores fit.
+ * The first fit the next entry save accepts is authored, or without one the
+ * first fit; equally good fits of another exit state are reported. Returns
+ * the replacement to convert with, `assumed` unless the save accepted it alone.
+ */
 function solveShip(
   context: RunImportContext,
   roomIndex: number,
   targets: readonly PressTarget[],
-  deferred: boolean,
-): void {
+  deferred: readonly ConversionKind[],
+): ConversionReplacement | undefined {
   const room = context.record.rooms[roomIndex]!;
   const unknown = unknownOffers(context, roomIndex);
-  if (unknown === undefined || !unknown.complete) return;
+  if (unknown === undefined || !unknown.complete) return undefined;
   const { offers } = unknown;
   const solved = `wheelSolved:${roomIndex}`;
-  if (offers.length === 0) {
+  const artificer = deferred.includes('artificer');
+  if (offers.length === 0 && !artificer) {
     context.used.add(solved);
-    return;
+    return undefined;
   }
   const provisional = offers.map((offer) => offerValue(context, offer.address));
-  if (provisional.some((value) => value === undefined)) return;
+  if (provisional.some((value) => value === undefined)) return undefined;
   const planned = offers.map((offer, index) => ({
     storeKey: offer.wheel.store,
     rewardType: provisional[index]!.rewardType,
@@ -534,17 +585,19 @@ function solveShip(
     0,
     poolSpends(context, roomIndex) ?? context.record.rooms[roomIndex]!.rerolls ?? 0,
   );
-  // A deferred conversion's draws are known: they count as on the canonical split.
-  const measure = () => bracketDraws(context, roomIndex, offers.length + rerolls, planned);
-  const draws = deferred
-    ? context.probe(() => {
-        convertWheelPickups(context, roomIndex, true);
-        return measure();
-      })
-    : measure();
-  if (draws === undefined) return;
+  // The deferred replacement is one more draw the plan does not know yet.
+  const draws = bracketDraws(
+    context,
+    roomIndex,
+    offers.length + rerolls + (artificer ? 1 : 0),
+    planned,
+  );
+  if (draws === undefined) return undefined;
   context.used.add(solved);
-  const wheelStores = new Set(offers.map((offer) => offer.wheel.store));
+  const stores = new Set([
+    ...offers.map((offer) => offer.wheel.store),
+    ...(artificer ? [ARTIFICER_STORE] : []),
+  ]);
   // Mixed sides add the split as a dimension; every wheel then has an unknown offer.
   const left = mixedLeftUses(room);
   const splits: readonly (readonly number[] | undefined)[] =
@@ -556,44 +609,44 @@ function solveShip(
     context.occurrences.biomeOfRoom[roomIndex]!,
   );
   const sourceId = context.occurrences.occurrenceOf(roomIndex);
-  const fits: (WheelFit<ResolvedRewardOffer> & {
-    readonly split?: readonly number[];
-    readonly accepted: boolean;
-  })[] = [];
-  const types = assignments(offers, draws.solutions);
-  for (const split of splits)
-    for (const { types: assigned, remainder } of types)
-      context.probe(() => {
-        const values: ResolvedRewardOffer[] = [];
-        const placed = context.transaction(() => {
-          if (!pickSides(context, offersOf(split), split)) return false;
-          // A press redraws the offers left unpicked, so the targets follow the split.
-          const pressTargets =
-            split === undefined ? targets : roomPressTargets(context, biome, sourceId);
-          return (
-            placeOffers(context, offersOf(split), assigned, (offer, index) => {
-              const value = firstSupported(context, offer.address, assigned[index]!);
-              if (value !== undefined) values.push(value);
-              return value;
-            }) &&
-            remainder.every((entry) => prependReplaced(context, pressTargets, entry)) &&
-            (!deferred || convertWheelPickups(context, roomIndex, true))
-          );
-        });
-        if (placed && bracketStoresMatch(context, roomIndex, wheelStores))
-          fits.push({
-            values,
-            fingerprint: exitFingerprint(context, roomIndex),
-            ...(split === undefined ? {} : { split }),
-            accepted: introducesNothing(context.acceptance(roomIndex)),
-          });
-      });
-  // Fits that leave the room no difference of its own at the next save go first, in canonical order.
-  fits.sort((left, right) => Number(right.accepted) - Number(left.accepted));
-  const choice = chooseWheelFit(fits, sameOffer);
+  const search = searchRoom(context, {
+    roomIndex,
+    candidates: shipCandidates(splits, assignments(offers, draws.solutions), artificer),
+    author: ({ split, types, replacement, remainder }): ShipChoice | undefined => {
+      const values: ResolvedRewardOffer[] = [];
+      if (!pickSides(context, offersOf(split), split)) return undefined;
+      // A press redraws the offers left unpicked, so the targets follow the split.
+      const pressTargets =
+        split === undefined ? targets : roomPressTargets(context, biome, sourceId);
+      const placed =
+        placeOffers(context, offersOf(split), types, (offer, index) => {
+          const value = firstSupported(context, offer.address, types[index]!);
+          if (value !== undefined) values.push(value);
+          return value;
+        }) &&
+        remainder.every((entry) => prependReplaced(context, pressTargets, entry)) &&
+        (deferred.length === 0 ||
+          convertWheelPickups(context, roomIndex, true, {
+            kinds: deferred,
+            replacement:
+              replacement === undefined ? undefined : { rewardType: replacement, assumed: false },
+          }));
+      return placed ? { split, values, replacement } : undefined;
+    },
+    fits: () => bracketStoresMatch(context, roomIndex, stores),
+    fingerprint: () => exitFingerprint(context, roomIndex),
+  });
   const at = record(roomIndex);
+  if (search.capped)
+    context.note({
+      area: 'wheel',
+      reason: 'assumption',
+      address: createOccurrenceAddress(biome, sourceId as OccurrenceId),
+      record: at,
+    });
+  const choice = chooseRoomFit(search.fits);
   if (choice === undefined) {
-    for (const storeKey of wheelStores)
+    for (const storeKey of new Set(offers.map((offer) => offer.wheel.store)))
       context.note({
         area: 'wheel',
         reason: 'mismatch',
@@ -603,14 +656,15 @@ function solveShip(
       });
     for (const entry of sideGuesses(context, roomIndex, offers)) context.note(entry);
     for (const entry of provisionalOffers(context, roomIndex, offers)) context.note(entry);
-    return;
+    return undefined;
   }
-  const split = fits[0]!.split;
+  const { split, values, replacement } = choice.chosen.choice;
+  const equivalents = choice.equivalents.map((fit) => fit.choice);
   const chosenOffers = offersOf(split);
   const commands = chosenOffers.map((offer, index): ProjectCommand => ({
     kind: 'ReplaceRewardWheelOffer',
     offer: offer.address,
-    value: choice.chosen[index]!,
+    value: values[index]!,
   }));
   const applied = context.transaction(
     () =>
@@ -618,21 +672,26 @@ function solveShip(
       placeOffers(
         context,
         chosenOffers,
-        choice.chosen.map((value) => value.rewardType),
-        (_offer, index) => choice.chosen[index],
+        values.map((value) => value.rewardType),
+        (_offer, index) => values[index],
       ),
   );
   if (applied && split !== undefined) {
-    const sides = chooseWheelFit(
-      fits.map((fit) => ({ values: fit.split!, fingerprint: fit.fingerprint })),
+    const sides = alternativeValues(
+      split,
+      equivalents.map((other) => other.split!),
       (left: number, right: number) => left === right,
-    )!;
+    );
     for (const [index, offer] of chosenOffers.entries())
-      if (sides.alternatives[index]!.length > 0)
-        context.note(sideGuess(offer, sides.chosen[index]!, sides.alternatives[index]!, at));
+      if (sides[index]!.length > 0)
+        context.note(sideGuess(offer, split[index]!, sides[index]!, at));
   }
+  const alternatives = alternativeValues(
+    values,
+    equivalents.map((other) => other.values),
+    sameOffer,
+  );
   for (const [index, offer] of chosenOffers.entries()) {
-    const alternatives = choice.alternatives[index]!;
     if (!applied)
       context.note({
         area: 'wheel',
@@ -641,13 +700,13 @@ function solveShip(
         applied: commands[index]!,
         record: at,
       });
-    else if (alternatives.length > 0)
+    else if (alternatives[index]!.length > 0)
       context.note({
         area: 'wheel',
         reason: 'notInRecord',
         address: offer.address,
         applied: commands[index]!,
-        alternatives: alternatives.map((value): ProjectCommand => ({
+        alternatives: alternatives[index]!.map((value): ProjectCommand => ({
           kind: 'ReplaceRewardWheelOffer',
           offer: offer.address,
           value,
@@ -655,6 +714,44 @@ function solveShip(
         record: at,
       });
   }
+  if (replacement === undefined) return undefined;
+  // Only the save's acceptance of this replacement alone settles it.
+  const settled =
+    choice.chosen.accepted && equivalents.every((other) => other.replacement === replacement);
+  return { rewardType: replacement, assumed: !settled };
+}
+
+/** The store an Artificer replacement draws from. */
+const ARTIFICER_STORE = 'RunProgress';
+
+/**
+ * The search's candidates in canonical order: by split, by the offers'
+ * types, then by the Artificer replacement, each RunProgress draw left over
+ * once in declaration order.
+ */
+function* shipCandidates(
+  splits: readonly (readonly number[] | undefined)[],
+  types: readonly { readonly types: readonly string[]; readonly remainder: readonly Replaced[] }[],
+  artificer: boolean,
+): Generator<ShipCandidate> {
+  for (const split of splits)
+    for (const { types: assigned, remainder } of types) {
+      if (!artificer) {
+        yield { split, types: assigned, replacement: undefined, remainder };
+        continue;
+      }
+      const tried = new Set<string>();
+      for (const [position, draw] of remainder.entries()) {
+        if (draw.storeKey !== ARTIFICER_STORE || tried.has(draw.rewardType)) continue;
+        tried.add(draw.rewardType);
+        yield {
+          split,
+          types: assigned,
+          replacement: draw.rewardType,
+          remainder: remainder.filter((_entry, other) => other !== position),
+        };
+      }
+    }
 }
 
 /**
@@ -896,29 +993,45 @@ export function importWheelConversions(context: RunImportContext): void {
       if (occurrence.state.kind !== 'shipCombat') continue;
       const visit = shipVisit(context, occurrence.occurrenceId);
       if (visit === undefined) continue;
-      const used = `conversion:${visit.roomIndex}`;
-      if (recordedConversions(context, visit.roomIndex).length === 0 || context.used.has(used))
-        continue;
-      if (wheelAuthoringWaits(context, visit.roomIndex)) continue;
+      const roomIndex = visit.roomIndex;
+      const used = `conversion:${roomIndex}`;
+      if (recordedConversions(context, roomIndex).length === 0 || context.used.has(used)) continue;
+      if (wheelAuthoringWaits(context, roomIndex)) continue;
+      // An Artificer the solve searches waits for it; the room's other conversions do not.
+      const waits = conversionWaits(context, roomIndex);
+      const kinds = recordedConversions(context, roomIndex).filter(
+        (kind) => !waits || kind !== 'artificer',
+      );
+      const early = `conversionEarly:${roomIndex}`;
+      if (kinds.length === 0 || context.used.has(early)) continue;
       // Once the window closes the room's pickups are as reached as they will be.
-      const closed = bracketClosed(context, visit.roomIndex);
+      const closed = bracketClosed(context, roomIndex);
       if (!closed && !context.pending(occurrence.occurrenceId)) continue;
-      if (convertWheelPickups(context, visit.roomIndex, closed)) context.used.add(used);
+      if (convertWheelPickups(context, roomIndex, closed, { kinds }))
+        context.used.add(waits ? early : used);
     }
 }
 
 /**
  * Applies a ship room's recorded conversions to its wheel pickups, each to an
- * uncollected pickup that takes it. Waits, returning false, until every pickup
- * is authored and reached; once the window has closed what is missing is refused.
+ * uncollected pickup that takes it, Artificer with `replacement` when a search
+ * pinned one. Waits, returning false, until every pickup is authored and
+ * reached; once the window has closed what is missing is refused. A pinned
+ * replacement that does not place also returns false.
  */
 function convertWheelPickups(
   context: RunImportContext,
   roomIndex: number,
   closed: boolean,
+  {
+    kinds = recordedConversions(context, roomIndex),
+    replacement,
+  }: {
+    readonly kinds?: readonly ConversionKind[];
+    readonly replacement?: ConversionReplacement | undefined;
+  } = {},
 ): boolean {
   const room = context.record.rooms[roomIndex]!;
-  const kinds = recordedConversions(context, roomIndex);
   const project = context.assembly().project;
   const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
   const occurrence = authoredOccurrence(
@@ -965,6 +1078,7 @@ function convertWheelPickups(
         }).kind !== 'acquisitionConversion',
     )
   ) {
+    if (replacement !== undefined) return false;
     if (closed) kinds.forEach(() => refused());
     return closed;
   }
@@ -976,7 +1090,8 @@ function convertWheelPickups(
         (room.uses[reward.offer.payload.source] ?? 0) > 0
       ),
   );
-  for (const kind of kinds) {
+  // Every recorded conversion takes its pickup in turn, so one authored apart keeps its target.
+  for (const kind of recordedConversions(context, roomIndex)) {
     const target = uncollected.find((pickup) => {
       const evaluation = context
         .candidates()
@@ -988,18 +1103,26 @@ function convertWheelPickups(
           : evaluation.result.timePieceSupported)
       );
     });
+    const pinned = kind === 'artificer' ? replacement : undefined;
     if (target === undefined) {
-      refused();
+      if (pinned !== undefined) return false;
+      if (kinds.includes(kind)) refused();
       continue;
     }
     uncollected.splice(uncollected.indexOf(target), 1);
-    convertAcquisition(
-      context,
-      acquisitionOf(target),
-      kind,
-      target.reward.offer.rewardType,
-      roomIndex,
-    );
+    if (!kinds.includes(kind)) continue;
+    if (
+      !convertAcquisition(
+        context,
+        acquisitionOf(target),
+        kind,
+        target.reward.offer.rewardType,
+        roomIndex,
+        pinned,
+      ) &&
+      pinned !== undefined
+    )
+      return false;
   }
   return true;
 }

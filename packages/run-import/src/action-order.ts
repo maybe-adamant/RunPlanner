@@ -106,52 +106,67 @@ export function importRoomActionOrders(context: RunImportContext): void {
   const project = context.assembly().project;
   for (const biome of project.route.biomes)
     for (const original of biome.topology?.occurrences ?? []) {
-      const visits = context.occurrences.visitsOf(original.occurrenceId);
-      if (visits.length === 0 || original.roomActions.order.length < 2) continue;
-      const roomIndex = visits[0]!;
-      const timed = timedActions(context, original, visits);
-      const order = original.roomActions.order;
-      const timedPositions = order.flatMap((reference, index) =>
-        timed.has(roomActionKey(reference)) ? [index] : [],
-      );
-      const sorted = timedPositions
-        .map((index) => order[index]!)
-        .sort((left, right) => timed.get(roomActionKey(left))! - timed.get(roomActionKey(right))!);
-      const target = [...order];
-      timedPositions.forEach((position, index) => (target[position] = sorted[index]!));
-      const reordered = context.transaction(() =>
-        target.every((reference, toIndex) => {
-          const current = context
-            .assembly()
-            .project.route.biomes.find((entry) => entry.biomeKey === biome.biomeKey)
-            ?.topology?.occurrences.find((entry) => entry.occurrenceId === original.occurrenceId)
-            ?.roomActions.order;
-          const from = current?.findIndex(
-            (entry) => roomActionKey(entry) === roomActionKey(reference),
-          );
-          if (from === undefined || from < 0) return false;
-          return (
-            from === toIndex ||
-            context.apply({
-              kind: 'MoveRoomAction',
-              action: roomActionAddress(context, biome.biomeKey, original.occurrenceId, reference),
-              toIndex,
-            })
-          );
-        }),
-      );
-      // Actions without a trait to time keep the native schedule between the timed ones.
-      if (!reordered || timed.size < order.length)
-        context.note({
-          area: 'roomActionOrder',
-          reason: 'assumption',
-          address: createOccurrenceAddress(
-            createBiomeAddress(project.route.routeKey, biome.biomeKey),
-            original.occurrenceId,
-          ),
-          record: { roomIndex, visit: 0 },
-        });
+      const ordered = orderRoomActions(context, biome.biomeKey, original.occurrenceId);
+      if (ordered === undefined || ordered.timed) continue;
+      context.note({
+        area: 'roomActionOrder',
+        reason: 'assumption',
+        address: createOccurrenceAddress(
+          createBiomeAddress(project.route.routeKey, biome.biomeKey),
+          original.occurrenceId,
+        ),
+        record: { roomIndex: ordered.roomIndex, visit: 0 },
+      });
     }
+}
+
+/**
+ * Orders one recorded occurrence's trait-granting actions by their stamped
+ * world times; `timed` when every action is timed and the order applied.
+ * Undefined for an occurrence the record never visits or with one action.
+ */
+export function orderRoomActions(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrenceId: string,
+): { readonly roomIndex: number; readonly timed: boolean } | undefined {
+  const current = () =>
+    context
+      .assembly()
+      .project.route.biomes.find((entry) => entry.biomeKey === biomeKey)
+      ?.topology?.occurrences.find((entry) => entry.occurrenceId === occurrenceId);
+  const original = current();
+  const visits = context.occurrences.visitsOf(occurrenceId);
+  if (original === undefined || visits.length === 0 || original.roomActions.order.length < 2)
+    return undefined;
+  const timed = timedActions(context, original, visits);
+  const order = original.roomActions.order;
+  const timedPositions = order.flatMap((reference, index) =>
+    timed.has(roomActionKey(reference)) ? [index] : [],
+  );
+  const sorted = timedPositions
+    .map((index) => order[index]!)
+    .sort((left, right) => timed.get(roomActionKey(left))! - timed.get(roomActionKey(right))!);
+  const target = [...order];
+  timedPositions.forEach((position, index) => (target[position] = sorted[index]!));
+  const reordered = context.transaction(() =>
+    target.every((reference, toIndex) => {
+      const from = current()?.roomActions.order.findIndex(
+        (entry) => roomActionKey(entry) === roomActionKey(reference),
+      );
+      if (from === undefined || from < 0) return false;
+      return (
+        from === toIndex ||
+        context.apply({
+          kind: 'MoveRoomAction',
+          action: roomActionAddress(context, biomeKey, occurrenceId, reference),
+          toIndex,
+        })
+      );
+    }),
+  );
+  // Actions without a trait to time keep the native schedule between the timed ones.
+  return { roomIndex: visits[0]!, timed: reordered && timed.size === order.length };
 }
 
 /** Each action's earliest stamped trait time across the occurrence's record visits. */

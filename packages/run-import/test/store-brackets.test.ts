@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { solveBracketDraws, solveReplacedRewards, type Counts } from '../src/store-brackets';
+import { solveBracketDraws, type Counts } from '../src/store-brackets';
 
 const FILLS: Readonly<Record<string, Counts>> = {
   RunProgress: { Boon: 2, MaxHealthDrop: 1, RoomMoneyDrop: 1 },
@@ -12,12 +12,12 @@ const solve = (
   after: Readonly<Record<string, Counts>>,
   rerolls: number,
 ) =>
-  solveReplacedRewards({
+  solveBracketDraws({
     before: new Map(Object.entries(before)),
     after: new Map(Object.entries(after)),
     fill: (storeKey) => FILLS[storeKey] ?? {},
     order: (storeKey) => Object.keys(FILLS[storeKey] ?? {}),
-    rerolls,
+    draws: rerolls,
   });
 
 describe('replaced rewards of a reroll bracket', () => {
@@ -31,32 +31,29 @@ describe('replaced rewards of a reroll bracket', () => {
           MetaProgress: { GiftDrop: 1, MetaCurrencyBigDrop: 0 },
         },
         2,
-      ),
-    ).toEqual({
-      kind: 'solved',
-      replaced: [
+      ).solutions,
+    ).toEqual([
+      [
         { storeKey: 'MetaProgress', rewardType: 'GiftDrop' },
         { storeKey: 'RunProgress', rewardType: 'MaxHealthDrop' },
       ],
-    });
+    ]);
   });
 
   it('keeps a persisting difference out of the bracket', () => {
     expect(
-      solve({ RunProgress: { Boon: 1 } }, { RunProgress: { Boon: 1, RoomMoneyDrop: 1 } }, 1),
-    ).toEqual({
-      kind: 'solved',
-      replaced: [{ storeKey: 'RunProgress', rewardType: 'RoomMoneyDrop' }],
-    });
+      solve({ RunProgress: { Boon: 1 } }, { RunProgress: { Boon: 1, RoomMoneyDrop: 1 } }, 1)
+        .solutions,
+    ).toEqual([[{ storeKey: 'RunProgress', rewardType: 'RoomMoneyDrop' }]]);
   });
 
   it('names the smallest loss when the stores lose another count than expected', () => {
     expect(solve({}, { RunProgress: { Boon: 1, RoomMoneyDrop: 1 } }, 1)).toEqual({
-      kind: 'unsolved',
+      solutions: [],
       smallest: 2,
     });
     // A store the plan holds more of than the game, past one whole refill, explains nothing.
-    expect(solve({}, { RunProgress: { Boon: -3 } }, 1)).toEqual({ kind: 'unsolved' });
+    expect(solve({}, { RunProgress: { Boon: -3 } }, 1)).toEqual({ solutions: [] });
   });
 });
 

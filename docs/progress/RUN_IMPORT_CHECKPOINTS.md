@@ -160,6 +160,26 @@ reproduces is reported with its nearest miss and the plan stops there.
    over the remaining unknowns, pinned by markers (trait timestamps, upgrade
    names, use counts) and narrowed by compared facts; equivalent outcomes take
    a canonical choice and are reported as such.
+
+   **Search** (`room-search.ts`). One room's candidates are authored in
+   canonical order on a probe; the room's own questions are answered from
+   the record, its actions take their stamped order, and the room is judged
+   at its next entry save. The first accepted fit is authored; equally good
+   fits of another exit state are reported as alternatives; without an
+   accepted fit the solver's earlier rule stands. At most 32 candidates per
+   room, a capped search reported as an assumption. A probe now also restores
+   the record facts it used.
+
+   - Wheels and Artificer jointly: a ship room's Artificer waits for the
+     wheel solve (its other conversions keep their targets and go first), and
+     its replacement is one RunProgress draw of the window, searched with
+     the unpicked offers. Raw 334 r20 and 931 r20 accepted (first mismatch
+     r20 → r21 and r20 → r27; mismatch 13 → 10 and 18 → 9); the fixture conversions
+     the save settles lose their assumption entry. Bracket rerolls whose
+     stores admit several multisets take the accepted one. Cost over the
+     corpus: 13 searches, 1–4 candidates, at most 0.4 s; import time
+     unchanged.
+
 4. **No manufactured outcomes.** Remove the two Draft guesses; run import no
    longer depends on Draft. An unreachable room ends the plan with its nearest
    miss.

@@ -29,11 +29,12 @@ import { authoredOccurrence, recordHubStay } from './occurrences';
 import type { RunImportReportEntry } from './report';
 import {
   bracketClosed,
+  bracketDraws,
   bracketStoresMatch,
   poolSpends,
-  replacedRewards,
   type Replaced,
 } from './store-brackets';
+import { searchRoom } from './room-search';
 import { POM_GIVERS, recordedOffer } from './vocabulary';
 
 /** `SpentRerolls` ids of the store screens the plan holds counts for. */
@@ -559,10 +560,41 @@ export function importRerolls(context: RunImportContext): void {
       unsupported(recorded);
       continue;
     }
-    const solution = replacedRewards(context, roomIndex, rerolls);
-    if (solution.kind === 'unsolved') {
-      // The stores lose another count of rewards than the pool spent.
-      if (solution.smallest !== undefined)
+    const place = (replaced: readonly Replaced[]) =>
+      replaced.every((entry) =>
+        hub !== undefined && stay > 0
+          ? placeRestoredHubPress(
+              context,
+              targets,
+              { previous: hubVisits[stay - 1]!, current: roomIndex },
+              entry,
+            )
+          : prependReplaced(context, targets, entry),
+      );
+    const draws = bracketDraws(context, roomIndex, rerolls, []);
+    const solutions = draws?.solutions ?? [];
+    // Several multisets the stores explain: the one the next entry save accepts, if any.
+    const search =
+      solutions.length > 1
+        ? searchRoom(context, {
+            roomIndex,
+            candidates: solutions,
+            author: (replaced) => (place(replaced) ? replaced : undefined),
+            fits: () => bracketStoresMatch(context, roomIndex),
+          })
+        : undefined;
+    if (search?.capped === true)
+      context.note({
+        area: 'reroll',
+        reason: 'assumption',
+        address: createOccurrenceAddress(biome, sourceId),
+        record,
+      });
+    const replaced =
+      solutions.length === 1 ? solutions[0] : search?.fits.find((fit) => fit.accepted)?.choice;
+    if (replaced === undefined) {
+      // The stores lose another count of rewards than the pool spent, or several counts alike.
+      if (draws?.smallest !== undefined)
         context.note({
           area: 'reroll',
           reason: 'mismatch',
@@ -570,7 +602,7 @@ export function importRerolls(context: RunImportContext): void {
           mismatch: {
             field: 'rerolls',
             expected: String(rerolls),
-            actual: String(solution.smallest),
+            actual: String(draws.smallest),
           },
         });
       unsupported(Math.max(rerolls, recorded));
@@ -584,18 +616,7 @@ export function importRerolls(context: RunImportContext): void {
     const earlier = new Set(
       sourceActions().flatMap((action) => (action.kind === 'reroll' ? [action.rerollId] : [])),
     );
-    const placed = context.transaction(() =>
-      solution.replaced.every((entry) =>
-        hub !== undefined && stay > 0
-          ? placeRestoredHubPress(
-              context,
-              targets,
-              { previous: hubVisits[stay - 1]!, current: roomIndex },
-              entry,
-            )
-          : prependReplaced(context, targets, entry),
-      ),
-    );
+    const placed = context.transaction(() => place(replaced));
     if (!placed) {
       unsupported(rerolls);
       continue;

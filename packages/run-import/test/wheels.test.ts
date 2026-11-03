@@ -1,42 +1,29 @@
 import { describe, expect, it } from 'vitest';
 
-import { chooseWheelFit, sideSplits } from '../src/wheels';
+import { alternativeValues, sideSplits } from '../src/wheels';
 
 const same = (left: string, right: string) => left === right;
 
-describe('choosing among the fits of a ship room', () => {
-  it('authors the first fit and reports nothing when every fit leaves one exit state', () => {
+describe('the values other fits of a ship room hold beside the chosen one', () => {
+  it('names nothing when every other fit holds the chosen values', () => {
+    expect(alternativeValues(['MaxManaDrop', 'Boon'], [['MaxManaDrop', 'Boon']], same)).toEqual([
+      [],
+      [],
+    ]);
+  });
+
+  it('names, per offer, each other value once', () => {
     expect(
-      chooseWheelFit(
+      alternativeValues(
+        ['MaxManaDrop', 'Boon'],
         [
-          { values: ['MaxManaDrop', 'Boon'], fingerprint: 'a' },
-          { values: ['Boon', 'MaxManaDrop'], fingerprint: 'a' },
+          ['MaxManaDrop', 'StackUpgrade'],
+          ['RoomMoneyDrop', 'Boon'],
+          ['RoomMoneyDrop', 'StackUpgrade'],
         ],
         same,
       ),
-    ).toEqual({ chosen: ['MaxManaDrop', 'Boon'], alternatives: [[], []] });
-  });
-
-  it("names, per offer, each other exit state's first value that differs from the chosen one", () => {
-    expect(
-      chooseWheelFit(
-        [
-          { values: ['MaxManaDrop', 'Boon'], fingerprint: 'a' },
-          { values: ['Boon', 'MaxManaDrop'], fingerprint: 'a' },
-          { values: ['MaxManaDrop', 'StackUpgrade'], fingerprint: 'b' },
-          { values: ['RoomMoneyDrop', 'Boon'], fingerprint: 'b' },
-          { values: ['RoomMoneyDrop', 'StackUpgrade'], fingerprint: 'c' },
-        ],
-        same,
-      ),
-    ).toEqual({
-      chosen: ['MaxManaDrop', 'Boon'],
-      alternatives: [['RoomMoneyDrop'], ['StackUpgrade']],
-    });
-  });
-
-  it('has nothing to author without a fit', () => {
-    expect(chooseWheelFit([], same)).toBeUndefined();
+    ).toEqual([['RoomMoneyDrop'], ['StackUpgrade']]);
   });
 });
 

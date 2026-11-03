@@ -393,7 +393,7 @@ describe('run import of the Surface victory', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
-        conversion: 2,
+        conversion: 1,
         encounter: 1,
         reward: 1,
         roomActionOrder: 19,
@@ -405,7 +405,6 @@ describe('run import of the Surface victory', () => {
       'assumption conversion r14 acquisitionEntry@N-r14 -> ReplaceAcquisitionEntryOffer(N-r14 HermesUpgrade)',
       'assumption traitOffer r17 traitOffer@N-r17:hiddenSource -> ReplaceTraitOffer(N-r17 HeraSpecialBoon|HeraCastBoon|DamageShareRetaliateBoon#option3)',
       'assumption shop r17 shopOffer@N-r17 -> ReplaceShopOfferOption(N-r17)',
-      'assumption conversion r22 acquisitionEntry@O-r22 -> ReplaceAcquisitionEntryOffer(O-r22 StackUpgrade)',
       'assumption traitOffer r23 traitOffer@O-r23:hiddenSource -> ReplaceTraitOffer(O-r23 ZeusCastBoon|ZeusManaBoon|BoltRetaliateBoon#option1)',
       'assumption traitOffer r27 traitOffer@O-r27:source -> ReplaceTraitOffer(O-r27 PoseidonManaBoon|OmegaPoseidonProjectileBoon|PoseidonExCastBoon#option2)',
       'assumption shop r27 shopOffer@O-r27 -> ReplaceShopOfferOption(O-r27)',
