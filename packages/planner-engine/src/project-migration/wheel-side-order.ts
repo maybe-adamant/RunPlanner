@@ -166,13 +166,29 @@ function swapWheelOffers(document: RawRecord, wheel: RewardWheelAddress): RawRec
 }
 
 /**
+ * The judge's block, or undefined when the plan's evaluation throws: such a
+ * plan keeps its offers and loads to report its own findings.
+ */
+function judged(
+  blockOf: (project: ProjectDocument) => WheelSideOrderBlock | undefined,
+  project: ProjectDocument,
+): { readonly block: WheelSideOrderBlock | undefined } | undefined {
+  try {
+    return { block: blockOf(project) };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * The game draws a Ship's two wheel offers left then right, and offer 1 is the
  * Left wheel. A plan saved while either draw order was admitted may hold a
  * two-offer wheel valid only the other way round: while the plan's block names
  * such a wheel and exchanging its offers clears that wheel from the block, the
- * exchange is kept. `blockOf` is the plan's evaluated blocking stop. Returns
- * the input itself when nothing changes; a document strict decoding rejects is
- * left for it to reject.
+ * exchange is kept. `blockOf` is the plan's evaluated blocking stop; only the
+ * wheels that stop names are judged, so a wheel behind an earlier stop keeps
+ * its offers. Returns the input itself when nothing changes; a document strict
+ * decoding rejects is left for it to reject.
  */
 export function exchangeBlockedWheelOffers(
   value: unknown,
@@ -183,8 +199,10 @@ export function exchangeBlockedWheelOffers(
   if (document === undefined || !rawShipWheels(document).some(twoOffered)) return value;
   const project = decodes(document, catalog);
   if (project === undefined) return value;
+  const initial = judged(blockOf, project);
+  if (initial === undefined) return value;
   let current = document;
-  let block = blockOf(project);
+  let block = initial.block;
   const tried = new Set<string>();
   for (;;) {
     const wheel = blockedWheels(block).find((candidate) => {
@@ -198,7 +216,9 @@ export function exchangeBlockedWheelOffers(
     const swapped = swapWheelOffers(current, wheel);
     const swappedProject = decodes(swapped, catalog);
     if (swappedProject === undefined) return current;
-    const swappedBlock = blockOf(swappedProject);
+    const swappedJudgement = judged(blockOf, swappedProject);
+    if (swappedJudgement === undefined) return current;
+    const swappedBlock = swappedJudgement.block;
     const wheelKey = semanticAddressKey(wheel);
     if (blockedWheels(swappedBlock).some((other) => semanticAddressKey(other) === wheelKey))
       return current;

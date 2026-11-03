@@ -30,7 +30,7 @@ function outcomes(document) {
 
 const toyDocument = (occurrences) => ({
   schemaVersion: 100,
-  schemaRevision: 1,
+  schemaRevision: 0,
   projectId: 'run-plan-1',
   name: 'Run',
   catalogVersion: '0.55.0-anvil-of-fates',
@@ -257,5 +257,33 @@ describe('schema 100 to 101 migration', () => {
     const source = toyDocument([]);
     assert.throws(() => migrate({ ...source, schemaVersion: 99 }), /expects schema 100/);
     assert.throws(() => migrate({ ...source, catalogVersion: 'other' }), /expects catalog/);
+  });
+
+  it('rejects a schema 100 revision newer than the last one schema 100 had', () => {
+    const source = toyDocument([]);
+    assert.equal(migrate({ ...source, schemaRevision: undefined }).schemaVersion, 101);
+    assert.throws(
+      () => migrate({ ...source, schemaRevision: 1 }),
+      /Project schema 100\.1 is newer than schema 100's final revision 0/,
+    );
+  });
+
+  it('rejects malformed biome and occurrence lists with a migration error', () => {
+    const source = toyDocument([]);
+    assert.throws(
+      () => migrate({ ...source, route: { routeKey: 'Underworld', biomes: { F: {} } } }),
+      /^Error: route\.biomes must be an array$/,
+    );
+    assert.throws(
+      () =>
+        migrate({
+          ...source,
+          route: {
+            routeKey: 'Underworld',
+            biomes: [{ biomeKey: 'F', topology: { occurrences: 'room' } }],
+          },
+        }),
+      /^Error: route\.biomes\[0\]\.topology\.occurrences must be an array$/,
+    );
   });
 });

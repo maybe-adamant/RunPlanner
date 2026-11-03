@@ -102,11 +102,9 @@ export function loadProjectDocument(
     );
   }
 
-  // Transitions run across majors only; an older major's revision does not carry forward.
-  const source: Record<string, unknown> = { ...(parsed as Record<string, unknown>) };
-  delete source.schemaRevision;
+  // Each transition leaves its source major's revision behind.
   const migrated = applyProjectDocumentTransitions({
-    document: source,
+    document: parsed,
     source: envelope,
     target: Object.freeze({
       catalogVersion: catalog.version,

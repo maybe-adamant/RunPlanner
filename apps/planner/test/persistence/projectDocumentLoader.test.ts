@@ -171,6 +171,20 @@ describe('project document loader', () => {
     expect(loaded.project).toEqual(project);
   });
 
+  it('rejects a schema-100 document from an unknown revision or catalog', () => {
+    const at100 = {
+      ...legacySchema100Body(JSON.parse(encodeProjectDocument(project))),
+      schemaVersion: 100,
+    };
+    expect(() =>
+      loadProjectDocument(JSON.stringify({ ...at100, schemaRevision: 1 }), catalog),
+    ).toThrow(/schema 100\.1 is newer than schema 100's final revision 0/);
+    // Neither the old in-place load nor the transition opens a plan of another catalog.
+    expect(() =>
+      loadProjectDocument(JSON.stringify({ ...at100, catalogVersion: 'other' }), catalog),
+    ).toThrow(/Project schema 100 with catalog other has no supported migration/);
+  });
+
   it('migrates a schema-87 Hub to fountain use before its retained visits', () => {
     const current = loadSurfaceNProject();
     const legacy = legacyRareEpicHexTrees(

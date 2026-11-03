@@ -8,6 +8,8 @@ import { dropFeatureInteraction, moveShrineDelays } from './project-99-to-100.js
 export const SOURCE_SCHEMA_VERSION = 100;
 export const OUTPUT_SCHEMA_VERSION = 101;
 export const CATALOG_VERSION = '0.55.0-anvil-of-fates';
+/** Schema 100 closed at its first revision; a later one comes from an unknown build. */
+const FINAL_SOURCE_SCHEMA_REVISION = 0;
 
 function record(value, label) {
   if (value === null || typeof value !== 'object' || Array.isArray(value))
@@ -63,9 +65,18 @@ function convertScreenRerollCounts(value) {
 
 // Schema 100 admitted plans saved with reroll counts, Well and Pool interaction
 // flags or Shrine purchase delays; each takes the shape the 99 -> 100 step writes.
+function list(value, label) {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new Error(`${label} must be an array`);
+  return value;
+}
+
 function reshapeSchema100(document) {
-  for (const biome of document.route?.biomes ?? [])
-    for (const occurrence of biome?.topology?.occurrences ?? []) {
+  for (const [index, biome] of list(document.route?.biomes, 'route.biomes').entries())
+    for (const occurrence of list(
+      biome?.topology?.occurrences,
+      `route.biomes[${index}].topology.occurrences`,
+    )) {
       convertFeatureRerollCounts(occurrence);
       dropFeatureInteraction(occurrence);
       moveShrineDelays(occurrence);
@@ -88,6 +99,11 @@ export function migrateProjectDocumentJudgedBy(value, catalog, blockOf) {
   if (source.catalogVersion !== CATALOG_VERSION)
     throw new Error(
       `schema 100 -> 101 migration expects catalog ${CATALOG_VERSION}, received ${String(source.catalogVersion)}`,
+    );
+  const revision = source.schemaRevision ?? 0;
+  if (!Number.isInteger(revision) || revision > FINAL_SOURCE_SCHEMA_REVISION)
+    throw new Error(
+      `Project schema 100.${String(revision)} is newer than schema 100's final revision ${FINAL_SOURCE_SCHEMA_REVISION}.`,
     );
   const copy = JSON.parse(JSON.stringify(source));
   delete copy.schemaRevision;
