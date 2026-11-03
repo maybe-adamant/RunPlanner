@@ -56,7 +56,7 @@ export interface RecentRunSummary {
   readonly route: RecentRunRoute;
   readonly importKind?: 'complete' | 'stopped';
   /** Weapon and aspect game names, when the record was built. */
-  readonly loadout?: { readonly weapon: string; readonly aspect?: string };
+  readonly loadout?: { readonly weapon?: string; readonly aspect?: string };
   readonly reportCount: number;
   /** The run's record is stored, so its plan can be imported again. */
   readonly hasRecord: boolean;
@@ -114,7 +114,9 @@ export function summarizeRecentRun(entry: RecentRunEntry): RecentRunSummary {
       ? {}
       : {
           loadout: {
-            weapon: entry.record.loadout.weapon,
+            ...(entry.record.loadout.weapon === undefined
+              ? {}
+              : { weapon: entry.record.loadout.weapon }),
             ...(entry.record.loadout.aspect === undefined
               ? {}
               : { aspect: entry.record.loadout.aspect.name }),

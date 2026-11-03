@@ -450,6 +450,16 @@ reproduces is reported with its nearest miss and the plan stops there.
    the underworld Bridge (`import-twin-doors`); corpus unchanged (every
    corpus twin separates by reward, the Bridge's search accepts).
 
+   **Fresh-profile first attempt.** A new profile's first attempt loads
+   `F_Opening01` directly (`StartNewGame`), so no save precedes it: no
+   `Hub_PreRun` save, and its first save is the entry save of the second room
+   (run count 0, depth 1). The recorder opens the run there and reads the
+   opening room's entry from that save's departure record (the room grants
+   nothing). `GameState.PrimaryWeaponName` is unset before a kit is ever
+   picked, so the record's weapon is optional. The import authors no loadout
+   on the Fresh File route, which fixes it. Synthetic witnesses only; no real
+   fresh capture yet.
+
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.
 6. **Recorded room** (authored outcome replayed as canonical events) only for

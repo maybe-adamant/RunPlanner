@@ -277,8 +277,7 @@ function outcome(end: SaveCheckpoint | undefined, endingRoom: string): RunRecord
 function loadout(first: SaveCheckpoint): RunRecordLoadout {
   const hero = first.hero;
   const weapon = first.profile.primaryWeapon;
-  if (weapon === undefined || hero === undefined)
-    throw new RunRecordBuildError('the run start save carries no loadout');
+  if (hero === undefined) throw new RunRecordBuildError('the run start save carries no loadout');
   const trait = (slot: string): SavedTrait | undefined => {
     const name = hero.slotted[slot];
     return name === undefined ? undefined : hero.traits.find((entry) => entry.name === name);
@@ -290,7 +289,7 @@ function loadout(first: SaveCheckpoint): RunRecordLoadout {
   };
   const familiarName = first.profile.equippedFamiliar;
   return {
-    weapon,
+    ...optional('weapon', weapon),
     ...optional('aspect', ranked('Aspect')),
     ...optional(
       'familiar',

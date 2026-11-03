@@ -29,6 +29,14 @@ describe('run import route support', () => {
       rooms: record.rooms.slice(0, 3),
     });
     expect(result.project.route.routeKey).toBe('FreshFile');
+    // The route fixes the whole loadout, so the record's weapon, keepsake and Arcana author nothing.
+    expect(record.loadout.keepsake).toBeDefined();
+    expect(result.report.entries.filter((entry) => entry.area === 'loadout')).toEqual([]);
+    expect(result.project.route.loadout).toMatchObject({
+      weaponKey: null,
+      startingKeepsakeKey: null,
+      manualArcanaKeys: [],
+    });
   });
 
   it('stops a run on a route the catalog does not declare', () => {

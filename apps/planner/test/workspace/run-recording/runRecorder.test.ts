@@ -15,6 +15,7 @@ import {
   type RecorderState,
   type SaveObservation,
 } from '@planner/workspace/run-recording/runRecorder';
+import { buildRunRecord } from '@planner/workspace/run-recording/runRecordBuilder';
 import type { SaveCheckpoint, SavedRoom } from '@planner/workspace/run-recording/saveCheckpoint';
 import { SaveFileError } from '@planner/workspace/run-recording/saveFile';
 
@@ -116,6 +117,44 @@ describe('run recorder', () => {
     expect(closed).toEqual([]);
     expect(state.runs.get(1)).toMatchObject({ profile: 1, runCount: 7, attempt: 1 });
     expect(state.runs.get(1)!.checkpoints).toHaveLength(5);
+  });
+
+  it("opens a new profile's first attempt at the save that leaves its opening room", () => {
+    // The opening room loads directly, with no Hub_PreRun save before it.
+    const fresh = (spec: SaveSpec): SaveObservation => {
+      const save = checkpoint({ ...spec, runCount: 0 });
+      return {
+        kind: 'checkpoint',
+        profile: 1,
+        checkpoint: {
+          ...save,
+          mapName: ROUTE[spec.depth - 1]!,
+          departure: room(ROUTE[spec.depth - 1]!),
+          ...(save.kind === 'hub' ? {} : { hero: { traits: [], slotted: {}, elements: {} } }),
+        },
+      };
+    };
+    expect(feed([fresh({ depth: 2 })]).state.runs.size).toBe(0);
+    const { state, closed } = feed([
+      fresh({ depth: 1 }),
+      fresh({ kind: 'postReward', depth: 1 }),
+      fresh({ depth: 2 }),
+      fresh({ kind: 'hub', depth: 3, heroDead: true }),
+    ]);
+    expect(state.runs.size).toBe(0);
+    expect(closed).toHaveLength(1);
+    expect(closed[0]).toMatchObject({ runCount: 0, attempt: 1, outcome: 'death', gap: false });
+    expect(depths(closed[0]!)).toEqual([
+      ['entry', 0],
+      ['entry', 1],
+      ['postReward', 1],
+      ['entry', 2],
+    ]);
+    const record = buildRunRecord(closed[0]!.checkpoints, closed[0]!.end);
+    expect(record.run.runCount).toBe(0);
+    expect(record.loadout.weapon).toBeUndefined();
+    expect(record.rooms.map((entry) => entry.name)).toEqual(ROUTE.slice(0, 3));
+    expect(record.outcome).toMatchObject({ kind: 'death', endingRoom: 'F_Combat02' });
   });
 
   it('closes a run at the hub save of the dead hero', () => {

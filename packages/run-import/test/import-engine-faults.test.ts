@@ -69,7 +69,7 @@ describe('run import of a settlement fault', () => {
     const command: ProjectCommand = {
       kind: 'ReplaceRouteLoadout',
       route: createRouteAddress('Underworld'),
-      weaponKey: record.loadout.weapon,
+      weaponKey: record.loadout.weapon!,
       aspectKey: record.loadout.aspect!.name,
     };
     expect(walk.transaction(() => walk.apply(command) && false)).toBe(false);

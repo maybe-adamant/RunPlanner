@@ -575,16 +575,21 @@ export class RunImportWalk {
     );
   }
 
-  /** Weapon, aspect, familiar, starting keepsake, Arcana and Fear, each validated by its command. */
+  /**
+   * Weapon, aspect, familiar, starting keepsake, Arcana and Fear, each validated by its command.
+   * A fresh-profile route fixes all of them, so the record authors none.
+   */
   importLoadout(): void {
     const { loadout } = this.record;
     const route = createRouteAddress(this.assembly.project.route.routeKey);
+    if (this.catalog.routes.byKey[route.routeKey]!.initialProfile.kind === 'freshFile') return;
     const tryApply = (command: ProjectCommand) => {
       if (!this.apply(command)) this.report('loadout', 'refused', route, command);
     };
+    const { weapon: weaponKey } = loadout;
     const aspectKey = loadout.aspect?.name;
-    if (aspectKey !== undefined)
-      tryApply({ kind: 'ReplaceRouteLoadout', route, weaponKey: loadout.weapon, aspectKey });
+    if (weaponKey !== undefined && aspectKey !== undefined)
+      tryApply({ kind: 'ReplaceRouteLoadout', route, weaponKey, aspectKey });
     else this.report('loadout', 'notInRecord', route);
     // Aspect of Selene's rolled Hex tree is the run's first Spell snapshot; its talents never change.
     if (this.assembly.project.route.loadout.aspectHexTree !== undefined) {

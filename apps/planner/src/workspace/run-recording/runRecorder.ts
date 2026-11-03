@@ -44,7 +44,10 @@ export function observeSave(
       kind: 'unsupportedVersion',
       profile: name.profile,
       version: header.version,
-      runStart: name.temp && header.mapName === 'Hub_PreRun' && header.nextMap !== '',
+      runStart:
+        name.temp &&
+        header.nextMap !== '' &&
+        (header.mapName === 'Hub_PreRun' || header.runCount === 0),
     };
   return {
     kind: 'checkpoint',
@@ -137,8 +140,28 @@ const sameSave = (left: SaveCheckpoint, right: SaveCheckpoint) =>
   left.timestamp === right.timestamp &&
   left.worldTime === right.worldTime;
 
+/**
+ * A new profile's first attempt (run count 0) loads its opening room directly, never
+ * visiting `Hub_PreRun`, so its first save is the entry save of the room after it.
+ */
+const isFreshStart = (checkpoint: SaveCheckpoint) =>
+  checkpoint.kind === 'entry' &&
+  checkpoint.runCount === 0 &&
+  depth(checkpoint) === 1 &&
+  checkpoint.departure?.name === checkpoint.history[0];
+
 const isRunStart = (checkpoint: SaveCheckpoint) =>
-  checkpoint.kind === 'entry' && checkpoint.mapName === 'Hub_PreRun' && depth(checkpoint) === 0;
+  (checkpoint.kind === 'entry' && checkpoint.mapName === 'Hub_PreRun' && depth(checkpoint) === 0) ||
+  isFreshStart(checkpoint);
+
+/**
+ * The opening room's entry, read from the fresh start save: the opening room
+ * grants nothing, so the hero and run leave it as they entered.
+ */
+function freshOpeningEntry(start: SaveCheckpoint): SaveCheckpoint {
+  const { departure, ...save } = start;
+  return { ...save, mapName: '', nextMap: start.history[0]!, history: [], currentRoom: departure! };
+}
 
 /** Cuts the run before the first room whose entry save is missing. */
 function close(run: OpenRun, ending: SaveCheckpoint | 'reset' | 'unfinished'): ClosedRun {
@@ -261,7 +284,9 @@ export function advanceRecorder(state: RecorderState, observation: SaveObservati
       profile,
       runCount: checkpoint.runCount,
       attempt,
-      checkpoints: Object.freeze([checkpoint]),
+      checkpoints: Object.freeze(
+        isFreshStart(checkpoint) ? [freshOpeningEntry(checkpoint), checkpoint] : [checkpoint],
+      ),
     });
   }
   return closed.length === 0 && !runs.has(profile) ? { state, closed } : settle();

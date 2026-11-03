@@ -176,8 +176,8 @@ function loadout(value: unknown): RunRecordLoadout {
   const record = object(value, label);
   exact(
     record,
-    ['weapon', 'arcana', 'vows', 'startingGold', 'startingTraits'],
-    ['aspect', 'familiar', 'keepsake'],
+    ['arcana', 'vows', 'startingGold', 'startingTraits'],
+    ['weapon', 'aspect', 'familiar', 'keepsake'],
     label,
   );
   const familiar =
@@ -205,7 +205,7 @@ function loadout(value: unknown): RunRecordLoadout {
     return Object.freeze({ name, level: integer(row.level, `${path}.level`, 1) });
   });
   return Object.freeze({
-    weapon: text(record.weapon, `${label}.weapon`),
+    ...optional(record, 'weapon', label, text),
     ...optional(record, 'aspect', label, rankedTrait),
     ...familiar,
     ...optional(record, 'keepsake', label, rankedTrait),
