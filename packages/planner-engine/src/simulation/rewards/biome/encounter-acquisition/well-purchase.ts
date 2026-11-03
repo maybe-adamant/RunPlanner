@@ -23,7 +23,7 @@ import {
   assessStygianWellPurchase,
   extendedWellItemKeys,
   stygianWellGrant,
-  type StygianWellCandidateContext,
+  type StygianWellActionCandidateContext,
 } from '../../../commerce/stygian-well';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
@@ -37,7 +37,7 @@ export interface WellPurchaseTransition {
   readonly findings: readonly FindingRegionEntry[];
   readonly timelineFacts: PlannerTimelineFacts;
   readonly refillRealization?: WellRefillRealization;
-  readonly candidateContexts: readonly StygianWellCandidateContext[];
+  readonly candidateContexts: readonly StygianWellActionCandidateContext[];
 }
 
 /** Applies one reached Stygian Well purchase. */

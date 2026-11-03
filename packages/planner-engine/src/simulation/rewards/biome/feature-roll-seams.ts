@@ -42,7 +42,6 @@ import {
   type FeatureRerollOption,
 } from '../../commerce/feature-rolls';
 import {
-  agreedPurgingPoolCandidates,
   assessPurgingPoolList,
   isPurgingPoolEligibleTrait,
   type PurgingPoolInteraction,
@@ -112,15 +111,10 @@ function purgingPoolWalk(
 ): Extract<FeatureRollWalk, { readonly feature: 'purgingPool' }> | undefined {
   const walk = state.featureRolls.get(featureRollWalkKey(roomKey, 'purgingPool'));
   if (walk?.feature === 'purgingPool') return walk;
-  const initial = state.purgingPoolAssessments.get(roomKey)?.assessments ?? [];
+  const initial = state.purgingPoolAssessments.get(roomKey)?.assessment;
   return room.purgingPool === undefined
     ? undefined
-    : initialPurgingPoolRollWalk(
-        room.purgingPool,
-        initial.length === 0
-          ? 0
-          : Math.min(...initial.map((assessment) => assessment.eligibleTraitKeys.length)),
-      );
+    : initialPurgingPoolRollWalk(room.purgingPool, initial?.eligibleTraitKeys.length ?? 0);
 }
 
 function withWalk(
@@ -243,8 +237,9 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
           roomKey,
           Object.freeze({
             origin: existing.origin,
-            assessments: Object.freeze([
-              ...existing.assessments,
+            entry: existing.entry,
+            actions: Object.freeze([
+              ...existing.actions,
               ...rolls.map((roll) => Object.freeze({ roll })),
             ]),
           }),
@@ -280,31 +275,27 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
       chronology,
     );
   }
-  const assessments = Object.freeze(
-    settled.branches.map((branch) =>
-      assessPurgingPoolList(context.catalog, pins, branch.state.traitHistory.equippedTraits),
-    ),
-  );
-  for (const assessment of assessments)
-    for (const finding of assessment.findings)
-      addRewardFinding(
-        findings,
-        rewardFinding(
-          finding.code,
-          createRoomFeatureAddress(room.origin, {
-            kind: 'purgingPoolOffer',
-            slotKey: finding.slotKey,
-            rollKey: event.rerollId,
-          }),
-          { ...finding.evidence, slotKey: finding.slotKey },
-        ),
-        region,
-        chronology,
-      );
-  const offeredSlotKeys = purgingPoolRerollSlots(
+  const assessment = assessPurgingPoolList(
+    context.catalog,
     pins,
-    Math.min(...assessments.map((assessment) => assessment.eligibleTraitKeys.length)),
+    settled.branches[0]!.state.traitHistory.equippedTraits,
   );
+  for (const finding of assessment.findings)
+    addRewardFinding(
+      findings,
+      rewardFinding(
+        finding.code,
+        createRoomFeatureAddress(room.origin, {
+          kind: 'purgingPoolOffer',
+          slotKey: finding.slotKey,
+          rollKey: event.rerollId,
+        }),
+        { ...finding.evidence, slotKey: finding.slotKey },
+      ),
+      region,
+      chronology,
+    );
+  const offeredSlotKeys = purgingPoolRerollSlots(pins, assessment.eligibleTraitKeys.length);
   const existing = state.purgingPoolAssessments.get(roomKey)!;
   return {
     state: Object.freeze({
@@ -317,7 +308,7 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
           walk,
           event.rerollId,
           offeredSlotKeys,
-          Math.min(...assessments.map((assessment) => assessment.eligibleTraitKeys.length)),
+          assessment.eligibleTraitKeys.length,
         ),
       ),
       purgingPoolAssessments: new Map(state.purgingPoolAssessments).set(
@@ -326,7 +317,7 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
           ...existing,
           rolls: Object.freeze({
             ...existing.rolls,
-            [event.rerollId]: Object.freeze({ offeredSlotKeys, assessments }),
+            [event.rerollId]: Object.freeze({ offeredSlotKeys, assessment }),
           }),
         }),
       ),
@@ -503,12 +494,10 @@ export function purgingPoolSale(
     return { findings: Object.freeze([...findings.values()]), featureRolls };
   }
   // An incomplete list or invalid pin is its own finding; the sale has no effect.
+  const list =
+    rollKey === INITIAL_ROLL_KEY ? assessment.assessment : assessment.rolls?.[rollKey]?.assessment;
   const listed =
-    (rollKey === INITIAL_ROLL_KEY
-      ? assessment.assessments
-      : assessment.rolls?.[rollKey]?.assessments
-    )?.every((entry) => !entry.findings.some((finding) => finding.slotKey === sale.slotKey)) ??
-    false;
+    list !== undefined && !list.findings.some((finding) => finding.slotKey === sale.slotKey);
   const equipped = state.branches.every((branch) => {
     const trait = branch.state.traitHistory.equippedTraits[traitKey];
     return trait !== undefined && isPurgingPoolEligibleTrait(context.catalog, trait);
@@ -619,8 +608,10 @@ export function purgingPoolInteractions(
     if (room?.purgingPool === undefined || !state.purgingPoolAssessments.has(roomKey)) continue;
     const walk = purgingPoolWalk(state, roomKey, room)!;
     const view = { purgingPool: room.purgingPool, roomActions: { order: rankedReferences(room) } };
-    const pending = end.branches.map((branch) =>
-      assessPurgingPoolList(context.catalog, {}, branch.state.traitHistory.equippedTraits),
+    const pending = assessPurgingPoolList(
+      context.catalog,
+      {},
+      end.branches[0]!.state.traitHistory.equippedTraits,
     );
     interactions.set(
       roomKey,
@@ -647,11 +638,8 @@ export function purgingPoolInteractions(
           purgingPoolOfferedSlots(walk).length > 0,
         ),
         pendingRoll: Object.freeze({
-          offeredSlotKeys: purgingPoolRerollSlots(
-            {},
-            Math.min(...pending.map((assessment) => assessment.eligibleTraitKeys.length)),
-          ),
-          candidateTraitKeysBySlot: agreedPurgingPoolCandidates(pending),
+          offeredSlotKeys: purgingPoolRerollSlots({}, pending.eligibleTraitKeys.length),
+          candidateTraitKeysBySlot: pending.candidateTraitKeysBySlot,
         }),
       }),
     );

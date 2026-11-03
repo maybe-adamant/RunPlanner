@@ -37,7 +37,7 @@ export interface FountainUsedTransition {
     readonly key: string;
     readonly value: {
       readonly origin: OccurrenceAddress;
-      readonly assessments: readonly PurgingPoolAssessment[];
+      readonly assessment: PurgingPoolAssessment;
     };
   };
 }
@@ -90,36 +90,34 @@ export function applyFountainUsedTransition(
     );
     return Object.freeze({ ...used, findings: Object.freeze(findings) });
   }
-  if (used.branches.length === 0) return used;
-  const pool = room.purgingPool;
-  const assessments = Object.freeze(
-    used.branches.map((branch) =>
-      assessPurgingPool(catalog, pool, branch.state.traitHistory.equippedTraits),
-    ),
+  const branch = used.branches[0];
+  if (branch === undefined) return used;
+  const assessment = assessPurgingPool(
+    catalog,
+    room.purgingPool,
+    branch.state.traitHistory.equippedTraits,
   );
-  for (const assessment of assessments) {
-    for (const finding of assessment.findings)
-      findings.push(
-        Object.freeze({
-          finding: rewardFinding(
-            finding.code,
-            createRoomFeatureAddress(room.origin, {
-              kind: 'purgingPoolOffer',
-              slotKey: finding.slotKey,
-            }),
-            { ...finding.evidence, slotKey: finding.slotKey },
-          ),
-          region: ownerRegion(room.origin),
-          chronology: chronology(),
-        }),
-      );
-  }
+  for (const finding of assessment.findings)
+    findings.push(
+      Object.freeze({
+        finding: rewardFinding(
+          finding.code,
+          createRoomFeatureAddress(room.origin, {
+            kind: 'purgingPoolOffer',
+            slotKey: finding.slotKey,
+          }),
+          { ...finding.evidence, slotKey: finding.slotKey },
+        ),
+        region: ownerRegion(room.origin),
+        chronology: chronology(),
+      }),
+    );
   return Object.freeze({
     ...used,
     findings: Object.freeze(findings),
     purgingPoolAssessment: Object.freeze({
       key: semanticAddressKey(room.origin),
-      value: Object.freeze({ origin: room.origin, assessments }),
+      value: Object.freeze({ origin: room.origin, assessment }),
     }),
   });
 }

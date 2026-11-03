@@ -9,10 +9,13 @@ import type { ResourcePlacements, RouteLoadout } from '../../../authored-project
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import type {
   HermesShrineCandidateContext,
-  HermesShrineTravelDealRefillAssessment,
+  RealizedHermesShrineTravelDealRefill,
 } from '../../commerce/hermes-shrine';
 import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
-import type { StygianWellCandidateContext } from '../../commerce/stygian-well';
+import type {
+  StygianWellActionCandidateContext,
+  StygianWellEntryCandidateContext,
+} from '../../commerce/stygian-well';
 import type { PurchasePriceContextPublication } from '../../commerce/gold/price-context';
 import type {
   GoldEventPublication,
@@ -71,20 +74,20 @@ export interface ChronologyWalkContext {
 
 export interface HermesShrineRoomAssessment {
   readonly origin: OccurrenceAddress;
-  readonly assessments: readonly HermesShrineCandidateContext[];
+  readonly assessment: HermesShrineCandidateContext;
 }
 
 export interface PurgingPoolRoomAssessment {
   readonly origin: OccurrenceAddress;
   /** The initial list, assessed after the fountain. */
-  readonly assessments: readonly PurgingPoolAssessment[];
+  readonly assessment: PurgingPoolAssessment;
   /** Each reached reroll's list, assessed at the reroll, by its id. */
   readonly rolls?: Readonly<
     Record<
       string,
       {
         readonly offeredSlotKeys: readonly import('../../../authored-project/model').PurgingPoolSlotKey[];
-        readonly assessments: readonly PurgingPoolAssessment[];
+        readonly assessment: PurgingPoolAssessment;
       }
     >
   >;
@@ -92,7 +95,9 @@ export interface PurgingPoolRoomAssessment {
 
 export interface StygianWellRoomAssessment {
   readonly origin: OccurrenceAddress;
-  readonly assessments: readonly StygianWellCandidateContext[];
+  readonly entry: StygianWellEntryCandidateContext;
+  /** Each reached purchase's and reroll's assessment, in chronological order. */
+  readonly actions: readonly StygianWellActionCandidateContext[];
 }
 
 /** A recorded phase's known roster, or why deriving it broke a contract. */
@@ -153,10 +158,7 @@ export interface ChronologyWalkState {
     { readonly historySequence: number; readonly branches: readonly RewardBranchState[] }
   >;
   /** Shrine-keyed Travel Deal refill domain, captured at the first rush made with the trait. */
-  readonly hermesShrineTravelDealRefills: ReadonlyMap<
-    string,
-    readonly HermesShrineTravelDealRefillAssessment[]
-  >;
+  readonly hermesShrineTravelDealRefills: ReadonlyMap<string, RealizedHermesShrineTravelDealRefill>;
   /** Gorgon phases keyed `occurrence::phase`, shared by encounter start and settlement. */
   readonly eligibleGorgonPhases: ReadonlySet<string>;
   readonly blockedGorgonPhases: ReadonlySet<string>;

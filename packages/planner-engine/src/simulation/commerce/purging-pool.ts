@@ -50,7 +50,7 @@ export interface PurgingPoolRollCapability {
 }
 
 export interface PurgingPoolCandidateCapability {
-  readonly assessments: readonly PurgingPoolAssessment[];
+  readonly assessment: PurgingPoolAssessment;
   /** The initial list's candidates. */
   readonly candidateTraitKeysBySlot: Readonly<Record<PurgingPoolSlotKey, readonly string[]>>;
   /** Each reached Pool reroll's list, by its reroll id. */
@@ -62,36 +62,15 @@ export interface PurgingPoolCandidateArtifacts {
   readonly at: (occurrence: OccurrenceAddress) => PurgingPoolCandidateCapability | undefined;
 }
 
-/** The candidates every branch's assessment agrees on. */
-export function agreedPurgingPoolCandidates(
-  assessments: readonly PurgingPoolAssessment[],
-): Readonly<Record<PurgingPoolSlotKey, readonly string[]>> {
-  const first = assessments[0];
-  return Object.freeze(
-    Object.fromEntries(
-      SLOT_KEYS.map((slotKey) => [
-        slotKey,
-        Object.freeze(
-          (first?.candidateTraitKeysBySlot[slotKey] ?? []).filter((traitKey) =>
-            assessments.every((assessment) =>
-              assessment.candidateTraitKeysBySlot[slotKey].includes(traitKey),
-            ),
-          ),
-        ),
-      ]),
-    ) as Record<PurgingPoolSlotKey, readonly string[]>,
-  );
-}
-
 /** One Pool room's assessed lists: the initial one, then each reroll's by its id. */
 export interface PurgingPoolRoomAssessments {
-  readonly assessments: readonly PurgingPoolAssessment[];
+  readonly assessment: PurgingPoolAssessment;
   readonly rolls?: Readonly<
     Record<
       string,
       {
         readonly offeredSlotKeys: readonly PurgingPoolSlotKey[];
-        readonly assessments: readonly PurgingPoolAssessment[];
+        readonly assessment: PurgingPoolAssessment;
       }
     >
   >;
@@ -105,17 +84,17 @@ export function createPurgingPoolCandidateArtifacts(
   return Object.freeze({
     at: (occurrence: OccurrenceAddress) => {
       const room = privateContexts.get(semanticAddressKey(occurrence));
-      if (room === undefined || room.assessments.length === 0) return undefined;
+      if (room === undefined) return undefined;
       return Object.freeze({
-        assessments: room.assessments,
-        candidateTraitKeysBySlot: agreedPurgingPoolCandidates(room.assessments),
+        assessment: room.assessment,
+        candidateTraitKeysBySlot: room.assessment.candidateTraitKeysBySlot,
         rolls: Object.freeze(
           Object.fromEntries(
             Object.entries(room.rolls ?? {}).map(([rollKey, roll]) => [
               rollKey,
               Object.freeze({
                 offeredSlotKeys: roll.offeredSlotKeys,
-                candidateTraitKeysBySlot: agreedPurgingPoolCandidates(roll.assessments),
+                candidateTraitKeysBySlot: roll.assessment.candidateTraitKeysBySlot,
               }),
             ]),
           ),

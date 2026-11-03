@@ -14,7 +14,7 @@ import type { CanonicalAuthoredRoom } from '../../../materialization';
 import type { PendingHermesShrineDelivery } from '../../../state/model';
 import {
   assessHermesShrineTravelDealRefill,
-  type HermesShrineTravelDealRefillAssessment,
+  type RealizedHermesShrineTravelDealRefill,
 } from '../../../commerce/hermes-shrine';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
@@ -30,7 +30,7 @@ export interface HermesShrinePurchaseReachedTransition {
   readonly branches: readonly RewardBranchState[];
   readonly findings: readonly FindingRegionEntry[];
   /** Published when this rush realizes the room's Travel Deal refill. */
-  readonly travelDealRefillAssessments?: readonly HermesShrineTravelDealRefillAssessment[];
+  readonly travelDealRefill?: RealizedHermesShrineTravelDealRefill;
   readonly timelineFacts?: PlannerTimelineFacts;
 }
 
@@ -67,21 +67,19 @@ export function pendingHermesShrineDelivery(
 
 function supportedRefill(
   room: CanonicalAuthoredRoom,
-  assessments: readonly HermesShrineTravelDealRefillAssessment[],
-  branchCount: number,
+  realized: RealizedHermesShrineTravelDealRefill,
 ): boolean {
   const offer = room.hermesShrine?.travelDealRefill?.offer;
   return (
     offer !== undefined &&
     offer !== null &&
-    assessments.length === branchCount &&
-    assessments.every((assessment) => assessment.candidateRewardTypes.includes(offer.rewardType))
+    realized.assessment?.candidateRewardTypes.includes(offer.rewardType) === true
   );
 }
 
 /**
  * Settles one ranked Shrine purchase. The first rushed initial purchase made
- * while every branch holds Travel Deal refills its slot (`FirstSpeedUpPurchase`);
+ * while Travel Deal is held refills its slot (`FirstSpeedUpPurchase`);
  * a rush without the trait leaves the refill available to a later rush.
  */
 export function applyHermesShrinePurchaseReachedTransition(inputs: {
@@ -93,7 +91,7 @@ export function applyHermesShrinePurchaseReachedTransition(inputs: {
   readonly roomView: ProgressiveRoomHistoryViews | undefined;
   readonly branches: readonly RewardBranchState[];
   /** The room's refill domain when an earlier rush already realized it. */
-  readonly realized: readonly HermesShrineTravelDealRefillAssessment[] | undefined;
+  readonly realized: RealizedHermesShrineTravelDealRefill | undefined;
 }): HermesShrinePurchaseReachedTransition {
   const { catalog, snapshot, event, room, declaration, roomView, branches, realized } = inputs;
   if (room === undefined || declaration === undefined || roomView === undefined)
@@ -137,7 +135,7 @@ export function applyHermesShrinePurchaseReachedTransition(inputs: {
       });
       return Object.freeze({ branches, findings: Object.freeze([...findings.values()]) });
     }
-    if (offer === undefined || offer === null || !supportedRefill(room, realized, branches.length))
+    if (offer === undefined || offer === null || !supportedRefill(room, realized))
       return unchanged();
     const [key, delivery] = pendingHermesShrineDelivery(
       room,
@@ -174,28 +172,26 @@ export function applyHermesShrinePurchaseReachedTransition(inputs: {
     !event.rushed ||
     realized !== undefined ||
     shrine === undefined ||
-    !branches.every((branch) => branch.state.traitHistory.equippedTraits.RestockBoon !== undefined)
+    branches[0]?.state.traitHistory.equippedTraits.RestockBoon === undefined
   )
     return unchanged();
   const view = roomView.preOutgoing ?? roomView.entry;
-  const assessments = Object.freeze(
-    branches.flatMap((branch) => {
-      const assessment = assessHermesShrineTravelDealRefill(catalog, shrine, event.generationKey, [
-        createBiomeRewardFacts({
-          catalog,
-          state: branch.state,
-          source: room,
-          currentRoom: room,
-          sourceDeclaration: declaration,
-          view,
-          hubBoardLookups: 'consulted',
-        }).requirements,
-      ]);
-      return assessment === undefined ? [] : [assessment];
-    }),
+  const assessment = assessHermesShrineTravelDealRefill(catalog, shrine, event.generationKey, [
+    createBiomeRewardFacts({
+      catalog,
+      state: branches[0].state,
+      source: room,
+      currentRoom: room,
+      sourceDeclaration: declaration,
+      view,
+      hubBoardLookups: 'consulted',
+    }).requirements,
+  ]);
+  const travelDealRefill: RealizedHermesShrineTravelDealRefill = Object.freeze(
+    assessment === undefined ? {} : { assessment },
   );
   const offer = shrine.travelDealRefill?.offer;
-  const supported = supportedRefill(room, assessments, branches.length);
+  const supported = supportedRefill(room, travelDealRefill);
   const feature = createRoomFeatureAddress(room.origin, {
     kind: 'hermesShrineOffer',
     generationKey: 'travelDealRefill',
@@ -212,7 +208,7 @@ export function applyHermesShrinePurchaseReachedTransition(inputs: {
   return Object.freeze({
     branches,
     findings: Object.freeze([...findings.values()]),
-    travelDealRefillAssessments: assessments,
+    travelDealRefill,
     ...(supported
       ? {
           timelineFacts: Object.freeze({

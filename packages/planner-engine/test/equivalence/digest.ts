@@ -117,6 +117,20 @@ function branchListShape(value: unknown): unknown {
     next.branches = [next.assessment];
     delete next.assessment;
   }
+  // Shrine, Pool and Well rooms published one assessment per branch.
+  if (
+    hasKeys(value, ['origin', 'assessment']) ||
+    hasKeys(value, ['origin', 'assessment', 'rolls']) ||
+    hasKeys(value, ['offeredSlotKeys', 'assessment'])
+  ) {
+    next.assessments = [next.assessment];
+    delete next.assessment;
+  }
+  if (hasKeys(value, ['origin', 'entry', 'actions'])) {
+    next.assessments = [next.entry, ...(next.actions as readonly unknown[])];
+    delete next.entry;
+    delete next.actions;
+  }
   // Timed outcomes published their one threshold's facts as branch lists.
   if ('requiredInterval' in value && 'progressBefore' in value && 'phaseKey' in value) {
     next.requiredIntervals = [value.requiredInterval];

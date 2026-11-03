@@ -94,6 +94,11 @@ export interface HermesShrineTravelDealRefillAssessment {
   readonly candidateOptionKeysByRewardType: Readonly<Record<string, string>>;
 }
 
+/** A rush made with Travel Deal realized the refill; absent `assessment` means nothing refills it. */
+export interface RealizedHermesShrineTravelDealRefill {
+  readonly assessment?: HermesShrineTravelDealRefillAssessment;
+}
+
 export function assessHermesShrineTravelDealRefill(
   catalog: Catalog,
   shrine: HermesShrineState,
@@ -273,7 +278,7 @@ export function assessHermesShrineInventory(
 }
 
 export interface HermesShrineCandidateCapability {
-  readonly assessments: readonly HermesShrineCandidateContext[];
+  readonly assessment: HermesShrineCandidateContext;
   readonly placementEligible: boolean;
   readonly required: boolean;
   readonly present: boolean;
@@ -292,31 +297,24 @@ export interface HermesShrineCandidateArtifacts {
 }
 
 export function createHermesShrineCandidateArtifacts(
-  contexts: ReadonlyMap<string, readonly HermesShrineCandidateContext[]>,
+  contexts: ReadonlyMap<string, HermesShrineCandidateContext>,
 ): HermesShrineCandidateArtifacts {
   const privateContexts = new Map(contexts);
   return Object.freeze({
     at: (occurrence: OccurrenceAddress) => {
-      const assessments = privateContexts.get(semanticAddressKey(occurrence));
-      if (assessments === undefined || assessments.length === 0) return undefined;
-      const first = assessments[0]!;
-      const travelDealRefill = first.travelDealRefill;
+      const assessment = privateContexts.get(semanticAddressKey(occurrence));
+      if (assessment === undefined) return undefined;
+      const travelDealRefill = assessment.travelDealRefill;
       return Object.freeze({
-        assessments,
-        placementEligible: assessments.every((assessment) => assessment.placement.eligible),
-        required: assessments.every((assessment) => assessment.placement.forced),
-        present: assessments.every((assessment) => assessment.inventory !== undefined),
+        assessment,
+        placementEligible: assessment.placement.eligible,
+        required: assessment.placement.forced,
+        present: assessment.inventory !== undefined,
         candidateRewardTypesBySlot: Object.freeze(
           Object.fromEntries(
             (['first', 'secondLeft', 'secondRight'] as const).map((slotKey) => [
               slotKey,
-              Object.freeze(
-                (first.inventory?.candidateRewardTypesBySlot[slotKey] ?? []).filter((rewardType) =>
-                  assessments.every((assessment) =>
-                    assessment.inventory?.candidateRewardTypesBySlot[slotKey].includes(rewardType),
-                  ),
-                ),
-              ),
+              assessment.inventory?.candidateRewardTypesBySlot[slotKey] ?? Object.freeze([]),
             ]),
           ) as Record<
             import('../../authored-project/model').HermesShrineSlotKey,
@@ -328,17 +326,7 @@ export function createHermesShrineCandidateArtifacts(
           : {
               travelDealRefill: Object.freeze({
                 sourceGenerationKey: travelDealRefill.sourceGenerationKey,
-                candidateRewardTypes: Object.freeze(
-                  travelDealRefill.candidateRewardTypes.filter((rewardType) =>
-                    assessments.every(
-                      (assessment) =>
-                        assessment.travelDealRefill?.sourceGenerationKey ===
-                          travelDealRefill.sourceGenerationKey &&
-                        assessment.travelDealRefill?.candidateRewardTypes.includes(rewardType) ===
-                          true,
-                    ),
-                  ),
-                ),
+                candidateRewardTypes: travelDealRefill.candidateRewardTypes,
               }),
             }),
       });

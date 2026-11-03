@@ -40,7 +40,7 @@ function runStateAt(
   }
   const currentShopNames = visibleStoreOptionNames(
     source,
-    state.hermesShrineAssessments.get(semanticAddressKey(source.origin))?.assessments,
+    state.hermesShrineAssessments.get(semanticAddressKey(source.origin))?.assessment,
   );
   // One token represents this exact rewardFacts closure: current/source room,
   // declaration, immutable view, shop names and peer context. State facts have

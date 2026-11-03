@@ -276,17 +276,7 @@ describe('Stygian Well consequential purchase state', () => {
           : createUnderworldFWellCheckpoint(false),
       );
       const candidate = stygianWellCandidateForProjectEvaluationAssembly(assembly, owner);
-      expect(candidate?.assessments).not.toHaveLength(0);
-      expect(
-        candidate?.assessments
-          .filter(
-            (
-              assessment,
-            ): assessment is import('../../src/simulation/commerce/stygian-well').StygianWellEntryCandidateContext =>
-              'inventory' in assessment,
-          )
-          .every((assessment) => assessment.inventory?.complete),
-      ).toBe(true);
+      expect(candidate?.entry.inventory?.complete).toBe(true);
       const biome = assembly.evaluation.route.biomes.find(
         (candidateBiome) => candidateBiome.biomeKey === 'F',
       );

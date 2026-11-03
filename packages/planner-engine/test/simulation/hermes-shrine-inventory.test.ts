@@ -360,7 +360,7 @@ describe('Hermes Shrine entry inventory gate', () => {
       3,
     );
     const candidate = createHermesShrineCandidateArtifacts(
-      new Map([[semanticAddressKey(owner), Object.freeze([Object.freeze({ placement })])]]),
+      new Map([[semanticAddressKey(owner), Object.freeze({ placement })]]),
     ).at(owner);
     expect(candidate).toMatchObject({ placementEligible: true, required: false, present: false });
   });
@@ -1497,9 +1497,9 @@ describe('Hermes Shrine Travel Deal generation', () => {
             event.settlement.entry.entryKey === refillKey,
         ),
       );
-      const sources = result.hermesShrineAssessments
-        .find((entry) => semanticAddressKey(entry.origin) === semanticAddressKey(host))
-        ?.assessments.map((assessment) => assessment.travelDealRefill?.sourceGenerationKey);
+      const sources = result.hermesShrineAssessments.find(
+        (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(host),
+      )?.assessment.travelDealRefill?.sourceGenerationKey;
       return {
         // The N/O base route carries unrelated incomplete owners; only Shrine codes matter here.
         codes: result.findings
@@ -1521,13 +1521,13 @@ describe('Hermes Shrine Travel Deal generation', () => {
     const kept = evaluate(project);
     expect(kept.codes).toEqual([]);
     expect(kept.refillAcquired).toBe(true);
-    expect(kept.sources).toEqual(['initial:first']);
+    expect(kept.sources).toBe('initial:first');
 
     const left = evaluate(removePickup(project, 'initial:first'));
     expect(left.codes).toEqual([]);
     expect(left.reasons).not.toContain('staleHermesShrineDelivery');
     expect(left.refillAcquired).toBe(true);
-    expect(left.sources).toEqual(['initial:first']);
+    expect(left.sources).toBe('initial:first');
 
     // A second rushed purchase is not the first speed-up and creates no other refill.
     const secondRush = purchaseTestHermesShrineOffer(project, catalog, host, 'initial:secondLeft', {
@@ -1537,7 +1537,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
     for (const document of [secondRush, removePickup(secondRush, 'initial:first')]) {
       const both = evaluate(document);
       expect(both.codes).toEqual([]);
-      expect(both.sources).toEqual(['initial:first']);
+      expect(both.sources).toBe('initial:first');
     }
 
     // A delayed first purchase is no speed-up and refills nothing.
@@ -1548,7 +1548,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
       }),
     );
     expect(delayed.refillAcquired).toBe(false);
-    expect(delayed.sources).toEqual([undefined]);
+    expect(delayed.sources).toBeUndefined();
   });
 
   describe('in timeline order', () => {
@@ -1571,9 +1571,9 @@ describe('Hermes Shrine Travel Deal generation', () => {
       if (n === undefined || !('rewards' in n)) throw new Error('N rewards are missing');
       return {
         findings: evaluation.findings,
-        sources: n.rewards.hermesShrineAssessments
-          .find((entry) => semanticAddressKey(entry.origin) === semanticAddressKey(shrine))
-          ?.assessments.map((assessment) => assessment.travelDealRefill?.sourceGenerationKey),
+        sources: n.rewards.hermesShrineAssessments.find(
+          (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(shrine),
+        )?.assessment.travelDealRefill?.sourceGenerationKey,
       };
     };
     const withSecondRush = () =>
@@ -1587,7 +1587,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
 
     it('refills the slot of the first rushed purchase action, not the first slot', () => {
       const project = withSecondRush();
-      expect(evaluate(project).sources).toEqual(['initial:first']);
+      expect(evaluate(project).sources).toBe('initial:first');
 
       const moved = applyProjectCommand(project, catalog, {
         kind: 'MoveRoomAction',
@@ -1678,12 +1678,12 @@ describe('Hermes Shrine Travel Deal generation', () => {
             (finding) => 'biomeKey' in finding.origin && finding.origin.biomeKey === 'N',
           ),
         ).toEqual([]);
-        expect(result.sources).toEqual(['initial:first']);
+        expect(result.sources).toBe('initial:first');
       });
 
       it('creates no refill when the Shrine boon is not Travel Deal', () => {
         const result = evaluate(shrineTravelDeal('option2'));
-        expect(result.sources).toEqual([undefined]);
+        expect(result.sources).toBeUndefined();
         expect(result.findings).toContainEqual(
           expect.objectContaining({
             code: 'hermesShrineTravelDealRefillUnavailable',
@@ -2424,7 +2424,7 @@ describe('Hermes Shrine entry inventory requirements', () => {
     const open = enterAuthoredShrineHost(false);
     const closed = enterAuthoredShrineHost(true);
     const inventory = (transition: typeof open) =>
-      transition.hermesShrineAssessment?.assessments[0]?.inventory;
+      transition.hermesShrineAssessment?.assessment.inventory;
     expect(inventory(open)?.candidateRewardTypesBySlot.secondRight).toContain('TalentDrop');
     expect(inventory(closed)?.candidateRewardTypesBySlot.secondRight).not.toContain('TalentDrop');
     expect(inventory(open)?.inventoryIssues).toEqual([]);

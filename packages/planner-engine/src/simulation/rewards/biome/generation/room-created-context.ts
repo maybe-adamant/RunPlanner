@@ -76,7 +76,7 @@ export function prepareRoomCreatedRewardContext(
     readonly expectedStores: ReadonlyMap<string, string | undefined>;
     readonly hermesShrineAssessments: ReadonlyMap<
       string,
-      { readonly assessments: readonly HermesShrineCandidateContext[] }
+      { readonly assessment: HermesShrineCandidateContext }
     >;
     readonly historyCurrent?: HistoryStateView;
   },
@@ -164,7 +164,7 @@ export function prepareRoomCreatedRewardContext(
         )?.before ?? parentViews.preOutgoing;
       currentShopNames = visibleStoreOptionNames(
         parent,
-        inputs.hermesShrineAssessments.get(semanticAddressKey(parent.origin))?.assessments,
+        inputs.hermesShrineAssessments.get(semanticAddressKey(parent.origin))?.assessment,
       );
     } else if (event.parentOrigin.kind !== 'hubRoom') {
       throw new BiomeRewardSimulationContractError('generated reward lost its source room');
@@ -204,7 +204,7 @@ export function prepareRoomCreatedRewardContext(
     generationView = parentViews.entry;
     currentShopNames = visibleStoreOptionNames(
       parent,
-      inputs.hermesShrineAssessments.get(semanticAddressKey(parent.origin))?.assessments,
+      inputs.hermesShrineAssessments.get(semanticAddressKey(parent.origin))?.assessment,
     );
   } else if (event.source === 'hubTarget') {
     const parent = inputs.rooms.get(semanticAddressKey(event.parentOrigin));

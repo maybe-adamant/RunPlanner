@@ -124,8 +124,7 @@ export interface StygianWellEntryCandidateContext {
   readonly inventory?: StygianWellAssessment;
 }
 
-export type StygianWellCandidateContext =
-  | StygianWellEntryCandidateContext
+export type StygianWellActionCandidateContext =
   | { readonly purchase: StygianWellPurchaseAssessment }
   | { readonly roll: StygianWellRollAssessment };
 
@@ -584,7 +583,7 @@ export interface StygianWellRollCapability {
 }
 
 export interface StygianWellCandidateCapability {
-  readonly assessments: readonly StygianWellCandidateContext[];
+  readonly entry: StygianWellEntryCandidateContext;
   readonly placementEligible: boolean;
   readonly required: boolean;
   readonly present: boolean;
@@ -607,27 +606,29 @@ export interface StygianWellCandidateArtifacts {
   readonly at: (occurrence: OccurrenceAddress) => StygianWellCandidateCapability | undefined;
 }
 
-/** The values every branch agrees on, in the first branch's order. */
+/** The keys every list holds, in the first list's order. */
 function agreed(lists: readonly (readonly string[])[]): readonly string[] {
   const [first, ...rest] = lists;
   return Object.freeze((first ?? []).filter((key) => rest.every((list) => list.includes(key))));
 }
 
-function agreedBySlot(
-  records: readonly Readonly<Record<StygianWellSlotKey, readonly string[]>>[],
-): Readonly<Record<StygianWellSlotKey, readonly string[]>> {
-  return Object.freeze(
-    Object.fromEntries(
-      STYGIAN_WELL_SLOT_KEYS.map((slotKey) => [
-        slotKey,
-        agreed(records.map((record) => record[slotKey])),
-      ]),
-    ) as Record<StygianWellSlotKey, readonly string[]>,
-  );
-}
+const noItemKeysBySlot: Readonly<Record<StygianWellSlotKey, readonly string[]>> = Object.freeze(
+  Object.fromEntries(
+    STYGIAN_WELL_SLOT_KEYS.map((slotKey): [StygianWellSlotKey, readonly string[]] => [
+      slotKey,
+      Object.freeze([]),
+    ]),
+  ) as Record<StygianWellSlotKey, readonly string[]>,
+);
 
 export function createStygianWellCandidateArtifacts(
-  contexts: ReadonlyMap<string, readonly StygianWellCandidateContext[]>,
+  contexts: ReadonlyMap<
+    string,
+    {
+      readonly entry: StygianWellEntryCandidateContext;
+      readonly actions: readonly StygianWellActionCandidateContext[];
+    }
+  >,
   interactions: ReadonlyMap<string, StygianWellInteraction> = new Map(),
 ): StygianWellCandidateArtifacts {
   const privateContexts = new Map(contexts);
@@ -635,17 +636,13 @@ export function createStygianWellCandidateArtifacts(
   return Object.freeze({
     at: (occurrence: OccurrenceAddress) => {
       const key = semanticAddressKey(occurrence);
-      const assessments = privateContexts.get(key);
-      if (assessments === undefined || assessments.length === 0) return undefined;
-      const entryAssessments = assessments.filter(
-        (assessment): assessment is StygianWellEntryCandidateContext => 'placement' in assessment,
+      const context = privateContexts.get(key);
+      if (context === undefined) return undefined;
+      const { entry, actions } = context;
+      const purchases = actions.flatMap((action) =>
+        'purchase' in action ? [action.purchase] : [],
       );
-      const purchases = assessments.flatMap((assessment) =>
-        'purchase' in assessment ? [assessment.purchase] : [],
-      );
-      const rolls = assessments.flatMap((assessment) =>
-        'roll' in assessment ? [assessment.roll] : [],
-      );
+      const rolls = actions.flatMap((action) => ('roll' in action ? [action.roll] : []));
       const refills = purchases.flatMap((purchase) =>
         purchase.travelDealRefill === undefined ? [] : [purchase.travelDealRefill],
       );
@@ -659,33 +656,20 @@ export function createStygianWellCandidateArtifacts(
       ];
       const interaction = privateInteractions.get(key);
       return Object.freeze({
-        assessments,
-        placementEligible: entryAssessments.every((assessment) => assessment.placement.eligible),
-        required: entryAssessments.every((assessment) => assessment.placement.forced),
-        present:
-          entryAssessments.length > 0 &&
-          entryAssessments.every((assessment) => assessment.inventory !== undefined),
-        candidateItemKeysBySlot: agreedBySlot(
-          entryAssessments.flatMap((assessment) =>
-            assessment.inventory === undefined
-              ? []
-              : [assessment.inventory.candidateItemKeysBySlot],
-          ),
-        ),
+        entry,
+        placementEligible: entry.placement.eligible,
+        required: entry.placement.forced,
+        present: entry.inventory !== undefined,
+        candidateItemKeysBySlot: entry.inventory?.candidateItemKeysBySlot ?? noItemKeysBySlot,
         rolls: Object.freeze(
           Object.fromEntries(
-            [...new Set(rolls.map((roll) => roll.rollKey))].map((rollKey) => {
-              const same = rolls.filter((roll) => roll.rollKey === rollKey);
-              return [
-                rollKey,
-                Object.freeze({
-                  offeredSlotKeys: same[0]!.offeredSlotKeys,
-                  candidateItemKeysBySlot: agreedBySlot(
-                    same.map((roll) => roll.candidateItemKeysBySlot),
-                  ),
-                }),
-              ];
-            }),
+            rolls.map((roll) => [
+              roll.rollKey,
+              Object.freeze({
+                offeredSlotKeys: roll.offeredSlotKeys,
+                candidateItemKeysBySlot: roll.candidateItemKeysBySlot,
+              }),
+            ]),
           ),
         ),
         ...(travelDealRefill === undefined

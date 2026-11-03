@@ -157,17 +157,16 @@ export function publishChronology(
     discoveredRunStateSnapshots,
   );
   const publishedHermesShrineAssessments = Object.freeze(
-    [...walk.hermesShrineAssessments.values()].map(({ origin, assessments }) => {
-      const travelDealRefills = walk.hermesShrineTravelDealRefills.get(semanticAddressKey(origin));
+    [...walk.hermesShrineAssessments.values()].map(({ origin, assessment }) => {
+      const travelDealRefill = walk.hermesShrineTravelDealRefills.get(
+        semanticAddressKey(origin),
+      )?.assessment;
       return Object.freeze({
         origin,
-        assessments: Object.freeze(
-          assessments.map((assessment, index) =>
-            travelDealRefills?.[index] === undefined
-              ? assessment
-              : Object.freeze({ ...assessment, travelDealRefill: travelDealRefills[index] }),
-          ),
-        ),
+        assessment:
+          travelDealRefill === undefined
+            ? assessment
+            : Object.freeze({ ...assessment, travelDealRefill }),
       });
     }),
   );
@@ -330,9 +329,9 @@ export function publishChronology(
     })(),
     hermesShrineArtifacts: createHermesShrineCandidateArtifacts(
       new Map(
-        publishedHermesShrineAssessments.map(({ origin, assessments }) => [
+        publishedHermesShrineAssessments.map(({ origin, assessment }) => [
           semanticAddressKey(origin),
-          assessments,
+          assessment,
         ]),
       ),
     ),
@@ -341,9 +340,9 @@ export function publishChronology(
     ),
     stygianWellArtifacts: createStygianWellCandidateArtifacts(
       new Map(
-        [...walk.stygianWellAssessments.values()].map(({ origin, assessments }) => [
+        [...walk.stygianWellAssessments.values()].map(({ origin, entry, actions }) => [
           semanticAddressKey(origin),
-          assessments,
+          { entry, actions },
         ]),
       ),
       stygianWellInteractions(context, interactionWalk),

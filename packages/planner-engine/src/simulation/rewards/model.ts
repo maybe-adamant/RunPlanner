@@ -350,17 +350,18 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   /** Exact room-entry Pool generation assessments, before any sale action. */
   readonly purgingPoolAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
-    readonly assessments: readonly import('../commerce/purging-pool').PurgingPoolAssessment[];
+    readonly assessment: import('../commerce/purging-pool').PurgingPoolAssessment;
   }[];
   /** Exact room-entry Shrine placement and inventory assessments. */
   readonly hermesShrineAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
-    readonly assessments: readonly import('../commerce/hermes-shrine').HermesShrineCandidateContext[];
+    readonly assessment: import('../commerce/hermes-shrine').HermesShrineCandidateContext;
   }[];
-  /** Exact room-entry Well placement and inventory assessments. */
+  /** Exact room-entry Well placement and inventory assessment, then each purchase's and reroll's. */
   readonly stygianWellAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
-    readonly assessments: readonly import('../commerce/stygian-well').StygianWellCandidateContext[];
+    readonly entry: import('../commerce/stygian-well').StygianWellEntryCandidateContext;
+    readonly actions: readonly import('../commerce/stygian-well').StygianWellActionCandidateContext[];
   }[];
   /** Open Shrine delivery obligations at the biome's end; no pending object is persisted. */
   readonly hermesShrineDeliveries: readonly import('../commerce/hermes-shrine').DerivedHermesShrineDelivery[];

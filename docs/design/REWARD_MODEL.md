@@ -814,8 +814,8 @@ child exists only while purchased and resolves against the later
 pre-acquisition context, not the refill-generation context.
 
 A Shrine of Hermes refill is caused by the first rushed initial
-`purchaseHermesShrineOffer` in timeline order made while every branch holds
-Travel Deal, when it closes the Shrine screen, not by collecting the rushed
+`purchaseHermesShrineOffer` in timeline order made while Travel Deal is held,
+when it closes the Shrine screen, not by collecting the rushed
 item; a rush without the trait leaves the refill to a later rush. The refill is
 realized at that purchase, replaces its slot, and removing the optional rushed
 pickup leaves the refill and its own delivery intact. Reordering or re-rushing

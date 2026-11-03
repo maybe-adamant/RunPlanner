@@ -914,10 +914,9 @@ describe('project document loader', () => {
     ]);
     expect(o?.hermesShrineDeliveries).toEqual([]);
     expect(
-      n?.hermesShrineAssessments
-        .find((entry) => entry.origin.occurrenceId === shrine)
-        ?.assessments.map((assessment) => assessment.travelDealRefill?.sourceGenerationKey),
-    ).toEqual(['initial:first']);
+      n?.hermesShrineAssessments.find((entry) => entry.origin.occurrenceId === shrine)?.assessment
+        .travelDealRefill?.sourceGenerationKey,
+    ).toBe('initial:first');
   });
 
   it('migrates schema-91 Anvil results onto their reward roles and evaluates identically', () => {

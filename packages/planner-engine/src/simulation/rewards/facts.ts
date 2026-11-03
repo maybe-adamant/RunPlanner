@@ -23,16 +23,13 @@ import { readBiomeEncounterDepth } from '../encounters/biome-encounter-depth';
 /** Visible store names that participate in RequiredNotInStore at room entry. */
 export function visibleStoreOptionNames(
   source: CanonicalLifecycleRoom,
-  shrineAssessments?: readonly HermesShrineCandidateContext[],
+  shrineAssessment?: HermesShrineCandidateContext,
 ): ReadonlySet<string> {
   const names = new Set<string>();
   if (source.kind !== 'authored') return names;
   for (const offer of source.entryState?.kind === 'shop' ? source.entryState.offers : [])
     names.add(offer.offer.rewardType);
-  const shrineInventoryVisible =
-    shrineAssessments !== undefined &&
-    shrineAssessments.length > 0 &&
-    shrineAssessments.every((assessment) => assessment.inventory?.complete === true);
+  const shrineInventoryVisible = shrineAssessment?.inventory?.complete === true;
   if (source.hermesShrine !== undefined && shrineInventoryVisible) {
     for (const offer of Object.values(source.hermesShrine.offerBySlot))
       names.add(offer!.rewardType);

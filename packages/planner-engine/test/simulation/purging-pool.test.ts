@@ -3,7 +3,6 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  semanticAddressKey,
   type EquippedTrait,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -15,7 +14,6 @@ import {
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import { describe, expect, it } from 'vitest';
 import type { PurgingPoolState } from '../../src/authored-project/model';
-import { createPurgingPoolCandidateArtifacts } from '../../src/simulation/commerce/purging-pool';
 
 function pool(
   left: string | null = null,
@@ -76,30 +74,8 @@ describe('Purging Pool generation assessment', () => {
     for (const assembly of [configuredTail, withG]) {
       const candidate = purgingPoolCandidateForProjectEvaluationAssembly(assembly, fPostboss);
       expect(candidate).toBeDefined();
-      expect(candidate?.assessments.length).toBeGreaterThan(0);
     }
     expect(candidates[0]).toEqual(candidates[1]);
-  });
-
-  it('intersects candidates across divergent branch assessments without leaking branch-zero traits', () => {
-    const branchZero = assessPurgingPool(
-      catalog,
-      pool(),
-      equipped(['ApolloWeaponBoon', 'Common'], ['HermesWeaponBoon', 'Rare']),
-    );
-    const otherBranch = assessPurgingPool(catalog, pool(), equipped(['HermesWeaponBoon', 'Rare']));
-    const poolOwner = createOccurrenceAddress(
-      createBiomeAddress('Underworld', 'F'),
-      createOccurrenceId('pool-divergent'),
-    );
-    const capability = createPurgingPoolCandidateArtifacts(
-      new Map([
-        [semanticAddressKey(poolOwner), { assessments: Object.freeze([branchZero, otherBranch]) }],
-      ]),
-    ).at(poolOwner);
-    expect(capability?.assessments).toEqual([branchZero, otherBranch]);
-    expect(capability?.candidateTraitKeysBySlot.left).toEqual(['HermesWeaponBoon']);
-    expect(capability?.candidateTraitKeysBySlot.left).not.toContain('ApolloWeaponBoon');
   });
 
   it.each([

@@ -134,10 +134,17 @@ happen", never as alternative states carried forward or offered as a choice.
    and the editor marks a target possible only while that Phial is pending. A
    keepsake equip result keeps its one pre-equip state; an Echo replay with
    no reached state opens no result.
-   Remaining: Hermes Shrine, Stygian Well and Purging Pool assessment lists,
-   derived-entry `branchCohortSize`, offer exclusions' `allBranches`, gold
-   purchase price contexts, the All Together settlement's per-history
-   domains, and the settlement internals' zero-or-one lists.
+   A fountain use keeps its one Phial frontier; its candidate answers there
+   and the editor marks a target possible only while that Phial is pending. A
+   keepsake equip result keeps its one pre-equip state; an Echo replay with
+   no reached state opens no result. A Hermes Shrine and a Purging Pool
+   publish one assessment (each Pool reroll one), a Stygian Well its entry
+   assessment and a chronological log of purchase and reroll assessments, and
+   a Shrine Travel Deal refill one realized domain; their capabilities read
+   them without agreement.
+   Remaining: derived-entry `branchCohortSize`, offer exclusions'
+   `allBranches`, gold purchase price contexts, the All Together settlement's
+   per-history domains, and the settlement internals' zero-or-one lists.
 5. **Trait offer state inspector.** With one state per draw, the offer-state
    popover's "Possible state N" blocks collapse to one; simplify it.
    _Status: done._ The presentation carries one rarity state and the

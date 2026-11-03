@@ -454,13 +454,13 @@ export function hermesShrineTravelDealRefill(
   const shrine = room.hermesShrine;
   if (shrine === undefined) return undefined;
   const owner = executionRoomOwnerKey(room);
-  const assessments = biome.rewards.hermesShrineAssessments.find(
+  const assessment = biome.rewards.hermesShrineAssessments.find(
     (candidate) => semanticAddressKey(candidate.origin) === owner,
-  )?.assessments;
-  if (assessments === undefined || assessments.length === 0)
+  )?.assessment;
+  if (assessment === undefined)
     throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks Shrine assessment`);
-  if (assessments.every((assessment) => assessment.travelDealRefill === undefined))
-    return undefined;
+  const refill = assessment.travelDealRefill;
+  if (refill === undefined) return undefined;
   const travelDeal = shrine.travelDealRefill;
   const refillOffer = travelDeal?.offer;
   if (travelDeal === undefined || refillOffer === undefined || refillOffer === null)
@@ -468,19 +468,13 @@ export function hermesShrineTravelDealRefill(
       'executionCoverageMissing',
       `${room.gameName} lacks Shrine Travel Deal result`,
     );
-  const refillEvidence = agreement(
-    assessments.map((assessment) => {
-      const refill = assessment.travelDealRefill;
-      const optionKey = refill?.candidateOptionKeysByRewardType[refillOffer.rewardType];
-      if (refill === undefined || optionKey === undefined)
-        throw new CompilerError(
-          'executionCoverageMissing',
-          `${room.gameName} lacks native SurfaceShop option ${refillOffer.rewardType}`,
-        );
-      return Object.freeze({ sourceGenerationKey: refill.sourceGenerationKey, optionKey });
-    }),
-    `${room.gameName} Shrine Travel Deal refill`,
-  );
+  const optionKey = refill.candidateOptionKeysByRewardType[refillOffer.rewardType];
+  if (optionKey === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks native SurfaceShop option ${refillOffer.rewardType}`,
+    );
+  const refillEvidence = { sourceGenerationKey: refill.sourceGenerationKey, optionKey };
   const sourceGenerationKey = refillEvidence.sourceGenerationKey as Exclude<
     HermesShrineGenerationKey,
     'travelDealRefill'
@@ -541,30 +535,25 @@ function executionHermesShrine(
   const shrine = room.hermesShrine;
   if (shrine === undefined) return undefined;
   const owner = executionRoomOwnerKey(room);
-  const assessments = biome.rewards.hermesShrineAssessments.find(
+  const assessment = biome.rewards.hermesShrineAssessments.find(
     (candidate) => semanticAddressKey(candidate.origin) === owner,
-  )?.assessments;
-  if (assessments === undefined || assessments.length === 0)
+  )?.assessment;
+  if (assessment === undefined)
     throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks Shrine assessment`);
   const slotRows = [
     ['first', 1],
     ['secondLeft', 2],
     ['secondRight', 3],
   ] as const satisfies readonly [HermesShrineSlotKey, 1 | 2 | 3][];
-  const optionKeys = agreement(
-    assessments.map((assessment) =>
-      slotRows.map(([slotKey]) => {
-        const optionKey = assessment.inventory?.optionKeysBySlot[slotKey];
-        if (optionKey === undefined)
-          throw new CompilerError(
-            'executionCoverageMissing',
-            `${room.gameName} lacks Shrine option ${slotKey}`,
-          );
-        return optionKey;
-      }),
-    ),
-    `${room.gameName} Shrine option order`,
-  );
+  const optionKeys = slotRows.map(([slotKey]) => {
+    const optionKey = assessment.inventory?.optionKeysBySlot[slotKey];
+    if (optionKey === undefined)
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `${room.gameName} lacks Shrine option ${slotKey}`,
+      );
+    return optionKey;
+  });
   const offers = Object.freeze(
     slotRows.map(([slotKey, slotIndex], index) => {
       const offer = shrine.offerBySlot[slotKey];

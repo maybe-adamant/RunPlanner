@@ -400,17 +400,17 @@ const wellPurchase: ChronologySeamHandler<'wellPurchase'> = (context, received, 
       ),
   });
   let stygianWellAssessments = state.stygianWellAssessments;
+  const existingWell = stygianWellAssessments.get(semanticAddressKey(event.origin));
   if (transition.candidateContexts.length > 0 && wellRoom?.kind === 'authored') {
-    const key = semanticAddressKey(event.origin);
-    const existing = stygianWellAssessments.get(key);
+    if (existingWell === undefined)
+      throw new BiomeRewardSimulationContractError(
+        `${wellRoom.gameName} has a Well purchase before its entry`,
+      );
     stygianWellAssessments = new Map(stygianWellAssessments).set(
-      key,
+      semanticAddressKey(event.origin),
       Object.freeze({
-        origin: wellRoom.origin,
-        assessments: Object.freeze([
-          ...(existing?.assessments ?? []),
-          ...transition.candidateContexts,
-        ]),
+        ...existingWell,
+        actions: Object.freeze([...existingWell.actions, ...transition.candidateContexts]),
       }),
     );
   }
@@ -504,7 +504,7 @@ const hermesShrinePurchaseReached: ChronologySeamHandler<'hermesShrinePurchaseRe
     branches: state.branches,
     realized: state.hermesShrineTravelDealRefills.get(key),
   });
-  const refills = transition.travelDealRefillAssessments;
+  const refills = transition.travelDealRefill;
   return {
     state:
       refills === undefined
@@ -1160,7 +1160,10 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
       stygianWellAssessments:
         well === undefined
           ? state.stygianWellAssessments
-          : new Map(state.stygianWellAssessments).set(semanticAddressKey(well.origin), well),
+          : new Map(state.stygianWellAssessments).set(
+              semanticAddressKey(well.origin),
+              Object.freeze({ ...well, actions: Object.freeze([]) }),
+            ),
     }),
     ...(checkpoint?.view === undefined
       ? {}

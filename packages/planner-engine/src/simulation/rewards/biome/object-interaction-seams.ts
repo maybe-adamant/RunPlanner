@@ -24,7 +24,7 @@ import type {
   RoomObjectInteractions,
   WorldShopInteraction,
 } from '../../commerce/object-interactions';
-import type { HermesShrineTravelDealRefillAssessment } from '../../commerce/hermes-shrine';
+import type { RealizedHermesShrineTravelDealRefill } from '../../commerce/hermes-shrine';
 import type { HistoryEvent } from '../../history';
 import type { CanonicalAuthoredRoom } from '../../materialization';
 import type { RewardBranchState } from '../branch-primitives';
@@ -81,12 +81,6 @@ export function captureRoomActionEnd(
       Object.freeze({ historySequence: event.sequence, branches: state.branches }),
     ),
   });
-}
-
-/** The values every list holds, in the first list's order. */
-function agreed(lists: readonly (readonly string[])[]): readonly string[] {
-  const [first, ...rest] = lists;
-  return Object.freeze((first ?? []).filter((value) => rest.every((list) => list.includes(value))));
 }
 
 type DerivedEntryFrontiers = ReadonlyMap<string, readonly DerivedAcquisitionEntryFrontier[]>;
@@ -208,7 +202,7 @@ function shrineOffer(
 function hermesShrineInteraction(
   room: CanonicalAuthoredRoom,
   historySequence: number,
-  realized: readonly HermesShrineTravelDealRefillAssessment[] | undefined,
+  realized: RealizedHermesShrineTravelDealRefill | undefined,
 ): HermesShrineInteraction | undefined {
   const shrine = room.hermesShrine;
   if (shrine === undefined) return undefined;
@@ -222,7 +216,7 @@ function hermesShrineInteraction(
       ? []
       : [shrineOffer(room, generationKey, offer)];
   });
-  // The first rush made with Travel Deal on every branch realizes the refill.
+  // The first rush made with Travel Deal realizes the refill.
   const live = realized !== undefined;
   return Object.freeze({
     historySequence,
@@ -233,9 +227,7 @@ function hermesShrineInteraction(
       : {
           travelDealRefill: Object.freeze({
             ...shrineOffer(room, 'travelDealRefill', shrine.travelDealRefill?.offer),
-            candidateRewardTypes: agreed(
-              realized.map((assessment) => assessment.candidateRewardTypes),
-            ),
+            candidateRewardTypes: realized.assessment?.candidateRewardTypes ?? Object.freeze([]),
           }),
         }),
   });

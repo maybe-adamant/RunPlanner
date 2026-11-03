@@ -21,7 +21,7 @@ import {
   assessStygianWell,
   assessStygianWellPlacement,
   priorThreeRoomShopPresence,
-  type StygianWellCandidateContext,
+  type StygianWellEntryCandidateContext,
 } from '../../../commerce/stygian-well';
 import {
   assessHermesShrine,
@@ -60,11 +60,11 @@ export interface RoomEnteredTransition {
   readonly hermesShrineDeliveryPlacementRequired: boolean;
   readonly hermesShrineAssessment?: {
     readonly origin: OccurrenceAddress;
-    readonly assessments: readonly HermesShrineCandidateContext[];
+    readonly assessment: HermesShrineCandidateContext;
   };
   readonly stygianWellAssessment?: {
     readonly origin: OccurrenceAddress;
-    readonly assessments: readonly StygianWellCandidateContext[];
+    readonly entry: StygianWellEntryCandidateContext;
   };
   readonly runStateCheckpoint?: {
     readonly owner: ReturnType<typeof createRoomRunStateCheckpointAddress>;
@@ -342,97 +342,95 @@ export function applyRoomEnteredTransition(
       throw new BiomeRewardSimulationContractError(`${room.gameName} has no Shrine entry frontier`);
     if (declaration.surfaceShop !== undefined || room.hermesShrine !== undefined) {
       const priorEnteredShrineFlags = priorTwoSurfaceShopPresence(entry.ledgers.roomAppearances);
-      const assessments = Object.freeze(
-        next.map((branch) =>
-          room.hermesShrine === undefined
-            ? Object.freeze({
-                placement: assessHermesShrinePlacement(
-                  declaration,
-                  priorEnteredShrineFlags,
-                  entry.ledgers.counters.biomeDepthCache,
-                ),
-                inventory: undefined,
-              })
-            : Object.freeze({
-                placement: assessHermesShrinePlacement(
-                  declaration,
-                  priorEnteredShrineFlags,
-                  entry.ledgers.counters.biomeDepthCache,
-                ),
-                inventory: assessHermesShrine(
-                  catalog,
-                  declaration,
-                  entry.ledgers.counters.biomeDepthCache,
-                  room.hermesShrine,
-                  createBiomeRewardFacts({
-                    catalog,
-                    state: branch.state,
-                    source: room,
-                    currentRoom: room,
-                    sourceDeclaration: declaration,
-                    view: entry,
-                    hubBoardLookups: 'consulted',
-                  }).requirements,
-                  priorEnteredShrineFlags,
-                ),
-              }),
-        ),
-      );
-      hermesShrineAssessment = Object.freeze({ origin: room.origin, assessments });
-      for (const assessment of assessments) {
-        if (assessment.inventory === undefined && assessment.placement.forced) {
-          for (const slotKey of ['first', 'secondLeft', 'secondRight'] as const)
-            findings.push(
-              Object.freeze({
-                finding: rewardFinding(
-                  'hermesShrineInventoryMissing',
-                  createRoomFeatureAddress(room.origin, {
-                    kind: 'hermesShrineOffer',
-                    generationKey: `initial:${slotKey}`,
-                  }),
-                  { slotKey },
-                ),
-                region: ownerRegion(room.origin),
-                chronology: findingChronology,
-              }),
-            );
-        }
-        if (assessment.inventory !== undefined && !assessment.placement.eligible)
-          findings.push(
-            Object.freeze({
-              finding: rewardFinding(
-                'hermesShrinePlacementUnavailable',
-                createRoomFeatureAddress(room.origin, { kind: 'hermesShrinePresence' }),
-                { priorShrineCount: assessment.placement.priorShrineCount },
+      const branch = next[0];
+      if (branch === undefined)
+        throw new BiomeRewardSimulationContractError(`${room.gameName} has no Shrine entry state`);
+      const assessment: HermesShrineCandidateContext =
+        room.hermesShrine === undefined
+          ? Object.freeze({
+              placement: assessHermesShrinePlacement(
+                declaration,
+                priorEnteredShrineFlags,
+                entry.ledgers.counters.biomeDepthCache,
               ),
-              region: ownerRegion(room.origin),
-              chronology: findingChronology,
-            }),
-          );
-        for (const issue of assessment.inventory?.inventoryIssues ?? []) {
-          const code =
-            issue.kind === 'missing'
-              ? 'hermesShrineInventoryMissing'
-              : issue.kind === 'wrongGroup'
-                ? 'hermesShrineInventoryWrongGroup'
-                : issue.kind === 'duplicateSecondGroup'
-                  ? 'hermesShrineInventoryDuplicate'
-                  : 'hermesShrineInventoryRequirement';
+              inventory: undefined,
+            })
+          : Object.freeze({
+              placement: assessHermesShrinePlacement(
+                declaration,
+                priorEnteredShrineFlags,
+                entry.ledgers.counters.biomeDepthCache,
+              ),
+              inventory: assessHermesShrine(
+                catalog,
+                declaration,
+                entry.ledgers.counters.biomeDepthCache,
+                room.hermesShrine,
+                createBiomeRewardFacts({
+                  catalog,
+                  state: branch.state,
+                  source: room,
+                  currentRoom: room,
+                  sourceDeclaration: declaration,
+                  view: entry,
+                  hubBoardLookups: 'consulted',
+                }).requirements,
+                priorEnteredShrineFlags,
+              ),
+            });
+      hermesShrineAssessment = Object.freeze({ origin: room.origin, assessment });
+      if (assessment.inventory === undefined && assessment.placement.forced) {
+        for (const slotKey of ['first', 'secondLeft', 'secondRight'] as const)
           findings.push(
             Object.freeze({
               finding: rewardFinding(
-                code,
+                'hermesShrineInventoryMissing',
                 createRoomFeatureAddress(room.origin, {
                   kind: 'hermesShrineOffer',
-                  generationKey: `initial:${issue.slotKey}`,
+                  generationKey: `initial:${slotKey}`,
                 }),
-                { slotKey: issue.slotKey },
+                { slotKey },
               ),
               region: ownerRegion(room.origin),
               chronology: findingChronology,
             }),
           );
-        }
+      }
+      if (assessment.inventory !== undefined && !assessment.placement.eligible)
+        findings.push(
+          Object.freeze({
+            finding: rewardFinding(
+              'hermesShrinePlacementUnavailable',
+              createRoomFeatureAddress(room.origin, { kind: 'hermesShrinePresence' }),
+              { priorShrineCount: assessment.placement.priorShrineCount },
+            ),
+            region: ownerRegion(room.origin),
+            chronology: findingChronology,
+          }),
+        );
+      for (const issue of assessment.inventory?.inventoryIssues ?? []) {
+        const code =
+          issue.kind === 'missing'
+            ? 'hermesShrineInventoryMissing'
+            : issue.kind === 'wrongGroup'
+              ? 'hermesShrineInventoryWrongGroup'
+              : issue.kind === 'duplicateSecondGroup'
+                ? 'hermesShrineInventoryDuplicate'
+                : 'hermesShrineInventoryRequirement';
+        findings.push(
+          Object.freeze({
+            finding: rewardFinding(
+              code,
+              createRoomFeatureAddress(room.origin, {
+                kind: 'hermesShrineOffer',
+                generationKey: `initial:${issue.slotKey}`,
+              }),
+              { slotKey: issue.slotKey },
+            ),
+            region: ownerRegion(room.origin),
+            chronology: findingChronology,
+          }),
+        );
       }
     }
   }
@@ -446,76 +444,69 @@ export function applyRoomEnteredTransition(
       if (entry === undefined)
         throw new BiomeRewardSimulationContractError(`${room.gameName} has no Well entry frontier`);
       const priorEnteredWellFlags = priorThreeRoomShopPresence(entry.ledgers.roomAppearances);
-      const assessments: readonly import('../../../commerce/stygian-well').StygianWellEntryCandidateContext[] =
-        Object.freeze(
-          next.map((branch) =>
-            room.stygianWell === undefined
-              ? Object.freeze({
-                  placement: assessStygianWellPlacement(
-                    declaration,
-                    room.origin.routeKey,
-                    priorEnteredWellFlags,
-                    entry.ledgers.counters.biomeDepthCache,
-                  ),
-                })
-              : Object.freeze({
-                  placement: assessStygianWellPlacement(
-                    declaration,
-                    room.origin.routeKey,
-                    priorEnteredWellFlags,
-                    entry.ledgers.counters.biomeDepthCache,
-                  ),
-                  inventory: assessStygianWell(
-                    catalog,
-                    room.origin.routeKey,
-                    declaration,
-                    entry.ledgers.counters.biomeDepthCache,
-                    room.stygianWell,
-                    branch.state.stygianWell,
-                    branch.state.traitHistory,
-                    priorEnteredWellFlags,
-                  ),
-                }),
-          ),
+      const branch = next[0];
+      if (branch === undefined)
+        throw new BiomeRewardSimulationContractError(`${room.gameName} has no Well entry state`);
+      const assessment: StygianWellEntryCandidateContext =
+        room.stygianWell === undefined
+          ? Object.freeze({
+              placement: assessStygianWellPlacement(
+                declaration,
+                room.origin.routeKey,
+                priorEnteredWellFlags,
+                entry.ledgers.counters.biomeDepthCache,
+              ),
+            })
+          : Object.freeze({
+              placement: assessStygianWellPlacement(
+                declaration,
+                room.origin.routeKey,
+                priorEnteredWellFlags,
+                entry.ledgers.counters.biomeDepthCache,
+              ),
+              inventory: assessStygianWell(
+                catalog,
+                room.origin.routeKey,
+                declaration,
+                entry.ledgers.counters.biomeDepthCache,
+                room.stygianWell,
+                branch.state.stygianWell,
+                branch.state.traitHistory,
+                priorEnteredWellFlags,
+              ),
+            });
+      stygianWellAssessment = Object.freeze({ origin: room.origin, entry: assessment });
+      if (assessment.inventory !== undefined && !assessment.placement.eligible)
+        findings.push(
+          Object.freeze({
+            finding: rewardFinding(
+              'stygianWellPlacementUnavailable',
+              createRoomFeatureAddress(room.origin, { kind: 'stygianWellPresence' }),
+              { priorWellCount: assessment.placement.priorWellCount },
+            ),
+            region: ownerRegion(room.origin),
+            chronology: findingChronology,
+          }),
         );
-      stygianWellAssessment = Object.freeze({
-        origin: room.origin,
-        assessments,
-      });
-      for (const assessment of assessments) {
-        if (assessment.inventory !== undefined && !assessment.placement.eligible)
-          findings.push(
-            Object.freeze({
-              finding: rewardFinding(
-                'stygianWellPlacementUnavailable',
-                createRoomFeatureAddress(room.origin, { kind: 'stygianWellPresence' }),
-                { priorWellCount: assessment.placement.priorWellCount },
-              ),
-              region: ownerRegion(room.origin),
-              chronology: findingChronology,
-            }),
-          );
-        for (const issue of assessment.inventory?.issues ?? []) {
-          const code =
-            issue.kind === 'duplicate' ? 'stygianWellDuplicate' : 'stygianWellWrongGroup';
-          const origin = createRoomFeatureAddress(room.origin, {
-            kind: 'stygianWellOffer',
-            generationKey: issue.generationKey,
-          });
-          findings.push(
-            Object.freeze({
-              finding: rewardFinding(
-                code,
-                origin,
-                issue.kind === 'duplicate'
-                  ? { reason: issue.kind, slotKey: issue.generationKey.slice('initial:'.length) }
-                  : { reason: issue.kind },
-              ),
-              region: ownerRegion(room.origin),
-              chronology: findingChronology,
-            }),
-          );
-        }
+      for (const issue of assessment.inventory?.issues ?? []) {
+        const code = issue.kind === 'duplicate' ? 'stygianWellDuplicate' : 'stygianWellWrongGroup';
+        const origin = createRoomFeatureAddress(room.origin, {
+          kind: 'stygianWellOffer',
+          generationKey: issue.generationKey,
+        });
+        findings.push(
+          Object.freeze({
+            finding: rewardFinding(
+              code,
+              origin,
+              issue.kind === 'duplicate'
+                ? { reason: issue.kind, slotKey: issue.generationKey.slice('initial:'.length) }
+                : { reason: issue.kind },
+            ),
+            region: ownerRegion(room.origin),
+            chronology: findingChronology,
+          }),
+        );
       }
     }
   }
