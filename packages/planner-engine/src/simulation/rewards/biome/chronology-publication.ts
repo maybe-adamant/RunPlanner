@@ -256,12 +256,11 @@ export function publishChronology(
       ),
     ),
     derivedAcquisitionEntries: Object.freeze(
-      [...accumulation.derivedAcquisitionEntryContexts.values()].flatMap((frontiers) => {
-        const first = frontiers[0];
-        const capability = attestDerivedAcquisitionEntryCandidateCapability(frontiers);
-        return first === undefined || capability === undefined
+      [...accumulation.derivedAcquisitionEntryContexts.values()].flatMap((frontier) => {
+        const capability = attestDerivedAcquisitionEntryCandidateCapability(frontier);
+        return capability === undefined
           ? []
-          : [Object.freeze({ address: first.address, ...capability })];
+          : [Object.freeze({ address: frontier.address, ...capability })];
       }),
     ),
   });

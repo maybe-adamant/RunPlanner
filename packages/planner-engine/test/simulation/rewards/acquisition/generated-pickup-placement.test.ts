@@ -108,20 +108,19 @@ it('matches clocked evidence to each branch maturity instead of temporally accum
     ),
     kind: 'clockedTraitPickup',
     historySequence: 7,
-    branchCohortSize: 2,
     rewardTypes: ['StackUpgrade'],
     encounterPhaseKey: 'combat1',
     branchesBeforeEntry: [branch],
   };
   const assess = (
     branches: readonly RewardBranchState[],
-    frontiers: readonly DerivedAcquisitionEntryFrontier[],
-  ) => assessReachedClockedPickupPlacement(host, clocked, branches, frontiers, 9).assessment.kind;
-  expect(assess([], [])).toBe('unassessed');
-  expect(assess([branch], [])).toBe('unassessed');
-  expect(assess([branch], [frontier])).toBe('valid');
-  expect(assess([branch], [{ ...frontier, encounterPhaseKey: 'combat2' }])).toBe('invalid');
-  expect(assess([branch], [{ ...frontier, historySequence: 6 }])).toBe('unassessed');
-  expect(assess([branch, seed], [frontier])).toBe('unassessed');
-  expect(assess([seed], [frontier])).toBe('invalid');
+    contact: DerivedAcquisitionEntryFrontier | undefined,
+  ) => assessReachedClockedPickupPlacement(host, clocked, branches, contact, 9).assessment.kind;
+  expect(assess([], undefined)).toBe('unassessed');
+  expect(assess([branch], undefined)).toBe('unassessed');
+  expect(assess([branch], frontier)).toBe('valid');
+  expect(assess([branch], { ...frontier, encounterPhaseKey: 'combat2' })).toBe('invalid');
+  expect(assess([branch], { ...frontier, historySequence: 6 })).toBe('unassessed');
+  expect(assess([branch, seed], frontier)).toBe('unassessed');
+  expect(assess([seed], frontier)).toBe('invalid');
 });

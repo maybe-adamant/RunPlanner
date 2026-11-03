@@ -180,7 +180,6 @@ export function materializeShopGold(input: {
   readonly roleBindings: PendingShopGoldMaterialization['roleBindings'];
   readonly profile: ShopProfileDeclaration;
   readonly site: AcquisitionSiteAddress;
-  readonly branchCohortSize: number;
   readonly historySequence: number;
   readonly eligibleSourceOfferKeys: readonly string[];
 }): ShopGoldMaterializationProduct {
@@ -193,7 +192,6 @@ export function materializeShopGold(input: {
     roleBindings,
     profile,
     site,
-    branchCohortSize,
     historySequence,
     eligibleSourceOfferKeys,
   } = input;
@@ -292,7 +290,6 @@ export function materializeShopGold(input: {
         participation: echoShopDuplicateRequiresPickup(catalog, sourceOffer.offer)
           ? ('required' as const)
           : ('optional' as const),
-        branchCohortSize,
         sourceOfferKey: sourceOffer.offerKey,
         rewardTypes: Object.freeze([sourceOffer.offer.rewardType]),
         ...(fixedReward === undefined ? {} : { fixedReward }),

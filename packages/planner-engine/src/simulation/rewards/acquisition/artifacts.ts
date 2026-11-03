@@ -78,30 +78,9 @@ export interface DerivedAcquisitionEntryCandidateArtifacts {
   }[];
 }
 export function attestDerivedAcquisitionEntryCandidateCapability(
-  frontiers: readonly DerivedAcquisitionEntryFrontier[],
+  first: DerivedAcquisitionEntryFrontier | undefined,
 ): DerivedAcquisitionEntryCandidateCapability | undefined {
-  const first = frontiers[0];
   if (first === undefined) return undefined;
-  if (
-    frontiers.length !== first.branchCohortSize ||
-    frontiers.some(
-      (frontier) =>
-        frontier.kind !== first.kind ||
-        frontier.branchCohortSize !== first.branchCohortSize ||
-        frontier.sourceOfferKey !== first.sourceOfferKey ||
-        frontier.slotIndex !== first.slotIndex ||
-        JSON.stringify(frontier.rewardTypes) !== JSON.stringify(first.rewardTypes) ||
-        JSON.stringify(frontier.fixedReward) !== JSON.stringify(first.fixedReward) ||
-        frontier.producerLifecycleKey !== first.producerLifecycleKey ||
-        frontier.traitKey !== first.traitKey ||
-        frontier.encounterPhaseKey !== first.encounterPhaseKey ||
-        frontier.participation !== first.participation ||
-        frontier.retainedSourceMismatch !== first.retainedSourceMismatch ||
-        JSON.stringify(frontier.eligibleSourceOfferKeys) !==
-          JSON.stringify(first.eligibleSourceOfferKeys),
-    )
-  )
-    return undefined;
   const sourceFamily = derivedPickupSourceFamily(first);
   return Object.freeze({
     kind: first.kind,
@@ -129,28 +108,22 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
   });
 }
 export function createDerivedAcquisitionEntryCandidateArtifacts(
-  contexts: ReadonlyMap<string, readonly DerivedAcquisitionEntryFrontier[]>,
+  contexts: ReadonlyMap<string, DerivedAcquisitionEntryFrontier>,
 ): DerivedAcquisitionEntryCandidateArtifacts {
-  const privateContexts = new Map(
-    [...contexts].map(([key, frontiers]) => [key, Object.freeze([...frontiers])] as const),
-  );
+  const privateContexts = new Map(contexts);
   return Object.freeze({
-    at: (address: AcquisitionEntryAddress) => {
-      const frontiers = privateContexts.get(semanticAddressKey(address));
-      return frontiers === undefined
-        ? undefined
-        : attestDerivedAcquisitionEntryCandidateCapability(frontiers);
-    },
+    at: (address: AcquisitionEntryAddress) =>
+      attestDerivedAcquisitionEntryCandidateCapability(
+        privateContexts.get(semanticAddressKey(address)),
+      ),
     entriesAt: (site: AcquisitionSiteAddress) =>
       Object.freeze(
-        [...privateContexts.values()].flatMap((frontiers) => {
-          const first = frontiers[0];
-          const capability = attestDerivedAcquisitionEntryCandidateCapability(frontiers);
-          return first === undefined ||
-            capability === undefined ||
-            semanticAddressKey(first.address.site) !== semanticAddressKey(site)
+        [...privateContexts.values()].flatMap((frontier) => {
+          const capability = attestDerivedAcquisitionEntryCandidateCapability(frontier);
+          return capability === undefined ||
+            semanticAddressKey(frontier.address.site) !== semanticAddressKey(site)
             ? []
-            : [Object.freeze({ address: first.address, capability })];
+            : [Object.freeze({ address: frontier.address, capability })];
         }),
       ),
   });

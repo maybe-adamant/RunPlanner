@@ -148,10 +148,10 @@ interface TwistReprice {
 function onlyContext(
   publication: PurchasePriceContextPublication & { readonly owner: SemanticAddress },
 ): PurchasePriceContext {
-  const [context, ...others] = publication.contexts;
-  if (context === undefined || others.length > 0)
+  const context = publication.context;
+  if (context === undefined)
     throw new GoldLedgerContractError(
-      `${semanticAddressKey(publication.owner)} has ${publication.contexts.length} distinct price contexts across reached branches`,
+      `${semanticAddressKey(publication.owner)} has no price context`,
     );
   return context;
 }
@@ -265,7 +265,7 @@ export function biomeGoldPrices(
     { readonly room: OccurrenceAddress; readonly outcomes: GoldPurchaseOutcome[] }
   >();
   // An unknown Twist reprice is one whose reached branches disagree.
-  const twists = new Map<string, TwistReprice | 'unknown'>();
+  const twists = new Map<string, TwistReprice>();
   for (const publication of publications) {
     const roomKey = semanticAddressKey(publication.room);
     const outcome = ((): GoldPurchaseOutcome => {
@@ -282,12 +282,7 @@ export function biomeGoldPrices(
         return Object.freeze({ kind: 'itemUnresolved' });
       try {
         const context = onlyContext({ ...publication, owner });
-        const twist = twists.get(roomKey);
-        if (twist === 'unknown' && context.venue.kind === 'stygianWell')
-          throw new GoldLedgerContractError(
-            `${semanticAddressKey(owner)} follows a Twist whose reached branches disagree`,
-          );
-        const priced = purchasePrice(catalog, context, twist === 'unknown' ? undefined : twist);
+        const priced = purchasePrice(catalog, context, twists.get(roomKey));
         return Object.freeze({
           kind: 'priced',
           purchase: Object.freeze({
@@ -307,17 +302,8 @@ export function biomeGoldPrices(
     const room = byRoom.get(roomKey) ?? { room: publication.room, outcomes: [] };
     room.outcomes.push(outcome);
     byRoom.set(roomKey, room);
-    const reprices = new Set(
-      publication.contexts.map((context) =>
-        JSON.stringify(twistRepriceAfter(catalog, context) ?? null),
-      ),
-    );
-    if (reprices.size > 1) twists.set(roomKey, 'unknown');
-    else {
-      const reprice =
-        publication.contexts[0] && twistRepriceAfter(catalog, publication.contexts[0]);
-      if (reprice !== undefined) twists.set(roomKey, reprice);
-    }
+    const reprice = publication.context && twistRepriceAfter(catalog, publication.context);
+    if (reprice !== undefined) twists.set(roomKey, reprice);
   }
   return Object.freeze({
     purchases,

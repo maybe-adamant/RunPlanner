@@ -603,7 +603,6 @@ export function applyEncounterEndEffectsTransition(
                 clockedTraitGeneratedPickupEntryKey(maturity.acquisitionIdentity, pickup.key),
               ),
               kind: 'clockedTraitPickup',
-              branchCohortSize: finalBranches.length,
               historySequence: event.sequence,
               rewardTypes: Object.freeze([pickup.rewardType]),
               fixedReward,

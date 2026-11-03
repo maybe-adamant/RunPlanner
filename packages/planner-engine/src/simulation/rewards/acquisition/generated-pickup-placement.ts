@@ -78,7 +78,7 @@ export function assessReachedClockedPickupPlacement(
   owner: OccurrenceAddress,
   reference: PickupReference,
   branches: readonly RewardBranchState[],
-  frontiers: readonly DerivedAcquisitionEntryFrontier[],
+  frontier: DerivedAcquisitionEntryFrontier | undefined,
   sequence: number,
 ): GeneratedPickupPlacement {
   const parsed = parseClockedTraitGeneratedPickupEntryKey(reference.entryKey)!;
@@ -96,21 +96,14 @@ export function assessReachedClockedPickupPlacement(
       );
       const maturity = maturities.at(-1);
       if (maturity === undefined) return 'invalid';
-      const contactFrontiers = frontiers.filter(
-        (frontier) =>
-          frontier.kind === 'clockedTraitPickup' && frontier.historySequence === maturity.sequence,
-      );
-      const branchFrontiers = contactFrontiers.filter((frontier) =>
+      const reached =
+        frontier?.kind === 'clockedTraitPickup' &&
+        frontier.historySequence === maturity.sequence &&
         frontier.branchesBeforeEntry.some((before) =>
           before.state.traitHistory.events.includes(maturity),
-        ),
-      );
-      if (branchFrontiers.length === 0) return 'unassessed';
-      return branchFrontiers.some(
-        (frontier) => frontier.encounterPhaseKey === reference.encounterPhaseKey,
-      )
-        ? 'valid'
-        : 'invalid';
+        );
+      if (!reached) return 'unassessed';
+      return frontier.encounterPhaseKey === reference.encounterPhaseKey ? 'valid' : 'invalid';
     }),
     sequence,
   );

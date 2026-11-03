@@ -34,15 +34,13 @@ function purchase(venue: PurchasePriceVenue, facts: Facts = {}): PurchasePriceCo
     sequence: ordinal,
     owner: createRoomActionAddress(biome, 'room' as never, `purchase-${ordinal}`),
     room: facts.at ?? room,
-    contexts: [
-      {
-        venue,
-        firstPaidPurchase: facts.first ?? false,
-        vowRank: facts.vowRank ?? 0,
-        activeVoucherItemKeys: facts.vouchers ?? [],
-        ...(facts.travelDeal === undefined ? {} : { travelDealRarity: facts.travelDeal }),
-      },
-    ],
+    context: {
+      venue,
+      firstPaidPurchase: facts.first ?? false,
+      vowRank: facts.vowRank ?? 0,
+      activeVoucherItemKeys: facts.vouchers ?? [],
+      ...(facts.travelDeal === undefined ? {} : { travelDealRarity: facts.travelDeal }),
+    },
   };
 }
 
@@ -202,16 +200,12 @@ describe('gold prices', () => {
     ]);
   });
 
-  it('refuses only the divergent purchase and its room', () => {
-    const divergent = purchase(randomLoot, { first: true, travelDeal: 'Rare' });
-    const other = purchase(randomLoot, { first: true, travelDeal: 'Epic' });
+  it('refuses only a purchase without a price context and its room', () => {
+    const divergent: PurchasePriceContextPublication = { ...purchase(randomLoot) };
+    delete (divergent as { context?: unknown }).context;
     const later = purchase(randomLoot);
     const elsewhere = purchase(randomLoot, { at: otherRoom });
-    const priced = biomeGoldPrices(catalog, [
-      { ...divergent, contexts: [...divergent.contexts, ...other.contexts] },
-      later,
-      elsewhere,
-    ]);
+    const priced = biomeGoldPrices(catalog, [divergent, later, elsewhere]);
     const outcome = (publication: PurchasePriceContextPublication) =>
       priced.purchases.get(semanticAddressKey(publication.owner!));
     expect(outcome(divergent)).toMatchObject({ kind: 'fault' });
@@ -227,17 +221,17 @@ describe('gold prices', () => {
   it('keeps an unresolved item unpriced and a contract failure on its own purchase', () => {
     const unresolved = {
       ...purchase(randomLoot),
-      contexts: [],
+      context: undefined,
       unpriced: { kind: 'itemUnresolved' },
     };
     const broken = {
       ...purchase(randomLoot, { at: otherRoom }),
-      contexts: [],
+      context: undefined,
       unpriced: { kind: 'contractFailure', detail: 'no ranked action row' },
     };
     const priced = biomeGoldPrices(catalog, [
-      unresolved as PurchasePriceContextPublication,
-      broken as PurchasePriceContextPublication,
+      unresolved as unknown as PurchasePriceContextPublication,
+      broken as unknown as PurchasePriceContextPublication,
     ]);
     expect(priced.purchases.get(semanticAddressKey(unresolved.owner!))).toEqual({
       kind: 'itemUnresolved',
@@ -246,35 +240,6 @@ describe('gold prices', () => {
     expect(priced.purchases.get(semanticAddressKey(broken.owner!))).toMatchObject({
       kind: 'fault',
       error: { message: 'no ranked action row' },
-    });
-  });
-
-  it('refuses later Well purchases after a Twist whose branches disagree on its reprice', () => {
-    const twist = purchase({
-      kind: 'stygianWell',
-      itemKey: 'RandomStoreItem',
-      rollKey: 'initial',
-      twistResultKey: 'TemporaryDiscountTrait',
-    });
-    const travelDeal = purchase(
-      {
-        kind: 'stygianWell',
-        itemKey: 'RandomStoreItem',
-        rollKey: 'initial',
-        twistResultKey: 'TemporaryDiscountTrait',
-      },
-      { first: true, travelDeal: 'Common' },
-    );
-    const next = purchase(
-      { kind: 'stygianWell', itemKey: 'HealDropRange', rollKey: 'initial' },
-      { vouchers: voucher },
-    );
-    const priced = biomeGoldPrices(catalog, [
-      { ...twist, contexts: [...twist.contexts, ...travelDeal.contexts] },
-      next,
-    ]);
-    expect(priced.purchases.get(semanticAddressKey(next.owner!))).toMatchObject({
-      kind: 'fault',
     });
   });
 });

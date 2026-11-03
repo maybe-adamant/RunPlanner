@@ -238,20 +238,6 @@ export function aggregateRewardOfferExclusions(
   return ranked(tallies, branchReasons.length);
 }
 
-/**
- * Combines candidate results over branch cohorts. A supported cohort cites
- * nothing, so its reasons cannot hold in every branch.
- */
-export function mergeRewardOfferExclusions(
-  results: readonly { readonly exclusions?: readonly RewardOfferExclusionEvidence[] }[],
-): readonly RewardOfferExclusionEvidence[] | undefined {
-  const tallies = new Map<string, Tally>();
-  for (const result of results)
-    for (const { allBranches, ...reason } of result.exclusions ?? [])
-      tally(tallies, reason as RewardOfferExclusionReason, allBranches);
-  return ranked(tallies, results.length);
-}
-
 /** God-source reasons for a locally valid offer unsupported without peers. */
 export function sourceSupportReason(
   catalog: RewardKernelCatalog,

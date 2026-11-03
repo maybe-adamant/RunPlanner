@@ -83,7 +83,6 @@ export interface DerivedAcquisitionEntryFrontier {
     | 'clockedTraitPickup'
     | 'travelDealPlaceholder'
     | 'travelDealRefill';
-  readonly branchCohortSize: number;
   /** Exact maturity contact; clocked placement evidence never combines temporal cohorts. */
   readonly historySequence?: number;
   readonly sourceOfferKey?: string;

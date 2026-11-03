@@ -367,7 +367,6 @@ export function settleAuthoredAcquisitionSite(
             Object.freeze({
               address: replayAddress,
               kind: 'echoLastReward' as const,
-              branchCohortSize: sourceBranches.length,
               rewardTypes: Object.freeze([agreedReplay.offer.rewardType]),
               fixedReward,
               retainedSourceMismatch:

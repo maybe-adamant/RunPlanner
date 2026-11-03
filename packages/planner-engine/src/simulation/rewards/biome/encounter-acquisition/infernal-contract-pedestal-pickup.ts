@@ -137,7 +137,6 @@ export function settleInfernalContractPedestalPickup(inputs: {
             blocksSeaStarDuplication: true,
             presentsMaterializedScreen: true,
             ...(pedestal.traitContext === undefined ? {} : { traitContext: pedestal.traitContext }),
-            branchCohortSize: sourceBranches.length,
           },
           facts,
           region,

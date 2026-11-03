@@ -24,7 +24,6 @@ import {
 } from '../../../src/simulation/rewards/offer-generation';
 import {
   aggregateRewardOfferExclusions,
-  mergeRewardOfferExclusions,
   sourceSupportReason,
   staticCountedOfferExclusion,
   type RewardOfferExclusionReason,
@@ -210,15 +209,6 @@ describe('reward offer exclusion aggregation', () => {
       { ...spent, allBranches: false },
     ]);
     expect(aggregateRewardOfferExclusions([undefined])).toBeUndefined();
-  });
-
-  it('merges every-combined cohorts; a supported cohort keeps reasons partial', () => {
-    const failed = { exclusions: [{ ...spent, allBranches: true }] };
-    expect(mergeRewardOfferExclusions([failed, failed])).toEqual([{ ...spent, allBranches: true }]);
-    expect(mergeRewardOfferExclusions([failed, {}])).toEqual([{ ...spent, allBranches: false }]);
-    expect(
-      mergeRewardOfferExclusions([failed, { exclusions: [{ ...spent, allBranches: false }] }]),
-    ).toEqual([{ ...spent, allBranches: false }]);
   });
 
   it('publishes exclusions only on an unsupported result', () => {

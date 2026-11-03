@@ -869,11 +869,10 @@ the shop reprices without it afterwards. Nothing else changes a price.
 - A rolled item's price is a distribution over its roll; the room spends the
   sum of its purchases.
 
-Each purchase settlement publishes the price facts its branches held (the
+Each purchase settlement publishes the price facts the reached state held (the
 item, the room's first paid purchase, the Vow rank, the held Vouchers and the
-Travel Deal rarity it discounts). They are outside the branch merge key, and
-prices are a lazy query over them, never chronology. Reached branches must
-agree on them; a divergence is an engine contract failure. The
+Travel Deal rarity it discounts). Prices are a lazy query over them, never
+chronology; a reached purchase without them is an engine contract failure. The
 [engine guide](SIMULATION_AND_VALIDATION.md#shop-settlement) owns the query.
 
 ### Gold ledger

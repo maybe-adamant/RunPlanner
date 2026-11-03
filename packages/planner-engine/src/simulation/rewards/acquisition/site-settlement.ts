@@ -323,7 +323,6 @@ export function settleAcquisitionResolvedReward(
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
     readonly timelineOwner?: SemanticAddress;
     readonly historySequence: number;
-    readonly branchCohortSize: number;
     readonly directTraitAgreementBranches?: readonly RewardBranchState[];
     readonly roleBindings?: readonly AcquisitionSettlementRole[];
     readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
@@ -343,7 +342,6 @@ export function settleAcquisitionResolvedReward(
   const frontier: DerivedAcquisitionEntryFrontier = Object.freeze({
     address,
     kind: 'acquisitionResolvedReward',
-    branchCohortSize: request.branchCohortSize,
     rewardTypes: Object.freeze([request.visibleOffer.rewardType]),
     branchesBeforeEntry: branches,
     evaluateOffer: (offer: ResolvedRewardOffer) =>

@@ -22,19 +22,17 @@ function state(travelDeal?: 'Rare' | 'Epic'): SimulationState {
 }
 
 describe('purchase price contexts', () => {
-  it('publishes one context per distinct branch reading', () => {
-    const publish = (states: readonly SimulationState[], firstPaidPurchase = true) =>
+  it('reads Travel Deal only on the first paid purchase', () => {
+    const publish = (rarity: 'Rare' | 'Epic', firstPaidPurchase = true) =>
       purchasePriceContextPublication({
         catalog,
         sequence: 1,
         room,
         firstPaidPurchase,
-        states,
+        state: state(rarity),
         venue: { kind: 'worldShop', profileKey: 'WorldShop', itemKey: 'RandomLoot' },
-      }).contexts.map((context) => context.travelDealRarity ?? null);
-    expect(publish([state('Rare'), state('Rare')])).toEqual(['Rare']);
-    expect(publish([state('Rare'), state('Epic'), state('Rare')])).toEqual(['Rare', 'Epic']);
-    // Travel Deal is read only on the first paid purchase, so a later one agrees.
-    expect(publish([state('Rare'), state('Epic')], false)).toEqual([null]);
+      }).context?.travelDealRarity ?? null;
+    expect(publish('Rare')).toBe('Rare');
+    expect(publish('Rare', false)).toBeNull();
   });
 });

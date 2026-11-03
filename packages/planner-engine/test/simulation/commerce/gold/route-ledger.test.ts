@@ -45,14 +45,12 @@ const purchase = (itemKey: string, at = room): PurchasePriceContextPublication =
     sequence,
     owner: createRoomActionAddress(biome, 'room' as never, `buy-${sequence}`),
     room: at,
-    contexts: [
-      {
-        venue: { kind: 'worldShop', profileKey: 'WorldShop', itemKey },
-        firstPaidPurchase: false,
-        vowRank: 0,
-        activeVoucherItemKeys: [],
-      },
-    ],
+    context: {
+      venue: { kind: 'worldShop', profileKey: 'WorldShop', itemKey },
+      firstPaidPurchase: false,
+      vowRank: 0,
+      activeVoucherItemKeys: [],
+    },
   };
 };
 

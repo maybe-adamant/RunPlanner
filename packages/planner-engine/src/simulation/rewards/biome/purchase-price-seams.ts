@@ -74,7 +74,7 @@ function withPurchasePrice(
     ...(inputs.owner === undefined ? {} : { owner: inputs.owner }),
     room: inputs.room,
     firstPaidPurchase: inputs.paid && !state.paidPurchaseRooms.has(roomKey),
-    states: state.branches.map((branch) => branch.state),
+    state: state.branches[0]!.state,
     ...(resolution.kind === 'priced'
       ? { venue: resolution.venue }
       : { unpriced: resolution as PurchasePriceUnpriced }),

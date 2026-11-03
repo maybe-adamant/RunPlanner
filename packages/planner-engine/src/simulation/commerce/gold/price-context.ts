@@ -45,16 +45,16 @@ export type PurchasePriceUnpriced =
   | { readonly kind: 'contractFailure'; readonly detail: string };
 
 /**
- * One reached purchase with the distinct contexts of its reached branches.
- * Branches must agree; the gold query refuses a divergent purchase. An owner
- * is absent only when no action row settles the purchase, a contract failure.
+ * One reached purchase with its price context at the reached state, absent
+ * when it is unpriced. An owner is absent only when no action row settles the
+ * purchase, a contract failure.
  */
 export interface PurchasePriceContextPublication {
   /** The walked history event the purchase settles at. */
   readonly sequence: number;
   readonly owner?: SemanticAddress;
   readonly room: OccurrenceAddress;
-  readonly contexts: readonly PurchasePriceContext[];
+  readonly context?: PurchasePriceContext;
   readonly unpriced?: PurchasePriceUnpriced;
 }
 
@@ -105,29 +105,27 @@ function branchContext(
   });
 }
 
-/** Reads one purchase's price context from every reached branch before it settles. */
+/** Reads one purchase's price context from the reached state before it settles. */
 export function purchasePriceContextPublication(inputs: {
   readonly catalog: Catalog;
   readonly sequence: number;
   readonly owner?: SemanticAddress;
   readonly room: OccurrenceAddress;
   readonly firstPaidPurchase: boolean;
-  readonly states: readonly SimulationState[];
+  readonly state: SimulationState;
   readonly venue?: PurchasePriceVenue;
   readonly unpriced?: PurchasePriceUnpriced;
 }): PurchasePriceContextPublication {
-  const distinct = new Map<string, PurchasePriceContext>();
   const venue = inputs.venue;
-  if (venue !== undefined)
-    for (const state of inputs.states) {
-      const context = branchContext(inputs.catalog, state, venue, inputs.firstPaidPurchase);
-      distinct.set(JSON.stringify(context), context);
-    }
+  const context =
+    venue === undefined
+      ? undefined
+      : branchContext(inputs.catalog, inputs.state, venue, inputs.firstPaidPurchase);
   return Object.freeze({
     sequence: inputs.sequence,
     ...(inputs.owner === undefined ? {} : { owner: inputs.owner }),
     room: inputs.room,
-    contexts: Object.freeze([...distinct.values()]),
+    ...(context === undefined ? {} : { context }),
     ...(inputs.unpriced === undefined ? {} : { unpriced: Object.freeze(inputs.unpriced) }),
   });
 }

@@ -99,7 +99,6 @@ export function dueHermesShrineDeliveryFrontier(
         Object.freeze({
           address: createAcquisitionEntryAddress(site, entryKey),
           kind: 'hermesShrineDelivery',
-          branchCohortSize: branches.length,
           rewardTypes: Object.freeze([delivery.rewardType]),
           ...(encounterPhaseKey === undefined ? {} : { encounterPhaseKey }),
           ...(fixedReward === null ? {} : { fixedReward }),

@@ -187,7 +187,6 @@ export function settleShopAcquisitionSite(
         : { goldMaterialization: pending.goldMaterialization }),
     });
   }
-  const branchCohortSize = executions.length;
   const eligibleGoldSourceOfferKeys = (): readonly string[] => {
     const travel = entry.travelDealRefill;
     return eligibleShopGoldSourceOfferKeys(
@@ -268,7 +267,6 @@ export function settleShopAcquisitionSite(
             blocksSeaStarDuplication: true,
             presentsMaterializedScreen: true,
             ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
-            branchCohortSize,
           },
           context.facts,
           ownerRegion(createAcquisitionEntryAddress(site, offer.offerKey)),
@@ -383,7 +381,6 @@ export function settleShopAcquisitionSite(
             roleBindings: bindings,
             profile,
             site,
-            branchCohortSize,
             historySequence,
             eligibleSourceOfferKeys: eligibleGoldSourceOfferKeys(),
           });
@@ -446,7 +443,6 @@ export function settleShopAcquisitionSite(
                 ? {}
                 : { traitContext: materialization.sourceOffer.traitContext }),
               historySequence,
-              branchCohortSize,
               ...(actionOwnerForOffer(entryKey) === undefined
                 ? {}
                 : { timelineOwner: actionOwnerForOffer(entryKey)! }),
@@ -634,7 +630,6 @@ export function settleShopAcquisitionSite(
         roleBindings: bindings,
         profile,
         site,
-        branchCohortSize,
         historySequence,
         eligibleSourceOfferKeys: eligibleGoldSourceOfferKeys(),
       });
@@ -704,7 +699,6 @@ export function settleShopAcquisitionSite(
                 address,
                 inventoryOwner,
                 kind: 'travelDealRefill' as const,
-                branchCohortSize,
                 sourceOfferKey: inventoryOffer.offerKey,
                 slotIndex,
                 rewardTypes: travelRefill.data.rewardTypes,
@@ -769,7 +763,6 @@ export function settleShopAcquisitionSite(
             TRAVEL_DEAL_REFILL_ENTRY_KEY,
           ),
           kind: 'travelDealPlaceholder' as const,
-          branchCohortSize,
           branchesBeforeEntry: Object.freeze([execution.candidate]),
         }),
       );
@@ -779,7 +772,6 @@ export function settleShopAcquisitionSite(
         Object.freeze({
           address: createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY),
           kind: 'echoDoubleShopPlaceholder' as const,
-          branchCohortSize,
           eligibleSourceOfferKeys: eligibleGoldSourceOfferKeys(),
           branchesBeforeEntry: Object.freeze([execution.candidate]),
         }),
@@ -839,7 +831,7 @@ export function settleShopAcquisitionSite(
     settlementFindings.every(isAcquisitionAuthorshipMissingFinding);
   // Every purchase that drops its branches explains itself on its own entry.
   if (
-    branchCohortSize > 0 &&
+    executions.length > 0 &&
     next.length === 0 &&
     !entryPurchaseFailureRecorded &&
     !stoppedOnlyForMissingAuthorship

@@ -83,14 +83,14 @@ export function captureRoomActionEnd(
   });
 }
 
-type DerivedEntryFrontiers = ReadonlyMap<string, readonly DerivedAcquisitionEntryFrontier[]>;
+type DerivedEntryFrontiers = ReadonlyMap<string, DerivedAcquisitionEntryFrontier>;
 
-/** The refilled slot's items every branch can stock without a finding. */
+/** The refilled slot's items the reached state can stock without a finding. */
 function travelDealRefillValues(
   catalog: Catalog,
   profileKey: string,
   slotIndex: number | undefined,
-  frontiers: readonly DerivedAcquisitionEntryFrontier[],
+  frontier: DerivedAcquisitionEntryFrontier,
 ): readonly ShopOptionSelection[] {
   const slot =
     slotIndex === undefined
@@ -98,12 +98,10 @@ function travelDealRefillValues(
       : catalog.rewards.shops.byKey[profileKey]?.slots.values[slotIndex];
   if (slot === undefined) return Object.freeze([]);
   return Object.freeze(
-    shopOfferOptionValues(catalog, profileKey, slot.key).filter((value) =>
-      frontiers.every((frontier) => {
-        const result = frontier.evaluateShopOption?.(value);
-        return result?.supported === true && result.findings.length === 0;
-      }),
-    ),
+    shopOfferOptionValues(catalog, profileKey, slot.key).filter((value) => {
+      const result = frontier.evaluateShopOption?.(value);
+      return result?.supported === true && result.findings.length === 0;
+    }),
   );
 }
 
@@ -127,18 +125,17 @@ function worldShopInteraction(
       reference.siteKey === 'roomExit' &&
       reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY,
   );
-  // The first normal paid purchase made with Travel Deal seeds the refill on every branch.
-  const refillFrontiers =
-    derivedEntries.get(
-      semanticAddressKey(
-        createShopOfferAddress(
-          createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-          room.occurrenceId,
-          TRAVEL_DEAL_REFILL_ENTRY_KEY,
-        ),
+  // The first normal paid purchase made with Travel Deal seeds the refill.
+  const refillFrontier = derivedEntries.get(
+    semanticAddressKey(
+      createShopOfferAddress(
+        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+        room.occurrenceId,
+        TRAVEL_DEAL_REFILL_ENTRY_KEY,
       ),
-    ) ?? [];
-  const seeded = attestDerivedAcquisitionEntryCandidateCapability(refillFrontiers);
+    ),
+  );
+  const seeded = attestDerivedAcquisitionEntryCandidateCapability(refillFrontier);
   const live = seeded?.kind === 'travelDealRefill';
   const refill = shop.travelDealRefill ?? null;
   return Object.freeze({
@@ -167,7 +164,7 @@ function worldShopInteraction(
               catalog,
               shop.profileKey,
               seeded?.slotIndex,
-              refillFrontiers,
+              refillFrontier!,
             ),
             command: Object.freeze({
               kind: 'PurchaseShopTravelDealRefill' as const,

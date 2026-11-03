@@ -574,16 +574,13 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     event.siteKey === undefined || room === undefined
       ? undefined
       : room.acquisitionSites[event.siteKey]?.address;
-  const derivedFrontiers =
-    derivedSite === undefined || event.entryKey === undefined
-      ? Object.freeze([])
-      : context.accumulated.derivedAcquisitionEntryFrontiers(
-          semanticAddressKey(createAcquisitionEntryAddress(derivedSite, event.entryKey)),
-        );
-  const derivedCapability =
+  const derivedFrontier =
     derivedSite === undefined || event.entryKey === undefined
       ? undefined
-      : attestDerivedAcquisitionEntryCandidateCapability(derivedFrontiers);
+      : context.accumulated.derivedAcquisitionEntryFrontier(
+          semanticAddressKey(createAcquisitionEntryAddress(derivedSite, event.entryKey)),
+        );
+  const derivedCapability = attestDerivedAcquisitionEntryCandidateCapability(derivedFrontier);
   const transition = applyAcquisitionPointReachedTransition({
     catalog: context.catalog,
     snapshot: context.snapshot,
@@ -593,7 +590,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     roomView: context.views.get(semanticAddressKey(event.origin)),
     sourceBranches: state.branches,
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
-    derivedAcquisitionEntryFrontiers: derivedFrontiers,
+    ...(derivedFrontier === undefined ? {} : { derivedAcquisitionEntryFrontier: derivedFrontier }),
     ...(derivedCapability === undefined
       ? {}
       : { derivedAcquisitionEntryCapability: derivedCapability }),

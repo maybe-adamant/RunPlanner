@@ -85,7 +85,7 @@ export interface AcquisitionPointReachedInputs {
     readonly traitKey: string;
     readonly owner: import('../../../../authored-project/addresses').RoomActionAddress;
   };
-  readonly derivedAcquisitionEntryFrontiers?: readonly DerivedAcquisitionEntryFrontier[];
+  readonly derivedAcquisitionEntryFrontier?: DerivedAcquisitionEntryFrontier;
   readonly derivedAcquisitionEntryCapability?: import('../../acquisition/artifacts').DerivedAcquisitionEntryCandidateCapability;
 }
 
@@ -404,7 +404,7 @@ export function applyAcquisitionPointReachedTransition(
               room.origin,
               pickupReference,
               inputs.sourceBranches,
-              inputs.derivedAcquisitionEntryFrontiers ?? [],
+              inputs.derivedAcquisitionEntryFrontier,
               event.sequence,
             );
       if (placement !== undefined) generatedPickupPlacements.push(placement);

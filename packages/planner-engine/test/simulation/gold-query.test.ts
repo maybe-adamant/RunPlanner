@@ -204,11 +204,15 @@ describe('gold ledger query', () => {
       .flatMap((biome) => ('rewards' in biome ? biome.rewards.purchasePriceContexts : []))
       .filter((publication) => publication.room.occurrenceId === shop.occurrenceId)
       .map((publication) =>
-        publication.contexts.map((context) => [
-          context.venue.kind,
-          context.firstPaidPurchase,
-          context.travelDealRarity ?? null,
-        ]),
+        publication.context === undefined
+          ? []
+          : [
+              [
+                publication.context.venue.kind,
+                publication.context.firstPaidPurchase,
+                publication.context.travelDealRarity ?? null,
+              ],
+            ],
       );
     expect(published).toEqual([
       [['free', false, null]],

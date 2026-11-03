@@ -68,7 +68,7 @@ export interface ChronologyWalkContext {
   /** Ordered reads of what earlier seams accumulated. */
   readonly accumulated: Pick<
     ChronologyAccumulator,
-    'derivedAcquisitionEntryFrontiers' | 'gorgonPhaseCandidate' | 'findingEntries'
+    'derivedAcquisitionEntryFrontier' | 'gorgonPhaseCandidate' | 'findingEntries'
   >;
 }
 

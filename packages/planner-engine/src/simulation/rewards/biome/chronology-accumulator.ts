@@ -68,7 +68,6 @@ import type {
   TargetRewardHistoryCheckpoint,
 } from '../model';
 import { indexRewardProducerFrontier, type RewardProducerFrontier } from '../producer-frontiers';
-import { mergeRewardOfferExclusions } from '../offer-exclusions';
 import type { RunStateSnapshot } from '../run-state';
 import type {
   ReachedTraitChildCheckpoint,
@@ -252,10 +251,7 @@ export interface ChronologyAccumulation {
   >;
   readonly acquisitionConversionContexts: ReadonlyMap<string, readonly AcquisitionRoleFrontier[]>;
   readonly fixedAcquisitionRealizations: ReadonlyMap<string, FixedAcquisitionRealization>;
-  readonly derivedAcquisitionEntryContexts: ReadonlyMap<
-    string,
-    readonly DerivedAcquisitionEntryFrontier[]
-  >;
+  readonly derivedAcquisitionEntryContexts: ReadonlyMap<string, DerivedAcquisitionEntryFrontier>;
   readonly timelineFacts: PlannerTimelineFacts;
   readonly runStateSnapshots: readonly RunStateSnapshot[];
   readonly traitChildSettlements: ReadonlyMap<string, TraitChildSettlementAccumulation>;
@@ -301,7 +297,7 @@ export interface ChronologyAccumulator {
   /** The first `count` merged emissions, for publishing the walk through an earlier step. */
   emissionsThrough(count: number): readonly ChronologyEmission[];
   findingEntries(): readonly FindingRegionEntry[];
-  derivedAcquisitionEntryFrontiers(key: string): readonly DerivedAcquisitionEntryFrontier[];
+  derivedAcquisitionEntryFrontier(key: string): DerivedAcquisitionEntryFrontier | undefined;
   gorgonPhaseCandidate(key: string): GorgonPhaseCandidateSupport | undefined;
   hasRunStateSnapshot(ownerKey: string): boolean;
   hasTargetHistory(originKey: string): boolean;
@@ -404,10 +400,7 @@ export function createChronologyAccumulator(
   const acquisitionConversionContexts = new Map<string, readonly AcquisitionRoleFrontier[]>();
   const fixedAcquisitionRealizations = new Map<string, FixedAcquisitionRealization>();
   const generatedPickupPlacements = new Map<string, GeneratedPickupPlacement>();
-  const derivedAcquisitionEntryContexts = new Map<
-    string,
-    readonly DerivedAcquisitionEntryFrontier[]
-  >();
+  const derivedAcquisitionEntryContexts = new Map<string, DerivedAcquisitionEntryFrontier>();
   const timelineFactNodes = new Map<string, PlannerTimelineNode>();
   const timelineFactDependencies = new Map<string, PlannerTimelineDependency>();
   const runStateSnapshotsByOwner = new Map<string, RunStateSnapshot>();
@@ -576,22 +569,13 @@ export function createChronologyAccumulator(
   function recordDerivedAcquisitionEntryFrontiers(
     frontiers: readonly DerivedAcquisitionEntryFrontier[] | undefined,
   ): void {
-    const incomingByOwner = new Map<string, DerivedAcquisitionEntryFrontier[]>();
-    for (const frontier of frontiers ?? []) {
-      const key = semanticAddressKey(frontier.inventoryOwner ?? frontier.address);
-      incomingByOwner.set(key, [...(incomingByOwner.get(key) ?? []), frontier]);
-    }
-    for (const [key, incoming] of incomingByOwner) {
-      const firstIncoming = incoming[0];
-      const completeIncomingCohort =
-        firstIncoming !== undefined && incoming.length === firstIncoming.branchCohortSize;
-      const combined = Object.freeze(
-        completeIncomingCohort
-          ? incoming
-          : [...(derivedAcquisitionEntryContexts.get(key) ?? []), ...incoming],
-      );
-      derivedAcquisitionEntryContexts.set(key, combined);
-      const first = combined[0];
+    const incomingKeys = new Set<string>();
+    for (const first of frontiers ?? []) {
+      const key = semanticAddressKey(first.inventoryOwner ?? first.address);
+      // The one reached state emits each entry once; a later emission replaces it.
+      if (incomingKeys.has(key)) fail(`${key} emitted two derived acquisition frontiers at once`);
+      incomingKeys.add(key);
+      derivedAcquisitionEntryContexts.set(key, first);
       if (first?.kind === 'travelDealRefill' && first.address.site.owner.kind === 'occurrence') {
         const origin = first.address.site.owner;
         const host = rooms.get(semanticAddressKey(origin));
@@ -622,18 +606,16 @@ export function createChronologyAccumulator(
             recordTimelineDependency(replacementAction.owner, realizationOwner);
         }
       }
+      const evaluateFrontierOffer = first.evaluateOffer;
       if (
-        (first?.kind !== 'travelDealRefill' &&
-          first?.kind !== 'acquisitionResolvedReward' &&
-          first?.kind !== 'echoDoubleShopReward') ||
-        combined.length !== first.branchCohortSize ||
-        combined.some((candidate) => candidate.evaluateOffer === undefined) ||
+        (first.kind !== 'travelDealRefill' &&
+          first.kind !== 'acquisitionResolvedReward' &&
+          first.kind !== 'echoDoubleShopReward') ||
+        evaluateFrontierOffer === undefined ||
         producerFrontiers.has(key)
       )
         continue;
-      recordAcquisitionRoleFrontiers(
-        combined.flatMap((candidate) => candidate.roleFrontiers ?? Object.freeze([])),
-      );
+      recordAcquisitionRoleFrontiers(first.roleFrontiers ?? Object.freeze([]));
       indexRewardProducerFrontier(
         producerFrontiers,
         Object.freeze({
@@ -642,11 +624,9 @@ export function createChronologyAccumulator(
               ? ('jointShopInventory' as const)
               : ('sequential' as const),
           generationHistorySequence: Math.max(
-            ...combined.flatMap((candidate) =>
-              candidate.branchesBeforeEntry.map((branch) => branch.processedThroughHistorySequence),
-            ),
+            ...first.branchesBeforeEntry.map((branch) => branch.processedThroughHistorySequence),
           ),
-          reachableBranchCount: combined.length,
+          reachableBranchCount: 1,
           acquisitionHorizon:
             first.kind === 'travelDealRefill' ||
             (first.kind === 'echoDoubleShopReward' && first.fixedReward !== undefined)
@@ -656,30 +636,13 @@ export function createChronologyAccumulator(
           evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
             if (semanticAddressKey(owner) !== key)
               return fail('derived acquisition frontier received a foreign owner');
-            const results = combined.map((candidate) => candidate.evaluateOffer!(offer));
-            const supported = results.every((result) => result.supported);
-            const exclusions = supported ? undefined : mergeRewardOfferExclusions(results);
-            return Object.freeze({
-              findings: Object.freeze(results.flatMap((result) => result.findings)),
-              supported,
-              ...(exclusions === undefined ? {} : { exclusions }),
-            });
+            return evaluateFrontierOffer(offer);
           },
           ...(first.evaluateShopOption === undefined
             ? {}
             : {
-                evaluateShopOption: (_owner: SemanticAddress, selection: ShopOptionSelection) => {
-                  const results = combined.map((candidate) =>
-                    candidate.evaluateShopOption!(selection),
-                  );
-                  const supported = results.every((result) => result.supported);
-                  const exclusions = supported ? undefined : mergeRewardOfferExclusions(results);
-                  return Object.freeze({
-                    findings: Object.freeze(results.flatMap((result) => result.findings)),
-                    supported,
-                    ...(exclusions === undefined ? {} : { exclusions }),
-                  });
-                },
+                evaluateShopOption: (_owner: SemanticAddress, selection: ShopOptionSelection) =>
+                  first.evaluateShopOption!(selection),
               }),
         }),
       );
@@ -906,8 +869,7 @@ export function createChronologyAccumulator(
     emissionCount: () => merged.length,
     emissionsThrough: (count: number) => Object.freeze(merged.slice(0, count)),
     findingEntries: () => Object.freeze([...findings.values()]),
-    derivedAcquisitionEntryFrontiers: (key: string) =>
-      derivedAcquisitionEntryContexts.get(key) ?? Object.freeze([]),
+    derivedAcquisitionEntryFrontier: (key: string) => derivedAcquisitionEntryContexts.get(key),
     gorgonPhaseCandidate: (key: string) => gorgonPhaseCandidates.get(key),
     hasRunStateSnapshot: (ownerKey: string) => runStateSnapshotsByOwner.has(ownerKey),
     hasTargetHistory: (originKey: string) => targetHistoryByOrigin.has(originKey),
