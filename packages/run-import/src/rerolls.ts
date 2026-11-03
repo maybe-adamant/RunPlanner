@@ -34,7 +34,7 @@ import {
   poolSpends,
   type Replaced,
 } from './store-brackets';
-import { chooseRoomFit, searchRoom } from './room-search';
+import { chooseRoomFit, exitFingerprint, searchRoom } from './room-search';
 import {
   ARTIFICER_STORE,
   pinArtificerReplacement,
@@ -519,7 +519,9 @@ function placeRestoredHubPress(
  * loss is what its presses drew, placed by the board doors its visits saved.
  * Every assignment that removes the same rewards leaves the same stores, so a
  * placement that reproduces the saved stores is one assumption for the room;
- * otherwise each press is reported.
+ * otherwise each press is reported. Several multisets the stores explain are
+ * judged at the next entry save: the first accepted is placed, and other
+ * accepted ones leaving another exit state make it an assumption.
  */
 export function importRerolls(context: RunImportContext): void {
   for (const [roomIndex, room] of context.record.rooms.entries()) {
@@ -597,8 +599,10 @@ export function importRerolls(context: RunImportContext): void {
             candidates: solutions,
             author: (replaced) => (place(replaced) ? replaced : undefined),
             fits: () => bracketStoresMatch(context, roomIndex),
+            fingerprint: () => exitFingerprint(context, roomIndex),
           })
         : undefined;
+    const choice = search === undefined ? undefined : chooseRoomFit(search.fits);
     if (search?.capped === true)
       context.note({
         area: 'reroll',
@@ -606,8 +610,7 @@ export function importRerolls(context: RunImportContext): void {
         address: createOccurrenceAddress(biome, sourceId),
         record,
       });
-    const replaced =
-      solutions.length === 1 ? solutions[0] : search?.fits.find((fit) => fit.accepted)?.choice;
+    const replaced = solutions.length === 1 ? solutions[0] : choice?.chosen.choice;
     if (replaced === undefined) {
       // The stores lose another count of rewards than the pool spent, or several counts alike.
       if (draws?.smallest !== undefined)
@@ -651,7 +654,8 @@ export function importRerolls(context: RunImportContext): void {
           !earlier.has(action.rerollId) &&
           action.target.kind !== 'wheelOffer',
       );
-    if (otherPresses)
+    // Accepted multisets leaving another exit state are what the record cannot tell apart.
+    if (otherPresses || (choice?.equivalents.length ?? 0) > 0)
       context.note({
         area: 'reroll',
         reason: 'assumption',
