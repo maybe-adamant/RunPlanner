@@ -548,12 +548,10 @@ describe('Echo Gift Gift Gift', () => {
     expect(replay.simulation.goldEvents).toContainEqual(
       expect.objectContaining({
         kind: 'gain',
-        contexts: [
-          {
-            gain: { kind: 'keepsakeGold', gold: 100 },
-            multipliers: { moneyMultiplier: 1, moneyRewardBonus: 1, blocksGold: false },
-          },
-        ],
+        context: {
+          gain: { kind: 'keepsakeGold', gold: 100 },
+          multipliers: { moneyMultiplier: 1, moneyRewardBonus: 1, blocksGold: false },
+        },
       }),
     );
   });

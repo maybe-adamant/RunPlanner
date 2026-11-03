@@ -32,8 +32,14 @@ const gain = (
     kind: 'gain',
     sequence,
     room: at,
-    contexts: [{ gain: value, multipliers: { ...plain, ...multipliers } }],
+    context: { gain: value, multipliers: { ...plain, ...multipliers } },
   };
+};
+const withoutContext = (publication: GoldEventPublication): GoldEventPublication => {
+  if (publication.kind !== 'gain') return publication;
+  const { context, ...rest } = publication;
+  void context;
+  return rest;
 };
 const marker = (kind: 'roomEntered' | 'doorsOpen', at = room): GoldEventPublication => {
   sequence += 1;
@@ -138,12 +144,10 @@ describe('gold ledger', () => {
     const start: GoldEventPublication = {
       kind: 'gain',
       sequence: 0,
-      contexts: [
-        {
-          gain: { kind: 'startingGold', gold: 450 },
-          multipliers: { ...plain, moneyMultiplier: 2 },
-        },
-      ],
+      context: {
+        gain: { kind: 'startingGold', gold: 450 },
+        multipliers: { ...plain, moneyMultiplier: 2 },
+      },
     };
     const blocked = { blocksGold: true };
     const result = ledger([
@@ -331,23 +335,12 @@ describe('gold ledger', () => {
     });
   });
 
-  it('refuses a divergent gain on its own room and leaves later balances unavailable', () => {
+  it('refuses a gain with no reading on its own room and leaves later balances unavailable', () => {
     sequence += 1;
-    const divergent: GoldEventPublication = {
-      kind: 'gain',
-      sequence,
-      room,
-      contexts: [
-        { gain: { kind: 'moneyPickup', gold: 100, npcDrop: false }, multipliers: plain },
-        {
-          gain: { kind: 'moneyPickup', gold: 100, npcDrop: false },
-          multipliers: { ...plain, moneyMultiplier: 1.2 },
-        },
-      ],
-    };
-    const unresolved = { ...gain({ kind: 'fallbackGold', gold: 90 }, {}, later), contexts: [] };
+    const unread: GoldEventPublication = { kind: 'gain', sequence, room };
+    const unresolved = withoutContext(gain({ kind: 'fallbackGold', gold: 90 }, {}, later));
     const result = ledger([
-      divergent,
+      unread,
       marker('roomEntered', later),
       { ...unresolved, unpriced: { kind: 'itemUnresolved' } } as GoldEventPublication,
     ]);
@@ -356,7 +349,7 @@ describe('gold ledger', () => {
     const pending = gain({ kind: 'fallbackGold', gold: 90 });
     const unresolvedOnly = ledger([
       gain({ kind: 'moneyPickup', gold: 100, npcDrop: false }, {}, later),
-      { ...pending, contexts: [], unpriced: { kind: 'itemUnresolved' } } as GoldEventPublication,
+      { ...withoutContext(pending), unpriced: { kind: 'itemUnresolved' } } as GoldEventPublication,
       marker('roomEntered', later),
     ]);
     expect(unresolvedOnly.rooms.get(semanticAddressKey(room))).toEqual({ kind: 'itemUnresolved' });

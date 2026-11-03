@@ -383,12 +383,11 @@ type Entry =
     };
 
 function contextOf(publication: GoldGainPublication): GoldEventContext {
-  const [context, ...others] = publication.contexts;
-  if (context === undefined || others.length > 0)
+  if (publication.context === undefined)
     throw new GoldLedgerContractError(
-      `${publication.owner === undefined ? 'a gold contact' : semanticAddressKey(publication.owner)} has ${publication.contexts.length} distinct gold readings across reached branches`,
+      `${publication.owner === undefined ? 'a gold contact' : semanticAddressKey(publication.owner)} has no gold reading`,
     );
-  return context;
+  return publication.context;
 }
 
 /**

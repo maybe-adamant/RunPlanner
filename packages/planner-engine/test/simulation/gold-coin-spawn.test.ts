@@ -133,12 +133,8 @@ function combat09MoneyGains(project: ProjectDocument, order: readonly Action[]) 
   return combat09GoldEvents(project, order).flatMap((event) =>
     event.kind === 'gain' &&
     event.room?.occurrenceId === combat09 &&
-    event.contexts[0]?.gain.kind === 'moneyPickup'
-      ? [
-          event.contexts.map(
-            (context) => context.gain as Extract<GoldGain, { kind: 'moneyPickup' }>,
-          ),
-        ]
+    event.context?.gain.kind === 'moneyPickup'
+      ? [[event.context.gain as Extract<GoldGain, { kind: 'moneyPickup' }>]]
       : [],
   );
 }
@@ -178,7 +174,7 @@ describe('coin spawn valuation', () => {
     const qb = coin(quickBuckScreen, 'quickBuckGold');
     const events = combat09GoldEvents(withQuickBuck('money'), [...openCage(1), qb, ...openCage(2)]);
     const byAction = events.flatMap((event) =>
-      event.kind === 'gain' && event.contexts[0]?.gain.kind === 'moneyPickup'
+      event.kind === 'gain' && event.context?.gain.kind === 'moneyPickup'
         ? [event.roomAction?.actionKey]
         : [],
     );

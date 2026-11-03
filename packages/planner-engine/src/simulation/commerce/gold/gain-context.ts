@@ -137,7 +137,7 @@ export interface GoldEventContext {
   readonly multipliers: GoldMultipliers;
 }
 
-/** One reached gold contact with the distinct readings of its reached branches. */
+/** One reached gold contact with the reached state's reading. */
 export interface GoldGainPublication {
   readonly kind: 'gain';
   readonly sequence: number;
@@ -146,7 +146,8 @@ export interface GoldGainPublication {
   readonly owner?: SemanticAddress;
   /** The room's ranked action whose settlement paid it; absent for gold no action pays. */
   readonly roomAction?: RoomActionAddress;
-  readonly contexts: readonly GoldEventContext[];
+  /** Absent when the contact is unpriced. */
+  readonly context?: GoldEventContext;
   readonly unpriced?: PurchasePriceUnpriced;
 }
 
@@ -276,44 +277,37 @@ export function goldOnKillFacts(
 }
 
 /**
- * Publishes one gold contact. Each reading pairs the gain a branch settled
- * with the multipliers a branch held; distinct readings are kept for the
- * query to refuse, and a reading with an unauthored multiplier is unresolved.
+ * Publishes one gold contact: the gain the reached state settled with the
+ * multipliers it held; a reading with an unauthored multiplier is unresolved.
  */
 export function goldGainPublication(inputs: {
   readonly sequence: number;
   readonly room?: OccurrenceAddress;
   readonly owner?: SemanticAddress;
   readonly roomAction?: RoomActionAddress;
-  readonly readings: readonly {
+  readonly reading?: {
     readonly gain: GoldGain;
     readonly multipliers: GoldMultipliers | undefined;
-  }[];
+  };
   readonly unpriced?: PurchasePriceUnpriced;
 }): GoldGainPublication {
-  const distinct = new Map<string, GoldEventContext>();
-  let unresolved = false;
-  for (const reading of inputs.readings) {
-    if (reading.multipliers === undefined) {
-      unresolved = true;
-      continue;
-    }
-    const context = Object.freeze({
-      gain: Object.freeze(reading.gain),
-      multipliers: reading.multipliers,
-    });
-    distinct.set(JSON.stringify(context), context);
-  }
+  const { reading } = inputs;
+  const context =
+    reading?.multipliers === undefined
+      ? undefined
+      : Object.freeze({ gain: Object.freeze(reading.gain), multipliers: reading.multipliers });
   const unpriced =
     inputs.unpriced ??
-    (unresolved ? Object.freeze({ kind: 'itemUnresolved' as const }) : undefined);
+    (reading !== undefined && context === undefined
+      ? Object.freeze({ kind: 'itemUnresolved' as const })
+      : undefined);
   return Object.freeze({
     kind: 'gain',
     sequence: inputs.sequence,
     ...(inputs.room === undefined ? {} : { room: inputs.room }),
     ...(inputs.owner === undefined ? {} : { owner: inputs.owner }),
     ...(inputs.roomAction === undefined ? {} : { roomAction: inputs.roomAction }),
-    contexts: Object.freeze([...distinct.values()]),
+    ...(context === undefined ? {} : { context }),
     ...(unpriced === undefined ? {} : { unpriced }),
   });
 }

@@ -226,7 +226,7 @@ describe('gold ledger walk', () => {
     const trades = traded.evaluation.route.biomes.flatMap((biome) =>
       'rewards' in biome
         ? biome.rewards.goldEvents.flatMap((event) =>
-            event.kind === 'gain' ? event.contexts.map((context) => context.gain) : [],
+            event.kind === 'gain' && event.context !== undefined ? [event.context.gain] : [],
           )
         : [],
     );

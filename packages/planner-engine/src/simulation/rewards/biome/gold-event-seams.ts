@@ -33,7 +33,6 @@ import type { CanonicalAuthoredRoom } from '../../materialization';
 import type { RoomActionRow } from '../../room-actions';
 import type { SimulationState } from '../../state/model';
 import { producingTraitPickup } from '../../state/pending-resource-pickups';
-import { branchList, type RewardBranchState } from '../branch-primitives';
 import type { RewardEvent } from '../model';
 import type {
   ChronologyWalkContext,
@@ -50,7 +49,7 @@ type Detection =
 
 interface Detected {
   readonly owner?: SemanticAddress;
-  readonly byBranch: Detection[];
+  readonly detection: Detection;
 }
 
 function authoredRoom(
@@ -213,63 +212,39 @@ function boostedConversionBonus(catalog: Catalog): number {
   return 0;
 }
 
-/**
- * Echo's biome-start keepsake copy: a captured Gold Purse pays its Common gold.
- * Reached branches that disagree on the copy or its gold fail the contract.
- */
+/** Echo's biome-start keepsake copy: a captured Gold Purse pays its Common gold. */
 export function withEchoKeepsakeGold(
   context: ChronologyWalkContext,
   before: ChronologyWalkState,
   after: ChronologyWalkState,
 ): ChronologyWalkState {
-  if (branchList(after.branch).length === 0) return after;
-  const seen = new Set(
-    branchList(before.branch).flatMap((branch) => branch.state.traitHistory.events),
-  );
+  const { branch } = after;
+  if (branch === undefined) return after;
+  const seen = new Set(before.branch?.state.traitHistory.events ?? []);
   const firstEntered = context.history.events.find((event) => event.kind === 'roomEntered');
   const firstRoom =
     firstEntered === undefined
       ? undefined
       : context.rooms.get(semanticAddressKey(firstEntered.origin));
-  const replays = branchList(after.branch).map((branch) =>
-    branch.state.traitHistory.events.filter(
-      (traitEvent): traitEvent is Extract<typeof traitEvent, { kind: 'echoKeepsakeReplay' }> =>
-        !seen.has(traitEvent) && traitEvent.kind === 'echoKeepsakeReplay',
-    ),
+  const replays = branch.state.traitHistory.events.filter(
+    (traitEvent): traitEvent is Extract<typeof traitEvent, { kind: 'echoKeepsakeReplay' }> =>
+      !seen.has(traitEvent) && traitEvent.kind === 'echoKeepsakeReplay',
   );
-  const golds = replays.map((events) =>
-    events.length === 1
-      ? context.catalog.keepsakes.byKey[events[0]!.capturedKeepsakeKey]?.goldByRank?.Common
-      : undefined,
-  );
-  const paid = replays.flatMap((events, index) =>
-    golds[index] === undefined ? [] : [{ replay: events[0]!, gold: golds[index] }],
-  );
-  const first = paid[0];
-  if (first === undefined) return after;
-  const agree =
-    replays.every((events) => events.length === 1) &&
-    golds.every((gold) => gold === first.gold) &&
-    paid.every(({ replay }) => replay.sequence === first.replay.sequence);
+  const replay = replays.length === 1 ? replays[0] : undefined;
+  const gold =
+    replay === undefined
+      ? undefined
+      : context.catalog.keepsakes.byKey[replay.capturedKeepsakeKey]?.goldByRank?.Common;
+  if (replay === undefined || gold === undefined) return after;
   return withGoldPublications(after, [
     goldGainPublication({
-      sequence: first.replay.sequence,
+      sequence: replay.sequence,
       ...(firstRoom?.origin.kind === 'occurrence' ? { room: firstRoom.origin } : {}),
-      owner: first.replay.owner,
-      readings: agree
-        ? branchList(after.branch).map((branch) => ({
-            gain: Object.freeze({ kind: 'keepsakeGold' as const, gold: first.gold }),
-            multipliers: goldMultipliers(context.catalog, branch.state),
-          }))
-        : [],
-      ...(agree
-        ? {}
-        : {
-            unpriced: {
-              kind: 'contractFailure' as const,
-              detail: "reached branches disagree on Echo's keepsake gold",
-            },
-          }),
+      owner: replay.owner,
+      reading: {
+        gain: Object.freeze({ kind: 'keepsakeGold' as const, gold }),
+        multipliers: goldMultipliers(context.catalog, branch.state),
+      },
     }),
   ]);
 }
@@ -356,25 +331,26 @@ export function withRunStartGold(
   walk: ChronologyWalkState,
   loadout: Pick<RouteLoadout, 'startingKeepsakeKey'>,
 ): ChronologyWalkState {
-  if (branchList(walk.branch).length === 0) return walk;
-  const readings = branchList(walk.branch).map((branch) => {
-    const keepsake =
-      loadout.startingKeepsakeKey === null
-        ? undefined
-        : keepsakeGold(context.catalog, loadout.startingKeepsakeKey, branch.state);
-    return {
-      gain: Object.freeze({
-        kind: 'startingGold' as const,
-        gold: arcanaGold(context.catalog, branch.state) + (keepsake ?? 0),
-      }),
-      multipliers: goldMultipliers(context.catalog, branch.state),
-    };
-  });
-  if (readings.every((reading) => reading.gain.gold === 0)) return walk;
-  return withGoldPublications(walk, [goldGainPublication({ sequence: 0, readings })]);
+  const { branch } = walk;
+  if (branch === undefined) return walk;
+  const keepsake =
+    loadout.startingKeepsakeKey === null
+      ? undefined
+      : keepsakeGold(context.catalog, loadout.startingKeepsakeKey, branch.state);
+  const gold = arcanaGold(context.catalog, branch.state) + (keepsake ?? 0);
+  if (gold === 0) return walk;
+  return withGoldPublications(walk, [
+    goldGainPublication({
+      sequence: 0,
+      reading: {
+        gain: Object.freeze({ kind: 'startingGold' as const, gold }),
+        multipliers: goldMultipliers(context.catalog, branch.state),
+      },
+    }),
+  ]);
 }
 
-/** A Pool of Purging sale, read from the branches it settles from. */
+/** A Pool of Purging sale, read from the state it settles from. */
 export function withPoolSaleGold(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
@@ -382,36 +358,35 @@ export function withPoolSaleGold(
   sold: { readonly traitKey: string; readonly owner: SemanticAddress },
 ): ChronologyWalkState {
   const room = authoredRoom(context, event.origin);
-  if (room === undefined || branchList(state.branch).length === 0) return state;
-  const readings = branchList(state.branch).map((branch) => {
-    const equipped = branch.state.traitHistory.equippedTraits[sold.traitKey];
-    const infusion = context.catalog.traits.byKey[sold.traitKey]?.unityTrait === true;
-    const rarity =
-      equipped?.rarity === undefined ? 'unranked' : infusion ? 'infusion' : equipped.rarity;
-    return {
-      gain: Object.freeze({
-        kind: 'poolSale' as const,
-        traitKey: sold.traitKey,
-        rarity: rarity as Extract<GoldGain, { kind: 'poolSale' }>['rarity'],
-        level: equipped?.level ?? 1,
-      }),
-      multipliers: goldMultipliers(context.catalog, branch.state),
-    };
-  });
+  const { branch } = state;
+  if (room === undefined || branch === undefined) return state;
+  const equipped = branch.state.traitHistory.equippedTraits[sold.traitKey];
+  const infusion = context.catalog.traits.byKey[sold.traitKey]?.unityTrait === true;
+  const rarity =
+    equipped?.rarity === undefined ? 'unranked' : infusion ? 'infusion' : equipped.rarity;
+  const reading = {
+    gain: Object.freeze({
+      kind: 'poolSale' as const,
+      traitKey: sold.traitKey,
+      rarity: rarity as Extract<GoldGain, { kind: 'poolSale' }>['rarity'],
+      level: equipped?.level ?? 1,
+    }),
+    multipliers: goldMultipliers(context.catalog, branch.state),
+  };
   return withGoldPublications(state, [
     goldGainPublication({
       sequence: event.sequence,
       room: room.origin,
       owner: sold.owner,
       ...optionalRoomAction(walkedRoomAction(room, event)),
-      readings,
+      reading,
     }),
   ]);
 }
 
 /**
- * Gold the walked event settled, read from the branches it received and the
- * branches it produced: new reward and trait-history entries, held loans,
+ * Gold the walked event settled, read from the state it received and the
+ * state it produced: new reward and trait-history entries, held loans,
  * keepsakes and Arcana, and the event's own gold contact.
  */
 export function withGoldEvents(
@@ -464,11 +439,10 @@ export function withGoldEvents(
   if (
     event.kind === 'roomEntered' &&
     enteredRoom?.origin.kind === 'occurrence' &&
-    branchList(received.branch).length > 0
+    received.branch !== undefined
   ) {
     // Native draws every store of the room at the door into it, before entry.
-    const entry =
-      goldMultipliers(catalog, branchList(received.branch)[0]!.state) ?? ('unresolved' as const);
+    const entry = goldMultipliers(catalog, received.branch.state) ?? ('unresolved' as const);
     state = Object.freeze({
       ...state,
       goldRoomEntryMultipliers: new Map(state.goldRoomEntryMultipliers).set(
@@ -484,27 +458,23 @@ export function withGoldEvents(
     (event.kind === 'roomEntered' ||
       (event.kind === 'encounterCompleted' && event.execution === 'normal')) &&
     roomKey !== undefined &&
-    branchList(next.branch).length > 0
+    next.branch !== undefined
   )
     state = Object.freeze({
       ...state,
       goldSpawnReadings: new Map(state.goldSpawnReadings).set(
         `${roomKey}::${event.kind === 'roomEntered' ? 'entry' : 'encounterEnd'}`,
-        goldSpawnReading(catalog, branchList(next.branch)[0]!.state) ?? 'unresolved',
+        goldSpawnReading(catalog, next.branch.state) ?? 'unresolved',
       ),
     });
-  if (branchList(next.branch).length > 0) {
+  if (next.branch !== undefined) {
     // A selected trait's own coins spawn as its screen closes, after it is equipped.
     const screens = new Map<string, SimulationState>();
-    for (const branch of branchList(next.branch))
-      for (const evaluation of branch.traitEvaluations ?? []) {
-        if (
-          branchList(received.branch).some((prior) => prior.traitEvaluations?.includes(evaluation))
-        )
-          continue;
-        const key = `trait::${semanticAddressKey(evaluation.address)}::${evaluation.acquisitionRole}`;
-        screens.set(key, branch.state);
-      }
+    for (const evaluation of next.branch.traitEvaluations ?? []) {
+      if (received.branch?.traitEvaluations?.includes(evaluation)) continue;
+      const key = `trait::${semanticAddressKey(evaluation.address)}::${evaluation.acquisitionRole}`;
+      screens.set(key, next.branch.state);
+    }
     if (screens.size > 0) {
       const readings = new Map(state.goldSpawnReadings);
       for (const [key, screenState] of screens)
@@ -560,45 +530,18 @@ export function withGoldEvents(
   const doorsOpen: readonly GoldEventPublication[] = doorsOpenHere
     ? [Object.freeze({ kind: 'doorsOpen' as const, sequence: event.sequence, room: roomOrigin! })]
     : [];
-  if (branchList(received.branch).length === 0 || branchList(next.branch).length === 0)
+  const { branch } = next;
+  if (received.branch === undefined || branch === undefined)
     return withGoldPublications(state, doorsOpen);
 
-  const receivedStates = branchList(received.branch).map((branch) => branch.state);
-  const before = receivedStates.map((received) => goldMultipliers(catalog, received));
-  const receivedEvents = new Set(branchList(received.branch).flatMap((branch) => branch.events));
-  const receivedEvaluations = new Set(
-    branchList(received.branch).flatMap((branch) => branch.traitEvaluations ?? []),
-  );
+  const prior = received.branch.state;
+  const before = goldMultipliers(catalog, prior);
+  const receivedEvents = new Set(received.branch.events);
+  const receivedEvaluations = new Set(received.branch.traitEvaluations ?? []);
   const detected = new Map<string, Detected>();
-  const detect = (
-    branchIndex: number,
-    key: string,
-    owner: SemanticAddress | undefined,
-    detection: Detection,
-  ) => {
-    const entry = detected.get(key) ?? { ...(owner === undefined ? {} : { owner }), byBranch: [] };
-    entry.byBranch[branchIndex] = detection;
-    detected.set(key, entry);
+  const detect = (key: string, owner: SemanticAddress | undefined, detection: Detection) => {
+    detected.set(key, { ...(owner === undefined ? {} : { owner }), detection });
   };
-  const distinctPriors = <T>(read: (received: SimulationState) => T): readonly T[] => {
-    const priors = new Map<string, T>();
-    for (const received of receivedStates) {
-      const value = read(received);
-      priors.set(JSON.stringify(value ?? null), value);
-    }
-    return [...priors.values()];
-  };
-  // Held loans, keepsakes and Arcana are compared with the received branches, which must agree.
-  const priorLoans = distinctPriors((received) => [...heldLoans(catalog, received)]);
-  const priorKeepsakes = distinctPriors((received) => received.keepsakes.currentKey);
-  const priorArcana = distinctPriors((received) => arcanaGold(catalog, received));
-  const divergentPrior = new Set(
-    [
-      ['loan', priorLoans.length],
-      ['keepsake', priorKeepsakes.length],
-      ['arcana', priorArcana.length],
-    ].flatMap(([family, count]) => ((count as number) > 1 ? [family as string] : [])),
-  );
 
   /**
    * How a collected coin object was valued: a trait's coins at its screen's
@@ -648,7 +591,7 @@ export function withGoldEvents(
     };
   };
 
-  branchList(next.branch).forEach((branch: RewardBranchState, index) => {
+  {
     const after = branch.state;
     for (const rewardEvent of branch.events) {
       if (receivedEvents.has(rewardEvent)) continue;
@@ -660,7 +603,6 @@ export function withGoldEvents(
       const declaration = catalog.rewards.acquisitions.byKey[gameName];
       if (rewardEvent.kind === 'conversionToGold') {
         detect(
-          index,
           key,
           owner,
           declaration?.goldifyValue === undefined
@@ -683,7 +625,6 @@ export function withGoldEvents(
         const producer =
           catalog.rewards.producerLifecycles.byKey[rewardEvent.source.producerLifecycleKey];
         detect(
-          index,
           key,
           owner,
           spawned === 'unresolved'
@@ -712,7 +653,6 @@ export function withGoldEvents(
           rewardEvent.settlement?.entry.entryKey,
         );
         detect(
-          index,
           key,
           owner,
           gold === undefined
@@ -733,19 +673,19 @@ export function withGoldEvents(
     }
     for (const evaluation of branch.traitEvaluations ?? []) {
       if (receivedEvaluations.has(evaluation) || evaluation.offer.kind !== 'fallbackGold') continue;
-      detect(index, `fallbackGold:${semanticAddressKey(evaluation.address)}`, evaluation.address, {
+      detect(`fallbackGold:${semanticAddressKey(evaluation.address)}`, evaluation.address, {
         gain: { kind: 'fallbackGold', gold: catalog.gold.fallbackGold },
         multipliers: goldMultipliers(catalog, evaluation.state),
       });
     }
     const loans = heldLoans(catalog, after);
     {
-      const held = new Map(priorLoans[0]);
+      const held = heldLoans(catalog, prior);
       for (const [traitKey, loan] of loans) {
         const was = held.get(traitKey);
         const key = `loan:${traitKey}`;
         if (was === undefined)
-          detect(index, key, undefined, {
+          detect(key, undefined, {
             gain: {
               kind: 'loanTake',
               traitKey,
@@ -753,9 +693,9 @@ export function withGoldEvents(
             },
           });
         else if (!was.paid && loan.paid)
-          detect(index, key, undefined, { gain: { kind: 'loanPayback', traitKey } });
+          detect(key, undefined, { gain: { kind: 'loanPayback', traitKey } });
         else if (!loan.paid && was.rarity !== loan.rarity)
-          detect(index, key, undefined, {
+          detect(key, undefined, {
             gain: {
               kind: 'loanCredit',
               traitKey,
@@ -767,14 +707,13 @@ export function withGoldEvents(
       }
     }
     const current = after.keepsakes.currentKey;
-    if (current !== null && current !== priorKeepsakes[0]) {
+    if (current !== null && current !== prior.keepsakes.currentKey) {
       const gold = keepsakeGold(catalog, current, after);
       if (gold !== undefined)
-        detect(index, `keepsake:${current}`, undefined, { gain: { kind: 'keepsakeGold', gold } });
+        detect(`keepsake:${current}`, undefined, { gain: { kind: 'keepsakeGold', gold } });
     }
-    const raised = arcanaGold(catalog, after) - (priorArcana[0] ?? 0);
-    if (raised > 0)
-      detect(index, 'arcana', undefined, { gain: { kind: 'arcanaGold', gold: raised } });
+    const raised = arcanaGold(catalog, after) - arcanaGold(catalog, prior);
+    if (raised > 0) detect('arcana', undefined, { gain: { kind: 'arcanaGold', gold: raised } });
     if (room !== undefined) {
       const biome = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
       if (event.kind === 'wellPurchase' && room.stygianWell !== undefined) {
@@ -783,7 +722,7 @@ export function withGoldEvents(
           .flatMap((group) => group.options.values)
           .find((candidate) => candidate.key === itemKey);
         if (itemKey !== undefined && itemKey !== null && option?.goldPayout !== undefined)
-          detect(index, `midas:${event.generationKey}`, undefined, {
+          detect(`midas:${event.generationKey}`, undefined, {
             gain: { kind: 'midasPayout', itemKey },
           });
       }
@@ -828,7 +767,6 @@ export function withGoldEvents(
           const runDepth = runDepthAt(context, roomKey!);
           const paidKey = paid.encounterKey;
           detect(
-            index,
             `enemyGold:${paid.phaseKey}`,
             createEncounterPhaseAddress(
               biome,
@@ -880,7 +818,7 @@ export function withGoldEvents(
           );
         }
         if (definition?.killBounty !== undefined)
-          detect(index, `heraclesBounty:${event.phaseKey}`, phase, {
+          detect(`heraclesBounty:${event.phaseKey}`, phase, {
             gain: { kind: 'heraclesBounty', encounterKey: completedKey },
           });
         const fights = ({ encounterKey }: { readonly encounterKey: string }) => {
@@ -896,7 +834,6 @@ export function withGoldEvents(
         // Each fight adds its kills to the room's capped drops; the ledger pays the increase.
         if (medea !== undefined && fights({ encounterKey: completedKey }))
           detect(
-            index,
             `medeaGold:${event.phaseKey}`,
             phase,
             hordesRank === undefined
@@ -926,7 +863,7 @@ export function withGoldEvents(
         routeInitialProfile(catalog, room.origin.routeKey).kind !== 'freshFile' &&
         urnAttempts(declaration) !== undefined
       )
-        detect(index, 'urnGold', undefined, {
+        detect('urnGold', undefined, {
           gain: { kind: 'urnGold', roomGameName: room.gameName },
           multipliers: goldMultipliers(catalog, after),
         });
@@ -944,7 +881,6 @@ export function withGoldEvents(
           throw new Error(`${event.phaseKey} fielded a Nemesis bet without an authored outcome`);
         if (bet !== undefined && outcome !== undefined)
           detect(
-            index,
             `nemesisBet:${event.phaseKey}`,
             createEncounterPhaseAddress(
               biome,
@@ -971,7 +907,6 @@ export function withGoldEvents(
               (candidate) => candidate.rewardType === rewardType,
             );
           detect(
-            index,
             `nemesisTrade:${event.phaseKey}`,
             createEncounterPhaseAddress(
               biome,
@@ -991,47 +926,25 @@ export function withGoldEvents(
         }
       }
     }
-  });
+  }
 
   const publications: GoldEventPublication[] = [];
-  for (const [key, entry] of detected) {
-    const detections = branchList(next.branch).map((_, index) => entry.byBranch[index]);
-    const common = {
-      sequence: event.sequence,
-      ...(roomOrigin === undefined ? {} : { room: roomOrigin }),
-      ...(entry.owner === undefined ? {} : { owner: entry.owner }),
-      ...optionalRoomAction(roomAction),
-    };
-    const family = key.split(':')[0]!;
-    const missing =
-      detections.some((detection) => detection === undefined) || divergentPrior.has(family);
-    const unpriced = detections.find(
-      (detection): detection is { readonly unpriced: PurchasePriceUnpriced } =>
-        detection !== undefined && 'unpriced' in detection,
-    );
-    if (missing || unpriced !== undefined) {
-      publications.push(
-        goldGainPublication({
-          ...common,
-          readings: [],
-          unpriced: missing
-            ? { kind: 'contractFailure', detail: `${key} settled in only some reached branches` }
-            : unpriced!.unpriced,
-        }),
-      );
-      continue;
-    }
+  for (const { owner, detection } of detected.values())
     publications.push(
       goldGainPublication({
-        ...common,
-        readings: detections.flatMap((detection) => {
-          const gained = detection as Extract<Detection, { readonly gain: GoldGain }>;
-          return 'multipliers' in gained
-            ? [{ gain: gained.gain, multipliers: gained.multipliers }]
-            : before.map((multipliers) => ({ gain: gained.gain, multipliers }));
-        }),
+        sequence: event.sequence,
+        ...(roomOrigin === undefined ? {} : { room: roomOrigin }),
+        ...(owner === undefined ? {} : { owner }),
+        ...optionalRoomAction(roomAction),
+        ...('unpriced' in detection
+          ? { unpriced: detection.unpriced }
+          : {
+              reading: {
+                gain: detection.gain,
+                multipliers: 'multipliers' in detection ? detection.multipliers : before,
+              },
+            }),
       }),
     );
-  }
   return withGoldPublications(state, [...publications, ...doorsOpen]);
 }
