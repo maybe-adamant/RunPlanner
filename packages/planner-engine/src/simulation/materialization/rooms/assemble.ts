@@ -261,6 +261,9 @@ export function materializeAuthoredRoom(
     entry: context.entry === true,
     effectNeutralRequiredReward: context.room.effectNeutralRequiredReward,
     ...(enteredRewardStoreKey === undefined ? {} : { enteredRewardStoreKey }),
+    ...(resolvedEntry.unspawnedRunStartRoll === undefined
+      ? {}
+      : { unspawnedRunStartRoll: resolvedEntry.unspawnedRunStartRoll }),
     roomActions: context.occurrence.roomActions,
     hasKeepsakeRack: routeHasKeepsakeRack(context.room, context.biome.routeKey),
     hasRequiredFountain: context.room.hasRequiredFountain,

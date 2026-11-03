@@ -228,8 +228,8 @@ execution, decodes tolerantly rather than strictly, and changes through
 [Draft Mode](DRAFT_MODE.md#the-draft-spec) owns its fields and decoding.
 
 Loadout also owns the nullable starting reward offer. A mature route reports a
-missing offer once any biome is configured; a Fresh File entry binds no
-run-start reward, so its null offer is complete. The offer can be selected
+missing offer once any biome is configured; a Fresh File entry only rolls the
+run-start reward without spawning it, so its null offer is complete. The offer can be selected
 before an entry-room variant exists and is retained when topology is cleared or
 no biomes are configured. The first entry occurrence owns only its acquisition
 payload and actions; composing these with the route offer does not persist a

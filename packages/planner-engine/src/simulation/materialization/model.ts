@@ -256,6 +256,8 @@ export interface CanonicalAuthoredRoom {
   readonly effectNeutralRequiredReward: boolean;
   /** Declaration-fixed completion rooms inherit selected Preboss reward-store provenance. */
   readonly enteredRewardStoreKey?: string;
+  /** A fresh profile's opening draws the run-start reward's type at creation and spawns nothing. */
+  readonly unspawnedRunStartRoll?: import('../../authored-project/room-state/entry-resolution').UnspawnedRewardRoll;
   /** Persisted occurrence chronology and its sole derived roster product. */
   readonly roomActions: RoomActionState;
   /** Declaration-owned physical rack presence, independent of an authored replacement. */

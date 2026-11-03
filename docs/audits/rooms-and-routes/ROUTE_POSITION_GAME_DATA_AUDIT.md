@@ -182,9 +182,10 @@ caches, `RoomsEntered`/`RoomCountCache`, `LifetimeResourcesGained`,
 
 Planner disposition: the `FreshFile` route stores no weapon aspect, starting
 keepsake or Arcana, starts with empty god-use, god-pickup and resource-gain
-history, and has no run-start reward. It does not yet model the opening's
-unspawned RunProgress roll, so its RunProgress store and entered-store counts
-differ from the game's by that roll from the first room on. The Executor realizes the opening at the
+history, and authors no run-start reward. Its opening draws the roll as a
+bag-only Boon draw from RunProgress and records RunProgress as its entered
+store, so the store and the Meta rewards ratio match the game's from the first
+room on. The Executor realizes the opening at the
 nested `CreateRoom` contact
 ([execution protocol](../../design/EXECUTION_PROTOCOL.md#room-content)). A
 brand-new profile run on 2026-09-30 (module source as of `0d65c432`) bound the opening under

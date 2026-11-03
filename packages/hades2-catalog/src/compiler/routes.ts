@@ -86,10 +86,13 @@ function normalizeInitialProfile(
   if (opening === undefined) fail(openingPath, `unknown room ${profile.openingRoomGameName}`);
   if (opening.kind !== 'Opening' || opening.roomSetKey !== biomeKeys[0])
     fail(openingPath, `must be an opening of route biome ${String(biomeKeys[0])}`);
+  if (profile.runStartReward !== 'unspawnedRoll')
+    fail(`${routePath}.initialProfile.runStartReward`, 'must be unspawnedRoll');
   return Object.freeze({
     kind: 'freshFile',
     fixedWeaponKey: profile.fixedWeaponKey,
     openingRoomGameName: opening.gameName,
+    runStartReward: 'unspawnedRoll',
   });
 }
 

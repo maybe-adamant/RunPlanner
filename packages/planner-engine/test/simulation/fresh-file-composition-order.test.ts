@@ -8,7 +8,6 @@ import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
-  createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
   createTargetAddress,
@@ -102,31 +101,20 @@ describe('Fresh File room issue chronology with uncustomized compositions', () =
       rewardStore: createBatchRewardStoreAddress(biome, source),
       storeKey: 'RunProgress',
     });
-    const boon = (godSource: string) =>
-      ({ rewardType: 'Boon', payload: { kind: 'BoonSource', source: godSource } }) as const;
-    for (const [exitKey, occurrenceId, gameName, reward] of [
-      ['exit1', combat, 'F_Combat07', boon('ApolloUpgrade')],
-      ['exit2', createOccurrenceId('fresh-new-sibling'), 'F_Combat06', boon('PoseidonUpgrade')],
-    ] as const) {
-      project = applyProjectCommand(project, catalog, {
-        kind: 'CreateTarget',
-        target: createTargetAddress(biome, source, exitKey),
-        occurrenceId,
-        gameName,
-      });
-      expect(
-        simulateProjectAssembly(catalog, project).evaluation.route.biomes[0]!.issue?.owner,
-      ).toEqual(createIncomingRewardAddress(biome, occurrenceId));
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceIncomingReward',
-        reward: createIncomingRewardAddress(biome, occurrenceId),
-        value: reward,
-      });
-    }
+    // fresh-2-0 is the one-exit F_Combat09.
     project = applyProjectCommand(project, catalog, {
-      kind: 'SetExitSelection',
-      selection: createExitSelectionAddress(biome, source),
-      value: { kind: 'normal', exitKey: 'exit1' },
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, source, 'exit1'),
+      occurrenceId: combat,
+      gameName: 'F_Combat07',
+    });
+    expect(
+      simulateProjectAssembly(catalog, project).evaluation.route.biomes[0]!.issue?.owner,
+    ).toEqual(createIncomingRewardAddress(biome, combat));
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, combat),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     expect(authorFreshFileRoomIssues(project, 'F', combat).labels).toEqual([
       'trait:incomingReward',

@@ -181,14 +181,42 @@ export function consumeCountedOffer(
     return undefined;
   }
 
+  return drawCanonicalEntry(store, current, eligible, offer.rewardType);
+}
+
+/** Removes the canonical eligible entry of one reward type, or undefined when none is eligible. */
+function drawCanonicalEntry(
+  store: RewardStoreDeclaration,
+  current: RewardBagState,
+  eligible: readonly number[],
+  rewardType: string,
+): RewardBagState | undefined {
   // Same-item entries eligible together never diverge (a catalog-compiler guard), so the last is canonical.
-  const entryIndex = eligible.findLast(
-    (index) => store.entries[index]?.rewardType === offer.rewardType,
-  );
+  const entryIndex = eligible.findLast((index) => store.entries[index]?.rewardType === rewardType);
   if (entryIndex === undefined) return undefined;
   const counts = [...current.remainingEntryCounts];
   counts[entryIndex] = (counts[entryIndex] ?? 0) - 1;
   return Object.freeze({ remainingEntryCounts: Object.freeze(counts) });
+}
+
+/**
+ * A bag-only draw for a roll that is never offered or acquired: when every
+ * eligible entry (after the usual refills) shares one reward type, the bag
+ * after removing that type's canonical entry; undefined when the type is not
+ * determined.
+ */
+export function drawSoleEligibleRewardType(
+  store: RewardStoreDeclaration,
+  state: RewardBagState,
+  facts: RewardKernelFacts,
+  options: CountedOfferTransitionOptions = {},
+): { readonly rewardType: string; readonly bag: RewardBagState } | undefined {
+  const { bag, eligible } = refilledFrontier(store, state, facts, options);
+  const rewardTypes = [...new Set(eligible.map((index) => store.entries[index]!.rewardType))];
+  const rewardType = rewardTypes[0];
+  if (rewardType === undefined || rewardTypes.length !== 1) return undefined;
+  const drawn = drawCanonicalEntry(store, bag, eligible, rewardType);
+  return drawn === undefined ? undefined : Object.freeze({ rewardType, bag: drawn });
 }
 
 /** Why a counted offer has no draw while its store still has eligible entries. */

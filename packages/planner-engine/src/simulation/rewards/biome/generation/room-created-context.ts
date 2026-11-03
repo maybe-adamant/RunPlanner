@@ -123,6 +123,7 @@ export function prepareRoomCreatedRewardContext(
   if (
     incoming === undefined &&
     unresolvedIncoming === undefined &&
+    room.unspawnedRunStartRoll === undefined &&
     localRewards.length === 0 &&
     unresolvedLocalRewards.length === 0
   )

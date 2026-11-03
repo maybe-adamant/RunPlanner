@@ -6,10 +6,13 @@ import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from
 import { forGeneration, type CanonicalResolvedIncomingReward } from '../../../materialization';
 import { preparedAcquisitionSiteOwner, type RewardLifecycleReferences } from '../prepared-inputs';
 import { createBiomeRewardFacts } from '../../facts';
+import { advanceReachedBranch } from '../../branch-lifecycle';
+import type { RewardFactsFactory } from '../../acquisition/contracts';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import {
   countedBinding,
+  drawUnspawnedRewardRoll,
   explainRewardOfferExclusions,
   processRewardOffer,
   type OfferProcessingContext,
@@ -162,6 +165,24 @@ function completeIncomingOfferCandidate(
     }
   }
   return createRewardProducerCandidateResult(candidateFindings, branch, exclusions);
+}
+
+/** A fresh opening's run-start roll leaves the bag one entry short and nothing else. */
+function unspawnedRollBranch(
+  catalog: Catalog,
+  context: RoomCreatedRewardContext,
+  branch: RewardBranchState | undefined,
+  historySequence: number,
+  facts: RewardFactsFactory,
+): RewardBranchState | undefined {
+  const roll = context.room.unspawnedRunStartRoll;
+  if (roll === undefined || branch === undefined) return branch;
+  const drawn = drawUnspawnedRewardRoll(catalog, branch, roll, facts);
+  if (drawn === undefined)
+    throw new BiomeRewardSimulationContractError(
+      `${context.room.gameName} rolls no single ${roll.storeKey} reward type`,
+    );
+  return advanceReachedBranch(drawn, historySequence);
 }
 
 function requireHubDoor(context: RoomCreatedRewardContext): HubBoardDoor {
@@ -362,7 +383,7 @@ export function generateIncomingReward(
     );
   if (incoming === undefined)
     return createGenerationEmissions(
-      inputs.branch,
+      unspawnedRollBranch(catalog, context, inputs.branch, event.sequence, facts),
       inputs.peers,
       findings,
       frontiers,

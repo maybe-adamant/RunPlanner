@@ -4,7 +4,12 @@ import { CatalogContractError, createCatalog } from '@run-planner/hades2-catalog
 import { declarations } from '@run-planner/hades2-catalog/test-support';
 import { cloneCatalogInput } from './support/catalog-input';
 
-type MutableProfile = { kind: string; fixedWeaponKey?: string; openingRoomGameName?: string };
+type MutableProfile = {
+  kind: string;
+  fixedWeaponKey?: string;
+  openingRoomGameName?: string;
+  runStartReward?: string;
+};
 
 function freshProfileInput(mutate: (profile: MutableProfile) => void) {
   const raw = cloneCatalogInput();
@@ -26,6 +31,7 @@ describe('route initial profiles', () => {
         kind: 'freshFile',
         fixedWeaponKey: 'WeaponStaffSwing',
         openingRoomGameName: 'F_Opening01',
+        runStartReward: 'unspawnedRoll',
       },
       completion: {
         prebossRoomGameNameByBiomeKey: { I: 'I_PreBoss01' },
@@ -56,6 +62,16 @@ describe('route initial profiles', () => {
         }),
       ),
     ).toThrow(/fixedWeaponKey.*unknown weapon WeaponMissing/);
+  });
+
+  it('requires the fresh opening to declare its unspawned run-start roll', () => {
+    expect(() =>
+      createCatalog(
+        freshProfileInput((profile) => {
+          delete profile.runStartReward;
+        }),
+      ),
+    ).toThrow(/initialProfile\.runStartReward.*must be unspawnedRoll/);
   });
 
   it('rejects an opening outside the first route biome', () => {

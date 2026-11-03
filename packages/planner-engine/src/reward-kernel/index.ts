@@ -2,6 +2,7 @@ export {
   consumeCountedOffer,
   countedStoreExhausted,
   createRewardBagState,
+  drawSoleEligibleRewardType,
   storeEntryOnRoute,
   insertExactPriorityIntoBag,
   oldestSupportedRewardPriority,

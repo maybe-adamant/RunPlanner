@@ -240,7 +240,7 @@
           "replace": {
             "counters": { "biomeDepthCache": 0, "routeEncounterDepth": 1, "roomHistoryOrdinal": 0 },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 19 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
@@ -336,7 +336,7 @@
             "rewardStores": [
               {
                 "name": "RunProgress",
-                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
               },
               {
                 "name": "MetaProgress",
@@ -514,7 +514,7 @@
           "replace": {
             "counters": { "biomeDepthCache": 2, "routeEncounterDepth": 1, "roomHistoryOrdinal": 2 },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 18 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
@@ -550,7 +550,7 @@
             "rewardStores": [
               {
                 "name": "RunProgress",
-                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
               },
               {
                 "name": "MetaProgress",
@@ -645,7 +645,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": { "id": "fresh-2-0", "biomeKey": "F", "gameName": "F_Combat03" },
+            "room": { "id": "fresh-2-0", "biomeKey": "F", "gameName": "F_Combat09" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "RoomMoneyDrop",
@@ -687,7 +687,7 @@
               "roomHistoryOrdinal": 3
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 16 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 18 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
@@ -703,7 +703,7 @@
             "rewardStores": [
               {
                 "name": "RunProgress",
-                "remainingEntryCounts": [1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                "remainingEntryCounts": [1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
               },
               {
                 "name": "MetaProgress",
@@ -733,7 +733,7 @@
       "id": "fresh-2-0",
       "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-2-0\"]",
       "biomeKey": "F",
-      "gameName": "F_Combat03",
+      "gameName": "F_Combat09",
       "kind": "SingleEncounter",
       "overview": {
         "incomingReward": {
@@ -815,18 +815,6 @@
               "producerLifecycleKey": "RoomReward",
               "resolvedStoreKey": "RunProgress",
               "source": "ApolloUpgrade"
-            }
-          },
-          {
-            "exitKey": "exit2",
-            "index": 2,
-            "room": { "id": "fresh-3-1", "biomeKey": "F", "gameName": "F_Combat06" },
-            "zagreusContractPresent": false,
-            "reward": {
-              "rewardType": "Boon",
-              "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "RunProgress",
-              "source": "PoseidonUpgrade"
             }
           }
         ],
@@ -1017,9 +1005,9 @@
             "room": { "id": "fresh-4-0", "biomeKey": "F", "gameName": "F_Combat19" },
             "zagreusContractPresent": false,
             "reward": {
-              "rewardType": "MaxHealthDrop",
+              "rewardType": "MetaCardPointsCommonDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "RunProgress"
+              "resolvedStoreKey": "MetaProgress"
             }
           },
           {
@@ -1028,13 +1016,13 @@
             "room": { "id": "fresh-4-1", "biomeKey": "F", "gameName": "F_Combat08" },
             "zagreusContractPresent": false,
             "reward": {
-              "rewardType": "MaxManaDrop",
+              "rewardType": "MetaCurrencyDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "RunProgress"
+              "resolvedStoreKey": "MetaProgress"
             }
           }
         ],
-        "resolvedSharedRewardStoreKey": "RunProgress"
+        "resolvedSharedRewardStoreKey": "MetaProgress"
       },
       "roomExitConformance": {
         "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
@@ -1058,8 +1046,8 @@
               "roomHistoryOrdinal": 5
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 12 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -1092,11 +1080,11 @@
             "rewardStores": [
               {
                 "name": "RunProgress",
-                "remainingEntryCounts": [1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+                "remainingEntryCounts": [1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
               },
               {
                 "name": "MetaProgress",
-                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                "remainingEntryCounts": [1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
               },
               { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
               {
@@ -1119,28 +1107,6 @@
       }
     },
     {
-      "id": "fresh-3-1",
-      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-3-1\"]",
-      "biomeKey": "F",
-      "gameName": "F_Combat06",
-      "kind": "SingleEncounter",
-      "overview": {
-        "incomingReward": {
-          "rewardType": "Boon",
-          "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "RunProgress",
-          "source": "PoseidonUpgrade"
-        },
-        "encounterPhases": [
-          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
-        ],
-        "requiredObjects": []
-      },
-      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
-      "roomGuide": [],
-      "doors": { "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-3-1\"]", "kind": "terminal" }
-    },
-    {
       "id": "fresh-4-0",
       "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-4-0\"]",
       "biomeKey": "F",
@@ -1148,9 +1114,9 @@
       "kind": "SingleEncounter",
       "overview": {
         "incomingReward": {
-          "rewardType": "MaxHealthDrop",
+          "rewardType": "MetaCardPointsCommonDrop",
           "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "RunProgress"
+          "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
           {
@@ -1174,9 +1140,9 @@
             "owner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-4-0\\\"]\",\"self\"]",
             "sourceOwner": "[\"incomingReward\",\"FreshFile\",\"F\",\"fresh-4-0\"]",
             "reward": {
-              "rewardType": "MaxHealthDrop",
+              "rewardType": "MetaCardPointsCommonDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "RunProgress"
+              "resolvedStoreKey": "MetaProgress"
             },
             "producerLifecycleKey": "RoomReward",
             "roles": [
@@ -1184,8 +1150,8 @@
                 "role": "self",
                 "disposition": "normal",
                 "lifecyclePoint": "roomRewardPickup",
-                "kind": "consumable",
-                "gameName": "MaxHealthDrop",
+                "kind": "resource",
+                "gameName": "MetaCardPointsCommonDrop",
                 "settlement": {
                   "site": "[\"acquisitionSite\",\"FreshFile\",\"F\",\"[\\\"occurrence\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-4-0\\\"]\",\"roomRewardPickup\"]",
                   "entry": "[\"acquisitionEntry\",\"FreshFile\",\"F\",\"[\\\"acquisitionSite\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"FreshFile\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"fresh-4-0\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
@@ -1204,9 +1170,9 @@
           "description": {
             "kind": "interactIncomingReward",
             "reward": {
-              "rewardType": "MaxHealthDrop",
+              "rewardType": "MetaCardPointsCommonDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "RunProgress"
+              "resolvedStoreKey": "MetaProgress"
             }
           },
           "transactionOwner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-4-0\\\"]\",\"self\"]"
@@ -1262,8 +1228,8 @@
               "roomHistoryOrdinal": 6
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 11 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -1278,11 +1244,11 @@
             "rewardStores": [
               {
                 "name": "RunProgress",
-                "remainingEntryCounts": [1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+                "remainingEntryCounts": [1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
               },
               {
                 "name": "MetaProgress",
-                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                "remainingEntryCounts": [1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
               },
               { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
               {
@@ -1312,9 +1278,9 @@
       "kind": "SingleEncounter",
       "overview": {
         "incomingReward": {
-          "rewardType": "MaxManaDrop",
+          "rewardType": "MetaCurrencyDrop",
           "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "RunProgress"
+          "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
@@ -1417,8 +1383,8 @@
               "roomHistoryOrdinal": 7
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 11 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -1433,11 +1399,11 @@
             "rewardStores": [
               {
                 "name": "RunProgress",
-                "remainingEntryCounts": [1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+                "remainingEntryCounts": [1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
               },
               {
                 "name": "MetaProgress",
-                "remainingEntryCounts": [1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
               },
               { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
               {
@@ -1603,8 +1569,8 @@
               "roomHistoryOrdinal": 8
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 9 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 11 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -1619,11 +1585,11 @@
             "rewardStores": [
               {
                 "name": "RunProgress",
-                "remainingEntryCounts": [1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+                "remainingEntryCounts": [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
               },
               {
                 "name": "MetaProgress",
-                "remainingEntryCounts": [1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
               },
               { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
               {
@@ -1787,8 +1753,8 @@
               "roomHistoryOrdinal": 9
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 7 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -1803,11 +1769,11 @@
             "rewardStores": [
               {
                 "name": "RunProgress",
-                "remainingEntryCounts": [0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+                "remainingEntryCounts": [1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
               },
               {
                 "name": "MetaProgress",
-                "remainingEntryCounts": [1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
               },
               { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
               {
@@ -1938,9 +1904,9 @@
             "room": { "id": "fresh-9-0", "biomeKey": "F", "gameName": "F_Combat17" },
             "zagreusContractPresent": false,
             "reward": {
-              "rewardType": "MetaCardPointsCommonDrop",
+              "rewardType": "MaxManaDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "MetaProgress"
+              "resolvedStoreKey": "RunProgress"
             }
           },
           {
@@ -1949,13 +1915,13 @@
             "room": { "id": "fresh-9-1", "biomeKey": "F", "gameName": "F_Combat18" },
             "zagreusContractPresent": false,
             "reward": {
-              "rewardType": "MetaCurrencyDrop",
+              "rewardType": "MaxHealthDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "MetaProgress"
+              "resolvedStoreKey": "RunProgress"
             }
           }
         ],
-        "resolvedSharedRewardStoreKey": "MetaProgress"
+        "resolvedSharedRewardStoreKey": "RunProgress"
       },
       "roomExitConformance": {
         "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
@@ -2068,9 +2034,9 @@
       "kind": "SingleEncounter",
       "overview": {
         "incomingReward": {
-          "rewardType": "MetaCardPointsCommonDrop",
+          "rewardType": "MaxManaDrop",
           "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "MetaProgress"
+          "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
           {
@@ -2094,9 +2060,9 @@
             "owner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-9-0\\\"]\",\"self\"]",
             "sourceOwner": "[\"incomingReward\",\"FreshFile\",\"F\",\"fresh-9-0\"]",
             "reward": {
-              "rewardType": "MetaCardPointsCommonDrop",
+              "rewardType": "MaxManaDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "MetaProgress"
+              "resolvedStoreKey": "RunProgress"
             },
             "producerLifecycleKey": "RoomReward",
             "roles": [
@@ -2104,8 +2070,8 @@
                 "role": "self",
                 "disposition": "normal",
                 "lifecyclePoint": "roomRewardPickup",
-                "kind": "resource",
-                "gameName": "MetaCardPointsCommonDrop",
+                "kind": "consumable",
+                "gameName": "MaxManaDrop",
                 "settlement": {
                   "site": "[\"acquisitionSite\",\"FreshFile\",\"F\",\"[\\\"occurrence\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-9-0\\\"]\",\"roomRewardPickup\"]",
                   "entry": "[\"acquisitionEntry\",\"FreshFile\",\"F\",\"[\\\"acquisitionSite\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"FreshFile\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"fresh-9-0\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
@@ -2124,9 +2090,9 @@
           "description": {
             "kind": "interactIncomingReward",
             "reward": {
-              "rewardType": "MetaCardPointsCommonDrop",
+              "rewardType": "MaxManaDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "MetaProgress"
+              "resolvedStoreKey": "RunProgress"
             }
           },
           "transactionOwner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-9-0\\\"]\",\"self\"]"
@@ -2231,9 +2197,9 @@
       "kind": "SingleEncounter",
       "overview": {
         "incomingReward": {
-          "rewardType": "MetaCurrencyDrop",
+          "rewardType": "MaxHealthDrop",
           "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "MetaProgress"
+          "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
@@ -2462,5 +2428,5 @@
       }
     }
   ],
-  "planFingerprint": "e1e6f30c"
+  "planFingerprint": "c920b098"
 }

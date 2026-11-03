@@ -161,7 +161,8 @@ of its choice, each route a declared route), a route overlay, and an
 own which rooms declare them and why.
 
 The catalog declares one counted run-start reward binding; entry rooms have no
-intrinsic incoming reward. Narrow contextual encounter rules express genuine
+intrinsic incoming reward. A fresh profile declares that its opening rolls that
+binding without spawning it. Narrow contextual encounter rules express genuine
 route-mode and first-position differences without replacing the whole room
 declaration. A route overlay replaces only kind, template, label, reward
 binding and encounter; normalization builds the overlaid room as a complete
