@@ -265,13 +265,13 @@ function answerCageOutcome(context: RunImportContext, decision: Origin<'exitDeci
 
 function answerFieldsReward(context: RunImportContext, reward: Origin<'localReward'>): boolean {
   const visit = fieldsVisit(context, reward.occurrenceId);
-  if (visit === undefined)
-    return (
-      reward.groupKey === 'cages' &&
-      (answerUntakenCages(context, reward) ||
-        solveUnrecordedCages(context, reward) ||
-        answerUnrecordedCage(context, reward))
-    );
+  if (visit === undefined) {
+    if (reward.groupKey !== 'cages') return false;
+    const recorded = untakenCageRewards(context, reward.occurrenceId);
+    return recorded !== undefined
+      ? answerUntakenCages(context, reward, recorded)
+      : solveUnrecordedCages(context, reward) || answerUnrecordedCage(context, reward);
+  }
   let offers: readonly ResolvedRewardOffer[];
   if (reward.groupKey === 'cages') {
     const placed = `cagesPlaced:${reward.occurrenceId}`;
@@ -344,56 +344,133 @@ function permutations<T>(values: readonly T[]): T[][] {
   );
 }
 
+/** One way to author a door's recorded cages: an engine-legal offer per slot, in slot order. */
+type CageValues = readonly { readonly slotKey: string; readonly value: ResolvedRewardOffer }[];
+
 /**
- * An untaken door's cages take the reward types the stores lost for them, in
- * the first slot order the engine admits; a boon takes the first eligible god.
- * The roll order and the gods are not saved.
+ * Each roll order of the recorded types, with each offer the engine admits
+ * at a slot once the earlier slots hold theirs.
  */
-function answerUntakenCages(context: RunImportContext, reward: Origin<'localReward'>): boolean {
-  const recorded = untakenCageRewards(context, reward.occurrenceId);
-  const state = fieldsState(context, reward.biomeKey, reward.occurrenceId);
-  if (recorded === undefined || state === undefined) return false;
-  const slots = Object.keys(state.cages).filter(
-    (slot) => cageIndexOfSlot(slot) < recorded.rewards.length,
-  );
-  if (slots.length !== recorded.rewards.length) return false;
-  const orders = permutations(recorded.rewards).filter(
+function* untakenCageCandidates(
+  context: RunImportContext,
+  reward: Origin<'localReward'>,
+  slots: readonly string[],
+  rewards: readonly string[],
+): Generator<CageValues> {
+  const orders = permutations(rewards).filter(
     (order, index, all) => all.findIndex((other) => other.join() === order.join()) === index,
   );
-  for (const order of orders) {
-    let boons = 0;
-    const applied = context.transaction(() =>
-      slots.every((slotKey) => {
-        const type = order[cageIndexOfSlot(slotKey)]!;
-        const target = { ...reward, slotKey };
-        return locallyValidRewardOffers(context.catalog.rewards, type).some((value) => {
-          const evaluation = context
-            .candidates()
-            .evaluate({ kind: 'localReward', reward: target, value });
-          if (
-            evaluation.kind !== 'localReward' ||
-            !evaluation.result.supported ||
-            evaluation.result.findings.length > 0 ||
-            !context.apply({ kind: 'ReplaceLocalReward', reward: target, value })
-          )
-            return false;
-          if (value.payload?.kind === 'BoonSource') boons += 1;
-          return true;
-        });
-      }),
+  const expand = (order: readonly string[], prefix: CageValues): CageValues[] => {
+    const slotKey = slots[prefix.length];
+    if (slotKey === undefined) return [prefix];
+    const target = { ...reward, slotKey };
+    const admitted = context.probe(() =>
+      prefix.every(({ slotKey: held, value }) =>
+        context.apply({ kind: 'ReplaceLocalReward', reward: { ...reward, slotKey: held }, value }),
+      )
+        ? locallyValidRewardOffers(
+            context.catalog.rewards,
+            order[cageIndexOfSlot(slotKey)]!,
+          ).filter((value) => {
+            const evaluation = context
+              .candidates()
+              .evaluate({ kind: 'localReward', reward: target, value });
+            return (
+              evaluation.kind === 'localReward' &&
+              evaluation.result.supported &&
+              evaluation.result.findings.length === 0
+            );
+          })
+        : [],
     );
-    if (!applied) continue;
-    if (orders.length > 1 || boons > 0)
-      context.note({
-        area: 'fields',
-        reason: 'assumption',
-        address: reward,
-        record: record(recorded.roomIndex),
-      });
+    return admitted.flatMap((value) => expand(order, [...prefix, { slotKey, value }]));
+  };
+  for (const order of orders) yield* expand(order, []);
+}
+
+/** Whether the Fields room a source visit entered holds every cage the record gives it. */
+function takenCagesHeld(context: RunImportContext, biomeKey: string, sourceIndex: number): boolean {
+  const taken = context.record.rooms[sourceIndex + 1]?.fields;
+  if (taken === undefined) return true;
+  const state = fieldsState(context, biomeKey, context.occurrences.occurrenceOf(sourceIndex + 1));
+  const held = Object.values(state?.cages ?? {}).flatMap((cage) =>
+    cage === null ? [] : [JSON.stringify(cage.offer)],
+  );
+  return taken.cages.every((cage) => {
+    const index = held.indexOf(JSON.stringify(recordedOffer(context.catalog, cage.reward)));
+    if (index < 0) return false;
+    held.splice(index, 1);
     return true;
-  }
-  context.refuse();
-  return false;
+  });
+}
+
+/**
+ * An untaken door's cages take the reward types the stores lost for them;
+ * the roll order and a boon's god are not saved. The source's doors draw
+ * their cages together, so each order with each engine-legal offer is
+ * authored with the entered Fields room's recorded cages pinned beside it,
+ * and the first the source room's next entry save accepts is kept. Without
+ * one the cages stay open.
+ */
+function answerUntakenCages(
+  context: RunImportContext,
+  reward: Origin<'localReward'>,
+  recorded: NonNullable<ReturnType<typeof untakenCageRewards>>,
+): boolean {
+  const state = fieldsState(context, reward.biomeKey, reward.occurrenceId);
+  if (state === undefined) return false;
+  const slots = Object.keys(state.cages).filter(
+    (slotKey) => cageIndexOfSlot(slotKey) < recorded.rewards.length,
+  );
+  if (slots.length !== recorded.rewards.length) return false;
+  const sourceIndex = recorded.roomIndex;
+  const search = searchRoom(context, {
+    roomIndex: sourceIndex,
+    candidates: untakenCageCandidates(context, reward, slots, recorded.rewards),
+    author: (values: CageValues) => {
+      const commands = values.map(({ slotKey, value }): ProjectCommand => ({
+        kind: 'ReplaceLocalReward',
+        reward: { ...reward, slotKey },
+        value,
+      }));
+      if (!commands.every((command) => context.apply(command))) return undefined;
+      return {
+        commands,
+        drawn: values
+          .map(({ value }) => JSON.stringify(value))
+          .sort()
+          .join(),
+      };
+    },
+    // The entered room's recorded cages, and a reroll redrawing a cage, are authored on the probe as the walk would.
+    settles: [context.occurrences.occurrenceOf(sourceIndex + 1)],
+    sweep: true,
+    fits: () => takenCagesHeld(context, reward.biomeKey, sourceIndex),
+  });
+  const accepted = search.fits.filter((fit) => fit.accepted);
+  const chosen = accepted[0]?.choice;
+  if (search.fits.length === 0) context.refuse();
+  if (
+    chosen === undefined ||
+    !context.transaction(() => chosen.commands.every((command) => context.apply(command)))
+  )
+    return false;
+  // Another order of the same offers is the same saved state; another offer is a choice.
+  const others = accepted.filter(
+    (fit, index) =>
+      fit.choice.drawn !== chosen.drawn &&
+      accepted.findIndex((first) => first.choice.drawn === fit.choice.drawn) === index,
+  );
+  if (search.fits.length > 1 || search.capped)
+    context.note({
+      area: 'fields',
+      reason: 'assumption',
+      address: reward,
+      applied: chosen.commands[0]!,
+      ...(others.length > 0 ? { alternatives: others.flatMap((fit) => fit.choice.commands) } : {}),
+      record: record(sourceIndex),
+    });
+  return true;
 }
 
 /** The first offer of `type` the engine admits at a cage slot, applied. */

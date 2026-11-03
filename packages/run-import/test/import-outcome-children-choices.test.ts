@@ -268,7 +268,11 @@ describe('run import of selected-outcome children', () => {
       },
     ]);
     const imported = projectFromRunRecord(catalog, record);
-    expectReachesLastRoom(imported);
+    // The refused gains leave r27 unaccepted, so its untaken door's cages stay open.
+    expect(imported).toMatchObject({
+      kind: 'stopped',
+      stop: { record: { roomIndex: 27 }, address: { occurrenceId: 'H-r27-d621470' } },
+    });
     expect(roomLines(imported.report, 27)).toEqual([
       expect.stringMatching(/^refused traitOffer r27 naturalSelectionResult@H-r27 /),
     ]);

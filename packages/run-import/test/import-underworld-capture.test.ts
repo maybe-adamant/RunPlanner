@@ -310,9 +310,9 @@ describe('run import of the Underworld capture', () => {
       'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 WeaponUpgrade)',
       'assumption traitOffer r15 traitOffer@G:start:chaos:self -> ReplaceTraitOffer(G:start:chaos chaos)',
       'assumption npc r18 nemesisRandomEvent@G-r18 -> ReplaceNemesisRandomEventInteraction(G-r18 freeItem)',
-      'assumption fields r26 localReward@H-r26-d621199:cage1',
+      'assumption fields r26 localReward@H-r26-d621199:cage1 -> ReplaceLocalReward(H-r26-d621199 MaxHealthDrop)',
       'assumption fields r27 exitDecision@H-r27 -> InitializeExitDecision(H-r27)',
-      'assumption fields r27 localReward@H-r27-d621470:cage1',
+      'assumption fields r27 localReward@H-r27-d621470:cage1 -> ReplaceLocalReward(H-r27-d621470 RoomMoneyDrop)',
       // Two optional rewards collected in combat have no saved point.
       'assumption fields r29 fieldsSpatial@H-r29 -> ReplaceFieldsSpatialPoint(H-r29)',
       'assumption fields r29 fieldsSpatial@H-r29 -> ReplaceFieldsSpatialPoint(H-r29)',

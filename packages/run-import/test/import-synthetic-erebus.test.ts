@@ -100,14 +100,35 @@ describe('run import of synthetic Erebus variants', () => {
   /** F through H with the H_Combat15 Hermes screen picking another boon than Travel Deal. */
   function withoutTravelDeal(): RunRecord {
     const record = fixture('underworld');
+    // The entry saves hold the other Hermes boon too.
+    const rename = (name: string) => (name === 'RestockBoon' ? 'SprintShieldBoon' : name);
+    const entry = (room: RunRecord['rooms'][number]) =>
+      room.entry === undefined
+        ? {}
+        : {
+            entry: {
+              ...room.entry,
+              ...(room.entry.traits === undefined
+                ? {}
+                : {
+                    traits: Object.fromEntries(
+                      Object.entries(room.entry.traits).map(([name, held]) => [rename(name), held]),
+                    ),
+                  }),
+              ...(room.entry.lostTraits === undefined
+                ? {}
+                : { lostTraits: room.entry.lostTraits.map(rename).sort() }),
+            },
+          };
     return {
       ...record,
       route: { biomes: ['F', 'G', 'H'], dream: false },
-      rooms: record.rooms.slice(0, 33).map((room, index) =>
-        index !== 26
-          ? room
+      rooms: record.rooms.slice(0, 33).map((room, index) => ({
+        ...room,
+        ...entry(room),
+        ...(index !== 26
+          ? {}
           : {
-              ...room,
               traitScreens: room.traitScreens.map((screen) =>
                 screen.giver !== 'HermesUpgrade'
                   ? screen
@@ -119,8 +140,8 @@ describe('run import of synthetic Erebus variants', () => {
                       })),
                     },
               ),
-            },
-      ),
+            }),
+      })),
     };
   }
 

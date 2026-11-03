@@ -234,9 +234,9 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       'assumption shop r22 shopOffer@G-r22 -> ReplaceShopOfferOption(G-r22)',
       // An optional reward collected in combat has no saved point.
       'assumption fields r26 fieldsSpatial@H-r26 -> ReplaceFieldsSpatialPoint(H-r26)',
-      'assumption fields r26 localReward@H-r26-d564448:cage1',
-      'assumption fields r27 localReward@H-r27-d621470:cage1',
-      'assumption fields r28 localReward@H-r28-d565616:cage1',
+      'assumption fields r26 localReward@H-r26-d564448:cage1 -> ReplaceLocalReward(H-r26-d564448 MaxManaDrop)',
+      'assumption fields r27 localReward@H-r27-d621470:cage1 -> ReplaceLocalReward(H-r27-d621470 HermesUpgrade)',
+      'assumption fields r28 localReward@H-r28-d565616:cage1 -> ReplaceLocalReward(H-r28-d565616 HermesUpgrade)',
       'assumption roomActionOrder r1 occurrence@F-r1',
       'assumption roomActionOrder r3 occurrence@F-r3',
       'assumption roomActionOrder r6 occurrence@F-r6',

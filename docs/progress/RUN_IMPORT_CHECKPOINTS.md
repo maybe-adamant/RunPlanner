@@ -345,12 +345,25 @@ reproduces is reported with its nearest miss and the plan stops there.
      Every room was already unchecked; fixture tests lost I_MiniBoss02's pick,
      the I Preboss pedestal and Steady Growth's second cycle (the Echo Pom
      target keeps its witness by authoring the roll in the test).
-   - Raw 1012 r29: the untaken H_Bridge01 door's Boon cage took Apollo (first
-     god), which peer-conflicts with r29's recorded Apollo cage; no answer is
-     accepted (was a guessed Zeus cage, 1 mismatch + 12 carried; now 16
-     unchecked).
-     Raws 333, 334, 931, 933 a/b, 1010-1330 and 1013, and fx underworld and
-     surface-victory, still complete with the same buckets.
+   - Raw 1012 r29 (resolved, I): the untaken H_Bridge01 door's Boon cage
+     took Apollo (first god), which a batch's doors never share with r29's
+     recorded Apollo cage, so r29's cage was refused and the walk stopped
+     (16 unchecked). An untaken door's cages are now a room search: each
+     roll order with each offer the engine admits per slot, authored with
+     the entered room's questions answered and the walk's sweep (its
+     recorded cages, a reroll redrawing a cage), fitting only when the
+     entered room holds every recorded cage; the first the source's next
+     entry save accepts is kept, other accepted gods reported as
+     alternatives (an untaken cage's god leaves no trace; owner), none
+     accepted leaves the cages open. Raw 1012 → complete 29/14/0/0.
+     RunProgress declares four Boon entries, so a batch holds at most four
+     Boon cages; with fewer eligible gods than Boon cages the distinct-god
+     rule could be unsatisfiable (not seen). Synthetic fallout: the Travel
+     Deal synthetic now renames the boon in its entry saves; the Natural
+     Selection refusal synthetic stops at r27's untaken door (r27 is
+     deliberately unaccepted).
+     Raws 333, 334, 931, 933 a/b, 1010-1330, 1012 and 1013, and fx
+     underworld and surface-victory, complete.
 
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.
