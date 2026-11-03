@@ -27,7 +27,13 @@ import {
 } from '../../topology/query';
 import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../../topology/impact';
 import { sameExitDecisionSource } from '../../topology/source-identity';
-import { failCommand, requireRoom, requireTopology, type LocatedBiome } from '../contract';
+import {
+  declaredRoom,
+  failCommand,
+  requireRoom,
+  requireTopology,
+  type LocatedBiome,
+} from '../contract';
 import type { RouteDetourCommand, TopologyCommand } from '../types';
 import { reconcileNormalTargetEntryStates } from '../selection-state';
 import {
@@ -92,7 +98,7 @@ function completionChainForSelection(
     (occurrence) => occurrence.occurrenceId === prebossOccurrenceId,
   );
   if (preboss === undefined) failCommand(command, 'selected Preboss occurrence is missing');
-  const prebossRoom = requireRoom(catalog, preboss.gameName, located.layout.biomeKey, command);
+  const prebossRoom = declaredRoom(catalog, preboss.gameName, command);
   if (prebossRoom.kind !== 'Preboss') return topology;
   const bossOccurrenceId = fixedCompletionOccurrenceId(prebossOccurrenceId, 'boss');
   // An authored boss-door store survives reconstruction. The key bound is per

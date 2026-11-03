@@ -19,6 +19,8 @@ import {
   redoProjectHistory,
   undoProjectHistory,
   normalDecisionProgressionForLayout,
+  type ProjectCommand,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 
 import { createNormalDispositionByAcquisitionRole } from '../../../src/authored-project/acquisition/reward-state';
@@ -256,6 +258,256 @@ describe('authored-project route detour commands', () => {
           decision.source.occurrenceId === target,
       ),
     ).toEqual(anomalyOutgoing);
+  });
+
+  describe('a detour beside ordinary targets', () => {
+    const id = createOccurrenceId;
+    const source = (occurrenceId: string) => ({
+      kind: 'occurrence' as const,
+      occurrenceId: id(occurrenceId),
+    });
+    const batch = (biome: typeof fBiome, occurrenceId: string): ProjectCommand[] => [
+      { kind: 'CreateBatch', decision: createExitDecisionAddress(biome, source(occurrenceId)) },
+      store(biome, occurrenceId),
+    ];
+    const store = (biome: typeof fBiome, occurrenceId: string): ProjectCommand => ({
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, source(occurrenceId)),
+      storeKey: 'RunProgress',
+    });
+    const target = (
+      biome: typeof fBiome,
+      from: string,
+      exitKey: string,
+      occurrenceId: string,
+      gameName: string,
+    ): ProjectCommand => ({
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, source(from), exitKey),
+      occurrenceId: id(occurrenceId),
+      gameName,
+    });
+    const replace = (
+      biome: typeof fBiome,
+      occurrenceId: string,
+      gameName: string,
+    ): ProjectCommand => ({
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, id(occurrenceId)),
+      gameName,
+    });
+    // A lone door is the derived pick until a detour joins it; the plan states its pick.
+    const pickNormal = (biome: typeof fBiome, occurrenceId: string): ProjectCommand => ({
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(biome, source(occurrenceId)),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+    const apply = (project: ProjectDocument, commands: readonly ProjectCommand[]) =>
+      commands.reduce(
+        (current, command) => applyProjectCommand(current, catalog, command),
+        project,
+      );
+    // Command order decides only the order occurrences were appended in.
+    const settled = (project: ProjectDocument, biomeKey: 'F' | 'G') => {
+      const topology = biomeTopology(project, 'Underworld', biomeKey);
+      return {
+        ...topology,
+        occurrences: [...topology.occurrences].sort((left, right) =>
+          left.occurrenceId.localeCompare(right.occurrenceId),
+        ),
+      };
+    };
+    const occurrence = (project: ProjectDocument, biomeKey: 'F' | 'G', occurrenceId: string) =>
+      biomeTopology(project, 'Underworld', biomeKey).occurrences.find(
+        (candidate) => candidate.occurrenceId === id(occurrenceId),
+      );
+
+    // The game swaps each generated G door independently (ChooseNextRoomData).
+    it('authors a G door beside an Anomaly sibling in either order', () => {
+      const fork: ProjectCommand[] = [
+        { kind: 'CreateStart', biome: gBiome, occurrenceId: id('intro') },
+        ...batch(gBiome, 'intro'),
+        target(gBiome, 'intro', 'exit1', 'fork', 'G_Combat01'),
+        ...batch(gBiome, 'fork'),
+        target(gBiome, 'fork', 'exit1', 'anomaly', 'G_Combat02'),
+      ];
+      const swap: ProjectCommand = {
+        kind: 'SwitchTargetToAnomaly',
+        target: createTargetAddress(gBiome, source('fork'), 'exit1'),
+      };
+      const sibling = target(gBiome, 'fork', 'exit2', 'peer', 'G_Combat03');
+      const swappedFirst = apply(gProject(), [...fork, swap, sibling]);
+      expect(settled(swappedFirst, 'G')).toEqual(
+        settled(apply(gProject(), [...fork, sibling, swap]), 'G'),
+      );
+      expect(occurrence(swappedFirst, 'G', 'anomaly')).toMatchObject({
+        anomalyReplacement: { replacedRoomGameName: 'G_Combat02' },
+      });
+      expect(
+        decodeProjectDocument(JSON.parse(encodeProjectDocument(swappedFirst)), catalog),
+      ).toEqual(swappedFirst);
+
+      expect(
+        occurrence(apply(swappedFirst, [replace(gBiome, 'peer', 'G_Shop01')]), 'G', 'peer'),
+      ).toMatchObject({ gameName: 'G_Shop01' });
+      const reverted = apply(swappedFirst, [
+        { kind: 'RevertAnomaly', occurrence: createOccurrenceAddress(gBiome, id('anomaly')) },
+      ]);
+      expect(occurrence(reverted, 'G', 'anomaly')).toMatchObject({ gameName: 'G_Combat02' });
+      expect(occurrence(reverted, 'G', 'peer')).toEqual(occurrence(swappedFirst, 'G', 'peer'));
+      expect(
+        occurrence(
+          apply(swappedFirst, [
+            {
+              kind: 'RemoveExitDecision',
+              decision: createExitDecisionAddress(gBiome, source('fork')),
+            },
+          ]),
+          'G',
+          'peer',
+        ),
+      ).toBeUndefined();
+
+      // The rules of the chosen room still hold: one target per door, a room of G itself, and an
+      // Anomaly changes only through its own commands.
+      expect(() =>
+        apply(swappedFirst, [target(gBiome, 'fork', 'exit2', 'other', 'G_Combat04')]),
+      ).toThrow(/exit2/);
+      expect(() =>
+        apply(apply(gProject(), [...fork, swap]), [
+          target(gBiome, 'fork', 'exit2', 'peer', 'B_Combat01'),
+        ]),
+      ).toThrow(/B_Combat01 belongs to Anomaly/);
+      expect(() => apply(swappedFirst, [replace(gBiome, 'anomaly', 'G_Combat04')])).toThrow(
+        /Anomaly commands/,
+      );
+    });
+
+    it('authors a Shop door beside a Zagreus contract in either order', () => {
+      const shop: ProjectCommand[] = [
+        {
+          kind: 'CreateStart',
+          biome: fBiome,
+          occurrenceId: id('opening'),
+          gameName: 'F_Opening01',
+        },
+        ...batch(fBiome, 'opening'),
+        target(fBiome, 'opening', 'exit1', 'shop', 'F_Shop01'),
+      ];
+      const contract: ProjectCommand = {
+        kind: 'AddZagreusContract',
+        additional: createAdditionalExitAddress(fBiome, id('shop'), 'zagreusContract'),
+        occurrenceId: id('contract'),
+      };
+      const contractFirst = apply(fProject(), [
+        ...shop,
+        contract,
+        store(fBiome, 'shop'),
+        target(fBiome, 'shop', 'exit1', 'peer', 'F_Combat01'),
+        pickNormal(fBiome, 'shop'),
+      ]);
+      expect(settled(contractFirst, 'F')).toEqual(
+        settled(
+          apply(fProject(), [
+            ...shop,
+            ...batch(fBiome, 'shop'),
+            target(fBiome, 'shop', 'exit1', 'peer', 'F_Combat01'),
+            contract,
+            pickNormal(fBiome, 'shop'),
+          ]),
+          'F',
+        ),
+      );
+      expect(
+        occurrence(apply(contractFirst, [replace(fBiome, 'peer', 'F_Combat02')]), 'F', 'peer'),
+      ).toMatchObject({ gameName: 'F_Combat02' });
+      expect(
+        occurrence(
+          apply(contractFirst, [
+            {
+              kind: 'RemoveZagreusContract',
+              additional: createAdditionalExitAddress(fBiome, id('shop'), 'zagreusContract'),
+            },
+          ]),
+          'F',
+          'peer',
+        ),
+      ).toEqual(occurrence(contractFirst, 'F', 'peer'));
+      // The contract's own return door is an ordinary F target behind a C room.
+      const returned = apply(contractFirst, [
+        {
+          kind: 'SetExitSelection',
+          selection: createExitSelectionAddress(fBiome, source('shop')),
+          value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+        },
+        ...batch(fBiome, 'contract'),
+        target(fBiome, 'contract', 'exit1', 'return', 'F_Combat02'),
+        replace(fBiome, 'return', 'F_Shop01'),
+      ]);
+      expect(occurrence(returned, 'F', 'return')).toMatchObject({ gameName: 'F_Shop01' });
+    });
+
+    it('authors a door beside a Chaos gate in either order', () => {
+      const opening: ProjectCommand[] = [
+        {
+          kind: 'CreateStart',
+          biome: fBiome,
+          occurrenceId: id('opening'),
+          gameName: 'F_Opening01',
+        },
+      ];
+      const chaos: ProjectCommand = {
+        kind: 'AddChaos',
+        additional: createAdditionalExitAddress(fBiome, id('opening'), 'chaos'),
+        occurrenceId: id('chaos'),
+      };
+      const chaosFirst = apply(fProject(), [
+        ...opening,
+        chaos,
+        store(fBiome, 'opening'),
+        target(fBiome, 'opening', 'exit1', 'peer', 'F_Combat01'),
+        pickNormal(fBiome, 'opening'),
+      ]);
+      expect(settled(chaosFirst, 'F')).toEqual(
+        settled(
+          apply(fProject(), [
+            ...opening,
+            ...batch(fBiome, 'opening'),
+            target(fBiome, 'opening', 'exit1', 'peer', 'F_Combat01'),
+            chaos,
+            pickNormal(fBiome, 'opening'),
+          ]),
+          'F',
+        ),
+      );
+      expect(
+        occurrence(apply(chaosFirst, [replace(fBiome, 'peer', 'F_Shop01')]), 'F', 'peer'),
+      ).toMatchObject({ gameName: 'F_Shop01' });
+      expect(
+        occurrence(
+          apply(chaosFirst, [
+            {
+              kind: 'RemoveChaos',
+              additional: createAdditionalExitAddress(fBiome, id('opening'), 'chaos'),
+            },
+          ]),
+          'F',
+          'peer',
+        ),
+      ).toEqual(occurrence(chaosFirst, 'F', 'peer'));
+      const returned = apply(chaosFirst, [
+        {
+          kind: 'SetExitSelection',
+          selection: createExitSelectionAddress(fBiome, source('opening')),
+          value: { kind: 'additional', additionalExitKey: 'chaos' },
+        },
+        ...batch(fBiome, 'chaos'),
+        target(fBiome, 'chaos', 'exit1', 'return', 'F_Combat02'),
+        target(fBiome, 'chaos', 'exit2', 'returnPeer', 'F_Shop01'),
+        replace(fBiome, 'return', 'F_Combat03'),
+      ]);
+      expect(occurrence(returned, 'F', 'return')).toMatchObject({ gameName: 'F_Combat03' });
+    });
   });
 
   it('gives the remaining Preboss Shop its completion chain when an Anomaly narrows a takeover', () => {

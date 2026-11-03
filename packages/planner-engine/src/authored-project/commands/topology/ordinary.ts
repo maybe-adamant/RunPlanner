@@ -35,6 +35,7 @@ import type { RoomOccurrenceRole } from '../../room-state/declaration';
 import {
   failCommand,
   locateBiome,
+  declaredRoom,
   requireRoom,
   requireTopology,
   withBiome,
@@ -375,7 +376,7 @@ export function createTarget(
     );
     if (targetIndex < 0) return occurrence;
     const targetRoom = routeRoomDeclaration(
-      requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
+      declaredRoom(catalog, occurrence.gameName, command),
       located.routeKey,
     );
     if (targetRoom.kind !== 'Preboss' && targetRoom.kind !== 'Shop') return occurrence;

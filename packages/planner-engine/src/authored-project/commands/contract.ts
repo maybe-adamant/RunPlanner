@@ -451,6 +451,11 @@ export function requireOccurrence(
   return occurrence;
 }
 
+/**
+ * The room a command chooses for this biome's own room set: a start, ordinary
+ * target, Hub slot, Preboss or replacement. Detour rooms are chosen through
+ * their own rule, and an occurrence already in the topology is read by name.
+ */
 export function requireRoom(
   catalog: Catalog,
   gameName: string,
@@ -462,6 +467,17 @@ export function requireRoom(
   if (room.roomSetKey !== biomeKey) {
     failCommand(command, `${gameName} belongs to ${room.roomSetKey}`);
   }
+  return room;
+}
+
+/** The declaration of a room the topology already holds, validated where it was chosen. */
+export function declaredRoom(
+  catalog: Catalog,
+  gameName: string,
+  command: CommandContractSubject,
+): RoomDeclaration {
+  const room = catalog.rooms.byKey[gameName];
+  if (room === undefined) failCommand(command, `unknown room ${gameName}`);
   return room;
 }
 

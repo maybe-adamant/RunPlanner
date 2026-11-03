@@ -30,6 +30,7 @@ import {
   failCommand,
   requireAnomalyRoom,
   requireOccurrence,
+  declaredRoom,
   requireRoom,
   requireTopology,
   withBiome,
@@ -147,10 +148,9 @@ function requireAnomalyOccurrence(
   if (!descriptor.replacementRoomGameNames.includes(anomalyOccurrence.gameName)) {
     failCommand(command, `${anomalyOccurrence.gameName} is not a declared Anomaly replacement map`);
   }
-  const rememberedRoom = requireRoom(
+  const rememberedRoom = declaredRoom(
     catalog,
     anomalyOccurrence.anomalyReplacement.replacedRoomGameName,
-    located.layout.biomeKey,
     command,
   );
   if (!descriptor.replaceableTargetRoomGameNames.includes(rememberedRoom.gameName)) {
@@ -188,12 +188,7 @@ function switchTargetToAnomaly(
   if (occurrence.anomalyReplacement !== undefined || occurrence.state.kind !== 'counted') {
     failCommand(command, 'target is not a replaceable counted host room');
   }
-  const rememberedRoom = requireRoom(
-    catalog,
-    occurrence.gameName,
-    located.layout.biomeKey,
-    command,
-  );
+  const rememberedRoom = declaredRoom(catalog, occurrence.gameName, command);
   if (!descriptor.replaceableTargetRoomGameNames.includes(rememberedRoom.gameName)) {
     failCommand(command, `${rememberedRoom.gameName} is not an Anomaly-replaceable target`);
   }
@@ -372,7 +367,7 @@ function requireContractSource(
     failCommand(command, 'a Zagreus contract source must be on the selected spine');
   }
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
-  const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
+  const room = declaredRoom(catalog, occurrence.gameName, command);
   if (
     room.kind !== 'Shop' ||
     occurrence.state.kind !== 'shop' ||
@@ -435,6 +430,7 @@ function requireChaosSource(
     failCommand(command, 'a Chaos source must be on the selected spine');
   }
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
+  // A Chaos gate opens only in a room of the host biome itself.
   const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
   if (room.mode.kind !== 'authored') {
     failCommand(command, 'a Chaos source must be an authored host room');

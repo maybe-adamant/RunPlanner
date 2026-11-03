@@ -4,7 +4,7 @@ import { requireEphyraSideRooms } from '../../room-state/declaration';
 import {
   failCommand,
   requireOccurrence,
-  requireRoom,
+  declaredRoom,
   requireTopology,
   type LocatedBiome,
 } from '../contract';
@@ -42,7 +42,7 @@ export function updateLocalVisit(
   );
   if (decision === undefined) failCommand(command, 'local visit decision does not exist');
   const source = requireOccurrence(located.plan, decision.sourceOccurrenceId, command);
-  const room = requireRoom(catalog, source.gameName, located.layout.biomeKey, command);
+  const room = declaredRoom(catalog, source.gameName, command);
   const descriptor = requireEphyraSideRooms(room, room.gameName);
   if (descriptor?.key !== decision.groupKey) {
     failCommand(command, 'local visit decision does not match its source declaration');

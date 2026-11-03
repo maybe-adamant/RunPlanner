@@ -12,7 +12,7 @@ import type {
 } from '../../model';
 import type { RoomOccurrenceRole } from '../../room-state/declaration';
 import { sourceOfferPointStoreKey } from '../../batchState';
-import { declaredPhysicalExitKeys, isHostRouteDetourRoom } from '../../topology/query';
+import { declaredPhysicalExitKeys } from '../../topology/query';
 import { sameExitDecisionSource } from '../../topology/source-identity';
 import { failCommand, requireOccurrence, withBiome, type LocatedBiome } from '../contract';
 import type { RouteDetourCommand, TopologyCommand } from '../types';
@@ -59,9 +59,6 @@ export function sourceRoom(
   const room = catalog.rooms.byKey[gameName];
   if (room === undefined) failCommand(command, `unknown room ${gameName}`);
   if (room.mode.kind !== 'authored') failCommand(command, `${gameName} is layout-derived`);
-  if (room.roomSetKey !== located.layout.biomeKey && !isHostRouteDetourRoom(room)) {
-    failCommand(command, `${gameName} belongs to ${room.roomSetKey}`);
-  }
   return room;
 }
 

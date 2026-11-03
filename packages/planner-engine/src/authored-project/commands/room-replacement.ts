@@ -42,6 +42,7 @@ import { composeStartingReward } from '../room-state/starting-reward';
 import {
   failCommand,
   requireOccurrence,
+  declaredRoom,
   requireRoom,
   requireTopology,
   type LocatedBiome,
@@ -218,7 +219,7 @@ function occurrenceContext(
   located: LocatedBiome,
   occurrenceId: OccurrenceId,
   command: RoomReplacementCommand,
-  replacementRoom?: RoomDeclaration,
+  replacementRoom: RoomDeclaration,
 ): OccurrenceContext {
   if (topology.startOccurrenceId === occurrenceId) {
     return Object.freeze({ role: 'ordinary', entryActive: true });
@@ -252,15 +253,7 @@ function occurrenceContext(
       (target) => target.occurrenceId === occurrenceId,
     );
     if (targetIndex < 0) continue;
-    const occurrence = topology.occurrences.find(
-      (candidate) => candidate.occurrenceId === occurrenceId,
-    );
-    const room =
-      replacementRoom ??
-      (occurrence === undefined
-        ? undefined
-        : requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command));
-    if (room === undefined) failCommand(command, `unknown occurrence ${occurrenceId}`);
+    const room = replacementRoom;
     const role = prebossRole(room, targetIndex, command);
     const target = decision.normal.targets[targetIndex];
     const resolvedStoreKey =
@@ -411,6 +404,9 @@ export function applyRoomReplacementCommand(
   const current = requireTopology(located.plan, command);
   const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
   if (occurrence.gameName === command.gameName) return document;
+  if (occurrence.anomalyReplacement !== undefined)
+    failCommand(command, 'an Anomaly occurrence changes through its Anomaly commands');
+  const replacedRoom = declaredRoom(catalog, occurrence.gameName, command);
   const routePosition = resolveRoutePosition(catalog, document.route, located.plan.biomeKey);
   const replacementRoom = resolveEntryDeclaration(
     requireRoom(catalog, command.gameName, located.layout.biomeKey, command),
@@ -497,10 +493,7 @@ export function applyRoomReplacementCommand(
   );
   const replacementState = reconcileReplacementRoomState(
     catalog,
-    resolveEntryDeclaration(
-      requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
-      routePosition,
-    ),
+    resolveEntryDeclaration(replacedRoom, routePosition),
     occurrence.state,
     replacementRoom,
     replacementDefault,
@@ -524,10 +517,7 @@ export function applyRoomReplacementCommand(
       : {}),
     encounters: reconcileRoomEncounterState(
       catalog,
-      resolveEntryDeclaration(
-        requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
-        routePosition,
-      ),
+      resolveEntryDeclaration(replacedRoom, routePosition),
       occurrence.encounters,
       replacementRoom,
       createDefaultRoomEncounterState(
