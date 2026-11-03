@@ -1,12 +1,14 @@
-import type {
-  AuthoredTraitOffer,
-  AuthoredTraitOption,
-  ProjectCommand,
-  TraitOfferAddress,
+import {
+  semanticAddressKey,
+  type AuthoredTraitOffer,
+  type AuthoredTraitOption,
+  type ProjectCommand,
+  type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 import {
   type SemanticFinding,
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -694,6 +696,42 @@ function applyTraitScreenRerolls(
 export function answerTraitOffer(context: RunImportContext, reason: SemanticFinding): boolean {
   if (reason.code !== 'traitOfferMissing' || reason.origin.kind !== 'traitOffer') return false;
   const trait: TraitOfferAddress = reason.origin;
+  const entry = unauthoredFixedEntry(context, trait);
+  return entry === undefined
+    ? answerTraitOfferScreens(context, trait)
+    : context.transaction(() => context.apply(entry) && answerTraitOfferScreens(context, trait));
+}
+
+/**
+ * A pickup entry whose reward the engine fixes (Echo's replay of the last
+ * reward) but the plan has not authored: its trait offer is asked first, and
+ * the entry takes the fixed reward with it.
+ */
+function unauthoredFixedEntry(
+  context: RunImportContext,
+  trait: TraitOfferAddress,
+): ProjectCommand | undefined {
+  const owner = trait.owner;
+  if (owner.kind !== 'acquisitionEntry') return undefined;
+  const occurrenceId = occurrenceIdOf(owner);
+  const occurrence =
+    occurrenceId === undefined
+      ? undefined
+      : authoredOccurrence(context.assembly().project, owner.biomeKey, occurrenceId);
+  const authored =
+    occurrence?.acquisitionSites?.[owner.site.pointKey]?.pickupEntries?.[owner.entryKey];
+  if (authored !== null) return undefined;
+  const fixed = derivedAcquisitionEntriesForProjectEvaluationAssembly(
+    context.assembly(),
+    owner.site,
+  ).find((candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(owner))
+    ?.fixedReward?.offer;
+  return fixed === undefined
+    ? undefined
+    : { kind: 'ReplaceAcquisitionEntryOffer', entry: owner, value: fixed };
+}
+
+function answerTraitOfferScreens(context: RunImportContext, trait: TraitOfferAddress): boolean {
   const occurrenceId = occurrenceIdOf(trait.owner);
   if (occurrenceId === undefined) return false;
   const giver = ownerGiver(context, trait);

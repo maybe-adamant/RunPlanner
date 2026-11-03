@@ -264,6 +264,12 @@ reproduces is reported with its nearest miss and the plan stops there.
      as a Pom screen, so raw 931's r46 level-up took the first eligible
      target. Raw 931 32/14/2/0 → 33/14/1/0, first mismatch r46 → r47.
      Neither 931 r46/r47 nor 333 r30 involved a challenge switch (see Open).
+   - Echo's last-reward replay (I): the engine fixes the replayed reward
+     and asks its trait offer, but the pickup entry itself was never
+     authored, so the screen's answer was refused and the walk stopped (the
+     Draft guess could not settle it either). The entry now takes the
+     engine's fixed reward with the screen's answer. Raw 1012 stopped at
+     r28 → complete; its first mismatch is r29 (below).
    - Conversions that share a solver's store (owner request). An Artificer
      replacement is one `RunProgress` draw, so it is searched with any solver
      reading that store across the same save window:
