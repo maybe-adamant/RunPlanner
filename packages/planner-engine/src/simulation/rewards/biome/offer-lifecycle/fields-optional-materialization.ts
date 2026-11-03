@@ -10,7 +10,7 @@ import type {
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { fieldsSpatialFindings } from '../../../fields/spatial';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
-import { branchList, type RewardBranchState } from '../../branch-primitives';
+import type { RewardBranchState } from '../../branch-primitives';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { createBiomeRewardFacts } from '../../facts';
@@ -210,7 +210,7 @@ export function materializeFieldsOptionalOfferPoint(
     ) {
       const settlement = settleOwnedAcquisitionSite(
         catalog,
-        branchList(completed),
+        completed,
         {
           siteOwner: selectedReward.origin,
           pointKey,

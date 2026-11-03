@@ -77,7 +77,7 @@ function settleTestRoomReward(
     facts,
   );
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
-  return settlement.branches;
+  return settlement.branch;
 }
 
 function equippedHistory() {
@@ -206,7 +206,7 @@ describe('Pom level resolutions', () => {
 
     const noTargetFindings = new Map();
     const empty = settleTestRoomReward(
-      initializeTestRewardBranches(),
+      initializeTestRewardBranches()[0],
       {
         origin: levelAddress.owner,
         offer: { rewardType: 'GiftDrop' },
@@ -219,20 +219,18 @@ describe('Pom level resolutions', () => {
       (state) => factsWithHistory(rewardFacts(), state.rewardHistory, new Set()),
       noTargetFindings,
     );
-    expect(empty[0]?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
-    expect(empty[0]?.state.traitHistory?.events).toEqual([]);
+    expect(empty?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
+    expect(empty?.state.traitHistory?.events).toEqual([]);
     expect([...noTargetFindings.values()]).toEqual([]);
 
     const withTarget = settleTestRoomReward(
-      [
-        Object.freeze({
-          ...initializeTestRewardBranches()[0]!,
-          state: Object.freeze({
-            ...initializeTestRewardBranches()[0]!.state,
-            traitHistory: equippedHistory(),
-          }),
+      Object.freeze({
+        ...initializeTestRewardBranches()[0]!,
+        state: Object.freeze({
+          ...initializeTestRewardBranches()[0]!.state,
+          traitHistory: equippedHistory(),
         }),
-      ],
+      }),
       {
         origin: levelAddress.owner,
         offer: { rewardType: 'GiftDrop' },
@@ -247,8 +245,8 @@ describe('Pom level resolutions', () => {
       (state) => factsWithHistory(rewardFacts(), state.rewardHistory, new Set()),
       new Map(),
     );
-    expect(withTarget[0]?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
-    expect(withTarget[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
+    expect(withTarget?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
+    expect(withTarget?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
   });
 
   it('requires exact visible cardinality, membership, and eligible equipped targets', () => {

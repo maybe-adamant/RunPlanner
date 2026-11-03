@@ -446,7 +446,7 @@ describe('Olympian reward pressure', () => {
     )[0]!;
     const settlement = settleOwnedAcquisitionSite(
       catalog,
-      [initial],
+      initial,
       {
         siteOwner: occurrence,
         pointKey: 'roomExit',
@@ -479,7 +479,7 @@ describe('Olympian reward pressure', () => {
     );
 
     expect(
-      settlement.branches[0]?.state.keepsakes.olympianSources.find(
+      settlement.branch?.state.keepsakes.olympianSources.find(
         (source) => source.providerKey === 'Hestia',
       )?.remainingForceUses,
     ).toBe(0);
@@ -501,7 +501,7 @@ describe('Olympian reward pressure', () => {
 
     const settlement = settleOwnedAcquisitionSite(
       catalog,
-      [initial],
+      initial,
       {
         siteOwner: occurrence,
         pointKey: 'roomRewardPickup',
@@ -534,7 +534,7 @@ describe('Olympian reward pressure', () => {
     );
 
     expect(
-      settlement.branches[0]?.state.keepsakes.olympianSources.find(
+      settlement.branch?.state.keepsakes.olympianSources.find(
         (source) => source.providerKey === 'Apollo',
       )?.remainingForceUses,
     ).toBe(0);
@@ -652,7 +652,7 @@ describe('Olympian reward pressure', () => {
     const result = echoGoldShop(['Boon'], {
       includeDuplicate: true,
       duplicateSelectOption2: true,
-      initialBranches: initializeTestRewardBranches().map((branch) =>
+      initialBranch: initializeTestRewardBranches().map((branch) =>
         Object.freeze({
           ...branch,
           state: Object.freeze({
@@ -666,9 +666,9 @@ describe('Olympian reward pressure', () => {
             ),
           }),
         }),
-      ),
+      )[0],
     });
-    const branch = result.settlement.branches[0];
+    const branch = result.settlement.branch;
     expect([...result.findings.values()]).toEqual([]);
     expect(
       Object.values(branch?.state.traitHistory?.equippedTraits ?? {}).filter(
@@ -713,7 +713,7 @@ describe('Olympian reward pressure', () => {
           createTestArcanaFearState(),
           catalog,
           'ForceZeusBoonKeepsake',
-        ),
+        )[0],
         {
           siteOwner: occurrence,
           site,
@@ -728,7 +728,7 @@ describe('Olympian reward pressure', () => {
           facts: (state) => factsFor(state.rewardHistory),
           presentsMaterializedScreen: true,
         },
-      ).branches[0]?.state.keepsakes.olympianSources.find((source) => source.providerKey === 'Zeus')
+      ).branch?.state.keepsakes.olympianSources.find((source) => source.providerKey === 'Zeus')
         ?.remainingForceUses;
 
     expect(settle(true)).toBe(1);

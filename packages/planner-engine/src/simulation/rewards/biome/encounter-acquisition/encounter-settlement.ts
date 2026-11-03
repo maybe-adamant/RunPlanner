@@ -47,12 +47,7 @@ import { historyFindingChronology, rewardFindingChronologyForRoom } from '../fin
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { GorgonPhaseCandidateSupport, NemesisRandomEventCandidateSupport } from '../../model';
-import {
-  branchList,
-  mapReached,
-  singleBranch,
-  type RewardBranchState,
-} from '../../branch-primitives';
+import { mapReached, type RewardBranchState } from '../../branch-primitives';
 import { advanceReachedBranch, advanceRewardBranch } from '../../branch-lifecycle';
 import { consumeOlympianProviderForReachedOffer } from '../../offer-generation';
 import {
@@ -673,7 +668,7 @@ export function applyEncounterSettlementTransition(inputs: {
     );
     const settlement = settleOwnedAcquisitionSite(
       catalog,
-      branchList(materialized),
+      materialized,
       {
         siteOwner: rewards[0].origin,
         pointKey: event.phaseKey,
@@ -709,7 +704,7 @@ export function applyEncounterSettlementTransition(inputs: {
     for (const checkpoint of settlement.traitChildSettlements ?? [])
       recordChild(checkpoint, room.origin);
     return Object.freeze({
-      branch: singleBranch(settlement.branches),
+      branch: settlement.branch,
       findings: Object.freeze([...findings.values()]),
       roleFrontiers: Object.freeze(roleFrontiers),
       traitChildSettlements: Object.freeze(traitChildSettlements),

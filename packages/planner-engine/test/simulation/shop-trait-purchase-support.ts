@@ -149,9 +149,9 @@ export const settleShop = (
   context: Parameters<typeof settleShopAcquisitionSite>[1],
   findings: Map<string, import('../../src/simulation/finding-regions').FindingRegionEntry>,
 ) => {
-  const settlement = settleShopAcquisitionSite(branch === undefined ? [] : [branch], context);
+  const settlement = settleShopAcquisitionSite(branch, context);
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
-  return settlement.branches;
+  return settlement.branch;
 };
 
 export function baseFacts(): RewardKernelFacts {
@@ -434,7 +434,7 @@ export function echoGoldShop(
     readonly duplicateConversion?: 'normal' | 'gold' | 'artificer';
     readonly duplicateSelectOption2?: boolean;
     readonly timePiece?: boolean;
-    readonly initialBranches?: readonly RewardBranchState[];
+    readonly initialBranch?: RewardBranchState | undefined;
     readonly occurrenceId?: ReturnType<typeof createOccurrenceId>;
     readonly offerOverrides?: Readonly<Record<string, ResolvedRewardOffer>>;
     readonly duplicateOffer?: ResolvedRewardOffer;
@@ -680,7 +680,7 @@ export function echoGoldShop(
       ? foldTraitHistoryEvents(catalog, [...echoTraits.events, ...pomTargetHistory().events])
       : echoTraits;
   const seeded =
-    options.initialBranches ??
+    options.initialBranch ??
     initializeTestRewardBranches(
       options.duplicateConversion === 'artificer'
         ? createArcanaFearState(catalog, {
@@ -702,7 +702,7 @@ export function echoGoldShop(
             : {}),
         }),
       }),
-    );
+    )[0]!;
   const facts = (
     state: { readonly rewardHistory: ReturnType<typeof createRewardHistoryState> },
     currentRoomShopOptionNames: ReadonlySet<string> = new Set(),
@@ -724,7 +724,7 @@ export function echoGoldShop(
       currentRoomShopOptionNames,
     );
   const inventoryFindings = new Map();
-  const inventory = processShopInventory(seeded[0], {
+  const inventory = processShopInventory(seeded, {
     catalog,
     room: canonical,
     declaration: room,
@@ -736,21 +736,18 @@ export function echoGoldShop(
   });
   mergeRewardFindingEmissions(inventoryFindings, inventory.findingEmissions);
   const findings = new Map();
-  const settlement = settleShopAcquisitionSite(
-    inventory.branch === undefined ? [] : [inventory.branch],
-    {
-      catalog,
-      room: canonical,
-      declaration: room,
-      historySequence: 3,
-      order: authoredOrder,
-      completeAfterOrder: options.completeAfterOrder ?? false,
-      facts,
-      fail: (detail) => {
-        throw new Error(detail);
-      },
+  const settlement = settleShopAcquisitionSite(inventory.branch, {
+    catalog,
+    room: canonical,
+    declaration: room,
+    historySequence: 3,
+    order: authoredOrder,
+    completeAfterOrder: options.completeAfterOrder ?? false,
+    facts,
+    fail: (detail) => {
+      throw new Error(detail);
     },
-  );
+  });
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
   return {
     canonical,

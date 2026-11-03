@@ -54,7 +54,7 @@ function collect(
 ) {
   return settleOwnedAcquisitionSite(
     catalog,
-    [branch],
+    branch,
     {
       siteOwner: item.siteOwner,
       pointKey: 'roomRewardPickup',
@@ -83,11 +83,11 @@ function collect(
         : {}),
     },
     facts,
-  ).branches;
+  ).branch;
 }
 
 function collectSeaStarDuplicate(branch: RewardBranchState, item: ReturnType<typeof pickup>) {
-  return settlePickupAcquisitionSite(catalog, [branch], {
+  return settlePickupAcquisitionSite(catalog, branch, {
     siteOwner: item.siteOwner,
     site: createAcquisitionSiteAddress(item.siteOwner, 'seaStarDuplicate:armor:self'),
     entries: Object.freeze({
@@ -112,7 +112,7 @@ function collectSeaStarDuplicate(branch: RewardBranchState, item: ReturnType<typ
     seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
     historySequence: 2,
     facts,
-  }).branches;
+  }).branch;
 }
 
 function branchWith(patch: Partial<SimulationState> = {}): RewardBranchState {
@@ -127,7 +127,7 @@ describe('item armor at acquisition', () => {
       ['ArmorBigBoost', 'HermesShrineDelivery', 40],
       ['ArmorBoost', 'NemesisEventPickup', 20],
     ] as const) {
-      const [settled] = collect(
+      const settled = collect(
         branchWith(),
         pickup(`${rewardType}-${producer}`, rewardType, producer),
       );
@@ -143,7 +143,7 @@ describe('item armor at acquisition', () => {
     const holding = branchWith({
       keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
     });
-    const [converted] = collect(holding, pickup('goldified', 'ArmorBoost', 'RoomReward'), {
+    const converted = collect(holding, pickup('goldified', 'ArmorBoost', 'RoomReward'), {
       timePiece: true,
     });
     expect(converted!.events).toContainEqual(expect.objectContaining({ kind: 'conversionToGold' }));
@@ -165,9 +165,9 @@ describe('item armor at acquisition', () => {
       }),
     });
     const item = pickup('double', 'ArmorBoost', 'RoomReward');
-    const [source] = collect(branchWith({ traitHistory: seaStar }), item, { seaStarProc: true });
+    const source = collect(branchWith({ traitHistory: seaStar }), item, { seaStarProc: true });
     expect(source!.state.rewardHistory.itemArmor).toBe(20);
-    const [duplicate] = collectSeaStarDuplicate(source!, item);
+    const duplicate = collectSeaStarDuplicate(source!, item);
     expect(duplicate!.state.rewardHistory.itemArmor).toBe(40);
     expect(duplicate!.state.rewardHistory.consumableRecord.ArmorBoost).toBe(2);
   });

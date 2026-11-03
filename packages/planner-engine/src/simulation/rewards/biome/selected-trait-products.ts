@@ -47,7 +47,7 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
 
 /** Freezes reached trait and level products after chronological evaluation completes. */
 export function selectedTraitOfferProducts(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   retainedLevelEvaluations: readonly ReachedLevelResolutionEvaluation[] = Object.freeze([]),
   catalog?: Catalog,
 ): SelectedTraitOfferProducts {
@@ -61,33 +61,31 @@ export function selectedTraitOfferProducts(
       chronologicalIndex: number;
     }
   >();
-  for (const branch of branches) {
-    for (const trace of branch.traitEvaluations ?? []) {
-      const owner = traitOwnerAddress(trace.address);
-      if (owner === undefined) {
-        continue;
-      }
-      const address = createTraitOfferAddress(owner, trace.acquisitionRole);
-      const key = semanticAddressKey(address);
-      const current = grouped.get(key);
-      if (current === undefined) {
-        grouped.set(key, {
-          address,
-          acquisitionRole: trace.acquisitionRole,
-          offer: trace.offer,
-          trace,
-          chronologicalIndex: trace.chronologicalIndex,
-        });
-      } else {
-        if (
-          JSON.stringify(traitOfferAssessmentIdentity(trace)) !==
-          JSON.stringify(traitOfferAssessmentIdentity(current.trace))
-        )
-          throw new BiomeRewardSimulationContractError(
-            `trait offer ${key} was assessed at two different states`,
-          );
-        current.chronologicalIndex = Math.min(current.chronologicalIndex, trace.chronologicalIndex);
-      }
+  for (const trace of branch?.traitEvaluations ?? []) {
+    const owner = traitOwnerAddress(trace.address);
+    if (owner === undefined) {
+      continue;
+    }
+    const address = createTraitOfferAddress(owner, trace.acquisitionRole);
+    const key = semanticAddressKey(address);
+    const current = grouped.get(key);
+    if (current === undefined) {
+      grouped.set(key, {
+        address,
+        acquisitionRole: trace.acquisitionRole,
+        offer: trace.offer,
+        trace,
+        chronologicalIndex: trace.chronologicalIndex,
+      });
+    } else {
+      if (
+        JSON.stringify(traitOfferAssessmentIdentity(trace)) !==
+        JSON.stringify(traitOfferAssessmentIdentity(current.trace))
+      )
+        throw new BiomeRewardSimulationContractError(
+          `trait offer ${key} was assessed twice with different results`,
+        );
+      current.chronologicalIndex = Math.min(current.chronologicalIndex, trace.chronologicalIndex);
     }
   }
   const selectedTraitOffers = Object.freeze(
@@ -223,7 +221,7 @@ export function selectedTraitOfferProducts(
     }
   >();
   for (const trace of [
-    ...branches.flatMap((branch) => branch.levelResolutionEvaluations ?? []),
+    ...(branch?.levelResolutionEvaluations ?? []),
     ...retainedLevelEvaluations,
   ]) {
     const key = semanticAddressKey(trace.address);

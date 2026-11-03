@@ -28,7 +28,7 @@ import { assessSeaStarDuplication } from '../../acquisition/conversions';
 import { settlePickupAcquisitionSite } from '../../acquisition/site-settlement';
 import { settleShopAcquisitionSite } from '../../shop/settlement';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
-import { branchList, singleBranch, type RewardBranchState } from '../../branch-primitives';
+import type { RewardBranchState } from '../../branch-primitives';
 import {
   staticallyExcludedCandidateResult,
   type RewardProducerFrontier,
@@ -222,7 +222,7 @@ export function settleAuthoredAcquisitionSite(
           view: roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
           hubBoardLookups: 'notConsulted',
         });
-      const settled = settlePickupAcquisitionSite(catalog, branchList(sourceBranch), {
+      const settled = settlePickupAcquisitionSite(catalog, sourceBranch, {
         siteOwner: room.origin,
         site: selectedSite.address,
         timelineOwnerByEntryKey,
@@ -259,7 +259,7 @@ export function settleAuthoredAcquisitionSite(
       mergeRewardFindingEmissions(targetFindings, settled.findingEmissions);
       acquisitionRoleFrontiers.push(...(settled.roleFrontiers ?? []));
       traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
-      return singleBranch(settled.branches);
+      return settled.branch;
     }
     // The Shop owns only its roomExit site (offers, Echo Gold, Travel Deal
     // refill); a trait-generated pickup in a Shop room is an ordinary pickup.
@@ -353,7 +353,7 @@ export function settleAuthoredAcquisitionSite(
                 replayEntry !== undefined &&
                 replayEntry !== null &&
                 JSON.stringify(replayEntry.offer) !== JSON.stringify(agreedReplay.offer),
-              branchesBeforeEntry: Object.freeze([sourceBranch]),
+              beforeEntry: sourceBranch,
             }),
           );
       }
@@ -372,7 +372,7 @@ export function settleAuthoredAcquisitionSite(
         replayEntryKey === undefined || effectiveReplayEntry === undefined
           ? authoredPickupEntries
           : Object.freeze({ ...authoredPickupEntries, [replayEntryKey]: effectiveReplayEntry });
-      const settled = settlePickupAcquisitionSite(catalog, branchList(sourceBranch), {
+      const settled = settlePickupAcquisitionSite(catalog, sourceBranch, {
         siteOwner: room.origin,
         site: selectedSite.address,
         timelineOwnerByEntryKey,
@@ -470,7 +470,7 @@ export function settleAuthoredAcquisitionSite(
               }
               const candidateSettlement = settlePickupAcquisitionSite(
                 catalog,
-                frontier.branchesBeforeEntry,
+                frontier.beforeEntry,
                 {
                   siteOwner: room.origin,
                   site: selectedSite.address,
@@ -520,17 +520,17 @@ export function settleAuthoredAcquisitionSite(
                   candidateSettlement.findingEmissions.map((entry) => entry.finding),
                 ),
                 supported:
-                  candidateSettlement.branches.length > 0 ||
+                  candidateSettlement.branch !== undefined ||
                   (candidateSettlement.traitChildSettlements?.length ?? 0) > 0,
               });
             },
           }),
         );
       }
-      return replayUnreached ? undefined : singleBranch(settled.branches);
+      return replayUnreached ? undefined : settled.branch;
     }
     const settlementRoom = room;
-    const settled = settleShopAcquisitionSite(branchList(sourceBranch), {
+    const settled = settleShopAcquisitionSite(sourceBranch, {
       catalog,
       room: settlementRoom,
       order: activationOnly
@@ -589,12 +589,14 @@ export function settleAuthoredAcquisitionSite(
           (frontier) => semanticAddressKey(frontier.address) === semanticAddressKey(sourceAddress),
         )
         .flatMap((frontier) =>
-          frontier.branchesBeforeRole.map((branch) =>
-            assessSeaStarDuplication(catalog, branch, frontier.source, {
-              role: seaStarDuplicate.acquisitionRole,
-              lifecyclePoint: frontier.lifecyclePoint,
-            }),
-          ),
+          frontier.beforeRole === undefined
+            ? []
+            : [
+                assessSeaStarDuplication(catalog, frontier.beforeRole, frontier.source, {
+                  role: seaStarDuplicate.acquisitionRole,
+                  lifecyclePoint: frontier.lifecyclePoint,
+                }),
+              ],
         )
         .find((assessment) => !assessment.supported);
       const sourceOfferKey = source.owner.kind === 'shopOffer' ? source.owner.offerKey : undefined;
@@ -608,25 +610,24 @@ export function settleAuthoredAcquisitionSite(
           : onlyEntry.entryKey === sourceOfferKey);
       const unsupported =
         unsupportedFromFrontier ??
-        (sourceWasPurchased
-          ? branchList(sourceBranch)
-              .map((branch) =>
-                assessSeaStarDuplication(
-                  catalog,
-                  branch,
-                  Object.freeze({
-                    origin: source.owner,
-                    offer: source.reward.offer,
-                    producerLifecycleKey: 'Shop',
-                    instanceProvenance: 'paid' as const,
-                    // Eligibility probe only; it publishes no replacement screen.
-                    presentsMaterializedScreen: false,
-                    dispositionByAcquisitionRole: source.reward.dispositionByAcquisitionRole,
-                  }),
-                  { role: seaStarDuplicate.acquisitionRole, lifecyclePoint: 'purchase' },
-                ),
-              )
-              .find((assessment) => !assessment.supported)
+        (sourceWasPurchased && sourceBranch !== undefined
+          ? (() => {
+              const assessment = assessSeaStarDuplication(
+                catalog,
+                sourceBranch,
+                Object.freeze({
+                  origin: source.owner,
+                  offer: source.reward.offer,
+                  producerLifecycleKey: 'Shop',
+                  instanceProvenance: 'paid' as const,
+                  // Eligibility probe only; it publishes no replacement screen.
+                  presentsMaterializedScreen: false,
+                  dispositionByAcquisitionRole: source.reward.dispositionByAcquisitionRole,
+                }),
+                { role: seaStarDuplicate.acquisitionRole, lifecyclePoint: 'purchase' },
+              );
+              return assessment.supported ? undefined : assessment;
+            })()
           : undefined);
       if (unsupported === undefined) continue;
       addRewardFinding(
@@ -645,7 +646,7 @@ export function settleAuthoredAcquisitionSite(
     timelineFacts = settled.timelineFacts;
     derivedEntryFrontiers.push(...(settled.derivedEntryFrontiers ?? []));
     traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
-    return singleBranch(settled.branches);
+    return settled.branch;
   }
 
   return Object.freeze({

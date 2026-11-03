@@ -244,7 +244,7 @@ describe('Dream Shop availability', () => {
         throw new Error(detail);
       },
     });
-    const settlement = settleShopAcquisitionSite([inventory.branch!], {
+    const settlement = settleShopAcquisitionSite(inventory.branch, {
       catalog,
       room,
       declaration,
@@ -257,7 +257,7 @@ describe('Dream Shop availability', () => {
     });
     expect(inventory.findingEmissions).toEqual([]);
     expect(settlement.findingEmissions).toEqual([]);
-    expect(settlement.branches[0]?.state.traitHistory?.elementCounts).toMatchObject({
+    expect(settlement.branch?.state.traitHistory?.elementCounts).toMatchObject({
       Earth: 1,
       Air: 1,
       Fire: 1,
@@ -269,7 +269,7 @@ describe('Dream Shop availability', () => {
       room.entryState?.kind === 'shop'
         ? room.entryState.offers.find((offer) => offer.offerKey === 'MetaProgress')
         : undefined;
-    const branch = settlement.branches[0];
+    const branch = settlement.branch;
     if (profile === undefined || sourceOffer === undefined || branch === undefined)
       throw new Error('Dream I Travel refill contact is incomplete');
     const refill = deriveTravelRefill({
@@ -436,7 +436,7 @@ describe('Dream Shop trait offers against the state they were built from', () =>
         ),
       }),
     );
-    const settlement = settleShopAcquisitionSite(spawned, {
+    const settlement = settleShopAcquisitionSite(spawned[0], {
       catalog,
       room,
       declaration,

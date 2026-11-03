@@ -1923,7 +1923,7 @@ describe('Hermes Shrine pickup settlement', () => {
 
     const delivery = settleOwnedAcquisitionSite(
       catalog,
-      [closed],
+      closed,
       {
         siteOwner: deliveryHost,
         pointKey: 'hermesShrineDelivery',
@@ -1940,11 +1940,11 @@ describe('Hermes Shrine pickup settlement', () => {
       },
       (state) => rewardFacts(state.rewardHistory),
     );
-    expect(delivery.branches[0]?.state.hexProgress).toMatchObject({
+    expect(delivery.branch?.state.hexProgress).toMatchObject({
       bankedPathPoints: 2,
       talentDropsClosed: true,
     });
-    expect(delivery.branches[0]?.state.hexProgress.investedNodeKeys).toHaveLength(18);
+    expect(delivery.branch?.state.hexProgress.investedNodeKeys).toHaveLength(18);
   });
 
   it('settles a rushed forced P Postboss Shrine pickup at the configured route tail', () => {

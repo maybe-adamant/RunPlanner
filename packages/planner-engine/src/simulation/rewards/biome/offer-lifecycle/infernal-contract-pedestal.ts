@@ -16,7 +16,7 @@ import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import type { RewardFactsFactory } from '../../acquisition/contracts';
 import { addRewardFinding, historyChronology, offerEvidence, rewardFinding } from '../../findings';
-import { appendRewardEvent, singleBranch, type RewardBranchState } from '../../branch-primitives';
+import { appendRewardEvent, type RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { reachedRewardOfferExclusion, staticRewardOfferExclusion } from '../../offer-exclusions';
 import {
@@ -30,7 +30,7 @@ import type { FindingChronology } from '../../../finding-regions';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 
 export interface InfernalContractPedestalSpawn {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: readonly FindingRegionEntry[];
   readonly producerFrontiers: readonly RewardProducerFrontier[];
 }
@@ -41,8 +41,8 @@ export function infernalContractHeld(state: SimulationState): boolean {
 
 /**
  * `SpawnZagContractRewards` runs with the room's start events in every
- * pedestal-declaring Preboss, whatever its reward form, on each branch holding
- * InfernalContractBoon. Its one ZagPedestalOptions draw sees the Shop the same
+ * pedestal-declaring Preboss, whatever its reward form, when the reached state
+ * holds InfernalContractBoon. Its one ZagPedestalOptions draw sees the Shop the same
  * events stocked first, when the room has one.
  */
 export function spawnInfernalContractPedestal(inputs: {
@@ -50,17 +50,17 @@ export function spawnInfernalContractPedestal(inputs: {
   readonly historySequence: number;
   readonly room: CanonicalAuthoredRoom | undefined;
   readonly declaration: RoomDeclaration | undefined;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   /** The room's Overview facts, seeing the Shop names its start events stocked. */
   readonly facts: RewardFactsFactory;
   readonly findingChronology?: FindingChronology;
 }): InfernalContractPedestalSpawn {
-  const { catalog, historySequence, room, declaration, branches } = inputs;
+  const { catalog, historySequence, room, declaration, branch } = inputs;
   const findingChronology = inputs.findingChronology ?? historyChronology(historySequence);
   const pedestal = room?.infernalContractPedestal;
-  if (room === undefined || pedestal === undefined || branches.length === 0)
+  if (room === undefined || pedestal === undefined || branch === undefined)
     return Object.freeze({
-      branches,
+      branch,
       findings: Object.freeze([]),
       producerFrontiers: Object.freeze([]),
     });
@@ -82,12 +82,8 @@ export function spawnInfernalContractPedestal(inputs: {
   );
   const facts = (state: SimulationState) => inputs.facts(state, shopNames);
   const findings = new Map<string, FindingRegionEntry>();
-  const next: RewardBranchState[] = [];
-  for (const branch of branches) {
-    if (!infernalContractHeld(branch.state)) {
-      next.push(branch);
-      continue;
-    }
+  const spawn = (): RewardBranchState | undefined => {
+    if (!infernalContractHeld(branch.state)) return branch;
     if (pedestal === null) {
       addRewardFinding(
         findings,
@@ -95,7 +91,7 @@ export function spawnInfernalContractPedestal(inputs: {
         ownerRegion(room.origin),
         findingChronology,
       );
-      continue;
+      return undefined;
     }
     if (
       findShopIndexedGenerationWitnesses(
@@ -112,7 +108,7 @@ export function spawnInfernalContractPedestal(inputs: {
         ownerRegion(room.origin),
         findingChronology,
       );
-      continue;
+      return undefined;
     }
     const offered = appendRewardEvent(
       Object.freeze({
@@ -131,28 +127,27 @@ export function spawnInfernalContractPedestal(inputs: {
       { kind: 'rewardOffered', origin: owner, offer: pedestal.offer },
     );
     // The item stores its resources as it spawns; its pool is its producer.
-    next.push(
-      Object.freeze({
-        ...offered,
-        state: spawnPickups(catalog, offered.state, [
-          Object.freeze({
-            origin: owner,
-            offer: pedestal.offer,
-            producerLifecycleKey: descriptor.generationProfileKey,
-            traitOffersByAcquisitionRole: pedestal.traitOffersByAcquisitionRole,
-            levelResolutionsByAcquisitionRole: pedestal.levelResolutionsByAcquisitionRole,
-            ...(pedestal.hexActivationsByAcquisitionRole === undefined
-              ? {}
-              : { hexActivationsByAcquisitionRole: pedestal.hexActivationsByAcquisitionRole }),
-          }),
-        ]),
-      }),
-    );
-  }
+    return Object.freeze({
+      ...offered,
+      state: spawnPickups(catalog, offered.state, [
+        Object.freeze({
+          origin: owner,
+          offer: pedestal.offer,
+          producerLifecycleKey: descriptor.generationProfileKey,
+          traitOffersByAcquisitionRole: pedestal.traitOffersByAcquisitionRole,
+          levelResolutionsByAcquisitionRole: pedestal.levelResolutionsByAcquisitionRole,
+          ...(pedestal.hexActivationsByAcquisitionRole === undefined
+            ? {}
+            : { hexActivationsByAcquisitionRole: pedestal.hexActivationsByAcquisitionRole }),
+        }),
+      ]),
+    });
+  };
+  const next = spawn();
 
-  const holders = branches.filter((branch) => infernalContractHeld(branch.state));
+  const holder = infernalContractHeld(branch.state) ? branch : undefined;
   const producerFrontiers: RewardProducerFrontier[] = [];
-  if (holders.length > 0) {
+  if (holder !== undefined) {
     const ownerKey = semanticAddressKey(owner);
     const requireOwner = (candidate: SemanticAddress) => {
       if (semanticAddressKey(candidate) !== ownerKey)
@@ -160,16 +155,16 @@ export function spawnInfernalContractPedestal(inputs: {
           'pedestal reward frontier received a foreign owner',
         );
     };
-    const supported = (branch: RewardBranchState, selection: AuthoredShopOffer) =>
+    const supported = (selection: AuthoredShopOffer) =>
       findShopPartialAuthoredGenerationWitnesses(
         catalog.rewards,
         profile,
         [selection],
-        facts(branch.state),
+        facts(holder.state),
       ).length > 0;
     const selectionResult = (candidate: SemanticAddress, selection: AuthoredShopOffer) => {
       requireOwner(candidate);
-      if (holders.some((branch) => supported(branch, selection)))
+      if (supported(selection))
         return Object.freeze({ findings: Object.freeze([]), supported: true });
       const input: ShopSlotExclusionInput = {
         catalog: catalog.rewards,
@@ -179,20 +174,10 @@ export function spawnInfernalContractPedestal(inputs: {
         peerAt: () => undefined,
       };
       const fixed = notInShopReason(input);
-      const reached = singleBranch(branches);
       const exclusions =
         fixed !== undefined
           ? staticRewardOfferExclusion(fixed)
-          : reachedRewardOfferExclusion(
-              // Inventory witnesses are checked before the Contract boon.
-              reached === undefined
-                ? undefined
-                : !supported(reached, selection)
-                  ? shopSlotReason(input, facts(reached.state))
-                  : !infernalContractHeld(reached.state)
-                    ? { kind: 'contractNotEquipped' as const }
-                    : undefined,
-            );
+          : reachedRewardOfferExclusion(shopSlotReason(input, facts(holder.state)));
       return Object.freeze({
         findings: Object.freeze([]),
         supported: false,
@@ -219,7 +204,7 @@ export function spawnInfernalContractPedestal(inputs: {
     );
   }
   return Object.freeze({
-    branches: Object.freeze(next),
+    branch: next,
     findings: Object.freeze([...findings.values()]),
     producerFrontiers: Object.freeze(producerFrontiers),
   });

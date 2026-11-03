@@ -112,7 +112,7 @@ export function dueHermesShrineDeliveryFrontier(
           retained !== undefined &&
           retained !== null &&
           retained.offer.rewardType !== delivery.rewardType,
-        branchesBeforeEntry: Object.freeze([branch]),
+        beforeEntry: branch,
       }),
     );
   }

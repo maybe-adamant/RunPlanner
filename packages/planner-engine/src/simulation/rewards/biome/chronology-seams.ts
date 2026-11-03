@@ -23,7 +23,7 @@ import {
 import { reachSimulationHistory } from '../../state/transitions';
 import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
 import { advanceRewardBranch } from '../branch-lifecycle';
-import { branchList, singleBranch, type RewardBranchState } from '../branch-primitives';
+import type { RewardBranchState } from '../branch-primitives';
 import type { MidBiomeStartPoint } from '../model';
 import { BiomeRewardSimulationContractError } from './biome-contract';
 import {
@@ -1073,7 +1073,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     historySequence: event.sequence,
     room,
     declaration: pedestalDeclaration,
-    branches: branchList(state.branch),
+    branch: state.branch,
     facts: (branchState, shopNames) => {
       if (room === undefined || pedestalDeclaration === undefined || roomView === undefined)
         throw new BiomeRewardSimulationContractError('pedestal spawn has no authored room');
@@ -1091,13 +1091,13 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     findingChronology,
   });
   // An unauthored or impossible pedestal item blocks the Overview before entry.
-  if (pedestal.branches.length === 0 && state.branch !== undefined)
+  if (pedestal.branch === undefined && state.branch !== undefined)
     return {
       leadingEmissions: [
         generationFindings(pedestal.findings),
         { kind: 'producerFrontiers', frontiers: pedestal.producerFrontiers },
       ],
-      state: withBranch(state, singleBranch(pedestal.branches)),
+      state: withBranch(state, pedestal.branch),
       emissions: [],
     };
   const entered = applyRoomEnteredTransition(
@@ -1107,7 +1107,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     roomView,
     context.chaosGateSourceOccurrenceIds,
     context.ixionGeneratedChaosSourceOccurrenceIds,
-    singleBranch(pedestal.branches),
+    pedestal.branch,
     findingChronology,
     context.routePosition,
     Object.freeze({
@@ -1330,12 +1330,12 @@ const reachedOfferSettled: ChronologySeamHandler<'offerPointAcquired' | 'produce
     event,
     rooms: context.rooms,
     views: context.views,
-    branches: branchList(state.branch),
+    branch: state.branch,
     priorFindings: context.accumulated.findingEntries(),
     authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
   });
   return {
-    state: withBranch(state, singleBranch(settlement.branches)),
+    state: withBranch(state, settlement.branch),
     emissions: [
       settledFindings(settlement.findings),
       { kind: 'acquisitionRoleFrontiers', frontiers: settlement.roleFrontiers },

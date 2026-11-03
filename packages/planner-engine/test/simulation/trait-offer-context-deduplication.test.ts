@@ -82,7 +82,7 @@ describe('trait offer context deduplication', () => {
     );
     expect(second.branch.state.traitHistory.equippedTraits.ApolloWeaponBoon).toBeDefined();
     expect(second.branch.state.traitHistory.equippedTraits.HeraSpecialBoon).toBeDefined();
-    const products = selectedTraitOfferProducts([second.branch], [], catalog);
+    const products = selectedTraitOfferProducts(second.branch, [], catalog);
     const firstContext = products.candidateContexts.get(
       semanticAddressKey(createTraitOfferAddress(owner, 'first')),
     );

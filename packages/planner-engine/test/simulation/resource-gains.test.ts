@@ -100,7 +100,7 @@ function collect(
 ) {
   return settleOwnedAcquisitionSite(
     catalog,
-    [branch],
+    branch,
     {
       siteOwner: pickup.siteOwner,
       pointKey: 'roomRewardPickup',
@@ -125,11 +125,11 @@ function collect(
         : {}),
     },
     facts,
-  ).branches;
+  ).branch;
 }
 
 function collectSeaStarDuplicate(branch: RewardBranchState, pickup: ReturnType<typeof roomPickup>) {
-  return settlePickupAcquisitionSite(catalog, [branch], {
+  return settlePickupAcquisitionSite(catalog, branch, {
     siteOwner: pickup.siteOwner,
     site: createAcquisitionSiteAddress(pickup.siteOwner, 'seaStarDuplicate:resource:self'),
     entries: Object.freeze({
@@ -157,7 +157,7 @@ function collectSeaStarDuplicate(branch: RewardBranchState, pickup: ReturnType<t
     seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
     historySequence: 2,
     facts,
-  }).branches;
+  }).branch;
 }
 
 describe('resource quantity production', () => {
@@ -214,8 +214,8 @@ describe('resource gains at acquisition', () => {
   it('credits the stored amount per resource key and keeps pickup counts', () => {
     const ashes = roomPickup('ashes', 'MetaCardPointsCommonDrop');
     const bones = roomPickup('bones', 'MetaCurrencyBigDrop');
-    const [afterAshes] = collect(branchWith(traitsWith(buriedTreasure())), ashes);
-    const [afterBones] = collect(afterAshes!, bones);
+    const afterAshes = collect(branchWith(traitsWith(buriedTreasure())), ashes);
+    const afterBones = collect(afterAshes!, bones);
     expect(afterBones!.state.rewardHistory.resourceGains).toEqual({
       MetaCardPointsCommon: 8,
       MetaCurrency: 150,
@@ -229,10 +229,10 @@ describe('resource gains at acquisition', () => {
 
   it('grants a Sea Star duplicate the same rounded amount again', () => {
     const ashes = roomPickup('double-up', 'MetaCardPointsCommonDrop');
-    const [source] = collect(branchWith(traitsWith(buriedTreasure(), seaStar)), ashes, true);
+    const source = collect(branchWith(traitsWith(buriedTreasure(), seaStar)), ashes, true);
     expect(source!.state.rewardHistory.resourceGains).toEqual({ MetaCardPointsCommon: 8 });
     // Losing the bonus before the second pickup does not change the retained object.
-    const [duplicate] = collectSeaStarDuplicate(withTraits(source!, traitsWith(seaStar)), ashes);
+    const duplicate = collectSeaStarDuplicate(withTraits(source!, traitsWith(seaStar)), ashes);
     expect(duplicate!.state.rewardHistory.resourceGains).toEqual({ MetaCardPointsCommon: 16 });
     expect(duplicate!.state.rewardHistory.consumableRecord.MetaCardPointsCommonDrop).toBe(2);
     // The retained run-progress object repeats its max-health bonus.
@@ -247,7 +247,7 @@ describe('resource gains at acquisition', () => {
       ...plain,
       state: producePendingResourcePickups(catalog, plain.state, [early]),
     });
-    const [gained] = collect(withTraits(produced, traitsWith(buriedTreasure('Epic'))), early);
+    const gained = collect(withTraits(produced, traitsWith(buriedTreasure('Epic'))), early);
     expect(gained!.state.rewardHistory.resourceGains).toEqual({ MetaCardPointsCommon: 5 });
 
     const late = roomPickup('produced-boosted', 'MetaCardPointsCommonDrop');
@@ -256,7 +256,7 @@ describe('resource gains at acquisition', () => {
       ...boosted,
       state: producePendingResourcePickups(catalog, boosted.state, [late]),
     });
-    const [kept] = collect(withTraits(stored, createTraitHistoryState()), late);
+    const kept = collect(withTraits(stored, createTraitHistoryState()), late);
     expect(kept!.state.rewardHistory.resourceGains).toEqual({ MetaCardPointsCommon: 8 });
   });
 
@@ -269,11 +269,11 @@ describe('resource gains at acquisition', () => {
     };
     const branch = branchWith(createTraitHistoryState());
     expect(evaluateRequirement(threshold, facts(branch.state).requirements)).toBe(false);
-    const [gained] = collect(branch, roomPickup('threshold', 'MetaCardPointsCommonDrop'));
+    const gained = collect(branch, roomPickup('threshold', 'MetaCardPointsCommonDrop'));
     expect(evaluateRequirement(threshold, facts(gained!.state).requirements)).toBe(true);
-    const [bones] = collect(branch, roomPickup('threshold-bones', 'MetaCurrencyDrop'));
+    const bones = collect(branch, roomPickup('threshold-bones', 'MetaCurrencyDrop'));
     expect(evaluateRequirement(threshold, facts(bones!.state).requirements)).toBe(false);
-    const [gift] = collect(
+    const gift = collect(
       branch,
       roomPickup('threshold-eris', 'MetaCardPointsCommonDrop', 'ErisCursePickup'),
     );
@@ -283,14 +283,14 @@ describe('resource gains at acquisition', () => {
 
   it('never lets Sea Star duplicate an Eris gift', () => {
     const gift = roomPickup('eris-sea-star', 'MetaCardPointsCommonDrop', 'ErisCursePickup');
-    const [collected] = collect(branchWith(traitsWith(seaStar)), gift, true);
+    const collected = collect(branchWith(traitsWith(seaStar)), gift, true);
     const role = semanticAddressKey(createAcquisitionRoleAddress(gift.origin, 'self'));
     expect(collected!.seaStarDuplicateEligibilityBySource?.[role]).toMatchObject({
       supported: false,
       evidence: { seaStarActive: true, canDuplicate: true, blocksSeaStarDuplication: true },
     });
     const ashes = roomPickup('ashes-sea-star', 'MetaCardPointsCommonDrop');
-    const [ordinary] = collect(branchWith(traitsWith(seaStar)), ashes, true);
+    const ordinary = collect(branchWith(traitsWith(seaStar)), ashes, true);
     expect(
       ordinary!.seaStarDuplicateEligibilityBySource?.[
         semanticAddressKey(createAcquisitionRoleAddress(ashes.origin, 'self'))

@@ -75,7 +75,7 @@ function settleTestRoomReward(
     facts,
   );
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
-  return settlement.branches;
+  return settlement.branch;
 }
 
 function reachedTraitOffers(
@@ -472,21 +472,19 @@ describe('Sacrificial Hymn replacement composition', () => {
     const settled = settleTestRoomReward(
       goldenFBiome,
       createOccurrenceId('well-incoming-boon'),
-      [
-        Object.freeze({
-          ...initial,
-          state: Object.freeze({
-            ...initial.state,
-            traitHistory: history,
-            stygianWell: Object.freeze({ ...initial.state.stygianWell, yarnUses: 1, hymnUses: 1 }),
-          }),
+      Object.freeze({
+        ...initial,
+        state: Object.freeze({
+          ...initial.state,
+          traitHistory: history,
+          stygianWell: Object.freeze({ ...initial.state.stygianWell, yarnUses: 1, hymnUses: 1 }),
         }),
-      ],
+      }),
       source,
       history.events.length + 1,
       (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
       new Map(),
-    )[0]!;
+    )!;
     expect(settled.state.stygianWell).toMatchObject({ yarnUses: 0, hymnUses: 0 });
     expect(settled.traitEvaluations?.at(-1)?.state.stygianWell).toMatchObject({
       yarnUses: 1,
@@ -509,16 +507,14 @@ describe('Sacrificial Hymn replacement composition', () => {
     );
     const product = settleOwnedAcquisitionSite(
       catalog,
-      [
-        Object.freeze({
-          ...initial,
-          state: Object.freeze({
-            ...initial.state,
-            traitHistory: history,
-            stygianWell: Object.freeze({ ...initial.state.stygianWell, yarnUses: 1, hymnUses: 1 }),
-          }),
+      Object.freeze({
+        ...initial,
+        state: Object.freeze({
+          ...initial.state,
+          traitHistory: history,
+          stygianWell: Object.freeze({ ...initial.state.stygianWell, yarnUses: 1, hymnUses: 1 }),
         }),
-      ],
+      }),
       {
         siteOwner: createOccurrenceAddress(
           goldenFBiome,
@@ -607,7 +603,7 @@ describe('rarity offer settlement contacts', () => {
     const settled = settleTestRoomReward(
       createBiomeAddress('Surface', 'Q'),
       occurrenceId,
-      initializeTestRewardBranches(),
+      initializeTestRewardBranches()[0],
       {
         origin: createIncomingRewardAddress(createBiomeAddress('Surface', 'Q'), occurrenceId),
         offer: { rewardType: 'HermesUpgrade' },
@@ -632,7 +628,7 @@ describe('rarity offer settlement contacts', () => {
       1,
       (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
       new Map(),
-    )[0]!;
+    )!;
     expect(settled.traitEvaluations?.[0]?.source.boonRarityFacts).toMatchObject({
       providerBase: { Rare: 0.06, Epic: 0.03, Heroic: 0, Duo: 0, Legendary: 0.01 },
       rollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
@@ -1223,7 +1219,7 @@ describe('reached trait offer chronology', () => {
         selectedOptionKey: 'option1' as const,
       }),
     });
-    let branches = settleTestRoomReward(
+    let branch = settleTestRoomReward(
       biome,
       createOccurrenceId('invalid-hammer-trace'),
       initializeTestRewardBranchesForRoute(
@@ -1234,7 +1230,7 @@ describe('reached trait offer chronology', () => {
         undefined,
         'Underworld',
         { ...createDefaultRouteLoadout(catalog), ...activeLoadout },
-      ),
+      )[0],
       {
         origin: createIncomingRewardAddress(biome, createOccurrenceId('invalid-hammer-trace')),
         offer: hammer,
@@ -1264,10 +1260,10 @@ describe('reached trait offer chronology', () => {
         selectedOptionKey: 'option1' as const,
       }),
     });
-    branches = settleTestRoomReward(
+    branch = settleTestRoomReward(
       biome,
       createOccurrenceId('valid-boon-trace'),
-      branches,
+      branch,
       {
         origin: createIncomingRewardAddress(biome, createOccurrenceId('valid-boon-trace')),
         offer: boon,
@@ -1282,7 +1278,6 @@ describe('reached trait offer chronology', () => {
       findings,
     );
 
-    const branch = branches[0];
     const expectedOffer = boonOffer.source;
     if (expectedOffer?.kind !== 'traits') throw new Error('valid boon trait offer is missing');
     expect(branch?.events).toContainEqual(

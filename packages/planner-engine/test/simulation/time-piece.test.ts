@@ -63,14 +63,14 @@ function facts(): RewardKernelFacts {
 
 function settle(
   value: 'normal' | 'gold',
-  branches = initializeTestRewardBranches(),
+  branch: RewardBranchState | undefined = initializeTestRewardBranches()[0],
   instanceProvenance: 'free' | 'paid' = 'free',
   offer: typeof boonOffer | { readonly rewardType: 'SpellDrop' | 'TrialUpgrade' } = boonOffer,
 ) {
   const acquisitionRole = offer.rewardType === 'Boon' ? 'source' : 'self';
   return settleOwnedAcquisitionSite(
     catalog,
-    branches,
+    branch,
     {
       siteOwner,
       pointKey: 'roomRewardPickup',
@@ -107,8 +107,8 @@ describe('Time Piece conversions', () => {
         }),
       }),
     );
-    const result = settle('gold', branches);
-    const branch = result.branches[0]!;
+    const result = settle('gold', branches[0]);
+    const branch = result.branch!;
     expect(branch.state.keepsakes.timePiece?.remainingCharges).toBe(3);
     expect(branch.state.rewardHistory.lootTypeHistory).toEqual({});
     expect(branch.state.rewardHistory.lastRewardRecreation?.offer.rewardType).toBe('GiftDrop');
@@ -128,15 +128,15 @@ describe('Time Piece conversions', () => {
         }),
       }),
     );
-    const result = settle('gold', seeded, 'free', { rewardType: 'SpellDrop' });
-    expect(result.branches[0]?.events).toContainEqual(
+    const result = settle('gold', seeded[0], 'free', { rewardType: 'SpellDrop' });
+    expect(result.branch?.events).toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold' }),
     );
-    expect(result.branches[0]?.state.hexProgress).toEqual({
+    expect(result.branch?.state.hexProgress).toEqual({
       bankedPathPoints: 0,
       investedNodeKeys: [],
     });
-    expect(result.branches[0]?.state.rewardHistory.useRecord.SpellDrop).toBeUndefined();
+    expect(result.branch?.state.rewardHistory.useRecord.SpellDrop).toBeUndefined();
   });
 
   it('converts a free Chaos TrialUpgrade before its trait acquisition resolves', () => {
@@ -149,20 +149,20 @@ describe('Time Piece conversions', () => {
         }),
       }),
     );
-    const result = settle('gold', branches, 'free', { rewardType: 'TrialUpgrade' });
-    expect(result.branches[0]?.state.keepsakes.timePiece?.remainingCharges).toBe(3);
-    expect(result.branches[0]?.events).toContainEqual(
+    const result = settle('gold', branches[0], 'free', { rewardType: 'TrialUpgrade' });
+    expect(result.branch?.state.keepsakes.timePiece?.remainingCharges).toBe(3);
+    expect(result.branch?.events).toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold' }),
     );
-    expect(result.branches[0]?.state.rewardHistory.lootTypeHistory.TrialUpgrade).toBeUndefined();
+    expect(result.branch?.state.rewardHistory.lootTypeHistory.TrialUpgrade).toBeUndefined();
   });
 
   it('keeps an invalid persisted conversion repairable without consuming a charge or suppressing the acquisition', () => {
     const result = settle('gold');
-    const branch = result.branches[0]!;
+    const branch = result.branch!;
     expect(branch.state.keepsakes.timePiece).toBeUndefined();
     expect(branch.state.rewardHistory.lootTypeHistory).toMatchObject({ ApolloUpgrade: 1 });
-    expect([...result.branches]).toHaveLength(1);
+    expect(result.branch).toBeDefined();
   });
 
   it('admits a capable zero-cost instance and rejects the same capable acquisition when paid', () => {
@@ -175,18 +175,18 @@ describe('Time Piece conversions', () => {
         }),
       }),
     );
-    const free = settle('gold', branches, 'free');
-    expect(free.branches[0]?.state.keepsakes.timePiece?.remainingCharges).toBe(3);
-    expect(free.branches[0]?.events).toContainEqual(
+    const free = settle('gold', branches[0], 'free');
+    expect(free.branch?.state.keepsakes.timePiece?.remainingCharges).toBe(3);
+    expect(free.branch?.events).toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold' }),
     );
 
-    const paid = settle('gold', branches, 'paid');
-    expect(paid.branches[0]?.state.keepsakes.timePiece?.remainingCharges).toBe(4);
-    expect(paid.branches[0]?.state.rewardHistory.lootTypeHistory).toMatchObject({
+    const paid = settle('gold', branches[0], 'paid');
+    expect(paid.branch?.state.keepsakes.timePiece?.remainingCharges).toBe(4);
+    expect(paid.branch?.state.rewardHistory.lootTypeHistory).toMatchObject({
       ApolloUpgrade: 1,
     });
-    expect(paid.branches[0]?.events).not.toContainEqual(
+    expect(paid.branch?.events).not.toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold' }),
     );
     expect(paid.roleFrontiers?.[0]?.source.instanceProvenance).toBe('paid');
@@ -235,19 +235,18 @@ describe('Time Piece conversions', () => {
   });
 
   it('exhausts exactly four retained conversions in acquisition order', () => {
-    let branches: readonly RewardBranchState[] = initializeTestRewardBranches().map((branch) =>
-      Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
-        }),
+    const initial = initializeTestRewardBranches()[0]!;
+    let branch: RewardBranchState | undefined = Object.freeze({
+      ...initial,
+      state: Object.freeze({
+        ...initial.state,
+        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', initial.state.arcanaFear),
       }),
-    );
-    for (let index = 0; index < 4; index += 1) branches = settle('gold', branches).branches;
-    expect(branches[0]?.state.keepsakes.timePiece?.remainingCharges).toBe(0);
-    const fifth = settle('gold', branches);
-    expect(fifth.branches[0]?.state.rewardHistory.lootTypeHistory).toMatchObject({
+    });
+    for (let index = 0; index < 4; index += 1) branch = settle('gold', branch).branch;
+    expect(branch?.state.keepsakes.timePiece?.remainingCharges).toBe(0);
+    const fifth = settle('gold', branch);
+    expect(fifth.branch?.state.rewardHistory.lootTypeHistory).toMatchObject({
       ApolloUpgrade: 1,
     });
   });

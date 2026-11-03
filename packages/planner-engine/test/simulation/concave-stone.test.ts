@@ -552,7 +552,7 @@ describe('Concave Stone trait settlement', () => {
     expect(afterEdit.findingEntries).toEqual([]);
     expect(afterEdit.branch.state.keepsakes.stone?.status).toBe('pending');
     expect(later.concaveStoneResult).toBeUndefined();
-    const published = selectedTraitOfferProducts([afterEdit.branch]).selectedTraitOffers[0]?.offer;
+    const published = selectedTraitOfferProducts(afterEdit.branch).selectedTraitOffers[0]?.offer;
     expect(published).toMatchObject({ concaveStoneResult: { kind: 'noProc' } });
     expect(
       settleWithKeepsakes(offer({ kind: 'noProc' }), priorProc.branch.state.keepsakes).blockedChild,

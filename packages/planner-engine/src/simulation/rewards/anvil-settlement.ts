@@ -50,13 +50,13 @@ export interface AnvilCandidateCapability {
     removedTraitKey: string | null,
     priorAddedTraitKeys: readonly string[],
   ) => readonly string[];
-  /** Settlement's assessment of a result at this frontier; legal only where every branch accepts it. */
+  /** Settlement's assessment of a result at this frontier; legal only where every recorded frontier accepts it. */
   readonly assess: (result: AuthoredAnvilResult) => AnvilResultAssessment;
 }
 
 interface AnvilAcquisitionFrontier {
   readonly address: AcquisitionRoleAddress;
-  readonly branchesBeforeRole: readonly RewardBranchState[];
+  readonly beforeRole: RewardBranchState | undefined;
   readonly source: {
     readonly offer: ResolvedRewardOffer;
     readonly traitContext?: ResolvedTraitOfferSource | undefined;
@@ -252,19 +252,22 @@ export function createAnvilCandidateCapability(
         disposition === 'normal'
       );
     })
-    .flatMap((entry) =>
-      entry.branchesBeforeRole.map((branch) =>
-        Object.freeze({
-          state: branch.state,
-          source: entry.source.traitContext ?? Object.freeze({}),
-          temporaryHammerTraitKeys: new Set(
-            branch.state.keepsakes.experimentalHammers
-              .filter((hammer) => hammer.active)
-              .map((hammer) => hammer.traitKey),
-          ),
-        }),
-      ),
-    );
+    .flatMap((entry) => {
+      const branch = entry.beforeRole;
+      return branch === undefined
+        ? []
+        : [
+            Object.freeze({
+              state: branch.state,
+              source: entry.source.traitContext ?? Object.freeze({}),
+              temporaryHammerTraitKeys: new Set(
+                branch.state.keepsakes.experimentalHammers
+                  .filter((hammer) => hammer.active)
+                  .map((hammer) => hammer.traitKey),
+              ),
+            }),
+          ];
+    });
   if (frontiers.length === 0) return undefined;
   const intersect = <Key>(domains: readonly (readonly Key[])[]): readonly Key[] =>
     Object.freeze(
@@ -308,7 +311,7 @@ export function createAnvilCandidateCapability(
     );
     return Object.freeze({
       legal: assessments.every((assessment) => assessment.legal),
-      // Agreeing branches keep settlement's exact list; divergent ones publish each issue once.
+      // Agreeing frontiers keep settlement's exact list; divergent ones publish each issue once.
       issues:
         agreed && first !== undefined
           ? first.issues

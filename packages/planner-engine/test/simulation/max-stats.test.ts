@@ -449,9 +449,9 @@ describe('pickup max-stat settlement', () => {
   ) {
     const occurrenceId = createOccurrenceId(`max-stat-${name}`);
     const origin = createIncomingRewardAddress(biome, occurrenceId);
-    const [settled] = settleOwnedAcquisitionSite(
+    const settled = settleOwnedAcquisitionSite(
       catalog,
-      [branch],
+      branch,
       {
         siteOwner: createOccurrenceAddress(biome, occurrenceId),
         pointKey: 'roomRewardPickup',
@@ -469,7 +469,7 @@ describe('pickup max-stat settlement', () => {
         },
       },
       facts,
-    ).branches;
+    ).branch;
     if (settled === undefined) throw new Error(`${rewardType} did not settle`);
     return settled.state.rewardHistory.maxStatGains;
   }

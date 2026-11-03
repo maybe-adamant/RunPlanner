@@ -922,9 +922,7 @@ describe('Supply Chain lifecycle', () => {
       (frontier) => frontier.kind === 'clockedTraitPickup',
     );
     expect(pickup).toBeDefined();
-    expect(
-      pickup?.branchesBeforeEntry[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon,
-    ).toMatchObject({
+    expect(pickup?.beforeEntry?.state.traitHistory?.equippedTraits.ApolloWeaponBoon).toMatchObject({
       rarity: 'Heroic',
       level: 3,
     });
@@ -932,7 +930,7 @@ describe('Supply Chain lifecycle', () => {
       (frontier) => frontier.kind === 'hermesShrineDelivery',
     );
     expect(
-      delivery?.branchesBeforeEntry[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon,
+      delivery?.beforeEntry?.state.traitHistory?.equippedTraits.ApolloWeaponBoon,
     ).toMatchObject({
       rarity: 'Heroic',
       level: 3,

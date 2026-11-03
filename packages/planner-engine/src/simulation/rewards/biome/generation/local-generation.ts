@@ -6,7 +6,7 @@ import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { forGeneration, type CanonicalLocalReward } from '../../../materialization';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
-import { branchList, type RewardBranchState } from '../../branch-primitives';
+import type { RewardBranchState } from '../../branch-primitives';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import {
@@ -176,7 +176,7 @@ export function generateLocalRewards(
           ) {
             const settlement = settleOwnedAcquisitionSite(
               catalog,
-              branchList(offered),
+              offered,
               {
                 siteOwner: localReward.origin,
                 pointKey:
@@ -311,7 +311,7 @@ export function generateLocalRewards(
           ) {
             const settlement = settleOwnedAcquisitionSite(
               catalog,
-              branchList(offered),
+              offered,
               {
                 siteOwner: candidate.origin,
                 pointKey:

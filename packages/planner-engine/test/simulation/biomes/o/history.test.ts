@@ -184,7 +184,7 @@ describe('O canonical materialization and lifecycle', () => {
     const site = createAcquisitionSiteAddress(wheel.origin, wheel.wheelKey);
     const settled = settleOwnedAcquisitionSite(
       catalog,
-      Object.freeze([]),
+      undefined,
       {
         siteOwner: wheel.origin,
         pointKey: wheel.wheelKey,

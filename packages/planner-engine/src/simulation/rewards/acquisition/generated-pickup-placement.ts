@@ -94,9 +94,7 @@ export function assessReachedClockedPickupPlacement(
     maturity !== undefined &&
     frontier?.kind === 'clockedTraitPickup' &&
     frontier.historySequence === maturity.sequence &&
-    frontier.branchesBeforeEntry.some((before) =>
-      before.state.traitHistory.events.includes(maturity),
-    );
+    frontier.beforeEntry?.state.traitHistory.events.includes(maturity) === true;
   return placement(
     owner,
     reference,

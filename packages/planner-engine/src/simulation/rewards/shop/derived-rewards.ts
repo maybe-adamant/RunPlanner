@@ -265,7 +265,6 @@ export function materializeShopGold(input: {
     roleBindings,
     sourceOffer,
   });
-  const branchesBeforeEntry = Object.freeze([updatedBranch]);
   const duplicateOffer = echoShopDuplicateOffer(catalog, sourceOffer.offer);
   const fixedReward =
     duplicateOffer === null
@@ -294,7 +293,7 @@ export function materializeShopGold(input: {
         rewardTypes: Object.freeze([sourceOffer.offer.rewardType]),
         ...(fixedReward === undefined ? {} : { fixedReward }),
         eligibleSourceOfferKeys,
-        branchesBeforeEntry,
+        beforeEntry: updatedBranch,
         ...(input.pickupPlaced && fixedReward !== undefined
           ? {
               evaluateOffer: (candidateOffer: ResolvedRewardOffer) =>

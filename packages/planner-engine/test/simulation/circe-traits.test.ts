@@ -528,7 +528,7 @@ describe('Circe selected trait acquisition', () => {
       0,
     );
     const published = selectedTraitOfferProducts(
-      [Object.freeze({ ...preEffect, traitEvaluations: Object.freeze([trace]) })],
+      Object.freeze({ ...preEffect, traitEvaluations: Object.freeze([trace]) }),
       Object.freeze([]),
       catalog,
     ).selectedTraitOffers[0]?.assessment.orderedCirceActivationKeys;
@@ -619,9 +619,10 @@ describe('Circe selected trait acquisition', () => {
         catalog,
         traitOfferContacts(
           new Map(
-            [...selectedTraitOfferProducts(Object.freeze([fated])).candidateContexts].map(
-              ([key, context]) => [key, [context]],
-            ),
+            [...selectedTraitOfferProducts(fated).candidateContexts].map(([key, context]) => [
+              key,
+              [context],
+            ]),
           ),
         ),
       )

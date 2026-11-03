@@ -20,7 +20,7 @@ import {
   createRewardProducerCandidateResult,
   type RewardProducerFrontier,
 } from '../../producer-frontiers';
-import { branchList, singleBranch, type RewardBranchState } from '../../branch-primitives';
+import type { RewardBranchState } from '../../branch-primitives';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import {
   createGenerationEmissions,
@@ -130,7 +130,7 @@ function completeIncomingOfferCandidate(
       if (branch === undefined) break;
       const settlement = settleProducerAcquisitionSite(
         catalog,
-        branchList(branch),
+        branch,
         candidateRoom,
         acquisitionEvent,
         (state) =>
@@ -157,7 +157,7 @@ function completeIncomingOfferCandidate(
         authoredSeaStarDuplicateSiteKeys,
       );
       mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
-      branch = singleBranch(settlement.branches);
+      branch = settlement.branch;
     }
   }
   return createRewardProducerCandidateResult(candidateFindings, branch, exclusions);

@@ -622,9 +622,8 @@ export function createChronologyAccumulator(
             first.kind === 'travelDealRefill'
               ? ('jointShopInventory' as const)
               : ('sequential' as const),
-          generationHistorySequence: Math.max(
-            ...first.branchesBeforeEntry.map((branch) => branch.processedThroughHistorySequence),
-          ),
+          generationHistorySequence:
+            first.beforeEntry?.processedThroughHistorySequence ?? Number.NEGATIVE_INFINITY,
           acquisitionHorizon:
             first.kind === 'travelDealRefill' ||
             (first.kind === 'echoDoubleShopReward' && first.fixedReward !== undefined)

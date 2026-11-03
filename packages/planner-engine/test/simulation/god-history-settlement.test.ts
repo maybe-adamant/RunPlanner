@@ -55,7 +55,7 @@ function settlePoseidonDoor(branch: RewardBranchState, screen: AuthoredTraitOffe
   const occurrenceId = createOccurrenceId('god-history-door');
   return settleOwnedAcquisitionSite(
     catalog,
-    [branch],
+    branch,
     {
       siteOwner: createOccurrenceAddress(biome, occurrenceId),
       pointKey: 'roomRewardPickup',
@@ -79,14 +79,14 @@ describe('god use and pickup settlement contacts', () => {
   it('records both use and pickup when the upgrade screen completes', () => {
     const settled = settlePoseidonDoor(closedBranch(), poseidonScreen());
     expect(settled.findingEmissions).toEqual([]);
-    const history = settled.branches[0]!.state.rewardHistory;
+    const history = settled.branch!.state.rewardHistory;
     expect(history.lifetimeGodUseRecord).toEqual({ PoseidonUpgrade: 1 });
     expect(history.lifetimeGodPickupRecord).toEqual({ PoseidonUpgrade: 1 });
   });
 
   it('records use without pickup when the reached screen has no selection', () => {
     const settled = settlePoseidonDoor(closedBranch(), null);
-    expect(settled.branches).toEqual([]);
+    expect(settled.branch).toBeUndefined();
     const blocked = settled.traitChildSettlements?.[0]?.branch;
     expect(blocked?.state.rewardHistory.lifetimeGodUseRecord).toEqual({ PoseidonUpgrade: 1 });
     expect(blocked?.state.rewardHistory.lifetimeGodPickupRecord).toEqual({});
@@ -95,13 +95,13 @@ describe('god use and pickup settlement contacts', () => {
   it('records use without pickup when the reached screen is invalid', () => {
     const settled = settlePoseidonDoor(closedBranch(), poseidonScreen('ZeusWeaponBoon'));
     expect(settled.findingEmissions.length).toBeGreaterThan(0);
-    const history = settled.branches[0]!.state.rewardHistory;
+    const history = settled.branch!.state.rewardHistory;
     expect(history.lifetimeGodUseRecord).toEqual({ PoseidonUpgrade: 1 });
     expect(history.lifetimeGodPickupRecord).toEqual({});
   });
 
   it('retains both records after the selected boon is removed', () => {
-    const settled = settlePoseidonDoor(closedBranch(), poseidonScreen()).branches[0]!;
+    const settled = settlePoseidonDoor(closedBranch(), poseidonScreen()).branch!;
     const removed = foldTraitHistoryEvents(catalog, [
       ...settled.state.traitHistory.events,
       {
@@ -122,7 +122,7 @@ describe('god use and pickup settlement contacts', () => {
 
   it('adds the run pickup to a mature file without changing the run pool facts', () => {
     const mature = initializeTestRewardBranches()[0]!;
-    const history = settlePoseidonDoor(mature, poseidonScreen()).branches[0]!.state.rewardHistory;
+    const history = settlePoseidonDoor(mature, poseidonScreen()).branch!.state.rewardHistory;
     expect(history.lifetimeGodPickupRecord.PoseidonUpgrade).toBe(2);
     expect(history.lootTypeHistory).toEqual({ PoseidonUpgrade: 1 });
   });
@@ -181,7 +181,7 @@ describe('World Shop inventory generation reads god pickups', () => {
   }
 
   it('offers only gods picked up on a closed file once one has been', () => {
-    const afterPoseidon = settlePoseidonDoor(closedBranch(), poseidonScreen()).branches[0]!;
+    const afterPoseidon = settlePoseidonDoor(closedBranch(), poseidonScreen()).branch!;
     expect(worldShopBoonFindings(afterPoseidon, 'PoseidonUpgrade')).toEqual([]);
     expect(worldShopBoonFindings(afterPoseidon, 'ApolloUpgrade')).toEqual(['shopOfferUnavailable']);
     // Nothing picked up yet: the native fallback admits every eligible god.
@@ -190,7 +190,7 @@ describe('World Shop inventory generation reads god pickups', () => {
 
   it('keeps every god available on a mature file', () => {
     const mature = initializeTestRewardBranches()[0]!;
-    const afterPoseidon = settlePoseidonDoor(mature, poseidonScreen()).branches[0]!;
+    const afterPoseidon = settlePoseidonDoor(mature, poseidonScreen()).branch!;
     expect(worldShopBoonFindings(afterPoseidon, 'ApolloUpgrade')).toEqual([]);
     expect(worldShopBoonFindings(afterPoseidon, 'HestiaUpgrade')).toEqual([]);
   });

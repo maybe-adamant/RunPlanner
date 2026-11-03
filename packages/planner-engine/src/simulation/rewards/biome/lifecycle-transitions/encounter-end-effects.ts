@@ -522,7 +522,7 @@ export function applyEncounterEndEffectsTransition(
             traitKey: maturity.traitKey,
             encounterPhaseKey: event.phaseKey,
             participation: 'optional',
-            branchesBeforeEntry: Object.freeze([final]),
+            beforeEntry: final,
           }),
         );
       }

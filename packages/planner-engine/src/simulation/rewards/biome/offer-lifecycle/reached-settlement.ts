@@ -22,7 +22,7 @@ import { shipWheelRoomRewardSource } from './reward-wheel-lifecycle';
 import type { SimulationState } from '../../../state/model';
 
 export interface ReachedOfferSettlement {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: readonly FindingRegionEntry[];
   readonly roleFrontiers: readonly AcquisitionRoleFrontier[];
   readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
@@ -38,7 +38,7 @@ export interface ReachedOfferSettlementInputs {
   >;
   readonly rooms: ReadonlyMap<string, CanonicalAuthoredRoom | CanonicalHubRoom>;
   readonly views: ReadonlyMap<string, ProgressiveRoomHistoryViews>;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   /** Existing chronology findings whose reached evaluations may be extended. */
   readonly priorFindings: readonly FindingRegionEntry[];
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
@@ -51,7 +51,7 @@ export interface ReachedOfferSettlementInputs {
 export function applyReachedOfferSettlement(
   inputs: ReachedOfferSettlementInputs,
 ): ReachedOfferSettlement {
-  const { catalog, snapshot, event, rooms, views, branches } = inputs;
+  const { catalog, snapshot, event, rooms, views, branch } = inputs;
   const priorFindings = new Map(
     inputs.priorFindings.map((entry) => [findingIdentityKey(entry.finding), entry] as const),
   );
@@ -93,7 +93,7 @@ export function applyReachedOfferSettlement(
     )?.owner;
     const settlement = settleOwnedAcquisitionSite(
       catalog,
-      branches,
+      branch,
       {
         siteOwner: wheel.origin,
         pointKey: wheel.wheelKey,
@@ -122,7 +122,7 @@ export function applyReachedOfferSettlement(
     );
     mergeRewardFindingEmissions(findings, settlement.findingEmissions);
     return Object.freeze({
-      branches: settlement.branches,
+      branch: settlement.branch,
       findings: changedFindings(),
       roleFrontiers: Object.freeze(settlement.roleFrontiers ?? []),
       traitChildSettlements: Object.freeze(settlement.traitChildSettlements ?? []),
@@ -148,7 +148,7 @@ export function applyReachedOfferSettlement(
       : createAcquisitionRoleAddress(room.incomingReward.origin, event.role);
   const settlement = settleProducerAcquisitionSite(
     catalog,
-    branches,
+    branch,
     room,
     event,
     producerFacts,
@@ -163,7 +163,7 @@ export function applyReachedOfferSettlement(
   );
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
   return Object.freeze({
-    branches: settlement.branches,
+    branch: settlement.branch,
     findings: changedFindings(),
     roleFrontiers: Object.freeze(settlement.roleFrontiers ?? []),
     traitChildSettlements: Object.freeze(settlement.traitChildSettlements ?? []),

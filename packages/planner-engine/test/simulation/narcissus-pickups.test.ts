@@ -313,11 +313,11 @@ describe('Narcissus pickup producer', () => {
       );
     const facts = (state: SimulationState) =>
       factsWithHistory(baseFacts(), state.rewardHistory, new Set());
-    const granted = (settled: readonly RewardBranchState[]) =>
-      settled.map((settledBranch) => settledBranch.state.arcanaFear.arcana.rerollPool.granted);
+    const granted = (settled: RewardBranchState | undefined) =>
+      settled?.state.arcanaFear.arcana.rerollPool.granted;
     const before = branch.state.arcanaFear.arcana.rerollPool.granted;
 
-    const collected = settlePickupAcquisitionSite(catalog, [branch], {
+    const collected = settlePickupAcquisitionSite(catalog, branch, {
       siteOwner: occurrence,
       site,
       entries: Object.freeze({ reroll: drop() }),
@@ -327,8 +327,8 @@ describe('Narcissus pickup producer', () => {
       historySequence: 1,
       facts,
       authoredSeaStarDuplicateSiteKeys: new Set([seaStarDuplicateSiteKey(source)]),
-    }).branches;
-    expect(granted(collected)).toEqual([before + 2]);
+    }).branch;
+    expect(granted(collected)).toBe(before + 2);
 
     const duplicated = settlePickupAcquisitionSite(catalog, collected, {
       siteOwner: occurrence,
@@ -347,8 +347,8 @@ describe('Narcissus pickup producer', () => {
       presentsMaterializedScreen: false,
       historySequence: 2,
       facts,
-    }).branches;
-    expect(granted(duplicated)).toEqual([before + 4]);
+    }).branch;
+    expect(granted(duplicated)).toBe(before + 4);
   });
 
   it('shares the reached Arcana state between Narcissus candidates and selected offer findings', () => {

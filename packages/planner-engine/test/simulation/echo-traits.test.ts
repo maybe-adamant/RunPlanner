@@ -1784,7 +1784,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       giverKey: 'Athena',
       rarity: 'Common',
     });
-    const selected = selectedTraitOfferProducts([withSpellDrop.branch], [], catalog);
+    const selected = selectedTraitOfferProducts(withSpellDrop.branch, [], catalog);
     expect(
       selected.candidateContexts.get(semanticAddressKey(echoOwner))?.state.hexProgress
         .investedNodeKeys,

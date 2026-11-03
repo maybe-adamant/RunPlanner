@@ -126,7 +126,7 @@ describe('encounter god screen spends', () => {
 
   it('publishes the spends an Artemis screen settled in its expectation', () => {
     const published = (branch: RewardBranchState) =>
-      selectedTraitOfferProducts([encounterScreen('Artemis', branch)], Object.freeze([]), catalog)
+      selectedTraitOfferProducts(encounterScreen('Artemis', branch), Object.freeze([]), catalog)
         .selectedTraitOffers[0]?.assessment.screenExpectation;
     expect(published(branchWith({ yarnUses: 1 }))).toEqual({
       hymnUses: 0,

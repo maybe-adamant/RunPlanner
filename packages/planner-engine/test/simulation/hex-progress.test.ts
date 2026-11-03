@@ -436,7 +436,7 @@ describe('finite Hex progress', () => {
     const site = createAcquisitionSiteAddress(occurrence, 'roomRewardPickup');
     const settlement = settleOwnedAcquisitionSite(
       catalog,
-      [initial],
+      initial,
       {
         siteOwner: occurrence,
         pointKey: 'roomRewardPickup',
@@ -453,7 +453,7 @@ describe('finite Hex progress', () => {
       },
       facts,
     );
-    expect(pathPointView(settlement.branches[0]!.state.hexProgress)).toMatchObject({
+    expect(pathPointView(settlement.branch!.state.hexProgress)).toMatchObject({
       bankedPathPoints: 0,
       investedPathPoints: grant + 2,
     });
@@ -476,7 +476,7 @@ describe('finite Hex progress', () => {
     const settle = (selectedNodeKeys?: readonly string[]) =>
       settleOwnedAcquisitionSite(
         catalog,
-        [initial],
+        initial,
         {
           siteOwner: occurrence,
           pointKey: 'roomRewardPickup',
@@ -496,17 +496,17 @@ describe('finite Hex progress', () => {
         facts,
       );
     const missing = settle();
-    expect(missing.branches).toEqual([]);
+    expect(missing.branch).toBeUndefined();
     expect(missing.findingEmissions.map(({ finding }) => [finding.code, finding.evidence])).toEqual(
       [['hexActivationMissing', { count: 3 }]],
     );
     const invalid = settle(['1:2', '3:1', '9:9']);
-    expect(invalid.branches).toEqual([]);
+    expect(invalid.branch).toBeUndefined();
     expect(invalid.findingEmissions.map(({ finding }) => finding.code)).toEqual([
       'hexActivationUnavailable',
     ]);
     expect(invalid.findingEmissions[0]?.finding.evidence.nodeKeys).toEqual(['9:9', '3:1']);
-    expect(settle(['1:2', '1:4', '2:2']).branches).toHaveLength(1);
+    expect(settle(['1:2', '1:4', '2:2']).branch).toBeDefined();
   });
 
   it('requires only the eligible nodes a nearly full tree has left, an inactive God Sent pair excluded', () => {
@@ -558,7 +558,7 @@ describe('finite Hex progress', () => {
     const site = createAcquisitionSiteAddress(occurrence, 'roomRewardPickup');
     const settlement = settleOwnedAcquisitionSite(
       catalog,
-      [full],
+      full,
       {
         siteOwner: occurrence,
         pointKey: 'roomRewardPickup',
@@ -575,8 +575,8 @@ describe('finite Hex progress', () => {
       facts,
     );
     expect(settlement.findingEmissions).toEqual([]);
-    expect(settlement.branches).toHaveLength(1);
-    expect(pathPointView(settlement.branches[0]!.state.hexProgress)).toMatchObject({
+    expect(settlement.branch).toBeDefined();
+    expect(pathPointView(settlement.branch!.state.hexProgress)).toMatchObject({
       investedPathPoints: 16,
       bankedPathPoints: 2,
     });
@@ -608,7 +608,7 @@ describe('finite Hex progress', () => {
     ) =>
       settleOwnedAcquisitionSite(
         catalog,
-        [initial],
+        initial,
         {
           siteOwner: occurrence,
           pointKey: 'roomRewardPickup',
@@ -631,7 +631,7 @@ describe('finite Hex progress', () => {
           },
         },
         facts,
-      ).branches[0]!;
+      ).branch!;
     expect(settleSpell('option1').state.hexProgress.bankedPathPoints).toBe(0);
     expect(settleSpell('option2').state.hexProgress.bankedPathPoints).toBe(1);
     expect(settleSpell('option3').state.hexProgress.bankedPathPoints).toBe(2);
@@ -659,7 +659,7 @@ describe('finite Hex progress', () => {
 
     const missingChild = settleOwnedAcquisitionSite(
       catalog,
-      [initial],
+      initial,
       {
         siteOwner: occurrence,
         pointKey: 'roomRewardPickup',
@@ -676,7 +676,7 @@ describe('finite Hex progress', () => {
       },
       facts,
     );
-    expect(missingChild.branches).toEqual([]);
+    expect(missingChild.branch).toBeUndefined();
   });
 
   it('routes Aspect of Selene SpellDrop through the three-point Path settlement without a spell child', () => {
@@ -707,7 +707,7 @@ describe('finite Hex progress', () => {
     const site = createAcquisitionSiteAddress(occurrence, 'roomRewardPickup');
     const settled = settleOwnedAcquisitionSite(
       catalog,
-      [initial],
+      initial,
       {
         siteOwner: occurrence,
         pointKey: 'roomRewardPickup',
@@ -724,7 +724,7 @@ describe('finite Hex progress', () => {
         },
       },
       facts,
-    ).branches[0]!;
+    ).branch!;
     expect(settled.state.rewardHistory.useRecord.SpellDrop).toBe(1);
     expect(pathPointView(settled.state.hexProgress)).toMatchObject({
       bankedPathPoints: 0,
@@ -736,7 +736,7 @@ describe('finite Hex progress', () => {
 
     const laterBig = settleOwnedAcquisitionSite(
       catalog,
-      [settled],
+      settled,
       {
         siteOwner: occurrence,
         pointKey: 'laterBig',
@@ -752,7 +752,7 @@ describe('finite Hex progress', () => {
         },
       },
       facts,
-    ).branches[0]!;
+    ).branch!;
     expect(pathPointView(laterBig.state.hexProgress)).toMatchObject({
       bankedPathPoints: 0,
       investedPathPoints: 8,

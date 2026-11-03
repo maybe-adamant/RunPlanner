@@ -73,7 +73,7 @@ describe('selected trait products', () => {
     const settled = settleEncounterTraitOffer(catalog, branch, origin, offer, 1, 'pickup').branch;
 
     expect(
-      selectedTraitOfferProducts([settled], Object.freeze([]), catalog).selectedTraitOffers[0]
+      selectedTraitOfferProducts(settled, Object.freeze([]), catalog).selectedTraitOffers[0]
         ?.assessment.effectiveEchoLastRunBoon?.options[0]?.rarity,
     ).toBe('Rare');
   });
@@ -163,7 +163,7 @@ describe('selected trait products', () => {
     expect(settled.state.traitHistory.activeChaosCurses).toEqual(history.activeChaosCurses);
     expect(settled.state.stygianWell.yarnUses).toBe(1);
     const published = selectedTraitOfferProducts(
-      [settled],
+      settled,
       Object.freeze([]),
       catalog,
     ).selectedTraitOffers;
@@ -216,7 +216,7 @@ describe('selected trait products', () => {
     });
     expect(late.state.hexProgress.godSentAdded).toBe(true);
     expect(
-      selectedTraitOfferProducts([late]).selectedTraitOffers[0]?.assessment.settledHexTree,
+      selectedTraitOfferProducts(late).selectedTraitOffers[0]?.assessment.settledHexTree,
     ).not.toHaveProperty('godSent');
   });
 
@@ -262,7 +262,7 @@ describe('selected trait products', () => {
         reached: true,
       }),
     ]);
-    expect(() => selectedTraitOfferProducts(Object.freeze([]), retained)).toThrow(
+    expect(() => selectedTraitOfferProducts(undefined, retained)).toThrow(
       BiomeRewardSimulationContractError,
     );
   });

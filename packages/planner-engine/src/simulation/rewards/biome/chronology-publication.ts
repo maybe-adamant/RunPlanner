@@ -36,7 +36,6 @@ import {
 
 import { createRewardProducerCandidateArtifacts } from '../producer-frontiers';
 import { publicRewardBranch } from '../branch-lifecycle';
-import { branchList } from '../branch-primitives';
 import { createJudgmentArcanaCandidateArtifacts } from '../../arcana-fear';
 import {
   createFigurineArcanaCandidateArtifacts,
@@ -135,7 +134,7 @@ export function publishChronology(
   const immutableFindingRegions = accumulation.findingRegions;
   const immutableFindings = Object.freeze(immutableFindingRegions.map((entry) => entry.finding));
   const traitProducts = selectedTraitOfferProducts(
-    branchList(walk.branch),
+    walk.branch,
     immutableFindingRegions.flatMap((entry) =>
       entry.levelResolutionEvaluations === undefined ? [] : entry.levelResolutionEvaluations,
     ),

@@ -60,7 +60,7 @@ function settleTestRoomReward(
     facts,
   );
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
-  return settlement.branches;
+  return settlement.branch;
 }
 
 function levelMutation(
@@ -270,7 +270,7 @@ describe('Selene Spell equipment chronology', () => {
         undefined,
         'Underworld',
         loadout,
-      ),
+      )[0],
       {
         ...source,
         presentsMaterializedScreen: true,
@@ -280,7 +280,7 @@ describe('Selene Spell equipment chronology', () => {
       1,
       (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
       new Map(),
-    )[0]!;
+    )!;
 
     expect(settled.state.rewardHistory.useRecord.SpellDrop).toBe(1);
     expect(settled.state.traitHistory?.equippedSlots.Spell?.traitKey).toBe('SpellMoonBeamTrait');

@@ -370,13 +370,13 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       (frontier) => frontier.kind === 'hermesShrineDelivery',
     );
     expect(delivery).toBeDefined();
-    expect(delivery?.branchesBeforeEntry[0]?.state.keepsakes.transcendentEmbryo).toMatchObject({
+    expect(delivery?.beforeEntry?.state.keepsakes.transcendentEmbryo).toMatchObject({
       progress: 0,
       markedBlessingKey: 'ChaosWeaponBlessing',
     });
-    expect(
-      delivery?.branchesBeforeEntry[0]?.state.traitHistory?.maturedChaosBlessings,
-    ).toContainEqual(expect.objectContaining({ blessingKey: 'ChaosWeaponBlessing' }));
+    expect(delivery?.beforeEntry?.state.traitHistory?.maturedChaosBlessings).toContainEqual(
+      expect.objectContaining({ blessingKey: 'ChaosWeaponBlessing' }),
+    );
   });
 
   it('retains the existing route-start Jeweled Pom acquisition', () => {

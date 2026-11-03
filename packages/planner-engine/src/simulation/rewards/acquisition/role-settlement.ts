@@ -50,7 +50,6 @@ import {
   appendRewardEvent,
   freezeRecord,
   offerEvidence,
-  singleBranch,
   withBag,
   type RewardBranchState,
 } from '../branch-primitives';
@@ -179,7 +178,7 @@ const ARTIFICER_REDRAW_BINDING: CountedRewardBinding = Object.freeze({
 
 export function applyProducerRoleHistory(
   catalog: Catalog,
-  branches: readonly RewardBranchState[],
+  reached: RewardBranchState | undefined,
   incoming: AcquisitionSource,
   resolution: AcquisitionRoleResolution,
   facts: RewardFactsFactory,
@@ -224,17 +223,16 @@ export function applyProducerRoleHistory(
       ? artificerReplacementEntryKey(settlement.entry.entryKey, resolution.role)
       : artificerReplacementEntryKey(incoming.origin, resolution.role),
   );
-  const next: RewardBranchState[] = [];
   const findingEmissions = new Map<string, FindingRegionEntry>();
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
-  const realizedAcquisitionByBranch: (ConcreteAcquisitionEvent | undefined)[] = [];
+  let realizedAcquisitionAtRole: ConcreteAcquisitionEvent | undefined;
   const priorTraitMutations = new Map<string, PriorTraitMutation>();
   const traitOfferCandidateContacts: ReachedTraitOfferCandidateContact[] = [];
   let unresolvedArtificerReplacement = false;
   let unresolvedTraitOffer = false;
   let unresolvedHexActivation = false;
-  const hexActivationContexts: HexActivationContext[] = [];
+  let hexActivationContext: HexActivationContext | undefined;
   const seaStarSourceKey = semanticAddressKey(
     createAcquisitionRoleAddress(incoming.origin, resolution.role),
   );
@@ -242,7 +240,7 @@ export function applyProducerRoleHistory(
     authoredSeaStarDuplicateSiteKeys?.has(
       seaStarDuplicateSiteKey(createAcquisitionRoleAddress(incoming.origin, resolution.role)),
     ) === true;
-  for (const branch of branches) {
+  const settleRole = (branch: RewardBranchState): RewardBranchState | undefined => {
     const branchFacts = facts(branch.state);
     if (
       !offerAlreadyGenerated &&
@@ -250,8 +248,7 @@ export function applyProducerRoleHistory(
         acquisitionRole: resolution.role,
       })
     ) {
-      realizedAcquisitionByBranch.push(undefined);
-      continue;
+      return undefined;
     }
     const acquisition = resolveAcquisitionRole(
       catalog.rewards,
@@ -292,7 +289,7 @@ export function applyProducerRoleHistory(
           }),
         })
       : acquisition;
-    realizedAcquisitionByBranch.push(forfeit.consumed ? realizedAcquisition : undefined);
+    if (forfeit.consumed) realizedAcquisitionAtRole = realizedAcquisition;
     const forfeitBranch =
       forfeit.consumed && fixedForfeit === undefined && qualifyingRewardType !== undefined
         ? appendRewardEvent(
@@ -366,26 +363,23 @@ export function applyProducerRoleHistory(
       realizedAcquisition,
     );
     if (disposition.kind === 'timePiece' && conversion.supported) {
-      next.push(
-        appendRewardEvent(
-          Object.freeze({
-            ...materializedBranch,
-            state: Object.freeze({
-              ...materializedBranch.state,
-              keepsakes: consumeTimePieceCharge(materializedBranch.state.keepsakes),
-            }),
+      return appendRewardEvent(
+        Object.freeze({
+          ...materializedBranch,
+          state: Object.freeze({
+            ...materializedBranch.state,
+            keepsakes: consumeTimePieceCharge(materializedBranch.state.keepsakes),
           }),
-          resolution.historySequence,
-          {
-            kind: 'conversionToGold',
-            origin: incoming.origin,
-            source: resolvedAcquisitionSource(incoming),
-            acquisition: realizedAcquisition,
-            settlement,
-          },
-        ),
+        }),
+        resolution.historySequence,
+        {
+          kind: 'conversionToGold',
+          origin: incoming.origin,
+          source: resolvedAcquisitionSource(incoming),
+          acquisition: realizedAcquisition,
+          settlement,
+        },
       );
-      continue;
     }
     if (disposition.kind === 'timePiece') {
       addRewardFinding(
@@ -407,23 +401,20 @@ export function applyProducerRoleHistory(
         materializedBranch.state.rewardHistory,
         realizedAcquisition.acquisition,
       );
-      next.push(
-        appendRewardEvent(
-          Object.freeze({
-            ...materializedBranch,
-            state: Object.freeze({ ...materializedBranch.state, rewardHistory: history }),
-          }),
-          resolution.historySequence,
-          {
-            kind: 'concreteAcquisition',
-            origin: incoming.origin,
-            source: resolvedAcquisitionSource(incoming),
-            acquisition: realizedAcquisition,
-            settlement,
-          },
-        ),
+      return appendRewardEvent(
+        Object.freeze({
+          ...materializedBranch,
+          state: Object.freeze({ ...materializedBranch.state, rewardHistory: history }),
+        }),
+        resolution.historySequence,
+        {
+          kind: 'concreteAcquisition',
+          origin: incoming.origin,
+          source: resolvedAcquisitionSource(incoming),
+          acquisition: realizedAcquisition,
+          settlement,
+        },
       );
-      continue;
     }
     if (disposition.kind === 'artificer') {
       const conversion = generateArtificerReplacement(
@@ -441,43 +432,39 @@ export function applyProducerRoleHistory(
       mergeRewardFindingEmissions(findingEmissions, conversion.findingEmissions);
       // A missing or unavailable conversion blocks the role; the source is not acquired.
       unresolvedArtificerReplacement ||= conversion.status !== 'converted';
-      for (const generated of conversion.generatedReplacements) {
-        // The conversion spawns the replacement loot, whose options are built now.
-        const spawned = Object.freeze({
-          ...generated.branch,
-          state: spawnPendingTraitOffers(catalog, generated.branch.state, [generated.source]),
-        });
-        if (deferArtificerReplacement) {
-          next.push(spawned);
-          continue;
-        }
-        let replacementBranches: readonly RewardBranchState[] = Object.freeze([spawned]);
-        for (const binding of generated.roles) {
-          const replacementSettlement = applyProducerRoleHistory(
-            catalog,
-            replacementBranches,
-            generated.source,
-            Object.freeze({ ...binding, historySequence: resolution.historySequence }),
-            facts,
-            atomicRegion,
-            findingChronology,
-            Object.freeze({
-              site: artificerReplacementAddress.site,
-              entry: artificerReplacementAddress,
-            }),
-            undefined,
-            false,
-            true,
-            authoredSeaStarDuplicateSiteKeys,
-          );
-          replacementBranches = replacementSettlement.branches;
-          mergeRewardFindingEmissions(findingEmissions, replacementSettlement.findingEmissions);
-          roleFrontiers.push(...replacementSettlement.roleFrontiers);
-          traitChildSettlements.push(...replacementSettlement.traitChildSettlements);
-        }
-        next.push(...replacementBranches);
+      const generated = conversion.generatedReplacement;
+      if (generated === undefined) return undefined;
+      // The conversion spawns the replacement loot, whose options are built now.
+      const spawned = Object.freeze({
+        ...generated.branch,
+        state: spawnPendingTraitOffers(catalog, generated.branch.state, [generated.source]),
+      });
+      if (deferArtificerReplacement) return spawned;
+      let replacement: RewardBranchState | undefined = spawned;
+      for (const binding of generated.roles) {
+        const replacementSettlement = applyProducerRoleHistory(
+          catalog,
+          replacement,
+          generated.source,
+          Object.freeze({ ...binding, historySequence: resolution.historySequence }),
+          facts,
+          atomicRegion,
+          findingChronology,
+          Object.freeze({
+            site: artificerReplacementAddress.site,
+            entry: artificerReplacementAddress,
+          }),
+          undefined,
+          false,
+          true,
+          authoredSeaStarDuplicateSiteKeys,
+        );
+        replacement = replacementSettlement.branch;
+        mergeRewardFindingEmissions(findingEmissions, replacementSettlement.findingEmissions);
+        roleFrontiers.push(...replacementSettlement.roleFrontiers);
+        traitChildSettlements.push(...replacementSettlement.traitChildSettlements);
       }
-      continue;
+      return replacement;
     }
     const concreteDeclaration =
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName];
@@ -498,7 +485,7 @@ export function applyProducerRoleHistory(
           atomicRegion,
           findingChronology ?? historyChronology(resolution.historySequence),
         );
-        continue;
+        return undefined;
       }
       if (pickupEffect.kind === 'anvilOfFates') {
         const temporaryHammerTraitKeys = new Set(
@@ -527,7 +514,7 @@ export function applyProducerRoleHistory(
             atomicRegion,
             findingChronology ?? historyChronology(resolution.historySequence),
           );
-          continue;
+          return undefined;
         }
       }
     }
@@ -622,7 +609,7 @@ export function applyProducerRoleHistory(
         pathPointGrant,
         incoming.hexActivationsByAcquisitionRole?.[resolution.role],
       );
-      hexActivationContexts.push(screen.context);
+      hexActivationContext = screen.context;
       if (screen.kind !== 'settled') {
         unresolvedHexActivation = true;
         addRewardFinding(
@@ -637,7 +624,7 @@ export function applyProducerRoleHistory(
           atomicRegion,
           findingChronology ?? historyChronology(resolution.historySequence),
         );
-        continue;
+        return undefined;
       }
       acquisitionBranch = screen.branch;
       investedHexNodeKeys = screen.selectedNodeKeys;
@@ -677,7 +664,7 @@ export function applyProducerRoleHistory(
       });
     }
     const traitEventCountBeforeSettlement = acquisitionBranch.state.traitHistory.events.length ?? 0;
-    const directTraitSetHistory = (directTraitAgreementBranch ?? branches[0])?.state.traitHistory;
+    const directTraitSetHistory = (directTraitAgreementBranch ?? branch).state.traitHistory;
     const traitSettlement = applyTraitOfferForAcquisition(
       catalog,
       acquisitionBranch,
@@ -732,7 +719,9 @@ export function applyProducerRoleHistory(
       traitChildSettlements.push(
         Object.freeze({ ...traitSettlement.blockedChild, branch: withEvent }),
       );
-    } else {
+      return undefined;
+    }
+    {
       // A completed selection screen records its loot in `GameState.LootPickups`.
       const pickupHistory =
         traitSettlement.completion === undefined
@@ -762,15 +751,14 @@ export function applyProducerRoleHistory(
               ...closed,
               state: spawnPickups(catalog, closed.state, screenPickups),
             });
-      next.push(
-        seaStarResult?.kind === 'proc' && traitSettlement.completion !== undefined
-          ? spawnSeaStarDuplicate(catalog, completed, incoming, resolution.role)
-          : completed,
-      );
+      return seaStarResult?.kind === 'proc' && traitSettlement.completion !== undefined
+        ? spawnSeaStarDuplicate(catalog, completed, incoming, resolution.role)
+        : completed;
     }
-  }
+  };
+  const next = reached === undefined ? undefined : settleRole(reached);
   if (
-    next.length === 0 &&
+    next === undefined &&
     !unresolvedArtificerReplacement &&
     !unresolvedTraitOffer &&
     !unresolvedHexActivation
@@ -790,10 +778,10 @@ export function applyProducerRoleHistory(
     Object.freeze({
       address: createAcquisitionRoleAddress(incoming.origin, resolution.role),
       ...(incoming.timelineOwner === undefined ? {} : { timelineOwner: incoming.timelineOwner }),
-      branchesBeforeRole: branches,
-      ...(realizedAcquisitionByBranch.some((acquisition) => acquisition !== undefined)
-        ? { realizedAcquisitionByBranch: Object.freeze(realizedAcquisitionByBranch) }
-        : {}),
+      beforeRole: reached,
+      ...(realizedAcquisitionAtRole === undefined
+        ? {}
+        : { realizedAcquisition: realizedAcquisitionAtRole }),
       source: incoming,
       lifecyclePoint: resolution.lifecyclePoint,
       historySequence: resolution.historySequence,
@@ -805,9 +793,7 @@ export function applyProducerRoleHistory(
       ...(traitOfferCandidateContacts.length === 0
         ? {}
         : { traitOfferCandidateContacts: Object.freeze(traitOfferCandidateContacts) }),
-      ...(hexActivationContexts.length === 0
-        ? {}
-        : { hexActivationContexts: Object.freeze(hexActivationContexts) }),
+      ...(hexActivationContext === undefined ? {} : { hexActivationContext }),
       ...(artificerReplacementOptions === undefined ? {} : { artificerReplacementOptions }),
       ...(artificerReplacementRewardTypes.length === 0
         ? {}
@@ -816,7 +802,7 @@ export function applyProducerRoleHistory(
               rewardTypes: artificerReplacementRewardTypes,
               evaluateOffer: (offer: ResolvedRewardOffer) => {
                 const store = catalog.rewards.stores.byKey.RunProgress!;
-                const supported = branches.every((branch) => {
+                const redraws = (branch: RewardBranchState) => {
                   const artificer = assessArtificerConversion(
                     catalog,
                     branch,
@@ -840,9 +826,10 @@ export function applyProducerRoleHistory(
                   } catch {
                     return false;
                   }
-                });
+                };
+                const supported = reached === undefined || redraws(reached);
                 if (supported) return Object.freeze({ findings: Object.freeze([]), supported });
-                const routeKey = branches[0]?.state.reached.routePosition.routeKey;
+                const routeKey = reached?.state.reached.routePosition.routeKey;
                 const fixed =
                   routeKey === undefined
                     ? undefined
@@ -873,7 +860,6 @@ export function applyProducerRoleHistory(
                     return undefined;
                   }
                 };
-                const reached = singleBranch(branches);
                 const exclusions = reachedRewardOfferExclusion(
                   reached === undefined ? undefined : redrawReason(reached),
                 );
@@ -891,7 +877,7 @@ export function applyProducerRoleHistory(
     }),
   );
   return Object.freeze({
-    branches: Object.freeze(next),
+    branch: next,
     findingEmissions: Object.freeze([...findingEmissions.values()]),
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),

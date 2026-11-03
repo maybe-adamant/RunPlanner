@@ -28,7 +28,7 @@ import {
 } from '../../finding-regions';
 import type { HistoryEvent } from '../../history';
 import type { CanonicalResolvedIncomingReward } from '../../materialization';
-import { singleBranch, type RewardBranchState } from '../branch-primitives';
+import type { RewardBranchState } from '../branch-primitives';
 import {
   addRewardFinding,
   historyChronology,
@@ -94,7 +94,7 @@ export function withRoomStoredSourceProducts(
 
 export function settleProducerAcquisitionSite(
   catalog: Catalog,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   room: CanonicalRewardRoom,
   event: Extract<HistoryEvent, { readonly kind: 'producerRoleAdvanced' }>,
   facts: RewardFactsFactory,
@@ -150,7 +150,7 @@ export function settleProducerAcquisitionSite(
   });
   const settled = applyProducerRoleHistory(
     catalog,
-    branches,
+    branch,
     incomingSource,
     {
       role: event.role,
@@ -172,7 +172,7 @@ export function settleProducerAcquisitionSite(
   return Object.freeze({
     site,
     entries: Object.freeze([entry]),
-    branches: settled.branches,
+    branch: settled.branch,
     findingEmissions: settled.findingEmissions,
     roleFrontiers: settled.roleFrontiers,
     traitChildSettlements: settled.traitChildSettlements,
@@ -182,7 +182,7 @@ export function settleProducerAcquisitionSite(
 /** Settles one exact composite-owned acquisition entry at its structural site. */
 export function settleOwnedAcquisitionSite(
   catalog: Catalog,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   request: OwnedAcquisitionSettlementRequest,
   facts: RewardFactsFactory,
   atomicRegion?: string,
@@ -231,7 +231,7 @@ export function settleOwnedAcquisitionSite(
       : { hexActivationsByAcquisitionRole: source.hexActivationsByAcquisitionRole }),
     dispositionByAcquisitionRole: source.dispositionByAcquisitionRole ?? Object.freeze({}),
   });
-  let current: readonly RewardBranchState[] = branches;
+  let current = branch;
   for (const binding of roleBindings) {
     const settled = applyProducerRoleHistory(
       catalog,
@@ -247,7 +247,7 @@ export function settleOwnedAcquisitionSite(
       false,
       request.authoredSeaStarDuplicateSiteKeys,
     );
-    current = settled.branches;
+    current = settled.branch;
     mergeRewardFindingEmissions(findingEmissions, settled.findingEmissions);
     roleFrontiers.push(...settled.roleFrontiers);
     traitChildSettlements.push(...settled.traitChildSettlements);
@@ -256,9 +256,6 @@ export function settleOwnedAcquisitionSite(
   if (request.deferArtificerReplacement !== true) {
     for (const binding of roleBindings) {
       if (sourceReward.dispositionByAcquisitionRole[binding.role]?.kind !== 'artificer') continue;
-      const untouched = current.filter(
-        (branch) => !hasArtificerUse(branch, source.origin, binding.role),
-      );
       const replacement = settleArtificerReplacementAcquisition(catalog, current, {
         siteOwner: request.siteOwner,
         pointKey: request.pointKey,
@@ -282,7 +279,7 @@ export function settleOwnedAcquisitionSite(
             }),
       });
       mergeRewardFindingEmissions(findingEmissions, replacement.findingEmissions);
-      current = Object.freeze([...untouched, ...replacement.branches]);
+      current = replacement.branch;
       entries.push(...replacement.entries);
       roleFrontiers.push(...(replacement.roleFrontiers ?? []));
       traitChildSettlements.push(...(replacement.traitChildSettlements ?? []));
@@ -291,7 +288,7 @@ export function settleOwnedAcquisitionSite(
   return Object.freeze({
     site,
     entries: Object.freeze(entries),
-    branches: current,
+    branch: current,
     findingEmissions: Object.freeze([...findingEmissions.values()]),
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
@@ -305,7 +302,7 @@ export function settleOwnedAcquisitionSite(
  */
 export function settleAcquisitionResolvedReward(
   catalog: Catalog,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   request: {
     readonly siteOwner: AcquisitionSiteOwnerAddress;
     readonly pointKey: string;
@@ -343,20 +340,19 @@ export function settleAcquisitionResolvedReward(
     address,
     kind: 'acquisitionResolvedReward',
     rewardTypes: Object.freeze([request.visibleOffer.rewardType]),
-    branchesBeforeEntry: branches,
+    beforeEntry: branch,
     evaluateOffer: (offer: ResolvedRewardOffer) =>
       offer.rewardType !== request.visibleOffer.rewardType
         ? staticallyExcludedCandidateResult({
             kind: 'rewardTypeFixed',
             rewardType: request.visibleOffer.rewardType,
           })
-        : branches.every((branch) =>
-              isOfferSupportedAtResolutionPoint(catalog.rewards, offer, facts(branch.state), {
-                acquisitionRole: resolution.role,
-              }),
-            )
+        : branch === undefined ||
+            isOfferSupportedAtResolutionPoint(catalog.rewards, offer, facts(branch.state), {
+              acquisitionRole: resolution.role,
+            })
           ? Object.freeze({ findings: Object.freeze([]), supported: true })
-          : acquisitionSourceExclusionResult(catalog, branches, offer, facts, resolution.role),
+          : acquisitionSourceExclusionResult(catalog, branch, offer, facts, resolution.role),
   });
   if (request.reward === undefined || request.reward === null) {
     addRewardFinding(
@@ -375,7 +371,7 @@ export function settleAcquisitionResolvedReward(
           participation: 'optional' as const,
         }),
       ]),
-      branches: Object.freeze([]),
+      branch: undefined,
       findingEmissions: Object.freeze([...findingEmissions.values()]),
       derivedEntryFrontiers: Object.freeze([frontier]),
     });
@@ -393,14 +389,14 @@ export function settleAcquisitionResolvedReward(
     return Object.freeze({
       site,
       entries: Object.freeze([]),
-      branches: Object.freeze([]),
+      branch: undefined,
       findingEmissions: Object.freeze([...findingEmissions.values()]),
       derivedEntryFrontiers: Object.freeze([frontier]),
     });
   }
   const settled = settleOwnedAcquisitionSite(
     catalog,
-    branches,
+    branch,
     {
       siteOwner: request.siteOwner,
       pointKey: request.pointKey,
@@ -453,7 +449,7 @@ export function settleAcquisitionResolvedReward(
 /** Settles a previously generated Artificer child at an ordered dependent checkpoint. */
 export function settleArtificerReplacementAcquisition(
   catalog: Catalog,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   request: {
     readonly siteOwner: AcquisitionSiteOwnerAddress;
     readonly pointKey: string;
@@ -482,12 +478,11 @@ export function settleArtificerReplacementAcquisition(
     site,
     artificerReplacementEntryKey(request.sourceEntryKey, request.acquisitionRole),
   );
-  const reached = branches.filter((branch) =>
-    hasArtificerUse(branch, request.sourceOrigin, request.acquisitionRole),
-  );
-  const untouched = branches.filter(
-    (branch) => !hasArtificerUse(branch, request.sourceOrigin, request.acquisitionRole),
-  );
+  // Only a state that spent its Artificer use on this role settles the replacement.
+  const converted =
+    branch !== undefined && hasArtificerUse(branch, request.sourceOrigin, request.acquisitionRole);
+  const reached = converted ? branch : undefined;
+  const untouched = converted ? undefined : branch;
   const findingEmissions = new Map<string, FindingRegionEntry>();
   const replacement = request.replacement ?? null;
   if (replacement === null) {
@@ -507,7 +502,7 @@ export function settleArtificerReplacementAcquisition(
           participation: request.participation,
         }),
       ]),
-      branches: untouched,
+      branch: untouched,
       findingEmissions: Object.freeze([...findingEmissions.values()]),
       roleFrontiers: Object.freeze([]),
       traitChildSettlements: Object.freeze([]),
@@ -530,7 +525,7 @@ export function settleArtificerReplacementAcquisition(
   const sourceCanDuplicate =
     catalog.rewards.acquisitions.byKey[sourceAcquisition.acquisition.gameName]?.canDuplicate ===
     true;
-  let current: readonly RewardBranchState[] = reached;
+  let current = reached;
   for (const binding of lifecycle.acquisitionLifecycle) {
     const settled = applyProducerRoleHistory(
       catalog,
@@ -574,7 +569,7 @@ export function settleArtificerReplacementAcquisition(
       true,
       request.authoredSeaStarDuplicateSiteKeys,
     );
-    current = settled.branches;
+    current = settled.branch;
     mergeRewardFindingEmissions(findingEmissions, settled.findingEmissions);
     roleFrontiers.push(...settled.roleFrontiers);
     traitChildSettlements.push(...settled.traitChildSettlements);
@@ -589,7 +584,7 @@ export function settleArtificerReplacementAcquisition(
         participation: request.participation,
       }),
     ]),
-    branches: Object.freeze([...untouched, ...current]),
+    branch: untouched ?? current,
     findingEmissions: Object.freeze([...findingEmissions.values()]),
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
@@ -601,7 +596,7 @@ export function settleArtificerReplacementAcquisition(
  * gets a private outcome processor. */
 export function settlePickupAcquisitionSite(
   catalog: Catalog,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   request: {
     readonly siteOwner: AcquisitionSiteOwnerAddress;
     readonly site: AcquisitionSiteAddress;
@@ -695,7 +690,7 @@ export function settlePickupAcquisitionSite(
   });
   if (new Set(request.order).size !== request.order.length)
     throw new Error('pickup acquisition order contains a duplicate entry');
-  let current = branches;
+  let current = branch;
   const pickupEntryFrontiers: PickupAcquisitionEntryFrontier[] = [];
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
@@ -708,9 +703,7 @@ export function settlePickupAcquisitionSite(
   for (const [key, reward] of Object.entries(request.entries)) {
     if (reward !== null || request.order.includes(key)) continue;
     const address = createAcquisitionEntryAddress(site, key);
-    pickupEntryFrontiers.push(
-      Object.freeze({ address, reward: null, branchesBeforeEntry: current }),
-    );
+    pickupEntryFrontiers.push(Object.freeze({ address, reward: null, beforeEntry: current }));
     addRewardFinding(
       findingEmissions,
       rewardFinding('rewardMissing', address, {}),
@@ -722,9 +715,7 @@ export function settlePickupAcquisitionSite(
     for (const [key, definition] of definitions) {
       if (request.order.includes(key)) continue;
       const { reward, address: entry } = definition;
-      pickupEntryFrontiers.push(
-        Object.freeze({ address: entry, reward, branchesBeforeEntry: current }),
-      );
+      pickupEntryFrontiers.push(Object.freeze({ address: entry, reward, beforeEntry: current }));
       const lifecycle =
         catalog.rewards.producerLifecycles.byKey[request.producerLifecycleKey]!.rewardTypes.byKey[
           reward.offer.rewardType
@@ -795,7 +786,7 @@ export function settlePickupAcquisitionSite(
           false,
           request.authoredSeaStarDuplicateSiteKeys,
         );
-        candidateOnly = settled.branches;
+        candidateOnly = settled.branch;
         mergeRewardFindingEmissions(findingEmissions, settled.findingEmissions);
         roleFrontiers.push(...settled.roleFrontiers);
         traitChildSettlements.push(...settled.traitChildSettlements);
@@ -807,16 +798,14 @@ export function settlePickupAcquisitionSite(
     if (definition === undefined) {
       if (request.entries[key] === null) {
         const address = createAcquisitionEntryAddress(site, key);
-        pickupEntryFrontiers.push(
-          Object.freeze({ address, reward: null, branchesBeforeEntry: current }),
-        );
+        pickupEntryFrontiers.push(Object.freeze({ address, reward: null, beforeEntry: current }));
         addRewardFinding(
           findingEmissions,
           rewardFinding('rewardMissing', address, {}),
           request.atomicRegion ?? ownerRegion(address),
           request.findingChronology ?? historyChronology(request.historySequence),
         );
-        current = Object.freeze([]);
+        current = undefined;
         continue;
       }
       const parsed = parseArtificerReplacementEntryKey(key);
@@ -861,16 +850,14 @@ export function settlePickupAcquisitionSite(
             }),
       });
       mergeRewardFindingEmissions(findingEmissions, settlement.findingEmissions);
-      current = settlement.branches;
+      current = settlement.branch;
       roleFrontiers.push(...(settlement.roleFrontiers ?? []));
       traitChildSettlements.push(...(settlement.traitChildSettlements ?? []));
       continue;
     }
     interactedSources.add(key);
     const { reward, address: entry } = definition;
-    pickupEntryFrontiers.push(
-      Object.freeze({ address: entry, reward, branchesBeforeEntry: current }),
-    );
+    pickupEntryFrontiers.push(Object.freeze({ address: entry, reward, beforeEntry: current }));
     const lifecycle =
       catalog.rewards.producerLifecycles.byKey[request.producerLifecycleKey]!.rewardTypes.byKey[
         reward.offer.rewardType
@@ -935,7 +922,7 @@ export function settlePickupAcquisitionSite(
         false,
         request.authoredSeaStarDuplicateSiteKeys,
       );
-      current = settled.branches;
+      current = settled.branch;
       mergeRewardFindingEmissions(findingEmissions, settled.findingEmissions);
       roleFrontiers.push(...settled.roleFrontiers);
       traitChildSettlements.push(...settled.traitChildSettlements);
@@ -944,7 +931,7 @@ export function settlePickupAcquisitionSite(
   return Object.freeze({
     site,
     entries: Object.freeze(entries),
-    branches: current,
+    branch: current,
     findingEmissions: Object.freeze([...findingEmissions.values()]),
     pickupEntryFrontiers: Object.freeze(pickupEntryFrontiers),
     roleFrontiers: Object.freeze(roleFrontiers),
@@ -955,16 +942,13 @@ export function settlePickupAcquisitionSite(
 /** The reached state must resolve the source; a supported state cites nothing. */
 function acquisitionSourceExclusionResult(
   catalog: Catalog,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState,
   offer: ResolvedRewardOffer,
   facts: RewardFactsFactory,
   acquisitionRole: string,
 ) {
-  const branch = singleBranch(branches);
   const exclusions = reachedRewardOfferExclusion(
-    branch === undefined
-      ? undefined
-      : sourceSupportReason(catalog.rewards, offer, facts(branch.state), { acquisitionRole }),
+    sourceSupportReason(catalog.rewards, offer, facts(branch.state), { acquisitionRole }),
   );
   return Object.freeze({
     findings: Object.freeze([]),

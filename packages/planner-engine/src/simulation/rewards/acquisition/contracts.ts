@@ -32,7 +32,8 @@ export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoo
 export interface AcquisitionSettlementProduct {
   readonly site: AcquisitionSiteAddress;
   readonly entries: readonly AcquisitionSettlementEntry[];
-  readonly branches: readonly RewardBranchState[];
+  /** The state the site leaves, or none once a block stopped it. */
+  readonly branch: RewardBranchState | undefined;
   /** Ordered findings emitted while this site and its composed children settled. */
   readonly findingEmissions: readonly FindingRegionEntry[];
   /**
@@ -41,7 +42,7 @@ export interface AcquisitionSettlementProduct {
    * the real settlement merely to rediscover an entry frontier.
    */
   readonly pickupEntryFrontiers?: readonly PickupAcquisitionEntryFrontier[];
-  /** Exact pre-role branch products from the canonical settlement fold. */
+  /** Exact pre-role states from the canonical settlement fold. */
   readonly roleFrontiers?: readonly AcquisitionRoleFrontier[];
   /** Reached derived entry whose authored child is not part of the site's order. */
   readonly derivedEntryFrontiers?: readonly DerivedAcquisitionEntryFrontier[];
@@ -53,7 +54,7 @@ export interface AcquisitionSettlementProduct {
 
 /** Complete output of one ordered producer-role fold. */
 export interface ProducerRoleSettlementProduct {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   /**
    * Ordered, deduplicated finding entries emitted by this fold, including
    * recursive Artificer replacement settlement.
@@ -87,7 +88,7 @@ export interface DerivedAcquisitionEntryFrontier {
   readonly historySequence?: number;
   readonly sourceOfferKey?: string;
   readonly slotIndex?: number;
-  /** Exact declaration families with at least one supported resolved offer on this branch. */
+  /** Exact declaration families with at least one supported resolved offer at this state. */
   readonly rewardTypes?: readonly string[];
   /** Exact engine-derived state when the source offer is copied without fresh payload resolution. */
   readonly fixedReward?: AuthoredRewardState;
@@ -103,7 +104,8 @@ export interface DerivedAcquisitionEntryFrontier {
   readonly roleFrontiers?: readonly AcquisitionRoleFrontier[];
   /** Paid entries that can source a first-eligible derived child in this Shop. */
   readonly eligibleSourceOfferKeys?: readonly string[];
-  readonly branchesBeforeEntry: readonly RewardBranchState[];
+  /** The state reaching this entry, or none when its contact was not reached. */
+  readonly beforeEntry: RewardBranchState | undefined;
   readonly evaluateOffer?: (
     offer: ResolvedRewardOffer,
   ) => import('../producer-frontiers').RewardProducerCandidateResult;
@@ -126,13 +128,13 @@ export interface AcquisitionRoleFrontier {
   readonly address: import('../../../authored-project/addresses').AcquisitionRoleAddress;
   /** Exact active Room Action that reached this role, when it is consequential. */
   readonly timelineOwner?: SemanticAddress;
-  readonly branchesBeforeRole: readonly RewardBranchState[];
+  /** The state reaching this role, or none when its contact was not reached. */
+  readonly beforeRole: RewardBranchState | undefined;
   /**
    * Concrete materialization produced by this role when its outer RoomReward
-   * was forfeited. The array follows branchesBeforeRole and is absent for
-   * roles with no realized substitution.
+   * was forfeited; absent for a role with no realized substitution.
    */
-  readonly realizedAcquisitionByBranch?: readonly (ConcreteAcquisitionEvent | undefined)[];
+  readonly realizedAcquisition?: ConcreteAcquisitionEvent;
   readonly source: AcquisitionSource;
   readonly lifecyclePoint: ProducerLifecyclePointKey;
   readonly historySequence: number;
@@ -154,14 +156,14 @@ export interface AcquisitionRoleFrontier {
   readonly priorTraitMutations?: readonly PriorTraitMutation[];
   /** Exact pre-offer contacts reached while this acquisition role was settled. */
   readonly traitOfferCandidateContacts?: readonly ReachedTraitOfferCandidateContact[];
-  /** Each reaching branch's tree state at this role's writable Path screen. */
-  readonly hexActivationContexts?: readonly import('../../hex-activation').HexActivationContext[];
+  /** The reaching state's tree at this role's writable Path screen. */
+  readonly hexActivationContext?: import('../../hex-activation').HexActivationContext;
 }
 
 export interface PickupAcquisitionEntryFrontier {
   readonly address: AcquisitionEntryAddress;
   readonly reward: AuthoredRewardState | null;
-  readonly branchesBeforeEntry: readonly RewardBranchState[];
+  readonly beforeEntry: RewardBranchState | undefined;
 }
 
 export interface AcquisitionSettlementEntry {
@@ -199,7 +201,7 @@ export interface AcquisitionRoleResolution extends AcquisitionSettlementRole {
   readonly historySequence: number;
 }
 
-/** Facts for one reached branch snapshot and the contact's visible Shop names. */
+/** Facts for the reached state and the contact's visible Shop names. */
 export type RewardFactsFactory = (
   state: SimulationState,
   currentRoomShopOptionNames?: ReadonlySet<string>,

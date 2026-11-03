@@ -976,9 +976,9 @@ describe('N Hub rewards, validation, and candidates', () => {
         flags: { allSpellInvested: false, pendingSpellDrop: false },
       },
     };
-    const branches = settleOwnedAcquisitionSite(
+    const branch = settleOwnedAcquisitionSite(
       catalog,
-      initializeTestRewardBranches(createTestArcanaFearState({ BoonSkipShrineUpgrade: 1 })),
+      initializeTestRewardBranches(createTestArcanaFearState({ BoonSkipShrineUpgrade: 1 }))[0],
       {
         siteOwner: local!.origin,
         pointKey: 'roomRewardPickup',
@@ -987,8 +987,7 @@ describe('N Hub rewards, validation, and candidates', () => {
         historySequence: 1,
       },
       (state) => factsWithHistory(baseFacts, state.rewardHistory, new Set()),
-    ).branches;
-    const branch = branches[0];
+    ).branch;
     const expectedOffer = Object.values(incoming.traitOffersByAcquisitionRole ?? {})[0];
     if (
       branch === undefined ||

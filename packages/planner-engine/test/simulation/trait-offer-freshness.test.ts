@@ -536,10 +536,10 @@ describe('screen completion inside one Shop room', () => {
   it('builds a duplicated god boon from the state its source screen left', () => {
     const result = echoGoldShop(['Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranches: seeded(),
+      initialBranch: seeded()[0],
       rewardOverrides: { Boon: shopBoonReward('ZeusUpgrade', 'ZeusSpecialBoon') },
     });
-    const trace = duplicateTrace(result.settlement.branches[0]);
+    const trace = duplicateTrace(result.settlement.branch);
     // The boon just bought is held, so the duplicate cannot offer it again.
     expect(trace?.generationState.traitHistory.equippedTraits.ZeusSpecialBoon).toBeDefined();
     expect(
@@ -554,7 +554,7 @@ describe('screen completion inside one Shop room', () => {
   it('publishes a placed duplicate candidate from its own entry settlement', () => {
     const result = echoGoldShop(['Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranches: seeded(),
+      initialBranch: seeded()[0],
       rewardOverrides: { Boon: shopBoonReward('ZeusUpgrade', 'ZeusSpecialBoon') },
     });
     // The duplicate's frontier comes only from its entry, after the source screen.
@@ -563,16 +563,16 @@ describe('screen completion inside one Shop room', () => {
     );
     expect(frontiers).toHaveLength(1);
     expect(
-      frontiers[0]?.branchesBeforeRole[0]?.state.traitHistory.equippedTraits.ZeusSpecialBoon,
+      frontiers[0]?.beforeRole?.state.traitHistory.equippedTraits.ZeusSpecialBoon,
     ).toBeDefined();
-    const contexts = selectedTraitOfferProducts(result.settlement.branches).candidateContexts;
+    const contexts = selectedTraitOfferProducts(result.settlement.branch).candidateContexts;
     expect(contexts.get(semanticAddressKey(duplicateOffer))).toBeDefined();
   });
 
   it('rebuilds a waiting Echo duplicate at a later Pom screen', () => {
     const result = echoGoldShop(['Boon', 'Minor', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranches: seeded(),
+      initialBranch: seeded()[0],
       rewardOverrides: {
         Boon: shopBoonReward('ZeusUpgrade', 'ZeusSpecialBoon'),
         Minor: Object.freeze({
@@ -591,7 +591,7 @@ describe('screen completion inside one Shop room', () => {
     expect(
       [...result.findings.values()].filter((entry) => entry.finding.code.startsWith('pom')),
     ).toEqual([]);
-    const trace = duplicateTrace(result.settlement.branches[0]);
+    const trace = duplicateTrace(result.settlement.branch);
     expect(trace?.generationState.traitHistory.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
     expect(trace?.generationState.traitHistory.equippedTraits.ZeusSpecialBoon).toBeDefined();
   });
@@ -599,10 +599,10 @@ describe('screen completion inside one Shop room', () => {
   it('re-anchors the duplicate once, after the source screen consumes Yarn and Hymn', () => {
     const result = echoGoldShop(['Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranches: seeded({ yarnUses: 1, hymnUses: 1 }),
+      initialBranch: seeded({ yarnUses: 1, hymnUses: 1 })[0],
       rewardOverrides: { Boon: shopBoonReward('HeraUpgrade', 'HeraWeaponBoon') },
     });
-    const trace = duplicateTrace(result.settlement.branches[0]);
+    const trace = duplicateTrace(result.settlement.branch);
     expect(trace?.generationState.stygianWell).toMatchObject({ yarnUses: 0, hymnUses: 0 });
     expect(trace?.generationState.traitHistory.equippedTraits.HeraWeaponBoon).toBeDefined();
   });
@@ -628,10 +628,10 @@ describe('screen completion inside one Shop room', () => {
       });
     });
     const result = echoGoldShop(['Boon'], {
-      initialBranches,
+      initialBranch: initialBranches[0],
       rewardOverrides: { Boon: reward },
     });
-    const branch = result.settlement.branches[0];
+    const branch = result.settlement.branch;
     expect(branch?.state.stygianWell.hymnUses).toBe(1);
     // An ordinary replacement: the replaced boon's level without Hymn's bonus.
     expect(branch?.state.traitHistory.equippedTraits.HeraWeaponBoon).toMatchObject({
@@ -647,7 +647,7 @@ describe('screen completion inside one Shop room', () => {
     });
     const result = echoGoldShop(['Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranches: seeded(),
+      initialBranch: seeded()[0],
       rewardOverrides: { Boon: missing },
     });
     const blocked = result.settlement.traitChildSettlements?.[0]?.branch;
@@ -675,14 +675,14 @@ describe('screen completion inside one Shop room', () => {
       ['Boon', 'Minor', 'MajorNonBoon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY],
       {
         includeDuplicate: true,
-        initialBranches: seeded(),
+        initialBranch: seeded()[0],
         rewardOverrides: {
           Boon: shopBoonReward('ZeusUpgrade', 'ZeusSpecialBoon'),
           Minor: randomStack,
         },
       },
     );
-    const branch = result.settlement.branches[0];
+    const branch = result.settlement.branch;
     const trace = duplicateTrace(branch);
     // The random stack raised the level without rebuilding the loot it did not open.
     expect(branch?.state.traitHistory.equippedTraits.ApolloWeaponBoon?.level).toBe(2);

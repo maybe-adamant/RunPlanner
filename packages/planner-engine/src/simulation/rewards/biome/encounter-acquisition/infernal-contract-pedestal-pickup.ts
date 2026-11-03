@@ -16,7 +16,7 @@ import {
   mergeRewardFindingEmissions,
   rewardFinding,
 } from '../../findings';
-import { singleBranch, type RewardBranchState } from '../../branch-primitives';
+import type { RewardBranchState } from '../../branch-primitives';
 import {
   settleAcquisitionResolvedReward,
   settleOwnedAcquisitionSite,
@@ -122,7 +122,7 @@ export function settleInfernalContractPedestalPickup(inputs: {
   const settled = acquisitionResolved
     ? settleAcquisitionResolvedReward(
         catalog,
-        Object.freeze([branch]),
+        branch,
         {
           ...request,
           visibleOffer: pedestal.offer,
@@ -143,7 +143,7 @@ export function settleInfernalContractPedestalPickup(inputs: {
       )
     : settleOwnedAcquisitionSite(
         catalog,
-        Object.freeze([branch]),
+        branch,
         {
           ...request,
           source: withRoomStoredSourceProducts(
@@ -193,5 +193,5 @@ export function settleInfernalContractPedestalPickup(inputs: {
   derivedEntryFrontiers.push(...(settled.derivedEntryFrontiers ?? []));
   roleFrontiers.push(...(settled.roleFrontiers ?? []));
   traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
-  return result(singleBranch(settled.branches));
+  return result(settled.branch);
 }

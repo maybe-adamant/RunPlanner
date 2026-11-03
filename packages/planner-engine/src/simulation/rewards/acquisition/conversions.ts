@@ -183,11 +183,11 @@ export function assessArtificerConversion(
 }
 
 export interface ArtificerGenerationProduct {
-  readonly generatedReplacements: readonly {
+  readonly generatedReplacement?: {
     readonly branch: RewardBranchState;
     readonly source: AcquisitionSource;
     readonly roles: readonly AcquisitionSettlementRole[];
-  }[];
+  };
   readonly findingEmissions: readonly FindingRegionEntry[];
   /**
    * An unavailable conversion is one the game cannot make: it blocks at its
@@ -209,10 +209,10 @@ export function generateArtificerReplacement(
   settlement: { readonly site: AcquisitionSiteAddress; readonly entry: AcquisitionEntryAddress },
 ): ArtificerGenerationProduct {
   const findingEmissions = new Map<string, FindingRegionEntry>();
-  const generatedReplacements: ArtificerGenerationProduct['generatedReplacements'][number][] = [];
+  let generatedReplacement: ArtificerGenerationProduct['generatedReplacement'];
   const result = (status: ArtificerGenerationProduct['status']): ArtificerGenerationProduct =>
     Object.freeze({
-      generatedReplacements: Object.freeze(generatedReplacements),
+      ...(generatedReplacement === undefined ? {} : { generatedReplacement }),
       findingEmissions: Object.freeze([...findingEmissions.values()]),
       status,
     });
@@ -298,50 +298,48 @@ export function generateArtificerReplacement(
       );
       const sourceCanDuplicate =
         catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.canDuplicate === true;
-      generatedReplacements.push(
-        Object.freeze({
-          branch: generated,
-          source: Object.freeze({
-            origin: replacementAddress,
-            offer: artificerReplacement.offer,
-            producerLifecycleKey: 'RoomReward',
-            producer: Object.freeze({
-              kind: 'artificerReplacement' as const,
-              sourceOwner: incoming.origin,
-              ...(incoming.timelineOwner === undefined
-                ? {}
-                : { sourceTimelineOwner: incoming.timelineOwner }),
-              sourceRole: resolution.role,
-            }),
-            instanceProvenance: 'free',
-            roomRewardForfeitEligible: true as const,
-            traitOffersByAcquisitionRole: artificerReplacement.traitOffersByAcquisitionRole,
-            ...(artificerReplacement.levelResolutionsByAcquisitionRole === undefined
-              ? {}
-              : {
-                  levelResolutionsByAcquisitionRole:
-                    artificerReplacement.levelResolutionsByAcquisitionRole,
-                }),
-            ...(artificerReplacement.hexActivationsByAcquisitionRole === undefined
-              ? {}
-              : {
-                  hexActivationsByAcquisitionRole:
-                    artificerReplacement.hexActivationsByAcquisitionRole,
-                }),
-            dispositionByAcquisitionRole: artificerReplacement.dispositionByAcquisitionRole,
-            // A generated replacement stands on the screen its source presented.
-            presentsMaterializedScreen: incoming.presentsMaterializedScreen,
-            traitContext: incoming.traitContext,
+      generatedReplacement = Object.freeze({
+        branch: generated,
+        source: Object.freeze({
+          origin: replacementAddress,
+          offer: artificerReplacement.offer,
+          producerLifecycleKey: 'RoomReward',
+          producer: Object.freeze({
+            kind: 'artificerReplacement' as const,
+            sourceOwner: incoming.origin,
             ...(incoming.timelineOwner === undefined
               ? {}
-              : { timelineOwner: incoming.timelineOwner }),
-            ...(incoming.blocksSeaStarDuplication === true || !sourceCanDuplicate
-              ? { blocksSeaStarDuplication: true as const }
-              : {}),
+              : { sourceTimelineOwner: incoming.timelineOwner }),
+            sourceRole: resolution.role,
           }),
-          roles: replacementLifecycle.acquisitionLifecycle,
+          instanceProvenance: 'free',
+          roomRewardForfeitEligible: true as const,
+          traitOffersByAcquisitionRole: artificerReplacement.traitOffersByAcquisitionRole,
+          ...(artificerReplacement.levelResolutionsByAcquisitionRole === undefined
+            ? {}
+            : {
+                levelResolutionsByAcquisitionRole:
+                  artificerReplacement.levelResolutionsByAcquisitionRole,
+              }),
+          ...(artificerReplacement.hexActivationsByAcquisitionRole === undefined
+            ? {}
+            : {
+                hexActivationsByAcquisitionRole:
+                  artificerReplacement.hexActivationsByAcquisitionRole,
+              }),
+          dispositionByAcquisitionRole: artificerReplacement.dispositionByAcquisitionRole,
+          // A generated replacement stands on the screen its source presented.
+          presentsMaterializedScreen: incoming.presentsMaterializedScreen,
+          traitContext: incoming.traitContext,
+          ...(incoming.timelineOwner === undefined
+            ? {}
+            : { timelineOwner: incoming.timelineOwner }),
+          ...(incoming.blocksSeaStarDuplication === true || !sourceCanDuplicate
+            ? { blocksSeaStarDuplication: true as const }
+            : {}),
         }),
-      );
+        roles: replacementLifecycle.acquisitionLifecycle,
+      });
       return result('converted');
     }
   }

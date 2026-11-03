@@ -37,7 +37,7 @@ export function notInShopReason(
     : { kind: 'notInShop', profileKey: input.profile.key, slotIndex: input.slotIndex };
 }
 
-/** One branch's first failing Shop gate for the authored slot offer. */
+/** The reached state's first failing Shop gate for the authored slot offer. */
 export function shopSlotReason(
   input: ShopSlotExclusionInput,
   facts: RewardKernelFacts,

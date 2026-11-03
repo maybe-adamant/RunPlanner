@@ -108,16 +108,20 @@ function anvilCapabilityFor(...branches: readonly ReturnType<typeof branchWithHa
   const occurrence = createOccurrenceAddress(biome, createOccurrenceId('anvil-candidates'));
   const site = createAcquisitionSiteAddress(occurrence, 'shopPurchase');
   const entry = createAcquisitionEntryAddress(site, 'anvil');
-  return createAnvilCandidateCapability(catalog, [
-    Object.freeze({
-      address: createAcquisitionRoleAddress(entry, 'self'),
-      branchesBeforeRole: Object.freeze(branches),
-      source: Object.freeze({
-        offer: Object.freeze({ rewardType: 'ChaosWeaponUpgrade' }),
-        traitContext: {},
+  // Each state is one recorded frontier of the same role.
+  return createAnvilCandidateCapability(
+    catalog,
+    branches.map((branch) =>
+      Object.freeze({
+        address: createAcquisitionRoleAddress(entry, 'self'),
+        beforeRole: branch,
+        source: Object.freeze({
+          offer: Object.freeze({ rewardType: 'ChaosWeaponUpgrade' }),
+          traitContext: {},
+        }),
       }),
-    }),
-  ]);
+    ),
+  );
 }
 
 describe('Anvil of Fates acquisition settlement', () => {
@@ -143,7 +147,7 @@ describe('Anvil of Fates acquisition settlement', () => {
     const findings = new Map();
     const result = applyProducerRoleHistory(
       catalog,
-      branches,
+      branches[0],
       Object.freeze({
         origin: owner,
         offer,
@@ -172,13 +176,13 @@ describe('Anvil of Fates acquisition settlement', () => {
     mergeRewardFindingEmissions(findings, result.findingEmissions);
 
     expect(findings.size).toBe(0);
-    expect(result.branches).toHaveLength(1);
-    expect(result.branches[0]?.state.traitHistory?.equippedTraits).toMatchObject({
+    expect(result.branch).toBeDefined();
+    expect(result.branch?.state.traitHistory?.equippedTraits).toMatchObject({
       StaffLongAttackTrait: { hammerRank: 'RankI' },
       StaffJumpSpecialTrait: { hammerRank: 'RankI' },
     });
     expect(
-      result.branches[0]?.state.traitHistory?.equippedTraits.StaffDoubleAttackTrait,
+      result.branch?.state.traitHistory?.equippedTraits.StaffDoubleAttackTrait,
     ).toBeUndefined();
   });
 
@@ -193,7 +197,7 @@ describe('Anvil of Fates acquisition settlement', () => {
     const findings = new Map();
     const result = applyProducerRoleHistory(
       catalog,
-      initializeTestRewardBranches(),
+      initializeTestRewardBranches()[0],
       Object.freeze({
         origin: owner,
         offer,
@@ -212,7 +216,7 @@ describe('Anvil of Fates acquisition settlement', () => {
     );
     mergeRewardFindingEmissions(findings, result.findingEmissions);
 
-    expect(result.branches).toHaveLength(0);
+    expect(result.branch).toBeUndefined();
     expect(findings.size).toBeGreaterThan(0);
   });
 
@@ -227,7 +231,7 @@ describe('Anvil of Fates acquisition settlement', () => {
     );
   });
 
-  it('removes nothing only where every branch has no permanent Hammer', () => {
+  it('removes nothing only where every recorded frontier has no permanent Hammer', () => {
     expect(anvilCapabilityFor(branchWithoutHammers())?.removedTraitKeys).toEqual([null]);
     expect(
       anvilCapabilityFor(branchWithoutHammers(), branchWithHammerFrontier('StaffDoubleAttackTrait'))
@@ -235,7 +239,7 @@ describe('Anvil of Fates acquisition settlement', () => {
     ).toEqual([]);
   });
 
-  it('rejects a draft any divergent branch rejects', () => {
+  it('rejects a draft any disagreeing frontier rejects', () => {
     const capability = anvilCapabilityFor(
       branchWithoutHammers(),
       branchWithHammerFrontier('StaffDoubleAttackTrait'),
@@ -272,7 +276,7 @@ describe('Anvil of Fates acquisition settlement', () => {
       const findings = new Map();
       const settled = applyProducerRoleHistory(
         catalog,
-        [branch],
+        branch,
         Object.freeze({
           origin: createShopOfferAddress(biome, occurrence.occurrenceId, 'PremiumProgress'),
           offer,

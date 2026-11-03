@@ -178,8 +178,8 @@ export function createAcquisitionConversionCandidateArtifacts(
     string,
     readonly {
       readonly address: AcquisitionRoleAddress;
-      readonly branchesBeforeRole: readonly RewardBranchState[];
-      readonly realizedAcquisitionByBranch?: readonly (ConcreteAcquisitionEvent | undefined)[];
+      readonly beforeRole: RewardBranchState | undefined;
+      readonly realizedAcquisition?: ConcreteAcquisitionEvent;
       readonly source: AcquisitionSource;
       readonly lifecyclePoint: import('../../../reward-kernel').ProducerLifecyclePointKey;
       readonly historySequence: number;
@@ -189,7 +189,7 @@ export function createAcquisitionConversionCandidateArtifacts(
         readonly rewardTypes: readonly string[];
       };
       readonly artificerReplacementOptions?: readonly import('../../../authored-project/model').AuthoredRewardState[];
-      readonly hexActivationContexts?: readonly HexActivationContext[];
+      readonly hexActivationContext?: HexActivationContext;
     }[]
   >,
   fixedRealizations: ReadonlyMap<string, FixedAcquisitionRealization> = new Map(),
@@ -216,57 +216,63 @@ export function createAcquisitionConversionCandidateArtifacts(
     }
     const anvil = createAnvilCandidateCapability(catalog, entries);
     const hexActivation = createHexActivationCandidateCapability(
-      entries.flatMap((entry) => entry.hexActivationContexts ?? []),
+      entries.flatMap((entry) =>
+        entry.hexActivationContext === undefined ? [] : [entry.hexActivationContext],
+      ),
     );
     return Object.freeze({
       timePieceAssessments: Object.freeze(
         entries.flatMap((entry) =>
-          entry.branchesBeforeRole.map((branch, branchIndex) =>
-            assessTimePieceConversion(
-              catalog,
-              branch,
-              entry.source,
-              entry.address.acquisitionRole,
-              entry.lifecyclePoint,
-              entry.realizedAcquisitionByBranch?.[branchIndex],
-            ),
-          ),
+          entry.beforeRole === undefined
+            ? []
+            : [
+                assessTimePieceConversion(
+                  catalog,
+                  entry.beforeRole,
+                  entry.source,
+                  entry.address.acquisitionRole,
+                  entry.lifecyclePoint,
+                  entry.realizedAcquisition,
+                ),
+              ],
         ),
       ),
       artificerAssessments: Object.freeze(
         entries.flatMap((entry) =>
-          entry.branchesBeforeRole.map((branch) =>
-            assessArtificerConversion(catalog, branch, entry.source, {
-              role: entry.address.acquisitionRole,
-              lifecyclePoint: entry.lifecyclePoint,
-              ...(entry.blocksArtificerConversion === true
-                ? { blocksArtificerConversion: true as const }
-                : {}),
-            }),
-          ),
+          entry.beforeRole === undefined
+            ? []
+            : [
+                assessArtificerConversion(catalog, entry.beforeRole, entry.source, {
+                  role: entry.address.acquisitionRole,
+                  lifecyclePoint: entry.lifecyclePoint,
+                  ...(entry.blocksArtificerConversion === true
+                    ? { blocksArtificerConversion: true as const }
+                    : {}),
+                }),
+              ],
         ),
       ),
       seaStarAssessments: Object.freeze(
         entries.flatMap((entry) =>
-          entry.branchesBeforeRole.map((branch, branchIndex) =>
-            assessSeaStarDuplication(
-              catalog,
-              branch,
-              entry.source,
-              {
-                role: entry.address.acquisitionRole,
-                lifecyclePoint: entry.lifecyclePoint,
-              },
-              entry.realizedAcquisitionByBranch?.[branchIndex],
-            ),
-          ),
+          entry.beforeRole === undefined
+            ? []
+            : [
+                assessSeaStarDuplication(
+                  catalog,
+                  entry.beforeRole,
+                  entry.source,
+                  {
+                    role: entry.address.acquisitionRole,
+                    lifecyclePoint: entry.lifecyclePoint,
+                  },
+                  entry.realizedAcquisition,
+                ),
+              ],
         ),
       ),
       ...(() => {
         const realized = entries.flatMap((entry) =>
-          entry.branchesBeforeRole.map(
-            (_, branchIndex) => entry.realizedAcquisitionByBranch?.[branchIndex],
-          ),
+          entry.beforeRole === undefined ? [] : [entry.realizedAcquisition],
         );
         const first = realized[0];
         return first !== undefined &&

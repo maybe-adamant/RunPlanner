@@ -215,8 +215,8 @@ describe('Shop trait acquisition processing', () => {
       new Map(),
     );
     expect(inventory).toBeDefined();
-    expect(unpurchased).not.toHaveLength(0);
-    expect(unpurchased[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
+    expect(unpurchased).toBeDefined();
+    expect(unpurchased?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
 
     const purchasedCanonical = materializeAuthoredRoom({
       routePosition: ordinaryPositionFor(catalog, biome),
@@ -262,7 +262,7 @@ describe('Shop trait acquisition processing', () => {
       },
       new Map(),
     );
-    expect(purchased[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
+    expect(purchased?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
 
     const giftCanonical = materializeAuthoredRoom({
       routePosition: ordinaryPositionFor(catalog, biome),
@@ -322,10 +322,10 @@ describe('Shop trait acquisition processing', () => {
       },
       new Map(),
     );
-    expect(giftPurchased[0]?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
-    expect(giftPurchased[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
+    expect(giftPurchased?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
+    expect(giftPurchased?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
     expect(
-      giftPurchased[0]?.state.traitHistory?.events.some((event) => event.kind === 'levelMutation'),
+      giftPurchased?.state.traitHistory?.events.some((event) => event.kind === 'levelMutation'),
     ).toBe(false);
 
     const dormant = createDefaultRoomState(catalog, room, {
@@ -438,7 +438,7 @@ describe('Shop trait acquisition processing', () => {
       },
       findings,
     );
-    const branch = purchased[0];
+    const branch = purchased;
     const evaluation = branch?.levelResolutionEvaluations?.[0];
     expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({ code: 'missingPomTarget', origin: address }),
@@ -578,10 +578,10 @@ describe('Shop trait acquisition processing', () => {
         },
         new Map(),
       );
-      const result = purchased[0]?.state.traitHistory;
+      const result = purchased?.state.traitHistory;
       expect(result?.equippedTraits[expectedTraitKey]).toMatchObject({ level: expectedLevel });
       expect(result?.equippedTraits.ApolloWeaponBoon).toBeUndefined();
-      expect(purchased[0]?.state.arcanaFear.fear.forfeitConsumed).toBe(false);
+      expect(purchased?.state.arcanaFear.fear.forfeitConsumed).toBe(false);
     },
   );
 
@@ -774,7 +774,7 @@ describe('Shop trait acquisition processing', () => {
       },
       purchaseFindings,
     );
-    const purchasedBranch = purchased[0];
+    const purchasedBranch = purchased;
     expect([...purchaseFindings.values()].map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({
         code: 'wrongHammerLoadout',

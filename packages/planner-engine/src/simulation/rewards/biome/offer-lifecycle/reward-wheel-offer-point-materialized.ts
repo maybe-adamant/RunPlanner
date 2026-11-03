@@ -12,7 +12,7 @@ import {
 } from '../../../materialization';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
-import { branchList, type RewardBranchState } from '../../branch-primitives';
+import type { RewardBranchState } from '../../branch-primitives';
 import { explainCohortOfferExclusions, processOfferGenerationCohort } from '../../offer-generation';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
 import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-settlement';
@@ -328,7 +328,7 @@ export function applyRewardWheelOfferPointMaterialization(
         const source = shipWheelRoomRewardSource(wheel, selectedOffer, offer);
         const settlement = settleOwnedAcquisitionSite(
           catalog,
-          branchList(proposed),
+          proposed,
           {
             siteOwner: wheel.origin,
             pointKey: wheel.wheelKey,

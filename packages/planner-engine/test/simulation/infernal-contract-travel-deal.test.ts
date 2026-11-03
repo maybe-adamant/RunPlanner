@@ -39,11 +39,7 @@ import {
   settleShopAcquisitionSite,
 } from '../../src/simulation/rewards/shop/settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
-import {
-  branchList,
-  singleBranch,
-  type RewardBranchState,
-} from '../../src/simulation/rewards/branch-primitives';
+import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
@@ -520,16 +516,16 @@ function settle(options: {
     historySequence: 3,
     room: canonical,
     declaration,
-    branches: branchList(shopInventory.branch),
+    branch: shopInventory.branch,
     facts,
   });
   const inventory = Object.freeze({
     ...shopInventory,
-    branches: pedestal.branches,
+    branch: pedestal.branch,
     findingEmissions: Object.freeze([...shopInventory.findingEmissions, ...pedestal.findings]),
   });
   mergeRewardFindingEmissions(findings, inventory.findingEmissions);
-  const settlement = settleOrder(canonical, declaration, inventory.branches, facts, options);
+  const settlement = settleOrder(canonical, declaration, inventory.branch, facts, options);
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
   return { canonical, findings, settlement, inventory };
 }
@@ -541,7 +537,7 @@ function settle(options: {
 function settleOrder(
   room: ReturnType<typeof materializeAuthoredRoom>,
   declaration: NonNullable<(typeof catalog.rooms.byKey)[string]>,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   facts: (state: RewardBranchState['state']) => ReturnType<typeof factsWithHistory>,
   options: { readonly order: readonly string[]; readonly partial?: boolean },
 ) {
@@ -549,7 +545,7 @@ function settleOrder(
     throw new Error(detail);
   };
   const shop = (
-    current: readonly RewardBranchState[],
+    current: RewardBranchState | undefined,
     order: readonly string[] | undefined,
     completeAfterOrder: boolean,
   ) =>
@@ -564,8 +560,8 @@ function settleOrder(
     });
   if (!options.order.includes(INFERNAL_CONTRACT_ENTRY_KEY))
     return options.partial === true
-      ? shop(branches, options.order, false)
-      : shop(branches, undefined, true);
+      ? shop(branch, options.order, false)
+      : shop(branch, undefined, true);
   const at = options.order.indexOf(INFERNAL_CONTRACT_ENTRY_KEY);
   const before = options.order.slice(0, at);
   const after = options.order.slice(at + 1);
@@ -575,17 +571,17 @@ function settleOrder(
     readonly derivedEntryFrontiers?: readonly unknown[];
     readonly traitChildSettlements?: readonly unknown[];
   }[] = [];
-  let current = branches;
+  let current = branch;
   if (before.length > 0) {
     const first = shop(current, before, false);
     parts.push(first);
-    current = first.branches;
+    current = first.branch;
   }
   const pickup = settleInfernalContractPedestalPickup({
     catalog,
     room,
     declaration,
-    sourceBranch: singleBranch(current),
+    sourceBranch: current,
     historySequence: 4,
     facts,
   });
@@ -595,7 +591,7 @@ function settleOrder(
     derivedEntryFrontiers: pickup.emissions.derivedEntryFrontiers,
     traitChildSettlements: pickup.emissions.traitChildSettlements,
   });
-  current = branchList(pickup.branch);
+  current = pickup.branch;
   const last = shop(current, after, options.partial !== true);
   parts.push(last);
   return Object.freeze({
@@ -652,7 +648,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       contract: true,
       travel: true,
     });
-    expect(contractOnly.settlement.branches).toHaveLength(1);
+    expect(contractOnly.settlement.branch).toBeDefined();
     expect(
       contractOnly.settlement.derivedEntryFrontiers?.filter(
         (entry) => entry.kind === 'travelDealRefill',
@@ -660,7 +656,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
     ).toEqual([]);
     expect(contractOnly.settlement.roleFrontiers?.[0]?.source.instanceProvenance).toBe('free');
     expect(
-      contractOnly.settlement.branches[0]?.state.traitHistory?.equippedTraits.InfernalContractBoon,
+      contractOnly.settlement.branch?.state.traitHistory?.equippedTraits.InfernalContractBoon,
     ).not.toHaveProperty('rarity');
   });
 
@@ -698,7 +694,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
     const declaration = catalog.rooms.byKey.F_PreBoss01;
     if (declaration === undefined) throw new Error('missing F Preboss declaration');
     const shopKey = semanticAddressKey(first.canonical.origin);
-    const firstPending = first.settlement.branches[0]?.state.pendingShops[shopKey];
+    const firstPending = first.settlement.branch?.state.pendingShops[shopKey];
     const goldFrontier = first.settlement.derivedEntryFrontiers?.find(
       (entry) => entry.kind === 'echoDoubleShopReward',
     );
@@ -718,18 +714,18 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       catalog,
       room: first.canonical,
       declaration,
-      sourceBranch: singleBranch(first.settlement.branches),
+      sourceBranch: first.settlement.branch,
       historySequence: 5,
       facts,
     });
     const interleaved = {
-      branches: branchList(pickup.branch),
+      branch: pickup.branch,
       roleFrontiers: pickup.emissions.acquisitionRoleFrontiers,
     };
-    const interleavedPending = interleaved.branches[0]?.state.pendingShops[shopKey];
+    const interleavedPending = interleaved.branch?.state.pendingShops[shopKey];
     expect(interleavedPending?.goldMaterialization).toBe(goldMaterialization);
     expect(interleavedPending?.travelRefill?.generationFacts).toBe(travelGenerationFacts);
-    expect(goldFrontier.branchesBeforeEntry[0]?.state.traitHistory?.events).toContainEqual(
+    expect(goldFrontier.beforeEntry?.state.traitHistory?.events).toContainEqual(
       expect.objectContaining({
         kind: 'traitRemoval',
         acquisitionPoint: 'shopDuplicateMaterialized',
@@ -742,7 +738,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
     ).toBe(true);
 
     const completed = completePendingShopAcquisitionSite(
-      singleBranch(interleaved.branches),
+      interleaved.branch,
       first.canonical.origin,
     );
     expect(completed?.state.pendingShops[shopKey]).toBeUndefined();
@@ -776,7 +772,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
         unresolvedContract: true,
       });
       expect([...uncollected.findings.values()], contractRewardType).toEqual([]);
-      expect(uncollected.settlement.branches).toHaveLength(1);
+      expect(uncollected.settlement.branch).toBeDefined();
     }
     expect([...settle({ order: [], missingContract: true }).findings.values()]).toEqual([]);
   });
@@ -846,7 +842,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       travelChild: refillReward,
     });
     expect([...purchased.findings.values()]).toEqual([]);
-    expect(purchased.settlement.branches).toHaveLength(1);
+    expect(purchased.settlement.branch).toBeDefined();
     expect(
       purchased.settlement.roleFrontiers?.find(
         (frontier) => frontier.settlement.entry.entryKey === 'travelDealRefill',
@@ -952,7 +948,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
     const refillReward = authoredDerivedReward(refill, { rewardType: 'MaxManaDrop' });
     expect(refill).toMatchObject({ sourceOfferKey: 'Minor', slotIndex: 2 });
     expect(
-      derived.settlement.branches[0]?.state.traitHistory?.equippedTraits.EchoDoubleShop,
+      derived.settlement.branch?.state.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeDefined();
 
     const source = derived.canonical.entryState?.offers.find(
@@ -984,7 +980,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       settled.settlement.roleFrontiers?.map((frontier) => frontier.settlement.entry.entryKey),
     ).toEqual(['Minor', 'MajorNonBoon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, 'travelDealRefill']);
     expect(
-      settled.settlement.branches[0]?.state.traitHistory?.equippedTraits.EchoDoubleShop,
+      settled.settlement.branch?.state.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
     expect(
       settled.settlement.derivedEntryFrontiers?.filter(
@@ -1023,11 +1019,9 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
     expect(rejected.settlement.derivedEntryFrontiers ?? []).not.toContainEqual(
       expect.objectContaining({ kind: 'echoDoubleShopReward' }),
     );
+    expect(travel?.beforeEntry?.state.traitHistory?.equippedTraits.EchoDoubleShop).toBeDefined();
     expect(
-      travel?.branchesBeforeEntry[0]?.state.traitHistory?.equippedTraits.EchoDoubleShop,
-    ).toBeDefined();
-    expect(
-      travel?.branchesBeforeEntry[0]?.state.traitHistory?.events.filter(
+      travel?.beforeEntry?.state.traitHistory?.events.filter(
         (event) => event.kind === 'traitRemoval',
       ),
     ).toEqual([]);
@@ -1066,7 +1060,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       settled.settlement.roleFrontiers?.map((frontier) => frontier.settlement.entry.entryKey),
     ).toEqual(['Minor', 'travelDealRefill', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]);
     expect(
-      settled.settlement.branches[0]?.state.traitHistory?.equippedTraits.EchoDoubleShop,
+      settled.settlement.branch?.state.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
   });
 
@@ -1077,9 +1071,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
     );
     if (refill === undefined) throw new Error('missing Minor-triggered refill');
     const refillReward = authoredDerivedReward(refill, { rewardType: 'SpellDrop' });
-    expect(
-      refill.branchesBeforeEntry[0]?.state.traitHistory?.equippedTraits.EchoDoubleShop,
-    ).toBeUndefined();
+    expect(refill.beforeEntry?.state.traitHistory?.equippedTraits.EchoDoubleShop).toBeUndefined();
     const source = derived.canonical.entryState?.offers.find((offer) => offer.offerKey === 'Minor');
     if (source === undefined) throw new Error('missing Minor Shop source');
     const duplicateOffer = echoShopDuplicateOffer(catalog, source.offer);
@@ -1106,7 +1098,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       settled.settlement.roleFrontiers?.map((frontier) => frontier.settlement.entry.entryKey),
     ).toEqual(['Minor', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, 'travelDealRefill']);
     expect(
-      settled.settlement.branches[0]?.state.traitHistory?.equippedTraits.EchoDoubleShop,
+      settled.settlement.branch?.state.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
     expect(
       settled.settlement.derivedEntryFrontiers?.filter(
@@ -1158,9 +1150,9 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
         roomGameName: 'Q_PreBoss01',
       });
       expect([...settled.findings.values()]).toEqual([]);
-      expect(settled.settlement.branches).toHaveLength(1);
+      expect(settled.settlement.branch).toBeDefined();
       expect(
-        settled.settlement.branches[0]?.traitEvaluations
+        settled.settlement.branch?.traitEvaluations
           ?.filter((evaluation) => evaluation.acquisitionRole === 'source')
           .map((evaluation) => evaluation.source.boonRarityFacts?.itemOverride),
       ).toEqual([
@@ -1223,10 +1215,10 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
         frontier.address.entryKey === 'travelDealRefill',
     );
     expect(
-      generation?.branchesBeforeEntry[0]?.state.traitHistory?.equippedTraits.HestiaWeaponBoon,
+      generation?.beforeEntry?.state.traitHistory?.equippedTraits.HestiaWeaponBoon,
     ).toBeUndefined();
     expect(
-      acquisition?.branchesBeforeEntry[0]?.state.traitHistory?.equippedTraits.HestiaWeaponBoon,
+      acquisition?.beforeEntry?.state.traitHistory?.equippedTraits.HestiaWeaponBoon,
     ).toBeDefined();
     expect(
       acquisition?.evaluateOffer?.({
@@ -1235,7 +1227,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       }).supported,
     ).toBe(true);
     expect(
-      result.settlement.branches[0]?.state.traitHistory?.equippedTraits.ZeusSpecialBoon,
+      result.settlement.branch?.state.traitHistory?.equippedTraits.ZeusSpecialBoon,
     ).toBeDefined();
   });
 
@@ -1264,12 +1256,10 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
     });
     const result = settle({ order: ['Boon'], shopOfferOverrides: { Boon: hermesTravel } });
     expect([...result.findings.values()]).toEqual([]);
-    expect(result.settlement.branches[0]?.state.rewardHistory.lootTypeHistory.HermesUpgrade).toBe(
-      1,
+    expect(result.settlement.branch?.state.rewardHistory.lootTypeHistory.HermesUpgrade).toBe(1);
+    expect(result.settlement.branch?.state.traitHistory?.equippedTraits.RestockBoon?.rarity).toBe(
+      'Epic',
     );
-    expect(
-      result.settlement.branches[0]?.state.traitHistory?.equippedTraits.RestockBoon?.rarity,
-    ).toBe('Epic');
     expect(
       result.settlement.derivedEntryFrontiers?.some(
         (entry) => entry.kind === 'travelDealRefill' || entry.kind === 'travelDealPlaceholder',
@@ -1290,9 +1280,9 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
           contractRewardType === 'TalentDrop' || contractRewardType === 'TalentBigDrop',
       });
       expect([...result.findings.values()]).toEqual([]);
-      expect(result.settlement.branches).toHaveLength(1);
-      expect(result.settlement.branches[0]?.state.keepsakes.timePiece?.remainingCharges).toBe(3);
-      expect(result.settlement.branches[0]?.events).toContainEqual(
+      expect(result.settlement.branch).toBeDefined();
+      expect(result.settlement.branch?.state.keepsakes.timePiece?.remainingCharges).toBe(3);
+      expect(result.settlement.branch?.events).toContainEqual(
         expect.objectContaining({ kind: 'conversionToGold' }),
       );
     },
@@ -1310,10 +1300,10 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       'timePieceConversionUnavailable',
       'timePieceConversionUnavailable',
     ]);
-    expect(result.settlement.branches).toHaveLength(1);
-    expect(result.settlement.branches[0]?.state.keepsakes.timePiece?.remainingCharges).toBe(4);
+    expect(result.settlement.branch).toBeDefined();
+    expect(result.settlement.branch?.state.keepsakes.timePiece?.remainingCharges).toBe(4);
     expect(
-      result.settlement.branches[0]?.events.some((event) => event.kind === 'conversionToGold'),
+      result.settlement.branch?.events.some((event) => event.kind === 'conversionToGold'),
     ).toBe(false);
   });
 
@@ -1324,7 +1314,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       contractRewardType: 'BlindBoxLoot',
       contractBlindBoxSource: 'HermesUpgrade',
     });
-    expect(result.settlement.branches).toEqual([]);
+    expect(result.settlement.branch).toBeUndefined();
     expect([...result.findings.values()].map((entry) => entry.finding.code)).toContain(
       'rewardAcquisitionUnavailable',
     );
@@ -1506,7 +1496,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       shopOfferOverrides: { MixedProgress1: maxHealth, MixedProgress2: maxMana },
     });
     expect([...settled.findings.values()]).toEqual([]);
-    expect(settled.settlement.branches).toHaveLength(1);
+    expect(settled.settlement.branch).toBeDefined();
   });
 
   it.each([['Q Shop', 'Q_PreBoss01', 4, 'Survival']] as const)(
@@ -1524,9 +1514,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
           ),
         },
       });
-      expect(
-        result.settlement.branches[0]?.state.rewardHistory.consumableRecord.LastStandDrop,
-      ).toBe(1);
+      expect(result.settlement.branch?.state.rewardHistory.consumableRecord.LastStandDrop).toBe(1);
     },
   );
 
@@ -1543,7 +1531,7 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       },
     });
     expect(
-      result.settlement.branches[0]?.state.rewardHistory.consumableRecord.LastStandDrop,
+      result.settlement.branch?.state.rewardHistory.consumableRecord.LastStandDrop,
     ).toBeUndefined();
   });
 
@@ -1574,6 +1562,6 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
       travelChild: refillPreferred,
       shopOfferOverrides: { Survival: preferred },
     });
-    expect(settled.settlement.branches).toHaveLength(1);
+    expect(settled.settlement.branch).toBeDefined();
   });
 });

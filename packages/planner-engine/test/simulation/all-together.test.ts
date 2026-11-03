@@ -215,14 +215,12 @@ describe('All Together direct trait settlement', () => {
     const findings = new Map();
     const settled = settleOwnedAcquisitionSite(
       catalog,
-      [
-        installHexTree(
-          catalog,
-          branch(history),
-          'SpellPolymorphTrait',
-          createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait'),
-        ),
-      ],
+      installHexTree(
+        catalog,
+        branch(history),
+        'SpellPolymorphTrait',
+        createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait'),
+      ),
       {
         siteOwner: createOccurrenceAddress(biome, occurrenceId),
         pointKey: 'roomRewardPickup',
@@ -243,25 +241,23 @@ describe('All Together direct trait settlement', () => {
       (state) => factsWithHistory(rewardFacts(), state.rewardHistory, new Set()),
     );
     mergeRewardFindingEmissions(findings, settled.findingEmissions);
-    expect(settled.branches).toHaveLength(1);
+    expect(settled.branch).toBeDefined();
     expect(findings.size).toBe(0);
     expect(
-      settled.branches[0]?.state.traitHistory?.events
+      settled.branch?.state.traitHistory?.events
         .filter((event) => event.kind === 'directTraitGrant')
         .map((event) => event.traitKey),
     ).toEqual(Object.values(firstResult));
-    expect(settled.branches[0]?.state.hexProgress.godSentAdded).toBe(true);
+    expect(settled.branch?.state.hexProgress.godSentAdded).toBe(true);
 
     const nonmatching = settleOwnedAcquisitionSite(
       catalog,
-      [
-        installHexTree(
-          catalog,
-          branch(history),
-          'SpellTransformTrait',
-          createDefaultAuthoredHexTree(catalog, 'SpellTransformTrait'),
-        ),
-      ],
+      installHexTree(
+        catalog,
+        branch(history),
+        'SpellTransformTrait',
+        createDefaultAuthoredHexTree(catalog, 'SpellTransformTrait'),
+      ),
       {
         siteOwner: createOccurrenceAddress(biome, occurrenceId),
         pointKey: 'roomRewardPickup',
@@ -278,7 +274,7 @@ describe('All Together direct trait settlement', () => {
       },
       (state) => factsWithHistory(rewardFacts(), state.rewardHistory, new Set()),
     );
-    expect(nonmatching.branches[0]?.state.hexProgress.godSentAdded).toBe(false);
+    expect(nonmatching.branch?.state.hexProgress.godSentAdded).toBe(false);
   });
 
   it('publishes the exact post-outer checkpoint when an ordinary reward child blocks', () => {
@@ -288,7 +284,7 @@ describe('All Together direct trait settlement', () => {
     const findings = new Map();
     const settled = settleOwnedAcquisitionSite(
       catalog,
-      [branch(history)],
+      branch(history),
       {
         siteOwner: createOccurrenceAddress(biome, occurrenceId),
         pointKey: 'roomRewardPickup',

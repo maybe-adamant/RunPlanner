@@ -52,7 +52,7 @@ when they own one chronological or atomic invariant.
 | [First blocking region](#first-blocking-region)                   | The earliest atomic region holding a finding; its findings are retained and later-region findings withheld          |
 | [Authoring readiness](#authoring-readiness)                       | Which regions stay editable for required incompleteness, independent of the exact assessment stop                   |
 | [Horizon](#authoring-readiness)                                   | The normalized boundary after the region the user must be able to repair; the first locked region lies past it      |
-| [Settlement handoff](#settlement-handoffs)                        | A complete settlement product, branches with their findings and frontiers, merged once at its chronological handoff |
+| [Settlement handoff](#settlement-handoffs)                        | A complete settlement product, the one state it leaves, with its findings and frontiers, merged once at its handoff |
 | [Run-state snapshot](#run-state-snapshots)                        | A read-only projection of the folded state captured at a checkpoint, never a second simulation                      |
 | [Canonical vs retained product](#canonical-and-retained-products) | Only a complete-valid biome publishes a canonical product; otherwise the reached prefix is retained and assessed    |
 
@@ -417,19 +417,19 @@ generation and application against current history remain distinct.
 
 ### Complete products, not shared side effects
 
-A settlement result is more than its surviving branches: ordered findings,
-entry and role frontiers, derived-entry frontiers, trait-child checkpoints and
-timeline facts travel with the branches when produced. Callers merge once at the chronological handoff, preserving distinct
-evidence from divergent cohorts.
+A settlement result is more than the state it leaves: ordered findings, entry
+and role frontiers, derived-entry frontiers, trait-child checkpoints and
+timeline facts travel with that state, or with its absence once a block stops
+it. Callers merge once at the chronological handoff.
 
 Site traversal owns entry order and unpicked candidate probes. Conversion
-generation returns replacement sources, roles, branches and findings. The role
+generation returns its replacement source, roles, state and findings. The role
 coordinator owns immediate recursion versus deferred pickups. Neither passes
 a mutable accumulator into the other or replays settlement to recover a lost
 frontier.
 
 For example, a reached All Together child with no target needs both its finding
-and exact pre-effect context. Returning only an outer successful branch loses
+and exact pre-effect context. Returning only an outer successful state loses
 repair context. Returning only the finding allows navigation but leaves the
 picker unable to propose a correction. The unresolved effect must not enter
 history while its exact repair contact remains available.
@@ -442,8 +442,9 @@ acquisition must not be conflated.
 ### Shop settlement
 
 Shop inventory generation and acquisition settlement are different products.
-The ordered Shop coordinator retains inventory witnesses, purchase cohorts,
-branch survival and pending state across interleaved actions.
+The ordered Shop coordinator retains the inventory witness, the reached
+purchase state and pending state across interleaved actions; an inventory with
+more than one generation witness is a contract failure.
 
 Travel Deal uses its settled triggering purchase and post-purchase generation
 facts. Echo Gold consumes its use and registers the duplicate as a pending
@@ -509,7 +510,7 @@ capability answers what can replace it at the exact pre-effect frontier.
 They use the same policy but are not interchangeable products.
 
 All offer options are assessed against the same immutable generation-time
-context, while selected effects settle against the current branch;
+context, while selected effects settle against the current state;
 unselected alternatives do not equip traits. Selected children, Hex effects
 and Concave Stone residuals return complete products to their coordinator.
 Structural child discovery and alternative probes do not become another
@@ -597,7 +598,8 @@ Gold duplicate findings belong to their acquisition entry, and a Travel Deal
 refill inventory finding to the refill offer. Inventory generation failure
 belongs to the Shop's Overview with the relevant slots in evidence; only the
 close-time Echo Gold pickup placement finding is Shop-wide. A purchase order
-that loses every branch without an entry finding is a broken engine contract.
+that loses the reached state without an entry finding is a broken engine
+contract.
 A sequence failure belongs to chronology, not every supported sibling. Missing
 trait or target authorship retains the exact child finding rather than an
 additional generic purchase failure.

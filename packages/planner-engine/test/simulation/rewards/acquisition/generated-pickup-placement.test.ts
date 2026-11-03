@@ -109,7 +109,7 @@ it('matches clocked evidence to the reached maturity instead of temporally accum
     historySequence: 7,
     rewardTypes: ['StackUpgrade'],
     encounterPhaseKey: 'combat1',
-    branchesBeforeEntry: [branch],
+    beforeEntry: branch,
   };
   const assess = (
     reached: RewardBranchState | undefined,

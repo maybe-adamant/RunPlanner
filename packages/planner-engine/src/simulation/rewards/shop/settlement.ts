@@ -27,7 +27,7 @@ import {
 import { isAcquisitionAuthorshipMissingFinding } from '../../model';
 import { ownerRegion, type FindingRegionEntry } from '../../finding-regions';
 
-import { freezeRecord, singleBranch, type RewardBranchState } from '../branch-primitives';
+import { freezeRecord, type RewardBranchState } from '../branch-primitives';
 import type { PendingShopGoldMaterialization, PendingShopPaidOffer } from '../../state/model';
 import { type ReachedTraitChildCheckpoint } from '../trait-settlement/coordinator';
 import {
@@ -59,7 +59,7 @@ import {
 
 /** Settles optional Shop offer entries at the exact post-outgoing roomExit site. */
 export function settleShopAcquisitionSite(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   context: ShopProcessingContext,
 ): AcquisitionSettlementProduct {
   const findings = new Map<string, FindingRegionEntry>();
@@ -139,8 +139,7 @@ export function settleShopAcquisitionSite(
     goldMaterialization?: GoldMaterialization;
   };
   type GoldMaterialization = PendingShopGoldMaterialization;
-  const executions: ShopExecution[] = [];
-  for (const branch of branches) {
+  const openExecution = (branch: RewardBranchState): ShopExecution => {
     const pending = branch.state.pendingShops[semanticAddressKey(room.origin)];
     if (pending?.profileKey !== profile.key) {
       return fail(
@@ -151,7 +150,7 @@ export function settleShopAcquisitionSite(
       branch.pendingShopContinuations[semanticAddressKey(room.origin)]?.travelRefill;
     if (pending.travelRefill !== undefined && capability === undefined)
       return fail(`${room.gameName} lost its Travel Deal continuation`);
-    executions.push({
+    return {
       candidate: branch,
       witness: pending.witness,
       remainingSlotIndexes:
@@ -185,8 +184,10 @@ export function settleShopAcquisitionSite(
       ...(pending.goldMaterialization === undefined
         ? {}
         : { goldMaterialization: pending.goldMaterialization }),
-    });
-  }
+    };
+  };
+  /** The purchase walk at the reached state; a purchase that fails ends it. */
+  let execution = branch === undefined ? undefined : openExecution(branch);
   const eligibleGoldSourceOfferKeys = (): readonly string[] => {
     const travel = entry.travelDealRefill;
     return eligibleShopGoldSourceOfferKeys(
@@ -252,7 +253,7 @@ export function settleShopAcquisitionSite(
         ? {}
         : { authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys }),
     });
-    const current = Object.freeze([execution.candidate]);
+    const current = execution.candidate;
     const settled = rewardSourceResolvesAtAcquisition(catalog, offer.offer)
       ? settleAcquisitionResolvedReward(
           catalog,
@@ -286,11 +287,11 @@ export function settleShopAcquisitionSite(
     traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
     for (const settledEntry of settled.entries)
       recordRoles(offer.offerKey, settledEntry.acquisitionRoles);
-    if (settled.branches.length !== 1) {
+    if (settled.branch === undefined) {
       if (settled.findingEmissions.length > 0) entryPurchaseFailureRecorded = true;
       return false;
     }
-    execution.candidate = settled.branches[0]!;
+    execution.candidate = settled.branch;
     return true;
   };
 
@@ -303,9 +304,9 @@ export function settleShopAcquisitionSite(
           derivedEntryFrontiers.splice(index, 1);
       }
     }
-    const agreementBranch = singleBranch(executions.map(({ candidate }) => candidate));
-    const survivors: ShopExecution[] = [];
-    for (const execution of executions) {
+    if (execution === undefined) continue;
+    const agreementBranch = execution.candidate;
+    const settleEntry = (execution: ShopExecution): ShopExecution | undefined => {
       if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) {
         const refill = execution.travelRefill;
         const inventory = entry.travelDealRefill;
@@ -321,7 +322,7 @@ export function settleShopAcquisitionSite(
             ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
             context.findingChronology ?? historyChronology(historySequence),
           );
-          continue;
+          return undefined;
         }
         const slot = profile.slots.values[refill.data.slotIndex]!;
         const group = profile.groups.byKey[slot.groupKey]!;
@@ -346,7 +347,7 @@ export function settleShopAcquisitionSite(
             ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
             context.findingChronology ?? historyChronology(historySequence),
           );
-          continue;
+          return undefined;
         }
         {
           const option = exactOption;
@@ -397,11 +398,10 @@ export function settleShopAcquisitionSite(
               bindings,
               agreementBranch,
             )
-          ) {
-            survivors.push(refillExecution);
-          }
+          )
+            return refillExecution;
         }
-        continue;
+        return undefined;
       }
 
       if (entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY) {
@@ -420,12 +420,12 @@ export function settleShopAcquisitionSite(
             ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
             context.findingChronology ?? historyChronology(historySequence),
           );
-          continue;
+          return undefined;
         }
         if (rewardSourceResolvesAtAcquisition(catalog, materialization.sourceOffer.offer)) {
           const settled = settleAcquisitionResolvedReward(
             catalog,
-            Object.freeze([execution.candidate]),
+            execution.candidate,
             {
               siteOwner: room.origin,
               pointKey: 'roomExit',
@@ -472,13 +472,13 @@ export function settleShopAcquisitionSite(
               }),
             ),
           );
-          if (settled.branches.length === 1) {
-            execution.candidate = settled.branches[0]!;
-            survivors.push(execution);
+          if (settled.branch !== undefined) {
+            execution.candidate = settled.branch;
+            return execution;
           } else if (settled.findingEmissions.length > 0) {
             entryPurchaseFailureRecorded = true;
           }
-          continue;
+          return undefined;
         }
         if (child === null) {
           addRewardFinding(
@@ -487,7 +487,7 @@ export function settleShopAcquisitionSite(
             ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
             context.findingChronology ?? historyChronology(historySequence),
           );
-          continue;
+          return undefined;
         }
         if (
           !echoShopDuplicateOfferMatches(catalog, materialization.sourceOffer.offer, child.offer)
@@ -506,13 +506,13 @@ export function settleShopAcquisitionSite(
             ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
             context.findingChronology ?? historyChronology(historySequence),
           );
-          continue;
+          return undefined;
         }
         const source = materialization.sourceOffer;
         const duplicateActionOwner = actionOwnerForOffer(entryKey);
         const settled = settleOwnedAcquisitionSite(
           catalog,
-          Object.freeze([execution.candidate]),
+          execution.candidate,
           {
             siteOwner: room.origin,
             pointKey: 'roomExit',
@@ -563,13 +563,13 @@ export function settleShopAcquisitionSite(
         mergeRewardFindingEmissions(findings, settled.findingEmissions);
         roleFrontiers.push(...(settled.roleFrontiers ?? []));
         traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
-        if (settled.branches.length === 1) {
-          execution.candidate = settled.branches[0]!;
-          survivors.push(execution);
+        if (settled.branch !== undefined) {
+          execution.candidate = settled.branch;
+          return execution;
         } else if (settled.findingEmissions.length > 0) {
           entryPurchaseFailureRecorded = true;
         }
-        continue;
+        return undefined;
       }
 
       // Declared slot index; validly empty slots emit no inventory offer.
@@ -598,7 +598,7 @@ export function settleShopAcquisitionSite(
           ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
           context.findingChronology ?? historyChronology(historySequence),
         );
-        continue;
+        return undefined;
       }
       const bindings = purchase.acquisitionLifecycle;
       const optionKey = execution.witness.optionKeys[slotIndex];
@@ -638,7 +638,7 @@ export function settleShopAcquisitionSite(
       derivedEntryFrontiers.push(...gold.derivedEntryFrontiers);
       if (!settleOffer(execution, paidOffer, profile.key, 'paid', bindings, agreementBranch)) {
         entryPurchaseFailureRecorded = true;
-        continue;
+        return undefined;
       }
       execution.remainingSlotIndexes = purchase.remainingSlotIndexes;
       if (!execution.firstNormalPurchaseSeen) {
@@ -693,7 +693,6 @@ export function settleShopAcquisitionSite(
               room.origin.occurrenceId,
               TRAVEL_DEAL_REFILL_ENTRY_KEY,
             );
-            const branchesBeforeEntry = Object.freeze([execution.candidate]);
             derivedEntryFrontiers.push(
               Object.freeze({
                 address,
@@ -702,7 +701,7 @@ export function settleShopAcquisitionSite(
                 sourceOfferKey: inventoryOffer.offerKey,
                 slotIndex,
                 rewardTypes: travelRefill.data.rewardTypes,
-                branchesBeforeEntry,
+                beforeEntry: execution.candidate,
                 evaluateOffer: travelRefill.capability.evaluateOffer,
                 evaluateShopOption: travelRefill.capability.evaluateShopOption,
               }),
@@ -730,12 +729,12 @@ export function settleShopAcquisitionSite(
           }
         }
       }
-      survivors.push(execution);
-    }
-    executions.splice(0, executions.length, ...survivors);
+      return execution;
+    };
+    execution = settleEntry(execution);
   }
 
-  for (const execution of executions) {
+  if (execution !== undefined) {
     if (
       (context.completeAfterOrder === true || context.order === undefined) &&
       !goldPickupPlaced &&
@@ -763,7 +762,7 @@ export function settleShopAcquisitionSite(
             TRAVEL_DEAL_REFILL_ENTRY_KEY,
           ),
           kind: 'travelDealPlaceholder' as const,
-          branchesBeforeEntry: Object.freeze([execution.candidate]),
+          beforeEntry: execution.candidate,
         }),
       );
     }
@@ -773,71 +772,66 @@ export function settleShopAcquisitionSite(
           address: createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY),
           kind: 'echoDoubleShopPlaceholder' as const,
           eligibleSourceOfferKeys: eligibleGoldSourceOfferKeys(),
-          branchesBeforeEntry: Object.freeze([execution.candidate]),
+          beforeEntry: execution.candidate,
         }),
       );
     }
   }
 
-  const next: RewardBranchState[] = [];
-  for (const execution of executions) {
-    const { candidate } = execution;
-    const shopKey = semanticAddressKey(room.origin);
-    if (context.completeAfterOrder === true || context.order === undefined) {
-      next.push(closeShop(candidate, shopKey));
-      continue;
-    }
-    next.push(
-      Object.freeze({
-        ...candidate,
-        pendingShopContinuations: freezeRecord({
-          ...candidate.pendingShopContinuations,
-          [shopKey]: Object.freeze(
-            execution.travelRefill === undefined
-              ? {}
-              : {
-                  travelRefill: execution.travelRefill.capability,
-                },
-          ),
-        }),
-        state: Object.freeze({
-          ...candidate.state,
-          pendingShops: freezeRecord({
-            ...candidate.state.pendingShops,
-            [shopKey]: Object.freeze({
-              profileKey: profile.key,
-              witness: execution.witness,
-              remainingSlotIndexes: execution.remainingSlotIndexes,
-              travelActiveAtEntry: execution.travelActiveAtEntry,
-              ...(execution.goldActiveAtEntry === undefined
-                ? {}
-                : { goldActiveAtEntry: execution.goldActiveAtEntry }),
-              firstNormalPurchaseSeen: execution.firstNormalPurchaseSeen,
-              ...(execution.travelRefill === undefined
-                ? {}
-                : { travelRefill: execution.travelRefill.data }),
-              ...(execution.goldMaterialization === undefined
-                ? {}
-                : { goldMaterialization: execution.goldMaterialization }),
+  const shopKey = semanticAddressKey(room.origin);
+  const next =
+    execution === undefined
+      ? undefined
+      : context.completeAfterOrder === true || context.order === undefined
+        ? closeShop(execution.candidate, shopKey)
+        : Object.freeze({
+            ...execution.candidate,
+            pendingShopContinuations: freezeRecord({
+              ...execution.candidate.pendingShopContinuations,
+              [shopKey]: Object.freeze(
+                execution.travelRefill === undefined
+                  ? {}
+                  : {
+                      travelRefill: execution.travelRefill.capability,
+                    },
+              ),
             }),
-          }),
-        }),
-      }),
-    );
-  }
+            state: Object.freeze({
+              ...execution.candidate.state,
+              pendingShops: freezeRecord({
+                ...execution.candidate.state.pendingShops,
+                [shopKey]: Object.freeze({
+                  profileKey: profile.key,
+                  witness: execution.witness,
+                  remainingSlotIndexes: execution.remainingSlotIndexes,
+                  travelActiveAtEntry: execution.travelActiveAtEntry,
+                  ...(execution.goldActiveAtEntry === undefined
+                    ? {}
+                    : { goldActiveAtEntry: execution.goldActiveAtEntry }),
+                  firstNormalPurchaseSeen: execution.firstNormalPurchaseSeen,
+                  ...(execution.travelRefill === undefined
+                    ? {}
+                    : { travelRefill: execution.travelRefill.data }),
+                  ...(execution.goldMaterialization === undefined
+                    ? {}
+                    : { goldMaterialization: execution.goldMaterialization }),
+                }),
+              }),
+            }),
+          });
   const settlementFindings = [...findings.values()].map((finding) => finding.finding);
   const stoppedOnlyForMissingAuthorship =
     settlementFindings.length > 0 &&
     settlementFindings.every(isAcquisitionAuthorshipMissingFinding);
-  // Every purchase that drops its branches explains itself on its own entry.
+  // Every purchase that drops the reached state explains itself on its own entry.
   if (
-    executions.length > 0 &&
-    next.length === 0 &&
+    branch !== undefined &&
+    next === undefined &&
     !entryPurchaseFailureRecorded &&
     !stoppedOnlyForMissingAuthorship
   )
     return fail(
-      `${room.gameName} purchases ${JSON.stringify(context.order ?? [])} lost every branch`,
+      `${room.gameName} purchases ${JSON.stringify(context.order ?? [])} lost the reached state`,
     );
   return Object.freeze({
     site,
@@ -876,7 +870,7 @@ export function settleShopAcquisitionSite(
         });
       }),
     ),
-    branches: Object.freeze(next),
+    branch: next,
     findingEmissions: Object.freeze([...findings.values()]),
     roleFrontiers: Object.freeze(roleFrontiers),
     derivedEntryFrontiers: Object.freeze(derivedEntryFrontiers),

@@ -104,12 +104,12 @@ describe('Gold Gold Gold duplicate production', () => {
     // Ashes first (spawning the 5-Ashes duplicate), then Rare Buried Treasure, then the duplicate.
     const result = echoGoldShop(['MajorNonBoon', 'Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranches: initializeTestRewardBranches().map((branch) => withTraits(branch, traits)),
+      initialBranch: initializeTestRewardBranches().map((branch) => withTraits(branch, traits))[0],
       offerOverrides: { MajorNonBoon: { rewardType: 'MetaCardPointsCommonDrop' } },
       rewardOverrides: { Boon: boon as never },
     });
     expect([...result.findings.values()]).toEqual([]);
-    const [branch] = result.settlement.branches;
+    const branch = result.settlement.branch;
     expect(branch?.state.traitHistory.equippedTraits.RoomRewardBonusBoon?.rarity).toBe('Rare');
     expect(branch?.state.rewardHistory.consumableRecord.MetaCardPointsCommonDrop).toBe(2);
     expect(branch?.state.rewardHistory.resourceGains).toEqual({ MetaCardPointsCommon: 10 });
