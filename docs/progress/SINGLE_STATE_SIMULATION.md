@@ -229,3 +229,15 @@ happen", never as alternative states carried forward or offered as a choice.
   every trait-settlement path; the build-time guard and equivalence lane are
   what make the collapse safe. Confirm no other splitter (beyond bag entries
   and cohort order) yields divergent trait history before step 3.
+
+## Release notes for merge
+
+- Schema 101 is a major bump, approved by the project owner. Saves from
+  schema 86 to 100 migrate to it on load.
+- Hub boards now draw their rewards in the game's door order. An older Ephyra
+  board that was valid only under another order loads with its findings. By
+  owner policy authored door rewards are never changed, so the migration does
+  not re-assign them.
+- A two-offer Ship wheel valid only with its offers the other way round has
+  them exchanged by the migration, unless the wheel sits behind an earlier
+  blocking stop: it is not judged and keeps its offers.
