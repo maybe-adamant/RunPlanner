@@ -142,17 +142,27 @@ const sameSave = (left: SaveCheckpoint, right: SaveCheckpoint) =>
 
 /**
  * A new profile's first attempt (run count 0) loads its opening room directly, never
- * visiting `Hub_PreRun`, so its first save is the entry save of the room after it.
+ * visiting `Hub_PreRun`, so its first save is the entry save of the room after it. Run
+ * count 0 at depth 1 is the whole discriminator: every room save's departure is its last
+ * history room, and the Hub is never in the history. A run of that count opened at its own
+ * `Hub_PreRun` start (`continuesHubStart`) is extended instead.
  */
 const isFreshStart = (checkpoint: SaveCheckpoint) =>
-  checkpoint.kind === 'entry' &&
-  checkpoint.runCount === 0 &&
-  depth(checkpoint) === 1 &&
-  checkpoint.departure?.name === checkpoint.history[0];
+  checkpoint.kind === 'entry' && checkpoint.runCount === 0 && depth(checkpoint) === 1;
+
+const isHubStart = (checkpoint: SaveCheckpoint) =>
+  checkpoint.kind === 'entry' && checkpoint.mapName === 'Hub_PreRun' && depth(checkpoint) === 0;
 
 const isRunStart = (checkpoint: SaveCheckpoint) =>
-  (checkpoint.kind === 'entry' && checkpoint.mapName === 'Hub_PreRun' && depth(checkpoint) === 0) ||
-  isFreshStart(checkpoint);
+  isHubStart(checkpoint) || isFreshStart(checkpoint);
+
+/** Whether the save continues an open run of its count that began at its Hub start. */
+const continuesHubStart = (run: OpenRun | undefined, checkpoint: SaveCheckpoint) =>
+  run !== undefined &&
+  run.runCount === checkpoint.runCount &&
+  run.checkpoints[0] !== undefined &&
+  isHubStart(run.checkpoints[0]) &&
+  !isHubStart(checkpoint);
 
 /**
  * The opening room's entry, read from the fresh start save: the opening room
@@ -253,6 +263,7 @@ export function advanceRecorder(state: RecorderState, observation: SaveObservati
     open !== undefined &&
     checkpoint.runCount === open.runCount &&
     isRunStart(checkpoint) &&
+    !continuesHubStart(open, checkpoint) &&
     !open.checkpoints.some((save) => sameSave(save, checkpoint));
   if (open !== undefined && checkpoint.runCount === open.runCount && !reset) {
     const next = extend(open, checkpoint);

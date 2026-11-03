@@ -157,6 +157,21 @@ describe('run recorder', () => {
     expect(record.outcome).toMatchObject({ kind: 'death', endingRoom: 'F_Combat02' });
   });
 
+  it('extends a run of count 0 begun at its Hub start: its depth-1 entry is no fresh start', () => {
+    const { state, closed } = feed(through(2, 0));
+    expect(closed).toEqual([]);
+    const run = state.runs.get(1)!;
+    expect(run).toMatchObject({ runCount: 0, attempt: 1 });
+    expect(run.checkpoints.map((save) => [save.kind, save.history.length])).toEqual([
+      ['entry', 0],
+      ['postReward', 0],
+      ['entry', 1],
+      ['postReward', 1],
+      ['entry', 2],
+    ]);
+    expect(run.checkpoints[0]!.mapName).toBe('Hub_PreRun');
+  });
+
   it('closes a run at the hub save of the dead hero', () => {
     const { state, closed } = feed([
       ...through(3),
