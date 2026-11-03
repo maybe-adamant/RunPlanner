@@ -9,7 +9,7 @@ export type PurchasePriceVenue =
       readonly itemKey: string;
       /** The roll the item was stocked in; the Travel Deal refill's is the roll it restocked. */
       readonly rollKey: string;
-      /** A bought Fateful Twist's result, when every reached branch granted it. */
+      /** A bought Fateful Twist's result, when the reached state granted it. */
       readonly twistResultKey?: string;
     }
   | {

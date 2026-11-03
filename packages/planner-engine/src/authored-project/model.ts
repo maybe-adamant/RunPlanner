@@ -136,8 +136,8 @@ export interface InfernalContractPedestalState {
  * entered and the reward drawn for it. A null field is not missing: the
  * simulation settles the room to the first eligible placeholder in the
  * declared set order (the no-draw Preboss first for main rooms), and the
- * reward to the type every branch can draw with the most entries left in the
- * placeholder's store on its scarcest branch (ties in declaration order), and
+ * reward to the type the reached state can draw with the most entries left in
+ * the placeholder's store (ties in declaration order), and
  * publishes that value. A pinned value never falls back. A pinned reward
  * requires a pinned room that draws one.
  */

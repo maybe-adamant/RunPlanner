@@ -10,7 +10,7 @@ export interface FindingRegionEntry {
   /** Evaluator-owned chronology for non-linear structures. */
   readonly chronology?: FindingChronology;
   readonly aggregate?: FindingAggregate;
-  /** Exact reached Pom contexts retained if later policy eliminates their branches. */
+  /** Exact reached Pom contexts, retained with the finding for its repair. */
   readonly levelResolutionEvaluations?: readonly ReachedLevelResolutionEvaluation[];
 }
 

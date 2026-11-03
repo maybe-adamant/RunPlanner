@@ -350,7 +350,7 @@ function resourcePointConflictReasons(
 
 /**
  * Derive the complete point/roll envelope after route chronology and reward
- * branches have been evaluated. This is the sole producer consumed by the
+ * settlement have been evaluated. This is the sole producer consumed by the
  * execution-plan assembler.
  */
 export function deriveResourceExecutionPolicy(

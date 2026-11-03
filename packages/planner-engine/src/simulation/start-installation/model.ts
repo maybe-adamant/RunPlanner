@@ -217,8 +217,7 @@ export interface StartRewardStore {
  */
 export interface StartRewardStores {
   /**
-   * Stores exact across every branch; untouched stores and stores that differ
-   * by branch stay native-fresh.
+   * Store contents at the reached state; untouched stores stay native-fresh.
    */
   readonly stores: readonly StartRewardStore[];
 }

@@ -233,7 +233,7 @@ export interface ExecutionPhantomExit {
   readonly reward?: {
     readonly rewardType: string;
     readonly storeKey: string;
-    /** Present only where every branch drew the same god. */
+    /** The drawn god, for a reward that carries one. */
     readonly source?: string;
     readonly spurnedSource?: string;
   };

@@ -191,7 +191,7 @@ export function countedBagReason(
 
 /**
  * Store membership, route scope and binding filters of a counted offer; they
- * hold for every branch.
+ * hold whatever the reached state.
  */
 export function staticCountedOfferExclusion(
   catalog: Catalog,

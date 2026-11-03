@@ -185,7 +185,7 @@ export interface RunStateSnapshot {
   readonly effects: RunStateEffects;
   readonly rewardStoreController: RunStateRewardStoreController;
   readonly bags: readonly DecisionRewardBagState[];
-  /** Store contents exact across every branch, untouched ones at initial counts. */
+  /** Store contents at the reached state, untouched ones at initial counts. */
   readonly rewardStores: StartRewardStores['stores'];
 }
 

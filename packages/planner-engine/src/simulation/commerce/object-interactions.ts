@@ -24,7 +24,7 @@ export interface WorldShopInteraction {
     /** Null while the item is blank; the pick then adds its chosen `value` to `command`. */
     readonly rewardType: string | null;
     readonly optionKey: string | null;
-    /** The items every reached branch can stock there, each ready as the command's `value`. */
+    /** The items the reached state can stock there, each ready as the command's `value`. */
     readonly values: readonly ShopOptionSelection[];
     readonly command: CommandOf<'PurchaseShopTravelDealRefill'>;
   };
@@ -45,9 +45,9 @@ export interface HermesShrineInteraction {
   readonly historySequence: number;
   /** Each stocked initial item not yet bought, in slot order. */
   readonly offers: readonly HermesShrineInteractionOffer[];
-  /** A rush made with Travel Deal has refilled its slot on every reached branch. */
+  /** A rush made with Travel Deal has refilled its slot at the reached state. */
   readonly travelDealRefillLive: boolean;
-  /** The live refill while it is unbought, with the rewards every branch can stock. */
+  /** The live refill while it is unbought, with the rewards the reached state can stock. */
   readonly travelDealRefill?: HermesShrineInteractionOffer & {
     readonly candidateRewardTypes: readonly string[];
   };
@@ -55,7 +55,7 @@ export interface HermesShrineInteraction {
 
 /** Why the Pedestal cannot be collected there. */
 export type ChampionItemCollectLock =
-  /** The pedestal did not spawn on every reached branch: Champion of Elysium is not held. */
+  /** The pedestal did not spawn: Champion of Elysium is not held. */
   'inactive';
 
 /** Whether the Contract pedestal's item can be collected at the end of the room's sequence. */

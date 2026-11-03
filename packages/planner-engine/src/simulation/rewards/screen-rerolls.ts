@@ -70,7 +70,7 @@ export function settleScreenRerolls(
  * Settles one Well or Pool reroll press of the given cost: it needs screen
  * rerolls enabled and something left to reroll, and spends from the run's
  * pool. The game refuses a press it cannot make, so a refused press spends
- * and draws nothing and nothing past it happens: no branch continues.
+ * and draws nothing and nothing past it happens: no state continues.
  */
 export function settleFeatureReroll(
   catalog: Catalog,

@@ -44,7 +44,7 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-/** An unordered collection in content order, so equal sets agree across branches. */
+/** An unordered collection in content order, so equal sets project identically. */
 function sorted<T>(items: readonly T[], key: (item: T) => string = stable): readonly T[] {
   return Object.freeze(
     items
@@ -412,8 +412,7 @@ function families(
   };
 }
 
-/** Reward stores exact across branches; a store no branch has drawn from stays native-fresh. */
-/** Store contents exact across branches, an untouched store at its initial counts. */
+/** Store contents at the reached state, an untouched store at its initial counts. */
 export function exactRewardStoreContents(
   catalog: Catalog,
   state: Pick<SimulationState, 'bags' | 'reached'>,
