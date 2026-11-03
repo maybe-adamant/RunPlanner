@@ -252,6 +252,14 @@ reproduces is reported with its nearest miss and the plan stops there.
      32/14/2/0, first mismatch r37 → r46. Fixture underworld-live's H Preboss
      box now opens on its screen's god: four screen refusals and a Pool
      refusal gone (bound tightened).
+   - Shop purchase order (I): the record keeps purchases in slot order, so
+     Echo's duplicate (the first paid purchase's) doubled whichever slot came
+     first. A purchase whose giver's screen picked a stamped trait now goes
+     in its giver's earliest stamp order; unstamped purchases keep their
+     positions. Raw 333's Preboss bought its Hammer before the Hera boon, and
+     Echo had doubled the boon, guessing a Hera screen and leaving the second
+     Hammer screen unused. Raw 333 17/13/2/8 → 23/17/0/0, no mismatch left.
+     Fixtures unchanged.
    - Conversions that share a solver's store (owner request). An Artificer
      replacement is one `RunProgress` draw, so it is searched with any solver
      reading that store across the same save window:

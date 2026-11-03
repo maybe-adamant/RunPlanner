@@ -727,7 +727,7 @@ function importShopPurchases(
     });
     return;
   }
-  for (const purchase of visit.store.purchases) {
+  for (const purchase of purchaseOrder(context, shop, visit.room, visit.store.purchases)) {
     const offerKey = slots[purchase.slot - 1]?.key;
     const offer =
       offerKey === undefined
@@ -761,6 +761,50 @@ function importShopPurchases(
       record: record(visit.roomIndex),
     });
   }
+}
+
+/**
+ * The record keeps purchases in slot order; a purchase whose giver's screen
+ * picked a stamped trait is ordered by its giver's earliest stamp, so Echo's
+ * duplicate follows the first purchase. Unstamped purchases keep their positions.
+ */
+function purchaseOrder<Purchase extends { readonly slot: number }>(
+  context: RunImportContext,
+  shop: ShopState,
+  room: RunRecordRoom,
+  purchases: readonly Purchase[],
+): readonly Purchase[] {
+  const profile = context.catalog.rewards.shops.byKey[shop.profileKey];
+  if (profile === undefined) return purchases;
+  const stamps = new Map<string, number>();
+  for (const screen of room.traitScreens) {
+    const chosen = screen.options.find((option) => option.chosen)?.name;
+    const time = room.traits.acquired.find((trait) => trait.name === chosen)?.worldTime;
+    if (time !== undefined && time < (stamps.get(screen.giver) ?? Infinity))
+      stamps.set(screen.giver, time);
+  }
+  const stampOf = (purchase: Purchase) => {
+    const slot = profile.slots.values[purchase.slot - 1];
+    const bought = slot === undefined ? undefined : shop.offers[slot.key];
+    const option =
+      slot === undefined || bought?.optionKey == null
+        ? undefined
+        : profile.groups.byKey[slot.groupKey]?.options.byKey[bought.optionKey];
+    const name =
+      option === undefined || bought?.reward == null
+        ? undefined
+        : purchaseInteractionName(option, bought.reward.offer);
+    return name === undefined ? undefined : stamps.get(name);
+  };
+  const timed = purchases.flatMap((purchase, index) =>
+    stampOf(purchase) === undefined ? [] : [index],
+  );
+  const sorted = timed
+    .map((index) => purchases[index]!)
+    .sort((left, right) => stampOf(left)! - stampOf(right)!);
+  const ordered = [...purchases];
+  timed.forEach((position, index) => (ordered[position] = sorted[index]!));
+  return ordered;
 }
 
 /** The pickup a purchased item spawns, by its record use name. */
