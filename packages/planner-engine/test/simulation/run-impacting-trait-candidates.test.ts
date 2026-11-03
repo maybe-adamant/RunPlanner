@@ -396,7 +396,7 @@ describe('run-impacting trait candidate contacts', () => {
     });
     const artifacts = createSteadyGrowthCandidateArtifacts(
       catalog,
-      new Map([[semanticAddressKey(outcome), Object.freeze([threshold])]]),
+      new Map([[semanticAddressKey(outcome), threshold]]),
     );
     expect(
       evaluateSteadyGrowthOutcomeCandidate(catalog, {} as never, {} as never, artifacts, {
@@ -407,8 +407,8 @@ describe('run-impacting trait candidate contacts', () => {
     ).toMatchObject({
       kind: 'steadyGrowthOutcome',
       result: {
+        requiredInterval: 6,
         eligibleTargetKeys: ['ApolloWeaponBoon'],
-        branchSupport: [false],
         selectedPossible: false,
       },
     });
@@ -420,7 +420,7 @@ describe('run-impacting trait candidate contacts', () => {
       }),
     ).toMatchObject({
       kind: 'steadyGrowthOutcome',
-      result: { branchSupport: [true], selectedPossible: true },
+      result: { selectedPossible: true },
     });
   });
 });

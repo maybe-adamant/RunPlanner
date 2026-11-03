@@ -106,12 +106,10 @@ the final project and its exact assembly.
   it lands keeps its finding.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
-  assembly with a settlement fault naming the owner. A
-  [timed outcome](TRAIT_OFFERS.md#timed-outcomes) whose reached branches
-  disagree on its landing is also a fault. A fault signals an engine defect,
-  not an authoring task: the application publishes it beside the assembly,
-  never as an editor finding; dev builds warn in the console and bug reports
-  carry the current one.
+  assembly with a settlement fault naming the owner. A fault signals an engine
+  defect, not an authoring task: the application publishes it beside the
+  assembly, never as an editor finding; dev builds warn in the console and bug
+  reports carry the current one.
 
 ```mermaid
 sequenceDiagram

@@ -117,6 +117,17 @@ function branchListShape(value: unknown): unknown {
     next.branches = [next.assessment];
     delete next.assessment;
   }
+  // Timed outcomes published their one threshold's facts as branch lists.
+  if ('requiredInterval' in value && 'progressBefore' in value && 'phaseKey' in value) {
+    next.requiredIntervals = [value.requiredInterval];
+    next.progressBefore = [value.progressBefore];
+    delete next.requiredInterval;
+  }
+  if ('transformationRarity' in value && 'progressBefore' in value && 'phaseKey' in value) {
+    next.transformationRarities = [value.transformationRarity];
+    next.progressBefore = [value.progressBefore];
+    delete next.transformationRarity;
+  }
   if (
     hasKeys(value, ['origin', 'historySequence', 'state']) ||
     hasKeys(value, ['owner', 'gameName', 'state'])
@@ -191,6 +202,18 @@ function candidateBranchShape(value: unknown): unknown {
       }
       case 'ransomAssessment':
         next.result = { assessments: [result.assessment], branchAgreement: true };
+        break;
+      case 'steadyGrowthOutcome': {
+        const { requiredInterval, ...rest } = result;
+        next.result = {
+          ...rest,
+          requiredIntervals: [requiredInterval],
+          branchSupport: [result.selectedPossible],
+        };
+        break;
+      }
+      case 'transcendentEmbryoOutcome':
+        next.result = { ...result, branchSupport: [result.selectedPossible] };
         break;
       case 'concaveStone':
         next.result = { branches: listOf(result.stone) };

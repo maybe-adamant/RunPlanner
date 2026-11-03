@@ -225,55 +225,34 @@ export function publishChronology(
     gorgonPhaseCandidates: accumulation.gorgonPhaseCandidates,
     nemesisRandomEventCandidates: accumulation.nemesisRandomEventCandidates,
     steadyGrowthOutcomes: Object.freeze(
-      [...accumulation.steadyGrowthCandidateContexts.entries()].flatMap(([key, thresholds]) => {
-        const landed = accumulation.steadyGrowthOutcomeAddresses.get(key);
-        const first = thresholds[0];
-        if (landed === undefined || first === undefined) return [];
-        return [
-          Object.freeze({
-            address: landed.address,
-            owner: landed.landing.owner,
-            sourceTraitKey: first.traitKey,
-            phaseKey: landed.landing.phaseKey,
-            ...(first.targetTraitKey === undefined ? {} : { targetTraitKey: first.targetTraitKey }),
-            requiredIntervals: Object.freeze(
-              thresholds.map((threshold) => threshold.requiredInterval),
-            ),
-            progressBefore: Object.freeze(
-              thresholds.map(
-                (threshold) =>
-                  threshold.before.equippedTraits[threshold.traitKey]?.steadyGrowthProgress ?? 0,
-              ),
-            ),
-          }),
-        ];
-      }),
+      [...accumulation.steadyGrowthOutcomes.values()].map(({ address, landing, threshold }) =>
+        Object.freeze({
+          address,
+          owner: landing.owner,
+          sourceTraitKey: threshold.traitKey,
+          phaseKey: landing.phaseKey,
+          ...(threshold.targetTraitKey === undefined
+            ? {}
+            : { targetTraitKey: threshold.targetTraitKey }),
+          requiredInterval: threshold.requiredInterval,
+          progressBefore:
+            threshold.before.equippedTraits[threshold.traitKey]?.steadyGrowthProgress ?? 0,
+        }),
+      ),
     ),
-    ...(accumulation.divergentOutcomeLandings.length === 0
-      ? {}
-      : { divergentOutcomeLandings: accumulation.divergentOutcomeLandings }),
     transcendentEmbryoOutcomes: Object.freeze(
-      [...accumulation.transcendentEmbryoCandidateContexts.entries()].flatMap(
-        ([key, thresholds]) => {
-          const landed = accumulation.transcendentEmbryoOutcomeAddresses.get(key);
-          const first = thresholds[0];
-          if (landed === undefined || first === undefined) return [];
-          const value = first.source.transformations[String(first.cycle)];
-          return [
-            Object.freeze({
-              address: landed.address,
-              owner: landed.landing.owner,
-              sourceBlessingKey: first.source.markedBlessingKey,
-              phaseKey: landed.landing.phaseKey,
-              ...(value === undefined ? {} : { value }),
-              transformationRarities: Object.freeze(
-                thresholds.map((threshold) => threshold.source.rarity),
-              ),
-              progressBefore: Object.freeze(
-                thresholds.map((threshold) => threshold.source.progress),
-              ),
-            }),
-          ];
+      [...accumulation.transcendentEmbryoOutcomes.values()].map(
+        ({ address, landing, threshold }) => {
+          const value = threshold.source.transformations[String(threshold.cycle)];
+          return Object.freeze({
+            address,
+            owner: landing.owner,
+            sourceBlessingKey: threshold.source.markedBlessingKey,
+            phaseKey: landing.phaseKey,
+            ...(value === undefined ? {} : { value }),
+            transformationRarity: threshold.source.rarity,
+            progressBefore: threshold.source.progress,
+          });
         },
       ),
     ),
@@ -321,11 +300,18 @@ export function publishChronology(
     ),
     steadyGrowthArtifacts: createSteadyGrowthCandidateArtifacts(
       catalog,
-      accumulation.steadyGrowthCandidateContexts,
+      new Map(
+        [...accumulation.steadyGrowthOutcomes].map(([key, { threshold }]) => [key, threshold]),
+      ),
     ),
     transcendentEmbryoArtifacts: createTranscendentEmbryoCandidateArtifacts(
       catalog,
-      accumulation.transcendentEmbryoCandidateContexts,
+      new Map(
+        [...accumulation.transcendentEmbryoOutcomes].map(([key, { threshold }]) => [
+          key,
+          threshold,
+        ]),
+      ),
     ),
     fountainRarityArtifacts: createFountainRarityCandidateArtifacts(
       accumulation.fountainRarityCandidateContexts,

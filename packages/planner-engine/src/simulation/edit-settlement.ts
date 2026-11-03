@@ -89,11 +89,7 @@ function sameObligation(
   );
 }
 
-/**
- * An engine contract failure beside the settled assembly: a repair the
- * settlement refused to repeat, or a timed outcome whose reached branches
- * disagree on its landing.
- */
+/** An engine contract failure beside the settled assembly: a repair the settlement refused to repeat. */
 export interface SettlementFault {
   readonly key: string;
   readonly owner: SemanticAddress;
@@ -102,17 +98,6 @@ export interface SettlementFault {
 export interface ProjectEditSettlement {
   readonly assembly: ProjectEvaluationAssembly;
   readonly fault?: SettlementFault;
-}
-
-function divergentOutcomeLandingFault(
-  assembly: ProjectEvaluationAssembly,
-): SettlementFault | undefined {
-  for (const biome of assembly.evaluation.route.biomes) {
-    const owner = 'rewards' in biome ? biome.rewards.divergentOutcomeLandings?.[0] : undefined;
-    if (owner !== undefined)
-      return Object.freeze({ key: `divergentLanding:${semanticAddressKey(owner)}`, owner });
-  }
-  return undefined;
 }
 
 /** The fixed reroll pool refusing a new spend; known only once the edit is evaluated. */
@@ -128,17 +113,10 @@ interface ProjectEditSettlementOptions {
 /**
  * Settle one semantic edit above structural commands and exact evaluation.
  * Preparation and Undo/Redo never call this operation. The result is total:
- * a repeated repair stops settlement, and it or a divergent timed-outcome
- * landing is reported as a fault beside the last evaluated assembly.
+ * a repeated repair stops settlement and is reported as a fault beside the
+ * last evaluated assembly.
  */
 export function settleProjectEdit(options: ProjectEditSettlementOptions): ProjectEditSettlement {
-  const settled = settleProjectEditRepairs(options);
-  if (settled.fault !== undefined) return settled;
-  const fault = divergentOutcomeLandingFault(settled.assembly);
-  return fault === undefined ? settled : Object.freeze({ ...settled, fault });
-}
-
-function settleProjectEditRepairs(options: ProjectEditSettlementOptions): ProjectEditSettlement {
   const { catalog, before, command } = options;
   const evaluate = (project: ProjectDocument): ProjectEvaluationAssembly => {
     const result = options.evaluate(project);

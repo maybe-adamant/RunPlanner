@@ -403,9 +403,9 @@ outcomes stored on their source and keyed by cycle from 1:
 - **Source changes.** Picking another trait or another rack keepsake removes
   the source's outcomes; a changed route-start keepsake leaves them dormant,
   like its other equip results. Edit settlement never resets an outcome.
-- **Branch agreement.** The authored path to a landing is deterministic, so
-  reached branches that land one cycle at different encounters are an engine
-  contract failure, reported as a settlement fault rather than a finding.
+- **One landing.** The one reached state lands each cycle once, and its
+  candidates answer at that landing's threshold; a second landing of the same
+  cycle is an engine contract failure.
 
 ## Equipped state and acquired effects
 

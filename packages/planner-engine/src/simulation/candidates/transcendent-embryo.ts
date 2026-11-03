@@ -16,7 +16,6 @@ export interface EvaluatedTranscendentEmbryoOutcomeCandidate {
   readonly kind: 'transcendentEmbryoOutcome';
   readonly result: {
     readonly eligibleBlessingKeys: readonly string[];
-    readonly branchSupport: readonly boolean[];
     readonly selectedPossible: boolean;
     readonly emptyNoOp: boolean;
     readonly rarity: import('../../catalog-schema').InRunTraitRarity;
@@ -39,33 +38,14 @@ export function evaluateTranscendentEmbryoOutcomeCandidate(
       query.outcome,
       'afterRoomLifecycle',
     );
-  const assessments = capability.evaluate(query.value);
-  const first = capability.thresholds[0];
-  if (first === undefined)
-    return unavailableForBiome(
-      evaluation,
-      query.outcome.routeKey,
-      query.outcome.biomeKey,
-      query.outcome,
-      'afterRoomLifecycle',
-    );
-  const branchSupport = Object.freeze(assessments.map((assessment) => assessment.legal));
-  const eligibleBlessingKeys = capability.thresholds.every(
-    (threshold) =>
-      JSON.stringify(threshold.eligibleBlessingKeys) === JSON.stringify(first.eligibleBlessingKeys),
-  )
-    ? first.eligibleBlessingKeys
-    : Object.freeze([]);
+  const { threshold } = capability;
   return Object.freeze({
     kind: 'transcendentEmbryoOutcome',
     result: Object.freeze({
-      eligibleBlessingKeys,
-      branchSupport,
-      selectedPossible: branchSupport.length > 0 && branchSupport.every(Boolean),
-      emptyNoOp: capability.thresholds.every(
-        (threshold) => threshold.eligibleBlessingKeys.length === 0,
-      ),
-      rarity: first.source.rarity,
+      eligibleBlessingKeys: threshold.eligibleBlessingKeys,
+      selectedPossible: capability.evaluate(query.value).legal,
+      emptyNoOp: threshold.eligibleBlessingKeys.length === 0,
+      rarity: threshold.source.rarity,
     }),
   });
 }

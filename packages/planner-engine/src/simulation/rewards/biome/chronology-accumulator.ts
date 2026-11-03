@@ -36,10 +36,11 @@ import { traitOfferContextIdentity } from '../../traits';
 import type { ReachedSteadyGrowthThreshold } from '../../traits/history/transitions';
 import type { AutomaticOutcomeLanding } from '../model';
 
-/** An automatic outcome with the encounter end its cycle reached. */
-export interface LandedOutcome<Address> {
+/** An automatic outcome with the encounter end its cycle reached and the threshold there. */
+export interface LandedOutcome<Address, Threshold> {
   readonly address: Address;
   readonly landing: AutomaticOutcomeLanding;
+  readonly threshold: Threshold;
 }
 import type {
   AcquisitionRoleFrontier,
@@ -278,27 +279,15 @@ export interface ChronologyAccumulation {
   readonly rerollPool: readonly RerollPoolPoint[];
   readonly rerollSurfaces: readonly RerollSurfaceSettlement[];
   readonly rerollSurfaceCapabilities: ReadonlyMap<string, RerollSurfaceCapability>;
-  readonly steadyGrowthCandidateContexts: ReadonlyMap<
+  readonly steadyGrowthOutcomes: ReadonlyMap<
     string,
-    readonly ReachedSteadyGrowthThreshold[]
+    LandedOutcome<SteadyGrowthOutcomeAddress, ReachedSteadyGrowthThreshold>
   >;
-  readonly steadyGrowthOutcomeAddresses: ReadonlyMap<
+  readonly transcendentEmbryoOutcomes: ReadonlyMap<
     string,
-    LandedOutcome<SteadyGrowthOutcomeAddress>
-  >;
-  readonly transcendentEmbryoCandidateContexts: ReadonlyMap<
-    string,
-    readonly ReachedTranscendentEmbryoThreshold[]
-  >;
-  readonly transcendentEmbryoOutcomeAddresses: ReadonlyMap<
-    string,
-    LandedOutcome<TranscendentEmbryoOutcomeAddress>
+    LandedOutcome<TranscendentEmbryoOutcomeAddress, ReachedTranscendentEmbryoThreshold>
   >;
   readonly fountainRarityCandidateContexts: ReadonlyMap<string, FountainRarityCandidateCapability>;
-  /** Timed outcomes whose reached branches landed one cycle at different encounters. */
-  readonly divergentOutcomeLandings: readonly (
-    SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress
-  )[];
 }
 
 /**
@@ -443,40 +432,25 @@ export function createChronologyAccumulator(
     string,
     { readonly capture: RerollSurfaceCapture; readonly poolRemainingAtStart: number }
   >();
-  const steadyGrowthCandidateContexts = new Map<string, ReachedSteadyGrowthThreshold[]>();
-  const steadyGrowthOutcomeAddresses = new Map<string, LandedOutcome<SteadyGrowthOutcomeAddress>>();
-  const latestSteadyGrowthOutcomes = new Map<string, SteadyGrowthOutcomeAddress>();
-  const transcendentEmbryoCandidateContexts = new Map<
+  const steadyGrowthOutcomes = new Map<
     string,
-    ReachedTranscendentEmbryoThreshold[]
+    LandedOutcome<SteadyGrowthOutcomeAddress, ReachedSteadyGrowthThreshold>
   >();
-  const transcendentEmbryoOutcomeAddresses = new Map<
+  const latestSteadyGrowthOutcomes = new Map<string, SteadyGrowthOutcomeAddress>();
+  const transcendentEmbryoOutcomes = new Map<
     string,
-    LandedOutcome<TranscendentEmbryoOutcomeAddress>
+    LandedOutcome<TranscendentEmbryoOutcomeAddress, ReachedTranscendentEmbryoThreshold>
   >();
   const fountainRarityCandidateContexts = new Map<string, FountainRarityCandidateCapability>();
-  const divergentOutcomeLandings = new Map<
-    string,
-    SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress
-  >();
 
-  // The authored path to a landing is deterministic, so every reached branch
-  // must land one cycle at the same encounter; the first landing is kept.
-  function recordLanding<
-    Address extends SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress,
-  >(
-    landed: Map<string, LandedOutcome<Address>>,
-    key: string,
-    address: Address,
-    landing: AutomaticOutcomeLanding,
+  /** The one reached state lands each timed-outcome cycle once. */
+  function recordLanding<Address extends SemanticAddress, Threshold>(
+    landed: Map<string, LandedOutcome<Address, Threshold>>,
+    outcome: LandedOutcome<Address, Threshold>,
   ): void {
-    const current = landed.get(key);
-    if (current === undefined) landed.set(key, Object.freeze({ address, landing }));
-    else if (
-      current.landing.phaseKey !== landing.phaseKey ||
-      semanticAddressKey(current.landing.owner) !== semanticAddressKey(landing.owner)
-    )
-      divergentOutcomeLandings.set(key, address);
+    const key = semanticAddressKey(outcome.address);
+    if (landed.has(key)) fail(`${key} landed more than once`);
+    landed.set(key, Object.freeze({ ...outcome }));
   }
 
   function recordTimelineNode(owner: SemanticAddress, included: boolean): void {
@@ -898,23 +872,17 @@ export function createChronologyAccumulator(
         return;
       }
       case 'steadyGrowthThresholds':
-        for (const { address, landing, threshold } of emission.thresholds) {
-          const key = semanticAddressKey(address);
-          recordLanding(steadyGrowthOutcomeAddresses, key, address, landing);
-          latestSteadyGrowthOutcomes.set(semanticAddressKey(landing.owner), address);
-          const current = steadyGrowthCandidateContexts.get(key) ?? [];
-          current.push(threshold);
-          steadyGrowthCandidateContexts.set(key, current);
+        for (const outcome of emission.thresholds) {
+          recordLanding(steadyGrowthOutcomes, outcome);
+          latestSteadyGrowthOutcomes.set(
+            semanticAddressKey(outcome.landing.owner),
+            outcome.address,
+          );
         }
         return;
       case 'transcendentEmbryoThresholds':
-        for (const { address, landing, threshold } of emission.thresholds) {
-          const key = semanticAddressKey(address);
-          recordLanding(transcendentEmbryoOutcomeAddresses, key, address, landing);
-          const current = transcendentEmbryoCandidateContexts.get(key) ?? [];
-          current.push(threshold);
-          transcendentEmbryoCandidateContexts.set(key, current);
-        }
+        for (const outcome of emission.thresholds)
+          recordLanding(transcendentEmbryoOutcomes, outcome);
         return;
       case 'fountainRarityCandidate':
         fountainRarityCandidateContexts.set(emission.key, emission.candidate);
@@ -998,12 +966,9 @@ export function createChronologyAccumulator(
         rerollSurfaceCapabilities: new Map(
           [...rerollSurfaces].map(([key, { capture }]) => [key, capture.capability]),
         ),
-        steadyGrowthCandidateContexts,
-        steadyGrowthOutcomeAddresses,
-        transcendentEmbryoCandidateContexts,
-        transcendentEmbryoOutcomeAddresses,
+        steadyGrowthOutcomes,
+        transcendentEmbryoOutcomes,
         fountainRarityCandidateContexts,
-        divergentOutcomeLandings: Object.freeze([...divergentOutcomeLandings.values()]),
       });
     },
   });

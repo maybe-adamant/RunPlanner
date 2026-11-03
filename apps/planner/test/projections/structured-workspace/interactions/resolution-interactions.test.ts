@@ -126,8 +126,7 @@ describe('resolution-interactions', () => {
         Object.freeze({
           kind: 'steadyGrowthOutcome' as const,
           result: Object.freeze({
-            requiredIntervals: Object.freeze([6]),
-            branchSupport: Object.freeze([true]),
+            requiredInterval: 6,
             eligibleTargetKeys: Object.freeze(['ApolloWeaponBoon']),
             emptyNoOp: false,
             findings: Object.freeze([]),

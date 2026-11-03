@@ -220,7 +220,7 @@ describe('Boon Growth and Boon Decay target predicates', () => {
     expect(assessment.resultingHistory.equippedTraits.ZeusManaBoltBoon?.level).toBe(5);
   });
 
-  it('requires one Steady Growth target to work for every reached branch', () => {
+  it('assesses a Steady Growth target at its one reached threshold', () => {
     const biome = createBiomeAddress('Underworld', 'F');
     const source = createTraitOfferAddress(
       createIncomingRewardAddress(biome, createOccurrenceId('steady-branch')),
@@ -237,20 +237,17 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       before,
       eligibleTargetKeys: Object.freeze(['ApolloWeaponBoon']),
     } as const;
-    const noTargetThreshold = Object.freeze({
-      ...threshold,
-      eligibleTargetKeys: Object.freeze([]),
-    });
-    const artifacts = createSteadyGrowthCandidateArtifacts(
-      catalog,
-      new Map([[semanticAddressKey(outcome), Object.freeze([threshold, noTargetThreshold])]]),
-    );
-    expect(
-      artifacts
+    const legal = (eligibleTargetKeys: readonly string[]) =>
+      createSteadyGrowthCandidateArtifacts(
+        catalog,
+        new Map([
+          [semanticAddressKey(outcome), Object.freeze({ ...threshold, eligibleTargetKeys })],
+        ]),
+      )
         .at(outcome)
-        ?.evaluate('ApolloWeaponBoon')
-        .map((entry) => entry.legal),
-    ).toEqual([true, false]);
+        ?.evaluate('ApolloWeaponBoon').legal;
+    expect(legal(threshold.eligibleTargetKeys)).toBe(true);
+    expect(legal(Object.freeze([]))).toBe(false);
   });
 
   it("uses Natural Selection's declaration-owned level count for its child domain", () => {

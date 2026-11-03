@@ -120,13 +120,13 @@ export function createFigurineArcanaCandidateArtifacts(
 }
 
 export interface TranscendentEmbryoCandidateCapability {
-  readonly thresholds: readonly ReachedTranscendentEmbryoThreshold[];
+  readonly threshold: ReachedTranscendentEmbryoThreshold;
   readonly evaluate: (
     outcome:
       | import('../../authored-project/traits/state').AuthoredTranscendentEmbryoOutcome
       | null
       | undefined,
-  ) => readonly TranscendentEmbryoBlessingAssessment[];
+  ) => TranscendentEmbryoBlessingAssessment;
 }
 export interface TranscendentEmbryoCandidateArtifacts {
   readonly at: (
@@ -135,26 +135,21 @@ export interface TranscendentEmbryoCandidateArtifacts {
 }
 export function createTranscendentEmbryoCandidateArtifacts(
   catalog: import('../../catalog-schema').Catalog,
-  contexts: ReadonlyMap<string, readonly ReachedTranscendentEmbryoThreshold[]>,
+  contexts: ReadonlyMap<string, ReachedTranscendentEmbryoThreshold>,
 ): TranscendentEmbryoCandidateArtifacts {
   const privateContexts = new Map(contexts);
   return Object.freeze({
     at: (address: TranscendentEmbryoOutcomeAddress) => {
-      const thresholds = privateContexts.get(semanticAddressKey(address));
-      if (thresholds === undefined) return undefined;
+      const threshold = privateContexts.get(semanticAddressKey(address));
+      if (threshold === undefined) return undefined;
       return Object.freeze({
-        thresholds,
+        threshold,
         evaluate: (
           outcome:
             | import('../../authored-project/traits/state').AuthoredTranscendentEmbryoOutcome
             | null
             | undefined,
-        ) =>
-          Object.freeze(
-            thresholds.map((threshold) =>
-              assessTranscendentEmbryoTransformation(catalog, threshold, outcome),
-            ),
-          ),
+        ) => assessTranscendentEmbryoTransformation(catalog, threshold, outcome),
       });
     },
   });

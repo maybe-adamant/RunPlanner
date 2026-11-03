@@ -21,6 +21,7 @@ import {
   siteSettlementEmissions,
   type ChronologyEmission,
 } from '../../../../src/simulation/rewards/biome/chronology-accumulator';
+import { BiomeRewardSimulationContractError } from '../../../../src/simulation/rewards/biome/biome-contract';
 import type { AuthoredSiteSettlementResult } from '../../../../src/simulation/rewards/biome/generation/authored-site-settlement';
 import type { RewardBranchState } from '../../../../src/simulation/rewards/branch-primitives';
 import type { ReachedLevelResolutionEvaluation } from '../../../../src/simulation/traits';
@@ -247,7 +248,7 @@ describe('chronology accumulator', () => {
     ]);
   });
 
-  it('keeps the first landing of a timed outcome and reports branches that land it elsewhere', () => {
+  it('lands a timed outcome once and refuses a second landing', () => {
     const biome = createBiomeAddress('Underworld', 'F');
     const address = createSteadyGrowthOutcomeAddress(
       createTraitOfferAddress(
@@ -256,32 +257,25 @@ describe('chronology accumulator', () => {
       ),
       1,
     );
-    const landing = (id: string) => ({
-      owner: createOccurrenceAddress(biome, createOccurrenceId(id)),
+    const landing = {
+      owner: createOccurrenceAddress(biome, createOccurrenceId('first')),
       phaseKey: 'Encounter',
-    });
-    const reached = (id: string): ChronologyEmission => ({
+    };
+    const threshold = { traitKey: 'BoonGrowthBoon' } as unknown as ReachedSteadyGrowthThreshold;
+    const reached: ChronologyEmission = {
       kind: 'steadyGrowthThresholds',
-      thresholds: [
-        {
-          address,
-          landing: landing(id),
-          threshold: { traitKey: 'BoonGrowthBoon' } as unknown as ReachedSteadyGrowthThreshold,
-        },
-      ],
-    });
+      thresholds: [{ address, landing, threshold }],
+    };
 
-    const agreeing = createChronologyAccumulator(new Map());
-    agreeing.mergeEmissions([reached('first'), reached('first')]);
-    expect(agreeing.finish().divergentOutcomeLandings).toEqual([]);
-
-    const diverging = createChronologyAccumulator(new Map());
-    diverging.mergeEmissions([reached('first'), reached('second')]);
-    const accumulation = diverging.finish();
-    expect(accumulation.divergentOutcomeLandings).toEqual([address]);
-    expect(accumulation.steadyGrowthOutcomeAddresses.get(semanticAddressKey(address))).toEqual({
+    const accumulator = createChronologyAccumulator(new Map());
+    accumulator.mergeEmissions([reached]);
+    expect(accumulator.finish().steadyGrowthOutcomes.get(semanticAddressKey(address))).toEqual({
       address,
-      landing: landing('first'),
+      landing,
+      threshold,
     });
+    expect(() => createChronologyAccumulator(new Map()).mergeEmissions([reached, reached])).toThrow(
+      BiomeRewardSimulationContractError,
+    );
   });
 });

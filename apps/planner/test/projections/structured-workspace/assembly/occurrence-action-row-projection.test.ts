@@ -708,8 +708,8 @@ describe('structured workspace actions assembly', () => {
           sourceTraitKey: 'BoonGrowthBoon',
           phaseKey: 'Combat1',
           targetTraitKey: 'ApolloWeaponBoon',
-          requiredIntervals: Object.freeze([4]),
-          progressBefore: Object.freeze([1]),
+          requiredInterval: 4,
+          progressBefore: 1,
         }),
       ],
     );

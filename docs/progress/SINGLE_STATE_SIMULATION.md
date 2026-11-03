@@ -122,9 +122,11 @@ happen", never as alternative states carried forward or offered as a choice.
    random-event support read the one state; the Shop cohort agreement, the
    scarcest-branch phantom pick, the Gorgon divergence throw and the gold
    `divergent` reading are gone. Equivalence 157/157 after every commit.
-   Remaining: Steady Growth and Transcendent Embryo thresholds
-   (`requiredIntervals`, `progressBefore`, candidate `branchSupport`, the
-   divergent-landing fault), fountain rarity frontiers and its per-target
+   Then: Steady Growth and Transcendent Embryo outcomes land once each and
+   publish one threshold's interval, progress and rarity; their candidates
+   answer at it without `branchSupport`, and a second landing is a contract
+   error, so the divergent-landing settlement fault is gone.
+   Remaining: fountain rarity frontiers and its per-target
    `branchSupport`, keepsake equip-result frontiers, Hermes Shrine, Stygian
    Well and Purging Pool assessment lists, derived-entry `branchCohortSize`,
    offer exclusions' `allBranches`, gold purchase price contexts, the All

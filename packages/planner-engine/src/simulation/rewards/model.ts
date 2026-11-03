@@ -378,13 +378,9 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
     readonly phaseKey: string;
     /** The source offer's authored target for this cycle. */
     readonly targetTraitKey?: string;
-    readonly requiredIntervals: readonly number[];
-    readonly progressBefore: readonly number[];
+    readonly requiredInterval: number;
+    readonly progressBefore: number;
   }[];
-  /** Engine contract failures: outcomes whose reached branches disagree on their landing. */
-  readonly divergentOutcomeLandings?: readonly (
-    SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress
-  )[];
   /** Exact reached automatic Transcendent Embryo checkpoints, each at its landing. */
   readonly transcendentEmbryoOutcomes: readonly {
     readonly address: TranscendentEmbryoOutcomeAddress;
@@ -394,8 +390,8 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
     readonly phaseKey: string;
     /** The installing selection's authored blessing for this cycle. */
     readonly value?: import('../../authored-project/traits/state').AuthoredTranscendentEmbryoOutcome;
-    readonly transformationRarities: readonly import('../../catalog-schema').InRunTraitRarity[];
-    readonly progressBefore: readonly number[];
+    readonly transformationRarity: import('../../catalog-schema').InRunTraitRarity;
+    readonly progressBefore: number;
   }[];
   readonly derivedAcquisitionEntries: readonly {
     readonly address: import('../../authored-project/addresses').AcquisitionEntryAddress;

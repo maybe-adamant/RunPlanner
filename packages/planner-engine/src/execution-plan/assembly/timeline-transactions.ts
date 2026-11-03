@@ -568,11 +568,10 @@ export function executionTimelineTransactions(
             `missing automatic outcome ${semanticAddressKey(timeline.address)}`,
           );
         const selected = outcome.value;
-        const rarities = outcome.transformationRarities;
-        if (selected === undefined || rarities.length !== 1)
+        if (selected === undefined)
           throw new CompilerError(
             'executionCoverageMissing',
-            `missing or divergent Embryo outcome ${timeline.phaseKey}`,
+            `missing Embryo outcome ${timeline.phaseKey}`,
           );
         add({
           kind: 'automatic',
@@ -581,7 +580,7 @@ export function executionTimelineTransactions(
           phaseKey: timeline.phaseKey,
           source: outcome.sourceBlessingKey,
           target: selected.blessingKey,
-          rarity: rarities[0]!,
+          rarity: outcome.transformationRarity,
           blessingValues: selected.blessingValues,
           window: Object.freeze({ kind: 'encounterEnd', phaseKey: timeline.phaseKey }),
         });

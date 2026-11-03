@@ -282,8 +282,8 @@ describe('structured workspace biome semantic assembly', () => {
           sourceTraitKey: 'BoonGrowthBoon',
           phaseKey: 'Encounter',
           targetTraitKey: 'ApolloWeaponBoon',
-          requiredIntervals: Object.freeze([4]),
-          progressBefore: Object.freeze([1]),
+          requiredInterval: 4,
+          progressBefore: 1,
         }),
       ]),
     });
