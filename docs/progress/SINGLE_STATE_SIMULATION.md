@@ -102,9 +102,8 @@ happen", never as alternative states carried forward or offered as a choice.
    every seed/frontier agreement attestation (Gorgon, Fig Leaf, Shadow,
    Hordes, Spell reservation, talent closure, reward lookups, Echo replay).
    A probe over the equivalence corpus and the engine, Draft, run-import and
-   planner suites found no production path with more than one state. The
-   equivalence digest maps the new products onto the recorded branch-list
-   shape until the baseline is next recorded. Equivalence 157/157 and the
+   planner suites found no production path with more than one state.
+   Equivalence 157/157 and the
    Draft corpus unchanged; performance flat.
    Then (2026-11-02): each trait offer keeps one contact, its own pre-offer
    context plus a blocked target or All Together child's context keyed by
@@ -181,10 +180,17 @@ happen", never as alternative states carried forward or offered as a choice.
    run-import lanes deferred (no call sites changed). Performance against
    8c893ffce flat (second run: every metric within ±2 ms except Underworld
    rebuild +5.8 ms).
-   Remaining: the Anvil and conversion candidate artifacts still aggregate
-   over several recorded frontiers of one role address; a phantom exit's
-   `offers` list and the execution overview's divergence check stay
-   list-shaped; test support keeps `initializeTestRewardBranches`.
+   Then (2026-11-03, leftovers): an Anvil, conversion and Hex capability reads
+   its role's one recorded frontier (a probe over the engine and planner
+   suites and the equivalence corpus found no role recorded twice; a second
+   recording is a contract error), so the candidate's `branchCount` is gone;
+   the unproduced `contractNotEquipped` exclusion is gone; a phantom exit
+   publishes one optional drawn `offer` and execution reads it without the
+   divergence check. The Hub board branch merged (native door order, policy
+   `nativeDoorOrder`), and the equivalence baseline was re-recorded on the
+   real single-state products without the shape adapters: validity unchanged
+   everywhere, plans and candidates changed only by the Hub order.
+   Remaining: test support keeps `initializeTestRewardBranches`.
 5. **Trait offer state inspector.** With one state per draw, the offer-state
    popover's "Possible state N" blocks collapse to one; simplify it.
    _Status: done._ The presentation carries one rarity state and the
