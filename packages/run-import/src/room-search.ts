@@ -98,9 +98,9 @@ export function searchRoom<Candidate, Choice>(
 }
 
 /**
- * The fit to author: the first accepted one in canonical order, or without
- * one the first fit; and the first fit of each other exit state among those
- * equally good, which the record cannot tell apart from it. Undefined without a fit.
+ * The fit to author: the first accepted one in canonical order, and the first
+ * accepted fit of each other exit state, which the record cannot tell apart
+ * from it. Undefined without an accepted fit: the room's choice stays open.
  */
 export function chooseRoomFit<Choice>(
   fits: readonly RoomFit<Choice>[],
@@ -108,15 +108,14 @@ export function chooseRoomFit<Choice>(
   | { readonly chosen: RoomFit<Choice>; readonly equivalents: readonly RoomFit<Choice>[] }
   | undefined {
   const accepted = fits.filter((fit) => fit.accepted);
-  const pool = accepted.length > 0 ? accepted : fits;
-  const chosen = pool[0];
+  const chosen = accepted[0];
   if (chosen === undefined) return undefined;
   return {
     chosen,
-    equivalents: pool.filter(
+    equivalents: accepted.filter(
       (fit, index) =>
         fit.fingerprint !== chosen.fingerprint &&
-        pool.findIndex((first) => first.fingerprint === fit.fingerprint) === index,
+        accepted.findIndex((first) => first.fingerprint === fit.fingerprint) === index,
     ),
   };
 }

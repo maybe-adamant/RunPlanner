@@ -166,25 +166,22 @@ function tiedTwins(
  * Chooses the taken door among tied twins once, as the source's first exit
  * is placed: each twin is placed as taken and the source judged at its next
  * entry save, which draws both doors' rewards in door order. The first
- * accepted twin is taken; without one the first in native order; several
- * accepted are reported.
+ * accepted twin is taken and several accepted are reported; without one the
+ * source's doors stay open. False while they are open.
  */
 function chooseTakenTwin(
   context: RunImportContext,
   target: TargetAddress,
   sourceIndex: number,
   doors: readonly RunRecordDoor[],
-): void {
+): boolean {
   const tied = tiedTwins(context, sourceIndex, doors);
   const searched = `twinSearch:${sourceIndex}`;
-  if (
-    tied.length < 2 ||
-    context.used.has(searched) ||
-    tied.some((door) => context.used.has(twinPin(sourceIndex, door)))
-  )
-    return;
+  if (tied.length < 2 || tied.some((door) => context.used.has(twinPin(sourceIndex, door))))
+    return true;
+  if (context.used.has(searched)) return false;
   context.used.add(searched);
-  if (recordedEntryStates(context.record)[sourceIndex + 1] === undefined) return;
+  if (recordedEntryStates(context.record)[sourceIndex + 1] === undefined) return false;
   const search = searchRoom(context, {
     roomIndex: sourceIndex,
     candidates: tied,
@@ -199,7 +196,8 @@ function chooseTakenTwin(
     limit: tied.length,
   });
   const accepted = search.fits.filter((fit) => fit.accepted).map((fit) => fit.choice);
-  const taken = accepted[0] ?? tied[0]!;
+  const taken = accepted[0];
+  if (taken === undefined) return false;
   context.used.add(twinPin(sourceIndex, taken));
   if (accepted.length > 1)
     context.note({
@@ -211,6 +209,7 @@ function chooseTakenTwin(
       ),
       record: { roomIndex: sourceIndex, visit: 0, door: taken.door },
     });
+  return true;
 }
 
 const topologyOccurrence = (context: RunImportContext, biomeKey: string, occurrenceId: string) =>
@@ -552,7 +551,7 @@ function createTarget(context: RunImportContext, target: TargetAddress): boolean
     createBiomeAddress(target.routeKey, target.biomeKey),
     target.source,
   );
-  chooseTakenTwin(context, target, sourceIndex, doors);
+  if (!chooseTakenTwin(context, target, sourceIndex, doors)) return false;
   const positional = doors[position]!;
   const takeovers = takeoverPrebossGameNames(context.catalog, target.biomeKey);
   if (takeovers.includes(positional.room))

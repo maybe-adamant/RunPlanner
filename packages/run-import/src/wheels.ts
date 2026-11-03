@@ -556,8 +556,9 @@ interface ShipChoice {
  * draws the plan does not know; each way to give the unpicked offers their
  * types from it, a RunProgress draw to the replacement and the rest to the
  * room's rerolls is authored, and those reproducing the saved stores fit.
- * The first fit the next entry save accepts is authored, or without one the
- * first fit; equally good fits of another exit state are reported. Returns
+ * The first fit the next entry save accepts is authored, and other accepted
+ * fits of another exit state are reported; without one the room reports its
+ * store mismatch and provisional offers. Returns
  * the replacement to convert with, `assumed` unless the save accepted it alone.
  */
 function solveShip(
@@ -717,8 +718,7 @@ function solveShip(
   }
   if (replacement === undefined) return undefined;
   // Only the save's acceptance of this replacement alone settles it.
-  const settled =
-    choice.chosen.accepted && equivalents.every((other) => other.replacement === replacement);
+  const settled = equivalents.every((other) => other.replacement === replacement);
   return { rewardType: replacement, assumed: !settled };
 }
 

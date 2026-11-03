@@ -396,10 +396,19 @@ reproduces is reported with its nearest miss and the plan stops there.
      roll needs it (above). Entered-room cages take the first slot order
      the plan draws, re-placed on every probe that depends on them. No
      change.
-   - Remaining canonical-first answers (strictness, not patience; left as
-     is): an unrecorded cage the solve cannot place (`answerUnrecordedCage`,
-     notInRecord), an optional reward's boon god, and the solvers' first-fit
-     fallback when no fit is accepted.
+   - Strictness (owner): the remaining canonical-first answers are gone.
+     A room search authors only an accepted fit (`chooseRoomFit`), so
+     without one a ship's wheel solve reports its store mismatch and
+     provisional offers, a bracket's presses beside an Artificer
+     replacement stay unplaced, and an untaken door's unrecorded cages stay
+     open (the first-eligible `answerUnrecordedCage` is gone; its fill only
+     measures a door's cage count on a probe). Tied twin doors without an
+     accepted twin, or without a next entry save, leave the source's doors
+     open. A Fields optional reward is never natively a boon (game
+     `FieldsOptionalRewards` holds none; catalog agrees), so a boon one shows
+     came from an Artificer replacement and opens on the god of the room's
+     unanswered recorded screen, else stays open. No corpus or fixture room
+     moved: every search the corpus runs has an accepted fit.
 
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.

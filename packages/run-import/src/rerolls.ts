@@ -669,7 +669,8 @@ export function importRerolls(context: RunImportContext): void {
  * the stores lost the presses' replaced rewards and the replacement, the plan's
  * own replacement added back. Each multiset, with each of its run-store draws
  * as the replacement, is authored and fits when the stores then change as
- * saved; the first fit the next entry save accepts is kept, or the first fit.
+ * saved; the first fit the next entry save accepts is kept, and without one
+ * the presses stay unplaced.
  * A replacement other fits leave otherwise is an assumption.
  */
 function solveRerollsWithArtificer(
@@ -714,8 +715,7 @@ function solveRerollsWithArtificer(
   if (!placed) return false;
   const record = { roomIndex, visit: 0 };
   const others = search.fits.filter(
-    (fit) =>
-      fit.accepted === choice.chosen.accepted && fit.choice.replacement !== chosen.replacement,
+    (fit) => fit.accepted && fit.choice.replacement !== chosen.replacement,
   );
   if (others.length > 0 || search.capped)
     context.note({ area: 'conversion', reason: 'assumption', address: artificer.entry, record });

@@ -273,7 +273,7 @@ function answerFieldsReward(context: RunImportContext, reward: Origin<'localRewa
     const recorded = untakenCageRewards(context, reward.occurrenceId);
     return recorded !== undefined
       ? answerUntakenCages(context, reward, recorded)
-      : solveUnrecordedCages(context, reward) || answerUnrecordedCage(context, reward);
+      : solveUnrecordedCages(context, reward);
   }
   let offers: readonly ResolvedRewardOffer[];
   if (reward.groupKey === 'cages') {
@@ -299,8 +299,10 @@ function answerFieldsReward(context: RunImportContext, reward: Origin<'localRewa
     );
     const name = entries[Number(/^optional(\d+)$/.exec(reward.slotKey)?.[1]) - 1]?.reward;
     offers = name === undefined ? [] : locallyValidRewardOffers(context.catalog.rewards, name);
+    // No optional reward is natively a boon; one an Artificer replacement drew opens on its recorded screen's god.
+    if (offers.length > 1) offers = recordedScreenOffers(context, visit.roomIndex, offers);
   } else return false;
-  if (offers.length === 0) return false;
+  if (offers.length !== 1) return false;
   for (const offer of offers) {
     const evaluation = context.candidates().evaluate({ kind: 'localReward', reward, value: offer });
     const command: ProjectCommand = { kind: 'ReplaceLocalReward', reward, value: offer };
@@ -311,19 +313,26 @@ function answerFieldsReward(context: RunImportContext, reward: Origin<'localRewa
       !context.applyValid(command)
     )
       continue;
-    // An optional reward's saved name does not say which god a boon variant holds.
-    if (offers.length > 1)
-      context.note({
-        area: 'fields',
-        reason: 'notInRecord',
-        address: reward,
-        applied: command,
-        record: record(visit.roomIndex),
-      });
     return true;
   }
   context.refuse();
   return false;
+}
+
+/** The boon offers whose god gave one of the room's recorded screens no answer has taken. */
+function recordedScreenOffers(
+  context: RunImportContext,
+  roomIndex: number,
+  offers: readonly ResolvedRewardOffer[],
+): readonly ResolvedRewardOffer[] {
+  const givers = new Set(
+    context.record.rooms[roomIndex]!.traitScreens.flatMap((screen, position) =>
+      context.used.has(`screen:${roomIndex}:${position}`) ? [] : [screen.giver],
+    ),
+  );
+  return offers.filter(
+    (offer) => offer.payload?.kind === 'BoonSource' && givers.has(offer.payload.source),
+  );
 }
 
 /** The cage rewards a door never taken rolled, by the offered occurrence it created. */
@@ -640,8 +649,8 @@ function* cageCandidates(
  * and the walk's sweep run after it (its recorded cages are drawn with the
  * same batch), and fits when that room holds its recorded cages and the
  * source room adds no store difference at the next entry save; the first fit
- * that save accepts is kept, or the first fit. Several fits are reported, as
- * is any boon's god, which no save shows.
+ * that save accepts is kept, and without one the cages stay open. Other
+ * accepted fits are reported, as is any boon's god, which no save shows.
  */
 function solveUnrecordedCages(context: RunImportContext, reward: Origin<'localReward'>): boolean {
   const offered = context.occurrences.offeredDoor(reward.occurrenceId);
@@ -672,7 +681,7 @@ function solveUnrecordedCages(context: RunImportContext, reward: Origin<'localRe
   const measured = context.probe(() => {
     const slots: string[] = [];
     for (let slotKey: string | undefined = reward.slotKey; slotKey !== undefined;) {
-      if (!guessUnrecordedCage(context, { ...reward, slotKey }, false)) return undefined;
+      if (!fillUnrecordedCage(context, { ...reward, slotKey })) return undefined;
       const value = fieldsState(context, reward.biomeKey, reward.occurrenceId)?.cages[slotKey];
       if (value === null || value === undefined) return undefined;
       slots.push(slotKey);
@@ -752,7 +761,7 @@ function solveUnrecordedCages(context: RunImportContext, reward: Origin<'localRe
   // Another order of the same draws is the same saved state; another multiset is a choice.
   const others = search.fits.filter(
     (fit, index, all) =>
-      fit.accepted === choice.chosen.accepted &&
+      fit.accepted &&
       (fit.choice.drawn !== chosen.drawn || fit.choice.replacement !== chosen.replacement) &&
       all.findIndex(
         (first) =>
@@ -789,19 +798,11 @@ function solveUnrecordedCages(context: RunImportContext, reward: Origin<'localRe
 }
 
 /**
- * A cage the save never shows takes the first eligible reward, preferring
- * types the record's later rooms of the biome do not need, so the guess does
- * not spend a later recorded pick's store entry.
+ * A provisional fill of a cage the save never shows, which only measures how
+ * many cages a door holds: the first eligible reward, preferring types the
+ * record's later rooms of the biome do not need.
  */
-function answerUnrecordedCage(context: RunImportContext, reward: Origin<'localReward'>): boolean {
-  return guessUnrecordedCage(context, reward, true);
-}
-
-function guessUnrecordedCage(
-  context: RunImportContext,
-  reward: Origin<'localReward'>,
-  report: boolean,
-): boolean {
+function fillUnrecordedCage(context: RunImportContext, reward: Origin<'localReward'>): boolean {
   const occurrence = authoredOccurrence(
     context.assembly().project,
     reward.biomeKey,
@@ -849,16 +850,7 @@ function guessUnrecordedCage(
       )
         continue;
       const command: ProjectCommand = { kind: 'ReplaceLocalReward', reward, value };
-      if (!context.applyValid(command)) continue;
-      if (report)
-        context.note({
-          area: 'fields',
-          reason: 'notInRecord',
-          address: reward,
-          applied: command,
-          record: record(sourceIndex),
-        });
-      return true;
+      if (context.applyValid(command)) return true;
     }
   return false;
 }

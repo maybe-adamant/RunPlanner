@@ -21,11 +21,8 @@ describe('choosing among the fits of a room search', () => {
     ).toEqual({ chosen: fit('b', true, 'y'), equivalents: [fit('d', true, 'z')] });
   });
 
-  it('falls back to the first fit, beside the other fits, when the save accepts none', () => {
-    expect(chooseRoomFit([fit('a', false, 'x'), fit('b', false, 'y')])).toEqual({
-      chosen: fit('a', false, 'x'),
-      equivalents: [fit('b', false, 'y')],
-    });
+  it('leaves the choice open when the save accepts no fit', () => {
+    expect(chooseRoomFit([fit('a', false, 'x'), fit('b', false, 'y')])).toBeUndefined();
   });
 
   it('has nothing to author without a fit', () => {
