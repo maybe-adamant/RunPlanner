@@ -2,11 +2,30 @@
  * Each room's map exit doors in its door-setup order, the order open doors enter
  * `MapState.OfferedExitDoors`, as [ObjectId, obstacle name]. Native
  * `DoUnlockRoomExits` sorts that table by obstacle name, and same-name doors
- * keep the table's walk order, which no save keeps. Door-order probe.
+ * keep the table's walk order, which no save keeps. Door-order probe. Chaos
+ * return doors are spawned after map load, so their order is the spawn order
+ * the probe logged, not the map-load setup table.
  */
 export const exitDoorSetupOrders: Readonly<
   Record<string, readonly (readonly [doorId: number, obstacleName: string])[]>
 > = {
+  Chaos_01: [
+    [571041, 'SecretExitDoor'],
+    [561966, 'SecretExitDoor'],
+  ],
+  Chaos_02: [
+    [621976, 'SecretExitDoor'],
+    [561966, 'SecretExitDoor'],
+  ],
+  Chaos_04: [
+    [622073, 'SecretExitDoor'],
+    [622123, 'SecretExitDoor'],
+  ],
+  Chaos_05: [
+    [622252, 'SecretExitDoor'],
+    [622204, 'SecretExitDoor'],
+    [622250, 'SecretExitDoor'],
+  ],
   F_Combat02: [
     [560571, 'ErebusExitDoor'],
     [560574, 'ErebusExitDoor'],

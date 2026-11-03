@@ -502,9 +502,11 @@ counters without order.
   which door draws from the reward bag first. It is derivable from the open
   doors alone: each room fills the table in a fixed door-setup order (its map
   doors, open or not, then doors spawned at runtime such as the Chaos gate's
-  `SecretDoor` and the `ZagContract`). A door-order probe recorded every
-  room's setup order, and emulating the table walk and sort over the open set
-  reproduced all 147 orders it logged, the Ephyra boards
+  `SecretDoor` and the `ZagContract`; a Chaos room's `SecretExitDoor` return
+  doors are all spawned after map load, so their fixed spawn order is its
+  setup order). A door-order probe recorded every room's setup order, and
+  emulating the table walk and sort over the open set reproduced all 147
+  orders it logged, the Ephyra boards
   ([Persistent board generation](../../biomes/N_GAME_RULES.md#persistent-board-generation))
   among them; repeat visits always agreed.
 - The World Shop Travel Deal refill item's identity, and the Hermes Shrine
@@ -729,7 +731,7 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   several, the source room's native door order, from its declared door-setup
   order and the doors the record saw open, is exact; a door that order puts
   where the engine refuses it is reported as refused. A room without a
-  declared setup order (Chaos rooms, and six Olympus rooms the probe missed)
+  declared setup order (six Olympus rooms the probe missed)
   takes ascending door id among the admitted pairings and reports the order
   as an assumption. Reward-store replays first showed the order matters:
   - `H_Combat05` processes door `621199` before `564448`. In the live

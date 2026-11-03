@@ -217,8 +217,6 @@ describe('run import of the Underworld capture', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
         conversion: 3,
-        // A Chaos room declares no door-setup order: ascending id pairs its return doors.
-        doors: 1,
         encounter: 1,
         fields: 3,
         npc: 1,
@@ -242,7 +240,6 @@ describe('run import of the Underworld capture', () => {
       'assumption conversion r4 acquisitionEntry@F-r4 -> ReplaceAcquisitionEntryOffer(F-r4 RoomMoneyDrop)',
       'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 WeaponUpgrade)',
       'assumption traitOffer r15 traitOffer@G:start:chaos:self -> ReplaceTraitOffer(G:start:chaos chaos)',
-      'assumption doors r15 exitDecision@G:start:chaos',
       'assumption npc r18 nemesisRandomEvent@G-r18 -> ReplaceNemesisRandomEventInteraction(G-r18 freeItem)',
       'assumption fields r26 localReward@H-r26-d621199:cage1',
       'assumption fields r27 exitDecision@H-r27 -> InitializeExitDecision(H-r27)',

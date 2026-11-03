@@ -94,8 +94,6 @@ describe('run import of the live Underworld recording', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
         conversion: 3,
-        // A Chaos room declares no door-setup order: ascending id pairs its return doors.
-        doors: 1,
         encounter: 3,
         traitOffer: 1,
         reward: 1,
@@ -117,7 +115,6 @@ describe('run import of the live Underworld recording', () => {
       'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 MaxHealthDrop)',
       'assumption conversion r10 acquisitionEntry@F-r10 -> ReplaceAcquisitionEntryOffer(F-r10 StackUpgrade)',
       'assumption traitOffer r15 traitOffer@G-r15:self -> ReplaceTraitOffer(G-r15 chaos)',
-      'assumption doors r15 exitDecision@G-r15',
       'assumption encounter r16 encounterPhase@G-r16:Encounter -> ReplaceFigLeafSkip(G-r16)',
       'assumption reward r20 incomingReward@G-r20-d737226 -> ReplaceIncomingReward(G-r20-d737226 Devotion)',
       'assumption encounter r26 encounterPhase@H-r26:Cage02 -> ReplaceFigLeafSkip(H-r26)',

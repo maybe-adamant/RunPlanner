@@ -14,13 +14,12 @@ function withOrders(orders: Orders): CatalogInput {
 }
 
 describe('exit door setup order declarations', () => {
-  it('declares the Hub and every room with two or more exits outside Chaos but six the probe missed', () => {
+  it('declares the Hub and every room with two or more exits but six the probe missed', () => {
     const declared = catalog.rooms.values.filter((room) => room.exitDoorSetupOrder !== undefined);
-    expect(declared).toHaveLength(101);
+    expect(declared).toHaveLength(105);
     expect(
       catalog.rooms.values
-        // The door-order probe recorded no setup order for Chaos return doors.
-        .filter((room) => room.exits.length >= 2 && room.roomSetKey !== 'Chaos')
+        .filter((room) => room.exits.length >= 2)
         .filter((room) => room.exitDoorSetupOrder === undefined)
         .map((room) => room.gameName),
     ).toEqual(['P_Combat01', 'P_Combat05', 'P_Combat06', 'P_Combat16', 'P_Combat17', 'P_Shop01']);
