@@ -238,14 +238,17 @@ export function projectTraitOfferFeedback(
           ...(findingsByOption.get(['option1', 'option2', 'option3'][index]!) ?? []),
         ];
         const final = screen === 'final';
-        const replacement = uniformReplacement(
-          final
-            ? evaluation.result.assessments
-            : (evaluation.result.state?.rerolledScreens?.find((entry) => entry.screen === screen)
-                ?.assessments ?? []),
-          evaluation.result.state === undefined ? 0 : 1,
-          option.traitKey,
-        );
+        const replacement =
+          evaluation.result.state === undefined
+            ? undefined
+            : optionReplacement(
+                final
+                  ? evaluation.result.assessments
+                  : (evaluation.result.state.rerolledScreens?.find(
+                      (entry) => entry.screen === screen,
+                    )?.assessments ?? []),
+                option.traitKey,
+              );
         const screenLevel = (
           field:
             | 'effectiveLevel'
@@ -406,29 +409,14 @@ function aggregateTraceEvidence(traces: readonly AggregatedTraitTrace[]): {
   return Object.freeze({ invalid, findingCount: findingKeys.size });
 }
 
-function uniformReplacement(
+/** The replacement the one reached state assessed for taking this trait. */
+function optionReplacement(
   assessments: readonly SelectedTraitOfferAssessment['assessment']['assessments'][number][],
-  branchCount: number,
   traitKey: string,
 ): TraitReplacementTransition | undefined {
-  const replacements = assessments
-    .map((assessment) => assessment.replacementTransition)
-    .filter(
-      (replacement): replacement is TraitReplacementTransition =>
-        replacement?.newTraitKey === traitKey,
-    );
-  if (replacements.length !== branchCount) return undefined;
-  const first = replacements[0];
-  if (first === undefined) return undefined;
-  return replacements.every(
-    (replacement) =>
-      replacement.slot === first.slot &&
-      replacement.replacedTraitKey === first.replacedTraitKey &&
-      replacement.oldRarity === first.oldRarity &&
-      replacement.requiredRarity === first.requiredRarity,
-  )
-    ? first
-    : undefined;
+  return assessments.find(
+    (assessment) => assessment.replacementTransition?.newTraitKey === traitKey,
+  )?.replacementTransition;
 }
 
 function presentReplacement(
@@ -521,11 +509,7 @@ export function projectRouteTraitOffers(
     const giver = catalog.traitGivers.byKey[trace.offer.giverKey];
     if (trait === undefined || giver === undefined || control === undefined) continue;
     const evidence = aggregateTraceEvidence([grouped]);
-    const selectedReplacement = uniformReplacement(
-      grouped.assessments,
-      grouped.compositions.length,
-      option.traitKey,
-    );
+    const selectedReplacement = optionReplacement(trace.assessment.assessments, option.traitKey);
     rows.push(
       Object.freeze({
         address,
