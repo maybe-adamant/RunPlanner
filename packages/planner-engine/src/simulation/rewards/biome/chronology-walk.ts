@@ -28,6 +28,7 @@ import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materialization';
 import type { SemanticFinding } from '../../model';
 import type { RewardBranchState } from '../branch-primitives';
+import { BiomeRewardSimulationContractError } from './biome-contract';
 import type { ShipLifecycleCandidateContext } from '../lifecycle-artifacts';
 import type { WellRefillRealization } from '../model';
 import type { OfferProcessingPeer } from '../offer-generation';
@@ -276,6 +277,15 @@ export function withMember(
   if (member) next.add(key);
   else next.delete(key);
   return next;
+}
+
+/** The state a seam reaches; the walk stops before any event once none is reached. */
+export function reachedBranch(state: ChronologyWalkState): RewardBranchState {
+  if (state.branch === undefined)
+    throw new BiomeRewardSimulationContractError(
+      'a history event was walked with no reached state',
+    );
+  return state.branch;
 }
 
 export function withBranch(

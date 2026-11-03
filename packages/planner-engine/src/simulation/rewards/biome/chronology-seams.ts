@@ -37,6 +37,7 @@ import {
 } from './chronology-accumulator';
 import { captureRunState, hubDepartureEmissions, targetSlotHistory } from './chronology-run-state';
 import {
+  reachedBranch,
   rerollFlagKey,
   withBranch,
   withKeyed,
@@ -482,7 +483,7 @@ const hermesShrineDeliveriesScheduled: ChronologySeamHandler<'hermesShrineDelive
     room,
     declaration: roomDeclaration(context, room),
     roomView: context.views.get(semanticAddressKey(event.origin)),
-    sourceBranch: state.branch,
+    sourceBranch: reachedBranch(state),
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
   });
   return {
@@ -557,7 +558,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
       room,
       declaration: roomDeclaration(context, room),
       roomView: context.views.get(semanticAddressKey(event.origin)),
-      sourceBranch: state.branch,
+      sourceBranch: reachedBranch(state),
       authoredSeaStarDuplicateSiteKeys: Object.freeze([
         ...context.authoredSeaStarDuplicateSiteKeys,
       ]),
@@ -593,7 +594,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     room,
     declaration: roomDeclaration(context, room),
     roomView: context.views.get(semanticAddressKey(event.origin)),
-    sourceBranch: state.branch,
+    sourceBranch: reachedBranch(state),
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
     ...(derivedFrontier === undefined ? {} : { derivedAcquisitionEntryFrontier: derivedFrontier }),
     ...(derivedCapability === undefined

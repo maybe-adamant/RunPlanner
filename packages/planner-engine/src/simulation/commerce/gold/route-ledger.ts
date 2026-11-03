@@ -5,12 +5,7 @@ import {
   type RoomActionAddress,
   type SemanticAddress,
 } from '../../../authored-project/addresses';
-import type {
-  GoldEventContext,
-  GoldEventPublication,
-  GoldGain,
-  GoldGainPublication,
-} from './gain-context';
+import type { GoldEventContext, GoldEventPublication, GoldGain } from './gain-context';
 import { GoldLedgerContractError, type BiomeGoldPrices, type GoldPurchaseQuote } from './ledger';
 import type { PurchasePriceContextPublication } from './price-context';
 import { roundGold, sumGold, ZERO_GOLD, type GoldAmount } from './prices';
@@ -382,14 +377,6 @@ type Entry =
       readonly publication: GoldEventPublication;
     };
 
-function contextOf(publication: GoldGainPublication): GoldEventContext {
-  if (publication.context === undefined)
-    throw new GoldLedgerContractError(
-      `${publication.owner === undefined ? 'a gold contact' : semanticAddressKey(publication.owner)} has no gold reading`,
-    );
-  return publication.context;
-}
-
 /**
  * Walks the route's purchases and gold contacts in chronological order,
  * carrying the balance and any loan, and records each room's gold.
@@ -498,11 +485,11 @@ export function routeGoldLedger(
       try {
         if (publication.unpriced?.kind === 'contractFailure')
           throw new GoldLedgerContractError(publication.unpriced.detail);
-        if (publication.unpriced?.kind === 'itemUnresolved') {
+        if (publication.unpriced !== undefined) {
           block(room, { kind: 'itemUnresolved' });
           walk.balance = worse(walk.balance, 'itemUnresolved');
         } else {
-          const context = contextOf(publication);
+          const { context } = publication;
           if (room !== undefined && context.gain.kind === 'poolSale')
             room.beforeFirstTrade ??= walk.balance;
           const amount = applyGain(catalog, modifiers, walk, context);

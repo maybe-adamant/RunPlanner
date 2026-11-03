@@ -35,11 +35,11 @@ const gain = (
     context: { gain: value, multipliers: { ...plain, ...multipliers } },
   };
 };
-const withoutContext = (publication: GoldEventPublication): GoldEventPublication => {
+const unresolved = (publication: GoldEventPublication): GoldEventPublication => {
   if (publication.kind !== 'gain') return publication;
   const { context, ...rest } = publication;
   void context;
-  return rest;
+  return { ...rest, unpriced: { kind: 'itemUnresolved' } };
 };
 const marker = (kind: 'roomEntered' | 'doorsOpen', at = room): GoldEventPublication => {
   sequence += 1;
@@ -335,21 +335,25 @@ describe('gold ledger', () => {
     });
   });
 
-  it('refuses a gain with no reading on its own room and leaves later balances unavailable', () => {
+  it('faults a gain whose reading broke a contract on its own room and leaves later balances unavailable', () => {
     sequence += 1;
-    const unread: GoldEventPublication = { kind: 'gain', sequence, room };
-    const unresolved = withoutContext(gain({ kind: 'fallbackGold', gold: 90 }, {}, later));
+    const broken: GoldEventPublication = {
+      kind: 'gain',
+      sequence,
+      room,
+      unpriced: { kind: 'contractFailure', detail: 'test reading' },
+    };
     const result = ledger([
-      unread,
+      broken,
       marker('roomEntered', later),
-      { ...unresolved, unpriced: { kind: 'itemUnresolved' } } as GoldEventPublication,
+      unresolved(gain({ kind: 'fallbackGold', gold: 90 }, {}, later)),
     ]);
     expect(result.rooms.get(semanticAddressKey(room))).toMatchObject({ kind: 'fault' });
     expect(result.rooms.get(semanticAddressKey(later))).toEqual({ kind: 'itemUnresolved' });
     const pending = gain({ kind: 'fallbackGold', gold: 90 });
     const unresolvedOnly = ledger([
       gain({ kind: 'moneyPickup', gold: 100, npcDrop: false }, {}, later),
-      { ...withoutContext(pending), unpriced: { kind: 'itemUnresolved' } } as GoldEventPublication,
+      unresolved(pending),
       marker('roomEntered', later),
     ]);
     expect(unresolvedOnly.rooms.get(semanticAddressKey(room))).toEqual({ kind: 'itemUnresolved' });

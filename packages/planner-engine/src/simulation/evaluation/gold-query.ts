@@ -80,8 +80,8 @@ function memoized<K extends object, V>(
 
 /**
  * The gold ledger of an evaluated project, priced lazily per biome. A lookup
- * throws `GoldLedgerContractError` for a purchase, or its room, whose reached
- * branches disagree on a price input or whose price facts break a contract.
+ * throws `GoldLedgerContractError` for a purchase, or its room, whose price
+ * facts break a contract.
  */
 export function goldLedgerForProjectEvaluationAssembly(
   catalog: Catalog,

@@ -78,7 +78,7 @@ export interface AcquisitionPointReachedInputs {
   readonly room: CanonicalAuthoredRoom | undefined;
   readonly declaration: RoomDeclaration | undefined;
   readonly roomView: ProgressiveRoomHistoryViews | undefined;
-  readonly sourceBranch: RewardBranchState | undefined;
+  readonly sourceBranch: RewardBranchState;
   readonly authoredSeaStarDuplicateSiteKeys: readonly string[];
   /** A Pool sale's settled trait; absent when the sale has no effect. */
   readonly purgingPoolSale?: {
@@ -168,24 +168,21 @@ export function applyAcquisitionPointReachedTransition(
     );
     const { sourceBranch } = inputs;
     return publish({
-      branch:
-        sourceBranch === undefined
-          ? undefined
-          : spawnDueHermesDeliveries(
-              catalog,
-              room,
-              Object.freeze({
-                ...sourceBranch,
-                state: Object.freeze({
-                  ...sourceBranch.state,
-                  pendingHermesShrineDeliveries: Object.freeze({
-                    ...sourceBranch.state.pendingHermesShrineDeliveries,
-                    ...scheduled,
-                  }),
-                }),
-              }),
-              event.sequence,
-            ),
+      branch: spawnDueHermesDeliveries(
+        catalog,
+        room,
+        Object.freeze({
+          ...sourceBranch,
+          state: Object.freeze({
+            ...sourceBranch.state,
+            pendingHermesShrineDeliveries: Object.freeze({
+              ...sourceBranch.state.pendingHermesShrineDeliveries,
+              ...scheduled,
+            }),
+          }),
+        }),
+        event.sequence,
+      ),
       findings,
     });
   }
@@ -295,7 +292,7 @@ export function applyAcquisitionPointReachedTransition(
     const sale = inputs.purgingPoolSale;
     // A refused or invalid sale is its own finding; the sale has no effect.
     const { sourceBranch: branch } = inputs;
-    if (sale === undefined || branch === undefined) return publish({ branch, findings });
+    if (sale === undefined) return publish({ branch, findings });
     return publish({
       branch: (() => {
         const before = branch.state.traitHistory;
@@ -415,12 +412,14 @@ export function applyAcquisitionPointReachedTransition(
         retained === null ||
         JSON.stringify(retained.offer) !== JSON.stringify(capability.fixedReward.offer)
       ) {
+        // Unassessed: the state matured the trait here, but no pickup frontier
+        // was published at that maturity.
         addFinding('rewardSourceUnavailable', entry, {
           reason:
             placement?.assessment.kind === 'invalid'
               ? 'staleClockedTraitPickup'
               : placement?.assessment.kind === 'unassessed'
-                ? 'clockedPickupContextDisagreement'
+                ? 'clockedPickupMaturityUnpublished'
                 : 'retainedSourceMismatch',
         });
         return publish({ branch: inputs.sourceBranch, findings });
@@ -480,7 +479,7 @@ export function applyAcquisitionPointReachedTransition(
         occurrenceId: shrineDelivery.sourceOccurrenceId,
       };
       const sourceKey = hermesShrineDeliveryEntryKey(sourceOrigin, shrineDelivery.generationKey);
-      const due = inputs.sourceBranch?.state.pendingHermesShrineDeliveries[sourceKey];
+      const due = inputs.sourceBranch.state.pendingHermesShrineDeliveries[sourceKey];
       // The host is checked here; the placement assessment above already proved the exact phase.
       const agreedDue =
         placement?.assessment.kind === 'valid' &&
@@ -495,13 +494,12 @@ export function applyAcquisitionPointReachedTransition(
         retained === undefined ||
         (retained !== null && retained.offer.rewardType !== agreedDue.rewardType)
       ) {
+        // The reached state assesses the placement valid or invalid.
         addFinding('rewardSourceUnavailable', entry, {
           reason:
             placement?.assessment.kind === 'invalid'
               ? 'staleHermesShrineDelivery'
-              : placement?.assessment.kind === 'unassessed'
-                ? 'hermesDeliveryContextDisagreement'
-                : 'retainedSourceMismatch',
+              : 'retainedSourceMismatch',
         });
         return publish({ branch: inputs.sourceBranch, findings });
       }

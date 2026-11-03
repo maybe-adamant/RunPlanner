@@ -137,8 +137,7 @@ export interface GoldEventContext {
   readonly multipliers: GoldMultipliers;
 }
 
-/** One reached gold contact with the reached state's reading. */
-export interface GoldGainPublication {
+interface GoldGainContact {
   readonly kind: 'gain';
   readonly sequence: number;
   /** Absent for run-start gold, which precedes every room. */
@@ -146,10 +145,14 @@ export interface GoldGainPublication {
   readonly owner?: SemanticAddress;
   /** The room's ranked action whose settlement paid it; absent for gold no action pays. */
   readonly roomAction?: RoomActionAddress;
-  /** Absent when the contact is unpriced. */
-  readonly context?: GoldEventContext;
-  readonly unpriced?: PurchasePriceUnpriced;
 }
+
+/** One reached gold contact: the reached state's reading, or why it has none. */
+export type GoldGainPublication = GoldGainContact &
+  (
+    | { readonly context: GoldEventContext; readonly unpriced?: never }
+    | { readonly unpriced: PurchasePriceUnpriced; readonly context?: never }
+  );
 
 /** A room's entry, and the point its doors open, which the room's door-open balance reads. */
 export interface GoldRoomMarkerPublication {
@@ -280,34 +283,30 @@ export function goldOnKillFacts(
  * Publishes one gold contact: the gain the reached state settled with the
  * multipliers it held; a reading with an unauthored multiplier is unresolved.
  */
-export function goldGainPublication(inputs: {
-  readonly sequence: number;
-  readonly room?: OccurrenceAddress;
-  readonly owner?: SemanticAddress;
-  readonly roomAction?: RoomActionAddress;
-  readonly reading?: {
-    readonly gain: GoldGain;
-    readonly multipliers: GoldMultipliers | undefined;
-  };
-  readonly unpriced?: PurchasePriceUnpriced;
-}): GoldGainPublication {
-  const { reading } = inputs;
-  const context =
-    reading?.multipliers === undefined
-      ? undefined
-      : Object.freeze({ gain: Object.freeze(reading.gain), multipliers: reading.multipliers });
-  const unpriced =
-    inputs.unpriced ??
-    (reading !== undefined && context === undefined
-      ? Object.freeze({ kind: 'itemUnresolved' as const })
-      : undefined);
-  return Object.freeze({
+export function goldGainPublication(
+  inputs: Omit<GoldGainContact, 'kind'> &
+    (
+      | {
+          readonly reading: {
+            readonly gain: GoldGain;
+            readonly multipliers: GoldMultipliers | undefined;
+          };
+        }
+      | { readonly unpriced: PurchasePriceUnpriced }
+    ),
+): GoldGainPublication {
+  const contact: GoldGainContact = {
     kind: 'gain',
     sequence: inputs.sequence,
     ...(inputs.room === undefined ? {} : { room: inputs.room }),
     ...(inputs.owner === undefined ? {} : { owner: inputs.owner }),
     ...(inputs.roomAction === undefined ? {} : { roomAction: inputs.roomAction }),
-    ...(context === undefined ? {} : { context }),
-    ...(unpriced === undefined ? {} : { unpriced }),
-  });
+  };
+  if ('unpriced' in inputs) return Object.freeze({ ...contact, unpriced: inputs.unpriced });
+  const { gain, multipliers } = inputs.reading;
+  return Object.freeze(
+    multipliers === undefined
+      ? { ...contact, unpriced: Object.freeze({ kind: 'itemUnresolved' as const }) }
+      : { ...contact, context: Object.freeze({ gain: Object.freeze(gain), multipliers }) },
+  );
 }

@@ -25,7 +25,7 @@ import {
   type GoldAmount,
 } from './prices';
 
-/** A gold query input broke an engine contract, such as branches disagreeing on a price. */
+/** A gold query input broke an engine contract, such as an undeclared price. */
 export class GoldLedgerContractError extends Error {
   constructor(message: string) {
     super(message);
