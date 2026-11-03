@@ -180,6 +180,11 @@ export interface RunRecordRoomEntry {
   readonly biomeBoonSkipCount?: number;
   /** `NumRerolls`: the run's rerolls left. */
   readonly numRerolls?: number;
+  /**
+   * `FieldsMaxDoorsRolled`: Fields door-cage rolls that came up Max so far, zero
+   * included; absent in records made before it was read.
+   */
+  readonly fieldsMaxDoorsRolled?: number;
   /** Invested Path of Stars nodes by `depth:slot`, sorted. */
   readonly investedTalents?: readonly string[];
 }

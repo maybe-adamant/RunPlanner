@@ -53,6 +53,8 @@ export interface SavedRunState {
   readonly numRerolls?: number;
   /** `PoseidonDoubleRewardCount`: Sea Star duplicates this run. */
   readonly poseidonDoubleRewardCount: number;
+  /** `FieldsMaxDoorsRolled`: Fields door-cage rolls that came up Max; nil reads 0. */
+  readonly fieldsMaxDoorsRolled?: number;
 }
 
 export interface SavedLootChoice {
@@ -626,6 +628,7 @@ export function extractSaveCheckpoint(
         .sort(),
       ...optional('numRerolls', number(run.NumRerolls)),
       poseidonDoubleRewardCount: number(run.PoseidonDoubleRewardCount) ?? 0,
+      fieldsMaxDoorsRolled: number(run.FieldsMaxDoorsRolled) ?? 0,
     },
     ...optional('hero', savedHero),
     profile: {

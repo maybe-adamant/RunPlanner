@@ -14,6 +14,7 @@ import {
   type SemanticFinding,
 } from '@run-planner/engine/simulation';
 import { isQuestionFinding } from './areas';
+import { countedCageOutcome } from './fields';
 import type { RunImportContext } from './import';
 import { nemesisEventOf } from './nemesis';
 import { authoredOccurrence } from './occurrences';
@@ -66,7 +67,11 @@ function* candidateAnswers(
   const origin = reason.origin;
   if (origin.kind === 'shopOffer') yield* shopOfferAnswers(context, origin);
   else if (origin.kind === 'exitDecision' && reason.code === 'batchStateMissing')
-    for (const cageOutcome of ['min', 'max'] as const)
+    // A roll the Max counter pins is never searched: the record already answered it.
+    for (const cageOutcome of origin.source.kind === 'occurrence' &&
+    countedCageOutcome(context, origin.source.occurrenceId) !== undefined
+      ? []
+      : (['min', 'max'] as const))
       yield [
         {
           kind: 'InitializeExitDecision',

@@ -199,14 +199,46 @@ function switchUnseenRoll(
 }
 
 /**
+ * The roll the source's door unlock made: `SelectFieldsDoorCageCount` counts
+ * each Max roll in `FieldsMaxDoorsRolled` (EventLogic.lua:475-503), so the
+ * counter's gain from the source's entry save to the next room's is the roll,
+ * whatever cage count its doors show. Undefined when a save lacks the counter.
+ */
+export function countedCageOutcome(
+  context: RunImportContext,
+  occurrenceId: string,
+): 'min' | 'max' | undefined {
+  const index = context.occurrences.visitsOf(occurrenceId)[0];
+  if (index === undefined) return undefined;
+  const before = context.record.rooms[index]?.entry?.fieldsMaxDoorsRolled;
+  const after = context.record.rooms[index + 1]?.entry?.fieldsMaxDoorsRolled;
+  if (before === undefined || after === undefined) return undefined;
+  return after === before ? 'min' : after === before + 1 ? 'max' : undefined;
+}
+
+/**
  * One roll sets every Fields door's cage count: the minimum, or the maximum
- * the doors' rooms hold. The entered Fields room's cage count shows which.
+ * the doors' rooms hold. The Max counter pins it; a record without the
+ * counter reads it from the entered Fields room's cage count.
  */
 function answerCageOutcome(context: RunImportContext, decision: Origin<'exitDecision'>): boolean {
   if (decision.source.kind !== 'occurrence') return false;
   const layout = context.catalog.biomeLayouts.byKey[decision.biomeKey];
   const policy =
     layout === undefined ? undefined : normalDecisionProgressionForLayout(layout)?.batchPolicy;
+  const counted =
+    policy?.kind === 'fields'
+      ? countedCageOutcome(context, decision.source.occurrenceId)
+      : undefined;
+  if (counted !== undefined) {
+    if (
+      fieldsOutcomeSupported(context, decision, counted) &&
+      context.applyValid(cageOutcomeCommand(context, decision, counted))
+    )
+      return true;
+    context.refuse();
+    return false;
+  }
   const visits = context.occurrences.visitsOf(decision.source.occurrenceId);
   const next = visits.map((index) => context.record.rooms[index + 1]).find((room) => room?.fields);
   const untaken = visits
@@ -236,21 +268,7 @@ function answerCageOutcome(context: RunImportContext, decision: Origin<'exitDeci
   for (const cageOutcome of ordered) {
     if (!supported.includes(cageOutcome) && !switchUnseenRoll(context, decision, cageOutcome))
       continue;
-    const topology = context
-      .assembly()
-      .project.route.biomes.find((biome) => biome.biomeKey === decision.biomeKey)?.topology;
-    const existing =
-      topology === undefined || topology === null
-        ? undefined
-        : exitDecisionForSource(topology, decision.source);
-    const command: ProjectCommand =
-      existing === undefined
-        ? {
-            kind: 'InitializeExitDecision',
-            decision,
-            edit: { kind: 'fieldsCageOutcome', cageOutcome },
-          }
-        : { kind: 'ReplaceFieldsCageOutcome', decision, cageOutcome };
+    const command = cageOutcomeCommand(context, decision, cageOutcome);
     if (!context.applyValid(command)) continue;
     if (ambiguous)
       context.note({
@@ -264,6 +282,24 @@ function answerCageOutcome(context: RunImportContext, decision: Origin<'exitDeci
   }
   context.refuse();
   return false;
+}
+
+/** Authors a source's cage roll, initializing its exit decision when it has none. */
+function cageOutcomeCommand(
+  context: RunImportContext,
+  decision: Origin<'exitDecision'>,
+  cageOutcome: 'min' | 'max',
+): ProjectCommand {
+  const topology = context
+    .assembly()
+    .project.route.biomes.find((biome) => biome.biomeKey === decision.biomeKey)?.topology;
+  const existing =
+    topology === undefined || topology === null || decision.source.kind !== 'occurrence'
+      ? undefined
+      : exitDecisionForSource(topology, decision.source);
+  return existing === undefined
+    ? { kind: 'InitializeExitDecision', decision, edit: { kind: 'fieldsCageOutcome', cageOutcome } }
+    : { kind: 'ReplaceFieldsCageOutcome', decision, cageOutcome };
 }
 
 function answerFieldsReward(context: RunImportContext, reward: Origin<'localReward'>): boolean {

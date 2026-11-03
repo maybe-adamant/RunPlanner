@@ -653,6 +653,7 @@ function roomEntry(save: SaveCheckpoint, previous: SaveCheckpoint | undefined): 
     ...optional('wellShopPurchases', nonEmpty(wholeCounts(save.run.wellShopPurchases))),
     ...optional('biomeBoonSkipCount', whole(save.run.biomeBoonSkipCount, 1)),
     ...optional('numRerolls', whole(save.run.numRerolls, 1)),
+    ...optional('fieldsMaxDoorsRolled', whole(save.run.fieldsMaxDoorsRolled)),
     ...optional('investedTalents', invested.length > 0 ? invested : undefined),
   };
 }

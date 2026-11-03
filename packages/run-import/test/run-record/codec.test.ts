@@ -157,6 +157,7 @@ describe('run record codec', () => {
       rewardStores: { RunProgress: { Boon: 3 }, Secrets: {} },
       bannedTraits: ['HeraManaBoon', 'ZeusSprintBoon'],
       numRerolls: 3,
+      fieldsMaxDoorsRolled: 0,
       investedTalents: ['1:1', '2:1'],
     };
     room(withEntries, 1).entry = {};
@@ -173,6 +174,7 @@ describe('run record codec', () => {
     rejects(entry({ investedTalents: ['1-1'] }), /must be depth:slot/);
     rejects(entry({ metaConversionUses: 0 }), /metaConversionUses must be an integer >= 1/);
     rejects(entry({ numRerolls: 0 }), /numRerolls must be an integer >= 1/);
+    rejects(entry({ fieldsMaxDoorsRolled: -1 }), /fieldsMaxDoorsRolled must be an integer >= 0/);
     rejects(entry({ maxHealth: 0 }), /maxHealth must be an integer >= 1/);
     rejects(entry({ lostTraits: [] }), /lostTraits must not be empty/);
     rejects(entry({ traits: { ZeusWeaponBoon: { level: 0 } } }), /level must be an integer >= 1/);

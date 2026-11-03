@@ -698,6 +698,7 @@ function roomEntry(value: unknown, label: string): RunRecordRoomEntry {
       'wellShopPurchases',
       'biomeBoonSkipCount',
       'numRerolls',
+      'fieldsMaxDoorsRolled',
       'investedTalents',
     ],
     label,
@@ -736,6 +737,7 @@ function roomEntry(value: unknown, label: string): RunRecordRoomEntry {
     ...optional(record, 'wellShopPurchases', label, nonEmptyCounts),
     ...optional(record, 'biomeBoonSkipCount', label, (entry, path) => integer(entry, path, 1)),
     ...optional(record, 'numRerolls', label, (entry, path) => integer(entry, path, 1)),
+    ...optional(record, 'fieldsMaxDoorsRolled', label, (entry, path) => integer(entry, path)),
     ...optional(record, 'investedTalents', label, (entry, path) =>
       sortedNames(entry, path, (item, at) => {
         const node = text(item, at);

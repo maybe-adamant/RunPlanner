@@ -493,6 +493,15 @@ reproduces is reported with its nearest miss and the plan stops there.
    MaxHealthDrop Shrine; the Dream fixture's P_Boss01 no longer reports a
    refused Shrine.
 
+   **Fields Max counter.** `SelectFieldsDoorCageCount` adds one to
+   `CurrentRun.FieldsMaxDoorsRolled` exactly on a Max roll, so the record
+   now carries the counter on every entry save and the counter's gain across
+   a source room pins its roll, untaken or cageless doors included; a pinned
+   roll the plan cannot make is refused, never searched. Records without the
+   counter keep the cage-count reading and `switchUnseenRoll`. Raw 333: the
+   H_MiniBoss02 Max (behind the Bridge) and the H_Combat10 Min are pinned
+   with no Fields door assumption left.
+
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.
 6. **Recorded room** (authored outcome replayed as canonical events) only for
