@@ -476,7 +476,7 @@ export function createTraitOfferCandidateArtifacts(
             generationState: primary.generationState,
             source: traitOfferCandidateSource(catalog, context, effectiveOffer),
           }),
-          directTraitSetBranchHistories: Object.freeze([context.state.traitHistory]),
+          directTraitSetHistory: context.state.traitHistory,
           lifecyclePoint: 'candidate',
           sequence,
         });

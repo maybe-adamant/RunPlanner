@@ -41,7 +41,7 @@ export interface SelectedTraitChildSettlementInput {
   readonly targetedAcquisition: import('../../traits').TraitTargetedAcquisitionAssessment;
   readonly before: TraitHistoryState;
   readonly candidateContext: import('../../traits').TraitOfferCandidateContext;
-  readonly directTraitSetBranchHistories: readonly TraitHistoryState[];
+  readonly directTraitSetHistory: TraitHistoryState;
   readonly lifecyclePoint: string;
   readonly sequence: number;
   readonly findingChronology?: FindingChronology;
@@ -158,13 +158,15 @@ export function settleSelectedTraitChildren(
     for (const set of selectedDisposition.sets) {
       if (result === undefined) break;
       const address = createAllTogetherSetAddress(traitAddress, input.selectedOptionKey, set.key);
-      const domains = input.directTraitSetBranchHistories.map((history) =>
-        directTraitSetOutcomes(input.catalog, history, selected.traitKey, set.key),
+      const domain = directTraitSetOutcomes(
+        input.catalog,
+        input.directTraitSetHistory,
+        selected.traitKey,
+        set.key,
       );
       const hasResult = Object.prototype.hasOwnProperty.call(result, set.key);
       const value = result[set.key];
-      const branchSupported = domains.map((domain) => domain.includes(value ?? null));
-      if (!hasResult || branchSupported.length === 0 || !branchSupported.every(Boolean)) {
+      if (!hasResult || !domain.includes(value ?? null)) {
         invalid = true;
         blockedChild ??= Object.freeze({ address, candidateContext: input.candidateContext });
         findings.push(
@@ -174,7 +176,7 @@ export function settleSelectedTraitChildren(
             input.sequence,
             hasResult ? 'allTogetherResultUnavailable' : 'allTogetherResultMissing',
             selected.traitKey,
-            branchSupported.some(Boolean) ? 'branchDivergence' : String(value),
+            String(value),
             input.findingChronology,
             ownerRegion(traitAddress),
           ),

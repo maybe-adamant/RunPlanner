@@ -676,6 +676,7 @@ export function applyProducerRoleHistory(
       });
     }
     const traitEventCountBeforeSettlement = acquisitionBranch.state.traitHistory.events.length ?? 0;
+    const directTraitSetHistory = (directTraitAgreementBranches ?? branches)[0]?.state.traitHistory;
     const traitSettlement = applyTraitOfferForAcquisition(
       catalog,
       acquisitionBranch,
@@ -684,11 +685,7 @@ export function applyProducerRoleHistory(
       resolution.lifecyclePoint,
       resolution.historySequence,
       findingChronology,
-      {
-        directTraitSetBranchHistories: (directTraitAgreementBranches ?? branches).map(
-          (candidate) => candidate.state.traitHistory,
-        ),
-      },
+      directTraitSetHistory === undefined ? {} : { directTraitSetHistory },
     );
     mergeRewardFindingEmissions(findingEmissions, traitSettlement.findingEntries);
     if (traitSettlement.candidateContact !== undefined)

@@ -1019,7 +1019,7 @@ export function applyEncounterSettlementTransition(inputs: {
         'selection',
         undefined,
         encounterSource,
-        authored === null ? undefined : branches.map((candidate) => candidate.state.traitHistory),
+        undefined,
         provider,
       ),
     );

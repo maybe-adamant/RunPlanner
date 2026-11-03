@@ -169,8 +169,27 @@ happen", never as alternative states carried forward or offered as a choice.
    An offer exclusion is the reached state's first failing gate:
    `allBranches`, the ranking and the editor's "Depending on earlier rolls"
    prefix are gone, and Draft notes every exclusion. Draft corpus unchanged.
-   Remaining: the All Together settlement's per-history domains, and the
-   settlement internals' zero-or-one lists.
+   A fountain use keeps its one Phial frontier; its candidate answers there
+   and the editor marks a target possible only while that Phial is pending. A
+   keepsake equip result keeps its one pre-equip state; an Echo replay with
+   no reached state opens no result. A Hermes Shrine and a Purging Pool
+   publish one assessment (each Pool reroll one), a Stygian Well its entry
+   assessment and a chronological log of purchase and reroll assessments, and
+   a Shrine Travel Deal refill one realized domain; their capabilities read
+   them without agreement. Derived acquisition entries keep one frontier per
+   entry (a probe over every suite found every cohort of size one, a later
+   emission replacing the earlier), so `branchCohortSize` and
+   `mergeRewardOfferExclusions` are gone, and a purchase publishes one price
+   `context`, so the ledger's divergence and unknown-Twist faults are gone.
+   An offer exclusion is the reached state's first failing gate:
+   `allBranches`, the ranking and the editor's "Depending on earlier rolls"
+   prefix are gone, and Draft notes every exclusion. Draft corpus unchanged.
+   All Together sets are judged at one history; the per-history domains and
+   the `branchDivergence` finding detail are gone.
+   Remaining: the settlement internals' zero-or-one lists (walk `branches`,
+   settlement inputs such as `directTraitAgreementBranches`, `roomActionEnds`
+   branches, Well purchase and roll contexts) narrowed to `State |
+undefined`; the Echo replay source's `branchDivergence` reason.
 5. **Trait offer state inspector.** With one state per draw, the offer-state
    popover's "Possible state N" blocks collapse to one; simplify it.
    _Status: done._ The presentation carries one rarity state and the

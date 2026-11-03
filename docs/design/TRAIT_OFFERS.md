@@ -333,8 +333,8 @@ Replacement carries exact old identity, slot, promoted rarity and transferred
 level; it waives occupied-slot failure, not other eligibility. Its explicit
 rarity is not retested as a fresh roll. Hymn can seed despite Ordinary and
 credits every replacement alternative when used. Complete-screen support and
-selected effects must succeed within the same history branch; evidence is
-never assembled from incompatible branches.
+selected effects, including each All Together set, are judged at the one
+reached history.
 
 Echo replay, Chaos pairs, NPCs, Hammers and Spells retain their separate
 provider algorithms.

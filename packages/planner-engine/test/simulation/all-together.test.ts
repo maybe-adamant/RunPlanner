@@ -427,34 +427,4 @@ describe('All Together direct trait settlement', () => {
       settled.state.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
     ).toEqual([]);
   });
-
-  it('withholds branch-divergent sets atomically after acquiring the outer trait', () => {
-    const first = requiredHistory();
-    const second = requiredHistory([acquired(4, 'Hephaestus', 'ElementalDamageBoon')]);
-    const result = settleEncounterTraitOffer(
-      catalog,
-      branch(first),
-      owner.owner,
-      offer(),
-      20,
-      'encounterCompleted',
-      undefined,
-      'selection',
-      undefined,
-      undefined,
-      [first, second],
-    );
-    expect(result.branch.state.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe(
-      'Legendary',
-    );
-    expect(
-      result.branch.state.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
-    ).toEqual([]);
-    expect(result.blockedChild?.address).toMatchObject({ kind: 'allTogetherSet', setKey: 'earth' });
-    expect(result.blockedChild?.candidateContext).toBeDefined();
-    expect(
-      result.findingEntries.find((entry) => entry.finding.origin.kind === 'allTogetherSet')?.finding
-        .evidence.detail,
-    ).toBe('branchDivergence');
-  });
 });

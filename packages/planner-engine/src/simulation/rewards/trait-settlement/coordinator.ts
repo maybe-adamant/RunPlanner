@@ -111,7 +111,8 @@ type TraitOfferAcquisitionMode =
 
 interface ApplyTraitOfferOptions {
   readonly mode?: TraitOfferAcquisitionMode;
-  readonly directTraitSetBranchHistories?: readonly TraitHistoryState[];
+  /** The history All Together sets are judged against, when not the screen's own. */
+  readonly directTraitSetHistory?: TraitHistoryState;
 }
 
 /** A completed upgrade screen rebuilds every unopened loot in its room. */
@@ -886,7 +887,7 @@ function settleSelectedOffer(
     targetedAcquisition: evaluation.targetedAcquisition,
     before: evaluation.state.traitHistory,
     candidateContext: childCandidateContext,
-    directTraitSetBranchHistories: options.directTraitSetBranchHistories ?? [before],
+    directTraitSetHistory: options.directTraitSetHistory ?? before,
     lifecyclePoint,
     sequence,
     ...(findingChronology === undefined ? {} : { findingChronology }),
@@ -1717,7 +1718,7 @@ function settleTraitsEncounterOffer(
   sequence: number,
   findingChronology: FindingChronology | undefined,
   routedTraitContext: TraitOfferSourceContext,
-  directTraitSetBranchHistories: readonly TraitHistoryState[] | undefined,
+  directTraitSetHistory: TraitHistoryState | undefined,
 ): EncounterOfferResult {
   const selected = offer.options[optionIndex(offer.selectedOptionKey)];
   const disposition =
@@ -1737,7 +1738,7 @@ function settleTraitsEncounterOffer(
     lifecyclePoint,
     sequence,
     findingChronology,
-    directTraitSetBranchHistories === undefined ? {} : { directTraitSetBranchHistories },
+    directTraitSetHistory === undefined ? {} : { directTraitSetHistory },
   );
   const applied = appliedSettlement.branch;
   const selection: AppliedEncounterSelection = Object.freeze({
@@ -1797,7 +1798,7 @@ export function settleEncounterTraitOffer(
   acquisitionRole = 'selection',
   freshRarityOverride?: import('../../../catalog-schema').TraitRarity,
   encounterSource?: TraitOfferSourceContext,
-  directTraitSetBranchHistories?: readonly TraitHistoryState[],
+  directTraitSetHistory?: TraitHistoryState,
   unresolvedProviderKey?: string,
 ): EncounterTraitOfferSettlement {
   const providerKey = offer?.giverKey ?? unresolvedProviderKey;
@@ -1839,7 +1840,7 @@ export function settleEncounterTraitOffer(
           sequence,
           findingChronology,
           routedTraitContext,
-          directTraitSetBranchHistories,
+          directTraitSetHistory,
         )
       : (() => {
           // Gold and Chaos screens have no authored child; only a refused reroll blocks them.
