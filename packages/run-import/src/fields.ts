@@ -9,6 +9,7 @@ import {
   type FieldsSpatialAddress,
   type OccurrenceId,
   type ProjectCommand,
+  type RoomOccurrence,
   type SemanticAddress,
   exitDecisionForSource,
   normalDecisionProgressionForLayout,
@@ -29,7 +30,7 @@ import {
   type ConversionReplacement,
 } from './dispositions';
 import { authoredOccurrence, deliveredCageReward } from './occurrences';
-import { chooseRoomFit, searchRoom } from './room-search';
+import { chooseRoomFit, ROOM_SEARCH_LIMIT, searchRoom, stateFingerprint } from './room-search';
 import { recordedOffer } from './vocabulary';
 import { challengeSwitchPickups } from './room-uses';
 import { recordedEntryStates } from './conformance';
@@ -566,16 +567,29 @@ function recordCageOfSlots(
   });
 }
 
+/** A Fields room's recorded cages and every slot order the plan can draw them in. */
+interface RecordedCageOrders {
+  readonly offers: readonly ResolvedRewardOffer[];
+  /** Each order, as record cage indices by slot, with the state it enters the room with. */
+  readonly orders: readonly {
+    readonly order: readonly number[];
+    readonly state: string | undefined;
+  }[];
+  /** Places one order on the slots; a slot already holding its cage takes it unchanged. */
+  readonly place: (order: readonly number[]) => boolean;
+  readonly commands: (order: readonly number[]) => readonly ProjectCommand[];
+}
+
 /**
- * Places a Fields room's recorded cages on its slots in the first order the
- * plan draws them: the record keeps opening order, and a draw a refill makes
- * possible fails in another order. Kept only when every cage places.
+ * `firstWhenUnentered`: when the first order leaves the room unentered, its
+ * states cannot be compared yet, so the enumeration stops at it.
  */
-function placeRecordedCages(
+function recordedCageOrders(
   context: RunImportContext,
   reward: Origin<'localReward'>,
   fields: RunRecordFields,
-): boolean {
+  firstWhenUnentered = false,
+): RecordedCageOrders | undefined {
   const offers = fields.cages.map((cage) => recordedOffer(context.catalog, cage.reward));
   const state = fieldsState(context, reward.biomeKey, reward.occurrenceId);
   if (
@@ -583,15 +597,24 @@ function placeRecordedCages(
     offers.some((offer) => offer === undefined) ||
     fields.cages.some((_cage, index) => !(`cage${index + 1}` in state.cages))
   )
-    return false;
+    return undefined;
   const target = (slot: number) => ({ ...reward, slotKey: `cage${slot + 1}` });
-  // A slot already holding the cage takes it without a change.
-  const place = (slot: number, index: number) =>
+  const placeOne = (slot: number, index: number) =>
     context.apply({ kind: 'ReplaceLocalReward', reward: target(slot), value: offers[index]! }) ||
     sameCage(context, target(slot), offers[index]!);
-  const search = (slot: number, left: readonly number[]): readonly number[] | undefined => {
-    if (left.length === 0) return [];
+  const entered = () => stateFingerprint(context, reward, 'roomEntered');
+  const orders: { readonly order: readonly number[]; readonly state: string | undefined }[] = [];
+  const draw = (slot: number, left: readonly number[], prefix: readonly number[]): void => {
+    if (left.length === 0) {
+      orders.push({ order: prefix, state: entered() });
+      return;
+    }
     for (const index of left) {
+      if (
+        orders.length >= ROOM_SEARCH_LIMIT ||
+        (firstWhenUnentered && orders.length === 1 && orders[0]!.state === undefined)
+      )
+        return;
       const evaluation = context
         .candidates()
         .evaluate({ kind: 'localReward', reward: target(slot), value: offers[index]! });
@@ -600,26 +623,105 @@ function placeRecordedCages(
         (!evaluation.result.supported || evaluation.result.findings.length > 0)
       )
         continue;
-      const rest = context.probe(() =>
-        place(slot, index)
-          ? search(
-              slot + 1,
-              left.filter((other) => other !== index),
-            )
-          : undefined,
-      );
-      if (rest !== undefined) return [index, ...rest];
+      context.probe(() => {
+        if (placeOne(slot, index))
+          draw(
+            slot + 1,
+            left.filter((other) => other !== index),
+            [...prefix, index],
+          );
+      });
     }
-    return undefined;
   };
-  const order = search(
+  draw(
     0,
     fields.cages.map((_cage, index) => index),
+    [],
   );
-  return (
-    order !== undefined &&
-    context.transaction(() => order.every((index, slot) => place(slot, index)))
-  );
+  return {
+    offers: offers as readonly ResolvedRewardOffer[],
+    orders,
+    place: (order) => order.every((index, slot) => placeOne(slot, index)),
+    commands: (order) =>
+      order.map((index, slot): ProjectCommand => ({
+        kind: 'ReplaceLocalReward',
+        reward: target(slot),
+        value: offers[index]!,
+      })),
+  };
+}
+
+/** Whether the orders all enter the room with one state, so none leaves a trace a later save could show. */
+const ordersAlike = (orders: RecordedCageOrders['orders']) =>
+  orders[0]?.state !== undefined && orders.every((other) => other.state === orders[0]!.state);
+
+/**
+ * Places a Fields room's recorded cages on its slots: the record keeps
+ * opening order, and slots are draw order, drawn when the source prepares the
+ * room. The first order the plan can draw is placed; when the orders do not
+ * all enter the room with one state, as after a refill, or the room is not
+ * entered yet, the order is judged once it is (`judgeRecordedCageOrders`).
+ */
+function placeRecordedCages(
+  context: RunImportContext,
+  reward: Origin<'localReward'>,
+  fields: RunRecordFields,
+): boolean {
+  const cages = recordedCageOrders(context, reward, fields, true);
+  const first = cages?.orders[0];
+  if (cages === undefined || first === undefined) return false;
+  if (!context.transaction(() => cages.place(first.order))) return false;
+  if (!ordersAlike(cages.orders)) context.used.add(`cageOrderOpen:${reward.occurrenceId}`);
+  return true;
+}
+
+/**
+ * Judges each entered Fields room whose recorded cage orders may enter it
+ * with different states: alike orders keep the first, otherwise the order the
+ * source's next entry save (the room's own) accepts is placed, other accepted
+ * orders reported, and without one the plan stops at the room.
+ */
+function judgeRecordedCageOrders(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrence: RoomOccurrence,
+): void {
+  const id = occurrence.occurrenceId;
+  if (!context.used.has(`cageOrderOpen:${id}`) || context.used.has(`cageOrderJudged:${id}`)) return;
+  const visit = fieldsVisit(context, id);
+  const reward = createLocalRewardAddress(
+    createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+    id,
+    'cages',
+    'cage1',
+  ) as Origin<'localReward'>;
+  if (visit === undefined || stateFingerprint(context, reward, 'roomEntered') === undefined) return;
+  context.used.add(`cageOrderJudged:${id}`);
+  const cages = recordedCageOrders(context, reward, visit.fields);
+  if (cages === undefined || ordersAlike(cages.orders)) return;
+  const search = searchRoom(context, {
+    roomIndex: Math.max(0, visit.roomIndex - 1),
+    candidates: cages.orders.map((entry) => entry.order),
+    author: (order) => (cages.place(order) ? order : undefined),
+    settles: 'all',
+    sweep: true,
+    fingerprint: () => stateFingerprint(context, reward, 'roomEntered') ?? '',
+  });
+  const choice = chooseRoomFit(search.fits);
+  const at = record(visit.roomIndex);
+  if (choice === undefined || !context.transaction(() => cages.place(choice.chosen.choice))) {
+    context.halt({ area: 'fields', code: 'cageOrderUnaccepted', address: reward, record: at });
+    return;
+  }
+  if (choice.equivalents.length > 0 || search.capped)
+    context.note({
+      area: 'fields',
+      reason: 'notInRecord',
+      address: reward,
+      applied: cages.commands(choice.chosen.choice)[0]!,
+      alternatives: choice.equivalents.flatMap((fit) => cages.commands(fit.choice)),
+      record: at,
+    });
 }
 
 /** Whether a cage slot already holds the value, so placing it changes nothing. */
@@ -1131,6 +1233,8 @@ export function importFieldsRooms(context: RunImportContext): void {
   const project = context.assembly().project;
   for (const biome of project.route.biomes)
     for (const occurrence of biome.topology?.occurrences ?? []) {
+      if (occurrence.state.kind === 'fieldsCombat')
+        judgeRecordedCageOrders(context, biome.biomeKey, occurrence);
       collectOptionalRewards(context, biome.biomeKey, occurrence.occurrenceId);
       const used = `fieldsCount:${occurrence.occurrenceId}`;
       if (
