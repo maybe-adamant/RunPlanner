@@ -248,6 +248,7 @@ function answerShopOffer(
       context,
       visit!.roomIndex,
       commands.map((command) => [command]),
+      { area: 'shop', address: offer },
     );
     if (answer === undefined) {
       context.halt({ area: 'shop', code: 'stockGodUnaccepted', address: offer, record: at });
@@ -753,6 +754,7 @@ function answerAcquisitionEntry(
           context,
           roomIndex,
           guessed.map((command) => [command]),
+          { area: 'reward', address: entry },
         );
   if (answer === undefined) {
     if (supported.length === 0) context.refuse();

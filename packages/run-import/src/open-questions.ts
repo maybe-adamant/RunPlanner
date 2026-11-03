@@ -13,7 +13,8 @@ import {
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   type SemanticFinding,
 } from '@run-planner/engine/simulation';
-import { isQuestionFinding } from './areas';
+import { areaOfFinding, isQuestionFinding } from './areas';
+import type { RunImportArea } from './report';
 import { carrierChildAnswers } from './carrier-children';
 import { countedCageOutcome } from './fields';
 import type { RunImportContext } from './import';
@@ -44,18 +45,24 @@ export function answerByAcceptance(
 ): AcceptedAnswer | undefined {
   const roomIndex = context.occurrences.locationOf(reason.origin)?.roomIndex;
   if (roomIndex === undefined) return undefined;
-  return authorAcceptedAnswer(context, roomIndex, candidateAnswers(context, reason));
+  return authorAcceptedAnswer(context, roomIndex, candidateAnswers(context, reason), {
+    area: areaOfFinding(reason),
+    address: reason.origin,
+  });
 }
 
 /**
  * Authors the first candidate the room's next entry save accepts, each
  * candidate's later questions in any room answered until that save is
- * reached; undefined, authoring nothing, when none is accepted.
+ * reached; undefined, authoring nothing, when none is accepted. A search
+ * stopped at its limit is reported as an assumption on `owner`, since an
+ * accepted answer, or another, may lie past it.
  */
 export function authorAcceptedAnswer(
   context: RunImportContext,
   roomIndex: number,
   candidates: Iterable<readonly ProjectCommand[]>,
+  owner: { readonly area: RunImportArea; readonly address: SemanticAddress },
 ): AcceptedAnswer | undefined {
   const search = searchRoom(context, {
     roomIndex,
@@ -65,6 +72,8 @@ export function authorAcceptedAnswer(
     author: (commands: readonly ProjectCommand[]) =>
       commands.every((command) => context.apply(command)) ? commands : undefined,
   });
+  if (search.capped)
+    context.note({ ...owner, reason: 'assumption', record: { roomIndex, visit: 0 } });
   const accepted = search.fits.filter((fit) => fit.accepted);
   const chosen = accepted[0]?.choice;
   if (

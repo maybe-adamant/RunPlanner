@@ -263,6 +263,7 @@ export function answerWheels(context: RunImportContext, reason: SemanticFinding)
     context,
     visit.roomIndex,
     commands.map((command) => [command]),
+    { area: 'wheel', address: offer },
   );
   if (answer === undefined) return false;
   context.note({
