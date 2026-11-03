@@ -25,7 +25,7 @@ export type {
   TargetRewardHistoryCheckpoint,
   FigLeafPhaseCandidateSupport,
   GorgonPhaseCandidateSupport,
-  NemesisRandomEventBranchAssessment,
+  NemesisRandomEventAssessment,
   NemesisRandomEventCandidateSupport,
 } from './model';
 export type {

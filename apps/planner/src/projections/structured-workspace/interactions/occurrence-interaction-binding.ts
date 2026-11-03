@@ -132,17 +132,13 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly resourcePlacements: ReadonlyMap<string, WorkspaceResourcePlacementInteraction>;
 }
 
-function intersectNemesisBranchValues(
+function nemesisValues(
   support: NemesisRandomEventCandidateSupport,
-  select: (branch: NemesisRandomEventCandidateSupport['branches'][number]) => readonly string[],
+  select: (
+    assessment: NonNullable<NemesisRandomEventCandidateSupport['assessment']>,
+  ) => readonly string[],
 ): readonly string[] {
-  const first = support.branches[0];
-  if (first === undefined) return Object.freeze([]);
-  return Object.freeze(
-    select(first).filter((value) =>
-      support.branches.every((branch) => select(branch).includes(value)),
-    ),
-  );
+  return support.assessment === undefined ? Object.freeze([]) : select(support.assessment);
 }
 
 const nemesisBetLabels: Readonly<Record<AuthoredNemesisBetOutcome, string>> = Object.freeze({
@@ -193,33 +189,28 @@ function projectNemesisEventDomain(
   switch (value.kind) {
     case 'freeItem':
       return Object.freeze({
-        rewardPicker: rewardPicker(
-          intersectNemesisBranchValues(support, (branch) => branch.freeItemRewardTypes),
-        ),
+        rewardPicker: rewardPicker(nemesisValues(support, (branch) => branch.freeItemRewardTypes)),
       });
     case 'goldTrade':
       return Object.freeze({
-        rewardPicker: rewardPicker(
-          intersectNemesisBranchValues(support, (branch) => branch.goldTradeRewardTypes),
-        ),
+        rewardPicker: rewardPicker(nemesisValues(support, (branch) => branch.goldTradeRewardTypes)),
       });
     case 'damageTrade':
       return Object.freeze({
         rewardPicker: rewardPicker(
-          intersectNemesisBranchValues(support, (branch) => branch.damageTradeRewardTypes),
+          nemesisValues(support, (branch) => branch.damageTradeRewardTypes),
         ),
       });
     case 'traitTrade':
       return Object.freeze({
         traitPicker: projectStableIdentityPicker({
           assessment: 'assessed',
-          choices: intersectNemesisBranchValues(
-            support,
-            (branch) => branch.traitTradeTraitKeys,
-          ).map((traitKey) => ({
-            label: catalog.traits.byKey[traitKey]?.label ?? 'Unknown boon',
-            value: traitKey,
-          })),
+          choices: nemesisValues(support, (branch) => branch.traitTradeTraitKeys).map(
+            (traitKey) => ({
+              label: catalog.traits.byKey[traitKey]?.label ?? 'Unknown boon',
+              value: traitKey,
+            }),
+          ),
           selected: value.traitKey ?? undefined,
           selectedLabel:
             value.traitKey === null
@@ -232,10 +223,7 @@ function projectNemesisEventDomain(
         ? Object.freeze({})
         : Object.freeze({
             rewardPicker: rewardPicker(
-              intersectNemesisBranchValues(
-                support,
-                (branch) => branch.damageContestSuccessRewardTypes,
-              ),
+              nemesisValues(support, (branch) => branch.damageContestSuccessRewardTypes),
             ),
           });
   }

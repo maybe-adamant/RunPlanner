@@ -1435,7 +1435,7 @@ describe('field NPC encounter requirements', () => {
       assembly,
       event,
     );
-    expect(capability?.branches.length).toBeGreaterThan(0);
+    expect(capability?.assessment).toBeDefined();
     expect(capability?.familyKeys).toEqual([
       'freeItem',
       'goldTrade',

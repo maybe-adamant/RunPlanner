@@ -17,7 +17,7 @@ import {
 import {
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   simulateProjectAssembly,
-  type NemesisRandomEventBranchAssessment,
+  type NemesisRandomEventAssessment,
 } from '@run-planner/engine/simulation';
 
 import {
@@ -32,19 +32,15 @@ import {
 } from '../checkpoints/underworld';
 
 function sharedCandidate(
-  branches: readonly NemesisRandomEventBranchAssessment[],
+  assessment: NemesisRandomEventAssessment | undefined,
   key: 'traitTradeTraitKeys' | 'freeItemRewardTypes' | 'goldTradeRewardTypes',
 ): string {
-  const first = branches[0]?.[key];
-  if (first === undefined) throw new Error(`Nemesis candidate domain ${key} is missing`);
-  const value = first.find((candidate) =>
-    branches.every((branch) => branch[key].includes(candidate)),
-  );
-  if (value === undefined) throw new Error(`Nemesis candidate branches disagree about ${key}`);
+  const value = assessment?.[key][0];
+  if (value === undefined) throw new Error(`Nemesis candidate domain ${key} is missing`);
   return value;
 }
 
-function candidateBranches(
+function candidateAssessment(
   project: ProjectDocument,
   phase: ReturnType<typeof createEncounterPhaseAddress>,
 ) {
@@ -61,7 +57,7 @@ function candidateBranches(
   );
   if (capability === undefined)
     throw new Error('selected Nemesis event has no reached candidate support');
-  return capability.branches;
+  return capability.assessment;
 }
 
 function selectedNemesis(
@@ -83,7 +79,7 @@ function reachedFreeItemRewardType(): string {
     'Encounter',
   );
   return sharedCandidate(
-    candidateBranches(selectedNemesis(loadUnderworldFGHICheckpoint(), phase), phase),
+    candidateAssessment(selectedNemesis(loadUnderworldFGHICheckpoint(), phase), phase),
     'freeItemRewardTypes',
   );
 }
@@ -117,7 +113,7 @@ export function createNemesisTraitTradeCheckpoint(): ProjectDocument {
     'Encounter',
   );
   let project = selectedNemesis(loadUnderworldFGHICheckpoint(), phase);
-  const traitKey = sharedCandidate(candidateBranches(project, phase), 'traitTradeTraitKeys');
+  const traitKey = sharedCandidate(candidateAssessment(project, phase), 'traitTradeTraitKeys');
   project = replaceNemesisRandomEventInteraction(
     project,
     createNemesisRandomEventAddress(phase),
@@ -183,7 +179,7 @@ export function createNemesisPomCheckpoint(): ProjectDocument {
     'Encounter',
   );
   let project = selectedNemesis(loadUnderworldFGHICheckpoint(), phase);
-  const rewardTypes = candidateBranches(project, phase)[0]?.goldTradeRewardTypes ?? [];
+  const rewardTypes = candidateAssessment(project, phase)?.goldTradeRewardTypes ?? [];
   const rewardType = rewardTypes.find(
     (candidate) => candidate === 'StackUpgrade' || candidate === 'WeaponUpgrade',
   );

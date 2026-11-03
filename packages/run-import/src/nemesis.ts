@@ -62,7 +62,7 @@ export function guessNemesisEvent(
     return undefined;
   }
   const current = support()!;
-  const branch = current.branches[0];
+  const branch = current.assessment;
   const family = context
     .assembly()
     .project.route.biomes.find((biome) => biome.biomeKey === event.biomeKey)
@@ -142,7 +142,7 @@ export function answerNemesis(context: RunImportContext, reason: SemanticFinding
         context.assembly(),
         event,
       );
-      const branch = support?.branches[0];
+      const branch = support?.assessment;
       if (support === undefined || branch === undefined) return false;
       let value: Interaction | undefined;
       let traitExact = true;

@@ -808,81 +808,78 @@ export function applyEncounterSettlementTransition(inputs: {
         room.occurrenceId,
         roomActionKey({ kind: 'interactEncounter', phaseKey: event.phaseKey }),
       );
-      const assessments = Object.freeze(
-        branches.map((branch) => {
-          const facts = createBiomeRewardFacts({
-            catalog,
-            state: branch.state,
-            source: room,
-            currentRoom: room,
-            sourceDeclaration: declaration,
-            view: view.preOutgoing ?? view.entry,
-            hubBoardLookups: 'notConsulted',
-          });
-          const runProgressLegal = (rewardType: 'StackUpgrade' | 'WeaponUpgrade') => {
-            const entries = catalog.rewards.stores.byKey.RunProgress?.entries.filter(
-              (entry) => entry.rewardType === rewardType,
-            );
-            return (
-              entries === undefined ||
-              entries.length === 0 ||
-              entries.some(
-                (entry) =>
-                  entry.requirement === undefined ||
-                  evaluateRequirement(entry.requirement, facts.requirements),
-              )
-            );
-          };
-          const talentLegal =
-            (facts.requirements.records.useRecord.SpellDrop ?? 0) >= 1 &&
-            facts.requirements.flags.allSpellInvested !== true;
-          const applicable = (variant: {
-            readonly rewardType: string;
-            readonly enteredBiome: { readonly min?: number; readonly max?: number };
-            readonly requirement: string;
-          }) =>
-            (variant.enteredBiome.min === undefined ||
-              inputs.enteredBiomeCount >= variant.enteredBiome.min) &&
-            (variant.enteredBiome.max === undefined ||
-              inputs.enteredBiomeCount <= variant.enteredBiome.max) &&
-            (variant.requirement === 'none' ||
-              (variant.requirement === 'pomLegal' && runProgressLegal('StackUpgrade')) ||
-              (variant.requirement === 'hammerEarlyOrLate' && runProgressLegal('WeaponUpgrade')) ||
-              (variant.requirement === 'talentLegal' && talentLegal));
-          const equipped = Object.values(branch.state.traitHistory.equippedTraits).filter(
-            (trait) => {
-              const declaration = catalog.traits.byKey[trait.traitKey];
-              return (
-                declaration !== undefined &&
-                trait.providerKind === 'olympian' &&
-                trait.rarity !== undefined
-              );
-            },
+      const assessment = ((branch: RewardBranchState | undefined) => {
+        if (branch === undefined) return undefined;
+        const facts = createBiomeRewardFacts({
+          catalog,
+          state: branch.state,
+          source: room,
+          currentRoom: room,
+          sourceDeclaration: declaration,
+          view: view.preOutgoing ?? view.entry,
+          hubBoardLookups: 'notConsulted',
+        });
+        const runProgressLegal = (rewardType: 'StackUpgrade' | 'WeaponUpgrade') => {
+          const entries = catalog.rewards.stores.byKey.RunProgress?.entries.filter(
+            (entry) => entry.rewardType === rewardType,
           );
-          const common = equipped.filter((trait) => trait.rarity === 'Common');
-          return Object.freeze({
-            freeItemRewardTypes: Object.freeze([...policy.freeItem.resultRewardTypes]),
-            goldTradeRewardTypes: Object.freeze(
-              policy.goldTrade.variants.filter(applicable).map((variant) => variant.rewardType),
+          return (
+            entries === undefined ||
+            entries.length === 0 ||
+            entries.some(
+              (entry) =>
+                entry.requirement === undefined ||
+                evaluateRequirement(entry.requirement, facts.requirements),
+            )
+          );
+        };
+        const talentLegal =
+          (facts.requirements.records.useRecord.SpellDrop ?? 0) >= 1 &&
+          facts.requirements.flags.allSpellInvested !== true;
+        const applicable = (variant: {
+          readonly rewardType: string;
+          readonly enteredBiome: { readonly min?: number; readonly max?: number };
+          readonly requirement: string;
+        }) =>
+          (variant.enteredBiome.min === undefined ||
+            inputs.enteredBiomeCount >= variant.enteredBiome.min) &&
+          (variant.enteredBiome.max === undefined ||
+            inputs.enteredBiomeCount <= variant.enteredBiome.max) &&
+          (variant.requirement === 'none' ||
+            (variant.requirement === 'pomLegal' && runProgressLegal('StackUpgrade')) ||
+            (variant.requirement === 'hammerEarlyOrLate' && runProgressLegal('WeaponUpgrade')) ||
+            (variant.requirement === 'talentLegal' && talentLegal));
+        const equipped = Object.values(branch.state.traitHistory.equippedTraits).filter((trait) => {
+          const declaration = catalog.traits.byKey[trait.traitKey];
+          return (
+            declaration !== undefined &&
+            trait.providerKind === 'olympian' &&
+            trait.rarity !== undefined
+          );
+        });
+        const common = equipped.filter((trait) => trait.rarity === 'Common');
+        return Object.freeze({
+          freeItemRewardTypes: Object.freeze([...policy.freeItem.resultRewardTypes]),
+          goldTradeRewardTypes: Object.freeze(
+            policy.goldTrade.variants.filter(applicable).map((variant) => variant.rewardType),
+          ),
+          damageTradeRewardTypes: Object.freeze(
+            policy.damageTrade.variants.filter(applicable).map((variant) => variant.rewardType),
+          ),
+          damageContestSuccessRewardTypes: Object.freeze(
+            policy.damageContest.successResultRewardTypes.filter((rewardType) =>
+              rewardType === 'StackUpgrade'
+                ? runProgressLegal('StackUpgrade')
+                : rewardType === 'TalentDrop'
+                  ? talentLegal
+                  : true,
             ),
-            damageTradeRewardTypes: Object.freeze(
-              policy.damageTrade.variants.filter(applicable).map((variant) => variant.rewardType),
-            ),
-            damageContestSuccessRewardTypes: Object.freeze(
-              policy.damageContest.successResultRewardTypes.filter((rewardType) =>
-                rewardType === 'StackUpgrade'
-                  ? runProgressLegal('StackUpgrade')
-                  : rewardType === 'TalentDrop'
-                    ? talentLegal
-                    : true,
-              ),
-            ),
-            traitTradeTraitKeys: Object.freeze(
-              (common.length === 0 ? equipped : common).map((trait) => trait.traitKey),
-            ),
-          });
-        }),
-      );
+          ),
+          traitTradeTraitKeys: Object.freeze(
+            (common.length === 0 ? equipped : common).map((trait) => trait.traitKey),
+          ),
+        });
+      })(branches[0]);
       const candidate = Object.freeze({
         origin: owner,
         familyKeys: Object.freeze([
@@ -898,7 +895,7 @@ export function applyEncounterSettlementTransition(inputs: {
         damageContestResults: Object.freeze(['success', 'failure'] as const),
         traitTradeRewardType: policy.traitTrade.fixedResultRewardType,
         damageContestFailureRewardType: policy.damageContest.failureResultRewardType,
-        branches: assessments,
+        ...(assessment === undefined ? {} : { assessment }),
       });
       nemesisCandidate = Object.freeze({ key: semanticAddressKey(owner), value: candidate });
       const result =
@@ -912,26 +909,27 @@ export function applyEncounterSettlementTransition(inputs: {
       const legal =
         !familyMissing &&
         !interactionMissing &&
-        assessments.every((assessment) => {
-          switch (outcome.kind) {
-            case 'freeItem':
-              return assessment.freeItemRewardTypes.includes(rewardType as never);
-            case 'goldTrade':
-              return assessment.goldTradeRewardTypes.includes(rewardType as never);
-            case 'damageTrade':
-              return assessment.damageTradeRewardTypes.includes(rewardType as never);
-            case 'damageContest':
-              return outcome.result === 'success'
-                ? assessment.damageContestSuccessRewardTypes.includes(rewardType as never)
-                : policy.damageContest.failureResultRewardType === rewardType;
-            case 'traitTrade':
-              return (
-                rewardType === policy.traitTrade.fixedResultRewardType &&
-                outcome.traitKey !== null &&
-                assessment.traitTradeTraitKeys.includes(outcome.traitKey)
-              );
-          }
-        });
+        (assessment === undefined ||
+          (() => {
+            switch (outcome.kind) {
+              case 'freeItem':
+                return assessment.freeItemRewardTypes.includes(rewardType as never);
+              case 'goldTrade':
+                return assessment.goldTradeRewardTypes.includes(rewardType as never);
+              case 'damageTrade':
+                return assessment.damageTradeRewardTypes.includes(rewardType as never);
+              case 'damageContest':
+                return outcome.result === 'success'
+                  ? assessment.damageContestSuccessRewardTypes.includes(rewardType as never)
+                  : policy.damageContest.failureResultRewardType === rewardType;
+              case 'traitTrade':
+                return (
+                  rewardType === policy.traitTrade.fixedResultRewardType &&
+                  outcome.traitKey !== null &&
+                  assessment.traitTradeTraitKeys.includes(outcome.traitKey)
+                );
+            }
+          })());
       if (familyMissing) {
         // Room preparation reports the missing family; the interaction settles nothing.
       } else if (interactionMissing || !legal) {

@@ -76,14 +76,11 @@ export interface NemesisRandomEventCandidateSupport {
   readonly damageContestResults: readonly ('success' | 'failure')[];
   readonly traitTradeRewardType: string;
   readonly damageContestFailureRewardType: string;
-  /**
-   * One exact assessment per reachable reward-history branch. Domains must not
-   * be flattened: a result and a trait target are correlated within a branch.
-   */
-  readonly branches: readonly NemesisRandomEventBranchAssessment[];
+  /** The domains at the event's one reached state; absent where none is reached. */
+  readonly assessment?: NemesisRandomEventAssessment;
 }
 
-export interface NemesisRandomEventBranchAssessment {
+export interface NemesisRandomEventAssessment {
   readonly freeItemRewardTypes: readonly string[];
   readonly goldTradeRewardTypes: readonly string[];
   readonly damageTradeRewardTypes: readonly string[];

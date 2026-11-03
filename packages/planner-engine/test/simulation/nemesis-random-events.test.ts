@@ -26,7 +26,7 @@ import {
   createPreparedProjectCandidateSession,
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   simulateProjectAssembly,
-  type NemesisRandomEventBranchAssessment,
+  type NemesisRandomEventAssessment,
 } from '@run-planner/engine/simulation';
 import {
   createGoldenFGHIProject,
@@ -105,7 +105,7 @@ describe('Nemesis random events', () => {
   }
 
   function sharedResult(
-    branches: readonly NemesisRandomEventBranchAssessment[],
+    assessment: NemesisRandomEventAssessment | undefined,
     key:
       | 'freeItemRewardTypes'
       | 'goldTradeRewardTypes'
@@ -113,12 +113,8 @@ describe('Nemesis random events', () => {
       | 'damageContestSuccessRewardTypes'
       | 'traitTradeTraitKeys',
   ) {
-    const first = branches[0]?.[key];
-    if (first === undefined) throw new Error(`missing Nemesis candidate domain ${key}`);
-    const value = first.find((candidate) =>
-      branches.every((branch) => branch[key].includes(candidate)),
-    );
-    if (value === undefined) throw new Error(`Nemesis branches disagree on ${key}`);
+    const value = assessment?.[key][0];
+    if (value === undefined) throw new Error(`missing Nemesis candidate domain ${key}`);
     return value;
   }
 
@@ -135,7 +131,7 @@ describe('Nemesis random events', () => {
         createNemesisRandomEventAddress(phase),
       );
       if (capability === undefined) throw new Error('missing reached Nemesis candidate support');
-      const branches = capability.branches;
+      const assessment = capability.assessment;
 
       let value: AuthoredNemesisRandomEventOutcome;
       let rewardType: string;
@@ -144,19 +140,19 @@ describe('Nemesis random events', () => {
       switch (family) {
         case 'freeItem':
           value = { kind: 'freeItem' };
-          rewardType = sharedResult(branches, 'freeItemRewardTypes');
+          rewardType = sharedResult(assessment, 'freeItemRewardTypes');
           optional = true;
           break;
         case 'goldTrade':
           value = { kind: 'goldTrade', response: 'accept' };
-          rewardType = sharedResult(branches, 'goldTradeRewardTypes');
+          rewardType = sharedResult(assessment, 'goldTradeRewardTypes');
           break;
         case 'damageTrade':
           value = { kind: 'damageTrade', response: 'accept' };
-          rewardType = sharedResult(branches, 'damageTradeRewardTypes');
+          rewardType = sharedResult(assessment, 'damageTradeRewardTypes');
           break;
         case 'traitTrade': {
-          const traitKey = sharedResult(branches, 'traitTradeTraitKeys');
+          const traitKey = sharedResult(assessment, 'traitTradeTraitKeys');
           value = { kind: 'traitTrade', traitKey, response: 'accept' };
           rewardType = 'RoomMoneyTripleDrop';
           removedTraitKey = traitKey;
@@ -164,7 +160,7 @@ describe('Nemesis random events', () => {
         }
         case 'damageContestSuccess':
           value = { kind: 'damageContest', result: 'success' };
-          rewardType = sharedResult(branches, 'damageContestSuccessRewardTypes');
+          rewardType = sharedResult(assessment, 'damageContestSuccessRewardTypes');
           optional = true;
           break;
         case 'damageContestFailure':
@@ -358,7 +354,7 @@ describe('Nemesis random events', () => {
       assembly,
       event,
     );
-    expect(capability?.branches.length).toBeGreaterThan(0);
+    expect(capability?.assessment).toBeDefined();
     expect(
       nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
         assembly,
@@ -372,18 +368,17 @@ describe('Nemesis random events', () => {
       'traitTrade',
       'damageContest',
     ]);
-    expect(capability?.branches[0]).toMatchObject({
+    expect(capability?.assessment).toMatchObject({
       freeItemRewardTypes: expect.arrayContaining(['EmptyMaxHealthDrop', 'HealDrop']),
     });
     expect(
-      capability?.branches.every(
-        (branch) =>
-          branch.goldTradeRewardTypes.includes('StackUpgrade') &&
-          branch.goldTradeRewardTypes.includes('WeaponUpgrade') &&
-          branch.damageTradeRewardTypes.includes('StackUpgrade') &&
-          !branch.damageTradeRewardTypes.includes('TalentDrop') &&
-          !branch.damageContestSuccessRewardTypes.includes('TalentDrop'),
-      ),
+      ((branch) =>
+        branch !== undefined &&
+        branch.goldTradeRewardTypes.includes('StackUpgrade') &&
+        branch.goldTradeRewardTypes.includes('WeaponUpgrade') &&
+        branch.damageTradeRewardTypes.includes('StackUpgrade') &&
+        !branch.damageTradeRewardTypes.includes('TalentDrop') &&
+        !branch.damageContestSuccessRewardTypes.includes('TalentDrop'))(capability?.assessment),
     ).toBe(true);
     const f = assembly.evaluation.route.biomes.find((biome) => biome.origin.biomeKey === 'F');
     if (f === undefined || !('rewards' in f)) throw new Error('missing evaluated F rewards');
@@ -462,8 +457,8 @@ describe('Nemesis random events', () => {
       nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
         assembly,
         createNemesisRandomEventAddress(phase),
-      )?.branches.length,
-    ).toBeGreaterThan(0);
+      )?.assessment,
+    ).toBeDefined();
   });
 
   it('retains a declined trade result without activating its pickup or trait removal', () => {
@@ -550,11 +545,10 @@ describe('Nemesis random events', () => {
         event,
       );
       if (support === undefined) throw new Error('missing interaction-time Nemesis candidates');
-      expect(support.branches.length).toBeGreaterThan(0);
-      for (const branch of support.branches) {
-        expect(branch.traitTradeTraitKeys.includes('HeraCastBoon')).toBe(hasHera);
-        expect(branch.traitTradeTraitKeys.includes('HestiaManaBoon')).toBe(hasHestiaMana);
-      }
+      const branch = support.assessment;
+      if (branch === undefined) throw new Error('missing interaction-time Nemesis assessment');
+      expect(branch.traitTradeTraitKeys.includes('HeraCastBoon')).toBe(hasHera);
+      expect(branch.traitTradeTraitKeys.includes('HestiaManaBoon')).toBe(hasHestiaMana);
       expect(assembly.evaluation.findings).toContainEqual(
         expect.objectContaining({ code: 'nemesisOutcomeMissing', origin: action }),
       );
@@ -580,8 +574,8 @@ describe('Nemesis random events', () => {
       expect.objectContaining({ code: 'nemesisOutcomeUnavailable', origin: action }),
     );
     const repair = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(moved, event);
-    expect(repair?.branches[0]?.traitTradeTraitKeys.length).toBeGreaterThan(0);
-    expect(repair?.branches[0]?.traitTradeTraitKeys).not.toContain('ApolloRetaliateBoon');
+    expect(repair?.assessment?.traitTradeTraitKeys.length).toBeGreaterThan(0);
+    expect(repair?.assessment?.traitTradeTraitKeys).not.toContain('ApolloRetaliateBoon');
   });
 
   it('invalidates spawned cage loot when a trade sells a trait before the cages open', () => {

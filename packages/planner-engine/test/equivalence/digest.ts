@@ -107,6 +107,11 @@ function branchListShape(value: unknown): unknown {
     next.branches = value.frontier === undefined ? [] : [next.frontier];
     delete next.frontier;
   }
+  // Nemesis random-event support published its one assessment as a branch list.
+  if ('familyKeys' in value && 'traitTradeRewardType' in value) {
+    next.branches = next.assessment === undefined ? [] : [next.assessment];
+    delete next.assessment;
+  }
   // A selected trait offer or Pom published its one assessment as a branch list.
   if ('assessment' in value && value.reached === true && 'chronologicalIndex' in value) {
     next.branches = [next.assessment];

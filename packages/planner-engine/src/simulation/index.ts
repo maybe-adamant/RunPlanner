@@ -174,7 +174,7 @@ export {
   type RerollSurfaceSettlement,
   type FigLeafPhaseCandidateSupport,
   type GorgonPhaseCandidateSupport,
-  type NemesisRandomEventBranchAssessment,
+  type NemesisRandomEventAssessment,
   type NemesisRandomEventCandidateSupport,
   type CountedRewardDraw,
   type CountedRewardOwnerAddress,
