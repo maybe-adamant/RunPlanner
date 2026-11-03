@@ -39,6 +39,12 @@ describe('run import route support', () => {
     });
   });
 
+  it("routes the recorded fresh profile's first attempt to Fresh File, authoring no loadout", () => {
+    const imported = projectFromRunRecord(catalog, fixture('fresh'));
+    expect(imported.project.route.routeKey).toBe('FreshFile');
+    expect(imported.report.entries.filter((entry) => entry.area === 'loadout')).toEqual([]);
+  });
+
   it('stops a run on a route the catalog does not declare', () => {
     const record = fixture('surface');
     const result = projectFromRunRecord(catalog, {

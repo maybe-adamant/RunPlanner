@@ -457,8 +457,16 @@ reproduces is reported with its nearest miss and the plan stops there.
    opening room's entry from that save's departure record (the room grants
    nothing). `GameState.PrimaryWeaponName` is unset before a kit is ever
    picked, so the record's weapon is optional. The import authors no loadout
-   on the Fresh File route, which fixes it. Synthetic witnesses only; no real
-   fresh capture yet.
+   on the Fresh File route, which fixes it. Real capture: fixture `fresh`
+   (raw p3-…40272-0, F_Opening01 → F_Boss01, death); its first save is the
+   depth-1 entry save as predicted; the fixture generator now records through
+   the recorder. **Open (E, engine):** `CreateRoom` rolls the fresh opening's
+   reward from RunProgress (a Poseidon boon, `OpeningEmpty` never spawns it),
+   which draws a Boon from the store and counts a RunProgress room in the
+   meta ratio. The engine gives the fresh first entry no reward roll, so the
+   plan's RunProgress store holds one Boon more from r0 and the F_Combat07
+   door batch is MetaProgress in the game but only RunProgress is legal in
+   the plan: the import stops at r2 (`batchRewardStoreMissing`).
 
    **Chaos unpicked curses** (owner rule). They matter only under Vow of
    Denial, which bans both into `BannedTraits`. Under Denial the room's two

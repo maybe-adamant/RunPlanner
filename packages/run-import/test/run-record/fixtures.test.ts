@@ -25,6 +25,28 @@ describe('run record capture fixtures', () => {
     expect([record.rooms[0]!.name, record.rooms.at(-1)!.name]).toEqual(['Dream_Intro', 'H_Boss01']);
   });
 
+  // A new profile loads F_Opening01 directly: its first save is the next room's entry save.
+  it("records a new profile's first attempt from its first room save", () => {
+    const record = fixture('fresh');
+    expect(record.run.runCount).toBe(0);
+    expect(record.route).toEqual({ biomes: ['F'], dream: false });
+    expect(record.outcome).toMatchObject({ kind: 'death', endingRoom: 'F_Boss01' });
+    expect(record.rooms.map((room) => room.name).slice(0, 2)).toEqual([
+      'F_Opening01',
+      'F_Combat01',
+    ]);
+    expect(record.rooms).toHaveLength(13);
+    // No weapon kit was ever picked; the Staff's aspect is the aspectless dummy.
+    expect(record.loadout.weapon).toBeUndefined();
+    expect(record.loadout.aspect?.name).toBe('DummyWeaponStaff');
+    // The opening room rolls its reward from RunProgress although it spawns none.
+    expect(record.rooms[0]!.reward).toEqual({
+      type: 'Boon',
+      lootName: 'PoseidonUpgrade',
+      store: 'RunProgress',
+    });
+  });
+
   it('records the Surface run', () => {
     const record = fixture('surface');
     expect(record.rooms).toHaveLength(29);

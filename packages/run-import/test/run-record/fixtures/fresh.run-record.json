@@ -1,0 +1,722 @@
+{
+  "recordVersion": 1,
+  "run": { "runCount": 0, "startedAt": 1793740272 },
+  "route": { "biomes": ["F"], "dream": false },
+  "outcome": { "kind": "death", "endingRoom": "F_Boss01", "runResult": 2, "killedBy": "Hecate" },
+  "loadout": {
+    "aspect": { "name": "DummyWeaponStaff" },
+    "arcana": [],
+    "vows": {},
+    "startingGold": 0,
+    "startingTraits": [{ "name": "VanillaState", "worldTime": 0 }]
+  },
+  "rooms": [
+    {
+      "name": "F_Opening01",
+      "reward": { "type": "Boon", "lootName": "PoseidonUpgrade", "store": "RunProgress" },
+      "doors": [
+        {
+          "door": 560571,
+          "room": "F_Combat01",
+          "reward": { "type": "Boon", "lootName": "ApolloUpgrade" }
+        }
+      ],
+      "exit": "F_Combat01",
+      "encounters": [{ "name": "OpeningEmpty" }],
+      "uses": { "ErebusExitDoor": 1 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": { "DummyWeaponStaff": {}, "VanillaState": {} },
+        "maxHealth": 30,
+        "rewardStores": {
+          "PreHubRewards": {},
+          "Secrets": { "TrialUpgrade": 1 },
+          "TyphonBossRewards": {
+            "Boon": 2,
+            "TalentBigDrop": 1,
+            "StackUpgradeTriple": 1,
+            "WeaponUpgrade": 2
+          },
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 4,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 8,
+            "MetaCardPointsCommonBigDrop": 4
+          },
+          "SubRoomRewardsHard": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 2
+          },
+          "FieldsOptionalRewards": {
+            "MaxManaDropSmall": 3,
+            "MaxHealthDropSmall": 3,
+            "RoomMoneyTinyDrop": 3,
+            "RoomRewardHealDrop": 1,
+            "ArmorBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 1,
+            "MetaCardPointsCommonDrop": 4,
+            "MinorTalentDrop": 2
+          },
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 3
+          },
+          "InvalidOverrides": {},
+          "HubRewards": {
+            "MaxHealthDropBig": 1,
+            "MaxManaDropBig": 1,
+            "WeaponUpgrade": 1,
+            "HermesUpgrade": 1,
+            "SpellDrop": 1,
+            "Boon": 5
+          },
+          "MinorRunProgress": {
+            "MaxManaDropSmall": 3,
+            "MaxHealthDropSmall": 3,
+            "EmptyMaxHealthSmallDrop": 2,
+            "MinorTalentDrop": 2,
+            "StoreRewardRandomStack": 1,
+            "ElementalBoost": 1,
+            "ArmorBoost": 1
+          },
+          "SubRoomRewards": {
+            "MaxManaDropSmall": 1,
+            "MaxHealthDropSmall": 1,
+            "EmptyMaxHealthSmallDrop": 1,
+            "RoomMoneyTinyDrop": 1,
+            "AirBoost": 1,
+            "EarthBoost": 1,
+            "FireBoost": 1,
+            "WaterBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 2,
+            "MetaCardPointsCommonDrop": 2,
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 2,
+            "MinorTalentDrop": 2
+          },
+          "TartarusRewards": {
+            "RoomMoneyTripleDrop": 1,
+            "StackUpgradeTriple": 1,
+            "WeaponUpgrade": 2,
+            "Devotion": 1,
+            "TalentBigDrop": 1,
+            "Boon": 3
+          },
+          "FieldsCombatRewards": {}
+        }
+      }
+    },
+    {
+      "name": "F_Combat01",
+      "reward": { "type": "Boon", "lootName": "ApolloUpgrade", "store": "RunProgress" },
+      "doors": [
+        { "door": 560570, "room": "F_Combat07", "reward": { "type": "MetaCardPointsCommonDrop" } }
+      ],
+      "exit": "F_Combat07",
+      "encounters": [
+        {
+          "name": "FIntroFight",
+          "waves": [
+            { "spawns": [{ "enemy": "Brawler" }] },
+            { "spawns": [{ "enemy": "Guard" }] },
+            { "spawns": [{ "enemy": "Mage" }] },
+            { "spawns": [{ "enemy": "Brawler" }, { "enemy": "Guard" }, { "enemy": "Mage" }] }
+          ]
+        }
+      ],
+      "uses": { "ErebusExitDoor": 1, "ApolloUpgrade": 1 },
+      "kills": { "Guard": 7, "Mage": 4, "Breakable_F": 7, "Brawler": 2 },
+      "traitScreens": [
+        {
+          "giver": "ApolloUpgrade",
+          "options": [
+            { "name": "ApolloWeaponBoon", "rarity": "Common", "chosen": true },
+            { "name": "ApolloSprintBoon", "rarity": "Common", "chosen": false },
+            { "name": "ApolloManaBoon", "rarity": "Common", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "ApolloWeaponBoon", "rarity": "Common", "worldTime": 63.128085327684 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "npcInteractions": { "ApolloUpgrade": 1 },
+      "entry": { "maxHealth": 30 }
+    },
+    {
+      "name": "F_Combat07",
+      "reward": { "type": "MetaCardPointsCommonDrop", "store": "MetaProgress" },
+      "doors": [
+        { "door": 560574, "room": "F_Combat02", "reward": { "type": "MetaCurrencyDrop" } },
+        { "door": 560575, "room": "F_Combat06", "reward": { "type": "MetaCardPointsCommonDrop" } }
+      ],
+      "exit": "F_Combat02",
+      "encounters": [
+        {
+          "name": "GeneratedF",
+          "difficulty": 85,
+          "waves": [
+            { "difficulty": 42.5, "spawns": [{ "enemy": "Guard", "count": 9, "generated": true }] },
+            {
+              "difficulty": 42.5,
+              "spawns": [
+                { "enemy": "Guard", "count": 4, "generated": true },
+                { "enemy": "Brawler", "count": 2, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Brawler_Elite", "Guard"]
+        }
+      ],
+      "uses": { "MetaCardPointsCommonDrop": 1, "ErebusExitDoor": 1 },
+      "kills": { "Guard": 13, "Breakable_F": 12, "Brawler": 2 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": { "ApolloWeaponBoon": { "rarity": "Common" } },
+        "elements": { "Air": 1 },
+        "maxHealth": 30,
+        "rewardStores": {
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 4,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 7,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        }
+      }
+    },
+    {
+      "name": "F_Combat02",
+      "reward": { "type": "MetaCurrencyDrop", "store": "MetaProgress" },
+      "doors": [
+        { "door": 560571, "room": "F_Combat03", "reward": { "type": "MaxHealthDrop" } },
+        { "door": 560574, "room": "F_Combat22", "reward": { "type": "RoomMoneyDrop" } }
+      ],
+      "exit": "F_Combat22",
+      "encounters": [
+        {
+          "name": "RadiatorIntro",
+          "difficulty": 250,
+          "waves": [
+            { "difficulty": 125, "spawns": [{ "enemy": "Radiator" }] },
+            {
+              "difficulty": 125,
+              "spawns": [
+                { "enemy": "Radiator", "count": 13, "generated": true },
+                { "enemy": "Mage_Elite", "count": 2, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Mage"]
+        }
+      ],
+      "uses": { "MetaCurrencyDrop": 1, "ErebusExitDoor": 1 },
+      "kills": { "Mage_Elite": 2, "Breakable_F": 22, "Radiator": 18 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "elements": { "Air": 1 },
+        "maxHealth": 30,
+        "rewardStores": {
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 3,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 6,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        }
+      }
+    },
+    {
+      "name": "F_Combat22",
+      "reward": { "type": "RoomMoneyDrop", "store": "RunProgress" },
+      "doors": [
+        {
+          "door": 786704,
+          "room": "F_Combat09",
+          "reward": { "type": "Boon", "lootName": "DemeterUpgrade" }
+        },
+        {
+          "door": 786707,
+          "room": "F_MiniBoss01",
+          "reward": { "type": "Boon", "lootName": "PoseidonUpgrade" }
+        }
+      ],
+      "exit": "F_MiniBoss01",
+      "encounters": [
+        {
+          "name": "GeneratedF",
+          "difficulty": 115,
+          "waves": [
+            {
+              "difficulty": 115,
+              "spawns": [
+                { "enemy": "Brawler_Elite", "count": 1, "generated": true },
+                { "enemy": "Guard", "count": 16, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Brawler", "Guard_Elite"]
+        }
+      ],
+      "uses": { "RoomMoneyDrop": 1, "ErebusExitDoor": 1 },
+      "kills": { "Guard": 16, "Brawler_Elite": 1, "Breakable_F": 8 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "elements": { "Air": 1 },
+        "maxHealth": 30,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 1,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 1,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 3
+          }
+        }
+      }
+    },
+    {
+      "name": "F_MiniBoss01",
+      "reward": { "type": "Boon", "lootName": "PoseidonUpgrade", "store": "RunProgress" },
+      "doors": [
+        {
+          "door": 560574,
+          "room": "F_Combat19",
+          "reward": { "type": "Boon", "lootName": "AphroditeUpgrade" }
+        }
+      ],
+      "exit": "F_Combat19",
+      "encounters": [
+        {
+          "name": "MiniBossTreant",
+          "difficulty": 130,
+          "waves": [{ "difficulty": 130, "spawns": [{ "enemy": "Treant", "count": 1 }] }]
+        }
+      ],
+      "uses": { "PoseidonUpgrade": 1, "ErebusExitDoor": 1 },
+      "kills": { "Treant": 1, "Breakable_F": 10, "TreantTail": 2 },
+      "traitScreens": [
+        {
+          "giver": "PoseidonUpgrade",
+          "options": [
+            { "name": "PoseidonCastBoon", "rarity": "Rare", "chosen": false },
+            { "name": "PoseidonSprintBoon", "rarity": "Rare", "chosen": true },
+            { "name": "OmegaPoseidonProjectileBoon", "rarity": "Rare", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "PoseidonSprintBoon", "rarity": "Rare", "worldTime": 154.22712721652 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "npcInteractions": { "PoseidonUpgrade": 1 },
+      "entry": {
+        "elements": { "Air": 1 },
+        "maxHealth": 30,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 1,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 1,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "F_Combat19",
+      "reward": { "type": "Boon", "lootName": "AphroditeUpgrade", "store": "RunProgress" },
+      "doors": [
+        { "door": 561392, "room": "F_Shop01", "reward": { "type": "Shop" } },
+        { "door": 590549, "room": "F_Combat14", "reward": { "type": "MetaCardPointsCommonDrop" } }
+      ],
+      "exit": "F_Shop01",
+      "encounters": [
+        {
+          "name": "GeneratedF",
+          "difficulty": 145,
+          "waves": [
+            {
+              "difficulty": 145,
+              "spawns": [
+                { "enemy": "Mage_Elite", "count": 3, "generated": true },
+                { "enemy": "Brawler", "count": 3, "generated": true },
+                { "enemy": "Guard", "count": 4, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Brawler_Elite", "Guard_Elite", "Mage"]
+        }
+      ],
+      "uses": { "AphroditeUpgrade": 1, "ErebusExitDoor": 1 },
+      "kills": { "Guard": 4, "Mage_Elite": 3, "Breakable_F": 18, "Brawler": 3 },
+      "traitScreens": [
+        {
+          "giver": "AphroditeUpgrade",
+          "options": [
+            { "name": "AphroditeSpecialBoon", "rarity": "Common", "chosen": false },
+            { "name": "FocusRawDamageBoon", "rarity": "Common", "chosen": true },
+            { "name": "HealthRewardBonusBoon", "rarity": "Common", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "FocusRawDamageBoon", "rarity": "Common", "worldTime": 179.25256506621 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "npcInteractions": { "AphroditeUpgrade": 1 },
+      "entry": {
+        "traits": { "PoseidonSprintBoon": { "rarity": "Rare" } },
+        "elements": { "Water": 1, "Air": 1 },
+        "maxHealth": 30,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 1,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 1,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "F_Shop01",
+      "reward": { "type": "Shop", "store": "MetaProgress" },
+      "doors": [
+        { "door": 561481, "room": "F_Combat15", "reward": { "type": "StackUpgrade" } },
+        { "door": 561482, "room": "F_Combat16", "reward": { "type": "MaxHealthDrop" } }
+      ],
+      "exit": "F_Combat15",
+      "encounters": [{ "name": "Shop" }],
+      "uses": { "NPC_Charon_01": 1, "PoseidonUpgrade": 1, "ErebusExitDoor": 1 },
+      "kills": { "Breakable_F": 4 },
+      "traitScreens": [
+        {
+          "giver": "PoseidonUpgrade",
+          "options": [
+            { "name": "PoseidonSpecialBoon", "rarity": "Common", "chosen": false },
+            { "name": "OmegaPoseidonProjectileBoon", "rarity": "Common", "chosen": false },
+            { "name": "EncounterStartOffenseBuffBoon", "rarity": "Epic", "chosen": true }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          {
+            "name": "EncounterStartOffenseBuffBoon",
+            "rarity": "Epic",
+            "worldTime": 194.48589919403
+          }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "store": {
+        "kind": "worldShop",
+        "stock": [
+          {
+            "slot": 1,
+            "name": "RandomLoot",
+            "type": "Boon",
+            "lootName": "PoseidonUpgrade",
+            "baseCost": 150
+          },
+          { "slot": 2, "name": "MetaCardPointsCommonDrop", "type": "Consumable" },
+          { "slot": 3, "name": "StackUpgrade", "type": "Consumable", "baseCost": 100 }
+        ],
+        "purchases": [{ "slot": 1 }]
+      },
+      "npcInteractions": { "NPC_Charon_01": 1 },
+      "entry": {
+        "traits": { "FocusRawDamageBoon": { "rarity": "Common" } },
+        "elements": { "Water": 1, "Air": 2 },
+        "maxHealth": 30,
+        "rewardStores": {
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 3,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 5,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        }
+      }
+    },
+    {
+      "name": "F_Combat15",
+      "reward": { "type": "StackUpgrade", "store": "RunProgress" },
+      "doors": [
+        { "door": 560915, "room": "F_Combat17", "reward": { "type": "RoomMoneyDrop" } },
+        { "door": 566345, "room": "F_Combat05", "reward": { "type": "MaxManaDrop" } }
+      ],
+      "exit": "F_Combat17",
+      "encounters": [
+        {
+          "name": "GeneratedF",
+          "difficulty": 175,
+          "waves": [
+            { "difficulty": 87.5, "spawns": [{ "enemy": "Mage", "count": 8, "generated": true }] },
+            {
+              "difficulty": 87.5,
+              "spawns": [
+                { "enemy": "Mage", "count": 5, "generated": true },
+                { "enemy": "Guard", "count": 6, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Guard_Elite", "Mage"]
+        }
+      ],
+      "uses": { "ErebusExitDoor": 1, "StackUpgrade": 1 },
+      "kills": { "Guard": 6, "Mage": 13, "Breakable_F": 7 },
+      "traitScreens": [
+        {
+          "giver": "StackUpgrade",
+          "options": [
+            { "name": "ApolloWeaponBoon", "rarity": "Common", "chosen": false },
+            { "name": "PoseidonSprintBoon", "rarity": "Rare", "chosen": true },
+            { "name": "EncounterStartOffenseBuffBoon", "rarity": "Epic", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [],
+        "removed": [],
+        "upgraded": [
+          {
+            "name": "PoseidonSprintBoon",
+            "from": { "rarity": "Rare" },
+            "to": { "rarity": "Rare", "level": 2 },
+            "worldTime": 221.49857127282
+          }
+        ]
+      },
+      "entry": {
+        "traits": { "EncounterStartOffenseBuffBoon": { "rarity": "Epic" } },
+        "elements": { "Water": 2, "Air": 2 },
+        "maxHealth": 30,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 1,
+            "StackUpgrade": 1,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "F_Combat17",
+      "reward": { "type": "RoomMoneyDrop", "store": "RunProgress" },
+      "doors": [
+        { "door": 593700, "room": "F_Combat06", "reward": { "type": "MetaCardPointsCommonDrop" } },
+        { "door": 593702, "room": "F_Combat20", "reward": { "type": "MetaCurrencyDrop" } }
+      ],
+      "exit": "F_Combat06",
+      "encounters": [
+        {
+          "name": "ScreamerIntro",
+          "difficulty": 420,
+          "waves": [
+            { "difficulty": 210, "spawns": [{ "enemy": "Screamer" }] },
+            {
+              "difficulty": 210,
+              "spawns": [
+                { "enemy": "Screamer", "count": 12, "generated": true },
+                { "enemy": "Guard_Elite", "count": 5, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Guard"]
+        }
+      ],
+      "uses": { "RoomMoneyDrop": 1, "ErebusExitDoor": 1 },
+      "kills": { "Screamer": 14, "Breakable_F": 9, "Guard_Elite": 5 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": { "PoseidonSprintBoon": { "rarity": "Rare", "level": 2 } },
+        "elements": { "Water": 2, "Air": 2 },
+        "maxHealth": 30,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxManaDrop": 1,
+            "StackUpgrade": 1,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "F_Combat06",
+      "reward": { "type": "MetaCardPointsCommonDrop", "store": "MetaProgress" },
+      "doors": [
+        { "door": 560571, "room": "F_PreBoss01", "reward": { "type": "Shop" } },
+        { "door": 560573, "room": "F_PreBoss01", "reward": { "type": "StackUpgrade" } }
+      ],
+      "exit": "F_PreBoss01",
+      "encounters": [
+        {
+          "name": "GeneratedF",
+          "difficulty": 205,
+          "waves": [
+            {
+              "difficulty": 102.5,
+              "spawns": [{ "enemy": "Brawler", "count": 6, "generated": true }]
+            },
+            {
+              "difficulty": 102.5,
+              "spawns": [
+                { "enemy": "Brawler", "count": 4, "generated": true },
+                { "enemy": "Guard_Elite", "count": 3, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Brawler", "Guard"]
+        }
+      ],
+      "uses": { "MetaCardPointsCommonDrop": 1, "ErebusExitDoor": 1 },
+      "kills": { "Guard_Elite": 3, "Breakable_F": 5, "Brawler": 10 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "elements": { "Water": 2, "Air": 2 },
+        "maxHealth": 30,
+        "rewardStores": {
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 2,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 4,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        }
+      }
+    },
+    {
+      "name": "F_PreBoss01",
+      "reward": { "type": "Shop", "store": "RunProgress" },
+      "doors": [{ "door": 560574, "room": "F_Boss01", "reward": { "type": "MixerFBossDrop" } }],
+      "exit": "F_Boss01",
+      "encounters": [{ "name": "Shop" }],
+      "uses": { "ErebusExitDoor": 1, "ApolloUpgrade": 1 },
+      "traitScreens": [
+        {
+          "giver": "ApolloUpgrade",
+          "options": [
+            { "name": "ApolloSpecialBoon", "rarity": "Common", "chosen": false },
+            { "name": "PoseidonSplashSprintBoon", "rarity": "Duo", "chosen": true },
+            { "name": "ApolloCastAreaBoon", "rarity": "Common", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "PoseidonSplashSprintBoon", "rarity": "Duo", "worldTime": 283.24215127924 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "store": {
+        "kind": "worldShop",
+        "stock": [
+          {
+            "slot": 1,
+            "name": "RandomLoot",
+            "type": "Boon",
+            "lootName": "ApolloUpgrade",
+            "baseCost": 150
+          },
+          { "slot": 2, "name": "RoomRewardHealDrop", "type": "Consumable" },
+          { "slot": 3, "name": "StackUpgrade", "type": "Consumable", "baseCost": 100 }
+        ],
+        "purchases": [{ "slot": 1 }]
+      },
+      "npcInteractions": { "ApolloUpgrade": 1 },
+      "entry": {
+        "elements": { "Water": 2, "Air": 2 },
+        "maxHealth": 30,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxManaDrop": 1,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "F_Boss01",
+      "reward": { "type": "MixerFBossDrop", "store": "RunProgress" },
+      "doors": [],
+      "encounters": [{ "name": "BossHecate01" }],
+      "uses": {},
+      "kills": { "LightRanged": 9, "Default": 1, "Breakable_F": 10 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "npcInteractions": { "Hecate": 1 },
+      "entry": {
+        "traits": { "PoseidonSplashSprintBoon": { "rarity": "Duo" } },
+        "elements": { "Aether": 1, "Water": 2, "Air": 2 },
+        "maxHealth": 30
+      }
+    }
+  ]
+}

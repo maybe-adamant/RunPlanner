@@ -8,6 +8,12 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { encodeRunRecord, runRecordSavedValuePaths } from '@run-planner/run-import/run-record';
 import { buildRunRecord } from '@planner/workspace/run-recording/runRecordBuilder';
+import {
+  abandonOpenRuns,
+  advanceRecorder,
+  EMPTY_RECORDER,
+  type ClosedRun,
+} from '@planner/workspace/run-recording/runRecorder';
 import { extractSaveCheckpoint } from '@planner/workspace/run-recording/saveCheckpoint';
 import { decodeSaveFile } from '@planner/workspace/run-recording/saveFile';
 
@@ -19,7 +25,7 @@ const fixtureDirectory = fileURLToPath(
 
 /**
  * Writes one run-import record fixture from a capture folder of numbered save
- * writes (`NNN-Profile1_Temp.sav`, `NNN-Profile1.sav`). Raw saves never enter
+ * writes (`NNN-Profile<N>_Temp.sav`, `NNN-Profile<N>.sav`). Raw saves never enter
  * the repository; only `npm run fixtures:run-record` sets the inputs.
  */
 describe.skipIf(captureDirectory === undefined || fixtureName === undefined)(
@@ -28,7 +34,7 @@ describe.skipIf(captureDirectory === undefined || fixtureName === undefined)(
     it('writes the capture record through the run-record codec', async () => {
       const savedValuePaths = runRecordSavedValuePaths(catalog);
       const files = readdirSync(captureDirectory!)
-        .filter((name) => /^\d+-Profile1(_Temp)?\.sav$/.test(name))
+        .filter((name) => /^\d+-Profile\d+(_Temp)?\.sav$/.test(name))
         .sort();
       const saves = files.map((name) =>
         extractSaveCheckpoint(
@@ -37,12 +43,17 @@ describe.skipIf(captureDirectory === undefined || fixtureName === undefined)(
           savedValuePaths,
         ),
       );
-      const start = saves.find((save) => save.kind === 'entry' && save.history.length === 0);
-      if (start === undefined) throw new Error('the capture holds no run start');
-      const run = saves.filter((save) => save.runCount === start.runCount);
-      const checkpoints = run.filter((save) => save.kind !== 'hub');
-      const end = run.find((save) => save.kind === 'hub' && save.run.heroDead);
-      const record = buildRunRecord(checkpoints, end);
+      // The recorder's own run start and rewrites, as the application records the run.
+      let state = EMPTY_RECORDER;
+      const closed: ClosedRun[] = [];
+      for (const checkpoint of saves) {
+        const step = advanceRecorder(state, { kind: 'checkpoint', profile: 1, checkpoint });
+        state = step.state;
+        closed.push(...step.closed);
+      }
+      closed.push(...abandonOpenRuns(state).closed);
+      if (closed.length !== 1) throw new Error('the capture holds no single run');
+      const record = buildRunRecord(closed[0]!.checkpoints, closed[0]!.end);
       const filepath = join(fixtureDirectory, `${fixtureName!}.run-record.json`);
       const options = await resolveConfig(filepath);
       writeFileSync(filepath, await format(encodeRunRecord(record), { ...options, filepath }));
