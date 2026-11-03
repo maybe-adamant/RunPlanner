@@ -83,9 +83,8 @@ export function processShopInventory(
       slotAssessments,
     });
   }
-  // The inventory's option assignment is a fact of the one generated Shop.
-  if (assessment.witnesses.length > 1)
-    return fail(`${room.gameName} Shop inventory has more than one generation witness`);
+  // Exact options admit one assignment; a retained offer without its option
+  // may fit several, and the first in declared option order is the one generated.
   let next: RewardBranchState | undefined;
   const slotKeys = Object.freeze(profile.slots.values.map((slot) => slot.key));
   const slotGroupIndexes = Object.freeze(

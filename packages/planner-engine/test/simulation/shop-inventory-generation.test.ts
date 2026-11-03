@@ -25,6 +25,8 @@ import { addHubBoardRewardLookup } from '../../src/simulation/state/reward-looku
 import {
   applyProjectCommand,
   createIncomingRewardAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   createOccurrenceAddress,
   createShopOfferAddress,
   semanticAddressKey,
@@ -337,5 +339,44 @@ describe('Shop draw without replacement', () => {
         }),
       }),
     ]);
+  });
+});
+
+describe('Shop inventory without exact options', () => {
+  it('generates an inventory several option assignments fit from the first of them', () => {
+    const document = JSON.parse(encodeProjectDocument(loadSurfaceNOPQProject())) as {
+      route: { biomes: { topology: { occurrences: Record<string, unknown>[] } | null }[] };
+    };
+    const shop = document.route.biomes
+      .flatMap((entry) => entry.topology?.occurrences ?? [])
+      .find((room) => room.occurrenceId === qOccurrenceIds.preboss) as {
+      state: { shop: { offers: Record<string, unknown> } };
+    };
+    // Past the third biome both Q Mixed Progress options stock a Boon; retained
+    // selections without their option fit either assignment.
+    const boon = (source: string) => ({
+      optionKey: null,
+      reward: {
+        offer: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source } },
+        traitOffersByAcquisitionRole: { source: null },
+        dispositionByAcquisitionRole: { source: { kind: 'normal' } },
+      },
+    });
+    shop.state.shop.offers.MixedProgress1 = boon('ApolloUpgrade');
+    shop.state.shop.offers.MixedProgress2 = boon('AresUpgrade');
+    const project = decodeProjectDocument(document, catalog);
+
+    const q = simulateProject(catalog, project).route.biomes.find(
+      (candidate) => candidate.biomeKey === 'Q',
+    );
+    if (q === undefined || !('rewards' in q)) throw new Error('NOPQ lost its Q evaluation');
+    const inventory = q.rewards.frontier?.events.find(
+      (event) => event.kind === 'shopInventorySupported',
+    );
+    if (inventory?.kind !== 'shopInventorySupported') throw new Error('Q Shop generated nothing');
+    const mixed = inventory.slotKeys.flatMap((slotKey, index) =>
+      slotKey.startsWith('MixedProgress') ? [inventory.optionKeys[index]] : [],
+    );
+    expect(mixed).toEqual(['RandomLoot', 'BoostedRandomLoot']);
   });
 });
