@@ -22,7 +22,7 @@ import {
 import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/traits/state';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { applyTraitOfferForAcquisition } from '../../src/simulation/rewards/trait-settlement/coordinator';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import type { TraitOfferCandidateContext } from '../../src/simulation/traits';
 import {
   traitFrontierState,
@@ -69,8 +69,7 @@ function offer(bonus?: number): AuthoredTraitOfferTraits {
 }
 
 function pomBranch(levels = 3, traitHistory = createTraitHistoryState()) {
-  const branch = initializeTestRewardBranches()[0];
-  if (branch === undefined) throw new Error('missing test reward branch');
+  const branch = initializeTestRewardBranch();
   return Object.freeze({
     ...branch,
     state: Object.freeze({

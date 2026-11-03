@@ -15,7 +15,7 @@ import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation
 import type { TraitOfferEvent } from '../../src/simulation/traits/history/model';
 import { applyTraitOfferForAcquisition } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { echoGoldShop, shopBoonReward } from './shop-trait-purchase-support';
 
 const occurrenceId = createOccurrenceId('mutation-room');
@@ -32,7 +32,7 @@ const hermes: AuthoredTraitOffer = Object.freeze({
 
 /** A branch whose history holds one boon acquired from `boonOwner`'s `giverKey` screen. */
 function afterBoonFrom(boonOwner: TraitOfferOwnerAddress, giverKey = 'Hermes'): RewardBranchState {
-  const base = initializeTestRewardBranches()[0]! as RewardBranchState;
+  const base = initializeTestRewardBranch() as RewardBranchState;
   const history = foldTraitHistoryEvents(catalog, [
     Object.freeze({
       kind: 'traitOffer',

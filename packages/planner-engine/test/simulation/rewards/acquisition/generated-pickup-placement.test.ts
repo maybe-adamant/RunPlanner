@@ -12,7 +12,7 @@ import {
   assessReachedHermesDeliveryPlacement,
   assessReachedClockedPickupPlacement,
 } from '../../../../src/simulation/rewards/acquisition/generated-pickup-placement';
-import { initializeTestRewardBranches } from '../../../support/arcana-fear';
+import { initializeTestRewardBranch } from '../../../support/arcana-fear';
 import type { RewardBranchState } from '../../../../src/simulation/rewards/branch-primitives';
 import type { DerivedAcquisitionEntryFrontier } from '../../../../src/simulation/rewards/acquisition/contracts';
 
@@ -25,7 +25,7 @@ const reference = {
   entryKey: hermesShrineDeliveryEntryKey(source, 'initial:first'),
   encounterPhaseKey: 'combat1',
 };
-const seed = initializeTestRewardBranches()[0]!;
+const seed = initializeTestRewardBranch();
 function delivery(
   dueHost = host,
   dueEncounterPhaseKey: string | null = 'combat1',

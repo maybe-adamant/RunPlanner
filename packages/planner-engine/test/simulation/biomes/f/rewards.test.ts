@@ -54,7 +54,7 @@ import {
 } from '../../support/f-generation-project';
 import { createCompleteFTakeoverProject } from '../../support/f-takeover-project';
 import { createArcanaFearState } from '../../../../src/simulation/arcana-fear';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../../../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../../../support/arcana-fear';
 
 const biome = createBiomeAddress('Underworld', 'F');
 
@@ -302,8 +302,7 @@ function evaluate(
 
 function olympianContactSeed(project: ProjectDocument, keepsakeKey: string) {
   const arcanaFear = createArcanaFearState(catalog, traitContext(project));
-  const seed = initializeRewardBranches(undefined, arcanaFear, catalog, keepsakeKey)[0];
-  if (seed === undefined) throw new Error('Olympian contact seed is missing');
+  const seed = initializeTestRewardBranchForRoute(undefined, arcanaFear, catalog, keepsakeKey);
   // These contact witnesses isolate loot materialization. Exact-priority generation is covered
   // by the reward-pressure suite; the live F chronology still owns the spawn decision here.
   return Object.freeze({

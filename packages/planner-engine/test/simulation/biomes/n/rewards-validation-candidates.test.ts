@@ -32,7 +32,7 @@ import {
 import { createNormalDispositionByAcquisitionRole } from '../../../../src/authored-project/acquisition/reward-state';
 import {
   createTestArcanaFearState,
-  initializeTestRewardBranches,
+  initializeTestRewardBranch,
 } from '../../../support/arcana-fear';
 import { materializeHubDecision } from '../../../../src/simulation/materialization';
 import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/acquisition/site-settlement';
@@ -1026,7 +1026,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     };
     const branch = settleOwnedAcquisitionSite(
       catalog,
-      initializeTestRewardBranches(createTestArcanaFearState({ BoonSkipShrineUpgrade: 1 }))[0],
+      initializeTestRewardBranch(createTestArcanaFearState({ BoonSkipShrineUpgrade: 1 })),
       {
         siteOwner: local!.origin,
         pointKey: 'roomRewardPickup',

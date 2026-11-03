@@ -9,7 +9,7 @@ import { loadSurfaceNOPQProject, pOccurrenceId } from '@run-planner/test-fixture
 import { beforeAll, describe, expect, it } from 'vitest';
 import { attachTraitHistory } from '../../../../../src/simulation/traits';
 import { applyEncounterSettlementTransition } from '../../../../../src/simulation/rewards/biome/encounter-acquisition/encounter-settlement';
-import { initializeTestRewardBranches } from '../../../../support/arcana-fear';
+import { initializeTestRewardBranch } from '../../../../support/arcana-fear';
 import { ordinaryPositionFor } from '../../../../support/route-position';
 
 describe('Personal Loan boss checkpoint', () => {
@@ -61,7 +61,7 @@ describe('Personal Loan boss checkpoint', () => {
           selectedOptionKey: 'option1',
         },
       ]);
-      const base = initializeTestRewardBranches()[0]!;
+      const base = initializeTestRewardBranch();
       const branch = {
         ...base,
         state: Object.freeze({

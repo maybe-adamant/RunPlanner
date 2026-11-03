@@ -29,7 +29,7 @@ import {
   consumeConcaveStone,
 } from '../../src/simulation/keepsakes/trait-effects';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { describe, expect, it } from 'vitest';
 import { traitFrontierState, openTimeTraitOfferContexts } from '../support/simulation-state';
 
@@ -60,8 +60,7 @@ function branchWithStone(
   rank: 'Common' | 'Rare' | 'Epic' | 'Heroic' = 'Common',
   traitHistory = createTraitHistoryState(),
 ) {
-  const branch = initializeTestRewardBranches()[0];
-  if (branch === undefined) throw new Error('missing test reward branch');
+  const branch = initializeTestRewardBranch();
   const source = createKeepsakeState(catalog, 'UnpickedBoonKeepsake');
   return Object.freeze({
     ...branch,
@@ -102,8 +101,7 @@ function settleWithKeepsakes(
   value: AuthoredTraitOfferTraits,
   keepsakes: ReturnType<typeof createKeepsakeState>,
 ) {
-  const branch = initializeTestRewardBranches()[0];
-  if (branch === undefined) throw new Error('missing test reward branch');
+  const branch = initializeTestRewardBranch();
   return applyTraitOfferForAcquisition(
     catalog,
     Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes: keepsakes }) }),

@@ -47,7 +47,7 @@ import {
 } from '../../src/simulation/traits';
 import {
   createTestArcanaFearState,
-  initializeTestRewardBranchesForRoute,
+  initializeTestRewardBranchForRoute,
 } from '../support/arcana-fear';
 import { ordinaryPositionFor } from '../support/route-position';
 import { reachedFrontier } from '../support/reward-frontier';
@@ -284,7 +284,7 @@ describe('Silken Sash at a biome start', () => {
         echoRepeatedKeepsakeKey: sash,
       }),
     ]);
-    const start = initializeTestRewardBranchesForRoute(undefined, arcanaFear, catalog, sash)[0]!;
+    const start = initializeTestRewardBranchForRoute(undefined, arcanaFear, catalog, sash);
     const seeded = publicRewardBranch(
       Object.freeze({
         ...start,

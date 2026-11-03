@@ -48,7 +48,7 @@ import {
   assessGorgonChildSettlement,
   assessGorgonEligibility,
 } from '../../src/simulation/keepsakes/encounter-effects';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import { resolveGorgonCandidateRarity } from '../../src/simulation/rewards/biome/encounter-acquisition/gorgon-started';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 
@@ -57,7 +57,7 @@ import {
   createTraitHistoryState,
   foldTraitHistoryEvents,
 } from '../../src/simulation/traits';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
@@ -163,7 +163,7 @@ describe('Gorgon Amulet lifecycle', () => {
 
   function evaluateGWithGorgonSeed(
     project: ReturnType<typeof createCompleteFGProject>,
-    seed: ReturnType<typeof initializeRewardBranches>[number],
+    seed: ReturnType<typeof initializeTestRewardBranchForRoute>,
   ) {
     const baseline = simulateProject(catalog, createCompleteFGProject());
     const underworld = baseline.route;
@@ -223,7 +223,7 @@ describe('Gorgon Amulet lifecycle', () => {
   ] as const)(
     'resolves source level %s with %s Yarn use(s) through the Athena ledger as %s',
     (rarityLevel, yarnUses, expected) => {
-      const branch = initializeTestRewardBranches()[0]!;
+      const branch = initializeTestRewardBranch();
       expect(
         resolveGorgonCandidateRarity({
           catalog,
@@ -243,7 +243,7 @@ describe('Gorgon Amulet lifecycle', () => {
   );
 
   it('lets Ordinary force Common before the rank-III Gorgon source ledger', () => {
-    const branch = initializeTestRewardBranches()[0]!;
+    const branch = initializeTestRewardBranch();
     const ordinary = Object.freeze({
       ...createTraitHistoryState(),
       activeChaosCurses: Object.freeze([
@@ -277,7 +277,7 @@ describe('Gorgon Amulet lifecycle', () => {
   });
 
   it('lets room precedence replace the Gorgon source while permanent rarity still raises rank I', () => {
-    const branch = initializeTestRewardBranches()[0]!;
+    const branch = initializeTestRewardBranch();
     const history = branch.state.traitHistory ?? createTraitHistoryState();
     const properHistory = {
       ...history,
@@ -323,7 +323,7 @@ describe('Gorgon Amulet lifecycle', () => {
       { kind: 'occurrence', occurrenceId: createOccurrenceId('gorgon-yarn') },
       'Combat',
     );
-    const source = initializeTestRewardBranches()[0]!;
+    const source = initializeTestRewardBranch();
     const withYarn = {
       ...source,
       state: Object.freeze({
@@ -505,7 +505,7 @@ describe('Gorgon Amulet lifecycle', () => {
       if (offer === undefined) return;
       expect(offer.options).toHaveLength(3);
       expect(offer.options.every((option) => option.rarity === rarity)).toBe(true);
-      const branch = initializeTestRewardBranches()[0]!;
+      const branch = initializeTestRewardBranch();
       const phase = createEncounterPhaseAddress(
         createBiomeAddress('Underworld', 'G'),
         { kind: 'occurrence', occurrenceId: createOccurrenceId('gorgon-child') },
@@ -581,12 +581,12 @@ describe('Gorgon Amulet lifecycle', () => {
     const route = project.route;
     if (route === undefined) throw new Error('missing Underworld route');
     const arcanaFear = createArcanaFearState(catalog, route.loadout);
-    const initialized = initializeRewardBranches(
+    const initialized = initializeTestRewardBranchForRoute(
       undefined,
       arcanaFear,
       catalog,
       'AthenaEncounterKeepsake',
-    )[0]!;
+    );
     const before = cherishedPrerequisiteHistory();
     const seeded = {
       ...initialized,

@@ -14,7 +14,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 
 import { createTestArcanaFearState } from '../../support/arcana-fear';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../../support/arcana-fear';
 import {
   explainCohortOfferExclusions,
   explainRewardOfferExclusions,
@@ -112,7 +112,12 @@ function context(
 }
 
 function branch(keepsake?: string): RewardBranchState {
-  return initializeRewardBranches(undefined, createTestArcanaFearState(), catalog, keepsake)[0]!;
+  return initializeTestRewardBranchForRoute(
+    undefined,
+    createTestArcanaFearState(),
+    catalog,
+    keepsake,
+  );
 }
 
 function withHistory(

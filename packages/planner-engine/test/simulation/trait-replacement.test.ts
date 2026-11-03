@@ -14,7 +14,7 @@ import {
 } from '@run-planner/engine/simulation';
 import type { AuthoredTraitOffer } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { traitFrontierState } from '../support/simulation-state';
 
@@ -165,7 +165,7 @@ describe('derived Olympian trait replacement', () => {
       ).map((assessment) => assessment.replacementTransition?.levelBonus),
     ).toEqual([2, 2, 2]);
     for (const options of [value.options, [...value.options].reverse()]) {
-      const initial = initializeTestRewardBranches()[0]!;
+      const initial = initializeTestRewardBranch();
       const settlement = settleEncounterTraitOffer(
         testCatalog,
         {
@@ -225,7 +225,7 @@ describe('derived Olympian trait replacement', () => {
       { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
       { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
     ]);
-    const initial = initializeTestRewardBranches()[0]!;
+    const initial = initializeTestRewardBranch();
     const settled = settleEncounterTraitOffer(
       catalog,
       {

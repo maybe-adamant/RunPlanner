@@ -16,7 +16,7 @@ import { createInitialSimulationState } from '../../src/simulation/state/constru
 import type { SimulationState } from '../../src/simulation/state/model';
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
 import { createTraitHistoryState } from '../../src/simulation/traits/history/fold';
-import { initializeTestRewardBranchesForRoute } from './arcana-fear';
+import { initializeTestRewardBranchForRoute } from './arcana-fear';
 import type { TraitHistoryState } from '../../src/simulation/traits/history/model';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
@@ -141,7 +141,7 @@ export function withInvestedHexOlympianTalent(state: SimulationState): Simulatio
 }
 
 /** A run-start branch reached at the nth itinerary biome of an ordinary route. */
-export function testRewardBranchesAtOrdinal(
+export function testRewardBranchAtOrdinal(
   ordinal: number,
   routeKey = 'Underworld',
   testCatalog: Catalog = productionCatalog,
@@ -149,7 +149,7 @@ export function testRewardBranchesAtOrdinal(
 ) {
   const route = testCatalog.routes.byKey[routeKey];
   if (route === undefined) throw new Error(`unknown test route ${routeKey}`);
-  return initializeTestRewardBranchesForRoute(
+  return initializeTestRewardBranchForRoute(
     undefined,
     arcanaFear,
     testCatalog,

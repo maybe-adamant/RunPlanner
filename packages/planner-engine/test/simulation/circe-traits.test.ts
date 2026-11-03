@@ -26,14 +26,14 @@ import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import { ordinaryRoutePosition } from '../support/route-position';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { createTraitHistoryState, evaluateReachedTraitOffer } from '../../src/simulation/traits';
 import {
-  testRewardBranchesAtOrdinal,
+  testRewardBranchAtOrdinal,
   traitFrontierState,
   traitOfferContacts,
 } from '../support/simulation-state';
@@ -112,7 +112,7 @@ describe('Circe selected trait acquisition', () => {
         EnemyDamageShrineUpgrade: 1,
       }),
     });
-    const branch = initializeTestRewardBranches(createArcanaFearState(catalog, loadout))[0]!;
+    const branch = initializeTestRewardBranch(createArcanaFearState(catalog, loadout));
     const settlement = settleEncounterTraitOffer(
       catalog,
       branch,
@@ -213,7 +213,7 @@ describe('Circe selected trait acquisition', () => {
     if (!heroic.legal) throw new Error('Heroic Lapis exclusion fixture must be legal');
     const applied = settleEncounterTraitOffer(
       catalog,
-      initializeTestRewardBranches(heroic.state)[0]!,
+      initializeTestRewardBranch(heroic.state),
       circeOwner.owner,
       lapis,
       2,
@@ -243,7 +243,7 @@ describe('Circe selected trait acquisition', () => {
     const exhausted = exhaustedActivation.state;
     const red = settleEncounterTraitOffer(
       catalog,
-      initializeTestRewardBranches(exhausted)[0]!,
+      initializeTestRewardBranch(exhausted),
       circeOwner.owner,
       circeOffer('option1', [
         {
@@ -299,7 +299,7 @@ describe('Circe selected trait acquisition', () => {
     if (!disabled.legal) throw new Error('disabled Black Night fixture must be legal');
     const repeated = settleEncounterTraitOffer(
       catalog,
-      initializeTestRewardBranches(disabled.state)[0]!,
+      initializeTestRewardBranch(disabled.state),
       circeOwner.owner,
       black,
       2,
@@ -446,7 +446,7 @@ describe('Circe selected trait acquisition', () => {
   });
 
   it('rejects an unsupported Fates selection and settles a valid companion pair at its exact ordinal', () => {
-    const branch = initializeTestRewardBranches()[0]!;
+    const branch = initializeTestRewardBranch();
     const settlement = settleEncounterTraitOffer(
       catalog,
       branch,
@@ -482,7 +482,7 @@ describe('Circe selected trait acquisition', () => {
 
     const paired = settleEncounterTraitOffer(
       catalog,
-      testRewardBranchesAtOrdinal(3)[0]!,
+      testRewardBranchAtOrdinal(3),
       circeOwner.owner,
       circeOffer('option1', [
         {
@@ -517,7 +517,7 @@ describe('Circe selected trait acquisition', () => {
       { traitKey: 'CirceShrinkTrait' },
       { traitKey: 'CirceEnlargeTrait' },
     ]);
-    const preEffect = testRewardBranchesAtOrdinal(3)[0]!;
+    const preEffect = testRewardBranchAtOrdinal(3);
     const trace = evaluateReachedTraitOffer(
       catalog,
       circeOwner.owner,
@@ -599,7 +599,7 @@ describe('Circe selected trait acquisition', () => {
     const { keepsakes } = traitFrontierState(createTraitHistoryState(), { arcanaFear });
     const candidates = (fatedStatus: 'Fated' | 'Unfated') => {
       const fated = Object.freeze({
-        ...initializeTestRewardBranches(arcanaFear)[0]!,
+        ...initializeTestRewardBranch(arcanaFear),
         traitEvaluations: Object.freeze([
           evaluateReachedTraitOffer(
             catalog,

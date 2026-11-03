@@ -51,7 +51,7 @@ import {
 import { createEnteredNLocalProject, nLocalOccurrenceId } from '../support/complete-n-project';
 import { assessGeneratedPickupPlacement } from '../../../src/authored-project/generated-pickup-placement';
 import { assessRoomActionPlacements } from '../../../src/simulation';
-import { initializeTestRewardBranches } from '../../support/arcana-fear';
+import { initializeTestRewardBranch } from '../../support/arcana-fear';
 import { withTestEncounterRecord } from '../../support/simulation-state';
 import type { CanonicalAuthoredRoom } from '../../../src/simulation/materialization';
 import { applyEncounterEndEffectsTransition } from '../../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
@@ -423,7 +423,7 @@ describe('Hermes Shrine delivery placement', () => {
       createOccurrenceId('shrine-derived-host'),
     );
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
-    const branch = initializeTestRewardBranches()[0]!;
+    const branch = initializeTestRewardBranch();
     const pending = Object.freeze({
       ...branch,
       state: Object.freeze({
@@ -492,7 +492,7 @@ describe('Hermes Shrine delivery placement', () => {
       createOccurrenceId('n-main-host'),
     );
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
-    const branch = initializeTestRewardBranches()[0]!;
+    const branch = initializeTestRewardBranch();
     const pending = Object.freeze({
       ...branch,
       state: Object.freeze({
@@ -599,7 +599,7 @@ describe('Hermes Shrine delivery placement', () => {
       createOccurrenceId('retained-host'),
     );
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
-    const branch = initializeTestRewardBranches()[0]!;
+    const branch = initializeTestRewardBranch();
     const pending = Object.freeze({
       ...branch,
       state: Object.freeze({

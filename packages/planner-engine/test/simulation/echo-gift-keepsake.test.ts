@@ -65,7 +65,7 @@ import {
   type TraitHistoryEvent,
   type TraitHistoryState,
 } from '../../src/simulation/traits';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { installHexTree } from '../../src/simulation/hex-progress';
 import { resolveRoutePosition } from '../../src/authored-project/route-context';
 import { traitFrontierState } from '../support/simulation-state';
@@ -157,7 +157,7 @@ function branchWithGift(
     readonly keepsakes?: KeepsakeState;
   } = {},
 ): RewardBranchState {
-  const base = initializeTestRewardBranches()[0]!;
+  const base = initializeTestRewardBranch();
   const traitHistory = options.history ?? giftHistory(capturedKeepsakeKey);
   return Object.freeze({
     ...base,
@@ -305,7 +305,7 @@ describe('Echo Gift Gift Gift', () => {
   });
 
   it('captures the acquisition-time key and never retargets after a rack change', () => {
-    const base = initializeTestRewardBranches()[0]!;
+    const base = initializeTestRewardBranch();
     const branch = Object.freeze({
       ...base,
       state: Object.freeze({

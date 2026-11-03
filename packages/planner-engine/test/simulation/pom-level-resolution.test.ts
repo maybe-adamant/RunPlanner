@@ -31,7 +31,7 @@ import {
   type RewardKernelFacts,
 } from '@run-planner/engine/reward-kernel';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
@@ -206,7 +206,7 @@ describe('Pom level resolutions', () => {
 
     const noTargetFindings = new Map();
     const empty = settleTestRoomReward(
-      initializeTestRewardBranches()[0],
+      initializeTestRewardBranch(),
       {
         origin: levelAddress.owner,
         offer: { rewardType: 'GiftDrop' },
@@ -225,9 +225,9 @@ describe('Pom level resolutions', () => {
 
     const withTarget = settleTestRoomReward(
       Object.freeze({
-        ...initializeTestRewardBranches()[0]!,
+        ...initializeTestRewardBranch(),
         state: Object.freeze({
-          ...initializeTestRewardBranches()[0]!.state,
+          ...initializeTestRewardBranch().state,
           traitHistory: equippedHistory(),
         }),
       }),

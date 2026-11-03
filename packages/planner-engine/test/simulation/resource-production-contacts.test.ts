@@ -34,7 +34,7 @@ import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoGoldHistory,
   echoGoldShop,
-  initializeTestRewardBranches,
+  initializeTestRewardBranch,
 } from './shop-trait-purchase-support';
 
 function withTraits<Branch extends RewardBranch>(
@@ -104,7 +104,7 @@ describe('Gold Gold Gold duplicate production', () => {
     // Ashes first (spawning the 5-Ashes duplicate), then Rare Buried Treasure, then the duplicate.
     const result = echoGoldShop(['MajorNonBoon', 'Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranch: initializeTestRewardBranches().map((branch) => withTraits(branch, traits))[0],
+      initialBranch: withTraits(initializeTestRewardBranch(), traits),
       offerOverrides: { MajorNonBoon: { rewardType: 'MetaCardPointsCommonDrop' } },
       rewardOverrides: { Boon: boon as never },
     });

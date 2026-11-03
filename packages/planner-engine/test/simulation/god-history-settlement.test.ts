@@ -18,7 +18,7 @@ import { processShopInventory } from '../../src/simulation/rewards/shop/inventor
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
 import { foldTraitHistoryEvents } from '../../src/simulation/traits';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { traitFrontierState } from '../support/simulation-state';
 import { ordinaryPositionFor } from '../support/route-position';
 import {
@@ -30,7 +30,7 @@ import {
 const biome = createBiomeAddress('Underworld', 'F');
 
 function closedBranch(): RewardBranchState {
-  const branch = initializeTestRewardBranches()[0]!;
+  const branch = initializeTestRewardBranch();
   return Object.freeze({
     ...branch,
     state: traitFrontierState(undefined, { saveFileGodHistory: 'closed' }),
@@ -121,7 +121,7 @@ describe('god use and pickup settlement contacts', () => {
   });
 
   it('adds the run pickup to a mature file without changing the run pool facts', () => {
-    const mature = initializeTestRewardBranches()[0]!;
+    const mature = initializeTestRewardBranch();
     const history = settlePoseidonDoor(mature, poseidonScreen()).branch!.state.rewardHistory;
     expect(history.lifetimeGodPickupRecord.PoseidonUpgrade).toBe(2);
     expect(history.lootTypeHistory).toEqual({ PoseidonUpgrade: 1 });
@@ -189,7 +189,7 @@ describe('World Shop inventory generation reads god pickups', () => {
   });
 
   it('keeps every god available on a mature file', () => {
-    const mature = initializeTestRewardBranches()[0]!;
+    const mature = initializeTestRewardBranch();
     const afterPoseidon = settlePoseidonDoor(mature, poseidonScreen()).branch!;
     expect(worldShopBoonFindings(afterPoseidon, 'ApolloUpgrade')).toEqual([]);
     expect(worldShopBoonFindings(afterPoseidon, 'HestiaUpgrade')).toEqual([]);

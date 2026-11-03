@@ -19,7 +19,7 @@ import {
 import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/traits/state';
 import {
   createTestArcanaFearState,
-  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+  initializeTestRewardBranchForRoute,
 } from '../support/arcana-fear';
 import { maybeAddGodSent } from '../../src/simulation/hex-progress';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
@@ -30,12 +30,12 @@ describe('selected trait products', () => {
       { kind: 'biome', routeKey: 'Underworld', biomeKey: 'H' },
       createOccurrenceId('echo'),
     );
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ManaOverTimeRefundKeepsake',
-    )[0]!;
+    );
     const history = Object.freeze({
       ...createTraitHistoryState(),
       properUpbringingActive: true as const,
@@ -117,12 +117,12 @@ describe('selected trait products', () => {
       chaosPair('ChaosRestrictBoonCurse', 0),
       chaosPair('ChaosCommonCurse', 1),
     ]);
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ManaOverTimeRefundKeepsake',
-    )[0]!;
+    );
     const branch = Object.freeze({
       ...initial,
       state: Object.freeze({
@@ -178,12 +178,12 @@ describe('selected trait products', () => {
       { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
       createOccurrenceId('spell'),
     );
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ManaOverTimeRefundKeepsake',
-    )[0]!;
+    );
     const offer = {
       kind: 'traits' as const,
       giverKey: 'SpellDrop',
@@ -198,12 +198,12 @@ describe('selected trait products', () => {
     };
     const spell = settleEncounterTraitOffer(catalog, initial, origin, offer, 1, 'pickup').branch;
     expect(spell.state.hexProgress.godSentAdded).toBe(false);
-    const laterKeepsake = initializeRewardBranches(
+    const laterKeepsake = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceZeusBoonKeepsake',
-    )[0]!;
+    );
     const late = maybeAddGodSent(catalog, {
       ...spell,
       state: Object.freeze({

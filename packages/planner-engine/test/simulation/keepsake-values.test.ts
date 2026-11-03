@@ -17,7 +17,7 @@ import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import {
   createTestArcanaFearState,
-  initializeTestRewardBranchesForRoute,
+  initializeTestRewardBranchForRoute,
 } from '../support/arcana-fear';
 
 const bell = 'EscalatingKeepsake';
@@ -133,7 +133,7 @@ describe('Discordant Bell and Lion Fang values', () => {
 
   it('advances both values only where the room does not skip RoomsPerUpgrade', () => {
     const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
-    const branches = initializeTestRewardBranchesForRoute(undefined, undefined, catalog, bell);
+    const branch = initializeTestRewardBranchForRoute(undefined, undefined, catalog, bell);
     const room = (gameName: string) =>
       ({
         kind: 'authored',
@@ -156,7 +156,7 @@ describe('Discordant Bell and Lion Fang values', () => {
           sequence: 1,
         }),
         room(gameName),
-        branches[0],
+        branch,
       ).branch!.state.keepsakes.discordantBell;
     expect(catalog.rooms.byKey.N_Sub01?.skipRoomsPerUpgrade).toBe(true);
     expect(end('N_Sub01')).toEqual({ rank: 'Epic', multiplier: 1 });

@@ -12,7 +12,7 @@ import {
   baseFacts,
   createBiomeAddress,
   createOccurrenceId,
-  initializeTestRewardBranches,
+  initializeTestRewardBranch,
   type RewardKernelFacts,
 } from './shop-trait-purchase-support';
 import { assessShopInventory } from '../../src/reward-kernel';
@@ -142,7 +142,7 @@ describe('World Shop transition offered rewards', () => {
   });
 
   it('publishes the completed batch, clears it at entry and never inherits it', () => {
-    const initial = initializeTestRewardBranches()[0]!;
+    const initial = initializeTestRewardBranch();
     expect(initial.state.offeredRewardTypes).toEqual([]);
     const published = publishOfferedRewardTypes(initial.state, ['StackUpgrade', 'SpellDrop']);
     // Sorted and deduplicated so branch equivalence compares a set.
@@ -155,7 +155,7 @@ describe('World Shop transition offered rewards', () => {
   });
 
   it('keeps the persistent Hub lookup independent of the per-map reset', () => {
-    const initial = initializeTestRewardBranches()[0]!;
+    const initial = initializeTestRewardBranch();
     const withBoard = addHubBoardRewardLookup(
       publishOfferedRewardTypes(initial.state, ['SpellDrop']),
       'hubRewardLookup',
@@ -229,7 +229,7 @@ describe('World Shop refill reads its own reached contact', () => {
     worldShop().slots.values.findIndex((slot) => slot.groupKey === 'Minor');
 
   const refillRewardTypes = (offeredRewardTypes: readonly string[]) => {
-    const base = initializeTestRewardBranches()[0]!;
+    const base = initializeTestRewardBranch();
     const branch = Object.freeze({
       ...base,
       state: publishOfferedRewardTypes(base.state, offeredRewardTypes),

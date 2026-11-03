@@ -29,7 +29,7 @@ import {
   applyJeweledPomEquipResult,
 } from '../../src/simulation/keepsakes/branch-transitions';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
@@ -64,12 +64,12 @@ function prerequisiteHistory() {
 }
 
 function cherishedBranchState(startingKeepsakeKey = 'ManaOverTimeRefundKeepsake') {
-  const initialized = initializeRewardBranches(
+  const initialized = initializeTestRewardBranchForRoute(
     undefined,
     arcanaFear,
     catalog,
     startingKeepsakeKey,
-  )[0]!;
+  );
   const prior = prerequisiteHistory();
   const seeded = {
     ...initialized,

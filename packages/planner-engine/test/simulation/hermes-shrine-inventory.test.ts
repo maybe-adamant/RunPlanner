@@ -87,12 +87,12 @@ import { settleShallowestPathScreen } from './support/hex-progress-checkpoints';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import {
   createTestArcanaFearState,
-  initializeTestRewardBranches,
-  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+  initializeTestRewardBranch,
+  initializeTestRewardBranchForRoute,
 } from '../support/arcana-fear';
 import { reachedFrontier } from '../support/reward-frontier';
 
-function branchesWithTravelDeal() {
+function branchWithTravelDeal() {
   const traits = foldTraitHistoryEvents(catalog, [
     {
       kind: 'traitOffer' as const,
@@ -125,22 +125,21 @@ function branchesWithTravelDeal() {
       acquisitionPoint: 'fixture:N-before-O',
     },
   ]);
-  return initializeTestRewardBranches().map((branch) =>
-    Object.freeze({
-      ...branch,
-      state: Object.freeze({
-        ...branch.state,
-        rewardHistory: attachTraitHistory(
-          Object.freeze({
-            ...branch.state.rewardHistory,
-            lootTypeHistory: Object.freeze({ AresUpgrade: 1, HephaestusUpgrade: 1 }),
-          }),
-          traits,
-        ),
-        traitHistory: traits,
-      }),
+  const seed = initializeTestRewardBranch();
+  return Object.freeze({
+    ...seed,
+    state: Object.freeze({
+      ...seed.state,
+      rewardHistory: attachTraitHistory(
+        Object.freeze({
+          ...seed.state.rewardHistory,
+          lootTypeHistory: Object.freeze({ AresUpgrade: 1, HephaestusUpgrade: 1 }),
+        }),
+        traits,
+      ),
+      traitHistory: traits,
     }),
-  );
+  });
 }
 
 function rewardFacts(history: RewardHistoryState): RewardKernelFacts {
@@ -202,22 +201,21 @@ const complete = (
     },
   }) as never;
 
-function outgoingSeedBranches(rewardType: 'HermesUpgrade' | 'SpellDrop' | 'TalentDrop') {
-  return initializeTestRewardBranches().map((branch) =>
-    Object.freeze({
-      ...branch,
-      state: Object.freeze({
-        ...branch.state,
-        rewardHistory: Object.freeze({
-          ...branch.state.rewardHistory,
-          useRecord: Object.freeze({
-            ...branch.state.rewardHistory.useRecord,
-            ...(rewardType === 'TalentDrop' ? { SpellDrop: 1 } : {}),
-          }),
+function outgoingSeedBranch(rewardType: 'HermesUpgrade' | 'SpellDrop' | 'TalentDrop') {
+  const seed = initializeTestRewardBranch();
+  return Object.freeze({
+    ...seed,
+    state: Object.freeze({
+      ...seed.state,
+      rewardHistory: Object.freeze({
+        ...seed.state.rewardHistory,
+        useRecord: Object.freeze({
+          ...seed.state.rewardHistory.useRecord,
+          ...(rewardType === 'TalentDrop' ? { SpellDrop: 1 } : {}),
         }),
       }),
     }),
-  );
+  });
 }
 
 function evaluateShrineOutgoingPrefix(
@@ -265,7 +263,7 @@ function evaluateShrineOutgoingPrefix(
       snapshot as typeof snapshot & { readonly entryRoom: NonNullable<typeof snapshot.entryRoom> },
     ),
     route.loadout,
-    outgoingSeedBranches(rewardType)[0]!,
+    outgoingSeedBranch(rewardType),
   );
   const runState = rewards.runStateSnapshots.find(
     (candidate) =>
@@ -732,24 +730,23 @@ describe('Hermes Shrine delayed deliveries', () => {
         biomeKey,
       );
       const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
-      const branches = initializeTestRewardBranches().map((branch) =>
-        Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            pendingHermesShrineDeliveries: Object.freeze({
-              [entryKey]: Object.freeze({
-                entryKey,
-                source,
-                generationKey: 'initial:first' as const,
-                rewardType: 'HealBigDrop',
-                rushed: false,
-                remainingUses: 8,
-              }),
+      const seed = initializeTestRewardBranch();
+      const branch = Object.freeze({
+        ...seed,
+        state: Object.freeze({
+          ...seed.state,
+          pendingHermesShrineDeliveries: Object.freeze({
+            [entryKey]: Object.freeze({
+              entryKey,
+              source,
+              generationKey: 'initial:first' as const,
+              rewardType: 'HealBigDrop',
+              rushed: false,
+              remainingUses: 8,
             }),
           }),
         }),
-      );
+      });
       const transition = applyRoomEnteredTransition(
         catalog,
         entryEvent,
@@ -757,7 +754,7 @@ describe('Hermes Shrine delayed deliveries', () => {
         view,
         new Set(),
         new Set(),
-        branches[0],
+        branch,
         Object.freeze({
           kind: 'history' as const,
           sequence: entryEvent.sequence,
@@ -1265,7 +1262,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
       history,
       ordinaryPositionFor(catalog, completeSnapshot),
       route.loadout,
-      branchesWithTravelDeal()[0]!,
+      branchWithTravelDeal(),
     );
     expect(result.findings.map((finding) => finding.code)).not.toContain(
       'hermesShrineTravelDealRefillUnavailable',
@@ -1375,7 +1372,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
         },
       ),
       route.loadout,
-      branchesWithTravelDeal()[0]!,
+      branchWithTravelDeal(),
     );
     expect(bothRushedResult.findings.map((finding) => finding.code)).not.toContain(
       'hermesShrineTravelDealRefillUnavailable',
@@ -1484,7 +1481,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
         history,
         ordinaryPositionFor(catalog, completeSnapshot),
         route.loadout,
-        branchesWithTravelDeal()[0]!,
+        branchWithTravelDeal(),
       );
       const refillAcquired = reachedFrontier(result).some((branch) =>
         branch.events.some(
@@ -1908,12 +1905,12 @@ describe('Hermes Shrine pickup settlement', () => {
     const site = createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery');
     let closed = installHexTree(
       catalog,
-      initializeRewardBranches(
+      initializeTestRewardBranchForRoute(
         undefined,
         createTestArcanaFearState(),
         catalog,
         'ForceZeusBoonKeepsake',
-      )[0]!,
+      ),
       'SpellPolymorphTrait',
       createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait', 'Lung'),
     );
@@ -2377,29 +2374,28 @@ describe('Hermes Shrine entry inventory requirements', () => {
 
   function enterAuthoredShrineHost(talentDropsClosed: boolean) {
     const { room, view, entryEvent, routePosition } = authoredShrineHostEntry();
-    const branches = initializeTestRewardBranches().map((branch) =>
-      Object.freeze({
-        ...branch,
-        state: reachSimulationHistory(
-          Object.freeze({
-            ...branch.state,
-            rewardHistory: Object.freeze({
-              ...branch.state.rewardHistory,
-              useRecord: Object.freeze({
-                ...branch.state.rewardHistory.useRecord,
-                SpellDrop: 1,
-              }),
-            }),
-            hexProgress: Object.freeze({
-              ...branch.state.hexProgress,
-              ...(talentDropsClosed ? { talentDropsClosed: true as const } : {}),
+    const seed = initializeTestRewardBranch();
+    const branch = Object.freeze({
+      ...seed,
+      state: reachSimulationHistory(
+        Object.freeze({
+          ...seed.state,
+          rewardHistory: Object.freeze({
+            ...seed.state.rewardHistory,
+            useRecord: Object.freeze({
+              ...seed.state.rewardHistory.useRecord,
+              SpellDrop: 1,
             }),
           }),
-          routePosition,
-          view.entry,
-        ),
-      }),
-    );
+          hexProgress: Object.freeze({
+            ...seed.state.hexProgress,
+            ...(talentDropsClosed ? { talentDropsClosed: true as const } : {}),
+          }),
+        }),
+        routePosition,
+        view.entry,
+      ),
+    });
     return applyRoomEnteredTransition(
       catalog,
       entryEvent,
@@ -2407,7 +2403,7 @@ describe('Hermes Shrine entry inventory requirements', () => {
       view,
       new Set(),
       new Set(),
-      branches[0],
+      branch,
       Object.freeze({
         kind: 'history' as const,
         sequence: entryEvent.sequence,

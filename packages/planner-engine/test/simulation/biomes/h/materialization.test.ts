@@ -58,7 +58,7 @@ import {
   replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject, goldenHStartId } from '@run-planner/test-fixtures/underworld';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../../../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../../../support/arcana-fear';
 
 const biome = createBiomeAddress('Underworld', 'H');
 
@@ -334,8 +334,7 @@ function materialize(project: ProjectDocument) {
 
 function olympianContactSeed(project: ProjectDocument, keepsakeKey: string) {
   const arcanaFear = createArcanaFearState(catalog, traitContext(project));
-  const seed = initializeRewardBranches(undefined, arcanaFear, catalog, keepsakeKey)[0];
-  if (seed === undefined) throw new Error('Olympian contact seed is missing');
+  const seed = initializeTestRewardBranchForRoute(undefined, arcanaFear, catalog, keepsakeKey);
   return Object.freeze({
     ...seed,
     state: Object.freeze({ ...seed.state, rewardPriorities: Object.freeze([]) }),

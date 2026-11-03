@@ -43,7 +43,7 @@ import {
   createAcquisitionSiteAddress,
   echoGoldHistory,
   echoGoldShop,
-  initializeTestRewardBranches,
+  initializeTestRewardBranch,
   pomTargetHistory,
   shopBoonReward,
   shopId,
@@ -514,29 +514,29 @@ describe('screen completion inside one Shop room', () => {
           createTraitOfferAddress(trace.address as typeof duplicate, trace.acquisitionRole),
         ) === semanticAddressKey(duplicateOffer),
     );
-  const seeded = (stygianWell?: { readonly yarnUses: number; readonly hymnUses: number }) =>
-    initializeTestRewardBranches().map((branch) => {
-      const traits = foldTraitHistoryEvents(catalog, [
-        ...echoGoldHistory().events,
-        ...pomTargetHistory().events,
-      ]);
-      return Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          rewardHistory: attachTraitHistory(branch.state.rewardHistory, traits),
-          traitHistory: traits,
-          ...(stygianWell === undefined
-            ? {}
-            : { stygianWell: Object.freeze({ ...branch.state.stygianWell, ...stygianWell }) }),
-        }),
-      });
+  const seeded = (stygianWell?: { readonly yarnUses: number; readonly hymnUses: number }) => {
+    const branch = initializeTestRewardBranch();
+    const traits = foldTraitHistoryEvents(catalog, [
+      ...echoGoldHistory().events,
+      ...pomTargetHistory().events,
+    ]);
+    return Object.freeze({
+      ...branch,
+      state: Object.freeze({
+        ...branch.state,
+        rewardHistory: attachTraitHistory(branch.state.rewardHistory, traits),
+        traitHistory: traits,
+        ...(stygianWell === undefined
+          ? {}
+          : { stygianWell: Object.freeze({ ...branch.state.stygianWell, ...stygianWell }) }),
+      }),
     });
+  };
 
   it('builds a duplicated god boon from the state its source screen left', () => {
     const result = echoGoldShop(['Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranch: seeded()[0],
+      initialBranch: seeded(),
       rewardOverrides: { Boon: shopBoonReward('ZeusUpgrade', 'ZeusSpecialBoon') },
     });
     const trace = duplicateTrace(result.settlement.branch);
@@ -554,7 +554,7 @@ describe('screen completion inside one Shop room', () => {
   it('publishes a placed duplicate candidate from its own entry settlement', () => {
     const result = echoGoldShop(['Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranch: seeded()[0],
+      initialBranch: seeded(),
       rewardOverrides: { Boon: shopBoonReward('ZeusUpgrade', 'ZeusSpecialBoon') },
     });
     // The duplicate's frontier comes only from its entry, after the source screen.
@@ -572,7 +572,7 @@ describe('screen completion inside one Shop room', () => {
   it('rebuilds a waiting Echo duplicate at a later Pom screen', () => {
     const result = echoGoldShop(['Boon', 'Minor', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranch: seeded()[0],
+      initialBranch: seeded(),
       rewardOverrides: {
         Boon: shopBoonReward('ZeusUpgrade', 'ZeusSpecialBoon'),
         Minor: Object.freeze({
@@ -599,7 +599,7 @@ describe('screen completion inside one Shop room', () => {
   it('re-anchors the duplicate once, after the source screen consumes Yarn and Hymn', () => {
     const result = echoGoldShop(['Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranch: seeded({ yarnUses: 1, hymnUses: 1 })[0],
+      initialBranch: seeded({ yarnUses: 1, hymnUses: 1 }),
       rewardOverrides: { Boon: shopBoonReward('HeraUpgrade', 'HeraWeaponBoon') },
     });
     const trace = duplicateTrace(result.settlement.branch);
@@ -610,25 +610,24 @@ describe('screen completion inside one Shop room', () => {
   it('spends no Hymn on a screen built before Hymn was held', () => {
     const boon = createShopOfferAddress(shopBiome, shopId, 'Boon');
     const reward = shopBoonReward('HeraUpgrade', 'HeraWeaponBoon');
-    const initialBranches = seeded().map((branch) => {
-      // The Boon spawned at room entry; Hymn arrives afterwards.
-      const spawned = spawnPendingTraitOffers(catalog, branch.state, [
-        Object.freeze({
-          origin: boon,
-          offer: reward.offer,
-          traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
-        }),
-      ]);
-      return Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...spawned,
-          stygianWell: Object.freeze({ ...spawned.stygianWell, hymnUses: 1 }),
-        }),
-      });
+    const seed = seeded();
+    // The Boon spawned at room entry; Hymn arrives afterwards.
+    const spawned = spawnPendingTraitOffers(catalog, seed.state, [
+      Object.freeze({
+        origin: boon,
+        offer: reward.offer,
+        traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+      }),
+    ]);
+    const initialBranch = Object.freeze({
+      ...seed,
+      state: Object.freeze({
+        ...spawned,
+        stygianWell: Object.freeze({ ...spawned.stygianWell, hymnUses: 1 }),
+      }),
     });
     const result = echoGoldShop(['Boon'], {
-      initialBranch: initialBranches[0],
+      initialBranch,
       rewardOverrides: { Boon: reward },
     });
     const branch = result.settlement.branch;
@@ -647,7 +646,7 @@ describe('screen completion inside one Shop room', () => {
     });
     const result = echoGoldShop(['Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranch: seeded()[0],
+      initialBranch: seeded(),
       rewardOverrides: { Boon: missing },
     });
     const blocked = result.settlement.traitChildSettlements?.[0]?.branch;
@@ -675,7 +674,7 @@ describe('screen completion inside one Shop room', () => {
       ['Boon', 'Minor', 'MajorNonBoon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY],
       {
         includeDuplicate: true,
-        initialBranch: seeded()[0],
+        initialBranch: seeded(),
         rewardOverrides: {
           Boon: shopBoonReward('ZeusUpgrade', 'ZeusSpecialBoon'),
           Minor: randomStack,
@@ -703,7 +702,7 @@ describe('invalidation products', () => {
   it('marks waiting loot stale on a Steady Growth interval with no promotable trait', () => {
     // A lone Heroic Steady Growth boon reaches its interval with an empty target domain.
     let branch = withSteadyGrowthDueAt(
-      withHistory(initializeTestRewardBranches()[0]!, pomTargetHistory()),
+      withHistory(initializeTestRewardBranch(), pomTargetHistory()),
       1,
     );
     // Its prerequisite boon is gone, so it is the only rarifiable trait left.
@@ -789,7 +788,7 @@ describe('invalidation products', () => {
   });
 
   it('distinguishes trait offer contexts with equal equipment but different spawn states', () => {
-    const base = initializeTestRewardBranches()[0]! as RewardBranchState;
+    const base = initializeTestRewardBranch() as RewardBranchState;
     const fresh = Object.freeze({
       ...base,
       state: spawnPendingTraitOffers(catalog, base.state, [waiting]),
@@ -819,7 +818,7 @@ describe('invalidation products', () => {
 
 describe('Mystery Box loot', () => {
   it('spawns a box but never its hidden god loot, which exists only once unwrapped', () => {
-    const base = initializeTestRewardBranches()[0]! as RewardBranchState;
+    const base = initializeTestRewardBranch() as RewardBranchState;
     const box = createShopOfferAddress(underworldH, combat09, 'Boon');
     const state = spawnPendingTraitOffers(catalog, base.state, [
       Object.freeze({
@@ -850,7 +849,7 @@ describe('upgrade screens that settle without a trait event', () => {
     ];
   /** A loot that spawned before `history` was acquired. */
   function waitingSince(history: TraitHistoryState): RewardBranchState {
-    const base = initializeTestRewardBranches()[0]! as RewardBranchState;
+    const base = initializeTestRewardBranch() as RewardBranchState;
     const spawned = spawnPendingTraitOffers(catalog, base.state, [waiting]);
     return withHistory(
       { ...base, state: spawned } as RewardBranchState,
@@ -1000,9 +999,9 @@ describe('room rewards created before combat', () => {
       }),
       minibossRoom,
       Object.freeze({
-        ...(initializeTestRewardBranches()[0]! as RewardBranchState),
+        ...(initializeTestRewardBranch() as RewardBranchState),
         state: Object.freeze({
-          ...initializeTestRewardBranches()[0]!.state,
+          ...initializeTestRewardBranch().state,
           keepsakes: createKeepsakeState(catalog, 'SkipEncounterKeepsake'),
         }),
       }) as RewardBranchState,
@@ -1053,7 +1052,7 @@ describe('room rewards created before combat', () => {
         operationIndex: sequence,
         sequence,
       });
-    const base = initializeTestRewardBranches()[0]! as RewardBranchState;
+    const base = initializeTestRewardBranch() as RewardBranchState;
     const evaluated = simulateProject(catalog, project).route.biomes.find(
       (biome) => biome.biomeKey === 'H',
     );

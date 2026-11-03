@@ -14,8 +14,8 @@ import { describe, expect, it } from 'vitest';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import {
-  initializeTestRewardBranches,
-  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+  initializeTestRewardBranch,
+  initializeTestRewardBranchForRoute,
 } from '../support/arcana-fear';
 import {
   advanceArcanaRoomEntry,
@@ -186,13 +186,13 @@ describe('progressive Arcana and Fear state', () => {
     expect(forfeitStatus(suppressed.state)).toBe('consumed');
 
     const branch = Object.freeze({
-      ...initializeTestRewardBranches(consumed.state)[0]!,
+      ...initializeTestRewardBranch(consumed.state),
       state: Object.freeze({
-        ...initializeTestRewardBranches(consumed.state)[0]!.state,
+        ...initializeTestRewardBranch(consumed.state).state,
         arcanaFear: consumed.state,
       }),
     });
-    const nextBiome = initializeRewardBranches(publicRewardBranch(branch))[0]!;
+    const nextBiome = initializeTestRewardBranchForRoute(publicRewardBranch(branch));
     expect(nextBiome.state.arcanaFear.fear.forfeitConsumed).toBe(false);
     expect(forfeitStatus(nextBiome.state.arcanaFear)).toBe('available');
     expect(

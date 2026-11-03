@@ -65,7 +65,7 @@ import { settlePickupAcquisitionSite } from '../../src/simulation/rewards/acquis
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import type { SimulationState } from '../../src/simulation/state/model';
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { baseFacts } from './shop-trait-purchase-support';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
@@ -73,7 +73,7 @@ import { resolveProducedRerollGrant } from '../../src/simulation/state/pending-r
 import { foldTraitHistoryEvents } from '../../src/simulation/traits/history/fold';
 import {
   arcanaFearWithActive,
-  testRewardBranchesAtOrdinal,
+  testRewardBranchAtOrdinal,
   traitFrontierState,
 } from '../support/simulation-state';
 import { withArcana, withGoldenUnderworldJudgments } from '../support/rerolls';
@@ -295,7 +295,7 @@ describe('Narcissus pickup producer', () => {
         }),
       }),
     });
-    const initial = initializeTestRewardBranches()[0]!;
+    const initial = initializeTestRewardBranch();
     const branch = Object.freeze({
       ...initial,
       state: replaceSimulationTraitHistory(initial.state, traitHistory),
@@ -368,7 +368,7 @@ describe('Narcissus pickup producer', () => {
       [initial, false],
       [activation.state, true],
     ] as const) {
-      const branch = testRewardBranchesAtOrdinal(2, 'Underworld', catalog, state)[0]!;
+      const branch = testRewardBranchAtOrdinal(2, 'Underworld', catalog, state);
       const unresolved = settleEncounterTraitOffer(
         catalog,
         branch,

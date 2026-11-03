@@ -19,7 +19,7 @@ import {
 import { normalizeAuthoredChaosTraitOffer } from '../../../../src/authored-project/traits/state';
 import {
   createTestArcanaFearState,
-  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+  initializeTestRewardBranchForRoute,
 } from '../../../support/arcana-fear';
 
 const biome = createBiomeAddress('Underworld', 'G');
@@ -60,7 +60,7 @@ function branchWith(
   well: { yarnUses?: number; hymnUses?: number },
   ordinary = false,
 ): RewardBranchState {
-  const base = initializeRewardBranches(undefined, createTestArcanaFearState(), catalog)[0]!;
+  const base = initializeTestRewardBranchForRoute(undefined, createTestArcanaFearState(), catalog);
   const traitHistory = ordinary ? ordinaryHistory() : base.state.traitHistory;
   return Object.freeze({
     ...base,

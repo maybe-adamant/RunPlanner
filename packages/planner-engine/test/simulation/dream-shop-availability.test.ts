@@ -24,7 +24,7 @@ import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms/assemble';
 import { createRewardFacts } from '../../src/simulation/rewards/facts';
 import { offeredRewardTypeSet } from '../../src/simulation/state/offered-rewards';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import { processShopInventory } from '../../src/simulation/rewards/shop/inventory';
 import { deriveTravelRefill } from '../../src/simulation/rewards/shop/derived-rewards';
 import { settleShopAcquisitionSite } from '../../src/simulation/rewards/shop/settlement';
@@ -159,7 +159,7 @@ function dreamIShopContact(
 describe('Dream Shop availability', () => {
   it('retains an excluded Dream I Meta selection as an explicit repair finding', () => {
     const { project, declaration, room, view } = dreamIShopContact('CardUpgradePointsDrop');
-    const branches = initializeRewardBranches(
+    const branch = initializeTestRewardBranchForRoute(
       undefined,
       createArcanaFearState(catalog, project.route!.loadout),
       catalog,
@@ -169,7 +169,7 @@ describe('Dream Shop availability', () => {
       project.route!.loadout,
       { routePosition: resolveRoutePosition(catalog, project.route, 'I'), historyView: view },
     );
-    const facts = (state: (typeof branches)[number]['state']) =>
+    const facts = (state: (typeof branch)['state']) =>
       createRewardFacts({
         catalog,
         sourceOrigin: room.origin,
@@ -186,7 +186,7 @@ describe('Dream Shop availability', () => {
           throw new Error(detail);
         },
       });
-    const inventory = processShopInventory(branches[0], {
+    const inventory = processShopInventory(branch, {
       catalog,
       room,
       declaration,
@@ -207,7 +207,7 @@ describe('Dream Shop availability', () => {
 
   it('settles Dream I ElementalBoost through materialization and production reward facts', () => {
     const { project, declaration, room, view } = dreamIShopContact('ElementalBoost');
-    const branches = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createArcanaFearState(catalog, project.route!.loadout),
       catalog,
@@ -217,7 +217,7 @@ describe('Dream Shop availability', () => {
       project.route!.loadout,
       { routePosition: resolveRoutePosition(catalog, project.route, 'I'), historyView: view },
     );
-    const facts = (state: (typeof branches)[number]['state']) =>
+    const facts = (state: (typeof initial)['state']) =>
       createRewardFacts({
         catalog,
         sourceOrigin: room.origin,
@@ -234,7 +234,7 @@ describe('Dream Shop availability', () => {
           throw new Error(detail);
         },
       });
-    const inventory = processShopInventory(branches[0], {
+    const inventory = processShopInventory(initial, {
       catalog,
       room,
       declaration,
@@ -381,7 +381,7 @@ describe('Dream Shop trait offers against the state they were built from', () =>
       });
       return next;
     });
-    const branches = initializeRewardBranches(
+    const branch = initializeTestRewardBranchForRoute(
       undefined,
       createArcanaFearState(catalog, project.route!.loadout),
       catalog,
@@ -391,7 +391,7 @@ describe('Dream Shop trait offers against the state they were built from', () =>
       project.route!.loadout,
       { routePosition: resolveRoutePosition(catalog, project.route, 'I'), historyView: view },
     );
-    const facts = (state: (typeof branches)[number]['state']) =>
+    const facts = (state: (typeof branch)['state']) =>
       createRewardFacts({
         catalog,
         sourceOrigin: room.origin,
@@ -408,7 +408,7 @@ describe('Dream Shop trait offers against the state they were built from', () =>
           throw new Error(detail);
         },
       });
-    const inventory = processShopInventory(branches[0], {
+    const inventory = processShopInventory(branch, {
       catalog,
       room,
       declaration,
@@ -420,23 +420,21 @@ describe('Dream Shop trait offers against the state they were built from', () =>
     });
     const offers = room.entryState?.kind === 'shop' ? room.entryState.offers : [];
     // The shop's loot spawns at room entry, before any purchase.
-    const spawned = [inventory.branch!].map((branch) =>
-      Object.freeze({
-        ...branch,
-        state: spawnPendingTraitOffers(
-          catalog,
-          branch.state,
-          offers.map((offer) =>
-            Object.freeze({
-              origin: offer.offerOrigin,
-              offer: offer.offer,
-              traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole,
-            }),
-          ),
+    const spawned = Object.freeze({
+      ...inventory.branch!,
+      state: spawnPendingTraitOffers(
+        catalog,
+        inventory.branch!.state,
+        offers.map((offer) =>
+          Object.freeze({
+            origin: offer.offerOrigin,
+            offer: offer.offer,
+            traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole,
+          }),
         ),
-      }),
-    );
-    const settlement = settleShopAcquisitionSite(spawned[0], {
+      ),
+    });
+    const settlement = settleShopAcquisitionSite(spawned, {
       catalog,
       room,
       declaration,

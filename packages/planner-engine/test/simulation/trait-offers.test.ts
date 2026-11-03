@@ -37,8 +37,8 @@ import {
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 
 import {
-  initializeTestRewardBranches,
-  initializeTestRewardBranchesForRoute,
+  initializeTestRewardBranch,
+  initializeTestRewardBranchForRoute,
 } from '../support/arcana-fear';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
@@ -402,7 +402,7 @@ describe('Sacrificial Hymn replacement composition', () => {
     ];
     options.splice(1, 0, replacement);
     const selectedOptionKey = 'option2' as const;
-    const initial = initializeTestRewardBranches()[0]!;
+    const initial = initializeTestRewardBranch();
     const eligibleDraft: AuthoredTraitOffer = Object.freeze({
       ...draft,
       options: Object.freeze(
@@ -446,7 +446,7 @@ describe('Sacrificial Hymn replacement composition', () => {
     const history = historyFrom([
       { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
     ]);
-    const initial = initializeTestRewardBranches()[0]!;
+    const initial = initializeTestRewardBranch();
     const source = {
       origin: createIncomingRewardAddress(goldenFBiome, createOccurrenceId('well-incoming-boon')),
       offer: {
@@ -500,7 +500,7 @@ describe('Sacrificial Hymn replacement composition', () => {
     const history = historyFrom([
       { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
     ]);
-    const initial = initializeTestRewardBranches()[0]!;
+    const initial = initializeTestRewardBranch();
     const origin = createIncomingRewardAddress(
       goldenFBiome,
       createOccurrenceId('well-missing-incoming-boon'),
@@ -603,7 +603,7 @@ describe('rarity offer settlement contacts', () => {
     const settled = settleTestRoomReward(
       createBiomeAddress('Surface', 'Q'),
       occurrenceId,
-      initializeTestRewardBranches()[0],
+      initializeTestRewardBranch(),
       {
         origin: createIncomingRewardAddress(createBiomeAddress('Surface', 'Q'), occurrenceId),
         offer: { rewardType: 'HermesUpgrade' },
@@ -1222,7 +1222,7 @@ describe('reached trait offer chronology', () => {
     let branch = settleTestRoomReward(
       biome,
       createOccurrenceId('invalid-hammer-trace'),
-      initializeTestRewardBranchesForRoute(
+      initializeTestRewardBranchForRoute(
         undefined,
         undefined,
         catalog,
@@ -1230,7 +1230,7 @@ describe('reached trait offer chronology', () => {
         undefined,
         'Underworld',
         { ...createDefaultRouteLoadout(catalog), ...activeLoadout },
-      )[0],
+      ),
       {
         origin: createIncomingRewardAddress(biome, createOccurrenceId('invalid-hammer-trace')),
         offer: hammer,

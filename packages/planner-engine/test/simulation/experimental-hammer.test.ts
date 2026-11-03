@@ -38,7 +38,7 @@ import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewar
 import { evaluateKeepsakeEquipResultCandidate } from '../../src/simulation/candidates/keepsake-equip-result';
 import { applyExperimentalHammerEquipResult } from '../../src/simulation/keepsakes/branch-transitions';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import { reachedFrontier } from '../support/reward-frontier';
@@ -83,7 +83,12 @@ function equippedBranch(
 ) {
   const loadout = route(project).loadout;
   const arcanaFear = createArcanaFearState(catalog, loadout);
-  const seed = initializeRewardBranches(undefined, arcanaFear, catalog, 'TempHammerKeepsake')[0]!;
+  const seed = initializeTestRewardBranchForRoute(
+    undefined,
+    arcanaFear,
+    catalog,
+    'TempHammerKeepsake',
+  );
   const result = applyExperimentalHammerEquipResult(
     catalog,
     {
@@ -598,12 +603,12 @@ describe('Experimental Hammer', () => {
     )?.keepsakeRack;
     if (rack === undefined || rack.equipResults === undefined)
       throw new Error('expected authored F Hammer result');
-    const seed = initializeRewardBranches(
+    const seed = initializeTestRewardBranchForRoute(
       undefined,
       createArcanaFearState(catalog, route(project).loadout),
       catalog,
       'ManaOverTimeRefundKeepsake',
-    )[0]!;
+    );
     const carried = {
       ...seed,
       state: Object.freeze({

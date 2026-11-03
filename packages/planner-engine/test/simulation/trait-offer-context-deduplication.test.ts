@@ -12,7 +12,7 @@ import {
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { traitOfferContextIdentity } from '../../src/simulation/traits';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import {
   arcanaFearWithActive,
   traitFrontierState,
@@ -55,7 +55,7 @@ function heraOffer(): AuthoredTraitOfferTraits {
 
 describe('trait offer context deduplication', () => {
   it('leaves an earlier candidate context untouched by a later acquisition', () => {
-    const initial = initializeTestRewardBranches()[0]!;
+    const initial = initializeTestRewardBranch();
     const first = settleEncounterTraitOffer(
       catalog,
       initial,

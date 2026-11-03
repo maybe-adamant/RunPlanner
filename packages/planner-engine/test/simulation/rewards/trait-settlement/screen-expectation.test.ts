@@ -8,12 +8,16 @@ import type { SimulationState } from '../../../../src/simulation/state/model';
 import type { TraitScreenSpend } from '../../../../src/simulation/traits';
 import {
   createTestArcanaFearState,
-  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+  initializeTestRewardBranchForRoute,
 } from '../../../support/arcana-fear';
 
 function baseState(keepsakeKey = 'ManaOverTimeRefundKeepsake'): SimulationState {
-  return initializeRewardBranches(undefined, createTestArcanaFearState(), catalog, keepsakeKey)[0]!
-    .state;
+  return initializeTestRewardBranchForRoute(
+    undefined,
+    createTestArcanaFearState(),
+    catalog,
+    keepsakeKey,
+  ).state;
 }
 
 function withWell(state: SimulationState, well: { hymnUses?: number; yarnUses?: number }) {

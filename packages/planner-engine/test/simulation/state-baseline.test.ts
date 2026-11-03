@@ -8,7 +8,7 @@ import * as traitCapabilities from '../../src/simulation/candidates/trait-offer/
 import { createTraitHistoryState } from '../../src/simulation/traits';
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
 import { addHubBoardRewardLookup } from '../../src/simulation/state/reward-lookups';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { reachedFrontier } from '../support/reward-frontier';
 
 const baseline = {
@@ -40,7 +40,7 @@ const baseline = {
 };
 
 it('retains old lookup snapshots', () => {
-  const base = initializeTestRewardBranches()[0]!;
+  const base = initializeTestRewardBranch();
   const added = addHubBoardRewardLookup(base.state, 'hubRewardLookup', ['SpellDrop']);
   expect(base.state.rewardLookups.hubRewardLookup).toEqual([]);
   expect(added.rewardLookups.hubRewardLookup).toEqual(['SpellDrop']);

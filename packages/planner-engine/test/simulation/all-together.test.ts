@@ -23,7 +23,7 @@ import {
   type TraitHistoryEvent,
   type TraitHistoryState,
 } from '../../src/simulation/traits';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { installHexTree } from '../../src/simulation/hex-progress';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 
@@ -78,7 +78,7 @@ function requiredHistory(
 }
 
 function branch(history: TraitHistoryState) {
-  const initial = initializeTestRewardBranches()[0]!;
+  const initial = initializeTestRewardBranch();
   return Object.freeze({
     ...initial,
     state: Object.freeze({

@@ -11,7 +11,7 @@ import { foldTraitHistoryEvents } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures/underworld';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { withTestEncounterRecord } from '../support/simulation-state';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
@@ -109,7 +109,7 @@ function untilInterval(branch: RewardBranchState, firstSequence: number) {
 
 describe('Steady Growth outcomes by source and cycle', () => {
   it('reads each instance’s targets from the offer that gave it, counting cycles per source', () => {
-    let branch = initializeTestRewardBranches()[0]!;
+    let branch = initializeTestRewardBranch();
     branch = acquire(
       branch,
       'apollo',
@@ -188,7 +188,7 @@ describe('Steady Growth outcomes by source and cycle', () => {
   });
 
   it('reports a reached cycle its source does not author as missing at that address', () => {
-    let branch = initializeTestRewardBranches()[0]!;
+    let branch = initializeTestRewardBranch();
     branch = acquire(
       branch,
       'apollo',
@@ -220,7 +220,7 @@ describe('Steady Growth outcomes by source and cycle', () => {
   });
 
   it('grows a Steady Growth gained as the Concave Stone residual from its source offer', () => {
-    const initial = initializeTestRewardBranches()[0]!;
+    const initial = initializeTestRewardBranch();
     const withStone = Object.freeze({
       ...initial,
       state: Object.freeze({

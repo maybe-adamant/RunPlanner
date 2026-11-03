@@ -45,7 +45,7 @@ import type {
   TraitHistoryEvent,
   TraitHistoryState,
 } from '../../src/simulation/traits/history/model';
-import { initializeTestRewardBranchesForRoute } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import { traitFrontierState } from '../support/simulation-state';
 import { baseFacts } from './shop-trait-purchase-support';
 
@@ -474,7 +474,7 @@ describe('pickup max-stat settlement', () => {
     return settled.state.rewardHistory.maxStatGains;
   }
 
-  const mature = () => initializeTestRewardBranchesForRoute()[0]!;
+  const mature = () => initializeTestRewardBranchForRoute();
 
   it('credits each consumable amount', () => {
     for (const [rewardType, gains] of [
@@ -513,7 +513,7 @@ describe('pickup max-stat settlement', () => {
   });
 
   it('withholds the run-progress bonus on a Fresh File', () => {
-    const fresh = initializeTestRewardBranchesForRoute(
+    const fresh = initializeTestRewardBranchForRoute(
       undefined,
       undefined,
       catalog,
@@ -521,7 +521,7 @@ describe('pickup max-stat settlement', () => {
       undefined,
       'FreshFile',
       createInitialRouteLoadout(catalog, 'FreshFile'),
-    )[0]!;
+    );
     expect(collect(fresh, 'fresh-ashes', 'MetaCardPointsCommonDrop', 'RoomReward')).toEqual({
       maxHealth: 0,
       maxMana: 0,

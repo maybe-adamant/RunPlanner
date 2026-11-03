@@ -18,7 +18,7 @@ import {
 } from '../../src/simulation/keepsakes/state';
 import { invalidateJeweledPom } from '../../src/simulation/keepsakes/trait-effects';
 import { foldTraitHistoryEvents } from '../../src/simulation/traits';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 
 function authoredOffer(giverKey: string): AuthoredTraitOffer {
   const keys = catalog.traitGivers.byKey[giverKey]?.traitKeys.slice(0, 3);
@@ -33,7 +33,7 @@ function authoredOffer(giverKey: string): AuthoredTraitOffer {
 
 describe('Jeweled Pom', () => {
   it('acquires its exact one-result trait and applies +3 only to later eligible traits', () => {
-    const seeded = initializeTestRewardBranches()[0]!;
+    const seeded = initializeTestRewardBranch();
     const branch = Object.freeze({
       ...seeded,
       state: Object.freeze({
@@ -103,7 +103,7 @@ describe('Jeweled Pom', () => {
   });
 
   it('retains its effect across neutral replacement and removes only its exact grant when Unfated', () => {
-    const seeded = initializeTestRewardBranches()[0]!;
+    const seeded = initializeTestRewardBranch();
     const branch = Object.freeze({
       ...seeded,
       state: Object.freeze({

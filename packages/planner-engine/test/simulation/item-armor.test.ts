@@ -29,7 +29,7 @@ import {
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import type { SimulationState } from '../../src/simulation/state/model';
 import { createTraitHistoryState } from '../../src/simulation/traits';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { baseFacts } from './shop-trait-purchase-support';
 import { reachedFrontier } from '../support/reward-frontier';
 
@@ -116,7 +116,7 @@ function collectSeaStarDuplicate(branch: RewardBranchState, item: ReturnType<typ
 }
 
 function branchWith(patch: Partial<SimulationState> = {}): RewardBranchState {
-  const branch = initializeTestRewardBranches()[0]!;
+  const branch = initializeTestRewardBranch();
   return Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, ...patch }) });
 }
 
@@ -139,7 +139,7 @@ describe('item armor at acquisition', () => {
   });
 
   it('adds nothing for an item Time Piece converts to gold', () => {
-    const branch = initializeTestRewardBranches()[0]!;
+    const branch = initializeTestRewardBranch();
     const holding = branchWith({
       keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
     });

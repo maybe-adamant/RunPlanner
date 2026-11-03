@@ -78,7 +78,7 @@ import {
   settleFountainRarityMutation,
   type TraitHistoryEvent,
 } from '../../src/simulation/traits';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { deriveMaxStats } from '../../src/simulation/max-stats';
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
@@ -129,7 +129,7 @@ function echoTraitOption(traitKey: string): AuthoredTraitOfferTraits['options'][
 }
 
 function baseBranch(history = createTraitHistoryState()) {
-  const base = initializeTestRewardBranches()[0]!;
+  const base = initializeTestRewardBranch();
   const attached = attachTraitHistory(base.state.rewardHistory, history);
   return Object.freeze({
     ...base,
@@ -138,7 +138,7 @@ function baseBranch(history = createTraitHistoryState()) {
 }
 
 function baseBranchWithSources(sources: readonly string[], history = createTraitHistoryState()) {
-  const base = initializeTestRewardBranches()[0]!;
+  const base = initializeTestRewardBranch();
   const rewardHistory = sources.reduce(recordLootTypeHistorySource, base.state.rewardHistory);
   return Object.freeze({
     ...base,
@@ -1648,7 +1648,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       ...defaults,
       fearRanks: { ...defaults.fearRanks, BanUnpickedBoonsShrineUpgrade: 1 },
     });
-    const initialized = initializeTestRewardBranches()[0]!;
+    const initialized = initializeTestRewardBranch();
     const keepsakes = createKeepsakeState(catalog, 'RarifyKeepsake', arcanaFear);
     const branch = Object.freeze({
       ...initialized,

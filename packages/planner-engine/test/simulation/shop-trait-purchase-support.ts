@@ -31,7 +31,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { createDefaultRoomState } from '../../src/authored-project/room-state/defaults';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
-import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
+import { createTestArcanaFearState, initializeTestRewardBranch } from '../support/arcana-fear';
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounter-envelope';
 import { createNormalDispositionByAcquisitionRole } from '../../src/authored-project/acquisition/reward-state';
 import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
@@ -93,7 +93,7 @@ export {
   createDefaultRoomState,
   createDefaultRouteLoadout,
   createTestArcanaFearState,
-  initializeTestRewardBranches,
+  initializeTestRewardBranch,
   createDefaultRoomEncounterState,
   createNormalDispositionByAcquisitionRole,
   createUnresolvedAcquisitionRewardState,
@@ -679,30 +679,27 @@ export function echoGoldShop(
     options.withPomTarget === true
       ? foldTraitHistoryEvents(catalog, [...echoTraits.events, ...pomTargetHistory().events])
       : echoTraits;
+  const seed = initializeTestRewardBranch(
+    options.duplicateConversion === 'artificer'
+      ? createArcanaFearState(catalog, {
+          ...createDefaultRouteLoadout(catalog),
+          manualArcanaKeys: Object.freeze(['MetaToRunUpgrade']),
+        })
+      : undefined,
+  );
   const seeded =
     options.initialBranch ??
-    initializeTestRewardBranches(
-      options.duplicateConversion === 'artificer'
-        ? createArcanaFearState(catalog, {
-            ...createDefaultRouteLoadout(catalog),
-            manualArcanaKeys: Object.freeze(['MetaToRunUpgrade']),
-          })
-        : undefined,
-    ).map((branch) =>
-      Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          rewardHistory: attachTraitHistory(branch.state.rewardHistory, traits),
-          traitHistory: traits,
-          ...(options.timePiece
-            ? {
-                keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
-              }
-            : {}),
-        }),
+    Object.freeze({
+      ...seed,
+      state: Object.freeze({
+        ...seed.state,
+        rewardHistory: attachTraitHistory(seed.state.rewardHistory, traits),
+        traitHistory: traits,
+        ...(options.timePiece
+          ? { keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', seed.state.arcanaFear) }
+          : {}),
       }),
-    )[0]!;
+    });
   const facts = (
     state: { readonly rewardHistory: ReturnType<typeof createRewardHistoryState> },
     currentRoomShopOptionNames: ReadonlySet<string> = new Set(),

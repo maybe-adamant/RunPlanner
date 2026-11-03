@@ -42,7 +42,7 @@ import {
   fGenerationBiome,
   fGenerationStartId,
 } from './support/f-generation-project';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import {
   createCompleteFGProject,
   goldenFOccurrenceId,
@@ -523,8 +523,8 @@ describe('selected resource success legality', () => {
       ordinaryPositionFor(catalog, snapshot),
       route.loadout,
       {
-        ...initializeTestRewardBranches()[0]!,
-        state: Object.freeze({ ...initializeTestRewardBranches()[0]!.state, traitHistory: before }),
+        ...initializeTestRewardBranch(),
+        state: Object.freeze({ ...initializeTestRewardBranch().state, traitHistory: before }),
       },
     );
     const withResource = evaluateBiomeRewards(
@@ -534,8 +534,8 @@ describe('selected resource success legality', () => {
       ordinaryPositionFor(catalog, snapshot),
       route.loadout,
       {
-        ...initializeTestRewardBranches()[0]!,
-        state: Object.freeze({ ...initializeTestRewardBranches()[0]!.state, traitHistory: before }),
+        ...initializeTestRewardBranch(),
+        state: Object.freeze({ ...initializeTestRewardBranch().state, traitHistory: before }),
       },
       { ...none(), Pickaxe: at('F', host.occurrenceId) },
     );
@@ -546,8 +546,8 @@ describe('selected resource success legality', () => {
       ordinaryPositionFor(catalog, snapshot),
       route.loadout,
       {
-        ...initializeTestRewardBranches()[0]!,
-        state: Object.freeze({ ...initializeTestRewardBranches()[0]!.state, traitHistory: before }),
+        ...initializeTestRewardBranch(),
+        state: Object.freeze({ ...initializeTestRewardBranch().state, traitHistory: before }),
       },
       { ...none(), Pickaxe: at('F', host.occurrenceId) },
     );

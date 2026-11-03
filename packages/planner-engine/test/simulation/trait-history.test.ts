@@ -29,7 +29,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { settleNonFinalBossRarityBlocks } from '../../src/simulation/traits/history/transitions';
@@ -222,7 +222,7 @@ describe('Selene Spell equipment chronology', () => {
       aspectKey: 'SuitHexAspect',
       aspectHexTree: createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait'),
     };
-    const branches = initializeRewardBranches(
+    const branch = initializeTestRewardBranchForRoute(
       undefined,
       createArcanaFearState(catalog, loadout),
       catalog,
@@ -231,7 +231,7 @@ describe('Selene Spell equipment chronology', () => {
       'Underworld',
       loadout,
     );
-    const history = branches[0]?.state.traitHistory;
+    const history = branch.state.traitHistory;
     expect(history?.events).toContainEqual(
       expect.objectContaining({
         kind: 'directTraitGrant',
@@ -262,7 +262,7 @@ describe('Selene Spell equipment chronology', () => {
     const settled = settleTestRoomReward(
       biome,
       occurrenceId,
-      initializeRewardBranches(
+      initializeTestRewardBranchForRoute(
         undefined,
         createArcanaFearState(catalog, loadout),
         catalog,
@@ -270,7 +270,7 @@ describe('Selene Spell equipment chronology', () => {
         undefined,
         'Underworld',
         loadout,
-      )[0],
+      ),
       {
         ...source,
         presentsMaterializedScreen: true,

@@ -35,13 +35,13 @@ import {
   foldTraitHistoryEvents,
 } from '../../src/simulation/traits';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import { applyKeepsakeRackUsedTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/keepsake-rack-used';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import { spawnPendingTraitOffers } from '../../src/simulation/state/pending-trait-offers';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import {
   traitFrontierState,
   openTimeTraitOfferContexts,
@@ -54,8 +54,7 @@ function branchWithHistory(
   history = createTraitHistoryState(),
   keepsakes = createKeepsakeState(catalog, 'GoldifyKeepsake'),
 ): RewardBranchState {
-  const branch = initializeTestRewardBranches()[0];
-  if (branch === undefined) throw new Error('missing test reward branch');
+  const branch = initializeTestRewardBranch();
   return Object.freeze({
     ...branch,
     state: Object.freeze({
@@ -384,7 +383,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       ...createDefaultRouteLoadout(catalog),
       startingKeepsakeKey: 'HadesAndPersephoneKeepsake',
     };
-    const branch = initializeRewardBranches(
+    const branch = initializeTestRewardBranchForRoute(
       undefined,
       createArcanaFearState(catalog, loadout),
       catalog,
@@ -392,7 +391,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       { jeweledPom: { traitKey: 'HadesLifestealBoon' } },
       'Underworld',
       loadout,
-    )[0];
+    );
     expect(branch?.state.keepsakes.jeweledPom).toMatchObject({
       active: true,
       grantedTraitKey: 'HadesLifestealBoon',

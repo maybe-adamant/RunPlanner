@@ -28,7 +28,7 @@ import {
 } from '../../src/simulation/rewards/offer-generation';
 import { applyOlympianRewardPressureEquip } from '../../src/simulation/keepsakes/branch-transitions';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import { appendRewardEvent } from '../../src/simulation/rewards/branch-primitives';
 import {
   settleOwnedAcquisitionSite,
@@ -39,7 +39,7 @@ import {
   attachTraitHistory,
   echoGoldHistory,
   echoGoldShop,
-  initializeTestRewardBranches,
+  initializeTestRewardBranch,
 } from './shop-trait-purchase-support';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 
@@ -82,27 +82,27 @@ function factsFor(history: RewardHistoryState): RewardKernelFacts {
 
 describe('Olympian reward pressure', () => {
   it('retains an unconsumed exact priority through the public cross-biome branch boundary', () => {
-    const currentBiome = initializeRewardBranches(
+    const currentBiome = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceZeusBoonKeepsake',
-    )[0]!;
+    );
 
     expect(currentBiome.state.rewardPriorities).toEqual(['Boon']);
     expect(currentBiome.state.bags.RunProgress).toBeUndefined();
 
-    const nextBiome = initializeRewardBranches(publicRewardBranch(currentBiome))[0]!;
+    const nextBiome = initializeTestRewardBranchForRoute(publicRewardBranch(currentBiome));
     expect(nextBiome.state.rewardPriorities).toEqual(['Boon']);
   });
 
   it('consumes priority at counted generation while leaving force for materialization', () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceZeusBoonKeepsake',
-    )[0]!;
+    );
     const countedContext = (
       storeKey: 'RunProgress' | 'MetaProgress',
       offer:
@@ -152,12 +152,12 @@ describe('Olympian reward pressure', () => {
   });
 
   it("keeps a listed cohort's consumed priority out of a later counted offer and draws it in order", () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceZeusBoonKeepsake',
-    )[0]!;
+    );
     const context = (
       offer:
         | { readonly rewardType: 'MaxHealthDrop' }
@@ -235,12 +235,12 @@ describe('Olympian reward pressure', () => {
   });
 
   it('accepts either authored Devotion pair orientation containing the forced provider', () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceZeusBoonKeepsake',
-    )[0]!;
+    );
     const branch = Object.freeze({
       ...initial,
       state: Object.freeze({
@@ -293,12 +293,12 @@ describe('Olympian reward pressure', () => {
   });
 
   it('forces its provider past the god cap only while the force use remains', () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceZeusBoonKeepsake',
-    )[0]!;
+    );
     const capped = (remainingForceUses: 0 | 1): RewardBranchState =>
       Object.freeze({
         ...initial,
@@ -359,12 +359,12 @@ describe('Olympian reward pressure', () => {
   });
 
   it('does not steer an uncounted fixed god reward', () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceZeusBoonKeepsake',
-    )[0]!;
+    );
     const findings = new Map();
     const reached = processRewardOffer(
       initial,
@@ -391,12 +391,12 @@ describe('Olympian reward pressure', () => {
   });
 
   it('spends only matching free Boon and Devotion loot from the reached generated-event ledger', () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceZeusBoonKeepsake',
-    )[0]!;
+    );
     const boon = appendRewardEvent(initial, 1, {
       kind: 'rewardOffered',
       origin,
@@ -436,12 +436,12 @@ describe('Olympian reward pressure', () => {
     );
     const site = createAcquisitionSiteAddress(occurrence, 'roomExit');
     const entry = createAcquisitionEntryAddress(site, 'mysteryBoon');
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceHestiaBoonKeepsake',
-    )[0]!;
+    );
     const settlement = settleOwnedAcquisitionSite(
       catalog,
       initial,
@@ -490,12 +490,12 @@ describe('Olympian reward pressure', () => {
     );
     const site = createAcquisitionSiteAddress(occurrence, 'roomRewardPickup');
     const entry = createAcquisitionEntryAddress(site, 'source');
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceApolloBoonKeepsake',
-    )[0]!;
+    );
 
     const settlement = settleOwnedAcquisitionSite(
       catalog,
@@ -588,12 +588,12 @@ describe('Olympian reward pressure', () => {
   });
 
   it('keeps duplicate priorities through an ordinary swap and caps a Cherished later equip at Epic', () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceZeusBoonKeepsake',
-    )[0]!;
+    );
     const withGift = applyOlympianRewardPressureEquip(
       catalog,
       Object.freeze({
@@ -647,24 +647,19 @@ describe('Olympian reward pressure', () => {
     const apolloForce = (branch: RewardBranchState | undefined) =>
       branch?.state.keepsakes.olympianSources.find((source) => source.providerKey === 'Apollo')
         ?.remainingForceUses;
+    const seed = initializeTestRewardBranch();
     const result = echoGoldShop(['Boon'], {
       includeDuplicate: true,
       duplicateSelectOption2: true,
-      initialBranch: initializeTestRewardBranches().map((branch) =>
-        Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            rewardHistory: attachTraitHistory(branch.state.rewardHistory, echoGoldHistory()),
-            traitHistory: echoGoldHistory(),
-            keepsakes: createKeepsakeState(
-              catalog,
-              'ForceApolloBoonKeepsake',
-              branch.state.arcanaFear,
-            ),
-          }),
+      initialBranch: Object.freeze({
+        ...seed,
+        state: Object.freeze({
+          ...seed.state,
+          rewardHistory: attachTraitHistory(seed.state.rewardHistory, echoGoldHistory()),
+          traitHistory: echoGoldHistory(),
+          keepsakes: createKeepsakeState(catalog, 'ForceApolloBoonKeepsake', seed.state.arcanaFear),
         }),
-      )[0],
+      }),
     });
     const branch = result.settlement.branch;
     expect([...result.findings.values()]).toEqual([]);
@@ -706,12 +701,12 @@ describe('Olympian reward pressure', () => {
     const settle = (createdNotGiven: boolean) =>
       settlePickupAcquisitionSite(
         catalog,
-        initializeRewardBranches(
+        initializeTestRewardBranchForRoute(
           undefined,
           createTestArcanaFearState(),
           catalog,
           'ForceZeusBoonKeepsake',
-        )[0],
+        ),
         {
           siteOwner: occurrence,
           site,

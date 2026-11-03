@@ -5,12 +5,12 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 
 function predecessorBranch() {
   const loadout = createDefaultRouteLoadout(catalog);
   return publicRewardBranch(
-    initializeRewardBranches(
+    initializeTestRewardBranchForRoute(
       undefined,
       createArcanaFearState(catalog, loadout),
       catalog,
@@ -18,14 +18,14 @@ function predecessorBranch() {
       undefined,
       'Underworld',
       loadout,
-    )[0]!,
+    ),
   );
 }
 
 describe('reward frontier biome handoff', () => {
   it('starts the successor from the predecessor state without its biome-local events', () => {
     const base = predecessorBranch();
-    const next = initializeRewardBranches(
+    const next = initializeTestRewardBranchForRoute(
       Object.freeze({
         ...base,
         events: Object.freeze([
@@ -42,8 +42,7 @@ describe('reward frontier biome handoff', () => {
       }),
     );
 
-    expect(next).toHaveLength(1);
-    expect(next[0]?.events).toEqual([]);
-    expect(next[0]?.processedThroughHistorySequence).toBe(0);
+    expect(next.events).toEqual([]);
+    expect(next.processedThroughHistorySequence).toBe(0);
   });
 });

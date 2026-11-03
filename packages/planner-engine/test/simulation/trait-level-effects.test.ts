@@ -29,8 +29,8 @@ import { describe, expect, it } from 'vitest';
 import { goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures/underworld';
 
 import {
-  initializeTestRewardBranches,
-  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+  initializeTestRewardBranch,
+  initializeTestRewardBranchForRoute,
 } from '../support/arcana-fear';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
 import { withTestEncounterRecord } from '../support/simulation-state';
@@ -39,7 +39,7 @@ import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import {
-  testRewardBranchesAtOrdinal,
+  testRewardBranchAtOrdinal,
   traitFrontierState,
   traitOfferContacts,
 } from '../support/simulation-state';
@@ -486,7 +486,7 @@ describe('Supply Chain lifecycle', () => {
     const offer = selectedTraitOffer('Icarus', 'SupplyDropBoon');
     const first = settleEncounterTraitOffer(
       catalog,
-      testRewardBranchesAtOrdinal(4)[0]!,
+      testRewardBranchAtOrdinal(4),
       traitOrigin,
       offer,
       11,
@@ -498,7 +498,7 @@ describe('Supply Chain lifecycle', () => {
     );
     const second = settleEncounterTraitOffer(
       catalog,
-      initializeTestRewardBranches()[0]!,
+      initializeTestRewardBranch(),
       traitOrigin,
       offer,
       97,
@@ -538,7 +538,7 @@ describe('Supply Chain lifecycle', () => {
       { kind: 'occurrence', occurrenceId: goldenFStartId },
       'Encounter',
     );
-    const base = initializeTestRewardBranches()[0]!;
+    const base = initializeTestRewardBranch();
     const pommable = settleEncounterTraitOffer(
       catalog,
       base,
@@ -658,9 +658,9 @@ describe('Supply Chain lifecycle', () => {
       'encounterEndEffectsApplied',
     );
 
-    const afterBoss = initializeRewardBranches(publicRewardBranch(deferred.branch!));
+    const afterBoss = initializeTestRewardBranchForRoute(publicRewardBranch(deferred.branch!));
     expect(
-      afterBoss[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+      afterBoss.state.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
     ).toBe(6);
 
     const nextOccurrence = createOccurrenceAddress(
@@ -693,7 +693,7 @@ describe('Supply Chain lifecycle', () => {
           },
         ],
       } as unknown as CanonicalAuthoredRoom,
-      afterBoss[0],
+      afterBoss,
     );
     expect(released.derivedAcquisitionEntryFrontiers).toEqual([
       expect.objectContaining({
@@ -751,7 +751,7 @@ describe('Supply Chain lifecycle', () => {
     );
     const supply = settleEncounterTraitOffer(
       catalog,
-      testRewardBranchesAtOrdinal(4)[0]!,
+      testRewardBranchAtOrdinal(4),
       traitOrigin,
       selectedTraitOffer('Icarus', 'SupplyDropBoon'),
       1,
@@ -780,7 +780,7 @@ describe('Supply Chain lifecycle', () => {
       { kind: 'occurrence', occurrenceId: goldenFStartId },
       'Encounter',
     );
-    const initial = initializeTestRewardBranches()[0]!;
+    const initial = initializeTestRewardBranch();
     const coreSettlement = settleEncounterTraitOffer(
       catalog,
       initial,
@@ -939,8 +939,7 @@ describe('Supply Chain lifecycle', () => {
 
   it('advances Shrine delivery on a Fig Leaf-skipped end effect but not a suppressed room', () => {
     const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
-    const base = initializeTestRewardBranches()[0];
-    if (base === undefined) throw new Error('missing test reward branch');
+    const base = initializeTestRewardBranch();
     const branch = Object.freeze({
       ...base,
       state: Object.freeze({
@@ -1026,7 +1025,7 @@ describe('Supply Chain lifecycle', () => {
 
   it('counts every qualifying O encounter phase and defers a Chaos threshold', () => {
     const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
-    const base = initializeTestRewardBranches()[0]!;
+    const base = initializeTestRewardBranch();
     const supplySettlement = settleEncounterTraitOffer(
       catalog,
       base,
@@ -1284,7 +1283,7 @@ describe('Supply Chain lifecycle', () => {
 
   it('counts Traces of Spirit grants on the shared RoomsPerUpgrade clock', () => {
     const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
-    const base = initializeTestRewardBranches()[0]!;
+    const base = initializeTestRewardBranch();
     const history = foldTraitHistoryEvents(catalog, [
       ...base.state.traitHistory.events,
       Object.freeze({
@@ -1412,7 +1411,7 @@ describe('targeted selected-trait child chronology', () => {
         ) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
         selectedOptionKey: 'option1',
       });
-      const initial = initializeTestRewardBranches()[0]!;
+      const initial = initializeTestRewardBranch();
       const settlement = settleEncounterTraitOffer(
         catalog,
         Object.freeze({

@@ -16,7 +16,7 @@ import { ordinaryRoutePosition } from '../support/route-position';
 
 import {
   createTestArcanaFearState,
-  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+  initializeTestRewardBranchForRoute,
 } from '../support/arcana-fear';
 import {
   aspectSkyFallClosureCheckpoint,
@@ -83,7 +83,7 @@ describe('finite Hex progress', () => {
   });
 
   const withTree = (
-    branch: ReturnType<typeof initializeRewardBranches>[number],
+    branch: ReturnType<typeof initializeTestRewardBranchForRoute>,
     layoutKey: HexLayoutKey = 'Lung',
   ) =>
     installHexTree(
@@ -125,12 +125,12 @@ describe('finite Hex progress', () => {
   });
 
   it('preserves full semantic Path grants and transfers banked points at a writable screen', () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ManaOverTimeRefundKeepsake',
-    )[0]!;
+    );
     const banked = bankPathPoints(withTree(initial), 2);
     const settled = settleShallowestPathScreen(banked, 3);
     expect(pathPointView(settled.state.hexProgress)).toMatchObject({
@@ -143,12 +143,12 @@ describe('finite Hex progress', () => {
   });
 
   it('rejects a Path screen without a settled Hex tree', () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ManaOverTimeRefundKeepsake',
-    )[0]!;
+    );
     expect(() => settleShallowestPathScreen(initial, 3)).toThrow(/installed Hex tree/);
   });
 
@@ -159,12 +159,12 @@ describe('finite Hex progress', () => {
     ['Nacelle', 18],
   ] as const)('clamps %s Path settlement at its finite base capacity', (layoutKey, capacity) => {
     const initial = withTree(
-      initializeRewardBranches(
+      initializeTestRewardBranchForRoute(
         undefined,
         createTestArcanaFearState(),
         catalog,
         'ManaOverTimeRefundKeepsake',
-      )[0]!,
+      ),
       layoutKey,
     );
     let branch = initial;
@@ -175,12 +175,12 @@ describe('finite Hex progress', () => {
 
   it('retains raw bonus bank when a closed tree receives a normal Path screen', () => {
     const initial = withTree(
-      initializeRewardBranches(
+      initializeTestRewardBranchForRoute(
         undefined,
         createTestArcanaFearState(),
         catalog,
         'ManaOverTimeRefundKeepsake',
-      )[0]!,
+      ),
     );
     const full = Object.freeze({
       ...initial,
@@ -246,12 +246,12 @@ describe('finite Hex progress', () => {
   });
 
   it('adds the linked keepsake God Sent pair once, persists it after removal, and never reopens closure', () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceZeusBoonKeepsake',
-    )[0]!;
+    );
     const installed = withTree(initial);
     expect(installed.state.hexProgress.godSentAdded).toBe(true);
     const closed = Object.freeze({
@@ -278,12 +278,12 @@ describe('finite Hex progress', () => {
   });
 
   it('does not add God Sent before a linked source exists, then adds two capacity after closure without reopening', () => {
-    const ordinary = initializeRewardBranches(
+    const ordinary = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ManaOverTimeRefundKeepsake',
-    )[0]!;
+    );
     const installed = withTree(ordinary);
     expect(installed.state.hexProgress.godSentAdded).toBe(false);
     const closed = Object.freeze({
@@ -297,12 +297,12 @@ describe('finite Hex progress', () => {
         }),
       }),
     });
-    const forceZeus = initializeRewardBranches(
+    const forceZeus = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ForceZeusBoonKeepsake',
-    )[0]!;
+    );
     const late = maybeAddGodSent(
       catalog,
       Object.freeze({
@@ -324,12 +324,12 @@ describe('finite Hex progress', () => {
   });
 
   it('adds God Sent only for the currently held linked provider, then retains its insertion after removal', () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ManaOverTimeRefundKeepsake',
-    )[0]!;
+    );
     const acquired: TraitHistoryEvent = Object.freeze({
       kind: 'traitOffer',
       owner: { kind: 'project' as const },
@@ -386,12 +386,12 @@ describe('finite Hex progress', () => {
   });
 
   it('applies Moon Beam points and exact priority at each ordinary source frontier', () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'SpellTalentKeepsake',
-    )[0]!;
+    );
     expect(initial.state.hexProgress).toEqual({ bankedPathPoints: 5, investedNodeKeys: [] });
     expect(initial.state.rewardPriorities).toEqual(['SpellDrop']);
 
@@ -420,12 +420,12 @@ describe('finite Hex progress', () => {
   ] as const)('settles %s only at the shared acquisition frontier', (rewardType, grant) => {
     const initial = bankPathPoints(
       withTree(
-        initializeRewardBranches(
+        initializeTestRewardBranchForRoute(
           undefined,
           createTestArcanaFearState(),
           catalog,
           'ManaOverTimeRefundKeepsake',
-        )[0]!,
+        ),
       ),
       2,
     );
@@ -461,12 +461,12 @@ describe('finite Hex progress', () => {
 
   it('reports a reached Path screen without a selection, or with one that does not fit', () => {
     const initial = withTree(
-      initializeRewardBranches(
+      initializeTestRewardBranchForRoute(
         undefined,
         createTestArcanaFearState(),
         catalog,
         'ManaOverTimeRefundKeepsake',
-      )[0]!,
+      ),
     );
     const occurrence = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'F'),
@@ -511,12 +511,12 @@ describe('finite Hex progress', () => {
 
   it('requires only the eligible nodes a nearly full tree has left, an inactive God Sent pair excluded', () => {
     const initial = withTree(
-      initializeRewardBranches(
+      initializeTestRewardBranchForRoute(
         undefined,
         createTestArcanaFearState(),
         catalog,
         'ManaOverTimeRefundKeepsake',
-      )[0]!,
+      ),
     );
     const nodes = everyHexNode('SpellPolymorphTrait', 'Lung');
     const progress = { ...initial.state.hexProgress, investedNodeKeys: nodes.slice(0, -1) };
@@ -533,12 +533,12 @@ describe('finite Hex progress', () => {
 
   it('settles a Path screen on a full tree without a selection, since it has no choice', () => {
     const initial = withTree(
-      initializeRewardBranches(
+      initializeTestRewardBranchForRoute(
         undefined,
         createTestArcanaFearState(),
         catalog,
         'ManaOverTimeRefundKeepsake',
-      )[0]!,
+      ),
     );
     const full = Object.freeze({
       ...initial,
@@ -583,12 +583,12 @@ describe('finite Hex progress', () => {
   });
 
   it('banks the ordinary ordered SpellDrop bonus only after its selected spell installs', () => {
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createTestArcanaFearState(),
       catalog,
       'ManaOverTimeRefundKeepsake',
-    )[0]!;
+    );
     const occurrence = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'F'),
       createOccurrenceId('hex-spell'),
@@ -686,7 +686,7 @@ describe('finite Hex progress', () => {
       aspectKey: 'SuitHexAspect',
       aspectHexTree: createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait'),
     };
-    const initial = initializeRewardBranches(
+    const initial = initializeTestRewardBranchForRoute(
       undefined,
       createArcanaFearState(catalog, loadout),
       catalog,
@@ -694,7 +694,7 @@ describe('finite Hex progress', () => {
       undefined,
       'Underworld',
       loadout,
-    )[0]!;
+    );
     expect(pathPointView(initial.state.hexProgress)).toMatchObject({
       bankedPathPoints: 0,
       investedPathPoints: 0,

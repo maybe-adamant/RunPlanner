@@ -19,7 +19,7 @@ import {
   keepsakeRankForEquip,
   type KeepsakeState,
 } from '../../src/simulation/keepsakes/state';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
@@ -68,12 +68,12 @@ function branchWithKeepsakes(
   keepsakes: KeepsakeState,
   extraEvents: readonly TraitHistoryEvent[] = [],
 ): RewardBranchState {
-  const initialized = initializeRewardBranches(
+  const initialized = initializeTestRewardBranchForRoute(
     undefined,
     arcanaFear,
     catalog,
     keepsakes.currentKey,
-  )[0]!;
+  );
   const traitHistory = foldTraitHistoryEvents(catalog, [...prerequisiteEvents(), ...extraEvents]);
   return Object.freeze({
     ...initialized,
@@ -520,12 +520,12 @@ describe('Cherished Heirloom active keepsake advance', () => {
   });
 
   it('does nothing when the selected Cherished offer is not legal', () => {
-    const initialized = initializeRewardBranches(
+    const initialized = initializeTestRewardBranchForRoute(
       undefined,
       arcanaFear,
       catalog,
       'GoldifyKeepsake',
-    )[0]!;
+    );
     const before = {
       ...initialized,
       state: Object.freeze({

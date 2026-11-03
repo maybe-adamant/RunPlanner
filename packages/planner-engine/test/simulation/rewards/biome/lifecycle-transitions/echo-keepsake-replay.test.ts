@@ -18,7 +18,7 @@ import { applyEchoKeepsakeReplayTransition } from '../../../../../src/simulation
 import type { RewardBranchState } from '../../../../../src/simulation/rewards/branch-primitives';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../../../../src/simulation/traits';
 import { resolveRoutePosition } from '../../../../../src/authored-project/route-context';
-import { initializeTestRewardBranches } from '../../../../support/arcana-fear';
+import { initializeTestRewardBranch } from '../../../../support/arcana-fear';
 
 const replayOwner = createEchoKeepsakeReplayAddress(createBiomeAddress('Underworld', 'G'));
 const hammerResult = createKeepsakeEquipResultAddress(replayOwner, 'experimentalHammer');
@@ -36,7 +36,7 @@ function routeG() {
 
 /** One branch holding an Echo gift that captured Experimental Hammer, now unequipped. */
 function hammerGiftBranch(route: ReturnType<typeof routeG>['route']): RewardBranchState {
-  const base = initializeTestRewardBranches()[0]!;
+  const base = initializeTestRewardBranch();
   const traitHistory = foldTraitHistoryEvents(catalog, [
     Object.freeze({
       kind: 'traitOffer' as const,
@@ -74,7 +74,7 @@ function hammerGiftBranch(route: ReturnType<typeof routeG>['route']): RewardBran
 describe('Echo keepsake replay biome-start transition', () => {
   it('leaves the state untouched and emits nothing without a captured gift', () => {
     const { route, snapshot, position } = routeG();
-    const branch = initializeTestRewardBranches()[0];
+    const branch = initializeTestRewardBranch();
     const transition = applyEchoKeepsakeReplayTransition(
       catalog,
       snapshot,

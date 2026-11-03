@@ -25,7 +25,7 @@ import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
 import { createTraitHistoryState } from '../../src/simulation/traits';
 import { recordFixedAcquisitionTraitGrant } from '../../src/simulation/traits/offers';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { reachedFrontier } from '../support/reward-frontier';
 
 let cached: ProjectDocument | undefined;
@@ -186,7 +186,7 @@ describe('Fresh File Eris', () => {
   it('drops the gift only where that exact talk applied the curse', () => {
     const gTalk = erisAction(freshFileGBiome, freshFileGIntroId);
     const hTalk = erisAction(freshFileHBiome, freshFileHIntroId);
-    const branch = initializeTestRewardBranches()[0]!;
+    const branch = initializeTestRewardBranch();
     const cursedAt = Object.freeze({
       ...branch,
       state: replaceSimulationTraitHistory(

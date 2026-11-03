@@ -29,7 +29,7 @@ import { evaluateCallingCardOffer } from '../../src/simulation/keepsakes/reward-
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import { boonRarityRollUnavailable } from '../../src/simulation/traits/rarity';
 import { createTestArcanaFearState } from '../support/arcana-fear';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { assessArtificerConversion } from '../../src/simulation/rewards/acquisition/conversions';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
@@ -120,7 +120,7 @@ function historyWithActiveBarren() {
 }
 
 function branchWithHistory(history: ReturnType<typeof createTraitHistoryState>) {
-  const base = initializeTestRewardBranches()[0]!;
+  const base = initializeTestRewardBranch();
   return Object.freeze({
     ...base,
     state: Object.freeze({
@@ -845,7 +845,7 @@ describe('Chaos paired-trait history', () => {
         'reward',
       ).history.events,
     ).toHaveLength(1);
-    const source = initializeTestRewardBranches()[0]!;
+    const source = initializeTestRewardBranch();
     const impossible = settleEncounterTraitOffer(
       catalog,
       Object.freeze({
@@ -1113,7 +1113,7 @@ describe('Chaos paired-trait history', () => {
       }),
       properUpbringingActive: true as const,
     });
-    const source = initializeTestRewardBranches()[0]!;
+    const source = initializeTestRewardBranch();
     const withYarn = Object.freeze({
       ...source,
       state: Object.freeze({
@@ -1533,7 +1533,7 @@ describe('Chaos paired-trait history', () => {
       manualArcanaKeys: Object.freeze(['MetaToRunUpgrade']),
     });
     const barrenHistory = historyWithActiveBarren();
-    const base = initializeTestRewardBranches(arcanaFear)[0]!;
+    const base = initializeTestRewardBranch(arcanaFear);
     const branch = Object.freeze({
       ...base,
       state: replaceSimulationTraitHistory(base.state, barrenHistory),
@@ -1774,7 +1774,7 @@ describe('Chaos paired-trait history', () => {
   });
 
   it('settles a TrialUpgrade-shaped self child through the shared acquisition path and starts its clock there', () => {
-    const source = initializeTestRewardBranches()[0]!;
+    const source = initializeTestRewardBranch();
     const settled = settleEncounterTraitOffer(
       catalog,
       Object.freeze({

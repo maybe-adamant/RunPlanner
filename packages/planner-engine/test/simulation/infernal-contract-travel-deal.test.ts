@@ -42,7 +42,7 @@ import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findin
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { installHexTree } from '../../src/simulation/hex-progress';
 import { matureGodHistoryRecords } from '../support/god-history';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
@@ -214,7 +214,7 @@ function baseFacts(enteredBiomes = 4, routeKey = 'Underworld'): RewardKernelFact
   };
 }
 
-function seededBranches(options: {
+function seededBranch(options: {
   readonly contract?: boolean;
   readonly echo?: boolean;
   readonly travel?: boolean;
@@ -266,36 +266,35 @@ function seededBranches(options: {
       : []),
   ];
   const traits = foldTraitHistoryEvents(catalog, events);
-  return initializeTestRewardBranches().map((branch) =>
-    Object.freeze({
-      ...branch,
-      state: Object.freeze({
-        ...branch.state,
-        ...(options.startingSpell === true
-          ? installHexTree(
-              catalog,
-              branch,
-              'SpellPolymorphTrait',
-              createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait'),
-            ).state
-          : {}),
-        ...(options.timePiece === true
-          ? { keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear) }
-          : {}),
-        rewardHistory: attachTraitHistory(
-          {
-            ...branch.state.rewardHistory,
-            useRecord:
-              options.startingSpell === true
-                ? { ...branch.state.rewardHistory.useRecord, SpellDrop: 1 }
-                : branch.state.rewardHistory.useRecord,
-          },
-          traits,
-        ),
-        traitHistory: traits,
-      }),
+  const seed = initializeTestRewardBranch();
+  return Object.freeze({
+    ...seed,
+    state: Object.freeze({
+      ...seed.state,
+      ...(options.startingSpell === true
+        ? installHexTree(
+            catalog,
+            seed,
+            'SpellPolymorphTrait',
+            createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait'),
+          ).state
+        : {}),
+      ...(options.timePiece === true
+        ? { keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', seed.state.arcanaFear) }
+        : {}),
+      rewardHistory: attachTraitHistory(
+        {
+          ...seed.state.rewardHistory,
+          useRecord:
+            options.startingSpell === true
+              ? { ...seed.state.rewardHistory.useRecord, SpellDrop: 1 }
+              : seed.state.rewardHistory.useRecord,
+        },
+        traits,
+      ),
+      traitHistory: traits,
     }),
-  );
+  });
 }
 
 function settle(options: {
@@ -500,7 +499,7 @@ function settle(options: {
       currentRoomShopOptionNames,
     );
   const findings = new Map();
-  const shopInventory = processShopInventory(seededBranches(options)[0], {
+  const shopInventory = processShopInventory(seededBranch(options), {
     catalog,
     room: canonical,
     declaration,

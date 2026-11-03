@@ -52,7 +52,7 @@ import {
 } from '../../src/reward-kernel';
 import { deriveRouteLoadout } from '../../src/authored-project/loadout';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
 import {
   createRunState,
@@ -247,7 +247,7 @@ describe('decision run-state snapshots', () => {
       createBiomeAddress('Underworld', 'F'),
       createOccurrenceId('run-state-retained-effects'),
     );
-    const base = initializeTestRewardBranches()[0]!;
+    const base = initializeTestRewardBranch();
     const delivery = Object.freeze({
       entryKey: 'delivery-source',
       source: occurrence,
@@ -369,8 +369,8 @@ describe('decision run-state snapshots', () => {
         },
       },
     };
-    type State = ReturnType<typeof initializeTestRewardBranches>[number]['state'];
-    const base = initializeTestRewardBranches()[0]!;
+    type State = ReturnType<typeof initializeTestRewardBranch>['state'];
+    const base = initializeTestRewardBranch();
     const snapshot = (
       checkpoint: 'roomEntered' | 'beforeRoomExit',
       state: State,
@@ -511,8 +511,8 @@ describe('decision run-state snapshots', () => {
   it('keeps facts-derived caches local to one exact checkpoint context', () => {
     const history = createRewardHistoryState(catalog.rewards, 'mature');
     const branch = Object.freeze({
-      ...initializeTestRewardBranches()[0]!,
-      state: Object.freeze({ ...initializeTestRewardBranches()[0]!.state, rewardHistory: history }),
+      ...initializeTestRewardBranch(),
+      state: Object.freeze({ ...initializeTestRewardBranch().state, rewardHistory: history }),
     });
     const sharedCache = createRunStateDerivationCache();
     const historyView = (sequence: number) => ({
@@ -586,7 +586,7 @@ describe('decision run-state snapshots', () => {
   });
 
   it('keeps Hex and delivery facts distinct at a shared cached history frontier', () => {
-    const base = initializeTestRewardBranches()[0]!;
+    const base = initializeTestRewardBranch();
     const sharedCache = createRunStateDerivationCache();
     const owner = createRoomRunStateCheckpointAddress(
       createOccurrenceAddress(
@@ -1342,8 +1342,8 @@ describe('decision run-state snapshots', () => {
       }),
     });
     const branch = Object.freeze({
-      ...initializeTestRewardBranches()[0]!,
-      state: Object.freeze({ ...initializeTestRewardBranches()[0]!.state, rewardHistory: history }),
+      ...initializeTestRewardBranch(),
+      state: Object.freeze({ ...initializeTestRewardBranch().state, rewardHistory: history }),
     });
     const snapshot = createRunState({
       catalog,
@@ -1402,9 +1402,9 @@ describe('decision run-state snapshots', () => {
       }),
       state: reachedTestState(
         Object.freeze({
-          ...initializeTestRewardBranches()[0]!,
+          ...initializeTestRewardBranch(),
           state: Object.freeze({
-            ...initializeTestRewardBranches()[0]!.state,
+            ...initializeTestRewardBranch().state,
             rewardHistory: history,
           }),
         }),
@@ -1475,9 +1475,9 @@ describe('decision run-state snapshots', () => {
       }),
     );
     const branch = Object.freeze({
-      ...initializeTestRewardBranches()[0]!,
+      ...initializeTestRewardBranch(),
       state: Object.freeze({
-        ...initializeTestRewardBranches()[0]!.state,
+        ...initializeTestRewardBranch().state,
         rewardHistory: attachTraitHistory(
           createRewardHistoryState(catalog.rewards, 'mature'),
           traits,

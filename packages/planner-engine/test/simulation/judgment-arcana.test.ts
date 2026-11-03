@@ -24,7 +24,7 @@ import {
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOProject, loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { reconcileBarrenArcana } from '../../src/simulation/arcana-fear';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
@@ -194,11 +194,11 @@ function evaluateNBossLifecycle(
     project.route!.loadout,
     publicRewardBranch(
       Object.freeze({
-        ...initializeTestRewardBranches(arcanaFear)[0]!,
+        ...initializeTestRewardBranch(arcanaFear),
         state: Object.freeze({
-          ...initializeTestRewardBranches(arcanaFear)[0]!.state,
+          ...initializeTestRewardBranch(arcanaFear).state,
           rewardHistory: attachTraitHistory(
-            initializeTestRewardBranches(arcanaFear)[0]!.state.rewardHistory,
+            initializeTestRewardBranch(arcanaFear).state.rewardHistory,
             traitHistory,
           ),
           traitHistory: traitHistory,

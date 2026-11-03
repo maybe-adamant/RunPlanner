@@ -17,7 +17,7 @@ import {
   describe,
   expect,
   it,
-  initializeTestRewardBranches,
+  initializeTestRewardBranch,
   createKeepsakeState,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   selectedTraitOfferProducts,
@@ -95,7 +95,7 @@ describe('Gold Gold Gold Shop pickups', () => {
 
   it('applies and consumes Well Yarn and Hymn on a paid World Shop Boon screen', () => {
     const reward = shopBoonReward('HeraUpgrade', 'HeraWeaponBoon');
-    const initial = initializeTestRewardBranches()[0]!;
+    const initial = initializeTestRewardBranch();
     const traits = pomTargetHistory();
     const result = echoGoldShop(['Boon'], {
       initialBranch: Object.freeze({
@@ -140,20 +140,19 @@ describe('Gold Gold Gold Shop pickups', () => {
       ...echoGoldHistory().events,
       ...pomTargetHistory().events,
     ]);
-    const initialBranches = initializeTestRewardBranches().map((branch) => {
-      const history = recordLootTypeHistorySource(branch.state.rewardHistory, 'ZeusUpgrade');
-      return Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          rewardHistory: attachTraitHistory(history, traits),
-          traitHistory: traits,
-        }),
-      });
+    const seed = initializeTestRewardBranch();
+    const history = recordLootTypeHistorySource(seed.state.rewardHistory, 'ZeusUpgrade');
+    const initialBranch = Object.freeze({
+      ...seed,
+      state: Object.freeze({
+        ...seed.state,
+        rewardHistory: attachTraitHistory(history, traits),
+        traitHistory: traits,
+      }),
     });
     const result = echoGoldShop(['Minor', 'Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
       includeDuplicate: true,
-      initialBranch: initialBranches[0],
+      initialBranch,
       rewardOverrides: {
         Minor: sourcePom,
         Boon: shopBoonReward('ZeusUpgrade', 'ZeusSpecialBoon'),
@@ -448,23 +447,19 @@ describe('Gold Gold Gold Shop pickups', () => {
   });
 
   it('keeps provider force through a paid Mystery Boon but spends it when a paid Blind Box unwraps', () => {
-    const pressuredBranches = () =>
-      initializeTestRewardBranches().map((branch) =>
-        Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            keepsakes: createKeepsakeState(
-              catalog,
-              'ForceApolloBoonKeepsake',
-              branch.state.arcanaFear,
-            ),
-          }),
+    const pressuredBranch = () => {
+      const seed = initializeTestRewardBranch();
+      return Object.freeze({
+        ...seed,
+        state: Object.freeze({
+          ...seed.state,
+          keepsakes: createKeepsakeState(catalog, 'ForceApolloBoonKeepsake', seed.state.arcanaFear),
         }),
-      );
+      });
+    };
 
     const paidMysteryBoon = echoGoldShop(['Boon'], {
-      initialBranch: pressuredBranches()[0],
+      initialBranch: pressuredBranch(),
       rewardOverrides: { Boon: shopBoonReward('ApolloUpgrade', 'ApolloWeaponBoon') },
     }).settlement.branch;
     expect(
@@ -474,7 +469,7 @@ describe('Gold Gold Gold Shop pickups', () => {
     ).toBe(1);
 
     const paidBlindBox = echoGoldShop(['Boon'], {
-      initialBranch: pressuredBranches()[0],
+      initialBranch: pressuredBranch(),
       rewardOverrides: {
         Boon: blindBoxReward(
           'ApolloUpgrade',

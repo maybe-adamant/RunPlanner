@@ -12,13 +12,13 @@ import {
 } from '@run-planner/engine/authored-project';
 import { factsWithHistory, resolveAcquisitionRole } from '@run-planner/engine/reward-kernel';
 
-import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
+import { createTestArcanaFearState, initializeTestRewardBranch } from '../support/arcana-fear';
 import { baseFacts } from './shop-trait-purchase-support';
 import { applyProducerRoleHistory } from '../../src/simulation/rewards/acquisition/role-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { createAnvilCandidateCapability } from '../../src/simulation/rewards/anvil-settlement';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
-import { initializeTestRewardBranchesForRoute } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 
 const staffLoadout = Object.freeze({
@@ -53,7 +53,7 @@ function historyWithHammers(...traitKeys: readonly string[]) {
 }
 
 function branchWithHammerFrontier(traitKey: string, experimentalHammerTraitKey?: string) {
-  const branch = initializeTestRewardBranchesForRoute(
+  const branch = initializeTestRewardBranchForRoute(
     undefined,
     createTestArcanaFearState(),
     catalog,
@@ -61,7 +61,7 @@ function branchWithHammerFrontier(traitKey: string, experimentalHammerTraitKey?:
     undefined,
     'Underworld',
     { ...createDefaultRouteLoadout(catalog), ...staffLoadout },
-  )[0]!;
+  );
   const traitHistory = historyWithHammers(
     traitKey,
     ...(experimentalHammerTraitKey === undefined ? [] : [experimentalHammerTraitKey]),
@@ -92,7 +92,7 @@ function branchWithHammerFrontier(traitKey: string, experimentalHammerTraitKey?:
 }
 
 function branchWithoutHammers() {
-  return initializeTestRewardBranchesForRoute(
+  return initializeTestRewardBranchForRoute(
     undefined,
     createTestArcanaFearState(),
     catalog,
@@ -100,7 +100,7 @@ function branchWithoutHammers() {
     undefined,
     'Underworld',
     { ...createDefaultRouteLoadout(catalog), ...staffLoadout },
-  )[0]!;
+  );
 }
 
 function anvilCapabilityFor(branch: ReturnType<typeof branchWithHammerFrontier>) {
@@ -131,20 +131,19 @@ describe('Anvil of Fates acquisition settlement', () => {
     const offer = Object.freeze({ rewardType: 'ChaosWeaponUpgrade' as const });
     const role = resolveAcquisitionRole(catalog.rewards, offer, 'self', 'purchase');
     const beforeTraits = historyWithHammers('StaffDoubleAttackTrait');
-    const branches = initializeTestRewardBranches(createTestArcanaFearState()).map((branch) =>
-      Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          rewardHistory: attachTraitHistory(branch.state.rewardHistory, beforeTraits),
-          traitHistory: beforeTraits,
-        }),
+    const seed = initializeTestRewardBranch(createTestArcanaFearState());
+    const branch = Object.freeze({
+      ...seed,
+      state: Object.freeze({
+        ...seed.state,
+        rewardHistory: attachTraitHistory(seed.state.rewardHistory, beforeTraits),
+        traitHistory: beforeTraits,
       }),
-    );
+    });
     const findings = new Map();
     const result = applyProducerRoleHistory(
       catalog,
-      branches[0],
+      branch,
       Object.freeze({
         origin: owner,
         offer,
@@ -194,7 +193,7 @@ describe('Anvil of Fates acquisition settlement', () => {
     const findings = new Map();
     const result = applyProducerRoleHistory(
       catalog,
-      initializeTestRewardBranches()[0],
+      initializeTestRewardBranch(),
       Object.freeze({
         origin: owner,
         offer,

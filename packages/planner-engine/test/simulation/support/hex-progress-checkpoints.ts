@@ -17,7 +17,7 @@ import {
 import type { RewardBranchState } from '../../../src/simulation/rewards/branch-primitives';
 import {
   createTestArcanaFearState,
-  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+  initializeTestRewardBranchForRoute,
 } from '../../support/arcana-fear';
 
 type PathRewardType = 'MinorTalentDrop' | 'TalentBigDrop' | 'TalentDrop';
@@ -74,7 +74,7 @@ export function pathPointView(progress: HexProgressState) {
 }
 
 function settlePathReward(
-  branch: ReturnType<typeof initializeRewardBranches>[number],
+  branch: ReturnType<typeof initializeTestRewardBranchForRoute>,
   rewardType: PathRewardType,
 ) {
   const pathPointGrant = catalog.rewards.acquisitions.byKey[rewardType]?.pathPointGrant;
@@ -86,12 +86,12 @@ function settlePathReward(
 
 /** Canonical settlement-seam witness for a normal selected option-3 Lung Hex. */
 export function normalOption3LungClosureCheckpoint() {
-  const initial = initializeRewardBranches(
+  const initial = initializeTestRewardBranchForRoute(
     undefined,
     createTestArcanaFearState(),
     catalog,
     'ManaOverTimeRefundKeepsake',
-  )[0]!;
+  );
   let branch = bankPathPoints(
     installHexTree(
       catalog,
@@ -114,7 +114,7 @@ export function aspectSkyFallClosureCheckpoint() {
     aspectKey: 'SuitHexAspect',
     aspectHexTree: createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait', 'Lung'),
   };
-  let branch = initializeRewardBranches(
+  let branch = initializeTestRewardBranchForRoute(
     undefined,
     createArcanaFearState(catalog, loadout),
     catalog,
@@ -122,7 +122,7 @@ export function aspectSkyFallClosureCheckpoint() {
     undefined,
     'Underworld',
     loadout,
-  )[0]!;
+  );
   // The Aspect-routed Spell Drop settles as the standard three-point Talent
   // screen; use that acquisition's declaration rather than repeat its grant.
   const afterSpellDrop = settlePathReward(branch, 'TalentDrop');

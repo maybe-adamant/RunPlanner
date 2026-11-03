@@ -8,9 +8,9 @@ import { describe, expect, it } from 'vitest';
 
 import { deriveRunStateEffects } from '../../../src/simulation/rewards/run-state-effects';
 import type { SimulationState } from '../../../src/simulation/state/model';
-import { initializeTestRewardBranches } from '../../support/arcana-fear';
+import { initializeTestRewardBranch } from '../../support/arcana-fear';
 
-const base = initializeTestRewardBranches()[0]!.state;
+const base = initializeTestRewardBranch().state;
 const occurrence = createOccurrenceAddress(
   createBiomeAddress('Underworld', 'F'),
   createOccurrenceId('run-state-effects'),

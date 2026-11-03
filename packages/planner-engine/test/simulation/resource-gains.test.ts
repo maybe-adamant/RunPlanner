@@ -39,7 +39,7 @@ import type { SimulationState } from '../../src/simulation/state/model';
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
 import { createTraitHistoryState } from '../../src/simulation/traits';
 import type { TraitHistoryState } from '../../src/simulation/traits/history/model';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { baseFacts } from './shop-trait-purchase-support';
 
 const biome = createBiomeAddress('Underworld', 'F');
@@ -66,7 +66,7 @@ const buriedTreasure = (rarity: InRunTraitRarity = 'Common') =>
 const seaStar = equipped('DoubleRewardBoon', 'Common');
 
 function branchWith(traitHistory: TraitHistoryState): RewardBranchState {
-  const branch = initializeTestRewardBranches()[0]!;
+  const branch = initializeTestRewardBranch();
   return Object.freeze({
     ...branch,
     state: Object.freeze({ ...branch.state, traitHistory }),

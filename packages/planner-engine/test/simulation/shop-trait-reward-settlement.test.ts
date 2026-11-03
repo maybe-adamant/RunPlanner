@@ -14,7 +14,7 @@ import {
   it,
   createDefaultRoomState,
   createTestArcanaFearState,
-  initializeTestRewardBranches,
+  initializeTestRewardBranch,
   createDefaultRoomEncounterState,
   createNormalDispositionByAcquisitionRole,
   createUnresolvedAcquisitionRewardState,
@@ -38,7 +38,7 @@ import {
 } from './shop-trait-purchase-support';
 import type { TraitOfferEvent } from './shop-trait-purchase-support';
 import { ownerRegion } from '../../src/simulation/finding-regions';
-import { initializeTestRewardBranchesForRoute } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 
 describe('Shop trait acquisition processing', () => {
@@ -86,7 +86,7 @@ describe('Shop trait acquisition processing', () => {
       lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
-    const inventory = processShopInventory(initializeTestRewardBranches()[0], {
+    const inventory = processShopInventory(initializeTestRewardBranch(), {
       catalog,
       room: canonical,
       declaration: room,
@@ -180,17 +180,16 @@ describe('Shop trait acquisition processing', () => {
         new Set(),
       );
     const traitHistory = pomTargetHistory();
-    const seeded = initializeTestRewardBranches().map((branch) =>
-      Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          rewardHistory: attachTraitHistory(branch.state.rewardHistory, traitHistory),
-          traitHistory: traitHistory,
-        }),
+    const seed = initializeTestRewardBranch();
+    const seeded = Object.freeze({
+      ...seed,
+      state: Object.freeze({
+        ...seed.state,
+        rewardHistory: attachTraitHistory(seed.state.rewardHistory, traitHistory),
+        traitHistory: traitHistory,
       }),
-    );
-    const inventory = processShopInventory(seeded[0], {
+    });
+    const inventory = processShopInventory(seeded, {
       catalog,
       room: canonical,
       declaration: room,
@@ -238,7 +237,7 @@ describe('Shop trait acquisition processing', () => {
       lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
-    const purchasedInventory = processShopInventory(seeded[0], {
+    const purchasedInventory = processShopInventory(seeded, {
       catalog,
       room: purchasedCanonical,
       declaration: room,
@@ -300,7 +299,7 @@ describe('Shop trait acquisition processing', () => {
       loadout,
     });
     const giftPurchased = settleShop(
-      processShopInventory(seeded[0], {
+      processShopInventory(seeded, {
         catalog,
         room: giftCanonical,
         declaration: room,
@@ -402,18 +401,17 @@ describe('Shop trait acquisition processing', () => {
         state.rewardHistory,
         new Set(),
       );
-    const seeded = initializeTestRewardBranches().map((branch) => {
-      const traitHistory = pomTargetHistory();
-      return Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          rewardHistory: attachTraitHistory(branch.state.rewardHistory, traitHistory),
-          traitHistory: traitHistory,
-        }),
-      });
+    const seed = initializeTestRewardBranch();
+    const traitHistory = pomTargetHistory();
+    const seeded = Object.freeze({
+      ...seed,
+      state: Object.freeze({
+        ...seed.state,
+        rewardHistory: attachTraitHistory(seed.state.rewardHistory, traitHistory),
+        traitHistory: traitHistory,
+      }),
     });
-    const inventory = processShopInventory(seeded[0], {
+    const inventory = processShopInventory(seeded, {
       catalog,
       room: canonical,
       declaration: room,
@@ -541,20 +539,19 @@ describe('Shop trait acquisition processing', () => {
           state.rewardHistory,
           new Set(),
         );
-      const seeded = initializeTestRewardBranches(
+      const seed = initializeTestRewardBranch(
         createTestArcanaFearState({ BoonSkipShrineUpgrade: 1 }),
-      ).map((branch) => {
-        const traitHistory = pomTargetHistory();
-        return Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            rewardHistory: attachTraitHistory(branch.state.rewardHistory, traitHistory),
-            traitHistory: traitHistory,
-          }),
-        });
+      );
+      const traitHistory = pomTargetHistory();
+      const seeded = Object.freeze({
+        ...seed,
+        state: Object.freeze({
+          ...seed.state,
+          rewardHistory: attachTraitHistory(seed.state.rewardHistory, traitHistory),
+          traitHistory: traitHistory,
+        }),
       });
-      const inventory = processShopInventory(seeded[0], {
+      const inventory = processShopInventory(seeded, {
         catalog,
         room: canonical,
         declaration: room,
@@ -736,7 +733,7 @@ describe('Shop trait acquisition processing', () => {
       readonly rewardHistory: ReturnType<typeof createRewardHistoryState>;
     }) => factsWithHistory(baseFacts(), state.rewardHistory, new Set());
     const inventoryFindings = new Map();
-    const reachedLoadout = initializeTestRewardBranchesForRoute(
+    const reachedLoadout = initializeTestRewardBranchForRoute(
       undefined,
       undefined,
       catalog,
@@ -745,7 +742,7 @@ describe('Shop trait acquisition processing', () => {
       'Underworld',
       { ...createDefaultRouteLoadout(catalog), ...newLoadout },
     );
-    const inventory = processShopInventory(reachedLoadout[0], {
+    const inventory = processShopInventory(reachedLoadout, {
       catalog,
       room: canonical,
       declaration: room,

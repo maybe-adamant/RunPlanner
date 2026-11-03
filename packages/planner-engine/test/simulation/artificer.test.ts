@@ -45,7 +45,7 @@ import {
   createArcanaFearState,
   promoteArcana,
 } from '../../src/simulation/arcana-fear';
-import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import {
   assessArtificerConversion,
   assessSeaStarDuplication,
@@ -205,12 +205,12 @@ function initialBranch(forfeit = false): RewardBranchState {
       ...(forfeit ? { BoonSkipShrineUpgrade: 1 } : {}),
     }),
   });
-  return initializeRewardBranches(
+  return initializeTestRewardBranchForRoute(
     undefined,
     arcanaFear,
     catalog,
     catalog.defaultStartingKeepsakeKey,
-  )[0]!;
+  );
 }
 
 function withSeaStarAndTimePiece(branch: RewardBranchState): RewardBranchState {

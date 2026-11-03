@@ -24,8 +24,8 @@ export function createTestArcanaFearState(
  * starting keepsake. Tests that bypass route evaluation retain a complete
  * branch state without inventing a parallel keepsake default.
  */
-export function initializeTestRewardBranches(arcanaFear = createTestArcanaFearState()) {
-  return initializeTestRewardBranchesForRoute(undefined, arcanaFear);
+export function initializeTestRewardBranch(arcanaFear = createTestArcanaFearState()) {
+  return initializeTestRewardBranchForRoute(undefined, arcanaFear);
 }
 
 /**
@@ -33,7 +33,7 @@ export function initializeTestRewardBranches(arcanaFear = createTestArcanaFearSt
  * the same concrete route-start contact used by production evaluation while
  * retaining every explicit route/loadout input from a fixture.
  */
-export function initializeTestRewardBranchesForRoute(
+export function initializeTestRewardBranchForRoute(
   seedFrontier: RewardBranch | undefined = undefined,
   initialArcanaFear: ArcanaFearState | undefined = undefined,
   testCatalog: Catalog = catalog,
@@ -68,7 +68,7 @@ export function initializeTestRewardBranchesForRoute(
   ) {
     throw new Error(`test route ${resolvedRouteKey} has no first biome`);
   }
-  const initialized = initializeRewardBranch(
+  return initializeRewardBranch(
     seedFrontier,
     resolvedArcanaFear,
     testCatalog,
@@ -89,5 +89,4 @@ export function initializeTestRewardBranchesForRoute(
       historyView: predecessor?.state.reached.historyView ?? createRouteStartHistoryView(),
     },
   );
-  return Object.freeze([initialized]);
 }

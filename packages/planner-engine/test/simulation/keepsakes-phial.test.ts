@@ -38,7 +38,7 @@ import { settleNonFinalBossRarityBlocks } from '../../src/simulation/traits/hist
 import type { AuthoredFountainRarityResult } from '@run-planner/engine/authored-project';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import type { HistoryEvent } from '../../src/simulation/history';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import {
   createCompleteFGProject,
   goldenFBiome,
@@ -112,7 +112,7 @@ function fountainBranch(
   traitHistory = historyWith(trait),
   keepsakes = createKeepsakeState(catalog, 'FountainRarityKeepsake'),
 ): RewardBranchState {
-  const base = initializeTestRewardBranches()[0]!;
+  const base = initializeTestRewardBranch();
   return Object.freeze({
     ...base,
     state: Object.freeze({
@@ -188,7 +188,7 @@ describe('Aromatic Phial catalog and target domains', () => {
   it('initializes at route start, removes on ordinary replacement, and reinitializes at a rack equip', () => {
     const initial = createKeepsakeState(catalog, 'FountainRarityKeepsake');
     expect(initial.phial).toEqual({ status: 'pending' });
-    const arcanaFear = initializeTestRewardBranches()[0]!.state.arcanaFear;
+    const arcanaFear = initializeTestRewardBranch().state.arcanaFear;
     const removed = applyKeepsakeReplacement(catalog, initial, 'GoldifyKeepsake', arcanaFear);
     expect(removed.phial).toBeUndefined();
     const reequipped = applyKeepsakeReplacement(

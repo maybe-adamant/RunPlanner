@@ -21,7 +21,7 @@ import {
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { assessTimePieceConversion } from '../../src/simulation/rewards/acquisition/conversions';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
@@ -63,7 +63,7 @@ function facts(): RewardKernelFacts {
 
 function settle(
   value: 'normal' | 'gold',
-  branch: RewardBranchState | undefined = initializeTestRewardBranches()[0],
+  branch: RewardBranchState | undefined = initializeTestRewardBranch(),
   instanceProvenance: 'free' | 'paid' = 'free',
   offer: typeof boonOffer | { readonly rewardType: 'SpellDrop' | 'TrialUpgrade' } = boonOffer,
 ) {
@@ -93,21 +93,19 @@ function settle(
 
 describe('Time Piece conversions', () => {
   it('suppresses only a converted free concrete role while retaining settlement evidence and consuming one charge', () => {
-    const seeded = initializeTestRewardBranches();
-    const branches = seeded.map((branch) =>
-      Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          rewardHistory: applyConcreteAcquisition(catalog.rewards, branch.state.rewardHistory, {
-            kind: 'resource',
-            gameName: 'GiftDrop',
-          }),
-          keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
+    const seed = initializeTestRewardBranch();
+    const seeded = Object.freeze({
+      ...seed,
+      state: Object.freeze({
+        ...seed.state,
+        rewardHistory: applyConcreteAcquisition(catalog.rewards, seed.state.rewardHistory, {
+          kind: 'resource',
+          gameName: 'GiftDrop',
         }),
+        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', seed.state.arcanaFear),
       }),
-    );
-    const result = settle('gold', branches[0]);
+    });
+    const result = settle('gold', seeded);
     const branch = result.branch!;
     expect(branch.state.keepsakes.timePiece?.remainingCharges).toBe(3);
     expect(branch.state.rewardHistory.lootTypeHistory).toEqual({});
@@ -119,16 +117,15 @@ describe('Time Piece conversions', () => {
   });
 
   it('does not award SpellDrop Path points when Time Piece converts the source before acquisition', () => {
-    const seeded = initializeTestRewardBranches().map((branch) =>
-      Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
-        }),
+    const seed = initializeTestRewardBranch();
+    const seeded = Object.freeze({
+      ...seed,
+      state: Object.freeze({
+        ...seed.state,
+        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', seed.state.arcanaFear),
       }),
-    );
-    const result = settle('gold', seeded[0], 'free', { rewardType: 'SpellDrop' });
+    });
+    const result = settle('gold', seeded, 'free', { rewardType: 'SpellDrop' });
     expect(result.branch?.events).toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold' }),
     );
@@ -140,16 +137,15 @@ describe('Time Piece conversions', () => {
   });
 
   it('converts a free Chaos TrialUpgrade before its trait acquisition resolves', () => {
-    const branches = initializeTestRewardBranches().map((branch) =>
-      Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
-        }),
+    const seed = initializeTestRewardBranch();
+    const branch = Object.freeze({
+      ...seed,
+      state: Object.freeze({
+        ...seed.state,
+        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', seed.state.arcanaFear),
       }),
-    );
-    const result = settle('gold', branches[0], 'free', { rewardType: 'TrialUpgrade' });
+    });
+    const result = settle('gold', branch, 'free', { rewardType: 'TrialUpgrade' });
     expect(result.branch?.state.keepsakes.timePiece?.remainingCharges).toBe(3);
     expect(result.branch?.events).toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold' }),
@@ -166,22 +162,21 @@ describe('Time Piece conversions', () => {
   });
 
   it('admits a capable zero-cost instance and rejects the same capable acquisition when paid', () => {
-    const branches = initializeTestRewardBranches().map((branch) =>
-      Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
-        }),
+    const seed = initializeTestRewardBranch();
+    const branch = Object.freeze({
+      ...seed,
+      state: Object.freeze({
+        ...seed.state,
+        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', seed.state.arcanaFear),
       }),
-    );
-    const free = settle('gold', branches[0], 'free');
+    });
+    const free = settle('gold', branch, 'free');
     expect(free.branch?.state.keepsakes.timePiece?.remainingCharges).toBe(3);
     expect(free.branch?.events).toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold' }),
     );
 
-    const paid = settle('gold', branches[0], 'paid');
+    const paid = settle('gold', branch, 'paid');
     expect(paid.branch?.state.keepsakes.timePiece?.remainingCharges).toBe(4);
     expect(paid.branch?.state.rewardHistory.lootTypeHistory).toMatchObject({
       ApolloUpgrade: 1,
@@ -193,15 +188,14 @@ describe('Time Piece conversions', () => {
   });
 
   it('rejects both paid Blind Box roles, including its capable auto-activated hidden source', () => {
-    const branch = initializeTestRewardBranches().map((candidate) =>
-      Object.freeze({
-        ...candidate,
-        state: Object.freeze({
-          ...candidate.state,
-          keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', candidate.state.arcanaFear),
-        }),
+    const seed = initializeTestRewardBranch();
+    const branch = Object.freeze({
+      ...seed,
+      state: Object.freeze({
+        ...seed.state,
+        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', seed.state.arcanaFear),
       }),
-    )[0]!;
+    });
     const source = {
       origin: reward,
       offer: {
@@ -235,7 +229,7 @@ describe('Time Piece conversions', () => {
   });
 
   it('exhausts exactly four retained conversions in acquisition order', () => {
-    const initial = initializeTestRewardBranches()[0]!;
+    const initial = initializeTestRewardBranch();
     let branch: RewardBranchState | undefined = Object.freeze({
       ...initial,
       state: Object.freeze({
