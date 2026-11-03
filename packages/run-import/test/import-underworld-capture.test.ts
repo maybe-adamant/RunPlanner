@@ -182,6 +182,21 @@ describe('run import of the Underworld capture', () => {
     });
   });
 
+  it("picks up H_Combat07's optional rewards its uses show collected in combat", () => {
+    const pickups = occurrence(imported.project, 'H-r29').roomActions.order.flatMap((action) =>
+      action.kind === 'interactLocalReward' && action.groupKey === 'optionalRewards'
+        ? [action.slotKey]
+        : [],
+    );
+    expect(pickups).toEqual(['optional1', 'optional2']);
+    // H_Combat15's two listed rewards were left behind.
+    expect(
+      occurrence(imported.project, 'H-r26').roomActions.order.some(
+        (action) => action.kind === 'interactLocalReward' && action.groupKey === 'optionalRewards',
+      ),
+    ).toBe(false);
+  });
+
   it("opens Narcissus's Mystery Boon on the god whose screen its room recorded", () => {
     // G_Story01 as if Narcissus had given Mixed Blessings and its box opened on Apollo.
     const story = record.rooms[17]!;
@@ -283,8 +298,6 @@ describe('run import of the Underworld capture', () => {
         traitOffer: 3,
       },
       // The three Chaos screens stay: their unpicked curses' durations are never saved.
-      // The entry saves' run state where the plan's simulation holds another.
-      mismatch: { pathOfStars: 1 },
       // The H and I Preboss Travel Deal refills were never bought.
       notInRecord: { fields: 1, pathOfStars: 1, shop: 2, traitOffer: 3 },
     });
@@ -315,6 +328,7 @@ describe('run import of the Underworld capture', () => {
       'assumption roomActionOrder r29 occurrence@H-r29',
       'assumption roomActionOrder r32 occurrence@H-r30:postboss',
     ]);
-    expect(mismatchLines(imported.report)).toEqual(['pathOfStars r30 Invested: 5:1 | none other']);
+    // H_Combat07's Minor Talent, collected in combat, buys its Path of Stars node.
+    expect(mismatchLines(imported.report)).toEqual([]);
   });
 });

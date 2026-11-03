@@ -217,6 +217,17 @@ reproduces is reported with its nearest miss and the plan stops there.
      rise. Raw 931 19/8/9/12 → 26/11/4/7, first mismatch r27 → r37.
      Fixtures unchanged.
 
+   - Fields optional pickups: an optional reward the record collected (picked
+     up after combat, or shown only by the room's uses) is picked up once its
+     slot holds a reward; before, the walk drew it but never collected it, so
+     fx underworld's r29 Minor Talent bought no Path of Stars node. Fx
+     underworld 16/13/1/11 → 23/18/0/0 (bound tightened, its last mismatch
+     gone). Raws unchanged.
+   - E finding, not fixed here: `CreateTarget` refuses a new target beside an
+     Anomaly sibling ("… belongs to Anomaly"), though each generated G door
+     may be swapped independently; the importer works around it by switching
+     after every door is placed.
+
 4. **No manufactured outcomes.** Remove the two Draft guesses; run import no
    longer depends on Draft. An unreachable room ends the plan with its nearest
    miss.

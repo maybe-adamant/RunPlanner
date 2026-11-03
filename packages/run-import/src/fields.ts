@@ -1,5 +1,6 @@
 import {
   createBiomeAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
   type FieldsCombatState,
@@ -17,6 +18,7 @@ import {
 import type { SemanticFinding } from '@run-planner/engine/simulation';
 import type { RunRecordFields, RunRecordRoom } from './run-record/model';
 import type { RunImportContext } from './import';
+import { insertRoomAction } from './actions';
 import { authoredOccurrence } from './occurrences';
 import { recordedOffer } from './vocabulary';
 import { savedBracketDraws } from './store-brackets';
@@ -51,15 +53,19 @@ function fieldsState(
   return state?.kind === 'fieldsCombat' ? state : undefined;
 }
 
-/** The record's optional rewards: those still listed with their point, then those collected before listing. */
+/**
+ * The record's optional rewards: those still listed with their point, then
+ * those collected before listing, which no save lists.
+ */
 function optionalRewards(
   context: RunImportContext,
   visit: NonNullable<ReturnType<typeof fieldsVisit>>,
   rewardTypes: ReadonlySet<string>,
-): readonly { readonly reward: string; readonly point?: number }[] {
+): readonly { readonly reward: string; readonly point?: number; readonly collected?: boolean }[] {
   const listed = visit.fields.optionalRewards.map((entry) => ({
     reward: entry.reward,
     point: entry.point,
+    ...(entry.collected === undefined ? {} : { collected: entry.collected }),
   }));
   const cages = new Map<string, number>();
   for (const cage of visit.fields.cages) {
@@ -74,7 +80,7 @@ function optionalRewards(
   const unlisted = Object.entries(visit.room.uses).flatMap(([name, count]) => {
     if (!rewardTypes.has(name)) return [];
     const extra = count - (cages.get(name) ?? 0) - (collectedListed.get(name) ?? 0);
-    return Array.from({ length: Math.max(0, extra) }, () => ({ reward: name }));
+    return Array.from({ length: Math.max(0, extra) }, () => ({ reward: name, collected: true }));
   });
   return [...listed, ...unlisted];
 }
@@ -641,6 +647,51 @@ function guessUnrecordedCage(
 }
 
 /**
+ * Picks up each optional reward the record collected, once its slot holds a
+ * reward: one picked up after combat, or one only the room's uses show.
+ */
+function collectOptionalRewards(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrenceId: string,
+): void {
+  const state = fieldsState(context, biomeKey, occurrenceId);
+  const visit = state === undefined ? undefined : fieldsVisit(context, occurrenceId);
+  if (state === undefined || visit === undefined) return;
+  const gameName = authoredOccurrence(context.assembly().project, biomeKey, occurrenceId)!.gameName;
+  const entries = optionalRewards(context, visit, optionalRewardTypes(context, gameName));
+  for (const [index, entry] of entries.entries()) {
+    const slotKey = `optional${index + 1}`;
+    const used = `fieldsOptionalPickup:${occurrenceId}:${slotKey}`;
+    if (
+      entry.collected !== true ||
+      context.used.has(used) ||
+      state.optionalRewards[slotKey] == null
+    )
+      continue;
+    context.used.add(used);
+    if (
+      !insertRoomAction(context, biomeKey, occurrenceId, {
+        kind: 'interactLocalReward',
+        groupKey: 'optionalRewards',
+        slotKey,
+      })
+    )
+      context.note({
+        area: 'fields',
+        reason: 'refused',
+        address: createLocalRewardAddress(
+          createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+          occurrenceId as OccurrenceId,
+          'optionalRewards',
+          slotKey,
+        ),
+        record: record(visit.roomIndex),
+      });
+  }
+}
+
+/**
  * Fields optional rewards: their count and, for each, its point when the save
  * still listed it. Authored once the room is entered.
  */
@@ -648,6 +699,7 @@ export function importFieldsRooms(context: RunImportContext): void {
   const project = context.assembly().project;
   for (const biome of project.route.biomes)
     for (const occurrence of biome.topology?.occurrences ?? []) {
+      collectOptionalRewards(context, biome.biomeKey, occurrence.occurrenceId);
       const used = `fieldsCount:${occurrence.occurrenceId}`;
       if (
         occurrence.state.kind !== 'fieldsCombat' ||
