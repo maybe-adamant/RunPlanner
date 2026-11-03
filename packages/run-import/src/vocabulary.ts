@@ -5,6 +5,7 @@ import type {
   RunRecordDoorReward,
   RunRecordRoom,
   RunRecordRoomReward,
+  RunRecordTraitUpgrade,
 } from './run-record/model';
 
 /**
@@ -90,3 +91,19 @@ export function pickupUseCount(catalog: Catalog, room: RunRecordRoom, rewardType
 
 /** Pom level-up screens, by their loot: a Pom of Power and a Big Pom. */
 export const POM_GIVERS: ReadonlySet<string> = new Set(['StackUpgrade', 'StackUpgradeBig']);
+
+/**
+ * The rarity rise a room's fountain made: with the Phial, a fountain raises
+ * one boon's rarity, the room's one recorded rarity change. Fountain rooms
+ * hold no encounter, so nothing else that rises a rarity alone fires there.
+ */
+export function fountainRarityRise(room: RunRecordRoom): RunRecordTraitUpgrade | undefined {
+  if (!Object.keys(room.uses).some((name) => /Fountain/.test(name))) return undefined;
+  const raised = room.traits.upgraded.filter(
+    (upgrade) =>
+      upgrade.from.rarity !== undefined &&
+      upgrade.to.rarity !== undefined &&
+      upgrade.from.rarity !== upgrade.to.rarity,
+  );
+  return raised.length === 1 ? raised[0] : undefined;
+}

@@ -22,7 +22,7 @@ import { recordedEntryStates } from './conformance';
 import { chaosOffer } from './features';
 import { applyScreenRerolls } from './rerolls';
 import { rarifyRerolledScreens, takeRarifyCharges, withRarifyClicks } from './rarify';
-import { POM_GIVERS } from './vocabulary';
+import { fountainRarityRise, POM_GIVERS } from './vocabulary';
 import {
   awaitMaxHealthRolls,
   completeRecordedCarrierChildren,
@@ -102,8 +102,8 @@ function withoutIllegalRows(
 }
 
 /**
- * The record's rarity changes no screen or acquisition explains, in order: each
- * changes one trait's rarity alone, at a time no trait was acquired.
+ * The record's rarity changes no screen, acquisition or fountain explains, in
+ * order: each changes one trait's rarity alone, at a time no trait was acquired.
  */
 function unexplainedRarityUpgrades(
   context: RunImportContext,
@@ -112,11 +112,13 @@ function unexplainedRarityUpgrades(
   return context.record.rooms.slice(fromRoom).flatMap((room, offset) => {
     const roomIndex = fromRoom + offset;
     const acquiredAt = new Set(room.traits.acquired.map((trait) => trait.worldTime));
+    const fountain = fountainRarityRise(room);
     return room.traits.upgraded.flatMap((upgrade, position) => {
       const shared = room.traits.upgraded.filter(
         (other) => other.worldTime === upgrade.worldTime,
       ).length;
       return upgrade.from.rarity === upgrade.to.rarity ||
+        upgrade === fountain ||
         upgrade.worldTime === undefined ||
         acquiredAt.has(upgrade.worldTime) ||
         shared > 1

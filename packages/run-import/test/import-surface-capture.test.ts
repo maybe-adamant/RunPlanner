@@ -202,6 +202,45 @@ describe('run import of the Surface capture', () => {
     expect(entries).toEqual([{ ...withdrawal, reason: 'refused' }]);
   });
 
+  it("uses N_PostBoss01's fountain after the Phial its rack equipped there", () => {
+    // The rack's keepsake as the Phial, whose fountain then raised a Common boon.
+    const postBoss = record.rooms[19]!;
+    const { exit: _exit, ...last } = record.rooms[20]!;
+    void _exit;
+    const result = projectFromRunRecord(catalog, {
+      ...record,
+      outcome: { kind: 'abandoned', endingRoom: last.name },
+      rooms: [
+        ...record.rooms.slice(0, 19),
+        {
+          ...postBoss,
+          keepsakeSwap: { from: 'HadesAndPersephoneKeepsake', to: 'FountainRarityKeepsake' },
+          traits: {
+            ...postBoss.traits,
+            acquired: postBoss.traits.acquired.map((trait) =>
+              trait.name === 'GoldifyKeepsake'
+                ? { ...trait, name: 'FountainRarityKeepsake' }
+                : trait,
+            ),
+            upgraded: [
+              {
+                name: 'HighHealthOffenseBoon',
+                from: { rarity: 'Common', level: 4 },
+                to: { rarity: 'Rare', level: 4 },
+                worldTime: 490,
+              },
+            ],
+          },
+        },
+        last,
+      ],
+    });
+    const room = occurrence(result.project, 'N-r17:postboss');
+    const kinds = room.roomActions.order.map((action) => action.kind);
+    expect(kinds.indexOf('interactKeepsakeRack')).toBeLessThan(kinds.indexOf('useFountain'));
+    expect(room.fountainRarityResult).toEqual({ targetTraitKey: 'HighHealthOffenseBoon' });
+  });
+
   it('imports ship wheels, their conversions and Menace', () => {
     const ship = occurrence(imported.project, 'O-r25').state;
     expect(ship.kind === 'shipCombat' && ship.wheels['wheel1']).toMatchObject({

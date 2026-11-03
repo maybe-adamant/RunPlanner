@@ -10,6 +10,7 @@ import {
 import { roomActionAddress } from './actions';
 import type { RunImportContext } from './import';
 import { deliveredCageReward, deliveredIncomingReward } from './occurrences';
+import { fountainRarityRise } from './vocabulary';
 
 const OPTION_INDEX = { option1: 0, option2: 1, option3: 2 } as const;
 
@@ -193,5 +194,14 @@ function timedActions(
     for (const stamp of stamps) claimed.add(stamp!);
     times.set(roomActionKey(reference), Math.min(...stamps.map((stamp) => stamp!.worldTime!)));
   }
+  // A fountain grants nothing itself; with the Phial it raises a boon's rarity.
+  const fountain = occurrence.roomActions.order.find(
+    (reference) => reference.kind === 'useFountain',
+  );
+  const rise = visits
+    .map((index) => fountainRarityRise(context.record.rooms[index]!))
+    .find((upgrade) => upgrade !== undefined);
+  if (fountain !== undefined && rise?.worldTime !== undefined && !claimed.has(rise))
+    times.set(roomActionKey(fountain), rise.worldTime);
   return times;
 }

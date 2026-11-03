@@ -208,6 +208,15 @@ reproduces is reported with its nearest miss and the plan stops there.
      the ship's wheel search without an accepted fit). Raw 334 16/5/10/17 →
      33/14/1/0, first mismatch r21 → r47. Fixtures unchanged.
 
+   - Phial fountains: a fountain room's one recorded rarity rise is the
+     fountain's (fountain rooms hold no encounter, so Steady Growth cannot
+     fire there). It times the fountain, so a rack that equipped the Phial
+     goes first and the fountain's question is asked, and Steady Growth no
+     longer takes it: raw 931's r27 rise had gone to Steady Growth's fifth
+     cycle, which then refused the fountain's own answer and missed r32's
+     rise. Raw 931 19/8/9/12 → 26/11/4/7, first mismatch r27 → r37.
+     Fixtures unchanged.
+
 4. **No manufactured outcomes.** Remove the two Draft guesses; run import no
    longer depends on Draft. An unreachable room ends the plan with its nearest
    miss.

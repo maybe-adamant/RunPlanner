@@ -45,6 +45,7 @@ import { authoredOccurrence, deliveredIncomingReward, occurrenceIdOf } from './o
 import { collectedSources, pickupObjectName, unexplainedRoomUses } from './room-uses';
 import { isQuestionFinding } from './areas';
 import { wheelAuthoringWaits, wheelsSolved } from './wheels';
+import { fountainRarityRise } from './vocabulary';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
 
@@ -117,14 +118,8 @@ function answerFountainRarity(
 ): boolean {
   const roomIndex = fountainRooms(context, outcome)[0];
   if (roomIndex === undefined) return false;
-  const raised = context.record.rooms[roomIndex]!.traits.upgraded.filter(
-    (upgrade) =>
-      upgrade.from.rarity !== undefined &&
-      upgrade.to.rarity !== undefined &&
-      upgrade.from.rarity !== upgrade.to.rarity,
-  );
-  if (raised.length !== 1) return false;
-  const targetTraitKey = raised[0]!.name;
+  const targetTraitKey = fountainRarityRise(context.record.rooms[roomIndex]!)?.name;
+  if (targetTraitKey === undefined) return false;
   const evaluation = context
     .candidates()
     .evaluate({ kind: 'fountainRarityOutcome', outcome, targetTraitKey });
