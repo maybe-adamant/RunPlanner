@@ -270,7 +270,7 @@ export function prepareShipLifecycleCandidateContext(
             }),
         })),
         candidateFindings,
-        { ordering: 'listed', atomicRegion: ownerRegion(wheel.origin) },
+        { atomicRegion: ownerRegion(wheel.origin) },
       );
       const picked = wheel.offers.find((offer) => offer.picked);
       if (picked === undefined) {

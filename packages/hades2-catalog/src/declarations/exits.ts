@@ -52,13 +52,14 @@ export const exitTypes = [
     behavior: { kind: 'playerSelected', rewardPreview: 'hidden' },
     // The spawned contract door has its RerollFunctionName cleared.
     allowReroll: false,
+    spawnedObstacleName: 'ZagContract',
   },
   {
-    // SecretDoor.
     key: 'ChaosExitDoor',
     compatibilityPolicyKey: 'Unconstrained',
     behavior: { kind: 'playerSelected', rewardPreview: 'hidden' },
     allowReroll: false,
+    spawnedObstacleName: 'SecretDoor',
   },
   {
     // SecretExitDoor.

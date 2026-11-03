@@ -364,7 +364,8 @@ describe('structured workspace Hub assembly', () => {
       'authored',
     ]);
     expect(
-      complete.node.slots.find((slot) => slot.hubSlotKey === 'combat10')?.room?.rewardControls[0]
+      // Combat03 already offers the singleton Weapon and is assigned after Combat10.
+      complete.node.slots.find((slot) => slot.hubSlotKey === 'combat03')?.room?.rewardControls[0]
         ?.marker.findingCount,
     ).toBe(1);
 

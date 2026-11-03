@@ -18,7 +18,7 @@ import { validateRoomTemplateContracts } from './template-contracts';
 /** Produces the compiler-private immutable room collection. */
 export function normalizeRooms(
   rawRooms: readonly RawRoomDeclaration[],
-  rawNativeExitDoorOrders: Readonly<Record<string, readonly number[]>>,
+  rawExitDoorSetupOrders: Readonly<Record<string, readonly (readonly [number, string])[]>>,
   rawSwappableBreakables: Readonly<Record<string, number>>,
   rewards: RewardKernelCatalog,
   encounterEnvelopes: CatalogCollection<EncounterEnvelope>,
@@ -27,9 +27,9 @@ export function normalizeRooms(
   exitTypes: CatalogCollection<ExitTypeDeclaration>,
 ): CatalogCollection<RoomDeclaration> {
   const declaredGameNames = new Set(rawRooms.map((room) => room.gameName));
-  for (const gameName of Object.keys(rawNativeExitDoorOrders))
+  for (const gameName of Object.keys(rawExitDoorSetupOrders))
     if (!declaredGameNames.has(gameName))
-      fail(`nativeExitDoorOrders.${gameName}`, 'is not a declared room');
+      fail(`exitDoorSetupOrders.${gameName}`, 'is not a declared room');
   for (const [gameName, count] of Object.entries(rawSwappableBreakables)) {
     if (!declaredGameNames.has(gameName))
       fail(`swappableBreakables.${gameName}`, 'is not a declared room');
@@ -45,8 +45,8 @@ export function normalizeRooms(
       encounterDefinitions,
       encounterSets,
       exitTypes,
-      Object.hasOwn(rawNativeExitDoorOrders, room.gameName)
-        ? rawNativeExitDoorOrders[room.gameName]
+      Object.hasOwn(rawExitDoorSetupOrders, room.gameName)
+        ? rawExitDoorSetupOrders[room.gameName]
         : undefined,
       Object.hasOwn(rawSwappableBreakables, room.gameName)
         ? rawSwappableBreakables[room.gameName]

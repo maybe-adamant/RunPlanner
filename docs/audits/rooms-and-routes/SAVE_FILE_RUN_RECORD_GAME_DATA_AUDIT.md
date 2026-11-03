@@ -495,10 +495,20 @@ counters without order.
   element.
 - The Chaos gate spawn point (`ExitDoorRooms` keys are runtime object ids).
 - The order in which a room's exit doors were generated. `DoUnlockRoomExits`
-  walks `CollapseTableOrdered(MapState.OfferedExitDoors)`, whose
-  `CompareGameDataTables` ties on doors sharing an obstacle name and falls
-  back to `next()` table order; `MapState` is not saved. The order decides
-  which door draws from the reward bag first.
+  walks `CollapseTableOrdered(MapState.OfferedExitDoors)`: the table's Lua 5.2
+  `pairs()` order, then `table.sort` by `CompareGameDataTables`, which for
+  doors compares obstacle names, so same-name doors keep the walk's order as
+  the sort's pivot swaps leave it. `MapState` is not saved. The order decides
+  which door draws from the reward bag first. It is derivable from the open
+  doors alone: each room fills the table in a fixed door-setup order (its map
+  doors, open or not, then doors spawned at runtime such as the Chaos gate's
+  `SecretDoor` and the `ZagContract`; a Chaos room's `SecretExitDoor` return
+  doors are all spawned after map load, so their fixed spawn order is its
+  setup order). A door-order probe recorded every room's setup order, and
+  emulating the table walk and sort over the open set reproduced all 147
+  orders it logged, the Ephyra boards
+  ([Persistent board generation](../../biomes/N_GAME_RULES.md#persistent-board-generation))
+  among them; repeat visits always agreed.
 - The World Shop Travel Deal refill item's identity, and the Hermes Shrine
   refill's when it was itself rushed.
 - Which pickups Sea Star duplicated, and the phase and wave Aetos joined.
@@ -717,11 +727,13 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   takes the indoor `P_Combat09` whatever the door ids). A batch holding an
   unplaced takeover door is not paired: each exit takes its positional door,
   and a door the engine refuses there yields to the next unplaced door in
-  door order, reported with its id. One admitted pairing is exact. Among several, the catalog's declared native door order for the
-  source room is exact; a door that order puts where the engine refuses it is
-  reported as refused. A room without one takes ascending door id among the
-  admitted pairings and reports the order as an assumption. Both declared rooms are inferred from
-  reward-store replays, pending a native door-order probe:
+  door order, reported with its id. One admitted pairing is exact. Among
+  several, the source room's native door order, from its declared door-setup
+  order and the doors the record saw open, is exact; a door that order puts
+  where the engine refuses it is reported as refused. A room without a
+  declared setup order (six Olympus rooms the probe missed)
+  takes ascending door id among the admitted pairings and reports the order
+  as an assumption. Reward-store replays first showed the order matters:
   - `H_Combat05` processes door `621199` before `564448`. In the live
     Underworld recording's reward-bag replay that generates the Mini-Boss
     door first, refilling the store, so `H_Combat07`'s recorded Hestia cage

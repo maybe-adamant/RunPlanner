@@ -29,6 +29,7 @@ import {
 } from './emissions';
 import { historyFindingChronology, rewardFindingChronologyForRoom } from '../finding-chronology';
 import type { RoomCreatedRewardContext } from './room-created-context';
+import type { HubBoardDoor } from './hub-board-order';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { SimulationState } from '../../../state/model';
 
@@ -163,6 +164,14 @@ function completeIncomingOfferCandidate(
   return createRewardProducerCandidateResult(candidateFindings, branch, exclusions);
 }
 
+function requireHubDoor(context: RoomCreatedRewardContext): HubBoardDoor {
+  if (context.hubDoor === undefined)
+    throw new BiomeRewardSimulationContractError(
+      `${context.room.gameName} lost its Hub board door`,
+    );
+  return context.hubDoor;
+}
+
 /** Generates exactly one resolved or unresolved incoming reward envelope. */
 export function generateIncomingReward(
   catalog: Catalog,
@@ -263,6 +272,7 @@ export function generateIncomingReward(
             ...pending.participants,
             Object.freeze({
               kind: 'unresolved' as const,
+              door: requireHubDoor(context),
               declaration: context.declaration,
               incoming: unresolved,
               historySequence: event.sequence,
@@ -382,7 +392,12 @@ export function generateIncomingReward(
         frontier: pending.frontier,
         participants: Object.freeze([
           ...pending.participants,
-          Object.freeze({ kind: 'resolved' as const, context: offerContext, incoming }),
+          Object.freeze({
+            kind: 'resolved' as const,
+            door: requireHubDoor(context),
+            context: offerContext,
+            incoming,
+          }),
         ]),
       }),
     );

@@ -36,8 +36,9 @@ happen", never as alternative states carried forward or offered as a choice.
 4. **Wheels have a fixed draw order.** `ShipsEncounterSetup`
    (`RoomLogic.lua:1411`) loops the wheels left then right, threading
    `rewardsChosen`, so offer 1 is the Left wheel and is drawn first. The wheel
-   cohort order search is gone (owner, 2026-11-03); Hub boards keep their
-   source-offer order search.
+   cohort order search is gone (owner, 2026-11-03). Hub boards draw in the
+   game's native door order, derived from the catalog's door-setup order, so
+   no board order is searched either.
 
 ## Work
 
@@ -104,10 +105,7 @@ happen", never as alternative states carried forward or offered as a choice.
    planner suites found no production path with more than one state. The
    equivalence digest maps the new products onto the recorded branch-list
    shape until the baseline is next recorded. Equivalence 157/157 and the
-   Draft corpus unchanged; performance flat. Hub boards keep their
-   source-offer order search inside board settlement (one state out): the
-   game assigns board rewards over `CollapseTableOrdered` doors that tie on
-   one obstacle name, an order no authored or catalog fact carries.
+   Draft corpus unchanged; performance flat.
    Then (2026-11-02): each trait offer keeps one contact, its own pre-offer
    context plus a blocked target or All Together child's context keyed by
    the child's address, and every candidate product answers at that state;
@@ -166,8 +164,8 @@ happen", never as alternative states carried forward or offered as a choice.
    `beforeRole` state with one `realizedAcquisition` and Path context, and
    `selectedTraitOfferProducts` reads the one state. `branchList` /
    `singleBranch` are gone. Where settlement could still yield more than one
-   state it throws: a Shop inventory with more than one generation witness,
-   and the Hub board's source-order search returns one cohort state. The Eris
+   state it throws: a Shop inventory with more than one generation witness.
+   The Eris
    and Figurine/Arcana divergence throws, the pickup-maturity leak guard and
    the pending-Shop divergence fault are gone; an Artificer replacement keeps
    the one state that spent its use. A seam reaching an acquisition point

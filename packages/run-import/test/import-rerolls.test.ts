@@ -133,11 +133,11 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
       {
         kind: 'reroll',
         rerollId: 'r1',
-        target: { kind: 'door', exitKey: 'exit1', occurrenceId: 'G-r20-d609579' },
-        reward: { rewardType: 'RoomMoneyDrop' },
+        target: { kind: 'door', exitKey: 'exit1', occurrenceId: 'G-r20-d609581' },
+        reward: { rewardType: 'StackUpgrade' },
       },
     ]);
-    expect(reward(imported.project, 'G-r20-d609579').offer).toEqual({
+    expect(reward(imported.project, 'G-r20-d609581').offer).toEqual({
       rewardType: 'MaxHealthDrop',
     });
   });
@@ -254,7 +254,7 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     ]);
   });
 
-  it('redraws a Fields cage of the door its bracket opened', () => {
+  it("redraws the first exit's Fields cage that can have drawn the bracket's lost Boon", () => {
     const imported = projectFromRunRecord(
       catalog,
       withReroll(fixture('underworld-1010'), 28, 'RunProgress', { Boon: -1 }),
@@ -262,17 +262,18 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     expect(rerollLines(imported, 28)).toEqual(['assumption reroll r28 occurrence@H-r28']);
     expect(pressesOf(imported.project, 'H-r28')).toMatchObject([
       {
-        target: { kind: 'cage', occurrenceId: 'H-r29', slotKey: 'cage1' },
-        reward: { rewardType: 'WeaponUpgrade' },
+        target: { kind: 'cage', occurrenceId: 'H-r28-d565616', slotKey: 'cage1' },
+        reward: { rewardType: 'HermesUpgrade' },
       },
     ]);
-    const fields = occurrence(imported.project, 'H-r29').state;
+    const fields = occurrence(imported.project, 'H-r28-d565616').state;
     expect(fields.kind === 'fieldsCombat' && fields.cages['cage1']?.offer).toMatchObject({
       rewardType: 'Boon',
     });
+    // The bracket's first exit is H_Combat05, never entered, so its redrawn cage shows no screen.
     expect(fields.kind === 'fieldsCombat' && fields.rerolledCages?.['cage1']).toMatchObject({
-      offer: { rewardType: 'WeaponUpgrade' },
-      traitOffersByAcquisitionRole: { self: { giverKey: 'WeaponUpgrade' } },
+      offer: { rewardType: 'HermesUpgrade' },
+      traitOffersByAcquisitionRole: { self: null },
     });
   });
 

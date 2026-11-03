@@ -15,6 +15,7 @@ import {
   applyProjectCommand,
   exitDecisionForSource,
 } from '@run-planner/engine/authored-project';
+import { nativeExitDoorOrder } from '@run-planner/engine/catalog-schema';
 import type { SemanticFinding } from '@run-planner/engine/simulation';
 import type { RunRecordDoor } from './run-record/model';
 import type { RunImportContext } from './import';
@@ -85,26 +86,35 @@ const unorderedDoors = (context: RunImportContext, roomIndex: number) =>
     (door) => !chaosRoom(context, door.room) && !contractRoom(context, door.room),
   );
 
-/** The room's declared native door order, when it covers every ordinary door the visit offered. */
-function declaredDoorOrder(
+/**
+ * Every door the visit offered in the game's processing order, when the
+ * catalog declares the room's door-setup order.
+ */
+function nativeDoorOrder(
   context: RunImportContext,
   roomIndex: number,
 ): readonly number[] | undefined {
-  const order =
-    context.catalog.rooms.byKey[context.record.rooms[roomIndex]!.name]?.nativeExitDoorOrder;
-  return order !== undefined &&
-    unorderedDoors(context, roomIndex).every((door) => order.includes(door.door))
-    ? order
-    : undefined;
+  const room = context.record.rooms[roomIndex]!;
+  return nativeExitDoorOrder(
+    context.catalog,
+    room.name,
+    room.doors.map((door) =>
+      chaosRoom(context, door.room)
+        ? { doorId: door.door, additionalExitKey: 'chaos' }
+        : contractRoom(context, door.room)
+          ? { doorId: door.door, additionalExitKey: 'zagreusContract' }
+          : { doorId: door.door },
+    ),
+  );
 }
 
 /**
- * The source visit's ordinary doors in native order. Native door order ties on
- * the obstacle name and falls back to table order, which no save keeps: a room
- * without a declared order takes ascending door id.
+ * The source visit's ordinary doors in native order. Same-name doors keep
+ * the offered-exit table's order, which no save keeps: a room without a
+ * declared door-setup order takes ascending door id.
  */
 function ordinaryDoors(context: RunImportContext, roomIndex: number): readonly RunRecordDoor[] {
-  const order = declaredDoorOrder(context, roomIndex);
+  const order = nativeDoorOrder(context, roomIndex);
   const rank = (door: RunRecordDoor) =>
     order === undefined ? door.door : order.indexOf(door.door);
   return [...unorderedDoors(context, roomIndex)].sort((left, right) => rank(left) - rank(right));
@@ -227,7 +237,7 @@ function ensureZagreusContract(context: RunImportContext, biomeKey: string, sour
 
 /**
  * A batch's ascending door order is an assumption, reported once when its first
- * door lands; a declared native order is exact.
+ * door lands; a native order is exact.
  */
 function noteDoorOrder(
   context: RunImportContext,
@@ -237,7 +247,7 @@ function noteDoorOrder(
 ): void {
   const used = `doorOrder:${semanticAddressKey(decision)}`;
   if (doorCount < 2 || context.used.has(used)) return;
-  if (declaredDoorOrder(context, sourceIndex) !== undefined) return;
+  if (nativeDoorOrder(context, sourceIndex) !== undefined) return;
   context.used.add(used);
   context.note({
     area: 'doors',
@@ -367,8 +377,8 @@ function createTarget(context: RunImportContext, target: TargetAddress): boolean
     const applied = placeDoor(context, target, decision, sourceIndex, doors, paired);
     if (applied !== undefined) {
       if (pairings.length > 1) noteDoorOrder(context, decision, sourceIndex, doors.length);
-      // A declared native order the engine refuses is reported, not overridden silently.
-      if (paired !== positional && declaredDoorOrder(context, sourceIndex) !== undefined)
+      // A native order the engine refuses is reported, not overridden silently.
+      if (paired !== positional && nativeDoorOrder(context, sourceIndex) !== undefined)
         context.note({
           area: 'doors',
           reason: 'refused',

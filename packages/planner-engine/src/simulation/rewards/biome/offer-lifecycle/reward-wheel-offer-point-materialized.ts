@@ -300,7 +300,7 @@ export function applyRewardWheelOfferPointMaterialization(
             branch,
             [...values, candidate].map(contextForWheel),
             trialFindings,
-            { ordering: 'listed', atomicRegion: ownerRegion(wheel.origin) },
+            { atomicRegion: ownerRegion(wheel.origin) },
           );
           if (trial === undefined) continue;
           build(index + 1, [...values, candidate]);
@@ -312,7 +312,7 @@ export function applyRewardWheelOfferPointMaterialization(
         branch,
         (proposals[0] ?? []).map(contextForWheel),
         candidateFindings,
-        { ordering: 'listed', atomicRegion: ownerRegion(wheel.origin) },
+        { atomicRegion: ownerRegion(wheel.origin) },
       );
       const selectedOffer = (proposals[0] ?? []).find(
         (candidate) => semanticAddressKey(candidate.origin) === ownerKey,
@@ -383,7 +383,6 @@ export function applyRewardWheelOfferPointMaterialization(
     wheel.unresolvedOffers.length > 0
       ? undefined
       : processOfferGenerationCohort(branch, contexts, findings, {
-          ordering: 'listed',
           atomicRegion: ownerRegion(wheel.origin),
         });
   if (wheel.unresolvedOffers.length > 0) {

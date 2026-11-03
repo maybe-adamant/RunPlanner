@@ -272,6 +272,14 @@ export function normalizeHubDecision(
     `${path}.slots.slotKeys`,
   );
   const physicalDoorIds = new Set<number>();
+  const hubDoors = hubRoom.exitDoorSetupOrder ?? [];
+  const boardDoors = hubDoors.filter((door) =>
+    raw.slots.some((slot) => slot.physicalDoorId === door.doorId),
+  );
+  // The engine orders the board by the table walk alone, so its doors must tie in the sort.
+  if (new Set(boardDoors.map((door) => door.obstacleName)).size > 1) {
+    fail(`exitDoorSetupOrders.${hubRoom.gameName}`, 'must give every board door one obstacle name');
+  }
   const slots = raw.slots.map((slot, index) => {
     const slotPath = `${path}.slots[${index}]`;
     const room = requireLayoutRoom(slot.roomGameName, biomeKey, rooms, `${slotPath}.roomGameName`);
@@ -286,10 +294,18 @@ export function normalizeHubDecision(
       fail(`${slotPath}.physicalDoorId`, `duplicates ${physicalDoorId}`);
     }
     physicalDoorIds.add(physicalDoorId);
+    const offeredExitInsertionRank = boardDoors.findIndex((door) => door.doorId === physicalDoorId);
+    if (offeredExitInsertionRank < 0) {
+      fail(
+        `${slotPath}.physicalDoorId`,
+        `${physicalDoorId} is not in ${hubRoom.gameName}'s door-setup order`,
+      );
+    }
     return Object.freeze({
       slotKey: slotKeys[index] as string,
       roomGameName: room.gameName,
       physicalDoorId,
+      offeredExitInsertionRank,
     });
   });
   if (slots.length === 0) {

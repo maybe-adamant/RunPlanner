@@ -19,6 +19,7 @@ import type { RunStateOwner } from '../../run-state';
 import type { TargetAddress } from '../../../../authored-project/addresses';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
 import type { SimulationState } from '../../../state/model';
+import type { HubBoardDoor } from './hub-board-order';
 
 /** Complete non-state emissions from one authored acquisition-site settlement. */
 export interface AuthoredSiteSettlementEmissions {
@@ -61,12 +62,14 @@ export function createAuthoredSiteSettlementEmissions(input: {
 
 export interface ResolvedHubBoardGenerationParticipant {
   readonly kind: 'resolved';
+  readonly door: HubBoardDoor;
   readonly context: OfferProcessingContext;
   readonly incoming: CanonicalResolvedIncomingReward;
 }
 
 export interface UnresolvedHubBoardGenerationParticipant {
   readonly kind: 'unresolved';
+  readonly door: HubBoardDoor;
   readonly declaration: RoomDeclaration;
   readonly incoming: NonNullable<CanonicalAuthoredRoom['unresolvedIncomingReward']>;
   readonly historySequence: number;

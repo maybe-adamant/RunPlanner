@@ -588,10 +588,11 @@ describe('Hub progressive biome evaluation', () => {
     // The authored visit roster stays visible, but the invalid board does not
     // manufacture any entered Hub traversal or return lifecycle.
     expect(board.history.events.some((event) => event.kind === 'roomRestored')).toBe(false);
+    // Combat03 already offers the singleton Weapon and is assigned after Combat10.
     expect(board.rewards.findings).toContainEqual(
       expect.objectContaining({
         code: 'rewardBagEntryUnavailable',
-        origin: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
+        origin: createIncomingRewardAddress(nBiome, nOccurrenceId('combat03')),
       }),
     );
 
@@ -642,10 +643,11 @@ describe('Hub progressive biome evaluation', () => {
 
   it('blocks at invalid Hub board generation before a simultaneous visit failure', () => {
     let project = withoutNFirstVisitSideRooms(loadSurfaceNProject());
-    const boardReward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
+    // Combat03 already offers the singleton Weapon and is assigned after Combat10.
+    const boardReward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat03'));
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
-      reward: boardReward,
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
       value: { rewardType: 'WeaponUpgrade' },
     });
     const laterVisitFailure = createLocalVisitSlotAddress(

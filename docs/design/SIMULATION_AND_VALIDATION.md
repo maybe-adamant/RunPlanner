@@ -229,7 +229,7 @@ and shows read-only with the unreached hint, which follows coverage, not
 readiness.
 
 The same semantic chronology locates the missing owner, normalized horizon and
-queried command owners. Jointly unordered products, such as a Hub board or
+queried command owners. Jointly generated products, such as a Hub board or
 side-room sibling generation set, remain atomic. The application applies this
 product; it does not infer chronology from tabs, rail order, a target index or
 the component containing the finding.

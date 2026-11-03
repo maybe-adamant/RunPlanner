@@ -30,7 +30,12 @@ import {
   legacySchema99Body,
   legacySchema100Body,
 } from '@run-planner/test-fixtures/shared';
-import { loadSurfaceNProject, nBiome, nVisitSlotKeys } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNProject,
+  nBiome,
+  nVisitSlotKeys,
+  withFourthBoardGodBeforeCombat05,
+} from '@run-planner/test-fixtures/surface';
 import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
 
 import {
@@ -894,8 +899,13 @@ describe('project document loader', () => {
       },
     ]);
 
+    // The saved board repeats Ares on Combat05 before four distinct gods in the game's
+    // assignment order; the unvisited Combat01/Combat10 swap restores it.
+    expect(simulateProject(catalog, loaded.project).findings).toEqual([
+      expect.objectContaining({ code: 'rewardSourceUnavailable' }),
+    ]);
     // Recorded from the schema-90 engine evaluating the unmigrated fixture.
-    const evaluation = simulateProject(catalog, loaded.project);
+    const evaluation = simulateProject(catalog, withFourthBoardGodBeforeCombat05(loaded.project));
     expect(evaluation.status).toBe('valid');
     expect(evaluation.findings).toEqual([]);
     const [n, o] = evaluation.route.biomes.map((biome) =>

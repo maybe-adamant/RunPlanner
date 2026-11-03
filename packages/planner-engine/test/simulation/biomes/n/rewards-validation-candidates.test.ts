@@ -304,7 +304,8 @@ describe('N Hub rewards, validation, and candidates', () => {
     });
   });
 
-  it('keeps invalid board rewards attached to their incoming-reward owner', () => {
+  it('charges a repeated singleton to the door the game assigns later', () => {
+    // Combat03 already offers the singleton Weapon; the game assigns Combat10 first.
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
@@ -313,12 +314,12 @@ describe('N Hub rewards, validation, and candidates', () => {
     const { biome } = completeN(project);
 
     expect(biome.validity).toBe('invalid');
-    expect(biome.findings).toContainEqual(
+    expect(biome.findings).toEqual([
       expect.objectContaining({
         code: 'rewardBagEntryUnavailable',
-        origin: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
+        origin: createIncomingRewardAddress(nBiome, nOccurrenceId('combat03')),
       }),
-    );
+    ]);
   });
 
   it('retains the invalid board region while keeping structural Hub order proposals authorable', () => {
@@ -407,21 +408,38 @@ describe('N Hub rewards, validation, and candidates', () => {
       occurrenceId: nOccurrenceId('combat12'),
       localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('combat12'),
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat12')),
-      value: {
-        rewardType: 'Boon',
-        payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
-      },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('miniBoss01')),
-      value: {
-        rewardType: 'Boon',
-        payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
-      },
+    const boon = (source: string) =>
+      ({ rewardType: 'Boon', payload: { kind: 'BoonSource', source } }) as const;
+    const withSources = (sources: Readonly<Record<string, string>>) =>
+      Object.entries(sources).reduce(
+        (current, [slotKey, source]) =>
+          applyProjectCommand(current, catalog, {
+            kind: 'ReplaceIncomingReward',
+            reward: createIncomingRewardAddress(nBiome, nOccurrenceId(slotKey)),
+            value: boon(source),
+          }),
+        project,
+      );
+    // This board assigns MiniBoss01, Combat23, 11, 05, 10, then 12: Aphrodite repeats
+    // only once four distinct gods were offered before it.
+    expect(
+      completeN(
+        withSources({
+          miniBoss01: 'AphroditeUpgrade',
+          combat10: 'AphroditeUpgrade',
+          combat12: 'PoseidonUpgrade',
+        }),
+      ).biome.findings,
+    ).toEqual([
+      expect.objectContaining({
+        code: 'rewardSourceUnavailable',
+        origin: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
+      }),
+    ]);
+    project = withSources({
+      miniBoss01: 'AphroditeUpgrade',
+      combat10: 'PoseidonUpgrade',
+      combat12: 'AphroditeUpgrade',
     });
     const { biome } = validN(project);
     const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
@@ -440,13 +458,15 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('permits six distinct acquired god sources after visiting every Ephyra Boon offer', () => {
+    // In assignment order the board's two new gods fill the four-god cap with the run's
+    // Apollo and Hera; once those two are offered as well, the cap no longer applies.
     const hubSources = {
       combat01: 'DemeterUpgrade',
       combat02: 'ZeusUpgrade',
-      combat10: 'ApolloUpgrade',
-      combat11: 'HeraUpgrade',
-      combat23: 'AresUpgrade',
-      miniBoss01: 'PoseidonUpgrade',
+      miniBoss01: 'ApolloUpgrade',
+      combat23: 'HeraUpgrade',
+      combat11: 'PoseidonUpgrade',
+      combat10: 'AresUpgrade',
     } as const;
     let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceHubActionOrder',
@@ -509,21 +529,48 @@ describe('N Hub rewards, validation, and candidates', () => {
         payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
       },
     });
-    expect(
-      createPreparedProjectCandidateSession(
-        catalog,
-        simulateProjectAssembly(catalog, project),
-      ).evaluate({
+    // The game assigns Combat09 before Combat02 and Combat10 after four distinct gods.
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+    const zeusAt = (slotKey: string) =>
+      session.evaluate({
         kind: 'incomingReward',
-        reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat09')),
+        reward: createIncomingRewardAddress(nBiome, nOccurrenceId(slotKey)),
         value: {
           rewardType: 'Boon',
           payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
         },
-      }),
-    ).toMatchObject({ kind: 'incomingReward', result: { supported: true, findings: [] } });
+      });
+    expect(zeusAt('combat09')).toMatchObject({
+      kind: 'incomingReward',
+      result: {
+        supported: false,
+        findings: [
+          expect.objectContaining({
+            code: 'rewardSourceUnavailable',
+            origin: createIncomingRewardAddress(nBiome, nOccurrenceId('combat02')),
+          }),
+        ],
+        exclusions: [
+          expect.objectContaining({
+            kind: 'peerConflict',
+            peers: [
+              expect.objectContaining({
+                origin: createIncomingRewardAddress(nBiome, nOccurrenceId('combat02')),
+              }),
+            ],
+          }),
+        ],
+      },
+    });
+    expect(zeusAt('combat10')).toMatchObject({
+      kind: 'incomingReward',
+      result: { supported: true, findings: [] },
+    });
 
-    for (const slotKey of ['combat09', 'miniBoss01'] as const) {
+    for (const slotKey of ['combat10', 'combat01'] as const) {
       project = applyProjectCommand(project, catalog, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(nBiome, nOccurrenceId(slotKey)),
@@ -539,11 +586,11 @@ describe('N Hub rewards, validation, and candidates', () => {
       hub: createHubDecisionAddress(nBiome, 'hub'),
       actions: hubVisitActions([
         'combat02',
-        'combat09',
-        'miniBoss01',
+        'combat10',
+        'combat01',
         'combat05',
         'combat03',
-        'combat01',
+        'combat09',
       ]),
     });
     const { biome } = validN(project);
@@ -558,14 +605,14 @@ describe('N Hub rewards, validation, and candidates', () => {
             target.room.incomingReward.offer.payload.source === 'ZeusUpgrade',
         )
         .map((target) => target.hubSlotKey),
-    ).toEqual(['combat02', 'combat09', 'miniBoss01']);
+    ).toEqual(['combat01', 'combat02', 'combat10']);
     expect(hub.visits.map((visit) => visit.target.hubSlotKey)).toEqual([
       'combat02',
-      'combat09',
-      'miniBoss01',
+      'combat10',
+      'combat01',
       'combat05',
       'combat03',
-      'combat01',
+      'combat09',
     ]);
     expect(hub.board.targets).toHaveLength(10);
     const zeusRewardOwners = new Set(
@@ -740,10 +787,11 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('keeps unrelated board reward authoring available under a retained-invalid peer', () => {
-    const invalidPeer = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
+    // Combat10 is assigned before Combat03, which loses the singleton Weapon.
+    const invalidPeer = createIncomingRewardAddress(nBiome, nOccurrenceId('combat03'));
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
-      reward: invalidPeer,
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
       value: { rewardType: 'WeaponUpgrade' },
     });
     const assembly = simulateProjectAssembly(catalog, project);

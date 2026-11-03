@@ -47,6 +47,7 @@ import {
   pOccurrenceIds,
   qBiome,
   qOccurrenceIds,
+  withFourthBoardGodBeforeCombat05,
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNShrineSideRoomDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
@@ -809,7 +810,7 @@ describe('Hermes Shrine workbench', () => {
   it('authors the refill on the first rushed purchase row only while Travel Deal applies', async () => {
     const postbossId = createOccurrenceId('surface-n-preboss:postboss');
     const owner = createOccurrenceAddress(nBiome, postbossId);
-    let project = loadSurfaceNOProject();
+    let project = withFourthBoardGodBeforeCombat05(loadSurfaceNOProject());
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat05')),

@@ -132,65 +132,6 @@ export interface OfferProcessingPeer {
   readonly offer: ResolvedRewardOffer;
 }
 
-interface SourceOrderingFailure {
-  readonly blocked: OfferProcessingContext;
-  readonly prior: readonly OfferProcessingContext[];
-}
-
-function isSourceOrderingFailure(
-  value: readonly OfferProcessingContext[] | SourceOrderingFailure,
-): value is SourceOrderingFailure {
-  return 'blocked' in value;
-}
-
-function sourceOrdering(
-  branch: RewardBranchState,
-  contexts: readonly OfferProcessingContext[],
-): readonly OfferProcessingContext[] | SourceOrderingFailure {
-  const sourceContexts = contexts.filter((context) => {
-    const type = context.catalog.rewards.rewardTypes.byKey[context.reward.offer.rewardType];
-    return type?.sourceSupport !== undefined && type.sourceResolution?.kind === 'offer';
-  });
-  const completeMask = (1 << sourceContexts.length) - 1;
-  const failedMasks = new Set<number>();
-  let failure: SourceOrderingFailure = Object.freeze({
-    blocked: sourceContexts[0]!,
-    prior: Object.freeze([]),
-  });
-  const visit = (mask: number): readonly OfferProcessingContext[] | undefined => {
-    if (mask === completeMask) return Object.freeze([]);
-    if (failedMasks.has(mask)) return undefined;
-    const prior = sourceContexts.filter((_, offset) => (mask & (1 << offset)) !== 0);
-    for (const [offset, context] of sourceContexts.entries()) {
-      if ((mask & (1 << offset)) !== 0) continue;
-      if (
-        !isOfferSupportedAtResolutionPoint(
-          context.catalog.rewards,
-          context.reward.offer,
-          context.facts(branch.state),
-          'offer',
-          { priorOffers: prior.map((entry) => entry.reward.offer) },
-        )
-      ) {
-        if (prior.length >= failure.prior.length) {
-          failure = Object.freeze({ blocked: context, prior: Object.freeze(prior) });
-        }
-        continue;
-      }
-      const tail = visit(mask | (1 << offset));
-      if (tail !== undefined) return Object.freeze([context, ...tail]);
-    }
-    failedMasks.add(mask);
-    return undefined;
-  };
-  const orderedSources = visit(0);
-  if (orderedSources === undefined) return failure;
-  let sourceOffset = 0;
-  return contexts.map((context) =>
-    sourceContexts.includes(context) ? orderedSources[sourceOffset++]! : context,
-  );
-}
-
 /**
  * Offers the reward at the reached state, returning the state it leaves; an
  * unsupported offer, or none reached, records its finding and leaves none.
@@ -513,7 +454,7 @@ export function explainCohortOfferExclusions(
   const peerAloneValid = (peer: OfferProcessingContext) =>
     processRewardOffer(branch, peer, new Map()) !== undefined;
   const pairFails = (pair: readonly OfferProcessingContext[]) =>
-    processOfferGenerationCohort(branch, pair, new Map(), { ordering: 'listed' }) === undefined;
+    processOfferGenerationCohort(branch, pair, new Map()) === undefined;
   const conflicting = [
     ...peers.earlier.filter(
       (peer) =>
@@ -734,15 +675,15 @@ function recordCanonicalOffer(
   );
 }
 
+/**
+ * Draws a cohort's offers in the given order, each after the ones before it,
+ * and records them on the reached state in history order.
+ */
 export function processOfferGenerationCohort(
   branch: RewardBranchState | undefined,
   contexts: readonly OfferProcessingContext[],
   findings: Map<string, FindingRegionEntry>,
-  policy: {
-    /** `listed` draws in the given source order; `sourceOffers` searches an order of source offers. */
-    readonly ordering: 'listed' | 'sourceOffers';
-    readonly atomicRegion?: string;
-  },
+  policy: { readonly atomicRegion?: string } = {},
 ): RewardBranchState | undefined {
   if (contexts.length <= 1) {
     const context = contexts[0];
@@ -759,30 +700,10 @@ export function processOfferGenerationCohort(
       );
     return undefined;
   };
-  const sourceResult =
-    policy.ordering === 'sourceOffers' ? sourceOrdering(branch, contexts) : undefined;
-  if (sourceResult !== undefined && isSourceOrderingFailure(sourceResult)) {
-    const localFindings = new Map<string, FindingRegionEntry>();
-    processRewardOffer(
-      branch,
-      {
-        ...sourceResult.blocked,
-        peers: Object.freeze(
-          sourceResult.prior.map((context) => ({
-            origin: context.reward.origin,
-            offer: context.reward.offer,
-          })),
-        ),
-      },
-      localFindings,
-    );
-    return failed(localFindings);
-  }
-  const ordering = sourceResult ?? contexts;
   let candidate: RewardBranchState | undefined = branch;
   const localFindings = new Map<string, FindingRegionEntry>();
   const priorOffers: OfferProcessingPeer[] = [];
-  for (const context of ordering) {
+  for (const context of contexts) {
     candidate = processRewardOffer(
       candidate,
       { ...context, peers: Object.freeze([...priorOffers]) },
@@ -791,7 +712,7 @@ export function processOfferGenerationCohort(
     if (candidate === undefined) return failed(localFindings);
     priorOffers.push({ origin: context.reward.origin, offer: context.reward.offer });
   }
-  // The cohort's offers are recorded in listed order whatever order was drawn.
+  // The cohort's offers are recorded in history order whatever order was drawn.
   let canonical: RewardBranchState = Object.freeze({
     ...branch,
     state: Object.freeze({
@@ -800,51 +721,92 @@ export function processOfferGenerationCohort(
       rewardPriorities: candidate.state.rewardPriorities,
     }),
   });
-  for (const context of contexts) canonical = recordCanonicalOffer(canonical, context);
+  for (const context of [...contexts].sort(
+    (left, right) => left.historySequence - right.historySequence,
+  ))
+    canonical = recordCanonicalOffer(canonical, context);
   return canonical;
 }
 
 /**
- * Assess one new/edited participant after the board identities that are
- * already authored. Each supported peer contributes once to the generation
- * frontier and remains in the focused offer's unordered peer context; an
- * independently invalid peer is omitted so it cannot suppress an unrelated
- * repair. This is deliberately linear. Complete unordered-cohort validation
- * remains owned by `processOfferGenerationCohort`.
+ * Assesses one offer at its place in a cohort's draw order against the
+ * authored peers. Earlier peers draw first; one that cannot is its own repair
+ * and is skipped. The offer is then drawn, and each later peer that draws
+ * without it must still draw after it, or the offer conflicts with that peer.
  */
-export function processFocusedOfferAfterAuthoredPeers(
+export function processFocusedOfferInDrawOrder(
   branch: RewardBranchState | undefined,
-  peerContexts: readonly OfferProcessingContext[],
+  peers: {
+    readonly earlier: readonly OfferProcessingContext[];
+    readonly later: readonly OfferProcessingContext[];
+  },
   focusedContext: OfferProcessingContext,
   findings: Map<string, FindingRegionEntry>,
 ): {
   readonly branch: RewardBranchState | undefined;
   readonly exclusions?: readonly RewardOfferExclusionReason[];
 } {
-  let reached = branch;
-  const acceptedPeers: OfferProcessingPeer[] = [];
-  for (const context of peerContexts) {
-    const peerFindings = new Map<string, FindingRegionEntry>();
-    const next = processRewardOffer(
-      reached,
-      { ...context, peers: Object.freeze([]) },
-      peerFindings,
-    );
-    if (next === undefined) continue;
-    reached = next;
-    acceptedPeers.push(
-      Object.freeze({ origin: context.reward.origin, offer: context.reward.offer }),
-    );
-  }
-
+  const draw = (
+    from: RewardBranchState | undefined,
+    prior: readonly OfferProcessingPeer[],
+    contexts: readonly OfferProcessingContext[],
+    onFailure?: (context: OfferProcessingContext, failed: Map<string, FindingRegionEntry>) => void,
+  ) => {
+    let reached = from;
+    const accepted = [...prior];
+    for (const context of contexts) {
+      const failed = new Map<string, FindingRegionEntry>();
+      const next = processRewardOffer(
+        reached,
+        { ...context, peers: Object.freeze([...accepted]) },
+        failed,
+      );
+      if (next === undefined) {
+        onFailure?.(context, failed);
+        continue;
+      }
+      reached = next;
+      accepted.push(Object.freeze({ origin: context.reward.origin, offer: context.reward.offer }));
+    }
+    return { reached, accepted: Object.freeze(accepted) };
+  };
+  const before = draw(branch, [], peers.earlier);
+  const focused = { ...focusedContext, peers: before.accepted };
   const focusedFindings = new Map<string, FindingRegionEntry>();
-  const focused = { ...focusedContext, peers: Object.freeze(acceptedPeers) };
-  const supported = processRewardOffer(reached, focused, focusedFindings);
-  if (supported !== undefined) return { branch: supported };
-  for (const value of focusedFindings.values()) {
-    addRewardFinding(findings, value.finding, value.atomicRegion, value.chronology);
+  const supported = processRewardOffer(before.reached, focused, focusedFindings);
+  if (supported === undefined) {
+    for (const value of focusedFindings.values()) {
+      addRewardFinding(findings, value.finding, value.atomicRegion, value.chronology);
+    }
+    const exclusions = explainRewardOfferExclusions(before.reached, focused);
+    return { branch: undefined, ...(exclusions === undefined ? {} : { exclusions }) };
   }
-  const exclusions = explainRewardOfferExclusions(reached, focused);
+  const drawnWithout = new Set(
+    draw(before.reached, before.accepted, peers.later).accepted.map((peer) =>
+      semanticAddressKey(peer.origin),
+    ),
+  );
+  const conflicts: OfferProcessingContext[] = [];
+  const after = draw(
+    supported,
+    [
+      ...before.accepted,
+      Object.freeze({ origin: focused.reward.origin, offer: focused.reward.offer }),
+    ],
+    peers.later,
+    (context, failed) => {
+      if (!drawnWithout.has(semanticAddressKey(context.reward.origin))) return;
+      conflicts.push(context);
+      for (const value of failed.values()) {
+        addRewardFinding(findings, value.finding, value.atomicRegion, value.chronology);
+      }
+    },
+  );
+  if (conflicts.length === 0) return { branch: after.reached };
+  const exclusions = reachedRewardOfferExclusion({
+    kind: 'peerConflict',
+    peers: conflicts.map((peer) => ({ origin: peer.reward.origin, offer: peer.reward.offer })),
+  });
   return { branch: undefined, ...(exclusions === undefined ? {} : { exclusions }) };
 }
 

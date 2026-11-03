@@ -13,6 +13,7 @@ import { countedBinding } from '../../offer-generation';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import { visibleStoreOptionNames } from '../../facts';
 import { ImmutableSetView } from '../prepared-inputs';
+import type { HubBoardDoor } from './hub-board-order';
 
 type CanonicalRewardSource = CanonicalAuthoredRoom | CanonicalHubRoom;
 
@@ -34,6 +35,8 @@ export interface RoomCreatedRewardContext {
   readonly currentShopNames: ReadonlySet<string>;
   readonly peerParentOrigin: CanonicalRewardSource['origin'];
   readonly peerCreationSource: RoomCreationSource;
+  /** The board door a Hub target's reward is assigned through. */
+  readonly hubDoor?: HubBoardDoor;
 }
 
 export type RoomCreatedContextResult =
@@ -136,6 +139,7 @@ export function prepareRoomCreatedRewardContext(
   let currentShopNames: ReadonlySet<string> = new Set();
   let peerParentOrigin: CanonicalRewardSource['origin'] = source.origin;
   let peerCreationSource: RoomCreationSource = 'generatedTarget';
+  let hubDoor: HubBoardDoor | undefined;
 
   if (event.source === 'generatedTarget') {
     const target = inputs.targets.get(semanticAddressKey(event.targetOrigin));
@@ -226,6 +230,10 @@ export function prepareRoomCreatedRewardContext(
     )?.before;
     peerParentOrigin = parent.origin;
     peerCreationSource = 'hubTarget';
+    hubDoor = Object.freeze({
+      physicalDoorId: target.physicalDoorId,
+      offeredExitInsertionRank: target.offeredExitInsertionRank,
+    });
   } else if (event.source === 'localVisit') {
     const parent = inputs.rooms.get(semanticAddressKey(event.parentOrigin));
     const parentViews = inputs.views.get(semanticAddressKey(event.parentOrigin));
@@ -277,6 +285,7 @@ export function prepareRoomCreatedRewardContext(
       currentShopNames: new ImmutableSetView(currentShopNames),
       peerParentOrigin,
       peerCreationSource,
+      ...(hubDoor === undefined ? {} : { hubDoor }),
     }),
   });
 }

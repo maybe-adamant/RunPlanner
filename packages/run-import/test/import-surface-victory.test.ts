@@ -63,9 +63,9 @@ describe('run import of the Surface victory', () => {
         (entry) => entry.area === 'doors' && entry.record?.roomIndex === 32,
       ),
     ).toEqual([]);
-    // P_Combat09's two Mini-Boss doors fit either exit: ascending door id stays an assumption.
+    // P_Combat09's two Mini-Boss doors fit either exit: its native door order pairs them.
     expect(targets('P-r33')).toEqual(['exit1 P_MiniBoss01', 'exit2 P_MiniBoss02']);
-    expect(entryLines(imported.report)).toContain('assumption doors r33 exitDecision@P-r33');
+    expect(entryLines(imported.report)).not.toContain('assumption doors r33 exitDecision@P-r33');
   });
 
   it("splits P_Combat03's new Path nodes between its Talent drop and the Sea Star duplicate", () => {
@@ -394,7 +394,6 @@ describe('run import of the Surface victory', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
         conversion: 2,
-        doors: 7,
         encounter: 1,
         reward: 1,
         roomActionOrder: 19,
@@ -410,16 +409,9 @@ describe('run import of the Surface victory', () => {
       'assumption traitOffer r23 traitOffer@O-r23:hiddenSource -> ReplaceTraitOffer(O-r23 ZeusCastBoon|ZeusManaBoon|BoltRetaliateBoon#option1)',
       'assumption traitOffer r27 traitOffer@O-r27:source -> ReplaceTraitOffer(O-r27 PoseidonManaBoon|OmegaPoseidonProjectileBoon|PoseidonExCastBoon#option2)',
       'assumption shop r27 shopOffer@O-r27 -> ReplaceShopOfferOption(O-r27)',
-      'assumption doors r30 exitDecision@P:start',
-      'assumption doors r33 exitDecision@P-r33',
-      'assumption doors r34 exitDecision@P-r34',
-      'assumption doors r35 exitDecision@P-r35',
-      'assumption doors r37 exitDecision@P-r37',
       'assumption encounter r38 encounterPhase@P-r38:Combat -> ReplaceAetosWave(P-r38)',
       'assumption traitOffer r39 traitOffer@P-r39:source -> ReplaceTraitOffer(P-r39 HeraCastBoon|HeraManaBoon|LinkedDeathDamageBoon#option3)',
       'assumption shop r39 shopOffer@P-r39 -> ReplaceShopOfferOption(P-r39)',
-      'assumption doors r44 exitDecision@Q-r44',
-      'assumption doors r47 exitDecision@Q-r47',
       'assumption traitOffer r49 traitOffer@Q-r49:source -> ReplaceTraitOffer(Q-r49 PoseidonManaBoon|RoomRewardBonusBoon|EncounterStartOffenseBuffBoon#option2)',
       'assumption shop r49 shopOffer@Q-r49 -> ReplaceShopOfferOption(Q-r49)',
       'assumption reward r49 acquisitionRole@Q-r49:self -> ReplaceSeaStarResult(Q-r49)',

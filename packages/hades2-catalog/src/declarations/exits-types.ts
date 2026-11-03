@@ -11,6 +11,8 @@ export interface RawExitTypeDeclaration {
   readonly compatibilityPolicyKey: string;
   readonly behavior?: ExitBehavior;
   readonly allowReroll: boolean;
+  /** The obstacle name of a door of this type spawned at runtime rather than placed on the map. */
+  readonly spawnedObstacleName?: string;
 }
 
 export interface RawZagreusContractAdditionalExitDeclaration {
