@@ -136,6 +136,44 @@ describe('save checkpoint extraction', () => {
     ).toBe(true);
   });
 
+  it("reads a Dream run's erased room and encounter names and its clear", () => {
+    const save = sample('underworld-062');
+    const run = save.globals.CurrentRun as LuaTable;
+    // A Dream death keeps each erased name as OriginalName and the clear as DreamCleared.
+    const erase = (room: LuaTable): LuaTable => ({
+      ...room,
+      Name: 'NameErasedForDreamRun',
+      OriginalName: room.Name!,
+      RoomSetName: 'RoomSetNameErasedForDreamRun',
+      OriginalRoomSetName: room.RoomSetName ?? 'F',
+      Encounter: {
+        ...(room.Encounter as LuaTable),
+        Name: 'NameErasedForDreamRun',
+        OriginalName: (room.Encounter as LuaTable).Name!,
+      },
+    });
+    const history = run.RoomHistory as LuaTable;
+    const last = String(Math.max(...Object.keys(history).map(Number)));
+    const dream: DecodedSave = {
+      ...save,
+      globals: {
+        ...save.globals,
+        CurrentRun: {
+          ...run,
+          Cleared: null,
+          DreamCleared: true,
+          CurrentRoom: erase(run.CurrentRoom as LuaTable),
+          RoomHistory: { ...history, [last]: erase(history[last] as LuaTable) },
+        },
+      },
+    };
+    const checkpoint = extractSaveCheckpoint(dream, true, NO_SAVED_VALUES);
+    expect(checkpoint.currentRoom).toMatchObject({ name: 'G_Intro', encounter: { name: 'Empty' } });
+    expect(checkpoint.departure?.name).toBe('F_PostBoss01');
+    expect(checkpoint.history.at(-1)).toBe('F_PostBoss01');
+    expect(checkpoint.run.cleared).toBe(true);
+  });
+
   it("keeps the numbers at each trait name's given paths, Lua array keys included", () => {
     const save = sample('underworld-062');
     const run = save.globals.CurrentRun as LuaTable;

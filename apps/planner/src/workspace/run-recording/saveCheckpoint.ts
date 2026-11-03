@@ -246,9 +246,20 @@ function optional<K extends string, V>(key: K, value: V | undefined): { [P in K]
   return (value === undefined ? {} : { [key]: value }) as { [P in K]?: V };
 }
 
+const DREAM_ERASED_NAME = 'NameErasedForDreamRun';
+
+/**
+ * A room's or encounter's name. A Dream run's death erases the ending room's
+ * and its encounter's names, keeping each as `OriginalName`.
+ */
+function savedName(value: LuaTable): string | undefined {
+  const name = text(value.Name);
+  return name === DREAM_ERASED_NAME ? text(value.OriginalName) : name;
+}
+
 function encounter(value: LuaValue | undefined): SavedEncounter | undefined {
   if (!isTable(value)) return undefined;
-  const name = text(value.Name);
+  const name = savedName(value);
   if (name === undefined) return undefined;
   const waves = items(value.SpawnWaves).flatMap((wave) => {
     if (!isTable(wave)) return [];
@@ -350,7 +361,7 @@ function offeredRewards(value: LuaValue | undefined): SavedRoom['offeredRewards'
 
 function room(value: LuaValue | undefined): SavedRoom | undefined {
   if (!isTable(value)) return undefined;
-  const name = text(value.Name);
+  const name = savedName(value);
   if (name === undefined) return undefined;
   const sellOptions =
     isTable(value.SellOptions) || Array.isArray(value.SellOptions)
@@ -545,7 +556,7 @@ export function extractSaveCheckpoint(
     throw new SaveCheckpointError('save has no CurrentRun.CurrentRoom');
   const historyEntries = items(run.RoomHistory);
   const history = historyEntries.map((entry, index) => {
-    const name = isTable(entry) ? text(entry.Name) : undefined;
+    const name = isTable(entry) ? savedName(entry) : undefined;
     if (name === undefined) throw new SaveCheckpointError(`RoomHistory[${index + 1}] has no name`);
     return name;
   });
@@ -577,7 +588,8 @@ export function extractSaveCheckpoint(
       ),
       dream: run.IsDreamRun === true,
       ...optional('runResult', number(run.RunResult)),
-      cleared: run.Cleared === true,
+      // A Dream run's death clears `Cleared`; `DreamCleared` keeps the clear.
+      cleared: run.Cleared === true || run.DreamCleared === true,
       ...optional('killedBy', text(run.KilledByName)),
       heroDead: heroTable.IsDead === true,
       metaConversionUses: number(run.MetaConversionUses) ?? 0,
