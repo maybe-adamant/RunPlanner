@@ -1094,7 +1094,7 @@ Jeweled Pom, Discordant Bell, and Aromatic Phial. Experimental Hammer's authored
 equip result now permits explicit exhaustion on every equip path, and each
 successful acquisition owns an independent temporary-Hammer instance.
 
-The implementation retains one branch-owned keepsake state and routes each
+The implementation retains one keepsake state in the reached simulation state and routes each
 effect through its existing trait, acquisition, encounter, or lifecycle
 authority. It has no generic effect registry, second route history, authored
 rank, or React-owned keepsake-key policy. Experimental Hammer duration now

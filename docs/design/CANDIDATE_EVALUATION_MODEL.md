@@ -369,8 +369,8 @@ requirements.
 
 Selected reward simulation holds the necessary state while walking the room
 lifecycle. At every covered reward producer it retains a typed pre-decision
-frontier containing enough state to rerun that producer: every reachable latent
-reward branch; counted bags and reward history; lifecycle and history
+frontier containing enough state to rerun that producer: the one reached
+reward state with its counted bags and reward history; lifecycle and history
 sequence; the semantic producer and offer owner; the resolved store and
 declaration binding; sibling offers with their semantic origins; sequential,
 native door order or joint Shop inventory generation policy; the room,
@@ -379,7 +379,7 @@ used at resolution; and the Shop, wheel, cage, side-room, or incoming-reward
 policy as applicable.
 
 These frontiers are selected-simulation facts, not candidate arrays. They are
-captured as frozen branch references during the normal reward walk rather than
+captured as frozen state references during the normal reward walk rather than
 rediscovered by replaying history. Reward evaluation returns them as an opaque
 producer capability beside its data-only simulation result, and biome/project
 composition carries that capability through the exact assembly. The public
@@ -387,7 +387,7 @@ reward and project results omit it entirely; a producer evaluator can look up
 only its addressed owner and evaluate its offered value. The frontier is
 captured before processing the selected offer or atomic offer group, which
 preserves repair support when the selected value is invalid and would
-otherwise collapse the reachable branch set.
+otherwise leave no reached state.
 
 Candidate evaluation substitutes one proposed complete offer into the producer
 and invokes the existing reward authorities:
@@ -402,7 +402,7 @@ and invokes the existing reward authorities:
 - native-door-order producers (the Hub board) reevaluate the complete board in
   the game's derived door order: earlier doors draw first, then the offer,
   then later doors;
-- counted rewards preserve every reachable bag transition;
+- counted rewards consume the offer's one canonical bag transition;
 - support is judged at the one reached state, never probabilistic;
 - Boon sources and complete Devotion pairs use the ordinary source rules;
 - shop inventory candidates use the joint inventory authority;
@@ -426,13 +426,13 @@ the pool at that point. A hidden return door's placeholder and reward
 candidates come from its room's first outgoing generation, under the creation
 caps and the placeholder's own store. When a bag entry is unavailable, the
 finding names earlier hidden return doors of the biome that drew from the same
-store on a reached branch, as an alternative repair. A rerolled screen's
+store before it, as an alternative repair. A rerolled screen's
 candidates judge the offer's whole screen chain exactly as settlement does.
 
 A keepsake selection works the same way. A keepsake chosen in a route-start or
 Postboss rack draft but not yet saved opens the equip result it would have
 (Jeweled Pom, Experimental Hammer, Transcendent Embryo), judged at that
-selection's frontier on the branches that equip it, exactly as an authored
+selection's one reached frontier, exactly as an authored
 choice would be, so its candidates and findings are known before Save. An
 unchanged rack emits no rack event, so its drafted keepsake is judged at the
 Postboss room's [creation](ROOM_LIFECYCLE_MODEL.md#boss-and-postboss).
@@ -565,8 +565,8 @@ their own contracts.
 A replacement candidate supplies its exact occupied slot, prior identity and
 promoted rarity. It waives only occupied-slot failure and is not tested as a
 fresh random rarity. Siblings are never equipped during candidate evaluation.
-All evidence for support must agree within one retained branch; one branch's
-eligibility cannot borrow another's generation or selected-effect result.
+Eligibility, generation and selected-effect evidence are all read at the
+offer's one reached contact, never assembled from different states.
 
 The [trait offer model](TRAIT_OFFERS.md#assessment-and-settlement) owns settlement;
 the [construction audit](../audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md)
@@ -604,8 +604,8 @@ siblings are not erased. Source availability and acquisition targets stay
 distinct where the game makes them so, and products never union targets from
 incompatible histories. Missing or stale targets remain pinned and repairable.
 A Pom level resolution publishes one surface, its target domain, level count,
-required offer count and effect kind, which every reached context must agree
-on; a disagreement is an engine contract error, never a choice for the user.
+required offer count and effect kind, at its one reached state; a second,
+differing surface is an engine contract error, never a choice for the user.
 
 Trait-specific child capabilities follow the effect facts in the
 [run-impacting trait audit](../audits/traits/RUN_IMPACTING_TRAIT_EFFECTS_GAME_DATA_AUDIT.md):

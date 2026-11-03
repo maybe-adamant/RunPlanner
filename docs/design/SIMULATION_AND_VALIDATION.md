@@ -53,6 +53,7 @@ when they own one chronological or atomic invariant.
 | [Authoring readiness](#authoring-readiness)                       | Which regions stay editable for required incompleteness, independent of the exact assessment stop                   |
 | [Horizon](#authoring-readiness)                                   | The normalized boundary after the region the user must be able to repair; the first locked region lies past it      |
 | [Settlement handoff](#settlement-handoffs)                        | A complete settlement product, the one state it leaves, with its findings and frontiers, merged once at its handoff |
+| [One reached state](#one-reached-state)                           | What everything the user sees resolves against; branching is lookahead inside one decision only                     |
 | [Run-state snapshot](#run-state-snapshots)                        | A read-only projection of the folded state captured at a checkpoint, never a second simulation                      |
 | [Canonical vs retained product](#canonical-and-retained-products) | Only a complete-valid biome publishes a canonical product; otherwise the reached prefix is retained and assessed    |
 
@@ -330,7 +331,7 @@ serve selected validation, candidate support and workspace consumers.
 
 ## Chronology and History
 
-`SimulationState` is the immutable, branch-local authority for live equipment,
+`SimulationState` is the immutable authority for the one reached state's live equipment,
 trait history, Arcana/Fear, keepsakes, Hex progression, Well effects, reward
 bags/history/priorities, persistent offered-reward lookups, the transient
 per-map transition-offered reward types, pending Shop or Shrine work,
@@ -360,13 +361,13 @@ settlement does not.
 
 Earlier source witnesses remain explicit when they differ from current state,
 such as Travel Deal's post-purchase generation facts and a pending trait
-offer's generation context. Branch evaluation products and executable candidate/continuation
+offer's generation context. Evaluation products and executable candidate/continuation
 capabilities remain outside `SimulationState`. The state is neither a service
 container nor an inspector summary used to authorize transitions.
 
 The lifecycle authority determines operation order. History folding owns
 sequence validation, paired-event closure, counters, room/ledger views and
-the immutable result. Reward chronology owns possibility branches, findings,
+the immutable result. Reward chronology owns the reached reward state, findings,
 producer frontiers and candidate capture alongside that fold.
 
 Each operation consumes explicit pre- or post-operation facts. Important axes
@@ -534,20 +535,25 @@ owns the full contract.
 
 ### One reached state
 
-The walk carries one reached state, or none once a block stops it; settlement
-that would yield a second state is an engine contract failure, and nothing
-merges states. A biome publishes the state its walk ended on, and checkpoints
+Anything the user sees or edits resolves against one reached state. The walk
+carries it, or none once a block stops it, and nothing merges states. Branching
+is lookahead only, inside one decision: a candidate substituted at a producer
+frontier, a trait offer's screen composition or a Shop inventory's generation
+search asks whether an outcome can happen and answers once, never carrying
+alternative states forward or offering them as a choice. Settlement that would
+yield a second reached state is an engine contract failure. A biome publishes the state its walk ended on, and checkpoints
 and start captures carry one state each.
 A counted draw resolves to one bag state: the last eligible same-item entry is
 canonical, because the catalog compiler rejects any store whose same-item
 entries could both be eligible and later diverge
 ([Reward Model](REWARD_MODEL.md#counted-stores-and-bags)). A Ship wheel's
-offers draw in side order, Left then Right, so no draw order is searched.
+offers draw in side order, Left then Right, and a Hub board's doors in the
+game's [native door order](../biomes/N_GAME_RULES.md#persistent-board-generation),
+so no draw order is searched.
 
-Reward-generation contacts require agreement on the history families they
-consume. If those exact inputs diverge where the contract requires agreement,
-report a contract failure rather than selecting a convenient branch.
-Aggregated diagnostic ranges are not authorization to merge semantic states.
+A contact that would publish two differing answers for one owner, such as a
+role recorded twice or a Shop inventory with two generation witnesses, reports
+that contract failure rather than choosing one.
 
 ## Findings and Repair
 
@@ -644,7 +650,7 @@ owns their precise timing.
 A retained owner beyond coverage is unavailable with an explicit coverage
 reason; it receives no fabricated state. A later failure cannot erase an
 already-reached snapshot. Presentation preserves correlated condition groups.
-Lazy bags show their declared initial contents without materializing a branch.
+Lazy bags show their declared initial contents without materializing the bag.
 
 The snapshot type is the field catalogue. Every field is derived from the
 checkpoint's folded state, never reconstructed from the current selected key

@@ -228,8 +228,7 @@ conformance (`room/conformance/readers.lua`).
    row is published); Ordinary and Rejected remaining uses at screen open;
    Persephone, Jeweled Pom and Proper inputs on ordinary screens (only the
    resulting `effectiveLevel` and rarity); the Denial ban set; the other
-   rarity-ledger inputs. Any expectation field on which reached branches
-   disagree is dropped (`agreedScreenExpectation`).
+   rarity-ledger inputs.
 2. **Published but not checked at the screen.** Final row `rarity` and Calling
    Card clicks (exit only); non-exchange `effectiveLevel`, which is installed as
    `StackNum` rather than compared; the Stone roll's presence (a missing roll is

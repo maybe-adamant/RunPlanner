@@ -206,9 +206,11 @@ happen", never as alternative states carried forward or offered as a choice.
    sees resolves against one state, branching is lookahead only. Revise the
    "existential over reachable latent branches" wording in
    `CANDIDATE_EVALUATION_MODEL.md` and `CONTEXTUAL_EDITOR_UX.md` to match.
-   _Status: in progress._ The trait-offer candidate boundary, the
-   existential-support bullet, the Circe domain note, the screen-expectation
-   publication and the Offer State popover sentence now describe one state.
+   _Status: done._ The engine guide's One reached state section states the
+   rule (lookahead only inside one decision; a second reached state is a
+   contract failure), and every design, biome and audit sentence that described
+   reward branches, latent bag states, cross-branch agreement or the
+   scarcest-branch phantom pick now describes the one reached state.
 
 ## Verification
 

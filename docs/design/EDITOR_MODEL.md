@@ -363,7 +363,7 @@ React. A finding never hides or disables its control.
 
 ### Inner layer and stable rows
 
-Every popup editor reports its draft's findings (branch disagreement, an
+Every popup editor reports its draft's findings (an
 unassessable retained outcome, a carrier not yet complete) on its [title
 row](CONTEXTUAL_EDITOR_UX.md#popup-editors): the first finding with a count of
 the rest, in a slot that stays reserved when there is none, never between

@@ -45,8 +45,8 @@ authority for concrete acquisition semantics. Each acquisition event carries
 its resolved offer, producer lifecycle and store provenance, generated-parent
 provenance when applicable, concrete roles, and settlement ownership. The
 compiler is only a lossless shape translator from that engine document to the
-execution-plan wire: it may select records by their semantic addresses, require
-branch agreement, encode addresses, and copy the exact selected trait and level
+execution-plan wire: it may select records by their semantic addresses, encode
+addresses, and copy the exact selected trait and level
 products. It must not derive domain meaning. If the wire needs another semantic
 fact, that fact must first become an explicit engine product. In particular,
 the compiler must not recover Artificer, Sea Star, Echo, or other producer
@@ -104,7 +104,7 @@ the native pedestal spawn. An `N_Combat*`, `N_MiniBoss*` or `N_Sub*` occurrence
 publishes its hidden return door as the simulation settled it: the placeholder
 room native `ChooseNextRoomData` must return for that door at the room's first
 doors unlock, and the reward its store draw must yield (absent when the
-placeholder draws nothing; a god only where every branch drew the same one).
+placeholder draws nothing, with its god for a Boon draw).
 The adapter identifies the door at runtime by name or
 `ReturnToPreviousRoomName` and steers it through the ordinary Ephyra door path.
 
@@ -521,8 +521,8 @@ exactly: the traits; every held keepsake with its rank, slot and charge counters
 multiplier; each active Arcana card with rarity, origin and whether Barren
 holds it unequipped; the vows, Forfeit, the Denial ban list and Artificer
 charges; Chaos curses and blessings with their values and clocks; the Hex tree
-and invested nodes; and each reward store's contents where they agree across
-branches, an untouched store at its initial counts. A difference in a frame
+and invested nodes; and each reward store's contents at the reached state, an
+untouched store at its initial counts. A difference in a frame
 never blocks execution by itself. The planner separately publishes the sparse
 named facts that changed during the room; besides trait inventory, elements,
 Steady Growth, Chaos, keepsake effects, reward priorities, Path of Stars,

@@ -314,7 +314,7 @@ Practice mode is the last row ([Practice mode start](RUN_START_INSTALLATION.md#p
 a checkbox, a Start at picker and a Gold field, the latter two disabled while
 unchecked. Checking opens the picker over the engine's start-point domain
 (evaluated when it opens): biome rows of Opening, Preboss and Boss, an
-unavailable option disabled and hinted only when branches disagree. Only a
+unavailable option disabled. Only a
 choice sets the value; dismissing an unchosen picker unchecks and returns
 focus to the checkbox. Unchecking removes the start point and its gold in one
 edit. Gold is added to the game's own starting gold; empty adds none. A saved

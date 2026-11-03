@@ -117,7 +117,7 @@ is false (`RoomDataF.lua:F_Combat01`). The planner declares it on the room's
 counted producer with a `lifetimeGodUseRecord` requirement, so it applies on
 `FreshFile` and never on a mature save.
 
-### Latent Bag State
+### Same-Item Bag Entries
 
 Multiplicity entries are not interchangeable merely because they share a
 reward name. Once `ordinaryLootCount` is satisfied, for example, both the base
@@ -901,7 +901,7 @@ Two bounded gaps in the planner's published set, both currently inert:
   WorldShop is reached by the single-target handoff, whose Ephyra board offers
   are already excluded through the persistent hub lookup.
 
-Planner disposition: a transient `offeredRewardTypes` substate on the branch
+Planner disposition: a transient `offeredRewardTypes` substate on the reached
 state, published once when the arriving batch's last target completes
 generation, cleared at room entry, and consumed only through the
 entry-declared `offeredRewardExcludes` requirement on the ordinary `WorldShop`
@@ -988,8 +988,7 @@ A Blind Box persists its intended eventual source in authored payload while
 keeping that source game-hidden and semantically dormant until purchase. An
 earlier purchased Boon can change whether the authored source is then possible.
 Possibility simulation validates the authored order and hidden source only in
-that order; it retains reward-source branches but never retries another
-permutation. World Shop rerolls remain outside the plan.
+that order and never retries another permutation. World Shop rerolls remain outside the plan.
 
 ### Prices
 

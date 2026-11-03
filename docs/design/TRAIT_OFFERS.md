@@ -89,8 +89,7 @@ choice: nothing fills it, and a reached screen without one is the required
 input `hexActivationMissing`. The screen's count, invested set and God Sent
 presence are simulation facts. A selection is kept as authored; a wrong count,
 an absent, invested or unknown node, or a node no order can reach is a
-`hexActivationUnavailable` finding on the role with the nodes in evidence, and
-a branch the selection does not fit reports the same finding. The screen's
+`hexActivationUnavailable` finding on the role with the nodes in evidence. The screen's
 candidate offers additions only while the selection is under its count; a
 saved selection over a count an upstream edit shrank is kept with its finding
 and can only shrink.
@@ -171,7 +170,7 @@ choices.
 ## Assessment and settlement
 
 At the declared lifecycle point, the reward kernel applies the exact loot/use
-projection. Each retained branch assesses the offer against its
+projection. The reached state assesses the offer against its
 [generation-time context](#generation-time-context) and settles the selection
 against its current state. Validation separates three products:
 
@@ -362,7 +361,7 @@ Between choosing a Ship wheel offer and collecting its reward after that
 wheel's combat, no other Forfeit-eligible RoomReward spawn can occur in the
 room: Artificer outputs cannot intercede there, and NPC interactions never touch
 the RoomReward spawn path. A picked `Boon` or `HermesUpgrade` wheel offer whose
-biome use is unconsumed on every branch at the pick therefore has its Red Onion
+biome use is unconsumed at the pick therefore has its Red Onion
 realization published from the pick, while consumption and the
 `rewardForfeited` event stay at pickup settlement, so event order is
 unchanged. Entry- and pick-fixed realizations are retained when a later

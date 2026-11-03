@@ -503,7 +503,7 @@ requires a concrete legal interleaving that changes the modeled outcome.
 ## Planner disposition
 
 The engine asks whether a complete authored initial screen has one supported
-construction path against one exact generation-time context per branch. It
+construction path against its one exact generation-time context. It
 does not combine evidence from different histories or require a particular
 random seed. Row eligibility, generation feasibility and selected acquisition
 effects are separate questions.
