@@ -195,9 +195,9 @@ happen", never as alternative states carried forward or offered as a choice.
    and the re-recorded baseline differs only in Surface and Dream runs whose
    first change is Ephyra's Hub board door rewards (native order). The raw-run
    import measurement is unchanged. The planner's trait replacement reads the
-   offer's one assessment.
-   Remaining: test support keeps the list-returning
-   `initializeTestRewardBranches` (about 25 call sites transform the list).
+   offer's one assessment. Test support seeds one branch state
+   (`initializeTestRewardBranch`), and the planner's route trait projection
+   reads one trace per owner without merging.
 5. **Trait offer state inspector.** With one state per draw, the offer-state
    popover's "Possible state N" blocks collapse to one; simplify it.
    _Status: done._ The presentation carries one rarity state and the
