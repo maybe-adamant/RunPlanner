@@ -1,4 +1,5 @@
 import {
+  createAcquisitionRoleAddress,
   createBiomeAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
@@ -19,8 +20,17 @@ import type { SemanticFinding } from '@run-planner/engine/simulation';
 import type { RunRecordFields, RunRecordRoom } from './run-record/model';
 import type { RunImportContext } from './import';
 import { insertRoomAction } from './actions';
-import { authoredOccurrence } from './occurrences';
+import {
+  ARTIFICER_STORE,
+  convertAcquisition,
+  recordedConversions,
+  type ConversionKind,
+  type ConversionReplacement,
+} from './dispositions';
+import { authoredOccurrence, deliveredCageReward } from './occurrences';
+import { chooseRoomFit, searchRoom } from './room-search';
 import { recordedOffer } from './vocabulary';
+import { recordedEntryStates } from './conformance';
 import { savedBracketDraws } from './store-brackets';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
@@ -469,14 +479,38 @@ function missingCageSlots(context: RunImportContext, occurrenceId: string): read
     );
 }
 
+/** One way to author an untaken door's cages: their types in slot order, and the source's Artificer replacement. */
+interface CageCandidate {
+  readonly order: readonly string[];
+  readonly replacement: string | undefined;
+}
+
+/** The candidates of one bracket solution: each replacement type the source's Artificer may take, then each cage order. */
+function* cageCandidates(
+  solution: readonly string[],
+  artificer: boolean,
+): Generator<CageCandidate> {
+  const replacements = artificer ? [...new Set(solution)] : [undefined];
+  for (const replacement of replacements) {
+    const cages = [...solution];
+    if (replacement !== undefined) cages.splice(cages.indexOf(replacement), 1);
+    const orders = permutations(cages).filter(
+      (order, index, all) => all.findIndex((other) => other.join() === order.join()) === index,
+    );
+    for (const order of orders) yield { order, replacement };
+  }
+}
+
 /**
  * An untaken door's cages the record cannot attribute, as when a store
  * refilled, take the reward types the stores lost across the source room
- * beyond the plan's other draws. Each multiset that bracket explains is tried
- * with the entered Fields room's recorded cages pinned after it, and one is
- * kept when the source room then adds no store difference at the next entry
- * save; equal fits take the first and are reported, as is any boon's god,
- * which no save shows.
+ * beyond the plan's other draws. The source room's waiting Artificer
+ * replacement is one more of those draws, searched with the cages. Each
+ * multiset that bracket explains is authored in each order with the entered
+ * Fields room's recorded cages pinned after it, and fits when the source room
+ * then adds no store difference at the next entry save; the first fit that
+ * save accepts is kept, or the first fit. Several fits are reported, as is
+ * any boon's god, which no save shows.
  */
 function solveUnrecordedCages(context: RunImportContext, reward: Origin<'localReward'>): boolean {
   const offered = context.occurrences.offeredDoor(reward.occurrenceId);
@@ -515,57 +549,109 @@ function solveUnrecordedCages(context: RunImportContext, reward: Origin<'localRe
     }
     return slots;
   });
+  // The source's Artificer is released to the walk whatever the search finds.
+  const artificer = storeKey === ARTIFICER_STORE && fieldsConversionWaits(context, sourceIndex);
+  if (artificer) context.used.add(`fieldsConversionReleased:${sourceIndex}`);
   if (measured === undefined) return false;
-  const known = (context.record.rooms[sourceIndex + 1]?.fields?.cages ?? []).map(
-    (cage) => cage.reward.type,
+  // The entered room's cages and the doors' rewards the store declares are the window's known draws.
+  const declared = new Set(
+    context.catalog.rewards.stores.byKey[storeKey]?.entries.map((entry) => entry.rewardType),
   );
-  const solutions = savedBracketDraws(context, sourceIndex, storeKey, known, measured.length);
+  const known = [
+    ...(context.record.rooms[sourceIndex + 1]?.fields?.cages ?? []).map((cage) => cage.reward.type),
+    ...context.record.rooms[sourceIndex]!.doors.flatMap((door) =>
+      door.reward !== undefined && declared.has(door.reward.type) ? [door.reward.type] : [],
+    ),
+  ];
+  const solutions = savedBracketDraws(
+    context,
+    sourceIndex,
+    storeKey,
+    known,
+    measured.length + (artificer ? 1 : 0),
+  );
   const slots = [...measured].sort((left, right) => cageIndexOfSlot(left) - cageIndexOfSlot(right));
-  const fits: { readonly commands: readonly ProjectCommand[]; readonly boons: number }[] = [];
-  for (const solution of solutions) {
-    if (solution.some((draw) => draw.storeKey !== storeKey)) continue;
-    const orders = permutations(solution.map((draw) => draw.rewardType)).filter(
-      (order, index, all) => all.findIndex((other) => other.join() === order.join()) === index,
-    );
-    for (const order of orders) {
-      const fit = context.probe(() => {
-        const commands: ProjectCommand[] = [];
-        let boons = 0;
-        const placed = context.transaction(() =>
-          slots.every((slotKey, index) => {
-            const target = { ...reward, slotKey };
-            const value = placeCage(context, target, order[index]!);
-            if (value === undefined) return false;
-            if (value.payload?.kind === 'BoonSource') boons += 1;
-            commands.push({ kind: 'ReplaceLocalReward', reward: target, value });
-            return true;
-          }),
-        );
-        if (!placed) return undefined;
-        // Before the walk authors the entered room, its draws are missing from any judgement.
-        if (!placeTakenCages(context, reward, sourceIndex)) return { commands, boons };
-        const acceptance = context.acceptance(sourceIndex);
-        return acceptance.verdict !== 'unchecked' &&
-          acceptance.introduced.every((difference) => difference.area !== 'stores')
-          ? { commands, boons }
-          : undefined;
+  let judged = true;
+  const search = searchRoom(context, {
+    roomIndex: sourceIndex,
+    candidates: (function* () {
+      for (const solution of solutions)
+        if (solution.every((draw) => draw.storeKey === storeKey))
+          yield* cageCandidates(
+            solution.map((draw) => draw.rewardType),
+            artificer,
+          );
+    })(),
+    author: ({ order, replacement }) => {
+      const commands: ProjectCommand[] = [];
+      let boons = 0;
+      const placed = slots.every((slotKey, index) => {
+        const target = { ...reward, slotKey };
+        const value = placeCage(context, target, order[index]!);
+        if (value === undefined) return false;
+        if (value.payload?.kind === 'BoonSource') boons += 1;
+        commands.push({ kind: 'ReplaceLocalReward', reward: target, value });
+        return true;
       });
-      if (fit === undefined) continue;
-      fits.push(fit);
-      break;
-    }
-  }
-  const chosen = fits[0];
-  if (chosen === undefined) return false;
-  if (!context.transaction(() => chosen.commands.every((command) => context.apply(command))))
+      if (
+        !placed ||
+        (replacement !== undefined &&
+          !convertFieldsPickups(context, sourceIndex, {
+            kinds: ['artificer'],
+            replacement: { rewardType: replacement, assumed: false },
+          }))
+      )
+        return undefined;
+      // Before the walk authors the entered room, its draws are missing from any judgement.
+      judged = placeTakenCages(context, reward, sourceIndex);
+      return { commands, boons, replacement, drawn: [...order].sort().join() };
+    },
+    fits: () => {
+      if (!judged) return true;
+      const acceptance = context.acceptance(sourceIndex);
+      return (
+        acceptance.verdict !== 'unchecked' &&
+        acceptance.introduced.every((difference) => difference.area !== 'stores')
+      );
+    },
+  });
+  const choice = chooseRoomFit(search.fits);
+  if (choice === undefined) return false;
+  const chosen = choice.chosen.choice;
+  // Another order of the same draws is the same saved state; another multiset is a choice.
+  const others = search.fits.filter(
+    (fit, index, all) =>
+      fit.accepted === choice.chosen.accepted &&
+      (fit.choice.drawn !== chosen.drawn || fit.choice.replacement !== chosen.replacement) &&
+      all.findIndex(
+        (first) =>
+          first.choice.drawn === fit.choice.drawn &&
+          first.choice.replacement === fit.choice.replacement,
+      ) === index,
+  );
+  if (
+    !context.transaction(
+      () =>
+        chosen.commands.every((command) => context.apply(command)) &&
+        (chosen.replacement === undefined ||
+          convertFieldsPickups(context, sourceIndex, {
+            kinds: ['artificer'],
+            replacement: {
+              rewardType: chosen.replacement,
+              assumed: others.some((fit) => fit.choice.replacement !== chosen.replacement),
+            },
+          })),
+    )
+  )
     return false;
-  if (fits.length > 1 || chosen.boons > 0)
+  if (chosen.replacement !== undefined) context.used.add(`conversion:${sourceIndex}`);
+  if (others.length > 0 || chosen.boons > 0 || search.capped)
     context.note({
       area: 'fields',
       reason: 'assumption',
       address: reward,
       applied: chosen.commands[0]!,
-      ...(fits.length > 1 ? { alternatives: fits.slice(1).flatMap((fit) => fit.commands) } : {}),
+      ...(others.length > 0 ? { alternatives: others.flatMap((fit) => fit.choice.commands) } : {}),
       record: record(sourceIndex),
     });
   return true;
@@ -688,6 +774,193 @@ function collectOptionalRewards(
         ),
         record: record(visit.roomIndex),
       });
+  }
+}
+
+/**
+ * Whether a Fields room's recorded Artificer waits for an untaken door's cage
+ * solve: its replacement is one more draw of the window that solve reads,
+ * from the same store, when a door the record gives no cages for leads to a
+ * room with cages and the next entry save bounds the window.
+ */
+function fieldsConversionWaits(context: RunImportContext, roomIndex: number): boolean {
+  const room = context.record.rooms[roomIndex];
+  const next = context.record.rooms[roomIndex + 1];
+  if (
+    room?.fields === undefined ||
+    !recordedConversions(context, roomIndex).includes('artificer') ||
+    context.used.has(`conversion:${roomIndex}`) ||
+    context.used.has(`fieldsConversionReleased:${roomIndex}`) ||
+    recordedEntryStates(context.record)[roomIndex + 1] === undefined
+  )
+    return false;
+  const caged = room.doors.filter(
+    (door) =>
+      door.cageRewards === undefined &&
+      context.catalog.rooms.byKey[door.room]?.localChildren.some(
+        (child) => child.kind === 'boundedRewardSlots' && child.key === 'cages',
+      ),
+  );
+  // The entered door's cages are the next room's recorded ones.
+  const entered = next?.fields !== undefined && caged.some((door) => door.room === next.name);
+  return caged.length > (entered ? 1 : 0);
+}
+
+/** The reward a pickup names in the room's uses: a boon by its god. */
+const useOf = (offer: ResolvedRewardOffer) =>
+  offer.payload?.kind === 'BoonSource' ? offer.payload.source : offer.rewardType;
+
+/**
+ * Applies a Fields room's recorded conversions to its pickups the room's uses
+ * do not show: cages in slot order, then optional rewards, those the record
+ * saw leave the room first. Artificer takes `replacement` when a search pinned one.
+ * False, changing nothing, until every cage and optional reward holds a
+ * reached pickup, or when a pinned replacement does not place.
+ */
+function convertFieldsPickups(
+  context: RunImportContext,
+  roomIndex: number,
+  {
+    kinds = recordedConversions(context, roomIndex),
+    replacement,
+  }: {
+    readonly kinds?: readonly ConversionKind[];
+    readonly replacement?: ConversionReplacement;
+  } = {},
+): boolean {
+  const room = context.record.rooms[roomIndex]!;
+  const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
+  const project = context.assembly().project;
+  const occurrence = authoredOccurrence(
+    project,
+    biomeKey,
+    context.occurrences.occurrenceOf(roomIndex),
+  );
+  const visit =
+    occurrence === undefined ? undefined : fieldsVisit(context, occurrence.occurrenceId);
+  if (occurrence?.state.kind !== 'fieldsCombat' || visit === undefined) return false;
+  const state = occurrence.state;
+  const biome = createBiomeAddress(project.route.routeKey, biomeKey);
+  const optional = optionalRewards(
+    context,
+    visit,
+    optionalRewardTypes(context, occurrence.gameName),
+  );
+  const slots = (group: Readonly<Record<string, unknown>>, prefix: string) =>
+    Object.keys(group).sort(
+      (left, right) => Number(left.slice(prefix.length)) - Number(right.slice(prefix.length)),
+    );
+  const pickups = [
+    ...slots(state.cages, 'cage').map((slotKey) => ({
+      groupKey: 'cages',
+      slotKey,
+      reward: deliveredCageReward(occurrence, slotKey),
+      gone: false,
+    })),
+    ...slots(state.optionalRewards, 'optional').map((slotKey) => ({
+      groupKey: 'optionalRewards',
+      slotKey,
+      reward: state.optionalRewards[slotKey],
+      gone: optional[Number(slotKey.slice('optional'.length)) - 1]?.collected === true,
+    })),
+  ].flatMap(({ groupKey, slotKey, reward, gone }) => {
+    const role =
+      reward === null || reward === undefined
+        ? undefined
+        : Object.keys(reward.dispositionByAcquisitionRole)[0];
+    return reward === null || reward === undefined || role === undefined
+      ? []
+      : [
+          {
+            reward,
+            gone,
+            groupKey,
+            acquisition: createAcquisitionRoleAddress(
+              createLocalRewardAddress(biome, occurrence.occurrenceId, groupKey, slotKey),
+              role,
+            ),
+          },
+        ];
+  });
+  const reached = ({ acquisition }: (typeof pickups)[number]) =>
+    context.candidates().evaluate({ kind: 'acquisitionConversion', acquisition }).kind ===
+    'acquisitionConversion';
+  // An optional reward left in the room is never reached; every other pickup is waited for.
+  if (
+    pickups.length !== room.fields!.cages.length + optional.length ||
+    pickups.some((pickup) => (pickup.gone || pickup.groupKey === 'cages') && !reached(pickup))
+  )
+    return false;
+  // A use names each collected pickup; the ones left over may have been converted.
+  const uses = { ...room.uses };
+  const uncollected = pickups
+    .filter((pickup) => {
+      const name = useOf(pickup.reward.offer);
+      if ((uses[name] ?? 0) === 0) return true;
+      uses[name] = uses[name]! - 1;
+      return false;
+    })
+    .filter(reached)
+    .sort((left, right) => Number(right.gone) - Number(left.gone));
+  for (const kind of recordedConversions(context, roomIndex)) {
+    const target = uncollected.find(({ acquisition }) => {
+      const evaluation = context
+        .candidates()
+        .evaluate({ kind: 'acquisitionConversion', acquisition });
+      return (
+        evaluation.kind === 'acquisitionConversion' &&
+        (kind === 'artificer'
+          ? evaluation.result.artificerSupported
+          : evaluation.result.timePieceSupported)
+      );
+    });
+    const pinned = kind === 'artificer' ? replacement : undefined;
+    if (target === undefined) {
+      if (pinned !== undefined) return false;
+      if (kinds.includes(kind))
+        context.note({
+          area: 'conversion',
+          reason: 'refused',
+          address: createOccurrenceAddress(biome, occurrence.occurrenceId as OccurrenceId),
+          record: record(roomIndex),
+        });
+      continue;
+    }
+    uncollected.splice(uncollected.indexOf(target), 1);
+    if (!kinds.includes(kind)) continue;
+    if (
+      !convertAcquisition(
+        context,
+        target.acquisition,
+        kind,
+        target.reward.offer.rewardType,
+        roomIndex,
+        pinned,
+      ) &&
+      pinned !== undefined
+    )
+      return false;
+  }
+  return true;
+}
+
+/**
+ * A Fields room's recorded conversions act on its pickups once the room is
+ * entered and its rewards placed; an Artificer an untaken door's cage solve
+ * searches waits for it.
+ */
+export function importFieldsConversions(context: RunImportContext): void {
+  for (const roomIndex of context.record.rooms.keys()) {
+    const used = `conversion:${roomIndex}`;
+    if (
+      context.record.rooms[roomIndex]!.fields === undefined ||
+      recordedConversions(context, roomIndex).length === 0 ||
+      context.used.has(used) ||
+      fieldsConversionWaits(context, roomIndex) ||
+      !context.pending(context.occurrences.occurrenceOf(roomIndex))
+    )
+      continue;
+    if (convertFieldsPickups(context, roomIndex)) context.used.add(used);
   }
 }
 

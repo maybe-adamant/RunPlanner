@@ -45,7 +45,7 @@ import { importRoomActionOrders } from './action-order';
 import { importEncounters } from './encounters';
 import { answerCommerce, importCommerce } from './commerce';
 import { answerFeatures, importFeatures, recordedHexTree, reportDenialBans } from './features';
-import { answerFields, importFieldsRooms } from './fields';
+import { answerFields, importFieldsConversions, importFieldsRooms } from './fields';
 import {
   answerWheels,
   importWheelConversions,
@@ -574,6 +574,7 @@ export class RunImportWalk {
         // A ship room's rerolls wait for its unpicked offers, so a closed window sweeps again.
         if (solveWheelOffers(this.context)) before = undefined;
         importFieldsRooms(this.context);
+        importFieldsConversions(this.context);
         importResourcePlacements(this.context);
         importMaxHealthRolls(this.context);
       }

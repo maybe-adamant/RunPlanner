@@ -20,6 +20,7 @@ import { countedRewardTypeDomain, type SemanticFinding } from '@run-planner/engi
 import type { RunRecordRoom, RunRecordWheel } from './run-record/model';
 import { entrySnapshot, occurrenceSnapshot, recordedEntryStates, storeCounts } from './conformance';
 import {
+  ARTIFICER_STORE,
   convertAcquisition,
   recordedConversions,
   type ConversionKind,
@@ -722,7 +723,6 @@ function solveShip(
 }
 
 /** The store an Artificer replacement draws from. */
-const ARTIFICER_STORE = 'RunProgress';
 
 /**
  * The search's candidates in canonical order: by split, by the offers'

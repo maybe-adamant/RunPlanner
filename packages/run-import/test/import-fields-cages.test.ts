@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import { projectFromRunRecord, type RunImport } from '../src/import';
+import type { RunRecord } from '../src/run-record';
 import { fixture, occurrence, occurrenceOf } from './support/run-import';
 
 describe('run import of Fields cages', () => {
@@ -56,5 +57,92 @@ describe('run import of Fields cages', () => {
         .some((entry) => entry.occurrenceId === 'H-r28-d564300'),
     ).toBe(false);
     expect(capture.report.rooms![BRIDGE]).toMatchObject({ verdict: 'accepted' });
+  });
+
+  /**
+   * The 1010 capture through its first Fields room, which converts its left-behind
+   * Bone optional reward with an Artificer use moved from F_Combat22 and picks the
+   * replacement Magick up; its untaken door's cages are unattributed. The next entry
+   * save is the capture's with that replacement drawn.
+   */
+  function fieldsArtificer(): RunRecord {
+    const record = fixture('underworld-1010');
+    const rooms = record.rooms.slice(0, FIELDS + 2).map((room, index) => {
+      if (index === 3) {
+        const { conversions: _moved, ...rest } = room;
+        void _moved;
+        return rest;
+      }
+      if (index === FIELDS)
+        return {
+          ...room,
+          conversions: { artificer: 1 },
+          uses: { ...room.uses, MaxManaDrop: 1 },
+          fields: {
+            ...room.fields!,
+            optionalRewards: room.fields!.optionalRewards.map((entry) =>
+              entry.reward === 'MetaCardPointsCommonDrop' ? { ...entry, collected: true } : entry,
+            ),
+          },
+          doors: room.doors.map((door) => ({
+            door: door.door,
+            room: door.room,
+            ...(door.reward === undefined ? {} : { reward: door.reward }),
+          })),
+        };
+      if (index === FIELDS + 1) {
+        const { exit: _exit, ...last } = room;
+        void _exit;
+        const entry = room.entry!;
+        const stores = entry.rewardStores!['RunProgress']!;
+        return {
+          ...last,
+          doors: [],
+          entry: {
+            ...entry,
+            rewardStores: {
+              ...entry.rewardStores,
+              RunProgress: { ...stores, MaxManaDrop: stores['MaxManaDrop']! - 1 },
+            },
+          },
+        };
+      }
+      return room;
+    });
+    return { ...record, outcome: { kind: 'abandoned', endingRoom: 'H_MiniBoss01' }, rooms };
+  }
+  const FIELDS = 26;
+
+  it("searches a Fields room's Artificer replacement with its untaken door's cages", () => {
+    // The window lost two Magick and a Gold beyond the MiniBoss door's boon: the replacement
+    // the room's uses name takes one Magick, the untaken cages the rest.
+    const converted = projectFromRunRecord(catalog, fieldsArtificer());
+    const fields = occurrence(converted.project, 'H-r26');
+    expect(
+      fields.state.kind === 'fieldsCombat' &&
+        fields.state.optionalRewards['optional2']?.dispositionByAcquisitionRole,
+    ).toEqual({ self: { kind: 'artificer' } });
+    expect(
+      Object.values(fields.acquisitionSites ?? {}).flatMap((site) =>
+        Object.values(site.pickupEntries ?? {}).map((entry) => entry?.offer),
+      ),
+    ).toEqual([{ rewardType: 'MaxManaDrop' }]);
+    const untaken = occurrence(converted.project, 'H-r26-d564448').state;
+    expect(
+      untaken.kind === 'fieldsCombat'
+        ? Object.values(untaken.cages)
+            .flatMap((cage) => (cage === null ? [] : [cage.offer.rewardType]))
+            .sort()
+        : [],
+    ).toEqual(['MaxManaDrop', 'RoomMoneyDrop']);
+    expect(
+      converted.report.entries.filter(
+        (entry) =>
+          entry.record?.roomIndex === FIELDS &&
+          (entry.area === 'conversion' || occurrenceOf(entry.address) === 'H-r26-d564448'),
+      ),
+    ).toEqual([]);
+    const room = converted.report.rooms![FIELDS]!;
+    expect(room.verdict !== 'unchecked' && room.introduced).toEqual([]);
   });
 });

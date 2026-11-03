@@ -194,10 +194,8 @@ reproduces is reported with its nearest miss and the plan stops there.
    - Anomaly doors: a door to an Anomaly map is a G target the game swapped,
      so it is authored as the first G room the engine admits there (no save
      names the displaced room, reported as an assumption per door) and
-     switched to the recorded map once every door of the source is placed;
-     the entered map's challenge failed when its reward has no pickup use.
-     The engine refuses `CreateTarget` beside an Anomaly sibling (a batch's
-     rooms must all belong to the host), hence the deferred switch. Raw 333
+     switched to the recorded map as it is placed; the entered map's
+     challenge failed when its reward has no pickup use. Raw 333
      13/8/7/8 → 17/11/4/8, first mismatch r25 → r28; r21–24 reached and
      accepted. Fixtures unchanged (none crosses an Anomaly).
 
@@ -223,10 +221,31 @@ reproduces is reported with its nearest miss and the plan stops there.
      fx underworld's r29 Minor Talent bought no Path of Stars node. Fx
      underworld 16/13/1/11 → 23/18/0/0 (bound tightened, its last mismatch
      gone). Raws unchanged.
-   - E finding, not fixed here: `CreateTarget` refuses a new target beside an
-     Anomaly sibling ("… belongs to Anomaly"), though each generated G door
-     may be swapped independently; the importer works around it by switching
-     after every door is placed.
+   - Engine (E): commands validate a room's biome membership only where they
+     choose an ordinary room (start, target, Hub slot, Preboss, replacement);
+     a room already in the topology is read by name. `CreateTarget` beside an
+     Anomaly sibling was refused because it re-checked its siblings' room
+     set; Zagreus contract and Chaos siblings had ad-hoc exceptions, now
+     gone. The importer's deferred Anomaly switch went with it. Equivalence
+     157/157, buckets unchanged.
+   - Conversions that share a solver's store (owner request). An Artificer
+     replacement is one `RunProgress` draw, so it is searched with any solver
+     reading that store across the same save window:
+     - Ship rooms: the wheel solve (above).
+     - Fields rooms: the untaken doors' cage solve. A Fields room converts
+       its pickups the uses do not show (in practice a Meta optional reward;
+       cages hold `RunProgress` rewards, which Artificer cannot convert); its
+       Artificer waits while a door the record gives no cages for remains,
+       and that solve, now a room search, draws the cages and the
+       replacement together, judged at the next entry save. The window's
+       known draws now include the source's recorded door rewards (a
+       MiniBoss door's boon), without which no bracket balanced.
+     - Bracket rerolls in a room that also converts: not joined yet (open);
+       the reroll solve counts an unplaced replacement as a reroll draw.
+     - Shops (own stores, purchases never convert) and N side rooms
+       (`SubRoomRewards`) share no store with a replacement.
+       Synthetic witness: the 1010 capture's first Fields room converting its
+       Bone optional (an F conversion moved there). Corpus buckets unchanged.
 
 4. **No manufactured outcomes.** Remove the two Draft guesses; run import no
    longer depends on Draft. An unreachable room ends the plan with its nearest

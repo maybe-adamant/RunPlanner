@@ -11,6 +11,9 @@ import { authoredOccurrence, deliveredIncomingReward } from './occurrences';
 
 export type ConversionKind = 'artificer' | 'timePiece';
 
+/** The store an Artificer replacement draws from. */
+export const ARTIFICER_STORE = 'RunProgress';
+
 /** An Artificer replacement a search pinned; `assumed` unless the next entry save settled it. */
 export interface ConversionReplacement {
   readonly rewardType: string;
