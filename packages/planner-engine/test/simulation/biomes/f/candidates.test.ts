@@ -289,11 +289,11 @@ describe('F candidate support', () => {
           value,
         })),
       );
-      const supported = (remaining: number, total: number) => ({
+      const supported = (remaining: number) => ({
         kind: 'startingReward',
-        result: { supported: true, findings: [], countedStore: { remaining, total } },
+        result: { supported: true, findings: [], countedStore: { remaining } },
       });
-      expect(results).toEqual([supported(4, 4), supported(1, 1), supported(1, 1)]);
+      expect(results).toEqual([supported(4), supported(1), supported(1)]);
       expect(
         session.evaluate({
           kind: 'startingReward',
@@ -348,7 +348,7 @@ describe('F candidate support', () => {
       }),
     ).toEqual({
       kind: 'incomingReward',
-      result: { supported: true, findings: [], countedStore: { remaining: 3, total: 4 } },
+      result: { supported: true, findings: [], countedStore: { remaining: 3 } },
     });
   });
 

@@ -51,7 +51,7 @@ describe('reward wheel offer exclusions', () => {
       result: {
         findings: [],
         supported: false,
-        countedStore: { remaining: 0, total: 2 },
+        countedStore: { remaining: 0 },
         exclusions: [
           {
             kind: 'peerConflict',
@@ -71,8 +71,8 @@ describe('reward wheel offer exclusions', () => {
       });
       return evaluation.kind === 'rewardWheelOffer' ? evaluation.result.countedStore : undefined;
     };
-    expect(standing('RoomMoneyDrop')).toEqual({ remaining: 2, total: 2 });
-    expect(standing('Boon')).toEqual({ remaining: 1, total: 4 });
+    expect(standing('RoomMoneyDrop')).toEqual({ remaining: 2 });
+    expect(standing('Boon')).toEqual({ remaining: 1 });
   });
 
   it("reports the offer's own cause when it fails alone", () => {

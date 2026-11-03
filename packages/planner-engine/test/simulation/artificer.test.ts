@@ -761,7 +761,7 @@ describe('The Artificer', () => {
     ).toEqual({
       findings: [],
       supported: false,
-      countedStore: { remaining: 0, total: 2 },
+      countedStore: { remaining: 0 },
       exclusions: [
         {
           kind: 'entriesSpent',

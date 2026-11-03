@@ -75,12 +75,17 @@ function itemValue<T>(item: ContextualPickerItem<T>): string {
   return `${item.label} ${item.key}`;
 }
 
+const countHint = 'Entries of this reward left in the bag for this draw.';
+
 function PickerSection<T>({
+  countHinted = false,
   groupRef,
   itemIcon,
   onSelect,
   section,
 }: {
+  /** Whether this section's heading explains the options' bag counts. */
+  readonly countHinted?: boolean;
   readonly groupRef?: Ref<HTMLDivElement>;
   readonly itemIcon?: ((item: ContextualPickerItem<T>) => ArtworkSource | undefined) | undefined;
   readonly onSelect: (item: ContextualPickerItem<T>) => void;
@@ -88,11 +93,26 @@ function PickerSection<T>({
 }) {
   return (
     <Command.Group heading={section.label} value={section.key} ref={groupRef}>
+      {countHinted && (
+        // The counts' column label; outside the heading, which assistive technology skips.
+        <div className="contextual-picker-count-heading">
+          <span
+            className="contextual-picker-count-label"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.stopPropagation();
+            }}
+            tabIndex={0}
+            {...hintProps(countHint)}
+          >
+            Bag
+          </span>
+        </div>
+      )}
       {section.items.map((item) => {
         const icon = itemIcon?.(item);
         return (
           <Command.Item
-            aria-description={item.count === undefined ? undefined : `${item.count} left`}
+            aria-description={item.count === undefined ? undefined : `${item.count} left in bag`}
             aria-label={item.ariaLabel}
             data-candidate-state={item.state}
             data-has-icon={itemIcon === undefined ? undefined : true}
@@ -185,6 +205,10 @@ function PickerContent<T>({
   const previousLoading = useRef(loading);
   const collapsible = model.sections.find((section) => section.collapsible);
   const ordinarySections = model.sections.filter((section) => !section.collapsible);
+  // The list's first heading explains the counts once, not each option.
+  const countHintedKey = items.some((item) => item.count !== undefined)
+    ? (ordinarySections[0] ?? collapsible)?.key
+    : undefined;
 
   useEffect(() => {
     if (collapsibleOpen && list.current !== null && collapsibleGroup.current !== null) {
@@ -245,6 +269,7 @@ function PickerContent<T>({
             )}
             {ordinarySections.map((section) => (
               <PickerSection
+                countHinted={section.key === countHintedKey}
                 itemIcon={itemIcon}
                 key={section.key}
                 onSelect={select}
@@ -253,6 +278,7 @@ function PickerContent<T>({
             ))}
             {collapsibleOpen && collapsible !== undefined && (
               <PickerSection
+                countHinted={collapsible.key === countHintedKey}
                 groupRef={collapsibleGroup}
                 itemIcon={itemIcon}
                 onSelect={select}

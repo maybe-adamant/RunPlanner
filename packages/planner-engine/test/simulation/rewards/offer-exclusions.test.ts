@@ -550,30 +550,20 @@ describe('Shop slot exclusions', () => {
 });
 
 describe('counted store standing', () => {
-  const healthTotal = catalog.rewards.stores.byKey.RunProgress!.entries.filter(
-    (entry) => entry.rewardType === 'MaxHealthDrop',
-  ).length;
-
-  it("counts the offer type's eligible entries against one base set", () => {
-    expect(countedStoreStanding(branch(), context(boon('ZeusUpgrade')))).toEqual({
-      remaining: 4,
-      total: 4,
-    });
+  it("counts the offer type's eligible entries", () => {
+    expect(countedStoreStanding(branch(), context(boon('ZeusUpgrade')))).toEqual({ remaining: 4 });
   });
 
   it('counts one fewer after a draw takes an entry of the type', () => {
     const drawn = processRewardOffer(branch(), context(boon('ZeusUpgrade')), new Map());
-    expect(countedStoreStanding(drawn, context(boon('ApolloUpgrade')))).toEqual({
-      remaining: 3,
-      total: 4,
-    });
+    expect(countedStoreStanding(drawn, context(boon('ApolloUpgrade')))).toEqual({ remaining: 3 });
   });
 
   it('counts none left beside a peer of a type that never repeats', () => {
     const peer = { origin: peerOrigin, offer: { rewardType: 'MaxHealthDrop' } };
     expect(
       countedStoreStanding(branch(), context({ rewardType: 'MaxHealthDrop' }, { peers: [peer] })),
-    ).toEqual({ remaining: 0, total: healthTotal });
+    ).toEqual({ remaining: 0 });
   });
 
   it('counts the set the draw appends when nothing eligible is left', () => {
@@ -589,10 +579,7 @@ describe('counted store standing', () => {
         },
       },
     };
-    expect(countedStoreStanding(empty, context(boon('ZeusUpgrade')))).toEqual({
-      remaining: 4,
-      total: 4,
-    });
+    expect(countedStoreStanding(empty, context(boon('ZeusUpgrade')))).toEqual({ remaining: 4 });
   });
 
   it('publishes nothing for an uncounted producer or a type the store lacks', () => {
@@ -605,7 +592,7 @@ describe('counted store standing', () => {
   });
 
   it('travels on the candidate result whether or not the offer is supported', () => {
-    const standing = { remaining: 0, total: healthTotal };
+    const standing = { remaining: 0 };
     expect(createRewardProducerCandidateResult(new Map(), undefined, undefined, standing)).toEqual({
       findings: [],
       supported: false,

@@ -140,9 +140,9 @@ describe('ContextualPicker', () => {
     },
   );
 
-  it("shows an option's counted-store entries left and nothing for an uncounted option", async () => {
+  it("shows an option's bag count, explained once in the list's heading", async () => {
     const user = userEvent.setup();
-    const item = (key: string, count?: string) => ({
+    const item = (key: string, count?: number) => ({
       key,
       value: key,
       label: key,
@@ -151,7 +151,7 @@ describe('ContextualPicker', () => {
       disabled: false,
       ...(count === undefined ? {} : { count }),
     });
-    render(
+    const counted = (items: ReturnType<typeof item>[]) => (
       <ContextualPicker
         id="count-picker"
         label="Reward"
@@ -162,7 +162,60 @@ describe('ContextualPicker', () => {
               kind: 'category',
               label: 'Available',
               collapsible: false,
-              items: [item('Boon', '3/4'), item('Gold')],
+              items,
+            },
+            {
+              key: 'other',
+              kind: 'category',
+              label: 'Other',
+              collapsible: false,
+              items: [item('Gold', 9)],
+            },
+          ],
+        }}
+        onSelect={() => undefined}
+        placeholder="Select a reward"
+      />
+    );
+    render(counted([item('Boon', 7), item('Ward')]));
+    await user.click(screen.getByLabelText('Reward'));
+    const listbox = screen.getByRole('listbox');
+    const options = within(listbox).getAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual(['Boon7', 'Ward', 'Gold9']);
+    // The count does not rename the option; it describes it.
+    expect(screen.getByRole('option', { name: 'Boon' })).toBe(options[0]);
+    expect(options[0]!.getAttribute('aria-description')).toBe('7 left in bag');
+    expect(options[1]!.getAttribute('aria-description')).toBeNull();
+    // One keyboard-reachable column label explains the counts, in the first section.
+    const labels = listbox.querySelectorAll<HTMLElement>('[data-hint]');
+    expect(labels).toHaveLength(1);
+    expect(labels[0]!.tabIndex).toBe(0);
+    expect(screen.getByRole('group', { name: 'Available' }).contains(labels[0]!)).toBe(true);
+  });
+
+  it('shows no bag hint when no option has a count', async () => {
+    const user = userEvent.setup();
+    render(
+      <ContextualPicker
+        id="uncounted-picker"
+        label="Reward"
+        model={{
+          sections: [
+            {
+              key: 'available',
+              kind: 'category',
+              label: 'Available',
+              collapsible: false,
+              items: [
+                {
+                  key: 'Gold',
+                  value: 'Gold',
+                  label: 'Gold',
+                  state: 'possible',
+                  selected: false,
+                  disabled: false,
+                },
+              ],
             },
           ],
         }}
@@ -171,10 +224,7 @@ describe('ContextualPicker', () => {
       />,
     );
     await user.click(screen.getByLabelText('Reward'));
-    const options = within(screen.getByRole('listbox')).getAllByRole('option');
-    expect(options.map((option) => option.textContent)).toEqual(['Boon3/4', 'Gold']);
-    // The count does not rename the option.
-    expect(screen.getByRole('option', { name: 'Boon' })).toBe(options[0]);
+    expect(screen.getByRole('listbox').querySelector('[data-hint]')).toBeNull();
   });
 
   it('marks a retained unavailable value invalid with its hover hint and nothing else', () => {

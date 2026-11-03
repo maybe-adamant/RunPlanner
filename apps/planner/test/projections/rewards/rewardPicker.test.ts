@@ -79,9 +79,9 @@ describe('reward picker projection', () => {
   it("shows each reward type's entries left in its counted store", () => {
     const counted = (rewardType: string) =>
       rewardType === 'Boon'
-        ? { remaining: 3, total: 4 }
+        ? { remaining: 7 }
         : rewardType === 'MaxHealthDrop'
-          ? { remaining: 0, total: 2 }
+          ? { remaining: 0 }
           : undefined;
     const domain = (kind: 'incomingReward' | 'shopOffer') => {
       const prepared = prepareRewardDomain(catalog, ['Boon', 'MaxHealthDrop']);
@@ -102,8 +102,8 @@ describe('reward picker projection', () => {
       );
     };
     expect(countsFor(pickers.project(domain('incomingReward'), 'type'))).toEqual({
-      Boon: '3/4',
-      'Max Health': '0/2',
+      Boon: 7,
+      'Max Health': 0,
     });
     // The god step and a source without a counted store show none.
     const boon = {

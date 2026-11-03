@@ -45,14 +45,14 @@ export interface ContextualOption<T> {
   readonly selected: boolean;
   /** At most two distinct reasons, most direct first. */
   readonly explanations?: readonly CandidateExplanation[];
-  /** Entries of this choice its counted store still holds, as `left/total`. */
-  readonly count?: string;
+  /** Entries of this choice its counted store still holds. */
+  readonly count?: number;
 }
 
 export interface ContextualOptionPresentation {
   readonly label: string;
   readonly category?: string;
-  readonly count?: string;
+  readonly count?: number;
   /** Domain-specific, typed reasons supplied by its application projector. */
   readonly explanations?: readonly CandidateExplanation[];
   readonly selected: boolean;
@@ -1277,10 +1277,9 @@ function rewardOfferExclusions(
   return rewardOfferResult(evaluation)?.exclusions ?? [];
 }
 
-/** A reward offer's counted-store entries of its type as `left/total`; none when uncounted. */
-export function rewardOfferStoreCount(evaluation: ProjectCandidateEvaluation): string | undefined {
-  const standing = rewardOfferResult(evaluation)?.countedStore;
-  return standing === undefined ? undefined : `${standing.remaining}/${standing.total}`;
+/** A reward offer's counted-store entries of its type left; none when uncounted. */
+export function rewardOfferStoreCount(evaluation: ProjectCandidateEvaluation): number | undefined {
+  return rewardOfferResult(evaluation)?.countedStore?.remaining;
 }
 
 /** The reasons for a forced, impossible, or unassessed candidate, most direct first. */

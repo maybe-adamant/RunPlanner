@@ -470,10 +470,11 @@ Selected-plan findings do not carry these exclusions.
 A reward-offer result whose producer draws from a counted store also carries
 the standing of the offer's reward type in that store, supported or not: the
 eligible entries of the type left in the bag the draw sees, after any refill
-that draw would make, and the type's entries in one base set on the route. It
-is read at the same frontier the offer is drawn at: after the earlier siblings
-of a sequential, cohort or native-door-order producer have drawn, under that
-producer's own peer rule, and before the offer takes its entry. A peer of a
+that draw would make. A refill appends a fresh base set to what is left, so
+the count is not bounded by one set's entries. It is read at the same frontier
+the offer is drawn at: after the earlier siblings of a sequential, cohort or
+native-door-order producer have drawn, under that producer's own peer rule,
+and before the offer takes its entry. A peer of a
 type that never repeats leaves none of it eligible. An uncounted producer, a
 forced reward, which bypasses the bag, and a type the store lacks carry none.
 

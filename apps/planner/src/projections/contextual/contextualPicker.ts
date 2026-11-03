@@ -21,8 +21,8 @@ export interface ContextualPickerItem<T> {
   readonly selected: boolean;
   readonly disabled: boolean;
   readonly status?: string;
-  /** Entries left in the counted store the choice draws from, as `left/total`. */
-  readonly count?: string;
+  /** Entries left in the counted store the choice draws from. */
+  readonly count?: number;
   /** Up to two reason lines, most direct first. */
   readonly explanations?: readonly string[];
 }
