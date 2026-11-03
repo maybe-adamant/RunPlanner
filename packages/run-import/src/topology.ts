@@ -19,6 +19,8 @@ import { nativeExitDoorOrder } from '@run-planner/engine/catalog-schema';
 import type { SemanticFinding } from '@run-planner/engine/simulation';
 import type { RunRecordDoor } from './run-record/model';
 import type { RunImportContext } from './import';
+import { recordedEntryStates } from './conformance';
+import { searchRoom } from './room-search';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
 
@@ -127,19 +129,87 @@ function doorOccurrence(
   doors: readonly RunRecordDoor[],
   door: RunRecordDoor,
 ): OccurrenceId {
-  const room = context.record.rooms[roomIndex]!;
   const next = context.record.rooms[roomIndex + 1];
-  const sameRoom = doors.filter((candidate) => candidate.room === room.exit);
-  // Twin doors can lead to one room: the taken one offered the collected reward, god included.
-  const sameType = sameRoom.filter((candidate) => candidate.reward?.type === next?.reward?.type);
+  const tied = tiedTwins(context, roomIndex, doors);
   const taken =
-    sameRoom.length === 1
-      ? sameRoom[0]
-      : (sameType.find((candidate) => candidate.reward?.lootName === next?.reward?.lootName) ??
-        sameType[0]);
+    tied.find((candidate) => context.used.has(twinPin(roomIndex, candidate))) ?? tied[0];
   return taken === door && next !== undefined
     ? context.occurrences.occurrenceOf(roomIndex + 1)
     : context.occurrences.offeredOccurrence(roomIndex, door.door);
+}
+
+const twinPin = (roomIndex: number, door: RunRecordDoor) => `twinTaken:${roomIndex}:${door.door}`;
+
+/**
+ * The doors to the entered room the taken one may be, in native order. Twin
+ * doors can lead to one room: the taken one offered the collected reward, god
+ * included, and only doors alike in both remain tied.
+ */
+function tiedTwins(
+  context: RunImportContext,
+  roomIndex: number,
+  doors: readonly RunRecordDoor[],
+): readonly RunRecordDoor[] {
+  const room = context.record.rooms[roomIndex]!;
+  const next = context.record.rooms[roomIndex + 1];
+  const sameRoom = doors.filter((candidate) => candidate.room === room.exit);
+  if (sameRoom.length <= 1) return sameRoom;
+  const sameType = sameRoom.filter((candidate) => candidate.reward?.type === next?.reward?.type);
+  const sameGod = sameType.filter(
+    (candidate) => candidate.reward?.lootName === next?.reward?.lootName,
+  );
+  return sameGod.length > 0 ? sameGod : sameType.slice(0, 1);
+}
+
+/**
+ * Chooses the taken door among tied twins once, as the source's first exit
+ * is placed: each twin is placed as taken and the source judged at its next
+ * entry save, which draws both doors' rewards in door order. The first
+ * accepted twin is taken; without one the first in native order; several
+ * accepted are reported.
+ */
+function chooseTakenTwin(
+  context: RunImportContext,
+  target: TargetAddress,
+  sourceIndex: number,
+  doors: readonly RunRecordDoor[],
+): void {
+  const tied = tiedTwins(context, sourceIndex, doors);
+  const searched = `twinSearch:${sourceIndex}`;
+  if (
+    tied.length < 2 ||
+    context.used.has(searched) ||
+    tied.some((door) => context.used.has(twinPin(sourceIndex, door)))
+  )
+    return;
+  context.used.add(searched);
+  if (recordedEntryStates(context.record)[sourceIndex + 1] === undefined) return;
+  const search = searchRoom(context, {
+    roomIndex: sourceIndex,
+    candidates: tied,
+    author: (door) => {
+      context.used.add(twinPin(sourceIndex, door));
+      return createTarget(context, target) ? door : undefined;
+    },
+    settles: [
+      ...doors.map((door) => context.occurrences.offeredOccurrence(sourceIndex, door.door)),
+      context.occurrences.occurrenceOf(sourceIndex + 1),
+    ],
+    limit: tied.length,
+  });
+  const accepted = search.fits.filter((fit) => fit.accepted).map((fit) => fit.choice);
+  const taken = accepted[0] ?? tied[0]!;
+  context.used.add(twinPin(sourceIndex, taken));
+  if (accepted.length > 1)
+    context.note({
+      area: 'doors',
+      reason: 'notInRecord',
+      address: createExitDecisionAddress(
+        createBiomeAddress(target.routeKey, target.biomeKey),
+        target.source,
+      ),
+      record: { roomIndex: sourceIndex, visit: 0, door: taken.door },
+    });
 }
 
 const topologyOccurrence = (context: RunImportContext, biomeKey: string, occurrenceId: string) =>
@@ -352,6 +422,7 @@ function createTarget(context: RunImportContext, target: TargetAddress): boolean
     createBiomeAddress(target.routeKey, target.biomeKey),
     target.source,
   );
+  chooseTakenTwin(context, target, sourceIndex, doors);
   const positional = doors[position]!;
   const takeovers = takeoverPrebossGameNames(context.catalog, target.biomeKey);
   if (takeovers.includes(positional.room))

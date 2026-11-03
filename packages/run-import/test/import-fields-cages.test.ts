@@ -43,4 +43,18 @@ describe('run import of Fields cages', () => {
     const bridge = imported.report.rooms![BRIDGE]!;
     expect(bridge.verdict !== 'unchecked' && bridge.introduced).toEqual([]);
   });
+
+  it('takes the twin door to the entered room whose draws the next entry save accepts', () => {
+    // The capture's Bridge offers two doors to H_Combat07 that no saved fact tells apart; only
+    // with the second in native order taken can the other's cages be drawn before the refill.
+    const capture = projectFromRunRecord(catalog, fixture('underworld'));
+    const untaken = occurrence(capture.project, 'H-r28-d565616').state;
+    expect(untaken.kind === 'fieldsCombat' && Object.values(untaken.cages).length).toBe(3);
+    expect(
+      capture.project.route.biomes
+        .flatMap((biome) => biome.topology?.occurrences ?? [])
+        .some((entry) => entry.occurrenceId === 'H-r28-d564300'),
+    ).toBe(false);
+    expect(capture.report.rooms![BRIDGE]).toMatchObject({ verdict: 'accepted' });
+  });
 });

@@ -179,6 +179,15 @@ reproduces is reported with its nearest miss and the plan stops there.
      stores admit several multisets take the accepted one. Cost over the
      corpus: 13 searches, 1–4 candidates, at most 0.4 s; import time
      unchanged.
+   - Twin doors: when a source's doors to the entered room are alike in
+     room, reward and god, each is placed as taken and the source judged at
+     its next entry save (a candidate's own and created rooms' questions are
+     answered until that save is reached); the first accepted twin is taken,
+     native order without one, several accepted reported. The corpus has one
+     such source, fx underworld's H_Bridge01: the second door in native order
+     is taken, so its sibling's cages draw before the refill (r28 accepted,
+     first mismatch r28 → r29, buckets 15/2/11 → 16/1/11, bound tightened;
+     its pool refusal and cage-screen guesses gone). Cost 2 candidates, 1.1 s.
 
 4. **No manufactured outcomes.** Remove the two Draft guesses; run import no
    longer depends on Draft. An unreachable room ends the plan with its nearest

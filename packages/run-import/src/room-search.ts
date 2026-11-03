@@ -1,5 +1,6 @@
 import { introducesNothing } from './acceptance';
 import { orderRoomActions } from './action-order';
+import { entrySnapshot } from './conformance';
 import type { RunImportContext } from './import';
 
 /*
@@ -22,6 +23,8 @@ export interface RoomSearchSpec<Candidate, Choice> {
   readonly fits?: () => boolean;
   /** The room's exit state a later room reads; fits sharing it are interchangeable. */
   readonly fingerprint?: () => string;
+  /** Rooms the candidate creates whose questions, too, are answered until the next entry is reached. */
+  readonly settles?: readonly string[];
   readonly limit?: number;
 }
 
@@ -49,6 +52,7 @@ export function searchRoom<Candidate, Choice>(
   const limit = spec.limit ?? ROOM_SEARCH_LIMIT;
   const biomeKey = context.occurrences.biomeOfRoom[spec.roomIndex]!;
   const occurrenceId = context.occurrences.occurrenceOf(spec.roomIndex);
+  const settles = new Set(spec.settles);
   const fits: RoomFit<Choice>[] = [];
   let tried = 0;
   for (const candidate of spec.candidates) {
@@ -61,7 +65,13 @@ export function searchRoom<Candidate, Choice>(
         return choice !== undefined;
       });
       if (!placed || choice === undefined) return undefined;
-      context.settleQuestions(occurrenceId);
+      context.settleQuestions(
+        (id) =>
+          id === occurrenceId ||
+          (settles.has(id) &&
+            entrySnapshot(context.assembly(), context.occurrences, spec.roomIndex + 1) ===
+              undefined),
+      );
       orderRoomActions(context, biomeKey, occurrenceId);
       if (spec.fits !== undefined && !spec.fits()) return undefined;
       return {

@@ -114,11 +114,12 @@ export interface RunImportContext {
    */
   readonly probe: <Result>(run: () => Result) => Result;
   /**
-   * Answers from the record each question the plan asks inside one
-   * occurrence, as the walk would, until one is not answered; inside `probe`
-   * it completes a candidate authoring of a room so the room can be judged.
+   * Answers from the record each question the plan asks inside the
+   * occurrences `owns` names, as the walk would, until one is not answered;
+   * inside `probe` it completes a candidate authoring of a room so the room
+   * can be judged.
    */
-  readonly settleQuestions: (occurrenceId: string) => void;
+  readonly settleQuestions: (owns: (occurrenceId: string) => boolean) => void;
   /** Whether evaluation has entered the occurrence. */
   readonly entered: (occurrenceId: string) => boolean;
   /** Whether an entered occurrence changed, or was entered, since the previous sweep. */
@@ -246,7 +247,7 @@ export class RunImportWalk {
       applyValid: (command) => this.transaction(() => this.apply(command)),
       transaction: (run) => this.transaction(run),
       probe: (run) => this.probe(run),
-      settleQuestions: (occurrenceId) => this.settleQuestions(occurrenceId),
+      settleQuestions: (owns) => this.settleQuestions(owns),
       entered: (occurrenceId) => this.enteredOccurrences().has(occurrenceId),
       pending: (occurrenceId) =>
         this.dirty.has(occurrenceId) && this.enteredOccurrences().has(occurrenceId),
@@ -418,14 +419,16 @@ export class RunImportWalk {
     }
   }
 
-  private settleQuestions(occurrenceId: string): void {
+  private settleQuestions(owns: (occurrenceId: string) => boolean): void {
     const asked = new Set<string>();
     for (;;) {
       const reason = this.assembly.evaluation.issue?.reasons[0];
+      const occurrenceId = reason === undefined ? undefined : occurrenceIdOf(reason.origin);
       if (
         reason === undefined ||
         !isQuestionFinding(reason) ||
-        occurrenceIdOf(reason.origin) !== occurrenceId
+        occurrenceId === undefined ||
+        !owns(occurrenceId)
       )
         return;
       // Each question is answered once; one that survives its answer stays open.
