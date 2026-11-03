@@ -18,7 +18,8 @@ import type { FindingRegionEntry } from '../finding-regions';
 import { staticRewardOfferExclusion, type RewardOfferExclusionReason } from './offer-exclusions';
 import type { RewardBranchState } from './branch-primitives';
 
-export type RewardProducerGenerationPolicy = 'jointShopInventory' | 'jointUnordered' | 'sequential';
+export type RewardProducerGenerationPolicy =
+  'jointShopInventory' | 'nativeDoorOrder' | 'sequential';
 
 export interface RewardProducerCandidateResult {
   readonly findings: readonly SemanticFinding[];

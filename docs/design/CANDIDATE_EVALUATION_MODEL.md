@@ -372,8 +372,9 @@ lifecycle. At every covered reward producer it retains a typed pre-decision
 frontier containing enough state to rerun that producer: every reachable latent
 reward branch; counted bags and reward history; lifecycle and history
 sequence; the semantic producer and offer owner; the resolved store and
-declaration binding; sibling offers with their semantic origins; sequential or
-jointly unordered generation policy; the room, lifecycle, and generation facts
+declaration binding; sibling offers with their semantic origins; sequential,
+native door order or joint Shop inventory generation policy; the room,
+lifecycle, and generation facts
 used at resolution; and the Shop, wheel, cage, side-room, or incoming-reward
 policy as applicable.
 
@@ -398,8 +399,9 @@ and invokes the existing reward authorities:
   the unchanged incoming offer replays its retained acquisition descendants;
 - sequential producers include the effects and peer exclusions of earlier
   siblings;
-- jointly unordered producers reevaluate the complete sibling group and every
-  supported generation order required by policy;
+- native-door-order producers (the Hub board) reevaluate the complete board in
+  the game's derived door order: earlier doors draw first, then the offer,
+  then later doors;
 - counted rewards preserve every reachable bag transition;
 - support is judged at the one reached state, never probabilistic;
 - Boon sources and complete Devotion pairs use the ordinary source rules;
@@ -476,7 +478,7 @@ Each candidate family has an explicit semantic horizon:
 | Incoming reward               | Generation; retained acquisition only for the unchanged offer |
 | Local reward                  | Offer generation and its own entered acquisition lifecycle    |
 | Sequential sibling reward     | Earlier sibling generation plus the addressed offer           |
-| Joint unordered rewards       | Complete atomic sibling generation region                     |
+| Native-door-order rewards     | Complete atomic board generation region                       |
 | Shop offer                    | Complete joint inventory generation                           |
 | Room Action order             | Occurrence lifecycle and roster-order assessment              |
 | Fields Min/Max                | Pre-outcome support ledger                                    |

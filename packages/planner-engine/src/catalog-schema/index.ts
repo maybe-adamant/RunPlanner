@@ -1289,7 +1289,7 @@ export type LocalChildDescriptor =
         readonly physicalDoorId: number;
         readonly availabilityRank: number;
       }[];
-      readonly rewardGeneration: 'jointUnordered';
+      readonly rewardGeneration: 'nativeDoorOrder';
       readonly fields: readonly AuthoredFieldDescriptor[];
     };
 

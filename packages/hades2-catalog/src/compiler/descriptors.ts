@@ -192,7 +192,7 @@ export function normalizeLocalChildren(
             fail(`${childPath}.slots.availabilityRanks`, `must contain contiguous rank ${rank}`);
           }
         }
-        if (child.rewardGeneration !== 'jointUnordered') {
+        if (child.rewardGeneration !== 'nativeDoorOrder') {
           fail(
             `${childPath}.rewardGeneration`,
             `unknown fixed-room reward generation ${String(child.rewardGeneration)}`,
@@ -202,7 +202,7 @@ export function normalizeLocalChildren(
           key: keys[index] as string,
           kind: 'fixedRoomSlots',
           slots: Object.freeze(slots),
-          rewardGeneration: 'jointUnordered',
+          rewardGeneration: 'nativeDoorOrder',
           fields: normalizeAuthoredFields(child.fields, `${childPath}.fields`),
         });
       }

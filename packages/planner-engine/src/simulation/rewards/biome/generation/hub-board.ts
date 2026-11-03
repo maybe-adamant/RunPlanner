@@ -136,7 +136,7 @@ export function flushHubBoard(
   };
   const frontiers: RewardProducerFrontier[] = pending.participants.map((entry) =>
     Object.freeze({
-      generationPolicy: 'jointUnordered' as const,
+      generationPolicy: 'nativeDoorOrder' as const,
       generationHistorySequence: historySequence,
       acquisitionHorizon: 'generationOnly' as const,
       owners: Object.freeze([entry.incoming.origin]),
