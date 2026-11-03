@@ -101,9 +101,10 @@ describe('reward picker projection', () => {
         }),
       );
     };
+    // An unavailable type shows its reason, not a count.
     expect(countsFor(pickers.project(domain('incomingReward'), 'type'))).toEqual({
       Boon: 7,
-      'Max Health': 0,
+      'Max Health': undefined,
     });
     // The god step and a source without a counted store show none.
     const boon = {

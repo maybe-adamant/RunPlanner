@@ -120,7 +120,8 @@ function pickerItem<T>(option: ContextualOption<T>, keyFor: (value: T) => string
     selected: option.selected,
     disabled: option.state === 'impossible',
     ...(status === undefined ? {} : { status }),
-    ...(option.count === undefined ? {} : { count: option.count }),
+    // An unavailable option's reason explains it; a bag count there would only mislead.
+    ...(option.count === undefined || option.state === 'impossible' ? {} : { count: option.count }),
     ...(option.explanations === undefined
       ? {}
       : { explanations: Object.freeze(option.explanations.map((reason) => reason.message)) }),

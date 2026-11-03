@@ -313,7 +313,7 @@ impossible reward. An unavailable candidate distinguishes at least:
 A reward-type option drawn from a counted store shows a small muted count: the
 eligible entries of that type the bag holds when this offer draws. It is the
 engine's [counted-store standing](CANDIDATE_EVALUATION_MODEL.md#counted-store-standing)
-for that candidate, so a type with none left shows `0` beside its exclusion.
+for that candidate. An unavailable option shows no count; its reason explains it.
 The count has no denominator, since a refill can leave more than one base set.
 A column label over the counts on the first section's heading row carries the
 one hint explaining them, by hover or keyboard focus; options carry no hint of

@@ -494,8 +494,9 @@ select {
   color: #8e8b95;
   cursor: help;
   font-size: 0.68rem;
-  font-weight: 650;
-  letter-spacing: 0.04em;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .contextual-picker-count-label:hover,
