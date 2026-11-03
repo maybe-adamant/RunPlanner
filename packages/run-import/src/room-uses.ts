@@ -8,6 +8,8 @@ import {
 } from '@run-planner/engine/authored-project';
 import { resolveAcquisitionRole } from '@run-planner/engine/reward-kernel';
 import type { RunImportContext } from './import';
+import type { RunImportReportEntry } from './report';
+import type { RunRecord } from './run-record/model';
 
 /** The object a pickup of `role` uses, by the name the record counts its uses under. */
 export function pickupObjectName(
@@ -58,4 +60,17 @@ export function unexplainedRoomUses(
     if (left !== undefined) unexplained.set(name!, left - 1);
   }
   return unexplained;
+}
+
+/**
+ * Rooms where a challenge switch was used (an Infernal Trove or Unseen Sigil:
+ * its interaction is the switch's obstacle name). The plan models no
+ * challenge encounter or its reward, so each such room is reported.
+ */
+export function unsupportedChallengeSwitches(record: RunRecord): readonly RunImportReportEntry[] {
+  return record.rooms.flatMap((room, roomIndex): RunImportReportEntry[] =>
+    Object.keys(room.uses).some((name) => /ChallengeSwitch/.test(name))
+      ? [{ area: 'other', reason: 'unsupportedArea', record: { roomIndex, visit: 0 } }]
+      : [],
+  );
 }

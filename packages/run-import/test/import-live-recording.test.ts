@@ -101,8 +101,8 @@ describe('run import of the live Underworld recording', () => {
         roomActionOrder: 12,
       },
       notInRecord: { traitOffer: 1, fields: 2, shop: 3, route: 1 },
-      // H_PreBoss01's purchases are unknown.
-      unsupportedArea: { traitOffer: 1 },
+      // H_PreBoss01's purchases are unknown; H_Combat07's Unseen Sigil is not modelled.
+      unsupportedArea: { traitOffer: 1, other: 1 },
     });
     // Fig Leaf, racked at F_PostBoss01, skipped one encounter in each of G, H and I: the record
     // predates the skip mark, so each is inferred from a rolled phase with no kills.

@@ -308,6 +308,25 @@ reproduces is reported with its nearest miss and the plan stops there.
   Fields cage encounter ends through `EndEncounterEffects` →
   `CheckChamberTraits`, so a three-cage room credits three (H_Combat02 4 →
   wrap → 1 the same way). The counter is per encounter, not per room.
+- Challenge switches (C, unmodelled): Infernal Troves and Unseen Sigils
+  (`ObstacleData` `TimeChallengeSwitch_Money`, `PerfectClearChallengeSwitch_Pom`
+  / `_MaxHealth`, `EliteChallengeSwitch_Talent` / `_MaxMana`). `CreateRoom`
+  rolls `ChallengeChanceSuccess` (base 0.15, F 0.25; 0 in Anomaly, Chaos,
+  Dream and some declared rooms); `RoomLogic` places one on a free
+  `ChallengeSwitchBase` after the Well, Pool and Shrine take theirs, from
+  biome depth 5, at least three rooms after the last, each kind behind its
+  world upgrade. Using it after the room clears starts `CurrentRoom.ChallengeEncounter`
+  (a Generated `TimeChallenge`/`PerfectClearChallenge`/`EliteChallenge` per
+  biome); the reward is gold, a Pom, a max health drop, a Talent or a max
+  Magick drop, the Perfect Clear one a consolation prize if hit. A save shows
+  the spawned switch as `CurrentRoom.ChallengeSwitch` at entry; a used one
+  adds the switch name to the room's `UseRecord` and, later,
+  `StartedChallengeEncounter`/`Completed`. The catalog and engine declare
+  none of it, so the import reports a room whose uses name a switch
+  (`other`, unsupported). Corpus: spawned in 14 rooms across 11 raw runs; used in
+  only two: raw 1013 r48 Q_Combat09 (Elite, max Magick; the room compares
+  exact because no compared fact moves) and the live capture / record 1008
+  r27 H_Combat07 (Perfect Clear, max health; no entry saves).
 - Owner questions: where an unreachable room leaves the plan (stop, or keep a
   disconnected reference tail); whether equivalent choices are flagged per
   room; which save facts are deliberately outside the comparison set.

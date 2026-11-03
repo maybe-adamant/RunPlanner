@@ -56,6 +56,7 @@ import {
 } from './wheels';
 import { areaOfFinding, areaOfOwner, isQuestionFinding } from './areas';
 import { importResourcePlacements } from './resources';
+import { unsupportedChallengeSwitches } from './room-uses';
 import { routeKeyForRecord } from './vocabulary';
 import { compareEntrySaves, entrySaves, mismatchEntries, type EntrySaves } from './conformance';
 import { judgeRoom, judgeRooms } from './acceptance';
@@ -200,7 +201,10 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
     entries,
   );
   walk.importLoadout();
-  entries.push(...unsupportedScreenRerolls(catalog, record));
+  entries.push(
+    ...unsupportedScreenRerolls(catalog, record),
+    ...unsupportedChallengeSwitches(record),
+  );
   const stop = walk.run();
   walk.reportUnusedScreens(stop);
   walk.reportUnreachedRerolls();
