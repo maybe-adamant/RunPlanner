@@ -89,8 +89,12 @@ export function pickupUseCount(catalog: Catalog, room: RunRecordRoom, rewardType
   return [...names].reduce((count, name) => count + (room.uses[name] ?? 0), 0);
 }
 
-/** Pom level-up screens, by their loot: a Pom of Power and a Big Pom. */
-export const POM_GIVERS: ReadonlySet<string> = new Set(['StackUpgrade', 'StackUpgradeBig']);
+/** Pom level-up screens, by their loot: a Pom of Power, a Big Pom and a Triple Pom. */
+export const POM_GIVERS: ReadonlySet<string> = new Set([
+  'StackUpgrade',
+  'StackUpgradeBig',
+  'StackUpgradeTriple',
+]);
 
 /**
  * The rarity rise a room's fountain made: with the Phial, a fountain raises

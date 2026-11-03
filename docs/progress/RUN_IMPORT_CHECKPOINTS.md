@@ -260,6 +260,10 @@ reproduces is reported with its nearest miss and the plan stops there.
      Echo had doubled the boon, guessing a Hera screen and leaving the second
      Hammer screen unused. Raw 333 17/13/2/8 → 23/17/0/0, no mismatch left.
      Fixtures unchanged.
+   - Triple Pom (I): its level-up screen (`StackUpgradeTriple`) was not read
+     as a Pom screen, so raw 931's r46 level-up took the first eligible
+     target. Raw 931 32/14/2/0 → 33/14/1/0, first mismatch r46 → r47.
+     Neither 931 r46/r47 nor 333 r30 involved a challenge switch (see Open).
    - Conversions that share a solver's store (owner request). An Artificer
      replacement is one `RunProgress` draw, so it is searched with any solver
      reading that store across the same save window:
