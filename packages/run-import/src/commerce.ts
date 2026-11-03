@@ -50,6 +50,7 @@ import type { RunImportContext } from './import';
 import type { RunImportArea } from './report';
 import { isQuestionFinding } from './areas';
 import { authoredOccurrence, occurrenceIdOf } from './occurrences';
+import { authorAcceptedAnswer } from './open-questions';
 import { applyFeatureRerolls } from './rerolls';
 import { pickupUseCount } from './vocabulary';
 
@@ -227,35 +228,58 @@ function answerShopOffer(
   const stock = visit?.store.stock.find((option) => option.slot === position + 1);
   if (occurrence === undefined || shop === undefined || stock === undefined) return false;
   const values = shopOfferOptionValues(context.catalog, shop.profileKey, offer.offerKey).filter(
-    (value) => stockMatches(context, shop.profileKey, offer.offerKey, stock, value),
+    (value) =>
+      stockMatches(context, shop.profileKey, offer.offerKey, stock, value) &&
+      shopOptionSupported(context, offer, value),
   );
-  for (const value of values) {
-    const evaluation = context.candidates().evaluate({ kind: 'shopOfferOption', offer, value });
-    if (
-      evaluation.kind !== 'shopOffer' ||
-      !evaluation.result.supported ||
-      !evaluation.result.findings.every(isQuestionFinding)
-    )
-      continue;
-    const command: ProjectCommand = { kind: 'ReplaceShopOfferOption', offer, value };
-    if (!context.applyValid(command)) continue;
-    // A boon whose god the stock does not name takes the first eligible one.
-    if (
-      stock.lootName === undefined &&
-      value.offer.payload !== undefined &&
-      !resolvesByAcquisition(context, value.offer)
-    )
-      context.note({
-        area: 'shop',
-        reason: 'notInRecord',
-        address: offer,
-        applied: command,
-        record: record(visit!.roomIndex),
-      });
+  const at = record(visit!.roomIndex);
+  // A boon whose god the stock does not name is any god the room's next entry save accepts.
+  const godOpen = (value: ShopOptionSelection) =>
+    stock.lootName === undefined &&
+    value.offer.payload !== undefined &&
+    !resolvesByAcquisition(context, value.offer);
+  const commands = values.map((value): ProjectCommand => ({
+    kind: 'ReplaceShopOfferOption',
+    offer,
+    value,
+  }));
+  if (values.length > 1 && values.some(godOpen)) {
+    const answer = authorAcceptedAnswer(
+      context,
+      visit!.roomIndex,
+      commands.map((command) => [command]),
+    );
+    if (answer === undefined) {
+      context.halt({ area: 'shop', code: 'stockGodUnaccepted', address: offer, record: at });
+      return false;
+    }
+    context.note({
+      area: 'shop',
+      reason: 'notInRecord',
+      address: offer,
+      applied: answer.commands[0]!,
+      ...(answer.alternatives.length === 0 ? {} : { alternatives: answer.alternatives }),
+      record: at,
+    });
     return true;
   }
+  if (commands.some((command) => context.applyValid(command))) return true;
   context.refuse();
   return false;
+}
+
+/** Whether the engine supports a Shop option there, leaving at most open questions. */
+function shopOptionSupported(
+  context: RunImportContext,
+  offer: Origin<'shopOffer'>,
+  value: ShopOptionSelection,
+): boolean {
+  const evaluation = context.candidates().evaluate({ kind: 'shopOfferOption', offer, value });
+  return (
+    evaluation.kind === 'shopOffer' &&
+    evaluation.result.supported &&
+    evaluation.result.findings.every(isQuestionFinding)
+  );
 }
 
 /**
@@ -697,31 +721,52 @@ function answerAcquisitionEntry(
     ),
     ...values.filter((value) => !(boon(value) !== undefined && named(boon(value)!))),
   ];
-  for (const value of ordered) {
+  const supported = ordered.filter((value) => {
     const evaluation = context
       .candidates()
       .evaluate({ kind: 'acquisitionEntryOffer', entry, value });
-    if (
-      evaluation.kind !== 'acquisitionEntryOffer' ||
-      !evaluation.result.supported ||
-      !evaluation.result.findings.every(isQuestionFinding)
-    )
-      continue;
-    const command: ProjectCommand = { kind: 'ReplaceAcquisitionEntryOffer', entry, value };
-    if (!context.applyValid(command)) continue;
-    // Several reward types, or a god no room record names, are the first eligible guess.
-    if (rewardTypes.length > 1 || (boon(value) !== undefined && !named(boon(value)!)))
-      context.note({
-        area: 'reward',
-        reason: 'notInRecord',
-        address: entry,
-        applied: command,
-        ...(visits.length === 0 ? {} : { record: record(visits[0]!) }),
-      });
-    return true;
+    return (
+      evaluation.kind === 'acquisitionEntryOffer' &&
+      evaluation.result.supported &&
+      evaluation.result.findings.every(isQuestionFinding)
+    );
+  });
+  const commands = supported.map((value): ProjectCommand => ({
+    kind: 'ReplaceAcquisitionEntryOffer',
+    entry,
+    value,
+  }));
+  // One reward type with a god the record names, or none, is the record's answer.
+  const recorded = (value: ResolvedRewardOffer) =>
+    rewardTypes.length === 1 && (boon(value) === undefined || named(boon(value)!));
+  for (const [index, value] of supported.entries()) {
+    if (!recorded(value)) break;
+    if (context.applyValid(commands[index]!)) return true;
   }
-  context.refuse();
-  return false;
+  const guessed = commands.filter((_command, index) => !recorded(supported[index]!));
+  // Several reward types, or a god no room record names: what the next entry save accepts.
+  const roomIndex = visits[0];
+  const answer =
+    roomIndex === undefined || guessed.length === 0
+      ? undefined
+      : authorAcceptedAnswer(
+          context,
+          roomIndex,
+          guessed.map((command) => [command]),
+        );
+  if (answer === undefined) {
+    if (supported.length === 0) context.refuse();
+    return false;
+  }
+  context.note({
+    area: 'reward',
+    reason: 'notInRecord',
+    address: entry,
+    applied: answer.commands[0]!,
+    ...(answer.alternatives.length === 0 ? {} : { alternatives: answer.alternatives }),
+    record: record(roomIndex!),
+  });
+  return true;
 }
 
 /** A purchase's own pickup effect, such as the Anvil of Fates result, answered with it. */
@@ -1532,32 +1577,20 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
       traitKey,
     };
     if (!context.applyValid(command)) {
-      // A refused trait yields to the first one the Pool admits there.
-      const taken = new Set(
-        Object.values(
-          authoredOccurrence(context.assembly().project, biomeKey, occurrence.occurrenceId)
-            ?.purgingPool?.traitKeyBySlot ?? {},
-        ),
-      );
-      const fallback = (
-        purgingPoolCandidateForProjectEvaluationAssembly(context.assembly(), address)
-          ?.candidateTraitKeysBySlot[slotKey] ?? []
-      )
-        .filter((key) => !taken.has(key))
-        .map((key): ProjectCommand => ({
-          kind: 'ReplacePurgingPoolSlot',
-          occurrence: address,
-          slotKey,
-          traitKey: key,
-        }))
-        .find((candidate) => context.applyValid(candidate));
+      // A refused trait leaves its slot open; a sale from it cannot be authored.
       context.note({
         area: 'pool',
         reason: 'refused',
         address: feature,
-        ...(fallback === undefined ? {} : { applied: fallback }),
         record: record(roomIndex),
       });
+      if (pool.soldSlots.includes(slot))
+        context.halt({
+          area: 'pool',
+          code: 'refusedSale',
+          address: feature,
+          record: record(roomIndex),
+        });
       continue;
     }
     if (ambiguous)
