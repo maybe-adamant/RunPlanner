@@ -49,7 +49,16 @@ describe('run import route support', () => {
   // (a Boon OpeningEmpty never spawns), drawing a Boon and counting a
   // RunProgress room; the Fresh File route binds no opening roll, so the plan's
   // store keeps one Boon more and F_Combat07's MetaProgress doors are refused.
-  it.fails('imports the recorded fresh first attempt as the saves show it', () => {
+  it('stops the recorded fresh first attempt at F_Combat07, whose doors no legal store holds', () => {
+    const imported = projectFromRunRecord(catalog, fixture('fresh'));
+    expect(imported).toMatchObject({
+      kind: 'stopped',
+      stop: { area: 'doors', code: 'batchRewardStoreMissing', record: { roomIndex: 2 } },
+    });
+  });
+
+  // The witness once the Fresh File route binds the opening roll.
+  it.skip('imports the recorded fresh first attempt as the saves show it', () => {
     const imported = projectFromRunRecord(catalog, fixture('fresh'));
     expect(imported.report.rooms?.slice(0, 2).map((room) => room.verdict)).toEqual([
       'accepted',

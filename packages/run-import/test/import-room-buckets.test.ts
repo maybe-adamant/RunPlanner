@@ -28,6 +28,8 @@ const BASELINE = {
   'underworld-1010': { rooms: 30, settled: 17, mismatch: 0, differing: 0, unchecked: 1 },
   // A cleared Dream run (Q, P, O, H).
   dream: { rooms: 40, settled: 20, mismatch: 0, differing: 0, unchecked: 1 },
+  // A fresh profile's first attempt; the Fresh File opening roll is not modelled yet.
+  fresh: { rooms: 13, settled: 0, mismatch: 0, differing: 2, unchecked: 11 },
   // The live recording carries no entry saves.
   'underworld-live': { rooms: 42, settled: 0, mismatch: 0, differing: 0, unchecked: 42 },
 } as const;
