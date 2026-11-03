@@ -6,12 +6,14 @@ import {
   applyOfferProjection,
   consumeCountedOffer,
   countedStoreExhausted,
+  countedStoreTypeStanding,
   drawSoleEligibleRewardType,
   oldestSupportedRewardPriority,
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
   sameRewardOffer,
   type CountedOfferTransitionOptions,
+  type CountedStoreTypeStanding,
   type RewardBagState,
   type RewardPeerContext,
   type RewardStoreDeclaration,
@@ -467,6 +469,54 @@ export function explainRewardOfferExclusions(
 }
 
 /**
+ * How many entries of the offer's reward type its counted draw could take at
+ * the reached state; none for an uncounted producer or a forced reward, which
+ * bypasses the bag.
+ */
+export function countedStoreStanding(
+  branch: RewardBranchState | undefined,
+  context: OfferProcessingContext,
+): CountedStoreTypeStanding | undefined {
+  if (branch === undefined || context.binding === undefined) return undefined;
+  if (forcedRewardFor(context, branch) !== undefined) return undefined;
+  const counted = countedOfferInputs(context, context.binding, branch, {
+    priorOffers: context.peers.map((peer) => peer.offer),
+  });
+  if (counted === undefined) return undefined;
+  return countedStoreTypeStanding(
+    counted.store,
+    counted.prepared.bag,
+    context.reward.offer.rewardType,
+    context.facts(branch.state),
+    counted.options,
+  );
+}
+
+/**
+ * The focused cohort offer's standing after the earlier peers draw in order;
+ * a peer that cannot draw is skipped, as its own repair. `drawn` peers join
+ * each later draw as prior offers; `declared` keeps each context's own peers.
+ */
+export function countedStoreStandingInDrawOrder(
+  branch: RewardBranchState | undefined,
+  earlier: readonly OfferProcessingContext[],
+  focused: OfferProcessingContext,
+  peers: 'drawn' | 'declared',
+): CountedStoreTypeStanding | undefined {
+  let reached = branch;
+  const accepted: OfferProcessingPeer[] = [];
+  const withPeers = (context: OfferProcessingContext): OfferProcessingContext =>
+    peers === 'declared' ? context : { ...context, peers: Object.freeze([...accepted]) };
+  for (const context of earlier) {
+    const next = processRewardOffer(reached, withPeers(context), new Map());
+    if (next === undefined) continue;
+    reached = next;
+    accepted.push(Object.freeze({ origin: context.reward.origin, offer: context.reward.offer }));
+  }
+  return countedStoreStanding(reached, withPeers(focused));
+}
+
+/**
  * Explains a cohort member its ordered cohort rejected: its own cause alone,
  * or the authored peers it cannot be generated beside. `peersFirst` assesses
  * each earlier peer before the focused offer as Fields does; `listed` draws
@@ -777,6 +827,7 @@ export function processFocusedOfferInDrawOrder(
   findings: Map<string, FindingRegionEntry>,
 ): {
   readonly branch: RewardBranchState | undefined;
+  readonly countedStore?: CountedStoreTypeStanding;
   readonly exclusions?: readonly RewardOfferExclusionReason[];
 } {
   const draw = (
@@ -805,6 +856,8 @@ export function processFocusedOfferInDrawOrder(
   };
   const before = draw(branch, [], peers.earlier);
   const focused = { ...focusedContext, peers: before.accepted };
+  const standing = countedStoreStanding(before.reached, focused);
+  const countedStore = standing === undefined ? {} : { countedStore: standing };
   const focusedFindings = new Map<string, FindingRegionEntry>();
   const supported = processRewardOffer(before.reached, focused, focusedFindings);
   if (supported === undefined) {
@@ -812,7 +865,11 @@ export function processFocusedOfferInDrawOrder(
       addRewardFinding(findings, value.finding, value.atomicRegion, value.chronology);
     }
     const exclusions = explainRewardOfferExclusions(before.reached, focused);
-    return { branch: undefined, ...(exclusions === undefined ? {} : { exclusions }) };
+    return {
+      branch: undefined,
+      ...countedStore,
+      ...(exclusions === undefined ? {} : { exclusions }),
+    };
   }
   const drawnWithout = new Set(
     draw(before.reached, before.accepted, peers.later).accepted.map((peer) =>
@@ -835,12 +892,16 @@ export function processFocusedOfferInDrawOrder(
       }
     },
   );
-  if (conflicts.length === 0) return { branch: after.reached };
+  if (conflicts.length === 0) return { branch: after.reached, ...countedStore };
   const exclusions = reachedRewardOfferExclusion({
     kind: 'peerConflict',
     peers: conflicts.map((peer) => ({ origin: peer.reward.origin, offer: peer.reward.offer })),
   });
-  return { branch: undefined, ...(exclusions === undefined ? {} : { exclusions }) };
+  return {
+    branch: undefined,
+    ...countedStore,
+    ...(exclusions === undefined ? {} : { exclusions }),
+  };
 }
 
 /**

@@ -563,9 +563,22 @@ select {
   white-space: normal;
 }
 
+.contextual-picker-item-trail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .contextual-picker-item-state {
   color: #aaa3b2;
   font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.contextual-picker-item-count {
+  color: #8f8a98;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 

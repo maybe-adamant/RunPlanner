@@ -51,6 +51,7 @@ describe('reward wheel offer exclusions', () => {
       result: {
         findings: [],
         supported: false,
+        countedStore: { remaining: 0, total: 2 },
         exclusions: [
           {
             kind: 'peerConflict',
@@ -59,6 +60,19 @@ describe('reward wheel offer exclusions', () => {
         ],
       },
     });
+  });
+
+  it("publishes the store's eligible entries of each offered type at the wheel", () => {
+    const standing = (rewardType: string) => {
+      const evaluation = twoOffers().evaluate({
+        kind: 'rewardWheelOffer',
+        offer: offer2,
+        value: { rewardType },
+      });
+      return evaluation.kind === 'rewardWheelOffer' ? evaluation.result.countedStore : undefined;
+    };
+    expect(standing('RoomMoneyDrop')).toEqual({ remaining: 2, total: 2 });
+    expect(standing('Boon')).toEqual({ remaining: 1, total: 4 });
   });
 
   it("reports the offer's own cause when it fails alone", () => {

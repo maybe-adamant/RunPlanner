@@ -92,6 +92,7 @@ function PickerSection<T>({
         const icon = itemIcon?.(item);
         return (
           <Command.Item
+            aria-description={item.count === undefined ? undefined : `${item.count} left`}
             aria-label={item.ariaLabel}
             data-candidate-state={item.state}
             data-has-icon={itemIcon === undefined ? undefined : true}
@@ -116,8 +117,17 @@ function PickerSection<T>({
                 </span>
               ))}
             </span>
-            {item.status !== undefined && (
-              <span className="contextual-picker-item-state">{item.status}</span>
+            {(item.count !== undefined || item.status !== undefined) && (
+              <span className="contextual-picker-item-trail">
+                {item.count !== undefined && (
+                  <span aria-hidden="true" className="contextual-picker-item-count">
+                    {item.count}
+                  </span>
+                )}
+                {item.status !== undefined && (
+                  <span className="contextual-picker-item-state">{item.status}</span>
+                )}
+              </span>
             )}
           </Command.Item>
         );

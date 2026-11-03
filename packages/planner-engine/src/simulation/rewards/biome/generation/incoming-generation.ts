@@ -12,6 +12,7 @@ import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '..
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import {
   countedBinding,
+  countedStoreStanding,
   drawUnspawnedRewardRoll,
   explainRewardOfferExclusions,
   processRewardOffer,
@@ -89,10 +90,16 @@ function completeIncomingOfferCandidate(
 ) {
   const exclusions =
     offered === undefined ? explainRewardOfferExclusions(entry.frontier, entry.context) : undefined;
+  const countedStore = countedStoreStanding(entry.frontier, entry.context);
   // Only the unchanged envelope retains authored acquisition children. A new
   // reward's children are authored after selection, not prerequisites for it.
   if (entry.incoming !== entry.room.incomingReward) {
-    return createRewardProducerCandidateResult(candidateFindings, offered, exclusions);
+    return createRewardProducerCandidateResult(
+      candidateFindings,
+      offered,
+      exclusions,
+      countedStore,
+    );
   }
   let branch = offered;
   if (
@@ -164,7 +171,7 @@ function completeIncomingOfferCandidate(
       branch = settlement.branch;
     }
   }
-  return createRewardProducerCandidateResult(candidateFindings, branch, exclusions);
+  return createRewardProducerCandidateResult(candidateFindings, branch, exclusions, countedStore);
 }
 
 /** A fresh opening's run-start roll leaves the bag one entry short and nothing else. */

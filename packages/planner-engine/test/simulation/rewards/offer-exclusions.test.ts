@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { createTestArcanaFearState } from '../../support/arcana-fear';
 import { initializeTestRewardBranchForRoute } from '../../support/arcana-fear';
 import {
+  countedStoreStanding,
   explainCohortOfferExclusions,
   explainRewardOfferExclusions,
   processRewardOffer,
@@ -544,6 +545,71 @@ describe('Shop slot exclusions', () => {
       optionKey: 'TalentDrop',
       rewardType: 'TalentDrop',
       evaluation: { satisfied: false },
+    });
+  });
+});
+
+describe('counted store standing', () => {
+  const healthTotal = catalog.rewards.stores.byKey.RunProgress!.entries.filter(
+    (entry) => entry.rewardType === 'MaxHealthDrop',
+  ).length;
+
+  it("counts the offer type's eligible entries against one base set", () => {
+    expect(countedStoreStanding(branch(), context(boon('ZeusUpgrade')))).toEqual({
+      remaining: 4,
+      total: 4,
+    });
+  });
+
+  it('counts one fewer after a draw takes an entry of the type', () => {
+    const drawn = processRewardOffer(branch(), context(boon('ZeusUpgrade')), new Map());
+    expect(countedStoreStanding(drawn, context(boon('ApolloUpgrade')))).toEqual({
+      remaining: 3,
+      total: 4,
+    });
+  });
+
+  it('counts none left beside a peer of a type that never repeats', () => {
+    const peer = { origin: peerOrigin, offer: { rewardType: 'MaxHealthDrop' } };
+    expect(
+      countedStoreStanding(branch(), context({ rewardType: 'MaxHealthDrop' }, { peers: [peer] })),
+    ).toEqual({ remaining: 0, total: healthTotal });
+  });
+
+  it('counts the set the draw appends when nothing eligible is left', () => {
+    const spent = branch();
+    const store = catalog.rewards.stores.byKey.RunProgress!;
+    const empty: RewardBranchState = {
+      ...spent,
+      state: {
+        ...spent.state,
+        bags: {
+          ...spent.state.bags,
+          RunProgress: { remainingEntryCounts: store.entries.map(() => 0) },
+        },
+      },
+    };
+    expect(countedStoreStanding(empty, context(boon('ZeusUpgrade')))).toEqual({
+      remaining: 4,
+      total: 4,
+    });
+  });
+
+  it('publishes nothing for an uncounted producer or a type the store lacks', () => {
+    expect(countedStoreStanding(branch(), context(boon('ZeusUpgrade'), { binding: null }))).toBe(
+      undefined,
+    );
+    expect(countedStoreStanding(branch(), context({ rewardType: 'MetaCurrencyDrop' }))).toBe(
+      undefined,
+    );
+  });
+
+  it('travels on the candidate result whether or not the offer is supported', () => {
+    const standing = { remaining: 0, total: healthTotal };
+    expect(createRewardProducerCandidateResult(new Map(), undefined, undefined, standing)).toEqual({
+      findings: [],
+      supported: false,
+      countedStore: standing,
     });
   });
 });

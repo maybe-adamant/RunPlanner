@@ -17,7 +17,11 @@ import { createBiomeRewardFacts } from '../../facts';
 import { historyFindingChronology, rewardFindingChronologyForRoom } from '../finding-chronology';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
-import { explainCohortOfferExclusions, processRewardOffer } from '../../offer-generation';
+import {
+  countedStoreStandingInDrawOrder,
+  explainCohortOfferExclusions,
+  processRewardOffer,
+} from '../../offer-generation';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { localRewardBinding } from '../room-reward-bindings';
 import { spawnPickups } from '../../../state/pending-resource-pickups';
@@ -245,22 +249,23 @@ export function materializeFieldsOptionalOfferPoint(
       );
       mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
     }
+    const focusedContext = contextFor(focusedReward(selectedReward.slotKey));
+    const earlier = orderedSlots
+      .slice(0, orderedSlots.indexOf(selectedReward.slotKey))
+      .flatMap((slotKey) => {
+        const concrete = concreteBySlot.get(slotKey);
+        return concrete === undefined ? [] : [contextFor(concrete)];
+      });
     const exclusions =
       completed !== undefined
         ? undefined
-        : explainCohortOfferExclusions(
-            frontier,
-            contextFor(focusedReward(selectedReward.slotKey)),
-            {
-              earlier: orderedSlots
-                .slice(0, orderedSlots.indexOf(selectedReward.slotKey))
-                .flatMap((slotKey) => {
-                  const concrete = concreteBySlot.get(slotKey);
-                  return concrete === undefined ? [] : [contextFor(concrete)];
-                }),
-            },
-            'peersFirst',
-          );
+        : explainCohortOfferExclusions(frontier, focusedContext, { earlier }, 'peersFirst');
+    const countedStore = countedStoreStandingInDrawOrder(
+      frontier,
+      earlier,
+      focusedContext,
+      'declared',
+    );
     return Object.freeze({
       findings: Object.freeze(
         [...candidateFindings.values()]
@@ -269,6 +274,7 @@ export function materializeFieldsOptionalOfferPoint(
       ),
       supported: completed !== undefined,
       ...(exclusions === undefined ? {} : { exclusions }),
+      ...(countedStore === undefined ? {} : { countedStore }),
     });
   };
 

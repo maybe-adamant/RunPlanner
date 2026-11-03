@@ -140,6 +140,43 @@ describe('ContextualPicker', () => {
     },
   );
 
+  it("shows an option's counted-store entries left and nothing for an uncounted option", async () => {
+    const user = userEvent.setup();
+    const item = (key: string, count?: string) => ({
+      key,
+      value: key,
+      label: key,
+      state: 'possible' as const,
+      selected: false,
+      disabled: false,
+      ...(count === undefined ? {} : { count }),
+    });
+    render(
+      <ContextualPicker
+        id="count-picker"
+        label="Reward"
+        model={{
+          sections: [
+            {
+              key: 'available',
+              kind: 'category',
+              label: 'Available',
+              collapsible: false,
+              items: [item('Boon', '3/4'), item('Gold')],
+            },
+          ],
+        }}
+        onSelect={() => undefined}
+        placeholder="Select a reward"
+      />,
+    );
+    await user.click(screen.getByLabelText('Reward'));
+    const options = within(screen.getByRole('listbox')).getAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual(['Boon3/4', 'Gold']);
+    // The count does not rename the option.
+    expect(screen.getByRole('option', { name: 'Boon' })).toBe(options[0]);
+  });
+
   it('marks a retained unavailable value invalid with its hover hint and nothing else', () => {
     render(
       <ContextualPicker

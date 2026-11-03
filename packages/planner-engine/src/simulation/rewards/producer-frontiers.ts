@@ -11,7 +11,7 @@ import {
   type RoomActionAddress,
   type HubRerollAddress,
 } from '../../authored-project/addresses';
-import type { ResolvedRewardOffer } from '../../reward-kernel';
+import type { CountedStoreTypeStanding, ResolvedRewardOffer } from '../../reward-kernel';
 import type { ShopOptionSelection, ShopSlotAssessment } from '../../reward-kernel';
 import type { SemanticFinding } from '../model';
 import type { FindingRegionEntry } from '../finding-regions';
@@ -26,6 +26,8 @@ export interface RewardProducerCandidateResult {
   readonly supported: boolean;
   /** Why the offer is impossible; present only when unsupported and explained. */
   readonly exclusions?: readonly RewardOfferExclusionReason[];
+  /** The offer's reward type in the counted store it would draw from; absent when uncounted. */
+  readonly countedStore?: CountedStoreTypeStanding;
 }
 
 /** Freezes the only public result shape produced by an exact offer frontier. */
@@ -34,12 +36,14 @@ export function createRewardProducerCandidateResult(
   /** The state the offer leaves, or none when it is unsupported. */
   reached: RewardBranchState | undefined,
   exclusions?: readonly RewardOfferExclusionReason[],
+  countedStore?: CountedStoreTypeStanding,
 ): RewardProducerCandidateResult {
   const supported = reached !== undefined;
   return Object.freeze({
     findings: Object.freeze([...findings.values()].map((entry) => entry.finding)),
     supported,
     ...(supported || exclusions === undefined ? {} : { exclusions }),
+    ...(countedStore === undefined ? {} : { countedStore }),
   });
 }
 

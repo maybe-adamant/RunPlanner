@@ -13,7 +13,11 @@ import {
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
-import { explainCohortOfferExclusions, processOfferGenerationCohort } from '../../offer-generation';
+import {
+  countedStoreStandingInDrawOrder,
+  explainCohortOfferExclusions,
+  processOfferGenerationCohort,
+} from '../../offer-generation';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
 import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-settlement';
 import type { FixedAcquisitionRealization } from '../../acquisition/contracts';
@@ -351,22 +355,30 @@ export function applyRewardWheelOfferPointMaterialization(
         );
         mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
       }
+      const focusedContext = contextForWheel(focusedCandidate());
+      const earlier = wheel.offers
+        .filter((candidate) => candidate.offerKey < focused.offerKey)
+        .map(contextForWheel);
       const exclusions =
         proposals.length > 0
           ? undefined
           : explainCohortOfferExclusions(
               branch,
-              contextForWheel(focusedCandidate()),
+              focusedContext,
               {
-                earlier: wheel.offers
-                  .filter((candidate) => candidate.offerKey < focused.offerKey)
-                  .map(contextForWheel),
+                earlier,
                 later: wheel.offers
                   .filter((candidate) => candidate.offerKey > focused.offerKey)
                   .map(contextForWheel),
               },
               'listed',
             );
+      const countedStore = countedStoreStandingInDrawOrder(
+        branch,
+        earlier,
+        focusedContext,
+        'drawn',
+      );
       return Object.freeze({
         findings: Object.freeze(
           [...candidateFindings.values()]
@@ -375,6 +387,7 @@ export function applyRewardWheelOfferPointMaterialization(
         ),
         supported: proposals.length > 0,
         ...(exclusions === undefined ? {} : { exclusions }),
+        ...(countedStore === undefined ? {} : { countedStore }),
       });
     },
   });

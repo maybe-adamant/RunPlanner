@@ -289,11 +289,11 @@ describe('F candidate support', () => {
           value,
         })),
       );
-      expect(results).toEqual([
-        { kind: 'startingReward', result: { supported: true, findings: [] } },
-        { kind: 'startingReward', result: { supported: true, findings: [] } },
-        { kind: 'startingReward', result: { supported: true, findings: [] } },
-      ]);
+      const supported = (remaining: number, total: number) => ({
+        kind: 'startingReward',
+        result: { supported: true, findings: [], countedStore: { remaining, total } },
+      });
+      expect(results).toEqual([supported(4, 4), supported(1, 1), supported(1, 1)]);
       expect(
         session.evaluate({
           kind: 'startingReward',
@@ -346,7 +346,10 @@ describe('F candidate support', () => {
         reward,
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
       }),
-    ).toEqual({ kind: 'incomingReward', result: { supported: true, findings: [] } });
+    ).toEqual({
+      kind: 'incomingReward',
+      result: { supported: true, findings: [], countedStore: { remaining: 3, total: 4 } },
+    });
   });
 
   it('shares terminal empty-decision force support between Door 1 and the takeover batch', () => {

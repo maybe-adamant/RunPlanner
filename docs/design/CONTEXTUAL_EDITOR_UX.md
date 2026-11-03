@@ -310,8 +310,14 @@ impossible reward. An unavailable candidate distinguishes at least:
 - blocked by a jointly generated peer;
 - blocked by Boon or Devotion source support.
 
-A reward picker does not show a `remaining / total` bag counter; bag contents
-belong to the [Run State snapshot](SIMULATION_AND_VALIDATION.md#run-state-snapshots).
+A reward-type option drawn from a counted store shows a small `left/total`
+count: the eligible entries of that type the bag holds when this offer draws,
+against the type's entries in one base set on the route. It is the engine's
+[counted-store standing](CANDIDATE_EVALUATION_MODEL.md#counted-store-standing)
+for that candidate, so a type with none left shows `0/total` beside its
+exclusion. Options from an uncounted source, such as a Shop or a forced reward,
+and the payload steps show no count. The full bag contents belong to the
+[Run State snapshot](SIMULATION_AND_VALIDATION.md#run-state-snapshots).
 
 A safe compact summary is based on candidate support, for example:
 

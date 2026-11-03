@@ -21,6 +21,8 @@ export interface ContextualPickerItem<T> {
   readonly selected: boolean;
   readonly disabled: boolean;
   readonly status?: string;
+  /** Entries left in the counted store the choice draws from, as `left/total`. */
+  readonly count?: string;
   /** Up to two reason lines, most direct first. */
   readonly explanations?: readonly string[];
 }
@@ -118,6 +120,7 @@ function pickerItem<T>(option: ContextualOption<T>, keyFor: (value: T) => string
     selected: option.selected,
     disabled: option.state === 'impossible',
     ...(status === undefined ? {} : { status }),
+    ...(option.count === undefined ? {} : { count: option.count }),
     ...(option.explanations === undefined
       ? {}
       : { explanations: Object.freeze(option.explanations.map((reason) => reason.message)) }),

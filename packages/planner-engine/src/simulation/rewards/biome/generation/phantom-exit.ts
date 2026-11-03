@@ -21,6 +21,7 @@ import { advanceReachedBranch } from '../../branch-lifecycle';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, historyChronology, rewardFinding } from '../../findings';
 import {
+  countedStoreStanding,
   explainRewardOfferExclusions,
   processRewardOffer,
   type OfferProcessingContext,
@@ -251,6 +252,7 @@ export function applyPhantomExitTransition(inputs: {
           candidateFindings,
           offered,
           offered === undefined ? explainRewardOfferExclusions(reached, context) : undefined,
+          countedStoreStanding(reached, context),
         );
       },
     }),

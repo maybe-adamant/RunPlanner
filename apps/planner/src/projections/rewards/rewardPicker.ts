@@ -12,6 +12,7 @@ import type {
 import {
   explainCandidateEvaluation,
   rewardExclusionExplanation,
+  rewardOfferStoreCount,
   type CandidateExplanation,
 } from '../contextual/contextualOptions';
 import type { ProjectedRewardDomain, ProjectedRewardDomainOption } from './rewardDomainProjection';
@@ -323,10 +324,12 @@ export function createRewardPickerProjection(
             throw new Error(`Reward ${step} projection lost its domain option`);
           }
           const explanations = aggregateDevotionReasons(catalog, step, resolved.mode, source);
+          const count = step === 'type' ? rewardOfferStoreCount(source.evaluation) : undefined;
           return {
             label: optionLabel(catalog, step, source.key),
             selected: source.key === selectedValue,
             ...(explanations === undefined ? {} : { explanations }),
+            ...(count === undefined ? {} : { count }),
           };
         },
         offerKey,

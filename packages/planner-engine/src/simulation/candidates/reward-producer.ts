@@ -26,6 +26,7 @@ import { initializeRewardBranch } from '../rewards/branch-lifecycle';
 import { createArcanaFearState } from '../arcana-fear';
 import { createRouteStartRewardFacts } from '../rewards/facts';
 import {
+  countedStoreStanding,
   explainRewardOfferExclusions,
   processRewardOffer,
   type OfferProcessingContext,
@@ -188,6 +189,7 @@ export function createStartingRewardCandidateCapability(
         findings,
         evaluated,
         evaluated === undefined ? explainRewardOfferExclusions(branch, context) : undefined,
+        countedStoreStanding(branch, context),
       );
     },
   });

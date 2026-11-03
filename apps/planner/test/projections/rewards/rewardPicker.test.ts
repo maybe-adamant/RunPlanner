@@ -70,4 +70,54 @@ describe('reward picker projection', () => {
       'Requires a boon from Hera earlier this run.',
     ]);
   });
+
+  const countsFor = (model: ReturnType<typeof pickers.project>) =>
+    Object.fromEntries(
+      model.sections.flatMap((section) => section.items).map((item) => [item.label, item.count]),
+    );
+
+  it("shows each reward type's entries left in its counted store", () => {
+    const counted = (rewardType: string) =>
+      rewardType === 'Boon'
+        ? { remaining: 3, total: 4 }
+        : rewardType === 'MaxHealthDrop'
+          ? { remaining: 0, total: 2 }
+          : undefined;
+    const domain = (kind: 'incomingReward' | 'shopOffer') => {
+      const prepared = prepareRewardDomain(catalog, ['Boon', 'MaxHealthDrop']);
+      return projectRewardDomain(
+        prepared,
+        rewardDomainOffers(prepared).map((value) => {
+          const countedStore = kind === 'shopOffer' ? undefined : counted(value.rewardType);
+          const evaluation: ProjectCandidateEvaluation = {
+            kind,
+            result: {
+              supported: value.rewardType === 'Boon',
+              findings: [],
+              ...(countedStore === undefined ? {} : { countedStore }),
+            },
+          };
+          return { value, evaluation };
+        }),
+      );
+    };
+    expect(countsFor(pickers.project(domain('incomingReward'), 'type'))).toEqual({
+      Boon: '3/4',
+      'Max Health': '0/2',
+    });
+    // The god step and a source without a counted store show none.
+    const boon = {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+    } as const;
+    const gods = Object.values(
+      countsFor(pickers.project(domain('incomingReward'), 'source', boon)),
+    );
+    expect(gods.length).toBeGreaterThan(0);
+    expect(gods.every((count) => count === undefined)).toBe(true);
+    expect(countsFor(pickers.project(domain('shopOffer'), 'type'))).toEqual({
+      Boon: undefined,
+      'Max Health': undefined,
+    });
+  });
 });

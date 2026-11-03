@@ -139,6 +139,38 @@ export function countedStoreExhausted(
   return refilledFrontier(store, state, facts, options).eligible.length === 0;
 }
 
+/** Entries of one reward type a counted draw could take now, against one base set's count. */
+export interface CountedStoreTypeStanding {
+  /** Eligible entries left in the bag the draw sees, after any refill it would make. */
+  readonly remaining: number;
+  /** Entries of the type in one complete base set on the route. */
+  readonly total: number;
+}
+
+/** Undefined when the route's store holds no entry of the type. */
+export function countedStoreTypeStanding(
+  store: RewardStoreDeclaration,
+  state: RewardBagState,
+  rewardType: string,
+  facts: RewardKernelFacts,
+  options: CountedOfferTransitionOptions = {},
+): CountedStoreTypeStanding | undefined {
+  const routeKey = facts.requirements.routeKey;
+  const total = store.entries.filter(
+    (entry) => entry.rewardType === rewardType && storeEntryOnRoute(entry, routeKey),
+  ).length;
+  if (total === 0) return undefined;
+  const { bag, eligible } = refilledFrontier(store, state, facts, options);
+  const remaining = eligible.reduce(
+    (sum, index) =>
+      store.entries[index]!.rewardType === rewardType
+        ? sum + (bag.remainingEntryCounts[index] ?? 0)
+        : sum,
+    0,
+  );
+  return Object.freeze({ remaining, total });
+}
+
 function refill(
   store: RewardStoreDeclaration,
   state: RewardBagState,

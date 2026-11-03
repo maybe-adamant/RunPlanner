@@ -10,6 +10,7 @@ import type { RewardBranchState } from '../../branch-primitives';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import {
+  countedStoreStanding,
   explainRewardOfferExclusions,
   processRewardOffer,
   type OfferProcessingContext,
@@ -218,6 +219,7 @@ export function generateLocalRewards(
             offered === undefined
               ? explainRewardOfferExclusions(frontier, candidateContext)
               : undefined,
+            countedStoreStanding(frontier, candidateContext),
           );
         },
       }),
@@ -345,6 +347,7 @@ export function generateLocalRewards(
             offered === undefined
               ? explainRewardOfferExclusions(frontier, candidateContext)
               : undefined;
+          const countedStore = countedStoreStanding(frontier, candidateContext);
           return Object.freeze({
             findings: Object.freeze(
               [...candidateFindings.values()]
@@ -353,6 +356,7 @@ export function generateLocalRewards(
             ),
             supported: offered !== undefined,
             ...(exclusions === undefined ? {} : { exclusions }),
+            ...(countedStore === undefined ? {} : { countedStore }),
           });
         },
       }),

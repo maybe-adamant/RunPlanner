@@ -45,11 +45,14 @@ export interface ContextualOption<T> {
   readonly selected: boolean;
   /** At most two distinct reasons, most direct first. */
   readonly explanations?: readonly CandidateExplanation[];
+  /** Entries of this choice its counted store still holds, as `left/total`. */
+  readonly count?: string;
 }
 
 export interface ContextualOptionPresentation {
   readonly label: string;
   readonly category?: string;
+  readonly count?: string;
   /** Domain-specific, typed reasons supplied by its application projector. */
   readonly explanations?: readonly CandidateExplanation[];
   readonly selected: boolean;
@@ -1251,9 +1254,7 @@ const summaryFindingCodes: ReadonlySet<string> = new Set([
   'rewardSourceUnavailable',
 ]);
 
-function rewardOfferExclusions(
-  evaluation: Exclude<ProjectCandidateEvaluation, { readonly kind: 'unavailable' }>,
-): readonly RewardOfferExclusionReason[] {
+function rewardOfferResult(evaluation: ProjectCandidateEvaluation) {
   switch (evaluation.kind) {
     case 'incomingReward':
     case 'startingReward':
@@ -1264,10 +1265,22 @@ function rewardOfferExclusions(
     case 'phantomExitReward':
     case 'rerollReward':
     case 'acquisitionEntryOffer':
-      return evaluation.result.exclusions ?? [];
+      return evaluation.result;
     default:
-      return [];
+      return undefined;
   }
+}
+
+function rewardOfferExclusions(
+  evaluation: ProjectCandidateEvaluation,
+): readonly RewardOfferExclusionReason[] {
+  return rewardOfferResult(evaluation)?.exclusions ?? [];
+}
+
+/** A reward offer's counted-store entries of its type as `left/total`; none when uncounted. */
+export function rewardOfferStoreCount(evaluation: ProjectCandidateEvaluation): string | undefined {
+  const standing = rewardOfferResult(evaluation)?.countedStore;
+  return standing === undefined ? undefined : `${standing.remaining}/${standing.total}`;
 }
 
 /** The reasons for a forced, impossible, or unassessed candidate, most direct first. */
@@ -1358,6 +1371,7 @@ export function createContextualOptionResolver(catalog: Catalog): ContextualOpti
             state: state(option.evaluation),
             selected: display.selected,
             ...(explanations.length === 0 ? {} : { explanations }),
+            ...(display.count === undefined ? {} : { count: display.count }),
           });
         }),
       );

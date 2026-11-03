@@ -132,6 +132,9 @@ export function flushHubBoard(
       ),
       supported: focusedResult.branch !== undefined,
       ...(focusedResult.exclusions === undefined ? {} : { exclusions: focusedResult.exclusions }),
+      ...(focusedResult.countedStore === undefined
+        ? {}
+        : { countedStore: focusedResult.countedStore }),
     });
   };
   const frontiers: RewardProducerFrontier[] = pending.participants.map((entry) =>

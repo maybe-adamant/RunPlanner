@@ -1,6 +1,8 @@
 export {
   consumeCountedOffer,
   countedStoreExhausted,
+  countedStoreTypeStanding,
+  type CountedStoreTypeStanding,
   createRewardBagState,
   drawSoleEligibleRewardType,
   storeEntryOnRoute,

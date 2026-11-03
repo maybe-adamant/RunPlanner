@@ -16,6 +16,7 @@ import type { Catalog } from '../../../catalog-schema';
 import {
   applyConcreteAcquisition,
   consumeCountedOffer,
+  countedStoreTypeStanding,
   creditResourceGains,
   isOfferSupportedAtResolutionPoint,
   locallyValidRewardOffers,
@@ -827,8 +828,27 @@ export function applyProducerRoleHistory(
                     return false;
                   }
                 };
+                const standing = (branch: RewardBranchState) => {
+                  const prepared = withBag(catalog, branch, 'RunProgress');
+                  if (prepared === undefined) return undefined;
+                  try {
+                    return countedStoreTypeStanding(
+                      store,
+                      prepared.bag,
+                      offer.rewardType,
+                      facts(prepared.branch.state),
+                      ARTIFICER_REDRAW_OPTIONS,
+                    );
+                  } catch {
+                    return undefined;
+                  }
+                };
+                const countedStoreStanding = reached === undefined ? undefined : standing(reached);
+                const countedStore =
+                  countedStoreStanding === undefined ? {} : { countedStore: countedStoreStanding };
                 const supported = reached === undefined || redraws(reached);
-                if (supported) return Object.freeze({ findings: Object.freeze([]), supported });
+                if (supported)
+                  return Object.freeze({ findings: Object.freeze([]), supported, ...countedStore });
                 const routeKey = reached?.state.reached.routePosition.routeKey;
                 const fixed =
                   routeKey === undefined
@@ -867,6 +887,7 @@ export function applyProducerRoleHistory(
                   findings: Object.freeze([]),
                   supported,
                   ...(exclusions === undefined ? {} : { exclusions }),
+                  ...countedStore,
                 });
               },
             }),

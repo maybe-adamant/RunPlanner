@@ -33,6 +33,7 @@ import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, rewardFinding } from '../../findings';
 import {
   countedBinding,
+  countedStoreStanding,
   explainRewardOfferExclusions,
   processRewardOffer,
   type OfferProcessingContext,
@@ -345,6 +346,7 @@ export function rerollOfferEvaluator(inputs: {
         candidateFindings,
         candidate,
         candidate === undefined ? explainRewardOfferExclusions(branch, context) : undefined,
+        countedStoreStanding(branch, context),
       );
     },
   });
