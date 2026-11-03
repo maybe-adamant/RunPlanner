@@ -189,6 +189,18 @@ reproduces is reported with its nearest miss and the plan stops there.
      first mismatch r28 → r29, buckets 15/2/11 → 16/1/11, bound tightened;
      its pool refusal and cage-screen guesses gone). Cost 2 candidates, 1.1 s.
 
+   **Next-layer fixes** (buckets as exact / guessed / mismatch / carried):
+
+   - Anomaly doors: a door to an Anomaly map is a G target the game swapped,
+     so it is authored as the first G room the engine admits there (no save
+     names the displaced room, reported as an assumption per door) and
+     switched to the recorded map once every door of the source is placed;
+     the entered map's challenge failed when its reward has no pickup use.
+     The engine refuses `CreateTarget` beside an Anomaly sibling (a batch's
+     rooms must all belong to the host), hence the deferred switch. Raw 333
+     13/8/7/8 → 17/11/4/8, first mismatch r25 → r28; r21–24 reached and
+     accepted. Fixtures unchanged (none crosses an Anomaly).
+
 4. **No manufactured outcomes.** Remove the two Draft guesses; run import no
    longer depends on Draft. An unreachable room ends the plan with its nearest
    miss.

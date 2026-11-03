@@ -109,4 +109,64 @@ describe('run import door assignment', () => {
       rewardType: 'MaxHealthDrop',
     });
   });
+
+  /**
+   * Oceanus through its Preboss, G_MiniBoss01's doors swapped for two Anomaly
+   * maps and the entered one returning to the Preboss.
+   */
+  function oceanusWithAnomalyDoors(collected: boolean): RunRecord {
+    const record = fixture('underworld');
+    const rooms = record.rooms.slice(0, 23).map((room, index) =>
+      index === 20
+        ? {
+            ...room,
+            doors: [
+              { door: 558528, room: 'B_Combat05', reward: { type: 'MetaCurrencyBigDrop' } },
+              { door: 568792, room: 'B_Combat06', reward: { type: 'MetaCardPointsCommonBigDrop' } },
+            ],
+            exit: 'B_Combat06',
+          }
+        : index === 21
+          ? {
+              ...room,
+              name: 'B_Combat06',
+              doors: [{ door: 569281, room: 'G_PreBoss01', reward: { type: 'Shop' } }],
+              encounters: [{ name: 'GeneratedAnomalyB' }],
+              uses: collected ? { MetaCardPointsCommonBigDrop: 1 } : { CapturePointSwitch: 1 },
+              traits: { acquired: [], removed: [], upgraded: [] },
+            }
+          : room,
+    );
+    const { exit: _exit, ...last } = rooms[22]!;
+    void _exit;
+    return {
+      ...record,
+      route: { biomes: ['F', 'G'], dream: false },
+      outcome: { kind: 'abandoned', endingRoom: last.name },
+      rooms: [...rooms.slice(0, 22), last],
+    };
+  }
+
+  it('authors Anomaly doors as displaced G targets switched to their recorded maps', () => {
+    const imported = projectFromRunRecord(catalog, oceanusWithAnomalyDoors(true));
+    expect(imported.kind).toBe('complete');
+    const entered = occurrence(imported.project, 'G-r21');
+    expect(entered.gameName).toBe('B_Combat06');
+    expect(entered.state).toMatchObject({ kind: 'anomaly', success: true });
+    expect(occurrence(imported.project, 'G-r20-d558528').gameName).toBe('B_Combat05');
+    expect(occurrence(imported.project, 'G-r22').gameName).toBe('G_PreBoss01');
+    // The displaced G room is no save fact: each door's is reported.
+    const displaced = imported.report.entries.filter(
+      (entry) => entry.area === 'doors' && entry.record?.roomIndex === 20,
+    );
+    expect(displaced.map((entry) => entry.reason)).toEqual(['assumption', 'assumption']);
+  });
+
+  it("fails the entered Anomaly's challenge when its reward was not picked up", () => {
+    const imported = projectFromRunRecord(catalog, oceanusWithAnomalyDoors(false));
+    expect(occurrence(imported.project, 'G-r21').state).toMatchObject({
+      kind: 'anomaly',
+      success: false,
+    });
+  });
 });

@@ -21,6 +21,7 @@ import type { RunRecordDoor } from './run-record/model';
 import type { RunImportContext } from './import';
 import { recordedEntryStates } from './conformance';
 import { searchRoom } from './room-search';
+import { pickupUseCount } from './vocabulary';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
 
@@ -327,6 +328,23 @@ function noteDoorOrder(
   });
 }
 
+/** Authors a room at the target's exit, returning the command applied. */
+function placeRoom(
+  context: RunImportContext,
+  target: TargetAddress,
+  decision: ReturnType<typeof createExitDecisionAddress>,
+  occurrenceId: OccurrenceId,
+  gameName: string,
+): ProjectCommand | undefined {
+  const created: ProjectCommand = { kind: 'CreateTarget', target, occurrenceId, gameName };
+  const initialized: ProjectCommand = {
+    kind: 'InitializeExitDecision',
+    decision,
+    edit: { kind: 'target', target, occurrenceId, gameName },
+  };
+  return context.apply(created) ? created : context.apply(initialized) ? initialized : undefined;
+}
+
 /** Authors the door's room at the target's exit, returning the command applied. */
 function placeDoor(
   context: RunImportContext,
@@ -337,26 +355,118 @@ function placeDoor(
   door: RunRecordDoor,
 ): ProjectCommand | undefined {
   const occurrenceId = doorOccurrence(context, sourceIndex, doors, door);
-  const created: ProjectCommand = {
-    kind: 'CreateTarget',
-    target,
-    occurrenceId,
-    gameName: door.room,
-  };
-  const initialized: ProjectCommand = {
-    kind: 'InitializeExitDecision',
-    decision,
-    edit: { kind: 'target', target, occurrenceId, gameName: door.room },
-  };
-  return context.apply(created) ? created : context.apply(initialized) ? initialized : undefined;
+  if (anomalyRoom(context, door.room))
+    return placeAnomaly(context, target, decision, sourceIndex, occurrenceId, door);
+  return placeRoom(context, target, decision, occurrenceId, door.room);
 }
 
-const refusedAt = (context: RunImportContext, target: TargetAddress, door: RunRecordDoor) => {
-  const evaluation = context
-    .candidates()
-    .evaluate({ kind: 'roomTarget', target, gameName: door.room });
+const anomalyRoom = (context: RunImportContext, gameName: string) =>
+  context.catalog.rooms.byKey[gameName]?.roomSetKey === 'Anomaly';
+
+/** The G rooms an Anomaly may displace at a target, when the target's biome declares the detour. */
+function replaceableRooms(context: RunImportContext, target: TargetAddress): readonly string[] {
+  const progression = context.catalog.biomeLayouts.byKey[target.biomeKey]?.progression;
+  return progression?.kind === 'generated'
+    ? (progression.anomalyReplacement?.replaceableTargetRoomGameNames ?? [])
+    : [];
+}
+
+/**
+ * An Anomaly door is a G target the game swapped for the Anomaly map, so it is
+ * first authored as the first G room the engine admits there; once every door
+ * of the source is placed, it is switched to the recorded map. No save names
+ * the displaced room, which leaves no trace in the run: the first admitted
+ * one stands for any, reported.
+ */
+function placeAnomaly(
+  context: RunImportContext,
+  target: TargetAddress,
+  decision: ReturnType<typeof createExitDecisionAddress>,
+  sourceIndex: number,
+  occurrenceId: OccurrenceId,
+  door: RunRecordDoor,
+): ProjectCommand | undefined {
+  for (const gameName of replaceableRooms(context, target)) {
+    if (roomRefusedAt(context, target, gameName)) continue;
+    const applied = placeRoom(context, target, decision, occurrenceId, gameName);
+    if (applied === undefined) continue;
+    context.note({
+      area: 'doors',
+      reason: 'assumption',
+      address: target,
+      applied,
+      record: { roomIndex: sourceIndex, visit: 0, door: door.door },
+    });
+    return applied;
+  }
+  return undefined;
+}
+
+/**
+ * Switches the source's placed Anomaly doors to their recorded maps once all
+ * its doors are placed: a batch takes no new target beside an Anomaly. The
+ * entered map's challenge succeeded when its reward was picked up.
+ */
+function switchAnomalies(
+  context: RunImportContext,
+  decision: ReturnType<typeof createExitDecisionAddress>,
+  sourceIndex: number,
+  doors: readonly RunRecordDoor[],
+): void {
+  if (!doors.some((door) => anomalyRoom(context, door.room))) return;
+  const topology = context
+    .assembly()
+    .project.route.biomes.find((biome) => biome.biomeKey === decision.biomeKey)?.topology;
+  if (topology === undefined || topology === null) return;
+  const placed = exitDecisionForSource(topology, decision.source)?.normal;
+  if (placed?.kind !== 'batch' || placed.targets.length < doors.length) return;
+  const biome = createBiomeAddress(decision.routeKey, decision.biomeKey);
+  for (const door of doors) {
+    if (!anomalyRoom(context, door.room)) continue;
+    const occurrenceId = doorOccurrence(context, sourceIndex, doors, door);
+    const entry = placed.targets.find((candidate) => candidate.occurrenceId === occurrenceId);
+    const current = topologyOccurrence(context, decision.biomeKey, occurrenceId);
+    if (entry === undefined || current === undefined || current.anomalyReplacement !== undefined)
+      continue;
+    const target = createTargetAddress(biome, decision.source, entry.exitKey);
+    const occurrence = createOccurrenceAddress(biome, occurrenceId);
+    const entered =
+      occurrenceId === context.occurrences.occurrenceOf(sourceIndex + 1)
+        ? context.record.rooms[sourceIndex + 1]
+        : undefined;
+    const rewardType = entered?.reward?.type;
+    const switched = context.transaction(() => {
+      if (!context.apply({ kind: 'SwitchTargetToAnomaly', target })) return false;
+      context.apply({ kind: 'ReplaceAnomalyMap', occurrence, gameName: door.room });
+      if (
+        entered !== undefined &&
+        rewardType !== undefined &&
+        pickupUseCount(context.catalog, entered, rewardType) === 0
+      )
+        context.apply({ kind: 'ReplaceAnomalySuccess', occurrence, success: false });
+      return topologyOccurrence(context, decision.biomeKey, occurrenceId)?.gameName === door.room;
+    });
+    if (!switched)
+      context.note({
+        area: 'doors',
+        reason: 'refused',
+        address: target,
+        record: { roomIndex: sourceIndex, visit: 0, door: door.door },
+      });
+  }
+}
+
+const roomRefusedAt = (context: RunImportContext, target: TargetAddress, gameName: string) => {
+  const evaluation = context.candidates().evaluate({ kind: 'roomTarget', target, gameName });
   return evaluation.kind === 'roomTarget' && evaluation.result.findings.length > 0;
 };
+
+const refusedAt = (context: RunImportContext, target: TargetAddress, door: RunRecordDoor) =>
+  anomalyRoom(context, door.room)
+    ? replaceableRooms(context, target).every((gameName) =>
+        roomRefusedAt(context, target, gameName),
+      )
+    : roomRefusedAt(context, target, door.room);
 
 /**
  * The pairings of the unplaced doors with the open exits that the engine
@@ -457,6 +567,7 @@ function createTarget(context: RunImportContext, target: TargetAddress): boolean
           applied,
           record: { roomIndex: sourceIndex, visit: 0, door: positional.door },
         });
+      switchAnomalies(context, decision, sourceIndex, doors);
       return true;
     }
   }
@@ -489,6 +600,7 @@ function createTarget(context: RunImportContext, target: TargetAddress): boolean
           door: positionalRefused ? positional.door : door.door,
         },
       });
+    switchAnomalies(context, decision, sourceIndex, doors);
     return true;
   }
   context.refuse();
