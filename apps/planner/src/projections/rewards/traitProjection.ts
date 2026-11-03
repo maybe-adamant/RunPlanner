@@ -363,16 +363,6 @@ function ownerLocationForAddress(
   return ownerLocation(project, owner);
 }
 
-interface AggregatedTraitTrace {
-  readonly trace: SelectedTraitOfferAssessment;
-  readonly assessments: SelectedTraitOfferAssessment['assessment']['assessments'][number][];
-  readonly generations: NonNullable<SelectedTraitOfferAssessment['assessment']['generation']>[];
-  readonly compositions: SelectedTraitOfferAssessment['assessment']['composition'][];
-  readonly targetedAcquisitions: SelectedTraitOfferAssessment['assessment']['targetedAcquisition'][];
-  biomeOrder: number;
-  chronologicalIndex: number;
-}
-
 function findingKey(finding: {
   readonly code: string;
   readonly traitKey?: string;
@@ -382,29 +372,21 @@ function findingKey(finding: {
   return `${finding.code}|${finding.traitKey}|${finding.detail ?? ''}|${finding.requirementTraitKeys?.join(',') ?? ''}`;
 }
 
-function aggregateTraceEvidence(traces: readonly AggregatedTraitTrace[]): {
+/** A selected offer's legality and distinct findings across its one reached assessment. */
+function traceEvidence(assessment: SelectedTraitOfferAssessment['assessment']): {
   readonly invalid: boolean;
   readonly findingCount: number;
 } {
   const findingKeys = new Set<string>();
   let invalid = false;
-  for (const trace of traces) {
-    for (const assessment of trace.assessments) {
-      if (!assessment.legal) invalid = true;
-      for (const finding of assessment.findings) findingKeys.add(findingKey(finding));
-    }
-    for (const generation of trace.generations) {
-      if (!generation.legal) invalid = true;
-      for (const finding of generation.findings) findingKeys.add(findingKey(finding));
-    }
-    for (const composition of trace.compositions) {
-      if (!composition.legal) invalid = true;
-      for (const finding of composition.findings) findingKeys.add(findingKey(finding));
-    }
-    for (const acquisition of trace.targetedAcquisitions) {
-      if (!acquisition.legal) invalid = true;
-      for (const finding of acquisition.findings) findingKeys.add(findingKey(finding));
-    }
+  for (const product of [
+    ...assessment.assessments,
+    ...(assessment.generation === undefined ? [] : [assessment.generation]),
+    assessment.composition,
+    assessment.targetedAcquisition,
+  ]) {
+    if (!product.legal) invalid = true;
+    for (const finding of product.findings) findingKeys.add(findingKey(finding));
   }
   return Object.freeze({ invalid, findingCount: findingKeys.size });
 }
@@ -434,49 +416,18 @@ function presentReplacement(
   });
 }
 
-/* One row per exact semantic owner, ordered by engine chronology. */
-function groupedTraitTraces(route: ProjectEvaluation['route']): readonly AggregatedTraitTrace[] {
-  const grouped = new Map<string, AggregatedTraitTrace>();
-  for (const [biomeOrder, biome] of route.biomes.entries()) {
-    if (!('rewards' in biome)) continue;
-    for (const trace of biome.rewards.selectedTraitOffers) {
-      const key = semanticAddressKey(trace.address);
-      const existing = grouped.get(key);
-      if (existing === undefined) {
-        grouped.set(key, {
-          assessments: [...trace.assessment.assessments],
-          generations:
-            trace.assessment.generation === undefined ? [] : [trace.assessment.generation],
-          compositions: [trace.assessment.composition],
-          targetedAcquisitions: [trace.assessment.targetedAcquisition],
-          biomeOrder,
-          chronologicalIndex: trace.chronologicalIndex,
-          trace,
-        });
-      } else {
-        existing.assessments.push(...trace.assessment.assessments);
-        if (trace.assessment.generation !== undefined)
-          existing.generations.push(trace.assessment.generation);
-        existing.compositions.push(trace.assessment.composition);
-        existing.targetedAcquisitions.push(trace.assessment.targetedAcquisition);
-        existing.chronologicalIndex = Math.min(
-          existing.chronologicalIndex,
-          trace.chronologicalIndex,
-        );
-        existing.biomeOrder = Math.min(existing.biomeOrder, biomeOrder);
-      }
-    }
-  }
-  return Object.freeze(
-    [...grouped.values()].sort((left, right) => {
-      const chronology = left.biomeOrder - right.biomeOrder;
-      if (chronology !== 0) return chronology;
-      const localChronology = left.chronologicalIndex - right.chronologicalIndex;
-      if (localChronology !== 0) return localChronology;
-      return semanticAddressKey(left.trace.address).localeCompare(
-        semanticAddressKey(right.trace.address),
-      );
-    }),
+/* The engine publishes one trace per owner; chronology restarts in each biome. */
+function chronologicalTraitTraces(
+  route: ProjectEvaluation['route'],
+): readonly SelectedTraitOfferAssessment[] {
+  return route.biomes.flatMap((biome) =>
+    'rewards' in biome
+      ? [...biome.rewards.selectedTraitOffers].sort(
+          (left, right) =>
+            left.chronologicalIndex - right.chronologicalIndex ||
+            semanticAddressKey(left.address).localeCompare(semanticAddressKey(right.address)),
+        )
+      : [],
   );
 }
 
@@ -490,8 +441,7 @@ export function projectRouteTraitOffers(
   const route = evaluation.route.routeKey === routeKey ? evaluation.route : undefined;
   if (route === undefined) return Object.freeze([]);
   const rows: RouteTraitOfferProjection[] = [];
-  for (const grouped of groupedTraitTraces(route)) {
-    const trace = grouped.trace;
+  for (const trace of chronologicalTraitTraces(route)) {
     const address = trace.address;
     const key = semanticAddressKey(address);
     const control = interactions.traitOffers.get(key);
@@ -508,7 +458,7 @@ export function projectRouteTraitOffers(
     const trait = catalog.traits.byKey[option.traitKey];
     const giver = catalog.traitGivers.byKey[trace.offer.giverKey];
     if (trait === undefined || giver === undefined || control === undefined) continue;
-    const evidence = aggregateTraceEvidence([grouped]);
+    const evidence = traceEvidence(trace.assessment);
     const selectedReplacement = optionReplacement(trace.assessment.assessments, option.traitKey);
     rows.push(
       Object.freeze({
