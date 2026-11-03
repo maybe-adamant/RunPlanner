@@ -1,4 +1,5 @@
 import {
+  assessPublicDreamItinerary,
   createProjectDocument,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -182,7 +183,8 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
     );
   };
   const routeKey = routeKeyForRecord(catalog, record);
-  if (routeKey === undefined)
+  const itinerary = routeKey === undefined ? undefined : recordItinerary(catalog, routeKey, record);
+  if (routeKey === undefined || itinerary === undefined)
     return finish(
       createProjectDocument(catalog, {
         projectId: `run-${record.run.runCount}`,
@@ -191,11 +193,13 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
       { area: record.route.dream ? 'dream' : 'route', code: 'unsupportedRoute' },
       record.rooms.map((_, roomIndex) => ({ roomIndex, verdict: 'unchecked', reason: 'stopped' })),
     );
-  const route = catalog.routes.byKey[routeKey]!;
   const project = createProjectDocument(catalog, {
     projectId: `run-${record.run.runCount}`,
     routeKey,
-    configuredBiomeCount: Math.min(record.route.biomes.length, route.biomeKeys.length),
+    ...(catalog.routes.byKey[routeKey]!.dreamItinerary === undefined
+      ? {}
+      : { itineraryBiomeKeys: itinerary }),
+    configuredBiomeCount: Math.min(record.route.biomes.length, itinerary.length),
   });
   const walk = new RunImportWalk(
     catalog,
@@ -221,6 +225,29 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
     ),
   );
   return finish(walk.assembly.project, stop, walk.finalAcceptance(throughRoom));
+}
+
+/**
+ * The route's biomes: its preset, or for a Dream run the biomes it visited,
+ * filled to the itinerary's length with the first legal choices, which stay
+ * unconfigured. Undefined when the visited biomes are no legal itinerary.
+ */
+function recordItinerary(
+  catalog: Catalog,
+  routeKey: string,
+  record: RunRecord,
+): readonly string[] | undefined {
+  const route = catalog.routes.byKey[routeKey]!;
+  if (route.dreamItinerary === undefined) return route.biomeKeys;
+  const itinerary = [...record.route.biomes];
+  for (;;) {
+    const assessment = assessPublicDreamItinerary(catalog, itinerary);
+    if (assessment.issues.length > 0) return undefined;
+    if (assessment.complete) return itinerary;
+    const next = assessment.nextChoices.find((choice) => choice.legal);
+    if (next === undefined) return undefined;
+    itinerary.push(next.biomeKey);
+  }
 }
 
 export class RunImportWalk {

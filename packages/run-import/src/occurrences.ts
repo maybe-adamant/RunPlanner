@@ -10,7 +10,7 @@ import {
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RunRecord } from './run-record/model';
 import type { RunImportRecordLocation } from './report';
-import { recordRoomBiomeKeys } from './vocabulary';
+import { recordPrologueLength, recordRoomBiomeKeys } from './vocabulary';
 
 /**
  * Deterministic occurrence identities for the record's rooms. An entered room
@@ -20,6 +20,8 @@ import { recordRoomBiomeKeys } from './vocabulary';
  */
 export class RecordOccurrences {
   readonly biomeOfRoom: readonly string[];
+  /** Record rooms before the first biome's start, outside every biome: a Dream run's prologue. */
+  readonly prologue: number;
   private readonly occurrenceOfRoom: OccurrenceId[];
   private readonly roomsOfOccurrence = new Map<string, number[]>();
   private readonly offeredDoors = new Map<
@@ -33,6 +35,7 @@ export class RecordOccurrences {
     private readonly record: RunRecord,
   ) {
     this.biomeOfRoom = recordRoomBiomeKeys(catalog, record);
+    this.prologue = recordPrologueLength(record);
     this.chaosRooms = new Set(
       catalog.rooms.values
         .filter((room) => room.roomSetKey === 'Chaos')

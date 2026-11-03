@@ -14,6 +14,17 @@ function fixture(name: string): RunRecord {
 
 /** Spot facts of the unmodded capture records, checked against the save audit. */
 describe('run record capture fixtures', () => {
+  it('records the cleared Dream run under its original room names', () => {
+    const record = fixture('dream');
+    expect(record.route).toEqual({ biomes: ['Q', 'P', 'O', 'H'], dream: true });
+    expect(record.outcome).toEqual({ kind: 'victory', endingRoom: 'H_Boss01', runResult: 9 });
+    expect(record.rooms).toHaveLength(40);
+    expect(record.rooms.map((room) => room.name)).toEqual(
+      expect.arrayContaining(['Dream_PostBoss01', 'Dream_PostBoss02', 'Dream_PostBoss03']),
+    );
+    expect([record.rooms[0]!.name, record.rooms.at(-1)!.name]).toEqual(['Dream_Intro', 'H_Boss01']);
+  });
+
   it('records the Surface run', () => {
     const record = fixture('surface');
     expect(record.rooms).toHaveLength(29);

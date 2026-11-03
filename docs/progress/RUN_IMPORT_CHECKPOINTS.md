@@ -410,6 +410,22 @@ reproduces is reported with its nearest miss and the plan stops there.
      unanswered recorded screen, else stays open. No corpus or fixture room
      moved: every search the corpus runs has an accepted fit.
 
+   **Dream runs** (owner: Chaos is legal on Dream and the engine supports
+   it). A Dream record imports on the Dream route: its itinerary is the
+   visited biomes, filled to four with the first legal choices of the
+   engine's public itinerary assessment, and only the visited ones are
+   configured; visited biomes no legal itinerary admits stop the import
+   (`unsupportedRoute`). `Dream_Intro`, the record's first room, is the
+   native prologue the engine installs as history: it belongs to no biome
+   and holds no occurrence, its entry save and the first biome's are both
+   compared at the first biome's opening, and the starting reward is the
+   first biome room's. `Dream_PostBoss0N` bind to the route's postboss
+   links as any PostBoss does. Witnesses: the cleared run (p3-…10530, Q P O
+   H) is now a capture fixture (`dream`); its partial first biome stands in
+   for the abandoned run. Raw p3-…10294 (G only): complete 6/4/0/0,
+   1 unchecked (last room). Raw p3-…10530: stopped at r8 Q_PreBoss01 (8
+   exact, 32 unchecked), an importer gap of the blind box (below).
+
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.
 6. **Recorded room** (authored outcome replayed as canonical events) only for
@@ -427,7 +443,7 @@ reproduces is reported with its nearest miss and the plan stops there.
   `EncountersOccurredCache`, `EnemyKills`, `ResourcesSpent`, `RoomCountCache`,
   `RoomsEntered`, `SpawnRecord` and run `UseRecord` are emptied; `Cleared` is
   nil (`DreamCleared` holds the clear). The room's own departure record
-  keeps its `UseRecord` and `Kills`. The importer refuses Dream routes anyway.
+  keeps its `UseRecord` and `Kills`.
 - Steady Growth counter jumped 2 → 5 in one room of run 930: explained. Each
   Fields cage encounter ends through `EndEncounterEffects` →
   `CheckChamberTraits`, so a three-cage room credits three (H_Combat02 4 →

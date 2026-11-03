@@ -151,8 +151,15 @@ export function entryCheckpoint(
       'shipCombat'
       ? { entered: at(roomIndex) }
       : {};
-  if (roomIndex === 0)
-    return { kind: 'compared', roomIndex, visit, source: { kind: 'opening', occurrence: at(0) } };
+  // A prologue's entry save is the run's start, as the first biome's opening is.
+  const opening = occurrences.prologue;
+  if (roomIndex <= opening)
+    return {
+      kind: 'compared',
+      roomIndex,
+      visit,
+      source: { kind: 'opening', occurrence: at(opening) },
+    };
   const left = roomIndex - 1;
   const stay = recordHubStay(project, occurrences, left);
   if (stay !== undefined)

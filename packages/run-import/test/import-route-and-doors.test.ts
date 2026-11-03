@@ -6,7 +6,8 @@ import { projectFromRunRecord } from '../src/import';
 import { fixture, occurrence, reward, expectReachesLastRoom } from './support/run-import';
 
 describe('run import route support', () => {
-  it('stops a Dream run before authoring anything', () => {
+  it('stops a Dream run whose visited biomes are no legal Dream itinerary', () => {
+    // A Dream run never starts in N.
     const record = fixture('surface');
     const result = projectFromRunRecord(catalog, {
       ...record,

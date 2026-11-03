@@ -9,18 +9,28 @@ import type {
 } from './run-record/model';
 
 /**
- * The catalog route whose biome order the record walked; a Dream run has none
- * here. The run count is `#GameState.RunHistory`, which only `EndRun` grows, so
- * it is zero only on a new profile's first attempt: the fresh-profile route.
+ * The catalog route the record walked: the Dream route for a Dream run, else
+ * the route whose biome order it took. The run count is
+ * `#GameState.RunHistory`, which only `EndRun` grows, so it is zero only on a
+ * new profile's first attempt: the fresh-profile route.
  */
 export function routeKeyForRecord(catalog: Catalog, record: RunRecord): string | undefined {
-  if (record.route.dream) return undefined;
+  if (record.route.dream)
+    return catalog.routes.values.find((route) => route.dreamItinerary !== undefined)?.key;
   const first = record.route.biomes[0];
   const fresh = record.run.runCount === 0;
   const routes = catalog.routes.values.filter((route) => route.biomeKeys[0] === first);
   return (
     routes.find((route) => (route.initialProfile.kind === 'freshFile') === fresh) ?? routes[0]
   )?.key;
+}
+
+/** The room a Dream run starts in, before its first biome; the engine installs it as history. */
+const DREAM_PROLOGUE_ROOM = 'Dream_Intro';
+
+/** Record rooms before the route's first biome room: a Dream run's native prologue. */
+export function recordPrologueLength(record: RunRecord): number {
+  return record.route.dream && record.rooms[0]?.name === DREAM_PROLOGUE_ROOM ? 1 : 0;
 }
 
 /** The planner resource family of a gathering tool (`WeaponShopData` `Tool*` items). */
@@ -37,12 +47,16 @@ export function resourceFamilyOfTool(tool: string): ResourceFamily | undefined {
           : undefined;
 }
 
-/** The biome a record room belongs to: its own room set, else the room it was entered from. */
+/**
+ * The biome a record room belongs to: its own room set, else the room it was
+ * entered from. A prologue room belongs to no biome and keeps its own name.
+ */
 export function recordRoomBiomeKeys(catalog: Catalog, record: RunRecord): readonly string[] {
   const biomeKeys = new Set(catalog.biomes.values.map((biome) => biome.key));
-  const result: string[] = [];
+  const prologue = recordPrologueLength(record);
+  const result: string[] = record.rooms.slice(0, prologue).map((room) => room.name);
   let current = record.route.biomes[0] ?? '';
-  for (const room of record.rooms) {
+  for (const room of record.rooms.slice(prologue)) {
     const roomSet = catalog.rooms.byKey[room.name]?.roomSetKey;
     if (roomSet !== undefined && biomeKeys.has(roomSet)) current = roomSet;
     result.push(current);

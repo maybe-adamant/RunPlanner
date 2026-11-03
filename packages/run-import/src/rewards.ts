@@ -203,7 +203,10 @@ export function answerReward(context: RunImportContext, reason: SemanticFinding)
     rewardOf(context, origin.biomeKey, origin.occurrenceId) === null;
   if (!rewardCodes.has(reason.code) && !unauthored) return false;
   if (origin.kind === 'startingReward') {
-    const value = recordedOffer(context.catalog, context.record.rooms[0]?.reward);
+    const value = recordedOffer(
+      context.catalog,
+      context.record.rooms[context.occurrences.prologue]?.reward,
+    );
     if (value === undefined) return false;
     const evaluation = context
       .candidates()
