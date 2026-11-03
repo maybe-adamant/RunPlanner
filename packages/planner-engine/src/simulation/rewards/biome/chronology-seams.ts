@@ -955,8 +955,7 @@ const targetGenerationCompleted: ChronologySeamHandler<'targetGenerationComplete
     transition.nextTargetHistory === undefined &&
     targetGeneration.exitKeys.at(-1) === event.origin.exitKey
   ) {
-    // Normalized once for the whole cohort: every branch of one batch
-    // shares the same offered set and therefore the same frozen array.
+    // Normalized once for the whole batch, which shares one offered set.
     const offeredRewardTypes = normalizeOfferedRewardTypes(
       current.peers.map((peer) => peer.offer.rewardType),
     );
@@ -1232,7 +1231,7 @@ const roomPrepared: ChronologySeamHandler<'roomPrepared'> = (context, state, eve
     state: Object.freeze({
       ...state,
       branch,
-      overviewCohort: Object.freeze({ roomKey: semanticAddressKey(event.origin), branch }),
+      overviewEntry: Object.freeze({ roomKey: semanticAddressKey(event.origin), branch }),
     }),
     emissions: [lifecycleFindings(transition.findings)],
   };

@@ -166,7 +166,7 @@ export function applyPhantomExitTransition(inputs: {
   const declaredTypes = phantomPlaceholderRewardTypes(catalog, placeholder);
   const store = catalog.rewards.stores.byKey[draw.storeKey];
   /** Each type's first surviving offer at the reached state, with the entries it has left. */
-  const branchOptions = (branch: RewardBranchState) => {
+  const reachedOptions = (branch: RewardBranchState) => {
     const bag = withBag(catalog, branch, draw.storeKey)?.bag;
     const types = phantom.rewardType === null ? declaredTypes : [phantom.rewardType];
     return new Map(
@@ -189,7 +189,7 @@ export function applyPhantomExitTransition(inputs: {
     );
   };
   const reached = inputs.branch;
-  const options = reached === undefined ? undefined : branchOptions(reached);
+  const options = reached === undefined ? undefined : reachedOptions(reached);
   let next: RewardBranchState | undefined;
   const offers: ResolvedRewardOffer[] = [];
   const settle = (rewardType: string) => {

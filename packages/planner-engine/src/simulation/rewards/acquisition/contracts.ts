@@ -190,7 +190,7 @@ export interface OwnedAcquisitionSettlementRequest {
   readonly historySequence: number;
   readonly roleBindings?: readonly AcquisitionSettlementRole[];
   /** The state whose trait history judges one directly selected trait screen's set. */
-  readonly directTraitAgreementBranch?: RewardBranchState;
+  readonly directTraitSetBranch?: RewardBranchState;
   /** Exact authored Sea Star result sites whose source frontier must be retained. */
   readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
   /** Ordered sites publish a distinct dependent action instead of settling immediately. */

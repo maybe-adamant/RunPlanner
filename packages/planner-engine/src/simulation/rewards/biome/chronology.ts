@@ -239,21 +239,21 @@ function blankFrontierTargetHistory(
 
 /**
  * An entered room whose Overview product the reached state does not support stops the walk
- * with an empty cohort; its entry Run State is the prepared cohort with the
- * room's entry effects, without the unsettled product.
+ * with no state; its entry Run State is the prepared state with the room's
+ * entry effects, without the unsettled product.
  */
 function captureFailedOverviewEntry(
   context: ChronologyWalkContext,
   accumulator: ChronologyAccumulator,
   walk: ChronologyWalkState,
 ): void {
-  const cohort = walk.overviewCohort;
-  if (walk.branch !== undefined || cohort?.branch === undefined) return;
-  const room = context.rooms.get(cohort.roomKey);
-  const entry = context.views.get(cohort.roomKey)?.entry;
+  const overview = walk.overviewEntry;
+  if (walk.branch !== undefined || overview?.branch === undefined) return;
+  const room = context.rooms.get(overview.roomKey);
+  const entry = context.views.get(overview.roomKey)?.entry;
   const entered = context.history.events.find(
     (event): event is Extract<HistoryEvent, { readonly kind: 'roomEntered' }> =>
-      event.kind === 'roomEntered' && semanticAddressKey(event.origin) === cohort.roomKey,
+      event.kind === 'roomEntered' && semanticAddressKey(event.origin) === overview.roomKey,
   );
   if (
     room?.kind !== 'authored' ||
@@ -268,7 +268,7 @@ function captureFailedOverviewEntry(
     room,
     context.chaosGateSourceOccurrenceIds,
     context.ixionGeneratedChaosSourceOccurrenceIds,
-    cohort.branch,
+    overview.branch,
     rewardFindingChronologyForRoom(
       context.snapshot,
       room.origin,

@@ -185,7 +185,7 @@ export function applyProducerRoleHistory(
   atomicRegion: string | undefined,
   findingChronology: FindingChronology | undefined,
   settlement: { readonly site: AcquisitionSiteAddress; readonly entry: AcquisitionEntryAddress },
-  directTraitAgreementBranch?: RewardBranchState,
+  directTraitSetBranch?: RewardBranchState,
   deferArtificerReplacement = false,
   offerAlreadyGenerated = false,
   authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>,
@@ -664,7 +664,7 @@ export function applyProducerRoleHistory(
       });
     }
     const traitEventCountBeforeSettlement = acquisitionBranch.state.traitHistory.events.length ?? 0;
-    const directTraitSetHistory = (directTraitAgreementBranch ?? branch).state.traitHistory;
+    const directTraitSetHistory = (directTraitSetBranch ?? branch).state.traitHistory;
     const traitSettlement = applyTraitOfferForAcquisition(
       catalog,
       acquisitionBranch,

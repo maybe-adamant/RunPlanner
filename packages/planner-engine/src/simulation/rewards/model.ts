@@ -243,13 +243,13 @@ export interface PhantomExitSettlement {
   /** The placeholder's own store; absent when its fixed or Shop reward draws nothing. */
   readonly storeKey?: string;
   readonly rewardPinned: boolean;
-  /** Distinct drawn offers across reached branches; empty when nothing is drawn. */
+  /** The offer the reached state drew; empty when nothing is drawn. */
   readonly offers: readonly import('../../reward-kernel').ResolvedRewardOffer[];
 }
 
 /**
  * One reached door, cage, wheel or Hub board reroll. Each costs one reroll from
- * the run's pool; the pool remainder is the minimum over reached branches.
+ * the run's pool; the pool remainder is the reached state's.
  */
 export interface RerollSettlement {
   readonly owner:
@@ -261,11 +261,11 @@ export interface RerollSettlement {
   readonly reward: import('../../reward-kernel').ResolvedRewardOffer;
   /** The run's pool remainder before this reroll. */
   readonly poolRemainingBefore: number;
-  /** The run's pool remainder after this reroll, absent when no branch reached it. */
+  /** The run's pool remainder after this reroll, absent when the reroll did not settle. */
   readonly poolRemainingAfter?: number;
 }
 
-/** The run's reroll pool after one history event, lowest over reached branches. */
+/** The run's reroll pool after one history event, at the reached state. */
 export interface RerollPoolPoint {
   readonly historySequence: number;
   readonly remaining: number;
@@ -294,9 +294,9 @@ export interface RerollSurfaceSettlement {
   readonly historySequence: number;
   /** Whether a held card enabled door rerolls when its targets were assigned. */
   readonly enabled: boolean;
-  /** The run's pool when the surface opened, lowest over reached branches. */
+  /** The run's pool when the surface opened, at the reached state. */
   readonly poolRemainingAtStart: number;
-  /** The run's pool at the append point, lowest over reached branches. */
+  /** The run's pool at the append point, at the reached state. */
   readonly poolRemaining: number;
   readonly targets: readonly RerollSurfaceTarget[];
 }

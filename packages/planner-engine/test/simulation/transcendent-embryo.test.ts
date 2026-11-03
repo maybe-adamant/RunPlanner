@@ -297,7 +297,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     expect(record()?.stale).toBe(true);
   });
 
-  it('publishes a same-phase Shrine delivery from the final Embryo branch', () => {
+  it('publishes a same-phase Shrine delivery from the final Embryo state', () => {
     const encounterOwner = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'F'),
       createOccurrenceId('embryo-delivery-chronology'),

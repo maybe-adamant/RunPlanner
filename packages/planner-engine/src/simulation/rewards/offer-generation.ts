@@ -248,7 +248,7 @@ function offerPayloadValid({ catalog, reward }: OfferProcessingContext): boolean
 }
 
 /** The offer gate that rejected the reached state, in gate order. */
-type OfferBranchGate =
+type OfferGate =
   | 'forcedReward'
   | 'olympianProvider'
   | 'source'
@@ -263,7 +263,7 @@ type OfferBranchGate =
  */
 interface OfferDraw {
   readonly branch?: RewardBranchState;
-  readonly gate?: OfferBranchGate;
+  readonly gate?: OfferGate;
   readonly sourceFailure: boolean;
   readonly bagSupportEmpty: boolean;
   /** Earlier peers the offer cannot be drawn beside, when any were found. */
@@ -304,10 +304,7 @@ function countedOfferInputs(
   };
 }
 
-function drawRewardOffer(
-  originalBranch: RewardBranchState,
-  context: OfferProcessingContext,
-): OfferDraw {
+function drawRewardOffer(branch: RewardBranchState, context: OfferProcessingContext): OfferDraw {
   const { catalog, reward, historySequence } = context;
   let sawSourceFailure = false;
   let sawBagSupportEmpty = false;
@@ -316,7 +313,7 @@ function drawRewardOffer(
   const recordSiblingConflict = (peer: OfferProcessingPeer) => {
     siblingConflicts.set(semanticAddressKey(peer.origin), peer);
   };
-  const rejected = (gate: OfferBranchGate): OfferDraw =>
+  const rejected = (gate: OfferGate): OfferDraw =>
     Object.freeze({
       gate,
       sourceFailure: sawSourceFailure,
@@ -327,20 +324,20 @@ function drawRewardOffer(
     Object.freeze({ branch, sourceFailure: false, bagSupportEmpty: false });
   // ChooseRoomReward returns a qualifying ForcedRewards entry before the bag,
   // reward priorities, ChooseLoot and ForceBoonName are consulted.
-  const forced = forcedRewardFor(context, originalBranch);
+  const forced = forcedRewardFor(context, branch);
   if (forced !== undefined) {
     if (!sameRewardOffer(forced.offer, reward.offer)) {
       if (forced.offer.rewardType === reward.offer.rewardType) sawSourceFailure = true;
       return rejected('forcedReward');
     }
-    return offered(recordCanonicalOffer(originalBranch, context));
+    return offered(recordCanonicalOffer(branch, context));
   }
   // ForceBoonName participates only in counted room-reward setup. Fixed
   // rewards, direct pickups, and inventory offers retain their own provider.
   const requiredProvider =
     context.binding === undefined
       ? undefined
-      : requiredOlympianProviderForOffer(catalog, originalBranch, reward.offer, context.peers);
+      : requiredOlympianProviderForOffer(catalog, branch, reward.offer, context.peers);
   // Provider pressure constrains the retained authored offer at its existing
   // reward owner.  It is deliberately not a runtime rewrite: an author can
   // repair the same payload control and no hidden forced-provider field is
@@ -353,7 +350,7 @@ function drawRewardOffer(
     return rejected('olympianProvider');
   }
   const effectiveOffer = reward.offer;
-  const facts = context.facts(originalBranch.state);
+  const facts = context.facts(branch.state);
   const peers = { priorOffers: context.peers.map((peer) => peer.offer) };
   // A forced boon replaces ChooseLoot's pick, so the god cap is never consulted.
   const forcedBoonSource =
@@ -380,15 +377,15 @@ function drawRewardOffer(
   if (context.binding === undefined) {
     const history = applyOfferProjection(
       catalog.rewards,
-      originalBranch.state.rewardHistory,
+      branch.state.rewardHistory,
       effectiveOffer,
       facts,
     );
     return offered(
       appendRewardEvent(
         Object.freeze({
-          ...originalBranch,
-          state: Object.freeze({ ...originalBranch.state, rewardHistory: history }),
+          ...branch,
+          state: Object.freeze({ ...branch.state, rewardHistory: history }),
         }),
         historySequence,
         {
@@ -401,7 +398,7 @@ function drawRewardOffer(
     );
   }
 
-  const counted = countedOfferInputs(context, context.binding, originalBranch, peers);
+  const counted = countedOfferInputs(context, context.binding, branch, peers);
   if (counted === undefined) {
     sawBagSupportEmpty = true;
     return rejected('storeBinding');
@@ -412,7 +409,7 @@ function drawRewardOffer(
   const requiredPriority = oldestSupportedRewardPriority(
     store,
     prepared.bag,
-    originalBranch.state.rewardPriorities,
+    branch.state.rewardPriorities,
     facts,
     bagOptions,
   );
@@ -492,7 +489,7 @@ export function explainRewardOfferExclusions(
   const gate = offerPayloadValid(context) ? drawRewardOffer(branch, context).gate : undefined;
   return gate === undefined
     ? undefined
-    : reachedRewardOfferExclusion(rejectedBranchExclusion(context, branch, gate));
+    : reachedRewardOfferExclusion(rejectedOfferExclusion(context, branch, gate));
 }
 
 /**
@@ -552,10 +549,10 @@ function staticOfferExclusion(
   );
 }
 
-function rejectedBranchExclusion(
+function rejectedOfferExclusion(
   context: OfferProcessingContext,
   branch: RewardBranchState,
-  gate: OfferBranchGate,
+  gate: OfferGate,
 ): RewardOfferExclusionReason | undefined {
   const { catalog, reward } = context;
   const offer = reward.offer;

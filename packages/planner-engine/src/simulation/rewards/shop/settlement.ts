@@ -207,7 +207,7 @@ export function settleShopAcquisitionSite(
       readonly role: string;
       readonly lifecyclePoint: ProducerLifecyclePointKey;
     }[],
-    agreementBranch: RewardBranchState | undefined,
+    directTraitSetBranch: RewardBranchState | undefined,
   ): boolean => {
     const purchaseActionOwner = actionOwnerForOffer(offer.offerKey);
     const source: AcquisitionSource = withRoomStoredSourceProducts(
@@ -247,7 +247,7 @@ export function settleShopAcquisitionSite(
       entryKey: offer.offerKey,
       historySequence,
       roleBindings,
-      ...(agreementBranch === undefined ? {} : { directTraitAgreementBranch: agreementBranch }),
+      ...(directTraitSetBranch === undefined ? {} : { directTraitSetBranch: directTraitSetBranch }),
       ...(purchaseActionOwner === undefined ? {} : { timelineOwner: purchaseActionOwner }),
       ...(context.authoredSeaStarDuplicateSiteKeys === undefined
         ? {}
@@ -305,7 +305,7 @@ export function settleShopAcquisitionSite(
       }
     }
     if (execution === undefined) continue;
-    const agreementBranch = execution.candidate;
+    const directTraitSetBranch = execution.candidate;
     const settleEntry = (execution: ShopExecution): ShopExecution | undefined => {
       if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) {
         const refill = execution.travelRefill;
@@ -396,7 +396,7 @@ export function settleShopAcquisitionSite(
               profile.key,
               'paid',
               bindings,
-              agreementBranch,
+              directTraitSetBranch,
             )
           )
             return refillExecution;
@@ -636,7 +636,7 @@ export function settleShopAcquisitionSite(
       execution.candidate = gold.branch;
       if (gold.materialization !== undefined) execution.goldMaterialization = gold.materialization;
       derivedEntryFrontiers.push(...gold.derivedEntryFrontiers);
-      if (!settleOffer(execution, paidOffer, profile.key, 'paid', bindings, agreementBranch)) {
+      if (!settleOffer(execution, paidOffer, profile.key, 'paid', bindings, directTraitSetBranch)) {
         entryPurchaseFailureRecorded = true;
         return undefined;
       }

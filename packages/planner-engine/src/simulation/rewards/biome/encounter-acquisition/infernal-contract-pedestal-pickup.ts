@@ -113,7 +113,7 @@ export function settleInfernalContractPedestalPickup(inputs: {
     entryKey: INFERNAL_CONTRACT_ENTRY_KEY,
     historySequence,
     roleBindings: bindings,
-    directTraitAgreementBranch: branch,
+    directTraitSetBranch: branch,
     ...(timelineOwner === undefined ? {} : { timelineOwner }),
     ...(inputs.authoredSeaStarDuplicateSiteKeys === undefined
       ? {}

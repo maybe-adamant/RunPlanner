@@ -19,7 +19,7 @@ export interface FeatureRerollOption {
   readonly enabled: boolean;
   /** Something is left to reroll: the game hides the button otherwise. */
   readonly available: boolean;
-  /** The run's pool there, lowest over reached branches. */
+  /** The run's pool there, at the reached state. */
   readonly poolRemaining: number;
 }
 

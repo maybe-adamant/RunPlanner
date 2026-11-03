@@ -206,8 +206,8 @@ export interface ChronologyWalkState {
   readonly expectedStores: ReadonlyMap<string, string | undefined>;
   readonly hermesShrineAssessments: ReadonlyMap<string, HermesShrineRoomAssessment>;
   readonly shipLifecycleContexts: ReadonlyMap<string, ShipLifecycleCandidateContext>;
-  /** The prepared cohort entering the current room's Overview. */
-  readonly overviewCohort:
+  /** The prepared state entering the current room's Overview. */
+  readonly overviewEntry:
     { readonly roomKey: string; readonly branch: RewardBranchState | undefined } | undefined;
   /** Each entered room's vow ranks, which every phase's encounter composition reads. */
   readonly encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>;
@@ -246,7 +246,7 @@ export function createChronologyWalkState(
     expectedStores: new Map(),
     hermesShrineAssessments: new Map(),
     shipLifecycleContexts: new Map(),
-    overviewCohort: undefined,
+    overviewEntry: undefined,
     encounterEntryVowRanks: new Map(),
   });
 }

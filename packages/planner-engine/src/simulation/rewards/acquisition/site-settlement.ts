@@ -242,7 +242,7 @@ export function settleOwnedAcquisitionSite(
       atomicRegion,
       findingChronology,
       Object.freeze({ site, entry: entry.address }),
-      request.directTraitAgreementBranch,
+      request.directTraitSetBranch,
       true,
       false,
       request.authoredSeaStarDuplicateSiteKeys,
@@ -320,7 +320,7 @@ export function settleAcquisitionResolvedReward(
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
     readonly timelineOwner?: SemanticAddress;
     readonly historySequence: number;
-    readonly directTraitAgreementBranch?: RewardBranchState;
+    readonly directTraitSetBranch?: RewardBranchState;
     readonly roleBindings?: readonly AcquisitionSettlementRole[];
     readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
   },
@@ -429,9 +429,9 @@ export function settleAcquisitionResolvedReward(
       ...(request.timelineOwner === undefined ? {} : { timelineOwner: request.timelineOwner }),
       historySequence: request.historySequence,
       ...(request.roleBindings === undefined ? {} : { roleBindings: request.roleBindings }),
-      ...(request.directTraitAgreementBranch === undefined
+      ...(request.directTraitSetBranch === undefined
         ? {}
-        : { directTraitAgreementBranch: request.directTraitAgreementBranch }),
+        : { directTraitSetBranch: request.directTraitSetBranch }),
       ...(request.authoredSeaStarDuplicateSiteKeys === undefined
         ? {}
         : { authoredSeaStarDuplicateSiteKeys: request.authoredSeaStarDuplicateSiteKeys }),

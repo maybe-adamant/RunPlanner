@@ -2418,7 +2418,7 @@ describe('Hermes Shrine entry inventory requirements', () => {
     );
   }
 
-  it('closes Talent Shrine inventory for a branch that invested every Talent', () => {
+  it('closes Talent Shrine inventory for a state that invested every Talent', () => {
     const open = enterAuthoredShrineHost(false);
     const closed = enterAuthoredShrineHost(true);
     const inventory = (transition: typeof open) =>

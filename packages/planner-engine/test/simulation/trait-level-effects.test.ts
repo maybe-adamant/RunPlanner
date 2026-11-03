@@ -773,7 +773,7 @@ describe('Supply Chain lifecycle', () => {
     expect(released.history.equippedTraits.SupplyDropBoon?.pickupProducerProgress).toBe(0);
   });
 
-  it('publishes a matured Supply Chain pickup from the final Steady Growth branch', () => {
+  it('publishes a matured Supply Chain pickup from the final Steady Growth state', () => {
     const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
     const traitOrigin = createEncounterPhaseAddress(
       goldenFBiome,
