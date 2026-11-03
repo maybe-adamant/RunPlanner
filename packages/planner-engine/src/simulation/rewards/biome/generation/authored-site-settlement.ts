@@ -298,7 +298,10 @@ export function settleAuthoredAcquisitionSite(
         derivedReplayOffer === undefined
           ? agreedReplayFromHistory
           : Object.freeze({ offer: derivedReplayOffer });
-      const replaySourceMismatch = echoReplay && agreedReplay === undefined;
+      // Selecting Echo with no last reward is the offer's own finding, so a reached replay has one.
+      if (echoReplay && sourceBranch !== undefined && agreedReplay === undefined)
+        contractFail(`${room.gameName} reached an Echo replay with no last reward`);
+      const replayUnreached = echoReplay && agreedReplay === undefined;
       const retainedReplayMatches =
         agreedReplay !== undefined &&
         replayEntry !== undefined &&
@@ -353,17 +356,6 @@ export function settleAuthoredAcquisitionSite(
               branchesBeforeEntry: Object.freeze([sourceBranch]),
             }),
           );
-      }
-      if (replaySourceMismatch && replayEntryKey !== undefined) {
-        const replayAddress = createAcquisitionEntryAddress(selectedSite.address, replayEntryKey);
-        addRewardFinding(
-          targetFindings,
-          rewardFinding('rewardSourceUnavailable', replayAddress, {
-            reason: 'branchDivergence',
-          }),
-          ownerRegion(replayAddress),
-          findingChronology,
-        );
       }
       const authoredPickupEntries = activationOnly
         ? Object.freeze(
@@ -430,7 +422,7 @@ export function settleAuthoredAcquisitionSite(
         },
       });
       mergeRewardFindingEmissions(targetFindings, settled.findingEmissions);
-      if (!replaySourceMismatch) {
+      if (!replayUnreached) {
         acquisitionRoleFrontiers.push(...(settled.roleFrontiers ?? []));
         traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
       }
@@ -535,7 +527,7 @@ export function settleAuthoredAcquisitionSite(
           }),
         );
       }
-      return replaySourceMismatch ? undefined : singleBranch(settled.branches);
+      return replayUnreached ? undefined : singleBranch(settled.branches);
     }
     const settlementRoom = room;
     const settled = settleShopAcquisitionSite(branchList(sourceBranch), {
