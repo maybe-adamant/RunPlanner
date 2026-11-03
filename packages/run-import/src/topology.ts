@@ -373,10 +373,10 @@ function replaceableRooms(context: RunImportContext, target: TargetAddress): rea
 
 /**
  * An Anomaly door is a G target the game swapped for the Anomaly map, so it is
- * first authored as the first G room the engine admits there; once every door
- * of the source is placed, it is switched to the recorded map. No save names
- * the displaced room, which leaves no trace in the run: the first admitted
- * one stands for any, reported.
+ * authored as the first G room the engine admits there and switched to the
+ * recorded map. No save names the displaced room, which leaves no trace in the
+ * run: the first admitted one stands for any, reported. The entered map's
+ * challenge succeeded when its reward was picked up.
  */
 function placeAnomaly(
   context: RunImportContext,
@@ -397,63 +397,46 @@ function placeAnomaly(
       applied,
       record: { roomIndex: sourceIndex, visit: 0, door: door.door },
     });
+    switchAnomaly(context, target, sourceIndex, occurrenceId, door);
     return applied;
   }
   return undefined;
 }
 
-/**
- * Switches the source's placed Anomaly doors to their recorded maps once all
- * its doors are placed: a batch takes no new target beside an Anomaly. The
- * entered map's challenge succeeded when its reward was picked up.
- */
-function switchAnomalies(
+function switchAnomaly(
   context: RunImportContext,
-  decision: ReturnType<typeof createExitDecisionAddress>,
+  target: TargetAddress,
   sourceIndex: number,
-  doors: readonly RunRecordDoor[],
+  occurrenceId: OccurrenceId,
+  door: RunRecordDoor,
 ): void {
-  if (!doors.some((door) => anomalyRoom(context, door.room))) return;
-  const topology = context
-    .assembly()
-    .project.route.biomes.find((biome) => biome.biomeKey === decision.biomeKey)?.topology;
-  if (topology === undefined || topology === null) return;
-  const placed = exitDecisionForSource(topology, decision.source)?.normal;
-  if (placed?.kind !== 'batch' || placed.targets.length < doors.length) return;
-  const biome = createBiomeAddress(decision.routeKey, decision.biomeKey);
-  for (const door of doors) {
-    if (!anomalyRoom(context, door.room)) continue;
-    const occurrenceId = doorOccurrence(context, sourceIndex, doors, door);
-    const entry = placed.targets.find((candidate) => candidate.occurrenceId === occurrenceId);
-    const current = topologyOccurrence(context, decision.biomeKey, occurrenceId);
-    if (entry === undefined || current === undefined || current.anomalyReplacement !== undefined)
-      continue;
-    const target = createTargetAddress(biome, decision.source, entry.exitKey);
-    const occurrence = createOccurrenceAddress(biome, occurrenceId);
-    const entered =
-      occurrenceId === context.occurrences.occurrenceOf(sourceIndex + 1)
-        ? context.record.rooms[sourceIndex + 1]
-        : undefined;
-    const rewardType = entered?.reward?.type;
-    const switched = context.transaction(() => {
-      if (!context.apply({ kind: 'SwitchTargetToAnomaly', target })) return false;
-      context.apply({ kind: 'ReplaceAnomalyMap', occurrence, gameName: door.room });
-      if (
-        entered !== undefined &&
-        rewardType !== undefined &&
-        pickupUseCount(context.catalog, entered, rewardType) === 0
-      )
-        context.apply({ kind: 'ReplaceAnomalySuccess', occurrence, success: false });
-      return topologyOccurrence(context, decision.biomeKey, occurrenceId)?.gameName === door.room;
+  const occurrence = createOccurrenceAddress(
+    createBiomeAddress(target.routeKey, target.biomeKey),
+    occurrenceId,
+  );
+  const entered =
+    occurrenceId === context.occurrences.occurrenceOf(sourceIndex + 1)
+      ? context.record.rooms[sourceIndex + 1]
+      : undefined;
+  const rewardType = entered?.reward?.type;
+  const switched = context.transaction(() => {
+    if (!context.apply({ kind: 'SwitchTargetToAnomaly', target })) return false;
+    context.apply({ kind: 'ReplaceAnomalyMap', occurrence, gameName: door.room });
+    if (
+      entered !== undefined &&
+      rewardType !== undefined &&
+      pickupUseCount(context.catalog, entered, rewardType) === 0
+    )
+      context.apply({ kind: 'ReplaceAnomalySuccess', occurrence, success: false });
+    return topologyOccurrence(context, target.biomeKey, occurrenceId)?.gameName === door.room;
+  });
+  if (!switched)
+    context.note({
+      area: 'doors',
+      reason: 'refused',
+      address: target,
+      record: { roomIndex: sourceIndex, visit: 0, door: door.door },
     });
-    if (!switched)
-      context.note({
-        area: 'doors',
-        reason: 'refused',
-        address: target,
-        record: { roomIndex: sourceIndex, visit: 0, door: door.door },
-      });
-  }
 }
 
 const roomRefusedAt = (context: RunImportContext, target: TargetAddress, gameName: string) => {
@@ -567,7 +550,6 @@ function createTarget(context: RunImportContext, target: TargetAddress): boolean
           applied,
           record: { roomIndex: sourceIndex, visit: 0, door: positional.door },
         });
-      switchAnomalies(context, decision, sourceIndex, doors);
       return true;
     }
   }
@@ -600,7 +582,6 @@ function createTarget(context: RunImportContext, target: TargetAddress): boolean
           door: positionalRefused ? positional.door : door.door,
         },
       });
-    switchAnomalies(context, decision, sourceIndex, doors);
     return true;
   }
   context.refuse();
