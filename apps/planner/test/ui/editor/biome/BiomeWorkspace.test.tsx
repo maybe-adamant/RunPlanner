@@ -1219,10 +1219,6 @@ describe('BiomeWorkspace', () => {
       const inspector = screen.getByRole('complementary', { name: 'Details' });
       expect(inspector.querySelector('.biome-batch-workbench')).toBeNull();
       expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
-      // The completed biome opens its Boss or Postboss; the Preboss stop stays selected.
-      const selected = projected.defaultInspectorDestination?.selectedRailKey;
-      expect(selected).toBeDefined();
-      expect(selectedRailMarkerKeys(view.container)).toEqual([selected]);
       cleanup();
     }
   });

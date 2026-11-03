@@ -896,7 +896,6 @@ export function assembleWorkspaceBiomeSemantics(
               return Object.freeze({
                 kind: 'room' as const,
                 label: declaration?.label ?? 'Fixed room',
-                occurrenceId: targetStatus.occurrenceId,
                 ...(target === undefined || declaration === undefined
                   ? {}
                   : {

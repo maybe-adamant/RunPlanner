@@ -605,8 +605,6 @@ export type WorkspaceOccurrenceStageOutgoing =
             readonly kind: 'room';
             readonly label: string;
             readonly gameName?: string;
-            /** The fixed occurrence this room continues into. */
-            readonly occurrenceId: OccurrenceId;
             readonly roomIcon?: WorkspaceRoomIcon;
           }
         | { readonly kind: 'biome'; readonly label: string }
