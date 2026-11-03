@@ -230,10 +230,7 @@ describe('run import of selected-outcome children', () => {
       }),
     ]);
     expect(roomLines(imported.report, 27)).toEqual([]);
-    // The capture's own Fields store difference only.
-    expect(mismatchLines(imported.report)).toEqual([
-      'stores r27 FieldsOptionalRewards: MaxHealthDropSmall 1 | MaxHealthDropSmall 2',
-    ]);
+    expect(mismatchLines(imported.report)).toEqual([]);
   });
 
   it("refuses Natural Selection's recorded gains when no order reaches them, taking the first eligible order", () => {

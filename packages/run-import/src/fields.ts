@@ -81,15 +81,12 @@ function optionalRewards(
 
 /** The reward types an optional slot of this room admits: its stores' entries. */
 function optionalRewardTypes(context: RunImportContext, gameName: string): ReadonlySet<string> {
-  const group = context.catalog.rooms.byKey[gameName]?.localChildren.find(
-    (child) => child.kind === 'boundedRewardSlots' && child.key === 'optionalRewards',
-  );
-  if (group?.kind !== 'boundedRewardSlots' || group.reward.kind !== 'countedChoice')
-    return new Set();
+  const reward = context.catalog.rooms.byKey[gameName]?.fieldsOptionalRewards?.reward;
+  if (reward === undefined) return new Set();
   const stores = context.catalog.rewards.stores;
   return new Set([
-    ...group.reward.allowedRewardTypes,
-    ...group.reward.storeKeys.flatMap(
+    ...reward.allowedRewardTypes,
+    ...reward.storeKeys.flatMap(
       (key) => stores.byKey[key]?.entries.map((entry) => entry.rewardType) ?? [],
     ),
   ]);

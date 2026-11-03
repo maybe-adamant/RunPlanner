@@ -218,14 +218,14 @@ describe('run import of the Underworld capture', () => {
       assumption: {
         conversion: 3,
         encounter: 1,
-        fields: 3,
+        fields: 5,
         npc: 1,
         roomActionOrder: 10,
         traitOffer: 3,
       },
       // The three Chaos screens stay: their unpicked curses' durations are never saved.
       // The entry saves' run state where the plan's simulation holds another.
-      mismatch: { elements: 1, pathOfStars: 1, stores: 2, traits: 2 },
+      mismatch: { elements: 1, pathOfStars: 1, stores: 1, traits: 2 },
       // The H and I Preboss Travel Deal refills were never bought.
       notInRecord: { fields: 4, pathOfStars: 1, shop: 2, traitOffer: 4 },
       refused: { fields: 2, pool: 1 },
@@ -246,6 +246,9 @@ describe('run import of the Underworld capture', () => {
       'assumption fields r27 localReward@H-r27-d621470:cage1',
       'refused fields r29 localReward@H-r29:cage1 -> ReplaceLocalReward(H-r29 StackUpgrade)',
       'refused fields r29 localReward@H-r29:cage2 -> ReplaceLocalReward(H-r29 MaxManaDrop)',
+      // Two optional rewards collected in combat have no saved point.
+      'assumption fields r29 fieldsSpatial@H-r29 -> ReplaceFieldsSpatialPoint(H-r29)',
+      'assumption fields r29 fieldsSpatial@H-r29 -> ReplaceFieldsSpatialPoint(H-r29)',
       'refused pool r32 roomFeature@H-r30:postboss -> ReplacePurgingPoolSlot(H-r30:postboss)',
       'assumption traitOffer r39 traitOffer@I-r38:chaos:self -> ReplaceTraitOffer(I-r38:chaos chaos)',
       'assumption roomActionOrder r2 occurrence@F-r2',
@@ -262,10 +265,9 @@ describe('run import of the Underworld capture', () => {
     expect(mismatchLines(imported.report)).toEqual([
       // H_Combat07's guessed cages of its twin door take other store entries.
       'stores r29 RunProgress: Boon 2, RoomMoneyDrop 2 | Boon 3, RoomMoneyDrop 1',
-      // H_Combat07's unused cage screen, its Talent and its optional rewards.
+      // H_Combat07's unused cage screen and its Talent.
       'traits r30 HeraSpecialBoon: Heroic level 7 | Heroic level 8',
       'traits r30 DoubleBoltBoon: Epic level 4 | absent',
-      'stores r30 FieldsOptionalRewards: MinorTalentDrop 1, RoomMoneyTinyDrop 2 | MinorTalentDrop 2, RoomMoneyTinyDrop 3',
       'pathOfStars r30 Invested: 5:1 | none other',
       'elements r30 Elements: Air 6 | Air 5',
     ]);

@@ -144,6 +144,12 @@ reproduces is reported with its nearest miss and the plan stops there.
      r7 → r20; r11's refused `sideDoor2` generation was downstream of r7 (the
      side-room store still held what r7's ungenerated rooms should have
      drawn) and no longer refuses. Fixtures unchanged.
+   - Fields optional count: the importer already set it, but read the
+     admitted reward types from a local child the catalog no longer
+     declares, so a reward collected in combat went uncounted; it now reads
+     the room's optional-reward declaration. Raw 930 → 25/0/0; fx
+     underworld-1010 mismatch 1 → 0, carried 2 → 0 (bound tightened); fx
+     underworld's r30 optional store difference gone.
 
 3. **One bounded search.** Replace the four solvers with one per-room search
    over the remaining unknowns, pinned by markers (trait timestamps, upgrade

@@ -25,7 +25,7 @@ const BASELINE = {
   surface: { rooms: 29, settled: 15, mismatch: 0, differing: 0, unchecked: 2 },
   'surface-victory': { rooms: 51, settled: 30, mismatch: 0, differing: 0, unchecked: 2 },
   underworld: { rooms: 42, settled: 15, mismatch: 2, differing: 13, unchecked: 1 },
-  'underworld-1010': { rooms: 30, settled: 17, mismatch: 1, differing: 3, unchecked: 1 },
+  'underworld-1010': { rooms: 30, settled: 17, mismatch: 0, differing: 0, unchecked: 1 },
   // The live recording carries no entry saves.
   'underworld-live': { rooms: 42, settled: 0, mismatch: 0, differing: 0, unchecked: 42 },
 } as const;

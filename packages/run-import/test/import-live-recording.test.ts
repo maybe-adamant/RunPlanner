@@ -239,13 +239,12 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       // G_PreBoss01's Travel Deal refill is the Poseidon boon its room used beyond its stock.
       assumption: {
         conversion: 3,
-        fields: 3,
+        fields: 4,
         reroll: 1,
         roomActionOrder: 10,
         shop: 1,
         traitOffer: 1,
       },
-      mismatch: { stores: 1 },
       // The run was reset in H_Combat04: the rest of Ephyra's Fields is guessed.
       notInRecord: {
         doors: 1,
@@ -266,6 +265,8 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       // Its one screen reroll names a loot object id; the first rerollable screen takes it.
       'assumption reroll r22 traitOffer@G-r22:source -> ReplaceTraitOffer(G-r22 ZeusManaBoon|CastAnywhereBoon|ElementalDamageFloorBoon#option3)',
       'assumption shop r22 shopOffer@G-r22 -> ReplaceShopOfferOption(G-r22)',
+      // An optional reward collected in combat has no saved point.
+      'assumption fields r26 fieldsSpatial@H-r26 -> ReplaceFieldsSpatialPoint(H-r26)',
       'assumption fields r26 localReward@H-r26-d564448:cage1',
       'assumption fields r27 localReward@H-r27-d621470:cage1',
       'assumption fields r28 localReward@H-r28-d565616:cage1',
@@ -280,10 +281,7 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       'assumption roomActionOrder r26 occurrence@H-r26',
       'assumption roomActionOrder r29 occurrence@H-r29',
     ]);
-    expect(mismatchLines(imported.report)).toEqual([
-      // H_Combat07's optional rewards are guessed: one was collected during combat, without a point.
-      'stores r27 FieldsOptionalRewards: MaxHealthDropSmall 1 | MaxHealthDropSmall 2',
-    ]);
+    expect(mismatchLines(imported.report)).toEqual([]);
   });
 
   it("authors each screen's recorded rerolls on its final rows", () => {
