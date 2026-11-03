@@ -85,6 +85,45 @@ reproduces is reported with its nearest miss and the plan stops there.
    deliveries, Well items). Verify each against a capture.
 2. **Per-room acceptance.** Run the comparison as each room is accepted, not
    after the walk; add Hub stays and repeated rooms, which are skipped today.
+
+   **Result (2026-11-03).** The walk judges each room as coverage first reaches
+   its next entry save, and the report's `rooms` holds every room's final
+   verdict: _accepted_, _mismatch_ (introduced and carried differences, with
+   families) or _unchecked_ (reason), plus the verdict at reach where later
+   authoring changed it. The walk's context exposes the judgement, so a probe
+   can test a room's candidate authoring against the next save. Hub stays
+   compare at the engine's Hub departure snapshots (a new engine query), a
+   main room's first visit at its own exit; a restored room's later departure
+   captures no state and stays unchecked, and elements stay unchecked where
+   the entered room publishes no entry state (Hub stay, restored room, Ship
+   room). The bracket solvers read the same entry moments. Only the wheel
+   solver changed a choice rule (an accepted fit goes first); no fixture or raw
+   room moved by it. Unreachable rooms do not stop the plan yet.
+
+   | Run                | Rooms   | Exact | Solved | Guessed (order only) | Mismatch | Carried | Unchecked                                 | First mismatch |
+   | ------------------ | ------- | ----- | ------ | -------------------- | -------- | ------- | ----------------------------------------- | -------------- |
+   | 333 UW             | 41      | 13    | 0      | 8 (4)                | 8        | 7       | 5 (4 unreached past an Anomaly door)      | r25            |
+   | 334 Surface        | 49      | 7     | 0      | 0                    | 15       | 26      | 1                                         | r7             |
+   | 930 UW             | 41      | 17    | 0      | 11 (2)               | 4        | 8       | 1                                         | r28            |
+   | 931 Surface        | 49      | 16    | 0      | 4 (2)                | 18       | 10      | 1                                         | r20            |
+   | 932 Dream ×2       | 11 + 40 | –     | –      | –                    | –        | –       | all (Dream route unsupported; both build) | –              |
+   | 933 UW (a)         | 41      | 11    | 0      | 6 (1)                | 5        | 18      | 1                                         | r17            |
+   | 933 UW (b)         | 41      | 5     | 0      | 4 (1)                | 4        | 27      | 1                                         | r9             |
+   | fx surface         | 29      | 15    | 0      | 12 (2)               | 0        | 0       | 2 (1 restored departure)                  | –              |
+   | fx surface-victory | 51      | 30    | 0      | 19 (11)              | 0        | 0       | 2 (1 restored departure)                  | –              |
+   | fx underworld      | 42      | 15    | 0      | 13 (4)               | 3        | 10      | 1                                         | r28            |
+   | fx underworld-1010 | 30      | 17    | 0      | 9 (4)                | 1        | 2       | 1                                         | r26            |
+   | fx underworld-live | 42      | –     | –      | –                    | –        | –       | all (no entry saves)                      | –              |
+   | **Total**          | 507     | 146   | 0      | 86 (31)              | 58       | 108     | 109                                       |                |
+
+   Over the 414 rooms with entry saves on an importable route: 35% exact,
+   21% guessed, 14% mismatch, 26% carried, 4% unchecked (10 last rooms, 4
+   unreached, 2 restored departures; was 11%). The 30 Hub stays and repeated
+   rooms now compared introduce no difference, so the introduced families are
+   unchanged from step 0. Seven rooms, all Shops or a Story room, mismatched
+   when first reached and were accepted after the walk's closing action-order
+   pass. Import time is unchanged (8–13 s per run).
+
 3. **One bounded search.** Replace the four solvers with one per-room search
    over the remaining unknowns, pinned by markers (trait timestamps, upgrade
    names, use counts) and narrowed by compared facts; equivalent outcomes take
@@ -101,8 +140,8 @@ reproduces is reported with its nearest miss and the plan stops there.
 ## Open
 
 - Dream runs: the post-death hub save renames the room to
-  `NameErasedForDreamRun`, failing the record build (raw p3-932 …10530).
-  Found (DeathLoopLogic `KillHero` Dream branch): the ending room and its
+  `NameErasedForDreamRun`; the recorder now reads the original names and
+  `DreamCleared`, so the record builds (raw p3-932 …10530). Found (DeathLoopLogic `KillHero` Dream branch): the ending room and its
   encounter are renamed, the originals kept as `OriginalName` /
   `OriginalRoomSetName` / `Encounter.OriginalName`; `BiomesReached`,
   `BossHealthBarRecord`, `EncounterClearStats`, `EncountersCompletedCache`,
