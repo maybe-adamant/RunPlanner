@@ -568,11 +568,24 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   rewards, encounters and waves, boon screens, purchases, and feature uses are
   saved or inferable, read from the entry save, PostReward save, and departure
   record of each room plus the first and last `_Temp`.
-- Facts marked lost stay unauthored and surface as findings, except where the
-  project owner decided otherwise:
-  - an unpicked ship-wheel Boon takes the first god the wheel admits,
-    unreported, since the god leaves no trace;
+- The import walks the plan room by room and judges each room at the next
+  room's entry save (below). A question the record answers takes the record's
+  value where the engine admits it. One it does not answer, or whose recorded
+  value the engine refuses, takes the first engine-legal answer whose room the
+  next entry save accepts: each candidate is authored on a probe, with the
+  room's later questions answered from the record until that save is reached,
+  at most 32 candidates per search (a capped search is reported). Other
+  accepted answers that leave another run state are reported as alternatives.
+  Without an accepted answer, or without a next entry save to judge it (the
+  last room, a record without entry saves), the question stays open and the
+  plan stops before it. Choices that leave no trace in the run state take the
+  first legal value silently. The owner decided these lost facts instead:
+  - an unpicked ship-wheel Boon takes the first god the wheel admits for the
+    type the solve accepted, unreported;
   - a collected Fields optional reward takes the first free optional point;
+  - the Anomaly-displaced G room is the first the engine admits there: the
+    game never creates it, and every replaceable room shares one incoming
+    reward;
   - aspect and keepsake levels are assumed to be maximum, although the save
     records the equipped rarity.
 - A Fig Leaf skip is imported exactly from `SpawnsSkipped`. A record without
@@ -594,11 +607,13 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   the result of the screen it followed (its own children keyed to the extra
   pick's time). Several qualifying values
   take the first the engine admits, an assumption. A child the record does not
-  answer, or whose recorded value the engine refuses, takes Draft's first
-  eligible value and is reported, so no such child stops the import; one an
-  earlier change makes stale is answered again the same way. Black Night's
-  disabled vows and Boon Boon Boon's replayed boon, nested children included,
-  are not in the record and always take that fallback.
+  answer, or whose recorded value the engine refuses, stays open and is
+  answered by acceptance: every value its engine domain allows, nested picks
+  included, is a candidate. One an earlier change makes stale is answered
+  again the same way. Black Night's disabled vows are not in the record; Boon
+  Boon Boon's replayed boon is not saved either, but it is acquired with its
+  pick, so its candidates are the rows the room acquired at the pick's time,
+  at their recorded rarity.
 - Worry Free's roll is the next entry save's max-health gain over its room
   less the plan's gain there with the minimum roll, kept where the plan then
   holds the saved max health; any other gain is refused and keeps the minimum
@@ -622,8 +637,11 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   A bought blind box's god is not saved either; it takes the room's first boon
   screen its purchases leave unexplained, so the refill is the god after it
   (run 1011 `N_PreBoss01`: the box opened Hera, the refill Zeus). The refill
-  is reported as an assumption; an unbought refill leaves no use and takes the
-  first eligible item, reported as not in the record.
+  is reported as an assumption; an unbought refill leaves no use and its item
+  is answered by acceptance. A stock boon whose god the save does not name is
+  the god the next entry save accepts; none stops the plan. A derived pickup's
+  payload (a Shrine delivery, a box's hidden god) with several reward types,
+  or a god no room record names, is answered the same way.
 - A Hermes Shrine Travel Deal refill is imported exactly from its rushed slot,
   with its delayed purchase.
 - A batch's boon doors, the Hub board included, are authored one door per
@@ -676,7 +694,10 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   store and declaration order, on the first owner in native order the engine
   accepts. Every placement removing the same rewards leaves the same stores,
   so a placement that reproduces the saved stores is one assumption for the
-  room; otherwise each press is reported. In a ship room the unpicked offers
+  room; otherwise each press is reported. Several multisets the stores admit
+  are each placed and judged at the next entry save: the first accepted is
+  kept (an assumption when another accepted one leaves another exit state),
+  and without one the presses stay unplaced. In a ship room the unpicked offers
   and the presses are solved jointly: the presses take what the solved offers
   leave of the room's unknown draws. A press on a picked offer loses the same
   rewards as one on the unpicked offer of its wheel, so it is imported as that
@@ -698,15 +719,17 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   plan's wheel stores across the room match the saved ones. Fits are grouped
   by the ship's exit state (every store's counts, reward priorities, the god
   pool and the rerolls left). The first fit in canonical order (setup order,
-  then the store's declared type order) is authored; when every fit shares
-  one exit state nothing is reported, otherwise each offer whose value
-  differs is reported as not in the record with the other groups' values as
-  alternatives. When nothing fits the provisional values stay, each reported
-  as not in the record, and each wheel store's loss is reported as a
-  mismatch. Unpicked offers of a room whose
-  window never closes (the last room, one past a stop, a record without entry
-  saves) keep their provisional values and are reported as not in the record,
-  as are those of wheels whose side is unknown.
+  then the store's declared type order) the next entry save accepts is
+  authored; when every accepted fit shares one exit state nothing is
+  reported, otherwise each offer whose value differs is reported as not in
+  the record with the other groups' values as alternatives. The provisional
+  values cannot be withdrawn, so when no fit is accepted, no draws explain the
+  saved stores, or the window never closes (the last room, one past a stop, a
+  record without entry saves), each wheel store's loss is reported as a
+  mismatch where known and the plan stops at the ship room. Unpicked offers
+  of wheels whose side is unknown stay open. A picked offer whose god the
+  save does not name takes the one god the room's screens or uses name, else
+  the god the next entry save accepts.
 - A ship room whose two-offer wheels used both sides first authors the
   canonical split, the first wheels in setup order taking the Left uses. The
   solve then also tries every other split consistent with the Left and Right
@@ -717,11 +740,19 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   recorded Artificer and Time Piece conversions and the pickups a picked
   trait drops are authored after the split is chosen: each split's simulation
   applies the conversions to its own picks before the stores compare, and the
-  conversions' draws count as known in the arithmetic. When the window never
-  closes or nothing fits, each wheel's canonical side is reported the same
-  way, and the conversions act on the canonical picks; a window still open
-  when the walk ends releases the trait pickups and Sea Star duplicates
-  waiting on it onto the canonical picks.
+  conversions' draws count as known in the arithmetic. When nothing fits,
+  each wheel's canonical side is reported the same way before the plan stops;
+  a window still open when the walk ends, with no unpicked offer, releases
+  the trait pickups and Sea Star duplicates waiting on it onto the canonical
+  picks.
+- An entered Fields room's recorded cages take the first slot order the plan
+  can draw: the record keeps opening order, and slots are draw order, drawn
+  when the source prepares the room. When the orders do not all enter the
+  room with one state, as after a refill, the order is judged at the room's
+  entry save once the room is entered; other accepted orders are reported,
+  and none accepted stops the plan.
+- A Pool listed trait the engine refuses leaves its slot open; a recorded
+  sale from that slot stops the plan.
 - A hidden return door's placeholder and reward are pinned exactly from the
   return door's `ExitDoorRooms` and `OfferedRewards`.
 - A batch's doors are paired with the source room's exits as the engine's
@@ -750,7 +781,10 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
     `ZeusCastBoon`; the relaunch mid-room was coincidental.
 - An imported plan is checked against each room's entry save, which leaving
   the previous room writes: the plan's `beforeRoomExit` of that room holds the
-  same moment. The checked state is held traits (rarity, and level as
+  same moment. The check is the walk's acceptance test: a room is accepted
+  when its next entry save introduces no difference (one an earlier compared
+  save already held unchanged is carried, not introduced), judged as the walk
+  first reaches that save and again on the final plan. The checked state is held traits (rarity, and level as
   `StackNum`), the slotted keepsake, reward store counts, Denial bans,
   Artificer and Time Piece uses, Well purchases, Chaos curses' remaining uses
   and blessings, invested Path of Stars nodes, Forfeit and elements; each
@@ -763,5 +797,9 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   declared for another route, so store names with such an entry are not
   compared. `Secrets` is not compared: every Chaos gate a room creates draws
   its `TrialUpgrade` (`RoomLogic.lua:4858`), taken or not, and the store
-  refills itself when empty (`RewardLogic.lua:140`). The first room and rooms left from a revisited occurrence are not
-  checked.
+  refills itself when empty (`RewardLogic.lua:140`). A Hub stay and a
+  main room's repeated visits compare at the engine's Hub departure snapshots,
+  a main room's first visit at its own exit; a restored room's later
+  departure captures no state and stays unchecked, as do elements where the
+  entered room publishes no entry state (a Hub stay, a restored room, a Ship
+  room).

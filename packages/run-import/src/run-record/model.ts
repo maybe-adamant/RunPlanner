@@ -148,7 +148,7 @@ export interface RunRecordRoom {
 
 /**
  * Run state an entry save holds. A record carries it on every room or on none;
- * a zero counter or empty list is absent.
+ * a zero counter or empty list is absent unless its field says zero is kept.
  */
 export interface RunRecordRoomEntry {
   /**
