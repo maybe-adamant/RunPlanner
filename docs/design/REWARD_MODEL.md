@@ -371,6 +371,14 @@ entries. The fallback is an ordinary `RoomRewardHealDrop` offer for
 acquisition, Run State and peer duplicate blocking. An offer other than the
 fallback on an exhausted bag reports `rewardBagSupportEmpty`.
 
+A roll that the game makes but never spawns is a bag-only draw: it removes
+the canonical entry of the one reward type its binding's store can yield at
+that state, with the same refills, and has no offer payload, source, offer
+history or acquisition. Only the Fresh File opening makes one
+([Fresh File Rules](../biomes/FRESH_FILE_RULES.md#f)); a state at which more
+than one type could be drawn is a contract failure, since the planner has no
+authored choice to pick between them.
+
 The reward audit's [refill
 proof](../audits/rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#refill-reachability-proof)
 establishes that a mature-save offer at generation always finds an eligible

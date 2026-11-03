@@ -121,7 +121,8 @@ export interface RouteDeclaration {
 /**
  * A mature save supplies authored equipment and progression. A brand-new
  * profile's first attempt starts with the aspectless Staff, no keepsake,
- * Arcana, Fear or starting reward, from one fixed opening.
+ * Arcana or Fear, from one fixed opening that rolls the run-start reward
+ * without spawning it.
  */
 export type RouteInitialProfileDeclaration =
   | { readonly kind: 'matureSave' }
@@ -129,6 +130,11 @@ export type RouteInitialProfileDeclaration =
       readonly kind: 'freshFile';
       readonly fixedWeaponKey: string;
       readonly openingRoomGameName: string;
+      /**
+       * The opening draws the run-start reward's type from its counted store
+       * and records that store on entry, but nothing is offered or acquired.
+       */
+      readonly runStartReward: 'unspawnedRoll';
     };
 
 /** The one declaration-owned reward domain offered before a route chooses an entry room. */

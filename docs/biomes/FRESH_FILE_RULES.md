@@ -44,12 +44,20 @@ and the
   reward type and its `ErisCursePickup` producer lifecycle. Normalization
   requires an Intro room, a declared route, a rarityless curse, and a
   payload-free gift the producer supports.
-- A fresh profile's first entry has no run-start reward.
+- The `FreshFile` profile declares that its opening only rolls the run-start
+  reward: the first entry draws the roll's type from the run-start store and
+  records that store on entry, but offers and acquires nothing.
 
 ## F
 
 A brand-new profile starts directly in `F_Opening01` with `OpeningEmpty`, no
 reward and no Arcana, keepsake or aspect; the other openings are unreachable.
+Creating the opening still rolls its reward from RunProgress under the opening
+bans, and on a fresh profile only a Boon is eligible there, so the roll always
+removes one Boon entry; `OpeningEmpty` never spawns it, so no god is offered or
+acquired. The opening counts as a RunProgress room for the Meta rewards ratio,
+which makes its own doors roll MetaProgress (`F_Combat01`'s forced store still
+gives its Apollo boon RunProgress).
 `F_Combat01` is the forced second room and resolves the fixed four-wave
 `FIntroFight`, which does not count encounter depth, so later F encounter
 depths are one lower than after `GeneratedF`. Its reward is the native

@@ -6,6 +6,7 @@ import {
   applyOfferProjection,
   consumeCountedOffer,
   countedStoreExhausted,
+  drawSoleEligibleRewardType,
   oldestSupportedRewardPriority,
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
@@ -186,6 +187,38 @@ function offerPayloadValid({ catalog, reward }: OfferProcessingContext): boolean
     rewardType !== undefined &&
     isPayloadLocallyValid(catalog.rewards, rewardType, reward.offer.payload)
   );
+}
+
+/**
+ * Draws a roll that is never offered or acquired: the sole reward type the
+ * binding's store can yield loses its canonical entry, with the same refills
+ * as any counted draw. No offer history, priority or source is involved.
+ */
+export function drawUnspawnedRewardRoll(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  roll: { readonly binding: CountedRewardBinding; readonly storeKey: string },
+  facts: RewardFactsFactory,
+): RewardBranchState | undefined {
+  const prepared = withBag(catalog, branch, roll.storeKey);
+  const store = catalog.rewards.stores.byKey[roll.storeKey];
+  if (prepared === undefined || store === undefined) return undefined;
+  const drawn = drawSoleEligibleRewardType(store, prepared.bag, facts(prepared.branch.state), {
+    ...(roll.binding.eligibleRewardTypes.length === 0
+      ? {}
+      : { eligibleRewardTypes: new Set(roll.binding.eligibleRewardTypes) }),
+    ...(roll.binding.ineligibleRewardTypes.length === 0
+      ? {}
+      : { ineligibleRewardTypes: new Set(roll.binding.ineligibleRewardTypes) }),
+  });
+  if (drawn === undefined) return undefined;
+  return Object.freeze({
+    ...prepared.branch,
+    state: Object.freeze({
+      ...prepared.branch.state,
+      bags: freezeRecord({ ...prepared.branch.state.bags, [roll.storeKey]: drawn.bag }),
+    }),
+  });
 }
 
 /** The offer gate that rejected the reached state, in gate order. */

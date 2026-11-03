@@ -120,7 +120,8 @@ const freshF: readonly {
   readonly storeKey: 'RunProgress' | 'MetaProgress';
   readonly targets: readonly (readonly [string, ResolvedRewardOffer | null])[];
 }[] = [
-  { storeKey: 'RunProgress', targets: [['F_Combat01', boon('ApolloUpgrade')]] },
+  // The opening's unspawned RunProgress roll counts, so its doors roll MetaProgress.
+  { storeKey: 'MetaProgress', targets: [['F_Combat01', boon('ApolloUpgrade')]] },
   {
     storeKey: 'MetaProgress',
     targets: [['F_Combat02', { rewardType: 'MetaCardPointsCommonDrop' }]],
@@ -128,22 +129,16 @@ const freshF: readonly {
   {
     storeKey: 'RunProgress',
     targets: [
-      ['F_Combat03', { rewardType: 'RoomMoneyDrop' }],
+      ['F_Combat09', { rewardType: 'RoomMoneyDrop' }],
       ['F_Combat04', { rewardType: 'MaxManaDrop' }],
     ],
   },
+  { storeKey: 'RunProgress', targets: [['F_Combat07', boon('ApolloUpgrade')]] },
   {
-    storeKey: 'RunProgress',
+    storeKey: 'MetaProgress',
     targets: [
-      ['F_Combat07', boon('ApolloUpgrade')],
-      ['F_Combat06', boon('PoseidonUpgrade')],
-    ],
-  },
-  {
-    storeKey: 'RunProgress',
-    targets: [
-      ['F_Combat19', { rewardType: 'MaxHealthDrop' }],
-      ['F_Combat08', { rewardType: 'MaxManaDrop' }],
+      ['F_Combat19', { rewardType: 'MetaCardPointsCommonDrop' }],
+      ['F_Combat08', { rewardType: 'MetaCurrencyDrop' }],
     ],
   },
   {
@@ -175,10 +170,10 @@ const freshF: readonly {
     ],
   },
   {
-    storeKey: 'MetaProgress',
+    storeKey: 'RunProgress',
     targets: [
-      ['F_Combat17', { rewardType: 'MetaCardPointsCommonDrop' }],
-      ['F_Combat18', { rewardType: 'MetaCurrencyDrop' }],
+      ['F_Combat17', { rewardType: 'MaxManaDrop' }],
+      ['F_Combat18', { rewardType: 'MaxHealthDrop' }],
     ],
   },
 ];
@@ -326,7 +321,8 @@ export function createFreshFileFirstSequence(projectId = 'fresh-first-sequence')
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceBatchRewardStore',
     rewardStore: createBatchRewardStoreAddress(biome, decision.source),
-    storeKey: 'RunProgress',
+    // F_Combat01's ForcedRewardStore still resolves its reward from RunProgress.
+    storeKey: 'MetaProgress',
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',
@@ -603,6 +599,7 @@ function freshFileRouteFrontierStart(): ProjectDocument {
       reward.levelResolutionsByAcquisitionRole = {
         self: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null },
       };
+    else delete reward.levelResolutionsByAcquisitionRole;
   }
   // Fresh gods and resource tiers; every trait offer is re-authored below.
   const legal = JSON.parse(

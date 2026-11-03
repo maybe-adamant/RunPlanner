@@ -10,6 +10,7 @@ import {
   consumeCountedOffer,
   countedStoreExhausted,
   createRewardBagState,
+  drawSoleEligibleRewardType,
   insertExactPriorityIntoBag,
   oldestSupportedRewardPriority,
   createRewardHistoryState,
@@ -521,6 +522,34 @@ describe('counted reward bags', () => {
     expect(fallback?.remainingEntryCounts).toEqual(runProgress.entries.map(() => 2));
     expect(countedStoreExhausted(runProgress, empty, spellUsed, onlySpell)).toBe(true);
     expect(countedStoreExhausted(runProgress, empty, spellUsed)).toBe(false);
+  });
+
+  it('draws a type-only roll only when one reward type is eligible', () => {
+    const initial = createRewardBagState(runProgress, 'Underworld');
+    const drawn = drawSoleEligibleRewardType(runProgress, initial, facts(), {
+      eligibleRewardTypes: new Set(['Boon']),
+    });
+    expect(drawn?.rewardType).toBe('Boon');
+    expect(drawn?.bag.remainingEntryCounts).toEqual([
+      ...initial.remainingEntryCounts.slice(0, -1),
+      0,
+    ]);
+    expect(
+      drawSoleEligibleRewardType(runProgress, initial, facts(), {
+        eligibleRewardTypes: new Set(['Boon', 'MaxHealthDrop']),
+      }),
+    ).toBeUndefined();
+  });
+
+  it('refills an exhausted bag before a type-only roll, as any counted draw does', () => {
+    const empty = { remainingEntryCounts: runProgress.entries.map(() => 0) };
+    const onlyBoon = { eligibleRewardTypes: new Set(['Boon']) };
+    const drawn = drawSoleEligibleRewardType(runProgress, empty, facts(), onlyBoon);
+    expect(drawn?.rewardType).toBe('Boon');
+    expect(drawn?.bag.remainingEntryCounts).toEqual([
+      ...runProgress.entries.slice(0, -1).map(() => 1),
+      0,
+    ]);
   });
 });
 

@@ -94,6 +94,9 @@ export const routes = [
       kind: 'freshFile',
       fixedWeaponKey: 'WeaponStaffSwing',
       openingRoomGameName: 'F_Opening01',
+      // CreateRoom still rolls the opening's reward from RunProgress under
+      // OpeningRoomBans (RunLogic.lua:618-622); OpeningEmpty never spawns it.
+      runStartReward: 'unspawnedRoll',
     },
   },
 ] as const satisfies readonly RouteDeclaration[];

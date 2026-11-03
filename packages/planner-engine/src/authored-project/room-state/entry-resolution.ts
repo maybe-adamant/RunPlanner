@@ -1,7 +1,11 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
-import type { RewardProducerBinding } from '../../reward-kernel/bindings';
+import type { CountedRewardBinding, RewardProducerBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRoutePosition } from '../route-context';
-import { routeBindsRunStartReward, routeRoomDeclaration } from '../route-profile';
+import {
+  routeBindsRunStartReward,
+  routeInitialProfile,
+  routeRoomDeclaration,
+} from '../route-profile';
 
 /**
  * Resolves the room a route position realizes: the route's overlay, then its
@@ -42,11 +46,20 @@ export interface ResolvedEntryRoom {
   readonly incomingRewardStoreKey?: string;
   /** The resolved run-start offer contributes only when the entry declaration participates. */
   readonly enteredRewardStoreKey?: string;
+  /** A fresh profile's opening draws the run-start reward's type and spawns nothing. */
+  readonly unspawnedRunStartRoll?: UnspawnedRewardRoll;
+}
+
+/** A counted draw that removes one reward type from its store with no offer or acquisition. */
+export interface UnspawnedRewardRoll {
+  readonly binding: CountedRewardBinding;
+  readonly storeKey: string;
 }
 
 /**
- * The route's first active topology entry binds the one route-owned reward;
- * all other entries retain their rewardless room declarations.
+ * The route's first active topology entry binds the one route-owned reward, or
+ * on a fresh profile only rolls it; all other entries retain their rewardless
+ * room declarations.
  */
 export function resolveEntryRoom(
   catalog: Catalog,
@@ -56,6 +69,27 @@ export function resolveEntryRoom(
 ): ResolvedEntryRoom {
   const contextualDeclaration = resolveEntryDeclaration(declaration, routePosition);
   const runStartReward = routeBindsRunStartReward(catalog, routePosition.routeKey);
+  const binding = catalog.runStartReward.incomingReward;
+  const storeKey = binding.storeKeys[0];
+  if (binding.storeKeys.length !== 1 || storeKey === undefined)
+    throw new Error('run-start reward must declare one counted reward store');
+  const entersStore = contextualDeclaration.enteredRewardStoreHistory.kind === 'resolvedOffer';
+  if (
+    entry &&
+    routePosition.isFirst &&
+    routeInitialProfile(catalog, routePosition.routeKey).kind === 'freshFile'
+  )
+    return Object.freeze({
+      declaration: contextualDeclaration,
+      runStartReward: false,
+      incomingRewardBinding: contextualDeclaration.incomingReward,
+      lifecycleProfileKey:
+        contextualDeclaration.encounterEnvelopeKey === 'EmptyEncounter'
+          ? 'RewardlessRoom'
+          : 'RewardlessCombatRoom',
+      ...(entersStore ? { enteredRewardStoreKey: storeKey } : {}),
+      unspawnedRunStartRoll: Object.freeze({ binding, storeKey }),
+    });
   if (!entry || !routePosition.isFirst || !runStartReward)
     return Object.freeze({
       declaration:
@@ -76,9 +110,6 @@ export function resolveEntryRoom(
           }
         : {}),
     });
-  const binding = catalog.runStartReward.incomingReward;
-  if (binding.storeKeys.length !== 1)
-    throw new Error('run-start reward must declare one counted reward store');
   return Object.freeze({
     declaration: contextualDeclaration,
     runStartReward: true,
@@ -87,10 +118,7 @@ export function resolveEntryRoom(
       contextualDeclaration.encounterEnvelopeKey === 'EmptyEncounter'
         ? 'OpeningRewardNoEncounterRoom'
         : 'OpeningRewardRoom',
-    ...(binding.storeKeys[0] === undefined ? {} : { incomingRewardStoreKey: binding.storeKeys[0] }),
-    ...(contextualDeclaration.enteredRewardStoreHistory.kind !== 'resolvedOffer' ||
-    binding.storeKeys[0] === undefined
-      ? {}
-      : { enteredRewardStoreKey: binding.storeKeys[0] }),
+    incomingRewardStoreKey: storeKey,
+    ...(entersStore ? { enteredRewardStoreKey: storeKey } : {}),
   });
 }
