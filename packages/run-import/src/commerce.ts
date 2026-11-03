@@ -567,8 +567,9 @@ function shrineDeliveryRewardTypes(
 /**
  * The givers of the host's recorded screens no answer has taken yet, in the
  * order of their first such screen, less the hidden gods its other pickups
- * already opened on and whose screens are still to be answered: two boxes in
- * one room open on two screens' gods.
+ * already opened on and whose screens are still to be answered (two boxes in
+ * one room open on two screens' gods), and less the screens its bought boons
+ * of a named god still need.
  */
 function unclaimedScreenGivers(
   context: RunImportContext,
@@ -576,10 +577,24 @@ function unclaimedScreenGivers(
   visits: readonly number[],
 ): ReadonlyMap<string, number> {
   const counts = new Map<string, number>();
-  for (const roomIndex of visits)
-    for (const [position, screen] of context.record.rooms[roomIndex]!.traitScreens.entries())
-      if (!context.used.has(`screen:${roomIndex}:${position}`))
-        counts.set(screen.giver, (counts.get(screen.giver) ?? 0) + 1);
+  const answered = new Map<string, number>();
+  const bought = new Map<string, number>();
+  for (const roomIndex of visits) {
+    const room = context.record.rooms[roomIndex]!;
+    for (const [position, screen] of room.traitScreens.entries()) {
+      const tally = context.used.has(`screen:${roomIndex}:${position}`) ? answered : counts;
+      tally.set(screen.giver, (tally.get(screen.giver) ?? 0) + 1);
+    }
+    if (room.store?.kind !== 'worldShop') continue;
+    for (const purchase of room.store.purchases ?? []) {
+      const god = room.store.stock.find((option) => option.slot === purchase.slot)?.lootName;
+      if (god !== undefined) bought.set(god, (bought.get(god) ?? 0) + 1);
+    }
+  }
+  // A bought boon whose screen is not answered yet takes one of its god's.
+  for (const [god, count] of bought)
+    if (counts.has(god))
+      counts.set(god, counts.get(god)! - Math.max(0, count - (answered.get(god) ?? 0)));
   const hostId = occurrenceIdOf(entry);
   const host =
     hostId === undefined
@@ -805,24 +820,25 @@ function importShopPurchases(
   }
 }
 
-/** Each giver's earliest stamped screen pick in a room: an acquired trait, or the one a level-up raised. */
-function giverStamps(room: RunRecordRoom): ReadonlyMap<string, number> {
-  const stamps = new Map<string, number>();
+/** Each giver's stamped screen picks in a room, earliest first: an acquired trait, or the one a level-up raised. */
+function giverStamps(room: RunRecordRoom): ReadonlyMap<string, readonly number[]> {
+  const stamps = new Map<string, number[]>();
   for (const screen of room.traitScreens) {
     const chosen = screen.options.find((option) => option.chosen)?.name;
     const time = [...room.traits.acquired, ...room.traits.upgraded].find(
       (trait) => trait.name === chosen,
     )?.worldTime;
-    if (time !== undefined && time < (stamps.get(screen.giver) ?? Infinity))
-      stamps.set(screen.giver, time);
+    if (time !== undefined) stamps.set(screen.giver, [...(stamps.get(screen.giver) ?? []), time]);
   }
+  for (const times of stamps.values()) times.sort((left, right) => left - right);
   return stamps;
 }
 
 /**
  * The stamp of each bought Shop item, by slot key: its giver's earliest
- * stamp, and for a blind box the earliest stamp of a giver no other purchase
- * names (its god's screen). Undefined for an item no screen stamps.
+ * stamp, and for a blind box the earliest stamp the named purchases leave,
+ * each taking one of its giver's screens (its god's screen). Undefined for
+ * an item no screen stamps.
  */
 function purchaseStamps(
   context: RunImportContext,
@@ -854,13 +870,17 @@ function purchaseStamps(
           hidden: resolvesByAcquisition(context, state.reward.offer),
         };
   };
-  const named = new Set(slotKeys.map((slotKey) => bought(slotKey)?.name));
+  const named = new Map<string, number>();
+  for (const slotKey of slotKeys) {
+    const name = bought(slotKey)?.name;
+    if (name !== undefined) named.set(name, (named.get(name) ?? 0) + 1);
+  }
   const hidden = Math.min(
-    ...[...stamps].flatMap(([giver, time]) => (named.has(giver) ? [] : [time])),
+    ...[...stamps].flatMap(([giver, times]) => times.slice(named.get(giver) ?? 0)),
   );
   return (slotKey) => {
     const item = bought(slotKey);
-    const stamp = item?.name === undefined ? undefined : stamps.get(item.name);
+    const stamp = item?.name === undefined ? undefined : stamps.get(item.name)?.[0];
     return stamp ?? (item?.hidden === true && Number.isFinite(hidden) ? hidden : undefined);
   };
 }

@@ -423,8 +423,18 @@ reproduces is reported with its nearest miss and the plan stops there.
    links as any PostBoss does. Witnesses: the cleared run (p3-…10530, Q P O
    H) is now a capture fixture (`dream`); its partial first biome stands in
    for the abandoned run. Raw p3-…10294 (G only): complete 6/4/0/0,
-   1 unchecked (last room). Raw p3-…10530: stopped at r8 Q_PreBoss01 (8
-   exact, 32 unchecked), an importer gap of the blind box (below).
+   1 unchecked (last room). Raw p3-…10530 stopped at r8 Q_PreBoss01 (8
+   exact, 32 unchecked) on a blind box (I, not Dream-specific): the Shop
+   sold two Hera boons, one Aphrodite boon and the box, with two screens
+   each. The box opened on the earliest unclaimed screen's god (Hera),
+   leaving the second Hera purchase without a screen, and kept its slot
+   position first, so the Aphrodite pick it took held a Special the Hera
+   screen's Common HeraSpecialBoon then had to replace at Rare. A box now
+   leaves the screens its room's named boon purchases still need, and its
+   stamp is the earliest screen those purchases leave. Raw p3-…10530 →
+   complete 20/19/0/0, 1 unchecked (last room); no other corpus room moved.
+   PostBoss ordinals and the Chaos room inside P import with no Dream
+   special case.
 
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.

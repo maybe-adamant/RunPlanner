@@ -26,8 +26,8 @@ const BASELINE = {
   'surface-victory': { rooms: 51, settled: 30, mismatch: 0, differing: 0, unchecked: 2 },
   underworld: { rooms: 42, settled: 23, mismatch: 0, differing: 0, unchecked: 1 },
   'underworld-1010': { rooms: 30, settled: 17, mismatch: 0, differing: 0, unchecked: 1 },
-  // A cleared Dream run (Q, P, O, H); the plan stops at Q's Preboss Shop.
-  dream: { rooms: 40, settled: 8, mismatch: 0, differing: 0, unchecked: 32 },
+  // A cleared Dream run (Q, P, O, H).
+  dream: { rooms: 40, settled: 20, mismatch: 0, differing: 0, unchecked: 1 },
   // The live recording carries no entry saves.
   'underworld-live': { rooms: 42, settled: 0, mismatch: 0, differing: 0, unchecked: 42 },
 } as const;
