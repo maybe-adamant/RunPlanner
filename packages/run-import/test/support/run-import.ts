@@ -54,8 +54,8 @@ export function grouped(report: RunImportReport) {
   return counts;
 }
 
-/** The occurrence an address names, found through its nested owners. */
-function occurrenceOf(value: unknown): string | undefined {
+/** The occurrence an address or command names, found through its nested owners. */
+export function occurrenceOf(value: unknown): string | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
   const record = value as Record<string, unknown>;
   for (const field of ['occurrenceId', 'sourceOccurrenceId'])

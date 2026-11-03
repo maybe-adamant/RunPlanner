@@ -15,7 +15,7 @@ import {
 } from '@run-planner/engine/simulation';
 import type { RunRecord, RunRecordHeldTrait } from './run-record/model';
 import type { RecordOccurrences } from './occurrences';
-import type { RunImportArea, RunImportReportEntry } from './report';
+import type { RunImportArea, RunImportMismatch, RunImportReportEntry } from './report';
 
 /** A room's entry save with the record's deltas folded in. */
 export interface RecordedEntryState {
@@ -407,18 +407,33 @@ export function entrySnapshot(
     : undefined;
 }
 
+/** Every run-state value one compared entry save and the plan disagree on. */
+export interface EntryComparison {
+  /** The entered record room whose entry save is compared. */
+  readonly roomIndex: number;
+  /** The entered room's visit ordinal of its occurrence. */
+  readonly visit: number;
+  readonly differences: readonly EntryDifference[];
+}
+
+export interface EntryDifference extends RunImportMismatch {
+  readonly area: RunImportArea;
+  /** What stays the same while the difference persists. */
+  readonly persists: string;
+}
+
 /**
  * Compares each record room's entry save with the plan's simulated state at
  * the same moment, the previous room's `beforeRoomExit`, through `throughRoom`.
  * A room whose checkpoint the evaluation did not reach is not compared.
  */
-export function compareImportToRecord(
+export function compareEntrySaves(
   catalog: Catalog,
   record: RunRecord,
   occurrences: RecordOccurrences,
   assembly: ProjectEvaluationAssembly,
   throughRoom: number,
-): readonly RunImportReportEntry[] {
+): readonly EntryComparison[] {
   const states = recordedEntryStates(record);
   if (states.length === 0) return [];
   const routeKey = assembly.project.route.routeKey;
@@ -432,9 +447,7 @@ export function compareImportToRecord(
   );
   const snapshot = (occurrence: RecordOccurrence, kind: 'roomEntered' | 'beforeRoomExit') =>
     occurrenceSnapshot(assembly, occurrence, kind);
-  const entries: RunImportReportEntry[] = [];
-  // A difference that persists is reported where it begins and again where it changes.
-  const previous = new Map<string, string>();
+  const comparisons: EntryComparison[] = [];
   for (const { roomIndex, visit, left, entered } of entryCheckpoints(
     record,
     occurrences,
@@ -442,7 +455,7 @@ export function compareImportToRecord(
   )) {
     const exit = snapshot(left, 'beforeRoomExit');
     if (exit === undefined) continue;
-    const found = compareEntry(
+    const differences = compareEntry(
       catalog,
       record,
       routeKey,
@@ -450,15 +463,37 @@ export function compareImportToRecord(
       exit,
       entered === undefined ? undefined : snapshot(entered, 'roomEntered'),
       rarifySources,
-    );
-    const current = new Map(
-      found.map((entry) => [
-        `${entry.area} ${entry.field}`,
-        entry.persists ?? `${entry.expected} ${entry.actual}`,
-      ]),
-    );
-    for (const { area, field, expected, actual } of found)
-      if (previous.get(`${area} ${field}`) !== current.get(`${area} ${field}`))
+    ).map(({ persists, ...difference }) => ({
+      ...difference,
+      persists: persists ?? `${difference.expected} ${difference.actual}`,
+    }));
+    comparisons.push({ roomIndex, visit, differences });
+  }
+  return comparisons;
+}
+
+/**
+ * The entry saves' differences as report entries: a difference that persists
+ * is reported where it begins and again where it changes.
+ */
+export function compareImportToRecord(
+  catalog: Catalog,
+  record: RunRecord,
+  occurrences: RecordOccurrences,
+  assembly: ProjectEvaluationAssembly,
+  throughRoom: number,
+): readonly RunImportReportEntry[] {
+  const entries: RunImportReportEntry[] = [];
+  const previous = new Map<string, string>();
+  for (const { roomIndex, visit, differences } of compareEntrySaves(
+    catalog,
+    record,
+    occurrences,
+    assembly,
+    throughRoom,
+  )) {
+    for (const { area, field, expected, actual, persists } of differences)
+      if (previous.get(`${area} ${field}`) !== persists)
         entries.push({
           area,
           reason: 'mismatch',
@@ -466,7 +501,7 @@ export function compareImportToRecord(
           mismatch: { field, expected, actual },
         });
     previous.clear();
-    for (const [key, value] of current) previous.set(key, value);
+    for (const { area, field, persists } of differences) previous.set(`${area} ${field}`, persists);
   }
   return entries;
 }
