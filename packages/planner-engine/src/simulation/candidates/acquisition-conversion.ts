@@ -13,18 +13,17 @@ export interface AcquisitionConversionCandidateQuery {
 export interface EvaluatedAcquisitionConversionCandidate {
   readonly kind: 'acquisitionConversion';
   readonly result: {
-    /** True only when every reached branch can convert this exact role. */
+    /** Whether the reached state can convert this exact role. */
     readonly timePieceSupported: boolean;
     /** Declaration plus concrete free/paid provenance, independent of charge/Fated. */
     readonly timePieceConvertible: boolean;
     readonly artificerSupported: boolean;
     readonly artificerConvertible: boolean;
-    /** True only when every reached branch can author the Sea Star result. */
+    /** Whether the reached state can author the Sea Star result. */
     readonly seaStarSupported: boolean;
     readonly artificerReplacementAddress?: import('../../authored-project/addresses').AcquisitionEntryAddress;
     readonly artificerReplacementRewardTypes?: readonly string[];
     readonly artificerReplacementOptions?: readonly import('../../authored-project/model').AuthoredRewardState[];
-    readonly branchCount: number;
     readonly unsupportedEvidence: readonly import('../model').FindingEvidence[];
   };
 }
@@ -37,8 +36,16 @@ export function evaluateAcquisitionConversionCandidate(
   query: AcquisitionConversionCandidateQuery,
 ): CandidateContextUnavailable | EvaluatedAcquisitionConversionCandidate {
   const capability = artifacts?.at(query.acquisition);
+  const timePiece = capability?.timePieceAssessment;
+  const artificer = capability?.artificerAssessment;
+  const seaStar = capability?.seaStarAssessment;
   // A role realized only by an entry-fixed Forfeit has no reached pickup to convert.
-  if (capability === undefined || capability.timePieceAssessments.length === 0)
+  if (
+    capability === undefined ||
+    timePiece === undefined ||
+    artificer === undefined ||
+    seaStar === undefined
+  )
     return unavailableForBiome(
       evaluation,
       query.acquisition.routeKey,
@@ -49,31 +56,17 @@ export function evaluateAcquisitionConversionCandidate(
   return Object.freeze({
     kind: 'acquisitionConversion',
     result: Object.freeze({
-      timePieceSupported:
-        capability.timePieceAssessments.length > 0 &&
-        capability.timePieceAssessments.every((entry) => entry.supported),
+      timePieceSupported: timePiece.supported,
       timePieceConvertible:
-        capability.timePieceAssessments.length > 0 &&
-        capability.timePieceAssessments.every(
-          (entry) =>
-            entry.evidence.goldConversionEligible === true &&
-            entry.evidence.blocksGoldConversion !== true &&
-            entry.evidence.instanceProvenance === 'free',
-        ),
-      artificerSupported:
-        capability.artificerAssessments.length > 0 &&
-        capability.artificerAssessments.every((entry) => entry.supported),
+        timePiece.evidence.goldConversionEligible === true &&
+        timePiece.evidence.blocksGoldConversion !== true &&
+        timePiece.evidence.instanceProvenance === 'free',
+      artificerSupported: artificer.supported,
       artificerConvertible:
-        capability.artificerAssessments.length > 0 &&
-        capability.artificerAssessments.every(
-          (entry) =>
-            entry.evidence.artificerConversionEligible === true &&
-            entry.evidence.blocksArtificerConversion !== true &&
-            entry.evidence.instanceProvenance === 'free',
-        ),
-      seaStarSupported:
-        capability.seaStarAssessments.length > 0 &&
-        capability.seaStarAssessments.every((entry) => entry.supported),
+        artificer.evidence.artificerConversionEligible === true &&
+        artificer.evidence.blocksArtificerConversion !== true &&
+        artificer.evidence.instanceProvenance === 'free',
+      seaStarSupported: seaStar.supported,
       ...(capability.artificerReplacementAddress === undefined
         ? {}
         : { artificerReplacementAddress: capability.artificerReplacementAddress }),
@@ -83,13 +76,8 @@ export function evaluateAcquisitionConversionCandidate(
       ...(capability.artificerReplacementOptions === undefined
         ? {}
         : { artificerReplacementOptions: capability.artificerReplacementOptions }),
-      branchCount: capability.timePieceAssessments.length,
       unsupportedEvidence: Object.freeze(
-        [
-          ...capability.timePieceAssessments,
-          ...capability.artificerAssessments,
-          ...capability.seaStarAssessments,
-        ]
+        [timePiece, artificer, seaStar]
           .filter((entry) => !entry.supported)
           .map((entry) => entry.evidence),
       ),

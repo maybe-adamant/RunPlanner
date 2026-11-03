@@ -50,7 +50,7 @@ export interface AnvilCandidateCapability {
     removedTraitKey: string | null,
     priorAddedTraitKeys: readonly string[],
   ) => readonly string[];
-  /** Settlement's assessment of a result at this frontier; legal only where every recorded frontier accepts it. */
+  /** Settlement's assessment of a result at the role's reached state. */
   readonly assess: (result: AuthoredAnvilResult) => AnvilResultAssessment;
 }
 
@@ -237,97 +237,42 @@ export function assessAnvilResult(
 /** Adapts the existing acquisition frontier into the three sequential Anvil pickers. */
 export function createAnvilCandidateCapability(
   catalog: Catalog,
-  entries: readonly AnvilAcquisitionFrontier[],
+  frontier: AnvilAcquisitionFrontier,
 ): AnvilCandidateCapability | undefined {
-  const frontiers = entries
-    .filter((entry) => {
-      const pickupEffect = pickupEffectForOffer(catalog.rewards, entry.source.offer);
-      // A converted pickup is never collected, so its Anvil result does not apply.
-      const disposition =
-        entry.source.dispositionByAcquisitionRole?.[entry.address.acquisitionRole]?.kind ??
-        'normal';
-      return (
-        pickupEffect?.role === entry.address.acquisitionRole &&
-        pickupEffect.effect.kind === 'anvilOfFates' &&
-        disposition === 'normal'
-      );
-    })
-    .flatMap((entry) => {
-      const branch = entry.beforeRole;
-      return branch === undefined
-        ? []
-        : [
-            Object.freeze({
-              state: branch.state,
-              source: entry.source.traitContext ?? Object.freeze({}),
-              temporaryHammerTraitKeys: new Set(
-                branch.state.keepsakes.experimentalHammers
-                  .filter((hammer) => hammer.active)
-                  .map((hammer) => hammer.traitKey),
-              ),
-            }),
-          ];
-    });
-  if (frontiers.length === 0) return undefined;
-  const intersect = <Key>(domains: readonly (readonly Key[])[]): readonly Key[] =>
-    Object.freeze(
-      (domains[0] ?? []).filter((traitKey) => domains.every((domain) => domain.includes(traitKey))),
-    );
-  const removedTraitKeys = intersect<string | null>(
-    frontiers.map(({ state, temporaryHammerTraitKeys }) => {
-      const removable = anvilHammerCandidates(
-        catalog,
-        state.traitHistory,
-        temporaryHammerTraitKeys,
-      );
-      return removable.length === 0 ? [null] : removable;
-    }),
+  const pickupEffect = pickupEffectForOffer(catalog.rewards, frontier.source.offer);
+  // A converted pickup is never collected, so its Anvil result does not apply.
+  const disposition =
+    frontier.source.dispositionByAcquisitionRole?.[frontier.address.acquisitionRole]?.kind ??
+    'normal';
+  const branch = frontier.beforeRole;
+  if (
+    branch === undefined ||
+    pickupEffect?.role !== frontier.address.acquisitionRole ||
+    pickupEffect.effect.kind !== 'anvilOfFates' ||
+    disposition !== 'normal'
+  )
+    return undefined;
+  const { state } = branch;
+  const source = frontier.source.traitContext ?? Object.freeze({});
+  const temporaryHammerTraitKeys = new Set(
+    state.keepsakes.experimentalHammers
+      .filter((hammer) => hammer.active)
+      .map((hammer) => hammer.traitKey),
   );
-  const addedTraitKeysFor = (
-    removedTraitKey: string | null,
-    priorAddedTraitKeys: readonly string[],
-  ) =>
-    intersect(
-      frontiers.map(({ state, source, temporaryHammerTraitKeys }) =>
-        anvilAdditionCandidates(
-          catalog,
-          state,
-          source,
-          temporaryHammerTraitKeys,
-          removedTraitKey,
-          priorAddedTraitKeys,
-        ),
-      ),
-    );
-  const assess = (result: AuthoredAnvilResult): AnvilResultAssessment => {
-    const assessments = frontiers.map(({ state, source, temporaryHammerTraitKeys }) =>
-      assessAnvilResult(catalog, state, result, source, temporaryHammerTraitKeys),
-    );
-    const [first] = assessments;
-    const agreed = assessments.every(
-      (assessment) =>
-        assessment.issues.length === first?.issues.length &&
-        assessment.issues.every((issue, index) => issue.key === first.issues[index]!.key),
-    );
-    return Object.freeze({
-      legal: assessments.every((assessment) => assessment.legal),
-      // Agreeing frontiers keep settlement's exact list; divergent ones publish each issue once.
-      issues:
-        agreed && first !== undefined
-          ? first.issues
-          : Object.freeze([
-              ...new Map(
-                assessments.flatMap((assessment) =>
-                  assessment.issues.map((issue) => [issue.key, issue] as const),
-                ),
-              ).values(),
-            ]),
-    });
-  };
+  const removable = anvilHammerCandidates(catalog, state.traitHistory, temporaryHammerTraitKeys);
   return Object.freeze({
-    removedTraitKeys,
-    addedTraitKeysFor,
-    assess,
+    removedTraitKeys: removable.length === 0 ? Object.freeze([null]) : removable,
+    addedTraitKeysFor: (removedTraitKey: string | null, priorAddedTraitKeys: readonly string[]) =>
+      anvilAdditionCandidates(
+        catalog,
+        state,
+        source,
+        temporaryHammerTraitKeys,
+        removedTraitKey,
+        priorAddedTraitKeys,
+      ),
+    assess: (result: AuthoredAnvilResult) =>
+      assessAnvilResult(catalog, state, result, source, temporaryHammerTraitKeys),
   });
 }
 

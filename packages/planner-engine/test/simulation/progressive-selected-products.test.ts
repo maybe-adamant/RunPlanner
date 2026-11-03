@@ -1325,7 +1325,7 @@ describe('progressive selected and blocked products', () => {
     const capability = candidateArtifactsForProjectEvaluationAssembly(assembly)
       .biomeAt(goldenHBiome)
       ?.acquisitionConversions.at(createAcquisitionRoleAddress(cage2, 'source'));
-    expect(capability?.timePieceAssessments).toHaveLength(1);
+    expect(capability?.timePieceAssessment).toBeDefined();
     expect(capability?.realizedAcquisition).toMatchObject({
       acquisition: { kind: 'consumable', gameName: 'RoomRewardConsolationPrize' },
     });

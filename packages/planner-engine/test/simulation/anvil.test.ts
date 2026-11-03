@@ -103,24 +103,21 @@ function branchWithoutHammers() {
   )[0]!;
 }
 
-function anvilCapabilityFor(...branches: readonly ReturnType<typeof branchWithHammerFrontier>[]) {
+function anvilCapabilityFor(branch: ReturnType<typeof branchWithHammerFrontier>) {
   const biome = createBiomeAddress('Surface', 'Q');
   const occurrence = createOccurrenceAddress(biome, createOccurrenceId('anvil-candidates'));
   const site = createAcquisitionSiteAddress(occurrence, 'shopPurchase');
   const entry = createAcquisitionEntryAddress(site, 'anvil');
-  // Each state is one recorded frontier of the same role.
   return createAnvilCandidateCapability(
     catalog,
-    branches.map((branch) =>
-      Object.freeze({
-        address: createAcquisitionRoleAddress(entry, 'self'),
-        beforeRole: branch,
-        source: Object.freeze({
-          offer: Object.freeze({ rewardType: 'ChaosWeaponUpgrade' }),
-          traitContext: {},
-        }),
+    Object.freeze({
+      address: createAcquisitionRoleAddress(entry, 'self'),
+      beforeRole: branch,
+      source: Object.freeze({
+        offer: Object.freeze({ rewardType: 'ChaosWeaponUpgrade' }),
+        traitContext: {},
       }),
-    ),
+    }),
   );
 }
 
@@ -231,19 +228,15 @@ describe('Anvil of Fates acquisition settlement', () => {
     );
   });
 
-  it('removes nothing only where every recorded frontier has no permanent Hammer', () => {
+  it('removes nothing only where no permanent Hammer is equipped', () => {
     expect(anvilCapabilityFor(branchWithoutHammers())?.removedTraitKeys).toEqual([null]);
     expect(
-      anvilCapabilityFor(branchWithoutHammers(), branchWithHammerFrontier('StaffDoubleAttackTrait'))
-        ?.removedTraitKeys,
-    ).toEqual([]);
+      anvilCapabilityFor(branchWithHammerFrontier('StaffDoubleAttackTrait'))?.removedTraitKeys,
+    ).toEqual(['StaffDoubleAttackTrait']);
   });
 
-  it('rejects a draft any disagreeing frontier rejects', () => {
-    const capability = anvilCapabilityFor(
-      branchWithoutHammers(),
-      branchWithHammerFrontier('StaffDoubleAttackTrait'),
-    );
+  it('rejects removing a Hammer the reached state does not hold', () => {
+    const capability = anvilCapabilityFor(branchWithoutHammers());
     expect(
       capability?.assess({
         kind: 'anvilOfFates',

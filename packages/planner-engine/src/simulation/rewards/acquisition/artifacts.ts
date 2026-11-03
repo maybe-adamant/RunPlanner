@@ -132,19 +132,15 @@ export function createEmptyDerivedAcquisitionEntryCandidateArtifacts(): DerivedA
   return Object.freeze({ at: () => undefined, entriesAt: () => Object.freeze([]) });
 }
 
+interface AcquisitionConversionAssessment {
+  readonly supported: boolean;
+  readonly evidence: FindingEvidence;
+}
 export interface AcquisitionConversionCandidateCapability {
-  readonly timePieceAssessments: readonly {
-    readonly supported: boolean;
-    readonly evidence: FindingEvidence;
-  }[];
-  readonly artificerAssessments: readonly {
-    readonly supported: boolean;
-    readonly evidence: FindingEvidence;
-  }[];
-  readonly seaStarAssessments: readonly {
-    readonly supported: boolean;
-    readonly evidence: FindingEvidence;
-  }[];
+  /** Absent when the role has no reached pickup to convert. */
+  readonly timePieceAssessment?: AcquisitionConversionAssessment;
+  readonly artificerAssessment?: AcquisitionConversionAssessment;
+  readonly seaStarAssessment?: AcquisitionConversionAssessment;
   readonly realizedAcquisition?: ConcreteAcquisitionEvent;
   readonly artificerReplacementAddress?: AcquisitionEntryAddress;
   readonly artificerReplacementRewardTypes?: readonly string[];
@@ -176,7 +172,7 @@ export function createAcquisitionConversionCandidateArtifacts(
   catalog: Catalog,
   contexts: ReadonlyMap<
     string,
-    readonly {
+    {
       readonly address: AcquisitionRoleAddress;
       readonly beforeRole: RewardBranchState | undefined;
       readonly realizedAcquisition?: ConcreteAcquisitionEvent;
@@ -184,13 +180,13 @@ export function createAcquisitionConversionCandidateArtifacts(
       readonly lifecyclePoint: import('../../../reward-kernel').ProducerLifecyclePointKey;
       readonly historySequence: number;
       readonly blocksArtificerConversion?: true;
-      readonly artificerReplacementAddress: import('../../../authored-project/addresses').AcquisitionEntryAddress;
+      readonly artificerReplacementAddress: AcquisitionEntryAddress;
       readonly artificerReplacementCandidate?: {
         readonly rewardTypes: readonly string[];
       };
-      readonly artificerReplacementOptions?: readonly import('../../../authored-project/model').AuthoredRewardState[];
+      readonly artificerReplacementOptions?: readonly AuthoredRewardState[];
       readonly hexActivationContext?: HexActivationContext;
-    }[]
+    }
   >,
   fixedRealizations: ReadonlyMap<string, FixedAcquisitionRealization> = new Map(),
 ): AcquisitionConversionCandidateArtifacts {
@@ -201,138 +197,79 @@ export function createAcquisitionConversionCandidateArtifacts(
   const fixedCapability = (
     fixed: FixedAcquisitionRealization,
   ): AcquisitionConversionCandidateCapability =>
-    Object.freeze({
-      timePieceAssessments: Object.freeze([]),
-      artificerAssessments: Object.freeze([]),
-      seaStarAssessments: Object.freeze([]),
-      realizedAcquisition: fixed.realizedAcquisition,
-    });
+    Object.freeze({ realizedAcquisition: fixed.realizedAcquisition });
   const at = (address: AcquisitionRoleAddress) => {
     const key = semanticAddressKey(address);
-    const entries = privateContexts.get(key);
-    if (entries === undefined) {
+    const entry = privateContexts.get(key);
+    if (entry === undefined) {
       const fixed = privateFixedRealizations.get(key);
       return fixed === undefined ? undefined : fixedCapability(fixed);
     }
-    const anvil = createAnvilCandidateCapability(catalog, entries);
-    const hexActivation = createHexActivationCandidateCapability(
-      entries.flatMap((entry) =>
-        entry.hexActivationContext === undefined ? [] : [entry.hexActivationContext],
-      ),
-    );
+    const anvil = createAnvilCandidateCapability(catalog, entry);
+    const hexActivation =
+      entry.hexActivationContext === undefined
+        ? undefined
+        : createHexActivationCandidateCapability(entry.hexActivationContext);
+    const before = entry.beforeRole;
     return Object.freeze({
-      timePieceAssessments: Object.freeze(
-        entries.flatMap((entry) =>
-          entry.beforeRole === undefined
-            ? []
-            : [
-                assessTimePieceConversion(
-                  catalog,
-                  entry.beforeRole,
-                  entry.source,
-                  entry.address.acquisitionRole,
-                  entry.lifecyclePoint,
-                  entry.realizedAcquisition,
-                ),
-              ],
-        ),
-      ),
-      artificerAssessments: Object.freeze(
-        entries.flatMap((entry) =>
-          entry.beforeRole === undefined
-            ? []
-            : [
-                assessArtificerConversion(catalog, entry.beforeRole, entry.source, {
-                  role: entry.address.acquisitionRole,
-                  lifecyclePoint: entry.lifecyclePoint,
-                  ...(entry.blocksArtificerConversion === true
-                    ? { blocksArtificerConversion: true as const }
-                    : {}),
-                }),
-              ],
-        ),
-      ),
-      seaStarAssessments: Object.freeze(
-        entries.flatMap((entry) =>
-          entry.beforeRole === undefined
-            ? []
-            : [
-                assessSeaStarDuplication(
-                  catalog,
-                  entry.beforeRole,
-                  entry.source,
-                  {
-                    role: entry.address.acquisitionRole,
-                    lifecyclePoint: entry.lifecyclePoint,
-                  },
-                  entry.realizedAcquisition,
-                ),
-              ],
-        ),
-      ),
-      ...(() => {
-        const realized = entries.flatMap((entry) =>
-          entry.beforeRole === undefined ? [] : [entry.realizedAcquisition],
-        );
-        const first = realized[0];
-        return first !== undefined &&
-          realized.every(
-            (candidate) =>
-              candidate !== undefined && JSON.stringify(candidate) === JSON.stringify(first),
-          )
-          ? { realizedAcquisition: first }
-          : {};
-      })(),
-      ...(() => {
-        const domains = entries.map((entry) => entry.artificerReplacementOptions);
-        const first = domains[0];
-        return first !== undefined &&
-          domains.every((domain) => JSON.stringify(domain) === JSON.stringify(first))
-          ? { artificerReplacementOptions: first }
-          : {};
-      })(),
-      ...(() => {
-        const domains = entries.map((entry) => entry.artificerReplacementCandidate?.rewardTypes);
-        const first = domains[0];
-        return first !== undefined &&
-          domains.every((domain) => JSON.stringify(domain) === JSON.stringify(first))
-          ? { artificerReplacementRewardTypes: first }
-          : {};
-      })(),
-      ...(() => {
-        const addresses = entries.map((entry) => entry.artificerReplacementAddress);
-        const first = addresses[0];
-        return first !== undefined &&
-          addresses.every(
-            (candidate) => semanticAddressKey(candidate) === semanticAddressKey(first),
-          )
-          ? { artificerReplacementAddress: first }
-          : {};
-      })(),
+      ...(before === undefined
+        ? {}
+        : {
+            timePieceAssessment: assessTimePieceConversion(
+              catalog,
+              before,
+              entry.source,
+              entry.address.acquisitionRole,
+              entry.lifecyclePoint,
+              entry.realizedAcquisition,
+            ),
+            artificerAssessment: assessArtificerConversion(catalog, before, entry.source, {
+              role: entry.address.acquisitionRole,
+              lifecyclePoint: entry.lifecyclePoint,
+              ...(entry.blocksArtificerConversion === true
+                ? { blocksArtificerConversion: true as const }
+                : {}),
+            }),
+            seaStarAssessment: assessSeaStarDuplication(
+              catalog,
+              before,
+              entry.source,
+              {
+                role: entry.address.acquisitionRole,
+                lifecyclePoint: entry.lifecyclePoint,
+              },
+              entry.realizedAcquisition,
+            ),
+            ...(entry.realizedAcquisition === undefined
+              ? {}
+              : { realizedAcquisition: entry.realizedAcquisition }),
+          }),
+      ...(entry.artificerReplacementOptions === undefined
+        ? {}
+        : { artificerReplacementOptions: entry.artificerReplacementOptions }),
+      ...(entry.artificerReplacementCandidate === undefined
+        ? {}
+        : { artificerReplacementRewardTypes: entry.artificerReplacementCandidate.rewardTypes }),
+      artificerReplacementAddress: entry.artificerReplacementAddress,
       ...(anvil === undefined ? {} : { anvil }),
       ...(hexActivation === undefined ? {} : { hexActivation }),
     });
   };
   return Object.freeze({
     at,
-    atReplacement: (
-      replacement: import('../../../authored-project/addresses').AcquisitionEntryAddress,
-    ) => {
+    atReplacement: (replacement: AcquisitionEntryAddress) => {
       const replacementKey = semanticAddressKey(replacement);
-      for (const entries of privateContexts.values()) {
-        const source = entries.find(
-          (entry) => semanticAddressKey(entry.artificerReplacementAddress) === replacementKey,
-        );
-        if (source === undefined) continue;
-        const capability = at(source.address);
-        if (capability !== undefined) return Object.freeze({ address: source.address, capability });
+      for (const entry of privateContexts.values()) {
+        if (semanticAddressKey(entry.artificerReplacementAddress) !== replacementKey) continue;
+        const capability = at(entry.address);
+        if (capability !== undefined) return Object.freeze({ address: entry.address, capability });
       }
       return undefined;
     },
     positionAt: (address: AcquisitionRoleAddress) => {
       const key = semanticAddressKey(address);
       const sequence =
-        privateContexts.get(key)?.[0]?.historySequence ??
+        privateContexts.get(key)?.historySequence ??
         privateFixedRealizations.get(key)?.historySequence;
       return sequence === undefined
         ? undefined

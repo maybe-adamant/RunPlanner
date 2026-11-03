@@ -882,15 +882,15 @@ describe('The Artificer', () => {
     if (frontier === undefined) throw new Error('ordinary Red Onion frontier is missing');
     const candidates = createAcquisitionConversionCandidateArtifacts(
       catalog,
-      new Map([[semanticAddressKey(frontier.address), [frontier]]]),
+      new Map([[semanticAddressKey(frontier.address), frontier]]),
     );
 
     expect(candidates.at(frontier.address)).toMatchObject({
       realizedAcquisition: {
         acquisition: { kind: 'consumable', gameName: 'RoomRewardConsolationPrize' },
       },
-      timePieceAssessments: [{ supported: true }],
-      seaStarAssessments: [{ supported: true }],
+      timePieceAssessment: { supported: true },
+      seaStarAssessment: { supported: true },
     });
   });
 
@@ -902,15 +902,15 @@ describe('The Artificer', () => {
     if (frontier === undefined) throw new Error('Artificer Red Onion frontier is missing');
     const candidates = createAcquisitionConversionCandidateArtifacts(
       catalog,
-      new Map([[semanticAddressKey(frontier.address), [frontier]]]),
+      new Map([[semanticAddressKey(frontier.address), frontier]]),
     );
 
     expect(candidates.at(frontier.address)).toMatchObject({
       realizedAcquisition: {
         acquisition: { kind: 'consumable', gameName: 'RoomRewardConsolationPrize' },
       },
-      timePieceAssessments: [{ supported: true }],
-      seaStarAssessments: [{ supported: true }],
+      timePieceAssessment: { supported: true },
+      seaStarAssessment: { supported: true },
     });
   });
 

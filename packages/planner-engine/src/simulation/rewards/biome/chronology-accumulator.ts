@@ -249,7 +249,7 @@ export interface ChronologyAccumulation {
     string,
     readonly TraitOfferCandidateContext[]
   >;
-  readonly acquisitionConversionContexts: ReadonlyMap<string, readonly AcquisitionRoleFrontier[]>;
+  readonly acquisitionConversionContexts: ReadonlyMap<string, AcquisitionRoleFrontier>;
   readonly fixedAcquisitionRealizations: ReadonlyMap<string, FixedAcquisitionRealization>;
   readonly derivedAcquisitionEntryContexts: ReadonlyMap<string, DerivedAcquisitionEntryFrontier>;
   readonly timelineFacts: PlannerTimelineFacts;
@@ -345,7 +345,7 @@ function traitMutationAcquisitionContact(
 function traitMutationTimelineOwner(
   owner: SemanticAddress,
   acquisitionRole: string,
-  acquisitionFrontiers: ReadonlyMap<string, readonly AcquisitionRoleFrontier[]>,
+  acquisitionFrontiers: ReadonlyMap<string, AcquisitionRoleFrontier>,
 ): SemanticAddress {
   const contact = traitMutationAcquisitionContact(owner);
   const acquisitionOwner =
@@ -365,16 +365,7 @@ function traitMutationTimelineOwner(
       acquisitionOwner,
       contact?.acquisitionRole ?? acquisitionRole,
     );
-    const timelineOwners = new Map<string, SemanticAddress>();
-    for (const frontier of acquisitionFrontiers.get(semanticAddressKey(address)) ?? []) {
-      if (frontier.timelineOwner !== undefined)
-        timelineOwners.set(semanticAddressKey(frontier.timelineOwner), frontier.timelineOwner);
-    }
-    if (timelineOwners.size > 1)
-      throw new BiomeRewardSimulationContractError(
-        `trait mutation ${semanticAddressKey(owner)} maps to multiple active Room Actions`,
-      );
-    const timelineOwner = timelineOwners.values().next().value as SemanticAddress | undefined;
+    const timelineOwner = acquisitionFrontiers.get(semanticAddressKey(address))?.timelineOwner;
     if (timelineOwner !== undefined) return timelineOwner;
   }
   return owner.kind === 'fountainRarityOutcome' ? owner.action : owner;
@@ -397,7 +388,7 @@ export function createChronologyAccumulator(
   const producerFrontiers = new Map<string, RewardProducerFrontier>();
   const reachedTraitOfferCandidateContexts = new Map<string, TraitOfferCandidateContext[]>();
   const reachedTraitOfferCandidateFingerprints = new Map<string, Set<string>>();
-  const acquisitionConversionContexts = new Map<string, readonly AcquisitionRoleFrontier[]>();
+  const acquisitionConversionContexts = new Map<string, AcquisitionRoleFrontier>();
   const fixedAcquisitionRealizations = new Map<string, FixedAcquisitionRealization>();
   const generatedPickupPlacements = new Map<string, GeneratedPickupPlacement>();
   const derivedAcquisitionEntryContexts = new Map<string, DerivedAcquisitionEntryFrontier>();
@@ -501,10 +492,11 @@ export function createChronologyAccumulator(
   ): void {
     for (const frontier of frontiers ?? []) {
       const key = semanticAddressKey(frontier.address);
-      acquisitionConversionContexts.set(
-        key,
-        Object.freeze([...(acquisitionConversionContexts.get(key) ?? []), frontier]),
-      );
+      if (acquisitionConversionContexts.has(key))
+        throw new BiomeRewardSimulationContractError(
+          `acquisition role ${key} recorded a second reached frontier`,
+        );
+      acquisitionConversionContexts.set(key, frontier);
       recordTraitOfferCandidateContacts(frontier.traitOfferCandidateContacts);
       const replacement = frontier.artificerReplacementCandidate;
       const replacementKey = semanticAddressKey(frontier.artificerReplacementAddress);

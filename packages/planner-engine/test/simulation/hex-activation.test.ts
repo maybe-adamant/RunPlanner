@@ -92,21 +92,17 @@ describe('Hex activation legality', () => {
 });
 
 describe('Hex activation candidate capability', () => {
-  it('draws the board from the first branch and reports every branch a selection does not fit', () => {
-    const capability = createHexActivationCandidateCapability([
-      context('Lung', [], false, 2),
-      context('Lung', ['1:2'], false, 2),
-    ])!;
-    expect(capability).toMatchObject({ count: 2, investedNodeKeys: [] });
-    expect(capability.availableNodeKeys(['1:2'])).toEqual(['1:4', '2:2']);
+  it('draws the board from the reached state and reports what a selection does not fit', () => {
+    const capability = createHexActivationCandidateCapability(context('Lung', ['1:2'], false, 2));
+    expect(capability).toMatchObject({ count: 2, investedNodeKeys: ['1:2'] });
+    expect(capability.availableNodeKeys([])).toEqual(['1:4', '2:2']);
     expect(capability.assess(['1:2', '1:4'])).toEqual([
       { kind: 'alreadyInvested', nodeKey: '1:2' },
     ]);
-    expect(createHexActivationCandidateCapability([])).toBeUndefined();
   });
 
   it('offers no additions once the selection spends the screen, keeping it removable', () => {
-    const capability = createHexActivationCandidateCapability([context('Lung', [], false, 2)])!;
+    const capability = createHexActivationCandidateCapability(context('Lung', [], false, 2));
     expect(capability.availableNodeKeys(['1:2'])).toEqual(['1:4', '2:2']);
     expect(capability.availableNodeKeys(['1:2', '2:2'])).toEqual([]);
     // A saved selection over a shrunken budget is kept and reported, never trimmed.

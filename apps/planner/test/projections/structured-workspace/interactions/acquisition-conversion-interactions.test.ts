@@ -136,7 +136,6 @@ describe('acquisition-conversion-interactions', () => {
     expect(candidate.result).toMatchObject({
       timePieceSupported: false,
       timePieceConvertible: false,
-      branchCount: expect.any(Number),
     });
     expect(candidate.result.unsupportedEvidence).toEqual(
       expect.arrayContaining([
@@ -204,7 +203,6 @@ describe('acquisition-conversion-interactions', () => {
             artificerSupported: false,
             artificerConvertible: false,
             seaStarSupported: true,
-            branchCount: 1,
             unsupportedEvidence: Object.freeze([]),
           }),
         }),

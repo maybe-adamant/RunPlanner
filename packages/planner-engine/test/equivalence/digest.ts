@@ -226,6 +226,9 @@ function candidateBranchShape(value: unknown): unknown {
         };
         break;
       }
+      case 'acquisitionConversion':
+        next.result = { ...result, branchCount: 1 };
+        break;
       case 'transcendentEmbryoOutcome':
         next.result = { ...result, branchSupport: [result.selectedPossible] };
         break;

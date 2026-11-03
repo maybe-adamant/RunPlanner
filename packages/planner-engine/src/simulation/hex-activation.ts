@@ -137,7 +137,7 @@ export function validateHexActivation(
   return Object.freeze(violations);
 }
 
-/** The board's exact domain for one reached screen, drawn from the first reaching branch. */
+/** The board's exact domain for one reached screen at its reached state. */
 export interface HexActivationCandidateCapability {
   readonly spellTraitKey: string;
   readonly tree: AuthoredHexTreeConfiguration;
@@ -147,30 +147,29 @@ export interface HexActivationCandidateCapability {
   readonly godSentAdded: boolean;
   /** Nodes the selection can add next, in layout order; none once it spends the screen. */
   readonly availableNodeKeys: (selection: readonly string[]) => readonly string[];
-  /** The selection's violations in every reaching branch, without repeats. */
+  /** The selection's violations at the reached state, without repeats. */
   readonly assess: (selection: readonly string[]) => readonly HexActivationViolation[];
 }
 
 export function createHexActivationCandidateCapability(
-  contexts: readonly HexActivationContext[],
-): HexActivationCandidateCapability | undefined {
-  const first = contexts[0];
-  if (first === undefined) return undefined;
+  context: HexActivationContext,
+): HexActivationCandidateCapability {
   return Object.freeze({
-    spellTraitKey: first.spellTraitKey,
-    tree: first.tree,
-    layoutKey: first.layout.key,
-    count: first.count,
-    investedNodeKeys: first.investedNodeKeys,
-    godSentAdded: first.godSentAdded,
+    spellTraitKey: context.spellTraitKey,
+    tree: context.tree,
+    layoutKey: context.layout.key,
+    count: context.count,
+    investedNodeKeys: context.investedNodeKeys,
+    godSentAdded: context.godSentAdded,
     availableNodeKeys: (selection: readonly string[]) =>
-      selection.length >= first.count ? Object.freeze([]) : availableHexNodes(first, selection),
-    assess: (selection: readonly string[]) => {
-      const seen = new Map<string, HexActivationViolation>();
-      for (const context of contexts)
-        for (const violation of validateHexActivation(context, selection))
-          seen.set(JSON.stringify(violation), violation);
-      return Object.freeze([...seen.values()]);
-    },
+      selection.length >= context.count ? Object.freeze([]) : availableHexNodes(context, selection),
+    assess: (selection: readonly string[]) =>
+      Object.freeze([
+        ...new Map(
+          validateHexActivation(context, selection).map(
+            (violation) => [JSON.stringify(violation), violation] as const,
+          ),
+        ).values(),
+      ]),
   });
 }

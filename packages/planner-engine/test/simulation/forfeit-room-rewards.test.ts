@@ -291,9 +291,6 @@ describe('Vow of Forfeit Red Onion substitution', () => {
     const cage1Role = createAcquisitionRoleAddress(fieldsCage1, 'self');
     expect(acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, cage1Role)).toEqual(
       {
-        timePieceAssessments: [],
-        artificerAssessments: [],
-        seaStarAssessments: [],
         realizedAcquisition: {
           role: 'self',
           lifecyclePoint: 'roomRewardPickup',
@@ -443,9 +440,6 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       const blocked = blockedAtCombat(project);
       const fixed = acquisitionConversionCandidateForProjectEvaluationAssembly(blocked, role);
       expect(fixed).toEqual({
-        timePieceAssessments: [],
-        artificerAssessments: [],
-        seaStarAssessments: [],
         realizedAcquisition: {
           role: 'source',
           lifecyclePoint: 'roomRewardPickup',
@@ -464,7 +458,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       const settled = simulateProjectAssembly(catalog, project);
       expect(settled.evaluation.issue).toBeUndefined();
       const capability = acquisitionConversionCandidateForProjectEvaluationAssembly(settled, role);
-      expect(capability?.timePieceAssessments).toHaveLength(1);
+      expect(capability?.timePieceAssessment).toBeDefined();
       expect(capability?.realizedAcquisition).toEqual(fixed?.realizedAcquisition);
       expect(forfeitEvents(settled)).toHaveLength(1);
     });
