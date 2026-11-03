@@ -190,7 +190,14 @@ happen", never as alternative states carried forward or offered as a choice.
    `nativeDoorOrder`), and the equivalence baseline was re-recorded on the
    real single-state products without the shape adapters: validity unchanged
    everywhere, plans and candidates changed only by the Hub order.
-   Remaining: test support keeps `initializeTestRewardBranches`.
+   Then (2026-11-03, consumer lanes): Draft and run-import lanes pass
+   unchanged; the Draft corpus at the pre-merge commit matched its baseline,
+   and the re-recorded baseline differs only in Surface and Dream runs whose
+   first change is Ephyra's Hub board door rewards (native order). The raw-run
+   import measurement is unchanged. The planner's trait replacement reads the
+   offer's one assessment.
+   Remaining: test support keeps the list-returning
+   `initializeTestRewardBranches` (about 25 call sites transform the list).
 5. **Trait offer state inspector.** With one state per draw, the offer-state
    popover's "Possible state N" blocks collapse to one; simplify it.
    _Status: done._ The presentation carries one rarity state and the
