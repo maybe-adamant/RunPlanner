@@ -17,9 +17,9 @@ import {
   type SemanticFinding,
   type SettlementFault,
 } from '@run-planner/engine/simulation';
-import { createDraftIssueRepairer, type DraftIssueRepairer } from '@run-planner/draft';
 import type { RunRecord } from './run-record/model';
-import { answerNemesis, guessNemesisEvent } from './nemesis';
+import { answerNemesis } from './nemesis';
+import { answerByAcceptance } from './open-questions';
 import { occurrenceIdOf, RecordOccurrences } from './occurrences';
 import type {
   RunImportArea,
@@ -92,8 +92,8 @@ const enteredRoomCount = (assembly: ProjectEvaluationAssembly) =>
     0,
   );
 
-/** Guesses one question may take; one it keeps surviving cannot be settled. */
-const MAX_GUESSES_PER_ISSUE = 3;
+/** Choices one question may take; one it keeps surviving cannot be settled. */
+const MAX_CHOICES_PER_ISSUE = 3;
 
 /** What each area's answerer borrows from the import walk. */
 export interface RunImportContext {
@@ -121,6 +121,8 @@ export interface RunImportContext {
    * can be judged.
    */
   readonly settleQuestions: (owns: (occurrenceId: string) => boolean) => void;
+  /** Authors the optional record facts the route never asks for, as the walk does before each question. */
+  readonly sweep: () => void;
   /** Whether evaluation has entered the occurrence. */
   readonly entered: (occurrenceId: string) => boolean;
   /** Whether an entered occurrence changed, or was entered, since the previous sweep. */
@@ -150,9 +152,10 @@ export interface RunImportContext {
 
 /**
  * Imports an observed run as an ordinary plan. The walk follows the route's
- * assessment issue like Draft: each question is answered from the record and
- * validated by the engine; what the record cannot answer, or the engine
- * refuses, takes the first eligible candidate and is reported.
+ * assessment issue: each question is answered from the record and validated
+ * by the engine; what the record cannot answer, or the engine refuses, takes
+ * the engine-legal answer the room's next entry save accepts and is reported,
+ * and without one the plan stops before it.
  */
 export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunImport {
   const entries: RunImportReportEntry[] = [];
@@ -209,7 +212,9 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
   walk.reportUnusedScreens(stop);
   walk.reportUnreachedRerolls();
   entries.push(...unansweredMaxHealthRolls(walk.context));
-  const throughRoom = stop === undefined ? record.rooms.length : (stop.record?.roomIndex ?? 0);
+  // A stop past the record's rooms leaves every room judged where the plan reached it.
+  const throughRoom =
+    stop === undefined ? record.rooms.length : (stop.record?.roomIndex ?? record.rooms.length);
   entries.push(
     ...mismatchEntries(
       compareEntrySaves(catalog, record, walk.occurrences, walk.assembly, throughRoom),
@@ -221,7 +226,6 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
 export class RunImportWalk {
   private readonly authoring: AuthoringSession;
   private refusedAnswer = false;
-  private repairer: DraftIssueRepairer | undefined;
   private readonly retractions = new Map<
     string,
     { readonly undo: ProjectCommand; readonly entry: RunImportReportEntry }
@@ -252,6 +256,7 @@ export class RunImportWalk {
       transaction: (run) => this.transaction(run),
       probe: (run) => this.probe(run),
       settleQuestions: (owns) => this.settleQuestions(owns),
+      sweep: () => this.sweep(),
       entered: (occurrenceId) => this.enteredOccurrences().has(occurrenceId),
       pending: (occurrenceId) =>
         this.dirty.has(occurrenceId) && this.enteredOccurrences().has(occurrenceId),
@@ -409,6 +414,9 @@ export class RunImportWalk {
     const refusedAnswer = this.refusedAnswer;
     const used = new Set(this.context.used);
     const maxHealthRolls = new Map(this.context.maxHealthRolls);
+    const dirty = this.dirty;
+    const seen = new Map(this.seen);
+    const seenBindings = this.seenBindings;
     try {
       return this.authoring.probe(run);
     } finally {
@@ -420,6 +428,35 @@ export class RunImportWalk {
       for (const key of used) this.context.used.add(key);
       this.context.maxHealthRolls.clear();
       for (const [key, roll] of maxHealthRolls) this.context.maxHealthRolls.set(key, roll);
+      this.dirty = dirty;
+      this.seen.clear();
+      for (const [key, marker] of seen) this.seen.set(key, marker);
+      this.seenBindings = seenBindings;
+    }
+  }
+
+  /** Optional authorship the route never asks for, settled before the next question. */
+  private sweep(): void {
+    for (let before; before !== this.assembly;) {
+      before = this.assembly;
+      this.occurrences.bindEngineOccurrences(this.assembly.project);
+      this.markDirty();
+      // A bracket's rerolls rewrite its draws before the entered room's pickup is answered.
+      importRerolls(this.context);
+      importEncounters(this.context);
+      importDispositions(this.context);
+      importSideRoomVisits(this.context);
+      importPhantomExits(this.context);
+      importCommerce(this.context);
+      importFeatures(this.context);
+      importWheels(this.context);
+      importWheelConversions(this.context);
+      // A ship room's rerolls wait for its unpicked offers, so a closed window sweeps again.
+      if (solveWheelOffers(this.context)) before = undefined;
+      importFieldsRooms(this.context);
+      importFieldsConversions(this.context);
+      importResourcePlacements(this.context);
+      importMaxHealthRolls(this.context);
     }
   }
 
@@ -485,7 +522,10 @@ export class RunImportWalk {
    * plan holds none of their picks.
    */
   reportUnusedScreens(stop: RunImportStop | undefined): void {
-    const end = stop === undefined ? this.record.rooms.length : (stop.record?.roomIndex ?? 0);
+    const end =
+      stop === undefined
+        ? this.record.rooms.length
+        : (stop.record?.roomIndex ?? this.record.rooms.length);
     for (const [roomIndex, room] of this.record.rooms.slice(0, end).entries())
       for (const position of room.traitScreens.keys())
         if (!this.context.used.has(`screen:${roomIndex}:${position}`))
@@ -551,37 +591,16 @@ export class RunImportWalk {
 
   /**
    * Answers the route's issue until none remains. Each question, by code and
-   * owner, is answered from the record once and guessed a bounded number of
-   * times, so the walk is bounded by the plan's distinct questions.
+   * owner, is answered from the record once and chosen by acceptance a bounded
+   * number of times, so the walk is bounded by the plan's distinct questions.
    */
   run(): RunImportStop | undefined {
     const answered = new Set<string>();
     const refused = new Set<string>();
-    const guessCounts = new Map<string, number>();
+    const choiceCounts = new Map<string, number>();
     let ordered = false;
     for (;;) {
-      // Optional authorship the route never asks for settles before the next question.
-      for (let before; before !== this.assembly;) {
-        before = this.assembly;
-        this.occurrences.bindEngineOccurrences(this.assembly.project);
-        this.markDirty();
-        // A bracket's rerolls rewrite its draws before the entered room's pickup is answered.
-        importRerolls(this.context);
-        importEncounters(this.context);
-        importDispositions(this.context);
-        importSideRoomVisits(this.context);
-        importPhantomExits(this.context);
-        importCommerce(this.context);
-        importFeatures(this.context);
-        importWheels(this.context);
-        importWheelConversions(this.context);
-        // A ship room's rerolls wait for its unpicked offers, so a closed window sweeps again.
-        if (solveWheelOffers(this.context)) before = undefined;
-        importFieldsRooms(this.context);
-        importFieldsConversions(this.context);
-        importResourcePlacements(this.context);
-        importMaxHealthRolls(this.context);
-      }
+      this.sweep();
       this.acceptReachedRooms();
       const issue = this.assembly.evaluation.issue;
       // A ship window still open as the walk ends never closes; its waiting pickups are authored.
@@ -613,18 +632,25 @@ export class RunImportWalk {
         this.refusedAnswer = false;
         if (this.answer(reason)) continue;
         if (this.refusedAnswer) refused.add(key);
-      } else if (!guessCounts.has(key)) {
+      } else if (!choiceCounts.has(key)) {
         // The record's answer applied, but the question survived it.
         refused.add(key);
       }
-      const guessed = (guessCounts.get(key) ?? 0) + 1;
-      guessCounts.set(key, guessed);
+      const chosen = (choiceCounts.get(key) ?? 0) + 1;
+      choiceCounts.set(key, chosen);
       if (
-        guessed <= MAX_GUESSES_PER_ISSUE &&
-        this.guess(reason, refused.has(key) ? 'refused' : 'notInRecord')
+        chosen <= MAX_CHOICES_PER_ISSUE &&
+        this.chooseByAcceptance(reason, refused.has(key) ? 'refused' : 'notInRecord')
       )
         continue;
       if (releaseOpenWheelWindows(this.context)) continue;
+      // Rooms before the stop take their stamped action order too.
+      if (!ordered) {
+        ordered = true;
+        const before = this.assembly;
+        importRoomActionOrders(this.context);
+        if (this.assembly !== before) continue;
+      }
       const record = this.occurrences.locationOf(reason.origin);
       return {
         area: areaOfFinding(reason),
@@ -653,19 +679,25 @@ export class RunImportWalk {
     );
   }
 
-  private guess(reason: SemanticFinding, fallback: RunImportReason): boolean {
-    // One repairer serves the whole import; its occurrences are named apart from recorded ones.
-    this.repairer ??= createDraftIssueRepairer(this.catalog, this.authoring, {
-      occurrenceIdPrefix: 'guess',
-    });
-    const repair = this.repairer.repairIssue();
-    const commands = repair?.commands ?? guessNemesisEvent(this.context, reason);
-    if (commands === undefined) return false;
+  /**
+   * A question the record cannot answer takes the engine-legal answer its
+   * room's next entry save accepts; without one it stays open.
+   */
+  private chooseByAcceptance(reason: SemanticFinding, fallback: RunImportReason): boolean {
+    const answer = answerByAcceptance(this.context, reason);
+    if (answer === undefined) return false;
     const area = areaOfFinding(reason);
-    // Required actions take their native schedule when no trait timestamp orders them.
-    const why = area === 'roomActionOrder' ? 'assumption' : fallback;
-    for (const command of commands) this.report(area, why, reason.origin, command);
-    for (const fault of repair?.faults ?? []) this.reportFault(fault);
+    const record = this.occurrences.locationOf(reason.origin);
+    // Other accepted answers leave run states the record cannot tell apart.
+    for (const command of answer.commands)
+      this.entries.push({
+        area,
+        reason: fallback,
+        address: reason.origin,
+        applied: command,
+        ...(answer.alternatives.length === 0 ? {} : { alternatives: answer.alternatives }),
+        ...(record === undefined ? {} : { record }),
+      });
     return true;
   }
 }

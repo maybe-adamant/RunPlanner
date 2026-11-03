@@ -15,9 +15,19 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import type { RunImport } from '../../src/import';
 import type { RunImportReport, RunImportReportEntry } from '../../src/report';
 import { decodeRunRecord, type RunRecord } from '../../src/run-record';
 import { occurrenceSnapshot, storeCounts } from '../../src/conformance';
+
+/**
+ * The plan reaches the record's last room: complete, or stopped at a question
+ * of that room or past the record, which no later entry save can judge.
+ */
+export function expectReachesLastRoom(imported: RunImport): void {
+  if (imported.kind === 'complete' || imported.stop.record === undefined) return;
+  expect(imported.stop.record.roomIndex).toBe((imported.report.rooms?.length ?? 0) - 1);
+}
 
 export function fixture(name: string): RunRecord {
   return decodeRunRecord(
@@ -169,10 +179,16 @@ export function shipExitState(project: ProjectDocument, occurrenceId: string) {
   };
 }
 
-/** Rooms the imported plan enters, in order, read from the evaluated route history. */
-export function enteredRooms(project: ProjectDocument): readonly string[] {
+/**
+ * Rooms the imported plan enters, in order, read from the evaluated route
+ * history; the plan is valid, or `incomplete` when the import stopped.
+ */
+export function enteredRooms(
+  project: ProjectDocument,
+  status: 'valid' | 'incomplete' = 'valid',
+): readonly string[] {
   const evaluation = simulateProjectAssembly(catalog, project).evaluation;
-  expect(evaluation.status).toBe('valid');
+  expect(evaluation.status).toBe(status);
   const last = [...evaluation.route.biomes].reverse().find((biome) => 'history' in biome);
   if (last === undefined || !('history' in last)) throw new Error('no evaluated history');
   return last.history.ledgers.roomAppearances.map((appearance) => appearance.gameName);

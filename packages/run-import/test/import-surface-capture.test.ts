@@ -23,6 +23,7 @@ import {
   mismatchLines,
   enteredRooms,
   generatedCustomizations,
+  expectReachesLastRoom,
 } from './support/run-import';
 
 /** The reward types an occurrence's Artificer replacements hold. */
@@ -55,10 +56,10 @@ describe('run import of the Surface capture', () => {
     });
   });
 
-  it('completes as a valid plan entering every recorded room, Hub returns included', () => {
-    expect(imported.kind).toBe('complete');
-    // The run ended in O_Boss02; the plan completes its biome.
-    expect(enteredRooms(imported.project)).toEqual([
+  it('enters every recorded room, Hub returns included, and stops at the unseen Postboss Shrine', () => {
+    // The run ended in O_Boss02; no save shows the Postboss Shrine's stock, so the plan stops there.
+    expectReachesLastRoom(imported);
+    expect(enteredRooms(imported.project, 'incomplete')).toEqual([
       ...record.rooms.map((room) => room.name),
       'O_PostBoss01',
     ]);
@@ -312,51 +313,21 @@ describe('run import of the Surface capture', () => {
   });
 
   it.each([
-    ['the converted MetaProgress wheel first', [0, 1], 1, 2],
-    ['the RunProgress wheel first', [1, 0], 2, 1],
+    ['the converted MetaProgress wheel first', [0, 1]],
+    ['the RunProgress wheel first', [1, 0]],
   ])(
-    "settles O_Combat05's split with %s, its conversions on the authored picks",
-    (_name, order, metaPick, runPick) => {
+    "stops at O_Combat05's split with %s, whose picked Spell screen no record answers",
+    (_name, order) => {
+      // Neither side is saved, so the Time Piece waits for the wheel solve and the picked
+      // Spell asks its screen before the window closes; no save judges an answer there.
       const result = projectFromRunRecord(catalog, mixedCombat05(order));
-      expect(
-        result.report.entries
-          .filter((entry) => entry.area === 'wheel' && entry.record?.roomIndex === 25)
-          .map(describeEntry),
-      ).toEqual([]);
-      expect(mismatchLines(result.report)).toEqual(mismatchLines(imported.report));
-      const ship = occurrence(result.project, 'O-r25').state;
-      const wheels = ship.kind === 'shipCombat' ? ship.wheels : {};
-      const [meta, run] = order[0] === 0 ? ['wheel1', 'wheel2'] : ['wheel2', 'wheel1'];
-      // Left picks go to the first wheel in setup order; Artificer and Time Piece follow them.
-      expect(wheels[meta!]).toMatchObject({
-        storeKey: 'MetaProgress',
-        pickedOfferIndex: metaPick,
-        offers: {
-          [`offer${metaPick}`]: {
-            offer: { rewardType: 'MetaCardPointsCommonBigDrop' },
-            dispositionByAcquisitionRole: { self: { kind: 'artificer' } },
-          },
-          [`offer${3 - metaPick}`]: { offer: { rewardType: 'GiftDrop' } },
-        },
+      expect(result.kind).toBe('stopped');
+      expect(result.kind === 'stopped' && result.stop).toMatchObject({
+        area: 'traitOffer',
+        code: 'traitOfferMissing',
+        address: { owner: { kind: 'rewardWheelOffer', occurrenceId: 'O-r25' } },
+        record: { roomIndex: 25 },
       });
-      expect(wheels[run!]).toMatchObject({
-        storeKey: 'RunProgress',
-        pickedOfferIndex: runPick,
-        offers: {
-          [`offer${runPick}`]: {
-            offer: { rewardType: 'SpellDrop' },
-            dispositionByAcquisitionRole: { self: { kind: 'timePiece' } },
-          },
-          [`offer${3 - runPick}`]: { offer: { rewardType: 'MaxManaDrop' } },
-        },
-      });
-      // The next entry save accepts only the MaxHealthDrop replacement, so it is no assumption.
-      expect(
-        result.report.entries
-          .filter((entry) => entry.area === 'conversion' && entry.record?.roomIndex === 25)
-          .map(describeEntry),
-      ).toEqual([]);
-      expect(artificerReplacements(result.project, 'O-r25')).toEqual(['MaxHealthDrop']);
     },
   );
 
@@ -383,7 +354,8 @@ describe('run import of the Surface capture', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { menace: 14, roomActionOrder: 5 },
-      notInRecord: { menace: 17, shop: 8 },
+      notInRecord: { menace: 17 },
+      stopped: { shop: 1 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption menace r1 encounterPhase@N-r1:Encounter -> ReplaceEncounterCustomization(N-r1 generated)',

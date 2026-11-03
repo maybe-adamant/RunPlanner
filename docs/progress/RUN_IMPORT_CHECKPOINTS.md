@@ -319,6 +319,39 @@ reproduces is reported with its nearest miss and the plan stops there.
 4. **No manufactured outcomes.** Remove the two Draft guesses; run import no
    longer depends on Draft. An unreachable room ends the plan with its nearest
    miss.
+
+   **Result (2026-11-03).** The Draft repairer and the Nemesis guess are gone,
+   with run import's dependency on Draft (the repairer is deleted from Draft;
+   ESLint and the package boundary test forbid the edge). A question the
+   record does not answer takes, by `open-questions.ts`, the first
+   engine-legal answer whose room the next entry save accepts (each candidate
+   authored on a probe, the walk's sweep and the room's later questions
+   answered until that save is reached); other accepted answers are reported
+   as alternatives. Domains: a Shop slot's or refill's options, a Fields cage
+   roll, a batch store, a fountain, Steady Growth or random level-up target, a
+   Fields point, and Nemesis's family and interaction. Without an accepted
+   answer the question stays open and the plan stops there; rooms before a
+   stop still take their stamped action order, and a stop past the record
+   judges every recorded room.
+
+   Stops (raw and fixtures; bucket bounds unchanged, the fixtures' rooms move
+   only to unchecked where the record ends):
+   - Last room, no next save: raw 930 r40 (exit target), raw 1010 and fx
+     underworld-1010 r29 (Fields point). Buckets unchanged.
+   - Past the record: fx surface's O_PostBoss01 Shrine stock. Buckets
+     unchanged.
+   - No entry saves at all: fx underworld-live and record 1008 stop at r27
+     H_Combat07's unseen cage roll (its Unseen Sigil is not modelled either).
+     Every room was already unchecked; fixture tests lost I_MiniBoss02's pick,
+     the I Preboss pedestal and Steady Growth's second cycle (the Echo Pom
+     target keeps its witness by authoring the roll in the test).
+   - Raw 1012 r29: the untaken H_Bridge01 door's Boon cage took Apollo (first
+     god), which peer-conflicts with r29's recorded Apollo cage; no answer is
+     accepted (was a guessed Zeus cage, 1 mismatch + 12 carried; now 16
+     unchecked).
+     Raws 333, 334, 931, 933 a/b, 1010-1330 and 1013, and fx underworld and
+     surface-victory, still complete with the same buckets.
+
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.
 6. **Recorded room** (authored outcome replayed as canonical events) only for
@@ -360,6 +393,9 @@ reproduces is reported with its nearest miss and the plan stops there.
   only two: raw 1013 r48 Q_Combat09 (Elite, max Magick; the room compares
   exact because no compared fact moves) and the live capture / record 1008
   r27 H_Combat07 (Perfect Clear, max health; no entry saves).
+- Open questions stay strict (owner, 2026-11-03), records without entry saves
+  included: no canonical-first fallback. Revisit if unsolvable save states
+  appear.
 - Owner questions: where an unreachable room leaves the plan (stop, or keep a
   disconnected reference tail); whether equivalent choices are flagged per
   room; which save facts are deliberately outside the comparison set.

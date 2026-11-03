@@ -84,8 +84,8 @@ is a second composition entry point and constructs its own catalog.
 
 Cross-package consumers use declared package exports: Draft, the run import
 and the application import the engine only through its `package.json` entries,
-never deep paths, and the engine imports none of them. The run import uses
-Draft's issue repairer; Draft never imports the run import.
+never deep paths, and the engine imports none of them. Draft and the run
+import never import each other.
 [Engine Consumers](ENGINE_CONSUMERS.md#enforcement) owns the entry tiers and
 how ESLint and the package boundary test enforce them. Within the planner,
 cross-root imports use `@planner/*` for composition, persistence, projections,

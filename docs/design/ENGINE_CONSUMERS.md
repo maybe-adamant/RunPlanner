@@ -11,13 +11,13 @@ specialist authorities it routes.
 The package graph is one direction:
 
 ```text
-hades2-catalog → engine ← draft ← run-import ← apps/planner
+hades2-catalog → engine ← {draft, run-import} ← apps/planner
 ```
 
 | Consumer                             | Uses the engine to                                                                               |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------ |
 | `hades2-catalog`                     | Compile game declarations into the engine's catalog contract; it reads the contract entries only |
-| `@run-planner/draft`                 | Draft a random valid route ([Draft Mode](DRAFT_MODE.md)) and repair one issue for the run import |
+| `@run-planner/draft`                 | Draft a random valid route ([Draft Mode](DRAFT_MODE.md))                                         |
 | `@run-planner/run-import`            | Turn a recorded run into an authored project; it publishes the run record as its own entry       |
 | Planner application (`apps/planner`) | Compose, edit, display, save and publish projects ([Editor Model](EDITOR_MODEL.md))              |
 
@@ -126,16 +126,15 @@ An export exists for a consumer that needs it now.
   consumer would have to assemble.
 - Land the export in the same commit as the consumer that first imports it; an
   export-only commit is not a slice.
-- A consumer's own reusable product (the run record, Draft's issue repairer)
-  is published by that consumer's package, not by the engine.
+- A consumer's own reusable product (the run record) is published by that consumer's package, not by the engine.
 
 ## Enforcement
 
 - **ESLint** bans, by import specifier, for each consumer package's source
   and tests, planner application, platform and deep engine imports and the
-  catalog implementation in source (tests may construct a catalog). Draft
-  additionally may not import the run import, and the engine may import none
-  of its consumers.
+  catalog implementation in source (tests may construct a catalog). Draft and
+  the run import additionally may not import each other, and the engine may
+  import none of its consumers.
 - **The planner's package boundary architecture test**
   (`apps/planner/test/architecture/packageBoundaries.test.ts`) owns relative
   escapes and dependency direction: every engine specifier is a declared

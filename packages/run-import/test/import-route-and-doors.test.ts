@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { RunRecord } from '../src/run-record';
 import { projectFromRunRecord } from '../src/import';
-import { fixture, occurrence, reward } from './support/run-import';
+import { fixture, occurrence, reward, expectReachesLastRoom } from './support/run-import';
 
 describe('run import route support', () => {
   it('stops a Dream run before authoring anything', () => {
@@ -149,7 +149,7 @@ describe('run import door assignment', () => {
 
   it('authors Anomaly doors as displaced G targets switched to their recorded maps', () => {
     const imported = projectFromRunRecord(catalog, oceanusWithAnomalyDoors(true));
-    expect(imported.kind).toBe('complete');
+    expectReachesLastRoom(imported);
     const entered = occurrence(imported.project, 'G-r21');
     expect(entered.gameName).toBe('B_Combat06');
     expect(entered.state).toMatchObject({ kind: 'anomaly', success: true });

@@ -31,7 +31,8 @@ describe('run import of Fig Leaf skip marks in the live Underworld recording', (
 
   it('imports a marked Fig Leaf skip exactly and infers none beside it', () => {
     const imported = projectFromRunRecord(catalog, liveThroughH([16]));
-    expect(imported.kind).toBe('complete');
+    // No entry save judges H_Combat07's unseen cage roll, so the plan stops there, past H_Combat05.
+    expect(imported.kind === 'stopped' && imported.stop.record?.roomIndex).toBe(27);
     expect(occurrence(imported.project, 'G-r16').encounters.figLeafSkipByPhase).toEqual({
       Encounter: true,
     });

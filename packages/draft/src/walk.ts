@@ -148,8 +148,6 @@ export class DraftWalk {
   readonly appliedCommands: ProjectCommand[] = [];
   /** Settlement faults beside the commands this walk applied, in order. */
   readonly faults: SettlementFault[] = [];
-  /** Names the occurrences this walk creates, so walks over one project never collide. */
-  occurrenceIdPrefix = 'draft';
   private failureReason: string | undefined;
   /** The biome being walked. */
   private biomeIndex = 0;
@@ -361,18 +359,6 @@ export class DraftWalk {
     return true;
   }
 
-  /** Forgets the hooks and rewards this walk tried, so each may be tried again. */
-  forgetTried(): void {
-    this.hooked.clear();
-    this.authoredRewards.clear();
-  }
-
-  /** Repairs the route's current issue once, without choosing encounters; false when none applies. */
-  repairIssue(): boolean {
-    const reason = this.assembly.evaluation.issue?.reasons[0];
-    return reason !== undefined && this.repair(reason);
-  }
-
   private shuffle<T>(values: readonly T[]): T[] {
     return shuffleDraft(this.rng, values);
   }
@@ -397,7 +383,7 @@ export class DraftWalk {
 
   private occurrenceId(biomeKey: string): OccurrenceId {
     this.nextOccurrence += 1;
-    return createOccurrenceId(`${biomeKey}-${this.occurrenceIdPrefix}-${this.nextOccurrence}`);
+    return createOccurrenceId(`${biomeKey}-draft-${this.nextOccurrence}`);
   }
 
   /** A room as this route declares it, with its route overlay applied. */

@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createExitDecisionAddress,
   createTraitOfferAddress,
   type OccurrenceId,
 } from '@run-planner/engine/authored-project';
@@ -17,6 +18,31 @@ import { RunImportWalk } from '../src/import';
 import { fixture, describeEntry, occurrence, authoredOptions } from './support/run-import';
 
 describe('run import of selected-outcome children', () => {
+  /**
+   * The live recording imported past H_Combat07, whose cage roll no save shows: the test
+   * authors it as the Minimum, as the plan would need, and the walk continues from there.
+   */
+  function livePastUnseenRoll(record: RunRecord) {
+    const first = projectFromRunRecord(catalog, record);
+    const project = applyProjectCommand(first.project, catalog, {
+      kind: 'InitializeExitDecision',
+      decision: createExitDecisionAddress(createBiomeAddress(first.project.route.routeKey, 'H'), {
+        kind: 'occurrence',
+        occurrenceId: 'H-r27' as OccurrenceId,
+      }),
+      edit: { kind: 'fieldsCageOutcome', cageOutcome: 'min' },
+    });
+    const entries: RunImportReportEntry[] = [];
+    const walk = new RunImportWalk(
+      catalog,
+      record,
+      simulateProjectAssembly(catalog, project),
+      entries,
+    );
+    walk.run();
+    return { project: walk.assembly.project, entries };
+  }
+
   /** A record with one room's trait rows edited. */
   function withRoomTraits(
     record: RunRecord,
@@ -74,10 +100,9 @@ describe('run import of selected-outcome children', () => {
       ...traits,
       upgraded: [],
     }));
-    const imported = projectFromRunRecord(catalog, record);
-    expect(imported.kind).toBe('complete');
+    const imported = livePastUnseenRoll(record);
     expect(
-      imported.report.entries
+      imported.entries
         .filter((entry) => entry.area === 'traitOffer' && entry.record?.roomIndex === 28)
         .map(describeEntry),
     ).toEqual([
@@ -119,7 +144,7 @@ describe('run import of selected-outcome children', () => {
 
   it('answers a child an earlier change left unavailable from the record again', () => {
     const record = fixture('underworld-live');
-    const imported = projectFromRunRecord(catalog, record);
+    const imported = livePastUnseenRoll(record);
     const trait = createTraitOfferAddress(
       createEncounterPhaseAddress(
         createBiomeAddress(imported.project.route.routeKey, 'H'),

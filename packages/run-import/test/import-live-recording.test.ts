@@ -11,6 +11,7 @@ import {
   entryLines,
   mismatchLines,
   enteredRooms,
+  expectReachesLastRoom,
 } from './support/run-import';
 
 describe('run import of the live Underworld recording', () => {
@@ -20,17 +21,16 @@ describe('run import of the live Underworld recording', () => {
     imported = projectFromRunRecord(catalog, record);
   });
 
-  it('completes as a valid plan entering every recorded room, the Zagreus contract included', () => {
-    expect(imported.kind).toBe('complete');
-    expect(enteredRooms(imported.project)).toEqual(record.rooms.map((room) => room.name));
-  });
-
-  it("keeps I_MiniBoss02's logged pick above its acquired rarity with no rarify source held", () => {
-    // Logged Epic, acquired Rare: no hover explains the step.
-    expect(reward(imported.project, 'I-r36').traitOffersByAcquisitionRole['source']).toMatchObject({
-      options: [{}, { traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Epic' }, {}],
-      selectedOptionKey: 'option2',
+  it('enters every room through H_Combat07, the Zagreus contract included, and stops at its unseen cage roll', () => {
+    // The recording holds no entry saves, so no save can judge the cage roll H_Combat07's
+    // doors never show (its Unseen Sigil is not modelled either): the plan stops there.
+    expect(imported.kind === 'stopped' && imported.stop).toMatchObject({
+      code: 'batchStateMissing',
+      record: { roomIndex: 27 },
     });
+    expect(enteredRooms(imported.project, 'incomplete')).toEqual(
+      record.rooms.slice(0, 28).map((room) => room.name),
+    );
   });
 
   it('takes the Midshop Zagreus contract door as its additional exit, not an ordinary one', () => {
@@ -42,7 +42,7 @@ describe('run import of the live Underworld recording', () => {
     expect(occurrence(imported.project, 'G-r17-d561374').gameName).toBe('G_MiniBoss03');
   });
 
-  it("imports Gorgon's Athena, Echo's Pom target, Steady Growth and the Contract pedestal", () => {
+  it("imports Gorgon's Athena, Steady Growth and the Contract pedestal", () => {
     expect(
       occurrence(imported.project, 'F-r2').encounters.gorgonResultByPhase?.['Encounter'],
     ).toEqual({
@@ -52,27 +52,14 @@ describe('run import of the live Underworld recording', () => {
         selectedOptionKey: 'option1',
       },
     });
-    const echo = occurrence(imported.project, 'H-r28').encounters.traitOffersByPhase?.[
-      'Encounter'
-    ]?.['Story_Echo_01'];
-    expect(echo?.kind === 'traits' && echo.options[1]).toEqual({
-      traitKey: 'EchoDoubleLevelBoon',
-      echoPomTarget: 'HestiaCastBoon',
-    });
     expect(reward(imported.project, 'G-r22').traitOffersByAcquisitionRole['source']).toMatchObject({
-      steadyGrowthTargets: { 1: 'HermesCastDiscountBoon', 2: 'ApolloSprintBoon' },
+      // Its second cycle falls past the plan's stop at H_Combat07.
+      steadyGrowthTargets: { 1: 'HermesCastDiscountBoon' },
     });
-    // The pedestal stands in the Shop form and in the boon form alike.
-    for (const [occurrenceId, optionKey] of [
-      ['I-r40', 'StackUpgrade'],
-      ['G-r22', 'StackUpgradeBig'],
-    ] as const) {
-      const preboss = occurrence(imported.project, occurrenceId);
-      expect(preboss.infernalContractPedestal, occurrenceId).toMatchObject({ optionKey });
-      expect(preboss.roomActions.order, occurrenceId).toContainEqual({
-        kind: 'interactInfernalContractPedestal',
-      });
-    }
+    // The pedestal stands in the boon form of G's Preboss.
+    const preboss = occurrence(imported.project, 'G-r22');
+    expect(preboss.infernalContractPedestal).toMatchObject({ optionKey: 'StackUpgradeBig' });
+    expect(preboss.roomActions.order).toContainEqual({ kind: 'interactInfernalContractPedestal' });
     expect(occurrence(imported.project, 'G-r22').state.kind).toBe('freeReward');
   });
 
@@ -92,23 +79,16 @@ describe('run import of the live Underworld recording', () => {
 
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
-      assumption: {
-        conversion: 3,
-        encounter: 3,
-        traitOffer: 2,
-        reward: 1,
-        fields: 1,
-        roomActionOrder: 12,
-      },
-      notInRecord: { traitOffer: 1, fields: 2, shop: 3, route: 1 },
-      // H_PreBoss01's purchases are unknown; H_Combat07's Unseen Sigil is not modelled.
-      unsupportedArea: { traitOffer: 1, other: 1 },
+      assumption: { conversion: 3, encounter: 2, traitOffer: 1, reward: 1, roomActionOrder: 10 },
+      notInRecord: { traitOffer: 1 },
+      // H_Combat07's Unseen Sigil is not modelled.
+      unsupportedArea: { other: 1 },
+      stopped: { fields: 1 },
     });
-    // Fig Leaf, racked at F_PostBoss01, skipped one encounter in each of G, H and I: the record
+    // Fig Leaf, racked at F_PostBoss01, skipped one encounter in each of G and H: the record
     // predates the skip mark, so each is inferred from a rolled phase with no kills.
-    // F_Combat13, H_Combat05 and H_Bridge01 declare their native door order, so their batches carry
-    // no door-order assumption.
-    // H_PreBoss01's Shop stock was recorded as a Well, so its purchases are unknown.
+    // F_Combat13 and H_Combat05 declare their native door order, so their batches carry no
+    // door-order assumption.
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r1 acquisitionEntry@F-r1 -> ReplaceAcquisitionEntryOffer(F-r1 RoomMoneyDrop)',
       'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 MaxHealthDrop)',
@@ -117,9 +97,6 @@ describe('run import of the live Underworld recording', () => {
       'assumption encounter r16 encounterPhase@G-r16:Encounter -> ReplaceFigLeafSkip(G-r16)',
       'assumption reward r20 incomingReward@G-r20-d737226 -> ReplaceIncomingReward(G-r20-d737226 Devotion)',
       'assumption encounter r26 encounterPhase@H-r26:Cage02 -> ReplaceFigLeafSkip(H-r26)',
-      'assumption fields r28 localReward@H-r28-d564300:cage1',
-      'assumption traitOffer r30 traitOffer@H-r30:hiddenSource -> ReplaceTraitOffer(H-r30 PlantHealthBoon|ReserveManaHitShieldBoon|CastNovaBoon#option3)',
-      'assumption encounter r34 encounterPhase@I-r34:Encounter -> ReplaceFigLeafSkip(I-r34)',
       'assumption roomActionOrder r1 occurrence@F-r1',
       'assumption roomActionOrder r2 occurrence@F-r2',
       'assumption roomActionOrder r8 occurrence@F-r8',
@@ -130,8 +107,6 @@ describe('run import of the live Underworld recording', () => {
       'assumption roomActionOrder r24 occurrence@G-r22:postboss',
       'assumption roomActionOrder r26 occurrence@H-r26',
       'assumption roomActionOrder r27 occurrence@H-r27',
-      'assumption roomActionOrder r29 occurrence@H-r29',
-      'assumption roomActionOrder r32 occurrence@H-r30:postboss',
     ]);
   });
 });
@@ -143,9 +118,10 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
     imported = projectFromRunRecord(catalog, record);
   });
 
-  it('completes as a valid plan entering every recorded room before completing its biome', () => {
-    expect(imported.kind).toBe('complete');
-    expect(enteredRooms(imported.project).slice(0, record.rooms.length)).toEqual(
+  it("enters every recorded room and stops at the last room's unseen spatial point", () => {
+    // No save follows H_Combat04, so nothing judges its open questions.
+    expectReachesLastRoom(imported);
+    expect(enteredRooms(imported.project, 'incomplete')).toEqual(
       record.rooms.map((room) => room.name),
     );
   });
@@ -240,17 +216,13 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
         shop: 1,
         traitOffer: 1,
       },
-      // The run was reset in H_Combat04: the rest of Ephyra's Fields is guessed.
       notInRecord: {
-        doors: 1,
-        fields: 6,
-        other: 1,
+        fields: 1,
         // Each rerolled screen's earlier screen is a guess: the record keeps the final one.
         reroll: 2,
-        reward: 1,
-        route: 1,
-        traitOffer: 3,
       },
+      // The run was reset in H_Combat04, whose questions no later save judges.
+      stopped: { fields: 1 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r1 acquisitionEntry@F-r1 -> ReplaceAcquisitionEntryOffer(F-r1 Boon)',

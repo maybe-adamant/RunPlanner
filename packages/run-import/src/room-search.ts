@@ -23,8 +23,13 @@ export interface RoomSearchSpec<Candidate, Choice> {
   readonly fits?: () => boolean;
   /** The room's exit state a later room reads; fits sharing it are interchangeable. */
   readonly fingerprint?: () => string;
-  /** Rooms the candidate creates whose questions, too, are answered until the next entry is reached. */
-  readonly settles?: readonly string[];
+  /**
+   * Rooms the candidate creates whose questions, too, are answered until the
+   * next entry is reached; `all` answers any room's.
+   */
+  readonly settles?: readonly string[] | 'all';
+  /** Also authors the optional record facts the walk sweeps, until the room settles. */
+  readonly sweep?: boolean;
   readonly limit?: number;
 }
 
@@ -52,7 +57,7 @@ export function searchRoom<Candidate, Choice>(
   const limit = spec.limit ?? ROOM_SEARCH_LIMIT;
   const biomeKey = context.occurrences.biomeOfRoom[spec.roomIndex]!;
   const occurrenceId = context.occurrences.occurrenceOf(spec.roomIndex);
-  const settles = new Set(spec.settles);
+  const settles = spec.settles === 'all' ? undefined : new Set(spec.settles);
   const fits: RoomFit<Choice>[] = [];
   let tried = 0;
   for (const candidate of spec.candidates) {
@@ -65,13 +70,20 @@ export function searchRoom<Candidate, Choice>(
         return choice !== undefined;
       });
       if (!placed || choice === undefined) return undefined;
-      context.settleQuestions(
-        (id) =>
-          id === occurrenceId ||
-          (settles.has(id) &&
-            entrySnapshot(context.assembly(), context.occurrences, spec.roomIndex + 1) ===
-              undefined),
-      );
+      const settle = () =>
+        context.settleQuestions(
+          (id) =>
+            id === occurrenceId ||
+            ((settles === undefined || settles.has(id)) &&
+              entrySnapshot(context.assembly(), context.occurrences, spec.roomIndex + 1) ===
+                undefined),
+        );
+      settle();
+      for (let before; spec.sweep === true && before !== context.assembly();) {
+        before = context.assembly();
+        context.sweep();
+        settle();
+      }
       orderRoomActions(context, biomeKey, occurrenceId);
       if (spec.fits !== undefined && !spec.fits()) return undefined;
       return {

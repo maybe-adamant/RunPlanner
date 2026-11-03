@@ -23,14 +23,14 @@ const repositoryAliases = ['@run-planner/test-fixtures', '@run-planner/test-conf
 
 /**
  * The workspace packages each lane may import from its source: the catalog compiles into the
- * engine's contract, Draft consumes declared engine entries, the run import consumes those and
- * Draft's repairer, and the application composes all of them.
+ * engine's contract, Draft and the run import consume declared engine entries, and the
+ * application composes all of them.
  */
 const allowedSourcePackages: Readonly<Record<string, readonly string[]>> = {
   'packages/hades2-catalog': ['@run-planner/engine'],
   'packages/planner-engine': [],
   'packages/draft': ['@run-planner/engine'],
-  'packages/run-import': ['@run-planner/engine', '@run-planner/draft'],
+  'packages/run-import': ['@run-planner/engine'],
   'apps/planner': [
     '@run-planner/engine',
     '@run-planner/hades2-catalog',
@@ -43,11 +43,7 @@ const allowedTestPackages: Readonly<Record<string, readonly string[]>> = {
   'packages/hades2-catalog': ['@run-planner/engine'],
   'packages/planner-engine': ['@run-planner/hades2-catalog'],
   'packages/draft': ['@run-planner/engine', '@run-planner/hades2-catalog'],
-  'packages/run-import': [
-    '@run-planner/engine',
-    '@run-planner/draft',
-    '@run-planner/hades2-catalog',
-  ],
+  'packages/run-import': ['@run-planner/engine', '@run-planner/hades2-catalog'],
 };
 /** Packages that consume the engine only through its declared entries. */
 const engineConsumers = ['packages/draft', 'packages/run-import', 'apps/planner'];

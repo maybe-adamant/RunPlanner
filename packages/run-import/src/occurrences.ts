@@ -147,7 +147,17 @@ export function occurrenceIdOf(address: SemanticAddress): string | undefined {
   const value = address as unknown as Record<string, unknown>;
   if (typeof value['occurrenceId'] === 'string') return value['occurrenceId'];
   if (typeof value['sourceOccurrenceId'] === 'string') return value['sourceOccurrenceId'];
-  for (const field of ['source', 'owner', 'occurrence', 'phase', 'trait', 'site', 'entry']) {
+  for (const field of [
+    'source',
+    'owner',
+    'occurrence',
+    'phase',
+    'trait',
+    'site',
+    'entry',
+    'encounter',
+    'action',
+  ]) {
     const nested = value[field];
     if (typeof nested === 'object' && nested !== null) {
       const id = occurrenceIdOf(nested as SemanticAddress);

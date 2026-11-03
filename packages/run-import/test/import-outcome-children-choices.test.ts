@@ -14,6 +14,7 @@ import {
   occurrence,
   mismatchLines,
   authoredOptions,
+  expectReachesLastRoom,
 } from './support/run-import';
 
 describe('run import of selected-outcome children', () => {
@@ -214,7 +215,7 @@ describe('run import of selected-outcome children', () => {
         },
       ]),
     );
-    expect(imported.kind).toBe('complete');
+    expectReachesLastRoom(imported);
     expect(authoredOptions(occurrence(imported.project, 'H-r27'), 'GoodStuffBoon')).toEqual([
       expect.objectContaining({
         naturalSelectionTargets: [
@@ -267,7 +268,7 @@ describe('run import of selected-outcome children', () => {
       },
     ]);
     const imported = projectFromRunRecord(catalog, record);
-    expect(imported.kind).toBe('complete');
+    expectReachesLastRoom(imported);
     expect(roomLines(imported.report, 27)).toEqual([
       expect.stringMatching(/^refused traitOffer r27 naturalSelectionResult@H-r27 /),
     ]);
@@ -331,7 +332,7 @@ describe('run import of selected-outcome children', () => {
       },
     }));
     const imported = projectFromRunRecord(catalog, record);
-    expect(imported.kind).toBe('complete');
+    expectReachesLastRoom(imported);
     expect(authoredOptions(occurrence(imported.project, 'O-r25'), 'RandomArcanaTrait')).toEqual([
       expect.objectContaining({
         circeResolution: { kind: 'activateArcana', arcanaKeys: ['MagicCrit'] },
@@ -363,7 +364,7 @@ describe('run import of selected-outcome children', () => {
       },
     }));
     const imported = projectFromRunRecord(catalog, record);
-    expect(imported.kind).toBe('complete');
+    expectReachesLastRoom(imported);
     expect(authoredOptions(occurrence(imported.project, 'O-r25'), 'ArcanaRarityTrait')).toEqual([
       expect.objectContaining({
         circeResolution: { kind: 'promoteArcana', arcanaKeys: ['BonusHealth', 'BonusDodge'] },
@@ -386,7 +387,7 @@ describe('run import of selected-outcome children', () => {
         })),
       })),
     );
-    expect(imported.kind).toBe('complete');
+    expectReachesLastRoom(imported);
     expect(authoredOptions(occurrence(imported.project, 'O-r25'), 'RemoveShrineTrait')).toEqual([
       expect.objectContaining({
         circeResolution: { kind: 'disableFear', vowKeys: ['EnemySpeedShrineUpgrade'] },
@@ -429,7 +430,7 @@ describe('run import of selected-outcome children', () => {
       };
     });
     const imported = projectFromRunRecord(catalog, record);
-    expect(imported.kind).toBe('complete');
+    expectReachesLastRoom(imported);
     expect(authoredOptions(occurrence(imported.project, 'H-r28'), 'EchoLastRunBoon')).toEqual([
       expect.objectContaining({
         echoLastRunBoon: {

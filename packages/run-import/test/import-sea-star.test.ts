@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { RunRecord } from '../src/run-record';
 import { projectFromRunRecord } from '../src/import';
-import { fixture, describeEntry, seaStarDuplicates } from './support/run-import';
+import {
+  fixture,
+  describeEntry,
+  seaStarDuplicates,
+  expectReachesLastRoom,
+} from './support/run-import';
 
 describe('run import of Sea Star duplicates', () => {
   /** The Surface capture with Sea Star picked at O_MiniBoss01 and duplicates counted after it. */
@@ -40,7 +45,7 @@ describe('run import of Sea Star duplicates', () => {
 
   it('leaves a duplicate unplaced where no duplicable pickup takes a leftover use', () => {
     const imported = projectFromRunRecord(catalog, surfaceWithSeaStar());
-    expect(imported.kind).toBe('complete');
+    expectReachesLastRoom(imported);
     // O_Reprieve01's Magick reward shows a leftover use, but its Time Piece conversion leaves no
     // pickup Sea Star can duplicate; O_Combat05 used nothing more than the plan collects.
     expect(seaStarDuplicates(imported.project, 'O-r24')).toEqual([]);

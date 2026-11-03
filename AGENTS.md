@@ -25,7 +25,7 @@ in-game acceptance checklists in `docs/testing/`.
 
 ```text
 catalog construction -> pure core <- application composition -> React UI
-hades2-catalog -> planner-engine <- draft <- run-import <- apps/planner
+hades2-catalog -> planner-engine <- {draft, run-import} <- apps/planner
 ```
 
 The second line is the workspace package graph; Draft and the run import are
@@ -80,7 +80,7 @@ first needs the result.
 
 - Owns Draft mode: the spec's world options, static basket legality with its
   caps and refusals, steering, the search and its biome walk, the encounter
-  post pass, the report, and the issue repairer the run import drives. The
+  post pass and the report. The
   persisted Draft settings and share code stay in the engine's authored model.
 - Answers “what random valid plan does this Draft spec produce, and which of
   its targets did it meet?”
@@ -100,10 +100,9 @@ first needs the result.
 - Answers “what authored project does this recorded run correspond to, and
   what could not be matched?”
 - Consumes only declared `@run-planner/engine` entries, building through the
-  engine's authoring session and queries, and Draft's issue repairer through
-  `@run-planner/draft`; it must not import engine internals,
-  the `hades2-catalog` implementation (tests may construct it), the planner
-  application, or platform code, and the engine never imports it.
+  engine's authoring session and queries; it must not import engine internals,
+  the `hades2-catalog` implementation (tests may construct it), Draft, the
+  planner application, or platform code, and the engine never imports it.
 - Primary tests: record codec and fixtures, and import witnesses over the
   capture fixtures (`npm run test:run-import`).
 

@@ -7,7 +7,6 @@ export {
   type DraftSpec,
 } from './spec';
 export { draftRefusals, type DraftRefusal } from './refusals';
-export { createDraftIssueRepairer, type DraftIssueRepairer } from './repair';
 export { draftGodBoonBudget } from './budget';
 export {
   assessDraftGods,

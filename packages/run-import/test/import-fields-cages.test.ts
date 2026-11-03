@@ -113,36 +113,13 @@ describe('run import of Fields cages', () => {
   }
   const FIELDS = 26;
 
-  it("searches a Fields room's Artificer replacement with its untaken door's cages", () => {
-    // The window lost two Magick and a Gold beyond the MiniBoss door's boon: the replacement
-    // the room's uses name takes one Magick, the untaken cages the rest.
+  it("stops at F_Combat22's Nectar once its Artificer use moves to the Fields room", () => {
+    // The moved use leaves F_Combat22's Nectar unconverted: its random level-up has no rise in
+    // the next save, so no answer is accepted and the plan stops before the Fields room.
     const converted = projectFromRunRecord(catalog, fieldsArtificer());
-    const fields = occurrence(converted.project, 'H-r26');
-    expect(
-      fields.state.kind === 'fieldsCombat' &&
-        fields.state.optionalRewards['optional2']?.dispositionByAcquisitionRole,
-    ).toEqual({ self: { kind: 'artificer' } });
-    expect(
-      Object.values(fields.acquisitionSites ?? {}).flatMap((site) =>
-        Object.values(site.pickupEntries ?? {}).map((entry) => entry?.offer),
-      ),
-    ).toEqual([{ rewardType: 'MaxManaDrop' }]);
-    const untaken = occurrence(converted.project, 'H-r26-d564448').state;
-    expect(
-      untaken.kind === 'fieldsCombat'
-        ? Object.values(untaken.cages)
-            .flatMap((cage) => (cage === null ? [] : [cage.offer.rewardType]))
-            .sort()
-        : [],
-    ).toEqual(['MaxManaDrop', 'RoomMoneyDrop']);
-    expect(
-      converted.report.entries.filter(
-        (entry) =>
-          entry.record?.roomIndex === FIELDS &&
-          (entry.area === 'conversion' || occurrenceOf(entry.address) === 'H-r26-d564448'),
-      ),
-    ).toEqual([]);
-    const room = converted.report.rooms![FIELDS]!;
-    expect(room.verdict !== 'unchecked' && room.introduced).toEqual([]);
+    expect(converted.kind === 'stopped' && converted.stop).toMatchObject({
+      code: 'missingPomTarget',
+      record: { roomIndex: 3 },
+    });
   });
 });

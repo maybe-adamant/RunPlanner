@@ -257,8 +257,9 @@ describe('run import of the Surface victory', () => {
     });
   });
 
-  it("authors a mixed-side ship's Sea Star duplicate on the canonical split when its window never closes", () => {
-    // As above, but O_Combat12's exit names a door the ship cannot offer, so O_MiniBoss01 is never entered.
+  it("keeps a mixed-side ship's sides and offers provisional when its window never closes", () => {
+    // As above, but O_Combat12's exit names a door the ship cannot offer: the plan stops at
+    // that door, and O_MiniBoss01 is never entered.
     const open: RunRecord = {
       ...record,
       rooms: record.rooms.map((room, index) =>
@@ -284,7 +285,10 @@ describe('run import of the Surface victory', () => {
       ),
     };
     const result = projectFromRunRecord(catalog, open);
-    expect(seaStarDuplicates(result.project, 'O-r23')).toHaveLength(1);
+    expect(result.kind === 'stopped' && result.stop).toMatchObject({
+      code: 'targetMissing',
+      record: { roomIndex: 23 },
+    });
     // The unsettled sides and offers stay provisional, each reported.
     expect(
       result.report.entries
@@ -348,7 +352,12 @@ describe('run import of the Surface victory', () => {
       }),
     };
     const result = projectFromRunRecord(catalog, altered);
-    expect(result.kind).toBe('complete');
+    // The carried store difference leaves O_Combat05's recorded wheel offer refused, with no
+    // answer its next save accepts.
+    expect(result.kind === 'stopped' && result.stop).toMatchObject({
+      area: 'wheel',
+      record: { roomIndex: 26 },
+    });
     expect(
       result.report.entries
         .filter((entry) => entry.area === 'wheel' && entry.record?.roomIndex === 23)
