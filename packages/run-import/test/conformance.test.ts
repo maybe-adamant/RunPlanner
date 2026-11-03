@@ -268,6 +268,8 @@ describe('import conformance field groups', () => {
         traits: { DoorHealMetaUpgrade: { rarity: 'Epic' }, UnknownTrait: { rarity: 'Rare' } },
       }),
     ).toEqual([]);
+    // Dresses break with their armor, which the planner never loses.
+    expect(added({ traits: { CastDamageCostume: { rarity: 'Common' } } })).toEqual([]);
   });
 
   it('compares the slotted keepsake', () => {

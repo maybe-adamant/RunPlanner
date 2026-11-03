@@ -308,7 +308,13 @@ function compareEntry(
   const curseKeys = new Set(curses.values.map((curse) => curse.key));
   const blessingKeys = new Set(blessings.values.map((blessing) => blessing.key));
   const arcanaTraits = new Set(catalog.arcanaCards.values.map((card) => card.traitKey));
-  const simulated = new Map(snapshotTraitInventory(snapshot).map((row) => [row.traitKey, row]));
+  // The planner assumes no damage, so it never loses a dress; the game removes one as its armor breaks.
+  const isDress = (key: string) => key.endsWith('Costume');
+  const simulated = new Map(
+    snapshotTraitInventory(snapshot)
+      .filter((row) => !isDress(row.traitKey))
+      .map((row) => [row.traitKey, row]),
+  );
   for (const [key, row] of simulated) {
     const held = saved.traits.get(key);
     // The game reads a trait's level as its `StackNum`, one when unset.
@@ -330,6 +336,7 @@ function compareEntry(
   for (const [name, held] of saved.traits)
     if (
       !simulated.has(name) &&
+      !isDress(name) &&
       catalog.traits.byKey[name] !== undefined &&
       !arcanaTraits.has(name) &&
       !curseKeys.has(name) &&

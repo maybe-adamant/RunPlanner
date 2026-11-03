@@ -225,7 +225,7 @@ describe('run import of the Underworld capture', () => {
       },
       // The three Chaos screens stay: their unpicked curses' durations are never saved.
       // The entry saves' run state where the plan's simulation holds another.
-      mismatch: { elements: 1, pathOfStars: 1, stores: 2, traits: 3 },
+      mismatch: { elements: 1, pathOfStars: 1, stores: 2, traits: 2 },
       // The H and I Preboss Travel Deal refills were never bought.
       notInRecord: { fields: 4, pathOfStars: 1, shop: 2, traitOffer: 4 },
       refused: { fields: 2, pool: 1 },
@@ -268,8 +268,6 @@ describe('run import of the Underworld capture', () => {
       'stores r30 FieldsOptionalRewards: MinorTalentDrop 1, RoomMoneyTinyDrop 2 | MinorTalentDrop 2, RoomMoneyTinyDrop 3',
       'pathOfStars r30 Invested: 5:1 | none other',
       'elements r30 Elements: Air 6 | Air 5',
-      // The plan's armor is never damaged, so Arachne's costume never breaks.
-      'traits r32 CastDamageCostume: absent | held',
     ]);
   });
 });

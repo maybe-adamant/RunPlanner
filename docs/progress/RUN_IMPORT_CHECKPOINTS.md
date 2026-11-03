@@ -124,6 +124,13 @@ reproduces is reported with its nearest miss and the plan stops there.
    when first reached and were accepted after the walk's closing action-order
    pass. Import time is unchanged (8–13 s per run).
 
+   **Triage fixes** (first-mismatch triage; buckets as exact / mismatch / carried):
+
+   - Dresses leave the held-trait comparison (armor breaks remove them; every
+     corpus removal coincides with `LastBrokenArmorTraitName`). fx underworld
+     mismatch 3 → 2; raw 333 mismatch 8 → 7, 933a 5 → 4, 933b 5/4/27 → 19/3/9
+     with its first mismatch r9 → r28.
+
 3. **One bounded search.** Replace the four solvers with one per-room search
    over the remaining unknowns, pinned by markers (trait timestamps, upgrade
    names, use counts) and narrowed by compared facts; equivalent outcomes take
