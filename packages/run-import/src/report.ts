@@ -88,6 +88,63 @@ export interface RunImportMismatch {
 
 export interface RunImportReport {
   readonly entries: readonly RunImportReportEntry[];
+  /** Each record room, in order, judged at its next entry save; a stored report may lack it. */
+  readonly rooms?: readonly RunImportRoomAcceptance[];
+}
+
+/**
+ * A record room judged at its next entry save: `accepted` when the plan holds
+ * every compared value the save holds, `mismatch` when it does not, and
+ * `unchecked` when no plan state compares the save.
+ */
+export type RunImportRoomAcceptance =
+  | {
+      readonly roomIndex: number;
+      readonly verdict: 'accepted' | 'mismatch';
+      /** Differences the room began or changed. */
+      readonly introduced: readonly RunImportRoomDifference[];
+      /** Differences an earlier room left that persist unchanged through this one. */
+      readonly carried: readonly RunImportRoomDifference[];
+      readonly unchecked: readonly RunImportUncheckedFamily[];
+      /** The verdict when the walk first reached the next save, where later authoring changed it. */
+      readonly whenReached?: 'accepted' | 'mismatch';
+    }
+  | {
+      readonly roomIndex: number;
+      readonly verdict: 'unchecked';
+      readonly reason: RunImportRoomUncheckedReason;
+    };
+
+export type RunImportRoomUncheckedReason =
+  /** The record carries no entry saves. */
+  | 'noEntrySaves'
+  /** The run's last room has no next entry save. */
+  | 'lastRoom'
+  /** The plan ends before the room. */
+  | 'stopped'
+  /** The plan's evaluation did not reach the next save's moment. */
+  | 'unreached'
+  /** The room is a restored visit, whose departure captures no state. */
+  | 'restoredDeparture';
+
+/** One fact family an entry save holds that no plan state at its moment compares. */
+export interface RunImportUncheckedFamily {
+  readonly family: 'elements';
+  readonly reason:
+    /**
+     * Element grants follow the room's exit; a Hub stay, a restored room or a
+     * Ship room publishes no entry state after them.
+     */
+    | 'noEntrySnapshot'
+    /** The plan's evaluation did not reach the entered room. */
+    | 'unreached';
+}
+
+/** One run-state value a room's next entry save and the plan disagree on. */
+export interface RunImportRoomDifference extends RunImportMismatch {
+  readonly area: RunImportArea;
+  /** The area, and for a trait whether it is `traits.missing`, `traits.extra`, `traits.rarity` or `traits.level`. */
+  readonly family: string;
 }
 
 /** The decision no answer or guess could settle, by its finding code; the plan ends before it. */

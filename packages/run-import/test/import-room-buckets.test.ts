@@ -22,8 +22,8 @@ vi.mock('@run-planner/engine/authoring', async (original) => {
  * rooms no save checks, only shrink. Tighten a bound when a change moves it.
  */
 const BASELINE = {
-  surface: { rooms: 29, settled: 8, mismatch: 0, differing: 0, unchecked: 10 },
-  'surface-victory': { rooms: 51, settled: 22, mismatch: 0, differing: 0, unchecked: 10 },
+  surface: { rooms: 29, settled: 15, mismatch: 0, differing: 0, unchecked: 2 },
+  'surface-victory': { rooms: 51, settled: 30, mismatch: 0, differing: 0, unchecked: 2 },
   underworld: { rooms: 42, settled: 15, mismatch: 3, differing: 13, unchecked: 1 },
   'underworld-1010': { rooms: 30, settled: 17, mismatch: 1, differing: 3, unchecked: 1 },
   // The live recording carries no entry saves.

@@ -15,9 +15,16 @@ import {
 } from '@run-planner/engine/simulation';
 import { projectFromRunRecord } from '../src/import';
 import { decodeRunRecord, type RunRecord, type RunRecordRoomEntry } from '../src/run-record';
-import { compareImportToRecord, entryCheckpoints, recordedEntryStates } from '../src/conformance';
+import {
+  compareImportToRecord,
+  entryCheckpoint,
+  entrySaves,
+  entrySnapshot,
+  recordedEntryStates,
+} from '../src/conformance';
 import { RecordOccurrences } from '../src/occurrences';
-import type { RunImportReportEntry } from '../src/report';
+import type { RunImportReport, RunImportReportEntry } from '../src/report';
+import { judgeRoom } from '../src/acceptance';
 
 function fixture(name: string): RunRecord {
   return decodeRunRecord(
@@ -38,13 +45,14 @@ interface Imported {
   readonly record: RunRecord;
   readonly assembly: ProjectEvaluationAssembly;
   readonly occurrences: RecordOccurrences;
+  readonly report: RunImportReport;
 }
 
 function imported(record: RunRecord): Imported {
-  const project = projectFromRunRecord(catalog, record).project;
+  const { project, report } = projectFromRunRecord(catalog, record);
   const occurrences = new RecordOccurrences(catalog, record);
   occurrences.bindEngineOccurrences(project);
-  return { record, assembly: simulateProjectAssembly(catalog, project), occurrences };
+  return { record, assembly: simulateProjectAssembly(catalog, project), occurrences, report };
 }
 
 describe('import conformance alignment', () => {
@@ -53,26 +61,39 @@ describe('import conformance alignment', () => {
     surface = imported(fixture('surface'));
   });
 
-  it("compares each entry save with the previous room's exit, skipping Hub visits", () => {
-    const { record, occurrences } = surface;
-    const checkpoints = entryCheckpoints(record, occurrences, record.rooms.length);
-    for (const checkpoint of checkpoints)
-      expect(checkpoint.left.occurrenceId).toBe(occurrences.occurrenceOf(checkpoint.roomIndex - 1));
+  it("compares each entry save at the previous room's exit or its Hub stay's departure", () => {
+    const { record, assembly, occurrences } = surface;
+    const at = (roomIndex: number) => entryCheckpoint(occurrences, assembly.project, roomIndex);
     const name = (index: number) => record.rooms[index]!.name;
-    // No room is left from N_Hub, which every return revisits.
-    expect(checkpoints.some((checkpoint) => name(checkpoint.roomIndex - 1) === 'N_Hub')).toBe(
-      false,
-    );
-    expect(checkpoints[0]).toMatchObject({ roomIndex: 1, entered: { occurrenceId: 'N-r1' } });
-    // Entering the Hub again names no entered occurrence, only its visit.
-    const hubReturn = checkpoints.find(
-      (checkpoint) => name(checkpoint.roomIndex) === 'N_Hub' && checkpoint.visit > 0,
-    );
-    expect(hubReturn).toMatchObject({ roomIndex: 8, visit: 2 });
-    expect(hubReturn?.entered).toBeUndefined();
-    expect(
-      entryCheckpoints(record, occurrences, 1).map((checkpoint) => checkpoint.roomIndex),
-    ).toEqual([1]);
+    expect([2, 3, 4, 5, 6].map(name)).toEqual([
+      'N_Hub',
+      'N_Combat02',
+      'N_Sub01',
+      'N_Combat02',
+      'N_Hub',
+    ]);
+    expect(at(0)).toMatchObject({ kind: 'compared', source: { kind: 'opening' } });
+    expect(at(1)).toMatchObject({
+      source: { kind: 'exit', occurrence: { occurrenceId: 'N:start' } },
+      entered: { occurrenceId: 'N-r1' },
+    });
+    // Leaving the Hub reads the departure after its completed visits.
+    expect(at(3)).toMatchObject({
+      source: { kind: 'hubDeparture', hub: { hubKey: 'hub' }, stay: 0 },
+      entered: { occurrenceId: 'N-r3' },
+    });
+    expect(at(7)).toMatchObject({ source: { kind: 'hubDeparture', stay: 1 } });
+    // A main room's first visit is left for its side room at its own exit.
+    expect(at(4)).toMatchObject({ source: { kind: 'exit', occurrence: { occurrenceId: 'N-r3' } } });
+    // Restoring a room, or the Hub, names no entered occurrence, only its visit.
+    expect(at(5)).toMatchObject({ kind: 'compared', visit: 1 });
+    expect(at(5)).not.toHaveProperty('entered');
+    expect(at(8)).toMatchObject({ kind: 'compared', visit: 2 });
+    expect(at(8)).not.toHaveProperty('entered');
+    // The restored room's departure to the Hub captures no state.
+    expect(at(6)).toMatchObject({ kind: 'unchecked', reason: 'restoredDeparture' });
+    for (const roomIndex of [3, 4, 7])
+      expect(entrySnapshot(assembly, occurrences, roomIndex)).toBeDefined();
   });
 
   it("reads Forfeit at the last room's exit, before the next biome restarts its count", () => {
@@ -106,6 +127,76 @@ describe('import conformance alignment', () => {
         (entry) => entry.area === 'forfeit',
       ),
     ).toEqual([]);
+  });
+});
+
+describe('import room acceptance', () => {
+  let surface: Imported;
+  beforeAll(() => {
+    surface = imported(fixture('surface'));
+  });
+
+  it('judges each room at its next entry save, Hub stays included', () => {
+    const { record, report } = surface;
+    const rooms = report.rooms ?? [];
+    expect(rooms.map((room) => room.roomIndex)).toEqual(record.rooms.map((_, index) => index));
+    const at = (roomIndex: number) => rooms[roomIndex]!;
+    // N_Hub stays are judged at their departures.
+    for (const roomIndex of [2, 6, 8, 16])
+      expect(at(roomIndex)).toMatchObject({ verdict: 'accepted', introduced: [], carried: [] });
+    expect(at(5)).toEqual({ roomIndex: 5, verdict: 'unchecked', reason: 'restoredDeparture' });
+    expect(at(record.rooms.length - 1)).toMatchObject({ verdict: 'unchecked', reason: 'lastRoom' });
+    // Entering the Hub or a Ship room publishes no entry state after the exit's element grants.
+    expect(record.rooms[21]!.name).toBe('O_Combat01');
+    for (const roomIndex of [1, 20])
+      expect(at(roomIndex)).toMatchObject({
+        unchecked: [{ family: 'elements', reason: 'noEntrySnapshot' }],
+      });
+    expect(at(3)).toMatchObject({ unchecked: [] });
+  });
+
+  it('tells a difference a room began from one it carried', () => {
+    const { record, assembly, occurrences } = surface;
+    const saves = entrySaves(record);
+    const changed = 8;
+    const [store, counts] = [...saves.states[changed]!.rewardStores].find(
+      ([key, entries]) => key !== 'Secrets' && Object.keys(entries).length > 0,
+    )!;
+    const name = Object.keys(counts)[0]!;
+    // Every save from the Hub's third stay on holds one more of a reward than the game left.
+    const altered = {
+      ...saves,
+      states: saves.states.map((state, index) =>
+        index < changed
+          ? state
+          : {
+              ...state,
+              rewardStores: new Map([
+                ...state.rewardStores,
+                [
+                  store,
+                  {
+                    ...state.rewardStores.get(store)!,
+                    [name]: (state.rewardStores.get(store)![name] ?? 0) + 1,
+                  },
+                ],
+              ]),
+            },
+      ),
+    };
+    const judged = (roomIndex: number) =>
+      judgeRoom(catalog, record, altered, occurrences, assembly, roomIndex);
+    expect(judged(changed - 2)).toMatchObject({ verdict: 'accepted' });
+    expect(judged(changed - 1)).toMatchObject({
+      verdict: 'mismatch',
+      introduced: [{ area: 'stores', family: 'stores', field: store }],
+      carried: [],
+    });
+    expect(judged(changed)).toMatchObject({
+      verdict: 'mismatch',
+      introduced: [],
+      carried: [{ family: 'stores', field: store }],
+    });
   });
 });
 

@@ -1,8 +1,11 @@
 import {
   createBiomeAddress,
+  createHubDecisionAddress,
   createOccurrenceAddress,
   createRoomRunStateCheckpointAddress,
+  type HubDecisionAddress,
   type OccurrenceId,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { storeEntryOnRoute } from '@run-planner/engine/reward-kernel';
@@ -10,12 +13,18 @@ import {
   type ProjectEvaluationAssembly,
   type RunStateSnapshot,
   heldKeepsakeRanks,
+  hubDepartureSnapshotForProjectEvaluationAssembly,
   runStateSnapshotForProjectEvaluationAssembly,
   snapshotTraitInventory,
 } from '@run-planner/engine/simulation';
 import type { RunRecord, RunRecordHeldTrait } from './run-record/model';
-import type { RecordOccurrences } from './occurrences';
-import type { RunImportArea, RunImportMismatch, RunImportReportEntry } from './report';
+import { authoredOccurrence, recordHubStay, type RecordOccurrences } from './occurrences';
+import type {
+  RunImportArea,
+  RunImportMismatch,
+  RunImportReportEntry,
+  RunImportUncheckedFamily,
+} from './report';
 
 /** A room's entry save with the record's deltas folded in. */
 export interface RecordedEntryState {
@@ -77,42 +86,115 @@ export interface RecordOccurrence {
   readonly occurrenceId: OccurrenceId;
 }
 
+/** Where the plan holds the run state a record room's entry save wrote. */
+export type EntrySource =
+  /** The run's first save follows the opening room's own draw: its `roomEntered`. */
+  | { readonly kind: 'opening'; readonly occurrence: RecordOccurrence }
+  /** Leaving a room writes the next entry save: its `beforeRoomExit`. */
+  | { readonly kind: 'exit'; readonly occurrence: RecordOccurrence }
+  /** Leaving a Hub stay: the Run State captured at that departure. */
+  | {
+      readonly kind: 'hubDeparture';
+      readonly hub: HubDecisionAddress;
+      /** The room visits completed before the stay. */
+      readonly stay: number;
+    };
+
+/** Why a record room's entry save is not compared at all. */
+export type EntryUncheckedReason =
+  /** The record carries no entry saves. */
+  | 'noEntrySaves'
+  /** The plan's evaluation did not reach the save's moment. */
+  | 'unreached'
+  /** A restored room's later departure replays no lifecycle, so no state is captured there. */
+  | 'restoredDeparture';
+
 /**
- * The record rooms whose entry save is compared. Leaving the previous room
- * writes the entry save, so it holds that room's `beforeRoomExit` moment; the
- * entered room is named for the effects that settle after it. The first room,
- * and a room left from an occurrence visited more than once (a Hub or a
- * revisited room), are not compared.
+ * Where a record room's entry save is compared: the moment its source holds,
+ * and the entered room when this is its first visit to an occurrence that
+ * publishes its entry, which follows the grants made as the previous room was
+ * left.
  */
-export function entryCheckpoints(
-  record: RunRecord,
+export type EntryCheckpoint =
+  | {
+      readonly kind: 'compared';
+      readonly roomIndex: number;
+      /** The entered room's visit ordinal of its occurrence. */
+      readonly visit: number;
+      readonly source: EntrySource;
+      readonly entered?: RecordOccurrence;
+    }
+  | {
+      readonly kind: 'unchecked';
+      readonly roomIndex: number;
+      readonly visit: number;
+      readonly reason: 'restoredDeparture';
+    };
+
+export function entryCheckpoint(
   occurrences: RecordOccurrences,
-  throughRoom: number,
-): readonly {
-  readonly roomIndex: number;
-  /** The entered room's visit ordinal of its occurrence. */
-  readonly visit: number;
-  readonly left: RecordOccurrence;
-  /** Absent when the entered occurrence is visited more than once. */
-  readonly entered?: RecordOccurrence;
-}[] {
-  const at = (roomIndex: number): RecordOccurrence => ({
-    biomeKey: occurrences.biomeOfRoom[roomIndex]!,
-    occurrenceId: occurrences.occurrenceOf(roomIndex),
+  project: ProjectDocument,
+  roomIndex: number,
+): EntryCheckpoint {
+  const at = (index: number): RecordOccurrence => ({
+    biomeKey: occurrences.biomeOfRoom[index]!,
+    occurrenceId: occurrences.occurrenceOf(index),
   });
-  const visits = (roomIndex: number) => occurrences.visitsOf(occurrences.occurrenceOf(roomIndex));
-  const once = (roomIndex: number) => visits(roomIndex).length === 1;
-  const checkpoints = [];
-  const last = Math.min(throughRoom, record.rooms.length - 1);
-  for (let roomIndex = 1; roomIndex <= last; roomIndex += 1)
-    if (once(roomIndex - 1))
-      checkpoints.push({
-        roomIndex,
-        visit: Math.max(0, visits(roomIndex).indexOf(roomIndex)),
-        left: at(roomIndex - 1),
-        ...(once(roomIndex) ? { entered: at(roomIndex) } : {}),
-      });
-  return checkpoints;
+  const visits = (index: number) => occurrences.visitsOf(occurrences.occurrenceOf(index));
+  const firstVisit = (index: number) => visits(index)[0] === index;
+  const visit = Math.max(0, visits(roomIndex).indexOf(roomIndex));
+  // A Ship room publishes its phases' states instead of its entry.
+  const entered =
+    firstVisit(roomIndex) &&
+    recordHubStay(project, occurrences, roomIndex) === undefined &&
+    authoredOccurrence(project, at(roomIndex).biomeKey, at(roomIndex).occurrenceId)?.state.kind !==
+      'shipCombat'
+      ? { entered: at(roomIndex) }
+      : {};
+  if (roomIndex === 0)
+    return { kind: 'compared', roomIndex, visit, source: { kind: 'opening', occurrence: at(0) } };
+  const left = roomIndex - 1;
+  const stay = recordHubStay(project, occurrences, left);
+  if (stay !== undefined)
+    return {
+      kind: 'compared',
+      roomIndex,
+      visit,
+      source: {
+        kind: 'hubDeparture',
+        hub: createHubDecisionAddress(
+          createBiomeAddress(project.route.routeKey, occurrences.biomeOfRoom[left]!),
+          stay.hub.hubKey,
+        ),
+        stay: stay.stay,
+      },
+      ...entered,
+    };
+  // A room's `beforeRoomExit` is captured once, as its first visit is left.
+  if (!firstVisit(left))
+    return { kind: 'unchecked', roomIndex, visit, reason: 'restoredDeparture' };
+  return {
+    kind: 'compared',
+    roomIndex,
+    visit,
+    source: { kind: 'exit', occurrence: at(left) },
+    ...entered,
+  };
+}
+
+/** The plan's run state at an entry save's source, when evaluation reached it. */
+export function sourceSnapshot(
+  assembly: ProjectEvaluationAssembly,
+  source: EntrySource,
+): RunStateSnapshot | undefined {
+  switch (source.kind) {
+    case 'opening':
+      return occurrenceSnapshot(assembly, source.occurrence, 'roomEntered');
+    case 'exit':
+      return occurrenceSnapshot(assembly, source.occurrence, 'beforeRoomExit');
+    case 'hubDeparture':
+      return hubDepartureSnapshotForProjectEvaluationAssembly(assembly, source.hub, source.stay);
+  }
 }
 
 const FORFEIT_VOW = 'BoonSkipShrineUpgrade';
@@ -380,40 +462,55 @@ export function occurrenceSnapshot(
   );
 }
 
-/**
- * The plan's run state at a record room's entry save: the left room's exit,
- * or, leaving a Hub visit or a room visited more than once, and for the run's
- * first room, the entered room's first entry.
- */
+/** The plan's run state at a record room's entry save, when it has one. */
 export function entrySnapshot(
   assembly: ProjectEvaluationAssembly,
   occurrences: RecordOccurrences,
   roomIndex: number,
 ): RunStateSnapshot | undefined {
-  const at = (index: number): RecordOccurrence => ({
-    biomeKey: occurrences.biomeOfRoom[index]!,
-    occurrenceId: occurrences.occurrenceOf(index),
-  });
-  // The run's first save follows the opening room's own draw.
-  if (roomIndex === 0) return occurrenceSnapshot(assembly, at(0), 'roomEntered');
-  const left = occurrences.occurrenceOf(roomIndex - 1);
-  const exit =
-    occurrences.visitsOf(left).length === 1
-      ? occurrenceSnapshot(assembly, at(roomIndex - 1), 'beforeRoomExit')
-      : undefined;
-  if (exit !== undefined) return exit;
-  return occurrences.visitsOf(occurrences.occurrenceOf(roomIndex))[0] === roomIndex
-    ? occurrenceSnapshot(assembly, at(roomIndex), 'roomEntered')
-    : undefined;
+  const checkpoint = entryCheckpoint(occurrences, assembly.project, roomIndex);
+  return checkpoint.kind === 'compared' ? sourceSnapshot(assembly, checkpoint.source) : undefined;
+}
+
+/** A record's entry saves, folded once for every comparison against them. */
+export interface EntrySaves {
+  readonly states: readonly RecordedEntryState[];
+  /** Rarify sources whose charges the record carries; an older record has none. */
+  readonly rarifySources: ReadonlySet<string>;
+}
+
+export function entrySaves(record: RunRecord): EntrySaves {
+  const states = recordedEntryStates(record);
+  return {
+    states,
+    rarifySources: new Set(
+      states.flatMap((state) =>
+        [...state.traits]
+          .filter(([, row]) => row.rarityUpgradeUses !== undefined)
+          .map(([name]) => name),
+      ),
+    ),
+  };
 }
 
 /** Every run-state value one compared entry save and the plan disagree on. */
 export interface EntryComparison {
+  readonly kind: 'compared';
   /** The entered record room whose entry save is compared. */
   readonly roomIndex: number;
   /** The entered room's visit ordinal of its occurrence. */
   readonly visit: number;
   readonly differences: readonly EntryDifference[];
+  /** The fact families the save holds that no plan state at its moment compares. */
+  readonly unchecked: readonly RunImportUncheckedFamily[];
+}
+
+/** An entry save no plan state compares. */
+export interface EntryUnchecked {
+  readonly kind: 'unchecked';
+  readonly roomIndex: number;
+  readonly visit: number;
+  readonly reason: EntryUncheckedReason;
 }
 
 export interface EntryDifference extends RunImportMismatch {
@@ -423,9 +520,57 @@ export interface EntryDifference extends RunImportMismatch {
 }
 
 /**
- * Compares each record room's entry save with the plan's simulated state at
- * the same moment, the previous room's `beforeRoomExit`, through `throughRoom`.
- * A room whose checkpoint the evaluation did not reach is not compared.
+ * Compares one record room's entry save with the plan's state at the same
+ * moment: the previous room's `beforeRoomExit`, or the Hub departure that
+ * left its stay.
+ */
+export function compareEntrySave(
+  catalog: Catalog,
+  record: RunRecord,
+  saves: EntrySaves,
+  occurrences: RecordOccurrences,
+  assembly: ProjectEvaluationAssembly,
+  roomIndex: number,
+): EntryComparison | EntryUnchecked {
+  const checkpoint = entryCheckpoint(occurrences, assembly.project, roomIndex);
+  const { visit } = checkpoint;
+  const saved = saves.states[roomIndex];
+  if (saved === undefined) return { kind: 'unchecked', roomIndex, visit, reason: 'noEntrySaves' };
+  if (checkpoint.kind === 'unchecked')
+    return { kind: 'unchecked', roomIndex, visit, reason: checkpoint.reason };
+  const snapshot = sourceSnapshot(assembly, checkpoint.source);
+  if (snapshot === undefined) return { kind: 'unchecked', roomIndex, visit, reason: 'unreached' };
+  const entered =
+    checkpoint.entered === undefined
+      ? undefined
+      : occurrenceSnapshot(assembly, checkpoint.entered, 'roomEntered');
+  const unchecked: RunImportUncheckedFamily[] =
+    entered !== undefined
+      ? []
+      : [
+          {
+            family: 'elements',
+            reason: checkpoint.entered === undefined ? 'noEntrySnapshot' : 'unreached',
+          },
+        ];
+  const differences = compareEntry(
+    catalog,
+    record,
+    assembly.project.route.routeKey,
+    saved,
+    snapshot,
+    entered,
+    saves.rarifySources,
+  ).map(({ persists, ...difference }) => ({
+    ...difference,
+    persists: persists ?? `${difference.expected} ${difference.actual}`,
+  }));
+  return { kind: 'compared', roomIndex, visit, differences, unchecked };
+}
+
+/**
+ * Compares each record room's entry save through `throughRoom` with the
+ * plan's state at the same moment; a save no plan state compares is left out.
  */
 export function compareEntrySaves(
   catalog: Catalog,
@@ -434,40 +579,12 @@ export function compareEntrySaves(
   assembly: ProjectEvaluationAssembly,
   throughRoom: number,
 ): readonly EntryComparison[] {
-  const states = recordedEntryStates(record);
-  if (states.length === 0) return [];
-  const routeKey = assembly.project.route.routeKey;
-  // Rarify sources whose charges the record carries; an older record has none.
-  const rarifySources = new Set(
-    states.flatMap((state) =>
-      [...state.traits]
-        .filter(([, row]) => row.rarityUpgradeUses !== undefined)
-        .map(([name]) => name),
-    ),
-  );
-  const snapshot = (occurrence: RecordOccurrence, kind: 'roomEntered' | 'beforeRoomExit') =>
-    occurrenceSnapshot(assembly, occurrence, kind);
+  const saves = entrySaves(record);
   const comparisons: EntryComparison[] = [];
-  for (const { roomIndex, visit, left, entered } of entryCheckpoints(
-    record,
-    occurrences,
-    throughRoom,
-  )) {
-    const exit = snapshot(left, 'beforeRoomExit');
-    if (exit === undefined) continue;
-    const differences = compareEntry(
-      catalog,
-      record,
-      routeKey,
-      states[roomIndex]!,
-      exit,
-      entered === undefined ? undefined : snapshot(entered, 'roomEntered'),
-      rarifySources,
-    ).map(({ persists, ...difference }) => ({
-      ...difference,
-      persists: persists ?? `${difference.expected} ${difference.actual}`,
-    }));
-    comparisons.push({ roomIndex, visit, differences });
+  const last = Math.min(throughRoom, record.rooms.length - 1);
+  for (let roomIndex = 1; roomIndex <= last; roomIndex += 1) {
+    const comparison = compareEntrySave(catalog, record, saves, occurrences, assembly, roomIndex);
+    if (comparison.kind === 'compared') comparisons.push(comparison);
   }
   return comparisons;
 }
@@ -476,22 +593,12 @@ export function compareEntrySaves(
  * The entry saves' differences as report entries: a difference that persists
  * is reported where it begins and again where it changes.
  */
-export function compareImportToRecord(
-  catalog: Catalog,
-  record: RunRecord,
-  occurrences: RecordOccurrences,
-  assembly: ProjectEvaluationAssembly,
-  throughRoom: number,
+export function mismatchEntries(
+  comparisons: readonly EntryComparison[],
 ): readonly RunImportReportEntry[] {
   const entries: RunImportReportEntry[] = [];
   const previous = new Map<string, string>();
-  for (const { roomIndex, visit, differences } of compareEntrySaves(
-    catalog,
-    record,
-    occurrences,
-    assembly,
-    throughRoom,
-  )) {
+  for (const { roomIndex, visit, differences } of comparisons) {
     for (const { area, field, expected, actual, persists } of differences)
       if (previous.get(`${area} ${field}`) !== persists)
         entries.push({
@@ -504,4 +611,15 @@ export function compareImportToRecord(
     for (const { area, field, persists } of differences) previous.set(`${area} ${field}`, persists);
   }
   return entries;
+}
+
+/** The entry saves' differences through `throughRoom` as report entries. */
+export function compareImportToRecord(
+  catalog: Catalog,
+  record: RunRecord,
+  occurrences: RecordOccurrences,
+  assembly: ProjectEvaluationAssembly,
+  throughRoom: number,
+): readonly RunImportReportEntry[] {
+  return mismatchEntries(compareEntrySaves(catalog, record, occurrences, assembly, throughRoom));
 }

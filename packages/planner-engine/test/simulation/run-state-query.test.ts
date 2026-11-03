@@ -3,13 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
+  createHubDecisionAddress,
   createOccurrenceAddress,
   createRoomRunStateCheckpointAddress,
 } from '@run-planner/engine/authored-project';
 import {
+  hubDepartureSnapshotForProjectEvaluationAssembly,
   runStateSnapshotForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { loadSurfaceNProject, nBiome } from '@run-planner/test-fixtures/surface';
 
 import { createCompleteFTakeoverProject, fStartId } from './support/f-takeover-project';
 
@@ -59,6 +62,46 @@ describe('run-state snapshot query', () => {
     ).toBeUndefined();
     expect(
       runStateSnapshotForProjectEvaluationAssembly(assembly, occurrence('Surface', 'F')),
+    ).toBeUndefined();
+  });
+});
+
+describe('Hub departure snapshot query', () => {
+  const assembly = simulateProjectAssembly(catalog, loadSurfaceNProject());
+  const biome = assembly.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
+  if (biome === undefined || !('rewards' in biome)) throw new Error('N publishes rewards');
+  const { hubDepartures } = biome.rewards;
+  const hub = createHubDecisionAddress(nBiome, 'hub');
+
+  it('returns each departure by its completed visits', () => {
+    expect(hubDepartures.length).toBeGreaterThan(1);
+    for (const departure of hubDepartures)
+      expect(
+        hubDepartureSnapshotForProjectEvaluationAssembly(
+          assembly,
+          hub,
+          departure.precedingVisitCount,
+        ),
+      ).toBe(departure.departure);
+  });
+
+  it('is undefined past the last departure, for another Hub or another route', () => {
+    expect(
+      hubDepartureSnapshotForProjectEvaluationAssembly(assembly, hub, hubDepartures.length),
+    ).toBeUndefined();
+    expect(
+      hubDepartureSnapshotForProjectEvaluationAssembly(
+        assembly,
+        createHubDecisionAddress(nBiome, 'other'),
+        0,
+      ),
+    ).toBeUndefined();
+    expect(
+      hubDepartureSnapshotForProjectEvaluationAssembly(
+        assembly,
+        createHubDecisionAddress(createBiomeAddress('Underworld', 'N'), 'hub'),
+        0,
+      ),
     ).toBeUndefined();
   });
 });

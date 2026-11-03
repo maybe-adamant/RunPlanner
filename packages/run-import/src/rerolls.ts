@@ -25,7 +25,7 @@ import {
 } from '@run-planner/engine/reward-kernel';
 import type { RunRecord, RunRecordTraitScreen } from './run-record/model';
 import type { RunImportContext } from './import';
-import { authoredOccurrence } from './occurrences';
+import { authoredOccurrence, recordHubStay } from './occurrences';
 import type { RunImportReportEntry } from './report';
 import {
   bracketClosed,
@@ -531,25 +531,11 @@ export function importRerolls(context: RunImportContext): void {
     const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
     const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
     const sourceId = context.occurrences.occurrenceOf(roomIndex);
-    const topology = context
-      .assembly()
-      .project.route.biomes.find((entry) => entry.biomeKey === biomeKey)?.topology;
-    // A Hub visit is no occurrence: its board is the decision of the room that first led to it.
-    const hubVisits = context.occurrences.visitsOf(sourceId);
+    const hubStay = recordHubStay(context.assembly().project, context.occurrences, roomIndex);
+    const hub = hubStay?.hub;
     // Each return to the Hub follows one completed room visit.
-    const stay = hubVisits.indexOf(roomIndex);
-    const firstVisit = hubVisits[0];
-    const hub =
-      topology?.occurrences.some((entry) => entry.occurrenceId === sourceId) ||
-      stay < 0 ||
-      firstVisit === undefined ||
-      firstVisit === 0
-        ? undefined
-        : topology?.decisions.find(
-            (decision): decision is HubDecision =>
-              decision.kind === 'hub' &&
-              decision.source.occurrenceId === context.occurrences.occurrenceOf(firstVisit - 1),
-          );
+    const stay = hubStay?.stay ?? -1;
+    const hubVisits = context.occurrences.visitsOf(sourceId);
     const targets =
       hub === undefined
         ? roomPressTargets(context, biome, sourceId)

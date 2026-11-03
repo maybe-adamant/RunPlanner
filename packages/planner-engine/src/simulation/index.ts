@@ -273,7 +273,10 @@ export {
   type ScreenRerollAllowance,
   type ScreenRerollSpend,
 } from './evaluation/reroll-authoring';
-export { runStateSnapshotForProjectEvaluationAssembly } from './evaluation/run-state-query';
+export {
+  hubDepartureSnapshotForProjectEvaluationAssembly,
+  runStateSnapshotForProjectEvaluationAssembly,
+} from './evaluation/run-state-query';
 export {
   goldLedgerForProjectEvaluationAssembly,
   type GoldLedger,

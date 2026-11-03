@@ -1,14 +1,10 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import { traitMaxHealthRollWidth } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
-import {
-  compareEntrySaves,
-  compareImportToRecord,
-  recordedEntryStates,
-} from '../../src/conformance';
+import { compareImportToRecord } from '../../src/conformance';
 import { projectFromRunRecord, type RunImport } from '../../src/import';
 import { RecordOccurrences } from '../../src/occurrences';
-import type { RunImportReportEntry } from '../../src/report';
+import type { RunImportReportEntry, RunImportRoomUncheckedReason } from '../../src/report';
 import type { RunRecord } from '../../src/run-record';
 import { timedCalls } from './authoring-timing';
 import { describeEntry, occurrenceOf } from './run-import';
@@ -31,13 +27,15 @@ export const ROOM_BUCKETS: readonly RoomBucket[] = [
   'unchecked',
 ];
 
-export type UncheckedReason = 'noEntrySaves' | 'lastRoom' | 'stopped' | 'revisited' | 'unreached';
-
 export interface RoomRow {
   readonly roomIndex: number;
   readonly name: string;
   readonly bucket: RoomBucket;
-  readonly unchecked?: UncheckedReason;
+  readonly unchecked?: RunImportRoomUncheckedReason;
+  /** `family:reason` of each fact family the next entry save holds that nothing compares. */
+  readonly uncheckedFamilies: readonly string[];
+  /** The verdict when the walk first reached the next save, where later authoring changed it. */
+  readonly whenReached?: 'accepted' | 'mismatch';
   /** The record-supported solvers that apply to the room. */
   readonly solvers: readonly string[];
   /**
@@ -73,15 +71,6 @@ export interface RunMeasurement {
   readonly kind: RunImport['kind'];
   readonly rows: readonly RoomRow[];
   readonly timing: RunTiming;
-}
-
-/** A difference's family: its area, and for a trait whether it is missing, extra, or graded otherwise. */
-function family(area: string, expected: string, actual: string): string {
-  if (area !== 'traits') return area;
-  if (expected === 'absent') return 'traits.extra';
-  if (actual === 'absent') return 'traits.missing';
-  const rarity = (grade: string) => (grade.startsWith('level') ? '' : grade.split(' ')[0]);
-  return rarity(expected) === rarity(actual) ? 'traits.level' : 'traits.rarity';
 }
 
 const quantile = (values: readonly number[], q: number) => {
@@ -140,8 +129,6 @@ export function measureRun(name: string, record: RunRecord): RunMeasurement {
   const evaluateMs = performance.now() - evaluateBegan;
   const throughRoom =
     imported.kind === 'stopped' ? (imported.stop.record?.roomIndex ?? 0) : record.rooms.length;
-  const comparisons = compareEntrySaves(catalog, record, occurrences, assembly, throughRoom);
-
   // The comparison's own entries are the report's trailing mismatches; the rest are the walk's.
   const compared = compareImportToRecord(catalog, record, occurrences, assembly, throughRoom).map(
     (entry) => JSON.stringify(entry),
@@ -164,8 +151,6 @@ export function measureRun(name: string, record: RunRecord): RunMeasurement {
     byRoom.set(roomIndex, [...(byRoom.get(roomIndex) ?? []), entry]);
   }
 
-  const states = recordedEntryStates(record);
-  const comparisonAt = new Map(comparisons.map((comparison) => [comparison.roomIndex, comparison]));
   const rows: RoomRow[] = record.rooms.map((room, roomIndex) => {
     const entries = byRoom.get(roomIndex) ?? [];
     const guesses = entries.filter((entry) => !CHECK_REASONS.has(entry.reason));
@@ -188,34 +173,19 @@ export function measureRun(name: string, record: RunRecord): RunMeasurement {
       entries: entries.map(describeEntry),
       orderOnly: guesses.length > 0 && guesses.every((entry) => entry.area === 'roomActionOrder'),
     };
-    const unchecked = (reason: UncheckedReason): RoomRow => ({
-      ...base,
-      bucket: 'unchecked',
-      unchecked: reason,
-      introduced: solverMismatches,
-      carried: [],
-    });
-    if (states.length === 0) return unchecked('noEntrySaves');
-    if (roomIndex >= throughRoom) return unchecked('stopped');
-    if (occurrences.visitsOf(occurrences.occurrenceOf(roomIndex)).length > 1)
-      return unchecked('revisited');
-    if (roomIndex === record.rooms.length - 1) return unchecked('lastRoom');
-    const next = comparisonAt.get(roomIndex + 1);
-    if (next === undefined) return unchecked('unreached');
-    // A difference is the room's own unless the comparison before it held it unchanged.
-    const before = comparisons.filter((comparison) => comparison.roomIndex <= roomIndex).at(-1);
-    const held = new Map(
-      (before?.differences ?? []).map((difference) => [
-        `${difference.area}:${difference.field}`,
-        difference.persists,
-      ]),
-    );
-    const introduced = [...solverMismatches];
-    const carried: string[] = [];
-    for (const { area, field, expected, actual, persists } of next.differences)
-      (held.get(`${area}:${field}`) === persists ? carried : introduced).push(
-        `${family(area, expected, actual)}:${field}`,
-      );
+    const acceptance = imported.report.rooms![roomIndex]!;
+    if (acceptance.verdict === 'unchecked')
+      return {
+        ...base,
+        bucket: 'unchecked',
+        unchecked: acceptance.reason,
+        uncheckedFamilies: [],
+        introduced: solverMismatches,
+        carried: [],
+      };
+    const key = ({ family, field }: { family: string; field: string }) => `${family}:${field}`;
+    const introduced = [...solverMismatches, ...acceptance.introduced.map(key)];
+    const carried = acceptance.carried.map(key);
     const bucket: RoomBucket =
       introduced.length > 0
         ? 'mismatch'
@@ -226,7 +196,14 @@ export function measureRun(name: string, record: RunRecord): RunMeasurement {
             : solvers.length > 0
               ? 'solved'
               : 'exact';
-    return { ...base, bucket, introduced, carried };
+    return {
+      ...base,
+      bucket,
+      introduced,
+      carried,
+      uncheckedFamilies: acceptance.unchecked.map(({ family, reason }) => `${family}:${reason}`),
+      ...(acceptance.whenReached === undefined ? {} : { whenReached: acceptance.whenReached }),
+    };
   });
 
   const applies = taken.filter((sample) => sample.call === 'apply');
@@ -273,7 +250,7 @@ const ms = (value: number) => value.toFixed(value < 10 ? 1 : 0);
 /** One table line per run: bucket counts, unchecked reasons and timing. */
 export function summaryLines(measurements: readonly RunMeasurement[]): readonly string[] {
   const lines = [
-    `run | kind | rooms | ${ROOM_BUCKETS.join(' | ')} | orderOnly | first mismatch | solver rooms | unchecked by reason | import s | cold eval ms | applies | apply p50/p95 ms | apply total s | room p50/p95 ms | probes | candidates ms`,
+    `run | kind | rooms | ${ROOM_BUCKETS.join(' | ')} | orderOnly | first mismatch | solver rooms | unchecked by reason | revised after reach | import s | cold eval ms | applies | apply p50/p95 ms | apply total s | room p50/p95 ms | probes | candidates ms`,
   ];
   const tally = (values: readonly string[]) => {
     const counts: Record<string, number> = {};
@@ -297,6 +274,9 @@ export function summaryLines(measurements: readonly RunMeasurement[]): readonly 
         first === undefined ? '-' : `r${first.roomIndex}`,
         tally(rows.filter((row) => row.solvers.length > 0).map((row) => row.bucket)),
         tally(rows.flatMap((row) => (row.unchecked === undefined ? [] : [row.unchecked]))),
+        tally(
+          rows.flatMap((row) => (row.whenReached === undefined ? [] : [`from ${row.whenReached}`])),
+        ),
         (timing.importMs / 1000).toFixed(1),
         ms(timing.evaluateMs),
         timing.applies,
@@ -318,6 +298,8 @@ export function roomLines(measurement: RunMeasurement): readonly string[] {
       row.solvers.length === 0 ? '' : ` solvers=${row.solvers.join(',')}`
     }${row.introduced.length === 0 ? '' : ` introduced=${row.introduced.join(',')}`}${
       row.carried.length === 0 ? '' : ` carried=${row.carried.join(',')}`
+    }${row.uncheckedFamilies.length === 0 ? '' : ` uncheckedFamilies=${row.uncheckedFamilies.join(',')}`}${
+      row.whenReached === undefined ? '' : ` whenReached=${row.whenReached}`
     }`,
     ...row.entries.map((entry) => `    ${entry}`),
   ]);

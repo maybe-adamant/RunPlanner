@@ -26,6 +26,7 @@ import type {
   RunImportReason,
   RunImportReport,
   RunImportReportEntry,
+  RunImportRoomAcceptance,
   RunImportStop,
 } from './report';
 import { answerHub, importPhantomExits, importSideRoomVisits } from './hub';
@@ -56,7 +57,8 @@ import {
 import { areaOfFinding, areaOfOwner, isQuestionFinding } from './areas';
 import { importResourcePlacements } from './resources';
 import { routeKeyForRecord } from './vocabulary';
-import { compareImportToRecord } from './conformance';
+import { compareEntrySaves, entrySaves, mismatchEntries, type EntrySaves } from './conformance';
+import { judgeRoom, judgeRooms } from './acceptance';
 import {
   importRerolls,
   unplacedStoreScreenRerolls,
@@ -119,6 +121,11 @@ export interface RunImportContext {
   readonly used: Set<string>;
   /** Picked max-health rolls waiting for their room's next entry save, by offer and row. */
   readonly maxHealthRolls: Map<string, MaxHealthRollQuestion>;
+  /**
+   * Judges a record room at its next entry save against the plan as it
+   * stands; inside `probe`, it tests a candidate authoring of the room.
+   */
+  readonly acceptance: (roomIndex: number) => RunImportRoomAcceptance;
   /** Marks that the record answered the current question but the engine refused the value. */
   readonly refuse: () => void;
   /**
@@ -140,7 +147,11 @@ export interface RunImportContext {
  */
 export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunImport {
   const entries: RunImportReportEntry[] = [];
-  const finish = (project: ProjectDocument, stop: RunImportStop | undefined): RunImport => {
+  const finish = (
+    project: ProjectDocument,
+    stop: RunImportStop | undefined,
+    rooms: readonly RunImportRoomAcceptance[],
+  ): RunImport => {
     if (stop !== undefined)
       entries.push({
         area: stop.area,
@@ -150,6 +161,7 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
       });
     const report = Object.freeze({
       entries: Object.freeze(entries.map((entry) => Object.freeze(entry))),
+      rooms: Object.freeze(rooms.map((room) => Object.freeze(room))),
     });
     return Object.freeze(
       stop === undefined
@@ -165,6 +177,7 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
         routeKey: catalog.routes.values[0]!.key,
       }),
       { area: record.route.dream ? 'dream' : 'route', code: 'unsupportedRoute' },
+      record.rooms.map((_, roomIndex) => ({ roomIndex, verdict: 'unchecked', reason: 'stopped' })),
     );
   const route = catalog.routes.byKey[routeKey]!;
   const project = createProjectDocument(catalog, {
@@ -184,16 +197,13 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
   walk.reportUnusedScreens(stop);
   walk.reportUnreachedRerolls();
   entries.push(...unansweredMaxHealthRolls(walk.context));
+  const throughRoom = stop === undefined ? record.rooms.length : (stop.record?.roomIndex ?? 0);
   entries.push(
-    ...compareImportToRecord(
-      catalog,
-      record,
-      walk.occurrences,
-      walk.assembly,
-      stop === undefined ? record.rooms.length : (stop.record?.roomIndex ?? 0),
+    ...mismatchEntries(
+      compareEntrySaves(catalog, record, walk.occurrences, walk.assembly, throughRoom),
     ),
   );
-  return finish(walk.assembly.project, stop);
+  return finish(walk.assembly.project, stop, walk.finalAcceptance(throughRoom));
 }
 
 export class RunImportWalk {
@@ -206,6 +216,9 @@ export class RunImportWalk {
   >();
   readonly occurrences: RecordOccurrences;
   readonly context: RunImportContext;
+  private readonly saves: EntrySaves;
+  /** Each room's verdict when the walk first reached its next entry save, in room order. */
+  private readonly reached: RunImportRoomAcceptance[] = [];
 
   constructor(
     readonly catalog: Catalog,
@@ -215,6 +228,7 @@ export class RunImportWalk {
   ) {
     this.authoring = createAuthoringSession(catalog, start);
     this.occurrences = new RecordOccurrences(catalog, record);
+    this.saves = entrySaves(record);
     this.context = {
       catalog,
       record,
@@ -231,6 +245,7 @@ export class RunImportWalk {
       note: (entry) => this.entries.push(entry),
       used: new Set(),
       maxHealthRolls: new Map(),
+      acceptance: (roomIndex) => this.judge(roomIndex),
       refuse: () => {
         this.refusedAnswer = true;
       },
@@ -243,6 +258,56 @@ export class RunImportWalk {
 
   get assembly(): ProjectEvaluationAssembly {
     return this.authoring.current();
+  }
+
+  private judge(roomIndex: number): RunImportRoomAcceptance {
+    return judgeRoom(
+      this.catalog,
+      this.record,
+      this.saves,
+      this.occurrences,
+      this.assembly,
+      roomIndex,
+    );
+  }
+
+  /**
+   * Accepts, in room order, each room whose next entry save the plan now
+   * reaches, keeping its verdict at that moment.
+   */
+  private acceptReachedRooms(): void {
+    for (
+      let roomIndex = this.reached.length;
+      roomIndex < this.record.rooms.length;
+      roomIndex += 1
+    ) {
+      const acceptance = this.judge(roomIndex);
+      if (acceptance.verdict === 'unchecked' && acceptance.reason === 'unreached') return;
+      this.reached.push(acceptance);
+    }
+  }
+
+  /**
+   * Every room judged against the final plan, through `throughRoom`. A room
+   * whose verdict later authoring changed also names the one it was accepted with.
+   */
+  finalAcceptance(throughRoom: number): readonly RunImportRoomAcceptance[] {
+    return judgeRooms(
+      this.catalog,
+      this.record,
+      this.saves,
+      this.occurrences,
+      this.assembly,
+      throughRoom,
+    ).map((room) => {
+      const reached = this.reached[room.roomIndex];
+      return room.verdict !== 'unchecked' &&
+        reached !== undefined &&
+        reached.verdict !== 'unchecked' &&
+        reached.verdict !== room.verdict
+        ? { ...room, whenReached: reached.verdict }
+        : room;
+    });
   }
 
   private dirty = new Set<string>();
@@ -477,6 +542,7 @@ export class RunImportWalk {
         importResourcePlacements(this.context);
         importMaxHealthRolls(this.context);
       }
+      this.acceptReachedRooms();
       const issue = this.assembly.evaluation.issue;
       // A ship window still open as the walk ends never closes; its waiting pickups are authored.
       if (issue === undefined && releaseOpenWheelWindows(this.context)) continue;

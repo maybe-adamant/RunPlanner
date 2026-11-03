@@ -380,9 +380,12 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
       ),
     };
     const imported = projectFromRunRecord(catalog, record);
+    // Neither press is placed, so the stay's departure keeps both draws and both spends.
     expect(rerollLines(imported, 8)).toEqual([
       'unsupportedArea reroll r8 -',
       'unsupportedArea reroll r8 -',
+      'mismatch stores r9 -',
+      'mismatch reroll r9 -',
     ]);
     const hub = imported.project.route.biomes[0]!.topology!.decisions.find(
       (decision) => decision.kind === 'hub',

@@ -1,6 +1,7 @@
 import {
   createOccurrenceId,
   type AuthoredRewardState,
+  type HubDecision,
   type OccurrenceId,
   type ProjectDocument,
   type RoomOccurrence,
@@ -165,6 +166,34 @@ export function authoredOccurrence(
   return project.route.biomes
     .find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
+}
+
+/**
+ * The Hub a record room stays in, and its stay: the room visits completed
+ * before it. A Hub visit is no occurrence: its board is the decision of the
+ * room that first led to it.
+ */
+export function recordHubStay(
+  project: ProjectDocument,
+  occurrences: RecordOccurrences,
+  roomIndex: number,
+): { readonly hub: HubDecision; readonly stay: number } | undefined {
+  const occurrenceId = occurrences.occurrenceOf(roomIndex);
+  const topology = project.route.biomes.find(
+    (biome) => biome.biomeKey === occurrences.biomeOfRoom[roomIndex],
+  )?.topology;
+  if (topology === undefined || topology === null) return undefined;
+  if (topology.occurrences.some((entry) => entry.occurrenceId === occurrenceId)) return undefined;
+  const visits = occurrences.visitsOf(occurrenceId);
+  const stay = visits.indexOf(roomIndex);
+  const first = visits[0];
+  if (stay < 0 || first === undefined || first === 0) return undefined;
+  const hub = topology.decisions.find(
+    (decision): decision is HubDecision =>
+      decision.kind === 'hub' &&
+      decision.source.occurrenceId === occurrences.occurrenceOf(first - 1),
+  );
+  return hub === undefined ? undefined : { hub, stay };
 }
 
 /** The reward a room's door delivers: its last reroll's, else its first draw. */
