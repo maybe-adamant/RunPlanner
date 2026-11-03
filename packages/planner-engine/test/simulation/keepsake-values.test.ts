@@ -156,8 +156,8 @@ describe('Discordant Bell and Lion Fang values', () => {
           sequence: 1,
         }),
         room(gameName),
-        branches,
-      ).branches[0]!.state.keepsakes.discordantBell;
+        branches[0],
+      ).branch!.state.keepsakes.discordantBell;
     expect(catalog.rooms.byKey.N_Sub01?.skipRoomsPerUpgrade).toBe(true);
     expect(end('N_Sub01')).toEqual({ rank: 'Epic', multiplier: 1 });
     expect(end('RoomOpening01')).toEqual({ rank: 'Epic', multiplier: 1.01 });

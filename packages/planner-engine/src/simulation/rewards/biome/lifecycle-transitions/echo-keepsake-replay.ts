@@ -44,7 +44,7 @@ import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import type { LifecycleFinding } from './types';
 
 export interface EchoKeepsakeReplayTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly keepsakeEquipResultCandidates: readonly {
     readonly key: string;
     readonly candidate: KeepsakeEquipResultCandidateCapability;
@@ -64,10 +64,9 @@ export function applyEchoKeepsakeReplayTransition(
   snapshot: BiomeRewardSnapshot,
   routePosition: ResolvedRoutePosition,
   routeLoadout: RouteLoadout,
-  branchesBefore: readonly RewardBranchState[],
+  before: RewardBranchState | undefined,
   biomeStartSequence: number,
 ): EchoKeepsakeReplayTransition {
-  let branches = branchesBefore;
   const echoKeepsakeReplay = createEchoKeepsakeReplayAddress(
     createBiomeAddress(snapshot.routeKey, snapshot.biomeKey),
   );
@@ -99,7 +98,8 @@ export function applyEchoKeepsakeReplayTransition(
   };
   let replayed = false;
   let outcome: BiomeRewardSimulation['volatileEchoKeepsakeReplay'];
-  const gift = branches[0]?.state.traitHistory.equippedTraits.EchoRepeatKeepsakeBoon;
+  let branch = before;
+  const gift = before?.state.traitHistory.equippedTraits.EchoRepeatKeepsakeBoon;
   const giftState =
     gift?.echoRepeatedKeepsakeKey === undefined || gift.acquisitionIdentity === undefined
       ? undefined
@@ -108,7 +108,7 @@ export function applyEchoKeepsakeReplayTransition(
           acquisitionIdentity: gift.acquisitionIdentity,
           replayCount: gift.echoKeepsakeReplayCount ?? 0,
         });
-  if (giftState !== undefined) {
+  if (before !== undefined && giftState !== undefined) {
     const declaration = catalog.keepsakes.byKey[giftState.capturedKeepsakeKey];
     if (declaration?.echoGift.availability !== 'eligible')
       throw new BiomeRewardSimulationContractError(
@@ -150,146 +150,98 @@ export function applyEchoKeepsakeReplayTransition(
         state: replaceSimulationTraitHistory(state, traitHistory),
       });
     };
-    const startBranches = branches;
-    branches = Object.freeze(permanent ? startBranches : startBranches.filter((b) => !held(b)));
-    if (branches.length === 0) {
-      branches = startBranches;
+    const start = before;
+    // A held keepsake other than a Permanent one gets no copy at all.
+    const replays = permanent || !held(start);
+    /** Applies a keepsake-state replay, recording it only when the state changed. */
+    const replayKeepsakes = (
+      apply: (
+        keepsakes: RewardBranchState['state']['keepsakes'],
+      ) => RewardBranchState['state']['keepsakes'],
+      equip: (branch: RewardBranchState) => RewardBranchState = (branch) => branch,
+    ): RewardBranchState => {
+      const keepsakes = apply(start.state.keepsakes);
+      return keepsakes === start.state.keepsakes
+        ? start
+        : recordReplay(
+            equip(Object.freeze({ ...start, state: Object.freeze({ ...start.state, keepsakes }) })),
+          );
+    };
+    const withKeepsakes = (keepsakes: RewardBranchState['state']['keepsakes']): RewardBranchState =>
+      Object.freeze({ ...start, state: Object.freeze({ ...start.state, keepsakes }) });
+    if (!replays) {
+      branch = start;
     } else if (replayEffect.kind === 'modeledNeutral') {
-      branches = Object.freeze(branches.map(recordReplay));
+      branch = recordReplay(start);
     } else if (replayEffect.kind === 'figLeaf' && giftState.replayCount === 0) {
-      branches = Object.freeze(
-        branches.map((branch) =>
-          recordReplay(
-            Object.freeze({
-              ...branch,
-              state: Object.freeze({
-                ...branch.state,
-                keepsakes: applyEchoFigLeafReplay(branch.state.keepsakes),
-              }),
-            }),
-          ),
-        ),
-      );
+      branch = recordReplay(withKeepsakes(applyEchoFigLeafReplay(start.state.keepsakes)));
     } else if (replayEffect.kind === 'crystalFigurine') {
       // Echo can recreate the captured keepsake's Common Figurine source at
       // the start of every biome once the previous source has been consumed.
       // The keepsake state owns the no-duplicate and consumed-source rules;
-      // this boundary only records the replay event for branches it changes.
-      const replayedBranches = branches.map((branch) => {
-        const keepsakes = applyEchoFigurineReplay(
-          catalog,
-          branch.state.keepsakes,
-          giftState.capturedKeepsakeKey,
-        );
-        return keepsakes === branch.state.keepsakes
-          ? branch
-          : recordReplay(
-              Object.freeze({
-                ...branch,
-                state: Object.freeze({ ...branch.state, keepsakes: keepsakes }),
-              }),
-            );
-      });
-      branches = Object.freeze(replayedBranches);
+      // this boundary only records the replay event when it changes the state.
+      branch = replayKeepsakes((keepsakes) =>
+        applyEchoFigurineReplay(catalog, keepsakes, giftState.capturedKeepsakeKey),
+      );
     } else if (replayEffect.kind === 'concaveStone') {
-      const replayedBranches = branches.map((branch) => {
-        const keepsakes = applyEchoConcaveStoneReplay(
-          catalog,
-          branch.state.keepsakes,
-          giftState.capturedKeepsakeKey,
-        );
-        return keepsakes === branch.state.keepsakes
-          ? branch
-          : recordReplay(
-              Object.freeze({
-                ...branch,
-                state: Object.freeze({ ...branch.state, keepsakes: keepsakes }),
-              }),
-            );
-      });
-      branches = Object.freeze(replayedBranches);
+      branch = replayKeepsakes((keepsakes) =>
+        applyEchoConcaveStoneReplay(catalog, keepsakes, giftState.capturedKeepsakeKey),
+      );
     } else if (replayEffect.kind === 'olympianRewardPressure') {
-      const replayedBranches = branches.map((branch) => {
-        const keepsakes = applyEchoOlympianRewardPressureReplay(
-          catalog,
-          branch.state.keepsakes,
-          giftState.capturedKeepsakeKey,
-        );
-        return keepsakes === branch.state.keepsakes
-          ? branch
-          : recordReplay(
-              applyOlympianRewardPressureEquip(
-                catalog,
-                Object.freeze({
-                  ...branch,
-                  state: Object.freeze({ ...branch.state, keepsakes: keepsakes }),
-                }),
-                giftState.capturedKeepsakeKey,
-              ),
-            );
-      });
-      branches = Object.freeze(replayedBranches);
+      branch = replayKeepsakes(
+        (keepsakes) =>
+          applyEchoOlympianRewardPressureReplay(catalog, keepsakes, giftState.capturedKeepsakeKey),
+        (changed) =>
+          applyOlympianRewardPressureEquip(catalog, changed, giftState.capturedKeepsakeKey),
+      );
     } else if (
       replayEffect.kind === 'moonBeam' &&
       giftState.replayCount === 0 &&
-      branches[0]?.state.keepsakes.currentKey !== giftState.capturedKeepsakeKey
+      start.state.keepsakes.currentKey !== giftState.capturedKeepsakeKey
     ) {
       const precedingPostbossWasBigPath =
         routePosition.previousPostbossRoomGameName === 'H_PostBoss01' ||
         routePosition.previousPostbossRoomGameName === 'P_PostBoss01';
-      branches = Object.freeze(
-        branches.map((branch) =>
-          recordReplay(
-            applyMoonBeamEquip(
-              catalog,
-              branch,
-              giftState.capturedKeepsakeKey,
-              'Common',
-              precedingPostbossWasBigPath,
-            ),
-          ),
+      branch = recordReplay(
+        applyMoonBeamEquip(
+          catalog,
+          start,
+          giftState.capturedKeepsakeKey,
+          'Common',
+          precedingPostbossWasBigPath,
         ),
       );
     } else if (
       (replayEffect.kind === 'maxManaGrant' || replayEffect.kind === 'maxHealthCap') &&
       giftState.replayCount === 0 &&
-      branches[0]?.state.keepsakes.currentKey !== giftState.capturedKeepsakeKey
+      start.state.keepsakes.currentKey !== giftState.capturedKeepsakeKey
     ) {
-      branches = Object.freeze(
-        branches.map((branch) =>
-          recordReplay(
-            Object.freeze({
-              ...branch,
-              state: Object.freeze({
-                ...branch.state,
-                keepsakes: applyEchoMaxStatKeepsakeReplay(
-                  catalog,
-                  branch.state.keepsakes,
-                  giftState.capturedKeepsakeKey,
-                ),
-              }),
-            }),
+      branch = recordReplay(
+        withKeepsakes(
+          applyEchoMaxStatKeepsakeReplay(
+            catalog,
+            start.state.keepsakes,
+            giftState.capturedKeepsakeKey,
           ),
         ),
       );
     } else if (
       replayEffect.kind === 'transcendentEmbryo' &&
       giftState.replayCount === 0 &&
-      branches.every((branch) => branch.state.keepsakes.transcendentEmbryo === undefined)
+      start.state.keepsakes.transcendentEmbryo === undefined
     ) {
       const effect = catalog.keepsakes.byKey[giftState.capturedKeepsakeKey]?.effect;
       if (effect?.kind !== 'transcendentEmbryo')
         throw new BiomeRewardSimulationContractError(
           'Echo Transcendent Embryo replay has no rank data',
         );
-      if (branches[0] !== undefined)
-        keepsakeEquipResultCandidates.push({
-          key: semanticAddressKey(echoEmbryoResult),
-          candidate: Object.freeze({
-            state: branches[0].state,
-            transcendentEmbryoRarity: effect.blessingRarityByRank.Common,
-          }),
-        });
+      keepsakeEquipResultCandidates.push({
+        key: semanticAddressKey(echoEmbryoResult),
+        candidate: Object.freeze({
+          state: start.state,
+          transcendentEmbryoRarity: effect.blessingRarityByRank.Common,
+        }),
+      });
       const authored = snapshot.echoKeepsakeReplayResults?.transcendentEmbryo;
       if (authored === undefined) {
         addFinding(
@@ -298,16 +250,13 @@ export function applyEchoKeepsakeReplayTransition(
           }),
         );
       } else if (
-        branches.some(
-          (branch) =>
-            !assessTranscendentEmbryoBlessing(
-              catalog,
-              authored,
-              branch.state.traitHistory,
-              effect.blessingRarityByRank.Common,
-              { ...routeLoadout, routeKey: echoEmbryoResult.routeKey },
-            ).legal,
-        )
+        !assessTranscendentEmbryoBlessing(
+          catalog,
+          authored,
+          start.state.traitHistory,
+          effect.blessingRarityByRank.Common,
+          { ...routeLoadout, routeKey: echoEmbryoResult.routeKey },
+        ).legal
       ) {
         addFinding(
           rewardFinding('keepsakeEquipResultUnavailable', echoEmbryoResult, {
@@ -315,22 +264,18 @@ export function applyEchoKeepsakeReplayTransition(
           }),
         );
       } else {
-        branches = Object.freeze(
-          branches.map((branch) =>
-            recordReplay(
-              applyTranscendentEmbryoEquipResult(
-                catalog,
-                branch,
-                giftState.capturedKeepsakeKey,
-                authored,
-                snapshot.echoKeepsakeReplayResults?.transcendentEmbryoTransformations,
-                echoEmbryoResult,
-                biomeStartSequence,
-                'echo',
-                'Common',
-                routeLoadout,
-              ),
-            ),
+        branch = recordReplay(
+          applyTranscendentEmbryoEquipResult(
+            catalog,
+            start,
+            giftState.capturedKeepsakeKey,
+            authored,
+            snapshot.echoKeepsakeReplayResults?.transcendentEmbryoTransformations,
+            echoEmbryoResult,
+            biomeStartSequence,
+            'echo',
+            'Common',
+            routeLoadout,
           ),
         );
         outcome = Object.freeze({
@@ -348,13 +293,12 @@ export function applyEchoKeepsakeReplayTransition(
     } else if (
       replayEffect.kind === 'experimentalHammer' &&
       giftState.replayCount === 0 &&
-      branches[0]?.state.keepsakes.currentKey !== giftState.capturedKeepsakeKey
+      start.state.keepsakes.currentKey !== giftState.capturedKeepsakeKey
     ) {
-      if (branches[0] !== undefined)
-        keepsakeEquipResultCandidates.push({
-          key: semanticAddressKey(echoHammerResult),
-          candidate: Object.freeze({ state: branches[0].state }),
-        });
+      keepsakeEquipResultCandidates.push({
+        key: semanticAddressKey(echoHammerResult),
+        candidate: Object.freeze({ state: start.state }),
+      });
       const authored = snapshot.echoKeepsakeReplayResults?.experimentalHammer;
       if (authored === undefined) {
         addFinding(
@@ -362,30 +306,22 @@ export function applyEchoKeepsakeReplayTransition(
             keepsakeKey: giftState.capturedKeepsakeKey,
           }),
         );
-      } else if (
-        branches.some(
-          (branch) => !assessExperimentalHammerEquipResult(catalog, authored, branch.state).legal,
-        )
-      ) {
+      } else if (!assessExperimentalHammerEquipResult(catalog, authored, start.state).legal) {
         addFinding(
           rewardFinding('keepsakeEquipResultUnavailable', echoHammerResult, {
             keepsakeKey: giftState.capturedKeepsakeKey,
           }),
         );
       } else {
-        branches = Object.freeze(
-          branches.map((branch) =>
-            recordReplay(
-              applyExperimentalHammerEquipResult(
-                catalog,
-                branch,
-                giftState.capturedKeepsakeKey,
-                snapshot.echoKeepsakeReplayResults,
-                echoHammerResult,
-                biomeStartSequence,
-                'Common',
-              ),
-            ),
+        branch = recordReplay(
+          applyExperimentalHammerEquipResult(
+            catalog,
+            start,
+            giftState.capturedKeepsakeKey,
+            snapshot.echoKeepsakeReplayResults,
+            echoHammerResult,
+            biomeStartSequence,
+            'Common',
           ),
         );
         outcome = Object.freeze({
@@ -398,52 +334,22 @@ export function applyEchoKeepsakeReplayTransition(
         replayed = true;
       }
     } else if (replayEffect.kind === 'lionFang') {
-      branches = Object.freeze(
-        branches.map((branch) => {
-          const keepsakes = applyEchoLionFangReplay(
-            catalog,
-            branch.state.keepsakes,
-            giftState.capturedKeepsakeKey,
-          );
-          return keepsakes === branch.state.keepsakes
-            ? branch
-            : recordReplay(
-                Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes }) }),
-              );
-        }),
+      branch = replayKeepsakes((keepsakes) =>
+        applyEchoLionFangReplay(catalog, keepsakes, giftState.capturedKeepsakeKey),
       );
     } else if (replayEffect.kind === 'silkenSash') {
-      branches = Object.freeze(
-        branches.map((branch) => {
-          const keepsakes = applyEchoSilkenSashReplay(
-            catalog,
-            branch.state.keepsakes,
-            giftState.capturedKeepsakeKey,
-          );
-          return keepsakes === branch.state.keepsakes
-            ? branch
-            : recordReplay(
-                Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes }) }),
-              );
-        }),
+      branch = replayKeepsakes((keepsakes) =>
+        applyEchoSilkenSashReplay(catalog, keepsakes, giftState.capturedKeepsakeKey),
       );
     } else if (replayEffect.kind === 'callingCard') {
       const charges = catalog.keepsakes.byKey[giftState.capturedKeepsakeKey]?.effect;
       if (charges?.kind !== 'callingCard')
         throw new BiomeRewardSimulationContractError('Echo Calling Card replay has no rank data');
-      branches = Object.freeze(
-        branches.map((branch) =>
-          recordReplay(
-            Object.freeze({
-              ...branch,
-              state: Object.freeze({
-                ...branch.state,
-                keepsakes: applyEchoCallingCardReplay(
-                  branch.state.keepsakes,
-                  charges.rarificationChargesByRank.Common,
-                ),
-              }),
-            }),
+      branch = recordReplay(
+        withKeepsakes(
+          applyEchoCallingCardReplay(
+            start.state.keepsakes,
+            charges.rarificationChargesByRank.Common,
           ),
         ),
       );
@@ -451,36 +357,15 @@ export function applyEchoKeepsakeReplayTransition(
       const charges = catalog.keepsakes.byKey[giftState.capturedKeepsakeKey]?.effect;
       if (charges?.kind !== 'timePiece')
         throw new BiomeRewardSimulationContractError('Echo Time Piece replay has no rank data');
-      branches = Object.freeze(
-        branches.map((branch) =>
-          recordReplay(
-            Object.freeze({
-              ...branch,
-              state: Object.freeze({
-                ...branch.state,
-                keepsakes: applyEchoTimePieceReplay(
-                  branch.state.keepsakes,
-                  charges.conversionChargesByRank.Common,
-                ),
-              }),
-            }),
-          ),
+      branch = recordReplay(
+        withKeepsakes(
+          applyEchoTimePieceReplay(start.state.keepsakes, charges.conversionChargesByRank.Common),
         ),
       );
     }
-    if (branches !== startBranches) {
-      const replayedBranches = branches;
-      let next = 0;
-      const merged = startBranches.map((branch) =>
-        permanent || !held(branch) ? replayedBranches[next++]! : branch,
-      );
-      branches = merged.every((branch, index) => branch === startBranches[index])
-        ? startBranches
-        : Object.freeze(merged);
-    }
   }
   return Object.freeze({
-    branches,
+    branch,
     keepsakeEquipResultCandidates: Object.freeze(keepsakeEquipResultCandidates),
     findings: Object.freeze(findings),
     timelineFacts: replayed

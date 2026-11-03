@@ -143,9 +143,9 @@ function withSpentEntries(base: RewardBranchState, rewardType: string): RewardBr
   };
 }
 
-function explain(branches: readonly RewardBranchState[], offerContext: OfferProcessingContext) {
-  expect(processRewardOffer(branches, offerContext, new Map())).toEqual([]);
-  return explainRewardOfferExclusions(branches, offerContext);
+function explain(reached: RewardBranchState, offerContext: OfferProcessingContext) {
+  expect(processRewardOffer(reached, offerContext, new Map())).toBeUndefined();
+  return explainRewardOfferExclusions(reached, offerContext);
 }
 
 const boon = (source: string): ResolvedRewardOffer => ({
@@ -166,11 +166,11 @@ describe('reward offer exclusion aggregation', () => {
 
   it('publishes exclusions only on an unsupported result', () => {
     const exclusions = [spent];
-    expect(createRewardProducerCandidateResult(new Map(), [branch()], exclusions)).toEqual({
+    expect(createRewardProducerCandidateResult(new Map(), branch(), exclusions)).toEqual({
       findings: [],
       supported: true,
     });
-    expect(createRewardProducerCandidateResult(new Map(), [], exclusions)).toEqual({
+    expect(createRewardProducerCandidateResult(new Map(), undefined, exclusions)).toEqual({
       findings: [],
       supported: false,
       exclusions,
@@ -180,7 +180,7 @@ describe('reward offer exclusion aggregation', () => {
 
 describe('door and local reward offer exclusions', () => {
   it('names a type the store does not hold', () => {
-    expect(explain([branch()], context({ rewardType: 'MetaCurrencyDrop' }))).toEqual([
+    expect(explain(branch(), context({ rewardType: 'MetaCurrencyDrop' }))).toEqual([
       {
         kind: 'notInStore',
         rewardType: 'MetaCurrencyDrop',
@@ -192,7 +192,7 @@ describe('door and local reward offer exclusions', () => {
   it('names a type the producer filters out', () => {
     expect(
       explain(
-        [branch()],
+        branch(),
         context(
           { rewardType: 'MaxHealthDrop' },
           {
@@ -231,7 +231,7 @@ describe('door and local reward offer exclusions', () => {
   it('names a qualifying forced reward', () => {
     expect(
       explain(
-        [branch()],
+        branch(),
         context(
           { rewardType: 'RoomMoneyDrop' },
           {
@@ -243,7 +243,7 @@ describe('door and local reward offer exclusions', () => {
   });
 
   it('names the provider an Olympian keepsake forces', () => {
-    const [reason] = explain([branch('ForceZeusBoonKeepsake')], context(boon('ApolloUpgrade')))!;
+    const [reason] = explain(branch('ForceZeusBoonKeepsake'), context(boon('ApolloUpgrade')))!;
     expect(reason).toEqual({
       kind: 'olympianProviderForced',
       providerKey: catalog.traitGiverByAcquisitionGameName.ZeusUpgrade,
@@ -252,22 +252,22 @@ describe('door and local reward offer exclusions', () => {
 
   it('names the queued reward priority', () => {
     expect(
-      explain([branch('ForceZeusBoonKeepsake')], context({ rewardType: 'MaxHealthDrop' })),
+      explain(branch('ForceZeusBoonKeepsake'), context({ rewardType: 'MaxHealthDrop' })),
     ).toEqual([{ kind: 'priorityRequired', rewardType: 'Boon', storeKey: 'RunProgress' }]);
   });
 
   it('names an earlier door offering the same god', () => {
     const peer = { origin: peerOrigin, offer: boon('ZeusUpgrade') };
-    expect(explain([branch()], context(boon('ZeusUpgrade'), { peers: [peer] }))).toEqual([
+    expect(explain(branch(), context(boon('ZeusUpgrade'), { peers: [peer] }))).toEqual([
       { kind: 'peerConflict', peers: [peer] },
     ]);
   });
 
   it('names an earlier door offering the same non-repeatable reward', () => {
     const peer = { origin: peerOrigin, offer: { rewardType: 'MaxHealthDrop' } };
-    expect(
-      explain([branch()], context({ rewardType: 'MaxHealthDrop' }, { peers: [peer] })),
-    ).toEqual([{ kind: 'peerConflict', peers: [peer] }]);
+    expect(explain(branch(), context({ rewardType: 'MaxHealthDrop' }, { peers: [peer] }))).toEqual([
+      { kind: 'peerConflict', peers: [peer] },
+    ]);
   });
 
   it('names the god cap with the gods already taken', () => {
@@ -275,7 +275,7 @@ describe('door and local reward offer exclusions', () => {
     const capped = withHistory(branch(), {
       lootTypeHistory: Object.fromEntries(acquired.map((source) => [source, 1])),
     });
-    expect(explain([capped], context(boon('ApolloUpgrade')))).toEqual([
+    expect(explain(capped, context(boon('ApolloUpgrade')))).toEqual([
       {
         kind: 'godCap',
         source: 'ApolloUpgrade',
@@ -287,7 +287,7 @@ describe('door and local reward offer exclusions', () => {
 
   it("names a god's unmet loot requirement with its evidence", () => {
     const unused = withHistory(branch(), { lifetimeGodUseRecord: {} });
-    expect(explain([unused], context(boon('AphroditeUpgrade')))).toEqual([
+    expect(explain(unused, context(boon('AphroditeUpgrade')))).toEqual([
       {
         kind: 'godRequirement',
         source: 'AphroditeUpgrade',
@@ -307,7 +307,7 @@ describe('door and local reward offer exclusions', () => {
     const interacted = withHistory(branch(), { lifetimeGodPickupRecord: { ZeusUpgrade: 1 } });
     expect(
       explain(
-        [interacted],
+        interacted,
         context(
           { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
           {
@@ -322,7 +322,7 @@ describe('door and local reward offer exclusions', () => {
     const one = withHistory(branch(), { lootTypeHistory: { ZeusUpgrade: 1 } });
     expect(
       explain(
-        [one],
+        one,
         context({
           rewardType: 'Devotion',
           payload: {
@@ -339,7 +339,7 @@ describe('door and local reward offer exclusions', () => {
     const one = withHistory(branch(), { lootTypeHistory: { ZeusUpgrade: 1 } });
     expect(
       explain(
-        [one],
+        one,
         context(
           {
             rewardType: 'Devotion',
@@ -363,7 +363,7 @@ describe('door and local reward offer exclusions', () => {
   });
 
   it('names an unmet store-entry requirement with its evidence', () => {
-    expect(explain([branch()], context({ rewardType: 'StackUpgrade' }))).toEqual([
+    expect(explain(branch(), context({ rewardType: 'StackUpgrade' }))).toEqual([
       {
         kind: 'entryRequirement',
         rewardType: 'StackUpgrade',
@@ -382,7 +382,7 @@ describe('door and local reward offer exclusions', () => {
   it('names entries spent while the store still offers others', () => {
     expect(
       explain(
-        [withSpentEntries(branch(), 'MaxHealthDrop')],
+        withSpentEntries(branch(), 'MaxHealthDrop'),
         context({ rewardType: 'MaxHealthDrop' }),
       ),
     ).toEqual([
@@ -397,7 +397,7 @@ describe('door and local reward offer exclusions', () => {
   it('names a store exhausted after both refills', () => {
     expect(
       explain(
-        [branch()],
+        branch(),
         context(
           { rewardType: 'StackUpgrade' },
           {
@@ -422,7 +422,7 @@ describe('cohort reward offer exclusions', () => {
     const duplicate = peer({ rewardType: 'MaxHealthDrop' });
     expect(
       explainCohortOfferExclusions(
-        [branch()],
+        branch(),
         context({ rewardType: 'MaxHealthDrop' }),
         { earlier: [], later: [duplicate, peer({ rewardType: 'StackUpgrade' })] },
         'listed',
@@ -438,7 +438,7 @@ describe('cohort reward offer exclusions', () => {
   it('names an earlier peer that spent the only eligible entry', () => {
     expect(
       explainCohortOfferExclusions(
-        [branch()],
+        branch(),
         context({ rewardType: 'MaxHealthDrop' }),
         { earlier: [peer({ rewardType: 'MaxHealthDrop' })] },
         'peersFirst',
@@ -454,7 +454,7 @@ describe('cohort reward offer exclusions', () => {
   it("reports the offer's own cause when it fails alone", () => {
     expect(
       explainCohortOfferExclusions(
-        [branch()],
+        branch(),
         context({ rewardType: 'MetaCurrencyDrop' }),
         { earlier: [peer({ rewardType: 'MaxHealthDrop' })] },
         'listed',

@@ -782,12 +782,10 @@ describe('invalidation products', () => {
         encounters: {},
         encounterPhases: [],
       } as unknown as CanonicalAuthoredRoom,
-      [spawned],
+      spawned,
     );
     expect(transition.steadyGrowthThresholds[0]?.threshold.eligibleTargetKeys).toEqual([]);
-    expect(transition.branches[0]?.state.pendingTraitOffers[roomKey]?.[waitingKey]?.stale).toBe(
-      true,
-    );
+    expect(transition.branch?.state.pendingTraitOffers[roomKey]?.[waitingKey]?.stale).toBe(true);
   });
 
   it('distinguishes trait offer contexts with equal equipment but different spawn states', () => {
@@ -1001,16 +999,14 @@ describe('room rewards created before combat', () => {
         sequence: 1,
       }),
       minibossRoom,
-      [
-        Object.freeze({
-          ...(initializeTestRewardBranches()[0]! as RewardBranchState),
-          state: Object.freeze({
-            ...initializeTestRewardBranches()[0]!.state,
-            keepsakes: createKeepsakeState(catalog, 'SkipEncounterKeepsake'),
-          }),
-        }) as RewardBranchState,
-      ],
-    ).branches[0]!;
+      Object.freeze({
+        ...(initializeTestRewardBranches()[0]! as RewardBranchState),
+        state: Object.freeze({
+          ...initializeTestRewardBranches()[0]!.state,
+          keepsakes: createKeepsakeState(catalog, 'SkipEncounterKeepsake'),
+        }),
+      }) as RewardBranchState,
+    ).branch!;
 
   it('spawns an H miniboss reward at encounter start, before the Fig Leaf use', () => {
     const branch = start('MiniBossVampire');
@@ -1073,17 +1069,15 @@ describe('room rewards created before combat', () => {
       {},
       event('encounterStarted', 1) as Extract<HistoryEvent, { readonly kind: 'encounterStarted' }>,
       realRoom,
-      [
-        Object.freeze({
-          ...base,
-          state: Object.freeze({
-            ...base.state,
-            reached: { routePosition, historyView },
-            keepsakes: createKeepsakeState(catalog, 'SkipEncounterKeepsake'),
-          }),
-        }) as RewardBranchState,
-      ],
-    ).branches;
+      Object.freeze({
+        ...base,
+        state: Object.freeze({
+          ...base.state,
+          reached: { routePosition, historyView },
+          keepsakes: createKeepsakeState(catalog, 'SkipEncounterKeepsake'),
+        }),
+      }) as RewardBranchState,
+    ).branch;
     const completed = applyEncounterSettlementTransition({
       catalog,
       snapshot: {} as never,
@@ -1094,7 +1088,7 @@ describe('room rewards created before combat', () => {
       >,
       room: realRoom,
       view: {} as never,
-      branches: started,
+      branch: started,
       enteredBiomeCount: 3,
       fullRunBiomeCount: 4,
       authoredSeaStarDuplicateSiteKeys: new Set(),
@@ -1102,7 +1096,7 @@ describe('room rewards created before combat', () => {
       gorgonCandidate: undefined,
       gorgonPhaseBlocked: false,
       gorgonEvaluationBlocked: false,
-    }).branches[0]!;
+    }).branch!;
     const record =
       completed.state.pendingTraitOffers[semanticAddressKey(room)]?.[
         semanticAddressKey(createTraitOfferAddress(realRoom.incomingReward!.origin, 'source'))

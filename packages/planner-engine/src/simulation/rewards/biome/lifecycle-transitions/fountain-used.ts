@@ -17,7 +17,7 @@ import { ownerRegion } from '../../../finding-regions';
 import type { AuthoredFountainRarityResult } from '../../../../authored-project/model';
 import { assessPhialTraitTargets, consumePhial } from '../../../keepsakes/trait-effects';
 import { settleFountainRarityMutation } from '../../../traits';
-import { advanceRewardBranches } from '../../branch-lifecycle';
+import { advanceRewardBranch } from '../../branch-lifecycle';
 import type { RewardBranchState } from '../../branch-primitives';
 import { rewardFinding } from '../../findings';
 import { type FountainRarityCandidateCapability } from '../../../keepsakes/candidate-artifacts';
@@ -25,7 +25,7 @@ import type { LifecycleFinding } from './types';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
 
 export interface FountainUsedTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly candidate?: {
     readonly key: string;
     readonly value: FountainRarityCandidateCapability;
@@ -52,11 +52,11 @@ export function applyFountainUsedTransition(
   catalog: Catalog,
   event: FountainUsedEvent,
   result: AuthoredFountainRarityResult | undefined,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   /** Undefined for a Hub-owned or non-authored fountain. */
   room: CanonicalAuthoredRoom | undefined,
 ): FountainUsedTransition {
-  const used = resolveFountainUse(catalog, event, result, branches);
+  const used = resolveFountainUse(catalog, event, result, branch);
   // The fountain unlocks Postboss facilities. Capture the pool only after
   // its rarity effects settle, never from entry or an unresolved Phial.
   // A Pool on a route without one is never assessed, so its sales stay unavailable;
@@ -90,12 +90,11 @@ export function applyFountainUsedTransition(
     );
     return Object.freeze({ ...used, findings: Object.freeze(findings) });
   }
-  const branch = used.branches[0];
-  if (branch === undefined) return used;
+  if (used.branch === undefined) return used;
   const assessment = assessPurgingPool(
     catalog,
     room.purgingPool,
-    branch.state.traitHistory.equippedTraits,
+    used.branch.state.traitHistory.equippedTraits,
   );
   for (const finding of assessment.findings)
     findings.push(
@@ -126,16 +125,15 @@ function resolveFountainUse(
   catalog: Catalog,
   event: FountainUsedEvent,
   result: AuthoredFountainRarityResult | undefined,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
 ): FountainUsedTransition {
   const outcome = createFountainRarityOutcomeAddress(event.owner);
   const timelineFacts: PlannerTimelineFacts = Object.freeze({
     nodes: Object.freeze([Object.freeze({ owner: event.owner, included: true })]),
     dependencies: Object.freeze([]),
   });
-  const branch = branches[0];
   if (branch === undefined)
-    return Object.freeze({ branches, findings: Object.freeze([]), timelineFacts });
+    return Object.freeze({ branch, findings: Object.freeze([]), timelineFacts });
   const targets = assessPhialTraitTargets(catalog, branch.state.traitHistory);
   const status = branch.state.keepsakes.phial?.status;
   const frontier: FountainRarityCandidateCapability = Object.freeze({
@@ -150,7 +148,7 @@ function resolveFountainUse(
   if (result === undefined) {
     if (!needsTarget && !hasConsumptionGuard)
       return Object.freeze({
-        branches: advanceRewardBranches(branches, event.sequence),
+        branch: advanceRewardBranch(branch, event.sequence),
         candidate,
         findings: Object.freeze([]),
         timelineFacts,
@@ -158,7 +156,7 @@ function resolveFountainUse(
   }
   if (needsTarget && result === undefined) {
     return Object.freeze({
-      branches: Object.freeze([]),
+      branch: undefined,
       candidate,
       findings: Object.freeze([
         Object.freeze({
@@ -179,7 +177,7 @@ function resolveFountainUse(
     !frontier.mutationTargetKeys.includes(targetTraitKey)
   ) {
     return Object.freeze({
-      branches: Object.freeze([]),
+      branch: undefined,
       candidate,
       findings: Object.freeze([
         Object.freeze({
@@ -219,9 +217,8 @@ function resolveFountainUse(
       Object.freeze({ ...branch, state: replaceSimulationTraitHistory(consumed, settled.history) }),
     );
   };
-  const nextBranches = [settle()];
   return Object.freeze({
-    branches: advanceRewardBranches(Object.freeze(nextBranches), event.sequence),
+    branch: advanceRewardBranch(settle(), event.sequence),
     candidate,
     findings: Object.freeze([]),
     timelineFacts,

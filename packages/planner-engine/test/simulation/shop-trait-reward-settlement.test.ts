@@ -86,7 +86,7 @@ describe('Shop trait acquisition processing', () => {
       lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
-    const inventory = processShopInventory(initializeTestRewardBranches(), {
+    const inventory = processShopInventory(initializeTestRewardBranches()[0], {
       catalog,
       room: canonical,
       declaration: room,
@@ -99,7 +99,7 @@ describe('Shop trait acquisition processing', () => {
     const findings = new Map();
     mergeRewardFindingEmissions(findings, inventory.findingEmissions);
 
-    expect(inventory.branches).toEqual([]);
+    expect(inventory.branch).toBeUndefined();
     expect([...findings.values()]).toEqual([
       expect.objectContaining({
         finding: expect.objectContaining({
@@ -190,7 +190,7 @@ describe('Shop trait acquisition processing', () => {
         }),
       }),
     );
-    const inventory = processShopInventory(seeded, {
+    const inventory = processShopInventory(seeded[0], {
       catalog,
       room: canonical,
       declaration: room,
@@ -199,7 +199,7 @@ describe('Shop trait acquisition processing', () => {
       fail: (detail) => {
         throw new Error(detail);
       },
-    }).branches;
+    }).branch;
     const unpurchased = settleShop(
       inventory,
       {
@@ -214,7 +214,7 @@ describe('Shop trait acquisition processing', () => {
       },
       new Map(),
     );
-    expect(inventory).not.toHaveLength(0);
+    expect(inventory).toBeDefined();
     expect(unpurchased).not.toHaveLength(0);
     expect(unpurchased[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
 
@@ -238,7 +238,7 @@ describe('Shop trait acquisition processing', () => {
       lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
-    const purchasedInventory = processShopInventory(seeded, {
+    const purchasedInventory = processShopInventory(seeded[0], {
       catalog,
       room: purchasedCanonical,
       declaration: room,
@@ -247,7 +247,7 @@ describe('Shop trait acquisition processing', () => {
       fail: (detail) => {
         throw new Error(detail);
       },
-    }).branches;
+    }).branch;
     const purchased = settleShop(
       purchasedInventory,
       {
@@ -300,7 +300,7 @@ describe('Shop trait acquisition processing', () => {
       loadout,
     });
     const giftPurchased = settleShop(
-      processShopInventory(seeded, {
+      processShopInventory(seeded[0], {
         catalog,
         room: giftCanonical,
         declaration: room,
@@ -309,7 +309,7 @@ describe('Shop trait acquisition processing', () => {
         fail: (detail) => {
           throw new Error(detail);
         },
-      }).branches,
+      }).branch,
       {
         catalog,
         room: giftCanonical,
@@ -413,7 +413,7 @@ describe('Shop trait acquisition processing', () => {
         }),
       });
     });
-    const inventory = processShopInventory(seeded, {
+    const inventory = processShopInventory(seeded[0], {
       catalog,
       room: canonical,
       declaration: room,
@@ -422,7 +422,7 @@ describe('Shop trait acquisition processing', () => {
       fail: (detail) => {
         throw new Error(detail);
       },
-    }).branches;
+    }).branch;
     const findings = new Map();
     const purchased = settleShop(
       inventory,
@@ -554,7 +554,7 @@ describe('Shop trait acquisition processing', () => {
           }),
         });
       });
-      const inventory = processShopInventory(seeded, {
+      const inventory = processShopInventory(seeded[0], {
         catalog,
         room: canonical,
         declaration: room,
@@ -563,7 +563,7 @@ describe('Shop trait acquisition processing', () => {
         fail: (detail) => {
           throw new Error(detail);
         },
-      }).branches;
+      }).branch;
       const purchased = settleShop(
         inventory,
         {
@@ -745,7 +745,7 @@ describe('Shop trait acquisition processing', () => {
       'Underworld',
       { ...createDefaultRouteLoadout(catalog), ...newLoadout },
     );
-    const inventory = processShopInventory(reachedLoadout, {
+    const inventory = processShopInventory(reachedLoadout[0], {
       catalog,
       room: canonical,
       declaration: room,
@@ -757,11 +757,11 @@ describe('Shop trait acquisition processing', () => {
     });
     mergeRewardFindingEmissions(inventoryFindings, inventory.findingEmissions);
     expect(inventoryFindings).toHaveLength(0);
-    expect(inventory.branches).not.toHaveLength(0);
+    expect(inventory.branch).toBeDefined();
 
     const purchaseFindings = new Map();
     const purchased = settleShop(
-      inventory.branches,
+      inventory.branch,
       {
         catalog,
         room: canonical,

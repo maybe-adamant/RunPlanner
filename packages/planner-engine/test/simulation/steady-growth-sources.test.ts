@@ -82,7 +82,7 @@ function acquire(
 
 /** Runs encounter ends at the landing room until one reaches an interval. */
 function untilInterval(branch: RewardBranchState, firstSequence: number) {
-  let branches: readonly RewardBranchState[] = [branch];
+  let reached: RewardBranchState | undefined = branch;
   for (let sequence = firstSequence; sequence < firstSequence + 12; sequence += 1) {
     const transition = applyEncounterEndEffectsTransition(
       catalog,
@@ -96,13 +96,13 @@ function untilInterval(branch: RewardBranchState, firstSequence: number) {
         sequence,
       }),
       room,
-      branches.map((candidate) =>
-        withTestEncounterRecord(candidate, room, 'Encounter', 'OpeningGeneratedF'),
-      ),
+      reached === undefined
+        ? undefined
+        : withTestEncounterRecord(reached, room, 'Encounter', 'OpeningGeneratedF'),
     );
     if (transition.steadyGrowthThresholds.length > 0)
       return Object.freeze({ transition, sequence });
-    branches = transition.branches;
+    reached = transition.branch;
   }
   throw new Error('Steady Growth never reached its interval');
 }
@@ -135,7 +135,7 @@ describe('Steady Growth outcomes by source and cycle', () => {
       phaseKey: 'Encounter',
     });
     expect(first.transition.findings).toEqual([]);
-    const promoted = first.transition.branches[0]!;
+    const promoted = first.transition.branch!;
     expect(promoted.state.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Rare');
 
     // The same Steady Growth's second interval reads its second cycle.
@@ -144,11 +144,11 @@ describe('Steady Growth outcomes by source and cycle', () => {
       createSteadyGrowthOutcomeAddress(firstSource, 2),
     ]);
     expect(
-      second.transition.branches[0]!.state.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity,
+      second.transition.branch!.state.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity,
     ).toBe('Epic');
 
     // A later Steady Growth from another offer starts its own cycles with its own targets.
-    const sold = second.transition.branches[0]!;
+    const sold = second.transition.branch!;
     const removed = Object.freeze({
       ...sold,
       state: replaceSimulationTraitHistory(
@@ -183,7 +183,7 @@ describe('Steady Growth outcomes by source and cycle', () => {
       ),
     ]);
     expect(
-      third.transition.branches[0]!.state.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity,
+      third.transition.branch!.state.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity,
     ).toBe('Heroic');
   });
 
@@ -204,7 +204,7 @@ describe('Steady Growth outcomes by source and cycle', () => {
       2,
     );
     const reached = untilInterval(branch, 10);
-    expect(reached.transition.branches).toEqual([]);
+    expect(reached.transition.branch).toBeUndefined();
     expect(reached.transition.findings).toMatchObject([
       {
         finding: {
@@ -249,7 +249,7 @@ describe('Steady Growth outcomes by source and cycle', () => {
     ]);
     expect(reached.transition.findings).toEqual([]);
     expect(
-      reached.transition.branches[0]!.state.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity,
+      reached.transition.branch!.state.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity,
     ).toBe('Rare');
 
     const unauthored = untilInterval(acquire(apollo, 'stone-source', residualOffer({}), 3), 10);

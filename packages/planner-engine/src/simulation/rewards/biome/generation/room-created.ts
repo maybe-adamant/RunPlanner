@@ -3,7 +3,7 @@ import { semanticAddressKey } from '../../../../authored-project/addresses';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
-import { advanceRewardBranches } from '../../branch-lifecycle';
+import { advanceReachedBranch } from '../../branch-lifecycle';
 import type { OfferProcessingPeer } from '../../offer-generation';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { GenerationEmissions, PendingHubBoardGeneration } from './emissions';
@@ -30,7 +30,7 @@ export interface RoomCreatedTransitionInputs {
   readonly hermesShrineAssessments: ContextInputs['hermesShrineAssessments'];
   readonly batchesByParent: PreludeBatches;
   readonly historyCurrent?: NonNullable<ContextInputs['historyCurrent']>;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly peers: readonly OfferProcessingPeer[];
   readonly pendingHubBoard?: PendingHubBoardGeneration;
   readonly lifecycle: RewardLifecycleReferences;
@@ -54,7 +54,7 @@ export function applyRoomCreatedTransition(
     rooms,
     views,
     batchesByParent,
-    branches,
+    branch,
     peers,
     lifecycle,
     enteredBiomeCount,
@@ -66,7 +66,7 @@ export function applyRoomCreatedTransition(
     rooms,
     views,
     batchesByParent,
-    branches,
+    branch,
     enteredBiomeCount + 1,
   );
   const contextResult = prepareRoomCreatedRewardContext(catalog, event, {
@@ -81,7 +81,7 @@ export function applyRoomCreatedTransition(
   });
   if (contextResult.kind !== 'reward')
     return Object.freeze({
-      branches: advanceRewardBranches(branches, event.sequence),
+      branch: advanceReachedBranch(branch, event.sequence),
       peers,
       findings: Object.freeze([]),
       producerFrontiers: Object.freeze([]),
@@ -91,7 +91,7 @@ export function applyRoomCreatedTransition(
 
   const exactRoomViews = views.get(semanticAddressKey(contextResult.context.room.origin));
   const incoming = generateIncomingReward(catalog, snapshot, event, contextResult.context, {
-    branches,
+    branch,
     peers,
     ...(inputs.pendingHubBoard === undefined ? {} : { pendingHubBoard: inputs.pendingHubBoard }),
     lifecycle,
@@ -99,9 +99,9 @@ export function applyRoomCreatedTransition(
     enteredBiomeCount,
     authoredSeaStarDuplicateSiteKeys,
   });
-  if (incoming.branches.length === 0) return Object.freeze({ ...incoming, ...prelude });
+  if (incoming.branch === undefined) return Object.freeze({ ...incoming, ...prelude });
   const local = generateLocalRewards(catalog, snapshot, event, contextResult.context, {
-    branches: incoming.branches,
+    branch: incoming.branch,
     peers: incoming.peers,
     views: exactRoomViews,
     lifecycle,
@@ -109,7 +109,7 @@ export function applyRoomCreatedTransition(
     authoredSeaStarDuplicateSiteKeys,
   });
   return Object.freeze({
-    branches: local.branches,
+    branch: local.branch,
     peers: local.peers,
     findings: Object.freeze([...incoming.findings, ...local.findings]),
     producerFrontiers: Object.freeze([...incoming.producerFrontiers, ...local.producerFrontiers]),

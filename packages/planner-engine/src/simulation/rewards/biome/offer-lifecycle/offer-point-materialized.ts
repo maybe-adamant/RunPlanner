@@ -23,14 +23,14 @@ export interface OfferPointMaterializedTransitionInputs {
   readonly rooms: ReadonlyMap<string, CanonicalAuthoredRoom | CanonicalHubRoom>;
   readonly views: ReadonlyMap<string, ProgressiveRoomHistoryViews>;
   readonly lifecycle: RewardLifecycleReferences;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly routeLoadout: RouteLoadout;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
   readonly shipLifecycleCandidateAlreadyPublished: boolean;
 }
 
 export interface OfferPointMaterializedTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: readonly FindingRegionEntry[];
   readonly producerFrontiers: readonly RewardProducerFrontier[];
   readonly fixedAcquisitionRealizations: readonly FixedAcquisitionRealization[];
@@ -64,7 +64,7 @@ export function applyOfferPointMaterializedTransition(
         room,
         declaration,
         roomView,
-        branches: inputs.branches,
+        branch: inputs.branch,
       }),
       fixedAcquisitionRealizations: Object.freeze([]),
     });
@@ -78,7 +78,7 @@ export function applyOfferPointMaterializedTransition(
         room,
         declaration,
         roomView,
-        branches: inputs.branches,
+        branch: inputs.branch,
         lifecycle: inputs.lifecycle,
         authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
       }),
@@ -92,12 +92,12 @@ export function applyOfferPointMaterializedTransition(
     declaration,
     roomView,
     lifecycle: inputs.lifecycle,
-    branches: inputs.branches,
+    branch: inputs.branch,
     routeLoadout: inputs.routeLoadout,
     authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
   });
   return Object.freeze({
-    branches: wheel.branches,
+    branch: wheel.branch,
     findings: wheel.findings,
     producerFrontiers: wheel.producerFrontiers,
     fixedAcquisitionRealizations: wheel.fixedAcquisitionRealizations,

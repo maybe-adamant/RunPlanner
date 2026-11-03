@@ -77,7 +77,7 @@ describe('Personal Loan boss checkpoint', () => {
         event,
         room,
         view: undefined,
-        branches: [branch],
+        branch,
         enteredBiomeCount,
         fullRunBiomeCount: catalog.routes.byKey.Surface!.biomeKeys.length,
         authoredSeaStarDuplicateSiteKeys: new Set(),
@@ -86,7 +86,7 @@ describe('Personal Loan boss checkpoint', () => {
         gorgonPhaseBlocked: false,
         gorgonEvaluationBlocked: false,
       });
-      const history = result.branches[0]?.state.traitHistory;
+      const history = result.branch?.state.traitHistory;
       expect(history?.equippedTraits.BankBoon).toMatchObject({
         traitKey: 'BankBoon',
         rarity: 'Common',

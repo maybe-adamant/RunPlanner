@@ -72,18 +72,18 @@ function hammerGiftBranch(route: ReturnType<typeof routeG>['route']): RewardBran
 }
 
 describe('Echo keepsake replay biome-start transition', () => {
-  it('leaves branches untouched and emits nothing without a captured gift', () => {
+  it('leaves the state untouched and emits nothing without a captured gift', () => {
     const { route, snapshot, position } = routeG();
-    const branches = initializeTestRewardBranches();
+    const branch = initializeTestRewardBranches()[0];
     const transition = applyEchoKeepsakeReplayTransition(
       catalog,
       snapshot,
       position,
       route.loadout,
-      branches,
+      branch,
       0,
     );
-    expect(transition.branches).toBe(branches);
+    expect(transition.branch).toBe(branch);
     expect(transition.findings).toEqual([]);
     expect(transition.keepsakeEquipResultCandidates).toEqual([]);
     expect(transition.timelineFacts.nodes).toEqual([]);
@@ -93,16 +93,16 @@ describe('Echo keepsake replay biome-start transition', () => {
   it('publishes the equip-result candidate and a biome-start missing finding', () => {
     const { route, snapshot, position } = routeG();
     expect(snapshot.echoKeepsakeReplayResults).toBeUndefined();
-    const branches = [hammerGiftBranch(route)];
+    const branch = hammerGiftBranch(route);
     const transition = applyEchoKeepsakeReplayTransition(
       catalog,
       snapshot,
       position,
       route.loadout,
-      branches,
+      branch,
       7,
     );
-    expect(transition.branches).toBe(branches);
+    expect(transition.branch).toBe(branch);
     expect(transition.keepsakeEquipResultCandidates.map((entry) => entry.key)).toEqual([
       semanticAddressKey(hammerResult),
     ]);
@@ -128,7 +128,7 @@ describe('Echo keepsake replay biome-start transition', () => {
       },
       position,
       route.loadout,
-      [hammerGiftBranch(route)],
+      hammerGiftBranch(route),
       0,
     );
     expect(transition.findings).toEqual([]);
@@ -141,7 +141,7 @@ describe('Echo keepsake replay biome-start transition', () => {
     });
     expect(transition.timelineFacts.nodes).toEqual([{ owner: replayOwner, included: true }]);
     expect(
-      transition.branches[0]?.state.traitHistory.equippedTraits.EchoRepeatKeepsakeBoon
+      transition.branch?.state.traitHistory.equippedTraits.EchoRepeatKeepsakeBoon
         ?.echoKeepsakeReplayCount,
     ).toBe(1);
   });

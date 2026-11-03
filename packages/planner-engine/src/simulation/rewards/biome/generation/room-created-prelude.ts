@@ -53,7 +53,7 @@ export function prepareRoomCreatedPrelude(
       }[];
     }
   >,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   effectiveBiomeNumber: number,
 ): RoomCreatedPrelude {
   const room = rooms.get(semanticAddressKey(event.origin));
@@ -64,7 +64,6 @@ export function prepareRoomCreatedPrelude(
       ? (() => {
           const selection = createPostbossKeepsakeSelectionAddress(event.origin);
           const historyAtRack = views.get(semanticAddressKey(event.origin))?.entry;
-          const branch = branches[0];
           if (branch === undefined) return undefined;
           const encounterBlockedKeepsakeKeys = Object.freeze([
             ...new Set(
@@ -87,7 +86,7 @@ export function prepareRoomCreatedPrelude(
                 selection,
                 event.sequence,
                 room.gameName,
-                branches,
+                branch,
                 encounterBlockedKeepsakeKeys,
                 effectiveBiomeNumber,
               ),

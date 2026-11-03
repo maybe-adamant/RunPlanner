@@ -419,10 +419,10 @@ describe('Aromatic Phial fountain lifecycle', () => {
       catalog,
       fountainEvent(),
       fountainRoom('ApolloWeaponBoon'),
-      [fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'))],
+      fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo')),
       undefined,
     );
-    const branch = result.branches[0];
+    const branch = result.branch;
     expect(branch?.state.keepsakes.phial).toEqual({ status: 'consumed' });
     expect(branch?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Heroic');
     expect(branch?.state.traitHistory?.events.at(-1)).toMatchObject({
@@ -442,13 +442,11 @@ describe('Aromatic Phial fountain lifecycle', () => {
       catalog,
       fountainEvent(2),
       fountainRoom('BoonDecayBoon'),
-      [fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'), history)],
+      fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'), history),
       undefined,
     );
-    expect(result.branches[0]?.state.traitHistory?.equippedTraits.BoonDecayBoon?.rarity).toBe(
-      'Heroic',
-    );
-    expect(result.branches[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon).toMatchObject({
+    expect(result.branch?.state.traitHistory?.equippedTraits.BoonDecayBoon?.rarity).toBe('Heroic');
+    expect(result.branch?.state.traitHistory?.equippedTraits.ApolloWeaponBoon).toMatchObject({
       rarity: 'Heroic',
       level: 5,
     });
@@ -459,15 +457,13 @@ describe('Aromatic Phial fountain lifecycle', () => {
       catalog,
       fountainEvent(),
       undefined,
-      [
-        fountainBranch(
-          equippedTrait('HephaestusWeaponBoon', 'Hephaestus', 1),
-          cappedHephaestusHistory(),
-        ),
-      ],
+      fountainBranch(
+        equippedTrait('HephaestusWeaponBoon', 'Hephaestus', 1),
+        cappedHephaestusHistory(),
+      ),
       undefined,
     );
-    const branch = result.branches[0];
+    const branch = result.branch;
     expect(branch?.state.keepsakes.phial).toEqual({ status: 'consumed' });
     expect(branch?.state.traitHistory?.equippedTraits.HephaestusWeaponBoon?.rarity).toBe('Common');
     expect(branch?.state.traitHistory?.events).not.toContainEqual(
@@ -481,10 +477,10 @@ describe('Aromatic Phial fountain lifecycle', () => {
       catalog,
       fountainEvent(),
       undefined,
-      [fountainBranch(equippedTrait('ElementalDamageFloorBoon', 'Apollo'))],
+      fountainBranch(equippedTrait('ElementalDamageFloorBoon', 'Apollo')),
       undefined,
     );
-    expect(empty.branches[0]?.state.keepsakes.phial).toEqual({ status: 'pending' });
+    expect(empty.branch?.state.keepsakes.phial).toEqual({ status: 'pending' });
     expect(empty.findings).toEqual([]);
 
     const consumed = consumePhial(createKeepsakeState(catalog, 'FountainRarityKeepsake'));
@@ -492,11 +488,11 @@ describe('Aromatic Phial fountain lifecycle', () => {
       catalog,
       fountainEvent(2),
       fountainRoom('ApolloWeaponBoon'),
-      [fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'), undefined, consumed)],
+      fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'), undefined, consumed),
       undefined,
     );
-    expect(later.branches[0]?.state.keepsakes.phial).toEqual({ status: 'consumed' });
-    expect(later.branches[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.rarity).toBe(
+    expect(later.branch?.state.keepsakes.phial).toEqual({ status: 'consumed' });
+    expect(later.branch?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.rarity).toBe(
       'Common',
     );
   });
@@ -516,7 +512,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
         state: spawnPendingTraitOffers(catalog, branch.state, [waiting]),
       });
     const stale = (result: ReturnType<typeof applyFountainUsedTransition>) =>
-      result.branches[0]?.state.pendingTraitOffers[semanticAddressKey(occurrence)]?.[
+      result.branch?.state.pendingTraitOffers[semanticAddressKey(occurrence)]?.[
         semanticAddressKey(createTraitOfferAddress(waiting.origin, 'source'))
       ]?.stale;
     expect(
@@ -525,7 +521,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
           catalog,
           fountainEvent(),
           fountainRoom('ApolloWeaponBoon'),
-          [withWaiting(fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo')))],
+          withWaiting(fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'))),
           undefined,
         ),
       ),
@@ -536,14 +532,12 @@ describe('Aromatic Phial fountain lifecycle', () => {
           catalog,
           fountainEvent(),
           undefined,
-          [
-            withWaiting(
-              fountainBranch(
-                equippedTrait('HephaestusWeaponBoon', 'Hephaestus', 1),
-                cappedHephaestusHistory(),
-              ),
+          withWaiting(
+            fountainBranch(
+              equippedTrait('HephaestusWeaponBoon', 'Hephaestus', 1),
+              cappedHephaestusHistory(),
             ),
-          ],
+          ),
           undefined,
         ),
       ),
@@ -555,7 +549,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
           catalog,
           fountainEvent(),
           undefined,
-          [withWaiting(fountainBranch(equippedTrait('ElementalDamageFloorBoon', 'Apollo')))],
+          withWaiting(fountainBranch(equippedTrait('ElementalDamageFloorBoon', 'Apollo'))),
           undefined,
         ),
       ),
@@ -568,20 +562,20 @@ describe('Aromatic Phial fountain lifecycle', () => {
       catalog,
       fountainEvent(),
       undefined,
-      [branch],
+      branch,
       undefined,
     );
-    expect(missing.branches).toEqual([]);
+    expect(missing.branch).toBeUndefined();
     expect(missing.findings[0]?.finding.code).toBe('fountainRarityResultMissing');
 
     const unavailable = applyFountainUsedTransition(
       catalog,
       fountainEvent(),
       fountainRoom('ZeusWeaponBoon'),
-      [branch],
+      branch,
       undefined,
     );
-    expect(unavailable.branches).toEqual([]);
+    expect(unavailable.branch).toBeUndefined();
     expect(unavailable.findings[0]?.finding.code).toBe('fountainRarityResultUnavailable');
   });
 });

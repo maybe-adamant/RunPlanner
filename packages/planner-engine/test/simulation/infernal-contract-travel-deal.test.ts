@@ -313,7 +313,6 @@ function settle(options: {
     'BlindBoxLoot' | 'StackUpgradeBig' | 'StackUpgrade' | 'TalentBigDrop' | 'TalentDrop';
   readonly contractGold?: boolean;
   readonly contractBlindBoxSource?: string;
-  readonly divergentTravel?: boolean;
   readonly echo?: boolean;
   readonly echoDuplicateSourceKey?: string;
   readonly echoDuplicateChild?: AuthoredRewardState;
@@ -504,15 +503,8 @@ function settle(options: {
       state.rewardHistory,
       currentRoomShopOptionNames,
     );
-  const sourceBranches =
-    options.divergentTravel === true
-      ? Object.freeze([
-          ...seededBranches({ ...options, travel: true }),
-          ...seededBranches({ ...options, travel: false }),
-        ])
-      : seededBranches(options);
   const findings = new Map();
-  const shopInventory = processShopInventory(sourceBranches, {
+  const shopInventory = processShopInventory(seededBranches(options)[0], {
     catalog,
     room: canonical,
     declaration,
@@ -528,7 +520,7 @@ function settle(options: {
     historySequence: 3,
     room: canonical,
     declaration,
-    branches: shopInventory.branches,
+    branches: branchList(shopInventory.branch),
     facts,
   });
   const inventory = Object.freeze({
@@ -750,14 +742,10 @@ describe('Infernal Contract pedestal and Travel Deal chronology', () => {
     ).toBe(true);
 
     const completed = completePendingShopAcquisitionSite(
-      interleaved.branches,
+      singleBranch(interleaved.branches),
       first.canonical.origin,
-      (detail) => {
-        throw new Error(detail);
-      },
     );
-    expect(completed).toHaveLength(1);
-    expect(completed[0]?.state.pendingShops[shopKey]).toBeUndefined();
+    expect(completed?.state.pendingShops[shopKey]).toBeUndefined();
   });
 
   it('retains first-purchase legality without publishing purchase barriers', () => {

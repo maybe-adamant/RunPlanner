@@ -37,20 +37,21 @@ export function advanceRewardBranch(
     : Object.freeze({ ...branch, processedThroughHistorySequence: historySequence });
 }
 
-export function advanceRewardBranches(
-  branches: readonly RewardBranchState[],
+/** Advances the reached state, if any, through a history sequence. */
+export function advanceReachedBranch(
+  branch: RewardBranchState | undefined,
   historySequence: number,
-): readonly RewardBranchState[] {
-  return Object.freeze(branches.map((branch) => advanceRewardBranch(branch, historySequence)));
+): RewardBranchState | undefined {
+  return branch === undefined ? undefined : advanceRewardBranch(branch, historySequence);
 }
 
 export function beginRewardRoom(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   historySequence: number,
-): readonly RewardBranchState[] {
-  return Object.freeze(
-    branches.map((branch) =>
-      advanceRewardBranch(
+): RewardBranchState | undefined {
+  return branch === undefined
+    ? undefined
+    : advanceRewardBranch(
         Object.freeze({
           ...branch,
           state: Object.freeze({
@@ -59,9 +60,7 @@ export function beginRewardRoom(
           }),
         }),
         historySequence,
-      ),
-    ),
-  );
+      );
 }
 
 export function initializeRewardBranch(

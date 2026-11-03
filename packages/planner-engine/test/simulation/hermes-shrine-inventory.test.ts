@@ -757,7 +757,7 @@ describe('Hermes Shrine delayed deliveries', () => {
         view,
         new Set(),
         new Set(),
-        branches,
+        branches[0],
         Object.freeze({
           kind: 'history' as const,
           sequence: entryEvent.sequence,
@@ -777,14 +777,12 @@ describe('Hermes Shrine delayed deliveries', () => {
             finding: expect.objectContaining({ code: 'hermesShrineDeliveryPlacementRequired' }),
           }),
         );
-        expect(transition.branches[0]?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject(
-          {
-            remainingUses: 8,
-          },
+        expect(transition.branch?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
+          remainingUses: 8,
+        });
+        expect(transition.branch?.state.pendingHermesShrineDeliveries[entryKey]).not.toHaveProperty(
+          'due',
         );
-        expect(
-          transition.branches[0]?.state.pendingHermesShrineDeliveries[entryKey],
-        ).not.toHaveProperty('due');
         return;
       }
       expect(transition.hermesShrineDeliveryPlacementRequired).toBe(true);
@@ -795,7 +793,7 @@ describe('Hermes Shrine delayed deliveries', () => {
         },
         fixedReward: { offer: { rewardType: 'HealBigDrop' } },
       });
-      expect(transition.branches[0]?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
+      expect(transition.branch?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
         remainingUses: 0,
         due: { host: room.origin, cause: 'flush', historySequence: entryEvent.sequence },
       });
@@ -2409,7 +2407,7 @@ describe('Hermes Shrine entry inventory requirements', () => {
       view,
       new Set(),
       new Set(),
-      branches,
+      branches[0],
       Object.freeze({
         kind: 'history' as const,
         sequence: entryEvent.sequence,

@@ -12,7 +12,7 @@ import {
 } from '../../../materialization';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
-import type { RewardBranchState } from '../../branch-primitives';
+import { branchList, type RewardBranchState } from '../../branch-primitives';
 import { explainCohortOfferExclusions, processOfferGenerationCohort } from '../../offer-generation';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
 import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-settlement';
@@ -39,13 +39,13 @@ export interface RewardWheelOfferPointMaterializationInputs {
   readonly declaration: RoomDeclaration;
   readonly roomView: ProgressiveRoomHistoryViews;
   readonly lifecycle: RewardLifecycleReferences;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly routeLoadout: RouteLoadout;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
 }
 
 export interface RewardWheelOfferPointMaterialization {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: readonly FindingRegionEntry[];
   readonly producerFrontiers: readonly RewardProducerFrontier[];
   /** Roles of the picked offer realized by a Forfeit fixed at this pick. */
@@ -62,7 +62,7 @@ export interface RewardWheelOfferPointMaterialization {
 function pickedWheelForfeitRealizations(
   catalog: Catalog,
   wheel: CanonicalRewardWheel,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   historySequence: number,
 ): readonly FixedAcquisitionRealization[] {
   const picked = wheel.offers.find((offer) => offer.picked);
@@ -70,25 +70,20 @@ function pickedWheelForfeitRealizations(
   if (
     picked === undefined ||
     (rewardType !== 'Boon' && rewardType !== 'HermesUpgrade') ||
-    branches.length === 0
+    branch === undefined
   )
     return Object.freeze([]);
-  const replacements = branches.map((branch) => {
-    const forfeit = consumeRoomRewardForfeit(catalog, branch.state.arcanaFear, rewardType, {
-      owner: picked.origin,
-      sequence: historySequence,
-    });
-    return forfeit.consumed ? forfeit.replacementRewardType : undefined;
+  const forfeit = consumeRoomRewardForfeit(catalog, branch.state.arcanaFear, rewardType, {
+    owner: picked.origin,
+    sequence: historySequence,
   });
-  const replacement = replacements[0];
-  if (replacement === undefined || replacements.some((candidate) => candidate !== replacement))
-    return Object.freeze([]);
+  if (!forfeit.consumed) return Object.freeze([]);
   return forfeitFixedAcquisitionRealizations(
     catalog,
     picked.origin,
     wheel.producerLifecycleKey,
     picked.offer,
-    replacement,
+    forfeit.replacementRewardType,
     historySequence,
   );
 }
@@ -104,7 +99,7 @@ export function applyRewardWheelOfferPointMaterialization(
     declaration,
     roomView,
     lifecycle,
-    branches,
+    branch,
     routeLoadout,
     authoredSeaStarDuplicateSiteKeys,
   } = inputs;
@@ -213,7 +208,6 @@ export function applyRewardWheelOfferPointMaterialization(
       }),
   });
   const contexts = wheel.offers.map(contextForWheel);
-  const frontierBranches = branches;
   const owners = Object.freeze(
     [...wheel.offers, ...wheel.unresolvedOffers].map((offer) => offer.origin),
   );
@@ -303,19 +297,19 @@ export function applyRewardWheelOfferPointMaterialization(
                 : wheelStateFor(unresolved, candidateOffer);
           const trialFindings = new Map<string, FindingRegionEntry>();
           const trial = processOfferGenerationCohort(
-            frontierBranches,
+            branch,
             [...values, candidate].map(contextForWheel),
             trialFindings,
             { ordering: 'listed', atomicRegion: ownerRegion(wheel.origin) },
           );
-          if (trial.length === 0) continue;
+          if (trial === undefined) continue;
           build(index + 1, [...values, candidate]);
           if (proposals.length > 0) return;
         }
       };
       build(0, []);
-      const candidateBranches = processOfferGenerationCohort(
-        frontierBranches,
+      const proposed = processOfferGenerationCohort(
+        branch,
         (proposals[0] ?? []).map(contextForWheel),
         candidateFindings,
         { ordering: 'listed', atomicRegion: ownerRegion(wheel.origin) },
@@ -324,7 +318,7 @@ export function applyRewardWheelOfferPointMaterialization(
         (candidate) => semanticAddressKey(candidate.origin) === ownerKey,
       );
       if (
-        candidateBranches.length > 0 &&
+        proposed !== undefined &&
         selectedOffer?.picked === true &&
         selectedOffer.reroll === undefined &&
         acquisitionView !== undefined &&
@@ -334,7 +328,7 @@ export function applyRewardWheelOfferPointMaterialization(
         const source = shipWheelRoomRewardSource(wheel, selectedOffer, offer);
         const settlement = settleOwnedAcquisitionSite(
           catalog,
-          candidateBranches,
+          branchList(proposed),
           {
             siteOwner: wheel.origin,
             pointKey: wheel.wheelKey,
@@ -361,7 +355,7 @@ export function applyRewardWheelOfferPointMaterialization(
         proposals.length > 0
           ? undefined
           : explainCohortOfferExclusions(
-              frontierBranches,
+              branch,
               contextForWheel(focusedCandidate()),
               {
                 earlier: wheel.offers
@@ -385,10 +379,10 @@ export function applyRewardWheelOfferPointMaterialization(
     },
   });
 
-  const nextBranches =
+  const next =
     wheel.unresolvedOffers.length > 0
-      ? Object.freeze([])
-      : processOfferGenerationCohort(branches, contexts, findings, {
+      ? undefined
+      : processOfferGenerationCohort(branch, contexts, findings, {
           ordering: 'listed',
           atomicRegion: ownerRegion(wheel.origin),
         });
@@ -411,7 +405,7 @@ export function applyRewardWheelOfferPointMaterialization(
           declaration,
           roomView,
           lifecycle,
-          branchesBeforeFirstWheel: branches,
+          beforeFirstWheel: branch,
           routeLoadout: Object.freeze({
             ...routeLoadout,
             ...(declaration.boonRarityOverride === undefined
@@ -420,13 +414,13 @@ export function applyRewardWheelOfferPointMaterialization(
           }),
         });
   return Object.freeze({
-    branches: nextBranches,
+    branch: next,
     findings: Object.freeze([...findings.values()]),
     producerFrontiers: Object.freeze([producerFrontier]),
     fixedAcquisitionRealizations: pickedWheelForfeitRealizations(
       catalog,
       ownedWheel ?? wheel,
-      nextBranches,
+      next,
       event.sequence,
     ),
     ...(shipLifecycleCandidate === undefined ? {} : { shipLifecycleCandidate }),

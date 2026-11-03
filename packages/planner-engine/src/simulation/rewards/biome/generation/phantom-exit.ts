@@ -17,7 +17,7 @@ import {
   type PhantomPlaceholderCandidate,
 } from '../../../generation/phantom-exit';
 import { withBag, type RewardBranchState } from '../../branch-primitives';
-import { advanceRewardBranches } from '../../branch-lifecycle';
+import { advanceReachedBranch } from '../../branch-lifecycle';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, historyChronology, rewardFinding } from '../../findings';
 import {
@@ -54,7 +54,7 @@ export function settlePhantomRewardType(
 }
 
 export interface PhantomExitTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   /** The drawn offer, a prior door of the same unlock for the side doors that follow. */
   readonly peers: readonly OfferProcessingPeer[];
   readonly findings: readonly FindingRegionEntry[];
@@ -75,7 +75,7 @@ export function applyPhantomExitTransition(inputs: {
   readonly room: CanonicalAuthoredRoom | undefined;
   /** History immediately before the door is filled. */
   readonly view: HistoryStateView | undefined;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
 }): PhantomExitTransition {
   const { catalog, event, room, view } = inputs;
   const phantom = room?.phantomExit;
@@ -121,7 +121,7 @@ export function applyPhantomExitTransition(inputs: {
       chronology,
     );
     return Object.freeze({
-      branches: Object.freeze([]),
+      branch: undefined,
       peers: Object.freeze([]),
       findings: Object.freeze([...findings.values()]),
       producerFrontiers: Object.freeze([]),
@@ -130,7 +130,7 @@ export function applyPhantomExitTransition(inputs: {
   }
   if (draw === undefined)
     return Object.freeze({
-      branches: advanceRewardBranches(inputs.branches, event.sequence),
+      branch: advanceReachedBranch(inputs.branch, event.sequence),
       peers: Object.freeze([]),
       findings: Object.freeze([]),
       producerFrontiers: Object.freeze([]),
@@ -172,8 +172,8 @@ export function applyPhantomExitTransition(inputs: {
     return new Map(
       types.flatMap((rewardType) => {
         for (const offer of locallyValidRewardOffers(catalog.rewards, rewardType)) {
-          const survivors = processRewardOffer([branch], contextFor(offer), new Map());
-          if (survivors.length === 0) continue;
+          const survivor = processRewardOffer(branch, contextFor(offer), new Map());
+          if (survivor === undefined) continue;
           const remaining =
             store?.entries.reduce(
               (sum, entry, index) =>
@@ -182,20 +182,20 @@ export function applyPhantomExitTransition(inputs: {
                   : sum,
               0,
             ) ?? 0;
-          return [[rewardType, { offer, survivors, remaining }] as const];
+          return [[rewardType, { offer, survivor, remaining }] as const];
         }
         return [];
       }),
     );
   };
-  const reached = inputs.branches[0];
+  const reached = inputs.branch;
   const options = reached === undefined ? undefined : branchOptions(reached);
-  const next: RewardBranchState[] = [];
+  let next: RewardBranchState | undefined;
   const offers: ResolvedRewardOffer[] = [];
   const settle = (rewardType: string) => {
     const option = options?.get(rewardType);
     if (option === undefined) return;
-    next.push(...option.survivors);
+    next = option.survivor;
     offers.push(option.offer);
   };
   if (phantom.rewardType !== null) {
@@ -230,9 +230,7 @@ export function applyPhantomExitTransition(inputs: {
         chronology,
       );
   }
-  const branches = findings.size > 0 ? Object.freeze([]) : Object.freeze(next);
-
-  const frontierBranches = inputs.branches;
+  const branch = findings.size > 0 ? undefined : next;
   const ownerKey = semanticAddressKey(owner);
   const producerFrontiers: readonly RewardProducerFrontier[] = Object.freeze([
     Object.freeze({
@@ -248,22 +246,20 @@ export function applyPhantomExitTransition(inputs: {
           );
         const candidateFindings = new Map<string, FindingRegionEntry>();
         const context = contextFor(offer);
-        const candidateBranches = processRewardOffer(frontierBranches, context, candidateFindings);
+        const offered = processRewardOffer(reached, context, candidateFindings);
         return createRewardProducerCandidateResult(
           candidateFindings,
-          candidateBranches,
-          candidateBranches.length === 0
-            ? explainRewardOfferExclusions(frontierBranches, context)
-            : undefined,
+          offered,
+          offered === undefined ? explainRewardOfferExclusions(reached, context) : undefined,
         );
       },
     }),
   ]);
   const settledOffers = Object.freeze(offers);
   return Object.freeze({
-    branches,
+    branch,
     peers:
-      branches.length === 0
+      branch === undefined
         ? Object.freeze([])
         : Object.freeze(settledOffers.map((offer) => Object.freeze({ origin: owner, offer }))),
     findings: Object.freeze([...findings.values()]),

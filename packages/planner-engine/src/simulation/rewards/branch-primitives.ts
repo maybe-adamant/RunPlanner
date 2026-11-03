@@ -40,6 +40,14 @@ export interface RewardBranchState {
   >;
 }
 
+/** Applies a transition to the reached state, if any. */
+export function mapReached(
+  branch: RewardBranchState | undefined,
+  transition: (reached: RewardBranchState) => RewardBranchState | undefined,
+): RewardBranchState | undefined {
+  return branch === undefined ? undefined : transition(branch);
+}
+
 /** The zero-or-one state list a list-shaped settlement takes. */
 export function branchList(branch: RewardBranchState | undefined): readonly RewardBranchState[] {
   return branch === undefined ? Object.freeze([]) : Object.freeze([branch]);

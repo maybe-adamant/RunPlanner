@@ -20,7 +20,7 @@ import type { TargetAddress } from '../../../../authored-project/addresses';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
 import type { SimulationState } from '../../../state/model';
 
-/** Complete non-branch emissions from one authored acquisition-site settlement. */
+/** Complete non-state emissions from one authored acquisition-site settlement. */
 export interface AuthoredSiteSettlementEmissions {
   readonly acquisitionRoleFrontiers: readonly AcquisitionRoleFrontier[];
   readonly derivedEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
@@ -78,13 +78,14 @@ export type HubBoardGenerationParticipant =
   ResolvedHubBoardGenerationParticipant | UnresolvedHubBoardGenerationParticipant;
 
 export interface PendingHubBoardGeneration {
-  readonly frontierBranches: readonly RewardBranchState[];
+  /** The post-Hub-entry state the whole board generates from. */
+  readonly frontier: RewardBranchState | undefined;
   readonly participants: readonly HubBoardGenerationParticipant[];
 }
 
 /** One room-generation event's complete immutable mutations for the coordinator. */
 export interface GenerationEmissions {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly peers: readonly OfferProcessingPeer[];
   readonly findings: readonly FindingRegionEntry[];
   readonly producerFrontiers: readonly RewardProducerFrontier[];
@@ -92,14 +93,14 @@ export interface GenerationEmissions {
 }
 
 export function createGenerationEmissions(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   peers: readonly OfferProcessingPeer[],
   findings: ReadonlyMap<string, FindingRegionEntry>,
   producerFrontiers: readonly RewardProducerFrontier[],
   pendingHubBoard?: PendingHubBoardGeneration,
 ): GenerationEmissions {
   return Object.freeze({
-    branches: Object.freeze(branches),
+    branch,
     peers: Object.freeze(peers),
     findings: Object.freeze([...findings.values()]),
     producerFrontiers: Object.freeze(producerFrontiers),

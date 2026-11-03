@@ -44,7 +44,6 @@ import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contr
 import { type BiomeRewardEvaluationAssembly } from './publication';
 
 import { initializeRewardBranch } from '../branch-lifecycle';
-import { branchList, singleBranch } from '../branch-primitives';
 import { rewardFinding } from '../findings';
 import { assessAuthoredBossDoorRewardStore } from './reward-store-support';
 import { createArcanaFearState } from '../../arcana-fear';
@@ -176,7 +175,7 @@ function replayEchoKeepsake(
     snapshot,
     routePosition,
     routeLoadout,
-    branchList(walk.branch),
+    walk.branch,
     history.events[0]?.sequence ?? 0,
   );
   accumulator.mergeEmissions([
@@ -188,7 +187,7 @@ function replayEchoKeepsake(
     { kind: 'timelineFacts', facts: echoReplay.timelineFacts },
     { kind: 'echoKeepsakeReplayOutcome', outcome: echoReplay.outcome },
   ]);
-  return withBranch(walk, singleBranch(echoReplay.branches));
+  return withBranch(walk, echoReplay.branch);
 }
 
 /** A prefix's blank exit decision records history for its next unauthored target slot. */
@@ -269,7 +268,7 @@ function captureFailedOverviewEntry(
     room,
     context.chaosGateSourceOccurrenceIds,
     context.ixionGeneratedChaosSourceOccurrenceIds,
-    branchList(cohort.branch),
+    cohort.branch,
     rewardFindingChronologyForRoom(
       context.snapshot,
       room.origin,
@@ -278,7 +277,7 @@ function captureFailedOverviewEntry(
     ),
     context.routePosition,
   );
-  captureRunState(context, withBranch(walk, singleBranch(effects.branches)), accumulator, {
+  captureRunState(context, withBranch(walk, effects.branch), accumulator, {
     owner: createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' }),
     room,
     view: entry,

@@ -21,7 +21,7 @@ import { mergeRewardFindingEmissions } from '../../findings';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { spawnPickups } from '../../../state/pending-resource-pickups';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
-import { singleBranch, type RewardBranchState } from '../../branch-primitives';
+import type { RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { reachedRewardOfferExclusion, staticRewardOfferExclusion } from '../../offer-exclusions';
 import {
@@ -39,29 +39,28 @@ export interface ShopOfferPointMaterializationInputs {
   readonly room: CanonicalAuthoredRoom;
   readonly declaration: RoomDeclaration;
   readonly roomView: RoomOverviewHistoryViews;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
 }
 
 export interface ShopOfferPointMaterialization {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: readonly FindingRegionEntry[];
   readonly producerFrontiers: readonly RewardProducerFrontier[];
 }
 
 /**
  * Evaluates the reached Shop inventory materialization point. The returned
- * frontier deliberately closes over the exact pre-materialization branch
- * cohort, because a Shop's authored offers are jointly constrained.
+ * frontier deliberately closes over the exact pre-materialization state,
+ * because a Shop's authored offers are jointly constrained.
  */
 export function applyShopOfferPointMaterialization(
   inputs: ShopOfferPointMaterializationInputs,
 ): ShopOfferPointMaterialization {
-  const { catalog, snapshot, event, room, declaration, roomView, branches } = inputs;
+  const { catalog, snapshot, event, room, declaration, roomView, branch: frontier } = inputs;
   if (event.offerPoint !== 'shopInventory')
     throw new BiomeRewardSimulationContractError('Shop offer transition received a non-Shop point');
 
   const findings = new Map<string, FindingRegionEntry>();
-  const frontierBranches = branches;
   const shopEntry = room.entryState?.kind === 'shop' ? room.entryState : undefined;
   const owners = Object.freeze([
     ...(shopEntry?.offers.map((offer) => offer.offerOrigin) ?? []),
@@ -89,7 +88,7 @@ export function applyShopOfferPointMaterialization(
   const inventory =
     shopEntry === undefined
       ? undefined
-      : processShopInventory(branches, {
+      : processShopInventory(frontier, {
           catalog,
           room,
           declaration,
@@ -149,7 +148,7 @@ export function applyShopOfferPointMaterialization(
       return { context, fixedOffers };
     };
     const hasWitnesses = (
-      branch: (typeof frontierBranches)[number],
+      branch: RewardBranchState,
       { context, fixedOffers }: ReturnType<typeof selectionInputs>,
     ) =>
       findShopPartialAuthoredGenerationWitnesses(
@@ -161,7 +160,7 @@ export function applyShopOfferPointMaterialization(
       ).length > 0;
     const supportsSelection = (owner: SemanticAddress, selection: AuthoredShopOffer): boolean => {
       const inputs = selectionInputs(owner, selection);
-      return frontierBranches.some((branch) => hasWitnesses(branch, inputs));
+      return frontier !== undefined && hasWitnesses(frontier, inputs);
     };
     const explainSelection = (owner: SemanticAddress, selection: AuthoredShopOffer) => {
       const inputs = selectionInputs(owner, selection);
@@ -182,11 +181,10 @@ export function applyShopOfferPointMaterialization(
       };
       const fixed = notInShopReason(input);
       if (fixed !== undefined) return staticRewardOfferExclusion(fixed);
-      const reached = singleBranch(frontierBranches);
       return reachedRewardOfferExclusion(
-        reached === undefined || hasWitnesses(reached, inputs)
+        frontier === undefined || hasWitnesses(frontier, inputs)
           ? undefined
-          : shopSlotReason(input, facts(reached.state)),
+          : shopSlotReason(input, facts(frontier.state)),
       );
     };
     const selectionResult = (owner: SemanticAddress, selection: AuthoredShopOffer) => {
@@ -228,26 +226,28 @@ export function applyShopOfferPointMaterialization(
   }
 
   // World Shop loot is spawned at room entry with its options built.
-  const nextBranches = Object.freeze(
-    (inventory?.branches ?? []).map((branch) => {
-      // Store items store their resources as they spawn; the Shop profile is their producer.
-      const spawned = (shopEntry?.offers ?? []).map((offer) =>
-        Object.freeze({
-          origin: offer.offerOrigin,
-          offer: offer.offer,
-          producerLifecycleKey: shopEntry!.profileKey,
-          traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole,
-          levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole,
-          ...(offer.hexActivationsByAcquisitionRole === undefined
-            ? {}
-            : { hexActivationsByAcquisitionRole: offer.hexActivationsByAcquisitionRole }),
-        }),
-      );
-      return Object.freeze({ ...branch, state: spawnPickups(catalog, branch.state, spawned) });
+  // Store items store their resources as they spawn; the Shop profile is their producer.
+  const spawned = (shopEntry?.offers ?? []).map((offer) =>
+    Object.freeze({
+      origin: offer.offerOrigin,
+      offer: offer.offer,
+      producerLifecycleKey: shopEntry!.profileKey,
+      traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole,
+      levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole,
+      ...(offer.hexActivationsByAcquisitionRole === undefined
+        ? {}
+        : { hexActivationsByAcquisitionRole: offer.hexActivationsByAcquisitionRole }),
     }),
   );
+  const inventoried = inventory?.branch;
   return Object.freeze({
-    branches: nextBranches,
+    branch:
+      inventoried === undefined
+        ? undefined
+        : Object.freeze({
+            ...inventoried,
+            state: spawnPickups(catalog, inventoried.state, spawned),
+          }),
     findings: Object.freeze([...findings.values()]),
     producerFrontiers: Object.freeze(producerFrontiers),
   });

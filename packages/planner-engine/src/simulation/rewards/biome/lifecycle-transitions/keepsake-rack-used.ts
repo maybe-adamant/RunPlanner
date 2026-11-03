@@ -43,7 +43,7 @@ import type { LifecycleFinding } from './types';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
 
 export interface KeepsakeRackUsedTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly keepsakeSelectionCandidate?: {
     readonly key: string;
     readonly candidate: KeepsakeSelectionCandidateCapability;
@@ -63,7 +63,7 @@ interface RackEquip {
 }
 
 /**
- * Equips a keepsake at the rack on each pre-rack branch: the replacement, its equip effects
+ * Equips a keepsake at the rack on the pre-rack state: the replacement, its equip effects
  * and the Fated Pom cleanup, before any equip result applies.
  */
 function equipAtRack(
@@ -72,63 +72,61 @@ function equipAtRack(
   selection: KeepsakeSelectionAddress,
   sequence: number,
   roomGameName: string,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState,
   encounterBlockedKeepsakeKeys: readonly string[],
   effectiveBiomeNumber: number,
-): readonly RackEquip[] {
-  return branches.map((branch): RackEquip => {
-    const before = branch.state.keepsakes;
-    const unavailable =
-      keepsakeSelectionUnavailableReason(
+): RackEquip {
+  const before = branch.state.keepsakes;
+  const unavailable =
+    keepsakeSelectionUnavailableReason(
+      catalog,
+      before,
+      keepsakeKey,
+      encounterBlockedKeepsakeKeys,
+    ) !== undefined;
+  const equippedRank = !unavailable
+    ? keepsakeRankForEquip(catalog, keepsakeKey, branch.state.traitHistory)
+    : undefined;
+  const after = unavailable
+    ? before
+    : applyKeepsakeReplacement(
         catalog,
         before,
         keepsakeKey,
-        encounterBlockedKeepsakeKeys,
-      ) !== undefined;
-    const equippedRank = !unavailable
-      ? keepsakeRankForEquip(catalog, keepsakeKey, branch.state.traitHistory)
-      : undefined;
-    const after = unavailable
-      ? before
-      : applyKeepsakeReplacement(
-          catalog,
-          before,
-          keepsakeKey,
-          branch.state.arcanaFear,
-          equippedRank,
-          effectiveBiomeNumber,
-          before.currentKey === null
-            ? undefined
-            : keepsakeRankForEquip(catalog, before.currentKey, branch.state.traitHistory),
-        );
-    const replacementSucceeded =
-      before.currentKey !== after.currentKey && after.currentKey === keepsakeKey;
-    // Unequipping the Sash moves its armor into MinorArmorBoon.
-    const transitionedBranch = Object.freeze({
-      ...branch,
-      state: Object.freeze({
-        ...branch.state,
-        keepsakes: after,
-        rewardHistory: creditItemArmor(
-          branch.state.rewardHistory,
-          silkenSashArmorTransferredOnReplacement(before, after),
-        ),
-      }),
-    });
-    const equipped = replacementSucceeded
-      ? applyMoonBeamEquip(
-          catalog,
-          applyOlympianRewardPressureEquip(catalog, transitionedBranch, keepsakeKey),
-          keepsakeKey,
-          equippedRank,
-          roomGameName === 'H_PostBoss01' || roomGameName === 'P_PostBoss01',
-        )
-      : transitionedBranch;
-    return Object.freeze({
-      branch: fatedJeweledPomCleanup(catalog, equipped, selection, sequence),
-      replacementSucceeded,
-      ...(equippedRank === undefined ? {} : { equippedRank }),
-    });
+        branch.state.arcanaFear,
+        equippedRank,
+        effectiveBiomeNumber,
+        before.currentKey === null
+          ? undefined
+          : keepsakeRankForEquip(catalog, before.currentKey, branch.state.traitHistory),
+      );
+  const replacementSucceeded =
+    before.currentKey !== after.currentKey && after.currentKey === keepsakeKey;
+  // Unequipping the Sash moves its armor into MinorArmorBoon.
+  const transitionedBranch = Object.freeze({
+    ...branch,
+    state: Object.freeze({
+      ...branch.state,
+      keepsakes: after,
+      rewardHistory: creditItemArmor(
+        branch.state.rewardHistory,
+        silkenSashArmorTransferredOnReplacement(before, after),
+      ),
+    }),
+  });
+  const equipped = replacementSucceeded
+    ? applyMoonBeamEquip(
+        catalog,
+        applyOlympianRewardPressureEquip(catalog, transitionedBranch, keepsakeKey),
+        keepsakeKey,
+        equippedRank,
+        roomGameName === 'H_PostBoss01' || roomGameName === 'P_PostBoss01',
+      )
+    : transitionedBranch;
+  return Object.freeze({
+    branch: fatedJeweledPomCleanup(catalog, equipped, selection, sequence),
+    replacementSucceeded,
+    ...(equippedRank === undefined ? {} : { equippedRank }),
   });
 }
 
@@ -175,10 +173,10 @@ function rackEquipResult(
   catalog: Catalog,
   keepsakeKey: string,
   selection: KeepsakeSelectionAddress,
-  equipped: readonly RackEquip[],
+  equipped: RackEquip,
 ): KeepsakeDraftEquipResult | undefined {
   const resultKind = keepsakeEquipResultKind(catalog, keepsakeKey);
-  const successful = equipped.find((transition) => transition.replacementSucceeded)?.branch;
+  const successful = equipped.replacementSucceeded ? equipped.branch : undefined;
   if (resultKind === undefined || successful === undefined) return undefined;
   const effect = catalog.keepsakes.byKey[keepsakeKey]?.effect;
   const rarity =
@@ -198,15 +196,15 @@ function rackEquipResult(
 }
 
 /**
- * The equip result any keepsake drafted at this rack would open, judged from these pre-rack
- * branches exactly as the rack judges its authored keepsake.
+ * The equip result any keepsake drafted at this rack would open, judged from the pre-rack
+ * state exactly as the rack judges its authored keepsake.
  */
 export function rackKeepsakeEquipResultFor(
   catalog: Catalog,
   selection: KeepsakeSelectionAddress,
   sequence: number,
   roomGameName: string,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState,
   encounterBlockedKeepsakeKeys: readonly string[],
   effectiveBiomeNumber: number,
 ): KeepsakeSelectionCandidateCapability['equipResultFor'] {
@@ -221,7 +219,7 @@ export function rackKeepsakeEquipResultFor(
         selection,
         sequence,
         roomGameName,
-        branches,
+        branch,
         encounterBlockedKeepsakeKeys,
         effectiveBiomeNumber,
       ),
@@ -235,7 +233,7 @@ export function applyKeepsakeRackUsedTransition(
   room: CanonicalAuthoredRoom | undefined,
   historyAtRack: ProgressiveRoomHistoryViews['entry'] | undefined,
   routeLoadout: RouteLoadout,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   effectiveBiomeNumber: number,
 ): KeepsakeRackUsedTransition {
   const findings: LifecycleFinding[] = [];
@@ -247,9 +245,13 @@ export function applyKeepsakeRackUsedTransition(
     readonly key: string;
     readonly candidate: KeepsakeEquipResultCandidateCapability;
   }[] = [];
-  if (room?.keepsakeRack === undefined || event.origin.kind !== 'occurrence')
+  if (
+    room?.keepsakeRack === undefined ||
+    event.origin.kind !== 'occurrence' ||
+    branch === undefined
+  )
     return Object.freeze({
-      branches,
+      branch,
       keepsakeEquipResultCandidates: Object.freeze(keepsakeEquipResultCandidates),
       findings: Object.freeze(findings),
       timelineFacts: noTimelineFacts,
@@ -270,14 +272,14 @@ export function applyKeepsakeRackUsedTransition(
   const keepsakeSelectionCandidate = Object.freeze({
     key: semanticAddressKey(selection),
     candidate: Object.freeze({
-      state: branches[0]!.state.keepsakes,
+      state: branch.state.keepsakes,
       encounterBlockedKeepsakeKeys,
       equipResultFor: rackKeepsakeEquipResultFor(
         catalog,
         selection,
         event.sequence,
         room.gameName,
-        branches,
+        branch,
         encounterBlockedKeepsakeKeys,
         effectiveBiomeNumber,
       ),
@@ -288,15 +290,13 @@ export function applyKeepsakeRackUsedTransition(
     sequence: event.sequence,
     boundary: 'at' as const,
   });
-  const invalidReplacement = branches.some(
-    (branch) =>
-      keepsakeSelectionUnavailableReason(
-        catalog,
-        branch.state.keepsakes,
-        keepsakeKey,
-        encounterBlockedKeepsakeKeys,
-      ) !== undefined,
-  );
+  const invalidReplacement =
+    keepsakeSelectionUnavailableReason(
+      catalog,
+      branch.state.keepsakes,
+      keepsakeKey,
+      encounterBlockedKeepsakeKeys,
+    ) !== undefined;
   if (invalidReplacement)
     findings.push(
       Object.freeze({
@@ -309,27 +309,25 @@ export function applyKeepsakeRackUsedTransition(
       }),
     );
 
-  let rackTransitions = equipAtRack(
+  const rackTransition = equipAtRack(
     catalog,
     keepsakeKey,
     selection,
     event.sequence,
     room.gameName,
-    branches,
+    branch,
     encounterBlockedKeepsakeKeys,
     effectiveBiomeNumber,
   );
   const replacementEquipsPhial =
     catalog.keepsakes.byKey[keepsakeKey]?.effect?.kind === 'fountainRarity';
-  const phialSensitiveReplacement = rackTransitions.some(
-    (transition, index) =>
-      transition.replacementSucceeded &&
-      (replacementEquipsPhial ||
-        branches[index]?.state.keepsakes.phial?.status === 'pending' ||
-        (room.fountainRarityResult !== undefined &&
-          catalog.keepsakes.byKey[branches[index]?.state.keepsakes.currentKey ?? '']?.effect
-            ?.kind === 'fountainRarity')),
-  );
+  const phialSensitiveReplacement =
+    rackTransition.replacementSucceeded &&
+    (replacementEquipsPhial ||
+      branch.state.keepsakes.phial?.status === 'pending' ||
+      (room.fountainRarityResult !== undefined &&
+        catalog.keepsakes.byKey[branch.state.keepsakes.currentKey ?? '']?.effect?.kind ===
+          'fountainRarity'));
   const rackRow = room.roomActionRoster?.rows.find(
     (row) => !row.stale && row.rank !== null && row.reference.kind === 'interactKeepsakeRack',
   );
@@ -349,7 +347,7 @@ export function applyKeepsakeRackUsedTransition(
             ),
           ]),
   });
-  const equipResult = rackEquipResult(catalog, keepsakeKey, selection, rackTransitions);
+  const equipResult = rackEquipResult(catalog, keepsakeKey, selection, rackTransition);
   if (equipResult !== undefined) {
     const { result, capability } = equipResult;
     // An Embryo result's finding belongs to the selection; the others to its Postboss owner.
@@ -399,62 +397,43 @@ export function applyKeepsakeRackUsedTransition(
       Object.freeze({ key: semanticAddressKey(result), candidate: capability }),
     );
   }
-  rackTransitions = rackTransitions.map((transition) =>
-    !transition.replacementSucceeded
-      ? transition
-      : Object.freeze({
-          ...transition,
-          branch: applyJeweledPomEquipResult(
-            catalog,
-            transition.branch,
-            keepsakeKey,
-            rack.equipResults,
-            createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
-            event.sequence,
-            transition.equippedRank,
-          ),
-        }),
-  );
-  rackTransitions = rackTransitions.map((transition) =>
-    !transition.replacementSucceeded
-      ? transition
-      : Object.freeze({
-          ...transition,
-          branch:
-            rack.equipResults?.transcendentEmbryo === undefined
-              ? transition.branch
-              : applyTranscendentEmbryoEquipResult(
-                  catalog,
-                  transition.branch,
-                  keepsakeKey,
-                  rack.equipResults.transcendentEmbryo,
-                  rack.equipResults.transcendentEmbryoTransformations,
-                  createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo'),
-                  event.sequence,
-                  'ordinary',
-                  transition.equippedRank ?? catalog.keepsakes.byKey[keepsakeKey]?.rank ?? 'Epic',
-                  routeLoadout,
-                ),
-        }),
-  );
-  rackTransitions = rackTransitions.map((transition) =>
-    !transition.replacementSucceeded
-      ? transition
-      : Object.freeze({
-          ...transition,
-          branch: applyExperimentalHammerEquipResult(
-            catalog,
-            transition.branch,
-            keepsakeKey,
-            rack.equipResults,
-            createKeepsakeEquipResultAddress(selection, 'experimentalHammer'),
-            event.sequence,
-            transition.equippedRank,
-          ),
-        }),
-  );
+  let settled = rackTransition.branch;
+  if (rackTransition.replacementSucceeded) {
+    const { equippedRank } = rackTransition;
+    settled = applyJeweledPomEquipResult(
+      catalog,
+      settled,
+      keepsakeKey,
+      rack.equipResults,
+      createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
+      event.sequence,
+      equippedRank,
+    );
+    if (rack.equipResults?.transcendentEmbryo !== undefined)
+      settled = applyTranscendentEmbryoEquipResult(
+        catalog,
+        settled,
+        keepsakeKey,
+        rack.equipResults.transcendentEmbryo,
+        rack.equipResults.transcendentEmbryoTransformations,
+        createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo'),
+        event.sequence,
+        'ordinary',
+        equippedRank ?? catalog.keepsakes.byKey[keepsakeKey]?.rank ?? 'Epic',
+        routeLoadout,
+      );
+    settled = applyExperimentalHammerEquipResult(
+      catalog,
+      settled,
+      keepsakeKey,
+      rack.equipResults,
+      createKeepsakeEquipResultAddress(selection, 'experimentalHammer'),
+      event.sequence,
+      equippedRank,
+    );
+  }
   return Object.freeze({
-    branches: Object.freeze(rackTransitions.map((transition) => transition.branch)),
+    branch: settled,
     keepsakeSelectionCandidate,
     keepsakeEquipResultCandidates: Object.freeze(keepsakeEquipResultCandidates),
     findings: Object.freeze(findings),

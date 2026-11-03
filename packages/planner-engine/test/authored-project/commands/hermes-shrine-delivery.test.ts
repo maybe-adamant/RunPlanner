@@ -462,7 +462,7 @@ describe('Hermes Shrine delivery placement', () => {
         figLeafSkipOwner: false,
       },
       room,
-      [withTestEncounterRecord(pending, room, 'Combat1', 'GeneratedO')],
+      withTestEncounterRecord(pending, room, 'Combat1', 'GeneratedO'),
     );
 
     expect(transition.findings).toContainEqual(
@@ -538,16 +538,14 @@ describe('Hermes Shrine delivery placement', () => {
       catalog,
       endEffects(source, 1),
       roomFor('N_Sub10', 'EphyraSideRoom'),
-      [
-        withTestEncounterRecord(
-          pending,
-          roomFor('N_Sub10', 'EphyraSideRoom'),
-          'Encounter',
-          'GeneratedNSubRoom_Bigger',
-        ),
-      ],
+      withTestEncounterRecord(
+        pending,
+        roomFor('N_Sub10', 'EphyraSideRoom'),
+        'Encounter',
+        'GeneratedNSubRoom_Bigger',
+      ),
     );
-    expect(sideRoom.branches[0]?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
+    expect(sideRoom.branch?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
       source,
       remainingUses: 2,
     });
@@ -557,18 +555,14 @@ describe('Hermes Shrine delivery placement', () => {
       catalog,
       endEffects(host, 2),
       roomFor('N_Combat01', 'EphyraCombat'),
-      sideRoom.branches.map((branch) =>
-        withTestEncounterRecord(
-          branch,
-          roomFor('N_Combat01', 'EphyraCombat'),
-          'Encounter',
-          'GeneratedN_Bigger',
-        ),
+      withTestEncounterRecord(
+        sideRoom.branch!,
+        roomFor('N_Combat01', 'EphyraCombat'),
+        'Encounter',
+        'GeneratedN_Bigger',
       ),
     );
-    expect(
-      firstMainEncounter.branches[0]?.state.pendingHermesShrineDeliveries[entryKey],
-    ).toMatchObject({
+    expect(firstMainEncounter.branch?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
       source,
       remainingUses: 1,
     });
@@ -577,11 +571,9 @@ describe('Hermes Shrine delivery placement', () => {
       catalog,
       endEffects(host, 3),
       roomFor('N_Combat01', 'EphyraCombat'),
-      firstMainEncounter.branches,
+      firstMainEncounter.branch,
     );
-    expect(
-      dueMainEncounter.branches[0]?.state.pendingHermesShrineDeliveries[entryKey],
-    ).toMatchObject({
+    expect(dueMainEncounter.branch?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
       source,
       remainingUses: 0,
       due: { host, encounterPhaseKey: 'Encounter', cause: 'countdown' },
@@ -654,7 +646,7 @@ describe('Hermes Shrine delivery placement', () => {
         figLeafSkipOwner: false,
       },
       room,
-      [withTestEncounterRecord(pending, room, 'Combat1', 'GeneratedO')],
+      withTestEncounterRecord(pending, room, 'Combat1', 'GeneratedO'),
     );
     expect(transition.findings).toContainEqual(
       expect.objectContaining({

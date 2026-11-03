@@ -13,14 +13,14 @@ import { addRewardFinding, historyChronology, offerEvidence, rewardFinding } fro
 import { shopRequirements, type ShopProcessingContext } from './context';
 
 export interface ShopInventoryProduct {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findingEmissions: readonly FindingRegionEntry[];
   /** Declared-slot standing at the entering state, keyed by slot key. */
   readonly slotAssessments: ReadonlyMap<string, ShopSlotAssessment>;
 }
 
 export function processShopInventory(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   context: ShopProcessingContext,
 ): ShopInventoryProduct {
   const { catalog, room, declaration, historySequence, fail } = context;
@@ -34,10 +34,9 @@ export function processShopInventory(
   }
   const requirements = shopRequirements(declaration, entry.profileKey, fail);
   // An unreached Shop proves nothing about any slot.
-  const branch = branches[0];
   if (branch === undefined)
     return Object.freeze({
-      branches: Object.freeze([]),
+      branch: undefined,
       findingEmissions: Object.freeze([]),
       slotAssessments: new Map(),
     });
@@ -79,19 +78,23 @@ export function processShopInventory(
       );
     }
     return Object.freeze({
-      branches: Object.freeze([]),
+      branch: undefined,
       findingEmissions: Object.freeze([...findings.values()]),
       slotAssessments,
     });
   }
-  const next: RewardBranchState[] = [];
+  // The inventory's option assignment is a fact of the one generated Shop.
+  if (assessment.witnesses.length > 1)
+    return fail(`${room.gameName} Shop inventory has more than one generation witness`);
+  let next: RewardBranchState | undefined;
   const slotKeys = Object.freeze(profile.slots.values.map((slot) => slot.key));
   const slotGroupIndexes = Object.freeze(
     profile.groups.values.flatMap((group, groupIndex) =>
       Array.from({ length: group.offerCount }, () => groupIndex),
     ),
   );
-  for (const witness of assessment.witnesses) {
+  const witness = assessment.witnesses[0];
+  if (witness !== undefined) {
     let candidate = branch;
     // Validly empty slots emit no item and therefore no offer.
     for (const offer of entry.offers) {
@@ -123,23 +126,21 @@ export function processShopInventory(
       optionKeys: witness.optionKeys,
       slotGroupIndexes,
     });
-    next.push(
-      Object.freeze({
-        ...candidate,
-        state: Object.freeze({
-          ...candidate.state,
-          pendingShops: freezeRecord({
-            ...candidate.state.pendingShops,
-            [semanticAddressKey(room.origin)]: Object.freeze({
-              profileKey: profile.key,
-              witness,
-            }),
+    next = Object.freeze({
+      ...candidate,
+      state: Object.freeze({
+        ...candidate.state,
+        pendingShops: freezeRecord({
+          ...candidate.state.pendingShops,
+          [semanticAddressKey(room.origin)]: Object.freeze({
+            profileKey: profile.key,
+            witness,
           }),
         }),
       }),
-    );
+    });
   }
-  if (next.length === 0) {
+  if (next === undefined) {
     const unsupportedIndexes = profile.slots.values.flatMap((slot, index) =>
       slotAssessments.get(slot.key) === 'selectedInvalid' ? [index] : [],
     );
@@ -192,7 +193,7 @@ export function processShopInventory(
     }
   }
   return Object.freeze({
-    branches: Object.freeze(next),
+    branch: next,
     findingEmissions: Object.freeze([...findings.values()]),
     slotAssessments,
   });

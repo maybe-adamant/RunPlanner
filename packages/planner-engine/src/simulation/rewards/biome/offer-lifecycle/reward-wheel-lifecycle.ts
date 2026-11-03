@@ -24,7 +24,7 @@ import { createRewardProducerCandidateResult } from '../../producer-frontiers';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { ResolvedRewardOffer } from '../../../../reward-kernel';
-import type { RewardBranchState } from '../../branch-primitives';
+import { branchList, singleBranch, type RewardBranchState } from '../../branch-primitives';
 import { processOfferGenerationCohort } from '../../offer-generation';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
 import type { AcquisitionSource } from '../../acquisition/source';
@@ -190,7 +190,7 @@ export interface ShipLifecycleCandidateInputs {
   readonly declaration: RoomDeclaration;
   readonly roomView: ProgressiveRoomHistoryViews;
   readonly lifecycle: RewardLifecycleReferences;
-  readonly branchesBeforeFirstWheel: readonly RewardBranchState[];
+  readonly beforeFirstWheel: RewardBranchState | undefined;
   readonly routeLoadout: RouteLoadout;
 }
 
@@ -198,15 +198,8 @@ export interface ShipLifecycleCandidateInputs {
 export function prepareShipLifecycleCandidateContext(
   inputs: ShipLifecycleCandidateInputs,
 ): ShipLifecycleCandidateContext {
-  const {
-    catalog,
-    room,
-    declaration,
-    roomView,
-    lifecycle,
-    branchesBeforeFirstWheel,
-    routeLoadout,
-  } = inputs;
+  const { catalog, room, declaration, roomView, lifecycle, beforeFirstWheel, routeLoadout } =
+    inputs;
   const activeWheelKeys = Object.freeze(room.rewardWheels?.map((wheel) => wheel.wheelKey) ?? []);
   const rewardStoreSupportAtGeneration = (wheelKey: string): RewardStoreHistorySupport => {
     const wheel = room.rewardWheels?.find((candidate) => candidate.wheelKey === wheelKey);
@@ -248,13 +241,13 @@ export function prepareShipLifecycleCandidateContext(
       rewardWheels: ship.rewardWheels,
     });
     const candidateFindings = new Map<string, FindingRegionEntry>();
-    let candidateBranches = branchesBeforeFirstWheel;
+    let candidate = beforeFirstWheel;
     for (const wheel of ship.rewardWheels) {
-      if (candidateBranches.length === 0) break;
+      if (candidate === undefined) break;
       const lifecycleView = wheelLifecycleViews(catalog, lifecycle, candidateRoom, roomView, wheel);
       const binding = rewardWheelBinding(catalog, declaration, wheel);
-      candidateBranches = processOfferGenerationCohort(
-        candidateBranches,
+      candidate = processOfferGenerationCohort(
+        candidate,
         wheel.offers.map((offer) => ({
           catalog,
           reward: {
@@ -287,16 +280,16 @@ export function prepareShipLifecycleCandidateContext(
             candidateFindings,
             rewardFinding('rewardMissing', unresolvedPicked.origin, {}),
           );
-          return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
+          return createRewardProducerCandidateResult(candidateFindings, candidate);
         }
         throw new BiomeRewardSimulationContractError(
           `${room.gameName}.${wheel.wheelKey} has no picked offer`,
         );
       }
       if (wheel.wheelKey === stopAfterPickedWheelGeneration) {
-        return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
+        return createRewardProducerCandidateResult(candidateFindings, candidate);
       }
-      if (candidateBranches.length > 0) {
+      if (candidate !== undefined) {
         const timelineOwner = candidateRoom.roomActionRoster.rows.find(
           (candidate) =>
             !candidate.stale &&
@@ -306,7 +299,7 @@ export function prepareShipLifecycleCandidateContext(
         )?.owner;
         const settlement = settleOwnedAcquisitionSite(
           catalog,
-          candidateBranches,
+          branchList(candidate),
           {
             siteOwner: wheel.origin,
             pointKey: wheel.wheelKey,
@@ -328,10 +321,10 @@ export function prepareShipLifecycleCandidateContext(
           ownerRegion(wheel.origin),
         );
         mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
-        candidateBranches = settlement.branches;
+        candidate = singleBranch(settlement.branches);
       }
     }
-    return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
+    return createRewardProducerCandidateResult(candidateFindings, candidate);
   };
   return Object.freeze({
     origin: room.origin,

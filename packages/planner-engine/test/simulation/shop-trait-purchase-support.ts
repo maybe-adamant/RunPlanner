@@ -44,6 +44,7 @@ import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simul
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { processShopInventory } from '../../src/simulation/rewards/shop/inventory';
 import { settleShopAcquisitionSite } from '../../src/simulation/rewards/shop/settlement';
+import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import {
@@ -144,11 +145,11 @@ export const biome = createBiomeAddress('Underworld', 'F');
 export const shopId = createOccurrenceId('stale-purchased-hammer-shop');
 
 export const settleShop = (
-  branches: Parameters<typeof settleShopAcquisitionSite>[0],
+  branch: RewardBranchState | undefined,
   context: Parameters<typeof settleShopAcquisitionSite>[1],
   findings: Map<string, import('../../src/simulation/finding-regions').FindingRegionEntry>,
 ) => {
-  const settlement = settleShopAcquisitionSite(branches, context);
+  const settlement = settleShopAcquisitionSite(branch === undefined ? [] : [branch], context);
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
   return settlement.branches;
 };
@@ -433,7 +434,7 @@ export function echoGoldShop(
     readonly duplicateConversion?: 'normal' | 'gold' | 'artificer';
     readonly duplicateSelectOption2?: boolean;
     readonly timePiece?: boolean;
-    readonly initialBranches?: Parameters<typeof processShopInventory>[0];
+    readonly initialBranches?: readonly RewardBranchState[];
     readonly occurrenceId?: ReturnType<typeof createOccurrenceId>;
     readonly offerOverrides?: Readonly<Record<string, ResolvedRewardOffer>>;
     readonly duplicateOffer?: ResolvedRewardOffer;
@@ -723,7 +724,7 @@ export function echoGoldShop(
       currentRoomShopOptionNames,
     );
   const inventoryFindings = new Map();
-  const inventory = processShopInventory(seeded, {
+  const inventory = processShopInventory(seeded[0], {
     catalog,
     room: canonical,
     declaration: room,
@@ -735,25 +736,28 @@ export function echoGoldShop(
   });
   mergeRewardFindingEmissions(inventoryFindings, inventory.findingEmissions);
   const findings = new Map();
-  const settlement = settleShopAcquisitionSite(inventory.branches, {
-    catalog,
-    room: canonical,
-    declaration: room,
-    historySequence: 3,
-    order: authoredOrder,
-    completeAfterOrder: options.completeAfterOrder ?? false,
-    facts,
-    fail: (detail) => {
-      throw new Error(detail);
+  const settlement = settleShopAcquisitionSite(
+    inventory.branch === undefined ? [] : [inventory.branch],
+    {
+      catalog,
+      room: canonical,
+      declaration: room,
+      historySequence: 3,
+      order: authoredOrder,
+      completeAfterOrder: options.completeAfterOrder ?? false,
+      facts,
+      fail: (detail) => {
+        throw new Error(detail);
+      },
     },
-  });
+  );
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
   return {
     canonical,
     duplicateKey,
     replacementKey,
     findings,
-    inventory: inventory.branches,
+    inventory: inventory.branch,
     inventoryFindings,
     settlement,
   };

@@ -227,15 +227,13 @@ describe('Gorgon Amulet lifecycle', () => {
       expect(
         resolveGorgonCandidateRarity({
           catalog,
-          branches: [
-            {
-              ...branch,
-              state: Object.freeze({
-                ...branch.state,
-                stygianWell: { ...branch.state.stygianWell, yarnUses },
-              }),
-            },
-          ],
+          branch: {
+            ...branch,
+            state: Object.freeze({
+              ...branch.state,
+              stygianWell: { ...branch.state.stygianWell, yarnUses },
+            }),
+          },
           providerKey: 'Athena',
           rarityLevel,
           roomOverride: undefined,
@@ -267,12 +265,10 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(
       resolveGorgonCandidateRarity({
         catalog,
-        branches: [
-          Object.freeze({
-            ...branch,
-            state: Object.freeze({ ...branch.state, traitHistory: ordinary }),
-          }),
-        ],
+        branch: Object.freeze({
+          ...branch,
+          state: Object.freeze({ ...branch.state, traitHistory: ordinary }),
+        }),
         providerKey: 'Athena',
         rarityLevel: 3,
         roomOverride: undefined,
@@ -301,9 +297,10 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(
       resolveGorgonCandidateRarity({
         catalog,
-        branches: [
-          { ...branch, state: Object.freeze({ ...branch.state, traitHistory: properHistory }) },
-        ],
+        branch: {
+          ...branch,
+          state: Object.freeze({ ...branch.state, traitHistory: properHistory }),
+        },
         providerKey: 'Athena',
         rarityLevel: 1,
         roomOverride: undefined,
@@ -312,7 +309,7 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(
       resolveGorgonCandidateRarity({
         catalog,
-        branches: [branch],
+        branch,
         providerKey: 'Athena',
         rarityLevel: 4,
         roomOverride: { Rare: 1 },

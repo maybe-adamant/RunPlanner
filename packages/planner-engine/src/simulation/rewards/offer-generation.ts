@@ -35,7 +35,7 @@ import {
 } from './branch-primitives';
 import { historyChronology } from './findings';
 import type { RewardFactsFactory } from './acquisition/contracts';
-import { branchList, singleBranch, withBag } from './branch-primitives';
+import { withBag } from './branch-primitives';
 
 import { addRewardFinding, rewardFinding } from './findings';
 import {
@@ -52,25 +52,24 @@ function semanticAddressEvidence(origin: SemanticAddress): FindingEvidence {
 }
 
 /**
- * Earlier hidden return doors in this biome that drew from the same store on a
- * reached branch, naming an alternative repair for an unavailable bag entry.
+ * Earlier hidden return doors in this biome that drew from the same store at
+ * the reached state, naming an alternative repair for an unavailable bag entry.
  */
 function phantomExitDrawEvidence(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   origin: SemanticAddress,
   storeKey: string | undefined,
 ): FindingEvidence {
-  if (storeKey === undefined || !('biomeKey' in origin)) return {};
+  if (storeKey === undefined || !('biomeKey' in origin) || branch === undefined) return {};
   const draws = new Map<string, FindingEvidence>();
-  for (const branch of branches)
-    for (const event of branch.events)
-      if (
-        event.kind === 'rewardOffered' &&
-        event.storeKey === storeKey &&
-        event.origin.kind === 'phantomExit' &&
-        event.origin.biomeKey === origin.biomeKey
-      )
-        draws.set(semanticAddressKey(event.origin), semanticAddressEvidence(event.origin));
+  for (const event of branch.events)
+    if (
+      event.kind === 'rewardOffered' &&
+      event.storeKey === storeKey &&
+      event.origin.kind === 'phantomExit' &&
+      event.origin.biomeKey === origin.biomeKey
+    )
+      draws.set(semanticAddressKey(event.origin), semanticAddressEvidence(event.origin));
   return draws.size === 0 ? {} : { phantomExitDraws: Object.freeze([...draws.values()]) };
 }
 
@@ -192,15 +191,63 @@ function sourceOrdering(
   );
 }
 
+/**
+ * Offers the reward at the reached state, returning the state it leaves; an
+ * unsupported offer, or none reached, records its finding and leaves none.
+ */
 export function processRewardOffer(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   context: OfferProcessingContext,
   findings: Map<string, FindingRegionEntry>,
-): readonly RewardBranchState[] {
-  return processRewardOfferBranches(branches, context, findings, undefined);
+): RewardBranchState | undefined {
+  const { reward, historySequence, findingChronology } = context;
+  if (!offerPayloadValid(context)) {
+    addRewardFinding(
+      findings,
+      rewardFinding('rewardPayloadInvalid', reward.origin, offerEvidence(reward.offer)),
+      ownerRegion(reward.origin),
+      findingChronology ?? historyChronology(historySequence),
+    );
+    return undefined;
+  }
+  const draw = branch === undefined ? undefined : drawRewardOffer(branch, context);
+  if (draw?.branch !== undefined) return draw.branch;
+  const code: RewardGenerationFindingCode = draw?.sourceFailure
+    ? 'rewardSourceUnavailable'
+    : draw?.bagSupportEmpty
+      ? 'rewardBagSupportEmpty'
+      : 'rewardBagEntryUnavailable';
+  const siblingConflicts = draw?.siblingConflicts;
+  addRewardFinding(
+    findings,
+    rewardFinding(code, reward.origin, {
+      ...offerEvidence(reward.offer),
+      storeKey: reward.resolvedStoreKey ?? null,
+      ...phantomExitDrawEvidence(branch, reward.origin, reward.resolvedStoreKey),
+      ...(siblingConflicts === undefined
+        ? {}
+        : {
+            priorOffers: [...siblingConflicts.values()].map((peer) => ({
+              origin: semanticAddressEvidence(peer.origin),
+              offer: resolvedOfferEvidence(peer.offer),
+            })),
+          }),
+    }),
+    ownerRegion(reward.origin),
+    findingChronology ?? historyChronology(historySequence),
+  );
+  return undefined;
 }
 
-/** The offer gate that rejected one reached branch, in gate order. */
+function offerPayloadValid({ catalog, reward }: OfferProcessingContext): boolean {
+  const rewardType = catalog.rewards.rewardTypes.byKey[reward.offer.rewardType];
+  return (
+    rewardType !== undefined &&
+    isPayloadLocallyValid(catalog.rewards, rewardType, reward.offer.payload)
+  );
+}
+
+/** The offer gate that rejected the reached state, in gate order. */
 type OfferBranchGate =
   | 'forcedReward'
   | 'olympianProvider'
@@ -210,9 +257,17 @@ type OfferBranchGate =
   | 'bag'
   | 'storeExhausted';
 
-interface RejectedOfferBranch {
-  readonly branch: RewardBranchState;
-  readonly gate: OfferBranchGate;
+/**
+ * One offer drawn at the reached state: the state it leaves, or the gate that
+ * rejected it with what the rejection's finding cites.
+ */
+interface OfferDraw {
+  readonly branch?: RewardBranchState;
+  readonly gate?: OfferBranchGate;
+  readonly sourceFailure: boolean;
+  readonly bagSupportEmpty: boolean;
+  /** Earlier peers the offer cannot be drawn beside, when any were found. */
+  readonly siblingConflicts?: ReadonlyMap<string, OfferProcessingPeer>;
 }
 
 interface CountedOfferInputs {
@@ -249,28 +304,11 @@ function countedOfferInputs(
   };
 }
 
-function processRewardOfferBranches(
-  branches: readonly RewardBranchState[],
+function drawRewardOffer(
+  originalBranch: RewardBranchState,
   context: OfferProcessingContext,
-  findings: Map<string, FindingRegionEntry>,
-  rejected: RejectedOfferBranch[] | undefined,
-): readonly RewardBranchState[] {
-  const { catalog, reward, historySequence, findingChronology } = context;
-  const rewardType = catalog.rewards.rewardTypes.byKey[reward.offer.rewardType];
-  if (
-    rewardType === undefined ||
-    !isPayloadLocallyValid(catalog.rewards, rewardType, reward.offer.payload)
-  ) {
-    addRewardFinding(
-      findings,
-      rewardFinding('rewardPayloadInvalid', reward.origin, offerEvidence(reward.offer)),
-      ownerRegion(reward.origin),
-      findingChronology ?? historyChronology(historySequence),
-    );
-    return Object.freeze([]);
-  }
-
-  const next: RewardBranchState[] = [];
+): OfferDraw {
+  const { catalog, reward, historySequence } = context;
   let sawSourceFailure = false;
   let sawBagSupportEmpty = false;
   let sawSiblingFailure = false;
@@ -278,195 +316,166 @@ function processRewardOfferBranches(
   const recordSiblingConflict = (peer: OfferProcessingPeer) => {
     siblingConflicts.set(semanticAddressKey(peer.origin), peer);
   };
-  for (const originalBranch of branches) {
-    // ChooseRoomReward returns a qualifying ForcedRewards entry before the bag,
-    // reward priorities, ChooseLoot and ForceBoonName are consulted.
-    const forced = forcedRewardFor(context, originalBranch);
-    if (forced !== undefined) {
-      if (!sameRewardOffer(forced.offer, reward.offer)) {
-        if (forced.offer.rewardType === reward.offer.rewardType) sawSourceFailure = true;
-        rejected?.push({ branch: originalBranch, gate: 'forcedReward' });
-        continue;
-      }
-      next.push(recordCanonicalOffer(originalBranch, context));
-      continue;
+  const rejected = (gate: OfferBranchGate): OfferDraw =>
+    Object.freeze({
+      gate,
+      sourceFailure: sawSourceFailure,
+      bagSupportEmpty: sawBagSupportEmpty,
+      ...(sawSiblingFailure ? { siblingConflicts } : {}),
+    });
+  const offered = (branch: RewardBranchState): OfferDraw =>
+    Object.freeze({ branch, sourceFailure: false, bagSupportEmpty: false });
+  // ChooseRoomReward returns a qualifying ForcedRewards entry before the bag,
+  // reward priorities, ChooseLoot and ForceBoonName are consulted.
+  const forced = forcedRewardFor(context, originalBranch);
+  if (forced !== undefined) {
+    if (!sameRewardOffer(forced.offer, reward.offer)) {
+      if (forced.offer.rewardType === reward.offer.rewardType) sawSourceFailure = true;
+      return rejected('forcedReward');
     }
-    // ForceBoonName participates only in counted room-reward setup. Fixed
-    // rewards, direct pickups, and inventory offers retain their own provider.
-    const requiredProvider =
-      context.binding === undefined
-        ? undefined
-        : requiredOlympianProviderForOffer(catalog, originalBranch, reward.offer, context.peers);
-    // Provider pressure constrains the retained authored offer at its existing
-    // reward owner.  It is deliberately not a runtime rewrite: an author can
-    // repair the same payload control and no hidden forced-provider field is
-    // introduced into authored state.
+    return offered(recordCanonicalOffer(originalBranch, context));
+  }
+  // ForceBoonName participates only in counted room-reward setup. Fixed
+  // rewards, direct pickups, and inventory offers retain their own provider.
+  const requiredProvider =
+    context.binding === undefined
+      ? undefined
+      : requiredOlympianProviderForOffer(catalog, originalBranch, reward.offer, context.peers);
+  // Provider pressure constrains the retained authored offer at its existing
+  // reward owner.  It is deliberately not a runtime rewrite: an author can
+  // repair the same payload control and no hidden forced-provider field is
+  // introduced into authored state.
+  if (
+    requiredProvider !== undefined &&
+    !offerContainsProvider(catalog, reward.offer, requiredProvider)
+  ) {
+    sawSourceFailure = true;
+    return rejected('olympianProvider');
+  }
+  const effectiveOffer = reward.offer;
+  const facts = context.facts(originalBranch.state);
+  const peers = { priorOffers: context.peers.map((peer) => peer.offer) };
+  // A forced boon replaces ChooseLoot's pick, so the god cap is never consulted.
+  const forcedBoonSource =
+    requiredProvider !== undefined && effectiveOffer.payload?.kind === 'BoonSource'
+      ? effectiveOffer.payload.source
+      : undefined;
+  if (
+    forcedBoonSource === undefined &&
+    !isOfferSupportedAtResolutionPoint(catalog.rewards, effectiveOffer, facts, 'offer', peers)
+  ) {
+    sawSourceFailure = true;
     if (
-      requiredProvider !== undefined &&
-      !offerContainsProvider(catalog, reward.offer, requiredProvider)
-    ) {
-      sawSourceFailure = true;
-      rejected?.push({ branch: originalBranch, gate: 'olympianProvider' });
-      continue;
-    }
-    const effectiveOffer = reward.offer;
-    const facts = context.facts(originalBranch.state);
-    const peers = { priorOffers: context.peers.map((peer) => peer.offer) };
-    // A forced boon replaces ChooseLoot's pick, so the god cap is never consulted.
-    const forcedBoonSource =
-      requiredProvider !== undefined && effectiveOffer.payload?.kind === 'BoonSource'
-        ? effectiveOffer.payload.source
-        : undefined;
-    if (
-      forcedBoonSource === undefined &&
-      !isOfferSupportedAtResolutionPoint(catalog.rewards, effectiveOffer, facts, 'offer', peers)
-    ) {
-      sawSourceFailure = true;
-      if (
-        context.peers.length > 0 &&
-        isOfferSupportedAtResolutionPoint(catalog.rewards, effectiveOffer, facts, 'offer', {
-          priorOffers: [],
-        })
-      ) {
-        sawSiblingFailure = true;
-        sourceConflictingPeers(effectiveOffer, context.peers).forEach(recordSiblingConflict);
-      }
-      rejected?.push({ branch: originalBranch, gate: 'source' });
-      continue;
-    }
-
-    if (context.binding === undefined) {
-      const history = applyOfferProjection(
-        catalog.rewards,
-        originalBranch.state.rewardHistory,
-        effectiveOffer,
-        facts,
-      );
-      next.push(
-        appendRewardEvent(
-          Object.freeze({
-            ...originalBranch,
-            state: Object.freeze({ ...originalBranch.state, rewardHistory: history }),
-          }),
-          historySequence,
-          {
-            kind: 'rewardOffered',
-            origin: reward.origin,
-            offer: effectiveOffer,
-            ...(reward.resolvedStoreKey === undefined ? {} : { storeKey: reward.resolvedStoreKey }),
-          },
-        ),
-      );
-      continue;
-    }
-
-    const counted = countedOfferInputs(context, context.binding, originalBranch, peers);
-    if (counted === undefined) {
-      sawBagSupportEmpty = true;
-      rejected?.push({ branch: originalBranch, gate: 'storeBinding' });
-      continue;
-    }
-    const { storeKey, store, prepared } = counted;
-    const bagOptions =
-      forcedBoonSource === undefined ? counted.options : { ...counted.options, forcedBoonSource };
-    const requiredPriority = oldestSupportedRewardPriority(
-      store,
-      prepared.bag,
-      originalBranch.state.rewardPriorities,
-      facts,
-      bagOptions,
-    );
-    if (requiredPriority !== undefined && effectiveOffer.rewardType !== requiredPriority) {
-      sawBagSupportEmpty = true;
-      rejected?.push({ branch: originalBranch, gate: 'priority' });
-      continue;
-    }
-    if (
-      context.peers.some((peer) => peer.offer.rewardType === effectiveOffer.rewardType) &&
-      store.entries.some(
-        (entry) => entry.rewardType === effectiveOffer.rewardType && !entry.allowDuplicates,
-      )
+      context.peers.length > 0 &&
+      isOfferSupportedAtResolutionPoint(catalog.rewards, effectiveOffer, facts, 'offer', {
+        priorOffers: [],
+      })
     ) {
       sawSiblingFailure = true;
-      context.peers
-        .filter((peer) => peer.offer.rewardType === effectiveOffer.rewardType)
-        .forEach(recordSiblingConflict);
+      sourceConflictingPeers(effectiveOffer, context.peers).forEach(recordSiblingConflict);
     }
-    const bag = consumeCountedOffer(
-      catalog.rewards,
-      store,
-      prepared.bag,
-      effectiveOffer,
-      facts,
-      bagOptions,
-    );
-    if (bag === undefined) {
-      if (countedStoreExhausted(store, prepared.bag, facts, bagOptions)) {
-        sawBagSupportEmpty = true;
-        rejected?.push({ branch: originalBranch, gate: 'storeExhausted' });
-        continue;
-      }
-      rejected?.push({ branch: originalBranch, gate: 'bag' });
-      continue;
-    }
+    return rejected('source');
+  }
+
+  if (context.binding === undefined) {
     const history = applyOfferProjection(
       catalog.rewards,
-      prepared.branch.state.rewardHistory,
+      originalBranch.state.rewardHistory,
       effectiveOffer,
       facts,
     );
-    next.push(
+    return offered(
       appendRewardEvent(
         Object.freeze({
-          ...prepared.branch,
-          state: Object.freeze({
-            ...prepared.branch.state,
-            bags: freezeRecord({ ...prepared.branch.state.bags, [storeKey]: bag }),
-            rewardPriorities:
-              requiredPriority === undefined
-                ? prepared.branch.state.rewardPriorities
-                : Object.freeze(
-                    prepared.branch.state.rewardPriorities.filter(
-                      (priority, index) =>
-                        priority !== requiredPriority ||
-                        index !== prepared.branch.state.rewardPriorities.indexOf(requiredPriority),
-                    ),
-                  ),
-            rewardHistory: history,
-          }),
+          ...originalBranch,
+          state: Object.freeze({ ...originalBranch.state, rewardHistory: history }),
         }),
         historySequence,
-        { kind: 'rewardOffered', origin: reward.origin, offer: effectiveOffer, storeKey },
+        {
+          kind: 'rewardOffered',
+          origin: reward.origin,
+          offer: effectiveOffer,
+          ...(reward.resolvedStoreKey === undefined ? {} : { storeKey: reward.resolvedStoreKey }),
+        },
       ),
     );
   }
 
-  if (next.length === 0) {
-    const code: RewardGenerationFindingCode = sawSourceFailure
-      ? 'rewardSourceUnavailable'
-      : sawBagSupportEmpty
-        ? 'rewardBagSupportEmpty'
-        : 'rewardBagEntryUnavailable';
-    addRewardFinding(
-      findings,
-      rewardFinding(code, reward.origin, {
-        ...offerEvidence(reward.offer),
-        storeKey: reward.resolvedStoreKey ?? null,
-        ...phantomExitDrawEvidence(branches, reward.origin, reward.resolvedStoreKey),
-        ...(sawSiblingFailure
-          ? {
-              priorOffers: [...siblingConflicts.values()].map((peer) => ({
-                origin: semanticAddressEvidence(peer.origin),
-                offer: resolvedOfferEvidence(peer.offer),
-              })),
-            }
-          : {}),
-      }),
-      ownerRegion(reward.origin),
-      findingChronology ?? historyChronology(historySequence),
-    );
+  const counted = countedOfferInputs(context, context.binding, originalBranch, peers);
+  if (counted === undefined) {
+    sawBagSupportEmpty = true;
+    return rejected('storeBinding');
   }
-  return Object.freeze(next);
+  const { storeKey, store, prepared } = counted;
+  const bagOptions =
+    forcedBoonSource === undefined ? counted.options : { ...counted.options, forcedBoonSource };
+  const requiredPriority = oldestSupportedRewardPriority(
+    store,
+    prepared.bag,
+    originalBranch.state.rewardPriorities,
+    facts,
+    bagOptions,
+  );
+  if (requiredPriority !== undefined && effectiveOffer.rewardType !== requiredPriority) {
+    sawBagSupportEmpty = true;
+    return rejected('priority');
+  }
+  if (
+    context.peers.some((peer) => peer.offer.rewardType === effectiveOffer.rewardType) &&
+    store.entries.some(
+      (entry) => entry.rewardType === effectiveOffer.rewardType && !entry.allowDuplicates,
+    )
+  ) {
+    sawSiblingFailure = true;
+    context.peers
+      .filter((peer) => peer.offer.rewardType === effectiveOffer.rewardType)
+      .forEach(recordSiblingConflict);
+  }
+  const bag = consumeCountedOffer(
+    catalog.rewards,
+    store,
+    prepared.bag,
+    effectiveOffer,
+    facts,
+    bagOptions,
+  );
+  if (bag === undefined) {
+    if (countedStoreExhausted(store, prepared.bag, facts, bagOptions)) {
+      sawBagSupportEmpty = true;
+      return rejected('storeExhausted');
+    }
+    return rejected('bag');
+  }
+  const history = applyOfferProjection(
+    catalog.rewards,
+    prepared.branch.state.rewardHistory,
+    effectiveOffer,
+    facts,
+  );
+  return offered(
+    appendRewardEvent(
+      Object.freeze({
+        ...prepared.branch,
+        state: Object.freeze({
+          ...prepared.branch.state,
+          bags: freezeRecord({ ...prepared.branch.state.bags, [storeKey]: bag }),
+          rewardPriorities:
+            requiredPriority === undefined
+              ? prepared.branch.state.rewardPriorities
+              : Object.freeze(
+                  prepared.branch.state.rewardPriorities.filter(
+                    (priority, index) =>
+                      priority !== requiredPriority ||
+                      index !== prepared.branch.state.rewardPriorities.indexOf(requiredPriority),
+                  ),
+                ),
+          rewardHistory: history,
+        }),
+      }),
+      historySequence,
+      { kind: 'rewardOffered', origin: reward.origin, offer: effectiveOffer, storeKey },
+    ),
+  );
 }
 
 /**
@@ -474,18 +483,16 @@ function processRewardOfferBranches(
  * replaying its gates; callers run it only on that failure path.
  */
 export function explainRewardOfferExclusions(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   context: OfferProcessingContext,
 ): readonly RewardOfferExclusionReason[] | undefined {
-  const branch = singleBranch(branches);
-  const fixed = staticOfferExclusion(branches, context);
+  if (branch === undefined) return undefined;
+  const fixed = staticOfferExclusion(branch, context);
   if (fixed !== undefined) return staticRewardOfferExclusion(fixed);
-  const rejected: RejectedOfferBranch[] = [];
-  processRewardOfferBranches(branchList(branch), context, new Map(), rejected);
-  const entry = rejected[0];
-  return entry === undefined
+  const gate = offerPayloadValid(context) ? drawRewardOffer(branch, context).gate : undefined;
+  return gate === undefined
     ? undefined
-    : reachedRewardOfferExclusion(rejectedBranchExclusion(context, entry));
+    : reachedRewardOfferExclusion(rejectedBranchExclusion(context, branch, gate));
 }
 
 /**
@@ -495,7 +502,7 @@ export function explainRewardOfferExclusions(
  * the pair in source order, earlier peers before it and later peers after.
  */
 export function explainCohortOfferExclusions(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   focused: OfferProcessingContext,
   peers: {
     readonly earlier: readonly OfferProcessingContext[];
@@ -503,20 +510,20 @@ export function explainCohortOfferExclusions(
   },
   ordering: 'peersFirst' | 'listed',
 ): readonly RewardOfferExclusionReason[] | undefined {
-  if (processRewardOffer(branches, focused, new Map()).length === 0)
-    return explainRewardOfferExclusions(branches, focused);
+  if (processRewardOffer(branch, focused, new Map()) === undefined)
+    return explainRewardOfferExclusions(branch, focused);
   // An independently invalid peer is its own repair, not this offer's conflict.
   const peerAloneValid = (peer: OfferProcessingContext) =>
-    processRewardOffer(branches, peer, new Map()).length > 0;
+    processRewardOffer(branch, peer, new Map()) !== undefined;
   const pairFails = (pair: readonly OfferProcessingContext[]) =>
-    processOfferGenerationCohort(branches, pair, new Map(), { ordering: 'listed' }).length === 0;
+    processOfferGenerationCohort(branch, pair, new Map(), { ordering: 'listed' }) === undefined;
   const conflicting = [
     ...peers.earlier.filter(
       (peer) =>
         peerAloneValid(peer) &&
         (ordering === 'peersFirst'
-          ? processRewardOffer(processRewardOffer(branches, peer, new Map()), focused, new Map())
-              .length === 0
+          ? processRewardOffer(processRewardOffer(branch, peer, new Map()), focused, new Map()) ===
+            undefined
           : pairFails([peer, focused])),
     ),
     ...(ordering === 'listed' ? (peers.later ?? []) : []).filter(
@@ -533,24 +540,22 @@ export function explainCohortOfferExclusions(
 }
 
 function staticOfferExclusion(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState,
   context: OfferProcessingContext,
 ): RewardOfferExclusionReason | undefined {
-  const first = branches[0];
-  return first === undefined
-    ? undefined
-    : staticCountedOfferExclusion(
-        context.catalog,
-        context.binding,
-        context.reward.resolvedStoreKey,
-        context.reward.offer,
-        first.state.reached.routePosition.routeKey,
-      );
+  return staticCountedOfferExclusion(
+    context.catalog,
+    context.binding,
+    context.reward.resolvedStoreKey,
+    context.reward.offer,
+    branch.state.reached.routePosition.routeKey,
+  );
 }
 
 function rejectedBranchExclusion(
   context: OfferProcessingContext,
-  { branch, gate }: RejectedOfferBranch,
+  branch: RewardBranchState,
+  gate: OfferBranchGate,
 ): RewardOfferExclusionReason | undefined {
   const { catalog, reward } = context;
   const offer = reward.offer;
@@ -733,7 +738,7 @@ function recordCanonicalOffer(
 }
 
 export function processOfferGenerationCohort(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   contexts: readonly OfferProcessingContext[],
   findings: Map<string, FindingRegionEntry>,
   policy: {
@@ -741,83 +746,65 @@ export function processOfferGenerationCohort(
     readonly ordering: 'listed' | 'sourceOffers';
     readonly atomicRegion?: string;
   },
-): readonly RewardBranchState[] {
+): RewardBranchState | undefined {
   if (contexts.length <= 1) {
     const context = contexts[0];
-    return context === undefined ? branches : processRewardOffer(branches, context, findings);
+    return context === undefined ? branch : processRewardOffer(branch, context, findings);
   }
-  const supported: RewardBranchState[] = [];
-  let representativeFailures: readonly FindingRegionEntry[] = Object.freeze([]);
-  for (const branch of branches) {
-    const sourceResult =
-      policy.ordering === 'sourceOffers' ? sourceOrdering(branch, contexts) : undefined;
-    if (sourceResult !== undefined && isSourceOrderingFailure(sourceResult)) {
-      const localFindings = new Map<string, FindingRegionEntry>();
-      processRewardOffer(
-        Object.freeze([branch]),
-        {
-          ...sourceResult.blocked,
-          peers: Object.freeze(
-            sourceResult.prior.map((context) => ({
-              origin: context.reward.origin,
-              offer: context.reward.offer,
-            })),
-          ),
-        },
-        localFindings,
-      );
-      if (representativeFailures.length === 0) {
-        representativeFailures = Object.freeze([...localFindings.values()]);
-      }
-      continue;
-    }
-    const ordering = sourceResult ?? contexts;
-    let candidates: readonly RewardBranchState[] = Object.freeze([branch]);
-    const localFindings = new Map<string, FindingRegionEntry>();
-    const priorOffers: OfferProcessingPeer[] = [];
-    for (const context of ordering) {
-      candidates = processRewardOffer(
-        candidates,
-        { ...context, peers: Object.freeze([...priorOffers]) },
-        localFindings,
-      );
-      if (candidates.length === 0) {
-        break;
-      }
-      priorOffers.push({ origin: context.reward.origin, offer: context.reward.offer });
-    }
-    if (candidates.length === 0) {
-      if (representativeFailures.length === 0) {
-        representativeFailures = Object.freeze([...localFindings.values()]);
-      }
-      continue;
-    }
-    for (const candidate of candidates) {
-      let canonical: RewardBranchState = Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          bags: candidate.state.bags,
-          rewardPriorities: candidate.state.rewardPriorities,
-        }),
-      });
-      for (const context of contexts) {
-        canonical = recordCanonicalOffer(canonical, context);
-      }
-      supported.push(canonical);
-    }
-  }
-  if (supported.length === 0) {
-    for (const value of representativeFailures) {
+  if (branch === undefined) return undefined;
+  const failed = (localFindings: ReadonlyMap<string, FindingRegionEntry>): undefined => {
+    for (const value of localFindings.values())
       addRewardFinding(
         findings,
         value.finding,
         policy.atomicRegion ?? value.atomicRegion,
         value.chronology,
       );
-    }
+    return undefined;
+  };
+  const sourceResult =
+    policy.ordering === 'sourceOffers' ? sourceOrdering(branch, contexts) : undefined;
+  if (sourceResult !== undefined && isSourceOrderingFailure(sourceResult)) {
+    const localFindings = new Map<string, FindingRegionEntry>();
+    processRewardOffer(
+      branch,
+      {
+        ...sourceResult.blocked,
+        peers: Object.freeze(
+          sourceResult.prior.map((context) => ({
+            origin: context.reward.origin,
+            offer: context.reward.offer,
+          })),
+        ),
+      },
+      localFindings,
+    );
+    return failed(localFindings);
   }
-  return Object.freeze(supported);
+  const ordering = sourceResult ?? contexts;
+  let candidate: RewardBranchState | undefined = branch;
+  const localFindings = new Map<string, FindingRegionEntry>();
+  const priorOffers: OfferProcessingPeer[] = [];
+  for (const context of ordering) {
+    candidate = processRewardOffer(
+      candidate,
+      { ...context, peers: Object.freeze([...priorOffers]) },
+      localFindings,
+    );
+    if (candidate === undefined) return failed(localFindings);
+    priorOffers.push({ origin: context.reward.origin, offer: context.reward.offer });
+  }
+  // The cohort's offers are recorded in listed order whatever order was drawn.
+  let canonical: RewardBranchState = Object.freeze({
+    ...branch,
+    state: Object.freeze({
+      ...branch.state,
+      bags: candidate.state.bags,
+      rewardPriorities: candidate.state.rewardPriorities,
+    }),
+  });
+  for (const context of contexts) canonical = recordCanonicalOffer(canonical, context);
+  return canonical;
 }
 
 /**
@@ -829,15 +816,15 @@ export function processOfferGenerationCohort(
  * remains owned by `processOfferGenerationCohort`.
  */
 export function processFocusedOfferAfterAuthoredPeers(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   peerContexts: readonly OfferProcessingContext[],
   focusedContext: OfferProcessingContext,
   findings: Map<string, FindingRegionEntry>,
 ): {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly exclusions?: readonly RewardOfferExclusionReason[];
 } {
-  let reached = branches;
+  let reached = branch;
   const acceptedPeers: OfferProcessingPeer[] = [];
   for (const context of peerContexts) {
     const peerFindings = new Map<string, FindingRegionEntry>();
@@ -846,7 +833,7 @@ export function processFocusedOfferAfterAuthoredPeers(
       { ...context, peers: Object.freeze([]) },
       peerFindings,
     );
-    if (next.length === 0) continue;
+    if (next === undefined) continue;
     reached = next;
     acceptedPeers.push(
       Object.freeze({ origin: context.reward.origin, offer: context.reward.offer }),
@@ -856,12 +843,12 @@ export function processFocusedOfferAfterAuthoredPeers(
   const focusedFindings = new Map<string, FindingRegionEntry>();
   const focused = { ...focusedContext, peers: Object.freeze(acceptedPeers) };
   const supported = processRewardOffer(reached, focused, focusedFindings);
-  if (supported.length > 0) return { branches: supported };
+  if (supported !== undefined) return { branch: supported };
   for (const value of focusedFindings.values()) {
     addRewardFinding(findings, value.finding, value.atomicRegion, value.chronology);
   }
   const exclusions = explainRewardOfferExclusions(reached, focused);
-  return { branches: Object.freeze([]), ...(exclusions === undefined ? {} : { exclusions }) };
+  return { branch: undefined, ...(exclusions === undefined ? {} : { exclusions }) };
 }
 
 /**

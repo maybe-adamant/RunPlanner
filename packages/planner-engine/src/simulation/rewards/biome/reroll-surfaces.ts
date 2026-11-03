@@ -26,7 +26,6 @@ import type { FindingChronology } from '../../finding-regions';
 import type { RerollSurfaceSettlement, RerollSurfaceTarget } from '../model';
 import type { RewardProducerCandidateResult } from '../producer-frontiers';
 import { historyFindingChronology } from './finding-chronology';
-import { branchList } from '../branch-primitives';
 import {
   rerollFlagKey,
   type ChronologyWalkContext,
@@ -155,7 +154,7 @@ function surfaceCapture(
             historySequence: event.sequence + 1,
             view,
             chronology: inputs.chronology,
-            branches: branchList(state.branch),
+            branch: state.branch,
             rerolledOffers: state.rerolledOffers,
           }).evaluateOffer;
           evaluators.set(key, evaluate);

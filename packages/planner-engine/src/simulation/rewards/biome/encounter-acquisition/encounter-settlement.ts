@@ -47,8 +47,13 @@ import { historyFindingChronology, rewardFindingChronologyForRoom } from '../fin
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { GorgonPhaseCandidateSupport, NemesisRandomEventCandidateSupport } from '../../model';
-import type { RewardBranchState } from '../../branch-primitives';
-import { advanceRewardBranches } from '../../branch-lifecycle';
+import {
+  branchList,
+  mapReached,
+  singleBranch,
+  type RewardBranchState,
+} from '../../branch-primitives';
+import { advanceReachedBranch, advanceRewardBranch } from '../../branch-lifecycle';
 import { consumeOlympianProviderForReachedOffer } from '../../offer-generation';
 import {
   settleOwnedAcquisitionSite,
@@ -80,7 +85,7 @@ type EncounterSettlementEvent = Extract<
 >;
 
 export interface EncounterSettlementTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: readonly FindingRegionEntry[];
   readonly roleFrontiers: readonly AcquisitionRoleFrontier[];
   readonly traitChildSettlements: readonly {
@@ -128,19 +133,6 @@ function chronology(
   );
 }
 
-function arcanaFrontier(branches: readonly RewardBranchState[]) {
-  const first = branches[0]?.state.arcanaFear.arcana.active;
-  if (first === undefined) return undefined;
-  const identity = JSON.stringify(first);
-  if (
-    !branches.every((branch) => JSON.stringify(branch.state.arcanaFear.arcana.active) === identity)
-  )
-    throw new BiomeRewardSimulationContractError(
-      'Automatic Boss Arcana frontier has divergent state across surviving branches',
-    );
-  return first;
-}
-
 /**
  * Settles the three encounter chronology seams.  Its inputs and returned
  * emissions are immutable; the chronology owner alone publishes them.
@@ -151,7 +143,7 @@ export function applyEncounterSettlementTransition(inputs: {
   readonly event: EncounterSettlementEvent;
   readonly room: CanonicalAuthoredRoom | CanonicalHubRoom | undefined;
   readonly view: ProgressiveRoomHistoryViews | undefined;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly routePosition: ResolvedRoutePosition;
   readonly enteredBiomeCount: number;
   readonly fullRunBiomeCount: number;
@@ -186,21 +178,19 @@ export function applyEncounterSettlementTransition(inputs: {
     if (checkpoint !== undefined)
       traitChildSettlements.push(Object.freeze({ checkpoint, occurrenceOwner: owner }));
   };
-  let branches = inputs.branches;
+  let reached = inputs.branch;
   let blockGorgonPhaseKey: string | undefined;
   let gorgonEvaluationBlocked = inputs.gorgonEvaluationBlocked;
   if (event.kind === 'bossDefeated')
-    branches = Object.freeze(
-      branches.map((branch) =>
-        Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            stygianWell: advanceStygianWellClock(branch.state.stygianWell, 'bosses'),
-            keepsakes: expireMaxHealthCapAtBoss(branch.state.keepsakes),
-          }),
+    reached = mapReached(reached, (branch) =>
+      Object.freeze({
+        ...branch,
+        state: Object.freeze({
+          ...branch.state,
+          stygianWell: advanceStygianWellClock(branch.state.stygianWell, 'bosses'),
+          keepsakes: expireMaxHealthCapAtBoss(branch.state.keepsakes),
         }),
-      ),
+      }),
     );
   const nonFinalBossDefeated =
     event.kind === 'bossDefeated' &&
@@ -209,22 +199,20 @@ export function applyEncounterSettlementTransition(inputs: {
     declaration.mode.templateKey === 'Boss' &&
     inputs.enteredBiomeCount < inputs.fullRunBiomeCount;
   if (nonFinalBossDefeated)
-    branches = Object.freeze(
-      branches.map((branch) => {
-        const traitHistory = settleNonFinalBossRarityBlocks(
-          catalog,
-          branch.state.traitHistory,
-          event.origin,
-          event.sequence,
-        );
-        return traitHistory === branch.state.traitHistory
-          ? branch
-          : Object.freeze({
-              ...branch,
-              state: replaceSimulationTraitHistory(branch.state, traitHistory),
-            });
-      }),
-    );
+    reached = mapReached(reached, (branch) => {
+      const traitHistory = settleNonFinalBossRarityBlocks(
+        catalog,
+        branch.state.traitHistory,
+        event.origin,
+        event.sequence,
+      );
+      return traitHistory === branch.state.traitHistory
+        ? branch
+        : Object.freeze({
+            ...branch,
+            state: replaceSimulationTraitHistory(branch.state, traitHistory),
+          });
+    });
 
   if (
     event.kind === 'encounterInteractionReached' &&
@@ -249,9 +237,9 @@ export function applyEncounterSettlementTransition(inputs: {
         ? undefined
         : materializeGorgonAthenaOffer(catalog, result.athenaOffer, inputs.gorgonCandidate.rarity);
     const record =
-      branches[0] === undefined
+      reached === undefined
         ? undefined
-        : projectRoomEncounterRecords(branches[0].state.reached.historyView, event.origin).find(
+        : projectRoomEncounterRecords(reached.state.reached.historyView, event.origin).find(
             (entry) => entry.slotKey === event.phaseKey,
           );
     const resolvedPhase =
@@ -278,10 +266,10 @@ export function applyEncounterSettlementTransition(inputs: {
       const effect = catalog.keepsakes.values.find(
         (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
       )?.effect;
-      for (const branch of branches) {
+      if (reached !== undefined) {
         const settled = settleEncounterTraitOffer(
           catalog,
-          branch,
+          reached,
           owner,
           null,
           event.sequence,
@@ -307,48 +295,45 @@ export function applyEncounterSettlementTransition(inputs: {
       offered !== undefined &&
       assessGorgonChildSettlement(catalog, result.athenaOffer)
     ) {
-      const before = branches.map((branch) => branch.traitEvaluations?.length ?? 0);
-      const settled = branches.map((branch) =>
-        settleEncounterTraitOffer(
-          catalog,
-          branch,
-          owner,
-          offered,
-          event.sequence,
-          'encounterCompleted',
-          chronology(snapshot, room, event),
-          'gorgonAthena',
-          undefined,
-          gorgonTraitContext,
-        ),
-      );
-      for (const item of settled) {
-        mergeTraitFindings(item.findingEntries);
-        if (item.candidateContact !== undefined)
-          traitOfferCandidateContacts.push(item.candidateContact);
+      const before = reached?.traitEvaluations?.length ?? 0;
+      const settled =
+        reached === undefined
+          ? undefined
+          : settleEncounterTraitOffer(
+              catalog,
+              reached,
+              owner,
+              offered,
+              event.sequence,
+              'encounterCompleted',
+              chronology(snapshot, room, event),
+              'gorgonAthena',
+              undefined,
+              gorgonTraitContext,
+            );
+      if (settled !== undefined) {
+        mergeTraitFindings(settled.findingEntries);
+        if (settled.candidateContact !== undefined)
+          traitOfferCandidateContacts.push(settled.candidateContact);
       }
-      const processed = settled.map((item) => item.branch);
-      const valid = processed.every((branch, index) => {
-        const evaluations = branch.traitEvaluations ?? [];
-        const evaluation = evaluations.at(-1);
-        return (
-          evaluations.length > before[index]! &&
+      const processed = settled?.branch;
+      const evaluations = processed?.traitEvaluations ?? [];
+      const evaluation = evaluations.at(-1);
+      const valid =
+        processed === undefined ||
+        (evaluations.length > before &&
           evaluation !== undefined &&
           traitOfferGenerationLegal(evaluation) &&
-          evaluation.targetedAcquisition.legal
-        );
-      });
+          evaluation.targetedAcquisition.legal);
       if (valid)
-        branches = Object.freeze(
-          processed.map((branch) =>
-            Object.freeze({
-              ...branch,
-              state: Object.freeze({
-                ...branch.state,
-                keepsakes: consumeGorgonAppearance(branch.state.keepsakes),
-              }),
+        reached = mapReached(processed, (branch) =>
+          Object.freeze({
+            ...branch,
+            state: Object.freeze({
+              ...branch.state,
+              keepsakes: consumeGorgonAppearance(branch.state.keepsakes),
             }),
-          ),
+          }),
         );
       else {
         blockGorgonPhaseKey = phaseKey;
@@ -383,12 +368,11 @@ export function applyEncounterSettlementTransition(inputs: {
   if (nonFinalBossDefeated) {
     const owner = createJudgmentArcanaAddress(room.origin, event.phaseKey);
     const figurineOwner = createFigurineArcanaAddress(room.origin, event.phaseKey);
-    const frontier = arcanaFrontier(branches);
-    const first = branches[0]?.state.arcanaFear;
+    const first = reached?.state.arcanaFear;
     const requiredCount =
-      frontier === undefined || first === undefined
+      first === undefined
         ? undefined
-        : judgmentRequiredCount(catalog, first, branches[0]?.state.keepsakes.fatedStatus);
+        : judgmentRequiredCount(catalog, first, reached?.state.keepsakes.fatedStatus);
     const judgmentCandidate =
       requiredCount === undefined || first === undefined
         ? undefined
@@ -400,104 +384,79 @@ export function applyEncounterSettlementTransition(inputs: {
             inactiveArcanaKeys: randomArcanaDrawKeys(
               catalog,
               first,
-              branches[0]?.state.keepsakes.fatedStatus,
+              reached?.state.keepsakes.fatedStatus,
             ),
           });
     const judgmentSelected = room.encounters.judgmentArcanaKeysByPhase?.[event.phaseKey] ?? [];
-    branches = Object.freeze(
-      branches.flatMap((branch) => {
-        const required = judgmentRequiredCount(
-          catalog,
-          branch.state.arcanaFear,
-          branch.state.keepsakes.fatedStatus,
-        );
-        if (required === undefined) return [advanceRewardBranches([branch], event.sequence)[0]!];
-        const selected = judgmentSelected;
-        if (selected.length !== required) {
-          const finding = rewardFinding(
-            selected.length === 0 ? 'judgmentOutcomeMissing' : 'judgmentOutcomeWrongCardinality',
-            owner,
-            Object.freeze({ required, selected: selected.length }),
-          );
-          findings.set(
-            findingIdentityKey(finding),
-            Object.freeze({
-              finding,
-              atomicRegion: ownerRegion(owner),
-              chronology: historyFindingChronology(event.sequence),
-            }),
-          );
-          return [];
-        }
-        if (selected.length === 0) return [advanceRewardBranches([branch], event.sequence)[0]!];
-        const assessed = activateTemporaryArcana(catalog, branch.state.arcanaFear, selected, {
+    reached = mapReached(reached, (branch) => {
+      const required = judgmentRequiredCount(
+        catalog,
+        branch.state.arcanaFear,
+        branch.state.keepsakes.fatedStatus,
+      );
+      if (required === undefined) return advanceRewardBranch(branch, event.sequence);
+      const selected = judgmentSelected;
+      if (selected.length !== required) {
+        const finding = rewardFinding(
+          selected.length === 0 ? 'judgmentOutcomeMissing' : 'judgmentOutcomeWrongCardinality',
           owner,
-          sequence: event.sequence,
-        });
-        if (
-          !assessed.legal ||
-          (branch.state.keepsakes.fatedStatus === 'Fated' &&
-            selected.some((key) => catalog.arcanaCards.byKey[key]?.fatedIncompatible === true))
-        ) {
-          const finding = rewardFinding(
-            'judgmentOutcomeTargetUnavailable',
-            owner,
-            Object.freeze({ reason: assessed.legal ? 'fatedExcluded' : assessed.reason }),
-          );
-          findings.set(
-            findingIdentityKey(finding),
-            Object.freeze({
-              finding,
-              atomicRegion: ownerRegion(owner),
-              chronology: historyFindingChronology(event.sequence),
-            }),
-          );
-          return [];
-        }
-        return [
+          Object.freeze({ required, selected: selected.length }),
+        );
+        findings.set(
+          findingIdentityKey(finding),
           Object.freeze({
-            ...branch,
-            processedThroughHistorySequence: event.sequence,
-            state: Object.freeze({
-              ...branch.state,
-              arcanaFear: assessed.state,
-              keepsakes: refreshKeepsakeFatedStatus(
-                catalog,
-                branch.state.keepsakes,
-                assessed.state,
-              ),
-            }),
+            finding,
+            atomicRegion: ownerRegion(owner),
+            chronology: historyFindingChronology(event.sequence),
           }),
-        ];
-      }),
-    );
-    const figurineBranches = branches;
-    const figurineSource = figurineBranches[0]?.state.keepsakes.figurine;
+        );
+        return undefined;
+      }
+      if (selected.length === 0) return advanceRewardBranch(branch, event.sequence);
+      const assessed = activateTemporaryArcana(catalog, branch.state.arcanaFear, selected, {
+        owner,
+        sequence: event.sequence,
+      });
+      if (
+        !assessed.legal ||
+        (branch.state.keepsakes.fatedStatus === 'Fated' &&
+          selected.some((key) => catalog.arcanaCards.byKey[key]?.fatedIncompatible === true))
+      ) {
+        const finding = rewardFinding(
+          'judgmentOutcomeTargetUnavailable',
+          owner,
+          Object.freeze({ reason: assessed.legal ? 'fatedExcluded' : assessed.reason }),
+        );
+        findings.set(
+          findingIdentityKey(finding),
+          Object.freeze({
+            finding,
+            atomicRegion: ownerRegion(owner),
+            chronology: historyFindingChronology(event.sequence),
+          }),
+        );
+        return undefined;
+      }
+      return Object.freeze({
+        ...branch,
+        processedThroughHistorySequence: event.sequence,
+        state: Object.freeze({
+          ...branch.state,
+          arcanaFear: assessed.state,
+          keepsakes: refreshKeepsakeFatedStatus(catalog, branch.state.keepsakes, assessed.state),
+        }),
+      });
+    });
+    const figurineSource = reached?.state.keepsakes.figurine;
     const figurineEffect = catalog.keepsakes.values.find(
       (keepsake) => keepsake.effect?.kind === 'crystalFigurine',
     )?.effect;
     const figurineEligible =
       figurineSource?.status === 'pending' && figurineEffect?.kind === 'crystalFigurine';
-    if (figurineEligible) {
-      if (
-        figurineBranches.some(
-          (branch) =>
-            JSON.stringify(branch.state.keepsakes.figurine) !== JSON.stringify(figurineSource),
-        )
-      )
-        throw new BiomeRewardSimulationContractError(
-          'Crystal Figurine source frontier has divergent state across surviving branches',
-        );
-      arcanaFrontier(figurineBranches);
-    }
-    const figurineFrontier = figurineEligible ? figurineBranches[0]?.state.arcanaFear : undefined;
+    const figurineFrontier = figurineEligible ? reached?.state.arcanaFear : undefined;
     const figurineInactive =
       figurineEligible && figurineFrontier !== undefined
-        ? randomArcanaDrawKeys(
-            catalog,
-            figurineFrontier,
-            figurineBranches[0]?.state.keepsakes.fatedStatus,
-          )
+        ? randomArcanaDrawKeys(catalog, figurineFrontier, reached?.state.keepsakes.fatedStatus)
         : Object.freeze([]);
     const figurineRequiredCount = figurineEligible
       ? Math.min(figurineEffect.requestedCards, figurineInactive.length)
@@ -514,89 +473,82 @@ export function applyEncounterSettlementTransition(inputs: {
           })
         : undefined;
     const figurineSelected = room.encounters.figurineArcanaKeysByPhase?.[event.phaseKey] ?? [];
-    branches = Object.freeze(
-      figurineBranches.flatMap((branch) => {
-        const source = branch.state.keepsakes.figurine;
-        if (source?.status !== 'pending' || figurineEffect?.kind !== 'crystalFigurine')
-          return [advanceRewardBranches([branch], event.sequence)[0]!];
-        const selected = figurineSelected;
-        if (selected.length !== figurineRequiredCount) {
-          const finding = rewardFinding(
-            selected.length === 0 ? 'figurineOutcomeMissing' : 'figurineOutcomeWrongCardinality',
-            figurineOwner,
-            Object.freeze({ required: figurineRequiredCount, selected: selected.length }),
-          );
-          findings.set(
-            findingIdentityKey(finding),
-            Object.freeze({
-              finding,
-              atomicRegion: ownerRegion(figurineOwner),
-              chronology: historyFindingChronology(event.sequence),
-            }),
-          );
-          return [];
-        }
-        if (selected.length === 0) {
-          return [
-            Object.freeze({
-              ...branch,
-              processedThroughHistorySequence: event.sequence,
-              state: Object.freeze({
-                ...branch.state,
-                keepsakes: consumeFigurine(branch.state.keepsakes),
-              }),
-            }),
-          ];
-        }
-        const assessed = activateTemporaryArcana(
-          catalog,
-          branch.state.arcanaFear,
-          selected,
-          { owner: figurineOwner, sequence: event.sequence },
-          source.rarity,
+    reached = mapReached(reached, (branch) => {
+      const source = branch.state.keepsakes.figurine;
+      if (source?.status !== 'pending' || figurineEffect?.kind !== 'crystalFigurine')
+        return advanceRewardBranch(branch, event.sequence);
+      const selected = figurineSelected;
+      if (selected.length !== figurineRequiredCount) {
+        const finding = rewardFinding(
+          selected.length === 0 ? 'figurineOutcomeMissing' : 'figurineOutcomeWrongCardinality',
+          figurineOwner,
+          Object.freeze({ required: figurineRequiredCount, selected: selected.length }),
         );
-        if (
-          !assessed.legal ||
-          (branch.state.keepsakes.fatedStatus === 'Fated' &&
-            selected.some((key) => catalog.arcanaCards.byKey[key]?.fatedIncompatible === true))
-        ) {
-          const finding = rewardFinding(
-            'figurineOutcomeTargetUnavailable',
-            figurineOwner,
-            Object.freeze({ reason: assessed.legal ? 'fatedExcluded' : assessed.reason }),
-          );
-          findings.set(
-            findingIdentityKey(finding),
-            Object.freeze({
-              finding,
-              atomicRegion: ownerRegion(figurineOwner),
-              chronology: historyFindingChronology(event.sequence),
-            }),
-          );
-          return [];
-        }
-        return [
+        findings.set(
+          findingIdentityKey(finding),
           Object.freeze({
-            ...branch,
-            processedThroughHistorySequence: event.sequence,
-            state: Object.freeze({
-              ...branch.state,
-              arcanaFear: assessed.state,
-              keepsakes: refreshKeepsakeFatedStatus(
-                catalog,
-                consumeFigurine(branch.state.keepsakes),
-                assessed.state,
-              ),
-            }),
+            finding,
+            atomicRegion: ownerRegion(figurineOwner),
+            chronology: historyFindingChronology(event.sequence),
           }),
-        ];
-      }),
-    );
+        );
+        return undefined;
+      }
+      if (selected.length === 0)
+        return Object.freeze({
+          ...branch,
+          processedThroughHistorySequence: event.sequence,
+          state: Object.freeze({
+            ...branch.state,
+            keepsakes: consumeFigurine(branch.state.keepsakes),
+          }),
+        });
+      const assessed = activateTemporaryArcana(
+        catalog,
+        branch.state.arcanaFear,
+        selected,
+        { owner: figurineOwner, sequence: event.sequence },
+        source.rarity,
+      );
+      if (
+        !assessed.legal ||
+        (branch.state.keepsakes.fatedStatus === 'Fated' &&
+          selected.some((key) => catalog.arcanaCards.byKey[key]?.fatedIncompatible === true))
+      ) {
+        const finding = rewardFinding(
+          'figurineOutcomeTargetUnavailable',
+          figurineOwner,
+          Object.freeze({ reason: assessed.legal ? 'fatedExcluded' : assessed.reason }),
+        );
+        findings.set(
+          findingIdentityKey(finding),
+          Object.freeze({
+            finding,
+            atomicRegion: ownerRegion(figurineOwner),
+            chronology: historyFindingChronology(event.sequence),
+          }),
+        );
+        return undefined;
+      }
+      return Object.freeze({
+        ...branch,
+        processedThroughHistorySequence: event.sequence,
+        state: Object.freeze({
+          ...branch.state,
+          arcanaFear: assessed.state,
+          keepsakes: refreshKeepsakeFatedStatus(
+            catalog,
+            consumeFigurine(branch.state.keepsakes),
+            assessed.state,
+          ),
+        }),
+      });
+    });
     const judgmentOutcome: BossArcanaOutcome | undefined =
       judgmentCandidate !== undefined &&
       judgmentSelected.length === judgmentCandidate.requiredCount &&
       judgmentSelected.length > 0 &&
-      branches.length > 0
+      reached !== undefined
         ? Object.freeze({
             owner,
             effect: 'judgment' as const,
@@ -612,7 +564,7 @@ export function applyEncounterSettlementTransition(inputs: {
     const figurineOutcome: BossArcanaOutcome | undefined =
       figurineCandidate !== undefined &&
       figurineSelected.length === figurineCandidate.requiredCount &&
-      branches.length > 0
+      reached !== undefined
         ? Object.freeze({
             owner: figurineOwner,
             effect: 'crystalFigurine' as const,
@@ -647,7 +599,7 @@ export function applyEncounterSettlementTransition(inputs: {
             ]),
     });
     return Object.freeze({
-      branches,
+      branch: reached,
       findings: Object.freeze([...findings.values()]),
       roleFrontiers: Object.freeze(roleFrontiers),
       traitChildSettlements: Object.freeze(traitChildSettlements),
@@ -669,7 +621,7 @@ export function applyEncounterSettlementTransition(inputs: {
     room.kind !== 'authored'
   )
     return Object.freeze({
-      branches: advanceRewardBranches(branches, event.sequence),
+      branch: advanceReachedBranch(reached, event.sequence),
       findings: Object.freeze([...findings.values()]),
       roleFrontiers: Object.freeze(roleFrontiers),
       traitChildSettlements: Object.freeze(traitChildSettlements),
@@ -679,26 +631,24 @@ export function applyEncounterSettlementTransition(inputs: {
     });
   if (event.kind === 'encounterCompleted') {
     const roomEncounterKeys =
-      branches[0] === undefined
+      reached === undefined
         ? []
-        : projectRoomEncounterRecords(branches[0].state.reached.historyView, event.origin).map(
+        : projectRoomEncounterRecords(reached.state.reached.historyView, event.origin).map(
             (record) => record.encounterKey,
           );
-    branches = Object.freeze(
-      branches.map((branch) =>
-        spawnWheelRewardAtEncounterCompletion(
-          catalog,
-          room,
-          event.phaseKey,
-          spawnIncomingRewardAtEncounterCompletion(catalog, room, roomEncounterKeys, branch),
-        ),
+    reached = mapReached(reached, (branch) =>
+      spawnWheelRewardAtEncounterCompletion(
+        catalog,
+        room,
+        event.phaseKey,
+        spawnIncomingRewardAtEncounterCompletion(catalog, room, roomEncounterKeys, branch),
       ),
     );
     const rewards =
       room.localRewards?.filter((reward) => reward.encounterPhaseKey === event.phaseKey) ?? [];
     if (room.lifecycleProfileKey === 'FieldsCombatRoom' || rewards.length === 0)
       return Object.freeze({
-        branches: advanceRewardBranches(branches, event.sequence),
+        branch: advanceReachedBranch(reached, event.sequence),
         findings: Object.freeze([...findings.values()]),
         roleFrontiers: Object.freeze(roleFrontiers),
         traitChildSettlements: Object.freeze(traitChildSettlements),
@@ -718,14 +668,12 @@ export function applyEncounterSettlementTransition(inputs: {
         candidate.reference.groupKey === 'cages' &&
         candidate.reference.slotKey === rewards[0]!.slotKey,
     )?.owner;
-    const materialized = Object.freeze(
-      branches.map((branch) =>
-        consumeOlympianProviderForReachedOffer(catalog, branch, rewards[0]!.origin, 'free'),
-      ),
+    const materialized = mapReached(reached, (branch) =>
+      consumeOlympianProviderForReachedOffer(catalog, branch, rewards[0]!.origin, 'free'),
     );
     const settlement = settleOwnedAcquisitionSite(
       catalog,
-      materialized,
+      branchList(materialized),
       {
         siteOwner: rewards[0].origin,
         pointKey: event.phaseKey,
@@ -761,7 +709,7 @@ export function applyEncounterSettlementTransition(inputs: {
     for (const checkpoint of settlement.traitChildSettlements ?? [])
       recordChild(checkpoint, room.origin);
     return Object.freeze({
-      branches: settlement.branches,
+      branch: singleBranch(settlement.branches),
       findings: Object.freeze([...findings.values()]),
       roleFrontiers: Object.freeze(roleFrontiers),
       traitChildSettlements: Object.freeze(traitChildSettlements),
@@ -772,7 +720,7 @@ export function applyEncounterSettlementTransition(inputs: {
   }
   if (event.kind === 'encounterInteractionReached' && event.interaction === 'gorgon')
     return Object.freeze({
-      branches: advanceRewardBranches(branches, event.sequence),
+      branch: advanceReachedBranch(reached, event.sequence),
       findings: Object.freeze([...findings.values()]),
       roleFrontiers: Object.freeze(roleFrontiers),
       traitChildSettlements: Object.freeze(traitChildSettlements),
@@ -879,7 +827,7 @@ export function applyEncounterSettlementTransition(inputs: {
             (common.length === 0 ? equipped : common).map((trait) => trait.traitKey),
           ),
         });
-      })(branches[0]);
+      })(reached);
       const candidate = Object.freeze({
         origin: owner,
         familyKeys: Object.freeze([
@@ -954,38 +902,34 @@ export function applyEncounterSettlementTransition(inputs: {
             ? undefined
             : invalidatedTraitOffers(room.origin, 'nemesisTraitTrade');
         if (removedTraitKey !== null)
-          branches = Object.freeze(
-            branches.map((branch) => {
-              const before = branch.state.traitHistory;
-              const traitHistory = foldTraitHistoryEvents(catalog, [
-                ...before.events,
-                Object.freeze({
-                  kind: 'traitRemoval' as const,
-                  owner: createEncounterPhaseAddress(
-                    createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-                    { kind: 'occurrence' as const, occurrenceId: room.occurrenceId },
-                    event.phaseKey,
-                  ),
-                  acquisitionRole: 'nemesisTraitTrade',
-                  sequence: event.sequence,
-                  acquisitionPoint: 'encounterInteraction',
-                  traitKey: removedTraitKey,
-                  match: 'currentTraitKey' as const,
-                }),
-              ]);
-              const traded = Object.freeze({
-                ...branch,
-                state: replaceSimulationTraitHistory(branch.state, traitHistory),
-              });
-              return trade === undefined ? traded : applyTraitOfferTransition(traded, trade);
-            }),
-          );
+          reached = mapReached(reached, (branch) => {
+            const before = branch.state.traitHistory;
+            const traitHistory = foldTraitHistoryEvents(catalog, [
+              ...before.events,
+              Object.freeze({
+                kind: 'traitRemoval' as const,
+                owner: createEncounterPhaseAddress(
+                  createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+                  { kind: 'occurrence' as const, occurrenceId: room.occurrenceId },
+                  event.phaseKey,
+                ),
+                acquisitionRole: 'nemesisTraitTrade',
+                sequence: event.sequence,
+                acquisitionPoint: 'encounterInteraction',
+                traitKey: removedTraitKey,
+                match: 'currentTraitKey' as const,
+              }),
+            ]);
+            const traded = Object.freeze({
+              ...branch,
+              state: replaceSimulationTraitHistory(branch.state, traitHistory),
+            });
+            return trade === undefined ? traded : applyTraitOfferTransition(traded, trade);
+          });
         // The trade's result loot is created after the sale clears live options.
         const resultSite = nemesisGeneratedPickupSiteKey(event.phaseKey);
-        branches = Object.freeze(
-          branches.map((branch) =>
-            spawnTraitOffers(catalog, branch, siteEntryTraitOffers(room, resultSite)),
-          ),
+        reached = mapReached(reached, (branch) =>
+          spawnTraitOffers(catalog, branch, siteEntryTraitOffers(room, resultSite)),
         );
       }
     }
@@ -1007,39 +951,36 @@ export function applyEncounterSettlementTransition(inputs: {
         : { boonRarityRoomOverride: declaration.boonRarityOverride },
     );
     const provider = catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer?.giverKey;
-    const settled = branches.map((branch) =>
-      settleEncounterTraitOffer(
-        catalog,
-        branch,
-        owner,
-        authored,
-        event.sequence,
-        'encounterCompleted',
-        chronology(snapshot, room, event),
-        'selection',
-        undefined,
-        encounterSource,
-        undefined,
-        provider,
-      ),
-    );
-    for (const item of settled) {
-      mergeTraitFindings(item.findingEntries);
-      recordChild(item.blockedChild, room.origin);
-      if (item.candidateContact !== undefined)
-        traitOfferCandidateContacts.push(item.candidateContact);
+    const settled =
+      reached === undefined
+        ? undefined
+        : settleEncounterTraitOffer(
+            catalog,
+            reached,
+            owner,
+            authored,
+            event.sequence,
+            'encounterCompleted',
+            chronology(snapshot, room, event),
+            'selection',
+            undefined,
+            encounterSource,
+            undefined,
+            provider,
+          );
+    if (settled !== undefined) {
+      mergeTraitFindings(settled.findingEntries);
+      recordChild(settled.blockedChild, room.origin);
+      if (settled.candidateContact !== undefined)
+        traitOfferCandidateContacts.push(settled.candidateContact);
+      if (authored !== null)
+        reached = settled.screenCompleted
+          ? spawnScreenProducedPickups(catalog, room, owner, 'selection', settled.branch)
+          : settled.branch;
     }
-    if (authored !== null)
-      branches = Object.freeze(
-        settled.map((item) =>
-          item.screenCompleted
-            ? spawnScreenProducedPickups(catalog, room, owner, 'selection', item.branch)
-            : item.branch,
-        ),
-      );
   }
   return Object.freeze({
-    branches,
+    branch: reached,
     findings: Object.freeze([...findings.values()]),
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),

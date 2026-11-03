@@ -11,7 +11,7 @@ import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { assessFigLeafSkip } from '../../../encounters';
 import { projectRoomEncounterRecords } from '../../../history/facts';
 import { consumeFigLeafUse } from '../../../keepsakes/encounter-effects';
-import { advanceRewardBranches } from '../../branch-lifecycle';
+import { advanceReachedBranch } from '../../branch-lifecycle';
 import type { RewardBranchState } from '../../branch-primitives';
 import { ownerRegion } from '../../../finding-regions';
 import type { FigLeafPhaseCandidateSupport } from '../../model';
@@ -19,7 +19,7 @@ import type { LifecycleFinding } from './types';
 import { spawnIncomingRewardAtEncounterStart } from '../offer-lifecycle/spawned-trait-offers';
 
 export interface EncounterStartedTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly figLeafCandidates: readonly {
     readonly key: string;
     readonly candidate: FigLeafPhaseCandidateSupport;
@@ -33,17 +33,13 @@ export function applyEncounterStartedTransition(
   snapshot: { readonly entryRoom?: { readonly origin: SemanticAddress } },
   event: Extract<HistoryEvent, { readonly kind: 'encounterStarted' }>,
   room: CanonicalAuthoredRoom | undefined,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
 ): EncounterStartedTransition {
   // The reward is spawned before this encounter's own start effects (Fig Leaf, Gorgon).
   let next =
-    room === undefined
-      ? branches
-      : Object.freeze(
-          branches.map((branch) =>
-            spawnIncomingRewardAtEncounterStart(catalog, room, event.encounterKey, branch),
-          ),
-        );
+    room === undefined || branch === undefined
+      ? branch
+      : spawnIncomingRewardAtEncounterStart(catalog, room, event.encounterKey, branch);
   const findings: LifecycleFinding[] = [];
   const figLeafCandidates: {
     key: string;
@@ -54,9 +50,9 @@ export function applyEncounterStartedTransition(
     if (phase !== undefined) {
       const definition = catalog.encounterDefinitions.byKey[event.encounterKey]!;
       const resolvedEnvelope =
-        next[0] === undefined
+        next === undefined
           ? []
-          : projectRoomEncounterRecords(next[0].state.reached.historyView, event.origin).map(
+          : projectRoomEncounterRecords(next.state.reached.historyView, event.origin).map(
               (record) => catalog.encounterDefinitions.byKey[record.encounterKey]!,
             );
       const origin = createEncounterPhaseAddress(
@@ -71,7 +67,7 @@ export function applyEncounterStartedTransition(
       const nonLeadingCascadePhase =
         definition.skipEndEncounterEffects === true &&
         room.encounterPhases[0]?.slotKey !== phase.slotKey;
-      const figLeaf = next[0]?.state.keepsakes.figLeaf;
+      const figLeaf = next?.state.keepsakes.figLeaf;
       const assessment = assessFigLeafSkip({
         selected: phase.figLeafSkip,
         canEncounterSkip: definition.canEncounterSkip === true,
@@ -125,21 +121,17 @@ export function applyEncounterStartedTransition(
       }
     }
   }
-  if (event.figLeafSkipOwner) {
-    next = Object.freeze(
-      next.map((branch) =>
-        Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            keepsakes: consumeFigLeafUse(branch.state.keepsakes),
-          }),
-        }),
-      ),
-    );
+  if (event.figLeafSkipOwner && next !== undefined) {
+    next = Object.freeze({
+      ...next,
+      state: Object.freeze({
+        ...next.state,
+        keepsakes: consumeFigLeafUse(next.state.keepsakes),
+      }),
+    });
   }
   return Object.freeze({
-    branches: advanceRewardBranches(next, event.sequence),
+    branch: advanceReachedBranch(next, event.sequence),
     figLeafCandidates: Object.freeze(figLeafCandidates),
     findings: Object.freeze(findings),
   });

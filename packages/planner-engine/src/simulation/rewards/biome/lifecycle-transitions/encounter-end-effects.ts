@@ -48,8 +48,8 @@ import type {
   GeneratedPickupPlacement,
   DerivedAcquisitionEntryFrontier,
 } from '../../acquisition/contracts';
-import type { RewardBranchState } from '../../branch-primitives';
-import { advanceRewardBranches } from '../../branch-lifecycle';
+import { mapReached, type RewardBranchState } from '../../branch-primitives';
+import { advanceReachedBranch } from '../../branch-lifecycle';
 import { rewardFinding } from '../../findings';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement/coordinator';
 import type { LifecycleFinding } from './types';
@@ -63,7 +63,7 @@ import type { AutomaticOutcomeLanding } from '../../model';
 
 export interface EncounterEndEffectsTransition {
   readonly generatedPickupPlacements: readonly GeneratedPickupPlacement[];
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly derivedAcquisitionEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
   /** A due Shrine delivery has no exact ranked/retained host action yet. */
   readonly hermesShrineDeliveryPlacementRequired: boolean;
@@ -85,176 +85,151 @@ export interface EncounterEndEffectsTransition {
 
 function advanceExperimentalHammerForEndEffects(
   catalog: Catalog,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState,
   owner: SemanticAddress,
   sequence: number,
-): readonly RewardBranchState[] {
-  return Object.freeze(
-    branches.map((branch) => {
-      const advanced = advanceExperimentalHammers(branch.state.keepsakes);
-      if (advanced.state === branch.state.keepsakes) return branch;
-      if (advanced.expired.length === 0)
-        return Object.freeze({
-          ...branch,
-          state: Object.freeze({ ...branch.state, keepsakes: advanced.state }),
-        });
-      const prior = branch.state.traitHistory;
-      const traitHistory = foldTraitHistoryEvents(catalog, [
-        ...prior.events,
-        ...advanced.expired.map((expired) =>
-          Object.freeze({
-            kind: 'traitRemoval' as const,
-            owner,
-            acquisitionRole: 'experimentalHammerExpiry',
-            sequence,
-            acquisitionPoint: 'encounterEndEffectsApplied',
-            traitKey: expired.traitKey,
-            acquisitionIdentity: expired.acquisitionIdentity,
-            match: 'acquisitionIdentity' as const,
-          }),
-        ),
-      ]);
-      return Object.freeze({
-        ...branch,
-        state: replaceSimulationTraitHistory(
-          Object.freeze({ ...branch.state, keepsakes: advanced.state }),
-          traitHistory,
-        ),
-      });
-    }),
-  );
+): RewardBranchState {
+  const advanced = advanceExperimentalHammers(branch.state.keepsakes);
+  if (advanced.state === branch.state.keepsakes) return branch;
+  if (advanced.expired.length === 0)
+    return Object.freeze({
+      ...branch,
+      state: Object.freeze({ ...branch.state, keepsakes: advanced.state }),
+    });
+  const prior = branch.state.traitHistory;
+  const traitHistory = foldTraitHistoryEvents(catalog, [
+    ...prior.events,
+    ...advanced.expired.map((expired) =>
+      Object.freeze({
+        kind: 'traitRemoval' as const,
+        owner,
+        acquisitionRole: 'experimentalHammerExpiry',
+        sequence,
+        acquisitionPoint: 'encounterEndEffectsApplied',
+        traitKey: expired.traitKey,
+        acquisitionIdentity: expired.acquisitionIdentity,
+        match: 'acquisitionIdentity' as const,
+      }),
+    ),
+  ]);
+  return Object.freeze({
+    ...branch,
+    state: replaceSimulationTraitHistory(
+      Object.freeze({ ...branch.state, keepsakes: advanced.state }),
+      traitHistory,
+    ),
+  });
 }
 
 function advanceChaosClockAt(
   catalog: Catalog,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState,
   sequence: number,
-): readonly RewardBranchState[] {
-  return Object.freeze(
-    branches.map((branch) => {
-      const before = branch.state.traitHistory;
-      const traitHistory = advanceChaosClock(catalog, before, sequence, 'encounters');
-      return traitHistory === before
-        ? branch
-        : Object.freeze({
-            ...branch,
-            state: replaceSimulationTraitHistory(branch.state, traitHistory),
-          });
-    }),
-  );
+): RewardBranchState {
+  const before = branch.state.traitHistory;
+  const traitHistory = advanceChaosClock(catalog, before, sequence, 'encounters');
+  return traitHistory === before
+    ? branch
+    : Object.freeze({
+        ...branch,
+        state: replaceSimulationTraitHistory(branch.state, traitHistory),
+      });
 }
 
 function advancePickupProducersAt(
   catalog: Catalog,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState,
   owner: Extract<SemanticAddress, { readonly kind: 'occurrence' }>,
   sequence: number,
   deferMaturity: boolean,
 ): {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState;
   readonly maturities: readonly ReachedPickupProducerMaturity[];
 } {
-  const next: RewardBranchState[] = [];
-  const maturities: ReachedPickupProducerMaturity[] = [];
-  for (const branch of branches) {
-    const before = branch.state.traitHistory;
-    const advanced = advancePickupProducerProgress(catalog, before, owner, sequence, deferMaturity);
-    const updated =
+  const before = branch.state.traitHistory;
+  const advanced = advancePickupProducerProgress(catalog, before, owner, sequence, deferMaturity);
+  return Object.freeze({
+    branch:
       advanced.history === before
         ? branch
         : Object.freeze({
             ...branch,
             state: replaceSimulationTraitHistory(branch.state, advanced.history),
-          });
-    next.push(updated);
-    for (const maturity of advanced.maturities) maturities.push(maturity);
-  }
-  return Object.freeze({ branches: Object.freeze(next), maturities: Object.freeze(maturities) });
+          }),
+    maturities: advanced.maturities,
+  });
+}
+
+interface SteadyGrowthLanding {
+  readonly address: SteadyGrowthOutcomeAddress;
+  readonly landing: AutomaticOutcomeLanding;
+  readonly threshold: ReachedSteadyGrowthThreshold;
+}
+
+/** The state an automatic outcome blocked at, with the threshold it could not settle. */
+interface BlockedSteadyGrowth {
+  readonly address: SteadyGrowthOutcomeAddress;
+  readonly branch: RewardBranchState;
+  readonly threshold: ReachedSteadyGrowthThreshold;
 }
 
 function advanceSteadyGrowthAt(
   catalog: Catalog,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState,
   landing: AutomaticOutcomeLanding,
   sequence: number,
 ): {
-  readonly branches: readonly RewardBranchState[];
-  readonly blocked: readonly {
-    readonly address: SteadyGrowthOutcomeAddress;
-    readonly branch: RewardBranchState;
-    readonly threshold: ReachedSteadyGrowthThreshold;
-  }[];
-  readonly thresholds: readonly {
-    readonly address: SteadyGrowthOutcomeAddress;
-    readonly landing: AutomaticOutcomeLanding;
-    readonly threshold: ReachedSteadyGrowthThreshold;
-  }[];
+  /** The settled state, or none when an outcome blocked. */
+  readonly branch: RewardBranchState | undefined;
+  readonly blocked?: BlockedSteadyGrowth;
+  readonly thresholds: readonly SteadyGrowthLanding[];
 } {
   const owner = landing.owner;
-  const next: RewardBranchState[] = [];
-  const blocked: {
-    readonly address: SteadyGrowthOutcomeAddress;
-    readonly branch: RewardBranchState;
-    readonly threshold: ReachedSteadyGrowthThreshold;
-  }[] = [];
-  const thresholds: {
-    readonly address: SteadyGrowthOutcomeAddress;
-    readonly landing: AutomaticOutcomeLanding;
-    readonly threshold: ReachedSteadyGrowthThreshold;
-  }[] = [];
-  for (const branch of branches) {
-    const before = branch.state.traitHistory;
-    const advanced = advanceRoomsPerUpgradeProgress(catalog, before, owner, sequence);
-    let traitHistory = advanced.history;
-    let blockedAtThreshold = false;
-    for (const threshold of advanced.thresholds) {
-      const address = createSteadyGrowthOutcomeAddress(threshold.source, threshold.cycle);
-      thresholds.push(Object.freeze({ address, landing, threshold }));
-      const settled = settleSteadyGrowthThreshold(
-        catalog,
-        traitHistory,
-        owner,
-        sequence,
-        threshold,
-        threshold.targetTraitKey,
-      );
-      if (!settled.assessment.legal) {
-        blocked.push(
-          Object.freeze({
-            address,
-            branch: Object.freeze({
-              ...branch,
-              state: replaceSimulationTraitHistory(branch.state, traitHistory),
-            }),
-            threshold,
-          }),
-        );
-        blockedAtThreshold = true;
-        break;
-      }
-      traitHistory = settled.history;
-    }
-    if (blockedAtThreshold) continue;
-    const settled =
-      traitHistory === before
-        ? branch
-        : Object.freeze({
+  const thresholds: SteadyGrowthLanding[] = [];
+  const before = branch.state.traitHistory;
+  const advanced = advanceRoomsPerUpgradeProgress(catalog, before, owner, sequence);
+  let traitHistory = advanced.history;
+  for (const threshold of advanced.thresholds) {
+    const address = createSteadyGrowthOutcomeAddress(threshold.source, threshold.cycle);
+    thresholds.push(Object.freeze({ address, landing, threshold }));
+    const settled = settleSteadyGrowthThreshold(
+      catalog,
+      traitHistory,
+      owner,
+      sequence,
+      threshold,
+      threshold.targetTraitKey,
+    );
+    if (!settled.assessment.legal)
+      return Object.freeze({
+        branch: undefined,
+        blocked: Object.freeze({
+          address,
+          branch: Object.freeze({
             ...branch,
             state: replaceSimulationTraitHistory(branch.state, traitHistory),
-          });
-    // Each reached interval runs `AddRarityToTraits`, which clears live loot
-    // options whether or not a trait was promotable.
-    const invalidation =
-      advanced.thresholds.length === 0
-        ? undefined
-        : invalidatedTraitOffers(owner, 'steadyGrowthInterval');
-    next.push(
-      invalidation === undefined ? settled : applyTraitOfferTransition(settled, invalidation),
-    );
+          }),
+          threshold,
+        }),
+        thresholds: Object.freeze(thresholds),
+      });
+    traitHistory = settled.history;
   }
+  const settled =
+    traitHistory === before
+      ? branch
+      : Object.freeze({
+          ...branch,
+          state: replaceSimulationTraitHistory(branch.state, traitHistory),
+        });
+  // Each reached interval runs `AddRarityToTraits`, which clears live loot
+  // options whether or not a trait was promotable.
+  const invalidation =
+    advanced.thresholds.length === 0
+      ? undefined
+      : invalidatedTraitOffers(owner, 'steadyGrowthInterval');
   return Object.freeze({
-    branches: Object.freeze(next),
-    blocked: Object.freeze(blocked),
+    branch: invalidation === undefined ? settled : applyTraitOfferTransition(settled, invalidation),
     thresholds: Object.freeze(thresholds),
   });
 }
@@ -263,175 +238,115 @@ function pickupMaturityKey(maturity: ReachedPickupProducerMaturity): string {
   return `${maturity.traitKey}:${maturity.acquisitionIdentity}:${maturity.producerLifecycleKey}`;
 }
 
-/**
- * A maturity is eligible for a frontier only when its own final branch still
- * carries the progress event that reached it. This keeps automatic effects
- * branch-local: a branch removed by Steady Growth or Embryo cannot leak its
- * generated pickup into a surviving branch.
- */
-function branchReachedPickupMaturity(
-  branch: RewardBranchState,
-  maturity: ReachedPickupProducerMaturity,
-  sequence: number,
-): boolean {
-  return (
-    branch.state.traitHistory.events.some(
-      (historyEvent) =>
-        historyEvent.kind === 'pickupProducerProgress' &&
-        historyEvent.sequence === sequence &&
-        historyEvent.traitKey === maturity.traitKey &&
-        historyEvent.acquisitionIdentity === maturity.acquisitionIdentity &&
-        historyEvent.matured,
-    ) ?? false
-  );
+interface TranscendentEmbryoLanding {
+  readonly address: TranscendentEmbryoOutcomeAddress;
+  readonly landing: AutomaticOutcomeLanding;
+  readonly threshold: ReachedTranscendentEmbryoThreshold;
+}
+
+interface BlockedTranscendentEmbryo {
+  readonly address: TranscendentEmbryoOutcomeAddress;
+  readonly branch: RewardBranchState;
+  readonly threshold: ReachedTranscendentEmbryoThreshold;
+  readonly targetOutcome: AuthoredTranscendentEmbryoOutcome | undefined;
 }
 
 function advanceTranscendentEmbryoAt(
   catalog: Catalog,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState,
   landing: AutomaticOutcomeLanding,
   sequence: number,
   routeKey: string,
   aspectKey: string,
 ): {
-  readonly branches: readonly RewardBranchState[];
-  readonly blocked: readonly {
-    readonly address: TranscendentEmbryoOutcomeAddress;
-    readonly branch: RewardBranchState;
-    readonly threshold: ReachedTranscendentEmbryoThreshold;
-    readonly targetOutcome: AuthoredTranscendentEmbryoOutcome | undefined;
-  }[];
-  readonly thresholds: readonly {
-    readonly address: TranscendentEmbryoOutcomeAddress;
-    readonly landing: AutomaticOutcomeLanding;
-    readonly threshold: ReachedTranscendentEmbryoThreshold;
-  }[];
+  /** The settled state, or none when the transformation blocked. */
+  readonly branch: RewardBranchState | undefined;
+  readonly blocked?: BlockedTranscendentEmbryo;
+  readonly threshold?: TranscendentEmbryoLanding;
 } {
   const owner = landing.owner;
-  const next: RewardBranchState[] = [];
-  const blocked: {
-    readonly address: TranscendentEmbryoOutcomeAddress;
-    readonly branch: RewardBranchState;
-    readonly threshold: ReachedTranscendentEmbryoThreshold;
-    readonly targetOutcome: AuthoredTranscendentEmbryoOutcome | undefined;
-  }[] = [];
-  const thresholds: {
-    readonly address: TranscendentEmbryoOutcomeAddress;
-    readonly landing: AutomaticOutcomeLanding;
-    readonly threshold: ReachedTranscendentEmbryoThreshold;
-  }[] = [];
-  for (const branch of branches) {
-    const source = branch.state.keepsakes.transcendentEmbryo;
-    if (source === undefined) {
-      next.push(branch);
-      continue;
-    }
-    const progressed = advanceTranscendentEmbryoProgress(branch.state.keepsakes);
-    if (!progressed.reached) {
-      next.push(
-        Object.freeze({
-          ...branch,
-          state: Object.freeze({ ...branch.state, keepsakes: progressed.state }),
-        }),
-      );
-      continue;
-    }
-    const before = branch.state.traitHistory;
-    const cycle = source.cycles + 1;
-    const address = createTranscendentEmbryoOutcomeAddress(source.source, cycle);
-    const targetOutcome = source.transformations[String(cycle)];
-    const threshold = Object.freeze({
-      source,
-      cycle,
+  const source = branch.state.keepsakes.transcendentEmbryo;
+  if (source === undefined) return Object.freeze({ branch });
+  const progressed = advanceTranscendentEmbryoProgress(branch.state.keepsakes);
+  const progressedBranch = Object.freeze({
+    ...branch,
+    state: Object.freeze({ ...branch.state, keepsakes: progressed.state }),
+  });
+  if (!progressed.reached) return Object.freeze({ branch: progressedBranch });
+  const before = branch.state.traitHistory;
+  const cycle = source.cycles + 1;
+  const address = createTranscendentEmbryoOutcomeAddress(source.source, cycle);
+  const targetOutcome = source.transformations[String(cycle)];
+  const threshold = Object.freeze({
+    source,
+    cycle,
+    before,
+    eligibleBlessingKeys: transcendentEmbryoBlessingKeys(
+      catalog,
       before,
-      eligibleBlessingKeys: transcendentEmbryoBlessingKeys(
-        catalog,
-        before,
-        source.rarity,
-        Object.freeze({
-          routeKey,
-          aspectKey,
-          removedBlessingAcquisitionIdentity: source.markedBlessingAcquisitionIdentity,
-        }),
-      ),
+      source.rarity,
+      Object.freeze({
+        routeKey,
+        aspectKey,
+        removedBlessingAcquisitionIdentity: source.markedBlessingAcquisitionIdentity,
+      }),
+    ),
+  });
+  const landed = Object.freeze({ address, landing, threshold });
+  const assessment = assessTranscendentEmbryoTransformation(catalog, threshold, targetOutcome);
+  if (!assessment.legal)
+    return Object.freeze({
+      branch: undefined,
+      blocked: Object.freeze({ address, branch: progressedBranch, threshold, targetOutcome }),
+      threshold: landed,
     });
-    thresholds.push(Object.freeze({ address, landing, threshold }));
-    const assessment = assessTranscendentEmbryoTransformation(catalog, threshold, targetOutcome);
-    if (!assessment.legal) {
-      blocked.push(
-        Object.freeze({
-          address,
-          branch: Object.freeze({
-            ...branch,
-            state: Object.freeze({ ...branch.state, keepsakes: progressed.state }),
-          }),
-          threshold,
-          targetOutcome,
-        }),
-      );
-      continue;
-    }
-    // The interval clears live loot options with or without a blessing to transform.
-    const invalidation = invalidatedTraitOffers(owner, 'transcendentEmbryoInterval');
-    const invalidate = (settled: RewardBranchState) =>
-      invalidation === undefined ? settled : applyTraitOfferTransition(settled, invalidation);
-    if (assessment.blessingKey === null) {
-      next.push(
-        invalidate(
-          Object.freeze({
-            ...branch,
-            state: Object.freeze({ ...branch.state, keepsakes: progressed.state }),
-          }),
-        ),
-      );
-      continue;
-    }
-    const acquisitionIdentity = `${semanticAddressKey(address)}:${sequence}`;
-    const traitHistory = foldTraitHistoryEvents(catalog, [
-      ...before.events,
-      Object.freeze({
-        kind: 'directChaosBlessingRemoval' as const,
-        owner: address,
-        acquisitionRole: 'transcendentEmbryoTransformation' as const,
-        sequence,
-        acquisitionPoint: 'encounterEndEffectsApplied',
-        acquisitionIdentity: source.markedBlessingAcquisitionIdentity,
-      }),
-      Object.freeze({
-        kind: 'directChaosBlessing' as const,
-        owner: address,
-        acquisitionRole: 'transcendentEmbryoTransformation' as const,
-        sequence,
-        acquisitionPoint: 'encounterEndEffectsApplied',
-        acquisitionIdentity,
-        blessingKey: assessment.value!.blessingKey,
-        rarity: source.rarity,
-        blessingValues: assessment.value!.blessingValues,
-      }),
-    ]);
-    next.push(
-      invalidate(
-        Object.freeze({
-          ...branch,
-          state: replaceSimulationTraitHistory(
-            Object.freeze({
-              ...branch.state,
-              keepsakes: replaceTranscendentEmbryoBlessing(
-                progressed.state,
-                assessment.value!,
-                acquisitionIdentity,
-              ),
-            }),
-            traitHistory,
-          ),
-        }),
-      ),
-    );
-  }
+  // The interval clears live loot options with or without a blessing to transform.
+  const invalidation = invalidatedTraitOffers(owner, 'transcendentEmbryoInterval');
+  const invalidate = (settled: RewardBranchState) =>
+    invalidation === undefined ? settled : applyTraitOfferTransition(settled, invalidation);
+  if (assessment.blessingKey === null)
+    return Object.freeze({ branch: invalidate(progressedBranch), threshold: landed });
+  const acquisitionIdentity = `${semanticAddressKey(address)}:${sequence}`;
+  const traitHistory = foldTraitHistoryEvents(catalog, [
+    ...before.events,
+    Object.freeze({
+      kind: 'directChaosBlessingRemoval' as const,
+      owner: address,
+      acquisitionRole: 'transcendentEmbryoTransformation' as const,
+      sequence,
+      acquisitionPoint: 'encounterEndEffectsApplied',
+      acquisitionIdentity: source.markedBlessingAcquisitionIdentity,
+    }),
+    Object.freeze({
+      kind: 'directChaosBlessing' as const,
+      owner: address,
+      acquisitionRole: 'transcendentEmbryoTransformation' as const,
+      sequence,
+      acquisitionPoint: 'encounterEndEffectsApplied',
+      acquisitionIdentity,
+      blessingKey: assessment.value!.blessingKey,
+      rarity: source.rarity,
+      blessingValues: assessment.value!.blessingValues,
+    }),
+  ]);
   return Object.freeze({
-    branches: Object.freeze(next),
-    blocked: Object.freeze(blocked),
-    thresholds: Object.freeze(thresholds),
+    branch: invalidate(
+      Object.freeze({
+        ...branch,
+        state: replaceSimulationTraitHistory(
+          Object.freeze({
+            ...branch.state,
+            keepsakes: replaceTranscendentEmbryoBlessing(
+              progressed.state,
+              assessment.value!,
+              acquisitionIdentity,
+            ),
+          }),
+          traitHistory,
+        ),
+      }),
+    ),
+    threshold: landed,
   });
 }
 
@@ -440,35 +355,35 @@ export function applyEncounterEndEffectsTransition(
   catalog: Catalog,
   event: Extract<HistoryEvent, { readonly kind: 'encounterEndEffectsApplied' }>,
   room: CanonicalAuthoredRoom | undefined,
-  branches: readonly RewardBranchState[],
+  received: RewardBranchState | undefined,
 ): EncounterEndEffectsTransition {
   const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
-  let next = branches;
+  let next = received;
   if (
     declaration?.advancesExperimentalHammerUses === true &&
     declaration.ignoreEncounterUses !== true &&
     !(room?.lifecycleProfileKey === 'FieldsCombatRoom' && event.phaseKey === 'Passive')
   )
-    next = advanceExperimentalHammerForEndEffects(catalog, next, event.origin, event.sequence);
+    next = mapReached(next, (branch) =>
+      advanceExperimentalHammerForEndEffects(catalog, branch, event.origin, event.sequence),
+    );
   if (declaration?.ignoreEncounterUses !== true)
-    next = advanceChaosClockAt(catalog, next, event.sequence);
-  next = Object.freeze(
-    next.map((branch) =>
-      Object.freeze({
-        ...branch,
-        state: Object.freeze({
-          ...branch.state,
-          stygianWell:
-            declaration?.ignoreEncounterUses === true
-              ? branch.state.stygianWell
-              : advanceStygianWellClock(branch.state.stygianWell, 'encounters'),
-        }),
+    next = mapReached(next, (branch) => advanceChaosClockAt(catalog, branch, event.sequence));
+  next = mapReached(next, (branch) =>
+    Object.freeze({
+      ...branch,
+      state: Object.freeze({
+        ...branch.state,
+        stygianWell:
+          declaration?.ignoreEncounterUses === true
+            ? branch.state.stygianWell
+            : advanceStygianWellClock(branch.state.stygianWell, 'encounters'),
       }),
-    ),
+    }),
   );
   const pickupOwner = event.origin.kind === 'occurrence' ? event.origin : undefined;
   const pickupAdvance =
-    pickupOwner === undefined || declaration?.skipRoomsPerUpgrade === true
+    pickupOwner === undefined || declaration?.skipRoomsPerUpgrade === true || next === undefined
       ? undefined
       : advancePickupProducersAt(
           catalog,
@@ -480,14 +395,14 @@ export function applyEncounterEndEffectsTransition(
               declaration?.skipTimedDropResourcesInDream === true),
         );
   if (pickupAdvance !== undefined) {
-    next = pickupAdvance.branches;
+    next = pickupAdvance.branch;
   }
   const deliveryPlacementFindings: LifecycleFinding[] = [];
   const generatedPickupPlacements: GeneratedPickupPlacement[] = [];
   const recordedPhase =
-    next[0] === undefined
+    next === undefined
       ? undefined
-      : projectRoomEncounterRecords(next[0].state.reached.historyView, event.origin).find(
+      : projectRoomEncounterRecords(next.state.reached.historyView, event.origin).find(
           (phase) => phase.slotKey === event.phaseKey,
         );
   const encounterPhase =
@@ -501,48 +416,46 @@ export function applyEncounterEndEffectsTransition(
     encounterPhase?.advancesHermesShrineDeliveryUses === true
   ) {
     const deliveryHost = event.origin;
-    next = Object.freeze(
-      next.map((branch) => {
-        const pending = branch.state.pendingHermesShrineDeliveries;
-        const deliveries = Object.fromEntries(
-          Object.entries(pending).map(([key, delivery]) => {
-            if (delivery.due !== undefined) return [key, delivery] as const;
-            const remainingUses = delivery.remainingUses - 1;
-            return [
-              key,
-              Object.freeze({
-                ...delivery,
-                remainingUses: Math.max(0, remainingUses),
-                ...(remainingUses <= 0
-                  ? {
-                      due: Object.freeze({
-                        host: deliveryHost,
-                        encounterPhaseKey: event.phaseKey,
-                        cause: 'countdown' as const,
-                        historySequence: event.sequence,
-                      }),
-                    }
-                  : {}),
-              }),
-            ] as const;
-          }),
-        );
-        // A delivery falling due spawns with the encounter's expiring traits,
-        // before the chamber-count effects below.
-        return spawnDueHermesDeliveries(
-          catalog,
-          room,
-          Object.freeze({
-            ...branch,
-            state: Object.freeze({
-              ...branch.state,
-              pendingHermesShrineDeliveries: Object.freeze(deliveries),
+    next = mapReached(next, (branch) => {
+      const pending = branch.state.pendingHermesShrineDeliveries;
+      const deliveries = Object.fromEntries(
+        Object.entries(pending).map(([key, delivery]) => {
+          if (delivery.due !== undefined) return [key, delivery] as const;
+          const remainingUses = delivery.remainingUses - 1;
+          return [
+            key,
+            Object.freeze({
+              ...delivery,
+              remainingUses: Math.max(0, remainingUses),
+              ...(remainingUses <= 0
+                ? {
+                    due: Object.freeze({
+                      host: deliveryHost,
+                      encounterPhaseKey: event.phaseKey,
+                      cause: 'countdown' as const,
+                      historySequence: event.sequence,
+                    }),
+                  }
+                : {}),
             }),
+          ] as const;
+        }),
+      );
+      // A delivery falling due spawns with the encounter's expiring traits,
+      // before the chamber-count effects below.
+      return spawnDueHermesDeliveries(
+        catalog,
+        room,
+        Object.freeze({
+          ...branch,
+          state: Object.freeze({
+            ...branch.state,
+            pendingHermesShrineDeliveries: Object.freeze(deliveries),
           }),
-          event.sequence,
-        );
-      }),
-    );
+        }),
+        event.sequence,
+      );
+    });
   }
   const steadyOwner: OccurrenceAddress | undefined =
     event.origin.kind === 'occurrence' ? event.origin : undefined;
@@ -552,68 +465,66 @@ export function applyEncounterEndEffectsTransition(
       : Object.freeze({ owner: steadyOwner, phaseKey: event.phaseKey });
   // Fang decay and Bell growth share the RoomsPerUpgrade gate, before the chamber pass.
   if (steadyOwner !== undefined && declaration?.skipRoomsPerUpgrade !== true)
-    next = Object.freeze(
-      next.map((branch) => {
-        const keepsakes = advanceKeepsakeEncounterValues(catalog, branch.state.keepsakes);
-        return keepsakes === branch.state.keepsakes
-          ? branch
-          : Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes }) });
-      }),
-    );
+    next = mapReached(next, (branch) => {
+      const keepsakes = advanceKeepsakeEncounterValues(catalog, branch.state.keepsakes);
+      return keepsakes === branch.state.keepsakes
+        ? branch
+        : Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes }) });
+    });
   const steadyAdvance =
-    landing === undefined || declaration?.skipRoomsPerUpgrade === true
+    landing === undefined || declaration?.skipRoomsPerUpgrade === true || next === undefined
       ? undefined
       : advanceSteadyGrowthAt(catalog, next, landing, event.sequence);
   const embryoAdvance =
-    steadyAdvance === undefined
+    steadyAdvance?.branch === undefined
       ? undefined
       : advanceTranscendentEmbryoAt(
           catalog,
-          steadyAdvance.branches,
+          steadyAdvance.branch,
           landing!,
           event.sequence,
           event.origin.routeKey,
           '',
         );
-  // All automatic end-effects branches must settle before any generated
-  // pickup or delivery frontier is published. The matching below uses the
-  // progress event retained by each final branch, so a filtered branch cannot
-  // leak its maturity into another branch.
-  const finalBranches = embryoAdvance?.branches ?? steadyAdvance?.branches ?? next;
+  // Every automatic end effect settles before any generated pickup or delivery
+  // frontier is published; a blocked outcome publishes neither.
+  const final =
+    embryoAdvance !== undefined
+      ? embryoAdvance.branch
+      : steadyAdvance !== undefined
+        ? steadyAdvance.branch
+        : next;
   const derivedAcquisitionEntryFrontiers: DerivedAcquisitionEntryFrontier[] = [];
-  if (pickupAdvance !== undefined && pickupOwner !== undefined) {
+  if (pickupAdvance !== undefined && pickupOwner !== undefined && final !== undefined) {
     const maturitiesByKey = new Map<string, ReachedPickupProducerMaturity>();
     for (const maturity of pickupAdvance.maturities)
       maturitiesByKey.set(pickupMaturityKey(maturity), maturity);
     const site = createAcquisitionSiteAddress(pickupOwner, 'roomExit');
-    for (const branch of finalBranches) {
-      for (const maturity of maturitiesByKey.values()) {
-        if (!branchReachedPickupMaturity(branch, maturity, event.sequence)) continue;
-        for (const pickup of maturity.pickups) {
-          const fixedReward = createUnresolvedAcquisitionRewardState(
-            catalog,
-            { rewardType: pickup.rewardType },
-            { kind: 'producerLifecycle', key: maturity.producerLifecycleKey },
-            site.routeKey,
-          );
-          derivedAcquisitionEntryFrontiers.push(
-            Object.freeze({
-              address: createAcquisitionEntryAddress(
-                site,
-                clockedTraitGeneratedPickupEntryKey(maturity.acquisitionIdentity, pickup.key),
-              ),
-              kind: 'clockedTraitPickup',
-              historySequence: event.sequence,
-              rewardTypes: Object.freeze([pickup.rewardType]),
-              fixedReward,
-              producerLifecycleKey: maturity.producerLifecycleKey,
-              traitKey: maturity.traitKey,
-              encounterPhaseKey: event.phaseKey,
-              participation: 'optional',
-              branchesBeforeEntry: Object.freeze([branch]),
-            }),
-          );
-        }
+    for (const maturity of maturitiesByKey.values()) {
+      for (const pickup of maturity.pickups) {
+        const fixedReward = createUnresolvedAcquisitionRewardState(
+          catalog,
+          { rewardType: pickup.rewardType },
+          { kind: 'producerLifecycle', key: maturity.producerLifecycleKey },
+          site.routeKey,
+        );
+        derivedAcquisitionEntryFrontiers.push(
+          Object.freeze({
+            address: createAcquisitionEntryAddress(
+              site,
+              clockedTraitGeneratedPickupEntryKey(maturity.acquisitionIdentity, pickup.key),
+            ),
+            kind: 'clockedTraitPickup',
+            historySequence: event.sequence,
+            rewardTypes: Object.freeze([pickup.rewardType]),
+            fixedReward,
+            producerLifecycleKey: maturity.producerLifecycleKey,
+            traitKey: maturity.traitKey,
+            encounterPhaseKey: event.phaseKey,
+            participation: 'optional',
+            branchesBeforeEntry: Object.freeze([final]),
+          }),
+        );
       }
     }
   }
@@ -627,7 +538,7 @@ export function applyEncounterEndEffectsTransition(
       catalog,
       room,
       event.origin,
-      finalBranches,
+      final,
       event.sequence,
       event.phaseKey,
     );
@@ -639,9 +550,9 @@ export function applyEncounterEndEffectsTransition(
     ...(steadyAdvance?.thresholds ?? []).map(({ address }) =>
       Object.freeze({ owner: address, included: true }),
     ),
-    ...(embryoAdvance?.thresholds ?? []).map(({ address }) =>
-      Object.freeze({ owner: address, included: true }),
-    ),
+    ...(embryoAdvance?.threshold === undefined
+      ? []
+      : [Object.freeze({ owner: embryoAdvance.threshold.address, included: true })]),
   ];
   const timelineFacts: PlannerTimelineFacts =
     timelineNodes.length === 0
@@ -649,7 +560,8 @@ export function applyEncounterEndEffectsTransition(
       : Object.freeze({ nodes: Object.freeze(timelineNodes), dependencies: Object.freeze([]) });
   const findings: LifecycleFinding[] = [...deliveryPlacementFindings];
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
-  for (const blocked of steadyAdvance?.blocked ?? []) {
+  const steadyBlocked = steadyAdvance?.blocked;
+  for (const blocked of steadyBlocked === undefined ? [] : [steadyBlocked]) {
     traitChildSettlements.push(Object.freeze({ address: blocked.address, branch: blocked.branch }));
     findings.push(
       Object.freeze({
@@ -677,7 +589,8 @@ export function applyEncounterEndEffectsTransition(
       }),
     );
   }
-  for (const blocked of embryoAdvance?.blocked ?? []) {
+  const embryoBlocked = embryoAdvance?.blocked;
+  for (const blocked of embryoBlocked === undefined ? [] : [embryoBlocked]) {
     traitChildSettlements.push(Object.freeze({ address: blocked.address, branch: blocked.branch }));
     findings.push(
       Object.freeze({
@@ -706,12 +619,15 @@ export function applyEncounterEndEffectsTransition(
     );
   }
   return Object.freeze({
-    branches: advanceRewardBranches(finalBranches, event.sequence),
+    branch: advanceReachedBranch(final, event.sequence),
     generatedPickupPlacements: Object.freeze(generatedPickupPlacements),
     derivedAcquisitionEntryFrontiers: Object.freeze(derivedAcquisitionEntryFrontiers),
     hermesShrineDeliveryPlacementRequired: deliveryPlacementFindings.length > 0,
     steadyGrowthThresholds: steadyAdvance?.thresholds ?? Object.freeze([]),
-    transcendentEmbryoThresholds: embryoAdvance?.thresholds ?? Object.freeze([]),
+    transcendentEmbryoThresholds:
+      embryoAdvance?.threshold === undefined
+        ? Object.freeze([])
+        : Object.freeze([embryoAdvance.threshold]),
     traitChildSettlements: Object.freeze(traitChildSettlements),
     timelineFacts,
     findings: Object.freeze(findings),

@@ -16,7 +16,7 @@ import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
 
 export interface ErisInteractedTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
 }
 
 function curseGrantOwnerKey(branch: RewardBranchState, curseTraitKey: string): string | undefined {
@@ -26,19 +26,10 @@ function curseGrantOwnerKey(branch: RewardBranchState, curseTraitKey: string): s
   return grant === undefined ? undefined : semanticAddressKey(grant.owner);
 }
 
-function cursed(
-  room: CanonicalAuthoredRoom,
-  curseTraitKey: string,
-  branches: readonly RewardBranchState[],
-): boolean | undefined {
-  const cursedBefore = branches.map(
-    (branch) => branch.state.traitHistory.equippedTraits[curseTraitKey] !== undefined,
-  );
-  if (cursedBefore.some((value) => value !== cursedBefore[0]))
-    throw new BiomeRewardSimulationContractError(
-      `${room.gameName} branches disagree on an earlier Eris curse`,
-    );
-  return cursedBefore[0];
+function cursed(curseTraitKey: string, branch: RewardBranchState | undefined): boolean | undefined {
+  return branch === undefined
+    ? undefined
+    : branch.state.traitHistory.equippedTraits[curseTraitKey] !== undefined;
 }
 
 /**
@@ -48,7 +39,7 @@ function cursed(
 export function erisSpawnFindings(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   chronology: FindingChronology,
 ): readonly LifecycleFinding[] {
   const host = routeErisHost(catalog.rooms.byKey[room.gameName], room.origin.routeKey);
@@ -57,7 +48,7 @@ export function erisSpawnFindings(
     !room.roomActionRoster.rows.some(
       (row) => !row.stale && row.reference.kind === 'interactEris',
     ) ||
-    cursed(room, host.curseTraitKey, branches) !== true
+    cursed(host.curseTraitKey, branch) !== true
   )
     return [];
   const owner = createRoomFeatureAddress(room.origin, { kind: 'erisSpawn' });
@@ -81,7 +72,7 @@ export function applyErisInteractedTransition(
   catalog: Catalog,
   event: Extract<HistoryEvent, { readonly kind: 'erisInteracted' }>,
   room: CanonicalAuthoredRoom | undefined,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
 ): ErisInteractedTransition {
   const host =
     room === undefined
@@ -91,26 +82,23 @@ export function applyErisInteractedTransition(
     throw new BiomeRewardSimulationContractError(
       `${room?.gameName ?? 'unknown room'} reached an Eris interaction without a route host`,
     );
-  if (cursed(room!, host.curseTraitKey, branches) === true) return Object.freeze({ branches });
+  if (branch === undefined || cursed(host.curseTraitKey, branch) === true)
+    return Object.freeze({ branch });
   return Object.freeze({
-    branches: Object.freeze(
-      branches.map((branch) =>
-        Object.freeze({
-          ...branch,
-          state: replaceSimulationTraitHistory(
-            branch.state,
-            recordFixedAcquisitionTraitGrant(
-              catalog,
-              branch.state.traitHistory,
-              event.owner,
-              event.sequence,
-              'erisInteraction',
-              host.curseTraitKey,
-            ),
-          ),
-        }),
+    branch: Object.freeze({
+      ...branch,
+      state: replaceSimulationTraitHistory(
+        branch.state,
+        recordFixedAcquisitionTraitGrant(
+          catalog,
+          branch.state.traitHistory,
+          event.owner,
+          event.sequence,
+          'erisInteraction',
+          host.curseTraitKey,
+        ),
       ),
-    ),
+    }),
   });
 }
 

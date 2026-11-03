@@ -10,7 +10,7 @@ import type {
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { fieldsSpatialFindings } from '../../../fields/spatial';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
-import type { RewardBranchState } from '../../branch-primitives';
+import { branchList, type RewardBranchState } from '../../branch-primitives';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { createBiomeRewardFacts } from '../../facts';
@@ -24,7 +24,7 @@ import { spawnPickups } from '../../../state/pending-resource-pickups';
 import type { SimulationState } from '../../../state/model';
 
 export interface FieldsOptionalOfferPointMaterialization {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: readonly FindingRegionEntry[];
   readonly producerFrontiers: readonly RewardProducerFrontier[];
 }
@@ -36,7 +36,7 @@ export interface FieldsOptionalOfferPointMaterializationInputs {
   readonly room: CanonicalAuthoredRoom;
   readonly declaration: RoomDeclaration;
   readonly roomView: ProgressiveRoomHistoryViews;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly lifecycle: RewardLifecycleReferences;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
 }
@@ -75,7 +75,7 @@ export function materializeFieldsOptionalOfferPoint(
   );
   const findings = new Map<string, FindingRegionEntry>();
   const producerFrontiers: RewardProducerFrontier[] = [];
-  const frontierBranches = inputs.branches;
+  const frontier = inputs.branch;
 
   const candidateState = (
     base: (typeof unresolvedOptionals)[number],
@@ -155,16 +155,16 @@ export function materializeFieldsOptionalOfferPoint(
     let representativeFailedFindings: Map<string, FindingRegionEntry> | undefined;
     const visit = (
       index: number,
-      current: readonly RewardBranchState[],
+      current: RewardBranchState | undefined,
       currentFindings: Map<string, FindingRegionEntry>,
     ):
       | {
-          readonly branches: readonly RewardBranchState[];
+          readonly branch: RewardBranchState | undefined;
           readonly findings: Map<string, FindingRegionEntry>;
         }
       | undefined => {
       if (index === orderedSlots.length)
-        return Object.freeze({ branches: current, findings: currentFindings });
+        return Object.freeze({ branch: current, findings: currentFindings });
       const slotKey = orderedSlots[index]!;
       const concrete = concreteBySlot.get(slotKey);
       const unresolved = unresolvedBySlot.get(slotKey);
@@ -183,7 +183,7 @@ export function materializeFieldsOptionalOfferPoint(
               ? Object.freeze({ ...concrete!, offer: candidateOffer })
               : candidateState(unresolved, candidateOffer);
         const next = processRewardOffer(current, contextFor(reward), trialFindings);
-        if (next.length === 0) {
+        if (next === undefined) {
           representativeFailedFindings ??= trialFindings;
           continue;
         }
@@ -192,8 +192,8 @@ export function materializeFieldsOptionalOfferPoint(
       }
       return undefined;
     };
-    const completion = visit(0, frontierBranches, new Map());
-    const candidateBranches = completion?.branches ?? Object.freeze([]);
+    const completion = visit(0, frontier, new Map());
+    const completed = completion?.branch;
     const candidateFindings = completion?.findings ?? representativeFailedFindings ?? new Map();
     const pointKey = `optionalRewards:${selectedReward.slotKey}`;
     const acquisitionEvent = lifecycle.acquisitionPointsByOwner
@@ -203,14 +203,14 @@ export function materializeFieldsOptionalOfferPoint(
       (point) => point.point === pointKey,
     )?.before;
     if (
-      candidateBranches.length > 0 &&
+      completed !== undefined &&
       acquisitionEvent !== undefined &&
       acquisitionEvent.sequence <= reachedThrough &&
       acquisitionView !== undefined
     ) {
       const settlement = settleOwnedAcquisitionSite(
         catalog,
-        candidateBranches,
+        branchList(completed),
         {
           siteOwner: selectedReward.origin,
           pointKey,
@@ -246,10 +246,10 @@ export function materializeFieldsOptionalOfferPoint(
       mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
     }
     const exclusions =
-      candidateBranches.length > 0
+      completed !== undefined
         ? undefined
         : explainCohortOfferExclusions(
-            frontierBranches,
+            frontier,
             contextFor(focusedReward(selectedReward.slotKey)),
             {
               earlier: orderedSlots
@@ -267,7 +267,7 @@ export function materializeFieldsOptionalOfferPoint(
           .map((entry) => entry.finding)
           .filter((finding) => finding.code !== 'traitOfferMissing'),
       ),
-      supported: candidateBranches.length > 0,
+      supported: completed !== undefined,
       ...(exclusions === undefined ? {} : { exclusions }),
     });
   };
@@ -292,7 +292,7 @@ export function materializeFieldsOptionalOfferPoint(
     );
   }
 
-  let branches = inputs.branches;
+  let branch = inputs.branch;
   let reachedMissing = false;
   for (const slotKey of orderedSlots) {
     const concrete = concreteBySlot.get(slotKey);
@@ -300,7 +300,7 @@ export function materializeFieldsOptionalOfferPoint(
       reachedMissing = true;
       continue;
     }
-    if (!reachedMissing) branches = processRewardOffer(branches, contextFor(concrete), findings);
+    if (!reachedMissing) branch = processRewardOffer(branch, contextFor(concrete), findings);
   }
   if (unresolvedOptionals.length > 0) {
     for (const unresolved of unresolvedOptionals) {
@@ -311,9 +311,9 @@ export function materializeFieldsOptionalOfferPoint(
         historyFindingChronology(event.sequence),
       );
     }
-    branches = Object.freeze([]);
+    branch = undefined;
   }
-  if (branches.length > 0)
+  if (branch !== undefined)
     for (const finding of fieldsSpatialFindings(catalog, room))
       addRewardFinding(
         findings,
@@ -324,11 +324,10 @@ export function materializeFieldsOptionalOfferPoint(
   // `SpawnRewardCages` builds every cage reward and optional reward at this point.
   const spawned = [...(room.localRewards ?? []), ...optionalRewards];
   return Object.freeze({
-    branches: Object.freeze(
-      branches.map((branch) =>
-        Object.freeze({ ...branch, state: spawnPickups(catalog, branch.state, spawned) }),
-      ),
-    ),
+    branch:
+      branch === undefined
+        ? undefined
+        : Object.freeze({ ...branch, state: spawnPickups(catalog, branch.state, spawned) }),
     findings: Object.freeze([...findings.values()]),
     producerFrontiers: Object.freeze(producerFrontiers),
   });

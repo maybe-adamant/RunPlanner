@@ -186,7 +186,7 @@ describe('Dream Shop availability', () => {
           throw new Error(detail);
         },
       });
-    const inventory = processShopInventory(branches, {
+    const inventory = processShopInventory(branches[0], {
       catalog,
       room,
       declaration,
@@ -234,7 +234,7 @@ describe('Dream Shop availability', () => {
           throw new Error(detail);
         },
       });
-    const inventory = processShopInventory(branches, {
+    const inventory = processShopInventory(branches[0], {
       catalog,
       room,
       declaration,
@@ -244,7 +244,7 @@ describe('Dream Shop availability', () => {
         throw new Error(detail);
       },
     });
-    const settlement = settleShopAcquisitionSite(inventory.branches, {
+    const settlement = settleShopAcquisitionSite([inventory.branch!], {
       catalog,
       room,
       declaration,
@@ -408,7 +408,7 @@ describe('Dream Shop trait offers against the state they were built from', () =>
           throw new Error(detail);
         },
       });
-    const inventory = processShopInventory(branches, {
+    const inventory = processShopInventory(branches[0], {
       catalog,
       room,
       declaration,
@@ -420,7 +420,7 @@ describe('Dream Shop trait offers against the state they were built from', () =>
     });
     const offers = room.entryState?.kind === 'shop' ? room.entryState.offers : [];
     // The shop's loot spawns at room entry, before any purchase.
-    const spawned = inventory.branches.map((branch) =>
+    const spawned = [inventory.branch!].map((branch) =>
       Object.freeze({
         ...branch,
         state: spawnPendingTraitOffers(

@@ -167,7 +167,7 @@ describe('World Shop inventory generation reads god pickups', () => {
       lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
-    const inventory = processShopInventory([branch], {
+    const inventory = processShopInventory(branch, {
       catalog,
       room: canonical,
       declaration: room,

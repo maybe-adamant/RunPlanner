@@ -19,7 +19,7 @@ import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import type { LifecycleFinding } from './types';
 
 export interface RoomPreparedTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: readonly LifecycleFinding[];
 }
 
@@ -68,7 +68,7 @@ export function applyRoomPreparedTransition(
   snapshot: BiomeRewardSnapshot,
   event: Extract<HistoryEvent, { readonly kind: 'roomPrepared' }>,
   room: CanonicalAuthoredRoom | undefined,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
 ): RoomPreparedTransition {
   const findings: LifecycleFinding[] = [];
   if (room !== undefined) {
@@ -84,7 +84,7 @@ export function applyRoomPreparedTransition(
       findings.push(Object.freeze({ finding, region: ownerRegion(finding.origin), chronology }));
   }
   return Object.freeze({
-    branches: beginRewardRoom(branches, event.sequence),
+    branch: beginRewardRoom(branch, event.sequence),
     findings: Object.freeze(findings),
   });
 }

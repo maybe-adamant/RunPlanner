@@ -887,19 +887,11 @@ export function settleShopAcquisitionSite(
 
 /** Closes a generated Shop witness after the room's final chronology action. */
 export function completePendingShopAcquisitionSite(
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   owner: SemanticAddress,
-  fail: (detail: string) => never,
-): readonly RewardBranchState[] {
+): RewardBranchState | undefined {
   const shopKey = semanticAddressKey(owner);
-  const pendingCount = branches.filter(
-    (branch) => branch.state.pendingShops[shopKey] !== undefined,
-  ).length;
-  if (pendingCount === 0) return branches;
-  if (pendingCount !== branches.length) {
-    return fail(`${semanticAddressKey(owner)} has a divergent pending Shop frontier`);
-  }
-  return Object.freeze(branches.map((branch) => closeShop(branch, shopKey)));
+  return branch?.state.pendingShops[shopKey] === undefined ? branch : closeShop(branch, shopKey);
 }
 
 function closeShop(branch: RewardBranchState, shopKey: string): RewardBranchState {

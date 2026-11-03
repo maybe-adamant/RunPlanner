@@ -20,7 +20,7 @@ import {
   createRewardProducerCandidateResult,
   type RewardProducerFrontier,
 } from '../../producer-frontiers';
-import type { RewardBranchState } from '../../branch-primitives';
+import { branchList, singleBranch, type RewardBranchState } from '../../branch-primitives';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import {
   createGenerationEmissions,
@@ -59,8 +59,8 @@ function incomingCandidateForOffer(
 
 interface IncomingOfferCandidateContext {
   readonly context: OfferProcessingContext;
-  /** Branches reaching generation, before the offer was processed. */
-  readonly frontierBranches: readonly RewardBranchState[];
+  /** The state reaching generation, before the offer was processed. */
+  readonly frontier: RewardBranchState | undefined;
   readonly declaration: RoomCreatedRewardContext['declaration'];
   readonly room: RoomCreatedRewardContext['room'];
   readonly incoming: CanonicalResolvedIncomingReward;
@@ -80,21 +80,19 @@ function completeIncomingOfferCandidate(
   authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>,
   entry: IncomingOfferCandidateContext,
   offer: CanonicalResolvedIncomingReward['offer'],
-  candidateBranches: readonly RewardBranchState[],
+  offered: RewardBranchState | undefined,
   candidateFindings: Map<string, FindingRegionEntry>,
 ) {
   const exclusions =
-    candidateBranches.length === 0
-      ? explainRewardOfferExclusions(entry.frontierBranches, entry.context)
-      : undefined;
+    offered === undefined ? explainRewardOfferExclusions(entry.frontier, entry.context) : undefined;
   // Only the unchanged envelope retains authored acquisition children. A new
   // reward's children are authored after selection, not prerequisites for it.
   if (entry.incoming !== entry.room.incomingReward) {
-    return createRewardProducerCandidateResult(candidateFindings, candidateBranches, exclusions);
+    return createRewardProducerCandidateResult(candidateFindings, offered, exclusions);
   }
-  let branches = candidateBranches;
+  let branch = offered;
   if (
-    branches.length > 0 &&
+    branch !== undefined &&
     entry.incoming.acquisitionEnabled !== false &&
     entry.acquisitionView !== undefined
   ) {
@@ -129,10 +127,10 @@ function completeIncomingOfferCandidate(
             }),
           );
     for (const acquisitionEvent of events) {
-      if (branches.length === 0) break;
+      if (branch === undefined) break;
       const settlement = settleProducerAcquisitionSite(
         catalog,
-        branches,
+        branchList(branch),
         candidateRoom,
         acquisitionEvent,
         (state) =>
@@ -159,10 +157,10 @@ function completeIncomingOfferCandidate(
         authoredSeaStarDuplicateSiteKeys,
       );
       mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
-      branches = settlement.branches;
+      branch = singleBranch(settlement.branches);
     }
   }
-  return createRewardProducerCandidateResult(candidateFindings, branches, exclusions);
+  return createRewardProducerCandidateResult(candidateFindings, branch, exclusions);
 }
 
 /** Generates exactly one resolved or unresolved incoming reward envelope. */
@@ -172,7 +170,7 @@ export function generateIncomingReward(
   event: Extract<HistoryEvent, { readonly kind: 'roomCreated' }>,
   context: RoomCreatedRewardContext,
   inputs: {
-    readonly branches: readonly RewardBranchState[];
+    readonly branch: RewardBranchState | undefined;
     readonly peers: readonly OfferProcessingPeer[];
     readonly pendingHubBoard?: PendingHubBoardGeneration;
     readonly lifecycle: RewardLifecycleReferences;
@@ -253,14 +251,14 @@ export function generateIncomingReward(
     if (event.source === 'hubTarget') {
       const pending =
         inputs.pendingHubBoard ??
-        Object.freeze({ frontierBranches: inputs.branches, participants: Object.freeze([]) });
+        Object.freeze({ frontier: inputs.branch, participants: Object.freeze([]) });
       return createGenerationEmissions(
-        inputs.branches,
+        inputs.branch,
         inputs.peers,
         findings,
         frontiers,
         Object.freeze({
-          frontierBranches: pending.frontierBranches,
+          frontier: pending.frontier,
           participants: Object.freeze([
             ...pending.participants,
             Object.freeze({
@@ -311,7 +309,7 @@ export function generateIncomingReward(
             peers: inputs.peers,
             facts: (state: SimulationState) => facts(state),
           });
-          const branches = processRewardOffer(inputs.branches, candidateContext, candidateFindings);
+          const offered = processRewardOffer(inputs.branch, candidateContext, candidateFindings);
           return completeIncomingOfferCandidate(
             catalog,
             snapshot,
@@ -319,7 +317,7 @@ export function generateIncomingReward(
             inputs.authoredSeaStarDuplicateSiteKeys,
             Object.freeze({
               context: candidateContext,
-              frontierBranches: inputs.branches,
+              frontier: inputs.branch,
               declaration: context.declaration,
               room: context.room,
               incoming: candidate,
@@ -328,7 +326,7 @@ export function generateIncomingReward(
               reachedThrough,
             }),
             offer,
-            branches,
+            offered,
             candidateFindings,
           );
         },
@@ -340,7 +338,7 @@ export function generateIncomingReward(
       ownerRegion(offerOrigin),
       offerChronology ?? historyFindingChronology(event.sequence),
     );
-    return createGenerationEmissions(Object.freeze([]), inputs.peers, findings, frontiers);
+    return createGenerationEmissions(undefined, inputs.peers, findings, frontiers);
   }
 
   // A rerolled door still offers its first draw; its acquisition is the effective reward's.
@@ -354,7 +352,7 @@ export function generateIncomingReward(
     );
   if (incoming === undefined)
     return createGenerationEmissions(
-      inputs.branches,
+      inputs.branch,
       inputs.peers,
       findings,
       frontiers,
@@ -374,14 +372,14 @@ export function generateIncomingReward(
   if (event.source === 'hubTarget') {
     const pending =
       inputs.pendingHubBoard ??
-      Object.freeze({ frontierBranches: inputs.branches, participants: Object.freeze([]) });
+      Object.freeze({ frontier: inputs.branch, participants: Object.freeze([]) });
     return createGenerationEmissions(
-      inputs.branches,
+      inputs.branch,
       inputs.peers,
       findings,
       frontiers,
       Object.freeze({
-        frontierBranches: pending.frontierBranches,
+        frontier: pending.frontier,
         participants: Object.freeze([
           ...pending.participants,
           Object.freeze({ kind: 'resolved' as const, context: offerContext, incoming }),
@@ -414,11 +412,7 @@ export function generateIncomingReward(
           ...offerContext,
           reward: Object.freeze({ ...candidate, origin: offerOrigin }),
         });
-        const candidateBranches = processRewardOffer(
-          inputs.branches,
-          candidateContext,
-          candidateFindings,
-        );
+        const offered = processRewardOffer(inputs.branch, candidateContext, candidateFindings);
         return completeIncomingOfferCandidate(
           catalog,
           snapshot,
@@ -426,7 +420,7 @@ export function generateIncomingReward(
           inputs.authoredSeaStarDuplicateSiteKeys,
           Object.freeze({
             context: candidateContext,
-            frontierBranches: inputs.branches,
+            frontier: inputs.branch,
             declaration: context.declaration,
             room: context.room,
             incoming: candidate,
@@ -435,13 +429,13 @@ export function generateIncomingReward(
             reachedThrough,
           }),
           offer,
-          candidateBranches,
+          offered,
           candidateFindings,
         );
       },
     }),
   );
-  const branches = processRewardOffer(inputs.branches, offerContext, findings);
+  const branch = processRewardOffer(inputs.branch, offerContext, findings);
   const peers =
     event.source === 'generatedTarget' || event.source === 'localVisit'
       ? Object.freeze([
@@ -449,5 +443,5 @@ export function generateIncomingReward(
           Object.freeze({ origin: event.targetOrigin, offer: incoming.offer }),
         ])
       : inputs.peers;
-  return createGenerationEmissions(branches, peers, findings, frontiers, inputs.pendingHubBoard);
+  return createGenerationEmissions(branch, peers, findings, frontiers, inputs.pendingHubBoard);
 }

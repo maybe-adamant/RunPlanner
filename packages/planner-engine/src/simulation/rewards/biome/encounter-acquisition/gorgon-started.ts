@@ -20,12 +20,12 @@ import {
   offerGenerationAdjustedGiverSource,
 } from '../../../traits/offers';
 
-import type { RewardBranchState } from '../../branch-primitives';
+import { mapReached, type RewardBranchState } from '../../branch-primitives';
 import type { GorgonPhaseCandidateSupport } from '../../model';
 import type { LifecycleFinding } from '../lifecycle-transitions/types';
 
 export interface GorgonStartedTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly candidate:
     { readonly key: string; readonly value: GorgonPhaseCandidateSupport } | undefined;
   readonly eligiblePhaseKey: string | undefined;
@@ -34,14 +34,14 @@ export interface GorgonStartedTransition {
 
 export function resolveGorgonCandidateRarity(inputs: {
   readonly catalog: Catalog;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly providerKey: string;
   readonly rarityLevel: NonNullable<GorgonPhaseCandidateSupport['rarityLevel']>;
   readonly roomOverride: BoonRarityOverride | undefined;
 }): TraitRarity | undefined {
   const sourceOverride = gorgonSourceRarityOverride(inputs.rarityLevel);
   const suppressTemporaryBoonRarity = inputs.rarityLevel > 1;
-  const branch = inputs.branches[0];
+  const { branch } = inputs;
   if (branch === undefined) return undefined;
   const context = offerGenerationAdjustedGiverSource(
     inputs.catalog,
@@ -70,7 +70,7 @@ export function applyGorgonStartedTransition(inputs: {
   readonly event: Extract<HistoryEvent, { readonly kind: 'encounterStarted' }>;
   readonly room: CanonicalAuthoredRoom | undefined;
   readonly view: ProgressiveRoomHistoryViews | undefined;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly evaluationBlocked: boolean;
 }): GorgonStartedTransition {
   const { catalog, event, room, view } = inputs;
@@ -78,12 +78,12 @@ export function applyGorgonStartedTransition(inputs: {
   const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
   if (room === undefined || phase === undefined || declaration === undefined || view === undefined)
     return Object.freeze({
-      branches: inputs.branches,
+      branch: inputs.branch,
       candidate: undefined,
       eligiblePhaseKey: undefined,
       findings: Object.freeze([]),
     });
-  const keepsakes = inputs.branches[0]?.state.keepsakes;
+  const keepsakes = inputs.branch?.state.keepsakes;
   const status = keepsakes?.gorgon?.status;
   const rarityLevel = keepsakes === undefined ? undefined : pendingGorgonRarityLevel(keepsakes);
   const definition = catalog.encounterDefinitions.byKey[event.encounterKey]!;
@@ -111,7 +111,7 @@ export function applyGorgonStartedTransition(inputs: {
       ? undefined
       : resolveGorgonCandidateRarity({
           catalog,
-          branches: inputs.branches,
+          branch: inputs.branch,
           providerKey: effect.providerKey,
           rarityLevel,
           roomOverride: declaration.boonRarityOverride,
@@ -157,16 +157,14 @@ export function applyGorgonStartedTransition(inputs: {
       : Object.freeze([]);
   if (naturalAthena)
     return Object.freeze({
-      branches: Object.freeze(
-        inputs.branches.map((branch) =>
-          Object.freeze({
-            ...branch,
-            state: Object.freeze({
-              ...branch.state,
-              keepsakes: expirePendingGorgon(branch.state.keepsakes),
-            }),
+      branch: mapReached(inputs.branch, (branch) =>
+        Object.freeze({
+          ...branch,
+          state: Object.freeze({
+            ...branch.state,
+            keepsakes: expirePendingGorgon(branch.state.keepsakes),
           }),
-        ),
+        }),
       ),
       candidate,
       eligiblePhaseKey: undefined,
@@ -184,7 +182,7 @@ export function applyGorgonStartedTransition(inputs: {
       room.encounters.gorgonResultByPhase?.[event.phaseKey]?.athenaTriggerConditionMet === true,
   });
   return Object.freeze({
-    branches: inputs.branches,
+    branch: inputs.branch,
     candidate,
     findings,
     eligiblePhaseKey:

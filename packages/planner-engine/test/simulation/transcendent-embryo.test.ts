@@ -182,57 +182,55 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
         sequence,
       });
 
-    let branches: readonly RewardBranchState[] = [initial];
-    expect(branches[0]?.state.keepsakes.transcendentEmbryo?.progress).toBe(0);
+    let branch: RewardBranchState | undefined = initial;
+    expect(branch?.state.keepsakes.transcendentEmbryo?.progress).toBe(0);
     for (let sequence = 1; sequence < 8; sequence += 1) {
-      const transition = applyEncounterEndEffectsTransition(catalog, end(sequence), room, branches);
+      const transition = applyEncounterEndEffectsTransition(catalog, end(sequence), room, branch);
       expect(transition.transcendentEmbryoThresholds).toHaveLength(0);
-      expect(transition.branches[0]?.state.keepsakes.transcendentEmbryo?.progress).toBe(sequence);
-      branches = transition.branches;
+      expect(transition.branch?.state.keepsakes.transcendentEmbryo?.progress).toBe(sequence);
+      branch = transition.branch;
     }
-    expect(branches[0]?.state.keepsakes.transcendentEmbryo?.progress).toBe(7);
+    expect(branch?.state.keepsakes.transcendentEmbryo?.progress).toBe(7);
 
     const suppressed = applyEncounterEndEffectsTransition(
       catalog,
       end(8),
       { ...room, gameName: 'N_Sub01' } as unknown as CanonicalAuthoredRoom,
-      branches,
+      branch,
     );
     expect(suppressed.transcendentEmbryoThresholds).toHaveLength(0);
-    expect(suppressed.branches[0]?.state.keepsakes.transcendentEmbryo?.progress).toBe(7);
+    expect(suppressed.branch?.state.keepsakes.transcendentEmbryo?.progress).toBe(7);
 
     const missing = applyEncounterEndEffectsTransition(
       catalog,
       end(9),
       room,
-      suppressed.branches.map((branch) =>
-        Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            keepsakes: Object.freeze({
-              ...branch.state.keepsakes,
-              transcendentEmbryo: Object.freeze({
-                ...branch.state.keepsakes.transcendentEmbryo!,
-                transformations: Object.freeze({}),
-              }),
+      Object.freeze({
+        ...suppressed.branch!,
+        state: Object.freeze({
+          ...suppressed.branch!.state,
+          keepsakes: Object.freeze({
+            ...suppressed.branch!.state.keepsakes,
+            transcendentEmbryo: Object.freeze({
+              ...suppressed.branch!.state.keepsakes.transcendentEmbryo!,
+              transformations: Object.freeze({}),
             }),
           }),
         }),
-      ),
+      }),
     );
-    expect(missing.branches).toHaveLength(0);
+    expect(missing.branch).toBeUndefined();
     expect(missing.findings).toMatchObject([
       { finding: { code: 'transcendentEmbryoOutcomeMissing' } },
     ]);
 
-    const resolved = applyEncounterEndEffectsTransition(catalog, end(9), room, suppressed.branches);
+    const resolved = applyEncounterEndEffectsTransition(catalog, end(9), room, suppressed.branch);
     expect(resolved.findings).toHaveLength(0);
-    expect(resolved.branches[0]?.state.keepsakes.transcendentEmbryo).toMatchObject({
+    expect(resolved.branch?.state.keepsakes.transcendentEmbryo).toMatchObject({
       progress: 0,
       markedBlessingKey: 'ChaosWeaponBlessing',
     });
-    expect(resolved.branches[0]?.state.traitHistory?.maturedChaosBlessings).toMatchObject([
+    expect(resolved.branch?.state.traitHistory?.maturedChaosBlessings).toMatchObject([
       { blessingKey: 'ChaosWeaponBlessing' },
     ]);
   });
@@ -270,19 +268,17 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       encounters: {},
       encounterPhases: [],
     } as unknown as CanonicalAuthoredRoom;
-    let branches: readonly RewardBranchState[] = [
-      Object.freeze({
-        ...initial,
-        state: spawnPendingTraitOffers(catalog, initial.state, [waiting]),
-      }),
-    ];
+    let branch: RewardBranchState | undefined = Object.freeze({
+      ...initial,
+      state: spawnPendingTraitOffers(catalog, initial.state, [waiting]),
+    });
     const record = () =>
-      branches[0]?.state.pendingTraitOffers[semanticAddressKey(encounterOwner)]?.[
+      branch?.state.pendingTraitOffers[semanticAddressKey(encounterOwner)]?.[
         semanticAddressKey(createTraitOfferAddress(waiting.origin, 'source'))
       ];
     for (let sequence = 1; sequence <= 8; sequence += 1) {
       expect(record()?.stale).toBe(false);
-      branches = applyEncounterEndEffectsTransition(
+      branch = applyEncounterEndEffectsTransition(
         catalog,
         Object.freeze({
           kind: 'encounterEndEffectsApplied' as const,
@@ -294,10 +290,10 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
           sequence,
         }),
         room,
-        branches,
-      ).branches;
+        branch,
+      ).branch;
     }
-    expect(branches[0]?.state.keepsakes.transcendentEmbryo?.progress).toBe(0);
+    expect(branch?.state.keepsakes.transcendentEmbryo?.progress).toBe(0);
     expect(record()?.stale).toBe(true);
   });
 
@@ -368,7 +364,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
         sequence: 1,
       }),
       room,
-      [withTestEncounterRecord(branch, room, 'Encounter', 'OpeningGeneratedF')],
+      withTestEncounterRecord(branch, room, 'Encounter', 'OpeningGeneratedF'),
     );
     const delivery = transition.derivedAcquisitionEntryFrontiers.find(
       (frontier) => frontier.kind === 'hermesShrineDelivery',
@@ -641,10 +637,10 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       } as unknown as CanonicalAuthoredRoom,
       undefined,
       createDefaultRouteLoadout(catalog),
-      [equipped],
+      equipped,
       2,
     );
-    const replaced = transition.branches[0];
+    const replaced = transition.branch;
     if (replaced === undefined) throw new Error('rack replacement did not produce a branch');
     expect(replaced.state.keepsakes.currentKey).toBe('GoldifyKeepsake');
     expect(replaced.state.keepsakes.transcendentEmbryo).toBeUndefined();
@@ -655,7 +651,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       equipped.state.traitHistory?.elementCounts,
     );
 
-    let laterBranches = transition.branches;
+    let laterBranches = transition.branch;
     for (let sequence = 3; sequence <= 10; sequence += 1) {
       const later = applyEncounterEndEffectsTransition(
         catalog,
@@ -677,11 +673,11 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       );
       expect(later.findings).toHaveLength(0);
       expect(later.transcendentEmbryoThresholds).toHaveLength(0);
-      expect(later.branches[0]?.state.keepsakes.transcendentEmbryo).toBeUndefined();
-      expect(later.branches[0]?.state.traitHistory?.maturedChaosBlessings).toEqual(
+      expect(later.branch?.state.keepsakes.transcendentEmbryo).toBeUndefined();
+      expect(later.branch?.state.traitHistory?.maturedChaosBlessings).toEqual(
         equipped.state.traitHistory?.maturedChaosBlessings,
       );
-      laterBranches = later.branches;
+      laterBranches = later.branch;
     }
 
     const laterChaos = createTraitOfferAddress(
@@ -766,10 +762,10 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       } as unknown as CanonicalAuthoredRoom,
       undefined,
       createDefaultRouteLoadout(catalog),
-      [echoBranch],
+      echoBranch,
       2,
     );
-    const replaced = transition.branches[0];
+    const replaced = transition.branch;
     if (replaced === undefined) throw new Error('rack replacement did not produce a branch');
     expect(replaced.state.keepsakes.currentKey).toBe('RarifyKeepsake');
     expect(replaced.state.keepsakes.transcendentEmbryo).toMatchObject({

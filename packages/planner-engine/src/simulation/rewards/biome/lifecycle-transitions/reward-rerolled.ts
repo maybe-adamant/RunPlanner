@@ -27,8 +27,8 @@ import {
   type FindingRegionEntry,
 } from '../../../finding-regions';
 import type { SimulationState } from '../../../state/model';
-import { singleBranch, type RewardBranchState } from '../../branch-primitives';
-import { advanceRewardBranches } from '../../branch-lifecycle';
+import type { RewardBranchState } from '../../branch-primitives';
+import { advanceRewardBranch } from '../../branch-lifecycle';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, rewardFinding } from '../../findings';
 import {
@@ -53,7 +53,7 @@ import { BiomeRewardSimulationContractError } from '../biome-contract';
 export type RerolledOffers = ReadonlyMap<string, ResolvedRewardOffer>;
 
 export interface RewardRerolledTransition {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly rerolledOffers: RerolledOffers;
   readonly findings: readonly FindingRegionEntry[];
   readonly producerFrontiers: readonly RewardProducerFrontier[];
@@ -282,8 +282,8 @@ export function reachedRerollPool(branch: RewardBranchState | undefined): number
 }
 
 /**
- * Evaluates one new reward for a press on the target, against the branches
- * that reach the press and every door's (wheel's, cage's) current reward.
+ * Evaluates one new reward for a press on the target, against the state
+ * that reaches the press and every door's (wheel's, cage's) current reward.
  */
 export function rerollOfferEvaluator(inputs: {
   readonly catalog: Catalog;
@@ -292,13 +292,13 @@ export function rerollOfferEvaluator(inputs: {
   readonly historySequence: number;
   readonly view: HistoryStateView;
   readonly chronology: FindingChronology;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly rerolledOffers: RerolledOffers;
 }): {
   readonly contextFor: (offer: ResolvedRewardOffer) => OfferProcessingContext;
   readonly evaluateOffer: (offer: ResolvedRewardOffer) => RewardProducerCandidateResult;
 } {
-  const { catalog, owner, target, historySequence, view, chronology, branches } = inputs;
+  const { catalog, owner, target, historySequence, view, chronology, branch } = inputs;
   const peers = Object.freeze([
     ...(target.excludesOriginal
       ? [Object.freeze({ origin: target.owner as SemanticAddress, offer: target.generated })]
@@ -340,13 +340,11 @@ export function rerollOfferEvaluator(inputs: {
     evaluateOffer: (offer: ResolvedRewardOffer) => {
       const candidateFindings = new Map<string, FindingRegionEntry>();
       const context = contextFor(offer);
-      const candidateBranches = processRewardOffer(branches, context, candidateFindings);
+      const candidate = processRewardOffer(branch, context, candidateFindings);
       return createRewardProducerCandidateResult(
         candidateFindings,
-        candidateBranches,
-        candidateBranches.length === 0
-          ? explainRewardOfferExclusions(branches, context)
-          : undefined,
+        candidate,
+        candidate === undefined ? explainRewardOfferExclusions(branch, context) : undefined,
       );
     },
   });
@@ -371,7 +369,7 @@ export function applyRewardRerolledTransition(inputs: {
   readonly historySequence: number;
   readonly view: HistoryStateView | undefined;
   readonly chronology?: FindingChronology;
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly rerolledOffers: RerolledOffers;
 }): RewardRerolledTransition {
   const { catalog, owner, target, historySequence, view } = inputs;
@@ -381,15 +379,16 @@ export function applyRewardRerolledTransition(inputs: {
   const blocked = (code: Parameters<typeof rewardFinding>[0], evidence = {}) => {
     addRewardFinding(findings, rewardFinding(code, owner, evidence), region, chronology);
     return Object.freeze({
-      branches: Object.freeze([]),
+      branch: undefined,
       rerolledOffers: inputs.rerolledOffers,
       findings: Object.freeze([...findings.values()]),
       producerFrontiers: Object.freeze([]),
     });
   };
-  if (inputs.branches.length === 0)
+  const reached = inputs.branch;
+  if (reached === undefined)
     return Object.freeze({
-      branches: inputs.branches,
+      branch: undefined,
       rerolledOffers: inputs.rerolledOffers,
       findings: Object.freeze([]),
       producerFrontiers: Object.freeze([]),
@@ -408,9 +407,8 @@ export function applyRewardRerolledTransition(inputs: {
       `${semanticAddressKey(owner)} has no history view`,
     );
   // The game refuses a press the pool cannot pay for, so nothing past it happens.
-  const remaining = reachedRerollPool(singleBranch(inputs.branches));
+  const remaining = reachedRerollPool(reached);
   if (remaining < 1) return blocked('rerollPoolExceeded', { cost: 1, remaining });
-  const frontierBranches = inputs.branches;
   const evaluator = rerollOfferEvaluator({
     catalog,
     owner,
@@ -418,25 +416,21 @@ export function applyRewardRerolledTransition(inputs: {
     historySequence,
     view,
     chronology,
-    branches: frontierBranches,
+    branch: reached,
     rerolledOffers: inputs.rerolledOffers,
   });
-  const drawn = processRewardOffer(frontierBranches, evaluator.contextFor(inputs.reward), findings);
-  const branches =
-    drawn.length === 0
-      ? Object.freeze([])
-      : advanceRewardBranches(
-          Object.freeze(
-            drawn.map((branch) =>
-              Object.freeze({
-                ...branch,
-                state: Object.freeze({
-                  ...branch.state,
-                  arcanaFear: spendRerolls(branch.state.arcanaFear, 1),
-                }),
-              }),
-            ),
-          ),
+  const drawn = processRewardOffer(reached, evaluator.contextFor(inputs.reward), findings);
+  const branch =
+    drawn === undefined
+      ? undefined
+      : advanceRewardBranch(
+          Object.freeze({
+            ...drawn,
+            state: Object.freeze({
+              ...drawn.state,
+              arcanaFear: spendRerolls(drawn.state.arcanaFear, 1),
+            }),
+          }),
           historySequence,
         );
   const ownerKey = semanticAddressKey(owner);
@@ -456,9 +450,9 @@ export function applyRewardRerolledTransition(inputs: {
       },
     }),
   ]);
-  const settled = branches.length > 0;
+  const settled = branch !== undefined;
   return Object.freeze({
-    branches,
+    branch,
     rerolledOffers: settled
       ? new Map(inputs.rerolledOffers).set(target.peerKey, inputs.reward)
       : inputs.rerolledOffers,
@@ -470,7 +464,7 @@ export function applyRewardRerolledTransition(inputs: {
       historySequence,
       reward: inputs.reward,
       poolRemainingBefore: remaining,
-      ...(settled ? { poolRemainingAfter: reachedRerollPool(singleBranch(branches)) } : {}),
+      ...(settled ? { poolRemainingAfter: reachedRerollPool(branch) } : {}),
     }),
   });
 }

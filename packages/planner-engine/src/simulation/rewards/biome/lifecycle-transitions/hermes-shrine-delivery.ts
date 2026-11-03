@@ -25,7 +25,7 @@ export function dueHermesShrineDeliveryFrontier(
   catalog: Catalog,
   room: CanonicalAuthoredRoom | undefined,
   deliveryHost: Extract<SemanticAddress, { readonly kind: 'occurrence' }>,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   sequence: number,
   encounterPhaseKey: string | undefined,
 ): {
@@ -39,77 +39,82 @@ export function dueHermesShrineDeliveryFrontier(
   let placementRequired = false;
   const placements = new Map<string, GeneratedPickupPlacement>();
   const site = createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery');
-  for (const branch of branches) {
-    for (const delivery of Object.values(branch.state.pendingHermesShrineDeliveries)) {
-      // The frontier covers every phase of the host; the exact phase is checked per retained action.
-      if (!dueContactMatches(delivery, deliveryHost)) continue;
-      const entryKey = hermesShrineDeliveryEntryKey(delivery.source, delivery.generationKey);
-      const retained =
-        room?.kind === 'authored'
-          ? room.acquisitionSites?.hermesShrineDelivery?.entries[entryKey]
-          : undefined;
-      const retainedReference = room?.roomActionRoster?.rows.find(
+  if (branch === undefined)
+    return Object.freeze({
+      findings: Object.freeze([]),
+      frontiers: Object.freeze([]),
+      placementRequired: false,
+      generatedPickupPlacements: Object.freeze([]),
+    });
+  for (const delivery of Object.values(branch.state.pendingHermesShrineDeliveries)) {
+    // The frontier covers every phase of the host; the exact phase is checked per retained action.
+    if (!dueContactMatches(delivery, deliveryHost)) continue;
+    const entryKey = hermesShrineDeliveryEntryKey(delivery.source, delivery.generationKey);
+    const retained =
+      room?.kind === 'authored'
+        ? room.acquisitionSites?.hermesShrineDelivery?.entries[entryKey]
+        : undefined;
+    const retainedReference = room?.roomActionRoster?.rows.find(
+      (row) =>
+        row.rank !== null &&
+        row.reference.kind === 'interactAcquisitionEntry' &&
+        row.reference.siteKey === 'hermesShrineDelivery' &&
+        row.reference.entryKey === entryKey,
+    )?.reference;
+    if (retainedReference?.kind === 'interactAcquisitionEntry')
+      placements.set(
+        entryKey,
+        assessReachedHermesDeliveryPlacement(deliveryHost, retainedReference, branch, sequence),
+      );
+    const fixedReward = defaultHermesShrineDeliveryReward(
+      catalog,
+      delivery.rewardType,
+      site.routeKey,
+    );
+    const hasExactDeliveryAction =
+      room?.kind === 'authored' &&
+      room.roomActionRoster?.rows.some(
         (row) =>
-          row.rank !== null &&
           row.reference.kind === 'interactAcquisitionEntry' &&
           row.reference.siteKey === 'hermesShrineDelivery' &&
-          row.reference.entryKey === entryKey,
-      )?.reference;
-      if (retainedReference?.kind === 'interactAcquisitionEntry')
-        placements.set(
-          entryKey,
-          assessReachedHermesDeliveryPlacement(deliveryHost, retainedReference, branch, sequence),
-        );
-      const fixedReward = defaultHermesShrineDeliveryReward(
-        catalog,
-        delivery.rewardType,
-        site.routeKey,
+          row.reference.entryKey === entryKey &&
+          row.reference.encounterPhaseKey === encounterPhaseKey,
       );
-      const hasExactDeliveryAction =
-        room?.kind === 'authored' &&
-        room.roomActionRoster?.rows.some(
-          (row) =>
-            row.reference.kind === 'interactAcquisitionEntry' &&
-            row.reference.siteKey === 'hermesShrineDelivery' &&
-            row.reference.entryKey === entryKey &&
-            row.reference.encounterPhaseKey === encounterPhaseKey,
-        );
-      if (retained === undefined || !hasExactDeliveryAction) {
-        placementRequired = true;
-        findings.push(
-          Object.freeze({
-            finding: rewardFinding(
-              'hermesShrineDeliveryPlacementRequired',
-              createAcquisitionEntryAddress(site, entryKey),
-              {
-                sourceKey: delivery.entryKey,
-                ...(encounterPhaseKey === undefined ? {} : { encounterPhaseKey }),
-              },
-            ),
-            region: ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
-            chronology: Object.freeze({
-              kind: 'history' as const,
-              sequence,
-              boundary: 'at' as const,
-            }),
-          }),
-        );
-      }
-      frontiers.push(
+    if (retained === undefined || !hasExactDeliveryAction) {
+      placementRequired = true;
+      findings.push(
         Object.freeze({
-          address: createAcquisitionEntryAddress(site, entryKey),
-          kind: 'hermesShrineDelivery',
-          rewardTypes: Object.freeze([delivery.rewardType]),
-          ...(encounterPhaseKey === undefined ? {} : { encounterPhaseKey }),
-          ...(fixedReward === null ? {} : { fixedReward }),
-          retainedSourceMismatch:
-            retained !== undefined &&
-            retained !== null &&
-            retained.offer.rewardType !== delivery.rewardType,
-          branchesBeforeEntry: Object.freeze([branch]),
+          finding: rewardFinding(
+            'hermesShrineDeliveryPlacementRequired',
+            createAcquisitionEntryAddress(site, entryKey),
+            {
+              sourceKey: delivery.entryKey,
+              ...(encounterPhaseKey === undefined ? {} : { encounterPhaseKey }),
+            },
+          ),
+          region: ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
+          chronology: Object.freeze({
+            kind: 'history' as const,
+            sequence,
+            boundary: 'at' as const,
+          }),
         }),
       );
     }
+    frontiers.push(
+      Object.freeze({
+        address: createAcquisitionEntryAddress(site, entryKey),
+        kind: 'hermesShrineDelivery',
+        rewardTypes: Object.freeze([delivery.rewardType]),
+        ...(encounterPhaseKey === undefined ? {} : { encounterPhaseKey }),
+        ...(fixedReward === null ? {} : { fixedReward }),
+        retainedSourceMismatch:
+          retained !== undefined &&
+          retained !== null &&
+          retained.offer.rewardType !== delivery.rewardType,
+        branchesBeforeEntry: Object.freeze([branch]),
+      }),
+    );
   }
   return Object.freeze({
     findings: Object.freeze(findings),

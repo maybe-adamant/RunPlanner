@@ -23,7 +23,6 @@ import {
   type RewardProducerOwnerAddress,
 } from '../rewards/producer-frontiers';
 import { initializeRewardBranch } from '../rewards/branch-lifecycle';
-import { branchList } from '../rewards/branch-primitives';
 import { createArcanaFearState } from '../arcana-fear';
 import { createRouteStartRewardFacts } from '../rewards/facts';
 import {
@@ -158,17 +157,15 @@ export function createStartingRewardCandidateCapability(
   routePosition: ResolvedRoutePosition,
 ): StartingRewardCandidateCapability {
   const binding = catalog.runStartReward.incomingReward;
-  const branches = branchList(
-    initializeRewardBranch(
-      undefined,
-      createArcanaFearState(catalog, loadout),
-      catalog,
-      loadout.startingKeepsakeKey,
-      loadout.keepsakeEquipResults,
-      routeKey,
-      loadout,
-      { routePosition, historyView: createRouteStartHistoryView() },
-    ),
+  const branch = initializeRewardBranch(
+    undefined,
+    createArcanaFearState(catalog, loadout),
+    catalog,
+    loadout.startingKeepsakeKey,
+    loadout.keepsakeEquipResults,
+    routeKey,
+    loadout,
+    { routePosition, historyView: createRouteStartHistoryView() },
   );
   return Object.freeze({
     evaluateOffer: (offer: ResolvedRewardOffer) => {
@@ -186,11 +183,11 @@ export function createStartingRewardCandidateCapability(
         peers: Object.freeze([]),
         facts: (state) => createRouteStartRewardFacts(catalog, reward, state),
       };
-      const evaluated = processRewardOffer(branches, context, findings);
+      const evaluated = processRewardOffer(branch, context, findings);
       return createRewardProducerCandidateResult(
         findings,
         evaluated,
-        evaluated.length === 0 ? explainRewardOfferExclusions(branches, context) : undefined,
+        evaluated === undefined ? explainRewardOfferExclusions(branch, context) : undefined,
       );
     },
   });

@@ -30,8 +30,8 @@ import {
   type HermesShrineCandidateContext,
 } from '../../../commerce/hermes-shrine';
 import { createBiomeRewardFacts } from '../../facts';
-import { appendRewardEvent, type RewardBranchState } from '../../branch-primitives';
-import { advanceRewardBranches } from '../../branch-lifecycle';
+import { appendRewardEvent, mapReached, type RewardBranchState } from '../../branch-primitives';
+import { advanceReachedBranch } from '../../branch-lifecycle';
 import { rewardFinding } from '../../findings';
 import {
   consumeOlympianProviderForReachedOffer,
@@ -52,7 +52,7 @@ import { clearOfferedRewardTypes } from '../../../state/offered-rewards';
 
 export interface RoomEnteredTransition {
   readonly generatedPickupPlacements: readonly import('../../acquisition/contracts').GeneratedPickupPlacement[];
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: readonly LifecycleFinding[];
   /** Roles realized by a Forfeit fixed at this entry, ahead of their pickup contact. */
   readonly fixedAcquisitionRealizations: readonly FixedAcquisitionRealization[];
@@ -74,14 +74,14 @@ export interface RoomEnteredTransition {
 }
 
 export interface RoomEntryEffects {
-  readonly branches: readonly RewardBranchState[];
+  readonly branch: RewardBranchState | undefined;
   readonly findings: readonly LifecycleFinding[];
   readonly fixedAcquisitionRealizations: readonly FixedAcquisitionRealization[];
   readonly flushHost: boolean;
 }
 
 /**
- * The entry effects on the reached branches that no Overview product decides:
+ * The entry effects on the reached state that no Overview product decides:
  * map reset, Fields forfeits, a forced Chaos spark and the delivery flush.
  */
 export function applyRoomEntryEffects(
@@ -90,77 +90,68 @@ export function applyRoomEntryEffects(
   room: CanonicalAuthoredRoom | undefined,
   chaosGateSourceOccurrenceIds: ReadonlySet<string>,
   ixionGeneratedChaosSourceOccurrenceIds: ReadonlySet<string>,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   findingChronology: FindingChronology,
   routePosition: ResolvedRoutePosition,
 ): RoomEntryEffects {
   // Entering a room initializes its map: the transition that offered the way
   // here stops being a fact before this room can generate anything of its own.
   // Room start also runs Arcana EnterRoom setup, counting The Centaur's cycle.
-  let next: readonly RewardBranchState[] = Object.freeze(
-    advanceRewardBranches(branches, event.sequence).map((branch) => {
-      const cleared = clearOfferedRewardTypes(branch.state);
-      const arcanaFear = advanceArcanaRoomEntry(catalog, cleared.arcanaFear);
-      return Object.freeze({
-        ...branch,
-        state:
-          arcanaFear === cleared.arcanaFear ? cleared : Object.freeze({ ...cleared, arcanaFear }),
-      });
-    }),
-  );
+  let next = mapReached(advanceReachedBranch(branch, event.sequence), (entered) => {
+    const cleared = clearOfferedRewardTypes(entered.state);
+    const arcanaFear = advanceArcanaRoomEntry(catalog, cleared.arcanaFear);
+    return Object.freeze({
+      ...entered,
+      state:
+        arcanaFear === cleared.arcanaFear ? cleared : Object.freeze({ ...cleared, arcanaFear }),
+    });
+  });
   const findings: LifecycleFinding[] = [];
   const fixedAcquisitionRealizations: FixedAcquisitionRealization[] = [];
   if (room?.lifecycleProfileKey === 'FieldsCombatRoom') {
     for (const localReward of room.localRewards ?? []) {
-      const replacementByBranch: ('RoomRewardConsolationPrize' | undefined)[] = [];
-      next = Object.freeze(
-        next.map((branch) => {
-          const offer = reachedOfferForOrigin(branch, localReward.origin);
-          const qualifyingRewardType =
-            offer?.rewardType === 'Boon' || offer?.rewardType === 'HermesUpgrade'
-              ? offer.rewardType
-              : undefined;
-          const forfeit =
-            qualifyingRewardType === undefined
-              ? Object.freeze({ consumed: false as const, state: branch.state.arcanaFear })
-              : consumeRoomRewardForfeit(catalog, branch.state.arcanaFear, qualifyingRewardType, {
-                  owner: localReward.origin,
-                  sequence: event.sequence,
-                });
-          replacementByBranch.push(forfeit.consumed ? forfeit.replacementRewardType : undefined);
-          const materialized = forfeit.consumed
-            ? appendRewardEvent(
-                Object.freeze({
-                  ...branch,
-                  state: Object.freeze({ ...branch.state, arcanaFear: forfeit.state }),
-                }),
-                event.sequence,
-                Object.freeze({
-                  kind: 'rewardForfeited' as const,
-                  origin: localReward.origin,
-                  rewardType: qualifyingRewardType!,
-                  replacementRewardType: forfeit.replacementRewardType,
-                }),
-              )
-            : branch;
-          return forfeit.consumed
-            ? materialized
-            : consumeOlympianProviderForReachedOffer(
-                catalog,
-                materialized,
-                localReward.origin,
-                'free',
-              );
-        }),
-      );
-      // A forfeit fixed on every entering branch realizes the cage's roles
-      // before their pickup contact is reached.
-      const replacement = replacementByBranch[0];
-      if (
-        replacement === undefined ||
-        replacementByBranch.some((candidate) => candidate !== replacement)
-      )
-        continue;
+      let replacement: 'RoomRewardConsolationPrize' | undefined;
+      next = mapReached(next, (branch) => {
+        const offer = reachedOfferForOrigin(branch, localReward.origin);
+        const qualifyingRewardType =
+          offer?.rewardType === 'Boon' || offer?.rewardType === 'HermesUpgrade'
+            ? offer.rewardType
+            : undefined;
+        const forfeit =
+          qualifyingRewardType === undefined
+            ? Object.freeze({ consumed: false as const, state: branch.state.arcanaFear })
+            : consumeRoomRewardForfeit(catalog, branch.state.arcanaFear, qualifyingRewardType, {
+                owner: localReward.origin,
+                sequence: event.sequence,
+              });
+        replacement = forfeit.consumed ? forfeit.replacementRewardType : undefined;
+        const materialized = forfeit.consumed
+          ? appendRewardEvent(
+              Object.freeze({
+                ...branch,
+                state: Object.freeze({ ...branch.state, arcanaFear: forfeit.state }),
+              }),
+              event.sequence,
+              Object.freeze({
+                kind: 'rewardForfeited' as const,
+                origin: localReward.origin,
+                rewardType: qualifyingRewardType!,
+                replacementRewardType: forfeit.replacementRewardType,
+              }),
+            )
+          : branch;
+        return forfeit.consumed
+          ? materialized
+          : consumeOlympianProviderForReachedOffer(
+              catalog,
+              materialized,
+              localReward.origin,
+              'free',
+            );
+      });
+      // A forfeit fixed at entry realizes the cage's roles before their pickup
+      // contact is reached.
+      if (replacement === undefined) continue;
       fixedAcquisitionRealizations.push(
         ...forfeitFixedAcquisitionRealizations(
           catalog,
@@ -181,7 +172,7 @@ export function applyRoomEntryEffects(
     const capable = chaosDeclaration !== undefined;
     const chaosGate = chaosGateSourceOccurrenceIds.has(room.occurrenceId);
     const ixionGeneratedChaos = ixionGeneratedChaosSourceOccurrenceIds.has(room.occurrenceId);
-    const ixionPending = next.some((branch) => branch.state.stygianWell.sparkUses > 0);
+    const ixionPending = next !== undefined && next.state.stygianWell.sparkUses > 0;
     const forcedChaos = capable && ixionPending && chaosGate;
     if (capable && ixionPending && !chaosGate)
       findings.push(
@@ -216,65 +207,59 @@ export function applyRoomEntryEffects(
         }),
       );
     if (forcedChaos)
-      next = Object.freeze(
-        next.map((branch) =>
-          Object.freeze({
-            ...branch,
-            state: Object.freeze({
-              ...branch.state,
-              stygianWell:
-                branch.state.stygianWell.sparkUses === 0
-                  ? branch.state.stygianWell
-                  : Object.freeze({
-                      ...branch.state.stygianWell,
-                      sparkUses: branch.state.stygianWell.sparkUses - 1,
-                    }),
-            }),
+      next = mapReached(next, (branch) =>
+        Object.freeze({
+          ...branch,
+          state: Object.freeze({
+            ...branch.state,
+            stygianWell:
+              branch.state.stygianWell.sparkUses === 0
+                ? branch.state.stygianWell
+                : Object.freeze({
+                    ...branch.state.stygianWell,
+                    sparkUses: branch.state.stygianWell.sparkUses - 1,
+                  }),
           }),
-        ),
+        }),
       );
   }
   const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
   const flushHost =
     room?.origin.kind === 'occurrence' && isDeliveryFlushHost(declaration, routePosition);
   if (flushHost) {
-    next = Object.freeze(
-      next.map((branch) =>
-        Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            pendingHermesShrineDeliveries: Object.freeze(
-              Object.fromEntries(
-                Object.entries(branch.state.pendingHermesShrineDeliveries).map(
-                  ([key, delivery]) => [
-                    key,
-                    delivery.due === undefined
-                      ? Object.freeze({
-                          ...delivery,
-                          remainingUses: 0,
-                          due: Object.freeze({
-                            host: room.origin,
-                            cause: 'flush' as const,
-                            historySequence: event.sequence,
-                          }),
-                        })
-                      : delivery,
-                  ],
-                ),
-              ),
+    next = mapReached(next, (branch) =>
+      Object.freeze({
+        ...branch,
+        state: Object.freeze({
+          ...branch.state,
+          pendingHermesShrineDeliveries: Object.freeze(
+            Object.fromEntries(
+              Object.entries(branch.state.pendingHermesShrineDeliveries).map(([key, delivery]) => [
+                key,
+                delivery.due === undefined
+                  ? Object.freeze({
+                      ...delivery,
+                      remainingUses: 0,
+                      due: Object.freeze({
+                        host: room.origin,
+                        cause: 'flush' as const,
+                        historySequence: event.sequence,
+                      }),
+                    })
+                  : delivery,
+              ]),
             ),
-          }),
+          ),
         }),
-      ),
+      }),
     );
     // Expiring deliveries spawn their loot on entry.
-    next = Object.freeze(
-      next.map((branch) => spawnDueHermesDeliveries(catalog, room, branch, event.sequence)),
+    next = mapReached(next, (branch) =>
+      spawnDueHermesDeliveries(catalog, room, branch, event.sequence),
     );
   }
   return Object.freeze({
-    branches: next,
+    branch: next,
     findings: Object.freeze(findings),
     fixedAcquisitionRealizations: Object.freeze(fixedAcquisitionRealizations),
     flushHost,
@@ -288,7 +273,7 @@ export function applyRoomEnteredTransition(
   roomView: RoomOverviewHistoryViews | undefined,
   chaosGateSourceOccurrenceIds: ReadonlySet<string>,
   ixionGeneratedChaosSourceOccurrenceIds: ReadonlySet<string>,
-  branches: readonly RewardBranchState[],
+  branch: RewardBranchState | undefined,
   findingChronology: FindingChronology,
   routePosition: ResolvedRoutePosition,
   alreadyAssessed: {
@@ -302,12 +287,12 @@ export function applyRoomEnteredTransition(
     room,
     chaosGateSourceOccurrenceIds,
     ixionGeneratedChaosSourceOccurrenceIds,
-    branches,
+    branch,
     findingChronology,
     routePosition,
   );
   const findings: LifecycleFinding[] = [...effects.findings];
-  const next = effects.branches;
+  const next = effects.branch;
   const fixedAcquisitionRealizations = effects.fixedAcquisitionRealizations;
   const flushHost = effects.flushHost;
   const dueDeliveries =
@@ -342,8 +327,7 @@ export function applyRoomEnteredTransition(
       throw new BiomeRewardSimulationContractError(`${room.gameName} has no Shrine entry frontier`);
     if (declaration.surfaceShop !== undefined || room.hermesShrine !== undefined) {
       const priorEnteredShrineFlags = priorTwoSurfaceShopPresence(entry.ledgers.roomAppearances);
-      const branch = next[0];
-      if (branch === undefined)
+      if (next === undefined)
         throw new BiomeRewardSimulationContractError(`${room.gameName} has no Shrine entry state`);
       const assessment: HermesShrineCandidateContext =
         room.hermesShrine === undefined
@@ -368,7 +352,7 @@ export function applyRoomEnteredTransition(
                 room.hermesShrine,
                 createBiomeRewardFacts({
                   catalog,
-                  state: branch.state,
+                  state: next.state,
                   source: room,
                   currentRoom: room,
                   sourceDeclaration: declaration,
@@ -444,8 +428,7 @@ export function applyRoomEnteredTransition(
       if (entry === undefined)
         throw new BiomeRewardSimulationContractError(`${room.gameName} has no Well entry frontier`);
       const priorEnteredWellFlags = priorThreeRoomShopPresence(entry.ledgers.roomAppearances);
-      const branch = next[0];
-      if (branch === undefined)
+      if (next === undefined)
         throw new BiomeRewardSimulationContractError(`${room.gameName} has no Well entry state`);
       const assessment: StygianWellEntryCandidateContext =
         room.stygianWell === undefined
@@ -470,8 +453,8 @@ export function applyRoomEnteredTransition(
                 declaration,
                 entry.ledgers.counters.biomeDepthCache,
                 room.stygianWell,
-                branch.state.stygianWell,
-                branch.state.traitHistory,
+                next.state.stygianWell,
+                next.state.traitHistory,
                 priorEnteredWellFlags,
               ),
             });
@@ -511,7 +494,7 @@ export function applyRoomEnteredTransition(
     }
   }
   return Object.freeze({
-    branches: next,
+    branch: next,
     findings: Object.freeze(findings),
     fixedAcquisitionRealizations: Object.freeze(fixedAcquisitionRealizations),
     generatedPickupPlacements: dueDeliveries?.generatedPickupPlacements ?? Object.freeze([]),

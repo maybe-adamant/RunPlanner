@@ -133,21 +133,21 @@ describe('Olympian reward pressure', () => {
     });
 
     const generated = processRewardOffer(
-      [initial],
+      initial,
       countedContext('RunProgress', {
         rewardType: 'Boon',
         payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
       }),
       new Map(),
-    )[0]!;
+    )!;
     expect(generated.state.rewardPriorities).toEqual([]);
     expect(generated.state.keepsakes.olympianSources[0]?.remainingForceUses).toBe(1);
 
     const unsupported = processRewardOffer(
-      [initial],
+      initial,
       countedContext('MetaProgress', { rewardType: 'GiftDrop' }),
       new Map(),
-    )[0]!;
+    )!;
     expect(unsupported.state.rewardPriorities).toEqual(['Boon']);
   });
 
@@ -192,18 +192,14 @@ describe('Olympian reward pressure', () => {
     });
     const maxHealth = context({ rewardType: 'MaxHealthDrop' });
 
-    const cohort = processOfferGenerationCohort([initial], [boon, maxHealth], new Map(), {
+    const cohort = processOfferGenerationCohort(initial, [boon, maxHealth], new Map(), {
       ordering: 'listed',
     });
-    expect(cohort).toHaveLength(1);
-    expect(cohort[0]?.state.rewardPriorities).toEqual([]);
+    expect(cohort).toBeDefined();
+    expect(cohort?.state.rewardPriorities).toEqual([]);
 
-    const later = processRewardOffer(
-      [cohort[0]!],
-      context({ rewardType: 'RoomMoneyDrop' }),
-      new Map(),
-    );
-    expect(later).toHaveLength(1);
+    const later = processRewardOffer(cohort, context({ rewardType: 'RoomMoneyDrop' }), new Map());
+    expect(later).toBeDefined();
 
     // ShipsEncounterSetup draws the left wheel first: the forced Zeus Boon must lead.
     const ares = context({
@@ -211,9 +207,9 @@ describe('Olympian reward pressure', () => {
       payload: { kind: 'BoonSource', source: 'AresUpgrade' },
     });
     const listed = (contexts: readonly (typeof boon)[]) =>
-      processOfferGenerationCohort([initial], contexts, new Map(), { ordering: 'listed' });
-    expect(listed([boon, ares])).toHaveLength(1);
-    expect(listed([ares, boon])).toHaveLength(0);
+      processOfferGenerationCohort(initial, contexts, new Map(), { ordering: 'listed' });
+    expect(listed([boon, ares])).toBeDefined();
+    expect(listed([ares, boon])).toBeUndefined();
   });
 
   it('uses ordinary acquisition order for Boons, Devotion last-source ordering, and preserves a paid source use', () => {
@@ -282,15 +278,15 @@ describe('Olympian reward pressure', () => {
       facts: (state: RewardBranchState['state']) => factsFor(state.rewardHistory),
     });
     expect(
-      processRewardOffer([branch], context('ApolloUpgrade', 'ZeusUpgrade'), new Map()),
-    ).toHaveLength(1);
+      processRewardOffer(branch, context('ApolloUpgrade', 'ZeusUpgrade'), new Map()),
+    ).toBeDefined();
     expect(
-      processRewardOffer([branch], context('ZeusUpgrade', 'ApolloUpgrade'), new Map()),
-    ).toHaveLength(1);
+      processRewardOffer(branch, context('ZeusUpgrade', 'ApolloUpgrade'), new Map()),
+    ).toBeDefined();
     const blockedFindings = new Map();
     expect(
-      processRewardOffer([branch], context('ApolloUpgrade', 'HeraUpgrade'), blockedFindings),
-    ).toEqual([]);
+      processRewardOffer(branch, context('ApolloUpgrade', 'HeraUpgrade'), blockedFindings),
+    ).toBeUndefined();
     expect([...blockedFindings.values()]).toContainEqual(
       expect.objectContaining({
         finding: expect.objectContaining({ code: 'rewardSourceUnavailable' }),
@@ -354,9 +350,9 @@ describe('Olympian reward pressure', () => {
       facts: (state: RewardBranchState['state']) => factsFor(state.rewardHistory),
     };
 
-    expect(processRewardOffer([capped(1)], context, new Map())).toHaveLength(1);
+    expect(processRewardOffer(capped(1), context, new Map())).toBeDefined();
     const spentFindings = new Map();
-    expect(processRewardOffer([capped(0)], context, spentFindings)).toEqual([]);
+    expect(processRewardOffer(capped(0), context, spentFindings)).toBeUndefined();
     expect([...spentFindings.values()]).toContainEqual(
       expect.objectContaining({
         finding: expect.objectContaining({ code: 'rewardSourceUnavailable' }),
@@ -373,7 +369,7 @@ describe('Olympian reward pressure', () => {
     )[0]!;
     const findings = new Map();
     const reached = processRewardOffer(
-      [initial],
+      initial,
       {
         catalog,
         reward: {
@@ -391,9 +387,9 @@ describe('Olympian reward pressure', () => {
       findings,
     );
 
-    expect(reached).toHaveLength(1);
+    expect(reached).toBeDefined();
     expect([...findings.values()]).toEqual([]);
-    expect(reached[0]?.state.keepsakes.olympianSources[0]?.remainingForceUses).toBe(1);
+    expect(reached?.state.keepsakes.olympianSources[0]?.remainingForceUses).toBe(1);
   });
 
   it('spends only matching free Boon and Devotion loot from the reached generated-event ledger', () => {

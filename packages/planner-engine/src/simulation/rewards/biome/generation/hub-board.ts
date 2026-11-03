@@ -34,15 +34,15 @@ export function flushHubBoard(
   const unresolved = pending.participants.filter(
     (entry): entry is UnresolvedHubBoardGenerationParticipant => entry.kind === 'unresolved',
   );
-  const branches =
+  const branch =
     unresolved.length === 0
       ? processOfferGenerationCohort(
-          pending.frontierBranches,
+          pending.frontier,
           Object.freeze(resolved.map((entry) => entry.context)),
           findings,
           { ordering: 'sourceOffers' },
         )
-      : Object.freeze([]);
+      : undefined;
   for (const entry of unresolved)
     addRewardFinding(
       findings,
@@ -100,7 +100,7 @@ export function flushHubBoard(
       throw new BiomeRewardSimulationContractError('Hub-board frontier lost its focused context');
     const candidateFindings = new Map<string, FindingRegionEntry>();
     const focusedResult = processFocusedOfferAfterAuthoredPeers(
-      pending.frontierBranches,
+      pending.frontier,
       Object.freeze(
         contexts.filter((context) => semanticAddressKey(context.reward.origin) !== ownerKey),
       ),
@@ -113,7 +113,7 @@ export function flushHubBoard(
           .map((entry) => entry.finding)
           .filter((finding) => finding.code !== 'traitOfferMissing'),
       ),
-      supported: focusedResult.branches.length > 0,
+      supported: focusedResult.branch !== undefined,
       ...(focusedResult.exclusions === undefined ? {} : { exclusions: focusedResult.exclusions }),
     });
   };
@@ -134,5 +134,5 @@ export function flushHubBoard(
       Object.freeze({ origin: entry.context.reward.origin, offer: entry.context.reward.offer }),
     ),
   );
-  return createGenerationEmissions(branches, peers, findings, frontiers);
+  return createGenerationEmissions(branch, peers, findings, frontiers);
 }

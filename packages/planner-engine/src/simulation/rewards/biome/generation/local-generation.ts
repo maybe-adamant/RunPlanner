@@ -6,7 +6,7 @@ import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { forGeneration, type CanonicalLocalReward } from '../../../materialization';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
-import type { RewardBranchState } from '../../branch-primitives';
+import { branchList, type RewardBranchState } from '../../branch-primitives';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import {
@@ -83,7 +83,7 @@ export function generateLocalRewards(
   event: Extract<HistoryEvent, { readonly kind: 'roomCreated' }>,
   context: RoomCreatedRewardContext,
   inputs: {
-    readonly branches: readonly RewardBranchState[];
+    readonly branch: RewardBranchState | undefined;
     readonly peers: readonly OfferProcessingPeer[];
     readonly views: ProgressiveRoomHistoryViews | undefined;
     readonly lifecycle: RewardLifecycleReferences;
@@ -91,7 +91,7 @@ export function generateLocalRewards(
     readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
   },
 ): GenerationEmissions {
-  let branches = inputs.branches;
+  let branch = inputs.branch;
   let peers = inputs.peers;
   const findings = new Map<string, FindingRegionEntry>();
   const producerFrontiers: RewardProducerFrontier[] = [];
@@ -105,7 +105,7 @@ export function generateLocalRewards(
         ownerRegion(ownedReward.origin),
         historyFindingChronology(event.sequence),
       );
-    const frontierBranches = branches;
+    const frontier = branch;
     const chronology =
       event.source === 'localVisit'
         ? rewardFindingChronologyForRoom(
@@ -167,20 +167,16 @@ export function generateLocalRewards(
           const candidate = localCandidateForOffer(catalog, localReward, offer);
           const candidateContext = Object.freeze({ ...offerContext, reward: candidate });
           const candidateFindings = new Map<string, FindingRegionEntry>();
-          const candidateBranches = processRewardOffer(
-            frontierBranches,
-            candidateContext,
-            candidateFindings,
-          );
+          const offered = processRewardOffer(frontier, candidateContext, candidateFindings);
           if (
-            candidateBranches.length > 0 &&
+            offered !== undefined &&
             acquisition.event !== undefined &&
             acquisition.event.sequence <= reachedThrough &&
             acquisition.view !== undefined
           ) {
             const settlement = settleOwnedAcquisitionSite(
               catalog,
-              candidateBranches,
+              branchList(offered),
               {
                 siteOwner: localReward.origin,
                 pointKey:
@@ -218,23 +214,23 @@ export function generateLocalRewards(
           }
           return createRewardProducerCandidateResult(
             candidateFindings,
-            candidateBranches,
-            candidateBranches.length === 0
-              ? explainRewardOfferExclusions(frontierBranches, candidateContext)
+            offered,
+            offered === undefined
+              ? explainRewardOfferExclusions(frontier, candidateContext)
               : undefined,
           );
         },
       }),
     );
-    branches = processRewardOffer(branches, offerContext, findings);
+    branch = processRewardOffer(branch, offerContext, findings);
     peers = Object.freeze([
       ...peers,
       Object.freeze({ origin: localReward.origin, offer: localReward.offer }),
     ]);
   }
   const unresolved = context.unresolvedLocalReward;
-  if (unresolved !== undefined && branches.length > 0) {
-    const frontierBranches = branches;
+  if (unresolved !== undefined && branch !== undefined) {
+    const frontier = branch;
     const ownerKey = semanticAddressKey(unresolved.origin);
     const acquisition = localAcquisition(
       context,
@@ -306,20 +302,16 @@ export function generateLocalRewards(
                 hubBoardLookups: 'notConsulted',
               }),
           });
-          const candidateBranches = processRewardOffer(
-            frontierBranches,
-            candidateContext,
-            candidateFindings,
-          );
+          const offered = processRewardOffer(frontier, candidateContext, candidateFindings);
           if (
-            candidateBranches.length > 0 &&
+            offered !== undefined &&
             acquisition.event !== undefined &&
             acquisition.event.sequence <= reachedThrough &&
             acquisition.view !== undefined
           ) {
             const settlement = settleOwnedAcquisitionSite(
               catalog,
-              candidateBranches,
+              branchList(offered),
               {
                 siteOwner: candidate.origin,
                 pointKey:
@@ -350,8 +342,8 @@ export function generateLocalRewards(
             mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
           }
           const exclusions =
-            candidateBranches.length === 0
-              ? explainRewardOfferExclusions(frontierBranches, candidateContext)
+            offered === undefined
+              ? explainRewardOfferExclusions(frontier, candidateContext)
               : undefined;
           return Object.freeze({
             findings: Object.freeze(
@@ -359,7 +351,7 @@ export function generateLocalRewards(
                 .map((entry) => entry.finding)
                 .filter((finding) => finding.code !== 'traitOfferMissing'),
             ),
-            supported: candidateBranches.length > 0,
+            supported: offered !== undefined,
             ...(exclusions === undefined ? {} : { exclusions }),
           });
         },
@@ -371,7 +363,7 @@ export function generateLocalRewards(
       ownerRegion(unresolved.origin),
       historyFindingChronology(event.sequence),
     );
-    branches = Object.freeze([]);
+    branch = undefined;
   }
-  return createGenerationEmissions(branches, peers, findings, producerFrontiers);
+  return createGenerationEmissions(branch, peers, findings, producerFrontiers);
 }
