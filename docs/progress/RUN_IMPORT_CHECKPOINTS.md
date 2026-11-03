@@ -228,6 +228,15 @@ reproduces is reported with its nearest miss and the plan stops there.
      set; Zagreus contract and Chaos siblings had ad-hoc exceptions, now
      gone. The importer's deferred Anomaly switch went with it. Equivalence
      157/157, buckets unchanged.
+   - Unseen Fields rolls: a source whose doors show no cage count (a
+     MiniBoss's lone Bridge door) takes a provisional roll; when a later
+     source's recorded roll is supported only with that roll the other way
+     (each Max counts toward the biome's two-Max ceiling), the earlier roll
+     is switched, latest first, and reported. Raw 333's Bridge rolled Min at
+     depth 4 because r26 and r27 had both rolled Max; the plan's r27 Min made
+     Max required there, refused the recorded Min and drew a third cage per
+     door. Raw 333 17/11/4/8 → 17/13/2/8, first mismatch r28 → r30.
+     Fixtures unchanged.
    - Conversions that share a solver's store (owner request). An Artificer
      replacement is one `RunProgress` draw, so it is searched with any solver
      reading that store across the same save window:

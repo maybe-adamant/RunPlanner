@@ -1,6 +1,7 @@
 import {
   createAcquisitionRoleAddress,
   createBiomeAddress,
+  createExitDecisionAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
@@ -120,6 +121,80 @@ export function answerFields(context: RunImportContext, reason: SemanticFinding)
   return false;
 }
 
+/** The cage count a source's doors show: the entered Fields room's, or a door never taken. */
+function observedCageCount(context: RunImportContext, occurrenceId: string): number | undefined {
+  const visits = context.occurrences.visitsOf(occurrenceId);
+  const next = visits.map((index) => context.record.rooms[index + 1]).find((room) => room?.fields);
+  const untaken = visits
+    .flatMap((index) => context.record.rooms[index]!.doors)
+    .find((door) => door.cageRewards !== undefined);
+  return next?.fields?.cages.length ?? untaken?.cageRewards?.length;
+}
+
+const fieldsOutcomeSupported = (
+  context: RunImportContext,
+  decision: Origin<'exitDecision'>,
+  cageOutcome: 'min' | 'max',
+) => {
+  const evaluation = context
+    .candidates()
+    .evaluate({ kind: 'fieldsCageOutcome', decision, cageOutcome });
+  return evaluation.kind === 'fieldsCageOutcome' && evaluation.result.selectedPossible;
+};
+
+/**
+ * An earlier source of the biome whose doors show no cage count holds a
+ * provisional roll; when a later recorded roll is supported only after that
+ * roll is the other outcome (each Max roll counts toward the biome's ceiling),
+ * the earlier roll is switched, latest first, and reported. Returns whether
+ * `cageOutcome` became supported at `decision`.
+ */
+function switchUnseenRoll(
+  context: RunImportContext,
+  decision: Origin<'exitDecision'>,
+  cageOutcome: 'min' | 'max',
+): boolean {
+  if (decision.source.kind !== 'occurrence') return false;
+  const first = context.occurrences.visitsOf(decision.source.occurrenceId)[0];
+  if (first === undefined) return false;
+  const biome = createBiomeAddress(decision.routeKey, decision.biomeKey);
+  const topology = context
+    .assembly()
+    .project.route.biomes.find((entry) => entry.biomeKey === decision.biomeKey)?.topology;
+  for (let index = first - 1; index >= 0; index--) {
+    if (context.occurrences.biomeOfRoom[index] !== decision.biomeKey) break;
+    const occurrenceId = context.occurrences.occurrenceOf(index);
+    if (observedCageCount(context, occurrenceId) !== undefined) continue;
+    const source = { kind: 'occurrence' as const, occurrenceId: occurrenceId as OccurrenceId };
+    const state =
+      topology === undefined || topology === null
+        ? undefined
+        : exitDecisionForSource(topology, source)?.normal;
+    const held = state?.kind === 'batch' ? state.batchState : undefined;
+    if (held === undefined || held === null) continue;
+    const command: ProjectCommand = {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision: createExitDecisionAddress(biome, source),
+      cageOutcome: held.cageOutcome === 'min' ? 'max' : 'min',
+    };
+    if (
+      context.transaction(
+        () => context.apply(command) && fieldsOutcomeSupported(context, decision, cageOutcome),
+      )
+    ) {
+      context.note({
+        area: 'fields',
+        reason: 'assumption',
+        address: createExitDecisionAddress(biome, source),
+        applied: command,
+        record: record(index),
+      });
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * One roll sets every Fields door's cage count: the minimum, or the maximum
  * the doors' rooms hold. The entered Fields room's cage count shows which.
@@ -131,11 +206,10 @@ function answerCageOutcome(context: RunImportContext, decision: Origin<'exitDeci
     layout === undefined ? undefined : normalDecisionProgressionForLayout(layout)?.batchPolicy;
   const visits = context.occurrences.visitsOf(decision.source.occurrenceId);
   const next = visits.map((index) => context.record.rooms[index + 1]).find((room) => room?.fields);
-  // Without an entered Fields room, a door never taken shows the count its cages rolled.
   const untaken = visits
     .flatMap((index) => context.record.rooms[index]!.doors)
     .find((door) => door.cageRewards !== undefined);
-  const count = next?.fields?.cages.length ?? untaken?.cageRewards?.length;
+  const count = observedCageCount(context, decision.source.occurrenceId);
   if (count === undefined || policy?.kind !== 'fields') return false;
   const supported = (['min', 'max'] as const).filter((cageOutcome) => {
     const evaluation = context
@@ -157,7 +231,8 @@ function answerCageOutcome(context: RunImportContext, decision: Origin<'exitDeci
     cageGroup.maxActiveSlots === count;
   const ordered = outcome === undefined ? [] : [outcome];
   for (const cageOutcome of ordered) {
-    if (!supported.includes(cageOutcome)) continue;
+    if (!supported.includes(cageOutcome) && !switchUnseenRoll(context, decision, cageOutcome))
+      continue;
     const topology = context
       .assembly()
       .project.route.biomes.find((biome) => biome.biomeKey === decision.biomeKey)?.topology;
