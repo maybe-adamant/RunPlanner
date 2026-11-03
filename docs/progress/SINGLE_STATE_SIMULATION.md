@@ -180,7 +180,9 @@ happen", never as alternative states carried forward or offered as a choice.
    agreement or plurality were renamed (`directTraitSetBranch`, `OfferGate`,
    `overviewEntry`); `RewardBranchState` and the `branch` field stay as the
    reached state's name. Equivalence 157/157 after every commit; Draft and
-   run-import lanes deferred (no call sites changed).
+   run-import lanes deferred (no call sites changed). Performance against
+   8c893ffce flat (second run: every metric within ±2 ms except Underworld
+   rebuild +5.8 ms).
    Remaining: the Anvil and conversion candidate artifacts still aggregate
    over several recorded frontiers of one role address; a phantom exit's
    `offers` list and the execution overview's divergence check stay
