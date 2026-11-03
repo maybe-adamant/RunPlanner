@@ -19,6 +19,7 @@ import {
 import { countedRewardTypeDomain, type SemanticFinding } from '@run-planner/engine/simulation';
 import type { RunRecordRoom, RunRecordWheel } from './run-record/model';
 import { entrySnapshot, occurrenceSnapshot, recordedEntryStates, storeCounts } from './conformance';
+import { introducesNothing } from './acceptance';
 import { convertAcquisition, recordedConversions } from './dispositions';
 import type { RunImportContext } from './import';
 import { authoredOccurrence } from './occurrences';
@@ -555,7 +556,10 @@ function solveShip(
     context.occurrences.biomeOfRoom[roomIndex]!,
   );
   const sourceId = context.occurrences.occurrenceOf(roomIndex);
-  const fits: (WheelFit<ResolvedRewardOffer> & { readonly split?: readonly number[] })[] = [];
+  const fits: (WheelFit<ResolvedRewardOffer> & {
+    readonly split?: readonly number[];
+    readonly accepted: boolean;
+  })[] = [];
   const types = assignments(offers, draws.solutions);
   for (const split of splits)
     for (const { types: assigned, remainder } of types)
@@ -581,8 +585,11 @@ function solveShip(
             values,
             fingerprint: exitFingerprint(context, roomIndex),
             ...(split === undefined ? {} : { split }),
+            accepted: introducesNothing(context.acceptance(roomIndex)),
           });
       });
+  // Fits that leave the room no difference of its own at the next save go first, in canonical order.
+  fits.sort((left, right) => Number(right.accepted) - Number(left.accepted));
   const choice = chooseWheelFit(fits, sameOffer);
   const at = record(roomIndex);
   if (choice === undefined) {
