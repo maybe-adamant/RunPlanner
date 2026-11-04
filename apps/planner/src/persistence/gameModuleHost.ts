@@ -82,7 +82,10 @@ export interface GameTargetInspection {
   readonly eventSlot: GameEventSlot;
   /** `active-slot.json`; a missing or invalid file names no slot. */
   readonly activeSlot: GameActiveSlot;
-  /** `settings.json`, the player's game module options; a missing or invalid file holds none. */
+  /**
+   * `settings.json`, the player's game module options, or while it is missing the earlier
+   * ModpackLib ticks the module seeds it from; a missing or invalid file holds none.
+   */
   readonly settings: GameSettingsFile;
 }
 

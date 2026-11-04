@@ -32,9 +32,11 @@ Anything both the planner and the game module need lives in
   planner writes.
 
 Module settings the planner does not offer, such as `Enabled` and Debug Mode,
-stay in ModpackLib storage. The planner never reads or writes the ModpackLib
-`.cfg`: ModpackLib keeps its committed values in memory and rewrites the whole
-file from them, so an outside edit would be neither seen nor kept.
+stay in ModpackLib storage. The planner never writes the ModpackLib `.cfg`:
+ModpackLib keeps its committed values in memory and rewrites the whole file
+from them, so an outside edit would be neither seen nor kept. It reads it only
+for the one-time move of the [options](#options) while `settings.json` is
+missing.
 
 ### Active slot
 
@@ -91,7 +93,11 @@ both offer:
 - A missing or invalid file means every option off; neither side rewrites it
   until the player changes an option, except once: when the module loads and
   finds no file, it seeds one from the options' earlier ModpackLib `.cfg`
-  values, if any are there, and never reads them again. The module logs one
+  values, if any are there, and never reads them again. While the file is
+  missing, the planner reads those `.cfg` values the same way, read-only and
+  under the same link and containment rules as the plan slots, to show them and
+  to keep them in its first write; once the file exists, neither side reads the
+  `.cfg` again. The module logs one
   `[RunPlanner] settings` line per option it writes and one per change of
   invalid content it reads.
 - Each write changes one option over the file as it is read just before, so an

@@ -11,12 +11,14 @@ use crate::atomic_file;
 use crate::game_module_install::{status, PublicationBlocker};
 use crate::game_module_package::ModulePackage;
 use crate::game_plan_publication::shared_file_destination;
-use crate::game_target::ResolvedTarget;
-use crate::plan_slots::module_config_dir;
+use crate::game_target::{existing_directory, ResolvedTarget, CONFIG_DIRECTORY};
+use crate::plan_slots::{module_config_dir, MODULE_CONFIG_DIRECTORY};
 
 pub const SETTINGS_FILE: &str = "settings.json";
 pub const MAX_SETTINGS_BYTES: usize = 1024;
 const SETTINGS_FORMAT: &str = "run-planner-settings";
+/// The module reads at most this much of its ModpackLib `.cfg`.
+const MAX_LEGACY_CONFIG_BYTES: u64 = 64 * 1024;
 
 /// Each option is off when the file is missing or invalid.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,7 +48,8 @@ impl GameSettings {
     }
 }
 
-/// `settings.json` as found on disk; a missing or invalid file holds no options.
+/// `settings.json` as found on disk, or while it is missing the earlier ModpackLib ticks the
+/// module will seed it from; a missing or invalid file holds no options.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "state", rename_all = "camelCase")]
 pub enum GameSettingsFacts {
@@ -132,12 +135,81 @@ fn read_settings(path: &Path) -> GameSettingsFacts {
     }
 }
 
-/// Reads `settings.json` under the same link and containment rules as the plan slots.
+/// The options' earlier ModpackLib ticks, read as the module reads them to seed
+/// `settings.json`: `true`/`false` lines under `[config]` (or before any section header),
+/// or none when the file holds none of them.
+pub fn decode_legacy_config(bytes: &[u8]) -> Option<GameSettings> {
+    let text = String::from_utf8_lossy(bytes);
+    let mut settings = GameSettings::default();
+    let mut found = false;
+    let mut in_config = true;
+    for line in text.split(['\r', '\n']).filter(|line| !line.is_empty()) {
+        let trimmed = line.trim();
+        if let Some(name) = trimmed
+            .strip_prefix('[')
+            .and_then(|rest| rest.strip_suffix(']'))
+            .filter(|name| !name.is_empty() && !name.contains(']'))
+        {
+            in_config = name == "config";
+            continue;
+        }
+        if !in_config {
+            continue;
+        }
+        let Some((key, value)) = trimmed.split_once('=') else {
+            continue;
+        };
+        let (key, value) = (key.trim_end(), value.trim_start());
+        if key.is_empty() || !key.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') {
+            continue;
+        }
+        let enabled = match value {
+            "true" => true,
+            "false" => false,
+            _ => continue,
+        };
+        let option = match key {
+            "ShowRoomGuide" => GameSettingOption::ShowRoomGuide,
+            "HighlightPlannedChoices" => GameSettingOption::HighlightPlannedChoices,
+            "SnapMode" => GameSettingOption::SnapMode,
+            _ => continue,
+        };
+        settings = settings.with(option, enabled);
+        found = true;
+    }
+    found.then_some(settings)
+}
+
+// The module's ModpackLib `.cfg`, a regular file directly in the contained config folder.
+fn read_legacy_config(target: &ResolvedTarget) -> Option<GameSettings> {
+    let config = existing_directory(&target.rom.join(CONFIG_DIRECTORY), &target.rom).ok()?;
+    let path = config.join(format!("{MODULE_CONFIG_DIRECTORY}.cfg"));
+    let metadata = fs::symlink_metadata(&path).ok()?;
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return None;
+    }
+    let mut bytes = Vec::new();
+    fs::File::open(&path)
+        .and_then(|file| file.take(MAX_LEGACY_CONFIG_BYTES).read_to_end(&mut bytes))
+        .ok()?;
+    decode_legacy_config(&bytes)
+}
+
+/// Reads `settings.json` under the same link and containment rules as the plan slots. While
+/// it is missing, the options' earlier ModpackLib ticks stand in for it, as the module seeds
+/// them once when it loads; once the file exists the `.cfg` is never read.
 pub fn inspect_settings(target: &ResolvedTarget) -> GameSettingsFacts {
-    match module_config_dir(target) {
+    let found = match module_config_dir(target) {
         Ok(None) => GameSettingsFacts::Missing,
         Err(_) => GameSettingsFacts::Invalid,
         Ok(Some(directory)) => read_settings(&directory.join(SETTINGS_FILE)),
+    };
+    match found {
+        GameSettingsFacts::Missing => read_legacy_config(target)
+            .map_or(GameSettingsFacts::Missing, |settings| {
+                GameSettingsFacts::Present { settings }
+            }),
+        found => found,
     }
 }
 
@@ -331,6 +403,92 @@ mod tests {
                 settings: ALL_OFF.with(GameSettingOption::SnapMode, true)
             }
         );
+    }
+
+    fn legacy_config(target: &ResolvedTarget) -> PathBuf {
+        target
+            .rom
+            .join(CONFIG_DIRECTORY)
+            .join(format!("{MODULE_CONFIG_DIRECTORY}.cfg"))
+    }
+
+    #[test]
+    fn legacy_ticks_are_read_only_from_the_config_section() {
+        assert_eq!(decode_legacy_config(b""), None);
+        assert_eq!(decode_legacy_config(b"[config]\nEnabled = true\n"), None);
+        assert_eq!(
+            decode_legacy_config(
+                b"## Settings file\r\n\r\n[config]\r\nEnabled = true\r\n  SnapMode=true  \r\nShowRoomGuide = yes\r\nHighlightPlannedChoices = false\r\n\r\n[other]\r\nShowRoomGuide = true\r\n"
+            ),
+            Some(ALL_OFF.with(GameSettingOption::SnapMode, true))
+        );
+        assert_eq!(
+            decode_legacy_config(b"ShowRoomGuide = true\n"),
+            Some(ALL_OFF.with(GameSettingOption::ShowRoomGuide, true))
+        );
+    }
+
+    #[test]
+    fn a_missing_file_shows_and_keeps_the_earlier_modpacklib_ticks() {
+        let temporary = TemporaryDirectory::new("settings-legacy");
+        let config = temporary.0.join("app-config");
+        let root = temporary.0.join("target");
+        let target = target(&root, TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        let legacy = legacy_config(&target);
+        fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        fs::write(
+            &legacy,
+            "[config]\nEnabled = true\nShowRoomGuide = true\nHighlightPlannedChoices = true\nSnapMode = false\n",
+        )
+        .unwrap();
+        let ticked = GameSettings {
+            show_room_guide: true,
+            highlight_planned_choices: true,
+            snap_mode: false,
+        };
+        assert_eq!(
+            inspect_settings(&target),
+            GameSettingsFacts::Present { settings: ticked }
+        );
+        let saved = set_game_setting(
+            &config,
+            &package("1.2.0", "return 1"),
+            GameSettingOption::SnapMode,
+            true,
+        );
+        assert_eq!(
+            saved.status,
+            SettingChangeStatus::Saved,
+            "{}",
+            saved.message
+        );
+        let written = ticked.with(GameSettingOption::SnapMode, true);
+        assert_eq!(
+            fs::read_to_string(settings_file(&target)).unwrap(),
+            encode_settings(written)
+        );
+        // Once settings.json exists, the .cfg is never read again.
+        fs::write(settings_file(&target), encode_settings(ALL_OFF)).unwrap();
+        assert_eq!(
+            inspect_settings(&target),
+            GameSettingsFacts::Present { settings: ALL_OFF }
+        );
+        fs::write(settings_file(&target), "stale").unwrap();
+        assert_eq!(inspect_settings(&target), GameSettingsFacts::Invalid);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_linked_legacy_config_is_not_read() {
+        let temporary = TemporaryDirectory::new("settings-legacy-link");
+        let target = target(&temporary.0, TargetKind::Manual);
+        let legacy = legacy_config(&target);
+        fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        let elsewhere = temporary.0.join("elsewhere.cfg");
+        fs::write(&elsewhere, "[config]\nSnapMode = true\n").unwrap();
+        std::os::unix::fs::symlink(&elsewhere, &legacy).unwrap();
+        assert_eq!(inspect_settings(&target), GameSettingsFacts::Missing);
     }
 
     #[cfg(unix)]

@@ -35,8 +35,9 @@ const OPTIONS: readonly Omit<GameSettingRow, 'enabled'>[] = [
 ];
 
 /**
- * The game module options as `settings.json` holds them, every option off when the file is
- * missing or invalid, as the module reads it. Null while no game location's files can be read.
+ * The game module options as `settings.json` holds them, or the earlier ModpackLib ticks while
+ * it is missing, every option off otherwise, as the module reads it. Null while no game
+ * location's files can be read.
  */
 export function projectGameSettings(status: GameModuleStatus | null): GameSettingsProduct | null {
   const file = status?.inspection?.settings;
