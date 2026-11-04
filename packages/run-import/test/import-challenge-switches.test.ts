@@ -223,12 +223,18 @@ describe('run import of a claimed Time switch and a hit Perfect Clear', () => {
 describe('run import of a switch in a Fields room', () => {
   const FIELDS = 26;
 
+  /** The Underworld capture through the room after the Fields room, whose entry save judges it. */
+  function throughFields(): RunRecord {
+    const record = fixture('underworld');
+    return { ...record, rooms: record.rooms.slice(0, FIELDS + 2) };
+  }
+
   it("claims an Infernal Trove after the cages and leaves its Nectar out of the room's optional rewards", () => {
-    const base = projectFromRunRecord(catalog, fixture('underworld'));
+    const base = projectFromRunRecord(catalog, throughFields());
     // Fields' own floor admits a switch at H_Combat15, biome depth two.
     const imported = projectFromRunRecord(
       catalog,
-      withRooms(fixture('underworld'), {
+      withRooms(throughFields(), {
         [FIELDS]: { uses: { TimeChallengeSwitch_Money: 2, GiftDrop: 1 } },
       }),
     );
