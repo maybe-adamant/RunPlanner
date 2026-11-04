@@ -4,6 +4,8 @@ local doors = type(import) == "function" and import("mods/navigation/doors.lua")
     or require("mods.navigation.doors")
 local ephyra = type(import) == "function" and import("mods/navigation/ephyra.lua")
     or require("mods.navigation.ephyra")
+local snapFailure = type(import) == "function" and import("mods/snap/failure.lua")
+    or require("mods.snap.failure")
 
 local hooks = {}
 
@@ -32,10 +34,24 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
     -- A substituted Ephyra door { planned, taken } while native LeaveRoom runs.
     local exitWalk
 
+    -- A correction that cannot hold stops snapping for the run. Its record, with
+    -- the mismatch that started the snap, stays on the session and is logged.
+    local function stopWith(state, nativeRoom, owner, failure, explained)
+        state.snapFailure = snapFailure.record({
+            room = roomName(nativeRoom), occurrenceId = owner, frame = true, kind = explained.kind,
+            trigger = state.firstMismatch, before = explained.before, after = explained.after,
+            unwritable = explained.unwritable, err = explained.err,
+        })
+        if snapScope.log ~= nil then
+            for _, line in ipairs(snapFailure.lines(state.snapFailure)) do snapScope.log(line) end
+        end
+        session.stopSnapping(state, failure)
+    end
+
     -- Writes the plan's hero state for the room being left before native LeaveRoom;
     -- nil when the correction failed and snapping stopped. Also returns the
     -- families it found different and wrote.
-    local function correctHero(state, frame, owner)
+    local function correctHero(state, nativeRoom, frame, owner)
         local ok, outcome, detail, written = pcall(snapScope.correct, frame, {
             hexTree = snapScope.hexTree,
             diagnostic = function(checkpoint, expected, observed)
@@ -43,11 +59,19 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
             end,
         })
         if not ok then
-            session.stopSnapping(state, { outcome = "fault", checkpoint = "snap-apply", expected = owner,
-                observed = tostring(outcome) })
+            local text = tostring(outcome)
+            stopWith(state, nativeRoom, owner,
+                { outcome = "fault", checkpoint = "snap-apply", expected = owner, observed = text },
+                { kind = "fault", err = text })
             return nil
         end
-        if outcome == nil then session.stopSnapping(state, detail); return nil end
+        if outcome == nil then
+            if type(detail) == "table" and detail.outcome == "fault" and detail.expected == nil then
+                detail.expected = owner
+            end
+            stopWith(state, nativeRoom, owner, detail, written or { kind = "still-differs" })
+            return nil
+        end
         return outcome, detail, written
     end
 
@@ -112,7 +136,7 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         local outcome, written
         if frame ~= nil then
             local _
-            outcome, _, written = correctHero(state, frame, leaving and leaving.id or roomName(nativeRoom))
+            outcome, _, written = correctHero(state, nativeRoom, frame, leaving and leaving.id or roomName(nativeRoom))
             if outcome == nil then
                 logSnap(nativeRoom, frame, "failed", nil, nil)
                 report(runtime)

@@ -20,3 +20,8 @@ waives each check.
       the planned god's boon instead. The next save's `LootTypeHistory` holds
       the planned god and not the unplanned one, and a later shop or god draw
       offers only gods the plan allows.
+- [ ] When a snap cannot hold (a correction that stops snapping for the run),
+      the log shows a `[RunPlanner] snap failed` line with its detail lines
+      naming the trigger and each differing family, and the status window's
+      Current Run tab keeps "Snap stopped at <room>: <families>" in every later
+      room.

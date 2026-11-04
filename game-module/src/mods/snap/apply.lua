@@ -591,15 +591,28 @@ function snap.differences(frame)
 end
 
 -- "in-sync" when the hero already matches the frame, else "corrected", the
--- first difference and every differing family once apply verifies; nil and the
--- failure otherwise.
+-- first difference and every differing family once apply verifies. Otherwise
+-- nil, the failure, and a report: its kind ("unwritable", "still-differs" or
+-- "fault"), every family that differed before the write and, by kind, the
+-- unwritable family, the families still different after it, or the error.
 function snap.correct(frame, context)
     local same, difference = admission.verifyFrame(frame, "snap-exit")
     if same then return "in-sync" end
-    local written = snap.differences(frame)
-    local applied, failure = snap.apply(frame, context)
-    if not applied then return nil, failure end
-    return "corrected", difference, written
+    local before = snap.differences(frame)
+    local ok, applied, failure = pcall(snap.apply, frame, context)
+    if not ok then
+        local text = tostring(applied)
+        return nil, { outcome = "fault", checkpoint = "snap-apply", observed = text },
+            { kind = "fault", before = before, err = text }
+    end
+    if applied then return "corrected", difference, before end
+    if type(failure) == "table" and failure.outcome == "fault" then
+        local family = tostring(failure.checkpoint):gsub("^snap:", "")
+        return nil, failure, { kind = "unwritable", before = before, unwritable = {
+            family = family, reason = tostring(failure.expected) .. " " .. tostring(failure.observed),
+        } }
+    end
+    return nil, failure, { kind = "still-differs", before = before, after = snap.differences(frame) }
 end
 
 return snap

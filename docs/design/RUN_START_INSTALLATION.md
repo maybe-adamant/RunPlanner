@@ -462,7 +462,13 @@ run to its plan at each room exit. Off, a desynchronized run is unchanged.
   proofs report as in any synchronized room.
 - **Stop.** Snapping stops for the run only when an exit correction fails in
   its own room: the writers fault (the session faults) or the verify fails
-  (`snap-loop`). Any later mismatch is corrected at the next exit.
+  (`snap-loop`). Any later mismatch is corrected at the next exit. A stopped
+  snap is never retried. Its failure is kept on the session for the rest of
+  the run: the room and occurrence, the mismatch that started the snap, every
+  family that differed before the write, and why it did not hold (a family it
+  cannot write, the families still different after the write, or the raised
+  error). The log carries all of it, bounded per family, and the status window
+  keeps one short line naming the room and the failed families.
 - **Declined.** A reloaded run, a planned door that is not offered, and a
   biome edge from a room entered out of sync or where the plan ends are
   declined, and native chooses. A declined run does not wait on the same

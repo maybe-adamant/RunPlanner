@@ -333,7 +333,10 @@ function ui.bind(inbox, inspectSession, activeSlotFile, settingsFile, slotOvervi
                 lines[3] = "What differed: "
                     .. (mismatch and mismatch.difference and mismatch.difference .. "." or "See More details.")
             end
-            if snapshot.reason == "snap-loop" then
+            local snapStopped = presentation.snapStopped(snapshot)
+            if snapStopped then
+                lines[#lines + 1] = snapStopped
+            elseif snapshot.reason == "snap-loop" then
                 lines[#lines + 1] = "Snapping stopped: the snap did not hold."
             end
             lines[#lines + 1] = snapped
@@ -351,7 +354,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, settingsFile, slotOvervi
     end
 
     -- Header and run text follow the session fields they read and the slot view.
-    local VIEW_FIELDS = { "plan", "state", "reason", "slot", "index", "current", "issue", "snaps" }
+    local VIEW_FIELDS = { "plan", "state", "reason", "slot", "index", "current", "issue", "snaps", "snapFailure" }
     local cached = { generation = -1 }
     local function sessionView(snapshot)
         local changed = cached.generation ~= generation or cached.viewSlot ~= viewSlot

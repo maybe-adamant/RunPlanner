@@ -64,6 +64,7 @@ function composition.bind(root, moduleVersion, legacyConfig)
         snapshot.restoredRoom = routeState and routeState.transparentNativeRoom
         snapshot.issue = executionState.firstMismatch or executionState.firstFault or executionState.admissionError
         snapshot.snaps = executionState.snaps
+        snapshot.snapFailure = executionState.snapFailure
         return snapshot
     end
 

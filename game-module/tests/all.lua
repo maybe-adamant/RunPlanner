@@ -81,6 +81,7 @@ require("tests/runtime/test_composition")
 require("tests/practice/test_start")
 require("tests/snap/test_apply")
 require("tests/snap/test_mode")
+require("tests/snap/test_failure")
 
 local lfs = require("lfs")
 local variantTests = {}

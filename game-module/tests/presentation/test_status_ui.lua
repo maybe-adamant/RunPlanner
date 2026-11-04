@@ -639,6 +639,32 @@ function TestStatusUi.testMismatchesAreDescribedInPlainWords()
     lu.assertNotStrContains(text, "4.0999999")
 end
 
+function TestStatusUi.testAStoppedSnapStaysShownInLaterRooms()
+    local plan = publishedPlan()
+    local failure = { room = "F_Combat03", kind = "still-differs", failedFamilies = { "keepsakes" } }
+    local snapshot = synchronized(plan, 3, {
+        state = "desynchronized", reason = "snap-loop", snapFailure = failure,
+        issue = { checkpoint = "snap-exit:keepsakes", expected = 1, observed = 0 },
+    })
+    local h = harness({ tab = "Current Run", snapshot = snapshot })
+    lu.assertStrContains(h.draw(), "Snap stopped at Erebus Combat 3: keepsakes")
+    reopen(h)
+    h.snapshot = synchronized(plan, 7, {
+        state = "desynchronized", reason = "snap-loop", snapFailure = failure,
+        issue = { checkpoint = "snap-exit:keepsakes", expected = 1, observed = 0 },
+    })
+    local later = h.draw()
+    lu.assertStrContains(later, "Snap stopped at Erebus Combat 3: keepsakes")
+    lu.assertNotStrContains(later, "the snap did not hold")
+    reopen(h)
+    h.snapshot = synchronized(plan, 7, {
+        state = "faulted", reason = "executor-fault", snapFailure = { room = "F_Combat03", kind = "fault",
+            failedFamilies = {} },
+        issue = { outcome = "fault", checkpoint = "snap-apply" },
+    })
+    lu.assertStrContains(h.draw(), "Snap stopped at Erebus Combat 3: planner error")
+end
+
 function TestStatusUi.testDiagnosticsTabIsMutedUntilDebugMode()
     local plan = publishedPlan()
     local snapshot = synchronized(plan, 3, {

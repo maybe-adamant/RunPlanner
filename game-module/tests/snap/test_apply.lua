@@ -506,6 +506,68 @@ function TestSnapApply.testACorrectionWritesNothingWhenTheHeroAlreadyMatches()
     lu.assertEquals(names(hero), {})
 end
 
+-- A correction that cannot hold reports every family that differed before the
+-- write, and by kind the unwritable family, what still differs, or the error.
+local function failingCorrection(value, afterWrite)
+    local mismatch = { checkpoint = "snap-exit:keepsakes" }
+    local differences, verifyFrame = admission.differences, admission.verifyFrame
+    local reads = 0
+    admission.verifyFrame = function() return nil, mismatch end
+    admission.differences = function()
+        reads = reads + 1
+        if reads > 1 then return afterWrite end
+        return {
+            { family = "keepsakes", expected = { held = 1 }, observed = { held = 0 } },
+            { family = "hermesDeliveries", expected = {}, observed = { "SpellDrop:8" } },
+        }
+    end
+    local outcome, failure, report = snap.correct(value, {})
+    admission.differences, admission.verifyFrame = differences, verifyFrame
+    return outcome, failure, report
+end
+
+function TestSnapApply.testAWriteThatDoesNotHoldReportsWhatStillDiffers()
+    local _, _, restore = world()
+    local outcome, failure, report = failingCorrection(frame(), {
+        { family = "keepsakes", expected = { held = 1 }, observed = { held = 0 } },
+    })
+    restore()
+    lu.assertNil(outcome)
+    lu.assertEquals(failure.checkpoint, "snap-exit:keepsakes")
+    lu.assertEquals(report, {
+        kind = "still-differs",
+        before = {
+            { family = "keepsakes", paths = { "keepsakes.held=1->0" } },
+            { family = "hermesDeliveries", paths = { "hermesDeliveries.1=nil->SpellDrop:8" } },
+        },
+        after = { { family = "keepsakes", paths = { "keepsakes.held=1->0" } } },
+    })
+end
+
+function TestSnapApply.testAnUnwritableFamilyIsNamedWithItsReason()
+    local _, _, restore = world()
+    local value = frame()
+    value.rewardStores = { { name = "Missing", remainingEntryCounts = { 1 } } }
+    local outcome, failure, report = failingCorrection(value, {})
+    restore()
+    lu.assertNil(outcome)
+    lu.assertEquals(failure.outcome, "fault")
+    lu.assertEquals({ report.kind, report.unwritable, #report.before },
+        { "unwritable", { family = "reward-store", reason = "Missing undeclared" }, 2 })
+end
+
+function TestSnapApply.testAnErrorDuringTheWriteIsAFaultWithItsText()
+    local _, _, restore = world()
+    _G.ValidateMaxHealth = function() error("max health exploded") end
+    local outcome, failure, report = failingCorrection(frame(), {})
+    restore()
+    lu.assertNil(outcome)
+    lu.assertEquals({ failure.outcome, failure.checkpoint }, { "fault", "snap-apply" })
+    lu.assertEquals(report.kind, "fault")
+    lu.assertStrContains(report.err, "max health exploded")
+    lu.assertEquals(#report.before, 2)
+end
+
 function TestSnapApply.testDifferencesNameEachFamilyAndLeafWithoutWriting()
     local hero, log, restore = world({ { Name = "ZeusWeaponBoon", Rarity = "Common", StackNum = 1 } })
     local differences = admission.differences

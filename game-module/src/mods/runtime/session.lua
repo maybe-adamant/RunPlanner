@@ -106,6 +106,7 @@ local function reset(state)
     state.abandoned = nil
     state.snaps = {}
     state.snapDisabled = nil
+    state.snapFailure = nil
     state.diagnostics = {}
     state.reason = "not-started"
     return state

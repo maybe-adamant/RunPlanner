@@ -442,6 +442,46 @@ function TestSnapMode.testAnApplyFaultStopsSnappingAsAPlannerError()
     lu.assertEquals(state.firstFault.checkpoint, "snap-apply")
 end
 
+function TestSnapMode.testAFailedSnapKeepsItsReportWithTheTriggerAndLogsIt()
+    local state = desynchronized(1, "room-exit-conformance:hermesDeliveries")
+    local leave, start, log, restore = attached(state, true, function()
+        return nil, { checkpoint = "snap-exit:keepsakes", expected = 1, observed = 0 }, {
+            kind = "still-differs",
+            before = {
+                { family = "keepsakes", paths = { "keepsakes.held=1->0" } },
+                { family = "hermesDeliveries", paths = { "hermesDeliveries.1=nil->SpellDrop:8" } },
+            },
+            after = { { family = "keepsakes", paths = { "keepsakes.held=1->0" } } },
+        }
+    end)
+    leave("F_A", { Room = { Name = "F_X" } })
+    start({ Name = "F_X" })
+    leave("F_X", { Room = { Name = "F_Y" } })
+    restore()
+    local record = state.snapFailure
+    lu.assertEquals({ record.room, record.occurrenceId, record.kind, record.failedFamilies, record.differedFamilies },
+        { "F_A", "a", "still-differs", { "keepsakes" }, { "keepsakes", "hermesDeliveries" } })
+    lu.assertEquals(record.trigger.checkpoint, "room-exit-conformance:hermesDeliveries")
+    lu.assertEquals({ state.reason, state.firstMismatch.checkpoint }, { "snap-loop", "snap-exit:keepsakes" })
+    local failed = {}
+    for _, message in ipairs(log.messages) do
+        if message:find("snap failed", 1, true) then failed[#failed + 1] = message end
+    end
+    lu.assertEquals(#failed, 5)
+    lu.assertStrContains(failed[1], "room=F_A occurrence=a frame=yes kind=still-differs failed=keepsakes")
+end
+
+function TestSnapMode.testAnErrorRaisedByTheCorrectionIsRecordedAsAFault()
+    local state = desynchronized(1)
+    local leave, _, log, restore = attached(state, true, function() error("native call failed") end)
+    leave("F_A", { Room = { Name = "F_X" } })
+    restore()
+    lu.assertEquals({ state.snapFailure.kind, state.snapFailure.failedFamilies }, { "fault", {} })
+    lu.assertStrContains(state.snapFailure.error, "native call failed")
+    lu.assertEquals(state.snapFailure.trigger.checkpoint, "room-exit-conformance:traitInventory")
+    lu.assertStrContains(log.messages[1], "kind=fault")
+end
+
 function TestSnapMode.testConsecutiveMispicksOfTheSameKindEachSnap()
     local state = desynchronized(1)
     local leave, start, _, restore = attached(state, true)
