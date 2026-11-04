@@ -106,6 +106,25 @@ export interface SavedProfile {
   /** Equipped Arcana by name with card level. */
   readonly arcana: Readonly<Record<string, number>>;
   readonly money: number;
+  /** Kept only on a save that can start a run, which is where the profile is judged. */
+  readonly progression?: SavedProgression;
+}
+
+/** The profile's stored progression, which no in-run effect changes. */
+export interface SavedProgression {
+  readonly reachedTrueEnding: boolean;
+  /** `MetaUpgradeState`: every card's unlock and stored level, equipped or not. */
+  readonly arcanaRanks: Readonly<
+    Record<string, { readonly unlocked: boolean; readonly level: number }>
+  >;
+  /** Aspects with a bought rank: 1 plus their `WeaponsUnlocked` `<Aspect>2`..`<Aspect>5`. */
+  readonly aspectRanks: Readonly<Record<string, number>>;
+  /** `KeepsakeChambers`: encounters cleared with each keepsake equipped. */
+  readonly keepsakeChambers: Readonly<Record<string, number>>;
+  /** `FamiliarUpgrades` bought. */
+  readonly familiarUpgrades: readonly string[];
+  /** `WorldUpgrades.WorldUpgradeAutoHarvestOnExit`: the exit harvest Incantation is active. */
+  readonly autoHarvestOnExit: boolean;
 }
 
 export interface SavedSpawn {
@@ -640,6 +659,37 @@ export function extractSaveCheckpoint(
       shrineUpgrades,
       arcana,
       money: number(table(gameState.Resources).Money) ?? 0,
+      // A Hub start save, or any save of a new profile's first attempt.
+      ...optional(
+        'progression',
+        temp && save.header.nextMap !== '' && (history.length === 0 || save.header.runCount === 0)
+          ? progression(gameState)
+          : undefined,
+      ),
     },
   });
+}
+
+function progression(gameState: LuaTable): SavedProgression {
+  const arcanaRanks: Record<string, { unlocked: boolean; level: number }> = {};
+  for (const [name, state] of Object.entries(table(gameState.MetaUpgradeState)))
+    if (isTable(state))
+      arcanaRanks[name] = { unlocked: state.Unlocked === true, level: number(state.Level) ?? 0 };
+  const aspectRanks: Record<string, number> = {};
+  for (const [name, unlocked] of Object.entries(table(gameState.WeaponsUnlocked))) {
+    const rank = /^(\w+Aspect)[2-5]$/.exec(name);
+    if (rank !== null && unlocked === true)
+      aspectRanks[rank[1]!] = (aspectRanks[rank[1]!] ?? 1) + 1;
+  }
+  return {
+    reachedTrueEnding: gameState.ReachedTrueEnding === true,
+    arcanaRanks,
+    aspectRanks,
+    keepsakeChambers: counts(gameState.KeepsakeChambers),
+    familiarUpgrades: Object.entries(table(gameState.FamiliarUpgrades))
+      .filter(([, bought]) => bought === true)
+      .map(([name]) => name)
+      .sort(),
+    autoHarvestOnExit: table(gameState.WorldUpgrades).WorldUpgradeAutoHarvestOnExit === true,
+  };
 }

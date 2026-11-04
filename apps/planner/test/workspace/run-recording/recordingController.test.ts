@@ -44,6 +44,7 @@ function setup(
     store: { dispatch },
     importer: options.importer ?? createInProcessRunImporter(catalog),
     prebossRooms: options.prebossRooms ?? prebossRoomsByBiome(catalog),
+    arcanaCards: catalog.arcanaCards.values.map((card) => card.key),
     savedValuePaths: new Map(),
     delay: () => Promise.resolve(),
   });
@@ -129,6 +130,32 @@ describe('recording controller', () => {
     await context.controller.restoreRun(deleted!);
     expect(context.state().recentRuns).toEqual([summary]);
     expect(await context.controller.readRun(summary!.id)).toEqual(stored);
+  });
+
+  it('keeps only the failed gates of a run whose profile fails one, importing nothing', async () => {
+    const context = setup({ prebossRooms: new Map([['N', new Set(['N_Hub'])]]) });
+    await context.controller.setEnabled(true);
+    const unfinishedStory = (globals: Record<string, LuaValue>) => ({
+      ...globals,
+      GameState: {
+        ...(globals['GameState'] as Record<string, LuaValue>),
+        ReachedTrueEnding: false,
+      },
+    });
+    await context.deliver('Profile1_Temp.sav', sampleSaveBytes('surface-002', {}, unfinishedStory));
+    for (const id of ['004', '006', '009', '011'])
+      await context.deliver('Profile1_Temp.sav', sampleSaveBytes(`surface-${id}`));
+    await context.deliver('Profile1_Temp.sav', sampleSaveBytes('surface-002', { runCount: 1003 }));
+    const [summary] = context.state().recentRuns!;
+    expect(summary).toMatchObject({
+      id: 'p1-1793057328-1002',
+      unmetGates: ['trueEnding'],
+      hasRecord: false,
+      reportCount: 0,
+    });
+    const stored = await context.controller.readRun(summary!.id);
+    expect(stored).not.toHaveProperty('record');
+    expect(stored).not.toHaveProperty('project');
   });
 
   it('reads a save again when the first read raced the write', async () => {

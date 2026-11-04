@@ -286,6 +286,29 @@ U: two each in `H_Combat15` and `H_Combat07`).
 `GameState.LastAwardTrait` in the end save is the last swapped keepsake, not the
 starting one.
 
+### Profile progression
+
+The recorder judges a profile against the
+[mature save](../../design/CATALOG_MODEL.md#save-profiles-and-route-availability)
+from the run's start save (the `Hub_PreRun` entry save, or every save of a run
+count 0 attempt), whose `GameState` holds stored progression no in-run effect
+changes; ranks an in-run effect raises (a keepsake or aspect trait's `Rarity`)
+are never read.
+
+| Gate                  | Save source and threshold                                                                                                                                                                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| True ending           | `GameState.ReachedTrueEnding` true                                                                                                                                                                                                                                        |
+| Arcana at rank III    | `GameState.MetaUpgradeState[card].Unlocked` true and `.Level >= 3` for every catalog card (the base two upgrade steps, `MetaUpgradeData.lua:56-71`); the non-card rows `BaseMetaUpgrade` and `BaseBonusMetaUpgrade` are not cards                                         |
+| Aspect at rank V      | `GameState.WeaponsUnlocked["<Aspect>2"]` through `["<Aspect>5"]` all true for the slotted aspect: its rank is 1 plus the bought `WeaponShopItemData` items whose `TraitUpgrade` names it (`GetWeaponUpgradeLevel`, `WeaponUpgradeLogic.lua:478-487`); all 96 are named so |
+| Keepsakes at rank III | `GameState.KeepsakeChambers[keepsake] >= 75` for every keepsake any save of the run slots, rack swaps included (`ChamberThresholds` 25 and 50, `TraitData_Keepsake.lua:43`, levelled by `KeepsakeLogic.lua:1-42`)                                                         |
+| Familiar at full rank | `GameState.FamiliarUpgrades` holds each of the equipped familiar's three items at levels 1 to 3 (`<Item>`, `<Item>2`, `<Item>3`; `FamiliarShopData.lua`), each raising one familiar trait (`GetFamiliarTraitStacks`, `FamiliarShopLogic.lua:445-453`)                     |
+| Greatest Gift of Gaia | `GameState.WorldUpgrades.WorldUpgradeAutoHarvestOnExit` true: leaving a room harvests its resources only while it is active (`RoomLogic.lua:4188`, `HarvestLogic.lua:291`)                                                                                                |
+
+A run count 0 attempt is exempt: it is the Fresh File route. Over the corpus
+(2026-11-03) every mature raw passes every gate, including runs 333 and 334,
+whose profile holds two keepsakes below rank III (`DeathVengeanceKeepsake` 54,
+`BlockDeathKeepsake` 48) that neither run equips.
+
 ### Encounters, Fangs, and Menace
 
 | Fact               | Save source                                                                         | Status      |

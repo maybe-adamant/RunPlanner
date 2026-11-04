@@ -2,6 +2,7 @@ import { decodeRunRecord, type RunRecord } from '@run-planner/run-import/run-rec
 import type { RunImportReport } from '@run-planner/run-import';
 
 import type { RecentRunsHost } from '@planner/persistence/recordHost';
+import { PROFILE_GATES, type ProfileGate } from './profileGates';
 import type { RawSaveCapture } from './rawSaves';
 import type { RunImportResult } from './runImportProtocol';
 import type { ClosedRun } from './runRecorder';
@@ -43,6 +44,8 @@ export interface RecentRunEntry {
   readonly gap?: true;
   /** Why the record or plan could not be built. */
   readonly failure?: string;
+  /** The profile gates the run failed, so it was not recorded; it has no record or plan. */
+  readonly unmetGates?: readonly ProfileGate[];
 }
 
 /** A stored run without its record, plan and report. */
@@ -62,6 +65,7 @@ export interface RecentRunSummary {
   readonly hasRecord: boolean;
   readonly gap: boolean;
   readonly failure?: string;
+  readonly unmetGates?: readonly ProfileGate[];
 }
 
 export function recentRunId(run: Pick<ClosedRun, 'profile' | 'startedAt' | 'runCount'>): string {
@@ -73,11 +77,10 @@ const idStart = (id: string): number | undefined => {
   return match === null ? undefined : Number(match[1]);
 };
 
-/** The stored entry for a closed run and its import. */
-export function recentRunEntry(run: ClosedRun, result: RunImportResult): RecentRunEntry {
+/** A closed run's identity and route, as every stored entry keeps them. */
+function closedRunEntry(run: ClosedRun) {
   const entries = run.checkpoints.filter((save) => save.kind === 'entry');
   const last = run.end ?? run.checkpoints[run.checkpoints.length - 1]!;
-  const recordJson = result.recordJson;
   return {
     entryVersion: ENTRY_VERSION,
     id: recentRunId(run),
@@ -92,6 +95,23 @@ export function recentRunEntry(run: ClosedRun, result: RunImportResult): RecentR
       rooms: entries.length,
       endingRoom: entries[entries.length - 1]!.currentRoom.name,
     },
+  } as const;
+}
+
+/** The stored entry for a run its profile gates refused: no record, plan or report. */
+export function refusedRunEntry(run: ClosedRun, gates: readonly ProfileGate[]): RecentRunEntry {
+  return {
+    ...closedRunEntry(run),
+    unmetGates: gates,
+    ...(run.gap ? { gap: true as const } : {}),
+  };
+}
+
+/** The stored entry for a closed run and its import. */
+export function recentRunEntry(run: ClosedRun, result: RunImportResult): RecentRunEntry {
+  const recordJson = result.recordJson;
+  return {
+    ...closedRunEntry(run),
     ...(recordJson === undefined ? {} : { record: decodeRunRecord(JSON.parse(recordJson)) }),
     ...(result.kind === 'imported'
       ? { project: result.projectJson, report: result.report, importKind: result.importKind }
@@ -126,6 +146,7 @@ export function summarizeRecentRun(entry: RecentRunEntry): RecentRunSummary {
     hasRecord: entry.record !== undefined,
     gap: entry.gap === true,
     ...(entry.failure === undefined ? {} : { failure: entry.failure }),
+    ...(entry.unmetGates === undefined ? {} : { unmetGates: entry.unmetGates }),
   };
 }
 
@@ -185,6 +206,14 @@ export function decodeRecentRunEntry(json: string): RecentRunEntry {
     return fail('importKind');
   if (value.gap !== undefined && value.gap !== true) return fail('gap');
   if (value.failure !== undefined && typeof value.failure !== 'string') return fail('failure');
+  const { unmetGates } = value;
+  if (
+    unmetGates !== undefined &&
+    (!Array.isArray(unmetGates) ||
+      unmetGates.length === 0 ||
+      !unmetGates.every((gate) => PROFILE_GATES.includes(gate as ProfileGate)))
+  )
+    return fail('unmetGates');
   return {
     entryVersion: ENTRY_VERSION,
     id,
@@ -205,6 +234,7 @@ export function decodeRecentRunEntry(json: string): RecentRunEntry {
     ...(value.importKind === undefined ? {} : { importKind: value.importKind }),
     ...(value.gap === undefined ? {} : { gap: true as const }),
     ...(value.failure === undefined ? {} : { failure: value.failure }),
+    ...(unmetGates === undefined ? {} : { unmetGates: unmetGates as ProfileGate[] }),
   };
 }
 

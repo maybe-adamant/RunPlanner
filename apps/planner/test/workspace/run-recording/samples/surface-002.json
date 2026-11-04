@@ -32,22 +32,54 @@
         "EnemyHealthShrineUpgrade": 3
       },
       "MetaUpgradeState": {
-        "MaxHealthPerRoom": { "Equipped": true, "Level": 3 },
-        "BonusHealth": { "Equipped": true, "Level": 3 },
-        "StartingGold": { "Equipped": true, "Level": 3 },
-        "HealthRegen": { "Equipped": true, "Level": 3 },
-        "BonusDodge": { "Equipped": true, "Level": 3 },
-        "EpicRarityBoost": { "Equipped": true, "Level": 3 },
-        "LowManaDamageBonus": { "Equipped": true, "Level": 3 },
-        "CastBuff": { "Equipped": true, "Level": 3 },
-        "MetaToRunUpgrade": { "Equipped": true, "Level": 3 },
-        "ChanneledCast": { "Equipped": true, "Level": 3 },
-        "LastStand": { "Equipped": true, "Level": 3 },
-        "SprintShield": { "Equipped": true, "Level": 3 },
-        "ChanneledBlock": { "Equipped": true, "Level": 3 },
-        "StatusVulnerability": { "Equipped": true, "Level": 3 }
+        "MaxHealthPerRoom": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "BonusHealth": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "StartingGold": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "HealthRegen": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "BonusDodge": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "EpicRarityBoost": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "LowManaDamageBonus": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "CastBuff": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "MetaToRunUpgrade": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "ChanneledCast": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "LastStand": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "SprintShield": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "ChanneledBlock": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "StatusVulnerability": { "Equipped": true, "Level": 3, "Unlocked": true },
+        "DoorReroll": { "Level": 3, "Unlocked": true },
+        "SorceryRegenUpgrade": { "Level": 3, "Unlocked": true },
+        "ManaOverTime": { "Level": 3, "Unlocked": true },
+        "CastCount": { "Level": 3, "Unlocked": true },
+        "LowHealthBonus": { "Level": 3, "Unlocked": true },
+        "BonusRarity": { "Level": 3, "Unlocked": true },
+        "MagicCrit": { "Level": 3, "Unlocked": true },
+        "ScreenReroll": { "Level": 3, "Unlocked": true },
+        "CardDraw": { "Level": 3, "Unlocked": true },
+        "RarityBoost": { "Level": 3, "Unlocked": true },
+        "TradeOff": { "Level": 3, "Unlocked": true }
       },
-      "Resources": { "Money": 300 }
+      "Resources": { "Money": 300 },
+      "ReachedTrueEnding": true,
+      "WeaponsUnlocked": {
+        "StaffClearCastAspect": true,
+        "StaffClearCastAspect2": true,
+        "StaffClearCastAspect3": true,
+        "StaffClearCastAspect4": true,
+        "StaffClearCastAspect5": true
+      },
+      "KeepsakeChambers": { "HadesAndPersephoneKeepsake": 6710 },
+      "FamiliarUpgrades": {
+        "PolecatDamage": true,
+        "PolecatDamage2": true,
+        "PolecatDamage3": true,
+        "PolecatDodgeBonus": true,
+        "PolecatDodgeBonus2": true,
+        "PolecatDodgeBonus3": true,
+        "PolecatUses": true,
+        "PolecatUses2": true,
+        "PolecatUses3": true
+      },
+      "WorldUpgrades": { "WorldUpgradeAutoHarvestOnExit": true }
     },
     "CurrentRun": {
       "BiomeVisitOrder": {},
@@ -137,7 +169,11 @@
             "Rarity": "Epic"
           },
           { "Name": "HadesChronosDebuffBoon", "Id": "1110.1166671942920.22087305318564" },
-          { "Name": "DodgeFamiliar", "Id": "2110.1166671942920.11951784905978", "StackNum": 4 },
+          {
+            "Name": "DodgeFamiliar",
+            "Id": "2110.1166671942920.11951784905978",
+            "StackNum": 4
+          },
           {
             "Name": "FamiliarPolecatResourceBonus",
             "Id": "3110.1166671942920.77560250484385",

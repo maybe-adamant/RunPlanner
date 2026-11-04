@@ -12,6 +12,7 @@ import type { HomeContextPart } from '@planner/projections/homeContext';
 import { ownEntry } from '@planner/projections/gameSlotSummary';
 import type { RecordingStatus } from '@planner/state/recordingSessionSlice';
 import type { LibraryItem } from '@planner/workspace/projectLibrary';
+import type { ProfileGate } from '@planner/workspace/run-recording/profileGates';
 import type { RecentRunEntry, RecentRunSummary } from '@planner/workspace/run-recording/recentRuns';
 
 /** The library-copy key a recorded run is remembered under, beside catalog entries. */
@@ -118,7 +119,29 @@ function loadoutText(catalog: Catalog, summary: RecentRunSummary): string | null
   return aspect === null ? weapon : `${weapon}, ${aspect}`;
 }
 
+/** What a refused run's profile still needs, as the hint lists it. */
+const GATE_TEXT: Readonly<Record<ProfileGate, string>> = {
+  trueEnding: 'the true ending',
+  arcanaRanks: 'every Arcana at rank III',
+  aspectRank: 'this aspect at rank V',
+  keepsakeRanks: 'every keepsake used at rank III',
+  familiarRank: 'this familiar fully upgraded',
+  autoHarvestOnExit: 'Greatest Gift of Gaia',
+};
+
+function listed(items: readonly string[]): string {
+  return items.length < 2
+    ? items.join('')
+    : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]!}`;
+}
+
 function marker(summary: RecentRunSummary): RecentRunMarker | null {
+  if (summary.unmetGates !== undefined)
+    return {
+      kind: 'failed',
+      label: 'Not recorded',
+      hint: `Needs ${listed(summary.unmetGates.map((gate) => GATE_TEXT[gate]))}.`,
+    };
   if (summary.failure !== undefined)
     return { kind: 'failed', label: 'Not imported', hint: summary.failure };
   if (summary.gap)
@@ -174,7 +197,7 @@ export function projectRecentRunsView(
       action:
         copy !== undefined
           ? { kind: 'inLibrary', key: copy }
-          : summary.failure === undefined
+          : summary.failure === undefined && summary.unmetGates === undefined
             ? { kind: 'add' }
             : { kind: 'none' },
       rebuildable: summary.hasRecord,

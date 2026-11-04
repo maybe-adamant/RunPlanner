@@ -123,6 +123,27 @@ describe('recent runs view', () => {
     expect(rows.map((row) => row.action.kind)).toEqual(['none', 'add', 'add']);
   });
 
+  it("marks a run its profile's gates refused with what it needs, offering nothing", () => {
+    const rows = view([
+      summary({ hasRecord: false, unmetGates: ['trueEnding'] }),
+      summary({
+        hasRecord: false,
+        unmetGates: ['aspectRank', 'keepsakeRanks', 'autoHarvestOnExit'],
+      }),
+    ]).rows;
+    expect(rows.map((row) => [row.marker?.label, row.marker?.hint])).toEqual([
+      ['Not recorded', 'Needs the true ending.'],
+      [
+        'Not recorded',
+        'Needs this aspect at rank V, every keepsake used at rank III and Greatest Gift of Gaia.',
+      ],
+    ]);
+    expect(rows.map((row) => [row.action.kind, row.rebuildable])).toEqual([
+      ['none', false],
+      ['none', false],
+    ]);
+  });
+
   it('offers a rebuild only for a run whose record is stored', () => {
     const rows = view([summary(), summary({ hasRecord: false, failure: 'no entry save' })]).rows;
     expect(rows.map((row) => row.rebuildable)).toEqual([true, false]);

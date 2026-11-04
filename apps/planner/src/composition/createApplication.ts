@@ -253,6 +253,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
           store,
           importer: options.runImporter ?? createInProcessRunImporter(catalog),
           prebossRooms: prebossRoomsByBiome(catalog),
+          arcanaCards: catalog.arcanaCards.values.map((card) => card.key),
           savedValuePaths: runRecordSavedValuePaths(catalog),
           // Raw saves are kept for importer work in development builds only.
           ...(devBuild ? { rawSaves: options.recordHost.rawSaves } : {}),

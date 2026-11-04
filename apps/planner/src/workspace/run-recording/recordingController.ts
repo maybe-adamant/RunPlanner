@@ -22,10 +22,12 @@ import {
   RECENT_RUNS_LIMIT,
   recentRunEntry,
   recentRunId,
+  refusedRunEntry,
   summarizeRecentRun,
   type RecentRunEntry,
 } from './recentRuns';
 import { createOpenRunStore } from './openRuns';
+import { unmetProfileGates } from './profileGates';
 import { createRawSaveCapture } from './rawSaves';
 import type { RunImporter } from './runImport';
 import type { RunImportResult } from './runImportProtocol';
@@ -92,7 +94,8 @@ function imported(result: RunImportResult): Extract<RunImportResult, { kind: 'im
 
 /**
  * Feeds delivered saves, in arrival order, through the run recorder; a closed
- * run that reached its first biome's Preboss is imported and stored.
+ * run that reached its first biome's Preboss is imported and stored, unless
+ * its profile fails a gate, when only the failed gates are stored.
  */
 export function createRecordingController(options: {
   readonly host: RecordHost;
@@ -100,13 +103,15 @@ export function createRecordingController(options: {
   readonly store: Pick<PlannerStore, 'dispatch'>;
   readonly importer: RunImporter;
   readonly prebossRooms: ReadonlyMap<string, ReadonlySet<string>>;
+  /** The catalog's Arcana card names, every one of which a recorded profile must own at rank III. */
+  readonly arcanaCards: readonly string[];
   /** The trait-table values each save keeps for the run record. */
   readonly savedValuePaths: RunRecordSavedValuePaths;
   /** Keeps every accepted save of a recorded run beside it; development builds only. */
   readonly rawSaves?: RawSavesHost;
   readonly delay?: (ms: number) => Promise<void>;
 }): RecordingController {
-  const { host, preference, store, importer, prebossRooms, savedValuePaths } = options;
+  const { host, preference, store, importer, prebossRooms, arcanaCards, savedValuePaths } = options;
   const delay =
     options.delay ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const capture =
@@ -193,6 +198,12 @@ export function createRecordingController(options: {
         continue;
       }
       stored = true;
+      const gates = unmetProfileGates(run, arcanaCards);
+      if (gates.length > 0) {
+        await write(refusedRunEntry(run, gates));
+        if (capture !== undefined) await raw(() => capture.discard(run.profile));
+        continue;
+      }
       let kept = false;
       try {
         if (folder !== null) publish({ kind: 'importing', folder });

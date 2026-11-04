@@ -122,18 +122,24 @@ Surface and Dream start from a mature save; `FreshFile` is the first Underworld
 attempt on a brand-new profile. The engine owns what that profile means for
 loadout authorship, start resolution and initial history.
 
-The mature save is the fully progressed profile the catalog's facts assume:
+The mature save is the progressed profile the catalog's facts assume. A
+recorded run counts as one only when its profile, read from its stored
+progression at the run's start and never from a rank an in-run effect raised,
+has:
 
-- every keepsake is unlocked at rank 3;
-- every weapon and every aspect is unlocked at rank V;
-- every Arcana card is unlocked at rank 3;
-- every Incantation (world upgrade) the catalog reads is owned;
-- the true ending has been reached;
-- every trait gated by an NPC's story progress is unlocked, such as
-  Dionysus's and Echo's story-gated traits.
+- reached the true ending;
+- every Arcana card unlocked at rank III;
+- the run's weapon aspect at rank V;
+- every keepsake the run equips, rack swaps included, at rank III;
+- the equipped familiar at full rank;
+- Greatest Gift of Gaia, the Incantation that gathers a room's resources as
+  it is left.
 
 The planner models only these two profiles: the mature save and the Fresh File
-first attempt. A profile between them is neither.
+first attempt (run count 0). The recorder does not record a run on any other
+profile and lists the gates it failed. The
+[save-file audit](../audits/rooms-and-routes/SAVE_FILE_RUN_RECORD_GAME_DATA_AUDIT.md#profile-progression)
+cites each gate's save field and threshold.
 
 Content a fresh profile's first attempt can never reach is closed on the
 existing declaration by route availability, never by a separate store, Shop
