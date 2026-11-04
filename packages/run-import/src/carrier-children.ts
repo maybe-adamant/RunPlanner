@@ -670,6 +670,10 @@ export function* carrierChildAnswers(
       semanticAddressKey(candidate.address) === key,
   );
   if (child === undefined) return;
+  if (child.kind === 'circeResolution') {
+    yield* circeResolutionAnswers(context, trait, cleared, child);
+    return;
+  }
   // Every domain choice the completion makes is one digit of an odometer over its options.
   const path: number[] = [];
   const seen = new Set<string>();
@@ -712,6 +716,55 @@ export function* carrierChildAnswers(
     path[digit] = (path[digit] ?? 0) + 1;
     path.length = digit + 1;
   }
+}
+
+/**
+ * Circe's Arcana or vows: every combination of the required count its domain
+ * allows, in domain order. The completion's order only reaches each value in
+ * first position, the rest fixed behind it.
+ */
+function* circeResolutionAnswers(
+  context: RunImportContext,
+  trait: TraitOfferAddress,
+  value: AuthoredTraitOfferTraits,
+  child: Child<'circeResolution'>,
+): Generator<readonly ProjectCommand[]> {
+  const domain = context
+    .candidates()
+    .evaluate({ kind: 'traitCarrierChildDomain', trait, value, child });
+  if (domain.kind !== 'circeResolutionDomain') return;
+  const { effect, requiredCount, arcanaCandidates, vowCandidates } = domain.result;
+  const keys = (effect === 'disableFear' ? vowCandidates : arcanaCandidates)
+    .filter((candidate) => candidate.support !== 'impossible')
+    .map((candidate) => candidate.value);
+  for (const chosen of combinations(keys, requiredCount)) {
+    const resolution: AuthoredCirceResolution =
+      effect === 'disableFear'
+        ? { kind: effect, vowKeys: Object.freeze(chosen) }
+        : { kind: effect, arcanaKeys: Object.freeze(chosen) };
+    yield [
+      {
+        kind: 'ReplaceTraitOffer',
+        trait,
+        value: updateAuthoredTraitCarrierChild(value, {
+          kind: 'circeResolution',
+          child,
+          value: Object.freeze(resolution),
+        }),
+      },
+    ];
+  }
+}
+
+/** Every `count`-element subset of `values`, each in `values` order, in lexicographic order. */
+function* combinations<T>(values: readonly T[], count: number): Generator<T[]> {
+  if (count === 0) {
+    yield [];
+    return;
+  }
+  for (let first = 0; first <= values.length - count; first += 1)
+    for (const rest of combinations(values.slice(first + 1), count - 1))
+      yield [values[first]!, ...rest];
 }
 
 /** A picked max-health roll waiting for its room's next entry save. */

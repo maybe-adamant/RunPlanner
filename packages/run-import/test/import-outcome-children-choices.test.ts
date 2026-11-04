@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { applyProjectCommand, type SemanticAddress } from '@run-planner/engine/authored-project';
+import {
+  applyProjectCommand,
+  authoredTraitOfferAt,
+  type SemanticAddress,
+} from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { projectFromRunRecord } from '../src/import';
 import type { RunImportReport } from '../src/report';
 import type { RunRecord, RunRecordHeldTrait } from '../src/run-record';
-import { answerCarrierChild } from '../src/carrier-children';
+import { answerCarrierChild, carrierChildAnswers } from '../src/carrier-children';
 import { RunImportWalk } from '../src/import';
 import {
   fixture,
@@ -399,6 +403,73 @@ describe('run import of selected-outcome children', () => {
       expect.stringMatching(/^notInRecord traitOffer r25 circeResolution@O-r25 /),
     ]);
     expect(mismatchesFrom(imported.report, 25)).toEqual([]);
+  });
+
+  it("searches every combination of Black Night's required vows, not each vow only first", () => {
+    const record = circeRun('RemoveShrineTrait', (room) => ({
+      ...room,
+      traitScreens: room.traitScreens.map((screen) => ({
+        ...screen,
+        options: screen.options.map((option, index) =>
+          index === 2 ? { ...option, name: 'CirceSorceryDamageBoon' } : option,
+        ),
+      })),
+    }));
+    const imported = projectFromRunRecord(catalog, record);
+    const address = imported.report.entries.find(
+      (entry) => entry.address?.kind === 'circeResolution',
+    )?.address as Extract<SemanticAddress, { kind: 'circeResolution' }> | undefined;
+    const offer =
+      address === undefined
+        ? undefined
+        : authoredTraitOfferAt(imported.project, catalog, address.trait);
+    if (address === undefined || offer?.kind !== 'traits')
+      throw new Error('O-r25 has no Black Night offer');
+    const cleared = applyProjectCommand(imported.project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: address.trait,
+      value: {
+        ...offer,
+        options: offer.options.map((option) => {
+          const { circeResolution: resolution, ...rest } = option;
+          void resolution;
+          return rest;
+        }) as unknown as typeof offer.options,
+      },
+    });
+    const walk = new RunImportWalk(catalog, record, simulateProjectAssembly(catalog, cleared), []);
+    const reason = walk.assembly.evaluation.issue?.reasons[0];
+    expect(reason).toMatchObject({ code: 'circeResolutionMissing' });
+    // A third Black Night disables two vows; four vows to choose from.
+    const vows = catalog.fearVows.values.slice(0, 4).map((vow) => vow.key);
+    const pairs: typeof walk.context = {
+      ...walk.context,
+      candidates: () => {
+        const session = walk.context.candidates();
+        const evaluate = ((query: { readonly kind?: string }) => {
+          const evaluated = session.evaluate(query as never) as unknown as {
+            readonly kind: string;
+            readonly result: object;
+          };
+          if (evaluated.kind !== 'circeResolutionDomain') return evaluated;
+          const vowCandidates = vows.map((value) => ({ value, support: 'possible' }));
+          return { ...evaluated, result: { ...evaluated.result, requiredCount: 2, vowCandidates } };
+        }) as unknown as typeof session.evaluate;
+        return { ...session, evaluate };
+      },
+    };
+    const answered = [...carrierChildAnswers(pairs, reason!)].map((commands) => {
+      const command = commands[0]!;
+      if (command.kind !== 'ReplaceTraitOffer' || command.value.kind !== 'traits')
+        throw new Error('not a trait offer');
+      const resolution = command.value.options.find(
+        (option) => option.circeResolution !== undefined,
+      )?.circeResolution;
+      return resolution?.kind === 'disableFear' ? resolution.vowKeys.join(' ') : '';
+    });
+    expect(answered).toEqual(
+      vows.flatMap((first, index) => vows.slice(index + 1).map((second) => `${first} ${second}`)),
+    );
   });
 
   it("takes Boon Boon Boon's boon acquired with its pick, reported, since the previous run's boons are not saved", () => {
