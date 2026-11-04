@@ -1339,7 +1339,13 @@ label.draft-row-label {
 /* The read-only basket: one line each for god, bonus and NPC traits; a line opens the basket. */
 .draft-basket-view {
   display: grid;
-  gap: 0.35rem;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+}
+
+.draft-basket-view > .draft-chip-group-note {
+  grid-column: 2;
 }
 
 .draft-basket-line {
@@ -1363,21 +1369,45 @@ label.draft-row-label {
   border-color: var(--selection-accent);
 }
 
-/* Picks the draft can never take, apart from the giver lines, with their one removal. */
+/* Picks the draft can never take: unframed, subdued chips that each remove their pick. */
 .draft-basket-unavailable {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-}
-
-.draft-basket-unavailable > .draft-basket-line {
-  flex: 1;
-  min-width: 0;
+  gap: 0.5rem 0.75rem;
+  padding: 0.3rem 0.5rem;
 }
 
 .draft-basket-row-label {
-  color: var(--attention);
+  color: var(--muted);
+  font-size: 0.82rem;
   white-space: nowrap;
+}
+
+.draft-basket-unavailable .draft-chip {
+  padding: 0.1rem 0.25rem 0.1rem 0.1rem;
+  border-color: transparent;
+  border-radius: 0.4rem;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.draft-basket-unavailable .draft-chip-icon {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.draft-basket-unavailable .draft-chip:hover,
+.draft-basket-unavailable .draft-chip:focus-visible {
+  border-color: #3a3b45;
+  color: var(--text);
+}
+
+.draft-chip-remove {
+  font-size: 0.85rem;
+  line-height: 1;
 }
 
 /* Each giver's traits follow its icon; a thin rule separates givers. */

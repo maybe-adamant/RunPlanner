@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import {
   DRAFT_OPTIONS,
   createRouteAddress,
@@ -354,11 +354,69 @@ const npcIcon = (npcKey: string): string | undefined => npcArtwork[npcKey] ?? un
 const BASKET_ROWS: readonly {
   readonly row: DraftBasketChipGroup['row'];
   readonly label: string;
+  /** The row's visible name, as its basket tab names it. */
+  readonly heading: string;
 }[] = [
-  { row: 'gods', label: 'God traits' },
-  { row: 'bonus', label: 'Bonus traits' },
-  { row: 'npcs', label: 'NPC traits' },
+  { row: 'gods', label: 'God traits', heading: 'Gods' },
+  { row: 'bonus', label: 'Bonus traits', heading: 'Bonus' },
+  { row: 'npcs', label: 'NPC traits', heading: 'NPCs' },
 ];
+
+/** Picks the draft can never take: a chip removes its pick, the trailing button all of them. */
+function UnavailableLine({
+  groups,
+  labelId,
+  onRemove,
+}: {
+  readonly groups: readonly DraftBasketChipGroup[];
+  readonly labelId: string;
+  readonly onRemove: (traitKeys: readonly string[]) => void;
+}) {
+  return (
+    <div aria-labelledby={labelId} className="draft-basket-unavailable" role="group">
+      {groups.map((group) => (
+        <span className="draft-basket-giver" key={group.key}>
+          <span className="draft-basket-giver-icon" {...hintProps(group.label)}>
+            <ArtworkIcon
+              className="draft-toggle-icon"
+              source={traitGiverArtwork[group.key] ?? undefined}
+            />
+          </span>
+          {group.chips.map((chip) => {
+            const icon = traitIcon(chip.traitKey);
+            return (
+              <button
+                aria-label={`Remove ${chip.label}`}
+                className="draft-chip"
+                data-unavailable
+                key={chip.traitKey}
+                onClick={() => onRemove([chip.traitKey])}
+                type="button"
+                {...hintProps(chip.hint === undefined ? chip.label : `${chip.label}: ${chip.hint}`)}
+              >
+                {icon === undefined ? (
+                  <span>{chip.label}</span>
+                ) : (
+                  <ArtworkIcon className="draft-chip-icon" source={icon} />
+                )}
+                <span aria-hidden="true" className="draft-chip-remove">
+                  ×
+                </span>
+              </button>
+            );
+          })}
+        </span>
+      ))}
+      <button
+        className="text-action"
+        onClick={() => onRemove(groups.flatMap((group) => group.chips.map((c) => c.traitKey)))}
+        type="button"
+      >
+        Clear all
+      </button>
+    </div>
+  );
+}
 
 /** One read-only basket line: each giver's icon, then its trait icons in order; it opens the basket. */
 function BasketLine({
@@ -777,54 +835,38 @@ export function RouteDraftPanel({
               </div>
               {basket === undefined || basket.chipGroups.length === 0 ? null : (
                 <div className="draft-basket-view">
-                  {BASKET_ROWS.map(({ row, label }) => {
+                  {BASKET_ROWS.map(({ row, label, heading }) => {
                     const groups = basket.lineGroups.filter((group) => group.row === row);
                     return groups.length === 0 ? null : (
-                      <BasketLine
-                        groups={groups}
-                        key={row}
-                        label={label}
-                        onOpen={(giverKey) =>
-                          setBasketOpen(
-                            giverKey === undefined ? { tab: row } : { tab: row, giverKey },
-                          )
-                        }
-                      />
+                      <Fragment key={row}>
+                        <span aria-hidden="true" className="draft-basket-row-label">
+                          {heading}
+                        </span>
+                        <BasketLine
+                          groups={groups}
+                          label={label}
+                          onOpen={(giverKey) =>
+                            setBasketOpen(
+                              giverKey === undefined ? { tab: row } : { tab: row, giverKey },
+                            )
+                          }
+                        />
+                      </Fragment>
                     );
                   })}
                   {basket.unavailableGroups.length === 0 ? null : (
-                    <div
-                      aria-labelledby="draft-basket-unavailable-label"
-                      className="draft-basket-unavailable"
-                      role="group"
-                    >
+                    <>
                       <span className="draft-basket-row-label" id="draft-basket-unavailable-label">
                         Unavailable
                       </span>
-                      <BasketLine
+                      <UnavailableLine
                         groups={basket.unavailableGroups}
-                        label="Unavailable"
-                        onOpen={(giverKey) => {
-                          const group = basket.unavailableGroups.find(
-                            (candidate) => candidate.key === giverKey,
-                          );
-                          setBasketOpen(
-                            group === undefined
-                              ? { tab: basket.unavailableGroups[0]!.row }
-                              : { tab: group.row, giverKey: group.key },
-                          );
-                        }}
-                      />
-                      <button
-                        className="secondary-action action-compact"
-                        onClick={() =>
-                          replaceDraft(withoutDraftBasketTraits(draft, basket.unavailableTraitKeys))
+                        labelId="draft-basket-unavailable-label"
+                        onRemove={(traitKeys) =>
+                          replaceDraft(withoutDraftBasketTraits(draft, traitKeys))
                         }
-                        type="button"
-                      >
-                        Remove all
-                      </button>
-                    </div>
+                      />
+                    </>
                   )}
                   {basket.lineGroups.flatMap((group) =>
                     group.orderNotes.map((note) => (

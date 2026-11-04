@@ -370,7 +370,7 @@ describe('Draft panel', () => {
     expect(basket()).toEqual({});
   });
 
-  it('moves unavailable picks to their own line and removes them all as one Undo step', () => {
+  it('moves unavailable picks to their own line, where a chip removes its pick as one Undo step', () => {
     const { application, catalog } = open();
     chooseGods(['Zeus', 'Apollo']);
     const basket = () =>
@@ -387,13 +387,10 @@ describe('Draft panel', () => {
     chooseGods(['Apollo']);
     expect(draftButton().getAttribute('aria-disabled')).toBe('true');
     expect(lineChips('God').map((chip) => chip.hint)).toEqual([label('ZeusWeaponBoon')]);
-    expect(
-      within(unavailable()!).getByRole('button', {
-        name: `Unavailable: ${label('ApolloCastBoon')}`,
-      }),
-    ).toBeTruthy();
     const past = application.store.getState().projectWorkspace.history!.past.length;
-    fireEvent.click(within(unavailable()!).getByRole('button', { name: 'Remove all' }));
+    fireEvent.click(
+      within(unavailable()!).getByRole('button', { name: `Remove ${label('ApolloCastBoon')}` }),
+    );
     expect(basket()).toEqual({ Zeus: ['ZeusWeaponBoon'] });
     expect(application.store.getState().projectWorkspace.history!.past.length).toBe(past + 1);
     expect(draftButton().getAttribute('aria-disabled')).toBeNull();
@@ -421,12 +418,14 @@ describe('Draft panel', () => {
     fireEvent.click(within(gods).getByRole('button', { name: 'Reset god order' }));
     expect(hintOf(draftButton())).toBe('Choose a god.');
     expect(basketLine('God')).toBeNull();
-    const line = within(unavailable()!).getByRole('button', { name: /^Unavailable:/ });
     expect(
-      line.getAttribute('aria-label')!.replace('Unavailable: ', '').split(', ').sort(),
-    ).toEqual(picks.map(label).sort());
+      within(unavailable()!)
+        .getAllByRole('button', { name: /^Remove / })
+        .map((chip) => chip.getAttribute('aria-label'))
+        .sort(),
+    ).toEqual(picks.map((key) => `Remove ${label(key)}`).sort());
     const past = application.store.getState().projectWorkspace.history!.past.length;
-    fireEvent.click(within(unavailable()!).getByRole('button', { name: 'Remove all' }));
+    fireEvent.click(within(unavailable()!).getByRole('button', { name: 'Clear all' }));
     expect(basket()).toEqual({});
     expect(application.store.getState().projectWorkspace.history!.past.length).toBe(past + 1);
     expect(unavailable()).toBeNull();
