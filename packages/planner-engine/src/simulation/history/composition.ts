@@ -1,6 +1,11 @@
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { BiomeTransitionCounterReset, Catalog } from '../../catalog-schema';
-import { createBiomeAddress, type BiomeAddress } from '../../authored-project/addresses';
+import {
+  createBiomeAddress,
+  semanticAddressKey,
+  type BiomeAddress,
+} from '../../authored-project/addresses';
+import { prepareChallengeSwitchEncounter } from '../encounters/challenge-switch';
 import { executeRoomLifecycle, type RoomLifecycleEvent } from '../lifecycle';
 import { prepareRoomEncounterPhases, type EncounterAuthoringRoom } from '../encounters/preparation';
 import {
@@ -68,6 +73,8 @@ export interface HistorySegmentWriter {
   append(event: SegmentHistoryEventData): void;
   current(): HistoryStateView;
   rewardGeneration(origin: CanonicalLifecycleRoom['origin']): HistoryStateView | undefined;
+  /** The room's entry view once it is entered. */
+  roomEntry(origin: CanonicalLifecycleRoom['origin']): HistoryStateView | undefined;
   readonly validatesEncounterResolution: boolean;
   readonly pendingSpellDrop: boolean;
   readonly allSpellInvested: boolean;
@@ -181,6 +188,12 @@ function segmentWriter(builder: EventBuilder): HistorySegmentWriter {
         foldBiomeHistoryPrefixEvents(builder.events, builder.seed).rooms,
         origin,
       );
+    },
+    roomEntry(origin: CanonicalLifecycleRoom['origin']): HistoryStateView | undefined {
+      const key = semanticAddressKey(origin);
+      return foldBiomeHistoryPrefixEvents(builder.events, builder.seed).rooms.find(
+        (room) => semanticAddressKey(room.origin) === key,
+      )?.entry;
     },
     validatesEncounterResolution: builder.validateEncounterResolution,
     pendingSpellDrop: builder.pendingSpellDrop,
@@ -352,7 +365,9 @@ export function appendRoomLifecycle(
               ),
             });
           })()
-        : sourceEvent;
+        : sourceEvent.kind === 'challengeSwitchInteracted' && room.kind === 'authored'
+          ? withChallengeSwitchEncounter(catalog, room, writer, sourceEvent, fail)
+          : sourceEvent;
     if (
       options.stopAfterOutgoing &&
       options.continueThroughPostOutgoingActions === true &&
@@ -404,6 +419,36 @@ export function appendRoomLifecycle(
   if (options.planEnd !== true && (options.outgoing !== undefined) !== projectedOutgoing) {
     fail(`${room.gameName} canonical outgoing projection does not match its lifecycle`);
   }
+}
+
+/**
+ * The switch press runs the encounter native generated at the room's entry
+ * (RoomLogic.lua:4983-4992), so it is prepared at the entry view.
+ */
+function withChallengeSwitchEncounter(
+  catalog: Catalog,
+  room: Extract<CanonicalLifecycleRoom, { readonly kind: 'authored' }>,
+  writer: HistorySegmentWriter,
+  event: Extract<RoomLifecycleEvent, { readonly kind: 'challengeSwitchInteracted' }>,
+  fail: (detail: string) => never,
+): RoomLifecycleEvent {
+  if (room.challengeSwitch === undefined) return event;
+  const entry = writer.roomEntry(room.origin);
+  if (entry === undefined) fail(`${room.gameName} pressed its switch before entry`);
+  const prepared = prepareChallengeSwitchEncounter(catalog, room, writer.routePosition, entry);
+  if (prepared === undefined) return event;
+  const { phase } = prepared;
+  return Object.freeze({
+    ...event,
+    encounter: Object.freeze({
+      encounterKey: phase.encounterKey,
+      phaseKind: phase.kind,
+      countsEncounterDepth: phase.countsEncounterDepth,
+      ...(phase.generatedCustomization === undefined
+        ? {}
+        : { generatedCustomization: phase.generatedCustomization }),
+    }),
+  });
 }
 
 interface BiomeHistoryPrefixOptions {

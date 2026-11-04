@@ -289,4 +289,79 @@ describe('challenge switch observation', () => {
       elite(observed, { enemyKey: 'Brawler_Elite', attributeKeys: ['Blink', 'Frenzy', 'Fog'] }),
     ).toThrow(/more attributes than any Elite switch draws/);
   });
+
+  it('customizes the switch encounter within its kind and drops it across kinds', () => {
+    const composition = Object.freeze({
+      kind: 'generated' as const,
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Mage'] }],
+    });
+    const customize = (project: ProjectDocument, decisionKey: string, value: unknown) =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceChallengeSwitchCustomization',
+        occurrence: host,
+        decisionKey,
+        value: value as never,
+      });
+    const observed = observe(golden(), 'PerfectClearChallengeSwitch_Pom');
+    const customized = customize(observed, 'generatedComposition', composition);
+    expect(occurrenceOf(customized).challengeSwitch?.customization).toEqual({
+      generatedComposition: composition,
+    });
+    const encoded = encodeProjectDocument(customized);
+    expect(encodeProjectDocument(decodeProjectDocument(JSON.parse(encoded), catalog))).toBe(
+      encoded,
+    );
+    expect(customize(customized, 'generatedComposition', composition)).toBe(customized);
+    // The kind fixes the encounter: another PerfectClear variant keeps it, another kind drops it.
+    expect(
+      occurrenceOf(observe(customized, 'PerfectClearChallengeSwitch_MaxHealth')).challengeSwitch
+        ?.customization,
+    ).toEqual({ generatedComposition: composition });
+    expect(
+      occurrenceOf(observe(customized, 'TimeChallengeSwitch_Money')).challengeSwitch?.customization,
+    ).toBeUndefined();
+    // The outcome keeps it.
+    expect(
+      occurrenceOf(
+        applyProjectCommand(customized, catalog, {
+          kind: 'ReplaceChallengeSwitchOutcome',
+          occurrence: host,
+          hitless: false,
+          nectarDropped: false,
+        }),
+      ).challengeSwitch?.customization,
+    ).toEqual({ generatedComposition: composition });
+    expect(
+      occurrenceOf(customize(customized, 'generatedComposition', null)).challengeSwitch,
+    ).toEqual(occurrenceOf(observed).challengeSwitch);
+    expect(() => customize(observed, 'cocoonCount', composition)).toThrow(
+      /cocoonCount is not a declared decision/,
+    );
+    expect(() =>
+      customize(observed, 'generatedComposition', {
+        ...composition,
+        waves: [{ waveIndex: 1, typeKeys: ['Brute'] }],
+      }),
+    ).toThrow(/outside its declaration domain/);
+    expect(() =>
+      customize(
+        observe(golden(), 'EliteChallengeSwitch_Talent'),
+        'generatedComposition',
+        composition,
+      ),
+    ).toThrow(/not a declared decision/);
+    expect(() => customize(golden(), 'generatedComposition', composition)).toThrow(
+      /no challenge switch/,
+    );
+    // Decoding refuses a decision the Elite encounter does not declare.
+    expect(() =>
+      decodeProjectDocument(
+        editOccurrence(customized, 'golden-f-b5-e1', (raw) => {
+          raw.challengeSwitch.variantKey = 'EliteChallengeSwitch_Talent';
+        }),
+        catalog,
+      ),
+    ).toThrow(/not a declared decision/);
+  });
 });

@@ -1,6 +1,10 @@
 import type { BiomeTransitionCounterAxis } from '../../catalog-schema';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import { biomeEncounterDepthAfterStart } from '../encounters/biome-encounter-depth';
+import {
+  CHALLENGE_SWITCH_ENVELOPE_KEY,
+  CHALLENGE_SWITCH_PHASE_KEY,
+} from '../encounters/challenge-switch-phase';
 import type {
   CanonicalBiomeHistory,
   EncounterHistoryEntry,
@@ -140,6 +144,7 @@ function roomName(
   namesByOrigin: ReadonlyMap<string, string>,
   event: Extract<
     HistoryEvent,
+    | { readonly kind: 'challengeSwitchInteracted' }
     | { readonly kind: 'encounterCompleted' }
     | { readonly kind: 'encounterRecorded' }
     | { readonly kind: 'encounterStarted' }
@@ -915,6 +920,46 @@ function foldHistoryEventStream(
             after: stateView(event.sequence, ledgers, viewsBySequence),
           }),
         );
+        break;
+      }
+      case 'challengeSwitchInteracted': {
+        const run = event.encounter;
+        if (run === undefined) break;
+        const views = requireRoomViews(viewsByOrigin, event);
+        if (views.entry === undefined || views.exit !== undefined)
+          throw new HistoryFoldContractError(
+            `${semanticAddressKey(event.origin)} ran its switch encounter outside the room`,
+          );
+        const key = encounterKey({ origin: event.origin, phaseKey: CHALLENGE_SWITCH_PHASE_KEY });
+        if (recordedEncounters.has(key))
+          throw new HistoryFoldContractError(
+            `${semanticAddressKey(event.origin)} ran its switch encounter more than once`,
+          );
+        // RecordEncounter, StartEncounter and its completion, all at the press.
+        const entry: EncounterHistoryEntry = Object.freeze({
+          sequence: event.sequence,
+          origin: event.origin,
+          gameName: roomName(namesByOrigin, event),
+          encounterEnvelopeKey: CHALLENGE_SWITCH_ENVELOPE_KEY,
+          slotKey: CHALLENGE_SWITCH_PHASE_KEY,
+          encounterKey: run.encounterKey,
+          phaseKind: run.phaseKind,
+          ...(run.generatedCustomization === undefined
+            ? {}
+            : {
+                knownEnemyBlacklistAdditions: run.generatedCustomization.knownRunBlacklistAdditions,
+              }),
+        });
+        recordedEncounters.set(key, entry);
+        ledgers.encounterRecords.push(entry);
+        ledgers.encounterStarts.push(entry);
+        if (run.countsEncounterDepth) {
+          ledgers.counters.biomeEncounterDepth = biomeEncounterDepthAfterStart(
+            ledgers.counters.biomeEncounterDepth,
+          );
+          ledgers.counters.routeEncounterDepth += 1;
+        }
+        ledgers.encounterCompletions.push(entry);
         break;
       }
       case 'producerRoleAdvanced':

@@ -3,6 +3,7 @@ import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createRoomActionAddress,
+  createRoomFeatureAddress,
   semanticAddressKey,
   type OccurrenceAddress,
   type RoomActionAddress,
@@ -24,7 +25,7 @@ import {
   type GoldGain,
   type GoldMultipliers,
 } from '../../commerce/gold/gain-context';
-import { knownEncounterRoster } from '../../commerce/gold/known-roster';
+import { knownEncounterRoster, type KnownRoster } from '../../commerce/gold/known-roster';
 import { GoldLedgerContractError } from '../../commerce/gold/ledger';
 import type { PurchasePriceUnpriced } from '../../commerce/gold/price-context';
 import type { HistoryEvent } from '../../history';
@@ -391,6 +392,65 @@ export function withPoolSaleGold(
  * state it produced: new reward and trait-history entries, held loans,
  * keepsakes and Arcana, and the event's own gold contact.
  */
+/**
+ * A switch encounter's kills pay from its own store, drawn as native generates
+ * it at the room's entry: by its known roster (an authored composition, or the
+ * Elite's pinned elite) or else its biome's generated-combat policy.
+ */
+function challengeSwitchEnemyGold(
+  context: ChronologyWalkContext,
+  state: ChronologyWalkState,
+  room: CanonicalAuthoredRoom,
+  run: import('../../lifecycle/model').ChallengeSwitchEncounterRun,
+): Detection {
+  const { catalog } = context;
+  const roomKey = semanticAddressKey(room.origin);
+  const entry = state.goldRoomEntryMultipliers.get(roomKey);
+  const runDepth = runDepthAt(context, roomKey);
+  const hordesRank = state.encounterEntryVowRanks.get(roomKey)?.hordes;
+  const fault = (detail: string): Detection => ({
+    unpriced: { kind: 'contractFailure', detail },
+  });
+  if (entry === undefined) return fault(`${run.encounterKey} has no gold multiplier at entry`);
+  if (entry === 'unresolved') return { unpriced: { kind: 'itemUnresolved' } };
+  if (runDepth === undefined) return fault(`${run.encounterKey} has no run depth at entry`);
+  if (hordesRank === undefined)
+    return fault(`${run.encounterKey} has no Hordes rank attested at its room's entry`);
+  let roster: KnownRoster | undefined;
+  const elite = catalog.challengeSwitches.eliteEncounters.byKey[run.encounterKey];
+  const pinned = room.challengeSwitch?.elite?.enemyKey;
+  if (elite !== undefined) {
+    const nativeId = elite.enemies.find((enemy) => enemy.key === pinned)?.nativeId;
+    roster =
+      nativeId === undefined
+        ? undefined
+        : Object.freeze([
+            Object.freeze([Object.freeze({ enemyKey: nativeId, count: elite.spawnCount })]),
+          ]);
+  } else
+    try {
+      roster = knownEncounterRoster(
+        catalog,
+        run.encounterKey,
+        run.generatedCustomization?.operands,
+      );
+    } catch (error) {
+      if (!(error instanceof GoldLedgerContractError)) throw error;
+      return fault(error.message);
+    }
+  return {
+    gain: {
+      kind: 'enemyGold',
+      encounterKey: run.encounterKey,
+      biomeKey: room.origin.biomeKey,
+      runDepth,
+      hordesRank,
+      ...(roster === undefined ? {} : { roster }),
+    },
+    multipliers: entry,
+  };
+}
+
 export function withGoldEvents(
   context: ChronologyWalkContext,
   received: ChronologyWalkState,
@@ -870,6 +930,12 @@ export function withGoldEvents(
                   },
           );
       }
+      if (event.kind === 'challengeSwitchInteracted' && event.encounter !== undefined)
+        detect(
+          'enemyGold:challengeSwitch',
+          createRoomFeatureAddress(room.origin, { kind: 'challengeSwitch' }),
+          challengeSwitchEnemyGold(context, state, room, event.encounter),
+        );
       // GOLD_ESTIMATE_ASSUMPTIONS.md "Urn upgrade owned", "Urns per occurrence".
       const declaration = catalog.rooms.byKey[room.gameName];
       if (

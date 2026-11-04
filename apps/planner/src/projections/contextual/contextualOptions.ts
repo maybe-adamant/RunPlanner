@@ -850,6 +850,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       };
     case 'challengeSwitchPlacementUnavailable':
     case 'challengeSwitchEliteUnavailable':
+    case 'challengeSwitchCustomizationUnavailable':
       return presented('generic', finding);
     case 'keepsakeEquipResultMissing':
     case 'keepsakeEquipResultUnavailable':

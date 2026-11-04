@@ -347,6 +347,16 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly midBiomeStartStates?: Readonly<
     Partial<Record<MidBiomeStartPoint, RoomStartStateCapture>>
   >;
+  /**
+   * Each reached observed switch's encounter as native generates it at its
+   * room's entry, with the entry's vow ranks; absent when the biome has none.
+   */
+  readonly challengeSwitchEncounters?: readonly {
+    readonly origin: OccurrenceAddress;
+    readonly encounterKey: string;
+    readonly customization?: import('../encounters/model').ResolvedEncounterPhase['customization'];
+    readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
+  }[];
   /** Exact room-entry Pool generation assessments, before any sale action. */
   readonly purgingPoolAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;

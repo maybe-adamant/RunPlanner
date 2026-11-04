@@ -71,6 +71,12 @@ export type RoomLifecycleEvent =
       /** Starting and claiming the challenge switch; neither an encounter end nor a store draw. */
       readonly kind: 'challengeSwitchInteracted';
       readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
+      /**
+       * The switch's encounter, recorded, started and completed by the press
+       * (`StartChallengeEncounter`, EncounterLogic.lua:2073-2113); history
+       * composition attaches it from the room's entry preparation.
+       */
+      readonly encounter?: ChallengeSwitchEncounterRun;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'requiredObjectSpawned';
@@ -182,6 +188,15 @@ export type RoomLifecycleEvent =
       readonly storeKey: string;
     })
   | (RoomLifecycleEventBase & { readonly kind: 'roomExited' });
+
+/** One run of a switch's encounter, outside the room's envelope. */
+export interface ChallengeSwitchEncounterRun {
+  readonly encounterKey: string;
+  readonly phaseKind: EncounterPhaseKind;
+  /** Native StartEncounter applies the inherited `CountsForRoomEncounterDepth`. */
+  readonly countsEncounterDepth: boolean;
+  readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
+}
 
 export interface RoomLifecycleProducerInput {
   readonly lifecycleProfileKey: string;

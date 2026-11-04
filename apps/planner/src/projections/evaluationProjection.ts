@@ -320,6 +320,9 @@ export const findingCopy = {
   challengeSwitchEliteUnavailable: {
     title: 'This elite cannot appear here',
   },
+  challengeSwitchCustomizationUnavailable: {
+    title: 'The switch encounter cannot spawn these enemies',
+  },
   keepsakeEquipResultMissing: {
     title: 'Choose the Hades trait from Jeweled Pom',
   },

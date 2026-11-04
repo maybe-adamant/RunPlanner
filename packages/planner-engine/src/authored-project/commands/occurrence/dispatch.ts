@@ -22,11 +22,14 @@ import type { OccurrenceLeafCommand } from '../types';
 import { requireOccurrence, failCommand } from '../contract';
 import { updateOccurrence } from './mutation';
 import {
+  challengeSwitchCustomizationIssue,
   challengeSwitchHost,
   challengeSwitchShapeIssue,
   defaultChallengeSwitch,
 } from '../../acquisition/challenge-switch';
+import { decodeGeneratedEncounterCustomization } from '../../room-state/decoding/generated-encounter-codec';
 import {
+  type AuthoredEncounterCustomization,
   defaultHermesShrineDelay,
   HERMES_SHRINE_DELAYS,
   hermesShrineInitialGenerationKey,
@@ -637,6 +640,10 @@ export function applyOccurrenceCommand(
         failCommand(command, `unknown challenge switch ${command.variantKey}`);
       const current = occurrence.challengeSwitch;
       if (current?.variantKey === command.variantKey) return document;
+      const sameKind =
+        current !== undefined &&
+        catalog.challengeSwitches.variants.byKey[current.variantKey]?.switchKind ===
+          catalog.challengeSwitches.variants.byKey[command.variantKey]?.switchKind;
       // The claim outcome survives a variant change; gold follows the kind.
       const next = Object.freeze({
         ...observed,
@@ -651,11 +658,56 @@ export function applyOccurrenceCommand(
         catalog.challengeSwitches.variants.byKey[command.variantKey]?.switchKind !== 'elite'
           ? {}
           : { elite: current.elite }),
+        // The kind fixes the encounter, so its customization survives within the kind.
+        ...(current?.customization === undefined || !sameKind
+          ? {}
+          : { customization: current.customization }),
       });
       return updateOccurrence(
         document,
         located,
         Object.freeze({ ...occurrence, challengeSwitch: next }),
+      );
+    }
+    case 'ReplaceChallengeSwitchCustomization': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const current = occurrence.challengeSwitch;
+      if (current === undefined) failCommand(command, 'occurrence has no challenge switch');
+      if (command.value !== null) {
+        const issue = challengeSwitchCustomizationIssue(
+          catalog,
+          occurrence.gameName,
+          current.variantKey,
+          command.decisionKey,
+          command.value,
+        );
+        if (issue !== undefined) failCommand(command, issue);
+      }
+      const decisions: Record<string, AuthoredEncounterCustomization> = {
+        ...(current.customization ?? {}),
+      };
+      if (command.value === null) delete decisions[command.decisionKey];
+      else
+        decisions[command.decisionKey] = decodeGeneratedEncounterCustomization(
+          command.value,
+          command.decisionKey,
+        );
+      if (JSON.stringify(decisions) === JSON.stringify(current.customization ?? {}))
+        return document;
+      const { customization: _previous, ...withoutCustomization } = current;
+      void _previous;
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({
+          ...occurrence,
+          challengeSwitch: Object.freeze({
+            ...withoutCustomization,
+            ...(Object.keys(decisions).length === 0
+              ? {}
+              : { customization: Object.freeze(decisions) }),
+          }),
+        }),
       );
     }
     case 'ReplaceChallengeSwitchOutcome': {
@@ -668,6 +720,7 @@ export function applyOccurrenceCommand(
         nectarDropped: command.nectarDropped,
         ...(command.gold === undefined ? {} : { gold: command.gold }),
         ...(current.elite === undefined ? {} : { elite: current.elite }),
+        ...(current.customization === undefined ? {} : { customization: current.customization }),
       });
       const issue = challengeSwitchShapeIssue(catalog, next);
       if (issue !== undefined) failCommand(command, issue);

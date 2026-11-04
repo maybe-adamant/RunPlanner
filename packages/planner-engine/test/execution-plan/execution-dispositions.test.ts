@@ -101,6 +101,7 @@ const executionDispositions = {
     stygianWell: 'covered',
     purgingPool: 'covered',
     keepsakeRack: 'covered',
+    challengeSwitch: 'deferred-route',
     fountain: 'covered',
     fields: 'covered',
     additional: 'covered',

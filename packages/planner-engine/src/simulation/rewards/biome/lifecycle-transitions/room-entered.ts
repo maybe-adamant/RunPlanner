@@ -37,7 +37,11 @@ import {
   consumeOlympianProviderForReachedOffer,
   reachedOfferForOrigin,
 } from '../../offer-generation';
-import { advanceArcanaRoomEntry, consumeRoomRewardForfeit } from '../../../arcana-fear';
+import {
+  advanceArcanaRoomEntry,
+  consumeRoomRewardForfeit,
+  encounterEntryVowRanks,
+} from '../../../arcana-fear';
 import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-settlement';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
@@ -45,10 +49,13 @@ import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
 import { erisSpawnFindings } from './eris-interacted';
 import {
   assessChallengeSwitchEntry,
-  assessEliteChallengeChoice,
   challengeSwitchPlacementIssues,
   type ChallengeSwitchEntryAssessment,
 } from '../../../commerce/challenge-switch';
+import {
+  prepareChallengeSwitchEncounter,
+  type PreparedChallengeSwitchEncounter,
+} from '../../../encounters/challenge-switch';
 import { challengeSwitchHost } from '../../../../authored-project/acquisition/challenge-switch';
 import { isDeliveryFlushHost } from '../../../../authored-project/hermes-shrine-delivery';
 import type {
@@ -77,6 +84,11 @@ export interface RoomEnteredTransition {
   readonly challengeSwitchAssessment?: {
     readonly origin: OccurrenceAddress;
     readonly assessment: ChallengeSwitchEntryAssessment;
+  };
+  /** The observed switch's encounter, generated at this entry. */
+  readonly challengeSwitchEncounter?: {
+    readonly origin: OccurrenceAddress;
+    readonly encounter: PreparedChallengeSwitchEncounter;
   };
   readonly runStateCheckpoint?: {
     readonly owner: ReturnType<typeof createRoomRunStateCheckpointAddress>;
@@ -315,6 +327,7 @@ export function applyRoomEnteredTransition(
   if (room !== undefined)
     findings.push(...erisSpawnFindings(catalog, room, next, findingChronology));
   let challengeSwitchAssessment: RoomEnteredTransition['challengeSwitchAssessment'];
+  let challengeSwitchEncounter: RoomEnteredTransition['challengeSwitchEncounter'];
   if (
     room !== undefined &&
     next !== undefined &&
@@ -357,20 +370,36 @@ export function applyRoomEnteredTransition(
             chronology: findingChronology,
           }),
         );
-      const elite = room.challengeSwitch.elite;
-      const encounter =
-        catalog.challengeSwitches.eliteEncounters.byKey[
-          challengeSwitchHost(catalog, room.gameName)!.encounterKeyBySwitchKind.elite
-        ];
-      if (elite !== undefined && encounter !== undefined)
-        for (const issue of assessEliteChallengeChoice(encounter, declaration.roomSetKey, elite))
-          findings.push(
-            Object.freeze({
-              finding: rewardFinding('challengeSwitchEliteUnavailable', owner, issue),
-              region: ownerRegion(room.origin),
-              chronology: findingChronology,
+      // Native generates the switch's encounter here, with the entry's vow ranks.
+      const encounter = prepareChallengeSwitchEncounter(
+        catalog,
+        room,
+        routePosition,
+        entry,
+        encounterEntryVowRanks(next.state),
+      );
+      if (encounter === undefined)
+        throw new BiomeRewardSimulationContractError(`${room.gameName} lost its switch encounter`);
+      challengeSwitchEncounter = Object.freeze({ origin: room.origin, encounter });
+      for (const { decisionKey, unsupported } of encounter.customizationIssues)
+        findings.push(
+          Object.freeze({
+            finding: rewardFinding('challengeSwitchCustomizationUnavailable', owner, {
+              decisionKey,
+              ...unsupported,
             }),
-          );
+            region: ownerRegion(room.origin),
+            chronology: findingChronology,
+          }),
+        );
+      for (const issue of encounter.elite?.issues ?? [])
+        findings.push(
+          Object.freeze({
+            finding: rewardFinding('challengeSwitchEliteUnavailable', owner, issue),
+            region: ownerRegion(room.origin),
+            chronology: findingChronology,
+          }),
+        );
     }
   }
   if (
@@ -574,6 +603,7 @@ export function applyRoomEnteredTransition(
     ...(hermesShrineAssessment === undefined ? {} : { hermesShrineAssessment }),
     ...(stygianWellAssessment === undefined ? {} : { stygianWellAssessment }),
     ...(challengeSwitchAssessment === undefined ? {} : { challengeSwitchAssessment }),
+    ...(challengeSwitchEncounter === undefined ? {} : { challengeSwitchEncounter }),
     ...(checkpoint === undefined ? {} : { runStateCheckpoint: checkpoint }),
   });
 }

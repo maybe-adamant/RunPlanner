@@ -619,6 +619,16 @@ export type ChallengeSwitchCommand =
       } | null;
     }
   | {
+      /**
+       * One decision of the switch encounter's customization, as
+       * `ReplaceEncounterCustomization` for a room phase; null restores native.
+       */
+      readonly kind: 'ReplaceChallengeSwitchCustomization';
+      readonly occurrence: OccurrenceAddress;
+      readonly decisionKey: string;
+      readonly value: import('../model').AuthoredEncounterCustomization | null;
+    }
+  | {
       /** Replaces the claim outcome; gold is a Time switch's only. */
       readonly kind: 'ReplaceChallengeSwitchOutcome';
       readonly occurrence: OccurrenceAddress;

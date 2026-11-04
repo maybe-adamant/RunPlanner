@@ -198,6 +198,29 @@ export function publishChronology(
     ...(Object.keys(accumulation.midBiomeStartStates).length === 0
       ? {}
       : { midBiomeStartStates: accumulation.midBiomeStartStates }),
+    ...(walk.challengeSwitchEncounters.size === 0
+      ? {}
+      : {
+          challengeSwitchEncounters: Object.freeze(
+            [...walk.challengeSwitchEncounters.entries()].map(([roomKey, prepared]) => {
+              const room = context.rooms.get(roomKey);
+              if (room?.origin.kind !== 'occurrence')
+                throw new BiomeRewardSimulationContractError(
+                  `${roomKey} published a switch encounter without its room`,
+                );
+              return Object.freeze({
+                origin: room.origin,
+                encounterKey: prepared.phase.encounterKey,
+                ...(prepared.phase.customization === undefined
+                  ? {}
+                  : { customization: prepared.phase.customization }),
+                ...(prepared.phase.generatedCustomization === undefined
+                  ? {}
+                  : { generatedCustomization: prepared.phase.generatedCustomization }),
+              });
+            }),
+          ),
+        }),
     purgingPoolAssessments: Object.freeze([...walk.purgingPoolAssessments.values()]),
     hermesShrineAssessments: publishedHermesShrineAssessments,
     stygianWellAssessments: Object.freeze([...walk.stygianWellAssessments.values()]),
@@ -350,6 +373,7 @@ export function publishChronology(
         interactionWalk,
         accumulation.derivedAcquisitionEntryContexts,
       ),
+      interactionWalk.challengeSwitchEncounters,
     ),
     findingRegions: Object.freeze(immutableFindingRegions),
     encounterEntryVowRanks: walk.encounterEntryVowRanks,

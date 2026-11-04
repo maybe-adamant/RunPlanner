@@ -144,6 +144,7 @@ function commandContractAddress(
     case 'ReplaceChallengeSwitch':
     case 'ReplaceChallengeSwitchOutcome':
     case 'ReplaceChallengeSwitchElite':
+    case 'ReplaceChallengeSwitchCustomization':
     case 'AddStygianWell':
     case 'RemoveStygianWell':
     case 'InsertStygianWellReroll':
@@ -322,6 +323,7 @@ export function projectCommandAddress(
     case 'ReplaceChallengeSwitch':
     case 'ReplaceChallengeSwitchOutcome':
     case 'ReplaceChallengeSwitchElite':
+    case 'ReplaceChallengeSwitchCustomization':
       return createRoomFeatureAddress(command.occurrence, { kind: 'challengeSwitch' });
   }
   return commandContractAddress(command);

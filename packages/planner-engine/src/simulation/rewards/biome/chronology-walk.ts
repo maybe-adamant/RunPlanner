@@ -117,6 +117,11 @@ export interface ChronologyWalkState {
     string,
     import('../../commerce/challenge-switch').ChallengeSwitchEntryAssessment
   >;
+  /** Each reached observed switch's encounter, prepared at its room's entry, by room. */
+  readonly challengeSwitchEncounters: ReadonlyMap<
+    string,
+    import('../../encounters/challenge-switch').PreparedChallengeSwitchEncounter
+  >;
   readonly wellRefillRealizations: ReadonlyMap<string, WellRefillRealization>;
   /** Each reached purchase's price context in settlement order, by owner. */
   readonly purchasePriceContexts: ReadonlyMap<string, PurchasePriceContextPublication>;
@@ -226,6 +231,7 @@ export function createChronologyWalkState(
     halted: false,
     stygianWellAssessments: new Map(),
     challengeSwitchAssessments: new Map(),
+    challengeSwitchEncounters: new Map(),
     wellRefillRealizations: new Map(),
     purchasePriceContexts: new Map(),
     paidPurchaseRooms: new Set<string>(),

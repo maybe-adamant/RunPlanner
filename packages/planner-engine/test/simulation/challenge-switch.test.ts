@@ -16,6 +16,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  challengeSwitchEncounterSupportForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
   eliteChallengeAttributeOptions,
   goldLedgerForProjectEvaluationAssembly,
@@ -523,5 +524,233 @@ describe('Elite switch elite', () => {
       eliteChallengeAttributeOptions(encounter, 'Dragon_Elite', 'P', ['Frenzy', 'Blink']),
     ).toEqual([]);
     expect(product?.attributeLabels.Frenzy).toBe('Swifter');
+  });
+});
+
+describe('challenge switch encounter', () => {
+  const fHost = createOccurrenceAddress(
+    createBiomeAddress('Underworld', 'F'),
+    createOccurrenceId('golden-f-b8-e1'),
+  );
+  const fBiomeOf = (project: ProjectDocument) => {
+    const biome = simulateProject(catalog, project).route.biomes.find(
+      (candidate) => candidate.biomeKey === 'F',
+    );
+    if (biome === undefined || !('history' in biome)) throw new Error('F was not evaluated');
+    return biome;
+  };
+  const switchRecords = (project: ProjectDocument) =>
+    fBiomeOf(project).history.ledgers.encounterCompletions.filter(
+      (entry) => entry.slotKey === 'challengeSwitch',
+    );
+  const customize = (project: ProjectDocument, value: unknown) =>
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceChallengeSwitchCustomization',
+      occurrence: fHost,
+      decisionKey: 'generatedComposition',
+      value: value as never,
+    });
+  const overviewSwitch = (project: ProjectDocument) => {
+    const assembly = simulateProjectAssembly(catalog, project);
+    const plan = compileExecutionPlan({
+      product: assembleExecutionProduct({ assembly, catalog }),
+    });
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+    const found: unknown[] = [];
+    const visit = (value: unknown) => {
+      if (Array.isArray(value)) value.forEach(visit);
+      else if (value !== null && typeof value === 'object') {
+        const record = value as Record<string, unknown>;
+        if (record.challengeSwitch !== undefined) found.push(record.challengeSwitch);
+        Object.values(record).forEach(visit);
+      }
+    };
+    visit(plan);
+    return found;
+  };
+
+  it('runs the encounter native generated at entry at the press, with no encounter end', () => {
+    const observed = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money');
+    const used = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', {
+      used: true,
+    });
+    const press = fBiomeOf(used).history.events.find(
+      (event) => event.kind === 'challengeSwitchInteracted',
+    );
+    expect(press).toMatchObject({
+      encounter: {
+        encounterKey: 'TimeChallengeF',
+        phaseKind: 'combat',
+        countsEncounterDepth: true,
+      },
+    });
+    // RecordEncounter, StartEncounter and its completion: the caches, never an end effect.
+    expect(switchRecords(observed)).toEqual([]);
+    expect(
+      switchRecords(used).map((entry) => [entry.encounterKey, entry.encounterEnvelopeKey]),
+    ).toEqual([['TimeChallengeF', 'challengeSwitch']]);
+    expect(
+      fBiomeOf(used).history.events.filter(
+        (event) =>
+          event.kind === 'encounterEndEffectsApplied' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === 'golden-f-b8-e1',
+      ),
+    ).toHaveLength(1);
+    // The inherited CountsForRoomEncounterDepth advances the encounter depth later rooms read.
+    expect(
+      fBiomeOf(used).history.ledgers.counters.routeEncounterDepth -
+        fBiomeOf(observed).history.ledgers.counters.routeEncounterDepth,
+    ).toBe(1);
+  });
+
+  it('pays the encounter’s kills from its own store at the press', () => {
+    const enemyGold = (project: ProjectDocument) => {
+      const room = goldLedgerForProjectEvaluationAssembly(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).roomAt(fHost);
+      if (room.availability !== 'available') throw new Error(`room is ${room.reason}`);
+      return room.room.gains.filter((gain) => gain.kind === 'enemyGold');
+    };
+    const observed = enemyGold(
+      withSwitch(golden(), 'F', 'golden-f-b8-e1', 'PerfectClearChallengeSwitch_MaxHealth'),
+    );
+    const used = enemyGold(
+      withSwitch(golden(), 'F', 'golden-f-b8-e1', 'PerfectClearChallengeSwitch_MaxHealth', {
+        used: true,
+      }),
+    );
+    expect(used).toHaveLength(observed.length + 1);
+    const paid = used.find((gain) => gain.owner?.kind === 'roomFeature');
+    expect(paid?.amount?.mean).toBeGreaterThan(0);
+  });
+
+  it('composes a Time or PerfectClear encounter from its entry capability and publishes it', () => {
+    const observed = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', {
+      used: true,
+    });
+    const capability = challengeSwitchEncounterSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, observed),
+      fHost,
+    );
+    expect(capability).toMatchObject({
+      decisionKey: 'generatedComposition',
+      waveCount: { min: 1, max: 1 },
+    });
+    const initial = capability!.initialize();
+    expect(initial).toBeDefined();
+    const customized = customize(observed, initial);
+    expect(simulateProject(catalog, customized).status).toBe('valid');
+    const product = roomObjectInteractionsForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, customized),
+      fHost,
+    )?.challengeSwitch?.encounter;
+    expect(product).toMatchObject({
+      switchKind: 'time',
+      selectedEncounterDefinitionKey: 'TimeChallengeF',
+      label: 'Time challenge',
+      customization: [
+        {
+          key: 'generatedComposition',
+          value: initial,
+          valueSupported: true,
+          reset: { kind: 'ReplaceChallengeSwitchCustomization', value: null },
+        },
+      ],
+    });
+    // The press records the composed roster's operands for later rolls and gold.
+    expect(
+      fBiomeOf(customized).history.events.find(
+        (event) => event.kind === 'challengeSwitchInteracted',
+      ),
+    ).toMatchObject({
+      encounter: { generatedCustomization: { decisionKey: 'generatedComposition' } },
+    });
+    const [published] = overviewSwitch(customized) as {
+      customization?: { kind: string; waveCount: number; waves: unknown[] }[];
+    }[];
+    expect(published).toMatchObject({
+      variantKey: 'TimeChallengeSwitch_Money',
+      encounterKey: 'TimeChallengeF',
+      customization: [{ decisionKey: 'generatedComposition', kind: 'generated', waveCount: 1 }],
+    });
+    expect(published?.customization?.[0]?.waves).toHaveLength(1);
+    // An observed, uncustomized switch publishes its encounter, natively rolled.
+    expect(overviewSwitch(observed)).toEqual([
+      { variantKey: 'TimeChallengeSwitch_Money', encounterKey: 'TimeChallengeF' },
+    ]);
+  });
+
+  it('reports a composition the entry cannot generate at the switch’s Overview', () => {
+    const observed = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', {
+      used: true,
+    });
+    // Only one Elite type may be drawn in F.
+    const customized = customize(observed, {
+      kind: 'generated',
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: ['Guard_Elite', 'Mage_Elite'] }],
+    });
+    const result = simulateProject(catalog, customized);
+    expect(result.status).toBe('invalid');
+    const finding = result.findings.find(
+      (candidate) => candidate.code === 'challengeSwitchCustomizationUnavailable',
+    );
+    expect(finding).toMatchObject({
+      origin: { kind: 'roomFeature', occurrenceId: 'golden-f-b8-e1' },
+      evidence: { decisionKey: 'generatedComposition', reason: 'compositionInvalid' },
+    });
+    // The Overview finding stops the room before its Timeline, so the press never runs.
+    expect(switchRecords(customized)).toEqual([]);
+  });
+
+  it('fields an Elite switch’s pinned elite and publishes it without a composition', () => {
+    const pinned = applyProjectCommand(
+      withSwitch(surface(), 'P', 'surface-p-6-1-p_combat10', 'EliteChallengeSwitch_MaxMana', {
+        used: true,
+      }),
+      catalog,
+      {
+        kind: 'ReplaceChallengeSwitchElite',
+        occurrence: createOccurrenceAddress(
+          createBiomeAddress('Surface', 'P'),
+          createOccurrenceId('surface-p-6-1-p_combat10'),
+        ),
+        elite: { enemyKey: 'Dragon_Elite', attributeKeys: ['Frenzy', 'Blink'] },
+      },
+    );
+    expect(simulateProject(catalog, pinned).status).toBe('valid');
+    const assembly = simulateProjectAssembly(catalog, pinned);
+    const host = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'P'),
+      createOccurrenceId('surface-p-6-1-p_combat10'),
+    );
+    expect(
+      challengeSwitchEncounterSupportForProjectEvaluationAssembly(assembly, host),
+    ).toBeUndefined();
+    expect(
+      roomObjectInteractionsForProjectEvaluationAssembly(assembly, host)?.challengeSwitch
+        ?.encounter,
+    ).toMatchObject({
+      switchKind: 'elite',
+      selectedEncounterDefinitionKey: 'EliteChallengeP',
+      customization: [],
+    });
+    expect(overviewSwitch(pinned)).toEqual([
+      {
+        variantKey: 'EliteChallengeSwitch_MaxMana',
+        encounterKey: 'EliteChallengeP',
+        elite: {
+          enemy: {
+            choiceKey: 'Dragon_Elite',
+            nativeId: catalog.challengeSwitches.eliteEncounters.byKey.EliteChallengeP!.enemies.find(
+              (enemy) => enemy.key === 'Dragon_Elite',
+            )!.nativeId,
+          },
+          attributeKeys: ['Frenzy', 'Blink'],
+        },
+      },
+    ]);
   });
 });

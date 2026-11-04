@@ -3,8 +3,10 @@ import type {
   ChallengeSwitchHostDeclaration,
   ChallengeSwitchKindDeclaration,
   ChallengeSwitchVariantDeclaration,
+  EncounterCustomizationDecision,
 } from '../../catalog-schema';
-import type { AuthoredChallengeSwitch } from '../model';
+import type { AuthoredChallengeSwitch, AuthoredEncounterCustomization } from '../model';
+import { customizationValueKnown } from '../room-state/encounter-customization';
 
 /** The occurrence-local site holding the pickups a switch's claim spawns. */
 export const CHALLENGE_SWITCH_SITE_KEY = 'challengeSwitch';
@@ -110,5 +112,46 @@ export function challengeSwitchShapeIssue(
     if (elite.attributeKeys.length > Math.max(0, ...counts))
       return 'the elite has more attributes than any Elite switch draws';
   }
+  return undefined;
+}
+
+/** The encounter an observed switch's kind fields at its host. */
+export function challengeSwitchEncounterKey(
+  catalog: Catalog,
+  gameName: string,
+  variantKey: string,
+): string | undefined {
+  const variant = catalog.challengeSwitches.variants.byKey[variantKey];
+  const host = challengeSwitchHost(catalog, gameName);
+  return variant === undefined || host === undefined
+    ? undefined
+    : host.encounterKeyBySwitchKind[variant.switchKind];
+}
+
+/** The customization decisions that encounter declares; none for an Elite switch. */
+export function challengeSwitchCustomizationDecisions(
+  catalog: Catalog,
+  gameName: string,
+  variantKey: string,
+): readonly EncounterCustomizationDecision[] {
+  const key = challengeSwitchEncounterKey(catalog, gameName, variantKey);
+  return (
+    (key === undefined ? undefined : catalog.encounterDefinitions.byKey[key]?.customization) ?? []
+  );
+}
+
+/** Why one switch encounter decision value cannot be authored at this host. */
+export function challengeSwitchCustomizationIssue(
+  catalog: Catalog,
+  gameName: string,
+  variantKey: string,
+  decisionKey: string,
+  value: AuthoredEncounterCustomization,
+): string | undefined {
+  const decisions = challengeSwitchCustomizationDecisions(catalog, gameName, variantKey);
+  if (!decisions.some((decision) => decision.key === decisionKey))
+    return `${decisionKey} is not a declared decision of this switch's encounter`;
+  if (!customizationValueKnown(decisions, decisionKey, value))
+    return `${decisionKey} is outside its declaration domain`;
   return undefined;
 }

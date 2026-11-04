@@ -631,6 +631,11 @@ export interface AuthoredChallengeSwitch {
   readonly gold?: number;
   /** Elite switch only: its pinned elite and attributes; absent leaves both native. */
   readonly elite?: AuthoredChallengeSwitchElite;
+  /**
+   * Sparse explicit decisions of the kind's encounter at this host, keyed by
+   * declaration decision key, as a room phase's `customizationByPhase` entry.
+   */
+  readonly customization?: Readonly<Record<string, AuthoredEncounterCustomization>>;
 }
 
 /**

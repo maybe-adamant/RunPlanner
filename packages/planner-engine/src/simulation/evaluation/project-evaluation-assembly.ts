@@ -281,6 +281,21 @@ export function roomObjectInteractionsForProjectEvaluationAssembly(
     ?.objectInteractions.at(occurrence);
 }
 
+/**
+ * The observed switch's encounter composition capability at its room's
+ * entry, as `generatedEncounterSupportForProjectEvaluationAssembly` is a room
+ * phase's: absent for an Elite switch or an unreached room.
+ */
+export function challengeSwitchEncounterSupportForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  occurrence: import('../../authored-project/addresses').OccurrenceAddress,
+):
+  import('../encounters/generation-preparation').GeneratedEncounterCandidateCapability | undefined {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
+    ?.objectInteractions.challengeSwitchEncounterAt(occurrence);
+}
+
 /** Exact reached-source Chaos placement capability for ordinary authoring. */
 export function chaosCandidateForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,

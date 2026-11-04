@@ -1,6 +1,7 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { RoomHistoryOrigin } from '../lifecycle';
 import type { ResolvedEncounterPhase } from '../encounters/model';
+import { CHALLENGE_SWITCH_ENVELOPE_KEY } from '../encounters/challenge-switch-phase';
 import type { EncounterHistoryEntry, HistoryStateView } from './model';
 
 export interface RecentEncounterEnvelopeSlotFact {
@@ -189,6 +190,8 @@ export function projectRecentEncounterEnvelopeSlots(
 ): readonly RecentEncounterEnvelopeSlotFact[] {
   const ordered = new Map<string, { readonly envelopeKey: string; readonly slotKeys: string[] }>();
   for (const encounter of view.ledgers.encounterStarts) {
+    // A switch's encounter is outside its room's envelope.
+    if (encounter.encounterEnvelopeKey === CHALLENGE_SWITCH_ENVELOPE_KEY) continue;
     const key = semanticAddressKey(encounter.origin);
     const current = ordered.get(key);
     if (current === undefined) {

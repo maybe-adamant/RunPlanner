@@ -868,6 +868,20 @@ export interface ExecutionOverview {
     }[];
   };
   readonly keepsakeRack?: { readonly keepsakeKey?: string };
+  /**
+   * The observed challenge switch and the encounter native generates for it
+   * at entry: its authored composition, or an Elite switch's pinned elite and
+   * forced attribute prefix. Absent decisions stay native.
+   */
+  readonly challengeSwitch?: {
+    readonly variantKey: string;
+    readonly encounterKey: string;
+    readonly customization?: readonly ExecutionGeneratedEncounterCustomization[];
+    readonly elite?: {
+      readonly enemy: { readonly choiceKey: string; readonly nativeId: string };
+      readonly attributeKeys: readonly string[];
+    };
+  };
   readonly fountain?: { readonly aromaticPhialTarget?: string };
   /** Selected Fields entry/layout facts; cage identities stay on door targets. */
   readonly fields?: ExecutionFieldsLayout;

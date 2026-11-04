@@ -234,6 +234,7 @@ export {
 } from './generation/candidate-artifacts';
 export {
   type ChallengeSwitchInteraction,
+  type ChallengeSwitchEncounterInteraction,
   type RoomObjectInteractions,
 } from './commerce/object-interactions';
 export {
@@ -260,6 +261,7 @@ export {
   hermesShrineCandidateForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
+  challengeSwitchEncounterSupportForProjectEvaluationAssembly,
   chaosCandidateForProjectEvaluationAssembly,
   zagreusContractCandidateForProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,

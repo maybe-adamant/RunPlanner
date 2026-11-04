@@ -403,50 +403,18 @@ function unreachableIntroductionTriggers(
 }
 
 /**
- * Evaluates every active pool-backed phase against the exact predecessor
- * checkpoint. A valid preceding phase extends the local record prefix for
- * later phase requirements without advancing any encounter counter. Once a
- * phase is invalid, later structurally active phases remain status-addressable
- * but unassessed: the blocker alone receives candidate support and findings.
+ * Room-owned admission facts at a generation checkpoint: enemies whose
+ * declared admission fails, and on a fresh profile the introductions
+ * completed on the route and those whose native gate passes there.
  */
-export function prepareRoomEncounterPhases(
+export function encounterAdmissionAt(
   catalog: Catalog,
   room: EncounterAuthoringRoom,
   routePosition: ResolvedRoutePosition,
-  preparationCheckpoint: HistoryStateView,
-  runState: EncounterPreparationRunState = Object.freeze({}),
-): PreparedEncounterPhases {
-  const rawDeclaration = catalog.rooms.byKey[room.gameName];
-  if (rawDeclaration === undefined) {
-    throw new Error(`encounter preparation lost declaration ${room.gameName}`);
-  }
-  const declaration = resolveEntryDeclaration(rawDeclaration, routePosition);
-  const bindings = encounterBindingsBySlot(catalog, declaration, declaration.gameName);
-  const pendingSpellDrop = runState.pendingSpellDrop === true;
-  const allSpellInvested = runState.allSpellInvested === true;
-  const slots = new Map(
-    encounterEnvelopeSlots(catalog, declaration, declaration.gameName).map((slot) => [
-      slot.key,
-      slot,
-    ]),
-  );
-  const candidates: EncounterPhaseCandidateSupport[] = [];
-  const generation: GeneratedEncounterCandidateCapability[] = [];
-  const nativeRolls: GeneratedNativeRollFacts[] = [];
-  const rosters: InfiniteRosterCandidateCapability[] = [];
-  const statuses: EncounterPhaseSequenceStatusEntry[] = [];
-  const findings: SemanticFinding[] = [];
-  const validPrefix: ResolvedEncounterPhase[] = [];
-  const recordedPhases: ResolvedEncounterPhase[] = [];
-  let recordable = true;
-  let blockedAt: EncounterPhaseAddress | undefined;
-  // The caller provides the real roomPrepared checkpoint. Later selected
-  // phases advance this transient view through their preceding record facts,
-  // exactly as the composed lifecycle event stream does.
-  let preparation = preparationCheckpoint;
-  let prefixValid = true;
-  let suffixTerminated = false;
-
+  declaration: RoomDeclaration,
+  pendingSpellDrop: boolean,
+  allSpellInvested: boolean,
+): (policy: GeneratedEncounterSelection, before: HistoryStateView) => GenerationAdmissionFacts {
   // A fresh profile starts with every enemy introduction unfinished.
   const unfinishedIntroductions =
     routeInitialProfile(catalog, routePosition.routeKey).kind === 'freshFile';
@@ -455,10 +423,7 @@ export function prepareRoomEncounterPhases(
     : undefined;
   if (unfinishedIntroductions && minDepthBeforeIntros === undefined)
     throw new Error(`encounter preparation lost biome ${room.origin.biomeKey}`);
-  // Room-owned admission facts at the current preparation checkpoint: enemies
-  // whose declared admission fails, and on a fresh profile the introductions
-  // completed on the route and those whose native gate passes here.
-  const admissionAt = (
+  return (
     policy: GeneratedEncounterSelection,
     before: HistoryStateView,
   ): GenerationAdmissionFacts => {
@@ -503,6 +468,61 @@ export function prepareRoomEncounterPhases(
       }),
     });
   };
+}
+
+/**
+ * Evaluates every active pool-backed phase against the exact predecessor
+ * checkpoint. A valid preceding phase extends the local record prefix for
+ * later phase requirements without advancing any encounter counter. Once a
+ * phase is invalid, later structurally active phases remain status-addressable
+ * but unassessed: the blocker alone receives candidate support and findings.
+ */
+export function prepareRoomEncounterPhases(
+  catalog: Catalog,
+  room: EncounterAuthoringRoom,
+  routePosition: ResolvedRoutePosition,
+  preparationCheckpoint: HistoryStateView,
+  runState: EncounterPreparationRunState = Object.freeze({}),
+): PreparedEncounterPhases {
+  const rawDeclaration = catalog.rooms.byKey[room.gameName];
+  if (rawDeclaration === undefined) {
+    throw new Error(`encounter preparation lost declaration ${room.gameName}`);
+  }
+  const declaration = resolveEntryDeclaration(rawDeclaration, routePosition);
+  const bindings = encounterBindingsBySlot(catalog, declaration, declaration.gameName);
+  const pendingSpellDrop = runState.pendingSpellDrop === true;
+  const allSpellInvested = runState.allSpellInvested === true;
+  const slots = new Map(
+    encounterEnvelopeSlots(catalog, declaration, declaration.gameName).map((slot) => [
+      slot.key,
+      slot,
+    ]),
+  );
+  const candidates: EncounterPhaseCandidateSupport[] = [];
+  const generation: GeneratedEncounterCandidateCapability[] = [];
+  const nativeRolls: GeneratedNativeRollFacts[] = [];
+  const rosters: InfiniteRosterCandidateCapability[] = [];
+  const statuses: EncounterPhaseSequenceStatusEntry[] = [];
+  const findings: SemanticFinding[] = [];
+  const validPrefix: ResolvedEncounterPhase[] = [];
+  const recordedPhases: ResolvedEncounterPhase[] = [];
+  let recordable = true;
+  let blockedAt: EncounterPhaseAddress | undefined;
+  // The caller provides the real roomPrepared checkpoint. Later selected
+  // phases advance this transient view through their preceding record facts,
+  // exactly as the composed lifecycle event stream does.
+  let preparation = preparationCheckpoint;
+  let prefixValid = true;
+  let suffixTerminated = false;
+
+  const admissionAt = encounterAdmissionAt(
+    catalog,
+    room,
+    routePosition,
+    declaration,
+    pendingSpellDrop,
+    allSpellInvested,
+  );
   const prepareCustomization = (
     resolved: ResolvedEncounterPhase,
     origin: EncounterPhaseAddress,

@@ -32,6 +32,7 @@ import type {
 import type { RealizedHermesShrineTravelDealRefill } from '../../commerce/hermes-shrine';
 import type { HistoryEvent } from '../../history';
 import type { CanonicalAuthoredRoom } from '../../materialization';
+import type { PreparedChallengeSwitchEncounter } from '../../encounters/challenge-switch';
 import type { RewardBranchState } from '../branch-primitives';
 import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
 import type { DerivedAcquisitionEntryFrontier } from '../acquisition/contracts';
@@ -279,6 +280,7 @@ function challengeSwitchInteraction(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
   assessment: ChallengeSwitchEntryAssessment,
+  prepared: PreparedChallengeSwitchEncounter | undefined,
 ): ChallengeSwitchInteraction | undefined {
   const origin = room.origin;
   const host = catalog.challengeSwitches.hosts.byKey[room.gameName];
@@ -308,6 +310,36 @@ function challengeSwitchInteraction(
         ),
       ),
     }),
+    ...(prepared === undefined
+      ? {}
+      : {
+          encounter: Object.freeze({
+            switchKind: prepared.switchKind,
+            selectedEncounterDefinitionKey: prepared.phase.encounterKey,
+            label: prepared.phase.label,
+            customization: Object.freeze(
+              (prepared.phase.customization ?? []).map((decision) =>
+                Object.freeze({
+                  key: decision.key,
+                  label: decision.label,
+                  selection: decision.selection,
+                  ...(decision.value === undefined ? {} : { value: decision.value }),
+                  valueSupported: decision.valueSupported,
+                  ...(decision.value === undefined
+                    ? {}
+                    : {
+                        reset: Object.freeze({
+                          kind: 'ReplaceChallengeSwitchCustomization' as const,
+                          occurrence: origin,
+                          decisionKey: decision.key,
+                          value: null,
+                        }),
+                      }),
+                }),
+              ),
+            ),
+          }),
+        }),
     sharedIssues: assessment.sharedIssues,
     variants: Object.freeze(
       assessment.variants.map((variant) =>
@@ -365,7 +397,12 @@ export function roomObjectInteractions(
   for (const [roomKey, assessment] of state.challengeSwitchAssessments) {
     const room = authoredRoom(context, roomKey);
     if (room === undefined) continue;
-    const challengeSwitch = challengeSwitchInteraction(context.catalog, room, assessment);
+    const challengeSwitch = challengeSwitchInteraction(
+      context.catalog,
+      room,
+      assessment,
+      state.challengeSwitchEncounters.get(roomKey),
+    );
     if (challengeSwitch === undefined) continue;
     interactions.set(roomKey, Object.freeze({ ...interactions.get(roomKey), challengeSwitch }));
   }

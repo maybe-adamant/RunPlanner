@@ -39,9 +39,11 @@ import {
 import { ERIS_GIFT_SITE_KEY } from '../acquisition/eris-gift';
 import {
   CHALLENGE_SWITCH_SITE_KEY,
+  challengeSwitchCustomizationIssue,
   challengeSwitchHost,
   challengeSwitchShapeIssue,
 } from '../acquisition/challenge-switch';
+import { decodeGeneratedEncounterCustomization } from '../room-state/decoding/generated-encounter-codec';
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import {
   hermesShrinePurchaseAction,
@@ -103,6 +105,7 @@ function decodeChallengeSwitch(
   const raw = expectRecord(value, path);
   const hasGold = Object.hasOwn(raw, 'gold');
   const hasElite = Object.hasOwn(raw, 'elite');
+  const hasCustomization = Object.hasOwn(raw, 'customization');
   expectExactKeys(
     raw,
     [
@@ -111,6 +114,7 @@ function decodeChallengeSwitch(
       'nectarDropped',
       ...(hasGold ? ['gold'] : []),
       ...(hasElite ? ['elite'] : []),
+      ...(hasCustomization ? ['customization'] : []),
     ],
     path,
   );
@@ -136,12 +140,40 @@ function decodeChallengeSwitch(
     failProjectDocument(`${path}.nectarDropped`, 'must be boolean');
   if (hasGold && typeof raw.gold !== 'number')
     failProjectDocument(`${path}.gold`, 'must be a number');
+  const customization = hasCustomization
+    ? (() => {
+        const record = expectRecord(raw.customization, `${path}.customization`);
+        if (Object.keys(record).length === 0)
+          failProjectDocument(`${path}.customization`, 'must not be empty');
+        // Every switch encounter decision is a generated composition.
+        const decisions = Object.fromEntries(
+          Object.entries(record).map(([decisionKey, value]) => {
+            const decisionPath = `${path}.customization.${decisionKey}`;
+            const parsed = decodeGeneratedEncounterCustomization(
+              expectRecord(value, decisionPath),
+              decisionPath,
+            );
+            const issue = challengeSwitchCustomizationIssue(
+              catalog,
+              gameName,
+              variantKey,
+              decisionKey,
+              parsed,
+            );
+            if (issue !== undefined) failProjectDocument(decisionPath, issue);
+            return [decisionKey, parsed];
+          }),
+        );
+        return Object.freeze(decisions);
+      })()
+    : undefined;
   const challengeSwitch = Object.freeze({
     variantKey,
     hitless: raw.hitless,
     nectarDropped: raw.nectarDropped,
     ...(hasGold ? { gold: raw.gold as number } : {}),
     ...(elite === undefined ? {} : { elite }),
+    ...(customization === undefined ? {} : { customization }),
   });
   const issue = challengeSwitchShapeIssue(catalog, challengeSwitch);
   if (issue !== undefined) failProjectDocument(path, issue);

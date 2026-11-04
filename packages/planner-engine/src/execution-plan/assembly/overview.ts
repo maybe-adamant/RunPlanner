@@ -1,3 +1,4 @@
+import { CHALLENGE_SWITCH_PHASE_KEY } from '../../simulation/encounters/challenge-switch-phase';
 import {
   INITIAL_ROLL_KEY,
   PURGING_POOL_SLOT_KEYS,
@@ -914,6 +915,60 @@ function executionEncounterCustomization(
 }
 
 /** The phase's native-roll exclusions as generated choices of its generated decision. */
+/**
+ * The observed switch with the encounter its room's entry generated: the
+ * composition the entry assessed, or the pinned elite. An unentered room
+ * publishes none.
+ */
+function executionChallengeSwitch(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  biome: PublishedBiomeEvaluation,
+): ExecutionOverview['challengeSwitch'] {
+  const observed = room.challengeSwitch;
+  if (observed === undefined || !room.entered) return undefined;
+  const prepared = biome.rewards.challengeSwitchEncounters?.find(
+    (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(room.origin),
+  );
+  if (prepared === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks its prepared switch encounter`,
+    );
+  const customization = executionEncounterCustomization(
+    prepared.customization,
+    room,
+    CHALLENGE_SWITCH_PHASE_KEY,
+    prepared.generatedCustomization,
+  )?.filter((decision) => decision.kind === 'generated');
+  const eliteEncounter = catalog.challengeSwitches.eliteEncounters.byKey[prepared.encounterKey];
+  const pinned = observed.elite;
+  const enemy =
+    pinned === undefined
+      ? undefined
+      : eliteEncounter?.enemies.find((candidate) => candidate.key === pinned.enemyKey);
+  if (pinned !== undefined && enemy === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} pins an elite its switch encounter cannot draw`,
+    );
+  return Object.freeze({
+    variantKey: observed.variantKey,
+    encounterKey: prepared.encounterKey,
+    ...(customization === undefined || customization.length === 0
+      ? {}
+      : { customization: Object.freeze(customization) }),
+    ...(pinned === undefined || enemy === undefined
+      ? {}
+      : {
+          elite: Object.freeze({
+            enemy: Object.freeze({ choiceKey: enemy.key, nativeId: enemy.nativeId }),
+            attributeKeys: Object.freeze([...pinned.attributeKeys]),
+          }),
+        }),
+  });
+}
+
 function executionExcludedEnemies(
   customization: ResolvedEncounterCustomization | undefined,
   room: CanonicalAuthoredRoom,
@@ -985,6 +1040,7 @@ export function assembleExecutionOverview(
   const stygianWell = executionStygianWell(room);
   const purgingPool = executionPurgingPool(room);
   const additional = executionAdditionalExits(batch);
+  const challengeSwitch = executionChallengeSwitch(catalog, room, biome);
   const biomeAddress = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
   const recordedPhases = new Map(
     biome.history.events.flatMap((event) =>
@@ -1117,6 +1173,7 @@ export function assembleExecutionOverview(
             room.keepsakeRack === undefined ? {} : { keepsakeKey: room.keepsakeRack.keepsakeKey },
           ),
         }),
+    ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
     ...(!room.hasRequiredFountain
       ? {}
       : {

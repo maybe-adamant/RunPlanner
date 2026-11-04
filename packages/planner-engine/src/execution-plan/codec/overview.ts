@@ -38,6 +38,48 @@ function excludedEnemies(value: unknown, label: string) {
   return Object.freeze(enemies);
 }
 
+function executionChallengeSwitch(value: unknown, label: string) {
+  const record = object(value, label);
+  exact(record, ['variantKey', 'encounterKey'], ['customization', 'elite'], label);
+  const customization =
+    record.customization === undefined
+      ? undefined
+      : array(record.customization, `${label}.customization`, 1).map((entry, index) =>
+          generatedEncounter(
+            object(entry, `${label}.customization[${index}]`),
+            `${label}.customization[${index}]`,
+          ),
+        );
+  const elite = record.elite === undefined ? undefined : object(record.elite, `${label}.elite`);
+  if (elite !== undefined) exact(elite, ['enemy', 'attributeKeys'], [], `${label}.elite`);
+  const enemy = elite === undefined ? undefined : object(elite.enemy, `${label}.elite.enemy`);
+  if (enemy !== undefined) exact(enemy, ['choiceKey', 'nativeId'], [], `${label}.elite.enemy`);
+  if (customization !== undefined && elite !== undefined)
+    fail(`${label} pins either a composition or an elite`);
+  const attributeKeys =
+    elite === undefined
+      ? undefined
+      : stringArray(elite.attributeKeys, `${label}.elite.attributeKeys`);
+  if (attributeKeys !== undefined && new Set(attributeKeys).size !== attributeKeys.length)
+    fail(`${label}.elite.attributeKeys must be distinct`);
+  return Object.freeze({
+    variantKey: stringValue(record.variantKey, `${label}.variantKey`),
+    encounterKey: stringValue(record.encounterKey, `${label}.encounterKey`),
+    ...(customization === undefined ? {} : { customization: Object.freeze(customization) }),
+    ...(elite === undefined || enemy === undefined || attributeKeys === undefined
+      ? {}
+      : {
+          elite: Object.freeze({
+            enemy: Object.freeze({
+              choiceKey: stringValue(enemy.choiceKey, `${label}.elite.enemy.choiceKey`),
+              nativeId: stringValue(enemy.nativeId, `${label}.elite.enemy.nativeId`),
+            }),
+            attributeKeys: Object.freeze([...attributeKeys]),
+          }),
+        }),
+  });
+}
+
 function encounterCustomization(value: unknown, label: string) {
   const decisions = array(value, label, 16).map((entry, index) => {
     const row = object(entry, `${label}[${index}]`);
@@ -299,6 +341,7 @@ export function overview(value: unknown, label: string) {
       'stygianWell',
       'purgingPool',
       'keepsakeRack',
+      'challengeSwitch',
       'fountain',
       'fields',
       'additional',
@@ -727,6 +770,10 @@ export function overview(value: unknown, label: string) {
       ? undefined
       : object(record.keepsakeRack, `${label}.keepsakeRack`);
   if (rack !== undefined) exact(rack, [], ['keepsakeKey'], `${label}.keepsakeRack`);
+  const challengeSwitch =
+    record.challengeSwitch === undefined
+      ? undefined
+      : executionChallengeSwitch(record.challengeSwitch, `${label}.challengeSwitch`);
   const fountain =
     record.fountain === undefined ? undefined : object(record.fountain, `${label}.fountain`);
   if (fountain !== undefined) exact(fountain, [], ['aromaticPhialTarget'], `${label}.fountain`);
@@ -945,6 +992,7 @@ export function overview(value: unknown, label: string) {
                 },
           ),
         }),
+    ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
     ...(fountain === undefined
       ? {}
       : {

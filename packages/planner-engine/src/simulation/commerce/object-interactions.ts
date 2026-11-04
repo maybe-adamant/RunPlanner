@@ -96,6 +96,28 @@ export interface ChallengeSwitchInteraction {
     }[];
     readonly attributeLabels: Readonly<Record<string, string>>;
   };
+  /**
+   * The observed switch's encounter, generated at this entry: an
+   * `EncounterCompositionPhase` whose customization reads its assessed
+   * support. Its capability is `challengeSwitchEncounterSupportForProjectEvaluationAssembly`.
+   */
+  readonly encounter?: ChallengeSwitchEncounterInteraction;
+}
+
+/** The observed switch's encounter and each declared decision with its authored value. */
+export interface ChallengeSwitchEncounterInteraction {
+  readonly switchKind: import('../../catalog-schema').ChallengeSwitchKind;
+  readonly selectedEncounterDefinitionKey: string;
+  readonly label: string;
+  readonly customization: readonly {
+    readonly key: string;
+    readonly label: string;
+    readonly selection: import('../../catalog-schema').EncounterCustomizationDecision['selection'];
+    readonly value?: import('../../authored-project/model').AuthoredEncounterCustomization;
+    readonly valueSupported: boolean;
+    /** Restores the native roll; present while a value is authored. */
+    readonly reset?: CommandOf<'ReplaceChallengeSwitchCustomization'>;
+  }[];
 }
 
 /** A room's object interactions; an object whose sequence is unreached has none. */
@@ -109,17 +131,28 @@ export interface RoomObjectInteractions {
 
 export interface RoomObjectInteractionArtifacts {
   readonly at: (occurrence: OccurrenceAddress) => RoomObjectInteractions | undefined;
+  /** The observed switch's encounter generation capability at its room's entry. */
+  readonly challengeSwitchEncounterAt: (
+    occurrence: OccurrenceAddress,
+  ) => import('../encounters').GeneratedEncounterCandidateCapability | undefined;
 }
 
 export function createRoomObjectInteractionArtifacts(
   interactions: ReadonlyMap<string, RoomObjectInteractions>,
+  challengeSwitchEncounters: ReadonlyMap<
+    string,
+    import('../encounters/challenge-switch').PreparedChallengeSwitchEncounter
+  >,
 ): RoomObjectInteractionArtifacts {
   const privateInteractions = new Map(interactions);
+  const privateEncounters = new Map(challengeSwitchEncounters);
   return Object.freeze({
     at: (occurrence: OccurrenceAddress) => privateInteractions.get(semanticAddressKey(occurrence)),
+    challengeSwitchEncounterAt: (occurrence: OccurrenceAddress) =>
+      privateEncounters.get(semanticAddressKey(occurrence))?.capability,
   });
 }
 
 export function createEmptyRoomObjectInteractionArtifacts(): RoomObjectInteractionArtifacts {
-  return Object.freeze({ at: () => undefined });
+  return Object.freeze({ at: () => undefined, challengeSwitchEncounterAt: () => undefined });
 }
