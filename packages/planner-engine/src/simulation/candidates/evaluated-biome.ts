@@ -3,6 +3,7 @@ import type { ProjectDocument } from '../../authored-project/model';
 import type {
   CompleteBlockedBiomeProjectEvaluation,
   CompleteBiomeProjectEvaluation,
+  EndedBiomeProjectEvaluation,
   PrefixIncompleteBiomeProjectEvaluation,
   ProjectEvaluation,
 } from '../evaluation/evaluation-products';
@@ -29,10 +30,25 @@ export function prefixBiome(
   return biome?.authoring === 'incomplete' && 'materializedPrefix' in biome ? biome : undefined;
 }
 
+/** The biome the plan ends in, assessed and valid through its end room. */
+export function endedBiome(
+  evaluation: ProjectEvaluation,
+  routeKey: string,
+  biomeKey: string,
+): EndedBiomeProjectEvaluation | undefined {
+  const route = evaluation.route.routeKey === routeKey ? evaluation.route : undefined;
+  const biome = route?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  return biome?.authoring === 'ended' ? biome : undefined;
+}
+
 export type CandidateBiomeEvaluation =
-  CompleteBiomeProjectEvaluation | PrefixIncompleteBiomeProjectEvaluation;
+  | CompleteBiomeProjectEvaluation
+  | PrefixIncompleteBiomeProjectEvaluation
+  | EndedBiomeProjectEvaluation;
 export type CandidatePrefixBiomeEvaluation =
-  CompleteBlockedBiomeProjectEvaluation | PrefixIncompleteBiomeProjectEvaluation;
+  | CompleteBlockedBiomeProjectEvaluation
+  | PrefixIncompleteBiomeProjectEvaluation
+  | EndedBiomeProjectEvaluation;
 
 /** The maximum candidate-safe evaluation through the first blocking authoring boundary. */
 export function candidateBiome(
@@ -41,7 +57,9 @@ export function candidateBiome(
   biomeKey: string,
 ): CandidateBiomeEvaluation | undefined {
   return (
-    completeBiome(evaluation, routeKey, biomeKey) ?? prefixBiome(evaluation, routeKey, biomeKey)
+    completeBiome(evaluation, routeKey, biomeKey) ??
+    prefixBiome(evaluation, routeKey, biomeKey) ??
+    endedBiome(evaluation, routeKey, biomeKey)
   );
 }
 

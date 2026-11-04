@@ -14,10 +14,12 @@ import {
   createLocalVisitSlotAddress,
   createOccurrenceAddress,
   createRouteAddress,
+  createTargetAddress,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  createPreparedProjectCandidateSession,
   planEndAvailability,
   authoredStartPointEligibility,
   authoringReadinessAt,
@@ -297,6 +299,66 @@ describe('Plan end evaluation', () => {
       endAt(fountainLater, 'N', 'surface-n-combat05'),
     );
     expect(authoringReadinessAt(fountainAfter, createHubFountainAddress(n, 'hub'))).toBe('locked');
+  });
+
+  it('answers candidates through the end and none past it', () => {
+    const project = endAt(createCompleteFGProject(), 'F', 'golden-f-b5-e1');
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+    const f = createBiomeAddress('Underworld', 'F');
+    const lastTarget = (source: string) => {
+      const decision = project.route.biomes[0]!.topology!.decisions.find(
+        (candidate) =>
+          candidate.kind === 'exit' &&
+          candidate.source.kind === 'occurrence' &&
+          candidate.source.occurrenceId === source,
+      );
+      if (decision?.kind !== 'exit' || decision.normal.kind !== 'batch')
+        throw new Error(`${source} has no doors`);
+      const target = decision.normal.targets.at(-1)!;
+      return session.evaluate({
+        kind: 'roomTarget',
+        target: createTargetAddress(
+          f,
+          { kind: 'occurrence', occurrenceId: source as OccurrenceId },
+          target.exitKey,
+        ),
+        gameName: project.route.biomes[0]!.topology!.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === target.occurrenceId,
+        )!.gameName,
+      });
+    };
+    // The end room's peer, offered by b4-e1's doors, keeps its alternatives.
+    expect(lastTarget('golden-f-b4-e1').kind).toBe('roomTarget');
+    expect(lastTarget('golden-f-b5-e1')).toMatchObject({
+      kind: 'unavailable',
+      reason: 'targetNotReachable',
+    });
+  });
+
+  it("keeps an ended Hub's visit order a reached context", () => {
+    const project = endAt(loadSurfaceNProject(), 'N', 'surface-n-combat05');
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+    const hub = createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub');
+    expect(session.contextReached({ kind: 'hubActionOrder', hub })).toBe(true);
+    const swapped = session.evaluate({
+      kind: 'hubActionOrder',
+      hub,
+      actions: [
+        { kind: 'useFountain' },
+        { kind: 'roomVisit', hubSlotKey: 'miniBoss01' },
+        { kind: 'roomVisit', hubSlotKey: 'combat05' },
+      ],
+    });
+    expect(swapped).toMatchObject({
+      kind: 'hubActionOrder',
+      result: { selectedPossible: true, findings: [] },
+    });
   });
 
   it('raises no finding for a route-owned placement on a room past the end', () => {

@@ -15,6 +15,7 @@ import {
   ProjectCommandContractError,
 } from '../../authored-project/commands/dispatch';
 import type {
+  AuthoredBiomePlan,
   HubAction,
   HubDecision,
   LocalVisitDecision,
@@ -39,8 +40,10 @@ import {
   evaluateProgressiveBiome,
   evaluateSelectedProgressiveBiome,
   progressiveSeed,
+  type ProgressiveBiomeContext,
 } from '../progressive/biome';
 import { ownsOccurrence } from '../progressive/finding-location';
+import { resolveBiomePlanEnd } from '../plan-end';
 import {
   effectiveRouteResourcePlacements,
   resourcePlacementFindings,
@@ -347,6 +350,29 @@ function actionsThroughVisit(
   return actions;
 }
 
+/**
+ * A plan end in this biome applies to a Hub alternative as it does to the
+ * selected plan: nothing the plan reaches after the end is evaluated.
+ */
+function hubRegionThroughPlanEnd(
+  catalog: Catalog,
+  project: ProjectDocument,
+  regionalPlan: AuthoredBiomePlan,
+  context: ReturnType<typeof hubAlternativeContext>,
+): { readonly plan: AuthoredBiomePlan; readonly context: ProgressiveBiomeContext } {
+  const end = project.route.planEnd;
+  if (end?.biomeKey !== regionalPlan.biomeKey) return { plan: regionalPlan, context };
+  const resolved = resolveBiomePlanEnd(
+    catalog,
+    context.routePosition,
+    regionalPlan,
+    end.occurrenceId,
+  );
+  return resolved.kind === 'cut'
+    ? { plan: resolved.plan, context: Object.freeze({ ...context, planEnd: end.occurrenceId }) }
+    : { plan: regionalPlan, context };
+}
+
 /** Evaluate only the addressed visit prefix of the persistent Hub region. */
 function hubRegionEvaluation(
   catalog: Catalog,
@@ -359,11 +385,17 @@ function hubRegionEvaluation(
 ) {
   const regionalPlan = hubRegionalPlan(project, routeKey, biomeKey, hubKey, visitIndex);
   if (regionalPlan === undefined) return undefined;
+  const region = hubRegionThroughPlanEnd(
+    catalog,
+    project,
+    regionalPlan,
+    hubAlternativeContext(catalog, project, evaluation, routeKey, biomeKey),
+  );
   return evaluateProgressiveBiome(
     catalog,
     createBiomeAddress(routeKey, biomeKey),
-    regionalPlan,
-    hubAlternativeContext(catalog, project, evaluation, routeKey, biomeKey),
+    region.plan,
+    region.context,
   );
 }
 
@@ -382,11 +414,17 @@ function hubActionOrderEvaluation(
 ) {
   const regionalPlan = hubRegionalPlan(project, routeKey, biomeKey, hubKey, undefined);
   if (regionalPlan === undefined) return undefined;
+  const region = hubRegionThroughPlanEnd(
+    catalog,
+    project,
+    regionalPlan,
+    hubAlternativeContext(catalog, project, evaluation, routeKey, biomeKey),
+  );
   return evaluateSelectedProgressiveBiome(
     catalog,
     createBiomeAddress(routeKey, biomeKey),
-    regionalPlan,
-    hubAlternativeContext(catalog, project, evaluation, routeKey, biomeKey),
+    region.plan,
+    region.context,
   );
 }
 
