@@ -112,8 +112,9 @@ leaves a god unreachable is refused.
 A basket pick the world or loadout never offers is unavailable: its giver, or a
 Duo's other god, is outside the world, it is draft-illegal, or it is a Hammer
 for another weapon or Aspect. Editing the world or loadout keeps such picks,
-and they refuse the draft like any other; Draft names them, so the player can
-remove them all in one edit. Refusals that depend on the other picks or their
+and they refuse the draft like any other; Draft names them, even while the
+world itself is refused (an emptied god pool), so the player can remove them
+all in one edit. Refusals that depend on the other picks or their
 order (caps, slots, prerequisites, the first pick, requirements) are left for
 the player to resolve.
 

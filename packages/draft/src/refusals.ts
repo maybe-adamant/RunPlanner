@@ -134,10 +134,13 @@ export function draftRefusals(
     (key) => catalog.traits.byKey[key] === undefined,
   );
   for (const traitKey of unknown) refusals.push({ kind: 'unknownTrait', traitKey });
-  if (loadoutValid && worldValid && unknown.length === 0)
-    for (const trait of assessDraftBasket(catalog, base.route, spec).traits)
-      if (trait.inBasket && !trait.selectable)
-        refusals.push({ kind: 'basketTrait', traitKey: trait.traitKey, refusals: trait.refusals });
+  if (loadoutValid && unknown.length === 0)
+    for (const trait of assessDraftBasket(catalog, base.route, spec).traits) {
+      // An invalid world still names the picks it never offers, so they can be removed.
+      const kept = worldValid ? trait.refusals : trait.refusals.filter(unavailable);
+      if (trait.inBasket && kept.length > 0)
+        refusals.push({ kind: 'basketTrait', traitKey: trait.traitKey, refusals: kept });
+    }
   if (loadoutValid && unknown.length === 0)
     for (const conflict of draftStartingKeepsakeConflicts(catalog, base.route, spec))
       refusals.push({ kind: 'startingKeepsakeResult', ...conflict });

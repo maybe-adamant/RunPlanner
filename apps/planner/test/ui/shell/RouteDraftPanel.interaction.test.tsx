@@ -404,6 +404,38 @@ describe('Draft panel', () => {
     expect(unavailable()).not.toBeNull();
   });
 
+  it('lists every old god pick as unavailable after the god order is reset', () => {
+    const { application, catalog } = open();
+    chooseGods(['Zeus', 'Apollo']);
+    const basket = () =>
+      application.store.getState().projectWorkspace.history!.present.route.draft.basketByGiver;
+    const unavailable = () => screen.queryByRole('group', { name: 'Unavailable' });
+    const label = (key: string) => catalog.traits.byKey[key]!.label;
+    const picks = ['ZeusWeaponBoon', 'ApolloCastBoon'];
+    const dialog = openBasket();
+    for (const key of picks)
+      fireEvent.click(within(dialog).getByRole('button', { name: label(key) }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    const gods = screen.getByRole('group', { name: 'Gods' });
+    fireEvent.click(within(gods).getByRole('button', { name: 'Reset god order' }));
+    expect(hintOf(draftButton())).toBe('Choose a god.');
+    expect(basketLine('God')).toBeNull();
+    const line = within(unavailable()!).getByRole('button', { name: /^Unavailable:/ });
+    expect(
+      line.getAttribute('aria-label')!.replace('Unavailable: ', '').split(', ').sort(),
+    ).toEqual(picks.map(label).sort());
+    const past = application.store.getState().projectWorkspace.history!.past.length;
+    fireEvent.click(within(unavailable()!).getByRole('button', { name: 'Remove all' }));
+    expect(basket()).toEqual({});
+    expect(application.store.getState().projectWorkspace.history!.past.length).toBe(past + 1);
+    expect(unavailable()).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(basket()).toEqual({ Zeus: ['ZeusWeaponBoon'], Apollo: ['ApolloCastBoon'] });
+    expect(unavailable()).not.toBeNull();
+  });
+
   it('adds basket traits, refuses a second trait for a held slot, and lists the selected NPCs', () => {
     const { catalog } = open();
     chooseGods(['Zeus', 'Hera']);

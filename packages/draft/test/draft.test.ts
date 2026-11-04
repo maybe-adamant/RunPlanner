@@ -560,6 +560,31 @@ describe('draft basket legality', () => {
     ).toEqual([]);
   });
 
+  it('names unavailable picks while the world itself is refused', () => {
+    const arachne = catalog.traitGivers.byKey.Arachne!.traitKeys[0]!;
+    // A reset god pool and no story NPC: only Hermes is still offered.
+    const refused = refusals(underworld, {
+      world: emptyWorld,
+      basketByGiver: {
+        Zeus: ['ZeusWeaponBoon', 'ZeusCastBoon'],
+        Apollo: ['ApolloSpecialBoon'],
+        Hermes: ['HermesWeaponBoon'],
+        Arachne: [arachne],
+      },
+    });
+    expect(refused[0]).toEqual({ kind: 'tooFewGods', minGods: 1 });
+    expect(refused.filter((refusal) => refusal.kind === 'basketTrait')).toEqual(
+      ['ZeusWeaponBoon', 'ZeusCastBoon', 'ApolloSpecialBoon', arachne].map((traitKey) => ({
+        kind: 'basketTrait',
+        traitKey,
+        refusals: [{ kind: 'giverNotInWorld' }],
+      })),
+    );
+    expect([...draftUnavailableTraitKeys(refused)].sort()).toEqual(
+      ['ApolloSpecialBoon', 'ZeusCastBoon', 'ZeusWeaponBoon', arachne].sort(),
+    );
+  });
+
   it('caps each selected trait-giving NPC at one trait', () => {
     const world = { storyNpcByBiome: { F: 'Arachne' }, fieldNpcsByBiome: { G: ['Artemis'] } };
     const [first, second] = catalog.traitGivers.byKey.Arachne!.traitKeys;
