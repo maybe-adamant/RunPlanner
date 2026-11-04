@@ -90,7 +90,7 @@ function optionalRewards(
     if (entry.collected === true)
       collectedListed.set(entry.reward, (collectedListed.get(entry.reward) ?? 0) + 1);
   // A use no cage, listed optional or used switch explains is an optional collected in combat.
-  const switched = challengeSwitchPickups(visit.room);
+  const switched = challengeSwitchPickups(context.catalog, visit.room);
   const unlisted = Object.entries(visit.room.uses).flatMap(([name, count]) => {
     if (!rewardTypes.has(name)) return [];
     const extra =

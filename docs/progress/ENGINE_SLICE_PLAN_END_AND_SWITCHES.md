@@ -1,6 +1,6 @@
 # Engine Slice: Plan End and Challenge Switches
 
-Status: P1, P3, P2 and its engine follow-ups, and P4 with the switch encounter delivered; started 2026-11-03 on branch `engine-slice-plan-end-switches` (from
+Status: P1, P3, P2 and its engine follow-ups, P4 with the switch encounter, and P5's switch import delivered; started 2026-11-03 on branch `engine-slice-plan-end-switches` (from
 main `606f8e588`). Temporary plan; delete at delivery after promoting the
 durable result into the design documents named per phase.
 
@@ -72,7 +72,10 @@ here. Game script paths are under `Hades II/Content/Scripts`.
    at room creation: base 0.15, Fields-era F rooms 0.25, 0 on special rooms.
 3. Spawn needs a free `ChallengeSwitchBase` anchor after the secret door,
    Well, Pool and Surface shop took theirs; no active bounty;
-   `BiomeDepthCache >= 5`; at least 3 rooms since the last switch
+   `BiomeDepthCache >= 5` (Fields `BaseH` and Thessaly `BaseO` replace the
+   requirement with `>= 1`, RoomDataH.lua:306, RoomDataO.lua:294; the live
+   recording's switch at H_Combat07, biome depth 3, confirms it); at least 3
+   rooms since the last switch
    (`LastChallengeDepth`, set at entry); Elite also biome depth ≥ 3. The
    world-upgrade unlocks are profile progression, outside the model.
 4. The switch is usable only once the doors open (`DoUnlockRoomExits` sets
@@ -803,13 +806,89 @@ What P5 needs:
   `challengeSwitchCustomizationUnavailable` (decision and reason, as the
   room phase's) routes to the switch row.
 - Finding copy per `challengeSwitchPlacementUnavailable` reason.
-- Run import: author a used switch (variant from `uses`, the interaction,
-  the outcome from the reward object) instead of reporting it unsupported.
+- Run import: delivered (see P5 below).
 
 Still open (engine): none for the switch encounter. Not modeled, by choice:
 leaving mid-fight (`EndedEarly`) — the press is the whole run; Elite
 attribute game-state requirements; the run's `BannedEliteAttributes`; the
 H `ChallengeSwitchBlockedByFieldsLoot` exit gate.
+
+### P5 — run import of challenge switches
+
+Delivered (2026-11-04):
+
+- **Catalog fix**: each switch host carries its RoomSet's biome-depth floor
+  (`minimumBiomeDepth`: BaseRoom 5, Fields H and Thessaly O 1); the shared
+  catalog-level floor is gone. Found by the import: the live recording's
+  H_Combat07 switch (biome depth 3) was refused by the engine.
+- **Import** (`run-import/src/challenge-switches.ts`), in the sweep once the
+  room's own questions have settled its other pickups (before Sea Star
+  duplicates are placed, so a claim can carry one):
+  - The pressed variant is the switch name in the room's `uses`; it is
+    authored with `ReplaceChallengeSwitch`. A switch the engine refuses
+    (placement findings) is reported `refused` on the switch owner, and its
+    possible claim pickups keep being absorbed from the room's unexplained
+    uses as before.
+  - Record-pinned claims, from the uses the plan's other collected pickups
+    leave: a leftover Onion is a failed Perfect Clear; the variant's reward a
+    clean claim (`hitless` / `finished`); for Time, whose gold is no object,
+    a leftover bonus Nectar alone pins `finished`. A leftover Nectar rides a
+    clean claim as `nectarDropped`. The outcome is set, then the press is
+    inserted and its claim rows follow it; Pom targets and Path screens are
+    then answered as ordinary questions.
+  - No claim shown: a bounded room search judged at the next entry save over
+    `left`, `finished` (Time with two or more presses) and "unpressed"
+    (`UseRecord` also counts a press refused before the doors open); the
+    first accepted is authored and reported `notInRecord` with the others as
+    alternatives. Without an accepted fit (no entry saves) only the switch is
+    authored, reported `notInRecord`.
+  - A finished Time switch's gold is the engine's default (authored before
+    the money multiplier, as the engine contract states), reported
+    `notInRecord`.
+  - Press position: the native default; where that does not run (Fields
+    exits wait for the cage loot) the press goes last. Untimed, so the room
+    keeps its `roomActionOrder` assumption.
+  - The elite pin and the encounter customization stay native: the record
+    holds neither.
+  - New report area `challengeSwitch` (app label "Challenge switches"); the
+    `unsupportedArea` report for switch rooms is gone.
+- Witnesses: `run-import/test/import-challenge-switches.test.ts` (synthetic
+  uses on the Underworld capture: refused before depth five, an unclaimed
+  Time press chosen by acceptance with alternatives, a hitless Pom on the
+  levelled trait, a finished Elite Max Magick beside a Well, a finished Time
+  claim with Nectar and default gold, a failed Perfect Clear's Onion, a
+  Fields Time claim after the cages); the live recording's H_Combat07 press
+  (presence only, no entry saves); catalog host floors; engine Fields
+  placement at biome depth 2.
+
+What the recorder would need to capture (none recorded today):
+
+- The entry save's `CurrentRoom.ChallengeSwitch` (variant name, `ObjectId`)
+  so an observed but unused switch can be authored present with no press;
+  today a switch without a `uses` entry leaves no record trace.
+- `CurrentRoom.ChallengeEncounter` from the first save after leaving the
+  room: `StartedChallengeEncounter`, `Completed`, `EndedEarly`,
+  `PlayerTookDamage`, `ClearTime`, `CurrentValue` (Time gold before the
+  multiplier), its generated roster (for the customization) and, for an
+  Elite, the elite's name and `EliteAttributes` (for the pin). These pin
+  `left` against a refused press, a finished Time fight, and the gold.
+- Or, failing that, the hero's gold before and after the room (Time gold
+  through the money multiplier), which the record does not hold either.
+
+Lanes (2026-11-04): typecheck, lint, format:check pass; `test:catalog` 460,
+`test:engine` 3949, `test:equivalence` 157/157 unchanged,
+`test:run-import` 349 (+1 skipped), `test:planner` 2170 (+1 skipped).
+
+Decisions made without an owner ruling:
+
+- A single press with no claim is authored `left` (canonical) with
+  "unpressed" as the reported alternative, rather than left unauthored; a
+  record without entry saves authors presence only.
+- A pinned claim is applied without a search: the record states it, and the
+  walk's entry-save acceptance stops the plan at a mismatch as for any
+  record answer.
+- The Fields press goes after the cages; the engine refuses (blocks) it at
+  the native position, which is before them.
 
 ## Equivalence characterization per phase
 
@@ -821,6 +900,7 @@ H `ChallengeSwitchBlockedByFieldsLoot` exit gate.
 | P2 follow-ups | none (157/157)  | Readiness and candidates change only under an ended horizon; no corpus project has one.                                                                  |
 | P4            | none (157/157)  | Catalog additions (switches, `Money`, `ChallengeSwitchLoot`) and switch handling apply only to rooms with an observed switch; no corpus project has one. |
 | P4 encounter  | none (157/157)  | The 24 encounter definitions sit outside every set; the press's encounter, its gold and `challengeSwitchEncounters` exist only with an observed switch.  |
+| P5            | none (157/157)  | The per-RoomSet depth floor changes only switch placement findings; no corpus project has a switch.                                                      |
 
 ## Owner-settled decisions (2026-11-03)
 

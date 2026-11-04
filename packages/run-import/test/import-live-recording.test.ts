@@ -22,7 +22,7 @@ describe('run import of the live Underworld recording', () => {
 
   it('enters every room through H_Combat07, the Zagreus contract included, and stops at its unseen cage roll', () => {
     // The recording holds no entry saves, so no save can judge the cage roll H_Combat07's
-    // doors never show (its Unseen Sigil is not modelled either): the plan stops there.
+    // doors never show: the plan stops there.
     expect(imported.kind === 'stopped' && imported.stop).toMatchObject({
       code: 'batchStateMissing',
       record: { roomIndex: 27 },
@@ -79,9 +79,8 @@ describe('run import of the live Underworld recording', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { conversion: 3, encounter: 2, reward: 1, roomActionOrder: 10 },
-      notInRecord: { traitOffer: 1 },
-      // H_Combat07's Unseen Sigil is not modelled.
-      unsupportedArea: { other: 1 },
+      // H_Combat07's one switch press shows no claim, and no entry save judges what it started.
+      notInRecord: { challengeSwitch: 1, traitOffer: 1 },
       stopped: { fields: 1 },
     });
     // Fig Leaf, racked at F_PostBoss01, skipped one encounter in each of G and H: the record

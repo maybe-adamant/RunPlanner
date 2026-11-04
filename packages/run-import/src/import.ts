@@ -61,7 +61,7 @@ import {
 } from './wheels';
 import { areaOfFinding, areaOfOwner, isQuestionFinding } from './areas';
 import { importResourcePlacements } from './resources';
-import { unsupportedChallengeSwitches } from './room-uses';
+import { importChallengeSwitches } from './challenge-switches';
 import { routeKeyForRecord } from './vocabulary';
 import { compareEntrySaves, entrySaves, mismatchEntries, type EntrySaves } from './conformance';
 import { judgeRoom, judgeRooms } from './acceptance';
@@ -218,10 +218,7 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
     entries,
   );
   walk.importLoadout();
-  entries.push(
-    ...unsupportedScreenRerolls(catalog, record),
-    ...unsupportedChallengeSwitches(record),
-  );
+  entries.push(...unsupportedScreenRerolls(catalog, record));
   const walked = walk.run();
   walk.reportUnusedScreens(walked);
   // A run that died or was abandoned in its last room never settled that room,
@@ -553,6 +550,8 @@ export class RunImportWalk {
       importSideRoomVisits(this.context);
       importPhantomExits(this.context);
       importCommerce(this.context);
+      // A switch's claim pickups are authored before the room's Sea Star duplicates are placed.
+      importChallengeSwitches(this.context);
       importFeatures(this.context);
       importWheels(this.context);
       importWheelConversions(this.context);

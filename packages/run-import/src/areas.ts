@@ -75,6 +75,7 @@ export function areaOfFinding(finding: SemanticFinding): RunImportArea {
     if (target.startsWith('purgingPool')) return 'pool';
     if (target.startsWith('hermesShrine')) return 'shop';
     if (target === 'fieldsOptionalRewardCount') return 'fields';
+    if (target === 'challengeSwitch') return 'challengeSwitch';
     return 'other';
   }
   if (finding.evidence['pickupEffect'] === 'anvilOfFates') return 'anvil';

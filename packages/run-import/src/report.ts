@@ -52,6 +52,7 @@ export type RunImportArea =
   | 'chaos'
   | 'forfeit'
   | 'elements'
+  | 'challengeSwitch'
   | 'other';
 
 /** One record room visit: its `rooms` index and the visit ordinal of its occurrence. */

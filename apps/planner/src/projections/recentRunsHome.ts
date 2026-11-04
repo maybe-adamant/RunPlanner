@@ -283,6 +283,7 @@ const AREA_LABELS: Readonly<Record<RunImportArea, string>> = {
   chaos: 'Chaos',
   forfeit: 'Vow of Forfeit',
   elements: 'Elements',
+  challengeSwitch: 'Challenge switches',
   other: 'Other',
 };
 
