@@ -218,6 +218,7 @@ export interface RoomAppearanceHistoryEntry {
   readonly gameName: string;
   readonly surfaceShopPresent?: boolean;
   readonly roomShopPresent?: boolean;
+  readonly challengeSwitchPresent?: true;
 }
 
 export interface EncounterHistoryEntry {

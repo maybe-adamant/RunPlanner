@@ -73,6 +73,7 @@ function decodeRoomActionReference(
     kind === 'useFountain' ||
     kind === 'interactKeepsakeRack' ||
     kind === 'interactEris' ||
+    kind === 'interactChallengeSwitch' ||
     kind === 'interactInfernalContractPedestal'
   ) {
     expectExactKeys(reference, ['kind'], path);

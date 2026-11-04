@@ -286,6 +286,9 @@ export function materializeAuthoredRoom(
     ...(context.occurrence.stygianWell === undefined
       ? {}
       : { stygianWell: context.occurrence.stygianWell }),
+    ...(context.occurrence.challengeSwitch === undefined
+      ? {}
+      : { challengeSwitch: context.occurrence.challengeSwitch }),
     ...(stygianWellOfferEffects === undefined ? {} : { stygianWellOfferEffects }),
     ...(stygianWellExtendedDirectPurchaseItemKeys === undefined
       ? {}

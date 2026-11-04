@@ -22,6 +22,11 @@ import type { OccurrenceLeafCommand } from '../types';
 import { requireOccurrence, failCommand } from '../contract';
 import { updateOccurrence } from './mutation';
 import {
+  challengeSwitchHost,
+  challengeSwitchShapeIssue,
+  defaultChallengeSwitch,
+} from '../../acquisition/challenge-switch';
+import {
   defaultHermesShrineDelay,
   HERMES_SHRINE_DELAYS,
   hermesShrineInitialGenerationKey,
@@ -601,6 +606,75 @@ export function applyOccurrenceCommand(
         document,
         located,
         Object.freeze({ ...occurrence, eris: Object.freeze({ spawned: true as const }) }),
+      );
+    }
+    case 'ReplaceChallengeSwitch': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      if (command.variantKey === null) {
+        if (occurrence.challengeSwitch === undefined) return document;
+        const withoutSwitch = { ...occurrence };
+        delete withoutSwitch.challengeSwitch;
+        return updateOccurrence(
+          document,
+          located,
+          Object.freeze({
+            ...withoutSwitch,
+            roomActions: Object.freeze({
+              ...occurrence.roomActions,
+              order: Object.freeze(
+                occurrence.roomActions.order.filter(
+                  (reference) => reference.kind !== 'interactChallengeSwitch',
+                ),
+              ),
+            }),
+          }),
+        );
+      }
+      if (challengeSwitchHost(catalog, occurrence.gameName) === undefined)
+        failCommand(command, `${occurrence.gameName} hosts no challenge switch`);
+      const observed = defaultChallengeSwitch(catalog, command.variantKey);
+      if (observed === undefined)
+        failCommand(command, `unknown challenge switch ${command.variantKey}`);
+      const current = occurrence.challengeSwitch;
+      if (current?.variantKey === command.variantKey) return document;
+      // The claim outcome survives a variant change; gold follows the kind.
+      const next = Object.freeze({
+        ...observed,
+        ...(current === undefined
+          ? {}
+          : { hitless: current.hitless, nectarDropped: current.nectarDropped }),
+        ...(observed.gold === undefined || current?.gold === undefined
+          ? {}
+          : { gold: current.gold }),
+      });
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({ ...occurrence, challengeSwitch: next }),
+      );
+    }
+    case 'ReplaceChallengeSwitchOutcome': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const current = occurrence.challengeSwitch;
+      if (current === undefined) failCommand(command, 'occurrence has no challenge switch');
+      const next = Object.freeze({
+        variantKey: current.variantKey,
+        hitless: command.hitless,
+        nectarDropped: command.nectarDropped,
+        ...(command.gold === undefined ? {} : { gold: command.gold }),
+      });
+      const issue = challengeSwitchShapeIssue(catalog, next);
+      if (issue !== undefined) failCommand(command, issue);
+      if (
+        current.hitless === next.hitless &&
+        current.nectarDropped === next.nectarDropped &&
+        current.gold === next.gold
+      )
+        return document;
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({ ...occurrence, challengeSwitch: next }),
       );
     }
     case 'ReplacePurgingPoolSlot': {

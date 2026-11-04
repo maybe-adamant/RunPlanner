@@ -469,6 +469,7 @@ function roomGuideDescription(value: unknown, label: string) {
           : { keepsakeKey: stringValue(record.keepsakeKey, `${label}.keepsakeKey`) }),
       });
     case 'interactEris':
+    case 'interactChallengeSwitch':
       exact(record, ['kind'], [], label);
       return Object.freeze({ kind });
     case 'reroll':

@@ -1385,6 +1385,8 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     fountainUsed: { step: fountainUsed },
     keepsakeRackUsed: { step: keepsakeRackUsed },
     erisInteracted: { step: erisInteracted },
+    // The claim's pickups settle at their own actions; the press changes no state.
+    challengeSwitchInteracted: { step: advanceOnly },
     rewardRerolled: { step: rewardRerolled },
     hubRewardRerolled: { step: hubRewardRerolled },
     requiredObjectSpawned: { step: advanceOnly },

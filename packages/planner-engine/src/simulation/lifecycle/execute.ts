@@ -192,6 +192,9 @@ const lifecycleEffectRegistry = Object.freeze({
       kind: 'roomEntered',
       surfaceShopPresent: context.input.surfaceShopPresent === true,
       roomShopPresent: context.input.roomShopPresent === true,
+      ...(context.input.challengeSwitchPresent === true
+        ? { challengeSwitchPresent: true as const }
+        : {}),
       ...(context.input.counterEffects.resetsBiomeDepthCache === true
         ? { biomeDepthCacheReset: true as const }
         : {}),
@@ -787,6 +790,11 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       case 'interactEris':
         return appendEvent(state, operationContext, {
           kind: 'erisInteracted',
+          owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
+        });
+      case 'interactChallengeSwitch':
+        return appendEvent(state, operationContext, {
+          kind: 'challengeSwitchInteracted',
           owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
         });
       case 'reroll': {

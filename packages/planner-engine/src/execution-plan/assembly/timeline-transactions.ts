@@ -709,6 +709,8 @@ export function executionTimelineTransactions(
       timeline.action.reference.kind === 'collectRequiredReward' ||
       timeline.action.reference.kind === 'sellPurgingPoolTrait' ||
       timeline.action.reference.kind === 'interactEris' ||
+      // The switch's press is native; its claim's pickups publish as acquisitions.
+      timeline.action.reference.kind === 'interactChallengeSwitch' ||
       // Shrine purchases, rush included, publish through the room Overview.
       timeline.action.reference.kind === 'purchaseHermesShrineOffer' ||
       // Fields cage completion is represented by the ordered encounter phases;

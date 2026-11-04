@@ -37,6 +37,12 @@ import { acquisitionSiteFromStorageKey } from './artificer';
 import { rewardWheelOfferIsPicked } from './acquisition-sources';
 import { roomActionKey } from '../room-actions/key';
 import { ERIS_GIFT_ENTRY_KEY, ERIS_GIFT_SITE_KEY } from './eris-gift';
+import {
+  CHALLENGE_SWITCH_ACTION,
+  CHALLENGE_SWITCH_SITE_KEY,
+  challengeSwitchClaimPickups,
+  challengeSwitchHost,
+} from './challenge-switch';
 import { directEncounterDefinitionKeyForSlot } from '../room-state/encounter-envelope';
 import { resolveRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
@@ -181,7 +187,8 @@ export function producerOwnedSiteKey(siteKey: string): boolean {
   return (
     siteKey.startsWith('traitGenerated:') ||
     siteKey.startsWith('nemesisGenerated:') ||
-    siteKey === ERIS_GIFT_SITE_KEY
+    siteKey === ERIS_GIFT_SITE_KEY ||
+    siteKey === CHALLENGE_SWITCH_SITE_KEY
   );
 }
 
@@ -627,6 +634,42 @@ export function selectedPickupProducers(
     ),
     ...nemesisPickupProducers(catalog, biome, occurrence, declaration),
     ...erisPickupProducers(biome, occurrence, declaration),
+    ...challengeSwitchPickupProducers(catalog, biome, occurrence),
+  ]);
+}
+
+/** A switch's claim spawns its reward and, when hitless, maybe its bonus Nectar. */
+function challengeSwitchPickupProducers(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  occurrence: RoomOccurrence,
+): readonly SelectedPickupProducer[] {
+  const challengeSwitch = occurrence.challengeSwitch;
+  if (
+    challengeSwitch === undefined ||
+    challengeSwitchHost(catalog, occurrence.gameName) === undefined
+  )
+    return Object.freeze([]);
+  const pickups = challengeSwitchClaimPickups(catalog, challengeSwitch);
+  if (pickups.length === 0) return Object.freeze([]);
+  return Object.freeze([
+    Object.freeze({
+      producerLifecycleKey: catalog.challengeSwitches.producerLifecycleKey,
+      placement: 'afterSource' as const,
+      source: createRoomActionAddress(
+        biome,
+        occurrence.occurrenceId,
+        roomActionKey(CHALLENGE_SWITCH_ACTION),
+      ),
+      sourceAction: CHALLENGE_SWITCH_ACTION,
+      sourceNormal: occurrence.roomActions.order.some(
+        (reference) => reference.kind === 'interactChallengeSwitch',
+      ),
+      siteKey: CHALLENGE_SWITCH_SITE_KEY,
+      pickups: Object.freeze(
+        pickups.map((pickup) => Object.freeze({ ...pickup, required: false as const })),
+      ),
+    }),
   ]);
 }
 

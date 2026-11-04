@@ -35,6 +35,8 @@ export type RoomLifecycleEvent =
       readonly kind: 'roomEntered';
       readonly surfaceShopPresent?: boolean;
       readonly roomShopPresent?: boolean;
+      /** An observed challenge switch; native records its depth at entry (`LastChallengeDepth`). */
+      readonly challengeSwitchPresent?: true;
       /** A NextRoomSet room's map load recomputes the biome depth cache to 1 after the run's first room. */
       readonly biomeDepthCacheReset?: true;
       /** Native StartRoom RunOverrides then set the biome depth cache to this value. */
@@ -63,6 +65,11 @@ export type RoomLifecycleEvent =
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'erisInteracted';
+      readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
+    })
+  | (RoomLifecycleEventBase & {
+      /** Starting and claiming the challenge switch; neither an encounter end nor a store draw. */
+      readonly kind: 'challengeSwitchInteracted';
       readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
     })
   | (RoomLifecycleEventBase & {
@@ -196,6 +203,7 @@ export interface RoomLifecycleExecutionInput {
   /** Exact feature presence recorded with the physical room-entry ledger. */
   readonly surfaceShopPresent?: boolean;
   readonly roomShopPresent?: boolean;
+  readonly challengeSwitchPresent?: true;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly enteredRewardStoreKey?: string;
   readonly offerPointRewardStores?: Readonly<Record<string, string>>;

@@ -325,6 +325,8 @@ export type RoomActionReference =
   | { readonly kind: 'useFountain' }
   | { readonly kind: 'interactKeepsakeRack' }
   | { readonly kind: 'interactEris' }
+  /** Starting and claiming the room's challenge switch, after its doors open. */
+  | { readonly kind: 'interactChallengeSwitch' }
   | RerollRoomAction
   | StygianWellRerollAction
   | PurgingPoolRerollAction;
@@ -581,6 +583,8 @@ export interface RoomOccurrence {
   readonly keepsakeRack?: AuthoredKeepsakeRack;
   /** Present only at a route-declared Eris host, as an observation rather than a condition. */
   readonly eris?: AuthoredErisObservation;
+  /** Present only where a challenge switch was observed, at a declared host. */
+  readonly challengeSwitch?: AuthoredChallengeSwitch;
   /** Present only when this exact occurrence owns a realized Phial target. */
   readonly fountainRarityResult?: AuthoredFountainRarityResult;
   /** Present only at declaration-owned F/G/H fixed Postboss Pool hosts. */
@@ -610,6 +614,21 @@ export interface AuthoredKeepsakeRack {
 /** Eris stood in the room on entry; her spawn condition is observed, never simulated. */
 export interface AuthoredErisObservation {
   readonly spawned: true;
+}
+
+/**
+ * A challenge switch observed in the room: its obstacle variant (and so its
+ * kind and reward) is rolled on entry, never simulated. The claim outcome is
+ * read only while the switch's interaction is in the room's order.
+ */
+export interface AuthoredChallengeSwitch {
+  readonly variantKey: string;
+  /** No damage taken during its encounter; a hit turns a PerfectClear reward into the Onion. */
+  readonly hitless: boolean;
+  /** A hitless claim's bonus Nectar dropped. */
+  readonly nectarDropped: boolean;
+  /** Time switch only: the approximate claimed value before the money multiplier. */
+  readonly gold?: number;
 }
 
 export interface AnomalyReplacementProvenance {

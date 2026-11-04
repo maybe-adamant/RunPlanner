@@ -141,6 +141,8 @@ function commandContractAddress(
     case 'InsertPurgingPoolReroll':
     case 'ReplacePurgingPoolSlot':
     case 'SetErisSpawned':
+    case 'ReplaceChallengeSwitch':
+    case 'ReplaceChallengeSwitchOutcome':
     case 'AddStygianWell':
     case 'RemoveStygianWell':
     case 'InsertStygianWellReroll':
@@ -316,6 +318,9 @@ export function projectCommandAddress(
       });
     case 'SetErisSpawned':
       return createRoomFeatureAddress(command.occurrence, { kind: 'erisSpawn' });
+    case 'ReplaceChallengeSwitch':
+    case 'ReplaceChallengeSwitchOutcome':
+      return createRoomFeatureAddress(command.occurrence, { kind: 'challengeSwitch' });
   }
   return commandContractAddress(command);
 }

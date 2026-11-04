@@ -81,6 +81,7 @@ export const rewardArtwork: Readonly<Record<string, string | null>> = {
   RoomMoneySmallDrop: iconGold,
   RoomMoneyTripleDrop: iconRoomMoneyTripleDropPreview,
   RoomMoneyTinyDrop: iconGold,
+  Money: iconGold,
   TalentDrop: iconPathOfStars,
   TalentBigDrop: iconPathOfStars,
   MinorTalentDrop: iconPathOfStars,

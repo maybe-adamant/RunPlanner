@@ -37,6 +37,11 @@ import {
   selectedPickupProducers,
 } from '../acquisition/pickup-producers';
 import { ERIS_GIFT_SITE_KEY } from '../acquisition/eris-gift';
+import {
+  CHALLENGE_SWITCH_SITE_KEY,
+  challengeSwitchHost,
+  challengeSwitchShapeIssue,
+} from '../acquisition/challenge-switch';
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import {
   hermesShrinePurchaseAction,
@@ -85,6 +90,38 @@ function decodeErisObservation(
   expectExactKeys(raw, ['spawned'], path);
   if (raw.spawned !== true) failProjectDocument(`${path}.spawned`, 'must be true when present');
   return Object.freeze({ spawned: true });
+}
+
+function decodeChallengeSwitch(
+  value: unknown,
+  catalog: Catalog,
+  gameName: string,
+  path: string,
+): NonNullable<RoomOccurrence['challengeSwitch']> {
+  if (challengeSwitchHost(catalog, gameName) === undefined)
+    failProjectDocument(path, `${gameName} hosts no challenge switch`);
+  const raw = expectRecord(value, path);
+  const hasGold = Object.hasOwn(raw, 'gold');
+  expectExactKeys(
+    raw,
+    ['variantKey', 'hitless', 'nectarDropped', ...(hasGold ? ['gold'] : [])],
+    path,
+  );
+  const variantKey = expectString(raw.variantKey, `${path}.variantKey`);
+  if (typeof raw.hitless !== 'boolean') failProjectDocument(`${path}.hitless`, 'must be boolean');
+  if (typeof raw.nectarDropped !== 'boolean')
+    failProjectDocument(`${path}.nectarDropped`, 'must be boolean');
+  if (hasGold && typeof raw.gold !== 'number')
+    failProjectDocument(`${path}.gold`, 'must be a number');
+  const challengeSwitch = Object.freeze({
+    variantKey,
+    hitless: raw.hitless,
+    nectarDropped: raw.nectarDropped,
+    ...(hasGold ? { gold: raw.gold as number } : {}),
+  });
+  const issue = challengeSwitchShapeIssue(catalog, challengeSwitch);
+  if (issue !== undefined) failProjectDocument(path, issue);
+  return challengeSwitch;
 }
 
 function decodeKeepsakeRackState(
@@ -412,6 +449,14 @@ export function decodeRoomOccurrence(input: {
         `${rawOccurrence.path}.eris`,
       )
     : undefined;
+  const challengeSwitch = rawOccurrence.hasChallengeSwitch
+    ? decodeChallengeSwitch(
+        rawOccurrence.challengeSwitch,
+        catalog,
+        room.gameName,
+        `${rawOccurrence.path}.challengeSwitch`,
+      )
+    : undefined;
   const pedestalDeclared = roomHasInfernalContractPedestal(contextualRoom);
   if (pedestalDeclared !== (rawOccurrence.hasInfernalContractPedestal === true))
     failProjectDocument(
@@ -487,6 +532,14 @@ export function decodeRoomOccurrence(input: {
     failProjectDocument(
       `${rawOccurrence.path}.roomActions.order`,
       'an Eris interaction requires the spawned Eris observation',
+    );
+  if (
+    roomActions.order.filter((reference) => reference.kind === 'interactChallengeSwitch').length >
+    (challengeSwitch === undefined ? 0 : 1)
+  )
+    failProjectDocument(
+      `${rawOccurrence.path}.roomActions.order`,
+      'an observed challenge switch owns at most one interactChallengeSwitch action',
     );
   if (
     roomActions.order.filter((reference) => reference.kind === 'interactKeepsakeRack').length !==
@@ -567,6 +620,7 @@ export function decodeRoomOccurrence(input: {
     ...(purgingPool === undefined ? {} : { purgingPool }),
     ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
     ...(eris === undefined ? {} : { eris }),
+    ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(phantomExit === undefined ? {} : { phantomExit }),
     ...(rerolledIncomingReward === undefined ? {} : { rerolledIncomingReward }),
@@ -749,6 +803,7 @@ export function decodeRoomOccurrence(input: {
       parseNemesisGeneratedPickupSiteKey(siteKey) === undefined &&
       parseSeaStarDuplicateSiteKey(siteKey) === undefined &&
       siteKey !== ERIS_GIFT_SITE_KEY &&
+      siteKey !== CHALLENGE_SWITCH_SITE_KEY &&
       siteKey !== 'hermesShrineDelivery' &&
       siteKey !== INFERNAL_CONTRACT_PEDESTAL_SITE_KEY &&
       Object.keys(site.pickupEntries ?? {}).some(
@@ -964,6 +1019,7 @@ export function decodeRoomOccurrence(input: {
     ...(purgingPool === undefined ? {} : { purgingPool }),
     ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
     ...(eris === undefined ? {} : { eris }),
+    ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(phantomExit === undefined ? {} : { phantomExit }),
     ...(rerolledIncomingReward === undefined ? {} : { rerolledIncomingReward }),

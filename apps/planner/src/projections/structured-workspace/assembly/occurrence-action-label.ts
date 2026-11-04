@@ -507,6 +507,8 @@ export function occurrenceActionLabelParts(
       return plain('Keepsake Rack');
     case 'interactEris':
       return talkTo('Eris');
+    case 'interactChallengeSwitch':
+      return plain('Challenge switch');
     case 'reroll': {
       const target = reference.target;
       const subject =

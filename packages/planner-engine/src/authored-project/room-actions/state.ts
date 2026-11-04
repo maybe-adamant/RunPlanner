@@ -31,6 +31,7 @@ import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../infernal-contract-pedest
 import type { ResolvedRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import { routeErisHost } from '../route-profile';
+import { CHALLENGE_SWITCH_ACTION, challengeSwitchHost } from '../acquisition/challenge-switch';
 export { roomActionKey } from './key';
 import { roomActionKey } from './key';
 import type { PurgingPoolSlotKey } from '../model';
@@ -169,6 +170,12 @@ export function activeRoomActionReferences(
     references.push(Object.freeze({ kind: 'interactKeepsakeRack' }));
   if (occurrence.eris !== undefined && routeErisHost(room, biome.routeKey) !== undefined)
     references.push(Object.freeze({ kind: 'interactEris' }));
+  // An observed switch is optional to use; most are never started.
+  if (
+    occurrence.challengeSwitch !== undefined &&
+    challengeSwitchHost(catalog, occurrence.gameName) !== undefined
+  )
+    references.push(CHALLENGE_SWITCH_ACTION);
   const activeWheels =
     occurrence.state.kind !== 'shipCombat'
       ? new Set<string>()

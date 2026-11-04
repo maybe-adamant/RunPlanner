@@ -520,6 +520,9 @@ function foldHistoryEventStream(
           gameName: roomName(namesByOrigin, event),
           surfaceShopPresent: event.surfaceShopPresent === true,
           roomShopPresent: event.roomShopPresent === true,
+          ...(event.challengeSwitchPresent === true
+            ? { challengeSwitchPresent: true as const }
+            : {}),
         });
         ledgers.roomAppearances.push(entry);
         // UpdateRunHistoryCache keeps the cache while RoomHistory is empty.

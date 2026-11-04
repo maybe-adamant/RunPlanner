@@ -53,6 +53,7 @@ const executionDispositions = {
     useFountain: 'covered',
     interactKeepsakeRack: 'covered',
     interactEris: 'deferred-route',
+    interactChallengeSwitch: 'deferred-route',
     reroll: 'covered',
     rerollStygianWell: 'covered',
     rerollPurgingPool: 'covered',

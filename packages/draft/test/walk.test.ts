@@ -362,3 +362,21 @@ describe('a Travel Deal refill', () => {
     expect(shop.kind === 'shop' ? shop.shop?.travelDealRefill : undefined).toBeDefined();
   });
 });
+
+describe('draft room observations', () => {
+  it('never observes a challenge switch, a random room object it cannot steer', () => {
+    const spec: DraftSpec = {
+      loadout,
+      world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketByGiver: {},
+      rackKeepsakeKeys: [null, null, null],
+    };
+    const walk = startDraftWalk(base, spec, 2);
+    expect(walk.runBiome(0, 600), walk.failure).toBe(true);
+    expect(
+      walk.project.route.biomes
+        .flatMap((plan) => plan.topology?.occurrences ?? [])
+        .filter((occurrence) => occurrence.challengeSwitch !== undefined),
+    ).toEqual([]);
+  });
+});

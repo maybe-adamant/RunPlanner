@@ -141,6 +141,7 @@ const BLOCKABLE: ReadonlySet<GoldGain['kind']> = new Set([
   'loanPayback',
   'enemyGold',
   'urnGold',
+  'challengeSwitchGold',
   'arcanaGold',
   'timePiece',
   'midasPayout',
@@ -283,6 +284,7 @@ function applyGain(
     case 'fallbackGold':
     case 'keepsakeGold':
     case 'timePiece':
+    case 'challengeSwitchGold':
       return pay(fixed(roundGold(gain.gold * sigma)));
     case 'midasPayout':
       return pay(midasPayout(catalog, gain.itemKey, 1 + (sigma - 1) + (bonus - 1)));

@@ -280,6 +280,18 @@ export function settleAuthoredAcquisitionSite(
         !erisGiftDropped(catalog, room, producer.source, sourceBranch)
       )
         return sourceBranch;
+      // A Path of Stars claim needs the installed Hex tree `TalentLegal` implies;
+      // without one no such switch spawned, and its Overview finding owns the repair.
+      if (
+        producer.sourceAction.kind === 'interactChallengeSwitch' &&
+        sourceBranch?.state.hexProgress.tree === undefined &&
+        producer.pickups.some(
+          (pickup) =>
+            pickup.rewardType !== undefined &&
+            catalog.rewards.acquisitions.byKey[pickup.rewardType]?.pathPointGrant !== undefined,
+        )
+      )
+        return sourceBranch;
       const requiredEntryKeys = new Set(
         producer.pickups.filter((pickup) => pickup.required).map((pickup) => pickup.key),
       );

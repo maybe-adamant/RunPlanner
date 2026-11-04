@@ -1117,6 +1117,7 @@ export type ExecutionRoomGuideDescription =
   | { readonly kind: 'useFountain'; readonly aromaticPhialTarget?: string }
   | { readonly kind: 'interactKeepsakeRack'; readonly keepsakeKey?: string }
   | { readonly kind: 'interactEris' }
+  | { readonly kind: 'interactChallengeSwitch' }
   | {
       readonly kind: 'reroll';
       readonly target: ExecutionRerollTarget;

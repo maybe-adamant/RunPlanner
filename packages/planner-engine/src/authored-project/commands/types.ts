@@ -601,6 +601,23 @@ export type ErisCommand = {
   readonly spawned: boolean;
 };
 
+/** Edits an observed challenge switch at a declared host. */
+export type ChallengeSwitchCommand =
+  | {
+      /** Observes the switch as this variant, keeping a compatible outcome; null clears it. */
+      readonly kind: 'ReplaceChallengeSwitch';
+      readonly occurrence: OccurrenceAddress;
+      readonly variantKey: string | null;
+    }
+  | {
+      /** Replaces the claim outcome; gold is a Time switch's only. */
+      readonly kind: 'ReplaceChallengeSwitchOutcome';
+      readonly occurrence: OccurrenceAddress;
+      readonly hitless: boolean;
+      readonly nectarDropped: boolean;
+      readonly gold?: number;
+    };
+
 export type HermesShrineCommand =
   | {
       readonly kind: 'SetHermesShrinePresence';
@@ -912,6 +929,7 @@ export type OccurrenceLeafCommand =
   | PhantomExitCommand
   | PurgingPoolCommand
   | ErisCommand
+  | ChallengeSwitchCommand
   | StygianWellCommand
   | HermesShrineCommand
   | EncounterOccurrenceCommand;

@@ -1,5 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import { ERIS_GIFT_SITE_KEY } from './eris-gift';
+import { CHALLENGE_SWITCH_SITE_KEY } from './challenge-switch';
 import { parseArtificerReplacementEntryKey } from './artificer';
 import {
   parseClockedTraitGeneratedPickupEntryKey,
@@ -30,6 +31,8 @@ export type AcquisitionEntrySourceFamily =
   | { readonly kind: 'nemesisEvent' }
   /** The gift talking to Eris drops. */
   | { readonly kind: 'erisGift' }
+  /** What a challenge switch's claim spawns. */
+  | { readonly kind: 'challengeSwitch' }
   /** A Hermes Shrine item delivered to its host room. */
   | { readonly kind: 'hermesShrineDelivery' }
   /** The World Shop's Travel Deal restock. */
@@ -41,6 +44,7 @@ const ARTIFICER = Object.freeze({ kind: 'artificer' as const });
 const SEA_STAR = Object.freeze({ kind: 'seaStar' as const });
 const NEMESIS_EVENT = Object.freeze({ kind: 'nemesisEvent' as const });
 const ERIS_GIFT = Object.freeze({ kind: 'erisGift' as const });
+const CHALLENGE_SWITCH = Object.freeze({ kind: 'challengeSwitch' as const });
 const HERMES_SHRINE_DELIVERY = Object.freeze({ kind: 'hermesShrineDelivery' as const });
 const SHOP_TRAVEL_DEAL_REFILL = Object.freeze({ kind: 'shopTravelDealRefill' as const });
 
@@ -101,7 +105,11 @@ export function acquisitionEntrySourceFamily(
     case 'nemesisRandomEvent':
       return NEMESIS_EVENT;
     case 'roomAction':
-      return producer.siteKey === ERIS_GIFT_SITE_KEY ? ERIS_GIFT : undefined;
+      return producer.siteKey === ERIS_GIFT_SITE_KEY
+        ? ERIS_GIFT
+        : producer.siteKey === CHALLENGE_SWITCH_SITE_KEY
+          ? CHALLENGE_SWITCH
+          : undefined;
     case 'traitOffer': {
       if (producer.traitKey === undefined) return undefined;
       const disposition = catalog.traits.byKey[producer.traitKey]?.selectedDisposition;

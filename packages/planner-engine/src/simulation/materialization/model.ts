@@ -280,6 +280,8 @@ export interface CanonicalAuthoredRoom {
   readonly stygianWell?: NonNullable<
     import('../../authored-project/model').RoomOccurrence['stygianWell']
   >;
+  /** An observed challenge switch, fixed on entry. */
+  readonly challengeSwitch?: import('../../authored-project/model').AuthoredChallengeSwitch;
   /** Normalized catalog effects for the authored Well generations only. */
   readonly stygianWellOfferEffects?: Readonly<
     Partial<Record<StygianWellGenerationKey, StygianWellEffect>>

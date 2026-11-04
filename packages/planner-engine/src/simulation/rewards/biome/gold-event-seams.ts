@@ -128,6 +128,7 @@ function rowSettledBy(event: HistoryEvent, row: RoomActionRow): boolean {
     case 'useFountain':
     case 'interactKeepsakeRack':
     case 'interactEris':
+    case 'interactChallengeSwitch':
     case 'reroll':
     case 'rerollStygianWell':
     case 'rerollPurgingPool':
@@ -135,6 +136,7 @@ function rowSettledBy(event: HistoryEvent, row: RoomActionRow): boolean {
         (event.kind === 'fountainUsed' ||
           event.kind === 'keepsakeRackUsed' ||
           event.kind === 'erisInteracted' ||
+          event.kind === 'challengeSwitchInteracted' ||
           event.kind === 'rewardRerolled' ||
           event.kind === 'featureRerolled') &&
         semanticAddressKey(event.owner) === semanticAddressKey(row.owner)
@@ -643,6 +645,19 @@ export function withGoldEvents(
                           : { remultipliers: spawned.remultipliers }),
                       }),
                 },
+              },
+        );
+      } else if (gameName === 'Money') {
+        // Only a Time switch's claim gushes `Money`; its value is authored.
+        const gold = room?.challengeSwitch?.gold;
+        detect(
+          key,
+          owner,
+          gold === undefined
+            ? { unpriced: { kind: 'contractFailure', detail: 'a gold claim has no switch value' } }
+            : {
+                gain: { kind: 'challengeSwitchGold', gold },
+                multipliers: goldMultipliers(catalog, after),
               },
         );
       } else if (gameName === 'Currency') {

@@ -4,6 +4,7 @@ import { resolveRoutePosition } from '../route-context';
 import { resolveEntryDeclaration, resolveEntryRoom } from '../room-state/entry-resolution';
 import { composeStartingReward, routeStartIncomingReward } from '../room-state/starting-reward';
 import { activeSelectedPickupProducers } from '../acquisition/pickup-producers';
+import { CHALLENGE_SWITCH_SITE_KEY } from '../acquisition/challenge-switch';
 import type {
   AuthoredBiomePlan,
   BiomeTopology,
@@ -395,8 +396,8 @@ interface TraitDroppedPickups {
 
 /**
  * Same-room pickups each active trait acquisition drops (Quick Buck, Buried
- * Treasure, Narcissus), per occurrence. Clocked drops and non-trait producers
- * keep their own closure.
+ * Treasure, Narcissus) or a challenge switch's claim spawns, per occurrence.
+ * Clocked drops and other producers keep their own closure.
  */
 function activeTraitDroppedPickups(
   document: ProjectDocument,
@@ -423,7 +424,8 @@ function activeTraitDroppedPickups(
         routePosition.ordinal,
         routeStartIncomingReward(document, routePosition, occurrence) ?? undefined,
       ).flatMap((producer): TraitDroppedPickups[] =>
-        producer.traitKey === undefined || !producer.siteKey.startsWith('traitGenerated:')
+        producer.siteKey !== CHALLENGE_SWITCH_SITE_KEY &&
+        (producer.traitKey === undefined || !producer.siteKey.startsWith('traitGenerated:'))
           ? []
           : [
               frozen({

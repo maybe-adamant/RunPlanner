@@ -383,6 +383,15 @@ function baseContribution(
         'required',
         frozen({ kind: 'standard', phase: 'afterCombat' }),
       );
+    // The switch is usable only once the doors open (`DoUnlockRoomExits`).
+    case 'interactChallengeSwitch':
+      return contribution(
+        biome,
+        occurrence,
+        reference,
+        'optional',
+        frozen({ kind: 'postOutgoing' }),
+      );
     case 'purchaseStygianWellOffer':
       return contribution(
         biome,
@@ -723,6 +732,7 @@ function baseContribution(
                   frozen({ kind: 'standard', phase: 'afterCombat' })
                 : frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey! })
             : producer?.placement === 'roomExit' ||
+                producer?.sourceAction.kind === 'interactChallengeSwitch' ||
                 (producer?.source.kind === 'traitOffer' &&
                   producer.source.owner.kind === 'shopOffer') ||
                 reference.siteKey === 'roomExit'

@@ -314,6 +314,9 @@ export const findingCopy = {
     title: 'Eris cannot spawn again',
     description: 'Her curse is already on this run.',
   },
+  challengeSwitchPlacementUnavailable: {
+    title: 'This switch cannot appear here',
+  },
   keepsakeEquipResultMissing: {
     title: 'Choose the Hades trait from Jeweled Pom',
   },

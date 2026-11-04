@@ -107,6 +107,9 @@ export function createRoomLifecycleInput(
     ...(room.kind === 'authored' && room.stygianWell !== undefined
       ? { roomShopPresent: true }
       : {}),
+    ...(room.kind === 'authored' && room.challengeSwitch !== undefined
+      ? { challengeSwitchPresent: true }
+      : {}),
     ...(requiredObjects === undefined ? {} : { requiredObjects }),
     ...(offerPointRewardStores === undefined ? {} : { offerPointRewardStores }),
     ...(roomActionRoster === undefined ? {} : { roomActionRoster }),

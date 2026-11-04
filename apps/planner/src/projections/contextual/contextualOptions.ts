@@ -848,6 +848,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'generic',
         message: 'Eris spawns only while her curse is absent; an earlier talk already applied it.',
       };
+    case 'challengeSwitchPlacementUnavailable':
+      return presented('generic', finding);
     case 'keepsakeEquipResultMissing':
     case 'keepsakeEquipResultUnavailable':
       if (

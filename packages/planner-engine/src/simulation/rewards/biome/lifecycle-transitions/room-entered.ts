@@ -43,6 +43,7 @@ import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
 import { erisSpawnFindings } from './eris-interacted';
+import { assessChallengeSwitchPlacement } from '../../../commerce/challenge-switch';
 import { isDeliveryFlushHost } from '../../../../authored-project/hermes-shrine-delivery';
 import type {
   DerivedAcquisitionEntryFrontier,
@@ -302,6 +303,44 @@ export function applyRoomEnteredTransition(
   if (dueDeliveries !== undefined) findings.push(...dueDeliveries.findings);
   if (room !== undefined)
     findings.push(...erisSpawnFindings(catalog, room, next, findingChronology));
+  if (room?.challengeSwitch !== undefined && next !== undefined) {
+    const declaration = catalog.rooms.byKey[room.gameName];
+    const entry = roomView?.entry;
+    if (declaration === undefined || entry === undefined)
+      throw new BiomeRewardSimulationContractError(`${room.gameName} has no switch entry frontier`);
+    const owner = createRoomFeatureAddress(room.origin, { kind: 'challengeSwitch' });
+    for (const issue of assessChallengeSwitchPlacement(
+      catalog,
+      room.gameName,
+      declaration.challengeSwitchAnchorCount ?? 0,
+      room.challengeSwitch,
+      {
+        biomeDepthCache: entry.ledgers.counters.biomeDepthCache,
+        appearances: entry.ledgers.roomAppearances,
+        occupants: Object.freeze([
+          ...(room.stygianWell === undefined ? [] : ['stygianWell' as const]),
+          ...(room.purgingPool === undefined ? [] : ['purgingPool' as const]),
+          ...(room.hermesShrine === undefined ? [] : ['hermesShrine' as const]),
+        ]),
+        requirements: createBiomeRewardFacts({
+          catalog,
+          state: next.state,
+          source: room,
+          currentRoom: room,
+          sourceDeclaration: declaration,
+          view: entry,
+          hubBoardLookups: 'consulted',
+        }).requirements,
+      },
+    ))
+      findings.push(
+        Object.freeze({
+          finding: rewardFinding('challengeSwitchPlacementUnavailable', owner, issue),
+          region: ownerRegion(room.origin),
+          chronology: findingChronology,
+        }),
+      );
+  }
   if (
     room !== undefined &&
     room.lifecycleProfileKey !== 'ShipCombatRoom' &&

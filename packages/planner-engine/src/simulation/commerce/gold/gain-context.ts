@@ -130,7 +130,13 @@ export type GoldGain =
       }[];
     }
   /** The room's golden urns, swapped in as it starts. */
-  | { readonly kind: 'urnGold'; readonly roomGameName: string };
+  | { readonly kind: 'urnGold'; readonly roomGameName: string }
+  /**
+   * A Time switch's claimed coins: its authored approximate value, times the
+   * money multiplier held when its encounter clears (EncounterLogic.lua
+   * EndChallengeEncounter).
+   */
+  | { readonly kind: 'challengeSwitchGold'; readonly gold: number };
 
 export interface GoldEventContext {
   readonly gain: GoldGain;

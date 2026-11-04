@@ -173,6 +173,7 @@ function descriptionFor(
         ...(transaction?.kind === 'keepsakeChange' ? { keepsakeKey: transaction.keepsakeKey } : {}),
       });
     case 'interactEris':
+    case 'interactChallengeSwitch':
       return Object.freeze({ kind: reference.kind });
     case 'reroll':
       return rerollGuideDescription(room, batch, reference);

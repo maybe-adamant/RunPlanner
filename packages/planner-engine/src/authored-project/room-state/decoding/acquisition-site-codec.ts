@@ -28,6 +28,7 @@ import {
 import { decodeNullableRewardState } from './reward-acquisition-codec';
 import { expectExactKeys, expectRecord, failProjectDocument } from '../../validation';
 import { ERIS_GIFT_SITE_KEY } from '../../acquisition/eris-gift';
+import { CHALLENGE_SWITCH_SITE_KEY } from '../../acquisition/challenge-switch';
 
 export interface AcquisitionSiteOccurrenceContext {
   readonly path: string;
@@ -96,6 +97,7 @@ export function decodeAcquisitionSites(
       pointKey !== 'roomExit' &&
       !pedestalSite &&
       pointKey !== ERIS_GIFT_SITE_KEY &&
+      pointKey !== CHALLENGE_SWITCH_SITE_KEY &&
       !generatedTraitSite &&
       !generatedNemesisSite &&
       !seaStarDuplicateSite &&
