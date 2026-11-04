@@ -1,4 +1,5 @@
 import { screenRerollSupported } from '../screen-rerolls';
+import type { ChallengeSwitchOutcome } from '../model';
 import type { BiomeLayout, Catalog } from '../../catalog-schema';
 import { routeErisHost, routeHasKeepsakeRack, routeRoomShop } from '../route-profile';
 import {
@@ -110,7 +111,7 @@ function decodeChallengeSwitch(
     raw,
     [
       'variantKey',
-      'hitless',
+      'outcome',
       'nectarDropped',
       ...(hasGold ? ['gold'] : []),
       ...(hasElite ? ['elite'] : []),
@@ -135,7 +136,8 @@ function decodeChallengeSwitch(
       })()
     : undefined;
   const variantKey = expectString(raw.variantKey, `${path}.variantKey`);
-  if (typeof raw.hitless !== 'boolean') failProjectDocument(`${path}.hitless`, 'must be boolean');
+  if (!['left', 'finished', 'hitless', 'failed'].includes(raw.outcome as string))
+    failProjectDocument(`${path}.outcome`, 'must be left, finished, hitless or failed');
   if (typeof raw.nectarDropped !== 'boolean')
     failProjectDocument(`${path}.nectarDropped`, 'must be boolean');
   if (hasGold && typeof raw.gold !== 'number')
@@ -169,7 +171,7 @@ function decodeChallengeSwitch(
     : undefined;
   const challengeSwitch = Object.freeze({
     variantKey,
-    hitless: raw.hitless,
+    outcome: raw.outcome as ChallengeSwitchOutcome,
     nectarDropped: raw.nectarDropped,
     ...(hasGold ? { gold: raw.gold as number } : {}),
     ...(elite === undefined ? {} : { elite }),

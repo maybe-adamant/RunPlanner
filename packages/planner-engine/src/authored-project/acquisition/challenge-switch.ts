@@ -5,14 +5,18 @@ import type {
   ChallengeSwitchVariantDeclaration,
   EncounterCustomizationDecision,
 } from '../../catalog-schema';
-import type { AuthoredChallengeSwitch, AuthoredEncounterCustomization } from '../model';
+import type {
+  AuthoredChallengeSwitch,
+  AuthoredEncounterCustomization,
+  ChallengeSwitchOutcome,
+} from '../model';
 import { customizationValueKnown } from '../room-state/encounter-customization';
 
 /** The occurrence-local site holding the pickups a switch's claim spawns. */
 export const CHALLENGE_SWITCH_SITE_KEY = 'challengeSwitch';
 /** The claim's reward: the variant's reward, the Onion after a PerfectClear hit, or Time gold. */
 export const CHALLENGE_SWITCH_REWARD_ENTRY_KEY = 'reward';
-/** A hitless claim's bonus Nectar. */
+/** A claim's bonus Nectar, dropped only when no damage was taken. */
 export const CHALLENGE_SWITCH_NECTAR_ENTRY_KEY = 'nectar';
 
 export const CHALLENGE_SWITCH_ACTION = Object.freeze({ kind: 'interactChallengeSwitch' as const });
@@ -39,6 +43,52 @@ export function resolveChallengeSwitch(
   return variant === undefined || kind === undefined ? undefined : Object.freeze({ variant, kind });
 }
 
+/**
+ * The outcomes a kind's fight can end with: a kind whose hit changes its
+ * reward (PerfectClear) ends hitless or failed, the others finished; any
+ * pressed fight may be left.
+ */
+export function challengeSwitchOutcomes(
+  kind: ChallengeSwitchKindDeclaration,
+): readonly ChallengeSwitchOutcome[] {
+  return kind.hitRewardType === undefined
+    ? Object.freeze(['left', 'finished'] as const)
+    : Object.freeze(['left', 'hitless', 'failed'] as const);
+}
+
+/** The outcome a newly observed switch starts from: the claim of a clean fight. */
+function defaultOutcome(kind: ChallengeSwitchKindDeclaration): ChallengeSwitchOutcome {
+  return kind.hitRewardType === undefined ? 'finished' : 'hitless';
+}
+
+/** Whether the fight ended so the claim can drop the bonus Nectar (`HandleChallengeLoot`). */
+export function challengeSwitchOutcomeDropsNectar(outcome: ChallengeSwitchOutcome): boolean {
+  return outcome === 'finished' || outcome === 'hitless';
+}
+
+/**
+ * The outcome a variant change keeps: the same one where the new kind has it,
+ * else the new kind's default; Nectar and gold follow it.
+ */
+export function challengeSwitchOutcomeForVariant(
+  catalog: Catalog,
+  current: AuthoredChallengeSwitch,
+  variantKey: string,
+): Pick<AuthoredChallengeSwitch, 'outcome' | 'nectarDropped' | 'gold'> | undefined {
+  const resolved = resolveChallengeSwitch(catalog, variantKey);
+  if (resolved === undefined) return undefined;
+  const outcome = challengeSwitchOutcomes(resolved.kind).includes(current.outcome)
+    ? current.outcome
+    : defaultOutcome(resolved.kind);
+  return Object.freeze({
+    outcome,
+    nectarDropped: current.nectarDropped && challengeSwitchOutcomeDropsNectar(outcome),
+    ...(resolved.kind.goldReward && outcome === 'finished'
+      ? { gold: current.gold ?? catalog.challengeSwitches.gold.defaultValue }
+      : {}),
+  });
+}
+
 /** A newly observed switch of one variant, with the declaration's claim defaults. */
 export function defaultChallengeSwitch(
   catalog: Catalog,
@@ -48,7 +98,7 @@ export function defaultChallengeSwitch(
   if (resolved === undefined) return undefined;
   return Object.freeze({
     variantKey,
-    hitless: true,
+    outcome: defaultOutcome(resolved.kind),
     nectarDropped: false,
     ...(resolved.kind.goldReward ? { gold: catalog.challengeSwitches.gold.defaultValue } : {}),
   });
@@ -61,13 +111,15 @@ export function challengeSwitchClaimPickups(
 ): readonly { readonly key: string; readonly rewardType: string }[] {
   const resolved = resolveChallengeSwitch(catalog, challengeSwitch.variantKey);
   if (resolved === undefined) return Object.freeze([]);
+  // A left fight ends early: native never re-arms the switch for a claim.
+  if (challengeSwitch.outcome === 'left') return Object.freeze([]);
   const reward =
-    !challengeSwitch.hitless && resolved.kind.hitRewardType !== undefined
+    challengeSwitch.outcome === 'failed' && resolved.kind.hitRewardType !== undefined
       ? resolved.kind.hitRewardType
       : resolved.variant.rewardType;
   return Object.freeze([
     Object.freeze({ key: CHALLENGE_SWITCH_REWARD_ENTRY_KEY, rewardType: reward }),
-    ...(challengeSwitch.hitless && challengeSwitch.nectarDropped
+    ...(challengeSwitchOutcomeDropsNectar(challengeSwitch.outcome) && challengeSwitch.nectarDropped
       ? [
           Object.freeze({
             key: CHALLENGE_SWITCH_NECTAR_ENTRY_KEY,
@@ -79,8 +131,9 @@ export function challengeSwitchClaimPickups(
 }
 
 /**
- * Why a claim outcome cannot be authored: the bonus Nectar needs a hitless
- * claim, and only a Time switch claims gold, within its decay range.
+ * Why a claim outcome cannot be authored: the outcome must be one the kind's
+ * fight can end with, the bonus Nectar needs a claim with no damage taken, and
+ * only a finished Time switch claims gold, within its decay range.
  */
 export function challengeSwitchShapeIssue(
   catalog: Catalog,
@@ -88,10 +141,12 @@ export function challengeSwitchShapeIssue(
 ): string | undefined {
   const resolved = resolveChallengeSwitch(catalog, challengeSwitch.variantKey);
   if (resolved === undefined) return `unknown challenge switch ${challengeSwitch.variantKey}`;
-  if (challengeSwitch.nectarDropped && !challengeSwitch.hitless)
-    return 'the bonus Nectar drops only on a hitless claim';
+  if (!challengeSwitchOutcomes(resolved.kind).includes(challengeSwitch.outcome))
+    return `${resolved.kind.key} switches cannot end ${challengeSwitch.outcome}`;
+  if (challengeSwitch.nectarDropped && !challengeSwitchOutcomeDropsNectar(challengeSwitch.outcome))
+    return 'the bonus Nectar drops only on a claim with no damage taken';
   const gold = catalog.challengeSwitches.gold;
-  if (resolved.kind.goldReward) {
+  if (resolved.kind.goldReward && challengeSwitch.outcome === 'finished') {
     if (
       challengeSwitch.gold === undefined ||
       !Number.isInteger(challengeSwitch.gold) ||
@@ -99,7 +154,7 @@ export function challengeSwitchShapeIssue(
       challengeSwitch.gold > gold.startingValue
     )
       return `gold must be an integer from ${gold.minimumValue} through ${gold.startingValue}`;
-  } else if (challengeSwitch.gold !== undefined) return 'only a Time switch claims gold';
+  } else if (challengeSwitch.gold !== undefined) return 'only a finished Time switch claims gold';
   const elite = challengeSwitch.elite;
   if (elite !== undefined) {
     if (resolved.kind.key !== 'elite') return 'only an Elite switch pins its elite';

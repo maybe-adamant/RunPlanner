@@ -617,17 +617,24 @@ export interface AuthoredErisObservation {
 }
 
 /**
+ * How a pressed switch's fight ended. `left`: the player left the room before
+ * it ended (`EndedEarly`), so nothing is claimed. PerfectClear ends `hitless`
+ * or `failed` (a hit, claiming the Onion); Time and Elite end `finished`.
+ */
+export type ChallengeSwitchOutcome = 'left' | 'finished' | 'hitless' | 'failed';
+
+/**
  * A challenge switch observed in the room: its obstacle variant (and so its
  * kind and reward) is rolled on entry, never simulated. The claim outcome is
  * read only while the switch's interaction is in the room's order.
  */
 export interface AuthoredChallengeSwitch {
   readonly variantKey: string;
-  /** No damage taken during its encounter; a hit turns a PerfectClear reward into the Onion. */
-  readonly hitless: boolean;
-  /** A hitless claim's bonus Nectar dropped. */
+  /** How the pressed switch's fight ended; read only while it is pressed. */
+  readonly outcome: ChallengeSwitchOutcome;
+  /** The claim's bonus Nectar dropped; only a claim with no damage taken can drop it. */
   readonly nectarDropped: boolean;
-  /** Time switch only: the approximate claimed value before the money multiplier. */
+  /** Time switch, finished only: the approximate claimed value before the money multiplier. */
   readonly gold?: number;
   /** Elite switch only: its pinned elite and attributes; absent leaves both native. */
   readonly elite?: AuthoredChallengeSwitchElite;

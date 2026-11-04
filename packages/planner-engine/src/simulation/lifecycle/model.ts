@@ -195,6 +195,8 @@ export interface ChallengeSwitchEncounterRun {
   readonly phaseKind: EncounterPhaseKind;
   /** Native StartEncounter applies the inherited `CountsForRoomEncounterDepth`. */
   readonly countsEncounterDepth: boolean;
+  /** False when the player left mid-fight (`EndedEarly`): started, never completed. */
+  readonly completed: boolean;
   readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
 }
 

@@ -935,7 +935,7 @@ function foldHistoryEventStream(
           throw new HistoryFoldContractError(
             `${semanticAddressKey(event.origin)} ran its switch encounter more than once`,
           );
-        // RecordEncounter, StartEncounter and its completion, all at the press.
+        // RecordEncounter and StartEncounter at the press, and its completion once fought out.
         const entry: EncounterHistoryEntry = Object.freeze({
           sequence: event.sequence,
           origin: event.origin,
@@ -959,7 +959,8 @@ function foldHistoryEventStream(
           );
           ledgers.counters.routeEncounterDepth += 1;
         }
-        ledgers.encounterCompletions.push(entry);
+        // Leaving mid-fight ends it early: never completed (RoomLogic.lua:4213-4216).
+        if (run.completed) ledgers.encounterCompletions.push(entry);
         break;
       }
       case 'producerRoleAdvanced':

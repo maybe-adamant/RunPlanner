@@ -469,9 +469,18 @@ function roomGuideDescription(value: unknown, label: string) {
           : { keepsakeKey: stringValue(record.keepsakeKey, `${label}.keepsakeKey`) }),
       });
     case 'interactEris':
-    case 'interactChallengeSwitch':
       exact(record, ['kind'], [], label);
       return Object.freeze({ kind });
+    case 'interactChallengeSwitch': {
+      exact(record, ['kind', 'outcome'], [], label);
+      const outcome = stringValue(record.outcome, `${label}.outcome`);
+      if (!['left', 'finished', 'hitless', 'failed'].includes(outcome))
+        fail(`${label}.outcome is unsupported`);
+      return Object.freeze({
+        kind,
+        outcome: outcome as 'left' | 'finished' | 'hitless' | 'failed',
+      });
+    }
     case 'reroll':
       exact(record, ['kind', 'target', 'reward'], [], label);
       return Object.freeze({

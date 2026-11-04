@@ -444,6 +444,7 @@ function withChallengeSwitchEncounter(
       encounterKey: phase.encounterKey,
       phaseKind: phase.kind,
       countsEncounterDepth: phase.countsEncounterDepth,
+      completed: room.challengeSwitch.outcome !== 'left',
       ...(phase.generatedCustomization === undefined
         ? {}
         : { generatedCustomization: phase.generatedCustomization }),

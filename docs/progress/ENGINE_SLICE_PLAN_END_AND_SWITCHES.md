@@ -741,6 +741,27 @@ customization?, elite? }` for every entered room with an observed switch,
   157/157 unchanged, `test:draft` 165, `test:run-import` 342 (+1 skipped),
   `test:planner` 2160 (+1 skipped).
 
+- **Switch outcome** (owner model change, 2026-11-04; supersedes `hitless`
+  above). Every pressed switch has one `outcome`: Time and Elite `left` or
+  `finished`, PerfectClear `left`, `hitless` or `failed` (derived from the
+  kind: a kind with a hit reward is PerfectClear). `left` is pressing then
+  leaving the room before the fight ends (`EndedEarly`, RoomLogic.lua:4213):
+  the encounter is recorded and started, counting its encounter depth, but
+  never completed, `EndChallengeEncounter` returns before re-arming the switch
+  (EncounterLogic.lua:2124), so nothing is claimed and no Nectar drops.
+  `failed` claims the Onion. `nectarDropped` needs `finished` or `hitless`
+  (`HandleChallengeLoot` rolls the GiftDrop only when no damage was taken, for
+  every kind, so a finished Time or Elite claim with Nectar asserts a clean
+  fight); `gold` exists exactly for a finished Time switch. A new switch starts
+  at its kind's clean claim; a variant change keeps the outcome where the new
+  kind has it, else the kind's default, with Nectar and gold following.
+  Strict decode, no transition (the shape never shipped). The fold leaves a
+  left fight out of the completions; the gold ledger pays a left fight's kills
+  nothing (no estimate of a partial fight). The guide row
+  `interactChallengeSwitch` carries `outcome` (rides P6, deferred to P7).
+  Not enforced: a left press being the room's last action (the player left).
+  Witnesses in the authored and simulation switch tests.
+
 What P5 needs:
 
 - **Overview, Objects tab** (owner shape, 2026-11-04):
@@ -760,9 +781,12 @@ What P5 needs:
 
 - **Timeline:** insert/remove `interactChallengeSwitch`
   (Insert/RemoveRoomAction) and its outcome (`ReplaceChallengeSwitchOutcome`:
-  hitless, Nectar, Time gold); the claim pickups are ordinary pickup rows with
-  source family `challengeSwitch` (Pom target, Path screen and dispositions
-  through the existing commands).
+  one per-kind choice — Time and Elite `left | finished`, PerfectClear
+  `left | hitless | failed` — with Nectar where the outcome can drop it and a
+  finished Time switch's gold; see "Switch outcome" below); the claim pickups
+  are ordinary pickup rows with source family `challengeSwitch` (Pom target,
+  Path screen and dispositions through the existing commands), none after a
+  left fight.
 - **Combat:** `challengeSwitch.encounter` feeds `encounterCompositionView`;
   `challengeSwitchEncounterSupportForProjectEvaluationAssembly` initializes
   and assesses a composition (Time, PerfectClear) whose save is

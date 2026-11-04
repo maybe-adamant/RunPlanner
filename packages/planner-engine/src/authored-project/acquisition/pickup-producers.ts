@@ -638,7 +638,7 @@ export function selectedPickupProducers(
   ]);
 }
 
-/** A switch's claim spawns its reward and, when hitless, maybe its bonus Nectar. */
+/** A claimed switch spawns its reward and, with no damage taken, maybe its bonus Nectar. */
 function challengeSwitchPickupProducers(
   catalog: Catalog,
   biome: BiomeAddress,

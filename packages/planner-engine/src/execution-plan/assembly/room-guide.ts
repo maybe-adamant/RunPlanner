@@ -16,6 +16,7 @@ import type {
 } from '../model';
 import { executionRewardFromOffer } from './overview';
 import { completeFrontier } from './support';
+import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 
 function rewardFor(transaction: ExecutionTimelineTransaction | undefined) {
   return transaction?.kind === 'acquisition' ? transaction.reward : undefined;
@@ -173,8 +174,16 @@ function descriptionFor(
         ...(transaction?.kind === 'keepsakeChange' ? { keepsakeKey: transaction.keepsakeKey } : {}),
       });
     case 'interactEris':
-    case 'interactChallengeSwitch':
       return Object.freeze({ kind: reference.kind });
+    case 'interactChallengeSwitch': {
+      const observed = room.challengeSwitch;
+      if (observed === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} presses a switch it does not observe`,
+        );
+      return Object.freeze({ kind: reference.kind, outcome: observed.outcome });
+    }
     case 'reroll':
       return rerollGuideDescription(room, batch, reference);
     case 'purchaseHermesShrineOffer': {

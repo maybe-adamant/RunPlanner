@@ -71,12 +71,17 @@ function withSwitch(
       reference: interaction,
       index: occurrence(next, biomeKey, occurrenceId).roomActions.order.length,
     });
+  const current = occurrence(next, biomeKey, occurrenceId).challengeSwitch!;
   if (options.outcome !== undefined)
     next = applyProjectCommand(next, catalog, {
       kind: 'ReplaceChallengeSwitchOutcome',
       occurrence: createOccurrenceAddress(biome, id),
-      hitless: true,
+      outcome: current.outcome,
       nectarDropped: false,
+      // Gold belongs to a finished Time fight only.
+      ...(current.gold === undefined || (options.outcome as { outcome?: string }).outcome === 'left'
+        ? {}
+        : { gold: current.gold }),
       ...options.outcome,
     } as ProjectCommand);
   return next;
@@ -207,7 +212,7 @@ describe('challenge switch spawn rules', () => {
       challengeSwitchPlacementIssues(
         catalog,
         assessChallengeSwitchEntry(catalog, 2, facts(count)),
-        { variantKey: 'PerfectClearChallengeSwitch_Pom', hitless: true, nectarDropped: false },
+        { variantKey: 'PerfectClearChallengeSwitch_Pom', outcome: 'hitless', nectarDropped: false },
       );
     expect(assess(0)).toEqual([
       { reason: 'variantUnavailable', variantKey: 'PerfectClearChallengeSwitch_Pom' },
@@ -275,7 +280,7 @@ describe('challenge switch claims', () => {
       'PerfectClearChallengeSwitch_MaxHealth',
       {
         used: true,
-        outcome: { hitless: false },
+        outcome: { outcome: 'failed' },
       },
     );
     expect(simulateProject(catalog, hit).status).toBe('valid');
@@ -291,7 +296,7 @@ describe('challenge switch claims', () => {
     expect(claimAcquisitions(nectar)).toEqual(['MaxHealthDrop', 'GiftDrop']);
   });
 
-  it('claims an Elite Max Magick, which a hit does not change', () => {
+  it('claims a finished Elite’s Max Magick', () => {
     // The Surface route holds Selene by P, so TalentLegal admits the Elite kind.
     const observed = withSwitch(
       surface(),
@@ -307,7 +312,7 @@ describe('challenge switch claims', () => {
       'EliteChallengeSwitch_MaxMana',
       {
         used: true,
-        outcome: { hitless: false },
+        outcome: { outcome: 'finished' },
       },
     );
     expect(simulateProject(catalog, used).status).toBe('valid');
@@ -333,10 +338,10 @@ describe('challenge switch claims', () => {
     expect(result.findings.map((finding) => finding.code)).toEqual(['hexActivationMissing']);
   });
 
-  it('claims Time gold as a pickup whatever the hit', () => {
+  it('claims a finished Time switch’s gold as a pickup', () => {
     const used = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', {
       used: true,
-      outcome: { hitless: false, gold: 35 },
+      outcome: { outcome: 'finished', gold: 35 },
     });
     expect(simulateProject(catalog, used).status).toBe('valid');
     expect(occurrence(used, 'F', 'golden-f-b8-e1').challengeSwitch?.gold).toBe(35);
@@ -638,6 +643,47 @@ describe('challenge switch encounter', () => {
         { kind: 'counterRange', axis: 'biomeEncounterDepth', range: { min: 5 } },
       ]),
     });
+  });
+
+  it('starts a left fight, counting its depth, but never completes or claims it', () => {
+    const finished = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', {
+      used: true,
+    });
+    const left = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', {
+      used: true,
+      outcome: { outcome: 'left' },
+    });
+    expect(simulateProject(catalog, left).status).toBe('valid');
+    const ledgers = fBiomeOf(left).history.ledgers;
+    const slot = (entries: readonly { readonly slotKey: string }[]) =>
+      entries.filter((entry) => entry.slotKey === 'challengeSwitch').length;
+    expect([slot(ledgers.encounterRecords), slot(ledgers.encounterStarts)]).toEqual([1, 1]);
+    expect(slot(ledgers.encounterCompletions)).toBe(0);
+    expect(ledgers.counters.routeEncounterDepth).toBe(
+      fBiomeOf(finished).history.ledgers.counters.routeEncounterDepth,
+    );
+    expect(claimAcquisitions(left)).toEqual([]);
+    const enemyGold = (project: ProjectDocument) => {
+      const room = goldLedgerForProjectEvaluationAssembly(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).roomAt(fHost);
+      if (room.availability !== 'available') throw new Error(`room is ${room.reason}`);
+      return room.room.gains.filter(
+        (gain) => gain.kind === 'enemyGold' && gain.owner?.kind === 'roomFeature',
+      );
+    };
+    expect(enemyGold(left)).toEqual([]);
+    expect(enemyGold(finished)).toHaveLength(1);
+    // The press's guide row carries how its fight ends.
+    const plan = compileExecutionPlan({
+      product: assembleExecutionProduct({
+        assembly: simulateProjectAssembly(catalog, left),
+        catalog,
+      }),
+    });
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+    expect(JSON.stringify(plan)).toContain('{"kind":"interactChallengeSwitch","outcome":"left"}');
   });
 
   it('pays the encounter’s kills from its own store at the press', () => {

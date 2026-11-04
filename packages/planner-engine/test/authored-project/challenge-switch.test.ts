@@ -70,7 +70,7 @@ describe('challenge switch observation', () => {
     const occurrence = occurrenceOf(observed);
     expect(occurrence.challengeSwitch).toEqual({
       variantKey: 'PerfectClearChallengeSwitch_Pom',
-      hitless: true,
+      outcome: 'hitless',
       nectarDropped: false,
     });
     expect(Object.keys(occurrence.acquisitionSites?.challengeSwitch?.pickupEntries ?? {})).toEqual([
@@ -91,27 +91,55 @@ describe('challenge switch observation', () => {
     const time = occurrenceOf(observe(golden(), 'TimeChallengeSwitch_Money'));
     expect(time.challengeSwitch).toEqual({
       variantKey: 'TimeChallengeSwitch_Money',
-      hitless: true,
+      outcome: 'finished',
       nectarDropped: false,
       gold: 90,
     });
     expect(time.acquisitionSites?.challengeSwitch?.pickupEntries?.reward?.offer.rewardType).toBe(
       'Money',
     );
-    const hit = applyProjectCommand(observe(golden(), 'TimeChallengeSwitch_Money'), catalog, {
+    const finished = applyProjectCommand(observe(golden(), 'TimeChallengeSwitch_Money'), catalog, {
       kind: 'ReplaceChallengeSwitchOutcome',
       occurrence: host,
-      hitless: false,
-      nectarDropped: false,
+      outcome: 'finished',
+      nectarDropped: true,
       gold: 40,
     });
-    const elite = occurrenceOf(observe(hit, 'EliteChallengeSwitch_MaxMana'));
+    // Elite ends finished as Time does; the claim keeps its Nectar, and gold stays Time's.
+    const elite = occurrenceOf(observe(finished, 'EliteChallengeSwitch_MaxMana'));
     expect(elite.challengeSwitch).toEqual({
       variantKey: 'EliteChallengeSwitch_MaxMana',
-      hitless: false,
+      outcome: 'finished',
+      nectarDropped: true,
+    });
+    expect(
+      occurrenceOf(
+        observe(observe(finished, 'EliteChallengeSwitch_MaxMana'), 'TimeChallengeSwitch_Money'),
+      ).challengeSwitch?.gold,
+    ).toBe(90);
+    // PerfectClear cannot end finished: it starts from its own clean claim.
+    expect(
+      occurrenceOf(observe(finished, 'PerfectClearChallengeSwitch_Pom')).challengeSwitch,
+    ).toEqual({
+      variantKey: 'PerfectClearChallengeSwitch_Pom',
+      outcome: 'hitless',
+      nectarDropped: true,
+    });
+    // A left fight is a left fight of any kind, and carries no gold or Nectar.
+    const left = applyProjectCommand(finished, catalog, {
+      kind: 'ReplaceChallengeSwitchOutcome',
+      occurrence: host,
+      outcome: 'left',
       nectarDropped: false,
     });
-    expect(occurrenceOf(observe(hit, 'TimeChallengeSwitch_Money')).challengeSwitch?.gold).toBe(40);
+    expect(occurrenceOf(left).challengeSwitch).toEqual({
+      variantKey: 'TimeChallengeSwitch_Money',
+      outcome: 'left',
+      nectarDropped: false,
+    });
+    expect(
+      occurrenceOf(observe(left, 'PerfectClearChallengeSwitch_Pom')).challengeSwitch?.outcome,
+    ).toBe('left');
   });
 
   it('takes the claim pickups with the interaction and follows the outcome', () => {
@@ -124,7 +152,7 @@ describe('challenge switch observation', () => {
     const hit = applyProjectCommand(used, catalog, {
       kind: 'ReplaceChallengeSwitchOutcome',
       occurrence: host,
-      hitless: false,
+      outcome: 'failed',
       nectarDropped: false,
     });
     expect(
@@ -134,7 +162,7 @@ describe('challenge switch observation', () => {
     const nectar = applyProjectCommand(used, catalog, {
       kind: 'ReplaceChallengeSwitchOutcome',
       occurrence: host,
-      hitless: true,
+      outcome: 'hitless',
       nectarDropped: true,
     });
     expect(occurrenceOf(nectar).roomActions.order.slice(-3)).toEqual([
@@ -146,6 +174,15 @@ describe('challenge switch observation', () => {
       occurrenceOf(nectar).acquisitionSites?.challengeSwitch?.pickupEntries?.nectar?.offer
         .rewardType,
     ).toBe('GiftDrop');
+    // Leaving mid-fight claims nothing: its pickups leave the order.
+    const left = applyProjectCommand(nectar, catalog, {
+      kind: 'ReplaceChallengeSwitchOutcome',
+      occurrence: host,
+      outcome: 'left',
+      nectarDropped: false,
+    });
+    expect(occurrenceOf(left).acquisitionSites?.challengeSwitch).toBeUndefined();
+    expect(occurrenceOf(left).roomActions.order.at(-1)).toEqual(interaction);
     const cleared = observe(nectar, null);
     expect(occurrenceOf(cleared).challengeSwitch).toBeUndefined();
     expect(occurrenceOf(cleared).acquisitionSites?.challengeSwitch).toBeUndefined();
@@ -177,26 +214,47 @@ describe('challenge switch observation', () => {
     ).toThrow(/hosts no challenge switch/);
     expect(() => observe(golden(), 'ChallengeSwitch')).toThrow(/unknown challenge switch/);
     const observed = observe(golden(), 'EliteChallengeSwitch_Talent');
-    const outcome = (hitless: boolean, nectarDropped: boolean, gold?: number) => () =>
-      applyProjectCommand(observed, catalog, {
-        kind: 'ReplaceChallengeSwitchOutcome',
-        occurrence: host,
-        hitless,
-        nectarDropped,
-        ...(gold === undefined ? {} : { gold }),
-      });
-    expect(outcome(false, true)).toThrow(/bonus Nectar drops only on a hitless claim/);
-    expect(outcome(true, false, 50)).toThrow(/only a Time switch claims gold/);
+    const outcome =
+      (value: 'left' | 'finished' | 'hitless' | 'failed', nectarDropped: boolean, gold?: number) =>
+      () =>
+        applyProjectCommand(observed, catalog, {
+          kind: 'ReplaceChallengeSwitchOutcome',
+          occurrence: host,
+          outcome: value,
+          nectarDropped,
+          ...(gold === undefined ? {} : { gold }),
+        });
+    expect(outcome('left', true)).toThrow(/bonus Nectar drops only on a claim with no damage/);
+    expect(outcome('hitless', false)).toThrow(/elite switches cannot end hitless/);
+    expect(outcome('failed', false)).toThrow(/elite switches cannot end failed/);
+    expect(outcome('finished', false, 50)).toThrow(/only a finished Time switch claims gold/);
     const time = observe(golden(), 'TimeChallengeSwitch_Money');
     expect(() =>
       applyProjectCommand(time, catalog, {
         kind: 'ReplaceChallengeSwitchOutcome',
         occurrence: host,
-        hitless: true,
+        outcome: 'finished',
         nectarDropped: false,
         gold: 120,
       }),
     ).toThrow(/gold must be an integer from 10 through 100/);
+    expect(() =>
+      applyProjectCommand(time, catalog, {
+        kind: 'ReplaceChallengeSwitchOutcome',
+        occurrence: host,
+        outcome: 'left',
+        nectarDropped: false,
+        gold: 50,
+      }),
+    ).toThrow(/only a finished Time switch claims gold/);
+    expect(() =>
+      applyProjectCommand(time, catalog, {
+        kind: 'ReplaceChallengeSwitchOutcome',
+        occurrence: host,
+        outcome: 'finished',
+        nectarDropped: false,
+      }),
+    ).toThrow(/gold must be an integer/);
   });
 
   it('decodes strictly: host, shape, and an interaction without a switch', () => {
@@ -206,7 +264,7 @@ describe('challenge switch observation', () => {
         editOccurrence(observed, 'golden-f-start', (occurrence) => {
           occurrence.challengeSwitch = {
             variantKey: 'TimeChallengeSwitch_Money',
-            hitless: true,
+            outcome: 'finished',
             nectarDropped: false,
             gold: 90,
           };
@@ -218,11 +276,27 @@ describe('challenge switch observation', () => {
       decodeProjectDocument(
         editOccurrence(observed, hostId, (occurrence) => {
           occurrence.challengeSwitch.nectarDropped = true;
-          occurrence.challengeSwitch.hitless = false;
+          occurrence.challengeSwitch.outcome = 'failed';
         }),
         catalog,
       ),
-    ).toThrow(/challengeSwitch: the bonus Nectar drops only on a hitless claim/);
+    ).toThrow(/challengeSwitch: the bonus Nectar drops only on a claim with no damage taken/);
+    expect(() =>
+      decodeProjectDocument(
+        editOccurrence(observed, hostId, (occurrence) => {
+          occurrence.challengeSwitch.outcome = 'finished';
+        }),
+        catalog,
+      ),
+    ).toThrow(/challengeSwitch: perfectClear switches cannot end finished/);
+    expect(() =>
+      decodeProjectDocument(
+        editOccurrence(observed, hostId, (occurrence) => {
+          occurrence.challengeSwitch.hitless = true;
+        }),
+        catalog,
+      ),
+    ).toThrow(/challengeSwitch/);
     expect(() =>
       decodeProjectDocument(
         editOccurrence(observed, hostId, (occurrence) => {
@@ -327,7 +401,7 @@ describe('challenge switch observation', () => {
         applyProjectCommand(customized, catalog, {
           kind: 'ReplaceChallengeSwitchOutcome',
           occurrence: host,
-          hitless: false,
+          outcome: 'failed',
           nectarDropped: false,
         }),
       ).challengeSwitch?.customization,

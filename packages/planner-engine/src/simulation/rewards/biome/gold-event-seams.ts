@@ -930,7 +930,8 @@ export function withGoldEvents(
                   },
           );
       }
-      if (event.kind === 'challengeSwitchInteracted' && event.encounter !== undefined)
+      // A left fight's kills are not estimated: they pay nothing here.
+      if (event.kind === 'challengeSwitchInteracted' && event.encounter?.completed === true)
         detect(
           'enemyGold:challengeSwitch',
           createRoomFeatureAddress(room.origin, { kind: 'challengeSwitch' }),

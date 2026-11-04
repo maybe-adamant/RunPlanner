@@ -24,6 +24,7 @@ import { updateOccurrence } from './mutation';
 import {
   challengeSwitchCustomizationIssue,
   challengeSwitchHost,
+  challengeSwitchOutcomeForVariant,
   challengeSwitchShapeIssue,
   defaultChallengeSwitch,
 } from '../../acquisition/challenge-switch';
@@ -644,15 +645,14 @@ export function applyOccurrenceCommand(
         current !== undefined &&
         catalog.challengeSwitches.variants.byKey[current.variantKey]?.switchKind ===
           catalog.challengeSwitches.variants.byKey[command.variantKey]?.switchKind;
-      // The claim outcome survives a variant change; gold follows the kind.
+      // The outcome survives a variant change the new kind can end with; gold follows it.
+      const { gold: _defaultGold, ...observedWithoutGold } = observed;
+      void _defaultGold;
       const next = Object.freeze({
-        ...observed,
+        ...(current === undefined ? observed : observedWithoutGold),
         ...(current === undefined
           ? {}
-          : { hitless: current.hitless, nectarDropped: current.nectarDropped }),
-        ...(observed.gold === undefined || current?.gold === undefined
-          ? {}
-          : { gold: current.gold }),
+          : challengeSwitchOutcomeForVariant(catalog, current, command.variantKey)),
         // A pinned elite belongs to its RoomSet's Elite encounter, kept across Elite variants.
         ...(current?.elite === undefined ||
         catalog.challengeSwitches.variants.byKey[command.variantKey]?.switchKind !== 'elite'
@@ -716,7 +716,7 @@ export function applyOccurrenceCommand(
       if (current === undefined) failCommand(command, 'occurrence has no challenge switch');
       const next = Object.freeze({
         variantKey: current.variantKey,
-        hitless: command.hitless,
+        outcome: command.outcome,
         nectarDropped: command.nectarDropped,
         ...(command.gold === undefined ? {} : { gold: command.gold }),
         ...(current.elite === undefined ? {} : { elite: current.elite }),
@@ -725,7 +725,7 @@ export function applyOccurrenceCommand(
       const issue = challengeSwitchShapeIssue(catalog, next);
       if (issue !== undefined) failCommand(command, issue);
       if (
-        current.hitless === next.hitless &&
+        current.outcome === next.outcome &&
         current.nectarDropped === next.nectarDropped &&
         current.gold === next.gold
       )

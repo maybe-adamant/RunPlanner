@@ -1131,7 +1131,11 @@ export type ExecutionRoomGuideDescription =
   | { readonly kind: 'useFountain'; readonly aromaticPhialTarget?: string }
   | { readonly kind: 'interactKeepsakeRack'; readonly keepsakeKey?: string }
   | { readonly kind: 'interactEris' }
-  | { readonly kind: 'interactChallengeSwitch' }
+  | {
+      readonly kind: 'interactChallengeSwitch';
+      /** How the fight the press starts ends; `left` claims nothing. */
+      readonly outcome: 'left' | 'finished' | 'hitless' | 'failed';
+    }
   | {
       readonly kind: 'reroll';
       readonly target: ExecutionRerollTarget;

@@ -629,10 +629,10 @@ export type ChallengeSwitchCommand =
       readonly value: import('../model').AuthoredEncounterCustomization | null;
     }
   | {
-      /** Replaces the claim outcome; gold is a Time switch's only. */
+      /** Replaces the fight's outcome; gold is a finished Time switch's only. */
       readonly kind: 'ReplaceChallengeSwitchOutcome';
       readonly occurrence: OccurrenceAddress;
-      readonly hitless: boolean;
+      readonly outcome: import('../model').ChallengeSwitchOutcome;
       readonly nectarDropped: boolean;
       readonly gold?: number;
     };
