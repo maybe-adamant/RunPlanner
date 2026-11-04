@@ -313,10 +313,11 @@ mod tests {
         for file in &package.files {
             assert_eq!(file.sha256, game_module_assembly::sha256_hex(&file.bytes));
         }
-        assert!(package
-            .dependencies
-            .iter()
-            .any(|dependency| dependency.starts_with("adamant-ModpackLib-")));
+        // ModpackLib's release declares everything else the module loads.
+        assert!(matches!(
+            package.dependencies.as_slice(),
+            [only] if only.starts_with("adamant-ModpackLib-")
+        ));
         #[cfg(debug_assertions)]
         assert_eq!(
             checkout_package().unwrap().compatibility,

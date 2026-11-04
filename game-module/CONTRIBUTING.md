@@ -77,8 +77,12 @@ module-only change keeps the pair, so sent plans stay valid.
 ## ModpackLib
 
 The module is built on `adamant-ModpackLib`. The required version is the
-`adamant-ModpackLib` dependency in `manifest.template.json`; raise it only when
-the module needs a newer API. ModpackLib's source is the
+`adamant-ModpackLib` dependency in `manifest.template.json`, the module's only
+declared dependency; raise it only when the module needs a newer API or
+dependency declaration. The module also calls Hell2Modding, the
+`SGG_Modding-ENVY` shim, ModUtil and ReLoad directly, which ModpackLib's
+release declares, so a new direct use of a package ModpackLib does not declare
+needs a ModpackLib release first. ModpackLib's source is the
 `external/adamant-ModpackLib` submodule, pinned to a release tag and bumped with
 each ModpackLib release. It is reference only: nothing builds against it, and
 lint, format and tests skip `external/`. Before changing ModpackLib-facing code

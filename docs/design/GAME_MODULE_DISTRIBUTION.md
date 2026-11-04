@@ -13,7 +13,10 @@ would produce for a Thunderstore package: the `src/` payload and the package
 files (`manifest.json`, `icon.png`, `LICENSE`, `README.md`) flattened into
 `ReturnOfModding/plugins/adamantRunPlanner-Run_Planner/`. The manifest comes
 from `manifest.template.json` stamped with the planner version; the module has
-no version of its own. A Tauri-free game-host crate owns this lane over
+no version of its own. The manifest declares only `adamant-ModpackLib`: the
+loader and libraries the module calls directly (Hell2Modding, the
+`SGG_Modding-ENVY` shim, ModUtil, ReLoad) are declared by that ModpackLib
+release, so r2modman installs the whole chain from ModpackLib. A Tauri-free game-host crate owns this lane over
 explicit paths and embeds that folder, with per-file SHA-256 hashes, into the
 binary at compile time, so every build carries exactly one module and never
 downloads game packages.

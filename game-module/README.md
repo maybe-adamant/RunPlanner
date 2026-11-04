@@ -13,7 +13,8 @@ instructions, see the
 - The [Run Planner app](https://github.com/maybe-adamant/RunPlanner/releases/latest).
   It installs and updates this mod from its **Game** panel; plans are sent only
   to a mod that matches the app.
-- `adamant-ModpackLib` in the same r2modman profile.
+- `adamant-ModpackLib` in the same r2modman profile; r2modman installs the
+  packages it needs with it.
 
 ## How to use it
 

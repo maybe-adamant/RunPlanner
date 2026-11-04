@@ -46,8 +46,9 @@ setting is community-documented, not verified by this project.
 
 ## Getting started
 
-1. Install **adamant-ModpackLib** in your Hades II r2modman profile. The app
-   checks for ModpackLib but never installs it.
+1. Install **adamant-ModpackLib** in your Hades II r2modman profile; r2modman
+   installs the packages it needs with it. The app checks for them but never
+   installs them.
 2. In the app, open the **Game** tab, pick your r2modman profile (or the folder
    of a manual Hell2Modding install) and choose **Install**. The Game tab lists
    anything else to fix first.

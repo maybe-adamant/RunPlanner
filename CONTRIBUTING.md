@@ -319,7 +319,7 @@ To move a pin to the current upstream, or to a tag, and record it:
 
 ```bash
 git submodule update --remote external/RunPlanner-Catalog          # upstream main
-git -C external/adamant-ModpackLib fetch --tags && git -C external/adamant-ModpackLib checkout 4.5.0
+git -C external/adamant-ModpackLib fetch --tags && git -C external/adamant-ModpackLib checkout 4.5.1
 git add external/<name> && git commit -m "chore(external): pin <name> to <ref>"
 ```
 
