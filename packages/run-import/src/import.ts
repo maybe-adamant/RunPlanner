@@ -617,20 +617,31 @@ export class RunImportWalk {
 
   /**
    * Weapon, aspect, familiar, starting keepsake, Arcana and Fear, each validated by its command.
-   * A fresh-profile route fixes all of them, so the record authors none.
+   * A fresh-profile route fixes all of them, so the record authors none. A refused weapon and
+   * aspect stops the plan before its first room: no room is played on the route's default kit.
    */
   importLoadout(): void {
     const { loadout } = this.record;
     const route = createRouteAddress(this.assembly.project.route.routeKey);
     if (this.catalog.routes.byKey[route.routeKey]!.initialProfile.kind === 'freshFile') return;
     const tryApply = (command: ProjectCommand) => {
-      if (!this.apply(command)) this.report('loadout', 'refused', route, command);
+      if (this.apply(command)) return true;
+      this.report('loadout', 'refused', route, command);
+      return false;
     };
     const { weapon: weaponKey } = loadout;
     const aspectKey = loadout.aspect?.name;
-    if (weaponKey !== undefined && aspectKey !== undefined)
-      tryApply({ kind: 'ReplaceRouteLoadout', route, weaponKey, aspectKey });
-    else this.report('loadout', 'notInRecord', route);
+    if (weaponKey === undefined || aspectKey === undefined)
+      this.report('loadout', 'notInRecord', route);
+    else if (!tryApply({ kind: 'ReplaceRouteLoadout', route, weaponKey, aspectKey })) {
+      this.halted = {
+        area: 'loadout',
+        code: 'refused',
+        address: route,
+        record: { roomIndex: 0, visit: 0 },
+      };
+      return;
+    }
     // Aspect of Selene's rolled Hex tree is the run's first Spell snapshot; its talents never change.
     if (this.assembly.project.route.loadout.aspectHexTree !== undefined) {
       const spell = this.record.rooms.find((room) => room.spell !== undefined)?.spell;

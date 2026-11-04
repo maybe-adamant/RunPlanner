@@ -20,6 +20,39 @@ describe('run import route support', () => {
     expect(result.report.entries).toEqual([{ area: 'dream', reason: 'stopped' }]);
   });
 
+  it('stops before the first room when the recorded weapon and aspect are refused', () => {
+    // The Hub weapon beside an installed aspect of another weapon: no default kit stands in.
+    const record = fixture('underworld');
+    const result = projectFromRunRecord(catalog, {
+      ...record,
+      loadout: { ...record.loadout, weapon: 'WeaponTorch' },
+    });
+    const route = { kind: 'route', routeKey: result.project.route.routeKey };
+    expect(result.kind === 'stopped' && result.stop).toEqual({
+      area: 'loadout',
+      code: 'refused',
+      address: route,
+      record: { roomIndex: 0, visit: 0 },
+    });
+    expect(result.report.entries.filter((entry) => entry.area === 'loadout')).toEqual([
+      {
+        area: 'loadout',
+        reason: 'refused',
+        address: route,
+        applied: {
+          kind: 'ReplaceRouteLoadout',
+          route,
+          weaponKey: 'WeaponTorch',
+          aspectKey: 'StaffClearCastAspect',
+        },
+      },
+      { area: 'loadout', reason: 'stopped', address: route, record: { roomIndex: 0, visit: 0 } },
+    ]);
+    expect(new Set(result.report.rooms?.map((room) => room.verdict))).toEqual(
+      new Set(['unchecked']),
+    );
+  });
+
   it("routes a profile's first attempt, whose run count is zero, to the Fresh File route", () => {
     const record = fixture('underworld');
     const result = projectFromRunRecord(catalog, {
