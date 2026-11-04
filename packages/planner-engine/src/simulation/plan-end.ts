@@ -63,8 +63,11 @@ export interface PlanEndExtent {
   readonly entered: ReadonlySet<OccurrenceId>;
   /** Rooms the authored plan enters only after its end. */
   readonly enteredAfter: ReadonlySet<OccurrenceId>;
-  /** Each Hub's authored actions after the end, keyed by Hub. */
-  readonly hubActionsAfter: ReadonlyMap<string, readonly HubAction[]>;
+  /**
+   * For a Hub whose stay the plan ends in (or whose entry room is the end), the
+   * authored actions through the end; anything else at that Hub is past it.
+   */
+  readonly hubActionsThroughEnd: ReadonlyMap<string, readonly HubAction[]>;
   /** The Hub main room whose visit a side room belongs to, for every side-room slot. */
   readonly sideRoomSource: ReadonlyMap<OccurrenceId, OccurrenceId>;
 }
@@ -81,22 +84,20 @@ export function planEndExtent(topology: BiomeTopology, end: OccurrenceId): PlanE
   const enteredAfter = new Set(
     [...structurallyActiveOccurrenceIds(topology)].filter((id) => !entered.has(id)),
   );
-  const keptActions = new Map(
-    through.decisions.flatMap((decision) =>
-      decision.kind === 'hub' ? [[decision.hubKey, decision.actions.length] as const] : [],
-    ),
+  const localVisits = topology.decisions.filter(
+    (decision): decision is LocalVisitDecision => decision.kind === 'localVisit',
   );
-  const hubActionsAfter = new Map(
-    topology.decisions.flatMap((decision) =>
-      decision.kind === 'hub'
-        ? [
-            [
-              decision.hubKey,
-              Object.freeze(decision.actions.slice(keptActions.get(decision.hubKey) ?? 0)),
-            ] as const,
-          ]
-        : [],
-    ),
+  const hubActionsThroughEnd = new Map(
+    topology.decisions.flatMap((decision) => {
+      if (decision.kind !== 'hub') return [];
+      if (decision.source.occurrenceId === end)
+        return [[decision.hubKey, Object.freeze([]) as readonly HubAction[]] as const];
+      if (hubVisitEntering(decision, localVisits, end) === undefined) return [];
+      const kept = through.decisions.find(
+        (candidate) => candidate.kind === 'hub' && candidate.hubKey === decision.hubKey,
+      );
+      return kept?.kind === 'hub' ? [[decision.hubKey, kept.actions] as const] : [];
+    }),
   );
   const sideRoomSource = new Map(
     topology.decisions.flatMap((decision) =>
@@ -107,7 +108,7 @@ export function planEndExtent(topology: BiomeTopology, end: OccurrenceId): PlanE
         : [],
     ),
   );
-  const extent = Object.freeze({ entered, enteredAfter, hubActionsAfter, sideRoomSource });
+  const extent = Object.freeze({ entered, enteredAfter, hubActionsThroughEnd, sideRoomSource });
   byEnd.set(end, extent);
   return extent;
 }

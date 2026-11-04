@@ -71,34 +71,24 @@ export function authoringReadinessAt(
 }
 
 /** Whether the owner is a Hub visit, fountain use or reroll the plan reaches only after its end. */
-function hubActionPastEnd(
-  topology: BiomeTopology,
-  extent: PlanEndExtent,
-  owner: SemanticAddress,
-): boolean {
+function hubActionPastEnd(extent: PlanEndExtent, owner: SemanticAddress): boolean {
   const hubKey =
     owner.kind === 'hubVisit' || owner.kind === 'hubFountain' || owner.kind === 'hubReroll'
       ? owner.hubKey
       : owner.kind === 'fountainRarityOutcome' && owner.action.kind === 'hubFountain'
         ? owner.action.hubKey
         : undefined;
-  if (hubKey === undefined) return false;
-  const after = extent.hubActionsAfter.get(hubKey) ?? [];
+  const through = hubKey === undefined ? undefined : extent.hubActionsThroughEnd.get(hubKey);
+  if (through === undefined) return false;
   switch (owner.kind) {
-    case 'hubVisit': {
-      const hub = topology.decisions.find(
-        (decision) => decision.kind === 'hub' && decision.hubKey === hubKey,
-      );
-      if (hub?.kind !== 'hub') return false;
-      const visit = hub.actions.filter((action) => action.kind === 'roomVisit')[
-        owner.visitIndex - 1
-      ];
-      return visit !== undefined && after.includes(visit);
-    }
+    case 'hubVisit':
+      return owner.visitIndex > through.filter((action) => action.kind === 'roomVisit').length;
     case 'hubReroll':
-      return after.some((action) => action.kind === 'reroll' && action.rerollId === owner.rerollId);
+      return !through.some(
+        (action) => action.kind === 'reroll' && action.rerollId === owner.rerollId,
+      );
     default:
-      return after.some((action) => action.kind === 'useFountain');
+      return !through.some((action) => action.kind === 'useFountain');
   }
 }
 
@@ -115,7 +105,7 @@ function endedReadiness(
   end: OccurrenceAddress,
 ): AuthoringReadiness {
   const extent = planEndExtent(topology, end.occurrenceId);
-  if (hubActionPastEnd(topology, extent, owner)) return 'locked';
+  if (hubActionPastEnd(extent, owner)) return 'locked';
   // The end room's additional and hidden doors belong to its doors, past the end.
   if (
     (owner.kind === 'additionalExit' || owner.kind === 'phantomExit') &&

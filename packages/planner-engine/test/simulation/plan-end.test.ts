@@ -269,6 +269,8 @@ describe('Plan end evaluation', () => {
     expect(main(room('surface-n-combat02-sideDoor1'))).toBe('locked');
     expect(main(group('surface-n-combat02'))).toBe('locked');
     expect(main(createHubVisitAddress(n, 'hub', 2))).toBe('locked');
+    // A visit appended to an ended stay would follow its end.
+    expect(main(createHubVisitAddress(n, 'hub', 7))).toBe('locked');
     // A board room no visit enters stays as editable as without an end.
     expect(main(room('surface-n-combat10'))).toBe('editable');
     expect(main(createHubDecisionAddress(n, 'hub'))).toBe('editable');
@@ -290,6 +292,14 @@ describe('Plan end evaluation', () => {
     );
     expect(authoringReadinessAt(atSide, room('surface-n-combat05-sideDoor1'))).toBe('locked');
     expect(authoringReadinessAt(atSide, room('surface-n-combat05-sideDoor3'))).toBe('editable');
+
+    // A Hub the plan ends after keeps every visit.
+    const afterHub = simulateProjectAssembly(
+      catalog,
+      endAt(loadSurfaceNProject(), 'N', 'surface-n-preboss'),
+    );
+    expect(authoringReadinessAt(afterHub, createHubVisitAddress(n, 'hub', 6))).toBe('editable');
+    expect(authoringReadinessAt(afterHub, room('surface-n-combat02'))).toBe('editable');
 
     // A fountain used after the end visit is past the end.
     const fountainLater = applyProjectCommand(loadSurfaceNProject(), catalog, {
