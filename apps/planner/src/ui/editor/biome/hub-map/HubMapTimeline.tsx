@@ -18,11 +18,10 @@ import {
   type WorkspaceHubActionOrderInteraction,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
+  type WorkspacePlanEndRelation,
 } from '@planner/projections/structured-workspace';
-import {
-  candidateMayBeAuthored,
-  candidateWaitingHint,
-} from '@planner/ui/feedback/candidatePresentation';
+import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
+import { hubVisitOrderWaitingHint } from '../planEndCopy';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
@@ -157,8 +156,11 @@ function TimelineMapMarker({
   visitMarker,
   visitPosition,
   waiting,
+  waitingHint,
+  planEnd,
 }: {
   readonly waiting: boolean;
+  readonly waitingHint: string;
   readonly actionPosition: number | undefined;
   readonly annotation: HubMapAnnotation;
   readonly atCapacity: boolean;
@@ -169,6 +171,8 @@ function TimelineMapMarker({
   readonly slot: WorkspaceHubSlot;
   readonly visitMarker: WorkspaceMarker | undefined;
   readonly visitPosition: number;
+  /** The visit's place against the plan end. */
+  readonly planEnd?: WorkspacePlanEndRelation | undefined;
 }) {
   const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
@@ -216,6 +220,7 @@ function TimelineMapMarker({
           data-open="true"
           data-room-map-overlay-control
           data-visited={isVisited}
+          data-plan-end={planEnd}
           {...(markerTarget ?? {})}
           ref={(element) => {
             marker.current = element;
@@ -228,7 +233,7 @@ function TimelineMapMarker({
           {...pointer}
           style={position}
           {...hintProps(
-            appendWaits ? candidateWaitingHint : slot.label,
+            appendWaits ? waitingHint : slot.label,
             [`Reward: ${reward.summary}`, markerTarget?.['aria-description']]
               .filter(Boolean)
               .join(' '),
@@ -255,8 +260,10 @@ function TimelineFountainMarker({
   complete,
   onAppend,
   waiting,
+  waitingHint,
 }: {
   readonly waiting: boolean;
+  readonly waitingHint: string;
   readonly fountain: WorkspaceHubFountain;
   readonly locked: boolean;
   readonly complete: boolean;
@@ -308,7 +315,7 @@ function TimelineFountainMarker({
           inert={markerDisabled}
           {...pointer}
           style={position}
-          {...hintProps(appendWaits ? candidateWaitingHint : undefined, undefined, fountainLabel)}
+          {...hintProps(appendWaits ? waitingHint : undefined, undefined, fountainLabel)}
           type="button"
         >
           <HubMapFountainContent />
@@ -349,6 +356,7 @@ export function HubMapTimeline({
   const atCapacity = visitOrder.length === node.requiredVisitCount;
   const complete = atCapacity && node.fountain.actionPosition !== undefined;
   const waiting = !interaction.contextReached;
+  const waitingHint = hubVisitOrderWaitingHint(node);
   const replaceActions = (actions: readonly HubAction[]): void => {
     const proposal = interaction.proposalFor(actions);
     const options = candidates.activate(proposal);
@@ -400,10 +408,12 @@ export function HubMapTimeline({
                   locked={locked}
                   onAppend={appendVisit}
                   waiting={waiting}
+                  waitingHint={waitingHint}
                   readinessOwner={node.owner}
                   slot={slot}
                   visitMarker={visitMarker}
                   visitPosition={visitPosition}
+                  planEnd={visitPosition === -1 ? undefined : node.visits[visitPosition]?.planEnd}
                 />
               );
             })}
@@ -413,6 +423,7 @@ export function HubMapTimeline({
               locked={locked}
               onAppend={replaceActions}
               waiting={waiting}
+              waitingHint={waitingHint}
             />
           </div>
         }

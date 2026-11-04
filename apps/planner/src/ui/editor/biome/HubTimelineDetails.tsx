@@ -1,3 +1,4 @@
+import { hubVisitOrderWaitingHint, planEndLabel } from './planEndCopy';
 import { Fragment, useId, useState, type ReactNode } from 'react';
 
 import type { HubAction } from '@run-planner/engine/authored-project';
@@ -22,10 +23,7 @@ import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { hubFountainIcon } from '@planner/ui/artwork/roomArtwork';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
-import {
-  candidateMayBeAuthored,
-  candidateWaitingHint,
-} from '@planner/ui/feedback/candidatePresentation';
+import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import {
   useFindingAnchor,
   useFindingMark,
@@ -92,10 +90,11 @@ function VisitRow({
       ? undefined
       : node.slots.find((candidate) => candidate.hubSlotKey === visit.hubSlotKey);
   const room = visit.room;
-  return (
+  const row = (
     <li
       className="hub-timeline-row hub-timeline-visit"
       data-authoring={visit.authoring}
+      data-plan-end={visit.planEnd}
       {...(slot === undefined ? {} : findingTarget(visit.marker.address, undefined, node.owner))}
       tabIndex={-1}
     >
@@ -107,7 +106,14 @@ function VisitRow({
       ) : (
         <>
           <strong className="hub-timeline-room">{slot.label}</strong>
-          <VisitReward door={visit.door} />
+          {visit.planEnd === 'pastEnd' ? (
+            <span className="hub-timeline-visit-detail">
+              <VisitReward door={visit.door} />
+              <span className="hub-timeline-muted">{planEndLabel('pastEnd')}</span>
+            </span>
+          ) : (
+            <VisitReward door={visit.door} />
+          )}
           {room === undefined ? null : (
             <button
               className="quiet-action action-compact"
@@ -120,6 +126,17 @@ function VisitRow({
         </>
       )}
     </li>
+  );
+  // The plan ends with this visit: everything after it on the timeline is past the end.
+  return visit.planEnd !== 'end' ? (
+    row
+  ) : (
+    <>
+      {row}
+      <li className="hub-timeline-plan-end" role="note">
+        {planEndLabel('end')}
+      </li>
+    </>
   );
 }
 
@@ -147,6 +164,7 @@ function HubRowPlacement({
   onApply,
   trigger,
   waiting,
+  waitingHint,
 }: {
   readonly findingMark?: FindingMarkProps;
   readonly label: string;
@@ -155,6 +173,7 @@ function HubRowPlacement({
   readonly onApply: (actions: readonly HubAction[]) => void;
   readonly trigger: string;
   readonly waiting: boolean;
+  readonly waitingHint: string;
 }) {
   if (moves.length === 0) return null;
   const choices = moves.map((move) => ({
@@ -169,7 +188,7 @@ function HubRowPlacement({
       label={label}
       trigger={trigger}
       choices={choices}
-      {...(waiting ? { disabledHint: candidateWaitingHint } : {})}
+      {...(waiting ? { disabledHint: waitingHint } : {})}
       onApply={(key) => {
         const move = moves.find((candidate) => candidate.key === key);
         if (move !== undefined) onApply(move.actions);
@@ -267,6 +286,7 @@ function HubRowHandle({
   rowIndex,
   stay,
   waiting,
+  waitingHint,
 }: {
   readonly findingMark?: FindingMarkProps;
   readonly label: string;
@@ -276,12 +296,13 @@ function HubRowHandle({
   readonly rowIndex: number;
   readonly stay: WorkspaceHubStay;
   readonly waiting: boolean;
+  readonly waitingHint: string;
 }) {
   const row = stay.rows[rowIndex]!;
   return (
     <TimelineReorderHandle
       disabled={locked}
-      {...(waiting ? { disabledHint: candidateWaitingHint } : {})}
+      {...(waiting ? { disabledHint: waitingHint } : {})}
       {...(findingMark === undefined ? {} : { findingMark })}
       item={{
         key: stayRowAnchor(row),
@@ -444,6 +465,7 @@ export function HubTimelineDetails({
       ReturnType<ReturnType<WorkspaceHubActionOrderInteraction['proposalFor']>['load']>
     >();
   const waiting = !interaction.contextReached;
+  const waitingHint = hubVisitOrderWaitingHint(node);
   // Which stays show their board: presentation only, never authored.
   const [shownBoards, setShownBoards] = useState<ReadonlySet<number>>(() => new Set());
   const boardStays = node.stays.flatMap((stay) =>
@@ -476,6 +498,7 @@ export function HubTimelineDetails({
       rowIndex={rowIndex}
       stay={stay}
       waiting={waiting}
+      waitingHint={waitingHint}
     />
   );
   const fountainRow = (stay: WorkspaceHubStay, rowIndex: number, inList: boolean) => (
@@ -592,6 +615,7 @@ export function HubTimelineDetails({
             onApply={replaceActions}
             trigger="Use…"
             waiting={waiting}
+            waitingHint={waitingHint}
           />
         </div>
       )}

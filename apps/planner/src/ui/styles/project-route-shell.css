@@ -1797,3 +1797,7 @@ label.draft-row-label {
   color: var(--attention);
   font-size: 0.9em;
 }
+
+.panel-navigation-item[data-feedback-context='pastPlanEnd'] .panel-navigation-biome {
+  opacity: 0.55;
+}

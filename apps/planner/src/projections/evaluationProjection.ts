@@ -48,7 +48,7 @@ export interface StatusPresentation {
   readonly tone: 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
 }
 
-export type BiomeFeedbackContext = 'blocked' | 'complete' | 'prefix' | 'unassessed';
+export type BiomeFeedbackContext = 'blocked' | 'complete' | 'pastPlanEnd' | 'prefix' | 'unassessed';
 
 export interface BiomeFeedbackPresentation {
   readonly biomeKey: string;
@@ -597,6 +597,10 @@ const loadoutStatus = Object.freeze({
 } as const satisfies Record<string, StatusPresentation>);
 const blockedBiomeStatus = Object.freeze({
   label: 'Blocked',
+  tone: 'blocked',
+} as const satisfies StatusPresentation);
+const pastPlanEndBiomeStatus = Object.freeze({
+  label: 'Past the plan end',
   tone: 'blocked',
 } as const satisfies StatusPresentation);
 const projectFeedbackCache = new WeakMap<ProjectEvaluation, ProjectFeedbackPresentation>();
@@ -1379,10 +1383,16 @@ export function presentBiomeStatus(
 
 /**
  * Route-scoped and route-start owners, which the Loadout panel hosts. A
- * route-start Embryo's transformation is hosted where its cycle lands.
+ * route-start Embryo's transformation is hosted where its cycle lands; the
+ * route itself (its plan end) is hosted on the Route panel.
  */
 function isLoadoutOwner(owner: SemanticAddress | undefined): boolean {
-  if (owner === undefined || owner.kind === 'project' || owner.kind === 'transcendentEmbryoOutcome')
+  if (
+    owner === undefined ||
+    owner.kind === 'project' ||
+    owner.kind === 'route' ||
+    owner.kind === 'transcendentEmbryoOutcome'
+  )
     return false;
   return !('biomeKey' in owner) || owner.biomeKey === 'routeStart';
 }
@@ -1408,6 +1418,14 @@ function biomeFeedback(
   issueBiome: string | undefined,
 ): BiomeFeedbackPresentation {
   const evaluation = route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  if (evaluation === undefined && route.processing.afterPlanEnd?.includes(biomeKey) === true) {
+    return Object.freeze({
+      biomeKey,
+      context: 'pastPlanEnd',
+      findingCount: 0,
+      status: pastPlanEndBiomeStatus,
+    });
+  }
   if (evaluation === undefined) {
     if (!route.processing.blockedSuffix.includes(biomeKey)) {
       throw new Error(`${route.routeKey} biome ${biomeKey} has no evaluation or blocked region`);
@@ -1499,6 +1517,7 @@ export function findingDestinationLabel(
   route?: import('./structured-workspace').WorkspaceRoute,
 ): string {
   // A destination names the biome that hosts it, e.g. where a timed outcome lands.
+  if (destination?.presentationPanel === 'route') return 'Route';
   const biomeKey =
     destination?.presentationPanel === 'loadout'
       ? undefined

@@ -324,6 +324,7 @@ function projectHubRailEntry(
   catalog: Catalog,
   node: WorkspaceHubDecisionNode,
   structuralNodes: readonly WorkspaceNode[],
+  planEndRelation: WorkspaceBiomeSemanticAssembly['planEndRelation'],
 ): WorkspaceHubRailEntry {
   const workbenchesByOccurrenceId = new Map(
     structuralNodes
@@ -380,9 +381,11 @@ function projectHubRailEntry(
             const sideRoomId = slot.label.startsWith('Side Room ')
               ? slot.label.slice('Side Room '.length)
               : slot.label;
+            const sidePlanEnd = planEndRelation(slot.occurrenceId);
             return [
               Object.freeze({
                 key: `${node.key}:visit:${visit.visitIndex}:side:${slot.key}`,
+                ...(sidePlanEnd === undefined ? {} : { planEnd: sidePlanEnd }),
                 label: `Side ${slot.enteredOrdinal ?? 1} · Room ${sideRoomId}`,
                 marker: sideNode.room.marker,
                 node: sideNode,
@@ -391,9 +394,11 @@ function projectHubRailEntry(
             ];
           }),
     );
+    const visitPlanEnd = planEndRelation(workbench.room.occurrenceId);
     visits.push(
       Object.freeze({
         key: `${node.key}:visit:${visit.visitIndex}`,
+        ...(visitPlanEnd === undefined ? {} : { planEnd: visitPlanEnd }),
         label: `Visit ${visit.visitIndex}`,
         marker: workbench.room.marker,
         node: workbench,
@@ -525,7 +530,10 @@ export function presentWorkspaceBiome(
   };
   let decisionIndex = 0;
   const railEntryForNode = (node: WorkspaceNode): WorkspaceRailEntry => {
-    if (node.kind === 'hubDecision') return projectHubRailEntry(catalog, node, structuralNodes);
+    if (node.kind === 'hubDecision')
+      return projectHubRailEntry(catalog, node, structuralNodes, semantic.planEndRelation);
+    const railRoom = railRoomOccurrenceId(node);
+    const planEnd = railRoom === undefined ? undefined : semantic.planEndRelation(railRoom);
     if (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') {
       decisionIndex += 1;
       const presentation = nodeRailPresentation(node, decisionIndex, node.key === entry?.key);
@@ -538,6 +546,7 @@ export function presentWorkspaceBiome(
         label: presentation.label,
         marker,
         node,
+        ...(planEnd === undefined ? {} : { planEnd }),
         ...(selectedTarget === undefined ? {} : { selectedTarget }),
       });
     }
@@ -574,6 +583,7 @@ export function presentWorkspaceBiome(
       ...(mainReward === undefined ? {} : { mainReward }),
       marker,
       node,
+      ...(planEnd === undefined ? {} : { planEnd }),
       ...(selectedTarget === undefined ? {} : { selectedTarget }),
     });
   };
@@ -704,6 +714,7 @@ export function presentWorkspaceBiome(
             label: entry.label,
             marker: entry.marker,
             node: withRunStateTitle(entry.node, entry.label),
+            ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
           });
         case 'mixedBatch':
@@ -714,6 +725,7 @@ export function presentWorkspaceBiome(
             label: entry.label,
             marker: entry.marker,
             node: withRunStateTitle(entry.node, entry.label),
+            ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
           });
         case 'takeoverBatch':
@@ -725,6 +737,7 @@ export function presentWorkspaceBiome(
             marker: entry.marker,
             node: withRunStateTitle(entry.node, entry.label),
             ...(entry.mainReward === undefined ? {} : { mainReward: entry.mainReward }),
+            ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
           });
         case 'occurrenceWorkbench':
@@ -768,6 +781,7 @@ export function presentWorkspaceBiome(
     nodes,
     occurrenceStages,
     owner: semantic.biome,
+    ...(semantic.planEnd === undefined ? {} : { planEnd: semantic.planEnd }),
     rail,
     source: semantic.source,
     status: semantic.status,

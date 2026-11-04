@@ -20,7 +20,10 @@ export interface FindingSelection {
   /** Stable finding owner that remains authoritative for workspace navigation. */
   readonly origin: SemanticAddress;
   /** The panel hosting the finding's destination, which may differ from its owner's biome. */
-  readonly presentationPanel?: Extract<RoutePanel, { readonly kind: 'loadout' | 'biome' }>;
+  readonly presentationPanel?: Extract<
+    RoutePanel,
+    { readonly kind: 'loadout' | 'route' | 'biome' }
+  >;
   /** Projection-resolved containing dialog for a fine-grained finding. */
   readonly traitDialogTarget?: TraitOfferAddress | null;
   /** Projection-resolved containing Pom dialog for a fine-grained finding. */

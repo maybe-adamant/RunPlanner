@@ -17,6 +17,7 @@ import {
   type WorkspaceOrdinaryBatchNode,
   type WorkspaceMixedBatchNode,
   type WorkspaceRoomIcon,
+  type WorkspaceRoomPlanEnd,
   type WorkspaceTopologyRemovalInteraction,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
@@ -38,6 +39,7 @@ import { CandidatePicker } from './CandidatePicker';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
 import { RoomSelector } from './RoomSelector';
 import { roomKindIcon } from './roomIcon';
+import { PlanEndAction } from './PlanEndAction';
 import { RunStateLauncher } from './RunStateSheet';
 import { DoorRewardEditor, DoorRewardHiddenTag, RerolledRewardRepairs } from './DoorRewardEditor';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
@@ -804,10 +806,13 @@ export function BatchWorkbench({
   interactions,
   label,
   node,
+  planEnd,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
   readonly node: BatchNode;
+  /** The source room's plan-end action, beside the way on. */
+  readonly planEnd?: WorkspaceRoomPlanEnd | undefined;
 }) {
   const findingAnchor = useFindingAnchor();
   const notes = useDoorNotes(node.notes);
@@ -901,6 +906,7 @@ export function BatchWorkbench({
           continuation={node.selectedContinuation}
           disabledHint={batchContinuationHint(node)}
         />
+        <PlanEndAction planEnd={planEnd} />
         <TopologyRemovalAction interaction={removal} label="Remove these doors" />
       </div>
     </section>
@@ -925,9 +931,11 @@ function StartFrontier({
 function ExitFrontier({
   interactions,
   frontier,
+  planEnd,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly frontier: Extract<WorkspaceAuthoringFrontier, { readonly kind: 'exitDecision' }>;
+  readonly planEnd?: WorkspaceRoomPlanEnd | undefined;
 }) {
   if (frontier.provisionalBatch === undefined) {
     throw new BiomeWorkspaceContractError(
@@ -935,22 +943,30 @@ function ExitFrontier({
     );
   }
   return (
-    <BatchWorkbench interactions={interactions} label="Doors" node={frontier.provisionalBatch} />
+    <BatchWorkbench
+      interactions={interactions}
+      label="Doors"
+      node={frontier.provisionalBatch}
+      planEnd={planEnd}
+    />
   );
 }
 
 export function AuthoringFrontier({
   frontier,
   interactions,
+  planEnd,
 }: {
   readonly frontier: WorkspaceAuthoringFrontier;
   readonly interactions: WorkspaceInteractionCatalog;
+  /** The plan-end action of the room whose doors this frontier authors. */
+  readonly planEnd?: WorkspaceRoomPlanEnd | undefined;
 }) {
   switch (frontier.kind) {
     case 'start':
       return <StartFrontier interaction={frontier} interactions={interactions} />;
     case 'exitDecision':
-      return <ExitFrontier frontier={frontier} interactions={interactions} />;
+      return <ExitFrontier frontier={frontier} interactions={interactions} planEnd={planEnd} />;
     case 'hubVisit':
     case 'hubOpenSet':
       throw new BiomeWorkspaceContractError(

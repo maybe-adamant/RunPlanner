@@ -42,6 +42,7 @@ import {
   rerollSpendAllowanceForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   goldLedgerForProjectEvaluationAssembly,
+  planEndAvailability,
   rerollSurfaceForProjectEvaluationAssembly,
   hubStaysForProjectEvaluationAssembly,
   type ProjectEvaluation,
@@ -55,6 +56,7 @@ import {
 } from './assembly/assembly-products';
 import { assembleWorkspaceBiomeSemantics } from './assembly/biome-semantic-assembly';
 import { requireWorkspaceRoom } from './assembly/catalog-room';
+import { projectRoutePlanEnd } from './assembly/plan-end-assembly';
 import { presentWorkspaceBiome } from './presentation/biome-presentation';
 import { registerWorkspaceFindingDestinations } from './navigation/finding-routing';
 import {
@@ -371,6 +373,7 @@ export function createStructuredWorkspaceProjection(
           }
         },
         goldLedgerForProjectEvaluationAssembly(catalog, assembly),
+        (room) => planEndAvailability(catalog, assembly, room),
       );
       const routeSource = sources.route;
       const authoredRoute =
@@ -681,7 +684,14 @@ export function createStructuredWorkspaceProjection(
               ] as const,
             ];
       appendUniqueFocusDestinations(focusByOwner, [
-        [routeMarker.focusKey, routeDestination(routeAddress)],
+        // The route owns its plan end, whose control is on the Route panel.
+        [
+          routeMarker.focusKey,
+          Object.freeze<WorkspaceInspectorDestination>({
+            ...routeDestination(routeAddress),
+            presentationPanel: 'route' as const,
+          }),
+        ],
         [
           semanticAddressKey(routeStartingReward),
           Object.freeze<WorkspaceInspectorDestination>({
@@ -709,6 +719,7 @@ export function createStructuredWorkspaceProjection(
             : [],
         ),
       ]);
+      const routePlanEnd = projectRoutePlanEnd(catalog, authoredRoute, routeSource.evaluation);
       const route = Object.freeze({
         runModifiers: bindRunModifiers(catalog, project, evaluation, devBuild),
         ...(fixedLoadout ? {} : { startingReward }),
@@ -722,12 +733,14 @@ export function createStructuredWorkspaceProjection(
         biomes: Object.freeze(biomes),
         label: catalog.routes.byKey[routeSource.routeKey]?.label ?? routeSource.routeKey,
         marker: routeMarker,
+        ...(routePlanEnd === undefined ? {} : { planEnd: routePlanEnd }),
         rail: Object.freeze(
           biomes.map((biome) =>
             Object.freeze({
               biomeKey: biome.biomeKey,
               label: biome.label,
               marker: biome.marker,
+              ...(biome.planEnd === undefined ? {} : { planEnd: biome.planEnd }),
               source: biome.source,
               status: biome.status,
             }),
@@ -746,8 +759,13 @@ export function createStructuredWorkspaceProjection(
                         candidate.origin.kind === 'occurrence' &&
                         candidate.origin.occurrenceId === placement.occurrenceId,
                     );
+                    const pastPlanEnd =
+                      routeSource.biomes
+                        .find((source) => source.biome.biomeKey === placement.biomeKey)
+                        ?.planEndRelation(placement.occurrenceId) === 'pastEnd';
                     return Object.freeze({
                       ...placement,
+                      ...(pastPlanEnd ? { pastPlanEnd: true as const } : {}),
                       locationLabel:
                         entry === undefined
                           ? 'Unavailable room'

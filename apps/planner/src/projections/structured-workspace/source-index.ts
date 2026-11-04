@@ -70,6 +70,7 @@ import type {
   RouteResourceAuthoring,
   AcquisitionConversionCandidateCapability,
   AssessmentIssue,
+  PlanEndAvailability,
 } from '@run-planner/engine/simulation';
 import {
   evaluateBiomeCompleteness,
@@ -233,6 +234,23 @@ export interface WorkspaceBiomeSource {
       }
     | undefined;
   readonly resourceAuthoring: RouteResourceAuthoring;
+  /** Where a room stands against the plan's end: the end room, or a room past it. */
+  readonly planEndRelation: (occurrenceId: OccurrenceId) => WorkspacePlanEndRelation | undefined;
+  /** The whole biome lies after the biome the plan ends in. */
+  readonly pastPlanEnd: boolean;
+  /** Whether the plan can end after a room; undefined when the engine query is not bound. */
+  readonly planEndAvailability: (occurrenceId: OccurrenceId) => PlanEndAvailability | undefined;
+}
+
+/** `end`: the plan ends after this room; `pastEnd`: the room lies past that end. */
+export type WorkspacePlanEndRelation = 'end' | 'pastEnd';
+
+/** The route's plan end as the evaluation applied it, shared by every biome source. */
+interface WorkspaceRoutePlanEndSource {
+  /** The settled end room; absent while no end applies or it is off the selected path. */
+  readonly endRoom?: OccurrenceAddress;
+  readonly afterPlanEnd: ReadonlySet<string>;
+  readonly availability: (room: OccurrenceAddress) => PlanEndAvailability | undefined;
 }
 
 export interface WorkspaceRouteSource {
@@ -727,6 +745,7 @@ function createWorkspaceBiomeSource(
   roomObjectInteractions: WorkspaceBiomeSource['roomObjectInteractions'],
   gold: WorkspaceBiomeSource['gold'],
   assessmentIssue: AssessmentIssue | undefined,
+  planEnd: WorkspaceRoutePlanEndSource,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -780,7 +799,14 @@ function createWorkspaceBiomeSource(
   // Reject malformed authored identity cheaply before asking the evaluator to
   // traverse the biome. Completeness remains one explicit source product, but
   // it is not the structural contract validator for workspace construction.
-  const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
+  const completeness = evaluateBiomeCompleteness(
+    catalog,
+    biome,
+    plan,
+    project.route.planEnd?.biomeKey === plan.biomeKey
+      ? project.route.planEnd.occurrenceId
+      : undefined,
+  );
   const exitDecisions = authoredExitDecisionsInTopologyOrder(
     catalog,
     biome,
@@ -839,7 +865,49 @@ function createWorkspaceBiomeSource(
     evaluation !== undefined && 'rewards' in evaluation
       ? evaluation.rewards.transcendentEmbryoOutcomes
       : Object.freeze([]);
+  const pastPlanEnd = planEnd.afterPlanEnd.has(plan.biomeKey);
+  const endOccurrenceId =
+    planEnd.endRoom?.biomeKey === plan.biomeKey ? planEnd.endRoom.occurrenceId : undefined;
+  const pastEndHubRooms = new Set<OccurrenceId>();
+  // A Hub ended inside its stay publishes only the visits through its end.
+  if (endOccurrenceId !== undefined) {
+    for (const decision of hubDecisionsByKey.values()) {
+      const canonical = overlay.hubs.get(
+        semanticAddressKey(createHubDecisionAddress(biome, decision.hubKey)),
+      );
+      if (canonical === undefined) continue;
+      const reached = new Set(canonical.visits.map((visit) => visit.target.room.occurrenceId));
+      for (const action of decision.actions) {
+        if (action.kind !== 'roomVisit') continue;
+        const room = decision.openTargets.find(
+          (target) => target.hubSlotKey === action.hubSlotKey,
+        )?.occurrenceId;
+        if (room !== undefined && !reached.has(room)) pastEndHubRooms.add(room);
+      }
+    }
+  }
+  const planEndRelation = (occurrenceId: OccurrenceId): WorkspacePlanEndRelation | undefined => {
+    if (pastPlanEnd) return 'pastEnd';
+    if (endOccurrenceId === undefined) return undefined;
+    if (occurrenceId === endOccurrenceId) return 'end';
+    return pastEndHubRooms.has(occurrenceId) ||
+      !coverage.isAssessed(createOccurrenceAddress(biome, occurrenceId))
+      ? 'pastEnd'
+      : undefined;
+  };
+  const planEndAvailabilityByRoom = new Map<OccurrenceId, PlanEndAvailability | undefined>();
   return Object.freeze({
+    planEndRelation,
+    pastPlanEnd,
+    planEndAvailability: (occurrenceId: OccurrenceId) => {
+      if (!planEndAvailabilityByRoom.has(occurrenceId)) {
+        planEndAvailabilityByRoom.set(
+          occurrenceId,
+          planEnd.availability(createOccurrenceAddress(biome, occurrenceId)),
+        );
+      }
+      return planEndAvailabilityByRoom.get(occurrenceId);
+    },
     configuredRivalsRank,
     routePosition,
     ...(startingReward === undefined ? {} : { startingReward }),
@@ -1046,12 +1114,22 @@ export function createWorkspaceProjectSourceIndex(
     Object.freeze({ kind: 'unreached' as const }),
   roomObjectInteractions: WorkspaceBiomeSource['roomObjectInteractions'] = () => undefined,
   gold: WorkspaceBiomeSource['gold'] = undefined,
+  planEndAvailability: (room: OccurrenceAddress) => PlanEndAvailability | undefined = () =>
+    undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
   const resources = routeResourceAuthoring(catalog, route);
   const routeEvaluation =
     evaluation.route.routeKey === route.routeKey ? evaluation.route : undefined;
+  const horizon = evaluation.authoringHorizon;
+  const planEnd: WorkspaceRoutePlanEndSource = Object.freeze({
+    ...(horizon.kind === 'ended' && horizon.blockedAfter.routeKey === route.routeKey
+      ? { endRoom: horizon.blockedAfter }
+      : {}),
+    afterPlanEnd: new Set(routeEvaluation?.processing.afterPlanEnd ?? []),
+    availability: planEndAvailability,
+  });
   return Object.freeze({
     route: Object.freeze({
       biomes: Object.freeze(
@@ -1088,6 +1166,7 @@ export function createWorkspaceProjectSourceIndex(
             roomObjectInteractions,
             gold,
             routeEvaluation?.issue,
+            planEnd,
           ),
         ),
       ),

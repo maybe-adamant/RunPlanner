@@ -338,6 +338,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
   ) => readonly WorkspaceDerivedAcquisitionEntry[];
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly occurrence: RoomOccurrence;
+  /** The room's plan-end action, bound by the biome assembly. */
+  readonly planEnd?: import('../contracts/structure').WorkspaceRoomPlanEnd;
   readonly runState: (owner: RoomRunStateCheckpointAddress) =>
     | { readonly availability: 'available'; readonly snapshot: RunStateSnapshot }
     | {
@@ -904,6 +906,7 @@ export function assembleWorkspaceOccurrence(
     key: `occurrence:${semanticAddressKey(address)}`,
     localDetailMarkers: roomSummary.localDetailMarkers,
     marker: roomSummary.marker,
+    ...(input.planEnd === undefined ? {} : { planEnd: input.planEnd }),
     room: roomSummary,
   });
   input.markerDestinations.setRoomTab(

@@ -90,8 +90,8 @@ export interface WorkspaceInspectorDestination {
    */
   readonly nodeKey: string;
   readonly ownerAddress: SemanticAddress;
-  /** Finding-only presentation override for controls intentionally hosted in Route Loadout. */
-  readonly presentationPanel?: 'loadout';
+  /** Finding-only presentation override for controls hosted in the Loadout or Route panel. */
+  readonly presentationPanel?: 'loadout' | 'route';
   /** Present when this owner belongs to a specific room-workbench tab. */
   readonly roomTab?: WorkspaceRoomTab;
   /** Declared parent-local slot selected by a side-room destination. */

@@ -6,16 +6,15 @@ function openRoomsText({ current, min, max, met }: WorkspaceHubRequirements['ope
   return met ? `${current} rooms open` : `Open ${range} rooms · ${current} open`;
 }
 
-function visitsText({
-  planned,
-  required,
-  met,
-  fountainUsed,
-}: WorkspaceHubRequirements['visits']): string {
+function visitsText(
+  { planned, required, met, fountainUsed }: WorkspaceHubRequirements['visits'],
+  planEndVisit: number | undefined,
+): string {
   const fountain = fountainUsed ? 'Fountain used' : 'Fountain unused';
+  const end = planEndVisit === undefined ? '' : ` · Plan ends after visit ${planEndVisit}`;
   return met
-    ? `${planned} planned · ${fountain}`
-    : `Visit ${required} rooms · ${planned} planned · ${fountain}`;
+    ? `${planned} planned · ${fountain}${end}`
+    : `Visit ${required} rooms · ${planned} planned · ${fountain}${end}`;
 }
 
 /**
@@ -24,9 +23,12 @@ function visitsText({
  */
 export function HubRequirementBox({
   findingTarget,
+  planEndVisit,
   requirement,
 }: {
   readonly findingTarget: FindingTargetProps;
+  /** The visit the plan ends with, when it ends inside this Hub. */
+  readonly planEndVisit?: number | undefined;
   readonly requirement:
     | { readonly kind: 'openRooms'; readonly value: WorkspaceHubRequirements['openRooms'] }
     | { readonly kind: 'visits'; readonly value: WorkspaceHubRequirements['visits'] };
@@ -45,7 +47,7 @@ export function HubRequirementBox({
     >
       {requirement.kind === 'openRooms'
         ? openRoomsText(requirement.value)
-        : visitsText(requirement.value)}
+        : visitsText(requirement.value, planEndVisit)}
     </p>
   );
 }

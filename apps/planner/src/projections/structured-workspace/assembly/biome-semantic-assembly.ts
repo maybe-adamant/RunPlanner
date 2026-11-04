@@ -29,6 +29,7 @@ import type {
   WorkspaceNode,
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceOccurrenceStageOutgoing,
+  WorkspacePlanEndRelation,
 } from '../contracts/structure';
 import type { BiomeLayout, Catalog } from '@run-planner/engine/catalog-schema';
 import type { ProjectBiomeEvaluation } from '@run-planner/engine/simulation';
@@ -89,6 +90,7 @@ import type { WorkspaceDecisionBatchNode } from '../navigation/marker-ownership'
 import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
 import type { WorkspaceBiomeSource } from '../source-index';
 import { assembleWorkspaceTopologyInteractions } from './topology-interaction-assembly';
+import { assembleRoomPlanEnd } from './plan-end-assembly';
 
 /**
  * Complete semantic product for one biome. It is produced before audits,
@@ -118,6 +120,10 @@ export interface WorkspaceBiomeSemanticAssembly {
     WorkspaceOccurrenceInteractionRequirement
   >;
   readonly occurrenceOutgoing: ReadonlyMap<OccurrenceId, WorkspaceOccurrenceStageOutgoing>;
+  /** `end`: the plan ends in this biome; `pastEnd`: the biome follows that end. */
+  readonly planEnd?: WorkspacePlanEndRelation;
+  /** Each room's place against the plan end, for its rail stop. */
+  readonly planEndRelation: (occurrenceId: OccurrenceId) => WorkspacePlanEndRelation | undefined;
   readonly preliminaryFocusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>;
   /** Presentation needs only this declared rail policy, never the full layout. */
   readonly progressionKind: BiomeLayout['progression']['kind'];
@@ -391,6 +397,43 @@ function appendHubAssembly(
   appendUniqueWorkspaceNodes(nodes, [assembly.node, ...assembly.workbenches]);
 }
 
+/**
+ * A Hub visit ends the plan when its main room or one of its side rooms is the
+ * end room, and follows the end when its main room does.
+ */
+function attachHubVisitPlanEnds(
+  nodes: WorkspaceNode[],
+  relation: (occurrenceId: OccurrenceId) => WorkspacePlanEndRelation | undefined,
+): void {
+  nodes.forEach((hub, hubIndex) => {
+    if (hub.kind !== 'hubDecision') return;
+    const visits = hub.visits.map((visit) => {
+      if (visit.room === undefined) return visit;
+      const main = nodes.find(
+        (node) =>
+          node.kind === 'occurrenceWorkbench' &&
+          node.room.occurrenceId === visit.room!.occurrenceId,
+      );
+      const sideRooms =
+        main?.kind === 'occurrenceWorkbench'
+          ? (main.localVisit?.slots.map((slot) => slot.occurrenceId) ?? [])
+          : [];
+      const planEnd = [visit.room.occurrenceId, ...sideRooms].some(
+        (occurrenceId) => relation(occurrenceId) === 'end',
+      )
+        ? ('end' as const)
+        : relation(visit.room.occurrenceId);
+      return planEnd === undefined ? visit : Object.freeze({ ...visit, planEnd });
+    });
+    if (visits.every((visit, index) => visit === hub.visits[index])) return;
+    nodes[hubIndex] = Object.freeze({
+      ...hub,
+      ...(visits.some((visit) => visit.planEnd === 'end') ? { planEnd: 'end' as const } : {}),
+      visits: Object.freeze(visits),
+    });
+  });
+}
+
 /** Hub visits return to their Timeline. */
 function attachHubRoomPresentation(nodes: WorkspaceNode[]): void {
   for (const hub of nodes) {
@@ -547,6 +590,11 @@ export function assembleWorkspaceBiomeSemantics(
     );
     const bossDoorRewardStore = bossDoorRewardStoreControl(request.occurrence.occurrenceId);
     const assembly = assembleWorkspaceOccurrence({
+      planEnd: assembleRoomPlanEnd({
+        room: createOccurrenceAddress(biome, request.occurrence.occurrenceId),
+        relation: source.planEndRelation(request.occurrence.occurrenceId),
+        availability: () => source.planEndAvailability(request.occurrence.occurrenceId),
+      }),
       configuredRivalsRank: source.configuredRivalsRank,
       routePosition: source.routePosition,
       ...(bossDoorRewardStore === undefined ? {} : { bossDoorRewardStore }),
@@ -737,6 +785,7 @@ export function assembleWorkspaceBiomeSemantics(
     if (decision.source.kind !== 'hubDecision') continue;
     projectAuthoredExitDecision(decision);
   }
+  attachHubVisitPlanEnds(nodes, source.planEndRelation);
   attachHubRoomPresentation(nodes);
   if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision') {
     markerDestinations.setHubTab([frontier.marker], 'doors');
@@ -818,6 +867,17 @@ export function assembleWorkspaceBiomeSemantics(
         break;
       }
       case 'blockedOrUnentered':
+        // The plan's end room needs no doors: nothing past it is planned.
+        if (source.planEndRelation(occurrence.occurrenceId) === 'end') {
+          occurrenceOutgoing.set(
+            occurrence.occurrenceId,
+            Object.freeze({
+              kind: 'planEnd' as const,
+              marker: markerDestinations.marker(status.owner),
+            }),
+          );
+          break;
+        }
         occurrenceOutgoing.set(
           occurrence.occurrenceId,
           Object.freeze({
@@ -998,6 +1058,13 @@ export function assembleWorkspaceBiomeSemantics(
     if ('runState' in node && node.runState !== undefined) appendRunStateLauncher(node.runState);
   }
   const preliminaryFocusDestinations = markerBuilder.destinations();
+  const biomePlanEnd = source.pastPlanEnd
+    ? ('pastEnd' as const)
+    : (plan.topology?.occurrences ?? []).some(
+          (occurrence) => source.planEndRelation(occurrence.occurrenceId) === 'end',
+        )
+      ? ('end' as const)
+      : undefined;
   return Object.freeze({
     biome,
     biomeKey: plan.biomeKey,
@@ -1013,6 +1080,8 @@ export function assembleWorkspaceBiomeSemantics(
     nodes: completedNodes,
     occurrenceInteractionRequirements,
     occurrenceOutgoing,
+    ...(biomePlanEnd === undefined ? {} : { planEnd: biomePlanEnd }),
+    planEndRelation: source.planEndRelation,
     preliminaryFocusDestinations,
     progressionKind: layout.progression.kind,
     roomControls,

@@ -343,6 +343,8 @@ export interface WorkspaceHubVisit {
   readonly visitIndex: number;
   /** One-based position among the Hub's visits and fountain use. */
   readonly actionPosition?: number;
+  /** `end`: the plan ends with this visit; `pastEnd`: the visit follows that end. */
+  readonly planEnd?: WorkspacePlanEndRelation;
 }
 
 /**
@@ -463,10 +465,52 @@ export interface WorkspaceHubDecisionNode {
   readonly rerollsRemaining?: number;
   readonly fountain: WorkspaceHubFountain;
   readonly runState?: WorkspaceRunStateLauncher;
+  /** `end`: the plan ends during this Hub's stay, so its visit order is settled. */
+  readonly planEnd?: WorkspacePlanEndRelation;
+}
+
+/** `end`: the plan ends after this room; `pastEnd`: the room lies past that end. */
+export type WorkspacePlanEndRelation = 'end' | 'pastEnd';
+
+/**
+ * Whether the plan can end after a room. `notOnRoute`: the room is off its
+ * biome's selected path; `notSettled`: it or something before it is incomplete
+ * or invalid; `unknown`: no engine answer is bound.
+ */
+export type WorkspacePlanEndAvailability =
+  | { readonly available: true }
+  | { readonly available: false; readonly reason: 'notOnRoute' | 'notSettled' | 'unknown' };
+
+type WorkspacePlanEndIntent = WorkspaceCommandIntent<
+  Extract<ProjectCommand, { readonly kind: 'ReplacePlanEnd' }>
+>;
+
+/** One room's place against the route's single plan end, with its two edits. */
+export interface WorkspaceRoomPlanEnd {
+  readonly relation?: WorkspacePlanEndRelation;
+  /** Read when the action renders; one engine evaluation per room. */
+  readonly availability: () => WorkspacePlanEndAvailability;
+  /** Moves the plan's end to this room. */
+  readonly endIntent: WorkspacePlanEndIntent;
+  readonly removeIntent: WorkspacePlanEndIntent;
+}
+
+/** Where the route's plan ends, for the Route panel's summary and its repair. */
+export interface WorkspaceRoutePlanEnd {
+  readonly biomeKey: string;
+  readonly biomeLabel: string;
+  readonly roomLabel: string;
+  /** The end room, opened from the summary. */
+  readonly room: OccurrenceAddress;
+  /** The end names a room off its biome's selected path. */
+  readonly unreached?: true;
+  readonly removeIntent: WorkspacePlanEndIntent;
 }
 
 export interface WorkspaceOccurrenceWorkbenchNode {
   readonly kind: 'occurrenceWorkbench';
+  /** The room's plan-end action and relation; absent outside a configured biome. */
+  readonly planEnd?: WorkspaceRoomPlanEnd;
   /** True only for the biome's authored Opening/Intro occurrence. */
   readonly isEntry?: boolean;
   readonly key: string;
@@ -598,6 +642,11 @@ export type WorkspaceOccurrenceStageOutgoing =
       readonly marker: WorkspaceMarker;
     }
   | {
+      /** The plan ends after this room before it authored any doors. */
+      readonly kind: 'planEnd';
+      readonly marker: WorkspaceMarker;
+    }
+  | {
       /** Engine-declared fixed completion continuation, rendered as a fixed exit. */
       readonly kind: 'fixedRoom';
       readonly destination:
@@ -620,6 +669,7 @@ export interface WorkspaceOccurrenceStage {
 
 export interface WorkspaceHubVisitRailEntry {
   readonly key: string;
+  readonly planEnd?: WorkspacePlanEndRelation;
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOccurrenceWorkbenchNode;
@@ -633,6 +683,7 @@ export interface WorkspaceHubVisitRailEntry {
 
 export interface WorkspaceHubSideVisitRailEntry {
   readonly key: string;
+  readonly planEnd?: WorkspacePlanEndRelation;
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOccurrenceWorkbenchNode;
@@ -700,6 +751,8 @@ export interface WorkspaceDecisionRailEntry {
   readonly mainReward?: never;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode;
+  /** The selected room's place against the plan end. */
+  readonly planEnd?: WorkspacePlanEndRelation;
   readonly selectedTarget?: WorkspaceRailSelectedTarget;
 }
 
@@ -713,6 +766,8 @@ export interface WorkspaceStageRailEntry {
   readonly mainReward?: WorkspaceRailReward;
   readonly marker: WorkspaceMarker;
   readonly node: Exclude<WorkspaceNode, WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode>;
+  /** The stage room's place against the plan end. */
+  readonly planEnd?: WorkspacePlanEndRelation;
   /** A Preboss takeover exposes the door it continues through; a shop stage, its shop. */
   readonly selectedTarget?: WorkspaceRailSelectedTarget;
 }
@@ -751,6 +806,8 @@ export interface WorkspaceBiome {
   readonly nodes: readonly WorkspaceNode[];
   readonly occurrenceStages: readonly WorkspaceOccurrenceStage[];
   readonly owner: BiomeAddress;
+  /** `end`: the plan ends in this biome; `pastEnd`: the biome follows that end. */
+  readonly planEnd?: WorkspacePlanEndRelation;
   readonly rail: readonly WorkspaceRailEntry[];
   readonly source: WorkspaceProjectionSource;
   readonly status: WorkspaceStatus;
@@ -758,6 +815,7 @@ export interface WorkspaceBiome {
 
 export interface WorkspaceRouteRailBiome {
   readonly biomeKey: string;
+  readonly planEnd?: WorkspacePlanEndRelation;
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly source: WorkspaceProjectionSource;
@@ -839,6 +897,8 @@ export interface WorkspaceRoute {
   readonly biomes: readonly WorkspaceBiome[];
   readonly label: string;
   readonly marker: WorkspaceMarker;
+  /** Where the plan ends; absent while it runs through its configured biomes. */
+  readonly planEnd?: WorkspaceRoutePlanEnd;
   readonly rail: readonly WorkspaceRouteRailBiome[];
   /** Assessed route-owned selected successful resource outcomes. */
   readonly resources: readonly {
@@ -849,6 +909,8 @@ export interface WorkspaceRoute {
       readonly biomeKey: string;
       readonly locationLabel: string;
       readonly occurrenceId: OccurrenceId;
+      /** The placement room lies past the plan end, so the placement is inactive. */
+      readonly pastPlanEnd?: true;
     };
   }[];
   readonly routeKey: string;

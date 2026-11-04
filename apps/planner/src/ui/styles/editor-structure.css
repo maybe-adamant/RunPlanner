@@ -1760,3 +1760,77 @@ select {
   outline: 2px solid color-mix(in srgb, var(--selection-accent) 80%, transparent);
   outline-offset: 2px;
 }
+
+/* The plan's end: the end room says so, rooms past it read as read-only. */
+.plan-end-pill {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  padding: 1px 9px;
+  border: 1px solid color-mix(in srgb, var(--plan-end) 55%, transparent);
+  border-radius: 999px;
+  color: var(--plan-end);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.plan-end-pill[data-plan-end='pastEnd'] {
+  border-style: dashed;
+  border-color: #55525f;
+  color: var(--muted);
+}
+
+.plan-end-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workbench-action-row > .plan-end-action:first-child {
+  margin-inline-start: auto;
+}
+
+.plan-end-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--plan-end);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.plan-end-state::before,
+.hub-timeline-plan-end::before {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--plan-end);
+  content: '';
+}
+
+.room-workbench-panel-content {
+  display: contents;
+}
+
+:is(.room-workbench-panel-content, .past-plan-end-content)[inert] > * {
+  opacity: 0.6;
+}
+
+.route-plan-end-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.route-plan-end-room {
+  color: var(--plan-end);
+  font-weight: 600;
+}
+
+.route-plan-end-value[data-unreached='true'] .route-plan-end-room {
+  color: var(--muted);
+  text-decoration: line-through;
+}

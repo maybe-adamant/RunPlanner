@@ -23,6 +23,8 @@
   --attention: #e2b971;
   /* Red of finding marks and invalid states. */
   --finding: #da7373;
+  /* Lavender of the plan's end: the end room and the rooms past it. */
+  --plan-end: #b9a8e6;
 
   color: var(--text);
   background: #111216;

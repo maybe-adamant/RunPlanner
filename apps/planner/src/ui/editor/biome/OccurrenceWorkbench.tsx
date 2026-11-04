@@ -7,6 +7,7 @@ import {
   type WorkspaceDoorContract,
   type WorkspaceInteractionCatalog,
   type WorkspaceLocalVisitDecision,
+  type WorkspacePlanEndRelation,
   type WorkspaceRoomSummary,
   type WorkspaceShipPhasePresentation,
   type WorkspaceRoomActions,
@@ -23,6 +24,8 @@ import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 import { SideRoomsWorkbench } from './locals/SideRoomsWorkbench';
 import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
 import { TimelineLegend } from './TimelineLegend';
+import { planEndLabel } from './planEndCopy';
+import { createRouteAddress } from '@run-planner/engine/authored-project';
 
 interface OccurrenceWorkbenchProps {
   readonly headerActions?: ReactNode;
@@ -39,6 +42,8 @@ interface OccurrenceWorkbenchProps {
   readonly navigationRevision?: number;
   readonly findingNavigationRevision?: number;
   readonly doors?: ReactNode;
+  /** The room's place against the plan end; past it, every panel but Doors is read-only. */
+  readonly planEndRelation?: WorkspacePlanEndRelation;
   /** Exact room-owned additions to ordinary lifecycle rows. */
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   /** Exact room-owned additions to ordinary lifecycle boundaries. */
@@ -63,6 +68,7 @@ export function OccurrenceWorkbench({
   renderRoomActionRowContent,
   renderLifecycleBoundaryContent,
   runState,
+  planEndRelation,
 }: OccurrenceWorkbenchProps) {
   const findingAnchor = useFindingAnchor();
   const executeIntent = useCommandIntent();
@@ -220,13 +226,25 @@ export function OccurrenceWorkbench({
   return (
     <article
       className="room-card biome-occurrence-workbench"
-      {...findingAnchor(room.address)}
+      {...findingAnchor(
+        room.address,
+        // A room past the plan end stays browsable: its panels are read-only on
+        // their own, and its Doors keep the action that moves the end here.
+        planEndRelation === 'pastEnd'
+          ? { readinessOwner: createRouteAddress(room.address.routeKey) }
+          : {},
+      )}
       tabIndex={-1}
     >
       <header className="room-card-heading">
         <div className="room-heading-identity">
           <h3 aria-label={heading}>{heading}</h3>
           <IncomingRewardSummary incomingDoor={incomingDoor} />
+          {planEndRelation === undefined ? null : (
+            <span className="plan-end-pill" data-plan-end={planEndRelation}>
+              {planEndLabel(planEndRelation)}
+            </span>
+          )}
         </div>
         <div className="owner-markers">
           {headerActions}
@@ -309,74 +327,82 @@ export function OccurrenceWorkbench({
         id={panelId}
         role="tabpanel"
       >
-        {activeTab === 'overview' ? (
-          <div className="room-overview-workbench">
-            {entryIdentity}
-            {renderDirectRoomWorkbench('overview')}
-          </div>
-        ) : activeTab === 'sideRooms' && localVisit !== undefined ? (
-          <SideRoomsWorkbench
-            interactions={interactions}
-            localVisit={localVisit}
-            parentGameName={room.gameName}
-            {...(initialSideRoomSlotKey === undefined
-              ? {}
-              : { selectedSlotKey: initialSideRoomSlotKey })}
-            title={room.label}
-            {...(findingNavigationRevision === undefined ? {} : { findingNavigationRevision })}
-          />
-        ) : activeTab === 'layout' && room.workbench.kind === 'fields' ? (
-          <FieldsLayoutWorkbench
-            gameName={room.gameName}
-            hostId={roomIdentity}
-            interactions={interactions}
-            room={room.workbench.fields}
-            title={room.label}
-          />
-        ) : activeTab === 'doors' ? (
-          (doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>)
-        ) : wheelPhase?.wheel !== undefined ? (
-          <RewardWheelWorkbench
-            interactions={interactions}
-            occurrence={room.address}
-            {...(wheelPhase.wheelRerolls === undefined ? {} : { rerolls: wheelPhase.wheelRerolls })}
-            wheel={wheelPhase.wheel}
-          />
-        ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (
-          <RoomActionsWorkbench
-            {...(room.workbench.roomActions === undefined
-              ? {}
-              : { actions: room.workbench.roomActions })}
-            interactions={interactions}
-            mode={{ kind: 'shipRepairs', rows: room.workbench.repairRows }}
-          />
-        ) : room.workbench.kind === 'ship' ? (
-          renderDirectRoomWorkbench(shipPhaseView())
-        ) : (
-          renderDirectRoomWorkbench('actions')
-        )}
-        {showTimelineLegend && room.placementRepairs !== undefined ? (
-          <section aria-label="Placement repairs">
-            {room.placementRepairs.map((repair) => (
-              <div className="room-placement-repair" key={repair.proposalKey}>
-                <span>{repair.label}</span>
-                <TimelineActionDeleteButton
-                  enabled
-                  explanation="Remove this delivery and its reward details while keeping the source purchase."
-                  label={repair.label}
-                  onRemove={() =>
-                    executeIntent(
-                      requireWorkspaceInteraction(
-                        interactions.roomActions,
-                        workspaceInteractionKey(room.address),
-                      ).intentFor(repair.proposalKey),
-                    )
-                  }
-                />
-              </div>
-            ))}
-          </section>
-        ) : null}
+        <div
+          className="room-workbench-panel-content"
+          // Past the plan end the room is read-only; its Doors panel keeps the plan-end action.
+          inert={planEndRelation === 'pastEnd' && activeTab !== 'doors'}
+        >
+          {activeTab === 'overview' ? (
+            <div className="room-overview-workbench">
+              {entryIdentity}
+              {renderDirectRoomWorkbench('overview')}
+            </div>
+          ) : activeTab === 'sideRooms' && localVisit !== undefined ? (
+            <SideRoomsWorkbench
+              interactions={interactions}
+              localVisit={localVisit}
+              parentGameName={room.gameName}
+              {...(initialSideRoomSlotKey === undefined
+                ? {}
+                : { selectedSlotKey: initialSideRoomSlotKey })}
+              title={room.label}
+              {...(findingNavigationRevision === undefined ? {} : { findingNavigationRevision })}
+            />
+          ) : activeTab === 'layout' && room.workbench.kind === 'fields' ? (
+            <FieldsLayoutWorkbench
+              gameName={room.gameName}
+              hostId={roomIdentity}
+              interactions={interactions}
+              room={room.workbench.fields}
+              title={room.label}
+            />
+          ) : activeTab === 'doors' ? (
+            (doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>)
+          ) : wheelPhase?.wheel !== undefined ? (
+            <RewardWheelWorkbench
+              interactions={interactions}
+              occurrence={room.address}
+              {...(wheelPhase.wheelRerolls === undefined
+                ? {}
+                : { rerolls: wheelPhase.wheelRerolls })}
+              wheel={wheelPhase.wheel}
+            />
+          ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (
+            <RoomActionsWorkbench
+              {...(room.workbench.roomActions === undefined
+                ? {}
+                : { actions: room.workbench.roomActions })}
+              interactions={interactions}
+              mode={{ kind: 'shipRepairs', rows: room.workbench.repairRows }}
+            />
+          ) : room.workbench.kind === 'ship' ? (
+            renderDirectRoomWorkbench(shipPhaseView())
+          ) : (
+            renderDirectRoomWorkbench('actions')
+          )}
+          {showTimelineLegend && room.placementRepairs !== undefined ? (
+            <section aria-label="Placement repairs">
+              {room.placementRepairs.map((repair) => (
+                <div className="room-placement-repair" key={repair.proposalKey}>
+                  <span>{repair.label}</span>
+                  <TimelineActionDeleteButton
+                    enabled
+                    explanation="Remove this delivery and its reward details while keeping the source purchase."
+                    label={repair.label}
+                    onRemove={() =>
+                      executeIntent(
+                        requireWorkspaceInteraction(
+                          interactions.roomActions,
+                          workspaceInteractionKey(room.address),
+                        ).intentFor(repair.proposalKey),
+                      )
+                    }
+                  />
+                </div>
+              ))}
+            </section>
+          ) : null}
+        </div>
       </section>
     </article>
   );

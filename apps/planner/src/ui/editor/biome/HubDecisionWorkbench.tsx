@@ -22,6 +22,7 @@ import {
   candidateWaits,
 } from '@planner/ui/feedback/candidatePresentation';
 import { HubCompletionHandoff } from './HubCompletionHandoff';
+import { hubVisitOrderWaitingHint } from './planEndCopy';
 import {
   ClosedHubRoomOption,
   MarkerAssessment,
@@ -235,6 +236,7 @@ export function HubDecisionWorkbench({
         undefined,
         node.owner,
       )}
+      planEndVisit={node.visits.find((visit) => visit.planEnd === 'end')?.visitIndex}
       requirement={{ kind: 'visits', value: node.requirements.visits }}
     />
   );
@@ -331,9 +333,11 @@ export function HubDecisionWorkbench({
       {...hintProps(
         resetRefusal !== undefined
           ? hubActionOrderRefusalHint(resetRefusal)
-          : !actionOrderInteraction.contextReached || candidateWaits(resetCandidates.result?.[0])
-            ? candidateWaitingHint
-            : undefined,
+          : !actionOrderInteraction.contextReached
+            ? hubVisitOrderWaitingHint(node)
+            : candidateWaits(resetCandidates.result?.[0])
+              ? candidateWaitingHint
+              : undefined,
       )}
       type="button"
     >

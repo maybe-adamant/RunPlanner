@@ -17,6 +17,7 @@ import {
   type WorkspaceAuthoringFrontier,
   type WorkspaceMarker,
   type WorkspaceNode,
+  type WorkspacePlanEndRelation,
   type WorkspaceRailEntry,
   type WorkspaceRailReward,
   type WorkspaceRailSelectedTarget,
@@ -30,6 +31,7 @@ import { RunStateSheet } from './RunStateSheet';
 import { EchoKeepsakeReplayControl } from './BiomeInspectorControls';
 import { BiomeInspectorNode } from './BiomeInspectorNode';
 import { bossIcon, roomKindIcon } from './roomIcon';
+import { planEndLabel } from './planEndCopy';
 
 interface BiomeWorkspaceProps {
   readonly biome: WorkspaceBiome;
@@ -82,7 +84,9 @@ function resolveInspectorSubject(
   }
 }
 
-function assessmentLabel(marker: WorkspaceMarker): string {
+/** A stop's place against the plan end replaces its assessment; findings still count. */
+function assessmentLabel(marker: WorkspaceMarker, planEnd?: WorkspacePlanEndRelation): string {
+  if (planEnd !== undefined) return planEndLabel(planEnd);
   if (marker.findingCount > 0)
     return `${marker.findingCount} finding${marker.findingCount === 1 ? '' : 's'}`;
   switch (marker.assessment) {
@@ -224,12 +228,12 @@ function RailNode({
   const { marker, node } = entry;
   const selected = selectedRailKey === marker.focusKey;
   return (
-    <div className="biome-rail-stop" data-kind={node.kind}>
+    <div className="biome-rail-stop" data-kind={node.kind} data-plan-end={entry.planEnd}>
       <FocusButton focusMarker={entry.focusMarker ?? marker} marker={marker} selected={selected}>
         <span className="biome-rail-heading">
           <strong>{entry.label}</strong>
           <span className="biome-rail-status">
-            {assessmentLabel(marker)}
+            {assessmentLabel(marker, entry.planEnd)}
             <FindingCount count={marker.findingCount} label="findings" />
           </span>
         </span>
@@ -275,12 +279,12 @@ function HubRailVisit({
 }) {
   const selected = selectedRailKey === visit.marker.focusKey;
   return (
-    <li className="biome-hub-rail-visit">
+    <li className="biome-hub-rail-visit" data-plan-end={visit.planEnd}>
       <FocusButton marker={visit.marker} presentationMarker={visit.visitMarker} selected={selected}>
         <span className="biome-rail-heading">
           <strong>{visit.label}</strong>
           <span className="biome-rail-status">
-            {assessmentLabel(visit.visitMarker)}
+            {assessmentLabel(visit.visitMarker, visit.planEnd)}
             <FindingCount count={visit.visitMarker.findingCount} label="findings" />
           </span>
         </span>
@@ -291,7 +295,11 @@ function HubRailVisit({
           {visit.sideVisits.map((sideVisit) => {
             const sideSelected = selectedRailKey === sideVisit.marker.focusKey;
             return (
-              <li className="biome-hub-rail-side-visit" key={sideVisit.key}>
+              <li
+                className="biome-hub-rail-side-visit"
+                data-plan-end={sideVisit.planEnd}
+                key={sideVisit.key}
+              >
                 <FocusButton
                   marker={sideVisit.marker}
                   presentationMarker={sideVisit.visitMarker}
@@ -300,7 +308,7 @@ function HubRailVisit({
                   <span className="biome-rail-heading">
                     <strong>{sideVisit.label}</strong>
                     <span className="biome-rail-status">
-                      {assessmentLabel(sideVisit.visitMarker)}
+                      {assessmentLabel(sideVisit.visitMarker, sideVisit.planEnd)}
                       <FindingCount count={sideVisit.visitMarker.findingCount} label="findings" />
                     </span>
                   </span>
@@ -401,12 +409,13 @@ function CompletionOutline({
             node.room.keepsakeSelection?.marker.address ??
             node.marker.address;
           return (
-            <li key={node.key}>
+            <li data-plan-end={node.planEnd?.relation} key={node.key}>
               <button
                 aria-label={`Open ${roleLabel} completion`}
                 aria-pressed={selectedNodeKey === node.key}
                 className="biome-completion-node"
                 data-assessment={node.marker.assessment}
+                data-plan-end={node.planEnd?.relation}
                 data-findings={node.marker.findingCount > 0}
                 onClick={() => dispatch(semanticOwnerFocused(focusOwner))}
                 type="button"
@@ -417,6 +426,11 @@ function CompletionOutline({
                 />
                 <span>{roleLabel}</span>
                 {node.room.label === roleLabel ? null : <strong>{node.room.label}</strong>}
+                {node.planEnd?.relation === undefined ? null : (
+                  <span className="biome-completion-plan-end">
+                    {planEndLabel(node.planEnd.relation)}
+                  </span>
+                )}
               </button>
             </li>
           );
@@ -525,6 +539,8 @@ export function BiomeWorkspace({
     outgoingDecisionCandidate?.kind === 'takeoverBatch'
       ? outgoingDecisionCandidate
       : undefined;
+  // A biome past the plan end is read-only; its rooms say so on their own.
+  const pastPlanEnd = biome.planEnd === 'pastEnd';
   const rendersTitledWorkbench =
     sourceOccurrence !== undefined ||
     (subject?.kind === 'node' &&
@@ -545,7 +561,11 @@ export function BiomeWorkspace({
             <div className="biome-structure-title-row">
               <ArtworkIcon className="biome-boss-icon" source={biomeIcon(biome.biomeKey)} />
               <h2>{biome.label}</h2>
-              {clearTopology === undefined ? null : (
+              {pastPlanEnd ? (
+                <span className="plan-end-pill" data-plan-end="pastEnd">
+                  {planEndLabel('pastEnd')}
+                </span>
+              ) : clearTopology === undefined ? null : (
                 <TopologyRemovalAction
                   accessibleLabel={`Clear ${biome.label}`}
                   compact
@@ -583,8 +603,10 @@ export function BiomeWorkspace({
             <h2>{inspectorTitle}</h2>
           </header>
         )}
-        {biome.entry === undefined ? null : <BiomeFieldControls fields={biome.fields} />}
-        <EchoKeepsakeReplayControl biome={biome} interactions={interactions} />
+        <div className="past-plan-end-content" inert={pastPlanEnd}>
+          {biome.entry === undefined ? null : <BiomeFieldControls fields={biome.fields} />}
+          <EchoKeepsakeReplayControl biome={biome} interactions={interactions} />
+        </div>
         {subject === undefined ? (
           <p className="fixed-room-state">Choose the first room to start this biome.</p>
         ) : subject.kind === 'frontier' && sourceOccurrence === undefined ? (
@@ -594,6 +616,7 @@ export function BiomeWorkspace({
         ) : (
           <BiomeInspectorNode
             navigationRevision={semanticNavigationRevision}
+            pastPlanEnd={pastPlanEnd}
             frontier={biome.frontier}
             interactions={interactions}
             label={inspectorTitle}

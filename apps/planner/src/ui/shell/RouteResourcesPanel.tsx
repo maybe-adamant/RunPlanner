@@ -53,7 +53,7 @@ export function RouteResourcesPanel({ route }: { readonly route: WorkspaceRoute 
                 <span className="route-trait-meta">
                   {placement === undefined
                     ? 'No selected success'
-                    : `${placement.biomeKey} · ${placement.locationLabel}`}
+                    : `${placement.biomeKey} · ${placement.locationLabel}${placement.pastPlanEnd === true ? ' · Past the plan end' : ''}`}
                 </span>
               </div>
               {placement === undefined ? null : (

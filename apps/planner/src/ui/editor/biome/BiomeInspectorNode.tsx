@@ -10,6 +10,7 @@ import {
   type WorkspaceNode,
   type WorkspaceOccurrenceStageOutgoing,
   type WorkspacePhantomExitControl,
+  type WorkspaceRoomPlanEnd,
   type WorkspaceRoomTab,
 } from '@planner/projections/structured-workspace';
 import {
@@ -30,6 +31,8 @@ import {
   StartRoomIdentityEditor,
 } from './BiomeInspectorControls';
 import { BiomeWorkspaceContractError } from './workspaceContract';
+import { PlanEndAction } from './PlanEndAction';
+import { ReadOnlyFindingScope } from '@planner/ui/feedback/useFindingTarget';
 
 interface BiomeInspectorNodeProps {
   readonly frontier: WorkspaceAuthoringFrontier | null;
@@ -47,6 +50,17 @@ interface BiomeInspectorNodeProps {
   readonly navigationRevision?: number;
   readonly findingNavigationRevision?: number;
   readonly sourceOccurrence?: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
+  /** The biome lies past the plan end, so its Hub is read-only. */
+  readonly pastPlanEnd?: boolean;
+}
+
+/** The way a room's plan-end action sits under doors that have no footer of their own. */
+function PlanEndRow({ planEnd }: { readonly planEnd: WorkspaceRoomPlanEnd | undefined }) {
+  return planEnd === undefined ? null : (
+    <div className="workbench-action-row">
+      <PlanEndAction planEnd={planEnd} />
+    </div>
+  );
 }
 
 function OccurrenceOutgoing({
@@ -55,6 +69,7 @@ function OccurrenceOutgoing({
   interactions,
   outgoing,
   phantomExit,
+  planEnd,
 }: {
   /** A fixed boss door authors or reports its pool alongside its destination. */
   readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreControl;
@@ -63,6 +78,8 @@ function OccurrenceOutgoing({
   readonly outgoing: WorkspaceOccurrenceStageOutgoing;
   /** The room's only door it authors itself; the Hub or its side visits own the rest. */
   readonly phantomExit?: WorkspacePhantomExitControl;
+  /** The room's plan-end action, beside its way on. */
+  readonly planEnd?: WorkspaceRoomPlanEnd | undefined;
 }): ReactNode {
   const notes = useDoorNotes(
     outgoing.kind === 'topologyOwned'
@@ -91,6 +108,7 @@ function OccurrenceOutgoing({
             </div>
           )}
         </div>
+        <PlanEndRow planEnd={planEnd} />
       </section>
     );
   switch (outgoing.kind) {
@@ -101,7 +119,17 @@ function OccurrenceOutgoing({
     case 'frontier':
       return (
         <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
-          <AuthoringFrontier frontier={outgoing.frontier} interactions={interactions} />
+          <AuthoringFrontier
+            frontier={outgoing.frontier}
+            interactions={interactions}
+            planEnd={planEnd}
+          />
+        </section>
+      );
+    case 'planEnd':
+      return (
+        <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
+          <PlanEndRow planEnd={planEnd} />
         </section>
       );
     case 'fixedRoom': {
@@ -110,6 +138,7 @@ function OccurrenceOutgoing({
         return (
           <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
             <p className="fixed-room-state">{destination.message}</p>
+            <PlanEndRow planEnd={planEnd} />
           </section>
         );
       return (
@@ -136,6 +165,7 @@ function OccurrenceOutgoing({
               />
             </div>
           </div>
+          <PlanEndRow planEnd={planEnd} />
         </section>
       );
     }
@@ -155,6 +185,7 @@ function OccurrenceOutgoing({
           <p className="fixed-room-state">
             {outgoing.kind === 'blockedOrUnentered' ? outgoing.message : outgoing.label}
           </p>
+          <PlanEndRow planEnd={planEnd} />
         </section>
       );
   }
@@ -185,9 +216,37 @@ function OccurrenceInspector({
   readonly node: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
 }) {
   const dispatch = useAppDispatch();
+  const planEnd = node.planEnd;
+  // From the end room on the doors are read-only, so the plan-end action sits
+  // outside them: the end can still be removed, or moved to a later room.
+  const pastEnd = planEnd?.relation === 'pastEnd';
+  const doorsPlanEnd = planEnd?.relation === undefined ? planEnd : undefined;
+  const doors =
+    outgoingDecision === undefined ? (
+      outgoing === undefined ? undefined : (
+        <OccurrenceOutgoing
+          {...(node.room.bossDoorRewardStore === undefined
+            ? {}
+            : { bossDoorRewardStore: node.room.bossDoorRewardStore })}
+          idPrefix={`occurrence-${node.room.occurrenceId}`}
+          interactions={interactions}
+          outgoing={outgoing}
+          {...(node.room.phantomExit === undefined ? {} : { phantomExit: node.room.phantomExit })}
+          planEnd={doorsPlanEnd}
+        />
+      )
+    ) : (
+      <BatchWorkbench
+        interactions={interactions}
+        label="Outgoing doors"
+        node={outgoingDecision}
+        planEnd={doorsPlanEnd}
+      />
+    );
   return (
     <>
       <OccurrenceWorkbench
+        {...(planEnd?.relation === undefined ? {} : { planEndRelation: planEnd.relation })}
         headerActions={
           node.hubTimeline === undefined ? undefined : (
             <button
@@ -216,26 +275,19 @@ function OccurrenceInspector({
         initialTab={roomTab ?? (defaultToDoors ? 'doors' : 'overview')}
         {...(sideRoomSlotKey === undefined ? {} : { initialSideRoomSlotKey: sideRoomSlotKey })}
         doors={
-          outgoingDecision === undefined ? (
-            outgoing === undefined ? undefined : (
-              <OccurrenceOutgoing
-                {...(node.room.bossDoorRewardStore === undefined
-                  ? {}
-                  : { bossDoorRewardStore: node.room.bossDoorRewardStore })}
-                idPrefix={`occurrence-${node.room.occurrenceId}`}
-                interactions={interactions}
-                outgoing={outgoing}
-                {...(node.room.phantomExit === undefined
-                  ? {}
-                  : { phantomExit: node.room.phantomExit })}
-              />
-            )
+          doorsPlanEnd !== undefined || planEnd === undefined ? (
+            doors
           ) : (
-            <BatchWorkbench
-              interactions={interactions}
-              label="Outgoing doors"
-              node={outgoingDecision}
-            />
+            <>
+              {pastEnd ? (
+                <div className="past-plan-end-content" inert>
+                  {doors}
+                </div>
+              ) : (
+                doors
+              )}
+              <PlanEndRow planEnd={planEnd} />
+            </>
           )
         }
       />
@@ -257,8 +309,8 @@ export function BiomeInspectorNode(props: BiomeInspectorNodeProps) {
       ) : (
         <OccurrenceInspector {...props} defaultToDoors node={props.sourceOccurrence} />
       );
-    case 'hubDecision':
-      return (
+    case 'hubDecision': {
+      const hub = (
         <HubDecisionWorkbench
           {...(props.hubTab === undefined ? {} : { initialTab: props.hubTab })}
           {...(props.navigationRevision === undefined
@@ -271,5 +323,7 @@ export function BiomeInspectorNode(props: BiomeInspectorNodeProps) {
           node={node}
         />
       );
+      return props.pastPlanEnd === true ? <ReadOnlyFindingScope>{hub}</ReadOnlyFindingScope> : hub;
+    }
   }
 }

@@ -6,6 +6,7 @@ import type { WorkspaceRoute } from '@planner/projections/structured-workspace';
 import { FindingCount } from '../feedback/EvaluationFeedback';
 import { DreamItineraryControl } from './DreamItineraryControl';
 import { RoutePrefixControl } from './RoutePrefixControl';
+import { RoutePlanEndControl } from './RoutePlanEndControl';
 import { RouteRunModifiers } from './RouteRunModifiers';
 
 /** The plan's extent and its run modifiers, with the whole-plan status. */
@@ -29,8 +30,13 @@ export function RouteScopePanel({
 }) {
   const configuredBiomeCount = workspaceRoute.biomes.length;
   const lastConfiguredBiome = navigation.biomePanels[configuredBiomeCount - 1]?.label;
+  const planEnd = workspaceRoute.planEnd;
   const routeExtent =
-    lastConfiguredBiome === undefined ? 'No biomes' : `Through ${lastConfiguredBiome}`;
+    planEnd !== undefined && planEnd.unreached !== true
+      ? `Ends in ${planEnd.biomeLabel}`
+      : lastConfiguredBiome === undefined
+        ? 'No biomes'
+        : `Through ${lastConfiguredBiome}`;
   return (
     <section className="route-overview route-scope-panel" aria-label="Route">
       <header className="panel-heading">
@@ -49,6 +55,9 @@ export function RouteScopePanel({
           configuredBiomeCount={configuredBiomeCount}
           routeKey={workspaceRoute.routeKey}
         />
+        {planEnd === undefined ? null : (
+          <RoutePlanEndControl planEnd={planEnd} route={workspaceRoute} />
+        )}
       </div>
       <RouteRunModifiers replacementKey={replacementKey} workspaceRoute={workspaceRoute} />
     </section>

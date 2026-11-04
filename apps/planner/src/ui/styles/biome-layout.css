@@ -705,3 +705,42 @@
   width: 1.2rem;
   height: 1.2rem;
 }
+
+.biome-rail-stop[data-plan-end='end']::after {
+  border-color: var(--plan-end);
+  border-radius: 2px;
+  background: var(--plan-end);
+}
+
+:is(.biome-rail-stop, .biome-hub-rail-visit, .biome-hub-rail-side-visit)[data-plan-end='end']
+  > .biome-rail-node
+  .biome-rail-status {
+  color: var(--plan-end);
+  font-weight: 600;
+}
+
+:is(.biome-rail-stop, .biome-hub-rail-visit, .biome-hub-rail-side-visit)[data-plan-end='pastEnd']
+  > .biome-rail-node {
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.biome-rail-stop[data-plan-end='pastEnd']::before {
+  background: repeating-linear-gradient(#3f3d48 0 4px, transparent 4px 8px);
+}
+
+.biome-completion-node[data-plan-end='pastEnd'] {
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.biome-completion-plan-end {
+  margin-inline-start: auto;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.biome-completion-node[data-plan-end='end'] .biome-completion-plan-end {
+  color: var(--plan-end);
+  font-weight: 600;
+}

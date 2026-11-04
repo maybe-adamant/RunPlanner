@@ -85,6 +85,15 @@ export function DialogFindingScope({
   return <feedback.Provider value={value}>{children}</feedback.Provider>;
 }
 
+const alwaysLocked: NonNullable<TargetFeedback['authoringReadiness']> = () => 'locked';
+
+/** Content past the plan end: every bound control inside is read-only. */
+export function ReadOnlyFindingScope({ children }: { readonly children: ReactNode }) {
+  const outer = useContext(feedback);
+  const value = useMemo(() => ({ ...outer, authoringReadiness: alwaysLocked }), [outer]);
+  return <feedback.Provider value={value}>{children}</feedback.Provider>;
+}
+
 export interface FindingTargetProps {
   readonly 'aria-disabled': true | undefined;
   readonly 'data-authoring-locked': true | undefined;
