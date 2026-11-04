@@ -1363,6 +1363,23 @@ label.draft-row-label {
   border-color: var(--selection-accent);
 }
 
+/* Picks the draft can never take, apart from the giver lines, with their one removal. */
+.draft-basket-unavailable {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.draft-basket-unavailable > .draft-basket-line {
+  flex: 1;
+  min-width: 0;
+}
+
+.draft-basket-row-label {
+  color: var(--attention);
+  white-space: nowrap;
+}
+
 /* Each giver's traits follow its icon; a thin rule separates givers. */
 .draft-basket-giver {
   display: inline-flex;

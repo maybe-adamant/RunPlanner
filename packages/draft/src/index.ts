@@ -6,7 +6,7 @@ export {
   type DraftKeepsakeOptions,
   type DraftSpec,
 } from './spec';
-export { draftRefusals, type DraftRefusal } from './refusals';
+export { draftRefusals, draftUnavailableTraitKeys, type DraftRefusal } from './refusals';
 export { draftGodBoonBudget } from './budget';
 export {
   assessDraftGods,

@@ -21,6 +21,8 @@ import {
   draftSourceQueues,
   draftKeepsakeOptions,
   draftPlannedBiomeKeys,
+  draftRefusals,
+  draftUnavailableTraitKeys,
   draftWorldOptions,
   type DraftCapUsage,
   type DraftGodAssessment,
@@ -267,6 +269,22 @@ export function withDraftBasketTraitToggled(
   };
 }
 
+/** Removes these traits from every list, dropping a list left empty. */
+export function withoutDraftBasketTraits(
+  draft: AuthoredDraftSpec,
+  traitKeys: readonly string[],
+): AuthoredDraftSpec {
+  return {
+    ...draft,
+    basketByGiver: Object.fromEntries(
+      Object.entries(draft.basketByGiver).flatMap(([giverKey, list]) => {
+        const kept = list.filter((key) => !traitKeys.includes(key));
+        return kept.length === 0 ? [] : [[giverKey, kept]];
+      }),
+    ),
+  };
+}
+
 /** Clears one giver's list, Duos it hosts included. */
 export function withDraftBasketGiverCleared(
   draft: AuthoredDraftSpec,
@@ -391,6 +409,11 @@ export interface DraftBasketChipGroup {
 export interface DraftBasketProjection {
   readonly tabs: readonly DraftBasketTab[];
   readonly chipGroups: readonly DraftBasketChipGroup[];
+  /** The panel's god, bonus and NPC lines: the chip groups without unavailable picks. */
+  readonly lineGroups: readonly DraftBasketChipGroup[];
+  /** Picks the draft refuses whatever the other picks, by giver, on their own line. */
+  readonly unavailableGroups: readonly DraftBasketChipGroup[];
+  readonly unavailableTraitKeys: readonly string[];
 }
 
 function refusalHint(
@@ -741,9 +764,31 @@ export function projectDraftBasket(
   ];
   const rowOrder: readonly DraftBasketChipGroup['row'][] = ['gods', 'bonus', 'npcs'];
   const chipGroups = rowOrder.flatMap((row) => groups.filter((group) => group.row === row));
+  const unavailableTraitKeys = draftUnavailableTraitKeys(draftRefusals(catalog, project, spec));
+  // Unavailable picks show unordered, without their giver's order notes.
+  const split = (available: boolean) =>
+    Object.freeze(
+      chipGroups.flatMap((group) => {
+        const chips = group.chips.filter(
+          (chip) => unavailableTraitKeys.includes(chip.traitKey) !== available,
+        );
+        if (chips.length === 0) return [];
+        if (available && chips.length === group.chips.length) return [group];
+        return [
+          Object.freeze({
+            ...group,
+            chips: Object.freeze(chips),
+            ...(available ? {} : { queued: false, orderNotes: Object.freeze([]) }),
+          }),
+        ];
+      }),
+    );
   return Object.freeze({
     tabs: Object.freeze(tabs.map((tab) => Object.freeze(tab))),
     chipGroups: Object.freeze(chipGroups),
+    lineGroups: split(true),
+    unavailableGroups: split(false),
+    unavailableTraitKeys,
   });
 }
 

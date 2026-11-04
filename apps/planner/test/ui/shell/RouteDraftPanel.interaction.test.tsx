@@ -370,6 +370,40 @@ describe('Draft panel', () => {
     expect(basket()).toEqual({});
   });
 
+  it('moves unavailable picks to their own line and removes them all as one Undo step', () => {
+    const { application, catalog } = open();
+    chooseGods(['Zeus', 'Apollo']);
+    const basket = () =>
+      application.store.getState().projectWorkspace.history!.present.route.draft.basketByGiver;
+    const unavailable = () => screen.queryByRole('group', { name: 'Unavailable' });
+    const label = (key: string) => catalog.traits.byKey[key]!.label;
+    const dialog = openBasket();
+    for (const key of ['ZeusWeaponBoon', 'ApolloCastBoon'])
+      fireEvent.click(within(dialog).getByRole('button', { name: label(key) }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(unavailable()).toBeNull();
+
+    // Apollo leaves the pool, so its pick can no longer be drafted.
+    chooseGods(['Apollo']);
+    expect(draftButton().getAttribute('aria-disabled')).toBe('true');
+    expect(lineChips('God').map((chip) => chip.hint)).toEqual([label('ZeusWeaponBoon')]);
+    expect(
+      within(unavailable()!).getByRole('button', {
+        name: `Unavailable: ${label('ApolloCastBoon')}`,
+      }),
+    ).toBeTruthy();
+    const past = application.store.getState().projectWorkspace.history!.past.length;
+    fireEvent.click(within(unavailable()!).getByRole('button', { name: 'Remove all' }));
+    expect(basket()).toEqual({ Zeus: ['ZeusWeaponBoon'] });
+    expect(application.store.getState().projectWorkspace.history!.past.length).toBe(past + 1);
+    expect(draftButton().getAttribute('aria-disabled')).toBeNull();
+    expect(unavailable()).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(basket()).toEqual({ Zeus: ['ZeusWeaponBoon'], Apollo: ['ApolloCastBoon'] });
+    expect(unavailable()).not.toBeNull();
+  });
+
   it('adds basket traits, refuses a second trait for a held slot, and lists the selected NPCs', () => {
     const { catalog } = open();
     chooseGods(['Zeus', 'Hera']);

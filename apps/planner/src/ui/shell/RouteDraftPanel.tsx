@@ -35,6 +35,7 @@ import {
   projectDraftBudget,
   withDraftRackKeepsake,
   withDraftStoryNpcToggled,
+  withoutDraftBasketTraits,
   type DraftBasketChipGroup,
   type DraftBasketTabKey,
   type DraftRackSlot,
@@ -777,7 +778,7 @@ export function RouteDraftPanel({
               {basket === undefined || basket.chipGroups.length === 0 ? null : (
                 <div className="draft-basket-view">
                   {BASKET_ROWS.map(({ row, label }) => {
-                    const groups = basket.chipGroups.filter((group) => group.row === row);
+                    const groups = basket.lineGroups.filter((group) => group.row === row);
                     return groups.length === 0 ? null : (
                       <BasketLine
                         groups={groups}
@@ -791,7 +792,41 @@ export function RouteDraftPanel({
                       />
                     );
                   })}
-                  {basket.chipGroups.flatMap((group) =>
+                  {basket.unavailableGroups.length === 0 ? null : (
+                    <div
+                      aria-labelledby="draft-basket-unavailable-label"
+                      className="draft-basket-unavailable"
+                      role="group"
+                    >
+                      <span className="draft-basket-row-label" id="draft-basket-unavailable-label">
+                        Unavailable
+                      </span>
+                      <BasketLine
+                        groups={basket.unavailableGroups}
+                        label="Unavailable"
+                        onOpen={(giverKey) => {
+                          const group = basket.unavailableGroups.find(
+                            (candidate) => candidate.key === giverKey,
+                          );
+                          setBasketOpen(
+                            group === undefined
+                              ? { tab: basket.unavailableGroups[0]!.row }
+                              : { tab: group.row, giverKey: group.key },
+                          );
+                        }}
+                      />
+                      <button
+                        className="secondary-action action-compact"
+                        onClick={() =>
+                          replaceDraft(withoutDraftBasketTraits(draft, basket.unavailableTraitKeys))
+                        }
+                        type="button"
+                      >
+                        Remove all
+                      </button>
+                    </div>
+                  )}
+                  {basket.lineGroups.flatMap((group) =>
                     group.orderNotes.map((note) => (
                       <p className="draft-chip-group-note" key={note}>
                         {note}

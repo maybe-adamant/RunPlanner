@@ -147,3 +147,38 @@ export function draftRefusals(
   }
   return Object.freeze(refusals);
 }
+
+/**
+ * Basket picks the world or loadout never offers, whatever the other picks: an unknown trait,
+ * one whose giver (or a Duo's partner) is outside the world, a draft-illegal trait or a Hammer
+ * of another weapon or Aspect. Removing them is safe; caps, order, slots, the first pick and
+ * requirements depend on other choices and stay for the player to resolve.
+ */
+export function draftUnavailableTraitKeys(refusals: readonly DraftRefusal[]): readonly string[] {
+  return Object.freeze(
+    refusals.flatMap((refusal) =>
+      refusal.kind === 'unknownTrait' ||
+      (refusal.kind === 'basketTrait' && refusal.refusals.some(unavailable))
+        ? [refusal.traitKey]
+        : [],
+    ),
+  );
+}
+
+function unavailable(refusal: DraftTraitRefusal): boolean {
+  switch (refusal.kind) {
+    case 'giverNotInWorld':
+    case 'draftIllegal':
+    case 'wrongHammerLoadout':
+      return true;
+    case 'slotTaken':
+    case 'cap':
+    case 'totalCap':
+    case 'supplyCap':
+    case 'prerequisiteAfter':
+    case 'firstGodPick':
+    case 'firstOfferSlot':
+    case 'requirement':
+      return false;
+  }
+}

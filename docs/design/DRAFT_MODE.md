@@ -109,6 +109,14 @@ acquisition requirements admit, with its first-run god required as pool #1, no
 Hermes, Hammer, Selene, NPCs or racks, and a nullable loadout; a pool that
 leaves a god unreachable is refused.
 
+A basket pick the world or loadout never offers is unavailable: its giver, or a
+Duo's other god, is outside the world, it is draft-illegal, or it is a Hammer
+for another weapon or Aspect. Editing the world or loadout keeps such picks,
+and they refuse the draft like any other; Draft names them, so the player can
+remove them all in one edit. Refusals that depend on the other picks or their
+order (caps, slots, prerequisites, the first pick, requirements) are left for
+the player to resolve.
+
 The loadout is input; the draft generates the starting reward, the biomes and
 their rack equip results and the resource points. The starting keepsake's equip
 result is input when the player set one: the walk takes it where it is possible

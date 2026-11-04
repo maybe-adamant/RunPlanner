@@ -12,6 +12,7 @@ import {
   draftKeepsakeOptions,
   draftSourceQueues,
   draftRefusals,
+  draftUnavailableTraitKeys,
   draftWorldOptions,
   type DraftSpec,
 } from '../src';
@@ -526,6 +527,37 @@ describe('draft basket legality', () => {
       traitKey: 'ApolloSecondStageCastBoon',
       refusals: expect.arrayContaining([{ kind: 'giverNotInWorld' }]),
     });
+  });
+
+  it('names as unavailable only picks the world or loadout never offers', () => {
+    const dagger = route('Underworld', ['F', 'G', 'H', 'I'], {
+      weaponKey: 'WeaponDagger',
+      aspectKey: catalog.weapons.byKey.WeaponDagger!.defaultAspectKey,
+    });
+    const refused = refusals(dagger, {
+      world: { ...emptyWorld, godKeys: ['Zeus', 'Hestia'] },
+      basketByGiver: {
+        Zeus: ['ZeusWeaponBoon', 'ApolloSecondStageCastBoon'],
+        Hera: ['HeraWeaponBoon'],
+        WeaponUpgrade: ['StaffDoubleAttackTrait'],
+      },
+    });
+    // Zeus's Attack is refused only for the slot Hera's Attack also claims.
+    expect(refused).toContainEqual({
+      kind: 'basketTrait',
+      traitKey: 'ZeusWeaponBoon',
+      refusals: [{ kind: 'slotTaken', slot: 'Melee', traitKey: 'HeraWeaponBoon' }],
+    });
+    expect([...draftUnavailableTraitKeys(refused)].sort()).toEqual([
+      'ApolloSecondStageCastBoon',
+      'HeraWeaponBoon',
+      'StaffDoubleAttackTrait',
+    ]);
+    expect(
+      draftUnavailableTraitKeys(
+        refusals(underworld, { basketByGiver: { Zeus: ['ZeusWeaponBoon'] } }),
+      ),
+    ).toEqual([]);
   });
 
   it('caps each selected trait-giving NPC at one trait', () => {
