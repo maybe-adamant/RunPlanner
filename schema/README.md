@@ -32,11 +32,15 @@ npm run test:schema:migrate
 ## History
 
 Revision 101.1 adds the route's optional `planEnd` (the room the plan ends
-after) and a challenge-switch host's optional `challengeSwitch` leaf with its
-`interactChallengeSwitch` action and claim pickups, and the plan wire gains
-the observed switch, its guide row and the shape of a plan that ends early. A
-revision changes no saved shape, so it has no transition; plans sent under
-101.0 read as outdated.
+after) and a challenge-switch host's optional `challengeSwitch` leaf (variant,
+pressed outcome, bonus Nectar, Time gold, Elite pin and encounter
+customization) with its `interactChallengeSwitch` action and its `reward` and
+`nectar` claim pickups. The plan wire gains `overview.challengeSwitch`, the
+switch's guide row and claim acquisitions, and the shape of a plan that ends
+before its biome's terminal room (a terminal end room and a partial Hub
+block); publication holds back a plan that ends that way or enters a switch
+room until the game module runs them. A revision changes no saved shape, so
+it has no transition; plans sent under 101.0 read as outdated.
 
 Schema 101 makes each phase whose binding can field a Nemesis bet combat own
 a complete `nemesisBetOutcomeByPhase` entry (`win`, `tie` or `loss`), and

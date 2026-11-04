@@ -666,7 +666,8 @@ At the claim, Perfect Clear after a hit gives the Onion
 (`RoomRewardConsolationPrize`); Time gives gold, 100 for 8 seconds then
 falling to a floor of 10, times the money multiplier; Elite has no fail state.
 A fight without damage also rolls a 5% bonus Nectar (`GiftDrop`) for every
-kind, spawned bare, without a `RunProgress` level. Rewards spawn directly: no
+kind, spawned bare, without a `RunProgress` level (owner-settled: kept, with no
+level-up). Rewards spawn directly: no
 counted store draw and no offer history. Sea Star duplicates apply to the
 consumables (Pom, Max Health, Max Magick, Path of Stars, Onion, Nectar), not
 to Time's gold; the Nectar is also `LastRewardEligible`, Time Piece

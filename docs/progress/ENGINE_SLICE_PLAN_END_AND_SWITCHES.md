@@ -13,31 +13,33 @@ section and the run import's settled decisions in `RECORD_MODE.md`.
 
 ## Release rule (owner, 2026-11-04)
 
-P6 and P7 ship in the same release. Until P7 lands, a plan whose route is
-valid through a cut plan end (mid-biome, or inside a Hub stay) is not
-publishable: the route summary carries `executionPlanBlock:
-'planEndAwaitsGameModule'`, `eligibleForExecutionPlan` is false, the
-publication entry `assembleExecutionProduct` refuses it with that compiler
-code, and the send button reads "Sending a plan that ends early needs the next
-game module update." An end at a biome's terminal room is the ordinary prefix
-end and publishes. The route assembly below the entry
-(`assembleRouteExecutionProduct`) still builds the truncated wire, witnessed in
-`packages/planner-engine/test/execution-plan/plan-end.test.ts`.
+P6 and P7 ship in the same release. Until P7 lands, two kinds of valid plan
+are not publishable; the route summary carries `executionPlanBlock`,
+`eligibleForExecutionPlan` is false, the publication entry
+`assembleExecutionProduct` refuses with that compiler code, and the send
+button names it:
 
-**Remove in P7**, once the module runs that wire: the summary's
-`executionPlanBlock` and the `validEnd === 'cut'` branch in `summarizeRoute`
-(eligibility becomes "valid through its end" again), the entry's refusal and
-the `planEndAwaitsGameModule` compiler code, the app's copy and
-`GameSendProject.executionPlanBlock`, the gate witnesses, and the sentence in
-`EXECUTION_PROTOCOL.md` and `SIMULATION_AND_VALIDATION.md` that names the
-block. Fold `assembleRouteExecutionProduct` back into
-`assembleExecutionProduct`.
+- `planEndAwaitsGameModule`: valid through a cut plan end (mid-biome, or
+  inside a Hub stay). Copy: "Sending a plan that ends early needs the next
+  game module update." An end at a biome's terminal room is the ordinary
+  prefix end and publishes.
+- `challengeSwitchAwaitsGameModule`: a published biome enters a room with an
+  observed challenge switch (its `rewards.challengeSwitchEncounters`). Copy:
+  "Sending a plan with a challenge switch needs the next game module update."
 
-Not gated: a plan with an observed challenge switch publishes under 101.1 with
-`overview.challengeSwitch`, an `interactChallengeSwitch` guide row and claim
-acquisitions from the `ChallengeSwitchLoot` producer. The current module's
-strict decoder refuses those keys, so such a plan fails to load in game until
-P7 consumes them.
+The route assembly below the entry (`assembleRouteExecutionProduct`) still
+builds both wires, witnessed in
+`packages/planner-engine/test/execution-plan/plan-end.test.ts` and
+`packages/planner-engine/test/simulation/challenge-switch.test.ts`.
+
+**Remove in P7**, once the module runs those wires: `ExecutionPlanBlock` and
+the summary's `executionPlanBlock`, the block branch in `summarizeRoute` and
+its `publishesChallengeSwitch` argument (eligibility becomes "valid through its
+end" again), the entry's refusal and both compiler codes, the app's copy and
+`GameSendProject.executionPlanBlock`, the gate witnesses (plan-end and switch
+tests, `gamePanel.test.ts`), and the sentences in `EXECUTION_PROTOCOL.md` and
+`SIMULATION_AND_VALIDATION.md` that name the blocks. Fold
+`assembleRouteExecutionProduct` back into `assembleExecutionProduct`.
 
 ## Owner-settled decisions still governing P7
 
@@ -52,10 +54,18 @@ P7 consumes them.
 4. The end room's own door draws are not simulated, so its `beforeRoomExit`
    Run State lacks them: the module's end-room conformance must not compare
    reward stores.
+5. The bonus Nectar claim stays, with no level-up, as the game source spawns
+   it (owner, 2026-11-04).
 
 ## P6 — merge preparation (delivered 2026-11-04)
 
-- Publication gate (above), with engine and app witnesses.
+- Publication gates (above), with engine and app witnesses.
+- D: the Fields/Hub god fallback past exhaustion is witnessed at the batch's
+  offer resolution point (`test/reward-kernel/behavior.test.ts`): at the
+  four-god cap a repeat is refused while an acquired god is unshown and
+  accepted (any acquired god, never a fifth) once all four are shown. The
+  offer cohort passes every earlier offer of the batch to that same check. No
+  real five-Boon batch is authored: it needs a refilled or prioritized bag.
 - `schemaRevision` 101.0 → 101.1: the engine constant, the game module's
   admitted pair (`decoder.lua`, `execution-compatibility.json`) and the
   `schema/README.md` history; no transition. The legacy schema-100 test body
@@ -75,35 +85,37 @@ P7 consumes them.
 
 - Decoder and graph validation accept a terminal room that is not a biome
   completion room and a partial Hub block (no `finalHandoff`, departures
-  through the last visit only), then lift the publication gate.
+  through the last visit only), then lift the plan-end publication gate.
 - `overview.challengeSwitch`: realize the switch's existence, variant,
   encounter composition and Elite pin; the `interactChallengeSwitch` guide row
-  with its outcome; claim pickups from `ChallengeSwitchLoot`.
+  with its outcome; claim pickups from `ChallengeSwitchLoot`; then lift the
+  switch publication gate.
 - Add execution fixtures that carry a cut end, a partial Hub and an observed
   switch once the module decodes them (none exist yet, so the module's
   fixture tests stay green under 101.1).
 
 ## Remaining items (not delivered in P1–P6)
 
+- **C (both items) waits on a ruling.** Either wire key makes almost every
+  plan unreadable by this branch's module, whose decoder is strict: a store
+  fact sits on nearly every room's conformance and a cage outcome on every door
+  into a Fields room. Gating them would hold back almost every plan, and the
+  checked-in fixtures would carry them, failing `test:game-module`. Since the
+  101.1 bump is unreleased and P7 ships in the same release, both can land in
+  P7 beside the module's decoding with no second bump.
 - **C. Store fact**: a planner-published room-exit `rewardStores` conformance
   fact per comparable store (entries declared for another route and Secrets
-  excluded, as the import's `storeCounts` does). Not implemented; it would add
-  a wire key, so if it lands after this release it needs its own minor bump.
+  excluded, as the import's `storeCounts` does), selecting the
+  `beforeRoomExit` frame's `rewardStores`, omitted on a cut end room. Not
+  implemented.
 - **C. Cage outcome**: each Fields cage roll's published Min/Max outcome beside
   the count, so the module's steering is exact when `MaxCageRewards` clamps Max
-  to Min. Not implemented; same bump consequence.
-- **D. Fields/Hub god fallback witness** past exhaustion (engine only): a
-  Fields batch at the four-god cap with five or six Boons accepts a repeat at
-  cage 5 and refuses one at cage 4 while an unshown acquired god remains; the
-  same for the Ephyra board. Not written.
+  to Min. Not implemented.
 - **Recorder capture** the switch import would use (none recorded today): the
   entry save's `CurrentRoom.ChallengeSwitch`, the first post-room save's
   `CurrentRoom.ChallengeEncounter` (started, completed, ended early, damage,
   Time gold, roster, Elite name and attributes), or the hero's gold before and
   after the room.
-- **Owner to confirm**: the bonus Nectar spawns without a `RunProgress` level
-  (source: bare `CreateConsumableItem`), contrary to the earlier settled
-  "+1 level target".
 
 ## Equivalence and Draft corpus characterization
 

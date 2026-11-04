@@ -621,7 +621,9 @@ guide carries an informational `interactChallengeSwitch` row with the press's
 outcome, never a transaction; the claim pickups publish as ordinary
 acquisitions. The executor steers only the switch's existence, its encounter
 and its reward; everything else is proved by resulting state at the room's
-exit. The module does not consume the switch yet.
+exit. The game module does not run the switch yet, so publication refuses a
+plan that enters a room with an observed switch
+(`challengeSwitchAwaitsGameModule`).
 
 Eris is the same kind of boundary. Her talk is a guide row, not a transaction,
 and the planner's observation that she spawned is not on the wire; the executor
