@@ -3,6 +3,7 @@ import {
   createInfernalContractPedestalAddress,
   createShopOfferAddress,
   semanticAddressKey,
+  type OccurrenceAddress,
 } from '../../../authored-project/addresses';
 import { hermesShrinePurchaseAction } from '../../../authored-project/hermes-shrine-delivery';
 import {
@@ -17,7 +18,9 @@ import {
 } from '../../../authored-project/shop';
 import type { Catalog } from '../../../catalog-schema';
 import type { ShopOptionSelection } from '../../../reward-kernel';
+import type { ChallengeSwitchEntryAssessment } from '../../commerce/challenge-switch';
 import type {
+  ChallengeSwitchInteraction,
   ChampionItemInteraction,
   HermesShrineInteraction,
   HermesShrineInteractionOffer,
@@ -269,7 +272,33 @@ function championItemInteraction(
   });
 }
 
-/** What can be done with each reached room's World Shop, Shrine and Contract pedestal, by room. */
+/** The switch variants a host's entry could hold, each with the command that observes it. */
+function challengeSwitchInteraction(
+  origin: OccurrenceAddress,
+  assessment: ChallengeSwitchEntryAssessment,
+): ChallengeSwitchInteraction {
+  return Object.freeze({
+    sharedIssues: assessment.sharedIssues,
+    variants: Object.freeze(
+      assessment.variants.map((variant) =>
+        Object.freeze({
+          ...variant,
+          rollable: assessment.sharedIssues.length === 0 && variant.lock === undefined,
+          command: Object.freeze({
+            kind: 'ReplaceChallengeSwitch' as const,
+            occurrence: origin,
+            variantKey: variant.variantKey,
+          }),
+        }),
+      ),
+    ),
+  });
+}
+
+/**
+ * What can be done with each reached room's World Shop, Shrine and Contract
+ * pedestal, and which switch its entry could hold, by room.
+ */
 export function roomObjectInteractions(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
@@ -299,6 +328,18 @@ export function roomObjectInteractions(
         ...(worldShop === undefined ? {} : { worldShop }),
         ...(hermesShrine === undefined ? {} : { hermesShrine }),
         ...(championItem === undefined ? {} : { championItem }),
+      }),
+    );
+  }
+  // The switch is an Overview fact of entry, available even where the Timeline is unreached.
+  for (const [roomKey, assessment] of state.challengeSwitchAssessments) {
+    const room = authoredRoom(context, roomKey);
+    if (room === undefined) continue;
+    interactions.set(
+      roomKey,
+      Object.freeze({
+        ...interactions.get(roomKey),
+        challengeSwitch: challengeSwitchInteraction(room.origin, assessment),
       }),
     );
   }

@@ -1149,6 +1149,13 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
               semanticAddressKey(event.origin),
               encounterEntryVowRanks(enteredBranch.state),
             ),
+      challengeSwitchAssessments:
+        entered.challengeSwitchAssessment === undefined
+          ? state.challengeSwitchAssessments
+          : new Map(state.challengeSwitchAssessments).set(
+              semanticAddressKey(entered.challengeSwitchAssessment.origin),
+              entered.challengeSwitchAssessment.assessment,
+            ),
       hermesShrineAssessments:
         shrine === undefined
           ? state.hermesShrineAssessments

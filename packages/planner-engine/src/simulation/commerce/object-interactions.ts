@@ -67,11 +67,28 @@ export interface ChampionItemInteraction {
     | { readonly locked: ChampionItemCollectLock };
 }
 
+/**
+ * The challenge switch a host's entry could hold: each variant, rollable when
+ * no shared spawn rule breaks and it has no lock, with the command observing it.
+ */
+export interface ChallengeSwitchInteraction {
+  readonly sharedIssues: import('./challenge-switch').ChallengeSwitchEntryAssessment['sharedIssues'];
+  readonly variants: readonly {
+    readonly variantKey: string;
+    readonly switchKind: import('../../catalog-schema').ChallengeSwitchKind;
+    readonly rollable: boolean;
+    readonly lock?: import('./challenge-switch').ChallengeSwitchVariantLock;
+    readonly command: CommandOf<'ReplaceChallengeSwitch'>;
+  }[];
+}
+
 /** A room's object interactions; an object whose sequence is unreached has none. */
 export interface RoomObjectInteractions {
   readonly worldShop?: WorldShopInteraction;
   readonly hermesShrine?: HermesShrineInteraction;
   readonly championItem?: ChampionItemInteraction;
+  /** Present at every entered switch host. */
+  readonly challengeSwitch?: ChallengeSwitchInteraction;
 }
 
 export interface RoomObjectInteractionArtifacts {

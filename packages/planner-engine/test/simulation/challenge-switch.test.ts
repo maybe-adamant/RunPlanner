@@ -18,6 +18,7 @@ import {
 import {
   createPreparedProjectCandidateSession,
   goldLedgerForProjectEvaluationAssembly,
+  roomObjectInteractionsForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -25,7 +26,8 @@ import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoint
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 
 import {
-  assessChallengeSwitchPlacement,
+  assessChallengeSwitchEntry,
+  challengeSwitchPlacementIssues,
   type ChallengeSwitchEntryFacts,
 } from '../../src/simulation/commerce/challenge-switch';
 import type { RequirementEvaluationContext } from '../../src/requirements/evaluator';
@@ -194,15 +196,16 @@ describe('challenge switch spawn rules', () => {
       occupants: [],
       requirements: {
         counters: { upgradableTraitCount },
+        records: { useRecord: {} },
+        currentRoomShopOptionNames: new Set<string>(),
+        flags: { allSpellInvested: false },
       } as unknown as RequirementEvaluationContext,
     });
     const assess = (count: number) =>
-      assessChallengeSwitchPlacement(
+      challengeSwitchPlacementIssues(
         catalog,
-        'F_Combat06',
-        2,
+        assessChallengeSwitchEntry(catalog, 2, facts(count)),
         { variantKey: 'PerfectClearChallengeSwitch_Pom', hitless: true, nectarDropped: false },
-        facts(count),
       );
     expect(assess(0)).toEqual([
       { reason: 'variantUnavailable', variantKey: 'PerfectClearChallengeSwitch_Pom' },
@@ -399,5 +402,52 @@ describe('challenge switch claims', () => {
         ]),
       },
     });
+  });
+});
+
+describe('challenge switch variant query', () => {
+  const at = (project: ProjectDocument, biomeKey: string, occurrenceId: string) =>
+    roomObjectInteractionsForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, project),
+      createOccurrenceAddress(
+        createBiomeAddress(project.route.routeKey, biomeKey),
+        createOccurrenceId(occurrenceId),
+      ),
+    )?.challengeSwitch;
+  const rollable = (project: ProjectDocument, biomeKey: string, occurrenceId: string) =>
+    at(project, biomeKey, occurrenceId)
+      ?.variants.filter((variant) => variant.rollable)
+      .map((variant) => variant.variantKey);
+
+  it('offers every host its rollable variants at entry, before any switch is observed', () => {
+    expect(rollable(golden(), 'F', 'golden-f-b5-e1')).toEqual([
+      'TimeChallengeSwitch_Money',
+      'PerfectClearChallengeSwitch_Pom',
+      'PerfectClearChallengeSwitch_MaxHealth',
+    ]);
+    expect(
+      at(golden(), 'F', 'golden-f-b5-e1')?.variants.find(
+        (variant) => variant.variantKey === 'EliteChallengeSwitch_Talent',
+      ),
+    ).toMatchObject({
+      rollable: false,
+      lock: 'kindUnavailable',
+      command: { kind: 'ReplaceChallengeSwitch', variantKey: 'EliteChallengeSwitch_Talent' },
+    });
+    expect(rollable(surface(), 'P', 'surface-p-6-1-p_combat10')).toEqual(
+      catalog.challengeSwitches.variants.values.map((variant) => variant.key),
+    );
+    // A room that cannot host a switch has no switch product.
+    expect(at(golden(), 'F', 'golden-f-start')).toBeUndefined();
+  });
+
+  it('offers nothing where a shared spawn rule breaks', () => {
+    const early = at(golden(), 'F', 'golden-f-b1-e1');
+    expect(early?.sharedIssues).toEqual([
+      { reason: 'biomeDepth', biomeDepthCache: 1, minimumBiomeDepth: 5 },
+    ]);
+    expect(early?.variants.some((variant) => variant.rollable)).toBe(false);
+    const spaced = withSwitch(golden(), 'F', 'golden-f-b5-e1', 'TimeChallengeSwitch_Money');
+    expect(rollable(spaced, 'F', 'golden-f-b7-e1')).toEqual([]);
   });
 });

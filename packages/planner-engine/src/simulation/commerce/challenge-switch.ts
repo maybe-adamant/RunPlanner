@@ -1,9 +1,6 @@
 import type { Catalog, ChallengeSwitchKind } from '../../catalog-schema';
 import type { AuthoredChallengeSwitch } from '../../authored-project/model';
-import {
-  challengeSwitchHost,
-  resolveChallengeSwitch,
-} from '../../authored-project/acquisition/challenge-switch';
+import { resolveChallengeSwitch } from '../../authored-project/acquisition/challenge-switch';
 import {
   evaluateRequirement,
   type RequirementEvaluationContext,
@@ -52,71 +49,99 @@ function roomsSinceLastSwitch(
   return undefined;
 }
 
+/** Why native could not roll one variant at this entry, beside the shared rules. */
+export type ChallengeSwitchVariantLock = 'kindUnavailable' | 'variantUnavailable';
+
 /**
- * Whether native `HandleSecretSpawns` could have placed this switch on entry:
- * the shared spawn requirements, a free anchor after the Well, Pool and
- * Shrine took theirs, and the kind's and variant's own gates. Each broken rule
- * is one issue; an empty result is an eligible placement.
+ * What native `HandleSecretSpawns` could place at one host's entry: the shared
+ * spawn rules this entry breaks (the depth, the spacing and a free anchor after
+ * the Well, Pool and Shrine took theirs), and each variant with its own lock.
+ * A variant is rollable when no shared rule breaks and it has no lock.
  */
-export function assessChallengeSwitchPlacement(
+export interface ChallengeSwitchEntryAssessment {
+  readonly sharedIssues: readonly Extract<
+    ChallengeSwitchPlacementIssue,
+    { readonly reason: 'biomeDepth' | 'recentSwitch' | 'noFreeAnchor' }
+  >[];
+  readonly variants: readonly {
+    readonly variantKey: string;
+    readonly switchKind: ChallengeSwitchKind;
+    readonly lock?: ChallengeSwitchVariantLock;
+  }[];
+}
+
+export function assessChallengeSwitchEntry(
   catalog: Catalog,
-  gameName: string,
   anchorCount: number,
-  challengeSwitch: AuthoredChallengeSwitch,
   facts: ChallengeSwitchEntryFacts,
-): readonly ChallengeSwitchPlacementIssue[] {
+): ChallengeSwitchEntryAssessment {
   const switches = catalog.challengeSwitches;
-  const resolved = resolveChallengeSwitch(catalog, challengeSwitch.variantKey);
-  if (resolved === undefined || challengeSwitchHost(catalog, gameName) === undefined)
-    return Object.freeze([]);
-  const issues: ChallengeSwitchPlacementIssue[] = [];
+  const sharedIssues: ChallengeSwitchEntryAssessment['sharedIssues'][number][] = [];
   if (facts.biomeDepthCache < switches.minimumBiomeDepth)
-    issues.push({
+    sharedIssues.push({
       reason: 'biomeDepth',
       biomeDepthCache: facts.biomeDepthCache,
       minimumBiomeDepth: switches.minimumBiomeDepth,
     });
   const since = roomsSinceLastSwitch(facts.appearances);
   if (since !== undefined && since < switches.minimumRoomsSinceLast)
-    issues.push({
+    sharedIssues.push({
       reason: 'recentSwitch',
       roomsSinceLast: since,
       minimumRoomsSinceLast: switches.minimumRoomsSinceLast,
     });
   if (facts.occupants.length >= anchorCount)
-    issues.push({
+    sharedIssues.push({
       reason: 'noFreeAnchor',
       anchorCount,
       occupants: Object.freeze([...facts.occupants]),
     });
-  const { kind, variant } = resolved;
-  if (
-    (kind.minimumBiomeDepth !== undefined && facts.biomeDepthCache < kind.minimumBiomeDepth) ||
-    (kind.requirement !== undefined && !evaluateRequirement(kind.requirement, facts.requirements))
-  )
-    issues.push({ reason: 'kindUnavailable', switchKind: kind.key });
-  else if (
-    variant.requirement !== undefined &&
-    !evaluateRequirement(variant.requirement, facts.requirements)
-  )
-    issues.push({ reason: 'variantUnavailable', variantKey: variant.key });
-  return Object.freeze(issues.map((issue) => Object.freeze(issue)));
+  const kindLocked = new Map(
+    switches.kinds.values.map((kind) => [
+      kind.key,
+      (kind.minimumBiomeDepth !== undefined && facts.biomeDepthCache < kind.minimumBiomeDepth) ||
+        (kind.requirement !== undefined &&
+          !evaluateRequirement(kind.requirement, facts.requirements)),
+    ]),
+  );
+  return Object.freeze({
+    sharedIssues: Object.freeze(sharedIssues.map((issue) => Object.freeze(issue))),
+    variants: Object.freeze(
+      switches.variants.values.map((variant) => {
+        const lock: ChallengeSwitchVariantLock | undefined =
+          kindLocked.get(variant.switchKind) === true
+            ? 'kindUnavailable'
+            : variant.requirement !== undefined &&
+                !evaluateRequirement(variant.requirement, facts.requirements)
+              ? 'variantUnavailable'
+              : undefined;
+        return Object.freeze({
+          variantKey: variant.key,
+          switchKind: variant.switchKind,
+          ...(lock === undefined ? {} : { lock }),
+        });
+      }),
+    ),
+  });
 }
 
-/** The variants of one kind native could roll at this entry, in declaration order. */
-export function eligibleChallengeSwitchVariantKeys(
+/** Each spawn rule the observed switch breaks at its entry; empty when native could place it. */
+export function challengeSwitchPlacementIssues(
   catalog: Catalog,
-  switchKind: ChallengeSwitchKind,
-  requirements: RequirementEvaluationContext,
-): readonly string[] {
-  return Object.freeze(
-    catalog.challengeSwitches.variants.values
-      .filter(
-        (variant) =>
-          variant.switchKind === switchKind &&
-          (variant.requirement === undefined ||
-            evaluateRequirement(variant.requirement, requirements)),
-      )
-      .map((variant) => variant.key),
+  assessment: ChallengeSwitchEntryAssessment,
+  challengeSwitch: AuthoredChallengeSwitch,
+): readonly ChallengeSwitchPlacementIssue[] {
+  const resolved = resolveChallengeSwitch(catalog, challengeSwitch.variantKey);
+  const variant = assessment.variants.find(
+    (candidate) => candidate.variantKey === challengeSwitch.variantKey,
   );
+  if (resolved === undefined || variant === undefined) return Object.freeze([]);
+  return Object.freeze([
+    ...assessment.sharedIssues,
+    ...(variant.lock === 'kindUnavailable'
+      ? [Object.freeze({ reason: 'kindUnavailable' as const, switchKind: variant.switchKind })]
+      : variant.lock === 'variantUnavailable'
+        ? [Object.freeze({ reason: 'variantUnavailable' as const, variantKey: variant.variantKey })]
+        : []),
+  ]);
 }

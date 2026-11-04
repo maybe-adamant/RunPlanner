@@ -43,7 +43,12 @@ import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
 import { erisSpawnFindings } from './eris-interacted';
-import { assessChallengeSwitchPlacement } from '../../../commerce/challenge-switch';
+import {
+  assessChallengeSwitchEntry,
+  challengeSwitchPlacementIssues,
+  type ChallengeSwitchEntryAssessment,
+} from '../../../commerce/challenge-switch';
+import { challengeSwitchHost } from '../../../../authored-project/acquisition/challenge-switch';
 import { isDeliveryFlushHost } from '../../../../authored-project/hermes-shrine-delivery';
 import type {
   DerivedAcquisitionEntryFrontier,
@@ -66,6 +71,11 @@ export interface RoomEnteredTransition {
   readonly stygianWellAssessment?: {
     readonly origin: OccurrenceAddress;
     readonly entry: StygianWellEntryCandidateContext;
+  };
+  /** What native could place at a switch host's entry, observed switch or not. */
+  readonly challengeSwitchAssessment?: {
+    readonly origin: OccurrenceAddress;
+    readonly assessment: ChallengeSwitchEntryAssessment;
   };
   readonly runStateCheckpoint?: {
     readonly owner: ReturnType<typeof createRoomRunStateCheckpointAddress>;
@@ -303,17 +313,19 @@ export function applyRoomEnteredTransition(
   if (dueDeliveries !== undefined) findings.push(...dueDeliveries.findings);
   if (room !== undefined)
     findings.push(...erisSpawnFindings(catalog, room, next, findingChronology));
-  if (room?.challengeSwitch !== undefined && next !== undefined) {
+  let challengeSwitchAssessment: RoomEnteredTransition['challengeSwitchAssessment'];
+  if (
+    room !== undefined &&
+    next !== undefined &&
+    challengeSwitchHost(catalog, room.gameName) !== undefined
+  ) {
     const declaration = catalog.rooms.byKey[room.gameName];
     const entry = roomView?.entry;
     if (declaration === undefined || entry === undefined)
       throw new BiomeRewardSimulationContractError(`${room.gameName} has no switch entry frontier`);
-    const owner = createRoomFeatureAddress(room.origin, { kind: 'challengeSwitch' });
-    for (const issue of assessChallengeSwitchPlacement(
+    const assessment = assessChallengeSwitchEntry(
       catalog,
-      room.gameName,
       declaration.challengeSwitchAnchorCount ?? 0,
-      room.challengeSwitch,
       {
         biomeDepthCache: entry.ledgers.counters.biomeDepthCache,
         appearances: entry.ledgers.roomAppearances,
@@ -332,14 +344,19 @@ export function applyRoomEnteredTransition(
           hubBoardLookups: 'consulted',
         }).requirements,
       },
-    ))
-      findings.push(
-        Object.freeze({
-          finding: rewardFinding('challengeSwitchPlacementUnavailable', owner, issue),
-          region: ownerRegion(room.origin),
-          chronology: findingChronology,
-        }),
-      );
+    );
+    challengeSwitchAssessment = Object.freeze({ origin: room.origin, assessment });
+    if (room.challengeSwitch !== undefined) {
+      const owner = createRoomFeatureAddress(room.origin, { kind: 'challengeSwitch' });
+      for (const issue of challengeSwitchPlacementIssues(catalog, assessment, room.challengeSwitch))
+        findings.push(
+          Object.freeze({
+            finding: rewardFinding('challengeSwitchPlacementUnavailable', owner, issue),
+            region: ownerRegion(room.origin),
+            chronology: findingChronology,
+          }),
+        );
+    }
   }
   if (
     room !== undefined &&
@@ -541,6 +558,7 @@ export function applyRoomEnteredTransition(
     hermesShrineDeliveryPlacementRequired: dueDeliveries?.placementRequired ?? false,
     ...(hermesShrineAssessment === undefined ? {} : { hermesShrineAssessment }),
     ...(stygianWellAssessment === undefined ? {} : { stygianWellAssessment }),
+    ...(challengeSwitchAssessment === undefined ? {} : { challengeSwitchAssessment }),
     ...(checkpoint === undefined ? {} : { runStateCheckpoint: checkpoint }),
   });
 }

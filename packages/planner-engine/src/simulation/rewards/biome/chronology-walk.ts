@@ -112,6 +112,11 @@ export interface ChronologyWalkState {
   /** A seam stopped the walk at its own sequence. */
   readonly halted: boolean;
   readonly stygianWellAssessments: ReadonlyMap<string, StygianWellRoomAssessment>;
+  /** Each reached switch host's entry assessment, by room. */
+  readonly challengeSwitchAssessments: ReadonlyMap<
+    string,
+    import('../../commerce/challenge-switch').ChallengeSwitchEntryAssessment
+  >;
   readonly wellRefillRealizations: ReadonlyMap<string, WellRefillRealization>;
   /** Each reached purchase's price context in settlement order, by owner. */
   readonly purchasePriceContexts: ReadonlyMap<string, PurchasePriceContextPublication>;
@@ -220,6 +225,7 @@ export function createChronologyWalkState(
     branch,
     halted: false,
     stygianWellAssessments: new Map(),
+    challengeSwitchAssessments: new Map(),
     wellRefillRealizations: new Map(),
     purchasePriceContexts: new Map(),
     paidPurchaseRooms: new Set<string>(),
