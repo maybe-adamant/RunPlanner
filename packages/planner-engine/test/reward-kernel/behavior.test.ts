@@ -200,6 +200,33 @@ describe('source support', () => {
     ]);
   });
 
+  it('lets a Fields or Hub batch repeat a god only once the acquired gods are all shown', () => {
+    // Draw-order peers of one batch at the four-god cap: a non-Boon door reward,
+    // then Boon cages (or board doors). Five or six Boons need a bag the game
+    // refilled or a priority supplied; the god rule is the same either way.
+    const capped = facts(['AphroditeUpgrade', 'ApolloUpgrade', 'AresUpgrade', 'ZeusUpgrade']);
+    const boon = (source: string) => ({
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource' as const, source },
+    });
+    const supportedAfter = (shown: readonly string[], source: string) =>
+      isOfferSupportedAtResolutionPoint(rewardKernelCatalog, boon(source), capped, 'offer', {
+        priorOffers: [{ rewardType: 'MaxHealthDrop' }, ...shown.map(boon)],
+      });
+    // Cage 4 while Zeus is unshown: a repeat is refused, Zeus is the only god.
+    const firstThree = ['AphroditeUpgrade', 'ApolloUpgrade', 'AresUpgrade'];
+    expect(supportedAfter(firstThree, 'ApolloUpgrade')).toBe(false);
+    expect(supportedAfter(firstThree, 'HestiaUpgrade')).toBe(false);
+    expect(supportedAfter(firstThree, 'ZeusUpgrade')).toBe(true);
+    // Cage 5 after all four: the exclusions empty the pool, so the game's retry
+    // without exclusions offers any acquired god again, never a fifth god.
+    const allFour = [...firstThree, 'ZeusUpgrade'];
+    for (const source of allFour) expect(supportedAfter(allFour, source)).toBe(true);
+    expect(supportedAfter(allFour, 'HestiaUpgrade')).toBe(false);
+    // Cage 6 after a repeat at cage 5 keeps the same fallback.
+    expect(supportedAfter([...allFour, 'ApolloUpgrade'], 'ApolloUpgrade')).toBe(true);
+  });
+
   it('defers Blind Box hidden-source support from shop generation to acquisition', () => {
     const blindBox = {
       rewardType: 'BlindBoxLoot',
