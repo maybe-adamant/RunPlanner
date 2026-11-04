@@ -33,6 +33,7 @@ describe.skipIf(captureDirectory === undefined || fixtureName === undefined)(
   () => {
     it('writes the capture record through the run-record codec', async () => {
       const savedValuePaths = runRecordSavedValuePaths(catalog);
+      const primaryWeapons = new Set(catalog.weapons.values.map((weapon) => weapon.key));
       const files = readdirSync(captureDirectory!)
         .filter((name) => /^\d+-Profile\d+(_Temp)?\.sav$/.test(name))
         .sort();
@@ -41,6 +42,7 @@ describe.skipIf(captureDirectory === undefined || fixtureName === undefined)(
           decodeSaveFile(new Uint8Array(readFileSync(join(captureDirectory!, name)))),
           name.endsWith('_Temp.sav'),
           savedValuePaths,
+          primaryWeapons,
         ),
       );
       // The recorder's own run start and rewrites, as the application records the run.

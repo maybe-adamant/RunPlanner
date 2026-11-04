@@ -883,6 +883,25 @@ describe('run record builder', () => {
     expect(record.rooms[0]?.fields?.cages[0]?.encounter).not.toHaveProperty('skipped');
   });
 
+  it("records the run-start hero's weapon over the profile's Hub weapon", () => {
+    const start = save({ history: [], current: room('F_Opening01') });
+    const installed: SaveCheckpoint = {
+      ...start,
+      hero: {
+        ...start.hero!,
+        slotted: { Aspect: 'SuitMarkCritAspect' },
+        primaryWeapon: 'WeaponSuit',
+      },
+      profile: { ...start.profile, primaryWeapon: 'WeaponTorch' },
+    };
+    expect(buildRunRecord([installed]).loadout).toMatchObject({
+      weapon: 'WeaponSuit',
+      aspect: { name: 'SuitMarkCritAspect' },
+    });
+    // A save whose hero names no primary weapon keeps the profile's.
+    expect(buildRunRecord([start]).loadout.weapon).toBe('WeaponStaffSwing');
+  });
+
   it('records the run-start traits the loadout does not describe', () => {
     const traits: SavedTrait[] = [
       { name: 'HadesAndPersephoneKeepsake', id: '015.950.54', rarity: 'Epic' },

@@ -23,7 +23,7 @@ function checkpoint(
       CurrentRun: { ...run, Hero: (edit.hero ?? ((hero) => hero))(run['Hero'] as LuaTable) },
     };
   });
-  return extractSaveCheckpoint(decodeSaveFile(bytes), true, new Map());
+  return extractSaveCheckpoint(decodeSaveFile(bytes), true, new Map(), new Set());
 }
 
 /** The sample Hub start of a mature profile, then one room, each optionally edited. */

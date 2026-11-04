@@ -35,6 +35,7 @@ export function observeSave(
   fileName: string,
   bytes: Uint8Array,
   savedValuePaths: RunRecordSavedValuePaths,
+  primaryWeapons: ReadonlySet<string>,
 ): SaveObservation | undefined {
   const name = parseSaveFileName(fileName);
   if (name === undefined) return undefined;
@@ -52,7 +53,12 @@ export function observeSave(
   return {
     kind: 'checkpoint',
     profile: name.profile,
-    checkpoint: extractSaveCheckpoint(decodeSaveFile(bytes), name.temp, savedValuePaths),
+    checkpoint: extractSaveCheckpoint(
+      decodeSaveFile(bytes),
+      name.temp,
+      savedValuePaths,
+      primaryWeapons,
+    ),
   };
 }
 

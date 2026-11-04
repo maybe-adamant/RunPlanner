@@ -255,6 +255,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
           prebossRooms: prebossRoomsByBiome(catalog),
           arcanaCards: catalog.arcanaCards.values.map((card) => card.key),
           savedValuePaths: runRecordSavedValuePaths(catalog),
+          primaryWeapons: new Set(catalog.weapons.values.map((weapon) => weapon.key)),
           // Raw saves are kept for importer work in development builds only.
           ...(devBuild ? { rawSaves: options.recordHost.rawSaves } : {}),
         });

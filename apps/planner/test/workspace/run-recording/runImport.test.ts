@@ -19,6 +19,7 @@ function sampleCheckpoints(): readonly SaveCheckpoint[] {
       'Profile1_Temp.sav',
       sampleSaveBytes(`surface-${id}`),
       new Map(),
+      new Set(),
     );
     if (observation?.kind !== 'checkpoint') throw new Error('sample is not a checkpoint');
     return observation.checkpoint;

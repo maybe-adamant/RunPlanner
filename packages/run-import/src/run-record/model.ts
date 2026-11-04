@@ -40,7 +40,10 @@ export interface RunRecordOutcome {
 }
 
 export interface RunRecordLoadout {
-  /** `GameState.PrimaryWeaponName`; a new profile's first attempt has never picked a kit. */
+  /**
+   * The run-start hero's primary weapon in `Hero.Weapons`, else
+   * `GameState.PrimaryWeaponName`; a new profile's first attempt has never picked a kit.
+   */
   readonly weapon?: string;
   readonly aspect?: RunRecordRankedTrait;
   readonly familiar?: RunRecordFamiliar;

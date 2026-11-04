@@ -2,12 +2,16 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
+import { catalog } from '@run-planner/hades2-catalog';
+
 import type { LuaTable, LuaValue } from '@planner/workspace/run-recording/luabins';
 import { buildRunRecord } from '@planner/workspace/run-recording/runRecordBuilder';
 import { extractSaveCheckpoint } from '@planner/workspace/run-recording/saveCheckpoint';
 import type { DecodedSave } from '@planner/workspace/run-recording/saveFile';
 
 const NO_SAVED_VALUES = new Map<string, readonly string[]>();
+const NO_WEAPONS = new Set<string>();
+const WEAPONS = new Set(catalog.weapons.values.map((weapon) => weapon.key));
 
 interface Sample {
   readonly header: {
@@ -44,7 +48,12 @@ function sample(name: string): DecodedSave {
 
 describe('save checkpoint extraction', () => {
   it('reduces an entry save to its departure record, counters and build', () => {
-    const checkpoint = extractSaveCheckpoint(sample('underworld-062'), true, NO_SAVED_VALUES);
+    const checkpoint = extractSaveCheckpoint(
+      sample('underworld-062'),
+      true,
+      NO_SAVED_VALUES,
+      NO_WEAPONS,
+    );
     expect(checkpoint).toMatchObject({
       kind: 'entry',
       runCount: 1003,
@@ -104,12 +113,16 @@ describe('save checkpoint extraction', () => {
       },
     };
     // The entered room's entry save is written before its secrets spawn.
-    expect(extractSaveCheckpoint(save, true, NO_SAVED_VALUES).currentRoom.spawnedStore).toEqual({
+    expect(
+      extractSaveCheckpoint(save, true, NO_SAVED_VALUES, NO_WEAPONS).currentRoom.spawnedStore,
+    ).toEqual({
       well: false,
       shrine: false,
       items: false,
     });
-    expect(extractSaveCheckpoint(spawned, true, NO_SAVED_VALUES).departure?.spawnedStore).toEqual({
+    expect(
+      extractSaveCheckpoint(spawned, true, NO_SAVED_VALUES, NO_WEAPONS).departure?.spawnedStore,
+    ).toEqual({
       well: true,
       shrine: false,
       items: false,
@@ -136,15 +149,22 @@ describe('save checkpoint extraction', () => {
     const untouched = withItems([{ ObjectId: 1 }, { ObjectId: 2 }]);
     const bought = withItems({ '2': { ObjectId: 2 } });
     expect(
-      extractSaveCheckpoint(untouched, true, NO_SAVED_VALUES).departure?.spawnedStore?.items,
+      extractSaveCheckpoint(untouched, true, NO_SAVED_VALUES, NO_WEAPONS).departure?.spawnedStore
+        ?.items,
     ).toBe(true);
     expect(
-      extractSaveCheckpoint(bought, true, NO_SAVED_VALUES).departure?.spawnedStore?.items,
+      extractSaveCheckpoint(bought, true, NO_SAVED_VALUES, NO_WEAPONS).departure?.spawnedStore
+        ?.items,
     ).toBe(true);
   });
 
   it('marks a save without a next map as the PostReward checkpoint', () => {
-    const checkpoint = extractSaveCheckpoint(sample('surface-004'), true, NO_SAVED_VALUES);
+    const checkpoint = extractSaveCheckpoint(
+      sample('surface-004'),
+      true,
+      NO_SAVED_VALUES,
+      NO_WEAPONS,
+    );
     expect(checkpoint.kind).toBe('postReward');
     expect(checkpoint.currentRoom.encounter?.waves[0]?.spawns).toEqual([
       {
@@ -162,13 +182,16 @@ describe('save checkpoint extraction', () => {
         infiniteSpawns: false,
       },
     ]);
-    expect(extractSaveCheckpoint(sample('surface-004'), false, NO_SAVED_VALUES).kind).toBe('hub');
+    expect(
+      extractSaveCheckpoint(sample('surface-004'), false, NO_SAVED_VALUES, NO_WEAPONS).kind,
+    ).toBe('hub');
   });
 
   it("reads a Fig Leaf skip from the started encounter's SpawnsSkipped", () => {
     const save = sample('surface-004');
     expect(
-      extractSaveCheckpoint(save, true, NO_SAVED_VALUES).currentRoom.encounter?.spawnsSkipped,
+      extractSaveCheckpoint(save, true, NO_SAVED_VALUES, NO_WEAPONS).currentRoom.encounter
+        ?.spawnsSkipped,
     ).toBe(false);
     const run = save.globals.CurrentRun as LuaTable;
     const room = run.CurrentRoom as LuaTable;
@@ -186,7 +209,8 @@ describe('save checkpoint extraction', () => {
       },
     };
     expect(
-      extractSaveCheckpoint(skipped, true, NO_SAVED_VALUES).currentRoom.encounter?.spawnsSkipped,
+      extractSaveCheckpoint(skipped, true, NO_SAVED_VALUES, NO_WEAPONS).currentRoom.encounter
+        ?.spawnsSkipped,
     ).toBe(true);
   });
 
@@ -221,7 +245,7 @@ describe('save checkpoint extraction', () => {
         },
       },
     };
-    const checkpoint = extractSaveCheckpoint(dream, true, NO_SAVED_VALUES);
+    const checkpoint = extractSaveCheckpoint(dream, true, NO_SAVED_VALUES, NO_WEAPONS);
     expect(checkpoint.currentRoom).toMatchObject({ name: 'G_Intro', encounter: { name: 'Empty' } });
     expect(checkpoint.departure?.name).toBe('F_PostBoss01');
     expect(checkpoint.history.at(-1)).toBe('F_PostBoss01');
@@ -267,7 +291,7 @@ describe('save checkpoint extraction', () => {
       ],
       ['ChaosManaCostBlessing', ['ManaCostModifiers.ManaCostMultiplier']],
     ]);
-    const traits = extractSaveCheckpoint(withCurse, true, paths).hero!.traits;
+    const traits = extractSaveCheckpoint(withCurse, true, paths, NO_WEAPONS).hero!.traits;
     expect(traits.find((trait) => trait.name === 'ChaosDashCurse')?.savedValues).toEqual({
       'OnWeaponFiredFunctions.FunctionArgs.Cost': 19,
       'OnExpire.TraitData.PropertyChanges.1.ChangeValue': 0.77,
@@ -298,7 +322,8 @@ describe('save checkpoint extraction', () => {
         },
       },
     };
-    const traits = extractSaveCheckpoint(withBridalGlow, true, NO_SAVED_VALUES).hero!.traits;
+    const traits = extractSaveCheckpoint(withBridalGlow, true, NO_SAVED_VALUES, NO_WEAPONS).hero!
+      .traits;
     expect(traits.find((trait) => trait.name === 'BoonDecayBoon')?.upgradedTrait).toBe(
       'HeraWeaponBoon',
     );
@@ -318,10 +343,37 @@ describe('save checkpoint extraction', () => {
         },
       },
     };
-    expect(extractSaveCheckpoint(withElements, true, NO_SAVED_VALUES).hero?.elements).toEqual({
+    expect(
+      extractSaveCheckpoint(withElements, true, NO_SAVED_VALUES, NO_WEAPONS).hero?.elements,
+    ).toEqual({
       Earth: 6,
       Fire: 3,
     });
+  });
+
+  it("names the hero's primary weapon from Hero.Weapons, not the profile's Hub weapon", () => {
+    const save = sample('underworld-062');
+    const run = save.globals.CurrentRun as LuaTable;
+    // The game module equips its planned weapon on the hero and leaves PrimaryWeaponName.
+    const installed = (weapons: LuaTable): DecodedSave => ({
+      ...save,
+      globals: {
+        ...save.globals,
+        CurrentRun: { ...run, Hero: { ...(run.Hero as LuaTable), Weapons: weapons } },
+      },
+    });
+    const suit = { WeaponSuit: true, WeaponSuitRanged: true, WeaponCast: true, WeaponBlink: true };
+    const checkpoint = extractSaveCheckpoint(installed(suit), true, NO_SAVED_VALUES, WEAPONS);
+    expect(checkpoint.hero?.primaryWeapon).toBe('WeaponSuit');
+    expect(checkpoint.profile.primaryWeapon).toBe('WeaponStaffSwing');
+    expect(() =>
+      extractSaveCheckpoint(
+        installed({ ...suit, WeaponTorch: true }),
+        true,
+        NO_SAVED_VALUES,
+        WEAPONS,
+      ),
+    ).toThrow('several primary weapons');
   });
 
   it("reads the hero's max health", () => {
@@ -334,7 +386,9 @@ describe('save checkpoint extraction', () => {
         CurrentRun: { ...run, Hero: { ...(run.Hero as LuaTable), MaxHealth: 135 } },
       },
     };
-    expect(extractSaveCheckpoint(withMaxHealth, true, NO_SAVED_VALUES).hero?.maxHealth).toBe(135);
+    expect(
+      extractSaveCheckpoint(withMaxHealth, true, NO_SAVED_VALUES, NO_WEAPONS).hero?.maxHealth,
+    ).toBe(135);
   });
 
   it("reads a Rarify source's charges from its nested data, not the keepsake's own uses", () => {
@@ -354,9 +408,9 @@ describe('save checkpoint extraction', () => {
         CurrentRun: { ...run, Hero: { ...hero, Traits: [conch] } },
       },
     };
-    expect(extractSaveCheckpoint(withConch, true, NO_SAVED_VALUES).hero?.traits).toEqual([
-      { name: 'ForcePoseidonBoonKeepsake', rarity: 'Epic', rarityUpgradeUses: 1 },
-    ]);
+    expect(
+      extractSaveCheckpoint(withConch, true, NO_SAVED_VALUES, NO_WEAPONS).hero?.traits,
+    ).toEqual([{ name: 'ForcePoseidonBoonKeepsake', rarity: 'Epic', rarityUpgradeUses: 1 }]);
   });
 
   it("keeps a Hex tree's slot 0, which Nacelle's third row holds", () => {
@@ -385,14 +439,15 @@ describe('save checkpoint extraction', () => {
     };
     expect(
       Object.keys(
-        extractSaveCheckpoint(withTree, true, NO_SAVED_VALUES).hero?.spell?.talents ?? {},
+        extractSaveCheckpoint(withTree, true, NO_SAVED_VALUES, NO_WEAPONS).hero?.spell?.talents ??
+          {},
       ),
     ).toEqual(['1:2', '3:0', '3:1']);
   });
 
   it('folds the first checkpoints of a run into an abandoned record', () => {
     const checkpoints = ['002', '004', '006', '009', '011'].map((id) =>
-      extractSaveCheckpoint(sample(`surface-${id}`), true, NO_SAVED_VALUES),
+      extractSaveCheckpoint(sample(`surface-${id}`), true, NO_SAVED_VALUES, NO_WEAPONS),
     );
     const record = buildRunRecord(checkpoints);
     expect(record.run).toEqual({ runCount: 1002, startedAt: 1_793_057_328 });

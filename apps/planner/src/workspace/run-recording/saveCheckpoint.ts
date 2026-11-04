@@ -90,6 +90,11 @@ export interface SavedHero {
   readonly elements: Readonly<Record<string, number>>;
   /** `Hero.MaxHealth`. */
   readonly maxHealth?: number;
+  /**
+   * The primary weapon in `Hero.Weapons`: the run's weapon even when the game
+   * module equipped one other than the profile's `PrimaryWeaponName`.
+   */
+  readonly primaryWeapon?: string;
 }
 
 /** `Hero.SlottedSpell`: the spell, its tree structure and talents by `depth:slot`. */
@@ -517,6 +522,7 @@ function savedValues(
 function hero(
   value: LuaValue | undefined,
   savedValuePaths: RunRecordSavedValuePaths,
+  primaryWeapons: ReadonlySet<string>,
 ): SavedHero | undefined {
   if (!isTable(value)) return undefined;
   const traits = items(value.Traits).flatMap((entry): SavedTrait[] => {
@@ -543,12 +549,20 @@ function hero(
   for (const [slot, trait] of Object.entries(table(value.SlottedTraits)))
     if (typeof trait === 'string') slotted[slot] = trait;
   const savedSpell = spell(value.SlottedSpell);
+  const equipped = Object.entries(table(value.Weapons))
+    .filter(([name, held]) => held === true && primaryWeapons.has(name))
+    .map(([name]) => name);
+  if (equipped.length > 1)
+    throw new SaveCheckpointError(
+      `Hero.Weapons holds several primary weapons: ${equipped.sort().join(', ')}`,
+    );
   return {
     traits,
     slotted,
     ...optional('spell', savedSpell),
     elements: counts(value.Elements),
     ...optional('maxHealth', number(value.MaxHealth)),
+    ...optional('primaryWeapon', equipped[0]),
   };
 }
 
@@ -580,11 +594,15 @@ function rewardStores(value: LuaValue | undefined): SavedRunState['rewardStores'
   return result;
 }
 
-/** Reduces one decoded save to its checkpoint view, keeping the given trait paths. */
+/**
+ * Reduces one decoded save to its checkpoint view, keeping the given trait
+ * paths and naming the hero's weapon among the given primary weapons.
+ */
 export function extractSaveCheckpoint(
   save: DecodedSave,
   temp: boolean,
   savedValuePaths: RunRecordSavedValuePaths,
+  primaryWeapons: ReadonlySet<string>,
 ): SaveCheckpoint {
   const globals = save.globals;
   const run = table(globals.CurrentRun);
@@ -609,7 +627,7 @@ export function extractSaveCheckpoint(
   const shrineUpgrades: Record<string, number> = {};
   for (const [vow, rank] of Object.entries(table(gameState.ShrineUpgrades)))
     if (typeof rank === 'number') shrineUpgrades[vow] = rank;
-  const savedHero = hero(heroTable, savedValuePaths);
+  const savedHero = hero(heroTable, savedValuePaths, primaryWeapons);
   return Object.freeze({
     kind: !temp ? 'hub' : save.header.nextMap === '' ? 'postReward' : 'entry',
     timestamp: save.header.timestamp,

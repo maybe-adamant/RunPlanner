@@ -107,11 +107,22 @@ export function createRecordingController(options: {
   readonly arcanaCards: readonly string[];
   /** The trait-table values each save keeps for the run record. */
   readonly savedValuePaths: RunRecordSavedValuePaths;
+  /** The catalog's weapon names, which pick the hero's primary weapon out of `Hero.Weapons`. */
+  readonly primaryWeapons: ReadonlySet<string>;
   /** Keeps every accepted save of a recorded run beside it; development builds only. */
   readonly rawSaves?: RawSavesHost;
   readonly delay?: (ms: number) => Promise<void>;
 }): RecordingController {
-  const { host, preference, store, importer, prebossRooms, arcanaCards, savedValuePaths } = options;
+  const {
+    host,
+    preference,
+    store,
+    importer,
+    prebossRooms,
+    arcanaCards,
+    savedValuePaths,
+    primaryWeapons,
+  } = options;
   const delay =
     options.delay ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const capture =
@@ -229,7 +240,10 @@ export function createRecordingController(options: {
     let bytes = delivery.bytes;
     for (let attempt = 1; ; attempt += 1) {
       try {
-        return { observation: observeSave(delivery.fileName, bytes, savedValuePaths), bytes };
+        return {
+          observation: observeSave(delivery.fileName, bytes, savedValuePaths, primaryWeapons),
+          bytes,
+        };
       } catch (error) {
         if (!(error instanceof SaveFileError) || attempt >= SAVE_READ_ATTEMPTS) throw error;
       }
@@ -291,7 +305,7 @@ export function createRecordingController(options: {
     let state: RecorderState = EMPTY_RECORDER;
     const closed: ClosedRun[] = [];
     for (const save of saves) {
-      const observation = observeSave(save.fileName, save.bytes, savedValuePaths);
+      const observation = observeSave(save.fileName, save.bytes, savedValuePaths, primaryWeapons);
       if (observation === undefined) continue;
       const step = advanceRecorder(state, observation);
       state = step.state;

@@ -471,7 +471,12 @@ describe('save observation', () => {
   });
 
   it('reduces a save to its checkpoint view', () => {
-    const observation = observeSave('Profile3_Temp.sav', sampleSaveBytes('surface-002'), new Map());
+    const observation = observeSave(
+      'Profile3_Temp.sav',
+      sampleSaveBytes('surface-002'),
+      new Map(),
+      new Set(),
+    );
     expect(observation).toMatchObject({
       kind: 'checkpoint',
       profile: 3,
@@ -496,24 +501,33 @@ describe('save observation', () => {
     // The high 16 bits differ between profiles of one game build.
     for (const version of [0x00010012, 0x00000012])
       expect(
-        observeSave('Profile2_Temp.sav', sampleSaveBytes('surface-002', { version }), new Map()),
+        observeSave(
+          'Profile2_Temp.sav',
+          sampleSaveBytes('surface-002', { version }),
+          new Map(),
+          new Set(),
+        ),
       ).toMatchObject({ kind: 'checkpoint', profile: 2, checkpoint: { runCount: 1002 } });
-    expect(observeSave('Profile1_Temp.sav', save(0x00010013), new Map())).toEqual({
+    expect(observeSave('Profile1_Temp.sav', save(0x00010013), new Map(), new Set())).toEqual({
       kind: 'unsupportedVersion',
       profile: 1,
       version: 0x13,
       runStart: true,
     });
-    expect(observeSave('Profile1_Temp.sav', save(0x13, 'F_Opening01'), new Map())).toMatchObject({
+    expect(
+      observeSave('Profile1_Temp.sav', save(0x13, 'F_Opening01'), new Map(), new Set()),
+    ).toMatchObject({
       runStart: false,
     });
-    expect(observeSave('Profile1.sav', save(0x13), new Map())).toMatchObject({ runStart: false });
+    expect(observeSave('Profile1.sav', save(0x13), new Map(), new Set())).toMatchObject({
+      runStart: false,
+    });
   });
 
   it('throws a save file error for a save read while it was written', () => {
     const bytes = sampleSaveBytes('surface-002');
     expect(() =>
-      observeSave('Profile1_Temp.sav', bytes.subarray(0, bytes.length - 10), new Map()),
+      observeSave('Profile1_Temp.sav', bytes.subarray(0, bytes.length - 10), new Map(), new Set()),
     ).toThrow(SaveFileError);
   });
 });

@@ -46,6 +46,7 @@ function setup(
     prebossRooms: options.prebossRooms ?? prebossRoomsByBiome(catalog),
     arcanaCards: catalog.arcanaCards.values.map((card) => card.key),
     savedValuePaths: new Map(),
+    primaryWeapons: new Set(),
     delay: () => Promise.resolve(),
   });
   return {

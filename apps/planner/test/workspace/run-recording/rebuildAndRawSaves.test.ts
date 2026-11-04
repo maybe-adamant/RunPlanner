@@ -44,6 +44,7 @@ function setup(options: {
     prebossRooms: new Map([['N', new Set(['N_Hub'])]]),
     arcanaCards: catalog.arcanaCards.values.map((card) => card.key),
     savedValuePaths: new Map(),
+    primaryWeapons: new Set(),
     ...(options.rawSaves ? { rawSaves: host.rawSaves } : {}),
     delay: () => Promise.resolve(),
   });

@@ -276,8 +276,9 @@ function outcome(end: SaveCheckpoint | undefined, endingRoom: string): RunRecord
 
 function loadout(first: SaveCheckpoint): RunRecordLoadout {
   const hero = first.hero;
-  const weapon = first.profile.primaryWeapon;
   if (hero === undefined) throw new RunRecordBuildError('the run start save carries no loadout');
+  // The game module equips its planned weapon on the hero, leaving the profile's Hub weapon.
+  const weapon = hero.primaryWeapon ?? first.profile.primaryWeapon;
   const trait = (slot: string): SavedTrait | undefined => {
     const name = hero.slotted[slot];
     return name === undefined ? undefined : hero.traits.find((entry) => entry.name === name);
