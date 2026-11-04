@@ -411,8 +411,11 @@ at each room exit. Off, a desynchronized run is unchanged.
   board, including a biome edge, the chosen door's room is kept only when it
   was prepared for that occurrence; otherwise the module builds the room the
   planned door would have offered, with its reward, cages and Zagreus Contract
-  presence, and `CreateRoom` replaces `door.Room`. A side room's native return
-  already re-enters its parent, so only the hero is corrected. A biome edge,
+  presence, and `CreateRoom` replaces `door.Room`. Like a native door room, it
+  is created without an encounter, which `LeaveRoom` chooses after the depth
+  and room-history update, so depth gates and budgets read the room's own
+  depth. A side room's native return already re-enters its parent, so only
+  the hero is corrected. A biome edge,
   including Dream's, is steered only from a Postboss the route entered in sync
   while the plan continues past it. Dream picks the next biome
   (`SelectNextDreamBiome`) and its opening (`ChooseStartingRoom`) before

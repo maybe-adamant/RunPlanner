@@ -105,7 +105,7 @@ local function attached(state, snapOn, correct, rewardProof, options)
     local roomData = { F_B = { Name = "F_B" } }
     for name, data in pairs(options.roomData or {}) do roomData[name] = data end
     local restore = nativeGame.install({
-        game = { RoomData = roomData, CreateRoom = function(data)
+        game = { RoomData = roomData, CreateRoom = options.createRoom or function(data)
             log.created[#log.created + 1] = data
             return { Name = data.Name, __runPlannerExecutionRoomId = data.__runPlannerExecutionRoomId }
         end },
@@ -245,6 +245,37 @@ function TestSnapMode.testBuildsThePlannedRoomWhenTheDoorLeadsElsewhere()
     restore()
     lu.assertEquals(#log.created, 1)
     lu.assertEquals(door.Room, { Name = "F_B", __runPlannerExecutionRoomId = "b" })
+end
+
+-- Native CreateRoom chooses the encounter at the current depth unless told to
+-- skip it (RunLogic.lua:609-616); LeaveRoom raises the depth, then chooses for a
+-- room without one (RoomLogic.lua:4378-4383). The encounter's depth gate and
+-- budget follow IcarusCombatO (EncounterData_Icarus.lua) and RunLogic.lua:1195.
+function TestSnapMode.testARebuiltRoomChoosesItsEncounterAtTheDepthItIsEnteredAt()
+    local state = desynchronized(1)
+    local currentRun = { CurrentRoom = { Name = "F_A" }, BiomeDepthCache = 2 }
+    local function chooseEncounter()
+        local depth = currentRun.BiomeDepthCache
+        return { Name = depth >= 3 and "IcarusCombatO" or "GeneratedO", DifficultyRating = 180 + 60 * depth }
+    end
+    local createArgs
+    local leave, _, _, restore = attached(state, true, nil, nil, {
+        currentRun = currentRun,
+        createRoom = function(data, args)
+            createArgs = args
+            local room = { Name = data.Name, __runPlannerExecutionRoomId = data.__runPlannerExecutionRoomId }
+            if not (args and args.SkipChooseEncounter) then room.Encounter = chooseEncounter() end
+            return room
+        end,
+    })
+    local door = { Room = { Name = "F_X" } }
+    leave(currentRun, door)
+    restore()
+    currentRun.BiomeDepthCache = currentRun.BiomeDepthCache + 1
+    if door.Room.Encounter == nil then door.Room.Encounter = chooseEncounter() end
+    lu.assertEquals(createArgs, { SkipChooseEncounter = true })
+    lu.assertEquals(door.Room.__runPlannerExecutionRoomId, "b")
+    lu.assertEquals(door.Room.Encounter, { Name = "IcarusCombatO", DifficultyRating = 360 })
 end
 
 -- A session in F_A, still synchronized, whose batch exit offers F_B (planned) and F_C.

@@ -116,7 +116,9 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
             if data ~= nil then data = navigation.realizeIncomingReward(target, data) end
             local createRoom = gameValue and gameValue.CreateRoom or _G.CreateRoom
             if type(data) == "table" and type(createRoom) == "function" and type(door) == "table" then
-                door.Room = createRoom(data)
+                -- As native doors do (RoomLogic.lua:3916): LeaveRoom chooses the
+                -- encounter after the depth and history update (RoomLogic.lua:4378).
+                door.Room = createRoom(data, { SkipChooseEncounter = true })
             end
         end
         session.recordSnap(state, { occurrenceId = target.id, mismatch = mismatch })
