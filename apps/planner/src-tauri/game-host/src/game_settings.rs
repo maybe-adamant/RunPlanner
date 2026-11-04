@@ -6,6 +6,7 @@ use serde_json::Value;
 use std::fs;
 use std::io::Read;
 use std::path::Path;
+use std::time::Duration;
 
 use crate::atomic_file;
 use crate::game_module_install::{status, PublicationBlocker};
@@ -17,6 +18,11 @@ use crate::plan_slots::{module_config_dir, MODULE_CONFIG_DIRECTORY};
 pub const SETTINGS_FILE: &str = "settings.json";
 pub const MAX_SETTINGS_BYTES: usize = 1024;
 const SETTINGS_FORMAT: &str = "run-planner-settings";
+/// The module's temporary file, present from before it removes `settings.json` until its
+/// rename lands.
+const MODULE_TEMP_FILE: &str = "settings.json.tmp";
+/// How long a reader waits for a replacement in flight to land.
+const REPLACE_SETTLE: Duration = Duration::from_millis(50);
 /// The module reads at most this much of its ModpackLib `.cfg`.
 const MAX_LEGACY_CONFIG_BYTES: u64 = 64 * 1024;
 
@@ -180,6 +186,22 @@ pub fn decode_legacy_config(bytes: &[u8]) -> Option<GameSettings> {
     found.then_some(settings)
 }
 
+// The module replaces the file by removing it before renaming its temporary file over it, so
+// a file found missing while that temporary file exists is read once more after a pause.
+fn settled(
+    mut read: impl FnMut() -> GameSettingsFacts,
+    in_flight: impl FnOnce() -> bool,
+    pause: impl FnOnce(),
+) -> GameSettingsFacts {
+    match read() {
+        GameSettingsFacts::Missing if in_flight() => {
+            pause();
+            read()
+        }
+        found => found,
+    }
+}
+
 // The module's ModpackLib `.cfg`, a regular file directly in the contained config folder.
 fn read_legacy_config(target: &ResolvedTarget) -> Option<GameSettings> {
     let config = existing_directory(&target.rom.join(CONFIG_DIRECTORY), &target.rom).ok()?;
@@ -202,7 +224,11 @@ pub fn inspect_settings(target: &ResolvedTarget) -> GameSettingsFacts {
     let found = match module_config_dir(target) {
         Ok(None) => GameSettingsFacts::Missing,
         Err(_) => GameSettingsFacts::Invalid,
-        Ok(Some(directory)) => read_settings(&directory.join(SETTINGS_FILE)),
+        Ok(Some(directory)) => settled(
+            || read_settings(&directory.join(SETTINGS_FILE)),
+            || fs::symlink_metadata(directory.join(MODULE_TEMP_FILE)).is_ok(),
+            || std::thread::sleep(REPLACE_SETTLE),
+        ),
     };
     match found {
         GameSettingsFacts::Missing => read_legacy_config(target)
@@ -403,6 +429,30 @@ mod tests {
                 settings: ALL_OFF.with(GameSettingOption::SnapMode, true)
             }
         );
+    }
+
+    #[test]
+    fn a_missing_file_is_read_again_while_the_module_replaces_it() {
+        let present = GameSettingsFacts::Present {
+            settings: ALL_OFF.with(GameSettingOption::SnapMode, true),
+        };
+        let mut reads = vec![present, GameSettingsFacts::Missing];
+        let mut paused = false;
+        let found = settled(|| reads.pop().unwrap(), || true, || paused = true);
+        assert_eq!((found, paused), (present, true));
+        let mut reads = vec![present, GameSettingsFacts::Missing];
+        let found = settled(
+            || reads.pop().unwrap(),
+            || false,
+            || panic!("no replacement is in flight"),
+        );
+        assert_eq!(found, GameSettingsFacts::Missing);
+        let found = settled(
+            || present,
+            || panic!("a present file needs no second look"),
+            || panic!("a present file needs no pause"),
+        );
+        assert_eq!(found, present);
     }
 
     fn legacy_config(target: &ResolvedTarget) -> PathBuf {

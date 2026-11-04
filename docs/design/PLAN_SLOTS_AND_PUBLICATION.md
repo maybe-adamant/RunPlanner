@@ -89,7 +89,9 @@ both offer:
 - Both sides decode strictly: exactly these five keys, the three options
   booleans, `formatVersion` the literal integer 1, and at most 1 KiB. Both
   write the compact form in this key order, atomically as the active slot is
-  written.
+  written. The planner reads a missing file once more after a short pause while
+  the module's temporary file is beside it, so a change the module is landing
+  is not taken for a missing file.
 - A missing or invalid file means every option off; neither side rewrites it
   until the player changes an option, except once: when the module loads and
   finds no file, it seeds one from the options' earlier ModpackLib `.cfg`
