@@ -200,6 +200,48 @@ describe('import room acceptance', () => {
   });
 });
 
+describe('import stop at an entry save mismatch', () => {
+  it('ends the plan at the first room whose next entry save differs', () => {
+    const record = fixture('underworld-1010');
+    const changed = 9;
+    // Every save from F_Combat18's on holds one more Talent in RunProgress than the game left.
+    const imported = projectFromRunRecord(catalog, {
+      ...record,
+      rooms: record.rooms.map((room, index) => {
+        const stores = room.entry?.rewardStores;
+        const run = stores?.['RunProgress'];
+        return index < changed || run === undefined
+          ? room
+          : {
+              ...room,
+              entry: {
+                ...room.entry,
+                rewardStores: {
+                  ...stores,
+                  RunProgress: { ...run, TalentDrop: (run['TalentDrop'] ?? 0) + 1 },
+                },
+              },
+            };
+      }),
+    });
+    expect(imported).toMatchObject({
+      kind: 'stopped',
+      stop: { code: 'entryMismatch', record: { roomIndex: changed - 1 } },
+    });
+    const rooms = imported.report.rooms ?? [];
+    expect(rooms[changed - 2]).toMatchObject({ verdict: 'accepted' });
+    expect(rooms[changed - 1]).toMatchObject({ verdict: 'mismatch' });
+    expect(imported.kind === 'stopped' && imported.stop.families).toEqual(['stores']);
+    // The run's state after the mismatch is unknown: no later room is judged.
+    expect(rooms.slice(changed).every((room) => room.verdict === 'unchecked')).toBe(true);
+    expect(
+      imported.report.entries
+        .filter((entry) => entry.reason === 'mismatch')
+        .map((entry) => entry.record?.roomIndex),
+    ).toEqual([changed]);
+  });
+});
+
 describe('import conformance field groups', () => {
   const ROOM = 5;
   let erebus: Imported;

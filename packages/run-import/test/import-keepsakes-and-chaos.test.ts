@@ -6,19 +6,27 @@ import { projectFromRunRecord, type RunImport } from '../src/import';
 import { fixture, occurrence, reward } from './support/run-import';
 
 describe('run import of keepsake equip grants', () => {
-  /** Erebus with a neutral starting keepsake, its rack swapped to `to` and granting `granted`. */
+  /**
+   * Erebus with a neutral starting keepsake, its rack swapped to `to` and
+   * granting `granted`. Its saves held Hades and Persephone's from the start,
+   * so they are left out: no entry save judges the swap.
+   */
   function erebusRackSwap(to: string, granted: string): RunRecord {
     const record = fixture('underworld');
     const worldTime = 340.65;
+    const unsaved = ({ entry, ...room }: RunRecord['rooms'][number]) => {
+      void entry;
+      return room;
+    };
     return {
       ...record,
       route: { biomes: ['F'], dream: false },
       loadout: { ...record.loadout, keepsake: { name: 'LowHealthCritKeepsake', rarity: 'Epic' } },
       rooms: record.rooms.slice(0, 14).map((room, index) =>
         index !== 13
-          ? room
+          ? unsaved(room)
           : {
-              ...room,
+              ...unsaved(room),
               keepsakeSwap: { from: 'LowHealthCritKeepsake', to },
               traits: {
                 ...room.traits,

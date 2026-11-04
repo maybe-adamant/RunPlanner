@@ -147,10 +147,16 @@ export interface RunImportRoomDifference extends RunImportMismatch {
   readonly family: string;
 }
 
-/** The decision no answer or guess could settle, by its finding code; the plan ends before it. */
+/**
+ * Where the plan ends: the decision no answer could settle, by its finding
+ * code, or (`entryMismatch`) the room whose next entry save the plan's state
+ * differs from, after which the run's state is unknown.
+ */
 export interface RunImportStop {
   readonly area: RunImportArea;
   readonly code: string;
   readonly address?: SemanticAddress;
   readonly record?: RunImportRecordLocation;
+  /** An `entryMismatch` stop's difference families, as its room's acceptance names them. */
+  readonly families?: readonly string[];
 }

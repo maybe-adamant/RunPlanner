@@ -191,7 +191,12 @@ describe('run import door assignment', () => {
 
   it('authors Anomaly doors as displaced G targets switched to their recorded maps', () => {
     const imported = projectFromRunRecord(catalog, oceanusWithAnomalyDoors(true));
-    expectReachesLastRoom(imported);
+    // The saves after the swapped doors are the original run's, so the entered map's next one differs.
+    expect(imported).toMatchObject({
+      kind: 'stopped',
+      stop: { code: 'entryMismatch', record: { roomIndex: 21 } },
+    });
+    expect(imported.report.rooms?.[20]).toMatchObject({ verdict: 'accepted' });
     const entered = occurrence(imported.project, 'G-r21');
     expect(entered.gameName).toBe('B_Combat06');
     expect(entered.state).toMatchObject({ kind: 'anomaly', success: true });

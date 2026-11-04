@@ -16,9 +16,22 @@ describe('run import of Sea Star duplicates', () => {
     const record = fixture('surface');
     const rename = (name: string) =>
       name === 'EncounterStartOffenseBuffBoon' ? 'DoubleRewardBoon' : name;
+    // Entry saves from O_MiniBoss01's next room on hold the pick under its new name.
+    const saved = (room: RunRecord['rooms'][number], index: number) =>
+      index <= 23 || room.entry?.traits === undefined
+        ? room
+        : {
+            ...room,
+            entry: {
+              ...room.entry,
+              traits: Object.fromEntries(
+                Object.entries(room.entry.traits).map(([name, held]) => [rename(name), held]),
+              ),
+            },
+          };
     return {
       ...record,
-      rooms: record.rooms.map((room, index) =>
+      rooms: record.rooms.map(saved).map((room, index) =>
         index === 23
           ? {
               ...room,

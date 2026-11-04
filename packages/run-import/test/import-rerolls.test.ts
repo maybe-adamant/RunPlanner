@@ -207,7 +207,7 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     expect(mismatchLines(imported.report)).toEqual([]);
   });
 
-  it('reports a pool spend the stores do not show, and the pool it leaves ahead', () => {
+  it('stops at a pool spend the stores do not show, reporting the pool it leaves ahead', () => {
     const record = oceanus();
     const imported = projectFromRunRecord(catalog, {
       ...record,
@@ -217,10 +217,15 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
           : room,
       ),
     });
+    expect(imported).toMatchObject({
+      kind: 'stopped',
+      stop: { area: 'reroll', code: 'entryMismatch', record: { roomIndex: 20 } },
+    });
     expect(rerollLines(imported, 20)).toEqual([
       'mismatch reroll r20 -',
       'unsupportedArea reroll r20 -',
       'mismatch reroll r21 -',
+      'stopped reroll r20 -',
     ]);
     expect(mismatchLines(imported.report)).toEqual([
       'reroll r20 rerolls: 1 | 0',

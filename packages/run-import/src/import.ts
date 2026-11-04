@@ -216,19 +216,40 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
     ...unsupportedScreenRerolls(catalog, record),
     ...unsupportedChallengeSwitches(record),
   );
-  const stop = walk.run();
-  walk.reportUnusedScreens(stop);
+  const answered = walk.run();
+  walk.reportUnusedScreens(answered);
   walk.reportUnreachedRerolls();
   entries.push(...unansweredMaxHealthRolls(walk.context));
   // A stop past the record's rooms leaves every room judged where the plan reached it.
-  const throughRoom =
-    stop === undefined ? record.rooms.length : (stop.record?.roomIndex ?? record.rooms.length);
+  const answeredThrough =
+    answered === undefined
+      ? record.rooms.length
+      : (answered.record?.roomIndex ?? record.rooms.length);
+  // The run state after a room whose next entry save differs is unknown, so the plan ends there.
+  const mismatched = walk
+    .finalAcceptance(answeredThrough)
+    .find((room): room is JudgedRoom => room.verdict === 'mismatch');
+  const stop = mismatched === undefined ? answered : entryMismatchStop(mismatched);
+  const throughRoom = mismatched === undefined ? answeredThrough : mismatched.roomIndex + 1;
   entries.push(
     ...mismatchEntries(
       compareEntrySaves(catalog, record, walk.occurrences, walk.assembly, throughRoom),
     ),
   );
   return finish(walk.assembly.project, stop, walk.finalAcceptance(throughRoom));
+}
+
+type JudgedRoom = Extract<RunImportRoomAcceptance, { readonly introduced: unknown }>;
+
+/** The stop at a room whose next entry save the plan's state differs from. */
+function entryMismatchStop(room: JudgedRoom): RunImportStop {
+  const differences = [...room.introduced, ...room.carried];
+  return {
+    area: differences[0]!.area,
+    code: 'entryMismatch',
+    record: { roomIndex: room.roomIndex, visit: 0 },
+    families: [...new Set(differences.map((difference) => difference.family))],
+  };
 }
 
 /**

@@ -781,10 +781,13 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
     `ZeusCastBoon`; the relaunch mid-room was coincidental.
 - An imported plan is checked against each room's entry save, which leaving
   the previous room writes: the plan's `beforeRoomExit` of that room holds the
-  same moment. The check is the walk's acceptance test: a room is accepted
-  when its next entry save introduces no difference (one an earlier compared
-  save already held unchanged is carried, not introduced), judged as the walk
-  first reaches that save and again on the final plan. The checked state is held traits (rarity, and level as
+  same moment. The check is the walk's acceptance test: a candidate is
+  accepted when its room's next entry save introduces no difference (one an
+  earlier compared save already held unchanged is carried, not introduced,
+  since later authoring may still settle an earlier room). On the final plan
+  the first room whose next entry save differs at all ends the plan there
+  (`entryMismatch`, with the differing families): the run's state after it is
+  unknown, so no later room is judged. The checked state is held traits (rarity, and level as
   `StackNum`), the slotted keepsake, reward store counts, Denial bans,
   Artificer and Time Piece uses, Well purchases, Chaos curses' remaining uses
   and blessings, invested Path of Stars nodes, Forfeit and elements; each

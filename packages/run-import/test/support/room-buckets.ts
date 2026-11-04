@@ -12,18 +12,16 @@ import { describeEntry, occurrenceOf } from './run-import';
 /**
  * Where a record room stands after the import, judged at its next entry save:
  * `exact` no entry touched it, `solved` an importer solver settled it,
- * `guessed` an assumption or guess touched it, `mismatch` the room introduced
- * or changed a difference, `carried` only an earlier difference persists,
- * `unchecked` no next entry save compares it.
+ * `guessed` an assumption or guess touched it, `mismatch` the save differs (the
+ * plan stops there), `unchecked` no next entry save compares it.
  */
-export type RoomBucket = 'exact' | 'solved' | 'guessed' | 'mismatch' | 'carried' | 'unchecked';
+export type RoomBucket = 'exact' | 'solved' | 'guessed' | 'mismatch' | 'unchecked';
 
 export const ROOM_BUCKETS: readonly RoomBucket[] = [
   'exact',
   'solved',
   'guessed',
   'mismatch',
-  'carried',
   'unchecked',
 ];
 
@@ -39,12 +37,10 @@ export interface RoomRow {
   /** The record-supported solvers that apply to the room. */
   readonly solvers: readonly string[];
   /**
-   * `family:field` of each difference the room introduced or changed, solver
+   * `family:field` of each difference at the room's next entry save, solver
    * mismatches included; a trait's family names how it differs.
    */
-  readonly introduced: readonly string[];
-  /** `family:field` of each earlier difference that persists through the room. */
-  readonly carried: readonly string[];
+  readonly differences: readonly string[];
   /** Report entries that concern the room, other than the comparison's own. */
   readonly entries: readonly string[];
   /** The room is guessed only by its native action order. */
@@ -180,27 +176,25 @@ export function measureRun(name: string, record: RunRecord): RunMeasurement {
         bucket: 'unchecked',
         unchecked: acceptance.reason,
         uncheckedFamilies: [],
-        introduced: solverMismatches,
-        carried: [],
+        differences: solverMismatches,
       };
     const key = ({ family, field }: { family: string; field: string }) => `${family}:${field}`;
-    const introduced = [...solverMismatches, ...acceptance.introduced.map(key)];
-    const carried = acceptance.carried.map(key);
+    const differences = [
+      ...solverMismatches,
+      ...[...acceptance.introduced, ...acceptance.carried].map(key),
+    ];
     const bucket: RoomBucket =
-      introduced.length > 0
+      differences.length > 0
         ? 'mismatch'
-        : carried.length > 0
-          ? 'carried'
-          : guesses.length > 0
-            ? 'guessed'
-            : solvers.length > 0
-              ? 'solved'
-              : 'exact';
+        : guesses.length > 0
+          ? 'guessed'
+          : solvers.length > 0
+            ? 'solved'
+            : 'exact';
     return {
       ...base,
       bucket,
-      introduced,
-      carried,
+      differences,
       uncheckedFamilies: acceptance.unchecked.map(({ family, reason }) => `${family}:${reason}`),
       ...(acceptance.whenReached === undefined ? {} : { whenReached: acceptance.whenReached }),
     };
@@ -296,23 +290,21 @@ export function roomLines(measurement: RunMeasurement): readonly string[] {
   return measurement.rows.flatMap((row) => [
     `r${row.roomIndex} ${row.name} ${row.bucket}${row.unchecked === undefined ? '' : `(${row.unchecked})`}${
       row.solvers.length === 0 ? '' : ` solvers=${row.solvers.join(',')}`
-    }${row.introduced.length === 0 ? '' : ` introduced=${row.introduced.join(',')}`}${
-      row.carried.length === 0 ? '' : ` carried=${row.carried.join(',')}`
-    }${row.uncheckedFamilies.length === 0 ? '' : ` uncheckedFamilies=${row.uncheckedFamilies.join(',')}`}${
+    }${row.differences.length === 0 ? '' : ` differences=${row.differences.join(',')}`}${row.uncheckedFamilies.length === 0 ? '' : ` uncheckedFamilies=${row.uncheckedFamilies.join(',')}`}${
       row.whenReached === undefined ? '' : ` whenReached=${row.whenReached}`
     }`,
     ...row.entries.map((entry) => `    ${entry}`),
   ]);
 }
 
-/** Introduced difference families over the measured rooms, most frequent first. */
-export function introducedFamilies(
+/** Difference families over the measured rooms, most frequent first. */
+export function differenceFamilies(
   measurements: readonly RunMeasurement[],
 ): readonly (readonly [string, number])[] {
   const counts = new Map<string, number>();
   for (const { rows } of measurements)
     for (const row of rows)
-      for (const family of new Set(row.introduced.map((key) => key.split(':')[0]!)))
+      for (const family of new Set(row.differences.map((key) => key.split(':')[0]!)))
         counts.set(family, (counts.get(family) ?? 0) + 1);
   return [...counts].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
 }
