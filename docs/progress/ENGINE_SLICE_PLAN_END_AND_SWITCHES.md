@@ -1,6 +1,6 @@
 # Engine Slice: Plan End and Challenge Switches
 
-Status: P1, P3, P2 and its engine follow-ups, P4 with the switch encounter, and P5's switch import delivered; started 2026-11-03 on branch `engine-slice-plan-end-switches` (from
+Status: P1, P3, P2 and its engine follow-ups, P4 with the switch encounter, outcome and terminal-press rule, P5 (switch editor and import) and the review follow-ups delivered; P6 and P7 open; started 2026-11-03 on branch `engine-slice-plan-end-switches` (from
 main `606f8e588`). Temporary plan; delete at delivery after promoting the
 durable result into the design documents named per phase.
 
@@ -822,8 +822,7 @@ What P5 needs:
 - Run import: delivered (see P5 below).
 
 Still open (engine): none for the switch encounter. Not modeled, by choice:
-leaving mid-fight (`EndedEarly`) — the press is the whole run; Elite
-attribute game-state requirements; the run's `BannedEliteAttributes`; the
+a left fight's kill gold; Elite attribute game-state requirements; the run's `BannedEliteAttributes`; the
 H `ChallengeSwitchBlockedByFieldsLoot` exit gate.
 
 ### P5 — run import of challenge switches
@@ -902,6 +901,48 @@ Decisions made without an owner ruling:
   record answer.
 - The Fields press goes after the cages; the engine refuses (blocks) it at
   the native position, which is before them.
+
+### P5 — challenge switch editor
+
+Delivered (2026-11-04), planner, on the engine products above:
+
+- `80897cd3f` refactor: the encounter customization editor binds and launches
+  outside a room phase (`encounter-customization-binding.ts`), so the
+  switch's Combat entry reuses it. With `80f238da8` (what lies past a plan end
+  comes from the engine, not the editor's own inference).
+- `dd40c9b35`: the Overview Objects rows (Perfect Clear, Gold, Elite Enemy
+  switches, mutually exclusive), each kind's variants with their locks and
+  copy (`challengeSwitchCopy.ts`), the observed switch's Combat entry
+  (composition through the shared editor; Elite through the pin) and the
+  press on the Timeline (`ChallengeSwitchControls.tsx`).
+- `9e7d5d5a6`: the press's outcome controls on its Timeline row
+  (`ChallengeSwitchOutcomeControls.tsx`): the kind's outcome choice, Nectar
+  where allowed, a finished Time switch's gold, bound to
+  `ChallengeSwitchInteraction.outcome`.
+- Witnesses: `test/projections/structured-workspace/challenge-switch.test.ts`,
+  `test/ui/editor/biome/ChallengeSwitch.test.tsx`, finding-title lengths.
+
+### Review follow-ups (2026-11-04)
+
+- **Kind gate named**: a `kindUnavailable` issue carries `gate`,
+  `{ kind: 'biomeDepth', biomeDepthCache, minimumBiomeDepth }` (checked
+  first) or `{ kind: 'requirement' }` (Elite's `TalentLegal`); each assessed
+  variant carries its own `issue`. The copy names the depth or the Hex.
+- **Selection policy in the engine**: `ChallengeSwitchInteraction.kinds`
+  gives each kind its `observe` command (the default variant when rollable,
+  else the first rollable) or the `lock` that stops it;
+  `elite.pinnedDraws` gives each forced draw of a pinned elite its
+  attributes, empty for a draw after an unpinned one (it stays native). The
+  editor binds both.
+- **Import Hub cut**: a death in a side room no longer keeps it. An end at
+  a main room ends its whole visit, so `endPlanBefore` first narrows that
+  visit to the side rooms recorded before the death (`ReplaceLocalVisitOrder`)
+  and cuts there; witnessed on the Surface capture cut at its first side room.
+
+Owed at merge for P5 (with P6): the `challengeSwitch` import area and its
+reasons in the run-import documentation, with the import's `end` and its
+Hub-visit cut; the switch Overview rows, the Combat entry and the press's
+outcome controls in `STRUCTURED_EDITOR_WORKSPACE.md`.
 
 ## Equivalence characterization per phase
 
