@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 101,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "fresh-f",
   "routeKey": "FreshFile",
   "startingLoadout": {
@@ -2428,5 +2428,5 @@
       }
     }
   ],
-  "planFingerprint": "c920b098"
+  "planFingerprint": "3cb9b7b7"
 }
