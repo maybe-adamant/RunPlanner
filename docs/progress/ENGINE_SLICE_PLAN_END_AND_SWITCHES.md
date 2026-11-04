@@ -1,6 +1,6 @@
 # Engine Slice: Plan End and Challenge Switches
 
-Status: P1, P3 and P2 delivered; started 2026-11-03 on branch `engine-slice-plan-end-switches` (from
+Status: P1, P3, P2 and its engine follow-ups delivered; started 2026-11-03 on branch `engine-slice-plan-end-switches` (from
 main `606f8e588`). Temporary plan; delete at delivery after promoting the
 durable result into the design documents named per phase.
 
@@ -436,28 +436,77 @@ Lanes (2026-11-04): typecheck, lint, format:check pass; `test:planner`
 `test/ui/editor/biome/PlanEnd.test.tsx`). Engine untouched. The
 owner-approved footer layout followed the same day, on the same lanes.
 
-Engine follow-ups observed (not fixed; planner lane):
+Engine follow-ups observed in P2 (fixed 2026-11-04, see "P2 follow-ups" below):
+the end visit's side rooms read as locked, later Hub visits' main rooms stayed
+editable, the end room's peers read as locked, and an ended Hub's visit order
+was not a reached context.
 
-- `authoringReadinessAt` with an ended horizon locks the entered side rooms of
-  an end visit (settled: an end at a main room includes its side rooms) and
-  leaves the main rooms of later Hub visits editable; the editor makes rooms
-  past the end read-only itself, but cannot unlock the end visit's side rooms.
-- In an ended biome the unpicked sibling targets of the end room's own decision
-  (for example `golden-f-b5-e2`) read as locked.
-- An ended Hub's action order is not a reached candidate context, so its visit
-  order and Reset visits are locked until the end is removed.
+### P2 follow-ups — authoring horizon around a plan end
+
+Delivered (2026-11-04), engine then planner:
+
+- **Horizon.** `authoringReadinessAt` with an ended horizon asks the plan-end
+  extent (`planEndExtent`: rooms entered through the end, rooms the authored
+  plan enters only after it, an ended Hub's actions through the end, side room
+  to main room). Inside the plan, editable: the end room, every room entered
+  through it, the end visit's side rooms (entered or not) and their local
+  order, rooms offered beside or before the end room, board rooms no visit
+  enters, the board and its offers. Past the end, locked: the end room's exit,
+  its hidden and additional doors, rooms entered after the end and their side
+  rooms, Hub visits after the end visit (an appended one included), a fountain
+  use or reroll after it, and everything the end room's doors offer.
+- **Candidates.** Candidate families accept the biome a plan ends in as a
+  reached biome (`candidateBiome` includes `ended`); past-the-end owners stay
+  unavailable because the ended product does not contain them
+  (`targetNotReachable`). Hub visit-order and visit-prefix alternatives apply
+  the end, so later visits add no candidate evidence.
+- **Planner.** A room's past-the-end relation in the ended biome is the
+  engine's lock (the editor's own Hub visit inference is gone); the end room's
+  hidden door is projected `pastEnd`, so its Choose and Reset are inactive. An
+  ended Hub's Reset visits works; the map adds no visit or fountain use after
+  the end visit; the "Remove the plan end to change visits" hint is gone.
+
+Decisions (no owner ruling needed; recorded here):
+
+- Gap 3 was the end room's peers, not its own siblings: `golden-f-b5-e2` is
+  offered by `golden-f-b4-e1`'s doors beside the end room `golden-f-b5-e1`, so
+  it is inside the plan and editable (readiness and candidates). The end
+  room's own door targets (`golden-f-b6-e1`, `golden-f-b6-e2`) are past the end
+  and stay locked.
+- A board room that no visit enters is treated like an unpicked door target:
+  editable, never "past the end". A later visit's main room is locked, but its
+  board offer stays editable because the board is generated before the first
+  visit.
+- An end at a side room keeps the visit's never-entered side rooms editable
+  (peers) and locks the side rooms entered after it.
+- The end room's hidden door and additional exits belong to its doors, which
+  are past the end (decision 7).
+- An ended Hub's visit order is reached: Reset visits is allowed (it leaves the
+  end unreached, a `planEndUnreached` finding, until a visit enters the end
+  room again), and appending a visit or a fountain use is not, because it
+  would land after the end visit.
+- Other candidate families that replay a hypothetical biome (room targets,
+  rewards) still replay the full authored plan; their target-local answers are
+  unaffected, so only the Hub alternatives apply the end.
+
+Lanes (2026-11-04): typecheck, lint, format:check pass; `test:engine` 3914,
+`test:equivalence` 157/157 unchanged, `test:draft` 164, `test:run-import` 342
+(+1 skipped), `test:planner` 2161 (+1 skipped; includes `test:ui`, 902).
 
 Owed at merge (with P6): describe the plan-end editor in
-`STRUCTURED_EDITOR_WORKSPACE.md` (actions, past-the-end state, Hub end row)
-and `EDITOR_MODEL.md` (route-owned repair on the Route panel).
+`STRUCTURED_EDITOR_WORKSPACE.md` (actions, past-the-end state, Hub end row),
+`EDITOR_MODEL.md` (route-owned repair on the Route panel), and the ended
+horizon's inside and past-the-end rules in `SIMULATION_AND_VALIDATION.md`
+(Authoring readiness).
 
 ## Equivalence characterization per phase
 
-| Phase | Entries changed | Why                                                                                                                        |
-| ----- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| P1    | none (157/157)  | A project without `planEnd` evaluates identically; `processing.afterPlanEnd` is present only when an end applies.          |
-| P3    | none (157/157)  | The end room's exit work, the partial Hub block and the ended extent apply only with `planEnd`; no corpus project has one. |
-| P2    | not run         | Planner only; no engine change.                                                                                            |
+| Phase         | Entries changed | Why                                                                                                                        |
+| ------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| P1            | none (157/157)  | A project without `planEnd` evaluates identically; `processing.afterPlanEnd` is present only when an end applies.          |
+| P3            | none (157/157)  | The end room's exit work, the partial Hub block and the ended extent apply only with `planEnd`; no corpus project has one. |
+| P2            | not run         | Planner only; no engine change.                                                                                            |
+| P2 follow-ups | none (157/157)  | Readiness and candidates change only under an ended horizon; no corpus project has one.                                    |
 
 ## Owner-settled decisions (2026-11-03)
 
