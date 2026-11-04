@@ -62,7 +62,13 @@ P7 consumes them.
   drops the current revision.
 - Execution fixtures regenerated: only the schema stamp and fingerprint
   changed (no fixture plans an end or a switch).
-- Equivalence and Draft corpus: see the characterization below.
+- Equivalence and Draft corpus: see the characterization below. Draft
+  corpus (432 runs, pass): the only metric deltas against its baseline are in
+  the Fresh File (`F*`) specs, and the same subset measured on the slice base
+  `606f8e588` gives identical values, so they predate the slice (the Fresh
+  File run-start roll landed after the baseline was recorded). The baseline
+  was not re-recorded in this slice; the owner decides whether to re-record
+  that drift.
 - Durable contracts promoted into the documents listed in the status line.
 
 ## P7 — game module (open; after `game-module-cage-draw` merges)
@@ -109,3 +115,4 @@ P7 consumes them.
 | P4            | none (157/157)  | Catalog additions (switches, `Money`, `ChallengeSwitchLoot`) and switch handling apply only to rooms with an observed switch; no corpus project has one. |
 | P4 encounter  | none (157/157)  | The 24 encounter definitions sit outside every set; the press's encounter, its gold and `challengeSwitchEncounters` exist only with an observed switch.  |
 | P5            | none (157/157)  | The per-RoomSet depth floor changes only switch placement findings; no corpus project has a switch.                                                      |
+| P6            | none (157/157)  | The publication block applies only to a cut end; the digests leave out the schema pair and fingerprint. Baseline not re-recorded (nothing to record).    |
