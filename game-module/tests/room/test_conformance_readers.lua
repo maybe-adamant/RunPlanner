@@ -308,12 +308,11 @@ function TestConformanceReaders.testFrameCheckReadsPendingHermesOrdersAsAMultise
     lu.assertNil(unplanned)
     lu.assertEquals(mismatch, {
         checkpoint = "practice-start:hermesDeliveries", family = "hermesDeliveries",
-        expected = { orders = {}, staleSpellDrop = false },
-        observed = { orders = { "BlindBoxLoot:8", "SpellDrop:8" }, staleSpellDrop = false },
+        expected = {}, observed = { "BlindBoxLoot:8", "SpellDrop:8" },
     })
     lu.assertTrue(planned)
     lu.assertNil(stale)
-    lu.assertEquals(usesMismatch.observed.orders, { "BlindBoxLoot:8", "SpellDrop:8" })
+    lu.assertEquals(usesMismatch.observed, { "BlindBoxLoot:8", "SpellDrop:8" })
 end
 
 function TestConformanceReaders.testFrameCheckReadsTheInteractedGodLoots()
@@ -327,14 +326,11 @@ function TestConformanceReaders.testFrameCheckReadsTheInteractedGodLoots()
     lu.assertFalse(readers.supports("interactedGods"))
 end
 
-function TestConformanceReaders.testAPendingSpellDropWithoutAnOrderOrUseIsStale()
+function TestConformanceReaders.testAPendingSpellDropFlagWithoutAnOrderIsNotADifference()
     local run = { Hero = { Traits = {} }, PendingSpellDrop = true }
-    lu.assertEquals(readers.read("hermesDeliveries", run), { orders = {}, staleSpellDrop = true })
-    run.UseRecord = { SpellDrop = 1 }
-    lu.assertFalse(readers.read("hermesDeliveries", run).staleSpellDrop)
-    run.UseRecord = {}
+    lu.assertEquals(readers.read("hermesDeliveries", run), {})
     run.Hero.Traits = { { Name = "StorePendingDeliveryItem", ShopItemName = "SpellDrop", RemainingUses = 2 } }
-    lu.assertEquals(readers.read("hermesDeliveries", run), { orders = { "SpellDrop:2" }, staleSpellDrop = false })
+    lu.assertEquals(readers.read("hermesDeliveries", run), { "SpellDrop:2" })
     lu.assertFalse(readers.supports("hermesDeliveries"))
 end
 
@@ -359,8 +355,8 @@ function TestConformanceReaders.testEveryRoomExitChecksPendingHermesOrdersFromIt
     lu.assertNil(ok)
     lu.assertEquals(mismatch, {
         checkpoint = "room-exit-conformance:hermesDeliveries",
-        expected = { orders = { "ArmorBoost:2", "MaxManaDrop:4" }, staleSpellDrop = false },
-        observed = { orders = { "ArmorBoost:2", "MaxManaDrop:4", "SpellDrop:8" }, staleSpellDrop = false },
+        expected = { "ArmorBoost:2", "MaxManaDrop:4" },
+        observed = { "ArmorBoost:2", "MaxManaDrop:4", "SpellDrop:8" },
     })
     lu.assertTrue(proof.prove({}, read))
 end

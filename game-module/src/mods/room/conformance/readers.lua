@@ -361,24 +361,16 @@ local function stygianWell(run)
     }
 end
 
--- Pending Hermes orders by item and remaining uses, in no particular order. A
--- PendingSpellDrop with no SpellDrop order and no SpellDrop used this run is
--- stale: native never clears it, and it blocks SpellDrop and Selene
--- (SurfaceShopLogic.lua:492, RequirementsData.lua:1349).
+-- Pending Hermes orders by item and remaining uses, in no particular order.
 local function hermesDeliveries(run)
-    local orders, spellOrder = {}, false
+    local orders = {}
     for _, trait in pairs(traits(run) or {}) do
         if traitKey(trait) == "StorePendingDeliveryItem" then
             orders[#orders + 1] = tostring(trait.ShopItemName) .. ":" .. tostring(trait.RemainingUses)
-            spellOrder = spellOrder or trait.ShopItemName == "SpellDrop"
         end
     end
     table.sort(orders)
-    local used = type(run) == "table" and type(run.UseRecord) == "table" and run.UseRecord.SpellDrop
-    return {
-        orders = orders,
-        staleSpellDrop = type(run) == "table" and run.PendingSpellDrop == true and not spellOrder and not used,
-    }
+    return orders
 end
 
 -- The god loots in LootTypeHistory, which native GetInteractedGodsThisRun,

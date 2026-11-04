@@ -12,7 +12,7 @@ waives each check.
 - [ ] In a planned room with a Hermes Shrine and no planned purchase, buy an
       order (SpellDrop if offered) and leave. That exit reports a
       `hermesDeliveries` mismatch, snap removes the order, and the next save
-      has no `StorePendingDeliveryItem` and `PendingSpellDrop` false.
+      has no `StorePendingDeliveryItem`.
 - [ ] After a mismatch, buy a Hermes order at a Shrine in the out-of-sync room
       and leave. Snap removes the order at that exit, and the next save has no
       `StorePendingDeliveryItem`.

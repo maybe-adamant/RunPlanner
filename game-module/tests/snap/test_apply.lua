@@ -323,7 +323,7 @@ function TestSnapApply.testReaddsChaosWithItsValuesAndKeepsDeathDefianceAfterABl
     lu.assertEquals(hero.MaxLastStands, 1)
 end
 
-function TestSnapApply.testRewritesWellChargesAndDeliveriesAndClearsAStalePendingSpellDrop()
+function TestSnapApply.testRewritesWellChargesAndDeliveriesAndKeepsPendingSpellDrop()
     local hero, _, restore = world({
         { Name = "StorePendingDeliveryItem", ShopItemName = "SpellDrop", RemainingUses = 1 },
     })
@@ -337,21 +337,31 @@ function TestSnapApply.testRewritesWellChargesAndDeliveriesAndClearsAStalePendin
     } }
     lu.assertTrue(apply(value))
     restore()
-    lu.assertFalse(run.PendingSpellDrop)
+    lu.assertTrue(run.PendingSpellDrop)
     lu.assertEquals(names(hero), { "StorePendingDeliveryItem", "TemporaryForcedSecretDoorTrait",
         "TemporaryForcedSecretDoorTrait" })
     lu.assertEquals({ named(hero, "StorePendingDeliveryItem").ShopItemName,
         named(hero, "StorePendingDeliveryItem").RemainingUses }, { "MaxManaDrop", 2 })
 end
 
-function TestSnapApply.testClearsAStalePendingSpellDropWhenTheOrdersAlreadyMatch()
-    local hero, _, restore = world()
+function TestSnapApply.testNeverClearsPendingSpellDropAndARereaddedSpellDropOrderSetsIt()
+    local _, _, restore = world({
+        { Name = "StorePendingDeliveryItem", ShopItemName = "MaxManaDrop", RemainingUses = 3 },
+    })
     local run = _G.CurrentRun
     run.PendingSpellDrop = true
     lu.assertTrue(apply(frame()))
+    local cleared = run.PendingSpellDrop
+    local spellOrder = frame()
+    spellOrder.retainedEffects.hermesShrineDeliveries = { {
+        sourceKey = "s", sourceOccurrenceId = "o", generationKey = "g", rewardType = "SpellDrop",
+        remainingUses = 2, rushed = false,
+    } }
+    run.PendingSpellDrop = nil
+    lu.assertTrue(apply(spellOrder))
     restore()
-    lu.assertFalse(run.PendingSpellDrop)
-    lu.assertEquals(names(hero), {})
+    lu.assertTrue(cleared)
+    lu.assertTrue(run.PendingSpellDrop)
 end
 
 -- Native god cap and god-pool eligibility count LootTypeHistory's god loots.

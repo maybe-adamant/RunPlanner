@@ -153,7 +153,7 @@ local function hermesDeliveries(state)
     local orders = {}
     for index, row in ipairs(rows) do orders[index] = row.rewardType .. ":" .. row.remainingUses end
     table.sort(orders)
-    return { orders = orders, staleSpellDrop = false }
+    return orders
 end
 
 conformance.hermesDeliveriesExpected = hermesDeliveries

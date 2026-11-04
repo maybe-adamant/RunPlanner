@@ -343,8 +343,8 @@ local function wellFamily(frame, expected)
     end
     if not matches(expected, "hermesDeliveries") then
         removeAll("StorePendingDeliveryItem")
-        -- Native never clears PendingSpellDrop, and a stale one blocks Selene (RequirementsData.lua:1349).
-        run().PendingSpellDrop = false
+        -- PendingSpellDrop stays true for the rest of the run once a SpellDrop is
+        -- bought (SurfaceShopLogic.lua:492): a re-added SpellDrop order sets it, nothing clears it.
         practice.deliveries({ hermesDeliveries = frame.retainedEffects.hermesShrineDeliveries })
     end
 end
