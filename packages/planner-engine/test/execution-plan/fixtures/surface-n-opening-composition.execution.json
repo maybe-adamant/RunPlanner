@@ -336,7 +336,30 @@
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
       "roomExitConformance": {
-        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+        "facts": [
+          { "kind": "elementCounts" },
+          { "kind": "traitInventory" },
+          {
+            "kind": "rewardStores",
+            "stores": [
+              {
+                "name": "RunProgress",
+                "rewardTypes": [
+                  "Boon",
+                  "Devotion",
+                  "HermesUpgrade",
+                  "MaxHealthDrop",
+                  "MaxManaDrop",
+                  "RoomMoneyDrop",
+                  "SpellDrop",
+                  "StackUpgrade",
+                  "TalentDrop",
+                  "WeaponUpgrade"
+                ]
+              }
+            ]
+          }
+        ]
       },
       "diagnostics": {
         "roomEntered": {
@@ -2418,7 +2441,62 @@
         "kind": "terminal"
       },
       "roomExitConformance": {
-        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+        "facts": [
+          { "kind": "elementCounts" },
+          { "kind": "traitInventory" },
+          {
+            "kind": "rewardStores",
+            "stores": [
+              {
+                "name": "RunProgress",
+                "rewardTypes": [
+                  "Boon",
+                  "Devotion",
+                  "HermesUpgrade",
+                  "MaxHealthDrop",
+                  "MaxManaDrop",
+                  "RoomMoneyDrop",
+                  "SpellDrop",
+                  "StackUpgrade",
+                  "TalentDrop",
+                  "WeaponUpgrade"
+                ]
+              },
+              {
+                "name": "HubRewards",
+                "rewardTypes": [
+                  "Boon",
+                  "HermesUpgrade",
+                  "MaxHealthDropBig",
+                  "MaxManaDropBig",
+                  "SpellDrop",
+                  "WeaponUpgrade"
+                ]
+              },
+              {
+                "name": "SubRoomRewards",
+                "rewardTypes": [
+                  "AirBoost",
+                  "EarthBoost",
+                  "EmptyMaxHealthSmallDrop",
+                  "FireBoost",
+                  "GiftDrop",
+                  "MaxHealthDrop",
+                  "MaxHealthDropSmall",
+                  "MaxManaDrop",
+                  "MaxManaDropSmall",
+                  "MetaCardPointsCommonDrop",
+                  "MetaCurrencyDrop",
+                  "MinorTalentDrop",
+                  "RoomMoneyDrop",
+                  "RoomMoneyTinyDrop",
+                  "StackUpgrade",
+                  "WaterBoost"
+                ]
+              }
+            ]
+          }
+        ]
       },
       "diagnostics": {
         "roomEntered": {
@@ -2616,7 +2694,37 @@
         "owner": "[\"occurrence\",\"Surface\",\"N\",\"surface-n-combat05-sideDoor2\"]",
         "kind": "terminal"
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "roomExitConformance": {
+        "facts": [
+          { "kind": "elementCounts" },
+          {
+            "kind": "rewardStores",
+            "stores": [
+              {
+                "name": "SubRoomRewards",
+                "rewardTypes": [
+                  "AirBoost",
+                  "EarthBoost",
+                  "EmptyMaxHealthSmallDrop",
+                  "FireBoost",
+                  "GiftDrop",
+                  "MaxHealthDrop",
+                  "MaxHealthDropSmall",
+                  "MaxManaDrop",
+                  "MaxManaDropSmall",
+                  "MetaCardPointsCommonDrop",
+                  "MetaCurrencyDrop",
+                  "MinorTalentDrop",
+                  "RoomMoneyDrop",
+                  "RoomMoneyTinyDrop",
+                  "StackUpgrade",
+                  "WaterBoost"
+                ]
+              }
+            ]
+          }
+        ]
+      },
       "diagnostics": {
         "roomEntered": {
           "frame": 6,
@@ -2748,7 +2856,37 @@
         "owner": "[\"occurrence\",\"Surface\",\"N\",\"surface-n-combat05-sideDoor1\"]",
         "kind": "terminal"
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "roomExitConformance": {
+        "facts": [
+          { "kind": "elementCounts" },
+          {
+            "kind": "rewardStores",
+            "stores": [
+              {
+                "name": "SubRoomRewards",
+                "rewardTypes": [
+                  "AirBoost",
+                  "EarthBoost",
+                  "EmptyMaxHealthSmallDrop",
+                  "FireBoost",
+                  "GiftDrop",
+                  "MaxHealthDrop",
+                  "MaxHealthDropSmall",
+                  "MaxManaDrop",
+                  "MaxManaDropSmall",
+                  "MetaCardPointsCommonDrop",
+                  "MetaCurrencyDrop",
+                  "MinorTalentDrop",
+                  "RoomMoneyDrop",
+                  "RoomMoneyTinyDrop",
+                  "StackUpgrade",
+                  "WaterBoost"
+                ]
+              }
+            ]
+          }
+        ]
+      },
       "diagnostics": {
         "roomEntered": {
           "frame": 8,
@@ -3071,7 +3209,37 @@
         "owner": "[\"occurrence\",\"Surface\",\"N\",\"surface-n-combat02\"]",
         "kind": "terminal"
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "roomExitConformance": {
+        "facts": [
+          { "kind": "elementCounts" },
+          {
+            "kind": "rewardStores",
+            "stores": [
+              {
+                "name": "SubRoomRewards",
+                "rewardTypes": [
+                  "AirBoost",
+                  "EarthBoost",
+                  "EmptyMaxHealthSmallDrop",
+                  "FireBoost",
+                  "GiftDrop",
+                  "MaxHealthDrop",
+                  "MaxHealthDropSmall",
+                  "MaxManaDrop",
+                  "MaxManaDropSmall",
+                  "MetaCardPointsCommonDrop",
+                  "MetaCurrencyDrop",
+                  "MinorTalentDrop",
+                  "RoomMoneyDrop",
+                  "RoomMoneyTinyDrop",
+                  "StackUpgrade",
+                  "WaterBoost"
+                ]
+              }
+            ]
+          }
+        ]
+      },
       "diagnostics": {
         "roomEntered": {
           "frame": 12,
@@ -3210,7 +3378,37 @@
         "owner": "[\"occurrence\",\"Surface\",\"N\",\"surface-n-combat02-sideDoor1\"]",
         "kind": "terminal"
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "roomExitConformance": {
+        "facts": [
+          { "kind": "elementCounts" },
+          {
+            "kind": "rewardStores",
+            "stores": [
+              {
+                "name": "SubRoomRewards",
+                "rewardTypes": [
+                  "AirBoost",
+                  "EarthBoost",
+                  "EmptyMaxHealthSmallDrop",
+                  "FireBoost",
+                  "GiftDrop",
+                  "MaxHealthDrop",
+                  "MaxHealthDropSmall",
+                  "MaxManaDrop",
+                  "MaxManaDropSmall",
+                  "MetaCardPointsCommonDrop",
+                  "MetaCurrencyDrop",
+                  "MinorTalentDrop",
+                  "RoomMoneyDrop",
+                  "RoomMoneyTinyDrop",
+                  "StackUpgrade",
+                  "WaterBoost"
+                ]
+              }
+            ]
+          }
+        ]
+      },
       "diagnostics": {
         "roomEntered": {
           "frame": 14,
@@ -3377,7 +3575,36 @@
         "kind": "terminal"
       },
       "roomExitConformance": {
-        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+        "facts": [
+          { "kind": "elementCounts" },
+          { "kind": "traitInventory" },
+          {
+            "kind": "rewardStores",
+            "stores": [
+              {
+                "name": "SubRoomRewards",
+                "rewardTypes": [
+                  "AirBoost",
+                  "EarthBoost",
+                  "EmptyMaxHealthSmallDrop",
+                  "FireBoost",
+                  "GiftDrop",
+                  "MaxHealthDrop",
+                  "MaxHealthDropSmall",
+                  "MaxManaDrop",
+                  "MaxManaDropSmall",
+                  "MetaCardPointsCommonDrop",
+                  "MetaCurrencyDrop",
+                  "MinorTalentDrop",
+                  "RoomMoneyDrop",
+                  "RoomMoneyTinyDrop",
+                  "StackUpgrade",
+                  "WaterBoost"
+                ]
+              }
+            ]
+          }
+        ]
       },
       "diagnostics": {
         "roomEntered": {
@@ -3538,7 +3765,37 @@
         "owner": "[\"occurrence\",\"Surface\",\"N\",\"surface-n-combat11-sideDoor1\"]",
         "kind": "terminal"
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "roomExitConformance": {
+        "facts": [
+          { "kind": "elementCounts" },
+          {
+            "kind": "rewardStores",
+            "stores": [
+              {
+                "name": "SubRoomRewards",
+                "rewardTypes": [
+                  "AirBoost",
+                  "EarthBoost",
+                  "EmptyMaxHealthSmallDrop",
+                  "FireBoost",
+                  "GiftDrop",
+                  "MaxHealthDrop",
+                  "MaxHealthDropSmall",
+                  "MaxManaDrop",
+                  "MaxManaDropSmall",
+                  "MetaCardPointsCommonDrop",
+                  "MetaCurrencyDrop",
+                  "MinorTalentDrop",
+                  "RoomMoneyDrop",
+                  "RoomMoneyTinyDrop",
+                  "StackUpgrade",
+                  "WaterBoost"
+                ]
+              }
+            ]
+          }
+        ]
+      },
       "diagnostics": {
         "roomEntered": {
           "frame": 18,
@@ -4308,5 +4565,5 @@
       }
     }
   ],
-  "planFingerprint": "48b1ead0"
+  "planFingerprint": "53309078"
 }

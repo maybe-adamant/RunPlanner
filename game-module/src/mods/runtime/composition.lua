@@ -301,6 +301,8 @@ function composition.bind(root, moduleVersion, legacyConfig)
                 hexTree = hexTree,
             })
         encounterHooks.attach(module, session, getState, report, room, shipCombat, generatedEncounter, highlights)
+        import("mods/room/features/challenge_switch.lua").attach(module, session, getState, report, room,
+            generatedEncounter)
         featureInventory.attach(module, session, getState, report, room, route, highlights)
         interactionHooks.attach(module, session, getState, report, room, route)
         -- A commit that turns the module off ends a live session at once.

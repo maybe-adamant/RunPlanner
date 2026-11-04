@@ -534,6 +534,45 @@ local function validate(frame, context)
     return true
 end
 
+-- The room's published reward store fact, read as its exit conformance reads it;
+-- nil when the room compares no store or the stores agree.
+local function storeDifference(stores, label)
+    if stores == nil then return nil end
+    local read = readers.read("rewardStores", run(), _G.GameState, stores)
+    local ok, mismatch = proof.compare(label .. ":rewardStores", read and read.expected, read and read.observed)
+    if ok then return nil end
+    mismatch.family = "rewardStores"
+    return mismatch
+end
+
+-- A pressed challenge switch counts its fight's encounter depth, which later
+-- rooms' encounter requirements read; a switch room compares it with the frame.
+local function encounterDepth(frame)
+    return { biome = frame.counters.biomeEncounterDepth, route = frame.counters.routeEncounterDepth }
+end
+
+local function depthDifference(frame, compared, label)
+    if not compared then return nil end
+    local current = run()
+    local ok, mismatch = proof.compare(label .. ":encounterDepth", encounterDepth(frame),
+        { biome = current.BiomeEncounterDepth, route = current.EncounterDepth })
+    if ok then return nil end
+    mismatch.family = "encounterDepth"
+    return mismatch
+end
+
+-- Every admission family, then the room's compared stores and, in a switch
+-- room, its encounter depth, against the frame.
+local function verify(frame, context)
+    local ok, failure = admission.verifyFrame(frame, "snap-exit")
+    if not ok then return nil, failure end
+    local stored = storeDifference(context and context.rewardStores, "snap-exit")
+    if stored ~= nil then return nil, stored end
+    local depth = depthDifference(frame, context and context.encounterDepth, "snap-exit")
+    if depth ~= nil then return nil, depth end
+    return true
+end
+
 -- Writes the frame's differences and proves them against the same frame,
 -- returning that result; an invalid frame touches nothing.
 function snap.apply(frame, context)
@@ -554,6 +593,10 @@ function snap.apply(frame, context)
         ledgers(frame)
         hex(frame, context or {})
         practice.rewardStores({ rewardStores = frame.rewardStores })
+        if context and context.encounterDepth then
+            run().BiomeEncounterDepth, run().EncounterDepth =
+                frame.counters.biomeEncounterDepth, frame.counters.routeEncounterDepth
+        end
         essences(frame)
         _G.ValidateMaxHealth(true)
         _G.ValidateMaxMana()
@@ -561,7 +604,7 @@ function snap.apply(frame, context)
         unit.LastStands, unit.MaxLastStands = captured.lastStands, captured.maxLastStands
     end)
     unit.Health = math.min(captured.health, unit.MaxHealth)
-    return admission.verifyFrame(frame, "snap-exit")
+    return verify(frame, context)
 end
 
 local function leaves(expected, observed, path, out)
@@ -576,11 +619,14 @@ local function leaves(expected, observed, path, out)
     return out
 end
 
--- The families and leaf paths where the live hero differs from the frame, read
+-- The families and leaf paths where the live hero differs from the frame, and
+-- the room's compared stores and switch encounter depth from theirs, read
 -- only; empty when they agree.
-function snap.differences(frame)
+function snap.differences(frame, context)
     local found, problem = admission.differences(frame, "snap-exit")
     if not found then return { { family = "frame", paths = { tostring(problem) } } } end
+    found[#found + 1] = storeDifference(context and context.rewardStores, "snap-exit")
+    found[#found + 1] = depthDifference(frame, context and context.encounterDepth, "snap-exit")
     local result = {}
     for _, mismatch in ipairs(found) do
         local paths = leaves(mismatch.expected, mismatch.observed, mismatch.family, {})
@@ -596,9 +642,9 @@ end
 -- "fault"), every family that differed before the write and, by kind, the
 -- unwritable family, the families still different after it, or the error.
 function snap.correct(frame, context)
-    local same, difference = admission.verifyFrame(frame, "snap-exit")
+    local same, difference = verify(frame, context)
     if same then return "in-sync" end
-    local before = snap.differences(frame)
+    local before = snap.differences(frame, context)
     local ok, applied, failure = pcall(snap.apply, frame, context)
     if not ok then
         local text = tostring(applied)
@@ -612,7 +658,7 @@ function snap.correct(frame, context)
             family = family, reason = tostring(failure.expected) .. " " .. tostring(failure.observed),
         } }
     end
-    return nil, failure, { kind = "still-differs", before = before, after = snap.differences(frame) }
+    return nil, failure, { kind = "still-differs", before = before, after = snap.differences(frame, context) }
 end
 
 return snap

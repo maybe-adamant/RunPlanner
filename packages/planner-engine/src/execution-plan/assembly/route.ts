@@ -151,8 +151,7 @@ export function completeExecutionBiomes(
   assembly: ExecutionAssemblerInput['assembly'],
 ): PublishedBiomeEvaluation[] {
   const route = assembly.evaluation.route;
-  // A publication block leaves the route valid through its end; the entry refuses it.
-  if (!route.summary.eligibleForExecutionPlan && route.summary.executionPlanBlock === undefined) {
+  if (!route.summary.eligibleForExecutionPlan) {
     throw new CompilerError('notEligible', 'project evaluation is not eligible for execution');
   }
   const values: PublishedBiomeEvaluation[] = [];

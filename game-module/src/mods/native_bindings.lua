@@ -64,6 +64,7 @@ return {
             keepsakeRack = { carrier = "obstacleUseFunction", key = "UseKeepsakeRack" },
             fountain = { carrier = "obstacleUseFunction", key = "UseHealthFountain" },
             shop = { carrier = "roomField", key = "StoreDataName" },
+            challengeSwitch = { carrier = "roomField", key = "ChallengeSwitch" },
         },
     },
     conformance = {

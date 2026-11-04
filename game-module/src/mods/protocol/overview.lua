@@ -572,6 +572,42 @@ local function hubFountain(value, requiredVisitCount, label)
     return record
 end
 
+-- The observed switch: its variant, the encounter native generates at entry, and
+-- either that encounter's composition or an Elite switch's pinned elite.
+local function challengeSwitch(value, label)
+    local record, errorMessage = p.exact(value, { "variantKey", "encounterKey" }, { "customization", "elite" }, label)
+    if not record then return nil, errorMessage end
+    if not p.str(record.variantKey, label .. ".variantKey") or not p.str(record.encounterKey, label .. ".encounterKey") then
+        return p.fail(label .. " has invalid switch identity")
+    end
+    if record.customization ~= nil then
+        local decisions, decisionsError = customization(record.customization, label .. ".customization")
+        if not decisions then return nil, decisionsError end
+        for _, decision in ipairs(decisions) do
+            if decision.kind ~= "generated" then return p.fail(label .. ".customization must be generated") end
+        end
+    end
+    if record.elite ~= nil then
+        if record.customization ~= nil then return p.fail(label .. " cannot both compose and pin an elite") end
+        local elite, eliteError = p.exact(record.elite, { "enemy", "attributeKeys" }, {}, label .. ".elite")
+        if not elite then return nil, eliteError end
+        local enemy, enemyError = p.exact(elite.enemy, { "choiceKey", "nativeId" }, {}, label .. ".elite.enemy")
+        if not enemy then return nil, enemyError end
+        if not p.str(enemy.choiceKey, label .. ".elite.enemy.choiceKey")
+            or not p.str(enemy.nativeId, label .. ".elite.enemy.nativeId") then
+            return p.fail(label .. ".elite has invalid enemy")
+        end
+        local keys, keysError = p.strings(elite.attributeKeys, label .. ".elite.attributeKeys", 8)
+        if not keys then return nil, keysError end
+        local seen = {}
+        for _, key in ipairs(keys) do
+            if seen[key] then return p.fail(label .. ".elite.attributeKeys must be distinct") end
+            seen[key] = true
+        end
+    end
+    return record
+end
+
 function overview.decode(value, label)
     local record, errorMessage = p.exact(
         value,
@@ -580,7 +616,7 @@ function overview.decode(value, label)
             "incomingReward", "effectNeutralRequiredReward", "unmodeledEncounterKeys",
             "rewardWheels",
             "shop", "infernalContractPedestal", "phantomExit", "hermesShrine", "stygianWell",
-            "purgingPool", "keepsakeRack",
+            "purgingPool", "keepsakeRack", "challengeSwitch",
             "fountain", "fields", "additional",
             "hub", "localSlots",
         },
@@ -677,6 +713,10 @@ function overview.decode(value, label)
             return p.fail(label .. " has invalid keepsake Rack")
         end
     end
+    if record.challengeSwitch ~= nil then
+        local _, switchError = challengeSwitch(record.challengeSwitch, label .. ".challengeSwitch")
+        if switchError then return nil, switchError end
+    end
     if record.fountain ~= nil then
         local fountain, fountainError = p.exact(
             record.fountain,
@@ -700,7 +740,7 @@ function overview.decode(value, label)
     end
     if record.hub ~= nil then
         local hub, hubError = p.exact(record.hub,
-            { "room", "slots", "finalHandoff", "requiredVisitCount", "fountain", "departures" }, { "rerolls" },
+            { "room", "slots", "requiredVisitCount", "departures" }, { "finalHandoff", "fountain", "rerolls" },
             label .. ".hub")
         if not hub then return nil, hubError end
         local room = p.exact(hub.room, { "gameName" }, {}, label .. ".hub.room")
@@ -729,16 +769,26 @@ function overview.decode(value, label)
                 return p.fail(label .. ".hub has invalid slot")
             end
         end
-        if not p.roomRef(hub.finalHandoff, label .. ".hub.finalHandoff") then return p.fail(label .. ".hub has invalid final handoff") end
+        -- A plan ending inside the stay publishes no handoff, no departure after its
+        -- last visit, and the fountain only when used by then.
+        local handoff = hub.finalHandoff ~= nil
+        if handoff and not p.roomRef(hub.finalHandoff, label .. ".hub.finalHandoff") then
+            return p.fail(label .. ".hub has invalid final handoff")
+        end
         local required = p.int(hub.requiredVisitCount, label .. ".hub.requiredVisitCount", 1)
         if not required or required > #slots then
             return p.fail(label .. ".hub.requiredVisitCount must be between 1 and the open Hub slots")
         end
-        local _, fountainError = hubFountain(hub.fountain, required, label .. ".hub.fountain")
-        if fountainError then return nil, fountainError end
+        if handoff and hub.fountain == nil then return p.fail(label .. ".hub.fountain is required with a final handoff") end
+        if hub.fountain ~= nil then
+            local _, fountainError = hubFountain(hub.fountain, required, label .. ".hub.fountain")
+            if fountainError then return nil, fountainError end
+        end
         local departures, departuresError = p.arr(hub.departures, label .. ".hub.departures")
         if not departures then return nil, departuresError end
-        if #departures ~= required + 1 then return p.fail(label .. ".hub.departures has invalid length") end
+        if #departures ~= required + (handoff and 1 or 0) then
+            return p.fail(label .. ".hub.departures has invalid length")
+        end
         for index, valueRow in ipairs(departures) do
             local departure, departureError = hubDepartureConformance(valueRow, label .. ".hub.departures[" .. index .. "]")
             if not departure then return nil, departureError end

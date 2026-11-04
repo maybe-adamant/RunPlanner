@@ -78,10 +78,16 @@ export function assembleExecutionDoors({
         zagreusContractPresent: targets[0]!.zagreusContractPresent,
       });
     }
+    const cageCountOutcome =
+      batch.batchState.kind === 'fields' &&
+      targets.some((target) => target.cageRewards !== undefined)
+        ? batch.batchState.cageOutcome
+        : undefined;
     return Object.freeze({
       owner: semanticAddressKey(batch.origin),
       kind: 'batch',
       targets,
+      ...(cageCountOutcome === undefined ? {} : { cageCountOutcome }),
       ...(batch.resolvedSharedRewardStoreKey === undefined
         ? {}
         : { resolvedSharedRewardStoreKey: batch.resolvedSharedRewardStoreKey }),

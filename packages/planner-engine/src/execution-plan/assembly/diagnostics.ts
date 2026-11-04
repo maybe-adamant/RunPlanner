@@ -303,8 +303,13 @@ export function assembleRoomExitConformance(
   room: CanonicalAuthoredRoom,
   delta: RoomExitConformanceDelta | undefined,
   snapshots: ReadonlyMap<string, RunStateSnapshot>,
+  /** The plan's end room: its own door draws are not simulated, so its stores are not compared. */
+  endRoom = false,
 ): ExecutionRoomExitConformance | undefined {
   if (delta === undefined) return undefined;
+  const deltaFacts = endRoom
+    ? delta.facts.filter((fact) => fact.kind !== 'rewardStores')
+    : delta.facts;
   const host = routeErisHost(catalog.rooms.byKey[room.gameName], routeKey);
   const exit = snapshots.get(
     semanticAddressKey(
@@ -317,12 +322,12 @@ export function assembleRoomExitConformance(
     !Object.values(exit.traits.equippedTraits).some(
       (trait) => trait.traitKey === host.curseTraitKey,
     );
-  if (!absent) return Object.freeze({ facts: Object.freeze([...delta.facts]) });
+  if (!absent) return Object.freeze({ facts: Object.freeze([...deltaFacts]) });
   const absentTraitKeys = Object.freeze([host.curseTraitKey]);
-  const facts = delta.facts.some((fact) => fact.kind === 'traitInventory')
-    ? delta.facts.map((fact) =>
+  const facts = deltaFacts.some((fact) => fact.kind === 'traitInventory')
+    ? deltaFacts.map((fact) =>
         fact.kind === 'traitInventory' ? Object.freeze({ kind: fact.kind, absentTraitKeys }) : fact,
       )
-    : [...delta.facts, Object.freeze({ kind: 'traitInventory' as const, absentTraitKeys })];
+    : [...deltaFacts, Object.freeze({ kind: 'traitInventory' as const, absentTraitKeys })];
   return Object.freeze({ facts: Object.freeze(facts) });
 }

@@ -132,6 +132,7 @@ const executionDispositions = {
     vows: 'covered',
     chaosValues: 'covered',
     hexNodes: 'covered',
+    rewardStores: 'covered',
   } satisfies Record<ExecutionRoomExitConformanceFactKind, ExecutionDisposition>,
 } as const;
 

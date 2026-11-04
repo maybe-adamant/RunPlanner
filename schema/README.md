@@ -38,8 +38,8 @@ customization) with its `interactChallengeSwitch` action and its `reward` and
 `nectar` claim pickups. The plan wire gains `overview.challengeSwitch`, the
 switch's guide row and claim acquisitions, and the shape of a plan that ends
 before its biome's terminal room (a terminal end room and a partial Hub
-block); publication holds back a plan that ends that way or enters a switch
-room until the game module runs them. A revision changes no saved shape, so
+block), a room-exit `rewardStores` conformance fact and each Fields door
+batch's `cageCountOutcome`. A revision changes no saved shape, so
 it has no transition; plans sent under 101.0 read as outdated.
 
 Schema 101 makes each phase whose binding can field a Nemesis bet combat own

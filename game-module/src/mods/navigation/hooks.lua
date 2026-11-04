@@ -336,33 +336,28 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         return result
     end
 
-    -- The native roll sets the cage count every Fields door shares; each target
-    -- publishes it. Max takes the native branch that advances FieldsMaxDoorsRolled
-    -- and min the one that leaves it; a count both give is min. A max past the
-    -- native ceiling, or a count neither gives, is a mismatch and rolls natively.
+    -- The native roll sets the cage count every Fields door shares. The batch
+    -- publishes its outcome: max takes the native branch that advances
+    -- FieldsMaxDoorsRolled, min the one that leaves it, even where a door's
+    -- capacity clamps the max to the min. A max past the native ceiling is a
+    -- mismatch and rolls natively.
     module.hooks.wrap("SelectFieldsDoorCageCount", "run-planner-fields-cage-count", function(_, runtime, base,
         run, nativeRoom)
         local state = getState(runtime)
-        if cageScope == nil or state == nil or state.state ~= "synchronized"
+        if cageScope == nil or cageScope.outcome == nil or state == nil or state.state ~= "synchronized"
             or type(run) ~= "table" or type(nativeRoom) ~= "table" then
             return base(run, nativeRoom)
-        end
-        local planned
-        for _, cages in pairs(cageScope.byRoomId) do
-            if planned ~= nil and planned ~= #cages.rewards then planned = false break end
-            planned = #cages.rewards
         end
         local depthTable = nativeRoom.MaxDoorDepthChanceTable
         if depthTable == nil or depthTable[run.BiomeDepthCache] == nil then return base(run, nativeRoom) end
         run.FieldsMaxDoorsRolled = run.FieldsMaxDoorsRolled or 0
-        if planned == nativeRoom.MinDoorCageRewards then return planned end
-        if planned == nativeRoom.MaxDoorCageRewards
-            and run.FieldsMaxDoorsRolled < (nativeRoom.MaxDoorCageCeiling or 0) then
+        if cageScope.outcome == "min" then return nativeRoom.MinDoorCageRewards end
+        if run.FieldsMaxDoorsRolled < (nativeRoom.MaxDoorCageCeiling or 0) then
             run.FieldsMaxDoorsRolled = run.FieldsMaxDoorsRolled + 1
-            return planned
+            return nativeRoom.MaxDoorCageRewards
         end
         local rolled = base(run, nativeRoom)
-        session.mismatch(state, { kind = "cageCount", expected = planned or nil, observed = rolled })
+        session.mismatch(state, { kind = "cageCount", expected = "max", observed = rolled })
         report(runtime)
         return rolled
     end)
@@ -486,7 +481,9 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
             state.plan.occurrencesById) or nil
         if rows ~= nil and expected and expected.kind ~= "terminal" then doorScope = { rows = rows, index = 1 } end
         local cageDraws = doors.cageDraws(occurrence, state.plan.occurrencesById)
-        if cageDraws ~= nil then cageScope = { byRoomId = cageDraws } end
+        if cageDraws ~= nil then
+            cageScope = { byRoomId = cageDraws, outcome = occurrence.doors and occurrence.doors.cageCountOutcome }
+        end
         local ok, result = pcall(base, currentRun, nativeRoom)
         doorScope = nil
         cageScope = nil

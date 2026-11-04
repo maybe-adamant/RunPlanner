@@ -36,6 +36,7 @@ end
 
 function TestRoomNavigationStructure.testNativeFactVocabularyIsClosedAndDoesNotTranslatePlannerAddresses()
     lu.assertEquals(featureBindings.features, {
+        challengeSwitch = { carrier = "roomField", key = "ChallengeSwitch" },
         stygianWell = { carrier = "roomField", key = "WellShop" },
         purgingPool = { carrier = "roomField", key = "SellTraitShop" },
         hermesShrine = { carrier = "roomField", key = "SurfaceShop" },

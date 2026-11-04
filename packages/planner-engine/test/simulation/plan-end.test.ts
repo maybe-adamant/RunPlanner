@@ -74,9 +74,8 @@ describe('Plan end evaluation', () => {
       blockedSuffix: [],
       afterPlanEnd: ['G'],
     });
-    // Valid through its end, but a mid-biome end does not publish until the game module runs it.
-    expect(evaluation.summary.eligibleForExecutionPlan).toBe(false);
-    expect(evaluation.summary.executionPlanBlock).toBe('planEndAwaitsGameModule');
+    // Valid through its end, a mid-biome end publishes.
+    expect(evaluation.summary.eligibleForExecutionPlan).toBe(true);
     expect(evaluation.authoringHorizon).toEqual({
       kind: 'ended',
       blockedAfter: createOccurrenceAddress(
@@ -149,7 +148,6 @@ describe('Plan end evaluation', () => {
     expect(atPostboss.route.processing.completeValidPrefix).toEqual(['F']);
     expect(atPostboss.route.processing.afterPlanEnd).toEqual(['G']);
     expect(atPostboss.summary.eligibleForExecutionPlan).toBe(true);
-    expect(atPostboss.summary).not.toHaveProperty('executionPlanBlock');
 
     // At the last configured biome's end it is the unmarked plan.
     const unmarked = simulateProject(catalog, createCompleteFGProject());
@@ -184,7 +182,6 @@ describe('Plan end evaluation', () => {
       afterPlanEnd: ['G'],
     });
     expect(evaluation.summary.eligibleForExecutionPlan).toBe(false);
-    expect(evaluation.summary).not.toHaveProperty('executionPlanBlock');
     expect(evaluation.authoringHorizon).toEqual({ kind: 'open' });
   });
 

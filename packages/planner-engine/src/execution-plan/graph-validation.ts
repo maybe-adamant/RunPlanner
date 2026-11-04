@@ -127,6 +127,13 @@ export function validateExecutionGraph(
         );
         result.add(target.room.id);
       }
+      const cages = entry.doors.targets.some(
+        (target) => occurrences.get(target.room.id)?.kind === 'FieldsEncounter',
+      );
+      if ((entry.doors.cageCountOutcome !== undefined) !== cages)
+        invalid(
+          `${entry.id} doors.cageCountOutcome is required exactly when a target is a Fields room`,
+        );
     } else if (entry.doors.kind === 'fixed') {
       assertRoomReference(entry.doors.target, `${entry.id} fixed target`);
       validateZagreusContractPresence(

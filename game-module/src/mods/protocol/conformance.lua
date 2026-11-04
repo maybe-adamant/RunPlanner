@@ -228,6 +228,54 @@ function conformance.admissionExpected(value)
     return expected
 end
 
+-- The fact names the stores to compare and the reward types both sides count alike;
+-- the frame's counts are aligned with native RewardStoreData and summed by type there.
+local function rewardStoresExpected(fact, exitState, label)
+    local stores, storesError = p.arr(fact.stores, label .. ".stores", 32)
+    if not stores then return nil, storesError end
+    if #stores == 0 then return p.fail(label .. ".stores must be nonempty") end
+    local frame = {}
+    for _, row in ipairs(field(exitState, "rewardStores") or {}) do frame[row.name] = row.remainingEntryCounts end
+    local expected = {}
+    for index, value in ipairs(stores) do
+        local storeLabel = label .. ".stores[" .. index .. "]"
+        local store, storeError = p.exact(value, { "name", "rewardTypes" }, {}, storeLabel)
+        if not store then return nil, storeError end
+        if not p.str(store.name, storeLabel .. ".name") or expected[store.name] ~= nil then
+            return p.fail(storeLabel .. " has an invalid or duplicate name")
+        end
+        local types, typesError = p.strings(store.rewardTypes, storeLabel .. ".rewardTypes", 64)
+        if not types then return nil, typesError end
+        if #types == 0 then return p.fail(storeLabel .. ".rewardTypes must be nonempty") end
+        local seen = {}
+        for _, rewardType in ipairs(types) do
+            if seen[rewardType] then return p.fail(storeLabel .. ".rewardTypes must be distinct") end
+            seen[rewardType] = true
+        end
+        if frame[store.name] == nil then return p.fail(storeLabel .. " names a store the frame lacks") end
+        expected[store.name] = { rewardTypes = types, remainingEntryCounts = frame[store.name] }
+    end
+    return expected
+end
+
+-- Per store, the frame's remaining counts summed by reward type over the native
+-- declaration; nil when the declaration does not align with the frame.
+function conformance.rewardStoreCounts(expected, declarations)
+    local result = {}
+    for name, store in pairs(expected) do
+        local declared = declarations and declarations[name]
+        if type(declared) ~= "table" or #declared ~= #store.remainingEntryCounts then return nil, name end
+        local compared, counts = {}, {}
+        for _, rewardType in ipairs(store.rewardTypes) do compared[rewardType], counts[rewardType] = true, 0 end
+        for index, entry in ipairs(declared) do
+            local rewardType = type(entry) == "table" and entry.Name or nil
+            if compared[rewardType] then counts[rewardType] = counts[rewardType] + store.remainingEntryCounts[index] end
+        end
+        result[name] = counts
+    end
+    return result
+end
+
 function conformance.resolve(value, state, label)
     local record, errorMessage = p.exact(value, { "facts" }, {}, label)
     if not record then return nil, errorMessage end
@@ -238,29 +286,38 @@ function conformance.resolve(value, state, label)
     for index, factValue in ipairs(facts) do
         local factLabel = label .. ".facts[" .. index .. "]"
         local inventory = type(factValue) == "table" and factValue.kind == "traitInventory"
-        local fact, factError = p.exact(factValue, { "kind" }, inventory and { "absentTraitKeys" } or {}, factLabel)
+        local stores = type(factValue) == "table" and factValue.kind == "rewardStores"
+        local fact, factError = p.exact(factValue, stores and { "kind", "stores" } or { "kind" },
+            inventory and { "absentTraitKeys" } or {}, factLabel)
         if not fact then return nil, factError end
-        local read = readers[fact.kind]
-        if not read or expected[fact.kind] ~= nil then
-            return p.fail(label .. " has unsupported or duplicate conformance fact")
-        end
-        expected[fact.kind] = read(fact.kind == "traitInventory" and state or exitState)
-        if expected[fact.kind] == nil then
-            return p.fail(factLabel .. " requires complete diagnostic frames")
-        end
-        if fact.absentTraitKeys ~= nil then
-            -- Traits asserted absent beyond the frames join the proved absences.
-            local keys, keysError = p.strings(fact.absentTraitKeys, factLabel .. ".absentTraitKeys")
-            if not keys then return nil, keysError end
-            if #keys == 0 then return p.fail(factLabel .. ".absentTraitKeys must be nonempty") end
-            local absent, framed, seen = expected.traitInventory.absent, {}, {}
-            for _, key in ipairs(absent) do framed[key] = true end
-            for _, key in ipairs(keys) do
-                if seen[key] then return p.fail(factLabel .. ".absentTraitKeys must be distinct") end
-                seen[key] = true
-                if not framed[key] then absent[#absent + 1] = key end
+        if stores then
+            if expected.rewardStores ~= nil then return p.fail(label .. " has duplicate conformance fact") end
+            local storesExpected, storesError = rewardStoresExpected(fact, exitState, factLabel)
+            if not storesExpected then return nil, storesError end
+            expected.rewardStores = storesExpected
+        else
+            local read = readers[fact.kind]
+            if not read or expected[fact.kind] ~= nil then
+                return p.fail(label .. " has unsupported or duplicate conformance fact")
             end
-            table.sort(absent)
+            expected[fact.kind] = read(fact.kind == "traitInventory" and state or exitState)
+            if expected[fact.kind] == nil then
+                return p.fail(factLabel .. " requires complete diagnostic frames")
+            end
+            if fact.absentTraitKeys ~= nil then
+                -- Traits asserted absent beyond the frames join the proved absences.
+                local keys, keysError = p.strings(fact.absentTraitKeys, factLabel .. ".absentTraitKeys")
+                if not keys then return nil, keysError end
+                if #keys == 0 then return p.fail(factLabel .. ".absentTraitKeys must be nonempty") end
+                local absent, framed, seen = expected.traitInventory.absent, {}, {}
+                for _, key in ipairs(absent) do framed[key] = true end
+                for _, key in ipairs(keys) do
+                    if seen[key] then return p.fail(factLabel .. ".absentTraitKeys must be distinct") end
+                    seen[key] = true
+                    if not framed[key] then absent[#absent + 1] = key end
+                end
+                table.sort(absent)
+            end
         end
     end
     return expected

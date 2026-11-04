@@ -106,6 +106,18 @@ import surfaceStartQOpeningFixture from '../fixtures/surface-start-q-opening.exe
 import underworldStartIPrebossFixture from '../fixtures/underworld-start-i-preboss.execution.json';
 import dreamStartNOpeningFixture from '../fixtures/dream-start-n-opening.execution.json';
 import underworldStartGRivalsBossFixture from '../fixtures/underworld-start-g-rivals-boss.execution.json';
+import underworldFCutEndFixture from '../fixtures/underworld-f-cut-end.execution.json';
+import surfaceNPartialHubFixture from '../fixtures/surface-n-partial-hub.execution.json';
+import underworldFSwitchesFixture from '../fixtures/underworld-f-switches.execution.json';
+import underworldFSwitchesFailedLeftFixture from '../fixtures/underworld-f-switches-failed-left.execution.json';
+import surfacePEliteSwitchFixture from '../fixtures/surface-p-elite-switch.execution.json';
+import {
+  surfaceNPartialHubProject,
+  surfacePEliteSwitchProject,
+  underworldFCutEndProject,
+  underworldFSwitchesFailedLeftProject,
+  underworldFSwitchesProject,
+} from './plan-end-switch-fixtures';
 
 const fixtureDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures');
 
@@ -346,6 +358,31 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     project: () =>
       withStartPoint(loadUnderworldTwistScyllaCheckpoint(), { biomeKey: 'G', point: 'boss' }),
     wire: underworldStartGRivalsBossFixture,
+  },
+  {
+    name: 'underworld-f-cut-end',
+    project: underworldFCutEndProject,
+    wire: underworldFCutEndFixture,
+  },
+  {
+    name: 'surface-n-partial-hub',
+    project: surfaceNPartialHubProject,
+    wire: surfaceNPartialHubFixture,
+  },
+  {
+    name: 'underworld-f-switches',
+    project: underworldFSwitchesProject,
+    wire: underworldFSwitchesFixture,
+  },
+  {
+    name: 'underworld-f-switches-failed-left',
+    project: underworldFSwitchesFailedLeftProject,
+    wire: underworldFSwitchesFailedLeftFixture,
+  },
+  {
+    name: 'surface-p-elite-switch',
+    project: surfacePEliteSwitchProject,
+    wire: surfacePEliteSwitchFixture,
   },
 ]);
 

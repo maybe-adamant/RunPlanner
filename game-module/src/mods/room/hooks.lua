@@ -51,9 +51,11 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
     -- Writes the plan's hero state for the room being left before native LeaveRoom;
     -- nil when the correction failed and snapping stopped. Also returns the
     -- families it found different and wrote.
-    local function correctHero(state, nativeRoom, frame, owner)
+    local function correctHero(state, nativeRoom, frame, owner, own)
         local ok, outcome, detail, written = pcall(snapScope.correct, frame, {
             hexTree = snapScope.hexTree,
+            rewardStores = own and own.rewardStores,
+            encounterDepth = own and own.encounterDepth,
             diagnostic = function(checkpoint, expected, observed)
                 session.diagnostic(state, checkpoint, { expected = expected, observed = observed })
             end,
@@ -86,8 +88,8 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
 
     -- An exit that passed its conformance still agrees with the full exit frame;
     -- any difference is a design issue, logged and never written.
-    local function reportDisagreement(state, nativeRoom, frame)
-        local found = snapScope.differences(frame)
+    local function reportDisagreement(state, nativeRoom, frame, own)
+        local found = snapScope.differences(frame, own)
         if #found == 0 or snapScope.log == nil then return end
         local families, paths = familiesAndPaths(found)
         snapScope.log("[RunPlanner] conformance/snap disagreement room=" .. tostring(roomName(nativeRoom))
@@ -127,8 +129,18 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         end
         local leaving = decision.leaving
         local frame = snapMode.frame(state, nativeRoom, leaving, decision.index)
+        -- A room's own frame also compares the stores its exit conformance names and,
+        -- with a challenge switch, its encounter depth; a Hub departure neither.
+        local own
+        if frame ~= nil and leaving ~= nil and leaving.diagnostics ~= nil
+            and frame == leaving.diagnostics.beforeRoomExit then
+            own = {
+                rewardStores = leaving.conformanceExpected and leaving.conformanceExpected.rewardStores or nil,
+                encounterDepth = leaving.overview ~= nil and leaving.overview.challengeSwitch ~= nil,
+            }
+        end
         if state.state == "synchronized" then
-            if frame ~= nil then reportDisagreement(state, nativeRoom, frame) end
+            if frame ~= nil then reportDisagreement(state, nativeRoom, frame, own) end
             return door
         end
         -- The first mismatch is logged before resync clears it.
@@ -136,7 +148,8 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         local outcome, written
         if frame ~= nil then
             local _
-            outcome, _, written = correctHero(state, nativeRoom, frame, leaving and leaving.id or roomName(nativeRoom))
+            outcome, _, written = correctHero(state, nativeRoom, frame, leaving and leaving.id or roomName(nativeRoom),
+                own)
             if outcome == nil then
                 logSnap(nativeRoom, frame, "failed", nil, nil)
                 report(runtime)

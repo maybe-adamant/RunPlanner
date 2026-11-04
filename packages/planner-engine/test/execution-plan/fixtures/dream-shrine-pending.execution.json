@@ -564,7 +564,20 @@
         ],
         "resolvedSharedRewardStoreKey": "TyphonBossRewards"
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "roomExitConformance": {
+        "facts": [
+          { "kind": "elementCounts" },
+          {
+            "kind": "rewardStores",
+            "stores": [
+              {
+                "name": "TyphonBossRewards",
+                "rewardTypes": ["Boon", "StackUpgradeTriple", "TalentBigDrop", "WeaponUpgrade"]
+              }
+            ]
+          }
+        ]
+      },
       "diagnostics": {
         "roomEntered": {
           "frame": 4,
@@ -983,7 +996,20 @@
         ],
         "resolvedSharedRewardStoreKey": "TyphonBossRewards"
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "roomExitConformance": {
+        "facts": [
+          { "kind": "elementCounts" },
+          {
+            "kind": "rewardStores",
+            "stores": [
+              {
+                "name": "TyphonBossRewards",
+                "rewardTypes": ["Boon", "StackUpgradeTriple", "TalentBigDrop", "WeaponUpgrade"]
+              }
+            ]
+          }
+        ]
+      },
       "diagnostics": {
         "roomEntered": {
           "frame": 10,
@@ -1434,5 +1460,5 @@
       }
     }
   ],
-  "planFingerprint": "6564f703"
+  "planFingerprint": "a52c5c9b"
 }

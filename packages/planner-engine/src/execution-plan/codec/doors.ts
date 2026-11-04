@@ -15,7 +15,12 @@ import { roomReference } from './room';
 export function doors(value: unknown, label: string): ExecutionDoors {
   const record = object(value, label);
   if (record.kind === 'batch') {
-    exact(record, ['kind', 'owner', 'targets'], ['resolvedSharedRewardStoreKey'], label);
+    exact(
+      record,
+      ['kind', 'owner', 'targets'],
+      ['cageCountOutcome', 'resolvedSharedRewardStoreKey'],
+      label,
+    );
     const targets = array(record.targets, `${label}.targets`).map((entry, index) => {
       const row = object(entry, `${label}.targets[${index}]`);
       exact(
@@ -47,10 +52,19 @@ export function doors(value: unknown, label: string): ExecutionDoors {
         ...(cageRewards === undefined ? {} : { cageRewards }),
       });
     });
+    if (
+      record.cageCountOutcome !== undefined &&
+      record.cageCountOutcome !== 'min' &&
+      record.cageCountOutcome !== 'max'
+    )
+      fail(`${label}.cageCountOutcome is unsupported`);
     return Object.freeze({
       kind: 'batch',
       owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       targets: Object.freeze(targets),
+      ...(record.cageCountOutcome === undefined
+        ? {}
+        : { cageCountOutcome: record.cageCountOutcome as 'min' | 'max' }),
       ...(record.resolvedSharedRewardStoreKey === undefined
         ? {}
         : {

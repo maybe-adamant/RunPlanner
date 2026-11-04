@@ -9,6 +9,8 @@ local overview = type(import) == "function" and import("mods/room/overview.lua")
     or require("mods.room.overview")
 local features = type(import) == "function" and import("mods/room/features/structure.lua")
     or require("mods.room.features.structure")
+local switchFeature = type(import) == "function" and import("mods/room/features/challenge_switch.lua")
+    or require("mods.room.features.challenge_switch")
 local fieldFeatures = type(import) == "function" and import("mods/room/features/fields.lua")
     or require("mods.room.features.fields")
 local conformance = type(import) == "function" and import("mods/room/conformance/proof.lua")
@@ -160,6 +162,7 @@ function coordinator.proveEntry(state, nativeRoom, nativeContext)
         function() return overview.prove(active.occurrence, nativeRoom) end,
         function() return coordinator.bindEntryEncounters(state, nativeRoom) end,
         function() return features.prove(active.occurrence, nativeRoom, nativeContext) end,
+        function() return switchFeature.prove(active.occurrence, nativeRoom) end,
     }) do
         local ok, errorValue = proof()
         if not ok then return fail(state, errorValue) end
@@ -503,6 +506,9 @@ function coordinator.close(state, currentRun, gameState)
     if active == nil then return nil end
     local reader = roomState.readConformance
     local ok, errorValue = session.close(active, function()
+        local switched, switchError = switchFeature.proveOutcome(active.occurrence,
+            type(currentRun) == "table" and currentRun.CurrentRoom or nil)
+        if not switched then return nil, switchError end
         return conformance.prove(active.occurrence, function(kind, expected)
             return type(reader) == "function" and reader(kind, currentRun, gameState, expected) or nil
         end)

@@ -31,7 +31,7 @@ local function reward(rewardType, source)
 end
 
 -- H_Intro offers two Fields doors; each target names its first cage draws.
-local function plan(cageCount, peerCageCount)
+local function plan(cageCount, peerCageCount, outcome)
     local function cages(count, ...)
         local all = { ... }
         local result = {}
@@ -40,7 +40,8 @@ local function plan(cageCount, peerCageCount)
     end
     local source = {
         id = "src", gameName = "H_Intro", biomeKey = "H", overview = {},
-        doors = { kind = "batch", owner = "batch", resolvedSharedRewardStoreKey = "RunProgress", targets = {
+        doors = { kind = "batch", owner = "batch", resolvedSharedRewardStoreKey = "RunProgress",
+            cageCountOutcome = outcome, targets = {
             { exitKey = "exit1", index = 1, room = { id = "a", biomeKey = "H", gameName = "H_Combat02" },
                 cageRewards = cages(cageCount, reward("RoomMoneyDrop"), reward("Boon", "HeraUpgrade"), reward("TalentDrop")) },
             { exitKey = "exit2", index = 2, room = { id = "b", biomeKey = "H", gameName = "H_Combat03" },
@@ -130,7 +131,10 @@ end
 
 local function unlock(cageCount, fieldsMaxDoorsRolled, options)
     options = options or {}
-    local callbacks, scope, state, mismatches = attached(plan(cageCount, options.peerCageCount))
+    local outcome = options.outcome
+    if outcome == nil then outcome = cageCount == 3 and "max" or "min" end
+    local callbacks, scope, state, mismatches = attached(plan(cageCount, options.peerCageCount,
+        outcome or nil))
     local run = {
         RewardStores = { RunProgress = options.store or store() }, BiomeDepthCache = 1,
         FieldsMaxDoorsRolled = fieldsMaxDoorsRolled,
@@ -192,26 +196,28 @@ end
 
 function TestFieldsCages.testAPlannedMaxPastTheNativeCeilingIsAMismatch()
     local result = unlock(3, 2)
-    lu.assertEquals(result.mismatches, { { kind = "cageCount", expected = 3, observed = 2 } })
+    lu.assertEquals(result.mismatches, { { kind = "cageCount", expected = "max", observed = 2 } })
     lu.assertEquals(result.run.FieldsMaxDoorsRolled, 2)
     -- The native roll stands, and native draws fill its cages.
     lu.assertEquals(#result.offered[1].Room.CageRewards, 2)
 end
 
-function TestFieldsCages.testAClampedMaxTakesTheMinBranchAndLeavesTheCounter()
-    -- A two-cage peer clamps max to min: both outcomes give two cages, and the
-    -- published count cannot say which the plan chose. The min branch never runs
-    -- the counter ahead of the plan's, but it trails a planned max, and a
-    -- recorded round trip reads that batch as min.
-    local result = unlock(2, 0, { peerCapacity = 2 })
+function TestFieldsCages.testAClampedMaxStillTakesTheMaxBranchAndAdvancesTheCounter()
+    -- A two-cage peer clamps max to min: both outcomes give two cages, so the
+    -- published outcome, not the count, picks the branch.
+    local result = unlock(2, 0, { peerCapacity = 2, outcome = "max" })
     lu.assertEquals(result.mismatches, {})
     lu.assertTrue(result.proved, result.errorValue)
-    lu.assertEquals(result.run.FieldsMaxDoorsRolled, 0)
+    lu.assertEquals(result.run.FieldsMaxDoorsRolled, 1)
+    local clampedMin = unlock(2, 0, { peerCapacity = 2, outcome = "min" })
+    lu.assertEquals(clampedMin.mismatches, {})
+    lu.assertEquals(clampedMin.run.FieldsMaxDoorsRolled, 0)
 end
 
-function TestFieldsCages.testDoorsPublishingDifferentCageCountsAreAMismatch()
-    local result = unlock(2, 0, { peerCageCount = 3 })
-    lu.assertEquals(result.mismatches, { { kind = "cageCount", observed = 2 } })
+function TestFieldsCages.testABatchWithoutAPublishedOutcomeRollsNatively()
+    local result = unlock(2, 0, { outcome = false })
+    lu.assertEquals(result.mismatches, {})
+    lu.assertEquals(result.run.FieldsMaxDoorsRolled, 0)
 end
 
 function TestFieldsCages.testACageDrawThatCannotYieldItsPlannedRewardFailsTheDoorProof()

@@ -164,6 +164,40 @@ function TestGeneratedEncounters.testAdmittedDecisionInstallsEveryWaveWithoutRee
     end)
 end
 
+-- A challenge switch's spawn generates its encounter directly, outside any SetupEncounter.
+function TestGeneratedEncounters.testASwitchEncounterInstallsItsCompositionAtItsSpawn()
+    withGame(eligibleGame(), function()
+        local module, _, callbacks = support.capture()
+        local instance = generatedDefinition.create()
+        local switch = { variantKey = "TimeChallengeSwitch_Money", encounterKey = "Generated", customization = { decision() } }
+        local occurrence = { id = "switch-host", overview = { challengeSwitch = switch } }
+        local state = { state = "synchronized" }
+        local room = { occurrence = function() return occurrence end, encounterPhase = function() return nil end }
+        local diagnostics = {}
+        instance.attach(module, { diagnostic = function(_, _, observed) diagnostics[#diagnostics + 1] = observed end },
+            function() return state end, room)
+        local encounter, run = encounterData({ Blacklist = {} }), { Blacklist = {} }
+        local phase = { slotKey = "challengeSwitch", encounterKey = "Generated", customization = switch.customization }
+        instance.withSwitchEncounter(state, occurrence, phase, function()
+            callbacks.GenerateEncounter(nil, {}, function(currentRun, generationRoom, generated)
+                generated.DifficultyRating = generated.BaseDifficultyMin
+                callbacks.CalculateActiveEnemyCap(nil, {}, function() return 7 end, currentRun, generationRoom, generated)
+                generated.Blacklist = generated.Blacklist or {}
+                generated.SpawnWaves = { { WaveIndex = 1, Spawns = {} } }
+                callbacks.FillEnemyTypes(nil, {}, function() error("native must not fill") end,
+                    generated, generated.SpawnWaves[1], generationRoom)
+                return generated
+            end, run, {}, encounter)
+        end)
+        lu.assertEquals(diagnostics[1].kind, "generated-installed")
+        lu.assertEquals(diagnostics[1].phase, "challengeSwitch")
+        lu.assertEquals(encounter.SpawnWaves[1].Spawns[1].TotalCount, 2)
+        -- The switch's Fangs perks apply when the press starts its encounter.
+        callbacks.PickEncounterEliteAttributes(nil, {}, function() error("Fangs must not redraw") end, encounter)
+        lu.assertEquals(encounter.EliteAttributes, { Elite = { "Blink" } })
+    end)
+end
+
 function TestGeneratedEncounters.testCapOutsideGenerationScopeIsUntouched()
     local callbacks = fixture()
     local encounter = encounterData()

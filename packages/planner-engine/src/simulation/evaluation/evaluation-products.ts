@@ -161,12 +161,6 @@ export interface RouteProcessingRegions {
   readonly afterPlanEnd?: readonly string[];
 }
 
-/**
- * A valid route the game module cannot run yet: one that ends before its biome's
- * terminal room, or one that enters a room with an observed challenge switch.
- */
-export type ExecutionPlanBlock = 'planEndAwaitsGameModule' | 'challengeSwitchAwaitsGameModule';
-
 export interface RouteEvaluationSummary {
   readonly configuredBiomeCount: number;
   readonly evaluatedBiomeCount: number;
@@ -175,8 +169,6 @@ export interface RouteEvaluationSummary {
   readonly invalidBiomeCount: number;
   readonly blockedBiomeCount: number;
   readonly eligibleForExecutionPlan: boolean;
-  /** Why a valid route still cannot publish: it needs what the game module does not run yet. */
-  readonly executionPlanBlock?: ExecutionPlanBlock;
 }
 
 export interface ProjectRouteEvaluation {
@@ -248,8 +240,6 @@ export function summarizeRoute(
   processing: RouteProcessingRegions,
   /** How the plan end is reached validly: at its biome's terminal room, or cut before it. */
   validEnd: 'terminal' | 'cut' | null = null,
-  /** A published biome enters a room with an observed challenge switch. */
-  publishesChallengeSwitch = false,
 ): RouteEvaluationSummary {
   const incompleteBiomeCount = evaluations.filter(
     (evaluation) => evaluation.authoring === 'incomplete' || evaluation.requiredInput !== undefined,
@@ -260,13 +250,6 @@ export function summarizeRoute(
   const validThroughEnd =
     configuredBiomeCount > 0 &&
     (validEnd !== null || processing.completeValidPrefix.length === configuredBiomeCount);
-  const block: ExecutionPlanBlock | undefined = !validThroughEnd
-    ? undefined
-    : validEnd === 'cut'
-      ? 'planEndAwaitsGameModule'
-      : publishesChallengeSwitch
-        ? 'challengeSwitchAwaitsGameModule'
-        : undefined;
   return Object.freeze({
     configuredBiomeCount,
     evaluatedBiomeCount: evaluations.length,
@@ -274,7 +257,6 @@ export function summarizeRoute(
     incompleteBiomeCount,
     invalidBiomeCount,
     blockedBiomeCount: processing.blockedSuffix.length,
-    eligibleForExecutionPlan: validThroughEnd && block === undefined,
-    ...(block === undefined ? {} : { executionPlanBlock: block }),
+    eligibleForExecutionPlan: validThroughEnd,
   });
 }

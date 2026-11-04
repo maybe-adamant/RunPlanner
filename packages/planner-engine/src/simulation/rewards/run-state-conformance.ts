@@ -7,6 +7,7 @@ import type { Catalog } from '../../catalog-schema';
 import type { RunStateSnapshot } from './run-state';
 import { advanceCurrentKeepsake, type KeepsakeState } from '../keepsakes/state';
 import { projectStartKeepsake } from '../start-installation/projection';
+import { storeEntryOnRoute } from '../../reward-kernel/bag';
 
 export interface PendingKeepsakeEffects {
   readonly olympianSources: KeepsakeState['olympianSources'];
@@ -64,11 +65,54 @@ export type RoomExitConformanceFactKind =
   | 'arcana'
   | 'vows'
   | 'chaosValues'
-  | 'hexNodes';
+  | 'hexNodes'
+  | 'rewardStores';
+
+/** One native reward store a room exit compares, by the reward types both sides count alike. */
+export interface ComparableRewardStore {
+  readonly name: string;
+  readonly rewardTypes: readonly string[];
+}
+
+export type RoomExitConformanceFact =
+  | { readonly kind: Exclude<RoomExitConformanceFactKind, 'rewardStores'> }
+  | { readonly kind: 'rewardStores'; readonly stores: readonly ComparableRewardStore[] };
 
 export interface RoomExitConformanceDelta {
   readonly occurrenceId: string;
-  readonly facts: readonly { readonly kind: RoomExitConformanceFactKind }[];
+  readonly facts: readonly RoomExitConformanceFact[];
+}
+
+/**
+ * Each store's remaining counts by reward type, over the types native and the
+ * planner count alike. Native keeps every fill's entries declared for another
+ * route, which no draw takes and the bag leaves out, so those types are not
+ * compared; Secrets is drawn by every offered Chaos gate and refills itself.
+ */
+function comparableRewardStores(
+  catalog: Catalog,
+  routeKey: string,
+  snapshot: RunStateSnapshot,
+): ReadonlyMap<string, Readonly<Record<string, number>>> {
+  const result = new Map<string, Readonly<Record<string, number>>>();
+  for (const store of snapshot.rewardStores) {
+    if (store.storeKey === 'Secrets') continue;
+    const declaration = catalog.rewards.stores.byKey[store.storeKey];
+    if (declaration === undefined) continue;
+    const offRoute = new Set(
+      declaration.entries
+        .filter((entry) => !storeEntryOnRoute(entry, routeKey))
+        .map((entry) => entry.rewardType),
+    );
+    const counts: Record<string, number> = {};
+    declaration.entries.forEach((entry, index) => {
+      if (offRoute.has(entry.rewardType)) return;
+      counts[entry.rewardType] =
+        (counts[entry.rewardType] ?? 0) + (store.remainingEntryCounts[index] ?? 0);
+    });
+    if (Object.keys(counts).length > 0) result.set(store.storeKey, Object.freeze(counts));
+  }
+  return result;
 }
 
 function stable(value: unknown): string {
@@ -184,9 +228,7 @@ export function deriveRoomExitConformanceDeltas(
     const roomEntry = snapshotFor(snapshots, occurrence, 'roomEntered');
     const baseline = previousExit ?? snapshotFor(snapshots, occurrence, 'roomEntered');
     previousExit = currentExit;
-    const facts: { readonly kind: RoomExitConformanceFactKind }[] = [
-      Object.freeze({ kind: 'elementCounts' }),
-    ];
+    const facts: RoomExitConformanceFact[] = [Object.freeze({ kind: 'elementCounts' })];
     if (baseline === undefined) {
       result.set(
         occurrence.occurrenceId,
@@ -194,7 +236,11 @@ export function deriveRoomExitConformanceDeltas(
       );
       continue;
     }
-    const add = (kind: RoomExitConformanceFactKind, before: unknown, after: unknown) => {
+    const add = (
+      kind: Exclude<RoomExitConformanceFactKind, 'rewardStores'>,
+      before: unknown,
+      after: unknown,
+    ) => {
       if (changed(before, after)) facts.push(Object.freeze({ kind }));
     };
     // Unlike carry-state facts, this proof is deliberately local to the
@@ -239,6 +285,14 @@ export function deriveRoomExitConformanceDeltas(
       [baseline.hexProgress.tree?.nodes, baseline.hexProgress.investedNodeKeys],
       [currentExit.hexProgress.tree?.nodes, currentExit.hexProgress.investedNodeKeys],
     );
+    const storesBefore = comparableRewardStores(catalog, occurrence.routeKey, baseline);
+    const stores = [...comparableRewardStores(catalog, occurrence.routeKey, currentExit)]
+      .filter(([name, counts]) => changed(storesBefore.get(name), counts))
+      .map(([name, counts]) =>
+        Object.freeze({ name, rewardTypes: Object.freeze(Object.keys(counts).sort()) }),
+      );
+    if (stores.length > 0)
+      facts.push(Object.freeze({ kind: 'rewardStores', stores: Object.freeze(stores) }));
     if (facts.length > 0)
       result.set(
         occurrence.occurrenceId,

@@ -607,6 +607,7 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     'vows',
     'chaosValues',
     'hexNodes',
+    'rewardStores',
   ]);
   const conformanceFacts =
     conformance === undefined
@@ -619,6 +620,27 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
             `${factLabel}.kind`,
           ) as ExecutionRoomExitConformanceFactKind;
           if (!allowedConformanceKinds.has(kind)) fail(`${factLabel}.kind is unsupported`);
+          if (kind === 'rewardStores') {
+            exact(fact, ['kind', 'stores'], [], factLabel);
+            const stores = array(fact.stores, `${factLabel}.stores`).map((entry, storeIndex) => {
+              const storeLabel = `${factLabel}.stores[${storeIndex}]`;
+              const store = object(entry, storeLabel);
+              exact(store, ['name', 'rewardTypes'], [], storeLabel);
+              const rewardTypes = stringArray(store.rewardTypes, `${storeLabel}.rewardTypes`);
+              if (rewardTypes.length === 0 || new Set(rewardTypes).size !== rewardTypes.length)
+                fail(`${storeLabel}.rewardTypes must be nonempty and distinct`);
+              return Object.freeze({
+                name: stringValue(store.name, `${storeLabel}.name`),
+                rewardTypes: Object.freeze([...rewardTypes]),
+              });
+            });
+            if (
+              stores.length === 0 ||
+              new Set(stores.map((store) => store.name)).size !== stores.length
+            )
+              fail(`${factLabel}.stores must be nonempty and distinct`);
+            return Object.freeze({ kind, stores: Object.freeze(stores) });
+          }
           if (kind !== 'traitInventory') {
             exact(fact, ['kind'], [], factLabel);
             return Object.freeze({ kind });

@@ -56,7 +56,7 @@ local rewardNames = {
     MaxHealthDrop = "Max Health", MaxHealthDropSmall = "Max Health", MaxHealthDropBig = "Big Max Health",
     EmptyMaxHealthDrop = "Centaur Soul", EmptyMaxHealthSmallDrop = "Centaur Soul",
     MaxManaDrop = "Max Magick", MaxManaDropSmall = "Max Magick", MaxManaDropBig = "Big Max Magick",
-    Currency = "Gold", RoomMoneyDrop = "Gold", RoomMoneySmallDrop = "Gold", RoomMoneyTinyDrop = "Gold",
+    Currency = "Gold", Money = "Gold", RoomMoneyDrop = "Gold", RoomMoneySmallDrop = "Gold", RoomMoneyTinyDrop = "Gold",
     RoomMoneyTripleDrop = "Gold x3",
     RoomRewardHealDrop = "Heal", HealDrop = "Heal", HealDropMinor = "Minor Heal", HealBigDrop = "Big Heal",
     RoomRewardConsolationPrize = "Red Onion", ArmorBoost = "Armor", ArmorBigBoost = "Big Armor",
@@ -130,6 +130,12 @@ local function rushedHere(occurrence, sourceKey)
     return false
 end
 
+-- How the planned challenge switch fight ends; a hit fails a Perfect Clear.
+local SWITCH_ROWS = {
+    left = "Switch: leave mid-fight", finished = "Switch: clear",
+    hitless = "Switch: clear unhit", failed = "Switch: clear, take hit",
+}
+
 local function instruction(description, occurrence, transaction)
     if type(description) ~= "table" then return "Planned action" end
     local kind = description.kind
@@ -198,6 +204,9 @@ local function instruction(description, occurrence, transaction)
     if kind == "rerollPurgingPool" then return "Reroll Pool" end
     if kind == "interactGorgon" then return "Talk to Athena" end
     if kind == "interactEris" then return "Talk to Eris" end
+    if kind == "interactChallengeSwitch" then
+        return SWITCH_ROWS[description.outcome] or "Challenge switch"
+    end
     if kind == "interactEncounter" then
         local resolution = transaction and transaction.resolution
         local giver = resolution and resolution.offer and resolution.offer.giver

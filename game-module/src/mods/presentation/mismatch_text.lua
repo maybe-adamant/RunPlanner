@@ -156,6 +156,7 @@ function text.checkpoint(issue)
     if checkpoint == "rewardDraw" then return "a reward draw" end
     if TRAIT_CHOICE[checkpoint] or TRAIT_SCREEN[checkpoint] then return "a trait choice" end
     if checkpoint == "encounter" or checkpoint == "encounterCount" then return "encounter" end
+    if checkpoint:match("^challengeSwitch") then return "the challenge switch" end
     if INVENTORY[checkpoint] then return INVENTORY[checkpoint] .. " stock" end
     return "a plan check"
 end
@@ -271,6 +272,12 @@ local CONFORMANCE = {
     pathOfStars = function() return "Path of Stars differs from the plan" end,
     steadyGrowth = function() return "Steady Growth differs from the plan" end,
     rewardPriorities = function() return "upcoming reward order differs from the plan" end,
+    rewardStores = function() return "the rewards left to draw differ from the plan" end,
+}
+
+local SWITCH_OUTCOMES = {
+    unused = "unused", left = "left mid-fight", finished = "cleared", hitless = "cleared unhit",
+    failed = "cleared with a hit", unclaimed = "cleared but not claimed",
 }
 
 -- One sentence describing what differed, or nil when the shape is unknown.
@@ -338,8 +345,8 @@ function text.difference(issue)
     end
     if checkpoint == "rewardDraw" then return plannedFound("reward ", expected, observed) end
     if checkpoint == "cageCount" then
-        return plannedFound("", expected, observed) and ("planned " .. scalar(expected) .. " cages per door, found "
-            .. scalar(observed)) or nil
+        return plannedFound("", expected, observed) and ("planned the " .. scalar(expected)
+            .. " cage roll, found " .. scalar(observed) .. " cages per door") or nil
     end
     if checkpoint == "reward" or checkpoint == "incomingReward" or checkpoint == "cageReward" then
         return plannedFound("reward ", expected, observed)
@@ -348,6 +355,20 @@ function text.difference(issue)
     if checkpoint == "encounterCount" then
         return plannedFound("", expected, observed) and ("planned " .. scalar(expected) .. " encounters, found "
             .. scalar(observed)) or nil
+    end
+    if checkpoint == "feature" and expected == "challengeSwitch" then
+        return observed and "a challenge switch appeared that the plan doesn't have"
+            or "the planned challenge switch didn't appear"
+    end
+    if checkpoint == "challengeSwitch" then return plannedFound("switch ", expected, observed) end
+    if checkpoint == "challengeSwitchEncounter" then return plannedFound("switch encounter ", expected, observed) end
+    if checkpoint == "challengeSwitchOutcome" then
+        return "the challenge switch was " .. (SWITCH_OUTCOMES[observed] or tostring(observed))
+            .. " (planned " .. (SWITCH_OUTCOMES[expected] or tostring(expected)) .. ")"
+    end
+    if checkpoint == "challengeSwitchNectar" then
+        return expected == true and "the planned switch Nectar didn't drop"
+            or "the challenge switch dropped Nectar the plan doesn't have"
     end
     if INVENTORY[checkpoint] then return "the " .. INVENTORY[checkpoint] .. " items differ from the plan" end
     if checkpoint == "ephyraDoorRoom" or checkpoint == "ephyraHubEntryRoom" then

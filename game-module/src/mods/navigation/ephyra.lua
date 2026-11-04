@@ -488,7 +488,7 @@ function ephyra.finalHandoff(state, routeSession, nativeRoomData)
     local currentRun = _G.CurrentRun
     local hub = ephyra.hub(state and state.plan, currentRun and currentRun.CurrentRoom)
     local expected = routeSession.expected(state and state.route)
-    if hub == nil or expected == nil or expected.id ~= hub.finalHandoff.id
+    if hub == nil or expected == nil or hub.finalHandoff == nil or expected.id ~= hub.finalHandoff.id
         or expected.gameName ~= hub.finalHandoff.gameName
         or roomName(nativeRoomData) ~= expected.gameName then return nil end
     return expected

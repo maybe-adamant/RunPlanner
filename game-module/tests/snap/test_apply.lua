@@ -467,6 +467,40 @@ function TestSnapApply.testWritesThePublishedRewardStores()
     lu.assertEquals(run.RewardStores.RunProgress, { { Name = "B" }, { Name = "B" } })
 end
 
+-- The room's reward store fact is a snap family: a store-only difference corrects.
+function TestSnapApply.testAStoreTheRoomComparesIsCorrectedAndVerified()
+    local _, _, restore = world({})
+    local run = _G.CurrentRun
+    _G.RewardStoreData = { RunProgress = { { Name = "A" }, { Name = "B" } } }
+    run.RewardStores.RunProgress = { { Name = "A" } }
+    run.RewardPriorities = {}
+    local value = frame()
+    value.rewardStores = { { name = "RunProgress", remainingEntryCounts = { 0, 2 } } }
+    local stores = { RunProgress = { rewardTypes = { "A", "B" }, remainingEntryCounts = { 0, 2 } } }
+    lu.assertEquals(snap.differences(value, { rewardStores = stores })[1].family, "rewardStores")
+    local outcome, difference = snap.correct(value, { rewardStores = stores })
+    restore()
+    lu.assertEquals(outcome, "corrected")
+    lu.assertEquals(difference.family, "rewardStores")
+    lu.assertEquals(run.RewardStores.RunProgress, { { Name = "B" }, { Name = "B" } })
+end
+
+-- A challenge switch room's frame also carries the encounter depth its press counted.
+function TestSnapApply.testASwitchRoomCorrectsItsEncounterDepth()
+    local _, _, restore = world({})
+    local run = _G.CurrentRun
+    run.BiomeEncounterDepth, run.EncounterDepth = 5, 9
+    run.RewardPriorities = {}
+    local value = frame()
+    value.counters = { biomeEncounterDepth = 6, routeEncounterDepth = 10 }
+    lu.assertEquals(snap.correct(value, {}), "in-sync")
+    local outcome, difference = snap.correct(value, { encounterDepth = true })
+    restore()
+    lu.assertEquals(outcome, "corrected")
+    lu.assertEquals(difference.family, "encounterDepth")
+    lu.assertEquals({ run.BiomeEncounterDepth, run.EncounterDepth }, { 6, 10 })
+end
+
 function TestSnapApply.testReslotsASpellWhoseRealisedTreeDiffers()
     local hero, _, restore = world({ { Name = "SpellPotionTrait" }, { Name = "TalentA", StackNum = 1 } })
     hero.SlottedSpell = { TraitName = "SpellPotionTrait", Talents = { { { Name = "TalentA", Invested = true } } } }

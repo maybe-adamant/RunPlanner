@@ -207,7 +207,25 @@ export interface ExecutionRoomExitConformance {
 }
 
 export type ExecutionRoomExitConformanceFact =
-  | { readonly kind: Exclude<ExecutionRoomExitConformanceFactKind, 'traitInventory'> }
+  | {
+      readonly kind: Exclude<
+        ExecutionRoomExitConformanceFactKind,
+        'traitInventory' | 'rewardStores'
+      >;
+    }
+  | {
+      readonly kind: 'rewardStores';
+      /**
+       * The native stores whose remaining counts this room changes, each with the
+       * reward types compared; expected counts come from the beforeRoomExit
+       * frame's `rewardStores`, summed by type over `RewardStoreData[name]`.
+       * Omitted on a plan's end room, whose own door draws are not simulated.
+       */
+      readonly stores: readonly {
+        readonly name: string;
+        readonly rewardTypes: readonly string[];
+      }[];
+    }
   | {
       readonly kind: 'traitInventory';
       /** Traits the planner asserts are not held at room exit, beyond the frames. */
@@ -1167,6 +1185,12 @@ export type ExecutionDoors =
       readonly kind: 'batch';
       readonly owner: string;
       readonly targets: readonly ExecutionDoorTarget[];
+      /**
+       * The batch's native Fields cage-count roll outcome, present when its
+       * targets carry cages: `max` advances `FieldsMaxDoorsRolled`, `min` does
+       * not, even where a door's capacity clamps the max to the min.
+       */
+      readonly cageCountOutcome?: 'min' | 'max';
       readonly resolvedSharedRewardStoreKey?: string;
     }
   | {
@@ -1573,9 +1597,7 @@ export interface ExecutionCompilerError extends Error {
     | 'openingMissing'
     | 'openingSelectionMissing'
     | 'executionCoverageMissing'
-    | 'startPointIneligible'
-    | 'planEndAwaitsGameModule'
-    | 'challengeSwitchAwaitsGameModule';
+    | 'startPointIneligible';
   /** Why the authored start point cannot start the run; present exactly for `startPointIneligible`. */
   readonly startPointReason?: StartInstallationUnavailableReason;
 }

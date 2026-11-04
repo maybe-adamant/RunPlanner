@@ -41,13 +41,6 @@ function sendEligible(state: RootState): boolean {
   );
 }
 
-function sendBlock(state: RootState): GameSendProject['executionPlanBlock'] {
-  const workspace = state.projectWorkspace;
-  return workspace.kind === 'openProject'
-    ? workspace.assembly.evaluation.route.summary.executionPlanBlock
-    : undefined;
-}
-
 function Occupant({ occupant }: { readonly occupant: SendSlotOccupant }) {
   switch (occupant.kind) {
     case 'thisPlan':
@@ -351,7 +344,6 @@ export function GameSendControls({
   const snapshot = useGameStatusSnapshot(gameStatus);
   const projectId = useAppSelector(sendProjectId);
   const eligible = useAppSelector(sendEligible);
-  const executionPlanBlock = useAppSelector(sendBlock);
   const lastSentSlot = useAppSelector((state) => state.gameSendSession.lastSentSlot);
   const activationFailure = useAppSelector((state) => state.gameSendSession.lastActivationFailure);
   const [activity, setActivity] = useSendActivity();
@@ -375,7 +367,6 @@ export function GameSendControls({
       : {
           projectId,
           eligible,
-          ...(executionPlanBlock === undefined ? {} : { executionPlanBlock }),
           ...(startPointBlock === undefined ? {} : { startPointBlock }),
           ...(current === null
             ? {}

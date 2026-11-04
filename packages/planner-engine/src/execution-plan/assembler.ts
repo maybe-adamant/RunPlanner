@@ -42,25 +42,7 @@ import {
 } from '../simulation/timeline-facts';
 import { deriveRoomExitConformanceDeltas } from '../simulation/rewards/run-state-conformance';
 
-/** Publishes a plan the game module can run; a route's publication block refuses it. */
-export function assembleExecutionProduct(
-  input: import('./model').ExecutionAssemblerInput,
-): ExecutionSemanticProduct {
-  assertExactProjectEvaluationAssembly(input.assembly);
-  const block = input.assembly.evaluation.route.summary.executionPlanBlock;
-  if (block !== undefined) {
-    throw new CompilerError(
-      block,
-      block === 'planEndAwaitsGameModule'
-        ? 'the plan ends before its biome ends, which the game module does not run yet'
-        : 'the plan enters a room with a challenge switch, which the game module does not run yet',
-    );
-  }
-  return assembleRouteExecutionProduct(input);
-}
-
-/** The execution product of a route valid through its end, whatever the game module runs. */
-export function assembleRouteExecutionProduct({
+export function assembleExecutionProduct({
   assembly,
   catalog,
   internalRunModifiers = false,
@@ -257,6 +239,7 @@ export function assembleRouteExecutionProduct({
         room,
         roomExitConformance.get(room.occurrenceId),
         snapshots,
+        assembly.project.route.planEnd?.occurrenceId === room.occurrenceId,
       ),
       hubsBySource.get(executionRoomOwnerKey(room)),
       hubExitsBySource.get(executionRoomOwnerKey(room)),

@@ -479,6 +479,16 @@ function generated.create()
             phase = phase, encounterKey = phase.encounterKey, decision = decision,
         }, action)
     end
+    -- A challenge switch's encounter is generated directly by its spawn, outside
+    -- any SetupEncounter, so its preparation scope is entered at that spawn.
+    function instance.withSwitchEncounter(state, occurrence, phase, action)
+        local decision = compositionFor(phase)
+        if decision == nil then return scoped(stack, { kind = "native" }, action) end
+        return scoped(stack, { kind = "setup", owner = {
+            kind = "preparation", state = state, session = instance.session, occurrence = occurrence,
+            phase = phase, encounterKey = phase.encounterKey, decision = decision,
+        } }, action)
+    end
     function instance.withRewardDestination(state, room, nativeRoom, action)
         return instance.withPhase(state, room, state and room.encounterAt(state, 1, nativeRoom), nativeRoom, action)
     end
@@ -492,6 +502,11 @@ function generated.create()
             if state == nil or state.state ~= "synchronized" then return nil end
             local phase = room.encounterPhase(state, encounter)
             local occurrence = room.occurrence(state)
+            local switch = occurrence and occurrence.overview and occurrence.overview.challengeSwitch
+            if phase == nil and marker.slotKey == "challengeSwitch" and switch ~= nil then
+                phase = { slotKey = "challengeSwitch", encounterKey = switch.encounterKey,
+                    customization = switch.customization }
+            end
             if phase == nil or occurrence == nil or marker.occurrenceId ~= occurrence.id
                 or marker.slotKey ~= phase.slotKey or marker.encounterKey ~= phase.encounterKey then return nil end
             return compositionFor(phase)

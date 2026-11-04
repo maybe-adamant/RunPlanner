@@ -1,6 +1,8 @@
 -- Source-backed room-exit readers. These functions project native run
 -- ownership into the already-decoded expected shape; they do not reconstruct
 -- planner chronology or action provenance.
+local conformance = type(import) == "function" and import("mods/protocol/conformance.lua")
+    or require("mods.protocol.conformance")
 local chaos = type(import) == "function" and import("mods/traits/chaos.lua") or require("mods.traits.chaos")
 local nativeBindings = type(import) == "function" and import("mods/native_bindings.lua")
     or require("mods.native_bindings")
@@ -14,6 +16,7 @@ local supported = {
     steadyGrowth = true, chaos = true, keepsakeEffects = true,
     rewardPriorities = true, pathOfStars = true, forfeit = true, stygianWell = true,
     keepsakes = true, equipment = true, arcana = true, vows = true, chaosValues = true, hexNodes = true,
+    rewardStores = true,
 }
 
 local function traitKey(value)
@@ -386,7 +389,28 @@ local function interactedGods(run)
     return gods
 end
 
+-- Each compared store's live entries counted by reward type, beside the frame's
+-- counts summed the same way over native RewardStoreData. A store native never
+-- filled reads as empty.
+local function rewardStores(run, expected)
+    if type(run) ~= "table" or type(expected) ~= "table" then return nil end
+    local declared, undeclared = conformance.rewardStoreCounts(expected, _G.RewardStoreData)
+    if declared == nil then return { expected = "declared " .. tostring(undeclared), observed = "undeclared" } end
+    local observed = {}
+    for name, store in pairs(expected) do
+        local counts = {}
+        for _, rewardType in ipairs(store.rewardTypes) do counts[rewardType] = 0 end
+        for _, entry in ipairs(type(run.RewardStores) == "table" and run.RewardStores[name] or {}) do
+            local rewardType = type(entry) == "table" and entry.Name or nil
+            if counts[rewardType] ~= nil then counts[rewardType] = counts[rewardType] + 1 end
+        end
+        observed[name] = counts
+    end
+    return { expected = declared, observed = observed }
+end
+
 function readers.read(kind, run, gameState, expected)
+    if kind == "rewardStores" then return rewardStores(run, expected) end
     if kind == "traitInventory" then return modeledTraitInventory(run, expected) end
     if kind == "elementCounts" then return elements(run) end
     if kind == "steadyGrowth" then return steadyGrowth(run, expected) end

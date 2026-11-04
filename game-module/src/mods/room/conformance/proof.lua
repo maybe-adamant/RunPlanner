@@ -53,6 +53,10 @@ function proof.prove(occurrence, read)
     for _, fact in ipairs((occurrence.roomExitConformance or {}).facts or {}) do
         local expected = occurrence.conformanceExpected and occurrence.conformanceExpected[fact.kind]
         local observed = type(read) == "function" and read(fact.kind, expected) or nil
+        -- Store counts are summed over the native declaration on both sides.
+        if fact.kind == "rewardStores" then
+            expected, observed = observed and observed.expected, observed and observed.observed
+        end
         local compare = proof.compare
         local requireActivation = false
         if fact.kind == "keepsakeEffects" then

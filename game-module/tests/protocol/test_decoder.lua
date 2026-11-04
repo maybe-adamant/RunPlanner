@@ -2240,7 +2240,7 @@ function TestProtocol.testHubFountainUseDecodesStrictlyWithinItsRequiredVisits()
     end
     for _, case in ipairs({
         { function(hub) hub.requiredVisitCount = nil end, "missing requiredVisitCount" },
-        { function(hub) hub.fountain = nil end, "missing fountain" },
+        { function(hub) hub.fountain = nil end, "fountain is required with a final handoff" },
         { function(hub) hub.departures = nil end, "missing departures" },
         { function(hub) table.remove(hub.departures) end, "departures has invalid length" },
         { function(hub) hub.departures[2].precedingVisitCount = 0 end, "precedingVisitCount order" },

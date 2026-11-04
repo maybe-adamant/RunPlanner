@@ -91,10 +91,13 @@ local function hubDeparturePosition(route, index)
     if expected == nil then return nil end
     for _, carrier in pairs(route.plan.occurrencesById or {}) do
         local hub = carrier.overview and carrier.overview.hub
-        if hub and hub.fountain then
+        if hub and hub.departures then
             local slotIds = {}
             for _, slot in ipairs(hub.slots or {}) do slotIds[slot.room.id] = true end
-            if not slotIds[expected.id] and expected.id ~= hub.finalHandoff.id then return nil end
+            -- A plan ending inside the stay has no handoff; its last visit ends the plan.
+            if not slotIds[expected.id] and not (hub.finalHandoff and expected.id == hub.finalHandoff.id) then
+                return nil
+            end
             local visits = 0
             for position = 1, index - 1 do
                 if slotIds[route.plan.selectedOccurrenceIds[position]] then visits = visits + 1 end
@@ -114,7 +117,7 @@ end
 
 local function hubFountainPosition(route)
     local hub, carrier, visits = hubDeparturePosition(route)
-    if hub == nil or visits ~= hub.fountain.precedingVisitCount then return nil end
+    if hub == nil or hub.fountain == nil or visits ~= hub.fountain.precedingVisitCount then return nil end
     return hub, carrier
 end
 

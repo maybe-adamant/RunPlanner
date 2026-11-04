@@ -225,6 +225,7 @@ describe('decision run-state snapshots', () => {
         pendingHermesShrineDeliveries: {},
         stygianWell: {},
         hexObserver,
+        rewardStores: [],
       }) as unknown as RunStateSnapshot;
     const entered = snapshot('roomEntered', before);
     const exited = snapshot('beforeRoomExit', after);

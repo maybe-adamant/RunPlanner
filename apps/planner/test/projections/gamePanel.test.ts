@@ -604,34 +604,6 @@ describe('Game panel projection', () => {
       [
         projectGameSendButton(
           ready,
-          { projectId: 'mine', eligible: false, executionPlanBlock: 'planEndAwaitsGameModule' },
-          null,
-          idle,
-        ),
-        'notSendable',
-        'Send to game',
-        null,
-        'Sending a plan that ends early needs the next game module update.',
-      ],
-      [
-        projectGameSendButton(
-          ready,
-          {
-            projectId: 'mine',
-            eligible: false,
-            executionPlanBlock: 'challengeSwitchAwaitsGameModule',
-          },
-          null,
-          idle,
-        ),
-        'notSendable',
-        'Send to game',
-        null,
-        'Sending a plan with a challenge switch needs the next game module update.',
-      ],
-      [
-        projectGameSendButton(
-          ready,
           {
             ...mine,
             startPointBlock: { code: 'startPointIneligible', reason: { kind: 'notOnItinerary' } },

@@ -394,6 +394,15 @@ local function guideDescription(value, label)
         return row
     end
     if kind == "interactEris" then return p.exact(record, { "kind" }, {}, label) end
+    if kind == "interactChallengeSwitch" then
+        local row, rowError = p.exact(record, { "kind", "outcome" }, {}, label)
+        if not row then return nil, rowError end
+        if not p.one(row.outcome, { left = true, finished = true, hitless = true, failed = true },
+            label .. ".outcome") then
+            return p.fail(label .. " has an unsupported challenge switch outcome")
+        end
+        return row
+    end
     if kind == "reroll" then
         local row, rowError = p.exact(record, { "kind", "target", "reward" }, {}, label)
         if not row then return nil, rowError end
@@ -466,7 +475,7 @@ local function doors(value, ids, label)
         local batch, batchError = p.exact(
             record,
             { "kind", "owner", "targets" },
-            { "resolvedSharedRewardStoreKey" },
+            { "cageCountOutcome", "resolvedSharedRewardStoreKey" },
             label
         )
         if not batch then return nil, batchError end
@@ -479,6 +488,7 @@ local function doors(value, ids, label)
         if not targets then return nil, targetsError end
         local exitKeys = {}
         local continuations = {}
+        local intoFields = false
         for index, valueTarget in ipairs(targets) do
             local target, targetError = p.exact(
                 valueTarget,
@@ -507,6 +517,7 @@ local function doors(value, ids, label)
                 return p.fail(targetLabel .. ".zagreusContractPresent must match the destination Overview.additional")
             end
             if targetOccurrence.kind == "FieldsEncounter" then
+                intoFields = true
                 if target.cageRewards == nil then
                     return p.fail(targetLabel .. ".cageRewards is required for FieldsEncounter target")
                 end
@@ -534,6 +545,11 @@ local function doors(value, ids, label)
                     if cageRewardError then return nil, cageRewardError end
                 end
             end
+        end
+        -- The batch's native cage-count roll outcome travels exactly with its Fields targets.
+        if (batch.cageCountOutcome ~= nil) ~= intoFields
+            or (batch.cageCountOutcome ~= nil and batch.cageCountOutcome ~= "min" and batch.cageCountOutcome ~= "max") then
+            return p.fail(label .. ".cageCountOutcome is required exactly when a target is a Fields room")
         end
         return batch, continuations
     end
@@ -709,9 +725,11 @@ function occurrences.decode(value, selected, label)
                 if not reference then return nil, referenceError end
                 continuations[row.id][reference.id] = true
             end
-            local reference, referenceError = assertRoomReference(hub.finalHandoff, ids, label .. ".hub.finalHandoff")
-            if not reference then return nil, referenceError end
-            continuations[row.id][reference.id] = true
+            if hub.finalHandoff ~= nil then
+                local reference, referenceError = assertRoomReference(hub.finalHandoff, ids, label .. ".hub.finalHandoff")
+                if not reference then return nil, referenceError end
+                continuations[row.id][reference.id] = true
+            end
         end
         for _, slot in ipairs(row.overview.localSlots or {}) do
             if slot.room ~= nil then
@@ -725,7 +743,7 @@ function occurrences.decode(value, selected, label)
     for _, row in ipairs(result) do
         if row.overview.hub ~= nil then
             for _, slot in ipairs(row.overview.hub.slots) do hubTargets[slot.room.id] = true end
-            hubTargets[row.overview.hub.finalHandoff.id] = true
+            if row.overview.hub.finalHandoff ~= nil then hubTargets[row.overview.hub.finalHandoff.id] = true end
         end
         for _, slot in ipairs(row.overview.localSlots or {}) do
             if slot.room ~= nil then sideParents[slot.room.id] = row end
