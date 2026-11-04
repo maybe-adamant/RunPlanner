@@ -604,6 +604,42 @@ describe('challenge switch encounter', () => {
     ).toBe(1);
   });
 
+  it('raises the biome encounter depth later rooms’ requirements read only when pressed', () => {
+    const host = 'surface-p-6-1-p_combat10';
+    const depths = (project: ProjectDocument) => {
+      const biome = simulateProject(catalog, project).route.biomes.find(
+        (candidate) => candidate.biomeKey === 'P',
+      );
+      if (biome === undefined || !('history' in biome)) throw new Error('P was not evaluated');
+      return biome.history.rooms.map((room) => [
+        room.origin.kind === 'occurrence' ? room.origin.occurrenceId : room.origin.kind,
+        room.preparation.ledgers.counters.biomeEncounterDepth,
+        room.preOutgoing?.ledgers.counters.biomeEncounterDepth,
+      ]);
+    };
+    const base = depths(surface());
+    const observed = depths(withSwitch(surface(), 'P', host, 'EliteChallengeSwitch_MaxMana'));
+    const used = depths(
+      withSwitch(surface(), 'P', host, 'EliteChallengeSwitch_MaxMana', { used: true }),
+    );
+    expect(observed).toEqual(base);
+    const hostIndex = base.findIndex(([id]) => id === host);
+    // The host's own doors are drawn before the press; every later room reads one more.
+    expect(used.slice(0, hostIndex + 1)).toEqual(base.slice(0, hostIndex + 1));
+    expect(used[hostIndex + 1]).toEqual([
+      base[hostIndex + 1]![0],
+      (base[hostIndex + 1]![1] as number) + 1,
+      (base[hostIndex + 1]![2] as number) + 1,
+    ]);
+    // The `counterRange` gate on `biomeEncounterDepth` that P room eligibility
+    // declares (RoomDataP.lua P_Shop01 BiomeEncounterDepth > 4) reads that counter.
+    expect(catalog.rooms.byKey.P_Shop01?.eligibility).toMatchObject({
+      requirements: expect.arrayContaining([
+        { kind: 'counterRange', axis: 'biomeEncounterDepth', range: { min: 5 } },
+      ]),
+    });
+  });
+
   it('pays the encounter’s kills from its own store at the press', () => {
     const enemyGold = (project: ProjectDocument) => {
       const room = goldLedgerForProjectEvaluationAssembly(
