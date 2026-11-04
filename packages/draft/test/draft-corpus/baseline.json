@@ -1157,5 +1157,26 @@
     "fillerRoomsPerRun": { "gold": 0.5, "maxHealth": 1.75, "maxMagick": 1.25, "pom": 1.375 },
     "msMedian": 7116,
     "msMax": 7650
+  },
+  "U12 medium Narcissus Mixed Blessings": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 0.982, "npcTrait": 1, "story": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 2.375,
+    "purchasesPerRun": { "BlindBoxLoot": 0.375, "boon": 0.375 },
+    "attemptsMedian": 4,
+    "depthSpread": 2.096,
+    "depthDistinct": 4.5,
+    "godRoomsPerBiome": 2.75,
+    "godGapMean": 1.667,
+    "godGapMax": 3,
+    "godEarlyShare": 0.307,
+    "shopsPerRun": 4,
+    "fillerRoomsPerRun": { "gold": 0.25, "maxHealth": 0.125, "maxMagick": 0.375, "pom": 0.25 },
+    "msMedian": 8633,
+    "msMax": 10392
   }
 }

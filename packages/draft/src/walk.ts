@@ -1246,11 +1246,18 @@ export class DraftWalk {
             ? probe!.rewardType
             : origin.entryKey;
       if (this.catalog.rewards.rewardTypes.byKey[rewardType] === undefined) return false;
+      // A pickup that opens its own boon screen, such as a Mystery boon, leaves that screen
+      // missing until the walk authors it next.
+      const ownScreen = (finding: SemanticFinding) =>
+        finding.code === 'traitOfferMissing' &&
+        finding.origin.kind === 'traitOffer' &&
+        semanticAddressKey(finding.origin.owner) === semanticAddressKey(origin);
       return this.tryOffers(
         [rewardType],
         evaluateEntry,
         (value) => ({ kind: 'ReplaceAcquisitionEntryOffer', entry: origin, value }),
         apply,
+        { followUp: ownScreen },
       );
     }
     if (origin.kind !== 'incomingReward' && origin.kind !== 'localReward') return false;
@@ -1270,13 +1277,15 @@ export class DraftWalk {
           (value) => this.evaluate({ kind: 'incomingReward', reward: origin, value }),
           (value) => ({ kind: 'ReplaceIncomingReward', reward: origin, value }),
           apply,
-          // A fountain room makes a wanted or due god boon somewhat likelier.
-          room.kind === 'Reprieve' ? 2 : 1,
-          this.npcExcludedRewards(origin.biomeKey, occurrence),
-          this.siblingHoldsBoon(origin.biomeKey, occurrence),
-          () => this.unvisitedHubDoorReward(origin, occurrence, types),
-          // A Hub door is visited later, so its reward is not paced to the board's depth.
-          !this.hubDoor(origin.biomeKey, occurrence),
+          {
+            // A fountain room makes a wanted or due god boon somewhat likelier.
+            wantedGodBoost: room.kind === 'Reprieve' ? 2 : 1,
+            npcExcluded: this.npcExcludedRewards(origin.biomeKey, occurrence),
+            avoidBoon: this.siblingHoldsBoon(origin.biomeKey, occurrence),
+            whenNoneLegal: () => this.unvisitedHubDoorReward(origin, occurrence, types),
+            // A Hub door is visited later, so its reward is not paced to the board's depth.
+            paced: !this.hubDoor(origin.biomeKey, occurrence),
+          },
         )
       : this.tryOffers(
           types,
@@ -1291,11 +1300,22 @@ export class DraftWalk {
     evaluate: (value: ResolvedRewardOffer) => ProjectCandidateEvaluation,
     command: (value: ResolvedRewardOffer) => ProjectCommand,
     apply: (command: ProjectCommand) => boolean,
-    wantedGodBoost = 1,
-    npcExcluded: ReadonlySet<string> = new Set(),
-    avoidBoon = false,
-    whenNoneLegal?: () => boolean,
-    paced = true,
+    {
+      wantedGodBoost = 1,
+      npcExcluded = new Set<string>(),
+      avoidBoon = false,
+      whenNoneLegal,
+      paced = true,
+      followUp = () => false,
+    }: {
+      readonly wantedGodBoost?: number;
+      readonly npcExcluded?: ReadonlySet<string>;
+      readonly avoidBoon?: boolean;
+      readonly whenNoneLegal?: () => boolean;
+      readonly paced?: boolean;
+      /** A finding the offer leaves for the walk's next repair, not against the offer. */
+      readonly followUp?: (finding: SemanticFinding) => boolean;
+    } = {},
   ): boolean {
     const legal = rewardTypes
       .flatMap((type) => locallyValidRewardOffers(this.catalog.rewards, type))
@@ -1304,7 +1324,7 @@ export class DraftWalk {
         const result = rewardOfferResult(evaluate(offer));
         if (result === undefined) return false;
         if (!result.supported) this.noteExclusions(result.exclusions ?? []);
-        return result.supported && result.findings.length === 0;
+        return result.supported && result.findings.every(followUp);
       });
     if (legal.length === 0 && whenNoneLegal !== undefined) return whenNoneLegal();
     this.noteSupply(legal);

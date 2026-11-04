@@ -320,6 +320,24 @@ describe('draftProject', () => {
     }
   });
 
+  it("takes Narcissus' Mixed Blessings and authors the Mystery boon's own screen", () => {
+    const spec: DraftSpec = {
+      ...underworld.spec,
+      world: { ...underworld.spec.world, storyNpcByBiome: { F: 'Arachne', G: 'Narcissus' } },
+      basketByGiver: draftBasket(['ZeusWeaponBoon', 'NarcissusI']),
+      rackKeepsakeKeys: [null, null, null],
+    };
+    for (const seed of [1, 2, 4]) {
+      const result = draftProject(catalog, planned('Underworld', 2), spec, seed);
+      if (result.kind !== 'drafted') throw new Error(`draft ${result.kind} at seed ${seed}`);
+      expect(result.report.targets).toContainEqual({
+        kind: 'basketTrait',
+        key: 'NarcissusI',
+        met: true,
+      });
+    }
+  });
+
   describe('a planned prefix', () => {
     const duo = 'ApolloSecondStageCastBoon';
     const prefixSpec: DraftSpec = {

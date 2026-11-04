@@ -441,6 +441,14 @@ const recipes: readonly EntryRecipe[] = [
     const recipe = baseRecipes.find((candidate) => candidate.name.split(' ')[0] === base)!;
     return { ...recipe, ...options, name: `${recipe.name} ${suffix}` };
   }),
+  // Listed last so every earlier spec keeps its index and shard.
+  {
+    name: 'U12 medium Narcissus Mixed Blessings',
+    routeKey: 'Underworld',
+    prefix: 4,
+    godKeys: UNDERWORLD_GODS,
+    basket: { godTraits: MEDIUM, leadTraits: ['NarcissusI'] },
+  },
 ];
 
 function baseName(recipe: EntryRecipe): string {

@@ -15,7 +15,10 @@ code. This document owns their meaning.
 
 The walk is driven by the route's next blocking finding and authors each
 decision from an engine domain or candidate query through edit settlement,
-including every selected-trait child; it never computes game legality. Its own
+including every selected-trait child; it never computes game legality. It
+takes a candidate only when the engine reports it supported with no findings,
+except the trait screen a pickup opens at its own site (a Mystery boon's god
+boon screen), which the walk authors next. Its own
 rules are draft policy, not legality: monotonic acquisition, the god pool,
 draft-illegal traits (the Ransoms and the replaying Echo choices), the per-slot
 basket claim, the basket's exclusive sets and the planner caps. A trait whose
