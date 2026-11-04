@@ -151,6 +151,8 @@ function challengeSwitch.attach(module, session, getState, report, room, generat
         if scope == nil or type(values) ~= "table" then return base(values, ...) end
         if scope.stage == "variant" then
             local data = obstacleData()
+            -- Only a nonempty list of declared switch variants is the variant draw.
+            if next(values) == nil or type(data) ~= "table" then return base(values, ...) end
             for _, value in pairs(values) do
                 if type(value) ~= "string" or type(data) ~= "table" or type(data[value]) ~= "table"
                     or data[value].EncounterOptionsName == nil then
@@ -164,9 +166,17 @@ function challengeSwitch.attach(module, session, getState, report, room, generat
                 diagnostic(scope.state, scope.occurrence, { kind = "variant-unavailable",
                     expected = scope.planned.variantKey, observed = rolled })
             end
+            local declared = chosen ~= nil and data[chosen] or nil
+            if type(declared) ~= "table" then
+                -- A native result outside the declarations stays native; nothing later is steered.
+                diagnostic(scope.state, scope.occurrence, { kind = "variant-undeclared",
+                    expected = scope.planned.variantKey, observed = rolled })
+                scope.stage = "spawned"
+                return rolled
+            end
             scope.room.__runPlannerChallengeVariant = chosen
             scope.stage = "encounter"
-            scope.options = scope.room[data[chosen].EncounterOptionsName]
+            scope.options = scope.room[declared.EncounterOptionsName]
             return chosen
         end
         if scope.stage == "encounter" and values == scope.options then

@@ -208,6 +208,30 @@ function TestChallengeSwitch.testAnUnavailableVariantStaysNativeWithADiagnostic(
     lu.assertEquals(issue.kind, "challengeSwitch")
 end
 
+function TestChallengeSwitch.testAnEmptyOrUndeclaredDrawStaysNative()
+    local occurrence = finished()
+    local callbacks, diagnostics = attached(occurrence)
+    local room = { __runPlannerExecutionRoomId = occurrence.id }
+    withGlobals({ ObstacleData = OBSTACLES }, function()
+        callbacks.HandleSecretSpawns(nil, {}, function()
+            -- An empty list is not the variant draw.
+            local empty = callbacks.GetRandomValue(nil, {}, function() return "native-empty" end, {})
+            lu.assertEquals(empty, "native-empty")
+            -- A native result outside the declarations stays native, with a diagnostic.
+            local rolled = callbacks.GetRandomValue(nil, {}, function() return nil end,
+                { "PerfectClearChallengeSwitch_Pom" })
+            lu.assertNil(rolled)
+            -- Nothing later is steered once the draw fell through.
+            local later = callbacks.GetRandomValue(nil, {}, function(values) return values[1] end,
+                { "TimeChallengeSwitch_Money" })
+            lu.assertEquals(later, "TimeChallengeSwitch_Money")
+        end, { CurrentRoom = room })
+    end)
+    lu.assertEquals(diagnostics[1].kind, "variant-unavailable")
+    lu.assertEquals(diagnostics[2].kind, "variant-undeclared")
+    lu.assertNil(room.__runPlannerChallengeVariant)
+end
+
 function TestChallengeSwitch.testAnEliteSwitchFieldsItsPinnedEliteAndForcedAttributes()
     local occurrence = elite()
     local nativeId = occurrence.overview.challengeSwitch.elite.enemy.nativeId
