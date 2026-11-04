@@ -7,6 +7,7 @@ import { cleanup } from '@testing-library/react';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createHubDecisionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteAddress,
@@ -165,6 +166,27 @@ describe('plan end in the biome workspace', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Doors' }));
     const door = within(roomCard()).getByRole('article', { name: 'Hidden return door' });
     expect(within(door).getByRole('button', { name: 'Choose' })).toHaveProperty('disabled', true);
+  });
+
+  it('resets the visits of a Hub the plan ends in', async () => {
+    const { application, user } = renderWorkspace(
+      endedAt(loadSurfaceNOPQProject(), 'N', nOccurrenceId('combat05')),
+      'Surface',
+      'N',
+    );
+    act(() => {
+      application.store.dispatch(semanticOwnerFocused(createHubDecisionAddress(nBiome, 'hub')));
+    });
+    await user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
+    const reset = screen.getByRole('button', { name: 'Reset visits' });
+    expect(reset).toHaveProperty('disabled', false);
+    await user.click(reset);
+    const workspace = application.store.getState().projectWorkspace;
+    if (workspace.kind !== 'openProject') throw new Error('expected an open project');
+    const hub = workspace.history.present.route.biomes
+      .find((biome) => biome.biomeKey === 'N')
+      ?.topology?.decisions.find((decision) => decision.kind === 'hub');
+    expect(hub?.kind === 'hub' ? hub.actions : undefined).toEqual([]);
   });
 });
 

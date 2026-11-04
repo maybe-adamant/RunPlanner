@@ -1,4 +1,4 @@
-import { hubVisitOrderWaitingHint, planEndLabel } from './planEndCopy';
+import { planEndLabel } from './planEndCopy';
 import { Fragment, useId, useState, type ReactNode } from 'react';
 
 import type { HubAction } from '@run-planner/engine/authored-project';
@@ -23,7 +23,10 @@ import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { hubFountainIcon } from '@planner/ui/artwork/roomArtwork';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
-import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
+import {
+  candidateMayBeAuthored,
+  candidateWaitingHint,
+} from '@planner/ui/feedback/candidatePresentation';
 import {
   useFindingAnchor,
   useFindingMark,
@@ -465,7 +468,7 @@ export function HubTimelineDetails({
       ReturnType<ReturnType<WorkspaceHubActionOrderInteraction['proposalFor']>['load']>
     >();
   const waiting = !interaction.contextReached;
-  const waitingHint = hubVisitOrderWaitingHint(node);
+  const waitingHint = candidateWaitingHint;
   // Which stays show their board: presentation only, never authored.
   const [shownBoards, setShownBoards] = useState<ReadonlySet<number>>(() => new Set());
   const boardStays = node.stays.flatMap((stay) =>

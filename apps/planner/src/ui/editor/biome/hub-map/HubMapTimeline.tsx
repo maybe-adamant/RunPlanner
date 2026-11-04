@@ -20,8 +20,10 @@ import {
   type WorkspaceMarker,
   type WorkspacePlanEndRelation,
 } from '@planner/projections/structured-workspace';
-import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
-import { hubVisitOrderWaitingHint } from '../planEndCopy';
+import {
+  candidateMayBeAuthored,
+  candidateWaitingHint,
+} from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
@@ -255,6 +257,7 @@ function TimelineMapMarker({
 
 /** Append once; after completing the board, open the hosted fountain interaction. */
 function TimelineFountainMarker({
+  endsHere,
   fountain,
   locked,
   complete,
@@ -264,6 +267,7 @@ function TimelineFountainMarker({
 }: {
   readonly waiting: boolean;
   readonly waitingHint: string;
+  readonly endsHere: boolean;
   readonly fountain: WorkspaceHubFountain;
   readonly locked: boolean;
   readonly complete: boolean;
@@ -273,7 +277,7 @@ function TimelineFountainMarker({
   const [open, setOpen] = useState(false);
   const marker = useRef<HTMLButtonElement>(null);
   // Using it at the end of the last stay appends it to the Hub's order.
-  const appendActions = fountain.useIn?.at(-1)?.actions;
+  const appendActions = endsHere ? undefined : fountain.useIn?.at(-1)?.actions;
   const canAppend = appendActions !== undefined;
   const canOpen = !canAppend && complete;
   const appendWaits = canAppend && waiting && !locked;
@@ -356,7 +360,9 @@ export function HubMapTimeline({
   const atCapacity = visitOrder.length === node.requiredVisitCount;
   const complete = atCapacity && node.fountain.actionPosition !== undefined;
   const waiting = !interaction.contextReached;
-  const waitingHint = hubVisitOrderWaitingHint(node);
+  const waitingHint = candidateWaitingHint;
+  // A Hub the plan ends in takes no visit or fountain use after its end visit.
+  const endsHere = node.planEnd === 'end';
   const replaceActions = (actions: readonly HubAction[]): void => {
     const proposal = interaction.proposalFor(actions);
     const options = candidates.activate(proposal);
@@ -402,7 +408,7 @@ export function HubMapTimeline({
                     visitPosition === -1 ? undefined : node.visits[visitPosition]?.actionPosition
                   }
                   annotation={annotation}
-                  atCapacity={atCapacity}
+                  atCapacity={atCapacity || endsHere}
                   complete={complete}
                   key={annotation.hubSlotKey}
                   locked={locked}
@@ -418,6 +424,7 @@ export function HubMapTimeline({
               );
             })}
             <TimelineFountainMarker
+              endsHere={endsHere}
               fountain={node.fountain}
               complete={complete}
               locked={locked}
