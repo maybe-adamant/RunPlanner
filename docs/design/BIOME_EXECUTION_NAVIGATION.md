@@ -88,9 +88,13 @@ with two contacts over the [native Fields setup](../biomes/H_GAME_RULES.md#nativ
    active `Cage03`, then leave starts, completions, acquisitions, and side
    effects to the existing encounter and timeline adapters.
 
-The Fields `min`/`max` choice, native chance table, ceiling counter, and clamp
-are not execution facts; they do not cross the boundary for the executor to
-repeat. The adapters consume the planner's explicit spatial result rather than
+The Fields `min`/`max` choice, native chance table and clamp are not execution
+facts; they do not cross the boundary for the executor to repeat. The executor
+steers the native cage-count roll to the published cage count, through the
+branch that advances the native max-door counter only when that count is the
+clamped max and not also the min. A count both outcomes give takes the min
+branch, so the counter never runs ahead of the plan's; a max past the native
+ceiling, or a count neither outcome gives, is a mismatch. The adapters consume the planner's explicit spatial result rather than
 inferring a layout from room names or recreating native objects. Everything
 outside `H_Combat` reuses existing work, and the executor neither counts the
 four qualifying H rooms nor re-evaluates Preboss eligibility.

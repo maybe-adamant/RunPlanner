@@ -99,7 +99,7 @@ local function checkpointOf(issue)
 end
 
 local DOOR_KINDS = {
-    target = true, count = true, reward = true, rewardSource = true, cageRewards = true,
+    target = true, count = true, reward = true, rewardSource = true, cageRewards = true, cageCount = true,
     cageReward = true, cageRewardSource = true, sharedRewardStore = true,
     additionalCount = true, additionalBinding = true,
 }
@@ -332,6 +332,10 @@ function text.difference(issue)
     end
     if checkpoint == "count" or checkpoint == "additionalCount" then
         return plannedFound("", expected, observed) and ("planned " .. scalar(expected) .. " doors, found "
+            .. scalar(observed)) or nil
+    end
+    if checkpoint == "cageCount" then
+        return plannedFound("", expected, observed) and ("planned " .. scalar(expected) .. " cages per door, found "
             .. scalar(observed)) or nil
     end
     if checkpoint == "reward" or checkpoint == "incomingReward" or checkpoint == "cageReward" then

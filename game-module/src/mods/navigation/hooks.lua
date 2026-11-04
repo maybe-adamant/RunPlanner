@@ -319,6 +319,37 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         return result
     end
 
+    -- The native roll sets the cage count every Fields door shares; each target
+    -- publishes it. Max takes the native branch that advances FieldsMaxDoorsRolled
+    -- and min the one that leaves it; a count both give is min. A max past the
+    -- native ceiling, or a count neither gives, is a mismatch and rolls natively.
+    module.hooks.wrap("SelectFieldsDoorCageCount", "run-planner-fields-cage-count", function(_, runtime, base,
+        run, nativeRoom)
+        local state = getState(runtime)
+        if cageScope == nil or state == nil or state.state ~= "synchronized"
+            or type(run) ~= "table" or type(nativeRoom) ~= "table" then
+            return base(run, nativeRoom)
+        end
+        local planned
+        for _, cages in pairs(cageScope.byRoomId) do
+            if planned ~= nil and planned ~= #cages.rewards then planned = false break end
+            planned = #cages.rewards
+        end
+        local depthTable = nativeRoom.MaxDoorDepthChanceTable
+        if depthTable == nil or depthTable[run.BiomeDepthCache] == nil then return base(run, nativeRoom) end
+        run.FieldsMaxDoorsRolled = run.FieldsMaxDoorsRolled or 0
+        if planned == nativeRoom.MinDoorCageRewards then return planned end
+        if planned == nativeRoom.MaxDoorCageRewards
+            and run.FieldsMaxDoorsRolled < (nativeRoom.MaxDoorCageCeiling or 0) then
+            run.FieldsMaxDoorsRolled = run.FieldsMaxDoorsRolled + 1
+            return planned
+        end
+        local rolled = base(run, nativeRoom)
+        session.mismatch(state, { kind = "cageCount", expected = planned or nil, observed = rolled })
+        report(runtime)
+        return rolled
+    end)
+
     module.hooks.wrap("AttemptRerollDoor", "run-planner-door-reroll", function(_, runtime, base, run, door)
         return steerReroll(runtime, base, "door", run, door)
     end)

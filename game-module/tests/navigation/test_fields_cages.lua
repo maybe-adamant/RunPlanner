@@ -97,7 +97,11 @@ local function nativeUnlock(callbacks, offered)
             door.Room = callbacks.CreateRoom and callbacks.CreateRoom(nil, {}, copy, data, {}) or copy(data)
             door.Room.NeedsReward = true
         end
-        room.NumDoorCageRewards = room.MinDoorCageRewards
+        -- The native roll here always misses the max chance.
+        room.NumDoorCageRewards = callbacks.SelectFieldsDoorCageCount(nil, {}, function(currentRun)
+            currentRun.FieldsMaxDoorsRolled = currentRun.FieldsMaxDoorsRolled or 0
+            return room.MinDoorCageRewards
+        end, run, room)
         for _, door in ipairs(offered) do
             local doorRoom = door.Room
             doorRoom.RewardStoreName = run.NextRewardStoreName
@@ -162,4 +166,28 @@ function TestFieldsCages.testCagesAreDrawnFromTheNativeStoreAsPlanned()
     })
     -- Every cage of both doors, the untaken one included, left the store.
     lu.assertEquals(names(result.run.RewardStores.RunProgress), { "TalentDrop", "GiftDrop", "StackUpgrade" })
+end
+
+function TestFieldsCages.testAPlannedMinRollLeavesTheMaxDoorCounter()
+    local result = unlock(2, 1)
+    lu.assertEquals(result.mismatches, {})
+    lu.assertEquals(result.run.FieldsMaxDoorsRolled, 1)
+end
+
+function TestFieldsCages.testAPlannedMaxRollAdvancesTheMaxDoorCounter()
+    local result = unlock(3)
+    lu.assertEquals(result.mismatches, {})
+    lu.assertTrue(result.proved, result.errorValue)
+    lu.assertEquals(result.run.FieldsMaxDoorsRolled, 1)
+    lu.assertEquals(#result.offered[1].Room.CageRewards, 3)
+    lu.assertEquals(result.offered[2].Room.CageRewards[3], { RewardType = "GiftDrop" })
+    lu.assertEquals(names(result.run.RewardStores.RunProgress), { "StackUpgrade" })
+end
+
+function TestFieldsCages.testAPlannedMaxPastTheNativeCeilingIsAMismatch()
+    local result = unlock(3, 2)
+    lu.assertEquals(result.mismatches, { { kind = "cageCount", expected = 3, observed = 2 } })
+    lu.assertEquals(result.run.FieldsMaxDoorsRolled, 2)
+    -- The native roll stands, and native draws fill its cages.
+    lu.assertEquals(#result.offered[1].Room.CageRewards, 2)
 end
