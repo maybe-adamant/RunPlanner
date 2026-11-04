@@ -129,6 +129,8 @@ function challengeSwitch.attach(module, session, getState, report, room, generat
         -- Only the flag's read is steered; its native draw already happened at creation.
         nativeRoom.ChallengeChanceSuccess = planned ~= nil
         if planned == nil then return base(currentRun, ...) end
+        -- CreateRoom rolls G's extra-exit lock only without a switch, so a switch room never locks.
+        nativeRoom.LockExtraExits = nil
         local prior = spawnScope
         spawnScope = { state = state, occurrence = occurrence, planned = planned, room = nativeRoom, stage = "variant" }
         local args = table.pack(...)

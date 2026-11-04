@@ -182,6 +182,19 @@ function TestChallengeSwitch.testTheSpawnRealizesThePlannedVariantAndEncounter()
     lu.assertTrue(switch.prove(occurrence, room))
 end
 
+function TestChallengeSwitch.testAPlannedSwitchClearsANativeExtraExitLock()
+    local occurrence = finished()
+    local callbacks = attached(occurrence)
+    local room = { __runPlannerExecutionRoomId = occurrence.id, ChallengeChanceSuccess = false,
+        LockExtraExits = true, TimeChallengeEncounterOptions = { "TimeChallengeF" } }
+    withGlobals({ ObstacleData = OBSTACLES }, function()
+        spawn(callbacks, { CurrentRoom = room }, {
+            variants = { "PerfectClearChallengeSwitch_Pom", "TimeChallengeSwitch_Money" } })
+    end)
+    lu.assertTrue(room.ChallengeChanceSuccess)
+    lu.assertNil(room.LockExtraExits)
+end
+
 function TestChallengeSwitch.testARoomWithoutAPlannedSwitchSpawnsNone()
     local occurrence = occurrenceOf("underworld-f-switches", "golden-f-b6-e1")
     local callbacks = attached(occurrence)
