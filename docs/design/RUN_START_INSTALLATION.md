@@ -399,7 +399,9 @@ at each room exit. Off, a desynchronized run is unchanged.
   armor stay live, and only the engine's modeled traits are restored. A room
   that is not the occurrence being left, a restored main room, and a Hub
   without a departure frame are not corrected; the next room's exit corrects
-  the hero.
+  the hero. Each out-of-sync exit logs its first mismatch before resuming and
+  a `[RunPlanner] snap exit` line naming the room, whether it had a frame, the
+  families it wrote and the occurrence it resumes at.
 - **Disagreement.** A synchronized exit that passes its checks still reads the
   frame's differences without writing them. Any difference means conformance
   and the frame disagree, a design issue: the module logs a

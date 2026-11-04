@@ -33,9 +33,10 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
     local exitWalk
 
     -- Writes the plan's hero state for the room being left before native LeaveRoom;
-    -- nil when the correction failed and snapping stopped.
+    -- nil when the correction failed and snapping stopped. Also returns the
+    -- families it found different and wrote.
     local function correctHero(state, frame, owner)
-        local ok, outcome, detail = pcall(snapScope.correct, frame, {
+        local ok, outcome, detail, written = pcall(snapScope.correct, frame, {
             hexTree = snapScope.hexTree,
             diagnostic = function(checkpoint, expected, observed)
                 session.diagnostic(state, checkpoint, { expected = expected, observed = observed })
@@ -47,7 +48,16 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
             return nil
         end
         if outcome == nil then session.stopSnapping(state, detail); return nil end
-        return outcome, detail
+        return outcome, detail, written
+    end
+
+    local function familiesAndPaths(found)
+        local families, paths = {}, {}
+        for _, difference in ipairs(found) do
+            families[#families + 1] = difference.family
+            for _, path in ipairs(difference.paths) do paths[#paths + 1] = path end
+        end
+        return table.concat(families, ","), table.concat(paths, "; ")
     end
 
     -- An exit that passed its conformance still agrees with the full exit frame;
@@ -55,14 +65,21 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
     local function reportDisagreement(state, nativeRoom, frame)
         local found = snapScope.differences(frame)
         if #found == 0 or snapScope.log == nil then return end
-        local families, paths = {}, {}
-        for _, difference in ipairs(found) do
-            families[#families + 1] = difference.family
-            for _, path in ipairs(difference.paths) do paths[#paths + 1] = path end
-        end
+        local families, paths = familiesAndPaths(found)
         snapScope.log("[RunPlanner] conformance/snap disagreement room=" .. tostring(roomName(nativeRoom))
-            .. " slot=" .. tostring(state.planSlot) .. " families=" .. table.concat(families, ",")
-            .. " paths=" .. table.concat(paths, "; "))
+            .. " slot=" .. tostring(state.planSlot) .. " families=" .. families .. " paths=" .. paths)
+    end
+
+    -- One line per out-of-sync exit: whether it had a frame, the correction's
+    -- outcome, the families it wrote and the occurrence it resumes at.
+    local function logSnap(nativeRoom, frame, outcome, written, target)
+        if snapScope.log == nil then return end
+        local families, paths = "none", ""
+        if written ~= nil and #written > 0 then families, paths = familiesAndPaths(written) end
+        snapScope.log("[RunPlanner] snap exit room=" .. tostring(roomName(nativeRoom))
+            .. " frame=" .. (frame ~= nil and "yes" or "none") .. " outcome=" .. tostring(outcome or "none")
+            .. " target=" .. tostring(target and target.id or "none")
+            .. " families=" .. families .. (paths ~= "" and " paths=" .. paths or ""))
     end
 
     -- Snap mode at an exit after the room's own checks: a synchronized exit writes
@@ -90,11 +107,20 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
             if frame ~= nil then reportDisagreement(state, nativeRoom, frame) end
             return door
         end
-        if frame ~= nil and correctHero(state, frame, leaving and leaving.id or roomName(nativeRoom)) == nil then
-            report(runtime)
-            return door
+        -- The first mismatch is logged before resync clears it.
+        report(runtime)
+        local outcome, written
+        if frame ~= nil then
+            local _
+            outcome, _, written = correctHero(state, frame, leaving and leaving.id or roomName(nativeRoom))
+            if outcome == nil then
+                logSnap(nativeRoom, frame, "failed", nil, nil)
+                report(runtime)
+                return door
+            end
         end
         local target, way = decision.target, decision.way
+        logSnap(nativeRoom, frame, outcome, written, target)
         if target == nil then report(runtime); return door end
         local mismatch = state.firstMismatch
         if way.door ~= nil then

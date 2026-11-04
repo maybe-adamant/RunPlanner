@@ -573,14 +573,16 @@ function snap.differences(frame)
     return result
 end
 
--- "in-sync" when the hero already matches the frame, else "corrected" and the
--- first difference once apply verifies; nil and the failure otherwise.
+-- "in-sync" when the hero already matches the frame, else "corrected", the
+-- first difference and every differing family once apply verifies; nil and the
+-- failure otherwise.
 function snap.correct(frame, context)
     local same, difference = admission.verifyFrame(frame, "snap-exit")
     if same then return "in-sync" end
+    local written = snap.differences(frame)
     local applied, failure = snap.apply(frame, context)
     if not applied then return nil, failure end
-    return "corrected", difference
+    return "corrected", difference, written
 end
 
 return snap

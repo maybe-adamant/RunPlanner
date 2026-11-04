@@ -80,7 +80,8 @@ local function attached(state, snapOn, correct, rewardProof, options)
         synchronizeStartingRoom = function() return true end, startingRun = function() return false end,
         installedRun = function() return false end,
     }
-    roomHooks.attach(module, session, function() return state end, function() end, route, room, nil, navigation,
+    roomHooks.attach(module, session, function() return state end, options.report or function() end, route, room,
+        nil, navigation,
         loadoutScope, nil, {
             enabled = function(runtime) return runtime.data.read("SnapMode") == true end,
             correct = function(frame, context)
@@ -245,6 +246,32 @@ function TestSnapMode.testBuildsThePlannedRoomWhenTheDoorLeadsElsewhere()
     restore()
     lu.assertEquals(#log.created, 1)
     lu.assertEquals(door.Room, { Name = "F_B", __runPlannerExecutionRoomId = "b" })
+end
+
+function TestSnapMode.testAnOutOfSyncExitReportsItsMismatchBeforeResyncAndLogsTheFamiliesItWrote()
+    local state = desynchronized(1, "room-exit-conformance:hermesDeliveries")
+    local reported = {}
+    local written = { { family = "hermesDeliveries", paths = { "hermesDeliveries.orders.1=nil->SpellDrop:8" } } }
+    local leave, _, log, restore = attached(state, true, function()
+        return "corrected", { checkpoint = "snap-exit:hermesDeliveries" }, written
+    end, nil, { report = function()
+        reported[#reported + 1] = state.firstMismatch and state.firstMismatch.checkpoint or "none"
+    end })
+    leave("F_A", { Room = { Name = "F_X" } })
+    restore()
+    lu.assertEquals(reported[1], "room-exit-conformance:hermesDeliveries")
+    lu.assertEquals(log.messages, {
+        "[RunPlanner] snap exit room=F_A frame=yes outcome=corrected target=b families=hermesDeliveries"
+            .. " paths=hermesDeliveries.orders.1=nil->SpellDrop:8",
+    })
+end
+
+function TestSnapMode.testAnExitFromAnUnplannedRoomLogsThatItWroteNothing()
+    local state = desynchronized(1)
+    local leave, _, log, restore = attached(state, true)
+    leave("F_X", { Room = { Name = "F_Y" } })
+    restore()
+    lu.assertEquals(log.messages, { "[RunPlanner] snap exit room=F_X frame=none outcome=none target=b families=none" })
 end
 
 -- Native CreateRoom chooses the encounter at the current depth unless told to
