@@ -68,6 +68,7 @@ import type {
 import {
   encounterCompositionView,
   encounterPhaseAuthoringDomainForRoom,
+  type EncounterPhaseAuthoringDomain,
   type EncounterPhaseAuthoringRoomOptions,
 } from '@run-planner/engine/simulation';
 import type {
@@ -938,162 +939,9 @@ export function activeEncounterPhasesForOwner(
       domain.customization === undefined
         ? undefined
         : Object.freeze(
-            domain.customization.map((decision): WorkspaceEncounterCustomizationDecision => {
-              const common = {
-                key: decision.key,
-                label: decision.label,
-                valueSupported: decision.valueSupported,
-                ...(decision.value === undefined ? {} : { value: decision.value }),
-                ...(decision.retainedChoiceLabels === undefined
-                  ? {}
-                  : { retainedChoiceLabels: decision.retainedChoiceLabels }),
-              };
-              if (decision.selection.kind === 'generated') {
-                return Object.freeze({
-                  ...common,
-                  ...(decision.retainedChoiceLabels === undefined
-                    ? {}
-                    : {
-                        retainedChoiceLabels: decision.retainedChoiceLabels.map((choice) => ({
-                          ...choice,
-                          label: generatedEnemyLabel(choice.label),
-                        })),
-                      }),
-                  selection: Object.freeze({
-                    kind: 'generated' as const,
-                    choices: Object.freeze(
-                      decision.selection.choices.map((choice) =>
-                        Object.freeze({
-                          key: choice.key,
-                          label: generatedEnemyLabel(choice.label),
-                          difficultyRating: choice.difficultyRating,
-                          ...(choice.unitGroupSize === undefined
-                            ? {}
-                            : { unitGroupSize: choice.unitGroupSize }),
-                          ...(choice.menace === undefined
-                            ? {}
-                            : { menace: projectGeneratedMenace(choice.menace)! }),
-                          ...(choice.fangs?.caveat === 'squad'
-                            ? { fangsCaveat: 'squad' as const }
-                            : {}),
-                        }),
-                      ),
-                    ),
-                    fixedEnemies: Object.freeze(
-                      decision.selection.fixedEnemies.map((enemy) =>
-                        Object.freeze({
-                          key: enemy.key,
-                          label: generatedEnemyLabel(enemy.label),
-                          difficultyRating: enemy.difficultyRating,
-                          ...(enemy.unitGroupSize === undefined
-                            ? {}
-                            : { unitGroupSize: enemy.unitGroupSize }),
-                          ...(enemy.menace === undefined
-                            ? {}
-                            : { menace: projectGeneratedMenace(enemy.menace)! }),
-                          ...(enemy.fangs?.caveat === 'squad'
-                            ? { fangsCaveat: 'squad' as const }
-                            : {}),
-                        }),
-                      ),
-                    ),
-                    waveCount: Object.freeze({ ...decision.selection.waveCount }),
-                    ...(decision.selection.fangs === undefined
-                      ? {}
-                      : {
-                          fangs: Object.freeze({
-                            perks: Object.freeze(
-                              Object.fromEntries(
-                                Object.entries(decision.selection.fangs.perks).map(
-                                  ([key, perk]) =>
-                                    [
-                                      key,
-                                      Object.freeze({
-                                        label: perk.label,
-                                        ...(perk.maxPerRoom === undefined
-                                          ? {}
-                                          : { maxPerRoom: perk.maxPerRoom }),
-                                      }),
-                                    ] as const,
-                                ),
-                              ),
-                            ),
-                          }),
-                        }),
-                  }),
-                });
-              }
-              if (decision.selection.kind === 'infiniteRoster') {
-                return Object.freeze({
-                  ...common,
-                  ...(decision.retainedChoiceLabels === undefined
-                    ? {}
-                    : {
-                        retainedChoiceLabels: decision.retainedChoiceLabels.map((choice) => ({
-                          ...choice,
-                          label: generatedEnemyLabel(choice.label),
-                        })),
-                      }),
-                  selection: Object.freeze({
-                    kind: 'infiniteRoster' as const,
-                    choices: Object.freeze(
-                      decision.selection.choices.map((choice) =>
-                        Object.freeze({
-                          key: choice.key,
-                          label: generatedEnemyLabel(choice.label),
-                        }),
-                      ),
-                    ),
-                  }),
-                });
-              }
-              if (decision.selection.kind === 'cocoonCount') {
-                return Object.freeze({
-                  ...common,
-                  selection: Object.freeze({
-                    kind: 'cocoonCount' as const,
-                    minimum: decision.selection.minimum,
-                    maximum: decision.selection.maximum,
-                  }),
-                });
-              }
-              if (decision.selection.kind === 'cocoonRewardPoint') {
-                return Object.freeze({
-                  ...common,
-                  selection: Object.freeze({
-                    kind: 'cocoonRewardPoint' as const,
-                    gameName: room.gameName,
-                    spawnPointIds: decision.cocoonRewardPointIds ?? Object.freeze([]),
-                  }),
-                });
-              }
-              if (decision.selection.kind === 'single') {
-                return Object.freeze({
-                  ...common,
-                  selection: Object.freeze({
-                    kind: 'single' as const,
-                    choices: Object.freeze(
-                      decision.selection.choices.map((choice) =>
-                        Object.freeze({ key: choice.key, label: choice.label }),
-                      ),
-                    ),
-                  }),
-                });
-              }
-              return Object.freeze({
-                ...common,
-                selection: Object.freeze({
-                  kind: 'orderedPrefix' as const,
-                  maximumLength: decision.selection.maximumLength,
-                  uses: decision.orderedPrefixUses ?? Object.freeze([]),
-                  choices: Object.freeze(
-                    decision.selection.choices.map((choice) =>
-                      Object.freeze({ key: choice.key, label: choice.label }),
-                    ),
-                  ),
-                }),
-              });
-            }),
+            domain.customization.map((decision) =>
+              projectEncounterCustomizationDecision(decision, room.gameName),
+            ),
           );
     const compositionView = encounterCompositionView(input.catalog, domain);
     const candidateChoices = Object.freeze(
@@ -1313,4 +1161,159 @@ function requiredNemesisBetOutcome(
       `${phaseKey} authors a Nemesis bet without an authored outcome`,
     );
   return outcome;
+}
+
+/** One declared customization decision of an encounter as the editor's decision product. */
+export function projectEncounterCustomizationDecision(
+  decision: NonNullable<EncounterPhaseAuthoringDomain['customization']>[number],
+  roomGameName: string,
+): WorkspaceEncounterCustomizationDecision {
+  const common = {
+    key: decision.key,
+    label: decision.label,
+    valueSupported: decision.valueSupported,
+    ...(decision.value === undefined ? {} : { value: decision.value }),
+    ...(decision.retainedChoiceLabels === undefined
+      ? {}
+      : { retainedChoiceLabels: decision.retainedChoiceLabels }),
+  };
+  if (decision.selection.kind === 'generated') {
+    return Object.freeze({
+      ...common,
+      ...(decision.retainedChoiceLabels === undefined
+        ? {}
+        : {
+            retainedChoiceLabels: decision.retainedChoiceLabels.map((choice) => ({
+              ...choice,
+              label: generatedEnemyLabel(choice.label),
+            })),
+          }),
+      selection: Object.freeze({
+        kind: 'generated' as const,
+        choices: Object.freeze(
+          decision.selection.choices.map((choice) =>
+            Object.freeze({
+              key: choice.key,
+              label: generatedEnemyLabel(choice.label),
+              difficultyRating: choice.difficultyRating,
+              ...(choice.unitGroupSize === undefined
+                ? {}
+                : { unitGroupSize: choice.unitGroupSize }),
+              ...(choice.menace === undefined
+                ? {}
+                : { menace: projectGeneratedMenace(choice.menace)! }),
+              ...(choice.fangs?.caveat === 'squad' ? { fangsCaveat: 'squad' as const } : {}),
+            }),
+          ),
+        ),
+        fixedEnemies: Object.freeze(
+          decision.selection.fixedEnemies.map((enemy) =>
+            Object.freeze({
+              key: enemy.key,
+              label: generatedEnemyLabel(enemy.label),
+              difficultyRating: enemy.difficultyRating,
+              ...(enemy.unitGroupSize === undefined ? {} : { unitGroupSize: enemy.unitGroupSize }),
+              ...(enemy.menace === undefined
+                ? {}
+                : { menace: projectGeneratedMenace(enemy.menace)! }),
+              ...(enemy.fangs?.caveat === 'squad' ? { fangsCaveat: 'squad' as const } : {}),
+            }),
+          ),
+        ),
+        waveCount: Object.freeze({ ...decision.selection.waveCount }),
+        ...(decision.selection.fangs === undefined
+          ? {}
+          : {
+              fangs: Object.freeze({
+                perks: Object.freeze(
+                  Object.fromEntries(
+                    Object.entries(decision.selection.fangs.perks).map(
+                      ([key, perk]) =>
+                        [
+                          key,
+                          Object.freeze({
+                            label: perk.label,
+                            ...(perk.maxPerRoom === undefined
+                              ? {}
+                              : { maxPerRoom: perk.maxPerRoom }),
+                          }),
+                        ] as const,
+                    ),
+                  ),
+                ),
+              }),
+            }),
+      }),
+    });
+  }
+  if (decision.selection.kind === 'infiniteRoster') {
+    return Object.freeze({
+      ...common,
+      ...(decision.retainedChoiceLabels === undefined
+        ? {}
+        : {
+            retainedChoiceLabels: decision.retainedChoiceLabels.map((choice) => ({
+              ...choice,
+              label: generatedEnemyLabel(choice.label),
+            })),
+          }),
+      selection: Object.freeze({
+        kind: 'infiniteRoster' as const,
+        choices: Object.freeze(
+          decision.selection.choices.map((choice) =>
+            Object.freeze({
+              key: choice.key,
+              label: generatedEnemyLabel(choice.label),
+            }),
+          ),
+        ),
+      }),
+    });
+  }
+  if (decision.selection.kind === 'cocoonCount') {
+    return Object.freeze({
+      ...common,
+      selection: Object.freeze({
+        kind: 'cocoonCount' as const,
+        minimum: decision.selection.minimum,
+        maximum: decision.selection.maximum,
+      }),
+    });
+  }
+  if (decision.selection.kind === 'cocoonRewardPoint') {
+    return Object.freeze({
+      ...common,
+      selection: Object.freeze({
+        kind: 'cocoonRewardPoint' as const,
+        gameName: roomGameName,
+        spawnPointIds: decision.cocoonRewardPointIds ?? Object.freeze([]),
+      }),
+    });
+  }
+  if (decision.selection.kind === 'single') {
+    return Object.freeze({
+      ...common,
+      selection: Object.freeze({
+        kind: 'single' as const,
+        choices: Object.freeze(
+          decision.selection.choices.map((choice) =>
+            Object.freeze({ key: choice.key, label: choice.label }),
+          ),
+        ),
+      }),
+    });
+  }
+  return Object.freeze({
+    ...common,
+    selection: Object.freeze({
+      kind: 'orderedPrefix' as const,
+      maximumLength: decision.selection.maximumLength,
+      uses: decision.orderedPrefixUses ?? Object.freeze([]),
+      choices: Object.freeze(
+        decision.selection.choices.map((choice) =>
+          Object.freeze({ key: choice.key, label: choice.label }),
+        ),
+      ),
+    }),
+  });
 }

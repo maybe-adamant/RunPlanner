@@ -1,5 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import type { AuthoredEncounterCustomization } from '@run-planner/engine/authored-project';
+import type {
+  AuthoredEncounterCustomization,
+  SemanticAddress,
+} from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -13,6 +16,7 @@ import {
   useCustomizationFindingExplanations,
   useFindingAnchor,
   useFindingTarget,
+  type FindingTargetFilter,
 } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -92,34 +96,46 @@ function customizationIssues(
   ];
 }
 
+/** What a customization launcher edits: one encounter's decisions under their finding owner. */
+export interface EncounterCustomizationSubject {
+  readonly address: SemanticAddress;
+  /** The launcher's element id, where the dialog returns focus. */
+  readonly controlId: string;
+  /** The encounter's engine key, the dialog title's hint. */
+  readonly definitionKey: string;
+  /** The encounter's name, titling the dialog without a composition. */
+  readonly label: string;
+  /** Names the launcher, as "Customize <identity>". */
+  readonly identityLabel: string;
+  readonly customization?: readonly CustomizationDecision[];
+  readonly composition?: WorkspaceEncounterPhase['composition'];
+  /** The owner's findings its launcher repairs. */
+  readonly findingFilter: FindingTargetFilter;
+}
+
 /** The dialog title names the encounter; its engine key is the title's hint. */
-function encounterDialogTitle(label: string, phase: WorkspaceEncounterPhase): ReactNode {
+function encounterDialogTitle(label: string, subject: EncounterCustomizationSubject): ReactNode {
   return (
-    <span
-      className="encounter-dialog-title"
-      {...hintProps(
-        phase.selectedEncounter.nativeEncounterDefinitionKey ?? phase.selectedEncounter.key,
-      )}
-    >
+    <span className="encounter-dialog-title" {...hintProps(subject.definitionKey)}>
       {label}
     </span>
   );
 }
 
-/** The phase's decisions as one draft: Save commits every changed decision as one edit. */
+/** The encounter's decisions as one draft: Save commits every changed decision as one edit. */
 function EncounterCustomizationDialog({
   customizationId,
   interaction,
   interactionKey,
   onClose,
-  phase,
+  subject,
   savedDecisions,
 }: {
   readonly customizationId: string;
   readonly interaction: WorkspaceEncounterCustomizationInteraction;
   readonly interactionKey: string;
   readonly onClose: () => void;
-  readonly phase: WorkspaceEncounterPhase;
+  readonly subject: EncounterCustomizationSubject;
   readonly savedDecisions: readonly CustomizationDecision[];
 }) {
   const dispatch = useAppDispatch();
@@ -144,9 +160,9 @@ function EncounterCustomizationDialog({
     [atRest, interaction, restView, values],
   );
   const decisions = draftView.decisions;
-  const composition = draftView.generatedComposition ?? phase.composition;
+  const composition = draftView.generatedComposition ?? subject.composition;
   const generatedDecision = decisions.find(isGeneratedEncounterDecision);
-  const findingExplanations = useCustomizationFindingExplanations(phase.address);
+  const findingExplanations = useCustomizationFindingExplanations(subject.address);
   const savedExplanation = (decision: CustomizationDecision) =>
     draftValueIdentity(decision.value) === draftValueIdentity(saved[decision.key])
       ? findingExplanations.get(decision.key)
@@ -154,7 +170,7 @@ function EncounterCustomizationDialog({
   const restIssues = customizationIssues(
     restView.decisions,
     restView,
-    (restView.generatedComposition ?? phase.composition) !== undefined,
+    (restView.generatedComposition ?? subject.composition) !== undefined,
     savedExplanation,
   );
   const draftIssues = customizationIssues(
@@ -181,13 +197,13 @@ function EncounterCustomizationDialog({
     if (commands.length > 0) dispatch(authoredProjectCommandsDispatched(commands));
     onClose();
   };
-  const savedComposition = interaction.generatedComposition ?? phase.composition;
+  const savedComposition = interaction.generatedComposition ?? subject.composition;
   return (
     <EditorDialog
       model={{ kind: 'draft', onCancel: onClose }}
       returnFocusId={customizationId}
       size="narrow"
-      title={encounterDialogTitle(savedComposition?.label ?? phase.selectedEncounter.label, phase)}
+      title={encounterDialogTitle(savedComposition?.label ?? subject.label, subject)}
     >
       <EditorDialogDraftActions
         issues={issues}
@@ -372,32 +388,26 @@ function EncounterCustomizationDialog({
   );
 }
 
-function EncounterCustomizationControl({
-  interactions,
-  phase,
+/** Opens an encounter's customization dialog, or a fixed roster's read-only view. */
+export function EncounterCustomizationLauncher({
+  interaction,
+  subject,
 }: {
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly phase: WorkspaceEncounterPhase;
+  readonly interaction: WorkspaceEncounterCustomizationInteraction | undefined;
+  readonly subject: EncounterCustomizationSubject;
 }) {
   const [manualOpen, setManualOpen] = useState(false);
-  const interactionKey = workspaceInteractionKey(phase.address);
-  const interaction =
-    phase.customization === undefined
-      ? undefined
-      : requireWorkspaceInteraction(interactions.encounterCustomizations, interactionKey);
-  const composition = interaction?.generatedComposition ?? phase.composition;
+  const interactionKey = workspaceInteractionKey(subject.address);
+  const composition = interaction?.generatedComposition ?? subject.composition;
   // A retained removal-only decision on a fixed identity is still an edit.
-  const editable = composition?.editable === true || phase.customization !== undefined;
+  const editable = composition?.editable === true || subject.customization !== undefined;
   const findingTarget = useFindingTarget();
-  const customizationId =
-    phase.customizable || interaction === undefined
-      ? `encounter-customization-${semanticOwnerControlElementId(phase.address)}`
-      : semanticOwnerControlElementId(phase.address);
+  const customizationId = subject.controlId;
   const triggerTarget =
     interaction === undefined
       ? { id: customizationId }
-      : findingTarget(phase.address, customizationId, phase.address, isCompositionFinding);
-  const generatedDecision = phase.customization?.find(isGeneratedEncounterDecision);
+      : findingTarget(subject.address, customizationId, subject.address, subject.findingFilter);
+  const generatedDecision = subject.customization?.find(isGeneratedEncounterDecision);
   // A decision whose candidate support is unreached waits on an earlier choice: a
   // generating composition without its assessment, or a roster without its drafts.
   // A fixed identity's retained value stays removable; the other decisions are static.
@@ -405,7 +415,7 @@ function EncounterCustomizationControl({
     (generatedDecision !== undefined &&
       interaction?.generatedComposition?.editable === true &&
       interaction.generatedAssessment === undefined) ||
-    (phase.customization?.some((decision) => decision.selection.kind === 'infiniteRoster') ===
+    (subject.customization?.some((decision) => decision.selection.kind === 'infiniteRoster') ===
       true &&
       interaction?.infiniteRosterDraftFor === undefined);
   const close = (): void => {
@@ -428,19 +438,19 @@ function EncounterCustomizationControl({
           contextUnreached ? candidateWaitingHint : undefined,
           'aria-description' in triggerTarget ? triggerTarget['aria-description'] : undefined,
         )}
-        aria-label={`${editable ? 'Customize' : 'View roster for'} ${phase.identityLabel.toLowerCase()}`}
+        aria-label={`${editable ? 'Customize' : 'View roster for'} ${subject.identityLabel.toLowerCase()}`}
         type="button"
       >
         {editable ? 'Customize' : 'View roster'}
       </button>
-      {!manualOpen ? null : interaction !== undefined && phase.customization !== undefined ? (
+      {!manualOpen ? null : interaction !== undefined && subject.customization !== undefined ? (
         <EncounterCustomizationDialog
           customizationId={customizationId}
           interaction={interaction}
           interactionKey={interactionKey}
           onClose={close}
-          phase={phase}
-          savedDecisions={phase.customization}
+          subject={subject}
+          savedDecisions={subject.customization}
         />
       ) : composition === undefined ? null : (
         // A fixed roster has nothing to edit: a read-only view that closes from its title row.
@@ -448,7 +458,7 @@ function EncounterCustomizationControl({
           model={{ kind: 'view', onClose: close }}
           returnFocusId={customizationId}
           size="narrow"
-          title={encounterDialogTitle(composition.label, phase)}
+          title={encounterDialogTitle(composition.label, subject)}
         >
           <div className="encounter-customization-fields">
             <EncounterCompositionControl composition={composition} idKey={interactionKey} />
@@ -456,6 +466,40 @@ function EncounterCustomizationControl({
         </EditorDialog>
       )}
     </>
+  );
+}
+
+/** A phase's customization launcher: its decisions under the phase's finding owner. */
+function EncounterCustomizationControl({
+  interactions,
+  phase,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly phase: WorkspaceEncounterPhase;
+}) {
+  const interactionKey = workspaceInteractionKey(phase.address);
+  const interaction =
+    phase.customization === undefined
+      ? undefined
+      : requireWorkspaceInteraction(interactions.encounterCustomizations, interactionKey);
+  return (
+    <EncounterCustomizationLauncher
+      interaction={interaction}
+      subject={{
+        address: phase.address,
+        controlId:
+          phase.customizable || interaction === undefined
+            ? `encounter-customization-${semanticOwnerControlElementId(phase.address)}`
+            : semanticOwnerControlElementId(phase.address),
+        definitionKey:
+          phase.selectedEncounter.nativeEncounterDefinitionKey ?? phase.selectedEncounter.key,
+        label: phase.selectedEncounter.label,
+        identityLabel: phase.identityLabel,
+        ...(phase.customization === undefined ? {} : { customization: phase.customization }),
+        ...(phase.composition === undefined ? {} : { composition: phase.composition }),
+        findingFilter: isCompositionFinding,
+      }}
+    />
   );
 }
 
