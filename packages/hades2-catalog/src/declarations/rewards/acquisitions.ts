@@ -305,6 +305,8 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     goldGrant: 20,
   },
+  // A Time switch's gushed coins; neither duplicable nor convertible.
+  { gameName: 'Money', kind: 'consumable', historyProjection: 'consumableAndUse' },
   { gameName: 'HealDropMinor', kind: 'consumable', historyProjection: 'consumableAndUse' },
   { gameName: 'HealDrop', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {

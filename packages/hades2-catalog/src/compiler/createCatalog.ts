@@ -3,6 +3,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RawCatalogInput } from '../declarations';
 import { normalizeArcanaCards, normalizeFearVows } from './arcana-fear';
 import { normalizeBiomes } from './biomes';
+import { normalizeChallengeSwitches } from './challenge-switches';
 import { requireNonEmpty, requirePositiveInteger } from './common';
 import {
   validateEncounterDefinitionClosure,
@@ -129,6 +130,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     exitTypes,
   );
   const routes = normalizeRoutes(input.routes, biomes, rooms);
+  const challengeSwitches = normalizeChallengeSwitches(input.challengeSwitches, rooms, rewards);
   validateRewardRouteAndAspectReferences(rewards, routes, traitCatalog.aspects);
   validateTraitRouteReferences(traitCatalog, routes);
   validateLifecycleBindings({
@@ -178,6 +180,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     exitCompatibilityPolicies,
     exitTypes,
     rooms,
+    challengeSwitches,
     biomeLayouts,
     weapons: traitCatalog.weapons,
     aspects: traitCatalog.aspects,

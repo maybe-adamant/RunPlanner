@@ -325,6 +325,22 @@ export const producerLifecycles = [
     })),
   },
   {
+    key: 'ChallengeSwitchLoot',
+    // EventLogic.lua HandleChallengeLoot spawns each claim reward and bonus
+    // drop with a bare `CreateConsumableItem`: no `RunProgress` upgrade, so the
+    // bonus Nectar carries no random boon level.
+    rewardTypes: [
+      'Money',
+      'StackUpgrade',
+      'MaxHealthDrop',
+      'RoomRewardConsolationPrize',
+      'TalentDrop',
+      'MaxManaDrop',
+      'GiftDrop',
+    ],
+    defaultLifecyclePoint: 'roomRewardPickup',
+  },
+  {
     key: 'ZagPedestal',
     rewardTypes: ['BlindBoxLoot', 'StackUpgradeBig', 'StackUpgrade', 'TalentBigDrop', 'TalentDrop'],
     defaultLifecyclePoint: 'roomExit',

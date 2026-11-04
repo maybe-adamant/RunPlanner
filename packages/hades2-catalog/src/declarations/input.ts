@@ -5,6 +5,7 @@ import type {
   RouteDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { RawArcanaCardDeclaration, RawFearVowDeclaration } from './arcana-fear-types';
+import type { RawChallengeSwitchInput } from './challenge-switches-types';
 import type {
   RawEncounterDefinitionDeclaration,
   RawEncounterEnvelopeDeclaration,
@@ -44,6 +45,7 @@ export interface RawCatalogInput {
   readonly exitCompatibilityPolicies: readonly ExitCompatibilityPolicy[];
   readonly exitTypes: readonly RawExitTypeDeclaration[];
   readonly rooms: readonly RawRoomDeclaration[];
+  readonly challengeSwitches: RawChallengeSwitchInput;
   /** Map exit doors in door-setup order, as [ObjectId, obstacle name], by room game name. */
   readonly exitDoorSetupOrders: Readonly<
     Record<string, readonly (readonly [doorId: number, obstacleName: string])[]>

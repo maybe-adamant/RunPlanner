@@ -1528,6 +1528,72 @@ export interface BiomeLayout {
   readonly fields: readonly AuthoredFieldDescriptor[];
 }
 
+/** The three challenge switch kinds (`EncounterSets` Time, PerfectClear and Elite options). */
+export type ChallengeSwitchKind = 'time' | 'perfectClear' | 'elite';
+
+export const CHALLENGE_SWITCH_KINDS = Object.freeze([
+  'time',
+  'perfectClear',
+  'elite',
+] as const satisfies readonly ChallengeSwitchKind[]);
+
+/** One switch kind's gates beyond the shared spawn rules. */
+export interface ChallengeSwitchKindDeclaration {
+  readonly key: ChallengeSwitchKind;
+  /** The variant a newly observed switch of this kind starts from. */
+  readonly defaultVariantKey: string;
+  /** The kind's own `BiomeDepthCache` floor, below the shared one when lower. */
+  readonly minimumBiomeDepth?: number;
+  /** The room's kind-level requirement (`EliteSwitchRequirements`). */
+  readonly requirement?: RequirementExpression;
+  /** The reward a hit turns the claim into; absent where a hit changes no reward. */
+  readonly hitRewardType?: string;
+  /** The claim pays gold that decays with the clear time instead of a consumable. */
+  readonly goldReward: boolean;
+}
+
+/** One switch obstacle variant: its kind, draw weight and reward. */
+export interface ChallengeSwitchVariantDeclaration {
+  /** Native obstacle name. */
+  readonly key: string;
+  readonly switchKind: ChallengeSwitchKind;
+  /** Native option multiplicity among the eligible variants. */
+  readonly weight: number;
+  /** The reward its clean claim spawns. */
+  readonly rewardType: string;
+  readonly requirement?: RequirementExpression;
+}
+
+/** A room able to hold a switch: a `ChallengeSwitchBase` anchor and a nonzero chance. */
+export interface ChallengeSwitchHostDeclaration {
+  readonly gameName: string;
+  /** Native `ChallengeSpawnChance`; a chance, never a rule. */
+  readonly spawnChance: number;
+  /** The one encounter each kind fields in this room (`<Kind>EncounterOptions`). */
+  readonly encounterKeyBySwitchKind: Readonly<Record<ChallengeSwitchKind, string>>;
+}
+
+/** Challenge switches: optional room objects rolled at room entry. */
+export interface ChallengeSwitchCatalog {
+  readonly kinds: CatalogCollection<ChallengeSwitchKindDeclaration>;
+  readonly variants: CatalogCollection<ChallengeSwitchVariantDeclaration>;
+  readonly hosts: CatalogCollection<ChallengeSwitchHostDeclaration>;
+  /** Shared `ChallengeSpawnRequirements` `BiomeDepthCache` floor. */
+  readonly minimumBiomeDepth: number;
+  /** `RequiredMinRoomsSinceEvent` ChallengeSwitch count. */
+  readonly minimumRoomsSinceLast: number;
+  /** Lifecycle of the pickups a claim spawns. */
+  readonly producerLifecycleKey: string;
+  /** Time-switch gold before the money multiplier. */
+  readonly gold: {
+    readonly startingValue: number;
+    readonly minimumValue: number;
+    readonly defaultValue: number;
+  };
+  /** The bonus drop a clean claim may add (`LootDrops`). */
+  readonly bonusReward: { readonly rewardType: string; readonly dropChance: number };
+}
+
 /** Gold facts with no narrower owner. */
 export interface GoldCatalogDeclaration {
   /** Gold a trait screen with no options pays instead, before the money multiplier. */
@@ -1578,6 +1644,7 @@ export interface Catalog {
   readonly exitCompatibilityPolicies: CatalogCollection<ExitCompatibilityPolicy>;
   readonly exitTypes: CatalogCollection<ExitTypeDeclaration>;
   readonly rooms: CatalogCollection<RoomDeclaration>;
+  readonly challengeSwitches: ChallengeSwitchCatalog;
   readonly biomeLayouts: CatalogCollection<BiomeLayout>;
   readonly weapons: CatalogCollection<WeaponDeclaration>;
   readonly aspects: CatalogCollection<AspectDeclaration>;

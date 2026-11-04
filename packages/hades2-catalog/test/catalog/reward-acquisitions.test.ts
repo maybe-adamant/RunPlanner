@@ -519,6 +519,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       RoomMoneySmallDrop: 'Small Gold',
       RoomMoneyTripleDrop: 'Triple Gold',
       RoomMoneyTinyDrop: 'Tiny Gold',
+      Money: 'Gold',
       TalentDrop: 'Path of Stars',
       TalentBigDrop: 'Big Path of Stars',
       MinorTalentDrop: 'Minor Path of Stars',
@@ -763,6 +764,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       'RoomMoneySmallDrop',
       'RoomMoneyTripleDrop',
       'RoomMoneyTinyDrop',
+      'Money',
       'HealDropMinor',
       'HealDrop',
       'TalentDrop',
@@ -802,7 +804,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       'CardUpgradePointsDrop',
       'CharonPointsDrop',
     ]);
-    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(62);
+    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(63);
   });
 
   it('rejects incomplete source contracts at catalog construction', () => {

@@ -42,6 +42,8 @@ export const rewardTypes = [
   directReward('RoomMoneySmallDrop', 'Small Gold', 'consumable'),
   directReward('RoomMoneyTripleDrop', 'Triple Gold', 'consumable'),
   directReward('RoomMoneyTinyDrop', 'Tiny Gold', 'consumable'),
+  // A Time switch's claim gushes its decayed value as coins (`GushMoney`).
+  directReward('Money', 'Gold', 'consumable'),
   directReward('TalentDrop', 'Path of Stars', 'consumable'),
   directReward('TalentBigDrop', 'Big Path of Stars', 'consumable'),
   directReward('MinorTalentDrop', 'Minor Path of Stars', 'consumable'),
