@@ -153,6 +153,7 @@ function text.checkpoint(issue)
     if checkpoint == "reroll-pool" then return "entering the room" end
     if DOOR_KINDS[checkpoint] or checkpoint:match("^ephyra") then return "when the doors appeared" end
     if checkpoint == "incomingReward" then return "room reward" end
+    if checkpoint == "rewardDraw" then return "a reward draw" end
     if TRAIT_CHOICE[checkpoint] or TRAIT_SCREEN[checkpoint] then return "a trait choice" end
     if checkpoint == "encounter" or checkpoint == "encounterCount" then return "encounter" end
     if INVENTORY[checkpoint] then return INVENTORY[checkpoint] .. " stock" end
@@ -334,6 +335,7 @@ function text.difference(issue)
         return plannedFound("", expected, observed) and ("planned " .. scalar(expected) .. " doors, found "
             .. scalar(observed)) or nil
     end
+    if checkpoint == "rewardDraw" then return plannedFound("reward ", expected, observed) end
     if checkpoint == "cageCount" then
         return plannedFound("", expected, observed) and ("planned " .. scalar(expected) .. " cages per door, found "
             .. scalar(observed)) or nil

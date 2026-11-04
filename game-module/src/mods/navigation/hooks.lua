@@ -141,6 +141,9 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         nativeRoom, prior, args)
         local nested = nestedRewardContext and nestedRewardContext() or nil
         if nested ~= nil and type(args) == "table" and args.AlwaysSetupForceLootName == true then
+            -- An out-of-sync wheel keeps its native god.
+            local state = getState(runtime)
+            if state == nil or state.state ~= "synchronized" then return base(currentRun, nativeRoom, prior, args) end
             local result = base(currentRun, nativeRoom, prior, args)
             local reward = nested.currentOffer and nested.currentOffer.reward
             if reward ~= nil and type(nativeRoom) == "table" then
@@ -211,6 +214,30 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         rewardStore, chosen, args)
         -- A steered draw's native refill re-enters here; it stays that draw.
         if rewardChoiceScope ~= nil then return base(run, nativeRoom, rewardStore, chosen, args) end
+        local state = getState(runtime)
+        if state == nil or state.state ~= "synchronized" then
+            return base(run, nativeRoom, rewardStore, chosen, args)
+        end
+        -- One native draw of `expected` from `store`. A draw can yield another
+        -- reward when the planned one is not in the store (native refills, then
+        -- falls back); the native result then stands without the planned god.
+        -- Door and room rewards are proven at the doors and at room entry; a wheel
+        -- offer has no later proof, so `unproven` makes the difference a mismatch.
+        local function steeredDraw(expected, store, unproven)
+            rewardChoiceScope = { rewardStoreName = store, rewardType = expected.rewardType }
+            local ok, result = pcall(base, run, nativeRoom, store, chosen, args)
+            rewardChoiceScope = nil
+            if not ok then error(result, 0) end
+            if result ~= expected.rewardType then
+                if unproven then
+                    session.mismatch(state, { kind = "rewardDraw", expected = expected.rewardType, observed = result })
+                end
+            elseif expected.source ~= nil and type(nativeRoom) == "table" then
+                nativeRoom.ForceLootName = expected.source
+            end
+            report(runtime)
+            return result
+        end
         local nested = nestedRewardContext and nestedRewardContext() or nil
         if nested ~= nil and type(args) == "table" and args.IgnoreForcedReward == true then
             local offer = nested.reroll
@@ -222,29 +249,12 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
             nested.currentOffer = offer
             -- Each wheel offer, and each reroll of one, draws its planned reward
             -- from the wheel's native store.
-            rewardChoiceScope = { rewardStoreName = rewardStore, rewardType = offer.reward.rewardType }
-            local ok, result = pcall(base, run, nativeRoom, rewardStore, chosen, args)
-            rewardChoiceScope = nil
-            if not ok then error(result, 0) end
-            if type(nativeRoom) == "table" then nativeRoom.ForceLootName = offer.reward.source end
-            return result
-        end
-        local state = getState(runtime)
-        if state == nil or state.state ~= "synchronized" then
-            return base(run, nativeRoom, rewardStore, chosen, args)
+            return steeredDraw(offer.reward, rewardStore, true)
         end
         local function drawExpected(expected)
             local resolvedStore = expected.resolvedStoreKey or rewardStore
             if type(nativeRoom) == "table" then nativeRoom.RewardStoreName = resolvedStore end
-            rewardChoiceScope = { rewardStoreName = resolvedStore, rewardType = expected.rewardType }
-            local ok, result = pcall(base, run, nativeRoom, resolvedStore, chosen, args)
-            rewardChoiceScope = nil
-            if not ok then error(result, 0) end
-            if expected.source ~= nil and type(nativeRoom) == "table" then
-                nativeRoom.ForceLootName = expected.source
-            end
-            report(runtime)
-            return result
+            return steeredDraw(expected, resolvedStore)
         end
         -- A cage draw copies its door's room and passes no Door; it draws the
         -- door's next planned cage from the native store.

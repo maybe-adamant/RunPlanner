@@ -381,8 +381,8 @@ function TestThessaly.testWheelSelectionPublishesBeforeNativeNotificationResumes
         return callbacks.ShipsEncounterSetup(nil, {}, function()
             callbacks.RandomChance(nil, {}, function() return false end, 1)
             callbacks.ChooseNextRewardStore(nil, {}, function() return "NativeStore" end, {})
-            local rewardType = callbacks.ChooseRoomReward(nil, {}, function() return "NativeReward" end,
-                {}, nativeRoom, "NativeStore", {}, { IgnoreForcedReward = true })
+            local rewardType = callbacks.ChooseRoomReward(nil, {}, nativeChoose(callbacks),
+                { RewardStores = nativeStore() }, nativeRoom, "RunProgress", {}, { IgnoreForcedReward = true })
             callbacks.SetupRoomReward(nil, {}, function()
                 nativeRoom.ForceLootName = "native-source"
             end, {}, nativeRoom, {}, { AlwaysSetupForceLootName = true })
@@ -532,8 +532,8 @@ function TestThessaly.testSelectedWheelRewardBindsAndCompletesThroughStandardPic
     callbacks.ShipsEncounterSetup(nil, {}, function()
         callbacks.RandomChance(nil, {}, function() return false end, 1)
         callbacks.ChooseNextRewardStore(nil, {}, function() return "wrong" end, {})
-        local rewardType = callbacks.ChooseRoomReward(nil, {}, function() return "wrong" end,
-            {}, { Encounter = encounter }, "RunProgress", {}, { IgnoreForcedReward = true })
+        local rewardType = callbacks.ChooseRoomReward(nil, {}, nativeChoose(callbacks),
+            { RewardStores = nativeStore() }, { Encounter = encounter }, "RunProgress", {}, { IgnoreForcedReward = true })
         callbacks.CreateDoorRewardPreview(nil, {}, function() end, wheelObstacle, rewardType)
         callbacks.UseShipWheel(nil, {}, function() return true end, wheelObstacle)
     end, encounter, {})
@@ -590,4 +590,62 @@ function TestThessaly.testRerollPressDrawsTheOffersNextPlannedRerollWithoutRetir
     lu.assertNil(shipCombat.rewardContext())
     callbacks.AttemptRerollShipWheel(nil, {}, function() end, {}, wheel)
     lu.assertEquals(mismatches, { { checkpoint = "reroll", expected = 1, observed = 2 } })
+end
+
+-- A two-offer wheel whose native setup draws both sides; `between` runs after the Left.
+local function drawWheel(store, between)
+    local module, callbacks = capture()
+    local active, phase = fixture(2, "offer1")
+    local state, encounter = { state = "synchronized" }, {}
+    local mismatches = {}
+    local room = {
+        current = function() return active end,
+        encounterPhase = function(_, value) return value == encounter and phase or nil end,
+        window = function() return true end,
+    }
+    local session = {
+        mismatch = function(_, value)
+            mismatches[#mismatches + 1] = value
+            state.state = "desynchronized"
+        end,
+        diagnostic = function() error("unexpected diagnostic") end,
+    }
+    local shipCombat = thessaly.create()
+    navigation.attach(module, session, function() return state end, function() end, {}, room, nil,
+        shipCombat.rewardContext)
+    shipCombat.attach(module, session, function() return state end, function() end, room)
+    local run = { RewardStores = { RunProgress = store } }
+    local sides = {}
+    callbacks.ShipsEncounterSetup(nil, {}, function()
+        callbacks.RandomChance(nil, {}, function() return false end, 1)
+        for index = 1, 2 do
+            local nativeRoom = { ForceLootName = "NativeGod" }
+            local rewardType = callbacks.ChooseRoomReward(nil, {}, nativeChoose(callbacks),
+                run, nativeRoom, "RunProgress", {}, { IgnoreForcedReward = true })
+            callbacks.SetupRoomReward(nil, {}, function() end, run, nativeRoom, {},
+                { AlwaysSetupForceLootName = true })
+            sides[index] = { rewardType = rewardType, god = nativeRoom.ForceLootName }
+            callbacks.CreateDoorRewardPreview(nil, {}, function() end, {}, rewardType)
+            if index == 1 and between then between(state) end
+        end
+    end, encounter, {})
+    return sides, mismatches, run.RewardStores.RunProgress
+end
+
+function TestThessaly.testAWheelDrawThatCannotYieldItsPlannedOfferIsAMismatch()
+    -- ZeusUpgrade is not in the store: native refills and falls back.
+    local sides, mismatches = drawWheel({ { Name = "MaxHealthDrop" } })
+    lu.assertEquals(mismatches, { { kind = "rewardDraw", expected = "ZeusUpgrade", observed = "RoomRewardHealDrop" } })
+    -- The native result stands without the planned god, and the Right stays native.
+    lu.assertEquals(sides[1], { rewardType = "RoomRewardHealDrop", god = "NativeGod" })
+    lu.assertEquals(sides[2], { rewardType = "MaxHealthDrop", god = "NativeGod" })
+end
+
+function TestThessaly.testAnOutOfSyncWheelDrawsNatively()
+    local sides, mismatches, store = drawWheel(nativeStore().RunProgress, function(state) state.state = "desynchronized" end)
+    lu.assertEquals(mismatches, {})
+    lu.assertEquals(sides[1], { rewardType = "ZeusUpgrade", god = "Zeus" })
+    -- The Right takes the store's first entry and keeps its native god.
+    lu.assertEquals(sides[2], { rewardType = "MaxManaDrop", god = "NativeGod" })
+    lu.assertEquals(store, { { Name = "MaxHealthDrop" }, { Name = "Boon" } })
 end

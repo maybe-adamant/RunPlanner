@@ -158,10 +158,12 @@ with two contacts:
 2. **Wheel realization.** At each non-Intro `ShipsEncounterSetup`, force the
    authored offer count and shared store, and steer each native offer draw,
    Left then Right, and each reroll redraw to its published reward and source,
-   so every offer leaves the wheel's store as it does natively. Bind the player's `UseShipWheel` callback to the exact published
-   picked-offer transaction while the native function records the choice,
-   starts the encounter, spawns the reward, and enforces
-   `WaitForNextEncounterReady`. The adapter does not replace or block input.
+   so every offer leaves the wheel's store as it does natively; a draw that
+   cannot yield its published reward is a mismatch. Bind the player's
+   `UseShipWheel` callback to the exact published picked-offer transaction
+   while the native function records the choice, starts the encounter, spawns
+   the reward, and enforces `WaitForNextEncounterReady`. The adapter does not
+   replace or block input.
 
 The selected wheel reward uses the existing acquisition adapter and Icarus the
 existing encounter-interaction adapter. The executor does not create wheel

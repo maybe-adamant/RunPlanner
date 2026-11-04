@@ -31,20 +31,20 @@ local function reward(rewardType, source)
 end
 
 -- H_Intro offers two Fields doors; each target names its first cage draws.
-local function plan(cageCount)
-    local function cages(...)
+local function plan(cageCount, peerCageCount)
+    local function cages(count, ...)
         local all = { ... }
         local result = {}
-        for index = 1, cageCount do result[index] = all[index] end
+        for index = 1, count do result[index] = all[index] end
         return result
     end
     local source = {
         id = "src", gameName = "H_Intro", biomeKey = "H", overview = {},
         doors = { kind = "batch", owner = "batch", resolvedSharedRewardStoreKey = "RunProgress", targets = {
             { exitKey = "exit1", index = 1, room = { id = "a", biomeKey = "H", gameName = "H_Combat02" },
-                cageRewards = cages(reward("RoomMoneyDrop"), reward("Boon", "HeraUpgrade"), reward("TalentDrop")) },
+                cageRewards = cages(cageCount, reward("RoomMoneyDrop"), reward("Boon", "HeraUpgrade"), reward("TalentDrop")) },
             { exitKey = "exit2", index = 2, room = { id = "b", biomeKey = "H", gameName = "H_Combat03" },
-                cageRewards = cages(reward("MaxManaDrop"), reward("MaxHealthDrop"), reward("GiftDrop")) },
+                cageRewards = cages(peerCageCount or cageCount, reward("MaxManaDrop"), reward("MaxHealthDrop"), reward("GiftDrop")) },
         } },
     }
     local a = { id = "a", gameName = "H_Combat02", biomeKey = "H", overview = {} }
@@ -85,6 +85,8 @@ local function nativeChoose(callbacks)
                 return entry.Name
             end
         end
+        -- Native refills twice, then falls back.
+        return "RoomRewardHealDrop"
     end
 end
 
@@ -96,6 +98,8 @@ local function nativeUnlock(callbacks, offered)
             local data = callbacks.ChooseNextRoomData(nil, {}, function() return nil end, run, {}, offered)
             door.Room = callbacks.CreateRoom and callbacks.CreateRoom(nil, {}, copy, data, {}) or copy(data)
             door.Room.NeedsReward = true
+            -- The smallest door capacity clamps the max.
+            room.MaxDoorCageRewards = math.min(room.MaxDoorCageRewards, door.Room.MaxCageRewards)
         end
         -- The native roll here always misses the max chance.
         room.NumDoorCageRewards = callbacks.SelectFieldsDoorCageCount(nil, {}, function(currentRun)
@@ -124,10 +128,11 @@ local function nativeUnlock(callbacks, offered)
     end
 end
 
-local function unlock(cageCount, fieldsMaxDoorsRolled)
-    local callbacks, scope, state, mismatches = attached(plan(cageCount))
+local function unlock(cageCount, fieldsMaxDoorsRolled, options)
+    options = options or {}
+    local callbacks, scope, state, mismatches = attached(plan(cageCount, options.peerCageCount))
     local run = {
-        RewardStores = { RunProgress = store() }, BiomeDepthCache = 1,
+        RewardStores = { RunProgress = options.store or store() }, BiomeDepthCache = 1,
         FieldsMaxDoorsRolled = fieldsMaxDoorsRolled,
     }
     local source = {
@@ -140,7 +145,8 @@ local function unlock(cageCount, fieldsMaxDoorsRolled)
     withGlobals({
         CurrentRun = run, MapState = { OfferedExitDoors = offered },
         CollapseTableOrdered = function(values) return values end,
-        game = { RoomData = { H_Combat02 = { MaxCageRewards = 3 }, H_Combat03 = { MaxCageRewards = 3 } } },
+        game = { RoomData = { H_Combat02 = { MaxCageRewards = 3 },
+            H_Combat03 = { MaxCageRewards = options.peerCapacity or 3 } } },
     }, function()
         callbacks.DoUnlockRoomExits(nil, {}, nativeUnlock(callbacks, offered), run, source)
         proved, errorValue = scope.proveOutgoingDoors(state, run)
@@ -190,4 +196,16 @@ function TestFieldsCages.testAPlannedMaxPastTheNativeCeilingIsAMismatch()
     lu.assertEquals(result.run.FieldsMaxDoorsRolled, 2)
     -- The native roll stands, and native draws fill its cages.
     lu.assertEquals(#result.offered[1].Room.CageRewards, 2)
+end
+
+function TestFieldsCages.testACageDrawThatCannotYieldItsPlannedRewardFailsTheDoorProof()
+    -- The store has no RoomMoneyDrop, so native falls back.
+    local entries = store()
+    table.remove(entries, 3)
+    local result = unlock(2, 0, { store = entries })
+    lu.assertEquals(result.offered[1].Room.CageRewards[1].RewardType, "RoomRewardHealDrop")
+    -- The doors' cage proof reports it.
+    lu.assertNil(result.proved)
+    lu.assertEquals(result.errorValue,
+        { kind = "cageReward", index = 1, cageIndex = 1, expected = "RoomMoneyDrop", observed = "RoomRewardHealDrop" })
 end
