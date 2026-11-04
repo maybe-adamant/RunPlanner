@@ -322,6 +322,33 @@ function TestConformanceReaders.testAPendingSpellDropWithoutAnOrderOrUseIsStale(
     lu.assertFalse(readers.supports("hermesDeliveries"))
 end
 
+function TestConformanceReaders.testEveryRoomExitChecksPendingHermesOrdersFromItsFrame()
+    local function order(rewardType, uses)
+        return { sourceKey = "s", sourceOccurrenceId = "o", generationKey = "g", rewardType = rewardType,
+            remainingUses = uses, rushed = false }
+    end
+    local occurrence = { diagnostics = { beforeRoomExit = { retainedEffects = {
+        hermesShrineDeliveries = { order("MaxManaDrop", 4), order("ArmorBoost", 2) },
+    } } } }
+    local run = { Hero = { Traits = {
+        { Name = "StorePendingDeliveryItem", ShopItemName = "ArmorBoost", RemainingUses = 2 },
+        { Name = "StorePendingDeliveryItem", ShopItemName = "MaxManaDrop", RemainingUses = 4 },
+    } } }
+    local function read(kind, expected) return readers.read(kind, run, nil, expected) end
+    lu.assertTrue(proof.prove(occurrence, read))
+    local traits = run.Hero.Traits
+    traits[#traits + 1] = { Name = "StorePendingDeliveryItem", ShopItemName = "SpellDrop", RemainingUses = 8 }
+    run.PendingSpellDrop = true
+    local ok, mismatch = proof.prove(occurrence, read)
+    lu.assertNil(ok)
+    lu.assertEquals(mismatch, {
+        checkpoint = "room-exit-conformance:hermesDeliveries",
+        expected = { orders = { "ArmorBoost:2", "MaxManaDrop:4" }, staleSpellDrop = false },
+        observed = { orders = { "ArmorBoost:2", "MaxManaDrop:4", "SpellDrop:8" }, staleSpellDrop = false },
+    })
+    lu.assertTrue(proof.prove({}, read))
+end
+
 function TestConformanceReaders.testStartRoomSelfCheckIgnoresExtraTraitsAndDiagnosticOnlyState()
     local occurrence, restore = admissionFixture()
     _G.CurrentRun.Hero.Traits[#_G.CurrentRun.Hero.Traits + 1] = {

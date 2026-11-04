@@ -15,7 +15,3 @@ each check.
       `FatedStatus` `Unfated` and the run stays synchronized; if it still shows
       `Fated`, the exit reports a `keepsakeEffects` mismatch and snap settles
       it.
-- [ ] After a mismatch, take a native door that leads elsewhere into a
-      depth-gated planned encounter (for example Icarus in Olympus at depth 3
-      or later). Snap rebuilds the planned room, the planned encounter plays,
-      and a planned generated encounter there reports no `budget-mismatch`.

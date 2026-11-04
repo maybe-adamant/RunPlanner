@@ -581,6 +581,11 @@ function TestStatusUi.testMismatchesAreDescribedInPlainWords()
         expected = { Fire = 2, Air = 0 }, observed = { Fire = 1, Air = 0 } })
     lu.assertStrContains(text, "What differed: element counts Fire 1 (planned 2).")
 
+    text = desynchronized({ checkpoint = "room-exit-conformance:hermesDeliveries",
+        expected = { orders = {}, staleSpellDrop = false },
+        observed = { orders = { "SpellDrop:8" }, staleSpellDrop = false } })
+    lu.assertStrContains(text, "What differed: pending Hermes orders differ from the plan.")
+
     text = desynchronized({ checkpoint = "trait-offer-blocked-row", expected = "no blocked row",
         observed = "blocked row" })
     lu.assertStrContains(text, "(a trait choice)")

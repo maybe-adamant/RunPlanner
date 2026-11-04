@@ -267,6 +267,7 @@ local CONFORMANCE = {
     forfeit = function(expected, observed) return plannedFound("forfeit ", expected, observed) end,
     chaos = function() return "active Chaos effects differ from the plan" end,
     stygianWell = function() return "Stygian Well items differ from the plan" end,
+    hermesDeliveries = function() return "pending Hermes orders differ from the plan" end,
     pathOfStars = function() return "Path of Stars differs from the plan" end,
     steadyGrowth = function() return "Steady Growth differs from the plan" end,
     rewardPriorities = function() return "upcoming reward order differs from the plan" end,

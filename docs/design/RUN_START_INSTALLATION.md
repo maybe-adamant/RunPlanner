@@ -379,7 +379,9 @@ persisted and hashed like the other gameplay options) returns a run to its plan
 at each room exit. Off, a desynchronized run is unchanged.
 
 - **Correct at the exit.** Every `LeaveRoom` first runs the room's ordinary
-  checks: its exit conformance, the Hub departure conformance in the Hub, and
+  checks: its exit conformance, which also compares pending Hermes orders with
+  the frame so an unplanned purchase is a mismatch in the room it was made, the
+  Hub departure conformance in the Hub, and
   the [`exit-door`](EXECUTION_PROTOCOL.md#exit-door) check of a synchronized
   exit. An exit that passes them writes nothing. After a mismatch, the module
   compares the live hero with the plan's hero state for the room being left

@@ -1,5 +1,8 @@
 -- Pure checkpoint proof over the planner-published conformance facts. Native
 -- observation is injected so this module owns comparison without owning hooks.
+local conformance = type(import) == "function" and import("mods/protocol/conformance.lua")
+    or require("mods.protocol.conformance")
+
 local proof = {}
 
 local function equal(left, right)
@@ -64,6 +67,15 @@ function proof.prove(occurrence, read)
             observed,
             requireActivation
         )
+        if not ok then return nil, mismatch end
+    end
+    -- Pending Hermes orders are checked at every exit from the frame, so an
+    -- unplanned purchase stops the plan in the room it was made.
+    local frame = occurrence.diagnostics and occurrence.diagnostics.beforeRoomExit
+    local deliveries = frame and conformance.hermesDeliveriesExpected(frame)
+    if deliveries ~= nil then
+        local observed = type(read) == "function" and read("hermesDeliveries", deliveries) or nil
+        local ok, mismatch = proof.compare("room-exit-conformance:hermesDeliveries", deliveries, observed)
         if not ok then return nil, mismatch end
     end
     return true
