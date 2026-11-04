@@ -169,6 +169,11 @@ export interface RouteEvaluationSummary {
   readonly invalidBiomeCount: number;
   readonly blockedBiomeCount: number;
   readonly eligibleForExecutionPlan: boolean;
+  /**
+   * Why a route valid through its end still cannot publish: it ends before its biome's
+   * terminal room, which the game module does not run yet.
+   */
+  readonly executionPlanBlock?: 'planEndAwaitsGameModule';
 }
 
 export interface ProjectRouteEvaluation {
@@ -238,8 +243,8 @@ export function summarizeRoute(
   configuredBiomeCount: number,
   evaluations: readonly ProjectBiomeEvaluation[],
   processing: RouteProcessingRegions,
-  /** The plan end is reached validly: the route publishes through it. */
-  endedValid = false,
+  /** How the plan end is reached validly: at its biome's terminal room, or cut before it. */
+  validEnd: 'terminal' | 'cut' | null = null,
 ): RouteEvaluationSummary {
   const incompleteBiomeCount = evaluations.filter(
     (evaluation) => evaluation.authoring === 'incomplete' || evaluation.requiredInput !== undefined,
@@ -256,6 +261,8 @@ export function summarizeRoute(
     blockedBiomeCount: processing.blockedSuffix.length,
     eligibleForExecutionPlan:
       configuredBiomeCount > 0 &&
-      (endedValid || processing.completeValidPrefix.length === configuredBiomeCount),
+      (validEnd === 'terminal' ||
+        (validEnd === null && processing.completeValidPrefix.length === configuredBiomeCount)),
+    ...(validEnd === 'cut' ? { executionPlanBlock: 'planEndAwaitsGameModule' as const } : {}),
   });
 }

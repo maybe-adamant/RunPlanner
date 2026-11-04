@@ -9,7 +9,11 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
-import { assembleExecutionProduct } from '../../src/execution-plan/assembler';
+import {
+  assembleExecutionProduct,
+  assembleRouteExecutionProduct,
+} from '../../src/execution-plan/assembler';
+import { ExecutionCompilerError } from '../../src/execution-plan/assembler-errors';
 import { compileExecutionPlan } from '../../src/execution-plan/compiler';
 import { decodeExecutionPlan, encodeExecutionPlan } from '../../src/execution-plan/codec';
 
@@ -20,15 +24,44 @@ const endAt = (project: ProjectDocument, biomeKey: string, occurrenceId: string)
     planEnd: { biomeKey, occurrenceId: occurrenceId as OccurrenceId },
   });
 
+// The wire a cut end publishes once the game module runs it; the publication entry refuses it.
 function publish(project: ProjectDocument) {
   const plan = compileExecutionPlan({
-    product: assembleExecutionProduct({
+    product: assembleRouteExecutionProduct({
       assembly: simulateProjectAssembly(catalog, project),
       catalog,
     }),
   });
   return decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)));
 }
+
+function publicationRefusal(project: ProjectDocument): unknown {
+  try {
+    assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project), catalog });
+  } catch (error) {
+    return error;
+  }
+  return undefined;
+}
+
+describe('Plan end publication block', () => {
+  it('refuses a plan that ends before its biome ends, mid-biome or inside a Hub stay', () => {
+    for (const project of [
+      endAt(createCompleteFGProject(), 'F', 'golden-f-b5-e1'),
+      endAt(createCompleteFGProject(), 'F', 'golden-f-preboss-shop:boss'),
+      endAt(loadSurfaceNProject(), 'N', 'surface-n-combat05'),
+    ]) {
+      const refusal = publicationRefusal(project);
+      expect(refusal).toBeInstanceOf(ExecutionCompilerError);
+      expect((refusal as ExecutionCompilerError).code).toBe('planEndAwaitsGameModule');
+    }
+  });
+
+  it('publishes an end at a biome’s terminal room, the ordinary prefix end', () => {
+    const atPostboss = endAt(createCompleteFGProject(), 'F', 'golden-f-preboss-shop:postboss');
+    expect(publicationRefusal(atPostboss)).toBeUndefined();
+  });
+});
 
 describe('Plan end publication', () => {
   it('publishes through the end room, which has no doors, and leaves later biomes out', () => {

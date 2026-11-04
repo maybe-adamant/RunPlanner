@@ -544,6 +544,8 @@ export function describeNotPublishable(code: ExecutionCompilerError['code'] | nu
       return RESOLVE_FINDINGS;
     case 'startPointIneligible':
       return 'The start point can’t start this run.';
+    case 'planEndAwaitsGameModule':
+      return 'Sending a plan that ends early needs the next game module update.';
     case 'executionCoverageMissing':
     case null:
       return 'The game module can’t run this plan yet.';
@@ -761,6 +763,8 @@ export interface GameSendButton {
 export interface GameSendProject {
   readonly projectId: string;
   readonly eligible: boolean;
+  /** The engine's reason a plan valid through its end still cannot be sent. */
+  readonly executionPlanBlock?: 'planEndAwaitsGameModule';
   /** The engine's reason the authored start point blocks publication. */
   readonly startPointBlock?: StartPointPublicationBlock;
   /** The plan's fingerprint as it is now; compiled only while the plan is in a slot. */
@@ -840,7 +844,11 @@ export function projectGameSendButton(
     return inactive('notReady', 'Send to game', 'Set up the game on the Game tab.');
   }
   if (!project.eligible) {
-    return inactive('notSendable', 'Send to game', describeNotPublishable('notEligible'));
+    return inactive(
+      'notSendable',
+      'Send to game',
+      describeNotPublishable(project.executionPlanBlock ?? 'notEligible'),
+    );
   }
   if (project.startPointBlock !== undefined) {
     return inactive(

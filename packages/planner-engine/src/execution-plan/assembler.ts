@@ -42,7 +42,22 @@ import {
 } from '../simulation/timeline-facts';
 import { deriveRoomExitConformanceDeltas } from '../simulation/rewards/run-state-conformance';
 
-export function assembleExecutionProduct({
+/** Publishes a plan the game module can run; a route's publication block refuses it. */
+export function assembleExecutionProduct(
+  input: import('./model').ExecutionAssemblerInput,
+): ExecutionSemanticProduct {
+  assertExactProjectEvaluationAssembly(input.assembly);
+  if (input.assembly.evaluation.route.summary.executionPlanBlock === 'planEndAwaitsGameModule') {
+    throw new CompilerError(
+      'planEndAwaitsGameModule',
+      'the plan ends before its biome ends, which the game module does not run yet',
+    );
+  }
+  return assembleRouteExecutionProduct(input);
+}
+
+/** The execution product of a route valid through its end, whatever the game module runs. */
+export function assembleRouteExecutionProduct({
   assembly,
   catalog,
   internalRunModifiers = false,

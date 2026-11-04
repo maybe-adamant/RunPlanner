@@ -194,7 +194,7 @@ function evaluateRouteAssembly(
   let routeStartBlock: 'incomplete' | 'invalid' | null = null;
   let routeStartIssue: AssessmentIssue | undefined;
   let planEndBlock: AssessmentIssue | undefined;
-  let endedValid = false;
+  let validEnd: 'terminal' | 'cut' | null = null;
   let authoringHorizon: AuthoringHorizon = Object.freeze({ kind: 'open' });
   const routeStartKeepsakes = new Map<string, KeepsakeSelectionCandidateCapability>();
   const routeStartKeepsakeEquipResults = new Map<
@@ -446,7 +446,7 @@ function evaluateRouteAssembly(
     if (evaluation.authoring === 'complete') completeValidPrefix.push(evaluation.biomeKey);
     const endRoom = createOccurrenceAddress(evaluation.origin, biomeEnd.occurrenceId);
     authoringHorizon = Object.freeze({ kind: 'ended', blockedAfter: endRoom });
-    endedValid = true;
+    validEnd = evaluation.authoring === 'complete' ? 'terminal' : 'cut';
     break;
   }
   const frozenEvaluations = Object.freeze(evaluations);
@@ -483,7 +483,7 @@ function evaluateRouteAssembly(
       processing,
       ...(issue === undefined ? {} : { issue }),
       findings: Object.freeze(findings),
-      summary: summarizeRoute(route.biomes.length, frozenEvaluations, processing, endedValid),
+      summary: summarizeRoute(route.biomes.length, frozenEvaluations, processing, validEnd),
       resources,
       npcShopping: deriveNpcShoppingExecutionPolicy(
         catalog,

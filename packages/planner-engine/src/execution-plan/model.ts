@@ -1573,7 +1573,8 @@ export interface ExecutionCompilerError extends Error {
     | 'openingMissing'
     | 'openingSelectionMissing'
     | 'executionCoverageMissing'
-    | 'startPointIneligible';
+    | 'startPointIneligible'
+    | 'planEndAwaitsGameModule';
   /** Why the authored start point cannot start the run; present exactly for `startPointIneligible`. */
   readonly startPointReason?: StartInstallationUnavailableReason;
 }
