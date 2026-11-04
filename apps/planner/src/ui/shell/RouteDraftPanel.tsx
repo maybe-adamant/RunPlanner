@@ -392,7 +392,7 @@ function UnavailableLine({
                 key={chip.traitKey}
                 onClick={() => onRemove([chip.traitKey])}
                 type="button"
-                {...hintProps(chip.hint === undefined ? chip.label : `${chip.label}: ${chip.hint}`)}
+                {...hintProps(`Remove ${chip.label} from the basket`)}
               >
                 {icon === undefined ? (
                   <span>{chip.label}</span>
