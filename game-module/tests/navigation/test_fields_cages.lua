@@ -198,6 +198,22 @@ function TestFieldsCages.testAPlannedMaxPastTheNativeCeilingIsAMismatch()
     lu.assertEquals(#result.offered[1].Room.CageRewards, 2)
 end
 
+function TestFieldsCages.testAClampedMaxTakesTheMinBranchAndLeavesTheCounter()
+    -- A two-cage peer clamps max to min: both outcomes give two cages, and the
+    -- published count cannot say which the plan chose. The min branch never runs
+    -- the counter ahead of the plan's, but it trails a planned max, and a
+    -- recorded round trip reads that batch as min.
+    local result = unlock(2, 0, { peerCapacity = 2 })
+    lu.assertEquals(result.mismatches, {})
+    lu.assertTrue(result.proved, result.errorValue)
+    lu.assertEquals(result.run.FieldsMaxDoorsRolled, 0)
+end
+
+function TestFieldsCages.testDoorsPublishingDifferentCageCountsAreAMismatch()
+    local result = unlock(2, 0, { peerCageCount = 3 })
+    lu.assertEquals(result.mismatches, { { kind = "cageCount", observed = 2 } })
+end
+
 function TestFieldsCages.testACageDrawThatCannotYieldItsPlannedRewardFailsTheDoorProof()
     -- The store has no RoomMoneyDrop, so native falls back.
     local entries = store()

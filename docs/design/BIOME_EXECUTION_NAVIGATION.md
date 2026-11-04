@@ -92,12 +92,16 @@ The Fields `min`/`max` choice, native chance table and clamp are not execution
 facts; they do not cross the boundary for the executor to repeat. The executor
 steers the native cage-count roll to the published cage count, through the
 branch that advances the native max-door counter only when that count is the
-clamped max and not also the min. A count both outcomes give takes the min
-branch, so the counter never runs ahead of the plan's; a max past the native
-ceiling, or a count neither outcome gives, is a mismatch. The adapters consume the planner's explicit spatial result rather than
-inferring a layout from room names or recreating native objects. Everything
-outside `H_Combat` reuses existing work, and the executor neither counts the
-four qualifying H rooms nor re-evaluates Preboss eligibility.
+clamped max and not also the min; a max past the native ceiling, or a count
+neither outcome gives, is a mismatch. When a door's capacity clamps the max to
+the min, the count cannot say which outcome the plan chose, so the executor
+takes the min branch: the counter never runs ahead of the plan's, but it lags a
+planned `max`, and a recorded round trip reads that batch as `min`. A steered
+count also skips the native max-door chance roll, which shifts later unsteered
+native random rolls. The adapters consume the planner's explicit spatial result
+rather than inferring a layout from room names or recreating native objects.
+Everything outside `H_Combat` reuses existing work, and the executor neither
+counts the four qualifying H rooms nor re-evaluates Preboss eligibility.
 
 ### Tartarus (`I`)
 
