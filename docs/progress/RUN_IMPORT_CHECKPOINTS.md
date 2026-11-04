@@ -581,6 +581,36 @@ reproduces is reported with its nearest miss and the plan stops there.
    | fx underworld-1010 | stopped  | 30    | 17    | 12 (4)               | 0        | 1                     |
    | fx underworld-live | stopped  | 42    | 0     | 0                    | 0        | 42 (no entry saves)   |
 
+   **Round trip 1014–1016** (game-module runs of published plans; diagnosis
+   in the round-trip investigation, causes A and C).
+   - Recorder (A, R): the record's weapon is the run-start hero's primary
+     weapon in `Hero.Weapons` (the catalog's weapon keys pick it out), with
+     `GameState.PrimaryWeaponName` only for a save whose hero names none.
+     The game module equips the planned weapon on the hero and leaves the
+     profile's Hub weapon in `PrimaryWeaponName`, so 1014 and 1015 paired
+     the Torch with the installed Coat and Staff aspects. Raw 1015 now
+     records `WeaponStaffSwing` with `StaffClearCastAspect`.
+   - Importer (A, strict): a refused weapon and aspect stops the plan before
+     r0 (`loadout`/`refused`); no room is imported on the route's default kit.
+     A record with no weapon or aspect still reports `notInRecord` and goes on.
+   - Importer (C): the Max counter pins a Fields roll unless the entered
+     Fields room's cages show the other roll (a count above the minimum, or
+     the minimum of a larger capacity); then the room is believed and the
+     conflict reported as an assumption on the source's exit decision. The
+     game module sets cage counts without steering the native roll, so its
+     counter records the native roll. 1015 H_Intro: counter min, 3 cages →
+     max (the plan's); 1014 (record, weapon patched): counter max, 2 cages →
+     min (the plan's).
+
+   Measured (rt-before → rt-after): corpus and fixtures unchanged room by
+   room; 1015 and 1016 22/3/1/15 and 21/4/1/15 as before, now on the right
+   aspect; both stop at r25 H_Intro (`entryMismatch`, RunProgress at r26's
+   entry save), the game module's missing cage draws (B), fixed in the game
+   module separately. The recovered 1014 record as recorded stops at the
+   loadout (0/0/0/41); with its weapon patched to WeaponSuit it went from a
+   stop at r26 (`rewardMissing` cage3, the counter's Max) to 21/4/1/15 with
+   the same r25 B stop.
+
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.
 6. **Recorded room** (authored outcome replayed as canonical events) only for
