@@ -296,11 +296,102 @@ What P2 needs:
   the ended biome raises no finding (even one invalid unmarked); P2 should
   present it as inactive rather than hide it.
 
+### P3 — plan-end publication, Practice start, import cuts (before P2)
+
+Ordered by the coordinator ahead of the P2 UI, with the engine query P2 needs.
+
+Delivered (2026-11-03):
+
+- **Availability query** `planEndAvailability(catalog, assembly, room)`
+  (`./simulation`, owner `simulation/plan-end-availability.ts`): `available`,
+  or unavailable with `notOnRoute` (not on the biome's selected path or biome
+  unconfigured) or `notSettled` (the plan ending there would not be valid: the
+  room or something before it is incomplete or invalid). It answers by
+  evaluating the plan as if it ended there; the biome cache keeps the
+  predecessors cheap. First consumer: the run import's cut (below); the app
+  binds it in P2.
+- **End room exit work.** The end room now settles through commit and exit:
+  its outgoing checkpoint generates nothing (`emptyOutgoingGenerationCompleted`)
+  and it records no departure. Its Shop close, resource element grants and
+  `beforeRoomExit` Run State are therefore published. The progressive frontier
+  carries `planEnd` so history composes it this way; the materializer receives
+  the end through the biome evaluation context. Supersedes P1's "up to commit".
+- **Publication.** An ended biome publishes `snapshot`: its selected structure
+  through the end room (the ended prefix as a canonical biome).
+  `PublishedBiomeEvaluation` (complete-valid or ended) is what execution
+  assembly consumes; `eligibleForExecutionPlan` is true when the route is
+  valid through its end. The wire's `extent` ends at the end's biome, the
+  selected occurrences end at the end room, whose `doors` are `terminal` (no
+  batch or fixed link exists for it), and no later biome is published. A Hub
+  ended inside its stay publishes a partial block: no `finalHandoff`,
+  `requiredVisitCount` = visits through the end, `fountain` only if used by
+  then, and one departure per visit (none after the last). The codec and graph
+  validation accept that shape and still require the fountain whenever a final
+  handoff is present. No new wire key; the extent and the terminal end room
+  carry the end.
+- **Practice start:** reason `afterPlanEnd` when the start's biome follows the
+  end's, or a Preboss/Boss start lies past the end inside the ended biome.
+- **Run import cuts.** Every room is judged first, on the plan the walk built,
+  so the end room is judged normally at its next entry save with its doors
+  drawn. Then:
+  - death or abandonment: the plan ends after the latest record room before
+    the last room that the availability query accepts; a question the walk
+    could not settle in the last room or past it (the death room, an unseen
+    Postboss) is no longer a stop, since the run never settled that room;
+  - entry mismatch at room M: the plan ends after the latest acceptable room
+    before M; the stop, M's `mismatch` verdict and its entries stay;
+  - a question stop before the last room: no cut (the plan stays open at the
+    question, as before);
+  - victory: no cut.
+    The report gains `end: { cause: 'death' | 'abandoned' | 'entryMismatch',
+record }`. Room verdicts are unchanged.
+
+Decisions made without an owner ruling:
+
+- Question stops before the last room do not cut: the coordinator listed
+  deaths, abandons and entry mismatches, and the owner's settled (6) names
+  deaths and abandons. Cutting there would hide an open question behind a
+  valid plan.
+- An entry mismatch ends before the mismatching room (its exit state is known
+  to differ), not at it.
+- The end room's own door draws are not simulated, so its `beforeRoomExit`
+  Run State lacks them. The import judges the end room on the walk's plan
+  before the cut (doors drawn); the game module's end-room conformance must
+  not compare stores (P7).
+- Hub: a plan ending inside a Hub stay publishes no departure after its last
+  visit (the plan does not leave the Hub); P7's module treats the stay's end as
+  the plan's end.
+
+Raw measurement (scratch harness copied in, run, removed; 2026-11-03): every
+death or abandonment now ends cleanly one room before its last room — 930,
+932-0294, 933-1612, 1018, 1010-4329 and both fresh-file raws (0-0272, 0-1339 =
+fresh-oceanus) — where 930, 1010-4329 and 0-1339 were `stopped` at their last
+room before. 1015/1016/1017 still stop at their r25 entry mismatch and now end
+at r24. Victories are unchanged. Room buckets are identical to before (rooms
+are judged before the cut). Capture fixtures: `surface`, `underworld-1010` and
+`fresh-oceanus` become clean ends; `underworld-live` (no entry saves) still
+stops at its r27 question.
+
+Lanes (2026-11-03): typecheck, lint, format:check pass; `test:engine`
+3910/3910 (execution fixture bytes unchanged), `test:equivalence` 157/157
+unchanged, `test:draft` 164/164, `test:run-import` 342 (+1 skipped),
+`test:planner` 2143 (+1 skipped), `test:game-module` 1067/1067 with Luacheck
+clean (no game-module change).
+
+Owed at merge (with P6): promote the plan-end contract into the design
+documents (Route Scope in `AUTHORED_PROJECT_MODEL.md`, the ended biome and
+horizon in `SIMULATION_AND_VALIDATION.md`, departures in
+`ROOM_LIFECYCLE_MODEL.md`, the partial Hub block and terminal end room in
+`EXECUTION_PROTOCOL.md`, `afterPlanEnd` in `RUN_START_INSTALLATION.md`, the
+import's `end` in the run-import documentation), regenerate execution
+fixtures, re-record equivalence and bump `schemaRevision`.
+
 ## Equivalence characterization per phase
 
-| Phase | Entries changed | Why                                                                                                               |
-| ----- | --------------- | ----------------------------------------------------------------------------------------------------------------- |
-| P1    | none (157/157)  | A project without `planEnd` evaluates identically; `processing.afterPlanEnd` is present only when an end applies. |
+| Phase | Entries changed | Why                                                                                                                        |
+| ----- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| P1    | none (157/157)  | A project without `planEnd` evaluates identically; `processing.afterPlanEnd` is present only when an end applies.          |
+| P3    | none (157/157)  | The end room's exit work, the partial Hub block and the ended extent apply only with `planEnd`; no corpus project has one. |
 
 ## Owner-settled decisions (2026-11-03)
 
