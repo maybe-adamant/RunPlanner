@@ -9,6 +9,7 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceNode,
   type WorkspaceOccurrenceStageOutgoing,
+  type WorkspaceMarker,
   type WorkspacePhantomExitControl,
   type WorkspaceRoomPlanEnd,
   type WorkspaceRoomTab,
@@ -16,9 +17,11 @@ import {
 import {
   AuthoringFrontier,
   BatchWorkbench,
+  DoorActionRow,
   DoorNotes,
   DoorRowsHeader,
   FixedExitRow,
+  SelectedContinuationAction,
 } from './DecisionWorkbench';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
@@ -32,7 +35,8 @@ import {
 } from './BiomeInspectorControls';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { PlanEndAction } from './PlanEndAction';
-import { ReadOnlyFindingScope } from '@planner/ui/feedback/useFindingTarget';
+import { ReadOnlyFindingScope, useAuthoringLocked } from '@planner/ui/feedback/useFindingTarget';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 
 interface BiomeInspectorNodeProps {
   readonly frontier: WorkspaceAuthoringFrontier | null;
@@ -54,12 +58,29 @@ interface BiomeInspectorNodeProps {
   readonly pastPlanEnd?: boolean;
 }
 
-/** The way a room's plan-end action sits under doors that have no footer of their own. */
-function PlanEndRow({ planEnd }: { readonly planEnd: WorkspaceRoomPlanEnd | undefined }) {
-  return planEnd === undefined ? null : (
+/** The footer the end room and the rooms past it keep outside their read-only doors. */
+function PlanEndRow({ planEnd }: { readonly planEnd: WorkspaceRoomPlanEnd }) {
+  return (
     <div className="workbench-action-row">
-      <PlanEndAction planEnd={planEnd} />
+      <span className="workbench-action-end">
+        <PlanEndAction planEnd={planEnd} />
+      </span>
     </div>
+  );
+}
+
+/** Opens a fixed exit's room once its context is reached. */
+function FixedExitContinuation({
+  continuation,
+}: {
+  readonly continuation: { readonly marker: WorkspaceMarker };
+}) {
+  const locked = useAuthoringLocked(continuation.marker.address);
+  return (
+    <SelectedContinuationAction
+      continuation={locked ? undefined : continuation}
+      disabledHint={candidateWaitingHint}
+    />
   );
 }
 
@@ -108,7 +129,7 @@ function OccurrenceOutgoing({
             </div>
           )}
         </div>
-        <PlanEndRow planEnd={planEnd} />
+        <DoorActionRow planEnd={planEnd} />
       </section>
     );
   switch (outgoing.kind) {
@@ -129,7 +150,7 @@ function OccurrenceOutgoing({
     case 'planEnd':
       return (
         <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
-          <PlanEndRow planEnd={planEnd} />
+          <DoorActionRow planEnd={planEnd} />
         </section>
       );
     case 'fixedRoom': {
@@ -138,7 +159,7 @@ function OccurrenceOutgoing({
         return (
           <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
             <p className="fixed-room-state">{destination.message}</p>
-            <PlanEndRow planEnd={planEnd} />
+            <DoorActionRow planEnd={planEnd} />
           </section>
         );
       return (
@@ -165,7 +186,14 @@ function OccurrenceOutgoing({
               />
             </div>
           </div>
-          <PlanEndRow planEnd={planEnd} />
+          <DoorActionRow
+            {...(destination.kind === 'room' && destination.continuation !== undefined
+              ? {
+                  continuation: <FixedExitContinuation continuation={destination.continuation} />,
+                }
+              : {})}
+            planEnd={planEnd}
+          />
         </section>
       );
     }
@@ -185,7 +213,7 @@ function OccurrenceOutgoing({
           <p className="fixed-room-state">
             {outgoing.kind === 'blockedOrUnentered' ? outgoing.message : outgoing.label}
           </p>
-          <PlanEndRow planEnd={planEnd} />
+          <DoorActionRow planEnd={planEnd} />
         </section>
       );
   }
@@ -217,10 +245,9 @@ function OccurrenceInspector({
 }) {
   const dispatch = useAppDispatch();
   const planEnd = node.planEnd;
-  // From the end room on the doors are read-only, so the plan-end action sits
-  // outside them: the end can still be removed, or moved to a later room.
+  // From the end room on the doors are read-only and drop their footer; the
+  // plan-end action sits outside them, so the end can be removed or moved later.
   const pastEnd = planEnd?.relation === 'pastEnd';
-  const doorsPlanEnd = planEnd?.relation === undefined ? planEnd : undefined;
   const doors =
     outgoingDecision === undefined ? (
       outgoing === undefined ? undefined : (
@@ -232,7 +259,7 @@ function OccurrenceInspector({
           interactions={interactions}
           outgoing={outgoing}
           {...(node.room.phantomExit === undefined ? {} : { phantomExit: node.room.phantomExit })}
-          planEnd={doorsPlanEnd}
+          planEnd={planEnd}
         />
       )
     ) : (
@@ -240,7 +267,7 @@ function OccurrenceInspector({
         interactions={interactions}
         label="Outgoing doors"
         node={outgoingDecision}
-        planEnd={doorsPlanEnd}
+        planEnd={planEnd}
       />
     );
   return (
@@ -275,7 +302,7 @@ function OccurrenceInspector({
         initialTab={roomTab ?? (defaultToDoors ? 'doors' : 'overview')}
         {...(sideRoomSlotKey === undefined ? {} : { initialSideRoomSlotKey: sideRoomSlotKey })}
         doors={
-          doorsPlanEnd !== undefined || planEnd === undefined ? (
+          planEnd?.relation === undefined ? (
             doors
           ) : (
             <>

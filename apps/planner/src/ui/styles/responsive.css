@@ -174,11 +174,14 @@
     flex-direction: column;
   }
 
-  .workbench-action-row > .primary-action {
+  .workbench-action-end {
+    flex-direction: column;
+    align-items: stretch;
     margin-inline-start: 0;
   }
 
   .workbench-action-row > button,
+  .workbench-action-end > button,
   .workbench-action-row > .topology-removal-action,
   .workbench-action-row > .topology-removal-action > .danger-action {
     width: 100%;

@@ -961,6 +961,11 @@ export function assembleWorkspaceBiomeSemantics(
                   : {
                       gameName: target.gameName,
                       roomIcon: candidateRoomIcon(catalog, biome.biomeKey, declaration),
+                      continuation: Object.freeze({
+                        marker: markerDestinations.marker(
+                          createOccurrenceAddress(biome, target.occurrenceId),
+                        ),
+                      }),
                     }),
               });
             }

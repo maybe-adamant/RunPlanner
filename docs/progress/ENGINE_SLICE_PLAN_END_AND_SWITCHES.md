@@ -404,11 +404,19 @@ Delivered (2026-11-04), planner only:
   `planEnd` summary (room, biome, `unreached`, remove intent). An end room
   without doors has a new outgoing kind `planEnd`. Resource placements on a
   room past the end are flagged inactive.
-- **Actions.** "End plan here" sits beside "Open next room" on ordinary and
-  frontier door footers and below fixed exits (Preboss, Boss, Postboss), Hub
-  main and side rooms and unentered rooms; disabled per the query, with a hint
-  only for `notSettled`. The end room shows "Plan ends here" and "Remove plan
-  end" outside its (locked) doors.
+- **Actions.** Every door footer (ordinary and frontier batches, fixed exits
+  of Preboss, Boss and Postboss, Hub main and side rooms, unentered rooms, the
+  Hub's completed exit) has one layout: at the start one contextual action —
+  the batch's targeted repair ("Remove unavailable doors" / "Add missing
+  Preboss doors") when the projection supplies one, otherwise "Remove these
+  doors", never both; at the end "Open next room" and a lavender "End plan
+  here", disabled per the query with a hint only for `notSettled`. A fixed exit
+  to a room projects that room as its continuation, so Preboss and Boss doors
+  also open the next room. The end room hides the way on and the contextual
+  action; its footer, outside its locked doors, holds only a lavender
+  "Continue planning" (`ReplacePlanEnd` null, one undo step) — the header pill
+  and the rail marker say where the plan ends. A room past the end keeps only
+  "End plan here" below its read-only doors.
 - **Past the end.** Rail stops, completion nodes, Hub visits and map markers
   are dimmed and labelled; the Hub Timeline gets an end row after the end
   visit and its requirement box names the visit. A room past the end stays
@@ -425,7 +433,8 @@ Delivered (2026-11-04), planner only:
 Lanes (2026-11-04): typecheck, lint, format:check pass; `test:planner`
 (incl. `test:ui`) green with new projection and UI witnesses
 (`test/projections/structured-workspace/plan-end.test.ts`,
-`test/ui/editor/biome/PlanEnd.test.tsx`). Engine untouched.
+`test/ui/editor/biome/PlanEnd.test.tsx`). Engine untouched. The
+owner-approved footer layout followed the same day, on the same lanes.
 
 Engine follow-ups observed (not fixed; planner lane):
 

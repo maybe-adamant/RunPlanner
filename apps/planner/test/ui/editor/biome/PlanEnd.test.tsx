@@ -67,7 +67,7 @@ describe('plan end in the biome workspace', () => {
     await user.click(screen.getByRole('button', { name: 'End plan here' }));
     expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b3-e1' });
 
-    await user.click(screen.getByRole('button', { name: 'Remove plan end' }));
+    await user.click(screen.getByRole('button', { name: 'Continue planning' }));
     expect(currentPlanEnd(application)).toBeUndefined();
 
     act(() => {
@@ -109,7 +109,7 @@ describe('plan end in the biome workspace', () => {
     expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b7-e1' });
   });
 
-  it('removes the plan end from the end room even though its doors are past it', async () => {
+  it('continues planning from the end room, which offers no way on or door repair', async () => {
     const { application, user } = renderWorkspace(
       endedAt(createGoldenFGHIProject(), 'F', 'golden-f-b5-e1'),
       'Underworld',
@@ -122,8 +122,25 @@ describe('plan end in the biome workspace', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Doors' }));
 
     expect(screen.queryByRole('button', { name: 'End plan here' })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Remove plan end' }));
+    expect(screen.queryByRole('button', { name: 'Open next room' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Continue planning' }));
     expect(currentPlanEnd(application)).toBeUndefined();
+  });
+
+  it('opens a fixed exit room or ends the plan from the Preboss doors', async () => {
+    const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
+    openRoom(
+      application,
+      createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-shop')),
+    );
+    await user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    expect(screen.getByRole('button', { name: 'End plan here' })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Open next room' }));
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-shop:boss')),
+    );
   });
 
   it('ends the plan with a Hub visit from its main room', async () => {

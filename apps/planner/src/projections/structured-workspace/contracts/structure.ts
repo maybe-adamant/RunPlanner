@@ -655,6 +655,8 @@ export type WorkspaceOccurrenceStageOutgoing =
             readonly label: string;
             readonly gameName?: string;
             readonly roomIcon?: WorkspaceRoomIcon;
+            /** The fixed room's occurrence, opened as the way on. */
+            readonly continuation?: { readonly marker: WorkspaceMarker };
           }
         | { readonly kind: 'biome'; readonly label: string }
         | { readonly kind: 'complete'; readonly message: string };

@@ -949,7 +949,11 @@ select {
   gap: 8px;
 }
 
-.workbench-action-row > .primary-action {
+.workbench-action-end {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-inline-start: auto;
 }
 
@@ -1201,9 +1205,14 @@ select {
   min-width: 0;
 }
 
-.door-workbench > .workbench-action-row {
+.door-workbench > .workbench-action-row,
+:is(.door-workbench, .outgoing-occurrence-state, .past-plan-end-content) + .workbench-action-row {
   padding-top: 12px;
   border-top: 1px solid #34353e;
+}
+
+:is(.door-workbench, .outgoing-occurrence-state, .past-plan-end-content) + .workbench-action-row {
+  margin-top: 12px;
 }
 
 .door-workbench-markers {
@@ -1783,24 +1792,25 @@ select {
 
 .plan-end-action {
   display: inline-flex;
+  min-height: 36px;
   align-items: center;
-  gap: 10px;
-}
-
-.workbench-action-row > .plan-end-action:first-child {
-  margin-inline-start: auto;
-}
-
-.plan-end-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
+  justify-content: center;
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, var(--plan-end) 55%, transparent);
+  border-radius: 8px;
   color: var(--plan-end);
-  font-size: 0.86rem;
+  background: color-mix(in srgb, var(--plan-end) 12%, #1c1b24);
   font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
 }
 
-.plan-end-state::before,
+.plan-end-action:hover:not(:disabled) {
+  border-color: var(--plan-end);
+  color: #e6defb;
+  background: color-mix(in srgb, var(--plan-end) 22%, #1c1b24);
+}
+
 .hub-timeline-plan-end::before {
   width: 9px;
   height: 9px;

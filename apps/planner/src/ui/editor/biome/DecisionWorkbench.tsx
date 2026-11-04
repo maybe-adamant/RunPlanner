@@ -567,6 +567,34 @@ function batchContinuationHint(node: BatchNode): string | undefined {
   return doorSelected ? 'Fill the remaining doors to continue.' : undefined;
 }
 
+/**
+ * A door footer: one contextual action at the start, the ways on at the end.
+ * From the end room on the doors are read-only, so the room renders its
+ * plan-end footer outside them and this row stays empty.
+ */
+export function DoorActionRow({
+  contextual,
+  continuation,
+  planEnd,
+}: {
+  /** The targeted repair when one applies, otherwise the doors' removal. */
+  readonly contextual?: ReactNode;
+  readonly continuation?: ReactNode;
+  readonly planEnd?: WorkspaceRoomPlanEnd | undefined;
+}) {
+  if (planEnd?.relation !== undefined) return null;
+  if (contextual === undefined && continuation === undefined && planEnd === undefined) return null;
+  return (
+    <div className="workbench-action-row">
+      {contextual}
+      <span className="workbench-action-end">
+        {continuation}
+        <PlanEndAction planEnd={planEnd} />
+      </span>
+    </div>
+  );
+}
+
 /** Moves to the occurrence a decision continues into; disabled while none is selected. */
 export function SelectedContinuationAction({
   continuation,
@@ -895,20 +923,27 @@ export function BatchWorkbench({
           <RoomRerolls interactions={interactions} rerolls={node.rerolls} />
         )}
       </div>
-      <div className="workbench-action-row">
-        <ExactRepairAction
-          intent={node.repairIntent}
-          onFocusedUse={() => {
-            refocusDoors.current = true;
-          }}
-        />
-        <SelectedContinuationAction
-          continuation={node.selectedContinuation}
-          disabledHint={batchContinuationHint(node)}
-        />
-        <PlanEndAction planEnd={planEnd} />
-        <TopologyRemovalAction interaction={removal} label="Remove these doors" />
-      </div>
+      <DoorActionRow
+        contextual={
+          node.repairIntent === undefined ? (
+            <TopologyRemovalAction interaction={removal} label="Remove these doors" />
+          ) : (
+            <ExactRepairAction
+              intent={node.repairIntent}
+              onFocusedUse={() => {
+                refocusDoors.current = true;
+              }}
+            />
+          )
+        }
+        continuation={
+          <SelectedContinuationAction
+            continuation={node.selectedContinuation}
+            disabledHint={batchContinuationHint(node)}
+          />
+        }
+        planEnd={planEnd}
+      />
     </section>
   );
 }

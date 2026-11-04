@@ -1,6 +1,11 @@
 import { type WorkspaceHubDecisionNode } from '@planner/projections/structured-workspace';
 import { useAuthoringLocked } from '@planner/ui/feedback/useFindingTarget';
-import { DoorRowsHeader, FixedExitRow, SelectedContinuationAction } from './DecisionWorkbench';
+import {
+  DoorActionRow,
+  DoorRowsHeader,
+  FixedExitRow,
+  SelectedContinuationAction,
+} from './DecisionWorkbench';
 
 /** The Hub's completed exit: its fixed Preboss room, reached once the Hub is complete. */
 export function HubCompletionHandoff({ node }: { readonly node: WorkspaceHubDecisionNode }) {
@@ -18,12 +23,14 @@ export function HubCompletionHandoff({ node }: { readonly node: WorkspaceHubDeci
           roomIcon={target.roomIcon}
         />
       </div>
-      <div className="workbench-action-row">
-        <SelectedContinuationAction
-          continuation={locked ? undefined : target}
-          disabledHint="Complete the Hub to continue."
-        />
-      </div>
+      <DoorActionRow
+        continuation={
+          <SelectedContinuationAction
+            continuation={locked ? undefined : target}
+            disabledHint="Complete the Hub to continue."
+          />
+        }
+      />
     </section>
   );
 }
