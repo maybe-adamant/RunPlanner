@@ -12,7 +12,7 @@ import type { PlanEnd } from './plan-end';
 
 export const PROJECT_DOCUMENT_SCHEMA_VERSION = 101 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
-export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 0;
+export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 1;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {

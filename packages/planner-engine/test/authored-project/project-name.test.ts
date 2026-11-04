@@ -7,6 +7,7 @@ import {
   DEFAULT_PROJECT_NAME,
   encodeProjectDocument,
   parseProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
   ProjectCommandContractError,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -30,6 +31,7 @@ describe('plan name', () => {
     expect(project().name).toBe(DEFAULT_PROJECT_NAME);
     expect(Object.keys(JSON.parse(encodeProjectDocument(project('Staff run'))))).toEqual([
       'schemaVersion',
+      ...(PROJECT_DOCUMENT_SCHEMA_REVISION === 0 ? [] : ['schemaRevision']),
       'projectId',
       'name',
       'catalogVersion',

@@ -24,13 +24,16 @@ function sparseOutcomes(occurrence: unknown): unknown {
 /**
  * A current document body in its schema-100 shape, for tests that relabel a
  * current document as schema 100 and load it through the 100 -> 101 transition.
+ * Schema 100's final revision is 0, so the current major's revision is dropped.
  */
 export function legacySchema100Body<T>(value: T): T {
   const document = record(value);
   const route = record(document?.route);
   if (document === undefined || route === undefined || !Array.isArray(route.biomes)) return value;
+  const { schemaRevision: _revision, ...body } = document;
+  void _revision;
   return {
-    ...document,
+    ...body,
     route: {
       ...route,
       biomes: route.biomes.map((biome) => {
