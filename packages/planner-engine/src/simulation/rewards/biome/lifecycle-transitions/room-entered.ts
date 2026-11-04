@@ -328,18 +328,18 @@ export function applyRoomEnteredTransition(
     findings.push(...erisSpawnFindings(catalog, room, next, findingChronology));
   let challengeSwitchAssessment: RoomEnteredTransition['challengeSwitchAssessment'];
   let challengeSwitchEncounter: RoomEnteredTransition['challengeSwitchEncounter'];
-  if (
-    room !== undefined &&
-    next !== undefined &&
-    challengeSwitchHost(catalog, room.gameName) !== undefined
-  ) {
+  const switchHost = room === undefined ? undefined : challengeSwitchHost(catalog, room.gameName);
+  if (room !== undefined && next !== undefined && switchHost !== undefined) {
     const declaration = catalog.rooms.byKey[room.gameName];
     const entry = roomView?.entry;
     if (declaration === undefined || entry === undefined)
       throw new BiomeRewardSimulationContractError(`${room.gameName} has no switch entry frontier`);
     const assessment = assessChallengeSwitchEntry(
       catalog,
-      declaration.challengeSwitchAnchorCount ?? 0,
+      {
+        anchorCount: declaration.challengeSwitchAnchorCount ?? 0,
+        minimumBiomeDepth: switchHost.minimumBiomeDepth,
+      },
       {
         biomeDepthCache: entry.ledgers.counters.biomeDepthCache,
         appearances: entry.ledgers.roomAppearances,

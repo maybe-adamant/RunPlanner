@@ -1,6 +1,7 @@
 import type {
   Catalog,
   ChallengeSwitchEliteEncounterDeclaration,
+  ChallengeSwitchHostDeclaration,
   ChallengeSwitchKind,
 } from '../../catalog-schema';
 import type {
@@ -79,16 +80,19 @@ export interface ChallengeSwitchEntryAssessment {
 
 export function assessChallengeSwitchEntry(
   catalog: Catalog,
-  anchorCount: number,
+  host: Pick<ChallengeSwitchHostDeclaration, 'minimumBiomeDepth'> & {
+    readonly anchorCount: number;
+  },
   facts: ChallengeSwitchEntryFacts,
 ): ChallengeSwitchEntryAssessment {
+  const anchorCount = host.anchorCount;
   const switches = catalog.challengeSwitches;
   const sharedIssues: ChallengeSwitchEntryAssessment['sharedIssues'][number][] = [];
-  if (facts.biomeDepthCache < switches.minimumBiomeDepth)
+  if (facts.biomeDepthCache < host.minimumBiomeDepth)
     sharedIssues.push({
       reason: 'biomeDepth',
       biomeDepthCache: facts.biomeDepthCache,
-      minimumBiomeDepth: switches.minimumBiomeDepth,
+      minimumBiomeDepth: host.minimumBiomeDepth,
     });
   const since = roomsSinceLastSwitch(facts.appearances);
   if (since !== undefined && since < switches.minimumRoomsSinceLast)

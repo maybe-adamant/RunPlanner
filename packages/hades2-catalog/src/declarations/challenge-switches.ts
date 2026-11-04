@@ -40,10 +40,11 @@ function eliteEncounter(roomSetKey: string, enemyKeys: readonly string[]) {
   });
 }
 
-function roomSet(roomSetKey: string, spawnChance: number) {
+function roomSet(roomSetKey: string, spawnChance: number, minimumBiomeDepth?: number) {
   return Object.freeze({
     roomSetKey,
     spawnChance,
+    ...(minimumBiomeDepth === undefined ? {} : { minimumBiomeDepth }),
     encounterKeyBySwitchKind: Object.freeze({
       time: `TimeChallenge${roomSetKey}`,
       perfectClear: `PerfectClearChallenge${roomSetKey}`,
@@ -120,14 +121,15 @@ export const challengeSwitches = {
     },
   ],
   // RoomData.lua BaseRoom ChallengeSpawnChance 0.15; RoomDataF.lua BaseF 0.25.
-  // Each Base<Set> names one encounter per kind.
+  // Each Base<Set> names one encounter per kind. RoomDataH.lua BaseH and
+  // RoomDataO.lua BaseO replace ChallengeSpawnRequirements with BiomeDepthCache >= 1.
   roomSets: [
     roomSet('F', 0.25),
     roomSet('G', 0.15),
-    roomSet('H', 0.15),
+    roomSet('H', 0.15, 1),
     roomSet('I', 0.15),
     roomSet('N', 0.15),
-    roomSet('O', 0.15),
+    roomSet('O', 0.15, 1),
     roomSet('P', 0.15),
     roomSet('Q', 0.15),
   ],

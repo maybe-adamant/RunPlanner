@@ -9,10 +9,13 @@ import type {
 export interface RawChallengeSwitchRoomSetDeclaration {
   readonly roomSetKey: string;
   readonly spawnChance: number;
+  /** The RoomSet's own `ChallengeSpawnRequirements` `BiomeDepthCache` floor, where it overrides BaseRoom's. */
+  readonly minimumBiomeDepth?: number;
   readonly encounterKeyBySwitchKind: Readonly<Record<ChallengeSwitchKind, string>>;
 }
 
 export interface RawChallengeSwitchInput {
+  /** BaseRoom's `ChallengeSpawnRequirements` `BiomeDepthCache` floor. */
   readonly minimumBiomeDepth: number;
   readonly minimumRoomsSinceLast: number;
   readonly producerLifecycleKey: string;

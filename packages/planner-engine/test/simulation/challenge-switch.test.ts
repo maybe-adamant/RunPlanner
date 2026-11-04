@@ -151,6 +151,12 @@ describe('challenge switch spawn rules', () => {
     ]);
   });
 
+  it("accepts a Fields switch from biome depth one, its RoomSet's own floor", () => {
+    expect(
+      placementIssues(withSwitch(golden(), 'H', 'golden-h-combat02', 'TimeChallengeSwitch_Money')),
+    ).toEqual([]);
+  });
+
   it('reports a switch within three rooms of the last one, counted from entry', () => {
     const first = withSwitch(golden(), 'F', 'golden-f-b5-e1', 'TimeChallengeSwitch_Money');
     expect(
@@ -211,7 +217,7 @@ describe('challenge switch spawn rules', () => {
     const assess = (count: number) =>
       challengeSwitchPlacementIssues(
         catalog,
-        assessChallengeSwitchEntry(catalog, 2, facts(count)),
+        assessChallengeSwitchEntry(catalog, { anchorCount: 2, minimumBiomeDepth: 5 }, facts(count)),
         { variantKey: 'PerfectClearChallengeSwitch_Pom', outcome: 'hitless', nectarDropped: false },
       );
     expect(assess(0)).toEqual([

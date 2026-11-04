@@ -42,7 +42,6 @@ describe('challenge switch declarations', () => {
     expect(switches.kinds.byKey.elite?.minimumBiomeDepth).toBe(3);
     expect(switches.kinds.byKey.elite?.requirement).toBeDefined();
     expect(switches.kinds.byKey.time).toMatchObject({ goldReward: true });
-    expect(switches.minimumBiomeDepth).toBe(5);
     expect(switches.minimumRoomsSinceLast).toBe(3);
     expect(switches.gold).toEqual({ startingValue: 100, minimumValue: 10, defaultValue: 90 });
     expect(switches.bonusReward).toEqual({ rewardType: 'GiftDrop', dropChance: 0.05 });
@@ -66,6 +65,7 @@ describe('challenge switch declarations', () => {
     expect(hosts.F_Combat05).toEqual({
       gameName: 'F_Combat05',
       spawnChance: 0.25,
+      minimumBiomeDepth: 5,
       encounterKeyBySwitchKind: {
         time: 'TimeChallengeF',
         perfectClear: 'PerfectClearChallengeF',
@@ -73,6 +73,12 @@ describe('challenge switch declarations', () => {
       },
     });
     expect(hosts.I_MiniBoss02?.spawnChance).toBe(0.15);
+    // Fields and Thessaly replace BaseRoom's depth floor of five with one.
+    expect(
+      ['G_Combat17', 'H_Combat07', 'O_Combat06', 'P_Combat14'].map(
+        (gameName) => hosts[gameName]?.minimumBiomeDepth,
+      ),
+    ).toEqual([5, 1, 1, 5]);
     expect(hosts.Q_Combat09?.encounterKeyBySwitchKind.elite).toBe('EliteChallengeQ');
     for (const gameName of [
       'F_PostBoss01',

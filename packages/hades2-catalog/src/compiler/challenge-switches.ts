@@ -183,6 +183,8 @@ export function normalizeChallengeSwitches(
       const roomSetPath = `${path}.roomSets[${index}]`;
       requireNonEmpty(roomSet.roomSetKey, `${roomSetPath}.roomSetKey`);
       requireChance(roomSet.spawnChance, `${roomSetPath}.spawnChance`);
+      if (roomSet.minimumBiomeDepth !== undefined)
+        requirePositiveInteger(roomSet.minimumBiomeDepth, `${roomSetPath}.minimumBiomeDepth`);
       for (const kind of CHALLENGE_SWITCH_KINDS)
         requireNonEmpty(
           roomSet.encounterKeyBySwitchKind[kind],
@@ -201,6 +203,10 @@ export function normalizeChallengeSwitches(
       fail(`${path}.noSpawnRoomGameNames[${index}]`, `${gameName} is not an anchored room`);
   });
 
+  const minimumBiomeDepth = requirePositiveInteger(
+    raw.minimumBiomeDepth,
+    `${path}.minimumBiomeDepth`,
+  );
   const hosts: ChallengeSwitchHostDeclaration[] = [];
   for (const room of rooms.values) {
     if ((room.challengeSwitchAnchorCount ?? 0) <= 0 || noSpawn.has(room.gameName)) continue;
@@ -211,6 +217,7 @@ export function normalizeChallengeSwitches(
       Object.freeze({
         gameName: room.gameName,
         spawnChance: roomSet.spawnChance,
+        minimumBiomeDepth: roomSet.minimumBiomeDepth ?? minimumBiomeDepth,
         encounterKeyBySwitchKind: Object.freeze({ ...roomSet.encounterKeyBySwitchKind }),
       }),
     );
@@ -284,7 +291,6 @@ export function normalizeChallengeSwitches(
     kinds,
     variants,
     hosts: createCollection(hosts, `${path}.hosts`, (host) => host.gameName, 'gameName'),
-    minimumBiomeDepth: requirePositiveInteger(raw.minimumBiomeDepth, `${path}.minimumBiomeDepth`),
     minimumRoomsSinceLast: requirePositiveInteger(
       raw.minimumRoomsSinceLast,
       `${path}.minimumRoomsSinceLast`,

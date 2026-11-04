@@ -92,7 +92,6 @@ describe('summarizeCatalog', () => {
         kinds: emptyCollection(),
         variants: emptyCollection(),
         hosts: emptyCollection(),
-        minimumBiomeDepth: 5,
         minimumRoomsSinceLast: 3,
         producerLifecycleKey: 'ChallengeSwitchLoot',
         gold: { startingValue: 100, minimumValue: 10, defaultValue: 90 },

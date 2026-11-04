@@ -1570,6 +1570,8 @@ export interface ChallengeSwitchHostDeclaration {
   readonly gameName: string;
   /** Native `ChallengeSpawnChance`; a chance, never a rule. */
   readonly spawnChance: number;
+  /** The RoomSet's `ChallengeSpawnRequirements` `BiomeDepthCache` floor. */
+  readonly minimumBiomeDepth: number;
   /**
    * The one encounter each kind fields in this room (`<Kind>EncounterOptions`):
    * a declared definition outside every encounter set, generated at room entry.
@@ -1622,8 +1624,6 @@ export interface ChallengeSwitchCatalog {
   readonly kinds: CatalogCollection<ChallengeSwitchKindDeclaration>;
   readonly variants: CatalogCollection<ChallengeSwitchVariantDeclaration>;
   readonly hosts: CatalogCollection<ChallengeSwitchHostDeclaration>;
-  /** Shared `ChallengeSpawnRequirements` `BiomeDepthCache` floor. */
-  readonly minimumBiomeDepth: number;
   /** `RequiredMinRoomsSinceEvent` ChallengeSwitch count. */
   readonly minimumRoomsSinceLast: number;
   /** Lifecycle of the pickups a claim spawns. */
