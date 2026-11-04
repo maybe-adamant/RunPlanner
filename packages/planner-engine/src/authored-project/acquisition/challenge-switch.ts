@@ -98,5 +98,17 @@ export function challengeSwitchShapeIssue(
     )
       return `gold must be an integer from ${gold.minimumValue} through ${gold.startingValue}`;
   } else if (challengeSwitch.gold !== undefined) return 'only a Time switch claims gold';
+  const elite = challengeSwitch.elite;
+  if (elite !== undefined) {
+    if (resolved.kind.key !== 'elite') return 'only an Elite switch pins its elite';
+    if (elite.enemyKey.trim().length === 0) return 'the elite needs an enemy';
+    if (new Set(elite.attributeKeys).size !== elite.attributeKeys.length)
+      return 'the elite repeats an attribute';
+    const counts = catalog.challengeSwitches.eliteEncounters.values.map(
+      (encounter) => encounter.attributeCount,
+    );
+    if (elite.attributeKeys.length > Math.max(0, ...counts))
+      return 'the elite has more attributes than any Elite switch draws';
+  }
   return undefined;
 }

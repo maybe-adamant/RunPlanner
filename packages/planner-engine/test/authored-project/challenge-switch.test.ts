@@ -242,4 +242,51 @@ describe('challenge switch observation', () => {
       ),
     ).toThrow(/acquisitionSites\.challengeSwitch\.pickupEntries: does not match selected/);
   });
+
+  it('pins an Elite switch elite, keeps it across Elite variants and drops it otherwise', () => {
+    const elite = (
+      project: ProjectDocument,
+      value: { enemyKey: string; attributeKeys: string[] } | null,
+    ) =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceChallengeSwitchElite',
+        occurrence: host,
+        elite: value,
+      });
+    const observed = observe(golden(), 'EliteChallengeSwitch_Talent');
+    const pinned = elite(observed, {
+      enemyKey: 'Brawler_Elite',
+      attributeKeys: ['Frenzy', 'Blink'],
+    });
+    expect(occurrenceOf(pinned).challengeSwitch?.elite).toEqual({
+      enemyKey: 'Brawler_Elite',
+      attributeKeys: ['Frenzy', 'Blink'],
+    });
+    const encoded = encodeProjectDocument(pinned);
+    expect(encodeProjectDocument(decodeProjectDocument(JSON.parse(encoded), catalog))).toBe(
+      encoded,
+    );
+    expect(
+      occurrenceOf(observe(pinned, 'EliteChallengeSwitch_MaxMana')).challengeSwitch?.elite,
+    ).toEqual({ enemyKey: 'Brawler_Elite', attributeKeys: ['Frenzy', 'Blink'] });
+    expect(
+      occurrenceOf(observe(pinned, 'TimeChallengeSwitch_Money')).challengeSwitch?.elite,
+    ).toBeUndefined();
+    expect(occurrenceOf(elite(pinned, null)).challengeSwitch?.elite).toBeUndefined();
+    expect(elite(pinned, { enemyKey: 'Brawler_Elite', attributeKeys: ['Frenzy', 'Blink'] })).toBe(
+      pinned,
+    );
+    expect(() =>
+      elite(observe(golden(), 'TimeChallengeSwitch_Money'), {
+        enemyKey: 'Brawler_Elite',
+        attributeKeys: [],
+      }),
+    ).toThrow(/only an Elite switch pins its elite/);
+    expect(() =>
+      elite(observed, { enemyKey: 'Brawler_Elite', attributeKeys: ['Blink', 'Blink'] }),
+    ).toThrow(/repeats an attribute/);
+    expect(() =>
+      elite(observed, { enemyKey: 'Brawler_Elite', attributeKeys: ['Blink', 'Frenzy', 'Fog'] }),
+    ).toThrow(/more attributes than any Elite switch draws/);
+  });
 });

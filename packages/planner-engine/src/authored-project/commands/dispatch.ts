@@ -276,6 +276,7 @@ function applyUnchecked(
     case 'SetErisSpawned':
     case 'ReplaceChallengeSwitch':
     case 'ReplaceChallengeSwitchOutcome':
+    case 'ReplaceChallengeSwitchElite':
     case 'AddStygianWell':
     case 'RemoveStygianWell':
     case 'InsertStygianWellReroll':

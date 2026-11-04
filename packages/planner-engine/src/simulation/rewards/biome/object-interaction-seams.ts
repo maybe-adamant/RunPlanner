@@ -3,7 +3,6 @@ import {
   createInfernalContractPedestalAddress,
   createShopOfferAddress,
   semanticAddressKey,
-  type OccurrenceAddress,
 } from '../../../authored-project/addresses';
 import { hermesShrinePurchaseAction } from '../../../authored-project/hermes-shrine-delivery';
 import {
@@ -18,7 +17,10 @@ import {
 } from '../../../authored-project/shop';
 import type { Catalog } from '../../../catalog-schema';
 import type { ShopOptionSelection } from '../../../reward-kernel';
-import type { ChallengeSwitchEntryAssessment } from '../../commerce/challenge-switch';
+import {
+  eliteChallengeAttributeOptions,
+  type ChallengeSwitchEntryAssessment,
+} from '../../commerce/challenge-switch';
 import type {
   ChallengeSwitchInteraction,
   ChampionItemInteraction,
@@ -274,10 +276,38 @@ function championItemInteraction(
 
 /** The switch variants a host's entry could hold, each with the command that observes it. */
 function challengeSwitchInteraction(
-  origin: OccurrenceAddress,
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
   assessment: ChallengeSwitchEntryAssessment,
-): ChallengeSwitchInteraction {
+): ChallengeSwitchInteraction | undefined {
+  const origin = room.origin;
+  const host = catalog.challengeSwitches.hosts.byKey[room.gameName];
+  const encounter =
+    host === undefined
+      ? undefined
+      : catalog.challengeSwitches.eliteEncounters.byKey[host.encounterKeyBySwitchKind.elite];
+  const roomSetKey = catalog.rooms.byKey[room.gameName]?.roomSetKey;
+  if (encounter === undefined || roomSetKey === undefined) return undefined;
   return Object.freeze({
+    elite: Object.freeze({
+      encounterKey: encounter.encounterKey,
+      roomSetKey,
+      attributeCount: encounter.attributeCount,
+      enemies: Object.freeze(
+        encounter.enemies.map((enemy) =>
+          Object.freeze({
+            enemyKey: enemy.key,
+            label: enemy.label,
+            attributeKeys: eliteChallengeAttributeOptions(encounter, enemy.key, roomSetKey, []),
+          }),
+        ),
+      ),
+      attributeLabels: Object.freeze(
+        Object.fromEntries(
+          Object.entries(encounter.attributes).map(([key, attribute]) => [key, attribute.label]),
+        ),
+      ),
+    }),
     sharedIssues: assessment.sharedIssues,
     variants: Object.freeze(
       assessment.variants.map((variant) =>
@@ -335,13 +365,9 @@ export function roomObjectInteractions(
   for (const [roomKey, assessment] of state.challengeSwitchAssessments) {
     const room = authoredRoom(context, roomKey);
     if (room === undefined) continue;
-    interactions.set(
-      roomKey,
-      Object.freeze({
-        ...interactions.get(roomKey),
-        challengeSwitch: challengeSwitchInteraction(room.origin, assessment),
-      }),
-    );
+    const challengeSwitch = challengeSwitchInteraction(context.catalog, room, assessment);
+    if (challengeSwitch === undefined) continue;
+    interactions.set(roomKey, Object.freeze({ ...interactions.get(roomKey), challengeSwitch }));
   }
   return interactions;
 }

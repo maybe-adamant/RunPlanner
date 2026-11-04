@@ -2,6 +2,41 @@ import type { ChallengeSwitchKind } from '@run-planner/engine/catalog-schema';
 
 import type { RawChallengeSwitchInput } from './challenge-switches-types';
 import { stackLegal, talentLegal } from './rewards/requirements';
+import {
+  eliteAttributeFacts,
+  fangsPerks,
+  generatedEnemyPools,
+} from './encounters/generated/enemies';
+
+const enemyChoices = Object.values(generatedEnemyPools).flat();
+
+/** EncounterData_Challenge.lua EliteChallenge<Set>: one elite from `Biome<Set>_EliteChallenge`. */
+function eliteEncounter(roomSetKey: string, enemyKeys: readonly string[]) {
+  return Object.freeze({
+    encounterKey: `EliteChallenge${roomSetKey}`,
+    enemies: enemyKeys.map((key) => {
+      const choice = enemyChoices.find((candidate) => candidate.key === key);
+      if (choice === undefined) throw new Error(`Missing Elite challenge enemy ${key}`);
+      return choice;
+    }),
+    attributeOptionsByEnemy: Object.fromEntries(
+      enemyKeys.map((key) => [key, eliteAttributeFacts(key)]),
+    ),
+    // EncounterData_Challenge.lua:411-412.
+    attributeCount: 2,
+    bannedAttributeKeys: ['Metallic', 'SpreadHitShields', 'StasisDeath', 'HeavyArmor'],
+    attributes: Object.fromEntries(
+      Object.entries(fangsPerks).map(([key, perk]) => [
+        key,
+        {
+          label: perk.label,
+          excludes: perk.excludes,
+          ...('roomSets' in perk ? { roomSets: perk.roomSets } : {}),
+        },
+      ]),
+    ),
+  });
+}
 
 function roomSet(roomSetKey: string, spawnChance: number) {
   return Object.freeze({
@@ -93,6 +128,26 @@ export const challengeSwitches = {
     roomSet('O', 0.15),
     roomSet('P', 0.15),
     roomSet('Q', 0.15),
+  ],
+  // EnemySets.lua Biome<Set>_EliteChallenge.
+  eliteEncounters: [
+    eliteEncounter('F', ['Brawler_Elite']),
+    eliteEncounter('G', ['FishmanMelee_Elite']),
+    eliteEncounter('H', ['Lycanthrope_Elite', 'Mourner_Elite']),
+    eliteEncounter('I', [
+      'SatyrLancer_Elite',
+      'SatyrRatCatcher_Elite',
+      'ClockworkHeavyMelee_Elite',
+    ]),
+    eliteEncounter('N', ['Mudman_Elite', 'ZombieHeavyRanged_Elite', 'ZombieAssassin_Elite']),
+    eliteEncounter('O', ['Swab_Elite']),
+    eliteEncounter('P', [
+      'SatyrSapper_Elite',
+      'Dragon_Elite',
+      'AutomatonEnforcer_Elite',
+      'AutomatonBeamer_Elite',
+    ]),
+    eliteEncounter('Q', ['Brute_Elite']),
   ],
   // ChallengeSpawnChance = 0.0 on these anchored rooms or their bases.
   noSpawnRoomGameNames: [

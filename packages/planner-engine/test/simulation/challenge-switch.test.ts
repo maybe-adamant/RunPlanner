@@ -17,6 +17,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  eliteChallengeAttributeOptions,
   goldLedgerForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   simulateProject,
@@ -449,5 +450,78 @@ describe('challenge switch variant query', () => {
     expect(early?.variants.some((variant) => variant.rollable)).toBe(false);
     const spaced = withSwitch(golden(), 'F', 'golden-f-b5-e1', 'TimeChallengeSwitch_Money');
     expect(rollable(spaced, 'F', 'golden-f-b7-e1')).toEqual([]);
+  });
+});
+
+describe('Elite switch elite', () => {
+  const pin = (project: ProjectDocument, enemyKey: string, attributeKeys: string[]) =>
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceChallengeSwitchElite',
+      occurrence: createOccurrenceAddress(
+        createBiomeAddress('Surface', 'P'),
+        createOccurrenceId('surface-p-6-1-p_combat10'),
+      ),
+      elite: { enemyKey, attributeKeys },
+    });
+  const observed = () =>
+    withSwitch(surface(), 'P', 'surface-p-6-1-p_combat10', 'EliteChallengeSwitch_MaxMana');
+  const eliteIssues = (project: ProjectDocument) =>
+    simulateProject(catalog, project)
+      .findings.filter((finding) => finding.code === 'challengeSwitchEliteUnavailable')
+      .map((finding) => finding.evidence);
+
+  it('accepts an elite of the RoomSet with two attributes it can draw', () => {
+    expect(eliteIssues(pin(observed(), 'Dragon_Elite', ['Frenzy', 'Blink']))).toEqual([]);
+  });
+
+  it('reports an elite outside the set and attributes the forced draw cannot take', () => {
+    expect(eliteIssues(pin(observed(), 'Brute_Elite', []))).toEqual([
+      { reason: 'enemyNotInSet', enemyKey: 'Brute_Elite' },
+    ]);
+    // Metallic is banned for the challenge; Vacuuming is excluded once Frenzy is drawn.
+    expect(eliteIssues(pin(observed(), 'Dragon_Elite', ['Metallic', 'Blink']))).toEqual([
+      { reason: 'attributeUnavailable', attributeKey: 'Metallic' },
+    ]);
+    expect(eliteIssues(pin(observed(), 'Dragon_Elite', ['Frenzy', 'Vacuuming']))).toEqual([
+      { reason: 'attributeExcluded', attributeKey: 'Vacuuming' },
+    ]);
+    // Rooting is drawn only in F and H.
+    expect(eliteIssues(pin(observed(), 'Dragon_Elite', ['Rooting']))).toEqual([
+      { reason: 'attributeUnavailable', attributeKey: 'Rooting' },
+    ]);
+  });
+
+  it('publishes each elite of the RoomSet with its first-draw attributes, narrowed per draw', () => {
+    const product = roomObjectInteractionsForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, surface()),
+      createOccurrenceAddress(
+        createBiomeAddress('Surface', 'P'),
+        createOccurrenceId('surface-p-6-1-p_combat10'),
+      ),
+    )?.challengeSwitch?.elite;
+    expect(product).toMatchObject({
+      encounterKey: 'EliteChallengeP',
+      roomSetKey: 'P',
+      attributeCount: 2,
+    });
+    expect(product?.enemies.map((enemy) => enemy.enemyKey)).toEqual([
+      'SatyrSapper_Elite',
+      'Dragon_Elite',
+      'AutomatonEnforcer_Elite',
+      'AutomatonBeamer_Elite',
+    ]);
+    const dragon = product!.enemies.find((enemy) => enemy.enemyKey === 'Dragon_Elite')!;
+    expect(dragon.attributeKeys).toContain('Frenzy');
+    expect(dragon.attributeKeys).not.toContain('Metallic');
+    expect(dragon.attributeKeys).not.toContain('Rooting');
+    const encounter = catalog.challengeSwitches.eliteEncounters.byKey.EliteChallengeP!;
+    const second = eliteChallengeAttributeOptions(encounter, 'Dragon_Elite', 'P', ['Frenzy']);
+    expect(second).not.toContain('Frenzy');
+    expect(second).not.toContain('Vacuuming');
+    expect(dragon.attributeKeys).toContain('Vacuuming');
+    expect(
+      eliteChallengeAttributeOptions(encounter, 'Dragon_Elite', 'P', ['Frenzy', 'Blink']),
+    ).toEqual([]);
+    expect(product?.attributeLabels.Frenzy).toBe('Swifter');
   });
 });

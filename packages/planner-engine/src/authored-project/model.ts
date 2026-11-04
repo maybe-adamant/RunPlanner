@@ -629,6 +629,17 @@ export interface AuthoredChallengeSwitch {
   readonly nectarDropped: boolean;
   /** Time switch only: the approximate claimed value before the money multiplier. */
   readonly gold?: number;
+  /** Elite switch only: its pinned elite and attributes; absent leaves both native. */
+  readonly elite?: AuthoredChallengeSwitchElite;
+}
+
+/**
+ * The Elite switch's one elite, drawn on entry, and an ordered prefix of the
+ * attributes forced on it when its encounter starts.
+ */
+export interface AuthoredChallengeSwitchElite {
+  readonly enemyKey: string;
+  readonly attributeKeys: readonly string[];
 }
 
 export interface AnomalyReplacementProvenance {

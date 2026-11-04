@@ -1,5 +1,12 @@
-import type { Catalog, ChallengeSwitchKind } from '../../catalog-schema';
-import type { AuthoredChallengeSwitch } from '../../authored-project/model';
+import type {
+  Catalog,
+  ChallengeSwitchEliteEncounterDeclaration,
+  ChallengeSwitchKind,
+} from '../../catalog-schema';
+import type {
+  AuthoredChallengeSwitch,
+  AuthoredChallengeSwitchElite,
+} from '../../authored-project/model';
 import { resolveChallengeSwitch } from '../../authored-project/acquisition/challenge-switch';
 import {
   evaluateRequirement,
@@ -144,4 +151,68 @@ export function challengeSwitchPlacementIssues(
         ? [Object.freeze({ reason: 'variantUnavailable' as const, variantKey: variant.variantKey })]
         : []),
   ]);
+}
+
+/** Why a pinned Elite switch elite cannot be what native draws there. */
+export type EliteChallengeIssue =
+  | { readonly reason: 'enemyNotInSet'; readonly enemyKey: string }
+  /** Not among the enemy's options here: unoffered, banned, blocked or another RoomSet's. */
+  | { readonly reason: 'attributeUnavailable'; readonly attributeKey: string }
+  /** An earlier drawn attribute removed it. */
+  | { readonly reason: 'attributeExcluded'; readonly attributeKey: string }
+  | { readonly reason: 'tooManyAttributes'; readonly attributeCount: number };
+
+/**
+ * The attributes the next forced draw can take for one enemy in one RoomSet,
+ * after an ordered prefix (`PickEliteAttributes`): the enemy's options less the
+ * encounter's banned ones, its own blocked ones and other RoomSets' ones, less
+ * each earlier draw and what it blocks. Empty once the forced count is drawn.
+ */
+export function eliteChallengeAttributeOptions(
+  encounter: ChallengeSwitchEliteEncounterDeclaration,
+  enemyKey: string,
+  roomSetKey: string,
+  prefix: readonly string[],
+): readonly string[] {
+  const facts = encounter.attributeOptionsByEnemy[enemyKey];
+  if (facts === undefined || prefix.length >= encounter.attributeCount) return Object.freeze([]);
+  let options = facts.options.filter((key) => {
+    const attribute = encounter.attributes[key];
+    return (
+      attribute !== undefined &&
+      !encounter.bannedAttributeKeys.includes(key) &&
+      !facts.blockedOptions.includes(key) &&
+      (attribute.roomSets === undefined || attribute.roomSets.includes(roomSetKey))
+    );
+  });
+  for (const drawn of prefix)
+    options = options.filter(
+      (key) => key !== drawn && !(encounter.attributes[drawn]?.excludes ?? []).includes(key),
+    );
+  return Object.freeze(options);
+}
+
+export function assessEliteChallengeChoice(
+  encounter: ChallengeSwitchEliteEncounterDeclaration,
+  roomSetKey: string,
+  elite: AuthoredChallengeSwitchElite,
+): readonly EliteChallengeIssue[] {
+  if (!encounter.enemies.some((enemy) => enemy.key === elite.enemyKey))
+    return Object.freeze([Object.freeze({ reason: 'enemyNotInSet', enemyKey: elite.enemyKey })]);
+  const issues: EliteChallengeIssue[] = [];
+  if (elite.attributeKeys.length > encounter.attributeCount)
+    issues.push({ reason: 'tooManyAttributes', attributeCount: encounter.attributeCount });
+  const offered = eliteChallengeAttributeOptions(encounter, elite.enemyKey, roomSetKey, []);
+  elite.attributeKeys.slice(0, encounter.attributeCount).forEach((attributeKey, index) => {
+    const prefix = elite.attributeKeys.slice(0, index);
+    if (!offered.includes(attributeKey))
+      issues.push({ reason: 'attributeUnavailable', attributeKey });
+    else if (
+      !eliteChallengeAttributeOptions(encounter, elite.enemyKey, roomSetKey, prefix).includes(
+        attributeKey,
+      )
+    )
+      issues.push({ reason: 'attributeExcluded', attributeKey });
+  });
+  return Object.freeze(issues.map((issue) => Object.freeze(issue)));
 }

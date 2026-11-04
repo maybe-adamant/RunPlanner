@@ -646,6 +646,11 @@ export function applyOccurrenceCommand(
         ...(observed.gold === undefined || current?.gold === undefined
           ? {}
           : { gold: current.gold }),
+        // A pinned elite belongs to its RoomSet's Elite encounter, kept across Elite variants.
+        ...(current?.elite === undefined ||
+        catalog.challengeSwitches.variants.byKey[command.variantKey]?.switchKind !== 'elite'
+          ? {}
+          : { elite: current.elite }),
       });
       return updateOccurrence(
         document,
@@ -662,6 +667,7 @@ export function applyOccurrenceCommand(
         hitless: command.hitless,
         nectarDropped: command.nectarDropped,
         ...(command.gold === undefined ? {} : { gold: command.gold }),
+        ...(current.elite === undefined ? {} : { elite: current.elite }),
       });
       const issue = challengeSwitchShapeIssue(catalog, next);
       if (issue !== undefined) failCommand(command, issue);
@@ -671,6 +677,32 @@ export function applyOccurrenceCommand(
         current.gold === next.gold
       )
         return document;
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({ ...occurrence, challengeSwitch: next }),
+      );
+    }
+    case 'ReplaceChallengeSwitchElite': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const current = occurrence.challengeSwitch;
+      if (current === undefined) failCommand(command, 'occurrence has no challenge switch');
+      const { elite: _previous, ...withoutElite } = current;
+      void _previous;
+      const next = Object.freeze({
+        ...withoutElite,
+        ...(command.elite === null
+          ? {}
+          : {
+              elite: Object.freeze({
+                enemyKey: command.elite.enemyKey,
+                attributeKeys: Object.freeze([...command.elite.attributeKeys]),
+              }),
+            }),
+      });
+      const issue = challengeSwitchShapeIssue(catalog, next);
+      if (issue !== undefined) failCommand(command, issue);
+      if (JSON.stringify(next.elite) === JSON.stringify(current.elite)) return document;
       return updateOccurrence(
         document,
         located,

@@ -120,4 +120,56 @@ describe('challenge switch declarations', () => {
       }),
     ).toThrow(/gold: must order minimumValue <= defaultValue <= startingValue/);
   });
+
+  it('declares each Elite switch encounter with its elite set and forced attributes', () => {
+    const elite = switches.eliteEncounters;
+    expect(
+      elite.values.map((encounter) => [
+        encounter.encounterKey,
+        encounter.enemies.map((enemy) => enemy.key),
+      ]),
+    ).toEqual([
+      ['EliteChallengeF', ['Brawler_Elite']],
+      ['EliteChallengeG', ['FishmanMelee_Elite']],
+      ['EliteChallengeH', ['Lycanthrope_Elite', 'Mourner_Elite']],
+      [
+        'EliteChallengeI',
+        ['SatyrLancer_Elite', 'SatyrRatCatcher_Elite', 'ClockworkHeavyMelee_Elite'],
+      ],
+      ['EliteChallengeN', ['Mudman_Elite', 'ZombieHeavyRanged_Elite', 'ZombieAssassin_Elite']],
+      ['EliteChallengeO', ['Swab_Elite']],
+      [
+        'EliteChallengeP',
+        ['SatyrSapper_Elite', 'Dragon_Elite', 'AutomatonEnforcer_Elite', 'AutomatonBeamer_Elite'],
+      ],
+      ['EliteChallengeQ', ['Brute_Elite']],
+    ]);
+    expect(elite.byKey.EliteChallengeQ).toMatchObject({
+      attributeCount: 2,
+      bannedAttributeKeys: ['Metallic', 'SpreadHitShields', 'StasisDeath', 'HeavyArmor'],
+    });
+    expect(elite.byKey.EliteChallengeQ?.attributes.Frenzy).toEqual({
+      label: 'Swifter',
+      excludes: ['Homing', 'Vacuuming'],
+    });
+    for (const host of switches.hosts.values)
+      expect(elite.byKey[host.encounterKeyBySwitchKind.elite]).toBeDefined();
+  });
+
+  it('refuses an Elite set member without attributes and a host without its encounter', () => {
+    expect(
+      withSwitches((raw) => {
+        (
+          raw.eliteEncounters as { attributeOptionsByEnemy: Record<string, unknown> }[]
+        )[0]!.attributeOptionsByEnemy.Brawler_Elite = { options: [], blockedOptions: [] };
+      }),
+    ).toThrow(/eliteEncounters\[0\]\.enemies\[0\]: Brawler_Elite has no attribute options/);
+    expect(
+      withSwitches((raw) => {
+        raw.eliteEncounters = (raw.eliteEncounters as { encounterKey: string }[]).filter(
+          (encounter) => encounter.encounterKey !== 'EliteChallengeQ',
+        );
+      }),
+    ).toThrow(/names no declared EliteChallengeQ/);
+  });
 });

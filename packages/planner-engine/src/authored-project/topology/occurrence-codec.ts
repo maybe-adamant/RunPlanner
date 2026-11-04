@@ -102,11 +102,34 @@ function decodeChallengeSwitch(
     failProjectDocument(path, `${gameName} hosts no challenge switch`);
   const raw = expectRecord(value, path);
   const hasGold = Object.hasOwn(raw, 'gold');
+  const hasElite = Object.hasOwn(raw, 'elite');
   expectExactKeys(
     raw,
-    ['variantKey', 'hitless', 'nectarDropped', ...(hasGold ? ['gold'] : [])],
+    [
+      'variantKey',
+      'hitless',
+      'nectarDropped',
+      ...(hasGold ? ['gold'] : []),
+      ...(hasElite ? ['elite'] : []),
+    ],
     path,
   );
+  const elite = hasElite
+    ? (() => {
+        const record = expectRecord(raw.elite, `${path}.elite`);
+        expectExactKeys(record, ['enemyKey', 'attributeKeys'], `${path}.elite`);
+        if (!Array.isArray(record.attributeKeys))
+          failProjectDocument(`${path}.elite.attributeKeys`, 'must be an array');
+        return Object.freeze({
+          enemyKey: expectString(record.enemyKey, `${path}.elite.enemyKey`),
+          attributeKeys: Object.freeze(
+            (record.attributeKeys as unknown[]).map((key, index) =>
+              expectString(key, `${path}.elite.attributeKeys[${index}]`),
+            ),
+          ),
+        });
+      })()
+    : undefined;
   const variantKey = expectString(raw.variantKey, `${path}.variantKey`);
   if (typeof raw.hitless !== 'boolean') failProjectDocument(`${path}.hitless`, 'must be boolean');
   if (typeof raw.nectarDropped !== 'boolean')
@@ -118,6 +141,7 @@ function decodeChallengeSwitch(
     hitless: raw.hitless,
     nectarDropped: raw.nectarDropped,
     ...(hasGold ? { gold: raw.gold as number } : {}),
+    ...(elite === undefined ? {} : { elite }),
   });
   const issue = challengeSwitchShapeIssue(catalog, challengeSwitch);
   if (issue !== undefined) failProjectDocument(path, issue);

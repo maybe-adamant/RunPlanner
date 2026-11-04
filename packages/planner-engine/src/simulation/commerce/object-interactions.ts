@@ -80,6 +80,22 @@ export interface ChallengeSwitchInteraction {
     readonly lock?: import('./challenge-switch').ChallengeSwitchVariantLock;
     readonly command: CommandOf<'ReplaceChallengeSwitch'>;
   }[];
+  /**
+   * The Elite kind's encounter here: each elite native can draw with the
+   * attributes its first forced draw can take; later draws narrow through
+   * `eliteChallengeAttributeOptions`.
+   */
+  readonly elite: {
+    readonly encounterKey: string;
+    readonly roomSetKey: string;
+    readonly attributeCount: number;
+    readonly enemies: readonly {
+      readonly enemyKey: string;
+      readonly label: string;
+      readonly attributeKeys: readonly string[];
+    }[];
+    readonly attributeLabels: Readonly<Record<string, string>>;
+  };
 }
 
 /** A room's object interactions; an object whose sequence is unreached has none. */

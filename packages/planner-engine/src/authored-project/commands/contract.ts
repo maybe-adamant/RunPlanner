@@ -143,6 +143,7 @@ function commandContractAddress(
     case 'SetErisSpawned':
     case 'ReplaceChallengeSwitch':
     case 'ReplaceChallengeSwitchOutcome':
+    case 'ReplaceChallengeSwitchElite':
     case 'AddStygianWell':
     case 'RemoveStygianWell':
     case 'InsertStygianWellReroll':
@@ -320,6 +321,7 @@ export function projectCommandAddress(
       return createRoomFeatureAddress(command.occurrence, { kind: 'erisSpawn' });
     case 'ReplaceChallengeSwitch':
     case 'ReplaceChallengeSwitchOutcome':
+    case 'ReplaceChallengeSwitchElite':
       return createRoomFeatureAddress(command.occurrence, { kind: 'challengeSwitch' });
   }
   return commandContractAddress(command);

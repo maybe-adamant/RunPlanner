@@ -182,6 +182,14 @@ const fangsBlocks: Readonly<Record<string, readonly string[]>> = {
   Screamer2: ['Tracking', 'Vacuuming'],
   Treant2: ['Frenzy'],
 };
+/** An enemy's native `EliteAttributeOptions` and `BlockAttributes`, elite or not. */
+export function eliteAttributeFacts(key: string): {
+  readonly options: readonly string[];
+  readonly blockedOptions: readonly string[];
+} {
+  return { options: fangsOptions[key] ?? genericFangs, blockedOptions: fangsBlocks[key] ?? [] };
+}
+
 function fangsFor(key: string, elite: boolean): EnemyFacts['fangs'] | undefined {
   if (!elite) return undefined;
   const options = fangsOptions[key] ?? genericFangs;

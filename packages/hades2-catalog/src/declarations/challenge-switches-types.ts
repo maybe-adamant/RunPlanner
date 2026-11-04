@@ -1,4 +1,5 @@
 import type {
+  ChallengeSwitchEliteEncounterDeclaration,
   ChallengeSwitchKind,
   ChallengeSwitchKindDeclaration,
   ChallengeSwitchVariantDeclaration,
@@ -24,6 +25,7 @@ export interface RawChallengeSwitchInput {
   readonly kinds: readonly ChallengeSwitchKindDeclaration[];
   readonly variants: readonly ChallengeSwitchVariantDeclaration[];
   readonly roomSets: readonly RawChallengeSwitchRoomSetDeclaration[];
+  readonly eliteEncounters: readonly ChallengeSwitchEliteEncounterDeclaration[];
   /** Anchored rooms whose own `ChallengeSpawnChance` is zero. */
   readonly noSpawnRoomGameNames: readonly string[];
 }

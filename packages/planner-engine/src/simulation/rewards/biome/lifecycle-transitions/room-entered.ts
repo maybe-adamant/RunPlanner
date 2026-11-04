@@ -45,6 +45,7 @@ import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
 import { erisSpawnFindings } from './eris-interacted';
 import {
   assessChallengeSwitchEntry,
+  assessEliteChallengeChoice,
   challengeSwitchPlacementIssues,
   type ChallengeSwitchEntryAssessment,
 } from '../../../commerce/challenge-switch';
@@ -356,6 +357,20 @@ export function applyRoomEnteredTransition(
             chronology: findingChronology,
           }),
         );
+      const elite = room.challengeSwitch.elite;
+      const encounter =
+        catalog.challengeSwitches.eliteEncounters.byKey[
+          challengeSwitchHost(catalog, room.gameName)!.encounterKeyBySwitchKind.elite
+        ];
+      if (elite !== undefined && encounter !== undefined)
+        for (const issue of assessEliteChallengeChoice(encounter, declaration.roomSetKey, elite))
+          findings.push(
+            Object.freeze({
+              finding: rewardFinding('challengeSwitchEliteUnavailable', owner, issue),
+              region: ownerRegion(room.origin),
+              chronology: findingChronology,
+            }),
+          );
     }
   }
   if (

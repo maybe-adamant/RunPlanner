@@ -140,6 +140,52 @@ export function normalizeChallengeSwitches(
     );
   }
 
+  const eliteEncounters = createCollection(
+    raw.eliteEncounters.map((encounter, index) => {
+      const encounterPath = `${path}.eliteEncounters[${index}]`;
+      requireNonEmpty(encounter.encounterKey, `${encounterPath}.encounterKey`);
+      if (encounter.enemies.length === 0) fail(`${encounterPath}.enemies`, 'must not be empty');
+      encounter.enemies.forEach((enemy, enemyIndex) => {
+        const facts = encounter.attributeOptionsByEnemy[enemy.key];
+        if (facts === undefined || facts.options.length === 0)
+          fail(`${encounterPath}.enemies[${enemyIndex}]`, `${enemy.key} has no attribute options`);
+        for (const option of facts.options)
+          if (encounter.attributes[option] === undefined)
+            fail(`${encounterPath}.enemies[${enemyIndex}]`, `unknown attribute ${option}`);
+      });
+      requirePositiveInteger(encounter.attributeCount, `${encounterPath}.attributeCount`);
+      for (const key of encounter.bannedAttributeKeys)
+        if (encounter.attributes[key] === undefined)
+          fail(`${encounterPath}.bannedAttributeKeys`, `unknown attribute ${key}`);
+      return Object.freeze({
+        encounterKey: encounter.encounterKey,
+        enemies: Object.freeze([...encounter.enemies]),
+        attributeOptionsByEnemy: Object.freeze(
+          Object.fromEntries(
+            encounter.enemies.map((enemy) => [
+              enemy.key,
+              Object.freeze({
+                options: Object.freeze([...encounter.attributeOptionsByEnemy[enemy.key]!.options]),
+                blockedOptions: Object.freeze([
+                  ...encounter.attributeOptionsByEnemy[enemy.key]!.blockedOptions,
+                ]),
+              }),
+            ]),
+          ),
+        ),
+        attributeCount: encounter.attributeCount,
+        bannedAttributeKeys: Object.freeze([...encounter.bannedAttributeKeys]),
+        attributes: Object.freeze({ ...encounter.attributes }),
+      });
+    }),
+    `${path}.eliteEncounters`,
+    (encounter) => encounter.encounterKey,
+    'encounterKey',
+  );
+  for (const host of hosts)
+    if (eliteEncounters.byKey[host.encounterKeyBySwitchKind.elite] === undefined)
+      fail(path, `host ${host.gameName} names no declared ${host.encounterKeyBySwitchKind.elite}`);
+
   const gold = raw.gold;
   requirePositiveInteger(gold.minimumValue, `${path}.gold.minimumValue`);
   requirePositiveInteger(gold.startingValue, `${path}.gold.startingValue`);
@@ -148,6 +194,7 @@ export function normalizeChallengeSwitches(
     fail(`${path}.gold`, 'must order minimumValue <= defaultValue <= startingValue');
 
   return Object.freeze({
+    eliteEncounters,
     kinds,
     variants,
     hosts: createCollection(hosts, `${path}.hosts`, (host) => host.gameName, 'gameName'),

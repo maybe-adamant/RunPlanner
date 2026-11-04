@@ -64,6 +64,7 @@ export type RewardGenerationFindingCode =
   | 'keepsakeUnavailable'
   | 'erisSpawnUnavailable'
   | 'challengeSwitchPlacementUnavailable'
+  | 'challengeSwitchEliteUnavailable'
   | 'timePieceConversionUnavailable'
   | 'artificerConversionUnavailable'
   | 'seaStarDuplicationUnavailable'

@@ -610,6 +610,15 @@ export type ChallengeSwitchCommand =
       readonly variantKey: string | null;
     }
   | {
+      /** Pins an Elite switch's elite and its attribute prefix; null leaves them native. */
+      readonly kind: 'ReplaceChallengeSwitchElite';
+      readonly occurrence: OccurrenceAddress;
+      readonly elite: {
+        readonly enemyKey: string;
+        readonly attributeKeys: readonly string[];
+      } | null;
+    }
+  | {
       /** Replaces the claim outcome; gold is a Time switch's only. */
       readonly kind: 'ReplaceChallengeSwitchOutcome';
       readonly occurrence: OccurrenceAddress;

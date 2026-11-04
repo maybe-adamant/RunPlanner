@@ -8,6 +8,7 @@ import type { CounterAxis, RequirementExpression, RoomStructuralTag } from '../r
 import type { ProducerLifecyclePointKey } from '../reward-kernel/model';
 import type { CatalogCollection } from '../normalized/collection';
 import type {
+  EncounterEnemyChoice,
   EnemyGoldDrop,
   GeneratedEncounterSelection,
   InfiniteRosterSelection,
@@ -1573,8 +1574,44 @@ export interface ChallengeSwitchHostDeclaration {
   readonly encounterKeyBySwitchKind: Readonly<Record<ChallengeSwitchKind, string>>;
 }
 
+/** One native elite attribute (`EliteAttributeData`), as the Fangs facts declare it. */
+export interface EliteAttributeDeclaration {
+  readonly label: string;
+  /** Attributes it blocks once drawn (`BlockAttributes`). */
+  readonly excludes: readonly string[];
+  /** RoomSets where it may be drawn; absent is everywhere. */
+  readonly roomSets?: readonly string[];
+}
+
+/**
+ * An Elite switch's encounter: its one generated elite, drawn from the
+ * RoomSet's `EnemySet` at room entry, and the attributes forced on it at the
+ * encounter's start (`PickEliteAttributes`).
+ */
+export interface ChallengeSwitchEliteEncounterDeclaration {
+  readonly encounterKey: string;
+  readonly enemies: readonly EncounterEnemyChoice[];
+  /**
+   * Each enemy's native `EliteAttributeOptions` and `BlockAttributes`; the
+   * forced draw reads them even on an armored variant that is not `IsElite`.
+   */
+  readonly attributeOptionsByEnemy: Readonly<
+    Record<
+      string,
+      { readonly options: readonly string[]; readonly blockedOptions: readonly string[] }
+    >
+  >;
+  /** `ForceEliteAttrubuteCount`. */
+  readonly attributeCount: number;
+  /** `BannedEliteAttributes`. */
+  readonly bannedAttributeKeys: readonly string[];
+  readonly attributes: Readonly<Record<string, EliteAttributeDeclaration>>;
+}
+
 /** Challenge switches: optional room objects rolled at room entry. */
 export interface ChallengeSwitchCatalog {
+  /** Each Elite switch encounter, by encounter key. */
+  readonly eliteEncounters: CatalogCollection<ChallengeSwitchEliteEncounterDeclaration>;
   readonly kinds: CatalogCollection<ChallengeSwitchKindDeclaration>;
   readonly variants: CatalogCollection<ChallengeSwitchVariantDeclaration>;
   readonly hosts: CatalogCollection<ChallengeSwitchHostDeclaration>;

@@ -232,7 +232,15 @@ export {
   type ChaosCandidateCapability,
   type ZagreusContractCandidateCapability,
 } from './generation/candidate-artifacts';
-export { type RoomObjectInteractions } from './commerce/object-interactions';
+export {
+  type ChallengeSwitchInteraction,
+  type RoomObjectInteractions,
+} from './commerce/object-interactions';
+export {
+  eliteChallengeAttributeOptions,
+  type ChallengeSwitchPlacementIssue,
+  type EliteChallengeIssue,
+} from './commerce/challenge-switch';
 export {
   assertProjectEvaluationAssembly,
   countedRewardTypeDomain,

@@ -627,6 +627,27 @@ and the Keepsake audit's switch note.
   assessment. Not part of the published evaluation, so equivalence is
   unaffected.
 
+- **Elite elite and attributes delivered** (first part of the side
+  encounter). Catalog `challengeSwitches.eliteEncounters`: each RoomSet's
+  `EliteChallenge<Set>` with its elite set (`Biome<Set>_EliteChallenge`), each
+  enemy's native attribute options and blocks (also for the armored
+  Cutthroat, which is not `IsElite` but carries `EliteAttributeOptions`), the
+  forced count 2 and the banned four; every host must name a declared one.
+  The leaf gains an optional `elite: { enemyKey, attributeKeys }` (Elite kind
+  only; absent leaves both native; attributes are an ordered prefix, as the
+  Fangs customization's), set by `ReplaceChallengeSwitchElite` (null clears)
+  and kept across Elite variants. Room entry raises
+  `challengeSwitchEliteUnavailable` (`enemyNotInSet`, `attributeUnavailable`
+  for banned, blocked, unoffered or another RoomSet's, `attributeExcluded` by
+  an earlier draw, `tooManyAttributes`). The switch's object interaction
+  carries `elite`: each enemy with its first-draw attributes and the labels;
+  `eliteChallengeAttributeOptions` narrows each later draw (native removes
+  the drawn attribute and what it blocks). The attributes are drawn when the
+  encounter starts (`PickEncounterEliteAttributes`, RoomLogic.lua:1913), the
+  elite at entry (`GenerateEncounter`). Elite attribute game-state
+  requirements and the run's `BannedEliteAttributes` (empty unless selected)
+  are not modeled.
+
 What P5 needs:
 
 - **Overview, Objects tab** (owner shape, 2026-11-04):
@@ -658,7 +679,8 @@ What P5 needs:
 
 Still open (engine, before the P5 Combat entry):
 
-- **Switch side encounter.** Each switch's encounter as an encounter product
+- **Switch side encounter, remaining part** (the Elite pin above is done).
+  Each switch's encounter as an encounter product
   like the room's main combat: catalog declarations for the 24 challenge
   encounters (`TimeChallenge*`, `PerfectClearChallenge*`, `EliteChallenge*`
   per RoomSet, through the existing generated-encounter policies: their

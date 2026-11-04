@@ -88,6 +88,7 @@ describe('summarizeCatalog', () => {
       exitTypes: emptyCollection(),
       rooms: emptyCollection(),
       challengeSwitches: {
+        eliteEncounters: emptyCollection(),
         kinds: emptyCollection(),
         variants: emptyCollection(),
         hosts: emptyCollection(),
