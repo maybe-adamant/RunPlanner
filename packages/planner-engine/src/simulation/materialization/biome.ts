@@ -319,6 +319,43 @@ function fixedRoomChain(
 }
 
 /**
+ * A completion chain ends the biome only at its terminal room: the Postboss,
+ * or the Boss where the route position has none. A chain stopped earlier, by
+ * a plan end, publishes its last room as an outgoing frontier with no doors.
+ */
+function completionChainPrefix(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
+  biomeState: CanonicalBiomeState,
+  entryRoom: CanonicalAuthoredRoom,
+  decisions: readonly CanonicalDecision[],
+  chainStart: CanonicalAuthoredRoom,
+  links: readonly CanonicalFixedRoomLink[],
+): MaterializedBiomePrefix {
+  const last = links.at(-1)?.target ?? chainStart;
+  const terminal =
+    isRouteCompletionRoom(catalog, routePosition, last.gameName) &&
+    (routePosition.completion.postbossRoomGameName === null ||
+      last.gameName === routePosition.completion.postbossRoomGameName);
+  const fixedRoomLinks = links.length === 0 ? undefined : links;
+  if (terminal) return prefix(biome, biomeState, entryRoom, decisions, undefined, fixedRoomLinks);
+  return prefix(
+    biome,
+    biomeState,
+    entryRoom,
+    decisions,
+    decisionFrontier(
+      biome,
+      undefined,
+      Object.freeze({ kind: 'occurrence', occurrenceId: last.occurrenceId }),
+      roomReference(last),
+    ),
+    fixedRoomLinks,
+  );
+}
+
+/**
  * N's bounded Hub progression has two deliberately narrow empty envelopes.
  * They still complete the entered source-room lifecycle against an empty
  * outgoing projection: Opening exposes its depth-one entry picker, and the
@@ -623,24 +660,27 @@ export function materializeBiomePrefix(
         );
         decisions.push(materialized.batch);
         const selected = selectedBatchContinuation(materialized.batch);
-        return prefix(
+        if (selected?.kind !== 'normal')
+          return prefix(biome, biomeState, entryRoom, decisions, undefined, undefined);
+        const chain = fixedRoomChain(
+          catalog,
           biome,
+          routePosition,
+          layout,
+          topology,
+          occurrences,
+          selected.target.room,
+          loadout,
+        );
+        return completionChainPrefix(
+          catalog,
+          biome,
+          routePosition,
           biomeState,
           entryRoom,
           decisions,
-          undefined,
-          selected?.kind === 'normal'
-            ? fixedRoomChain(
-                catalog,
-                biome,
-                routePosition,
-                layout,
-                topology,
-                occurrences,
-                selected.target.room,
-                loadout,
-              )
-            : undefined,
+          selected.target.room,
+          chain,
         );
       }
       const fixed = fixedRoomSuccessor(
@@ -658,14 +698,20 @@ export function materializeBiomePrefix(
         current = fixed.target;
         continue;
       }
-      if (isRouteCompletionRoom(catalog, routePosition, sourceRoom.gameName)) {
-        return prefix(
+      if (
+        fixedRoomLinks.length > 0 ||
+        isRouteCompletionRoom(catalog, routePosition, sourceRoom.gameName)
+      ) {
+        const chainStart = fixedRoomLinks[0]?.source ?? current;
+        return completionChainPrefix(
+          catalog,
           biome,
+          routePosition,
           biomeState,
           entryRoom,
           decisions,
-          undefined,
-          fixedRoomLinks.length === 0 ? undefined : Object.freeze([...fixedRoomLinks]),
+          chainStart,
+          Object.freeze([...fixedRoomLinks]),
         );
       }
       return prefix(

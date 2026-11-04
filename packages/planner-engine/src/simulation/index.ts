@@ -314,6 +314,7 @@ export type {
 export type {
   BiomeEvaluationPoint,
   CompleteValidBiomeProjectEvaluation,
+  EndedBiomeProjectEvaluation,
   ProjectBiomeEvaluation,
   ProjectEvaluation,
   ProjectEvaluationAssembly,

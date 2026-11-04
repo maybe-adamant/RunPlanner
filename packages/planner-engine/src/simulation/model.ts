@@ -11,6 +11,7 @@ export type CompletenessFindingCode =
   | 'hubOpenSetIncomplete'
   | 'hubVisitOrderIncomplete'
   | 'pickedTargetMissing'
+  | 'planEndUnreached'
   | 'roomActionPlacementRequired'
   | 'targetMissing';
 

@@ -299,7 +299,7 @@ function authoringFrontier(
     });
   }
   const completeness = source.completeness;
-  if (completeness.completion === 'complete') return null;
+  if (completeness.completion !== 'incomplete') return null;
   const frontier = completeness.frontier;
   switch (frontier.kind) {
     case 'exitDecision': {

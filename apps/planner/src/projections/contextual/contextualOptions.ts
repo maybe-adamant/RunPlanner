@@ -1017,6 +1017,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'pickedTargetMissing':
     case 'targetMissing':
       return { kind: 'structure', message: missingStepMessage(catalog, finding) };
+    case 'planEndUnreached':
+      return presented('structure', finding);
   }
 }
 

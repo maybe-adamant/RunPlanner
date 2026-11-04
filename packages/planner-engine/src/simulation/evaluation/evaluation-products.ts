@@ -17,7 +17,7 @@ export interface BiomeEvaluationBase {
   readonly issue?: AssessmentIssue;
   readonly biomeKey: string;
   readonly origin: BiomeAddress;
-  readonly authoring: 'incomplete' | 'complete';
+  readonly authoring: 'incomplete' | 'complete' | 'ended';
   readonly coverage: BiomeEvaluationCoverage;
   readonly findings: readonly SemanticFinding[];
   /** Present only when this biome owns the active required-input horizon. */
@@ -78,11 +78,29 @@ export interface CompleteBlockedBiomeProjectEvaluation extends CompleteBiomeProj
   readonly history: BiomeHistoryPrefix;
 }
 
+/**
+ * A biome the plan ends in before its completion: authored and valid through
+ * the end room's Timeline. Its assessed prefix stops at that room, which
+ * generates no doors; later authored structure is retained but dormant. It
+ * publishes no canonical snapshot and seeds no later biome.
+ */
+export interface EndedBiomeProjectEvaluation extends BiomeEvaluationBase {
+  readonly authoring: 'ended';
+  readonly validity: 'valid';
+  readonly roomGeneration: BiomeGenerationValidation;
+  readonly rewards: BiomeRewardSimulation;
+  readonly planEnd: OccurrenceAddress;
+  readonly coverage: PrefixBiomeEvaluationCoverage;
+  readonly materializedPrefix: MaterializedBiomePrefix;
+  readonly assessmentPrefix?: MaterializedBiomePrefix;
+  readonly history: BiomeHistoryPrefix;
+}
+
 export type CompleteBiomeProjectEvaluation =
   CompleteValidBiomeProjectEvaluation | CompleteBlockedBiomeProjectEvaluation;
 
 export type ProjectBiomeEvaluation =
-  IncompleteBiomeProjectEvaluation | CompleteBiomeProjectEvaluation;
+  IncompleteBiomeProjectEvaluation | CompleteBiomeProjectEvaluation | EndedBiomeProjectEvaluation;
 
 export type BiomeAuthoring = ProjectBiomeEvaluation['authoring'];
 
@@ -134,6 +152,8 @@ export interface RouteProcessingRegions {
   readonly completeValidPrefix: readonly string[];
   readonly active: ActiveRouteBiome | null;
   readonly blockedSuffix: readonly string[];
+  /** Present when the plan ends: the configured biomes after it, retained and never assessed. */
+  readonly afterPlanEnd?: readonly string[];
 }
 
 export interface RouteEvaluationSummary {
@@ -179,6 +199,11 @@ export type AuthoringHorizon =
       readonly kind: 'incomplete';
       /** The first locked authoring region begins immediately after this repairable region. */
       readonly blockedAfter: SemanticAddress;
+    }
+  | {
+      readonly kind: 'ended';
+      /** The plan's end room: its interior stays editable, its exit and everything after are locked. */
+      readonly blockedAfter: OccurrenceAddress;
     };
 
 export interface ProjectEvaluationAssembly {

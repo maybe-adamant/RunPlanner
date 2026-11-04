@@ -88,6 +88,11 @@ export type BiomeStatusEvaluation =
       readonly authoring: 'complete';
       readonly validity: 'invalid' | 'valid';
       readonly requiredInput?: unknown;
+    }
+  | {
+      readonly authoring: 'ended';
+      readonly validity: 'valid';
+      readonly requiredInput?: unknown;
     };
 
 const embryoBlessingMissing = Object.freeze({ title: 'Choose Embryo blessing' });
@@ -121,6 +126,9 @@ export const findingCopy = {
   },
   pickedTargetMissing: {
     title: 'Choose the door taken',
+  },
+  planEndUnreached: {
+    title: 'The plan ends in a room the route does not reach',
   },
   targetMissing: {
     title: 'Choose a room',

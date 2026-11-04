@@ -2,12 +2,17 @@ import type { ResolvedRoutePosition } from '../../authored-project/route-context
 import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
+  createOccurrenceAddress,
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type BiomeAddress,
   type NemesisRandomEventAddress,
 } from '../../authored-project/addresses';
-import type { AuthoredBiomePlan, ProjectDocument } from '../../authored-project/model';
+import type {
+  AuthoredBiomePlan,
+  OccurrenceId,
+  ProjectDocument,
+} from '../../authored-project/model';
 import { resolveRoutePosition } from '../../authored-project/route-context';
 import { evaluateBiomeCompleteness, type IncompleteBiomeCompletenessResult } from '../completeness';
 import { createAssessmentIssue } from '../assessment-issue';
@@ -416,12 +421,57 @@ export function evaluateBiomeAssembly(
   routeKey: string,
   plan: AuthoredBiomePlan,
   context: ProgressiveBiomeContext,
+  /** A mid-biome plan end; `plan` then already leaves out the end room's outgoing structure. */
+  end?: OccurrenceId,
 ): BiomeProjectEvaluationAssembly {
   const origin = createBiomeAddress(routeKey, plan.biomeKey);
-  const completeness = evaluateBiomeCompleteness(catalog, origin, plan);
-  if (completeness.completion === 'incomplete') {
+  const completeness = evaluateBiomeCompleteness(catalog, origin, plan, end);
+  let endedProgressive: ReturnType<typeof evaluateProgressiveBiomeAssembly> | undefined;
+  if (completeness.completion === 'ended') {
     const progressive = evaluateProgressiveBiomeAssembly(catalog, origin, plan, context);
+    endedProgressive = progressive;
     if (progressive === null) {
+      throw new ProjectSimulationContractError(
+        `${plan.biomeKey} reached its plan end without a materialized prefix`,
+      );
+    }
+    if (progressive.evaluation.blockedAt === undefined) {
+      const coveragePrefix =
+        progressive.evaluation.assessmentPrefix ?? progressive.evaluation.materializedPrefix;
+      return Object.freeze({
+        evaluation: Object.freeze({
+          biomeKey: plan.biomeKey,
+          origin,
+          authoring: 'ended',
+          validity: 'valid',
+          planEnd: createOccurrenceAddress(origin, completeness.endOccurrenceId),
+          coverage: Object.freeze({
+            kind: 'prefix',
+            through: materializedBiomePrefixCoveragePoint(coveragePrefix),
+          }),
+          materializedPrefix: progressive.evaluation.materializedPrefix,
+          ...(progressive.evaluation.assessmentPrefix === undefined
+            ? {}
+            : { assessmentPrefix: progressive.evaluation.assessmentPrefix }),
+          history: progressive.evaluation.history,
+          roomGeneration: progressive.evaluation.roomGeneration,
+          rewards: reconcileRunStateAvailability(
+            progressive.evaluation.rewards,
+            progressive.evaluation.rewards.runStateSnapshots,
+            structurallyEligibleRunStateOwners(progressive.evaluation.materializedPrefix),
+          ),
+          findings: progressive.evaluation.findings,
+        }),
+        candidateArtifacts: progressive.candidateArtifacts,
+      });
+    }
+  }
+  if (completeness.completion !== 'complete') {
+    const progressive =
+      endedProgressive ?? evaluateProgressiveBiomeAssembly(catalog, origin, plan, context);
+    if (progressive === null) {
+      if (completeness.completion === 'ended')
+        throw new ProjectSimulationContractError(`${plan.biomeKey} lost its plan-end prefix`);
       const requiredInput = completeness.requiredInput ?? completeness.frontier;
       return Object.freeze({
         evaluation: Object.freeze({
@@ -440,9 +490,21 @@ export function evaluateBiomeAssembly(
     }
     const blockedAt = progressive.evaluation.blockedAt;
     const incompleteStop = progressive.evaluation.blockedKind === 'incomplete';
+    // A biome blocked before its plan end publishes that block as its frontier.
+    const frontier = completeness.completion === 'incomplete' ? completeness.frontier : blockedAt;
+    const issue =
+      progressive.evaluation.issue ??
+      (completeness.completion === 'incomplete' ? completenessIssue(completeness) : undefined);
+    if (frontier === undefined || issue === undefined) {
+      throw new ProjectSimulationContractError(
+        `${plan.biomeKey} blocked before its plan end without a located issue`,
+      );
+    }
     const requiredInput =
       blockedAt === undefined
-        ? (completeness.requiredInput ?? completeness.frontier)
+        ? completeness.completion === 'incomplete'
+          ? (completeness.requiredInput ?? completeness.frontier)
+          : undefined
         : incompleteStop
           ? blockedAt
           : undefined;
@@ -462,8 +524,8 @@ export function evaluateBiomeAssembly(
         biomeKey: plan.biomeKey,
         origin,
         authoring: 'incomplete',
-        frontier: completeness.frontier,
-        issue: progressive.evaluation.issue ?? completenessIssue(completeness),
+        frontier,
+        issue,
         ...(requiredInput === undefined
           ? {}
           : {

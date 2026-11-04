@@ -51,9 +51,18 @@ export function authoringReadinessAt(
   );
   const prefix = evaluation === undefined ? undefined : materialization(evaluation);
   if (prefix === undefined) return 'locked';
+  // The plan's end room generates no doors: its own exit is past the end.
+  const boundary = resolveAuthoringBoundary(prefix, owner);
+  if (
+    horizon.kind === 'ended' &&
+    boundary.kind === 'exitDecision' &&
+    boundary.source.kind === 'occurrence' &&
+    boundary.source.occurrenceId === horizon.blockedAfter.occurrenceId
+  )
+    return 'locked';
   return authoringBoundaryReadiness(
     prefix,
-    resolveAuthoringBoundary(prefix, owner),
+    boundary,
     horizon.blockedAfter,
     evaluation?.requiredInputLocation,
   );

@@ -56,8 +56,17 @@ export interface CompleteBiomeCompletenessResult {
   readonly findings: readonly [];
 }
 
+/** The walk reached the plan's end room with nothing missing before it. */
+export interface EndedBiomeCompletenessResult {
+  readonly completion: 'ended';
+  readonly endOccurrenceId: OccurrenceId;
+  readonly findings: readonly [];
+}
+
 export type BiomeCompletenessResult =
-  CompleteBiomeCompletenessResult | IncompleteBiomeCompletenessResult;
+  | CompleteBiomeCompletenessResult
+  | IncompleteBiomeCompletenessResult
+  | EndedBiomeCompletenessResult;
 
 export class CompletenessContractError extends Error {
   constructor(detail: string) {
@@ -260,6 +269,24 @@ function evaluateHubDecisionCompleteness(
   }
 }
 
+/** Whether a Hub stay enters the occurrence, as a board room or one of its side rooms. */
+function hubContainsOccurrence(
+  hub: HubDecision,
+  topology: BiomeTopology,
+  occurrenceId: OccurrenceId,
+): boolean {
+  const mainRooms = new Set(hub.openTargets.map((target) => target.occurrenceId));
+  return (
+    mainRooms.has(occurrenceId) ||
+    topology.decisions.some(
+      (decision) =>
+        decision.kind === 'localVisit' &&
+        mainRooms.has(decision.sourceOccurrenceId) &&
+        decision.visitOrder.includes(occurrenceId),
+    )
+  );
+}
+
 /** The Hub takes over its source room's first physical door. */
 function terminalTakeoverDoor(
   biome: BiomeAddress,
@@ -319,6 +346,8 @@ export function evaluateBiomeCompleteness(
     readonly state: AuthoredBiomeState;
     readonly topology: BiomeTopology | null;
   },
+  /** A mid-biome plan end: its room's own exit and everything after it are not required. */
+  end?: OccurrenceId,
 ): BiomeCompletenessResult {
   const layout = requireLayout(catalog, biome, plan.biomeKey);
   const topology = plan.topology;
@@ -348,9 +377,29 @@ export function evaluateBiomeCompleteness(
   const occurrences = occurrenceMap(topology);
   const traversed = new Set<OccurrenceId>();
   let current = topology.startOccurrenceId;
+  const ended: EndedBiomeCompletenessResult | undefined =
+    end === undefined
+      ? undefined
+      : Object.freeze({
+          completion: 'ended',
+          endOccurrenceId: end,
+          findings: Object.freeze([]) as readonly [],
+        });
+  // The end lies in a selected Preboss's fixed chain when the chain reaches it.
+  const endsInChain = (preboss: OccurrenceId): boolean => {
+    for (let at: OccurrenceId | undefined = preboss, steps = 0; at !== undefined; steps += 1) {
+      if (at === end) return true;
+      if (steps > topology.fixedRoomLinks.length) return false;
+      at = topology.fixedRoomLinks.find(
+        (link) => link.sourceOccurrenceId === at,
+      )?.targetOccurrenceId;
+    }
+    return false;
+  };
 
   while (!traversed.has(current)) {
     traversed.add(current);
+    if (ended !== undefined && current === end) return ended;
     const room = sourceRoom(catalog, occurrences, current);
 
     const source: ExitDecisionSource = Object.freeze({ kind: 'occurrence', occurrenceId: current });
@@ -364,6 +413,13 @@ export function evaluateBiomeCompleteness(
       authoredHub.source.occurrenceId === current
     ) {
       const hubIncomplete = evaluateHubDecisionCompleteness(biome, layout, topology);
+      // An end inside the Hub stay needs only its board; its later visits are cut.
+      if (
+        ended !== undefined &&
+        hubContainsOccurrence(authoredHub, topology, end!) &&
+        hubIncomplete?.findings[0]?.code !== 'hubOpenSetIncomplete'
+      )
+        return ended;
       if (hubIncomplete !== undefined) return hubIncomplete;
       const hubSource: ExitDecisionSource = Object.freeze({
         kind: 'hubDecision',
@@ -394,6 +450,7 @@ export function evaluateBiomeCompleteness(
       if (preboss === undefined) {
         throw new CompletenessContractError(`trusted Hub exit lost ${selected.occurrenceId}`);
       }
+      if (ended !== undefined && endsInChain(preboss.occurrenceId)) return ended;
       const hubBossDoor = findBossDoorRewardStore(catalog, biome, topology, preboss.occurrenceId);
       if (hubBossDoor !== undefined) {
         return incomplete([hubBossDoor.finding], hubBossDoor.requiredInput);
@@ -488,6 +545,7 @@ export function evaluateBiomeCompleteness(
       );
     }
     if (selectedRoom.kind === 'Preboss') {
+      if (ended !== undefined && endsInChain(selectedOccurrence.occurrenceId)) return ended;
       const bossDoor = findBossDoorRewardStore(
         catalog,
         biome,

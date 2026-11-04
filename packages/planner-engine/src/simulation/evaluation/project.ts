@@ -56,6 +56,7 @@ import {
   ProjectSimulationContractError,
 } from './project-evaluation-assembly';
 import { evaluateBiomeAssembly } from './biome-evaluation';
+import { resolveBiomePlanEnd } from '../plan-end';
 import {
   routeStatus,
   summarizeRoute,
@@ -141,6 +142,7 @@ function evaluateCachedBiomeAssembly(
   plan: AuthoredBiomePlan,
   predecessor: ProjectBiomeEvaluation | undefined,
   context: Parameters<typeof evaluateBiomeAssembly>[3],
+  end?: OccurrenceId,
 ): BiomeAssembly {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const forcedChaos = (plan.topology?.occurrences ?? [])
@@ -155,7 +157,13 @@ function evaluateCachedBiomeAssembly(
   const findings = (context.resourceFindings ?? []).filter(
     (finding) => finding.origin.kind === 'roomFeature' && finding.origin.biomeKey === plan.biomeKey,
   );
-  const key = JSON.stringify([context.routePosition, forcedChaos, placements, findings]);
+  const key = JSON.stringify([
+    context.routePosition,
+    forcedChaos,
+    placements,
+    findings,
+    end ?? null,
+  ]);
   const owner = predecessor ?? catalog;
   let byPlan = biomeAssemblies.get(owner);
   if (byPlan === undefined) biomeAssemblies.set(owner, (byPlan = new WeakMap()));
@@ -165,7 +173,7 @@ function evaluateCachedBiomeAssembly(
   if (byInputs === undefined) byLoadout.set(context.loadout, (byInputs = new Map()));
   const cached = byInputs.get(key);
   if (cached !== undefined) return cached;
-  const assembled = evaluateBiomeAssembly(catalog, routeKey, plan, context);
+  const assembled = evaluateBiomeAssembly(catalog, routeKey, plan, context, end);
   byInputs.set(key, assembled);
   return assembled;
 }
@@ -181,8 +189,10 @@ function evaluateRouteAssembly(
   const findings: SemanticFinding[] = [];
   let active: ActiveRouteBiome | null = null;
   let blockedSuffix: readonly string[] = Object.freeze([]);
+  let afterPlanEnd: readonly string[] | undefined;
   let routeStartBlock: 'incomplete' | 'invalid' | null = null;
   let routeStartIssue: AssessmentIssue | undefined;
+  let planEndBlock: AssessmentIssue | undefined;
   let authoringHorizon: AuthoringHorizon = Object.freeze({ kind: 'open' });
   const routeStartKeepsakes = new Map<string, KeepsakeSelectionCandidateCapability>();
   const routeStartKeepsakeEquipResults = new Map<
@@ -364,6 +374,10 @@ function evaluateRouteAssembly(
         ? progressiveSeed(previous)
         : undefined;
     const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
+    const biomeEnd =
+      route.planEnd?.biomeKey === plan.biomeKey
+        ? resolveBiomePlanEnd(catalog, routePosition, plan, route.planEnd.occurrenceId)
+        : undefined;
     const context = Object.freeze({
       routePosition,
       forcedChaosOccurrenceKeys: forcedChaos,
@@ -372,7 +386,17 @@ function evaluateRouteAssembly(
       resourceFindings,
       ...(seed === undefined ? {} : { seed }),
     });
-    const assembled = evaluateCachedBiomeAssembly(catalog, route.routeKey, plan, previous, context);
+    const assembled =
+      biomeEnd?.kind === 'cut'
+        ? evaluateCachedBiomeAssembly(
+            catalog,
+            route.routeKey,
+            biomeEnd.plan,
+            previous,
+            context,
+            biomeEnd.occurrenceId,
+          )
+        : evaluateCachedBiomeAssembly(catalog, route.routeKey, plan, previous, context);
     const evaluation = assembled.evaluation;
     evaluations.push(evaluation);
     candidateArtifacts.push(assembled.candidateArtifacts);
@@ -395,7 +419,32 @@ function evaluateRouteAssembly(
       blockedSuffix = Object.freeze(route.biomes.slice(index + 1).map((biome) => biome.biomeKey));
       break;
     }
-    completeValidPrefix.push(evaluation.biomeKey);
+    if (biomeEnd === undefined) {
+      completeValidPrefix.push(evaluation.biomeKey);
+      continue;
+    }
+    afterPlanEnd = Object.freeze(route.biomes.slice(index + 1).map((biome) => biome.biomeKey));
+    if (biomeEnd.kind === 'unreached') {
+      // The end names a room off the selected spine; the route still stops here.
+      const origin = createRouteAddress(route.routeKey);
+      const unreached: SemanticFinding = Object.freeze({
+        code: 'planEndUnreached',
+        phase: 'completeness',
+        origin,
+        evidence: Object.freeze({
+          biomeKey: plan.biomeKey,
+          occurrenceId: biomeEnd.occurrenceId,
+        }),
+      });
+      findings.push(unreached);
+      planEndBlock = createAssessmentIssue(origin, authoringRegion(origin), [unreached]);
+      active = Object.freeze({ kind: 'invalid', biomeKey: evaluation.biomeKey });
+      break;
+    }
+    if (evaluation.authoring === 'complete') completeValidPrefix.push(evaluation.biomeKey);
+    const endRoom = createOccurrenceAddress(evaluation.origin, biomeEnd.occurrenceId);
+    authoringHorizon = Object.freeze({ kind: 'ended', blockedAfter: endRoom });
+    break;
   }
   const frozenEvaluations = Object.freeze(evaluations);
   const completeValidEvaluations = frozenEvaluations.filter(
@@ -411,9 +460,15 @@ function evaluateRouteAssembly(
     completeValidPrefix: Object.freeze(completeValidPrefix),
     active,
     blockedSuffix,
+    ...(afterPlanEnd === undefined ? {} : { afterPlanEnd }),
   });
-  const status = routeStatus(route.biomes.length, frozenEvaluations, routeStartBlock);
-  const issue = status === 'empty' ? undefined : (routeStartIssue ?? evaluations.at(-1)?.issue);
+  const status = routeStatus(
+    route.biomes.length,
+    frozenEvaluations,
+    routeStartBlock ?? (planEndBlock === undefined ? null : 'invalid'),
+  );
+  const issue =
+    status === 'empty' ? undefined : (routeStartIssue ?? planEndBlock ?? evaluations.at(-1)?.issue);
   if ((status === 'incomplete' || status === 'invalid') && issue === undefined)
     throw new ProjectSimulationContractError('blocked route has no selected assessment issue');
   return Object.freeze({

@@ -160,10 +160,10 @@ acquired god remains is refused. Same for the Ephyra board.
    unmarked, and the route still stops after it.
 9. **Practice start after the end** (default): start-point eligibility gains a
    reason when the start lies past the end (P3).
-10. **Importer cuts** (owner to confirm): victory → no cut; death or abandon →
-    cut at the last settled room (its exit doors recorded), else the room
-    before; an entry-mismatch stop → cut before the stopping room; the cut
-    room's acceptance is `unchecked` (it has no next-entry save).
+10. **Importer cuts** (settled, see below): victory → no cut; death or
+    abandon → cut at the last fully settled room; an entry-mismatch stop → cut
+    before the stopping room; the cut room is judged normally at the next
+    room's entry save.
 
 ### Challenge switches
 
@@ -220,33 +220,140 @@ travels with the equivalence regeneration if it moves any entry.
 
 ### P1 — plan end in the engine
 
-(Filled as commits land.)
+Delivered (2026-11-03):
+
+- Authored model: `route.planEnd?: { biomeKey, occurrenceId }`, strict decode
+  (configured biome, existing occurrence), `ReplacePlanEnd` (null clears, an
+  equal value keeps identity, a dangling value is refused). One route-wide
+  reconciliation after every command clears the marker when its occurrence or
+  biome is gone, and `ClearTopology` of its biome clears it even though the
+  reset start reuses the start occurrence ID. Dream itinerary replacement lists
+  the end's biome among the discarded content.
+- Engine: `resolveBiomePlanEnd` classifies the end per biome as `terminal`
+  (the terminal completion room: the ordinary biome end), `cut` (any other
+  structurally entered room) or `unreached` (off the selected spine). A cut
+  evaluates an explicit projection of the authored plan that leaves out the
+  end room's exit decision, the fixed link it opens and, in a Hub, every
+  action after the end's visit and the side rooms after it; it is memoized per
+  plan and occurrence so the route cache still hits.
+- Completeness takes the optional end and returns `ended` when the walk reaches
+  it with nothing missing before it (including inside a selected Preboss's
+  chain and inside a Hub stay once its board is open).
+- A completion chain stopped before its terminal room publishes that room as a
+  no-door outgoing frontier beside its fixed links; history composes the chain
+  to it. Every end room settles up to its commit: its Timeline including the
+  actions after the doors open, but no commit, exit, departure or door
+  generation.
+- New biome evaluation `authoring: 'ended'` (`EndedBiomeProjectEvaluation`):
+  valid, prefix coverage, the end room's address, no canonical snapshot.
+- Route: the walk stops at the end's biome; `processing.afterPlanEnd` lists the
+  configured biomes after it. A terminal end keeps its canonical biome in the
+  complete-valid prefix. Authoring horizon `{ kind: 'ended', blockedAfter }`:
+  the end room stays editable, its own exit and everything after it lock.
+- `planEndUnreached` (completeness, route-owned, evidence biome and
+  occurrence): status invalid, the biome is assessed unmarked and the route
+  still stops there; the horizon stays open.
+- App: compile-only adaptations (finding copy, status type, the workspace's
+  completeness narrowing, a test literal). No UI behaviour yet.
+
+Lanes (2026-11-03): typecheck, lint, format:check pass; `test:engine`
+3904/3904, `test:draft` 164/164, `test:run-import` 342 (+1 skipped),
+`test:planner` 2143 (+1 skipped), `test:equivalence` 157/157 unchanged.
+Catalog not touched.
+
+Engineering choices made without an owner ruling:
+
+- `ended` is its own authoring kind rather than `complete` with prefix
+  coverage, so every consumer that reads a canonical snapshot from a
+  complete-valid biome stays exact and the type system names each consumer
+  that must learn about ends.
+- The end room's exit work (Shop close at exit, resource element grants, the
+  `beforeRoomExit` snapshot) is not composed in P1. P3 decides how the
+  published end room conforms; a progressive frontier with a post-outgoing
+  acquisition point stops at that point, as an unauthored decision does today.
+- A Hub visit is atomic: an end at a main room or side room composes that
+  visit through its restore to the Hub.
+- `eligibleForExecutionPlan` stays false for a mid-biome end or any configured
+  biome after the end until P3 publishes them.
+
+What P2 needs:
+
+- An engine availability query for the button (the room is settled — its
+  interior complete and valid — the prefix before it valid, and the room on the
+  spine), placed with the plan-end neighbourhood, plus the end room's address
+  on the route evaluation if the projection needs it beyond the ended biome's
+  `planEnd`.
+- The workspace's own `evaluateBiomeCompleteness` call
+  (`source-index.ts`, `biome-semantic-assembly.ts`) passes no end, so it still
+  shows the end room's missing exit as the next frontier; it must pass the
+  route's end (or read the evaluation) and treat `ended` as complete.
+- Feedback/status projection for `authoring: 'ended'` and for
+  `processing.afterPlanEnd` biomes (read-only "past the plan end", not the
+  unreached hint), the "Plan ends here" / "Remove plan end" actions on every
+  outgoing kind, rail and Hub Timeline markers, and the
+  `planEndUnreached` finding's repair destination (the route's end control).
+- Witnessed in P1: a route-owned resource placement on a dormant room inside
+  the ended biome raises no finding (even one invalid unmarked); P2 should
+  present it as inactive rather than hide it.
 
 ## Equivalence characterization per phase
 
-| Phase | Entries changed | Why               |
-| ----- | --------------- | ----------------- |
-| P1    | —               | (filled when run) |
+| Phase | Entries changed | Why                                                                                                               |
+| ----- | --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| P1    | none (157/157)  | A project without `planEnd` evaluates identically; `processing.afterPlanEnd` is present only when an end applies. |
 
-## Open decisions for the owner
+## Owner-settled decisions (2026-11-03)
 
-1. Past-cut content: keep dormant (default) vs refuse vs destroy on set; and
-   whether to add "Remove everything after the plan end" later.
-2. Marker: route-level `planEnd { biomeKey, occurrenceId }` and one
-   `ReplacePlanEnd` command (default) vs two commands.
-3. Dangling marker: strict decode plus removal reconciliation (default) vs
-   tolerant "absent" like `practiceStart`.
-4. Cut at the Postboss/Boss: allowed, as the biome end with later biomes
-   dormant (default), or forbidden in favour of route scope.
-5. Importer death/abandon cut: at the last settled room (default) vs a new
-   "ended at entry" kind that keeps the previous room judged.
-6. Importer cut-room acceptance: `unchecked` (default) vs judged on a reduced
-   fact set at its exit snapshot.
-7. Hub: cuts at side rooms allowed (default); Hub-stay actions after a visit
-   can never be the last thing (default).
-8. Minor `schemaRevision` 0 → 1 at merge outdates every sent slot (default
-   yes).
-9. Challenge-switch outcome: optional with a success default (default) vs
-   required.
-10. Off-spine marker: finding `planEndUnreached` at the route (default) vs
-    silently ignoring it.
+These supersede the defaults above where they differ.
+
+Plan end:
+
+1. SETTLED: rooms past the end stay, inactive and read-only, so the marker can
+   be moved freely (decision 4 above).
+2. SETTLED: one route-level marker with a single set/clear command
+   (decisions 1–2).
+3. SETTLED: deleting the named room clears the marker in the same history step
+   (decision 3).
+4. SETTLED: cuts are allowed after the Preboss, the Boss and the Postboss; the
+   chain stays intact and is inactive past the cut (decision 5).
+5. SETTLED: Hub granularity is the end of any main-room visit; repeated
+   occurrences do not exist, so a cut can land at an intermediate Hub state.
+   Side-room cuts are a nice-to-have, not required. Applied: an end named at a
+   main room ends that whole visit, its entered side rooms included; an end at
+   a side room still ends after that side room (it costs nothing extra).
+6. SETTLED: the importer cuts deaths and abandons at the last fully settled
+   room (decision 10).
+7. SETTLED: no special "cut room unchecked": the next (death) room's entry save
+   exists, so the cut room is judged normally. Decision 10's `unchecked` clause
+   is withdrawn.
+8. SETTLED: one `schemaRevision` bump for the whole slice (plan end, the
+   `rewardStores` fact, the Fields cage Min/Max outcome and switches), done at
+   merge (decision 17).
+
+Challenge switches (replace decisions 11–14 where they differ):
+
+9. SETTLED: Overview carries a presence checkbox and the switch type; for
+   PerfectClear (hitless) and Elite (big enemy) switches also the encounter,
+   its customization and the reward, all rolled at room entry.
+10. SETTLED: Time-switch gold defaults to about 90 gold, approximate, a
+    plausibility fact only.
+11. SETTLED (game code): the bonus Nectar exists for all three switch
+    encounters (`TimeChallenge`, `PerfectClear`, `EliteChallenge`: `LootDrops`
+    `GiftDrop` with `DropChance` 0.05, spawned only when not
+    `PlayerTookDamage`, EventLogic.lua:531–546).
+12. SETTLED: Timeline has one interaction action with the switch in the
+    doors-open phase, with outcome fields "hitless" (all three types) and, when
+    hitless, "Nectar dropped". The outcome creates pickups on the Timeline,
+    collected later like any pickup: the PerfectClear reward (or the Onion on a
+    hit), the Elite reward, the Time gold, and the Nectar with its random +1
+    level target. Sea Star and other pickup effects apply as usual.
+13. SETTLED: every Crossroads unlock is owned (mature profile). Switches share
+    object slots with Shrines and Wells and use the same placement rule as
+    resources: one object takes the only eligible slot.
+14. SETTLED: Draft never authors switches.
+15. SETTLED (P7): the game module steers the switch's existence, its encounter
+    and its reward (hitless and Elite types) and nothing else; end-room
+    conformance catches the rest.
+
+Still open: none from the owner. Engineering choices made in P1 without an
+owner ruling are listed under P1 below.

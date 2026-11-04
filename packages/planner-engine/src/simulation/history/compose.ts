@@ -756,6 +756,34 @@ function composeBiomeHistoryPrefixResult(
         current = appendCompletedDecision(writer, catalog, decision, current);
       }
       const frontier = snapshot.frontier;
+      if (frontier?.kind === 'exitDecision' && snapshot.fixedRoomLinks !== undefined) {
+        // A plan end inside the completion chain: the chain runs to its end
+        // room, which settles its Timeline and generates no doors.
+        if (current.kind !== 'authored') {
+          fail('fixed completion links do not follow an authored Preboss room');
+        }
+        const links = snapshot.fixedRoomLinks;
+        const end = links.at(-1)!.target;
+        if (semanticAddressKey(frontier.parent.origin) !== semanticAddressKey(end.origin)) {
+          fail('a completion-chain frontier does not end its chain');
+        }
+        appendCanonicalRoomLifecycle(writer, catalog, current, fail);
+        appendFixedRoomLinks(
+          writer,
+          catalog,
+          createBiomeAddress(snapshot.routeKey, snapshot.biomeKey),
+          current,
+          links.slice(0, -1),
+          'newRoom',
+          fail,
+        );
+        appendStandaloneRoomCreated(writer, end, 'layoutCompletion');
+        appendClockworkAwareRoomLifecycle(writer, catalog, end, {
+          stopAfterOutgoing: true,
+          ...postOutgoingAcquisitionOption(catalog, end),
+        });
+        return;
+      }
       if (frontier === undefined && snapshot.fixedRoomLinks !== undefined) {
         if (current.kind !== 'authored') {
           fail('fixed completion links do not follow an authored Preboss room');
