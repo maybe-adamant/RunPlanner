@@ -353,8 +353,9 @@ export class DraftTraitOffers {
     const legal = (candidate: AuthoredTraitOfferTraits) => {
       const selected = candidate.options[OPTION_KEYS.indexOf(candidate.selectedOptionKey)];
       return (
-        this.basketAllows(selected?.traitKey) &&
-        this.rowAllowed(selected!.traitKey, true) &&
+        selected !== undefined &&
+        this.basketAllows(selected.traitKey) &&
+        this.rowAllowed(selected.traitKey, true) &&
         this.offerSupported(trait, candidate) &&
         this.monotonicSelection(trait, candidate)
       );
