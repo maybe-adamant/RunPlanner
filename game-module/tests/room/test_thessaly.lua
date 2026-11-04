@@ -168,6 +168,25 @@ function TestThessaly.testExactPublishedPhaseCountBypassesNativeThirdPhaseRoll()
     end
 end
 
+-- Native ChooseRoomReward over the run's store: remove the first eligible entry.
+local function nativeChoose(callbacks)
+    return function(run, room, storeName)
+        for index, entry in ipairs(run.RewardStores[storeName] or {}) do
+            if callbacks.IsRoomRewardEligible(nil, {}, function() return true end, run, room, entry, {}, {}) then
+                table.remove(run.RewardStores[storeName], index)
+                return entry.Name
+            end
+        end
+        return "RoomRewardHealDrop"
+    end
+end
+
+local function nativeStore()
+    return { RunProgress = {
+        { Name = "MaxManaDrop" }, { Name = "MaxHealthDrop" }, { Name = "ZeusUpgrade" }, { Name = "Boon" },
+    } }
+end
+
 local function runWheel(offerCount, pickedOfferKey, selectedIndex, highlights, observe)
     local module, callbacks = capture()
     local active, phase, wheel = fixture(offerCount, pickedOfferKey)
@@ -211,16 +230,17 @@ local function runWheel(offerCount, pickedOfferKey, selectedIndex, highlights, o
     shipCombat.attach(module, session, function() return state end, function() end, room, highlights)
 
     local nativeRoom = { Encounter = nativeEncounter }
+    local run = { RewardStores = nativeStore() }
     local obstacles = {}
     local chosenRewards = {}
     local selected
     local result = callbacks.ShipsEncounterSetup(nil, {}, function()
         lu.assertEquals(callbacks.RandomChance(nil, {}, function() return false end, 0.25), offerCount == 2)
-        lu.assertEquals(callbacks.ChooseNextRewardStore(nil, {}, function() return "MetaProgress" end, {}),
-            "RunProgress")
+        local store = callbacks.ChooseNextRewardStore(nil, {}, function() return "MetaProgress" end, {})
+        lu.assertEquals(store, "RunProgress")
         for index = 1, offerCount do
-            local rewardType = callbacks.ChooseRoomReward(nil, {}, function() return "wrong" end,
-                {}, nativeRoom, "MetaProgress", chosenRewards, { IgnoreForcedReward = true })
+            local rewardType = callbacks.ChooseRoomReward(nil, {}, nativeChoose(callbacks),
+                run, nativeRoom, store, chosenRewards, { IgnoreForcedReward = true })
             chosenRewards[index] = rewardType
             callbacks.SetupRoomReward(nil, {}, function()
                 nativeRoom.ForceLootName = "wrong-source"
@@ -242,7 +262,7 @@ local function runWheel(offerCount, pickedOfferKey, selectedIndex, highlights, o
         return "native-result"
     end, nativeEncounter, {})
     return {
-        result = result, chosenRewards = chosenRewards, obstacles = obstacles,
+        result = result, chosenRewards = chosenRewards, obstacles = obstacles, store = run.RewardStores.RunProgress,
         selected = selected, windows = windows, completed = completed, diagnostics = diagnostics,
     }
 end
@@ -295,6 +315,8 @@ function TestThessaly.testForcesOneAndTwoOfferWheelCohortsAndCompletesExactChoic
     local one = runWheel(1, "offer1", 1)
     lu.assertEquals(one.result, "native-result")
     lu.assertEquals(one.chosenRewards, { "ZeusUpgrade" })
+    -- Each offer left the wheel's store as a native draw.
+    lu.assertEquals(one.store, { { Name = "MaxManaDrop" }, { Name = "MaxHealthDrop" }, { Name = "Boon" } })
     lu.assertEquals(one.obstacles[1].__runPlannerOfferKey, "offer1")
     lu.assertEquals(one.windows, { "shipPreCombat:wheel1", "shipPostCombat:wheel1" })
     lu.assertEquals(#one.completed, 1)
@@ -302,6 +324,7 @@ function TestThessaly.testForcesOneAndTwoOfferWheelCohortsAndCompletesExactChoic
 
     local two = runWheel(2, "offer2", 2)
     lu.assertEquals(two.chosenRewards, { "ZeusUpgrade", "MaxHealthDrop" })
+    lu.assertEquals(two.store, { { Name = "MaxManaDrop" }, { Name = "Boon" } })
     lu.assertEquals(two.obstacles[2].__runPlannerOfferKey, "offer2")
     lu.assertEquals(#two.completed, 1)
     lu.assertEquals(two.diagnostics, {})
@@ -546,17 +569,22 @@ function TestThessaly.testRerollPressDrawsTheOffersNextPlannedRerollWithoutRetir
     navigation.attach(module, session, function() return state end, function() end, {}, room, nil,
         shipCombat.rewardContext)
     shipCombat.attach(module, session, function() return state end, function() end, room)
-    local wheel = { Room = {}, __runPlannerWheelKey = "wheel1", __runPlannerOfferKey = "offer1" }
-    local function nativeReroll(_, target)
-        target.ChosenRewardType = callbacks.ChooseRoomReward(nil, {}, function() return "native" end,
-            {}, {}, "RunProgress", {}, { IgnoreForcedReward = true })
+    local wheel = { Room = {}, __runPlannerWheelKey = "wheel1", __runPlannerOfferKey = "offer1",
+        RewardStoreName = "RunProgress" }
+    local run = { RewardStores = nativeStore() }
+    local function nativeReroll(currentRun, target)
+        target.ChosenRewardType = callbacks.ChooseRoomReward(nil, {}, nativeChoose(callbacks),
+            currentRun, {}, target.RewardStoreName, {}, { IgnoreForcedReward = true })
         callbacks.SetupRoomReward(nil, {}, function() target.Room.ForceLootName = "native" end,
             {}, target.Room, {}, { ChosenRewardType = target.ChosenRewardType, AlwaysSetupForceLootName = true })
         target.ForceLootName = target.Room.ForceLootName
         callbacks.CreateDoorRewardPreview(nil, {}, function() end, target, target.ChosenRewardType)
     end
-    callbacks.AttemptRerollShipWheel(nil, {}, nativeReroll, {}, wheel)
+    callbacks.AttemptRerollShipWheel(nil, {}, nativeReroll, run, wheel)
     lu.assertEquals(wheel.ChosenRewardType, "Boon")
+    -- The press drew its planned reroll from the wheel's store.
+    lu.assertEquals(run.RewardStores.RunProgress,
+        { { Name = "MaxManaDrop" }, { Name = "MaxHealthDrop" }, { Name = "ZeusUpgrade" } })
     lu.assertEquals(wheel.ForceLootName, "ApolloUpgrade")
     lu.assertEquals(wheel.__runPlannerOfferKey, "offer1")
     lu.assertNil(shipCombat.rewardContext())

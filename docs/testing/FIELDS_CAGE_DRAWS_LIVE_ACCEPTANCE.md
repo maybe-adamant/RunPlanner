@@ -1,8 +1,8 @@
-# Fields cage draws live acceptance
+# Fields cage and Ship wheel draws live acceptance
 
 Requires a current planner and an installed game module of the same schema
-pair, and a complete-valid plan through Mourning Fields (H) sent and set to
-play next. Use a plan with at least one `max` cage outcome and one `min`.
+pair, and a complete-valid plan through Mourning Fields (H), or Thessaly (O)
+for the wheel checks, sent and set to play next. Use a plan with at least one `max` cage outcome and one `min`.
 Automated hook coverage is not live verification; the owner confirms or waives
 each check.
 
@@ -25,3 +25,14 @@ each check.
 - [ ] With a door into a two-cage room offered, every door shows two cages and
       the counter stays, whichever outcome the plan chose; no `cageCount`
       mismatch.
+
+## Ship wheels
+
+- [ ] In each O ship room, every wheel (Left then Right on a two-offer wheel,
+      or the single central wheel) shows its planned reward and god, and the
+      run stays synchronized.
+- [ ] Record the run and import it. The entry save after each ship room shows
+      no `stores` `entryMismatch`: every offered wheel reward, the unpicked one
+      included, left its store.
+- [ ] Reroll a planned wheel offer. It shows its planned reroll, and the next
+      entry save's store matches.

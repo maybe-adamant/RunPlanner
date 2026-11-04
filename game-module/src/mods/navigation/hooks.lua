@@ -209,6 +209,8 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
 
     module.hooks.wrap("ChooseRoomReward", "run-planner-room-reward", function(_, runtime, base, run, nativeRoom,
         rewardStore, chosen, args)
+        -- A steered draw's native refill re-enters here; it stays that draw.
+        if rewardChoiceScope ~= nil then return base(run, nativeRoom, rewardStore, chosen, args) end
         local nested = nestedRewardContext and nestedRewardContext() or nil
         if nested ~= nil and type(args) == "table" and args.IgnoreForcedReward == true then
             local offer = nested.reroll
@@ -218,10 +220,15 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
             end
             if offer == nil then return base(run, nativeRoom, rewardStore, chosen, args) end
             nested.currentOffer = offer
+            -- Each wheel offer, and each reroll of one, draws its planned reward
+            -- from the wheel's native store.
+            rewardChoiceScope = { rewardStoreName = rewardStore, rewardType = offer.reward.rewardType }
+            local ok, result = pcall(base, run, nativeRoom, rewardStore, chosen, args)
+            rewardChoiceScope = nil
+            if not ok then error(result, 0) end
             if type(nativeRoom) == "table" then nativeRoom.ForceLootName = offer.reward.source end
-            return offer.reward.rewardType
+            return result
         end
-        if rewardChoiceScope ~= nil then return base(run, nativeRoom, rewardStore, chosen, args) end
         local state = getState(runtime)
         if state == nil or state.state ~= "synchronized" then
             return base(run, nativeRoom, rewardStore, chosen, args)
