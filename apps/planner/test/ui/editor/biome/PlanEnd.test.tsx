@@ -154,6 +154,18 @@ describe('plan end in the biome workspace', () => {
       occurrenceId: nOccurrenceId('combat02'),
     });
   });
+
+  it('keeps the hidden door of a Hub visit end room inactive with its doors', async () => {
+    const { application, user } = renderWorkspace(
+      endedAt(loadSurfaceNOPQProject(), 'N', nOccurrenceId('combat05')),
+      'Surface',
+      'N',
+    );
+    openRoom(application, createOccurrenceAddress(nBiome, nOccurrenceId('combat05')));
+    await user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    const door = within(roomCard()).getByRole('article', { name: 'Hidden return door' });
+    expect(within(door).getByRole('button', { name: 'Choose' })).toHaveProperty('disabled', true);
+  });
 });
 
 describe('plan end on the Route panel', () => {

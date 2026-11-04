@@ -599,6 +599,7 @@ export function assembleWorkspaceBiomeSemantics(
       routePosition: source.routePosition,
       ...(bossDoorRewardStore === undefined ? {} : { bossDoorRewardStore }),
       phantomExitSettlement: source.phantomExitSettlement,
+      pastPlanEndAt: source.pastPlanEndAt,
       findingsFor: source.findingsFor,
       rerollSource: source,
       rerollTargetLabel: (target) =>

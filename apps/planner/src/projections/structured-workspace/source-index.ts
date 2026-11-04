@@ -71,6 +71,7 @@ import type {
   AcquisitionConversionCandidateCapability,
   AssessmentIssue,
   PlanEndAvailability,
+  AuthoringReadiness,
 } from '@run-planner/engine/simulation';
 import {
   evaluateBiomeCompleteness,
@@ -238,6 +239,8 @@ export interface WorkspaceBiomeSource {
   readonly planEndRelation: (occurrenceId: OccurrenceId) => WorkspacePlanEndRelation | undefined;
   /** The whole biome lies after the biome the plan ends in. */
   readonly pastPlanEnd: boolean;
+  /** Whether an authoring owner lies past the plan's end, as the engine locks it. */
+  readonly pastPlanEndAt: (owner: SemanticAddress) => boolean;
   /** Whether the plan can end after a room; undefined when the engine query is not bound. */
   readonly planEndAvailability: (occurrenceId: OccurrenceId) => PlanEndAvailability | undefined;
 }
@@ -251,6 +254,7 @@ interface WorkspaceRoutePlanEndSource {
   readonly endRoom?: OccurrenceAddress;
   readonly afterPlanEnd: ReadonlySet<string>;
   readonly availability: (room: OccurrenceAddress) => PlanEndAvailability | undefined;
+  readonly readiness: (owner: SemanticAddress) => AuthoringReadiness;
 }
 
 export interface WorkspaceRouteSource {
@@ -868,37 +872,18 @@ function createWorkspaceBiomeSource(
   const pastPlanEnd = planEnd.afterPlanEnd.has(plan.biomeKey);
   const endOccurrenceId =
     planEnd.endRoom?.biomeKey === plan.biomeKey ? planEnd.endRoom.occurrenceId : undefined;
-  const pastEndHubRooms = new Set<OccurrenceId>();
-  // A Hub ended inside its stay publishes only the visits through its end.
-  if (endOccurrenceId !== undefined) {
-    for (const decision of hubDecisionsByKey.values()) {
-      const canonical = overlay.hubs.get(
-        semanticAddressKey(createHubDecisionAddress(biome, decision.hubKey)),
-      );
-      if (canonical === undefined) continue;
-      const reached = new Set(canonical.visits.map((visit) => visit.target.room.occurrenceId));
-      for (const action of decision.actions) {
-        if (action.kind !== 'roomVisit') continue;
-        const room = decision.openTargets.find(
-          (target) => target.hubSlotKey === action.hubSlotKey,
-        )?.occurrenceId;
-        if (room !== undefined && !reached.has(room)) pastEndHubRooms.add(room);
-      }
-    }
-  }
+  // In the biome the plan ends in, the engine locks exactly what lies past the end.
+  const pastPlanEndAt = (owner: SemanticAddress): boolean =>
+    pastPlanEnd || (endOccurrenceId !== undefined && planEnd.readiness(owner) === 'locked');
   const planEndRelation = (occurrenceId: OccurrenceId): WorkspacePlanEndRelation | undefined => {
-    if (pastPlanEnd) return 'pastEnd';
-    if (endOccurrenceId === undefined) return undefined;
-    if (occurrenceId === endOccurrenceId) return 'end';
-    return pastEndHubRooms.has(occurrenceId) ||
-      !coverage.isAssessed(createOccurrenceAddress(biome, occurrenceId))
-      ? 'pastEnd'
-      : undefined;
+    if (!pastPlanEnd && occurrenceId === endOccurrenceId) return 'end';
+    return pastPlanEndAt(createOccurrenceAddress(biome, occurrenceId)) ? 'pastEnd' : undefined;
   };
   const planEndAvailabilityByRoom = new Map<OccurrenceId, PlanEndAvailability | undefined>();
   return Object.freeze({
     planEndRelation,
     pastPlanEnd,
+    pastPlanEndAt,
     planEndAvailability: (occurrenceId: OccurrenceId) => {
       if (!planEndAvailabilityByRoom.has(occurrenceId)) {
         planEndAvailabilityByRoom.set(
@@ -1116,6 +1101,7 @@ export function createWorkspaceProjectSourceIndex(
   gold: WorkspaceBiomeSource['gold'] = undefined,
   planEndAvailability: (room: OccurrenceAddress) => PlanEndAvailability | undefined = () =>
     undefined,
+  authoringReadiness: (owner: SemanticAddress) => AuthoringReadiness = () => 'editable',
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -1129,6 +1115,7 @@ export function createWorkspaceProjectSourceIndex(
       : {}),
     afterPlanEnd: new Set(routeEvaluation?.processing.afterPlanEnd ?? []),
     availability: planEndAvailability,
+    readiness: authoringReadiness,
   });
   return Object.freeze({
     route: Object.freeze({

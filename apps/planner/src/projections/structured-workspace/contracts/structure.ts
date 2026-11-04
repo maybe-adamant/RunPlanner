@@ -584,14 +584,15 @@ export interface WorkspacePhantomExitControl {
     readonly summary: string;
     /** The effective room's icon; absent while the room is automatic and unsettled. */
     readonly icon?: WorkspaceRoomIcon;
-    readonly locked?: 'unreached';
+    /** `pastEnd`: the hidden door belongs to doors past the plan's end. */
+    readonly locked?: 'unreached' | 'pastEnd';
   };
   readonly reward: {
     readonly summary: string;
     /** The effective reward's type; absent while no reward is settled or chosen. */
     readonly rewardType?: string;
     /** `autoRoom`: the room is unpinned; `noDraw`: the room draws no reward. */
-    readonly locked?: 'unreached' | 'autoRoom' | 'noDraw';
+    readonly locked?: 'unreached' | 'pastEnd' | 'autoRoom' | 'noDraw';
   };
 }
 

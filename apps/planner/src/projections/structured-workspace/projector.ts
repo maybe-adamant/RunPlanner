@@ -374,6 +374,7 @@ export function createStructuredWorkspaceProjection(
         },
         goldLedgerForProjectEvaluationAssembly(catalog, assembly),
         (room) => planEndAvailability(catalog, assembly, room),
+        (owner) => authoringReadinessAt(assembly, owner),
       );
       const routeSource = sources.route;
       const authoredRoute =

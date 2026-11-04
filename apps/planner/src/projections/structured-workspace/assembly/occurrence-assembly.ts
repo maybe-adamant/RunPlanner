@@ -272,6 +272,10 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly phantomExitSettlement?: (
     owner: import('@run-planner/engine/authored-project').PhantomExitAddress,
   ) => import('@run-planner/engine/simulation').PhantomExitSettlement | undefined;
+  /** Whether an owner lies past the plan's end, such as the end room's hidden door. */
+  readonly pastPlanEndAt?: (
+    owner: import('@run-planner/engine/authored-project').SemanticAddress,
+  ) => boolean;
   readonly encounterPhaseStatus: (
     phase: EncounterPhaseAddress,
   ) => EncounterPhaseSequenceStatus | undefined;
@@ -749,6 +753,7 @@ export function assembleWorkspaceOccurrence(
     markerDestinations: input.markerDestinations,
     occurrence,
     settlement: input.phantomExitSettlement ?? (() => undefined),
+    pastPlanEndAt: input.pastPlanEndAt ?? (() => false),
   });
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,

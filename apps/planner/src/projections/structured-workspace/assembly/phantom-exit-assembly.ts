@@ -46,6 +46,7 @@ export function assemblePhantomExit(input: {
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly occurrence: RoomOccurrence;
   readonly settlement: (owner: PhantomExitAddress) => PhantomExitSettlement | undefined;
+  readonly pastPlanEndAt: (owner: PhantomExitAddress) => boolean;
 }): WorkspacePhantomExitAssembly | undefined {
   const value = input.occurrence.phantomExit;
   if (value === undefined) return undefined;
@@ -60,6 +61,7 @@ export function assemblePhantomExit(input: {
       routeRoomDeclaration(requireWorkspaceRoom(catalog, gameName), input.biome.routeKey),
     );
   const settled = input.settlement(address);
+  const pastEnd = input.pastPlanEndAt(address);
   const pinnedRoom = value.placeholderRoomGameName;
   const draws =
     settled !== undefined
@@ -68,8 +70,9 @@ export function assemblePhantomExit(input: {
         ? undefined
         : phantomPlaceholderDraw(catalog, pinnedRoom) !== undefined;
   const settledReward = settled?.offer?.rewardType;
-  const rewardLocked =
-    settled === undefined
+  const rewardLocked = pastEnd
+    ? ('pastEnd' as const)
+    : settled === undefined
       ? draws === false
         ? ('noDraw' as const)
         : ('unreached' as const)
@@ -95,7 +98,11 @@ export function assemblePhantomExit(input: {
     room: Object.freeze({
       summary: effectiveRoom === undefined ? 'Automatic' : roomLabel(effectiveRoom),
       ...(effectiveRoom === undefined ? {} : { icon: roomIcon(effectiveRoom) }),
-      ...(settled === undefined ? { locked: 'unreached' as const } : {}),
+      ...(pastEnd
+        ? { locked: 'pastEnd' as const }
+        : settled === undefined
+          ? { locked: 'unreached' as const }
+          : {}),
     }),
     reward: Object.freeze({
       summary: rewardSummary,

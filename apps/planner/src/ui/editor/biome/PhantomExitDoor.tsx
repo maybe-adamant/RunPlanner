@@ -56,6 +56,8 @@ export function PhantomExitDoor({
   const roomId = `${idPrefix}-hidden-door-room`;
   const rewardId = `${idPrefix}-hidden-door-reward`;
   const rewardLocked = control.reward.locked;
+  // The end room's doors, its hidden one included, lie past the plan's end.
+  const pastEnd = control.room.locked === 'pastEnd';
   const rewardTypeIcon =
     control.reward.rewardType === undefined ? undefined : rewardIcon(control.reward.rewardType);
   return (
@@ -82,7 +84,11 @@ export function PhantomExitDoor({
             itemIcon={(item) => roomKindIcon(interaction.rooms.roomIcon(item.value))}
             label=""
             layout="inline"
-            {...(control.room.locked === 'unreached' ? { disabledHint: candidateWaitingHint } : {})}
+            {...(control.room.locked === 'unreached'
+              ? { disabledHint: candidateWaitingHint }
+              : control.room.locked === 'pastEnd'
+                ? { locked: true }
+                : {})}
             loading={rooms.pending}
             model={rooms.result ?? emptyModel}
             onOpenChange={(open) => {
@@ -114,7 +120,7 @@ export function PhantomExitDoor({
               ? { disabledHint: candidateWaitingHint }
               : rewardLocked === 'autoRoom'
                 ? { disabledHint: 'Choose the room first.' }
-                : rewardLocked === 'noDraw'
+                : rewardLocked === 'noDraw' || rewardLocked === 'pastEnd'
                   ? { locked: true }
                   : {})}
             loading={rewards.pending}
@@ -135,6 +141,7 @@ export function PhantomExitDoor({
         control.pinned ? (
           <button
             className="quiet-action action-compact"
+            disabled={pastEnd}
             onClick={() => {
               setChoosing(false);
               executeIntent(interaction.resetIntent());
@@ -156,7 +163,7 @@ export function PhantomExitDoor({
             <span className="hidden-door-state">Automatic</span>
             <button
               className="quiet-action action-compact"
-              disabled={control.room.locked === 'unreached'}
+              disabled={control.room.locked !== undefined}
               onClick={() => setChoosing(true)}
               {...hintProps(control.room.locked === 'unreached' ? candidateWaitingHint : undefined)}
               type="button"

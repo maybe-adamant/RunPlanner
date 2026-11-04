@@ -168,6 +168,48 @@ describe('plan end in the structured workspace', () => {
     expect(rail?.visits[3]?.sideVisits.map((side) => side.planEnd)).toEqual(['pastEnd']);
   });
 
+  it("takes past the end exactly from the engine: the end visit's side rooms and peers stay in", () => {
+    const { workspace } = projectStructuredWorkspaceFixture(
+      endedAt(loadSurfaceNOPQProject(), 'N', nOccurrenceId('combat05')),
+    );
+    const ephyra = requireWorkspaceBiome(workspace, 'N');
+    const hub = ephyra.nodes.find((node) => node.kind === 'hubDecision');
+    const rail = ephyra.rail.find((entry) => entry.kind === 'hubGroup');
+
+    expect(hub?.visits.map((visit) => visit.planEnd ?? '-')).toEqual([
+      'end',
+      'pastEnd',
+      'pastEnd',
+      'pastEnd',
+      'pastEnd',
+      'pastEnd',
+    ]);
+    expect(rail?.visits[0]?.sideVisits.map((side) => side.planEnd)).toEqual([undefined, undefined]);
+    // The end visit's order stays a reached context.
+    if (hub?.kind !== 'hubDecision') throw new Error('Ephyra has no Hub');
+    expect(workspace.interactions.hubActionOrders.get(hub.marker.focusKey)?.contextReached).toBe(
+      true,
+    );
+
+    const erebus = requireWorkspaceBiome(
+      projectStructuredWorkspaceFixture(endedAt(createGoldenFGHIProject(), 'F', goldenEnd))
+        .workspace,
+      'F',
+    );
+    // golden-f-b5-e2 was offered beside the end room; golden-f-b6-e2 by the end room's doors.
+    expect(roomNode(erebus, 'golden-f-b5-e2').planEnd?.relation).toBeUndefined();
+    expect(roomNode(erebus, 'golden-f-b6-e2').planEnd?.relation).toBe('pastEnd');
+  });
+
+  it("keeps the end room's hidden door with its doors, past the end", () => {
+    const { workspace } = projectStructuredWorkspaceFixture(
+      endedAt(loadSurfaceNOPQProject(), 'N', nOccurrenceId('combat05')),
+    );
+    const end = roomNode(requireWorkspaceBiome(workspace, 'N'), nOccurrenceId('combat05'));
+    expect(end.room.phantomExit?.room.locked).toBe('pastEnd');
+    expect(end.room.phantomExit?.reward.locked).toBe('pastEnd');
+  });
+
   it('hosts an unreached end on the Route panel, where its control repairs it', () => {
     const { evaluation, workspace } = projectStructuredWorkspaceFixture(
       endedAt(createGoldenFGHIProject(), 'F', 'golden-f-b5-e2'),
