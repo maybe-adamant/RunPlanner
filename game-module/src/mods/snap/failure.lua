@@ -5,10 +5,12 @@ local failure = {}
 local MAX_PATHS = 6
 local MAX_TEXT = 200
 
+-- Bounded, with control bytes and backslashes as \ddd escapes so a value cannot
+-- start a new log line.
 local function clip(text)
     text = tostring(text)
-    if #text <= MAX_TEXT then return text end
-    return text:sub(1, MAX_TEXT) .. "..."
+    if #text > MAX_TEXT then text = text:sub(1, MAX_TEXT) .. "..." end
+    return (text:gsub("[%c\\]", function(byte) return string.format("\\%03d", byte:byte()) end))
 end
 
 -- A bounded one-line rendering of a published or observed value, keys sorted.
@@ -89,7 +91,7 @@ function failure.lines(record)
         detail("before " .. difference.family .. ": " .. table.concat(difference.paths, "; "))
     end
     if record.unwritable then
-        detail("unwritable " .. tostring(record.unwritable.family) .. ": " .. tostring(record.unwritable.reason))
+        detail("unwritable " .. tostring(record.unwritable.family) .. ": " .. clip(record.unwritable.reason))
     end
     for _, difference in ipairs(record.after) do
         detail("after " .. difference.family .. ": " .. table.concat(difference.paths, "; "))

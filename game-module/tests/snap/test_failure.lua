@@ -51,6 +51,24 @@ function TestSnapFailure.testAnUnwritableFamilyAndAFaultNameTheirCause()
     lu.assertEquals(lines[#lines], "[RunPlanner] snap failed detail error boom")
 end
 
+function TestSnapFailure.testControlCharactersCannotStartANewLogLine()
+    local record = failure.record({
+        room = "F_A", occurrenceId = "a", frame = true, kind = "unwritable",
+        before = { { family = "keepsakes", paths = { "keepsakes.held=a\nb" } } },
+        unwritable = { family = "reward-store", reason = "bad\r\nreason" },
+        trigger = { checkpoint = "c", expected = "x\ty", observed = "back\\slash" },
+        err = "line one\nline two",
+    })
+    lu.assertEquals(failure.lines(record), {
+        "[RunPlanner] snap failed room=F_A occurrence=a frame=yes kind=unwritable"
+            .. " failed=reward-store differed=keepsakes trigger=c",
+        "[RunPlanner] snap failed detail trigger c expected=x\\009y observed=back\\092slash",
+        "[RunPlanner] snap failed detail before keepsakes: keepsakes.held=a\\010b",
+        "[RunPlanner] snap failed detail unwritable reward-store: bad\\013\\010reason",
+        "[RunPlanner] snap failed detail error line one\\010line two",
+    })
+end
+
 function TestSnapFailure.testLargeFamiliesAreSummarised()
     local paths = {}
     for index = 1, 9 do paths[index] = "traitInventory.present." .. index .. "=" .. string.rep("x", 300) end
