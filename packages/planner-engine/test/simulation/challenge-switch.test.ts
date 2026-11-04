@@ -201,7 +201,28 @@ describe('challenge switch spawn rules', () => {
   it('reports an Elite switch whose kind gate (TalentLegal) fails', () => {
     expect(
       placementIssues(withSwitch(golden(), 'F', 'golden-f-b5-e1', 'EliteChallengeSwitch_MaxMana')),
-    ).toEqual([{ occurrenceId: 'golden-f-b5-e1', reason: 'kindUnavailable', switchKind: 'elite' }]);
+    ).toEqual([
+      {
+        occurrenceId: 'golden-f-b5-e1',
+        reason: 'kindUnavailable',
+        switchKind: 'elite',
+        gate: { kind: 'requirement' },
+      },
+    ]);
+  });
+
+  it('names an Elite switch’s biome-depth gate before its requirement', () => {
+    const issues = simulateProject(
+      catalog,
+      withSwitch(surface(), 'O', 'surface-o-combat04', 'EliteChallengeSwitch_MaxMana'),
+    )
+      .findings.filter((finding) => finding.code === 'challengeSwitchPlacementUnavailable')
+      .map((finding) => finding.evidence);
+    expect(issues).toContainEqual({
+      reason: 'kindUnavailable',
+      switchKind: 'elite',
+      gate: { kind: 'biomeDepth', biomeDepthCache: 2, minimumBiomeDepth: 3 },
+    });
   });
 
   it('reports a Pom switch with no upgradable trait', () => {
@@ -456,6 +477,22 @@ describe('challenge switch variant query', () => {
     expect(at(golden(), 'F', 'golden-f-start')).toBeUndefined();
   });
 
+  it('binds each kind’s observation to its default variant, else its first rollable one', () => {
+    const kinds = at(golden(), 'F', 'golden-f-b5-e1')?.kinds;
+    expect(
+      kinds?.map((kind) => [kind.switchKind, kind.observe?.variantKey, kind.lock?.reason]),
+    ).toEqual([
+      ['time', 'TimeChallengeSwitch_Money', undefined],
+      ['perfectClear', 'PerfectClearChallengeSwitch_Pom', undefined],
+      ['elite', undefined, 'kindUnavailable'],
+    ]);
+    // Where a shared spawn rule breaks, no kind can be observed and each names that rule.
+    const early = at(golden(), 'F', 'golden-f-b1-e1')?.kinds;
+    expect(
+      early?.every((kind) => kind.observe === undefined && kind.lock?.reason === 'biomeDepth'),
+    ).toBe(true);
+  });
+
   it('offers nothing where a shared spawn rule breaks', () => {
     const early = at(golden(), 'F', 'golden-f-b1-e1');
     expect(early?.sharedIssues).toEqual([
@@ -672,6 +709,20 @@ describe('Elite switch elite', () => {
       eliteChallengeAttributeOptions(encounter, 'Dragon_Elite', 'P', ['Frenzy', 'Blink']),
     ).toEqual([]);
     expect(product?.attributeLabels.Frenzy).toBe('Swifter');
+    expect(product?.pinnedDraws).toBeUndefined();
+    // A pinned elite publishes each forced draw; a draw after an unpinned one stays native.
+    const pinnedProduct = (attributeKeys: string[]) =>
+      roomObjectInteractionsForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, pin(observed(), 'Dragon_Elite', attributeKeys)),
+        createOccurrenceAddress(
+          createBiomeAddress('Surface', 'P'),
+          createOccurrenceId('surface-p-6-1-p_combat10'),
+        ),
+      )?.challengeSwitch?.elite.pinnedDraws;
+    const none = pinnedProduct([]);
+    expect(none?.[0]?.attributeKeys).toEqual(dragon.attributeKeys);
+    expect(none?.[1]?.attributeKeys).toEqual([]);
+    expect(pinnedProduct(['Frenzy'])?.[1]?.attributeKeys).toEqual(second);
   });
 });
 

@@ -42,7 +42,9 @@ export function challengeSwitchRuleSentence(rule: ChallengeSwitchRule): string {
         : `The ${names[0] ?? 'room'} takes the only spot.`;
     }
     case 'kindUnavailable':
-      return hexGate;
+      return rule.gate.kind === 'biomeDepth'
+        ? `Elite Enemy Switches need biome depth ${rule.gate.minimumBiomeDepth}; this room is at ${rule.gate.biomeDepthCache}.`
+        : hexGate;
     case 'variantUnavailable':
       return variantGates[rule.variantKey] ?? "This reward can't be rolled here.";
   }

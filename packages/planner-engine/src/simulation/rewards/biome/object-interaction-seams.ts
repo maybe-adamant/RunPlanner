@@ -347,7 +347,36 @@ function challengeSwitchInteraction(
   const roomSetKey = catalog.rooms.byKey[room.gameName]?.roomSetKey;
   if (encounter === undefined || roomSetKey === undefined) return undefined;
   const outcome = challengeSwitchOutcomeInteraction(catalog, room);
+  const pinned =
+    room.challengeSwitch !== undefined &&
+    catalog.challengeSwitches.variants.byKey[room.challengeSwitch.variantKey]?.switchKind ===
+      'elite'
+      ? room.challengeSwitch.elite
+      : undefined;
+  const observeCommand = (variantKey: string) =>
+    Object.freeze({
+      kind: 'ReplaceChallengeSwitch' as const,
+      occurrence: origin,
+      variantKey,
+    });
+  const rollable = (variant: ChallengeSwitchEntryAssessment['variants'][number]) =>
+    assessment.sharedIssues.length === 0 && variant.lock === undefined;
+  const kinds = catalog.challengeSwitches.kinds.values.map((kind) => {
+    const variants = assessment.variants.filter((variant) => variant.switchKind === kind.key);
+    const chosen =
+      variants.find(
+        (variant) => variant.variantKey === kind.defaultVariantKey && rollable(variant),
+      ) ?? variants.find(rollable);
+    const lock =
+      chosen === undefined ? (assessment.sharedIssues[0] ?? variants[0]?.issue) : undefined;
+    return Object.freeze({
+      switchKind: kind.key,
+      ...(chosen === undefined ? {} : { observe: observeCommand(chosen.variantKey) }),
+      ...(lock === undefined ? {} : { lock }),
+    });
+  });
   return Object.freeze({
+    kinds: Object.freeze(kinds),
     elite: Object.freeze({
       encounterKey: encounter.encounterKey,
       roomSetKey,
@@ -366,6 +395,25 @@ function challengeSwitchInteraction(
           Object.entries(encounter.attributes).map(([key, attribute]) => [key, attribute.label]),
         ),
       ),
+      ...(pinned === undefined
+        ? {}
+        : {
+            pinnedDraws: Object.freeze(
+              Array.from({ length: encounter.attributeCount }, (_, index) =>
+                Object.freeze({
+                  attributeKeys:
+                    index > pinned.attributeKeys.length
+                      ? Object.freeze([])
+                      : eliteChallengeAttributeOptions(
+                          encounter,
+                          pinned.enemyKey,
+                          roomSetKey,
+                          pinned.attributeKeys.slice(0, index),
+                        ),
+                }),
+              ),
+            ),
+          }),
     }),
     ...(prepared === undefined
       ? {}
@@ -403,12 +451,8 @@ function challengeSwitchInteraction(
       assessment.variants.map((variant) =>
         Object.freeze({
           ...variant,
-          rollable: assessment.sharedIssues.length === 0 && variant.lock === undefined,
-          command: Object.freeze({
-            kind: 'ReplaceChallengeSwitch' as const,
-            occurrence: origin,
-            variantKey: variant.variantKey,
-          }),
+          rollable: rollable(variant),
+          command: observeCommand(variant.variantKey),
         }),
       ),
     ),

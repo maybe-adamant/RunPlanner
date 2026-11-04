@@ -240,6 +240,7 @@ export {
 } from './commerce/object-interactions';
 export {
   eliteChallengeAttributeOptions,
+  type ChallengeSwitchKindGate,
   type ChallengeSwitchPlacementIssue,
   type EliteChallengeIssue,
 } from './commerce/challenge-switch';

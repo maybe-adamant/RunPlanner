@@ -34,10 +34,23 @@ export type ChallengeSwitchPlacementIssue =
       readonly anchorCount: number;
       readonly occupants: readonly ChallengeSwitchAnchorOccupant[];
     }
-  /** The kind's own gate (Elite: `TalentLegal`, biome depth 3). */
-  | { readonly reason: 'kindUnavailable'; readonly switchKind: ChallengeSwitchKind }
+  /** The kind's own gate (Elite: biome depth 3, then `TalentLegal`). */
+  | {
+      readonly reason: 'kindUnavailable';
+      readonly switchKind: ChallengeSwitchKind;
+      readonly gate: ChallengeSwitchKindGate;
+    }
   /** The variant's own gate (Pom: an upgradable trait; Path of Stars: `TalentLegal`). */
   | { readonly reason: 'variantUnavailable'; readonly variantKey: string };
+
+/** Which of a kind's own gates its entry fails: its biome depth first, else its requirement. */
+export type ChallengeSwitchKindGate =
+  | {
+      readonly kind: 'biomeDepth';
+      readonly biomeDepthCache: number;
+      readonly minimumBiomeDepth: number;
+    }
+  | { readonly kind: 'requirement' };
 
 export interface ChallengeSwitchEntryFacts {
   readonly biomeDepthCache: number;
@@ -75,6 +88,11 @@ export interface ChallengeSwitchEntryAssessment {
     readonly variantKey: string;
     readonly switchKind: ChallengeSwitchKind;
     readonly lock?: ChallengeSwitchVariantLock;
+    /** The variant's own broken gate, as its placement finding carries it. */
+    readonly issue?: Extract<
+      ChallengeSwitchPlacementIssue,
+      { readonly reason: 'kindUnavailable' | 'variantUnavailable' }
+    >;
   }[];
 }
 
@@ -107,29 +125,43 @@ export function assessChallengeSwitchEntry(
       anchorCount,
       occupants: Object.freeze([...facts.occupants]),
     });
-  const kindLocked = new Map(
-    switches.kinds.values.map((kind) => [
-      kind.key,
-      (kind.minimumBiomeDepth !== undefined && facts.biomeDepthCache < kind.minimumBiomeDepth) ||
-        (kind.requirement !== undefined &&
-          !evaluateRequirement(kind.requirement, facts.requirements)),
-    ]),
+  const kindGates = new Map(
+    switches.kinds.values.map(
+      (kind): [ChallengeSwitchKind, ChallengeSwitchKindGate | undefined] => [
+        kind.key,
+        kind.minimumBiomeDepth !== undefined && facts.biomeDepthCache < kind.minimumBiomeDepth
+          ? Object.freeze({
+              kind: 'biomeDepth' as const,
+              biomeDepthCache: facts.biomeDepthCache,
+              minimumBiomeDepth: kind.minimumBiomeDepth,
+            })
+          : kind.requirement !== undefined &&
+              !evaluateRequirement(kind.requirement, facts.requirements)
+            ? Object.freeze({ kind: 'requirement' as const })
+            : undefined,
+      ],
+    ),
   );
   return Object.freeze({
     sharedIssues: Object.freeze(sharedIssues.map((issue) => Object.freeze(issue))),
     variants: Object.freeze(
       switches.variants.values.map((variant) => {
-        const lock: ChallengeSwitchVariantLock | undefined =
-          kindLocked.get(variant.switchKind) === true
-            ? 'kindUnavailable'
+        const gate = kindGates.get(variant.switchKind);
+        const issue =
+          gate !== undefined
+            ? Object.freeze({
+                reason: 'kindUnavailable' as const,
+                switchKind: variant.switchKind,
+                gate,
+              })
             : variant.requirement !== undefined &&
                 !evaluateRequirement(variant.requirement, facts.requirements)
-              ? 'variantUnavailable'
+              ? Object.freeze({ reason: 'variantUnavailable' as const, variantKey: variant.key })
               : undefined;
         return Object.freeze({
           variantKey: variant.key,
           switchKind: variant.switchKind,
-          ...(lock === undefined ? {} : { lock }),
+          ...(issue === undefined ? {} : { lock: issue.reason, issue }),
         });
       }),
     ),
@@ -149,11 +181,7 @@ export function challengeSwitchPlacementIssues(
   if (resolved === undefined || variant === undefined) return Object.freeze([]);
   return Object.freeze([
     ...assessment.sharedIssues,
-    ...(variant.lock === 'kindUnavailable'
-      ? [Object.freeze({ reason: 'kindUnavailable' as const, switchKind: variant.switchKind })]
-      : variant.lock === 'variantUnavailable'
-        ? [Object.freeze({ reason: 'variantUnavailable' as const, variantKey: variant.variantKey })]
-        : []),
+    ...(variant.issue === undefined ? [] : [variant.issue]),
   ]);
 }
 

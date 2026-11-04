@@ -78,7 +78,20 @@ export interface ChallengeSwitchInteraction {
     readonly switchKind: import('../../catalog-schema').ChallengeSwitchKind;
     readonly rollable: boolean;
     readonly lock?: import('./challenge-switch').ChallengeSwitchVariantLock;
+    /** The variant's own broken gate, with which gate and its numbers. */
+    readonly issue?: import('./challenge-switch').ChallengeSwitchEntryAssessment['variants'][number]['issue'];
     readonly command: CommandOf<'ReplaceChallengeSwitch'>;
+  }[];
+  /**
+   * Each kind in catalog order: the command observing it as its default
+   * variant when that one is rollable, else its first rollable variant; when
+   * none is rollable, the rule that locks it (a shared rule, else its first
+   * variant's gate).
+   */
+  readonly kinds: readonly {
+    readonly switchKind: import('../../catalog-schema').ChallengeSwitchKind;
+    readonly observe?: CommandOf<'ReplaceChallengeSwitch'>;
+    readonly lock?: import('./challenge-switch').ChallengeSwitchPlacementIssue;
   }[];
   /**
    * The Elite kind's encounter here: each elite native can draw with the
@@ -95,6 +108,12 @@ export interface ChallengeSwitchInteraction {
       readonly attributeKeys: readonly string[];
     }[];
     readonly attributeLabels: Readonly<Record<string, string>>;
+    /**
+     * For the observed switch's pinned elite, each forced draw in order with
+     * the attributes it can take after the earlier pinned ones; a draw after
+     * an unpinned one stays native and offers none.
+     */
+    readonly pinnedDraws?: readonly { readonly attributeKeys: readonly string[] }[];
   };
   /**
    * The observed switch's encounter, generated at this entry: an

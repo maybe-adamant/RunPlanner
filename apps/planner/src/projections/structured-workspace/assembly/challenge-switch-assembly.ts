@@ -6,7 +6,6 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog, ChallengeSwitchKind } from '@run-planner/engine/catalog-schema';
 import {
-  eliteChallengeAttributeOptions,
   encounterCompositionView,
   type ChallengeSwitchInteraction,
   type ChallengeSwitchOutcomeInteraction,
@@ -81,15 +80,7 @@ function variantLock(
   if (product === undefined) return Object.freeze({ reason: 'unreached' as const });
   const shared = product.sharedIssues[0];
   if (shared !== undefined) return shared;
-  const variant = product.variants.find((candidate) => candidate.variantKey === variantKey);
-  switch (variant?.lock) {
-    case undefined:
-      return undefined;
-    case 'kindUnavailable':
-      return Object.freeze({ reason: 'kindUnavailable' as const, switchKind: variant.switchKind });
-    case 'variantUnavailable':
-      return Object.freeze({ reason: 'variantUnavailable' as const, variantKey });
-  }
+  return product.variants.find((candidate) => candidate.variantKey === variantKey)?.issue;
 }
 
 function eliteProduct(
@@ -112,16 +103,7 @@ function eliteProduct(
     attributes: Object.freeze(
       Array.from({ length: product.elite.attributeCount }, (_, index) => {
         const key = pinned?.attributeKeys[index];
-        // A draw after an unpinned one, or of an unpinned elite, stays native.
-        const choices =
-          pinned === undefined || index > pinned.attributeKeys.length
-            ? []
-            : eliteChallengeAttributeOptions(
-                declaration,
-                pinned.enemyKey,
-                product.elite.roomSetKey,
-                pinned.attributeKeys.slice(0, index),
-              );
+        const choices = product.elite.pinnedDraws?.[index]?.attributeKeys ?? [];
         return Object.freeze({
           ...(key === undefined ? {} : { key, label: labelOf(key) }),
           choices: Object.freeze(
@@ -190,11 +172,10 @@ export function assembleChallengeSwitch(input: {
           ...(lock === undefined ? {} : { lock }),
         });
       });
-    const rollable = variants.filter((variant) => variant.lock === undefined);
-    const observeVariantKey =
-      rollable.find((variant) => variant.variantKey === declaration.defaultVariantKey)
-        ?.variantKey ?? rollable[0]?.variantKey;
-    const lock = rollable.length === 0 ? variants[0]?.lock : undefined;
+    const row = product?.kinds.find((candidate) => candidate.switchKind === kind);
+    const observeVariantKey = row?.observe?.variantKey ?? undefined;
+    const lock: WorkspaceChallengeSwitchLock | undefined =
+      product === undefined ? Object.freeze({ reason: 'unreached' as const }) : row?.lock;
     return [
       Object.freeze({
         kind,

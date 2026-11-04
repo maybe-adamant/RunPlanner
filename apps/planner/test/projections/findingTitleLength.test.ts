@@ -295,7 +295,12 @@ describe('challenge switch finding copy', () => {
       { reason: 'biomeDepth', biomeDepthCache: 1, minimumBiomeDepth: 5 },
       { reason: 'recentSwitch', roomsSinceLast: 2, minimumRoomsSinceLast: 3 },
       { reason: 'noFreeAnchor', anchorCount: 2, occupants: ['stygianWell', 'hermesShrine'] },
-      { reason: 'kindUnavailable', switchKind: 'elite' },
+      { reason: 'kindUnavailable', switchKind: 'elite', gate: { kind: 'requirement' } },
+      {
+        reason: 'kindUnavailable',
+        switchKind: 'elite',
+        gate: { kind: 'biomeDepth', biomeDepthCache: 2, minimumBiomeDepth: 3 },
+      },
       { reason: 'variantUnavailable', variantKey: 'PerfectClearChallengeSwitch_Pom' },
     ];
     const copy = rules.map((rule) =>
@@ -308,6 +313,7 @@ describe('challenge switch finding copy', () => {
       'Switches need 3 rooms between them; this one is 2 after the last.',
       'The Stygian Well and Hermes Shrine take every spot.',
       "Needs a Hex whose Path of Stars isn't complete.",
+      'Elite Enemy Switches need biome depth 3; this room is at 2.',
       'Needs a boon a Pom can level.',
     ]);
   });

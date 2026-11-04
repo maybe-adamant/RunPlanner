@@ -397,8 +397,10 @@ export interface WorkspaceRoomObjectChoice {
 /** Why a challenge switch kind or variant cannot be observed at its host's entry. */
 export type WorkspaceChallengeSwitchLock =
   | import('@run-planner/engine/simulation').ChallengeSwitchInteraction['sharedIssues'][number]
-  | { readonly reason: 'kindUnavailable'; readonly switchKind: ChallengeSwitchKind }
-  | { readonly reason: 'variantUnavailable'; readonly variantKey: string }
+  | Extract<
+      import('@run-planner/engine/simulation').ChallengeSwitchPlacementIssue,
+      { readonly reason: 'kindUnavailable' | 'variantUnavailable' }
+    >
   /** The host's entry is not assessed yet. */
   | { readonly reason: 'unreached' };
 
