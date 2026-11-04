@@ -65,7 +65,8 @@ export interface GameTargetInspection {
     /** ModpackLib's store page, the only page the host opens for it. */
     readonly pageUrl: string;
   };
-  readonly missingDependencies: readonly { readonly name: string; readonly version: string }[];
+  /** `Namespace-Name` of each package in the declared dependency closure that is not installed. */
+  readonly missingDependencies: readonly string[];
   readonly coordinator: { readonly present: boolean; readonly managed: boolean };
   readonly install: {
     readonly action: GameModuleInstallAction;

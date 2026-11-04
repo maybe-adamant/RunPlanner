@@ -103,10 +103,7 @@ describe('Game panel projection', () => {
       inspection: {
         module: { state: 'unrecognized', version: '0.10.0', source: null, matchesBundled: false },
         modpackLib: { state: 'older', found: '4.0.1' },
-        missingDependencies: [
-          { name: 'LuaENVY-ENVY', version: '1.2.0' },
-          { name: 'SGG_Modding-ModUtil', version: '4.0.1' },
-        ],
+        missingDependencies: ['SGG_Modding-ENVY', 'SGG_Modding-ModUtil'],
         r2modman: { state: 'managed', moduleEnabled: true },
         strandedInstall: '.run-planner-replaced-01-2-3',
         coordinator: { present: true, managed: true },
@@ -124,12 +121,7 @@ describe('Game panel projection', () => {
     expect(module.summary).toBe('Stranded install');
     expect(module.steps.map((step) => [step.key, step.text, step.found, step.action])).toEqual([
       ['modpackLib', 'Update ModpackLib to 4.1.0+ in r2modman', '4.0.1', null],
-      [
-        'dependencies',
-        'Install LuaENVY-ENVY, SGG_Modding-ModUtil through r2modman or ModpackLib',
-        null,
-        null,
-      ],
+      ['dependencies', 'Install SGG_Modding-ENVY, SGG_Modding-ModUtil in r2modman', null, null],
       ['r2modman', 'Remove the Run Planner package in r2modman', null, null],
       [
         'stranded',
@@ -149,6 +141,12 @@ describe('Game panel projection', () => {
       'No longer needed; remove it in r2modman.',
     );
     expect(module.steps.some((step) => step.text.includes('coordinator'))).toBe(false);
+  });
+
+  it('needs setup while any dependency in the closure is missing', () => {
+    const missing: StatusOverrides = { inspection: { missingDependencies: ['LuaENVY-ENVY'] } };
+    expect(moduleOf(missing).state).toBe('needsSetup');
+    expect(stepKeys(missing)).toEqual(['dependencies']);
   });
 
   it('derives needs setup, update available and ready from the reported facts', () => {

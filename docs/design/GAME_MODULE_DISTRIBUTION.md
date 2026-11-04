@@ -100,9 +100,14 @@ Status is reported by the host and presented by the application:
   when the target has no `mods.yml`);
 - ModpackLib, compatible when its version is at or above the module manifest's
   `adamant-ModpackLib` requirement with the same major version;
-- dependencies named by the module and ModpackLib manifests that have no
-  plugin folder with a manifest; Hell2Modding is present when its `d3d12.dll`
-  sits beside `ReturnOfModding`;
+- the dependency closure: every package declared by the module's manifest,
+  ModpackLib's, and in turn each installed package's
+  `plugins/<Namespace-Name>/manifest.json`, walked once per package. Only
+  ModpackLib's version is checked; every other package counts by presence
+  alone (a plugin folder with a manifest), since mod managers install the
+  latest releases and ModpackLib keeps its declared dependencies current.
+  Hell2Modding is present when its `d3d12.dll` sits beside `ReturnOfModding`.
+  Missing dependencies are reported by name and do not block publishing;
 - a leftover `RunPlanner_Modpack` coordinator, as a non-blocking notice;
 - the bundled and installed compatibility files, for bug reports.
 

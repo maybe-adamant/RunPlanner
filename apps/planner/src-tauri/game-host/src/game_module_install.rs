@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -94,13 +94,6 @@ pub struct ModpackLibFacts {
     pub page_url: &'static str,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DependencyFacts {
-    pub name: String,
-    pub version: String,
-}
-
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CoordinatorFacts {
@@ -152,7 +145,9 @@ pub struct TargetInspection {
     pub module: InstalledModule,
     pub r2modman: R2modmanFacts,
     pub modpack_lib: ModpackLibFacts,
-    pub missing_dependencies: Vec<DependencyFacts>,
+    /// `Namespace-Name` of each package in the declared dependency closure
+    /// that is not installed.
+    pub missing_dependencies: Vec<String>,
     pub coordinator: CoordinatorFacts,
     pub install: InstallFacts,
     pub removable: bool,
@@ -216,6 +211,12 @@ struct PackageManifestFile {
     dependencies: Vec<String>,
 }
 
+#[derive(Deserialize)]
+struct DependencyManifestFile {
+    #[serde(default)]
+    dependencies: Vec<String>,
+}
+
 /// The renames that swap an install into place; tests inject failures.
 pub trait SwapFileSystem {
     fn rename(&mut self, from: &Path, to: &Path) -> io::Result<()>;
@@ -241,9 +242,18 @@ fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Option<T> {
     serde_json::from_slice(&read_bounded(path, MAX_METADATA_BYTES)?).ok()
 }
 
-/// Splits a Thunderstore dependency string into its package name and version.
+/// Splits a Thunderstore dependency string into its `Namespace-Name` package
+/// name, which is also its plugin folder, and its version.
 fn dependency_parts(dependency: &str) -> Option<(&str, &str)> {
     let (name, version) = dependency.rsplit_once('-')?;
+    let (namespace, package) = name.split_once('-')?;
+    let word = |part: &str| {
+        !part.is_empty()
+            && part
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+    };
+    (word(namespace) && word(package)).then_some(())?;
     parse_version(version)?;
     Some((name, version))
 }
@@ -482,35 +492,55 @@ fn modpack_lib_facts(plugins: Option<&Path>, required: String) -> (ModpackLibFac
     )
 }
 
-fn dependency_present(target: &ResolvedTarget, plugins: Option<&Path>, name: &str) -> bool {
-    if name == LOADER_PACKAGE && target.root.join(LOADER_FILE).is_file() {
-        return true;
+/// The dependencies an installed package declares; `None` when it is absent.
+fn installed_dependency(
+    target: &ResolvedTarget,
+    plugins: Option<&Path>,
+    name: &str,
+) -> Option<Vec<String>> {
+    let manifest = plugins.map(|plugins| plugins.join(name).join(MANIFEST_FILE));
+    if let Some(manifest) = manifest.filter(|manifest| manifest.is_file()) {
+        return Some(
+            read_json::<DependencyManifestFile>(&manifest)
+                .map(|file| file.dependencies)
+                .unwrap_or_default(),
+        );
     }
-    plugins.is_some_and(|plugins| plugins.join(name).join(MANIFEST_FILE).is_file())
+    (name == LOADER_PACKAGE && target.root.join(LOADER_FILE).is_file()).then(Vec::new)
 }
 
+/// Walks the dependency closure from the module's declarations through each
+/// installed package's manifest, by presence alone: mod managers install the
+/// latest releases. ModpackLib's version has its own facts, so only its
+/// declarations join the walk.
 fn missing_dependencies(
     target: &ResolvedTarget,
     plugins: Option<&Path>,
-    declared: impl IntoIterator<Item = String>,
-) -> Vec<DependencyFacts> {
-    let mut missing: Vec<DependencyFacts> = Vec::new();
-    for dependency in declared {
-        let Some((name, version)) = dependency_parts(&dependency) else {
+    module_dependencies: &[String],
+    mut modpack_lib_dependencies: Vec<String>,
+) -> Vec<String> {
+    let mut visited: Vec<(String, bool)> = Vec::new();
+    let mut pending: VecDeque<String> = module_dependencies.iter().cloned().collect();
+    while let Some(dependency) = pending.pop_front() {
+        let Some((name, _)) = dependency_parts(&dependency) else {
             continue;
         };
-        if name == MODPACKLIB_DIRECTORY
-            || missing.iter().any(|entry| entry.name == name)
-            || dependency_present(target, plugins, name)
-        {
+        if visited.iter().any(|(seen, _)| seen == name) {
             continue;
         }
-        missing.push(DependencyFacts {
-            name: name.to_owned(),
-            version: version.to_owned(),
-        });
+        if name == MODPACKLIB_DIRECTORY {
+            pending.extend(std::mem::take(&mut modpack_lib_dependencies));
+            continue;
+        }
+        let declared = installed_dependency(target, plugins, name);
+        visited.push((name.to_owned(), declared.is_some()));
+        pending.extend(declared.unwrap_or_default());
     }
-    missing
+    visited
+        .into_iter()
+        .filter(|(_, present)| !present)
+        .map(|(name, _)| name)
+        .collect()
 }
 
 /// The planner owns a copy it installed that r2modman does not (or may not) manage.
@@ -604,11 +634,8 @@ pub fn inspect(
     let missing = missing_dependencies(
         target,
         plugins.as_deref(),
-        package
-            .dependencies
-            .iter()
-            .cloned()
-            .chain(modpack_lib_dependencies),
+        &package.dependencies,
+        modpack_lib_dependencies,
     );
     let coordinator = CoordinatorFacts {
         present: plugins
@@ -1169,43 +1196,91 @@ mod tests {
         }
     }
 
+    fn missing(inspection: &TargetInspection) -> Vec<&str> {
+        inspection
+            .missing_dependencies
+            .iter()
+            .map(String::as_str)
+            .collect()
+    }
+
+    fn dependency(name: &str, version: &str, dependencies: &[&str]) -> String {
+        let (namespace, package) = name.split_once('-').unwrap();
+        format!(
+            r#"{{"namespace":"{namespace}","name":"{package}","version_number":"{version}","dependencies":{}}}"#,
+            serde_json::to_string(dependencies).unwrap()
+        )
+    }
+
     #[test]
-    fn missing_dependencies_come_from_both_manifests_and_the_loader_is_its_dll() {
+    fn missing_dependencies_walk_installed_manifests_and_the_loader_is_its_dll() {
         let temporary = TemporaryDirectory::new("dependencies");
         let target = target(&temporary.0, TargetKind::Manual);
         let package = package("1.2.0", "return 1");
-        let names = |inspection: &TargetInspection| -> Vec<String> {
-            inspection
-                .missing_dependencies
-                .iter()
-                .map(|dependency| dependency.name.clone())
-                .collect()
-        };
         assert_eq!(
-            names(&inspect(&target, &package).unwrap()),
-            ["Hell2Modding-Hell2Modding", "SGG_Modding-ModUtil"]
+            missing(&inspect(&target, &package).unwrap()),
+            ["Hell2Modding-Hell2Modding", "SGG_Modding-ModUtil",]
         );
         modpack_lib(&temporary.0, "4.2.0");
-        assert_eq!(
-            names(&inspect(&target, &package).unwrap()),
-            [
-                "Hell2Modding-Hell2Modding",
-                "SGG_Modding-ModUtil",
-                "LuaENVY-ENVY"
-            ]
-        );
         write(&temporary.0.join(LOADER_FILE), "");
-        plugin(&temporary.0, "LuaENVY-ENVY", "{}");
-        fs::create_dir_all(
-            target
-                .rom
-                .join(PLUGINS_DIRECTORY)
-                .join("SGG_Modding-ModUtil"),
-        )
-        .unwrap();
-        let inspection = inspect(&target, &package).unwrap();
-        assert_eq!(names(&inspection), ["SGG_Modding-ModUtil"]);
-        assert_eq!(inspection.missing_dependencies[0].version, "4.0.1");
+        plugin(
+            &temporary.0,
+            "SGG_Modding-ModUtil",
+            &dependency(
+                "SGG_Modding-ModUtil",
+                "4.0.1",
+                &["Hell2Modding-Hell2Modding-1.0.22", "SGG_Modding-ENVY-1.1.0"],
+            ),
+        );
+        assert_eq!(
+            missing(&inspect(&target, &package).unwrap()),
+            ["SGG_Modding-ENVY", "LuaENVY-ENVY",]
+        );
+        plugin(
+            &temporary.0,
+            "SGG_Modding-ENVY",
+            &dependency("SGG_Modding-ENVY", "1.2.1", &["LuaENVY-ENVY-1.2.1"]),
+        );
+        plugin(
+            &temporary.0,
+            "LuaENVY-ENVY",
+            &dependency("LuaENVY-ENVY", "1.0.0", &[]),
+        );
+        // Presence alone: an installed version below a declared one still counts.
+        assert_eq!(
+            missing(&inspect(&target, &package).unwrap()),
+            [] as [&str; 0]
+        );
+    }
+
+    #[test]
+    fn the_dependency_walk_survives_cycles_and_skips_unsafe_names() {
+        let temporary = TemporaryDirectory::new("dependency-cycle");
+        let target = target(&temporary.0, TargetKind::Manual);
+        let package = package("1.2.0", "return 1");
+        write(&temporary.0.join(LOADER_FILE), "");
+        plugin(
+            &temporary.0,
+            "SGG_Modding-ModUtil",
+            &dependency(
+                "SGG_Modding-ModUtil",
+                "4.0.1",
+                &["SGG_Modding-DemonDaemon-1.0.1", "../..-escape-1.0.0"],
+            ),
+        );
+        plugin(
+            &temporary.0,
+            "SGG_Modding-DemonDaemon",
+            &dependency(
+                "SGG_Modding-DemonDaemon",
+                "1.0.1",
+                &["SGG_Modding-ModUtil-4.0.1", "SGG_Modding-SJSON-1.0.0"],
+            ),
+        );
+        assert_eq!(
+            missing(&inspect(&target, &package).unwrap()),
+            ["SGG_Modding-SJSON"]
+        );
     }
 
     #[test]

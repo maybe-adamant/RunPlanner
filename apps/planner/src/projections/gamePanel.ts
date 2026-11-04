@@ -207,7 +207,7 @@ function instructionSteps(
   if (inspection.missingDependencies.length > 0) {
     steps.push({
       key: 'dependencies',
-      text: `Install ${inspection.missingDependencies.map((dependency) => dependency.name).join(', ')} through r2modman or ModpackLib`,
+      text: `Install ${inspection.missingDependencies.join(', ')} in r2modman`,
       found: null,
       tone: 'warning',
       action: null,
@@ -284,10 +284,7 @@ function details(
     {
       key: 'dependencies',
       label: 'Dependencies',
-      value:
-        missing.length === 0
-          ? 'All found'
-          : `Missing: ${missing.map((dependency) => `${dependency.name} ${dependency.version}`).join(', ')}`,
+      value: missing.length === 0 ? 'All found' : `Missing: ${missing.join(', ')}`,
     },
     { key: 'r2modman', label: 'r2modman', value: r2modmanDetail(inspection) },
   ];
