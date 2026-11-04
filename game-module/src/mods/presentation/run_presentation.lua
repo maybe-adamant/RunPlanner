@@ -121,7 +121,6 @@ function presentation.snapped(snapshot)
     return "Snapped back " .. #snaps .. (#snaps == 1 and " time" or " times") .. ": " .. table.concat(rooms, ", ")
 end
 
--- The window header: a status line, an optional reason line and a tone.
 -- The short line kept for the rest of the run once a snap could not hold; the
 -- log carries the detail.
 function presentation.snapStopped(snapshot)
@@ -133,6 +132,7 @@ function presentation.snapStopped(snapshot)
         .. (#families > 0 and table.concat(families, ", ") or record.kind == "fault" and "planner error" or "see log")
 end
 
+-- The window header: a status line, an optional reason line and a tone.
 function presentation.header(snapshot, planName)
     local title = presentation.title(planName, snapshot.slot)
     local practice = type(snapshot.plan) == "table" and snapshot.plan.startState ~= nil and " - Practice" or ""
