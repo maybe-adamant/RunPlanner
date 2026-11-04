@@ -13,6 +13,7 @@ import {
   createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
   createOccurrenceAddress,
+  createPhantomExitAddress,
   createRouteAddress,
   createTargetAddress,
   type OccurrenceId,
@@ -274,6 +275,12 @@ describe('Plan end evaluation', () => {
     expect(main(createHubFountainAddress(n, 'hub'))).toBe('editable');
     expect(main(createExitDecisionAddress(n, { kind: 'hubDecision', decisionKey: 'hub' }))).toBe(
       'locked',
+    );
+
+    // The end room's hidden door belongs to its doors; a side room's stays inside.
+    expect(main(createPhantomExitAddress(n, 'surface-n-combat05' as OccurrenceId))).toBe('locked');
+    expect(main(createPhantomExitAddress(n, 'surface-n-combat05-sideDoor2' as OccurrenceId))).toBe(
+      'editable',
     );
 
     // An end at a side room ends after it: the side room entered later is past it.

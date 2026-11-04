@@ -116,6 +116,12 @@ function endedReadiness(
 ): AuthoringReadiness {
   const extent = planEndExtent(topology, end.occurrenceId);
   if (hubActionPastEnd(topology, extent, owner)) return 'locked';
+  // The end room's additional and hidden doors belong to its doors, past the end.
+  if (
+    (owner.kind === 'additionalExit' || owner.kind === 'phantomExit') &&
+    owner.occurrenceId === end.occurrenceId
+  )
+    return 'locked';
   const boundary = resolveAuthoringBoundary(prefix, owner);
   if (boundary.kind === 'exitDecision') {
     // The plan's end room generates no doors: its own exit is past the end.
