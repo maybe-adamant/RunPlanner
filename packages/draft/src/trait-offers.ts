@@ -202,6 +202,23 @@ export class DraftTraitOffers {
     return reserved.length === 0 || reserved.includes(traitKey);
   }
 
+  /**
+   * A trait whose offer needs a missing Death Defiance, which the plan cannot know the player
+   * has, sits on a drafted screen only as the selected row, and only when it is a basket trait.
+   */
+  private rowAllowed(traitKey: string, selected: boolean): boolean {
+    if (this.catalog.traits.byKey[traitKey]?.offerDependsOnDeathDefiance !== true) return true;
+    return selected && this.context.steering.basket.includes(traitKey);
+  }
+
+  private rowsAllowed(value: AuthoredTraitOffer): boolean {
+    if (value.kind !== 'traits') return true;
+    const selected = OPTION_KEYS.indexOf(value.selectedOptionKey);
+    return value.options.every((option, index) =>
+      this.rowAllowed(option.traitKey, index === selected),
+    );
+  }
+
   private accepts(command: ProjectCommand): boolean {
     try {
       applyProjectCommand(this.context.project(), this.catalog, command);
@@ -231,11 +248,15 @@ export class DraftTraitOffers {
       }
       for (const value of values) {
         const filled = value.kind === 'traits' ? this.randomFiller(trait, value) : undefined;
-        if (filled !== undefined && this.context.apply(command(filled))) {
+        if (
+          filled !== undefined &&
+          this.rowsAllowed(filled) &&
+          this.context.apply(command(filled))
+        ) {
           this.authoredOffers.set(semanticAddressKey(trait), filled);
           return true;
         }
-        if (this.context.apply(command(value))) {
+        if (this.rowsAllowed(value) && this.context.apply(command(value))) {
           if (value.kind === 'traits') this.authoredOffers.set(semanticAddressKey(trait), value);
           return true;
         }
@@ -245,8 +266,9 @@ export class DraftTraitOffers {
   }
 
   /**
-   * The unselected rows redrawn at random among supported ones. Under Denial,
-   * which bans them, they keep clear of wanted basket traits unless nothing else fits.
+   * The unselected rows redrawn at random among supported ones, never a trait whose offer needs a
+   * missing Death Defiance. Under Denial, which bans them, they keep clear of wanted basket traits
+   * unless nothing else fits.
    */
   private randomFiller(
     trait: TraitOfferAddress,
@@ -268,12 +290,10 @@ export class DraftTraitOffers {
       const offered = new Set(current.options.map((option) => option.traitKey));
       const pool = this.context
         .shuffle(giver.traitKeys)
-        .filter((key) => !offered.has(key) && !avoided.has(key));
+        .filter((key) => !offered.has(key) && !avoided.has(key) && this.rowAllowed(key, false));
       // A row already clear of the reserve is redrawn only from a few draws.
-      for (const traitKey of pool.slice(
-        0,
-        avoided.has(row.traitKey) ? pool.length : FILLER_DRAWS,
-      )) {
+      const replaced = avoided.has(row.traitKey) || !this.rowAllowed(row.traitKey, false);
+      for (const traitKey of pool.slice(0, replaced ? pool.length : FILLER_DRAWS)) {
         const declaration = this.catalog.traits.byKey[traitKey];
         const rarities =
           declaration?.rarityDomain.kind === 'ranked'
@@ -330,12 +350,15 @@ export class DraftTraitOffers {
         ...(hexTree === undefined ? {} : { hexTree }),
       } as AuthoredTraitOfferTraits;
     };
-    const legal = (candidate: AuthoredTraitOfferTraits) =>
-      this.basketAllows(
-        candidate.options[OPTION_KEYS.indexOf(candidate.selectedOptionKey)]?.traitKey,
-      ) &&
-      this.offerSupported(trait, candidate) &&
-      this.monotonicSelection(trait, candidate);
+    const legal = (candidate: AuthoredTraitOfferTraits) => {
+      const selected = candidate.options[OPTION_KEYS.indexOf(candidate.selectedOptionKey)];
+      return (
+        this.basketAllows(selected?.traitKey) &&
+        this.rowAllowed(selected!.traitKey, true) &&
+        this.offerSupported(trait, candidate) &&
+        this.monotonicSelection(trait, candidate)
+      );
+    };
     const indexes = [...draft.options.keys()];
     const giverTraits = this.catalog.traitGivers.byKey[draft.giverKey]?.traitKeys ?? [];
     const steering = this.context.steering;
@@ -394,7 +417,9 @@ export class DraftTraitOffers {
     // Every offered row waits in a queue or is banned, so another of the giver's traits takes a row.
     const substitutes = this.context
       .shuffle(giverTraits)
-      .filter((key) => !wantedNow.includes(key) && this.basketAllows(key))
+      .filter(
+        (key) => !wantedNow.includes(key) && this.basketAllows(key) && this.rowAllowed(key, true),
+      )
       .slice(0, SUBSTITUTE_DRAWS);
     for (const traitKey of substitutes) {
       const declaration = this.catalog.traits.byKey[traitKey];

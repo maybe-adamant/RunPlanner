@@ -18,7 +18,10 @@ decision from an engine domain or candidate query through edit settlement,
 including every selected-trait child; it never computes game legality. Its own
 rules are draft policy, not legality: monotonic acquisition, the god pool,
 draft-illegal traits (the Ransoms and the replaying Echo choices), the per-slot
-basket claim, the basket's exclusive sets and the planner caps.
+basket claim, the basket's exclusive sets and the planner caps. A trait whose
+offer needs a missing Death Defiance, which no plan can know the player has
+(the catalog's Death Defiance offer dependence), appears on a drafted trait
+screen only as the selected row of a basket trait, never as another row.
 
 The contract is best effort with no compromise on validity: a drafted project
 always has zero findings, and the report lists each basket trait, story and

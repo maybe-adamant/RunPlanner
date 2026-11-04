@@ -97,6 +97,26 @@ function echoSelections(value: unknown): string[] {
   return [...own, ...Object.values(record).flatMap(echoSelections)];
 }
 
+/** Every authored trait screen's rows, each with whether it is the selected row. */
+function traitScreenRows(value: unknown): { traitKey: string; selected: boolean }[] {
+  if (Array.isArray(value)) return value.flatMap(traitScreenRows);
+  if (typeof value !== 'object' || value === null) return [];
+  const record = value as Record<string, unknown>;
+  const options = record.options as readonly { readonly traitKey: string }[] | undefined;
+  const selected = /^option(\d)$/.exec(String(record.selectedOptionKey))?.[1];
+  const own =
+    typeof record.giverKey === 'string' && Array.isArray(options) && selected !== undefined
+      ? options.map((option, index) => ({
+          traitKey: option.traitKey,
+          selected: index === Number(selected) - 1,
+        }))
+      : [];
+  return [...own, ...Object.values(record).flatMap(traitScreenRows)];
+}
+
+const deathDefianceDependent = (traitKey: string) =>
+  catalog.traits.byKey[traitKey]?.offerDependsOnDeathDefiance === true;
+
 describe('draftProject', () => {
   it('drafts a zero-finding Surface route that meets its story, field and rack targets', () => {
     const { base, spec } = surface;
@@ -140,6 +160,32 @@ describe('draftProject', () => {
       weaponKey: spec.loadout.weaponKey,
       startingKeepsakeKey: spec.loadout.startingKeepsakeKey,
     });
+  });
+
+  it('never fills a trait screen with a row whose offer needs a missing Death Defiance', () => {
+    // Unruled, this seed selects Echo's Death Defiance refill and offers Hades' Death Defiance boon.
+    const result = draftProject(catalog, underworld.base, underworld.spec, 1);
+    if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+    const rows = traitScreenRows(result.project);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.filter((row) => deathDefianceDependent(row.traitKey))).toEqual([]);
+  });
+
+  it('still takes a basket trait whose offer needs a missing Death Defiance', () => {
+    const spec: DraftSpec = {
+      ...surface.spec,
+      basketByGiver: draftBasket(['HeraCastBoon', 'DeathDefianceRefillBoon']),
+    };
+    const result = draftProject(catalog, planned('Surface', 3), spec, 1);
+    if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+    expect(result.report.targets).toContainEqual({
+      kind: 'basketTrait',
+      key: 'DeathDefianceRefillBoon',
+      met: true,
+    });
+    expect(
+      traitScreenRows(result.project).filter((row) => deathDefianceDependent(row.traitKey)),
+    ).toEqual([{ traitKey: 'DeathDefianceRefillBoon', selected: true }]);
   });
 
   it('takes the basket Attack and keeps every other Attack out of the run', () => {
