@@ -180,10 +180,10 @@ describe('run import of Fields cages', () => {
     // The window lost two Magick and a Gold beyond the MiniBoss door's boon: the replacement
     // the room's uses name takes one Magick, the untaken cages the rest.
     const converted = projectFromRunRecord(catalog, fieldsArtificer());
-    // The last room's cage roll has no next save to accept it.
-    expect(converted.kind === 'stopped' && converted.stop).toMatchObject({
-      code: 'batchStateMissing',
-      record: { roomIndex: FIELDS + 1 },
+    // The run was abandoned in the next room, so the plan ends after the Fields room.
+    expect(converted).toMatchObject({
+      kind: 'complete',
+      report: { end: { cause: 'abandoned', record: { roomIndex: FIELDS } } },
     });
     const fields = occurrence(converted.project, 'H-r26');
     expect(

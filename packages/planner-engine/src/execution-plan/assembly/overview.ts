@@ -22,7 +22,7 @@ import {
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import { resolvedEncounterPhaseForDefinition } from '../../simulation/encounters/resolve';
-import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
+import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
 import {
   forGeneration,
   type CanonicalAuthoredRoom,
@@ -127,7 +127,7 @@ export interface ExecutionShopInventoryRow {
  */
 export function shopInventoryRows(
   room: CanonicalAuthoredRoom,
-  biome: CompleteValidBiomeProjectEvaluation,
+  biome: PublishedBiomeEvaluation,
 ): readonly ExecutionShopInventoryRow[] {
   const entry = room.entryState;
   if (entry === undefined)
@@ -170,7 +170,7 @@ export function shopInventoryRows(
 
 export function travelDealRefill(
   room: CanonicalAuthoredRoom,
-  biome: CompleteValidBiomeProjectEvaluation,
+  biome: PublishedBiomeEvaluation,
 ):
   | {
       readonly owner: string;
@@ -301,7 +301,7 @@ export function zagreusContractPresent(batch: CanonicalBatch | undefined): boole
 
 function executionShop(
   room: CanonicalAuthoredRoom,
-  biome: CompleteValidBiomeProjectEvaluation,
+  biome: PublishedBiomeEvaluation,
   transactions: readonly ExecutionTimelineTransaction[],
 ): ExecutionOverview['shop'] | undefined {
   if (room.entryState === undefined) return undefined;
@@ -350,7 +350,7 @@ function executionShop(
 /** The entered Preboss's pedestal item, published only where the walk spawned it. */
 function executionInfernalContractPedestal(
   room: CanonicalAuthoredRoom,
-  biome: CompleteValidBiomeProjectEvaluation,
+  biome: PublishedBiomeEvaluation,
   transactions: readonly ExecutionTimelineTransaction[],
 ): ExecutionInfernalContract | undefined {
   const pedestal = room.infernalContractPedestal;
@@ -444,7 +444,7 @@ function executionRewardWheels(
  */
 export function hermesShrineTravelDealRefill(
   room: CanonicalAuthoredRoom,
-  biome: CompleteValidBiomeProjectEvaluation,
+  biome: PublishedBiomeEvaluation,
 ):
   | {
       readonly owner: string;
@@ -530,7 +530,7 @@ function shrinePurchase(
 
 function executionHermesShrine(
   room: CanonicalAuthoredRoom,
-  biome: CompleteValidBiomeProjectEvaluation,
+  biome: PublishedBiomeEvaluation,
 ): ExecutionOverview['hermesShrine'] | undefined {
   const shrine = room.hermesShrine;
   if (shrine === undefined) return undefined;
@@ -941,7 +941,7 @@ function executionExcludedEnemies(
 /** The settled phantom exit with the reward its reached state drew. */
 function executionPhantomExit(
   room: CanonicalAuthoredRoom,
-  biome: CompleteValidBiomeProjectEvaluation,
+  biome: PublishedBiomeEvaluation,
 ): ExecutionPhantomExit | undefined {
   if (room.phantomExit === undefined) return undefined;
   const ownerKey = semanticAddressKey(room.phantomExit.origin);
@@ -971,7 +971,7 @@ function executionPhantomExit(
 export function assembleExecutionOverview(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
-  biome: CompleteValidBiomeProjectEvaluation,
+  biome: PublishedBiomeEvaluation,
   batch: CanonicalBatch | undefined,
   transactions: readonly ExecutionTimelineTransaction[],
   nativeExclusions: ReadonlyMap<string, readonly string[]>,

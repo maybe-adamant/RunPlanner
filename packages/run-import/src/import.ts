@@ -1,5 +1,7 @@
 import {
   assessPublicDreamItinerary,
+  createBiomeAddress,
+  createOccurrenceAddress,
   createProjectDocument,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -13,6 +15,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   type ProjectCandidateSession,
   findingsAddedSince,
+  planEndAvailability,
   type ProjectEvaluationAssembly,
   simulateProjectAssembly,
   type SemanticFinding,
@@ -24,6 +27,7 @@ import { answerByAcceptance } from './open-questions';
 import { occurrenceIdOf, RecordOccurrences } from './occurrences';
 import type {
   RunImportArea,
+  RunImportEnd,
   RunImportReason,
   RunImportReport,
   RunImportReportEntry,
@@ -168,6 +172,7 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
     project: ProjectDocument,
     stop: RunImportStop | undefined,
     rooms: readonly RunImportRoomAcceptance[],
+    end?: RunImportEnd,
   ): RunImport => {
     if (stop !== undefined)
       entries.push({
@@ -178,6 +183,7 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
       });
     const report = Object.freeze({
       entries: Object.freeze(entries.map((entry) => Object.freeze(entry))),
+      ...(end === undefined ? {} : { end: Object.freeze(end) }),
       rooms: Object.freeze(rooms.map((room) => Object.freeze(room))),
     });
     return Object.freeze(
@@ -216,8 +222,17 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
     ...unsupportedScreenRerolls(catalog, record),
     ...unsupportedChallengeSwitches(record),
   );
-  const answered = walk.run();
-  walk.reportUnusedScreens(answered);
+  const walked = walk.run();
+  walk.reportUnusedScreens(walked);
+  // A run that died or was abandoned in its last room never settled that room,
+  // so a question there or past it is no stop: the plan ends before the room.
+  const lastRoom = record.outcome.kind === 'victory' ? undefined : record.rooms.length - 1;
+  const answered =
+    walked !== undefined &&
+    lastRoom !== undefined &&
+    (walked.record?.roomIndex ?? record.rooms.length) >= lastRoom
+      ? undefined
+      : walked;
   walk.reportUnreachedRerolls();
   entries.push(...unansweredMaxHealthRolls(walk.context));
   // A stop past the record's rooms leaves every room judged where the plan reached it.
@@ -236,7 +251,30 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
       compareEntrySaves(catalog, record, walk.occurrences, walk.assembly, throughRoom),
     ),
   );
-  return finish(walk.assembly.project, stop, walk.finalAcceptance(throughRoom));
+  // Every room is judged on the plan the walk built. A death or abandonment,
+  // or an entry mismatch, then ends the plan after its last settled room
+  // before it; a question the walk could not settle leaves the plan open there.
+  const rooms = walk.finalAcceptance(throughRoom);
+  const cause =
+    mismatched !== undefined
+      ? ('entryMismatch' as const)
+      : answered !== undefined || record.outcome.kind === 'victory'
+        ? undefined
+        : record.outcome.kind;
+  const endRoom =
+    cause === undefined
+      ? undefined
+      : walk.endPlanBefore(
+          mismatched !== undefined ? mismatched.roomIndex : record.rooms.length - 1,
+        );
+  return finish(
+    walk.assembly.project,
+    stop,
+    rooms,
+    cause === undefined || endRoom === undefined
+      ? undefined
+      : { cause, record: { roomIndex: endRoom, visit: 0 } },
+  );
 }
 
 type JudgedRoom = Extract<RunImportRoomAcceptance, { readonly introduced: unknown }>;
@@ -554,6 +592,30 @@ export class RunImportWalk {
     this.entries.length = mark;
     this.entries.push(...kept);
     return false;
+  }
+
+  /**
+   * Ends the plan after the latest record room before `before` the engine can
+   * end it at: settled, valid and on the path. Returns that room, if any.
+   */
+  endPlanBefore(before: number): number | undefined {
+    const route = createRouteAddress(this.assembly.project.route.routeKey);
+    for (let roomIndex = before - 1; roomIndex >= this.occurrences.prologue; roomIndex -= 1) {
+      const room = createOccurrenceAddress(
+        createBiomeAddress(route.routeKey, this.occurrences.biomeOfRoom[roomIndex]!),
+        this.occurrences.occurrenceOf(roomIndex),
+      );
+      if (!planEndAvailability(this.catalog, this.assembly, room).available) continue;
+      if (
+        this.apply({
+          kind: 'ReplacePlanEnd',
+          route,
+          planEnd: { biomeKey: room.biomeKey, occurrenceId: room.occurrenceId },
+        })
+      )
+        return roomIndex;
+    }
+    return undefined;
   }
 
   /** Settles one command; false when it is refused or changes nothing. A settlement fault is reported and the command kept. */

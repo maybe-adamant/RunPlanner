@@ -36,12 +36,16 @@ export function hubOverview(
   departures: readonly HubDepartureRunState[],
 ): ExecutionOverview['hub'] | undefined {
   if (hub === undefined) return undefined;
+  // A plan that ends inside the Hub stay has no handoff and leaves after no last visit.
   const final = hubExit?.targets[0]?.room;
-  if (hubExit?.targets.length !== 1 || final === undefined)
+  if (hubExit !== undefined && (hubExit.targets.length !== 1 || final === undefined))
     throw new CompilerError(
       'executionCoverageMissing',
       `${hub.room.gameName} lacks its final handoff`,
     );
+  const fountain = hub.fountain === undefined ? undefined : hubFountainUse(hub);
+  if (final !== undefined && fountain === undefined)
+    throw new CompilerError('executionCoverageMissing', `${hub.room.gameName} lacks fountain use`);
   const rerolls = executionHubRerolls(hub);
   return Object.freeze({
     room: Object.freeze({ gameName: hub.room.gameName }),
@@ -61,11 +65,11 @@ export function hubOverview(
         });
       }),
     ),
-    finalHandoff: reference(final),
+    ...(final === undefined ? {} : { finalHandoff: reference(final) }),
     // A complete canonical Hub holds exactly its declaration's required visits.
     requiredVisitCount: hub.visits.length,
-    fountain: hubFountainUse(hub),
-    departures: hubDepartures(catalog, hub, departures),
+    ...(fountain === undefined ? {} : { fountain }),
+    departures: hubDepartures(catalog, hub, departures, final !== undefined),
     ...(rerolls === undefined ? {} : { rerolls }),
   });
 }
@@ -74,12 +78,13 @@ function hubDepartures(
   catalog: Catalog,
   hub: CanonicalHubDecision,
   departures: readonly HubDepartureRunState[],
+  handedOff: boolean,
 ): readonly ExecutionHubDepartureConformance[] {
   const owned = departures.filter(
     (departure) => semanticAddressKey(departure.hub) === semanticAddressKey(hub.origin),
   );
   if (
-    owned.length !== hub.visits.length + 1 ||
+    owned.length !== hub.visits.length + (handedOff ? 1 : 0) ||
     owned.some((departure, index) => departure.precedingVisitCount !== index)
   )
     throw new CompilerError(

@@ -241,13 +241,13 @@ function hubRerolls(value: unknown, slotKeys: ReadonlySet<string>, label: string
 
 function hubDepartures(
   value: unknown,
-  requiredVisitCount: number,
+  departureCount: number,
   label: string,
 ): readonly ExecutionHubDepartureConformance[] {
   const departures = array(value, label).map((entry, index) =>
     hubDepartureConformance(entry, `${label}[${index}]`),
   );
-  if (departures.length !== requiredVisitCount + 1)
+  if (departures.length !== departureCount)
     fail(`${label} must publish one entry per Hub departure`);
   departures.forEach((departure, index) => {
     if (departure.precedingVisitCount !== index)
@@ -796,8 +796,8 @@ export function overview(value: unknown, label: string) {
   if (hub !== undefined)
     exact(
       hub,
-      ['room', 'slots', 'finalHandoff', 'requiredVisitCount', 'fountain', 'departures'],
-      ['rerolls'],
+      ['room', 'slots', 'requiredVisitCount', 'departures'],
+      ['finalHandoff', 'fountain', 'rerolls'],
       `${label}.hub`,
     );
   const parsedHub =
@@ -840,12 +840,26 @@ export function overview(value: unknown, label: string) {
               gameName: stringValue(room.gameName, `${label}.hub.room.gameName`),
             }),
             slots,
-            finalHandoff: roomReference(hub.finalHandoff, `${label}.hub.finalHandoff`),
+            // Without a final handoff the plan ends inside the stay: the fountain
+            // may not be reached and the last visit has no departure.
+            ...(hub.finalHandoff === undefined
+              ? {}
+              : { finalHandoff: roomReference(hub.finalHandoff, `${label}.hub.finalHandoff`) }),
             requiredVisitCount,
-            fountain: hubFountainUse(hub.fountain, requiredVisitCount, `${label}.hub.fountain`),
+            ...(hub.fountain === undefined
+              ? hub.finalHandoff === undefined
+                ? {}
+                : fail(`${label}.hub.fountain is required with a final handoff`)
+              : {
+                  fountain: hubFountainUse(
+                    hub.fountain,
+                    requiredVisitCount,
+                    `${label}.hub.fountain`,
+                  ),
+                }),
             departures: hubDepartures(
               hub.departures,
-              requiredVisitCount,
+              requiredVisitCount + (hub.finalHandoff === undefined ? 0 : 1),
               `${label}.hub.departures`,
             ),
             ...(hub.rerolls === undefined

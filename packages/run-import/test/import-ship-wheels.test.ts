@@ -39,8 +39,12 @@ describe('run import of unpicked ship-wheel offers the saved stores cannot settl
       outcome: { kind: 'abandoned', endingRoom: last.name },
       rooms: [...rooms.slice(0, 25), last],
     });
-    // Its picked Spell asks a screen no save judges, so the plan stops in the ship itself.
-    expect(imported).toMatchObject({ kind: 'stopped', stop: { record: { roomIndex: 25 } } });
+    // Its picked Spell asks a screen no save judges; the run was abandoned there, so the plan
+    // ends before the ship and its offers are still reported.
+    expect(imported).toMatchObject({
+      kind: 'complete',
+      report: { end: { cause: 'abandoned', record: { roomIndex: 24 } } },
+    });
     expect(wheelLines(imported)).toEqual([
       'notInRecord wheel r25 rewardWheelOffer@O-r25 -> ReplaceRewardWheelOffer(O-r25 GiftDrop)',
       'notInRecord wheel r25 rewardWheelOffer@O-r25 -> ReplaceRewardWheelOffer(O-r25 MaxHealthDrop)',

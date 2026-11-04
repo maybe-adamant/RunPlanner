@@ -23,7 +23,6 @@ import {
   mismatchLines,
   enteredRooms,
   generatedCustomizations,
-  expectReachesLastRoom,
 } from './support/run-import';
 
 /** The reward types an occurrence's Artificer replacements hold. */
@@ -56,13 +55,16 @@ describe('run import of the Surface capture', () => {
     });
   });
 
-  it('enters every recorded room, Hub returns included, and stops at the unseen Postboss Shrine', () => {
-    // The run ended in O_Boss02; no save shows the Postboss Shrine's stock, so the plan stops there.
-    expectReachesLastRoom(imported);
-    expect(enteredRooms(imported.project, 'incomplete')).toEqual([
-      ...record.rooms.map((room) => room.name),
-      'O_PostBoss01',
-    ]);
+  it('enters every recorded room, Hub returns included, and ends before the fatal O_Boss02', () => {
+    // The run died in O_Boss02, so the plan ends after its Preboss and its later
+    // questions, such as the Postboss Shrine's unseen stock, are past the plan's end.
+    expect(imported).toMatchObject({
+      kind: 'complete',
+      report: { end: { cause: 'death', record: { roomIndex: record.rooms.length - 2 } } },
+    });
+    expect(enteredRooms(imported.project)).toEqual(
+      record.rooms.slice(0, -1).map((room) => room.name),
+    );
   });
 
   it('imports the Hub board, its visit order and the fountain use', () => {
@@ -355,7 +357,6 @@ describe('run import of the Surface capture', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { menace: 14, roomActionOrder: 5 },
       notInRecord: { menace: 17 },
-      stopped: { shop: 1 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption menace r1 encounterPhase@N-r1:Encounter -> ReplaceEncounterCustomization(N-r1 generated)',

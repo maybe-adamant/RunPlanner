@@ -332,6 +332,7 @@ function completionChainPrefix(
   decisions: readonly CanonicalDecision[],
   chainStart: CanonicalAuthoredRoom,
   links: readonly CanonicalFixedRoomLink[],
+  end: OccurrenceId | undefined,
 ): MaterializedBiomePrefix {
   const last = links.at(-1)?.target ?? chainStart;
   const terminal =
@@ -350,6 +351,10 @@ function completionChainPrefix(
       undefined,
       Object.freeze({ kind: 'occurrence', occurrenceId: last.occurrenceId }),
       roomReference(last),
+      undefined,
+      undefined,
+      undefined,
+      last.occurrenceId === end,
     ),
     fixedRoomLinks,
   );
@@ -394,6 +399,7 @@ function decisionFrontier(
   partial?: CanonicalBatch,
   hubContinuation?: MaterializedHubContinuationFrontier,
   additional: readonly CanonicalAdditionalContinuation[] = Object.freeze([]),
+  planEnd = false,
 ): MaterializedExitDecisionFrontier {
   const address = sourceAddress(source);
   const pickedExitKey = decision === undefined ? null : selectedExitKey(decision);
@@ -410,6 +416,7 @@ function decisionFrontier(
     selectedExitKey: pickedExitKey ?? null,
     selectedOrigin: createExitSelectionAddress(biome, address),
     ...(hubContinuation === undefined ? {} : { hubContinuation }),
+    ...(planEnd ? { planEnd: true as const } : {}),
   });
 }
 
@@ -525,6 +532,8 @@ export function materializeBiomePrefix(
   routePosition: ResolvedRoutePosition,
   plan: AuthoredBiomePlan,
   loadout: BiomeMaterializationLoadout,
+  /** The plan's end room, whose outgoing structure the plan already leaves out. */
+  end?: OccurrenceId,
 ): MaterializedBiomePrefix | null {
   loadout = requireLoadout(loadout);
   const layout = requireLayout(catalog, biome, routePosition);
@@ -681,6 +690,7 @@ export function materializeBiomePrefix(
           decisions,
           selected.target.room,
           chain,
+          end,
         );
       }
       const fixed = fixedRoomSuccessor(
@@ -712,6 +722,7 @@ export function materializeBiomePrefix(
           decisions,
           chainStart,
           Object.freeze([...fixedRoomLinks]),
+          end,
         );
       }
       return prefix(
@@ -719,7 +730,16 @@ export function materializeBiomePrefix(
         biomeState,
         entryRoom,
         decisions,
-        decisionFrontier(biome, undefined, source, roomReference(current)),
+        decisionFrontier(
+          biome,
+          undefined,
+          source,
+          roomReference(current),
+          undefined,
+          undefined,
+          undefined,
+          current.occurrenceId === end,
+        ),
       );
     }
     if (!isCompleteBatch(catalog, layout, topology, occurrences, decision)) {

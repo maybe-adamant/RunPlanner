@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -385,9 +386,23 @@ describe('run import of Rarify clicks and rows a held rarify source logged one r
   it("reads a room's spent charges from the plan each walk holds, not an earlier import of its record", () => {
     const record = heirloomRoom('Rare', 5);
     const imported = projectFromRunRecord(catalog, record);
+    // The imported plan ends before room 7's next room; reading room 7 needs it entered.
+    expect(imported.report.end).toBeDefined();
     const spends = (project: ProjectDocument) =>
       recordedRarifySpends(
-        new RunImportWalk(catalog, record, simulateProjectAssembly(catalog, project), []).context,
+        new RunImportWalk(
+          catalog,
+          record,
+          simulateProjectAssembly(
+            catalog,
+            applyProjectCommand(project, catalog, {
+              kind: 'ReplacePlanEnd',
+              route: createRouteAddress(project.route.routeKey),
+              planEnd: null,
+            }),
+          ),
+          [],
+        ).context,
         7,
       );
     // With the Phial held instead, the Heirloom advances no charges: the Card's rise is no spend.

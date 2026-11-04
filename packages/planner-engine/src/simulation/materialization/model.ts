@@ -608,6 +608,11 @@ export interface MaterializedExitDecisionFrontier {
    * closed N progression fact, not a generic resume or host capability.
    */
   readonly hubContinuation?: MaterializedHubContinuationFrontier;
+  /**
+   * The parent is the plan's end room: it settles and exits with no doors
+   * generated and no departure, since the plan does not go on.
+   */
+  readonly planEnd?: true;
 }
 
 export type MaterializedHubContinuationFrontier =

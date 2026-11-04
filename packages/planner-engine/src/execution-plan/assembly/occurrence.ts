@@ -1,6 +1,6 @@
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
 import type { Catalog } from '../../catalog-schema';
-import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
+import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type { RunStateSnapshot } from '../../simulation/rewards/run-state';
 import { executionRoomOwnerKey } from './support';
 import { assembleExecutionOverview, executionReward } from './overview';
@@ -31,7 +31,7 @@ export function executionOccurrence(
   fixedTargets: ReadonlyMap<string, CanonicalAuthoredRoom>,
   crossBiomeTarget: CanonicalAuthoredRoom | undefined,
   crossBiomeSourceId: string | undefined,
-  biome: CompleteValidBiomeProjectEvaluation,
+  biome: PublishedBiomeEvaluation,
   transactions: ReturnType<typeof executionTimelineTransactions>,
   timelineFacts: PlannerTimelineFacts,
   roomExitConformance: ExecutionRoomExitConformance | undefined,

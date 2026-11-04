@@ -65,6 +65,9 @@ export function startInstallationAt(
   const index = itineraryBiomeKeys.indexOf(startPoint.biomeKey);
   if (index < 0) return unavailable({ kind: 'notOnItinerary' });
   if (startPoint.kind === 'opening' && index === 0) return unavailable({ kind: 'routeStart' });
+  const planEnd = project.route.planEnd;
+  if (planEnd !== undefined && index > itineraryBiomeKeys.indexOf(planEnd.biomeKey))
+    return unavailable({ kind: 'afterPlanEnd' });
   const biomeFor = (biomeKey: string) =>
     evaluation.route.biomes.find((biome) => biome.biomeKey === biomeKey);
   const start = biomeFor(startPoint.biomeKey);
@@ -99,7 +102,9 @@ export function startInstallationAt(
   const rewards = start !== undefined && 'rewards' in start ? start.rewards : undefined;
   const capture = rewards?.midBiomeStartStates?.[startPoint.kind];
   const sequence = capture?.state.reached.historyView.sequence;
-  if (capture === undefined || sequence === undefined) return unavailable({ kind: 'notReached' });
+  // A biome the plan ends in never prepares a Preboss or Boss past its end.
+  if (capture === undefined || sequence === undefined)
+    return unavailable({ kind: start?.authoring === 'ended' ? 'afterPlanEnd' : 'notReached' });
   return projectStartInstallation(catalog, {
     startPoint,
     startOccurrence: capture.owner,

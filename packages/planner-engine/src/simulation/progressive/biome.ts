@@ -99,6 +99,8 @@ export interface ProgressiveBiomeContext {
   readonly resourcePlacements: ResourcePlacements;
   readonly resourceFindings?: readonly import('../model').SemanticFinding[];
   readonly seed?: ProgressiveSeed;
+  /** A mid-biome plan end: that room exits with no doors and nothing follows it. */
+  readonly planEnd?: import('../../authored-project/model').OccurrenceId;
 }
 
 export function figLeafLifecycleState(
@@ -408,6 +410,7 @@ export function evaluateSelectedProgressiveBiomeAssembly(
     context.routePosition,
     plan,
     context.loadout,
+    context.planEnd,
   );
   if (initial?.entryRoom === undefined) return null;
   const materializedPrefix = Object.freeze({
@@ -478,6 +481,7 @@ export function evaluateProgressiveBiomeAssembly(
     context.routePosition,
     plan,
     context.loadout,
+    context.planEnd,
   );
   if (initial?.entryRoom === undefined) return null;
   const authoredPrefix = Object.freeze({
@@ -532,6 +536,7 @@ export function evaluateProgressiveBiomeAssemblyFromSelectedProducts(
     context.routePosition,
     plan,
     context.loadout,
+    context.planEnd,
   );
   if (initial?.entryRoom === undefined) return null;
   const authoredPrefix = Object.freeze({

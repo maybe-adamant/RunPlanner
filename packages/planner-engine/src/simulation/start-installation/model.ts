@@ -39,7 +39,9 @@ export type StartInstallationUnavailableReason =
   /** The first biome's Opening is a normal run. */
   | { readonly kind: 'routeStart' }
   /** Evaluation did not reach the start state: a blocked or unauthored predecessor. */
-  | { readonly kind: 'notReached' };
+  | { readonly kind: 'notReached' }
+  /** The plan ends before the start point. */
+  | { readonly kind: 'afterPlanEnd' };
 
 export type StartInstallationResult =
   | { readonly availability: 'available'; readonly installation: StartInstallation }

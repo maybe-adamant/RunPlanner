@@ -144,8 +144,11 @@ export function validateExecutionGraph(
         assertRoomReference(slot.room, `${entry.id} Hub slot`);
         result.add(slot.room.id);
       }
-      assertRoomReference(entry.overview.hub.finalHandoff, `${entry.id} Hub final handoff`);
-      result.add(entry.overview.hub.finalHandoff.id);
+      const finalHandoff = entry.overview.hub.finalHandoff;
+      if (finalHandoff !== undefined) {
+        assertRoomReference(finalHandoff, `${entry.id} Hub final handoff`);
+        result.add(finalHandoff.id);
+      }
     }
     for (const slot of entry.overview.localSlots ?? []) {
       if (slot.room !== undefined) {
@@ -182,7 +185,9 @@ export function validateExecutionGraph(
         ? []
         : [
             ...entry.overview.hub.slots.map((slot) => slot.room.id),
-            entry.overview.hub.finalHandoff.id,
+            ...(entry.overview.hub.finalHandoff === undefined
+              ? []
+              : [entry.overview.hub.finalHandoff.id]),
           ],
     ),
   );

@@ -20,7 +20,7 @@ import { acquisitionSiteStorageKey } from '../../authored-project/acquisition/ar
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../authored-project/shop';
 import type { AnvilResultsByAcquisitionRole } from '../../authored-project/model';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
-import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
+import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type { RewardEvent } from '../../simulation/rewards/model';
 import type { PlannerTimelineFacts } from '../../simulation/timeline-facts';
 import {
@@ -98,7 +98,7 @@ function sourceAnvilResults(
 
 export function executionTimelineTransactions(
   room: CanonicalAuthoredRoom,
-  biome: CompleteValidBiomeProjectEvaluation,
+  biome: PublishedBiomeEvaluation,
   timelineFacts: PlannerTimelineFacts,
 ): readonly ExecutionTimelineTransaction[] {
   if (!room.entered) return Object.freeze([]);

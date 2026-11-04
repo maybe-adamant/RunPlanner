@@ -420,6 +420,7 @@ function appendHubDecision(
 
 interface ClockworkAwareLifecycleOptions {
   readonly outgoing?: (writer: HistorySegmentWriter) => void;
+  readonly planEnd?: boolean;
   readonly stopAfterOutgoing?: boolean;
   readonly continueThroughAcquisitionPoint?: string;
   readonly continueThroughPostOutgoingActions?: boolean;
@@ -473,6 +474,7 @@ function appendClockworkAwareRoomLifecycle(
   };
   appendCanonicalRoomLifecycle(writer, catalog, room, fail, {
     ...(options.outgoing === undefined ? {} : { outgoing: options.outgoing }),
+    ...(options.planEnd === true ? { planEnd: true } : {}),
     ...(options.stopAfterOutgoing === undefined
       ? {}
       : { stopAfterOutgoing: options.stopAfterOutgoing }),
@@ -778,10 +780,14 @@ function composeBiomeHistoryPrefixResult(
           fail,
         );
         appendStandaloneRoomCreated(writer, end, 'layoutCompletion');
-        appendClockworkAwareRoomLifecycle(writer, catalog, end, {
-          stopAfterOutgoing: true,
-          ...postOutgoingAcquisitionOption(catalog, end),
-        });
+        appendClockworkAwareRoomLifecycle(
+          writer,
+          catalog,
+          end,
+          frontier.planEnd === true
+            ? { planEnd: true }
+            : { stopAfterOutgoing: true, ...postOutgoingAcquisitionOption(catalog, end) },
+        );
         return;
       }
       if (frontier === undefined && snapshot.fixedRoomLinks !== undefined) {
@@ -833,6 +839,15 @@ function composeBiomeHistoryPrefixResult(
                   origin: current.origin,
                 });
               },
+            });
+          } else if (frontier.planEnd === true) {
+            appendClockworkAwareRoomLifecycle(writer, catalog, current, {
+              afterEvent(afterWriter, event) {
+                if (event.kind === 'roomEntered') {
+                  appendAdditionalContinuations(afterWriter, current, frontier.additional);
+                }
+              },
+              planEnd: true,
             });
           } else {
             appendClockworkAwareRoomLifecycle(writer, catalog, current, {

@@ -80,9 +80,9 @@ export interface CompleteBlockedBiomeProjectEvaluation extends CompleteBiomeProj
 
 /**
  * A biome the plan ends in before its completion: authored and valid through
- * the end room's Timeline. Its assessed prefix stops at that room, which
- * generates no doors; later authored structure is retained but dormant. It
- * publishes no canonical snapshot and seeds no later biome.
+ * the end room, which settles and exits but generates no doors and departs
+ * nowhere. Later authored structure is retained but dormant. Its snapshot is
+ * the selected structure through the end room; it seeds no later biome.
  */
 export interface EndedBiomeProjectEvaluation extends BiomeEvaluationBase {
   readonly authoring: 'ended';
@@ -90,6 +90,7 @@ export interface EndedBiomeProjectEvaluation extends BiomeEvaluationBase {
   readonly roomGeneration: BiomeGenerationValidation;
   readonly rewards: BiomeRewardSimulation;
   readonly planEnd: OccurrenceAddress;
+  readonly snapshot: CanonicalBiome;
   readonly coverage: PrefixBiomeEvaluationCoverage;
   readonly materializedPrefix: MaterializedBiomePrefix;
   readonly assessmentPrefix?: MaterializedBiomePrefix;
@@ -98,6 +99,10 @@ export interface EndedBiomeProjectEvaluation extends BiomeEvaluationBase {
 
 export type CompleteBiomeProjectEvaluation =
   CompleteValidBiomeProjectEvaluation | CompleteBlockedBiomeProjectEvaluation;
+
+/** A biome whose selected structure publishes: complete and valid, or valid through the plan end. */
+export type PublishedBiomeEvaluation =
+  CompleteValidBiomeProjectEvaluation | EndedBiomeProjectEvaluation;
 
 export type ProjectBiomeEvaluation =
   IncompleteBiomeProjectEvaluation | CompleteBiomeProjectEvaluation | EndedBiomeProjectEvaluation;
@@ -233,6 +238,8 @@ export function summarizeRoute(
   configuredBiomeCount: number,
   evaluations: readonly ProjectBiomeEvaluation[],
   processing: RouteProcessingRegions,
+  /** The plan end is reached validly: the route publishes through it. */
+  endedValid = false,
 ): RouteEvaluationSummary {
   const incompleteBiomeCount = evaluations.filter(
     (evaluation) => evaluation.authoring === 'incomplete' || evaluation.requiredInput !== undefined,
@@ -248,6 +255,7 @@ export function summarizeRoute(
     invalidBiomeCount,
     blockedBiomeCount: processing.blockedSuffix.length,
     eligibleForExecutionPlan:
-      configuredBiomeCount > 0 && processing.completeValidPrefix.length === configuredBiomeCount,
+      configuredBiomeCount > 0 &&
+      (endedValid || processing.completeValidPrefix.length === configuredBiomeCount),
   });
 }

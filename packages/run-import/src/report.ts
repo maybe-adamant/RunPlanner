@@ -86,8 +86,21 @@ export interface RunImportMismatch {
   readonly actual: string;
 }
 
+/**
+ * Where the imported plan ends: after the last fully settled record room
+ * before the run's death or abandonment, or before the room whose next entry
+ * save the plan's state differs from.
+ */
+export interface RunImportEnd {
+  readonly cause: 'death' | 'abandoned' | 'entryMismatch';
+  /** The end room, judged at its next entry save like any other. */
+  readonly record: RunImportRecordLocation;
+}
+
 export interface RunImportReport {
   readonly entries: readonly RunImportReportEntry[];
+  /** Present when the plan ends before the record's last room or at a death. */
+  readonly end?: RunImportEnd;
   /** Each record room, in order, judged at its next entry save; a stored report may lack it. */
   readonly rooms?: readonly RunImportRoomAcceptance[];
 }

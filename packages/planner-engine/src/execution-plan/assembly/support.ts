@@ -1,5 +1,5 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
-import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
+import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import type { RewardBranch } from '../../simulation/rewards/model';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
@@ -21,7 +21,7 @@ export function agreement<T>(values: readonly T[], label: string): T {
 }
 
 /** A complete-valid biome's walk ends on its one reached state. */
-export function completeFrontier(biome: CompleteValidBiomeProjectEvaluation): RewardBranch {
+export function completeFrontier(biome: PublishedBiomeEvaluation): RewardBranch {
   const frontier = biome.rewards.frontier;
   if (frontier === undefined)
     throw new CompilerError('executionCoverageMissing', `${biome.biomeKey} has no reached state`);

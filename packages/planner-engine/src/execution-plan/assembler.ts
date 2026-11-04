@@ -63,7 +63,12 @@ export function assembleExecutionProduct({
       'unsupportedRoute',
       'execution supports only Underworld, Fresh File, Surface, or Dream routes',
     );
-  const keys = evaluation.route.configuredBiomeKeys;
+  // The plan's extent ends at its end's biome; later configured biomes are dormant.
+  const keys = evaluation.route.configuredBiomeKeys.slice(
+    0,
+    evaluation.route.configuredBiomeKeys.length -
+      (evaluation.route.processing.afterPlanEnd?.length ?? 0),
+  );
   const invalidUnderworldPrefix =
     !(keys.length === 1 && keys[0] === 'F') &&
     !(keys.length === 2 && keys[0] === 'F' && keys[1] === 'G') &&

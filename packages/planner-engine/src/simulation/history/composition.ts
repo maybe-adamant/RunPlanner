@@ -120,6 +120,8 @@ export interface RoomLifecycleCompositionOptions {
   readonly deferDeparture?: boolean;
   /** Where this room's first exit leads; ordinarily a room not visited before. */
   readonly departureDestination?: RoomDepartureDestination;
+  /** The plan's end room: it generates no doors and does not depart. */
+  readonly planEnd?: boolean;
 }
 
 interface BiomeHistoryEnvelopeOptions<
@@ -360,14 +362,17 @@ export function appendRoomLifecycle(
     }
     options.beforeEvent?.(writer, event);
     appendLifecycleEvent(writer, event, fail);
-    if (event.kind === 'roomExited' && options.deferDeparture !== true)
+    if (event.kind === 'roomExited' && options.deferDeparture !== true && options.planEnd !== true)
       writer.append({
         kind: 'roomDeparted',
         origin: room.origin,
         destination: options.departureDestination ?? 'newRoom',
       });
     options.afterEvent?.(writer, event);
-    if (event.kind === 'outgoingGenerationCheckpoint') {
+    if (event.kind === 'outgoingGenerationCheckpoint' && options.planEnd === true) {
+      reachedOutgoing = true;
+      writer.append({ kind: 'emptyOutgoingGenerationCompleted', origin: room.origin });
+    } else if (event.kind === 'outgoingGenerationCheckpoint') {
       reachedOutgoing = true;
       if ((options.outgoing === undefined && !options.stopAfterOutgoing) || projectedOutgoing) {
         fail(`${room.gameName} has no unique canonical outgoing projection`);
@@ -396,7 +401,7 @@ export function appendRoomLifecycle(
   if (options.stopAfterOutgoing && !reachedOutgoing) {
     fail(`${room.gameName} has no outgoing checkpoint for prefix composition`);
   }
-  if ((options.outgoing !== undefined) !== projectedOutgoing) {
+  if (options.planEnd !== true && (options.outgoing !== undefined) !== projectedOutgoing) {
     fail(`${room.gameName} canonical outgoing projection does not match its lifecycle`);
   }
 }

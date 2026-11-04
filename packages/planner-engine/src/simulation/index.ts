@@ -298,6 +298,7 @@ export type { GoldAmount } from './commerce/gold/prices';
 export { evaluateBiome, materializedBiomePrefixCoveragePoint } from './evaluation/biome-evaluation';
 export { simulateProject, simulateProjectAssembly } from './evaluation/project';
 export { startInstallationAt } from './start-installation/start-point';
+export { planEndAvailability, type PlanEndAvailability } from './plan-end-availability';
 export {
   authoredStartPointEligibility,
   startPointDomain,
@@ -315,6 +316,7 @@ export type {
   BiomeEvaluationPoint,
   CompleteValidBiomeProjectEvaluation,
   EndedBiomeProjectEvaluation,
+  PublishedBiomeEvaluation,
   ProjectBiomeEvaluation,
   ProjectEvaluation,
   ProjectEvaluationAssembly,

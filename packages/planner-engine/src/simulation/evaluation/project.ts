@@ -63,6 +63,7 @@ import {
   type ActiveRouteBiome,
   type ProjectBiomeEvaluation,
   type ProjectEvaluation,
+  type PublishedBiomeEvaluation,
   type ProjectEvaluationAssembly,
   type AuthoringHorizon,
   type ProjectRouteEvaluation,
@@ -193,6 +194,7 @@ function evaluateRouteAssembly(
   let routeStartBlock: 'incomplete' | 'invalid' | null = null;
   let routeStartIssue: AssessmentIssue | undefined;
   let planEndBlock: AssessmentIssue | undefined;
+  let endedValid = false;
   let authoringHorizon: AuthoringHorizon = Object.freeze({ kind: 'open' });
   const routeStartKeepsakes = new Map<string, KeepsakeSelectionCandidateCapability>();
   const routeStartKeepsakeEquipResults = new Map<
@@ -444,12 +446,13 @@ function evaluateRouteAssembly(
     if (evaluation.authoring === 'complete') completeValidPrefix.push(evaluation.biomeKey);
     const endRoom = createOccurrenceAddress(evaluation.origin, biomeEnd.occurrenceId);
     authoringHorizon = Object.freeze({ kind: 'ended', blockedAfter: endRoom });
+    endedValid = true;
     break;
   }
   const frozenEvaluations = Object.freeze(evaluations);
+  // An ended biome publishes its rooms through the end like a complete one.
   const completeValidEvaluations = frozenEvaluations.filter(
-    (evaluation): evaluation is Extract<ProjectBiomeEvaluation, { validity: 'valid' }> =>
-      evaluation.authoring === 'complete' && evaluation.validity === 'valid',
+    (evaluation): evaluation is PublishedBiomeEvaluation => 'snapshot' in evaluation,
   );
   const resources = deriveResourceExecutionPolicy(
     catalog,
@@ -480,7 +483,7 @@ function evaluateRouteAssembly(
       processing,
       ...(issue === undefined ? {} : { issue }),
       findings: Object.freeze(findings),
-      summary: summarizeRoute(route.biomes.length, frozenEvaluations, processing),
+      summary: summarizeRoute(route.biomes.length, frozenEvaluations, processing, endedValid),
       resources,
       npcShopping: deriveNpcShoppingExecutionPolicy(
         catalog,

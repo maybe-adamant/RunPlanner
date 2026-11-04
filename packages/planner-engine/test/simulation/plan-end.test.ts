@@ -12,6 +12,8 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  planEndAvailability,
+  authoredStartPointEligibility,
   authoringReadinessAt,
   simulateProject,
   simulateProjectAssembly,
@@ -42,7 +44,7 @@ const enteredRooms = (evaluation: ProjectBiomeEvaluation) =>
   );
 
 describe('Plan end evaluation', () => {
-  it('ends a biome after an ordinary room: valid, later biomes dormant, nothing published', () => {
+  it('ends a biome after an ordinary room: valid and publishable, later biomes dormant', () => {
     const baseline = simulateProject(catalog, createCompleteFGProject());
     expect(baseline.status).toBe('valid');
     const evaluation = simulateProject(
@@ -56,15 +58,14 @@ describe('Plan end evaluation', () => {
     const f = evaluation.route.biomes[0]!;
     expect(f.authoring).toBe('ended');
     expect(f.validity).toBe('valid');
-    expect(f).not.toHaveProperty('snapshot');
+    expect(f).toHaveProperty('snapshot');
     expect(evaluation.route.processing).toEqual({
       completeValidPrefix: [],
       active: null,
       blockedSuffix: [],
       afterPlanEnd: ['G'],
     });
-    // P1 publishes nothing for a mid-biome end.
-    expect(evaluation.summary.eligibleForExecutionPlan).toBe(false);
+    expect(evaluation.summary.eligibleForExecutionPlan).toBe(true);
     expect(evaluation.authoringHorizon).toEqual({
       kind: 'ended',
       blockedAfter: createOccurrenceAddress(
@@ -74,18 +75,24 @@ describe('Plan end evaluation', () => {
     });
     const events = history(f);
     expect(enteredRooms(f).at(-1)).toBe('golden-f-b5-e1');
-    expect(events.at(-1)).toEqual({
-      kind: 'outgoingGenerationCheckpoint',
-      occurrenceId: 'golden-f-b5-e1',
-    });
-    // The end room settles its Timeline but never commits, exits or generates doors.
+    // The end room settles and exits, generating no doors and departing nowhere.
+    const endEvents = events.flatMap((event) =>
+      event.occurrenceId === 'golden-f-b5-e1' ? [event.kind] : [],
+    );
+    expect(endEvents).toContain('emptyOutgoingGenerationCompleted');
+    expect(endEvents).toContain('roomCommitted');
+    expect(endEvents.at(-1)).toBe('roomExited');
+    expect(endEvents).not.toContain('roomDeparted');
+    expect(events.at(-1)).toEqual({ kind: 'roomExited', occurrenceId: 'golden-f-b5-e1' });
+    if (f.authoring !== 'ended') throw new Error('F did not end');
     expect(
-      events.some(
-        (event) =>
-          event.occurrenceId === 'golden-f-b5-e1' &&
-          ['roomCommitted', 'roomExited', 'roomDeparted'].includes(event.kind),
+      f.rewards.runStateSnapshots.some(
+        (snapshot) =>
+          snapshot.checkpoint === 'beforeRoomExit' &&
+          'occurrenceId' in snapshot.owner &&
+          snapshot.owner.occurrenceId === 'golden-f-b5-e1',
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(events.some((event) => event.occurrenceId === 'golden-f-b6-e1')).toBe(false);
   });
 
@@ -110,12 +117,11 @@ describe('Plan end evaluation', () => {
     expect(enteredRooms(f).at(-1)).toBe('golden-f-preboss-shop:boss');
     const kinds = history(f).map((event) => event.kind);
     expect(kinds).not.toContain('biomeCompleted');
-    expect(
-      history(f).some(
-        (event) =>
-          event.occurrenceId === 'golden-f-preboss-shop:boss' && event.kind === 'roomExited',
-      ),
-    ).toBe(false);
+    const bossEvents = history(f).flatMap((event) =>
+      event.occurrenceId === 'golden-f-preboss-shop:boss' ? [event.kind] : [],
+    );
+    expect(bossEvents.at(-1)).toBe('roomExited');
+    expect(bossEvents).not.toContain('roomDeparted');
     expect(
       history(f).some((event) => event.occurrenceId === 'golden-f-preboss-shop:postboss'),
     ).toBe(false);
@@ -131,7 +137,7 @@ describe('Plan end evaluation', () => {
     expect(atPostboss.route.biomes[0]).toHaveProperty('snapshot');
     expect(atPostboss.route.processing.completeValidPrefix).toEqual(['F']);
     expect(atPostboss.route.processing.afterPlanEnd).toEqual(['G']);
-    expect(atPostboss.summary.eligibleForExecutionPlan).toBe(false);
+    expect(atPostboss.summary.eligibleForExecutionPlan).toBe(true);
 
     // At the last configured biome's end it is the unmarked plan.
     const unmarked = simulateProject(catalog, createCompleteFGProject());
@@ -261,5 +267,55 @@ describe('Plan end evaluation', () => {
     );
     expect(atPreHub.route.biomes[0]!.authoring).toBe('ended');
     expect(enteredRooms(atPreHub.route.biomes[0]!).at(-1)).toBe('surface-n-prehub');
+  });
+
+  it('refuses a Practice start past the plan end', () => {
+    const withStart = (project: ProjectDocument, biomeKey: string, point: 'opening' | 'preboss') =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplacePracticeStart',
+        route: createRouteAddress('Underworld'),
+        startPoint: { biomeKey, point },
+      });
+    const eligibility = (project: ProjectDocument) =>
+      authoredStartPointEligibility(catalog, project, simulateProject(catalog, project));
+    const endedAtB5 = endAt(createCompleteFGProject(), 'F', 'golden-f-b5-e1');
+    expect(eligibility(withStart(endedAtB5, 'G', 'opening'))).toMatchObject({
+      kind: 'ineligible',
+      reason: { kind: 'afterPlanEnd' },
+    });
+    expect(eligibility(withStart(endedAtB5, 'F', 'preboss'))).toMatchObject({
+      kind: 'ineligible',
+      reason: { kind: 'afterPlanEnd' },
+    });
+    const endedAtBoss = endAt(createCompleteFGProject(), 'F', 'golden-f-preboss-shop:boss');
+    expect(eligibility(withStart(endedAtBoss, 'F', 'preboss')).kind).toBe('eligible');
+  });
+
+  it('answers whether the plan can end after a room', () => {
+    const f = createBiomeAddress('Underworld', 'F');
+    const room = (id: string) => createOccurrenceAddress(f, id as OccurrenceId);
+    const complete = simulateProjectAssembly(catalog, createCompleteFGProject());
+    expect(planEndAvailability(catalog, complete, room('golden-f-b5-e1'))).toEqual({
+      available: true,
+    });
+    expect(planEndAvailability(catalog, complete, room('golden-f-b5-e2'))).toEqual({
+      available: false,
+      reason: 'notOnRoute',
+    });
+    // An invalid placement on a room offered beside the path blocks ends after its door.
+    const placed = simulateProjectAssembly(
+      catalog,
+      applyProjectCommand(createCompleteFGProject(), catalog, {
+        kind: 'ReplaceResourcePlacement',
+        route: createRouteAddress('Underworld'),
+        family: 'Pickaxe',
+        value: { biomeKey: 'F', occurrenceId: 'golden-f-b8-e2' as OccurrenceId },
+      }),
+    );
+    expect(planEndAvailability(catalog, placed, room('golden-f-b9-e1'))).toEqual({
+      available: false,
+      reason: 'notSettled',
+    });
+    expect(planEndAvailability(catalog, placed, room('golden-f-b5-e1')).available).toBe(true);
   });
 });

@@ -4,7 +4,7 @@ import type {
   CanonicalBatch,
   CanonicalHubDecision,
 } from '../../simulation/materialization';
-import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
+import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
 import {
   createBiomeAddress,
   createOccurrenceAddress,
@@ -16,7 +16,7 @@ import { executionRoomOwnerKey } from './support';
 import type { ExecutionAssemblerInput } from '../model';
 
 export function executionRoomSnapshots(
-  biome: CompleteValidBiomeProjectEvaluation,
+  biome: PublishedBiomeEvaluation,
 ): ReadonlyMap<string, RunStateSnapshot> {
   const result = new Map<string, RunStateSnapshot>();
   for (const snapshot of biome.rewards.runStateSnapshots) {
@@ -38,7 +38,7 @@ function addRoom(
 
 /** Every reached generated phase of the route in generation order: biome, room entry, phase. */
 export function executionGeneratedPhases(
-  biomes: readonly CompleteValidBiomeProjectEvaluation[],
+  biomes: readonly PublishedBiomeEvaluation[],
 ): readonly ResolvedGeneratedPhase[] {
   return biomes.flatMap((biome) => {
     const roomOrder = new Map(
@@ -67,7 +67,7 @@ export function executionGeneratedPhases(
 }
 
 export function orderedExecutionRooms(
-  biomes: readonly CompleteValidBiomeProjectEvaluation[],
+  biomes: readonly PublishedBiomeEvaluation[],
 ): CanonicalAuthoredRoom[] {
   const rooms: CanonicalAuthoredRoom[] = [];
   const seen = new Set<string>();
@@ -111,7 +111,7 @@ export function orderedExecutionRooms(
 }
 
 export function executionHubs(
-  biomes: readonly CompleteValidBiomeProjectEvaluation[],
+  biomes: readonly PublishedBiomeEvaluation[],
 ): readonly CanonicalHubDecision[] {
   return Object.freeze(
     biomes.flatMap((evaluation) =>
@@ -123,7 +123,7 @@ export function executionHubs(
 }
 
 export function executionBatchesByRoom(
-  biomes: readonly CompleteValidBiomeProjectEvaluation[],
+  biomes: readonly PublishedBiomeEvaluation[],
 ): ReadonlyMap<string, CanonicalBatch> {
   const result = new Map<string, CanonicalBatch>();
   for (const evaluation of biomes) {
@@ -136,7 +136,7 @@ export function executionBatchesByRoom(
 }
 
 export function executionFixedTargetsByRoom(
-  biomes: readonly CompleteValidBiomeProjectEvaluation[],
+  biomes: readonly PublishedBiomeEvaluation[],
 ): ReadonlyMap<string, CanonicalAuthoredRoom> {
   const result = new Map<string, CanonicalAuthoredRoom>();
   for (const evaluation of biomes) {
@@ -149,17 +149,23 @@ export function executionFixedTargetsByRoom(
 
 export function completeExecutionBiomes(
   assembly: ExecutionAssemblerInput['assembly'],
-): CompleteValidBiomeProjectEvaluation[] {
+): PublishedBiomeEvaluation[] {
   const route = assembly.evaluation.route;
   if (!route.summary.eligibleForExecutionPlan) {
     throw new CompilerError('notEligible', 'project evaluation is not eligible for execution');
   }
-  const values: CompleteValidBiomeProjectEvaluation[] = [];
+  const values: PublishedBiomeEvaluation[] = [];
   for (const biome of route.biomes) {
-    if (biome.authoring !== 'complete' || biome.validity !== 'valid') {
+    if (!('snapshot' in biome)) {
       throw new CompilerError('notEligible', `${biome.biomeKey} is not complete-valid`);
     }
     values.push(biome);
   }
+  // A plan that ends publishes the biomes through its end; the rest are dormant.
+  if (
+    values.length !==
+    route.configuredBiomeKeys.length - (route.processing.afterPlanEnd?.length ?? 0)
+  )
+    throw new CompilerError('notEligible', 'project evaluation does not reach its plan end');
   return values;
 }

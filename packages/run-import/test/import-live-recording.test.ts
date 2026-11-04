@@ -11,7 +11,6 @@ import {
   entryLines,
   mismatchLines,
   enteredRooms,
-  expectReachesLastRoom,
 } from './support/run-import';
 
 describe('run import of the live Underworld recording', () => {
@@ -117,11 +116,14 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
     imported = projectFromRunRecord(catalog, record);
   });
 
-  it("enters every recorded room and stops at the last room's unseen spatial point", () => {
-    // No save follows H_Combat04, so nothing judges its open questions.
-    expectReachesLastRoom(imported);
-    expect(enteredRooms(imported.project, 'incomplete')).toEqual(
-      record.rooms.map((room) => room.name),
+  it('ends the plan after the last room before the reset in H_Combat04', () => {
+    // The run was abandoned in H_Combat04, so its open questions are past the plan's end.
+    expect(imported).toMatchObject({
+      kind: 'complete',
+      report: { end: { cause: 'abandoned', record: { roomIndex: record.rooms.length - 2 } } },
+    });
+    expect(enteredRooms(imported.project)).toEqual(
+      record.rooms.slice(0, -1).map((room) => room.name),
     );
   });
 
@@ -220,8 +222,6 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
         // Each rerolled screen's earlier screen is a guess: the record keeps the final one.
         reroll: 2,
       },
-      // The run was reset in H_Combat04, whose questions no later save judges.
-      stopped: { fields: 1 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r1 acquisitionEntry@F-r1 -> ReplaceAcquisitionEntryOffer(F-r1 Boon)',

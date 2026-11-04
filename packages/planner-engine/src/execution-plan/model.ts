@@ -702,16 +702,20 @@ export interface ExecutionOverview {
       readonly room: { readonly id: string; readonly biomeKey: string; readonly gameName: string };
       readonly reward: ExecutionReward;
     }[];
-    readonly finalHandoff: {
+    /** Absent when the plan ends inside the Hub stay, after its last planned visit. */
+    readonly finalHandoff?: {
       readonly id: string;
       readonly biomeKey: string;
       readonly gameName: string;
     };
-    /** Distinct room visits the Hub requires before its final handoff. */
+    /** Distinct room visits planned before the final handoff, or before the plan's end. */
     readonly requiredVisitCount: number;
-    /** The one Hub-owned fountain use, after its preceding completed room visits. */
-    readonly fountain: ExecutionHubFountainUse;
-    /** One entry per Hub departure, ordered by preceding visits 0..requiredVisitCount. */
+    /** The one Hub-owned fountain use; absent only when the plan ends before it. */
+    readonly fountain?: ExecutionHubFountainUse;
+    /**
+     * One entry per Hub departure, ordered by preceding visits: 0..requiredVisitCount
+     * with the final handoff, 0..requiredVisitCount - 1 when the plan ends in the stay.
+     */
     readonly departures: readonly ExecutionHubDepartureConformance[];
     /** Board rerolls pressed across Hub stays, in order; absent is none. */
     readonly rerolls?: readonly {

@@ -98,10 +98,10 @@ describe('run import route support', () => {
     expect(imported.report.rooms?.slice(0, 21).map((room) => room.verdict)).not.toContain(
       'unchecked',
     );
-    // The run died in G_Combat17 before its Apollo boon was taken, so nothing answers its screen.
+    // The run died in G_Combat17 before its Apollo boon was taken: the plan ends before it.
     expect(imported).toMatchObject({
-      kind: 'stopped',
-      stop: { area: 'traitOffer', code: 'traitOfferMissing', record: { roomIndex: 21 } },
+      kind: 'complete',
+      report: { end: { cause: 'death', record: { roomIndex: 20 } } },
     });
   });
 

@@ -355,6 +355,24 @@ export function materializedBiomePrefixCoveragePoint(
   return Object.freeze({ owner: last.origin, checkpoint: 'afterTargetGeneration' });
 }
 
+/** The selected structure through the plan end, which the ended prefix already is. */
+function endedSnapshot(prefix: MaterializedBiomePrefix): CanonicalBiome {
+  if (prefix.entryRoom === undefined)
+    throw new ProjectSimulationContractError(`${prefix.biomeKey} plan end has no entry room`);
+  return Object.freeze({
+    kind: 'biome',
+    routeKey: prefix.routeKey,
+    biomeKey: prefix.biomeKey,
+    entryRoom: prefix.entryRoom,
+    decisions: prefix.decisions,
+    fixedRoomLinks: prefix.fixedRoomLinks ?? Object.freeze([]),
+    biomeState: prefix.biomeState,
+    ...(prefix.echoKeepsakeReplayResults === undefined
+      ? {}
+      : { echoKeepsakeReplayResults: prefix.echoKeepsakeReplayResults }),
+  });
+}
+
 export function evaluateBiome(
   catalog: Catalog,
   routeKey: string,
@@ -428,7 +446,10 @@ export function evaluateBiomeAssembly(
   const completeness = evaluateBiomeCompleteness(catalog, origin, plan, end);
   let endedProgressive: ReturnType<typeof evaluateProgressiveBiomeAssembly> | undefined;
   if (completeness.completion === 'ended') {
-    const progressive = evaluateProgressiveBiomeAssembly(catalog, origin, plan, context);
+    const progressive = evaluateProgressiveBiomeAssembly(catalog, origin, plan, {
+      ...context,
+      planEnd: completeness.endOccurrenceId,
+    });
     endedProgressive = progressive;
     if (progressive === null) {
       throw new ProjectSimulationContractError(
@@ -445,6 +466,7 @@ export function evaluateBiomeAssembly(
           authoring: 'ended',
           validity: 'valid',
           planEnd: createOccurrenceAddress(origin, completeness.endOccurrenceId),
+          snapshot: endedSnapshot(progressive.evaluation.materializedPrefix),
           coverage: Object.freeze({
             kind: 'prefix',
             through: materializedBiomePrefixCoveragePoint(coveragePrefix),

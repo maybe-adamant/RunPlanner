@@ -24,6 +24,8 @@ export function describeStartPointUnavailable(reason: StartInstallationUnavailab
       return 'The run already starts here.';
     case 'notReached':
       return 'Plan the route up to this point first.';
+    case 'afterPlanEnd':
+      return 'The plan ends before this point.';
   }
 }
 

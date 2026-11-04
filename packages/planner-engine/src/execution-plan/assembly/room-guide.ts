@@ -7,7 +7,7 @@ import { hermesShrineInitialSlotKey, type RoomActionReference } from '../../auth
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
 import { rerollGuideDescription } from './rerolls';
-import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
+import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type {
   ExecutionReward,
   ExecutionRoomGuideDescription,
@@ -200,7 +200,7 @@ function descriptionFor(
 export function assembleExecutionRoomGuide(
   room: CanonicalAuthoredRoom,
   batch: CanonicalBatch | undefined,
-  biome: CompleteValidBiomeProjectEvaluation,
+  biome: PublishedBiomeEvaluation,
   transactions: readonly ExecutionTimelineTransaction[],
   selected: boolean,
 ): readonly ExecutionRoomGuideRow[] {

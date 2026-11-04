@@ -10,6 +10,7 @@ import {
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
+  simulateProject,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -232,6 +233,12 @@ describe('import stop at an entry save mismatch', () => {
     expect(rooms[changed - 2]).toMatchObject({ verdict: 'accepted' });
     expect(rooms[changed - 1]).toMatchObject({ verdict: 'mismatch' });
     expect(imported.kind === 'stopped' && imported.stop.families).toEqual(['stores']);
+    // The plan ends after the last room whose next save matched, so it publishes.
+    expect(imported.report.end).toEqual({
+      cause: 'entryMismatch',
+      record: { roomIndex: changed - 2, visit: 0 },
+    });
+    expect(simulateProject(catalog, imported.project).status).toBe('valid');
     // The run's state after the mismatch is unknown: no later room is judged.
     expect(rooms.slice(changed).every((room) => room.verdict === 'unchecked')).toBe(true);
     expect(
