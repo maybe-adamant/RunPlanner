@@ -119,7 +119,12 @@ Evidence: the save-file run record audit
     reported. The press takes its native position, or last where that does
     not run (Fields exits wait for the cage loot). The elite pin and the
     customization stay native. The report area is `challengeSwitch`; an
-    unused switch leaves no record trace.
+    unused switch leaves no record trace. The recorder does not yet capture
+    what would settle these guesses: the entry save's
+    `CurrentRoom.ChallengeSwitch`, the first post-room save's
+    `CurrentRoom.ChallengeEncounter` (started, completed, ended early, damage,
+    Time gold, roster, Elite name and attributes), or the hero's gold before
+    and after the room.
 
 ## Ownership
 

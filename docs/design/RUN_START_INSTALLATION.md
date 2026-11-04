@@ -390,9 +390,12 @@ run to its plan at each room exit. Off, a desynchronized run is unchanged.
   compares the live hero with the plan's hero state for the room being left
   over every admission family. That state is the occurrence's `beforeRoomExit`
   frame, or in Ephyra's Hub the visit's `departures[i].beforeRoomExit`, found
-  by its completed main-room visits. Differences are written through the
-  Practice writers before native `LeaveRoom` runs, and the hero is verified
-  against the same frame. A keepsake swap, and a frame whose Jeweled Pom is
+  by its completed main-room visits. An occurrence's own frame also compares
+  the reward stores its exit conformance names and, in a challenge switch
+  room, the encounter depth the press counts (`BiomeEncounterDepth` and
+  `EncounterDepth`), which later rooms' encounter requirements read.
+  Differences are written through the Practice writers before native
+  `LeaveRoom` runs, and the hero is verified against the same frame. A keepsake swap, and a frame whose Jeweled Pom is
   spent, also get the Keepsake Rack close's Fated effects: the Pom's granted
   boon is removed and the native Fated status update runs, so a swap to a
   Fated-disabling keepsake leaves the run Unfated. Native `LeaveRoom` and

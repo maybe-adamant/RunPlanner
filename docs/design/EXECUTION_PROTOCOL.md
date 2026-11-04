@@ -24,8 +24,11 @@ ends at the end's biome, its selected occurrences end at the end room, whose
 ended inside a visit publishes a partial block with no `finalHandoff`, the
 visits through the end as `requiredVisitCount`, the fountain only if used by
 then and no departure after the last visit. No new key carries the end. The
-game module does not run that shape yet, so publication refuses such a plan
-(`planEndAwaitsGameModule`) while the engine keeps assembling its product.
+module runs the end room like any other: its native doors stay unsteered, its
+exit runs the room's ordinary checks except reward stores (its own door draws
+are not simulated), and leaving it completes the plan, as leaving a configured
+prefix's last room does; the run then continues natively. In a Hub stay the
+end visit's last room is the end.
 
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The
@@ -539,7 +542,14 @@ named facts that changed during the room; besides trait inventory, elements,
 Steady Growth, Chaos, keepsake effects, reward priorities, Path of Stars,
 Forfeit and the Well, they are `keepsakes` (held keepsakes by rank and slot),
 `equipment`, `arcana` (cards, Barren holding, Artificer charges), `vows` (ranks,
-disabled vows, Denial bans), `chaosValues` and `hexNodes`. A Practice start
+disabled vows, Denial bans), `chaosValues`, `hexNodes` and `rewardStores`. The
+`rewardStores` fact names each store the room's draws change, with the reward
+types both sides count alike: a type the store also declares for another route
+is left out, since native keeps such entries from every fill and no draw takes
+them, and Secrets, which every offered Chaos gate draws, is never compared. The
+module sums the frame's counts by type over the native store declaration and
+counts the live entries the same way. A plan's end room publishes no store
+fact. A Practice start
 checks every family against its start room's `roomEntered` frame. Only a
 mismatch in one of those named conformance facts, a required Timeline
 obligation, or another explicit structural/transaction comparison stops further
@@ -621,9 +631,15 @@ guide carries an informational `interactChallengeSwitch` row with the press's
 outcome, never a transaction; the claim pickups publish as ordinary
 acquisitions. The executor steers only the switch's existence, its encounter
 and its reward; everything else is proved by resulting state at the room's
-exit. The game module does not run the switch yet, so publication refuses a
-plan that enters a room with an observed switch
-(`challengeSwitchAwaitsGameModule`).
+exit. The module reads the room's creation-time chance flag as planned, so a
+switch spawns only where one is published, and steers the variant and
+encounter draws, the composition through the generated-encounter contacts, and
+an Elite switch's one generated type and its press's attribute draws. Room
+entry proves the switch's presence, variant and encounter. Room exit proves
+how its fight ended from native state, never from contact order: unused, left
+(started and still running), or cleared and claimed, unhit or with a hit for a
+Perfect Clear; and the claim's bonus Nectar dropped exactly when the plan
+claims it. A different ending is a mismatch.
 
 Eris is the same kind of boundary. Her talk is a guide row, not a transaction,
 and the planner's observation that she spawned is not on the wire; the executor

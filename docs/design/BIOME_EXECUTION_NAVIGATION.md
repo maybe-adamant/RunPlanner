@@ -88,17 +88,14 @@ with two contacts over the [native Fields setup](../biomes/H_GAME_RULES.md#nativ
    active `Cage03`, then leave starts, completions, acquisitions, and side
    effects to the existing encounter and timeline adapters.
 
-The Fields `min`/`max` choice, native chance table and clamp are not execution
-facts; they do not cross the boundary for the executor to repeat. The executor
-steers the native cage-count roll to the published cage count, through the
-branch that advances the native max-door counter only when that count is the
-clamped max and not also the min; a max past the native ceiling, or a count
-neither outcome gives, is a mismatch. When a door's capacity clamps the max to
-the min, the count cannot say which outcome the plan chose, so the executor
-takes the min branch: the counter never runs ahead of the plan's, but it lags a
-planned `max`, and a recorded round trip reads that batch as `min`. A steered
-count also skips the native max-door chance roll, which shifts later unsteered
-native random rolls. The adapters consume the planner's explicit spatial result
+Each door batch into Fields publishes its cage-count roll outcome, `min` or
+`max`, beside the cage counts its targets carry; the native chance table and
+clamp are not execution facts. The executor returns that outcome through its
+native branch: `max` advances the native max-door counter and `min` leaves it,
+even where a door's capacity clamps the max to the min, so the counter follows
+the plan's exactly. A `max` past the native ceiling is a mismatch and rolls
+natively. A steered roll skips the native max-door chance draw, which shifts
+later unsteered native random rolls. The adapters consume the planner's explicit spatial result
 rather than inferring a layout from room names or recreating native objects.
 Everything outside `H_Combat` reuses existing work, and the executor neither
 counts the four qualifying H rooms nor re-evaluates Preboss eligibility.

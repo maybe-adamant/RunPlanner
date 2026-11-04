@@ -254,11 +254,8 @@ end, which execution assembly publishes like a complete biome. The route stops
 there and lists the later configured biomes as after the end; they and every
 room past the end are retained, never assessed, and raise no findings. An
 unreached end is the route-owned `planEndUnreached` finding: the biome is
-assessed unmarked and the route still stops after it. A plan valid through a
-cut is not yet eligible for publication: it carries the publication block
-`planEndAwaitsGameModule` until the game module runs that wire; a valid
-route that enters a room with an observed challenge switch carries
-`challengeSwitchAwaitsGameModule` the same way.
+assessed unmarked and the route still stops after it. A plan valid through
+its end, terminal or cut, is eligible for publication.
 
 Under an ended horizon, readiness asks the plan-end extent. Inside the plan,
 and editable: the end room, every room entered through it, the end visit's

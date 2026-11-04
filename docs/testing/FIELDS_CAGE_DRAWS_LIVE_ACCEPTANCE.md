@@ -23,7 +23,7 @@ each check.
       `CurrentRun.FieldsMaxDoorsRolled` grew by one; after a two-cage batch it
       stayed. The import authors each such batch's planned outcome.
 - [ ] With a door into a two-cage room offered, every door shows two cages and
-      the counter stays, whichever outcome the plan chose; no `cageCount`
+      the counter grows by one only when the plan chose `max`; no `cageCount`
       mismatch.
 
 ## Ship wheels
