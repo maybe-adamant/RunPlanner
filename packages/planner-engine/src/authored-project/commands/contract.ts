@@ -56,6 +56,7 @@ function commandContractAddress(
     case 'ReplaceAspectHexTree':
     case 'ReplaceRunModifiers':
     case 'ReplacePracticeStart':
+    case 'ReplacePlanEnd':
     case 'ReplaceDraftSpec':
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':

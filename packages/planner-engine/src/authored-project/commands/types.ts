@@ -73,6 +73,12 @@ export type ProjectStateCommand =
       readonly startPoint: import('../practice-start').RunStartPoint | null;
     }
   | {
+      readonly kind: 'ReplacePlanEnd';
+      readonly route: RouteAddress;
+      /** Null plans to the configured end. */
+      readonly planEnd: import('../plan-end').PlanEnd | null;
+    }
+  | {
       readonly kind: 'ReplaceDraftSpec';
       readonly route: RouteAddress;
       readonly draft: import('../model').AuthoredDraftSpec;

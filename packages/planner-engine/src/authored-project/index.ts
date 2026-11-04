@@ -503,6 +503,7 @@ export {
   samePracticeStart,
   type RunStartPoint,
 } from './practice-start';
+export { decodePlanEnd, planEndExists, samePlanEnd, type PlanEnd } from './plan-end';
 export { DEFAULT_PROJECT_NAME, PROJECT_NAME_MAX, normalizeProjectName } from './project-name';
 export {
   DRAFT_OPTIONS,

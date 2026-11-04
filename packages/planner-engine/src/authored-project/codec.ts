@@ -3,6 +3,7 @@ import { decodeBiomeState } from './biomeState';
 import { assessStartingArcanaGrasp } from './loadout';
 import { decodeRunModifiers, encodeRunModifiers } from './run-modifiers';
 import { decodePracticeStart, samePracticeStart, type RunStartPoint } from './practice-start';
+import { decodePlanEnd, samePlanEnd, type PlanEnd } from './plan-end';
 import { decodeDraftSpec } from './draft-spec';
 import { normalizeProjectName, PROJECT_NAME_MAX } from './project-name';
 import { decodeAuthoredHexTree } from './traits/hex-tree';
@@ -125,6 +126,7 @@ function decodeRoutePlan(
       'loadout',
       'resourcePlacements',
       ...('practiceStart' in plan ? ['practiceStart'] : []),
+      ...('planEnd' in plan ? ['planEnd'] : []),
       'draft',
       'biomes',
     ],
@@ -398,6 +400,12 @@ function decodeRoutePlan(
     samePracticeStart(plan.practiceStart as RunStartPoint, healedStart)
       ? (plan.practiceStart as RunStartPoint | undefined)
       : healedStart;
+  const decodedPlanEnd =
+    plan.planEnd === undefined ? undefined : decodePlanEnd(plan.planEnd, `${path}.planEnd`, biomes);
+  const planEnd =
+    Object.isFrozen(plan.planEnd) && samePlanEnd(plan.planEnd as PlanEnd, decodedPlanEnd)
+      ? (plan.planEnd as PlanEnd | undefined)
+      : decodedPlanEnd;
   const draft = reuseDecoded(plan.draft, [catalog, route], () =>
     decodeDraftSpec(plan.draft, catalog, route.key),
   );
@@ -410,6 +418,7 @@ function decodeRoutePlan(
     previous.resourcePlacements === resourcePlacements &&
     previous.loadout === decodedLoadout &&
     previous.practiceStart === practiceStart &&
+    previous.planEnd === planEnd &&
     previous.draft === draft &&
     previous.biomes.length === biomes.length &&
     previous.biomes.every((biome, index) => biome === biomes[index])
@@ -421,6 +430,7 @@ function decodeRoutePlan(
     resourcePlacements,
     loadout: decodedLoadout,
     ...(practiceStart === undefined ? {} : { practiceStart }),
+    ...(planEnd === undefined ? {} : { planEnd }),
     draft,
     biomes: Object.freeze(biomes),
   });

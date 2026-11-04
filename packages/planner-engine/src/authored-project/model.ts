@@ -8,6 +8,7 @@ import type {
 } from './traits/state';
 import type { RunModifiersRecord } from './run-modifiers';
 import type { RunStartPoint } from './practice-start';
+import type { PlanEnd } from './plan-end';
 
 export const PROJECT_DOCUMENT_SCHEMA_VERSION = 101 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
@@ -776,6 +777,8 @@ export interface AuthoredRoutePlan {
   readonly resourcePlacements: ResourcePlacements;
   /** A Practice mode start; absent is a full run. */
   readonly practiceStart?: RunStartPoint;
+  /** The room the plan ends after; absent ends at the configured prefix. */
+  readonly planEnd?: PlanEnd;
   readonly draft: AuthoredDraftSpec;
   readonly biomes: readonly AuthoredBiomePlan[];
 }

@@ -24,6 +24,7 @@ import { createUnresolvedAcquisitionRewardState } from '../traits/state';
 import { startingRewardAcquisitionFrom } from '../room-state/starting-reward';
 import type { ProjectDocument } from '../model';
 import { decodePracticeStart, samePracticeStart } from '../practice-start';
+import { decodePlanEnd, samePlanEnd } from '../plan-end';
 import { decodeDraftSpec, sameDraftSpec } from '../draft-spec';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../defaults';
 import { normalizeProjectName, PROJECT_NAME_MAX } from '../project-name';
@@ -535,6 +536,26 @@ export function applyProjectStateCommand(
         route: Object.freeze({
           ...rest,
           ...(startPoint === undefined ? {} : { practiceStart: startPoint }),
+        }) as typeof route,
+      };
+    }
+    case 'ReplacePlanEnd': {
+      if (document.route.routeKey !== command.route.routeKey)
+        failCommand(command, `project is missing route ${command.route.routeKey}`);
+      const route = document.route;
+      // A dangling or malformed end is refused like any other structural reference.
+      const planEnd =
+        command.planEnd === null
+          ? undefined
+          : decodePlanEnd(command.planEnd, 'planEnd', route.biomes);
+      if (samePlanEnd(route.planEnd, planEnd)) return document;
+      const { planEnd: _previous, ...rest } = route;
+      void _previous;
+      return {
+        ...document,
+        route: Object.freeze({
+          ...rest,
+          ...(planEnd === undefined ? {} : { planEnd }),
         }) as typeof route,
       };
     }

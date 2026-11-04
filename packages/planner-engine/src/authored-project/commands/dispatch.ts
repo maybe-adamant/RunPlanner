@@ -35,6 +35,7 @@ import {
 import { reconcileChaosTopology } from '../chaos-gate-reconciliation';
 import { applyFieldsSpatialCommand } from './occurrence/fields-spatial';
 import { retractMissingHermesShrineDeliveryActions } from '../hermes-shrine-delivery';
+import { planEndExists } from '../plan-end';
 
 /** Topology owns occurrence lifetime. A route-owned resource singleton retains
  * through room replacement, but is removed atomically when its exact target is
@@ -83,6 +84,23 @@ function retractResourcePlacementsForClearedBiome(
     ...document,
     route: Object.freeze({ ...route, resourcePlacements: Object.freeze(next) }),
   });
+}
+
+/** The plan end names an occurrence; it is cleared in the step that removes it. */
+function reconcilePlanEndTopology(
+  document: ProjectDocument,
+  clearedBiomeKey: string | undefined,
+): ProjectDocument {
+  const route = document.route;
+  const planEnd = route.planEnd;
+  if (
+    planEnd === undefined ||
+    (planEnd.biomeKey !== clearedBiomeKey && planEndExists(planEnd, route.biomes))
+  )
+    return document;
+  const { planEnd: _removed, ...rest } = route;
+  void _removed;
+  return Object.freeze({ ...document, route: Object.freeze(rest) as typeof route });
 }
 
 function applyUnchecked(
@@ -140,6 +158,7 @@ function applyUnchecked(
     case 'ReplaceAspectHexTree':
     case 'ReplaceRunModifiers':
     case 'ReplacePracticeStart':
+    case 'ReplacePlanEnd':
     case 'ReplaceDraftSpec':
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':
@@ -418,7 +437,13 @@ export function applyProjectCommand(
     const reconciled = reconcileChaosTopology(withRequiredActions, catalog);
     // Generated detours can delete occurrences after the direct command.
     // Close route-owned references against that final topology.
-    return decodeProjectDocument(reconcileResourcePlacementTopology(reconciled), catalog);
+    return decodeProjectDocument(
+      reconcilePlanEndTopology(
+        reconcileResourcePlacementTopology(reconciled),
+        command.kind === 'ClearTopology' ? command.biome.biomeKey : undefined,
+      ),
+      catalog,
+    );
   } catch (error) {
     if (error instanceof ProjectCommandContractError) throw error;
     if (error instanceof ProjectDocumentContractError) {

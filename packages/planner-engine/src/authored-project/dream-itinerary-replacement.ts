@@ -3,7 +3,7 @@ import type { AuthoredRoutePlan } from './model';
 /** The route content a Dream itinerary replacement keeps or discards per biome. */
 export type DreamItineraryReplacementRoute = Pick<
   AuthoredRoutePlan,
-  'itineraryBiomeKeys' | 'biomes' | 'resourcePlacements' | 'practiceStart' | 'draft'
+  'itineraryBiomeKeys' | 'biomes' | 'resourcePlacements' | 'practiceStart' | 'planEnd' | 'draft'
 >;
 
 /**
@@ -37,6 +37,7 @@ export function dreamItineraryReplacementDroppedBiomeKeys(
       placement === null ? [] : [placement.biomeKey],
     ),
     ...(route.practiceStart === undefined ? [] : [route.practiceStart.biomeKey]),
+    ...(route.planEnd === undefined ? [] : [route.planEnd.biomeKey]),
   ]);
   return Object.freeze(
     route.itineraryBiomeKeys.slice(keptCount).filter((biomeKey) => configured.has(biomeKey)),
