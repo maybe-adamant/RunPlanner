@@ -483,7 +483,15 @@ function evaluateRouteAssembly(
       processing,
       ...(issue === undefined ? {} : { issue }),
       findings: Object.freeze(findings),
-      summary: summarizeRoute(route.biomes.length, frozenEvaluations, processing, validEnd),
+      summary: summarizeRoute(
+        route.biomes.length,
+        frozenEvaluations,
+        processing,
+        validEnd,
+        completeValidEvaluations.some(
+          (evaluation) => (evaluation.rewards.challengeSwitchEncounters?.length ?? 0) > 0,
+        ),
+      ),
       resources,
       npcShopping: deriveNpcShoppingExecutionPolicy(
         catalog,

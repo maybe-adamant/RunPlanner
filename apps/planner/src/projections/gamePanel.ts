@@ -546,6 +546,8 @@ export function describeNotPublishable(code: ExecutionCompilerError['code'] | nu
       return 'The start point can’t start this run.';
     case 'planEndAwaitsGameModule':
       return 'Sending a plan that ends early needs the next game module update.';
+    case 'challengeSwitchAwaitsGameModule':
+      return 'Sending a plan with a challenge switch needs the next game module update.';
     case 'executionCoverageMissing':
     case null:
       return 'The game module can’t run this plan yet.';
@@ -764,7 +766,10 @@ export interface GameSendProject {
   readonly projectId: string;
   readonly eligible: boolean;
   /** The engine's reason a plan valid through its end still cannot be sent. */
-  readonly executionPlanBlock?: 'planEndAwaitsGameModule';
+  readonly executionPlanBlock?: Extract<
+    ExecutionCompilerError['code'],
+    'planEndAwaitsGameModule' | 'challengeSwitchAwaitsGameModule'
+  >;
   /** The engine's reason the authored start point blocks publication. */
   readonly startPointBlock?: StartPointPublicationBlock;
   /** The plan's fingerprint as it is now; compiled only while the plan is in a slot. */

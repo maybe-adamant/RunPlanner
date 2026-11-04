@@ -47,10 +47,13 @@ export function assembleExecutionProduct(
   input: import('./model').ExecutionAssemblerInput,
 ): ExecutionSemanticProduct {
   assertExactProjectEvaluationAssembly(input.assembly);
-  if (input.assembly.evaluation.route.summary.executionPlanBlock === 'planEndAwaitsGameModule') {
+  const block = input.assembly.evaluation.route.summary.executionPlanBlock;
+  if (block !== undefined) {
     throw new CompilerError(
-      'planEndAwaitsGameModule',
-      'the plan ends before its biome ends, which the game module does not run yet',
+      block,
+      block === 'planEndAwaitsGameModule'
+        ? 'the plan ends before its biome ends, which the game module does not run yet'
+        : 'the plan enters a room with a challenge switch, which the game module does not run yet',
     );
   }
   return assembleRouteExecutionProduct(input);

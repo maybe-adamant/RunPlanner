@@ -35,7 +35,12 @@ import {
   type ChallengeSwitchEntryFacts,
 } from '../../src/simulation/commerce/challenge-switch';
 import type { RequirementEvaluationContext } from '../../src/requirements/evaluator';
-import { assembleExecutionProduct, compileExecutionPlan } from '../../src/execution-plan';
+import {
+  assembleExecutionProduct,
+  compileExecutionPlan,
+  ExecutionCompilerError,
+} from '../../src/execution-plan';
+import { assembleRouteExecutionProduct } from '../../src/execution-plan/assembler';
 import { decodeExecutionPlan, encodeExecutionPlan } from '../../src/execution-plan';
 
 const interaction = Object.freeze({ kind: 'interactChallengeSwitch' as const });
@@ -115,7 +120,22 @@ function exitSnapshot(project: ProjectDocument, occurrenceId: string) {
 /** The claim acquisitions the published plan carries for one room. */
 function claimAcquisitions(project: ProjectDocument): readonly string[] {
   const assembly = simulateProjectAssembly(catalog, project);
-  const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) });
+  // The wire a switch publishes once the game module runs it; the publication entry refuses it.
+  expect(assembly.evaluation.route.summary.executionPlanBlock).toBe(
+    'challengeSwitchAwaitsGameModule',
+  );
+  expect(assembly.evaluation.route.summary.eligibleForExecutionPlan).toBe(false);
+  let refusal: unknown;
+  try {
+    assembleExecutionProduct({ assembly, catalog });
+  } catch (error) {
+    refusal = error;
+  }
+  expect(refusal).toBeInstanceOf(ExecutionCompilerError);
+  expect((refusal as ExecutionCompilerError).code).toBe('challengeSwitchAwaitsGameModule');
+  const plan = compileExecutionPlan({
+    product: assembleRouteExecutionProduct({ assembly, catalog }),
+  });
   expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
   const found: string[] = [];
   const visit = (value: unknown) => {
@@ -752,7 +772,7 @@ describe('challenge switch encounter', () => {
   const overviewSwitch = (project: ProjectDocument) => {
     const assembly = simulateProjectAssembly(catalog, project);
     const plan = compileExecutionPlan({
-      product: assembleExecutionProduct({ assembly, catalog }),
+      product: assembleRouteExecutionProduct({ assembly, catalog }),
     });
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
     const found: unknown[] = [];
@@ -871,7 +891,7 @@ describe('challenge switch encounter', () => {
     expect(enemyGold(finished)).toHaveLength(1);
     // The press's guide row carries how its fight ends.
     const plan = compileExecutionPlan({
-      product: assembleExecutionProduct({
+      product: assembleRouteExecutionProduct({
         assembly: simulateProjectAssembly(catalog, left),
         catalog,
       }),
