@@ -1,6 +1,6 @@
 # Engine Slice: Plan End and Challenge Switches
 
-Status: P1, P3, P2 and its engine follow-ups, and P4 delivered; started 2026-11-03 on branch `engine-slice-plan-end-switches` (from
+Status: P1, P3, P2 and its engine follow-ups, and P4 with the switch encounter delivered; started 2026-11-03 on branch `engine-slice-plan-end-switches` (from
 main `606f8e588`). Temporary plan; delete at delivery after promoting the
 durable result into the design documents named per phase.
 
@@ -87,8 +87,12 @@ here. Game script paths are under `Hades II/Content/Scripts`.
    is spawned directly: no counted store draw, no offer history.
 6. Not an encounter end: the challenge encounter is neither the room's
    encounter nor an override, so no Steady Growth tick, trait uses, keepsake
-   advance or Experimental Hammer decay; it is recorded in the encounter
-   caches.
+   advance or Experimental Hammer decay (RoomLogic.lua:2937). It is recorded
+   (`RecordEncounter`) when the press starts it (EncounterLogic.lua:2105), not
+   at entry, and completed in the caches. Correction to the study: it does
+   advance encounter depth, since every challenge encounter inherits
+   `Generated`'s `CountsForRoomEncounterDepth` through its GeneratedX parent and
+   `StartEncounter` applies it to any encounter (RoomLogic.lua:1900-1904).
 7. Sea Star duplicates apply to the consumable rewards (Pom, Max Health,
    Max Magick, Path of Stars, Onion), not to Time's gold gush.
 8. Corpus: 14 switch rooms in 11 save folders; one triggered (1013, Elite
@@ -597,12 +601,17 @@ Lanes (2026-11-04): typecheck, lint, format:check pass; `test:catalog` 454,
 `Money` reward needed its artwork record).
 
 Owed at merge (with P6): promote the switch contract into
-`AUTHORED_PROJECT_MODEL.md` (leaf, commands, claim site), `CATALOG_MODEL.md`,
-`ROOM_LIFECYCLE_MODEL.md` (doors-open interaction, entry spacing),
+`AUTHORED_PROJECT_MODEL.md` (leaf, commands, claim site, customization),
+`CATALOG_MODEL.md` (the 24 encounters outside the sets),
+`ENCOUNTER_PREPARATION.md` (the switch phase: prepared at entry, recorded and
+run at the press, its customization and findings),
+`ROOM_LIFECYCLE_MODEL.md` (doors-open interaction, entry spacing, the press's
+encounter run and depth advance),
 `REWARD_MODEL.md` (claim pickups among generated pickups; gold: line "challenge
 switches are not counted" is now only their encounters' kill gold),
-`GOLD_ESTIMATE_ASSUMPTIONS.md` (row 24), `EXECUTION_PROTOCOL.md` (guide row),
-and the Keepsake audit's switch note.
+`GOLD_ESTIMATE_ASSUMPTIONS.md` (row 24, and the switch's kill gold paid by
+roster or biome policy), `EXECUTION_PROTOCOL.md` (guide row and
+`overview.challengeSwitch`), and the Keepsake audit's switch note.
 
 #### P4 follow-ups (2026-11-04)
 
@@ -648,6 +657,90 @@ and the Keepsake audit's switch note.
   requirements and the run's `BannedEliteAttributes` (empty unless selected)
   are not modeled.
 
+- **Switch encounter delivered** (the remaining side encounter, 2026-11-04).
+  - Catalog: the 24 challenge encounters are encounter definitions outside
+    every set and fixed binding (`declarations/encounters/challenge.ts`), each
+    with its RoomSet's GeneratedX money store, `countsEncounterDepth`, no skip,
+    no Shrine delivery advance. Time and PerfectClear carry a generated
+    composition on the existing policy builder, resolved through `InheritFrom`
+    (first parent fills only nil keys): Time 2–3 types, cap 3, type ramp 0,
+    budget base per Set with ramp 0 (I: 380 and 10, elite cap 2; H keeps
+    GeneratedH's 290); PerfectClear 3 types, cap 3, GeneratedX's type ramp and
+    budget (F: 60 and 11); one wave, `RequireCompletedIntro`, room-entry
+    preparation, GeneratedX's pool, elite cap, escalation, type-depth axis and
+    group caps; never hard (HandleSecretSpawns calls `GenerateEncounter`
+    directly). Elite has no composition; its declaration gains `spawnCount` 1
+    (ManualWaveTemplates TotalCount). Construction fails on an undeclared,
+    bound, shared, non-combat, skippable, storeless or misshapen switch
+    encounter, a Time/PerfectClear one without one room-entry composition
+    with `RequireCompletedIntro`, or an Elite one with a composition.
+  - Authored: the leaf gains optional `customization` (sparse decisions of
+    the kind's encounter at the host, as `customizationByPhase[phase]`), set by
+    `ReplaceChallengeSwitchCustomization { occurrence, decisionKey, value |
+null }` with the main command's structural checks; kept across variants of
+    the same kind and by the outcome and elite edits, dropped on a kind
+    change; strict decode against the host's encounter.
+  - Engine: `encounters/challenge-switch.ts` prepares the observed switch's
+    encounter at the room's entry view: the kind's definition resolved as a
+    phase (slot and envelope `challengeSwitch`, outside the envelope), its
+    composition assessed through `prepareGeneratedEncounter` with the room's
+    admission facts, and for Elite the pin's issues (moved here from room
+    entry). Room entry prepares it with the entry's vow ranks; its findings
+    (`challengeSwitchCustomizationUnavailable` with the decision and reason,
+    `challengeSwitchEliteUnavailable`) stay on the switch's Overview owner.
+    History composition prepares it again at the entry view and attaches the
+    run to the press: `challengeSwitchInteracted.encounter`
+    `{ encounterKey, phaseKind, countsEncounterDepth, generatedCustomization? }`.
+    The fold records, starts and completes it in the encounter ledgers and
+    advances biome and route encounter depth; no `encounterEndEffectsApplied`.
+    The envelope-slot window skips it.
+  - Gold: the press pays the encounter's kills from its own store
+    (`enemyGold`, owner the switch feature): by known roster (an authored
+    composition, or the pinned elite × `spawnCount`), else the biome's
+    generated-combat policy, at the room's entry multipliers.
+  - Products: `challengeSwitchEncounterSupportForProjectEvaluationAssembly`
+    (the composition capability, as `generatedEncounterSupportFor…` is a
+    room phase's; none for Elite); `ChallengeSwitchInteraction.encounter`
+    (kind, definition key, label, each decision with value, assessed support
+    and a reset command; it satisfies `EncounterCompositionPhase`, so
+    `encounterCompositionView` renders it). `rewards.challengeSwitchEncounters`
+    (present only when a biome has one) carries the entry-prepared encounter
+    to the execution plan.
+  - Execution plan: `overview.challengeSwitch { variantKey, encounterKey,
+customization?, elite? }` for every entered room with an observed switch,
+    the composition in the room-phase `generated` shape and the elite as
+    `{ enemy: { choiceKey, nativeId }, attributeKeys }`; disposition
+    `deferred-route` until P7. Rides the P6 bump; fixture bytes unchanged.
+  - App: compile-only (finding copy and explanation).
+
+  Witnesses: catalog `challenge-switches.test.ts` (the 24 declarations,
+  inherited policies, Elite shape, construction refusals; inventory counts in
+  the encounter, generated, gold and lifecycle-clock tests);
+  `authored-project/challenge-switch.test.ts` (command, codec, kind rules);
+  `simulation/challenge-switch.test.ts` (the run at the press with depth and
+  no end effect, kill gold, capability → composition → wire, an invalid
+  composition stopping at the Overview, the Elite pin on the wire).
+
+  Decisions made without an owner ruling:
+  - **Recorded at the press, not at entry**: native `RecordEncounter` for the
+    challenge runs in `StartChallengeEncounter`; generation, roster and store
+    are fixed at entry. An unused switch therefore leaves no encounter record.
+    A once-per-run enemy an authored composition of an unused switch draws
+    (only `FogEmitter2`) is not blacklisted, though native blacklists it at
+    entry; the record carries it only when the switch is used.
+  - **Encounter depth advances** (the source correction above), so a used
+    switch raises later rooms' encounter-depth budgets.
+  - Customization findings have their own code on the switch's Overview
+    owner rather than `encounterCustomizationUnavailable` on a phase address,
+    so the editor's phase-slot lookups never meet a slot outside an envelope.
+  - The switch's kill gold is not added to Medea's per-room capped drops;
+    the gold ledger publishes it with the press as its room action.
+
+  Lanes (2026-11-04): typecheck, lint, format:check pass; `test:catalog` 460,
+  `test:engine` 3945 (execution fixture bytes unchanged), `test:equivalence`
+  157/157 unchanged, `test:draft` 165, `test:run-import` 342 (+1 skipped),
+  `test:planner` 2160 (+1 skipped).
+
 What P5 needs:
 
 - **Overview, Objects tab** (owner shape, 2026-11-04):
@@ -670,32 +763,22 @@ What P5 needs:
   hitless, Nectar, Time gold); the claim pickups are ordinary pickup rows with
   source family `challengeSwitch` (Pom target, Path screen and dispositions
   through the existing commands).
-- **Combat (not yet built, engine first):** the switch's encounter as a
-  customizable side encounter — see "Still open" below. Until it lands, the
-  Combat entry has no engine product to render.
+- **Combat:** `challengeSwitch.encounter` feeds `encounterCompositionView`;
+  `challengeSwitchEncounterSupportForProjectEvaluationAssembly` initializes
+  and assesses a composition (Time, PerfectClear) whose save is
+  `ReplaceChallengeSwitchCustomization`; reset is the decision's `reset`.
+  Elite's Combat is the existing elite pin (`challengeSwitch.elite`,
+  `ReplaceChallengeSwitchElite`). Finding copy for
+  `challengeSwitchCustomizationUnavailable` (decision and reason, as the
+  room phase's) routes to the switch row.
 - Finding copy per `challengeSwitchPlacementUnavailable` reason.
 - Run import: author a used switch (variant from `uses`, the interaction,
   the outcome from the reward object) instead of reporting it unsupported.
 
-Still open (engine, before the P5 Combat entry):
-
-- **Switch side encounter, remaining part** (the Elite pin above is done).
-  Each switch's encounter as an encounter product
-  like the room's main combat: catalog declarations for the 24 challenge
-  encounters (`TimeChallenge*`, `PerfectClearChallenge*`, `EliteChallenge*`
-  per RoomSet, through the existing generated-encounter policies: their
-  `EnemySet`s including the `Biome*_EliteChallenge` sets, budgets, wave and
-  type counts, `RequireCompletedIntro`); an encounter phase prepared at room
-  entry when the switch is observed (generation support, roster, the
-  encounter-cache record, `MoneyDropStore`), started and completed at the
-  interaction with no end effects; the authored customization on the switch
-  leaf; and for Elite the one elite enemy with its two attributes
-  (`ForceEliteAttrubuteCount` 2, `BannedEliteAttributes` Metallic,
-  SpreadHitShields, StasisDeath, HeavyArmor, EncounterData_Challenge.lua:411–412)
-  as an authoring product with candidates and findings, reusing the Fangs
-  perk facts the catalog already carries. Sized L: it adds a phase outside
-  the room's encounter envelope, which materialization, preparation, history,
-  gold, candidates and the execution plan all read.
+Still open (engine): none for the switch encounter. Not modeled, by choice:
+leaving mid-fight (`EndedEarly`) — the press is the whole run; Elite
+attribute game-state requirements; the run's `BannedEliteAttributes`; the
+H `ChallengeSwitchBlockedByFieldsLoot` exit gate.
 
 ## Equivalence characterization per phase
 
@@ -706,6 +789,7 @@ Still open (engine, before the P5 Combat entry):
 | P2            | not run         | Planner only; no engine change.                                                                                                                          |
 | P2 follow-ups | none (157/157)  | Readiness and candidates change only under an ended horizon; no corpus project has one.                                                                  |
 | P4            | none (157/157)  | Catalog additions (switches, `Money`, `ChallengeSwitchLoot`) and switch handling apply only to rooms with an observed switch; no corpus project has one. |
+| P4 encounter  | none (157/157)  | The 24 encounter definitions sit outside every set; the press's encounter, its gold and `challengeSwitchEncounters` exist only with an observed switch.  |
 
 ## Owner-settled decisions (2026-11-03)
 
