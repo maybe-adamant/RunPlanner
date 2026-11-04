@@ -30,6 +30,8 @@ const BASELINE = {
   dream: { rooms: 40, settled: 20, mismatch: 0, differing: 0, unchecked: 1 },
   // A fresh profile's first attempt.
   fresh: { rooms: 13, settled: 10, mismatch: 0, differing: 0, unchecked: 1 },
+  // A fresh profile's attempt into Oceanus, its Shops untouched.
+  'fresh-oceanus': { rooms: 22, settled: 17, mismatch: 0, differing: 0, unchecked: 1 },
   // The live recording carries no entry saves.
   'underworld-live': { rooms: 42, settled: 0, mismatch: 0, differing: 0, unchecked: 42 },
 } as const;

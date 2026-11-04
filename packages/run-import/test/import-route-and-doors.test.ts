@@ -56,6 +56,22 @@ describe('run import route support', () => {
     expectReachesLastRoom(imported);
   });
 
+  it("buys nothing at the fresh attempt's untouched Shops and reaches Oceanus as the saves show it", () => {
+    // Each Shop's boon is a god already picked up on this new file (Apollo at r7, Aphrodite at r17).
+    const imported = projectFromRunRecord(catalog, fixture('fresh-oceanus'));
+    expect(imported.report.rooms?.slice(0, 21).map((room) => room.verdict)).not.toContain(
+      'mismatch',
+    );
+    expect(imported.report.rooms?.slice(0, 21).map((room) => room.verdict)).not.toContain(
+      'unchecked',
+    );
+    // The run died in G_Combat17 before its Apollo boon was taken, so nothing answers its screen.
+    expect(imported).toMatchObject({
+      kind: 'stopped',
+      stop: { area: 'traitOffer', code: 'traitOfferMissing', record: { roomIndex: 21 } },
+    });
+  });
+
   it('stops a run on a route the catalog does not declare', () => {
     const record = fixture('surface');
     const result = projectFromRunRecord(catalog, {

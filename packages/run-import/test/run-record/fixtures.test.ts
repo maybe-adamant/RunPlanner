@@ -47,6 +47,18 @@ describe('run record capture fixtures', () => {
     });
   });
 
+  it("keeps an untouched Shop's stock as spawned", () => {
+    const record = fixture('fresh-oceanus');
+    expect(record.run.runCount).toBe(0);
+    expect(record.route).toEqual({ biomes: ['F', 'G'], dream: false });
+    expect(record.rooms[7]!.name).toBe('F_Shop01');
+    expect(record.rooms[7]!.store).toMatchObject({
+      kind: 'worldShop',
+      purchases: [],
+      spawned: true,
+    });
+  });
+
   it('records the Surface run', () => {
     const record = fixture('surface');
     expect(record.rooms).toHaveLength(29);

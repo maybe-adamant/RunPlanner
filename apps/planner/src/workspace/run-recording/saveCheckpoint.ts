@@ -427,7 +427,10 @@ function room(value: LuaValue | undefined): SavedRoom | undefined {
     spawnedStore: {
       well: isTable(value.WellShop),
       shrine: isTable(value.SurfaceShop),
-      items: isTable(value.Store) && isTable(value.Store.SpawnedStoreItems),
+      // An untouched Shop's items are a 1..n sequence, which decodes as an array.
+      items:
+        isTable(value.Store) &&
+        (isTable(value.Store.SpawnedStoreItems) || Array.isArray(value.Store.SpawnedStoreItems)),
     },
     olympusEagleSpawn: value.OlympusEagleSpawn === true,
     ...optional(

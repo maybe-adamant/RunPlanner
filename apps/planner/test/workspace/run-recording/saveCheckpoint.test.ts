@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
-import type { LuaTable } from '@planner/workspace/run-recording/luabins';
+import type { LuaTable, LuaValue } from '@planner/workspace/run-recording/luabins';
 import { buildRunRecord } from '@planner/workspace/run-recording/runRecordBuilder';
 import { extractSaveCheckpoint } from '@planner/workspace/run-recording/saveCheckpoint';
 import type { DecodedSave } from '@planner/workspace/run-recording/saveFile';
@@ -114,6 +114,33 @@ describe('save checkpoint extraction', () => {
       shrine: false,
       items: false,
     });
+  });
+
+  it("reads a Shop's spawned items whether or not a purchase left a hole in them", () => {
+    const save = sample('underworld-062');
+    const run = save.globals.CurrentRun as LuaTable;
+    const history = run.RoomHistory as readonly LuaTable[];
+    const withItems = (items: LuaValue) => ({
+      ...save,
+      globals: {
+        ...save.globals,
+        CurrentRun: {
+          ...run,
+          RoomHistory: [
+            ...history.slice(0, -1),
+            { ...history.at(-1)!, Store: { StoreOptions: [], SpawnedStoreItems: items } },
+          ],
+        },
+      },
+    });
+    const untouched = withItems([{ ObjectId: 1 }, { ObjectId: 2 }]);
+    const bought = withItems({ '2': { ObjectId: 2 } });
+    expect(
+      extractSaveCheckpoint(untouched, true, NO_SAVED_VALUES).departure?.spawnedStore?.items,
+    ).toBe(true);
+    expect(
+      extractSaveCheckpoint(bought, true, NO_SAVED_VALUES).departure?.spawnedStore?.items,
+    ).toBe(true);
   });
 
   it('marks a save without a next map as the PostReward checkpoint', () => {
