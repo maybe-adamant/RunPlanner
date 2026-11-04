@@ -1,6 +1,6 @@
 # Engine Slice: Plan End and Challenge Switches
 
-Status: P1, P3, P2 and its engine follow-ups delivered; started 2026-11-03 on branch `engine-slice-plan-end-switches` (from
+Status: P1, P3, P2 and its engine follow-ups, and P4 delivered; started 2026-11-03 on branch `engine-slice-plan-end-switches` (from
 main `606f8e588`). Temporary plan; delete at delivery after promoting the
 durable result into the design documents named per phase.
 
@@ -499,14 +499,134 @@ Owed at merge (with P6): describe the plan-end editor in
 horizon's inside and past-the-end rules in `SIMULATION_AND_VALIDATION.md`
 (Authoring readiness).
 
+### P4 — challenge switches in the catalog and engine
+
+Delivered (2026-11-04):
+
+- **Catalog** (`catalog.challengeSwitches`, validated at creation): the three
+  kinds (Time, PerfectClear, Elite) with their default variant, Elite's biome
+  depth 3 and `TalentLegal` gate and PerfectClear's hit reward (the Onion);
+  the five obstacle variants with their `EncounterSets` weights, reward and
+  own gate (Pom `StackUpgradeLegal`, Path of Stars `TalentLegal`); the shared
+  spawn rules (biome depth 5, 3 rooms since the last switch); Time gold
+  (100 start, floor 10, default 90); the 5% bonus Nectar; and the hosts:
+  every anchored room of a RoomSet with a nonzero chance (F 0.25, others
+  0.15), each naming its one encounter per kind. Anchored rooms with a zero
+  chance (Postbosses, Reprieves, N side rooms, Dream) are declared
+  spawn-free; an anchored room with neither fails catalog construction. Claim
+  pickups use a new `ChallengeSwitchLoot` producer; the Time claim's gush is a
+  new `Money` reward and acquisition (`CanDuplicate` false, not goldifiable).
+- **Authored model**: optional occurrence leaf
+  `challengeSwitch: { variantKey, hitless, nectarDropped, gold? }` at a host
+  only (absent for old projects, no transition). The variant fixes the kind
+  and reward; `gold` is present exactly for Time (10–100); `nectarDropped`
+  needs `hitless`. One optional room action `interactChallengeSwitch` in the
+  doors-open window (`postOutgoing`); its outcome stays on the leaf. The claim
+  pickups are entries `reward` and `nectar` of a producer-owned
+  `challengeSwitch` site: the reward is the variant's, the Onion after a
+  PerfectClear hit, or `Money` for Time; `nectar` exists only when hitless and
+  dropped. They are optional `interactAcquisitionEntry` rows, so they never
+  move the exit checkpoint.
+- **Commands**: `ReplaceChallengeSwitch { occurrence, variantKey | null }`
+  (null clears the leaf, its interaction and site; a variant change keeps the
+  outcome, gold following the kind) and `ReplaceChallengeSwitchOutcome`
+  (refuses a Nectar without hitless and gold outside Time's range). The
+  interaction uses the generic Insert/Move/RemoveRoomAction; the command that
+  makes claim pickups active also orders them right after the interaction
+  (the trait-drop rule, extended), and removing the interaction retracts them.
+  Each edit is one history step.
+- **Engine**: the interaction emits `challengeSwitchInteracted`: no encounter
+  end, no store draw, no state change; the pickups settle through the existing
+  acquisition machinery (Sea Star, Time Piece and Artificer as usual for the
+  consumables; the gush is neither duplicable nor convertible). Room entry
+  records `challengeSwitchPresent` on the appearance ledger (native sets
+  `LastChallengeDepth` at entry, used or not) and raises
+  `challengeSwitchPlacementUnavailable` on the switch's Overview owner, one
+  per broken rule: `biomeDepth`, `recentSwitch`, `noFreeAnchor` (Well, Pool
+  and Shrine occupy anchors first), `kindUnavailable`,
+  `variantUnavailable`. The gold ledger pays a Time claim
+  (`challengeSwitchGold`: authored value × money multiplier; `BlockMoney`
+  blocks it).
+- **Execution plan**: the room guide carries an `interactChallengeSwitch` row
+  (native press, no transaction) and the claim pickups publish as ordinary
+  acquisitions; disposition `deferred-route` until P7. This rides the P6 bump.
+- **App**: compile-only (finding copy, action label, contextual option).
+- **Draft**: never observes a switch (walk witness).
+
+Witnesses: `packages/hades2-catalog/test/catalog/challenge-switches.test.ts`
+(declarations and creation refusals),
+`packages/planner-engine/test/authored-project/challenge-switch.test.ts`
+(codec, commands, pickup closure, history),
+`packages/planner-engine/test/simulation/challenge-switch.test.ts` (each spawn
+rule; PerfectClear clean, hit and Nectar; Elite Max Magick and Path screen;
+Time gold in the ledger; no store draw, no encounter end; published
+acquisitions round-trip the wire; pickup-effect capabilities).
+
+Decisions made without an owner ruling:
+
+- **Bonus Nectar has no random boon level.** `HandleChallengeLoot` spawns the
+  drop with a bare `CreateConsumableItem` (EventLogic.lua:541), and
+  `CreateConsumableItemFromData` applies `RunProgress` only with
+  `RunProgressUpgradeEligible` (InteractLogic.lua:869). This contradicts
+  settled switch decision 12 ("Nectar with its random +1 level target"); the
+  model follows the source. Reverting is one catalog override (the
+  `giftDropRunProgressLevel` effect on `ChallengeSwitchLoot`'s `GiftDrop`).
+  Owner to confirm.
+- **Spawn-rule findings halt at the Overview** like the Well and Shrine
+  placement findings: the room is entered, its Timeline is not assessed. The
+  engine has no non-blocking finding class ("every finding is a simulation
+  blocker"); "non-blocking" is read as "reported, never refused". A truly
+  non-halting class is an engine-wide change for the owner to rule on.
+- **Claim pickups are optional rows**, auto-ordered after the interaction: a
+  required doors-open row would move the exit checkpoint, and the player may
+  leave them.
+- **The encounter is not a choice**: every RoomSet names exactly one encounter
+  per kind, so the host declares it. Its customization (generated roster, the
+  Elite's attributes) and its encounter-cache record are not modeled in P4:
+  they need a side-encounter phase in encounter preparation, and no modeled
+  eligibility reads the challenge encounters' names. Left for a later phase.
+- Spacing counts room appearances, as the Well's and Shrine's do; "no active
+  bounty" is not modeled (the planner has no bounty).
+- A Path of Stars claim with no installed Hex tree (only possible when
+  `TalentLegal` failed at entry) settles nothing in the walk; the Overview
+  finding owns the repair.
+
+Lanes (2026-11-04): typecheck, lint, format:check pass; `test:catalog` 454,
+`test:engine` 3933, `test:equivalence` 157/157 unchanged, `test:draft` 165,
+`test:run-import` 342 (+1 skipped), `test:planner` 2161 (+1 skipped; the
+`Money` reward needed its artwork record).
+
+Owed at merge (with P6): promote the switch contract into
+`AUTHORED_PROJECT_MODEL.md` (leaf, commands, claim site), `CATALOG_MODEL.md`,
+`ROOM_LIFECYCLE_MODEL.md` (doors-open interaction, entry spacing),
+`REWARD_MODEL.md` (claim pickups among generated pickups; gold: line "challenge
+switches are not counted" is now only their encounters' kill gold),
+`GOLD_ESTIMATE_ASSUMPTIONS.md` (row 24), `EXECUTION_PROTOCOL.md` (guide row),
+and the Keepsake audit's switch note.
+
+What P5 needs:
+
+- An Overview control on host rooms: presence and variant
+  (`ReplaceChallengeSwitch`), with the variants' entry eligibility (engine
+  query to add beside the room-entered assessment) and finding copy per
+  `challengeSwitchPlacementUnavailable` reason.
+- A Timeline control: insert/remove `interactChallengeSwitch`
+  (Insert/RemoveRoomAction) and its outcome (`ReplaceChallengeSwitchOutcome`:
+  hitless, Nectar, Time gold); the claim pickups are ordinary pickup rows with
+  source family `challengeSwitch` (Pom target, Path screen and dispositions
+  through the existing commands).
+- Run import: author a used switch (variant from `uses`, the interaction,
+  the outcome from the reward object) instead of reporting it unsupported.
+
 ## Equivalence characterization per phase
 
-| Phase         | Entries changed | Why                                                                                                                        |
-| ------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| P1            | none (157/157)  | A project without `planEnd` evaluates identically; `processing.afterPlanEnd` is present only when an end applies.          |
-| P3            | none (157/157)  | The end room's exit work, the partial Hub block and the ended extent apply only with `planEnd`; no corpus project has one. |
-| P2            | not run         | Planner only; no engine change.                                                                                            |
-| P2 follow-ups | none (157/157)  | Readiness and candidates change only under an ended horizon; no corpus project has one.                                    |
+| Phase         | Entries changed | Why                                                                                                                                                      |
+| ------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1            | none (157/157)  | A project without `planEnd` evaluates identically; `processing.afterPlanEnd` is present only when an end applies.                                        |
+| P3            | none (157/157)  | The end room's exit work, the partial Hub block and the ended extent apply only with `planEnd`; no corpus project has one.                               |
+| P2            | not run         | Planner only; no engine change.                                                                                                                          |
+| P2 follow-ups | none (157/157)  | Readiness and candidates change only under an ended horizon; no corpus project has one.                                                                  |
+| P4            | none (157/157)  | Catalog additions (switches, `Money`, `ChallengeSwitchLoot`) and switch handling apply only to rooms with an observed switch; no corpus project has one. |
 
 ## Owner-settled decisions (2026-11-03)
 
