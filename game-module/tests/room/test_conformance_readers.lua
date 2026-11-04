@@ -39,6 +39,7 @@ local function admissionFixture()
         chaos = { active = {}, matured = {} },
         retainedEffects = {
             steadyGrowth = {},
+            hermesShrineDeliveries = {},
             keepsakes = {
                 olympianSources = {}, jeweledPom = json.null, experimentalHammers = {},
                 callingCard = json.null, timePiece = json.null, figLeaf = json.null,
@@ -266,7 +267,7 @@ function TestConformanceReaders.testStartRoomSelfCheckDispatchesEveryNamedFamily
     for _, kind in ipairs({
         "traitInventory", "elementCounts", "steadyGrowth", "chaos", "keepsakeEffects",
         "rewardPriorities", "pathOfStars", "forfeit", "stygianWell",
-        "keepsakes", "equipment", "arcana", "vows", "chaosValues", "hexNodes",
+        "keepsakes", "equipment", "arcana", "vows", "chaosValues", "hexNodes", "hermesDeliveries",
     }) do
         lu.assertEquals(calls[kind], 1, kind)
     end
@@ -279,6 +280,46 @@ function TestConformanceReaders.testStartRoomSelfCheckRejectsModeledTraitDiffere
     lu.assertNil(ok)
     lu.assertEquals(mismatch.checkpoint, "practice-start:traitInventory")
     restore()
+end
+
+-- Snap's verify reads pending Hermes orders, so a frame differing only there is corrected.
+function TestConformanceReaders.testFrameCheckReadsPendingHermesOrdersAsAMultiset()
+    local occurrence, restore = admissionFixture()
+    local entry = occurrence.diagnostics.roomEntered
+    local traits = _G.CurrentRun.Hero.Traits
+    traits[#traits + 1] = { Name = "StorePendingDeliveryItem", ShopItemName = "BlindBoxLoot", RemainingUses = 8 }
+    traits[#traits + 1] = { Name = "StorePendingDeliveryItem", ShopItemName = "SpellDrop", RemainingUses = 8 }
+    _G.CurrentRun.PendingSpellDrop = true
+    local unplanned, mismatch = admission.verify(occurrence)
+    local function order(rewardType, uses)
+        return { sourceKey = "s", sourceOccurrenceId = "o", generationKey = "g", rewardType = rewardType,
+            remainingUses = uses, rushed = false }
+    end
+    entry.retainedEffects.hermesShrineDeliveries = { order("SpellDrop", 8), order("BlindBoxLoot", 8) }
+    local planned = admission.verify(occurrence)
+    entry.retainedEffects.hermesShrineDeliveries = { order("SpellDrop", 6), order("BlindBoxLoot", 8) }
+    local stale, usesMismatch = admission.verify(occurrence)
+    restore()
+    lu.assertNil(unplanned)
+    lu.assertEquals(mismatch, {
+        checkpoint = "practice-start:hermesDeliveries", family = "hermesDeliveries",
+        expected = { orders = {}, staleSpellDrop = false },
+        observed = { orders = { "BlindBoxLoot:8", "SpellDrop:8" }, staleSpellDrop = false },
+    })
+    lu.assertTrue(planned)
+    lu.assertNil(stale)
+    lu.assertEquals(usesMismatch.observed.orders, { "BlindBoxLoot:8", "SpellDrop:8" })
+end
+
+function TestConformanceReaders.testAPendingSpellDropWithoutAnOrderOrUseIsStale()
+    local run = { Hero = { Traits = {} }, PendingSpellDrop = true }
+    lu.assertEquals(readers.read("hermesDeliveries", run), { orders = {}, staleSpellDrop = true })
+    run.UseRecord = { SpellDrop = 1 }
+    lu.assertFalse(readers.read("hermesDeliveries", run).staleSpellDrop)
+    run.UseRecord = {}
+    run.Hero.Traits = { { Name = "StorePendingDeliveryItem", ShopItemName = "SpellDrop", RemainingUses = 2 } }
+    lu.assertEquals(readers.read("hermesDeliveries", run), { orders = { "SpellDrop:2" }, staleSpellDrop = false })
+    lu.assertFalse(readers.supports("hermesDeliveries"))
 end
 
 function TestConformanceReaders.testStartRoomSelfCheckIgnoresExtraTraitsAndDiagnosticOnlyState()

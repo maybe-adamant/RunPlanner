@@ -339,6 +339,16 @@ function TestSnapApply.testRewritesWellChargesAndDeliveriesAndClearsAStalePendin
         named(hero, "StorePendingDeliveryItem").RemainingUses }, { "MaxManaDrop", 2 })
 end
 
+function TestSnapApply.testClearsAStalePendingSpellDropWhenTheOrdersAlreadyMatch()
+    local hero, _, restore = world()
+    local run = _G.CurrentRun
+    run.PendingSpellDrop = true
+    lu.assertTrue(apply(frame()))
+    restore()
+    lu.assertFalse(run.PendingSpellDrop)
+    lu.assertEquals(names(hero), {})
+end
+
 function TestSnapApply.testReaddsAPerfectAspectAndCirceFamiliarStacks()
     local hero, _, restore = world({
         { Name = "BaseStaffAspect", Rarity = "Legendary" },

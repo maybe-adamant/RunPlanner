@@ -361,6 +361,26 @@ local function stygianWell(run)
     }
 end
 
+-- Pending Hermes orders by item and remaining uses, in no particular order. A
+-- PendingSpellDrop with no SpellDrop order and no SpellDrop used this run is
+-- stale: native never clears it, and it blocks SpellDrop and Selene
+-- (SurfaceShopLogic.lua:492, RequirementsData.lua:1349).
+local function hermesDeliveries(run)
+    local orders, spellOrder = {}, false
+    for _, trait in pairs(traits(run) or {}) do
+        if traitKey(trait) == "StorePendingDeliveryItem" then
+            orders[#orders + 1] = tostring(trait.ShopItemName) .. ":" .. tostring(trait.RemainingUses)
+            spellOrder = spellOrder or trait.ShopItemName == "SpellDrop"
+        end
+    end
+    table.sort(orders)
+    local used = type(run) == "table" and type(run.UseRecord) == "table" and run.UseRecord.SpellDrop
+    return {
+        orders = orders,
+        staleSpellDrop = type(run) == "table" and run.PendingSpellDrop == true and not spellOrder and not used,
+    }
+end
+
 function readers.read(kind, run, gameState, expected)
     if kind == "traitInventory" then return modeledTraitInventory(run, expected) end
     if kind == "elementCounts" then return elements(run) end
@@ -377,6 +397,7 @@ function readers.read(kind, run, gameState, expected)
     if kind == "vows" then return vows(run, gameState, expected) end
     if kind == "chaosValues" then return chaosValues(run) end
     if kind == "hexNodes" then return hexNodes(run) end
+    if kind == "hermesDeliveries" then return hermesDeliveries(run) end
     return nil
 end
 

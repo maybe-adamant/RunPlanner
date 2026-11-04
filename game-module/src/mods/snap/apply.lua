@@ -341,16 +341,7 @@ local function wellFamily(frame, expected)
             hymnUses = well.hymnUses, extendedUses = well.extendedUses,
         } })
     end
-    local planned, live = {}, {}
-    for _, row in ipairs(frame.retainedEffects.hermesShrineDeliveries) do
-        planned[#planned + 1] = row.rewardType .. ":" .. row.remainingUses
-    end
-    for _, trait in ipairs(each("StorePendingDeliveryItem")) do
-        live[#live + 1] = tostring(trait.ShopItemName) .. ":" .. tostring(trait.RemainingUses)
-    end
-    table.sort(planned)
-    table.sort(live)
-    if table.concat(planned, ",") ~= table.concat(live, ",") then
+    if not matches(expected, "hermesDeliveries") then
         removeAll("StorePendingDeliveryItem")
         -- Native never clears PendingSpellDrop, and a stale one blocks Selene (RequirementsData.lua:1349).
         run().PendingSpellDrop = false

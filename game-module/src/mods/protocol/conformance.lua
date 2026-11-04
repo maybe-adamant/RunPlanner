@@ -145,6 +145,19 @@ local function hexNodes(state)
     return { nodes = nodes.nodes, investedNodes = sorted(nodes.investedNodes) }
 end
 
+-- Pending Hermes orders as an order-insensitive multiset of item and remaining
+-- uses. A module-internal check, not a published fact kind.
+local function hermesDeliveries(state)
+    local rows = field(state, "retainedEffects", "hermesShrineDeliveries")
+    if type(rows) ~= "table" then return nil end
+    local orders = {}
+    for index, row in ipairs(rows) do orders[index] = row.rewardType .. ":" .. row.remainingUses end
+    table.sort(orders)
+    return { orders = orders, staleSpellDrop = false }
+end
+
+conformance.hermesDeliveriesExpected = hermesDeliveries
+
 local readers = {
     elementCounts = function(state) return field(state, "traits", "elements") end,
     steadyGrowth = function(state) return field(state, "retainedEffects", "steadyGrowth") end,
@@ -166,7 +179,7 @@ local readers = {
 conformance.admissionKinds = {
     "traitInventory", "elementCounts", "steadyGrowth", "chaos", "keepsakeEffects",
     "rewardPriorities", "pathOfStars", "forfeit", "stygianWell",
-    "keepsakes", "equipment", "arcana", "vows", "chaosValues", "hexNodes",
+    "keepsakes", "equipment", "arcana", "vows", "chaosValues", "hexNodes", "hermesDeliveries",
 }
 
 local function traitInventoryEntryExpected(entry)
@@ -184,6 +197,7 @@ end
 
 local function admissionStateValue(entry, kind)
     if kind == "traitInventory" then return traitInventoryEntryExpected(entry) end
+    if kind == "hermesDeliveries" then return hermesDeliveries(entry) end
     return readers[kind](entry)
 end
 
