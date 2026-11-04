@@ -23,6 +23,7 @@ import {
 } from '../../commerce/challenge-switch';
 import type {
   ChallengeSwitchInteraction,
+  ChallengeSwitchOutcomeInteraction,
   ChampionItemInteraction,
   HermesShrineInteraction,
   HermesShrineInteractionOffer,
@@ -33,6 +34,11 @@ import type { RealizedHermesShrineTravelDealRefill } from '../../commerce/hermes
 import type { HistoryEvent } from '../../history';
 import type { CanonicalAuthoredRoom } from '../../materialization';
 import type { PreparedChallengeSwitchEncounter } from '../../encounters/challenge-switch';
+import {
+  challengeSwitchOutcomeDropsNectar,
+  challengeSwitchOutcomes,
+  resolveChallengeSwitch,
+} from '../../../authored-project/acquisition/challenge-switch';
 import type { RewardBranchState } from '../branch-primitives';
 import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
 import type { DerivedAcquisitionEntryFrontier } from '../acquisition/contracts';
@@ -275,6 +281,56 @@ function championItemInteraction(
   });
 }
 
+function challengeSwitchOutcomeInteraction(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+): ChallengeSwitchOutcomeInteraction | undefined {
+  const observed = room.challengeSwitch;
+  const resolved =
+    observed === undefined ? undefined : resolveChallengeSwitch(catalog, observed.variantKey);
+  if (observed === undefined || resolved === undefined || room.origin.kind !== 'occurrence')
+    return undefined;
+  const occurrence = room.origin;
+  const command = (outcome: ChallengeSwitchOutcomeInteraction['current'], nectarDropped: boolean) =>
+    Object.freeze({
+      kind: 'ReplaceChallengeSwitchOutcome' as const,
+      occurrence,
+      outcome,
+      nectarDropped,
+      ...(outcome === observed.outcome && observed.gold !== undefined
+        ? { gold: observed.gold }
+        : {}),
+    });
+  const nectarAllowed = challengeSwitchOutcomeDropsNectar(observed.outcome);
+  const gold = catalog.challengeSwitches.gold;
+  return Object.freeze({
+    current: observed.outcome,
+    choices: Object.freeze(
+      challengeSwitchOutcomes(resolved.kind).map((outcome) =>
+        Object.freeze({
+          outcome,
+          command: command(
+            outcome,
+            observed.nectarDropped && challengeSwitchOutcomeDropsNectar(outcome),
+          ),
+        }),
+      ),
+    ),
+    nectarAllowed,
+    goldApplies: observed.gold !== undefined,
+    ...(nectarAllowed ? { nectarCommand: command(observed.outcome, !observed.nectarDropped) } : {}),
+    ...(observed.gold === undefined
+      ? {}
+      : {
+          gold: Object.freeze({
+            value: observed.gold,
+            minimum: gold.minimumValue,
+            maximum: gold.startingValue,
+          }),
+        }),
+  });
+}
+
 /** The switch variants a host's entry could hold, each with the command that observes it. */
 function challengeSwitchInteraction(
   catalog: Catalog,
@@ -290,6 +346,7 @@ function challengeSwitchInteraction(
       : catalog.challengeSwitches.eliteEncounters.byKey[host.encounterKeyBySwitchKind.elite];
   const roomSetKey = catalog.rooms.byKey[room.gameName]?.roomSetKey;
   if (encounter === undefined || roomSetKey === undefined) return undefined;
+  const outcome = challengeSwitchOutcomeInteraction(catalog, room);
   return Object.freeze({
     elite: Object.freeze({
       encounterKey: encounter.encounterKey,
@@ -340,6 +397,7 @@ function challengeSwitchInteraction(
             ),
           }),
         }),
+    ...(outcome === undefined ? {} : { outcome }),
     sharedIssues: assessment.sharedIssues,
     variants: Object.freeze(
       assessment.variants.map((variant) =>

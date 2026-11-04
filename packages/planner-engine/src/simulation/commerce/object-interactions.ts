@@ -102,6 +102,29 @@ export interface ChallengeSwitchInteraction {
    * support. Its capability is `challengeSwitchEncounterSupportForProjectEvaluationAssembly`.
    */
   readonly encounter?: ChallengeSwitchEncounterInteraction;
+  /** The observed switch's fight outcome and what each choice of its kind sets. */
+  readonly outcome?: ChallengeSwitchOutcomeInteraction;
+}
+
+/**
+ * The observed switch's outcome: its kind's choices, each with the command
+ * that sets it (Nectar kept where the choice can drop it, gold left to the
+ * engine), and what the current outcome allows.
+ */
+export interface ChallengeSwitchOutcomeInteraction {
+  readonly current: import('../../authored-project/model').ChallengeSwitchOutcome;
+  readonly choices: readonly {
+    readonly outcome: import('../../authored-project/model').ChallengeSwitchOutcome;
+    readonly command: CommandOf<'ReplaceChallengeSwitchOutcome'>;
+  }[];
+  /** The current outcome can drop the bonus Nectar. */
+  readonly nectarAllowed: boolean;
+  /** Toggles the bonus Nectar; present while it is allowed. */
+  readonly nectarCommand?: CommandOf<'ReplaceChallengeSwitchOutcome'>;
+  /** The current outcome claims gold (a finished Time switch). */
+  readonly goldApplies: boolean;
+  /** Present while gold applies: its value, authored within these bounds. */
+  readonly gold?: { readonly value: number; readonly minimum: number; readonly maximum: number };
 }
 
 /** The observed switch's encounter and each declared decision with its authored value. */

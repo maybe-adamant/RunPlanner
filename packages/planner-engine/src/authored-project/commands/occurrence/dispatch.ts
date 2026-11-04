@@ -27,6 +27,7 @@ import {
   challengeSwitchOutcomeForVariant,
   challengeSwitchShapeIssue,
   defaultChallengeSwitch,
+  resolveChallengeSwitch,
 } from '../../acquisition/challenge-switch';
 import { decodeGeneratedEncounterCustomization } from '../../room-state/decoding/generated-encounter-codec';
 import {
@@ -714,11 +715,18 @@ export function applyOccurrenceCommand(
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       const current = occurrence.challengeSwitch;
       if (current === undefined) failCommand(command, 'occurrence has no challenge switch');
+      // A finished Time fight claims gold: an omitted value keeps the current one or the default.
+      const gold =
+        command.gold ??
+        (command.outcome === 'finished' &&
+        resolveChallengeSwitch(catalog, current.variantKey)?.kind.goldReward === true
+          ? (current.gold ?? catalog.challengeSwitches.gold.defaultValue)
+          : undefined);
       const next = Object.freeze({
         variantKey: current.variantKey,
         outcome: command.outcome,
         nectarDropped: command.nectarDropped,
-        ...(command.gold === undefined ? {} : { gold: command.gold }),
+        ...(gold === undefined ? {} : { gold }),
         ...(current.elite === undefined ? {} : { elite: current.elite }),
         ...(current.customization === undefined ? {} : { customization: current.customization }),
       });

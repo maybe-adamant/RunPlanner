@@ -629,7 +629,10 @@ export type ChallengeSwitchCommand =
       readonly value: import('../model').AuthoredEncounterCustomization | null;
     }
   | {
-      /** Replaces the fight's outcome; gold is a finished Time switch's only. */
+      /**
+       * Replaces the fight's outcome; gold is a finished Time switch's only,
+       * and an omitted one keeps the current value or the catalog default.
+       */
       readonly kind: 'ReplaceChallengeSwitchOutcome';
       readonly occurrence: OccurrenceAddress;
       readonly outcome: import('../model').ChallengeSwitchOutcome;

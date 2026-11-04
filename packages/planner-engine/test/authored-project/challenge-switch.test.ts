@@ -247,14 +247,24 @@ describe('challenge switch observation', () => {
         gold: 50,
       }),
     ).toThrow(/only a finished Time switch claims gold/);
-    expect(() =>
-      applyProjectCommand(time, catalog, {
-        kind: 'ReplaceChallengeSwitchOutcome',
-        occurrence: host,
-        outcome: 'finished',
-        nectarDropped: false,
-      }),
-    ).toThrow(/gold must be an integer/);
+    // Finishing a Time fight without a value keeps its gold, or takes the default after a leave.
+    const left = applyProjectCommand(time, catalog, {
+      kind: 'ReplaceChallengeSwitchOutcome',
+      occurrence: host,
+      outcome: 'left',
+      nectarDropped: false,
+    });
+    expect(occurrenceOf(left).challengeSwitch?.gold).toBeUndefined();
+    expect(
+      occurrenceOf(
+        applyProjectCommand(left, catalog, {
+          kind: 'ReplaceChallengeSwitchOutcome',
+          occurrence: host,
+          outcome: 'finished',
+          nectarDropped: false,
+        }),
+      ).challengeSwitch?.gold,
+    ).toBe(catalog.challengeSwitches.gold.defaultValue);
   });
 
   it('decodes strictly: host, shape, and an interaction without a switch', () => {

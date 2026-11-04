@@ -760,6 +760,13 @@ customization?, elite? }` for every entered room with an observed switch,
   nothing (no estimate of a partial fight). The guide row
   `interactChallengeSwitch` carries `outcome` (rides P6, deferred to P7).
   Not enforced: a left press being the room's last action (the player left).
+  Product for the Timeline: `ChallengeSwitchInteraction.outcome`
+  (`ChallengeSwitchOutcomeInteraction`): `current`, `choices` (each kind
+  outcome with its bound `ReplaceChallengeSwitchOutcome`, Nectar kept where
+  the choice drops it), `nectarAllowed`, `nectarCommand` (toggle, while
+  allowed), `goldApplies` and `gold { value, minimum, maximum }`. The command
+  supplies a finished Time switch's omitted gold (current, else the catalog
+  default), so the app never sends one except to change it.
   Witnesses in the authored and simulation switch tests.
 
 What P5 needs:

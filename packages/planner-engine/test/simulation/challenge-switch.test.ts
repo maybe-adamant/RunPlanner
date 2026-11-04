@@ -459,6 +459,59 @@ describe('challenge switch variant query', () => {
   });
 });
 
+describe('challenge switch outcome product', () => {
+  const fHost = createOccurrenceAddress(
+    createBiomeAddress('Underworld', 'F'),
+    createOccurrenceId('golden-f-b8-e1'),
+  );
+  const product = (project: ProjectDocument) =>
+    roomObjectInteractionsForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, project),
+      fHost,
+    )?.challengeSwitch?.outcome;
+
+  it('offers the kind’s outcomes with bound commands, Nectar and gold where they apply', () => {
+    expect(product(golden())).toBeUndefined();
+    const time = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money');
+    const finished = product(time);
+    expect(finished).toMatchObject({
+      current: 'finished',
+      nectarAllowed: true,
+      goldApplies: true,
+      gold: { value: 90, minimum: 10, maximum: 100 },
+      nectarCommand: { outcome: 'finished', nectarDropped: true, gold: 90 },
+    });
+    expect(finished?.choices.map((choice) => choice.outcome)).toEqual(['left', 'finished']);
+    const leave = finished!.choices.find((choice) => choice.outcome === 'left')!.command;
+    expect(leave).toEqual({
+      kind: 'ReplaceChallengeSwitchOutcome',
+      occurrence: fHost,
+      outcome: 'left',
+      nectarDropped: false,
+    });
+    const left = applyProjectCommand(time, catalog, leave);
+    expect(product(left)).toMatchObject({
+      current: 'left',
+      nectarAllowed: false,
+      goldApplies: false,
+    });
+    expect(product(left)?.nectarCommand).toBeUndefined();
+    expect(product(left)?.gold).toBeUndefined();
+    // Choosing finished again needs no gold: the engine supplies the default.
+    const back = product(left)!.choices.find((choice) => choice.outcome === 'finished')!.command;
+    expect(back).not.toHaveProperty('gold');
+    expect(
+      occurrence(applyProjectCommand(left, catalog, back), 'F', 'golden-f-b8-e1').challengeSwitch
+        ?.gold,
+    ).toBe(90);
+    const perfect = product(
+      withSwitch(golden(), 'F', 'golden-f-b8-e1', 'PerfectClearChallengeSwitch_MaxHealth'),
+    );
+    expect(perfect?.choices.map((choice) => choice.outcome)).toEqual(['left', 'hitless', 'failed']);
+    expect(perfect).toMatchObject({ current: 'hitless', nectarAllowed: true, goldApplies: false });
+  });
+});
+
 describe('Elite switch elite', () => {
   const pin = (project: ProjectDocument, enemyKey: string, attributeKeys: string[]) =>
     applyProjectCommand(project, catalog, {
