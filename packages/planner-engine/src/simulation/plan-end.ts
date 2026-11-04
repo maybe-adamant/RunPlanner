@@ -2,6 +2,7 @@ import type { Catalog } from '../catalog-schema';
 import type {
   AuthoredBiomePlan,
   BiomeTopology,
+  HubAction,
   HubDecision,
   LocalVisitDecision,
   NextRoomDecision,
@@ -54,6 +55,61 @@ export function resolveBiomePlanEnd(
     byOccurrence.set(occurrenceId, cut);
   }
   return Object.freeze({ kind: 'cut', occurrenceId, plan: cut });
+}
+
+/** Which authored structure of a biome lies inside its plan end and which lies past it. */
+export interface PlanEndExtent {
+  /** Rooms the selected plan enters through its end room, the end room included. */
+  readonly entered: ReadonlySet<OccurrenceId>;
+  /** Rooms the authored plan enters only after its end. */
+  readonly enteredAfter: ReadonlySet<OccurrenceId>;
+  /** Each Hub's authored actions after the end, keyed by Hub. */
+  readonly hubActionsAfter: ReadonlyMap<string, readonly HubAction[]>;
+  /** The Hub main room whose visit a side room belongs to, for every side-room slot. */
+  readonly sideRoomSource: ReadonlyMap<OccurrenceId, OccurrenceId>;
+}
+
+const extents = new WeakMap<BiomeTopology, Map<OccurrenceId, PlanEndExtent>>();
+
+export function planEndExtent(topology: BiomeTopology, end: OccurrenceId): PlanEndExtent {
+  let byEnd = extents.get(topology);
+  if (byEnd === undefined) extents.set(topology, (byEnd = new Map()));
+  const known = byEnd.get(end);
+  if (known !== undefined) return known;
+  const through = topologyThroughEnd(topology, end);
+  const entered = structurallyActiveOccurrenceIds(through);
+  const enteredAfter = new Set(
+    [...structurallyActiveOccurrenceIds(topology)].filter((id) => !entered.has(id)),
+  );
+  const keptActions = new Map(
+    through.decisions.flatMap((decision) =>
+      decision.kind === 'hub' ? [[decision.hubKey, decision.actions.length] as const] : [],
+    ),
+  );
+  const hubActionsAfter = new Map(
+    topology.decisions.flatMap((decision) =>
+      decision.kind === 'hub'
+        ? [
+            [
+              decision.hubKey,
+              Object.freeze(decision.actions.slice(keptActions.get(decision.hubKey) ?? 0)),
+            ] as const,
+          ]
+        : [],
+    ),
+  );
+  const sideRoomSource = new Map(
+    topology.decisions.flatMap((decision) =>
+      decision.kind === 'localVisit'
+        ? Object.values(decision.targetsBySlot).map(
+            (target) => [target.occurrenceId, decision.sourceOccurrenceId] as const,
+          )
+        : [],
+    ),
+  );
+  const extent = Object.freeze({ entered, enteredAfter, hubActionsAfter, sideRoomSource });
+  byEnd.set(end, extent);
+  return extent;
 }
 
 /** The Hub visit ordinal (1-based) whose stay enters the occurrence, if any. */

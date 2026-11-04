@@ -193,6 +193,26 @@ function boundaryLocation(
   return coarseLocation(location);
 }
 
+/**
+ * Orders two already-normalized boundaries without exact child positions;
+ * undefined when either lies outside the evaluated structure.
+ */
+export function compareAuthoringBoundaries(
+  prefix: BiomeMaterialization,
+  owner: SemanticAddress,
+  blockedAfter: SemanticAddress,
+  blockedAfterFallbackLocation?: OwnerLocation,
+): number | undefined {
+  const ownerLocation = boundaryLocation(prefix, owner);
+  const blockedAfterLocation =
+    boundaryLocation(prefix, blockedAfter) ??
+    (blockedAfterFallbackLocation === undefined
+      ? undefined
+      : coarseLocation(blockedAfterFallbackLocation));
+  if (ownerLocation === undefined || blockedAfterLocation === undefined) return undefined;
+  return compareOwnerLocations(ownerLocation, blockedAfterLocation);
+}
+
 /** Compares two already-normalized boundaries without exact child positions. */
 export function authoringBoundaryReadiness(
   prefix: BiomeMaterialization,
@@ -201,14 +221,13 @@ export function authoringBoundaryReadiness(
   blockedAfterFallbackLocation?: OwnerLocation,
 ): 'editable' | 'locked' {
   if (semanticAddressKey(owner) === semanticAddressKey(blockedAfter)) return 'editable';
-  const ownerLocation = boundaryLocation(prefix, owner);
-  const blockedAfterLocation =
-    boundaryLocation(prefix, blockedAfter) ??
-    (blockedAfterFallbackLocation === undefined
-      ? undefined
-      : coarseLocation(blockedAfterFallbackLocation));
-  if (ownerLocation === undefined || blockedAfterLocation === undefined) return 'locked';
-  const comparison = compareOwnerLocations(ownerLocation, blockedAfterLocation);
+  const comparison = compareAuthoringBoundaries(
+    prefix,
+    owner,
+    blockedAfter,
+    blockedAfterFallbackLocation,
+  );
+  if (comparison === undefined) return 'locked';
   if (comparison < 0) return 'editable';
   if (comparison > 0) return 'locked';
   if (owner.kind === 'exitDecision' || owner.kind === 'hubDecision') {

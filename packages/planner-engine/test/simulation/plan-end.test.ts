@@ -6,6 +6,12 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createExitDecisionAddress,
+  createHubDecisionAddress,
+  createHubFountainAddress,
+  createHubVisitAddress,
+  createIncomingRewardAddress,
+  createLocalVisitOrderAddress,
+  createLocalVisitSlotAddress,
   createOccurrenceAddress,
   createRouteAddress,
   type OccurrenceId,
@@ -206,6 +212,91 @@ describe('Plan end evaluation', () => {
     expect(authoringReadinessAt(assembly, occurrence(f, 'golden-f-b6-e1'))).toBe('locked');
     expect(authoringReadinessAt(assembly, occurrence(g, 'golden-g-b1-e1'))).toBe('locked');
     expect(authoringReadinessAt(assembly, createRouteAddress('Underworld'))).toBe('editable');
+  });
+
+  it("keeps the end room's peers editable but locks the siblings of its own doors", () => {
+    const assembly = simulateProjectAssembly(
+      catalog,
+      endAt(createCompleteFGProject(), 'F', 'golden-f-b5-e1'),
+    );
+    const f = createBiomeAddress('Underworld', 'F');
+    const readiness = (id: string) => [
+      authoringReadinessAt(assembly, createOccurrenceAddress(f, id as OccurrenceId)),
+      authoringReadinessAt(assembly, createIncomingRewardAddress(f, id as OccurrenceId)),
+    ];
+    // b5-e2 was offered beside the end room by b4-e1's doors: inside the plan.
+    expect(readiness('golden-f-b5-e2')).toEqual(['editable', 'editable']);
+    expect(readiness('golden-f-b4-e2')).toEqual(['editable', 'editable']);
+    // b6-e1 and b6-e2 are the end room's own doors: past the end.
+    expect(readiness('golden-f-b6-e1')).toEqual(['locked', 'locked']);
+    expect(readiness('golden-f-b6-e2')).toEqual(['locked', 'locked']);
+  });
+
+  it('keeps a Hub end visit editable through its side rooms and locks later visits', () => {
+    // Visits: combat05 (sides sideDoor2, sideDoor1), miniBoss01, combat02 (side sideDoor1), ...
+    const n = createBiomeAddress('Surface', 'N');
+    const room = (id: string) => createOccurrenceAddress(n, id as OccurrenceId);
+    const group = (id: string) => createLocalVisitOrderAddress(n, id as OccurrenceId, 'sideRooms');
+    const atMain = simulateProjectAssembly(
+      catalog,
+      endAt(loadSurfaceNProject(), 'N', 'surface-n-combat05'),
+    );
+    const main = (owner: Parameters<typeof authoringReadinessAt>[1]) =>
+      authoringReadinessAt(atMain, owner);
+    expect(main(room('surface-n-combat05-sideDoor2'))).toBe('editable');
+    expect(main(room('surface-n-combat05-sideDoor1'))).toBe('editable');
+    expect(main(room('surface-n-combat05-sideDoor3'))).toBe('editable');
+    expect(main(group('surface-n-combat05'))).toBe('editable');
+    expect(
+      main(
+        createLocalVisitSlotAddress(
+          n,
+          'surface-n-combat05' as OccurrenceId,
+          'sideRooms',
+          'sideDoor3',
+        ),
+      ),
+    ).toBe('editable');
+    expect(main(createHubVisitAddress(n, 'hub', 1))).toBe('editable');
+    // Later visits are past the end; their board offers are part of the board, before it.
+    for (const later of ['surface-n-miniBoss01', 'surface-n-combat02', 'surface-n-combat11']) {
+      expect(main(room(later))).toBe('locked');
+      expect(main(createIncomingRewardAddress(n, later as OccurrenceId))).toBe('editable');
+    }
+    expect(main(room('surface-n-combat02-sideDoor1'))).toBe('locked');
+    expect(main(group('surface-n-combat02'))).toBe('locked');
+    expect(main(createHubVisitAddress(n, 'hub', 2))).toBe('locked');
+    // A board room no visit enters stays as editable as without an end.
+    expect(main(room('surface-n-combat10'))).toBe('editable');
+    expect(main(createHubDecisionAddress(n, 'hub'))).toBe('editable');
+    expect(main(createHubFountainAddress(n, 'hub'))).toBe('editable');
+    expect(main(createExitDecisionAddress(n, { kind: 'hubDecision', decisionKey: 'hub' }))).toBe(
+      'locked',
+    );
+
+    // An end at a side room ends after it: the side room entered later is past it.
+    const atSide = simulateProjectAssembly(
+      catalog,
+      endAt(loadSurfaceNProject(), 'N', 'surface-n-combat05-sideDoor2'),
+    );
+    expect(authoringReadinessAt(atSide, room('surface-n-combat05-sideDoor1'))).toBe('locked');
+    expect(authoringReadinessAt(atSide, room('surface-n-combat05-sideDoor3'))).toBe('editable');
+
+    // A fountain used after the end visit is past the end.
+    const fountainLater = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceHubActionOrder',
+      hub: createHubDecisionAddress(n, 'hub'),
+      actions: [
+        { kind: 'roomVisit', hubSlotKey: 'combat05' },
+        { kind: 'useFountain' },
+        { kind: 'roomVisit', hubSlotKey: 'miniBoss01' },
+      ],
+    });
+    const fountainAfter = simulateProjectAssembly(
+      catalog,
+      endAt(fountainLater, 'N', 'surface-n-combat05'),
+    );
+    expect(authoringReadinessAt(fountainAfter, createHubFountainAddress(n, 'hub'))).toBe('locked');
   });
 
   it('raises no finding for a route-owned placement on a room past the end', () => {

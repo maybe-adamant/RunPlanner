@@ -1,11 +1,17 @@
-import type { SemanticAddress } from '../../authored-project/addresses';
-import { authoringBoundaryReadiness, resolveAuthoringBoundary } from './authoring-boundary';
+import type { OccurrenceAddress, SemanticAddress } from '../../authored-project/addresses';
+import type { BiomeTopology, OccurrenceId } from '../../authored-project/model';
+import {
+  authoringBoundaryReadiness,
+  compareAuthoringBoundaries,
+  resolveAuthoringBoundary,
+} from './authoring-boundary';
 import type {
   ProjectBiomeEvaluation,
   ProjectEvaluationAssembly,
 } from '../evaluation/evaluation-products';
 import type { CanonicalBiome, MaterializedBiomePrefix } from '../materialization';
 import { assertExactProjectEvaluationAssembly } from '../evaluation/project-evaluation-assembly';
+import { planEndExtent, type PlanEndExtent } from '../plan-end';
 
 export type AuthoringReadiness = 'editable' | 'locked';
 
@@ -51,19 +57,81 @@ export function authoringReadinessAt(
   );
   const prefix = evaluation === undefined ? undefined : materialization(evaluation);
   if (prefix === undefined) return 'locked';
-  // The plan's end room generates no doors: its own exit is past the end.
-  const boundary = resolveAuthoringBoundary(prefix, owner);
-  if (
-    horizon.kind === 'ended' &&
-    boundary.kind === 'exitDecision' &&
-    boundary.source.kind === 'occurrence' &&
-    boundary.source.occurrenceId === horizon.blockedAfter.occurrenceId
-  )
-    return 'locked';
+  if (horizon.kind === 'ended') {
+    const topology = route.biomes[ownerBiomeIndex]?.topology;
+    if (topology === null || topology === undefined) return 'locked';
+    return endedReadiness(prefix, topology, owner, horizon.blockedAfter);
+  }
   return authoringBoundaryReadiness(
     prefix,
-    boundary,
+    resolveAuthoringBoundary(prefix, owner),
     horizon.blockedAfter,
     evaluation?.requiredInputLocation,
   );
+}
+
+/** Whether the owner is a Hub visit, fountain use or reroll the plan reaches only after its end. */
+function hubActionPastEnd(
+  topology: BiomeTopology,
+  extent: PlanEndExtent,
+  owner: SemanticAddress,
+): boolean {
+  const hubKey =
+    owner.kind === 'hubVisit' || owner.kind === 'hubFountain' || owner.kind === 'hubReroll'
+      ? owner.hubKey
+      : owner.kind === 'fountainRarityOutcome' && owner.action.kind === 'hubFountain'
+        ? owner.action.hubKey
+        : undefined;
+  if (hubKey === undefined) return false;
+  const after = extent.hubActionsAfter.get(hubKey) ?? [];
+  switch (owner.kind) {
+    case 'hubVisit': {
+      const hub = topology.decisions.find(
+        (decision) => decision.kind === 'hub' && decision.hubKey === hubKey,
+      );
+      if (hub?.kind !== 'hub') return false;
+      const visit = hub.actions.filter((action) => action.kind === 'roomVisit')[
+        owner.visitIndex - 1
+      ];
+      return visit !== undefined && after.includes(visit);
+    }
+    case 'hubReroll':
+      return after.some((action) => action.kind === 'reroll' && action.rerollId === owner.rerollId);
+    default:
+      return after.some((action) => action.kind === 'useFountain');
+  }
+}
+
+/**
+ * Inside an ended biome, everything the plan reaches through its end stays
+ * editable: the end room, its peers at the decision that led to it and, at a
+ * Hub main room, that whole visit with its side rooms. The end room's own exit,
+ * the rooms and Hub actions after the end, and their offers are locked.
+ */
+function endedReadiness(
+  prefix: CanonicalBiome | MaterializedBiomePrefix,
+  topology: BiomeTopology,
+  owner: SemanticAddress,
+  end: OccurrenceAddress,
+): AuthoringReadiness {
+  const extent = planEndExtent(topology, end.occurrenceId);
+  if (hubActionPastEnd(topology, extent, owner)) return 'locked';
+  const boundary = resolveAuthoringBoundary(prefix, owner);
+  if (boundary.kind === 'exitDecision') {
+    // The plan's end room generates no doors: its own exit is past the end.
+    if (boundary.source.kind === 'occurrence' && boundary.source.occurrenceId === end.occurrenceId)
+      return 'locked';
+  }
+  if (boundary.kind === 'occurrence') {
+    const room: OccurrenceId = boundary.occurrenceId;
+    const visit = extent.sideRoomSource.get(room);
+    if (extent.enteredAfter.has(room) || (visit !== undefined && extent.enteredAfter.has(visit)))
+      return 'locked';
+    if (extent.entered.has(room) || (visit !== undefined && extent.entered.has(visit)))
+      return 'editable';
+    // An unentered room offered beside the end room, or earlier, is inside the plan.
+    const comparison = compareAuthoringBoundaries(prefix, boundary, end);
+    return comparison !== undefined && comparison <= 0 ? 'editable' : 'locked';
+  }
+  return authoringBoundaryReadiness(prefix, boundary, end);
 }
