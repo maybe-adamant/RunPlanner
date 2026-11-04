@@ -57,6 +57,21 @@ describe('run import of Fields cage rolls by the Max counter', () => {
     );
   });
 
+  it("believes the entered room's cages over a counter that contradicts them, and reports it", () => {
+    // The counter gains at H_Intro, yet H_Combat15 holds the minimum of a larger capacity: a game
+    // module that sets cage counts itself leaves the counter on the native roll.
+    const imported = projectFromRunRecord(
+      catalog,
+      withMaxCounter({ 25: 0, 26: 1, 27: 2, 28: 2, 29: 3, 30: 3 }),
+    );
+    expect(
+      ['H:start', 'H-r26', 'H-r27', 'H-r28'].map((id) => cageOutcome(imported.project, id)),
+    ).toEqual(['min', 'max', 'min', 'max']);
+    expect(entryLines(imported.report).filter((line) => line.includes('exitDecision@H'))).toEqual([
+      'assumption fields r25 exitDecision@H:start -> InitializeExitDecision(H:start)',
+    ]);
+  });
+
   it('leaves a roll the counter pins open when the plan cannot make it', () => {
     // A third Max, at the Bridge, passes H's ceiling of two: refused, not swapped for Min.
     const imported = projectFromRunRecord(

@@ -202,8 +202,8 @@ function switchUnseenRoll(
 /**
  * The roll the source's door unlock made: `SelectFieldsDoorCageCount` counts
  * each Max roll in `FieldsMaxDoorsRolled` (EventLogic.lua:475-503), so the
- * counter's gain from the source's entry save to the next room's is the roll,
- * whatever cage count its doors show. Undefined when a save lacks the counter.
+ * counter's gain from the source's entry save to the next room's is the roll.
+ * Undefined when a save lacks the counter.
  */
 export function countedCageOutcome(
   context: RunImportContext,
@@ -218,9 +218,38 @@ export function countedCageOutcome(
 }
 
 /**
+ * The roll the entered Fields room's cages show: Min for the biome's minimum
+ * where the room holds more, Max for any other count. Undefined when no Fields
+ * room was entered from the source, or its capacity is the minimum, which
+ * either roll yields.
+ */
+function enteredCageOutcome(
+  context: RunImportContext,
+  occurrenceId: string,
+  minimum: number,
+): 'min' | 'max' | undefined {
+  const entered = context.occurrences
+    .visitsOf(occurrenceId)
+    .map((index) => context.record.rooms[index + 1])
+    .find((room) => room?.fields);
+  if (entered?.fields === undefined) return undefined;
+  const count = entered.fields.cages.length;
+  if (count !== minimum) return 'max';
+  const cageGroup = context.catalog.rooms.byKey[entered.name]?.localChildren.find(
+    (child) => child.kind === 'boundedRewardSlots' && child.key === 'cages',
+  );
+  return cageGroup?.kind === 'boundedRewardSlots' && cageGroup.maxActiveSlots > minimum
+    ? 'min'
+    : undefined;
+}
+
+/**
  * One roll sets every Fields door's cage count: the minimum, or the maximum
- * the doors' rooms hold. The Max counter pins it; a record without the
- * counter reads it from the entered Fields room's cage count.
+ * the doors' rooms hold. The Max counter pins it, unless the entered Fields
+ * room's cages show the other roll: a game module that sets cage counts
+ * itself leaves the counter on the native roll, so the room is believed and
+ * the conflict reported. A record without the counter reads the roll from
+ * the cage counts its doors show.
  */
 function answerCageOutcome(context: RunImportContext, decision: Origin<'exitDecision'>): boolean {
   if (decision.source.kind !== 'occurrence') return false;
@@ -232,11 +261,23 @@ function answerCageOutcome(context: RunImportContext, decision: Origin<'exitDeci
       ? countedCageOutcome(context, decision.source.occurrenceId)
       : undefined;
   if (counted !== undefined) {
-    if (
-      fieldsOutcomeSupported(context, decision, counted) &&
-      context.applyValid(cageOutcomeCommand(context, decision, counted))
-    )
+    const entered =
+      policy?.kind === 'fields'
+        ? enteredCageOutcome(context, decision.source.occurrenceId, policy.minDoorCageRewards)
+        : undefined;
+    const cageOutcome = entered ?? counted;
+    const command = cageOutcomeCommand(context, decision, cageOutcome);
+    if (fieldsOutcomeSupported(context, decision, cageOutcome) && context.applyValid(command)) {
+      if (cageOutcome !== counted)
+        context.note({
+          area: 'fields',
+          reason: 'assumption',
+          address: decision,
+          applied: command,
+          record: record(context.occurrences.visitsOf(decision.source.occurrenceId)[0]!),
+        });
       return true;
+    }
     context.refuse();
     return false;
   }
