@@ -604,19 +604,76 @@ switches are not counted" is now only their encounters' kill gold),
 `GOLD_ESTIMATE_ASSUMPTIONS.md` (row 24), `EXECUTION_PROTOCOL.md` (guide row),
 and the Keepsake audit's switch note.
 
+#### P4 follow-ups (2026-11-04)
+
+- **Nectar drop ruling checked: not simulation-neutral, so kept.** The owner
+  ruled to drop the bonus Nectar if it changes nothing. It does, in game and
+  in the engine: `GiftDrop` is `LastRewardEligible` (ConsumableData.lua; the
+  later key in its table wins), so collecting it becomes Echo's last reward
+  (InteractLogic.lua:1132–1137) and the engine records `lastRewardRecreation`;
+  it is `CanDuplicate` (Sea Star), `GoldifyValue` 200 (Time Piece) and
+  Artificer-convertible (its `UseOrConvert…` prompts); and it enters the use
+  records. `nectarDropped`, the `nectar` pickup and `hitless` on Time and Elite
+  therefore stay until the owner rules again (removing them is a small
+  change: the claim site, the outcome command and the codec).
+- **Variant query delivered.** Room entry assesses every reached switch host,
+  observed switch or not: the shared rules the entry breaks (`biomeDepth`,
+  `recentSwitch`, `noFreeAnchor`) and each variant's lock (`kindUnavailable`,
+  `variantUnavailable`). `roomObjectInteractionsForProjectEvaluationAssembly`
+  publishes it as `challengeSwitch` on the room's object interactions: each
+  variant with `rollable` and its `ReplaceChallengeSwitch` command. It is an
+  Overview fact, so it is present even where the Timeline is unreached; a room
+  that cannot host a switch has none. Placement findings derive from the same
+  assessment. Not part of the published evaluation, so equivalence is
+  unaffected.
+
 What P5 needs:
 
-- An Overview control on host rooms: presence and variant
-  (`ReplaceChallengeSwitch`), with the variants' entry eligibility (engine
-  query to add beside the room-entered assessment) and finding copy per
-  `challengeSwitchPlacementUnavailable` reason.
-- A Timeline control: insert/remove `interactChallengeSwitch`
+- **Overview, Objects tab** (owner shape, 2026-11-04):
+  - ( ) Hermes Shrine → items 1–3 (existing)
+  - ( ) Perfect Clear switch → Combat (encounter customization) + Item
+    (reward: Pom / Max Health)
+  - ( ) Gold (Time) switch → Combat
+  - ( ) Elite Enemy switch → Combat + Item (Path of Stars / Max Magick)
+
+  At most one switch per room (RoomLogic.lua:4932–4992 picks one object from
+  the union of the eligible kinds' variants), so the three switch rows are
+  mutually exclusive; a Shrine coexists only with a free anchor (the
+  `noFreeAnchor` rule). The rows reuse the existing Overview "collect element"
+  checkbox pattern (exclusive checkboxes), not a new radio group. Options come
+  from the variant query (`rollable`, `lock` for the hint); the Item picker
+  lists the kind's variants.
+
+- **Timeline:** insert/remove `interactChallengeSwitch`
   (Insert/RemoveRoomAction) and its outcome (`ReplaceChallengeSwitchOutcome`:
   hitless, Nectar, Time gold); the claim pickups are ordinary pickup rows with
   source family `challengeSwitch` (Pom target, Path screen and dispositions
   through the existing commands).
+- **Combat (not yet built, engine first):** the switch's encounter as a
+  customizable side encounter — see "Still open" below. Until it lands, the
+  Combat entry has no engine product to render.
+- Finding copy per `challengeSwitchPlacementUnavailable` reason.
 - Run import: author a used switch (variant from `uses`, the interaction,
   the outcome from the reward object) instead of reporting it unsupported.
+
+Still open (engine, before the P5 Combat entry):
+
+- **Switch side encounter.** Each switch's encounter as an encounter product
+  like the room's main combat: catalog declarations for the 24 challenge
+  encounters (`TimeChallenge*`, `PerfectClearChallenge*`, `EliteChallenge*`
+  per RoomSet, through the existing generated-encounter policies: their
+  `EnemySet`s including the `Biome*_EliteChallenge` sets, budgets, wave and
+  type counts, `RequireCompletedIntro`); an encounter phase prepared at room
+  entry when the switch is observed (generation support, roster, the
+  encounter-cache record, `MoneyDropStore`), started and completed at the
+  interaction with no end effects; the authored customization on the switch
+  leaf; and for Elite the one elite enemy with its two attributes
+  (`ForceEliteAttrubuteCount` 2, `BannedEliteAttributes` Metallic,
+  SpreadHitShields, StasisDeath, HeavyArmor, EncounterData_Challenge.lua:411–412)
+  as an authoring product with candidates and findings, reusing the Fangs
+  perk facts the catalog already carries. Sized L: it adds a phase outside
+  the room's encounter envelope, which materialization, preparation, history,
+  gold, candidates and the execution plan all read.
 
 ## Equivalence characterization per phase
 
