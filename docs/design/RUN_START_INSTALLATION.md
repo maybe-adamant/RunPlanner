@@ -391,7 +391,7 @@ run to its plan at each room exit. Off, a desynchronized run is unchanged.
   over every admission family. That state is the occurrence's `beforeRoomExit`
   frame, or in Ephyra's Hub the visit's `departures[i].beforeRoomExit`, found
   by its completed main-room visits. An occurrence's own frame also compares
-  the reward stores its exit conformance names and, in a challenge switch
+  the plan's reward stores, as its exit does, and, in a challenge switch
   room, the encounter depth the press counts (`BiomeEncounterDepth` and
   `EncounterDepth`), which later rooms' encounter requirements read.
   Differences are written through the Practice writers before native

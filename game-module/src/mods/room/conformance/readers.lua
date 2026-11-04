@@ -16,7 +16,6 @@ local supported = {
     steadyGrowth = true, chaos = true, keepsakeEffects = true,
     rewardPriorities = true, pathOfStars = true, forfeit = true, stygianWell = true,
     keepsakes = true, equipment = true, arcana = true, vows = true, chaosValues = true, hexNodes = true,
-    rewardStores = true,
 }
 
 local function traitKey(value)

@@ -539,6 +539,7 @@ function refreshWireFingerprint(wire: Record<string, unknown>): void {
     extent: expanded.extent,
     selectedOccurrenceIds: expanded.selectedOccurrenceIds,
     resources: expanded.resources,
+    rewardStoreComparison: expanded.rewardStoreComparison,
     occurrences: expanded.occurrences,
   });
 }

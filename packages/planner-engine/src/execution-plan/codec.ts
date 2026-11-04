@@ -94,6 +94,25 @@ function runModifiersRecord(value: unknown): RunModifiers {
   return Object.freeze(decoded) as RunModifiers;
 }
 
+function rewardStoreComparison(value: unknown): ExecutionPlan['rewardStoreComparison'] {
+  const label = 'execution plan.rewardStoreComparison';
+  const stores = array(value, label).map((entry, index) => {
+    const storeLabel = `${label}[${index}]`;
+    const store = object(entry, storeLabel);
+    exact(store, ['name', 'rewardTypes'], [], storeLabel);
+    const rewardTypes = stringArray(store.rewardTypes, `${storeLabel}.rewardTypes`);
+    if (rewardTypes.length === 0 || new Set(rewardTypes).size !== rewardTypes.length)
+      fail(`${storeLabel}.rewardTypes must be nonempty and distinct`);
+    return Object.freeze({
+      name: stringValue(store.name, `${storeLabel}.name`),
+      rewardTypes: Object.freeze([...rewardTypes]),
+    });
+  });
+  if (new Set(stores.map((store) => store.name)).size !== stores.length)
+    fail(`${label} names a store twice`);
+  return Object.freeze(stores);
+}
+
 export function decodeExecutionPlan(value: unknown): ExecutionPlan {
   const record = expandDiagnosticFrames(value);
   exact(
@@ -111,6 +130,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       'extent',
       'selectedOccurrenceIds',
       'resources',
+      'rewardStoreComparison',
       'occurrences',
     ],
     ['displayName', 'olympusAetos', 'runModifiers', 'startState'],
@@ -226,6 +246,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     selectedOccurrenceIds,
     ...(aetos === undefined ? {} : { olympusAetos: aetos }),
     resources: resources(record.resources, 'execution plan.resources'),
+    rewardStoreComparison: rewardStoreComparison(record.rewardStoreComparison),
     ...(record.startState === undefined ? {} : { startState: startState(record.startState) }),
     occurrences,
   });
@@ -243,6 +264,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     extent: plan.extent,
     selectedOccurrenceIds: plan.selectedOccurrenceIds,
     resources: plan.resources,
+    rewardStoreComparison: plan.rewardStoreComparison,
     ...(plan.olympusAetos === undefined ? {} : { olympusAetos: plan.olympusAetos }),
     ...(plan.startState === undefined ? {} : { startState: plan.startState }),
     occurrences: plan.occurrences,

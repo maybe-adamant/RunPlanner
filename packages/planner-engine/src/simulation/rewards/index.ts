@@ -50,8 +50,6 @@ export type {
   RunStateTraitEntry,
 } from './run-state-effects';
 export type {
-  ComparableRewardStore,
   RoomExitConformanceDelta,
-  RoomExitConformanceFact,
   RoomExitConformanceFactKind,
 } from './run-state-conformance';

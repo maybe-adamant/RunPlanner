@@ -6,6 +6,7 @@ import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import type { RunStateSnapshot } from '../../simulation/rewards/run-state';
 import type { Catalog, TraitRarity } from '../../catalog-schema';
 import { routeErisHost } from '../../authored-project/route-profile';
+import { storeEntryOnRoute } from '../../reward-kernel/bag';
 import type { GorgonRarityLevel } from '../../simulation/keepsakes/state';
 import type {
   ExecutionOccurrence,
@@ -303,13 +304,8 @@ export function assembleRoomExitConformance(
   room: CanonicalAuthoredRoom,
   delta: RoomExitConformanceDelta | undefined,
   snapshots: ReadonlyMap<string, RunStateSnapshot>,
-  /** The plan's end room: its own door draws are not simulated, so its stores are not compared. */
-  endRoom = false,
 ): ExecutionRoomExitConformance | undefined {
   if (delta === undefined) return undefined;
-  const deltaFacts = endRoom
-    ? delta.facts.filter((fact) => fact.kind !== 'rewardStores')
-    : delta.facts;
   const host = routeErisHost(catalog.rooms.byKey[room.gameName], routeKey);
   const exit = snapshots.get(
     semanticAddressKey(
@@ -322,12 +318,35 @@ export function assembleRoomExitConformance(
     !Object.values(exit.traits.equippedTraits).some(
       (trait) => trait.traitKey === host.curseTraitKey,
     );
-  if (!absent) return Object.freeze({ facts: Object.freeze([...deltaFacts]) });
+  if (!absent) return Object.freeze({ facts: Object.freeze([...delta.facts]) });
   const absentTraitKeys = Object.freeze([host.curseTraitKey]);
-  const facts = deltaFacts.some((fact) => fact.kind === 'traitInventory')
-    ? deltaFacts.map((fact) =>
+  const facts = delta.facts.some((fact) => fact.kind === 'traitInventory')
+    ? delta.facts.map((fact) =>
         fact.kind === 'traitInventory' ? Object.freeze({ kind: fact.kind, absentTraitKeys }) : fact,
       )
-    : [...deltaFacts, Object.freeze({ kind: 'traitInventory' as const, absentTraitKeys })];
+    : [...delta.facts, Object.freeze({ kind: 'traitInventory' as const, absentTraitKeys })];
   return Object.freeze({ facts: Object.freeze(facts) });
+}
+
+/** Every store with a reward type both sides count alike, for the plan's room exits to compare. */
+export function comparedRewardStores(
+  catalog: Catalog,
+  routeKey: string,
+): import('../model').ExecutionRewardStoreComparison {
+  return Object.freeze(
+    catalog.rewards.stores.values.flatMap((store) => {
+      if (store.key === 'Secrets') return [];
+      const offRoute = new Set(
+        store.entries
+          .filter((entry) => !storeEntryOnRoute(entry, routeKey))
+          .map((entry) => entry.rewardType),
+      );
+      const rewardTypes = [...new Set(store.entries.map((entry) => entry.rewardType))]
+        .filter((rewardType) => !offRoute.has(rewardType))
+        .sort();
+      return rewardTypes.length === 0
+        ? []
+        : [Object.freeze({ name: store.key, rewardTypes: Object.freeze(rewardTypes) })];
+    }),
+  );
 }

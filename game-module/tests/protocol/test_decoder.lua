@@ -529,7 +529,7 @@ local function refreshFingerprint(plan)
         routeKey = plan.routeKey, startingLoadout = plan.startingLoadout, runModifiers = plan.runModifiers,
         startingKeepsake = plan.startingKeepsake, extent = plan.extent,
         selectedOccurrenceIds = plan.selectedOccurrenceIds, resources = plan.resources,
-        olympusAetos = plan.olympusAetos,
+        rewardStoreComparison = plan.rewardStoreComparison, olympusAetos = plan.olympusAetos,
         occurrences = plan.occurrences,
     })
 end
@@ -580,6 +580,8 @@ end
 local objectMeta = getmetatable(assert(json.decode("{}")))
 local arrayMeta = getmetatable(assert(json.decode("[]")))
 local arrayFields = {
+    rewardStoreComparison = true,
+    rewardTypes = true,
     biomeKeys = true,
     selectedOccurrenceIds = true,
     occurrences = true,
@@ -628,6 +630,7 @@ local function minimalPlan(transactions)
         startingKeepsake = { keepsakeKey = "None", rarity = "Epic" },
         extent = { kind = "configuredPrefix", biomeKeys = { "F" }, terminalBiomeKey = "F" },
         selectedOccurrenceIds = { "opening" },
+        rewardStoreComparison = { { name = "RunProgress", rewardTypes = { "Boon" } } },
         resources = { occurrences = { {
             occurrenceId = "opening",
             pointDispositions = {

@@ -150,6 +150,92 @@
       }
     ]
   },
+  "rewardStoreComparison": [
+    {
+      "name": "RunProgress",
+      "rewardTypes": [
+        "Boon",
+        "Devotion",
+        "HermesUpgrade",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+        "RoomMoneyDrop",
+        "SpellDrop",
+        "StackUpgrade",
+        "TalentDrop",
+        "WeaponUpgrade"
+      ]
+    },
+    {
+      "name": "MetaProgress",
+      "rewardTypes": ["GiftDrop", "MetaCardPointsCommonBigDrop", "MetaCurrencyBigDrop"]
+    },
+    {
+      "name": "HubRewards",
+      "rewardTypes": [
+        "Boon",
+        "HermesUpgrade",
+        "MaxHealthDropBig",
+        "MaxManaDropBig",
+        "SpellDrop",
+        "WeaponUpgrade"
+      ]
+    },
+    {
+      "name": "SubRoomRewards",
+      "rewardTypes": [
+        "AirBoost",
+        "EarthBoost",
+        "EmptyMaxHealthSmallDrop",
+        "FireBoost",
+        "GiftDrop",
+        "MaxHealthDrop",
+        "MaxHealthDropSmall",
+        "MaxManaDrop",
+        "MaxManaDropSmall",
+        "MetaCardPointsCommonDrop",
+        "MetaCurrencyDrop",
+        "MinorTalentDrop",
+        "RoomMoneyDrop",
+        "RoomMoneyTinyDrop",
+        "StackUpgrade",
+        "WaterBoost"
+      ]
+    },
+    {
+      "name": "SubRoomRewardsHard",
+      "rewardTypes": ["MaxHealthDrop", "MaxManaDrop", "RoomMoneyDrop", "StackUpgrade"]
+    },
+    {
+      "name": "FieldsOptionalRewards",
+      "rewardTypes": [
+        "ArmorBoost",
+        "GiftDrop",
+        "MaxHealthDropSmall",
+        "MaxManaDropSmall",
+        "MetaCardPointsCommonDrop",
+        "MetaCurrencyDrop",
+        "MinorTalentDrop",
+        "RoomMoneyTinyDrop",
+        "RoomRewardHealDrop"
+      ]
+    },
+    {
+      "name": "TartarusRewards",
+      "rewardTypes": [
+        "Boon",
+        "Devotion",
+        "RoomMoneyTripleDrop",
+        "StackUpgradeTriple",
+        "TalentBigDrop",
+        "WeaponUpgrade"
+      ]
+    },
+    {
+      "name": "TyphonBossRewards",
+      "rewardTypes": ["Boon", "StackUpgradeTriple", "TalentBigDrop", "WeaponUpgrade"]
+    }
+  ],
   "occurrences": [
     {
       "id": "Q:start",
@@ -564,20 +650,7 @@
         ],
         "resolvedSharedRewardStoreKey": "TyphonBossRewards"
       },
-      "roomExitConformance": {
-        "facts": [
-          { "kind": "elementCounts" },
-          {
-            "kind": "rewardStores",
-            "stores": [
-              {
-                "name": "TyphonBossRewards",
-                "rewardTypes": ["Boon", "StackUpgradeTriple", "TalentBigDrop", "WeaponUpgrade"]
-              }
-            ]
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 4,
@@ -996,20 +1069,7 @@
         ],
         "resolvedSharedRewardStoreKey": "TyphonBossRewards"
       },
-      "roomExitConformance": {
-        "facts": [
-          { "kind": "elementCounts" },
-          {
-            "kind": "rewardStores",
-            "stores": [
-              {
-                "name": "TyphonBossRewards",
-                "rewardTypes": ["Boon", "StackUpgradeTriple", "TalentBigDrop", "WeaponUpgrade"]
-              }
-            ]
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 10,
@@ -1460,5 +1520,5 @@
       }
     }
   ],
-  "planFingerprint": "a52c5c9b"
+  "planFingerprint": "90d64953"
 }

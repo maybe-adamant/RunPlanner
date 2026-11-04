@@ -214,19 +214,6 @@ export type ExecutionRoomExitConformanceFact =
       >;
     }
   | {
-      readonly kind: 'rewardStores';
-      /**
-       * The native stores whose remaining counts this room changes, each with the
-       * reward types compared; expected counts come from the beforeRoomExit
-       * frame's `rewardStores`, summed by type over `RewardStoreData[name]`.
-       * Omitted on a plan's end room, whose own door draws are not simulated.
-       */
-      readonly stores: readonly {
-        readonly name: string;
-        readonly rewardTypes: readonly string[];
-      }[];
-    }
-  | {
       readonly kind: 'traitInventory';
       /** Traits the planner asserts are not held at room exit, beyond the frames. */
       readonly absentTraitKeys?: readonly string[];
@@ -1552,6 +1539,7 @@ export interface ExecutionPlan {
   readonly selectedOccurrenceIds: readonly string[];
   /** Engine-owned physical resource-point policy for each selected occurrence. */
   readonly resources: ExecutionResourcePolicy;
+  readonly rewardStoreComparison: ExecutionRewardStoreComparison;
   /** Required exactly when Olympus belongs to the configured extent. */
   readonly olympusAetos?: ExecutionOlympusAetos;
   /** Present exactly when the run starts mid-run (Practice mode). */
@@ -1570,10 +1558,24 @@ export interface ExecutionSemanticProduct {
   readonly extent: ExecutionPlan['extent'];
   readonly selectedOccurrenceIds: readonly string[];
   readonly resources: ExecutionResourcePolicy;
+  readonly rewardStoreComparison: ExecutionRewardStoreComparison;
   readonly olympusAetos?: ExecutionOlympusAetos;
   readonly startState?: ExecutionStartState;
   readonly occurrences: readonly ExecutionOccurrence[];
 }
+
+/**
+ * The native reward stores every room exit compares with its beforeRoomExit
+ * frame, each with the reward types the planner and native count alike: a type
+ * the store also declares for another route is left out, since native keeps
+ * such entries from every fill and no draw takes them, and Secrets, which every
+ * offered Chaos gate draws, is never compared. The frame's counts are summed by
+ * type over `RewardStoreData[name]`.
+ */
+export type ExecutionRewardStoreComparison = readonly {
+  readonly name: string;
+  readonly rewardTypes: readonly string[];
+}[];
 
 export interface ExecutionAssemblerInput {
   readonly assembly: ProjectEvaluationAssembly;

@@ -53,10 +53,6 @@ function proof.prove(occurrence, read)
     for _, fact in ipairs((occurrence.roomExitConformance or {}).facts or {}) do
         local expected = occurrence.conformanceExpected and occurrence.conformanceExpected[fact.kind]
         local observed = type(read) == "function" and read(fact.kind, expected) or nil
-        -- Store counts are summed over the native declaration on both sides.
-        if fact.kind == "rewardStores" then
-            expected, observed = observed and observed.expected, observed and observed.observed
-        end
         local compare = proof.compare
         local requireActivation = false
         if fact.kind == "keepsakeEffects" then
@@ -71,6 +67,15 @@ function proof.prove(occurrence, read)
             observed,
             requireActivation
         )
+        if not ok then return nil, mismatch end
+    end
+    -- The plan's stores are checked at every exit from the frame, so an unplanned
+    -- draw stops the plan in the room it was made. Counts are summed by reward
+    -- type over the native declaration on both sides.
+    if occurrence.rewardStoresExpected ~= nil then
+        local stores = type(read) == "function" and read("rewardStores", occurrence.rewardStoresExpected) or nil
+        local ok, mismatch = proof.compare("room-exit-conformance:rewardStores",
+            stores and stores.expected, stores and stores.observed)
         if not ok then return nil, mismatch end
     end
     -- Pending Hermes orders are checked at every exit from the frame, so an

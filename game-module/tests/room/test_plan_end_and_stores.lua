@@ -31,12 +31,6 @@ local function hubOf(plan)
     end
 end
 
-local function storeFact(occurrence)
-    for _, fact in ipairs(occurrence.roomExitConformance and occurrence.roomExitConformance.facts or {}) do
-        if fact.kind == "rewardStores" then return fact end
-    end
-end
-
 function TestPlanEndAndStores.testACutEndRoomIsTheLastRoomAndCompletesThePrefix()
     local plan = loadPlan("underworld-f-cut-end")
     local last = plan.selectedOccurrenceIds[#plan.selectedOccurrenceIds]
@@ -79,71 +73,117 @@ function TestPlanEndAndStores.testAHubHandoffStillRequiresItsFountainAndEveryDep
     lu.assertStrContains(reason, "departures has invalid length")
 end
 
-function TestPlanEndAndStores.testTheEndRoomComparesNoRewardStores()
+function TestPlanEndAndStores.testEveryRoomExitButTheEndRoomComparesThePlansStores()
     local plan = loadPlan("underworld-f-cut-end")
-    lu.assertNil(storeFact(plan.occurrencesById["golden-f-b5-e1"]))
-    local compared = 0
-    for _, occurrence in ipairs(plan.occurrences) do
-        local fact = storeFact(occurrence)
-        if fact ~= nil then
-            compared = compared + 1
-            for _, store in ipairs(fact.stores) do
-                local expected = occurrence.conformanceExpected.rewardStores[store.name]
-                lu.assertEquals(expected.rewardTypes, store.rewardTypes)
-                lu.assertNotNil(expected.remainingEntryCounts)
-            end
+    lu.assertNil(plan.occurrencesById["golden-f-b5-e1"].rewardStoresExpected)
+    for _, id in ipairs(plan.selectedOccurrenceIds) do
+        local occurrence = plan.occurrencesById[id]
+        if id ~= "golden-f-b5-e1" then
+            lu.assertNotNil(occurrence.rewardStoresExpected, id)
+            lu.assertNotNil(occurrence.rewardStoresExpected.RunProgress, id)
         end
     end
-    lu.assertTrue(compared > 0)
+    for _, store in ipairs(plan.rewardStoreComparison) do lu.assertNotEquals(store.name, "Secrets") end
 end
 
-local function storeOccurrence()
-    local frame = { rewardStores = { { name = "RunProgress", remainingEntryCounts = { 1, 0, 2, 1 } } } }
-    local value = assert(json.decode(
-        '{"facts":[{"kind":"rewardStores","stores":[{"name":"RunProgress","rewardTypes":["Boon","MaxHealthDrop"]}]}]}'))
-    local expected = assert(conformance.resolve(value, { beforeRoomExit = frame }, "test"))
-    return { roomExitConformance = value, conformanceExpected = expected }
+-- Native declarations aligned with each compared store's frame counts, and the
+-- live store those counts describe.
+local function nativeStores(expected)
+    local declared, live = {}, {}
+    for name, store in pairs(expected) do
+        declared[name], live[name] = {}, {}
+        for index, count in ipairs(store.remainingEntryCounts) do
+            local entry = { Name = store.rewardTypes[(index - 1) % #store.rewardTypes + 1] }
+            declared[name][index] = entry
+            for _ = 1, count do live[name][#live[name] + 1] = { Name = entry.Name } end
+        end
+    end
+    return declared, live
 end
 
-local DECLARED = {
-    RunProgress = { { Name = "Boon" }, { Name = "MaxHealthDrop" }, { Name = "Boon" }, { Name = "Unrelated" } },
-}
-
-local function prove(occurrence, live)
+local function proveStores(occurrence, declared, live)
     local priorData = _G.RewardStoreData
-    _G.RewardStoreData = DECLARED
+    _G.RewardStoreData = declared
     local ok, issue = proof.prove(occurrence, function(kind, expected)
-        return readers.read(kind, { RewardStores = { RunProgress = live } }, {}, expected)
+        if kind == "rewardStores" then return readers.read(kind, { RewardStores = live }, {}, expected) end
+        if kind == "hermesDeliveries" then return expected end
+        return expected
     end)
     _G.RewardStoreData = priorData
     return ok, issue
 end
 
-function TestPlanEndAndStores.testStoresCompareRemainingCountsByRewardType()
-    local occurrence = storeOccurrence()
-    -- Boon: 1 + 2 by the declaration; uncompared types are ignored on both sides.
-    lu.assertTrue(prove(occurrence, { { Name = "Boon" }, { Name = "Unrelated" }, { Name = "Boon" },
-        { Name = "Boon" }, { Name = "Unrelated" } }))
-    local ok, issue = prove(occurrence, { { Name = "Boon" }, { Name = "Boon" }, { Name = "MaxHealthDrop" } })
+local function sameStores(left, right)
+    for name, store in pairs(left or {}) do
+        local other = right and right[name]
+        if other == nil or #other.remainingEntryCounts ~= #store.remainingEntryCounts then return false end
+        for index, count in ipairs(store.remainingEntryCounts) do
+            if other.remainingEntryCounts[index] ~= count then return false end
+        end
+    end
+    return left ~= nil
+end
+
+function TestPlanEndAndStores.testAnUnplannedDrawIsAMismatchAtTheRoomItWasMadeIn()
+    -- A room whose planned stores do not change still compares them at its own exit.
+    local plan = loadPlan("fg")
+    local previous, quiet
+    for _, id in ipairs(plan.selectedOccurrenceIds) do
+        local occurrence = plan.occurrencesById[id]
+        if previous ~= nil and sameStores(occurrence.rewardStoresExpected, previous.rewardStoresExpected) then
+            quiet = occurrence
+            break
+        end
+        previous = occurrence
+    end
+    lu.assertNotNil(quiet, "fg has a room whose planned stores stay unchanged")
+    local isolated = { rewardStoresExpected = quiet.rewardStoresExpected }
+    local declared, live = nativeStores(quiet.rewardStoresExpected)
+    lu.assertTrue(proveStores(isolated, declared, live))
+    table.remove(live.RunProgress)
+    local ok, issue = proveStores(isolated, declared, live)
     lu.assertNil(ok)
     lu.assertEquals(issue.checkpoint, "room-exit-conformance:rewardStores")
-    lu.assertEquals(issue.expected, { RunProgress = { Boon = 3, MaxHealthDrop = 0 } })
-    lu.assertEquals(issue.observed, { RunProgress = { Boon = 2, MaxHealthDrop = 1 } })
     lu.assertEquals(text.difference(issue), "the rewards left to draw differ from the plan")
 end
 
-function TestPlanEndAndStores.testAStoreFactMustNameAFramedStoreAndDistinctTypes()
-    local frame = { beforeRoomExit = { rewardStores = { { name = "RunProgress", remainingEntryCounts = { 1 } } } } }
+function TestPlanEndAndStores.testStoresCompareRemainingCountsByRewardType()
+    local frame = { rewardStores = { { name = "RunProgress", remainingEntryCounts = { 1, 0, 2, 1 } } } }
+    local comparison = assert(conformance.rewardStoreComparison(assert(json.decode(
+        '[{"name":"RunProgress","rewardTypes":["Boon","MaxHealthDrop"]},{"name":"HubRewards","rewardTypes":["Boon"]}]')),
+        "test"))
+    -- A store the frame leaves out (it differs by planned branch) is not compared.
+    local occurrence = { rewardStoresExpected = conformance.rewardStoresExpected(comparison, frame) }
+    lu.assertNil(occurrence.rewardStoresExpected.HubRewards)
+    local declared = {
+        RunProgress = { { Name = "Boon" }, { Name = "MaxHealthDrop" }, { Name = "Boon" }, { Name = "Unrelated" } },
+    }
+    -- Boon: 1 + 2 by the declaration; uncompared types are ignored on both sides.
+    lu.assertTrue(proveStores(occurrence, declared, { RunProgress = { { Name = "Boon" }, { Name = "Unrelated" },
+        { Name = "Boon" }, { Name = "Boon" }, { Name = "Unrelated" } } }))
+    local ok, issue = proveStores(occurrence, declared,
+        { RunProgress = { { Name = "Boon" }, { Name = "Boon" }, { Name = "MaxHealthDrop" } } })
+    lu.assertNil(ok)
+    lu.assertEquals(issue.expected, { RunProgress = { Boon = 3, MaxHealthDrop = 0 } })
+    lu.assertEquals(issue.observed, { RunProgress = { Boon = 2, MaxHealthDrop = 1 } })
+end
+
+function TestPlanEndAndStores.testTheComparisonMustNameDistinctStoresAndTypes()
     for _, case in ipairs({
-        { '[{"name":"HubRewards","rewardTypes":["Boon"]}]', "store the frame lacks" },
+        { '[{"name":"RunProgress","rewardTypes":["Boon"]},{"name":"RunProgress","rewardTypes":["Boon"]}]',
+            "invalid or duplicate name" },
         { '[{"name":"RunProgress","rewardTypes":["Boon","Boon"]}]', "must be distinct" },
-        { '[]', "must be nonempty" },
+        { '[{"name":"RunProgress","rewardTypes":[]}]', "must be nonempty" },
     }) do
-        local value = assert(json.decode('{"facts":[{"kind":"rewardStores","stores":' .. case[1] .. '}]}'))
-        local expected, reason = conformance.resolve(value, frame, "test")
-        lu.assertNil(expected)
+        local stores, reason = conformance.rewardStoreComparison(assert(json.decode(case[1])), "test")
+        lu.assertNil(stores)
         lu.assertStrContains(reason, case[2])
     end
+    local value = fixtures.decode("f-opening.execution.json")
+    value.rewardStoreComparison = nil
+    local decoded, reason = protocol.decode(value)
+    lu.assertNil(decoded)
+    lu.assertStrContains(reason, "rewardStoreComparison")
 end
 
 function TestPlanEndAndStores.testAFieldsBatchMustCarryItsCageRollOutcome()

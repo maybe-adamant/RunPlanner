@@ -542,14 +542,18 @@ named facts that changed during the room; besides trait inventory, elements,
 Steady Growth, Chaos, keepsake effects, reward priorities, Path of Stars,
 Forfeit and the Well, they are `keepsakes` (held keepsakes by rank and slot),
 `equipment`, `arcana` (cards, Barren holding, Artificer charges), `vows` (ranks,
-disabled vows, Denial bans), `chaosValues`, `hexNodes` and `rewardStores`. The
-`rewardStores` fact names each store the room's draws change, with the reward
-types both sides count alike: a type the store also declares for another route
-is left out, since native keeps such entries from every fill and no draw takes
-them, and Secrets, which every offered Chaos gate draws, is never compared. The
-module sums the frame's counts by type over the native store declaration and
-counts the live entries the same way. A plan's end room publishes no store
-fact. A Practice start
+disabled vows, Denial bans), `chaosValues` and `hexNodes`. Reward stores are
+not a sparse fact: the plan publishes `rewardStoreComparison` once, each
+native store with the reward types both sides count alike (a type the store
+also declares for another route is left out, since native keeps such entries
+from every fill and no draw takes them, and Secrets, which every offered Chaos
+gate draws, is never compared), and every room exit compares those stores
+with its own `beforeRoomExit` frame, so an unplanned draw stops the plan in
+the room it was made. The module sums the frame's counts by type over the
+native store declaration and counts the live entries the same way; a store
+the frame leaves out, differing by planned branch, is not compared, and
+neither is any store at a room with terminal doors, whose own door draws are
+not simulated. A Practice start
 checks every family against its start room's `roomEntered` frame. Only a
 mismatch in one of those named conformance facts, a required Timeline
 obligation, or another explicit structural/transaction comparison stops further

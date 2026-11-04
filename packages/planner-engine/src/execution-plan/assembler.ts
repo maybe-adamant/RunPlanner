@@ -32,7 +32,7 @@ import { validateExecutionProduct } from './assembly/validation';
 import { executionTimelineTransactions } from './assembly/timeline-transactions';
 import { roomTimelineDependencies } from './assembly/timeline-dependencies';
 import { executionStartingLoadout } from './assembly/loadout';
-import { assembleRoomExitConformance } from './assembly/diagnostics';
+import { assembleRoomExitConformance, comparedRewardStores } from './assembly/diagnostics';
 import { semanticAddressKey } from '../authored-project/addresses';
 import { nativeRollExclusions } from '../simulation/encounters/native-roll-exclusions';
 import { assessPublicDreamItinerary } from '../authored-project/dream-itinerary';
@@ -239,7 +239,6 @@ export function assembleExecutionProduct({
         room,
         roomExitConformance.get(room.occurrenceId),
         snapshots,
-        assembly.project.route.planEnd?.occurrenceId === room.occurrenceId,
       ),
       hubsBySource.get(executionRoomOwnerKey(room)),
       hubExitsBySource.get(executionRoomOwnerKey(room)),
@@ -358,6 +357,7 @@ export function assembleExecutionProduct({
     extent,
     selectedOccurrenceIds,
     resources,
+    rewardStoreComparison: comparedRewardStores(catalog, routeKey),
     ...(() => {
       const olympus = biomes.find((biome) => biome.biomeKey === 'P');
       if (olympus === undefined) return {};

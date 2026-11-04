@@ -42,7 +42,7 @@ taken with a hit), and Elite with a pinned elite and attributes.
 ## Reward stores
 
 - [ ] Play a plan through two biomes: no `room-exit-conformance:rewardStores`
-      mismatch appears on any room whose doors draw planned rewards.
+      mismatch appears at any room exit, Hub and side rooms included.
 - [ ] Reroll an unplanned door: the run stops at the reroll as before; with
       snap mode on, the next exit rewrites the stores and the following rooms'
       store checks pass.

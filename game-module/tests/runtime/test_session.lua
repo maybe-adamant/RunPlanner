@@ -62,6 +62,7 @@ local function fingerprintBody(plan)
         extent = plan.extent,
         selectedOccurrenceIds = plan.selectedOccurrenceIds,
         resources = plan.resources,
+        rewardStoreComparison = plan.rewardStoreComparison,
         occurrences = plan.occurrences,
     }
 end

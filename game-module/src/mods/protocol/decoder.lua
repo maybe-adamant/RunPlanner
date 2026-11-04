@@ -12,6 +12,8 @@ local resources = type(import) == "function" and import("mods/protocol/resources
     or require("mods.protocol.resources")
 local aetos = type(import) == "function" and import("mods/protocol/aetos.lua")
     or require("mods.protocol.aetos")
+local conformance = type(import) == "function" and import("mods/protocol/conformance.lua")
+    or require("mods.protocol.conformance")
 local startState = type(import) == "function" and import("mods/protocol/start_state.lua")
     or require("mods.protocol.start_state")
 
@@ -132,6 +134,7 @@ local function fingerprintBody(plan, decodedOccurrences)
         extent = plan.extent,
         selectedOccurrenceIds = plan.selectedOccurrenceIds,
         resources = plan.resources,
+        rewardStoreComparison = plan.rewardStoreComparison,
         olympusAetos = plan.olympusAetos,
         startState = plan.startState,
         occurrences = decodedOccurrences,
@@ -177,7 +180,7 @@ function protocol.decode(value)
         {
             "format", "catalogVersion", "schemaVersion", "schemaRevision", "projectId", "planFingerprint",
             "routeKey", "startingLoadout", "startingKeepsake", "extent", "selectedOccurrenceIds", "resources",
-            "occurrences",
+            "rewardStoreComparison", "occurrences",
         },
         { "displayName", "olympusAetos", "runModifiers", "startState" },
         "execution plan"
@@ -245,6 +248,10 @@ function protocol.decode(value)
         end
         if not included then return p.fail("execution plan.occurrences contains a biome outside extent") end
     end
+    local comparison, comparisonError = conformance.rewardStoreComparison(
+        plan.rewardStoreComparison, "execution plan.rewardStoreComparison"
+    )
+    if not comparison then return nil, comparisonError end
     local resourcePolicy, resourceError = resources.decode(plan.resources, "execution plan.resources")
     if not resourcePolicy then return nil, resourceError end
     local resourcesValid, resourcesValidationError = validateResources(
@@ -262,6 +269,14 @@ function protocol.decode(value)
         return p.fail("execution plan fingerprint does not match contents")
     end
     attachDerived(decoded, derived)
+    -- Every room exit compares the plan's stores with its own frame, except a
+    -- room with terminal doors: its own door draws are not simulated.
+    for _, occurrence in ipairs(decoded) do
+        local frame = occurrence.diagnostics and occurrence.diagnostics.beforeRoomExit
+        if frame ~= nil and occurrence.doors.kind ~= "terminal" then
+            occurrence.rewardStoresExpected = conformance.rewardStoresExpected(comparison, frame)
+        end
+    end
     plan.runModifiers = modifiers
     plan.resources = resourcePolicy
     plan.occurrences = decoded

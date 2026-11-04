@@ -197,6 +197,98 @@
       }
     ]
   },
+  "rewardStoreComparison": [
+    {
+      "name": "RunProgress",
+      "rewardTypes": [
+        "Boon",
+        "Devotion",
+        "HermesUpgrade",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+        "RoomMoneyDrop",
+        "SpellDrop",
+        "StackUpgrade",
+        "TalentDrop",
+        "WeaponUpgrade"
+      ]
+    },
+    {
+      "name": "MetaProgress",
+      "rewardTypes": [
+        "GiftDrop",
+        "MetaCardPointsCommonBigDrop",
+        "MetaCardPointsCommonDrop",
+        "MetaCurrencyBigDrop",
+        "MetaCurrencyDrop"
+      ]
+    },
+    {
+      "name": "HubRewards",
+      "rewardTypes": [
+        "Boon",
+        "HermesUpgrade",
+        "MaxHealthDropBig",
+        "MaxManaDropBig",
+        "SpellDrop",
+        "WeaponUpgrade"
+      ]
+    },
+    {
+      "name": "SubRoomRewards",
+      "rewardTypes": [
+        "AirBoost",
+        "EarthBoost",
+        "EmptyMaxHealthSmallDrop",
+        "FireBoost",
+        "GiftDrop",
+        "MaxHealthDrop",
+        "MaxHealthDropSmall",
+        "MaxManaDrop",
+        "MaxManaDropSmall",
+        "MetaCardPointsCommonDrop",
+        "MetaCurrencyDrop",
+        "MinorTalentDrop",
+        "RoomMoneyDrop",
+        "RoomMoneyTinyDrop",
+        "StackUpgrade",
+        "WaterBoost"
+      ]
+    },
+    {
+      "name": "SubRoomRewardsHard",
+      "rewardTypes": ["MaxHealthDrop", "MaxManaDrop", "RoomMoneyDrop", "StackUpgrade"]
+    },
+    {
+      "name": "FieldsOptionalRewards",
+      "rewardTypes": [
+        "ArmorBoost",
+        "GiftDrop",
+        "MaxHealthDropSmall",
+        "MaxManaDropSmall",
+        "MetaCardPointsCommonDrop",
+        "MetaCurrencyDrop",
+        "MinorTalentDrop",
+        "RoomMoneyTinyDrop",
+        "RoomRewardHealDrop"
+      ]
+    },
+    {
+      "name": "TartarusRewards",
+      "rewardTypes": [
+        "Boon",
+        "Devotion",
+        "RoomMoneyTripleDrop",
+        "StackUpgradeTriple",
+        "TalentBigDrop",
+        "WeaponUpgrade"
+      ]
+    },
+    {
+      "name": "TyphonBossRewards",
+      "rewardTypes": ["Boon", "StackUpgradeTriple", "TalentBigDrop", "WeaponUpgrade"]
+    }
+  ],
   "occurrences": [
     {
       "id": "F:start",
@@ -498,25 +590,7 @@
         "resolvedSharedRewardStoreKey": "MetaProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          { "kind": "elementCounts" },
-          { "kind": "traitInventory" },
-          {
-            "kind": "rewardStores",
-            "stores": [
-              {
-                "name": "MetaProgress",
-                "rewardTypes": [
-                  "GiftDrop",
-                  "MetaCardPointsCommonBigDrop",
-                  "MetaCardPointsCommonDrop",
-                  "MetaCurrencyBigDrop",
-                  "MetaCurrencyDrop"
-                ]
-              }
-            ]
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -685,31 +759,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          { "kind": "elementCounts" },
-          {
-            "kind": "rewardStores",
-            "stores": [
-              {
-                "name": "RunProgress",
-                "rewardTypes": [
-                  "Boon",
-                  "Devotion",
-                  "HermesUpgrade",
-                  "MaxHealthDrop",
-                  "MaxManaDrop",
-                  "RoomMoneyDrop",
-                  "SpellDrop",
-                  "StackUpgrade",
-                  "TalentDrop",
-                  "WeaponUpgrade"
-                ]
-              }
-            ]
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 4,
@@ -862,31 +912,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          { "kind": "elementCounts" },
-          {
-            "kind": "rewardStores",
-            "stores": [
-              {
-                "name": "RunProgress",
-                "rewardTypes": [
-                  "Boon",
-                  "Devotion",
-                  "HermesUpgrade",
-                  "MaxHealthDrop",
-                  "MaxManaDrop",
-                  "RoomMoneyDrop",
-                  "SpellDrop",
-                  "StackUpgrade",
-                  "TalentDrop",
-                  "WeaponUpgrade"
-                ]
-              }
-            ]
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 6,
@@ -1091,25 +1117,7 @@
         "resolvedSharedRewardStoreKey": "MetaProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          { "kind": "elementCounts" },
-          { "kind": "traitInventory" },
-          {
-            "kind": "rewardStores",
-            "stores": [
-              {
-                "name": "MetaProgress",
-                "rewardTypes": [
-                  "GiftDrop",
-                  "MetaCardPointsCommonBigDrop",
-                  "MetaCardPointsCommonDrop",
-                  "MetaCurrencyBigDrop",
-                  "MetaCurrencyDrop"
-                ]
-              }
-            ]
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -1292,31 +1300,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          { "kind": "elementCounts" },
-          {
-            "kind": "rewardStores",
-            "stores": [
-              {
-                "name": "RunProgress",
-                "rewardTypes": [
-                  "Boon",
-                  "Devotion",
-                  "HermesUpgrade",
-                  "MaxHealthDrop",
-                  "MaxManaDrop",
-                  "RoomMoneyDrop",
-                  "SpellDrop",
-                  "StackUpgrade",
-                  "TalentDrop",
-                  "WeaponUpgrade"
-                ]
-              }
-            ]
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 10,
@@ -1471,26 +1455,7 @@
         ],
         "resolvedSharedRewardStoreKey": "MetaProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          { "kind": "elementCounts" },
-          {
-            "kind": "rewardStores",
-            "stores": [
-              {
-                "name": "MetaProgress",
-                "rewardTypes": [
-                  "GiftDrop",
-                  "MetaCardPointsCommonBigDrop",
-                  "MetaCardPointsCommonDrop",
-                  "MetaCurrencyBigDrop",
-                  "MetaCurrencyDrop"
-                ]
-              }
-            ]
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 12,
@@ -1676,31 +1641,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          { "kind": "elementCounts" },
-          {
-            "kind": "rewardStores",
-            "stores": [
-              {
-                "name": "RunProgress",
-                "rewardTypes": [
-                  "Boon",
-                  "Devotion",
-                  "HermesUpgrade",
-                  "MaxHealthDrop",
-                  "MaxManaDrop",
-                  "RoomMoneyDrop",
-                  "SpellDrop",
-                  "StackUpgrade",
-                  "TalentDrop",
-                  "WeaponUpgrade"
-                ]
-              }
-            ]
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 14,
@@ -1884,31 +1825,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          { "kind": "elementCounts" },
-          {
-            "kind": "rewardStores",
-            "stores": [
-              {
-                "name": "RunProgress",
-                "rewardTypes": [
-                  "Boon",
-                  "Devotion",
-                  "HermesUpgrade",
-                  "MaxHealthDrop",
-                  "MaxManaDrop",
-                  "RoomMoneyDrop",
-                  "SpellDrop",
-                  "StackUpgrade",
-                  "TalentDrop",
-                  "WeaponUpgrade"
-                ]
-              }
-            ]
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 16,
@@ -2099,30 +2016,7 @@
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          { "kind": "elementCounts" },
-          { "kind": "traitInventory" },
-          {
-            "kind": "rewardStores",
-            "stores": [
-              {
-                "name": "RunProgress",
-                "rewardTypes": [
-                  "Boon",
-                  "Devotion",
-                  "HermesUpgrade",
-                  "MaxHealthDrop",
-                  "MaxManaDrop",
-                  "RoomMoneyDrop",
-                  "SpellDrop",
-                  "StackUpgrade",
-                  "TalentDrop",
-                  "WeaponUpgrade"
-                ]
-              }
-            ]
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -2325,31 +2219,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          { "kind": "elementCounts" },
-          {
-            "kind": "rewardStores",
-            "stores": [
-              {
-                "name": "RunProgress",
-                "rewardTypes": [
-                  "Boon",
-                  "Devotion",
-                  "HermesUpgrade",
-                  "MaxHealthDrop",
-                  "MaxManaDrop",
-                  "RoomMoneyDrop",
-                  "SpellDrop",
-                  "StackUpgrade",
-                  "TalentDrop",
-                  "WeaponUpgrade"
-                ]
-              }
-            ]
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 20,
@@ -2650,5 +2520,5 @@
       }
     }
   ],
-  "planFingerprint": "528b5f6c"
+  "planFingerprint": "e0dd9338"
 }
