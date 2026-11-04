@@ -98,6 +98,28 @@ Evidence: the save-file run record audit
     acquired level, and Rejected's blocked row is synthesized from a trait the
     engine admits, unreported; unpicked and rerolled-away Persephone rolls stay
     at roll 0, unreported.
+12. **Where an imported plan ends.** Every room is judged first, on the plan
+    the walk built. A victory has no end. A death or abandonment ends the
+    plan after the latest room before the last one that the engine's plan-end
+    availability accepts; an entry mismatch at a room ends it after the latest
+    acceptable room before that room, keeping the mismatch. A question stop
+    before the last room does not end the plan. An end at a Hub main room
+    ends its whole visit, so a death in a side room first narrows that visit
+    to the side rooms recorded before it. The report carries `end` with its
+    cause and record room.
+13. **Challenge switches.** A pressed switch (its name in the room's uses)
+    is authored with its variant; one the engine refuses is reported
+    `refused` and its possible claim pickups are absorbed as before. A
+    leftover Onion pins a failed Perfect Clear, the variant's reward a clean
+    claim, and a leftover bonus Nectar rides a clean claim (alone, it pins a
+    finished Time switch). With no claim shown, a bounded room search judged
+    at the next entry save picks among left, finished (Time with two or more
+    presses) and unpressed, reported `notInRecord` with the others as
+    alternatives. A finished Time switch takes the engine's default gold,
+    reported. The press takes its native position, or last where that does
+    not run (Fields exits wait for the cage loot). The elite pin and the
+    customization stay native. The report area is `challengeSwitch`; an
+    unused switch leaves no record trace.
 
 ## Ownership
 

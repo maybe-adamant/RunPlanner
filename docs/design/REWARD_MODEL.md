@@ -946,8 +946,10 @@ over one (Quick Buck, Chaos Affluence's authored value), at the contact:
 
 A room reward collected in another room than the one it spawned in, and
 coins whose spawn the walk does not see (Hermes deliveries, Nemesis and Echo
-results), read the multipliers at collection. Arachne's costume, Selene's per-cast gold and challenge switches are not
-counted.
+results), read the multipliers at collection. A finished Time challenge
+switch's claim pays its authored gold times the money multiplier at the press,
+nothing while gold is blocked; the authored gold is an approximate value.
+Arachne's costume and Selene's per-cast gold are not counted.
 
 Each walked contact publishes its gain facts from the reached state, the way
 purchases publish price facts. A later balance is unavailable after an
@@ -959,8 +961,13 @@ A generated encounter's kill drops pay from its money store. The store is exact
 catalog data: the game draws an integer from the cap range, adds the run-depth
 ramp, multiplies by the money multiplier held at the door into the room (where
 it draws every store of the room, Nemesis and god combats included) and rounds
-up. Stores the game draws later (challenge switches, encounter-cost doors,
-boss spawns) belong to encounters the plan does not model. An encounter gold range run
+up. Stores the game draws later (encounter-cost doors, boss spawns) belong to
+encounters the plan does not model. A pressed challenge switch's encounter
+pays its kills from its own store at the press, by its known roster (an
+authored composition, or the pinned elite times its spawn count) or else the
+biome's generated-combat policy, at the room's entry multipliers; a fight left
+early pays nothing, since a partial fight is not estimated, and the switch's
+kills are not among Medea's capped per-room drops. An encounter gold range run
 modifier fixes the draw at its point of the range and the store loses its
 spread. Kills drain the store, the last drop overshooting it, or run out before
 it. Kills drain only the room's own encounter's store: a Fields cage never
@@ -1082,7 +1089,8 @@ required. A spawned pickup owns its exact authored reward and acquisition-time
 children at the site; the action row references that payload owner and does
 not duplicate its editor. Its roster row and derived-entry capability name its
 source family (a trait by key, Echo, Artificer, Sea Star, a Nemesis event, Eris's
-gift, a Hermes Shrine delivery or the Travel Deal restock); consumers never read
+gift, a challenge switch, a Hermes Shrine delivery or the Travel Deal
+restock); consumers never read
 it from entry or site keys.
 
 Narcissus demonstrates the producer/acquisition distinction. The selected
@@ -1103,6 +1111,15 @@ overrides (20 Ashes, 300 Bones; H's native 50 Psyche is untracked and declares
 no amount), `resourceBonusExempt` for `NPCDrop`, `duplicationExempt` for
 `CanDuplicate = false` so Sea Star never duplicates it, and Artificer-blocking
 bindings for `MetaConversionEligible = false`.
+
+A challenge switch's claim uses the `ChallengeSwitchLoot` producer at the
+switch's `challengeSwitch` site: the `reward` entry (the variant's reward, the
+Onion after a failed Perfect Clear, or Time's `Money` gush) and, after a clean
+fight, the bonus Nectar `nectar` entry, without a `RunProgress` level. Both are
+optional pickups the claim spawns directly: no counted store draw and no offer
+history. The consumables settle through Sea Star, Time Piece and Artificer as
+usual, and the Nectar is last-reward eligible; the gush is neither duplicable
+nor convertible. A fight left early claims nothing.
 
 Paid Shop entries are a different lifecycle: purchase is their sole atomic
 interaction and cannot open Time Piece, Artificer, Sea Star, or another

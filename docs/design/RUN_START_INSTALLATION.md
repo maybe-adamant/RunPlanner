@@ -152,7 +152,10 @@ and rejects a malformed value rather than healing it.
 Its eligibility is the engine's start-installation availability
 (`authoredStartPointEligibility`): the biome is on the itinerary
 (`notOnItinerary`), the point is not the route-start biome's Opening, which is
-a normal run (`routeStart`), and the simulation reaches it (`notReached`). The
+a normal run (`routeStart`), the simulation reaches it (`notReached`), and it
+does not lie past the [plan end](SIMULATION_AND_VALIDATION.md#plan-end)
+(`afterPlanEnd`: its biome follows the end's, or a Preboss or Boss start lies
+past the end inside the ended biome). The
 picker offers every itinerary biome's Opening, Preboss and
 Boss with that availability; it does not consult project validity. A start
 point publishes only from a valid project, through the ordinary publication

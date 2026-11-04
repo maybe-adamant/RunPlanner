@@ -4,7 +4,8 @@
 
 This is the consolidated source audit for the optional and automatic room
 features that are consequential to the modeled run: natural resource element
-gains, Pools of Purging, Shrines of Hermes, and Stygian Wells. It records source
+gains, Pools of Purging, Shrines of Hermes, Stygian Wells and challenge
+switches. It records source
 contacts, realized hosts, spacing and physical-capacity rules, inventories,
 effect matrices, bounded uncertainties, and the current schema-71 planner
 dispositions.
@@ -621,6 +622,70 @@ gold, price, and meta-resource amounts remain sim-neutral. Wells and Pools are t
 only room features whose stock may stay native slot by slot, initially and at
 each reroll; Shrines and Shops remain fully authored because their visible
 inventory can affect other generation rules.
+
+## Challenge Switches
+
+### Source contacts, variants and spawn
+
+The evidence was checked on 2026-11-03 against `ObstacleData.lua:3040-3274`,
+`EncounterSets.lua:760-790`, `RoomLogic.lua` (`HandleSecretSpawns`,
+4870-4995; `StartEncounter`, 1900-1913; `LeaveRoom`, 4213), `EventLogic.lua`
+(`HandleChallengeLoot`, 507-575), `EncounterLogic.lua:2105-2124`,
+`InteractLogic.lua:869` and `RoomDataH.lua:306` / `RoomDataO.lua:294`.
+
+There are three kinds and five variants, drawn by weight over the variants
+eligible at the time: Time (`TimeChallengeSwitch_Money`, gold, weight 4);
+Perfect Clear (`_Pom`, needing an upgradable trait, weight 3; `_MaxHealth`,
+weight 1); Elite (`_Talent`, Path of Stars, needing `TalentLegal`, weight 5;
+`_MaxMana`, weight 2). At most one switch spawns in a room: one object is
+picked from the union of the eligible kinds' variants.
+
+The chance flag is rolled at room creation: 0.15, 0.25 on Fields-era F rooms,
+0 on special rooms. Existence, variant, encounter, its generated roster and
+its money store are rolled at room entry. Spawn needs a free
+`ChallengeSwitchBase` after the Well, Sell Shop and Shrine took theirs, no
+active bounty, at least three rooms since the last switch
+(`LastChallengeDepth`, set at entry whether or not the switch is used), and a
+biome-depth floor per RoomSet: `BiomeDepthCache >= 5`, replaced by `>= 1` in
+Fields (`BaseH`) and Thessaly (`BaseO`). Elite also needs biome depth 3.
+World-upgrade unlocks are profile facts.
+
+### Press, encounter and claim
+
+The switch is usable once the doors open (`DoUnlockRoomExits` sets
+`ReadyToUse` after `RandomSynchronize()`, so switch randomness does not shift
+door draws). The first press records and starts the encounter fixed at entry;
+the second claims. The challenge encounter is neither the room's encounter nor
+an override, so it fires no encounter-end effects (no Steady Growth tick, trait
+uses, keepsake advance or Experimental Hammer decay), but it inherits
+`CountsForRoomEncounterDepth` and advances encounter depth. Leaving the room
+during the fight (`EndedEarly`, whose only writer is `LeaveRoom`) leaves it
+uncompleted and unclaimable.
+
+At the claim, Perfect Clear after a hit gives the Onion
+(`RoomRewardConsolationPrize`); Time gives gold, 100 for 8 seconds then
+falling to a floor of 10, times the money multiplier; Elite has no fail state.
+A fight without damage also rolls a 5% bonus Nectar (`GiftDrop`) for every
+kind, spawned bare, without a `RunProgress` level. Rewards spawn directly: no
+counted store draw and no offer history. Sea Star duplicates apply to the
+consumables (Pom, Max Health, Max Magick, Path of Stars, Onion, Nectar), not
+to Time's gold; the Nectar is also `LastRewardEligible`, Time Piece
+goldifiable and Artificer-convertible.
+
+### Current planner disposition
+
+The switch is an observed Overview fact of its host room, authored with its
+variant, the kind's encounter customization or Elite pin, and one press whose
+outcome (left, finished, hitless, failed), bonus Nectar and Time gold are
+authored. Spawn rules are findings on the switch's Overview owner and halt
+the room at its Overview like the Well and Shrine placement findings (owner
+settled): biome depth by RoomSet, spacing, anchor capacity shared with Well,
+Pool and Shrine, and the kind and variant gates. The planner assumes every
+Crossroads unlock (mature profile). Time gold is an approximate plausibility
+value, defaulting to about 90. Not modeled: a left fight's partial kill gold,
+Elite attribute game-state requirements, the run's `BannedEliteAttributes`,
+the H `ChallengeSwitchBlockedByFieldsLoot` exit gate and bounties. Draft
+never authors a switch.
 
 ## Bounded uncertainties and exclusions
 

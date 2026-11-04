@@ -134,6 +134,23 @@ preparation assesses a suffix as dormant, the lifecycle structure and Room
 Action roster are scoped to the active prefix
 ([lifecycle structure](ROOM_LIFECYCLE_MODEL.md#lifecycle-structure-and-authoring-timeline)).
 
+### Challenge-switch encounter
+
+An observed challenge switch's encounter is a side encounter outside the
+room's envelope. Its identity is the one the host declares for the switch's
+kind, so it is not a choice. It is prepared at the room's entry view, with the
+entry's vow ranks and admission facts: Time and Perfect Clear assess their
+optional authored composition through the ordinary generated assessment, and
+an Elite switch assesses its pinned elite and forced attributes against the
+RoomSet's elite set, the draw order and each draw's blocks (attributes are
+drawn when the fight starts, the elite at entry). Its findings stay on the
+switch's Overview owner and stop the room there. It is recorded, started and
+counted for encounter depth at the press, not at entry, so an unused switch
+leaves no encounter record; a once-per-run enemy an unused switch's
+composition would draw is therefore not blacklisted. Its kills drain its own
+money store. Not modeled: Elite attribute game-state requirements and the run's
+banned elite attributes.
+
 ## Generated composition
 
 Optional generated-composition assessment uses the resolved phase's exact

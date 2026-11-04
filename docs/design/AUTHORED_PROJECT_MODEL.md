@@ -207,6 +207,21 @@ The route optionally owns `practiceStart`, the Practice mode start point;
 [Run-Start Installation](RUN_START_INSTALLATION.md#authored-start-point) owns
 its decoding, command and eligibility.
 
+The route optionally owns `planEnd`, the room after which the plan stops:
+its biome and occurrence. Decoding is strict (a configured biome, an existing
+occurrence of its topology). `ReplacePlanEnd` sets or clears it as one route
+history edit; an equal value keeps identity and a dangling value is refused.
+One route-wide reconciliation after every command clears the marker in the
+same step when its occurrence or biome is removed, and clearing the biome's
+topology clears it. Rooms and later biomes past the end stay authored but
+dormant: they are not assessed, raise no findings and publish nothing, so
+moving or removing the end restores them losslessly. An end may name any
+selected room: an ordinary room, the Preboss, Boss or Postboss (the completion
+chain stays structural), a Hub main room (ending that whole visit, its entered
+side rooms included) or a Hub side room (ending after it). The end's meaning
+for evaluation is owned by
+[Simulation and Validation](SIMULATION_AND_VALIDATION.md#plan-end).
+
 `ReplaceRoute` replaces the loadout (keeping run modifiers) and the planned
 biome prefix (one to every itinerary biome, in itinerary order). Resource
 placements name hosts in the replaced biomes, so they clear unless the command
@@ -689,6 +704,28 @@ with the required `interactEris` action, the fixed gift's `erisGift`
 acquisition site and its required pickup action; clearing it removes all four.
 [Fresh File Rules](../biomes/FRESH_FILE_RULES.md#eris-at-a-biome-intro) own
 the hosts and their game rule.
+
+A room the catalog declares as a challenge-switch host may carry an optional
+`challengeSwitch` leaf, the observed switch: its `variantKey` (which fixes the
+kind, Time, Perfect Clear or Elite, and the claim reward), and, once pressed,
+its `outcome` (Time and Elite `left` or `finished`; Perfect Clear `left`,
+`hitless` or `failed`), `nectarDropped` (only with a clean claim: `finished`
+or `hitless`) and `gold` (exactly for a finished Time switch, within the
+catalog's range). Optional `elite` pins an Elite switch's enemy and its ordered
+forced attributes, and optional `customization` holds sparse decisions of the
+kind's encounter at the host. Absence means no switch. The press is one
+optional `interactChallengeSwitch` room action in the doors-open window; the
+claim pickups are the `reward` and `nectar` entries of a producer-owned
+`challengeSwitch` acquisition site with optional `interactAcquisitionEntry`
+rows ordered right after the press. A `left` press is the room's last action:
+placing an action after it is refused, other edits keep it last, and a
+preserved order with actions after it is a finding. `ReplaceChallengeSwitch`
+sets the variant or clears the leaf with its press and site (a variant change
+keeps what the new kind allows, the encounter customization only within the
+same kind); `ReplaceChallengeSwitchOutcome`, `ReplaceChallengeSwitchElite` and
+`ReplaceChallengeSwitchCustomization` edit the rest. Each is one history step.
+The game rules and spawn conditions are owned by the
+[room features audit](../audits/room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md#challenge-switches).
 
 ### Acquisition sites
 

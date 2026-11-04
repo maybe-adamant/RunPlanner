@@ -1,1013 +1,111 @@
 # Engine Slice: Plan End and Challenge Switches
 
-Status: P1, P3, P2 and its engine follow-ups, P4 with the switch encounter, outcome and terminal-press rule, P5 (switch editor and import) and the review follow-ups delivered; P6 and P7 open; started 2026-11-03 on branch `engine-slice-plan-end-switches` (from
-main `606f8e588`). Temporary plan; delete at delivery after promoting the
-durable result into the design documents named per phase.
-
-## Objective
-
-One combined slice, one minor `schemaRevision` bump at merge:
-
-- **A. End plan here.** A plan may end after any settled room, not only at a
-  biome boundary. Nothing past the end is authored, assessed or published, and
-  the run import can say "this run ended here".
-- **B. Challenge switches.** The optional room objects (Time, PerfectClear,
-  Elite) become authorable observations with their encounter, start and claim
-  actions and their outcome; the import authors a used switch instead of
-  reporting it as an unsupported area.
-- **C. Plan-wire additions.** A planner-published room-exit reward-store
-  conformance fact, and each Fields cage roll's published Min/Max outcome.
-- **D. Fields/Hub god fallback witness** past exhaustion.
-
-## Owner instructions for the slice (2026-11-03)
-
-- Game-module parts of A–C wait until branch `game-module-cage-draw` (native
-  cage and wheel draws) merges to main; they are the last phase (P7).
-- Hold every fixture regeneration, equivalence re-record and Draft-corpus
-  re-record until the slice is ready to merge. During phases, equivalence runs
-  only to characterize: each phase records here which entries it changes and
-  why; the single regeneration happens at merge (P6), together with the
-  execution fixtures and the `schemaRevision` bump.
-- The owner answers the [open decisions](#open-decisions-for-the-owner); until
-  then the defaults below stand.
-
-## Settled facts and evidence
-
-The studies live outside the repository
-(`~/run-planner-investigations/`); the evidence the slice depends on is copied
-here. Game script paths are under `Hades II/Content/Scripts`.
-
-### A. Plan end (study `PLAN_END.md`)
-
-1. A plan already ends, but only at a biome boundary: the route is a
-   contiguous configured prefix, and status is `valid` only when every
-   configured biome is complete-valid (`eligibleForExecutionPlan` =
-   complete-valid prefix length equals configured count). Publication gates on
-   that flag.
-2. The game module already ends at "no next occurrence": `routeSession.enter`
-   with `expected == nil` sets `configured-prefix-complete`, and the wire's
-   `doors: {kind:'terminal'}` already means "the native doors beyond are not
-   part of the plan". The release point needs no new wire key; what changes is
-   what the decoder and graph validator accept (a terminal room that is not a
-   biome completion room, a partial Hub block).
-3. Preboss → Boss → Postboss is a structural, always-materialized chain. A cut
-   stops evaluation; the chain stays intact and its unreached part dormant.
-4. The engine has the pieces of a "room settled, no outgoing doors" lifecycle:
-   a progressive frontier whose outgoing decision has no targets composes the
-   room through its post-doors-open actions and stops before commit.
-5. `practiceStart` is the symmetric precedent: a route-level optional field set
-   by one command, cleared with its biome, eligibility as an engine query.
-
-### B. Challenge switches (study `CHALLENGE_SWITCHES.md`, corrected)
-
-1. Three types, five variants: `TimeChallengeSwitch_Money` (gold);
-   `PerfectClearChallengeSwitch_Pom` (`StackUpgrade`, needs an upgradable
-   trait) and `_MaxHealth`; `EliteChallengeSwitch_Talent` (Path of Stars,
-   needs `TalentLegal`) and `_MaxMana`. Draw weights Time 4; PerfectClear 3 Pom
-   - 1 MaxHealth; Elite 5 Talent + 2 MaxMana, over the variants eligible at the
-     time (ObstacleData.lua:3040–3274, EncounterSets.lua:760–790).
-2. Existence, type, variant, encounter, its generated roster and its
-   `MoneyDropStore` are all rolled at room **entry** (`HandleSecretSpawns`,
-   RoomLogic.lua:4870–4995), confirmed by save 1013. The chance flag is rolled
-   at room creation: base 0.15, Fields-era F rooms 0.25, 0 on special rooms.
-3. Spawn needs a free `ChallengeSwitchBase` anchor after the secret door,
-   Well, Pool and Surface shop took theirs; no active bounty;
-   `BiomeDepthCache >= 5` (Fields `BaseH` and Thessaly `BaseO` replace the
-   requirement with `>= 1`, RoomDataH.lua:306, RoomDataO.lua:294; the live
-   recording's switch at H_Combat07, biome depth 3, confirms it); at least 3
-   rooms since the last switch
-   (`LastChallengeDepth`, set at entry); Elite also biome depth ≥ 3. The
-   world-upgrade unlocks are profile progression, outside the model.
-4. The switch is usable only once the doors open (`DoUnlockRoomExits` sets
-   `ReadyToUse`; `RandomSynchronize()` runs first, so switch RNG does not shift
-   the modeled door draws). Use 1 starts the already-built encounter; use 2
-   claims.
-5. Outcome at claim (`HandleChallengeLoot`, EventLogic.lua:507–575):
-   PerfectClear hit → `RoomRewardConsolationPrize` (the Onion); Time → gold,
-   100 for 8 s then falling to a floor of 10, times the money multiplier
-   (approximate, never exact); Elite → no fail state. A clean clear also rolls
-   a 5% bonus Nectar (`GiftDrop`) with its random +1 level target. The reward
-   is spawned directly: no counted store draw, no offer history.
-6. Not an encounter end: the challenge encounter is neither the room's
-   encounter nor an override, so no Steady Growth tick, trait uses, keepsake
-   advance or Experimental Hammer decay (RoomLogic.lua:2937). It is recorded
-   (`RecordEncounter`) when the press starts it (EncounterLogic.lua:2105), not
-   at entry, and completed in the caches. Correction to the study: it does
-   advance encounter depth, since every challenge encounter inherits
-   `Generated`'s `CountsForRoomEncounterDepth` through its GeneratedX parent and
-   `StartEncounter` applies it to any encounter (RoomLogic.lua:1900-1904).
-7. Sea Star duplicates apply to the consumable rewards (Pom, Max Health,
-   Max Magick, Path of Stars, Onion), not to Time's gold gush.
-8. Corpus: 14 switch rooms in 11 save folders; one triggered (1013, Elite
-   MaxMana). Hit and Time-gold outcomes rest on source only.
-
-### C. Plan-wire items (studies `ROUND_TRIP_1014_1016.md`, `GAME_MODULE_DRAW_REVIEW.md`)
-
-1. Store divergence (1014–1016: cage rewards realized without the RunProgress
-   draw) is invisible in game: no conformance fact covers store contents. The
-   import's `storeCounts` (run-import `conformance.ts`) already compares
-   stores, leaving out entries declared for another route (the game's fill
-   keeps them, the simulation does not).
-2. Fields Max/Min clamp: real rooms declare `MaxCageRewards = 2`
-   (RoomDataH.lua:2182), so a clamped Max equals Min. The module, knowing only
-   the count, takes Min while the engine counts Max; `FieldsMaxDoorsRolled`
-   then lags and the import reads "min" for a plan that said "max". Publishing
-   each cage roll's Min/Max outcome makes the steering exact.
-
-### D. Fields/Hub god fallback (study `FIELDS_CAGE_GODS.md`)
-
-Game: per-batch Boon gods exclude every earlier Boon of the batch; when the
-eligible pool empties the game retries `ChooseLoot()` with no exclusions, which
-can repeat a god already shown and exceed the cap. The engine's
-`ordinaryPeerSupport` falls back to `ordinaryBaseSupport` the same way. Witness
-to add: a Fields batch at the 4-god cap with 5–6 Boons; cages 1–4 the four
-acquired gods, cage 5 a repeat is accepted; a repeat at cage 4 while an unshown
-acquired god remains is refused. Same for the Ephyra board.
-
-## Decisions (defaults; "owner to confirm" where marked)
-
-### Plan end
-
-1. **Marker** (owner to confirm): route-level optional
-   `planEnd: { biomeKey, occurrenceId }`, the Practice-start pattern. Occurrence
-   IDs are the persisted topology identity; a Hub visit's end is its last
-   entered occurrence, so no visit ordinal is stored.
-2. **Command** (owner to confirm): one `ReplacePlanEnd { route, planEnd | null }`;
-   null clears, an equal value keeps identity, a malformed value is refused,
-   one history step per effective edit. The UI's "End plan here" and "Remove
-   plan end" bind to it.
-3. **Decode** (default): strict. The biome must be configured and the
-   occurrence must exist in its topology; anything else fails decoding like
-   other structural ownership errors. Every command that removes the named
-   occurrence or its biome clears the marker in the same step, the way a
-   route-owned resource placement is retracted: one route-wide reconciliation
-   after every command, plus `ClearTopology` of the marker's biome.
-4. **Past-cut content kept dormant** (owner to confirm): rooms authored past a
-   new end stay, are not assessed, raise no findings, publish nothing and are
-   read-only; removing the end restores them losslessly. No destructive "remove
-   everything after the end" command in this slice.
-5. **Chain intact** (owner to confirm): Preboss → Boss → Postboss stays
-   structural. Cuts are allowed at the Preboss, the Boss and the Postboss. A
-   cut at the biome's terminal completion room (the Postboss, or the Boss where
-   the route position has no Postboss) is the ordinary biome end with every
-   later biome dormant; any other cut ends the biome mid-way.
-6. **Hub cuts** (owner to confirm): allowed at a main room (ends that visit
-   before its side rooms) and at a side room (ends after that side room). Hub
-   actions after the cut (later visits, fountain, board rerolls) are dormant.
-   Cuts are rooms, never a Hub action.
-7. **Settled meaning** (default): the cut room is assessed through its whole
-   Timeline, including the actions after the doors open, but with no outgoing
-   door generation, no exit decision and no departure. Its own doors,
-   additional exits and door rerolls are dormant. In-flight effects (pending
-   Hermes deliveries, Steady Growth/Embryo cycles that would land later, unspent
-   rerolls) are simply untracked after the end.
-8. **Off-spine marker** (default): a marker naming an occurrence that is not on
-   the biome's selected spine is a finding, `planEndUnreached`, owned by the
-   route (repair: move or remove the end). The biome is then assessed as if
-   unmarked, and the route still stops after it.
-9. **Practice start after the end** (default): start-point eligibility gains a
-   reason when the start lies past the end (P3).
-10. **Importer cuts** (settled, see below): victory → no cut; death or
-    abandon → cut at the last fully settled room; an entry-mismatch stop → cut
-    before the stopping room; the cut room is judged normally at the next
-    room's entry save.
-
-### Challenge switches
-
-11. **Shape** (default): an optional occurrence leaf (absent = none), the
-    Eris/Hermes Shrine pattern: an Overview presence checkbox with the variant
-    and the entry-time encounter; Timeline actions `startChallengeSwitch` and
-    `claimChallengeSwitch` in the doors-open window; the claim carries the
-    outcome (PerfectClear hit, Time approximate gold, Elite none, the bonus
-    Nectar and its +1 level target). Never steered by the game module; proven
-    by resulting state.
-12. **Lifecycle** (default): a side encounter that records its encounter caches
-    but fires no encounter-end effects; the reward is a direct acquisition with
-    no counted store draw; Sea Star applies to the consumables.
-13. **Spawn rules as findings** (default): depth ≥ 5, 3-room spacing (a new
-    carried run counter), 15%/25%/0 chance (0 refuses presence), anchor
-    capacity shared with Well/Pool/Shrine, Elite depth and Talent gates. The
-    world-upgrade unlocks are profile facts and are not modeled.
-14. **Draft** (default): never authors a switch.
-
-### Plan wire
-
-15. **Store fact** (default): a room-exit `rewardStores` conformance fact the
-    planner publishes per comparable store: entries declared for another route
-    and Secrets excluded, as `storeCounts` does. Rides the P6 bump.
-16. **Cage outcome** (default): each Fields cage roll publishes its Min/Max
-    outcome beside the count.
-
-### Process
-
-17. One minor `schemaRevision` bump (0 → 1) at merge (P6), announced in the
-    commit; no major bump, no migration. Until then this branch writes
-    `planEnd` under revision 0; it is local and never ships before P6.
-18. Interim: in P1 a project ended mid-biome is `valid` but not yet
-    `eligibleForExecutionPlan` (the canonical truncated product and the wire
-    land in P3). A cut at a biome's terminal completion room with no later
-    biome configured is identical to an unmarked plan.
-
-## Phases
-
-| Phase | Scope                                                                                                                                                                                                                                                                                          | Lanes                                                                                                                              |
-| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| P1    | Plan end in the authored model: field, strict decode, `ReplacePlanEnd`, removal reconciliation; engine assessment with a cut (completeness, progressive evaluation through the cut room's Timeline, ended biome product, route stop and dormant suffix, authoring horizon, `planEndUnreached`) | engine, catalog if touched, equivalence (characterize: unchanged), draft, run-import, planner (typecheck), typecheck, lint, format |
-| P2    | Plan-end editor: engine availability query (settled room, valid prefix, on spine) and the "End plan here" / "Remove plan end" actions on every outgoing kind, rail/timeline end marker, read-only past-end regions with their own hint                                                         | planner, ui, contract, product (representative)                                                                                    |
-| P3    | Plan-end execution assembly (truncated canonical product: cut room exit work without departure, `doors: terminal`, extent ending at the cut, partial Hub block), `eligibleForExecutionPlan` through the cut, Practice-start reason, run-import cuts and report `end`                           | engine, equivalence (characterize), run-import, planner                                                                            |
-| P4    | Challenge-switch catalog declarations and engine model/lifecycle/findings                                                                                                                                                                                                                      | catalog, engine, equivalence (characterize), draft                                                                                 |
-| P5    | Switch editor and importer recognition (replacing the `unsupportedArea` report)                                                                                                                                                                                                                | planner, ui, run-import                                                                                                            |
-| P6    | Wire additions (store fact, cage outcome), `schemaRevision` bump, single regeneration of execution fixtures, equivalence and Draft corpus; Fields/Hub fallback witness (D)                                                                                                                     | engine, equivalence, draft-corpus, full `npm run check`                                                                            |
-| P7    | Game-module consumption of A–C after `game-module-cage-draw` merges: decoder acceptance of a mid-biome terminal and partial Hub, the switch observation and conformance, store fact, exact cage-count steering                                                                                 | game-module                                                                                                                        |
-
-D's witness is engine-only and may land in any phase; it is listed in P6 so it
-travels with the equivalence regeneration if it moves any entry.
-
-## Progress
-
-### P1 — plan end in the engine
-
-Delivered (2026-11-03):
-
-- Authored model: `route.planEnd?: { biomeKey, occurrenceId }`, strict decode
-  (configured biome, existing occurrence), `ReplacePlanEnd` (null clears, an
-  equal value keeps identity, a dangling value is refused). One route-wide
-  reconciliation after every command clears the marker when its occurrence or
-  biome is gone, and `ClearTopology` of its biome clears it even though the
-  reset start reuses the start occurrence ID. Dream itinerary replacement lists
-  the end's biome among the discarded content.
-- Engine: `resolveBiomePlanEnd` classifies the end per biome as `terminal`
-  (the terminal completion room: the ordinary biome end), `cut` (any other
-  structurally entered room) or `unreached` (off the selected spine). A cut
-  evaluates an explicit projection of the authored plan that leaves out the
-  end room's exit decision, the fixed link it opens and, in a Hub, every
-  action after the end's visit and the side rooms after it; it is memoized per
-  plan and occurrence so the route cache still hits.
-- Completeness takes the optional end and returns `ended` when the walk reaches
-  it with nothing missing before it (including inside a selected Preboss's
-  chain and inside a Hub stay once its board is open).
-- A completion chain stopped before its terminal room publishes that room as a
-  no-door outgoing frontier beside its fixed links; history composes the chain
-  to it. Every end room settles up to its commit: its Timeline including the
-  actions after the doors open, but no commit, exit, departure or door
-  generation.
-- New biome evaluation `authoring: 'ended'` (`EndedBiomeProjectEvaluation`):
-  valid, prefix coverage, the end room's address, no canonical snapshot.
-- Route: the walk stops at the end's biome; `processing.afterPlanEnd` lists the
-  configured biomes after it. A terminal end keeps its canonical biome in the
-  complete-valid prefix. Authoring horizon `{ kind: 'ended', blockedAfter }`:
-  the end room stays editable, its own exit and everything after it lock.
-- `planEndUnreached` (completeness, route-owned, evidence biome and
-  occurrence): status invalid, the biome is assessed unmarked and the route
-  still stops there; the horizon stays open.
-- App: compile-only adaptations (finding copy, status type, the workspace's
-  completeness narrowing, a test literal). No UI behaviour yet.
-
-Lanes (2026-11-03): typecheck, lint, format:check pass; `test:engine`
-3904/3904, `test:draft` 164/164, `test:run-import` 342 (+1 skipped),
-`test:planner` 2143 (+1 skipped), `test:equivalence` 157/157 unchanged.
-Catalog not touched.
-
-Engineering choices made without an owner ruling:
-
-- `ended` is its own authoring kind rather than `complete` with prefix
-  coverage, so every consumer that reads a canonical snapshot from a
-  complete-valid biome stays exact and the type system names each consumer
-  that must learn about ends.
-- The end room's exit work (Shop close at exit, resource element grants, the
-  `beforeRoomExit` snapshot) is not composed in P1. P3 decides how the
-  published end room conforms; a progressive frontier with a post-outgoing
-  acquisition point stops at that point, as an unauthored decision does today.
-- A Hub visit is atomic: an end at a main room or side room composes that
-  visit through its restore to the Hub.
-- `eligibleForExecutionPlan` stays false for a mid-biome end or any configured
-  biome after the end until P3 publishes them.
-
-What P2 needs:
-
-- An engine availability query for the button (the room is settled — its
-  interior complete and valid — the prefix before it valid, and the room on the
-  spine), placed with the plan-end neighbourhood, plus the end room's address
-  on the route evaluation if the projection needs it beyond the ended biome's
-  `planEnd`.
-- The workspace's own `evaluateBiomeCompleteness` call
-  (`source-index.ts`, `biome-semantic-assembly.ts`) passes no end, so it still
-  shows the end room's missing exit as the next frontier; it must pass the
-  route's end (or read the evaluation) and treat `ended` as complete.
-- Feedback/status projection for `authoring: 'ended'` and for
-  `processing.afterPlanEnd` biomes (read-only "past the plan end", not the
-  unreached hint), the "Plan ends here" / "Remove plan end" actions on every
-  outgoing kind, rail and Hub Timeline markers, and the
-  `planEndUnreached` finding's repair destination (the route's end control).
-- Witnessed in P1: a route-owned resource placement on a dormant room inside
-  the ended biome raises no finding (even one invalid unmarked); P2 should
-  present it as inactive rather than hide it.
-
-### P3 — plan-end publication, Practice start, import cuts (before P2)
-
-Ordered by the coordinator ahead of the P2 UI, with the engine query P2 needs.
-
-Delivered (2026-11-03):
-
-- **Availability query** `planEndAvailability(catalog, assembly, room)`
-  (`./simulation`, owner `simulation/plan-end-availability.ts`): `available`,
-  or unavailable with `notOnRoute` (not on the biome's selected path or biome
-  unconfigured) or `notSettled` (the plan ending there would not be valid: the
-  room or something before it is incomplete or invalid). It answers by
-  evaluating the plan as if it ended there; the biome cache keeps the
-  predecessors cheap. First consumer: the run import's cut (below); the app
-  binds it in P2.
-- **End room exit work.** The end room now settles through commit and exit:
-  its outgoing checkpoint generates nothing (`emptyOutgoingGenerationCompleted`)
-  and it records no departure. Its Shop close, resource element grants and
-  `beforeRoomExit` Run State are therefore published. The progressive frontier
-  carries `planEnd` so history composes it this way; the materializer receives
-  the end through the biome evaluation context. Supersedes P1's "up to commit".
-- **Publication.** An ended biome publishes `snapshot`: its selected structure
-  through the end room (the ended prefix as a canonical biome).
-  `PublishedBiomeEvaluation` (complete-valid or ended) is what execution
-  assembly consumes; `eligibleForExecutionPlan` is true when the route is
-  valid through its end. The wire's `extent` ends at the end's biome, the
-  selected occurrences end at the end room, whose `doors` are `terminal` (no
-  batch or fixed link exists for it), and no later biome is published. A Hub
-  ended inside its stay publishes a partial block: no `finalHandoff`,
-  `requiredVisitCount` = visits through the end, `fountain` only if used by
-  then, and one departure per visit (none after the last). The codec and graph
-  validation accept that shape and still require the fountain whenever a final
-  handoff is present. No new wire key; the extent and the terminal end room
-  carry the end.
-- **Practice start:** reason `afterPlanEnd` when the start's biome follows the
-  end's, or a Preboss/Boss start lies past the end inside the ended biome.
-- **Run import cuts.** Every room is judged first, on the plan the walk built,
-  so the end room is judged normally at its next entry save with its doors
-  drawn. Then:
-  - death or abandonment: the plan ends after the latest record room before
-    the last room that the availability query accepts; a question the walk
-    could not settle in the last room or past it (the death room, an unseen
-    Postboss) is no longer a stop, since the run never settled that room;
-  - entry mismatch at room M: the plan ends after the latest acceptable room
-    before M; the stop, M's `mismatch` verdict and its entries stay;
-  - a question stop before the last room: no cut (the plan stays open at the
-    question, as before);
-  - victory: no cut.
-    The report gains `end: { cause: 'death' | 'abandoned' | 'entryMismatch',
-record }`. Room verdicts are unchanged.
-
-Decisions made without an owner ruling:
-
-- Question stops before the last room do not cut: the coordinator listed
-  deaths, abandons and entry mismatches, and the owner's settled (6) names
-  deaths and abandons. Cutting there would hide an open question behind a
-  valid plan.
-- An entry mismatch ends before the mismatching room (its exit state is known
-  to differ), not at it.
-- The end room's own door draws are not simulated, so its `beforeRoomExit`
-  Run State lacks them. The import judges the end room on the walk's plan
-  before the cut (doors drawn); the game module's end-room conformance must
-  not compare stores (P7).
-- Hub: a plan ending inside a Hub stay publishes no departure after its last
-  visit (the plan does not leave the Hub); P7's module treats the stay's end as
-  the plan's end.
-
-Raw measurement (scratch harness copied in, run, removed; 2026-11-03): every
-death or abandonment now ends cleanly one room before its last room — 930,
-932-0294, 933-1612, 1018, 1010-4329 and both fresh-file raws (0-0272, 0-1339 =
-fresh-oceanus) — where 930, 1010-4329 and 0-1339 were `stopped` at their last
-room before. 1015/1016/1017 still stop at their r25 entry mismatch and now end
-at r24. Victories are unchanged. Room buckets are identical to before (rooms
-are judged before the cut). Capture fixtures: `surface`, `underworld-1010` and
-`fresh-oceanus` become clean ends; `underworld-live` (no entry saves) still
-stops at its r27 question.
-
-Lanes (2026-11-03): typecheck, lint, format:check pass; `test:engine`
-3910/3910 (execution fixture bytes unchanged), `test:equivalence` 157/157
-unchanged, `test:draft` 164/164, `test:run-import` 342 (+1 skipped),
-`test:planner` 2143 (+1 skipped), `test:game-module` 1067/1067 with Luacheck
-clean (no game-module change).
-
-Owed at merge (with P6): promote the plan-end contract into the design
-documents (Route Scope in `AUTHORED_PROJECT_MODEL.md`, the ended biome and
-horizon in `SIMULATION_AND_VALIDATION.md`, departures in
-`ROOM_LIFECYCLE_MODEL.md`, the partial Hub block and terminal end room in
-`EXECUTION_PROTOCOL.md`, `afterPlanEnd` in `RUN_START_INSTALLATION.md`, the
-import's `end` in the run-import documentation), regenerate execution
-fixtures, re-record equivalence and bump `schemaRevision`.
-
-### P2 — plan-end editor
-
-Delivered (2026-11-04), planner only:
-
-- **Workspace source.** `evaluateBiomeCompleteness` receives the route's end,
-  so an ended biome has no frontier and the end room no "missing exit" next
-  step. Each biome source publishes `planEndRelation(room)` (`end` for the
-  horizon's end room; `pastEnd` for rooms the ended evaluation does not cover,
-  Hub main rooms whose visit follows the end, and every room of an
-  `afterPlanEnd` biome) and a lazy, memoized `planEndAvailability(room)` bound
-  to the engine query.
-- **Products.** Every room workbench carries `planEnd` (relation, availability,
-  `endIntent` and `removeIntent`, both `ReplacePlanEnd`); rail stops, Hub
-  visits and side visits carry the relation; a Hub the plan ends in carries
-  `planEnd: 'end'`; biomes carry `end`/`pastEnd`; the route carries a
-  `planEnd` summary (room, biome, `unreached`, remove intent). An end room
-  without doors has a new outgoing kind `planEnd`. Resource placements on a
-  room past the end are flagged inactive.
-- **Actions.** Every door footer (ordinary and frontier batches, fixed exits
-  of Preboss, Boss and Postboss, Hub main and side rooms, unentered rooms, the
-  Hub's completed exit) has one layout: at the start one contextual action —
-  the batch's targeted repair ("Remove unavailable doors" / "Add missing
-  Preboss doors") when the projection supplies one, otherwise "Remove these
-  doors", never both; at the end "Open next room" and a lavender "End plan
-  here", disabled per the query with a hint only for `notSettled`. A fixed exit
-  to a room projects that room as its continuation, so Preboss and Boss doors
-  also open the next room. The end room hides the way on and the contextual
-  action; its footer, outside its locked doors, holds only a lavender
-  "Continue planning" (`ReplacePlanEnd` null, one undo step) — the header pill
-  and the rail marker say where the plan ends. A room past the end keeps only
-  "End plan here" below its read-only doors.
-- **Past the end.** Rail stops, completion nodes, Hub visits and map markers
-  are dimmed and labelled; the Hub Timeline gets an end row after the end
-  visit and its requirement box names the visit. A room past the end stays
-  browsable (tabs work) with read-only panels and keeps "End plan here", so
-  the end can move later. A biome after the end is labelled, dimmed in the
-  navigation and read-only (fields, Clear biome, Hub). A Hub whose stay the
-  plan ends in explains its locked visit order with "Remove the plan end to
-  change visits." instead of the unreached hint.
-- **Route.** The Route panel shows where the plan ends ("Ends in …" status,
-  a "Plan ends" row with Open room and Remove plan end). The route-owned
-  `planEndUnreached` routes to that row (`presentationPanel: 'route'`) and no
-  longer counts against the Loadout.
-
-Lanes (2026-11-04): typecheck, lint, format:check pass; `test:planner`
-(incl. `test:ui`) green with new projection and UI witnesses
-(`test/projections/structured-workspace/plan-end.test.ts`,
-`test/ui/editor/biome/PlanEnd.test.tsx`). Engine untouched. The
-owner-approved footer layout followed the same day, on the same lanes.
-
-Engine follow-ups observed in P2 (fixed 2026-11-04, see "P2 follow-ups" below):
-the end visit's side rooms read as locked, later Hub visits' main rooms stayed
-editable, the end room's peers read as locked, and an ended Hub's visit order
-was not a reached context.
-
-### P2 follow-ups — authoring horizon around a plan end
-
-Delivered (2026-11-04), engine then planner:
-
-- **Horizon.** `authoringReadinessAt` with an ended horizon asks the plan-end
-  extent (`planEndExtent`: rooms entered through the end, rooms the authored
-  plan enters only after it, an ended Hub's actions through the end, side room
-  to main room). Inside the plan, editable: the end room, every room entered
-  through it, the end visit's side rooms (entered or not) and their local
-  order, rooms offered beside or before the end room, board rooms no visit
-  enters, the board and its offers. Past the end, locked: the end room's exit,
-  its hidden and additional doors, rooms entered after the end and their side
-  rooms, Hub visits after the end visit (an appended one included), a fountain
-  use or reroll after it, and everything the end room's doors offer.
-- **Candidates.** Candidate families accept the biome a plan ends in as a
-  reached biome (`candidateBiome` includes `ended`); past-the-end owners stay
-  unavailable because the ended product does not contain them
-  (`targetNotReachable`). Hub visit-order and visit-prefix alternatives apply
-  the end, so later visits add no candidate evidence.
-- **Planner.** A room's past-the-end relation in the ended biome is the
-  engine's lock (the editor's own Hub visit inference is gone); the end room's
-  hidden door is projected `pastEnd`, so its Choose and Reset are inactive. An
-  ended Hub's Reset visits works; the map adds no visit or fountain use after
-  the end visit; the "Remove the plan end to change visits" hint is gone.
-
-Decisions (no owner ruling needed; recorded here):
-
-- Gap 3 was the end room's peers, not its own siblings: `golden-f-b5-e2` is
-  offered by `golden-f-b4-e1`'s doors beside the end room `golden-f-b5-e1`, so
-  it is inside the plan and editable (readiness and candidates). The end
-  room's own door targets (`golden-f-b6-e1`, `golden-f-b6-e2`) are past the end
-  and stay locked.
-- A board room that no visit enters is treated like an unpicked door target:
-  editable, never "past the end". A later visit's main room is locked, but its
-  board offer stays editable because the board is generated before the first
-  visit.
-- An end at a side room keeps the visit's never-entered side rooms editable
-  (peers) and locks the side rooms entered after it.
-- The end room's hidden door and additional exits belong to its doors, which
-  are past the end (decision 7).
-- An ended Hub's visit order is reached: Reset visits is allowed (it leaves the
-  end unreached, a `planEndUnreached` finding, until a visit enters the end
-  room again), and appending a visit or a fountain use is not, because it
-  would land after the end visit.
-- Other candidate families that replay a hypothetical biome (room targets,
-  rewards) still replay the full authored plan; their target-local answers are
-  unaffected, so only the Hub alternatives apply the end.
-
-Lanes (2026-11-04): typecheck, lint, format:check pass; `test:engine` 3914,
-`test:equivalence` 157/157 unchanged, `test:draft` 164, `test:run-import` 342
-(+1 skipped), `test:planner` 2161 (+1 skipped; includes `test:ui`, 902).
-
-Owed at merge (with P6): describe the plan-end editor in
-`STRUCTURED_EDITOR_WORKSPACE.md` (actions, past-the-end state, Hub end row),
-`EDITOR_MODEL.md` (route-owned repair on the Route panel), and the ended
-horizon's inside and past-the-end rules in `SIMULATION_AND_VALIDATION.md`
-(Authoring readiness).
-
-### P4 — challenge switches in the catalog and engine
-
-Delivered (2026-11-04):
-
-- **Catalog** (`catalog.challengeSwitches`, validated at creation): the three
-  kinds (Time, PerfectClear, Elite) with their default variant, Elite's biome
-  depth 3 and `TalentLegal` gate and PerfectClear's hit reward (the Onion);
-  the five obstacle variants with their `EncounterSets` weights, reward and
-  own gate (Pom `StackUpgradeLegal`, Path of Stars `TalentLegal`); the shared
-  spawn rules (biome depth 5, 3 rooms since the last switch); Time gold
-  (100 start, floor 10, default 90); the 5% bonus Nectar; and the hosts:
-  every anchored room of a RoomSet with a nonzero chance (F 0.25, others
-  0.15), each naming its one encounter per kind. Anchored rooms with a zero
-  chance (Postbosses, Reprieves, N side rooms, Dream) are declared
-  spawn-free; an anchored room with neither fails catalog construction. Claim
-  pickups use a new `ChallengeSwitchLoot` producer; the Time claim's gush is a
-  new `Money` reward and acquisition (`CanDuplicate` false, not goldifiable).
-- **Authored model**: optional occurrence leaf
-  `challengeSwitch: { variantKey, hitless, nectarDropped, gold? }` at a host
-  only (absent for old projects, no transition). The variant fixes the kind
-  and reward; `gold` is present exactly for Time (10–100); `nectarDropped`
-  needs `hitless`. One optional room action `interactChallengeSwitch` in the
-  doors-open window (`postOutgoing`); its outcome stays on the leaf. The claim
-  pickups are entries `reward` and `nectar` of a producer-owned
-  `challengeSwitch` site: the reward is the variant's, the Onion after a
-  PerfectClear hit, or `Money` for Time; `nectar` exists only when hitless and
-  dropped. They are optional `interactAcquisitionEntry` rows, so they never
-  move the exit checkpoint.
-- **Commands**: `ReplaceChallengeSwitch { occurrence, variantKey | null }`
-  (null clears the leaf, its interaction and site; a variant change keeps the
-  outcome, gold following the kind) and `ReplaceChallengeSwitchOutcome`
-  (refuses a Nectar without hitless and gold outside Time's range). The
-  interaction uses the generic Insert/Move/RemoveRoomAction; the command that
-  makes claim pickups active also orders them right after the interaction
-  (the trait-drop rule, extended), and removing the interaction retracts them.
-  Each edit is one history step.
-- **Engine**: the interaction emits `challengeSwitchInteracted`: no encounter
-  end, no store draw, no state change; the pickups settle through the existing
-  acquisition machinery (Sea Star, Time Piece and Artificer as usual for the
-  consumables; the gush is neither duplicable nor convertible). Room entry
-  records `challengeSwitchPresent` on the appearance ledger (native sets
-  `LastChallengeDepth` at entry, used or not) and raises
-  `challengeSwitchPlacementUnavailable` on the switch's Overview owner, one
-  per broken rule: `biomeDepth`, `recentSwitch`, `noFreeAnchor` (Well, Pool
-  and Shrine occupy anchors first), `kindUnavailable`,
-  `variantUnavailable`. The gold ledger pays a Time claim
-  (`challengeSwitchGold`: authored value × money multiplier; `BlockMoney`
-  blocks it).
-- **Execution plan**: the room guide carries an `interactChallengeSwitch` row
-  (native press, no transaction) and the claim pickups publish as ordinary
-  acquisitions; disposition `deferred-route` until P7. This rides the P6 bump.
-- **App**: compile-only (finding copy, action label, contextual option).
-- **Draft**: never observes a switch (walk witness).
-
-Witnesses: `packages/hades2-catalog/test/catalog/challenge-switches.test.ts`
-(declarations and creation refusals),
-`packages/planner-engine/test/authored-project/challenge-switch.test.ts`
-(codec, commands, pickup closure, history),
-`packages/planner-engine/test/simulation/challenge-switch.test.ts` (each spawn
-rule; PerfectClear clean, hit and Nectar; Elite Max Magick and Path screen;
-Time gold in the ledger; no store draw, no encounter end; published
-acquisitions round-trip the wire; pickup-effect capabilities).
-
-Decisions made without an owner ruling:
-
-- **Bonus Nectar has no random boon level.** `HandleChallengeLoot` spawns the
-  drop with a bare `CreateConsumableItem` (EventLogic.lua:541), and
-  `CreateConsumableItemFromData` applies `RunProgress` only with
-  `RunProgressUpgradeEligible` (InteractLogic.lua:869). This contradicts
-  settled switch decision 12 ("Nectar with its random +1 level target"); the
-  model follows the source. Reverting is one catalog override (the
-  `giftDropRunProgressLevel` effect on `ChallengeSwitchLoot`'s `GiftDrop`).
-  Owner to confirm.
-- **Spawn-rule findings halt at the Overview** like the Well and Shrine
-  placement findings: the room is entered, its Timeline is not assessed. The
-  engine has no non-blocking finding class ("every finding is a simulation
-  blocker"); "non-blocking" is read as "reported, never refused". A truly
-  non-halting class is an engine-wide change for the owner to rule on.
-- **Claim pickups are optional rows**, auto-ordered after the interaction: a
-  required doors-open row would move the exit checkpoint, and the player may
-  leave them.
-- **The encounter is not a choice**: every RoomSet names exactly one encounter
-  per kind, so the host declares it. Its customization (generated roster, the
-  Elite's attributes) and its encounter-cache record are not modeled in P4:
-  they need a side-encounter phase in encounter preparation, and no modeled
-  eligibility reads the challenge encounters' names. Left for a later phase.
-- Spacing counts room appearances, as the Well's and Shrine's do; "no active
-  bounty" is not modeled (the planner has no bounty).
-- A Path of Stars claim with no installed Hex tree (only possible when
-  `TalentLegal` failed at entry) settles nothing in the walk; the Overview
-  finding owns the repair.
-
-Lanes (2026-11-04): typecheck, lint, format:check pass; `test:catalog` 454,
-`test:engine` 3933, `test:equivalence` 157/157 unchanged, `test:draft` 165,
-`test:run-import` 342 (+1 skipped), `test:planner` 2161 (+1 skipped; the
-`Money` reward needed its artwork record).
-
-Owed at merge (with P6): promote the switch contract into
-`AUTHORED_PROJECT_MODEL.md` (leaf, commands, claim site, customization),
-`CATALOG_MODEL.md` (the 24 encounters outside the sets),
-`ENCOUNTER_PREPARATION.md` (the switch phase: prepared at entry, recorded and
-run at the press, its customization and findings),
-`ROOM_LIFECYCLE_MODEL.md` (doors-open interaction, entry spacing, the press's
-encounter run and depth advance),
-`REWARD_MODEL.md` (claim pickups among generated pickups; gold: line "challenge
-switches are not counted" is now only their encounters' kill gold),
-`GOLD_ESTIMATE_ASSUMPTIONS.md` (row 24, and the switch's kill gold paid by
-roster or biome policy), `EXECUTION_PROTOCOL.md` (guide row and
-`overview.challengeSwitch`), and the Keepsake audit's switch note.
-
-#### P4 follow-ups (2026-11-04)
-
-- **Nectar drop ruling checked: not simulation-neutral, so kept.** The owner
-  ruled to drop the bonus Nectar if it changes nothing. It does, in game and
-  in the engine: `GiftDrop` is `LastRewardEligible` (ConsumableData.lua; the
-  later key in its table wins), so collecting it becomes Echo's last reward
-  (InteractLogic.lua:1132–1137) and the engine records `lastRewardRecreation`;
-  it is `CanDuplicate` (Sea Star), `GoldifyValue` 200 (Time Piece) and
-  Artificer-convertible (its `UseOrConvert…` prompts); and it enters the use
-  records. `nectarDropped`, the `nectar` pickup and `hitless` on Time and Elite
-  therefore stay until the owner rules again (removing them is a small
-  change: the claim site, the outcome command and the codec).
-- **Variant query delivered.** Room entry assesses every reached switch host,
-  observed switch or not: the shared rules the entry breaks (`biomeDepth`,
-  `recentSwitch`, `noFreeAnchor`) and each variant's lock (`kindUnavailable`,
-  `variantUnavailable`). `roomObjectInteractionsForProjectEvaluationAssembly`
-  publishes it as `challengeSwitch` on the room's object interactions: each
-  variant with `rollable` and its `ReplaceChallengeSwitch` command. It is an
-  Overview fact, so it is present even where the Timeline is unreached; a room
-  that cannot host a switch has none. Placement findings derive from the same
-  assessment. Not part of the published evaluation, so equivalence is
-  unaffected.
-
-- **Elite elite and attributes delivered** (first part of the side
-  encounter). Catalog `challengeSwitches.eliteEncounters`: each RoomSet's
-  `EliteChallenge<Set>` with its elite set (`Biome<Set>_EliteChallenge`), each
-  enemy's native attribute options and blocks (also for the armored
-  Cutthroat, which is not `IsElite` but carries `EliteAttributeOptions`), the
-  forced count 2 and the banned four; every host must name a declared one.
-  The leaf gains an optional `elite: { enemyKey, attributeKeys }` (Elite kind
-  only; absent leaves both native; attributes are an ordered prefix, as the
-  Fangs customization's), set by `ReplaceChallengeSwitchElite` (null clears)
-  and kept across Elite variants. Room entry raises
-  `challengeSwitchEliteUnavailable` (`enemyNotInSet`, `attributeUnavailable`
-  for banned, blocked, unoffered or another RoomSet's, `attributeExcluded` by
-  an earlier draw, `tooManyAttributes`). The switch's object interaction
-  carries `elite`: each enemy with its first-draw attributes and the labels;
-  `eliteChallengeAttributeOptions` narrows each later draw (native removes
-  the drawn attribute and what it blocks). The attributes are drawn when the
-  encounter starts (`PickEncounterEliteAttributes`, RoomLogic.lua:1913), the
-  elite at entry (`GenerateEncounter`). Elite attribute game-state
-  requirements and the run's `BannedEliteAttributes` (empty unless selected)
-  are not modeled.
-
-- **Switch encounter delivered** (the remaining side encounter, 2026-11-04).
-  - Catalog: the 24 challenge encounters are encounter definitions outside
-    every set and fixed binding (`declarations/encounters/challenge.ts`), each
-    with its RoomSet's GeneratedX money store, `countsEncounterDepth`, no skip,
-    no Shrine delivery advance. Time and PerfectClear carry a generated
-    composition on the existing policy builder, resolved through `InheritFrom`
-    (first parent fills only nil keys): Time 2–3 types, cap 3, type ramp 0,
-    budget base per Set with ramp 0 (I: 380 and 10, elite cap 2; H keeps
-    GeneratedH's 290); PerfectClear 3 types, cap 3, GeneratedX's type ramp and
-    budget (F: 60 and 11); one wave, `RequireCompletedIntro`, room-entry
-    preparation, GeneratedX's pool, elite cap, escalation, type-depth axis and
-    group caps; never hard (HandleSecretSpawns calls `GenerateEncounter`
-    directly). Elite has no composition; its declaration gains `spawnCount` 1
-    (ManualWaveTemplates TotalCount). Construction fails on an undeclared,
-    bound, shared, non-combat, skippable, storeless or misshapen switch
-    encounter, a Time/PerfectClear one without one room-entry composition
-    with `RequireCompletedIntro`, or an Elite one with a composition.
-  - Authored: the leaf gains optional `customization` (sparse decisions of
-    the kind's encounter at the host, as `customizationByPhase[phase]`), set by
-    `ReplaceChallengeSwitchCustomization { occurrence, decisionKey, value |
-null }` with the main command's structural checks; kept across variants of
-    the same kind and by the outcome and elite edits, dropped on a kind
-    change; strict decode against the host's encounter.
-  - Engine: `encounters/challenge-switch.ts` prepares the observed switch's
-    encounter at the room's entry view: the kind's definition resolved as a
-    phase (slot and envelope `challengeSwitch`, outside the envelope), its
-    composition assessed through `prepareGeneratedEncounter` with the room's
-    admission facts, and for Elite the pin's issues (moved here from room
-    entry). Room entry prepares it with the entry's vow ranks; its findings
-    (`challengeSwitchCustomizationUnavailable` with the decision and reason,
-    `challengeSwitchEliteUnavailable`) stay on the switch's Overview owner.
-    History composition prepares it again at the entry view and attaches the
-    run to the press: `challengeSwitchInteracted.encounter`
-    `{ encounterKey, phaseKind, countsEncounterDepth, generatedCustomization? }`.
-    The fold records, starts and completes it in the encounter ledgers and
-    advances biome and route encounter depth; no `encounterEndEffectsApplied`.
-    The envelope-slot window skips it.
-  - Gold: the press pays the encounter's kills from its own store
-    (`enemyGold`, owner the switch feature): by known roster (an authored
-    composition, or the pinned elite × `spawnCount`), else the biome's
-    generated-combat policy, at the room's entry multipliers.
-  - Products: `challengeSwitchEncounterSupportForProjectEvaluationAssembly`
-    (the composition capability, as `generatedEncounterSupportFor…` is a
-    room phase's; none for Elite); `ChallengeSwitchInteraction.encounter`
-    (kind, definition key, label, each decision with value, assessed support
-    and a reset command; it satisfies `EncounterCompositionPhase`, so
-    `encounterCompositionView` renders it). `rewards.challengeSwitchEncounters`
-    (present only when a biome has one) carries the entry-prepared encounter
-    to the execution plan.
-  - Execution plan: `overview.challengeSwitch { variantKey, encounterKey,
-customization?, elite? }` for every entered room with an observed switch,
-    the composition in the room-phase `generated` shape and the elite as
-    `{ enemy: { choiceKey, nativeId }, attributeKeys }`; disposition
-    `deferred-route` until P7. Rides the P6 bump; fixture bytes unchanged.
-  - App: compile-only (finding copy and explanation).
-
-  Witnesses: catalog `challenge-switches.test.ts` (the 24 declarations,
-  inherited policies, Elite shape, construction refusals; inventory counts in
-  the encounter, generated, gold and lifecycle-clock tests);
-  `authored-project/challenge-switch.test.ts` (command, codec, kind rules);
-  `simulation/challenge-switch.test.ts` (the run at the press with depth and
-  no end effect, kill gold, capability → composition → wire, an invalid
-  composition stopping at the Overview, the Elite pin on the wire).
-
-  Decisions made without an owner ruling:
-  - **Recorded at the press, not at entry**: native `RecordEncounter` for the
-    challenge runs in `StartChallengeEncounter`; generation, roster and store
-    are fixed at entry. An unused switch therefore leaves no encounter record.
-    A once-per-run enemy an authored composition of an unused switch draws
-    (only `FogEmitter2`) is not blacklisted, though native blacklists it at
-    entry; the record carries it only when the switch is used.
-  - **Encounter depth advances** (the source correction above), so a used
-    switch raises later rooms' encounter-depth budgets.
-  - Customization findings have their own code on the switch's Overview
-    owner rather than `encounterCustomizationUnavailable` on a phase address,
-    so the editor's phase-slot lookups never meet a slot outside an envelope.
-  - The switch's kill gold is not added to Medea's per-room capped drops;
-    the gold ledger publishes it with the press as its room action.
-
-  Lanes (2026-11-04): typecheck, lint, format:check pass; `test:catalog` 460,
-  `test:engine` 3945 (execution fixture bytes unchanged), `test:equivalence`
-  157/157 unchanged, `test:draft` 165, `test:run-import` 342 (+1 skipped),
-  `test:planner` 2160 (+1 skipped).
-
-- **Switch outcome** (owner model change, 2026-11-04; supersedes `hitless`
-  above). Every pressed switch has one `outcome`: Time and Elite `left` or
-  `finished`, PerfectClear `left`, `hitless` or `failed` (derived from the
-  kind: a kind with a hit reward is PerfectClear). `left` is pressing then
-  leaving the room before the fight ends (`EndedEarly`, RoomLogic.lua:4213):
-  the encounter is recorded and started, counting its encounter depth, but
-  never completed, `EndChallengeEncounter` returns before re-arming the switch
-  (EncounterLogic.lua:2124), so nothing is claimed and no Nectar drops.
-  `failed` claims the Onion. `nectarDropped` needs `finished` or `hitless`
-  (`HandleChallengeLoot` rolls the GiftDrop only when no damage was taken, for
-  every kind, so a finished Time or Elite claim with Nectar asserts a clean
-  fight); `gold` exists exactly for a finished Time switch. A new switch starts
-  at its kind's clean claim; a variant change keeps the outcome where the new
-  kind has it, else the kind's default, with Nectar and gold following.
-  Strict decode, no transition (the shape never shipped). The fold leaves a
-  left fight out of the completions; the gold ledger pays a left fight's kills
-  nothing (no estimate of a partial fight). The guide row
-  `interactChallengeSwitch` carries `outcome` (rides P6, deferred to P7).
-  A left press is the room's last action (owner rule; leaving is the only
-  way a fight ends early: `LeaveRoom` sets `EndedEarly`, RoomLogic.lua:4213,
-  its only writer). One reconciliation after every command
-  (`commands/challenge-switch-press.ts`): a placing command (Insert/Move room
-  action, the reroll and Pool-sale inserts) that would put an action after a
-  left press, or move the press off the end, is refused; any other edit that
-  leaves actions after a press that was last, or that makes the outcome
-  `left`, moves the press last in the same step (so an appended purchase lands
-  before it). A preserved order with actions after a left press decodes and
-  gets `challengeSwitchLeftNotLast` (evidence `followingActionCount`) on the
-  press, blocking there. The room's roster drops every insert and move
-  proposal that would put more actions after a left press, so the Timeline's
-  add and reorder targets follow it. The import already lands a left press
-  last (a refused native position falls back to the end); witnessed.
-  Product for the Timeline: `ChallengeSwitchInteraction.outcome`
-  (`ChallengeSwitchOutcomeInteraction`): `current`, `choices` (each kind
-  outcome with its bound `ReplaceChallengeSwitchOutcome`, Nectar kept where
-  the choice drops it), `nectarAllowed`, `nectarCommand` (toggle, while
-  allowed), `goldApplies` and `gold { value, minimum, maximum }`. The command
-  supplies a finished Time switch's omitted gold (current, else the catalog
-  default), so the app never sends one except to change it.
-  Witnesses in the authored and simulation switch tests.
-
-What P5 needs:
-
-- **Overview, Objects tab** (owner shape, 2026-11-04):
-  - ( ) Hermes Shrine → items 1–3 (existing)
-  - ( ) Perfect Clear switch → Combat (encounter customization) + Item
-    (reward: Pom / Max Health)
-  - ( ) Gold (Time) switch → Combat
-  - ( ) Elite Enemy switch → Combat + Item (Path of Stars / Max Magick)
-
-  At most one switch per room (RoomLogic.lua:4932–4992 picks one object from
-  the union of the eligible kinds' variants), so the three switch rows are
-  mutually exclusive; a Shrine coexists only with a free anchor (the
-  `noFreeAnchor` rule). The rows reuse the existing Overview "collect element"
-  checkbox pattern (exclusive checkboxes), not a new radio group. Options come
-  from the variant query (`rollable`, `lock` for the hint); the Item picker
-  lists the kind's variants.
-
-- **Timeline:** insert/remove `interactChallengeSwitch`
-  (Insert/RemoveRoomAction) and its outcome (`ReplaceChallengeSwitchOutcome`:
-  one per-kind choice — Time and Elite `left | finished`, PerfectClear
-  `left | hitless | failed` — with Nectar where the outcome can drop it and a
-  finished Time switch's gold; see "Switch outcome" below); the claim pickups
-  are ordinary pickup rows with source family `challengeSwitch` (Pom target,
-  Path screen and dispositions through the existing commands), none after a
-  left fight.
-- **Combat:** `challengeSwitch.encounter` feeds `encounterCompositionView`;
-  `challengeSwitchEncounterSupportForProjectEvaluationAssembly` initializes
-  and assesses a composition (Time, PerfectClear) whose save is
-  `ReplaceChallengeSwitchCustomization`; reset is the decision's `reset`.
-  Elite's Combat is the existing elite pin (`challengeSwitch.elite`,
-  `ReplaceChallengeSwitchElite`). Finding copy for
-  `challengeSwitchCustomizationUnavailable` (decision and reason, as the
-  room phase's) routes to the switch row.
-- Finding copy per `challengeSwitchPlacementUnavailable` reason.
-- Run import: delivered (see P5 below).
-
-Still open (engine): none for the switch encounter. Not modeled, by choice:
-a left fight's kill gold; Elite attribute game-state requirements; the run's `BannedEliteAttributes`; the
-H `ChallengeSwitchBlockedByFieldsLoot` exit gate.
-
-### P5 — run import of challenge switches
-
-Delivered (2026-11-04):
-
-- **Catalog fix**: each switch host carries its RoomSet's biome-depth floor
-  (`minimumBiomeDepth`: BaseRoom 5, Fields H and Thessaly O 1); the shared
-  catalog-level floor is gone. Found by the import: the live recording's
-  H_Combat07 switch (biome depth 3) was refused by the engine.
-- **Import** (`run-import/src/challenge-switches.ts`), in the sweep once the
-  room's own questions have settled its other pickups (before Sea Star
-  duplicates are placed, so a claim can carry one):
-  - The pressed variant is the switch name in the room's `uses`; it is
-    authored with `ReplaceChallengeSwitch`. A switch the engine refuses
-    (placement findings) is reported `refused` on the switch owner, and its
-    possible claim pickups keep being absorbed from the room's unexplained
-    uses as before.
-  - Record-pinned claims, from the uses the plan's other collected pickups
-    leave: a leftover Onion is a failed Perfect Clear; the variant's reward a
-    clean claim (`hitless` / `finished`); for Time, whose gold is no object,
-    a leftover bonus Nectar alone pins `finished`. A leftover Nectar rides a
-    clean claim as `nectarDropped`. The outcome is set, then the press is
-    inserted and its claim rows follow it; Pom targets and Path screens are
-    then answered as ordinary questions.
-  - No claim shown: a bounded room search judged at the next entry save over
-    `left`, `finished` (Time with two or more presses) and "unpressed"
-    (`UseRecord` also counts a press refused before the doors open); the
-    first accepted is authored and reported `notInRecord` with the others as
-    alternatives. Without an accepted fit (no entry saves) only the switch is
-    authored, reported `notInRecord`.
-  - A finished Time switch's gold is the engine's default (authored before
-    the money multiplier, as the engine contract states), reported
-    `notInRecord`.
-  - Press position: the native default; where that does not run (Fields
-    exits wait for the cage loot) the press goes last. Untimed, so the room
-    keeps its `roomActionOrder` assumption.
-  - The elite pin and the encounter customization stay native: the record
-    holds neither.
-  - New report area `challengeSwitch` (app label "Challenge switches"); the
-    `unsupportedArea` report for switch rooms is gone.
-- Witnesses: `run-import/test/import-challenge-switches.test.ts` (synthetic
-  uses on the Underworld capture: refused before depth five, an unclaimed
-  Time press chosen by acceptance with alternatives, a hitless Pom on the
-  levelled trait, a finished Elite Max Magick beside a Well, a finished Time
-  claim with Nectar and default gold, a failed Perfect Clear's Onion, a
-  Fields Time claim after the cages); the live recording's H_Combat07 press
-  (presence only, no entry saves); catalog host floors; engine Fields
-  placement at biome depth 2.
-
-What the recorder would need to capture (none recorded today):
-
-- The entry save's `CurrentRoom.ChallengeSwitch` (variant name, `ObjectId`)
-  so an observed but unused switch can be authored present with no press;
-  today a switch without a `uses` entry leaves no record trace.
-- `CurrentRoom.ChallengeEncounter` from the first save after leaving the
-  room: `StartedChallengeEncounter`, `Completed`, `EndedEarly`,
-  `PlayerTookDamage`, `ClearTime`, `CurrentValue` (Time gold before the
-  multiplier), its generated roster (for the customization) and, for an
-  Elite, the elite's name and `EliteAttributes` (for the pin). These pin
-  `left` against a refused press, a finished Time fight, and the gold.
-- Or, failing that, the hero's gold before and after the room (Time gold
-  through the money multiplier), which the record does not hold either.
-
-Lanes (2026-11-04): typecheck, lint, format:check pass; `test:catalog` 460,
-`test:engine` 3949, `test:equivalence` 157/157 unchanged,
-`test:run-import` 349 (+1 skipped), `test:planner` 2170 (+1 skipped).
-
-Decisions made without an owner ruling:
-
-- A single press with no claim is authored `left` (canonical) with
-  "unpressed" as the reported alternative, rather than left unauthored; a
-  record without entry saves authors presence only.
-- A pinned claim is applied without a search: the record states it, and the
-  walk's entry-save acceptance stops the plan at a mismatch as for any
-  record answer.
-- The Fields press goes after the cages; the engine refuses (blocks) it at
-  the native position, which is before them.
-
-### P5 — challenge switch editor
-
-Delivered (2026-11-04), planner, on the engine products above:
-
-- `80897cd3f` refactor: the encounter customization editor binds and launches
-  outside a room phase (`encounter-customization-binding.ts`), so the
-  switch's Combat entry reuses it. With `80f238da8` (what lies past a plan end
-  comes from the engine, not the editor's own inference).
-- `dd40c9b35`: the Overview Objects rows (Perfect Clear, Gold, Elite Enemy
-  switches, mutually exclusive), each kind's variants with their locks and
-  copy (`challengeSwitchCopy.ts`), the observed switch's Combat entry
-  (composition through the shared editor; Elite through the pin) and the
-  press on the Timeline (`ChallengeSwitchControls.tsx`).
-- `9e7d5d5a6`: the press's outcome controls on its Timeline row
-  (`ChallengeSwitchOutcomeControls.tsx`): the kind's outcome choice, Nectar
-  where allowed, a finished Time switch's gold, bound to
-  `ChallengeSwitchInteraction.outcome`.
-- Witnesses: `test/projections/structured-workspace/challenge-switch.test.ts`,
-  `test/ui/editor/biome/ChallengeSwitch.test.tsx`, finding-title lengths.
-
-### Review follow-ups (2026-11-04)
-
-- **Kind gate named**: a `kindUnavailable` issue carries `gate`,
-  `{ kind: 'biomeDepth', biomeDepthCache, minimumBiomeDepth }` (checked
-  first) or `{ kind: 'requirement' }` (Elite's `TalentLegal`); each assessed
-  variant carries its own `issue`. The copy names the depth or the Hex.
-- **Selection policy in the engine**: `ChallengeSwitchInteraction.kinds`
-  gives each kind its `observe` command (the default variant when rollable,
-  else the first rollable) or the `lock` that stops it;
-  `elite.pinnedDraws` gives each forced draw of a pinned elite its
-  attributes, empty for a draw after an unpinned one (it stays native). The
-  editor binds both.
-- **Import Hub cut**: a death in a side room no longer keeps it. An end at
-  a main room ends its whole visit, so `endPlanBefore` first narrows that
-  visit to the side rooms recorded before the death (`ReplaceLocalVisitOrder`)
-  and cuts there; witnessed on the Surface capture cut at its first side room.
-
-Owed at merge for P5 (with P6): the `challengeSwitch` import area and its
-reasons in the run-import documentation, with the import's `end` and its
-Hub-visit cut; the switch Overview rows, the Combat entry and the press's
-outcome controls in `STRUCTURED_EDITOR_WORKSPACE.md`.
-
-## Equivalence characterization per phase
+Status: P1–P6 delivered on branch `engine-slice-plan-end-switches` (from main
+`606f8e588`, started 2026-11-03); P7 open. Temporary plan; delete at delivery
+after promoting P7's durable result. The durable contracts of P1–P6 live in
+the design documents (Route Scope and the switch leaf in
+`AUTHORED_PROJECT_MODEL.md`, Plan end in `SIMULATION_AND_VALIDATION.md`,
+`ROOM_LIFECYCLE_MODEL.md`, `EXECUTION_PROTOCOL.md`, `ENCOUNTER_PREPARATION.md`,
+`REWARD_MODEL.md`, `CATALOG_MODEL.md`, `RUN_START_INSTALLATION.md`,
+`STRUCTURED_EDITOR_WORKSPACE.md`, `EDITOR_MODEL.md`,
+`GOLD_ESTIMATE_ASSUMPTIONS.md`), the room features audit's Challenge Switches
+section and the run import's settled decisions in `RECORD_MODE.md`.
+
+## Release rule (owner, 2026-11-04)
+
+P6 and P7 ship in the same release. Until P7 lands, a plan whose route is
+valid through a cut plan end (mid-biome, or inside a Hub stay) is not
+publishable: the route summary carries `executionPlanBlock:
+'planEndAwaitsGameModule'`, `eligibleForExecutionPlan` is false, the
+publication entry `assembleExecutionProduct` refuses it with that compiler
+code, and the send button reads "Sending a plan that ends early needs the next
+game module update." An end at a biome's terminal room is the ordinary prefix
+end and publishes. The route assembly below the entry
+(`assembleRouteExecutionProduct`) still builds the truncated wire, witnessed in
+`packages/planner-engine/test/execution-plan/plan-end.test.ts`.
+
+**Remove in P7**, once the module runs that wire: the summary's
+`executionPlanBlock` and the `validEnd === 'cut'` branch in `summarizeRoute`
+(eligibility becomes "valid through its end" again), the entry's refusal and
+the `planEndAwaitsGameModule` compiler code, the app's copy and
+`GameSendProject.executionPlanBlock`, the gate witnesses, and the sentence in
+`EXECUTION_PROTOCOL.md` and `SIMULATION_AND_VALIDATION.md` that names the
+block. Fold `assembleRouteExecutionProduct` back into
+`assembleExecutionProduct`.
+
+Not gated: a plan with an observed challenge switch publishes under 101.1 with
+`overview.challengeSwitch`, an `interactChallengeSwitch` guide row and claim
+acquisitions from the `ChallengeSwitchLoot` producer. The current module's
+strict decoder refuses those keys, so such a plan fails to load in game until
+P7 consumes them.
+
+## Owner-settled decisions still governing P7
+
+1. The game module steers the switch's existence, its encounter and its reward
+   (Perfect Clear and Elite variants) and nothing else; room-exit conformance
+   catches the rest. The press and its outcome are never steered.
+2. Switch placement findings stay blocking at the room Overview, like the Well
+   and Shrine placement findings (owner, 2026-11-04; recorded in the room
+   features audit).
+3. A plan ending inside a Hub stay publishes no departure after its last visit;
+   the module treats the stay's end as the plan's end.
+4. The end room's own door draws are not simulated, so its `beforeRoomExit`
+   Run State lacks them: the module's end-room conformance must not compare
+   reward stores.
+
+## P6 — merge preparation (delivered 2026-11-04)
+
+- Publication gate (above), with engine and app witnesses.
+- `schemaRevision` 101.0 → 101.1: the engine constant, the game module's
+  admitted pair (`decoder.lua`, `execution-compatibility.json`) and the
+  `schema/README.md` history; no transition. The legacy schema-100 test body
+  drops the current revision.
+- Execution fixtures regenerated: only the schema stamp and fingerprint
+  changed (no fixture plans an end or a switch).
+- Equivalence and Draft corpus: see the characterization below.
+- Durable contracts promoted into the documents listed in the status line.
+
+## P7 — game module (open; after `game-module-cage-draw` merges)
+
+- Decoder and graph validation accept a terminal room that is not a biome
+  completion room and a partial Hub block (no `finalHandoff`, departures
+  through the last visit only), then lift the publication gate.
+- `overview.challengeSwitch`: realize the switch's existence, variant,
+  encounter composition and Elite pin; the `interactChallengeSwitch` guide row
+  with its outcome; claim pickups from `ChallengeSwitchLoot`.
+- Add execution fixtures that carry a cut end, a partial Hub and an observed
+  switch once the module decodes them (none exist yet, so the module's
+  fixture tests stay green under 101.1).
+
+## Remaining items (not delivered in P1–P6)
+
+- **C. Store fact**: a planner-published room-exit `rewardStores` conformance
+  fact per comparable store (entries declared for another route and Secrets
+  excluded, as the import's `storeCounts` does). Not implemented; it would add
+  a wire key, so if it lands after this release it needs its own minor bump.
+- **C. Cage outcome**: each Fields cage roll's published Min/Max outcome beside
+  the count, so the module's steering is exact when `MaxCageRewards` clamps Max
+  to Min. Not implemented; same bump consequence.
+- **D. Fields/Hub god fallback witness** past exhaustion (engine only): a
+  Fields batch at the four-god cap with five or six Boons accepts a repeat at
+  cage 5 and refuses one at cage 4 while an unshown acquired god remains; the
+  same for the Ephyra board. Not written.
+- **Recorder capture** the switch import would use (none recorded today): the
+  entry save's `CurrentRoom.ChallengeSwitch`, the first post-room save's
+  `CurrentRoom.ChallengeEncounter` (started, completed, ended early, damage,
+  Time gold, roster, Elite name and attributes), or the hero's gold before and
+  after the room.
+- **Owner to confirm**: the bonus Nectar spawns without a `RunProgress` level
+  (source: bare `CreateConsumableItem`), contrary to the earlier settled
+  "+1 level target".
+
+## Equivalence and Draft corpus characterization
 
 | Phase         | Entries changed | Why                                                                                                                                                      |
 | ------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | P1            | none (157/157)  | A project without `planEnd` evaluates identically; `processing.afterPlanEnd` is present only when an end applies.                                        |
 | P3            | none (157/157)  | The end room's exit work, the partial Hub block and the ended extent apply only with `planEnd`; no corpus project has one.                               |
-| P2            | not run         | Planner only; no engine change.                                                                                                                          |
 | P2 follow-ups | none (157/157)  | Readiness and candidates change only under an ended horizon; no corpus project has one.                                                                  |
 | P4            | none (157/157)  | Catalog additions (switches, `Money`, `ChallengeSwitchLoot`) and switch handling apply only to rooms with an observed switch; no corpus project has one. |
 | P4 encounter  | none (157/157)  | The 24 encounter definitions sit outside every set; the press's encounter, its gold and `challengeSwitchEncounters` exist only with an observed switch.  |
 | P5            | none (157/157)  | The per-RoomSet depth floor changes only switch placement findings; no corpus project has a switch.                                                      |
-
-## Owner-settled decisions (2026-11-03)
-
-These supersede the defaults above where they differ.
-
-Plan end:
-
-1. SETTLED: rooms past the end stay, inactive and read-only, so the marker can
-   be moved freely (decision 4 above).
-2. SETTLED: one route-level marker with a single set/clear command
-   (decisions 1–2).
-3. SETTLED: deleting the named room clears the marker in the same history step
-   (decision 3).
-4. SETTLED: cuts are allowed after the Preboss, the Boss and the Postboss; the
-   chain stays intact and is inactive past the cut (decision 5).
-5. SETTLED: Hub granularity is the end of any main-room visit; repeated
-   occurrences do not exist, so a cut can land at an intermediate Hub state.
-   Side-room cuts are a nice-to-have, not required. Applied: an end named at a
-   main room ends that whole visit, its entered side rooms included; an end at
-   a side room still ends after that side room (it costs nothing extra).
-6. SETTLED: the importer cuts deaths and abandons at the last fully settled
-   room (decision 10).
-7. SETTLED: no special "cut room unchecked": the next (death) room's entry save
-   exists, so the cut room is judged normally. Decision 10's `unchecked` clause
-   is withdrawn.
-8. SETTLED: one `schemaRevision` bump for the whole slice (plan end, the
-   `rewardStores` fact, the Fields cage Min/Max outcome and switches), done at
-   merge (decision 17).
-
-Challenge switches (replace decisions 11–14 where they differ):
-
-9. SETTLED: Overview carries a presence checkbox and the switch type; for
-   PerfectClear (hitless) and Elite (big enemy) switches also the encounter,
-   its customization and the reward, all rolled at room entry.
-10. SETTLED: Time-switch gold defaults to about 90 gold, approximate, a
-    plausibility fact only.
-11. SETTLED (game code): the bonus Nectar exists for all three switch
-    encounters (`TimeChallenge`, `PerfectClear`, `EliteChallenge`: `LootDrops`
-    `GiftDrop` with `DropChance` 0.05, spawned only when not
-    `PlayerTookDamage`, EventLogic.lua:531–546).
-12. SETTLED: Timeline has one interaction action with the switch in the
-    doors-open phase, with outcome fields "hitless" (all three types) and, when
-    hitless, "Nectar dropped". The outcome creates pickups on the Timeline,
-    collected later like any pickup: the PerfectClear reward (or the Onion on a
-    hit), the Elite reward, the Time gold, and the Nectar with its random +1
-    level target. Sea Star and other pickup effects apply as usual.
-13. SETTLED: every Crossroads unlock is owned (mature profile). Switches share
-    object slots with Shrines and Wells and use the same placement rule as
-    resources: one object takes the only eligible slot.
-14. SETTLED: Draft never authors switches.
-15. SETTLED (P7): the game module steers the switch's existence, its encounter
-    and its reward (hitless and Elite types) and nothing else; end-room
-    conformance catches the rest.
-
-Still open: none from the owner. Engineering choices made in P1 without an
-owner ruling are listed under P1 below.

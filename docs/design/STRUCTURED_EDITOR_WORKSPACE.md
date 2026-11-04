@@ -89,6 +89,20 @@ visible when blocked and its contextual state remains unassessed. Required
 upstream incompleteness locks its semantic authoring controls; upstream
 invalidity alone does not.
 
+### Plan end
+
+Every door footer offers to end the plan at its room, enabled by the engine's
+plan-end availability (a hint only when the room or something before it is not
+settled), beside the way on and at most one contextual repair. The end room's
+footer instead offers to continue planning, which clears the end; the room
+header and the rail say where the plan ends, and the Route panel shows the end
+with its room and removal. The route-owned unreached-end finding repairs at
+that Route row. Rooms, Hub visits and biomes past the end are dimmed, labelled
+and read-only, following the engine's ended horizon, but stay browsable, and a
+room past the end can still take the end so it can move later. The Hub
+Timeline closes with an end row after the end visit. Resource placements on a
+room past the end show as inactive.
+
 ### Biome Structure
 
 Every configured biome renders through one `BiomeWorkspace` composition over a
@@ -555,6 +569,17 @@ placement uses its ordinary semantic replacement command; the row's separate
 location column identifies and links to the current room. Removing or moving
 uses normal Undo, not an additional confirmation workflow. Neither the local
 control nor the Resources index displays the occurrence ID as its room label.
+
+A room that can host a challenge switch has one Overview row per kind, the
+three mutually exclusive since at most one switch spawns. Each row selects
+through the engine's per-kind observe command, or is disabled with the
+engine's lock as its hint; an observed switch lists its kind's variants with
+their locks. Its Combat entry reuses the encounter customization editor for a
+Time or Perfect Clear composition, and an Elite switch edits its pinned elite
+and the attributes each forced draw allows. The press is an optional
+Timeline row whose outcome controls (the kind's outcome, the bonus Nectar
+where allowed, a finished Time switch's gold) bind the engine's outcome
+product; the claim pickups are ordinary pickup rows.
 
 ### Wheel offers
 

@@ -222,6 +222,21 @@ and history policies. Commands create their fixed-linked occurrences;
 simulation does not synthesize them from constants. Route-position selection
 and Rivals variants remain declaration-backed, without extra player map choices.
 
+Challenge switches are declared once for the catalog: the three kinds with
+their default variant, gates and Perfect Clear's hit reward; the five variants
+with their draw weights, claim reward and own gate; the spawn spacing; Time's
+gold bounds and default; and the bonus Nectar. Every room with a
+`ChallengeSwitchBase` is a declared host or declared spawn-free. A host
+carries its RoomSet's chance, its biome-depth floor (5, or 1 in Fields and
+Thessaly) and, per kind, the one challenge encounter the RoomSet names;
+an anchored room with neither declaration fails construction. Each RoomSet's
+Elite encounter declares its elite set, each enemy's native attribute options
+and blocks, the forced attribute count and the banned attributes. Claim
+pickups use the `ChallengeSwitchLoot` producer; Time's gold is the `Money`
+reward, neither duplicable nor goldifiable. The
+[room features audit](../audits/room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md#challenge-switches)
+owns the evidence.
+
 ### Exits and detours
 
 Physical exit types select explicit source/target constraints. An unconstrained
@@ -278,6 +293,15 @@ slot and drain its own store.
 A set is not a consumed bag; source weighting is evidence, not normalized
 probability state. Only selectable slots need persisted selections. Empty
 envelopes and fixed slots use the same contract without fake choices.
+
+The 24 challenge-switch encounters are definitions outside every set and
+fixed binding: each names its RoomSet's generated money store, counts encounter
+depth and never skips. Time and Perfect Clear declare one room-entry generated
+composition with `RequireCompletedIntro`, inherited from their generated parent
+the way the game fills only missing keys; Elite has no composition and spawns
+one elite. Construction fails on a switch encounter that is bound, shared,
+non-combat, skippable or storeless, or whose composition shape does not match
+its kind.
 
 Lifecycle profiles execute supported envelope shapes; they do not fill missing
 room bindings. H cage phases, O ship phases and P's two-phase composition remain

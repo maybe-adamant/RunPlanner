@@ -16,6 +16,17 @@ or at a biome's Preboss or Boss. No other mid-run attachment or edited-plan
 repair is supported; the only recovery after a mismatch is opt-in
 [snap mode](RUN_START_INSTALLATION.md#snap-mode).
 
+A plan that [ends](SIMULATION_AND_VALIDATION.md#plan-end) at a biome's
+terminal room publishes as the ordinary configured prefix through that biome.
+A plan ending before its biome's terminal room has a defined wire: its `extent`
+ends at the end's biome, its selected occurrences end at the end room, whose
+`doors` are `terminal` (no batch or fixed link exists for it), and a Hub stay
+ended inside a visit publishes a partial block with no `finalHandoff`, the
+visits through the end as `requiredVisitCount`, the fountain only if used by
+then and no departure after the last visit. No new key carries the end. The
+game module does not run that shape yet, so publication refuses such a plan
+(`planEndAwaitsGameModule`) while the engine keeps assembling its product.
+
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The
 module strictly decodes this bounded artifact, translates its closed facts
@@ -601,6 +612,16 @@ random placement unchanged. The scoped SecretDoor spawn adapter substitutes
 only its destination, preserving native gate creation, destination-room choice,
 health cost and Ixion consumption. An unavailable point produces a diagnostic
 and leaves the native destination unchanged, not a placement-only mismatch.
+
+An observed challenge switch publishes `overview.challengeSwitch`: its
+variant, the encounter native generates for it at entry, the authored
+composition in the room-phase generated shape (absent decisions stay native)
+and an Elite switch's pinned elite with its forced attribute prefix. The room
+guide carries an informational `interactChallengeSwitch` row with the press's
+outcome, never a transaction; the claim pickups publish as ordinary
+acquisitions. The executor steers only the switch's existence, its encounter
+and its reward; everything else is proved by resulting state at the room's
+exit. The module does not consume the switch yet.
 
 Eris is the same kind of boundary. Her talk is a guide row, not a transaction,
 and the planner's observation that she spawned is not on the wire; the executor

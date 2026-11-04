@@ -1267,9 +1267,12 @@ CostResourceMax)`: heart 105-130 / 230-255, Magick 80-105 / 180-205, Pom
   credited total drops after combat as one `RoomMoneyDrop` whose `DropMoney`
   is set after creation, so unmultiplied (`EnemyAILogic.lua:5332-5336`).
   `HeraclesCombatMoneyValue` on enemies is unread.
-- **Not counted.** Arachne's `DoorCash` (`CostumeLogic.lua:36-46`), Selene's
-  `MoneyOnSpell` (`SpellLogic.lua:1728`) and challenge switches
-  (`EncounterLogic.lua:2138-2141`) are outside planner authorship.
+- **Not counted.** Arachne's `DoorCash` (`CostumeLogic.lua:36-46`) and
+  Selene's `MoneyOnSpell` (`SpellLogic.lua:1728`) are outside planner
+  authorship. A challenge switch's Time gold (`EncounterLogic.lua:2138-2141`)
+  is an authored approximate claim; the
+  [room features audit](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md#challenge-switches)
+  owns it.
 
 ### Empty groups and bounded unknowns
 

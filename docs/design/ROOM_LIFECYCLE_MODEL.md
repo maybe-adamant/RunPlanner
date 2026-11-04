@@ -171,6 +171,14 @@ history and required-object validation need their exact positions, but neither
 is a separate rendered row, and the timeline must not imply that an optional
 cleanup action is required before leaving.
 
+A plan's end room settles its whole Timeline, including the actions after the
+doors open, then commits and exits, so its Shop close, resource element grants
+and `beforeRoomExit` Run State exist. Its outgoing generation produces no doors
+and it records no `roomDeparted`; effects that would land later (pending
+deliveries, Steady Growth and Embryo cycles, unspent rerolls) are untracked
+after it. A Hub stay ended inside a visit records no departure after that
+visit.
+
 Two grouped operations compose encounter sequences:
 
 - `runEncounterSequence` executes every already-prepared active phase of one
@@ -723,6 +731,17 @@ ordinary later delivery hosts. The Shrine source action and its later required
 pickup remain distinct room owners in the same ordered room fold; no feature
 owns a private purchase order or a completion-only settlement path.
 
+A challenge switch is an Overview fact of room entry: entry records its
+appearance (the native spacing counter is set at entry, used or not), prepares
+its encounter with the entry's vow ranks and assesses its spawn rules, whose
+findings stop the room at its Overview. Its one optional press is a doors-open
+action (`postOutgoing`). The press records, starts and, unless the fight is
+left, completes the encounter in the encounter ledgers and advances biome and
+route encounter depth, but fires no encounter-end effects. It draws from no
+counted store; its claim pickups are optional rows ranked right after it and
+settle through the ordinary acquisition machinery. A press whose fight is
+left ends the room's actions: nothing is claimed and no action may follow it.
+
 ### Boss and Postboss
 
 The fixed Boss occurrence has the `BossRoom` lifecycle. Its player-facing
@@ -904,6 +923,10 @@ generated. Consequently:
 - the picked target's prepared encounters and shop inventory see the committed
   predecessor depth;
 - the picked target does not advance the depth caches until it later commits.
+
+A challenge switch's press is a counting encounter start outside the room's
+envelope, so a used switch raises the encounter depth that later rooms'
+budgets read.
 
 The biome depth cache follows native `GetBiomeDepth` (`RunLogic.lua`), which
 `UpdateRunHistoryCache` stores at `StartNewRun` (only once `RoomHistory` is

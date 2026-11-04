@@ -550,9 +550,10 @@ a skipped phase whose declaration still permits end effects advances the
 duration, while P's skipped pre-combat does not and its skipped terminal combat
 does.
 
-The source guard does not advance for a separate `ChallengeEncounter`, but
-Challenge switches are outside the planner's modeled route and impose no
-Experimental Hammer product or acceptance requirement.
+The source guard does not advance for a separate `ChallengeEncounter`
+(`RoomLogic.lua:2937`). The planner models a pressed challenge switch's
+encounter as a side encounter with no encounter-end effects, so it advances no
+keepsake and does not decrement the Experimental Hammer duration.
 
 Among the currently modeled room declarations, `BaseN_SubRooms` explicitly
 sets `IgnoreEncounterUses = true`. Ephyra side rooms therefore do not reduce

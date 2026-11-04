@@ -308,6 +308,9 @@ semantic destinations must name an existing presentation target and an explicit
 room tab when hosted by an occurrence. Placement findings target the existing
 placement repair row (Restore delivery for Hermes); inline Item and Phial
 findings target their own controls.
+A route-owned plan-end finding (the end names a room off the selected path)
+targets the Route panel's plan-end row, not the Loadout. A challenge switch's
+placement, customization and elite findings target its Overview switch row.
 
 Fine-grained findings require exact existing destinations. A truly coarse
 finding may belong to its biome shell, but a missing child destination is a

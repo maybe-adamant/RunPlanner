@@ -239,6 +239,38 @@ An unresolved delivery or nested trait child must not prevent arranging and
 repairing actions within the same occurrence. Conversely, opening-room editing
 cannot bypass an incomplete loadout merely because it uses another control.
 
+### Plan end
+
+A route's [plan end](AUTHORED_PROJECT_MODEL.md#route-scope) classifies per
+biome as terminal (the biome's terminal completion room: the ordinary biome
+end, every later biome dormant), cut (any other selected room) or unreached
+(off the selected spine). A cut evaluates the authored plan without the end
+room's exit decision and the fixed link it opens, and in a Hub without the
+actions after the end's visit and the side rooms after it. Completeness stops
+at the end; the end room settles its whole Timeline, commit and exit but
+generates no doors and records no departure. The ended biome is `ended`:
+valid, with prefix coverage and a canonical snapshot of its rooms through the
+end, which execution assembly publishes like a complete biome. The route stops
+there and lists the later configured biomes as after the end; they and every
+room past the end are retained, never assessed, and raise no findings. An
+unreached end is the route-owned `planEndUnreached` finding: the biome is
+assessed unmarked and the route still stops after it. A plan valid through a
+cut is not yet eligible for publication: it carries the publication block
+`planEndAwaitsGameModule` until the game module runs that wire.
+
+Under an ended horizon, readiness asks the plan-end extent. Inside the plan,
+and editable: the end room, every room entered through it, the end visit's
+side rooms (entered or not) and their order, rooms offered beside or before
+the end room, board rooms no visit enters, the board and its offers. Past the
+end, and locked: the end room's exit, its hidden and additional doors, rooms
+entered after the end and their side rooms, later Hub visits (an appended one
+included), a fountain use or reroll after the end visit, and everything the
+end room's doors offer. Candidates treat the ended biome as reached; owners
+past the end are unreachable because the ended product does not contain them,
+and Hub visit-order alternatives apply the end. The engine's plan-end
+availability answers whether a room can take the end: it must be on the
+selected path and the plan ending there must be valid.
+
 ### First blocking region
 
 Producing authorities attach exact semantic owners to findings, and aggregate
@@ -292,12 +324,12 @@ engine contract.
 Where the cut falls follows the room's
 [stages](ROOM_LIFECYCLE_MODEL.md#room-stages):
 
-| Block                                                                                                                                                                                                  | Cut and published products                                                                                                                                                                                                                                                                                             |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Overview: anything fixed on entry, such as Shop, Shrine, Well or Contract inventory, any phase's encounter identity, composition, customization or introduction, or a picked host's resource placement | After the whole Overview. The room is entered with its `roomEntered` snapshot, its entry effects (Preboss delivery flush, forced-Chaos spark, Fields forfeits) and the continuations created on entry, as on success minus the failed product. The Overview is the repair region; the Timeline and Exit are unreached. |
-| Timeline, including the doors opening                                                                                                                                                                  | At the start of the blocking product. Earlier Timeline products are kept. Coverage publishes the room's `roomTimeline.blockingRowKeys`: every Timeline row that settles an owner of the blocking region, whether or not it carries a finding. Later rows, the Exit and later rooms are unreached.                      |
-| Exit work                                                                                                                                                                                              | At the failing exit contact. The Timeline, door selection, commit and `beforeRoomExit` snapshot are kept; the room does not exit.                                                                                                                                                                                      |
-| The next room                                                                                                                                                                                          | The source room has committed and exited first: its Shop completion, resource element grants and `beforeRoomExit` snapshot are kept. Nothing in the next room changes the source room's door selection.                                                                                                                |
+| Block                                                                                                                                                                                                                                                      | Cut and published products                                                                                                                                                                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview: anything fixed on entry, such as Shop, Shrine, Well or Contract inventory, a challenge switch's placement, encounter or elite, any phase's encounter identity, composition, customization or introduction, or a picked host's resource placement | After the whole Overview. The room is entered with its `roomEntered` snapshot, its entry effects (Preboss delivery flush, forced-Chaos spark, Fields forfeits) and the continuations created on entry, as on success minus the failed product. The Overview is the repair region; the Timeline and Exit are unreached. |
+| Timeline, including the doors opening                                                                                                                                                                                                                      | At the start of the blocking product. Earlier Timeline products are kept. Coverage publishes the room's `roomTimeline.blockingRowKeys`: every Timeline row that settles an owner of the blocking region, whether or not it carries a finding. Later rows, the Exit and later rooms are unreached.                      |
+| Exit work                                                                                                                                                                                                                                                  | At the failing exit contact. The Timeline, door selection, commit and `beforeRoomExit` snapshot are kept; the room does not exit.                                                                                                                                                                                      |
+| The next room                                                                                                                                                                                                                                              | The source room has committed and exited first: its Shop completion, resource element grants and `beforeRoomExit` snapshot are kept. Nothing in the next room changes the source room's door selection.                                                                                                                |
 
 Overview assessments read only entry state, never a Timeline product. The
 blocking product is the engine atomic region of the blocking finding, so every
