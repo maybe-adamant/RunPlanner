@@ -460,13 +460,28 @@ reproduces is reported with its nearest miss and the plan stops there.
    on the Fresh File route, which fixes it. Real capture: fixture `fresh`
    (raw p3-…40272-0, F_Opening01 → F_Boss01, death); its first save is the
    depth-1 entry save as predicted; the fixture generator now records through
-   the recorder. **Open (E, engine):** `CreateRoom` rolls the fresh opening's
-   reward from RunProgress (a Poseidon boon, `OpeningEmpty` never spawns it),
-   which draws a Boon from the store and counts a RunProgress room in the
-   meta ratio. The engine gives the fresh first entry no reward roll, so the
-   plan's RunProgress store holds one Boon more from r0 and the F_Combat07
-   door batch is MetaProgress in the game but only RunProgress is legal in
-   the plan: the import stops at r2 (`batchRewardStoreMissing`).
+   the recorder. `CreateRoom` rolls the fresh opening's reward from
+   RunProgress (a Boon `OpeningEmpty` never spawns), drawing a Boon from the
+   store and counting a RunProgress room in the meta ratio. **Resolved (E,
+   engine, merged from `fresh-opening-roll`):** the FreshFile profile declares
+   that roll (`runStartReward: 'unspawnedRoll'`) and its first entry makes a
+   bag-only draw of the one eligible type; fresh execution fixtures were
+   regenerated and the equivalence baseline re-recorded for the 36 Fresh File
+   entries (schema 101 unreleased, so no revision bump; owner). Fixture
+   `fresh` → complete 10/2/0/0, 1 unchecked (last room); it stopped at r2
+   before.
+
+   **Second fresh capture** (raw p3-…41339-0, now fixture `fresh-oceanus`,
+   F → G, death in G_Combat17). It stopped at r7 F_Shop01 (`rewardMissing`
+   on the Shop's Boon slot). Not a Fresh File shop rule: the engine already
+   draws a Shop boon's god from `GetEligibleInteractedGods` (eligible gods
+   with a `GameState.LootPickups` entry, Apollo picked at r1). The cause was
+   the recorder (R): with no purchase, `Store.SpawnedStoreItems` is a 1..n
+   sequence that decodes as an array, which the `spawned` reader rejected, so
+   the untouched Shop read as never spawned and its stock was ignored. Fixed;
+   → 17/4/0/0, stopped at the last room r21, whose Apollo boon the run died
+   before taking (no answer exists for its screen; the same last-room class as
+   raw 930 r40).
 
    **Chaos unpicked curses** (owner rule). They matter only under Vow of
    Denial, which bans both into `BannedTraits`. Under Denial the room's two
@@ -501,6 +516,70 @@ reproduces is reported with its nearest miss and the plan stops there.
    counter keep the cage-count reading and `switchUnseenRoll`. Raw 333: the
    H_MiniBoss02 Max (behind the Bridge) and the H_Combat10 Min are pinned
    with no Fields door assumption left.
+
+   **Strictness batch** (2a4b62d67..ea6aef961: carrier children, unnamed
+   Shop and pickup gods, refused Pool sales, provisional wheels, the
+   Anomaly-displaced room, recorded cage orders, reroll multisets, probe
+   isolation, capped searches, the fresh-start discriminator). Measured raw-l7
+   → raw-l8: raw 333 r20 G_Combat03 guessed → exact (24/16 → 25/15); no other
+   corpus or fixture room moved, no new stop. Every search the corpus runs
+   still has an accepted fit.
+
+   **Circe's resolution** (I). Red Citrine, Lapis and Black Night choose a
+   required count of Arcana or vows; the acceptance candidates came from the
+   completion's ordering, which only rotates the first value, so a count of 2
+   or 3 never tried most combinations. Every combination is now a candidate,
+   in domain order, under the search cap (reported when capped). Corpus
+   unchanged (no Black Night past its first pick).
+
+   **Entry mismatch stops the plan** (owner, review §2). A room whose next
+   entry save differs from the plan's state on the final plan ends the plan
+   there (`entryMismatch`, with the differing families); every later room is
+   unchecked (`stopped`). Judged on the final plan, not as the walk first
+   reaches the save: corpus Shops, H_Bridge01 and Surface P rooms mismatch at
+   reach and are settled later (stamped action order, the untaken-door
+   cage solve). Acceptance inside the walk still tells introduced from carried
+   differences, since later authoring may still settle an earlier room. The
+   bucket witness drops `carried`. Synthetic witnesses whose saves did not
+   match their edits were made consistent (Sea Star renamed in its saves, the
+   rack-swap synthetic without entry saves) or now assert the stop (the
+   Anomaly doors, an unexplained pool spend). Corpus unchanged (0 mismatches).
+
+   **Mature-save gates** (owner). The recorder records a run only on a
+   Fresh File first attempt (run count 0) or a profile that passes every
+   gate, read from the run start's stored progression: true ending, every
+   Arcana at rank III, the aspect at rank V, every keepsake the run equips
+   (rack swaps included) at rank III, the equipped familiar at full rank,
+   Greatest Gift of Gaia (`WorldUpgradeAutoHarvestOnExit`, which room exit
+   reads from `WorldUpgrades`). A refused run is listed as "Not recorded"
+   with what its profile needs, with no record or plan. Fields and thresholds
+   are in the save-file audit's Profile progression. Corpus: every mature raw
+   passes (333/334's two rank-II keepsakes are never equipped); both fresh
+   raws pass the fresh path.
+
+   | Run (raw-l9)       | Kind     | Rooms | Exact | Guessed (order only) | Mismatch | Unchecked             |
+   | ------------------ | -------- | ----- | ----- | -------------------- | -------- | --------------------- |
+   | 333 UW             | complete | 41    | 25    | 15 (7)               | 0        | 1                     |
+   | 334 Surface        | complete | 49    | 35    | 13 (7)               | 0        | 1                     |
+   | 930 UW             | stopped  | 41    | 25    | 15 (3)               | 0        | 1 (stop at last room) |
+   | 931 Surface        | complete | 49    | 35    | 13 (8)               | 0        | 1                     |
+   | 932 Dream (G)      | complete | 11    | 6     | 4 (1)                | 0        | 1                     |
+   | 932 Dream (QPOH)   | complete | 40    | 21    | 18 (8)               | 0        | 1                     |
+   | 933 UW (a)         | complete | 41    | 24    | 16 (7)               | 0        | 1                     |
+   | 933 UW (b)         | complete | 41    | 28    | 12 (5)               | 0        | 1                     |
+   | 1014 (closed p1)   | stopped  | 41    | 13    | 3 (2)                | 0        | 25 (stopped)          |
+   | 1010 (a)           | stopped  | 30    | 17    | 12 (4)               | 0        | 1                     |
+   | 1010 (b)           | complete | 51    | 30    | 19 (12)              | 0        | 2                     |
+   | 1012               | complete | 44    | 29    | 14 (7)               | 0        | 1                     |
+   | 1013               | complete | 53    | 35    | 15 (5)               | 0        | 3                     |
+   | 0 fresh (a)        | complete | 13    | 10    | 2 (0)                | 0        | 1                     |
+   | 0 fresh (b)        | stopped  | 22    | 17    | 4 (0)                | 0        | 1 (stop at last room) |
+   | record 1008        | stopped  | 42    | 0     | 0                    | 0        | 42 (no entry saves)   |
+   | fx surface         | stopped  | 29    | 15    | 12 (2)               | 0        | 2                     |
+   | fx surface-victory | complete | 51    | 30    | 19 (12)              | 0        | 2                     |
+   | fx underworld      | complete | 42    | 23    | 18 (5)               | 0        | 1                     |
+   | fx underworld-1010 | stopped  | 30    | 17    | 12 (4)               | 0        | 1                     |
+   | fx underworld-live | stopped  | 42    | 0     | 0                    | 0        | 42 (no entry saves)   |
 
 5. **Engine room-from-state entry** only if step 0 shows per-room
    re-evaluation is too slow for the search. Owner decision.
@@ -554,9 +633,18 @@ reproduces is reported with its nearest miss and the plan stops there.
 - Open questions stay strict (owner, 2026-11-03), records without entry saves
   included: no canonical-first fallback. Revisit if unsolvable save states
   appear.
-- Owner questions: where an unreachable room leaves the plan (stop, or keep a
-  disconnected reference tail); whether equivalent choices are flagged per
-  room; which save facts are deliberately outside the comparison set.
+- Owner questions: whether equivalent choices are flagged per room; which
+  save facts are deliberately outside the comparison set; whether a run's
+  last room may leave an answer open when the run ended before it (fresh
+  `fresh-oceanus` r21's untaken boon, raw 930 r40's exit) instead of
+  stopping there. Resolved: an unreachable room or an entry mismatch stops
+  the plan (no disconnected tail, no carried continuation).
+- An `entryMismatch` stop is decided on the final plan, so the plan still
+  holds the walk's authoring past the stopping room (the report judges none
+  of it). Truncating it needs a way to drop later rooms; a recorded-room
+  snapshot (step 6) would instead allow safe continuation.
+- Review §7: no test yet asserts the refusals that now rest on other rules
+  (ReplaceRoom of an Anomaly occurrence, of a Chaos room).
 
 ## Verification
 
