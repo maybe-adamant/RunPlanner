@@ -610,8 +610,6 @@ EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGES.
 
   17. Interpretation of Sections 15 and 16.
-<<<<<<< HEAD
-=======
 
   If the disclaimer of warranty and limitation of liability provided
 above cannot be given local legal effect according to their terms,
@@ -674,4 +672,3 @@ may consider it more useful to permit linking proprietary applications with
 the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
->>>>>>> 3de09625b2007387af6231b042a5068d35845982
