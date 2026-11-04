@@ -11,7 +11,8 @@ settings.FORMAT = "run-planner-settings"
 settings.FORMAT_VERSION = 1
 -- The options in file order; each is a boolean, off when the file is missing or invalid.
 settings.OPTIONS = { "showRoomGuide", "highlightPlannedChoices", "snapMode" }
--- Reads of current() reuse the last values for this long, in clock seconds.
+-- Reads of current() reuse the last values for up to this long, in wall-clock
+-- seconds; os.time counts whole seconds, so a reread follows within this long.
 settings.REFRESH_SECONDS = 1
 
 -- The ModpackLib aliases that held each option before settings.json.
@@ -65,12 +66,12 @@ function settings.encode(values)
 end
 
 -- files replaces io.open/os.remove/os.rename; log receives one line per event;
--- clock measures the refresh interval.
+-- clock measures the refresh interval in wall-clock seconds (CPU time can stall).
 function settings.create(root, pathApi, options)
     options = options or {}
     local files = options.files or sharedFile.nativeFiles()
     local log = options.log or sharedFile.defaultLog
-    local clock = options.clock or os.clock
+    local clock = options.clock or os.time
     local lastInvalid, values, readAt = nil, nil, nil
     local store = {}
 
