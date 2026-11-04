@@ -60,6 +60,8 @@ import {
   withWellPurchasePrice,
 } from './purchase-price-seams';
 import { rewardFindingChronologyForRoom } from './finding-chronology';
+import { rewardFinding } from '../findings';
+import { ownerRegion } from '../../finding-regions';
 import { flushHubBoard } from './generation/hub-board';
 import { applyOutgoingGenerationTransition } from './generation/outgoing-generation';
 import { applyPhantomExitTransition } from './generation/phantom-exit';
@@ -126,6 +128,46 @@ const erisInteracted: ChronologySeamHandler<'erisInteracted'> = (context, state,
     state.branch,
   );
   return { state: withBranch(state, transition.branch), emissions: [] };
+};
+
+/**
+ * Leaving the switch fight leaves the room (`EndedEarly`, RoomLogic.lua:4213),
+ * so a left press after which the room orders more actions blocks at the press.
+ */
+const challengeSwitchInteracted: ChronologySeamHandler<'challengeSwitchInteracted'> = (
+  context,
+  state,
+  event,
+) => {
+  const room = authoredRoom(context, event.origin);
+  const press = room?.roomActionRoster.rows.find(
+    (row) => row.reference.kind === 'interactChallengeSwitch',
+  );
+  const following =
+    room?.challengeSwitch?.outcome !== 'left' || press?.rank == null
+      ? 0
+      : room.roomActionRoster.rows.filter((row) => row.rank !== null && row.rank > press.rank!)
+          .length;
+  const emissions =
+    room === undefined || following === 0
+      ? []
+      : [
+          lifecycleFindings([
+            Object.freeze({
+              finding: rewardFinding('challengeSwitchLeftNotLast', event.owner, {
+                followingActionCount: following,
+              }),
+              region: ownerRegion(event.owner),
+              chronology: rewardFindingChronologyForRoom(
+                context.snapshot,
+                room.origin,
+                event.sequence,
+                'localRoomLifecycle',
+              ),
+            }),
+          ]),
+        ];
+  return { state: advanceOnly(context, state, event).state, emissions };
 };
 
 /** One door, cage or wheel reroll press at its authored rank. */
@@ -1400,7 +1442,7 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     keepsakeRackUsed: { step: keepsakeRackUsed },
     erisInteracted: { step: erisInteracted },
     // The claim's pickups settle at their own actions; the press changes no state.
-    challengeSwitchInteracted: { step: advanceOnly },
+    challengeSwitchInteracted: { step: challengeSwitchInteracted },
     rewardRerolled: { step: rewardRerolled },
     hubRewardRerolled: { step: hubRewardRerolled },
     requiredObjectSpawned: { step: advanceOnly },

@@ -126,6 +126,10 @@ describe('run import of used challenge switches', () => {
       nectarDropped: false,
     });
     expect(switchActions(imported, 'F-r8')).toEqual([{ kind: 'interactChallengeSwitch' }]);
+    // Leaving mid-fight leaves the room: the press is its last action.
+    expect(occurrence(imported.project, 'F-r8').roomActions.order.at(-1)).toEqual({
+      kind: 'interactChallengeSwitch',
+    });
     // A finished Time fight gushes gold no save holds; a refused press starts nothing.
     expect(switchLines(imported)).toContain(
       'notInRecord challengeSwitch r8 roomFeature@F-r8 -> ReplaceChallengeSwitchOutcome(F-r8) | finished unpressed',

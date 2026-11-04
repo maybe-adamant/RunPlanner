@@ -151,6 +151,8 @@ export function assembleRoomActionRoster(options: {
     readonly actionKey: string;
     readonly toIndex: number;
   }[];
+  /** An action nothing may follow (a left switch press: leaving ends the room). */
+  readonly terminalActionKey?: string;
 }): RoomActionRoster {
   const actions = options.contributions.filter(
     (entry): entry is RoomActionContribution => entry.kind === 'action',
@@ -339,6 +341,21 @@ export function assembleRoomActionRoster(options: {
       );
     }
   }
+  // No insertion or move may put more actions after the terminal action than now follow it.
+  const following = (order: readonly RoomActionReference[]) => {
+    const index = order.findIndex(
+      (reference) => roomActionKey(reference) === options.terminalActionKey,
+    );
+    return index < 0 ? 0 : order.length - index - 1;
+  };
+  const offeredProposals =
+    options.terminalActionKey === undefined
+      ? proposals
+      : proposals.filter(
+          (proposal) =>
+            (proposal.kind !== 'insert' && proposal.kind !== 'move') ||
+            following(proposal.order) <= following(options.order),
+        );
   const lastRequiredRank = rows.reduce(
     (rank, row) =>
       row.rank !== null && row.participation === 'required' && row.window.kind !== 'postOutgoing'
@@ -417,7 +434,7 @@ export function assembleRoomActionRoster(options: {
     rows: withRequiredScopes(rows, options.lifecycleStructure),
     checkpoints: frozen(checkpoints),
     issues,
-    proposals: frozen(proposals),
+    proposals: frozen(offeredProposals),
     timelineFacts: frozen({
       nodes: frozen(timelineNodes),
       dependencies: frozen(timelineDependencies),

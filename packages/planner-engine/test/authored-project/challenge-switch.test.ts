@@ -448,4 +448,73 @@ describe('challenge switch observation', () => {
       ),
     ).toThrow(/not a declared decision/);
   });
+
+  it('keeps a left press its room’s last action and refuses placing past it', () => {
+    const reward = occurrenceOf(golden()).roomActions.order[0]!;
+    const pressFirst = applyProjectCommand(
+      observe(golden(), 'TimeChallengeSwitch_Money'),
+      catalog,
+      {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(fBiome, hostId, roomActionKey(interaction)),
+        reference: interaction,
+        index: 0,
+      },
+    );
+    const leave = (project: ProjectDocument) =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceChallengeSwitchOutcome',
+        occurrence: host,
+        outcome: 'left',
+        nectarDropped: false,
+      });
+    // Leaving moves the press last in the same step; its claim rows are gone.
+    const history = applyProjectHistoryCommand(createProjectHistory(pressFirst), catalog, {
+      kind: 'ReplaceChallengeSwitchOutcome',
+      occurrence: host,
+      outcome: 'left',
+      nectarDropped: false,
+    });
+    expect(history.past).toHaveLength(1);
+    const left = history.present;
+    expect(occurrenceOf(left).roomActions.order).toEqual([reward, interaction]);
+    const move = (project: ProjectDocument, actionKey: string, toIndex: number) =>
+      applyProjectCommand(project, catalog, {
+        kind: 'MoveRoomAction',
+        action: createRoomActionAddress(fBiome, hostId, actionKey),
+        toIndex,
+      });
+    expect(() => move(left, roomActionKey(reward), 1)).toThrow(
+      /nothing follows leaving the switch fight/,
+    );
+    expect(() => move(left, roomActionKey(interaction), 0)).toThrow(
+      /nothing follows leaving the switch fight/,
+    );
+    // Without the press, it can only go in last.
+    const unpressed = applyProjectCommand(left, catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(fBiome, hostId, roomActionKey(interaction)),
+    });
+    expect(() =>
+      applyProjectCommand(unpressed, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(fBiome, hostId, roomActionKey(interaction)),
+        reference: interaction,
+        index: 0,
+      }),
+    ).toThrow(/nothing follows leaving the switch fight/);
+    expect(occurrenceOf(insertInteraction(unpressed)).roomActions.order).toEqual([
+      reward,
+      interaction,
+    ]);
+    // A preserved order with actions after a left press decodes unchanged.
+    const preserved = editOccurrence(left, 'golden-f-b5-e1', (raw) => {
+      raw.roomActions.order = [interaction, reward];
+    });
+    expect(occurrenceOf(decodeProjectDocument(preserved, catalog)).roomActions.order).toEqual([
+      interaction,
+      reward,
+    ]);
+    expect(leave(left)).toBe(left);
+  });
 });

@@ -37,6 +37,7 @@ import {
   type StygianWellEffect,
 } from '../../commerce/stygian-well';
 import { assembleRoomActionRoster, assembleRoomLifecycleTimeline } from '../../room-actions';
+import { CHALLENGE_SWITCH_ACTION } from '../../../authored-project/acquisition/challenge-switch';
 import type { CanonicalAuthoredRoom } from '../model';
 import {
   authoredMaterializer,
@@ -396,6 +397,9 @@ export function materializeAuthoredRoom(
   const roomActionRoster = assembleRoomActionRoster({
     owner: base.origin,
     order: base.roomActions.order,
+    ...(context.occurrence.challengeSwitch?.outcome === 'left'
+      ? { terminalActionKey: roomActionKey(CHALLENGE_SWITCH_ACTION) }
+      : {}),
     contributions: roomActionDomain.contributions,
     retainedSourceFamilies: roomActionDomain.retainedSourceFamilies,
     lifecycleStructure: roomActionDomain.lifecycleStructure,

@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  decodeProjectDocument,
+  encodeProjectDocument,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
@@ -515,6 +517,88 @@ describe('challenge switch outcome product', () => {
     );
     expect(perfect?.choices.map((choice) => choice.outcome)).toEqual(['left', 'hitless', 'failed']);
     expect(perfect).toMatchObject({ current: 'hitless', nectarAllowed: true, goldApplies: false });
+  });
+});
+
+describe('a left switch fight ends its room', () => {
+  const fBiome = createBiomeAddress('Underworld', 'F');
+  const hostId = createOccurrenceId('golden-f-b8-e1');
+  const left = () =>
+    withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', {
+      used: true,
+      outcome: { outcome: 'left' },
+    });
+  const hostRoom = (project: ProjectDocument) => {
+    const f = simulateProjectAssembly(catalog, project).evaluation.route!.biomes.find(
+      (biome) => biome.biomeKey === 'F',
+    );
+    if (f === undefined || !('rewards' in f)) throw new Error('F must be evaluated');
+    const snapshot = 'snapshot' in f ? f.snapshot : f.materializedPrefix;
+    const room = snapshot.decisions
+      .filter((decision) => decision.kind === 'batch')
+      .flatMap((decision) => decision.targets.map((target) => target.room))
+      .find((candidate) => candidate.occurrenceId === hostId);
+    if (room?.kind !== 'authored') throw new Error('switch host is missing');
+    return room;
+  };
+
+  it('offers no insertion or move past a left press', () => {
+    const roster = hostRoom(left()).roomActionRoster;
+    const pressKey = roomActionKey(interaction);
+    const after = (order: readonly { readonly kind: string }[]) =>
+      order.length - order.findIndex((reference) => reference.kind === interaction.kind) - 1;
+    expect(after(occurrence(left(), 'F', 'golden-f-b8-e1').roomActions.order)).toBe(0);
+    const placing = roster.proposals.filter(
+      (proposal) => proposal.kind === 'insert' || proposal.kind === 'move',
+    );
+    expect(placing.every((proposal) => after(proposal.order) === 0)).toBe(true);
+    // A finished fight still offers moving the press earlier.
+    const finished = hostRoom(
+      withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', { used: true }),
+    ).roomActionRoster;
+    expect(
+      finished.proposals.some(
+        (proposal) => proposal.kind === 'move' && roomActionKey(proposal.reference) === pressKey,
+      ),
+    ).toBe(true);
+  });
+
+  it('takes a Well purchase in before a left press, and reports a preserved one after it', () => {
+    const occurrenceAddress = createOccurrenceAddress(fBiome, hostId);
+    let project = applyProjectCommand(left(), catalog, {
+      kind: 'AddStygianWell',
+      occurrence: occurrenceAddress,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: occurrenceAddress,
+      generationKey: 'initial:healing',
+      purchased: true,
+      itemKey: 'ArmorBoostStore',
+    });
+    const order = occurrence(project, 'F', 'golden-f-b8-e1').roomActions.order;
+    expect(order.map((reference) => reference.kind)).toEqual([
+      'interactIncomingReward',
+      'purchaseStygianWellOffer',
+      'interactChallengeSwitch',
+    ]);
+    expect(simulateProject(catalog, project).status).toBe('valid');
+    const raw = JSON.parse(encodeProjectDocument(project));
+    for (const biome of raw.route.biomes)
+      for (const entry of biome.topology?.occurrences ?? [])
+        if (entry.occurrenceId === 'golden-f-b8-e1')
+          entry.roomActions.order = [order[0], order[2], order[1]];
+    const result = simulateProject(catalog, decodeProjectDocument(raw, catalog));
+    expect(result.status).toBe('invalid');
+    expect(
+      result.findings.map((finding) => [finding.code, finding.origin, finding.evidence]),
+    ).toEqual([
+      [
+        'challengeSwitchLeftNotLast',
+        createRoomActionAddress(fBiome, hostId, roomActionKey(interaction)),
+        { followingActionCount: 1 },
+      ],
+    ]);
   });
 });
 

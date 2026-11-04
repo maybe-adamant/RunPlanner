@@ -9,6 +9,7 @@ import type {
   AuthoredChallengeSwitch,
   AuthoredEncounterCustomization,
   ChallengeSwitchOutcome,
+  RoomOccurrence,
 } from '../model';
 import { customizationValueKnown } from '../room-state/encounter-customization';
 
@@ -209,4 +210,18 @@ export function challengeSwitchCustomizationIssue(
   if (!customizationValueKnown(decisions, decisionKey, value))
     return `${decisionKey} is outside its declaration domain`;
   return undefined;
+}
+
+/**
+ * The actions an occurrence orders after its left switch press; undefined
+ * unless the switch is pressed and its fight left. Leaving mid-fight leaves
+ * the room (`LeaveRoom` sets `EndedEarly`, RoomLogic.lua:4213), so it is 0.
+ */
+export function actionsAfterLeftChallengeSwitch(
+  occurrence: Pick<RoomOccurrence, 'challengeSwitch' | 'roomActions'>,
+): number | undefined {
+  if (occurrence.challengeSwitch?.outcome !== 'left') return undefined;
+  const order = occurrence.roomActions.order;
+  const press = order.findIndex((reference) => reference.kind === 'interactChallengeSwitch');
+  return press < 0 ? undefined : order.length - press - 1;
 }

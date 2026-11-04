@@ -328,6 +328,9 @@ export const findingCopy = {
   challengeSwitchCustomizationUnavailable: {
     title: 'The switch encounter cannot spawn these enemies',
   },
+  challengeSwitchLeftNotLast: {
+    title: 'Leaving the switch fight ends the room',
+  },
   keepsakeEquipResultMissing: {
     title: 'Choose the Hades trait from Jeweled Pom',
   },

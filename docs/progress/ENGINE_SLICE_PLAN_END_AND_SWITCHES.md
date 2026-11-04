@@ -762,7 +762,20 @@ customization?, elite? }` for every entered room with an observed switch,
   left fight out of the completions; the gold ledger pays a left fight's kills
   nothing (no estimate of a partial fight). The guide row
   `interactChallengeSwitch` carries `outcome` (rides P6, deferred to P7).
-  Not enforced: a left press being the room's last action (the player left).
+  A left press is the room's last action (owner rule; leaving is the only
+  way a fight ends early: `LeaveRoom` sets `EndedEarly`, RoomLogic.lua:4213,
+  its only writer). One reconciliation after every command
+  (`commands/challenge-switch-press.ts`): a placing command (Insert/Move room
+  action, the reroll and Pool-sale inserts) that would put an action after a
+  left press, or move the press off the end, is refused; any other edit that
+  leaves actions after a press that was last, or that makes the outcome
+  `left`, moves the press last in the same step (so an appended purchase lands
+  before it). A preserved order with actions after a left press decodes and
+  gets `challengeSwitchLeftNotLast` (evidence `followingActionCount`) on the
+  press, blocking there. The room's roster drops every insert and move
+  proposal that would put more actions after a left press, so the Timeline's
+  add and reorder targets follow it. The import already lands a left press
+  last (a refused native position falls back to the end); witnessed.
   Product for the Timeline: `ChallengeSwitchInteraction.outcome`
   (`ChallengeSwitchOutcomeInteraction`): `current`, `choices` (each kind
   outcome with its bound `ReplaceChallengeSwitchOutcome`, Nectar kept where

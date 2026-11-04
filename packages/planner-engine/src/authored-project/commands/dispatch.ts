@@ -36,6 +36,7 @@ import { reconcileChaosTopology } from '../chaos-gate-reconciliation';
 import { applyFieldsSpatialCommand } from './occurrence/fields-spatial';
 import { retractMissingHermesShrineDeliveryActions } from '../hermes-shrine-delivery';
 import { planEndExists } from '../plan-end';
+import { reconcileLeftChallengeSwitchPresses } from './challenge-switch-press';
 
 /** Topology owns occurrence lifetime. A route-owned resource singleton retains
  * through room replacement, but is removed atomically when its exact target is
@@ -438,7 +439,10 @@ export function applyProjectCommand(
       withTraitDroppedPickups,
       catalog,
     );
-    const reconciled = reconcileChaosTopology(withRequiredActions, catalog);
+    const reconciled = reconcileChaosTopology(
+      reconcileLeftChallengeSwitchPresses(document, withRequiredActions, command),
+      catalog,
+    );
     // Generated detours can delete occurrences after the direct command.
     // Close route-owned references against that final topology.
     return decodeProjectDocument(
