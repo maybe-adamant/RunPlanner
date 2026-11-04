@@ -22,6 +22,8 @@ function eliteEncounter(roomSetKey: string, enemyKeys: readonly string[]) {
     attributeOptionsByEnemy: Object.fromEntries(
       enemyKeys.map((key) => [key, eliteAttributeFacts(key)]),
     ),
+    // EncounterData_Challenge.lua:468-481 ManualWaveTemplates: one Generated spawn, TotalCount 1.
+    spawnCount: 1,
     // EncounterData_Challenge.lua:411-412.
     attributeCount: 2,
     bannedAttributeKeys: ['Metallic', 'SpreadHitShields', 'StasisDeath', 'HeavyArmor'],

@@ -262,9 +262,18 @@ describe('declaration-owned lifecycle clocks', () => {
       'BossTyphonHead01',
       'BossTyphonHead02',
     ]);
+    // A switch's challenge encounter is no room encounter: its end runs no clocks.
+    const challenges = new Set(
+      ['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q'].flatMap((set) =>
+        ['TimeChallenge', 'PerfectClearChallenge', 'EliteChallenge'].map((kind) => kind + set),
+      ),
+    );
     expect(
       catalog.encounterDefinitions.values
-        .filter((definition) => !definition.advancesHermesShrineDeliveryUses)
+        .filter(
+          (definition) =>
+            !definition.advancesHermesShrineDeliveryUses && !challenges.has(definition.key),
+        )
         .every((definition) => definition.kind === 'nonCombat' || definition.kind === 'story'),
     ).toBe(true);
   });

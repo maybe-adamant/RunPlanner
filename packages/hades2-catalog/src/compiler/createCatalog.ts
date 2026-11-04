@@ -130,7 +130,10 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     exitTypes,
   );
   const routes = normalizeRoutes(input.routes, biomes, rooms);
-  const challengeSwitches = normalizeChallengeSwitches(input.challengeSwitches, rooms, rewards);
+  const challengeSwitches = normalizeChallengeSwitches(input.challengeSwitches, rooms, rewards, {
+    definitions: encounterDefinitions,
+    sets: encounterSets,
+  });
   validateRewardRouteAndAspectReferences(rewards, routes, traitCatalog.aspects);
   validateTraitRouteReferences(traitCatalog, routes);
   validateLifecycleBindings({

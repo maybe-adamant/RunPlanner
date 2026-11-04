@@ -364,6 +364,52 @@ const budgetByEncounter: Readonly<
   GeneratedQ: { base: 150, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
   GeneratedQ_Large: { base: 525, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
   GeneratedQ_Islands: { base: 150, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  // Challenge switch encounters (EncounterData_TimeChallenge.lua, EncounterData_Challenge.lua):
+  // the first parent fills only what the encounter leaves nil (RunData.lua:1363-1418), so
+  // TimeChallenge's DifficultyModifier 0 and DepthDifficultyRamp 0 win over GeneratedX's ramp,
+  // and each Set's own BaseDifficulty wins; PerfectClear leaves GeneratedX's budget.
+  TimeChallengeF: { base: 130, depthRamp: 0, depthAxis: 'biomeDepthCache', multiplier: 1 },
+  TimeChallengeG: { base: 240, depthRamp: 0, depthAxis: 'biomeDepthCache', multiplier: 1 },
+  // TimeChallengeH comments its BaseDifficulty out, leaving GeneratedH's 290.
+  TimeChallengeH: { base: 290, depthRamp: 0, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  TimeChallengeI: { base: 380, depthRamp: 10, depthAxis: 'biomeDepthCache', multiplier: 1 },
+  TimeChallengeN: { base: 150, depthRamp: 0, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  TimeChallengeO: { base: 300, depthRamp: 0, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  TimeChallengeP: { base: 400, depthRamp: 0, depthAxis: 'biomeDepthCache', multiplier: 1 },
+  TimeChallengeQ: { base: 180, depthRamp: 0, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  PerfectClearChallengeF: { base: 60, depthRamp: 11, depthAxis: 'biomeDepthCache', multiplier: 1 },
+  PerfectClearChallengeG: { base: 140, depthRamp: 40, depthAxis: 'biomeDepthCache', multiplier: 1 },
+  PerfectClearChallengeH: {
+    base: 290,
+    depthRamp: 82,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+  },
+  PerfectClearChallengeI: {
+    base: 325,
+    depthRamp: 105,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+  },
+  PerfectClearChallengeN: {
+    base: 110,
+    depthRamp: 25,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+  },
+  PerfectClearChallengeO: {
+    base: 115,
+    depthRamp: 55,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+  },
+  PerfectClearChallengeP: { base: 430, depthRamp: 85, depthAxis: 'biomeDepthCache', multiplier: 1 },
+  PerfectClearChallengeQ: {
+    base: 150,
+    depthRamp: 25,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+  },
 };
 
 // Native inherited defaults: no ramp/escalation, room depth, unrestricted
@@ -438,6 +484,64 @@ function introduction(data: {
     generatedSeeds: [poolEnemy(data.pool, data.seedKey)],
     requireCompletedIntro: true,
   });
+}
+
+/**
+ * The challenge switches' generated encounters: one wave of a single family
+ * (no highlight), RequireCompletedIntro, and native GenerateEncounter called
+ * straight from HandleSecretSpawns (RoomLogic.lua:4987-4992), so never a hard
+ * encounter. Each Set inherits its GeneratedX's pool, elite cap, type
+ * escalation, type depth axis and group caps.
+ */
+function challengeSwitchEncounterChoices() {
+  const biomes = {
+    F: { pool: pools.f, typeRamp: 0.2, eliteTypes: 1 },
+    G: { pool: pools.g, typeRamp: 0.1, eliteTypes: 2 },
+    H: { pool: pools.h, typeRamp: 0.2, eliteTypes: 3, escalate: true },
+    I: { pool: pools.i, typeRamp: 0.25, eliteTypes: 3 },
+    N: { pool: pools.n, typeRamp: 0.2, eliteTypes: 1, escalate: true, encounterDepth: true },
+    O: { pool: pools.o, typeRamp: 0.35, eliteTypes: 2, escalate: true },
+    P: {
+      pool: pools.p,
+      typeRamp: 0.33,
+      eliteTypes: 3,
+      groups: { Automatons: 1, ChronosForces: 2 },
+    },
+    Q: { pool: pools.q, typeRamp: 0.143, eliteTypes: 2, escalate: true, encounterDepth: true },
+  } as const;
+  const choices: Record<string, ReturnType<typeof generation>> = {};
+  for (const [set, base] of Object.entries(biomes)) {
+    const inherited = {
+      pool: base.pool,
+      waves: [1, 1] as const,
+      cap: 3,
+      requireCompletedIntro: true,
+      ...('escalate' in base ? { escalate: base.escalate } : {}),
+      ...('encounterDepth' in base ? { encounterDepth: base.encounterDepth } : {}),
+      ...('groups' in base ? { groups: base.groups } : {}),
+    };
+    // TimeChallenge: MinTypes 2, MaxTypes 3, MaxTypesCap 3, TypeCountDepthRamp 0;
+    // TimeChallengeI's own MaxEliteTypes 2.
+    choices[`TimeChallenge${set}`] = generation({
+      ...inherited,
+      minTypes: 2,
+      maxTypes: 3,
+      ramp: 0,
+      eliteTypes: set === 'I' ? 2 : base.eliteTypes,
+    });
+    // PerfectClear: MinTypes 3, MaxTypes 3, MaxTypesCap 3, GeneratedX's TypeCountDepthRamp.
+    choices[`PerfectClearChallenge${set}`] = generation({
+      ...inherited,
+      minTypes: 3,
+      maxTypes: 3,
+      ramp: base.typeRamp,
+      eliteTypes: base.eliteTypes,
+    });
+  }
+  return choices as Record<
+    `${'TimeChallenge' | 'PerfectClearChallenge'}${keyof typeof biomes}`,
+    ReturnType<typeof generation>
+  >;
 }
 
 const unbudgetedGeneratedEncounterChoices = {
@@ -987,6 +1091,7 @@ const unbudgetedGeneratedEncounterChoices = {
     cap: 2,
     eliteTypes: 2,
   }),
+  ...challengeSwitchEncounterChoices(),
 } as const;
 
 export const generatedEncounterChoices = Object.freeze(

@@ -109,6 +109,27 @@ const budgetEvidence: readonly BudgetRow[] = [
   ['GeneratedQ', 150, 25, 'biomeEncounterDepth', 0, 1, undefined],
   ['GeneratedQ_Large', 525, 25, 'biomeEncounterDepth', 0, 1, undefined],
   ['GeneratedQ_Islands', 150, 25, 'biomeEncounterDepth', 0, 1, undefined],
+  // Challenge switches never take a hard override: HandleSecretSpawns calls
+  // GenerateEncounter directly (RoomLogic.lua:4987-4992). TimeChallenge's own
+  // DepthDifficultyRamp 0 and each Set's BaseDifficulty (EncounterData_TimeChallenge.lua:47-123).
+  ['TimeChallengeF', 130, 0, 'biomeDepthCache', 0, 1, undefined],
+  ['TimeChallengeG', 240, 0, 'biomeDepthCache', 0, 1, undefined],
+  ['TimeChallengeH', 290, 0, 'biomeEncounterDepth', 0, 1, undefined],
+  ['TimeChallengeI', 380, 10, 'biomeDepthCache', 0, 1, undefined],
+  ['TimeChallengeN', 150, 0, 'biomeEncounterDepth', 0, 1, undefined],
+  ['TimeChallengeO', 300, 0, 'biomeEncounterDepth', 0, 1, undefined],
+  ['TimeChallengeP', 400, 0, 'biomeDepthCache', 0, 1, undefined],
+  ['TimeChallengeQ', 180, 0, 'biomeEncounterDepth', 0, 1, undefined],
+  // PerfectClear declares no budget, so GeneratedX's stands; F sets 60 and 11
+  // (EncounterData_Challenge.lua:281-289).
+  ['PerfectClearChallengeF', 60, 11, 'biomeDepthCache', 0, 1, undefined],
+  ['PerfectClearChallengeG', 140, 40, 'biomeDepthCache', 0, 1, undefined],
+  ['PerfectClearChallengeH', 290, 82, 'biomeEncounterDepth', 0, 1, undefined],
+  ['PerfectClearChallengeI', 325, 105, 'biomeDepthCache', 0, 1, undefined],
+  ['PerfectClearChallengeN', 110, 25, 'biomeEncounterDepth', 0, 1, undefined],
+  ['PerfectClearChallengeO', 115, 55, 'biomeEncounterDepth', 0, 1, undefined],
+  ['PerfectClearChallengeP', 430, 85, 'biomeDepthCache', 0, 1, undefined],
+  ['PerfectClearChallengeQ', 150, 25, 'biomeEncounterDepth', 0, 1, undefined],
 ];
 
 describe('source-declared generated encounter policies', () => {
@@ -422,8 +443,9 @@ describe('source-declared generated encounter policies', () => {
     }
   });
 
-  it('covers the audited 51 concrete identities without boss/prescribed vignettes', () => {
-    expect(definitions).toHaveLength(51);
+  it('covers the audited 67 concrete identities without boss/prescribed vignettes', () => {
+    // 51 room encounters and the 16 Time and PerfectClear switch encounters.
+    expect(definitions).toHaveLength(67);
     expect(definitions.every((definition) => definition.kind === 'combat')).toBe(true);
     expect(
       definitions

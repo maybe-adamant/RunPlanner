@@ -5,6 +5,8 @@ import {
   type ChallengeSwitchHostDeclaration,
   type ChallengeSwitchKindDeclaration,
   type ChallengeSwitchVariantDeclaration,
+  type EncounterDefinition,
+  type EncounterSet,
   type RoomDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
@@ -27,6 +29,76 @@ function requireRewardType(rewards: RewardKernelCatalog, rewardType: string, pat
 }
 
 /**
+ * Each RoomSet's switch encounters are declared definitions native generates
+ * at room entry, outside every encounter set and fixed binding: Time and
+ * PerfectClear through a generated composition with RequireCompletedIntro,
+ * Elite as its declared one-elite encounter with no composition. Every one
+ * counts encounter depth, cannot be skipped and draws a money store.
+ */
+function validateChallengeEncounters(
+  path: string,
+  roomSets: readonly RawChallengeSwitchInput['roomSets'][number][],
+  eliteEncounters: CatalogCollection<{ readonly encounterKey: string }>,
+  rooms: CatalogCollection<RoomDeclaration>,
+  definitions: CatalogCollection<EncounterDefinition>,
+  sets: CatalogCollection<EncounterSet>,
+): void {
+  const bound = new Set([
+    ...sets.values.flatMap((set) => set.encounterDefinitionKeys),
+    ...rooms.values.flatMap((room) =>
+      room.encounterSlotBindings.flatMap((binding) =>
+        binding.kind === 'fixed'
+          ? [
+              binding.encounterDefinitionKey,
+              ...(binding.rivalsEncounterDefinitionKey === undefined
+                ? []
+                : [binding.rivalsEncounterDefinitionKey]),
+              ...(binding.shadowEncounterDefinitionKey === undefined
+                ? []
+                : [binding.shadowEncounterDefinitionKey]),
+            ]
+          : [],
+      ),
+    ),
+  ]);
+  const seen = new Set<string>();
+  for (const roomSet of roomSets)
+    for (const kind of CHALLENGE_SWITCH_KINDS) {
+      const key = roomSet.encounterKeyBySwitchKind[kind];
+      const encounterPath = `${path}.roomSets.${roomSet.roomSetKey}.encounterKeyBySwitchKind.${kind}`;
+      if (seen.has(key)) fail(encounterPath, `${key} serves more than one switch`);
+      seen.add(key);
+      const definition = definitions.byKey[key];
+      if (definition === undefined) fail(encounterPath, `undeclared encounter ${key}`);
+      if (bound.has(key)) fail(encounterPath, `${key} is also a room encounter`);
+      if (definition.kind !== 'combat') fail(encounterPath, `${key} must be a combat`);
+      if (!definition.countsEncounterDepth || definition.canEncounterSkip)
+        fail(encounterPath, `${key} must count encounter depth and refuse a skip`);
+      if (definition.moneyStore === undefined)
+        fail(encounterPath, `${key} must draw a money store`);
+      const generated = (definition.customization ?? []).filter(
+        (decision) => decision.selection.kind === 'generated',
+      );
+      if ((definition.customization ?? []).length !== generated.length)
+        fail(encounterPath, `${key} may declare only a generated composition`);
+      if (kind === 'elite') {
+        if (eliteEncounters.byKey[key] === undefined)
+          fail(encounterPath, `${key} is not a declared Elite encounter`);
+        if (generated.length !== 0)
+          fail(encounterPath, `${key} fields its one elite, not a generated composition`);
+        continue;
+      }
+      const selection = generated[0]?.selection;
+      if (generated.length !== 1 || selection?.kind !== 'generated')
+        fail(encounterPath, `${key} must declare one generated composition`);
+      if (selection.requireCompletedIntro !== true)
+        fail(encounterPath, `${key} must require completed introductions`);
+      if (selection.preparation !== 'roomEntry')
+        fail(encounterPath, `${key} is generated at room entry`);
+    }
+}
+
+/**
  * Normalizes the switch kinds, variants and hosts. A host is every anchored
  * room of a declared RoomSet whose own chance is not zero; every other
  * anchored room must be declared spawn-free, so no anchored room is silent.
@@ -35,6 +107,10 @@ export function normalizeChallengeSwitches(
   raw: RawChallengeSwitchInput,
   rooms: CatalogCollection<RoomDeclaration>,
   rewards: RewardKernelCatalog,
+  encounters: {
+    readonly definitions: CatalogCollection<EncounterDefinition>;
+    readonly sets: CatalogCollection<EncounterSet>;
+  },
 ): ChallengeSwitchCatalog {
   const path = 'challengeSwitches';
   const lifecycle = rewards.producerLifecycles.byKey[raw.producerLifecycleKey];
@@ -154,12 +230,14 @@ export function normalizeChallengeSwitches(
             fail(`${encounterPath}.enemies[${enemyIndex}]`, `unknown attribute ${option}`);
       });
       requirePositiveInteger(encounter.attributeCount, `${encounterPath}.attributeCount`);
+      requirePositiveInteger(encounter.spawnCount, `${encounterPath}.spawnCount`);
       for (const key of encounter.bannedAttributeKeys)
         if (encounter.attributes[key] === undefined)
           fail(`${encounterPath}.bannedAttributeKeys`, `unknown attribute ${key}`);
       return Object.freeze({
         encounterKey: encounter.encounterKey,
         enemies: Object.freeze([...encounter.enemies]),
+        spawnCount: encounter.spawnCount,
         attributeOptionsByEnemy: Object.freeze(
           Object.fromEntries(
             encounter.enemies.map((enemy) => [
@@ -185,6 +263,14 @@ export function normalizeChallengeSwitches(
   for (const host of hosts)
     if (eliteEncounters.byKey[host.encounterKeyBySwitchKind.elite] === undefined)
       fail(path, `host ${host.gameName} names no declared ${host.encounterKeyBySwitchKind.elite}`);
+  validateChallengeEncounters(
+    path,
+    [...roomSets.values()],
+    eliteEncounters,
+    rooms,
+    encounters.definitions,
+    encounters.sets,
+  );
 
   const gold = raw.gold;
   requirePositiveInteger(gold.minimumValue, `${path}.gold.minimumValue`);

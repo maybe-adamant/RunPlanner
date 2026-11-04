@@ -1570,7 +1570,12 @@ export interface ChallengeSwitchHostDeclaration {
   readonly gameName: string;
   /** Native `ChallengeSpawnChance`; a chance, never a rule. */
   readonly spawnChance: number;
-  /** The one encounter each kind fields in this room (`<Kind>EncounterOptions`). */
+  /**
+   * The one encounter each kind fields in this room (`<Kind>EncounterOptions`):
+   * a declared definition outside every encounter set, generated at room entry.
+   * Time and PerfectClear carry a generated composition; Elite is an
+   * `eliteEncounters` entry.
+   */
   readonly encounterKeyBySwitchKind: Readonly<Record<ChallengeSwitchKind, string>>;
 }
 
@@ -1591,6 +1596,8 @@ export interface EliteAttributeDeclaration {
 export interface ChallengeSwitchEliteEncounterDeclaration {
   readonly encounterKey: string;
   readonly enemies: readonly EncounterEnemyChoice[];
+  /** The one generated spawn's `TotalCount`: native draws one type and fields this many. */
+  readonly spawnCount: number;
   /**
    * Each enemy's native `EliteAttributeOptions` and `BlockAttributes`; the
    * forced draw reads them even on an armored variant that is not `IsElite`.

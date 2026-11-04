@@ -479,14 +479,16 @@ describe('encounter envelope catalog', () => {
     expect(catalog.encounterDefinitions.byKey.FIntroFight?.fixedRoster?.[0]?.[0]?.label).toBe(
       'Wastrel',
     );
-    // Every combat identity either generates, customizes otherwise, or declares its roster.
+    // Every combat identity either generates, customizes otherwise, or declares
+    // its roster; an Elite switch's one elite is declared with the switches.
     expect(
       catalog.encounterDefinitions.values
         .filter(
           (definition) =>
             definition.kind === 'combat' &&
             definition.customization === undefined &&
-            definition.fixedRoster === undefined,
+            definition.fixedRoster === undefined &&
+            catalog.challengeSwitches.eliteEncounters.byKey[definition.key] === undefined,
         )
         .map((definition) => definition.key),
     ).toEqual([]);
@@ -619,6 +621,13 @@ describe('encounter envelope catalog', () => {
       'BossTyphonHead02',
       'BossZagreus01',
       'GeneratedAnomalyB',
+      // Every challenge switch encounter: BlockAthenaEncounterKeepsake
+      // (EncounterData_TimeChallenge.lua:11, EncounterData_Challenge.lua:232, 403).
+      ...['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q'].flatMap((set) => [
+        `TimeChallenge${set}`,
+        `PerfectClearChallenge${set}`,
+        `EliteChallenge${set}`,
+      ]),
     ];
     const pPreCombat = Object.keys(definitions).filter(
       (key) => key.startsWith('GeneratedP_PreCombat') || key.startsWith('P_Combat'),
