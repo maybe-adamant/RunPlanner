@@ -3,7 +3,6 @@
 -- current game run. The room conformance reader owns when this is requested.
 local json = type(import) == "function" and import("mods/protocol/json.lua") or require("mods.protocol.json")
 local chaos = type(import) == "function" and import("mods/traits/chaos.lua") or require("mods.traits.chaos")
-local fate = type(import) == "function" and import("mods/keepsakes/fate.lua") or require("mods.keepsakes.fate")
 local nativeBindings = type(import) == "function" and import("mods/native_bindings.lua")
     or require("mods.native_bindings")
 local conformanceBindings = nativeBindings.conformance
@@ -116,10 +115,7 @@ function conformance.read(run, gameState, expected)
     end
     if expected.jeweledPom ~= nil and not json.isNull(expected.jeweledPom) then
         local trait = findTrait(run, conformanceBindings.keepsakeTraits.jeweledPom)
-        -- A rack close that has swapped to a Fated-disabling keepsake but not yet
-        -- run UpdateFateStatus already reads as spent.
         local active = type(gameState) == "table" and gameState.FatedStatus == "Fated"
-            and not fate.unfating(gameState)
         local granted = active and findGrantedTrait(run) or nil
         result.jeweledPom = {
             -- While active, the granted trait is mutable native state. Once

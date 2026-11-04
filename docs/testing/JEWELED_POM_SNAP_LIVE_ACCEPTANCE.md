@@ -11,5 +11,7 @@ each check.
       missed rack, snap equips the planned keepsake, the Pom's granted Hades
       boon is gone, and the next save shows `FatedStatus` `Unfated`. The
       following rooms report no `keepsakeEffects` or boon level mismatch.
-- [ ] Swap at the planned rack and leave at once. The run stays synchronized
-      and the next save shows `FatedStatus` `Unfated`.
+- [ ] Swap at the planned rack and leave at once. The next save shows
+      `FatedStatus` `Unfated` and the run stays synchronized; if it still shows
+      `Fated`, the exit reports a `keepsakeEffects` mismatch and snap settles
+      it.

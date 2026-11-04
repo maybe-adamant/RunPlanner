@@ -4,7 +4,6 @@ local doors = type(import) == "function" and import("mods/navigation/doors.lua")
     or require("mods.navigation.doors")
 local ephyra = type(import) == "function" and import("mods/navigation/ephyra.lua")
     or require("mods.navigation.ephyra")
-local fate = type(import) == "function" and import("mods/keepsakes/fate.lua") or require("mods.keepsakes.fate")
 
 local hooks = {}
 
@@ -338,8 +337,6 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
 
     module.hooks.wrap("LeaveRoom", "run-planner-room-exit", function(_, runtime, base, currentRun, door)
         local state = getState(runtime)
-        -- The exit's checks and any snap read the Fated state the rack close settles.
-        if state ~= nil then fate.finishClose(currentRun) end
         if state == nil or state.state ~= "synchronized" then
             if state ~= nil then door = snapExit(runtime, state, currentRun, door) end
             local result = base(currentRun, door)

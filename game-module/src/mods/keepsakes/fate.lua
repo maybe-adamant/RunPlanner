@@ -25,11 +25,4 @@ function fate.close(hero, spent)
     _G.UpdateFateStatus()
 end
 
--- A rack close interrupted before its UpdateFateStatus leaves the run Fated;
--- finish it so the Jeweled Pom's level bonus ends as the swap planned.
-function fate.finishClose(currentRun)
-    if type(currentRun) ~= "table" or type(currentRun.Hero) ~= "table" then return end
-    if fate.unfating(_G.GameState) then fate.close(currentRun.Hero) end
-end
-
 return fate
