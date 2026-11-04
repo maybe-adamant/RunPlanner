@@ -21,7 +21,7 @@ function TestStoreScreenGuidance:setUp()
     _G.Destroy = function(args) self.destroyed[#self.destroyed + 1] = args.Ids[1] end
     _G.ScreenData = { UpgradeChoice = { PinOffsetX = 800, PinOffsetY = -75, ButtonOffsetX = 350 } }
     _G.GameState = { StoreItemPins = {} }
-    self.runtime = { data = { read = function() return true end } }
+    self.runtime, self.highlighted = {}, true
     self.state = { state = "synchronized", route = {} }
     self.completed, self.progress, self.rows = {}, {}, {}
     self.guide = {
@@ -29,7 +29,7 @@ function TestStoreScreenGuidance:setUp()
         isCompleted = function(owner) return self.completed[owner] == true end,
         shrineProgress = function(key) return self.progress[key] or "pending" end,
     }
-    self.stores = storeScreens.create(function() return self.guide end)
+    self.stores = storeScreens.create(function() return self.guide end, function() return self.highlighted end)
     self.callbacks = {}
     self.stores.attach({ hooks = { wrap = function(name, _, callback) self.callbacks[name] = callback end } },
         function() return self.state end)
@@ -157,10 +157,10 @@ end
 function TestStoreScreenGuidance:testDisabledSettingWithholdsMarkersUntilRefresh()
     self.rows[1] = guideRow("buy", { kind = "purchaseStygianWellOffer", generationKey = "initial:healing" })
     local screen = { Components = { PurchaseButton1 = wellButton(10, "initial:healing") } }
-    self.runtime.data.read = function() return false end
+    self.highlighted = false
     self.stores.present(self.runtime, self.state, screen, "well")
     lu.assertEquals(#self.created, 0)
-    self.runtime.data.read = function() return true end
+    self.highlighted = true
     self.stores.refresh(self.runtime, self.state)
     lu.assertEquals(#self.created, 1)
     self.stores.refresh(self.runtime, { state = "synchronized", route = {} })

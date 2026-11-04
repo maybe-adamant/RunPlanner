@@ -44,8 +44,8 @@ local function harness(payload, source, install)
         end
     end } }
     local state = { state = "synchronized", route = {} }
-    local runtime = { data = { read = function() return true end } }
-    local guide = highlights.create(function() end)
+    local runtime, option = {}, { highlighted = true }
+    local guide = highlights.create(function() end, nil, function() return option.highlighted end)
     local handle, current, completed = {}, { occurrence = { overview = {} } }, 0
     local room = {
         current = function() return current end,
@@ -84,7 +84,7 @@ local function harness(payload, source, install)
         end, screen, loot, reroll, {})
     end
     return {
-        call = call, construct = construct, guide = guide, state = state, runtime = runtime,
+        call = call, construct = construct, guide = guide, state = state, runtime = runtime, option = option,
         completed = function() return completed end,
     }
 end
@@ -109,10 +109,10 @@ function TestHighlightAdapterContacts:testOrdinaryHammerAndFallbackRemainMarkedA
         lu.assertNotNil(screen.Components.RunPlannerPlannedChoiceMarker)
         local expectedId = name == "HermesUpgrade" and 10 or 20
         lu.assertEquals(self.attached[#self.attached].DestinationId, expectedId)
-        h.runtime.data.read = function() return false end
+        h.option.highlighted = false
         h.guide.refresh(h.runtime, h.state)
         lu.assertNil(screen.Components.RunPlannerPlannedChoiceMarker)
-        h.runtime.data.read = function() return true end
+        h.option.highlighted = true
         h.guide.refresh(h.runtime, h.state)
         lu.assertNotNil(screen.Components.RunPlannerPlannedChoiceMarker)
         lu.assertEquals(h.completed(), 1)

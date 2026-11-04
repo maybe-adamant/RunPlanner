@@ -14,9 +14,9 @@ function TestChoiceScreenGuidance:setUp()
     end
     _G.Attach = function(args) self.attached[#self.attached + 1] = args end
     _G.Destroy = function(args) self.destroyed[#self.destroyed + 1] = args.Ids[1] end
-    self.runtime = { data = { read = function() return true end } }
+    self.runtime, self.highlighted = {}, true
     self.state = { state = "synchronized" }
-    self.guidance = screenGuidance.create()
+    self.guidance = screenGuidance.create(function() return self.highlighted end)
 end
 
 function TestChoiceScreenGuidance:tearDown()
@@ -39,11 +39,11 @@ end
 function TestChoiceScreenGuidance:testRetainsSourceContextWhileDisabledThenRendersOnRefresh()
     local source = {}
     local screen = { Source = source, Components = {}, UpgradeButtons = { { Id = 7, Data = { Name = "Target" } } } }
-    self.runtime.data.read = function() return false end
+    self.highlighted = false
     self.guidance.bindSource(self.runtime, self.state, source, "Target", false)
     self.guidance.constructed(self.runtime, screen)
     lu.assertEquals(#self.created, 0)
-    self.runtime.data.read = function() return true end
+    self.highlighted = true
     self.guidance.refresh(self.runtime, self.state)
     lu.assertEquals(self.attached[1].DestinationId, 7)
 end
@@ -135,9 +135,9 @@ function TestChoiceScreenGuidance:testBoonInfoSuspendsAcrossSettingCommitsWithou
     callbacks.AttemptOpenUpgradeChoiceBoonInfo(nil, self.runtime, function()
         self.guidance.refresh(self.runtime, self.state)
         lu.assertNil(screen.Components.RunPlannerPlannedChoiceMarker)
-        self.runtime.data.read = function() return false end
+        self.highlighted = false
         self.guidance.refresh(self.runtime, self.state)
-        self.runtime.data.read = function() return true end
+        self.highlighted = true
         self.guidance.refresh(self.runtime, self.state)
         lu.assertNil(screen.Components.RunPlannerPlannedChoiceMarker)
     end, screen, {})
@@ -152,11 +152,11 @@ function TestChoiceScreenGuidance:testPendingSourceSurvivesDisabledRefreshButNot
     local source = {}
     local screen = { Source = source, Components = {}, UpgradeButtons = { { Id = 4, Data = { Name = "Target" } } } }
     self.state.route = {}
-    self.runtime.data.read = function() return false end
+    self.highlighted = false
     self.guidance.bindSource(self.runtime, self.state, source, "Target", false)
     self.guidance.refresh(self.runtime, self.state)
     self.guidance.constructed(self.runtime, screen, self.state)
-    self.runtime.data.read = function() return true end
+    self.highlighted = true
     self.guidance.refresh(self.runtime, self.state)
     lu.assertNotNil(screen.Components.RunPlannerPlannedChoiceMarker)
     self.guidance.clear(screen)

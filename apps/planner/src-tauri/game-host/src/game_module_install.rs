@@ -11,6 +11,7 @@ use crate::game_module_assembly::{
     parse_version, sha256_hex, COMPATIBILITY_FILE, INSTALL_RECORD_FILE, MANIFEST_FILE,
 };
 use crate::game_module_package::{ExecutionCompatibility, ModulePackage, PackageSource};
+use crate::game_settings::{inspect_settings, GameSettingsFacts};
 use crate::game_target::{
     discover_profiles, existing_directory, remembered_target, resolve_target, target_facts,
     DiscoveredProfile, GameTargetFacts, ProfileModule, ResolvedTarget, TargetKind,
@@ -161,6 +162,8 @@ pub struct TargetInspection {
     /// The read-only community event slot, slot 0.
     pub event_slot: EventSlotFacts,
     pub active_slot: ActiveSlotFacts,
+    /// `settings.json`, the player's game module options.
+    pub settings: GameSettingsFacts,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -648,6 +651,7 @@ pub fn inspect(
         plan_slots,
         event_slot,
         active_slot: inspect_active_slot(target),
+        settings: inspect_settings(target),
     })
 }
 

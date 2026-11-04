@@ -151,8 +151,8 @@ assembles it from explicit inputs: `report.json` (planner facts supplied by the
 application, including the last send failure or a last send that was not made
 active and the current settlement fault, merged with the host's status of the
 established target), the open plan document when chosen, the event slot and
-twelve plan slot files, `active-slot.json` and the slot overview when plans in
-game are chosen, and log tails from `ReturnOfModding`: `LogOutput.log` and the
+twelve plan slot files, `active-slot.json`, `settings.json` and the slot
+overview when plans in game are chosen, and log tails from `ReturnOfModding`: `LogOutput.log` and the
 newest `backup/*_LogOutput.log` (last 2 MiB each) and `lovely.log` (last
 1 MiB), each cut forward to a line start. Missing or unreadable sources are
 recorded in `report.json`. Every entry replaces the user's profile folder with

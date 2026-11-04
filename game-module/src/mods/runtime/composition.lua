@@ -2,11 +2,14 @@
 -- constructed once here and retained in lexical scope.
 local composition = {}
 
-function composition.bind(root, moduleVersion)
+-- legacyConfig is the module's ModpackLib .cfg, read once to seed settings.json.
+function composition.bind(root, moduleVersion, legacyConfig)
     if type(root) ~= "string" or root == "" then error("executor config path is required", 2) end
     local protocol = import("mods/protocol/decoder.lua")
     local inbox = import("mods/host/inbox.lua").create(root, protocol.decode, rom.path)
     local activeSlotFile = import("mods/host/active_slot.lua").create(root, rom.path)
+    local settingsFile = import("mods/host/settings.lua").create(root, rom.path)
+    settingsFile.seedFromLegacy(legacyConfig)
     local route = import("mods/route/session.lua")
     local ephyra = import("mods/navigation/ephyra.lua")
     local room = import("mods/room/coordinator.lua")
@@ -36,6 +39,13 @@ function composition.bind(root, moduleVersion)
         activeSlot = {
             read = activeSlotFile.read,
             write = activeSlotFile.write,
+        },
+        -- The player's options in settings.json, which the planner also writes.
+        settings = {
+            read = settingsFile.read,
+            current = settingsFile.current,
+            enabled = settingsFile.enabled,
+            write = settingsFile.write,
         },
         nextOccurrence = route.next,
     }
@@ -273,8 +283,8 @@ function composition.bind(root, moduleVersion)
             shipCombat.takeRewardProducer, highlights)
         local transformationScope = transformationHooks.attach(module, session, getState, report, room)
         local featureScope = roomFeatureHooks.attach(module, session, getState, report, room)
-        local function snapEnabled(runtime)
-            return runtime ~= nil and runtime.data ~= nil and runtime.data.read("SnapMode") == true
+        local function snapEnabled()
+            return settingsFile.enabled("snapMode")
         end
         local navigation = navigationHooks.attach(module, session, getState, report, route, room,
             transformationScope, shipCombat.rewardContext, generatedEncounter, highlights, snapEnabled)

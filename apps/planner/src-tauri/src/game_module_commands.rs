@@ -9,6 +9,7 @@ use run_planner_game_host::game_module_package::ModulePackage;
 use run_planner_game_host::game_plan_publication::{
     self, ActiveSlotSetting, ClearedSlot, GamePlanPublication, SlotClearing, SlotRestoration,
 };
+use run_planner_game_host::game_settings::{self, GameSettingChange, GameSettingOption};
 use run_planner_game_host::game_target::{
     self, GameTargetDiscovery, GameTargetFacts, ResolvedTarget, TargetKind,
 };
@@ -233,6 +234,20 @@ pub(crate) fn game_active_slot_set(
         &config_dir(&app)?,
         ModulePackage::bundled(),
         slot_number,
+    ))
+}
+
+#[tauri::command]
+pub(crate) fn game_setting_set(
+    app: tauri::AppHandle,
+    option: GameSettingOption,
+    enabled: bool,
+) -> Result<GameSettingChange, String> {
+    Ok(game_settings::set_game_setting(
+        &config_dir(&app)?,
+        ModulePackage::bundled(),
+        option,
+        enabled,
     ))
 }
 

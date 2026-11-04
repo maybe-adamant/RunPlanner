@@ -2,6 +2,7 @@
 -- planner and the module both write it, and each read goes to the file.
 local json = type(import) == "function" and import("mods/protocol/json.lua") or require("mods.protocol.json")
 local inbox = type(import) == "function" and import("mods/host/inbox.lua") or require("mods.host.inbox")
+local sharedFile = type(import) == "function" and import("mods/host/shared_file.lua") or require("mods.host.shared_file")
 
 local activeSlot = {}
 activeSlot.FILE_NAME = "active-slot.json"
@@ -50,27 +51,11 @@ function activeSlot.encode(slot)
         .. ',"slot":' .. string.format("%d", slot) .. "}"
 end
 
-local function nativeFiles()
-    return { open = io.open, remove = os.remove, rename = os.rename }
-end
-
--- Control bytes become \ddd escapes so a reason cannot start a new log line.
-local function logText(value)
-    local escaped = tostring(value):gsub("[%c\\\"]", function(byte)
-        return string.format("\\%03d", byte:byte())
-    end)
-    return '"' .. escaped .. '"'
-end
-
-local function defaultLog(message)
-    if rom and rom.log and rom.log.info then rom.log.info(message) end
-end
-
 -- files replaces io.open/os.remove/os.rename; log receives one line per event.
 function activeSlot.create(root, pathApi, options)
     options = options or {}
-    local files = options.files or nativeFiles()
-    local log = options.log or defaultLog
+    local files = options.files or sharedFile.nativeFiles()
+    local log = options.log or sharedFile.defaultLog
     local lastInvalid = nil
     local store = {}
 
@@ -82,21 +67,10 @@ function activeSlot.create(root, pathApi, options)
         return pathApi.combine(root, activeSlot.FILE_NAME), pathApi.combine(root, activeSlot.TEMP_FILE_NAME)
     end
 
-    local function readRaw(path)
-        local file, openError, openErrno = files.open(path, "rb")
-        if not file then
-            if inbox.isMissingFileError(openError, openErrno) then return nil, "missing" end
-            return nil, "invalid", "could not open: " .. tostring(openError)
-        end
-        local content = file:read(activeSlot.MAX_BYTES + 1)
-        file:close()
-        return content or "", "present"
-    end
-
     local function invalid(key, reason)
         if lastInvalid ~= key then
             lastInvalid = key
-            log("[RunPlanner] active-slot invalid reason=" .. logText(reason)
+            log("[RunPlanner] active-slot invalid reason=" .. sharedFile.logText(reason)
                 .. " using slot=" .. activeSlot.DEFAULT_SLOT)
         end
         return activeSlot.DEFAULT_SLOT, "invalid", reason
@@ -106,7 +80,7 @@ function activeSlot.create(root, pathApi, options)
     -- Missing and invalid files mean slot 1; the file is left as found.
     function store.read()
         local path = paths()
-        local raw, state, openReason = readRaw(path)
+        local raw, state, openReason = sharedFile.read(files, path, activeSlot.MAX_BYTES)
         if state == "missing" then
             lastInvalid = nil
             return activeSlot.DEFAULT_SLOT, "missing"
@@ -118,29 +92,13 @@ function activeSlot.create(root, pathApi, options)
         return slot, "present"
     end
 
-    -- os.rename cannot replace on Windows, so the old file is removed first; a
-    -- reader may briefly find no file, never a partial one.
     function store.write(slot)
         local path, tempPath = paths()
-        local content = activeSlot.encode(slot)
-        local function fail(reason)
-            files.remove(tempPath)
-            log("[RunPlanner] active-slot write-failed slot=" .. slot .. " reason=" .. logText(reason))
+        local written, reason = sharedFile.replace(files, path, tempPath, activeSlot.encode(slot))
+        if not written then
+            log("[RunPlanner] active-slot write-failed slot=" .. slot .. " reason=" .. sharedFile.logText(reason))
             return false, reason
         end
-        local file, openError = files.open(tempPath, "wb")
-        if not file then return fail("could not open temp file: " .. tostring(openError)) end
-        local written, writeError = file:write(content)
-        local closed, closeError = file:close()
-        if not written then return fail("could not write temp file: " .. tostring(writeError)) end
-        if not closed then return fail("could not close temp file: " .. tostring(closeError)) end
-        local removed, removeError, removeErrno = files.remove(path)
-        if not removed and not inbox.isMissingFileError(removeError, removeErrno) then
-            return fail("could not remove previous file: " .. tostring(removeError))
-        end
-        local renamed, renameError = files.rename(tempPath, path)
-        if not renamed then renamed, renameError = files.rename(tempPath, path) end
-        if not renamed then return fail("could not rename temp file: " .. tostring(renameError)) end
         log("[RunPlanner] active-slot set slot=" .. slot)
         return true
     end

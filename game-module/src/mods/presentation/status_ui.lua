@@ -30,9 +30,15 @@ local STALE = "Made for another Run Planner version - resend from the app or upd
 local NO_OVERVIEW = "No overview - Load to inspect"
 local DEBUG_HINT = "Turn on Debug Mode (Advanced tab) to see diagnostics."
 local LOAD_BUTTON = { id = "run_planner_reload" }
-local GUIDE_CHECKBOX = { id = "show_room_guide", label = "Show room guide" }
-local HIGHLIGHT_CHECKBOX = { id = "highlight_planned_choices", label = "Highlight planned choices" }
-local SNAP_CHECKBOX = { id = "snap_mode", label = "Snap back to the plan" }
+-- Each checkbox draws a transient alias that mirrors one option of settings.json.
+local OPTION_CHECKBOXES = {
+    { alias = "ShowRoomGuide", option = "showRoomGuide",
+        opts = { id = "show_room_guide", label = "Show room guide" } },
+    { alias = "HighlightPlannedChoices", option = "highlightPlannedChoices",
+        opts = { id = "highlight_planned_choices", label = "Highlight planned choices" } },
+    { alias = "SnapMode", option = "snapMode",
+        opts = { id = "snap_mode", label = "Snap back to the plan" } },
+}
 
 local function safeText(value)
     local ok, text = pcall(function()
@@ -127,13 +133,16 @@ local function asciiDraw()
     end
 end
 
-function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
+function ui.bind(inbox, inspectSession, activeSlotFile, settingsFile, slotOverview, clock)
     assert(type(inbox) == "table" and type(inbox.activeSlot) == "function"
         and type(inbox.load) == "function" and type(inbox.status) == "function"
         and type(inbox.plan) == "function", "status UI inbox dependency is required")
     assert(type(inspectSession) == "function", "status UI session inspection is required")
     assert(type(activeSlotFile) == "table" and type(activeSlotFile.read) == "function"
         and type(activeSlotFile.write) == "function", "status UI active slot file is required")
+    assert(type(settingsFile) == "table" and type(settingsFile.read) == "function"
+        and type(settingsFile.current) == "function" and type(settingsFile.write) == "function",
+        "status UI settings file is required")
     assert(type(slotOverview) == "table" and type(slotOverview.read) == "function",
         "status UI slot overview is required")
     clock = clock or os.clock
@@ -141,7 +150,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
     -- The picker and slot descriptions are a view of active-slot.json and the
     -- slot overview, read when the window opens, on Load and after a pick.
     -- Plans are decoded only by Load; drawing never reads a plan file.
-    local viewSlot, failedSlot, lastDrawAt = nil, nil, nil
+    local viewSlot, failedSlot, failedOption, lastDrawAt = nil, nil, nil, nil
     local entries, present, values, keys, pickerOpts = {}, {}, SLOT_VALUES, {}, nil
     -- Counts view reads and loads, so cached views know when to rebuild.
     local generation = 0
@@ -179,6 +188,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
 
     local function refreshView()
         readActiveSlot()
+        settingsFile.read()
         entries, present = slotOverview.read()
         keys = {}
         relabel()
@@ -264,12 +274,6 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         local imgui = drawApi.imgui
         local field = ctx.data.get("ActivePlanSlot")
         assert(field ~= nil, "status UI ActivePlanSlot data field is required")
-        local showGuide = ctx.data.get("ShowRoomGuide")
-        assert(showGuide ~= nil, "status UI ShowRoomGuide data field is required")
-        local highlightChoices = ctx.data.get("HighlightPlannedChoices")
-        assert(highlightChoices ~= nil, "status UI HighlightPlannedChoices data field is required")
-        local snapMode = ctx.data.get("SnapMode")
-        assert(snapMode ~= nil, "status UI SnapMode data field is required")
         if field:read() ~= viewSlot then field:write(viewSlot) end
         if drawApi.widgets.dropdown(field, pickerOpts) then
             local requested = field:read()
@@ -286,9 +290,19 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         if failedSlot ~= nil then imgui.TextWrapped("Could not save the active slot.") end
         drawDetails(drawApi)
         drawApi.widgets.separator()
-        drawApi.widgets.checkbox(showGuide, GUIDE_CHECKBOX)
-        drawApi.widgets.checkbox(highlightChoices, HIGHLIGHT_CHECKBOX)
-        drawApi.widgets.checkbox(snapMode, SNAP_CHECKBOX)
+        local options = settingsFile.current()
+        for _, checkbox in ipairs(OPTION_CHECKBOXES) do
+            local option = ctx.data.get(checkbox.alias)
+            assert(option ~= nil, "status UI " .. checkbox.alias .. " data field is required")
+            if option:read() ~= options[checkbox.option] then option:write(options[checkbox.option]) end
+            if drawApi.widgets.checkbox(option, checkbox.opts) then
+                local saved = settingsFile.write(checkbox.option, option:read() == true)
+                failedOption = not saved and checkbox.option or nil
+                options = settingsFile.current()
+                option:write(options[checkbox.option])
+            end
+        end
+        if failedOption ~= nil then imgui.TextWrapped("Could not save the option.") end
     end
 
     -- Every string the tab shows, computed before any ImGui call.

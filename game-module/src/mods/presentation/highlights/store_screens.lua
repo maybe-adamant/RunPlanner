@@ -54,13 +54,13 @@ local function offsets(kind)
     return kind == "shrine" and SHRINE_OFFSET_X or pinX, layout.PinOffsetY or 0
 end
 
-function stores.create(guideView)
+-- highlighted reads the player's Highlight planned choices option.
+function stores.create(guideView, highlighted)
     local instance = {}
     local screens = setmetatable({}, { __mode = "k" })
 
-    local function enabled(runtime, state)
-        return state and state.state == "synchronized" and runtime and runtime.data
-            and runtime.data.read("HighlightPlannedChoices") == true
+    local function enabled(_, state)
+        return state and state.state == "synchronized" and highlighted() == true
     end
 
     local function valid(context, state)

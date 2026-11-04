@@ -2,13 +2,13 @@
 local world = {}
 local MARKER_KEY = "RunPlannerPlannedChoice"
 
--- nextOccurrence reads the route's next published occurrence.
-function world.create(nextOccurrence)
+-- nextOccurrence reads the route's next published occurrence; highlighted
+-- reads the player's Highlight planned choices option.
+function world.create(nextOccurrence, highlighted)
     local instance, markers = {}, setmetatable({}, { __mode = "k" })
     local desired = { route = nil, doors = {} }
-    local function enabled(runtime, state)
-        return state and state.state == "synchronized" and runtime and runtime.data
-            and runtime.data.read("HighlightPlannedChoices") == true
+    local function enabled(_, state)
+        return state and state.state == "synchronized" and highlighted() == true
     end
     local function retire(door)
         local marker = markers[door]

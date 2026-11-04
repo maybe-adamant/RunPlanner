@@ -171,13 +171,10 @@ end
 function TestPathAcquisitions.testPlannedNodesAreMarkedOnlyWhileTheirScreenIsOpenAndHighlightsAreOn()
     local row = payload("TalentDrop")
     row.detail.plannedHexNodeKeys = { "1:2", "2:2" }
-    local guide = highlights.create(function() end)
-    local callbacks, item = capture(row, nil, nil, nil, nil, guide)
     local created, destroyed, enabled = {}, {}, false
-    local runtime = { data = { read = function(alias)
-        lu.assertEquals(alias, "HighlightPlannedChoices")
-        return enabled
-    end } }
+    local guide = highlights.create(function() end, nil, function() return enabled end)
+    local callbacks, item = capture(row, nil, nil, nil, nil, guide)
+    local runtime = {}
     local previousCreate, previousDestroy = _G.CreateScreenComponent, _G.Destroy
     _G.CreateScreenComponent = function(args)
         created[#created + 1] = args

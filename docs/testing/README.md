@@ -9,6 +9,7 @@ commits, not these checklists.
 - [Fields cage and Ship wheel draws](FIELDS_CAGE_DRAWS_LIVE_ACCEPTANCE.md)
 - [Jeweled Pom rack swap and snap](JEWELED_POM_SNAP_LIVE_ACCEPTANCE.md)
 - [Snap exit corrections](SNAP_EXIT_LIVE_ACCEPTANCE.md)
+- [Game settings](GAME_SETTINGS_LIVE_ACCEPTANCE.md)
 
 Keep setup, actions and expected observations with each check. Confirm results
 from live testing or explicitly waive them; retire completed items and delete

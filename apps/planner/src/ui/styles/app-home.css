@@ -455,6 +455,26 @@ button.home-slot-name {
   overflow-wrap: anywhere;
 }
 
+.game-settings {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.game-setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.game-setting-description {
+  margin: 2px 0 0 24px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 .home-card-foot {
   display: flex;
   gap: 14px;

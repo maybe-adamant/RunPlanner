@@ -433,9 +433,11 @@ local function fingerprint(projection)
     return table.concat(values, "\30")
 end
 
-function guide.attach(module, inspect)
+-- shown reads the player's Show room guide option.
+function guide.attach(module, inspect, shown)
     assert(type(module) == "table" and type(module.overlays) == "table", "guide overlay module is required")
     assert(type(inspect) == "function", "guide inspection is required")
+    assert(type(shown) == "function", "guide option is required")
     local visible = { guide = false, footer = false }
     local lastFingerprint = nil
     module.overlays.createLine("room-guide-header", {
@@ -458,9 +460,9 @@ function guide.attach(module, inspect)
         visible = function() return visible.footer end,
     })
 
-    local function refresh(_, runtime, overlay)
+    local function refresh(_, _, overlay)
         local projection = nil
-        if runtime.data.read("ShowRoomGuide") == true then
+        if shown() == true then
             local ok, value = pcall(function() return guide.project(inspect()) end)
             if ok then projection = value end
         end

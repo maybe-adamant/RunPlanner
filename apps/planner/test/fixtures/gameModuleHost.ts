@@ -59,6 +59,7 @@ export function gameModuleStatus(
     })),
     eventSlot: eventSlot(),
     activeSlot: { state: 'missing' },
+    settings: { state: 'missing' },
   };
   const inspection =
     overrides.inspection === null
@@ -135,6 +136,9 @@ export function createFakeGameModuleHost(
     ),
     remove: vi.fn<GameModuleHost['remove']>(() => Promise.resolve({ outcome: 'removed', status })),
     setActiveSlot: vi.fn<GameModuleHost['setActiveSlot']>(() => Promise.resolve(activation)),
+    setGameSetting: vi.fn<GameModuleHost['setGameSetting']>(() =>
+      Promise.resolve({ status: 'saved', message: 'Saved.', blockers: [] }),
+    ),
     clearSlot: vi.fn<GameModuleHost['clearSlot']>((slotNumber) =>
       Promise.resolve({
         status: 'cleared',

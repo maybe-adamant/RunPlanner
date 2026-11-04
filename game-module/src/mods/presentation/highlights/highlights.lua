@@ -12,10 +12,12 @@ local safeHooks = type(import) == "function" and import("mods/host/presentation_
     or require("mods.host.presentation_hooks")
 local highlights = {}
 
--- `roomGuide` is the read-only room guide inspection (occurrence, completion, Shrine progress).
-function highlights.create(nextOccurrence, roomGuide)
-    local doors, choices, path = world.create(nextOccurrence), screen.create(), pathNodes.create()
-    local stores = storeScreens.create(roomGuide or function() return nil end)
+-- `roomGuide` is the read-only room guide inspection (occurrence, completion, Shrine progress);
+-- `highlighted` reads the player's Highlight planned choices option.
+function highlights.create(nextOccurrence, roomGuide, highlighted)
+    assert(type(highlighted) == "function", "highlights require the Highlight planned choices option")
+    local doors, choices, path = world.create(nextOccurrence, highlighted), screen.create(highlighted), pathNodes.create()
+    local stores = storeScreens.create(roomGuide or function() return nil end, highlighted)
     local entries = {
         doors = doors.doors,
         hub = doors.hub,
@@ -29,9 +31,8 @@ function highlights.create(nextOccurrence, roomGuide)
         -- `depth:slot` node keys of the Path screen now open, or nil to clear.
         pathNodes = path.plan,
     }
-    local function enabled(runtime, state)
-        return state ~= nil and state.state == "synchronized" and runtime ~= nil and runtime.data ~= nil
-            and runtime.data.read("HighlightPlannedChoices") == true
+    local function enabled(_, state)
+        return state ~= nil and state.state == "synchronized" and highlighted() == true
     end
     function entries.refresh(runtime, state)
         doors.refresh(runtime, state)
@@ -42,6 +43,16 @@ function highlights.create(nextOccurrence, roomGuide)
     function entries.attach(module, getState)
         choices.attach(module, getState)
         stores.attach(module, getState)
+        -- The option changes in the window or the planner; markers follow it at once.
+        if module.overlays then
+            local shown = highlighted() == true
+            safeHooks.onInterval(module, "run-planner-highlight-option", 0.25, function(_, runtime)
+                local now = highlighted() == true
+                if now == shown then return end
+                shown = now
+                entries.refresh(runtime, getState(runtime))
+            end)
+        end
         safeHooks.wrap(module, "UpdateTalentButtons", "run-planner-path-planned-nodes", {
             after = function(runtime, talentScreen)
                 path.refresh(talentScreen, enabled(runtime, getState(runtime)))

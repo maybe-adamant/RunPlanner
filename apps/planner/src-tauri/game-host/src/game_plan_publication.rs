@@ -141,7 +141,7 @@ fn safe_destination(target: &ResolvedTarget, slot_number: u8) -> Result<PathBuf,
 }
 
 // A regular file or absent entry directly inside the module's config folder.
-fn shared_file_destination(
+pub(crate) fn shared_file_destination(
     target: &ResolvedTarget,
     file_name: &str,
     artifact: &str,

@@ -27,12 +27,14 @@ Anything both the planner and the game module need lives in
   [Slot sources and rebuild](#slot-sources-and-rebuild)), which the module never
   reads; the event slot has none;
 - `active-slot.json`, the plan slot the module plays next, which both write;
+- `settings.json`, the player's [options](#options), which both write;
 - `slots.runplanner.json`, the [slot overview](#slot-overview), which only the
   planner writes.
 
-Settings that only the game uses, such as the room guide, highlights and
-`Enabled`, stay in ModpackLib storage. The planner never reads or writes the
-ModpackLib `.cfg`.
+Module settings the planner does not offer, such as `Enabled` and Debug Mode,
+stay in ModpackLib storage. The planner never reads or writes the ModpackLib
+`.cfg`: ModpackLib keeps its committed values in memory and rewrites the whole
+file from them, so an outside edit would be neither seen nor kept.
 
 ### Active slot
 
@@ -66,6 +68,40 @@ ModpackLib `.cfg`.
   event slot first while it holds a file or is the active slot. Writing the
   event slot never changes the active slot; clearing it, or a plan slot, while
   it is active makes slot 1 active (see [Clear and Undo](#clear-and-undo)).
+
+### Options
+
+`settings.json` holds the three options the module's window and the Game tab
+both offer:
+
+```json
+{
+  "format": "run-planner-settings",
+  "formatVersion": 1,
+  "showRoomGuide": false,
+  "highlightPlannedChoices": false,
+  "snapMode": false
+}
+```
+
+- Both sides decode strictly: exactly these five keys, the three options
+  booleans, `formatVersion` the literal integer 1, and at most 1 KiB. Both
+  write the compact form in this key order, atomically as the active slot is
+  written.
+- A missing or invalid file means every option off; neither side rewrites it
+  until the player changes an option, except once: when the module loads and
+  finds no file, it seeds one from the options' earlier ModpackLib `.cfg`
+  values, if any are there, and never reads them again. The module logs one
+  `[RunPlanner] settings` line per option it writes and one per change of
+  invalid content it reads.
+- Each write changes one option over the file as it is read just before, so an
+  option the other side changed is kept; otherwise the last writer wins.
+- The module rereads the file at most once a second, and at once when its
+  window opens, so a change made in the planner reaches a running game within
+  about a second: the guide and highlights follow it at once, and snap mode at
+  the next room exit. The planner reads it with the slot facts. Changing an
+  option needs only an established target, as choosing a slot does, and works
+  before the module is installed.
 
 ### Slot overview
 

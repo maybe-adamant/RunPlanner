@@ -374,9 +374,9 @@ write.
 
 ## Snap Mode
 
-The ModpackLib option **Snap back to the plan** (`SnapMode`, off by default,
-persisted and hashed like the other gameplay options) returns a run to its plan
-at each room exit. Off, a desynchronized run is unchanged.
+The option **Snap back to the plan** (`snapMode` in the shared
+[options file](PLAN_SLOTS_AND_PUBLICATION.md#options), off by default) returns a
+run to its plan at each room exit. Off, a desynchronized run is unchanged.
 
 - **Correct at the exit.** Every `LeaveRoom` first runs the room's ordinary
   checks: its exit conformance, which also compares pending Hermes orders with

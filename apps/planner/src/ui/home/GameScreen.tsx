@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import type { HomeContextPart } from '@planner/projections/homeContext';
 import type {
   GameClearedSlot,
+  GameSettingOption,
   GameStatusController,
   GameTargetDiscovery,
 } from '@planner/persistence/gameModuleHost';
@@ -28,6 +29,11 @@ import {
   type HomeSlotRow,
   type HomeSlotsProduct,
 } from '@planner/projections/gamePanel';
+import {
+  describeGameSettingChange,
+  projectGameSettings,
+  type GameSettingsProduct,
+} from '@planner/projections/gameSettings';
 import { ContextualPicker } from '../controls/ContextualPicker';
 import { IconActionButton } from '../controls/IconActionButton';
 import { ConfirmationDialog } from '../controls/ConfirmationDialog';
@@ -55,6 +61,11 @@ interface ClearedNotice {
   readonly id: number;
   readonly text: string;
   readonly undo: GameClearedSlot | null;
+}
+
+interface SettingRequest {
+  readonly option: GameSettingOption;
+  readonly enabled: boolean;
 }
 
 interface TargetRequest {
@@ -393,6 +404,48 @@ function ModuleCard({
   );
 }
 
+function SettingsCard({
+  feedback,
+  onChange,
+  saving,
+  settings,
+}: {
+  readonly feedback: Feedback | null;
+  readonly onChange: (option: GameSettingOption, enabled: boolean) => void;
+  /** The change being saved, shown at once. */
+  readonly saving: SettingRequest | null;
+  readonly settings: GameSettingsProduct;
+}) {
+  return (
+    <section aria-labelledby="game-settings-title" className="home-panel home-card">
+      <div className="home-panel-heading">
+        <h3 className="home-section-title" id="game-settings-title">
+          In-game options
+        </h3>
+      </div>
+      <ul aria-labelledby="game-settings-title" className="game-settings">
+        {settings.rows.map((row) => (
+          <li key={row.option}>
+            <label className="game-setting">
+              <input
+                aria-describedby={`game-setting-${row.option}`}
+                checked={saving?.option === row.option ? saving.enabled : row.enabled}
+                onChange={(event) => onChange(row.option, event.target.checked)}
+                type="checkbox"
+              />
+              <span className="game-setting-label">{row.label}</span>
+            </label>
+            <p className="game-setting-description" id={`game-setting-${row.option}`}>
+              {row.description}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <FeedbackLine feedback={feedback} />
+    </section>
+  );
+}
+
 // The name gives way to the state, which always shows in full.
 function SlotPlanCell({
   onOpen,
@@ -623,6 +676,8 @@ function GameSections({
   );
   const [pending, setPending] = useState(true);
   const [slotsFeedback, setSlotsFeedback] = useState<Feedback | null>(null);
+  const [settingsFeedback, setSettingsFeedback] = useState<Feedback | null>(null);
+  const [savingSetting, setSavingSetting] = useState<SettingRequest | null>(null);
   const [cleared, setCleared] = useState<ClearedNotice | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [changing, setChanging] = useState(false);
@@ -677,6 +732,26 @@ function GameSections({
     status === null
       ? null
       : projectHomeSlots(status, catalog, snapshot.readAt, index.links, rebuildReport);
+  const settings = projectGameSettings(status);
+  // One change at a time; the status read after it shows what the file now holds.
+  const changeSetting = async (option: GameSettingOption, enabled: boolean) => {
+    if (savingSetting !== null) return;
+    setSavingSetting({ option, enabled });
+    setSettingsFeedback(null);
+    try {
+      const problem = describeGameSettingChange(await host.setGameSetting(option, enabled));
+      if (problem !== null) setSettingsFeedback({ tone: 'alert', text: problem });
+    } catch (error) {
+      setSettingsFeedback({ tone: 'alert', text: `Couldn’t save the option: ${errorText(error)}` });
+    }
+    try {
+      await gameStatus.refresh();
+    } catch {
+      // The Game tab reports a failed status read.
+    } finally {
+      setSavingSetting(null);
+    }
+  };
   const playNext = async (intent: GameActiveSlotIntent) => {
     setPending(true);
     setSlotsFeedback(null);
@@ -874,6 +949,14 @@ function GameSections({
             }}
             onRemove={() => setConfirmation('remove')}
             pending={pending}
+          />
+        )}
+        {settings === null ? null : (
+          <SettingsCard
+            feedback={settingsFeedback}
+            onChange={(option, enabled) => void changeSetting(option, enabled)}
+            saving={savingSetting}
+            settings={settings}
           />
         )}
         <LocationCard

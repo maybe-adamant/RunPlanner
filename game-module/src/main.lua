@@ -26,7 +26,13 @@ end
 local function initialize()
     import_as_fallback(rom.game)
     local data = import("mods/host/data.lua")
-    local runtime = import("mods/runtime/composition.lua").bind(_PLUGIN.config_mod_folder_path, _PLUGIN.version)
+    -- ModpackLib's config file for this module, where the options lived before settings.json.
+    local ok, legacyConfig = pcall(function()
+        return rom.path.combine(rom.paths.config(), _PLUGIN.guid .. ".cfg")
+    end)
+    if not ok or type(legacyConfig) ~= "string" then legacyConfig = nil end
+    local runtime = import("mods/runtime/composition.lua").bind(_PLUGIN.config_mod_folder_path, _PLUGIN.version,
+        legacyConfig)
     local protocol = import("mods/protocol/decoder.lua")
     -- The only execution file that imports mods/presentation: presentation receives
     -- read-only views plus the status window's slot-picker capabilities.
@@ -35,7 +41,8 @@ local function initialize()
             protocol.matchesVersion)
     end)
     local highlights = presentationSurface("highlights", function()
-        return import("mods/presentation/highlights/highlights.lua").create(runtime.nextOccurrence, runtime.roomGuideInspection)
+        return import("mods/presentation/highlights/highlights.lua").create(runtime.nextOccurrence,
+            runtime.roomGuideInspection, function() return runtime.settings.enabled("highlightPlannedChoices") end)
     end)
     local module = lib.createModule({
         pluginGuid = _PLUGIN.guid,
@@ -49,13 +56,14 @@ local function initialize()
     module.data.define(data.buildStorage())
     local statusWindow = presentationSurface("status window", function()
         import("mods/presentation/status_ui.lua").attach(module, runtime.inboxInspection,
-            runtime.sessionInspection, runtime.activeSlot, slotOverview)
+            runtime.sessionInspection, runtime.activeSlot, runtime.settings, slotOverview)
         return true
     end)
     -- Lib activates only with a declared tab, so a failed window leaves an empty one.
     if not statusWindow then module.ui.tab(function() end) end
     presentationSurface("room guide", function()
-        import("mods/presentation/room_guide.lua").attach(module, runtime.roomGuideInspection)
+        import("mods/presentation/room_guide.lua").attach(module, runtime.roomGuideInspection,
+            function() return runtime.settings.enabled("showRoomGuide") end)
     end)
     presentationSurface("victory summary", function()
         import("mods/presentation/victory_summary.lua").attach(module, runtime.sessionInspection, slotOverview)

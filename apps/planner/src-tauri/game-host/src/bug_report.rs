@@ -9,6 +9,7 @@ use crate::atomic_file;
 use crate::external_url::ISSUE_PAGE_URL;
 use crate::game_module_install::{self, GameModuleStatus};
 use crate::game_module_package::ModulePackage;
+use crate::game_settings::{MAX_SETTINGS_BYTES, SETTINGS_FILE};
 use crate::game_target::{existing_directory, ResolvedTarget};
 use crate::plan_slots::{
     any_slot_file_name, module_config_dir, ACTIVE_SLOT_FILE, EVENT_SLOT, MAX_ACTIVE_SLOT_BYTES,
@@ -514,6 +515,12 @@ fn collect_slots(target: &ResolvedTarget, entries: &mut Vec<ReportEntry>) -> Sec
     ));
     files.push(bounded_entry(
         &directory,
+        SETTINGS_FILE,
+        MAX_SETTINGS_BYTES,
+        entries,
+    ));
+    files.push(bounded_entry(
+        &directory,
         SLOT_OVERVIEW_FILE,
         MAX_SLOT_OVERVIEW_BYTES,
         entries,
@@ -858,6 +865,12 @@ mod tests {
                 .join(ACTIVE_SLOT_FILE),
             &format!("invalid {profile_text}"),
         );
+        write(
+            &rom.join(CONFIG_DIRECTORY)
+                .join(MODULE_CONFIG_DIRECTORY)
+                .join(SETTINGS_FILE),
+            "{}",
+        );
         let destination = temporary.0.join("out").join("report.zip");
         fs::create_dir_all(destination.parent().unwrap()).unwrap();
         let written = create(
@@ -873,6 +886,7 @@ mod tests {
             "open-plan.runplanner.json",
             "plans-in-game/slot-2.runplanner.json",
             "plans-in-game/active-slot.json",
+            "plans-in-game/settings.json",
             "logs/LogOutput.log",
             "logs/backup/09-27-2026-12-22-27_LogOutput.log",
             "logs/lovely.log",
@@ -948,7 +962,7 @@ mod tests {
         };
         let entries = assemble_now();
         let recorded = files(&entries);
-        assert_eq!(recorded.len(), 15);
+        assert_eq!(recorded.len(), 16);
         assert_eq!(
             recorded[0],
             ("slot-0.runplanner.json".to_owned(), "missing".to_owned())
@@ -959,6 +973,10 @@ mod tests {
         );
         assert_eq!(
             recorded[14],
+            ("settings.json".to_owned(), "missing".to_owned())
+        );
+        assert_eq!(
+            recorded[15],
             ("slots.runplanner.json".to_owned(), "missing".to_owned())
         );
         write(

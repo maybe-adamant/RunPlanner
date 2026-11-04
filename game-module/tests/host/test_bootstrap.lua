@@ -6,7 +6,7 @@ TestHostBootstrap = {}
 -- failing names presentation imports whose construct or attach throws.
 local function bootstrap(failing)
     failing = failing or {}
-    local registered = { pathApi = {}, logs = {} }
+    local registered = { pathApi = { combine = function(base, name) return base .. "/" .. name end }, logs = {} }
     local bridge = { renderWindow = function() end, addMenuBar = function() end }
     local module = {
         data = { define = function() end },
@@ -41,12 +41,15 @@ local function bootstrap(failing)
         sessionInspection = function() end,
         nextOccurrence = function() end,
         inboxInspection = {}, activeSlot = {},
+        -- Each presentation surface reads its own option.
+        settings = { enabled = function(option) return option end },
     }
     local window = { header = function() end, tabs = { { id = "plan", label = "Plan", draw = function() end } } }
     local imports = {
         ["mods/host/data.lua"] = { buildStorage = function() return {} end },
-        ["mods/runtime/composition.lua"] = { bind = function(root, version)
-            lu.assertEquals({ root, version }, { "unused", "1.2.3" })
+        ["mods/runtime/composition.lua"] = { bind = function(root, version, legacyConfig)
+            lu.assertEquals({ root, version, legacyConfig },
+                { "unused", "1.2.3", "rom-config/adamantRunPlanner-Run_Planner.cfg" })
             return runtime
         end },
         ["mods/protocol/decoder.lua"] = protocol,
@@ -56,23 +59,27 @@ local function bootstrap(failing)
             lu.assertIs(pathApi, registered.pathApi)
             return slotOverview
         end },
-        ["mods/presentation/status_ui.lua"] = { attach = function(target, inbox, inspect, activeSlot, overview)
+        ["mods/presentation/status_ui.lua"] = { attach = function(target, inbox, inspect, activeSlot, settings, overview)
             lu.assertIs(target, module)
             lu.assertIs(inbox, runtime.inboxInspection)
             lu.assertIs(inspect, runtime.sessionInspection)
             lu.assertIs(activeSlot, runtime.activeSlot)
+            lu.assertIs(settings, runtime.settings)
             lu.assertIs(overview, slotOverview)
             target.ui.header(window.header)
             target.ui.tabs(window.tabs)
         end },
-        ["mods/presentation/highlights/highlights.lua"] = { create = function(nextOccurrence)
+        ["mods/presentation/highlights/highlights.lua"] = { create = function(nextOccurrence, guide, highlighted)
             lu.assertIs(nextOccurrence, runtime.nextOccurrence)
+            lu.assertIs(guide, runtime.roomGuideInspection)
+            lu.assertEquals(highlighted(), "highlightPlannedChoices")
             registered.expectedHighlights = highlights
             return highlights
         end },
-        ["mods/presentation/room_guide.lua"] = { attach = function(target, inspection)
+        ["mods/presentation/room_guide.lua"] = { attach = function(target, inspection, shown)
             lu.assertIs(target, module)
             lu.assertIs(inspection, runtime.roomGuideInspection)
+            lu.assertEquals(shown(), "showRoomGuide")
             registered.guide = true
         end },
         ["mods/presentation/victory_summary.lua"] = { attach = function(target, inspection, overview)
@@ -98,6 +105,7 @@ local function bootstrap(failing)
             game = {},
             log = { info = function(line) registered.logs[#registered.logs + 1] = line end },
             path = registered.pathApi,
+            paths = { config = function() return "rom-config" end },
             gui = {
                 add_imgui = function(callback) registered.window = callback end,
                 add_to_menu_bar = function(callback) registered.menu = callback end,

@@ -706,6 +706,50 @@ describe('Game screen', () => {
     expect(game.host.setActiveSlot).not.toHaveBeenCalled();
   });
 
+  it('shows the game module options as the game left them and saves each change', async () => {
+    const withSettings = (snapMode: boolean) =>
+      gameModuleStatus({
+        inspection: {
+          settings: {
+            state: 'present',
+            settings: { showRoomGuide: false, highlightPlannedChoices: true, snapMode },
+          },
+        },
+      });
+    const game = createFakeGameModuleHost(withSettings(false));
+    const { dialog, user } = await openGame(game.host);
+    const settings = within(dialog).getByRole('region', { name: 'In-game options' });
+    const option = (name: string) =>
+      within(settings).getByRole<HTMLInputElement>('checkbox', { name });
+    expect(option('Show room guide').checked).toBe(false);
+    expect(option('Highlight planned choices').checked).toBe(true);
+    expect(option('Snap back to the plan').checked).toBe(false);
+    // A change made in the game shows at the next status read.
+    game.host.status.mockResolvedValue(withSettings(true));
+    window.dispatchEvent(new Event('focus'));
+    await waitFor(() => expect(option('Snap back to the plan').checked).toBe(true));
+    game.host.status.mockResolvedValue(withSettings(false));
+    await user.click(option('Snap back to the plan'));
+    expect(game.host.setGameSetting).toHaveBeenCalledWith('snapMode', false);
+    await waitFor(() => expect(option('Snap back to the plan').checked).toBe(false));
+    game.host.setGameSetting.mockResolvedValueOnce({
+      status: 'nativeWrite',
+      message: 'settings file must be a regular file',
+      blockers: [],
+    });
+    await user.click(option('Show room guide'));
+    expect(await within(settings).findByRole('alert')).toHaveProperty(
+      'textContent',
+      'Couldn’t save the option: settings file must be a regular file',
+    );
+    expect(option('Show room guide').checked).toBe(false);
+  });
+
+  it('offers no options until the game location can be read', async () => {
+    const { dialog } = await openGame(createFakeGameModuleHost(unset()).host);
+    expect(within(dialog).queryByRole('region', { name: 'In-game options' })).toBeNull();
+  });
+
   it('explains that game management needs the desktop application', async () => {
     const { user } = renderPlannerForInteraction({ startWithProject: false });
     const home = screen.getByRole('navigation', { name: 'Home' });

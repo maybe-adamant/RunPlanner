@@ -37,6 +37,23 @@ local function slotFile(slot)
     return file
 end
 
+-- settings.json as the window sees it; a write fails while failing is set.
+local function settingsStore(values)
+    local store = { values = values or {}, writes = {}, reads = 0, failing = false }
+    for _, option in ipairs({ "showRoomGuide", "highlightPlannedChoices", "snapMode" }) do
+        store.values[option] = store.values[option] == true
+    end
+    function store.read() store.reads = store.reads + 1; return store.values, "present" end
+    function store.current() return store.values end
+    function store.write(option, enabled)
+        store.writes[#store.writes + 1] = { option, enabled }
+        if store.failing then return false, "locked" end
+        store.values[option] = enabled
+        return true
+    end
+    return store
+end
+
 local function overviewStore(entries, present)
     local store = { entries = entries or {}, present = present or {}, reads = 0 }
     function store.read() store.reads = store.reads + 1; return store.entries, store.present end
@@ -86,14 +103,15 @@ local function harness(options)
     local h = {
         inbox = options.inbox or fakeInbox(options.slots),
         file = options.file or slotFile(options.slot or 1),
+        settings = options.settings or settingsStore(),
         overview = options.overview or overviewStore(options.entries, options.present),
         snapshot = options.snapshot or { state = "inactive", reason = "not-started" },
         tab = options.tab or "Plan", debug = options.debug == true,
-        field = viewField(1), picks = {}, presses = {}, now = 0,
+        field = viewField(1), picks = {}, presses = {}, toggles = {}, now = 0,
     }
     h.inspections = 0
     local ui = statusUi.bind(h.inbox, function() h.inspections = h.inspections + 1; return h.snapshot end, h.file,
-        h.overview,
+        h.settings, h.overview,
         function() return h.now end)
     local lines, tabs, dropdown, checkboxes
     h.drawn = {}
@@ -129,7 +147,11 @@ local function harness(options)
         end,
         checkbox = function(target, opts)
             seen(opts.label)
-            checkboxes[#checkboxes + 1] = { target = target, opts = opts }
+            checkboxes[#checkboxes + 1] = { target = target, opts = opts, shown = target:read() }
+            if h.toggles[opts.id] == nil then return false end
+            target:write(h.toggles[opts.id])
+            h.toggles[opts.id] = nil
+            return true
         end,
         button = function(label, opts) seen(label); return table.remove(h.presses, 1) == opts.id end,
     }
@@ -185,15 +207,12 @@ function TestStatusUi.testStorageIncludesTheViewSlotAndDefaultDisabledGuidanceSe
     lu.assertEquals(storage[1], {
         type = "int", alias = "ActivePlanSlot", default = 1, min = 0, max = 12, persist = false,
     })
-    lu.assertEquals(storage[2].alias, "ShowRoomGuide")
-    lu.assertFalse(storage[2].default)
-    lu.assertEquals(storage[3].alias, "HighlightPlannedChoices")
-    lu.assertFalse(storage[3].default)
-    -- Snap mode changes gameplay, so it is persisted and hashed like the guidance options.
-    lu.assertEquals(storage[4].alias, "SnapMode")
-    lu.assertFalse(storage[4].default)
-    lu.assertNil(storage[4].persist)
-    lu.assertNil(storage[4].hash)
+    -- The options live in settings.json, which the planner also writes, never in Lib config.
+    for index, alias in ipairs({ "ShowRoomGuide", "HighlightPlannedChoices", "SnapMode" }) do
+        lu.assertEquals(storage[index + 1].alias, alias)
+        lu.assertFalse(storage[index + 1].default)
+        lu.assertFalse(storage[index + 1].persist)
+    end
     lu.assertNil(hostData.buildStatus)
 end
 
@@ -213,6 +232,29 @@ function TestStatusUi.testPickerLabelsSlotsFromTheOverviewAndSlotFiles()
     lu.assertEquals(h.checkboxes[1].opts, { id = "show_room_guide", label = "Show room guide" })
     lu.assertIs(h.checkboxes[1].target, h.guide)
     lu.assertEquals(h.checkboxes[2].opts, { id = "highlight_planned_choices", label = "Highlight planned choices" })
+end
+
+function TestStatusUi.testOptionCheckboxesMirrorTheSettingsFileAndWriteOneOptionEach()
+    local h = harness({ settings = settingsStore({ snapMode = true }) })
+    h.draw()
+    lu.assertEquals({ h.checkboxes[1].shown, h.checkboxes[2].shown, h.checkboxes[3].shown }, { false, false, true })
+    lu.assertEquals(h.checkboxes[3].opts, { id = "snap_mode", label = "Snap back to the plan" })
+    -- A change the planner made shows on the next draw.
+    h.settings.values.showRoomGuide = true
+    h.draw()
+    lu.assertTrue(h.checkboxes[1].shown)
+    h.toggles.highlight_planned_choices = true
+    h.draw()
+    lu.assertEquals(h.settings.writes, { { "highlightPlannedChoices", true } })
+    lu.assertTrue(h.highlight.value)
+    h.settings.failing = true
+    h.toggles.snap_mode = false
+    lu.assertStrContains(h.draw(), "Could not save the option.")
+    lu.assertTrue(h.snap.value)
+    h.settings.failing = false
+    h.toggles.snap_mode = false
+    lu.assertNotStrContains(h.draw(), "Could not save the option.")
+    lu.assertFalse(h.settings.values.snapMode)
 end
 
 local EVENT = { id = "2026-w42-staff", title = "Week 42: Staff sprint", endsAt = "2026-10-19T00:00:00Z" }

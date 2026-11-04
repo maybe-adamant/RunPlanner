@@ -3,13 +3,13 @@ local safeHooks = type(import) == "function" and import("mods/host/presentation_
     or require("mods.host.presentation_hooks")
 local guidance = {}
 
-function guidance.create()
+-- highlighted reads the player's Highlight planned choices option.
+function guidance.create(highlighted)
     local instance = {}
     local screens = setmetatable({}, { __mode = "k" })
     local sources = setmetatable({}, { __mode = "k" })
-    local function enabled(runtime, state)
-        return state and state.state == "synchronized" and runtime and runtime.data
-            and runtime.data.read("HighlightPlannedChoices") == true
+    local function enabled(_, state)
+        return state and state.state == "synchronized" and highlighted() == true
     end
 
     local function hide(screen)

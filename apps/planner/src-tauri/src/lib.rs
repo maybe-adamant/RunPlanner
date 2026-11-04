@@ -39,6 +39,7 @@ pub fn run() {
             game_module_commands::game_plan_rebuild,
             game_module_commands::game_slot_source_read,
             game_module_commands::game_active_slot_set,
+            game_module_commands::game_setting_set,
             game_module_commands::game_slot_clear,
             game_module_commands::game_slot_restore,
             catalog_feed::catalog_feed_refresh,

@@ -13,8 +13,9 @@ function TestGuidanceWorld:setUp()
     end
     _G.Destroy = function(args) self.destroyed[#self.destroyed + 1] = args.Ids[1] end
     self.route = { next = function(value) return value.nextTarget end }
-    self.guidance = world.create(self.route.next)
-    self.runtime = { data = { read = function() return true end } }
+    self.highlighted = true
+    self.guidance = world.create(self.route.next, function() return self.highlighted end)
+    self.runtime = {}
     self.state = { state = "synchronized", route = self.route }
 end
 
@@ -67,12 +68,13 @@ function TestGuidanceWorld:testMapSubiconsFollowNextVisitAndPreserveNativeIcons(
     self.guidance.hub(self.runtime, self.state, { first, second }, hub)
     lu.assertIs(self.guidance.mapIcons(self.runtime, self.state, first, native), native)
     lu.assertEquals(#self.guidance.mapIcons(self.runtime, self.state, second, native), 2)
-    self.runtime.data.read = function() return false end
+    self.highlighted = false
     lu.assertIs(self.guidance.mapIcons(self.runtime, self.state, second, native), native)
 end
 
 function TestGuidanceWorld:testMapHookOnlyAddsIconsDuringNativeMapConstruction()
-    local highlights = require("mods.presentation.highlights.highlights").create(self.route.next)
+    local highlights = require("mods.presentation.highlights.highlights").create(self.route.next, nil,
+        function() return self.highlighted end)
     local callbacks = {}
     highlights.attach({ hooks = { wrap = function(name, _, callback) callbacks[name] = callback end } },
         function() return self.state end)
@@ -99,10 +101,10 @@ function TestGuidanceWorld:testWheelRetainsSelectedOfferAcrossOtherPreviewAndCle
     self.guidance.wheel(self.runtime, self.state, selected, "offer1")
     self.guidance.wheel(self.runtime, self.state, other, "offer1")
     lu.assertEquals(#self.created, 1)
-    self.runtime.data.read = function() return false end
+    self.highlighted = false
     self.guidance.refresh(self.runtime, self.state)
     lu.assertEquals(self.destroyed, { 101 })
-    self.runtime.data.read = function() return true end
+    self.highlighted = true
     self.guidance.refresh(self.runtime, self.state)
     lu.assertEquals(#self.created, 2)
     lu.assertIs(self.created[2].Door, selected)
@@ -111,10 +113,10 @@ end
 function TestGuidanceWorld:testDisabledNormalDoorRetainsItsExactBoundObjectForEnable()
     local target = { id = "next", gameName = "F_Combat02" }
     local chosen = { __runPlannerExecutionDoorTarget = "next", RewardPreviewIconIds = { 2 }, AdditionalIcons = {} }
-    self.runtime.data.read = function() return false end
+    self.highlighted = false
     self.guidance.doors(self.runtime, self.state, { chosen }, target, { gameName = "F_Combat01" })
     lu.assertEquals(self.created, {})
-    self.runtime.data.read = function() return true end
+    self.highlighted = true
     self.guidance.refresh(self.runtime, self.state)
     lu.assertIs(self.created[1].Door, chosen)
 end
@@ -140,7 +142,8 @@ end
 
 function TestGuidanceWorld:testGlobalPreviewAndRoomHooksRetireMarkersBeforeNativeTeardown()
     local callbacks = {}
-    local guide = require("mods.presentation.highlights.highlights").create(self.route.next)
+    local guide = require("mods.presentation.highlights.highlights").create(self.route.next, nil,
+        function() return self.highlighted end)
     guide.attach({ hooks = { wrap = function(name, _, callback) callbacks[name] = callback end } },
         function() return self.state end)
     local door = { __runPlannerExecutionDoorTarget = "next", RewardPreviewIconIds = { 20 },
@@ -195,6 +198,31 @@ function TestGuidanceWorld:testEnteringSpecialGatesRemainsExcludedByNavigationPa
         lu.assertNil(gate.AdditionalIcons)
         lu.assertEquals(self.created, {})
     end
+end
+
+function TestGuidanceWorld:testAnOptionChangeOutsideACommitRedrawsTheMarkers()
+    local interval
+    local guide = require("mods.presentation.highlights.highlights").create(self.route.next, nil,
+        function() return self.highlighted end)
+    guide.attach({
+        hooks = { wrap = function() end },
+        overlays = { onInterval = function(name, seconds, callback)
+            if name == "run-planner-highlight-option" then interval = { seconds = seconds, callback = callback } end
+        end },
+    }, function() return self.state end)
+    local target = { id = "next", gameName = "F_Combat02" }
+    local chosen = { __runPlannerExecutionDoorTarget = "next", RewardPreviewIconIds = { 2 }, AdditionalIcons = {} }
+    guide.doors(self.runtime, self.state, { chosen }, target, { gameName = "F_Combat01" })
+    lu.assertEquals(#self.created, 1)
+    lu.assertEquals(interval.seconds, 0.25)
+    interval.callback(nil, self.runtime)
+    lu.assertEquals(self.destroyed, {})
+    self.highlighted = false
+    interval.callback(nil, self.runtime)
+    lu.assertEquals(self.destroyed, { 101 })
+    self.highlighted = true
+    interval.callback(nil, self.runtime)
+    lu.assertEquals(#self.created, 2)
 end
 
 return TestGuidanceWorld

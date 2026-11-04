@@ -33,8 +33,9 @@ victory summary and planned-choice markers.
 
 `src/main.lua` wires each presentation surface through `presentationSurface`,
 which logs and skips a surface that fails to load or attach, and passes the
-session, inbox and route inspection views it reads and, for the status window's
-slot picker, the active-slot write and inbox load capabilities. Surfaces
+session, inbox and route inspection views it reads, each surface's option
+reader and, for the status window, the active-slot and settings writes and the
+inbox load capability. Surfaces
 register hooks and overlay callbacks through
 `src/mods/host/presentation_hooks.lua`, which runs native base with its
 original arguments, returns base's results unchanged except the allowlisted
@@ -43,7 +44,8 @@ so it does not reach the native chain or execution. Execution notifies the
 planned-choice markers through the instance it is given.
 
 The status window's only player actions are its slot picker, which writes
-`active-slot.json`, and **Load**, which decodes the shown slot. Otherwise it
+`active-slot.json`, its option checkboxes, each of which writes one option of
+`settings.json`, and **Load**, which decodes the shown slot. Otherwise it
 never decodes a plan: it describes slots from the
 [slot overview](../docs/design/PLAN_SLOTS_AND_PUBLICATION.md#slot-overview),
 which it reads with the active slot when it opens, on **Load** and after its

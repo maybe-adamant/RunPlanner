@@ -34,6 +34,7 @@ describe('Tauri game module host adapter', () => {
     await host.rebuildSlot(3, '{"format":"run-planner-execution"}', '{"source":1}', summary);
     await host.setActiveSlot(2);
     await host.setActiveSlot(0);
+    await host.setGameSetting('snapMode', true);
     await host.clearSlot(4);
     const cleared = { slot: 4, plan: '{}', source: null, summary: null, wasActive: true } as const;
     await host.restoreSlot(cleared);
@@ -76,6 +77,7 @@ describe('Tauri game module host adapter', () => {
       ],
       ['game_active_slot_set', { slotNumber: 2 }],
       ['game_active_slot_set', { slotNumber: 0 }],
+      ['game_setting_set', { option: 'snapMode', enabled: true }],
       ['game_slot_clear', { slotNumber: 4 }],
       ['game_slot_restore', { cleared }],
       ['external_open_url', { url: 'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/' }],

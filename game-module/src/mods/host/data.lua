@@ -1,5 +1,8 @@
 local data = {}
 
+-- Every alias mirrors a shared file the planner also writes: ActivePlanSlot
+-- active-slot.json and the options settings.json. None is kept in Lib config.
+
 function data.buildStorage()
     return {
         {
@@ -16,6 +19,7 @@ function data.buildStorage()
             label = "Show room guide",
             tooltip = "Show read-only planned room instructions on the HUD.",
             default = false,
+            persist = false,
         },
         {
             type = "bool",
@@ -23,6 +27,7 @@ function data.buildStorage()
             label = "Highlight planned choices",
             tooltip = "Mark the next planned door or choice when it is available.",
             default = false,
+            persist = false,
         },
         {
             type = "bool",
@@ -30,6 +35,7 @@ function data.buildStorage()
             label = "Snap back to the plan",
             tooltip = "After the run goes out of sync, take the next door back into the planned route and restore the planned build there.",
             default = false,
+            persist = false,
         },
     }
 end

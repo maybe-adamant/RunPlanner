@@ -43,7 +43,8 @@ something the plan didn't expect. The mod stops steering and normal gameplay
 continues; **Current Run** says where it happened and what differed.
 
 **Show room guide** and **Highlight planned choices** on the **Plan** tab are
-off by default. The guide shows read-only instructions for the current planned
+off by default; these and **Snap back to the plan** are also in the app's
+**Game** tab, and a change in either place shows in the other. The guide shows read-only instructions for the current planned
 room; highlights mark the next planned exit or choice but never select it.
 
 **Snap back to the plan**, also off by default, picks the plan up again after

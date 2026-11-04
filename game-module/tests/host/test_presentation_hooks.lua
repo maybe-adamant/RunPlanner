@@ -68,7 +68,7 @@ end
 function TestPresentationHooks.testThrowingScreenHookStillReturnsTheNativeResult()
     withLog(function()
         local wrapped, module = captureModule()
-        highlights.create(function() end).attach(module, function() error("state unavailable") end)
+        highlights.create(function() end, nil, function() return true end).attach(module, function() error("state unavailable") end)
         local screen, loot, args, received = { Source = {} }, {}, {}, nil
         local result = wrapped.CreateBoonLootButtons(nil, {}, function(...)
             received = table.pack(...)
@@ -114,7 +114,7 @@ end
 
 function TestPresentationHooks.testExecutionFacingEntryPointsContainFailures()
     withLog(function(logs)
-        local instance = highlights.create(function() error("route unavailable") end)
+        local instance = highlights.create(function() error("route unavailable") end, nil, function() return true end)
         lu.assertNil(instance.hub({}, { state = "synchronized", route = {} }, {}, { slots = {} }))
         lu.assertEquals(#logs, 1)
         local guarded = safeHooks.guard("planted-overlay", function(_, _, overlay) overlay.missing() end)

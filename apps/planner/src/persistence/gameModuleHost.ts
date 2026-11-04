@@ -81,6 +81,24 @@ export interface GameTargetInspection {
   readonly eventSlot: GameEventSlot;
   /** `active-slot.json`; a missing or invalid file names no slot. */
   readonly activeSlot: GameActiveSlot;
+  /** `settings.json`, the player's game module options; a missing or invalid file holds none. */
+  readonly settings: GameSettingsFile;
+}
+
+/** The game module options the player sets in the game or here. */
+export type GameSettingOption = 'showRoomGuide' | 'highlightPlannedChoices' | 'snapMode';
+
+export type GameSettings = { readonly [Option in GameSettingOption]: boolean };
+
+export type GameSettingsFile =
+  | { readonly state: 'present'; readonly settings: GameSettings }
+  | { readonly state: 'missing' }
+  | { readonly state: 'invalid' };
+
+export interface GameSettingChange {
+  readonly status: 'saved' | 'blocked' | 'nativeWrite';
+  readonly message: string;
+  readonly blockers: readonly GamePublicationBlocker[];
 }
 
 export type GameActiveSlot =
@@ -277,6 +295,11 @@ export interface GameModuleHost extends GamePlanPublisher, GameSlotRebuildHost {
   readonly remove: () => Promise<GameModuleRemoveResult>;
   /** Makes a slot that holds a plan the one the game module plays next. */
   readonly setActiveSlot: (slotNumber: GameActiveSlotNumber) => Promise<GameActiveSlotSetting>;
+  /** Turns one game module option on or off, keeping the others as the file holds them. */
+  readonly setGameSetting: (
+    option: GameSettingOption,
+    enabled: boolean,
+  ) => Promise<GameSettingChange>;
   /** Removes a plan slot with its source and summary; an active slot hands over to slot 1. */
   readonly clearSlot: (slotNumber: GamePlanSlotNumber) => Promise<GameSlotClearing>;
   /** Writes a cleared slot back while it is still empty, active again when it was. */
@@ -353,6 +376,8 @@ export function createTauriGameModuleHost(
       }),
     setActiveSlot: (slotNumber: GameActiveSlotNumber) =>
       environment.invoke<GameActiveSlotSetting>('game_active_slot_set', { slotNumber }),
+    setGameSetting: (option: GameSettingOption, enabled: boolean) =>
+      environment.invoke<GameSettingChange>('game_setting_set', { option, enabled }),
     clearSlot: (slotNumber: GamePlanSlotNumber) =>
       environment.invoke<GameSlotClearing>('game_slot_clear', { slotNumber }),
     restoreSlot: (cleared: GameClearedSlot) =>

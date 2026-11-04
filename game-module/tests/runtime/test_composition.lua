@@ -72,6 +72,7 @@ function TestRuntimeComposition.testGuideInspectionProjectsActualRoomCompletionW
             return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
+        if path == "mods/host/settings.lua" then return { create = function() return { seedFromLegacy = function() end } end } end
         if path == "mods/host/inbox.lua" then
             return { create = function() return {
                 activeSlot = function() return 1 end, select = function() end, load = function() end,
@@ -98,16 +99,13 @@ function TestRuntimeComposition.testGuideInspectionProjectsActualRoomCompletionW
         createTable = function(name) tables[name] = true end,
         onCommit = function(callback) callbacks.commit = callback end,
         onInterval = function(_, _, callback) callbacks.interval = callback end,
-    } }, runtime.roomGuideInspection)
+    } }, runtime.roomGuideInspection, function() return true end)
     local overlay = {
         setLine = function() end,
         setTable = function(_, rows) tables.rows = rows end,
         refreshOwned = function() end,
     }
-    local overlayRuntime = { data = { read = function(alias)
-        lu.assertEquals(alias, "ShowRoomGuide")
-        return true
-    end } }
+    local overlayRuntime = {}
     callbacks.interval(nil, overlayRuntime, overlay)
     lu.assertEquals(tables.rows, { { instruction = "Fountain" } })
     local handle = assert(roomSession.resolve(active, function(index) return index.owner["guide-owner"] end, "test"))
@@ -148,6 +146,7 @@ function TestRuntimeComposition.testFirstMismatchLogIncludesFullInventoryAndOccu
             return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
+        if path == "mods/host/settings.lua" then return { create = function() return { seedFromLegacy = function() end } end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return { activeSlot = function() return 1 end, select = function() end,
@@ -213,6 +212,7 @@ function TestRuntimeComposition.testFaultLogIncludesBindingContextAndEachStackLi
             return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
+        if path == "mods/host/settings.lua" then return { create = function() return { seedFromLegacy = function() end } end } end
         if path == "mods/host/inbox.lua" then return { create = function() return {} end } end
         if path == "mods/runtime/session.lua" then
             return { create = function() return state end, steering = function() return false end,
@@ -280,6 +280,7 @@ function TestRuntimeComposition.testFieldsDiagnosticLogsItsCompletedSnapshotWith
             return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
+        if path == "mods/host/settings.lua" then return { create = function() return { seedFromLegacy = function() end } end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return { activeSlot = function() return 1 end, select = function() end,
@@ -342,6 +343,7 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
             return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
+        if path == "mods/host/settings.lua" then return { create = function() return { seedFromLegacy = function() end } end } end
         if path == "mods/host/inbox.lua" then return { create = function() return {} end } end
         if path == "mods/runtime/session.lua" then
             return { create = function() return state end, steering = function() return false end,
@@ -455,6 +457,7 @@ function TestRuntimeComposition.testRuntimeCompositionSharesOneHexTreeAcrossLoad
             return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
+        if path == "mods/host/settings.lua" then return { create = function() return { seedFromLegacy = function() end } end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return {
@@ -537,6 +540,7 @@ function TestRuntimeComposition.testCompositionPassesRouteAndRoomAuthoritiesToHo
             return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
+        if path == "mods/host/settings.lua" then return { create = function() return { seedFromLegacy = function() end } end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return {
@@ -624,6 +628,7 @@ function TestRuntimeComposition.testAdmissionReadsTheActiveSlotFileEachTime()
         if importPath == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if importPath == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. importPath))() end
         if importPath == "mods/host/active_slot.lua" then return activeSlotModule end
+        if importPath == "mods/host/settings.lua" then return { create = function() return { seedFromLegacy = function() end } end } end
         if importPath == "mods/protocol/json.lua" or importPath == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
@@ -816,6 +821,7 @@ function TestRuntimeComposition.testAdmittedModifierCompositionUsesFrozenRunAndP
         if path == 'mods/run_modifiers/hooks.lua' then return modifierHooks end
         if path == 'mods/protocol/decoder.lua' then return protocol end
         if path == 'mods/host/active_slot.lua' then return { create = function() return { read = function() return 1 end } end } end
+        if path == 'mods/host/settings.lua' then return { create = function() return { seedFromLegacy = function() end } end } end
         if path == 'mods/host/inbox.lua' then return { create = function() return {
             load = function() return true, preview end, plan = function() return preview end,
             status = function() return {} end,
@@ -880,6 +886,7 @@ local function enabledToggleRun()
         end
         if path == 'mods/run_modifiers/hooks.lua' then return modifierHooks end
         if path == 'mods/host/active_slot.lua' then return { create = function() return { read = function() return 1 end } end } end
+        if path == 'mods/host/settings.lua' then return { create = function() return { seedFromLegacy = function() end } end } end
         if path == 'mods/host/inbox.lua' then return { create = function() return {} end } end
         if path == 'mods/spells/hex_tree.lua' then return { create = function() return { attach = function() end } end } end
         if path == 'mods/room/timeline/encounters/thessaly.lua' then return { create = shipCombatStub } end

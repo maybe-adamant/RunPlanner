@@ -614,7 +614,7 @@ function TestRoomGuide.testOverlayRefreshesOnlyOnProjectionChangesAndClearsOnTog
     guide.attach(module, function()
         if failInspection then error("presentation failure") end
         return snapshot
-    end)
+    end, function() return enabled end)
     lu.assertNotNil(lines["room-guide-header"])
     lu.assertEquals(lines["room-guide-header"].hudVisibility, "independent")
     lu.assertEquals(lines["room-guide-footer"].hudVisibility, "independent")
@@ -625,7 +625,7 @@ function TestRoomGuide.testOverlayRefreshesOnlyOnProjectionChangesAndClearsOnTog
         setTable = function(name, value) tables[name].value = value end,
         refreshOwned = function() refreshes = refreshes + 1 end,
     }
-    local runtime = { data = { read = function() return enabled end } }
+    local runtime = {}
     callbacks.commit(nil, runtime, overlay)
     callbacks.interval(nil, runtime, overlay)
     lu.assertEquals(callbacks.seconds, 0.25)

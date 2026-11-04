@@ -221,6 +221,12 @@ on window focus and after every game action.
 
 - **Game module:** its status, install or update as the one primary action,
   and its facts grouped into location, one overall state and ordered steps.
+- **In-game options:** the module's three options as
+  [`settings.json`](PLAN_SLOTS_AND_PUBLICATION.md#options) holds them, each a
+  checkbox in the game window's order and wording with a one-line description.
+  A change writes that option at once and reads the status again; a change the
+  game made shows at the next status read. Shown while the target's files can
+  be read.
 - **Game location:** the platform's r2modman profiles (none on macOS), a
   folder picker and Forget. Switching away from a planner install asks whether
   to keep or remove that copy; replacing a copy the planner did not install,

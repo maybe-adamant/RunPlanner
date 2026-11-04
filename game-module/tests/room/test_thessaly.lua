@@ -291,7 +291,8 @@ function TestThessaly.testRealGuidanceSurvivesSecondOfferAndRetiresBeforeAnyNati
     _G.Destroy = function() end
     for _, count in ipairs({ 1, 2 }) do
         for _, selected in ipairs(count == 1 and { 1 } or { 1, 2 }) do
-            local guide = require("mods.presentation.highlights.highlights").create(function() end)
+            local guide = require("mods.presentation.highlights.highlights").create(function() end, nil,
+                function() return true end)
             runWheel(count, "offer1", selected, guide, function(obstacles, used)
                 if used then
                     for _, obstacle in ipairs(obstacles) do
