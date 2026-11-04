@@ -16,3 +16,7 @@ waives each check.
 - [ ] After a mismatch, buy a Hermes order at a Shrine in the out-of-sync room
       and leave. Snap removes the order at that exit, and the next save has no
       `StorePendingDeliveryItem`.
+- [ ] After a mismatch, take an unplanned god's boon and leave so snap installs
+      the planned god's boon instead. The next save's `LootTypeHistory` holds
+      the planned god and not the unplanned one, and a later shop or god draw
+      offers only gods the plan allows.

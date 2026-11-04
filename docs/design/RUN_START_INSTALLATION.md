@@ -396,7 +396,11 @@ at each room exit. Off, a desynchronized run is unchanged.
   `StartRoom` then replay what
   follows the frame: room-counted traits, Echo, Silken Sash, shop completions,
   the Well spark and the Hub board draws. Health is clamped, Death Defiance and
-  armor stay live, and only the engine's modeled traits are restored. A room
+  armor stay live, and only the engine's modeled traits are restored. The
+  run's interacted gods, the god loots in `LootTypeHistory` that the god cap
+  and god-pool eligibility read, are set to the frame's god pool: an unplanned
+  god is removed and a missing planned one is recorded once, while other loot
+  counts and use records stay native. A room
   that is not the occurrence being left, a restored main room, and a Hub
   without a departure frame are not corrected; the next room's exit corrects
   the hero. Each out-of-sync exit logs its first mismatch before resuming and

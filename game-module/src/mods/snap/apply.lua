@@ -349,6 +349,22 @@ local function wellFamily(frame, expected)
     end
 end
 
+-- The run's interacted gods: an unplanned god loot leaves LootTypeHistory and a
+-- planned one missing from it is recorded once; other loot counts stay native.
+local function interactedGods(frame, expected)
+    if matches(expected, "interactedGods") then return end
+    local history = run().LootTypeHistory or {}
+    run().LootTypeHistory = history
+    local planned = set(frame.godPool.acquiredSourceKeys)
+    for name in pairs(history) do
+        local loot = _G.LootData[name]
+        if type(loot) == "table" and loot.GodLoot and not planned[name] then history[name] = nil end
+    end
+    for name in pairs(planned) do
+        if (history[name] or 0) < 1 then history[name] = 1 end
+    end
+end
+
 -- Per-instance ledgers the frames carry, and the run's reward priorities.
 local function ledgers(frame)
     for _, row in ipairs(frame.retainedEffects.steadyGrowth) do
@@ -534,6 +550,7 @@ function snap.apply(frame, context)
         modeled(frame)
         chaosFamily(frame, expected)
         wellFamily(frame, expected)
+        interactedGods(frame, expected)
         ledgers(frame)
         hex(frame, context or {})
         practice.rewardStores({ rewardStores = frame.rewardStores })

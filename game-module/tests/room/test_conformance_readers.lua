@@ -21,7 +21,8 @@ function TestConformanceReaders:tearDown()
 end
 
 local function admissionFixture()
-    local priorGame, priorRun, priorTraitCount = _G.GameState, _G.CurrentRun, _G.GetTraitCount
+    local priorGame, priorRun, priorTraitCount, priorLoot = _G.GameState, _G.CurrentRun, _G.GetTraitCount,
+        _G.LootData
     local entry = {
         traits = {
             equipped = {
@@ -37,6 +38,7 @@ local function admissionFixture()
         hexNodes = { nodes = {}, investedNodes = {} },
         artificer = json.null,
         chaos = { active = {}, matured = {} },
+        godPool = { acquiredSourceKeys = { "ZeusUpgrade" }, effectiveSourceKeys = {}, capNarrowed = false },
         retainedEffects = {
             steadyGrowth = {},
             hermesShrineDeliveries = {},
@@ -60,6 +62,8 @@ local function admissionFixture()
     }
     local occurrence = { diagnostics = { roomEntered = entry } }
     _G.GameState = {}
+    _G.LootData = { ZeusUpgrade = { GodLoot = true }, PoseidonUpgrade = { GodLoot = true },
+        HermesUpgrade = { GodLoot = false } }
     _G.CurrentRun = {
         Hero = {
             TraitDictionary = { BaseStaffAspect = true },
@@ -67,10 +71,11 @@ local function admissionFixture()
             Elements = { Earth = 2 },
         },
         RewardPriorities = {},
+        LootTypeHistory = { ZeusUpgrade = 2, HermesUpgrade = 1 },
     }
     _G.GetTraitCount = function() return 2 end
     return occurrence, function()
-        _G.GameState, _G.CurrentRun, _G.GetTraitCount = priorGame, priorRun, priorTraitCount
+        _G.GameState, _G.CurrentRun, _G.GetTraitCount, _G.LootData = priorGame, priorRun, priorTraitCount, priorLoot
     end
 end
 
@@ -267,7 +272,7 @@ function TestConformanceReaders.testStartRoomSelfCheckDispatchesEveryNamedFamily
     for _, kind in ipairs({
         "traitInventory", "elementCounts", "steadyGrowth", "chaos", "keepsakeEffects",
         "rewardPriorities", "pathOfStars", "forfeit", "stygianWell",
-        "keepsakes", "equipment", "arcana", "vows", "chaosValues", "hexNodes", "hermesDeliveries",
+        "keepsakes", "equipment", "arcana", "vows", "chaosValues", "hexNodes", "hermesDeliveries", "interactedGods",
     }) do
         lu.assertEquals(calls[kind], 1, kind)
     end
@@ -309,6 +314,17 @@ function TestConformanceReaders.testFrameCheckReadsPendingHermesOrdersAsAMultise
     lu.assertTrue(planned)
     lu.assertNil(stale)
     lu.assertEquals(usesMismatch.observed.orders, { "BlindBoxLoot:8", "SpellDrop:8" })
+end
+
+function TestConformanceReaders.testFrameCheckReadsTheInteractedGodLoots()
+    local occurrence, restore = admissionFixture()
+    _G.CurrentRun.LootTypeHistory.PoseidonUpgrade = 1
+    local ok, mismatch = admission.verify(occurrence)
+    restore()
+    lu.assertNil(ok)
+    lu.assertEquals({ mismatch.checkpoint, mismatch.expected, mismatch.observed },
+        { "practice-start:interactedGods", { "ZeusUpgrade" }, { "PoseidonUpgrade", "ZeusUpgrade" } })
+    lu.assertFalse(readers.supports("interactedGods"))
 end
 
 function TestConformanceReaders.testAPendingSpellDropWithoutAnOrderOrUseIsStale()

@@ -158,6 +158,12 @@ end
 
 conformance.hermesDeliveriesExpected = hermesDeliveries
 
+-- The gods the run has interacted with, as native god-cap and god-pool
+-- eligibility count them. A module-internal check, not a published fact kind.
+local function interactedGods(state)
+    return sorted(field(state, "godPool", "acquiredSourceKeys"))
+end
+
 local readers = {
     elementCounts = function(state) return field(state, "traits", "elements") end,
     steadyGrowth = function(state) return field(state, "retainedEffects", "steadyGrowth") end,
@@ -180,6 +186,7 @@ conformance.admissionKinds = {
     "traitInventory", "elementCounts", "steadyGrowth", "chaos", "keepsakeEffects",
     "rewardPriorities", "pathOfStars", "forfeit", "stygianWell",
     "keepsakes", "equipment", "arcana", "vows", "chaosValues", "hexNodes", "hermesDeliveries",
+    "interactedGods",
 }
 
 local function traitInventoryEntryExpected(entry)
@@ -198,6 +205,7 @@ end
 local function admissionStateValue(entry, kind)
     if kind == "traitInventory" then return traitInventoryEntryExpected(entry) end
     if kind == "hermesDeliveries" then return hermesDeliveries(entry) end
+    if kind == "interactedGods" then return interactedGods(entry) end
     return readers[kind](entry)
 end
 

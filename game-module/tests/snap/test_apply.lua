@@ -30,6 +30,7 @@ local function frame()
         hexNodes = { nodes = {}, investedNodes = {} },
         rewardStores = {},
         artificer = json.null,
+        godPool = { acquiredSourceKeys = {}, effectiveSourceKeys = {}, capNarrowed = false },
         retainedEffects = {
             steadyGrowth = {}, hermesShrineDeliveries = {},
             keepsakes = {
@@ -77,6 +78,10 @@ local function world(traits)
         },
             { __index = function() return {} end }),
         MetaUpgradeCardData = {}, MetaUpgradeData = {}, RewardStoreData = {},
+        LootData = {
+            ApolloUpgrade = { GodLoot = true }, PoseidonUpgrade = { GodLoot = true },
+            ZeusUpgrade = { GodLoot = true }, HermesUpgrade = { GodLoot = false },
+        },
         PersistentTraitKeys = { "Activated", "TraitListTextString", "SacrificedTraitName", "UpgradedTraitName",
             "Uses", "RemainingUses", "ShrineManaReserve", "CurrentArmor", "RemainingBlocks", "StoredGold" },
         GetProcessedTraitData = function(args)
@@ -347,6 +352,32 @@ function TestSnapApply.testClearsAStalePendingSpellDropWhenTheOrdersAlreadyMatch
     restore()
     lu.assertFalse(run.PendingSpellDrop)
     lu.assertEquals(names(hero), {})
+end
+
+-- Native god cap and god-pool eligibility count LootTypeHistory's god loots.
+function TestSnapApply.testRewritesTheInteractedGodsKeepingOtherLootCounts()
+    local _, _, restore = world()
+    local run = _G.CurrentRun
+    run.LootTypeHistory = { ZeusUpgrade = 4, PoseidonUpgrade = 1, HermesUpgrade = 1, WeaponUpgrade = 2 }
+    local value = frame()
+    value.godPool.acquiredSourceKeys = { "ApolloUpgrade", "ZeusUpgrade" }
+    lu.assertTrue(apply(value))
+    restore()
+    lu.assertEquals(run.LootTypeHistory,
+        { ZeusUpgrade = 4, ApolloUpgrade = 1, HermesUpgrade = 1, WeaponUpgrade = 2 })
+end
+
+function TestSnapApply.testLeavesAMatchingGodRecordUntouched()
+    local _, _, restore = world()
+    local run = _G.CurrentRun
+    local history = { ZeusUpgrade = 3, HermesUpgrade = 1 }
+    run.LootTypeHistory = history
+    local value = frame()
+    value.godPool.acquiredSourceKeys = { "ZeusUpgrade" }
+    lu.assertTrue(apply(value))
+    restore()
+    lu.assertIs(run.LootTypeHistory, history)
+    lu.assertEquals(history, { ZeusUpgrade = 3, HermesUpgrade = 1 })
 end
 
 function TestSnapApply.testReaddsAPerfectAspectAndCirceFamiliarStacks()

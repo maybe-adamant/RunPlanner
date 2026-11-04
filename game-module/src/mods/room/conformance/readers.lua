@@ -381,6 +381,19 @@ local function hermesDeliveries(run)
     }
 end
 
+-- The god loots in LootTypeHistory, which native GetInteractedGodsThisRun,
+-- ReachedMaxGods and GetEligibleLootNames read (RunLogic.lua:1819-1846).
+local function interactedGods(run)
+    local history, loot = type(run) == "table" and run.LootTypeHistory or nil, _G.LootData
+    if type(loot) ~= "table" then return nil end
+    local gods = {}
+    for name in pairs(type(history) == "table" and history or {}) do
+        if type(loot[name]) == "table" and loot[name].GodLoot then gods[#gods + 1] = name end
+    end
+    table.sort(gods)
+    return gods
+end
+
 function readers.read(kind, run, gameState, expected)
     if kind == "traitInventory" then return modeledTraitInventory(run, expected) end
     if kind == "elementCounts" then return elements(run) end
@@ -398,6 +411,7 @@ function readers.read(kind, run, gameState, expected)
     if kind == "chaosValues" then return chaosValues(run) end
     if kind == "hexNodes" then return hexNodes(run) end
     if kind == "hermesDeliveries" then return hermesDeliveries(run) end
+    if kind == "interactedGods" then return interactedGods(run) end
     return nil
 end
 
