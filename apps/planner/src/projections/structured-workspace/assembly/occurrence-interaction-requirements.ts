@@ -98,6 +98,18 @@ export function occurrenceInteractionRequirements(
         spawned: room.erisObservation.spawned,
       }),
     );
+  if (room.challengeSwitch !== undefined)
+    requirements.push(
+      Object.freeze({
+        kind: 'challengeSwitch' as const,
+        owner: room.address,
+        address: room.challengeSwitch.address,
+        interactionKey: room.challengeSwitch.interactionKey,
+        ...(room.challengeSwitch.encounter === undefined
+          ? {}
+          : { encounter: room.challengeSwitch.encounter }),
+      }),
+    );
 
   const zagreusPresence = room.workbench.features.find(
     (feature) => feature.kind === 'zagreusContract' && feature.action === 'add',

@@ -1,3 +1,4 @@
+import { challengeSwitchKindLabel, observedChallengeSwitchKind } from './challenge-switch-assembly';
 import {
   hermesShrineInitialSlotKey,
   type AcquisitionEntrySourceFamily,
@@ -199,7 +200,12 @@ export function occurrenceActionLabel(
     import('@run-planner/engine/authored-project').RoomOccurrence,
     'hermesShrine' | 'stygianWell' | 'acquisitionSites' | 'infernalContractPedestal'
   > &
-    Partial<Pick<import('@run-planner/engine/authored-project').RoomOccurrence, 'roomActions'>>,
+    Partial<
+      Pick<
+        import('@run-planner/engine/authored-project').RoomOccurrence,
+        'roomActions' | 'challengeSwitch'
+      >
+    >,
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
   /** What created a generated pickup, as the engine publishes it. */
   sourceFamily?: AcquisitionEntrySourceFamily,
@@ -229,7 +235,12 @@ export function occurrenceActionLabelParts(
     import('@run-planner/engine/authored-project').RoomOccurrence,
     'hermesShrine' | 'stygianWell' | 'acquisitionSites' | 'infernalContractPedestal'
   > &
-    Partial<Pick<import('@run-planner/engine/authored-project').RoomOccurrence, 'roomActions'>>,
+    Partial<
+      Pick<
+        import('@run-planner/engine/authored-project').RoomOccurrence,
+        'roomActions' | 'challengeSwitch'
+      >
+    >,
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
   /** What created a generated pickup, as the engine publishes it. */
   sourceFamily?: AcquisitionEntrySourceFamily,
@@ -507,8 +518,10 @@ export function occurrenceActionLabelParts(
       return plain('Keepsake Rack');
     case 'interactEris':
       return talkTo('Eris');
-    case 'interactChallengeSwitch':
-      return plain('Challenge switch');
+    case 'interactChallengeSwitch': {
+      const kind = observedChallengeSwitchKind(catalog, occurrence);
+      return plain(kind === undefined ? 'Use switch' : `Use ${challengeSwitchKindLabel(kind)}`);
+    }
     case 'reroll': {
       const target = reference.target;
       const subject =
@@ -584,6 +597,12 @@ function sourceFamilyPresentation(
         'Delivered from the Hermes Shrine',
         addGroup('object:hermesShrine', 'Hermes Shrine', 'hermesShrine'),
         'Delivery',
+      );
+    case 'challengeSwitch':
+      return source(
+        'Switch reward',
+        'Claimed from the challenge switch',
+        addGroup('challengeSwitch', 'Challenge Switch'),
       );
     case 'shopTravelDealRefill':
       return source(

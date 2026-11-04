@@ -150,6 +150,7 @@ export function workspaceOccurrenceOwnedMarkers(
     ...(room.chaosSpawn === undefined ? [] : [room.chaosSpawn.marker]),
     ...(room.resources?.map((resource) => resource.marker) ?? []),
     ...(room.erisObservation === undefined ? [] : [room.erisObservation.marker]),
+    ...(room.challengeSwitch === undefined ? [] : [room.challengeSwitch.marker]),
     ...workspaceRoomFeatureMarkers(room.workbench.features),
     ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),
   ]);

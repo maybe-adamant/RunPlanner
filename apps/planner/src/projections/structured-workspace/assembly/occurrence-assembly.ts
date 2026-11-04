@@ -1,3 +1,4 @@
+import { assembleChallengeSwitch } from './challenge-switch-assembly';
 import {
   resolveEntryDeclaration,
   routeErisHost,
@@ -655,6 +656,15 @@ export function assembleWorkspaceOccurrence(
             spawned: occurrence.eris !== undefined,
           });
         })();
+  const challengeSwitch = !input.facts.detailsActive
+    ? undefined
+    : assembleChallengeSwitch({
+        catalog: input.catalog,
+        occurrence,
+        address,
+        markerDestinations: input.markerDestinations,
+        product: input.roomObjectInteractions?.(address)?.challengeSwitch,
+      });
   const wheelRerollRequirements: Extract<
     import('../interactions/interaction-requirements').WorkspaceOccurrenceInteractionRequirement,
     { readonly kind: 'roomRerolls' }
@@ -771,6 +781,7 @@ export function assembleWorkspaceOccurrence(
     ...(figurine === undefined ? {} : { figurine }),
     ...(keepsakeSelection === undefined ? {} : { keepsakeSelection }),
     ...(erisObservation === undefined ? {} : { erisObservation }),
+    ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
     encounterPhases,
     entered,
     gameName: occurrence.gameName,
@@ -922,6 +933,7 @@ export function assembleWorkspaceOccurrence(
       ...workspaceRoomFeatureMarkers(features),
       ...(roomSummary.resources?.map((resource) => resource.marker) ?? []),
       ...(erisObservation === undefined ? [] : [erisObservation.marker]),
+      ...(challengeSwitch === undefined ? [] : [challengeSwitch.marker]),
       ...(input.isEntry === true && roomLocal.kind === 'incomingReward'
         ? [roomLocal.control.marker]
         : []),

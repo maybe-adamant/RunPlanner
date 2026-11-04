@@ -131,7 +131,8 @@ export function useCustomizationFindingExplanations(
   const { findings, labels } = useContext(feedback);
   return new Map(
     (findings.get(semanticAddressKey(address)) ?? []).flatMap((finding) =>
-      finding.code === 'encounterCustomizationUnavailable' &&
+      (finding.code === 'encounterCustomizationUnavailable' ||
+        finding.code === 'challengeSwitchCustomizationUnavailable') &&
       typeof finding.evidence.decisionKey === 'string'
         ? [
             [

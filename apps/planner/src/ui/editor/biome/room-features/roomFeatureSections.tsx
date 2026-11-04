@@ -5,6 +5,7 @@ import type {
   WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
 import type { RoomOverviewSectionContent } from '../RoomOverviewSections';
+import { ChallengeSwitchControls } from './ChallengeSwitchControls';
 import { ErisSpawnControl } from './ErisSpawnControl';
 import { RoomResourceControls } from './ResourceControls';
 import {
@@ -73,7 +74,28 @@ export function roomFeatureSections({
     );
   return {
     additionalExits: section(featureGroup('Additional Exits', additionalExits)),
-    objects: section(featureGroup('Objects', roomObjects)),
+    objects: section(
+      ((group) =>
+        room.challengeSwitch === undefined
+          ? group
+          : Object.freeze({
+              key: 'Objects',
+              label: 'Objects',
+              entries: [
+                ...(group?.entries ?? []),
+                {
+                  kind: 'content' as const,
+                  key: 'Objects:challengeSwitch',
+                  content: (
+                    <ChallengeSwitchControls
+                      interactions={interactions}
+                      observation={room.challengeSwitch}
+                    />
+                  ),
+                },
+              ],
+            }))(featureGroup('Objects', roomObjects)),
+    ),
     resources:
       room.resources === undefined || room.resources.length === 0
         ? undefined

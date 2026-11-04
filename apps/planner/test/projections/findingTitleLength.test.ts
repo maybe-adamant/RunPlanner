@@ -271,3 +271,71 @@ describe('encounter finding title length', () => {
     expect(title.length, title).toBeLessThanOrEqual(findingTitleLimit);
   });
 });
+
+describe('challenge switch finding copy', () => {
+  const finding = (
+    code: 'challengeSwitchPlacementUnavailable' | 'challengeSwitchEliteUnavailable',
+    evidence: Record<string, unknown>,
+  ) =>
+    ({
+      code,
+      phase: 'roomEntry',
+      origin: { kind: 'project' },
+      evidence,
+    }) as unknown as Parameters<typeof presentFinding>[0];
+  const longestAttribute = longestOf(
+    catalog.challengeSwitches.eliteEncounters.values.flatMap((encounter) =>
+      Object.values(encounter.attributes).map((attribute) => attribute.label),
+    ),
+  );
+  const labels: FindingLabels = { ...longestLabels, eliteAttribute: () => longestAttribute };
+
+  it('titles every broken spawn rule within the limit and states the rule', () => {
+    const rules = [
+      { reason: 'biomeDepth', biomeDepthCache: 1, minimumBiomeDepth: 5 },
+      { reason: 'recentSwitch', roomsSinceLast: 2, minimumRoomsSinceLast: 3 },
+      { reason: 'noFreeAnchor', anchorCount: 2, occupants: ['stygianWell', 'hermesShrine'] },
+      { reason: 'kindUnavailable', switchKind: 'elite' },
+      { reason: 'variantUnavailable', variantKey: 'PerfectClearChallengeSwitch_Pom' },
+    ];
+    const copy = rules.map((rule) =>
+      presentFinding(finding('challengeSwitchPlacementUnavailable', rule)),
+    );
+    for (const { title } of copy)
+      expect(title.length, title).toBeLessThanOrEqual(findingTitleLimit);
+    expect(copy.map((entry) => entry.description)).toEqual([
+      'Switches need biome depth 5; this room is at 1.',
+      'Switches need 3 rooms between them; this one is 2 after the last.',
+      'The Stygian Well and Hermes Shrine take every spot.',
+      "Needs a Hex whose Path of Stars isn't complete.",
+      'Needs a boon a Pom can level.',
+    ]);
+  });
+
+  it('titles every unavailable elite pin within the limit with the longest names', () => {
+    for (const evidence of [
+      { reason: 'enemyNotInSet', enemyKey: 'enemy' },
+      { reason: 'attributeUnavailable', attributeKey: 'attribute' },
+      { reason: 'attributeExcluded', attributeKey: 'attribute' },
+      { reason: 'tooManyAttributes', attributeCount: 2 },
+    ])
+      for (const named of [labels, undefined]) {
+        const { title } = presentFinding(
+          finding('challengeSwitchEliteUnavailable', evidence),
+          named,
+        );
+        expect(title.length, title).toBeLessThanOrEqual(findingTitleLimit);
+      }
+    expect(
+      presentFinding(
+        finding('challengeSwitchEliteUnavailable', {
+          reason: 'attributeExcluded',
+          attributeKey: 'Frenzy',
+        }),
+        catalogFindingLabels(catalog),
+      ).title,
+    ).toBe(
+      `${catalogFindingLabels(catalog).eliteAttribute('Frenzy')} is blocked by an earlier attribute`,
+    );
+  });
+});

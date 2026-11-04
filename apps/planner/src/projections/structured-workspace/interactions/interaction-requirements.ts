@@ -270,6 +270,13 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly spawned: boolean;
     }
   | {
+      readonly kind: 'challengeSwitch';
+      readonly owner: OccurrenceAddress;
+      readonly address: import('@run-planner/engine/authored-project').RoomFeatureAddress;
+      readonly interactionKey: string;
+      readonly encounter?: import('../contracts/features').WorkspaceChallengeSwitchEncounter;
+    }
+  | {
       readonly assessment: WorkspaceFeatureAssessment;
       readonly kind: 'purgingPoolSlots';
       readonly owner: OccurrenceAddress;

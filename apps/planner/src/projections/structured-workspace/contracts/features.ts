@@ -393,3 +393,95 @@ export interface WorkspaceRoomObjectChoice {
   /** The reward its icon shows. */
   readonly rewardType: string;
 }
+
+/** Why a challenge switch kind or variant cannot be observed at its host's entry. */
+export type WorkspaceChallengeSwitchLock =
+  | import('@run-planner/engine/simulation').ChallengeSwitchInteraction['sharedIssues'][number]
+  | { readonly reason: 'kindUnavailable'; readonly switchKind: ChallengeSwitchKind }
+  | { readonly reason: 'variantUnavailable'; readonly variantKey: string }
+  /** The host's entry is not assessed yet. */
+  | { readonly reason: 'unreached' };
+
+type ChallengeSwitchKind = import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
+
+/** One switch variant: the reward its clean claim spawns. */
+export interface WorkspaceChallengeSwitchVariant {
+  readonly variantKey: string;
+  readonly rewardType: string;
+  readonly label: string;
+  readonly selected: boolean;
+  readonly lock?: WorkspaceChallengeSwitchLock;
+}
+
+/** One switch kind's Overview row; at most one kind is observed per room. */
+export interface WorkspaceChallengeSwitchKindRow {
+  readonly kind: ChallengeSwitchKind;
+  readonly label: string;
+  readonly selected: boolean;
+  /** The variant ticking the row observes; absent while none can be rolled here. */
+  readonly observeVariantKey?: string;
+  /** Why ticking the row is unavailable; absent when a variant can be rolled. */
+  readonly lock?: WorkspaceChallengeSwitchLock;
+  readonly variants: readonly WorkspaceChallengeSwitchVariant[];
+}
+
+/** The observed Time or Perfect Clear switch's generated encounter. */
+export interface WorkspaceChallengeSwitchEncounter {
+  readonly definitionKey: string;
+  readonly label: string;
+  readonly customization?: readonly import('./locals').WorkspaceEncounterCustomizationDecision[];
+  readonly composition?: import('./locals').WorkspaceEncounterComposition;
+}
+
+/** The observed Elite switch's pinned elite and each forced attribute draw's options. */
+export interface WorkspaceChallengeSwitchElite {
+  readonly enemies: readonly { readonly key: string; readonly label: string }[];
+  readonly enemyKey?: string;
+  readonly enemyLabel?: string;
+  /** One entry per forced draw: the pinned attribute and what that draw can take. */
+  readonly attributes: readonly {
+    readonly key?: string;
+    readonly label?: string;
+    readonly choices: readonly { readonly key: string; readonly label: string }[];
+  }[];
+}
+
+/** A challenge switch host's Overview rows and the observed switch's encounter. */
+export interface WorkspaceChallengeSwitch {
+  readonly address: RoomFeatureAddress;
+  readonly marker: WorkspaceMarker;
+  readonly interactionKey: string;
+  readonly kinds: readonly WorkspaceChallengeSwitchKindRow[];
+  readonly encounter?: WorkspaceChallengeSwitchEncounter;
+  readonly elite?: WorkspaceChallengeSwitchElite;
+}
+
+type ChallengeSwitchCommand = Extract<
+  ProjectCommand,
+  {
+    readonly kind:
+      | 'ReplaceChallengeSwitch'
+      | 'ReplaceChallengeSwitchElite'
+      | 'ReplaceChallengeSwitchCustomization';
+  }
+>;
+
+/** The commands a challenge switch host's Overview rows dispatch. */
+export interface WorkspaceChallengeSwitchInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  /** Observes the switch as this variant; null clears it. */
+  readonly observeIntentFor: (
+    variantKey: string | null,
+  ) => WorkspaceCommandIntent<
+    Extract<ChallengeSwitchCommand, { readonly kind: 'ReplaceChallengeSwitch' }>
+  >;
+  /** Pins the elite and an attribute prefix; null leaves both native. */
+  readonly eliteIntentFor: (
+    elite: { readonly enemyKey: string; readonly attributeKeys: readonly string[] } | null,
+  ) => WorkspaceCommandIntent<
+    Extract<ChallengeSwitchCommand, { readonly kind: 'ReplaceChallengeSwitchElite' }>
+  >;
+  /** The observed Time or Perfect Clear switch's encounter customization. */
+  readonly customization?: import('./locals').WorkspaceEncounterCustomizationInteraction;
+}

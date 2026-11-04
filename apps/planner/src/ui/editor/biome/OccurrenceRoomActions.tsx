@@ -125,10 +125,14 @@ function WorkbenchAddArea({
     string,
     { label: string; object?: string; rows: (typeof optionalRows)[number][] }
   >();
-  const rackRows: (typeof optionalRows)[number][] = [];
+  const objectActionRows: (typeof optionalRows)[number][] = [];
   for (const row of optionalRows) {
-    if (row.reference.kind === 'interactKeepsakeRack') {
-      rackRows.push(row);
+    // The rack and the challenge switch are room objects used in one step.
+    if (
+      row.reference.kind === 'interactKeepsakeRack' ||
+      row.reference.kind === 'interactChallengeSwitch'
+    ) {
+      objectActionRows.push(row);
       continue;
     }
     const group = row.addGroup ?? { key: 'other', label: 'Actions' };
@@ -182,7 +186,7 @@ function WorkbenchAddArea({
           </li>
         ),
       })),
-    ...rackRows.map((row) => {
+    ...objectActionRows.map((row) => {
       const action = addAction(row);
       return {
         rank: objectOrder.length,
@@ -201,7 +205,7 @@ function WorkbenchAddArea({
               {action.icon === undefined ? null : (
                 <ArtworkIcon className="artwork-label-icon" source={action.icon} />
               )}
-              Keepsake Rack
+              {row.reference.kind === 'interactKeepsakeRack' ? 'Keepsake Rack' : row.label}
             </button>
           </li>
         ),

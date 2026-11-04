@@ -1,3 +1,8 @@
+import {
+  challengeSwitchRuleSentence,
+  challengeSwitchRuleTitle,
+  type ChallengeSwitchRule,
+} from './challengeSwitchCopy';
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import {
@@ -315,10 +320,10 @@ export const findingCopy = {
     description: 'Her curse is already on this run.',
   },
   challengeSwitchPlacementUnavailable: {
-    title: 'This switch cannot appear here',
+    title: "This switch can't appear here",
   },
   challengeSwitchEliteUnavailable: {
-    title: 'This elite cannot appear here',
+    title: "This elite can't appear here",
   },
   challengeSwitchCustomizationUnavailable: {
     title: 'The switch encounter cannot spawn these enemies',
@@ -661,6 +666,8 @@ export interface FindingLabels extends EncounterIssueNames {
   readonly customizationChoice: (decisionKey: string, choiceKey: string) => string | undefined;
   /** The encounter every declaration of this decision presents, e.g. its boss. */
   readonly customizationOwner: (decisionKey: string) => string | undefined;
+  /** A native elite attribute an Elite switch forces. */
+  readonly eliteAttribute: (attributeKey: string) => string | undefined;
 }
 
 const labelsByCatalog = new WeakMap<Catalog, FindingLabels>();
@@ -704,6 +711,13 @@ export function catalogFindingLabels(catalog: Catalog): FindingLabels {
   }
   for (const set of catalog.encounterSets.values)
     for (const profile of set.authoringProfiles) encounters.set(profile.key, profile.label);
+  const eliteAttributes = new Map<string, string>();
+  for (const encounter of catalog.challengeSwitches.eliteEncounters.values) {
+    for (const enemy of encounter.enemies)
+      if (!enemies.has(enemy.key)) enemies.set(enemy.key, generatedEnemyLabel(enemy.label));
+    for (const [key, attribute] of Object.entries(encounter.attributes))
+      eliteAttributes.set(key, attribute.label);
+  }
   const labels: FindingLabels = Object.freeze({
     trait: catalogTraitLabel(catalog),
     encounter: (key: string) => encounters.get(key),
@@ -713,6 +727,8 @@ export function catalogFindingLabels(catalog: Catalog): FindingLabels {
     customizationOwner: (key: string) => owners.get(key) ?? undefined,
     customizationChoice: (decisionKey: string, choiceKey: string) =>
       choices.get(`${decisionKey}\u0000${choiceKey}`),
+
+    eliteAttribute: (key: string) => eliteAttributes.get(key),
   });
   labelsByCatalog.set(catalog, labels);
   return labels;
@@ -920,6 +936,66 @@ function encounterCustomizationEvidence(
     : undefined;
 }
 
+const challengeSwitchReasons = new Set([
+  'biomeDepth',
+  'recentSwitch',
+  'noFreeAnchor',
+  'kindUnavailable',
+  'variantUnavailable',
+]);
+
+function challengeSwitchRuleEvidence(
+  evidence: SemanticFinding['evidence'],
+): ChallengeSwitchRule | undefined {
+  // The engine spreads its closed placement issue into the finding evidence.
+  return typeof evidence.reason === 'string' && challengeSwitchReasons.has(evidence.reason)
+    ? (evidence as unknown as ChallengeSwitchRule)
+    : undefined;
+}
+
+/** Why a pinned Elite switch elite or attribute cannot be drawn, naming it where it fits. */
+function presentEliteChallengeFinding(
+  evidence: SemanticFinding['evidence'],
+  labels: FindingLabels | undefined,
+): FindingPresentation | undefined {
+  const attribute =
+    typeof evidence.attributeKey === 'string'
+      ? labels?.eliteAttribute(evidence.attributeKey)
+      : undefined;
+  switch (evidence.reason) {
+    case 'enemyNotInSet': {
+      const enemy =
+        typeof evidence.enemyKey === 'string' ? labels?.enemy(evidence.enemyKey) : undefined;
+      return Object.freeze({
+        title: fittingTitle([
+          enemy === undefined ? undefined : `${enemy} isn't this biome's switch elite`,
+          findingCopy.challengeSwitchEliteUnavailable.title,
+        ]),
+      });
+    }
+    case 'attributeUnavailable':
+      return Object.freeze({
+        title: fittingTitle([
+          attribute === undefined ? undefined : `${attribute} can't be drawn for this elite`,
+          "This attribute can't be drawn for this elite",
+        ]),
+      });
+    case 'attributeExcluded':
+      return Object.freeze({
+        title: fittingTitle([
+          attribute === undefined ? undefined : `${attribute} is blocked by an earlier attribute`,
+          'Attribute blocked by an earlier attribute',
+        ]),
+      });
+    case 'tooManyAttributes':
+      return typeof evidence.attributeCount === 'number'
+        ? Object.freeze({ title: `This elite takes only ${evidence.attributeCount} attributes` })
+        : undefined;
+    default:
+      return undefined;
+  }
+}
+
 export function presentFinding(
   finding: SemanticFinding,
   labels?: FindingLabels,
@@ -929,9 +1005,24 @@ export function presentFinding(
       traitOfferGenerationEvidence(finding.evidence),
       labels?.trait,
     );
-  if (finding.code === 'encounterCustomizationUnavailable') {
+  if (
+    finding.code === 'encounterCustomizationUnavailable' ||
+    finding.code === 'challengeSwitchCustomizationUnavailable'
+  ) {
     const facts = encounterCustomizationEvidence(finding.evidence);
     if (facts !== undefined) return presentEncounterCustomizationFinding(facts, labels);
+  }
+  if (finding.code === 'challengeSwitchPlacementUnavailable') {
+    const rule = challengeSwitchRuleEvidence(finding.evidence);
+    if (rule !== undefined)
+      return Object.freeze({
+        title: challengeSwitchRuleTitle(rule),
+        description: challengeSwitchRuleSentence(rule),
+      });
+  }
+  if (finding.code === 'challengeSwitchEliteUnavailable') {
+    const presented = presentEliteChallengeFinding(finding.evidence, labels);
+    if (presented !== undefined) return presented;
   }
   if (finding.code === 'encounterUnavailable') {
     const key = evidenceString(finding.evidence.selectedEncounterKey);

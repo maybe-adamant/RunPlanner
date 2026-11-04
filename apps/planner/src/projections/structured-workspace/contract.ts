@@ -5,6 +5,13 @@ export type {
   WorkspaceShopSupplementalPurchaseDescriptor,
 } from './contracts/commerce';
 export type {
+  WorkspaceChallengeSwitch,
+  WorkspaceChallengeSwitchElite,
+  WorkspaceChallengeSwitchEncounter,
+  WorkspaceChallengeSwitchInteraction,
+  WorkspaceChallengeSwitchKindRow,
+  WorkspaceChallengeSwitchLock,
+  WorkspaceChallengeSwitchVariant,
   WorkspaceChaosExitControl,
   WorkspaceChaosSpawnControl,
   WorkspaceFeatureRollActions,
@@ -376,6 +383,10 @@ export interface WorkspaceInteractionCatalog {
   >;
   readonly gorgonConditions: ReadonlyMap<string, WorkspaceGorgonConditionInteraction>;
   readonly erisObservations: ReadonlyMap<string, WorkspaceErisObservationInteraction>;
+  readonly challengeSwitches: ReadonlyMap<
+    string,
+    import('./contracts/features').WorkspaceChallengeSwitchInteraction
+  >;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceFieldsCageOutcomeInteraction>;
   readonly fieldsSpatialPoints: ReadonlyMap<string, WorkspaceFieldsSpatialPointInteraction>;
@@ -697,7 +708,8 @@ export interface WorkspaceRoomSummary {
     readonly interactionKey: string;
     readonly marker: WorkspaceMarker;
     readonly spawned: boolean;
-  };
+  }; /** A challenge switch host; the switch is the author's observation, rolled on entry. */
+  readonly challengeSwitch?: import('./contracts/features').WorkspaceChallengeSwitch;
 }
 
 export interface StructuredWorkspaceContextualServices {

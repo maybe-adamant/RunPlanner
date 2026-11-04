@@ -99,10 +99,15 @@ export interface WorkspaceEncounterCustomizationInteraction {
     decisionKey: string,
     value: AuthoredEncounterCustomization | null,
   ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceEncounterCustomization' }>
+    Extract<
+      ProjectCommand,
+      { readonly kind: 'ReplaceEncounterCustomization' | 'ReplaceChallengeSwitchCustomization' }
+    >
   >;
   readonly key: string;
-  readonly owner: EncounterPhaseAddress;
+  /** A room phase, or the challenge switch whose encounter this is. */
+  readonly owner:
+    EncounterPhaseAddress | import('@run-planner/engine/authored-project').RoomFeatureAddress;
   /**
    * Current exact-assembly assessment of the saved value, published atomically with
    * the bound intent and authored choices. Absent only when context is genuinely unavailable.

@@ -56,6 +56,7 @@ import type { WorkspaceRoomActionInteraction } from '../contracts/timeline';
 import type { WorkspacePhantomExitInteraction } from '../contracts/structure';
 import { bindPhantomExitInteraction } from './phantom-exit-interactions';
 import { bindEncounterCustomizationInteraction } from './encounter-customization-binding';
+import { bindChallengeSwitchInteraction } from './challenge-switch-binding';
 import type {
   WorkspacePurgingPoolSlotInteraction,
   WorkspaceHermesShrineOfferInteraction,
@@ -107,6 +108,10 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly erisObservations: ReadonlyMap<
     string,
     import('../contract').WorkspaceErisObservationInteraction
+  >;
+  readonly challengeSwitches: ReadonlyMap<
+    string,
+    import('../contracts/features').WorkspaceChallengeSwitchInteraction
   >;
   readonly hermesShrineOffers: ReadonlyMap<string, WorkspaceHermesShrineOfferInteraction>;
   readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
@@ -266,6 +271,10 @@ export function bindOccurrenceLocalInteractions(
   const erisObservations = new Map<
     string,
     import('../contract').WorkspaceErisObservationInteraction
+  >();
+  const challengeSwitches = new Map<
+    string,
+    import('../contracts/features').WorkspaceChallengeSwitchInteraction
   >();
   const purgingPoolSlots = new Map<string, WorkspacePurgingPoolSlotInteraction>();
   const hermesShrineOffers = new Map<string, WorkspaceHermesShrineOfferInteraction>();
@@ -804,6 +813,18 @@ export function bindOccurrenceLocalInteractions(
         );
         break;
       }
+      case 'challengeSwitch': {
+        if (challengeSwitches.has(requirement.interactionKey)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${requirement.interactionKey} has multiple bound challenge switches`,
+          );
+        }
+        challengeSwitches.set(
+          requirement.interactionKey,
+          bindChallengeSwitchInteraction(catalog, assembly, requirement),
+        );
+        break;
+      }
       case 'phantomExit': {
         if (phantomExits.has(requirement.interactionKey)) {
           throw new StructuredWorkspaceProjectionContractError(
@@ -1213,6 +1234,7 @@ export function bindOccurrenceLocalInteractions(
     phantomExits,
     purgingPoolSlots,
     erisObservations,
+    challengeSwitches,
     hermesShrineOffers,
     hermesShrinePresences,
     stygianWellPresences,
