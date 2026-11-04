@@ -9,6 +9,7 @@ import {
   eliteChallengeAttributeOptions,
   encounterCompositionView,
   type ChallengeSwitchInteraction,
+  type ChallengeSwitchOutcomeInteraction,
 } from '@run-planner/engine/simulation';
 import { generatedEnemyLabel } from '@planner/projections/encounterIssueCopy';
 
@@ -18,6 +19,7 @@ import type {
   WorkspaceChallengeSwitchEncounter,
   WorkspaceChallengeSwitchKindRow,
   WorkspaceChallengeSwitchLock,
+  WorkspaceChallengeSwitchOutcome,
 } from '../contracts/features';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import { projectEncounterComposition } from '../interactions/generated-encounter-projection';
@@ -47,6 +49,29 @@ export function observedChallengeSwitchKind(
   return variantKey === undefined
     ? undefined
     : catalog.challengeSwitches.variants.byKey[variantKey]?.switchKind;
+}
+
+const outcomeLabels: Readonly<Record<ChallengeSwitchOutcomeInteraction['current'], string>> =
+  Object.freeze({ left: 'Left', finished: 'Finished', hitless: 'Hitless', failed: 'Failed' });
+
+function outcomeProduct(
+  outcome: ChallengeSwitchOutcomeInteraction,
+  occurrence: RoomOccurrence,
+  interactionKey: string,
+): WorkspaceChallengeSwitchOutcome {
+  return Object.freeze({
+    interactionKey,
+    current: outcome.current,
+    choices: Object.freeze(
+      outcome.choices.map((choice) =>
+        Object.freeze({ outcome: choice.outcome, label: outcomeLabels[choice.outcome] }),
+      ),
+    ),
+    ...(outcome.nectarAllowed
+      ? { nectar: Object.freeze({ dropped: occurrence.challengeSwitch?.nectarDropped === true }) }
+      : {}),
+    ...(outcome.goldApplies && outcome.gold !== undefined ? { gold: outcome.gold } : {}),
+  });
 }
 
 function variantLock(
@@ -189,10 +214,16 @@ export function assembleChallengeSwitch(input: {
     product === undefined || observedKind !== 'elite'
       ? undefined
       : eliteProduct(catalog, product, occurrence);
+  const interactionKey = semanticAddressKey(address);
+  const outcome =
+    product?.outcome === undefined
+      ? undefined
+      : outcomeProduct(product.outcome, occurrence, interactionKey);
   return Object.freeze({
     address,
     marker: input.markerDestinations.marker(address),
-    interactionKey: semanticAddressKey(address),
+    interactionKey,
+    ...(outcome === undefined ? {} : { outcome }),
     kinds: Object.freeze(kinds),
     ...(encounter === undefined ? {} : { encounter }),
     ...(elite === undefined ? {} : { elite }),

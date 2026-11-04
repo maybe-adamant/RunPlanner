@@ -1,6 +1,7 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   challengeSwitchEncounterSupportForProjectEvaluationAssembly,
+  roomObjectInteractionsForProjectEvaluationAssembly,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 
@@ -21,7 +22,32 @@ export function bindChallengeSwitchInteraction(
 ): WorkspaceChallengeSwitchInteraction {
   const { owner } = requirement;
   const customization = requirement.encounter?.customization;
+  const outcome = (() => {
+    try {
+      return roomObjectInteractionsForProjectEvaluationAssembly(assembly, owner)?.challengeSwitch
+        ?.outcome;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ProjectSimulationContractError')
+        return undefined;
+      throw error;
+    }
+  })();
+  const intent = <Command>(command: Command) => Object.freeze({ command });
+  const current = outcome?.choices.find((choice) => choice.outcome === outcome.current);
   return Object.freeze({
+    outcomeIntentFor: (value: NonNullable<typeof outcome>['current']) => {
+      const choice = outcome?.choices.find((candidate) => candidate.outcome === value);
+      return choice === undefined ? undefined : intent(choice.command);
+    },
+    ...(outcome?.nectarCommand === undefined
+      ? {}
+      : { nectarIntent: intent(outcome.nectarCommand) }),
+    ...(outcome?.goldApplies !== true || current === undefined
+      ? {}
+      : {
+          // The current outcome's command keeps its Nectar; only the gold changes.
+          goldIntentFor: (gold: number) => intent(Object.freeze({ ...current.command, gold })),
+        }),
     key: requirement.interactionKey,
     owner,
     observeIntentFor: (variantKey: string | null) =>

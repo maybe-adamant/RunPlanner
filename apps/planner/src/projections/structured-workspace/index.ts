@@ -137,6 +137,7 @@ export type {
   WorkspaceChallengeSwitchInteraction,
   WorkspaceChallengeSwitchKindRow,
   WorkspaceChallengeSwitchLock,
+  WorkspaceChallengeSwitchOutcome,
   WorkspaceChallengeSwitchVariant,
   WorkspaceChaosExitControl,
   WorkspaceChaosExitInteraction,

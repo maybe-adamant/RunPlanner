@@ -155,6 +155,8 @@ export interface WorkspaceRoomActionRow {
   readonly traitOffer?: WorkspaceTraitOfferControl;
   /** Exact Phial target control nested under this occurrence-owned fountain action. */
   readonly fountainRarity?: WorkspaceFountainRarityControl;
+  /** The fight outcome of the challenge switch this row uses. */
+  readonly challengeSwitchOutcome?: import('./features').WorkspaceChallengeSwitchOutcome;
   /** Exact Fateful Twist result control at this purchased Well action. */
   readonly stygianWellTwist?: {
     readonly address: import('@run-planner/engine/authored-project').RoomFeatureAddress;

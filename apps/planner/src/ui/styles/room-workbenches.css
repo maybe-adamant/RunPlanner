@@ -1809,6 +1809,27 @@
 }
 
 /* One checkbox presentation for every timeline toggle. */
+.room-action-switch-outcome {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.room-action-switch-gold > input {
+  width: 3.5rem;
+  min-height: 28px;
+  padding: 3px 7px;
+  border: 1px solid #42434d;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+}
+
 .timeline-checkbox {
   display: inline-flex;
   flex: 0 0 auto;

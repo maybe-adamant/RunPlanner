@@ -195,4 +195,51 @@ describe('challenge switch in the structured workspace', () => {
       elite: { enemyKey: 'Dragon_Elite', attributeKeys: ['Frenzy', 'Blink'] },
     });
   });
+
+  it("binds a pressed switch's per-kind outcome, Nectar and gold on its use row", () => {
+    const project = observed(
+      createGoldenFGHIProject(),
+      'F',
+      'golden-f-b5-e1',
+      'TimeChallengeSwitch_Money',
+      true,
+    );
+    const { workspace } = projectStructuredWorkspaceFixture(project);
+    const row = room(workspace, 'F', 'golden-f-b5-e1').roomActions!.rows.find(
+      (candidate) => candidate.reference.kind === 'interactChallengeSwitch',
+    )!;
+    const outcome = row.challengeSwitchOutcome!;
+    const interaction = workspace.interactions.challengeSwitches.get(outcome.interactionKey)!;
+
+    expect(outcome.current).toBe('finished');
+    expect(outcome.choices.map((choice) => [choice.outcome, choice.label])).toEqual([
+      ['left', 'Left'],
+      ['finished', 'Finished'],
+    ]);
+    expect(outcome.nectar).toEqual({ dropped: false });
+    expect(outcome.gold?.value).toBe(90);
+    expect(interaction.outcomeIntentFor('left')?.command).toMatchObject({
+      kind: 'ReplaceChallengeSwitchOutcome',
+      outcome: 'left',
+    });
+    expect(interaction.outcomeIntentFor('hitless')).toBeUndefined();
+    expect(interaction.goldIntentFor?.(35).command).toMatchObject({
+      outcome: 'finished',
+      gold: 35,
+    });
+
+    const left = projectStructuredWorkspaceFixture(
+      applyProjectCommand(project, catalog, interaction.outcomeIntentFor('left')!.command),
+    ).workspace;
+    const leftRows = room(left, 'F', 'golden-f-b5-e1').roomActions!.rows;
+    const leftOutcome = leftRows.find(
+      (candidate) => candidate.reference.kind === 'interactChallengeSwitch',
+    )!.challengeSwitchOutcome!;
+    expect(leftOutcome.nectar).toBeUndefined();
+    expect(leftOutcome.gold).toBeUndefined();
+    // A left fight claims nothing.
+    expect(leftRows.some((candidate) => candidate.sourceFamily?.kind === 'challengeSwitch')).toBe(
+      false,
+    );
+  });
 });

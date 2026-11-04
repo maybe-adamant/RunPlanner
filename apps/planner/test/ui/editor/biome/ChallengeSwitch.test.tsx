@@ -78,4 +78,24 @@ describe('challenge switch rows on the room Overview', () => {
       ),
     ).toBe(true);
   });
+
+  it("edits a pressed switch's outcome and Nectar on its Timeline row", async () => {
+    const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
+    openHost(application);
+    await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Perfect Clear Switch' }));
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    await user.click(screen.getByRole('button', { name: 'Use Perfect Clear Switch' }));
+
+    await user.click(screen.getByRole('checkbox', { name: 'Nectar dropped' }));
+    expect(hostRoom(application).challengeSwitch?.nectarDropped).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Switch outcome: Hitless' }));
+    await user.click(screen.getByRole('option', { name: 'Failed' }));
+    expect(hostRoom(application).challengeSwitch).toMatchObject({
+      outcome: 'failed',
+      nectarDropped: false,
+    });
+    expect(screen.queryByRole('checkbox', { name: 'Nectar dropped' })).toBeNull();
+  });
 });

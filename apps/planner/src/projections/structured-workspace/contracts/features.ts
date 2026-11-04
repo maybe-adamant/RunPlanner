@@ -446,6 +446,20 @@ export interface WorkspaceChallengeSwitchElite {
   }[];
 }
 
+/** How a pressed switch's fight ended, edited on its use row. */
+export interface WorkspaceChallengeSwitchOutcome {
+  readonly interactionKey: string;
+  readonly current: import('@run-planner/engine/simulation').ChallengeSwitchOutcomeInteraction['current'];
+  readonly choices: readonly {
+    readonly outcome: import('@run-planner/engine/simulation').ChallengeSwitchOutcomeInteraction['current'];
+    readonly label: string;
+  }[];
+  /** Present while the outcome can drop the bonus Nectar. */
+  readonly nectar?: { readonly dropped: boolean };
+  /** Present while the outcome claims gold. */
+  readonly gold?: { readonly value: number; readonly minimum: number; readonly maximum: number };
+}
+
 /** A challenge switch host's Overview rows and the observed switch's encounter. */
 export interface WorkspaceChallengeSwitch {
   readonly address: RoomFeatureAddress;
@@ -454,6 +468,8 @@ export interface WorkspaceChallengeSwitch {
   readonly kinds: readonly WorkspaceChallengeSwitchKindRow[];
   readonly encounter?: WorkspaceChallengeSwitchEncounter;
   readonly elite?: WorkspaceChallengeSwitchElite;
+  /** The observed switch's fight outcome, once it is reached. */
+  readonly outcome?: WorkspaceChallengeSwitchOutcome;
 }
 
 type ChallengeSwitchCommand = Extract<
@@ -462,8 +478,13 @@ type ChallengeSwitchCommand = Extract<
     readonly kind:
       | 'ReplaceChallengeSwitch'
       | 'ReplaceChallengeSwitchElite'
-      | 'ReplaceChallengeSwitchCustomization';
+      | 'ReplaceChallengeSwitchCustomization'
+      | 'ReplaceChallengeSwitchOutcome';
   }
+>;
+type OutcomeCommand = Extract<
+  ChallengeSwitchCommand,
+  { readonly kind: 'ReplaceChallengeSwitchOutcome' }
 >;
 
 /** The commands a challenge switch host's Overview rows dispatch. */
@@ -484,4 +505,12 @@ export interface WorkspaceChallengeSwitchInteraction {
   >;
   /** The observed Time or Perfect Clear switch's encounter customization. */
   readonly customization?: import('./locals').WorkspaceEncounterCustomizationInteraction;
+  /** Sets the fight's outcome; absent for an outcome the kind cannot end with. */
+  readonly outcomeIntentFor: (
+    outcome: import('@run-planner/engine/simulation').ChallengeSwitchOutcomeInteraction['current'],
+  ) => WorkspaceCommandIntent<OutcomeCommand> | undefined;
+  /** Toggles the bonus Nectar; present while the outcome can drop it. */
+  readonly nectarIntent?: WorkspaceCommandIntent<OutcomeCommand>;
+  /** Changes the claimed gold; present while the outcome claims gold. */
+  readonly goldIntentFor?: (gold: number) => WorkspaceCommandIntent<OutcomeCommand>;
 }

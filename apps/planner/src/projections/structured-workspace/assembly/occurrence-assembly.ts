@@ -543,12 +543,36 @@ export function assembleWorkspaceOccurrence(
     roomLocal,
   });
   const { runStateByTab, runStateLaunchers } = actionAssembly;
-  const roomActions =
-    actionAssembly.roomActions === undefined ||
-    (featureRollActions.length === 0 && objectEntries.entries.length === 0)
+  const challengeSwitch = !input.facts.detailsActive
+    ? undefined
+    : assembleChallengeSwitch({
+        catalog: input.catalog,
+        occurrence,
+        address,
+        markerDestinations: input.markerDestinations,
+        product: input.roomObjectInteractions?.(address)?.challengeSwitch,
+      });
+  // The switch's use row carries the fight's outcome control.
+  const switchOutcome = challengeSwitch?.outcome;
+  const assembledRoomActions =
+    actionAssembly.roomActions === undefined || switchOutcome === undefined
       ? actionAssembly.roomActions
       : Object.freeze({
           ...actionAssembly.roomActions,
+          rows: Object.freeze(
+            actionAssembly.roomActions.rows.map((row) =>
+              row.reference.kind === 'interactChallengeSwitch'
+                ? Object.freeze({ ...row, challengeSwitchOutcome: switchOutcome })
+                : row,
+            ),
+          ),
+        });
+  const roomActions =
+    assembledRoomActions === undefined ||
+    (featureRollActions.length === 0 && objectEntries.entries.length === 0)
+      ? assembledRoomActions
+      : Object.freeze({
+          ...assembledRoomActions,
           ...(featureRollActions.length === 0
             ? {}
             : { featureRolls: Object.freeze(featureRollActions) }),
@@ -656,15 +680,6 @@ export function assembleWorkspaceOccurrence(
             spawned: occurrence.eris !== undefined,
           });
         })();
-  const challengeSwitch = !input.facts.detailsActive
-    ? undefined
-    : assembleChallengeSwitch({
-        catalog: input.catalog,
-        occurrence,
-        address,
-        markerDestinations: input.markerDestinations,
-        product: input.roomObjectInteractions?.(address)?.challengeSwitch,
-      });
   const wheelRerollRequirements: Extract<
     import('../interactions/interaction-requirements').WorkspaceOccurrenceInteractionRequirement,
     { readonly kind: 'roomRerolls' }

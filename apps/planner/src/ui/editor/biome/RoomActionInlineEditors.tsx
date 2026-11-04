@@ -16,6 +16,7 @@ import { AnvilResultLauncher } from '../rewards/AnvilResultEditor';
 import { HexActivationLauncher } from '../rewards/HexActivationEditor';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
+import { ChallengeSwitchOutcomeControls } from './ChallengeSwitchOutcomeControls';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 
 /** Pickup outcome and Sea Star controls for one acquisition role of a timeline row. */
@@ -283,6 +284,12 @@ export function RoomActionInlineEditors({
       )}
       {row.fountainRarity === undefined ? null : (
         <FountainRarityEffectRow control={row.fountainRarity} interactions={interactions} />
+      )}
+      {row.challengeSwitchOutcome === undefined ? null : (
+        <ChallengeSwitchOutcomeControls
+          interactions={interactions}
+          outcome={row.challengeSwitchOutcome}
+        />
       )}
     </>
   );
