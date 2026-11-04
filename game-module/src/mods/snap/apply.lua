@@ -15,6 +15,7 @@ local nativeBindings = type(import) == "function" and import("mods/native_bindin
     or require("mods.native_bindings")
 local modeledTraits = type(import) == "function" and import("modeled_traits.lua") or require("modeled_traits")
 local json = type(import) == "function" and import("mods/protocol/json.lua") or require("mods.protocol.json")
+local fate = type(import) == "function" and import("mods/keepsakes/fate.lua") or require("mods.keepsakes.fate")
 
 local snap = {}
 
@@ -99,7 +100,7 @@ local function isKeepsake(trait)
 end
 
 -- KeepsakeLogic.UnequipKeepsake/EquipKeepsake with the planned rank, then
--- unslotted keepsakes and every held keepsake's counters.
+-- unslotted keepsakes and every held keepsake's counters; true when the slot changed.
 local function keepsakes(frame)
     local rows, slottedRow, wanted = frame.keepsakes.held, nil, {}
     for _, row in ipairs(rows) do
@@ -110,12 +111,14 @@ local function keepsakes(frame)
     for _, trait in ipairs(hero().Traits) do
         if trait.Slot == "Keepsake" then slotted = trait end
     end
-    local kept = {}
+    local kept, swapped = {}, false
     if slotted and (slottedRow == nil or slotted.Name ~= slottedRow.name or slotted.Rarity ~= slottedRow.rarity) then
         -- A rank change keeps the instance's fields, such as the Silken Sash's armor.
         if slottedRow and slotted.Name == slottedRow.name then kept = carried(slotted) end
+        -- KeepsakeLogic.lua:1307-1308: the rack records its selection before the close swaps.
+        if slottedRow then _G.GameState.LastAwardTrait = slottedRow.name end
         _G.UnequipKeepsake(hero(), slotted.Name)
-        slotted = nil
+        slotted, swapped = nil, true
     end
     for _, trait in ipairs(traits()) do
         local row = wanted[trait.Name]
@@ -126,11 +129,11 @@ local function keepsakes(frame)
     end
     if slottedRow and slotted == nil then
         local args = practice.keepsakeEquipArgs({ SkipNewTraitHighlight = true, SkipQuestStatusCheck = true }, slottedRow)
+        _G.GameState.LastAwardTrait = slottedRow.name
         _G.EquipKeepsake(hero(), slottedRow.name, args)
         local equipped = find(slottedRow.name)
         if equipped then carry(kept, equipped) end
-        -- KeepsakeLogic.lua:1307-1308: the rack records the slotted keepsake.
-        _G.GameState.LastAwardTrait = slottedRow.name
+        swapped = true
     end
     for _, row in ipairs(rows) do
         if not row.slotted and find(row.name) == nil then
@@ -144,6 +147,15 @@ local function keepsakes(frame)
     end
     run().KeepsakeCache = copy(frame.keepsakes.usedKeys)
     run().BlockedKeepsakes = copy(frame.keepsakes.blockedKeys)
+    return swapped
+end
+
+-- The rack close's Fated effects after a slot change, and a spent Jeweled Pom's
+-- grant removed with its Fated status settled natively.
+local function fated(frame, swapped)
+    local pom = frame.retainedEffects.keepsakes.jeweledPom
+    local spent = present(pom) and pom.active == false
+    if swapped or spent then fate.close(hero(), spent) end
 end
 
 -- Premium Service's re-add (TraitLogic.UpgradeAspect) and Circe's stacks
@@ -524,7 +536,7 @@ function snap.apply(frame, context)
     local unit = hero()
     local captured = { health = unit.Health, lastStands = copy(unit.LastStands), maxLastStands = unit.MaxLastStands }
     practice.quietly(function()
-        keepsakes(frame)
+        fated(frame, keepsakes(frame))
         equipment(frame, expected)
         arcana(frame)
         vows(frame)

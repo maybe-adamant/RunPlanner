@@ -4,6 +4,7 @@ local json = require("mods/protocol/json")
 local nativeGame = require("tests/harness/native_game")
 local admission = require("mods.room.conformance.admission")
 local snap = require("mods.snap.apply")
+local keepsakeConformance = require("mods.keepsakes.conformance")
 
 TestSnapApply = {}
 
@@ -52,7 +53,7 @@ local function world(traits)
         LastStands = { { Name = "LastStandSkelly" } }, MaxLastStands = 1,
     }
     local run = { Hero = hero, TemporaryMetaUpgrades = {}, ShrineUpgradesDisabled = {}, RewardStores = {} }
-    local log = { removed = {}, added = {} }
+    local log = { removed = {}, added = {}, fateUpdates = 0 }
     local function removeData(_, trait, args)
         for index, held in ipairs(hero.Traits) do
             if held == trait then table.remove(hero.Traits, index) break end
@@ -70,6 +71,8 @@ local function world(traits)
             ReincarnationKeepsake = { Slot = "Keepsake" }, ArmorGainKeepsake = { Slot = "Keepsake" },
             RarifyKeepsake = { Slot = "Keepsake" }, ManaOverTimeRefundKeepsake = { Slot = "Keepsake" },
             FountainRarityKeepsake = { Slot = "Keepsake" },
+            HadesAndPersephoneKeepsake = { Slot = "Keepsake", Permanent = true },
+            AthenaEncounterKeepsake = { Slot = "Keepsake" },
             StorePendingDeliveryItem = { Name = "StorePendingDeliveryItem" },
         },
             { __index = function() return {} end }),
@@ -114,7 +117,11 @@ local function world(traits)
         end,
         ValidateMaxHealth = function() end, ValidateMaxMana = function() end,
         UpdateTalentPointInvestedCache = function() end,
-        UnequipKeepsake = function(_, name) removeData(hero, find(name), {}) end,
+        -- KeepsakeLogic.UnequipKeepsake keeps a Permanent keepsake unslotted.
+        UnequipKeepsake = function(_, name)
+            local trait = find(name)
+            if _G.TraitData[name].Permanent then trait.Slot = nil else removeData(hero, trait, {}) end
+        end,
         EquipKeepsake = function(_, name, args)
             -- KeepsakeLogic.EquipKeepsake: Reincarnation adds a Death Defiance.
             table.insert(hero.Traits, { Name = name, Rarity = args.ForceRarity, Slot = "Keepsake" })
@@ -127,6 +134,18 @@ local function world(traits)
         ShrineUpgradeExtractValues = function() end, CallFunctionName = function() end,
         RemoveIncomingDamageModifier = function() end, AddIncomingDamageModifier = function() end,
         GetSurfaceShopText = function(item) return item.Name end,
+        FatedDisableKeepsakes = { AthenaEncounterKeepsake = true },
+        FatedEnableKeepsakes = { HadesAndPersephoneKeepsake = true },
+        -- KeepsakeLogic.UpdateFateStatus for a living hero.
+        UpdateFateStatus = function()
+            local state = _G.GameState
+            log.fateUpdates = log.fateUpdates + 1
+            if _G.FatedDisableKeepsakes[state.LastAwardTrait] then
+                state.FatedStatus = "Unfated"
+            elseif _G.FatedEnableKeepsakes[state.LastAwardTrait] then
+                state.FatedStatus = "Fated"
+            end
+        end,
     })
     local verify = admission.verifyFrame
     admission.verifyFrame = function() return true end
@@ -466,4 +485,82 @@ function TestSnapApply.testRejectsAnUndeclaredStoreOrMissingTreeBeforeAnyWrite()
     lu.assertEquals(failure.checkpoint, "snap:hex-tree")
     lu.assertEquals(names(hero), { "ZeusWeaponBoon" })
     lu.assertEquals(log.removed, {})
+end
+
+-- Run 1018: the plan swaps Jeweled Pom for Athena at a rack the player skipped.
+local function spentPomFrame()
+    local value = frame()
+    value.keepsakes.held = {
+        { name = "HadesAndPersephoneKeepsake", rarity = "Rare", slotted = false },
+        { name = "AthenaEncounterKeepsake", rarity = "Epic", slotted = true },
+    }
+    value.retainedEffects.keepsakes.jeweledPom = {
+        grantedTraitKey = "HadesDashSweepBoon", active = false, levels = 3, acquisitionIdentity = "pom",
+    }
+    return value
+end
+
+local function pom(slot)
+    return { Name = "HadesAndPersephoneKeepsake", Rarity = "Rare", Slot = slot, FatedBoonLevelBonus = 3 }
+end
+
+local function readPom(value)
+    return keepsakeConformance.read(_G.CurrentRun, _G.GameState, value.retainedEffects.keepsakes).jeweledPom
+end
+
+function TestSnapApply.testASnappedSwapOffJeweledPomRunsTheRackClosesFateEffects()
+    local hero, log, restore = world({ pom("Keepsake"), { Name = "HadesDashSweepBoon", GrantedTrait = true } })
+    local gameState = _G.GameState
+    gameState.FatedStatus, gameState.LastAwardTrait = "Fated", "HadesAndPersephoneKeepsake"
+    local value = spentPomFrame()
+    lu.assertTrue(apply(value))
+    local observed = readPom(value)
+    restore()
+    lu.assertEquals(names(hero), { "AthenaEncounterKeepsake", "HadesAndPersephoneKeepsake" })
+    lu.assertEquals({ gameState.LastAwardTrait, gameState.FatedStatus },
+        { "AthenaEncounterKeepsake", "Unfated" })
+    -- Removed natively as the rack close does, not by the modeled-trait pass.
+    lu.assertEquals(log.removed, { { name = "HadesDashSweepBoon" } })
+    lu.assertEquals(observed, value.retainedEffects.keepsakes.jeweledPom)
+end
+
+function TestSnapApply.testASpentJeweledPomStillFatedIsSettledWithoutASwap()
+    local hero, log, restore = world({ pom(nil), { Name = "AthenaEncounterKeepsake", Rarity = "Epic", Slot = "Keepsake" } })
+    local gameState = _G.GameState
+    -- The rack removed the grant, but its UpdateFateStatus never ran.
+    gameState.FatedStatus, gameState.LastAwardTrait = "Fated", "AthenaEncounterKeepsake"
+    local value = spentPomFrame()
+    lu.assertTrue(apply(value))
+    local observed = readPom(value)
+    restore()
+    lu.assertEquals(names(hero), { "AthenaEncounterKeepsake", "HadesAndPersephoneKeepsake" })
+    lu.assertEquals(gameState.FatedStatus, "Unfated")
+    lu.assertEquals({ log.removed, log.fateUpdates }, { {}, 1 })
+    lu.assertEquals(observed, value.retainedEffects.keepsakes.jeweledPom)
+end
+
+function TestSnapApply.testASpentJeweledPomRemovesALiveGrantWhateverTheStatus()
+    local hero, log, restore = world({
+        pom(nil), { Name = "AthenaEncounterKeepsake", Rarity = "Epic", Slot = "Keepsake" },
+        { Name = "HadesDashSweepBoon", GrantedTrait = true },
+    })
+    local gameState = _G.GameState
+    gameState.FatedStatus, gameState.LastAwardTrait = "Unfated", "AthenaEncounterKeepsake"
+    lu.assertTrue(apply(spentPomFrame()))
+    restore()
+    lu.assertEquals(names(hero), { "AthenaEncounterKeepsake", "HadesAndPersephoneKeepsake" })
+    lu.assertEquals({ log.removed, gameState.FatedStatus }, { { { name = "HadesDashSweepBoon" } }, "Unfated" })
+end
+
+function TestSnapApply.testAnUnchangedSlotWithoutASpentPomLeavesFateAlone()
+    local hero, log, restore = world({ pom("Keepsake"), { Name = "HadesDashSweepBoon", GrantedTrait = true } })
+    local gameState = _G.GameState
+    gameState.FatedStatus, gameState.LastAwardTrait = "Fated", "HadesAndPersephoneKeepsake"
+    local value = frame()
+    value.keepsakes.held = { { name = "HadesAndPersephoneKeepsake", rarity = "Rare", slotted = true } }
+    value.traits.equipped = { { traitKey = "HadesDashSweepBoon" } }
+    lu.assertTrue(apply(value))
+    restore()
+    lu.assertEquals(names(hero), { "HadesAndPersephoneKeepsake", "HadesDashSweepBoon" })
+    lu.assertEquals({ log.removed, log.fateUpdates, gameState.FatedStatus }, { {}, 0, "Fated" })
 end

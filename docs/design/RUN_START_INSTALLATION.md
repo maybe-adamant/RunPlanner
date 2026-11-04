@@ -387,7 +387,11 @@ at each room exit. Off, a desynchronized run is unchanged.
   frame, or in Ephyra's Hub the visit's `departures[i].beforeRoomExit`, found
   by its completed main-room visits. Differences are written through the
   Practice writers before native `LeaveRoom` runs, and the hero is verified
-  against the same frame. Native `LeaveRoom` and `StartRoom` then replay what
+  against the same frame. A keepsake swap, and a frame whose Jeweled Pom is
+  spent, also get the Keepsake Rack close's Fated effects: the Pom's granted
+  boon is removed and the native Fated status update runs, so a swap to a
+  Fated-disabling keepsake leaves the run Unfated. Native `LeaveRoom` and
+  `StartRoom` then replay what
   follows the frame: room-counted traits, Echo, Silken Sash, shop completions,
   the Well spark and the Hub board draws. Health is clamped, Death Defiance and
   armor stay live, and only the engine's modeled traits are restored. A room

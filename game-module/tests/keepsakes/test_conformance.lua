@@ -133,6 +133,25 @@ function TestKeepsakeConformance.testInactiveJeweledPomRetainsGrantProvenanceAft
     lu.assertEquals(observed.jeweledPom.grantedTraitKey, "RemovedHadesTrait")
 end
 
+function TestKeepsakeConformance.testARackCloseAwaitingItsFateUpdateReadsJeweledPomSpent()
+    local expected = {
+        jeweledPom = {
+            grantedTraitKey = "RemovedHadesTrait", active = false, levels = 3,
+            acquisitionIdentity = "pom-acquisition",
+        },
+    }
+    local prior = _G.FatedDisableKeepsakes
+    _G.FatedDisableKeepsakes = { AthenaEncounterKeepsake = true }
+    local run = { Hero = { Traits = { { Name = "HadesAndPersephoneKeepsake", FatedBoonLevelBonus = 3 } } } }
+    local pending = conformance.read(run, { FatedStatus = "Fated", LastAwardTrait = "AthenaEncounterKeepsake" },
+        expected)
+    local fated = conformance.read(run, { FatedStatus = "Fated", LastAwardTrait = "HadesAndPersephoneKeepsake" },
+        expected)
+    _G.FatedDisableKeepsakes = prior
+    lu.assertEquals(pending.jeweledPom, expected.jeweledPom)
+    lu.assertTrue(fated.jeweledPom.active)
+end
+
 function TestKeepsakeConformance.testSameHammerIdentityCorrelatesTheLiveInstanceToNewestAcquisition()
     local expected = {
         experimentalHammers = {

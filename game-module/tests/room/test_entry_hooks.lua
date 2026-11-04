@@ -963,6 +963,26 @@ function TestRoomEntryHooks.testLeaveRoomContinuesNativeAfterRoomCloseMismatch()
     lu.assertTrue(nativeCalled)
 end
 
+function TestRoomEntryHooks.testLeaveRoomSettlesAnInterruptedRackCloseBeforeTheExitChecks()
+    local module, _, callbacks = capture()
+    local state = { state = "synchronized", route = {} }
+    local gameState = { FatedStatus = "Fated", LastAwardTrait = "AthenaEncounterKeepsake" }
+    local restore = require("tests/harness/native_game").install({
+        GameState = gameState,
+        FatedDisableKeepsakes = { AthenaEncounterKeepsake = true },
+        RemoveTrait = function() error("the rack close already removed the grant") end,
+        UpdateFateStatus = function() gameState.FatedStatus = "Unfated" end,
+    })
+    local closedWith
+    local roomSession = { close = function(_, _, value) closedWith = value.FatedStatus; return true end }
+    roomHooks.attach(module, stub(), function() return state end, function() end,
+        { exit = function() return true end, expected = function() return nil end }, roomSession, nil,
+        { proveOutgoingDoors = function() return true end }, unusedLoadoutScope)
+    callbacks.LeaveRoom(nil, {}, function() end, { Hero = { Traits = {} } }, {})
+    restore()
+    lu.assertEquals(closedWith, "Unfated")
+end
+
 function TestRoomEntryHooks.testLeaveRoomAdvancesBeforeNativeLeaveCanEnterNextRoom()
     local module, _, callbacks = capture()
     local first = { id = "one", gameName = "F_One" }

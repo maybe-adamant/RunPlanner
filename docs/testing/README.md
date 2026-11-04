@@ -7,6 +7,7 @@ commits, not these checklists.
 
 - [Rerolls, Contract pedestal and Ephyra return door](REROLLS_PEDESTAL_RETURN_DOOR_LIVE_ACCEPTANCE.md)
 - [Fields cage and Ship wheel draws](FIELDS_CAGE_DRAWS_LIVE_ACCEPTANCE.md)
+- [Jeweled Pom rack swap and snap](JEWELED_POM_SNAP_LIVE_ACCEPTANCE.md)
 
 Keep setup, actions and expected observations with each check. Confirm results
 from live testing or explicitly waive them; retire completed items and delete
