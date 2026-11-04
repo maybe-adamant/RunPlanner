@@ -383,3 +383,29 @@ describe('run import of the Surface capture', () => {
     expect(mismatchLines(imported.report)).toEqual([]);
   });
 });
+
+describe('run import of a death in an Ephyra side room', () => {
+  it('ends the plan after the main room, without the side room the run never settled', () => {
+    const record = fixture('surface');
+    const side = record.rooms.findIndex((room) => room.name === 'N_Sub01');
+    const died = {
+      ...record,
+      rooms: record.rooms.slice(0, side + 1),
+      outcome: { ...record.outcome, kind: 'death' as const, endingRoom: 'N_Sub01' },
+    } as RunRecord;
+    const imported = projectFromRunRecord(catalog, died);
+    expect(record.rooms[side - 1]?.name).toBe('N_Combat02');
+    expect(imported).toMatchObject({
+      kind: 'complete',
+      report: { end: { cause: 'death', record: { roomIndex: side - 1 } } },
+    });
+    // The main room's visit returns to the Hub; the fatal side room is not entered.
+    expect(enteredRooms(imported.project)).toEqual([
+      'N_Opening01',
+      'N_PreHub01',
+      'N_Hub',
+      'N_Combat02',
+      'N_Hub',
+    ]);
+  });
+});

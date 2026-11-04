@@ -1,6 +1,7 @@
 import {
   assessPublicDreamItinerary,
   createBiomeAddress,
+  createLocalVisitOrderAddress,
   createOccurrenceAddress,
   createProjectDocument,
   createRouteAddress,
@@ -604,17 +605,54 @@ export class RunImportWalk {
         createBiomeAddress(route.routeKey, this.occurrences.biomeOfRoom[roomIndex]!),
         this.occurrences.occurrenceOf(roomIndex),
       );
-      if (!planEndAvailability(this.catalog, this.assembly, room).available) continue;
       if (
-        this.apply({
-          kind: 'ReplacePlanEnd',
-          route,
-          planEnd: { biomeKey: room.biomeKey, occurrenceId: room.occurrenceId },
-        })
+        this.transaction(
+          () =>
+            this.keepSettledSideRooms(room.biomeKey, room.occurrenceId, before) &&
+            planEndAvailability(this.catalog, this.assembly, room).available &&
+            this.apply({
+              kind: 'ReplacePlanEnd',
+              route,
+              planEnd: { biomeKey: room.biomeKey, occurrenceId: room.occurrenceId },
+            }),
+        )
       )
         return roomIndex;
     }
     return undefined;
+  }
+
+  /**
+   * An end at a Hub main room ends its whole visit, side rooms included, so the
+   * visit keeps only the side rooms recorded before `before`: the last fully
+   * settled room is the main room, never a side room the run did not settle.
+   */
+  private keepSettledSideRooms(biomeKey: string, occurrenceId: string, before: number): boolean {
+    const routeKey = this.assembly.project.route.routeKey;
+    const topology = this.assembly.project.route.biomes.find(
+      (biome) => biome.biomeKey === biomeKey,
+    )?.topology;
+    for (const decision of topology?.decisions ?? []) {
+      if (decision.kind !== 'localVisit' || decision.sourceOccurrenceId !== occurrenceId) continue;
+      const settled = decision.visitOrder.filter((sideId) => {
+        const first = this.occurrences.visitsOf(sideId)[0];
+        return first !== undefined && first < before;
+      });
+      if (settled.length === decision.visitOrder.length) continue;
+      if (
+        !this.apply({
+          kind: 'ReplaceLocalVisitOrder',
+          order: createLocalVisitOrderAddress(
+            createBiomeAddress(routeKey, biomeKey),
+            decision.sourceOccurrenceId,
+            decision.groupKey,
+          ),
+          occurrenceIds: settled,
+        })
+      )
+        return false;
+    }
+    return true;
   }
 
   /** Settles one command; false when it is refused or changes nothing. A settlement fault is reported and the command kept. */
