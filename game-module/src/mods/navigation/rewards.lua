@@ -15,9 +15,8 @@ function rewards.isLogicalRoomAcquisition(reward)
 end
 
 function rewards.realize(occurrence, nativeRoom)
-    -- After room declaration composition, retain the door's exact cage payload
-    -- instead of letting DoUnlockRoomExits roll it again. This is independent
-    -- of whether the destination has an entered-room layout.
+    -- A room rebuilt with its planned cages keeps them; native DoUnlockRoomExits
+    -- draws cages only for a room that still declares MaxCageRewards.
     if nativeRoom.CageRewards ~= nil then nativeRoom.MaxCageRewards = nil end
     local expected = occurrence.overview
     if expected.incomingReward and not rewards.isLogicalRoomAcquisition(expected.incomingReward) then

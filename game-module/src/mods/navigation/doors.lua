@@ -212,8 +212,9 @@ function doors.bindAdditional(nativeRoom, additional)
 end
 
 -- The planned room behind one published door target: its declaration with the
--- occurrence identity, Zagreus Contract presence, reward and cages stamped.
-local function plannedRoom(target, game, occurrencesById)
+-- occurrence identity, Zagreus Contract presence and reward stamped. Cages are
+-- stamped only on a room rebuilt for a door whose native cage draws already ran.
+local function plannedRoom(target, game, occurrencesById, stampCages)
     local declaration = game and game.RoomData and game.RoomData[target.room.gameName]
     local room = copy(declaration or { GenusName = target.room.gameName })
     room.GenusName = target.room.gameName
@@ -230,7 +231,7 @@ local function plannedRoom(target, game, occurrencesById)
         room.Encounter.LootAName = target.reward.source
         room.Encounter.LootBName = target.reward.spurnedSource
     end
-    if target.cageRewards ~= nil then
+    if stampCages and target.cageRewards ~= nil then
         room.CageRewards = {}
         for cageIndex, cageReward in ipairs(target.cageRewards) do
             room.CageRewards[cageIndex] = { RewardType = cageReward.rewardType, ForceLootName = cageReward.source }
@@ -241,6 +242,7 @@ end
 
 -- The planned room for the occurrence at `index`, as the planned room before it
 -- offers it through its door after that door's rerolls; nil when no published door leads there.
+-- It replaces a taken door's room, so no native cage draw follows.
 function doors.plannedRoom(plan, index, game)
     local source = plan.occurrencesById[plan.selectedOccurrenceIds[index - 1]]
     local id = plan.selectedOccurrenceIds[index]
@@ -248,10 +250,25 @@ function doors.plannedRoom(plan, index, game)
     for _, target in ipairs(publishedTargets(source.doors, plan.occurrencesById)) do
         if target.room.id == id then
             if source.doors.kind == "batch" then target = rerolls.effectiveTarget(source, target) end
-            return plannedRoom(target, game, plan.occurrencesById)
+            return plannedRoom(target, game, plan.occurrencesById, true)
         end
     end
     return nil
+end
+
+-- Each published batch target's first cage draws by destination occurrence id;
+-- native DoUnlockRoomExits draws them from the store after the door's own reward.
+function doors.cageDraws(occurrence, occurrencesById)
+    local expected = occurrence and occurrence.doors
+    if expected == nil or expected.kind ~= "batch" then return nil end
+    local result
+    for _, target in ipairs(publishedTargets(expected, occurrencesById)) do
+        if target.cageRewards ~= nil then
+            result = result or {}
+            result[target.room.id] = { rewards = target.cageRewards, next = 1 }
+        end
+    end
+    return result
 end
 
 -- The other published target or planned additional exit a door from `occurrence`

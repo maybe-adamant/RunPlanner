@@ -75,9 +75,11 @@ H has **no new route-navigation mechanism**. It earns one Fields-room slice
 with two contacts over the [native Fields setup](../biomes/H_GAME_RULES.md#native-execution-contacts):
 
 1. **Fields door payload realization.** During ordinary outgoing-door
-   generation, bypass the native cage-count roll and install each target's
-   exact ordered cage rewards. The grouped cage preview extends an ordinary
-   door target; it is not an incoming reward or a collection of fake exits.
+   generation, steer each native cage draw to the target's exact ordered cage
+   reward, so every target's cages, an unpicked peer's included, leave the
+   reward store as they do natively. The grouped cage preview extends an
+   ordinary door target; it is not an incoming reward or a collection of fake
+   exits.
 2. **Fields room realization.** On entry to the selected `H_Combat`
    occurrence, let native Fields setup create the cages and optional rewards
    while steering their exact authored identities and physical assignments,

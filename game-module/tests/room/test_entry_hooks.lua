@@ -1116,7 +1116,7 @@ function TestRoomEntryHooks.testEphyraRestoresStayTransparentWhileFreshRoomsAdva
     lu.assertNil(cursor.firstMismatch)
 end
 
-function TestRoomEntryHooks.testFieldsDoorRewardsSurviveRoomCreationWithOrWithoutLayout()
+function TestRoomEntryHooks.testFieldsDoorRoomsKeepTheirNativeCageDrawWithOrWithoutLayout()
     for _, hasLayout in ipairs({ true, false }) do
         local module, _, callbacks = capture()
         local destination = { id = "fields", gameName = "H_Combat07", biomeKey = "H", overview = {} }
@@ -1138,20 +1138,44 @@ function TestRoomEntryHooks.testFieldsDoorRewardsSurviveRoomCreationWithOrWithou
         local priorGame = _G.game
         _G.game = { RoomData = { H_Combat07 = { MaxCageRewards = 2 } } }
         local offered = doors.realize(source, {}, _G.game)
-        local created = callbacks.CreateRoom(nil, {}, function(roomData)
-            -- Native DoUnlockRoomExits rerolls cage rewards if this survives
-            -- the declaration composition before CreateRoom.
-            lu.assertNil(roomData.MaxCageRewards)
-            return roomData
-        end, offered[1].Room, {})
-        lu.assertNil(created.MaxCageRewards)
-        lu.assertEquals(created.CageRewards, {
-            { RewardType = "MaxManaDrop" },
-            { RewardType = "Boon", ForceLootName = "HeraUpgrade" },
-        })
-        lu.assertEquals(_G.game.RoomData.H_Combat07.MaxCageRewards, 2)
+        local created = callbacks.CreateRoom(nil, {}, function(roomData) return roomData end, offered[1].Room, {})
+        -- Native DoUnlockRoomExits draws the cages from the store after creation.
+        lu.assertEquals(created.MaxCageRewards, 2)
+        lu.assertNil(created.CageRewards)
         _G.game = priorGame
     end
+end
+
+function TestRoomEntryHooks.testARebuiltFieldsRoomKeepsItsPlannedCages()
+    local module, _, callbacks = capture()
+    local destination = { id = "fields", gameName = "H_Combat07", biomeKey = "H", overview = {} }
+    local source = { id = "src", gameName = "H_Intro", biomeKey = "H", overview = {},
+        doors = { kind = "batch", targets = { {
+            exitKey = "exit1", room = { id = destination.id, gameName = destination.gameName },
+            cageRewards = {
+                { rewardType = "MaxManaDrop" },
+                { rewardType = "Boon", source = "HeraUpgrade" },
+            },
+        } } } }
+    local plan = { selectedOccurrenceIds = { "src", "fields" },
+        occurrencesById = { src = source, fields = destination } }
+    local state = { state = "synchronized", plan = plan }
+    local navigationEntry = navigation.attach(module, stub(), function() return state end,
+        function() end, routeSessionModule, roomCoordinatorModule)
+    roomHooks.attach(module, stub(), function() return state end, function() end,
+        routeSessionModule, roomCoordinatorModule, nil, navigationEntry, unusedLoadoutScope)
+    local priorGame = _G.game
+    _G.game = { RoomData = { H_Combat07 = { MaxCageRewards = 2 } } }
+    -- A taken door's cages were already drawn natively; the planned room replaces its room.
+    local rebuilt = navigationEntry.plannedRoom(plan, 2, _G.game)
+    local created = callbacks.CreateRoom(nil, {}, function(roomData) return roomData end, rebuilt, {})
+    lu.assertNil(created.MaxCageRewards)
+    lu.assertEquals(created.CageRewards, {
+        { RewardType = "MaxManaDrop" },
+        { RewardType = "Boon", ForceLootName = "HeraUpgrade" },
+    })
+    lu.assertEquals(_G.game.RoomData.H_Combat07.MaxCageRewards, 2)
+    _G.game = priorGame
 end
 
 function TestRoomEntryHooks.testEphyraFinalHandoffIsBoundBeforeNativeRoomCreation()

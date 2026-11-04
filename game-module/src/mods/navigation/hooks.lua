@@ -51,6 +51,8 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
     local dreamBiomeScope
     -- The planned reward one native door or cage reroll press must draw.
     local rerollScope
+    -- Each Fields door's planned cage draws while DoUnlockRoomExits runs.
+    local cageScope
     local takePress = rerollPlan.counter()
 
     -- A restored Hub re-assigns each open board door its persisted offer, the
@@ -154,6 +156,13 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         if state == nil or state.state ~= "synchronized" or restoredBoardDoor(args) then
             return base(currentRun, nativeRoom, prior, args)
         end
+        local cage = cageScope and cageScope.current
+        if cage ~= nil and cage.room == nativeRoom then
+            cageScope.current = nil
+            local result = base(currentRun, nativeRoom, prior, args)
+            if cage.reward.source ~= nil then nativeRoom.ForceLootName = cage.reward.source end
+            return result
+        end
         local occurrence = occurrenceForRoom(state, nativeRoom)
         local reward = occurrence and (firstDraw(state, occurrence) or occurrence.overview.incomingReward)
         if ephyraDoorScope ~= nil and type(args) == "table" and type(args.Door) == "table" then
@@ -229,6 +238,17 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
             end
             report(runtime)
             return result
+        end
+        -- A cage draw copies its door's room and passes no Door; it draws the
+        -- door's next planned cage from the native store.
+        local cages = cageScope and type(nativeRoom) == "table"
+            and cageScope.byRoomId[nativeRoom.__runPlannerExecutionRoomId] or nil
+        if cages ~= nil and (type(args) ~= "table" or args.Door == nil) then
+            local cage = cages.rewards[cages.next]
+            if cage == nil then return base(run, nativeRoom, rewardStore, chosen, args) end
+            cages.next = cages.next + 1
+            cageScope.current = { room = nativeRoom, reward = cage }
+            return drawExpected(cage)
         end
         -- A reroll press is a real draw of its planned reward from the native store.
         if rerollScope ~= nil and not rerollScope.drawn then
@@ -417,8 +437,11 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         local rows = doors.realize(occurrence, normal, _G.game or game,
             state.plan.occurrencesById) or nil
         if rows ~= nil and expected and expected.kind ~= "terminal" then doorScope = { rows = rows, index = 1 } end
+        local cageDraws = doors.cageDraws(occurrence, state.plan.occurrencesById)
+        if cageDraws ~= nil then cageScope = { byRoomId = cageDraws } end
         local ok, result = pcall(base, currentRun, nativeRoom)
         doorScope = nil
+        cageScope = nil
         if not ok then error(result, 0) end
         room.checkpoint(state, "outgoingGeneration")
         if state.state == "synchronized" then room.window(state, "postOutgoing") end
