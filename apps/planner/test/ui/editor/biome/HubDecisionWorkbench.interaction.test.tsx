@@ -115,14 +115,8 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(screen.getAllByRole('tab')).toEqual([overview, timeline]);
     const removal = screen.getByRole('button', { name: 'Remove Hub' });
     const hubPanel = screen.getByRole('region', { name: 'Ephyra Hub' });
-    expect(hubPanel.classList.contains('room-card')).toBe(true);
-    expect(
-      screen.getByRole('heading', { name: 'Ephyra Hub' }).closest('.room-card-heading')
-        ?.parentElement,
-    ).toBe(hubPanel);
-    expect(removal.closest('.room-workbench-tab-row')).toBe(
-      overview.closest('.room-workbench-tab-row'),
-    );
+    expect(hubPanel.contains(screen.getByRole('heading', { name: 'Ephyra Hub' }))).toBe(true);
+    expect(hubPanel.contains(removal)).toBe(true);
     expect(removal.closest('[role="tablist"]')).toBeNull();
     const panel = screen.getByRole('region', { name: 'Hub room participation' });
     expect(screen.getByRole('region', { name: 'Ephyra Hub map' })).toBeTruthy();

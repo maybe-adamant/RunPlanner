@@ -6,6 +6,8 @@ import { Provider } from 'react-redux';
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import { createProjectDocument } from '@run-planner/engine/authored-project';
 import type { LoadoutPresetController } from '@planner/persistence/loadoutPresets';
+import type { NavigationPinPreference } from '@planner/persistence/navigationPinPreference';
+import type { BiomeRailPinPreference } from '@planner/persistence/biomeRailPinPreference';
 import { App } from '@planner/ui/shell/App';
 import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
@@ -14,6 +16,8 @@ interface RenderPlannerOptions {
   readonly application?: PlannerApplication;
   readonly companion?: ReactNode;
   readonly loadoutPresets?: LoadoutPresetController;
+  readonly navigationPinPreference?: NavigationPinPreference;
+  readonly biomeRailPinPreference?: BiomeRailPinPreference;
   /** Most editor interaction tests need an explicitly open route. */
   readonly startWithProject?: boolean;
 }
@@ -52,6 +56,12 @@ export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) 
         {...(options.loadoutPresets === undefined
           ? {}
           : { loadoutPresets: options.loadoutPresets })}
+        {...(options.navigationPinPreference === undefined
+          ? {}
+          : { navigationPinPreference: options.navigationPinPreference })}
+        {...(options.biomeRailPinPreference === undefined
+          ? {}
+          : { biomeRailPinPreference: options.biomeRailPinPreference })}
         {...(application.bugReport === undefined ? {} : { bugReport: application.bugReport })}
         {...(application.communityEvents === undefined
           ? {}

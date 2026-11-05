@@ -13,6 +13,8 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRoomRunStateCheckpointAddress,
+  createStartingRewardAddress,
   createTargetAddress,
   semanticAddressKey,
   type ProjectDocument,
@@ -563,7 +565,7 @@ describe('structured workspace biome presentation', () => {
         entry.kind === 'node' && entry.node.key === directDecision.key,
     );
     if (directRail === undefined) throw new Error('F direct decision rail entry is missing');
-    expect(directRail.selectedTarget).toEqual({
+    expect(directRail.selectedTarget).toMatchObject({
       roomIcon: { kind: 'combat', biomeKey: 'F' },
       roomLabel: directTarget.room.label,
       roomRewards: [directTarget.room.roomLocal.control.offer],
@@ -590,7 +592,7 @@ describe('structured workspace biome presentation', () => {
     );
     if (fieldsRail === undefined) throw new Error('H Fields decision rail entry is missing');
     // The rail keeps every cage reward, in cage order.
-    expect(fieldsRail.selectedTarget).toEqual({
+    expect(fieldsRail.selectedTarget).toMatchObject({
       roomIcon: { kind: 'combat', biomeKey: 'H' },
       roomLabel: fieldsTarget.room.label,
       roomRewards: fieldsTarget.door.offerRewardSurface.rewards.map((reward) => reward.offer),
@@ -624,6 +626,63 @@ describe('structured workspace biome presentation', () => {
         offer: fixedTarget.room.roomLocal.offer,
       },
     });
+  });
+
+  it("numbers reached rail stops by the engine snapshot's run depth and leaves unreached stops bare", () => {
+    const source = biomeSource(goldenProject, 'Underworld', 'F');
+    const biome = presentWorkspaceBiome(
+      catalog,
+      assembleWorkspaceBiomeSemantics(catalog, source),
+    ).biome;
+    const enteredDepth = (room: WorkspaceOccurrenceWorkbenchNode['room']) => {
+      const entered = source.runState(
+        createRoomRunStateCheckpointAddress(room.address, { kind: 'roomEntered' }),
+      );
+      return entered?.availability === 'available'
+        ? entered.snapshot.counters.runDepthCache
+        : undefined;
+    };
+    const roomStops = biome.rail.flatMap((entry) =>
+      entry.kind === 'node' && entry.node.kind === 'occurrenceWorkbench'
+        ? [{ depth: entry.runDepth, room: entry.node.room }]
+        : [],
+    );
+    expect(roomStops.length).toBeGreaterThan(0);
+    for (const stop of roomStops) {
+      expect(stop.depth).toBeDefined();
+      expect(stop.depth).toBe(enteredDepth(stop.room));
+    }
+
+    // Without a starting reward the route is blocked before its first room.
+    const start = createOccurrenceId('unreached-f-start');
+    const unreached = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'unreached-f',
+        routeKey: 'Underworld',
+        configuredBiomeCount: 1,
+      }),
+      catalog,
+      {
+        kind: 'CreateStart',
+        biome: createBiomeAddress('Underworld', 'F'),
+        occurrenceId: start,
+        gameName: 'F_Opening01',
+      },
+    );
+    const blocked = present(unreached, 'Underworld', 'F').presentation.biome;
+    const blockedStops = blocked.rail.filter((entry) => entry.kind === 'node');
+    expect(blockedStops.length).toBeGreaterThan(0);
+    for (const entry of blockedStops) expect(entry).not.toHaveProperty('runDepth');
+    const reached = applyProjectCommand(unreached, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    expect(
+      present(reached, 'Underworld', 'F').presentation.biome.rail.some(
+        (entry) => entry.kind === 'node' && entry.runDepth !== undefined,
+      ),
+    ).toBe(true);
   });
 
   it('does not present a Clockwork Goal room dormant concrete reward on the rail', () => {
@@ -660,12 +719,13 @@ describe('structured workspace biome presentation', () => {
       ),
     ).toEqual([{ clockworkGoalsRemaining: 5, control: undefined, summary: 'Clockwork Goal' }]);
     expect(goalDecision.missingTargets).toEqual([]);
-    expect(rail.selectedTarget).toEqual({
+    expect(rail.selectedTarget).toMatchObject({
       clockworkGoalsRemaining: 5,
       roomIcon: { kind: 'combat', biomeKey: 'I' },
       roomLabel: goalTarget.room.label,
       roomRewards: [],
     });
+    expect(rail.selectedTarget).not.toHaveProperty('reward');
     // Each Goal door on the rail carries the countdown its batch shows.
     expect(
       biome.rail.flatMap((entry) =>

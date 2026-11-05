@@ -49,7 +49,7 @@ function appMarkup(application: ReturnType<typeof createApplication>): string {
 }
 
 function findingsMarkup(markup: string): string {
-  const match = /<section class="project-findings"[\s\S]*?<\/section>/.exec(markup);
+  const match = /<section[^>]*class="project-findings[^"]*"[\s\S]*?<\/section>/.exec(markup);
   if (match === null) throw new Error('Findings panel is missing');
   return match[0];
 }

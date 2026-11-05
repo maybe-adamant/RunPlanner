@@ -142,7 +142,7 @@ function railButtonForMarker(container: ParentNode, marker: string): HTMLButtonE
 }
 
 function hubRailButton(container: ParentNode = document): HTMLButtonElement {
-  const button = container.querySelector<HTMLButtonElement>('[data-kind="hubDecision"] > button');
+  const button = container.querySelector<HTMLButtonElement>('[data-kind="hubDecision"] button');
   if (button === null) throw new Error('N Hub rail button is missing');
   return button;
 }

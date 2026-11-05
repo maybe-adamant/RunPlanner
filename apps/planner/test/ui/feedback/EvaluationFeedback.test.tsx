@@ -22,37 +22,47 @@ import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { findingDestinationLabel } from '@planner/projections/evaluationProjection';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
-it.each([
-  ['Decision 1', 'Fields · Entrance'],
-  ['Decision 3', 'Fields · Decision 2'],
-])('labels the unfinished %s from its existing predecessor', (removedLabel, expected) => {
-  const application = createOpenTestApplication();
-  const project = createGoldenFGHIProject();
-  application.store.dispatch(authoredProjectReplaced(project));
-  const before = application.selectStructuredWorkspace(application.store.getState())!;
-  const entry = before.route.biomes
-    .find((biome) => biome.biomeKey === 'H')
-    ?.rail.find((entry) => entry.kind === 'node' && entry.label === removedLabel);
-  if (
-    entry?.kind !== 'node' ||
-    (entry.node.kind !== 'ordinaryBatch' && entry.node.kind !== 'mixedBatch')
-  )
-    throw new Error('Fields decision fixture is missing');
-  application.store.dispatch(
-    authoredProjectReplaced(
-      applyProjectCommand(project, catalog, {
-        kind: 'RemoveExitDecision',
-        decision: entry.node.owner,
-      }),
-    ),
-  );
-  const workspace = application.selectStructuredWorkspace(application.store.getState())!;
-  const frontier = workspace.route.biomes.find((biome) => biome.biomeKey === 'H')?.frontier;
-  if (frontier?.kind !== 'exitDecision') throw new Error('Expected an outgoing decision frontier');
-  const target = workspace.focusByOwner.get(semanticAddressKey(frontier.owner));
-  expect(target).toBeDefined();
-  expect(findingDestinationLabel(catalog, frontier.owner, target, workspace.route)).toBe(expected);
-});
+it.each(['Decision 1', 'Decision 3'])(
+  'locates the unfinished %s at its existing predecessor',
+  (removedLabel) => {
+    const application = createOpenTestApplication();
+    const project = createGoldenFGHIProject();
+    application.store.dispatch(authoredProjectReplaced(project));
+    const before = application.selectStructuredWorkspace(application.store.getState())!;
+    const entry = before.route.biomes
+      .find((biome) => biome.biomeKey === 'H')
+      ?.rail.find((entry) => entry.kind === 'node' && entry.label === removedLabel);
+    if (
+      entry?.kind !== 'node' ||
+      (entry.node.kind !== 'ordinaryBatch' && entry.node.kind !== 'mixedBatch')
+    )
+      throw new Error('Fields decision fixture is missing');
+    application.store.dispatch(
+      authoredProjectReplaced(
+        applyProjectCommand(project, catalog, {
+          kind: 'RemoveExitDecision',
+          decision: entry.node.owner,
+        }),
+      ),
+    );
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const fields = workspace.route.biomes.find((biome) => biome.biomeKey === 'H')!;
+    const frontier = fields.frontier;
+    if (frontier?.kind !== 'exitDecision')
+      throw new Error('Expected an outgoing decision frontier');
+    const predecessor = fields.rail.find(
+      (candidate) =>
+        candidate.kind === 'node' && candidate.node.key === frontier.predecessorNodeKey,
+    );
+    if (predecessor?.kind !== 'node' || predecessor.runDepth === undefined)
+      throw new Error('Expected a reached predecessor stop');
+    const target = workspace.focusByOwner.get(semanticAddressKey(frontier.owner));
+    expect(target).toBeDefined();
+    expect(findingDestinationLabel(catalog, frontier.owner, target, workspace.route)).toMatch(
+      new RegExp(`^${fields.label} · Location ${predecessor.runDepth} · `),
+    );
+  },
+);
 
 const biome = createBiomeAddress('Underworld', 'F');
 const trait = createTraitOfferAddress(
@@ -92,7 +102,7 @@ const destination: WorkspaceInspectorDestination = {
   traitDialogTarget: trait,
 };
 
-it('uses actual rail destinations for decision, room, and Hub visit locations', () => {
+it('names rail destinations by Location for decision, room, and Hub visit stops', () => {
   const application = createOpenTestApplication();
   application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
   const workspace = application.selectStructuredWorkspace(application.store.getState())!;
@@ -119,7 +129,10 @@ it('uses actual rail destinations for decision, room, and Hub visit locations', 
           target,
           workspace.route,
         );
-        expect(label).toBe(`${biome.label} · ${stop.label}`);
+        // Reached rooms read by their Location; the Hub and stops without a room keep a title.
+        if ('runDepth' in stop && stop.runDepth !== undefined)
+          expect(label.startsWith(`${biome.label} · Location ${stop.runDepth} · `)).toBe(true);
+        else expect(label).toBe(`${biome.label} · ${stop.label}`);
         labels.push(stop.label);
       }
     }
@@ -154,7 +167,7 @@ it('shows one grouped issue and selects its Timeline launcher without opening it
   const repair = screen.getByRole('button', { name: /choose a trait offer/i });
   expect(screen.getAllByRole('button')).toHaveLength(1);
   // Both reasons share the launcher, which carries only the first title.
-  expect(repair.querySelector('.finding-description')).toBeNull();
+  expect(repair.getAttribute('aria-description')).toBeNull();
 
   fireEvent.click(repair);
 
@@ -192,7 +205,7 @@ it('collapses inner trait reasons into one attention entry that selects the laun
   const panel = within(container);
   const repair = panel.getByRole('button', { name: /trait offer: choose echo pom target/i });
   expect(panel.getAllByRole('button')).toHaveLength(1);
-  expect(repair.querySelector('.finding-description')?.textContent).toBe('+1 more in its editor');
+  expect(repair.getAttribute('aria-description')).toContain('+1 more in its editor');
 
   fireEvent.click(repair);
 
@@ -217,7 +230,7 @@ it('keeps details that explain how to repair the issue', () => {
   );
 
   const repair = screen.getByRole('button', { name: /wrong replacement rarity/i });
-  expect(repair.querySelector('.finding-description')?.textContent).toBe(
+  expect(repair.getAttribute('aria-description')).toContain(
     'Use the next rarity above the equipped boon.',
   );
 });

@@ -205,7 +205,7 @@ describe('RouteWorkspace', () => {
     expect(markup).toContain('aria-label="Start room configuration"');
   });
 
-  it('shows only the route issue card in a blocked biome view', () => {
+  it('leaves the route repair to the header in a blocked biome view', () => {
     const application = createOpenTestApplication('Underworld');
     application.store.dispatch(
       authoredProjectCommandDispatched({
@@ -219,16 +219,8 @@ describe('RouteWorkspace', () => {
     );
 
     const markup = routeWorkspaceMarkup(application, 'Underworld');
-    expect(markup).not.toContain('feedback-context-banner');
-    const findings = markup.slice(
-      markup.indexOf('class="project-findings"'),
-      markup.indexOf('</section>', markup.indexOf('class="project-findings"')),
-    );
-    expect(findings.match(/class="assessment-issue-button"/g)).toHaveLength(1);
-    expect(findings).not.toContain('data-feedback-context');
-    expect(findings).not.toContain('is blocked');
-    // The missing starting reward blocks the route before any biome.
-    expect(findings).toContain('Loadout');
+    expect(markup).not.toContain('Next repair');
+    expect(markup).not.toContain('assessment-issue-button');
   });
 
   it('keeps the singleton later P entry automatic in its biome workbench', () => {

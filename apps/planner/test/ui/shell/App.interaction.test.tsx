@@ -486,7 +486,7 @@ const openLoadout = (user: ReturnType<typeof renderPlannerForInteraction>['user'
   user.click(screen.getByRole('button', { name: 'Loadout' }));
 
 describe('planner history interaction', () => {
-  it('places the same route repair in the biome rail or above non-biome content', async () => {
+  it('keeps the one route repair in the header on every panel and navigates to its owner', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHProject()));
     application.store.dispatch(
@@ -503,40 +503,79 @@ describe('planner history interaction', () => {
     const repair = () => {
       const headings = screen.getAllByRole('heading', { name: 'Next repair' });
       expect(headings).toHaveLength(1);
-      return headings[0]!.closest('section')!;
+      const section = headings[0]!.closest('section')!;
+      expect(section.closest('header')).not.toBeNull();
+      return section;
     };
 
     await user.click(screen.getByRole('button', { name: 'Erebus' }));
     const copy = repair().textContent;
-    expect(repair().parentElement).toBe(
-      screen.getByRole('region', { name: 'Erebus route structure' }),
-    );
-    expect(repair().nextElementSibling?.textContent).toContain('Erebus');
-    expect(screen.queryByText('Route structure')).toBeNull();
+    for (const label of ['Oceanus', 'Loadout', 'Traits']) {
+      await user.click(screen.getByRole('button', { name: label }));
+      expect(repair().textContent).toBe(copy);
+    }
 
-    await user.click(screen.getByRole('button', { name: 'Oceanus' }));
-    expect(repair().parentElement).toBe(
-      screen.getByRole('region', { name: 'Oceanus route structure' }),
-    );
-    // A blocked view shows the same single repair card.
+    expect(screen.queryByRole('region', { name: 'Erebus route structure' })).toBeNull();
     const entries = within(repair()).getAllByRole('button');
     expect(entries).toHaveLength(1);
-    expect(repair().textContent).toBe(copy);
     await user.click(entries[0]!);
     expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
       key: issue.regionKey,
       origin: issue.owner,
     });
-    expect(repair().parentElement).toBe(
-      screen.getByRole('region', { name: 'Erebus route structure' }),
-    );
+    // The repair's owner sits in Erebus, which the pill opens.
+    expect(screen.getByRole('region', { name: 'Erebus route structure' })).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
 
-    for (const label of ['Loadout', 'Traits']) {
-      await user.click(screen.getByRole('button', { name: label }));
-      expect(repair().parentElement?.className).toBe('editor-panel');
-      expect(repair().textContent).toBe(copy);
-    }
+  it('folds the panel navigation and the biome rail and restores those choices', async () => {
+    const stored = {
+      navigation: undefined as boolean | undefined,
+      rail: undefined as boolean | undefined,
+    };
+    const navigationPinPreference = {
+      read: () => stored.navigation,
+      write: (pinned: boolean) => {
+        stored.navigation = pinned;
+      },
+    };
+    const biomeRailPinPreference = {
+      read: () => stored.rail,
+      write: (pinned: boolean) => {
+        stored.rail = pinned;
+      },
+    };
+    const open = () => {
+      const application = createApplication();
+      application.store.dispatch(authoredProjectReplaced(createGoldenFGHProject()));
+      return renderPlannerForInteraction({
+        application,
+        biomeRailPinPreference,
+        navigationPinPreference,
+      });
+    };
+
+    const first = open();
+    await first.user.click(screen.getByRole('button', { name: 'Erebus' }));
+    await first.user.click(screen.getByRole('button', { name: 'Unpin panels' }));
+    expect(stored.navigation).toBe(false);
+    expect(screen.getByRole('button', { name: 'Show panels' }).getAttribute('aria-expanded')).toBe(
+      'false',
+    );
+    await first.user.click(screen.getByRole('button', { name: 'Fold rooms' }));
+    expect(stored.rail).toBe(false);
+    expect(screen.getByRole('button', { name: 'Show rooms' })).toBeTruthy();
+    first.unmount();
+
+    const second = open();
+    expect(screen.getByRole('button', { name: 'Show panels' })).toBeTruthy();
+    await second.user.click(screen.getByRole('button', { name: 'Show panels' }));
+    await second.user.click(screen.getByRole('button', { name: 'Erebus' }));
+    expect(screen.getByRole('button', { name: 'Show rooms' })).toBeTruthy();
+    await second.user.click(screen.getByRole('button', { name: 'Show rooms' }));
+    await second.user.click(screen.getByRole('button', { name: 'Pin rooms' }));
+    expect(stored.rail).toBe(true);
+    expect(screen.getByRole('button', { name: 'Fold rooms' })).toBeTruthy();
   });
 
   it('repeatedly routes the selected Fields Optional 3 issue to its Overview picker', async () => {
@@ -1032,7 +1071,7 @@ describe('planner history interaction', () => {
 
     const view = renderPlannerForInteraction({ application });
     const hubRailButton = view.container.querySelector<HTMLButtonElement>(
-      '[data-kind="hubDecision"] > button',
+      '[data-kind="hubDecision"] button',
     );
     if (hubRailButton === null) throw new Error('N Hub rail button is missing');
     await view.user.click(hubRailButton);
