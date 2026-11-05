@@ -484,15 +484,19 @@ the chosen door's room icon and name and its final reward icons as fixed
 labels beside it; a lone door, a fixed exit or the completed run is shown
 plainly, and a partly filled batch says how many doors are set. The picker is
 the exit selection's finding anchor. The row ends with **End plan here**; on
-the end room it reads **Plan ends here** with **Continue planning**. A room the
-Hub or a side-room visit leaves has no last row, and a room past the plan's
-end shows no doors; both keep **End plan here** under their read-only
-Timeline. Moving to the next room is the rail's job.
+the end room it reads **Plan ends here** with **Continue planning**. A room with
+no planned way on (the Hub or a side-room visit leads on, or nothing is planned
+past it) has no last row and keeps **End plan here** under its Timeline, with
+any boss-door pool still in its doors; a room past the plan's end shows no
+doors and keeps it under its read-only Timeline. Moving to the next room is
+the rail's job.
 
 Door and Fields cage rerolls are Timeline rows, where their reorder handle is
 the only way to change their position among other post-unlock actions. The
 room's **Doors** entry in the Add area's Objects asks for the door (or its
 cage) and then its new reward, appending one press after the room's actions;
+each option names its door, marked with the reroll die, then the rerolls left
+before the press and what it spends, as the engine publishes them;
 it is disabled with its reason when no reroll is left, and absent without a
 card that enables rerolls unless the plan already holds presses. A press row
 reads Reroll, the pressed door with the reward it replaces (a cage is known by
