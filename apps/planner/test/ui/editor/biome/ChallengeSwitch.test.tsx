@@ -62,7 +62,10 @@ describe('challenge switch rows on the room Overview', () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await user.click(screen.getByRole('button', { name: 'Switch type' }));
+    // The type picker appears once the switch is ticked.
+    expect(screen.queryByRole('button', { name: 'Switch type' })).toBeNull();
+    await user.click(screen.getByRole('checkbox', { name: 'Challenge Switch' }));
+    await user.click(screen.getByRole('button', { name: /Switch type/ }));
     await user.click(screen.getByRole('option', { name: /Infernal Trove/ }));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 

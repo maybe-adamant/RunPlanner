@@ -12,7 +12,8 @@ import {
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { challengeSwitchRuleSentence } from '@planner/projections/challengeSwitchCopy';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
-import { challengeSwitchIcon } from '@planner/ui/artwork/roomArtwork';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { challengeSwitchIcon, roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { hintProps } from '@planner/ui/controls/hint';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -87,40 +88,43 @@ export function ChallengeSwitchControls({
             }}
             type="checkbox"
           />
+          <ArtworkIcon className="artwork-label-icon" source={roomObjectIcon('challengeSwitch')} />
           <span>Challenge Switch</span>
         </label>
-        <ContextualPicker<ChallengeSwitchKind>
-          ariaLabel="Switch type"
-          id={`challenge-switch-type-${idKey}`}
-          itemIcon={(item) => challengeSwitchIcon(item.value)}
-          label=""
-          model={declaredChoicesPicker(
-            observation.kinds.map((kind) => ({
-              key: kind.kind,
-              value: kind.kind,
-              label: kind.label,
-              ...(kind.selected || kind.observeVariantKey !== undefined
-                ? {}
-                : {
-                    disabled: true,
-                    ...(kind.lock === undefined ? {} : { explanation: lockHint(kind.lock) }),
-                  }),
-            })),
-            row?.kind,
-          )}
-          onSelect={(kind) => {
-            if (kind === row?.kind) return;
-            const variantKey = observation.kinds.find(
-              (candidate) => candidate.kind === kind,
-            )?.observeVariantKey;
-            if (variantKey !== undefined) executeIntent(interaction.observeIntentFor(variantKey));
-          }}
-          placeholder="Type"
-          searchable={false}
-          {...(row === undefined
-            ? {}
-            : { triggerIcon: challengeSwitchIcon(row.kind), triggerLabel: row.label })}
-        />
+        {row === undefined ? null : (
+          <ContextualPicker<ChallengeSwitchKind>
+            ariaLabel="Switch type"
+            id={`challenge-switch-type-${idKey}`}
+            itemIcon={(item) => challengeSwitchIcon(item.value)}
+            label=""
+            model={declaredChoicesPicker(
+              observation.kinds.map((kind) => ({
+                key: kind.kind,
+                value: kind.kind,
+                label: kind.label,
+                ...(kind.selected || kind.observeVariantKey !== undefined
+                  ? {}
+                  : {
+                      disabled: true,
+                      ...(kind.lock === undefined ? {} : { explanation: lockHint(kind.lock) }),
+                    }),
+              })),
+              row?.kind,
+            )}
+            onSelect={(kind) => {
+              if (kind === row?.kind) return;
+              const variantKey = observation.kinds.find(
+                (candidate) => candidate.kind === kind,
+              )?.observeVariantKey;
+              if (variantKey !== undefined) executeIntent(interaction.observeIntentFor(variantKey));
+            }}
+            placeholder="Type"
+            searchable={false}
+            {...(row === undefined
+              ? {}
+              : { triggerIcon: challengeSwitchIcon(row.kind), triggerLabel: row.label })}
+          />
+        )}
       </div>
       {row === undefined ? null : (
         <ChallengeSwitchKindOptions interaction={interaction} observation={observation} row={row} />

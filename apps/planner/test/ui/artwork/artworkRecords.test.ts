@@ -153,6 +153,7 @@ const records: [string, Readonly<Record<string, string | null>>, readonly string
       'purgingPool',
       'hermesShrine',
       'keepsakeRack',
+      'challengeSwitch',
       'infernalTrove',
       'moonMonument',
       'unseenSigil',
