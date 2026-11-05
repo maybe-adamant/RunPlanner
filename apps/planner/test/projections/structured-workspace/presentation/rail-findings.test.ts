@@ -1,10 +1,13 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
+  createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createRouteAddress,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
@@ -61,5 +64,36 @@ describe('rail room findings', () => {
     expect(selection.equipResult?.marker.findingCount).toBe(1);
     expect(node.marker.findingCount).toBe(0);
     expect(node.railMarker?.findingCount).toBe(1);
+  });
+
+  it("marks the Chaos room a decision takes with its reward's unchosen trait offer", () => {
+    const biome = createBiomeAddress('Surface', 'N');
+    const additional = createAdditionalExitAddress(
+      biome,
+      createOccurrenceId('surface-n-opening'),
+      'chaos',
+    );
+    const withChaos = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'AddChaos',
+      additional,
+      occurrenceId: createOccurrenceId('rail-findings-chaos'),
+    });
+    const application = createOpenTestApplication();
+    application.store.dispatch(authoredProjectReplaced(withChaos));
+    const select = application
+      .selectStructuredWorkspace(application.store.getState())
+      ?.interactions.chaosExits.get(semanticAddressKey(additional))?.selectIntent.command;
+    if (select === undefined) throw new Error('N Opening Chaos exit is missing');
+    application.store.dispatch(
+      authoredProjectReplaced(applyProjectCommand(withChaos, catalog, select)),
+    );
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const rail = workspace?.route.biomes.find((candidate) => candidate.biomeKey === 'N')?.rail;
+    const chaosStop = rail?.find(
+      (entry) => entry.kind === 'node' && entry.selectedTarget?.roomIcon.kind === 'chaos',
+    );
+    if (chaosStop === undefined) throw new Error('N Chaos rail stop is missing');
+    // The finding belongs to the trait offer of the Chaos room's own reward.
+    expect(chaosStop.marker.findingCount).toBe(1);
   });
 });

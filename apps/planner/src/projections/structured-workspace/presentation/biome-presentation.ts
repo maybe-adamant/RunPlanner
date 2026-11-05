@@ -13,6 +13,7 @@ import {
 } from '../navigation/inspector-destinations';
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
 import { candidateRoomIcon, sharedRoomIconNumber } from './room-icon';
+import { workspaceOccurrenceOwnedMarkers } from '../navigation/marker-ownership';
 import {
   workspaceDecisionOwnedMarkers,
   type WorkspaceDecisionBatchNode,
@@ -138,14 +139,21 @@ function railRoomOccurrenceId(node: WorkspaceNode): OccurrenceId | undefined {
   return railRoom(node)?.occurrenceId;
 }
 
-/** Findings on a room's local owners, such as its encounter, Judgment or keepsake selection. */
-function roomLocalFindingCount(room: WorkspaceRoomSummary): number {
-  return room.localDetailMarkers.reduce((count, marker) => count + marker.findingCount, 0);
+/**
+ * Findings a room's card carries: on every owner the room holds, the same
+ * package finding navigation routes to it, from its encounter and rewards'
+ * trait offers to Judgment and its keepsake rack.
+ */
+function roomFindingCount(room: WorkspaceRoomSummary): number {
+  return workspaceOccurrenceOwnedMarkers(room).reduce(
+    (count, marker) => count + marker.findingCount,
+    0,
+  );
 }
 
-/** Findings a room's card carries: on the room itself and on its local owners. */
-function roomFindingCount(room: WorkspaceRoomSummary): number {
-  return room.marker.findingCount + roomLocalFindingCount(room);
+/** Findings on a room's owners other than the room itself. */
+function roomLocalFindingCount(room: WorkspaceRoomSummary): number {
+  return roomFindingCount(room) - room.marker.findingCount;
 }
 
 /** A room stop's marker carrying its room-local findings too. */
