@@ -403,6 +403,12 @@ local function guideDescription(value, label)
         end
         return row
     end
+    if kind == "unlockExit" then
+        local row, rowError = p.exact(record, { "kind", "exitKey" }, {}, label)
+        if not row then return nil, rowError end
+        if not p.str(row.exitKey, label .. ".exitKey") then return p.fail(label .. " has invalid exitKey") end
+        return row
+    end
     if kind == "reroll" then
         local row, rowError = p.exact(record, { "kind", "target", "reward" }, {}, label)
         if not row then return nil, rowError end

@@ -40,8 +40,9 @@ customization) with its `interactChallengeSwitch` action and its `reward` and
 which carries its fight's encounter customization. The plan wire gains `overview.challengeSwitch`, the
 switch's guide row and claim acquisitions, and the shape of a plan that ends
 before its biome's terminal room (a terminal end room and a partial Hub
-block), the plan's `rewardStoreComparison` that every room exit checks, and each Fields door
-batch's `cageCountOutcome`. A revision changes no saved shape, so
+block), the plan's `rewardStoreComparison` that every room exit checks, each Fields door
+batch's `cageCountOutcome`, and an Oceanus room's `overview.lockedExits` with its `unlockExit`
+guide rows. A revision changes no saved shape, so
 it has no transition; plans sent under 101.0 read as outdated.
 
 Schema 101 makes each phase whose binding can field a Nemesis bet combat own

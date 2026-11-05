@@ -357,6 +357,17 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
     readonly customization?: import('../encounters/model').ResolvedEncounterPhase['customization'];
     readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
   }[];
+  /**
+   * Each reached locked door's press and its fight as `AttemptUseDoor`
+   * generates it there; absent when the biome presses none.
+   */
+  readonly unlockExitEncounters?: readonly {
+    readonly origin: OccurrenceAddress;
+    readonly exitKey: string;
+    readonly encounterKey: string;
+    readonly customization?: import('../encounters/model').ResolvedEncounterPhase['customization'];
+    readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
+  }[];
   /** Exact room-entry Pool generation assessments, before any sale action. */
   readonly purgingPoolAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;

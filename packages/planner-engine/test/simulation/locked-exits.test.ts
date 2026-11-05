@@ -23,6 +23,12 @@ import {
   unlockExitEncounterSupportForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  assembleExecutionProduct,
+  compileExecutionPlan,
+  decodeExecutionPlan,
+  encodeExecutionPlan,
+} from '../../src/execution-plan';
 
 let cached: ProjectDocument | undefined;
 const golden = () => (cached ??= loadUnderworldFGHICheckpoint());
@@ -325,5 +331,31 @@ describe('Oceanus locked door simulation', () => {
     expect(product?.sharedIssues[0]).toEqual({ reason: 'lockedDoors' });
     expect(product?.kinds.every((kind) => kind.observe === undefined)).toBe(true);
     expect(switchAt(golden())?.sharedIssues[0]).not.toEqual({ reason: 'lockedDoors' });
+  });
+
+  it('publishes the locks, each pressed door’s fight and its guide row', () => {
+    const pressed = pressAt(lock(golden()));
+    const assembly = simulateProjectAssembly(catalog, pressed);
+    expect(assembly.evaluation.route.summary.eligibleForExecutionPlan).toBe(true);
+    const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) });
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+    const published = plan.occurrences.find((candidate) => candidate.id === HOST)!;
+    expect(published.overview.lockedExits).toEqual([
+      { exitKey: 'exit2', unlock: { encounterKey: 'GeneratedG_ExtraDoor' } },
+    ]);
+    expect(published.roomGuide.map((row) => row.description)).toContainEqual({
+      kind: 'unlockExit',
+      exitKey: 'exit2',
+    });
+    // A locked door never pressed publishes its lock alone.
+    const lockedOnly = compileExecutionPlan({
+      product: assembleExecutionProduct({
+        assembly: simulateProjectAssembly(catalog, lock(golden())),
+        catalog,
+      }),
+    });
+    expect(
+      lockedOnly.occurrences.find((candidate) => candidate.id === HOST)!.overview.lockedExits,
+    ).toEqual([{ exitKey: 'exit2' }]);
   });
 });

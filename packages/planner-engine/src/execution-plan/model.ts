@@ -887,6 +887,19 @@ export interface ExecutionOverview {
       readonly attributeKeys: readonly string[];
     };
   };
+  /**
+   * The doors observed locked when the room's doors open, in exit order
+   * (never the first), each with the fight `AttemptUseDoor` generates at its
+   * press when the plan presses it: its authored composition, absent
+   * decisions staying native. Absent where every door opens.
+   */
+  readonly lockedExits?: readonly {
+    readonly exitKey: string;
+    readonly unlock?: {
+      readonly encounterKey: string;
+      readonly customization?: readonly ExecutionGeneratedEncounterCustomization[];
+    };
+  }[];
   readonly fountain?: { readonly aromaticPhialTarget?: string };
   /** Selected Fields entry/layout facts; cage identities stay on door targets. */
   readonly fields?: ExecutionFieldsLayout;
@@ -1141,6 +1154,8 @@ export type ExecutionRoomGuideDescription =
       /** How the fight the press starts ends; `left` claims nothing. */
       readonly outcome: 'left' | 'finished' | 'hitless' | 'failed';
     }
+  /** Pressing a locked door: its fight, then the door opens. */
+  | { readonly kind: 'unlockExit'; readonly exitKey: string }
   | {
       readonly kind: 'reroll';
       readonly target: ExecutionRerollTarget;

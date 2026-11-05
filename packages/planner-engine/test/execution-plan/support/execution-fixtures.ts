@@ -111,10 +111,12 @@ import underworldFCutEndRerollsFixture from '../fixtures/underworld-f-cut-end-re
 import surfaceNPartialHubFixture from '../fixtures/surface-n-partial-hub.execution.json';
 import underworldFSwitchesFixture from '../fixtures/underworld-f-switches.execution.json';
 import underworldFSwitchesFailedLeftFixture from '../fixtures/underworld-f-switches-failed-left.execution.json';
+import underworldGLockedDoorsFixture from '../fixtures/underworld-g-locked-doors.execution.json';
 import surfacePEliteSwitchFixture from '../fixtures/surface-p-elite-switch.execution.json';
 import {
   surfaceNPartialHubProject,
   surfacePEliteSwitchProject,
+  underworldGLockedDoorsProject,
   underworldFCutEndProject,
   underworldFCutEndRerollsProject,
   underworldFSwitchesFailedLeftProject,
@@ -390,6 +392,11 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     name: 'surface-p-elite-switch',
     project: surfacePEliteSwitchProject,
     wire: surfacePEliteSwitchFixture,
+  },
+  {
+    name: 'underworld-g-locked-doors',
+    project: underworldGLockedDoorsProject,
+    wire: underworldGLockedDoorsFixture,
   },
 ]);
 

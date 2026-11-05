@@ -91,6 +91,7 @@ local CORPUS = {
     ["underworld-f-rerolls.execution.json"] = "1cbc3e3b",
     ["underworld-f-switches-failed-left.execution.json"] = "9683a782",
     ["underworld-f-switches.execution.json"] = "cc9c4704",
+    ["underworld-g-locked-doors.execution.json"] = "56ad8af1",
     ["underworld-fgh.execution.json"] = "d1255079",
     ["underworld-fghi-empty-shop-group.execution.json"] = "f2cb8343",
     ["underworld-fghi.execution.json"] = "33a8243d",
@@ -108,7 +109,7 @@ function TestFingerprint.testEveryExecutionFixtureKeepsItsFingerprint()
         lu.assertEquals(p.fingerprint(assert(p.json.decode(source))), expected, name)
         count = count + 1
     end
-    lu.assertEquals(count, 46)
+    lu.assertEquals(count, 47)
 end
 
 function TestFingerprint.testAsciiAndMultibyteStringsHashTheirBytes()

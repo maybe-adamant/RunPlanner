@@ -8,6 +8,8 @@ local fangs = type(import) == "function" and import("mods/room/timeline/encounte
     or require("mods.room.timeline.encounters.fangs")
 local proof = type(import) == "function" and import("mods/room/conformance/proof.lua")
     or require("mods.room.conformance.proof")
+local lockedDoors = type(import) == "function" and import("mods/room/features/locked_doors.lua")
+    or require("mods.room.features.locked_doors")
 
 local function compositionFor(phase)
     for _, decision in ipairs(phase and phase.customization or {}) do
@@ -507,6 +509,7 @@ function generated.create()
                 phase = { slotKey = "challengeSwitch", encounterKey = switch.encounterKey,
                     customization = switch.customization }
             end
+            if phase == nil then phase = lockedDoors.markedPhase(occurrence, marker.slotKey) end
             if phase == nil or occurrence == nil or marker.occurrenceId ~= occurrence.id
                 or marker.slotKey ~= phase.slotKey or marker.encounterKey ~= phase.encounterKey then return nil end
             return compositionFor(phase)

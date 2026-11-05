@@ -157,6 +157,7 @@ function text.checkpoint(issue)
     if TRAIT_CHOICE[checkpoint] or TRAIT_SCREEN[checkpoint] then return "a trait choice" end
     if checkpoint == "encounter" or checkpoint == "encounterCount" then return "encounter" end
     if checkpoint:match("^challengeSwitch") then return "the challenge switch" end
+    if checkpoint == "lockedDoorFights" then return "the locked doors" end
     if INVENTORY[checkpoint] then return INVENTORY[checkpoint] .. " stock" end
     return "a plan check"
 end
@@ -365,6 +366,9 @@ function text.difference(issue)
     if checkpoint == "challengeSwitchOutcome" then
         return "the challenge switch was " .. (SWITCH_OUTCOMES[observed] or tostring(observed))
             .. " (planned " .. (SWITCH_OUTCOMES[expected] or tostring(expected)) .. ")"
+    end
+    if checkpoint == "lockedDoorFights" then
+        return "fought " .. scalar(observed) .. " locked doors (planned " .. scalar(expected) .. ")"
     end
     if checkpoint == "challengeSwitchNectar" then
         return expected == true and "the planned switch Nectar didn't drop"

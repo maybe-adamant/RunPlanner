@@ -1,7 +1,12 @@
 import { purgingPoolInteractions, stygianWellInteractions } from './feature-roll-seams';
 import { roomObjectInteractions } from './object-interaction-seams';
 import { createRoomObjectInteractionArtifacts } from '../../commerce/object-interactions';
-import { semanticAddressKey, type SemanticAddress } from '../../../authored-project/addresses';
+import {
+  createBiomeAddress,
+  createOccurrenceAddress,
+  semanticAddressKey,
+  type SemanticAddress,
+} from '../../../authored-project/addresses';
 import type { BiomeRewardSimulation } from '../model';
 import { createAcquisitionConversionCandidateArtifacts } from '../acquisition/artifacts';
 import {
@@ -210,6 +215,29 @@ export function publishChronology(
                 );
               return Object.freeze({
                 origin: room.origin,
+                encounterKey: prepared.phase.encounterKey,
+                ...(prepared.phase.customization === undefined
+                  ? {}
+                  : { customization: prepared.phase.customization }),
+                ...(prepared.phase.generatedCustomization === undefined
+                  ? {}
+                  : { generatedCustomization: prepared.phase.generatedCustomization }),
+              });
+            }),
+          ),
+        }),
+    ...(walk.unlockExitEncounters.size === 0
+      ? {}
+      : {
+          unlockExitEncounters: Object.freeze(
+            [...walk.unlockExitEncounters.values()].map((prepared) => {
+              const origin = prepared.origin.owner;
+              return Object.freeze({
+                origin: createOccurrenceAddress(
+                  createBiomeAddress(prepared.origin.routeKey, prepared.origin.biomeKey),
+                  origin.occurrenceId,
+                ),
+                exitKey: prepared.exitKey,
                 encounterKey: prepared.phase.encounterKey,
                 ...(prepared.phase.customization === undefined
                   ? {}

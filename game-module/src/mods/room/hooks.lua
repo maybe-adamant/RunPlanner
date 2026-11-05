@@ -130,13 +130,14 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         local leaving = decision.leaving
         local frame = snapMode.frame(state, nativeRoom, leaving, decision.index)
         -- A room's own frame also compares the plan's stores, as its exit does, and,
-        -- with a challenge switch, its encounter depth; a Hub departure neither.
+        -- with a challenge switch or locked doors, its encounter depth; a Hub departure neither.
         local own
         if frame ~= nil and leaving ~= nil and leaving.diagnostics ~= nil
             and frame == leaving.diagnostics.beforeRoomExit then
             own = {
                 rewardStores = leaving.rewardStoresExpected,
-                encounterDepth = leaving.overview ~= nil and leaving.overview.challengeSwitch ~= nil,
+                encounterDepth = leaving.overview ~= nil
+                    and (leaving.overview.challengeSwitch ~= nil or leaving.overview.lockedExits ~= nil),
             }
         end
         if state.state == "synchronized" then

@@ -13,6 +13,7 @@ import {
 import {
   challengeSwitchEncounterSupportForProjectEvaluationAssembly,
   simulateProjectAssembly,
+  unlockExitEncounterSupportForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
@@ -156,4 +157,71 @@ export function surfacePEliteSwitchProject(): ProjectDocument {
     elite: { enemyKey: 'Dragon_Elite', attributeKeys: ['Frenzy', 'Blink'] },
   });
   return endAt(pinned, 'P', 'surface-p-7-1-p_story01');
+}
+
+/** Locks a room's doors and presses some of them, last in the room, in order. */
+function lockedDoors(
+  project: ProjectDocument,
+  biomeKey: string,
+  occurrenceId: string,
+  locked: readonly string[],
+  pressed: readonly string[],
+): ProjectDocument {
+  const biome = createBiomeAddress(project.route.routeKey, biomeKey);
+  const id = createOccurrenceId(occurrenceId);
+  let next = project;
+  for (const exitKey of locked)
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceLockedExit',
+      occurrence: createOccurrenceAddress(biome, id),
+      exitKey,
+      locked: true,
+    });
+  for (const exitKey of pressed) {
+    const reference = Object.freeze({ kind: 'unlockExit' as const, exitKey });
+    next = applyProjectCommand(next, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(biome, id, roomActionKey(reference)),
+      reference,
+      index: occurrenceOf(next, biomeKey, occurrenceId).roomActions.order.length,
+    });
+  }
+  return next;
+}
+
+/** A pressed door's fight composition, initialized from the engine's press capability. */
+function composedUnlock(
+  project: ProjectDocument,
+  biomeKey: string,
+  occurrenceId: string,
+  exitKey: string,
+) {
+  const reference = Object.freeze({ kind: 'unlockExit' as const, exitKey });
+  const action = createRoomActionAddress(
+    createBiomeAddress(project.route.routeKey, biomeKey),
+    createOccurrenceId(occurrenceId),
+    roomActionKey(reference),
+  );
+  const capability = unlockExitEncounterSupportForProjectEvaluationAssembly(
+    simulateProjectAssembly(catalog, project),
+    action,
+  );
+  if (capability === undefined) throw new Error(`${occurrenceId} has no composable fight`);
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceUnlockExitCustomization',
+    action,
+    decisionKey: capability.decisionKey,
+    value: capability.initialize() as never,
+  });
+}
+
+/**
+ * G's first combat locks its second door and fights it open with a composed
+ * fight without taking it; the next combat locks both later doors and presses
+ * neither. The plan ends after G's fourth room.
+ */
+export function underworldGLockedDoorsProject(): ProjectDocument {
+  const first = lockedDoors(createCompleteFGProject(), 'G', 'golden-g-b1-e1', ['exit2'], ['exit2']);
+  const second = lockedDoors(first, 'G', 'golden-g-b2-e1', ['exit2', 'exit3'], []);
+  return endAt(composedUnlock(second, 'G', 'golden-g-b1-e1', 'exit2'), 'G', 'golden-g-b4-e1');
 }

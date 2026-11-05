@@ -207,6 +207,10 @@ local function instruction(description, occurrence, transaction)
     if kind == "interactChallengeSwitch" then
         return SWITCH_ROWS[description.outcome] or "Challenge switch"
     end
+    if kind == "unlockExit" then
+        local index = type(description.exitKey) == "string" and description.exitKey:match("^exit(%d+)$")
+        return index and ("Unlock door " .. index) or "Unlock door"
+    end
     if kind == "interactEncounter" then
         local resolution = transaction and transaction.resolution
         local giver = resolution and resolution.offer and resolution.offer.giver

@@ -1,5 +1,6 @@
--- Protect only the authored continuation. Native code retains lock rolls on
--- other exits and Nemesis's eligibility, timing, movement and door takeover.
+-- Protect only the authored continuation from Nemesis: native code retains her
+-- eligibility, timing, movement and takeover of other doors. Oceanus door locks
+-- are the plan's (room/features/locked_doors.lua).
 local doors = type(import) == "function" and import("mods/navigation/doors.lua")
     or require("mods.navigation.doors")
 local exitProtection = {}
@@ -14,20 +15,6 @@ function exitProtection.attach(module, getState, routeSession)
         if routeSession.current(route) == nil then return nil end
         return route.plan.selectedOccurrenceIds[route.index + 1]
     end
-
-    module.hooks.wrap("CheckExitPreUnlock", "run-planner-picked-exit-lock", function(_, runtime, base,
-        door, args, doorIndex)
-        if not doors.targets(door, pickedDestination(getState(runtime))) then
-            return base(door, args, doorIndex)
-        end
-        local chance = door.LockedWithEncounterChance
-        -- Native RandomChance(nil) is unconditionally false (zero still rolls).
-        door.LockedWithEncounterChance = nil
-        local result = table.pack(pcall(base, door, args, doorIndex))
-        door.LockedWithEncounterChance = chance
-        if not result[1] then error(result[2], 0) end
-        return table.unpack(result, 2, result.n)
-    end)
 
     module.hooks.wrap("NemesisTakeRoomExit", "run-planner-nemesis-exit-scope", function(_, runtime, base, ...)
         local state = getState(runtime)

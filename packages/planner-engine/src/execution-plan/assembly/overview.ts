@@ -1,3 +1,4 @@
+import { unlockExitPhaseKey } from '../../simulation/encounters/unlock-exit';
 import { CHALLENGE_SWITCH_PHASE_KEY } from '../../simulation/encounters/challenge-switch-phase';
 import {
   INITIAL_ROLL_KEY,
@@ -969,6 +970,52 @@ function executionChallengeSwitch(
   });
 }
 
+/**
+ * The doors observed locked and each pressed door's fight as its press
+ * generated it. An unentered room publishes none.
+ */
+function executionLockedExits(
+  room: CanonicalAuthoredRoom,
+  biome: PublishedBiomeEvaluation,
+): ExecutionOverview['lockedExits'] {
+  const locked = room.lockedExits;
+  if (locked === undefined || locked.length === 0 || !room.entered) return undefined;
+  const roomKey = semanticAddressKey(room.origin);
+  const pressed = new Set(
+    room.roomActionRoster.rows.flatMap((row) =>
+      row.rank !== null && row.reference.kind === 'unlockExit' ? [row.reference.exitKey] : [],
+    ),
+  );
+  return Object.freeze(
+    locked.map((exitKey) => {
+      if (!pressed.has(exitKey)) return Object.freeze({ exitKey });
+      const prepared = biome.rewards.unlockExitEncounters?.find(
+        (entry) => semanticAddressKey(entry.origin) === roomKey && entry.exitKey === exitKey,
+      );
+      if (prepared === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks the prepared fight of ${exitKey}`,
+        );
+      const customization = executionEncounterCustomization(
+        prepared.customization,
+        room,
+        unlockExitPhaseKey(exitKey),
+        prepared.generatedCustomization,
+      )?.filter((decision) => decision.kind === 'generated');
+      return Object.freeze({
+        exitKey,
+        unlock: Object.freeze({
+          encounterKey: prepared.encounterKey,
+          ...(customization === undefined || customization.length === 0
+            ? {}
+            : { customization: Object.freeze(customization) }),
+        }),
+      });
+    }),
+  );
+}
+
 function executionExcludedEnemies(
   customization: ResolvedEncounterCustomization | undefined,
   room: CanonicalAuthoredRoom,
@@ -1041,6 +1088,7 @@ export function assembleExecutionOverview(
   const purgingPool = executionPurgingPool(room);
   const additional = executionAdditionalExits(batch);
   const challengeSwitch = executionChallengeSwitch(catalog, room, biome);
+  const lockedExits = executionLockedExits(room, biome);
   const biomeAddress = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
   const recordedPhases = new Map(
     biome.history.events.flatMap((event) =>
@@ -1174,6 +1222,7 @@ export function assembleExecutionOverview(
           ),
         }),
     ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
+    ...(lockedExits === undefined ? {} : { lockedExits }),
     ...(!room.hasRequiredFountain
       ? {}
       : {

@@ -11,6 +11,8 @@ local features = type(import) == "function" and import("mods/room/features/struc
     or require("mods.room.features.structure")
 local switchFeature = type(import) == "function" and import("mods/room/features/challenge_switch.lua")
     or require("mods.room.features.challenge_switch")
+local lockedDoors = type(import) == "function" and import("mods/room/features/locked_doors.lua")
+    or require("mods.room.features.locked_doors")
 local fieldFeatures = type(import) == "function" and import("mods/room/features/fields.lua")
     or require("mods.room.features.fields")
 local conformance = type(import) == "function" and import("mods/room/conformance/proof.lua")
@@ -167,6 +169,7 @@ function coordinator.proveEntry(state, nativeRoom, nativeContext)
         local ok, errorValue = proof()
         if not ok then return fail(state, errorValue) end
     end
+    lockedDoors.recordEntry(nativeRoom, _G.CurrentRun)
     local ok, errorValue = session.checkpoint(active, "roomEntered")
     if not ok then return fail(state, errorValue) end
     return active
@@ -509,6 +512,9 @@ function coordinator.close(state, currentRun, gameState)
         local switched, switchError = switchFeature.proveOutcome(active.occurrence,
             type(currentRun) == "table" and currentRun.CurrentRoom or nil)
         if not switched then return nil, switchError end
+        local fought, fightsError = lockedDoors.proveFights(active.occurrence,
+            type(currentRun) == "table" and currentRun.CurrentRoom or nil, currentRun)
+        if not fought then return nil, fightsError end
         return conformance.prove(active.occurrence, function(kind, expected)
             return type(reader) == "function" and reader(kind, currentRun, gameState, expected) or nil
         end)

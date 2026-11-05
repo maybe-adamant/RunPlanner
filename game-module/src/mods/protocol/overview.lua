@@ -608,6 +608,40 @@ local function challengeSwitch(value, label)
     return record
 end
 
+-- The doors observed locked, each with the fight its planned press generates.
+local function lockedExits(value, label)
+    if type(value) ~= "table" or #value == 0 then return p.fail(label .. " must be a non-empty array") end
+    local seen = {}
+    for index, entry in ipairs(value) do
+        local entryLabel = label .. "[" .. index .. "]"
+        local door, doorError = p.exact(entry, { "exitKey" }, { "unlock" }, entryLabel)
+        if not door then return nil, doorError end
+        if not p.str(door.exitKey, entryLabel .. ".exitKey") or seen[door.exitKey] then
+            return p.fail(entryLabel .. " has an invalid or repeated exitKey")
+        end
+        seen[door.exitKey] = true
+        if door.unlock ~= nil then
+            local unlock, unlockError = p.exact(door.unlock, { "encounterKey" }, { "customization" },
+                entryLabel .. ".unlock")
+            if not unlock then return nil, unlockError end
+            if not p.str(unlock.encounterKey, entryLabel .. ".unlock.encounterKey") then
+                return p.fail(entryLabel .. ".unlock has invalid encounter")
+            end
+            if unlock.customization ~= nil then
+                local decisions, decisionsError = customization(unlock.customization,
+                    entryLabel .. ".unlock.customization")
+                if not decisions then return nil, decisionsError end
+                for _, decision in ipairs(decisions) do
+                    if decision.kind ~= "generated" then
+                        return p.fail(entryLabel .. ".unlock.customization must be generated")
+                    end
+                end
+            end
+        end
+    end
+    return value
+end
+
 function overview.decode(value, label)
     local record, errorMessage = p.exact(
         value,
@@ -616,7 +650,7 @@ function overview.decode(value, label)
             "incomingReward", "effectNeutralRequiredReward", "unmodeledEncounterKeys",
             "rewardWheels",
             "shop", "infernalContractPedestal", "phantomExit", "hermesShrine", "stygianWell",
-            "purgingPool", "keepsakeRack", "challengeSwitch",
+            "purgingPool", "keepsakeRack", "challengeSwitch", "lockedExits",
             "fountain", "fields", "additional",
             "hub", "localSlots",
         },
@@ -716,6 +750,10 @@ function overview.decode(value, label)
     if record.challengeSwitch ~= nil then
         local _, switchError = challengeSwitch(record.challengeSwitch, label .. ".challengeSwitch")
         if switchError then return nil, switchError end
+    end
+    if record.lockedExits ~= nil then
+        local _, lockError = lockedExits(record.lockedExits, label .. ".lockedExits")
+        if lockError then return nil, lockError end
     end
     if record.fountain ~= nil then
         local fountain, fountainError = p.exact(

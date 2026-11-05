@@ -650,6 +650,21 @@ how its fight ended from native state, never from contact order: unused, left
 Perfect Clear; and the claim's bonus Nectar dropped exactly when the plan
 claims it. A different ending is a mismatch.
 
+An Oceanus room observed with locked doors publishes `overview.lockedExits`:
+each locked door in exit order and, for a door the plan presses, the fight its
+press generates with the authored composition in the same generated shape. The
+room guide carries an informational `unlockExit` row per press, never a
+transaction. In a planned room the module decides the lock roll: the room's
+lock flag is set exactly when a door is published locked, and each door's lock
+chance is certain for a published door and none for every other, so no
+unplanned door locks and the plan's taken door is open unless the plan locks
+and presses it. A press of a published door generates its fight through the
+generated-encounter contacts; a press of any other door stays native and is
+reported. Room entry records the lock fights completed so far and room exit
+proves, from native state, that the room completed exactly as many as the plan
+presses; a switch room or a room with locked doors also compares its encounter
+depth with its exit frame when it snaps.
+
 Eris is the same kind of boundary. Her talk is a guide row, not a transaction,
 and the planner's observation that she spawned is not on the wire; the executor
 never steers her spawn. Her gift is an ordinary direct pickup. Her curse is

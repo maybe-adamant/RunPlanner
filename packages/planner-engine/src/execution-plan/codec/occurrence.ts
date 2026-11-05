@@ -481,6 +481,9 @@ function roomGuideDescription(value: unknown, label: string) {
         outcome: outcome as 'left' | 'finished' | 'hitless' | 'failed',
       });
     }
+    case 'unlockExit':
+      exact(record, ['kind', 'exitKey'], [], label);
+      return Object.freeze({ kind, exitKey: stringValue(record.exitKey, `${label}.exitKey`) });
     case 'reroll':
       exact(record, ['kind', 'target', 'reward'], [], label);
       return Object.freeze({

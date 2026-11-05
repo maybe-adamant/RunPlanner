@@ -38,6 +38,44 @@ function excludedEnemies(value: unknown, label: string) {
   return Object.freeze(enemies);
 }
 
+function executionLockedExits(value: unknown, label: string) {
+  const exits = array(value, label).map((entry, index) => {
+    const entryLabel = `${label}[${index}]`;
+    const record = object(entry, entryLabel);
+    exact(record, ['exitKey'], ['unlock'], entryLabel);
+    const unlock =
+      record.unlock === undefined ? undefined : object(record.unlock, `${entryLabel}.unlock`);
+    if (unlock !== undefined)
+      exact(unlock, ['encounterKey'], ['customization'], `${entryLabel}.unlock`);
+    const customization =
+      unlock?.customization === undefined
+        ? undefined
+        : array(unlock.customization, `${entryLabel}.unlock.customization`, 1).map(
+            (decision, decisionIndex) =>
+              generatedEncounter(
+                object(decision, `${entryLabel}.unlock.customization[${decisionIndex}]`),
+                `${entryLabel}.unlock.customization[${decisionIndex}]`,
+              ),
+          );
+    return Object.freeze({
+      exitKey: stringValue(record.exitKey, `${entryLabel}.exitKey`),
+      ...(unlock === undefined
+        ? {}
+        : {
+            unlock: Object.freeze({
+              encounterKey: stringValue(unlock.encounterKey, `${entryLabel}.unlock.encounterKey`),
+              ...(customization === undefined
+                ? {}
+                : { customization: Object.freeze(customization) }),
+            }),
+          }),
+    });
+  });
+  if (exits.length === 0 || new Set(exits.map((exit) => exit.exitKey)).size !== exits.length)
+    fail(`${label} must name each door once`);
+  return Object.freeze(exits);
+}
+
 function executionChallengeSwitch(value: unknown, label: string) {
   const record = object(value, label);
   exact(record, ['variantKey', 'encounterKey'], ['customization', 'elite'], label);
@@ -342,6 +380,7 @@ export function overview(value: unknown, label: string) {
       'purgingPool',
       'keepsakeRack',
       'challengeSwitch',
+      'lockedExits',
       'fountain',
       'fields',
       'additional',
@@ -774,6 +813,10 @@ export function overview(value: unknown, label: string) {
     record.challengeSwitch === undefined
       ? undefined
       : executionChallengeSwitch(record.challengeSwitch, `${label}.challengeSwitch`);
+  const lockedExits =
+    record.lockedExits === undefined
+      ? undefined
+      : executionLockedExits(record.lockedExits, `${label}.lockedExits`);
   const fountain =
     record.fountain === undefined ? undefined : object(record.fountain, `${label}.fountain`);
   if (fountain !== undefined) exact(fountain, [], ['aromaticPhialTarget'], `${label}.fountain`);
@@ -993,6 +1036,7 @@ export function overview(value: unknown, label: string) {
           ),
         }),
     ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
+    ...(lockedExits === undefined ? {} : { lockedExits }),
     ...(fountain === undefined
       ? {}
       : {

@@ -1,7 +1,6 @@
 -- luacheck: globals TestExitProtection
 local lu = require("luaunit")
 local navigation = require("mods.navigation.hooks")
-local overview = require("mods.room.overview")
 local routeSession = require("mods.route.session")
 local support = require("tests.harness.hook_composition")
 local nativeGame = require("tests.harness.native_game")
@@ -32,57 +31,6 @@ end
 
 function TestExitProtection:tearDown()
     self.restore()
-end
-
--- RoomLogic.CheckExitPreUnlock's native branching, with a deterministic roll.
--- It retains the first-exit guarantee and the lock's encounter/presentation facts.
-local function preUnlock(room)
-    return function(door, args, index)
-        room.FirstExitChosen = room.FirstExitChosen or false
-        if room.LockExtraExitsWithEncounter and room.LockExtraExits and room.FirstExitChosen then
-            if door.LockedWithEncounterChance and 0 <= door.LockedWithEncounterChance then
-                door.SkipUnlock = true
-                door.ReadyToUse = true
-                door.CanBeRerolled = false
-                door.EncounterCost = room.LockExtraExitsWithEncounter
-            end
-        else
-            room.FirstExitChosen = true
-        end
-        return args, nil, index
-    end
-end
-
-function TestExitProtection:testOceanusRetainsNativeLockingExceptOnThePickedOccurrence()
-    local declaration = { Name = "G_Combat01", LockExtraExitsChance = 0.35,
-        LockExtraExits = true, LockExtraExitsWithEncounter = "GeneratedG_ExtraDoor" }
-    local room = assert(overview.realize(self.state.route.currentOccurrence, { RoomData = { G_Combat01 = declaration } }))
-    lu.assertEquals(room.LockExtraExitsChance, 0.35)
-    lu.assertTrue(room.LockExtraExits)
-    local args = {}
-    for index, door in ipairs({ self.other, self.picked, self.third }) do
-        local returned, middle, returnedIndex = self.callbacks.CheckExitPreUnlock(nil, {}, preUnlock(room), door, args, index)
-        lu.assertIs(returned, args)
-        lu.assertNil(middle)
-        lu.assertEquals(returnedIndex, index)
-        lu.assertEquals(door.LockedWithEncounterChance, 0.8)
-    end
-    lu.assertNil(self.other.EncounterCost) -- native first-exit guarantee
-    lu.assertNil(self.picked.EncounterCost)
-    lu.assertEquals(self.third.EncounterCost, "GeneratedG_ExtraDoor")
-    lu.assertTrue(self.third.SkipUnlock)
-    lu.assertFalse(self.third.CanBeRerolled)
-    lu.assertEquals(declaration.LockExtraExitsChance, 0.35)
-end
-
-function TestExitProtection:testLockOverrideRestoresTheOperandOnNativeError()
-    local ok, message = pcall(self.callbacks.CheckExitPreUnlock, nil, {}, function(door)
-        lu.assertNil(door.LockedWithEncounterChance)
-        error("native lock fault")
-    end, self.picked, {}, 2)
-    lu.assertFalse(ok)
-    lu.assertStrContains(message, "native lock fault")
-    lu.assertEquals(self.picked.LockedWithEncounterChance, 0.8)
 end
 
 function TestExitProtection:choose(values, choose)
@@ -204,9 +152,6 @@ function TestExitProtection:testNoPlanOrNoContinuationLeavesBothMechanismsNative
         function() self.state = nil end,
     }) do
         change()
-        self.callbacks.CheckExitPreUnlock(nil, {}, function(door)
-            lu.assertEquals(door.LockedWithEncounterChance, 0.8)
-        end, self.picked, {}, 2)
         local selected = self.callbacks.NemesisTakeRoomExit(nil, {}, function()
             return self:choose({ self.picked, self.other })
         end)

@@ -185,10 +185,12 @@ function descriptionFor(
       return Object.freeze({ kind: reference.kind, outcome: observed.outcome });
     }
     case 'unlockExit':
-      throw new CompilerError(
-        'executionCoverageMissing',
-        `${room.gameName} presses a locked door the execution plan cannot carry`,
-      );
+      if (!(room.lockedExits ?? []).includes(reference.exitKey))
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} presses ${reference.exitKey}, which it does not lock`,
+        );
+      return Object.freeze({ kind: reference.kind, exitKey: reference.exitKey });
     case 'reroll':
       return rerollGuideDescription(room, batch, reference);
     case 'purchaseHermesShrineOffer': {
