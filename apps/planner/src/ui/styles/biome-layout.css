@@ -219,6 +219,20 @@
   min-width: 0;
 }
 
+/* Sized so the longest biome name fits beside the toggle, icon and clear action at 224px. */
+.biome-structure-head .biome-structure-heading h2 {
+  font-size: 1.12rem;
+}
+
+.biome-structure-heading .biome-boss-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.biome-structure-heading .biome-structure-title-row {
+  gap: 8px;
+}
+
 .biome-rail-pin {
   flex: 0 0 auto;
   padding: 2px 7px;
