@@ -301,6 +301,7 @@
 .biome-rail-node[data-assessment='unassessed'] {
   border-style: dashed;
   color: #aaa7af;
+  opacity: 0.6;
 }
 
 .biome-rail-node[data-assessment='blocked'] {
@@ -418,6 +419,28 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* A card's one line: its room in the card's text colour, its reward in gold. */
+.biome-rail-node > .biome-rail-selection {
+  color: inherit;
+  font-size: 0.8rem;
+}
+
+.biome-rail-node > .biome-rail-selection .biome-rail-reward {
+  color: #c3a86f;
+}
+
+.biome-rail-prefix {
+  color: #8f8c95;
+  font-weight: 600;
+}
+
+.biome-rail-plan-end {
+  margin: 3px 0 0 4px;
+  color: var(--plan-end);
+  font-size: 0.72rem;
+  font-weight: 600;
 }
 
 .biome-rail-reward-row {
@@ -651,13 +674,6 @@
   border-color: var(--plan-end);
   border-radius: 2px;
   background: var(--plan-end);
-}
-
-:is(.biome-rail-stop, .biome-hub-rail-visit, .biome-hub-rail-side-visit)[data-plan-end='end']
-  > .biome-rail-node
-  .biome-rail-status {
-  color: var(--plan-end);
-  font-weight: 600;
 }
 
 :is(.biome-rail-stop, .biome-hub-rail-visit, .biome-hub-rail-side-visit)[data-plan-end='pastEnd']

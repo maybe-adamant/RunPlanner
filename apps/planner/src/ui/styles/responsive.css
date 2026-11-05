@@ -194,6 +194,10 @@
     min-width: 0;
   }
 
+  .biome-rail-plan-end {
+    display: none;
+  }
+
   .biome-rail-icons-count {
     color: #c3a86f;
     font-size: 0.7rem;

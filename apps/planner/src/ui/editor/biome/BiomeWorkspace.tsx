@@ -251,9 +251,12 @@ function railRewardIcons(
 /** `[room] Room · [reward] Reward`: each icon sits before the thing it describes. */
 function RailSelectedTarget({
   biomeKey,
+  prefix,
   selectedTarget,
 }: {
   readonly biomeKey: string;
+  /** A Hub visit's or side room's place, before its room. */
+  readonly prefix?: string;
   readonly selectedTarget: WorkspaceRailSelectedTarget;
 }) {
   const rewardIcons = railRewardIcons(biomeKey, selectedTarget).map((icon, index) => (
@@ -261,6 +264,7 @@ function RailSelectedTarget({
   ));
   return (
     <span className="biome-rail-selection">
+      {prefix === undefined ? null : <span className="biome-rail-prefix">{prefix} · </span>}
       <ArtworkIcon
         className="biome-rail-reward-icon"
         source={roomKindIcon(selectedTarget.roomIcon)}
@@ -281,6 +285,41 @@ function RailSelectedTarget({
   );
 }
 
+/**
+ * A rail card's title and assessment, read by assistive tech; only a card
+ * without a room line shows its title. Its border carries the assessment.
+ */
+function RailHeading({
+  label,
+  marker,
+  planEnd,
+  visible = false,
+}: {
+  readonly label: string;
+  readonly marker: WorkspaceMarker;
+  readonly planEnd?: WorkspacePlanEndRelation | undefined;
+  readonly visible?: boolean;
+}) {
+  return (
+    <span className={visible ? 'biome-rail-heading' : 'biome-rail-heading visually-hidden'}>
+      <strong>{label}</strong>
+      <span className="biome-rail-status visually-hidden">
+        {assessmentLabel(marker, planEnd)}
+        <FindingCount count={marker.findingCount} label="findings" />
+      </span>
+    </span>
+  );
+}
+
+/** The plan's end, noted under its room's card. */
+function RailPlanEnd({ planEnd }: { readonly planEnd: WorkspacePlanEndRelation | undefined }) {
+  return planEnd !== 'end' ? null : (
+    <p aria-hidden="true" className="biome-rail-plan-end">
+      {planEndHereLabel}
+    </p>
+  );
+}
+
 function RailNode({
   biomeKey,
   entry,
@@ -295,13 +334,12 @@ function RailNode({
   return (
     <div className="biome-rail-stop" data-kind={node.kind} data-plan-end={entry.planEnd}>
       <FocusButton focusMarker={entry.focusMarker ?? marker} marker={marker} selected={selected}>
-        <span className="biome-rail-heading">
-          <strong>{entry.label}</strong>
-          <span className="biome-rail-status">
-            {assessmentLabel(marker, entry.planEnd)}
-            <FindingCount count={marker.findingCount} label="findings" />
-          </span>
-        </span>
+        <RailHeading
+          label={entry.label}
+          marker={marker}
+          planEnd={entry.planEnd}
+          visible={entry.selectedTarget === undefined && entry.roomIcon === undefined}
+        />
         {entry.selectedTarget === undefined ? null : (
           <RailSelectedTarget biomeKey={biomeKey} selectedTarget={entry.selectedTarget} />
         )}
@@ -323,6 +361,7 @@ function RailNode({
           <RailRoom icon={entry.roomIcon} label={entry.roomLabel} />
         )}
       </FocusButton>
+      <RailPlanEnd planEnd={entry.planEnd} />
     </div>
   );
 }
@@ -343,7 +382,9 @@ function RailFrontier({
       <FocusButton marker={frontier.marker} selected={selectedRailKey === frontier.marker.focusKey}>
         <span className="biome-rail-kicker">Next step</span>
         <strong>{label}</strong>
-        <span className="biome-rail-status">{assessmentLabel(frontier.marker)}</span>
+        <span className="biome-rail-status visually-hidden">
+          {assessmentLabel(frontier.marker)}
+        </span>
       </FocusButton>
     </div>
   );
@@ -362,16 +403,15 @@ function HubRailVisit({
   return (
     <li className="biome-hub-rail-visit" data-plan-end={visit.planEnd}>
       <FocusButton marker={visit.marker} presentationMarker={visit.visitMarker} selected={selected}>
-        <span className="biome-rail-heading">
-          <strong>{visit.label}</strong>
-          <span className="biome-rail-status">
-            {assessmentLabel(visit.visitMarker, visit.planEnd)}
-            <FindingCount count={visit.visitMarker.findingCount} label="findings" />
-          </span>
-        </span>
-        <RailSelectedTarget biomeKey={biomeKey} selectedTarget={visit.room} />
+        <RailHeading label={visit.label} marker={visit.visitMarker} planEnd={visit.planEnd} />
+        <RailSelectedTarget
+          biomeKey={biomeKey}
+          prefix={visit.shortLabel}
+          selectedTarget={visit.room}
+        />
         <RailTargetIcons biomeKey={biomeKey} target={visit.room} />
       </FocusButton>
+      <RailPlanEnd planEnd={visit.planEnd} />
       {visit.sideVisits.length === 0 ? null : (
         <ol aria-label={`${visit.label} side rooms`} className="biome-hub-rail-side-visits">
           {visit.sideVisits.map((sideVisit) => {
@@ -387,16 +427,19 @@ function HubRailVisit({
                   presentationMarker={sideVisit.visitMarker}
                   selected={sideSelected}
                 >
-                  <span className="biome-rail-heading">
-                    <strong>{sideVisit.label}</strong>
-                    <span className="biome-rail-status">
-                      {assessmentLabel(sideVisit.visitMarker, sideVisit.planEnd)}
-                      <FindingCount count={sideVisit.visitMarker.findingCount} label="findings" />
-                    </span>
-                  </span>
-                  <RailSelectedTarget biomeKey={biomeKey} selectedTarget={sideVisit.room} />
+                  <RailHeading
+                    label={sideVisit.label}
+                    marker={sideVisit.visitMarker}
+                    planEnd={sideVisit.planEnd}
+                  />
+                  <RailSelectedTarget
+                    biomeKey={biomeKey}
+                    prefix={sideVisit.shortLabel}
+                    selectedTarget={sideVisit.room}
+                  />
                   <RailTargetIcons biomeKey={biomeKey} target={sideVisit.room} />
                 </FocusButton>
+                <RailPlanEnd planEnd={sideVisit.planEnd} />
               </li>
             );
           })}
@@ -424,16 +467,12 @@ function HubRailGroup({
         marker={entry.marker}
         selected={selected}
       >
-        <span className="biome-rail-heading">
-          <strong>Hub</strong>
-          <span className="biome-rail-status">
-            {assessment}
-            <FindingCount count={entry.marker.findingCount} label="findings" />
-          </span>
-        </span>
-        <span className="biome-rail-summary">
+        <span className="biome-rail-selection">
           <ArtworkIcon className="biome-rail-reward-icon" source={roomKindIcon(entry.roomIcon)} />
-          {entry.visits.length} of {entry.node.requiredVisitCount} visits
+          Hub ·{' '}
+          <span className="biome-rail-reward">
+            {entry.visits.length} of {entry.node.requiredVisitCount} visits
+          </span>
         </span>
         <span aria-hidden="true" className="biome-rail-icons">
           <ArtworkIcon className="biome-rail-icons-room" source={roomKindIcon(entry.roomIcon)} />
@@ -495,16 +534,11 @@ function RailCompletionNode({
   return (
     <div className="biome-rail-stop" data-kind="completion" data-plan-end={planEnd}>
       <FocusButton focusMarker={focusMarker} marker={node.marker} selected={selected}>
-        <span className="biome-rail-heading">
-          <strong>{roleLabel}</strong>
-          <span className="biome-rail-status">
-            {assessmentLabel(node.marker, planEnd)}
-            <FindingCount count={node.marker.findingCount} label="findings" />
-          </span>
-        </span>
+        <RailHeading label={roleLabel} marker={node.marker} planEnd={planEnd} />
         <RailRoom icon={node.room.roomIcon} label={node.room.label} />
         <RailIcons room={node.room.roomIcon} />
       </FocusButton>
+      <RailPlanEnd planEnd={planEnd} />
     </div>
   );
 }

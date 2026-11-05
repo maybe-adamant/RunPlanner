@@ -688,6 +688,8 @@ export interface WorkspaceHubVisitRailEntry {
   readonly key: string;
   readonly planEnd?: WorkspacePlanEndRelation;
   readonly label: string;
+  /** The visit's place in brief, such as `V3`, leading its room line. */
+  readonly shortLabel: string;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOccurrenceWorkbenchNode;
   /** The visited room and the rewards its door offers, presented as a decision's selected room. */
@@ -702,6 +704,8 @@ export interface WorkspaceHubSideVisitRailEntry {
   readonly key: string;
   readonly planEnd?: WorkspacePlanEndRelation;
   readonly label: string;
+  /** The side room's entry place in brief, such as `S1`, leading its room line. */
+  readonly shortLabel: string;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOccurrenceWorkbenchNode;
   /** The side room and the rewards its door offers, presented like a Hub visit's room. */

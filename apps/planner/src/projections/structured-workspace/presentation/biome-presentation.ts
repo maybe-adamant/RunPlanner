@@ -394,6 +394,7 @@ function projectHubRailEntry(
                 key: `${node.key}:visit:${visit.visitIndex}:side:${slot.key}`,
                 ...(sidePlanEnd === undefined ? {} : { planEnd: sidePlanEnd }),
                 label: `Side ${slot.enteredOrdinal ?? 1}`,
+                shortLabel: `S${slot.enteredOrdinal ?? 1}`,
                 marker: sideNode.room.marker,
                 node: sideNode,
                 room: Object.freeze({
@@ -411,6 +412,7 @@ function projectHubRailEntry(
         key: `${node.key}:visit:${visit.visitIndex}`,
         ...(visitPlanEnd === undefined ? {} : { planEnd: visitPlanEnd }),
         label: `Visit ${visit.visitIndex}`,
+        shortLabel: `V${visit.visitIndex}`,
         marker: workbench.room.marker,
         node: workbench,
         room: roomRailPresentation(catalog, workbench.room, visit.door),
