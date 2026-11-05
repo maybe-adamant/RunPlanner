@@ -1,11 +1,15 @@
+import type { ReactNode } from 'react';
 import { useAppDispatch } from '@planner/state/store';
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import type { RouteHermesShrineIndexRow } from '@planner/projections/routeRoomFeatureIndex';
 
 /** Read-only route index; Shrine authoring remains on the owning Room Feature. */
 export function RouteShrinesPanel({
+  headingAside,
   rows,
 }: {
+  /** Shown at the end of the panel heading, such as the plan's next repair. */
+  readonly headingAside?: ReactNode;
   readonly rows: readonly RouteHermesShrineIndexRow[];
 }) {
   const dispatch = useAppDispatch();
@@ -16,6 +20,9 @@ export function RouteShrinesPanel({
           <p className="eyebrow">Room features</p>
           <h2 id="route-shrines-title">Hermes Shrines</h2>
         </div>
+        {headingAside === undefined ? null : (
+          <div className="panel-heading-aside">{headingAside}</div>
+        )}
       </header>
       <ol className="route-traits-list">
         {rows.map(({ biomeKey, room, shrine }) => (

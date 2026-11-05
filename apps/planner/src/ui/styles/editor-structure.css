@@ -718,6 +718,15 @@ select {
   text-overflow: ellipsis;
 }
 
+.panel-heading-aside {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  align-self: center;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
 .room-title-aside {
   display: flex;
   /* The pill gives way before the room's reward does. */
@@ -788,17 +797,6 @@ select {
   background: rgb(190 80 80 / 22%);
   font-size: 0.72rem;
   font-weight: 700;
-}
-
-.finding-pill[data-status='valid'] {
-  padding: 2px 10px;
-  border: 1px solid rgb(120 170 130 / 35%);
-  border-radius: 999px;
-  color: #9cc4a3;
-  background: rgb(120 170 130 / 8%);
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 .room-workbench-tabs {

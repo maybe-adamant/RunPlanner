@@ -12,11 +12,14 @@ import { useCommonItemWidth } from './useCommonItemWidth';
 
 /** The starting choices; route-scoped findings anchor here. */
 export function RouteLoadoutPanel({
+  headingAside,
   catalog,
   project,
   workspaceRoute,
   interactions,
 }: {
+  /** Shown at the end of the panel heading, such as the plan's next repair. */
+  readonly headingAside?: ReactNode;
   readonly catalog: Catalog;
   readonly project: ProjectDocument;
   readonly workspaceRoute: WorkspaceRoute;
@@ -36,6 +39,9 @@ export function RouteLoadoutPanel({
     >
       <header className="panel-heading">
         <h2 className="eyebrow route-loadout-heading">Loadout</h2>
+        {headingAside === undefined ? null : (
+          <div className="panel-heading-aside">{headingAside}</div>
+        )}
       </header>
       {initialProfile.kind === 'freshFile' ? (
         <FreshFileLoadout catalog={catalog} fixedWeaponKey={initialProfile.fixedWeaponKey} />

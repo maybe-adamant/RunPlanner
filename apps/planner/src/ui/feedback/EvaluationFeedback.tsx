@@ -67,17 +67,14 @@ export function ProjectFindings({
   issue,
   focusByOwner,
   route,
-  pill,
+  otherFindings = 0,
 }: {
   readonly catalog: Catalog;
   readonly issue: AssessmentIssue | undefined;
   readonly focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>;
   readonly route?: WorkspaceRoute;
-  /**
-   * A compact pill on a room's title line: the next repair and how many other
-   * findings the plan has, or "No issues" where `showValid` asks for it.
-   */
-  readonly pill?: { readonly otherFindings: number; readonly showValid: boolean };
+  /** The plan's findings beyond those of the repair shown, counted on the pill. */
+  readonly otherFindings?: number;
 }) {
   const dispatch = useAppDispatch();
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
@@ -85,12 +82,8 @@ export function ProjectFindings({
   // A running draft holds the workspace on the Draft panel.
   const drafting = useAppSelector((state) => state.draftSession.run.kind === 'running');
 
-  if (issue === undefined)
-    return pill?.showValid === true ? (
-      <span className="finding-pill" data-status="valid">
-        No issues
-      </span>
-    ) : null;
+  // A plan without issues shows nothing; the heading keeps its place.
+  if (issue === undefined) return null;
 
   const destination = focusByOwner.get(semanticAddressKey(issue.owner));
   const destinationLabel = findingDestinationLabel(
@@ -107,63 +100,35 @@ export function ProjectFindings({
     catalogFindingLabels(catalog),
   );
 
-  if (pill !== undefined) {
-    const text = `${copy.title} · ${destinationLabel}`;
-    return (
-      <section
-        aria-labelledby="project-findings-title"
-        className="project-findings finding-pill-group"
-      >
-        <h2 className="visually-hidden" id="project-findings-title">
-          Next repair
-        </h2>
-        <button
-          aria-current={selectedKey === issue.regionKey ? 'true' : undefined}
-          className="assessment-issue-button finding-pill"
-          data-selected={selectedKey === issue.regionKey}
-          data-status="issue"
-          disabled={drafting}
-          onClick={navigate}
-          type="button"
-          {...hintProps(text, undefined, text)}
-        >
-          <span aria-hidden="true" className="finding-pill-mark">
-            !
-          </span>
-          <span className="finding-pill-text">
-            <span className="finding-title">{copy.title}</span>
-            {' · '}
-            <span className="finding-destination">{destinationLabel}</span>
-          </span>
-        </button>
-        {pill.otherFindings > 0 ? (
-          <span className="finding-pill-more">+{pill.otherFindings}</span>
-        ) : null}
-      </section>
-    );
-  }
-
+  const text = `${copy.title} · ${destinationLabel}`;
   return (
-    <section className="project-findings" aria-labelledby="project-findings-title">
+    <section
+      aria-labelledby="project-findings-title"
+      className="project-findings finding-pill-group"
+    >
       <h2 className="visually-hidden" id="project-findings-title">
         Next repair
       </h2>
       <button
         aria-current={selectedKey === issue.regionKey ? 'true' : undefined}
-        className="assessment-issue-button"
+        className="assessment-issue-button finding-pill"
         data-selected={selectedKey === issue.regionKey}
+        data-status="issue"
         disabled={drafting}
         onClick={navigate}
         type="button"
+        {...hintProps(text, undefined, text)}
       >
-        <span className="assessment-issue-summary">
+        <span aria-hidden="true" className="finding-pill-mark">
+          !
+        </span>
+        <span className="finding-pill-text">
           <span className="finding-title">{copy.title}</span>
+          {' · '}
           <span className="finding-destination">{destinationLabel}</span>
         </span>
-        {copy.description !== undefined && (
-          <span className="finding-description">{copy.description}</span>
-        )}
       </button>
+      {otherFindings > 0 ? <span className="finding-pill-more">+{otherFindings}</span> : null}
     </section>
   );
 }

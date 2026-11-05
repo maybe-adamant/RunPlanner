@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { AuthoredRoutePlan } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { type RouteFeedbackPresentation } from '@planner/projections/evaluationProjection';
@@ -11,6 +12,7 @@ import { RouteRunModifiers } from './RouteRunModifiers';
 
 /** The plan's extent and its run modifiers, with the whole-plan status. */
 export function RouteScopePanel({
+  headingAside,
   authoredRoute,
   catalog,
   label,
@@ -19,6 +21,8 @@ export function RouteScopePanel({
   replacementKey,
   workspaceRoute,
 }: {
+  /** Shown at the end of the panel heading, such as the plan's next repair. */
+  readonly headingAside?: ReactNode;
   readonly authoredRoute: AuthoredRoutePlan;
   readonly catalog: Catalog;
   readonly label: string;
@@ -45,6 +49,9 @@ export function RouteScopePanel({
           <FindingCount count={feedback.findingCount} label={`${label} findings`} />
           <span className="neutral-status">{routeExtent}</span>
         </div>
+        {headingAside === undefined ? null : (
+          <div className="panel-heading-aside">{headingAside}</div>
+        )}
       </header>
       <div className="route-scope-rows">
         {navigation.itinerarySelectionRequired && (

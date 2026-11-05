@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { createOccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { WorkspaceRoute } from '@planner/projections/structured-workspace';
 import { useAppDispatch } from '@planner/state/store';
@@ -18,7 +19,14 @@ function resourceFamilyLabel(family: WorkspaceRoute['resources'][number]['family
   }
 }
 
-export function RouteResourcesPanel({ route }: { readonly route: WorkspaceRoute }) {
+export function RouteResourcesPanel({
+  headingAside,
+  route,
+}: {
+  /** Shown at the end of the panel heading, such as the plan's next repair. */
+  readonly headingAside?: ReactNode;
+  readonly route: WorkspaceRoute;
+}) {
   const dispatch = useAppDispatch();
   return (
     <section
@@ -30,6 +38,9 @@ export function RouteResourcesPanel({ route }: { readonly route: WorkspaceRoute 
           <p className="eyebrow">Route outcomes</p>
           <h2 id="route-resources-title">Resources</h2>
         </div>
+        {headingAside === undefined ? null : (
+          <div className="panel-heading-aside">{headingAside}</div>
+        )}
       </header>
       <ol className="route-traits-list">
         {route.resources.map((resource) => {

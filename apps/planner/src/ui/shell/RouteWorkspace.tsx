@@ -183,12 +183,18 @@ export function RouteWorkspace({
     pendingNpcPhaseFocus.current = phase;
     dispatch(semanticOwnerNavigated(phase));
   };
-  const repairBanner = (
+  // The plan's next repair, a pill on the heading of whichever panel is shown.
+  const findingPill = (
     <ProjectFindings
       catalog={catalog}
       issue={routeEvaluation.issue}
       focusByOwner={workspace.focusByOwner}
       route={workspaceRoute}
+      // The plan's findings beyond those of the repair shown.
+      otherFindings={Math.max(
+        0,
+        projectEvaluation.findings.length - (routeEvaluation.issue?.reasons.length ?? 0),
+      )}
     />
   );
 
@@ -417,10 +423,10 @@ export function RouteWorkspace({
         </nav>
       </div>
       <div className="editor-panel" aria-live="polite">
-        {contentLayout === 'biome' ? null : repairBanner}
         <div className="editor-panel-content" data-editor-layout={contentLayout}>
           {displayedPanel.kind === 'route' ? (
             <RouteScopePanel
+              headingAside={findingPill}
               authoredRoute={project.route}
               catalog={catalog}
               label={navigation.label}
@@ -431,6 +437,7 @@ export function RouteWorkspace({
             />
           ) : displayedPanel.kind === 'draft' ? (
             <RouteDraftPanel
+              headingAside={findingPill}
               catalog={catalog}
               draftRun={draftRun}
               interactions={interactions}
@@ -439,23 +446,33 @@ export function RouteWorkspace({
             />
           ) : displayedPanel.kind === 'loadout' ? (
             <RouteLoadoutPanel
+              headingAside={findingPill}
               catalog={catalog}
               project={project}
               workspaceRoute={workspaceRoute}
               interactions={interactions}
             />
           ) : displayedPanel.kind === 'npcIndex' ? (
-            <RouteNpcIndex index={npcIndex} onNavigate={navigateNpcIndexEntry} />
+            <RouteNpcIndex
+              headingAside={findingPill}
+              index={npcIndex}
+              onNavigate={navigateNpcIndexEntry}
+            />
           ) : displayedPanel.kind === 'traits' ? (
-            <RouteTraitsPanel interactions={interactions} rows={traitRows} />
+            <RouteTraitsPanel
+              headingAside={findingPill}
+              interactions={interactions}
+              rows={traitRows}
+            />
           ) : displayedPanel.kind === 'resources' ? (
-            <RouteResourcesPanel route={workspaceRoute} />
+            <RouteResourcesPanel headingAside={findingPill} route={workspaceRoute} />
           ) : displayedPanel.kind === 'shrines' ? (
-            <RouteShrinesPanel rows={shrineRows} />
+            <RouteShrinesPanel headingAside={findingPill} rows={shrineRows} />
           ) : displayedPanel.kind === 'wells' ? (
-            <RouteWellsPanel rows={wellRows} />
+            <RouteWellsPanel headingAside={findingPill} rows={wellRows} />
           ) : activeBiomeProjection === undefined ? (
             <RouteScopePanel
+              headingAside={findingPill}
               authoredRoute={project.route}
               catalog={catalog}
               label={navigation.label}
@@ -472,23 +489,7 @@ export function RouteWorkspace({
                 : { railPinPreference: biomeRailPinPreference })}
               focusByOwner={workspace.focusByOwner}
               interactions={interactions}
-              repairBanner={
-                <ProjectFindings
-                  catalog={catalog}
-                  issue={routeEvaluation.issue}
-                  focusByOwner={workspace.focusByOwner}
-                  route={workspaceRoute}
-                  pill={{
-                    // The plan's findings beyond those of the repair shown.
-                    otherFindings: Math.max(
-                      0,
-                      projectEvaluation.findings.length -
-                        (routeEvaluation.issue?.reasons.length ?? 0),
-                    ),
-                    showValid: true,
-                  }}
-                />
-              }
+              repairBanner={findingPill}
               runStateLaunchers={workspace.runStateLaunchers}
             />
           )}
