@@ -1,4 +1,17 @@
+import type { ChallengeSwitchKind } from '@run-planner/engine/catalog-schema';
 import type { ChallengeSwitchPlacementIssue } from '@run-planner/engine/simulation';
+
+/** Each switch kind's in-game name. */
+const kindLabels: Readonly<Record<ChallengeSwitchKind, string>> = Object.freeze({
+  perfectClear: 'Unseen Sigil',
+  time: 'Infernal Trove',
+  elite: 'Moon Monument',
+});
+
+/** A switch kind's in-game name. */
+export function challengeSwitchKindLabel(kind: ChallengeSwitchKind): string {
+  return kindLabels[kind];
+}
 
 /** A native spawn rule a switch breaks, as its finding evidence and lock carry it. */
 export type ChallengeSwitchRule = ChallengeSwitchPlacementIssue;
@@ -43,7 +56,7 @@ export function challengeSwitchRuleSentence(rule: ChallengeSwitchRule): string {
     }
     case 'kindUnavailable':
       return rule.gate.kind === 'biomeDepth'
-        ? `Elite Enemy Switches need biome depth ${rule.gate.minimumBiomeDepth}; this room is at ${rule.gate.biomeDepthCache}.`
+        ? `${challengeSwitchKindLabel(rule.switchKind)}s need biome depth ${rule.gate.minimumBiomeDepth}; this room is at ${rule.gate.biomeDepthCache}.`
         : hexGate;
     case 'variantUnavailable':
       return variantGates[rule.variantKey] ?? "This reward can't be rolled here.";
@@ -60,7 +73,7 @@ export function challengeSwitchRuleTitle(rule: ChallengeSwitchRule): string {
     case 'noFreeAnchor':
       return 'No free spot for the switch';
     case 'kindUnavailable':
-      return "Elite Enemy Switch can't appear here";
+      return `${challengeSwitchKindLabel(rule.switchKind)} can't appear here`;
     case 'variantUnavailable':
       return "This switch reward can't appear here";
   }

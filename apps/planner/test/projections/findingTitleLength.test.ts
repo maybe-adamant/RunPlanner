@@ -313,7 +313,7 @@ describe('challenge switch finding copy', () => {
       'Switches need 3 rooms between them; this one is 2 after the last.',
       'The Stygian Well and Hermes Shrine take every spot.',
       "Needs a Hex whose Path of Stars isn't complete.",
-      'Elite Enemy Switches need biome depth 3; this room is at 2.',
+      'Moon Monuments need biome depth 3; this room is at 2.',
       'Needs a boon a Pom can level.',
     ]);
   });

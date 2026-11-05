@@ -558,7 +558,12 @@ export function RoomActionsWorkbench({
     // A Talk row's portrait names the NPC, so the row leads with no second icon.
     const icon =
       portrait === undefined
-        ? roomActionIcon(row.reference, row.address.biomeKey, row.sourceFamily)
+        ? roomActionIcon(
+            row.reference,
+            row.address.biomeKey,
+            row.sourceFamily,
+            row.challengeSwitchKind,
+          )
         : undefined;
     const mysteryVerb = inlineMysteryBoonOfferVerb(row);
     // A press on a door reads as its verb, then the door and its new reward as chips.
@@ -829,7 +834,12 @@ export function RoomActionsWorkbench({
   };
   // An optional action adds in one click where it has one place; otherwise its place is chosen.
   const addAction = (row: WorkspaceRoomActions['rows'][number]): RoomAddAction => {
-    const icon = roomActionIcon(row.reference, row.address.biomeKey, row.sourceFamily);
+    const icon = roomActionIcon(
+      row.reference,
+      row.address.biomeKey,
+      row.sourceFamily,
+      row.challengeSwitchKind,
+    );
     const base = {
       key: row.key,
       label: row.label,

@@ -148,7 +148,15 @@ const records: [string, Readonly<Record<string, string | null>>, readonly string
   [
     'room-objects',
     roomObjectArtwork,
-    ['stygianWell', 'purgingPool', 'hermesShrine', 'keepsakeRack'],
+    [
+      'stygianWell',
+      'purgingPool',
+      'hermesShrine',
+      'keepsakeRack',
+      'infernalTrove',
+      'moonMonument',
+      'unseenSigil',
+    ],
   ],
   ['fountains', fountainArtwork, catalog.biomes.values.map((b) => b.key)],
   [

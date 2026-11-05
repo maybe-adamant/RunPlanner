@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import type { ChallengeSwitchKind } from '@run-planner/engine/catalog-schema';
 import {
   requireWorkspaceInteraction,
   type WorkspaceChallengeSwitch,
@@ -10,6 +12,7 @@ import {
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { challengeSwitchRuleSentence } from '@planner/projections/challengeSwitchCopy';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { challengeSwitchIcon } from '@planner/ui/artwork/roomArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { hintProps } from '@planner/ui/controls/hint';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -30,8 +33,9 @@ function lockHint(lock: WorkspaceChallengeSwitchLock): string {
 }
 
 /**
- * A host's switch rows: ticking one observes that kind (clearing any other),
- * then its reward and encounter are chosen beneath it.
+ * A host's one switch row: ticking it observes the first type that can be
+ * rolled, picking a type observes that one, and unticking clears the switch.
+ * The observed switch's reward and encounter are chosen beneath it.
  */
 export function ChallengeSwitchControls({
   interactions,
@@ -44,21 +48,88 @@ export function ChallengeSwitchControls({
     interactions.challengeSwitches,
     observation.interactionKey,
   );
+  const executeIntent = useCommandIntent();
+  const findingTarget = useFindingTarget();
+  const row = observation.kinds.find((kind) => kind.selected);
+  const firstRollable = observation.kinds.find((kind) => kind.observeVariantKey !== undefined);
+  // An observed switch stays clearable whatever its rules say.
+  const unavailable =
+    row !== undefined || firstRollable !== undefined
+      ? undefined
+      : observation.kinds.find((kind) => kind.lock !== undefined)?.lock;
+  const target =
+    row === undefined
+      ? {}
+      : findingTarget(
+          observation.address,
+          semanticOwnerControlElementId(observation.address),
+          observation.address,
+          isPlacementFinding,
+        );
+  const idKey = semanticOwnerControlElementId(observation.address);
   return (
-    <>
-      {observation.kinds.map((row) => (
-        <ChallengeSwitchKindControl
-          interaction={interaction}
-          key={row.kind}
-          observation={observation}
-          row={row}
+    <fieldset className="room-purging-pool challenge-switch">
+      <legend className="visually-hidden">Challenge Switch</legend>
+      <div className="room-feature-presence-row room-resource-row challenge-switch-row">
+        <label
+          className="room-resource-selection"
+          {...hintProps(unavailable === undefined ? undefined : lockHint(unavailable))}
+        >
+          <input
+            {...target}
+            aria-label="Challenge Switch"
+            checked={row !== undefined}
+            disabled={row === undefined && firstRollable === undefined}
+            onChange={(event) => {
+              if (!event.target.checked) executeIntent(interaction.observeIntentFor(null));
+              else if (firstRollable?.observeVariantKey !== undefined)
+                executeIntent(interaction.observeIntentFor(firstRollable.observeVariantKey));
+            }}
+            type="checkbox"
+          />
+          <span>Challenge Switch</span>
+        </label>
+        <ContextualPicker<ChallengeSwitchKind>
+          ariaLabel="Switch type"
+          id={`challenge-switch-type-${idKey}`}
+          itemIcon={(item) => challengeSwitchIcon(item.value)}
+          label=""
+          model={declaredChoicesPicker(
+            observation.kinds.map((kind) => ({
+              key: kind.kind,
+              value: kind.kind,
+              label: kind.label,
+              ...(kind.selected || kind.observeVariantKey !== undefined
+                ? {}
+                : {
+                    disabled: true,
+                    ...(kind.lock === undefined ? {} : { explanation: lockHint(kind.lock) }),
+                  }),
+            })),
+            row?.kind,
+          )}
+          onSelect={(kind) => {
+            if (kind === row?.kind) return;
+            const variantKey = observation.kinds.find(
+              (candidate) => candidate.kind === kind,
+            )?.observeVariantKey;
+            if (variantKey !== undefined) executeIntent(interaction.observeIntentFor(variantKey));
+          }}
+          placeholder="Type"
+          searchable={false}
+          {...(row === undefined
+            ? {}
+            : { triggerIcon: challengeSwitchIcon(row.kind), triggerLabel: row.label })}
         />
-      ))}
-    </>
+      </div>
+      {row === undefined ? null : (
+        <ChallengeSwitchKindOptions interaction={interaction} observation={observation} row={row} />
+      )}
+    </fieldset>
   );
 }
 
-function ChallengeSwitchKindControl({
+function ChallengeSwitchKindOptions({
   interaction,
   observation,
   row,
@@ -68,118 +139,87 @@ function ChallengeSwitchKindControl({
   readonly row: WorkspaceChallengeSwitchKindRow;
 }) {
   const executeIntent = useCommandIntent();
-  const findingTarget = useFindingTarget();
-  // An observed switch stays clearable whatever its rules say.
-  const unavailable = row.selected || row.observeVariantKey !== undefined ? undefined : row.lock;
-  const target = row.selected
-    ? findingTarget(
-        observation.address,
-        semanticOwnerControlElementId(observation.address),
-        observation.address,
-        isPlacementFinding,
-      )
-    : {};
   const selectedVariant = row.variants.find((variant) => variant.selected);
   return (
-    <fieldset className="room-purging-pool challenge-switch" data-switch-kind={row.kind}>
-      <legend className="visually-hidden">{row.label}</legend>
-      <label
-        className="room-feature-presence-row"
-        {...hintProps(unavailable === undefined ? undefined : lockHint(unavailable))}
-      >
-        <input
-          {...target}
-          aria-label={row.label}
-          checked={row.selected}
-          disabled={unavailable !== undefined}
-          onChange={(event) => {
-            if (!event.target.checked) executeIntent(interaction.observeIntentFor(null));
-            else if (row.observeVariantKey !== undefined)
-              executeIntent(interaction.observeIntentFor(row.observeVariantKey));
-          }}
-          type="checkbox"
-        />
-        <span>{row.label}</span>
-      </label>
-      {!row.selected ? null : (
-        <>
-          {row.variants.length < 2 ? null : (
-            <div className="shop-family-offer-row">
-              <ContextualPicker<string>
-                ariaLabel={`${row.label} Item`}
-                id={`challenge-switch-${row.kind}-item`}
-                label="Item"
-                layout="inline"
-                model={declaredChoicesPicker(
-                  row.variants.map((variant) => ({
-                    key: variant.variantKey,
-                    value: variant.variantKey,
-                    label: variant.label,
-                    ...(variant.lock === undefined || variant.selected
-                      ? {}
-                      : { disabled: true, explanation: lockHint(variant.lock) }),
-                  })),
-                  selectedVariant?.variantKey,
-                )}
-                itemIcon={(item) =>
-                  rewardIcon(
-                    row.variants.find((variant) => variant.variantKey === item.value)?.rewardType ??
-                      '',
-                  )
-                }
-                onSelect={(variantKey) => {
-                  if (variantKey !== selectedVariant?.variantKey)
-                    executeIntent(interaction.observeIntentFor(variantKey));
-                }}
-                placeholder="Item"
-                searchable={false}
-                {...(selectedVariant === undefined
+    <>
+      {row.variants.length < 2 ? null : (
+        <div className="shop-family-offer-row">
+          <ContextualPicker<string>
+            ariaLabel={`${row.label} Reward`}
+            id={`challenge-switch-${row.kind}-item`}
+            label="Reward"
+            layout="inline"
+            model={declaredChoicesPicker(
+              row.variants.map((variant) => ({
+                key: variant.variantKey,
+                value: variant.variantKey,
+                label: variant.label,
+                ...(variant.lock === undefined || variant.selected
                   ? {}
-                  : {
-                      triggerIcon: rewardIcon(selectedVariant.rewardType),
-                      triggerLabel: selectedVariant.label,
-                    })}
-              />
-            </div>
-          )}
-          {observation.encounter === undefined ? null : (
-            <div className="shop-family-offer-row">
-              <div className="field-control field-control-inline">
-                <span>Combat</span>
-                <EncounterCustomizationLauncher
-                  interaction={interaction.customization}
-                  subject={{
-                    address: observation.address,
-                    controlId: `challenge-switch-customization-${semanticOwnerControlElementId(observation.address)}`,
-                    definitionKey: observation.encounter.definitionKey,
-                    label: observation.encounter.label,
-                    identityLabel: `${row.label} encounter`,
-                    ...(observation.encounter.customization === undefined
-                      ? {}
-                      : { customization: observation.encounter.customization }),
-                    ...(observation.encounter.composition === undefined
-                      ? {}
-                      : { composition: observation.encounter.composition }),
-                    findingFilter: isCustomizationFinding,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-          {observation.elite === undefined ? null : (
-            <ChallengeSwitchEliteControl
-              elite={observation.elite}
-              interaction={interaction}
-              observation={observation}
-            />
-          )}
-        </>
+                  : { disabled: true, explanation: lockHint(variant.lock) }),
+              })),
+              selectedVariant?.variantKey,
+            )}
+            itemIcon={(item) =>
+              rewardIcon(
+                row.variants.find((variant) => variant.variantKey === item.value)?.rewardType ?? '',
+              )
+            }
+            onSelect={(variantKey) => {
+              if (variantKey !== selectedVariant?.variantKey)
+                executeIntent(interaction.observeIntentFor(variantKey));
+            }}
+            placeholder="Reward"
+            searchable={false}
+            {...(selectedVariant === undefined
+              ? {}
+              : {
+                  triggerIcon: rewardIcon(selectedVariant.rewardType),
+                  triggerLabel: selectedVariant.label,
+                })}
+          />
+        </div>
       )}
-    </fieldset>
+      {observation.encounter === undefined ? null : (
+        <div className="shop-family-offer-row">
+          <div className="field-control field-control-inline">
+            <span>Combat</span>
+            <EncounterCustomizationLauncher
+              interaction={interaction.customization}
+              subject={{
+                address: observation.address,
+                controlId: `challenge-switch-customization-${semanticOwnerControlElementId(observation.address)}`,
+                definitionKey: observation.encounter.definitionKey,
+                label: observation.encounter.label,
+                identityLabel: `${row.label} encounter`,
+                ...(observation.encounter.customization === undefined
+                  ? {}
+                  : { customization: observation.encounter.customization }),
+                ...(observation.encounter.composition === undefined
+                  ? {}
+                  : { composition: observation.encounter.composition }),
+                findingFilter: isCustomizationFinding,
+              }}
+            />
+          </div>
+        </div>
+      )}
+      {observation.elite === undefined ? null : (
+        <ChallengeSwitchEliteControl
+          elite={observation.elite}
+          interaction={interaction}
+          observation={observation}
+        />
+      )}
+    </>
   );
 }
 
-/** The Elite switch's elite and its forced attributes; each Default leaves the draw native. */
+/**
+ * The Moon Monument's elite and its forced attributes on one line. The
+ * attributes are picked in draw order, each from what the earlier pins leave;
+ * Default leaves that draw and the later ones native.
+ */
 function ChallengeSwitchEliteControl({
   elite,
   interaction,
@@ -191,97 +231,91 @@ function ChallengeSwitchEliteControl({
 }) {
   const executeIntent = useCommandIntent();
   const findingTarget = useFindingTarget();
+  const [stage, setStage] = useState<number | undefined>(undefined);
   const pinned = elite.attributes.flatMap((attribute) =>
     attribute.key === undefined ? [] : [attribute.key],
   );
   const id = `challenge-switch-elite-${semanticOwnerControlElementId(observation.address)}`;
+  const enemyKey = elite.enemyKey;
+  const draw = elite.attributes[stage ?? 0];
+  const pinnedLabels = elite.attributes.flatMap((attribute) =>
+    attribute.key === undefined ? [] : [attribute.label ?? attribute.key],
+  );
   return (
-    <>
-      <div className="shop-family-offer-row">
+    <div className="shop-family-offer-row">
+      <ContextualPicker<string>
+        ariaLabel="Elite enemy"
+        findingTarget={findingTarget(observation.address, id, observation.address, isEliteFinding)}
+        id={id}
+        label="Enemy"
+        layout="inline"
+        model={declaredChoicesPicker(
+          [
+            { key: 'default', value: '', label: 'Default' },
+            ...elite.enemies.map((enemy) => ({
+              key: enemy.key,
+              value: enemy.key,
+              label: enemy.label,
+            })),
+          ],
+          elite.enemyKey ?? '',
+        )}
+        onSelect={(next) => {
+          if (next === (elite.enemyKey ?? '')) return;
+          executeIntent(
+            interaction.eliteIntentFor(next === '' ? null : { enemyKey: next, attributeKeys: [] }),
+          );
+        }}
+        placeholder="Default"
+        triggerLabel={elite.enemyLabel ?? elite.enemyKey ?? 'Default'}
+      />
+      {enemyKey === undefined || elite.attributes.length === 0 ? null : (
         <ContextualPicker<string>
-          ariaLabel="Elite enemy"
-          findingTarget={findingTarget(
-            observation.address,
-            id,
-            observation.address,
-            isEliteFinding,
-          )}
-          id={id}
-          label="Elite"
+          ariaLabel="Elite attributes"
+          cancelLabel="Cancel"
+          choiceLabel={`Attribute ${(stage ?? 0) + 1}`}
+          closeOnSelect={false}
+          id={`${id}-attributes`}
+          label="Attributes"
           layout="inline"
           model={declaredChoicesPicker(
             [
               { key: 'default', value: '', label: 'Default' },
-              ...elite.enemies.map((enemy) => ({
-                key: enemy.key,
-                value: enemy.key,
-                label: enemy.label,
+              ...(draw?.key !== undefined && !draw.choices.some((choice) => choice.key === draw.key)
+                ? [
+                    {
+                      key: draw.key,
+                      value: draw.key,
+                      label: `${draw.label ?? draw.key} (unavailable)`,
+                      disabled: true,
+                    },
+                  ]
+                : []),
+              ...(draw?.choices ?? []).map((choice) => ({
+                key: choice.key,
+                value: choice.key,
+                label: choice.label,
               })),
             ],
-            elite.enemyKey ?? '',
+            draw?.key ?? '',
           )}
-          onSelect={(enemyKey) => {
-            if (enemyKey === (elite.enemyKey ?? '')) return;
-            executeIntent(
-              interaction.eliteIntentFor(enemyKey === '' ? null : { enemyKey, attributeKeys: [] }),
+          onOpenChange={(open) => setStage(open ? 0 : undefined)}
+          onSelect={(attributeKey) => {
+            const index = stage ?? 0;
+            const prefix = pinned.slice(0, index);
+            const next = attributeKey === '' ? prefix : [...prefix, attributeKey];
+            executeIntent(interaction.eliteIntentFor({ enemyKey, attributeKeys: next }));
+            // A later draw follows the earlier pins, so it is offered once they are set.
+            setStage(
+              attributeKey !== '' && index + 1 < elite.attributes.length ? index + 1 : undefined,
             );
           }}
+          open={stage !== undefined}
           placeholder="Default"
-          triggerLabel={elite.enemyLabel ?? elite.enemyKey ?? 'Default'}
+          searchable={false}
+          triggerLabel={pinnedLabels.length === 0 ? 'Default' : pinnedLabels.join(' + ')}
         />
-      </div>
-      {elite.enemyKey === undefined
-        ? null
-        : elite.attributes.map((attribute, index) => {
-            const enemyKey = elite.enemyKey!;
-            // A later draw follows the earlier ones, so it waits for them to be pinned.
-            const waiting = index > pinned.length;
-            return (
-              <div className="shop-family-offer-row" key={index}>
-                <ContextualPicker<string>
-                  ariaLabel={`Elite attribute ${index + 1}`}
-                  id={`${id}-attribute-${index}`}
-                  label={`Attribute ${index + 1}`}
-                  layout="inline"
-                  {...(waiting ? { locked: true } : {})}
-                  model={declaredChoicesPicker(
-                    [
-                      { key: 'default', value: '', label: 'Default' },
-                      ...(attribute.key !== undefined &&
-                      !attribute.choices.some((choice) => choice.key === attribute.key)
-                        ? [
-                            {
-                              key: attribute.key,
-                              value: attribute.key,
-                              label: `${attribute.label ?? attribute.key} (unavailable)`,
-                              disabled: true,
-                            },
-                          ]
-                        : []),
-                      ...attribute.choices.map((choice) => ({
-                        key: choice.key,
-                        value: choice.key,
-                        label: choice.label,
-                      })),
-                    ],
-                    attribute.key ?? '',
-                  )}
-                  onSelect={(attributeKey) => {
-                    if (attributeKey === (attribute.key ?? '')) return;
-                    const prefix = pinned.slice(0, index);
-                    executeIntent(
-                      interaction.eliteIntentFor({
-                        enemyKey,
-                        attributeKeys: attributeKey === '' ? prefix : [...prefix, attributeKey],
-                      }),
-                    );
-                  }}
-                  placeholder="Default"
-                  triggerLabel={attribute.label ?? 'Default'}
-                />
-              </div>
-            );
-          })}
-    </>
+      )}
+    </div>
   );
 }

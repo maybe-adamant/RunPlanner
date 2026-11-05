@@ -1,4 +1,5 @@
-import { challengeSwitchKindLabel, observedChallengeSwitchKind } from './challenge-switch-assembly';
+import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
+import { observedChallengeSwitchKind } from './challenge-switch-assembly';
 import {
   hermesShrineInitialSlotKey,
   type AcquisitionEntrySourceFamily,

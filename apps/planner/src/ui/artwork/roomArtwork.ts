@@ -2,7 +2,7 @@ import type {
   AcquisitionEntrySourceFamily,
   RoomActionReference,
 } from '@run-planner/engine/authored-project';
-import type { ResourceFamily } from '@run-planner/engine/catalog-schema';
+import type { ChallengeSwitchKind, ResourceFamily } from '@run-planner/engine/catalog-schema';
 
 import { biomeArtwork } from './biomes/biomeArtwork';
 import { elementArtwork } from './elements/elementArtwork';
@@ -15,11 +15,29 @@ import { npcArtwork } from './npcs/npcArtwork';
 import { gatheringToolArtwork } from './tools/gatheringToolArtwork';
 import { wellArtwork } from './well/wellArtwork';
 
-export type RoomObjectKey = 'stygianWell' | 'purgingPool' | 'hermesShrine' | 'keepsakeRack';
+export type RoomObjectKey =
+  | 'stygianWell'
+  | 'purgingPool'
+  | 'hermesShrine'
+  | 'keepsakeRack'
+  | 'infernalTrove'
+  | 'moonMonument'
+  | 'unseenSigil';
 
 /** An in-world room object's icon. */
 export function roomObjectIcon(key: RoomObjectKey): string | undefined {
   return roomObjectArtwork[key] ?? undefined;
+}
+
+const challengeSwitchObjects: Readonly<Record<ChallengeSwitchKind, RoomObjectKey>> = Object.freeze({
+  perfectClear: 'unseenSigil',
+  time: 'infernalTrove',
+  elite: 'moonMonument',
+});
+
+/** A challenge switch kind's in-world icon. */
+export function challengeSwitchIcon(kind: ChallengeSwitchKind): string | undefined {
+  return roomObjectIcon(challengeSwitchObjects[kind]);
 }
 
 /** A biome's fountain room icon; undefined where the biome has no fountain room. */
@@ -50,6 +68,7 @@ export function roomActionIcon(
   reference: RoomActionReference,
   biomeKey: string,
   sourceFamily?: AcquisitionEntrySourceFamily,
+  challengeSwitchKind?: ChallengeSwitchKind,
 ): string | undefined {
   switch (reference.kind) {
     case 'interactShopOffer':
@@ -69,6 +88,10 @@ export function roomActionIcon(
       return roomObjectIcon('purgingPool');
     case 'interactKeepsakeRack':
       return roomObjectIcon('keepsakeRack');
+    case 'interactChallengeSwitch':
+      return challengeSwitchKind === undefined
+        ? undefined
+        : challengeSwitchIcon(challengeSwitchKind);
     case 'useFountain':
       return fountainIcon(biomeKey);
     case 'interactEris':

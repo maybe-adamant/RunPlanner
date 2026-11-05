@@ -38,6 +38,47 @@ function contentGroup(key: string, label: ReactNode, content: ReactNode): RoomFe
   });
 }
 
+type RoomObjectKind = 'stygianWell' | 'purgingPool' | 'hermesShrine' | 'infernalContractPedestal';
+
+/** The game's secret spawn order: the Well, Pool and Shrine claim spots before the switch. */
+const spawnPriority: readonly RoomObjectKind[] = ['stygianWell', 'purgingPool', 'hermesShrine'];
+const afterSwitch: readonly RoomObjectKind[] = ['infernalContractPedestal'];
+
+/** The Objects section in spawn order, the challenge switch after the objects that outrank it. */
+function objectsGroup(
+  features: readonly RoomFeaturePresence[],
+  interactions: WorkspaceInteractionCatalog,
+  room: WorkspaceRoomSummary,
+): RoomFeatureGroup | undefined {
+  const ofKinds = (kinds: readonly RoomObjectKind[]) =>
+    kinds.flatMap((kind) => features.filter((feature) => feature.kind === kind));
+  const feature = (entry: RoomFeaturePresence, index: number) =>
+    Object.freeze({ kind: 'feature' as const, key: `Objects:${index}`, feature: entry });
+  const before = ofKinds(spawnPriority);
+  const after = ofKinds(afterSwitch);
+  const entries = [
+    ...before.map(feature),
+    ...(room.challengeSwitch === undefined
+      ? []
+      : [
+          Object.freeze({
+            kind: 'content' as const,
+            key: 'Objects:challengeSwitch',
+            content: (
+              <ChallengeSwitchControls
+                interactions={interactions}
+                observation={room.challengeSwitch}
+              />
+            ),
+          }),
+        ]),
+    ...after.map((entry, index) => feature(entry, before.length + index)),
+  ];
+  return entries.length === 0
+    ? undefined
+    : Object.freeze({ key: 'Objects', label: 'Objects', entries });
+}
+
 /** Room feature products as Overview sections; individual controls retain their semantic owners. */
 export function roomFeatureSections({
   features,
@@ -54,48 +95,13 @@ export function roomFeatureSections({
     ): feature is Extract<RoomFeaturePresence, { readonly kind: 'chaos' | 'zagreusContract' }> =>
       feature.kind === 'chaos' || feature.kind === 'zagreusContract',
   );
-  const roomObjects = features.filter(
-    (
-      feature,
-    ): feature is Extract<
-      RoomFeaturePresence,
-      {
-        readonly kind: 'hermesShrine' | 'purgingPool' | 'stygianWell' | 'infernalContractPedestal';
-      }
-    > =>
-      feature.kind === 'hermesShrine' ||
-      feature.kind === 'purgingPool' ||
-      feature.kind === 'stygianWell' ||
-      feature.kind === 'infernalContractPedestal',
-  );
   const section = (group: RoomFeatureGroup | undefined): ReactNode =>
     group === undefined ? undefined : (
       <RoomFeatureSection group={group} interactions={interactions} />
     );
   return {
     additionalExits: section(featureGroup('Additional Exits', additionalExits)),
-    objects: section(
-      ((group) =>
-        room.challengeSwitch === undefined
-          ? group
-          : Object.freeze({
-              key: 'Objects',
-              label: 'Objects',
-              entries: [
-                ...(group?.entries ?? []),
-                {
-                  kind: 'content' as const,
-                  key: 'Objects:challengeSwitch',
-                  content: (
-                    <ChallengeSwitchControls
-                      interactions={interactions}
-                      observation={room.challengeSwitch}
-                    />
-                  ),
-                },
-              ],
-            }))(featureGroup('Objects', roomObjects)),
-    ),
+    objects: section(objectsGroup(features, interactions, room)),
     resources:
       room.resources === undefined || room.resources.length === 0
         ? undefined

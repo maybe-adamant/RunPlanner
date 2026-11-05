@@ -29,49 +29,44 @@ function openHost(application: PlannerApplication) {
 }
 
 describe('challenge switch rows on the room Overview', () => {
-  it('observes one switch kind at a time and clears it again', async () => {
+  it('observes one switch type at a time and clears it again', async () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
 
-    expect(
-      screen.getByRole<HTMLInputElement>('checkbox', { name: 'Elite Enemy Switch' }).disabled,
-    ).toBe(true);
-    await user.click(screen.getByRole('checkbox', { name: 'Gold Switch' }));
-    expect(hostRoom(application).challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
-
-    // Ticking another kind replaces the observed one.
-    await user.click(screen.getByRole('checkbox', { name: 'Perfect Clear Switch' }));
+    // Ticking the row observes the first type the room can roll.
+    await user.click(screen.getByRole('checkbox', { name: 'Challenge Switch' }));
     expect(hostRoom(application).challengeSwitch?.variantKey).toBe(
       'PerfectClearChallengeSwitch_Pom',
     );
-    expect(screen.getByRole<HTMLInputElement>('checkbox', { name: 'Gold Switch' }).checked).toBe(
-      false,
-    );
+
+    // Picking another type replaces the observed one.
+    await user.click(screen.getByRole('button', { name: 'Switch type' }));
+    await user.click(screen.getByRole('option', { name: /Infernal Trove/ }));
+    expect(hostRoom(application).challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
     expect(
       screen.getByRole<HTMLButtonElement>('button', {
-        name: 'Customize perfect clear switch encounter',
+        name: 'Customize infernal trove encounter',
       }).disabled,
     ).toBe(false);
 
-    await user.click(screen.getByRole('checkbox', { name: 'Perfect Clear Switch' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Challenge Switch' }));
     expect(hostRoom(application).challengeSwitch).toBeUndefined();
     act(() => {
       application.store.dispatch(authoredProjectUndoRequested());
     });
-    expect(hostRoom(application).challengeSwitch?.variantKey).toBe(
-      'PerfectClearChallengeSwitch_Pom',
-    );
+    expect(hostRoom(application).challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
   });
 
   it("adds the observed switch's use to the Timeline in one click", async () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Gold Switch' }));
+    await user.click(screen.getByRole('button', { name: 'Switch type' }));
+    await user.click(screen.getByRole('option', { name: /Infernal Trove/ }));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
-    await user.click(screen.getByRole('button', { name: 'Use Gold Switch' }));
+    await user.click(screen.getByRole('button', { name: 'Use Infernal Trove' }));
     expect(
       hostRoom(application).roomActions.order.some(
         (reference) => reference.kind === 'interactChallengeSwitch',
@@ -83,9 +78,9 @@ describe('challenge switch rows on the room Overview', () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Perfect Clear Switch' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Challenge Switch' }));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await user.click(screen.getByRole('button', { name: 'Use Perfect Clear Switch' }));
+    await user.click(screen.getByRole('button', { name: 'Use Unseen Sigil' }));
 
     await user.click(screen.getByRole('checkbox', { name: 'Nectar dropped' }));
     expect(hostRoom(application).challengeSwitch?.nectarDropped).toBe(true);

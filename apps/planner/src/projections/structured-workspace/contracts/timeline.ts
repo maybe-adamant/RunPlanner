@@ -90,6 +90,8 @@ export interface WorkspaceRoomActionRow {
   };
   /** Engine-published source of a generated pickup; absent for every other action. */
   readonly sourceFamily?: import('@run-planner/engine/authored-project').AcquisitionEntrySourceFamily;
+  /** The observed switch's kind on a switch use row, named and pictured by it. */
+  readonly challengeSwitchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
   /** The inventory slot bought from, shown as a badge on the row icon. */
   readonly slot?: number;
   /** A Travel Deal refill purchase, marked on its icon; `shownLabel` drops the offer name. */

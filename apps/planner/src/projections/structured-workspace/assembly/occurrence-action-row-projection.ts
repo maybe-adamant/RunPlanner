@@ -21,6 +21,7 @@ import {
   type FountainRarityOutcomeAddress,
 } from '@run-planner/engine/authored-project';
 import type { WorkspaceDerivedAcquisitionEntry } from './occurrence-reward-assembly';
+import { observedChallengeSwitchKind } from './challenge-switch-assembly';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   appendSteadyGrowthTimelineEffects,
@@ -535,12 +536,17 @@ function roomActionsForOccurrence(
         sourceFamily,
         input.rerollTargetLabel,
       );
+      const challengeSwitchKind =
+        row.reference.kind === 'interactChallengeSwitch'
+          ? observedChallengeSwitchKind(input.catalog, input.occurrence)
+          : undefined;
       return Object.freeze({
         address,
         key: row.key,
         label: labelParts.label,
         addGroup: occurrenceActionAddGroup(input.catalog, row.reference, roomLocal, sourceFamily),
         ...(sourceFamily === undefined ? {} : { sourceFamily }),
+        ...(challengeSwitchKind === undefined ? {} : { challengeSwitchKind }),
         ...(labelParts.slot === undefined ? {} : { slot: labelParts.slot }),
         ...(labelParts.travelDeal === undefined
           ? {}

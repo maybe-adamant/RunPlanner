@@ -417,14 +417,14 @@ export interface WorkspaceChallengeSwitchVariant {
   readonly lock?: WorkspaceChallengeSwitchLock;
 }
 
-/** One switch kind's Overview row; at most one kind is observed per room. */
+/** One switch type on the Overview's type picker; at most one is observed per room. */
 export interface WorkspaceChallengeSwitchKindRow {
   readonly kind: ChallengeSwitchKind;
   readonly label: string;
   readonly selected: boolean;
-  /** The variant ticking the row observes; absent while none can be rolled here. */
+  /** The variant picking this type observes; absent while none can be rolled here. */
   readonly observeVariantKey?: string;
-  /** Why ticking the row is unavailable; absent when a variant can be rolled. */
+  /** Why this type is unavailable; absent when a variant can be rolled. */
   readonly lock?: WorkspaceChallengeSwitchLock;
   readonly variants: readonly WorkspaceChallengeSwitchVariant[];
 }

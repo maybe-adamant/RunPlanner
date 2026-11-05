@@ -10,6 +10,7 @@ import {
   type ChallengeSwitchInteraction,
   type ChallengeSwitchOutcomeInteraction,
 } from '@run-planner/engine/simulation';
+import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import { generatedEnemyLabel } from '@planner/projections/encounterIssueCopy';
 
 import type {
@@ -24,19 +25,8 @@ import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-bui
 import { projectEncounterComposition } from '../interactions/generated-encounter-projection';
 import { projectEncounterCustomizationDecision } from './occurrence-reward-assembly';
 
-/** The Overview row order: Perfect Clear, Gold, then Elite. */
+/** The switch type order: Unseen Sigil, Infernal Trove, then Moon Monument. */
 const kindOrder: readonly ChallengeSwitchKind[] = ['perfectClear', 'time', 'elite'];
-
-const kindLabels: Readonly<Record<ChallengeSwitchKind, string>> = Object.freeze({
-  perfectClear: 'Perfect Clear Switch',
-  time: 'Gold Switch',
-  elite: 'Elite Enemy Switch',
-});
-
-/** A switch kind's name in the editor. */
-export function challengeSwitchKindLabel(kind: ChallengeSwitchKind): string {
-  return kindLabels[kind];
-}
 
 /** The observed switch's kind, when its variant is declared. */
 export function observedChallengeSwitchKind(
