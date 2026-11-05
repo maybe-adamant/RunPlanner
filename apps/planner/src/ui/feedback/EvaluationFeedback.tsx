@@ -67,11 +67,17 @@ export function ProjectFindings({
   issue,
   focusByOwner,
   route,
+  strip = false,
 }: {
   readonly catalog: Catalog;
   readonly issue: AssessmentIssue | undefined;
   readonly focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>;
   readonly route?: WorkspaceRoute;
+  /**
+   * A one-line status strip that keeps its height: "No issues" without an
+   * issue, otherwise its first finding and how many more it has.
+   */
+  readonly strip?: boolean;
 }) {
   const dispatch = useAppDispatch();
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
@@ -79,7 +85,16 @@ export function ProjectFindings({
   // A running draft holds the workspace on the Draft panel.
   const drafting = useAppSelector((state) => state.draftSession.run.kind === 'running');
 
-  if (issue === undefined) return null;
+  if (issue === undefined)
+    return strip ? (
+      <section
+        aria-label="Plan status"
+        className="project-findings room-status-strip"
+        data-status="valid"
+      >
+        <span className="room-status-valid">No issues</span>
+      </section>
+    ) : null;
 
   const destination = focusByOwner.get(semanticAddressKey(issue.owner));
   const destinationLabel = findingDestinationLabel(
@@ -97,7 +112,11 @@ export function ProjectFindings({
   );
 
   return (
-    <section className="project-findings" aria-labelledby="project-findings-title">
+    <section
+      className={strip ? 'project-findings room-status-strip' : 'project-findings'}
+      aria-labelledby="project-findings-title"
+      {...(strip ? { 'data-status': 'issue' } : {})}
+    >
       <h2 className="visually-hidden" id="project-findings-title">
         Next repair
       </h2>
@@ -113,8 +132,14 @@ export function ProjectFindings({
           <span className="finding-title">{copy.title}</span>
           <span className="finding-destination">{destinationLabel}</span>
         </span>
-        {copy.description !== undefined && (
-          <span className="finding-description">{copy.description}</span>
+        {strip ? (
+          issue.reasons.length > 1 ? (
+            <span className="room-status-more">+{issue.reasons.length - 1}</span>
+          ) : null
+        ) : (
+          copy.description !== undefined && (
+            <span className="finding-description">{copy.description}</span>
+          )
         )}
       </button>
     </section>

@@ -3,7 +3,7 @@
   display: grid;
   min-height: 0;
   grid-template-areas:
-    'head room'
+    'head status'
     'rail room';
   grid-template-columns: minmax(180px, 224px) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
@@ -24,6 +24,69 @@
 
 .biome-workspace > .biome-inspector {
   grid-area: room;
+}
+
+/* One fixed-height line atop the room: no issues, or the next repair and how many more. */
+.biome-room-status {
+  grid-area: status;
+  min-width: 0;
+  padding-bottom: 10px;
+}
+
+.room-status-strip {
+  display: flex;
+  box-sizing: border-box;
+  height: 44px;
+  align-items: stretch;
+}
+
+.room-status-strip > .assessment-issue-button {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.room-status-strip .assessment-issue-summary {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 10px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.room-status-strip .finding-title,
+.room-status-strip .finding-destination {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.room-status-more {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: #f1d6d6;
+  background: rgb(190 80 80 / 22%);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.project-findings.room-status-strip[data-status='valid'] {
+  align-items: center;
+  padding: 0 14px;
+  border: 1px solid rgb(120 170 130 / 28%);
+  border-radius: 10px;
+  background: rgb(120 170 130 / 6%);
+}
+
+.room-status-valid {
+  color: #9cc4a3;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .run-state-sheet {
@@ -198,10 +261,6 @@
   scrollbar-gutter: stable;
 }
 
-.biome-structure-head > .project-findings {
-  margin-bottom: 12px;
-}
-
 .biome-structure-scroll {
   position: relative;
   grid-area: rail;
@@ -239,36 +298,23 @@
  * Folded: a narrow column of the backbone, numbered circles and room icons,
  * with the biome's head as one row above the room.
  */
+/* Folded: a narrow column of the backbone, numbered circles and room icons. */
 .biome-workspace[data-rail='folded'] {
-  grid-template-areas:
-    'rail head'
-    'rail room';
   grid-template-columns: 112px minmax(0, 1fr);
 }
 
+/* Folded, the head keeps the biome's icon and its trash action. */
+.biome-workspace[data-rail='folded'] .biome-structure-head h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .biome-workspace[data-rail='folded'] .biome-structure-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 0 12px;
-  border-right: 0;
-}
-
-.biome-workspace[data-rail='folded']
-  :is(.biome-structure-heading, .biome-structure-title, .biome-structure-title-row) {
-  display: contents;
-}
-
-.biome-workspace[data-rail='folded'] .biome-structure-head > .project-findings {
-  order: 1;
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-}
-
-.biome-workspace[data-rail='folded'] .biome-structure-head .topology-removal-action {
-  order: 2;
-  margin-left: auto;
+  padding-right: 6px;
 }
 
 .biome-workspace[data-rail='folded'] .biome-structure-scroll {
@@ -459,11 +505,39 @@
 
 .biome-structure-title-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+/* Clear biome: a muted red trash can at the end of the title row. */
+.topology-removal-icon {
+  display: inline-grid;
+  border-color: transparent;
+  background: transparent;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  border-radius: 7px;
+  color: #b97777;
+}
+
+.topology-removal-icon:hover:not(:disabled) {
+  color: #e59b9b;
+  background: rgb(190 80 80 / 14%);
+}
+
+.topology-removal-icon > svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.3;
 }
 
 .biome-structure-title-row > .topology-removal-action {
@@ -955,7 +1029,11 @@
 }
 
 .biome-structure-title-row h2 {
+  min-width: 0;
   margin-right: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .biome-boss-icon {

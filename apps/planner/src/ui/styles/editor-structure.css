@@ -660,47 +660,6 @@ select {
   background: rgb(13 14 18 / 32%);
 }
 
-.room-card-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  /* One header height whether or not the heading carries actions. */
-  min-height: 50px;
-  margin: -4px -4px 14px;
-  padding: 10px 12px;
-  border: 1px solid rgb(145 119 174 / 32%);
-  border-left: 3px solid #9c7fbd;
-  border-radius: 9px;
-  background: linear-gradient(90deg, rgb(126 101 154 / 18%), rgb(151 104 39 / 7%));
-}
-
-.room-card-heading .action-compact {
-  min-height: 26px;
-  padding-block: 2px;
-}
-
-.room-heading-identity {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 8px;
-  min-width: 0;
-}
-
-.room-card-heading > h3,
-.room-heading-identity > h3 {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  margin: 0;
-  color: #f6f0e7;
-  font-size: 1.05rem;
-  letter-spacing: 0.01em;
-}
-
 .room-workbench-tab-row {
   position: sticky;
   top: 0;
@@ -714,6 +673,25 @@ select {
   margin: 0 -4px 12px;
   border-bottom: 1px solid #353640;
   background: #1c1c24;
+}
+
+/* The room's name leads its tab row, where its title card used to be. */
+.room-workbench-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0 6px 0 4px;
+  overflow: hidden;
+  color: #d6cfe2;
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-workbench-name::after {
+  margin-left: 6px;
+  color: #77757e;
+  content: '·';
 }
 
 .room-workbench-tabs {
@@ -759,17 +737,6 @@ select {
 
 .room-workbench-panel {
   min-width: 0;
-}
-
-.room-heading-incoming-reward {
-  align-items: center;
-  display: flex;
-  gap: 8px;
-  min-width: 0;
-  color: #c7b698;
-  font-size: 0.78rem;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
 }
 
 .card-kicker {

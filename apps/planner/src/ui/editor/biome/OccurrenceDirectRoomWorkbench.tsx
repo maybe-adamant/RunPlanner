@@ -4,7 +4,6 @@ import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { ReactNode } from 'react';
 import type {
   WorkspaceEncounterBannerSupplement,
-  WorkspaceDoorContract,
   WorkspaceInteractionCatalog,
   WorkspaceRoomActions,
   WorkspaceRoomLifecycleBoundary,
@@ -333,24 +332,4 @@ export function DirectRoomWorkbench({
         />
       );
   }
-}
-
-export function IncomingRewardSummary({
-  incomingDoor,
-}: {
-  readonly incomingDoor: WorkspaceDoorContract | undefined;
-}) {
-  if (incomingDoor === undefined) return null;
-  const preview = incomingDoor.offerRewardSurface;
-  if (preview.visibility === 'visible' && preview.rewards.length === 0) return null;
-  const summary =
-    preview.visibility === 'hidden'
-      ? 'Hidden'
-      : preview.rewards.map((reward) => reward.rerolledSummary ?? reward.summary).join(', ');
-  return (
-    <section aria-label="Incoming reward" className="room-heading-incoming-reward">
-      <span aria-hidden="true">·</span>
-      <span>{summary}</span>
-    </section>
-  );
 }

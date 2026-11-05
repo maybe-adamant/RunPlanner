@@ -284,11 +284,14 @@ function ExactRepairAction({
 export function TopologyRemovalAction({
   accessibleLabel,
   compact = false,
+  icon = false,
   interaction,
   label,
 }: {
   readonly accessibleLabel?: string;
   readonly compact?: boolean;
+  /** A trash icon in place of the label, which then shows on hover. */
+  readonly icon?: boolean;
   readonly interaction: WorkspaceTopologyRemovalInteraction | undefined;
   readonly label: string;
 }) {
@@ -299,13 +302,24 @@ export function TopologyRemovalAction({
       {...(interaction === undefined ? {} : { 'data-command': interaction.intent.command.kind })}
     >
       <button
-        aria-label={accessibleLabel}
-        className={`danger-action${compact ? ' action-compact' : ''}`}
+        aria-label={accessibleLabel ?? (icon ? label : undefined)}
+        className={
+          icon
+            ? 'quiet-action topology-removal-icon'
+            : `danger-action${compact ? ' action-compact' : ''}`
+        }
         disabled={interaction === undefined}
         onClick={() => interaction === undefined || executeIntent(interaction.intent)}
         type="button"
+        {...(icon ? hintProps(label, undefined, accessibleLabel ?? label) : {})}
       >
-        {label}
+        {icon ? (
+          <svg aria-hidden="true" viewBox="0 0 16 16">
+            <path d="M3.5 4.5h9M6 2.5h4l.5 2h-5l.5-2Zm-1 2 .5 9h5l.5-9M7 7v4M9 7v4" />
+          </svg>
+        ) : (
+          label
+        )}
       </button>
     </div>
   );

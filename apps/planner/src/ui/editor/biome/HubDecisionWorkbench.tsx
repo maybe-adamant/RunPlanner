@@ -361,10 +361,10 @@ export function HubDecisionWorkbench({
       className="room-card hub-decision-workbench"
       aria-label="Ephyra Hub"
     >
-      <header className="room-card-heading">
-        <h3 id={`${titleId}-title`}>Ephyra Hub</h3>
-      </header>
       <div className="room-workbench-tab-row">
+        <h3 className="room-workbench-name" id={`${titleId}-title`}>
+          Ephyra Hub
+        </h3>
         <nav
           aria-label="Hub workbench"
           className="room-workbench-tabs"

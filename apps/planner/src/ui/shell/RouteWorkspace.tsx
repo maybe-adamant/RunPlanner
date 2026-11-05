@@ -472,7 +472,15 @@ export function RouteWorkspace({
                 : { railPinPreference: biomeRailPinPreference })}
               focusByOwner={workspace.focusByOwner}
               interactions={interactions}
-              repairBanner={repairBanner}
+              repairBanner={
+                <ProjectFindings
+                  catalog={catalog}
+                  issue={routeEvaluation.issue}
+                  focusByOwner={workspace.focusByOwner}
+                  route={workspaceRoute}
+                  strip
+                />
+              }
               runStateLaunchers={workspace.runStateLaunchers}
             />
           )}

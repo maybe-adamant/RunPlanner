@@ -4,7 +4,6 @@ import { useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactN
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
-  type WorkspaceDoorContract,
   type WorkspaceInteractionCatalog,
   type WorkspaceLocalVisitDecision,
   type WorkspacePlanEndRelation,
@@ -19,11 +18,10 @@ import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindin
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { RunStateLauncher } from './RunStateSheet';
 import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
-import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
+import { DirectRoomWorkbench } from './OccurrenceDirectRoomWorkbench';
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 import { SideRoomsWorkbench } from './locals/SideRoomsWorkbench';
 import { TimelineLegend } from './TimelineLegend';
-import { planEndHereLabel } from './planEndCopy';
 import type { TimelineDoors, TimelineDoorsContent } from './TimelineDoors';
 import { createRouteAddress } from '@run-planner/engine/authored-project';
 
@@ -31,7 +29,6 @@ interface OccurrenceWorkbenchProps {
   readonly headerActions?: ReactNode;
   /** Entry identity is an Overview-only biome authoring control. */
   readonly entryIdentity?: ReactNode;
-  readonly incomingDoor?: WorkspaceDoorContract;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly localVisit?: WorkspaceLocalVisitDecision;
   readonly initialSideRoomSlotKey?: string;
@@ -64,7 +61,6 @@ export function OccurrenceWorkbench({
   timelineDoors,
   pastEndAction,
   entryIdentity,
-  incomingDoor,
   initialTab,
   findingNavigationRevision,
   navigationRevision,
@@ -277,23 +273,10 @@ export function OccurrenceWorkbench({
       )}
       tabIndex={-1}
     >
-      <header className="room-card-heading">
-        <div className="room-heading-identity">
-          <h3 aria-label={heading}>{heading}</h3>
-          <IncomingRewardSummary incomingDoor={incomingDoor} />
-          {planEndRelation !== 'end' ? null : (
-            <span className="plan-end-pill" data-plan-end="end">
-              {planEndHereLabel}
-            </span>
-          )}
-        </div>
-        <div className="owner-markers">
-          {headerActions}
-          <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
-          {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
-        </div>
-      </header>
       <div className="room-workbench-tab-row">
+        <h3 aria-label={heading} className="room-workbench-name">
+          {heading}
+        </h3>
         <nav
           aria-label="Room workbench"
           className="room-workbench-tabs"
@@ -319,12 +302,13 @@ export function OccurrenceWorkbench({
             ? tabButton('shipInactiveRepair', 'Inactive Actions')
             : null}
         </nav>
-        {!showTimelineLegend && tabRunState === undefined ? null : (
-          <div className="room-workbench-tab-utility">
-            {showTimelineLegend ? <TimelineLegend /> : null}
-            {tabRunState === undefined ? null : <RunStateLauncher launcher={tabRunState} />}
-          </div>
-        )}
+        <div className="room-workbench-tab-utility">
+          {headerActions}
+          <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
+          {showTimelineLegend ? <TimelineLegend /> : null}
+          {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
+          {tabRunState === undefined ? null : <RunStateLauncher launcher={tabRunState} />}
+        </div>
       </div>
       <section
         aria-label="Room workbench panel"

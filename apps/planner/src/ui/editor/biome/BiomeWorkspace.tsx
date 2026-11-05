@@ -755,7 +755,6 @@ export function BiomeWorkspace({
         data-status={biome.status}
       >
         <div className="biome-structure-head">
-          {repairBanner}
           <header className="biome-structure-heading">
             <div className="biome-structure-title">
               <div className="biome-structure-title-row">
@@ -764,7 +763,7 @@ export function BiomeWorkspace({
                 {pastPlanEnd || clearTopology === undefined ? null : (
                   <TopologyRemovalAction
                     accessibleLabel={`Clear ${biome.label}`}
-                    compact
+                    icon
                     interaction={clearTopology}
                     label="Clear biome"
                   />
@@ -809,6 +808,8 @@ export function BiomeWorkspace({
           </div>
         </div>
       </section>
+      {/* The room column's status keeps one height and place, so nothing shifts as findings come and go. */}
+      <div className="biome-room-status">{repairBanner}</div>
       <aside aria-label="Details" className="biome-inspector">
         {rendersTitledWorkbench ? null : (
           <header className="biome-inspector-heading">

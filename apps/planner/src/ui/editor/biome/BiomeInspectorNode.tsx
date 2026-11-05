@@ -340,7 +340,6 @@ function OccurrenceInspector({
         </>
       }
       entryIdentity={<StartRoomIdentityEditor interactions={interactions} node={node} />}
-      {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
       interactions={interactions}
       {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
       room={node.room}
