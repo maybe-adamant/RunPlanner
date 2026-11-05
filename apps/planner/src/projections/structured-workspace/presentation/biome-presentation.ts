@@ -593,6 +593,7 @@ export function presentWorkspaceBiome(
         node,
         ...(planEnd === undefined ? {} : { planEnd }),
         ...(selectedTarget === undefined ? {} : { selectedTarget }),
+        stepNumber: decisionIndex,
       });
     }
     const presentation = nodeRailPresentation(node, undefined, node.key === entry?.key);
@@ -767,6 +768,7 @@ export function presentWorkspaceBiome(
             node: withRunStateTitle(entry.node, entry.label),
             ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
+            stepNumber: entry.stepNumber ?? 0,
           });
         case 'mixedBatch':
           return Object.freeze({
@@ -778,6 +780,7 @@ export function presentWorkspaceBiome(
             node: withRunStateTitle(entry.node, entry.label),
             ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
+            stepNumber: entry.stepNumber ?? 0,
           });
         case 'takeoverBatch':
           return Object.freeze({

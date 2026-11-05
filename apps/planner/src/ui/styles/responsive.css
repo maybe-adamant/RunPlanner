@@ -13,11 +13,11 @@
 /*
  * The rail turns horizontal above the room once side by side would squeeze the
  * room's Timeline: its door editor reaches its full width (one line per door)
- * only with about 760px of room column, which the 280px rail and gutters leave
- * from about 1100px of editor panel. Measuring the panel, not the window, lets
+ * only with about 760px of room column, which the 224px rail and gutters leave
+ * from about 1044px of editor panel. Measuring the panel, not the window, lets
  * an unpinned navigation hand its width to the room.
  */
-@container editor-panel (max-width: 1100px) {
+@container editor-panel (max-width: 1044px) {
   .editor-panel-content[data-editor-layout='biome'] {
     display: block;
     overflow-y: auto;

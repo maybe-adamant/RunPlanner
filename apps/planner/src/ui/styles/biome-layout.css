@@ -2,7 +2,7 @@
   position: relative;
   display: grid;
   min-height: 0;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  grid-template-columns: minmax(180px, 224px) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   gap: 12px;
 }
@@ -227,6 +227,7 @@
 
 .biome-structure-title-row {
   display: flex;
+  flex-wrap: wrap;
   min-width: 0;
   align-items: center;
   justify-content: space-between;
@@ -246,14 +247,14 @@
 
 .biome-rail-stop {
   position: relative;
-  padding-left: 17px;
+  padding-left: 22px;
 }
 
 .biome-rail-stop::before {
   position: absolute;
   top: -7px;
   bottom: -7px;
-  left: 4px;
+  left: 8px;
   width: 2px;
   background: #3f3d48;
   content: '';
@@ -269,14 +270,33 @@
 
 .biome-rail-stop::after {
   position: absolute;
-  top: 18px;
-  left: 0;
+  top: 15px;
+  left: 2px;
   width: 10px;
   height: 10px;
   border: 2px solid #6d6878;
   border-radius: 50%;
   background: #1c1d23;
   content: '';
+}
+
+/* A decision's circle carries its number. */
+.biome-rail-stop[data-step]::after {
+  top: 13px;
+  left: 0;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  color: #c3a86f;
+  content: attr(data-step);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+
+.biome-rail-stop[data-step][data-plan-end='end']::after {
+  color: #1c1d23;
 }
 
 .biome-rail-node {
@@ -315,6 +335,30 @@
 .biome-rail-node[data-selected='true'] {
   border-color: color-mix(in srgb, var(--selection-accent) 55%, transparent);
   background: color-mix(in srgb, var(--selection-accent) 7%, transparent);
+}
+
+/* A stop waiting on a choice: a dashed card with a glyph where its room icon goes. */
+.biome-rail-stop[data-pending] > .biome-rail-node {
+  border-style: dashed;
+}
+
+.biome-rail-pending {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #c9bfe0;
+}
+
+.biome-rail-glyph {
+  display: inline-grid;
+  width: 1.45rem;
+  height: 1.45rem;
+  place-items: center;
+  border: 1px dashed rgb(174 152 202 / 60%);
+  border-radius: 50%;
+  color: rgb(174 152 202);
+  font-weight: 700;
+  line-height: 1;
 }
 
 .biome-frontier-stop .biome-rail-node {

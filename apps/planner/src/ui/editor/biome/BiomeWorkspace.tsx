@@ -279,28 +279,35 @@ function RailSelectedTarget({
   );
 }
 
-/**
- * A rail card's title and assessment, read by assistive tech; only a card
- * without a room line shows its title. Its border carries the assessment.
- */
+/** A rail card's title and assessment, read by assistive tech; its border carries the assessment. */
 function RailHeading({
   label,
   marker,
   planEnd,
-  visible = false,
 }: {
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly planEnd?: WorkspacePlanEndRelation | undefined;
-  readonly visible?: boolean;
 }) {
   return (
-    <span className={visible ? 'biome-rail-heading' : 'biome-rail-heading visually-hidden'}>
+    <span className="biome-rail-heading visually-hidden">
       <strong>{label}</strong>
       <span className="biome-rail-status visually-hidden">
         {assessmentLabel(marker, planEnd)}
         <FindingCount count={marker.findingCount} label="findings" />
       </span>
+    </span>
+  );
+}
+
+/** A stop still waiting on a choice: a glyph where its room icon would be, and what to do. */
+function RailPending({ glyph, label }: { readonly glyph: string; readonly label: string }) {
+  return (
+    <span className="biome-rail-selection biome-rail-pending">
+      <span aria-hidden="true" className="biome-rail-glyph">
+        {glyph}
+      </span>
+      {label}
     </span>
   );
 }
@@ -325,15 +332,19 @@ function RailNode({
 }) {
   const { marker, node } = entry;
   const selected = selectedRailKey === marker.focusKey;
+  // A decision with no room chosen yet has no room line.
+  const undecided = entry.selectedTarget === undefined && entry.roomIcon === undefined;
   return (
-    <div className="biome-rail-stop" data-kind={node.kind} data-plan-end={entry.planEnd}>
+    <div
+      className="biome-rail-stop"
+      data-kind={node.kind}
+      data-plan-end={entry.planEnd}
+      data-step={entry.stepNumber}
+      {...(undecided ? { 'data-pending': 'room' } : {})}
+    >
       <FocusButton focusMarker={entry.focusMarker ?? marker} marker={marker} selected={selected}>
-        <RailHeading
-          label={entry.label}
-          marker={marker}
-          planEnd={entry.planEnd}
-          visible={entry.selectedTarget === undefined && entry.roomIcon === undefined}
-        />
+        <RailHeading label={entry.label} marker={marker} planEnd={entry.planEnd} />
+        {undecided ? <RailPending glyph="?" label="Choose a room" /> : null}
         {entry.selectedTarget === undefined ? null : (
           <RailSelectedTarget biomeKey={biomeKey} selectedTarget={entry.selectedTarget} />
         )}
@@ -372,12 +383,12 @@ function RailFrontier({
 }) {
   const label = frontier.kind === 'start' ? 'Start biome' : 'Continue route';
   return (
-    <div className="biome-rail-stop biome-frontier-stop">
+    <div className="biome-rail-stop biome-frontier-stop" data-pending="frontier">
       <FocusButton marker={frontier.marker} selected={selectedRailKey === frontier.marker.focusKey}>
-        <span className="biome-rail-kicker">Next step</span>
-        <strong>{label}</strong>
-        <span className="biome-rail-status visually-hidden">
-          {assessmentLabel(frontier.marker)}
+        <span className="visually-hidden">Next step </span>
+        <RailPending glyph="+" label={frontier.kind === 'start' ? 'Start biome' : 'Continue'} />
+        <span className="visually-hidden">
+          {label} {assessmentLabel(frontier.marker)}
         </span>
       </FocusButton>
     </div>

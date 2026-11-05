@@ -1613,6 +1613,21 @@ export function nextRepairSelection(
   };
 }
 
+/**
+ * A rail stop as a finding location: a decision by its number and chosen room,
+ * a room stage by its room alone.
+ */
+function railStopLocation(
+  entry: Extract<import('./structured-workspace').WorkspaceRailEntry, { readonly kind: 'node' }>,
+): string {
+  if (entry.stepNumber !== undefined) {
+    const room = entry.selectedTarget?.roomLabel;
+    return room === undefined ? `${entry.stepNumber}` : `${entry.stepNumber} · ${room}`;
+  }
+  if (entry.node.kind === 'occurrenceWorkbench') return entry.roomLabel ?? entry.node.room.label;
+  return entry.label;
+}
+
 export function findingDestinationLabel(
   catalog: Catalog,
   origin: SemanticAddress,
@@ -1648,19 +1663,27 @@ export function findingDestinationLabel(
         entry.kind !== 'frontier' &&
         (entry.marker.focusKey === railKey || entry.node.key === predecessorNodeKey)
       ) {
-        return `${biome.label} · ${entry.kind === 'hubGroup' ? 'Hub' : entry.label}`;
+        return `${biome.label} · ${entry.kind === 'hubGroup' ? 'Hub' : railStopLocation(entry)}`;
       }
       if (entry.kind === 'hubGroup') {
         for (const visit of entry.visits) {
           if (visit.marker.focusKey === railKey || visit.node.key === predecessorNodeKey)
-            return `${biome.label} · ${visit.label}`;
+            return `${biome.label} · ${visit.label} · ${visit.node.room.label}`;
           const sideVisit = visit.sideVisits.find(
             (side) => side.marker.focusKey === railKey || side.node.key === predecessorNodeKey,
           );
-          if (sideVisit !== undefined) return `${biome.label} · ${sideVisit.label}`;
+          // A side room may recur under several visits, so its visit names it too.
+          if (sideVisit !== undefined)
+            return `${biome.label} · ${visit.label} · ${sideVisit.node.room.label}`;
         }
       }
     }
   }
-  return biome.label;
+  // The Boss and Postboss are their rooms.
+  const subject = destination?.inspectorSubject;
+  const completion =
+    subject?.kind === 'node'
+      ? workspaceBiome?.completionOutline.find((node) => node.key === subject.nodeKey)
+      : undefined;
+  return completion === undefined ? biome.label : `${biome.label} · ${completion.room.label}`;
 }

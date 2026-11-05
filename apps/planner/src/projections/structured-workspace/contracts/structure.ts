@@ -779,6 +779,8 @@ export interface WorkspaceDecisionRailEntry {
   /** The selected room's place against the plan end. */
   readonly planEnd?: WorkspacePlanEndRelation;
   readonly selectedTarget?: WorkspaceRailSelectedTarget;
+  /** The decision's number in the biome, counted from its first decision. */
+  readonly stepNumber: number;
 }
 
 export interface WorkspaceStageRailEntry {
@@ -793,6 +795,7 @@ export interface WorkspaceStageRailEntry {
   readonly roomIcon?: WorkspaceRoomIcon;
   /** The room's name on the stage's line, absent where the title already gives it. */
   readonly roomLabel?: string;
+  readonly stepNumber?: never;
   readonly marker: WorkspaceMarker;
   readonly node: Exclude<WorkspaceNode, WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode>;
   /** The stage room's place against the plan end. */
