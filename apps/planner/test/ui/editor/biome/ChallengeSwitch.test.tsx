@@ -69,7 +69,7 @@ describe('challenge switch rows on the room Overview', () => {
     await user.click(screen.getByRole('option', { name: /Infernal Trove/ }));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
-    await user.click(screen.getByRole('button', { name: 'Use Infernal Trove' }));
+    await user.click(screen.getByRole('button', { name: 'Infernal Trove' }));
     expect(
       hostRoom(application).roomActions.order.some(
         (reference) => reference.kind === 'interactChallengeSwitch',
@@ -83,7 +83,7 @@ describe('challenge switch rows on the room Overview', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     await user.click(screen.getByRole('checkbox', { name: 'Challenge Switch' }));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await user.click(screen.getByRole('button', { name: 'Use Unseen Sigil' }));
+    await user.click(screen.getByRole('button', { name: 'Unseen Sigil' }));
 
     await user.click(screen.getByRole('checkbox', { name: 'Nectar dropped' }));
     expect(hostRoom(application).challengeSwitch?.nectarDropped).toBe(true);

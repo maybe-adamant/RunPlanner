@@ -1,5 +1,6 @@
 import { FeatureRollEntry } from './commerce/FeatureRollInteract';
 import { Fragment, useState, type ReactNode } from 'react';
+import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -223,7 +224,12 @@ function WorkbenchAddArea({
               {action.icon === undefined ? null : (
                 <ArtworkIcon className="artwork-label-icon" source={action.icon} />
               )}
-              {row.reference.kind === 'interactKeepsakeRack' ? 'Keepsake Rack' : row.label}
+              {/* Named as the object, like the Well, Pool and Shrine entries. */}
+              {row.reference.kind === 'interactKeepsakeRack'
+                ? 'Keepsake Rack'
+                : row.challengeSwitchKind === undefined
+                  ? 'Challenge Switch'
+                  : challengeSwitchKindLabel(row.challengeSwitchKind)}
             </button>
           </li>
         ),
