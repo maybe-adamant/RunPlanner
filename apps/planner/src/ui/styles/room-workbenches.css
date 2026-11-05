@@ -2602,6 +2602,7 @@
  * heading: extra width never makes the room scroll.
  */
 :is(.ephyra-side-map-reference, .hub-map-overview) > .room-map-viewport > .room-map-canvas {
+  width: 100%;
   aspect-ratio: 16 / 9;
   max-width: max(24rem, calc((100 * var(--app-vh) - 18rem) * 16 / 9));
   margin-inline: auto;
