@@ -1,0 +1,1004 @@
+{
+  "format": "run-planner-execution",
+  "catalogVersion": "0.55.0-anvil-of-fates",
+  "schemaVersion": 101,
+  "schemaRevision": 1,
+  "projectId": "golden-fg",
+  "routeKey": "Underworld",
+  "startingLoadout": {
+    "weaponKey": "WeaponStaffSwing",
+    "aspectKey": "BaseStaffAspect",
+    "aspectRarity": "Legendary",
+    "familiar": { "name": "FrogFamiliar", "traitStacks": 4 },
+    "arcana": [
+      { "key": "DoorReroll", "origin": "manual", "rarity": "Epic" },
+      { "key": "BonusRarity", "origin": "automatic", "rarity": "Epic" },
+      { "key": "CardDraw", "origin": "automatic", "rarity": "Epic" }
+    ],
+    "fear": {
+      "configuredRanks": {
+        "HealingReductionShrineUpgrade": 0,
+        "ShopPricesShrineUpgrade": 0,
+        "EnemyHealthShrineUpgrade": 0,
+        "EnemyDamageShrineUpgrade": 0,
+        "EnemySpeedShrineUpgrade": 0,
+        "EnemyShieldShrineUpgrade": 0,
+        "EnemyCountShrineUpgrade": 0,
+        "EnemyRespawnShrineUpgrade": 0,
+        "NextBiomeEnemyShrineUpgrade": 0,
+        "BiomeSpeedShrineUpgrade": 0,
+        "MinibossCountShrineUpgrade": 0,
+        "BossDifficultyShrineUpgrade": 0,
+        "BoonSkipShrineUpgrade": 0,
+        "BoonManaReserveShrineUpgrade": 0,
+        "BanUnpickedBoonsShrineUpgrade": 0,
+        "LimitGraspShrineUpgrade": 0,
+        "EnemyEliteShrineUpgrade": 0
+      },
+      "effectiveRanks": {
+        "HealingReductionShrineUpgrade": 0,
+        "ShopPricesShrineUpgrade": 0,
+        "EnemyHealthShrineUpgrade": 0,
+        "EnemyDamageShrineUpgrade": 0,
+        "EnemySpeedShrineUpgrade": 0,
+        "EnemyShieldShrineUpgrade": 0,
+        "EnemyCountShrineUpgrade": 0,
+        "EnemyRespawnShrineUpgrade": 0,
+        "NextBiomeEnemyShrineUpgrade": 0,
+        "BiomeSpeedShrineUpgrade": 0,
+        "MinibossCountShrineUpgrade": 0,
+        "BossDifficultyShrineUpgrade": 0,
+        "BoonSkipShrineUpgrade": 0,
+        "BoonManaReserveShrineUpgrade": 0,
+        "BanUnpickedBoonsShrineUpgrade": 0,
+        "LimitGraspShrineUpgrade": 0,
+        "EnemyEliteShrineUpgrade": 0
+      }
+    }
+  },
+  "startingKeepsake": { "keepsakeKey": "ManaOverTimeRefundKeepsake", "rarity": "Epic" },
+  "extent": { "kind": "configuredPrefix", "biomeKeys": ["F"], "terminalBiomeKey": "F" },
+  "selectedOccurrenceIds": ["golden-f-start", "golden-f-b1-e1", "golden-f-b2-e1"],
+  "resources": {
+    "occurrences": [
+      {
+        "occurrenceId": "golden-f-start",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "golden-f-b1-e1",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "golden-f-b2-e1",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      }
+    ]
+  },
+  "rewardStoreComparison": [
+    {
+      "name": "RunProgress",
+      "rewardTypes": [
+        "Boon",
+        "Devotion",
+        "HermesUpgrade",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+        "RoomMoneyDrop",
+        "SpellDrop",
+        "StackUpgrade",
+        "TalentDrop",
+        "WeaponUpgrade"
+      ]
+    },
+    {
+      "name": "MetaProgress",
+      "rewardTypes": ["GiftDrop", "MetaCardPointsCommonBigDrop", "MetaCurrencyBigDrop"]
+    },
+    {
+      "name": "HubRewards",
+      "rewardTypes": [
+        "Boon",
+        "HermesUpgrade",
+        "MaxHealthDropBig",
+        "MaxManaDropBig",
+        "SpellDrop",
+        "WeaponUpgrade"
+      ]
+    },
+    {
+      "name": "SubRoomRewards",
+      "rewardTypes": [
+        "AirBoost",
+        "EarthBoost",
+        "EmptyMaxHealthSmallDrop",
+        "FireBoost",
+        "GiftDrop",
+        "MaxHealthDrop",
+        "MaxHealthDropSmall",
+        "MaxManaDrop",
+        "MaxManaDropSmall",
+        "MetaCardPointsCommonDrop",
+        "MetaCurrencyDrop",
+        "MinorTalentDrop",
+        "RoomMoneyDrop",
+        "RoomMoneyTinyDrop",
+        "StackUpgrade",
+        "WaterBoost"
+      ]
+    },
+    {
+      "name": "SubRoomRewardsHard",
+      "rewardTypes": ["MaxHealthDrop", "MaxManaDrop", "RoomMoneyDrop", "StackUpgrade"]
+    },
+    {
+      "name": "FieldsOptionalRewards",
+      "rewardTypes": [
+        "ArmorBoost",
+        "GiftDrop",
+        "MaxHealthDropSmall",
+        "MaxManaDropSmall",
+        "MetaCardPointsCommonDrop",
+        "MetaCurrencyDrop",
+        "MinorTalentDrop",
+        "RoomMoneyTinyDrop",
+        "RoomRewardHealDrop"
+      ]
+    },
+    {
+      "name": "TartarusRewards",
+      "rewardTypes": [
+        "Boon",
+        "Devotion",
+        "RoomMoneyTripleDrop",
+        "StackUpgradeTriple",
+        "TalentBigDrop",
+        "WeaponUpgrade"
+      ]
+    },
+    {
+      "name": "TyphonBossRewards",
+      "rewardTypes": ["Boon", "StackUpgradeTriple", "TalentBigDrop", "WeaponUpgrade"]
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "golden-f-start",
+      "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-start\"]",
+      "biomeKey": "F",
+      "gameName": "F_Opening01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Boon",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress",
+          "source": "ApolloUpgrade"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "OpeningGeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"Underworld\",\"F\",\"[\\\"incomingReward\\\",\\\"Underworld\\\",\\\"F\\\",\\\"golden-f-start\\\"]\",\"source\"]",
+            "sourceOwner": "[\"incomingReward\",\"Underworld\",\"F\",\"golden-f-start\"]",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ApolloUpgrade"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "source",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "loot",
+                "gameName": "ApolloUpgrade",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"Underworld\",\"F\",\"[\\\"occurrence\\\",\\\"Underworld\\\",\\\"F\\\",\\\"golden-f-start\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"Underworld\",\"F\",\"[\\\"acquisitionSite\\\",\\\"Underworld\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Underworld\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"golden-f-start\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"source\"]"
+                },
+                "traitOffer": {
+                  "kind": "traits",
+                  "giver": "Apollo",
+                  "options": [
+                    { "key": "ApolloWeaponBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ApolloSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 }
+                  ],
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "beforeCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"source\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ApolloUpgrade"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"Underworld\",\"F\",\"[\\\"incomingReward\\\",\\\"Underworld\\\",\\\"F\\\",\\\"golden-f-start\\\"]\",\"source\"]"
+        }
+      ],
+      "rerollPoolAtEntry": 3,
+      "doors": {
+        "owner": "[\"exitDecision\",\"Underworld\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"golden-f-start\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "golden-f-b1-e1", "biomeKey": "F", "gameName": "F_Combat02" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MetaCurrencyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "MetaProgress"
+      },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+      },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 0,
+          "owner": "[\"roomRunStateCheckpoint\",\"Underworld\",\"F\",\"golden-f-start\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {
+            "counters": { "biomeDepthCache": 0, "routeEncounterDepth": 1, "roomHistoryOrdinal": 0 },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "godPool": {
+              "acquiredSourceKeys": [],
+              "effectiveSourceKeys": [
+                "AphroditeUpgrade",
+                "ApolloUpgrade",
+                "AresUpgrade",
+                "DemeterUpgrade",
+                "HephaestusUpgrade",
+                "HeraUpgrade",
+                "HestiaUpgrade",
+                "PoseidonUpgrade",
+                "ZeusUpgrade"
+              ],
+              "capNarrowed": false
+            },
+            "traits": {
+              "equipped": [],
+              "slots": [
+                { "slot": "Melee" },
+                { "slot": "Secondary" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
+              ],
+              "elements": { "Aether": 0, "Earth": 0, "Air": 0, "Fire": 0, "Water": 0 },
+              "godRarityCounts": {},
+              "upgradableCount": 0,
+              "bannedTraitKeys": []
+            },
+            "arcana": {
+              "active": [
+                { "key": "DoorReroll", "origin": "manual", "rarity": "Epic", "held": true },
+                { "key": "BonusRarity", "origin": "automatic", "rarity": "Epic", "held": true },
+                { "key": "CardDraw", "origin": "automatic", "rarity": "Epic", "held": true }
+              ]
+            },
+            "vows": {
+              "configuredRanks": {
+                "HealingReductionShrineUpgrade": 0,
+                "ShopPricesShrineUpgrade": 0,
+                "EnemyHealthShrineUpgrade": 0,
+                "EnemyDamageShrineUpgrade": 0,
+                "EnemySpeedShrineUpgrade": 0,
+                "EnemyShieldShrineUpgrade": 0,
+                "EnemyCountShrineUpgrade": 0,
+                "EnemyRespawnShrineUpgrade": 0,
+                "NextBiomeEnemyShrineUpgrade": 0,
+                "BiomeSpeedShrineUpgrade": 0,
+                "MinibossCountShrineUpgrade": 0,
+                "BossDifficultyShrineUpgrade": 0,
+                "BoonSkipShrineUpgrade": 0,
+                "BoonManaReserveShrineUpgrade": 0,
+                "BanUnpickedBoonsShrineUpgrade": 0,
+                "LimitGraspShrineUpgrade": 0,
+                "EnemyEliteShrineUpgrade": 0
+              },
+              "effectiveRanks": {
+                "HealingReductionShrineUpgrade": 0,
+                "ShopPricesShrineUpgrade": 0,
+                "EnemyHealthShrineUpgrade": 0,
+                "EnemyDamageShrineUpgrade": 0,
+                "EnemySpeedShrineUpgrade": 0,
+                "EnemyShieldShrineUpgrade": 0,
+                "EnemyCountShrineUpgrade": 0,
+                "EnemyRespawnShrineUpgrade": 0,
+                "NextBiomeEnemyShrineUpgrade": 0,
+                "BiomeSpeedShrineUpgrade": 0,
+                "MinibossCountShrineUpgrade": 0,
+                "BossDifficultyShrineUpgrade": 0,
+                "BoonSkipShrineUpgrade": 0,
+                "BoonManaReserveShrineUpgrade": 0,
+                "BanUnpickedBoonsShrineUpgrade": 0,
+                "LimitGraspShrineUpgrade": 0,
+                "EnemyEliteShrineUpgrade": 0
+              },
+              "disabledKeys": []
+            },
+            "forfeit": "inactive",
+            "chaos": { "active": [], "matured": [] },
+            "keepsakes": {
+              "currentKey": "ManaOverTimeRefundKeepsake",
+              "usedKeys": ["ManaOverTimeRefundKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unfated",
+              "held": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
+            },
+            "equipment": {
+              "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+              "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
+            },
+            "rewardPriorities": [],
+            "hexProgress": {
+              "talentKeys": [],
+              "closed": false,
+              "bankedPathPoints": 0,
+              "investedPathPoints": 0,
+              "olympianTalentInvested": false
+            },
+            "hexNodes": { "nodes": {}, "investedNodes": [] },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
+            "artificer": null,
+            "retainedEffects": {
+              "echoShopDuplicateStatus": null,
+              "keepsakes": {
+                "olympianSources": [],
+                "jeweledPom": null,
+                "experimentalHammers": [],
+                "callingCard": null,
+                "timePiece": null,
+                "figLeaf": null,
+                "phial": null,
+                "figurine": null,
+                "stone": null,
+                "transcendentEmbryo": null,
+                "gorgon": null
+              },
+              "steadyGrowth": [],
+              "hermesShrineDeliveries": [],
+              "stygianWell": {
+                "sparkUses": 0,
+                "yarnUses": 0,
+                "hymnUses": 0,
+                "discountUses": [],
+                "emptySlotUses": [],
+                "extendedUses": 0
+              }
+            }
+          }
+        },
+        "beforeRoomExit": {
+          "frame": 1,
+          "owner": "[\"roomRunStateCheckpoint\",\"Underworld\",\"F\",\"golden-f-start\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 2,
+              "routeEncounterDepth": 2,
+              "roomHistoryOrdinal": 1
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "godPool": {
+              "acquiredSourceKeys": ["ApolloUpgrade"],
+              "effectiveSourceKeys": [
+                "AphroditeUpgrade",
+                "ApolloUpgrade",
+                "AresUpgrade",
+                "DemeterUpgrade",
+                "HephaestusUpgrade",
+                "HeraUpgrade",
+                "HestiaUpgrade",
+                "PoseidonUpgrade",
+                "ZeusUpgrade"
+              ],
+              "capNarrowed": false
+            },
+            "traits": {
+              "equipped": [{ "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 }],
+              "slots": [
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
+              ],
+              "elements": { "Aether": 0, "Earth": 0, "Air": 1, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 1 },
+              "upgradableCount": 1,
+              "bannedTraitKeys": []
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "golden-f-b1-e1",
+      "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b1-e1\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat02",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MetaCurrencyDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "MetaProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"Underworld\",\"F\",\"[\\\"incomingReward\\\",\\\"Underworld\\\",\\\"F\\\",\\\"golden-f-b1-e1\\\"]\",\"self\"]",
+            "sourceOwner": "[\"incomingReward\",\"Underworld\",\"F\",\"golden-f-b1-e1\"]",
+            "reward": {
+              "rewardType": "MetaCurrencyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "self",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "resource",
+                "gameName": "MetaCurrencyDrop",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"Underworld\",\"F\",\"[\\\"occurrence\\\",\\\"Underworld\\\",\\\"F\\\",\\\"golden-f-b1-e1\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"Underworld\",\"F\",\"[\\\"acquisitionSite\\\",\\\"Underworld\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Underworld\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"golden-f-b1-e1\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"self\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "MetaCurrencyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"Underworld\",\"F\",\"[\\\"incomingReward\\\",\\\"Underworld\\\",\\\"F\\\",\\\"golden-f-b1-e1\\\"]\",\"self\"]"
+        }
+      ],
+      "rerollPoolAtEntry": 3,
+      "doors": {
+        "owner": "[\"exitDecision\",\"Underworld\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"golden-f-b1-e1\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "golden-f-b2-e1", "biomeKey": "F", "gameName": "F_Combat03" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ZeusUpgrade"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "golden-f-b2-e2", "biomeKey": "F", "gameName": "F_Combat03" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MaxHealthDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 2,
+          "owner": "[\"roomRunStateCheckpoint\",\"Underworld\",\"F\",\"golden-f-b1-e1\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 3,
+          "owner": "[\"roomRunStateCheckpoint\",\"Underworld\",\"F\",\"golden-f-b1-e1\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 2,
+              "biomeEncounterDepth": 3,
+              "routeEncounterDepth": 3,
+              "roomHistoryOrdinal": 2
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "golden-f-b2-e1",
+      "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b2-e1\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat03",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Boon",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress",
+          "source": "ZeusUpgrade"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"Underworld\",\"F\",\"[\\\"incomingReward\\\",\\\"Underworld\\\",\\\"F\\\",\\\"golden-f-b2-e1\\\"]\",\"source\"]",
+            "sourceOwner": "[\"incomingReward\",\"Underworld\",\"F\",\"golden-f-b2-e1\"]",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ZeusUpgrade"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "source",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "loot",
+                "gameName": "ZeusUpgrade",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"Underworld\",\"F\",\"[\\\"occurrence\\\",\\\"Underworld\\\",\\\"F\\\",\\\"golden-f-b2-e1\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"Underworld\",\"F\",\"[\\\"acquisitionSite\\\",\\\"Underworld\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Underworld\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"golden-f-b2-e1\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"source\"]"
+                },
+                "traitOffer": {
+                  "kind": "traits",
+                  "giver": "Zeus",
+                  "options": [
+                    { "key": "ZeusSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ZeusCastBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ZeusSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
+                  ],
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"source\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ZeusUpgrade"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"Underworld\",\"F\",\"[\\\"incomingReward\\\",\\\"Underworld\\\",\\\"F\\\",\\\"golden-f-b2-e1\\\"]\",\"source\"]"
+        },
+        {
+          "key": "[\"reroll\",\"r1\"]",
+          "description": {
+            "kind": "reroll",
+            "target": { "kind": "door", "exitKey": "exit2" },
+            "reward": {
+              "rewardType": "StackUpgrade",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          }
+        }
+      ],
+      "rerolls": [
+        {
+          "owner": "[\"roomAction\",\"Underworld\",\"F\",\"golden-f-b2-e1\",\"[\\\"reroll\\\",\\\"r1\\\"]\"]",
+          "target": { "kind": "door", "exitKey": "exit2" },
+          "reward": {
+            "rewardType": "StackUpgrade",
+            "producerLifecycleKey": "RoomReward",
+            "resolvedStoreKey": "RunProgress"
+          }
+        }
+      ],
+      "rerollPoolAtEntry": 3,
+      "doors": {
+        "owner": "[\"exitDecision\",\"Underworld\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"golden-f-b2-e1\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "golden-f-b3-e1", "biomeKey": "F", "gameName": "F_Combat04" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MaxHealthDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "golden-f-b3-e2", "biomeKey": "F", "gameName": "F_Combat04" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MaxManaDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+      },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 4,
+          "owner": "[\"roomRunStateCheckpoint\",\"Underworld\",\"F\",\"golden-f-b2-e1\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 5,
+          "owner": "[\"roomRunStateCheckpoint\",\"Underworld\",\"F\",\"golden-f-b2-e1\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 3,
+              "biomeEncounterDepth": 4,
+              "routeEncounterDepth": 4,
+              "roomHistoryOrdinal": 3
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "godPool": {
+              "acquiredSourceKeys": ["ApolloUpgrade", "ZeusUpgrade"],
+              "effectiveSourceKeys": [
+                "AphroditeUpgrade",
+                "ApolloUpgrade",
+                "AresUpgrade",
+                "DemeterUpgrade",
+                "HephaestusUpgrade",
+                "HeraUpgrade",
+                "HestiaUpgrade",
+                "PoseidonUpgrade",
+                "ZeusUpgrade"
+              ],
+              "capNarrowed": false
+            },
+            "traits": {
+              "equipped": [
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 }
+              ],
+              "slots": [
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
+              ],
+              "elements": { "Aether": 0, "Earth": 0, "Air": 2, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 2 },
+              "upgradableCount": 2,
+              "bannedTraitKeys": []
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "golden-f-b2-e2",
+      "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b2-e2\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat03",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MaxHealthDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b2-e2\"]",
+        "kind": "terminal"
+      }
+    },
+    {
+      "id": "golden-f-b3-e1",
+      "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b3-e1\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat04",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MaxHealthDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b3-e1\"]",
+        "kind": "terminal"
+      }
+    },
+    {
+      "id": "golden-f-b3-e2",
+      "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b3-e2\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat04",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "StackUpgrade",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b3-e2\"]",
+        "kind": "terminal"
+      }
+    }
+  ],
+  "planFingerprint": "2582bbb3"
+}

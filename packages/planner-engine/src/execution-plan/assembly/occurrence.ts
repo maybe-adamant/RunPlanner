@@ -89,6 +89,7 @@ export function executionOccurrence(
       crossBiomeTarget,
       crossBiomeSourceId,
       rewardForRoom: (target) => executionReward(target, 'generated'),
+      endsPlan: biome.authoring === 'ended' && biome.planEnd.occurrenceId === room.occurrenceId,
     }),
     ...(roomExitConformance === undefined
       ? {}

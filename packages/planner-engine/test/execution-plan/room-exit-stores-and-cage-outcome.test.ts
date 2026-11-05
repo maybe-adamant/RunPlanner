@@ -50,13 +50,19 @@ describe('reward store comparison', () => {
     );
   });
 
-  it('publishes the same comparison for a plan that ends early; its end room has terminal doors', () => {
+  it('publishes the same comparison for a plan that ends early; its end room opens its doors', () => {
     const plan = publish(underworldFCutEndProject());
-    expect(plan.rewardStoreComparison).toEqual(
-      publish(createCompleteFGProject()).rewardStoreComparison,
-    );
+    const complete = publish(createCompleteFGProject());
+    expect(plan.rewardStoreComparison).toEqual(complete.rewardStoreComparison);
     const end = plan.occurrences.find((occurrence) => occurrence.id === 'golden-f-b5-e1')!;
-    expect(end.doors.kind).toBe('terminal');
+    // Its doors draw as in the full plan, so its exit's stores are the same frame.
+    expect(end.doors).toEqual(
+      complete.occurrences.find((occurrence) => occurrence.id === 'golden-f-b5-e1')!.doors,
+    );
+    expect(end.diagnostics?.beforeRoomExit).toEqual(
+      complete.occurrences.find((occurrence) => occurrence.id === 'golden-f-b5-e1')!.diagnostics
+        ?.beforeRoomExit,
+    );
   });
 });
 

@@ -6,10 +6,12 @@ coverage is not live verification; the owner confirms or waives each check.
 
 ## Plan end
 
-- [ ] Send a plan ending mid-biome (End plan here on an ordinary combat room).
-      Play to the end room and clear it: the doors are native, leaving the room
-      shows **Plan complete**, and the next room and the rest of the run stay
-      native with no mismatch.
+- [ ] Send a plan ending mid-biome (End plan here on an ordinary combat room
+      with its doors planned and one door rerolled). Play to the end room and
+      clear it: the doors open with their planned rewards, the reroll draws its
+      planned reward, leaving through any door shows **Plan complete** with no
+      `exit-door` or `rewardStores` mismatch, and the next room and the rest of
+      the run stay native.
 - [ ] Send a plan ending inside Ephyra's Hub stay, after a visit's main room
       or side room. Leaving that room shows **Plan complete**; no Hub departure
       mismatch appears when later leaving the Hub.

@@ -472,7 +472,8 @@ export interface CanonicalBatch {
   readonly additional: readonly CanonicalAdditionalContinuation[];
   /**
    * A materialized prefix may have generated its physical doors before an
-   * authored selection exists. Complete batches always carry a concrete key.
+   * authored selection exists. Complete batches always carry a concrete key,
+   * except the plan's end room's doors, which open without one.
    */
   readonly selectedExitKey: string | null;
   readonly selectedOrigin: ExitSelectionAddress;
@@ -611,8 +612,9 @@ export interface MaterializedExitDecisionFrontier {
    */
   readonly hubContinuation?: MaterializedHubContinuationFrontier;
   /**
-   * The parent is the plan's end room: it settles and exits with no doors
-   * generated and no departure, since the plan does not go on.
+   * The parent is the plan's end room: it settles through its exit, opening
+   * its authored doors (or none) without a selection, and departs nowhere,
+   * since the plan does not go on.
    */
   readonly planEnd?: true;
 }

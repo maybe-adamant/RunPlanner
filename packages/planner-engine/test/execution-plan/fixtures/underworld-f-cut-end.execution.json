@@ -1391,8 +1391,35 @@
         }
       ],
       "doors": {
-        "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b5-e1\"]",
-        "kind": "terminal"
+        "owner": "[\"exitDecision\",\"Underworld\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"golden-f-b5-e1\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "golden-f-b6-e1", "biomeKey": "F", "gameName": "F_MiniBoss01" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "HeraUpgrade"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "golden-f-b6-e2", "biomeKey": "F", "gameName": "F_MiniBoss02" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "PoseidonUpgrade"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
       },
       "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
@@ -1412,7 +1439,46 @@
               "biomeEncounterDepth": 7,
               "routeEncounterDepth": 7,
               "roomHistoryOrdinal": 6
-            }
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -1440,7 +1506,57 @@
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b5-e2\"]",
         "kind": "terminal"
       }
+    },
+    {
+      "id": "golden-f-b6-e1",
+      "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b6-e1\"]",
+      "biomeKey": "F",
+      "gameName": "F_MiniBoss01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Boon",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress",
+          "source": "HeraUpgrade"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "MiniBossTreant", "kind": "miniboss" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b6-e1\"]",
+        "kind": "terminal"
+      }
+    },
+    {
+      "id": "golden-f-b6-e2",
+      "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b6-e2\"]",
+      "biomeKey": "F",
+      "gameName": "F_MiniBoss02",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Boon",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress",
+          "source": "PoseidonUpgrade"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "MiniBossFogEmitter", "kind": "miniboss" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b6-e2\"]",
+        "kind": "terminal"
+      }
     }
   ],
-  "planFingerprint": "8effaefd"
+  "planFingerprint": "d5bfb516"
 }

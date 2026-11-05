@@ -15,6 +15,8 @@ interface ExecutionDoorsInput {
   readonly crossBiomeTarget: CanonicalAuthoredRoom | undefined;
   readonly crossBiomeSourceId: string | undefined;
   readonly rewardForRoom: (room: CanonicalAuthoredRoom) => ExecutionReward | undefined;
+  /** The room is the plan's end: its doors open with no planned exit. */
+  readonly endsPlan: boolean;
 }
 
 function executionCageRewards(room: CanonicalAuthoredRoom): readonly ExecutionReward[] | undefined {
@@ -38,11 +40,12 @@ export function assembleExecutionDoors({
   crossBiomeTarget,
   crossBiomeSourceId,
   rewardForRoom,
+  endsPlan,
 }: ExecutionDoorsInput): ExecutionDoors {
   const owner = semanticAddressKey(room.origin);
   const batch = batches.get(owner);
   if (batch !== undefined) {
-    if (batch.selectedExitKey === null && batch.additional.length === 0)
+    if (batch.selectedExitKey === null && batch.additional.length === 0 && !endsPlan)
       throw new CompilerError('openingSelectionMissing', `${room.gameName} has no selected exit`);
     const targets: readonly ExecutionDoorTarget[] = Object.freeze(
       batch.targets.map((target) => {

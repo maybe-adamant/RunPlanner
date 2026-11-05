@@ -244,31 +244,43 @@ cannot bypass an incomplete loadout merely because it uses another control.
 A route's [plan end](AUTHORED_PROJECT_MODEL.md#route-scope) classifies per
 biome as terminal (the biome's terminal completion room: the ordinary biome
 end, every later biome dormant), cut (any other selected room) or unreached
-(off the selected spine). A cut evaluates the authored plan without the end
-room's exit decision and the fixed link it opens, and in a Hub without the
-actions after the end's visit and the side rooms after it. Completeness stops
-at the end; the end room settles its whole Timeline, commit and exit but
-generates no doors and records no departure. The ended biome is `ended`:
-valid, with prefix coverage and a canonical snapshot of its rooms through the
-end, which execution assembly publishes like a complete biome. The route stops
-there and lists the later configured biomes as after the end; they and every
-room past the end are retained, never assessed, and raise no findings. An
-unreached end is the route-owned `planEndUnreached` finding: the biome is
-assessed unmarked and the route still stops after it. A plan valid through
-its end, terminal or cut, is eligible for publication.
+(off the selected spine). A cut ends the plan at the end room's Leave point:
+it evaluates the authored plan without the end room's exit selection and the
+fixed link it opens, and in a Hub without the actions after the end's visit
+and the side rooms after it. Everything up to leaving stays evaluated: the end
+room settles its whole Timeline, opens its authored doors as a batch with no
+selection (their rewards drawn by the batch's store rules, its hidden door
+settled with them), settles its door and cage rerolls, commits and exits, and
+records no departure. A room with no authored doors opens none, and a Hub
+source, Preboss or Boss end has no batch. Completeness stops at the end: the
+end room's authored doors must be complete (store, Fields roll and every
+physical door), never its exit selection. The rooms behind its doors are
+offered, never entered, so nothing inside them is assessed: a resource
+placement there raises no finding. The ended biome is `ended`: valid, with
+prefix coverage and a canonical snapshot of its rooms through the end, the
+end room's doors its last batch, which execution assembly publishes like a
+complete biome. The route stops there and lists the later configured biomes
+as after the end; they and every room past the end are retained, never
+assessed, and raise no findings. An unreached end is the route-owned
+`planEndUnreached` finding: the biome is assessed unmarked and the route still
+stops after it. A plan valid through its end, terminal or cut, is eligible
+for publication.
 
 Under an ended horizon, readiness asks the plan-end extent. Inside the plan,
-and editable: the end room, every room entered through it, the end visit's
-side rooms (entered or not) and their order, rooms offered beside or before
-the end room, board rooms no visit enters, the board and its offers. Past the
-end, and locked: the end room's exit, its hidden and additional doors, rooms
-entered after the end and their side rooms, later Hub visits (an appended one
-included), a fountain use or reroll after the end visit, and everything the
-end room's doors offer. Candidates treat the ended biome as reached; owners
-past the end are unreachable because the ended product does not contain them,
-and Hub visit-order alternatives apply the end. The engine's plan-end
+and editable: the end room with its doors, their offers, rerolls, hidden and
+additional doors, every room entered through it, the end visit's side rooms
+(entered or not) and their order, rooms offered beside or before the end room,
+board rooms no visit enters, the board and its offers. Past the end, and
+locked: the end room's exit selection (its doors too while it authors none),
+the rooms behind its doors, rooms entered after the end and their side rooms,
+later Hub visits (an appended one included), a fountain use or reroll after
+the end visit, and their offers.
+Candidates treat the ended biome as reached, the end room's doors included;
+owners past the end are unreachable because the ended product does not contain
+them, and Hub visit-order alternatives apply the end. The engine's plan-end
 availability answers whether a room can take the end: it must be on the
-selected path and the plan ending there must be valid.
+selected path and the plan ending there must be valid, which a room with door
+rerolls or any other settled action up to leaving can be.
 
 ### First blocking region
 

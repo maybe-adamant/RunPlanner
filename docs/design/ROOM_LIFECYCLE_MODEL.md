@@ -171,13 +171,14 @@ history and required-object validation need their exact positions, but neither
 is a separate rendered row, and the timeline must not imply that an optional
 cleanup action is required before leaving.
 
-A plan's end room settles its whole Timeline, including the actions after the
-doors open, then commits and exits, so its Shop close, resource element grants
-and `beforeRoomExit` Run State exist. Its outgoing generation produces no doors
-and it records no `roomDeparted`; effects that would land later (pending
-deliveries, Steady Growth and Embryo cycles, unspent rerolls) are untracked
-after it. A Hub stay ended inside a visit records no departure after that
-visit.
+A plan's end room ends at its Leave point: it settles its whole Timeline,
+including the doors opening with its authored doors (none when it authors
+none) and the actions after them, then commits and exits, so its Shop close,
+resource element grants and `beforeRoomExit` Run State exist. No exit is
+selected and it records no `roomDeparted`; effects that would land later
+(pending deliveries, Steady Growth and Embryo cycles, unspent rerolls) are
+untracked after it. A Hub stay ended inside a visit records no departure after
+that visit.
 
 Two grouped operations compose encounter sequences:
 

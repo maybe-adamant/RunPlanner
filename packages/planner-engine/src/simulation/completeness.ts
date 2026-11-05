@@ -346,7 +346,7 @@ export function evaluateBiomeCompleteness(
     readonly state: AuthoredBiomeState;
     readonly topology: BiomeTopology | null;
   },
-  /** A mid-biome plan end: its room's own exit and everything after it are not required. */
+  /** A mid-biome plan end: its room's exit selection and everything after it are not required. */
   end?: OccurrenceId,
 ): BiomeCompletenessResult {
   const layout = requireLayout(catalog, biome, plan.biomeKey);
@@ -399,11 +399,24 @@ export function evaluateBiomeCompleteness(
 
   while (!traversed.has(current)) {
     traversed.add(current);
-    if (ended !== undefined && current === end) return ended;
     const room = sourceRoom(catalog, occurrences, current);
 
     const source: ExitDecisionSource = Object.freeze({ kind: 'occurrence', occurrenceId: current });
     const decision = exitDecisionForSource(topology, source);
+    if (ended !== undefined && current === end) {
+      // The end room's doors open as authored; only their selection is past the end.
+      if (decision === undefined) return ended;
+      const doors = evaluateBatchCompleteness(
+        catalog,
+        biome,
+        layout,
+        topology,
+        occurrences,
+        decision,
+        room,
+      );
+      return doors.findings.length === 0 ? ended : incomplete(doors.findings, doors.requiredInput);
+    }
     const hubProgression = layout.progression.kind === 'hub' ? layout.progression : undefined;
     const authoredHub =
       hubProgression === undefined ? undefined : hubDecision(topology, hubProgression.hubKey);

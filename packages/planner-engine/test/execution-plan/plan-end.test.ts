@@ -12,6 +12,7 @@ import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { assembleExecutionProduct } from '../../src/execution-plan/assembler';
 import { compileExecutionPlan } from '../../src/execution-plan/compiler';
 import { decodeExecutionPlan, encodeExecutionPlan } from '../../src/execution-plan/codec';
+import { underworldFCutEndRerollsProject } from './support/plan-end-switch-fixtures';
 
 const endAt = (project: ProjectDocument, biomeKey: string, occurrenceId: string) =>
   applyProjectCommand(project, catalog, {
@@ -31,7 +32,7 @@ function publish(project: ProjectDocument) {
 }
 
 describe('Plan end publication', () => {
-  it('publishes through the end room, which has no doors, and leaves later biomes out', () => {
+  it('publishes through the end room, which opens its doors, and leaves later biomes out', () => {
     const plan = publish(endAt(createCompleteFGProject(), 'F', 'golden-f-b5-e1'));
     expect(plan.extent).toEqual({
       kind: 'configuredPrefix',
@@ -41,8 +42,30 @@ describe('Plan end publication', () => {
     expect(plan.selectedOccurrenceIds.at(-1)).toBe('golden-f-b5-e1');
     expect(plan.selectedOccurrenceIds).not.toContain('golden-f-b6-e1');
     const end = plan.occurrences.find((occurrence) => occurrence.id === 'golden-f-b5-e1')!;
-    expect(end.doors.kind).toBe('terminal');
+    // Its doors and their rewards publish as in the whole plan; no door is planned to be taken.
+    const whole = publish(createCompleteFGProject());
+    expect(end.doors).toEqual(
+      whole.occurrences.find((occurrence) => occurrence.id === 'golden-f-b5-e1')!.doors,
+    );
+    expect(end.doors.kind === 'batch' && end.doors.targets.map((target) => target.room.id)).toEqual(
+      ['golden-f-b6-e1', 'golden-f-b6-e2'],
+    );
+    // The rooms behind them are offered, never entered: they publish no doors of their own.
+    for (const id of ['golden-f-b6-e1', 'golden-f-b6-e2'])
+      expect(plan.occurrences.find((occurrence) => occurrence.id === id)?.doors.kind).toBe(
+        'terminal',
+      );
     expect(plan.occurrences.every((occurrence) => occurrence.biomeKey === 'F')).toBe(true);
+  });
+
+  it("publishes the end room's door rerolls with its doors", () => {
+    const plan = publish(underworldFCutEndRerollsProject());
+    expect(plan.selectedOccurrenceIds.at(-1)).toBe('golden-f-b2-e1');
+    const end = plan.occurrences.find((occurrence) => occurrence.id === 'golden-f-b2-e1')!;
+    expect(end.doors.kind).toBe('batch');
+    expect(end.rerolls?.map((reroll) => reroll.target)).toEqual([
+      { kind: 'door', exitKey: 'exit2' },
+    ]);
   });
 
   it('ends inside the completion chain and at a biome end before a later biome', () => {

@@ -876,8 +876,10 @@ function composeBiomeHistoryPrefixResult(
               }
               appendGeneratedTargets(outgoingWriter, current.origin, frontier.targets);
             },
-            stopAfterOutgoing: true,
-            ...postOutgoingAcquisitionOption(catalog, current),
+            // The end room's doors open, then it settles through its exit.
+            ...(frontier.planEnd === true
+              ? { planEnd: true }
+              : { stopAfterOutgoing: true, ...postOutgoingAcquisitionOption(catalog, current) }),
           });
         }
       } else if (snapshot.frontier?.kind === 'hubBoard') {

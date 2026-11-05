@@ -107,6 +107,7 @@ import underworldStartIPrebossFixture from '../fixtures/underworld-start-i-prebo
 import dreamStartNOpeningFixture from '../fixtures/dream-start-n-opening.execution.json';
 import underworldStartGRivalsBossFixture from '../fixtures/underworld-start-g-rivals-boss.execution.json';
 import underworldFCutEndFixture from '../fixtures/underworld-f-cut-end.execution.json';
+import underworldFCutEndRerollsFixture from '../fixtures/underworld-f-cut-end-rerolls.execution.json';
 import surfaceNPartialHubFixture from '../fixtures/surface-n-partial-hub.execution.json';
 import underworldFSwitchesFixture from '../fixtures/underworld-f-switches.execution.json';
 import underworldFSwitchesFailedLeftFixture from '../fixtures/underworld-f-switches-failed-left.execution.json';
@@ -115,6 +116,7 @@ import {
   surfaceNPartialHubProject,
   surfacePEliteSwitchProject,
   underworldFCutEndProject,
+  underworldFCutEndRerollsProject,
   underworldFSwitchesFailedLeftProject,
   underworldFSwitchesProject,
 } from './plan-end-switch-fixtures';
@@ -363,6 +365,11 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     name: 'underworld-f-cut-end',
     project: underworldFCutEndProject,
     wire: underworldFCutEndFixture,
+  },
+  {
+    name: 'underworld-f-cut-end-rerolls',
+    project: underworldFCutEndRerollsProject,
+    wire: underworldFCutEndRerollsFixture,
   },
   {
     name: 'surface-n-partial-hub',

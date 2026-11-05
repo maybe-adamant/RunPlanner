@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
@@ -15,6 +15,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
+import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import type { PlannerApplication } from '@planner/composition/createApplication';
 import { createApplication } from '@planner/composition/createApplication';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
@@ -68,11 +69,9 @@ describe('plan end in the biome workspace', () => {
     await user.click(screen.getByRole('button', { name: 'End plan here' }));
     expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b3-e1' });
 
-    // The end room's doors are read-only together, fixed values included.
-    expect(document.querySelector('.door-body')?.getAttribute('data-authoring-locked')).toBe(
-      'true',
-    );
-    // The end room's dormant exit must not lock the action that removes the end.
+    // The end room's doors open inside the plan and stay editable.
+    expect(document.querySelector('.door-body')?.hasAttribute('data-authoring-locked')).toBe(false);
+    // Only its exit selection lies past the end; it must not lock the action that removes the end.
     const continuePlanning = screen.getByRole('button', { name: 'Continue planning' });
     expect(continuePlanning.closest('[inert]')).toBeNull();
     await user.click(continuePlanning);
@@ -121,7 +120,7 @@ describe('plan end in the biome workspace', () => {
     expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b7-e1' });
   });
 
-  it('continues planning from the end room, which offers no way on or door repair', async () => {
+  it('continues planning from the end room, which offers no way on but keeps its door repair', async () => {
     const { application, user } = renderWorkspace(
       endedAt(createGoldenFGHIProject(), 'F', 'golden-f-b5-e1'),
       'Underworld',
@@ -135,9 +134,48 @@ describe('plan end in the biome workspace', () => {
 
     expect(screen.queryByRole('button', { name: 'End plan here' })).toBeNull();
     expect(within(roomCard()).getByRole('listitem', { name: 'Plan ends here' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Reset Doors' })).toBeNull();
+    expect(within(roomCard()).queryByRole('listitem', { name: 'Leave room' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Reset Doors' })).toHaveProperty('disabled', false);
     await user.click(screen.getByRole('button', { name: 'Continue planning' }));
     expect(currentPlanEnd(application)).toBeUndefined();
+  });
+
+  it("rerolls the end room's doors before the plan ends", async () => {
+    const withDoorReroll = applyProjectCommand(loadUnderworldFGCheckpoint(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Underworld'),
+      arcanaKeys: ['DoorReroll'],
+    });
+    const { application, user } = renderWorkspace(
+      endedAt(withDoorReroll, 'F', 'golden-f-b2-e1'),
+      'Underworld',
+      'F',
+    );
+    openRoom(
+      application,
+      createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-b2-e1')),
+    );
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    expect(within(roomCard()).getByRole('listitem', { name: 'Plan ends here' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Doors' }));
+    await user.click(
+      within(await screen.findByRole('listbox')).getByRole('option', { name: /^Reroll Door 2/ }),
+    );
+    // The press asks for its reward like any room's; take the first possible one.
+    await screen.findByRole('listbox');
+    while (screen.queryByRole('listbox') !== null) {
+      const options = await within(screen.getByRole('listbox')).findAllByRole('option');
+      await user.click(options.find((option) => option.getAttribute('aria-disabled') !== 'true')!);
+    }
+    await waitFor(() => {
+      const workspace = application.store.getState().projectWorkspace;
+      if (workspace.kind !== 'openProject') throw new Error('expected an open project');
+      const end = workspace.history.present.route.biomes[0]!.topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === 'golden-f-b2-e1',
+      )!;
+      expect(end.roomActions.order.filter((action) => action.kind === 'reroll')).toHaveLength(1);
+    });
+    expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b2-e1' });
   });
 
   it('ends the plan from the Preboss, whose fixed exit is its last row', async () => {
@@ -167,7 +205,7 @@ describe('plan end in the biome workspace', () => {
     });
   });
 
-  it('keeps the hidden door of a Hub visit end room inactive with its doors', async () => {
+  it('keeps the hidden door of a Hub visit end room editable with its doors', async () => {
     const { application, user } = renderWorkspace(
       endedAt(loadSurfaceNOPQProject(), 'N', nOccurrenceId('combat05')),
       'Surface',
@@ -176,7 +214,7 @@ describe('plan end in the biome workspace', () => {
     openRoom(application, createOccurrenceAddress(nBiome, nOccurrenceId('combat05')));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const door = within(roomCard()).getByRole('article', { name: 'Hidden return door' });
-    expect(within(door).getByRole('button', { name: 'Choose' })).toHaveProperty('disabled', true);
+    expect(within(door).getByRole('button', { name: 'Choose' })).toHaveProperty('disabled', false);
   });
 
   it('resets the visits of a Hub the plan ends in', async () => {

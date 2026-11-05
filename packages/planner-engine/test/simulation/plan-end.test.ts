@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
+import { underworldFRerollsProject } from '../execution-plan/support/rerolls-fixture';
 import {
   applyProjectCommand,
   createBiomeAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createHubDecisionAddress,
   createHubFountainAddress,
   createHubVisitAddress,
@@ -85,11 +87,15 @@ describe('Plan end evaluation', () => {
     });
     const events = history(f);
     expect(enteredRooms(f).at(-1)).toBe('golden-f-b5-e1');
-    // The end room settles and exits, generating no doors and departing nowhere.
+    // The end room opens its doors, settles and exits, departing nowhere.
     const endEvents = events.flatMap((event) =>
       event.occurrenceId === 'golden-f-b5-e1' ? [event.kind] : [],
     );
-    expect(endEvents).toContain('emptyOutgoingGenerationCompleted');
+    expect(endEvents).toContain('outgoingGenerationCheckpoint');
+    expect(endEvents).not.toContain('emptyOutgoingGenerationCompleted');
+    expect(
+      events.filter((event) => event.kind === 'roomCreated').map((event) => event.occurrenceId),
+    ).toEqual(expect.arrayContaining(['golden-f-b6-e1', 'golden-f-b6-e2']));
     expect(endEvents).toContain('roomCommitted');
     expect(endEvents.at(-1)).toBe('roomExited');
     expect(endEvents).not.toContain('roomDeparted');
@@ -103,7 +109,57 @@ describe('Plan end evaluation', () => {
           snapshot.owner.occurrenceId === 'golden-f-b5-e1',
       ),
     ).toBe(true);
-    expect(events.some((event) => event.occurrenceId === 'golden-f-b6-e1')).toBe(false);
+    // The rooms behind its doors are offered, never entered.
+    expect(enteredRooms(f)).not.toContain('golden-f-b6-e1');
+    expect(enteredRooms(f)).not.toContain('golden-f-b6-e2');
+  });
+
+  it("requires the end room's authored doors but never its exit selection", () => {
+    const f = createBiomeAddress('Underworld', 'F');
+    const end = { kind: 'occurrence' as const, occurrenceId: 'golden-f-b5-e1' as OccurrenceId };
+    const unselected = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(f, end),
+      value: { kind: 'unresolved' },
+    });
+    expect(simulateProject(catalog, unselected).status).toBe('incomplete');
+    const ended = simulateProject(catalog, endAt(unselected, 'F', 'golden-f-b5-e1'));
+    expect(ended.status).toBe('valid');
+    expect(ended.findings).toEqual([]);
+
+    // A room whose doors are not authored ends with none.
+    const removed = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(f, end),
+    });
+    const doorless = simulateProject(catalog, endAt(removed, 'F', 'golden-f-b5-e1'));
+    expect(doorless.status).toBe('valid');
+    const doorlessEvents = history(doorless.route.biomes[0]!);
+    expect(doorlessEvents.map((event) => event.kind)).toContain('emptyOutgoingGenerationCompleted');
+    // Its doors stay unplanned while it ends the plan.
+    expect(
+      authoringReadinessAt(
+        simulateProjectAssembly(catalog, endAt(removed, 'F', 'golden-f-b5-e1')),
+        createExitDecisionAddress(f, end),
+      ),
+    ).toBe('locked');
+
+    // Doors begun but not finished keep the end unsettled.
+    const begun = applyProjectCommand(removed, catalog, {
+      kind: 'InitializeExitDecision',
+      decision: createExitDecisionAddress(f, end),
+      edit: { kind: 'rewardStore', storeKey: 'RunProgress' },
+    });
+    const unfinished = simulateProject(catalog, endAt(begun, 'F', 'golden-f-b5-e1'));
+    expect(unfinished.status).toBe('incomplete');
+    expect(unfinished.issue?.reasons[0]).toMatchObject({ code: 'targetMissing' });
+    expect(
+      planEndAvailability(
+        catalog,
+        simulateProjectAssembly(catalog, begun),
+        createOccurrenceAddress(f, 'golden-f-b5-e1' as OccurrenceId),
+      ),
+    ).toEqual({ available: false, reason: 'notSettled' });
   });
 
   it('keeps the completion chain and stops inside it at the Preboss or Boss', () => {
@@ -199,7 +255,7 @@ describe('Plan end evaluation', () => {
     expect(ended.authoringHorizon).toEqual(unended.authoringHorizon);
   });
 
-  it('locks the end room exit and everything after it, but not the room itself', () => {
+  it("locks the end room's exit selection and everything after it, but not its doors", () => {
     const assembly = simulateProjectAssembly(
       catalog,
       endAt(createCompleteFGProject(), 'F', 'golden-f-b5-e1'),
@@ -212,13 +268,22 @@ describe('Plan end evaluation', () => {
       createExitDecisionAddress(f, { kind: 'occurrence', occurrenceId: id as OccurrenceId });
     expect(authoringReadinessAt(assembly, occurrence(f, 'golden-f-b5-e1'))).toBe('editable');
     expect(authoringReadinessAt(assembly, exit('golden-f-b4-e1'))).toBe('editable');
-    expect(authoringReadinessAt(assembly, exit('golden-f-b5-e1'))).toBe('locked');
+    expect(authoringReadinessAt(assembly, exit('golden-f-b5-e1'))).toBe('editable');
+    expect(
+      authoringReadinessAt(
+        assembly,
+        createExitSelectionAddress(f, {
+          kind: 'occurrence',
+          occurrenceId: 'golden-f-b5-e1' as OccurrenceId,
+        }),
+      ),
+    ).toBe('locked');
     expect(authoringReadinessAt(assembly, occurrence(f, 'golden-f-b6-e1'))).toBe('locked');
     expect(authoringReadinessAt(assembly, occurrence(g, 'golden-g-b1-e1'))).toBe('locked');
     expect(authoringReadinessAt(assembly, createRouteAddress('Underworld'))).toBe('editable');
   });
 
-  it("keeps the end room's peers editable but locks the siblings of its own doors", () => {
+  it("keeps the end room's peers and door offers editable but locks the rooms behind its doors", () => {
     const assembly = simulateProjectAssembly(
       catalog,
       endAt(createCompleteFGProject(), 'F', 'golden-f-b5-e1'),
@@ -231,9 +296,10 @@ describe('Plan end evaluation', () => {
     // b5-e2 was offered beside the end room by b4-e1's doors: inside the plan.
     expect(readiness('golden-f-b5-e2')).toEqual(['editable', 'editable']);
     expect(readiness('golden-f-b4-e2')).toEqual(['editable', 'editable']);
-    // b6-e1 and b6-e2 are the end room's own doors: past the end.
-    expect(readiness('golden-f-b6-e1')).toEqual(['locked', 'locked']);
-    expect(readiness('golden-f-b6-e2')).toEqual(['locked', 'locked']);
+    // b6-e1 and b6-e2 are the end room's own doors: their offers open inside
+    // the plan, the rooms behind them lie past it.
+    expect(readiness('golden-f-b6-e1')).toEqual(['locked', 'editable']);
+    expect(readiness('golden-f-b6-e2')).toEqual(['locked', 'editable']);
   });
 
   it('keeps a Hub end visit editable through its side rooms and locks later visits', () => {
@@ -280,8 +346,10 @@ describe('Plan end evaluation', () => {
       'locked',
     );
 
-    // The end room's hidden door belongs to its doors; a side room's stays inside.
-    expect(main(createPhantomExitAddress(n, 'surface-n-combat05' as OccurrenceId))).toBe('locked');
+    // The end room's hidden door opens with its doors, inside the plan.
+    expect(main(createPhantomExitAddress(n, 'surface-n-combat05' as OccurrenceId))).toBe(
+      'editable',
+    );
     expect(main(createPhantomExitAddress(n, 'surface-n-combat05-sideDoor2' as OccurrenceId))).toBe(
       'editable',
     );
@@ -348,9 +416,12 @@ describe('Plan end evaluation', () => {
         )!.gameName,
       });
     };
-    // The end room's peer, offered by b4-e1's doors, keeps its alternatives.
+    // The end room's peer, offered by b4-e1's doors, keeps its alternatives,
+    // as do the end room's own doors, which open inside the plan.
     expect(lastTarget('golden-f-b4-e1').kind).toBe('roomTarget');
-    expect(lastTarget('golden-f-b5-e1')).toMatchObject({
+    expect(lastTarget('golden-f-b5-e1').kind).toBe('roomTarget');
+    // A door of a room past the end has none.
+    expect(lastTarget('golden-f-b6-e1')).toMatchObject({
       kind: 'unavailable',
       reason: 'targetNotReachable',
     });
@@ -380,16 +451,19 @@ describe('Plan end evaluation', () => {
   });
 
   it('raises no finding for a route-owned placement on a room past the end', () => {
-    const placed = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'ReplaceResourcePlacement',
-      route: createRouteAddress('Underworld'),
-      family: 'Pickaxe',
-      value: { biomeKey: 'F', occurrenceId: 'golden-f-b8-e2' as OccurrenceId },
-    });
-    expect(simulateProject(catalog, placed).status).toBe('invalid');
-    const ended = simulateProject(catalog, endAt(placed, 'F', 'golden-f-b5-e1'));
-    expect(ended.status).toBe('valid');
-    expect(ended.findings).toEqual([]);
+    // b8-e2 lies past the end; b6-e2 behind one of the end room's own doors.
+    for (const host of ['golden-f-b8-e2', 'golden-f-b6-e2']) {
+      const placed = applyProjectCommand(createCompleteFGProject(), catalog, {
+        kind: 'ReplaceResourcePlacement',
+        route: createRouteAddress('Underworld'),
+        family: 'Pickaxe',
+        value: { biomeKey: 'F', occurrenceId: host as OccurrenceId },
+      });
+      expect(simulateProject(catalog, placed).status).toBe('invalid');
+      const ended = simulateProject(catalog, endAt(placed, 'F', 'golden-f-b5-e1'));
+      expect(ended.status).toBe('valid');
+      expect(ended.findings).toEqual([]);
+    }
   });
 
   it('restores the unmarked evaluation when the end is removed', () => {
@@ -460,6 +534,28 @@ describe('Plan end evaluation', () => {
     });
     const endedAtBoss = endAt(createCompleteFGProject(), 'F', 'golden-f-preboss-shop:boss');
     expect(eligibility(withStart(endedAtBoss, 'F', 'preboss')).kind).toBe('eligible');
+  });
+
+  it('ends after a room whose doors are rerolled, settling its presses', () => {
+    const project = underworldFRerollsProject();
+    const room = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      'golden-f-b2-e1' as OccurrenceId,
+    );
+    expect(planEndAvailability(catalog, simulateProjectAssembly(catalog, project), room)).toEqual({
+      available: true,
+    });
+    const ended = simulateProject(catalog, endAt(project, 'F', 'golden-f-b2-e1'));
+    expect(ended.status).toBe('valid');
+    const endEvents = history(ended.route.biomes[0]!).flatMap((event) =>
+      event.occurrenceId === 'golden-f-b2-e1' ? [event.kind] : [],
+    );
+    // The press redraws a door after the doors open and before the room commits.
+    expect(endEvents.indexOf('rewardRerolled')).toBeGreaterThan(
+      endEvents.indexOf('outgoingGenerationCheckpoint'),
+    );
+    expect(endEvents.indexOf('rewardRerolled')).toBeLessThan(endEvents.indexOf('roomCommitted'));
+    expect(endEvents.at(-1)).toBe('roomExited');
   });
 
   it('answers whether the plan can end after a room', () => {

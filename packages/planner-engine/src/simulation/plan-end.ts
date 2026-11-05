@@ -10,19 +10,22 @@ import type {
 } from '../authored-project/model';
 import type { ResolvedRoutePosition } from '../authored-project/route-context';
 import { isRouteCompletionRoom } from '../authored-project/completion-boss';
-import { structurallyActiveOccurrenceIds } from '../authored-project/topology/query';
+import {
+  isExactTerminalTakeoverEnvelope,
+  structurallyActiveOccurrenceIds,
+} from '../authored-project/topology/query';
 
 /**
  * How a plan end applies to its biome. A cut at the biome's terminal
  * completion room is the ordinary biome end; any other reached room ends the
- * biome after its Timeline, through the authored structure before it.
+ * biome at its Leave point, through the authored structure before it.
  */
 export type BiomePlanEnd =
   | { readonly kind: 'terminal'; readonly occurrenceId: OccurrenceId }
   | {
       readonly kind: 'cut';
       readonly occurrenceId: OccurrenceId;
-      /** The authored plan with everything after the end room left out. */
+      /** The authored plan with the end room's exit selection and everything after it left out. */
       readonly plan: AuthoredBiomePlan;
     }
   | { readonly kind: 'unreached'; readonly occurrenceId: OccurrenceId };
@@ -55,6 +58,29 @@ export function resolveBiomePlanEnd(
     byOccurrence.set(occurrenceId, cut);
   }
   return Object.freeze({ kind: 'cut', occurrenceId, plan: cut });
+}
+
+/**
+ * The rooms behind the end room's doors: its doors open and offer them, but
+ * the plan ends before any is entered, so nothing inside them is assessed.
+ */
+export function roomsBehindEndDoors(
+  topology: BiomeTopology,
+  end: OccurrenceId,
+): ReadonlySet<OccurrenceId> {
+  const doors = topology.decisions.find(
+    (decision) =>
+      decision.kind === 'exit' &&
+      decision.source.kind === 'occurrence' &&
+      decision.source.occurrenceId === end,
+  );
+  const additional =
+    topology.occurrences.find((occurrence) => occurrence.occurrenceId === end)?.additionalExits ??
+    [];
+  return new Set([
+    ...(doors?.kind === 'exit' ? doors.normal.targets.map((target) => target.occurrenceId) : []),
+    ...additional.map((exit) => exit.occurrenceId),
+  ]);
 }
 
 /** Which authored structure of a biome lies inside its plan end and which lies past it. */
@@ -137,10 +163,11 @@ function hubVisitEntering(
 }
 
 /**
- * Leaves out the end room's outgoing structure: its exit decision, the fixed
- * link it opens and, at its Hub, every action after its visit and the side
- * rooms entered after it. An end at a Hub main room ends that whole visit.
- * Occurrences stay; only referenced ones are evaluated.
+ * Leaves out what follows the end room's Leave point: its exit selection (its
+ * doors still open, with their rewards and rerolls), the fixed link it opens
+ * and, at its Hub, every action after its visit and the side rooms entered
+ * after it. An end at a Hub main room ends that whole visit. Occurrences stay;
+ * only referenced ones are evaluated.
  */
 function topologyThroughEnd(topology: BiomeTopology, end: OccurrenceId): BiomeTopology {
   const localVisits = topology.decisions.filter(
@@ -157,10 +184,17 @@ function topologyThroughEnd(topology: BiomeTopology, end: OccurrenceId): BiomeTo
   const decisions = topology.decisions.flatMap((decision): NextRoomDecision[] => {
     switch (decision.kind) {
       case 'exit':
-        return (decision.source.kind === 'occurrence' && decision.source.occurrenceId === end) ||
-          (decision.source.kind === 'hubDecision' && cutHubKeys.has(decision.source.decisionKey))
+        if (decision.source.kind === 'hubDecision')
+          return cutHubKeys.has(decision.source.decisionKey) ? [] : [decision];
+        if (decision.source.occurrenceId !== end) return [decision];
+        // An authored door batch opens without a selection; a Hub's empty
+        // takeover envelope, or a room whose Hub follows it, opens none.
+        return isExactTerminalTakeoverEnvelope(decision) ||
+          topology.decisions.some(
+            (candidate) => candidate.kind === 'hub' && candidate.source.occurrenceId === end,
+          )
           ? []
-          : [decision];
+          : [Object.freeze({ ...decision, selection: Object.freeze({ kind: 'unresolved' }) })];
       case 'hub': {
         if (decision.source.occurrenceId === end) return [];
         const visit = hubVisitEntering(decision, localVisits, end);

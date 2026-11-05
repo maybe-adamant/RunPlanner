@@ -1,4 +1,8 @@
-import type { OccurrenceAddress, SemanticAddress } from '../../authored-project/addresses';
+import type {
+  ExitDecisionSourceAddress,
+  OccurrenceAddress,
+  SemanticAddress,
+} from '../../authored-project/addresses';
 import type { BiomeTopology, OccurrenceId } from '../../authored-project/model';
 import {
   authoringBoundaryReadiness,
@@ -94,9 +98,10 @@ function hubActionPastEnd(extent: PlanEndExtent, owner: SemanticAddress): boolea
 
 /**
  * Inside an ended biome, everything the plan reaches through its end stays
- * editable: the end room, its peers at the decision that led to it and, at a
- * Hub main room, that whole visit with its side rooms. The end room's own exit,
- * the rooms and Hub actions after the end, and their offers are locked.
+ * editable: the end room with its doors and their offers, its peers at the
+ * decision that led to it and, at a Hub main room, that whole visit with its
+ * side rooms. The end room's exit selection, the rooms behind its doors, the
+ * rooms and Hub actions after the end, and their offers are locked.
  */
 function endedReadiness(
   prefix: CanonicalBiome | MaterializedBiomePrefix,
@@ -106,17 +111,20 @@ function endedReadiness(
 ): AuthoringReadiness {
   const extent = planEndExtent(topology, end.occurrenceId);
   if (hubActionPastEnd(extent, owner)) return 'locked';
-  // The end room's additional and hidden doors belong to its doors, past the end.
-  if (
-    (owner.kind === 'additionalExit' || owner.kind === 'phantomExit') &&
-    owner.occurrenceId === end.occurrenceId
-  )
-    return 'locked';
+  const endsHere = (source: ExitDecisionSourceAddress) =>
+    source.kind === 'occurrence' && source.occurrenceId === end.occurrenceId;
+  // The plan ends at the end room's Leave point: which door it takes is past it.
+  if (owner.kind === 'exitSelection' && endsHere(owner.source)) return 'locked';
   const boundary = resolveAuthoringBoundary(prefix, owner);
-  if (boundary.kind === 'exitDecision') {
-    // The plan's end room generates no doors: its own exit is past the end.
-    if (boundary.source.kind === 'occurrence' && boundary.source.occurrenceId === end.occurrenceId)
-      return 'locked';
+  if (boundary.kind === 'exitDecision' && endsHere(boundary.source)) {
+    // Its authored doors open inside the plan; a room that opens none plans none there.
+    const opens = prefix.decisions.some(
+      (decision) =>
+        decision.kind === 'batch' &&
+        decision.parent.origin.kind === 'occurrence' &&
+        decision.parent.origin.occurrenceId === end.occurrenceId,
+    );
+    return opens ? 'editable' : 'locked';
   }
   if (boundary.kind === 'occurrence') {
     const room: OccurrenceId = boundary.occurrenceId;

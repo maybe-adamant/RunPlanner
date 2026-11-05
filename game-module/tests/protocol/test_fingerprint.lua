@@ -74,7 +74,7 @@ local CORPUS = {
     ["surface-n.execution.json"] = "b053e2df",
     ["surface-no-rerolls.execution.json"] = "9eb50f9e",
     ["surface-nopq.execution.json"] = "70d8994f",
-    ["surface-p-elite-switch.execution.json"] = "75a6ea10",
+    ["surface-p-elite-switch.execution.json"] = "674766a8",
     ["surface-q-shop-correlation.execution.json"] = "5854adcc",
     ["surface-scheduled-lifecycle.execution.json"] = "ed600752",
     ["surface-selene-hex-path.execution.json"] = "8e9eaac9",
@@ -85,11 +85,12 @@ local CORPUS = {
     ["surface-travel-deal-refill-anvil.execution.json"] = "7383c75d",
     ["underworld-arachne-cocoons.execution.json"] = "296954a9",
     ["underworld-echo-gold-anvil-duplicate.execution.json"] = "13f17bfd",
-    ["underworld-f-cut-end.execution.json"] = "66fc276f",
+    ["underworld-f-cut-end.execution.json"] = "0bb7ead9",
+    ["underworld-f-cut-end-rerolls.execution.json"] = "113496ce",
     ["underworld-f-rarified-screen-reroll.execution.json"] = "d7b358fb",
     ["underworld-f-rerolls.execution.json"] = "1cbc3e3b",
-    ["underworld-f-switches-failed-left.execution.json"] = "a3c81e54",
-    ["underworld-f-switches.execution.json"] = "7fcc1f95",
+    ["underworld-f-switches-failed-left.execution.json"] = "9683a782",
+    ["underworld-f-switches.execution.json"] = "cc9c4704",
     ["underworld-fgh.execution.json"] = "d1255079",
     ["underworld-fghi-empty-shop-group.execution.json"] = "f2cb8343",
     ["underworld-fghi.execution.json"] = "33a8243d",
@@ -107,7 +108,7 @@ function TestFingerprint.testEveryExecutionFixtureKeepsItsFingerprint()
         lu.assertEquals(p.fingerprint(assert(p.json.decode(source))), expected, name)
         count = count + 1
     end
-    lu.assertEquals(count, 45)
+    lu.assertEquals(count, 46)
 end
 
 function TestFingerprint.testAsciiAndMultibyteStringsHashTheirBytes()

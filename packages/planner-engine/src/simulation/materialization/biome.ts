@@ -532,7 +532,7 @@ export function materializeBiomePrefix(
   routePosition: ResolvedRoutePosition,
   plan: AuthoredBiomePlan,
   loadout: BiomeMaterializationLoadout,
-  /** The plan's end room, whose outgoing structure the plan already leaves out. */
+  /** The plan's end room, whose exit selection and later structure the plan already leaves out. */
   end?: OccurrenceId,
 ): MaterializedBiomePrefix | null {
   loadout = requireLoadout(loadout);
@@ -783,6 +783,7 @@ export function materializeBiomePrefix(
           partial,
           hubContinuation,
           additional,
+          current.occurrenceId === end,
         ),
       );
     }

@@ -10,6 +10,9 @@ local readers = require("mods.room.conformance.readers")
 local proof = require("mods.room.conformance.proof")
 local text = require("mods.presentation.mismatch_text")
 local json = require("mods/protocol/json")
+local doors = require("mods.navigation.doors")
+local roomHooks = require("mods.room.hooks")
+local support = require("tests.harness.hook_composition")
 
 TestPlanEndAndStores = {}
 
@@ -35,7 +38,13 @@ function TestPlanEndAndStores.testACutEndRoomIsTheLastRoomAndCompletesThePrefix(
     local plan = loadPlan("underworld-f-cut-end")
     local last = plan.selectedOccurrenceIds[#plan.selectedOccurrenceIds]
     lu.assertEquals(last, "golden-f-b5-e1")
-    lu.assertEquals(plan.occurrencesById[last].doors.kind, "terminal")
+    -- Its doors open as planned; the rooms behind them are never selected.
+    local endDoors = plan.occurrencesById[last].doors
+    lu.assertEquals(endDoors.kind, "batch")
+    lu.assertEquals(#endDoors.targets, 2)
+    for _, target in ipairs(endDoors.targets) do
+        for _, id in ipairs(plan.selectedOccurrenceIds) do lu.assertNotEquals(id, target.room.id) end
+    end
     lu.assertEquals(plan.extent.biomeKeys, { "F" })
     local cursor = route.new(plan)
     walk(cursor)
@@ -73,17 +82,87 @@ function TestPlanEndAndStores.testAHubHandoffStillRequiresItsFountainAndEveryDep
     lu.assertStrContains(reason, "departures has invalid length")
 end
 
-function TestPlanEndAndStores.testEveryRoomExitButTheEndRoomComparesThePlansStores()
+function TestPlanEndAndStores.testEveryRoomExitComparesThePlansStoresTheEndRoomIncluded()
+    -- The end room's door draws are planned, so its exit compares the stores too.
     local plan = loadPlan("underworld-f-cut-end")
-    lu.assertNil(plan.occurrencesById["golden-f-b5-e1"].rewardStoresExpected)
     for _, id in ipairs(plan.selectedOccurrenceIds) do
         local occurrence = plan.occurrencesById[id]
-        if id ~= "golden-f-b5-e1" then
-            lu.assertNotNil(occurrence.rewardStoresExpected, id)
-            lu.assertNotNil(occurrence.rewardStoresExpected.RunProgress, id)
-        end
+        lu.assertNotNil(occurrence.rewardStoresExpected, id)
+        lu.assertNotNil(occurrence.rewardStoresExpected.RunProgress, id)
     end
     for _, store in ipairs(plan.rewardStoreComparison) do lu.assertNotEquals(store.name, "Secrets") end
+end
+
+-- Native doors offering the end room's published targets, each with `rewardOf(target)`.
+local function offeredDoors(endRoom, rewardOf)
+    local result = {}
+    for index, target in ipairs(endRoom.doors.targets) do
+        result[index] = { Room = { Name = target.room.gameName, RewardType = rewardOf(target).rewardType,
+            ForceLootName = rewardOf(target).source, __runPlannerExecutionRoomId = target.room.id } }
+    end
+    result.sharedRewardStoreKey = endRoom.doors.resolvedSharedRewardStoreKey
+    return result
+end
+
+function TestPlanEndAndStores.testTheEndRoomSteersItsDoorsAndChecksTheirPlannedRerolls()
+    local plan = loadPlan("underworld-f-cut-end-rerolls")
+    local endRoom = plan.occurrencesById[plan.selectedOccurrenceIds[#plan.selectedOccurrenceIds]]
+    lu.assertEquals(endRoom.id, "golden-f-b2-e1")
+    lu.assertEquals(#endRoom.rerolls, 1)
+    local pressed = endRoom.rerolls[1]
+    -- The doors open with their planned first draws.
+    local realized = doors.realize(endRoom, {}, nil, plan.occurrencesById)
+    for index, target in ipairs(endRoom.doors.targets) do
+        lu.assertEquals(realized[index].__runPlannerExecutionDoorTarget, target.room.id)
+        lu.assertEquals(realized[index].Room.RewardType, target.reward and target.reward.rewardType)
+    end
+    -- Leaving, the rerolled door must offer what its press drew.
+    local function rerolled(target)
+        return target.exitKey == pressed.target.exitKey and pressed.reward or target.reward
+    end
+    local proved, why = doors.prove(endRoom, offeredDoors(endRoom, rerolled), plan.occurrencesById)
+    lu.assertTrue(proved, why and lu.prettystr(why))
+    local ok, issue = doors.prove(endRoom, offeredDoors(endRoom, function(target) return target.reward end),
+        plan.occurrencesById)
+    lu.assertNil(ok)
+    lu.assertEquals(issue.kind, "reward")
+    lu.assertEquals(issue.expected, pressed.reward.rewardType)
+end
+
+function TestPlanEndAndStores.testLeavingTheEndRoomThroughAnyOfItsDoorsCompletesThePlan()
+    local plan = loadPlan("underworld-f-cut-end-rerolls")
+    local endId = plan.selectedOccurrenceIds[#plan.selectedOccurrenceIds]
+    for _, target in ipairs(plan.occurrencesById[endId].doors.targets) do
+        local cursor = route.new(plan)
+        for index = 1, #plan.selectedOccurrenceIds - 1 do
+            local occurrence = plan.occurrencesById[plan.selectedOccurrenceIds[index]]
+            assert(route.enter(cursor, occurrence.id, occurrence.gameName))
+            assert(route.exit(cursor))
+        end
+        assert(route.enter(cursor, endId, plan.occurrencesById[endId].gameName))
+        local state = { state = "synchronized", reason = "ready", route = cursor }
+        local mismatches = {}
+        local session = support.stub()
+        session.mismatch = function(_, errorValue)
+            mismatches[#mismatches + 1] = errorValue
+            state.state = "desynchronized"
+        end
+        local module, _, callbacks = support.capture()
+        roomHooks.attach(module, session, function() return state end, function() end,
+            route, { close = function() return true end }, nil, support.navigationEntryStub, {
+                startingRun = function() return false end, installedRun = function() return false end,
+                synchronizeStartingRoom = function() error("outside this test") end,
+            })
+        local nativeCalled = false
+        callbacks.LeaveRoom(nil, {}, function() nativeCalled = true end,
+            { CurrentRoom = { Name = plan.occurrencesById[endId].gameName } },
+            { Room = { __runPlannerExecutionRoomId = target.room.id }, __runPlannerExecutionDoorTarget = target.room.id })
+        lu.assertTrue(nativeCalled)
+        lu.assertEquals(mismatches, {}, target.exitKey)
+        lu.assertEquals(state.state, "synchronized")
+        lu.assertEquals(state.reason, "configured-prefix-complete")
+        lu.assertNil(route.expected(cursor))
+    end
 end
 
 -- Native declarations aligned with each compared store's frame counts, and the

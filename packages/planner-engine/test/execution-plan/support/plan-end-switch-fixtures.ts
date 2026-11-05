@@ -17,6 +17,7 @@ import {
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { underworldFRerollsProject } from './rerolls-fixture';
 
 const press = Object.freeze({ kind: 'interactChallengeSwitch' as const });
 
@@ -93,6 +94,11 @@ function composedSwitch(project: ProjectDocument, biomeKey: string, occurrenceId
 /** F ending mid-biome, after its fifth room. */
 export function underworldFCutEndProject(): ProjectDocument {
   return endAt(createCompleteFGProject(), 'F', 'golden-f-b5-e1');
+}
+
+/** F ending after its second room, whose doors open and one is rerolled before it is left. */
+export function underworldFCutEndRerollsProject(): ProjectDocument {
+  return endAt(underworldFRerollsProject(), 'F', 'golden-f-b2-e1');
 }
 
 /** N ending inside its Hub stay, after the first visit and its side rooms. */

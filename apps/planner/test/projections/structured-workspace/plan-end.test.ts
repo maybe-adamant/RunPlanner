@@ -201,13 +201,14 @@ describe('plan end in the structured workspace', () => {
     expect(roomNode(erebus, 'golden-f-b6-e2').planEnd?.relation).toBe('pastEnd');
   });
 
-  it("keeps the end room's hidden door with its doors, past the end", () => {
+  it("keeps the end room's hidden door with its doors, inside the plan", () => {
     const { workspace } = projectStructuredWorkspaceFixture(
       endedAt(loadSurfaceNOPQProject(), 'N', nOccurrenceId('combat05')),
     );
     const end = roomNode(requireWorkspaceBiome(workspace, 'N'), nOccurrenceId('combat05'));
-    expect(end.room.phantomExit?.room.locked).toBe('pastEnd');
-    expect(end.room.phantomExit?.reward.locked).toBe('pastEnd');
+    expect(end.room.phantomExit).toBeDefined();
+    expect(end.room.phantomExit?.room.locked).not.toBe('pastEnd');
+    expect(end.room.phantomExit?.reward.locked).not.toBe('pastEnd');
   });
 
   it('hosts an unreached end on the Route panel, where its control repairs it', () => {

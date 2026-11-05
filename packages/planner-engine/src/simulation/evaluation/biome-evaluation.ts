@@ -355,16 +355,24 @@ export function materializedBiomePrefixCoveragePoint(
   return Object.freeze({ owner: last.origin, checkpoint: 'afterTargetGeneration' });
 }
 
-/** The selected structure through the plan end, which the ended prefix already is. */
+/**
+ * The selected structure through the plan end, which the ended prefix already
+ * is, with the end room's doors as its last batch, opened without a selection.
+ */
 function endedSnapshot(prefix: MaterializedBiomePrefix): CanonicalBiome {
   if (prefix.entryRoom === undefined)
     throw new ProjectSimulationContractError(`${prefix.biomeKey} plan end has no entry room`);
+  const endDoors =
+    prefix.frontier?.kind === 'exitDecision' && prefix.frontier.planEnd === true
+      ? prefix.frontier.partialBatch
+      : undefined;
   return Object.freeze({
     kind: 'biome',
     routeKey: prefix.routeKey,
     biomeKey: prefix.biomeKey,
     entryRoom: prefix.entryRoom,
-    decisions: prefix.decisions,
+    decisions:
+      endDoors === undefined ? prefix.decisions : Object.freeze([...prefix.decisions, endDoors]),
     fixedRoomLinks: prefix.fixedRoomLinks ?? Object.freeze([]),
     biomeState: prefix.biomeState,
     ...(prefix.echoKeepsakeReplayResults === undefined

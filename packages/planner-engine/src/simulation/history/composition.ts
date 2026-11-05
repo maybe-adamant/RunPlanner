@@ -127,7 +127,7 @@ export interface RoomLifecycleCompositionOptions {
   readonly deferDeparture?: boolean;
   /** Where this room's first exit leads; ordinarily a room not visited before. */
   readonly departureDestination?: RoomDepartureDestination;
-  /** The plan's end room: it generates no doors and does not depart. */
+  /** The plan's end room: it opens only its authored doors, if any, and does not depart. */
   readonly planEnd?: boolean;
 }
 
@@ -384,7 +384,11 @@ export function appendRoomLifecycle(
         destination: options.departureDestination ?? 'newRoom',
       });
     options.afterEvent?.(writer, event);
-    if (event.kind === 'outgoingGenerationCheckpoint' && options.planEnd === true) {
+    if (
+      event.kind === 'outgoingGenerationCheckpoint' &&
+      options.planEnd === true &&
+      options.outgoing === undefined
+    ) {
       reachedOutgoing = true;
       writer.append({ kind: 'emptyOutgoingGenerationCompleted', origin: room.origin });
     } else if (event.kind === 'outgoingGenerationCheckpoint') {

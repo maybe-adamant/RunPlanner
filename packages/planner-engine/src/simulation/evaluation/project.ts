@@ -56,7 +56,7 @@ import {
   ProjectSimulationContractError,
 } from './project-evaluation-assembly';
 import { evaluateBiomeAssembly } from './biome-evaluation';
-import { resolveBiomePlanEnd } from '../plan-end';
+import { resolveBiomePlanEnd, roomsBehindEndDoors } from '../plan-end';
 import {
   routeStatus,
   summarizeRoute,
@@ -177,6 +177,21 @@ function evaluateCachedBiomeAssembly(
   const assembled = evaluateBiomeAssembly(catalog, routeKey, plan, context, end);
   byInputs.set(key, assembled);
   return assembled;
+}
+
+/** A placement in a room behind the end room's doors is past the end, like the room. */
+function withoutPlacementsBehindEndDoors<
+  Context extends { readonly resourceFindings?: readonly SemanticFinding[] },
+>(context: Context, plan: AuthoredBiomePlan, end: OccurrenceId): Context {
+  if (plan.topology === null || context.resourceFindings === undefined) return context;
+  const behind = roomsBehindEndDoors(plan.topology, end);
+  const kept = context.resourceFindings.filter(
+    (finding) =>
+      !(finding.origin.kind === 'roomFeature' && behind.has(finding.origin.occurrenceId)),
+  );
+  return kept.length === context.resourceFindings.length
+    ? context
+    : Object.freeze({ ...context, resourceFindings: Object.freeze(kept) });
 }
 
 function evaluateRouteAssembly(
@@ -395,7 +410,7 @@ function evaluateRouteAssembly(
             route.routeKey,
             biomeEnd.plan,
             previous,
-            context,
+            withoutPlacementsBehindEndDoors(context, biomeEnd.plan, biomeEnd.occurrenceId),
             biomeEnd.occurrenceId,
           )
         : evaluateCachedBiomeAssembly(catalog, route.routeKey, plan, previous, context);

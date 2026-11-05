@@ -961,8 +961,9 @@ export function BatchDoorsDetail({
   readonly repair?: ReactNode;
 }) {
   const findingAnchor = useFindingAnchor();
-  // Where the exit is dormant (past or at the plan end) every door row is read-only together.
-  const locked = useAuthoringLocked(exitSelectionAddress(node.selection));
+  // Where the doors lie past the plan end every door row is read-only together;
+  // the end room's own doors still open inside the plan.
+  const locked = useAuthoringLocked(node.owner);
   return (
     <section
       aria-label="Door details"

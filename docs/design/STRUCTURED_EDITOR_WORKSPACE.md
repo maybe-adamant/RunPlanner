@@ -98,7 +98,8 @@ settled), beside the way on and at most one contextual repair. The end room's
 footer instead offers to continue planning, which clears the end; the room
 header and the rail say where the plan ends, and the Route panel shows the end
 with its room and removal. The route-owned unreached-end finding repairs at
-that Route row. Rooms, Hub visits and biomes past the end are dimmed, labelled
+that Route row. The end room's doors lie inside the plan, the rooms behind
+them past it. Rooms, Hub visits and biomes past the end are dimmed, labelled
 and read-only, following the engine's ended horizon, but stay browsable, and a
 room past the end can still take the end so it can move later. The Hub
 Timeline closes with an end row after the end visit. Resource placements on a
@@ -475,8 +476,8 @@ The table's header ends in one quiet red action: **Fix Preboss** where a
 takeover batch can be matched to its source's declared doors, **Fix Doors**
 where an ordinary batch removes its unavailable doors, otherwise **Reset
 Doors**, which removes the batch. A repair draws the eye, as does each door row
-it removes. The end room offers neither. The batch's notes sit in the Timeline's
-side column, under the Add area.
+it removes. The batch's notes sit in the Timeline's side column, under the Add
+area.
 
 The room's last Timeline row says how it is left. **Leave room** picks the exit
 door by its name only (Door 1, or Chaos gate or Infernal Contract) and shows
@@ -484,7 +485,9 @@ the chosen door's room icon and name and its final reward icons as fixed
 labels beside it; a lone door, a fixed exit or the completed run is shown
 plainly, and a partly filled batch says how many doors are set. The picker is
 the exit selection's finding anchor. The row ends with **End plan here**; on
-the end room it reads **Plan ends here** with **Continue planning**. A room with
+the end room it reads **Plan ends here** with **Continue planning** in place of
+the picker: the end room's doors, their rerolls and its other doors stay
+editable, since the plan ends only as the room is left. A room with
 no planned way on (the Hub or a side-room visit leads on, or nothing is planned
 past it) has no last row and keeps **End plan here** under its Timeline, with
 any boss-door pool still in its doors; a room past the plan's end shows no

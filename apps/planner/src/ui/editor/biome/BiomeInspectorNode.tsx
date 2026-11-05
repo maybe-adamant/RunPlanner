@@ -114,7 +114,7 @@ function roomTimelineDoors({
     anchorOwner?: SemanticAddress,
   ) =>
     relation === 'end' ? (
-      // The end room's exit is dormant, so anchoring it would lock Continue planning.
+      // Its exit selection lies past the end; anchoring it would lock Continue planning.
       <LeaveRow actions={endAction} key="leave" label="Plan ends here" />
     ) : (
       <LeaveRow
@@ -158,9 +158,7 @@ function roomTimelineDoors({
           interactions={interactions}
           markFor={markFor}
           node={batch}
-          // The end room's doors lead nowhere planned, so they offer no reset or repair.
-          {...(relation === undefined &&
-          (batch.persistence === 'authored' || batch.repairIntent !== undefined)
+          {...(batch.persistence === 'authored' || batch.repairIntent !== undefined
             ? { repair: <BatchDoorsRepair interactions={interactions} node={batch} /> }
             : {})}
         />

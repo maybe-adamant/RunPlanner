@@ -7052,8 +7052,33 @@
         }
       ],
       "doors": {
-        "owner": "[\"occurrence\",\"Surface\",\"P\",\"surface-p-7-1-p_story01\"]",
-        "kind": "terminal"
+        "owner": "[\"exitDecision\",\"Surface\",\"P\",{\"kind\":\"occurrence\",\"occurrenceId\":\"surface-p-7-1-p_story01\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "surface-p-8-1-p_combat12", "biomeKey": "P", "gameName": "P_Combat12" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "StackUpgrade",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "surface-p-8-2-p_combat14", "biomeKey": "P", "gameName": "P_Combat14" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MaxManaDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
       },
       "roomExitConformance": {
         "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
@@ -7076,6 +7101,20 @@
               "routeEncounterDepth": 19,
               "roomHistoryOrdinal": 44
             },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
             "traits": {
               "equipped": [
                 { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 3 },
@@ -7104,7 +7143,32 @@
               "godRarityCounts": { "Common": 11 },
               "upgradableCount": 8,
               "bannedTraitKeys": []
-            }
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 0, 0, 1, 0, 1, 0, 0, 2, 1, 2, 2, 2, 1, 1, 1, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -7405,7 +7469,57 @@
         "owner": "[\"occurrence\",\"Surface\",\"P\",\"surface-p-7-2-p_reprieve01\"]",
         "kind": "terminal"
       }
+    },
+    {
+      "id": "surface-p-8-1-p_combat12",
+      "owner": "[\"occurrence\",\"Surface\",\"P\",\"surface-p-8-1-p_combat12\"]",
+      "biomeKey": "P",
+      "gameName": "P_Combat12",
+      "kind": "PEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "StackUpgrade",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Intro", "encounterKey": "GeneratedP_PreCombat", "kind": "combat" },
+          { "slotKey": "Combat", "encounterKey": "GeneratedP", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"occurrence\",\"Surface\",\"P\",\"surface-p-8-1-p_combat12\"]",
+        "kind": "terminal"
+      }
+    },
+    {
+      "id": "surface-p-8-2-p_combat14",
+      "owner": "[\"occurrence\",\"Surface\",\"P\",\"surface-p-8-2-p_combat14\"]",
+      "biomeKey": "P",
+      "gameName": "P_Combat14",
+      "kind": "PEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MaxManaDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Intro", "encounterKey": "GeneratedP_PreCombat", "kind": "combat" },
+          { "slotKey": "Combat", "encounterKey": "GeneratedP", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"occurrence\",\"Surface\",\"P\",\"surface-p-8-2-p_combat14\"]",
+        "kind": "terminal"
+      }
     }
   ],
-  "planFingerprint": "4fc99587"
+  "planFingerprint": "d10f73e0"
 }

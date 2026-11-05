@@ -19,16 +19,21 @@ repair is supported; the only recovery after a mismatch is opt-in
 A plan that [ends](SIMULATION_AND_VALIDATION.md#plan-end) at a biome's
 terminal room publishes as the ordinary configured prefix through that biome.
 A plan ending before its biome's terminal room has a defined wire: its `extent`
-ends at the end's biome, its selected occurrences end at the end room, whose
-`doors` are `terminal` (no batch or fixed link exists for it), and a Hub stay
-ended inside a visit publishes a partial block with no `finalHandoff`, the
-visits through the end as `requiredVisitCount`, the fountain only if used by
-then and no departure after the last visit. No new key carries the end. The
-module runs the end room like any other: its native doors stay unsteered, its
-exit runs the room's ordinary checks except reward stores (its own door draws
-are not simulated), and leaving it completes the plan, as leaving a configured
-prefix's last room does; the run then continues natively. In a Hub stay the
-end visit's last room is the end.
+ends at the end's biome, its selected occurrences end at the end room, and a
+Hub stay ended inside a visit publishes a partial block with no
+`finalHandoff`, the visits through the end as `requiredVisitCount`, the
+fountain only if used by then and no departure after the last visit. The end
+room's authored doors publish as its `batch`, with its door and cage
+`rerolls`; the rooms behind them are unselected occurrences, and no selected
+occurrence follows. An end room with no authored doors, or a Preboss, Boss or
+Hub end, has `terminal` doors. No new key carries the end. The module runs the
+end room like any other: it steers the doors' rewards and planned rerolls, and
+its exit runs the room's ordinary checks, its doors as they stand after their
+rerolls and the reward stores included (a room with `terminal` doors skips the
+store comparison: its own door draws are not simulated), with no exit door to
+check. Leaving it through any door completes the plan, as leaving a
+configured prefix's last room does; the run then continues natively. In a Hub
+stay the end visit's last room is the end.
 
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The
