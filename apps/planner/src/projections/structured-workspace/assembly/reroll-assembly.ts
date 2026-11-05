@@ -35,6 +35,7 @@ import type {
   WorkspaceDoorContract,
   WorkspaceDoorReward,
   WorkspacePhysicalTarget,
+  WorkspaceRerollRow,
   WorkspaceRoomRerolls,
 } from '../contracts/structure';
 import type {
@@ -239,6 +240,7 @@ function assembleRerollList(input: {
       interactionKey,
       targetNoun: input.targetNoun,
       ...(settled === undefined ? {} : { poolRemaining: settled.poolRemaining }),
+      ...(allowance.kind === 'reached' ? { pressCost: allowance.cost } : {}),
       rows: Object.freeze(
         rows.map(({ address, key, marker, reward, targetLabel }) =>
           Object.freeze({ address, key, marker, reward, targetLabel }),
@@ -491,45 +493,111 @@ export function assembleRoomRerolls(input: {
             rewardTypes,
           });
         })();
-  // Each press reads as its door, the reward it replaces, and every door once it lands.
-  const presses =
-    occurrence === undefined
-      ? []
-      : occurrence.roomActions.order.flatMap((reference) =>
-          reference.kind === 'reroll' &&
-          (reference.target.kind === 'door' || reference.target.kind === 'cage')
-            ? [reference]
-            : [],
-        );
+  // Each press reads as its door (a cage is known by its reward), the reward it
+  // replaces, and every door once it lands.
+  const states = workspacePressSurfaceStates({
+    entries: input.targets.map((target) => ({
+      key: target.exitKey,
+      visible: target.door.offerRewardSurface.visibility !== 'hidden',
+      owners: target.door.offerRewardSurface.rewards.map((reward) => ({
+        ownerKey: semanticAddressKey(reward.marker.address),
+        first: reward.offer,
+      })),
+    })),
+    presses:
+      occurrence === undefined
+        ? []
+        : occurrence.roomActions.order.flatMap((reference) => {
+            if (
+              reference.kind !== 'reroll' ||
+              (reference.target.kind !== 'door' && reference.target.kind !== 'cage')
+            )
+              return [];
+            const target = reference.target;
+            const index = input.targets.find(
+              (candidate) => candidate.exitKey === target.exitKey,
+            )?.index;
+            return [
+              {
+                rowKey: roomActionKey(reference),
+                ownerKey: semanticAddressKey(
+                  rerollTargetOwner(biome, occurrence.occurrenceId, target),
+                ),
+                label: index === undefined ? 'Door' : `Door ${index}`,
+                reward: reference.reward,
+              },
+            ];
+          }),
+    settled: settledRewards(settled),
+  });
+  const withDoors = withPressStates(list, states);
+  return Object.freeze({
+    ...(withDoors === undefined ? {} : withDoors),
+    targets: Object.freeze(targets),
+  });
+}
+
+/** One door or wheel offer a press may change: each reward it shows, by owner. */
+export interface WorkspacePressSurfaceEntry {
+  /** The door's exit key or the offer's key. */
+  readonly key: string;
+  /** False where the game hides the entry's rewards. */
+  readonly visible: boolean;
+  readonly owners: readonly {
+    readonly ownerKey: string;
+    readonly first: ResolvedRewardOffer | null;
+  }[];
+}
+
+/** One authored press on the surface, in action order. */
+export interface WorkspaceSurfacePress {
+  readonly rowKey: string;
+  readonly ownerKey: string;
+  readonly label: string;
+  readonly reward: ResolvedRewardOffer;
+}
+
+/**
+ * Each press's view of its surface: the reward it replaces, and every entry
+ * once it lands. The engine's settled reward of an owner stands for its last
+ * press, so a press that did not settle changes nothing; earlier presses read
+ * their authored rewards in order. Hidden rewards are never shown.
+ */
+export function workspacePressSurfaceStates(input: {
+  readonly entries: readonly WorkspacePressSurfaceEntry[];
+  readonly presses: readonly WorkspaceSurfacePress[];
+  readonly settled: ReadonlyMap<string, ResolvedRewardOffer>;
+}): ReadonlyMap<string, NonNullable<WorkspaceRerollRow['doors']>> {
   const current = new Map(
-    input.targets.flatMap((target) =>
-      target.door.offerRewardSurface.rewards.map(
-        (reward) => [semanticAddressKey(reward.marker.address), reward.offer] as const,
-      ),
+    input.entries.flatMap((entry) =>
+      entry.owners.map((owner) => [owner.ownerKey, owner.first] as const),
     ),
   );
-  const pressDoors = new Map(
-    presses.map((reference) => {
-      const target = reference.target as Extract<RerollTarget, { readonly kind: 'door' | 'cage' }>;
-      const ownerKey = semanticAddressKey(
-        rerollTargetOwner(biome, occurrence!.occurrenceId, target),
-      );
-      const before = current.get(ownerKey) ?? null;
-      current.set(ownerKey, reference.reward);
-      const index = input.targets.find((candidate) => candidate.exitKey === target.exitKey)?.index;
+  const hidden = new Set(
+    input.entries.flatMap((entry) =>
+      entry.visible ? [] : entry.owners.map((owner) => owner.ownerKey),
+    ),
+  );
+  const lastPress = new Map(input.presses.map((press, index) => [press.ownerKey, index] as const));
+  return new Map(
+    input.presses.map((press, index) => {
+      const before = hidden.has(press.ownerKey) ? null : (current.get(press.ownerKey) ?? null);
+      const settled =
+        lastPress.get(press.ownerKey) === index ? input.settled.get(press.ownerKey) : undefined;
+      current.set(press.ownerKey, settled ?? press.reward);
       return [
-        roomActionKey(reference),
+        press.rowKey,
         Object.freeze({
-          doorLabel: index === undefined ? 'Door' : `Door ${index}`,
+          doorLabel: press.label,
           before,
           after: Object.freeze(
-            input.targets.map((door) =>
+            input.entries.map((entry) =>
               Object.freeze({
-                exitKey: door.exitKey,
+                exitKey: entry.key,
                 rewards: Object.freeze(
-                  door.door.offerRewardSurface.rewards.map(
-                    (reward) => current.get(semanticAddressKey(reward.marker.address)) ?? null,
-                  ),
+                  entry.visible
+                    ? entry.owners.map((owner) => current.get(owner.ownerKey) ?? null)
+                    : [],
                 ),
               }),
             ),
@@ -538,25 +606,37 @@ export function assembleRoomRerolls(input: {
       ] as const;
     }),
   );
-  const withDoors =
-    list?.rerolls === undefined
-      ? list
-      : {
-          ...list,
-          rerolls: Object.freeze({
-            ...list.rerolls,
-            rows: Object.freeze(
-              list.rerolls.rows.map((row) => {
-                const doors = pressDoors.get(row.key);
-                return doors === undefined ? row : Object.freeze({ ...row, doors });
-              }),
-            ),
-          }),
-        };
-  return Object.freeze({
-    ...(withDoors === undefined ? {} : withDoors),
-    targets: Object.freeze(targets),
-  });
+}
+
+/** A list whose rows carry their press's view of the surface. */
+function withPressStates<T extends { readonly rerolls?: WorkspaceRoomRerolls }>(
+  list: T | undefined,
+  states: ReadonlyMap<string, NonNullable<WorkspaceRerollRow['doors']>>,
+): T | undefined {
+  if (list?.rerolls === undefined) return list;
+  return {
+    ...list,
+    rerolls: Object.freeze({
+      ...list.rerolls,
+      rows: Object.freeze(
+        list.rerolls.rows.map((row) => {
+          const doors = states.get(row.key);
+          return doors === undefined ? row : Object.freeze({ ...row, doors });
+        }),
+      ),
+    }),
+  };
+}
+
+/** The engine's settled reward of each owner on a reached surface. */
+function settledRewards(
+  settled: RerollSurfaceSettlement | undefined,
+): ReadonlyMap<string, ResolvedRewardOffer> {
+  return new Map(
+    (settled?.targets ?? []).map(
+      (target) => [semanticAddressKey(target.owner), target.current] as const,
+    ),
+  );
 }
 
 /** One ship wheel's offers with their final draws, and its offer rerolls before the pick. */
@@ -622,62 +702,38 @@ export function assembleWheelRerolls(input: {
     rewardTypes,
   });
   // Each press reads as its offer, the reward it replaces, and every offer once it lands.
-  const current = new Map(
-    wheel.offers.map(
-      (offer) => [semanticAddressKey(offer.control.owner.address), offer.control.offer] as const,
+  const states = workspacePressSurfaceStates({
+    entries: wheel.offers
+      .filter((offer) => offer.active)
+      .map((offer) => ({
+        key: offer.key,
+        visible: true,
+        owners: [
+          {
+            ownerKey: semanticAddressKey(offer.control.owner.address),
+            first: offer.control.offer,
+          },
+        ],
+      })),
+    presses: input.occurrence.roomActions.order.flatMap((reference) =>
+      reference.kind === 'reroll' &&
+      reference.target.kind === 'wheelOffer' &&
+      reference.target.wheelKey === wheel.key
+        ? [
+            {
+              rowKey: roomActionKey(reference),
+              ownerKey: semanticAddressKey(
+                rerollTargetOwner(source.biome, input.occurrence.occurrenceId, reference.target),
+              ),
+              label: targetLabel(reference.target),
+              reward: reference.reward,
+            },
+          ]
+        : [],
     ),
-  );
-  const pressOffers = new Map(
-    input.occurrence.roomActions.order.flatMap((reference) => {
-      if (
-        reference.kind !== 'reroll' ||
-        reference.target.kind !== 'wheelOffer' ||
-        reference.target.wheelKey !== wheel.key
-      )
-        return [];
-      const ownerKey = semanticAddressKey(
-        rerollTargetOwner(source.biome, input.occurrence.occurrenceId, reference.target),
-      );
-      const before = current.get(ownerKey) ?? null;
-      current.set(ownerKey, reference.reward);
-      return [
-        [
-          roomActionKey(reference),
-          Object.freeze({
-            doorLabel: targetLabel(reference.target),
-            before,
-            after: Object.freeze(
-              wheel.offers
-                .filter((offer) => offer.active)
-                .map((offer) =>
-                  Object.freeze({
-                    exitKey: offer.key,
-                    rewards: Object.freeze([
-                      current.get(semanticAddressKey(offer.control.owner.address)) ?? null,
-                    ]),
-                  }),
-                ),
-            ),
-          }),
-        ] as const,
-      ];
-    }),
-  );
-  const withOffers =
-    list?.rerolls === undefined
-      ? list
-      : {
-          ...list,
-          rerolls: Object.freeze({
-            ...list.rerolls,
-            rows: Object.freeze(
-              list.rerolls.rows.map((row) => {
-                const doors = pressOffers.get(row.key);
-                return doors === undefined ? row : Object.freeze({ ...row, doors });
-              }),
-            ),
-          }),
-        };
+    settled: settledRewards(settled),
+  });
+  const withOffers = withPressStates(list, states);
   return Object.freeze({
     wheel: Object.freeze({ ...wheel, offers: Object.freeze(offers) }),
     ...(withOffers === undefined ? {} : withOffers),

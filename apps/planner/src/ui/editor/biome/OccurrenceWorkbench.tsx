@@ -138,6 +138,8 @@ export function OccurrenceWorkbench({
       ? undefined
       : {
           ...timelineDoors,
+          noun: 'door' as const,
+          detailId: `occurrence-${room.occurrenceId}-doors-detail`,
           expanded: doorsHoldFindings || !doorsState.collapsed,
           ...(doorsHoldFindings
             ? {}

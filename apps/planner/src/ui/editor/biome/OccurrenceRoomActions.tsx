@@ -306,7 +306,9 @@ export function RoomActionsWorkbench({
     phaseWheel === undefined || actions === undefined
       ? undefined
       : {
-          summary: <DoorChips chips={wheelOfferChips(phaseWheel, 'first')} />,
+          noun: 'offer' as const,
+          detailId: `wheel-${actions.interactionKey}-${phaseWheel.key}-detail`,
+          summary: <DoorChips chips={wheelOfferChips(phaseWheel, 'first')} label="Offer summary" />,
           detail: (
             <RewardWheelWorkbench
               inTimeline
@@ -349,11 +351,19 @@ export function RoomActionsWorkbench({
             </Fragment>
           ))}
         {roomDoors === undefined ? null : (
-          <div className="room-timeline-main">
-            <ol aria-label="Room timeline" className="room-action-list">
-              {doorsTail(false)}
-            </ol>
-          </div>
+          <>
+            <div className="room-timeline-main">
+              <ol aria-label="Room timeline" className="room-action-list">
+                {doorsTail(false)}
+              </ol>
+            </div>
+            {/* Its notes and Doors object stay beside the doors without any room actions. */}
+            <RoomAddArea
+              footer={roomDoors.notes}
+              groups={[]}
+              objects={roomDoors.object === undefined ? [] : [roomDoors.object]}
+            />
+          </>
         )}
       </section>
     );
@@ -500,7 +510,7 @@ export function RoomActionsWorkbench({
         />
         {content?.rows}
         {doorsOpen?.expanded === true && doorsOpen.detail !== undefined ? (
-          <DoorsOpenDetailRow>{doorsOpen.detail}</DoorsOpenDetailRow>
+          <DoorsOpenDetailRow id={doorsOpen.detailId}>{doorsOpen.detail}</DoorsOpenDetailRow>
         ) : null}
       </Fragment>
     );

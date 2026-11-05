@@ -75,7 +75,7 @@ describe('ship wheels on their phase Timeline', () => {
   it('opens the wheel after the Intro on the Intro Timeline, with its pool and offer targets', () => {
     const projected = projectStructuredWorkspaceFixture(cardHolder());
     const phase = wheelPhase(projected);
-    expect(phase).toMatchObject({ tab: 'shipIntroActions', wheelTab: 'shipIntroWheels' });
+    expect(phase).toMatchObject({ tab: 'shipIntroActions', wheel: { key: 'wheel1' } });
     expect(phase.wheelRerolls).toMatchObject({ poolRemaining: 10, targetNoun: 'offer', rows: [] });
     // The Timeline keeps only its Next phase marker.
     const nextPhase = phase.timeline.find(

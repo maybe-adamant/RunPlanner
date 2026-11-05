@@ -600,6 +600,11 @@ select {
   gap: 8px;
 }
 
+.contextual-picker-item-trail-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
 .contextual-picker-item-state {
   color: #aaa3b2;
   font-size: 0.68rem;
@@ -740,36 +745,6 @@ select {
   font-size: 0.78rem;
   font-weight: 650;
   white-space: nowrap;
-}
-
-/* A Ship phase names itself once; its Timeline and Wheels tabs follow. */
-.room-workbench-tab-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding-inline-start: 4px;
-  color: #77737f;
-  font-size: 0.74rem;
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-.room-workbench-tab-divider {
-  width: 1px;
-  height: 1.1rem;
-  margin-inline-end: 4px;
-  background: #3d3e48;
-}
-
-.room-workbench-tab-dot {
-  align-self: center;
-  color: #5d5a66;
-  font-size: 0.78rem;
-}
-
-.room-workbench-tabs:has(> .room-workbench-tab-group) {
-  align-items: center;
-  gap: 0;
 }
 
 .room-workbench-tab:hover,
@@ -1194,7 +1169,7 @@ select {
 }
 
 /*
- * Room Doors: the pool line, then one row per exit in a shared grid of
+ * A door editor: the pool line, then one row per exit in a shared grid of
  * select | door number or exit art | room | reward | map | secondary. Every
  * column is as wide as its widest value, and pickers size to their choice.
  */

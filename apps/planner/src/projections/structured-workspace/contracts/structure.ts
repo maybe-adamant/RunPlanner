@@ -245,6 +245,8 @@ export interface WorkspaceRoomRerolls {
   readonly targetNoun: 'door' | 'offer';
   /** The run's pool at the append point; absent while unreached. */
   readonly poolRemaining?: number;
+  /** What one more press spends from the pool; absent while unreached. */
+  readonly pressCost?: number;
   readonly rows: readonly WorkspaceRerollRow[];
   /**
    * Why a press cannot be appended: unreached, no held card, no pool left, or

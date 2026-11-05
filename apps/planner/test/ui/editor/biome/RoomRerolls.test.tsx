@@ -96,8 +96,17 @@ describe('RoomRerolls', () => {
     await openDoors(view);
     // The reward is asked for once a door is chosen.
     expect(screen.queryByRole('button', { name: 'New reroll reward' })).toBeNull();
+    // Each option names its door and the rerolls left before the press, and what it spends.
+    await view.user.click(doorsObject());
+    const option = within(await screen.findByRole('listbox')).getByRole('option', {
+      name: /^Reroll Door 2/,
+    });
+    expect(option.textContent).toContain('· 3 (\u22121)');
+    expect(option.querySelector('.contextual-picker-item-trail-icon')).not.toBeNull();
+    await view.user.keyboard('{Escape}');
+    expect(doorsObject().querySelector('img')).toBeNull();
 
-    await appendPress(view, /^Door 2$/);
+    await appendPress(view, /^Reroll Door 2/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(1));
     const [row] = pressRows();
     expect(within(row!).getByText('Reroll')).toBeTruthy();
@@ -105,9 +114,9 @@ describe('RoomRerolls', () => {
     expect(within(row!).getByRole('button', { name: 'Door 2 reroll reward' })).toBeTruthy();
     // The doors keep their first draws; the press row's chips show them as it leaves them.
     expect(screen.queryAllByRole('img', { name: /^Rerolled into / })).toHaveLength(0);
-    expect(within(row!).getByRole('list', { name: 'Doors' })).toBeTruthy();
+    expect(within(row!).getByRole('list', { name: 'Door summary' })).toBeTruthy();
 
-    await appendPress(view, /^Door 1$/);
+    await appendPress(view, /^Reroll Door 1/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(2));
     const [first, second] = presses(view.application);
     await view.user.click(
@@ -124,7 +133,7 @@ describe('RoomRerolls', () => {
       'F',
     );
     await openDoors(view);
-    for (const door of [/^Door 2$/, /^Door 1$/, /^Door 2$/]) {
+    for (const door of [/^Reroll Door 2/, /^Reroll Door 1/, /^Reroll Door 2/]) {
       const count = presses(view.application).length;
       await appendPress(view, door);
       await waitFor(() => expect(presses(view.application)).toHaveLength(count + 1));
@@ -146,7 +155,7 @@ describe('RoomRerolls', () => {
     await openDoors(view);
 
     // Escape on the reward picker drops the pending press.
-    await choose(view, doorsObject(), /^Door 2$/);
+    await choose(view, doorsObject(), /^Reroll Door 2/);
     await screen.findByRole('listbox');
     await view.user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
@@ -154,7 +163,7 @@ describe('RoomRerolls', () => {
     await waitFor(() => expect(document.activeElement).toBe(doorsObject()));
 
     // Choosing the reward appends the press.
-    await appendPress(view, /^Door 2$/);
+    await appendPress(view, /^Reroll Door 2/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(1));
     await waitFor(() => expect(document.activeElement).toBe(doorsObject()));
   });
@@ -166,7 +175,7 @@ describe('RoomRerolls', () => {
       'F',
     );
     const details = await openDoors(view);
-    await appendPress(view, /^Door 2$/);
+    await appendPress(view, /^Reroll Door 2/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(1));
     const [press] = presses(view.application);
     if (press?.kind !== 'reroll') throw new Error('Door 2 press is missing');

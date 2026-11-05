@@ -691,7 +691,7 @@ export function assembleWorkspaceOccurrence(
       ...presented,
       phases: Object.freeze(
         presented.phases.map((phase) => {
-          if (phase.wheel === undefined || phase.wheelTab === undefined) return phase;
+          if (phase.wheel === undefined) return phase;
           const wheel = assembleWheelRerolls({
             catalog: input.catalog,
             markerDestinations: input.markerDestinations,
@@ -1008,7 +1008,7 @@ export function assembleWorkspaceOccurrence(
       );
   }
   if (roomLocal.kind === 'fields') {
-    // Cage rewards are authored on the source door, which routes them to Room Doors.
+    // Cage rewards are authored on the source door, on its room's Doors open row.
     input.markerDestinations.setRoomTab(
       [
         ...roomLocal.optionalRewards.map((reward) => reward.control.marker),
@@ -1233,13 +1233,14 @@ export function assembleWorkspaceOccurrence(
         row.reference.kind === 'reroll' && !rerollMovedOnTimeline(input, row.address)
           ? row.reference.target
           : undefined;
-      const wheelTab =
+      // A wheel press sits on the Timeline of the phase its wheel follows.
+      const wheelPhaseTab =
         rerollTarget?.kind === 'wheelOffer' && workbench.kind === 'ship'
           ? workbench.phases.find((phase) => phase.wheel?.key === rerollTarget.wheelKey)?.tab
           : undefined;
       const tab =
-        wheelTab !== undefined
-          ? wheelTab
+        wheelPhaseTab !== undefined
+          ? wheelPhaseTab
           : roomLocal.kind === 'ship'
             ? (shipActionTabs.get(row.key) ??
               (workbench.kind === 'ship' &&

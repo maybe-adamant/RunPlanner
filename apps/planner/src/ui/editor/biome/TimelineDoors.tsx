@@ -30,6 +30,10 @@ export interface TimelineDoorsContent {
 }
 
 export interface TimelineDoors extends TimelineDoorsContent {
+  /** What the editor holds: a room's doors, or a Ship wheel's offers. */
+  readonly noun: 'door' | 'offer';
+  /** The editor line's id, which the disclosure controls. */
+  readonly detailId: string;
   readonly expanded: boolean;
   /** Absent while a finding inside keeps the doors open. */
   readonly onExpandedChange?: (expanded: boolean) => void;
@@ -43,8 +47,9 @@ export function DoorsOpenControls({ doors }: { readonly doors: TimelineDoors }) 
       {doors.summary}
       {doors.detail === undefined || toggle === undefined ? null : (
         <button
+          aria-controls={doors.detailId}
           aria-expanded={doors.expanded}
-          aria-label={doors.expanded ? 'Hide doors' : 'Show doors'}
+          aria-label={doors.noun === 'door' ? 'Door details' : 'Offer details'}
           className="text-action timeline-doors-toggle"
           onClick={() => toggle(!doors.expanded)}
           type="button"
@@ -57,8 +62,18 @@ export function DoorsOpenControls({ doors }: { readonly doors: TimelineDoors }) 
 }
 
 /** The expanded doors, as one full-width Timeline line under the Doors open row. */
-export function DoorsOpenDetailRow({ children }: { readonly children: ReactNode }) {
-  return <li className="timeline-doors-detail-row">{children}</li>;
+export function DoorsOpenDetailRow({
+  children,
+  id,
+}: {
+  readonly children: ReactNode;
+  readonly id: string;
+}) {
+  return (
+    <li className="timeline-doors-detail-row" id={id}>
+      {children}
+    </li>
+  );
 }
 
 /** A Doors open row where the room's timeline has none of its own yet. */
@@ -87,7 +102,7 @@ export function DoorsOpenBanner({
         }
       />
       {doors.expanded && doors.detail !== undefined ? (
-        <DoorsOpenDetailRow>{doors.detail}</DoorsOpenDetailRow>
+        <DoorsOpenDetailRow id={doors.detailId}>{doors.detail}</DoorsOpenDetailRow>
       ) : null}
     </>
   );
@@ -115,8 +130,9 @@ export function LeaveRow({
       ? {}
       : {
           ...findingAnchor(anchorOwner, {
+            // Navigation lands on the exit picker, never on End plan here; else on the row.
             focusTarget: (row) =>
-              row.querySelector<HTMLElement>('.timeline-leave-controls button:not(:disabled)'),
+              row.querySelector<HTMLElement>('.timeline-leave-door button:not(:disabled)') ?? row,
           }),
           tabIndex: -1,
         };

@@ -265,6 +265,27 @@ export function DoorsRerollEntry({
       : undefined;
   const pendingLabel =
     pending === undefined ? undefined : interaction.targets(pending).selected?.label;
+  // Each option is one press: the die marks it, then the rerolls left before it and its cost.
+  const spend =
+    rerolls.poolRemaining === undefined || rerolls.pressCost === undefined
+      ? undefined
+      : `· ${rerolls.poolRemaining} (\u2212${rerolls.pressCost})`;
+  const targets = interaction.targets(undefined);
+  const presses: ContextualPickerModel<string> = Object.freeze({
+    ...targets,
+    sections: targets.sections.map((section) =>
+      Object.freeze({
+        ...section,
+        items: section.items.map((item) =>
+          Object.freeze({
+            ...item,
+            label: `Reroll ${item.label}`,
+            ...(spend === undefined ? {} : { status: spend }),
+          }),
+        ),
+      }),
+    ),
+  });
   return (
     <TimelineRow
       className="room-action-feature-roll"
@@ -276,17 +297,16 @@ export function DoorsRerollEntry({
             ariaLabel={name}
             {...(lockedHint === undefined ? {} : { disabledHint: lockedHint })}
             id={`${idPrefix}-target`}
-            itemIcon={() => rerollDieArtwork}
+            itemTrailIcon={() => rerollDieArtwork}
             label=""
-            model={lockedHint === undefined ? interaction.targets(undefined) : emptyTargets}
+            model={lockedHint === undefined ? presses : emptyTargets}
             onSelect={setPendingTarget}
             placeholder={name}
             searchable={false}
-            triggerIcon={rerollDieArtwork}
           />
         ) : (
           // The target picker gives way while the reward is picked, so closing it does not dismiss that.
-          <FixedValueChip icon={rerollDieArtwork} label={`Reroll ${pendingLabel ?? ''}`} />
+          <FixedValueChip label={`Reroll ${pendingLabel ?? ''}`} />
         )
       }
       editors={

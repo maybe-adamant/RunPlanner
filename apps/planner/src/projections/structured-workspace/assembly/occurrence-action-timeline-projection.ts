@@ -254,7 +254,7 @@ function projectRoomLifecycleTimeline(
       }
       case 'encounterEnd':
         return encounterEndSupplement(boundary.phaseKey);
-      // A wheel is edited on its own tab; its Next phase boundary stays a read-only marker.
+      // A wheel opens and is taken on its phase's Timeline, beside these boundaries.
       case 'bossDefeated':
       case 'nextPhase':
       case 'cleanup':

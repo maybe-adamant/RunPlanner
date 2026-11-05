@@ -114,7 +114,12 @@ function roomTimelineDoors({
     anchorOwner?: SemanticAddress,
   ) =>
     relation === 'end' ? (
-      <LeaveRow actions={endAction} key="leave" label="Plan ends here" />
+      <LeaveRow
+        actions={endAction}
+        {...(anchorOwner === undefined ? {} : { anchorOwner })}
+        key="leave"
+        label="Plan ends here"
+      />
     ) : (
       <LeaveRow
         actions={endAction}
@@ -126,6 +131,27 @@ function roomTimelineDoors({
         {value}
       </LeaveRow>
     );
+
+  // A boss door's pool is authored or reported with the room's doors.
+  const store = node.room.bossDoorRewardStore;
+  const storeDetail =
+    store === undefined
+      ? {}
+      : {
+          ...(store.kind === 'editor' ? { findingOwners: [store.address] } : {}),
+          detail: (
+            <section aria-label="Door details" className="door-workbench timeline-doors-detail">
+              <div className="door-batch">
+                <BossDoorRewardPoolRow
+                  idPrefix={idPrefix}
+                  interactions={interactions}
+                  markFor={markFor}
+                  store={store}
+                />
+              </div>
+            </section>
+          ),
+        };
 
   if (batch !== undefined) {
     return {
@@ -163,9 +189,17 @@ function roomTimelineDoors({
   }
   switch (outgoing?.kind) {
     case undefined:
+      return undefined;
     case 'blockedOrUnentered':
     case 'terminal':
-      return undefined;
+      // No way on is planned from here; a boss door's pool and the plan's end still are.
+      return store === undefined && relation === undefined
+        ? undefined
+        : {
+            ...storeDetail,
+            ...(relation === 'end' ? { leave: leaveRow('Leave room', null) } : {}),
+            notes,
+          };
     case 'authoredDecision':
       throw new BiomeWorkspaceContractError(
         `${outgoing.decisionNodeKey} authored outgoing decision was not joined to its node.`,
@@ -197,7 +231,7 @@ function roomTimelineDoors({
               ),
               findingOwners: [phantom.address],
               detail: (
-                <section aria-label="Doors" className="door-workbench timeline-doors-detail">
+                <section aria-label="Door details" className="door-workbench timeline-doors-detail">
                   <div className="door-rows">
                     <DoorRowsHeader />
                     <PhantomExitDoor
@@ -217,7 +251,6 @@ function roomTimelineDoors({
     }
     case 'fixedRoom': {
       const destination = outgoing.destination;
-      const store = node.room.bossDoorRewardStore;
       const value =
         destination.kind === 'complete' ? (
           <span>{destination.message}</span>
@@ -248,23 +281,7 @@ function roomTimelineDoors({
               ),
             }
           : {}),
-        ...(store === undefined
-          ? {}
-          : {
-              ...(store.kind === 'editor' ? { findingOwners: [store.address] } : {}),
-              detail: (
-                <section aria-label="Doors" className="door-workbench timeline-doors-detail">
-                  <div className="door-batch">
-                    <BossDoorRewardPoolRow
-                      idPrefix={idPrefix}
-                      interactions={interactions}
-                      markFor={markFor}
-                      store={store}
-                    />
-                  </div>
-                </section>
-              ),
-            }),
+        ...storeDetail,
         leave: leaveRow('Leave room', value),
         notes,
       };
@@ -346,9 +363,7 @@ function OccurrenceInspector({
       {...(doors === undefined ? {} : { timelineDoors: doors })}
       // A room with no last row keeps the action that moves the plan's end to it.
       {...(planEnd?.relation === 'pastEnd' ||
-      (planEnd !== undefined &&
-        planEnd.relation === undefined &&
-        outgoing?.kind === 'topologyOwned')
+      (planEnd !== undefined && planEnd.relation === undefined && doors?.leave === undefined)
         ? {
             pastEndAction: (
               <div className="workbench-action-row">

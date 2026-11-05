@@ -499,7 +499,7 @@ export function presentWorkspaceBiome(
       ? frontier
       : undefined;
   // A decision that opens its selected room repairs its own doors on its source
-  // room's Doors tab, so the stop opening that source room owns their marks.
+  // room's Timeline, so the stop opening that source room owns their marks.
   const railKeyByRoom = new Map<OccurrenceId, string>();
   for (const node of railNodes) {
     const room = railRoomOccurrenceId(node);

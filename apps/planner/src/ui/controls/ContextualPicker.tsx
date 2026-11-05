@@ -65,6 +65,8 @@ interface ContextualPickerProps<T> {
   }[];
   /** An image shown before an option's text. */
   readonly itemIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
+  /** An image shown at the start of an option's trailing figures. */
+  readonly itemTrailIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
   /** Marks a retained value the current context cannot produce. */
   readonly invalid?: boolean;
   /** Marks a local customization issue this picker repairs. */
@@ -81,9 +83,12 @@ function PickerSection<T>({
   countHinted = false,
   groupRef,
   itemIcon,
+  itemTrailIcon,
   onSelect,
   section,
 }: {
+  readonly itemTrailIcon?:
+    ((item: ContextualPickerItem<T>) => ArtworkSource | undefined) | undefined;
   /** Whether this section's heading explains the options' bag counts. */
   readonly countHinted?: boolean;
   readonly groupRef?: Ref<HTMLDivElement>;
@@ -137,8 +142,16 @@ function PickerSection<T>({
                 </span>
               ))}
             </span>
-            {(item.count !== undefined || item.status !== undefined) && (
+            {(item.count !== undefined ||
+              item.status !== undefined ||
+              itemTrailIcon?.(item) !== undefined) && (
               <span className="contextual-picker-item-trail">
+                {itemTrailIcon?.(item) === undefined ? null : (
+                  <ArtworkIcon
+                    className="contextual-picker-item-trail-icon"
+                    source={itemTrailIcon(item)}
+                  />
+                )}
                 {item.count !== undefined && (
                   <span aria-hidden="true" className="contextual-picker-item-count">
                     {item.count}
@@ -160,6 +173,7 @@ function PickerContent<T>({
   cancelLabel,
   choicesLabel,
   itemIcon,
+  itemTrailIcon,
   loading,
   model,
   onActiveChange,
@@ -171,6 +185,8 @@ function PickerContent<T>({
   readonly cancelLabel?: string;
   readonly choicesLabel: string;
   readonly itemIcon?: ((item: ContextualPickerItem<T>) => ArtworkSource | undefined) | undefined;
+  readonly itemTrailIcon?:
+    ((item: ContextualPickerItem<T>) => ArtworkSource | undefined) | undefined;
   readonly loading: boolean;
   readonly model: ContextualPickerModel<T>;
   /** The item under the pointer or keyboard highlight. */
@@ -271,6 +287,7 @@ function PickerContent<T>({
               <PickerSection
                 countHinted={section.key === countHintedKey}
                 itemIcon={itemIcon}
+                itemTrailIcon={itemTrailIcon}
                 key={section.key}
                 onSelect={select}
                 section={section}
@@ -281,6 +298,7 @@ function PickerContent<T>({
                 countHinted={collapsible.key === countHintedKey}
                 groupRef={collapsibleGroup}
                 itemIcon={itemIcon}
+                itemTrailIcon={itemTrailIcon}
                 onSelect={select}
                 section={collapsible}
               />
@@ -337,6 +355,7 @@ export function ContextualPicker<T>({
   triggerIcon,
   triggerParts,
   itemIcon,
+  itemTrailIcon,
   invalid = false,
   hasIssues,
   findingMark,
@@ -467,6 +486,7 @@ export function ContextualPicker<T>({
               {...(cancelLabel === undefined ? {} : { cancelLabel })}
               choicesLabel={choicesLabel}
               itemIcon={itemIcon}
+              itemTrailIcon={itemTrailIcon}
               key={choiceLabel ?? 'default'}
               loading={loading}
               model={model}

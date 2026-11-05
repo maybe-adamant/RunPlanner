@@ -773,10 +773,17 @@ export function BatchDoorsRepair({
 }
 
 /** The doors' compact state on the Doors open row; each chip names its door on hover. */
-export function DoorChips({ chips }: { readonly chips: readonly DoorChip[] }) {
+export function DoorChips({
+  chips,
+  label = 'Door summary',
+}: {
+  readonly chips: readonly DoorChip[];
+  /** The list's name: a room's doors, or a Ship wheel's offers. */
+  readonly label?: string;
+}) {
   if (chips.length === 0) return null;
   return (
-    <span aria-label="Doors" className="timeline-door-chips" role="list">
+    <span aria-label={label} className="timeline-door-chips" role="list">
       {chips.map((chip) => (
         <span
           {...hintProps(chip.label, undefined, chip.label)}
@@ -787,7 +794,6 @@ export function DoorChips({ chips }: { readonly chips: readonly DoorChip[] }) {
           data-unavailable={chip.unavailable || undefined}
           key={chip.key}
           role="listitem"
-          tabIndex={0}
         >
           {chip.roomIcon === undefined ? (
             chip.rewards.length > 0 ? null : (
@@ -953,7 +959,7 @@ export function BatchDoorsDetail({
   const findingAnchor = useFindingAnchor();
   return (
     <section
-      aria-label="Doors"
+      aria-label="Door details"
       className="biome-batch-workbench door-workbench timeline-doors-detail"
       data-batch-kind={node.kind}
       data-topology-state={node.topologyState}

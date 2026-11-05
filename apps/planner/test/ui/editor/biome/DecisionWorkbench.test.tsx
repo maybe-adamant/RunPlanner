@@ -391,6 +391,25 @@ describe('DecisionWorkbench', () => {
     expect(within(gate).queryByRole('button', { name: 'Reward' })).toBeNull();
     // The gate is taken from the Leave row's exit picker, beside the doors.
     expect(await exitChoices(view.user)).toContain('Chaos gate');
+    await pickExit(view.user, 'Chaos gate');
+    const decision = view.application.store
+      .getState()
+      .projectWorkspace.history!.present.route.biomes.find(
+        (plan) => plan.biomeKey === located.plan.biomeKey,
+      )
+      ?.topology?.decisions.find(
+        (candidate) =>
+          candidate.kind === 'exit' &&
+          candidate.source.kind === 'occurrence' &&
+          candidate.source.occurrenceId === source.occurrenceId,
+      );
+    expect(decision?.kind === 'exit' ? decision.selection : undefined).toEqual({
+      kind: 'additional',
+      additionalExitKey: 'chaos',
+    });
+    expect(within(leaveRow()).getByRole('button', { name: 'Exit door' }).textContent).toBe(
+      'Chaos gate',
+    );
   });
 
   it('removes an authored natural Chaos exit from its source Room features', async () => {
@@ -679,6 +698,12 @@ describe('DecisionWorkbench', () => {
     const room = within(contract).getByText('Champion of Elysium');
     expect(room.compareDocumentPosition(leaveRow()) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
     expect(await exitChoices(decisionView.user)).toContain('Infernal Contract');
+    await pickExit(decisionView.user, 'Infernal Contract');
+    await waitFor(() =>
+      expect(screen.getByRole('article', { name: 'Infernal Contract exit' }).dataset.picked).toBe(
+        'true',
+      ),
+    );
     cleanup();
 
     const sourceView = renderOccurrenceWorkbench(
@@ -2004,6 +2029,15 @@ describe('DecisionWorkbench', () => {
     const repair = screen.getByRole('button', { name: 'Fix Doors' });
     expect(repair.dataset.tone).toBe('danger');
     expect(doorRow('Door 2').dataset.available).toBe('false');
+    // The unavailable door stays listed as an exit that cannot be picked.
+    await ordinary.user.click(within(leaveRow()).getByRole('button', { name: 'Exit door' }));
+    await ordinary.user.click(await screen.findByRole('button', { name: /^Unavailable/ }));
+    const unavailable = within(await screen.findByRole('listbox')).getByRole('option', {
+      name: /^Door 2/,
+    });
+    expect(unavailable.getAttribute('aria-disabled')).toBe('true');
+    expect(unavailable.textContent).toContain('This saved room is no longer offered here.');
+    await ordinary.user.keyboard('{Escape}');
     await ordinary.user.click(repair);
     expect(
       workspaceBiome(ordinary.application, 'Underworld', 'F').nodes.find(
@@ -2035,7 +2069,7 @@ describe('DecisionWorkbench', () => {
     await view.user.keyboard('{Enter}');
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Fix Doors' })).toBeNull());
     await waitFor(() =>
-      expect(document.activeElement).toBe(screen.getByRole('region', { name: 'Doors' })),
+      expect(document.activeElement).toBe(screen.getByRole('region', { name: 'Door details' })),
     );
   });
 

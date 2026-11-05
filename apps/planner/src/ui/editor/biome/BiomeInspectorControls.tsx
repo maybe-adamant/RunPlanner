@@ -186,31 +186,11 @@ export function inspectorRoomActionContent(
         slots={row.featureRoll.slots}
       />
     );
-  if (row.reference.kind === 'reroll') return <RerollTimelineLink row={row} />;
+  // A press is edited on its own row, which the Timeline renders itself.
+  if (row.reference.kind === 'reroll') return null;
   return row.reference.kind !== 'interactKeepsakeRack' ||
     room.keepsakeSelection === undefined ? null : (
     <KeepsakeRackTimelineContent interactions={interactions} selection={room.keepsakeSelection} />
-  );
-}
-
-/** A wheel reroll is edited in its wheel's Rerolls list. */
-function RerollTimelineLink({
-  row,
-}: {
-  readonly row: NonNullable<WorkspaceRoomSummary['roomActions']>['rows'][number];
-}) {
-  const dispatch = useAppDispatch();
-  return (
-    <button
-      className="semantic-focus-link"
-      data-workspace-node={row.marker.focusKey}
-      onClick={() => dispatch(semanticOwnerFocused(row.address))}
-      type="button"
-    >
-      {row.reference.kind === 'reroll' && row.reference.target.kind === 'wheelOffer'
-        ? 'Open wheel'
-        : 'Doors'}
-    </button>
   );
 }
 

@@ -1,4 +1,4 @@
-import { roomTabForPhase, wheelTabAfterPhase } from './occurrence-action-run-state';
+import { roomTabForPhase } from './occurrence-action-run-state';
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceRoomWorkbenchPresentation,
@@ -176,7 +176,7 @@ function shipWorkbenchPresentation(
       ...(index !== roomLocal.phases.length - 1 || roomActions?.objectEntries === undefined
         ? {}
         : { objectEntries: roomActions.objectEntries }),
-      ...(wheel === undefined ? {} : { wheel, wheelTab: wheelTabAfterPhase(roomLocal, phase.key) }),
+      ...(wheel === undefined ? {} : { wheel }),
     });
   });
   return Object.freeze({

@@ -1755,9 +1755,7 @@ describe('BiomeWorkspace', () => {
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     await view.user.click(screen.getByRole('button', { name: 'Details →' }));
     const timeline = screen.getByRole('region', { name: 'Ephyra Hub timeline' });
-    const exit = within(timeline)
-      .getByText('Go to Preboss')
-      .closest<HTMLElement>('.hub-timeline-exit');
+    const exit = within(timeline).getByRole('group', { name: 'Go to Preboss' });
     expect(exit?.dataset.ready).toBe('true');
     expect(exit?.querySelector('button')).toBeNull();
     // It is the timeline's last row, after every visit and the fountain.

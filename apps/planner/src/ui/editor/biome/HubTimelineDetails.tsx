@@ -638,7 +638,9 @@ function HubExitRow({ node }: { readonly node: WorkspaceHubDecisionNode }) {
   return (
     <div
       {...findingAnchor(node.completedExit.marker.address)}
+      aria-label={`Go to ${node.completedExit.target.label}`}
       className="hub-timeline-row hub-timeline-exit"
+      role="group"
       data-ready={ready}
       tabIndex={-1}
     >
