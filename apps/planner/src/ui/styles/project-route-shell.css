@@ -417,7 +417,7 @@
 
 .editor-workspace[data-navigation-pinned='false']
   .panel-navigation-column:not([data-open])
-  :is(.navigation-label, .panel-navigation-separator) {
+  .navigation-label {
   display: none;
 }
 
@@ -444,6 +444,13 @@
   top: 2px;
   right: 2px;
   transform: scale(0.7);
+}
+
+/* Folded, a section's rule spans the narrow strip. */
+.editor-workspace[data-navigation-pinned='false']
+  .panel-navigation-column:not([data-open])
+  .panel-navigation-separator {
+  margin-inline: 6px;
 }
 
 /* Unpinned and opened, the full list floats over the panel beside it. */
