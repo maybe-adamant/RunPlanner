@@ -68,6 +68,7 @@ export function ProjectFindings({
   focusByOwner,
   route,
   otherFindings = 0,
+  tone,
 }: {
   readonly catalog: Catalog;
   readonly issue: AssessmentIssue | undefined;
@@ -75,6 +76,8 @@ export function ProjectFindings({
   readonly route?: WorkspaceRoute;
   /** The plan's findings beyond those of the repair shown, counted on the pill. */
   readonly otherFindings?: number;
+  /** The plan's status, colouring the pill as the status it stands in for. */
+  readonly tone?: StatusPresentation['tone'];
 }) {
   const dispatch = useAppDispatch();
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
@@ -116,6 +119,7 @@ export function ProjectFindings({
         className="assessment-issue-button finding-pill"
         data-selected={selectedKey === issue.regionKey}
         data-status="issue"
+        {...(tone === undefined ? {} : { 'data-tone': tone })}
         disabled={drafting}
         onClick={navigate}
         type="button"

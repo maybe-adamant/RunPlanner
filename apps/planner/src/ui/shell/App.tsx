@@ -1,3 +1,4 @@
+import { ProjectFindings } from '@planner/ui/feedback/EvaluationFeedback';
 import { type Catalog, type CatalogSummary } from '@run-planner/engine/catalog-schema';
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import { useMemo } from 'react';
@@ -160,6 +161,24 @@ export function App({
               onShowFindings={showFindings}
               operations={projectOperations}
               readiness={activeRouteFeedback.status}
+              {...(repairIssue === undefined || workspace === undefined
+                ? {}
+                : {
+                    repair: (
+                      <ProjectFindings
+                        catalog={catalog}
+                        focusByOwner={workspace.focusByOwner}
+                        issue={repairIssue}
+                        // The plan's findings beyond those of the repair shown.
+                        otherFindings={Math.max(
+                          0,
+                          (evaluation?.findings.length ?? 0) - repairIssue.reasons.length,
+                        )}
+                        route={workspace.route}
+                        tone={activeRouteFeedback.status.tone}
+                      />
+                    ),
+                  })}
               {...(activeWorkspaceRoute?.runModifiers.startPointBlock === undefined
                 ? {}
                 : { startPointBlock: activeWorkspaceRoute.runModifiers.startPointBlock })}

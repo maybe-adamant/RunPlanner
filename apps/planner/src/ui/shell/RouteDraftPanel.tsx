@@ -486,15 +486,12 @@ function BasketLine({
 
 /** Describes a world and basket; drafting fills the route's biomes and sets the loadout. */
 export function RouteDraftPanel({
-  headingAside,
   catalog,
   draftRun,
   interactions,
   project,
   workspaceRoute,
 }: {
-  /** Shown at the end of the panel heading, such as the plan's next repair. */
-  readonly headingAside?: ReactNode;
   readonly catalog: Catalog;
   readonly draftRun: DraftRunController;
   readonly interactions: WorkspaceInteractionCatalog;
@@ -611,9 +608,6 @@ export function RouteDraftPanel({
             Reset to defaults
           </button>
         ) : null}
-        {headingAside === undefined ? null : (
-          <div className="panel-heading-aside">{headingAside}</div>
-        )}
       </header>
       <fieldset
         aria-labelledby={`draft-tab-${tab}`}

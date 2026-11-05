@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import { useAppDispatch } from '@planner/state/store';
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
@@ -9,12 +8,9 @@ import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
 
 export function RouteTraitsPanel({
-  headingAside,
   interactions,
   rows,
 }: {
-  /** Shown at the end of the panel heading, such as the plan's next repair. */
-  readonly headingAside?: ReactNode;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly rows: readonly RouteTraitOfferProjection[];
 }) {
@@ -26,9 +22,6 @@ export function RouteTraitsPanel({
           <p className="eyebrow">Chronological loadout</p>
           <h2 id="route-traits-title">Traits</h2>
         </div>
-        {headingAside === undefined ? null : (
-          <div className="panel-heading-aside">{headingAside}</div>
-        )}
       </header>
       {rows.length === 0 ? (
         <p className="route-npc-index-empty">No reached trait offers in this route.</p>

@@ -24,7 +24,7 @@ import type {
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
 } from '@planner/projections/structured-workspace';
-import { NavigationStatusMarker, ProjectFindings } from '../feedback/EvaluationFeedback';
+import { NavigationStatusMarker } from '../feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '../feedback/semanticOwner';
 import { BiomeWorkspace } from '../editor/biome/BiomeWorkspace';
 import type { DraftRunController } from '@planner/workspace/draftRun';
@@ -183,20 +183,6 @@ export function RouteWorkspace({
     pendingNpcPhaseFocus.current = phase;
     dispatch(semanticOwnerNavigated(phase));
   };
-  // The plan's next repair, a pill on the heading of whichever panel is shown.
-  const findingPill = (
-    <ProjectFindings
-      catalog={catalog}
-      issue={routeEvaluation.issue}
-      focusByOwner={workspace.focusByOwner}
-      route={workspaceRoute}
-      // The plan's findings beyond those of the repair shown.
-      otherFindings={Math.max(
-        0,
-        projectEvaluation.findings.length - (routeEvaluation.issue?.reasons.length ?? 0),
-      )}
-    />
-  );
 
   return (
     <div className="editor-workspace" data-navigation-pinned={pinned}>
@@ -426,7 +412,6 @@ export function RouteWorkspace({
         <div className="editor-panel-content" data-editor-layout={contentLayout}>
           {displayedPanel.kind === 'route' ? (
             <RouteScopePanel
-              headingAside={findingPill}
               authoredRoute={project.route}
               catalog={catalog}
               label={navigation.label}
@@ -437,7 +422,6 @@ export function RouteWorkspace({
             />
           ) : displayedPanel.kind === 'draft' ? (
             <RouteDraftPanel
-              headingAside={findingPill}
               catalog={catalog}
               draftRun={draftRun}
               interactions={interactions}
@@ -446,33 +430,23 @@ export function RouteWorkspace({
             />
           ) : displayedPanel.kind === 'loadout' ? (
             <RouteLoadoutPanel
-              headingAside={findingPill}
               catalog={catalog}
               project={project}
               workspaceRoute={workspaceRoute}
               interactions={interactions}
             />
           ) : displayedPanel.kind === 'npcIndex' ? (
-            <RouteNpcIndex
-              headingAside={findingPill}
-              index={npcIndex}
-              onNavigate={navigateNpcIndexEntry}
-            />
+            <RouteNpcIndex index={npcIndex} onNavigate={navigateNpcIndexEntry} />
           ) : displayedPanel.kind === 'traits' ? (
-            <RouteTraitsPanel
-              headingAside={findingPill}
-              interactions={interactions}
-              rows={traitRows}
-            />
+            <RouteTraitsPanel interactions={interactions} rows={traitRows} />
           ) : displayedPanel.kind === 'resources' ? (
-            <RouteResourcesPanel headingAside={findingPill} route={workspaceRoute} />
+            <RouteResourcesPanel route={workspaceRoute} />
           ) : displayedPanel.kind === 'shrines' ? (
-            <RouteShrinesPanel headingAside={findingPill} rows={shrineRows} />
+            <RouteShrinesPanel rows={shrineRows} />
           ) : displayedPanel.kind === 'wells' ? (
-            <RouteWellsPanel headingAside={findingPill} rows={wellRows} />
+            <RouteWellsPanel rows={wellRows} />
           ) : activeBiomeProjection === undefined ? (
             <RouteScopePanel
-              headingAside={findingPill}
               authoredRoute={project.route}
               catalog={catalog}
               label={navigation.label}
@@ -489,7 +463,6 @@ export function RouteWorkspace({
                 : { railPinPreference: biomeRailPinPreference })}
               focusByOwner={workspace.focusByOwner}
               interactions={interactions}
-              repairBanner={findingPill}
               runStateLaunchers={workspace.runStateLaunchers}
             />
           )}

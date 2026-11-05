@@ -747,10 +747,16 @@ button.home-slot-name {
 
 .editor-header-actions {
   display: flex;
-  flex: none;
+  /* Shrinks only through the repair pill, which gives way before the plan name. */
+  flex: 0 1 auto;
+  min-width: 0;
   align-items: center;
   gap: 16px;
   margin-left: auto;
+}
+
+.editor-header-actions > :not(.project-findings) {
+  flex: none;
 }
 
 .editor-home-button {
@@ -916,7 +922,7 @@ button.home-slot-name {
 .editor-title {
   display: flex;
   min-width: 12rem;
-  flex: 1 1 0;
+  flex: 1 0.001 auto;
   align-items: baseline;
   gap: 12px;
   /* The clip keeps room for the name field's left margin and focus outlines. */

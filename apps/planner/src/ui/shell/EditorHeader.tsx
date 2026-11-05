@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 
 import type { StatusPresentation } from '@planner/projections/evaluationProjection';
 import type { GameStatusController } from '@planner/persistence/gameModuleHost';
@@ -29,6 +29,7 @@ export function EditorHeader({
   onShowFindings,
   operations,
   readiness,
+  repair,
   startPointBlock,
 }: {
   /** The route's victory scene behind the editor, when it has one. */
@@ -38,6 +39,8 @@ export function EditorHeader({
   readonly onShowFindings: (() => void) | undefined;
   readonly operations: ProjectOperations;
   readonly readiness: StatusPresentation;
+  /** The plan's next repair, shown in place of its status while it has one. */
+  readonly repair?: ReactNode;
   readonly startPointBlock?: GameSendProject['startPointBlock'];
 }) {
   const dispatch = useAppDispatch();
@@ -100,7 +103,7 @@ export function EditorHeader({
       </div>
       {/* Readiness, history and send wrap together, kept to the right. */}
       <div className="editor-header-actions">
-        <StatusBadge status={readiness} />
+        {repair ?? <StatusBadge status={readiness} />}
         <ProjectHistoryControls hasProject />
         <GameSendControls
           gameStatus={gameStatus}

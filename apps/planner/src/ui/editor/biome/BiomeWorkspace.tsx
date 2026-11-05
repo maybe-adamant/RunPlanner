@@ -39,7 +39,6 @@ interface BiomeWorkspaceProps {
   readonly biome: WorkspaceBiome;
   readonly focusByOwner: StructuredWorkspaceProjection['focusByOwner'];
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly repairBanner?: ReactNode;
   readonly runStateLaunchers: StructuredWorkspaceProjection['runStateLaunchers'];
   /** Whether the rail stays open beside the room, remembered on this device. */
   readonly railPinPreference?: BiomeRailPinPreference;
@@ -640,7 +639,6 @@ export function BiomeWorkspace({
   biome,
   focusByOwner,
   interactions,
-  repairBanner,
   runStateLaunchers,
   railPinPreference,
 }: BiomeWorkspaceProps) {
@@ -813,9 +811,6 @@ export function BiomeWorkspace({
           <header className="biome-inspector-heading">
             <p className="eyebrow">Details</p>
             <h2>{inspectorTitle}</h2>
-            {repairBanner === undefined ? null : (
-              <div className="room-title-aside">{repairBanner}</div>
-            )}
           </header>
         )}
         <div className="past-plan-end-content" inert={pastPlanEnd}>
@@ -831,7 +826,6 @@ export function BiomeWorkspace({
         ) : (
           <BiomeInspectorNode
             navigationRevision={semanticNavigationRevision}
-            titleAside={repairBanner}
             pastPlanEnd={pastPlanEnd}
             frontier={biome.frontier}
             interactions={interactions}

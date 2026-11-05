@@ -32,8 +32,6 @@ interface OccurrenceWorkbenchProps {
   readonly headerActions?: ReactNode;
   /** The door the room was entered through, for its reward on the title line. */
   readonly incomingDoor?: WorkspaceDoorContract;
-  /** Shown at the end of the room's title line, such as the plan's next repair. */
-  readonly titleAside?: ReactNode;
   /** Entry identity is an Overview-only biome authoring control. */
   readonly entryIdentity?: ReactNode;
   readonly interactions: WorkspaceInteractionCatalog;
@@ -64,7 +62,6 @@ interface OccurrenceWorkbenchProps {
 /** A room-local editor that consumes the structured workspace only. */
 export function OccurrenceWorkbench({
   incomingDoor,
-  titleAside,
   headerActions,
   doorsRequested = false,
   timelineDoors,
@@ -291,7 +288,6 @@ export function OccurrenceWorkbench({
           <IncomingRewardSummary incomingDoor={incomingDoor} />
           <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
         </div>
-        {titleAside === undefined ? null : <div className="room-title-aside">{titleAside}</div>}
       </header>
       <div className="room-workbench-tab-row">
         <nav

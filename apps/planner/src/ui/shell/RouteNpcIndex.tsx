@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import {
   semanticAddressKey,
   type EncounterPhaseAddress,
@@ -10,12 +9,9 @@ import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
 
 /** Read-only route history index; editing remains in the exact room workbench. */
 export function RouteNpcIndex({
-  headingAside,
   index,
   onNavigate,
 }: {
-  /** Shown at the end of the panel heading, such as the plan's next repair. */
-  readonly headingAside?: ReactNode;
   readonly index: RouteNpcIndexProjection;
   readonly onNavigate: (phase: EncounterPhaseAddress) => void;
 }) {
@@ -26,9 +22,6 @@ export function RouteNpcIndex({
           <p className="eyebrow">Route history</p>
           <h2 id="route-npc-index-title">NPC encounters</h2>
         </div>
-        {headingAside === undefined ? null : (
-          <div className="panel-heading-aside">{headingAside}</div>
-        )}
       </header>
       {index.groups.length === 0 ? (
         <p className="route-npc-index-empty">No resolved NPC encounters in this route.</p>

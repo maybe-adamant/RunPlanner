@@ -675,23 +675,13 @@ select {
   background: #1c1c24;
 }
 
-/*
- * The room's one-line card above its tabs: its icon, name, the reward it
- * offered and its map on the left, the plan's next repair on the right. The
- * pill gives way first, then the reward's text; the name and map never do.
- * Too narrow even for that, the pill drops to its own line.
- */
-.room-card:has(> .room-head-card) {
-  container: room-head / inline-size;
-}
-
+/* The room's one-line card above its tabs: icon, name, the reward it offered, and its map. */
 .room-head-card {
   display: flex;
   box-sizing: border-box;
   min-height: 42px;
   min-width: 0;
   align-items: center;
-  gap: 6px 12px;
   margin: 0 0 6px;
   padding: 5px 12px;
   border: 1px solid #34323f;
@@ -699,44 +689,24 @@ select {
   background: rgb(174 152 202 / 5%);
 }
 
+/* A long reward gives way first, then a long name; the map stays. */
 .room-head-identity {
   display: flex;
-  flex: 0 1 auto;
+  min-width: 0;
   align-items: center;
   gap: 8px;
 }
 
-.room-head-identity > :is(.room-title-name, .room-map-launcher, button) {
+.room-head-identity > .room-title-name {
+  flex-shrink: 0.01;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-head-identity > :not(.room-title-name, .room-title-reward) {
   flex: 0 0 auto;
-}
-
-.room-head-card > .room-title-aside {
-  flex: 0 1000 auto;
-  min-width: min(8rem, 100%);
-}
-
-@container room-head (max-width: 26rem) {
-  .room-head-card {
-    flex-wrap: wrap;
-  }
-
-  .room-head-card > .room-title-aside {
-    flex-basis: 100%;
-  }
-
-  /* On its own line the room keeps its map; a long name gives way. */
-  .room-head-identity {
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  .room-head-identity > .room-title-name {
-    flex-shrink: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 }
 
 .room-title-name {
@@ -772,31 +742,14 @@ select {
   text-overflow: ellipsis;
 }
 
-.panel-heading-aside {
-  display: flex;
-  flex: 0 1 auto;
-  min-width: 0;
-  align-self: center;
-  /* The pill overhangs the row a little rather than growing it, so a finding never moves the panel. */
-  margin-block: -0.2rem;
-  justify-content: flex-end;
-  margin-left: auto;
-}
-
-.room-title-aside {
-  display: flex;
-  flex: 0 1 auto;
-  min-width: 0;
-  align-self: center;
-  justify-content: flex-end;
-  margin-left: auto;
-}
-
-/* The plan's next repair as a pill sized to its text, capped and cut short when narrow. */
+/*
+ * The plan's next repair, in the header in place of its status: sized to its
+ * text, capped, and the first to give way when the header is narrow.
+ */
 .project-findings.finding-pill-group {
   display: flex;
-  flex: 0 1 auto;
-  min-width: 0;
+  flex: 0 1000 auto;
+  min-width: min(8rem, 100%);
   max-width: 30rem;
   align-items: center;
   gap: 6px;
@@ -813,6 +766,15 @@ select {
   border-width: 1px;
   border-radius: 999px;
   box-shadow: none;
+}
+
+.finding-pill[data-tone='incomplete'] {
+  border-color: rgb(214 170 90 / 55%);
+  background: rgb(120 90 40 / 28%);
+}
+
+.finding-pill[data-tone='incomplete'] .finding-pill-mark {
+  background: #d6aa5a;
 }
 
 .finding-pill-mark {

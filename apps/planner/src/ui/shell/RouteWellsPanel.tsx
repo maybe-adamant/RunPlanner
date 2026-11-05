@@ -1,17 +1,9 @@
-import type { ReactNode } from 'react';
 import { useAppDispatch } from '@planner/state/store';
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import type { RouteStygianWellIndexRow } from '@planner/projections/routeRoomFeatureIndex';
 
 /** Read-only route index; Well authoring remains on the owning Room Feature. */
-export function RouteWellsPanel({
-  headingAside,
-  rows,
-}: {
-  /** Shown at the end of the panel heading, such as the plan's next repair. */
-  readonly headingAside?: ReactNode;
-  readonly rows: readonly RouteStygianWellIndexRow[];
-}) {
+export function RouteWellsPanel({ rows }: { readonly rows: readonly RouteStygianWellIndexRow[] }) {
   const dispatch = useAppDispatch();
   return (
     <section aria-labelledby="route-wells-title" className="route-index-panel route-traits-panel">
@@ -20,9 +12,6 @@ export function RouteWellsPanel({
           <p className="eyebrow">Room features</p>
           <h2 id="route-wells-title">Stygian Wells</h2>
         </div>
-        {headingAside === undefined ? null : (
-          <div className="panel-heading-aside">{headingAside}</div>
-        )}
       </header>
       <ol className="route-traits-list">
         {rows.map(({ biomeKey, room, well }) => (
