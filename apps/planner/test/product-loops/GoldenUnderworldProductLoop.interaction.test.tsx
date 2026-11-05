@@ -101,7 +101,7 @@ describe('underworld product loop', () => {
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
-    await view.user.click(screen.getByRole('button', { name: /^OpeningEvaluated/ }));
+    await view.user.click(screen.getByRole('button', { name: /^EntranceEvaluated/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const workbench = screen
       .getByRole('region', { name: 'Room Timeline' })
@@ -135,8 +135,8 @@ describe('underworld product loop', () => {
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
-    await view.user.click(screen.getByRole('button', { name: /^OpeningEvaluated/ }));
-    expect(screen.getByRole('button', { name: /^OpeningEvaluated/ }).textContent).toContain(
+    await view.user.click(screen.getByRole('button', { name: /^EntranceEvaluated/ }));
+    expect(screen.getByRole('button', { name: /^EntranceEvaluated/ }).textContent).toContain(
       'Boon · Zeus',
     );
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
@@ -739,7 +739,7 @@ describe('underworld product loop', () => {
     expect(currentProject(application)).toBe(beforeShrink);
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     const structure = screen.getByRole('region', { name: 'Erebus route structure' });
-    expect(within(structure).getByRole('button', { name: /^Opening/ })).toBeTruthy();
+    expect(within(structure).getByRole('button', { name: /^Entrance/ })).toBeTruthy();
   });
 
   it('keeps pointer and keyboard workflows available across decisions, fixed stages, Hub, and completion landmarks', async () => {

@@ -165,15 +165,18 @@ function FocusButton({
 function RailMainReward({
   reward,
   roomIcon,
+  roomLabel,
 }: {
   readonly reward: WorkspaceRailReward;
   readonly roomIcon: WorkspaceRoomIcon | undefined;
+  readonly roomLabel: string | undefined;
 }) {
   return (
     <span className="biome-rail-selection">
       {roomIcon === undefined ? null : (
         <ArtworkIcon className="biome-rail-reward-icon" source={roomKindIcon(roomIcon)} />
       )}
+      {roomLabel === undefined ? null : <>{roomLabel} · </>}
       <span className="visually-hidden">Main reward: </span>
       <ArtworkIcon className="biome-rail-reward-icon" source={offerIcon(reward.offer)} />
       <span className="biome-rail-reward">{reward.label}</span>
@@ -214,7 +217,13 @@ function RailTargetIcons({
 }
 
 /** A room seen without a door: its icon and name. */
-function RailRoom({ icon, label }: { readonly icon: WorkspaceRoomIcon; readonly label: string }) {
+function RailRoom({
+  icon,
+  label,
+}: {
+  readonly icon: WorkspaceRoomIcon;
+  readonly label: string | undefined;
+}) {
   return (
     <span className="biome-rail-selection">
       <ArtworkIcon className="biome-rail-reward-icon" source={roomKindIcon(icon)} />
@@ -305,9 +314,13 @@ function RailNode({
           />
         )}
         {entry.mainReward !== undefined ? (
-          <RailMainReward reward={entry.mainReward} roomIcon={entry.roomIcon} />
-        ) : entry.roomIcon === undefined || node.kind !== 'occurrenceWorkbench' ? null : (
-          <RailRoom icon={entry.roomIcon} label={node.room.label} />
+          <RailMainReward
+            reward={entry.mainReward}
+            roomIcon={entry.roomIcon}
+            roomLabel={entry.roomLabel}
+          />
+        ) : entry.roomIcon === undefined ? null : (
+          <RailRoom icon={entry.roomIcon} label={entry.roomLabel} />
         )}
       </FocusButton>
     </div>
@@ -419,7 +432,14 @@ function HubRailGroup({
           </span>
         </span>
         <span className="biome-rail-summary">
+          <ArtworkIcon className="biome-rail-reward-icon" source={roomKindIcon(entry.roomIcon)} />
           {entry.visits.length} of {entry.node.requiredVisitCount} visits
+        </span>
+        <span aria-hidden="true" className="biome-rail-icons">
+          <ArtworkIcon className="biome-rail-icons-room" source={roomKindIcon(entry.roomIcon)} />
+          <span className="biome-rail-icons-count">
+            {entry.visits.length}/{entry.node.requiredVisitCount}
+          </span>
         </span>
       </FocusButton>
       {entry.visits.length === 0 ? null : (

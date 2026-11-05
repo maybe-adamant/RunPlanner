@@ -5,6 +5,7 @@ import type {
 import { bossArtwork } from '@planner/ui/artwork/bosses/bossArtwork';
 import { combatRoomArtwork } from '@planner/ui/artwork/combat-rooms/combatRoomArtwork';
 import { emptyRoomArtwork } from '@planner/ui/artwork/empty-rooms/emptyRoomArtwork';
+import { hubRoomArtwork } from '@planner/ui/artwork/hub-rooms/hubRoomArtwork';
 import { minibossIcon } from '@planner/ui/artwork/encounterArtwork';
 import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
@@ -20,6 +21,9 @@ export function roomKindIcon(room: WorkspaceRoomIcon): string | undefined {
       return combatRoomArtwork[room.biomeKey] ?? undefined;
     case 'empty':
       return emptyRoomArtwork[room.biomeKey] ?? undefined;
+    case 'hub':
+      // A Hub without its own icon is shown as any room without foes.
+      return hubRoomArtwork[room.biomeKey] ?? emptyRoomArtwork[room.biomeKey] ?? undefined;
     case 'fountain':
       return fountainIcon(room.biomeKey);
     case 'boss':

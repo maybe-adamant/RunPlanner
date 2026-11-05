@@ -81,7 +81,7 @@ describe('plan end in the structured workspace', () => {
     expect(roomNode(erebus, goldenEnd).planEnd?.relation).toBe('end');
     expect(roomNode(erebus, 'golden-f-b7-e1').planEnd?.relation).toBe('pastEnd');
     expect(railRelations(erebus)).toEqual([
-      ['Opening', '-'],
+      ['Entrance', '-'],
       ['Decision 1', '-'],
       ['Decision 2', '-'],
       ['Decision 3', '-'],

@@ -8,7 +8,14 @@ import type { WorkspaceRoomIcon } from '../contracts/structure';
 export interface WorkspaceRoomIconEncounter {
   readonly encounterDefinitionKey: string;
   readonly npcKey?: string;
+  /** The encounter spawns no foes, such as an Opening's empty variant. */
+  readonly nonCombat?: true;
 }
+
+const nonCombat = (catalog: Catalog, encounterDefinitionKey: string): { nonCombat?: true } =>
+  catalog.encounterDefinitions.byKey[encounterDefinitionKey]?.kind === 'nonCombat'
+    ? { nonCombat: true }
+    : {};
 
 /**
  * The encounter a room declares outright through its one fixed slot, such as
@@ -24,6 +31,7 @@ export function declaredRoomIconEncounter(
   return Object.freeze({
     encounterDefinitionKey: binding.encounterDefinitionKey,
     ...(npcKey === undefined ? {} : { npcKey }),
+    ...nonCombat(catalog, binding.encounterDefinitionKey),
   });
 }
 
@@ -61,16 +69,20 @@ export function workspaceRoomIcon(input: {
         kind: 'story' as const,
         ...(encounter?.npcKey === undefined ? {} : { npcKey: encounter.npcKey }),
       });
+    // A fighting room without its own icon shows its foes; one without foes, the empty room.
     case 'Combat':
+    case 'Opening':
     case 'Devotion':
-      return Object.freeze({ kind: 'combat' as const, biomeKey });
+      return Object.freeze({
+        kind: encounter?.nonCombat === true ? ('empty' as const) : ('combat' as const),
+        biomeKey,
+      });
     case 'PostBoss':
       return Object.freeze({ kind: 'keepsakeRack' as const });
-    // An Opening is shown by its reward, like the reward-only rooms.
-    case 'Opening':
+    case 'Hub':
+      return Object.freeze({ kind: 'hub' as const, biomeKey });
     case 'Intro':
     case 'PreHub':
-    case 'Hub':
     case 'Preboss':
       return Object.freeze({ kind: 'empty' as const, biomeKey });
   }
@@ -110,6 +122,7 @@ export function occurrenceRoomIcon(input: {
         : {
             encounterDefinitionKey: encounter.nativeEncounterDefinitionKey ?? encounter.key,
             ...(encounter.npcKey === undefined ? {} : { npcKey: encounter.npcKey }),
+            ...nonCombat(input.catalog, encounter.nativeEncounterDefinitionKey ?? encounter.key),
           },
     shop: input.roomLocal.kind === 'shop',
   });

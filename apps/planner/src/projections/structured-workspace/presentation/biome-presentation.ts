@@ -12,6 +12,7 @@ import {
   workspaceRailSelection,
 } from '../navigation/inspector-destinations';
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
+import { candidateRoomIcon } from './room-icon';
 import {
   workspaceDecisionOwnedMarkers,
   type WorkspaceDecisionBatchNode,
@@ -141,8 +142,8 @@ function nodeRailPresentation(
 ): { readonly label: string } {
   switch (node.kind) {
     case 'occurrenceWorkbench': {
-      const entryLabel = isEntry && node.room.kind === 'Opening' ? 'Opening' : node.room.label;
-      return { label: entryLabel };
+      // A biome's first stop is its Entrance; its line names the room.
+      return { label: isEntry ? 'Entrance' : node.room.label };
     }
     case 'ordinaryBatch':
     case 'mixedBatch':
@@ -162,6 +163,12 @@ function nodeRailPresentation(
     case 'hubDecision':
       return { label: 'Hub' };
   }
+}
+
+/** A room stage's line names its room unless the stop's title already does; an Intro by its role. */
+function railRoomLabel(room: WorkspaceRoomSummary, title: string): { readonly roomLabel?: string } {
+  if (room.label !== title) return { roomLabel: room.label };
+  return room.kind === 'Intro' ? { roomLabel: 'Intro' } : {};
 }
 
 /**
@@ -413,11 +420,18 @@ function projectHubRailEntry(
       }),
     );
   }
+  const hubDeclaration = catalog.rooms.byKey[node.gameName];
+  if (hubDeclaration === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `Hub ${node.gameName} has no room declaration`,
+    );
+  }
   return Object.freeze({
     kind: 'hubGroup' as const,
     key: node.key,
     marker: node.marker,
     node,
+    roomIcon: candidateRoomIcon(catalog, node.owner.biomeKey, hubDeclaration),
     visits: Object.freeze(visits),
   });
 }
@@ -587,7 +601,10 @@ export function presentWorkspaceBiome(
       ...(mainReward === undefined ? {} : { mainReward }),
       ...(node.kind !== 'occurrenceWorkbench' || selectedTarget !== undefined
         ? {}
-        : { roomIcon: node.room.roomIcon }),
+        : {
+            roomIcon: node.room.roomIcon,
+            ...railRoomLabel(node.room, presentation.label),
+          }),
       marker,
       node,
       ...(planEnd === undefined ? {} : { planEnd }),

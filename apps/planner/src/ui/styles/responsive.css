@@ -190,6 +190,15 @@
     height: 1.1rem;
   }
 
+  .biome-hub-rail-group > .biome-rail-node:has(.biome-rail-icons) {
+    min-width: 0;
+  }
+
+  .biome-rail-icons-count {
+    color: #c3a86f;
+    font-size: 0.7rem;
+  }
+
   .biome-inspector {
     height: auto;
     max-height: none;

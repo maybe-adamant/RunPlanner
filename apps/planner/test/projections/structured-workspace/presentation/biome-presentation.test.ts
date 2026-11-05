@@ -709,7 +709,7 @@ describe('structured workspace biome presentation', () => {
     const expected = {
       F: {
         decisions: 10,
-        entry: 'Opening',
+        entry: 'Entrance',
         preboss: true,
         project: underworld,
         route: 'Underworld',
@@ -757,6 +757,8 @@ describe('structured workspace biome presentation', () => {
             entry.node.kind === 'occurrenceWorkbench' && entry.node.key !== biome.entry?.key,
         ),
       ).toBe(false);
+      if (biomeKey === 'F') expect(entries[0]?.roomLabel).toBe('Opening 01');
+      if (biomeKey === 'G') expect(entries[0]?.roomLabel).toBe('Intro');
     }
   });
 

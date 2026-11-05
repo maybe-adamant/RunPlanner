@@ -90,7 +90,7 @@ describe('Run State product loop', () => {
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
-    await view.user.click(screen.getByRole('button', { name: /^OpeningEvaluated/ }));
+    await view.user.click(screen.getByRole('button', { name: /^EntranceEvaluated/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const workbench = actions.closest<HTMLElement>('.biome-occurrence-workbench');

@@ -317,7 +317,7 @@ describe('Biome inspector controls', () => {
 
   it('keeps the singleton N entry automatic without an identity selector', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
-    await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
+    await view.user.click(screen.getByRole('button', { name: /^Entrance/ }));
     expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
   });
 
@@ -328,7 +328,7 @@ describe('Biome inspector controls', () => {
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
     });
     const view = renderWorkspace(project, 'Surface', 'N');
-    await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
+    await view.user.click(screen.getByRole('button', { name: /^Entrance/ }));
     expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
   });
 
@@ -349,7 +349,7 @@ describe('Biome inspector controls', () => {
 
   it('binds a room-local selected resource removal to one semantic edit and undo', async () => {
     const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
-    await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
+    await view.user.click(screen.getByRole('button', { name: /^Entrance/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     expect(
       within(screen.getByRole('tabpanel', { name: 'Room Overview' })).queryByRole('heading', {
@@ -385,7 +385,7 @@ describe('Biome inspector controls', () => {
 
   it('binds an unplaced legal resource to one semantic edit and undo', async () => {
     const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
-    await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
+    await view.user.click(screen.getByRole('button', { name: /^Entrance/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const resources = screen.getByRole('region', { name: 'Resources' });
     const fishing = within(resources).getByRole('checkbox', {
@@ -413,7 +413,7 @@ describe('Biome inspector controls', () => {
 
   it('discloses and navigates an existing resource placement before moving it', async () => {
     const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
-    await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
+    await view.user.click(screen.getByRole('button', { name: /^Entrance/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const resources = screen.getByRole('region', { name: 'Resources' });
     const opening = workspaceBiome(view.application, 'Surface', 'N').nodes.find(

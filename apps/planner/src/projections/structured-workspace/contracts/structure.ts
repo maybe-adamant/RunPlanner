@@ -715,6 +715,7 @@ export interface WorkspaceHubRailEntry {
   readonly key: string;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceHubDecisionNode;
+  readonly roomIcon: WorkspaceRoomIcon;
   readonly visits: readonly WorkspaceHubVisitRailEntry[];
 }
 
@@ -737,7 +738,8 @@ export interface WorkspaceRailReward {
 /** What a room's icon depicts, on the rail and in room pickers, from its catalog declaration. */
 export type WorkspaceRoomIcon =
   | {
-      readonly kind: 'combat' | 'empty' | 'fountain' | 'boss';
+      /** `hub`: the biome's Hub room, shown by its own icon where it has one. */
+      readonly kind: 'combat' | 'empty' | 'fountain' | 'boss' | 'hub';
       readonly biomeKey: string;
     }
   /** `keepsakeRack`: a Postboss room, shown by its Keepsake Rack. */
@@ -770,6 +772,7 @@ export interface WorkspaceDecisionRailEntry {
   /** Only direct room stages and Hub visits expose primary-reward context. */
   readonly mainReward?: never;
   readonly roomIcon?: never;
+  readonly roomLabel?: never;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode;
   /** The selected room's place against the plan end. */
@@ -787,6 +790,8 @@ export interface WorkspaceStageRailEntry {
   readonly mainReward?: WorkspaceRailReward;
   /** A room stage's own icon, shown before its main reward or its name. */
   readonly roomIcon?: WorkspaceRoomIcon;
+  /** The room's name on the stage's line, absent where the title already gives it. */
+  readonly roomLabel?: string;
   readonly marker: WorkspaceMarker;
   readonly node: Exclude<WorkspaceNode, WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode>;
   /** The stage room's place against the plan end. */
