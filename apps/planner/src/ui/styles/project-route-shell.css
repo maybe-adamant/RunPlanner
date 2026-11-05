@@ -353,6 +353,7 @@
 }
 
 .editor-workspace {
+  container: editor-workspace / inline-size;
   display: grid;
   grid-template-columns: 172px minmax(0, 1fr);
   min-height: 0;

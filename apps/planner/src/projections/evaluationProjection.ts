@@ -1613,19 +1613,19 @@ export function nextRepairSelection(
   };
 }
 
-/**
- * A rail stop as a finding location: a decision by its number and chosen room,
- * a room stage by its room alone.
- */
+/** A rail stop as a finding location: its run depth and room, or its title before it has a room. */
+function depthAndRoom(depth: number | undefined, room: string): string {
+  return depth === undefined ? room : `${depth} · ${room}`;
+}
+
 function railStopLocation(
   entry: Extract<import('./structured-workspace').WorkspaceRailEntry, { readonly kind: 'node' }>,
 ): string {
-  if (entry.stepNumber !== undefined) {
-    const room = entry.selectedTarget?.roomLabel;
-    return room === undefined ? `${entry.stepNumber}` : `${entry.stepNumber} · ${room}`;
-  }
-  if (entry.node.kind === 'occurrenceWorkbench') return entry.roomLabel ?? entry.node.room.label;
-  return entry.label;
+  const room =
+    entry.selectedTarget?.roomLabel ??
+    (entry.node.kind === 'occurrenceWorkbench' ? entry.node.room.label : undefined);
+  if (room === undefined) return entry.label;
+  return entry.runDepth === undefined ? room : `${entry.runDepth} · ${room}`;
 }
 
 export function findingDestinationLabel(
@@ -1668,13 +1668,12 @@ export function findingDestinationLabel(
       if (entry.kind === 'hubGroup') {
         for (const visit of entry.visits) {
           if (visit.marker.focusKey === railKey || visit.node.key === predecessorNodeKey)
-            return `${biome.label} · ${visit.label} · ${visit.node.room.label}`;
+            return `${biome.label} · ${depthAndRoom(visit.runDepth, visit.node.room.label)}`;
           const sideVisit = visit.sideVisits.find(
             (side) => side.marker.focusKey === railKey || side.node.key === predecessorNodeKey,
           );
-          // A side room may recur under several visits, so its visit names it too.
           if (sideVisit !== undefined)
-            return `${biome.label} · ${visit.label} · ${sideVisit.node.room.label}`;
+            return `${biome.label} · ${depthAndRoom(sideVisit.runDepth, sideVisit.node.room.label)}`;
         }
       }
     }
@@ -1685,5 +1684,7 @@ export function findingDestinationLabel(
     subject?.kind === 'node'
       ? workspaceBiome?.completionOutline.find((node) => node.key === subject.nodeKey)
       : undefined;
-  return completion === undefined ? biome.label : `${biome.label} · ${completion.room.label}`;
+  return completion === undefined
+    ? biome.label
+    : `${biome.label} · ${depthAndRoom(completion.room.runDepth, completion.room.label)}`;
 }

@@ -1273,13 +1273,12 @@
 
 .room-action-list {
   --timeline-money-width: 8.2rem;
-  /* Columns fit their content; space left over stays empty at the right. */
-  --timeline-working-width: min(46rem, 100%);
+  /* The Timeline fills its column up to the readable width (see responsive.css). */
+  --timeline-working-width: min(60rem, 100%);
   /* Label and decisions stay together; a spacer keeps money and trash at one right edge. */
   --timeline-columns: 28px max-content minmax(0, max-content) 1fr var(--timeline-money-width)
     var(--timeline-control-height);
-  width: fit-content;
-  min-width: var(--timeline-working-width);
+  width: var(--timeline-working-width);
   max-width: 100%;
   position: relative;
   display: grid;
@@ -3259,7 +3258,7 @@
 .room-actions-workbench > .room-add,
 .room-actions-workbench .room-action-repairs,
 .ship-phase > .room-add {
-  width: var(--timeline-working-width, min(46rem, 100%));
+  width: var(--timeline-working-width, min(60rem, 100%));
   padding-left: var(--timeline-title-x);
 }
 
@@ -3387,14 +3386,19 @@
   container: room-panel / inline-size;
 }
 
+/* The room's readable width: the Timeline and Overview stop growing here (see responsive.css). */
+.room-overview-workbench {
+  max-width: 60rem;
+}
+
 /*
- * A panel wide enough for the timeline and a side column puts the optional
- * actions beside it, always present so the timeline keeps its place; the
- * column stays in view while a tall timeline scrolls.
+ * The medium and wide bands: the optional actions beside the Timeline, always
+ * present so the Timeline keeps its place, in view while a tall Timeline
+ * scrolls. The Timeline grows to 60rem; the side column takes what is left.
  */
-@container room-panel (min-width: 62rem) {
+@container room-panel (min-width: 63.5rem) {
   :is(.room-actions-workbench, .ship-phase):has(> .room-add) {
-    grid-template-columns: minmax(46rem, max-content) 16rem;
+    grid-template-columns: minmax(46rem, 60rem) minmax(16rem, 1fr);
     justify-content: start;
     align-items: start;
     column-gap: 1.5rem;

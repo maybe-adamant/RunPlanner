@@ -309,6 +309,11 @@
   font-size: 0.9rem;
 }
 
+/* Folded, side rooms sit in a row beside their visit, so they show no depth circle. */
+.biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-hub-rail-side-visit::after {
+  display: none;
+}
+
 /* Folded, a visit keeps its group: main room icons on top, side rooms as a row of smaller icons. */
 .biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-hub-rail-side-visits {
   display: flex;
@@ -515,19 +520,45 @@
   content: '';
 }
 
-/* A decision's circle carries its number. */
-.biome-rail-stop[data-step]::after {
+/*
+ * A reached room's circle carries the run's room depth on entering it, the
+ * engine's count across biomes; centred on the backbone and widening for
+ * longer numbers. Stops not yet reached keep a plain dot.
+ */
+.biome-rail-stop[data-step]::after,
+:is(.biome-hub-rail-visit, .biome-hub-rail-side-visit)[data-step]::after {
+  position: absolute;
   top: 13px;
-  left: 0;
+  left: 9px;
   box-sizing: border-box;
-  width: 18px;
+  min-width: 18px;
   height: 18px;
+  padding: 0 3px;
+  border: 2px solid #6d6878;
+  border-radius: 9px;
+  background: #1c1d23;
   color: #c3a86f;
   content: attr(data-step);
   font-size: 0.62rem;
   font-weight: 700;
   line-height: 14px;
   text-align: center;
+  transform: translateX(-50%);
+}
+
+/* A visit and its side rooms sit inside their group; their circles reach back to the backbone. */
+.biome-hub-rail-visit[data-step]::after {
+  top: 15px;
+  left: -13px;
+}
+
+.biome-hub-rail-side-visit[data-step]::after {
+  top: 6px;
+  left: -17px;
+  height: 16px;
+  min-width: 16px;
+  line-height: 12px;
+  font-size: 0.58rem;
 }
 
 .biome-rail-stop[data-step][data-plan-end='end']::after {
@@ -608,8 +639,7 @@
 
 /*
  * Each Hub visit is one group on the backbone: its main room on top, its side
- * rooms as slimmer lines under a divider. The visit's number sits on the
- * backbone beside the main room, in a purple square apart from decisions.
+ * rooms as slimmer lines under a divider.
  */
 .biome-hub-rail-visits {
   display: grid;
@@ -631,24 +661,6 @@
   border-color: color-mix(in srgb, var(--selection-accent) 35%, transparent);
 }
 
-.biome-hub-rail-visit::after {
-  position: absolute;
-  top: 16px;
-  left: -22px;
-  box-sizing: border-box;
-  width: 16px;
-  height: 16px;
-  border: 1px solid #8f7bb8;
-  border-radius: 4px;
-  background: #221f2d;
-  color: #c9bfe0;
-  content: attr(data-visit);
-  font-size: 0.62rem;
-  font-weight: 700;
-  line-height: 14px;
-  text-align: center;
-}
-
 .biome-hub-rail-visit .biome-rail-node {
   padding: 9px 11px;
 }
@@ -660,6 +672,10 @@
   margin: 3px 0 0;
   border-top: 1px solid #34323f;
   list-style: none;
+}
+
+.biome-hub-rail-side-visit {
+  position: relative;
 }
 
 /* A side room is a slim line in its visit: no frame until it is selected or has a finding. */

@@ -7,7 +7,7 @@ import {
 import type { EncounterPhaseAddress, ProjectDocument } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectEvaluation } from '@run-planner/engine/simulation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { type RouteFeedbackPresentation } from '@planner/projections/evaluationProjection';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
@@ -173,8 +173,28 @@ export function RouteWorkspace({
     phaseControl?.focus({ preventScroll: true });
   }, [displayedPanel, workspaceRoute.routeKey]);
 
-  const [pinned, setPinnedState] = useState(() => navigationPinPreference?.read() ?? true);
+  const [pinnedPreference, setPinnedState] = useState(
+    () => navigationPinPreference?.read() ?? true,
+  );
   const [navigationOpen, setNavigationOpen] = useState(false);
+  // Too narrow to keep the panel list beside the editor, it folds first; the stylesheet owns when.
+  const workspaceElement = useRef<HTMLDivElement>(null);
+  const [navigationAutoFolded, setNavigationAutoFolded] = useState(false);
+  useLayoutEffect(() => {
+    const element = workspaceElement.current;
+    const column = element?.querySelector('.panel-navigation-column');
+    if (element === null || element === undefined || column === null || column === undefined)
+      return;
+    const read = (): void =>
+      setNavigationAutoFolded(
+        getComputedStyle(column).getPropertyValue('--navigation-auto-fold').trim() === '1',
+      );
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const pinned = pinnedPreference && !navigationAutoFolded;
   const setPinned = (next: boolean): void => {
     setPinnedState(next);
     navigationPinPreference?.write(next);
@@ -185,7 +205,7 @@ export function RouteWorkspace({
   };
 
   return (
-    <div className="editor-workspace" data-navigation-pinned={pinned}>
+    <div className="editor-workspace" data-navigation-pinned={pinned} ref={workspaceElement}>
       <div
         className="panel-navigation-column"
         data-open={navigationOpen || undefined}
@@ -198,20 +218,29 @@ export function RouteWorkspace({
       >
         <button
           aria-expanded={pinned || navigationOpen}
-          aria-label={pinned ? 'Unpin panels' : navigationOpen ? 'Pin panels' : 'Show panels'}
+          aria-label={
+            pinned
+              ? 'Unpin panels'
+              : !navigationOpen
+                ? 'Show panels'
+                : navigationAutoFolded
+                  ? 'Hide panels'
+                  : 'Pin panels'
+          }
           className="panel-navigation-pin"
           onClick={() => {
             if (pinned) {
               setPinned(false);
               setNavigationOpen(false);
             } else if (navigationOpen) {
-              setPinned(true);
+              // Too narrow to pin beside the editor, the opened list only closes.
+              if (!navigationAutoFolded) setPinned(true);
               setNavigationOpen(false);
             } else setNavigationOpen(true);
           }}
           type="button"
         >
-          {pinned ? '⇤' : navigationOpen ? '⇥' : '☰'}
+          {pinned ? '⇤' : !navigationOpen ? '☰' : navigationAutoFolded ? '⇤' : '⇥'}
         </button>
         <nav className="panel-navigation" aria-label={`${navigation.label} panels`}>
           {/* Panels stay put while a draft runs. */}

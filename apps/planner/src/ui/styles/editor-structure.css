@@ -675,7 +675,7 @@ select {
   background: #1c1c24;
 }
 
-/* The room's one-line card above its tabs: icon, name, the reward it offered, and its map. */
+/* The room's one-line card above its tabs: icon, name and the reward it offered; its map at the end. */
 .room-head-card {
   display: flex;
   box-sizing: border-box;
@@ -689,9 +689,10 @@ select {
   background: rgb(174 152 202 / 5%);
 }
 
-/* A long reward gives way first, then a long name; the map stays. */
+/* A long reward gives way first, then a long name; the map stays at the card's end. */
 .room-head-identity {
   display: flex;
+  flex: 1 1 auto;
   min-width: 0;
   align-items: center;
   gap: 8px;
@@ -707,6 +708,10 @@ select {
 
 .room-head-identity > :not(.room-title-name, .room-title-reward) {
   flex: 0 0 auto;
+}
+
+.room-head-identity > .room-map-launcher {
+  margin-left: auto;
 }
 
 .room-title-name {

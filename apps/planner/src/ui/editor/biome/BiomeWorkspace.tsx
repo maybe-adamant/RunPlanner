@@ -418,7 +418,7 @@ function RailNode({
       className="biome-rail-stop"
       data-kind={node.kind}
       data-plan-end={entry.planEnd}
-      data-step={entry.stepNumber}
+      data-step={entry.runDepth}
       {...(undecided ? { 'data-pending': 'room' } : {})}
     >
       <FocusButton focusMarker={entry.focusMarker ?? marker} marker={marker} selected={selected}>
@@ -486,11 +486,7 @@ function HubRailVisit({
 }) {
   const selected = selectedRailKey === visit.marker.focusKey;
   return (
-    <li
-      className="biome-hub-rail-visit"
-      data-plan-end={visit.planEnd}
-      data-visit={visit.visitIndex}
-    >
+    <li className="biome-hub-rail-visit" data-plan-end={visit.planEnd} data-step={visit.runDepth}>
       <FocusButton marker={visit.marker} presentationMarker={visit.visitMarker} selected={selected}>
         <RailHeading label={visit.label} marker={visit.visitMarker} planEnd={visit.planEnd} />
         <RailSelectedTarget biomeKey={biomeKey} selectedTarget={visit.room} />
@@ -505,6 +501,7 @@ function HubRailVisit({
               <li
                 className="biome-hub-rail-side-visit"
                 data-plan-end={sideVisit.planEnd}
+                data-step={sideVisit.runDepth}
                 key={sideVisit.key}
               >
                 <FocusButton
@@ -614,7 +611,12 @@ function RailCompletionNode({
   const planEnd = node.planEnd?.relation;
   const railMarker = node.railMarker ?? node.marker;
   return (
-    <div className="biome-rail-stop" data-kind="completion" data-plan-end={planEnd}>
+    <div
+      className="biome-rail-stop"
+      data-kind="completion"
+      data-plan-end={planEnd}
+      data-step={node.room.runDepth}
+    >
       <FocusButton
         focusMarker={focusMarker}
         marker={node.marker}

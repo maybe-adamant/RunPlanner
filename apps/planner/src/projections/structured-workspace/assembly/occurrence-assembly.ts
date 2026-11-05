@@ -804,6 +804,23 @@ export function assembleWorkspaceOccurrence(
     kind: room.kind,
     label: room.label,
     localDetailMarkers,
+    ...(() => {
+      // A Ship room publishes its state at its first encounter rather than on entry.
+      const firstPhase = encounterPhases[0]?.address.phaseKey;
+      const entered =
+        input.runState(createRoomRunStateCheckpointAddress(address, { kind: 'roomEntered' })) ??
+        (firstPhase === undefined
+          ? undefined
+          : input.runState(
+              createRoomRunStateCheckpointAddress(address, {
+                kind: 'beforeEncounterStart',
+                phaseKey: firstPhase,
+              }),
+            ));
+      return entered?.availability === 'available'
+        ? { runDepth: entered.snapshot.counters.runDepthCache }
+        : {};
+    })(),
     marker: input.markerDestinations.marker(address),
     occurrenceId: occurrence.occurrenceId,
     ...(roomActions === undefined ? {} : { roomActions }),

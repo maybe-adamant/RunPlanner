@@ -636,6 +636,11 @@ export interface WorkspaceRoomSummary {
   readonly roomLocal: WorkspaceRoomLocal;
   /** The room's kind icon, as the rail and room pickers show it. */
   readonly roomIcon: WorkspaceRoomIcon;
+  /**
+   * The run's room depth on entering this room, from the engine's room-entered
+   * run state; absent while the room is not reached.
+   */
+  readonly runDepth?: number;
   readonly workbench: WorkspaceRoomWorkbenchPresentation;
   /** Closed tab placement for engine-owned lifecycle snapshots. */
   readonly runStateByTab: Readonly<Partial<Record<WorkspaceRoomTab, WorkspaceRunStateLauncher>>>;

@@ -127,7 +127,7 @@ function isDecisionBatchNode(node: WorkspaceNode): node is WorkspaceDecisionBatc
 }
 
 /** The room a stop opens: its own room, or the one room its decision selects. */
-function railRoom(node: WorkspaceNode): WorkspaceRoomSummary | undefined {
+function railRoomSummary(node: WorkspaceNode): WorkspaceRoomSummary | undefined {
   if (node.kind === 'occurrenceWorkbench') return node.room;
   if (!isDecisionBatchNode(node)) return undefined;
   if (node.selectedContinuation !== undefined) return node.selectedContinuation.door.room;
@@ -136,7 +136,7 @@ function railRoom(node: WorkspaceNode): WorkspaceRoomSummary | undefined {
 }
 
 function railRoomOccurrenceId(node: WorkspaceNode): OccurrenceId | undefined {
-  return railRoom(node)?.occurrenceId;
+  return railRoomSummary(node)?.occurrenceId;
 }
 
 /**
@@ -189,6 +189,11 @@ function nodeRailPresentation(
     case 'hubDecision':
       return { label: 'Hub' };
   }
+}
+
+/** A stop's run depth, the engine's room count on entering its room, where it is reached. */
+function railRunDepth(room: WorkspaceRoomSummary | undefined): { readonly runDepth?: number } {
+  return room?.runDepth === undefined ? {} : { runDepth: room.runDepth };
 }
 
 function withRoomNumber(room: WorkspaceRoomSummary): { readonly roomNumber?: string } {
@@ -426,6 +431,7 @@ function projectHubRailEntry(
                 key: `${node.key}:visit:${visit.visitIndex}:side:${slot.key}`,
                 ...(sidePlanEnd === undefined ? {} : { planEnd: sidePlanEnd }),
                 label: `Side ${slot.enteredOrdinal ?? 1}`,
+                ...railRunDepth(sideNode.room),
                 marker: sideNode.room.marker,
                 node: sideNode,
                 room: Object.freeze({
@@ -446,6 +452,7 @@ function projectHubRailEntry(
         key: `${node.key}:visit:${visit.visitIndex}`,
         ...(visitPlanEnd === undefined ? {} : { planEnd: visitPlanEnd }),
         label: `Visit ${visit.visitIndex}`,
+        ...railRunDepth(workbench.room),
         marker: workbench.room.marker,
         node: workbench,
         room: roomRailPresentation(catalog, workbench.room, visit.door),
@@ -577,7 +584,7 @@ export function presentWorkspaceBiome(
   }
   const railMarker = (node: WorkspaceNode): WorkspaceMarker => {
     const base = railMarkerForNode(node);
-    const selectedRoom = isDecisionBatchNode(node) ? railRoom(node) : undefined;
+    const selectedRoom = isDecisionBatchNode(node) ? railRoomSummary(node) : undefined;
     const ownCount =
       node.kind === 'occurrenceWorkbench'
         ? base.findingCount + roomLocalFindingCount(node.room)
@@ -613,7 +620,7 @@ export function presentWorkspaceBiome(
         node,
         ...(planEnd === undefined ? {} : { planEnd }),
         ...(selectedTarget === undefined ? {} : { selectedTarget }),
-        ...(preHub === undefined ? { stepNumber: decisionIndex } : {}),
+        ...railRunDepth(railRoomSummary(node)),
       });
     }
     const presentation = nodeRailPresentation(node, undefined, node.key === entry?.key);
@@ -647,6 +654,7 @@ export function presentWorkspaceBiome(
       key: node.key,
       label: presentation.label,
       ...(mainReward === undefined ? {} : { mainReward }),
+      ...railRunDepth(railRoomSummary(node)),
       ...(node.kind !== 'occurrenceWorkbench' || selectedTarget !== undefined
         ? {}
         : {
@@ -789,7 +797,7 @@ export function presentWorkspaceBiome(
             node: withRunStateTitle(entry.node, entry.label),
             ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
-            ...(entry.stepNumber === undefined ? {} : { stepNumber: entry.stepNumber }),
+            ...(entry.runDepth === undefined ? {} : { runDepth: entry.runDepth }),
           });
         case 'mixedBatch':
           return Object.freeze({
@@ -801,7 +809,7 @@ export function presentWorkspaceBiome(
             node: withRunStateTitle(entry.node, entry.label),
             ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
-            ...(entry.stepNumber === undefined ? {} : { stepNumber: entry.stepNumber }),
+            ...(entry.runDepth === undefined ? {} : { runDepth: entry.runDepth }),
           });
         case 'takeoverBatch':
           return Object.freeze({
@@ -813,6 +821,7 @@ export function presentWorkspaceBiome(
             node: withRunStateTitle(entry.node, entry.label),
             ...(entry.mainReward === undefined ? {} : { mainReward: entry.mainReward }),
             ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
+            ...(entry.runDepth === undefined ? {} : { runDepth: entry.runDepth }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
           });
         case 'occurrenceWorkbench':

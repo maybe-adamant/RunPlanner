@@ -11,13 +11,26 @@
 }
 
 /*
- * Beside the room the rail would squeeze its Timeline: the door editor reaches
- * its full width (one line per door) only with about 760px of room column,
- * which the 224px rail and gutters leave from about 1044px of editor panel.
- * Narrower, the workspace folds its rail. Measuring the panel, not the window,
- * lets an unpinned navigation hand its width to the room.
+ * One width policy for the editor, from what the room's content needs:
+ *  - The Timeline lays out its rows in full from 46rem; the optional actions
+ *    column beside it takes 16rem with a 1.5rem gap. A room panel of 63.5rem
+ *    holds both (the medium band); narrower, the actions go below the
+ *    Timeline (the narrow band). Wider, the Timeline grows to a readable 60rem
+ *    and the rest goes to the side column (the wide band).
+ *  - The room panel sits 34px inside the room column (its card), which sits
+ *    beside the 224px rail and its 20px of gutters: 278px in all.
+ *  - As the editor narrows, the panel list folds first, then the rail, and
+ *    only then does the room drop to its narrow band. A user's pin holds
+ *    while the room keeps its medium band; folding is never forced sooner.
+ * Measuring containers, not the window, lets every fold hand its width to the room.
  */
-@container editor-panel (max-width: 1044px) {
+@container editor-workspace (max-width: calc(172px + 44px + 278px + 63.5rem)) {
+  .panel-navigation-column {
+    --navigation-auto-fold: 1;
+  }
+}
+
+@container editor-panel (max-width: calc(278px + 63.5rem)) {
   .biome-workspace {
     --biome-rail-auto-fold: 1;
   }

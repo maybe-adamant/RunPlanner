@@ -687,6 +687,8 @@ export interface WorkspaceOccurrenceStage {
 
 export interface WorkspaceHubVisitRailEntry {
   readonly key: string;
+  /** The run's room depth on entering the visited room; absent while it is not reached. */
+  readonly runDepth?: number;
   readonly planEnd?: WorkspacePlanEndRelation;
   readonly label: string;
   readonly marker: WorkspaceMarker;
@@ -701,6 +703,8 @@ export interface WorkspaceHubVisitRailEntry {
 
 export interface WorkspaceHubSideVisitRailEntry {
   readonly key: string;
+  /** The run's room depth on entering the side room; absent while it is not reached. */
+  readonly runDepth?: number;
   readonly planEnd?: WorkspacePlanEndRelation;
   readonly label: string;
   readonly marker: WorkspaceMarker;
@@ -782,8 +786,8 @@ export interface WorkspaceDecisionRailEntry {
   /** The selected room's place against the plan end. */
   readonly planEnd?: WorkspacePlanEndRelation;
   readonly selectedTarget?: WorkspaceRailSelectedTarget;
-  /** The decision's number in the biome, counted from its first decision; absent where named instead. */
-  readonly stepNumber?: number;
+  /** The run's room depth on entering the room the stop shows; absent while it is not reached. */
+  readonly runDepth?: number;
 }
 
 export interface WorkspaceStageRailEntry {
@@ -800,7 +804,8 @@ export interface WorkspaceStageRailEntry {
   readonly roomLabel?: string;
   /** The room's number where many rooms share its icon. */
   readonly roomNumber?: string;
-  readonly stepNumber?: never;
+  /** The run's room depth on entering this stage's room; absent while it is not reached. */
+  readonly runDepth?: number;
   readonly marker: WorkspaceMarker;
   readonly node: Exclude<WorkspaceNode, WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode>;
   /** The stage room's place against the plan end. */
