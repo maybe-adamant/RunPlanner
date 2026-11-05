@@ -43,7 +43,7 @@ describe('Fresh File product loop', () => {
 
     await user.click(screen.getByRole('button', { name: 'Erebus' }));
     expect(project().route.biomes[0]?.topology?.occurrences[0]?.gameName).toBe('F_Opening01');
-    await user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     await user.click(screen.getByLabelText('Reward Pool'));
     await user.click(within(screen.getByRole('listbox')).getByText('Minor Reward'));
     const decisions = () => project().route.biomes[0]!.topology!.decisions;
@@ -73,7 +73,8 @@ describe('Fresh File product loop', () => {
     const gods = within(screen.getByRole('listbox')).getAllByRole('option');
     expect(gods.map((option) => option.textContent)).toEqual(['✓Apollo']);
     await user.click(gods[0]!);
-    await user.click(screen.getByRole('button', { name: 'Open next room' }));
+    // The rail opens the room the doors lead to.
+    await user.click(screen.getByRole('button', { name: /^Decision 1/ }));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     expect(screen.getByRole('region', { name: 'Room Timeline' }).textContent).toContain(
       'Intro combat',

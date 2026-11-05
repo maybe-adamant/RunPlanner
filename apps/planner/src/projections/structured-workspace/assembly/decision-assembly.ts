@@ -170,9 +170,8 @@ function redirectDecisionFocus(
   node: WorkspaceDecisionBatchNode,
 ): void {
   if (node.source.kind === 'hubDecision') return;
-  const markers = workspaceDecisionOwnedMarkers(node);
-  markerDestinations.redirect(markers, node.key);
-  markerDestinations.setRoomTab(markers, 'doors');
+  // The source room's Timeline hosts the doors; its assembly names the row.
+  markerDestinations.redirect(workspaceDecisionOwnedMarkers(node), node.key);
 }
 
 /**

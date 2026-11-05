@@ -24,9 +24,10 @@ import { useAppSelector } from '@planner/state/store';
 import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import {
   AuthoringFrontier,
-  BatchWorkbench,
+  BatchDoorsDetail,
   TopologyRemovalAction,
 } from '@planner/ui/editor/biome/DecisionWorkbench';
+import { BiomeInspectorNode } from '@planner/ui/editor/biome/BiomeInspectorNode';
 import { HubDecisionWorkbench } from '@planner/ui/editor/biome/HubDecisionWorkbench';
 import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbench';
 import { TraitOfferDialog } from '@planner/ui/editor/rewards/TraitOfferEditor';
@@ -177,6 +178,49 @@ export type DecisionWorkbenchSubject =
   | { readonly kind: 'frontier'; readonly frontier: WorkspaceAuthoringFrontier }
   | { readonly kind: 'node'; readonly node: DecisionWorkbenchNode };
 
+/** A decision's doors as its source room shows them: on that room's Timeline. */
+function DecisionDoors({
+  biome,
+  subject,
+  workspace,
+}: {
+  readonly biome: WorkspaceBiome;
+  readonly subject: DecisionWorkbenchSubject;
+  readonly workspace: StructuredWorkspaceProjection;
+}) {
+  const stage = biome.occurrenceStages.find((candidate) =>
+    subject.kind === 'node'
+      ? candidate.outgoing.kind === 'authoredDecision' &&
+        candidate.outgoing.decisionNodeKey === subject.node.key
+      : candidate.outgoing.kind === 'frontier' &&
+        candidate.outgoing.frontier.marker.focusKey === subject.frontier.marker.focusKey,
+  );
+  const source = biome.nodes.find((node) => node.key === stage?.sourceOccurrenceNodeKey);
+  if (stage === undefined || source?.kind !== 'occurrenceWorkbench') {
+    return subject.kind === 'frontier' ? (
+      <AuthoringFrontier frontier={subject.frontier} interactions={workspace.interactions} />
+    ) : (
+      <BatchDoorsDetail
+        interactions={workspace.interactions}
+        markFor={() => undefined}
+        node={subject.node}
+      />
+    );
+  }
+  return (
+    <BiomeInspectorNode
+      frontier={biome.frontier}
+      interactions={workspace.interactions}
+      label={biome.label}
+      node={subject.kind === 'node' ? subject.node : source}
+      outgoing={stage.outgoing}
+      {...(subject.kind === 'node' ? { outgoingDecision: subject.node } : {})}
+      roomTab={source.room.doorsTab}
+      sourceOccurrence={source}
+    />
+  );
+}
+
 export function renderDecisionWorkbench(
   project: ProjectDocument,
   routeKey: string,
@@ -191,18 +235,7 @@ export function renderDecisionWorkbench(
     (biome, workspace) => {
       const subject = select(biome);
       if (subject === undefined) return <p>No decision workbench</p>;
-      if (subject.kind === 'frontier') {
-        return (
-          <AuthoringFrontier frontier={subject.frontier} interactions={workspace.interactions} />
-        );
-      }
-      return (
-        <BatchWorkbench
-          interactions={workspace.interactions}
-          label={biome.label}
-          node={subject.node}
-        />
-      );
+      return <DecisionDoors biome={biome} subject={subject} workspace={workspace} />;
     },
     application,
   );
@@ -360,16 +393,7 @@ export function renderStaticDecisionWorkbench(
   const biome = staticBiome(workspace, routeKey, biomeKey);
   const subject = select(biome);
   if (subject === undefined) throw new Error('Decision workbench is missing');
-  const workbench =
-    subject.kind === 'frontier' ? (
-      <AuthoringFrontier frontier={subject.frontier} interactions={workspace.interactions} />
-    ) : (
-      <BatchWorkbench
-        interactions={workspace.interactions}
-        label={biome.label}
-        node={subject.node}
-      />
-    );
+  const workbench = <DecisionDoors biome={biome} subject={subject} workspace={workspace} />;
   return render(
     <Provider store={store}>
       <FindingTargetScope

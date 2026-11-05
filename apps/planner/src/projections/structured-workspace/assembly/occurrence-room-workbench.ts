@@ -16,6 +16,7 @@ import type {
   WorkspaceRoomLifecycleTimelineEntry,
 } from '../contracts/timeline';
 import type { WorkspaceRoomFeature } from '../contracts/features';
+import type { WorkspaceRoomTab } from '../contracts/navigation';
 
 function shipWorkbenchPresentation(
   encounterPhases: readonly WorkspaceEncounterPhase[],
@@ -222,4 +223,18 @@ export function roomWorkbenchPresentation(
         ...(roomActions === undefined ? {} : { roomActions }),
       });
   }
+}
+
+/** The Timeline tab holding the room's Doors open and exit rows: a Ship's last phase. */
+export function workspaceDoorsTimelineTab(
+  workbench: WorkspaceRoomWorkbenchPresentation,
+): WorkspaceRoomTab {
+  if (workbench.kind !== 'ship') return 'actions';
+  const last = workbench.phases.at(-1);
+  if (last === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      'A Ship room has no phase to open its doors',
+    );
+  }
+  return last.tab;
 }

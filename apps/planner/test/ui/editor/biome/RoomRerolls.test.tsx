@@ -53,8 +53,18 @@ async function openDoors(view: ReturnType<typeof renderWorkspace>) {
     view.application.store.dispatch(semanticOwnerFocused(createOccurrenceAddress(f, source))),
   );
   const details = screen.getByRole('complementary', { name: 'Details' });
-  await view.user.click(within(details).getByRole('tab', { name: 'Room Doors' }));
+  await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
   return within(details);
+}
+
+/** The room's Doors object, where a press on a door is added. */
+function doorsObject(): HTMLElement {
+  return screen.getByRole('button', { name: 'Doors' });
+}
+
+/** The room's door presses on its Timeline, in order. */
+function pressRows(): HTMLElement[] {
+  return [...document.querySelectorAll<HTMLElement>('[data-door-press]')];
 }
 
 async function choose(view: ReturnType<typeof renderWorkspace>, picker: HTMLElement, name: RegExp) {
@@ -66,8 +76,7 @@ async function choose(view: ReturnType<typeof renderWorkspace>, picker: HTMLElem
 
 /** Appends a press: a door, then the first reward the picker that opens next offers. */
 async function appendPress(view: ReturnType<typeof renderWorkspace>, door: RegExp) {
-  const rerolls = within(screen.getByRole('region', { name: 'Rerolls' }));
-  await choose(view, rerolls.getByRole('button', { name: 'New reroll door' }), door);
+  await choose(view, doorsObject(), door);
   await screen.findByRole('listbox');
   // A staged reward (a Boon) asks for its god next; each step takes the first possible row.
   while (screen.queryByRole('listbox') !== null) {
@@ -78,33 +87,37 @@ async function appendPress(view: ReturnType<typeof renderWorkspace>, door: RegEx
 }
 
 describe('RoomRerolls', () => {
-  it('appends presses below the doors, labels the door first to final and removes a press', async () => {
+  it('appends presses from the Doors object as Timeline rows and removes a press', async () => {
     const view = renderWorkspace(
       withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']),
       'Underworld',
       'F',
     );
     await openDoors(view);
-    const rerolls = () => within(screen.getByRole('region', { name: 'Rerolls' }));
-    expect(rerolls().getByRole('img', { name: '3 rerolls left' })).toBeTruthy();
     // The reward is asked for once a door is chosen.
-    expect(rerolls().queryByRole('button', { name: 'New reroll reward' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'New reroll reward' })).toBeNull();
 
     await appendPress(view, /^Door 2$/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(1));
-    expect(rerolls().getByRole('img', { name: '2 rerolls left' })).toBeTruthy();
-    expect(rerolls().getByRole('button', { name: 'Reroll 1 reward' })).toBeTruthy();
-    expect(screen.getAllByRole('img', { name: /^Rerolled into / })).toHaveLength(1);
+    const [row] = pressRows();
+    expect(within(row!).getByText('Reroll')).toBeTruthy();
+    expect(within(row!).getByText('Door 2')).toBeTruthy();
+    expect(within(row!).getByRole('button', { name: 'Door 2 reroll reward' })).toBeTruthy();
+    // The doors keep their first draws; the press row's chips show them as it leaves them.
+    expect(screen.queryAllByRole('img', { name: /^Rerolled into / })).toHaveLength(0);
+    expect(within(row!).getByRole('list', { name: 'Doors' })).toBeTruthy();
 
     await appendPress(view, /^Door 1$/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(2));
     const [first, second] = presses(view.application);
-    await view.user.click(rerolls().getByRole('button', { name: 'Remove reroll 1' }));
+    await view.user.click(
+      within(pressRows()[0]!).getByRole('button', { name: /^Remove .* from timeline$/ }),
+    );
     await waitFor(() => expect(presses(view.application)).toEqual([second]));
     expect(first).not.toEqual(second);
   });
 
-  it('disables the next press at an empty pool and hides the list without the card', async () => {
+  it('disables the Doors object at an empty pool and hides it without the card', async () => {
     let view = renderWorkspace(
       withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']),
       'Underworld',
@@ -116,45 +129,37 @@ describe('RoomRerolls', () => {
       await appendPress(view, door);
       await waitFor(() => expect(presses(view.application)).toHaveLength(count + 1));
     }
-    const rerolls = within(screen.getByRole('region', { name: 'Rerolls' }));
-    expect(rerolls.getByRole('img', { name: '0 rerolls left' })).toBeTruthy();
-    expect(rerolls.getByRole('button', { name: 'New reroll door' }).getAttribute('data-hint')).toBe(
-      'No rerolls left.',
-    );
+    expect(doorsObject().getAttribute('data-hint')).toBe('No rerolls left.');
     cleanup();
 
     view = renderWorkspace(loadUnderworldFGCheckpoint(), 'Underworld', 'F');
     await openDoors(view);
-    expect(screen.queryByRole('region', { name: 'Rerolls' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Doors' })).toBeNull();
   });
 
-  it('returns focus to the new press trigger when the pending reward is dismissed or chosen', async () => {
+  it('returns focus to the Doors object when the pending reward is dismissed or chosen', async () => {
     const view = renderWorkspace(
       withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']),
       'Underworld',
       'F',
     );
     await openDoors(view);
-    const trigger = () =>
-      within(screen.getByRole('region', { name: 'Rerolls' })).getByRole('button', {
-        name: 'New reroll door',
-      });
 
     // Escape on the reward picker drops the pending press.
-    await choose(view, trigger(), /^Door 2$/);
+    await choose(view, doorsObject(), /^Door 2$/);
     await screen.findByRole('listbox');
     await view.user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
     expect(presses(view.application)).toHaveLength(0);
-    await waitFor(() => expect(document.activeElement).toBe(trigger()));
+    await waitFor(() => expect(document.activeElement).toBe(doorsObject()));
 
     // Choosing the reward appends the press.
     await appendPress(view, /^Door 2$/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(1));
-    await waitFor(() => expect(document.activeElement).toBe(trigger()));
+    await waitFor(() => expect(document.activeElement).toBe(doorsObject()));
   });
 
-  it('links a reroll Timeline row to its press in Room Doors', async () => {
+  it('edits a press reward on its own Timeline row and shows the final reward on the Leave row', async () => {
     const view = renderWorkspace(
       withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']),
       'Underworld',
@@ -163,16 +168,29 @@ describe('RoomRerolls', () => {
     const details = await openDoors(view);
     await appendPress(view, /^Door 2$/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(1));
-    await view.user.click(details.getByRole('tab', { name: 'Room Timeline' }));
-    expect(details.getByText(/^Reroll Door 2 → \S/)).toBeTruthy();
-    await view.user.click(details.getByRole('button', { name: 'Room Doors' }));
-    await waitFor(() =>
-      expect(details.getByRole('tab', { name: 'Room Doors' }).getAttribute('aria-selected')).toBe(
-        'true',
-      ),
+    const [press] = presses(view.application);
+    if (press?.kind !== 'reroll') throw new Error('Door 2 press is missing');
+    const row = pressRows()[0]!;
+    // The row is edited in place: no link elsewhere.
+    expect(within(row).queryByRole('button', { name: 'Doors' })).toBeNull();
+    // Picking Door 2 to leave shows its reward as the press left it.
+    await view.user.click(
+      within(details.getByRole('listitem', { name: 'Leave room' })).getByRole('button', {
+        name: 'Exit door',
+      }),
     );
-    expect(screen.getByRole('region', { name: 'Rerolls' })).toBeTruthy();
+    await view.user.click(
+      within(await screen.findByRole('listbox')).getByRole('option', { name: 'Door 2' }),
+    );
+    await waitFor(() =>
+      expect(
+        details
+          .getByRole('listitem', { name: 'Leave room' })
+          .querySelector('.timeline-leave-rewards img'),
+      ).not.toBeNull(),
+    );
   });
+
   it("repairs a door row's stale kept rerolled reward from its last reroll", async () => {
     // Door 1 rerolled into a Pom whose kept resolution is authored, then the press changes.
     let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);

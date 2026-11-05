@@ -223,6 +223,18 @@ export interface WorkspaceRerollRow {
   readonly marker: WorkspaceMarker;
   readonly targetLabel: string;
   readonly reward: ResolvedRewardOffer;
+  /** A press's view of its doors or wheel offers: present on door, cage and wheel presses. */
+  readonly doors?: {
+    /** The pressed door or offer, without its cage: a cage is known by its reward. */
+    readonly doorLabel: string;
+    /** The pressed reward as the earlier presses left it. */
+    readonly before: ResolvedRewardOffer | null;
+    /** Every door's or offer's rewards once this press lands, keyed by exit or offer. */
+    readonly after: readonly {
+      readonly exitKey: string;
+      readonly rewards: readonly (ResolvedRewardOffer | null)[];
+    }[];
+  };
 }
 
 /** One surface's presses in action order, with a press appended at the end. */

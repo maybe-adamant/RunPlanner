@@ -5,7 +5,6 @@ import {
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createEchoKeepsakeReplayAddress,
-  createEncounterPhaseAddress,
   createHubDecisionAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -36,8 +35,6 @@ import {
   nOccurrenceId,
   nOccurrenceIds,
   nVisitSlotKeys,
-  pBiome,
-  surfaceEncounterShowcaseProject,
 } from '@run-planner/test-fixtures/surface';
 import type { WorkspaceBiome } from '@planner/projections/structured-workspace/contracts/structure';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
@@ -153,40 +150,9 @@ describe('structured workspace biome presentation', () => {
         (node) =>
           node.room.runStateByTab.overview === node.room.runStateByTab.actions &&
           node.room.runStateByTab.overview?.owner.kind === 'roomRunStateCheckpoint' &&
-          node.room.runStateByTab.overview.owner.checkpoint.kind === 'roomEntered' &&
-          node.room.runStateByTab.doors?.owner.kind === 'roomRunStateCheckpoint' &&
-          node.room.runStateByTab.doors.owner.checkpoint.kind === 'beforeRoomExit',
+          node.room.runStateByTab.overview.owner.checkpoint.kind === 'roomEntered',
       ),
     ).toBe(true);
-  });
-
-  it('keeps the source room before-exit Run State when its next room blocks', () => {
-    const project = applyProjectCommand(surfaceEncounterShowcaseProject(), catalog, {
-      kind: 'ReplaceEncounterCustomization',
-      phase: createEncounterPhaseAddress(
-        pBiome,
-        { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-p-4-1-p_combat07') },
-        'Intro',
-      ),
-      decisionKey: 'generatedComposition',
-      value: {
-        kind: 'generated',
-        baseRoll: 9999,
-        waveCount: 1,
-        waves: [
-          { waveIndex: 1, typeKeys: ['SentryBot', 'Dragon'], allocations: { SentryBot: 206 } },
-        ],
-      },
-    });
-    const source = present(project, 'Surface', 'P').presentation.biome.nodes.find(
-      (node): node is WorkspaceOccurrenceWorkbenchNode =>
-        node.kind === 'occurrenceWorkbench' &&
-        node.room.occurrenceId === createOccurrenceId('surface-p-3-1-p_combat04'),
-    );
-    expect(source?.room.runStateByTab.doors).toMatchObject({
-      availability: 'available',
-      owner: { kind: 'roomRunStateCheckpoint', checkpoint: { kind: 'beforeRoomExit' } },
-    });
   });
 
   it('keeps Run State on N outer decisions and binds the completed-Hub handoff to visible Preboss', () => {
@@ -399,7 +365,7 @@ describe('structured workspace biome presentation', () => {
 
     expect(assembly.progressionKind).toBe('generated');
     expect(rail.label).toBe('Decision 1');
-    // Decision 1's doors repair on the Opening's Doors tab.
+    // Decision 1's doors repair on the Opening's Doors open row.
     const opening = presentation.biome.rail.find(
       (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
         entry.kind === 'node' && entry.node.key === presentation.biome.entry?.key,
@@ -424,7 +390,7 @@ describe('structured workspace biome presentation', () => {
     });
   });
 
-  it("marks a door finding on the stop whose room's Doors tab repairs it", () => {
+  it("marks a door finding on the stop whose room's Doors open row repairs it", () => {
     // Offering Zeus again at Decision 2's unselected door repeats its sibling's source.
     const repeated = applyProjectCommand(goldenProject, catalog, {
       kind: 'ReplaceIncomingReward',
@@ -449,7 +415,8 @@ describe('structured workspace biome presentation', () => {
     expect(second.marker.findingCount).toBe(0);
     expect(presentation.focusDestinations.get(doorReward.marker.focusKey)).toMatchObject({
       inspectorSubject: { kind: 'node', nodeKey: second.node.key },
-      roomTab: 'doors',
+      roomTab: 'actions',
+      timelineDoors: 'doorsOpen',
       selectedRailKey: first.marker.focusKey,
     });
     // That inspector opens on Decision 1's room.

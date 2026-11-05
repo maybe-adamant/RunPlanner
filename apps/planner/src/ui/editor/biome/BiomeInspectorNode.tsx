@@ -1,42 +1,51 @@
 import type { ReactNode } from 'react';
+import type { SemanticAddress } from '@run-planner/engine/authored-project';
 import { useAppDispatch } from '@planner/state/store';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 
 import {
-  type WorkspaceBossDoorRewardStoreControl,
   type WorkspaceAuthoringFrontier,
+  type WorkspaceDoorNote,
   type WorkspaceHubTab,
   type WorkspaceInteractionCatalog,
   type WorkspaceNode,
   type WorkspaceOccurrenceStageOutgoing,
-  type WorkspaceMarker,
-  type WorkspacePhantomExitControl,
   type WorkspaceRoomPlanEnd,
   type WorkspaceRoomTab,
 } from '@planner/projections/structured-workspace';
 import {
-  AuthoringFrontier,
-  BatchWorkbench,
-  DoorActionRow,
+  BatchDoorsDetail,
+  BatchDoorsRepair,
+  BatchExitPicker,
+  DoorChips,
   DoorNotes,
   DoorRowsHeader,
-  FixedExitRow,
-  SelectedContinuationAction,
 } from './DecisionWorkbench';
+import { batchDoorChips, batchDoorFindingOwners, batchDoorsStatus } from './doorSummary';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { PhantomExitDoor } from './PhantomExitDoor';
 import { BossDoorRewardPoolRow } from './OccurrenceDirectRoomWorkbench';
-import { useDoorNotes } from './doorNotes';
+import { useDoorNotes, type DoorNoteMark, type DoorNoteTarget } from './doorNotes';
 import {
   inspectorLifecycleBoundaryContent,
   inspectorRoomActionContent,
   StartRoomIdentityEditor,
 } from './BiomeInspectorControls';
-import { BiomeWorkspaceContractError } from './workspaceContract';
 import { PlanEndAction } from './PlanEndAction';
-import { ReadOnlyFindingScope, useAuthoringLocked } from '@planner/ui/feedback/useFindingTarget';
-import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
+import { ReadOnlyFindingScope } from '@planner/ui/feedback/useFindingTarget';
+import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
+import { DoorsRerollEntry } from './RoomRerolls';
+import { roomKindIcon } from './roomIcon';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { LeaveRow, type TimelineDoorsContent } from './TimelineDoors';
+import { BiomeWorkspaceContractError } from './workspaceContract';
+
+type OccurrenceNode = Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
+type BatchNode = Extract<
+  WorkspaceNode,
+  { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
+>;
 
 interface BiomeInspectorNodeProps {
   readonly frontier: WorkspaceAuthoringFrontier | null;
@@ -44,183 +53,228 @@ interface BiomeInspectorNodeProps {
   readonly label: string;
   readonly node: WorkspaceNode;
   readonly outgoing?: WorkspaceOccurrenceStageOutgoing;
-  readonly outgoingDecision?: Extract<
-    WorkspaceNode,
-    { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
-  >;
+  readonly outgoingDecision?: BatchNode;
   readonly hubTab?: WorkspaceHubTab;
   readonly roomTab?: WorkspaceRoomTab;
+  /** Navigation landed on a door owner, so the room's Doors open row opens. */
+  readonly doorsRequested?: boolean;
   readonly sideRoomSlotKey?: string;
   readonly navigationRevision?: number;
   readonly findingNavigationRevision?: number;
-  readonly sourceOccurrence?: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
+  readonly sourceOccurrence?: OccurrenceNode;
   /** The biome lies past the plan end, so its Hub is read-only. */
   readonly pastPlanEnd?: boolean;
 }
 
-/** The footer the end room and the rooms past it keep outside their read-only doors. */
-function PlanEndRow({ planEnd }: { readonly planEnd: WorkspaceRoomPlanEnd }) {
-  return (
-    <div className="workbench-action-row">
-      <span className="workbench-action-end">
-        <PlanEndAction planEnd={planEnd} />
-      </span>
-    </div>
-  );
+/** The notes beside a room's doors: its batch's, its hidden door's or its boss door's. */
+function doorNoteSource(
+  node: OccurrenceNode,
+  batch: BatchNode | undefined,
+  outgoing: WorkspaceOccurrenceStageOutgoing | undefined,
+): readonly WorkspaceDoorNote[] {
+  if (batch !== undefined) return batch.notes;
+  if (outgoing?.kind === 'topologyOwned') return outgoing.notes;
+  const store = node.room.bossDoorRewardStore;
+  return store === undefined || store.kind === 'editor' ? [] : store.notes;
 }
 
-/** Opens a fixed exit's room once its context is reached. */
-function FixedExitContinuation({
-  continuation,
-}: {
-  readonly continuation: { readonly marker: WorkspaceMarker };
-}) {
-  const locked = useAuthoringLocked(continuation.marker.address);
-  return (
-    <SelectedContinuationAction
-      continuation={locked ? undefined : continuation}
-      disabledHint={candidateWaitingHint}
-    />
-  );
-}
-
-function OccurrenceOutgoing({
-  bossDoorRewardStore,
-  idPrefix,
-  interactions,
-  outgoing,
-  phantomExit,
-  planEnd,
-}: {
-  /** A fixed boss door authors or reports its pool alongside its destination. */
-  readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreControl;
-  readonly idPrefix: string;
+interface RoomDoorsInput {
+  readonly batch: BatchNode | undefined;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly outgoing: WorkspaceOccurrenceStageOutgoing;
-  /** The room's only door it authors itself; the Hub or its side visits own the rest. */
-  readonly phantomExit?: WorkspacePhantomExitControl;
-  /** The room's plan-end action, beside its way on. */
-  readonly planEnd?: WorkspaceRoomPlanEnd | undefined;
-}): ReactNode {
-  const notes = useDoorNotes(
-    outgoing.kind === 'topologyOwned'
-      ? outgoing.notes
-      : bossDoorRewardStore === undefined || bossDoorRewardStore.kind === 'editor'
-        ? []
-        : bossDoorRewardStore.notes,
-  );
-  // The Hub or a side-room visit decides where such a room leads; its notes
-  // say where, beside its hidden return door when it has one.
-  if (outgoing.kind === 'topologyOwned')
-    return (
-      <section aria-label="Outgoing doors" className="door-workbench outgoing-occurrence-state">
-        <div className="door-body">
-          <div className="door-batch" />
-          <DoorNotes items={notes.items} />
-          {phantomExit === undefined ? null : (
-            <div className="door-rows">
-              <DoorRowsHeader />
-              <PhantomExitDoor
-                control={phantomExit}
-                idPrefix={idPrefix}
-                interactions={interactions}
-                mark={notes.markFor('hiddenDoor')}
-              />
-            </div>
-          )}
-        </div>
-        <DoorActionRow planEnd={planEnd} />
-      </section>
+  readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
+  readonly node: OccurrenceNode;
+  readonly notes: ReactNode;
+  readonly outgoing: WorkspaceOccurrenceStageOutgoing | undefined;
+  readonly planEnd: WorkspaceRoomPlanEnd | undefined;
+}
+
+/**
+ * The room's doors on its Timeline, by how it is left: a batch of doors, a
+ * fixed room, a Hub or side-room return, or the plan's end. A room left no
+ * way (unreached, past the end, no next room) has no last row.
+ */
+function roomTimelineDoors({
+  batch,
+  interactions,
+  markFor,
+  node,
+  notes,
+  outgoing,
+  planEnd,
+}: RoomDoorsInput): TimelineDoorsContent | undefined {
+  const relation = planEnd?.relation;
+  // Past the plan end the doors are dormant; only the action that moves the end stays.
+  if (relation === 'pastEnd') return undefined;
+  const idPrefix = `occurrence-${node.room.occurrenceId}`;
+  const endAction = <PlanEndAction planEnd={planEnd} />;
+  const leaveRow = (
+    label: string,
+    value: ReactNode,
+    status?: string,
+    anchorOwner?: SemanticAddress,
+  ) =>
+    relation === 'end' ? (
+      <LeaveRow actions={endAction} key="leave" label="Plan ends here" />
+    ) : (
+      <LeaveRow
+        actions={endAction}
+        {...(anchorOwner === undefined ? {} : { anchorOwner })}
+        key="leave"
+        label={label}
+        status={status}
+      >
+        {value}
+      </LeaveRow>
     );
-  switch (outgoing.kind) {
+
+  if (batch !== undefined) {
+    return {
+      summary: <DoorChips chips={batchDoorChips(batch)} />,
+      findingOwners: batchDoorFindingOwners(batch),
+      detail: (
+        <BatchDoorsDetail
+          interactions={interactions}
+          markFor={markFor}
+          node={batch}
+          // The end room's doors lead nowhere planned, so they offer no reset or repair.
+          {...(relation === undefined &&
+          (batch.persistence === 'authored' || batch.repairIntent !== undefined)
+            ? { repair: <BatchDoorsRepair interactions={interactions} node={batch} /> }
+            : {})}
+        />
+      ),
+      leave: leaveRow(
+        'Leave room',
+        <BatchExitPicker interactions={interactions} node={batch} />,
+        batchDoorsStatus(batch),
+        batch.selection.address,
+      ),
+      notes,
+      ...(batch.rerolls === undefined
+        ? {}
+        : {
+            rerolls: batch.rerolls,
+            chips: batchDoorChips(batch),
+            object: (
+              <DoorsRerollEntry interactions={interactions} key="doors" rerolls={batch.rerolls} />
+            ),
+          }),
+    };
+  }
+  switch (outgoing?.kind) {
+    case undefined:
+    case 'blockedOrUnentered':
+    case 'terminal':
+      return undefined;
     case 'authoredDecision':
       throw new BiomeWorkspaceContractError(
         `${outgoing.decisionNodeKey} authored outgoing decision was not joined to its node.`,
       );
     case 'frontier':
-      return (
-        <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
-          <AuthoringFrontier
-            frontier={outgoing.frontier}
-            interactions={interactions}
-            planEnd={planEnd}
-          />
-        </section>
-      );
+      throw new BiomeWorkspaceContractError('An exit frontier must carry its provisional doors.');
     case 'planEnd':
-      return (
-        <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
-          <DoorActionRow planEnd={planEnd} />
-        </section>
-      );
+      return { leave: leaveRow('Leave room', null) };
+    case 'topologyOwned': {
+      const phantom = node.room.phantomExit;
+      return {
+        ...(phantom === undefined
+          ? {}
+          : {
+              summary: (
+                <DoorChips
+                  chips={[
+                    {
+                      key: 'hidden',
+                      label: 'Hidden door',
+                      ...(phantom.room.icon === undefined ? {} : { roomIcon: phantom.room.icon }),
+                      rewards:
+                        phantom.reward.rewardType === undefined
+                          ? []
+                          : [rewardIcon(phantom.reward.rewardType)],
+                    },
+                  ]}
+                />
+              ),
+              findingOwners: [phantom.address],
+              detail: (
+                <section aria-label="Doors" className="door-workbench timeline-doors-detail">
+                  <div className="door-rows">
+                    <DoorRowsHeader />
+                    <PhantomExitDoor
+                      control={phantom}
+                      idPrefix={idPrefix}
+                      interactions={interactions}
+                      mark={markFor('hiddenDoor')}
+                    />
+                  </div>
+                </section>
+              ),
+            }),
+        // The Hub decides where the room leads; only the plan's end gets a last row.
+        ...(relation === 'end' ? { leave: leaveRow('Leave room', null) } : {}),
+        notes,
+      };
+    }
     case 'fixedRoom': {
       const destination = outgoing.destination;
-      if (destination.kind === 'complete')
-        return (
-          <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
-            <p className="fixed-room-state">{destination.message}</p>
-            <DoorActionRow planEnd={planEnd} />
-          </section>
-        );
-      return (
-        <section aria-label="Outgoing doors" className="door-workbench outgoing-occurrence-state">
-          <div className="door-body">
-            <div className="door-batch">
-              {bossDoorRewardStore === undefined ? null : (
-                <BossDoorRewardPoolRow
-                  idPrefix={idPrefix}
-                  interactions={interactions}
-                  markFor={notes.markFor}
-                  store={bossDoorRewardStore}
-                />
-              )}
-            </div>
-            <DoorNotes items={notes.items} />
-            <div className="door-rows">
-              <DoorRowsHeader />
-              <FixedExitRow
-                gameName={destination.kind === 'room' ? destination.gameName : undefined}
-                hostId={outgoing.marker.focusKey}
-                label={destination.label}
-                roomIcon={destination.kind === 'room' ? destination.roomIcon : undefined}
-              />
-            </div>
-          </div>
-          <DoorActionRow
-            {...(destination.kind === 'room' && destination.continuation !== undefined
-              ? {
-                  continuation: <FixedExitContinuation continuation={destination.continuation} />,
-                }
-              : {})}
-            planEnd={planEnd}
+      const store = node.room.bossDoorRewardStore;
+      const value =
+        destination.kind === 'complete' ? (
+          <span>{destination.message}</span>
+        ) : (
+          <FixedValueChip
+            icon={
+              destination.kind === 'room' && destination.roomIcon !== undefined
+                ? roomKindIcon(destination.roomIcon)
+                : undefined
+            }
+            label={destination.label}
           />
-        </section>
-      );
+        );
+      return {
+        ...(destination.kind === 'room' && destination.roomIcon !== undefined
+          ? {
+              summary: (
+                <DoorChips
+                  chips={[
+                    {
+                      key: 'fixed',
+                      label: destination.label,
+                      roomIcon: destination.roomIcon,
+                      rewards: [],
+                    },
+                  ]}
+                />
+              ),
+            }
+          : {}),
+        ...(store === undefined
+          ? {}
+          : {
+              ...(store.kind === 'editor' ? { findingOwners: [store.address] } : {}),
+              detail: (
+                <section aria-label="Doors" className="door-workbench timeline-doors-detail">
+                  <div className="door-batch">
+                    <BossDoorRewardPoolRow
+                      idPrefix={idPrefix}
+                      interactions={interactions}
+                      markFor={markFor}
+                      store={store}
+                    />
+                  </div>
+                </section>
+              ),
+            }),
+        leave: leaveRow('Leave room', value),
+        notes,
+      };
     }
-    case 'blockedOrUnentered':
-    case 'terminal':
-      return (
-        <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
-          {bossDoorRewardStore === undefined ? null : (
-            <BossDoorRewardPoolRow
-              idPrefix={idPrefix}
-              interactions={interactions}
-              markFor={notes.markFor}
-              store={bossDoorRewardStore}
-            />
-          )}
-          <DoorNotes items={notes.items} />
-          <p className="fixed-room-state">
-            {outgoing.kind === 'blockedOrUnentered' ? outgoing.message : outgoing.label}
-          </p>
-          <DoorActionRow planEnd={planEnd} />
-        </section>
-      );
   }
 }
 
 function OccurrenceInspector({
   defaultToDoors = false,
+  doorsRequested = false,
   interactions,
   node,
   outgoing,
@@ -231,8 +285,8 @@ function OccurrenceInspector({
   sideRoomSlotKey,
 }: Pick<
   BiomeInspectorNodeProps,
+  | 'doorsRequested'
   | 'interactions'
-  | 'node'
   | 'outgoing'
   | 'outgoingDecision'
   | 'navigationRevision'
@@ -241,41 +295,29 @@ function OccurrenceInspector({
   | 'sideRoomSlotKey'
 > & {
   readonly defaultToDoors?: boolean;
-  readonly node: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
+  readonly node: OccurrenceNode;
 }) {
   const dispatch = useAppDispatch();
   const planEnd = node.planEnd;
-  // From the end room on the doors are read-only and drop their footer; the
-  // plan-end action sits outside them, so the end can be removed or moved later.
-  const pastEnd = planEnd?.relation === 'pastEnd';
-  const doors =
-    outgoingDecision === undefined ? (
-      outgoing === undefined ? undefined : (
-        <OccurrenceOutgoing
-          {...(node.room.bossDoorRewardStore === undefined
-            ? {}
-            : { bossDoorRewardStore: node.room.bossDoorRewardStore })}
-          idPrefix={`occurrence-${node.room.occurrenceId}`}
-          interactions={interactions}
-          outgoing={outgoing}
-          {...(node.room.phantomExit === undefined ? {} : { phantomExit: node.room.phantomExit })}
-          planEnd={planEnd}
-        />
-      )
-    ) : (
-      <BatchWorkbench
-        interactions={interactions}
-        label="Outgoing doors"
-        node={outgoingDecision}
-        planEnd={planEnd}
-      />
-    );
+  const batch =
+    outgoingDecision ??
+    (outgoing?.kind === 'frontier' ? outgoing.frontier.provisionalBatch : undefined);
+  const doorNotes = useDoorNotes(doorNoteSource(node, batch, outgoing));
+  const doors = roomTimelineDoors({
+    batch,
+    interactions,
+    markFor: doorNotes.markFor,
+    node,
+    notes: <DoorNotes items={doorNotes.items} />,
+    outgoing,
+    planEnd,
+  });
   return (
-    <>
-      <OccurrenceWorkbench
-        {...(planEnd?.relation === undefined ? {} : { planEndRelation: planEnd.relation })}
-        headerActions={
-          node.hubTimeline === undefined ? undefined : (
+    <OccurrenceWorkbench
+      {...(planEnd?.relation === undefined ? {} : { planEndRelation: planEnd.relation })}
+      headerActions={
+        <>
+          {node.hubTimeline === undefined ? null : (
             <button
               type="button"
               className="primary-action action-compact"
@@ -283,42 +325,41 @@ function OccurrenceInspector({
             >
               ← Hub Timeline
             </button>
-          )
-        }
-        entryIdentity={<StartRoomIdentityEditor interactions={interactions} node={node} />}
-        {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
-        interactions={interactions}
-        {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
-        room={node.room}
-        renderRoomActionRowContent={(row) =>
-          inspectorRoomActionContent(node.room, interactions, row)
-        }
-        renderLifecycleBoundaryContent={(boundary) =>
-          inspectorLifecycleBoundaryContent(node.room, interactions, boundary)
-        }
-        {...(node.runState === undefined ? {} : { runState: node.runState })}
-        {...(navigationRevision === undefined ? {} : { navigationRevision })}
-        {...(findingNavigationRevision === undefined ? {} : { findingNavigationRevision })}
-        initialTab={roomTab ?? (defaultToDoors ? 'doors' : 'overview')}
-        {...(sideRoomSlotKey === undefined ? {} : { initialSideRoomSlotKey: sideRoomSlotKey })}
-        doors={
-          planEnd?.relation === undefined ? (
-            doors
-          ) : (
-            <>
-              {pastEnd ? (
-                <div className="past-plan-end-content" inert>
-                  {doors}
-                </div>
-              ) : (
-                doors
-              )}
-              <PlanEndRow planEnd={planEnd} />
-            </>
-          )
-        }
-      />
-    </>
+          )}
+        </>
+      }
+      entryIdentity={<StartRoomIdentityEditor interactions={interactions} node={node} />}
+      {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
+      interactions={interactions}
+      {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
+      room={node.room}
+      renderRoomActionRowContent={(row) => inspectorRoomActionContent(node.room, interactions, row)}
+      renderLifecycleBoundaryContent={(boundary) =>
+        inspectorLifecycleBoundaryContent(node.room, interactions, boundary)
+      }
+      {...(node.runState === undefined ? {} : { runState: node.runState })}
+      {...(navigationRevision === undefined ? {} : { navigationRevision })}
+      {...(findingNavigationRevision === undefined ? {} : { findingNavigationRevision })}
+      initialTab={roomTab ?? (defaultToDoors ? node.room.doorsTab : 'overview')}
+      doorsRequested={doorsRequested || (roomTab === undefined && defaultToDoors)}
+      {...(sideRoomSlotKey === undefined ? {} : { initialSideRoomSlotKey: sideRoomSlotKey })}
+      {...(doors === undefined ? {} : { timelineDoors: doors })}
+      // A room with no last row keeps the action that moves the plan's end to it.
+      {...(planEnd?.relation === 'pastEnd' ||
+      (planEnd !== undefined &&
+        planEnd.relation === undefined &&
+        outgoing?.kind === 'topologyOwned')
+        ? {
+            pastEndAction: (
+              <div className="workbench-action-row">
+                <span className="workbench-action-end">
+                  <PlanEndAction planEnd={planEnd} />
+                </span>
+              </div>
+            ),
+          }
+        : {})}
+    />
   );
 }
 
@@ -332,7 +373,7 @@ export function BiomeInspectorNode(props: BiomeInspectorNodeProps) {
     case 'mixedBatch':
     case 'takeoverBatch':
       return props.sourceOccurrence === undefined ? (
-        <BatchWorkbench interactions={props.interactions} label={props.label} node={node} />
+        <BatchDoorsDetail interactions={props.interactions} markFor={() => undefined} node={node} />
       ) : (
         <OccurrenceInspector {...props} defaultToDoors node={props.sourceOccurrence} />
       );

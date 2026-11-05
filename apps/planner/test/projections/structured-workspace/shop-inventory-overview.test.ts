@@ -30,10 +30,7 @@ it('routes an invalid Shop inventory to the entered Shop Overview', () => {
           return node.room;
     return undefined;
   };
-  // The source room has exited and the Shop is entered.
-  expect(room('surface-p-8-1-p_combat12')?.runStateByTab.doors).toMatchObject({
-    availability: 'available',
-  });
+  // The Shop is entered.
   expect(room(pOccurrenceIds.prebossShop)?.runStateByTab.overview).toMatchObject({
     availability: 'available',
   });

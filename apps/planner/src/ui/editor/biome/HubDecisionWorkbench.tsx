@@ -21,7 +21,6 @@ import {
   candidateWaitingHint,
   candidateWaits,
 } from '@planner/ui/feedback/candidatePresentation';
-import { HubCompletionHandoff } from './HubCompletionHandoff';
 import {
   ClosedHubRoomOption,
   MarkerAssessment,
@@ -51,7 +50,6 @@ const hubWorkbenchTabs: readonly {
 }[] = Object.freeze([
   Object.freeze({ key: 'overview', label: 'Hub Overview', shown: 'Overview' }),
   Object.freeze({ key: 'timeline', label: 'Hub Timeline', shown: 'Timeline' }),
-  Object.freeze({ key: 'doors', label: 'Hub Doors', shown: 'Doors' }),
 ]);
 
 /** Why a proposed Hub action order cannot replace the current one. */
@@ -126,8 +124,12 @@ export function HubDecisionWorkbench({
     findingNavigationRevision !== undefined && requestedTab === 'overview' ? 'list' : 'map';
   // Board-door rerolls and the Phial target are edited in Details; visits and
   // fountain placement on the map.
+  // The completed-Hub exit's row closes the Details timeline.
   const detailsOwner =
-    focusedOwner?.kind === 'hubReroll' || focusedOwner?.kind === 'fountainRarityOutcome';
+    focusedOwner?.kind === 'hubReroll' ||
+    focusedOwner?.kind === 'fountainRarityOutcome' ||
+    (focusedOwner !== null &&
+      semanticAddressKey(focusedOwner) === semanticAddressKey(node.completedExit.marker.address));
   const findingTimelineView = detailsOwner ? 'details' : 'map';
   const initialTimelineView =
     (findingNavigationRevision !== undefined ||
@@ -407,89 +409,86 @@ export function HubDecisionWorkbench({
         id={`${titleId}-tabpanel`}
         role="tabpanel"
       >
-        {activeTab === 'doors' ? null : (
-          <div className="hub-workbench-view">
-            {activeTab === 'overview' ? (
-              <section className="hub-board" aria-label="Hub room participation">
-                {overviewView === 'map' ? (
-                  <HubMapOverview
-                    hubIdentity={hubIdentity}
-                    interactions={interactions}
-                    node={node}
-                    requirement={openRoomsRequirement}
-                    resetBoardControl={resetBoardControl}
-                    detailsControl={overviewNavigationControl}
-                  />
-                ) : (
-                  <>
-                    <header className="hub-board-heading">
-                      <div className="hub-board-heading-row">
-                        <div className="owner-markers">
-                          {openRoomsRequirement}
-                          <MarkerAssessment marker={node.openSet} />
-                        </div>
-                        <div className="hub-board-heading-actions">
-                          {overviewNavigationControl}
-                          {resetBoardControl}
-                        </div>
+        <div className="hub-workbench-view">
+          {activeTab === 'overview' ? (
+            <section className="hub-board" aria-label="Hub room participation">
+              {overviewView === 'map' ? (
+                <HubMapOverview
+                  hubIdentity={hubIdentity}
+                  interactions={interactions}
+                  node={node}
+                  requirement={openRoomsRequirement}
+                  resetBoardControl={resetBoardControl}
+                  detailsControl={overviewNavigationControl}
+                />
+              ) : (
+                <>
+                  <header className="hub-board-heading">
+                    <div className="hub-board-heading-row">
+                      <div className="owner-markers">
+                        {openRoomsRequirement}
+                        <MarkerAssessment marker={node.openSet} />
                       </div>
-                    </header>
-                    <div
-                      aria-label="Hub room set"
-                      className="hub-overview-room-grid"
-                      ref={overviewOpenMembershipRegion}
-                      role="group"
-                      tabIndex={-1}
-                    >
-                      {node.slots.map((slot) =>
-                        slot.open ? (
-                          <OpenHubRoomCard
-                            focusedRewardOwnerKey={focusedOwnerKey}
-                            interactions={interactions}
-                            key={slot.hubSlotKey}
-                            onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                            slot={slot}
-                          />
-                        ) : (
-                          <ClosedHubRoomOption
-                            interactions={interactions}
-                            key={slot.hubSlotKey}
-                            onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                            slot={slot}
-                          />
-                        ),
-                      )}
+                      <div className="hub-board-heading-actions">
+                        {overviewNavigationControl}
+                        {resetBoardControl}
+                      </div>
                     </div>
-                  </>
-                )}
-              </section>
-            ) : (
-              <>
-                {timelineView === 'map' ? (
-                  <HubMapTimeline
-                    detailsControl={timelineNavigationControl}
-                    hubIdentity={hubIdentity}
-                    interactions={interactions}
-                    locked={hubTarget.inert}
-                    node={node}
-                    requirement={visitsRequirement}
-                    resetVisitsControl={resetVisitsControl}
-                  />
-                ) : (
-                  <HubTimelineDetails
-                    interactions={interactions}
-                    locked={hubTarget.inert}
-                    mapControl={timelineNavigationControl}
-                    node={node}
-                    requirement={visitsRequirement}
-                    resetVisitsControl={resetVisitsControl}
-                  />
-                )}
-              </>
-            )}
-          </div>
-        )}
-        {activeTab === 'doors' ? <HubCompletionHandoff node={node} /> : null}
+                  </header>
+                  <div
+                    aria-label="Hub room set"
+                    className="hub-overview-room-grid"
+                    ref={overviewOpenMembershipRegion}
+                    role="group"
+                    tabIndex={-1}
+                  >
+                    {node.slots.map((slot) =>
+                      slot.open ? (
+                        <OpenHubRoomCard
+                          focusedRewardOwnerKey={focusedOwnerKey}
+                          interactions={interactions}
+                          key={slot.hubSlotKey}
+                          onMembershipTransition={continueKeyboardMembershipAfterTransition}
+                          slot={slot}
+                        />
+                      ) : (
+                        <ClosedHubRoomOption
+                          interactions={interactions}
+                          key={slot.hubSlotKey}
+                          onMembershipTransition={continueKeyboardMembershipAfterTransition}
+                          slot={slot}
+                        />
+                      ),
+                    )}
+                  </div>
+                </>
+              )}
+            </section>
+          ) : (
+            <>
+              {timelineView === 'map' ? (
+                <HubMapTimeline
+                  detailsControl={timelineNavigationControl}
+                  hubIdentity={hubIdentity}
+                  interactions={interactions}
+                  locked={hubTarget.inert}
+                  node={node}
+                  requirement={visitsRequirement}
+                  resetVisitsControl={resetVisitsControl}
+                />
+              ) : (
+                <HubTimelineDetails
+                  interactions={interactions}
+                  locked={hubTarget.inert}
+                  mapControl={timelineNavigationControl}
+                  node={node}
+                  requirement={visitsRequirement}
+                  resetVisitsControl={resetVisitsControl}
+                />
+              )}
+            </>
+          )}
+        </div>
       </section>
     </section>
   );

@@ -885,7 +885,8 @@ function projectHubNode(
   );
   markerDestinations.setHubTab(Object.freeze(node.visits.map((visit) => visit.marker)), 'timeline');
   markerDestinations.redirect([completedExit.marker], node.key);
-  markerDestinations.setHubTab([completedExit.marker], 'doors');
+  // The Hub Timeline's last row names the way on to the Preboss.
+  markerDestinations.setHubTab([completedExit.marker], 'timeline');
   // Placement and the Phial target both repair on the Hub Timeline's fountain row.
   markerDestinations.redirect([fountain.marker, fountain.outcomeMarker], node.key);
   markerDestinations.setHubTab([fountain.marker, fountain.outcomeMarker], 'timeline');

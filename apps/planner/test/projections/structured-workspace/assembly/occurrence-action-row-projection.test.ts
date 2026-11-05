@@ -1038,11 +1038,7 @@ describe('structured workspace actions assembly', () => {
       availability: 'available',
       owner: { kind: 'roomRunStateCheckpoint', checkpoint: { kind: 'roomEntered' } },
     });
-    expect(fields.node.room.runStateByTab.doors).toMatchObject({
-      availability: 'available',
-      owner: { kind: 'roomRunStateCheckpoint', checkpoint: { kind: 'beforeRoomExit' } },
-    });
-    expect(fields.runStateLaunchers).toHaveLength(2);
+    expect(fields.runStateLaunchers).toHaveLength(1);
 
     expect(ship.node.room.roomLocal.kind).toBe('ship');
     if (ship.node.room.roomLocal.kind !== 'ship') throw new Error('Ship surface is missing');
@@ -1139,7 +1135,7 @@ describe('structured workspace actions assembly', () => {
       ]),
     ).toEqual([
       ['offer1', 'Offer', true],
-      ['offer2', 'Right Offer', false],
+      ['offer2', 'R Offer', false],
     ]);
     expect(
       ship.node.room.roomLocal.wheels.every(
@@ -1170,11 +1166,8 @@ describe('structured workspace actions assembly', () => {
     expect(ship.node.room.runStateByTab.shipCombat1Actions?.owner).toMatchObject({
       checkpoint: { kind: 'beforeEncounterStart', phaseKey: 'Combat1' },
     });
-    expect(ship.node.room.runStateByTab.doors?.owner).toMatchObject({
-      checkpoint: { kind: 'beforeRoomExit' },
-    });
     expect(ship.node.room.runStateByTab.shipInactiveRepair).toBeUndefined();
-    expect(ship.runStateLaunchers).toHaveLength(ship.node.room.encounterPhases.length + 1);
+    expect(ship.runStateLaunchers).toHaveLength(ship.node.room.encounterPhases.length);
     expect(
       ship.runStateLaunchers.some(
         (launcher) =>

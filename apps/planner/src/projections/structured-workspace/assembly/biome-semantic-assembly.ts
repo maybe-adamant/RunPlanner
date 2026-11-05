@@ -91,6 +91,7 @@ import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
 import type { WorkspaceBiomeSource } from '../source-index';
 import { assembleWorkspaceTopologyInteractions } from './topology-interaction-assembly';
 import { assembleRoomPlanEnd } from './plan-end-assembly';
+import { workspaceDoorsTimelineTab } from './occurrence-room-workbench';
 
 /**
  * Complete semantic product for one biome. It is produced before audits,
@@ -789,7 +790,44 @@ export function assembleWorkspaceBiomeSemantics(
   attachHubVisitPlanEnds(nodes, source.planEndRelation);
   attachHubRoomPresentation(nodes);
   if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision') {
-    markerDestinations.setHubTab([frontier.marker], 'doors');
+    markerDestinations.setHubTab([frontier.marker], 'timeline');
+  }
+  // A room's doors live on its Timeline: their leaves on the Doors open row,
+  // the selection on the exit row, and the presses as Timeline rows.
+  const doorsTimelineTab = (occurrenceId: string) => {
+    const workbench = nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
+    );
+    if (workbench === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${occurrenceId} doors have no source room workbench`,
+      );
+    }
+    return workspaceDoorsTimelineTab(workbench.room.workbench);
+  };
+  const routeDoorsToTimeline = (batch: WorkspaceDecisionBatchNode): void => {
+    if (batch.source.kind !== 'occurrence') return;
+    const tab = doorsTimelineTab(batch.source.occurrenceId);
+    markerDestinations.setTimelineDoors(
+      workspaceDecisionOwnedMarkers(batch).filter((marker) => marker !== batch.selection),
+      tab,
+      'doorsOpen',
+    );
+    markerDestinations.setTimelineDoors([batch.selection], tab, 'leave');
+    if (batch.rerolls !== undefined)
+      markerDestinations.setRoomTab(
+        batch.rerolls.rows.map((row) => row.marker),
+        tab,
+      );
+  };
+  for (const node of nodes) {
+    if (
+      node.kind === 'ordinaryBatch' ||
+      node.kind === 'mixedBatch' ||
+      node.kind === 'takeoverBatch'
+    )
+      routeDoorsToTimeline(node);
   }
   const frontierSeed = enrichFrontierPredecessor(frontier, Object.freeze([...nodes]));
   let resolvedFrontier: WorkspaceAuthoringFrontier | null;
@@ -827,9 +865,8 @@ export function assembleWorkspaceBiomeSemantics(
       const sourceNodeKey = `occurrence:${semanticAddressKey(
         createOccurrenceAddress(biome, sourceOccurrence.occurrenceId),
       )}`;
-      const doorMarkers = workspaceDecisionOwnedMarkers(provisional.batch);
-      markerDestinations.redirect(doorMarkers, sourceNodeKey);
-      markerDestinations.setRoomTab(doorMarkers, 'doors');
+      markerDestinations.redirect(workspaceDecisionOwnedMarkers(provisional.batch), sourceNodeKey);
+      routeDoorsToTimeline(provisional.batch);
       resolvedFrontier = Object.freeze({
         ...frontierSeed,
         provisionalBatch: provisional.batch,
@@ -892,23 +929,6 @@ export function assembleWorkspaceBiomeSemantics(
         );
         break;
       case 'topologyOwned': {
-        // A side room returns to the main room it opened from; a main room to the Hub.
-        const mainOccurrenceId =
-          status.owner.kind === 'localVisitDecision' &&
-          status.owner.sourceOccurrenceId !== occurrence.occurrenceId
-            ? status.owner.sourceOccurrenceId
-            : undefined;
-        const main =
-          mainOccurrenceId === undefined
-            ? undefined
-            : plan.topology?.occurrences.find(
-                (candidate) => candidate.occurrenceId === mainOccurrenceId,
-              );
-        const returnsTo =
-          main === undefined
-            ? 'the Hub'
-            : routeRoomDeclaration(requireWorkspaceRoom(catalog, main.gameName), biome.routeKey)
-                .label;
         occurrenceOutgoing.set(
           occurrence.occurrenceId,
           Object.freeze({
@@ -923,7 +943,6 @@ export function assembleWorkspaceBiomeSemantics(
                       text: 'Its room and reward are drawn when the doors first unlock, before any side door.',
                     }),
                   ]),
-              Object.freeze({ target: 'batch' as const, text: `Returns to ${returnsTo}.` }),
             ]),
           }),
         );

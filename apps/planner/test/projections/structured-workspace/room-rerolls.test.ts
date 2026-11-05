@@ -108,7 +108,7 @@ function roomAction(address: RoomActionAddress | HubRerollAddress): RoomActionAd
 const doorKey = (occurrenceId: typeof doorTo) =>
   semanticAddressKey(createIncomingRewardAddress(f, occurrenceId));
 
-describe('Room Doors Rerolls list', () => {
+describe('Room door rerolls', () => {
   const base = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
 
   it('appears for a card holder with the pool and the engine targets', async () => {
@@ -156,9 +156,30 @@ describe('Room Doors Rerolls list', () => {
       expect.any(String),
       expect.any(String),
     ]);
-    // A press's findings route to its row beside the doors.
+    // A press's findings route to its own Timeline row.
     expect(projected.workspace.focusByOwner.get(semanticAddressKey(first!.address))).toMatchObject({
-      roomTab: 'doors',
+      roomTab: 'actions',
+    });
+    expect(
+      projected.workspace.focusByOwner.get(semanticAddressKey(first!.address))?.timelineDoors,
+    ).toBeUndefined();
+    // Each press names its door, the reward it replaces and every door once it lands.
+    const [door1, door2] = doors;
+    expect(first!.doors).toMatchObject({
+      doorLabel: 'Door 2',
+      before: door2!.door.offerRewardSurface.rewards[0]!.offer,
+      after: [
+        { exitKey: door1!.exitKey, rewards: [door1!.door.offerRewardSurface.rewards[0]!.offer] },
+        { exitKey: door2!.exitKey, rewards: [first!.reward] },
+      ],
+    });
+    expect(second!.doors).toMatchObject({
+      doorLabel: 'Door 1',
+      before: door1!.door.offerRewardSurface.rewards[0]!.offer,
+      after: [
+        { exitKey: door1!.exitKey, rewards: [second!.reward] },
+        { exitKey: door2!.exitKey, rewards: [first!.reward] },
+      ],
     });
     // The Timeline row names its door and new reward.
     const room = requireWorkspaceBiome(projected.workspace, 'F').nodes.find(

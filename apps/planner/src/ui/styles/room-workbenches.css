@@ -3499,3 +3499,162 @@
   gap: 10px;
   min-width: 0;
 }
+
+/* Doors on the Timeline: the Doors open row's door chips, its editor and the room's last row. */
+
+.timeline-doors-open-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.timeline-door-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeline-door-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 24px;
+  padding: 1px 5px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.timeline-door-chip[data-picked] {
+  border-color: color-mix(in srgb, var(--selection-accent) 70%, transparent);
+}
+
+.timeline-door-chip[data-missing] {
+  border-style: dashed;
+  border-color: var(--border);
+  background: none;
+}
+
+.timeline-door-chip[data-unavailable] {
+  opacity: 0.5;
+}
+
+.timeline-door-chip-blank {
+  width: 18px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.timeline-doors-detail-row {
+  padding: 4px 8px 10px calc(var(--timeline-row-start) + 3px);
+  border-radius: 0 0 6px 6px;
+  background: rgb(255 255 255 / 2.5%);
+}
+
+.timeline-doors-detail-row > .timeline-doors-detail {
+  display: grid;
+  gap: 8px;
+}
+
+.timeline-doors-detail-row .workbench-action-row {
+  padding-top: 4px;
+  border-top: 0;
+}
+
+.timeline-leave-row .timeline-banner-title {
+  min-width: auto;
+  flex: 0 0 auto;
+}
+
+.timeline-leave-row .timeline-leave-controls {
+  min-width: 0;
+  margin-inline-start: 14px;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  row-gap: 6px;
+  gap: 10px;
+}
+
+.timeline-leave-actions {
+  display: inline-flex;
+  margin-inline-start: auto;
+  gap: 8px;
+}
+
+.timeline-leave-actions > :is(.primary-action, .plan-end-action) {
+  min-height: var(--action-compact-height);
+  padding-block: 2px;
+}
+
+.room-reroll-row-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.timeline-leave-door {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.timeline-leave-door span.contextual-picker-trigger-part-image:empty {
+  display: none;
+}
+
+.timeline-leave-rewards {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.door-rows-header-action {
+  justify-self: end;
+}
+
+.timeline-doors-toggle {
+  min-width: 1.5rem;
+}
+
+/* A press row: the door, its reward before, the new reward, then every door as it leaves them. */
+.timeline-row[data-door-press] > [data-timeline-cell='money'] {
+  display: none;
+}
+
+.timeline-row[data-door-press] > [data-timeline-cell='editors'] {
+  display: flex;
+  grid-row: 1;
+  grid-column: 3 / 6;
+  align-items: center;
+  gap: 10px;
+}
+
+.room-reroll-row-inline .contextual-picker,
+.room-reroll-row-inline .contextual-picker-trigger {
+  width: auto;
+  max-width: none;
+}
+
+.room-reroll-row-doors {
+  margin-inline-start: auto;
+}
+
+/* A door the doors' repair removes draws the eye with that repair. */
+.timeline-doors-detail .door-row[data-available='false'] {
+  background: color-mix(in srgb, var(--finding) 9%, transparent);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--finding) 70%, transparent);
+}
+
+.door-rows-header-action .text-action[data-attention] {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--finding) 14%, transparent);
+  color: var(--finding);
+  text-decoration-color: color-mix(in srgb, var(--finding) 60%, transparent);
+}
+
+.hub-timeline-exit[data-ready='false'] {
+  opacity: 0.55;
+}

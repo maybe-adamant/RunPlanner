@@ -116,7 +116,7 @@ function railKeyForNode(biome: WorkspaceBiome, nodeKey: string): string {
   return entry.marker.focusKey;
 }
 
-/** The rail stop that opens a decision's source room, whose Doors tab repairs the decision. */
+/** The rail stop that opens a decision's source room, whose Timeline repairs the decision. */
 function sourceRoomRailKey(
   biome: WorkspaceBiome,
   decision: Extract<
@@ -446,7 +446,8 @@ describe('workspace inspector destinations', () => {
       ownerAddress: finding.origin,
       focusAddress: finding.origin,
       focusKey: semanticAddressKey(finding.origin),
-      roomTab: 'doors',
+      roomTab: 'actions',
+        timelineDoors: 'doorsOpen',
       selectedRailKey: sourceRoomRailKey(biome(workspace, 'H'), decision),
       inspectorSubject: { kind: 'node', nodeKey: decision.key },
     });
@@ -1235,7 +1236,7 @@ describe('workspace inspector destinations', () => {
     { entry: 'Chaos', persistence: 'authored' },
     { entry: 'Chaos', persistence: 'uncommitted' },
   ])(
-    'routes the $persistence $entry Hub continuation finding to its Room Doors',
+    'routes the $persistence $entry Hub continuation finding to its Doors open row',
     ({ entry, persistence }) => {
       const occurrenceId =
         entry === 'Chaos' ? createOccurrenceId('inspector-hub-chaos') : nOccurrenceIds.preHub;
@@ -1286,7 +1287,8 @@ describe('workspace inspector destinations', () => {
           : occurrenceWorkbenchFor(n, occurrenceId);
       if (host === undefined) throw new Error('Hub continuation host is missing');
       expect(destination(workspace, owner)).toMatchObject({
-        roomTab: 'doors',
+        roomTab: 'actions',
+        timelineDoors: 'doorsOpen',
         inspectorSubject: { kind: 'node', nodeKey: host.key },
         selectedRailKey: semanticAddressKey(owner),
       });
@@ -1331,7 +1333,7 @@ describe('workspace inspector destinations', () => {
     );
     if (preHubWorkbench === undefined) throw new Error('complete N PreHub workbench is missing');
     const preHubSource = destination(complete, preHubDecision.marker.address);
-    // PreHub's doors repair on the Opening's Doors tab.
+    // PreHub's doors repair on the Opening's Doors open row.
     const preHubRailKey = railKeyForNode(n, n.entry?.key ?? '');
     expect(preHubSource.inspectorSubject).toEqual({ kind: 'node', nodeKey: preHubDecision.key });
     expect(preHubSource.selectedRailKey).toBe(preHubRailKey);
@@ -1547,7 +1549,7 @@ describe('workspace inspector destinations', () => {
     );
     if (handoffPreboss === undefined) throw new Error('completed N Hub Preboss stage is missing');
     const handoffDestination = destination(handoff, handoffOwner);
-    expect(handoffDestination.hubTab).toBe('doors');
+    expect(handoffDestination.hubTab).toBe('timeline');
     expect(handoffDestination.inspectorSubject).toEqual({
       kind: 'node',
       nodeKey: handoffPreboss.key,
@@ -1640,7 +1642,8 @@ describe('workspace inspector destinations', () => {
         ownerAddress: owner,
         focusAddress: owner,
         focusKey: semanticAddressKey(owner),
-        roomTab: 'doors',
+        roomTab: 'actions',
+        timelineDoors: 'doorsOpen',
         selectedRailKey: sourceRoomRailKey(h, fieldsDecision),
       });
     }

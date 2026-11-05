@@ -79,12 +79,13 @@ function projectedRunStateTitles(
 }
 
 describe('Run State product loop', () => {
-  it('opens F at its room-entry and pre-exit lifecycle seams without new evaluation work', async () => {
+  it('opens F at its room-entry seam without new evaluation work', async () => {
     const application = fRunStateApplication;
     const events = fRunStateEvents;
     const titles = fRunStateTitles;
     expect(titles).toContain('the first action in Opening 01');
-    expect(titles).toContain('exiting Opening 01');
+    // The run as a room is left is the next room's entry; no launcher repeats it.
+    expect(titles).not.toContain('exiting Opening 01');
     expect(titles).not.toContain('Decision 1');
     const view = renderPlannerForInteraction({ application });
 
@@ -121,18 +122,7 @@ describe('Run State product loop', () => {
     expect(document.activeElement).toBe(launcher);
     expectNoEvaluationWork(events, 'F Run State open/close');
 
-    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
-    const exitLauncher = screen.getByRole('button', { name: 'Run State' });
-    await view.user.click(exitLauncher);
-    const exitSheet = screen.getByRole('region', { name: 'State before exiting Opening 01' });
-    // The Opening's own RunProgress entry is folded by its pre-exit boundary.
-    await view.user.click(within(exitSheet).getByRole('tab', { name: 'More Info' }));
-    expect(stateRowValue(exitSheet, 'Entered stores')).toBe('1 entered, 0 Minor Reward');
-    expect(stateRowValue(exitSheet, 'Current ratio')).toBe('0.000');
-    await view.user.keyboard('{Escape}');
-    expectNoEvaluationWork(events, 'F pre-exit Run State open/close');
-
-    await view.user.click(exitLauncher);
+    await view.user.click(launcher);
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expectNoEvaluationWork(events, 'F Run State route reconciliation');
@@ -187,15 +177,14 @@ describe('Run State product loop', () => {
     expectNoEvaluationWork(events, 'N Preboss Run State open/close');
   });
 
-  it('reaches the completed-Hub Preboss from the Hub Doors tab', async () => {
+  it('reaches the completed-Hub Preboss from its rail stop', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(loadSurfaceNCompleteHubFrontierProject()));
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(screen.getByRole('button', { name: /Hub.*visits/ }));
-    await view.user.click(screen.getByRole('tab', { name: 'Hub Doors' }));
-    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
+    await view.user.click(screen.getByRole('button', { name: /^Preboss/ }));
     const prebossWorkbench = document.querySelector<HTMLElement>('.biome-occurrence-workbench');
     if (prebossWorkbench === null) throw new Error('Preboss room workbench is missing');
     expect(within(prebossWorkbench).getByRole('heading', { name: 'Preboss' })).toBeTruthy();

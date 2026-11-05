@@ -630,6 +630,7 @@ export function BiomeWorkspace({
             {...(explicitDestination?.roomTab === undefined
               ? {}
               : { roomTab: explicitDestination.roomTab })}
+            doorsRequested={explicitDestination?.timelineDoors === 'doorsOpen'}
             {...(explicitDestination?.sideRoomSlotKey === undefined
               ? {}
               : { sideRoomSlotKey: explicitDestination.sideRoomSlotKey })}

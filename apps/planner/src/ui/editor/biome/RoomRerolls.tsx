@@ -14,6 +14,11 @@ import { RewardOfferPicker } from '../rewards/RewardEditors';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { hintProps } from '@planner/ui/controls/hint';
 import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
+import { TimelineRow } from './TimelineRow';
+import { DoorChips } from './DecisionWorkbench';
+import type { DoorChip } from './doorSummary';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 
 const emptyTargets: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
@@ -218,5 +223,153 @@ export function RoomRerolls({
         )}
       </ol>
     </section>
+  );
+}
+
+/**
+ * The room's Doors as an object beside its Timeline: a pick names the door
+ * (or its cage) to reroll, then its new reward, appending one press after the
+ * room's other actions.
+ */
+export function DoorsRerollEntry({
+  interactions,
+  name = 'Doors',
+  rerolls,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  /** The object's name: the room's Doors, or a Ship phase's Wheel. */
+  readonly name?: string;
+  readonly rerolls: WorkspaceRoomRerolls;
+}) {
+  const interaction = requireWorkspaceInteraction(interactions.roomRerolls, rerolls.interactionKey);
+  const executeIntent = useCommandIntent();
+  const [pendingTarget, setPendingTarget] = useState<string>();
+  // Ending a pending press brings back the object's picker, which takes focus again.
+  const refocus = useRef(false);
+  const endPending = () => {
+    refocus.current = true;
+    setPendingTarget(undefined);
+  };
+  const idPrefix = `doors-object-${rerolls.interactionKey}`;
+  useEffect(() => {
+    if (pendingTarget !== undefined || !refocus.current) return;
+    refocus.current = false;
+    document.getElementById(`${idPrefix}-target`)?.focus();
+  });
+  const lockedHint = appendHint(rerolls.appendLocked);
+  const pending =
+    pendingTarget !== undefined &&
+    rerolls.appendLocked === undefined &&
+    interaction.targets(pendingTarget).selected !== undefined
+      ? pendingTarget
+      : undefined;
+  const pendingLabel =
+    pending === undefined ? undefined : interaction.targets(pending).selected?.label;
+  return (
+    <TimelineRow
+      className="room-action-feature-roll"
+      data-feature="doors"
+      kind="insertion"
+      label={
+        pending === undefined ? (
+          <ContextualPicker<string>
+            ariaLabel={name}
+            {...(lockedHint === undefined ? {} : { disabledHint: lockedHint })}
+            id={`${idPrefix}-target`}
+            itemIcon={() => rerollDieArtwork}
+            label=""
+            model={lockedHint === undefined ? interaction.targets(undefined) : emptyTargets}
+            onSelect={setPendingTarget}
+            placeholder={name}
+            searchable={false}
+            triggerIcon={rerollDieArtwork}
+          />
+        ) : (
+          // The target picker gives way while the reward is picked, so closing it does not dismiss that.
+          <FixedValueChip icon={rerollDieArtwork} label={`Reroll ${pendingLabel ?? ''}`} />
+        )
+      }
+      editors={
+        pending === undefined ? null : (
+          <RewardOfferPicker
+            ariaLabel="New reroll reward"
+            defaultOpen
+            id={`${idPrefix}-reward`}
+            key={pending}
+            label=""
+            offer={null}
+            onDismiss={endPending}
+            onReplace={(reward) => {
+              endPending();
+              executeIntent(interaction.appendIntent(pending, reward));
+            }}
+            resolver={interaction.pendingReward(pending)}
+          />
+        )
+      }
+    />
+  );
+}
+
+/** One door press on its Timeline row: its new reward, picked in place. */
+export function DoorRerollRowReward({
+  chips,
+  interactions,
+  rerolls,
+  rowKey,
+}: {
+  /** The room's door chips as first drawn; the row shows them as this press leaves them. */
+  readonly chips?: readonly DoorChip[];
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly rerolls: WorkspaceRoomRerolls;
+  readonly rowKey: string;
+}) {
+  const interaction = requireWorkspaceInteraction(interactions.roomRerolls, rerolls.interactionKey);
+  const executeIntent = useCommandIntent();
+  const findingTarget = useFindingTarget();
+  const row = rerolls.rows.find((candidate) => candidate.key === rowKey);
+  if (row === undefined) return null;
+  const doors = row.doors;
+  const after = doors?.after;
+  const chipsAfter =
+    chips === undefined || after === undefined
+      ? undefined
+      : chips.map((chip) => {
+          const door = after.find((candidate) => candidate.exitKey === chip.key);
+          return door === undefined
+            ? chip
+            : {
+                ...chip,
+                rewards: door.rewards.flatMap((offer) =>
+                  offer === null ? [] : [offerIcon(offer)],
+                ),
+              };
+        });
+  return (
+    <>
+      <span className="room-reroll-row-inline">
+        <span>{doors?.doorLabel ?? row.targetLabel}</span>
+        {doors?.before == null ? null : (
+          <ArtworkIcon className="artwork-label-icon" source={offerIcon(doors.before)} />
+        )}
+        <span aria-hidden="true" className="row-reward-arrow">
+          →
+        </span>
+        <RewardOfferPicker
+          ariaLabel={`${row.targetLabel} reroll reward`}
+          findingTarget={findingTarget(row.address)}
+          id={semanticOwnerControlElementId(row.address)}
+          label=""
+          offer={row.reward}
+          onReplace={(reward) => executeIntent(interaction.replaceRewardIntent(row.key, reward))}
+          resolver={interaction.rowReward(row.key)}
+        />
+      </span>
+      {chipsAfter === undefined ? null : (
+        <span className="room-reroll-row-doors">
+          <DoorChips chips={chipsAfter} />
+        </span>
+      )}
+    </>
   );
 }

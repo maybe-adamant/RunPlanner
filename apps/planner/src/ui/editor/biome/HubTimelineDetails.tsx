@@ -28,6 +28,7 @@ import {
   candidateWaitingHint,
 } from '@planner/ui/feedback/candidatePresentation';
 import {
+  useAuthoringLocked,
   useFindingAnchor,
   useFindingMark,
   useFindingTarget,
@@ -622,6 +623,27 @@ export function HubTimelineDetails({
           />
         </div>
       )}
+      <HubExitRow node={node} />
     </section>
+  );
+}
+
+/**
+ * The Hub always leaves to its Preboss: a fixed last row, quiet until the
+ * Hub is complete, that holds the completed-Hub exit's findings.
+ */
+function HubExitRow({ node }: { readonly node: WorkspaceHubDecisionNode }) {
+  const findingAnchor = useFindingAnchor();
+  const ready = !useAuthoringLocked(node.completedExit.target.marker.address);
+  return (
+    <div
+      {...findingAnchor(node.completedExit.marker.address)}
+      className="hub-timeline-row hub-timeline-exit"
+      data-ready={ready}
+      tabIndex={-1}
+    >
+      <span className="hub-timeline-step" />
+      <strong className="hub-timeline-room">Go to {node.completedExit.target.label}</strong>
+    </div>
   );
 }

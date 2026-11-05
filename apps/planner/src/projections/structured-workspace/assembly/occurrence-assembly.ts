@@ -102,7 +102,7 @@ import { workspaceScreenRerollSource } from './screen-reroll-assembly';
 import { assemblePhantomExit } from './phantom-exit-assembly';
 import { assembleWheelRerolls, rerollMovedOnTimeline } from './reroll-assembly';
 import { occurrenceInteractionRequirements } from './occurrence-interaction-requirements';
-import { roomWorkbenchPresentation } from './occurrence-room-workbench';
+import { roomWorkbenchPresentation, workspaceDoorsTimelineTab } from './occurrence-room-workbench';
 import { resourceOutcomeLabel } from './resource-labels';
 
 function offerRewardRewards(
@@ -697,7 +697,7 @@ export function assembleWorkspaceOccurrence(
             markerDestinations: input.markerDestinations,
             occurrence: input.occurrence,
             source: rerollSource,
-            tab: phase.wheelTab,
+            tab: phase.tab,
             wheel: phase.wheel,
           });
           if (wheel.requirement !== undefined) wheelRerollRequirements.push(wheel.requirement);
@@ -928,6 +928,7 @@ export function assembleWorkspaceOccurrence(
           ),
         }),
     runStateByTab,
+    doorsTab: workspaceDoorsTimelineTab(workbench),
     workbench,
   });
   const node: WorkspaceOccurrenceWorkbenchNode = Object.freeze({
@@ -955,12 +956,20 @@ export function assembleWorkspaceOccurrence(
     ],
     'overview',
   );
-  // The boss-door pool sits beside its door, so its findings route to Doors.
+  // The boss-door pool and the hidden door sit with the doors on the Doors open row.
   if (bossDoorRewardStore?.kind === 'editor') {
-    input.markerDestinations.setRoomTab([bossDoorRewardStore.marker], 'doors');
+    input.markerDestinations.setTimelineDoors(
+      [bossDoorRewardStore.marker],
+      workspaceDoorsTimelineTab(workbench),
+      'doorsOpen',
+    );
   }
   if (phantomExit !== undefined) {
-    input.markerDestinations.setRoomTab([phantomExit.control.marker], 'doors');
+    input.markerDestinations.setTimelineDoors(
+      [phantomExit.control.marker],
+      workspaceDoorsTimelineTab(workbench),
+      'doorsOpen',
+    );
   }
   if (roomLocal.kind === 'shop') {
     input.markerDestinations.setRoomTab(
@@ -1219,27 +1228,25 @@ export function assembleWorkspaceOccurrence(
           mark?.control,
         );
       }
-      // Rerolls are edited in their list: beside the doors, or on their wheel's tab.
+      // Wheel and door rerolls are rows of the Timeline that opens them.
       const rerollTarget =
         row.reference.kind === 'reroll' && !rerollMovedOnTimeline(input, row.address)
           ? row.reference.target
           : undefined;
       const wheelTab =
         rerollTarget?.kind === 'wheelOffer' && workbench.kind === 'ship'
-          ? workbench.phases.find((phase) => phase.wheel?.key === rerollTarget.wheelKey)?.wheelTab
+          ? workbench.phases.find((phase) => phase.wheel?.key === rerollTarget.wheelKey)?.tab
           : undefined;
       const tab =
-        rerollTarget !== undefined && rerollTarget.kind !== 'wheelOffer'
-          ? ('doors' as const)
-          : wheelTab !== undefined
-            ? wheelTab
-            : roomLocal.kind === 'ship'
-              ? (shipActionTabs.get(row.key) ??
-                (workbench.kind === 'ship' &&
-                workbench.repairRows.some((repair) => repair.key === row.key)
-                  ? 'shipInactiveRepair'
-                  : undefined))
-              : 'actions';
+        wheelTab !== undefined
+          ? wheelTab
+          : roomLocal.kind === 'ship'
+            ? (shipActionTabs.get(row.key) ??
+              (workbench.kind === 'ship' &&
+              workbench.repairRows.some((repair) => repair.key === row.key)
+                ? 'shipInactiveRepair'
+                : undefined))
+            : 'actions';
       if (tab === undefined) {
         throw new StructuredWorkspaceProjectionContractError(
           `Ship action ${row.key} has no rendered timeline destination`,
@@ -1277,7 +1284,8 @@ export function assembleWorkspaceOccurrence(
         input.markerDestinations.setRoomTab(wheelMarkers, 'overview');
         continue;
       }
-      const tab: WorkspaceRoomTab = workbenchPhase!.wheelTab ?? workbenchPhase!.tab;
+      // The phase the wheel follows hosts its Next phase ready and Select wheel rows.
+      const tab: WorkspaceRoomTab = workbenchPhase!.tab;
       input.markerDestinations.setRoomTab(wheelMarkers, tab);
       const choice = roomActions?.rows.find(
         (row) => row.reference.kind === 'chooseRewardWheel' && row.reference.wheelKey === wheel.key,

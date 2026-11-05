@@ -21,6 +21,6 @@ export function assembleOccurrenceActions(input: WorkspaceOccurrenceActionAssemb
   );
   return Object.freeze({
     roomActions,
-    ...assembleOccurrenceRunState(input, input.roomLocal, input.roomLabel, roomActions),
+    ...assembleOccurrenceRunState(input, input.roomLocal, roomActions),
   });
 }

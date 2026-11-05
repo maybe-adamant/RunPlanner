@@ -40,7 +40,7 @@ async function openDoors(view: ReturnType<typeof renderWorkspace>, occurrenceId:
     ),
   );
   const details = screen.getByRole('complementary', { name: 'Details' });
-  await view.user.click(within(details).getByRole('tab', { name: 'Room Doors' }));
+  await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
   return within(details).getByRole('article', { name: 'Hidden return door' });
 }
 
@@ -65,9 +65,8 @@ describe('PhantomExitDoor', () => {
     expect(
       within(door).queryByText(/^(Automatic|No reward)$/, { selector: '.fixed-value-chip-text' }),
     ).toBeNull();
-    // A side room's notes say it returns to its main room and explain the hidden door.
-    const notes = within(screen.getByRole('complementary', { name: 'Notes' }));
-    expect(notes.getByText('Returns to Combat 05.')).toBeTruthy();
+    // A side room's notes explain the hidden door, linked from its name.
+    expect(screen.getByRole('complementary', { name: 'Notes' })).toBeTruthy();
     expect(door.querySelector('[aria-describedby]')).not.toBeNull();
     expect(within(door).getByRole('button', { name: 'Choose' })).toBeTruthy();
     expect(within(door).queryByRole('button', { name: 'Reward' })).toBeNull();
@@ -151,7 +150,7 @@ describe('PhantomExitDoor', () => {
         findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
       ),
     );
-    expect(screen.getByRole('tab', { name: 'Room Doors' }).getAttribute('aria-selected')).toBe(
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
     );
     const door = screen.getByRole('article', { name: 'Hidden return door' });

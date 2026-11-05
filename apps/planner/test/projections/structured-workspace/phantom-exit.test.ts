@@ -75,7 +75,7 @@ describe('hidden return door', () => {
     expect(control.reward).toEqual({ summary: 'No reward', locked: 'noDraw' });
     expect(
       projected.workspace.focusByOwner.get(semanticAddressKey(exitOf(combat05))),
-    ).toMatchObject({ roomTab: 'doors' });
+    ).toMatchObject({ roomTab: 'actions', timelineDoors: 'doorsOpen' });
 
     // Only real candidates are listed; the settled room is the current one.
     const items = interaction.rooms.load().sections.flatMap((section) => section.items);
@@ -162,7 +162,7 @@ describe('hidden return door', () => {
     });
   });
 
-  it('routes an unavailable pinned room to the Doors tab under a descriptive title', () => {
+  it('routes an unavailable pinned room to the Timeline under a descriptive title', () => {
     const projected = projectStructuredWorkspaceFixture(
       pin(loadSurfaceNOPQProject(), combat02, {
         placeholderRoomGameName: 'N_MiniBoss01',
@@ -178,7 +178,7 @@ describe('hidden return door', () => {
     expect(presentFinding(finding).title).toBe('Hidden door room unavailable');
     expect(
       projected.workspace.focusByOwner.get(semanticAddressKey(exitOf(combat02))),
-    ).toMatchObject({ roomTab: 'doors', ownerAddress: exitOf(combat02) });
+    ).toMatchObject({ roomTab: 'actions', ownerAddress: exitOf(combat02) });
     const items = hiddenDoor(projected, combat02)
       .interaction.rooms.load()
       .sections.flatMap((section) => section.items);

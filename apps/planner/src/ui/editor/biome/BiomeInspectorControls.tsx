@@ -193,7 +193,7 @@ export function inspectorRoomActionContent(
   );
 }
 
-/** A reroll is edited in its Rerolls list: beside the doors, or on its wheel's tab. */
+/** A wheel reroll is edited in its wheel's Rerolls list. */
 function RerollTimelineLink({
   row,
 }: {
@@ -209,7 +209,7 @@ function RerollTimelineLink({
     >
       {row.reference.kind === 'reroll' && row.reference.target.kind === 'wheelOffer'
         ? 'Open wheel'
-        : 'Room Doors'}
+        : 'Doors'}
     </button>
   );
 }

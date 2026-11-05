@@ -142,7 +142,7 @@ it('marks Delete on a Timeline action that should not exist', async () => {
   await waitFor(() => expect(document.activeElement).toBe(remove));
 });
 
-it('rings every pickable door of a missing selection and focuses the first', async () => {
+it('marks the exit picker of a missing selection and focuses it', async () => {
   const project = applyProjectCommand(createCompleteFGProject(), catalog, {
     kind: 'SetExitSelection',
     selection: createExitSelectionAddress(goldenFBiome, {
@@ -160,12 +160,12 @@ it('rings every pickable door of a missing selection and focuses the first', asy
     </Provider>,
   );
   await view.user.click(findings.container.querySelector('button')!);
-  const doors = screen.getByRole('group', { name: 'Doors' });
-  const radios = within(doors).getAllByRole<HTMLInputElement>('radio');
-  expect(radios.length).toBeGreaterThan(1);
-  expect(paintedFindings()).toEqual(radios.filter((radio) => !radio.disabled));
-  expect(doors.hasAttribute('data-has-findings')).toBe(false);
-  await waitFor(() => expect(document.activeElement).toBe(radios.find((radio) => !radio.disabled)));
+  // The exit is picked on the room's last row; its picker carries the mark and takes focus.
+  const leave = screen.getByRole('listitem', { name: 'Leave room' });
+  const exit = within(leave).getByRole('button', { name: 'Exit door' });
+  expect(paintedFindings()).toEqual([exit]);
+  expect(leave.hasAttribute('data-has-findings')).toBe(false);
+  await waitFor(() => expect(document.activeElement).toBe(exit));
 });
 
 it('marks the Overview requirement box for an incomplete Hub open set', async () => {

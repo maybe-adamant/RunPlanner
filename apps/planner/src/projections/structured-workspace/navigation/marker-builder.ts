@@ -44,6 +44,12 @@ export interface WorkspaceMarkerDestinationEmitter {
   markCodeAt(marker: WorkspaceMarker, code: string, mark: WorkspaceMarker): void;
   setHubTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceHubTab): void;
   setRoomTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceRoomTab): void;
+  /** Hosts markers on the room Timeline's Doors open row or its terminal exit row. */
+  setTimelineDoors(
+    markers: Iterable<WorkspaceMarker>,
+    tab: WorkspaceRoomTab,
+    row: 'doorsOpen' | 'leave',
+  ): void;
   setSideRoomDestination(markers: Iterable<WorkspaceMarker>, slotKey: string): void;
 }
 
@@ -204,8 +210,22 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
     },
     setRoomTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceRoomTab): void {
       for (const marker of markers) {
-        const destination = requireRegistered(marker);
+        const { timelineDoors: _timelineDoors, ...destination } = requireRegistered(marker);
+        void _timelineDoors;
         destinations.set(marker.focusKey, Object.freeze({ ...destination, roomTab: tab }));
+      }
+    },
+    setTimelineDoors(
+      markers: Iterable<WorkspaceMarker>,
+      tab: WorkspaceRoomTab,
+      row: 'doorsOpen' | 'leave',
+    ): void {
+      for (const marker of markers) {
+        const destination = requireRegistered(marker);
+        destinations.set(
+          marker.focusKey,
+          Object.freeze({ ...destination, roomTab: tab, timelineDoors: row }),
+        );
       }
     },
     setSideRoomDestination(markers: Iterable<WorkspaceMarker>, slotKey: string): void {

@@ -63,7 +63,7 @@ describe('plan end in the biome workspace', () => {
       application,
       createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-b3-e1')),
     );
-    await user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
     await user.click(screen.getByRole('button', { name: 'End plan here' }));
     expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b3-e1' });
@@ -103,8 +103,12 @@ describe('plan end in the biome workspace', () => {
 
     const overview = roomCard().querySelector('.room-workbench-panel-content');
     expect(overview?.hasAttribute('inert')).toBe(true);
-    await user.click(screen.getByRole('tab', { name: 'Room Doors' }));
-    expect(roomCard().querySelector('.past-plan-end-content')?.hasAttribute('inert')).toBe(true);
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    // Its Timeline is read-only and its doors, dormant past the end, are not shown.
+    expect(roomCard().querySelector('.room-workbench-panel-content')?.hasAttribute('inert')).toBe(
+      true,
+    );
+    expect(within(roomCard()).queryByLabelText('Doors open')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'End plan here' }));
     expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b7-e1' });
@@ -120,34 +124,34 @@ describe('plan end in the biome workspace', () => {
       application,
       createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-b5-e1')),
     );
-    await user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
     expect(screen.queryByRole('button', { name: 'End plan here' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Open next room' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
+    expect(within(roomCard()).getByRole('listitem', { name: 'Plan ends here' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Reset Doors' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Continue planning' }));
     expect(currentPlanEnd(application)).toBeUndefined();
   });
 
-  it('opens a fixed exit room or ends the plan from the Preboss doors', async () => {
+  it('ends the plan from the Preboss, whose fixed exit is its last row', async () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openRoom(
       application,
       createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-shop')),
     );
-    await user.click(screen.getByRole('tab', { name: 'Room Doors' }));
-    expect(screen.getByRole('button', { name: 'End plan here' })).toBeTruthy();
-
-    await user.click(screen.getByRole('button', { name: 'Open next room' }));
-    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-shop:boss')),
-    );
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const leave = within(roomCard()).getByRole('listitem', { name: 'Leave room' });
+    await user.click(within(leave).getByRole('button', { name: 'End plan here' }));
+    expect(currentPlanEnd(application)).toEqual({
+      biomeKey: 'F',
+      occurrenceId: 'golden-f-preboss-shop',
+    });
   });
 
   it('ends the plan with a Hub visit from its main room', async () => {
     const { application, user } = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     openRoom(application, createOccurrenceAddress(nBiome, nOccurrenceId('combat02')));
-    await user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
     await user.click(screen.getByRole('button', { name: 'End plan here' }));
     expect(currentPlanEnd(application)).toEqual({
@@ -163,7 +167,7 @@ describe('plan end in the biome workspace', () => {
       'N',
     );
     openRoom(application, createOccurrenceAddress(nBiome, nOccurrenceId('combat05')));
-    await user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const door = within(roomCard()).getByRole('article', { name: 'Hidden return door' });
     expect(within(door).getByRole('button', { name: 'Choose' })).toHaveProperty('disabled', true);
   });

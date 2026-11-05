@@ -1,8 +1,4 @@
-import type {
-  ExitSelectionAddress,
-  SemanticAddress,
-  TargetAddress,
-} from '@run-planner/engine/authored-project';
+import type { ExitSelectionAddress, TargetAddress } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -21,7 +17,6 @@ import {
   type WorkspaceTopologyRemovalInteraction,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import {
@@ -39,20 +34,15 @@ import { CandidatePicker } from './CandidatePicker';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
 import { RoomSelector } from './RoomSelector';
 import { roomKindIcon } from './roomIcon';
-import { PlanEndAction } from './PlanEndAction';
-import { RunStateLauncher } from './RunStateSheet';
 import { DoorRewardEditor, DoorRewardHiddenTag, RerolledRewardRepairs } from './DoorRewardEditor';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
-import { RoomRerolls } from './RoomRerolls';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
-import {
-  useDoorNotes,
-  type DoorNoteItem,
-  type DoorNoteMark,
-  type DoorNoteTarget,
-} from './doorNotes';
+import { doorRewardIcons, type DoorChip } from './doorSummary';
+import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
+import { type DoorNoteItem, type DoorNoteMark, type DoorNoteTarget } from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
@@ -199,10 +189,13 @@ export function FixedExitRow({
 
 /** The doors table's column names; each row names its own cells for assistive technology. */
 export function DoorRowsHeader({
+  action,
   identity = 'Door',
   room = 'Room',
   select,
 }: {
+  /** One quiet action at the header's end, such as resetting the doors. */
+  readonly action?: ReactNode;
   readonly identity?: string;
   /** Empty where the rows have no room column, such as a reward wheel's offers. */
   readonly room?: string;
@@ -210,13 +203,13 @@ export function DoorRowsHeader({
   readonly select?: ReactNode;
 } = {}) {
   return (
-    <div aria-hidden="true" className="door-rows-header">
-      <span>{select}</span>
-      <span>{identity}</span>
-      <span>{room}</span>
-      <span>Reward</span>
-      <span />
-      <span />
+    <div {...(action === undefined ? { 'aria-hidden': true } : {})} className="door-rows-header">
+      <span aria-hidden="true">{select}</span>
+      <span aria-hidden="true">{identity}</span>
+      <span aria-hidden="true">{room}</span>
+      <span aria-hidden="true">Reward</span>
+      <span aria-hidden="true" />
+      <span className="door-rows-header-action">{action}</span>
     </div>
   );
 }
@@ -254,28 +247,31 @@ function DoorRowWaiting({ children }: { readonly children: string }) {
 /** The repair's projected effect names and styles it; a projected mark owner carries the batch's mark. */
 function ExactRepairAction({
   intent,
+  label,
   onFocusedUse,
 }: {
   readonly intent: WorkspaceBatchRepairIntent | undefined;
+  readonly label: string;
   /** The repair removes its own button, so a focused use hands focus on. */
   readonly onFocusedUse: () => void;
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   if (intent === undefined) return null;
-  const adds = intent.effect === 'addMissing';
   return (
     <button
       {...(intent.markOwner === undefined ? {} : findingTarget(intent.markOwner))}
-      className={adds ? 'secondary-action' : 'danger-action'}
+      className="text-action"
+      data-attention=""
       data-command={intent.command.kind}
+      data-tone="danger"
       onClick={(event) => {
         if (document.activeElement === event.currentTarget) onFocusedUse();
         executeIntent(intent);
       }}
       type="button"
     >
-      {adds ? 'Add missing Preboss doors' : 'Remove unavailable doors'}
+      {label}
     </button>
   );
 }
@@ -314,6 +310,25 @@ export function TopologyRemovalAction({
   );
 }
 
+/** The doors' editor shows each first draw; the Leave row and the press rows show rerolls. */
+function firstDrawDoor(door: WorkspacePhysicalTarget['door']): WorkspacePhysicalTarget['door'] {
+  if (door.offerRewardSurface.rewards.every((reward) => reward.rerolledSummary === undefined))
+    return door;
+  return {
+    ...door,
+    offerRewardSurface: {
+      ...door.offerRewardSurface,
+      rewards: door.offerRewardSurface.rewards.map(
+        ({ rerolledOffer: _offer, rerolledSummary: _summary, ...reward }) => {
+          void _offer;
+          void _summary;
+          return reward;
+        },
+      ),
+    },
+  };
+}
+
 function TargetRow({
   interactions,
   node,
@@ -324,19 +339,7 @@ function TargetRow({
   readonly target: WorkspacePhysicalTarget;
 }) {
   const findingAnchor = useFindingAnchor();
-  const findingMark = useFindingMark();
   const dispatch = useAppDispatch();
-  const selectionInteraction =
-    node.targets.length === 1 && node.zagreusContract === undefined && node.chaos === undefined
-      ? undefined
-      : requireWorkspaceInteraction(
-          interactions.exitSelections,
-          workspaceInteractionKey(node.selection.address),
-        );
-  const selectionChoice = selectionInteraction?.targets.find(
-    (choice) => choice.value === target.exitKey,
-  );
-  const selection = exitSelectionAddress(node.selection);
   const door = target.door;
   const authorsRoom =
     node.targetInteraction === 'replaceable' &&
@@ -369,7 +372,7 @@ function TargetRow({
       map={{ gameName: door.room.gameName, hostId: target.marker.focusKey, title: door.room.label }}
       reward={
         <DoorRewardEditor
-          door={door}
+          door={firstDrawDoor(door)}
           focusOwner={target.marker.address}
           idPrefix={`door-${target.marker.focusKey}`}
           interactions={interactions}
@@ -404,31 +407,6 @@ function TargetRow({
           )}
         </>
       }
-      {...(selectionChoice === undefined
-        ? {}
-        : {
-            selection: (
-              <input
-                {...(target.physicalState === 'unavailable'
-                  ? hintProps('This saved room is no longer offered here.')
-                  : findingMark(selection))}
-                aria-label={`Pick ${door.room.label} from Door ${target.index}`}
-                checked={selectionInteraction?.selectedExitKey === target.exitKey}
-                disabled={target.physicalState === 'unavailable'}
-                name={`selection-${node.key}`}
-                onChange={() =>
-                  dispatch(
-                    authoredProjectCommandDispatched({
-                      kind: 'SetExitSelection',
-                      selection,
-                      value: { kind: 'normal', exitKey: target.exitKey },
-                    }),
-                  )
-                }
-                type="radio"
-              />
-            ),
-          })}
       state={{
         available: target.physicalState === 'available',
         picked: target.selected,
@@ -487,22 +465,14 @@ function MissingTargetRow({
 function AdditionalExitRow({
   control,
   interactions,
-  selection,
-  selectionName,
 }: {
   readonly control: NonNullable<BatchNode['chaos'] | BatchNode['zagreusContract']>;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly selection: SemanticAddress;
-  readonly selectionName: string;
 }) {
   const executeIntent = useCommandIntent();
-  const findingMark = useFindingMark();
   const key = workspaceInteractionKey(control.owner);
   const chaos =
     'kind' in control ? requireWorkspaceInteraction(interactions.chaosExits, key) : undefined;
-  const selectIntent =
-    chaos?.selectIntent ??
-    requireWorkspaceInteraction(interactions.zagreusContracts, key).selectIntent;
   const room = control.door.room;
   const art = roomKindIcon(room.roomIcon);
   return (
@@ -543,81 +513,8 @@ function AdditionalExitRow({
           <FixedValueChip icon={art} label={room.label} />
         )
       }
-      selection={
-        <input
-          {...findingMark(selection)}
-          aria-label={`Take ${control.exitTypeLabel}`}
-          checked={control.selected}
-          name={selectionName}
-          onChange={() => executeIntent(selectIntent)}
-          type="radio"
-        />
-      }
       state={{ available: true, picked: control.selected }}
     />
-  );
-}
-
-/** Only a partial selection needs explaining; an empty one is obvious. */
-function batchContinuationHint(node: BatchNode): string | undefined {
-  const doorSelected =
-    node.targets.some((target) => target.selected) ||
-    node.zagreusContract?.selected === true ||
-    node.chaos?.selected === true;
-  return doorSelected ? 'Fill the remaining doors to continue.' : undefined;
-}
-
-/**
- * A door footer: one contextual action at the start, the ways on at the end.
- * From the end room on the doors are read-only, so the room renders its
- * plan-end footer outside them and this row stays empty.
- */
-export function DoorActionRow({
-  contextual,
-  continuation,
-  planEnd,
-}: {
-  /** The targeted repair when one applies, otherwise the doors' removal. */
-  readonly contextual?: ReactNode;
-  readonly continuation?: ReactNode;
-  readonly planEnd?: WorkspaceRoomPlanEnd | undefined;
-}) {
-  if (planEnd?.relation !== undefined) return null;
-  if (contextual === undefined && continuation === undefined && planEnd === undefined) return null;
-  return (
-    <div className="workbench-action-row">
-      {contextual}
-      <span className="workbench-action-end">
-        {continuation}
-        <PlanEndAction planEnd={planEnd} />
-      </span>
-    </div>
-  );
-}
-
-/** Moves to the occurrence a decision continues into; disabled while none is selected. */
-export function SelectedContinuationAction({
-  continuation,
-  disabledHint,
-}: {
-  readonly continuation: { readonly marker: WorkspaceMarker } | undefined;
-  readonly disabledHint?: string | undefined;
-}) {
-  const dispatch = useAppDispatch();
-  return (
-    <button
-      className="primary-action"
-      disabled={continuation === undefined}
-      onClick={() => {
-        if (continuation !== undefined) {
-          dispatch(semanticOwnerFocused(continuation.marker.address));
-        }
-      }}
-      {...hintProps(continuation === undefined ? disabledHint : undefined)}
-      type="button"
-    >
-      Open next room
-    </button>
   );
 }
 
@@ -829,21 +726,14 @@ function BatchSettings({
   );
 }
 
-/** Renders an ordinary, bounded Hub-entry, mixed, or atomic takeover decision from its projection. */
-export function BatchWorkbench({
+/** The doors' repair where one applies, otherwise their removal. */
+export function BatchDoorsRepair({
   interactions,
-  label,
   node,
-  planEnd,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly label: string;
   readonly node: BatchNode;
-  /** The source room's plan-end action, beside the way on. */
-  readonly planEnd?: WorkspaceRoomPlanEnd | undefined;
 }) {
-  const findingAnchor = useFindingAnchor();
-  const notes = useDoorNotes(node.notes);
   const removal =
     node.persistence === 'authored' && node.source.kind === 'occurrence'
       ? requireWorkspaceInteraction(
@@ -851,45 +741,231 @@ export function BatchWorkbench({
           workspaceInteractionKey(node.owner),
         )
       : undefined;
-  const doorsId = semanticOwnerControlElementId(exitSelectionAddress(node.selection));
+  // A repair removes its own button, so a keyboard use hands focus to the doors.
+  const doorsId = semanticOwnerControlElementId(node.owner);
   const refocusDoors = useRef(false);
   useEffect(() => {
     if (!refocusDoors.current || node.repairIntent !== undefined) return;
     refocusDoors.current = false;
     document.getElementById(doorsId)?.focus();
   });
+  const executeIntent = useCommandIntent();
+  return node.repairIntent === undefined ? (
+    <button
+      className="text-action"
+      data-tone="danger"
+      {...(removal === undefined ? {} : { 'data-command': removal.intent.command.kind })}
+      disabled={removal === undefined}
+      onClick={() => removal === undefined || executeIntent(removal.intent)}
+      type="button"
+    >
+      Reset Doors
+    </button>
+  ) : (
+    <ExactRepairAction
+      intent={node.repairIntent}
+      label={node.kind === 'takeoverBatch' ? 'Fix Preboss' : 'Fix Doors'}
+      onFocusedUse={() => {
+        refocusDoors.current = true;
+      }}
+    />
+  );
+}
+
+/** The doors' compact state on the Doors open row; each chip names its door on hover. */
+export function DoorChips({ chips }: { readonly chips: readonly DoorChip[] }) {
+  if (chips.length === 0) return null;
+  return (
+    <span aria-label="Doors" className="timeline-door-chips" role="list">
+      {chips.map((chip) => (
+        <span
+          {...hintProps(chip.label, undefined, chip.label)}
+          aria-label={chip.label}
+          className="timeline-door-chip"
+          data-missing={chip.missing}
+          data-picked={chip.picked || undefined}
+          data-unavailable={chip.unavailable || undefined}
+          key={chip.key}
+          role="listitem"
+          tabIndex={0}
+        >
+          {chip.roomIcon === undefined ? (
+            chip.rewards.length > 0 ? null : (
+              <span aria-hidden="true" className="timeline-door-chip-blank">
+                ?
+              </span>
+            )
+          ) : (
+            <ArtworkIcon className="artwork-label-icon" source={roomKindIcon(chip.roomIcon)} />
+          )}
+          {chip.rewards.map((icon, index) => (
+            <ArtworkIcon className="artwork-label-icon" key={index} source={icon} />
+          ))}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * The exit door pick on the room's last Timeline row: every door the batch
+ * offers, plus its Chaos Gate or Contract.
+ */
+export function BatchExitPicker({
+  interactions,
+  node,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly node: BatchNode;
+}) {
+  const executeIntent = useCommandIntent();
+  const findingMark = useFindingMark();
+  const selectionAddress = exitSelectionAddress(node.selection);
+  const additional = [node.zagreusContract, node.chaos].flatMap((control) =>
+    control === undefined ? [] : [control],
+  );
+  const lone =
+    node.targets.length === 1 && additional.length === 0 && node.missingTargets.length === 0;
+  if (lone) {
+    const target = node.targets[0]!;
+    return (
+      <span className="timeline-leave-door">
+        <span>{`Door ${target.index}`}</span>
+        <span aria-hidden="true">·</span>
+        <FixedValueChip
+          icon={roomKindIcon(target.door.room.roomIcon)}
+          label={target.door.room.label}
+        />
+        <LeaveRewards icons={doorRewardIcons(target, 'final')} />
+      </span>
+    );
+  }
+  const selectable = node.targets.length > 1 || additional.length > 0;
+  const interaction = selectable
+    ? interactions.exitSelections.get(workspaceInteractionKey(node.selection.address))
+    : undefined;
+  const additionalIntent = (control: (typeof additional)[number]) => {
+    const key = workspaceInteractionKey(control.owner);
+    return 'kind' in control
+      ? requireWorkspaceInteraction(interactions.chaosExits, key).selectIntent
+      : requireWorkspaceInteraction(interactions.zagreusContracts, key).selectIntent;
+  };
+  const choices = [
+    ...node.targets.map((target) => ({
+      key: target.exitKey,
+      value: target.exitKey,
+      label: `Door ${target.index}`,
+      room: target.door.room.label,
+      rewards: doorRewardIcons(target, 'final'),
+      icon: roomKindIcon(target.door.room.roomIcon),
+      ...(target.physicalState === 'unavailable'
+        ? { disabled: true, explanation: 'This saved room is no longer offered here.' }
+        : {}),
+    })),
+    ...additional.map((control) => ({
+      key: workspaceInteractionKey(control.owner),
+      value: workspaceInteractionKey(control.owner),
+      label: control.exitTypeLabel,
+      room: control.door.room.label,
+      rewards: [rewardIcon(control.fixedRewardType)],
+      icon: roomKindIcon(control.door.room.roomIcon),
+    })),
+  ];
+  const selected =
+    additional.find((control) => control.selected) === undefined
+      ? interaction?.selectedExitKey
+      : workspaceInteractionKey(additional.find((control) => control.selected)!.owner);
+  const current = choices.find((choice) => choice.value === selected);
+  return (
+    <span className="timeline-leave-door">
+      <ContextualPicker<string>
+        ariaLabel="Exit door"
+        findingMark={findingMark(selectionAddress)}
+        id={semanticOwnerControlElementId(selectionAddress)}
+        label=""
+        {...(interaction === undefined ? { disabledHint: 'Fill the remaining doors first.' } : {})}
+        layout="inline"
+        model={declaredChoicesPicker(choices, selected)}
+        onSelect={(value) => {
+          const control = additional.find(
+            (candidate) => workspaceInteractionKey(candidate.owner) === value,
+          );
+          if (control !== undefined) {
+            executeIntent(additionalIntent(control));
+            return;
+          }
+          executeIntent({
+            command: {
+              kind: 'SetExitSelection',
+              selection: selectionAddress,
+              value: { kind: 'normal', exitKey: value },
+            },
+            focus: { owner: selectionAddress, timing: 'after' },
+          });
+        }}
+        placeholder="Choose a door"
+        searchable={false}
+        {...(current === undefined ? {} : { triggerLabel: current.label })}
+        triggerSize="content"
+      />
+      {current === undefined ? null : (
+        <>
+          <span aria-hidden="true">·</span>
+          <FixedValueChip icon={current.icon} label={current.room} />
+          <LeaveRewards icons={current.rewards} />
+        </>
+      )}
+    </span>
+  );
+}
+
+/** A door's final rewards after its room on the Leave row. */
+function LeaveRewards({ icons }: { readonly icons: readonly (ArtworkSource | undefined)[] }) {
+  if (icons.length === 0) return null;
+  return (
+    <>
+      <span aria-hidden="true">·</span>
+      <span className="timeline-leave-rewards">
+        {icons.map((icon, index) => (
+          <ArtworkIcon className="artwork-label-icon" key={index} source={icon} />
+        ))}
+      </span>
+    </>
+  );
+}
+
+/**
+ * A batch's doors as the Doors open row's detail: the batch rules, then one
+ * row per door. The exit pick and the way on sit on the room's last row.
+ */
+export function BatchDoorsDetail({
+  interactions,
+  markFor,
+  node,
+  repair,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
+  readonly node: BatchNode;
+  /** The doors' repair or removal, where it sits under the doors. */
+  readonly repair?: ReactNode;
+}) {
+  const findingAnchor = useFindingAnchor();
   return (
     <section
-      aria-label={`${label} room offers`}
-      className="biome-batch-workbench door-workbench"
+      aria-label="Doors"
+      className="biome-batch-workbench door-workbench timeline-doors-detail"
       data-batch-kind={node.kind}
       data-topology-state={node.topologyState}
       {...(node.repairIntent?.markOwner === undefined ? findingAnchor(node.owner) : {})}
       tabIndex={-1}
     >
-      {node.runState === undefined ? null : (
-        <div className="owner-markers door-workbench-markers">
-          <RunStateLauncher launcher={node.runState} />
-        </div>
-      )}
       <div className="door-body">
         <div className="door-batch">
-          <BatchSettings interactions={interactions} markFor={notes.markFor} node={node} />
+          <BatchSettings interactions={interactions} markFor={markFor} node={node} />
         </div>
-        <DoorNotes items={notes.items} />
-        <div
-          aria-label="Doors"
-          className="door-rows"
-          {...findingAnchor(exitSelectionAddress(node.selection), {
-            // Navigation lands on the first door that can still be picked.
-            focusTarget: (list) =>
-              list.querySelector<HTMLElement>('input[type="radio"]:not(:disabled)'),
-          })}
-          tabIndex={-1}
-          // The rows stay named articles; their radios group natively by name.
-          role="group"
-        >
-          <DoorRowsHeader />
+        <div className="door-rows" role="group" aria-label="Door rows">
+          <DoorRowsHeader {...(repair === undefined ? {} : { action: repair })} />
           {node.targets.map((target) => (
             <TargetRow
               interactions={interactions}
@@ -913,37 +989,11 @@ export function BatchWorkbench({
                 control={control}
                 interactions={interactions}
                 key={workspaceInteractionKey(control.owner)}
-                selection={exitSelectionAddress(node.selection)}
-                selectionName={`selection-${node.key}`}
               />
             ),
           )}
         </div>
-        {node.rerolls === undefined ? null : (
-          <RoomRerolls interactions={interactions} rerolls={node.rerolls} />
-        )}
       </div>
-      <DoorActionRow
-        contextual={
-          node.repairIntent === undefined ? (
-            <TopologyRemovalAction interaction={removal} label="Remove these doors" />
-          ) : (
-            <ExactRepairAction
-              intent={node.repairIntent}
-              onFocusedUse={() => {
-                refocusDoors.current = true;
-              }}
-            />
-          )
-        }
-        continuation={
-          <SelectedContinuationAction
-            continuation={node.selectedContinuation}
-            disabledHint={batchContinuationHint(node)}
-          />
-        }
-        planEnd={planEnd}
-      />
     </section>
   );
 }
@@ -977,12 +1027,12 @@ function ExitFrontier({
       'An ordinary exit frontier must provide its provisional door workbench.',
     );
   }
+  void planEnd;
   return (
-    <BatchWorkbench
+    <BatchDoorsDetail
       interactions={interactions}
-      label="Doors"
+      markFor={() => undefined}
       node={frontier.provisionalBatch}
-      planEnd={planEnd}
     />
   );
 }

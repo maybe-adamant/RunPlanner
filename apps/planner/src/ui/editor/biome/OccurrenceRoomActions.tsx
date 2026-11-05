@@ -43,6 +43,10 @@ import {
   type RoomAddGroup,
 } from './RoomAddMenu';
 import { useTimelineReorder } from './useTimelineReorder';
+import { DoorRerollRowReward, DoorsRerollEntry } from './RoomRerolls';
+import { DoorChips } from './DecisionWorkbench';
+import { RewardWheelWorkbench, SelectWheelRow } from './locals/RewardWheelWorkbench';
+import { wheelOfferChips } from './doorSummary';
 import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
 import { RoomObjectEntry } from './commerce/RoomObjectEntry';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
@@ -51,6 +55,12 @@ import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomActionIcon } from '@planner/ui/artwork/roomArtwork';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
+import {
+  DoorsOpenBanner,
+  DoorsOpenControls,
+  DoorsOpenDetailRow,
+  type TimelineDoors,
+} from './TimelineDoors';
 /** Room-owned boundary additions: editors on the boundary row and rows that follow it. */
 export interface TimelineBoundaryContent {
   readonly editors?: ReactNode;
@@ -92,12 +102,18 @@ const objectOfReference = (
 
 function WorkbenchAddArea({
   addAction,
+  doors,
+  extraObjects = [],
   featureRolls,
   interactions,
   objectEntries,
   objectRows,
   optionalRows,
 }: {
+  /** The room's Doors object and batch notes, where this list hosts the doors. */
+  readonly doors?: TimelineDoors | undefined;
+  /** Further object entries this list hosts, such as a Ship phase's Wheel. */
+  readonly extraObjects?: readonly ReactNode[];
   /** The timeline's rows, whose purchase, sale and reroll findings mark their object. */
   readonly objectRows: readonly WorkspaceRoomActions['rows'][number][];
   readonly addAction: (row: WorkspaceRoomActions['rows'][number]) => RoomAddAction;
@@ -186,6 +202,8 @@ function WorkbenchAddArea({
           </li>
         ),
       })),
+    ...(doors?.object === undefined ? [] : [{ rank: objectOrder.length + 1, node: doors.object }]),
+    ...extraObjects.map((node) => ({ rank: objectOrder.length + 1, node })),
     ...objectActionRows.map((row) => {
       const action = addAction(row);
       return {
@@ -216,6 +234,7 @@ function WorkbenchAddArea({
     .map((entry) => entry.node);
   return (
     <RoomAddArea
+      footer={doors?.notes}
       groups={[...groups.entries()]
         .filter(([, entry]) => entry.object === undefined)
         .map(([key, entry]) => toGroup(key, entry))}
@@ -227,6 +246,7 @@ function WorkbenchAddArea({
 export function RoomActionsWorkbench({
   actions,
   children,
+  doors,
   encounterPhases,
   idPrefix,
   interactions,
@@ -237,6 +257,8 @@ export function RoomActionsWorkbench({
 }: {
   readonly actions?: WorkspaceRoomActions;
   readonly children?: ReactNode;
+  /** The room's doors, on the Timeline that opens them. */
+  readonly doors?: TimelineDoors | undefined;
   readonly encounterPhases?: readonly WorkspaceEncounterPhase[];
   readonly idPrefix?: string;
   readonly interactions: WorkspaceInteractionCatalog;
@@ -266,11 +288,59 @@ export function RoomActionsWorkbench({
   const reorder = useTimelineReorder();
   const { attachRoot } = reorder;
   const [announcement, setAnnouncement] = useState('');
+  // A Ship opens its doors in its last phase; every other room on its one Timeline.
+  const roomDoors =
+    mode.kind === 'roomTimeline' ||
+    (mode.kind === 'shipPhase' && mode.phase.key === mode.phases.at(-1)?.key)
+      ? doors
+      : undefined;
+  // A Ship phase that a wheel follows opens it like doors: its offers, then its pick.
+  const phaseWheel = mode.kind === 'shipPhase' ? mode.phase.wheel : undefined;
+  const [collapsedWheels, setCollapsedWheels] = useState<ReadonlySet<string>>(() => new Set());
+  const wheelHoldsFindings =
+    phaseWheel !== undefined &&
+    [phaseWheel.marker, ...phaseWheel.offers.map((offer) => offer.control.marker)].some(
+      (marker) => findingMark(marker.address)['data-has-findings'],
+    );
+  const wheelDoors: TimelineDoors | undefined =
+    phaseWheel === undefined || actions === undefined
+      ? undefined
+      : {
+          summary: <DoorChips chips={wheelOfferChips(phaseWheel, 'first')} />,
+          detail: (
+            <RewardWheelWorkbench
+              inTimeline
+              interactions={interactions}
+              occurrence={actions.owner}
+              wheel={phaseWheel}
+            />
+          ),
+          expanded: wheelHoldsFindings || !collapsedWheels.has(phaseWheel.key),
+          ...(wheelHoldsFindings
+            ? {}
+            : {
+                onExpandedChange: (expanded: boolean) =>
+                  setCollapsedWheels((collapsed) => {
+                    const next = new Set(collapsed);
+                    if (expanded) next.delete(phaseWheel.key);
+                    else next.add(phaseWheel.key);
+                    return next;
+                  }),
+              }),
+        };
+  const doorsTail = (hasDoorsOpenRow: boolean): ReactNode =>
+    roomDoors === undefined ? null : (
+      <>
+        {hasDoorsOpenRow ? null : <DoorsOpenBanner doors={roomDoors} />}
+        {roomDoors.leave}
+      </>
+    );
   if (actions === undefined && mode.kind === 'roomTimeline') {
-    if (encounterPhases === undefined || idPrefix === undefined) return null;
+    if ((encounterPhases === undefined || idPrefix === undefined) && roomDoors === undefined)
+      return null;
     return (
       <section aria-label="Room Timeline" className="room-actions-workbench">
-        {encounterPhases
+        {(encounterPhases ?? [])
           .filter((phase) => phase.timelineAnchor !== undefined)
           .map((phase) => (
             <Fragment key={workspaceInteractionKey(phase.address)}>
@@ -278,6 +348,13 @@ export function RoomActionsWorkbench({
               {renderEncounterControls?.({ kind: 'encounterEnd', phase })}
             </Fragment>
           ))}
+        {roomDoors === undefined ? null : (
+          <div className="room-timeline-main">
+            <ol aria-label="Room timeline" className="room-action-list">
+              {doorsTail(false)}
+            </ol>
+          </div>
+        )}
       </section>
     );
   }
@@ -374,9 +451,12 @@ export function RoomActionsWorkbench({
   ) => {
     const content = renderBoundaryContent?.(entry.boundary);
     const boundary = entry.boundary;
-    const modifiers = [renderSupplement(entry.supplement), content?.editors].filter(
-      (node) => node !== null && node !== undefined && node !== false,
-    );
+    const doorsOpen = boundary.kind === 'cleanup' ? roomDoors : undefined;
+    const modifiers = [
+      renderSupplement(entry.supplement),
+      content?.editors,
+      doorsOpen === undefined ? undefined : <DoorsOpenControls doors={doorsOpen} />,
+    ].filter((node) => node !== null && node !== undefined && node !== false);
     // A Nemesis bet settles as its encounter ends.
     const phaseBet =
       boundary.kind === 'encounterEnd'
@@ -425,9 +505,34 @@ export function RoomActionsWorkbench({
             : {})}
         />
         {content?.rows}
+        {doorsOpen?.expanded === true && doorsOpen.detail !== undefined ? (
+          <DoorsOpenDetailRow>{doorsOpen.detail}</DoorsOpenDetailRow>
+        ) : null}
       </Fragment>
     );
   };
+  // The wheel opens once the phase's own actions are done: before its first offer reroll,
+  // or else just before the pick that starts the next phase.
+  const phaseTimelineWithWheel = (
+    timeline: readonly WorkspaceRoomLifecycleTimelineEntry[],
+  ): readonly (WorkspaceRoomLifecycleTimelineEntry | 'wheelOpen')[] => {
+    if (phaseWheel === undefined) return timeline;
+    const opensBefore = timeline.findIndex((entry) => {
+      if (entry.kind === 'boundary')
+        return entry.boundary.kind === 'nextPhase' && entry.boundary.wheelKey === phaseWheel.key;
+      if (entry.kind !== 'action') return false;
+      const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
+      return (
+        row?.reference.kind === 'reroll' &&
+        row.reference.target.kind === 'wheelOffer' &&
+        row.reference.target.wheelKey === phaseWheel.key
+      );
+    });
+    if (opensBefore < 0) return [...timeline, 'wheelOpen'];
+    return [...timeline.slice(0, opensBefore), 'wheelOpen', ...timeline.slice(opensBefore)];
+  };
+  const opensDoors = (timeline: readonly WorkspaceRoomLifecycleTimelineEntry[]): boolean =>
+    timeline.some((entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup');
   const renderRow = (
     row: WorkspaceRoomActions['rows'][number],
     checkpoints: WorkspaceRoomActions['checkpoints'] = actions?.checkpoints ?? [],
@@ -452,6 +557,28 @@ export function RoomActionsWorkbench({
         ? roomActionIcon(row.reference, row.address.biomeKey, row.sourceFamily)
         : undefined;
     const mysteryVerb = inlineMysteryBoonOfferVerb(row);
+    // A press on a door reads as its verb, then the door and its new reward as chips.
+    const reference = row.reference;
+    const pressedWheelPhase =
+      reference.kind === 'reroll' &&
+      reference.target.kind === 'wheelOffer' &&
+      mode.kind === 'shipPhase'
+        ? mode.phases.find(
+            (phase) =>
+              reference.target.kind === 'wheelOffer' &&
+              phase.wheel?.key === reference.target.wheelKey,
+          )
+        : undefined;
+    const doorPress =
+      reference.kind !== 'reroll'
+        ? undefined
+        : reference.target.kind !== 'wheelOffer'
+          ? doors?.rerolls
+          : pressedWheelPhase?.wheelRerolls;
+    const pressChips =
+      pressedWheelPhase?.wheel !== undefined
+        ? wheelOfferChips(pressedWheelPhase.wheel, 'first')
+        : doors?.chips;
     const placement = row.placement;
     const actionAccent = row.stale
       ? undefined
@@ -499,6 +626,7 @@ export function RoomActionsWorkbench({
       <Fragment key={row.key}>
         <TimelineRow
           data-action-accent={actionAccent}
+          data-door-press={doorPress === undefined ? undefined : ''}
           data-blocking-product={row.blockingProduct}
           data-reorder-anchor={row.rank === null ? undefined : row.key}
           data-phase={phaseByKey.get(row.key)}
@@ -550,7 +678,9 @@ export function RoomActionsWorkbench({
                   )}
                 </span>
               )}
-              {nemesisInteraction !== undefined && nemesisInteraction.value !== null ? (
+              {doorPress !== undefined ? (
+                <strong>Reroll</strong>
+              ) : nemesisInteraction !== undefined && nemesisInteraction.value !== null ? (
                 <NemesisInteractionPhrase interaction={nemesisInteraction} />
               ) : row.labelParts === undefined ? (
                 <strong>{row.label}</strong>
@@ -629,7 +759,16 @@ export function RoomActionsWorkbench({
           }
           editors={
             <>
-              {renderRowContent?.(row)}
+              {doorPress === undefined ? (
+                renderRowContent?.(row)
+              ) : (
+                <DoorRerollRowReward
+                  {...(pressChips === undefined ? {} : { chips: pressChips })}
+                  interactions={interactions}
+                  rerolls={doorPress}
+                  rowKey={row.key}
+                />
+              )}
               <RoomActionInlineEditors interactions={interactions} row={row} />
               <RoomActionAcquisitionRow
                 hideOffer={mysteryVerb !== undefined}
@@ -734,8 +873,31 @@ export function RoomActionsWorkbench({
                 phase.timeline.flatMap((entry) => (entry.kind === 'action' ? [entry.rank] : [])),
               );
               const renderPhaseTimelineEntry = (
-                entry: WorkspaceRoomLifecycleTimelineEntry,
+                entry: WorkspaceRoomLifecycleTimelineEntry | 'wheelOpen',
               ): ReactNode[] => {
+                if (entry === 'wheelOpen')
+                  return wheelDoors === undefined
+                    ? []
+                    : [
+                        <DoorsOpenBanner
+                          doors={wheelDoors}
+                          key="wheel-open"
+                          label="Next phase ready"
+                        />,
+                      ];
+                // The wheel is taken as the next phase starts.
+                if (
+                  entry.kind === 'boundary' &&
+                  entry.boundary.kind === 'nextPhase' &&
+                  phaseWheel?.key === entry.boundary.wheelKey
+                )
+                  return [
+                    <SelectWheelRow
+                      interactions={interactions}
+                      key={entry.boundary.key}
+                      wheel={phaseWheel}
+                    />,
+                  ];
                 if (entry.kind === 'boundary') return [renderBoundary(entry)];
                 if (entry.kind === 'automaticEffect') {
                   if (entry.effect === 'steadyGrowth') {
@@ -797,7 +959,7 @@ export function RoomActionsWorkbench({
                     phase.timeline.length === 0 ? null : (
                       <ol aria-label={`${phase.label} timeline`} className="room-action-list">
                         {checkpointRows(0, phase.checkpoints)}
-                        {phase.timeline.flatMap(renderPhaseTimelineEntry)}
+                        {phaseTimelineWithWheel(phase.timeline).flatMap(renderPhaseTimelineEntry)}
                         {trailingCheckpoints.map((checkpoint) => (
                           <TimelineRow
                             key={`checkpoint:${checkpoint.key}`}
@@ -805,6 +967,7 @@ export function RoomActionsWorkbench({
                             label={<strong>{checkpoint.label}</strong>}
                           />
                         ))}
+                        {doorsTail(opensDoors(phase.timeline))}
                       </ol>
                     )}
                     {phase.unplacedRows.length === 0 ? null : (
@@ -823,6 +986,19 @@ export function RoomActionsWorkbench({
                   </div>
                   <WorkbenchAddArea
                     addAction={addAction}
+                    doors={roomDoors}
+                    extraObjects={
+                      phase.wheelRerolls === undefined
+                        ? []
+                        : [
+                            <DoorsRerollEntry
+                              interactions={interactions}
+                              key="wheel"
+                              name="Wheel"
+                              rerolls={phase.wheelRerolls}
+                            />,
+                          ]
+                    }
                     featureRolls={[]}
                     interactions={interactions}
                     objectEntries={phase.objectEntries ?? []}
@@ -912,6 +1088,7 @@ export function RoomActionsWorkbench({
         <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
           {timelineRows}
           {rankedRows.length === 0 ? checkpointRows(0) : null}
+          {doorsTail(opensDoors(actions.timeline.entries))}
         </ol>
         {children}
         {actions.repairRows.length === 0 ? null : (
@@ -928,6 +1105,7 @@ export function RoomActionsWorkbench({
       </div>
       <WorkbenchAddArea
         addAction={addAction}
+        doors={roomDoors}
         featureRolls={actions.featureRolls ?? []}
         interactions={interactions}
         objectEntries={actions.objectEntries ?? []}

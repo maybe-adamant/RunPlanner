@@ -5,5 +5,5 @@
  */
 export function rewardWheelOfferLabel(offerKey: string, offerCount: number): string {
   if (offerCount === 1 && offerKey === 'offer1') return 'Offer';
-  return offerKey === 'offer1' ? 'Left Offer' : offerKey === 'offer2' ? 'Right Offer' : offerKey;
+  return offerKey === 'offer1' ? 'L Offer' : offerKey === 'offer2' ? 'R Offer' : offerKey;
 }

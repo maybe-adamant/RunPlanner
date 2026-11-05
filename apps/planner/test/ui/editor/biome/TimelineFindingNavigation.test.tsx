@@ -107,7 +107,7 @@ it.each([
           ),
         ),
       );
-    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const findings = render(
       <Provider store={view.application.store}>
         <ProjectFindings catalog={catalog} issue={issue} focusByOwner={workspace.focusByOwner} />

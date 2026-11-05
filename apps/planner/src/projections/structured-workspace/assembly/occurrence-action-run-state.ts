@@ -2,11 +2,7 @@ import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceShipPhasePresentation,
 } from '../contract';
-import {
-  createOccurrenceAddress,
-  createRoomRunStateCheckpointAddress,
-  type RoomRunStateCheckpointAddress,
-} from '@run-planner/engine/authored-project';
+import { type RoomRunStateCheckpointAddress } from '@run-planner/engine/authored-project';
 import type {
   WorkspaceOccurrenceActionsInput,
   WorkspaceOccurrenceActionAssembly,
@@ -76,19 +72,8 @@ export function runStateLauncher(
 export function assembleOccurrenceRunState(
   input: WorkspaceOccurrenceActionsInput,
   roomLocal: WorkspaceRoomLocal,
-  roomLabel: string,
   roomActions: WorkspaceRoomActions | undefined,
-): Pick<
-  WorkspaceOccurrenceActionAssembly,
-  'beforeExitRunState' | 'runStateLaunchers' | 'runStateByTab'
-> {
-  const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
-  const beforeExitRunState = runStateLauncher(
-    input,
-    createRoomRunStateCheckpointAddress(owner, { kind: 'beforeRoomExit' }),
-    `exiting ${roomLabel}`,
-    `Leaving ${roomLabel}`,
-  );
+): Pick<WorkspaceOccurrenceActionAssembly, 'runStateLaunchers' | 'runStateByTab'> {
   const byTab: Partial<Record<WorkspaceRoomTab, WorkspaceRunStateLauncher>> = {};
   for (const entry of roomActions?.timeline.entries ?? []) {
     if (entry.kind !== 'boundary' || entry.runState === undefined) continue;
@@ -110,14 +95,11 @@ export function assembleOccurrenceRunState(
       }
     }
   }
-  if (beforeExitRunState !== undefined) byTab.doors = beforeExitRunState;
   return Object.freeze({
-    beforeExitRunState,
     runStateLaunchers: Object.freeze([
       ...(roomActions?.timeline.entries ?? []).flatMap((entry) =>
         entry.kind === 'boundary' && entry.runState !== undefined ? [entry.runState] : [],
       ),
-      ...(beforeExitRunState === undefined ? [] : [beforeExitRunState]),
     ]),
     runStateByTab: Object.freeze(byTab),
   });

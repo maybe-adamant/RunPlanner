@@ -77,6 +77,13 @@ function runStateRowRight(scope: HTMLElement, name: string): string | undefined 
   );
 }
 
+/** Picks the exit by its door name on the room's last Timeline row. */
+async function pickExit(user: { click: (element: Element) => Promise<void> }, door: string) {
+  const leave = screen.getByRole('listitem', { name: 'Leave room' });
+  await user.click(within(leave).getByRole('button', { name: 'Exit door' }));
+  await user.click(within(await screen.findByRole('listbox')).getByRole('option', { name: door }));
+}
+
 describe('underworld product loop', () => {
   it('shows Moon Beam banked Path progress in Run State without inventing a Hex-node editor', async () => {
     const application = createApplication();
@@ -561,8 +568,13 @@ describe('underworld product loop', () => {
     );
     await view.user.click(within(gate).getByRole('button', { name: 'Chaos gate room' }));
     await view.user.click(screen.getByRole('option', { name: 'Chaos 06' }));
-    await view.user.click(within(gate).getByLabelText('Take Chaos gate'));
-    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
+    await pickExit(view.user, 'Chaos gate');
+    // The rail opens the room the exit leads to.
+    act(() =>
+      application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, chaosOccurrenceId)),
+      ),
+    );
     const enteredChaos = screen.getByRole('complementary', { name: 'Details' });
     expect(within(enteredChaos).queryByLabelText('Room')).toBeNull();
     expect(within(enteredChaos).queryByLabelText('Reward')).toBeNull();
@@ -572,8 +584,8 @@ describe('underworld product loop', () => {
         semanticOwnerFocused(createExitDecisionAddress(goldenFBiome, source)),
       ),
     );
-    const configuredGate = await screen.findByRole('article', { name: 'Chaos gate exit' });
-    await view.user.click(within(configuredGate).getByLabelText('Take Chaos gate'));
+    await screen.findByRole('article', { name: 'Chaos gate exit' });
+    await pickExit(view.user, 'Chaos gate');
     expect(
       topology()?.occurrences.find((occurrence) => occurrence.occurrenceId === chaosOccurrenceId)
         ?.gameName,
@@ -617,7 +629,7 @@ describe('underworld product loop', () => {
           decision.source.occurrenceId === chaosOccurrenceId,
       ),
     ).toBe(false);
-    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const rewardPool = screen.getByRole('button', { name: /Reward Pool/ });
     await view.user.click(rewardPool);
     const nextPool = within(await screen.findByRole('listbox'))
@@ -673,7 +685,7 @@ describe('underworld product loop', () => {
         .getElementById(oceanus.getAttribute('aria-describedby') ?? '')
         ?.getAttribute('aria-label'),
     ).toBe('Blocked');
-    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const start = screen.getByRole('button', { name: 'Door 1 room' });
     expect(start.getAttribute('aria-disabled')).toBe('true');
     const before = currentProject(application);
@@ -881,9 +893,10 @@ describe('underworld product loop', () => {
         ),
       ),
     );
-    const automaticReturn = screen.getByRole('group', { name: 'Doors' });
+    const automaticReturn = screen.getByRole('group', { name: 'Door rows' });
     expect(within(automaticReturn).getAllByRole('article')).toHaveLength(1);
-    expect(within(automaticReturn).queryByRole('radio')).toBeNull();
+    // A lone exit has nothing to pick.
+    expect(screen.queryByRole('button', { name: 'Exit door' })).toBeNull();
     expect(within(automaticReturn).getByText('Hidden on door')).toBeTruthy();
     expect(within(automaticReturn).getByRole('button', { name: 'Reward' })).toBeTruthy();
     const returnReward = createIncomingRewardAddress(goldenGBiome, returned);
@@ -920,7 +933,6 @@ describe('underworld product loop', () => {
       expect(returnRewardOffer()).not.toBeNull();
       expect(missingReturnReward()).toBe(false);
     });
-    expect(screen.getByRole('button', { name: 'Open next room' })).toBeTruthy();
     const evaluation = simulateProject(application.catalog, failed);
     const gEvaluation = evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     if (gEvaluation === undefined || !('rewards' in gEvaluation)) {
@@ -972,12 +984,13 @@ describe('underworld product loop', () => {
       application.store.dispatch(semanticOwnerFocused(createExitDecisionAddress(biome, source))),
     );
 
-    expect((screen.getByLabelText('Take Infernal Contract') as HTMLInputElement).checked).toBe(
-      false,
+    expect(
+      screen.getByRole('article', { name: 'Infernal Contract exit' }).getAttribute('data-picked'),
+    ).toBe('false');
+    await pickExit(view.user, 'Infernal Contract');
+    act(() =>
+      application.store.dispatch(semanticOwnerFocused(createOccurrenceAddress(biome, contract))),
     );
-    const contractCard = screen.getByRole('article', { name: 'Infernal Contract exit' });
-    await view.user.click(within(contractCard).getByLabelText('Take Infernal Contract'));
-    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
     const contractWorkbench = screen.getByRole('complementary', { name: 'Details' });
     expect(
       within(contractWorkbench).queryByText(/Incoming door reward|Infernal Contract Boon/),
@@ -986,7 +999,7 @@ describe('underworld product loop', () => {
     act(() =>
       application.store.dispatch(semanticOwnerFocused(createExitDecisionAddress(biome, source))),
     );
-    await view.user.click(screen.getByLabelText('Take Infernal Contract'));
+    await pickExit(view.user, 'Infernal Contract');
     expect(
       screen.getByRole('article', { name: 'Infernal Contract exit' }).getAttribute('data-picked'),
     ).toBe('true');

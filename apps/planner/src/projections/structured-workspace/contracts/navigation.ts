@@ -12,7 +12,6 @@ export type WorkspaceRoomTab =
   | 'sideRooms'
   | 'layout'
   | 'actions'
-  | 'doors'
   | 'shipIntroActions'
   | 'shipCombat1Actions'
   | 'shipCombat2Actions'
@@ -22,7 +21,7 @@ export type WorkspaceRoomTab =
   | 'shipInactiveRepair';
 
 /** Transient destination for one presentation surface of the persistent Hub board. */
-export type WorkspaceHubTab = 'overview' | 'timeline' | 'doors';
+export type WorkspaceHubTab = 'overview' | 'timeline';
 
 export interface WorkspaceMarker {
   readonly address: SemanticAddress;
@@ -77,6 +76,11 @@ export interface WorkspaceInspectorDestination {
   readonly markByCode?: Readonly<Record<string, SemanticAddress>>;
   /** Present for trait owners that must open the transient shared dialog. */
   readonly traitDialogTarget?: TraitOfferAddress;
+  /**
+   * The room Timeline's door row hosting this owner: the expandable Doors open
+   * row, or the terminal row that picks the exit.
+   */
+  readonly timelineDoors?: 'doorsOpen' | 'leave';
   /** Present for exact Pom owners that must open the transient Pom dialog. */
   readonly levelResolutionDialogTarget?: LevelResolutionAddress;
   /**

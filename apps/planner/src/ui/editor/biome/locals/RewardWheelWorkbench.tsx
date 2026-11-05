@@ -21,17 +21,25 @@ import { DoorRow, DoorRowsHeader, RewardPoolLine } from '../DecisionWorkbench';
 import { RerolledRewardRepairs, RowReward } from '../DoorRewardEditor';
 import { RoomRerolls } from '../RoomRerolls';
 import { hintProps } from '@planner/ui/controls/hint';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { offerIcon } from '@planner/ui/artwork/rewardIcon';
+import { LeaveRow } from '../TimelineDoors';
 
 /**
  * One wheel in the doors' language: its pool line and offer count, then its
  * offers as rows of the door table, then its rerolls. The tab names the wheel.
  */
 export function RewardWheelWorkbench({
+  inTimeline = false,
   interactions,
   occurrence,
   rerolls,
   wheel,
 }: {
+  /** On its phase's Timeline the wheel shows its offers as first drawn; the pick has its own row. */
+  readonly inTimeline?: boolean;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly occurrence: OccurrenceAddress;
   /** The wheel's offer rerolls, appended before the pick. */
@@ -68,7 +76,7 @@ export function RewardWheelWorkbench({
       }),
     );
   };
-  const choosesOffer = wheel.offerCount > 1;
+  const choosesOffer = wheel.offerCount > 1 && !inTimeline;
 
   return (
     <section
@@ -154,7 +162,7 @@ export function RewardWheelWorkbench({
                             label=""
                           />
                         }
-                        reward={offer}
+                        reward={inTimeline ? {} : offer}
                       />
                     </span>
                   }
@@ -183,10 +191,79 @@ export function RewardWheelWorkbench({
               );
             })}
         </div>
-        {rerolls === undefined ? null : (
+        {rerolls === undefined || inTimeline ? null : (
           <RoomRerolls interactions={interactions} rerolls={rerolls} />
         )}
       </div>
     </section>
+  );
+}
+
+/** The phase's last row: which wheel offer is taken, then that offer's reward as it stands. */
+export function SelectWheelRow({
+  interactions,
+  wheel,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly wheel: WorkspaceRewardWheelDescriptor;
+}) {
+  const findingMark = useFindingMark();
+  const dispatch = useAppDispatch();
+  const pick = requireWorkspaceInteraction(
+    interactions.rewardWheelPicks,
+    workspaceInteractionKey(wheel.address),
+  );
+  const pickCandidates = useWorkspaceInteraction(pick);
+  const offers = wheel.offers.filter((offer) => offer.active);
+  const chosen = offers[wheel.pickedOfferIndex - 1];
+  const chosenReward = chosen === undefined ? null : (chosen.rerolledOffer ?? chosen.control.offer);
+  const choices = offers.map((offer, index) => ({
+    key: offer.key,
+    value: index + 1,
+    label: offer.label,
+  }));
+  return (
+    <LeaveRow label="Select wheel">
+      <span className="timeline-leave-door">
+        {offers.length > 1 ? (
+          <ContextualPicker<number>
+            ariaLabel={`${wheel.label} offer`}
+            findingMark={findingMark(wheel.marker.address, 'wheelChoice')}
+            id={`wheel-pick-${wheel.key}`}
+            label=""
+            {...(pick.contextReached ? {} : { disabledHint: candidateWaitingHint })}
+            layout="inline"
+            model={declaredChoicesPicker(choices, wheel.pickedOfferIndex)}
+            onOpenChange={(open) => {
+              if (open) pickCandidates.activate();
+            }}
+            onSelect={(pickedOfferIndex) => {
+              const results = pickCandidates.result ?? pickCandidates.activate();
+              const candidate = results?.find((option) => option.value === pickedOfferIndex);
+              if (!candidateMayBeAuthored(candidate)) return;
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceRewardWheelPicked',
+                  wheel: wheel.address,
+                  pickedOfferIndex,
+                }),
+              );
+            }}
+            placeholder="Choose an offer"
+            searchable={false}
+            {...(chosen === undefined ? {} : { triggerLabel: chosen.label })}
+            triggerSize="content"
+          />
+        ) : (
+          <span>{chosen?.label ?? 'Offer'}</span>
+        )}
+        {chosenReward === null ? null : (
+          <>
+            <span aria-hidden="true">·</span>
+            <ArtworkIcon className="artwork-label-icon" source={offerIcon(chosenReward)} />
+          </>
+        )}
+      </span>
+    </LeaveRow>
   );
 }

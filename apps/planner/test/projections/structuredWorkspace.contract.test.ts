@@ -1467,7 +1467,10 @@ describe('structured workspace overlay contract', () => {
       rewards: [],
     });
     expect(projected.focusByOwner.get(semanticAddressKey(additional))?.nodeKey).toBe(batch.key);
-    expect(projected.focusByOwner.get(semanticAddressKey(additional))?.roomTab).toBe('doors');
+    expect(projected.focusByOwner.get(semanticAddressKey(additional))).toMatchObject({
+      roomTab: 'actions',
+      timelineDoors: 'doorsOpen',
+    });
     const chaosWorkbench = workspace?.nodes.find(
       (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === chaosId,
     );

@@ -15,16 +15,16 @@ import {
   type WorkspaceRoomTab,
   type WorkspaceRunStateLauncher,
 } from '@planner/projections/structured-workspace';
-import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { RunStateLauncher } from './RunStateSheet';
 import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
 import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 import { SideRoomsWorkbench } from './locals/SideRoomsWorkbench';
-import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
 import { TimelineLegend } from './TimelineLegend';
 import { planEndLabel } from './planEndCopy';
+import type { TimelineDoors, TimelineDoorsContent } from './TimelineDoors';
 import { createRouteAddress } from '@run-planner/engine/authored-project';
 
 interface OccurrenceWorkbenchProps {
@@ -41,9 +41,14 @@ interface OccurrenceWorkbenchProps {
   /** Reapply a finding-owned tab request even when the requested tab is unchanged. */
   readonly navigationRevision?: number;
   readonly findingNavigationRevision?: number;
-  readonly doors?: ReactNode;
-  /** The room's place against the plan end; past it, every panel but Doors is read-only. */
+  /** The room's doors on its Timeline. */
+  readonly timelineDoors?: TimelineDoorsContent;
+  /** Navigation landed on a door owner, so the Doors open row opens. */
+  readonly doorsRequested?: boolean;
+  /** The room's place against the plan end; past it, every panel is read-only. */
   readonly planEndRelation?: WorkspacePlanEndRelation;
+  /** The action that moves the plan's end here, where no last row holds it. */
+  readonly pastEndAction?: ReactNode;
   /** Exact room-owned additions to ordinary lifecycle rows. */
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   /** Exact room-owned additions to ordinary lifecycle boundaries. */
@@ -55,7 +60,9 @@ interface OccurrenceWorkbenchProps {
 /** A room-local editor that consumes the structured workspace only. */
 export function OccurrenceWorkbench({
   headerActions,
-  doors,
+  doorsRequested = false,
+  timelineDoors,
+  pastEndAction,
   entryIdentity,
   incomingDoor,
   initialTab,
@@ -101,6 +108,44 @@ export function OccurrenceWorkbench({
     });
   }
   const selectedTab = tabState.active;
+  // The doors stand open unless collapsed in this room; navigation to a door
+  // reopens them, and a finding inside keeps them open.
+  const [doorsState, setDoorsState] = useState({
+    collapsed: false,
+    findingNavigationRevision,
+    navigationRevision,
+    roomIdentity,
+  });
+  if (
+    doorsState.roomIdentity !== roomIdentity ||
+    doorsState.navigationRevision !== navigationRevision ||
+    doorsState.findingNavigationRevision !== findingNavigationRevision
+  ) {
+    setDoorsState({
+      collapsed:
+        !doorsRequested && doorsState.roomIdentity === roomIdentity && doorsState.collapsed,
+      findingNavigationRevision,
+      navigationRevision,
+      roomIdentity,
+    });
+  }
+  const findingMark = useFindingMark();
+  const doorsHoldFindings = (timelineDoors?.findingOwners ?? []).some(
+    (owner) => findingMark(owner)['data-has-findings'],
+  );
+  const doors: TimelineDoors | undefined =
+    timelineDoors === undefined
+      ? undefined
+      : {
+          ...timelineDoors,
+          expanded: doorsHoldFindings || !doorsState.collapsed,
+          ...(doorsHoldFindings
+            ? {}
+            : {
+                onExpandedChange: (expanded: boolean) =>
+                  setDoorsState({ ...doorsState, collapsed: !expanded }),
+              }),
+        };
   const setActiveTab = (tab: WorkspaceRoomTab): void =>
     setTabState({
       active: tab,
@@ -118,14 +163,11 @@ export function OccurrenceWorkbench({
     ...(localVisit === undefined ? [] : (['sideRooms'] as const)),
     ...(room.workbench.kind === 'fields' ? (['layout'] as const) : []),
     ...(room.workbench.kind === 'ship'
-      ? room.workbench.phases.flatMap((phase) =>
-          phase.wheelTab === undefined ? [phase.tab] : [phase.tab, phase.wheelTab],
-        )
+      ? room.workbench.phases.map((phase) => phase.tab)
       : ['actions' as const]),
     ...(room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0
       ? (['shipInactiveRepair'] as const)
       : []),
-    'doors',
   ];
   const activeTab = tabOrder.includes(selectedTab) ? selectedTab : 'overview';
   const onTabKeyDown = (event: ReactKeyboardEvent<HTMLElement>, tab: WorkspaceRoomTab) => {
@@ -176,10 +218,6 @@ export function OccurrenceWorkbench({
     </button>
   );
   const heading = room.label;
-  const wheelPhase =
-    room.workbench.kind === 'ship'
-      ? room.workbench.phases.find((phase) => phase.wheelTab === activeTab)
-      : undefined;
   const tabRunState = room.runStateByTab[activeTab];
   const showTimelineLegend =
     activeTab === 'actions' ||
@@ -214,6 +252,7 @@ export function OccurrenceWorkbench({
         },
   ): ReactNode => (
     <DirectRoomWorkbench
+      {...(view === 'overview' ? {} : { doors })}
       idPrefix={idPrefix}
       interactions={interactions}
       room={room}
@@ -229,7 +268,7 @@ export function OccurrenceWorkbench({
       {...findingAnchor(
         room.address,
         // A room past the plan end stays browsable: its panels are read-only on
-        // their own, and its Doors keep the action that moves the end here.
+        // their own, and it keeps the action that moves the end here.
         planEndRelation === 'pastEnd'
           ? { readinessOwner: createRouteAddress(room.address.routeKey) }
           : {},
@@ -269,49 +308,14 @@ export function OccurrenceWorkbench({
             ? tabButton('layout', 'Room Layout', undefined, 'Layout')
             : null}
           {room.workbench.kind === 'ship'
-            ? room.workbench.phases.flatMap((phase) => [
-                <span
-                  aria-hidden="true"
-                  className="room-workbench-tab-group"
-                  key={`${phase.key}-group`}
-                >
-                  <span className="room-workbench-tab-divider" />
-                  {`${phase.label}:`}
-                </span>,
-                tabButton(phase.tab, `${phase.label} Timeline`, phase.key, 'Timeline'),
-                ...(phase.wheelTab === undefined
-                  ? []
-                  : [
-                      <span
-                        aria-hidden="true"
-                        className="room-workbench-tab-dot"
-                        key={`${phase.key}-dot`}
-                      >
-                        ·
-                      </span>,
-                      tabButton(
-                        phase.wheelTab,
-                        `${phase.label} Wheels`,
-                        `${phase.key}-wheels`,
-                        'Wheels',
-                      ),
-                    ]),
-              ])
+            ? // Each Ship phase is one Timeline tab, named by its phase.
+              room.workbench.phases.map((phase) =>
+                tabButton(phase.tab, `${phase.label} Timeline`, phase.key, phase.label),
+              )
             : tabButton('actions', 'Room Timeline', undefined, 'Timeline')}
-          {room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0 ? (
-            <>
-              <span aria-hidden="true" className="room-workbench-tab-group">
-                <span className="room-workbench-tab-divider" />
-              </span>
-              {tabButton('shipInactiveRepair', 'Inactive Actions')}
-            </>
-          ) : null}
-          {room.workbench.kind === 'ship' ? (
-            <span aria-hidden="true" className="room-workbench-tab-group">
-              <span className="room-workbench-tab-divider" />
-            </span>
-          ) : null}
-          {tabButton('doors', 'Room Doors', undefined, 'Doors')}
+          {room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0
+            ? tabButton('shipInactiveRepair', 'Inactive Actions')
+            : null}
         </nav>
         {!showTimelineLegend && tabRunState === undefined ? null : (
           <div className="room-workbench-tab-utility">
@@ -321,7 +325,7 @@ export function OccurrenceWorkbench({
         )}
       </div>
       <section
-        aria-label={activeTab === 'doors' ? 'Room Doors' : 'Room workbench panel'}
+        aria-label="Room workbench panel"
         aria-labelledby={tabId(activeTab)}
         className="room-workbench-panel"
         id={panelId}
@@ -329,8 +333,8 @@ export function OccurrenceWorkbench({
       >
         <div
           className="room-workbench-panel-content"
-          // Past the plan end the room is read-only; its Doors panel keeps the plan-end action.
-          inert={planEndRelation === 'pastEnd' && activeTab !== 'doors'}
+          // Past the plan end the room is read-only but for its plan-end action.
+          inert={planEndRelation === 'pastEnd'}
         >
           {activeTab === 'overview' ? (
             <div className="room-overview-workbench">
@@ -355,17 +359,6 @@ export function OccurrenceWorkbench({
               interactions={interactions}
               room={room.workbench.fields}
               title={room.label}
-            />
-          ) : activeTab === 'doors' ? (
-            (doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>)
-          ) : wheelPhase?.wheel !== undefined ? (
-            <RewardWheelWorkbench
-              interactions={interactions}
-              occurrence={room.address}
-              {...(wheelPhase.wheelRerolls === undefined
-                ? {}
-                : { rerolls: wheelPhase.wheelRerolls })}
-              wheel={wheelPhase.wheel}
             />
           ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (
             <RoomActionsWorkbench
@@ -403,6 +396,7 @@ export function OccurrenceWorkbench({
             </section>
           ) : null}
         </div>
+        {pastEndAction}
       </section>
     </article>
   );

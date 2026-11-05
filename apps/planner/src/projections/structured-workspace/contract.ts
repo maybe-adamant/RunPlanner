@@ -640,6 +640,8 @@ export interface WorkspaceRoomSummary {
   readonly workbench: WorkspaceRoomWorkbenchPresentation;
   /** Closed tab placement for engine-owned lifecycle snapshots. */
   readonly runStateByTab: Readonly<Partial<Record<WorkspaceRoomTab, WorkspaceRunStateLauncher>>>;
+  /** The Timeline tab holding the room's Doors open and exit rows. */
+  readonly doorsTab: WorkspaceRoomTab;
   /** One shared entered-room chronology across every semantic participant. */
   readonly placementRepairs?: readonly import('./contracts/timeline').WorkspaceGeneratedPickupPlacementRepair[];
   readonly roomActions?: WorkspaceRoomActions;

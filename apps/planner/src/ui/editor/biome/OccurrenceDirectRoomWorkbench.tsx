@@ -13,6 +13,7 @@ import type {
   WorkspaceBossDoorRewardStoreControl,
 } from '@planner/projections/structured-workspace';
 import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
+import type { TimelineDoors } from './TimelineDoors';
 import { roomFeatureSections } from './room-features/roomFeatureSections';
 import { RoomOverviewSections, type RoomOverviewSectionContent } from './RoomOverviewSections';
 import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
@@ -153,6 +154,7 @@ export function BossDoorRewardPoolRow({
 }
 
 export function DirectRoomWorkbench({
+  doors,
   idPrefix,
   interactions,
   room,
@@ -160,6 +162,8 @@ export function DirectRoomWorkbench({
   renderRoomActionRowContent,
   renderLifecycleBoundaryContent,
 }: {
+  /** The room's doors, on the Timeline that opens them. */
+  readonly doors?: TimelineDoors | undefined;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: WorkspaceRoomSummary;
@@ -233,6 +237,7 @@ export function DirectRoomWorkbench({
       }
       return (
         <RoomActionsWorkbench
+          doors={doors}
           mode={{ kind: 'roomTimeline' }}
           {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
           encounterPhases={workbench.encounterPhases}
@@ -256,6 +261,7 @@ export function DirectRoomWorkbench({
       }
       return (
         <RoomActionsWorkbench
+          doors={doors}
           mode={{ kind: 'roomTimeline' }}
           {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
           encounterPhases={workbench.encounterPhases}
@@ -279,6 +285,7 @@ export function DirectRoomWorkbench({
       }
       return (
         <RoomActionsWorkbench
+          doors={doors}
           mode={{ kind: 'roomTimeline' }}
           {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
           idPrefix={idPrefix}
@@ -310,6 +317,7 @@ export function DirectRoomWorkbench({
       if (typeof view === 'string') throw new Error('Ship timeline requires an explicit phase');
       return (
         <RoomActionsWorkbench
+          doors={doors}
           mode={view}
           {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
           encounterPhases={room.encounterPhases}

@@ -25,7 +25,7 @@ describe('HubDecisionWorkbench interaction', () => {
       'N',
       { initialTab: 'timeline' },
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Hub Doors' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Hub Overview' }));
     view.rerenderHub({ initialTab: 'timeline', findingNavigationRevision: 1 });
     expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
@@ -35,9 +35,9 @@ describe('HubDecisionWorkbench interaction', () => {
       'true',
     );
     view.rerenderHub({ initialTab: 'timeline', findingNavigationRevision: 2 });
-    fireEvent.click(screen.getByRole('tab', { name: 'Hub Doors' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Hub Overview' }));
     view.rerenderHub({ initialTab: 'timeline' });
-    expect(screen.getByRole('tab', { name: 'Hub Doors' }).getAttribute('aria-selected')).toBe(
+    expect(screen.getByRole('tab', { name: 'Hub Overview' }).getAttribute('aria-selected')).toBe(
       'true',
     );
     view.rerenderHub({ initialTab: 'timeline', findingNavigationRevision: 3 });
@@ -107,12 +107,12 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
   });
 
-  it('separates participation, visit/reward editing, and the completed exit into occurrence-style tabs', () => {
+  it('separates participation from visit and reward editing in occurrence-style tabs', () => {
     renderStaticHubDecisionWorkbench(loadSurfaceNCompleteHubFrontierProject());
 
     const overview = screen.getByRole('tab', { name: 'Hub Overview' });
     const timeline = screen.getByRole('tab', { name: 'Hub Timeline' });
-    const exit = screen.getByRole('tab', { name: 'Hub Doors' });
+    expect(screen.getAllByRole('tab')).toEqual([overview, timeline]);
     const removal = screen.getByRole('button', { name: 'Remove Hub' });
     const hubPanel = screen.getByRole('region', { name: 'Ephyra Hub' });
     expect(hubPanel.classList.contains('room-card')).toBe(true);
@@ -185,18 +185,13 @@ describe('HubDecisionWorkbench interaction', () => {
       screen.getByRole('button', { name: 'Map controls' }).closest('.room-map-canvas'),
     );
 
-    fireEvent.keyDown(timeline, { key: 'End' });
-    expect(exit.getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Remove Hub' })).toBe(removal);
-    expect(screen.getByRole('article', { name: 'Preboss room offer' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Open next room' })).not.toHaveProperty(
-      'disabled',
-      true,
-    );
-    expect(screen.queryByRole('button', { name: 'Combat 05: Visit 1, step 2.' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Details →' })).toBeNull();
+    // The Hub always leaves to its Preboss: the Details timeline's fixed last row.
+    fireEvent.click(screen.getByRole('button', { name: 'Details →' }));
+    const exit = screen.getByText('Go to Preboss').closest<HTMLElement>('.hub-timeline-exit');
+    expect(exit?.dataset.ready).toBe('true');
+    expect(exit?.querySelector('button')).toBeNull();
 
-    fireEvent.keyDown(exit, { key: 'Home' });
+    fireEvent.keyDown(timeline, { key: 'Home' });
     expect(overview.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('region', { name: 'Ephyra Hub map' })).toBeTruthy();
   });

@@ -71,8 +71,8 @@ async function possibleRewards(resolver: WorkspaceRewardOfferResolver) {
     .map((item) => item.value);
 }
 
-describe('ship wheel tabs', () => {
-  it('give the wheel after the Intro its own tab, with its pool and offer targets', () => {
+describe('ship wheels on their phase Timeline', () => {
+  it('opens the wheel after the Intro on the Intro Timeline, with its pool and offer targets', () => {
     const projected = projectStructuredWorkspaceFixture(cardHolder());
     const phase = wheelPhase(projected);
     expect(phase).toMatchObject({ tab: 'shipIntroActions', wheelTab: 'shipIntroWheels' });
@@ -85,9 +85,8 @@ describe('ship wheel tabs', () => {
     expect(nextPhase?.kind === 'boundary' ? nextPhase.supplement : undefined).toBeUndefined();
     for (const owner of [wheel, createRewardWheelOfferAddress(o, ship, 'wheel1', 'offer1')])
       expect(projected.workspace.focusByOwner.get(semanticAddressKey(owner))).toMatchObject({
-        roomTab: 'shipIntroWheels',
+        roomTab: 'shipIntroActions',
       });
-    expect(shipRoom(projected).runStateByTab.shipIntroWheels).toBeDefined();
     const interaction = projected.workspace.interactions.roomRerolls.get(
       phase.wheelRerolls!.interactionKey,
     );
@@ -130,7 +129,13 @@ describe('ship wheel tabs', () => {
     expect(phase.wheel?.offers[0]?.control.rerolledOffer).toEqual(reward);
     const press = phase.wheelRerolls!.rows[0]!;
     expect(projected.workspace.focusByOwner.get(semanticAddressKey(press.address))).toMatchObject({
-      roomTab: 'shipIntroWheels',
+      roomTab: 'shipIntroActions',
+    });
+    // The press names its offer, the reward it replaces and the offers once it lands.
+    expect(press.doors).toMatchObject({
+      doorLabel: 'Offer',
+      before: wheelPhase(before).wheel!.offers[0]!.control.offer,
+      after: [{ exitKey: 'offer1', rewards: [reward] }],
     });
     // The Timeline row names the offer and links to the wheel.
     const row = shipRoom(projected).roomActions?.rows.find(

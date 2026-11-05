@@ -137,7 +137,6 @@ export interface WorkspaceOccurrenceActionAssemblyInput extends WorkspaceOccurre
 }
 
 export interface WorkspaceOccurrenceActionAssembly {
-  readonly beforeExitRunState: WorkspaceRunStateLauncher | undefined;
   readonly roomActions: WorkspaceRoomActions | undefined;
   readonly runStateLaunchers: readonly WorkspaceRunStateLauncher[];
   readonly runStateByTab: Readonly<Partial<Record<WorkspaceRoomTab, WorkspaceRunStateLauncher>>>;

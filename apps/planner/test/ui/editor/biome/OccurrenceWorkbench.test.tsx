@@ -157,7 +157,7 @@ describe('OccurrenceWorkbench', () => {
     ).toBeTruthy();
     expect(within(standardFeatures).getByRole('heading', { name: 'Objects' })).toBeTruthy();
     expect(document.querySelector('.room-overview-workbench')).not.toBeNull();
-    expect(screen.getByRole('tab', { name: 'Room Doors' })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'Room Doors' })).toBeNull();
     const overviewRunState = screen.getByRole('button', { name: 'Run State' });
     const entryOwner = overviewRunState.getAttribute('data-run-state-launcher');
     expect(overviewRunState.closest('.room-workbench-tab-row')).not.toBeNull();
@@ -185,15 +185,8 @@ describe('OccurrenceWorkbench', () => {
     expectBefore(entryRunState, roomEntered);
     expectBefore(standardStart, standardEncounter);
     expectBefore(standardEncounter, standardEnd);
-    openRoomTab('Room Doors');
-    expect(
-      within(screen.getByRole('tabpanel', { name: 'Room Doors' })).queryByRole('button', {
-        name: 'Run State',
-      }),
-    ).toBeNull();
-    expect(
-      screen.getByRole('button', { name: 'Run State' }).closest('.room-workbench-tab-row'),
-    ).not.toBeNull();
+    // The doors open on the Timeline, after the encounter.
+    expectBefore(standardEnd, within(standardActions).getByLabelText('Doors open'));
   });
 
   it('gives H Fields a dedicated Layout tab without changing the Timeline surface', () => {
@@ -207,7 +200,7 @@ describe('OccurrenceWorkbench', () => {
     // Tabs show short names; their accessible names stay the full ones.
     expect(
       screen.getAllByRole('tab').map((tab) => tab.getAttribute('aria-label') ?? tab.textContent),
-    ).toEqual(['Room Overview', 'Room Layout', 'Room Timeline', 'Room Doors']);
+    ).toEqual(['Room Overview', 'Room Layout', 'Room Timeline']);
     openRoomTab('Room Layout');
     const layout = screen.getByRole('region', { name: 'Fields Layout' });
     expect(within(layout).getByRole('heading', { name: 'Position' })).toBeTruthy();
@@ -450,12 +443,11 @@ describe('OccurrenceWorkbench', () => {
     );
     const overview = screen.getByRole('tab', { name: 'Room Overview' });
     const actions = screen.getByRole('tab', { name: 'Room Timeline' });
-    const doors = screen.getByRole('tab', { name: 'Room Doors' });
     const panelId = overview.getAttribute('aria-controls');
     expect(panelId).not.toBeNull();
     const panel = panelId === null ? null : document.getElementById(panelId);
     expect(panel).not.toBeNull();
-    for (const tab of [overview, actions, doors]) {
+    for (const tab of [overview, actions]) {
       expect(tab.getAttribute('aria-controls')).toBe(panelId);
     }
     expect(overview.getAttribute('tabindex')).toBe('0');
@@ -463,15 +455,16 @@ describe('OccurrenceWorkbench', () => {
     expect(actions.getAttribute('aria-selected')).toBe('true');
     expect(document.activeElement).toBe(actions);
     expect(document.getElementById(panelId!)).toBe(panel);
-    fireEvent.keyDown(actions, { key: 'End' });
-    expect(doors.getAttribute('aria-selected')).toBe('true');
-    expect(document.activeElement).toBe(doors);
-    expect(doors.getAttribute('aria-controls')).toBe(panelId);
-    expect(document.getElementById(panelId!)).toBe(panel);
-    fireEvent.keyDown(doors, { key: 'ArrowLeft' });
+    fireEvent.keyDown(actions, { key: 'Home' });
+    expect(overview.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(overview);
+    fireEvent.keyDown(overview, { key: 'End' });
     expect(actions.getAttribute('aria-selected')).toBe('true');
     expect(document.activeElement).toBe(actions);
     expect(document.getElementById(panelId!)).toBe(panel);
+    fireEvent.keyDown(actions, { key: 'ArrowLeft' });
+    expect(overview.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(overview);
   });
 
   it('resets the active room tab when the occurrence identity changes', () => {
@@ -509,8 +502,8 @@ describe('OccurrenceWorkbench', () => {
     openRoomTab('Side Rooms');
     const sideRooms = screen.getByRole('region', { name: 'Side Rooms' });
     expect(within(sideRooms).queryByRole('tab', { name: 'Doors' })).toBeNull();
-    // Leaving the room stays on Doors, where its hidden return door sits.
-    expect(screen.getByRole('tab', { name: 'Room Doors' })).toBeTruthy();
+    // Its hidden return door sits with its doors on the Timeline, not here.
+    expect(screen.getByRole('tab', { name: 'Room Timeline' })).toBeTruthy();
     expect(within(sideRooms).queryByRole('article', { name: 'Hidden return door' })).toBeNull();
     const parentMap = screen.getByRole('img', { name: 'Map of Combat 05' });
     expect(parentMap.getAttribute('src')).toBe(roomMapAssetFor('N_Combat05')?.src);

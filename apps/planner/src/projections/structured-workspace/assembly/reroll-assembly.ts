@@ -267,7 +267,8 @@ function roomRerollRows(input: {
   readonly occurrence: RoomOccurrence;
   readonly presses: readonly RerollRoomAction[];
   readonly source: WorkspaceRerollSource;
-  readonly tab: WorkspaceRoomTab;
+  /** The list's tab; absent where the presses are the room Timeline's own rows. */
+  readonly tab?: WorkspaceRoomTab;
   readonly targetLabel: (target: RerollTarget) => string;
   readonly rewardTypes: (owner: RerolledRewardOwner) => WorkspaceRerollRewardTypes;
 }): readonly WorkspacePreparedRerollRow[] {
@@ -279,7 +280,7 @@ function roomRerollRows(input: {
     const address = createRoomActionAddress(biome, occurrence.occurrenceId, key);
     const marker = input.markerDestinations.marker(address);
     input.markerDestinations.redirect([marker], nodeKey);
-    if (!rerollMovedOnTimeline(input.source, address))
+    if (input.tab !== undefined && !rerollMovedOnTimeline(input.source, address))
       input.markerDestinations.setRoomTab([marker], input.tab);
     return Object.freeze({
       address,
@@ -479,7 +480,6 @@ export function assembleRoomRerolls(input: {
                   : [],
               ),
               source,
-              tab: 'doors',
               targetLabel,
               rewardTypes,
             }),
@@ -491,8 +491,70 @@ export function assembleRoomRerolls(input: {
             rewardTypes,
           });
         })();
+  // Each press reads as its door, the reward it replaces, and every door once it lands.
+  const presses =
+    occurrence === undefined
+      ? []
+      : occurrence.roomActions.order.flatMap((reference) =>
+          reference.kind === 'reroll' &&
+          (reference.target.kind === 'door' || reference.target.kind === 'cage')
+            ? [reference]
+            : [],
+        );
+  const current = new Map(
+    input.targets.flatMap((target) =>
+      target.door.offerRewardSurface.rewards.map(
+        (reward) => [semanticAddressKey(reward.marker.address), reward.offer] as const,
+      ),
+    ),
+  );
+  const pressDoors = new Map(
+    presses.map((reference) => {
+      const target = reference.target as Extract<RerollTarget, { readonly kind: 'door' | 'cage' }>;
+      const ownerKey = semanticAddressKey(
+        rerollTargetOwner(biome, occurrence!.occurrenceId, target),
+      );
+      const before = current.get(ownerKey) ?? null;
+      current.set(ownerKey, reference.reward);
+      const index = input.targets.find((candidate) => candidate.exitKey === target.exitKey)?.index;
+      return [
+        roomActionKey(reference),
+        Object.freeze({
+          doorLabel: index === undefined ? 'Door' : `Door ${index}`,
+          before,
+          after: Object.freeze(
+            input.targets.map((door) =>
+              Object.freeze({
+                exitKey: door.exitKey,
+                rewards: Object.freeze(
+                  door.door.offerRewardSurface.rewards.map(
+                    (reward) => current.get(semanticAddressKey(reward.marker.address)) ?? null,
+                  ),
+                ),
+              }),
+            ),
+          ),
+        }),
+      ] as const;
+    }),
+  );
+  const withDoors =
+    list?.rerolls === undefined
+      ? list
+      : {
+          ...list,
+          rerolls: Object.freeze({
+            ...list.rerolls,
+            rows: Object.freeze(
+              list.rerolls.rows.map((row) => {
+                const doors = pressDoors.get(row.key);
+                return doors === undefined ? row : Object.freeze({ ...row, doors });
+              }),
+            ),
+          }),
+        };
   return Object.freeze({
-    ...(list === undefined ? {} : list),
+    ...(withDoors === undefined ? {} : withDoors),
     targets: Object.freeze(targets),
   });
 }
@@ -559,8 +621,65 @@ export function assembleWheelRerolls(input: {
     targetNoun: 'offer',
     rewardTypes,
   });
+  // Each press reads as its offer, the reward it replaces, and every offer once it lands.
+  const current = new Map(
+    wheel.offers.map(
+      (offer) => [semanticAddressKey(offer.control.owner.address), offer.control.offer] as const,
+    ),
+  );
+  const pressOffers = new Map(
+    input.occurrence.roomActions.order.flatMap((reference) => {
+      if (
+        reference.kind !== 'reroll' ||
+        reference.target.kind !== 'wheelOffer' ||
+        reference.target.wheelKey !== wheel.key
+      )
+        return [];
+      const ownerKey = semanticAddressKey(
+        rerollTargetOwner(source.biome, input.occurrence.occurrenceId, reference.target),
+      );
+      const before = current.get(ownerKey) ?? null;
+      current.set(ownerKey, reference.reward);
+      return [
+        [
+          roomActionKey(reference),
+          Object.freeze({
+            doorLabel: targetLabel(reference.target),
+            before,
+            after: Object.freeze(
+              wheel.offers
+                .filter((offer) => offer.active)
+                .map((offer) =>
+                  Object.freeze({
+                    exitKey: offer.key,
+                    rewards: Object.freeze([
+                      current.get(semanticAddressKey(offer.control.owner.address)) ?? null,
+                    ]),
+                  }),
+                ),
+            ),
+          }),
+        ] as const,
+      ];
+    }),
+  );
+  const withOffers =
+    list?.rerolls === undefined
+      ? list
+      : {
+          ...list,
+          rerolls: Object.freeze({
+            ...list.rerolls,
+            rows: Object.freeze(
+              list.rerolls.rows.map((row) => {
+                const doors = pressOffers.get(row.key);
+                return doors === undefined ? row : Object.freeze({ ...row, doors });
+              }),
+            ),
+          }),
+        };
   return Object.freeze({
     wheel: Object.freeze({ ...wheel, offers: Object.freeze(offers) }),
-    ...(list === undefined ? {} : list),
+    ...(withOffers === undefined ? {} : withOffers),
   });
 }
