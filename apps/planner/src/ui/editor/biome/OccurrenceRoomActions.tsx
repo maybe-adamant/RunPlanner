@@ -78,7 +78,14 @@ function inlineMysteryBoonOfferVerb(row: WorkspaceRoomActions['rows'][number]) {
 }
 
 // The Add area: room objects in game order, then optional actions by source family.
-const objectOrder = ['worldShop', 'hermesShrine', 'stygianWell', 'purgingPool', 'championItem'];
+const objectOrder = [
+  'worldShop',
+  'hermesShrine',
+  'stygianWell',
+  'purgingPool',
+  'challengeSwitch',
+  'championItem',
+];
 
 const objectOfReference = (
   reference: WorkspaceRoomActions['rows'][number]['reference'],
@@ -208,7 +215,10 @@ function WorkbenchAddArea({
     ...objectActionRows.map((row) => {
       const action = addAction(row);
       return {
-        rank: objectOrder.length,
+        rank:
+          row.reference.kind === 'interactChallengeSwitch'
+            ? objectOrder.indexOf('challengeSwitch')
+            : objectOrder.length,
         node: (
           <li key={row.key}>
             <button

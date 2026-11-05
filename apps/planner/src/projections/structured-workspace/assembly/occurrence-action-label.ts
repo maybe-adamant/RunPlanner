@@ -543,7 +543,7 @@ export function occurrenceActionLabelParts(
 export interface OccurrenceActionAddGroup {
   readonly key: string;
   readonly label: string;
-  readonly object?: 'worldShop' | 'hermesShrine';
+  readonly object?: 'worldShop' | 'hermesShrine' | 'challengeSwitch';
 }
 
 const addGroup = (
@@ -603,7 +603,7 @@ function sourceFamilyPresentation(
       return source(
         'Switch reward',
         'Claimed from the challenge switch',
-        addGroup('challengeSwitch', 'Challenge Switch'),
+        addGroup('object:challengeSwitch', 'Challenge Switch', 'challengeSwitch'),
       );
     case 'shopTravelDealRefill':
       return source(

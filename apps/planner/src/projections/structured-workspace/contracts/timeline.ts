@@ -86,7 +86,7 @@ export interface WorkspaceRoomActionRow {
   readonly addGroup?: {
     readonly key: string;
     readonly label: string;
-    readonly object?: 'worldShop' | 'hermesShrine';
+    readonly object?: 'worldShop' | 'hermesShrine' | 'challengeSwitch';
   };
   /** Engine-published source of a generated pickup; absent for every other action. */
   readonly sourceFamily?: import('@run-planner/engine/authored-project').AcquisitionEntrySourceFamily;

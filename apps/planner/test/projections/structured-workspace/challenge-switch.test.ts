@@ -159,7 +159,11 @@ describe('challenge switch in the structured workspace', () => {
     const use = rows.find((row) => row.reference.kind === 'interactChallengeSwitch');
     expect(use?.label).toBe('Use Infernal Trove');
     expect(use?.challengeSwitchKind).toBe('time');
-    expect(claim?.addGroup).toEqual({ key: 'challengeSwitch', label: 'Challenge Switch' });
+    expect(claim?.addGroup).toEqual({
+      key: 'object:challengeSwitch',
+      label: 'Challenge Switch',
+      object: 'challengeSwitch',
+    });
     expect(claim?.labelParts?.origin).toBe('Claimed from the challenge switch');
   });
 
