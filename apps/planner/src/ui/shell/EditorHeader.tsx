@@ -21,7 +21,7 @@ import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
 import { PLAN_NAME_FIELD_ID, ProjectNameField } from '../project/ProjectNameField';
 import { GameSendControls } from './GameSendControls';
 
-/** The open plan's header: back to Home, its name and save state, readiness, history and send. */
+/** The open plan's header: Home and readiness, then its name and save state, then history and send. */
 export function EditorHeader({
   banner,
   gameStatus,
@@ -59,14 +59,18 @@ export function EditorHeader({
             style: { '--window-backdrop': `url("${banner.url}")` } as CSSProperties,
           })}
     >
-      <button
-        className="quiet-action editor-home-button"
-        onClick={() => dispatch(viewChanged({ kind: 'home', tab: 'library' }))}
-        type="button"
-      >
-        <ActionIcon name="chevronLeft" />
-        Home
-      </button>
+      {/* Home and the plan's status sit on the rail's side, where a repair leads. */}
+      <div className="editor-header-start">
+        <button
+          className="quiet-action editor-home-button"
+          onClick={() => dispatch(viewChanged({ kind: 'home', tab: 'library' }))}
+          type="button"
+        >
+          <ActionIcon name="chevronLeft" />
+          Home
+        </button>
+        {repair ?? <StatusBadge status={readiness} />}
+      </div>
       <div className="editor-title">
         <ProjectNameField key={name} name={name} />
         <button
@@ -101,9 +105,8 @@ export function EditorHeader({
           <ProjectFileFeedback result={failure} session={librarySession} />
         </span>
       </div>
-      {/* Readiness, history and send wrap together, kept to the right. */}
+      {/* History and send end the header. */}
       <div className="editor-header-actions">
-        {repair ?? <StatusBadge status={readiness} />}
         <ProjectHistoryControls hasProject />
         <GameSendControls
           gameStatus={gameStatus}

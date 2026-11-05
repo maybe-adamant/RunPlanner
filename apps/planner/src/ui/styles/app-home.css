@@ -739,23 +739,34 @@ button.home-slot-name {
   margin-left: 8px;
 }
 
-/* Editor header: Home and the title keep one line; the actions wrap as one group. */
-.editor-header {
-  flex-wrap: wrap;
+/* Editor header: Home and status start it, the plan name is centred, history and send end it. */
+.app-header.editor-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 8px 16px;
+}
+
+.editor-header-start {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Only the repair pill shrinks; Home keeps its size. */
+.editor-header-start > :not(.project-findings) {
+  flex: none;
 }
 
 .editor-header-actions {
   display: flex;
-  /* Shrinks only through the repair pill, which gives way before the plan name. */
-  flex: 0 1 auto;
   min-width: 0;
   align-items: center;
+  justify-content: flex-end;
   gap: 16px;
-  margin-left: auto;
 }
 
-.editor-header-actions > :not(.project-findings) {
+.editor-header-actions > * {
   flex: none;
 }
 
@@ -766,8 +777,6 @@ button.home-slot-name {
 .editor-header .history-controls {
   display: flex;
   gap: 6px;
-  padding-left: 10px;
-  border-left: 1px solid #383943;
 }
 
 .editor-game-group {
@@ -918,7 +927,7 @@ button.home-slot-name {
   margin-top: 10px;
 }
 
-/* The title takes the line's spare room; its empty reserved slots give way first, then the name ellipsizes. */
+/* The centred title: its empty reserved slots give way first, then the name ellipsizes. */
 .editor-title {
   display: flex;
   min-width: 12rem;
