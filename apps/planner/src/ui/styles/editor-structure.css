@@ -43,7 +43,6 @@
 }
 
 .panel-heading {
-  container: finding-host / inline-size;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -681,7 +680,6 @@ select {
  * and map, then the reward it offered; the plan's next repair on its right.
  */
 .room-head-card {
-  container: finding-host / inline-size;
   display: flex;
   box-sizing: border-box;
   height: 64px;
@@ -746,6 +744,8 @@ select {
   flex: 0 1 auto;
   min-width: 0;
   align-self: center;
+  /* The pill overhangs the row a little rather than growing it, so a finding never moves the panel. */
+  margin-block: -0.2rem;
   justify-content: flex-end;
   margin-left: auto;
 }
@@ -793,43 +793,6 @@ select {
   background: var(--finding);
   font-size: 0.72rem;
   font-weight: 800;
-}
-
-.finding-pill-lines {
-  display: grid;
-  min-width: 0;
-}
-
-/* A described finding takes two lines, centred, wherever its host has the width. */
-.finding-pill[data-described='true'] {
-  border-radius: 14px;
-}
-
-.finding-pill[data-described='true'] .finding-pill-lines {
-  text-align: center;
-}
-
-.finding-pill-description {
-  min-width: 0;
-  overflow: hidden;
-  color: #b9b2c4;
-  font-size: 0.72rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@container finding-host (max-width: 760px) {
-  .finding-pill-description {
-    display: none;
-  }
-
-  .finding-pill[data-described='true'] {
-    border-radius: 999px;
-  }
-
-  .finding-pill[data-described='true'] .finding-pill-lines {
-    text-align: left;
-  }
 }
 
 .finding-pill-text {
