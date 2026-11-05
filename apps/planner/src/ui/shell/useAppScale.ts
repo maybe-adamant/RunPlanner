@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
 import type { AppScalePreference } from '@planner/persistence/appScalePreference';
 
-const minimumScale = 50;
-const maximumScale = 200;
-const scaleStep = 10;
+/** The supported scales; every layout is checked at each of them. */
+const scaleLevels = [80, 90, 100, 110, 125, 150] as const;
+const minimumScale = Math.min(...scaleLevels);
+const maximumScale = Math.max(...scaleLevels);
 
 export interface AppScale {
   readonly percent: number;
@@ -13,19 +14,22 @@ export interface AppScale {
   reset(): void;
 }
 
+/** The supported level closest to a scale, as for one saved before the levels were fixed. */
+function nearestLevel(percent: number): number {
+  return scaleLevels.reduce((best, level) =>
+    Math.abs(level - percent) < Math.abs(best - percent) ? level : best,
+  );
+}
+
 function clampedStep(current: number, direction: number): number {
-  return Math.max(minimumScale, Math.min(maximumScale, current + direction * scaleStep));
+  const index = scaleLevels.indexOf(nearestLevel(current) as (typeof scaleLevels)[number]);
+  return scaleLevels[Math.max(0, Math.min(scaleLevels.length - 1, index + direction))]!;
 }
 
 export function useAppScale(preference?: AppScalePreference): AppScale {
   const [percent, setPercent] = useState(() => {
     const saved = preference?.read();
-    return saved !== undefined &&
-      saved >= minimumScale &&
-      saved <= maximumScale &&
-      saved % scaleStep === 0
-      ? saved
-      : 100;
+    return saved === undefined || !Number.isFinite(saved) || saved <= 0 ? 100 : nearestLevel(saved);
   });
 
   useLayoutEffect(() => {

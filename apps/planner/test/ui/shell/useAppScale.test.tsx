@@ -23,13 +23,20 @@ it('restores, changes and persists scale with keyboard shortcuts', () => {
   expect(scale()).toBe('');
 });
 
-it.each([undefined, 0, 49, 205, 83, NaN])(
-  'defaults to 100%% for invalid stored scale %s',
-  (saved) => {
-    renderHook(() => useAppScale({ read: () => saved, write: vi.fn() }));
-    expect(scale()).toBe('1');
-  },
-);
+it.each([undefined, 0, NaN])('defaults to 100%% for invalid stored scale %s', (saved) => {
+  renderHook(() => useAppScale({ read: () => saved, write: vi.fn() }));
+  expect(scale()).toBe('1');
+});
+
+it.each([
+  [49, '0.8'],
+  [83, '0.8'],
+  [120, '1.25'],
+  [205, '1.5'],
+])('snaps a stored scale of %s to its nearest level', (saved, expected) => {
+  renderHook(() => useAppScale({ read: () => saved, write: vi.fn() }));
+  expect(scale()).toBe(expected);
+});
 
 it('handles zoom keys while editing, including reset, without consuming unrelated shortcuts', () => {
   renderHook(() => useAppScale());
@@ -38,7 +45,7 @@ it('handles zoom keys while editing, including reset, without consuming unrelate
   for (const key of ['=', '+']) {
     expect(fireEvent.keyDown(input, { key, ctrlKey: true })).toBe(false);
   }
-  expect(scale()).toBe('1.2');
+  expect(scale()).toBe('1.25');
   expect(fireEvent.keyDown(input, { key: '-', metaKey: true })).toBe(false);
   expect(scale()).toBe('1.1');
   expect(fireEvent.keyDown(input, { key: '0', ctrlKey: true })).toBe(false);
@@ -65,12 +72,12 @@ it('accumulates Ctrl-wheel deltas while leaving ordinary scrolling native', () =
 });
 
 it('enforces the scale limits without falling through to native zoom', () => {
-  const view = renderHook(() => useAppScale({ read: () => 50, write: vi.fn() }));
+  const view = renderHook(() => useAppScale({ read: () => 80, write: vi.fn() }));
   expect(fireEvent.keyDown(window, { key: '-', ctrlKey: true })).toBe(false);
   expect(fireEvent.wheel(window, { ctrlKey: true, deltaY: 120 })).toBe(false);
-  expect(scale()).toBe('0.5');
-  for (let count = 0; count < 16; count++) fireEvent.keyDown(window, { key: '+', ctrlKey: true });
-  expect(scale()).toBe('2');
+  expect(scale()).toBe('0.8');
+  for (let count = 0; count < 8; count++) fireEvent.keyDown(window, { key: '+', ctrlKey: true });
+  expect(scale()).toBe('1.5');
   view.unmount();
   expect(fireEvent.keyDown(window, { key: '+', ctrlKey: true })).toBe(true);
   expect(fireEvent.wheel(window, { ctrlKey: true, deltaY: 120 })).toBe(true);

@@ -25,7 +25,9 @@ deleting the open plan closes it and returns to the Library.
 
 **Settings** holds the app scale and the Arcana and Vow presets. App scale is
 a device-local presentation preference, outside plans and Undo/Redo, with
-keyboard and wheel shortcuts; map zoom is independent of it, and pointer
+keyboard and wheel shortcuts. It moves between a fixed set of levels (80–150%),
+each of which layouts are checked at; a saved scale between levels opens at the
+nearest one. Map zoom is independent of it, and pointer
 gestures and floating overlays convert between screen and scaled layout
 coordinates. Presets are
 device-local planner settings, never project state, history or plan data:
