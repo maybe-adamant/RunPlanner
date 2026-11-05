@@ -2596,9 +2596,15 @@
   opacity: 0.6;
 }
 
-/* The map fills its frame, so overlays pinned to the frame sit on the image. */
+/*
+ * The map fills its frame, so overlays pinned to the frame sit on the image.
+ * Its width is capped so its height fits the window under the header and room
+ * heading: extra width never makes the room scroll.
+ */
 :is(.ephyra-side-map-reference, .hub-map-overview) > .room-map-viewport > .room-map-canvas {
   aspect-ratio: 16 / 9;
+  max-width: max(24rem, calc((100 * var(--app-vh) - 18rem) * 16 / 9));
+  margin-inline: auto;
 }
 
 :is(.ephyra-side-map-reference, .hub-map-overview)
