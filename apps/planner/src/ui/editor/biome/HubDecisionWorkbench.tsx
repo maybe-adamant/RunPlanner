@@ -372,11 +372,9 @@ export function HubDecisionWorkbench({
     >
       <header className="room-head-card">
         <div className="room-head-identity">
-          <div className="room-head-name-line">
-            <h3 className="room-title-name" id={`${titleId}-title`}>
-              Ephyra Hub
-            </h3>
-          </div>
+          <h3 className="room-title-name" id={`${titleId}-title`}>
+            Ephyra Hub
+          </h3>
         </div>
         {titleAside === undefined ? null : <div className="room-title-aside">{titleAside}</div>}
       </header>

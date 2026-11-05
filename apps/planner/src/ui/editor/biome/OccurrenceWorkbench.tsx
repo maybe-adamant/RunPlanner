@@ -284,14 +284,12 @@ export function OccurrenceWorkbench({
     >
       <header className="room-head-card">
         <div className="room-head-identity">
-          <div className="room-head-name-line">
-            <h3 aria-label={heading} className="room-title-name">
-              <ArtworkIcon className="room-title-icon" source={roomKindIcon(room.roomIcon)} />
-              {heading}
-            </h3>
-            <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
-          </div>
+          <h3 aria-label={heading} className="room-title-name">
+            <ArtworkIcon className="room-title-icon" source={roomKindIcon(room.roomIcon)} />
+            {heading}
+          </h3>
           <IncomingRewardSummary incomingDoor={incomingDoor} />
+          <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
         </div>
         {titleAside === undefined ? null : <div className="room-title-aside">{titleAside}</div>}
       </header>

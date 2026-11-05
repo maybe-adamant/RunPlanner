@@ -676,35 +676,67 @@ select {
 }
 
 /*
- * The room's slim card above its tabs, always two lines high: its icon, name
- * and map, then the reward it offered; the plan's next repair on its right.
+ * The room's one-line card above its tabs: its icon, name, the reward it
+ * offered and its map on the left, the plan's next repair on the right. The
+ * pill gives way first, then the reward's text; the name and map never do.
+ * Too narrow even for that, the pill drops to its own line.
  */
+.room-card:has(> .room-head-card) {
+  container: room-head / inline-size;
+}
+
 .room-head-card {
   display: flex;
   box-sizing: border-box;
-  height: 64px;
+  min-height: 42px;
   min-width: 0;
   align-items: center;
-  gap: 12px;
+  gap: 6px 12px;
   margin: 0 0 6px;
-  padding: 6px 12px;
+  padding: 5px 12px;
   border: 1px solid #34323f;
   border-radius: 10px;
   background: rgb(174 152 202 / 5%);
 }
 
 .room-head-identity {
-  display: grid;
-  min-width: 0;
-  grid-template-rows: 26px 22px;
+  display: flex;
+  flex: 0 1 auto;
   align-items: center;
+  gap: 8px;
 }
 
-.room-head-name-line {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 6px;
+.room-head-identity > :is(.room-title-name, .room-map-launcher, button) {
+  flex: 0 0 auto;
+}
+
+.room-head-card > .room-title-aside {
+  flex: 0 1000 auto;
+  min-width: min(8rem, 100%);
+}
+
+@container room-head (max-width: 26rem) {
+  .room-head-card {
+    flex-wrap: wrap;
+  }
+
+  .room-head-card > .room-title-aside {
+    flex-basis: 100%;
+  }
+
+  /* On its own line the room keeps its map; a long name gives way. */
+  .room-head-identity {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .room-head-identity > .room-title-name {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .room-title-name {
@@ -725,6 +757,7 @@ select {
 
 .room-title-reward {
   display: flex;
+  flex: 0 1 auto;
   min-width: 0;
   align-items: center;
   gap: 6px;
