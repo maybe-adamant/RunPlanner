@@ -64,6 +64,8 @@ interface BiomeInspectorNodeProps {
   readonly sourceOccurrence?: OccurrenceNode;
   /** The biome lies past the plan end, so its Hub is read-only. */
   readonly pastPlanEnd?: boolean;
+  /** Shown at the end of the workbench's title line, such as the plan's next repair. */
+  readonly titleAside?: ReactNode;
 }
 
 /** The notes beside a room's doors: its batch's, its hidden door's or its boss door's. */
@@ -294,8 +296,10 @@ function OccurrenceInspector({
   navigationRevision,
   roomTab,
   sideRoomSlotKey,
+  titleAside,
 }: Pick<
   BiomeInspectorNodeProps,
+  | 'titleAside'
   | 'doorsRequested'
   | 'interactions'
   | 'outgoing'
@@ -340,6 +344,8 @@ function OccurrenceInspector({
         </>
       }
       entryIdentity={<StartRoomIdentityEditor interactions={interactions} node={node} />}
+      {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
+      titleAside={titleAside}
       interactions={interactions}
       {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
       room={node.room}
@@ -397,6 +403,7 @@ export function BiomeInspectorNode(props: BiomeInspectorNodeProps) {
             : { findingNavigationRevision: props.findingNavigationRevision })}
           interactions={props.interactions}
           node={node}
+          titleAside={props.titleAside}
         />
       );
       return props.pastPlanEnd === true ? <ReadOnlyFindingScope>{hub}</ReadOnlyFindingScope> : hub;

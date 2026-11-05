@@ -3,7 +3,7 @@
   display: grid;
   min-height: 0;
   grid-template-areas:
-    'head status'
+    'head room'
     'rail room';
   grid-template-columns: minmax(180px, 224px) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
@@ -24,69 +24,6 @@
 
 .biome-workspace > .biome-inspector {
   grid-area: room;
-}
-
-/* One fixed-height line atop the room: no issues, or the next repair and how many more. */
-.biome-room-status {
-  grid-area: status;
-  min-width: 0;
-  padding-bottom: 10px;
-}
-
-.room-status-strip {
-  display: flex;
-  box-sizing: border-box;
-  height: 44px;
-  align-items: stretch;
-}
-
-.room-status-strip > .assessment-issue-button {
-  display: flex;
-  width: 100%;
-  min-width: 0;
-  align-items: center;
-  gap: 10px;
-  overflow: hidden;
-}
-
-.room-status-strip .assessment-issue-summary {
-  display: flex;
-  min-width: 0;
-  align-items: baseline;
-  gap: 10px;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.room-status-strip .finding-title,
-.room-status-strip .finding-destination {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.room-status-more {
-  flex: 0 0 auto;
-  margin-left: auto;
-  padding: 1px 7px;
-  border-radius: 999px;
-  color: #f1d6d6;
-  background: rgb(190 80 80 / 22%);
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.project-findings.room-status-strip[data-status='valid'] {
-  align-items: center;
-  padding: 0 14px;
-  border: 1px solid rgb(120 170 130 / 28%);
-  border-radius: 10px;
-  background: rgb(120 170 130 / 6%);
-}
-
-.room-status-valid {
-  color: #9cc4a3;
-  font-size: 0.82rem;
-  font-weight: 600;
 }
 
 .run-state-sheet {
@@ -269,12 +206,14 @@
   scrollbar-gutter: auto;
 }
 
-/* Folds or pins the rail, like the panel navigation's toggle. */
+/* Folds or pins the rail, like the panel navigation's toggle, atop the rail column. */
+.biome-structure-head {
+  display: grid;
+  gap: 4px;
+}
+
 .biome-rail-pin {
-  position: absolute;
-  top: 0;
-  right: 10px;
-  z-index: 1;
+  justify-self: end;
   padding: 2px 7px;
   border: 0;
   border-radius: 6px;
@@ -288,10 +227,6 @@
 .biome-rail-pin:hover {
   color: #f4efe7;
   background: rgb(255 255 255 / 6%);
-}
-
-.biome-rail {
-  padding-top: 26px;
 }
 
 /*
@@ -322,8 +257,7 @@
 }
 
 .biome-workspace[data-rail='folded'] .biome-rail-pin {
-  right: 50%;
-  transform: translateX(50%);
+  justify-self: center;
 }
 
 /* Opened while folded, the full rail floats over the room. */
@@ -335,11 +269,6 @@
   border-radius: 0 10px 10px 0;
   background: #17181e;
   box-shadow: 14px 0 30px rgb(0 0 0 / 40%);
-}
-
-.biome-workspace[data-rail-open] .biome-rail-pin {
-  right: 10px;
-  transform: none;
 }
 
 .biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-rail-node {

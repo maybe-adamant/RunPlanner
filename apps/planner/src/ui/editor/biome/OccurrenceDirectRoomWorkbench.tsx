@@ -1,8 +1,11 @@
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { RewardPoolLine } from './DecisionWorkbench';
 import type { DoorNoteMark, DoorNoteTarget } from './doorNotes';
 import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { ReactNode } from 'react';
 import type {
+  WorkspaceDoorContract,
   WorkspaceEncounterBannerSupplement,
   WorkspaceInteractionCatalog,
   WorkspaceRoomActions,
@@ -332,4 +335,35 @@ export function DirectRoomWorkbench({
         />
       );
   }
+}
+
+/** The reward the room's door offered: its icons and summary, "Hidden" while unseen. */
+export function IncomingRewardSummary({
+  incomingDoor,
+}: {
+  readonly incomingDoor: WorkspaceDoorContract | undefined;
+}) {
+  if (incomingDoor === undefined) return null;
+  const preview = incomingDoor.offerRewardSurface;
+  if (preview.visibility === 'visible' && preview.rewards.length === 0) return null;
+  const summary =
+    preview.visibility === 'hidden'
+      ? 'Hidden'
+      : preview.rewards.map((reward) => reward.rerolledSummary ?? reward.summary).join(', ');
+  const icons =
+    preview.visibility === 'hidden'
+      ? []
+      : preview.rewards.flatMap((reward) => {
+          const offer = reward.rerolledOffer ?? reward.offer;
+          return offer === null ? [] : [offerIcon(offer)];
+        });
+  return (
+    <section aria-label="Incoming reward" className="room-title-reward">
+      <span aria-hidden="true">·</span>
+      {icons.map((icon, index) => (
+        <ArtworkIcon className="room-title-icon" key={index} source={icon} />
+      ))}
+      <span>{summary}</span>
+    </section>
+  );
 }

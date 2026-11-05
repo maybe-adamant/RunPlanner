@@ -675,23 +675,130 @@ select {
   background: #1c1c24;
 }
 
-/* The room's name leads its tab row, where its title card used to be. */
-.room-workbench-name {
+/* The room's title line above its tabs: icon, name, the reward it offered, and the plan's next repair. */
+.room-title-line {
+  display: flex;
+  min-width: 0;
+  min-height: 34px;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+}
+
+.room-title-name {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: #f6f0e7;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.room-title-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.room-title-reward {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: min(8rem, 30%);
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  color: #d8c49c;
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+
+.room-title-reward > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.room-title-aside {
+  display: flex;
+  /* The pill gives way before the room's reward does. */
   flex: 0 1 auto;
   min-width: 0;
-  margin: 0 6px 0 4px;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+/* The plan's next repair as a pill sized to its text, capped and cut short when narrow. */
+.project-findings.finding-pill-group {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 30rem;
+  align-items: center;
+  gap: 6px;
+}
+
+.finding-pill-group > .finding-pill {
+  display: inline-flex;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 11px 3px 4px;
+  border-width: 1px;
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.finding-pill-mark {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 1.15rem;
+  height: 1.15rem;
+  place-items: center;
+  border-radius: 50%;
+  color: #1c1c24;
+  background: var(--finding);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.finding-pill-text {
+  min-width: 0;
   overflow: hidden;
-  color: #d6cfe2;
-  font-size: 0.82rem;
-  font-weight: 650;
+  color: #8f8c95;
+  font-size: 0.78rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.room-workbench-name::after {
-  margin-left: 6px;
-  color: #77757e;
-  content: '·';
+.finding-pill-text > .finding-title {
+  font-size: 0.8rem;
+}
+
+.finding-pill-text > .finding-destination {
+  color: #c9bfe0;
+}
+
+.finding-pill-more {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: #f1d6d6;
+  background: rgb(190 80 80 / 22%);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.finding-pill[data-status='valid'] {
+  padding: 2px 10px;
+  border: 1px solid rgb(120 170 130 / 35%);
+  border-radius: 999px;
+  color: #9cc4a3;
+  background: rgb(120 170 130 / 8%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .room-workbench-tabs {

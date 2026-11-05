@@ -755,6 +755,15 @@ export function BiomeWorkspace({
         data-status={biome.status}
       >
         <div className="biome-structure-head">
+          <button
+            aria-expanded={!rail.folded || rail.open}
+            aria-label={rail.toggleLabel}
+            className="biome-rail-pin"
+            onClick={rail.toggle}
+            type="button"
+          >
+            {rail.toggleGlyph}
+          </button>
           <header className="biome-structure-heading">
             <div className="biome-structure-title">
               <div className="biome-structure-title-row">
@@ -780,15 +789,6 @@ export function BiomeWorkspace({
           }}
           onMouseLeave={() => rail.setOpen(false)}
         >
-          <button
-            aria-expanded={!rail.folded || rail.open}
-            aria-label={rail.toggleLabel}
-            className="biome-rail-pin"
-            onClick={rail.toggle}
-            type="button"
-          >
-            {rail.toggleGlyph}
-          </button>
           <div className="biome-rail">
             {biome.rail.map((entry) => (
               <RailEntry
@@ -808,13 +808,14 @@ export function BiomeWorkspace({
           </div>
         </div>
       </section>
-      {/* The room column's status keeps one height and place, so nothing shifts as findings come and go. */}
-      <div className="biome-room-status">{repairBanner}</div>
       <aside aria-label="Details" className="biome-inspector">
         {rendersTitledWorkbench ? null : (
           <header className="biome-inspector-heading">
             <p className="eyebrow">Details</p>
             <h2>{inspectorTitle}</h2>
+            {repairBanner === undefined ? null : (
+              <div className="room-title-aside">{repairBanner}</div>
+            )}
           </header>
         )}
         <div className="past-plan-end-content" inert={pastPlanEnd}>
@@ -830,6 +831,7 @@ export function BiomeWorkspace({
         ) : (
           <BiomeInspectorNode
             navigationRevision={semanticNavigationRevision}
+            titleAside={repairBanner}
             pastPlanEnd={pastPlanEnd}
             frontier={biome.frontier}
             interactions={interactions}

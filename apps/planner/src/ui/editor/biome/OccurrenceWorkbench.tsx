@@ -4,6 +4,7 @@ import { useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactN
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
+  type WorkspaceDoorContract,
   type WorkspaceInteractionCatalog,
   type WorkspaceLocalVisitDecision,
   type WorkspacePlanEndRelation,
@@ -18,7 +19,9 @@ import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindin
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { RunStateLauncher } from './RunStateSheet';
 import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
-import { DirectRoomWorkbench } from './OccurrenceDirectRoomWorkbench';
+import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { roomKindIcon } from './roomIcon';
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 import { SideRoomsWorkbench } from './locals/SideRoomsWorkbench';
 import { TimelineLegend } from './TimelineLegend';
@@ -27,6 +30,10 @@ import { createRouteAddress } from '@run-planner/engine/authored-project';
 
 interface OccurrenceWorkbenchProps {
   readonly headerActions?: ReactNode;
+  /** The door the room was entered through, for its reward on the title line. */
+  readonly incomingDoor?: WorkspaceDoorContract;
+  /** Shown at the end of the room's title line, such as the plan's next repair. */
+  readonly titleAside?: ReactNode;
   /** Entry identity is an Overview-only biome authoring control. */
   readonly entryIdentity?: ReactNode;
   readonly interactions: WorkspaceInteractionCatalog;
@@ -56,6 +63,8 @@ interface OccurrenceWorkbenchProps {
 
 /** A room-local editor that consumes the structured workspace only. */
 export function OccurrenceWorkbench({
+  incomingDoor,
+  titleAside,
   headerActions,
   doorsRequested = false,
   timelineDoors,
@@ -273,10 +282,15 @@ export function OccurrenceWorkbench({
       )}
       tabIndex={-1}
     >
-      <div className="room-workbench-tab-row">
-        <h3 aria-label={heading} className="room-workbench-name">
+      <div className="room-title-line">
+        <h3 aria-label={heading} className="room-title-name">
+          <ArtworkIcon className="room-title-icon" source={roomKindIcon(room.roomIcon)} />
           {heading}
         </h3>
+        <IncomingRewardSummary incomingDoor={incomingDoor} />
+        {titleAside === undefined ? null : <div className="room-title-aside">{titleAside}</div>}
+      </div>
+      <div className="room-workbench-tab-row">
         <nav
           aria-label="Room workbench"
           className="room-workbench-tabs"
@@ -304,8 +318,8 @@ export function OccurrenceWorkbench({
         </nav>
         <div className="room-workbench-tab-utility">
           {headerActions}
-          <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
           {showTimelineLegend ? <TimelineLegend /> : null}
+          <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
           {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
           {tabRunState === undefined ? null : <RunStateLauncher launcher={tabRunState} />}
         </div>

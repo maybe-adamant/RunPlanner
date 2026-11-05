@@ -478,7 +478,15 @@ export function RouteWorkspace({
                   issue={routeEvaluation.issue}
                   focusByOwner={workspace.focusByOwner}
                   route={workspaceRoute}
-                  strip
+                  pill={{
+                    // The plan's findings beyond those of the repair shown.
+                    otherFindings: Math.max(
+                      0,
+                      projectEvaluation.findings.length -
+                        (routeEvaluation.issue?.reasons.length ?? 0),
+                    ),
+                    showValid: true,
+                  }}
                 />
               }
               runStateLaunchers={workspace.runStateLaunchers}

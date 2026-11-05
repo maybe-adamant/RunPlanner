@@ -1,4 +1,10 @@
-import { type KeyboardEvent as ReactKeyboardEvent, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   semanticAddressKey,
@@ -41,6 +47,8 @@ interface HubDecisionWorkbenchProps {
   readonly findingNavigationRevision?: number;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: WorkspaceHubDecisionNode;
+  /** Shown at the end of the Hub's title line, such as the plan's next repair. */
+  readonly titleAside?: ReactNode;
 }
 
 const hubWorkbenchTabs: readonly {
@@ -74,6 +82,7 @@ export function HubDecisionWorkbench({
   navigationRevision,
   interactions,
   node,
+  titleAside,
 }: HubDecisionWorkbenchProps) {
   const findingAnchor = useFindingAnchor();
   const findingTarget = useFindingTarget();
@@ -361,10 +370,13 @@ export function HubDecisionWorkbench({
       className="room-card hub-decision-workbench"
       aria-label="Ephyra Hub"
     >
-      <div className="room-workbench-tab-row">
-        <h3 className="room-workbench-name" id={`${titleId}-title`}>
+      <div className="room-title-line">
+        <h3 className="room-title-name" id={`${titleId}-title`}>
           Ephyra Hub
         </h3>
+        {titleAside === undefined ? null : <div className="room-title-aside">{titleAside}</div>}
+      </div>
+      <div className="room-workbench-tab-row">
         <nav
           aria-label="Hub workbench"
           className="room-workbench-tabs"

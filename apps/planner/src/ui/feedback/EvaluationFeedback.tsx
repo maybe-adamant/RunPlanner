@@ -67,17 +67,17 @@ export function ProjectFindings({
   issue,
   focusByOwner,
   route,
-  strip = false,
+  pill,
 }: {
   readonly catalog: Catalog;
   readonly issue: AssessmentIssue | undefined;
   readonly focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>;
   readonly route?: WorkspaceRoute;
   /**
-   * A one-line status strip that keeps its height: "No issues" without an
-   * issue, otherwise its first finding and how many more it has.
+   * A compact pill on a room's title line: the next repair and how many other
+   * findings the plan has, or "No issues" where `showValid` asks for it.
    */
-  readonly strip?: boolean;
+  readonly pill?: { readonly otherFindings: number; readonly showValid: boolean };
 }) {
   const dispatch = useAppDispatch();
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
@@ -86,14 +86,10 @@ export function ProjectFindings({
   const drafting = useAppSelector((state) => state.draftSession.run.kind === 'running');
 
   if (issue === undefined)
-    return strip ? (
-      <section
-        aria-label="Plan status"
-        className="project-findings room-status-strip"
-        data-status="valid"
-      >
-        <span className="room-status-valid">No issues</span>
-      </section>
+    return pill?.showValid === true ? (
+      <span className="finding-pill" data-status="valid">
+        No issues
+      </span>
     ) : null;
 
   const destination = focusByOwner.get(semanticAddressKey(issue.owner));
@@ -111,12 +107,44 @@ export function ProjectFindings({
     catalogFindingLabels(catalog),
   );
 
+  if (pill !== undefined) {
+    const text = `${copy.title} · ${destinationLabel}`;
+    return (
+      <section
+        aria-labelledby="project-findings-title"
+        className="project-findings finding-pill-group"
+      >
+        <h2 className="visually-hidden" id="project-findings-title">
+          Next repair
+        </h2>
+        <button
+          aria-current={selectedKey === issue.regionKey ? 'true' : undefined}
+          className="assessment-issue-button finding-pill"
+          data-selected={selectedKey === issue.regionKey}
+          data-status="issue"
+          disabled={drafting}
+          onClick={navigate}
+          type="button"
+          {...hintProps(text, undefined, text)}
+        >
+          <span aria-hidden="true" className="finding-pill-mark">
+            !
+          </span>
+          <span className="finding-pill-text">
+            <span className="finding-title">{copy.title}</span>
+            {' · '}
+            <span className="finding-destination">{destinationLabel}</span>
+          </span>
+        </button>
+        {pill.otherFindings > 0 ? (
+          <span className="finding-pill-more">+{pill.otherFindings}</span>
+        ) : null}
+      </section>
+    );
+  }
+
   return (
-    <section
-      className={strip ? 'project-findings room-status-strip' : 'project-findings'}
-      aria-labelledby="project-findings-title"
-      {...(strip ? { 'data-status': 'issue' } : {})}
-    >
+    <section className="project-findings" aria-labelledby="project-findings-title">
       <h2 className="visually-hidden" id="project-findings-title">
         Next repair
       </h2>
@@ -132,14 +160,8 @@ export function ProjectFindings({
           <span className="finding-title">{copy.title}</span>
           <span className="finding-destination">{destinationLabel}</span>
         </span>
-        {strip ? (
-          issue.reasons.length > 1 ? (
-            <span className="room-status-more">+{issue.reasons.length - 1}</span>
-          ) : null
-        ) : (
-          copy.description !== undefined && (
-            <span className="finding-description">{copy.description}</span>
-          )
+        {copy.description !== undefined && (
+          <span className="finding-description">{copy.description}</span>
         )}
       </button>
     </section>
