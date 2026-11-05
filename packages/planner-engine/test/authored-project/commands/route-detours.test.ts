@@ -13,10 +13,12 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectHistory,
+  createRoomActionAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   createTargetAddress,
   redoProjectHistory,
+  roomActionKey,
   undoProjectHistory,
   normalDecisionProgressionForLayout,
   type ProjectCommand,
@@ -258,6 +260,91 @@ describe('authored-project route detour commands', () => {
           decision.source.occurrenceId === target,
       ),
     ).toEqual(anomalyOutgoing);
+  });
+
+  it('keeps only the room actions an Anomaly can host, and Undo restores the switch and Well', () => {
+    const intro = createOccurrenceId('detour-g-object-intro');
+    const target = createOccurrenceId('detour-g-object-target');
+    const source = { kind: 'occurrence' as const, occurrenceId: intro };
+    const host = createOccurrenceAddress(gBiome, target);
+    const useSwitch = { kind: 'interactChallengeSwitch' } as const;
+    const occurrenceOf = (project: ProjectDocument) =>
+      biomeTopology(project, 'Underworld', 'G').occurrences.find(
+        (occurrence) => occurrence.occurrenceId === target,
+      )!;
+    let project = applyProjectCommand(gProject(), catalog, {
+      kind: 'CreateStart',
+      biome: gBiome,
+      occurrenceId: intro,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(gBiome, source),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(gBiome, source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(gBiome, source, 'exit1'),
+      occurrenceId: target,
+      gameName: 'G_Combat01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(gBiome, target),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceChallengeSwitch',
+      occurrence: host,
+      variantKey: 'PerfectClearChallengeSwitch_Pom',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(gBiome, target, roomActionKey(useSwitch)),
+      reference: useSwitch,
+      index: occurrenceOf(project).roomActions.order.length,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'AddStygianWell', occurrence: host });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertStygianWellReroll',
+      occurrence: host,
+      index: occurrenceOf(project).roomActions.order.length,
+    });
+    const before = occurrenceOf(project).roomActions.order;
+    expect(before.map((reference) => reference.kind)).toEqual(
+      expect.arrayContaining(['interactChallengeSwitch', 'rerollStygianWell']),
+    );
+    expect(before).toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'challengeSwitch',
+      entryKey: 'reward',
+    });
+    const rewardActions = before.filter((reference) => reference.kind === 'interactIncomingReward');
+    expect(rewardActions).not.toHaveLength(0);
+
+    const switched = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'SwitchTargetToAnomaly',
+      target: createTargetAddress(gBiome, source, 'exit1'),
+    });
+    const anomaly = occurrenceOf(switched.present);
+    expect(anomaly.gameName).toBe('B_Combat01');
+    expect(anomaly.challengeSwitch).toBeUndefined();
+    expect(anomaly.stygianWell).toBeUndefined();
+    expect(anomaly.roomActions.order).toEqual(rewardActions);
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(switched.present)), catalog),
+    ).toEqual(switched.present);
+    expect(undoProjectHistory(switched).present).toEqual(project);
+
+    const reverted = applyProjectCommand(switched.present, catalog, {
+      kind: 'RevertAnomaly',
+      occurrence: host,
+    });
+    expect(occurrenceOf(reverted).roomActions.order).toEqual(rewardActions);
   });
 
   describe('a detour beside ordinary targets', () => {

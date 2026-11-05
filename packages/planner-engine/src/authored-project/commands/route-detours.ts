@@ -37,6 +37,7 @@ import {
   type LocatedBiome,
 } from './contract';
 import { replaceOccurrence } from './occurrence/mutation';
+import { reconcileReplacementRoomLocalState } from './room-replacement';
 import { reconcileNormalTargetEntryStates } from './selection-state';
 import { reconcileExitDecisionToDeclaredCapacity } from './topology-reconciliation';
 import { exitKeysForTopologySource } from './topology/construction';
@@ -198,7 +199,7 @@ function switchTargetToAnomaly(
     descriptor.defaultReplacementRoomGameName,
     command,
   );
-  const replacement: RoomOccurrence = Object.freeze({
+  const replacementDraft: RoomOccurrence = Object.freeze({
     occurrenceId: occurrence.occurrenceId,
     gameName: replacementRoom.gameName,
     anomalyReplacement: Object.freeze({ replacedRoomGameName: rememberedRoom.gameName }),
@@ -215,6 +216,13 @@ function switchTargetToAnomaly(
     roomActions: occurrence.roomActions,
     additionalExits: Object.freeze([]),
   });
+  const replacement = reconcileReplacementRoomLocalState(
+    catalog,
+    document.route,
+    located,
+    occurrence,
+    replacementDraft,
+  );
   const source = {
     kind: 'occurrence',
     occurrenceId: occurrence.occurrenceId,
@@ -332,28 +340,28 @@ function revertAnomaly(
     command,
   );
   requireCountedBinding(rememberedRoom, rememberedRoom.gameName);
-  return updateTopology(
-    document,
+  const restored = reconcileReplacementRoomLocalState(
+    catalog,
+    document.route,
     located,
-    replaceOccurrence(
-      topology,
-      Object.freeze({
-        occurrenceId: occurrence.occurrenceId,
-        gameName: rememberedRoom.gameName,
-        state: Object.freeze({
-          kind: 'counted',
-          reward: occurrence.state.reward,
-        }),
-        encounters: createDefaultRoomEncounterState(
-          catalog,
-          rememberedRoom,
-          `occurrences.${occurrence.occurrenceId}.encounters`,
-        ),
-        roomActions: occurrence.roomActions,
-        additionalExits: occurrence.additionalExits ?? Object.freeze([]),
+    occurrence,
+    Object.freeze({
+      occurrenceId: occurrence.occurrenceId,
+      gameName: rememberedRoom.gameName,
+      state: Object.freeze({
+        kind: 'counted',
+        reward: occurrence.state.reward,
       }),
-    ),
+      encounters: createDefaultRoomEncounterState(
+        catalog,
+        rememberedRoom,
+        `occurrences.${occurrence.occurrenceId}.encounters`,
+      ),
+      roomActions: occurrence.roomActions,
+      additionalExits: occurrence.additionalExits ?? Object.freeze([]),
+    }),
   );
+  return updateTopology(document, located, replaceOccurrence(topology, restored));
 }
 
 function requireContractSource(

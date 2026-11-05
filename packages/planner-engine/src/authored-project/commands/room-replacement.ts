@@ -153,7 +153,11 @@ function reconcileReplacementAcquisitionSites(
   return Object.keys(sites).length === 0 ? undefined : Object.freeze(sites);
 }
 
-function reconcileReplacementRoomLocalState(
+/**
+ * Carries an occurrence's room-local authorship onto a replacement declaration:
+ * only the actions the replacement can host, then its required defaults.
+ */
+export function reconcileReplacementRoomLocalState(
   catalog: Catalog,
   route: ProjectDocument['route'],
   located: LocatedBiome,
