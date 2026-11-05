@@ -23,7 +23,7 @@ import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRo
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 import { SideRoomsWorkbench } from './locals/SideRoomsWorkbench';
 import { TimelineLegend } from './TimelineLegend';
-import { planEndLabel } from './planEndCopy';
+import { planEndHereLabel } from './planEndCopy';
 import type { TimelineDoors, TimelineDoorsContent } from './TimelineDoors';
 import { createRouteAddress } from '@run-planner/engine/authored-project';
 
@@ -281,9 +281,9 @@ export function OccurrenceWorkbench({
         <div className="room-heading-identity">
           <h3 aria-label={heading}>{heading}</h3>
           <IncomingRewardSummary incomingDoor={incomingDoor} />
-          {planEndRelation === undefined ? null : (
-            <span className="plan-end-pill" data-plan-end={planEndRelation}>
-              {planEndLabel(planEndRelation)}
+          {planEndRelation !== 'end' ? null : (
+            <span className="plan-end-pill" data-plan-end="end">
+              {planEndHereLabel}
             </span>
           )}
         </div>

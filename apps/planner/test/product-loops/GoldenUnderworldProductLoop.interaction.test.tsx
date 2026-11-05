@@ -807,9 +807,7 @@ describe('underworld product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Olympus' }));
     const pStructure = screen.getByRole('region', { name: 'Olympus route structure' });
-    expect(pStructure.querySelector('[data-kind="completion"]')).toBeNull();
-    const completion = within(pStructure).getByRole('region', { name: 'Biome completion' });
-    expect(within(completion).getByText('Prometheus')).toBeTruthy();
+    expect(within(pStructure).getByRole('button', { name: /^Boss.*Prometheus/ })).toBeTruthy();
   });
 
   it('carries an Anomaly failure through the browser without acquiring its retained offer', async () => {

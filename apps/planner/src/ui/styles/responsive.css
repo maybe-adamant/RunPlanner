@@ -44,7 +44,7 @@
     scrollbar-gutter: auto;
   }
 
-  /* One horizontal strip: the rooms in order, then the biome's completion. */
+  /* One horizontal strip: the rooms in order, the Boss and Postboss last. */
   .biome-structure-scroll {
     display: flex;
     max-height: none;
@@ -81,24 +81,6 @@
   .biome-rail-node {
     height: 100%;
     align-content: start;
-  }
-
-  .biome-completion-outline {
-    display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 6px;
-    margin: 0;
-  }
-
-  .biome-completion-outline > .card-kicker {
-    display: none;
-  }
-
-  .biome-completion-outline > ol {
-    display: flex;
-    gap: 6px;
-    margin: 0;
   }
 
   .biome-rail-status {

@@ -62,14 +62,16 @@ export function workspaceRoomIcon(input: {
         ...(encounter?.npcKey === undefined ? {} : { npcKey: encounter.npcKey }),
       });
     case 'Combat':
-    case 'Opening':
     case 'Devotion':
       return Object.freeze({ kind: 'combat' as const, biomeKey });
+    case 'PostBoss':
+      return Object.freeze({ kind: 'keepsakeRack' as const });
+    // An Opening is shown by its reward, like the reward-only rooms.
+    case 'Opening':
     case 'Intro':
     case 'PreHub':
     case 'Hub':
     case 'Preboss':
-    case 'PostBoss':
       return Object.freeze({ kind: 'empty' as const, biomeKey });
   }
 }

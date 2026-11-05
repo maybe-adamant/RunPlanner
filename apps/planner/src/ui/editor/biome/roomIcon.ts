@@ -9,9 +9,9 @@ import { minibossIcon } from '@planner/ui/artwork/encounterArtwork';
 import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { fountainIcon } from '@planner/ui/artwork/roomArtwork';
+import { roomObjectArtwork } from '@planner/ui/artwork/room-objects/roomObjectArtwork';
 
-export const bossIcon = (biomeKey: string): string | undefined =>
-  bossArtwork[biomeKey] ?? undefined;
+const bossIcon = (biomeKey: string): string | undefined => bossArtwork[biomeKey] ?? undefined;
 
 /** The room's own icon: its enemies, empty scene, object, miniboss or NPC. */
 export function roomKindIcon(room: WorkspaceRoomIcon): string | undefined {
@@ -30,6 +30,8 @@ export function roomKindIcon(room: WorkspaceRoomIcon): string | undefined {
       return npcArtwork.Chaos ?? undefined;
     case 'contract':
       return npcArtwork.Zagreus ?? undefined;
+    case 'keepsakeRack':
+      return roomObjectArtwork.keepsakeRack ?? undefined;
     case 'miniboss':
       return room.encounterDefinitionKey === undefined
         ? undefined

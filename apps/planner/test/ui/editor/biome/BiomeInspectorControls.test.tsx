@@ -586,15 +586,15 @@ describe('Biome inspector controls', () => {
       ),
     );
     expect(within(inspector).queryByText('Judgment — choose 5 inactive Arcana cards')).toBeNull();
-    act(() => screen.getByRole('button', { name: 'Open Boss completion' }).click());
+    act(() => screen.getByRole('button', { name: /^Boss/ }).click());
     expect(
       within(inspector).getByRole('button', {
         name: /Judgment — choose 5 inactive Arcana cards/,
       }),
     ).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'Open Boss completion' }).getAttribute('aria-pressed'),
-    ).toBe('true');
+    expect(screen.getByRole('button', { name: /^Boss/ }).getAttribute('aria-current')).toBe(
+      'location',
+    );
   });
 
   it('keeps Judgment and Crystal Figurine independently authorable and undoable', async () => {

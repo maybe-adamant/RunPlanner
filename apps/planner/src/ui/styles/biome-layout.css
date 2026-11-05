@@ -448,64 +448,6 @@
   white-space: nowrap;
 }
 
-.biome-completion-outline {
-  margin-top: 14px;
-  padding: 10px;
-  border: 1px solid #34353e;
-  border-radius: 9px;
-  color: #aaa7af;
-  background: rgb(13 14 18 / 24%);
-}
-
-.biome-completion-outline > .card-kicker {
-  margin: 0 0 6px;
-}
-
-.biome-completion-outline ol {
-  display: grid;
-  gap: 4px;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.biome-completion-outline li {
-  font-size: 0.78rem;
-}
-
-.biome-completion-node {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: 7px;
-  padding: 6px 8px;
-  border: 1px solid #393a44;
-  border-radius: 7px;
-  color: #d8d3cb;
-  background: rgb(13 14 18 / 35%);
-  text-align: left;
-  cursor: pointer;
-}
-
-.biome-completion-node:hover,
-.biome-completion-node[aria-pressed='true'] {
-  border-color: color-mix(in srgb, var(--selection-accent) 55%, transparent);
-  background: color-mix(in srgb, var(--selection-accent) 7%, transparent);
-}
-
-.biome-completion-node[data-findings='true'] {
-  border-color: color-mix(in srgb, var(--finding) 55%, transparent);
-}
-
-.biome-completion-node > span {
-  color: #8f8c95;
-}
-
-.biome-completion-node > strong {
-  color: #d8d3cb;
-  font-weight: 500;
-}
-
 .biome-inspector {
   padding-right: 8px;
 }
@@ -683,12 +625,6 @@
   height: 2rem;
 }
 
-.biome-completion-icon {
-  flex: 0 0 auto;
-  width: 1.2rem;
-  height: 1.2rem;
-}
-
 .run-state-elements {
   display: inline-flex;
   flex-wrap: wrap;
@@ -727,20 +663,4 @@
 
 .biome-rail-stop[data-plan-end='pastEnd']::before {
   background: repeating-linear-gradient(#3f3d48 0 4px, transparent 4px 8px);
-}
-
-.biome-completion-node[data-plan-end='pastEnd'] {
-  border-style: dashed;
-  opacity: 0.55;
-}
-
-.biome-completion-plan-end {
-  margin-inline-start: auto;
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.biome-completion-node[data-plan-end='end'] .biome-completion-plan-end {
-  color: var(--plan-end);
-  font-weight: 600;
 }

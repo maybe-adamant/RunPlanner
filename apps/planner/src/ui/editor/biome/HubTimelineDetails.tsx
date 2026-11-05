@@ -1,4 +1,3 @@
-import { planEndLabel } from './planEndCopy';
 import { Fragment, useId, useState, type ReactNode } from 'react';
 
 import type { HubAction } from '@run-planner/engine/authored-project';
@@ -94,7 +93,7 @@ function VisitRow({
       ? undefined
       : node.slots.find((candidate) => candidate.hubSlotKey === visit.hubSlotKey);
   const room = visit.room;
-  const row = (
+  return (
     <li
       className="hub-timeline-row hub-timeline-visit"
       data-authoring={visit.authoring}
@@ -110,14 +109,7 @@ function VisitRow({
       ) : (
         <>
           <strong className="hub-timeline-room">{slot.label}</strong>
-          {visit.planEnd === 'pastEnd' ? (
-            <span className="hub-timeline-visit-detail">
-              <VisitReward door={visit.door} />
-              <span className="hub-timeline-muted">{planEndLabel('pastEnd')}</span>
-            </span>
-          ) : (
-            <VisitReward door={visit.door} />
-          )}
+          <VisitReward door={visit.door} />
           {room === undefined ? null : (
             <button
               className="quiet-action action-compact"
@@ -130,17 +122,6 @@ function VisitRow({
         </>
       )}
     </li>
-  );
-  // The plan ends with this visit: everything after it on the timeline is past the end.
-  return visit.planEnd !== 'end' ? (
-    row
-  ) : (
-    <>
-      {row}
-      <li className="hub-timeline-plan-end" role="note">
-        {planEndLabel('end')}
-      </li>
-    </>
   );
 }
 

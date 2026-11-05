@@ -261,9 +261,10 @@ describe('structured workspace biome presentation', () => {
       nLocalOccurrenceId('combat05', 'sideDoor2'),
       nLocalOccurrenceId('combat05', 'sideDoor1'),
     ]);
-    expect(combat05.sideVisits.map((side) => side.label)).toEqual([
-      'Side 1 · Room 07',
-      'Side 2 · Room 02',
+    expect(combat05.sideVisits.map((side) => side.label)).toEqual(['Side 1', 'Side 2']);
+    expect(combat05.sideVisits.map((side) => side.room.roomLabel)).toEqual([
+      'S.Room 07',
+      'S.Room 02',
     ]);
 
     const opening = biome.rail.find(

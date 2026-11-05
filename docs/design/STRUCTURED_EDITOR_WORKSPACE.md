@@ -99,10 +99,10 @@ footer instead offers to continue planning, which clears the end; the room
 header and the rail say where the plan ends, and the Route panel shows the end
 with its room and removal. The route-owned unreached-end finding repairs at
 that Route row. The end room's doors lie inside the plan, the rooms behind
-them past it. Rooms, Hub visits and biomes past the end are dimmed, labelled
-and read-only, following the engine's ended horizon, but stay browsable, and a
-room past the end can still take the end so it can move later. The Hub
-Timeline closes with an end row after the end visit. Resource placements on a
+them past it. Only the end room's header and rail stop name the end; rooms,
+Hub visits and biomes past it are dimmed and read-only without a label,
+following the engine's ended horizon, but stay browsable, and a room past the
+end can still take the end so it can move later. Resource placements on a
 room past the end show as inactive.
 
 ### Biome Structure
@@ -958,7 +958,8 @@ The N rail gives its fixed Opening and PreHub stages and each authored Hub
 visit one read-only primary-reward token when the room projects one. This is
 the same resolved token product used by ordinary selected-room context: fixed,
 incoming, and Ephyra incoming rewards are eligible, while side-room offers are
-not. The token neither changes focus nor creates another edit path; the Hub
+not; an entered side room shows its room and its door's reward like a Hub
+visit. The token neither changes focus nor creates another edit path; the Hub
 board remains the sole editable main-reward surface.
 
 Entered side occurrences extend the N rail as nested children of their owning

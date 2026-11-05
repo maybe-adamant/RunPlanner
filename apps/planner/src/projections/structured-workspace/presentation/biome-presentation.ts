@@ -386,9 +386,13 @@ function projectHubRailEntry(
               Object.freeze({
                 key: `${node.key}:visit:${visit.visitIndex}:side:${slot.key}`,
                 ...(sidePlanEnd === undefined ? {} : { planEnd: sidePlanEnd }),
-                label: `Side ${slot.enteredOrdinal ?? 1} · Room ${sideRoomId}`,
+                label: `Side ${slot.enteredOrdinal ?? 1}`,
                 marker: sideNode.room.marker,
                 node: sideNode,
+                room: Object.freeze({
+                  ...roomRailPresentation(catalog, slot.room, slot.door),
+                  roomLabel: `S.Room ${sideRoomId}`,
+                }),
                 visitMarker: slot.marker,
               }),
             ];
@@ -581,6 +585,9 @@ export function presentWorkspaceBiome(
       key: node.key,
       label: presentation.label,
       ...(mainReward === undefined ? {} : { mainReward }),
+      ...(node.kind !== 'occurrenceWorkbench' || selectedTarget !== undefined
+        ? {}
+        : { roomIcon: node.room.roomIcon }),
       marker,
       node,
       ...(planEnd === undefined ? {} : { planEnd }),

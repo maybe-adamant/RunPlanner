@@ -1746,7 +1746,7 @@ select {
   outline-offset: 2px;
 }
 
-/* The plan's end: the end room says so, rooms past it read as read-only. */
+/* The plan's end: the end room says so. */
 .plan-end-pill {
   display: inline-flex;
   align-items: center;
@@ -1758,12 +1758,6 @@ select {
   font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
-}
-
-.plan-end-pill[data-plan-end='pastEnd'] {
-  border-style: dashed;
-  border-color: #55525f;
-  color: var(--muted);
 }
 
 .plan-end-action {
@@ -1785,14 +1779,6 @@ select {
   border-color: var(--plan-end);
   color: #e6defb;
   background: color-mix(in srgb, var(--plan-end) 22%, #1c1b24);
-}
-
-.hub-timeline-plan-end::before {
-  width: 9px;
-  height: 9px;
-  border-radius: 2px;
-  background: var(--plan-end);
-  content: '';
 }
 
 .room-workbench-panel-content {

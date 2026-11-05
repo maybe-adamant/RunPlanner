@@ -1231,9 +1231,10 @@ describe('BiomeWorkspace', () => {
       expect(view.container.querySelector('.biome-workspace')).not.toBeNull();
       expect(screen.getByRole('region', { name: /route structure$/ })).toBeTruthy();
       expect(screen.queryByText(projected.source)).toBeNull();
-      expect(railMarkerKeys(view.container)).toEqual(
-        projected.rail.map((entry) => entry.marker.focusKey),
-      );
+      expect(railMarkerKeys(view.container)).toEqual([
+        ...projected.rail.map((entry) => entry.marker.focusKey),
+        ...projected.completionOutline.map((node) => node.marker.focusKey),
+      ]);
       const inspector = screen.getByRole('complementary', { name: 'Details' });
       expect(inspector.querySelector('.biome-batch-workbench')).toBeNull();
       expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
@@ -1497,7 +1498,7 @@ describe('BiomeWorkspace', () => {
       semanticAddressKey(createOccurrenceAddress(nBiome, openingId)),
       emptyWorkspace.frontier.marker.focusKey,
     ]);
-    expect(screen.queryByRole('region', { name: 'Biome completion' })).toBeNull();
+    expect(emptyView.container.querySelector('[data-kind="completion"]')).toBeNull();
   });
 
   it('replaces the terminal PreHub decision with Hub and restores it through undo and redo', async () => {
@@ -1676,7 +1677,7 @@ describe('BiomeWorkspace', () => {
     };
     const firstNodeView = renderProjectedBiome(fApplication, firstNodeDefault);
     const firstNodeInspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(selectedRailMarkerKeys(firstNodeView.container)).toEqual([]);
+    expect(selectedRailMarkerKeys(firstNodeView.container)).toEqual([first.marker.focusKey]);
     expect(
       within(firstNodeInspector).getByRole('heading', {
         level: 3,
