@@ -1,9 +1,10 @@
 /*
  * The rail stacks above the inspector once side by side would squeeze the room
- * Overview grid: the sidebar, rail and gutters take about 611px, and the grid
- * needs about 470px (label 5.6rem, picker 17rem, secondary 7.5rem, gaps).
+ * Timeline: its door editor reaches its full width (one line per door) only
+ * with about 760px of inspector, which the sidebar, rail and gutters leave
+ * from about 1300px of layout width.
  */
-@container app-viewport (max-width: 1080px) {
+@container app-viewport (max-width: 1300px) {
   /* Space held for a hidden Discard or an absent save failure goes to the plan name. */
   .editor-title > .editor-discard[data-hidden] {
     display: none;
