@@ -783,6 +783,7 @@ export function assembleWorkspaceOccurrence(
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
     roomIcon: occurrenceRoomIcon({
+      catalog: input.catalog,
       biomeKey: address.biomeKey,
       declaration: requireRoom(input.catalog, occurrence.gameName),
       encounterPhases,

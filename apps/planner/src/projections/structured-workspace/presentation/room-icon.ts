@@ -91,6 +91,7 @@ export function candidateRoomIcon(
 
 /** An occurrence's icon: its selected encounter and whether it hosts a shop. */
 export function occurrenceRoomIcon(input: {
+  readonly catalog: Catalog;
   readonly biomeKey: string;
   readonly declaration: RoomDeclaration;
   readonly encounterPhases: readonly WorkspaceEncounterPhase[];
@@ -100,9 +101,10 @@ export function occurrenceRoomIcon(input: {
   return workspaceRoomIcon({
     biomeKey: input.biomeKey,
     declaration: input.declaration,
+    // An unentered door's room has no selected encounter yet; its declared one names it.
     encounter:
       encounter === undefined
-        ? undefined
+        ? declaredRoomIconEncounter(input.catalog, input.declaration)
         : {
             encounterDefinitionKey: encounter.nativeEncounterDefinitionKey ?? encounter.key,
             ...(encounter.npcKey === undefined ? {} : { npcKey: encounter.npcKey }),
