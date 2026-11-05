@@ -505,7 +505,7 @@
 .biome-rail {
   display: grid;
   gap: 7px;
-  margin-top: 14px;
+  margin-top: 6px;
 }
 
 .biome-rail-stop {
