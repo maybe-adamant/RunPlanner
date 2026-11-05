@@ -557,7 +557,6 @@ export function RouteDraftPanel({
   const godTags = projectDraftGodTags(catalog, project, godKeys, refusals);
   const firstBoonTag =
     spec === undefined ? undefined : projectDraftFirstBoonTag(catalog, project, spec, refusals);
-  const overwrites = project.route.biomes.some((biome) => biome.topology !== null);
   const biomeLabel = (biomeKey: string) => catalog.biomes.byKey[biomeKey]?.label ?? biomeKey;
   const godKeepsakeHint = (keepsakeKey: string) =>
     forcesGod(catalog, keepsakeKey) ? godKeepsakeReason : undefined;
@@ -602,11 +601,6 @@ export function RouteDraftPanel({
             </button>
           ))}
         </div>
-        {tab === 'draft' && overwrites ? (
-          <span className="draft-heading-meta" role="note">
-            Drafting replaces the current route plan.
-          </span>
-        ) : null}
         {tab === 'advanced' ? (
           <button
             className="secondary-action action-compact draft-advanced-reset"

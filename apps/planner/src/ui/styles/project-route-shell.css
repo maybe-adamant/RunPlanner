@@ -1283,20 +1283,6 @@
 }
 
 /* A warning, not an action: a pill in the danger tones, as tall as the Advanced tab's Reset. */
-.draft-heading-meta {
-  display: inline-flex;
-  box-sizing: border-box;
-  height: var(--action-compact-height);
-  align-items: center;
-  margin-left: auto;
-  padding: 0 0.75rem;
-  border: 1px solid rgb(202 112 112 / 48%);
-  border-radius: 999px;
-  color: #eeb8b8;
-  background: rgb(110 43 43 / 16%);
-  font-size: 0.85rem;
-  font-weight: 600;
-}
 
 /* Advanced-tab text shares the section labels' face and weight, in sentence case. */
 .draft-tags {

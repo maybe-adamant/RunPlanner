@@ -59,7 +59,6 @@ it('drafts a zero-finding route as one undoable edit, and rerolls as one more', 
   expect(workspace.history!.present.route.biomes).toHaveLength(4);
   const actionRow = document.querySelector('.draft-action-row') as HTMLElement;
   expect(within(actionRow).getByText(/^\d+ of \d+ targets met\.$/)).toBeTruthy();
-  expect(screen.getByRole('note').textContent).toBe('Drafting replaces the current route plan.');
 
   expect(present().route.draft).toBe(before.route.draft);
 
