@@ -1,5 +1,6 @@
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
-import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import type { BiomeRailPinPreference } from '@planner/persistence/biomeRailPinPreference';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { clockworkCountdownArtwork } from '@planner/ui/artwork/clockwork/clockworkCountdownArtwork';
@@ -40,6 +41,57 @@ interface BiomeWorkspaceProps {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly repairBanner?: ReactNode;
   readonly runStateLaunchers: StructuredWorkspaceProjection['runStateLaunchers'];
+  /** Whether the rail stays open beside the room, remembered on this device. */
+  readonly railPinPreference?: BiomeRailPinPreference;
+}
+
+/**
+ * The rail folds to its circles and room icons when unpinned, or when the
+ * editor panel leaves too little room beside it (a breakpoint the stylesheet
+ * owns and publishes as a custom property). Folded, it opens over the room.
+ */
+function useRailFold(
+  workspace: RefObject<HTMLDivElement | null>,
+  preference: BiomeRailPinPreference | undefined,
+) {
+  const [pinned, setPinnedState] = useState(() => preference?.read() ?? true);
+  const [open, setOpen] = useState(false);
+  const [autoFolded, setAutoFolded] = useState(false);
+  useLayoutEffect(() => {
+    const element = workspace.current;
+    if (element === null) return;
+    const read = (): void =>
+      setAutoFolded(
+        getComputedStyle(element).getPropertyValue('--biome-rail-auto-fold').trim() === '1',
+      );
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [workspace]);
+  const setPinned = (next: boolean): void => {
+    setPinnedState(next);
+    preference?.write(next);
+  };
+  const folded = !pinned || autoFolded;
+  const toggle = (): void => {
+    if (!folded) setPinned(false);
+    else if (!open) setOpen(true);
+    else {
+      // Too narrow to pin beside the room, the opened rail only closes.
+      if (!autoFolded) setPinned(true);
+      setOpen(false);
+    }
+  };
+  const toggleLabel = !folded
+    ? 'Fold rooms'
+    : !open
+      ? 'Show rooms'
+      : autoFolded
+        ? 'Hide rooms'
+        : 'Pin rooms';
+  const toggleGlyph = !folded ? '⇤' : !open ? '☰' : autoFolded ? '⇤' : '⇥';
+  return { folded, open, setOpen, toggle, toggleGlyph, toggleLabel };
 }
 
 type InspectorSubject =
@@ -561,6 +613,7 @@ export function BiomeWorkspace({
   interactions,
   repairBanner,
   runStateLaunchers,
+  railPinPreference,
 }: BiomeWorkspaceProps) {
   const runStateTarget = useAppSelector((state) => state.editorSession.runStateTarget);
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
@@ -656,29 +709,15 @@ export function BiomeWorkspace({
     (subject?.kind === 'node' &&
       (subject.node.kind === 'occurrenceWorkbench' || subject.node.kind === 'hubDecision'));
 
-  const railScroll = useRef<HTMLDivElement>(null);
-  // A horizontal rail scrolls its selected room into view without moving the page.
-  useLayoutEffect(() => {
-    const strip = railScroll.current;
-    if (strip === null) return;
-    const reveal = (): void => {
-      if (strip.scrollWidth <= strip.clientWidth) return;
-      const node = strip.querySelector<HTMLElement>('.biome-rail-node[data-selected="true"]');
-      if (node === null) return;
-      const stripBox = strip.getBoundingClientRect();
-      const nodeBox = node.getBoundingClientRect();
-      if (nodeBox.left < stripBox.left) strip.scrollLeft -= stripBox.left - nodeBox.left + 12;
-      else if (nodeBox.right > stripBox.right)
-        strip.scrollLeft += nodeBox.right - stripBox.right + 12;
-    };
-    reveal();
-    // The rail turns horizontal on resize; reveal the selection then too.
-    const observer = new ResizeObserver(reveal);
-    observer.observe(strip);
-    return () => observer.disconnect();
-  }, [selectedRailKey]);
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const rail = useRailFold(workspaceRef, railPinPreference);
   return (
-    <div className="biome-workspace">
+    <div
+      className="biome-workspace"
+      data-rail={rail.folded ? 'folded' : 'pinned'}
+      data-rail-open={rail.folded && rail.open ? true : undefined}
+      ref={workspaceRef}
+    >
       {runState === undefined ? null : <RunStateSheet launcher={runState} />}
       <section
         aria-label={`${biome.label} route structure`}
@@ -686,24 +725,42 @@ export function BiomeWorkspace({
         data-source={biome.source}
         data-status={biome.status}
       >
-        {repairBanner}
-        <header className="biome-structure-heading">
-          <div className="biome-structure-title">
-            <div className="biome-structure-title-row">
-              <ArtworkIcon className="biome-boss-icon" source={biomeIcon(biome.biomeKey)} />
-              <h2>{biome.label}</h2>
-              {pastPlanEnd || clearTopology === undefined ? null : (
-                <TopologyRemovalAction
-                  accessibleLabel={`Clear ${biome.label}`}
-                  compact
-                  interaction={clearTopology}
-                  label="Clear biome"
-                />
-              )}
+        <div className="biome-structure-head">
+          {repairBanner}
+          <header className="biome-structure-heading">
+            <div className="biome-structure-title">
+              <div className="biome-structure-title-row">
+                <ArtworkIcon className="biome-boss-icon" source={biomeIcon(biome.biomeKey)} />
+                <h2>{biome.label}</h2>
+                {pastPlanEnd || clearTopology === undefined ? null : (
+                  <TopologyRemovalAction
+                    accessibleLabel={`Clear ${biome.label}`}
+                    compact
+                    interaction={clearTopology}
+                    label="Clear biome"
+                  />
+                )}
+              </div>
             </div>
-          </div>
-        </header>
-        <div className="biome-structure-scroll" ref={railScroll}>
+          </header>
+        </div>
+        <div
+          className="biome-structure-scroll"
+          onClickCapture={(event) => {
+            // An opened rail closes once a room is chosen from it.
+            if ((event.target as Element).closest('.biome-rail-node') !== null) rail.setOpen(false);
+          }}
+          onMouseLeave={() => rail.setOpen(false)}
+        >
+          <button
+            aria-expanded={!rail.folded || rail.open}
+            aria-label={rail.toggleLabel}
+            className="biome-rail-pin"
+            onClick={rail.toggle}
+            type="button"
+          >
+            {rail.toggleGlyph}
+          </button>
           <div className="biome-rail">
             {biome.rail.map((entry) => (
               <RailEntry

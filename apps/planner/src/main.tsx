@@ -29,6 +29,7 @@ import { App } from './ui/shell/App';
 import { ApplicationFaultBoundary } from './ui/shell/ApplicationFaultBoundary';
 import { createBrowserAppScalePreference } from './persistence/appScalePreference';
 import { createBrowserNavigationPinPreference } from './persistence/navigationPinPreference';
+import { createBrowserBiomeRailPinPreference } from './persistence/biomeRailPinPreference';
 import { createBrowserLoadoutPresets } from './persistence/loadoutPresets';
 import type { BuildIdentity } from './composition/buildIdentity';
 import {
@@ -44,6 +45,7 @@ const rootElement = document.getElementById('root');
 const tauriHost = isTauri();
 const appScalePreference = createBrowserAppScalePreference(() => globalThis.localStorage);
 const navigationPinPreference = createBrowserNavigationPinPreference(() => globalThis.localStorage);
+const biomeRailPinPreference = createBrowserBiomeRailPinPreference(() => globalThis.localStorage);
 const projectLibrary = tauriHost
   ? createTauriProjectLibraryAdapter({
       invoke: tauriInvoke,
@@ -147,6 +149,7 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
         <App
           appScalePreference={appScalePreference}
           navigationPinPreference={navigationPinPreference}
+          biomeRailPinPreference={biomeRailPinPreference}
           loadoutPresets={createBrowserLoadoutPresets(
             application.catalog,
             () => globalThis.localStorage,

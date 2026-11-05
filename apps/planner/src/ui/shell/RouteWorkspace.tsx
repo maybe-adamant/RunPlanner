@@ -29,6 +29,7 @@ import { semanticOwnerControlElementId } from '../feedback/semanticOwner';
 import { BiomeWorkspace } from '../editor/biome/BiomeWorkspace';
 import type { DraftRunController } from '@planner/workspace/draftRun';
 import type { NavigationPinPreference } from '@planner/persistence/navigationPinPreference';
+import type { BiomeRailPinPreference } from '@planner/persistence/biomeRailPinPreference';
 import { RouteDraftPanel } from './RouteDraftPanel';
 import { RouteNpcIndex } from './RouteNpcIndex';
 import { RouteLoadoutPanel } from './RouteLoadoutPanel';
@@ -51,6 +52,7 @@ export function RouteWorkspace({
   draftRun,
   navigation,
   navigationPinPreference,
+  biomeRailPinPreference,
   feedback,
   interactions,
   project,
@@ -62,6 +64,7 @@ export function RouteWorkspace({
   readonly draftRun: DraftRunController;
   readonly navigation: RouteEditorNavigation;
   readonly navigationPinPreference?: NavigationPinPreference;
+  readonly biomeRailPinPreference?: BiomeRailPinPreference;
   readonly feedback: RouteFeedbackPresentation;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly project: ProjectDocument;
@@ -464,6 +467,9 @@ export function RouteWorkspace({
           ) : (
             <BiomeWorkspace
               biome={activeBiomeProjection}
+              {...(biomeRailPinPreference === undefined
+                ? {}
+                : { railPinPreference: biomeRailPinPreference })}
               focusByOwner={workspace.focusByOwner}
               interactions={interactions}
               repairBanner={repairBanner}

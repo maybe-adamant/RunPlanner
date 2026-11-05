@@ -2,9 +2,28 @@
   position: relative;
   display: grid;
   min-height: 0;
+  grid-template-areas:
+    'head room'
+    'rail room';
   grid-template-columns: minmax(180px, 224px) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  gap: 12px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0 12px;
+}
+
+/* The region's head and rail take their own places in the workspace grid. */
+.biome-structure-region {
+  display: contents;
+}
+
+.biome-structure-head {
+  grid-area: head;
+  min-width: 0;
+  padding-right: 12px;
+  border-right: 1px solid #30313a;
+}
+
+.biome-workspace > .biome-inspector {
+  grid-area: room;
 }
 
 .run-state-sheet {
@@ -179,27 +198,193 @@
   scrollbar-gutter: stable;
 }
 
-.biome-structure-region {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  padding-right: 12px;
-  border-right: 1px solid #30313a;
-  overflow: hidden;
-}
-
-.biome-structure-region > .project-findings {
+.biome-structure-head > .project-findings {
   margin-bottom: 12px;
 }
 
-.biome-structure-heading {
-  flex: 0 0 auto;
+.biome-structure-scroll {
+  position: relative;
+  grid-area: rail;
+  padding-right: 12px;
+  border-right: 1px solid #30313a;
+  scrollbar-gutter: auto;
 }
 
-.biome-structure-scroll {
-  flex: 1;
-  scrollbar-gutter: auto;
+/* Folds or pins the rail, like the panel navigation's toggle. */
+.biome-rail-pin {
+  position: absolute;
+  top: 0;
+  right: 10px;
+  z-index: 1;
+  padding: 2px 7px;
+  border: 0;
+  border-radius: 6px;
+  color: #77757e;
+  background: transparent;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.biome-rail-pin:hover {
+  color: #f4efe7;
+  background: rgb(255 255 255 / 6%);
+}
+
+.biome-rail {
+  padding-top: 26px;
+}
+
+/*
+ * Folded: a narrow column of the backbone, numbered circles and room icons,
+ * with the biome's head as one row above the room.
+ */
+.biome-workspace[data-rail='folded'] {
+  grid-template-areas:
+    'rail head'
+    'rail room';
+  grid-template-columns: 64px minmax(0, 1fr);
+}
+
+.biome-workspace[data-rail='folded'] .biome-structure-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 12px;
+  border-right: 0;
+}
+
+.biome-workspace[data-rail='folded']
+  :is(.biome-structure-heading, .biome-structure-title, .biome-structure-title-row) {
+  display: contents;
+}
+
+.biome-workspace[data-rail='folded'] .biome-structure-head > .project-findings {
+  order: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.biome-workspace[data-rail='folded'] .biome-structure-head .topology-removal-action {
+  order: 2;
+  margin-left: auto;
+}
+
+.biome-workspace[data-rail='folded'] .biome-structure-scroll {
+  padding-right: 6px;
+}
+
+.biome-workspace[data-rail='folded'] .biome-rail-pin {
+  right: 50%;
+  transform: translateX(50%);
+}
+
+/* Opened while folded, the full rail floats over the room. */
+.biome-workspace[data-rail-open] .biome-structure-scroll {
+  z-index: 6;
+  width: 236px;
+  padding: 0 12px 12px 0;
+  border-right: 1px solid #45465a;
+  border-radius: 0 10px 10px 0;
+  background: #17181e;
+  box-shadow: 14px 0 30px rgb(0 0 0 / 40%);
+}
+
+.biome-workspace[data-rail-open] .biome-rail-pin {
+  right: 10px;
+  transform: none;
+}
+
+.biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-rail-node {
+  justify-items: center;
+  padding: 5px 2px;
+}
+
+.biome-workspace[data-rail='folded']:not([data-rail-open])
+  .biome-rail-node
+  > :is(.biome-rail-selection, .biome-rail-summary) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-rail-icons {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-rail-pending {
+  position: static;
+  width: auto;
+  height: auto;
+  clip-path: none;
+  font-size: 0;
+}
+
+.biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-rail-glyph {
+  font-size: 0.9rem;
+}
+
+/* Hub visits stack on the backbone, each number in its own circle; side rooms follow it. */
+.biome-workspace[data-rail='folded']:not([data-rail-open])
+  :is(.biome-hub-rail-visits, .biome-hub-rail-side-visits) {
+  margin-left: 0;
+}
+
+.biome-workspace[data-rail='folded']:not([data-rail-open])
+  :is(.biome-hub-rail-visit, .biome-hub-rail-side-visit)::before {
+  display: none;
+}
+
+.biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-hub-rail-visit::after {
+  top: 9px;
+  left: -22px;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #6d6878;
+  border-radius: 50%;
+  background: #1c1d23;
+  color: #c3a86f;
+  line-height: 14px;
+  text-align: center;
+}
+
+.biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-rail-plan-end {
+  display: none;
+}
+
+/* Folded, the end room's circle keeps its square plan-end mark. */
+.biome-workspace[data-rail='folded']:not([data-rail-open])
+  .biome-hub-rail-side-visit
+  .biome-rail-icons-room {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.biome-rail-icons-room {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.biome-rail-icons-rewards {
+  display: flex;
+  gap: 2px;
+}
+
+.biome-rail-icons-reward {
+  width: 1rem;
+  height: 1rem;
+}
+
+.biome-rail-icons-count {
+  color: #c3a86f;
+  font-size: 0.65rem;
 }
 
 .biome-structure-heading,

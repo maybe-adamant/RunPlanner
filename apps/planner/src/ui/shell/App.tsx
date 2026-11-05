@@ -24,6 +24,7 @@ import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import type { StructuredWorkspaceProjection } from '@planner/projections/structured-workspace';
 import type { AppScalePreference } from '@planner/persistence/appScalePreference';
 import type { NavigationPinPreference } from '@planner/persistence/navigationPinPreference';
+import type { BiomeRailPinPreference } from '@planner/persistence/biomeRailPinPreference';
 import type { LoadoutPresetController } from '@planner/persistence/loadoutPresets';
 import type { BuildIdentity } from '@planner/composition/buildIdentity';
 import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdates';
@@ -51,6 +52,7 @@ import { routeBannerArtwork } from '@planner/ui/artwork/route-banners/routeBanne
 interface AppProps {
   readonly appScalePreference?: AppScalePreference;
   readonly navigationPinPreference?: NavigationPinPreference;
+  readonly biomeRailPinPreference?: BiomeRailPinPreference;
   /** The planner's Arcana and Vow presets; absent where none are kept. */
   readonly loadoutPresets?: LoadoutPresetController;
   /** Present only in the desktop application. */
@@ -81,6 +83,7 @@ interface AppProps {
 export function App({
   appScalePreference,
   navigationPinPreference,
+  biomeRailPinPreference,
   loadoutPresets,
   bugReport,
   buildIdentity,
@@ -199,6 +202,7 @@ export function App({
                 interactions={workspace.interactions}
                 navigation={activeRouteNavigation}
                 {...(navigationPinPreference === undefined ? {} : { navigationPinPreference })}
+                {...(biomeRailPinPreference === undefined ? {} : { biomeRailPinPreference })}
                 project={project}
                 projectEvaluation={evaluation}
                 workspace={workspace}
