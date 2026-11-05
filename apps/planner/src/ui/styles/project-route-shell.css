@@ -417,11 +417,7 @@
 
 .editor-workspace[data-navigation-pinned='false']
   .panel-navigation-column:not([data-open])
-  :is(
-    .navigation-label,
-    .panel-navigation-separator,
-    .panel-navigation-item:not([data-feedback-context])
-  ) {
+  :is(.navigation-label, .panel-navigation-separator) {
   display: none;
 }
 
