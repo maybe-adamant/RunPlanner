@@ -545,7 +545,10 @@ earlier spend takes precedence over the later spends it starves. Engine-owned au
 queries publish, at each reached reroll surface, the pool there, whether a
 held card enables it, each target's settled current reward and why a press
 would be refused, candidates for a press not yet inserted, and each Hub
-stay's board as it was assigned and after its presses.
+stay's board: every open door, whether a visit has cleared it, its first draw,
+its current reward and the presses that drew it up to and within that stay.
+The board's draw order is published from the authored open set alone, so an
+incomplete or invalid board still shows each open door's draw position.
 
 ### Selected traits and alternative candidates
 

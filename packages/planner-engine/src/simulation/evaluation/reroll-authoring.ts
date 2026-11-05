@@ -2,9 +2,12 @@ import {
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type HubDecisionAddress,
+  type HubRerollAddress,
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
+import type { HubDecision } from '../../authored-project/model';
 import {
+  hubStayRows,
   rerollSurfaceKey,
   rerollSurfaceOwner,
   type RerolledRewardOwner,
@@ -55,12 +58,31 @@ export interface HubBoardDoor {
   readonly changed: boolean;
 }
 
-/** One reached Hub stay: its settled surface and the doors still open in it. */
+/** One settled press of a board door, in action-list order. */
+export interface HubBoardPress {
+  readonly owner: HubRerollAddress;
+  /** Room visits returned before the stay that holds the press. */
+  readonly precedingVisitCount: number;
+  /** The reward it drew. */
+  readonly reward: ResolvedRewardOffer;
+}
+
+/** One open board door as a stay leaves it, its room entered or not. */
+export interface HubStayDoor extends HubBoardDoor {
+  /** Whether a visit up to this stay entered its room, closing it for the run. */
+  readonly cleared: boolean;
+  /** Every settled press of it up to and within this stay; the last drew `current`. */
+  readonly presses: readonly HubBoardPress[];
+}
+
+/** One reached Hub stay: its settled surface and its open doors. */
 export interface HubStaySettlement {
   readonly precedingVisitCount: number;
   readonly settlement: RerollSurfaceSettlement;
   /** The doors not yet entered, as the stay leaves them. */
   readonly board: readonly HubBoardDoor[];
+  /** Every open door of the board as the stay leaves it, in the board's declared order. */
+  readonly doors: readonly HubStayDoor[];
 }
 
 export interface HubStays {
@@ -79,7 +101,8 @@ export function hubStaysForProjectEvaluationAssembly(
   hub: HubDecisionAddress,
 ): HubStays {
   const key = semanticAddressKey(hub);
-  const settlements = (rewardsOf(assembly, hub.biomeKey)?.rerollSurfaces ?? [])
+  const rewards = rewardsOf(assembly, hub.biomeKey);
+  const settlements = (rewards?.rerollSurfaces ?? [])
     .flatMap((candidate) =>
       candidate.surface.kind === 'hubStay' && semanticAddressKey(candidate.surface.hub) === key
         ? [{ precedingVisitCount: candidate.surface.precedingVisitCount, settlement: candidate }]
@@ -91,18 +114,35 @@ export function hubStaysForProjectEvaluationAssembly(
     ? settlements[0].settlement.targets
     : [])
     if (target.target.kind === 'hubSlot') firstDraws.set(target.target.hubSlotKey, target.assigned);
+  // Settled board presses in walk order, which is the Hub's action order.
+  const presses = (rewards?.rerolls ?? [])
+    .flatMap((reroll) =>
+      reroll.owner.kind === 'hubReroll' &&
+      reroll.owner.hubKey === hub.hubKey &&
+      reroll.poolRemainingAfter !== undefined
+        ? [{ reroll, owner: reroll.owner }]
+        : [],
+    )
+    .sort((left, right) => left.reroll.historySequence - right.reroll.historySequence);
+  const decision = assembly.project.route.biomes
+    .find((biome) => biome.biomeKey === hub.biomeKey)
+    ?.topology?.decisions.find(
+      (candidate): candidate is HubDecision =>
+        candidate.kind === 'hub' && candidate.hubKey === hub.hubKey,
+    );
+  const stayOf = new Map(
+    (decision === undefined ? [] : hubStayRows(hub, decision)).flatMap((stay) =>
+      stay.rows.map((row) => [semanticAddressKey(row.address), stay.precedingVisitCount] as const),
+    ),
+  );
   const offeredOnward = new Map<string, HubBoardDoor & { readonly precedingVisitCount: number }>();
   const entered = new Set<string>();
   const stays = settlements.map(({ precedingVisitCount, settlement }) => {
     const board: HubBoardDoor[] = [];
+    const doors: HubStayDoor[] = [];
     for (const target of settlement.targets) {
       if (target.target.kind !== 'hubSlot') continue;
       const hubSlotKey = target.target.hubSlotKey;
-      // An entered door is closed for the run.
-      if (target.unavailable === 'slotEntered') {
-        entered.add(hubSlotKey);
-        continue;
-      }
       const firstDraw = firstDraws.get(hubSlotKey) ?? target.assigned;
       const door = Object.freeze({
         hubSlotKey,
@@ -111,11 +151,43 @@ export function hubStaysForProjectEvaluationAssembly(
         current: target.current,
         changed: !sameRewardOffer(firstDraw, target.current),
       });
+      const ownerKey = semanticAddressKey(target.owner);
+      // An entered door is closed for the run.
+      const cleared = target.unavailable === 'slotEntered';
+      doors.push(
+        Object.freeze({
+          ...door,
+          cleared,
+          presses: Object.freeze(
+            presses.flatMap(({ reroll, owner }) =>
+              semanticAddressKey(reroll.target) === ownerKey &&
+              reroll.historySequence <= settlement.historySequence
+                ? [
+                    Object.freeze({
+                      owner,
+                      precedingVisitCount: stayOf.get(semanticAddressKey(owner)) ?? 0,
+                      reward: reroll.reward,
+                    }),
+                  ]
+                : [],
+            ),
+          ),
+        }),
+      );
+      if (cleared) {
+        entered.add(hubSlotKey);
+        continue;
+      }
       board.push(door);
       if (!entered.has(hubSlotKey))
         offeredOnward.set(hubSlotKey, Object.freeze({ ...door, precedingVisitCount }));
     }
-    return Object.freeze({ precedingVisitCount, settlement, board: Object.freeze(board) });
+    return Object.freeze({
+      precedingVisitCount,
+      settlement,
+      board: Object.freeze(board),
+      doors: Object.freeze(doors),
+    });
   });
   return Object.freeze({
     stays: Object.freeze(stays),

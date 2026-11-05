@@ -617,6 +617,80 @@ describe('Hub stays', () => {
     ]);
   });
 
+  it("publish every open door's state per stay, cleared doors and presses included", () => {
+    // combat03 and combat10 are never entered: one is pressed at Entry, the other after Visit 2.
+    const atEntry = press(base(), stay(0), slot('combat03'));
+    const afterVisit2 = press(atEntry.project, stay(2), slot('combat10'));
+    const assembly = evaluate(afterVisit2.project);
+    const { stays } = hubStaysForProjectEvaluationAssembly(assembly, hub);
+    const at = (index: number, hubSlotKey: string) =>
+      stays[index]!.doors.find((entry) => entry.hubSlotKey === hubSlotKey)!;
+    const first03 = { rewardType: 'WeaponUpgrade' };
+    // Every stay lists all nine open doors; visits mark theirs cleared.
+    expect(stays.map((entry) => entry.doors.length)).toEqual([9, 9, 9, 9, 9, 9, 9]);
+    expect(
+      stays.map((entry) =>
+        entry.doors.flatMap((door) => (door.cleared ? [door.hubSlotKey] : [])).sort(),
+      ),
+    ).toEqual([
+      [],
+      ['combat05'],
+      ['combat05', 'miniBoss01'],
+      ['combat02', 'combat05', 'miniBoss01'],
+      ['combat02', 'combat05', 'combat11', 'miniBoss01'],
+      ['combat02', 'combat05', 'combat11', 'combat23', 'miniBoss01'],
+      ['combat02', 'combat05', 'combat09', 'combat11', 'combat23', 'miniBoss01'],
+    ]);
+    stays.forEach((entry) =>
+      expect(entry.board.map((door) => door.hubSlotKey)).toEqual(
+        entry.doors.flatMap((door) => (door.cleared ? [] : [door.hubSlotKey])),
+      ),
+    );
+    const press03 = {
+      owner: createHubRerollAddress(n, 'hub', 'r1'),
+      precedingVisitCount: 0,
+      reward: atEntry.reward,
+    };
+    const press10 = {
+      owner: createHubRerollAddress(n, 'hub', 'r2'),
+      precedingVisitCount: 2,
+      reward: afterVisit2.reward,
+    };
+    expect(at(0, 'combat03')).toMatchObject({
+      cleared: false,
+      firstDraw: first03,
+      current: atEntry.reward,
+      changed: true,
+      presses: [press03],
+    });
+    expect(at(6, 'combat03')).toMatchObject({
+      firstDraw: first03,
+      current: atEntry.reward,
+      presses: [press03],
+    });
+    // combat10 keeps its first draw until the press after Visit 2.
+    const first10 = at(0, 'combat10').firstDraw;
+    expect([0, 1].map((index) => at(index, 'combat10'))).toEqual(
+      [0, 1].map(() => expect.objectContaining({ current: first10, changed: false, presses: [] })),
+    );
+    expect([2, 6].map((index) => at(index, 'combat10'))).toEqual(
+      [2, 6].map(() =>
+        expect.objectContaining({
+          firstDraw: first10,
+          current: afterVisit2.reward,
+          changed: true,
+          presses: [press10],
+        }),
+      ),
+    );
+    // A cleared door keeps the reward it was entered with.
+    expect(at(1, 'combat05')).toMatchObject({
+      cleared: true,
+      current: at(0, 'combat05').firstDraw,
+      presses: [],
+    });
+  });
+
   it('evaluate a press not yet authored as the same press once appended', () => {
     const pending = pendingRewards(base(), stay(3), slot('combat09'), HUB_REWARDS).map(key);
     expect(pending.length).toBeGreaterThan(0);

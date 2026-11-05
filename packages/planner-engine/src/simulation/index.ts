@@ -279,12 +279,19 @@ export {
   hubStaysForProjectEvaluationAssembly,
   rerollSpendAllowanceForProjectEvaluationAssembly,
   rerollSurfaceForProjectEvaluationAssembly,
+  type HubBoardPress,
+  type HubStayDoor,
+  type HubStaySettlement,
   type HubStays,
   type RerollSpend,
   type RerollSpendAllowance,
   type ScreenRerollAllowance,
   type ScreenRerollSpend,
 } from './evaluation/reroll-authoring';
+export {
+  hubBoardDrawPositions,
+  type HubBoardSlotDraw,
+} from './rewards/biome/generation/hub-board-order';
 export {
   hubDepartureSnapshotForProjectEvaluationAssembly,
   runStateSnapshotForProjectEvaluationAssembly,
