@@ -379,4 +379,25 @@ describe('draft room observations', () => {
         .filter((occurrence) => occurrence.challengeSwitch !== undefined),
     ).toEqual([]);
   });
+
+  it('never observes a locked door, so Oceanus leaves through open doors with no fight', () => {
+    const spec: DraftSpec = {
+      loadout,
+      world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketByGiver: {},
+      rackKeepsakeKeys: [null, null, null],
+    };
+    const walk = startDraftWalk(base, spec, 2);
+    expect(walk.runBiome(0, 600), walk.failure).toBe(true);
+    expect(walk.runBiome(1, walk.steps + 600), walk.failure).toBe(true);
+    const oceanus = walk.project.route.biomes[1]!.topology!.occurrences;
+    expect(oceanus.some((occurrence) => occurrence.gameName.startsWith('G_Combat'))).toBe(true);
+    expect(
+      oceanus.filter(
+        (occurrence) =>
+          occurrence.lockedExits !== undefined ||
+          occurrence.roomActions.order.some((reference) => reference.kind === 'unlockExit'),
+      ),
+    ).toEqual([]);
+  });
 });
