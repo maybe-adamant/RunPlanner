@@ -68,7 +68,10 @@ describe('plan end in the biome workspace', () => {
     await user.click(screen.getByRole('button', { name: 'End plan here' }));
     expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b3-e1' });
 
-    await user.click(screen.getByRole('button', { name: 'Continue planning' }));
+    // The end room's dormant exit must not lock the action that removes the end.
+    const continuePlanning = screen.getByRole('button', { name: 'Continue planning' });
+    expect(continuePlanning.closest('[inert]')).toBeNull();
+    await user.click(continuePlanning);
     expect(currentPlanEnd(application)).toBeUndefined();
 
     act(() => {

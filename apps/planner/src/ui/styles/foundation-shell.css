@@ -533,7 +533,9 @@ button:disabled {
 }
 
 [data-authoring-locked='true'] :is(button, input, select, textarea),
-:is(button, input, select, textarea)[data-authoring-locked='true'] {
+:is(button, input, select, textarea)[data-authoring-locked='true'],
+/* A fixed value reads as locked beside its row's locked controls. */
+.door-row:has([data-authoring-locked='true']) .fixed-value-chip {
   opacity: 0.55;
   filter: saturate(0.35);
 }

@@ -114,12 +114,8 @@ function roomTimelineDoors({
     anchorOwner?: SemanticAddress,
   ) =>
     relation === 'end' ? (
-      <LeaveRow
-        actions={endAction}
-        {...(anchorOwner === undefined ? {} : { anchorOwner })}
-        key="leave"
-        label="Plan ends here"
-      />
+      // The end room's exit is dormant, so anchoring it would lock Continue planning.
+      <LeaveRow actions={endAction} key="leave" label="Plan ends here" />
     ) : (
       <LeaveRow
         actions={endAction}
