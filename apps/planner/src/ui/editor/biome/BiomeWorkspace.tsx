@@ -540,37 +540,40 @@ function HubRailGroup({
   const assessment = assessmentLabel(entry.marker);
   return (
     <div className="biome-rail-stop biome-hub-rail-group" data-kind="hubDecision">
-      <FocusButton
-        accessibleLabel={`Hub, ${entry.visits.length} of ${entry.node.requiredVisitCount} visits, ${assessment}`}
-        marker={entry.marker}
-        selected={selected}
-      >
-        <span className="biome-rail-selection">
-          <ArtworkIcon className="biome-rail-reward-icon" source={roomKindIcon(entry.roomIcon)} />
-          Hub ·{' '}
-          <span className="biome-rail-count">
-            {entry.visits.length} of {entry.node.requiredVisitCount} visits
+      {/* One panel: the Hub, then each visit with its side rooms. */}
+      <div className="biome-hub-rail-panel">
+        <FocusButton
+          accessibleLabel={`Hub, ${entry.visits.length} of ${entry.node.requiredVisitCount} visits, ${assessment}`}
+          marker={entry.marker}
+          selected={selected}
+        >
+          <span className="biome-rail-selection">
+            <ArtworkIcon className="biome-rail-reward-icon" source={roomKindIcon(entry.roomIcon)} />
+            Hub ·{' '}
+            <span className="biome-rail-count">
+              {entry.visits.length} of {entry.node.requiredVisitCount} visits
+            </span>
           </span>
-        </span>
-        <span aria-hidden="true" className="biome-rail-icons">
-          <ArtworkIcon className="biome-rail-icons-room" source={roomKindIcon(entry.roomIcon)} />
-          <span className="biome-rail-icons-count">
-            {entry.visits.length}/{entry.node.requiredVisitCount}
+          <span aria-hidden="true" className="biome-rail-icons">
+            <ArtworkIcon className="biome-rail-icons-room" source={roomKindIcon(entry.roomIcon)} />
+            <span className="biome-rail-icons-count">
+              {entry.visits.length}/{entry.node.requiredVisitCount}
+            </span>
           </span>
-        </span>
-      </FocusButton>
-      {entry.visits.length === 0 ? null : (
-        <ol aria-label="Hub visits" className="biome-hub-rail-visits">
-          {entry.visits.map((visit) => (
-            <HubRailVisit
-              biomeKey={biomeKey}
-              key={visit.key}
-              selectedRailKey={selectedRailKey}
-              visit={visit}
-            />
-          ))}
-        </ol>
-      )}
+        </FocusButton>
+        {entry.visits.length === 0 ? null : (
+          <ol aria-label="Hub visits" className="biome-hub-rail-visits">
+            {entry.visits.map((visit) => (
+              <HubRailVisit
+                biomeKey={biomeKey}
+                key={visit.key}
+                selectedRailKey={selectedRailKey}
+                visit={visit}
+              />
+            ))}
+          </ol>
+        )}
+      </div>
     </div>
   );
 }
