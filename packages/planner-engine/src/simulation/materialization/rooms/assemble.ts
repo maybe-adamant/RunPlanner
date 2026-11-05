@@ -290,6 +290,9 @@ export function materializeAuthoredRoom(
     ...(context.occurrence.challengeSwitch === undefined
       ? {}
       : { challengeSwitch: context.occurrence.challengeSwitch }),
+    ...(context.occurrence.lockedExits === undefined
+      ? {}
+      : { lockedExits: context.occurrence.lockedExits }),
     ...(stygianWellOfferEffects === undefined ? {} : { stygianWellOfferEffects }),
     ...(stygianWellExtendedDirectPurchaseItemKeys === undefined
       ? {}

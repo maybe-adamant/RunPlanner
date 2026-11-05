@@ -5,6 +5,7 @@ import {
   CHALLENGE_SWITCH_ENVELOPE_KEY,
   CHALLENGE_SWITCH_PHASE_KEY,
 } from '../encounters/challenge-switch-phase';
+import { UNLOCK_EXIT_ENVELOPE_KEY, unlockExitPhaseKey } from '../encounters/unlock-exit';
 import type {
   CanonicalBiomeHistory,
   EncounterHistoryEntry,
@@ -145,6 +146,7 @@ function roomName(
   event: Extract<
     HistoryEvent,
     | { readonly kind: 'challengeSwitchInteracted' }
+    | { readonly kind: 'exitUnlocked' }
     | { readonly kind: 'encounterCompleted' }
     | { readonly kind: 'encounterRecorded' }
     | { readonly kind: 'encounterStarted' }
@@ -961,6 +963,48 @@ function foldHistoryEventStream(
         }
         // Leaving mid-fight ends it early: never completed (RoomLogic.lua:4213-4216).
         if (run.completed) ledgers.encounterCompletions.push(entry);
+        break;
+      }
+      case 'exitUnlocked': {
+        const run = event.encounter;
+        if (run === undefined) break;
+        const views = requireRoomViews(viewsByOrigin, event);
+        if (views.entry === undefined || views.exit !== undefined)
+          throw new HistoryFoldContractError(
+            `${semanticAddressKey(event.origin)} fought a locked door outside the room`,
+          );
+        const slotKey = unlockExitPhaseKey(event.exitKey);
+        const originKey = semanticAddressKey(event.origin);
+        if (
+          ledgers.encounterStarts.some(
+            (entry) => entry.slotKey === slotKey && semanticAddressKey(entry.origin) === originKey,
+          )
+        )
+          throw new HistoryFoldContractError(`${originKey} fought ${event.exitKey}'s lock twice`);
+        // StartEncounter at the press and its completion once fought out; the
+        // press never calls RecordEncounter.
+        const entry: EncounterHistoryEntry = Object.freeze({
+          sequence: event.sequence,
+          origin: event.origin,
+          gameName: roomName(namesByOrigin, event),
+          encounterEnvelopeKey: UNLOCK_EXIT_ENVELOPE_KEY,
+          slotKey,
+          encounterKey: run.encounterKey,
+          phaseKind: run.phaseKind,
+          ...(run.generatedCustomization === undefined
+            ? {}
+            : {
+                knownEnemyBlacklistAdditions: run.generatedCustomization.knownRunBlacklistAdditions,
+              }),
+        });
+        ledgers.encounterStarts.push(entry);
+        if (run.countsEncounterDepth) {
+          ledgers.counters.biomeEncounterDepth = biomeEncounterDepthAfterStart(
+            ledgers.counters.biomeEncounterDepth,
+          );
+          ledgers.counters.routeEncounterDepth += 1;
+        }
+        ledgers.encounterCompletions.push(entry);
         break;
       }
       case 'producerRoleAdvanced':

@@ -146,6 +146,7 @@ function commandContractAddress(
     case 'ReplaceChallengeSwitchOutcome':
     case 'ReplaceChallengeSwitchElite':
     case 'ReplaceChallengeSwitchCustomization':
+    case 'ReplaceLockedExit':
     case 'AddStygianWell':
     case 'RemoveStygianWell':
     case 'InsertStygianWellReroll':
@@ -168,6 +169,7 @@ function commandContractAddress(
     case 'ReplaceRerollReward':
     case 'ReplaceStygianWellRollOffer':
     case 'ReplacePurgingPoolRollSlot':
+    case 'ReplaceUnlockExitCustomization':
       return command.action;
     case 'SellPurgingPoolRollSlot':
       return createRoomFeatureAddress(command.occurrence, {
@@ -326,6 +328,8 @@ export function projectCommandAddress(
     case 'ReplaceChallengeSwitchElite':
     case 'ReplaceChallengeSwitchCustomization':
       return createRoomFeatureAddress(command.occurrence, { kind: 'challengeSwitch' });
+    case 'ReplaceLockedExit':
+      return createRoomFeatureAddress(command.occurrence, { kind: 'lockedExits' });
   }
   return commandContractAddress(command);
 }

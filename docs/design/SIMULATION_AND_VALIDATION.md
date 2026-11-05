@@ -513,8 +513,11 @@ engine-owned authoring queries publish what each of its objects allows there,
 each with the command that appends it: a Stygian Well's or Pool of Purging's
 offered slots and reroll with its cost, a World Shop's unbought items and its
 live Travel Deal item with the values the reached state can stock there, a
-Hermes Shrine's unbought items to buy or rush with its live refill, and
-whether the Pedestal can be collected or why not.
+Hermes Shrine's unbought items to buy or rush with its live refill,
+whether the Pedestal can be collected or why not, and an Oceanus lock host's
+lockable doors with each one's lock command (from entry), each locked door's
+press to append or its pressed fight, and the doors still locked when the
+room is left.
 
 The gold query prices each reached purchase from the price facts its
 settlement published and walks the [gold ledger](REWARD_MODEL.md#gold-ledger)
@@ -671,6 +674,10 @@ over-spend at the spend that exceeded the pool, a rerolled reward that no
 longer matches its last press at the rerolled owner, and an earlier-screen
 finding at that screen of the offer. A hidden return door's unavailable
 placeholder or reward belongs to its room's door.
+
+Leaving through an Oceanus door still locked is exit work: the finding is on
+the exit selection, at the room's exit, and the room's Timeline stays
+evaluated.
 
 Toggling a participant changes membership without replaying chronological
 legality; only a move assesses position, so an unresolved earlier item cannot

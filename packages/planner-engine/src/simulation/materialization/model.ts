@@ -282,6 +282,8 @@ export interface CanonicalAuthoredRoom {
   >;
   /** An observed challenge switch, fixed on entry. */
   readonly challengeSwitch?: import('../../authored-project/model').AuthoredChallengeSwitch;
+  /** The doors observed locked when the room's doors open, by exit key. */
+  readonly lockedExits?: readonly string[];
   /** Normalized catalog effects for the authored Well generations only. */
   readonly stygianWellOfferEffects?: Readonly<
     Partial<Record<StygianWellGenerationKey, StygianWellEffect>>

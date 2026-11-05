@@ -31,6 +31,11 @@ import {
 } from '../../acquisition/challenge-switch';
 import { decodeGeneratedEncounterCustomization } from '../../room-state/decoding/generated-encounter-codec';
 import {
+  lockedExitsIssue,
+  orderedLockedExits,
+  unlockExitCustomizationIssue,
+} from '../../locked-exits';
+import {
   type AuthoredEncounterCustomization,
   defaultHermesShrineDelay,
   HERMES_SHRINE_DELAYS,
@@ -637,6 +642,9 @@ export function applyOccurrenceCommand(
       }
       if (challengeSwitchHost(catalog, occurrence.gameName) === undefined)
         failCommand(command, `${occurrence.gameName} hosts no challenge switch`);
+      // The game rolls a lock only where no switch spawned (RunLogic.lua CreateRoom).
+      if ((occurrence.lockedExits ?? []).length > 0)
+        failCommand(command, 'a room with locked doors never holds a challenge switch');
       const observed = defaultChallengeSwitch(catalog, command.variantKey);
       if (observed === undefined)
         failCommand(command, `unknown challenge switch ${command.variantKey}`);
@@ -668,6 +676,77 @@ export function applyOccurrenceCommand(
         document,
         located,
         Object.freeze({ ...occurrence, challengeSwitch: next }),
+      );
+    }
+    case 'ReplaceLockedExit': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const current = occurrence.lockedExits ?? [];
+      if (current.includes(command.exitKey) === command.locked) return document;
+      const exitKeys = command.locked
+        ? [...current, command.exitKey]
+        : current.filter((exitKey) => exitKey !== command.exitKey);
+      const issue = lockedExitsIssue(catalog, occurrence, exitKeys);
+      if (issue !== undefined) failCommand(command, issue);
+      const { lockedExits: _previous, ...withoutLocks } = occurrence;
+      void _previous;
+      const order = command.locked
+        ? occurrence.roomActions.order
+        : occurrence.roomActions.order.filter(
+            (reference) => reference.kind !== 'unlockExit' || reference.exitKey !== command.exitKey,
+          );
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({
+          ...withoutLocks,
+          ...(exitKeys.length === 0
+            ? {}
+            : { lockedExits: orderedLockedExits(catalog, occurrence.gameName, exitKeys) }),
+          roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
+        }),
+      );
+    }
+    case 'ReplaceUnlockExitCustomization': {
+      const occurrence = requireOccurrence(located.plan, command.action.occurrenceId, command);
+      const index = occurrence.roomActions.order.findIndex(
+        (reference) => roomActionKey(reference) === command.action.actionKey,
+      );
+      const current = occurrence.roomActions.order[index];
+      if (current?.kind !== 'unlockExit')
+        failCommand(command, 'action does not press a locked door');
+      if (command.value !== null) {
+        const issue = unlockExitCustomizationIssue(
+          catalog,
+          occurrence.gameName,
+          command.decisionKey,
+          command.value,
+        );
+        if (issue !== undefined) failCommand(command, issue);
+      }
+      const decisions: Record<string, AuthoredEncounterCustomization> = {
+        ...(current.customization ?? {}),
+      };
+      if (command.value === null) delete decisions[command.decisionKey];
+      else
+        decisions[command.decisionKey] = decodeGeneratedEncounterCustomization(
+          command.value,
+          command.decisionKey,
+        );
+      if (JSON.stringify(decisions) === JSON.stringify(current.customization ?? {}))
+        return document;
+      const order = [...occurrence.roomActions.order];
+      order[index] = Object.freeze({
+        kind: 'unlockExit' as const,
+        exitKey: current.exitKey,
+        ...(Object.keys(decisions).length === 0 ? {} : { customization: Object.freeze(decisions) }),
+      });
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({
+          ...occurrence,
+          roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
+        }),
       );
     }
     case 'ReplaceChallengeSwitchCustomization': {

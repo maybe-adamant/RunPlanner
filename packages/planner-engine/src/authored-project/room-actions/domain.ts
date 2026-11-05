@@ -59,6 +59,7 @@ import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import type { RewardProducerBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import { activeRoomActionReferences, roomActionKey } from './state';
+import { unlockExitAction } from '../locked-exits';
 import {
   parseClockedTraitGeneratedPickupEntryKey,
   selectedPickupProducerForEntry,
@@ -488,16 +489,44 @@ function baseContribution(
         ],
         createRewardWheelAddress(biome, occurrence.occurrenceId, reference.wheelKey),
       );
-    case 'reroll':
+    case 'reroll': {
       // Door and cage rerolls follow the doors unlocking; a wheel's precede its use.
+      // A locked door cannot be rerolled until its fight opens it (`CheckExitPreUnlock`).
+      const target = reference.target;
+      const locked =
+        target.kind !== 'wheelOffer' && (occurrence.lockedExits ?? []).includes(target.exitKey);
       return contribution(
         biome,
         occurrence,
         reference,
         'optional',
-        reference.target.kind === 'wheelOffer'
-          ? frozen({ kind: 'shipPreCombat', wheelKey: reference.target.wheelKey })
+        target.kind === 'wheelOffer'
+          ? frozen({ kind: 'shipPreCombat', wheelKey: target.wheelKey })
           : frozen({ kind: 'postOutgoing' }),
+        locked
+          ? [
+              frozen({
+                kind: 'afterAction' as const,
+                action:
+                  occurrence.roomActions.order.find(
+                    (candidate) =>
+                      candidate.kind === 'unlockExit' && candidate.exitKey === target.exitKey,
+                  ) ?? unlockExitAction(target.exitKey),
+              }),
+            ]
+          : [],
+      );
+    }
+    // A locked door can be pressed once the doors are open and no required
+    // pickup remains (`AttemptUseDoor` checks `CheckRoomExitsReady`).
+    case 'unlockExit':
+      return contribution(
+        biome,
+        occurrence,
+        reference,
+        'optional',
+        frozen({ kind: 'postOutgoing' }),
+        [frozen({ kind: 'afterCheckpoint' as const, checkpointKey: 'exitUsable' })],
       );
     case 'interactWheelReward': {
       const wheel =

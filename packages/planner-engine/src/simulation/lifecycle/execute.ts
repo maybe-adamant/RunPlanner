@@ -797,6 +797,12 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           kind: 'challengeSwitchInteracted',
           owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
         });
+      case 'unlockExit':
+        return appendEvent(state, operationContext, {
+          kind: 'exitUnlocked',
+          owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
+          exitKey: row.reference.exitKey,
+        });
       case 'reroll': {
         const reroll = Object.freeze({
           kind: 'rewardRerolled' as const,

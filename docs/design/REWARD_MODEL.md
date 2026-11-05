@@ -961,13 +961,15 @@ A generated encounter's kill drops pay from its money store. The store is exact
 catalog data: the game draws an integer from the cap range, adds the run-depth
 ramp, multiplies by the money multiplier held at the door into the room (where
 it draws every store of the room, Nemesis and god combats included) and rounds
-up. Stores the game draws later (encounter-cost doors, boss spawns) belong to
-encounters the plan does not model. A pressed challenge switch's encounter
+up. Stores the game draws later at boss spawns belong to encounters the plan
+does not model. A pressed challenge switch's encounter
 pays its kills from its own store at the press, by its known roster (an
 authored composition, or the pinned elite times its spawn count) or else the
 biome's generated-combat policy, at the room's entry multipliers; a fight left
 early pays nothing, since a partial fight is not estimated, and the switch's
-kills are not among Medea's capped per-room drops. An encounter gold range run
+kills are not among Medea's capped per-room drops. A pressed Oceanus locked
+door's fight draws its store at the press, at the money multipliers held
+there, and pays by its authored composition or else the biome's policy. An encounter gold range run
 modifier fixes the draw at its point of the range and the store loses its
 spread. Kills drain the store, the last drop overshooting it, or run out before
 it. Kills drain only the room's own encounter's store: a Fields cage never

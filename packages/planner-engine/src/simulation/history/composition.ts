@@ -6,6 +6,7 @@ import {
   type BiomeAddress,
 } from '../../authored-project/addresses';
 import { prepareChallengeSwitchEncounter } from '../encounters/challenge-switch';
+import { prepareUnlockExitEncounter } from '../encounters/unlock-exit';
 import { executeRoomLifecycle, type RoomLifecycleEvent } from '../lifecycle';
 import { prepareRoomEncounterPhases, type EncounterAuthoringRoom } from '../encounters/preparation';
 import {
@@ -367,7 +368,9 @@ export function appendRoomLifecycle(
           })()
         : sourceEvent.kind === 'challengeSwitchInteracted' && room.kind === 'authored'
           ? withChallengeSwitchEncounter(catalog, room, writer, sourceEvent, fail)
-          : sourceEvent;
+          : sourceEvent.kind === 'exitUnlocked' && room.kind === 'authored'
+            ? withUnlockExitEncounter(catalog, room, writer, sourceEvent, fail)
+            : sourceEvent;
     if (
       options.stopAfterOutgoing &&
       options.continueThroughPostOutgoingActions === true &&
@@ -449,6 +452,40 @@ function withChallengeSwitchEncounter(
       phaseKind: phase.kind,
       countsEncounterDepth: phase.countsEncounterDepth,
       completed: room.challengeSwitch.outcome !== 'left',
+      ...(phase.generatedCustomization === undefined
+        ? {}
+        : { generatedCustomization: phase.generatedCustomization }),
+    }),
+  });
+}
+
+/** A locked door's press runs the fight `AttemptUseDoor` generates there, at the press's view. */
+function withUnlockExitEncounter(
+  catalog: Catalog,
+  room: Extract<CanonicalLifecycleRoom, { readonly kind: 'authored' }>,
+  writer: HistorySegmentWriter,
+  event: Extract<RoomLifecycleEvent, { readonly kind: 'exitUnlocked' }>,
+  fail: (detail: string) => never,
+): RoomLifecycleEvent {
+  const action = room.roomActionRoster.rows.find(
+    (row) => row.reference.kind === 'unlockExit' && row.reference.exitKey === event.exitKey,
+  )?.reference;
+  if (action?.kind !== 'unlockExit') fail(`${room.gameName} pressed a door it does not lock`);
+  const prepared = prepareUnlockExitEncounter(
+    catalog,
+    room,
+    writer.routePosition,
+    action,
+    writer.current(),
+  );
+  if (prepared === undefined) return event;
+  const { phase } = prepared;
+  return Object.freeze({
+    ...event,
+    encounter: Object.freeze({
+      encounterKey: phase.encounterKey,
+      phaseKind: phase.kind,
+      countsEncounterDepth: phase.countsEncounterDepth,
       ...(phase.generatedCustomization === undefined
         ? {}
         : { generatedCustomization: phase.generatedCustomization }),

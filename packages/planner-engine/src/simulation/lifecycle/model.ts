@@ -79,6 +79,18 @@ export type RoomLifecycleEvent =
       readonly encounter?: ChallengeSwitchEncounterRun;
     })
   | (RoomLifecycleEventBase & {
+      /**
+       * Pressing a locked door: its fight starts at the press (`AttemptUseDoor`
+       * generates and starts it) and is fought out, opening the door. Neither a
+       * recorded encounter nor an encounter end, and it spawns no reward.
+       */
+      readonly kind: 'exitUnlocked';
+      readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
+      readonly exitKey: string;
+      /** The fight; history composition attaches it from the press's view. */
+      readonly encounter?: UnlockExitEncounterRun;
+    })
+  | (RoomLifecycleEventBase & {
       readonly kind: 'requiredObjectSpawned';
       readonly objectKey: RequiredRoomObjectDescriptor['key'];
       readonly completionRequirement: RequiredRoomObjectDescriptor['completionRequirement'];
@@ -197,6 +209,15 @@ export interface ChallengeSwitchEncounterRun {
   readonly countsEncounterDepth: boolean;
   /** False when the player left mid-fight (`EndedEarly`): started, never completed. */
   readonly completed: boolean;
+  readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
+}
+
+/** One locked door's fight, outside the room's envelope. */
+export interface UnlockExitEncounterRun {
+  readonly encounterKey: string;
+  readonly phaseKind: EncounterPhaseKind;
+  /** Native StartEncounter applies the inherited `CountsForRoomEncounterDepth`. */
+  readonly countsEncounterDepth: boolean;
   readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
 }
 

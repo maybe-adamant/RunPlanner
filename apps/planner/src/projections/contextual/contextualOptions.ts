@@ -852,6 +852,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'challengeSwitchEliteUnavailable':
     case 'challengeSwitchCustomizationUnavailable':
     case 'challengeSwitchLeftNotLast':
+    case 'unlockExitCustomizationUnavailable':
+    case 'lockedExitSelected':
       return presented('generic', finding);
     case 'keepsakeEquipResultMissing':
     case 'keepsakeEquipResultUnavailable':

@@ -25,6 +25,8 @@ export function roomActionKey(reference: RoomActionReference): string {
         : JSON.stringify([reference.kind, reference.slotKey, reference.rollKey]);
     case 'interactAcquisitionEntry':
       return JSON.stringify([reference.kind, reference.siteKey, reference.entryKey]);
+    case 'unlockExit':
+      return unlockExitActionKey(reference.exitKey);
     case 'reroll':
       return rerollActionKey(reference.rerollId);
     case 'rerollStygianWell':
@@ -43,4 +45,9 @@ export function roomActionKey(reference: RoomActionReference): string {
 /** The action key of the room reroll with this persisted id. */
 export function rerollActionKey(rerollId: string): string {
   return JSON.stringify(['reroll', rerollId]);
+}
+
+/** The action key of pressing this locked exit. */
+export function unlockExitActionKey(exitKey: string): string {
+  return JSON.stringify(['unlockExit', exitKey]);
 }

@@ -731,6 +731,25 @@ same kind); `ReplaceChallengeSwitchOutcome`, `ReplaceChallengeSwitchElite` and
 The game rules and spawn conditions are owned by the
 [room features audit](../audits/room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md#challenge-switches).
 
+A room the catalog declares as a lock host (the ordinary Oceanus combats) may
+carry an optional `lockedExits` leaf: the exit keys, in exit order, of the
+doors observed locked when its doors opened. Only a door the host declares
+lockable may appear, never the first; absence means every door opened, and a
+leaf beside a `challengeSwitch` is rejected because the game never rolls both.
+Each locked door may be pressed once by an optional `unlockExit` room action
+keyed by its `exitKey`, in the doors-open window after every required action,
+which carries optional `customization` of its fight as a room phase's
+`customizationByPhase` entry; a press of a door that is not locked is
+rejected. A door or cage reroll of a locked door depends on that door's press.
+`ReplaceLockedExit` locks or opens one door (refused on the first door, off a
+host and in a switch room; opening a door drops its press);
+`ReplaceChallengeSwitch` is refused while a door is locked;
+`ReplaceUnlockExitCustomization` edits the press's fight; the press itself is
+inserted, moved and removed as any optional room action. Each is one history
+step. Leaving through a door still locked is a finding on the exit
+selection, never a refused selection. The game rules are owned by
+[G Game Rules](../biomes/G_GAME_RULES.md#locked-extra-exits).
+
 ### Acquisition sites
 
 An acquisition site is sparse occurrence-owned payload state for one exact

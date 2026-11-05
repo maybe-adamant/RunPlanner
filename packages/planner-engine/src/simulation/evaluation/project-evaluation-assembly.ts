@@ -296,6 +296,21 @@ export function challengeSwitchEncounterSupportForProjectEvaluationAssembly(
     ?.objectInteractions.challengeSwitchEncounterAt(occurrence);
 }
 
+/**
+ * A pressed locked door's fight composition capability at its press, as
+ * `generatedEncounterSupportForProjectEvaluationAssembly` is a room phase's:
+ * absent for an unreached press.
+ */
+export function unlockExitEncounterSupportForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  action: import('../../authored-project/addresses').RoomActionSemanticAddress,
+):
+  import('../encounters/generation-preparation').GeneratedEncounterCandidateCapability | undefined {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(action.routeKey, action.biomeKey))
+    ?.objectInteractions.unlockExitEncounterAt(action);
+}
+
 /** Exact reached-source Chaos placement capability for ordinary authoring. */
 export function chaosCandidateForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,

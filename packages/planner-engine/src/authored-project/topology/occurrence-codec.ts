@@ -1,5 +1,10 @@
 import { screenRerollSupported } from '../screen-rerolls';
 import type { ChallengeSwitchOutcome } from '../model';
+import {
+  lockedExitsIssue,
+  orderedLockedExits,
+  unlockExitCustomizationIssue,
+} from '../locked-exits';
 import type { BiomeLayout, Catalog } from '../../catalog-schema';
 import { routeErisHost, routeHasKeepsakeRack, routeRoomShop } from '../route-profile';
 import {
@@ -62,7 +67,13 @@ import {
 import { decodeInfernalContractPedestal } from '../room-state/decoding/infernal-contract-pedestal-codec';
 import { roomHasPhantomExit } from '../phantom-exit';
 import { decodePhantomExit } from '../room-state/decoding/phantom-exit-codec';
-import { expectExactKeys, expectRecord, failProjectDocument } from '../validation';
+import {
+  expectArray,
+  expectExactKeys,
+  expectNonBlankString,
+  expectRecord,
+  failProjectDocument,
+} from '../validation';
 import type { DecodedTopologyStructure } from './decoding/coordinator';
 import { decodeAcquisitionSites } from '../room-state/decoding/acquisition-site-codec';
 import { decodeFountainRarityResult } from '../fountain-rarity-codec';
@@ -180,6 +191,24 @@ function decodeChallengeSwitch(
   const issue = challengeSwitchShapeIssue(catalog, challengeSwitch);
   if (issue !== undefined) failProjectDocument(path, issue);
   return challengeSwitch;
+}
+
+function decodeLockedExits(
+  value: unknown,
+  catalog: Catalog,
+  occurrence: Pick<RoomOccurrence, 'gameName' | 'challengeSwitch'>,
+  path: string,
+): readonly string[] {
+  const exitKeys = expectArray(value, path).map((entry, index) =>
+    expectNonBlankString(entry, `${path}[${index}]`),
+  );
+  if (exitKeys.length === 0) failProjectDocument(path, 'must not be empty');
+  const issue = lockedExitsIssue(catalog, occurrence, exitKeys);
+  if (issue !== undefined) failProjectDocument(path, issue);
+  const ordered = orderedLockedExits(catalog, occurrence.gameName, exitKeys);
+  if (ordered.length !== exitKeys.length || ordered.some((key, index) => key !== exitKeys[index]))
+    failProjectDocument(path, 'must list each door once in exit order');
+  return ordered;
 }
 
 function decodeKeepsakeRackState(
@@ -515,6 +544,14 @@ export function decodeRoomOccurrence(input: {
         `${rawOccurrence.path}.challengeSwitch`,
       )
     : undefined;
+  const lockedExits = rawOccurrence.hasLockedExits
+    ? decodeLockedExits(
+        rawOccurrence.lockedExits,
+        catalog,
+        { gameName: room.gameName, ...(challengeSwitch === undefined ? {} : { challengeSwitch }) },
+        `${rawOccurrence.path}.lockedExits`,
+      )
+    : undefined;
   const pedestalDeclared = roomHasInfernalContractPedestal(contextualRoom);
   if (pedestalDeclared !== (rawOccurrence.hasInfernalContractPedestal === true))
     failProjectDocument(
@@ -599,6 +636,17 @@ export function decodeRoomOccurrence(input: {
       `${rawOccurrence.path}.roomActions.order`,
       'an observed challenge switch owns at most one interactChallengeSwitch action',
     );
+  for (const [index, reference] of roomActions.order.entries()) {
+    if (reference.kind !== 'unlockExit') continue;
+    const referencePath = `${rawOccurrence.path}.roomActions.order[${index}]`;
+    if (!(lockedExits ?? []).includes(reference.exitKey))
+      failProjectDocument(`${referencePath}.exitKey`, 'presses a door that is not locked');
+    for (const [decisionKey, value] of Object.entries(reference.customization ?? {})) {
+      const issue = unlockExitCustomizationIssue(catalog, room.gameName, decisionKey, value);
+      if (issue !== undefined)
+        failProjectDocument(`${referencePath}.customization.${decisionKey}`, issue);
+    }
+  }
   if (
     roomActions.order.filter((reference) => reference.kind === 'interactKeepsakeRack').length !==
     (keepsakeRack === undefined ? 0 : 1)
@@ -679,6 +727,7 @@ export function decodeRoomOccurrence(input: {
     ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
     ...(eris === undefined ? {} : { eris }),
     ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
+    ...(lockedExits === undefined ? {} : { lockedExits }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(phantomExit === undefined ? {} : { phantomExit }),
     ...(rerolledIncomingReward === undefined ? {} : { rerolledIncomingReward }),
@@ -1078,6 +1127,7 @@ export function decodeRoomOccurrence(input: {
     ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
     ...(eris === undefined ? {} : { eris }),
     ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
+    ...(lockedExits === undefined ? {} : { lockedExits }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(phantomExit === undefined ? {} : { phantomExit }),
     ...(rerolledIncomingReward === undefined ? {} : { rerolledIncomingReward }),

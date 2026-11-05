@@ -347,6 +347,75 @@ describe('authored-project route detour commands', () => {
     expect(occurrenceOf(reverted).roomActions.order).toEqual(rewardActions);
   });
 
+  it('drops a locked room’s doors and their presses on an Anomaly switch, and Undo restores them', () => {
+    const intro = createOccurrenceId('detour-g-lock-intro');
+    const target = createOccurrenceId('detour-g-lock-target');
+    const source = { kind: 'occurrence' as const, occurrenceId: intro };
+    const host = createOccurrenceAddress(gBiome, target);
+    const unlock = { kind: 'unlockExit', exitKey: 'exit2' } as const;
+    const occurrenceOf = (project: ProjectDocument) =>
+      biomeTopology(project, 'Underworld', 'G').occurrences.find(
+        (occurrence) => occurrence.occurrenceId === target,
+      )!;
+    let project = applyProjectCommand(gProject(), catalog, {
+      kind: 'CreateStart',
+      biome: gBiome,
+      occurrenceId: intro,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(gBiome, source),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(gBiome, source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(gBiome, source, 'exit1'),
+      occurrenceId: target,
+      gameName: 'G_Combat01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLockedExit',
+      occurrence: host,
+      exitKey: 'exit2',
+      locked: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(gBiome, target, roomActionKey(unlock)),
+      reference: unlock,
+      index: occurrenceOf(project).roomActions.order.length,
+    });
+    expect(occurrenceOf(project).lockedExits).toEqual(['exit2']);
+    expect(occurrenceOf(project).roomActions.order).toContainEqual(unlock);
+
+    const switched = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'SwitchTargetToAnomaly',
+      target: createTargetAddress(gBiome, source, 'exit1'),
+    });
+    const anomaly = occurrenceOf(switched.present);
+    expect(anomaly.lockedExits).toBeUndefined();
+    expect(anomaly.roomActions.order.map((reference) => reference.kind)).not.toContain(
+      'unlockExit',
+    );
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(switched.present)), catalog),
+    ).toEqual(switched.present);
+    expect(undoProjectHistory(switched).present).toEqual(project);
+
+    const reverted = applyProjectCommand(switched.present, catalog, {
+      kind: 'RevertAnomaly',
+      occurrence: host,
+    });
+    expect(occurrenceOf(reverted).lockedExits).toBeUndefined();
+    expect(
+      occurrenceOf(reverted).roomActions.order.map((reference) => reference.kind),
+    ).not.toContain('unlockExit');
+  });
+
   describe('a detour beside ordinary targets', () => {
     const id = createOccurrenceId;
     const source = (occurrenceId: string) => ({

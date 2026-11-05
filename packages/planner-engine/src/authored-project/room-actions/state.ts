@@ -32,6 +32,7 @@ import type { ResolvedRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import { routeErisHost } from '../route-profile';
 import { CHALLENGE_SWITCH_ACTION, challengeSwitchHost } from '../acquisition/challenge-switch';
+import { extraExitLockHost, unlockExitAction } from '../locked-exits';
 export { roomActionKey } from './key';
 import { roomActionKey } from './key';
 import type { PurgingPoolSlotKey } from '../model';
@@ -176,6 +177,15 @@ export function activeRoomActionReferences(
     challengeSwitchHost(catalog, occurrence.gameName) !== undefined
   )
     references.push(CHALLENGE_SWITCH_ACTION);
+  // Each locked door may be pressed once; most are left locked.
+  for (const exitKey of occurrence.lockedExits ?? []) {
+    if (extraExitLockHost(catalog, occurrence.gameName) === undefined) break;
+    references.push(
+      occurrence.roomActions.order.find(
+        (reference) => reference.kind === 'unlockExit' && reference.exitKey === exitKey,
+      ) ?? unlockExitAction(exitKey),
+    );
+  }
   const activeWheels =
     occurrence.state.kind !== 'shipCombat'
       ? new Set<string>()

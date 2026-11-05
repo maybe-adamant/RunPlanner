@@ -264,6 +264,7 @@ export {
   stygianWellCandidateForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   challengeSwitchEncounterSupportForProjectEvaluationAssembly,
+  unlockExitEncounterSupportForProjectEvaluationAssembly,
   chaosCandidateForProjectEvaluationAssembly,
   zagreusContractCandidateForProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,

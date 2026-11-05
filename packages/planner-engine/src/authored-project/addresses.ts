@@ -68,7 +68,8 @@ export type RoomFeatureTarget =
     }
   | { readonly kind: 'purgingPoolInventory' }
   | { readonly kind: 'erisSpawn' }
-  | { readonly kind: 'challengeSwitch' };
+  | { readonly kind: 'challengeSwitch' }
+  | { readonly kind: 'lockedExits' };
 export interface RoomFeatureAddress extends BiomeOwnedAddress {
   readonly kind: 'roomFeature';
   readonly occurrenceId: OccurrenceId;

@@ -743,6 +743,15 @@ counted store; its claim pickups are optional rows ranked right after it and
 settle through the ordinary acquisition machinery. A press whose fight is
 left ends the room's actions: nothing is claimed and no action may follow it.
 
+An Oceanus locked door is an observation of the room's doors opening: the
+room's `lockedExits` change nothing until a door is pressed. Each press is an
+optional doors-open action (`postOutgoing`) that follows every required action
+(the exit checkpoint), and a reroll of that door follows the press. The press
+starts and completes its fight in the encounter ledgers without a record and
+advances biome and route encounter depth, with no encounter-end effects and no
+reward; it never ends the room, since its fight cannot be left. Leaving
+through a door still locked blocks at the room's exit.
+
 ### Boss and Postboss
 
 The fixed Boss occurrence has the `BossRoom` lifecycle. Its player-facing
@@ -926,9 +935,9 @@ generated. Consequently:
   predecessor depth;
 - the picked target does not advance the depth caches until it later commits.
 
-A challenge switch's press is a counting encounter start outside the room's
-envelope, so a used switch raises the encounter depth that later rooms'
-budgets read.
+A challenge switch's press and an Oceanus locked door's press are counting
+encounter starts outside the room's envelope, so each raises the encounter
+depth that later rooms' budgets and eligibility read.
 
 The biome depth cache follows native `GetBiomeDepth` (`RunLogic.lua`), which
 `UpdateRunHistoryCache` stores at `StartNewRun` (only once `RoomHistory` is

@@ -126,6 +126,11 @@ function rowSettledBy(event: HistoryEvent, row: RoomActionRow): boolean {
         event.kind === 'hermesShrinePurchaseReached' &&
         event.generationKey === reference.generationKey
       );
+    case 'unlockExit':
+      return (
+        event.kind === 'exitUnlocked' &&
+        semanticAddressKey(event.owner) === semanticAddressKey(row.owner)
+      );
     case 'useFountain':
     case 'interactKeepsakeRack':
     case 'interactEris':
@@ -448,6 +453,52 @@ function challengeSwitchEnemyGold(
       ...(roster === undefined ? {} : { roster }),
     },
     multipliers: entry,
+  };
+}
+
+/**
+ * A locked door's kills pay from the fight's own store, drawn as
+ * `AttemptUseDoor` generates it at the press, with the money multipliers held
+ * there: by its authored composition or else its biome's generated-combat policy.
+ */
+function unlockExitEnemyGold(
+  context: ChronologyWalkContext,
+  state: ChronologyWalkState,
+  room: CanonicalAuthoredRoom,
+  run: import('../../lifecycle/model').UnlockExitEncounterRun,
+  multipliers: GoldMultipliers | undefined,
+): Detection {
+  const roomKey = semanticAddressKey(room.origin);
+  const runDepth = runDepthAt(context, roomKey);
+  const hordesRank = state.encounterEntryVowRanks.get(roomKey)?.hordes;
+  const fault = (detail: string): Detection => ({
+    unpriced: { kind: 'contractFailure', detail },
+  });
+  if (multipliers === undefined) return { unpriced: { kind: 'itemUnresolved' } };
+  if (runDepth === undefined) return fault(`${run.encounterKey} has no run depth at its press`);
+  if (hordesRank === undefined)
+    return fault(`${run.encounterKey} has no Hordes rank attested at its room's entry`);
+  let roster: KnownRoster | undefined;
+  try {
+    roster = knownEncounterRoster(
+      context.catalog,
+      run.encounterKey,
+      run.generatedCustomization?.operands,
+    );
+  } catch (error) {
+    if (!(error instanceof GoldLedgerContractError)) throw error;
+    return fault(error.message);
+  }
+  return {
+    gain: {
+      kind: 'enemyGold',
+      encounterKey: run.encounterKey,
+      biomeKey: room.origin.biomeKey,
+      runDepth,
+      hordesRank,
+      ...(roster === undefined ? {} : { roster }),
+    },
+    multipliers,
   };
 }
 
@@ -936,6 +987,12 @@ export function withGoldEvents(
           'enemyGold:challengeSwitch',
           createRoomFeatureAddress(room.origin, { kind: 'challengeSwitch' }),
           challengeSwitchEnemyGold(context, state, room, event.encounter),
+        );
+      if (event.kind === 'exitUnlocked' && event.encounter !== undefined)
+        detect(
+          'enemyGold:unlockExit',
+          event.owner,
+          unlockExitEnemyGold(context, state, room, event.encounter, before),
         );
       // GOLD_ESTIMATE_ASSUMPTIONS.md "Urn upgrade owned", "Urns per occurrence".
       const declaration = catalog.rooms.byKey[room.gameName];

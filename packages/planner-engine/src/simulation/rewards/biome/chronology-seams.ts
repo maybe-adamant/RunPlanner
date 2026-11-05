@@ -91,6 +91,8 @@ import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-p
 import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
 import { spawnInfernalContractPedestal } from './offer-lifecycle/infernal-contract-pedestal';
 import { createBiomeRewardFacts } from '../facts';
+import { prepareUnlockExitEncounter } from '../../encounters/unlock-exit';
+import { extraExitLockHost } from '../../../authored-project/locked-exits';
 import { rerollKindEnabled } from '../../arcana-fear';
 
 /** Records whether the state holds a door-reroll card as doors, wheels or the board are flagged. */
@@ -169,6 +171,99 @@ const challengeSwitchInteracted: ChronologySeamHandler<'challengeSwitchInteracte
         ];
   return { state: advanceOnly(context, state, event).state, emissions };
 };
+
+/**
+ * A locked door's press: native generates its fight there (`AttemptUseDoor`),
+ * so its composition is assessed against the state the press reaches.
+ */
+const exitUnlocked: ChronologySeamHandler<'exitUnlocked'> = (context, state, event) => {
+  const room = authoredRoom(context, event.origin);
+  const ownerKey = semanticAddressKey(event.owner);
+  const action = room?.roomActionRoster.rows.find(
+    (row) => semanticAddressKey(row.owner) === ownerKey,
+  )?.reference;
+  if (room === undefined || action?.kind !== 'unlockExit')
+    throw new BiomeRewardSimulationContractError(`${ownerKey} reached without its locked door`);
+  const before = context.history.viewsBySequence[event.sequence - 1];
+  if (before === undefined)
+    throw new BiomeRewardSimulationContractError(`${ownerKey} has no view before its press`);
+  const prepared = prepareUnlockExitEncounter(
+    context.catalog,
+    room,
+    context.routePosition,
+    action,
+    before,
+    state.encounterEntryVowRanks.get(semanticAddressKey(room.origin)),
+  );
+  if (prepared === undefined)
+    throw new BiomeRewardSimulationContractError(`${ownerKey} lost its locked door's fight`);
+  const chronology = rewardFindingChronologyForRoom(
+    context.snapshot,
+    room.origin,
+    event.sequence,
+    'localRoomLifecycle',
+  );
+  const advanced = advanceOnly(context, state, event).state;
+  return {
+    state: Object.freeze({
+      ...advanced,
+      unlockExitEncounters: new Map(advanced.unlockExitEncounters).set(ownerKey, prepared),
+    }),
+    emissions:
+      prepared.customizationIssues.length === 0
+        ? []
+        : [
+            lifecycleFindings(
+              prepared.customizationIssues.map(({ decisionKey, unsupported }) =>
+                Object.freeze({
+                  finding: rewardFinding('unlockExitCustomizationUnavailable', event.owner, {
+                    decisionKey,
+                    ...unsupported,
+                  }),
+                  region: ownerRegion(event.owner),
+                  chronology,
+                }),
+              ),
+            ),
+          ],
+  };
+};
+
+/**
+ * Leaving through a locked door needs its fight first: a selected exit
+ * still locked when the room is left blocks at the exit (`AttemptUseDoor`
+ * starts the fight instead of opening it).
+ */
+function lockedExitSelectedFindings(
+  context: ChronologyWalkContext,
+  room: CanonicalAuthoredRoom | undefined,
+  sequence: number,
+): readonly ChronologyEmission[] {
+  if (room === undefined || (room.lockedExits ?? []).length === 0) return [];
+  const batch = context.prepared.batchesByParent.get(semanticAddressKey(room.origin));
+  const exitKey = batch?.selectedExitKey;
+  if (batch === undefined || exitKey == null || !(room.lockedExits ?? []).includes(exitKey))
+    return [];
+  const unlocked = room.roomActionRoster.rows.some(
+    (row) =>
+      row.rank !== null && row.reference.kind === 'unlockExit' && row.reference.exitKey === exitKey,
+  );
+  if (unlocked) return [];
+  return [
+    lifecycleFindings([
+      Object.freeze({
+        finding: rewardFinding('lockedExitSelected', batch.selectedOrigin, { exitKey }),
+        region: ownerRegion(batch.selectedOrigin),
+        chronology: rewardFindingChronologyForRoom(
+          context.snapshot,
+          room.origin,
+          sequence,
+          'localRoomLifecycle',
+        ),
+      }),
+    ]),
+  ];
+}
 
 /** One door, cage or wheel reroll press at its authored rank. */
 const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state, event) => {
@@ -365,7 +460,11 @@ const roomExited: ChronologySeamHandler<'roomExited'> = (context, state, event) 
   );
   return {
     state: withBranch(state, exited.branch),
-    emissions: [],
+    emissions: lockedExitSelectedFindings(
+      context,
+      authoredRoom(context, event.origin),
+      event.sequence,
+    ),
     ...(exited.runStateCheckpoint === undefined
       ? {}
       : { runStateCheckpoint: { ...exited.runStateCheckpoint, against: 'received' as const } }),
@@ -1191,6 +1290,10 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
               semanticAddressKey(event.origin),
               encounterEntryVowRanks(enteredBranch.state),
             ),
+      enteredLockHosts:
+        room === undefined || extraExitLockHost(context.catalog, room.gameName) === undefined
+          ? state.enteredLockHosts
+          : new Set(state.enteredLockHosts).add(semanticAddressKey(event.origin)),
       challengeSwitchAssessments:
         entered.challengeSwitchAssessment === undefined
           ? state.challengeSwitchAssessments
@@ -1443,6 +1546,7 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     erisInteracted: { step: erisInteracted },
     // The claim's pickups settle at their own actions; the press changes no state.
     challengeSwitchInteracted: { step: challengeSwitchInteracted },
+    exitUnlocked: { step: exitUnlocked },
     rewardRerolled: { step: rewardRerolled },
     hubRewardRerolled: { step: hubRewardRerolled },
     requiredObjectSpawned: { step: advanceOnly },

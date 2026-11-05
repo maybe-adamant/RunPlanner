@@ -641,6 +641,26 @@ export type ChallengeSwitchCommand =
       readonly gold?: number;
     };
 
+/** Edits the doors a lock host observed locked and the fights that open them. */
+export type ExtraExitLockCommand =
+  | {
+      /** Locks or opens one door; opening it also drops its press. */
+      readonly kind: 'ReplaceLockedExit';
+      readonly occurrence: OccurrenceAddress;
+      readonly exitKey: string;
+      readonly locked: boolean;
+    }
+  | {
+      /**
+       * One decision of a pressed locked door's fight, as
+       * `ReplaceEncounterCustomization` for a room phase; null restores native.
+       */
+      readonly kind: 'ReplaceUnlockExitCustomization';
+      readonly action: RoomActionSemanticAddress;
+      readonly decisionKey: string;
+      readonly value: import('../model').AuthoredEncounterCustomization | null;
+    };
+
 export type HermesShrineCommand =
   | {
       readonly kind: 'SetHermesShrinePresence';
@@ -953,6 +973,7 @@ export type OccurrenceLeafCommand =
   | PurgingPoolCommand
   | ErisCommand
   | ChallengeSwitchCommand
+  | ExtraExitLockCommand
   | StygianWellCommand
   | HermesShrineCommand
   | EncounterOccurrenceCommand;

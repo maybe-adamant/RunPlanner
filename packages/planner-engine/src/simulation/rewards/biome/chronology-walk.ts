@@ -122,6 +122,13 @@ export interface ChronologyWalkState {
     string,
     import('../../encounters/challenge-switch').PreparedChallengeSwitchEncounter
   >;
+  /** Each entered room whose doors can lock, by room. */
+  readonly enteredLockHosts: ReadonlySet<string>;
+  /** Each reached locked door's press and its fight, prepared at the press, by action. */
+  readonly unlockExitEncounters: ReadonlyMap<
+    string,
+    import('../../encounters/unlock-exit').PreparedUnlockExitEncounter
+  >;
   readonly wellRefillRealizations: ReadonlyMap<string, WellRefillRealization>;
   /** Each reached purchase's price context in settlement order, by owner. */
   readonly purchasePriceContexts: ReadonlyMap<string, PurchasePriceContextPublication>;
@@ -232,6 +239,8 @@ export function createChronologyWalkState(
     stygianWellAssessments: new Map(),
     challengeSwitchAssessments: new Map(),
     challengeSwitchEncounters: new Map(),
+    enteredLockHosts: new Set<string>(),
+    unlockExitEncounters: new Map(),
     wellRefillRealizations: new Map(),
     purchasePriceContexts: new Map(),
     paidPurchaseRooms: new Set<string>(),

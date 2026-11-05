@@ -184,6 +184,11 @@ function descriptionFor(
         );
       return Object.freeze({ kind: reference.kind, outcome: observed.outcome });
     }
+    case 'unlockExit':
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `${room.gameName} presses a locked door the execution plan cannot carry`,
+      );
     case 'reroll':
       return rerollGuideDescription(room, batch, reference);
     case 'purchaseHermesShrineOffer': {

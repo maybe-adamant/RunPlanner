@@ -67,6 +67,8 @@ export type RewardGenerationFindingCode =
   | 'challengeSwitchEliteUnavailable'
   | 'challengeSwitchCustomizationUnavailable'
   | 'challengeSwitchLeftNotLast'
+  | 'unlockExitCustomizationUnavailable'
+  | 'lockedExitSelected'
   | 'timePieceConversionUnavailable'
   | 'artificerConversionUnavailable'
   | 'seaStarDuplicationUnavailable'

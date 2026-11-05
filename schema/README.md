@@ -35,7 +35,9 @@ Revision 101.1 adds the route's optional `planEnd` (the room the plan ends
 after) and a challenge-switch host's optional `challengeSwitch` leaf (variant,
 pressed outcome, bonus Nectar, Time gold, Elite pin and encounter
 customization) with its `interactChallengeSwitch` action and its `reward` and
-`nectar` claim pickups. The plan wire gains `overview.challengeSwitch`, the
+`nectar` claim pickups, and an Oceanus lock host's optional `lockedExits`
+(the doors observed locked) with an `unlockExit` action per pressed door,
+which carries its fight's encounter customization. The plan wire gains `overview.challengeSwitch`, the
 switch's guide row and claim acquisitions, and the shape of a plan that ends
 before its biome's terminal room (a terminal end room and a partial Hub
 block), the plan's `rewardStoreComparison` that every room exit checks, and each Fields door

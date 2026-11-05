@@ -331,6 +331,13 @@ export const findingCopy = {
   challengeSwitchLeftNotLast: {
     title: 'Leaving the switch fight ends the room',
   },
+  unlockExitCustomizationUnavailable: {
+    title: "The door's fight cannot spawn these enemies",
+  },
+  lockedExitSelected: {
+    title: 'This door is still locked',
+    description: 'Unlock it earlier in the room, or leave through another door.',
+  },
   keepsakeEquipResultMissing: {
     title: 'Choose the Hades trait from Jeweled Pom',
   },
@@ -1010,7 +1017,8 @@ export function presentFinding(
     );
   if (
     finding.code === 'encounterCustomizationUnavailable' ||
-    finding.code === 'challengeSwitchCustomizationUnavailable'
+    finding.code === 'challengeSwitchCustomizationUnavailable' ||
+    finding.code === 'unlockExitCustomizationUnavailable'
   ) {
     const facts = encounterCustomizationEvidence(finding.evidence);
     if (facts !== undefined) return presentEncounterCustomizationFinding(facts, labels);

@@ -327,9 +327,22 @@ export type RoomActionReference =
   | { readonly kind: 'interactEris' }
   /** Starting and claiming the room's challenge switch, after its doors open. */
   | { readonly kind: 'interactChallengeSwitch' }
+  | UnlockExitRoomAction
   | RerollRoomAction
   | StygianWellRerollAction
   | PurgingPoolRerollAction;
+
+/**
+ * Pressing one of the room's locked doors: it starts the door's fight, and
+ * once that is fought out the door opens. One per locked exit; the fight's
+ * explicit encounter decisions travel with the press, keyed as a room
+ * phase's `customizationByPhase` entry.
+ */
+export interface UnlockExitRoomAction {
+  readonly kind: 'unlockExit';
+  readonly exitKey: string;
+  readonly customization?: Readonly<Record<string, AuthoredEncounterCustomization>>;
+}
 
 /**
  * One Well reroll, identified by its persisted `rerollId`. It restocks every
@@ -585,6 +598,12 @@ export interface RoomOccurrence {
   readonly eris?: AuthoredErisObservation;
   /** Present only where a challenge switch was observed, at a declared host. */
   readonly challengeSwitch?: AuthoredChallengeSwitch;
+  /**
+   * Present only where doors were observed locked, at a declared lock host:
+   * the locked doors' exit keys in exit order, never the first door, and
+   * never beside an observed challenge switch.
+   */
+  readonly lockedExits?: readonly string[];
   /** Present only when this exact occurrence owns a realized Phial target. */
   readonly fountainRarityResult?: AuthoredFountainRarityResult;
   /** Present only at declaration-owned F/G/H fixed Postboss Pool hosts. */

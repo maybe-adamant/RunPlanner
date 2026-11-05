@@ -151,6 +151,17 @@ composition would draw is therefore not blacklisted. Its kills drain its own
 money store. Not modeled: Elite attribute game-state requirements and the run's
 banned elite attributes.
 
+### Locked-door fight
+
+A pressed Oceanus locked door's fight is a side encounter outside the room's
+envelope, one per door, whose identity the lock host declares. It is prepared
+at the press's view, with the room's entry vow ranks and admission facts,
+because the game generates it there; its optional authored composition is
+assessed through the ordinary generated assessment and its findings stay on
+the press, stopping the Timeline there. It is started, completed and counted
+for encounter depth at the press but never recorded, and its kills drain its
+own money store.
+
 ## Generated composition
 
 Optional generated-composition assessment uses the resolved phase's exact

@@ -618,6 +618,7 @@ export function decodeTopologyStructure(
     const hasKeepsakeRack = Object.hasOwn(occurrence, 'keepsakeRack');
     const hasEris = Object.hasOwn(occurrence, 'eris');
     const hasChallengeSwitch = Object.hasOwn(occurrence, 'challengeSwitch');
+    const hasLockedExits = Object.hasOwn(occurrence, 'lockedExits');
     const hasInfernalContractPedestal = Object.hasOwn(occurrence, 'infernalContractPedestal');
     const hasPhantomExit = Object.hasOwn(occurrence, 'phantomExit');
     const hasRerolledIncomingReward = Object.hasOwn(occurrence, 'rerolledIncomingReward');
@@ -641,6 +642,7 @@ export function decodeTopologyStructure(
         ...(hasKeepsakeRack ? ['keepsakeRack'] : []),
         ...(hasEris ? ['eris'] : []),
         ...(hasChallengeSwitch ? ['challengeSwitch'] : []),
+        ...(hasLockedExits ? ['lockedExits'] : []),
         ...(hasInfernalContractPedestal ? ['infernalContractPedestal'] : []),
         ...(hasPhantomExit ? ['phantomExit'] : []),
         ...(hasRerolledIncomingReward ? ['rerolledIncomingReward'] : []),
@@ -682,6 +684,8 @@ export function decodeTopologyStructure(
         hasEris,
         challengeSwitch: occurrence.challengeSwitch,
         hasChallengeSwitch,
+        lockedExits: occurrence.lockedExits,
+        hasLockedExits,
         infernalContractPedestal: occurrence.infernalContractPedestal,
         hasInfernalContractPedestal,
         phantomExit: occurrence.phantomExit,

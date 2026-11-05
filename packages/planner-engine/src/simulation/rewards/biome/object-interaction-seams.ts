@@ -1,9 +1,17 @@
 import {
   createBiomeAddress,
   createInfernalContractPedestalAddress,
+  createRoomActionAddress,
   createShopOfferAddress,
   semanticAddressKey,
 } from '../../../authored-project/addresses';
+import {
+  extraExitLockHost,
+  lockableExitKeys,
+  unlockExitAction,
+} from '../../../authored-project/locked-exits';
+import { roomActionKey } from '../../../authored-project/room-actions/key';
+import type { PreparedUnlockExitEncounter } from '../../encounters/unlock-exit';
 import { hermesShrinePurchaseAction } from '../../../authored-project/hermes-shrine-delivery';
 import {
   hermesShrineInitialGenerationKey,
@@ -27,6 +35,7 @@ import type {
   ChampionItemInteraction,
   HermesShrineInteraction,
   HermesShrineInteractionOffer,
+  LockedDoorsInteraction,
   RoomObjectInteractions,
   WorldShopInteraction,
 } from '../../commerce/object-interactions';
@@ -64,9 +73,13 @@ function authoredRoom(
   return room?.kind === 'authored' ? room : undefined;
 }
 
-/** A Well, Pool, World Shop, Shrine or Contract pedestal is interacted with through room actions. */
-function hasInteractiveObject(room: CanonicalAuthoredRoom): boolean {
+/**
+ * A Well, Pool, World Shop, Shrine, Contract pedestal or locked door is
+ * interacted with through room actions.
+ */
+function hasInteractiveObject(catalog: Catalog, room: CanonicalAuthoredRoom): boolean {
   return (
+    extraExitLockHost(catalog, room.gameName) !== undefined ||
     room.stygianWell !== undefined ||
     room.purgingPool !== undefined ||
     room.hermesShrine !== undefined ||
@@ -85,7 +98,7 @@ export function captureRoomActionEnd(
     return state;
   const roomKey = semanticAddressKey(event.origin);
   const room = authoredRoom(context, roomKey);
-  if (room === undefined || !hasInteractiveObject(room)) return state;
+  if (room === undefined || !hasInteractiveObject(context.catalog, room)) return state;
   return Object.freeze({
     ...state,
     roomActionEnds: new Map(state.roomActionEnds).set(
@@ -460,6 +473,101 @@ function challengeSwitchInteraction(
 }
 
 /**
+ * An entered lock host's doors: each door that can lock with the command
+ * flipping it (refused beside a challenge switch), and once its Timeline is
+ * reached, each locked door's press, appended where its actions end, or its
+ * fight once pressed.
+ */
+function lockedDoorsInteraction(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  timelineReached: boolean,
+  unlockEncounters: ReadonlyMap<string, PreparedUnlockExitEncounter>,
+): LockedDoorsInteraction | undefined {
+  if (room.origin.kind !== 'occurrence') return undefined;
+  const origin = room.origin;
+  const locked = room.lockedExits ?? [];
+  const doors = lockableExitKeys(catalog, room.gameName).map((exitKey) =>
+    Object.freeze({
+      exitKey,
+      locked: locked.includes(exitKey),
+      ...(room.challengeSwitch !== undefined && !locked.includes(exitKey)
+        ? { lock: 'challengeSwitch' as const }
+        : {
+            command: Object.freeze({
+              kind: 'ReplaceLockedExit' as const,
+              occurrence: origin,
+              exitKey,
+              locked: !locked.includes(exitKey),
+            }),
+          }),
+    }),
+  );
+  const biome = createBiomeAddress(origin.routeKey, origin.biomeKey);
+  const order = room.roomActionRoster.rows.flatMap((row) =>
+    row.rank === null ? [] : [row.reference],
+  );
+  const unlocks = locked.map((exitKey) => {
+    const reference = unlockExitAction(exitKey);
+    const action = createRoomActionAddress(biome, origin.occurrenceId, roomActionKey(reference));
+    const pressed = order.some(
+      (candidate) => candidate.kind === 'unlockExit' && candidate.exitKey === exitKey,
+    );
+    const prepared = unlockEncounters.get(semanticAddressKey(action));
+    return Object.freeze({
+      exitKey,
+      action,
+      ...(pressed
+        ? {}
+        : {
+            append: Object.freeze({
+              kind: 'InsertRoomAction' as const,
+              action,
+              reference,
+              index: order.length,
+            }),
+          }),
+      ...(prepared === undefined
+        ? {}
+        : {
+            encounter: Object.freeze({
+              selectedEncounterDefinitionKey: prepared.phase.encounterKey,
+              label: prepared.phase.label,
+              customization: Object.freeze(
+                (prepared.phase.customization ?? []).map((decision) =>
+                  Object.freeze({
+                    key: decision.key,
+                    label: decision.label,
+                    selection: decision.selection,
+                    ...(decision.value === undefined ? {} : { value: decision.value }),
+                    valueSupported: decision.valueSupported,
+                    ...(decision.value === undefined
+                      ? {}
+                      : {
+                          reset: Object.freeze({
+                            kind: 'ReplaceUnlockExitCustomization' as const,
+                            action,
+                            decisionKey: decision.key,
+                            value: null,
+                          }),
+                        }),
+                  }),
+                ),
+              ),
+            }),
+          }),
+    });
+  });
+  return Object.freeze({
+    doors: Object.freeze(doors),
+    lockedAtLeave: Object.freeze(
+      unlocks.flatMap((unlock) => (unlock.append === undefined ? [] : [unlock.exitKey])),
+    ),
+    ...(timelineReached ? { unlocks: Object.freeze(unlocks) } : {}),
+  });
+}
+
+/**
  * What can be done with each reached room's World Shop, Shrine and Contract
  * pedestal, and which switch its entry could hold, by room.
  */
@@ -507,6 +615,18 @@ export function roomObjectInteractions(
     );
     if (challengeSwitch === undefined) continue;
     interactions.set(roomKey, Object.freeze({ ...interactions.get(roomKey), challengeSwitch }));
+  }
+  for (const roomKey of state.enteredLockHosts) {
+    const room = authoredRoom(context, roomKey);
+    if (room === undefined) continue;
+    const lockedDoors = lockedDoorsInteraction(
+      context.catalog,
+      room,
+      state.roomActionEnds.has(roomKey),
+      state.unlockExitEncounters,
+    );
+    if (lockedDoors === undefined) continue;
+    interactions.set(roomKey, Object.freeze({ ...interactions.get(roomKey), lockedDoors }));
   }
   return interactions;
 }

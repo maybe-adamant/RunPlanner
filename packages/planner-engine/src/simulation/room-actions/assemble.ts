@@ -39,6 +39,14 @@ function assessOrder(
   const issues: RoomActionRosterIssue[] = [];
   const indexes = new Map(order.map((reference, index) => [roomActionKey(reference), index]));
   const checkpointAfterIndex = (checkpointKey: string): number => {
+    // The exit is usable once every required action is done.
+    if (checkpointKey === 'exitUsable')
+      return [...active.values()]
+        .filter((entry) => entry.participation === 'required')
+        .reduce(
+          (rank, entry) => Math.max(rank, indexes.get(roomActionKey(entry.reference)) ?? -1),
+          -1,
+        );
     if (!checkpointKey.startsWith('nextPhaseUsable:')) return -1;
     const checkpoint = checkpoints.get(checkpointKey);
     if (checkpoint === undefined) return -1;

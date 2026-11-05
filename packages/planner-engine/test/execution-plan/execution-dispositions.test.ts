@@ -54,6 +54,7 @@ const executionDispositions = {
     interactKeepsakeRack: 'covered',
     interactEris: 'deferred-route',
     interactChallengeSwitch: 'deferred-route',
+    unlockExit: 'deferred-route',
     reroll: 'covered',
     rerollStygianWell: 'covered',
     rerollPurgingPool: 'covered',

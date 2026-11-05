@@ -35,6 +35,8 @@ export interface RawOccurrence {
   readonly hasEris?: boolean;
   readonly challengeSwitch?: unknown;
   readonly hasChallengeSwitch?: boolean;
+  readonly lockedExits?: unknown;
+  readonly hasLockedExits?: boolean;
   readonly infernalContractPedestal?: unknown;
   readonly hasInfernalContractPedestal?: boolean;
   readonly phantomExit?: unknown;

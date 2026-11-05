@@ -1,3 +1,4 @@
+import { normalExitOrdinal } from './ordering';
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import { observedChallengeSwitchKind } from './challenge-switch-assembly';
 import {
@@ -522,6 +523,10 @@ export function occurrenceActionLabelParts(
     case 'interactChallengeSwitch': {
       const kind = observedChallengeSwitchKind(catalog, occurrence);
       return plain(kind === undefined ? 'Use switch' : `Use ${challengeSwitchKindLabel(kind)}`);
+    }
+    case 'unlockExit': {
+      const ordinal = normalExitOrdinal(reference.exitKey);
+      return plain(ordinal === undefined ? 'Unlock door' : `Unlock Door ${ordinal}`);
     }
     case 'reroll': {
       const target = reference.target;

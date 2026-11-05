@@ -162,6 +162,52 @@ export interface ChallengeSwitchEncounterInteraction {
   }[];
 }
 
+/**
+ * A lock host's doors: which can lock and how each is set, and each locked
+ * door's press. Door locks are an Overview fact of entry; a press appends
+ * where the room's actions end.
+ */
+export interface LockedDoorsInteraction {
+  /** Each door that can lock, in exit order; never the first. */
+  readonly doors: readonly {
+    readonly exitKey: string;
+    readonly locked: boolean;
+    /** Flips the lock; absent while the door cannot lock in this room. */
+    readonly command?: CommandOf<'ReplaceLockedExit'>;
+    /** Why the door cannot lock: the room holds a challenge switch. */
+    readonly lock?: 'challengeSwitch';
+  }[];
+  /**
+   * The doors still locked when the room is left, which the room cannot be
+   * left through: locked and never pressed.
+   */
+  readonly lockedAtLeave: readonly string[];
+  /** Each locked door's press, in exit order; absent while the room's Timeline is unreached. */
+  readonly unlocks?: readonly {
+    readonly exitKey: string;
+    readonly action: import('../../authored-project/addresses').RoomActionSemanticAddress;
+    /** Appends the press where the room's actions end; absent once it is pressed. */
+    readonly append?: CommandOf<'InsertRoomAction'>;
+    /** The pressed door's fight, generated at its press; absent while unreached. */
+    readonly encounter?: UnlockExitEncounterInteraction;
+  }[];
+}
+
+/** A pressed locked door's fight and each declared decision with its authored value. */
+export interface UnlockExitEncounterInteraction {
+  readonly selectedEncounterDefinitionKey: string;
+  readonly label: string;
+  readonly customization: readonly {
+    readonly key: string;
+    readonly label: string;
+    readonly selection: import('../../catalog-schema').EncounterCustomizationDecision['selection'];
+    readonly value?: import('../../authored-project/model').AuthoredEncounterCustomization;
+    readonly valueSupported: boolean;
+    /** Restores the native roll; present while a value is authored. */
+    readonly reset?: CommandOf<'ReplaceUnlockExitCustomization'>;
+  }[];
+}
+
 /** A room's object interactions; an object whose sequence is unreached has none. */
 export interface RoomObjectInteractions {
   readonly worldShop?: WorldShopInteraction;
@@ -169,6 +215,8 @@ export interface RoomObjectInteractions {
   readonly championItem?: ChampionItemInteraction;
   /** Present at every entered switch host. */
   readonly challengeSwitch?: ChallengeSwitchInteraction;
+  /** Present at every entered lock host. */
+  readonly lockedDoors?: LockedDoorsInteraction;
 }
 
 export interface RoomObjectInteractionArtifacts {
@@ -176,6 +224,10 @@ export interface RoomObjectInteractionArtifacts {
   /** The observed switch's encounter generation capability at its room's entry. */
   readonly challengeSwitchEncounterAt: (
     occurrence: OccurrenceAddress,
+  ) => import('../encounters').GeneratedEncounterCandidateCapability | undefined;
+  /** A pressed locked door's fight generation capability at its press. */
+  readonly unlockExitEncounterAt: (
+    action: import('../../authored-project/addresses').RoomActionSemanticAddress,
   ) => import('../encounters').GeneratedEncounterCandidateCapability | undefined;
 }
 
@@ -185,16 +237,28 @@ export function createRoomObjectInteractionArtifacts(
     string,
     import('../encounters/challenge-switch').PreparedChallengeSwitchEncounter
   >,
+  unlockExitEncounters: ReadonlyMap<
+    string,
+    import('../encounters/unlock-exit').PreparedUnlockExitEncounter
+  >,
 ): RoomObjectInteractionArtifacts {
   const privateInteractions = new Map(interactions);
   const privateEncounters = new Map(challengeSwitchEncounters);
+  const privateUnlocks = new Map(unlockExitEncounters);
   return Object.freeze({
     at: (occurrence: OccurrenceAddress) => privateInteractions.get(semanticAddressKey(occurrence)),
     challengeSwitchEncounterAt: (occurrence: OccurrenceAddress) =>
       privateEncounters.get(semanticAddressKey(occurrence))?.capability,
+    unlockExitEncounterAt: (
+      action: import('../../authored-project/addresses').RoomActionSemanticAddress,
+    ) => privateUnlocks.get(semanticAddressKey(action))?.capability,
   });
 }
 
 export function createEmptyRoomObjectInteractionArtifacts(): RoomObjectInteractionArtifacts {
-  return Object.freeze({ at: () => undefined, challengeSwitchEncounterAt: () => undefined });
+  return Object.freeze({
+    at: () => undefined,
+    challengeSwitchEncounterAt: () => undefined,
+    unlockExitEncounterAt: () => undefined,
+  });
 }

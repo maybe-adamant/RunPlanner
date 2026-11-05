@@ -374,6 +374,7 @@ export function publishChronology(
         accumulation.derivedAcquisitionEntryContexts,
       ),
       interactionWalk.challengeSwitchEncounters,
+      interactionWalk.unlockExitEncounters,
     ),
     findingRegions: Object.freeze(immutableFindingRegions),
     encounterEntryVowRanks: walk.encounterEntryVowRanks,

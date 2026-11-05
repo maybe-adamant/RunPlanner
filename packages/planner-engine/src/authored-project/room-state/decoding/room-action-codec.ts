@@ -7,6 +7,7 @@ import type {
   RoomActionState,
 } from '../../model';
 import { decodeResolvedRewardOffer } from './reward-acquisition-codec';
+import { decodeGeneratedEncounterCustomization } from './generated-encounter-codec';
 import { decodeStygianWellGenerationKey } from './well-codec';
 import { PURGING_POOL_SLOT_KEYS, STYGIAN_WELL_SLOT_KEYS } from '../../feature-rolls';
 import { roomActionKey } from '../../room-actions/state';
@@ -175,6 +176,38 @@ function decodeRoomActionReference(
             ),
           }
         : {}),
+    });
+  }
+  if (kind === 'unlockExit') {
+    const hasCustomization = Object.hasOwn(reference, 'customization');
+    expectExactKeys(
+      reference,
+      ['kind', 'exitKey', ...(hasCustomization ? ['customization'] : [])],
+      path,
+    );
+    const customization = hasCustomization
+      ? (() => {
+          const record = expectRecord(reference.customization, `${path}.customization`);
+          if (Object.keys(record).length === 0)
+            failProjectDocument(`${path}.customization`, 'must not be empty');
+          // The locked door's fight declares only a generated composition.
+          return Object.freeze(
+            Object.fromEntries(
+              Object.entries(record).map(([decisionKey, value]) => [
+                decisionKey,
+                decodeGeneratedEncounterCustomization(
+                  expectRecord(value, `${path}.customization.${decisionKey}`),
+                  `${path}.customization.${decisionKey}`,
+                ),
+              ]),
+            ),
+          );
+        })()
+      : undefined;
+    return Object.freeze({
+      kind,
+      exitKey: expectNonBlankString(reference.exitKey, `${path}.exitKey`),
+      ...(customization === undefined ? {} : { customization }),
     });
   }
   if (kind === 'reroll') {
