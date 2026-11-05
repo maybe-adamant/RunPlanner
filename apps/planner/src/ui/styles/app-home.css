@@ -936,9 +936,9 @@ button.home-slot-name {
   flex-direction: column;
   align-items: center;
   gap: 0;
-  /* The clip keeps room for the name field's left margin and focus outlines. */
+  /* The clip keeps room for focus outlines; the extra block margin keeps the header's height. */
   padding: 6px;
-  margin: -6px;
+  margin: -12px -6px;
   overflow: hidden;
 }
 
