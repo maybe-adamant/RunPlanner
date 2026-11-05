@@ -2,7 +2,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useAppSelector } from '@planner/state/store';
-import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { hintProps } from '@planner/ui/controls/hint';
 import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 
@@ -24,6 +24,8 @@ export interface RoomAddAction {
 export interface RoomAddGroup {
   readonly key: string;
   readonly label: string;
+  /** A room object's icon: the group then reads like the other object entries. */
+  readonly icon?: ArtworkSource | undefined;
   readonly actions: readonly RoomAddAction[];
 }
 
@@ -147,7 +149,10 @@ export function RoomAddGroupMenu({ group }: { readonly group: RoomAddGroup }) {
           ref={trigger}
           type="button"
         >
-          {group.label}
+          {group.icon === undefined ? null : (
+            <ArtworkIcon className="artwork-label-icon" source={group.icon} />
+          )}
+          {group.icon === undefined ? group.label : `${group.label} ▸`}
         </button>
       </Popover.Trigger>
       <Popover.Portal>

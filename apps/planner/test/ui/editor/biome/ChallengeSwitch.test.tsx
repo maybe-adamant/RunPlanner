@@ -58,7 +58,7 @@ describe('challenge switch rows on the room Overview', () => {
     expect(hostRoom(application).challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
   });
 
-  it("adds the observed switch's use to the Timeline in one click", async () => {
+  it("adds the observed switch's use from its object entry", async () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
@@ -69,7 +69,8 @@ describe('challenge switch rows on the room Overview', () => {
     await user.click(screen.getByRole('option', { name: /Infernal Trove/ }));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
-    await user.click(screen.getByRole('button', { name: 'Infernal Trove' }));
+    await user.click(screen.getByRole('button', { name: 'Infernal Trove ▸' }));
+    await user.click(await screen.findByRole('button', { name: 'Use Infernal Trove' }));
     expect(
       hostRoom(application).roomActions.order.some(
         (reference) => reference.kind === 'interactChallengeSwitch',
@@ -83,7 +84,8 @@ describe('challenge switch rows on the room Overview', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     await user.click(screen.getByRole('checkbox', { name: 'Challenge Switch' }));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await user.click(screen.getByRole('button', { name: 'Unseen Sigil' }));
+    await user.click(screen.getByRole('button', { name: 'Unseen Sigil ▸' }));
+    await user.click(await screen.findByRole('button', { name: 'Use Unseen Sigil' }));
 
     await user.click(screen.getByRole('checkbox', { name: 'Nectar dropped' }));
     expect(hostRoom(application).challengeSwitch?.nectarDropped).toBe(true);

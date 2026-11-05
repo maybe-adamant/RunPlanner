@@ -54,7 +54,11 @@ import { TravelDealLine } from './commerce/PurchaseRowControls';
 import { GoldAmount, PurchaseCost } from './commerce/GoldAmount';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
-import { roomActionIcon } from '@planner/ui/artwork/roomArtwork';
+import {
+  challengeSwitchIcon,
+  roomActionIcon,
+  roomObjectIcon,
+} from '@planner/ui/artwork/roomArtwork';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import {
   DoorsOpenBanner,
@@ -150,16 +154,25 @@ function WorkbenchAddArea({
     { label: string; object?: string; rows: (typeof optionalRows)[number][] }
   >();
   const objectActionRows: (typeof optionalRows)[number][] = [];
+  const switchKind = [...optionalRows, ...objectRows].find(
+    (row) => row.challengeSwitchKind !== undefined,
+  )?.challengeSwitchKind;
+  const switchGroup = {
+    key: 'object:challengeSwitch',
+    label: switchKind === undefined ? 'Challenge Switch' : challengeSwitchKindLabel(switchKind),
+    object: 'challengeSwitch',
+  };
   for (const row of optionalRows) {
-    // The rack and the challenge switch are room objects used in one step.
-    if (
-      row.reference.kind === 'interactKeepsakeRack' ||
-      row.reference.kind === 'interactChallengeSwitch'
-    ) {
+    // The rack is a room object used in one step.
+    if (row.reference.kind === 'interactKeepsakeRack') {
       objectActionRows.push(row);
       continue;
     }
-    const group = row.addGroup ?? { key: 'other', label: 'Actions' };
+    // The switch's press and its claim pickups share one entry, named by the switch.
+    const group =
+      row.reference.kind === 'interactChallengeSwitch' || row.addGroup?.object === 'challengeSwitch'
+        ? switchGroup
+        : (row.addGroup ?? { key: 'other', label: 'Actions' });
     const entry = groups.get(group.key) ?? {
       label: group.label,
       ...(group.object === undefined ? {} : { object: group.object }),
@@ -206,7 +219,19 @@ function WorkbenchAddArea({
         rank: objectOrder.indexOf(entry.object!) + 0.5,
         node: (
           <li key={key}>
-            <RoomAddGroupMenu group={toGroup(key, entry)} />
+            <RoomAddGroupMenu
+              group={{
+                ...toGroup(key, entry),
+                ...(entry.object === 'challengeSwitch'
+                  ? {
+                      icon:
+                        switchKind === undefined
+                          ? roomObjectIcon('challengeSwitch')
+                          : challengeSwitchIcon(switchKind),
+                    }
+                  : {}),
+              }}
+            />
           </li>
         ),
       })),
@@ -215,10 +240,7 @@ function WorkbenchAddArea({
     ...objectActionRows.map((row) => {
       const action = addAction(row);
       return {
-        rank:
-          row.reference.kind === 'interactChallengeSwitch'
-            ? objectOrder.indexOf('challengeSwitch')
-            : objectOrder.length,
+        rank: objectOrder.length,
         node: (
           <li key={row.key}>
             <button
@@ -234,12 +256,7 @@ function WorkbenchAddArea({
               {action.icon === undefined ? null : (
                 <ArtworkIcon className="artwork-label-icon" source={action.icon} />
               )}
-              {/* Named as the object, like the Well, Pool and Shrine entries. */}
-              {row.reference.kind === 'interactKeepsakeRack'
-                ? 'Keepsake Rack'
-                : row.challengeSwitchKind === undefined
-                  ? 'Challenge Switch'
-                  : challengeSwitchKindLabel(row.challengeSwitchKind)}
+              {row.reference.kind === 'interactKeepsakeRack' ? 'Keepsake Rack' : row.label}
             </button>
           </li>
         ),
