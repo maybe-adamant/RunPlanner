@@ -427,7 +427,7 @@ export function EncounterCustomizationLauncher({
     <>
       <button
         {...triggerTarget}
-        className="dialog-launcher quiet-action"
+        className="dialog-launcher quiet-action encounter-launcher"
         disabled={
           ('aria-disabled' in triggerTarget ? triggerTarget['aria-disabled'] : undefined) ||
           contextUnreached ||

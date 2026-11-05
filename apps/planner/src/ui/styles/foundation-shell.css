@@ -537,3 +537,13 @@ button:disabled {
   opacity: 0.55;
   filter: saturate(0.35);
 }
+
+/* The encounter Customize / View roster launcher sits inline with pickers: a slim gold-outlined chip. */
+.encounter-launcher {
+  min-height: 28px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 0.84rem;
+  font-weight: 500;
+}
