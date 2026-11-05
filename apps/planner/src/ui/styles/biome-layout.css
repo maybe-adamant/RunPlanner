@@ -208,12 +208,19 @@
 
 /* Folds or pins the rail, like the panel navigation's toggle, atop the rail column. */
 .biome-structure-head {
-  display: grid;
+  display: flex;
+  align-items: center;
   gap: 4px;
 }
 
+/* The rail toggle opens the title row; the clear action ends it, far from the toggle. */
+.biome-structure-head > .biome-structure-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .biome-rail-pin {
-  justify-self: end;
+  flex: 0 0 auto;
   padding: 2px 7px;
   border: 0;
   border-radius: 6px;
@@ -261,8 +268,12 @@
   padding-right: 6px;
 }
 
-.biome-workspace[data-rail='folded'] .biome-rail-pin {
-  justify-self: center;
+.biome-workspace[data-rail='folded'] .biome-structure-head {
+  justify-content: center;
+}
+
+.biome-workspace[data-rail='folded'] .biome-structure-head > .biome-structure-heading {
+  flex: 0 0 auto;
 }
 
 /* Opened while folded, the full rail floats over the room. */
