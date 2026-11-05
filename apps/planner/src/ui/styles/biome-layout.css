@@ -319,7 +319,10 @@
   gap: 4px;
 }
 
-.biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-rail-pending {
+/* Folded, a pending stop keeps only its glyph. */
+.biome-workspace[data-rail='folded']:not([data-rail-open])
+  .biome-rail-node
+  > .biome-rail-selection.biome-rail-pending {
   position: static;
   width: auto;
   height: auto;

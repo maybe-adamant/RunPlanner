@@ -72,6 +72,7 @@ export function workspaceRoomIcon(input: {
     // A fighting room without its own icon shows its foes; one without foes, the empty room.
     case 'Combat':
     case 'Opening':
+    case 'PreHub':
     case 'Devotion':
       return Object.freeze({
         kind: encounter?.nonCombat === true ? ('empty' as const) : ('combat' as const),
@@ -82,7 +83,6 @@ export function workspaceRoomIcon(input: {
     case 'Hub':
       return Object.freeze({ kind: 'hub' as const, biomeKey });
     case 'Intro':
-    case 'PreHub':
     case 'Preboss':
       return Object.freeze({ kind: 'empty' as const, biomeKey });
   }
