@@ -1,15 +1,3 @@
-/* Narrow windows give the header's spare room to the plan name. */
-@container app-viewport (max-width: 1080px) {
-  /* Space held for a hidden Discard or an absent save failure goes to the plan name. */
-  .editor-title > .editor-discard[data-hidden] {
-    display: none;
-  }
-
-  .editor-save-slot {
-    flex-basis: 0;
-  }
-}
-
 /*
  * One width policy for the editor, from what the room's content needs:
  *  - The Timeline lays out its rows in full from 46rem; the optional actions

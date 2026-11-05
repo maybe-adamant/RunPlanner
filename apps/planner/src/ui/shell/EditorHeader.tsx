@@ -73,37 +73,40 @@ export function EditorHeader({
       </div>
       <div className="editor-title">
         <ProjectNameField key={name} name={name} />
-        <button
-          className="text-action"
-          onClick={() => {
-            const field = document.getElementById(PLAN_NAME_FIELD_ID);
-            if (field instanceof HTMLInputElement) {
-              field.focus();
-              field.select();
-            }
-          }}
-          type="button"
-        >
-          Rename
-        </button>
-        {/* Shown only after an edit since opening; its space stays so nothing shifts. */}
-        <button
-          aria-hidden={!revertAvailable || undefined}
-          className="text-action editor-discard"
-          data-hidden={!revertAvailable || undefined}
-          disabled={!revertAvailable}
-          onClick={() => {
-            const outcome = operations.revertToOpened();
-            setFailure(outcome.status === 'failure' ? outcome : null);
-          }}
-          tabIndex={revertAvailable ? undefined : -1}
-          type="button"
-        >
-          Discard changes
-        </button>
-        <span className="editor-save-slot">
-          <ProjectFileFeedback result={failure} session={librarySession} />
-        </span>
+        {/* Rename, Discard and the save notice sit under the name, so the name stays centred. */}
+        <div className="editor-title-actions">
+          <button
+            className="text-action"
+            onClick={() => {
+              const field = document.getElementById(PLAN_NAME_FIELD_ID);
+              if (field instanceof HTMLInputElement) {
+                field.focus();
+                field.select();
+              }
+            }}
+            type="button"
+          >
+            Rename
+          </button>
+          {/* Shown only after an edit since opening. */}
+          <button
+            aria-hidden={!revertAvailable || undefined}
+            className="text-action editor-discard"
+            data-hidden={!revertAvailable || undefined}
+            disabled={!revertAvailable}
+            onClick={() => {
+              const outcome = operations.revertToOpened();
+              setFailure(outcome.status === 'failure' ? outcome : null);
+            }}
+            tabIndex={revertAvailable ? undefined : -1}
+            type="button"
+          >
+            Discard changes
+          </button>
+          <span className="editor-save-slot">
+            <ProjectFileFeedback result={failure} session={librarySession} />
+          </span>
+        </div>
       </div>
       {/* History and send end the header. */}
       <div className="editor-header-actions">

@@ -929,27 +929,33 @@ button.home-slot-name {
   margin-top: 10px;
 }
 
-/* The centred title: its empty reserved slots give way first, then the name ellipsizes. */
+/* The centred title: the name on its own line, its actions in a quiet line beneath. */
 .editor-title {
   display: flex;
   min-width: 12rem;
-  flex: 1 0.001 auto;
-  align-items: baseline;
-  gap: 12px;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
   /* The clip keeps room for the name field's left margin and focus outlines. */
   padding: 6px;
   margin: -6px;
   overflow: hidden;
 }
 
-.editor-title > .text-action {
+.editor-title-actions {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px;
+  font-size: 0.82rem;
+}
+
+.editor-title-actions > .text-action {
   flex: none;
 }
 
-.editor-title > .editor-discard[data-hidden] {
-  min-width: 0;
-  flex: 0 1 auto;
-  overflow: hidden;
+.editor-title-actions > .editor-discard[data-hidden] {
+  display: none;
 }
 
 .editor-title .app-plan-name {
@@ -957,6 +963,7 @@ button.home-slot-name {
   field-sizing: content;
   flex: 0 0 auto;
   max-width: 40ch;
+  margin: 0;
   border-bottom-color: transparent;
   color: var(--text);
   font-family: Georgia, 'Times New Roman', serif;
@@ -968,16 +975,15 @@ button.home-slot-name {
   border-bottom-color: #5f5a66;
 }
 
-.editor-discard[data-hidden] {
-  visibility: hidden;
-}
-
-/* Reserved for "Not saved · Details", so a write failure never moves the header. */
+/* "Not saved · Details" after a write failure. */
 .editor-save-slot {
   display: inline-flex;
   min-width: 0;
-  flex: 0 1 11rem;
-  font-size: 0.82rem;
+  flex: 0 1 auto;
+}
+
+.editor-save-slot:empty {
+  display: none;
 }
 
 .send-split {
