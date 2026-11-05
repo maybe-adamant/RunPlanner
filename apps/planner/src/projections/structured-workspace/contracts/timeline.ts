@@ -74,6 +74,8 @@ export interface WorkspacePurchaseAffordability {
   readonly label: string;
   /** How likely the gold held covers the price, by the percent shown. */
   readonly tone: 'high' | 'medium' | 'low';
+  /** The estimated gold held just before the purchase. */
+  readonly balanceBefore: WorkspaceGoldAmount;
 }
 
 export interface WorkspaceRoomActionRow {
@@ -233,8 +235,6 @@ export interface WorkspaceRoomActions {
   readonly objectEntries?: readonly import('./features').WorkspaceRoomObjectEntry[];
   readonly steadyGrowth?: readonly WorkspaceSteadyGrowthControl[];
   readonly transcendentEmbryo?: readonly WorkspaceTranscendentEmbryoControl[];
-  /** Gold held when the doors open; absent when the ledger cannot say. */
-  readonly current?: WorkspaceGoldAmount;
   /** Gold an encounter phase itself settles (a Nemesis bet), shown on its encounter line. */
   readonly phaseGold?: readonly {
     readonly phaseKey: string;

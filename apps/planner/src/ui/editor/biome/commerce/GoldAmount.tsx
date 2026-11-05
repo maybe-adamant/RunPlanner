@@ -3,6 +3,7 @@ import type {
   WorkspacePurchaseAffordability,
 } from '@planner/projections/structured-workspace';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { hintProps } from '@planner/ui/controls/hint';
 import { rewardArtwork } from '@planner/ui/artwork/rewards/rewardArtwork';
 
 /** A gold amount with the game's gold icon. */
@@ -25,18 +26,6 @@ export function GoldAmount({
   );
 }
 
-/** The room's gold when its doors open, before its purchases, on its Doors open banner. */
-export function RoomGoldSummary({ current }: { readonly current?: WorkspaceGoldAmount }) {
-  if (current === undefined) return null;
-  return (
-    <span className="room-gold-summary">
-      <span className="room-gold-figure">
-        Current <GoldAmount amount={current} />
-      </span>
-    </span>
-  );
-}
-
 /** A purchase's price and the chance the gold held covers it, at the end of its row. */
 export function PurchaseCost({
   affordability,
@@ -50,7 +39,12 @@ export function PurchaseCost({
     <span className="purchase-cost">
       {price === undefined ? null : <GoldAmount amount={price} className="purchase-cost-price" />}
       {affordability === undefined ? null : (
-        <span className="purchase-affordability" data-tone={affordability.tone}>
+        <span
+          className="purchase-affordability"
+          data-tone={affordability.tone}
+          {...hintProps(`${affordability.balanceBefore.label} gold before this purchase`)}
+          tabIndex={0}
+        >
           {affordability.label}
           <span className="visually-hidden"> chance to afford</span>
         </span>

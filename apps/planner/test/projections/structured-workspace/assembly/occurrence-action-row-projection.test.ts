@@ -65,7 +65,6 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   goldenFOccurrenceId,
-  goldenGBiome,
   replaceNemesisRandomEventInteraction,
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
@@ -2210,8 +2209,6 @@ describe('purchase gold', () => {
 });
 
 describe('Doors open room gold', () => {
-  const plain = (gold: number) => (gold < 0 ? `−${-gold}` : `${gold}`);
-
   function roomGoldWitness(
     project: ProjectDocument,
     room: ReturnType<typeof createOccurrenceAddress>,
@@ -2229,41 +2226,6 @@ describe('Doors open room gold', () => {
     if (priced.availability !== 'available') throw new Error('The room is not priced');
     return { actions: node.room.roomActions, room: priced.room };
   }
-
-  it('shows the estimated gold held when the doors open', () => {
-    const well = createOccurrenceAddress(
-      goldenFBiome,
-      createOccurrenceId('golden-f-preboss-shop:postboss'),
-    );
-    const { actions, room } = roomGoldWitness(
-      authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint()),
-      well,
-    );
-    const balance = room.doorsOpenBalance;
-    if (balance.availability !== 'available') throw new Error('The Well balance is unavailable');
-    expect(balance.balance.variance).toBeGreaterThan(0);
-    // A spread balance reads as its rounded mean and its one-deviation spread.
-    expect(actions?.current?.label).toMatch(
-      new RegExp(`^${plain(Math.round(balance.balance.mean))} ±\\d+$`),
-    );
-    expect(actions?.current).toEqual(goldBalanceLabel(balance.balance));
-  });
-
-  it('marks a spread balance approximate', () => {
-    const intro = createOccurrenceAddress(goldenGBiome, createOccurrenceId('golden-g-intro'));
-    const { actions, room } = roomGoldWitness(
-      underworldCheckpointArtifacts['underworld-f-pool'].load(),
-      intro,
-    );
-    const balance = room.doorsOpenBalance;
-    if (balance.availability !== 'available') throw new Error('The G intro balance is unavailable');
-    expect(balance.balance.variance).toBeGreaterThan(0);
-    // A spread balance reads as its rounded mean and its one-deviation spread.
-    expect(actions?.current?.label).toMatch(
-      new RegExp(`^${plain(Math.round(balance.balance.mean))} ±\\d+$`),
-    );
-    expect(actions?.current).toEqual(goldBalanceLabel(balance.balance));
-  });
 
   it('keeps a rolled purchase price as its range', () => {
     const well = createOccurrenceAddress(
@@ -2327,6 +2289,7 @@ describe('Purchase affordability', () => {
         return {
           probability: affordableProbability,
           exact: balanceBefore.balance.variance === 0 && price.variance === 0,
+          balanceBefore: goldBalanceLabel(balanceBefore.balance),
         };
       });
     const rows = (node.room.roomActions?.rows ?? []).filter((row) => row.price !== undefined);
@@ -2371,8 +2334,12 @@ describe('Purchase affordability', () => {
     ];
     const witnessed = rooms.flatMap(({ project, room }) => affordabilityWitness(project, room));
     expect(witnessed.length).toBeGreaterThan(0);
-    for (const { probability, exact, affordability } of witnessed) {
-      expect(affordability).toEqual(expectedAffordability(probability, exact));
+    for (const { probability, exact, balanceBefore, affordability } of witnessed) {
+      // The figure also carries the estimated gold held just before the purchase.
+      expect(affordability).toEqual({
+        ...expectedAffordability(probability, exact),
+        balanceBefore,
+      });
       expect(affordability!.label).toMatch(/^(>99%|<1%|\d{1,3}%)$/);
     }
   });

@@ -12,10 +12,11 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { act, cleanup, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { findingSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
+import { PurchaseCost } from '@planner/ui/editor/biome/commerce/GoldAmount';
 import { renderWorkspace } from '@planner-test/support/biome-workbench';
 
 afterEach(cleanup);
@@ -165,5 +166,19 @@ describe('a room’s doors on its Timeline', () => {
       'listitem',
     )[0]!;
     expect(firstDraw.innerHTML).not.toBe(doorOne!.innerHTML);
+  });
+});
+
+describe('a purchase’s chance to afford', () => {
+  it('tells the gold held just before the purchase on hover', () => {
+    render(
+      <PurchaseCost
+        affordability={{ label: '>99%', tone: 'high', balanceBefore: { label: '1413 ±90' } }}
+        price={{ label: '650' }}
+      />,
+    );
+    const figure = screen.getByText('>99%').closest<HTMLElement>('.purchase-affordability');
+    expect(figure?.dataset.hint).toBe('1413 ±90 gold before this purchase');
+    expect(figure?.tabIndex).toBe(0);
   });
 });

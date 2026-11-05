@@ -1011,7 +1011,6 @@ function roomActionsForOccurrence(
     rows: allProjectedRows,
     ...(steadyGrowth.length === 0 ? {} : { steadyGrowth }),
     ...(transcendentEmbryo.length === 0 ? {} : { transcendentEmbryo }),
-    ...roomGold(input.gold, owner),
     ...phaseGold(input.gold, owner),
   });
 }
@@ -1042,10 +1041,13 @@ function purchaseGold(
     ...(affordableProbability === undefined || balanceBefore.availability !== 'available'
       ? {}
       : {
-          affordability: purchaseAffordability(
-            affordableProbability,
-            balanceBefore.balance.variance === 0 && price.variance === 0,
-          ),
+          affordability: Object.freeze({
+            ...purchaseAffordability(
+              affordableProbability,
+              balanceBefore.balance.variance === 0 && price.variance === 0,
+            ),
+            balanceBefore: goldBalanceLabel(balanceBefore.balance),
+          }),
         }),
   };
 }
@@ -1119,7 +1121,7 @@ function rowGoldGain(
 export function purchaseAffordability(
   probability: number,
   exact: boolean,
-): WorkspacePurchaseAffordability {
+): Omit<WorkspacePurchaseAffordability, 'balanceBefore'> {
   const percent = Math.round(probability * 100);
   const label =
     exact || (percent > 0 && percent < 100) ? `${percent}%` : percent >= 100 ? '>99%' : '<1%';
@@ -1138,18 +1140,6 @@ export function goldBalanceLabel(moments: GoldMoments): WorkspaceGoldAmount {
   const step = deviation < 50 ? 5 : 10;
   const spread = Math.max(step, Math.round(deviation / step) * step);
   return Object.freeze({ label: `${mean} ±${spread}` });
-}
-
-function roomGold(
-  gold: GoldLedger | undefined,
-  room: OccurrenceAddress,
-): Pick<WorkspaceRoomActions, 'current'> {
-  const priced = gold?.roomAt(room);
-  if (priced?.availability !== 'available') return {};
-  const { doorsOpenBalance } = priced.room;
-  return doorsOpenBalance.availability === 'available'
-    ? { current: goldBalanceLabel(doorsOpenBalance.balance) }
-    : {};
 }
 
 type PurchaseRowProducts = Pick<WorkspaceRoomActionRow, 'travelDealLine' | 'purchaseRemoval'>;

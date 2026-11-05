@@ -1462,7 +1462,7 @@
 
 /* A banner's gold keeps the money column. */
 
-.timeline-cell-editors > :is(.room-gold-summary, .timeline-banner-gold) {
+.timeline-cell-editors > .timeline-banner-gold {
   grid-column: 3;
   justify-self: end;
 }
@@ -1568,12 +1568,6 @@
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-/* Gold figures fill the rest of the editors cell and sit at its end. */
-.room-gold-summary {
-  flex: 1 0 auto;
-  justify-content: flex-end;
 }
 
 /* The chance to afford a purchase: a pill toned by how likely, never the currency gold. */
@@ -1757,25 +1751,6 @@
 .timeline-cell-editors .trait-offer-launcher {
   width: auto;
   max-width: min(16rem, 100%);
-}
-
-.room-gold-summary,
-.room-gold-figure {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-/* Each figure sits beside its label in a five-character column so the banner never shifts. */
-.room-gold-figure .gold-amount {
-  min-width: calc(1.15rem + 2px + 5ch);
-  justify-content: flex-start;
-}
-
-.room-gold-figure[data-placeholder] {
-  visibility: hidden;
 }
 
 /* Row titles are semibold; banner titles stay bold as the headings above them. */

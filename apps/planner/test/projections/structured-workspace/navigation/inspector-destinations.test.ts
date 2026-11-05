@@ -447,7 +447,7 @@ describe('workspace inspector destinations', () => {
       focusAddress: finding.origin,
       focusKey: semanticAddressKey(finding.origin),
       roomTab: 'actions',
-        timelineDoors: 'doorsOpen',
+      timelineDoors: 'doorsOpen',
       selectedRailKey: sourceRoomRailKey(biome(workspace, 'H'), decision),
       inspectorSubject: { kind: 'node', nodeKey: decision.key },
     });

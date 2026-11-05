@@ -50,7 +50,7 @@ import { wheelOfferChips } from './doorSummary';
 import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
 import { RoomObjectEntry } from './commerce/RoomObjectEntry';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
-import { GoldAmount, PurchaseCost, RoomGoldSummary } from './commerce/GoldAmount';
+import { GoldAmount, PurchaseCost } from './commerce/GoldAmount';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomActionIcon } from '@planner/ui/artwork/roomArtwork';
@@ -476,12 +476,6 @@ export function RoomActionsWorkbench({
               })}
           editors={
             <>
-              {/* A banner's gold keeps the money column. */}
-              {entry.boundary.kind === 'cleanup' && actions !== undefined ? (
-                <RoomGoldSummary
-                  {...(actions.current === undefined ? {} : { current: actions.current })}
-                />
-              ) : null}
               {phaseBet === undefined ? null : (
                 <span className="timeline-banner-gold">
                   <GoldAmount
