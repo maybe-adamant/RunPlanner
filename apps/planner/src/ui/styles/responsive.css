@@ -1,10 +1,5 @@
-/*
- * The rail stacks above the inspector once side by side would squeeze the room
- * Timeline: its door editor reaches its full width (one line per door) only
- * with about 760px of inspector, which the sidebar, rail and gutters leave
- * from about 1300px of layout width.
- */
-@container app-viewport (max-width: 1300px) {
+/* Narrow windows give the header's spare room to the plan name. */
+@container app-viewport (max-width: 1080px) {
   /* Space held for a hidden Discard or an absent save failure goes to the plan name. */
   .editor-title > .editor-discard[data-hidden] {
     display: none;
@@ -13,7 +8,16 @@
   .editor-save-slot {
     flex-basis: 0;
   }
+}
 
+/*
+ * The rail turns horizontal above the room once side by side would squeeze the
+ * room's Timeline: its door editor reaches its full width (one line per door)
+ * only with about 760px of room column, which the 280px rail and gutters leave
+ * from about 1100px of editor panel. Measuring the panel, not the window, lets
+ * an unpinned navigation hand its width to the room.
+ */
+@container editor-panel (max-width: 1100px) {
   .editor-panel-content[data-editor-layout='biome'] {
     display: block;
     overflow-y: auto;
@@ -26,21 +30,117 @@
   }
 
   .biome-structure-region {
-    display: block;
+    display: flex;
     height: auto;
     max-height: none;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
     padding-right: 0;
-    padding-bottom: 18px;
+    padding-bottom: 12px;
     border-right: 0;
     border-bottom: 1px solid #30313a;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+
+  /* One horizontal strip: the rooms in order, then the biome's completion. */
+  .biome-structure-scroll {
+    display: flex;
+    max-height: none;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 10px;
+    padding-bottom: 6px;
+    overflow-x: auto;
     overflow-y: visible;
     scrollbar-gutter: auto;
   }
 
-  .biome-structure-scroll {
-    max-height: none;
-    overflow-y: visible;
-    scrollbar-gutter: auto;
+  .biome-rail {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .biome-rail-stop {
+    flex: 0 0 auto;
+    min-width: 7.5rem;
+    max-width: 13rem;
+    margin: 0;
+    padding-left: 0;
+  }
+
+  .biome-rail-stop::before,
+  .biome-rail-stop::after {
+    display: none;
+  }
+
+  .biome-rail-node {
+    height: 100%;
+    align-content: start;
+  }
+
+  .biome-completion-outline {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .biome-completion-outline > .card-kicker {
+    display: none;
+  }
+
+  .biome-completion-outline > ol {
+    display: flex;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .biome-rail-status {
+    display: none;
+  }
+
+  /* Ephyra: the Hub card, then its visits (and their side rooms) in the same row. */
+  .biome-hub-rail-group {
+    display: flex;
+    max-width: none;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .biome-hub-rail-group > .biome-rail-node {
+    width: auto;
+    min-width: 7.5rem;
+  }
+
+  .biome-hub-rail-visits,
+  .biome-hub-rail-side-visits {
+    display: flex;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .biome-hub-rail-visit {
+    display: flex;
+    gap: 4px;
+  }
+
+  .biome-hub-rail-visit::before,
+  .biome-hub-rail-visit::after,
+  .biome-hub-rail-side-visit::before,
+  .biome-hub-rail-side-visit::after {
+    display: none;
+  }
+
+  .biome-hub-rail-visit .biome-rail-node,
+  .biome-hub-rail-side-visit .biome-rail-node {
+    width: auto;
+    white-space: nowrap;
   }
 
   .biome-inspector {

@@ -1,5 +1,5 @@
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
-import { type ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { clockworkCountdownArtwork } from '@planner/ui/artwork/clockwork/clockworkCountdownArtwork';
@@ -546,6 +546,27 @@ export function BiomeWorkspace({
     (subject?.kind === 'node' &&
       (subject.node.kind === 'occurrenceWorkbench' || subject.node.kind === 'hubDecision'));
 
+  const railScroll = useRef<HTMLDivElement>(null);
+  // A horizontal rail scrolls its selected room into view without moving the page.
+  useLayoutEffect(() => {
+    const strip = railScroll.current;
+    if (strip === null) return;
+    const reveal = (): void => {
+      if (strip.scrollWidth <= strip.clientWidth) return;
+      const node = strip.querySelector<HTMLElement>('.biome-rail-node[data-selected="true"]');
+      if (node === null) return;
+      const stripBox = strip.getBoundingClientRect();
+      const nodeBox = node.getBoundingClientRect();
+      if (nodeBox.left < stripBox.left) strip.scrollLeft -= stripBox.left - nodeBox.left + 12;
+      else if (nodeBox.right > stripBox.right)
+        strip.scrollLeft += nodeBox.right - stripBox.right + 12;
+    };
+    reveal();
+    // The rail turns horizontal on resize; reveal the selection then too.
+    const observer = new ResizeObserver(reveal);
+    observer.observe(strip);
+    return () => observer.disconnect();
+  }, [selectedRailKey]);
   return (
     <div className="biome-workspace">
       {runState === undefined ? null : <RunStateSheet launcher={runState} />}
@@ -576,7 +597,7 @@ export function BiomeWorkspace({
             </div>
           </div>
         </header>
-        <div className="biome-structure-scroll">
+        <div className="biome-structure-scroll" ref={railScroll}>
           <div className="biome-rail">
             {biome.rail.map((entry) => (
               <RailEntry

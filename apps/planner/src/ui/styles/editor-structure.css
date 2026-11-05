@@ -3,6 +3,7 @@
 }
 
 .editor-panel {
+  container: editor-panel / inline-size;
   display: flex;
   flex-direction: column;
   min-height: 0;
