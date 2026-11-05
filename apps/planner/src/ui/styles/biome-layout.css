@@ -334,30 +334,25 @@
   font-size: 0.9rem;
 }
 
-/* Hub visits stack on the backbone, each number in its own circle; side rooms follow it. */
-.biome-workspace[data-rail='folded']:not([data-rail-open])
-  :is(.biome-hub-rail-visits, .biome-hub-rail-side-visits) {
-  margin-left: 0;
+/* Folded, a visit keeps its group: main room icons on top, side rooms as a row of smaller icons. */
+.biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-hub-rail-side-visits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
 }
 
 .biome-workspace[data-rail='folded']:not([data-rail-open])
-  :is(.biome-hub-rail-visit, .biome-hub-rail-side-visit)::before {
+  .biome-hub-rail-side-visit
+  .biome-rail-node {
+  width: auto;
+  padding: 3px 4px;
+}
+
+.biome-workspace[data-rail='folded']:not([data-rail-open])
+  .biome-hub-rail-side-visit
+  .biome-rail-icons
+  > .biome-rail-reward-slot {
   display: none;
-}
-
-/* A visit's number rides a small purple square, apart from the decisions' gold circles. */
-.biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-hub-rail-visit::after {
-  top: 12px;
-  left: -21px;
-  box-sizing: border-box;
-  width: 16px;
-  height: 16px;
-  border: 1px solid #8f7bb8;
-  border-radius: 4px;
-  background: #221f2d;
-  color: #c9bfe0;
-  line-height: 14px;
-  text-align: center;
 }
 
 .biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-rail-plan-end {
@@ -608,39 +603,47 @@
   bottom: 0;
 }
 
+/*
+ * Each Hub visit is one group on the backbone: its main room on top, its side
+ * rooms as slimmer lines under a divider. The visit's number sits on the
+ * backbone beside the main room, in a purple square apart from decisions.
+ */
 .biome-hub-rail-visits {
   display: grid;
-  gap: 5px;
+  gap: 6px;
   padding: 0;
-  margin: 7px 0 0 17px;
+  margin: 7px 0 0;
   list-style: none;
 }
 
 .biome-hub-rail-visit {
   position: relative;
+  padding: 3px;
+  border: 1px solid #34323f;
+  border-radius: 11px;
+  background: rgb(174 152 202 / 4%);
 }
 
-.biome-hub-rail-visit::before {
-  position: absolute;
-  top: 0;
-  left: -14px;
-  width: 12px;
-  height: 22px;
-  border-bottom: 1px solid #4b4855;
-  border-left: 1px solid #4b4855;
-  content: '';
+.biome-hub-rail-visit:has(.biome-rail-node[data-selected='true']) {
+  border-color: color-mix(in srgb, var(--selection-accent) 35%, transparent);
 }
 
-/* The visit's number rides on its connector. */
 .biome-hub-rail-visit::after {
   position: absolute;
-  top: 7px;
-  left: -10px;
-  color: #8f8c95;
+  top: 16px;
+  left: -22px;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #8f7bb8;
+  border-radius: 4px;
+  background: #221f2d;
+  color: #c9bfe0;
   content: attr(data-visit);
   font-size: 0.62rem;
   font-weight: 700;
-  line-height: 1;
+  line-height: 14px;
+  text-align: center;
 }
 
 .biome-hub-rail-visit .biome-rail-node {
@@ -649,29 +652,33 @@
 
 .biome-hub-rail-side-visits {
   display: grid;
-  gap: 4px;
-  padding: 0;
-  margin: 4px 0 0 14px;
+  gap: 1px;
+  padding: 3px 0 0;
+  margin: 3px 0 0;
+  border-top: 1px solid #34323f;
   list-style: none;
 }
 
-.biome-hub-rail-side-visit {
-  position: relative;
-}
-
-.biome-hub-rail-side-visit::before {
-  position: absolute;
-  top: 50%;
-  left: -10px;
-  width: 7px;
-  height: 7px;
-  border-bottom: 1px solid #4b4855;
-  border-left: 1px solid #4b4855;
-  content: '';
-}
-
+/* A side room is a slim line in its visit: no frame until it is selected or has a finding. */
 .biome-hub-rail-side-visit .biome-rail-node {
-  padding: 8px 10px;
+  padding: 5px 11px;
+}
+
+.biome-hub-rail-side-visit
+  .biome-rail-node:not(:hover, [data-selected='true'], [data-findings='true']) {
+  border-color: transparent;
+  background: transparent;
+}
+
+.biome-hub-rail-side-visit .biome-rail-node > .biome-rail-selection {
+  font-size: 0.85rem;
+}
+
+.biome-hub-rail-side-visit .biome-rail-node > .biome-rail-selection > .biome-rail-reward-icon,
+.biome-hub-rail-side-visit .biome-rail-node > .biome-rail-selection > .biome-rail-reward-slot {
+  width: 1.2rem;
+  height: 1.2rem;
+  vertical-align: -0.3rem;
 }
 
 .biome-rail-kicker,
