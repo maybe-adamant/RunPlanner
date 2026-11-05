@@ -651,6 +651,17 @@ Timeline row whose outcome controls (the kind's outcome, the bonus Nectar
 where allowed, a finished Time switch's gold) bind the engine's outcome
 product; the claim pickups are ordinary pickup rows.
 
+An Oceanus room that can lock its doors lists them under Objects, one
+checkbox per door that can lock, each bound to the engine's lock command and
+disabled with its lock as the hint (unreached, or a challenge switch in the
+room). A locked door's press is an option of the room's Doors object, beside
+its rerolls, so the object appears for a locked door even without rerolls; the
+press row carries the fight's Combat entry, the same encounter customization
+editor. The Leave room picker offers only the doors the engine publishes as
+open at leave, keeping a saved pick of a still-locked door, which carries its
+finding. That finding and any finding on a door's press count as the door
+editor's attention.
+
 ### Wheel offers
 
 A wheel's editor reads like a door editor: the wheel's pool line (its pool

@@ -458,6 +458,7 @@ export {
   hermesShrineInitialSlotKey,
 } from './model';
 export { roomActionKey } from './room-actions/state';
+export { lockableExitKeys } from './locked-exits';
 export {
   createInitialExitDecision,
   sourceOfferPointStoreResolution,

@@ -18,6 +18,7 @@ import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { ChallengeSwitchOutcomeControls } from './ChallengeSwitchOutcomeControls';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
+import { UnlockExitFightControl } from './UnlockExitFightControl';
 
 /** Pickup outcome and Sea Star controls for one acquisition role of a timeline row. */
 function PickupOutcomeControls({
@@ -290,6 +291,9 @@ export function RoomActionInlineEditors({
           interactions={interactions}
           outcome={row.challengeSwitchOutcome}
         />
+      )}
+      {row.unlockExitEncounter === undefined ? null : (
+        <UnlockExitFightControl encounter={row.unlockExitEncounter} interactions={interactions} />
       )}
     </>
   );

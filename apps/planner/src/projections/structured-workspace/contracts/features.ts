@@ -372,7 +372,9 @@ type RoomObjectCommand = Extract<
       | 'ReplaceShopPurchaseParticipation'
       | 'PurchaseShopTravelDealRefill'
       | 'PurchaseHermesShrineOffer'
-      | 'SetInfernalContractPedestalCollected';
+      | 'SetInfernalContractPedestalCollected'
+      | 'ReplaceLockedExit'
+      | 'InsertRoomAction';
   }
 >;
 
@@ -427,6 +429,42 @@ export interface WorkspaceChallengeSwitchKindRow {
   /** Why this type is unavailable; absent when a variant can be rolled. */
   readonly lock?: WorkspaceChallengeSwitchLock;
   readonly variants: readonly WorkspaceChallengeSwitchVariant[];
+}
+
+/**
+ * A lock host's doors: each door that can lock, as an Overview object, and
+ * the presses its Doors object can add. Each toggle and press is an option
+ * of a room object entry.
+ */
+export interface WorkspaceLockedDoors {
+  readonly address: RoomFeatureAddress;
+  readonly marker: WorkspaceMarker;
+  /** The lock toggles' entry: one option per door, keyed by exit. */
+  readonly interactionKey: string;
+  readonly doors: readonly {
+    readonly exitKey: string;
+    readonly label: string;
+    readonly locked: boolean;
+    /** Why the door cannot be toggled. */
+    readonly lock?: 'unreached' | 'challengeSwitch';
+  }[];
+  /** The Doors object's presses: each locked door not yet pressed; absent while unreached. */
+  readonly unlocks?: {
+    readonly interactionKey: string;
+    readonly options: readonly { readonly exitKey: string; readonly label: string }[];
+  };
+  /** The doors the room cannot be left through: locked and never pressed. */
+  readonly lockedAtLeave: readonly string[];
+}
+
+/** A pressed locked door's fight, customized on its press row. */
+export interface WorkspaceUnlockExitEncounter {
+  readonly address: import('@run-planner/engine/authored-project').RoomActionAddress;
+  readonly interactionKey: string;
+  readonly definitionKey: string;
+  readonly label: string;
+  readonly customization?: readonly import('./locals').WorkspaceEncounterCustomizationDecision[];
+  readonly composition?: import('./locals').WorkspaceEncounterComposition;
 }
 
 /** The observed Time or Perfect Clear switch's generated encounter. */

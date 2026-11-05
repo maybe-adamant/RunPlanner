@@ -7,6 +7,7 @@ import type {
 import type { RoomOverviewSectionContent } from '../RoomOverviewSections';
 import { ChallengeSwitchControls } from './ChallengeSwitchControls';
 import { ErisSpawnControl } from './ErisSpawnControl';
+import { LockedDoorsControls } from './LockedDoorsControls';
 import { RoomResourceControls } from './ResourceControls';
 import {
   RoomFeatureSection,
@@ -73,6 +74,17 @@ function objectsGroup(
           }),
         ]),
     ...after.map((entry, index) => feature(entry, before.length + index)),
+    ...(room.lockedDoors === undefined
+      ? []
+      : [
+          Object.freeze({
+            kind: 'content' as const,
+            key: 'Objects:lockedDoors',
+            content: (
+              <LockedDoorsControls interactions={interactions} lockedDoors={room.lockedDoors} />
+            ),
+          }),
+        ]),
   ];
   return entries.length === 0
     ? undefined

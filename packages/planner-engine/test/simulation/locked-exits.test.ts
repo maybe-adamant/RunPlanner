@@ -308,4 +308,22 @@ describe('Oceanus locked door simulation', () => {
       customization: [{ key: 'generatedComposition', valueSupported: true }],
     });
   });
+
+  it('offers no challenge switch in a room observed with locked doors', () => {
+    const switchAt = (project: ProjectDocument) =>
+      roomObjectInteractionsForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, project),
+        host(project, 'golden-g-b4-e1'),
+      )?.challengeSwitch;
+    const locked = apply(golden(), {
+      kind: 'ReplaceLockedExit',
+      occurrence: host(golden(), 'golden-g-b4-e1'),
+      exitKey: 'exit2',
+      locked: true,
+    });
+    const product = switchAt(locked);
+    expect(product?.sharedIssues[0]).toEqual({ reason: 'lockedDoors' });
+    expect(product?.kinds.every((kind) => kind.observe === undefined)).toBe(true);
+    expect(switchAt(golden())?.sharedIssues[0]).not.toEqual({ reason: 'lockedDoors' });
+  });
 });

@@ -60,6 +60,8 @@ export function challengeSwitchRuleSentence(rule: ChallengeSwitchRule): string {
         : hexGate;
     case 'variantUnavailable':
       return variantGates[rule.variantKey] ?? "This reward can't be rolled here.";
+    case 'lockedDoors':
+      return 'A room with locked doors never holds a switch.';
   }
 }
 
@@ -76,5 +78,7 @@ export function challengeSwitchRuleTitle(rule: ChallengeSwitchRule): string {
       return `${challengeSwitchKindLabel(rule.switchKind)} can't appear here`;
     case 'variantUnavailable':
       return "This switch reward can't appear here";
+    case 'lockedDoors':
+      return 'No switch beside locked doors';
   }
 }

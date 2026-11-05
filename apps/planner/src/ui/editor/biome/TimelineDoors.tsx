@@ -15,6 +15,11 @@ export interface TimelineDoorsContent {
   readonly summary?: ReactNode;
   /** The owners the editor repairs; a new finding on any opens the doors. */
   readonly findingOwners?: readonly SemanticAddress[];
+  /** Owners whose findings of one code also open the doors, such as a locked door picked to leave by. */
+  readonly attentionFindings?: readonly {
+    readonly owner: SemanticAddress;
+    readonly code: string;
+  }[];
   /** The doors' editor, shown while the row is expanded. */
   readonly detail?: ReactNode;
   /** The room's last row: how the room is left, or where the plan ends. */

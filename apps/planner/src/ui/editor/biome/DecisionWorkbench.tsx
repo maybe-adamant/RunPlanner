@@ -838,9 +838,12 @@ export function DoorChips({
  */
 export function BatchExitPicker({
   interactions,
+  lockedAtLeave = [],
   node,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
+  /** Doors still locked when the room is left: offered only while one is the saved pick. */
+  readonly lockedAtLeave?: readonly string[];
   readonly node: BatchNode;
 }) {
   const executeIntent = useCommandIntent();
@@ -876,17 +879,23 @@ export function BatchExitPicker({
       : requireWorkspaceInteraction(interactions.zagreusContracts, key).selectIntent;
   };
   const choices = [
-    ...node.targets.map((target) => ({
-      key: target.exitKey,
-      value: target.exitKey,
-      label: `Door ${target.index}`,
-      room: target.door.room.label,
-      rewards: doorRewardIcons(target, 'final'),
-      icon: roomKindIcon(target.door.room.roomIcon),
-      ...(target.physicalState === 'unavailable'
-        ? { disabled: true, explanation: 'This saved room is no longer offered here.' }
-        : {}),
-    })),
+    ...node.targets
+      .filter(
+        (target) =>
+          !lockedAtLeave.includes(target.exitKey) ||
+          interaction?.selectedExitKey === target.exitKey,
+      )
+      .map((target) => ({
+        key: target.exitKey,
+        value: target.exitKey,
+        label: `Door ${target.index}`,
+        room: target.door.room.label,
+        rewards: doorRewardIcons(target, 'final'),
+        icon: roomKindIcon(target.door.room.roomIcon),
+        ...(target.physicalState === 'unavailable'
+          ? { disabled: true, explanation: 'This saved room is no longer offered here.' }
+          : {}),
+      })),
     ...additional.map((control) => ({
       key: workspaceInteractionKey(control.owner),
       value: workspaceInteractionKey(control.owner),

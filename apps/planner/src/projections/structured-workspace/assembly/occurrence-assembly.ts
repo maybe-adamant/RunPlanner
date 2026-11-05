@@ -1,3 +1,4 @@
+import { assembleLockedDoors, assembleUnlockExitEncounters } from './locked-doors-assembly';
 import { assembleChallengeSwitch } from './challenge-switch-assembly';
 import {
   resolveEntryDeclaration,
@@ -552,19 +553,40 @@ export function assembleWorkspaceOccurrence(
         markerDestinations: input.markerDestinations,
         product: input.roomObjectInteractions?.(address)?.challengeSwitch,
       });
-  // The switch's use row carries the fight's outcome control.
+  const lockedDoorsProduct = input.facts.detailsActive
+    ? input.roomObjectInteractions?.(address)?.lockedDoors
+    : undefined;
+  const lockedDoors = !input.facts.detailsActive
+    ? undefined
+    : assembleLockedDoors({
+        catalog: input.catalog,
+        occurrence,
+        address,
+        markerDestinations: input.markerDestinations,
+        product: lockedDoorsProduct,
+      });
+  const unlockEncounters = assembleUnlockExitEncounters(
+    input.catalog,
+    occurrence,
+    lockedDoorsProduct,
+  );
+  // The switch's use row carries the fight's outcome control; a door's press, its fight.
   const switchOutcome = challengeSwitch?.outcome;
   const assembledRoomActions =
-    actionAssembly.roomActions === undefined || switchOutcome === undefined
+    actionAssembly.roomActions === undefined ||
+    (switchOutcome === undefined && unlockEncounters.size === 0)
       ? actionAssembly.roomActions
       : Object.freeze({
           ...actionAssembly.roomActions,
           rows: Object.freeze(
-            actionAssembly.roomActions.rows.map((row) =>
-              row.reference.kind === 'interactChallengeSwitch'
-                ? Object.freeze({ ...row, challengeSwitchOutcome: switchOutcome })
-                : row,
-            ),
+            actionAssembly.roomActions.rows.map((row) => {
+              if (row.reference.kind === 'interactChallengeSwitch' && switchOutcome !== undefined)
+                return Object.freeze({ ...row, challengeSwitchOutcome: switchOutcome });
+              const unlockExitEncounter = unlockEncounters.get(row.key);
+              return unlockExitEncounter === undefined
+                ? row
+                : Object.freeze({ ...row, unlockExitEncounter });
+            }),
           ),
         });
   const roomActions =
@@ -798,6 +820,7 @@ export function assembleWorkspaceOccurrence(
     ...(keepsakeSelection === undefined ? {} : { keepsakeSelection }),
     ...(erisObservation === undefined ? {} : { erisObservation }),
     ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
+    ...(lockedDoors === undefined ? {} : { lockedDoors: lockedDoors.lockedDoors }),
     encounterPhases,
     entered,
     gameName: occurrence.gameName,
@@ -1336,6 +1359,10 @@ export function assembleWorkspaceOccurrence(
     ...wheelRerollRequirements,
     ...featureRollRequirements,
     ...(roomActions?.objectEntries === undefined ? [] : objectEntries.requirements),
+    ...(lockedDoors === undefined ? [] : lockedDoors.requirements),
+    ...[...unlockEncounters.values()].map((encounter) =>
+      Object.freeze({ kind: 'unlockExitEncounter' as const, owner: address, encounter }),
+    ),
   ]);
   input.markerDestinations.redirect(workspaceOccurrenceOwnedMarkers(node.room), node.key);
   return Object.freeze({

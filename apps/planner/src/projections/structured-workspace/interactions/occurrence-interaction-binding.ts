@@ -20,6 +20,7 @@ import {
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   type NemesisRandomEventCandidateSupport,
   type ProjectEvaluationAssembly,
+  unlockExitEncounterSupportForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
@@ -112,6 +113,10 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly challengeSwitches: ReadonlyMap<
     string,
     import('../contracts/features').WorkspaceChallengeSwitchInteraction
+  >;
+  readonly unlockExitEncounters: ReadonlyMap<
+    string,
+    import('../contracts/locals').WorkspaceEncounterCustomizationInteraction
   >;
   readonly hermesShrineOffers: ReadonlyMap<string, WorkspaceHermesShrineOfferInteraction>;
   readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
@@ -275,6 +280,10 @@ export function bindOccurrenceLocalInteractions(
   const challengeSwitches = new Map<
     string,
     import('../contracts/features').WorkspaceChallengeSwitchInteraction
+  >();
+  const unlockExitEncounters = new Map<
+    string,
+    import('../contracts/locals').WorkspaceEncounterCustomizationInteraction
   >();
   const purgingPoolSlots = new Map<string, WorkspacePurgingPoolSlotInteraction>();
   const hermesShrineOffers = new Map<string, WorkspaceHermesShrineOfferInteraction>();
@@ -825,6 +834,49 @@ export function bindOccurrenceLocalInteractions(
         );
         break;
       }
+      case 'unlockExitEncounter': {
+        const { encounter } = requirement;
+        if (unlockExitEncounters.has(encounter.interactionKey)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${encounter.interactionKey} has multiple bound locked door fights`,
+          );
+        }
+        if (encounter.customization === undefined) break;
+        unlockExitEncounters.set(
+          encounter.interactionKey,
+          bindEncounterCustomizationInteraction({
+            catalog,
+            key: encounter.interactionKey,
+            owner: encounter.address,
+            customization: encounter.customization,
+            encounterDefinitionKey: encounter.definitionKey,
+            generatedSupport: () => {
+              try {
+                return unlockExitEncounterSupportForProjectEvaluationAssembly(
+                  assembly,
+                  encounter.address,
+                );
+              } catch (error) {
+                if (error instanceof Error && error.name === 'ProjectSimulationContractError')
+                  return undefined;
+                throw error;
+              }
+            },
+            // The fight has no infinite roster.
+            rosterSupport: () => undefined,
+            intentFor: (decisionKey, value) =>
+              Object.freeze({
+                command: Object.freeze({
+                  kind: 'ReplaceUnlockExitCustomization' as const,
+                  action: encounter.address,
+                  decisionKey,
+                  value,
+                }),
+              }),
+          }),
+        );
+        break;
+      }
       case 'phantomExit': {
         if (phantomExits.has(requirement.interactionKey)) {
           throw new StructuredWorkspaceProjectionContractError(
@@ -1235,6 +1287,7 @@ export function bindOccurrenceLocalInteractions(
     purgingPoolSlots,
     erisObservations,
     challengeSwitches,
+    unlockExitEncounters,
     hermesShrineOffers,
     hermesShrinePresences,
     stygianWellPresences,

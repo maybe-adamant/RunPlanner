@@ -87,7 +87,9 @@ export interface WorkspaceRoomObjectActionRequirement {
         | 'ReplaceShopPurchaseParticipation'
         | 'PurchaseShopTravelDealRefill'
         | 'PurchaseHermesShrineOffer'
-        | 'SetInfernalContractPedestalCollected';
+        | 'SetInfernalContractPedestalCollected'
+        | 'ReplaceLockedExit'
+        | 'InsertRoomAction';
     }
   >;
   /** A blank item: what it stocks is chosen with the purchase, each choice its complete command. */
@@ -268,6 +270,12 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly owner: OccurrenceAddress;
       readonly interactionKey: string;
       readonly spawned: boolean;
+    }
+  | {
+      /** A pressed locked door's fight, customized on its press row. */
+      readonly kind: 'unlockExitEncounter';
+      readonly owner: OccurrenceAddress;
+      readonly encounter: import('../contracts/features').WorkspaceUnlockExitEncounter;
     }
   | {
       readonly kind: 'challengeSwitch';
@@ -468,6 +476,8 @@ function occurrenceInteractionRequirementKey(
     requirement.kind === 'roomObjectActions'
   )
     return `${requirement.kind}:${requirement.interactionKey}`;
+  if (requirement.kind === 'unlockExitEncounter')
+    return `${requirement.kind}:${requirement.encounter.interactionKey}`;
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
 

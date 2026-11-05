@@ -372,16 +372,22 @@ function challengeSwitchInteraction(
       occurrence: origin,
       variantKey,
     });
+  // A room observed with locked doors never held a switch.
+  const sharedIssues: ChallengeSwitchEntryAssessment['sharedIssues'] = Object.freeze([
+    ...((room.lockedExits ?? []).length === 0
+      ? []
+      : [Object.freeze({ reason: 'lockedDoors' as const })]),
+    ...assessment.sharedIssues,
+  ]);
   const rollable = (variant: ChallengeSwitchEntryAssessment['variants'][number]) =>
-    assessment.sharedIssues.length === 0 && variant.lock === undefined;
+    sharedIssues.length === 0 && variant.lock === undefined;
   const kinds = catalog.challengeSwitches.kinds.values.map((kind) => {
     const variants = assessment.variants.filter((variant) => variant.switchKind === kind.key);
     const chosen =
       variants.find(
         (variant) => variant.variantKey === kind.defaultVariantKey && rollable(variant),
       ) ?? variants.find(rollable);
-    const lock =
-      chosen === undefined ? (assessment.sharedIssues[0] ?? variants[0]?.issue) : undefined;
+    const lock = chosen === undefined ? (sharedIssues[0] ?? variants[0]?.issue) : undefined;
     return Object.freeze({
       switchKind: kind.key,
       ...(chosen === undefined ? {} : { observe: observeCommand(chosen.variantKey) }),
@@ -459,7 +465,7 @@ function challengeSwitchInteraction(
           }),
         }),
     ...(outcome === undefined ? {} : { outcome }),
-    sharedIssues: assessment.sharedIssues,
+    sharedIssues,
     variants: Object.freeze(
       assessment.variants.map((variant) =>
         Object.freeze({

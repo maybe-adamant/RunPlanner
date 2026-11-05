@@ -21,6 +21,8 @@ export type {
   WorkspaceFeatureRollOption,
   WorkspaceFeatureRollSlot,
   WorkspaceFeatureRollSlotInteraction,
+  WorkspaceLockedDoors,
+  WorkspaceUnlockExitEncounter,
   WorkspaceRoomFeature,
   WorkspaceRoomObject,
   WorkspaceRoomObjectChoice,
@@ -388,6 +390,11 @@ export interface WorkspaceInteractionCatalog {
     string,
     import('./contracts/features').WorkspaceChallengeSwitchInteraction
   >;
+  /** Each pressed locked door's fight customization, by its press's interaction key. */
+  readonly unlockExitEncounters: ReadonlyMap<
+    string,
+    import('./contracts/locals').WorkspaceEncounterCustomizationInteraction
+  >;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceFieldsCageOutcomeInteraction>;
   readonly fieldsSpatialPoints: ReadonlyMap<string, WorkspaceFieldsSpatialPointInteraction>;
@@ -717,6 +724,8 @@ export interface WorkspaceRoomSummary {
     readonly spawned: boolean;
   }; /** A challenge switch host; the switch is the author's observation, rolled on entry. */
   readonly challengeSwitch?: import('./contracts/features').WorkspaceChallengeSwitch;
+  /** A lock host's doors: their locks on the Overview, their presses on the Timeline. */
+  readonly lockedDoors?: import('./contracts/features').WorkspaceLockedDoors;
 }
 
 export interface StructuredWorkspaceContextualServices {

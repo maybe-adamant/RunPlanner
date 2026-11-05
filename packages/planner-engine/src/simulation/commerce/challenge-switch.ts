@@ -41,7 +41,9 @@ export type ChallengeSwitchPlacementIssue =
       readonly gate: ChallengeSwitchKindGate;
     }
   /** The variant's own gate (Pom: an upgradable trait; Path of Stars: `TalentLegal`). */
-  | { readonly reason: 'variantUnavailable'; readonly variantKey: string };
+  | { readonly reason: 'variantUnavailable'; readonly variantKey: string }
+  /** The room's doors were observed locked: the game rolls a lock only where no switch spawned. */
+  | { readonly reason: 'lockedDoors' };
 
 /** Which of a kind's own gates its entry fails: its biome depth first, else its requirement. */
 export type ChallengeSwitchKindGate =
@@ -82,7 +84,7 @@ export type ChallengeSwitchVariantLock = 'kindUnavailable' | 'variantUnavailable
 export interface ChallengeSwitchEntryAssessment {
   readonly sharedIssues: readonly Extract<
     ChallengeSwitchPlacementIssue,
-    { readonly reason: 'biomeDepth' | 'recentSwitch' | 'noFreeAnchor' }
+    { readonly reason: 'biomeDepth' | 'recentSwitch' | 'noFreeAnchor' | 'lockedDoors' }
   >[];
   readonly variants: readonly {
     readonly variantKey: string;

@@ -236,6 +236,8 @@ export {
   type ChallengeSwitchInteraction,
   type ChallengeSwitchEncounterInteraction,
   type ChallengeSwitchOutcomeInteraction,
+  type LockedDoorsInteraction,
+  type UnlockExitEncounterInteraction,
   type RoomObjectInteractions,
 } from './commerce/object-interactions';
 export {

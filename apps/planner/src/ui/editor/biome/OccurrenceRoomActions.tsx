@@ -163,6 +163,8 @@ function WorkbenchAddArea({
     object: 'challengeSwitch',
   };
   for (const row of optionalRows) {
+    // A locked door is pressed from the Doors object.
+    if (row.reference.kind === 'unlockExit') continue;
     // The rack is a room object used in one step.
     if (row.reference.kind === 'interactKeepsakeRack') {
       objectActionRows.push(row);

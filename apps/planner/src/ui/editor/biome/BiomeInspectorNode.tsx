@@ -183,10 +183,28 @@ function roomTimelineDoors({
           ),
         };
 
+  // A lock host's Doors object also presses its locked doors; the room cannot be left through one still locked.
+  const lockedDoors = node.room.lockedDoors;
+  const unlocks = {
+    lockedAtLeave: lockedDoors?.lockedAtLeave ?? [],
+    options:
+      lockedDoors?.unlocks === undefined || lockedDoors.unlocks.options.length === 0
+        ? undefined
+        : lockedDoors.unlocks,
+  };
+  // A locked door's findings, on its press or on the exit picked through it, need the doors.
+  const unlockOwners = (node.room.roomActions?.rows ?? []).flatMap((row) =>
+    row.reference.kind === 'unlockExit' ? [row.address] : [],
+  );
   if (batch !== undefined) {
     return {
       summary: <DoorChips chips={batchDoorChips(batch)} />,
-      findingOwners: batchDoorFindingOwners(batch),
+      findingOwners: [...batchDoorFindingOwners(batch), ...unlockOwners],
+      ...(lockedDoors === undefined
+        ? {}
+        : {
+            attentionFindings: [{ owner: batch.selection.address, code: 'lockedExitSelected' }],
+          }),
       detail: (
         <BatchDoorsDetail
           interactions={interactions}
@@ -199,18 +217,27 @@ function roomTimelineDoors({
       ),
       leave: leaveRow(
         'Leave room',
-        <BatchExitPicker interactions={interactions} node={batch} />,
+        <BatchExitPicker
+          interactions={interactions}
+          lockedAtLeave={unlocks.lockedAtLeave}
+          node={batch}
+        />,
         batchDoorsStatus(batch),
         batch.selection.address,
       ),
       notes,
-      ...(batch.rerolls === undefined
+      ...(batch.rerolls === undefined ? {} : { rerolls: batch.rerolls }),
+      ...(batch.rerolls === undefined && unlocks.options === undefined
         ? {}
         : {
-            rerolls: batch.rerolls,
             chips: batchDoorChips(batch),
             object: (
-              <DoorsRerollEntry interactions={interactions} key="doors" rerolls={batch.rerolls} />
+              <DoorsRerollEntry
+                interactions={interactions}
+                key="doors"
+                {...(batch.rerolls === undefined ? {} : { rerolls: batch.rerolls })}
+                {...(unlocks.options === undefined ? {} : { unlocks: unlocks.options })}
+              />
             ),
           }),
     };

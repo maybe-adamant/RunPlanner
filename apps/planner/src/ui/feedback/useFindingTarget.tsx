@@ -123,16 +123,30 @@ export function useFindingFeedbackEntries(
   );
 }
 
-/** The keys of every finding these owners carry on any of their controls, in a stable order. */
+/**
+ * The keys of every finding these owners carry on any of their controls, and
+ * of each coded owner's findings of its code, in a stable order.
+ */
 // eslint-disable-next-line react-refresh/only-export-components -- Reads the same feedback boundary.
-export function useFindingKeys(owners: readonly SemanticAddress[]): readonly string[] {
+export function useFindingKeys(
+  owners: readonly SemanticAddress[],
+  codedOwners: readonly { readonly owner: SemanticAddress; readonly code: string }[] = [],
+): readonly string[] {
   const { findings } = useContext(feedback);
   const ownerKeys = new Set(owners.map((owner) => semanticAddressKey(owner)));
+  const codesByOwner = new Map<string, Set<string>>();
+  for (const { owner, code } of codedOwners) {
+    const key = semanticAddressKey(owner);
+    codesByOwner.set(key, (codesByOwner.get(key) ?? new Set()).add(code));
+  }
   const keys = new Set<string>();
   for (const [target, marked] of findings) {
     // A control's findings are keyed by its owner's key, then `#` and the control.
     const owner = target.endsWith(']') ? target : target.slice(0, target.lastIndexOf('#'));
-    if (ownerKeys.has(owner)) for (const finding of marked) keys.add(semanticFindingKey(finding));
+    const codes = codesByOwner.get(owner);
+    for (const finding of marked)
+      if (ownerKeys.has(owner) || codes?.has(finding.code) === true)
+        keys.add(semanticFindingKey(finding));
   }
   return [...keys].sort();
 }
@@ -146,7 +160,8 @@ export function useCustomizationFindingExplanations(
   return new Map(
     (findings.get(semanticAddressKey(address)) ?? []).flatMap((finding) =>
       (finding.code === 'encounterCustomizationUnavailable' ||
-        finding.code === 'challengeSwitchCustomizationUnavailable') &&
+        finding.code === 'challengeSwitchCustomizationUnavailable' ||
+        finding.code === 'unlockExitCustomizationUnavailable') &&
       typeof finding.evidence.decisionKey === 'string'
         ? [
             [

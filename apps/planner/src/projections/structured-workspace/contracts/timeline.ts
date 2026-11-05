@@ -161,6 +161,8 @@ export interface WorkspaceRoomActionRow {
   readonly fountainRarity?: WorkspaceFountainRarityControl;
   /** The fight outcome of the challenge switch this row uses. */
   readonly challengeSwitchOutcome?: import('./features').WorkspaceChallengeSwitchOutcome;
+  /** The fight of the locked door this row presses, once its press is reached. */
+  readonly unlockExitEncounter?: import('./features').WorkspaceUnlockExitEncounter;
   /** Exact Fateful Twist result control at this purchased Well action. */
   readonly stygianWellTwist?: {
     readonly address: import('@run-planner/engine/authored-project').RoomFeatureAddress;

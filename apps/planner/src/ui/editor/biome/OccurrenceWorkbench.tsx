@@ -115,14 +115,17 @@ export function OccurrenceWorkbench({
     });
   }
   const selectedTab = tabState.active;
-  // The door editor stays shut unless it needs attention (a finding inside, or
-  // the doors as the next required input) or navigation asks for it. A
+  // The door editor stays shut unless it needs attention (a finding inside or
+  // on a locked door, or the doors as the next required input) or navigation asks for it. A
   // remembered choice holds until attention it has not seen appears.
   const doorChoice = useAppSelector(
     (state) => state.editorSession.doorEditorChoices?.[roomIdentity],
   );
   const dispatch = useAppDispatch();
-  const doorFindingKeys = useFindingKeys(timelineDoors?.findingOwners ?? []);
+  const doorFindingKeys = useFindingKeys(
+    timelineDoors?.findingOwners ?? [],
+    timelineDoors?.attentionFindings,
+  );
   const doorAttention = [...doorFindingKeys, ...(doorsFrontier ? ['frontier'] : [])];
   const currentNavigation = navigationRevision ?? -1;
   const doorsExpanded =
