@@ -350,8 +350,8 @@ maps it to a control:
 
 - a sequential repair (batch rule, then doors one by one, then the door
   selection) names only its next edit;
-- one choice spread over several controls (door or wheel pick radios) rings
-  each enabled control;
+- a pick between doors or wheel offers marks its one picker, on the room's
+  Leave row or the phase's Select wheel row;
 - a requirement spread across a map marks that map's requirement box;
 - an action that should not exist marks its Delete, a misplaced action its
   reorder handle, and an unplaced action its Restore or its Add area entry
@@ -385,9 +385,8 @@ value frame. Room Timeline rows (actions, lifecycle boundaries, checkpoints,
 automatic effects, insertion points, the Travel Deal line) share one set of
 cells: handle, label, decisions, money and delete. An action row keeps its
 handle and delete, quieter and disabled when no proposal applies;
-a banner keeps its controls on its own line, after its title; and the door-exit
-continuation says on hover whether a door is unselected or the batch is
-unfinished. Rows or sections created by an authored decision are expected
+a banner keeps its controls on its own line, after its title; and the exit
+picker says on hover when the batch is unfinished. Rows or sections created by an authored decision are expected
 changes.
 
 Stable layout means a control has a reserved home when it appears, not that
@@ -400,8 +399,8 @@ as a phase skipped with Fig Leaf). A Nemesis combat's Outcome choice is the
 exception: it shows only while that combat is selected, always with its
 complete value, and a dormant outcome stays hidden. The application
 never computes applicability itself. Explanatory notes sit beneath their owning
-control, except a door batch's batch-wide facts, which sit in Room Doors' Notes
-column, candidate explanations stay inside the picker (its trigger keeps its
+control, except a door batch's batch-wide facts, which sit in the Notes block
+of the room Timeline's side column, candidate explanations stay inside the picker (its trigger keeps its
 accessible description and invalid state without adding layout space), and placement or
 rejected-drag feedback floats outside the layout.
 

@@ -34,8 +34,9 @@ appear, not what they mean.
   summaries also reference it. UI destinations use occurrence IDs and semantic
   addresses, never rendered indexes, ancestry or encoded identifiers.
 - Overview owns occurrence contents and feature inventory, Timeline owns
-  participating actions and their chronology, Layout owns Fields spawn-point
-  placement, and Doors owns outgoing offers and selection.
+  participating actions and their chronology, the room's outgoing offers on its
+  Doors open row and the exit pick on its last row, and Layout owns Fields
+  spawn-point placement.
 - Dormant, ungenerated, unvisited and unpurchased children publish no active
   Timeline control merely because their authored detail is retained.
 - Context-invalid authored values remain visible until explicitly replaced or
@@ -125,7 +126,7 @@ features, items, or other room-local products remain available through the conta
 decision or fixed-stage inspector unless a separate player-facing navigation
 need justifies another rail highlight. Whatever opens the inspector, the rail
 selects the stop that opens the same room, and selects nothing only when no
-stop opens it. A decision's doors are repaired on its source room's Room Doors,
+stop opens it. A decision's doors are repaired on its source room's Timeline,
 so once the decision opens its selected room, the stop that opens the source
 room carries the doors' finding marks and selection; a decision still choosing
 its room keeps them on its own stop.
@@ -148,9 +149,10 @@ a `beforeTargetGeneration` launcher on their door rows. Room-local lifecycle
 launchers keep their exact engine owners while the application projects one
 consistent utility slot at the top of each tab panel. Ordinary/H/Shop Overview
 and Timeline reuse the same Room-entered launcher. O Overview and Intro Timeline
-reuse Intro's pre-start launcher, while each later phase tab, and the wheel
-tab whose pick leads into that phase, uses that phase's pre-start launcher. Room Doors uses the literal pre-exit launcher. Inactive
-Actions is a repair surface and owns no lifecycle launcher. An unavailable
+reuse Intro's pre-start launcher, while each later phase tab uses that phase's
+pre-start launcher. No launcher shows the run as a room is left: that state is
+the next room's entry. Inactive Actions is a repair surface and owns no
+lifecycle launcher. An unavailable
 retained checkpoint stays visible and disabled; an occurrence absent from the
 materialized prefix owns no launcher. The workspace-level launcher index
 resolves the sheet without React scanning nested workbenches or reconstructing
@@ -159,8 +161,8 @@ history.
 N has an explicit two-layer presentation:
 its outer chronology is Opening -> PreHub -> Hub -> Preboss, while Hub visits,
 slots, side-room occurrences, and restores are inner chronology. Opening
-remains a fixed stage. Entered N occurrences use the same room-entry and
-pre-exit lifecycle launchers as other ordinary rooms. The Hub launcher is owned
+remains a fixed stage. Entered N occurrences use the same room-entry
+launcher as other ordinary rooms. The Hub launcher is owned
 by the Hub decision before board generation, and the visible completed-Hub
 exit owns the retained generation diagnostic before Preboss. React consumes
 these projected owners and never distinguishes them from room names or rendered
@@ -174,7 +176,7 @@ semantic focus, finding navigation, coverage, and focused-inspector language.
 
 The inspector renders the occurrence stage or exact structural workbench
 containing the focused semantic owner. An ordinary decision remains the
-outgoing-door section of its source occurrence and includes its batch policy
+doors of its source occurrence's Timeline and includes its batch policy
 and every physical offer's picked state, Room row, and Reward row. A topology-
 free biome instead exposes one generic `Start biome` action. That action creates
 and focuses the actual Opening or Intro occurrence, whose inspector exclusively
@@ -348,7 +350,7 @@ or child ownership moves to a composite editor.
 
 The application publishes one closed occurrence-presentation union rather than
 a generic room-details disclosure. Standard, Fields, and Shop occurrences
-render Room Overview, Room Timeline, and Room Doors; Fields adds Room Layout,
+render Room Overview and Room Timeline; Fields adds Room Layout,
 which edits the spawn-point placement of the entry, cages, optionals and
 Nemesis beside the room map. Overview contains read-only
 incoming context and meaningful room-local setup: Fields identities, World
@@ -359,7 +361,7 @@ authors content only: buying, rushing, collecting and every Travel Deal refill
 are authored on the Room Timeline. A Stygian Well or Pool of Purging Overview
 shows only its presence and initial stock, whose slots are always editable and
 optional; using it starts on the Timeline. Ephyra parents with declared
-side-room groups add a dedicated Side Rooms workbench beside Room Doors: its
+side-room groups add a dedicated Side Rooms workbench beside the Timeline: its
 doors table has a row per side-room door (generation, visit, generation
 priority, room by its short number such as SR 10, reward and map) with the
 visit order under it, and the
@@ -375,8 +377,9 @@ label, value picker and secondary action, so each picker starts at the same
 place in every section and room. A room object or Chaos Gate the room always
 has is named without a presence toggle.
 Room Timeline consumes the engine lifecycle timeline plus the one
-occurrence-owned chronology. Doors consumes the unchanged total outgoing-stage
-product. A section is omitted when its projected product is empty.
+occurrence-owned chronology; its doors rows consume the unchanged total
+outgoing-stage product. A section is omitted when its projected product is
+empty.
 
 When a block lies in a room's Timeline or doors opening, the application marks
 the rows named by the engine's `roomTimeline.blockingRowKeys` as the blocking
@@ -384,9 +387,9 @@ product; it never infers that row set. Those rows keep their row-level edits
 (order, removal, purchase participation) and findings; an inner picker is
 editable only where the engine published a reached capability, so rows past
 the failing contact show it read-only with the unreached hint. Rows after the
-blocking product, Room Doors and later rooms show their authored values the
-same way. A block at the Overview leaves the Overview as the repair surface and
-the Timeline and Doors read-only.
+blocking product, the room's doors and later rooms show their authored values
+the same way. A block at the Overview leaves the Overview as the repair surface
+and the Timeline read-only.
 
 Every Room Timeline row has one anatomy: its reorder handle, the icon of the
 object or NPC it uses (badged with the inventory slot it buys from, and marked
@@ -417,7 +420,9 @@ with the full value on hover and in its accessible name), then Artificer
 output, Fountain and other row decisions. A control appears only where the row
 uses it. The money column carries a purchase's price and chance to afford, or
 the gold the row gains or loses as the engine's gold ledger attributes it to
-that row. Narrow timelines move a row's decisions to a second line.
+that row. The chance to afford tells on hover and focus the gold estimated to
+be held just before the purchase, with its spread; no banner repeats a running
+balance. Narrow timelines move a row's decisions to a second line.
 
 Purchase and collect rows carry no inner checkbox; their delete control
 removes the action. The purchase row that triggers Travel Deal renders the refill's inventory controls as its second line: for a
@@ -431,7 +436,8 @@ Each room has one Add area for optional work: a side column beside a wide
 room panel, below the timeline otherwise, saying so when nothing optional
 remains. Its Objects line holds an entry for each present Stygian Well, Pool
 of Purging, World Shop (the Preboss Shop form included), Hermes Shrine,
-Pedestal and Keepsake Rack, listing what the engine publishes as possible at
+Pedestal and Keepsake Rack, and the room's Doors (a Ship phase's Wheel) where
+rerolls may be pressed, listing what the engine publishes as possible at
 the end of the room's current actions, each option named by the row it
 appends. Its Actions line groups the room's other optional actions by source
 family, each group opening its short list; the optional pickups a room object
@@ -451,26 +457,54 @@ inactive). One pick appends one action at its last legal position, which its
 reorder handle then moves. A reroll row carries an optional picker for each restocked
 slot, pinned or native.
 
-Room Doors lists the room's door and Fields cage rerolls below the doors in
-one ordered list headed by the reroll die and the rerolls left. Each row is
-the die, its target and its new reward with Remove; one add control on the die
-asks for the target and then its reward, appending the press at the end. A
-removal keeps the later rows it invalidates, with their findings. The same
-presses appear as Timeline rows, where their reorder handle is the only way to
-change their position among other post-unlock actions. A rerolled target's door
-row keeps its first draw on one line, followed by the final reward as its icon
-alone, badged with the reroll die and named and hinted as rerolled into that
-reward, with any kept-reward repair as a die button in the row's action
-zone; the
-timeline, Hub and reroll rows keep the full first draw → final reading. The next room's header and the rail
-show the final reward. Reroll findings route to the list row, except an
-out-of-order press, which routes to its Timeline row. A room whose
-continuation the Hub or a side-room visit decides states where it returns as
-a Note. An Ephyra room's hidden return door is a row of its Room Doors table
-whose name is footnote-linked to the Note explaining the door; it shows its
+### Doors on the Timeline
+
+A room's doors are rows of its Timeline, in the tab whose phase opens them (a
+Ship's last phase). The engine-placed **Doors open** banner holds the doors'
+compact state at its right end: one chip per door, each its room's icon then
+its rewards' icons as first drawn, the picked door outlined and a missing door
+dashed; a fixed exit (a boss door, the next biome) is one chip of its
+destination, and an Ephyra room's hidden return door is a chip of its own.
+Beside the chips a disclosure shows or hides the doors' editor, which follows
+the banner as one full-width line: the batch rules (pool line, Fields roll and
+cage facts, a boss door's pool), then the shared door table without selection
+controls. Doors are shown open by default. Hiding them is session state only
+(neither authored nor in history); navigation to a door owner opens them, and
+while any owner in the editor has a finding they stay open with no disclosure.
+The table's header ends in one quiet red action: **Fix Preboss** where a
+takeover batch can be matched to its source's declared doors, **Fix Doors**
+where an ordinary batch removes its unavailable doors, otherwise **Reset
+Doors**, which removes the batch. A repair draws the eye, as does each door row
+it removes. The end room offers neither. The batch's notes sit in the Timeline's
+side column, under the Add area.
+
+The room's last Timeline row says how it is left. **Leave room** picks the exit
+door by its name only (Door 1, or Chaos gate or Infernal Contract) and shows
+the chosen door's room icon and name and its final reward icons as fixed
+labels beside it; a lone door, a fixed exit or the completed run is shown
+plainly, and a partly filled batch says how many doors are set. The picker is
+the exit selection's finding anchor. The row ends with **End plan here**; on
+the end room it reads **Plan ends here** with **Continue planning**. A room the
+Hub or a side-room visit leaves has no last row, and a room past the plan's
+end shows no doors; both keep **End plan here** under their read-only
+Timeline. Moving to the next room is the rail's job.
+
+Door and Fields cage rerolls are Timeline rows, where their reorder handle is
+the only way to change their position among other post-unlock actions. The
+room's **Doors** entry in the Add area's Objects asks for the door (or its
+cage) and then its new reward, appending one press after the room's actions;
+it is disabled with its reason when no reroll is left, and absent without a
+card that enables rerolls unless the plan already holds presses. A press row
+reads Reroll, the pressed door with the reward it replaces (a cage is known by
+its reward), then the new reward's standard picker, and ends with every door's
+chips as that press leaves them. A removal keeps the later rows it invalidates,
+with their findings. Each door row of the editor keeps its first draw, with any
+kept-reward repair as a die button in its action zone; the Leave row, the next
+room's header and the rail show the final reward. Reroll findings route to the
+press's Timeline row. An Ephyra room's hidden return door is a row of the door
+table whose name is footnote-linked to the note explaining it; it shows its
 automatic room and reward as plain values until its placeholder room or reward
-is pinned, and a reward picker waits for the room. Reroll lists and counts are hidden without a card
-that enables them unless the plan already holds rerolls.
+is pinned, and a reward picker waits for the room.
 
 An Anvil of Fates result launcher sits on the Timeline row of the reward that
 carries the Anvil, wherever it settles: a Shop slot's purchase row, the Gold
@@ -508,7 +542,8 @@ markers and encounter identity and customization owners open Overview, Travel
 Deal refill markers, Fig Leaf, Gorgon, Aetos and Nemesis-response owners and
 action owners open the matching Room Timeline tab,
 inactive Ship actions open repair, Fields spawn-point owners open Room Layout,
-and outgoing owners open Room Doors. The
+door owners open the Timeline with its doors open, and the exit selection its
+Leave row. The
 application publishes that closed destination; React does not parse addresses
 or labels. Tabs use one stable tabpanel identity and roving ArrowLeft,
 ArrowRight, Home, and End keyboard activation.
@@ -521,16 +556,19 @@ from room-local state or expose an incoming-reward editor there. A Room-features
 child renders its bound Add or Remove Chaos-gate/Zagreus-contract action
 directly, without a second child heading that repeats the action's subject.
 
-ShipCombat is the deliberate fourth shape. It renders Room Overview, Intro
-Timeline, Intro Wheels, Combat 1 Timeline, then Combat 1 Wheels and Combat 2
-Timeline when Combat 2 is structurally active, and Room Doors. Overview owns
-encounter count, every phase's encounter and room features. Each phase tab
-contains its encounter banners and their events and its post-combat actions;
-its following `nextPhase` boundary is a read-only marker. Each active wheel's
-tab follows the timeline tab it closes and holds the wheel's pool, offers, its
-Rerolls list and the pick; final Combat 2 has no wheel. Wheel rerolls also
-show as Timeline rows, and Choose and post-combat pickup actions stay on their
-phase tab.
+ShipCombat is the deliberate fourth shape. Its tabs are Room Overview, then one
+Timeline per phase named by the phase: Intro, Combat 1, and Combat 2 when it is
+structurally active. Overview owns encounter count, every phase's encounter
+and room features. Each phase tab holds its encounter banners and their events
+and its post-combat actions. A phase a wheel follows then opens that wheel as
+**Next phase ready**, like Doors open: its offers' chips and the wheel's editor
+(pool and offer count, then its offers as first drawn). Wheel-offer rerolls
+follow as press rows, added from the phase's **Wheel** object, and the phase
+ends with **Select wheel**, which picks the offer by its name and shows its
+reward as it stands; a one-offer wheel has nothing to pick. Next phase becomes
+ready only after the phase's own actions, so nothing but offer rerolls sits
+between. The last phase keeps Doors open and Leave room, since a Ship room
+leaves through ordinary doors.
 The groups are views over one interaction and one authored order: global ranks,
 proposals, pointer drag, keyboard moves, and Undo are unchanged. The application
 consumes engine-owned timeline action keys and phase attachments; React does
@@ -583,15 +621,13 @@ product; the claim pickups are ordinary pickup rows.
 
 ### Wheel offers
 
-A wheel tab reads like Room Doors, without repeating the tab's name: the
-wheel's pool line (its pool picker, with no arrow, since a wheel has no
-separate counted store) beside its offer count, then its active offers as rows
-of the door table: selection, offer, and reward, with a rerolled offer read
-like a rerolled door. One offer needs no false choice control. They
-remain rewards, not doors: no room selector, door number, map or topology
-interaction is introduced. Wheel 1 and Wheel 2 stay in their separate phase
-tabs, and the next room's doors show the last active wheel's pool as a plain
-value.
+A wheel's editor reads like a door editor: the wheel's pool line (its pool
+picker, with no arrow, since a wheel has no separate counted store) beside its
+offer count, then its active offers as rows of the door table: offer label (L
+Offer and R Offer, or Offer alone) and reward, each as first drawn. They remain
+rewards, not doors: no room selector, door number, map or topology interaction
+is introduced. Each wheel opens on the phase it follows, and the next room's
+doors show the last active wheel's pool as a plain value.
 
 The chronological Choose action does not duplicate card selection with another
 picker. Its engine-bound choice assesses the generated cohort without demanding
@@ -709,7 +745,7 @@ projected.
 ### Decision Offers and Picked State
 
 Selecting a decision shows all of its exits together as one table with a
-row per exit: its selection, its door name (a door number, with any door
+row per exit: its door name (a door number, with any door
 type such as Indoor muted beneath it, or Contract or Chaos Gate), its room, its
 reward, an action zone, and its map, pinned last at the table's right edge.
 The zone holds the row's actions and notices (an Anomaly replacement or
@@ -730,10 +766,9 @@ lists each in the reward cell. The door contract keeps game preview visibility
 separate from planner authorship: a hidden reward is marked on its row, and an
 Anomaly or Zagreus automatic return, hidden in game, still keeps its reward
 editor and finding destination because its fresh host reward consumes the
-ordinary store. A lone exit has no selection control. The picked row receives
-the strongest emphasis because it is the authored selected route; an
-unavailable retained door is dimmed with its selection disabled and explained
-on hover. Evaluated entry is shown separately when materialization has
+ordinary store. The picked row receives the strongest emphasis because it is
+the authored selected route, chosen on the room's Leave row; an unavailable
+retained door is dimmed and cannot be picked, explained in the exit picker. Evaluated entry is shown separately when materialization has
 actually reached that room.
 
 A decision with a reward pool shows one pool line above the table: the pool,
@@ -747,8 +782,7 @@ additional exit's own store. A Fields batch states its door roll and its cage
 facts on the same line. React derives none of these values. A decision without
 a pool renders no pool line.
 
-Batch-wide facts sit in a Notes column beside the table where the panel is
-wide, and between the pool line and the table where it is narrow: where an
+Batch-wide facts sit in the Notes block of the Timeline's side column: where an
 inherited pool was chosen, why the effective store differs (the forcing room,
 the discarding room, the counting exit), and how Fields cages read. Notes are
 absent, with no reserved space, when a batch has none, and a reason shown there
@@ -800,11 +834,8 @@ addresses. Visual grouping does not change ownership.
 The projection publishes one closed selected-continuation navigation product
 when exactly one normal, Chaos, Zagreus, or Preboss occurrence continuation is
 selected. It contains the occurrence-owned door and room marker only; it does
-not include Hub interactions or UI labels. The decision footer consumes that
-same product through one `Open next room` action immediately before
-`Remove these doors`. The action remains disabled until the product exists,
-then focuses the selected occurrence's Room Overview without creating authored
-history. Individual door rows do not publish room-opening actions.
+not include Hub interactions or UI labels. The rail consumes it; no door row or
+Timeline row publishes a room-opening action.
 
 The one-stop-per-decision rule applies only to rail presentation. It does not
 collapse, delete, or coarsen the decision's target, occurrence, reward,
@@ -832,18 +863,20 @@ language, but its center is not an ordinary decision spine. The
 - Hub Overview for the complete fixed-slot set, open/closed membership, and
   each open room's reward editor; Hub Timeline for the exact authored action
   prefix (up to six room visits, one fountain use and board-door rerolls) on
-  the map or in its Details timeline; and Hub Doors' fixed Preboss door for the
-  Hub's completed-Hub exit. The tabs read Overview, Timeline and Doors, so the
-  leaving tab has the same name in every room;
+  the map or in its Details timeline, which ends with the fixed completed-Hub
+  exit. The tabs read Overview and Timeline;
 - side-room generation and entry state under visited parents;
 - derived Hub returns and parent restores;
 - the fixed completed-Hub exit to the width-one Preboss Shop and its derived
   completion sequence, authored with the Hub.
 
-Hub Doors shows the Preboss as Door 1 with the shared `Open next room`
-continuation; it has no create or remove action. While the Hub is incomplete
-the chain is unreached: the continuation is disabled with a hint and the
-Preboss rooms follow the unreached-context policy.
+The Hub always leaves to its Preboss, so the completed-Hub exit is a hidden
+structural link with nothing to author. The Details timeline ends with one
+fixed, unmovable **Go to Preboss** row after every visit and the fountain,
+read-only and muted until the Hub is complete; it is the exit's finding anchor.
+While the Hub is incomplete the Preboss rooms follow the unreached-context
+policy. A Hub visit's main room and its side rooms have no last row: the Hub
+decides where they lead.
 
 Exact Hub inspector destinations also carry their presentation tab: Hub,
 slot-set, and main incoming-reward-identity owners open Hub Overview; main
@@ -852,8 +885,9 @@ their incoming-reward acquisition children open the main occurrence Timeline;
 parent-owned side generation, side reward identity, and side entry order open
 the parent main occurrence Side Rooms workbench;
 entered side occurrences and their acquisition
-children open the side occurrence Timeline; the completed-Hub exit opens
-Doors; Hub fountain placement opens Hub Timeline; and its Phial
+children open the side occurrence Timeline; the completed-Hub exit opens the
+Hub Timeline's Details on its last row; Hub fountain placement opens Hub
+Timeline; and its Phial
 outcome and board-door rerolls open the Hub Timeline's Details. React consumes that explicit destination and
 does not infer tab ownership from semantic-address shapes or rendered ancestry.
 

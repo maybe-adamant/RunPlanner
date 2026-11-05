@@ -270,16 +270,17 @@ final active phase. The source evidence and relationship to wheel selection
 and room-local ordering are owned by
 [`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md).
 
-The editor renders Room Overview, Intro Timeline, Combat 1 Timeline, optional
-Combat 2 Timeline, and Room Doors. Overview owns encounter count, each phase's
-encounter (including whether Combat 2 plays) and room features. Wheel 1 is
-configured at Intro's next-phase boundary and Wheel 2 at Combat 1's. The wheel
-panel represents its choice action without a separate timeline row; choice and
-pickup keep their engine timeline positions. Invalid,
+The editor renders Room Overview and one Timeline per phase: Intro, Combat 1
+and, when it plays, Combat 2. Overview owns encounter count, each phase's
+encounter (including whether Combat 2 plays) and room features. Wheel 1 opens
+on the Intro Timeline as Next phase ready and Wheel 2 on Combat 1's; only offer
+rerolls follow before the phase's Select wheel row, which is the choice action's
+place, and the pickup keeps its engine timeline position. Invalid,
 missing, or retained inactive choice actions remain visible for repair.
 A retained inactive Combat 2 action appears once in the repair
 surface. The phase tabs are views over one global `roomActions.order`, and only
-the final active phase reaches room-level **Cleanup · Doors open**.
+the final active phase reaches room-level **Cleanup · Doors open**, whose
+ordinary doors the room leaves through.
 
 The remaining NPC event, interaction, reward, and external-profile paths are
 not encounter candidates. The raw source composition remains documented in the

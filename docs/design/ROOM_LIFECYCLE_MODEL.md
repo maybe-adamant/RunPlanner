@@ -302,9 +302,9 @@ generation, then room setup, so an Overview product reads only entry state; one
 that reads a Timeline product is a modelling error. The doors opening is a
 Timeline fact of the source room: the door offers settle when the doors open,
 usually at the room clear, and later Timeline actions (purchases, digging,
-Shrine and Well use) follow it without changing the frozen batch. Room Doors is
-where those offers and the selection are authored; it does not move their
-chronology.
+Shrine and Well use) follow it without changing the frozen batch. The
+Timeline's Doors open row is where those offers are authored and its last row
+where the exit is picked; neither moves their chronology.
 
 A picked host's resource placements are fixed on entry, so their legality is
 an Overview fact; the element a legal placement grants is exit work.
@@ -321,8 +321,8 @@ Aetos, NPC trait offers, the Nemesis response, the Anomaly capture-point
 outcome (which decides whether the room reward spawns) and encounter-end
 checkpoints. Fig Leaf, Aetos and Gorgon keep their own phase-child addresses.
 
-The editor presents the stages as Room Overview, Room Timeline and Room Doors.
-These are transient views over unchanged semantic owners, not persisted
+The editor presents the stages as Room Overview and Room Timeline, whose Doors
+open row and last row present the exit stage. These are transient views over unchanged semantic owners, not persisted
 lifecycle events or a second room model. The
 [simulation authority](SIMULATION_AND_VALIDATION.md#selected-cut) owns what a
 block in each stage publishes.
@@ -879,8 +879,9 @@ structurally retained occurrence beyond progressive coverage may expose a
 disabled launcher, while an occurrence absent from the materialized prefix
 publishes none. The `beforeTargetGeneration` product remains internally useful
 for generation assessment, but only N's Hub-board and Hub-sourced Preboss
-generation exceptions retain public launchers. A literal pre-exit snapshot must
-not replace or relabel either exception. Hub departures capture conformance
+generation exceptions retain public launchers. The pre-exit snapshot has no
+launcher (the run as a room is left is the next room's entry), and must not
+replace or relabel either exception. Hub departures capture conformance
 snapshots described in the [N rules](../biomes/N_GAME_RULES.md#restoration-and-departures).
 
 Separately, each Preboss and completion Boss occurrence captures the raw states
