@@ -462,6 +462,15 @@ const g = [
     { ...soloBlocked, ...introducedBy('FishmanIntro') },
   ),
 ];
+// EnemySets.lua BiomeGLockedDoor: the locked-door fight's families, a subset of BiomeG.
+const lockedDoorFamilies = new Set([
+  'FishmanMelee',
+  'FishmanRanged',
+  'FishSwarmerSquad',
+  'Turtle',
+  'Guard2',
+]);
+const gLockedDoor = g.filter((enemy) => lockedDoorFamilies.has(enemy.key.replace(/_Elite$/, '')));
 const hPassive = [
   enemy('DespairElemental_Elite', 'Bawlder (Elite)', {
     elite: true,
@@ -558,6 +567,7 @@ const q = [
 export const generatedEnemyPools = {
   f,
   g,
+  gLockedDoor,
   hPassive,
   h,
   i,

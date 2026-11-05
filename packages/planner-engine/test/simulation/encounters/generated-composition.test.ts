@@ -89,8 +89,9 @@ describe('native generated composition possibility', () => {
             : [],
         ),
     );
-    // 51 room encounters and the 16 Time and PerfectClear switch encounters.
-    expect(profiles).toHaveLength(67);
+    // 51 room encounters, the 16 Time and PerfectClear switch encounters and
+    // the locked-door fight.
+    expect(profiles).toHaveLength(68);
     for (const { definitionKey, policy: profile } of profiles) {
       const context = {
         biomeDepthCache: 8,

@@ -364,6 +364,9 @@ const budgetByEncounter: Readonly<
   GeneratedQ: { base: 150, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
   GeneratedQ_Large: { base: 525, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
   GeneratedQ_Islands: { base: 150, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  // EncounterData_Generated.lua:118-136 GeneratedG_ExtraDoor: its own BaseDifficulty and
+  // DepthDifficultyRamp over GeneratedG's biome-depth axis.
+  GeneratedG_ExtraDoor: { base: 38, depthRamp: 12, depthAxis: 'biomeDepthCache', multiplier: 1 },
   // Challenge switch encounters (EncounterData_TimeChallenge.lua, EncounterData_Challenge.lua):
   // the first parent fills only what the encounter leaves nil (RunData.lua:1363-1418), so
   // TimeChallenge's DifficultyModifier 0 and DepthDifficultyRamp 0 win over GeneratedX's ramp,
@@ -624,6 +627,17 @@ const unbudgetedGeneratedEncounterChoices = {
     cap: 3,
     eliteTypes: 2,
     hardCap: 4,
+  }),
+  // GeneratedG_ExtraDoor: one wave of GeneratedG's types from BiomeGLockedDoor. AttemptUseDoor
+  // calls GenerateEncounter straight on the definition, so it is never a hard encounter.
+  GeneratedG_ExtraDoor: generation({
+    pool: pools.gLockedDoor,
+    waves: [1, 1],
+    minTypes: 1,
+    maxTypes: 2,
+    ramp: 0.1,
+    cap: 3,
+    eliteTypes: 2,
   }),
   // EncounterData_Intro.lua:78. The seed is the native squad identity, not its spawned units.
   FishSwarmerIntro: introduction({

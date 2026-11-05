@@ -262,12 +262,14 @@ describe('declaration-owned lifecycle clocks', () => {
       'BossTyphonHead01',
       'BossTyphonHead02',
     ]);
-    // A switch's challenge encounter is no room encounter: its end runs no clocks.
-    const challenges = new Set(
-      ['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q'].flatMap((set) =>
+    // A switch's challenge encounter and a locked door's fight are no room
+    // encounter: their end runs no clocks.
+    const challenges = new Set([
+      ...['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q'].flatMap((set) =>
         ['TimeChallenge', 'PerfectClearChallenge', 'EliteChallenge'].map((kind) => kind + set),
       ),
-    );
+      'GeneratedG_ExtraDoor',
+    ]);
     expect(
       catalog.encounterDefinitions.values
         .filter(

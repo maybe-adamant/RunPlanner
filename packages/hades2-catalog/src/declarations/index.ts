@@ -1,5 +1,6 @@
 import { biomes } from './biomes';
 import { challengeSwitches } from './challenge-switches';
+import { extraExitLocks } from './extra-exit-locks';
 import {
   encounterDefinitions,
   encounterEnvelopes,
@@ -79,6 +80,7 @@ export const declarations = {
   exitTypes,
   rooms,
   challengeSwitches,
+  extraExitLocks,
   exitDoorSetupOrders,
   swappableBreakables,
   biomeLayouts,
@@ -88,6 +90,7 @@ export const declarations = {
 export type { RawCatalogInput } from './input';
 export type { RawArcanaCardDeclaration, RawFearVowDeclaration } from './arcana-fear-types';
 export type { RawChallengeSwitchInput } from './challenge-switches-types';
+export type { RawExtraExitLockInput } from './extra-exit-locks-types';
 export type {
   RawEncounterDefinitionDeclaration,
   RawEncounterEnvelopeDeclaration,

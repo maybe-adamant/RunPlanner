@@ -279,6 +279,21 @@ export const gEncounterDefinitions = [
       },
     ],
   },
+  {
+    // EncounterData_Generated.lua:118-136: pressing a locked door generates and
+    // starts it (RoomLogic.lua AttemptUseDoor). It inherits Generated's
+    // CountsForRoomEncounterDepth, refuses a skip and blocks the Gorgon Amulet;
+    // EncounterEventsExtraDoorUnlock spawns no reward, and StartEncounterEffects
+    // and the end effects run only for the room's own encounter.
+    key: 'GeneratedG_ExtraDoor',
+    label: 'Locked door fight',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    advancesHermesShrineDeliveryUses: false,
+    blocksGorgon: true,
+    moneyStore: oceanusMoneyStore,
+    customization: [generatedEncounterChoices.GeneratedG_ExtraDoor],
+  },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const gEncounterSets = [

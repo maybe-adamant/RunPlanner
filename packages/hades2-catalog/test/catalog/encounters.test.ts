@@ -628,6 +628,8 @@ describe('encounter envelope catalog', () => {
         `PerfectClearChallenge${set}`,
         `EliteChallenge${set}`,
       ]),
+      // EncounterData_Generated.lua:128 GeneratedG_ExtraDoor.
+      'GeneratedG_ExtraDoor',
     ];
     const pPreCombat = Object.keys(definitions).filter(
       (key) => key.startsWith('GeneratedP_PreCombat') || key.startsWith('P_Combat'),

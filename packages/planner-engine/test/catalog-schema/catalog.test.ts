@@ -97,6 +97,7 @@ describe('summarizeCatalog', () => {
         gold: { startingValue: 100, minimumValue: 10, defaultValue: 90 },
         bonusReward: { rewardType: 'GiftDrop', dropChance: 0.05 },
       },
+      extraExitLocks: { hosts: emptyCollection() },
       biomeLayouts: emptyCollection(),
       weapons: emptyCollection(),
       aspects: emptyCollection(),

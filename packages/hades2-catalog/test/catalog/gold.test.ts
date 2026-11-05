@@ -203,10 +203,10 @@ describe('gold catalog facts', () => {
       runDepthRamp: 0,
       undrawn: true,
     });
-    // 125 room encounters and the 24 challenge switch encounters.
+    // 125 room encounters, the 24 challenge switch encounters and the locked-door fight.
     expect(
       catalog.encounterDefinitions.values.filter((definition) => definition.moneyStore).length,
-    ).toBe(149);
+    ).toBe(150);
   });
 
   it('drains a Fields room’s Passive store from its cages', () => {

@@ -130,6 +130,9 @@ const budgetEvidence: readonly BudgetRow[] = [
   ['PerfectClearChallengeO', 115, 55, 'biomeEncounterDepth', 0, 1, undefined],
   ['PerfectClearChallengeP', 430, 85, 'biomeDepthCache', 0, 1, undefined],
   ['PerfectClearChallengeQ', 150, 25, 'biomeEncounterDepth', 0, 1, undefined],
+  // A locked door's fight is generated at the press, never hard
+  // (EncounterData_Generated.lua:118-136).
+  ['GeneratedG_ExtraDoor', 38, 12, 'biomeDepthCache', 0, 1, undefined],
 ];
 
 describe('source-declared generated encounter policies', () => {
@@ -443,9 +446,10 @@ describe('source-declared generated encounter policies', () => {
     }
   });
 
-  it('covers the audited 67 concrete identities without boss/prescribed vignettes', () => {
-    // 51 room encounters and the 16 Time and PerfectClear switch encounters.
-    expect(definitions).toHaveLength(67);
+  it('covers the audited 68 concrete identities without boss/prescribed vignettes', () => {
+    // 51 room encounters, the 16 Time and PerfectClear switch encounters and
+    // the locked-door fight.
+    expect(definitions).toHaveLength(68);
     expect(definitions.every((definition) => definition.kind === 'combat')).toBe(true);
     expect(
       definitions

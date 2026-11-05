@@ -4,6 +4,7 @@ import type { RawCatalogInput } from '../declarations';
 import { normalizeArcanaCards, normalizeFearVows } from './arcana-fear';
 import { normalizeBiomes } from './biomes';
 import { normalizeChallengeSwitches } from './challenge-switches';
+import { normalizeExtraExitLocks } from './extra-exit-locks';
 import { requireNonEmpty, requirePositiveInteger } from './common';
 import {
   validateEncounterDefinitionClosure,
@@ -134,6 +135,10 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     definitions: encounterDefinitions,
     sets: encounterSets,
   });
+  const extraExitLocks = normalizeExtraExitLocks(input.extraExitLocks, rooms, {
+    definitions: encounterDefinitions,
+    sets: encounterSets,
+  });
   validateRewardRouteAndAspectReferences(rewards, routes, traitCatalog.aspects);
   validateTraitRouteReferences(traitCatalog, routes);
   validateLifecycleBindings({
@@ -184,6 +189,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     exitTypes,
     rooms,
     challengeSwitches,
+    extraExitLocks,
     biomeLayouts,
     weapons: traitCatalog.weapons,
     aspects: traitCatalog.aspects,

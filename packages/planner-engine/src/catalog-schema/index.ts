@@ -1638,6 +1638,34 @@ export interface ChallengeSwitchCatalog {
   readonly bonusReward: { readonly rewardType: string; readonly dropChance: number };
 }
 
+/**
+ * A room whose doors after the first may lock behind a side encounter
+ * (`LockExtraExitsWithEncounter`). Its flag is rolled when the room is
+ * created, only where no challenge switch spawned; each lockable door then
+ * rolls its own chance as the doors open (`CheckExitPreUnlock`).
+ */
+export interface ExtraExitLockHostDeclaration {
+  readonly gameName: string;
+  /** Native `LockExtraExitsChance`: a chance, never a rule. */
+  readonly chance: number;
+  /**
+   * The side encounter pressing a locked door starts: a declared definition
+   * outside every encounter set, generated at the press.
+   */
+  readonly encounterKey: string;
+  /**
+   * The doors that can lock, by declared exit index, each with its door's
+   * `LockedWithEncounterChance`. The first door the game processes never
+   * locks (`FirstExitChosen`), so exit 1 is never listed.
+   */
+  readonly lockableExits: readonly { readonly index: number; readonly chance: number }[];
+}
+
+/** Oceanus locked doors: optional per-door locks, each opened by its own fight. */
+export interface ExtraExitLockCatalog {
+  readonly hosts: CatalogCollection<ExtraExitLockHostDeclaration>;
+}
+
 /** Gold facts with no narrower owner. */
 export interface GoldCatalogDeclaration {
   /** Gold a trait screen with no options pays instead, before the money multiplier. */
@@ -1689,6 +1717,7 @@ export interface Catalog {
   readonly exitTypes: CatalogCollection<ExitTypeDeclaration>;
   readonly rooms: CatalogCollection<RoomDeclaration>;
   readonly challengeSwitches: ChallengeSwitchCatalog;
+  readonly extraExitLocks: ExtraExitLockCatalog;
   readonly biomeLayouts: CatalogCollection<BiomeLayout>;
   readonly weapons: CatalogCollection<WeaponDeclaration>;
   readonly aspects: CatalogCollection<AspectDeclaration>;
