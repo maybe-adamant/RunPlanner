@@ -470,6 +470,7 @@ function AdditionalExitRow({
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const executeIntent = useCommandIntent();
+  const findingTarget = useFindingTarget();
   const key = workspaceInteractionKey(control.owner);
   const chaos =
     'kind' in control ? requireWorkspaceInteraction(interactions.chaosExits, key) : undefined;
@@ -496,6 +497,8 @@ function AdditionalExitRow({
         'kind' in control && chaos !== undefined ? (
           <ContextualPicker
             ariaLabel={`${control.exitTypeLabel} room`}
+            // Locked with the other doors where the room's exit is dormant.
+            findingTarget={findingTarget(control.owner, `chaos-room-${room.occurrenceId}`)}
             id={`chaos-room-${room.occurrenceId}`}
             itemIcon={() => art}
             label=""
