@@ -425,6 +425,40 @@ describe('run record builder', () => {
     });
   });
 
+  it("records a lock host's lock flag and the locked doors fought open in it", () => {
+    const locked = { lockEncounter: 'GeneratedG_ExtraDoor', lockExtraExits: true } as const;
+    const record = buildRunRecord([
+      save({ history: [], current: room('G_Combat05', locked) }),
+      save({
+        history: ['G_Combat05'],
+        current: room('G_Combat09', { lockEncounter: 'GeneratedG_ExtraDoor' }),
+        departure: room('G_Combat05', locked),
+        run: { encountersCompleted: { GeneratedG_ExtraDoor: 2 } },
+      }),
+      save({
+        history: ['G_Combat05', 'G_Combat09'],
+        current: room('G_Shop01'),
+        departure: room('G_Combat09', { lockEncounter: 'GeneratedG_ExtraDoor' }),
+        run: { encountersCompleted: { GeneratedG_ExtraDoor: 2 } },
+      }),
+      save({
+        history: ['G_Combat05', 'G_Combat09', 'G_Shop01'],
+        current: room('G_PreBoss01'),
+        departure: room('G_Shop01'),
+        run: { encountersCompleted: { GeneratedG_ExtraDoor: 2 } },
+      }),
+    ]);
+    // A room that can lock keeps its count, zero included; which doors locked is not saved.
+    expect(
+      record.rooms.map((entry) => [entry.name, entry.lockedExits, entry.lockedDoorFights]),
+    ).toEqual([
+      ['G_Combat05', true, 2],
+      ['G_Combat09', undefined, 0],
+      ['G_Shop01', undefined, undefined],
+      ['G_PreBoss01', undefined, undefined],
+    ]);
+  });
+
   it('records Sea Star duplicates and an Aetos appearance in their rooms', () => {
     const record = buildRunRecord([
       save({ history: [], current: room('P_Combat14') }),

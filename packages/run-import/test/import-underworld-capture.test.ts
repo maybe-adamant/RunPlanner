@@ -298,7 +298,8 @@ describe('run import of the Underworld capture', () => {
       },
       // The three Chaos screens stay: their unpicked curses' durations are never saved.
       // The H and I Preboss Travel Deal refills were never bought.
-      notInRecord: { fields: 1, pathOfStars: 1, shop: 2, traitOffer: 3 },
+      // The record predates the locked-door fight count.
+      notInRecord: { fields: 1, lockedDoors: 1, pathOfStars: 1, shop: 2, traitOffer: 3 },
     });
     // The Bridge's taken twin door is the one whose sibling's cages the saved stores explain.
     expect(entryLines(imported.report)).toEqual([

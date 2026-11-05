@@ -55,6 +55,8 @@ export interface SavedRunState {
   readonly poseidonDoubleRewardCount: number;
   /** `FieldsMaxDoorsRolled`: Fields door-cage rolls that came up Max; nil reads 0. */
   readonly fieldsMaxDoorsRolled?: number;
+  /** `EncountersCompletedCache`: completions this run by encounter name; absent when none. */
+  readonly encountersCompleted?: Readonly<Record<string, number>>;
 }
 
 export interface SavedLootChoice {
@@ -213,6 +215,10 @@ export interface SavedRoom {
   readonly spentRerolls?: Readonly<Record<string, number>>;
   /** `OlympusEagleSpawn`: Aetos appeared in the room. */
   readonly olympusEagleSpawn: boolean;
+  /** `LockExtraExitsWithEncounter`: the fight a locked door of this room starts. */
+  readonly lockEncounter?: string;
+  /** `LockExtraExits`: the room locks doors after its first. */
+  readonly lockExtraExits?: true;
 }
 
 export class SaveCheckpointError extends Error {
@@ -457,6 +463,8 @@ function room(value: LuaValue | undefined): SavedRoom | undefined {
         (isTable(value.Store.SpawnedStoreItems) || Array.isArray(value.Store.SpawnedStoreItems)),
     },
     olympusEagleSpawn: value.OlympusEagleSpawn === true,
+    ...optional('lockEncounter', text(value.LockExtraExitsWithEncounter)),
+    ...optional('lockExtraExits', value.LockExtraExits === true ? (true as const) : undefined),
     ...optional(
       'spentRerolls',
       Object.keys(counts(value.SpentRerolls)).length > 0 ? counts(value.SpentRerolls) : undefined,
@@ -669,6 +677,12 @@ export function extractSaveCheckpoint(
       ...optional('numRerolls', number(run.NumRerolls)),
       poseidonDoubleRewardCount: number(run.PoseidonDoubleRewardCount) ?? 0,
       fieldsMaxDoorsRolled: number(run.FieldsMaxDoorsRolled) ?? 0,
+      ...optional(
+        'encountersCompleted',
+        Object.keys(counts(run.EncountersCompletedCache)).length === 0
+          ? undefined
+          : counts(run.EncountersCompletedCache),
+      ),
     },
     ...optional('hero', savedHero),
     profile: {

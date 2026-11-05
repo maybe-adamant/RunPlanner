@@ -770,6 +770,8 @@ const ROOM_OPTIONAL = [
   'spentRerolls',
   'doubleRewards',
   'olympusEagleSpawn',
+  'lockedExits',
+  'lockedDoorFights',
   'entry',
 ] as const;
 
@@ -822,6 +824,8 @@ function room(value: unknown, label: string): RunRecordRoom {
     }),
     ...optional(record, 'doubleRewards', label, (entry, path) => integer(entry, path, 1)),
     ...optional(record, 'olympusEagleSpawn', label, flag),
+    ...optional(record, 'lockedExits', label, flag),
+    ...optional(record, 'lockedDoorFights', label, (entry, path) => integer(entry, path)),
     ...optional(record, 'entry', label, roomEntry),
   }) as RunRecordRoom;
 }

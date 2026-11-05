@@ -145,6 +145,17 @@ export interface RunRecordRoom {
    * room, so the encounter and wave it joined are not saved.
    */
   readonly olympusEagleSpawn?: true;
+  /**
+   * `LockExtraExits`: the room locked doors after its first when they opened.
+   * Which doors locked is not saved.
+   */
+  readonly lockedExits?: true;
+  /**
+   * Locked doors fought open in this visit: the gain of the room's
+   * `LockExtraExitsWithEncounter` in `EncountersCompletedCache`, zero kept in a
+   * room that can lock; absent in a record made before it was read.
+   */
+  readonly lockedDoorFights?: number;
   /** Run state of the room's entry save, which leaving the previous room writes. */
   readonly entry?: RunRecordRoomEntry;
 }

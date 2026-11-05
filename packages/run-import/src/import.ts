@@ -63,6 +63,7 @@ import {
 import { areaOfFinding, areaOfOwner, isQuestionFinding } from './areas';
 import { importResourcePlacements } from './resources';
 import { importChallengeSwitches } from './challenge-switches';
+import { importLockedDoors } from './locked-doors';
 import { routeKeyForRecord } from './vocabulary';
 import { compareEntrySaves, entrySaves, mismatchEntries, type EntrySaves } from './conformance';
 import { judgeRoom, judgeRooms } from './acceptance';
@@ -553,6 +554,7 @@ export class RunImportWalk {
       importCommerce(this.context);
       // A switch's claim pickups are authored before the room's Sea Star duplicates are placed.
       importChallengeSwitches(this.context);
+      importLockedDoors(this.context);
       importFeatures(this.context);
       importWheels(this.context);
       importWheelConversions(this.context);

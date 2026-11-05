@@ -534,6 +534,9 @@ function buildRoom(
         : undefined,
     ),
   });
+  const lockEncounter = entered.lockEncounter ?? settled.lockEncounter;
+  const gainOf = (from: number | undefined, to: number | undefined) =>
+    Math.max(0, (to ?? 0) - (from ?? 0));
   // The Forfeit skip count restarts in each biome.
   const forfeitSkips =
     after.biomeBoonSkipCount >= before.biomeBoonSkipCount
@@ -579,6 +582,17 @@ function buildRoom(
     ...optional(
       'olympusEagleSpawn',
       combatThisVisit && settled.olympusEagleSpawn ? (true as const) : undefined,
+    ),
+    ...optional('lockedExits', entered.lockExtraExits ?? settled.lockExtraExits),
+    // A room that can lock keeps its count of fights, zero included.
+    ...optional(
+      'lockedDoorFights',
+      lockEncounter === undefined
+        ? undefined
+        : gainOf(
+            before.encountersCompleted?.[lockEncounter],
+            after.encountersCompleted?.[lockEncounter],
+          ),
     ),
     entry: roomEntry(room.entry, saves[room.index - 1]?.entry),
   };

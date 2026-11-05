@@ -80,7 +80,8 @@ describe('run import of the live Underworld recording', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { conversion: 3, encounter: 2, reward: 1, roomActionOrder: 10 },
       // H_Combat07's one switch press shows no claim, and no entry save judges what it started.
-      notInRecord: { challengeSwitch: 1, traitOffer: 1 },
+      // The record predates the locked-door fight count.
+      notInRecord: { challengeSwitch: 1, lockedDoors: 1, traitOffer: 1 },
       stopped: { fields: 1 },
     });
     // Fig Leaf, racked at F_PostBoss01, skipped one encounter in each of G and H: the record
@@ -218,6 +219,8 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       },
       notInRecord: {
         fields: 1,
+        // The record predates the locked-door fight count.
+        lockedDoors: 1,
         // Each rerolled screen's earlier screen is a guess: the record keeps the final one.
         reroll: 2,
       },

@@ -15,8 +15,8 @@ the planner.
 ## Evidence Status
 
 These rules were verified against the Hades II script extraction and map data
-on 2026-07-16, with reward-store behavior and locked-exit encounters rechecked
-on 2026-07-18. Primary sources are:
+on 2026-07-16, with reward-store behavior rechecked on 2026-07-18 and locked
+extra exits on 2026-11-05. Primary sources are:
 
 ```text
 ../../../../1GameData/Scripts/RoomSets.lua

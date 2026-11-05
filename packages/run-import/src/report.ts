@@ -53,6 +53,7 @@ export type RunImportArea =
   | 'forfeit'
   | 'elements'
   | 'challengeSwitch'
+  | 'lockedDoors'
   | 'other';
 
 /** One record room visit: its `rooms` index and the visit ordinal of its occurrence. */

@@ -125,6 +125,13 @@ Evidence: the save-file run record audit
     `CurrentRoom.ChallengeEncounter` (started, completed, ended early, damage,
     Time gold, roster, Elite name and attributes), or the hero's gold before
     and after the room.
+14. **Oceanus locked doors.** The recorder keeps a lock host's lock flag
+    (`lockedExits`) and the locked doors fought open there
+    (`lockedDoorFights`, zero kept); the saves never name the doors. A room
+    with no fight authors no lock. A fight stops the plan before its room
+    (`lockedDoors`, `lockedDoorFight`), since the door it opened cannot be
+    named. A record made before the count was kept reports it `notInRecord`
+    once and authors no lock.
 
 ## Ownership
 
