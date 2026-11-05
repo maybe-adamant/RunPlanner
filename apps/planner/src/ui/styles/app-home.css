@@ -742,7 +742,7 @@ button.home-slot-name {
 /* Editor header: Home and status start it, the plan name is centred, history and send end it. */
 .app-header.editor-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(auto, max-content) minmax(0, 1fr);
   gap: 8px 16px;
 }
 
@@ -777,6 +777,8 @@ button.home-slot-name {
 .editor-header .history-controls {
   display: flex;
   gap: 6px;
+  padding-left: 0;
+  border-left: 0;
 }
 
 .editor-game-group {
@@ -951,6 +953,9 @@ button.home-slot-name {
 }
 
 .editor-title .app-plan-name {
+  /* Sized to the name itself, so the centred column never clips a short name. */
+  field-sizing: content;
+  flex: 0 0 auto;
   max-width: 40ch;
   border-bottom-color: transparent;
   color: var(--text);
