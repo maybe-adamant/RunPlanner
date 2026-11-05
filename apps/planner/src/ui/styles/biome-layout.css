@@ -440,6 +440,11 @@
   vertical-align: -0.2rem;
 }
 
+/* A horizontal rail card's icons; the vertical rail names its rooms instead. */
+.biome-rail-icons {
+  display: none;
+}
+
 .biome-rail-status {
   display: flex;
   flex: 0 0 auto;

@@ -181,6 +181,38 @@ function RailMainReward({
   );
 }
 
+/** A horizontal rail card's room icon over its reward icons; the card's text names it. */
+function RailIcons({
+  rewards = [],
+  room,
+}: {
+  readonly rewards?: readonly (ArtworkSource | undefined)[];
+  readonly room: WorkspaceRoomIcon;
+}) {
+  return (
+    <span aria-hidden="true" className="biome-rail-icons">
+      <ArtworkIcon className="biome-rail-icons-room" source={roomKindIcon(room)} />
+      {rewards.length === 0 ? null : (
+        <span className="biome-rail-icons-rewards">
+          {rewards.map((icon, index) => (
+            <ArtworkIcon className="biome-rail-icons-reward" key={index} source={icon} />
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function RailTargetIcons({
+  biomeKey,
+  target,
+}: {
+  readonly biomeKey: string;
+  readonly target: WorkspaceRailSelectedTarget;
+}) {
+  return <RailIcons rewards={railRewardIcons(biomeKey, target)} room={target.roomIcon} />;
+}
+
 /** A room seen without a door: its icon and name. */
 function RailRoom({ icon, label }: { readonly icon: WorkspaceRoomIcon; readonly label: string }) {
   return (
@@ -264,6 +296,14 @@ function RailNode({
         {entry.selectedTarget === undefined ? null : (
           <RailSelectedTarget biomeKey={biomeKey} selectedTarget={entry.selectedTarget} />
         )}
+        {entry.selectedTarget !== undefined ? (
+          <RailTargetIcons biomeKey={biomeKey} target={entry.selectedTarget} />
+        ) : entry.roomIcon === undefined ? null : (
+          <RailIcons
+            rewards={entry.mainReward === undefined ? [] : [offerIcon(entry.mainReward.offer)]}
+            room={entry.roomIcon}
+          />
+        )}
         {entry.mainReward !== undefined ? (
           <RailMainReward reward={entry.mainReward} roomIcon={entry.roomIcon} />
         ) : entry.roomIcon === undefined || node.kind !== 'occurrenceWorkbench' ? null : (
@@ -317,6 +357,7 @@ function HubRailVisit({
           </span>
         </span>
         <RailSelectedTarget biomeKey={biomeKey} selectedTarget={visit.room} />
+        <RailTargetIcons biomeKey={biomeKey} target={visit.room} />
       </FocusButton>
       {visit.sideVisits.length === 0 ? null : (
         <ol aria-label={`${visit.label} side rooms`} className="biome-hub-rail-side-visits">
@@ -341,6 +382,7 @@ function HubRailVisit({
                     </span>
                   </span>
                   <RailSelectedTarget biomeKey={biomeKey} selectedTarget={sideVisit.room} />
+                  <RailTargetIcons biomeKey={biomeKey} target={sideVisit.room} />
                 </FocusButton>
               </li>
             );
@@ -441,6 +483,7 @@ function RailCompletionNode({
           </span>
         </span>
         <RailRoom icon={node.room.roomIcon} label={node.room.label} />
+        <RailIcons room={node.room.roomIcon} />
       </FocusButton>
     </div>
   );

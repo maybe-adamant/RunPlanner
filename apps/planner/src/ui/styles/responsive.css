@@ -125,6 +125,71 @@
     white-space: nowrap;
   }
 
+  /* Icon cards: the room over its rewards, an arrow between rooms; the text stays for assistive tech. */
+  .biome-rail-stop,
+  .biome-hub-rail-visit,
+  .biome-hub-rail-side-visit {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .biome-rail > .biome-rail-stop + .biome-rail-stop::before,
+  .biome-hub-rail-visits > li::before,
+  .biome-hub-rail-side-visits > li::before {
+    display: block;
+    position: static;
+    width: auto;
+    height: auto;
+    border: 0;
+    color: #6d6878;
+    background: none;
+    content: '→';
+    font-size: 0.8rem;
+  }
+
+  .biome-rail-stop:has(.biome-rail-icons) {
+    min-width: 0;
+  }
+
+  .biome-rail-node:has(.biome-rail-icons) {
+    width: auto;
+    justify-items: center;
+    padding: 5px 7px;
+  }
+
+  .biome-rail-node:has(.biome-rail-icons)
+    > :is(.biome-rail-heading, .biome-rail-selection, .biome-rail-summary) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .biome-rail-icons {
+    display: grid;
+    justify-items: center;
+    gap: 3px;
+  }
+
+  .biome-rail-icons-room {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+
+  .biome-rail-icons-rewards {
+    display: flex;
+    gap: 2px;
+  }
+
+  .biome-rail-icons-reward {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
   .biome-inspector {
     height: auto;
     max-height: none;
