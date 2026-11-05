@@ -1,6 +1,9 @@
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { biomeIcon } from '@planner/ui/artwork/roomArtwork';
-import { navigationArtwork } from '@planner/ui/artwork/navigation/navigationArtwork';
+import {
+  navigationArtwork,
+  routeNavigationArtwork,
+} from '@planner/ui/artwork/navigation/navigationArtwork';
 import type { EncounterPhaseAddress, ProjectDocument } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectEvaluation } from '@run-planner/engine/simulation';
@@ -241,7 +244,14 @@ export function RouteWorkspace({
                     }
                   : {})}
               >
-                <PanelLabel kind={panel.kind} label={panel.label} />
+                <PanelLabel
+                  icon={
+                    panel.kind === 'route'
+                      ? routeNavigationArtwork[workspaceRoute.routeKey]
+                      : navigationArtwork[panel.kind]
+                  }
+                  label={panel.label}
+                />
                 {panel.kind === 'loadout' ? (
                   <span
                     aria-label={`${feedback.loadout.status.label}${feedback.loadout.findingCount === 0 ? '' : `, ${feedback.loadout.findingCount} findings`}`}
@@ -325,7 +335,7 @@ export function RouteWorkspace({
                 }
                 type="button"
               >
-                <PanelLabel kind="npcIndex" label="NPCs" />
+                <PanelLabel icon={navigationArtwork.npcIndex} label="NPCs" />
               </button>
             ) : null}
             {hasTraits ? (
@@ -343,7 +353,7 @@ export function RouteWorkspace({
                 }
                 type="button"
               >
-                <PanelLabel kind="traits" label="Traits" />
+                <PanelLabel icon={navigationArtwork.traits} label="Traits" />
               </button>
             ) : null}
             {hasResources ? (
@@ -361,7 +371,7 @@ export function RouteWorkspace({
                 }
                 type="button"
               >
-                <PanelLabel kind="resources" label="Resources" />
+                <PanelLabel icon={navigationArtwork.resources} label="Resources" />
               </button>
             ) : null}
             {hasShrines ? (
@@ -379,7 +389,7 @@ export function RouteWorkspace({
                 }
                 type="button"
               >
-                <PanelLabel kind="shrines" label="Shrines" />
+                <PanelLabel icon={navigationArtwork.shrines} label="Shrines" />
               </button>
             ) : null}
             {hasWells ? (
@@ -397,7 +407,7 @@ export function RouteWorkspace({
                 }
                 type="button"
               >
-                <PanelLabel kind="wells" label="Wells" />
+                <PanelLabel icon={navigationArtwork.wells} label="Wells" />
               </button>
             ) : null}
           </fieldset>
@@ -467,13 +477,16 @@ export function RouteWorkspace({
 }
 
 /** A panel's icon and name; folded navigation shows the icon alone. */
-function PanelLabel({ kind, label }: { readonly kind: string; readonly label: string }) {
+function PanelLabel({
+  icon,
+  label,
+}: {
+  readonly icon: string | null | undefined;
+  readonly label: string;
+}) {
   return (
     <span className="panel-navigation-biome">
-      <ArtworkIcon
-        className="panel-navigation-icon"
-        source={navigationArtwork[kind] ?? undefined}
-      />
+      <ArtworkIcon className="panel-navigation-icon" source={icon ?? undefined} />
       <span>{label}</span>
     </span>
   );

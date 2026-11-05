@@ -128,7 +128,9 @@ describe('RouteWorkspace', () => {
     expect(navigation).not.toContain('findings-count');
     for (const label of ['Route', 'Draft'])
       expect(navigation).not.toMatch(
-        new RegExp(`aria-label="${label}"[^>]*><span>${label}</span><span[^>]*navigation-feedback`),
+        new RegExp(
+          `aria-label="${label}"[^>]*>.*?<span>${label}</span></span><span[^>]*navigation-feedback`,
+        ),
       );
   });
 
@@ -144,7 +146,7 @@ describe('RouteWorkspace', () => {
     );
     const separatorPosition = navigationMarkup.lastIndexOf('class="panel-navigation-separator"');
     const indexPositions = ['NPCs', 'Traits', 'Resources', 'Shrines', 'Wells']
-      .map((label) => navigationMarkup.indexOf(`>${label}</button>`))
+      .map((label) => navigationMarkup.indexOf(`<span>${label}</span></span></button>`))
       .filter((position) => position >= 0);
     expect(routePosition).toBeGreaterThanOrEqual(0);
     expect(biomePositions.every((position) => position > routePosition)).toBe(true);
