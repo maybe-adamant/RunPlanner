@@ -3,7 +3,7 @@ import { biomeIcon } from '@planner/ui/artwork/roomArtwork';
 import type { EncounterPhaseAddress, ProjectDocument } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectEvaluation } from '@run-planner/engine/simulation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { type RouteFeedbackPresentation } from '@planner/projections/evaluationProjection';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
@@ -24,6 +24,7 @@ import { NavigationStatusMarker, ProjectFindings } from '../feedback/EvaluationF
 import { semanticOwnerControlElementId } from '../feedback/semanticOwner';
 import { BiomeWorkspace } from '../editor/biome/BiomeWorkspace';
 import type { DraftRunController } from '@planner/workspace/draftRun';
+import type { NavigationPinPreference } from '@planner/persistence/navigationPinPreference';
 import { RouteDraftPanel } from './RouteDraftPanel';
 import { RouteNpcIndex } from './RouteNpcIndex';
 import { RouteLoadoutPanel } from './RouteLoadoutPanel';
@@ -45,6 +46,7 @@ export function RouteWorkspace({
   catalog,
   draftRun,
   navigation,
+  navigationPinPreference,
   feedback,
   interactions,
   project,
@@ -55,6 +57,7 @@ export function RouteWorkspace({
   readonly catalog: Catalog;
   readonly draftRun: DraftRunController;
   readonly navigation: RouteEditorNavigation;
+  readonly navigationPinPreference?: NavigationPinPreference;
   readonly feedback: RouteFeedbackPresentation;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly project: ProjectDocument;
@@ -163,6 +166,12 @@ export function RouteWorkspace({
     phaseControl?.focus({ preventScroll: true });
   }, [displayedPanel, workspaceRoute.routeKey]);
 
+  const [pinned, setPinnedState] = useState(() => navigationPinPreference?.read() ?? true);
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const setPinned = (next: boolean): void => {
+    setPinnedState(next);
+    navigationPinPreference?.write(next);
+  };
   const navigateNpcIndexEntry = (phase: EncounterPhaseAddress): void => {
     pendingNpcPhaseFocus.current = phase;
     dispatch(semanticOwnerNavigated(phase));
@@ -177,8 +186,34 @@ export function RouteWorkspace({
   );
 
   return (
-    <div className="editor-workspace">
-      <div className="panel-navigation-column">
+    <div className="editor-workspace" data-navigation-pinned={pinned}>
+      <div
+        className="panel-navigation-column"
+        data-open={navigationOpen || undefined}
+        onClickCapture={(event) => {
+          // An unpinned list closes once a panel is chosen from it.
+          if (!pinned && (event.target as Element).closest('.panel-navigation-item') !== null)
+            setNavigationOpen(false);
+        }}
+        onMouseLeave={() => setNavigationOpen(false)}
+      >
+        <button
+          aria-expanded={pinned || navigationOpen}
+          aria-label={pinned ? 'Unpin panels' : navigationOpen ? 'Pin panels' : 'Show panels'}
+          className="panel-navigation-pin"
+          onClick={() => {
+            if (pinned) {
+              setPinned(false);
+              setNavigationOpen(false);
+            } else if (navigationOpen) {
+              setPinned(true);
+              setNavigationOpen(false);
+            } else setNavigationOpen(true);
+          }}
+          type="button"
+        >
+          {pinned ? '⇤' : navigationOpen ? '⇥' : '☰'}
+        </button>
         <nav className="panel-navigation" aria-label={`${navigation.label} panels`}>
           {/* Panels stay put while a draft runs. */}
           <fieldset className="panel-navigation-fieldset" disabled={drafting}>

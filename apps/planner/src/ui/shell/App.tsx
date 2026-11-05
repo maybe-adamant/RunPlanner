@@ -23,6 +23,7 @@ import { findingSelected } from '@planner/state/editorSessionSlice';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import type { StructuredWorkspaceProjection } from '@planner/projections/structured-workspace';
 import type { AppScalePreference } from '@planner/persistence/appScalePreference';
+import type { NavigationPinPreference } from '@planner/persistence/navigationPinPreference';
 import type { LoadoutPresetController } from '@planner/persistence/loadoutPresets';
 import type { BuildIdentity } from '@planner/composition/buildIdentity';
 import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdates';
@@ -49,6 +50,7 @@ import { routeBannerArtwork } from '@planner/ui/artwork/route-banners/routeBanne
 
 interface AppProps {
   readonly appScalePreference?: AppScalePreference;
+  readonly navigationPinPreference?: NavigationPinPreference;
   /** The planner's Arcana and Vow presets; absent where none are kept. */
   readonly loadoutPresets?: LoadoutPresetController;
   /** Present only in the desktop application. */
@@ -78,6 +80,7 @@ interface AppProps {
 
 export function App({
   appScalePreference,
+  navigationPinPreference,
   loadoutPresets,
   bugReport,
   buildIdentity,
@@ -195,6 +198,7 @@ export function App({
                 feedback={activeRouteFeedback}
                 interactions={workspace.interactions}
                 navigation={activeRouteNavigation}
+                {...(navigationPinPreference === undefined ? {} : { navigationPinPreference })}
                 project={project}
                 projectEvaluation={evaluation}
                 workspace={workspace}

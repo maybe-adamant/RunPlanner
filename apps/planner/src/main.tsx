@@ -28,6 +28,7 @@ import './ui/styles.css';
 import { App } from './ui/shell/App';
 import { ApplicationFaultBoundary } from './ui/shell/ApplicationFaultBoundary';
 import { createBrowserAppScalePreference } from './persistence/appScalePreference';
+import { createBrowserNavigationPinPreference } from './persistence/navigationPinPreference';
 import { createBrowserLoadoutPresets } from './persistence/loadoutPresets';
 import type { BuildIdentity } from './composition/buildIdentity';
 import {
@@ -42,6 +43,7 @@ const devBrowserErrorReporter = installDevBrowserErrorReporter();
 const rootElement = document.getElementById('root');
 const tauriHost = isTauri();
 const appScalePreference = createBrowserAppScalePreference(() => globalThis.localStorage);
+const navigationPinPreference = createBrowserNavigationPinPreference(() => globalThis.localStorage);
 const projectLibrary = tauriHost
   ? createTauriProjectLibraryAdapter({
       invoke: tauriInvoke,
@@ -144,6 +146,7 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
       >
         <App
           appScalePreference={appScalePreference}
+          navigationPinPreference={navigationPinPreference}
           loadoutPresets={createBrowserLoadoutPresets(
             application.catalog,
             () => globalThis.localStorage,
