@@ -20,6 +20,7 @@ import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspac
 import { useAppDispatch } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import {
+  useAuthoringLocked,
   useFindingAnchor,
   useFindingMark,
   useFindingTarget,
@@ -960,6 +961,8 @@ export function BatchDoorsDetail({
   readonly repair?: ReactNode;
 }) {
   const findingAnchor = useFindingAnchor();
+  // Where the exit is dormant (past or at the plan end) every door row is read-only together.
+  const locked = useAuthoringLocked(exitSelectionAddress(node.selection));
   return (
     <section
       aria-label="Door details"
@@ -969,7 +972,7 @@ export function BatchDoorsDetail({
       {...(node.repairIntent?.markOwner === undefined ? findingAnchor(node.owner) : {})}
       tabIndex={-1}
     >
-      <div className="door-body">
+      <div className="door-body" data-authoring-locked={locked || undefined} inert={locked}>
         <div className="door-batch">
           <BatchSettings interactions={interactions} markFor={markFor} node={node} />
         </div>
