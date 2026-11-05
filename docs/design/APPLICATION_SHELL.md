@@ -3,7 +3,8 @@
 The shell is everything around the biome workspace: the Home screens, the
 project library and its operations, continuous save, opening and migration,
 startup, navigation history, fault recovery, the Game tab and send control,
-the Route, Draft and Loadout panels and the Run State sheet.
+the editor header, the panel navigation and width policy, the Route, Draft and
+Loadout panels and the Run State sheet.
 [Editor Model](EDITOR_MODEL.md) owns the application architecture these sit
 on (composition, projections, binding, findings);
 [Structured Editor Workspace](STRUCTURED_EDITOR_WORKSPACE.md) owns the biome
@@ -25,8 +26,8 @@ deleting the open plan closes it and returns to the Library.
 
 **Settings** holds the app scale and the Arcana and Vow presets. App scale is
 a device-local presentation preference, outside plans and Undo/Redo, with
-keyboard and wheel shortcuts. It moves between a fixed set of levels (80–150%),
-each of which layouts are checked at; a saved scale between levels opens at the
+keyboard and wheel shortcuts. It moves between six fixed levels from 80 to
+150%, each of which layouts are checked at; a saved scale between levels opens at the
 nearest one. Map zoom is independent of it, and pointer
 gestures and floating overlays convert between screen and scaled layout
 coordinates. Presets are
@@ -278,12 +279,41 @@ made active) are UI-session state cleared by any document replacement; a
 status region announces each result. The game target is neither authored nor
 Redux state.
 
+## Editor header
+
+The open plan's header has three zones. Its start holds Home and the plan's
+[status pill](EDITOR_MODEL.md#outer-layer-the-status-pill-and-dialog-owners),
+the one place findings read. Its centre holds the plan name, with a small line
+under it for renaming, discarding the changes made since opening (offered only
+once there are any) and the save notice. Its end holds Undo/Redo and the
+[send control](#game-tab-and-send-control).
+
 ## Editor panels
 
-The editor's route rail leads with three route-level panels before the biomes
-([Structured Editor Workspace](STRUCTURED_EDITOR_WORKSPACE.md#route-rail)).
+The editor's panel navigation leads with three route-level panels before the
+biomes
+([Structured Editor Workspace](STRUCTURED_EDITOR_WORKSPACE.md#panel-navigation)).
 The editor works on one route per project and never holds sibling route runs;
 no route-specific reducer or second authored navigation tree exists.
+
+The panel navigation is pinned open beside the editor or folded to its icons;
+folded, it opens over the editor on demand and closes once a panel is chosen.
+The pin, like the biome rail's, is a device-local preference outside plans and
+history.
+
+### Width policy
+
+The editor gives its width to the room first. The room has three bands: wide,
+where the Timeline grows to a readable width and the rest goes to its side
+column; medium, where the Timeline and the room's actions column sit side by
+side; and narrow, where the actions go below the Timeline. As the editor
+narrows, the panel navigation folds first, then the biome rail, and only then
+does the room drop to its narrow band. A pin holds while the room keeps its
+medium band, so folding is never forced sooner; an automatically folded panel
+list or rail still opens over the room but cannot be pinned until there is room
+again. Bands and folds follow the space the editor has rather than the window,
+so app scale and each fold hand their width on; the stylesheet owns the
+breakpoints.
 
 ### Route
 
@@ -336,8 +366,8 @@ the route in a worker; the result applies as one edit. It has Draft and
 Advanced tabs. Draft holds the run (loadout controls, rack keepsakes for each
 planned biome's Postboss; god keepsakes are refused), the god pool in click
 order with its rules and a reset, story and field NPCs per planned biome, and
-the basket. When the route already has topology the tab notes that drafting
-replaces it.
+the basket. Drafting over existing topology replaces it as that one undoable
+edit, with no warning first.
 
 The basket shows read-only as three lines (God, Bonus and NPC traits), each
 giver's icon then its traits, numbered in pick order for queued givers, with

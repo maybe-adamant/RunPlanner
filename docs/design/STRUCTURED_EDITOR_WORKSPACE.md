@@ -3,7 +3,7 @@
 ## Purpose
 
 This document defines what the route and biome workspace shows and where:
-the route rail, biome structure, focused inspector, occurrence workbenches,
+the panel navigation, biome rail, focused inspector, occurrence workbenches,
 ordinary decisions, the Hub board, empty-biome outlines and removal repair. It
 composes engine and application products into a game-structured route rather
 than a database form, so a user can see where they are, which authored
@@ -60,30 +60,32 @@ The primary authoring surface uses three conceptual regions:
 
 ```text
 +----------------+-----------------------------+---------------------------+
-| Route rail     | Route structure             | Details                   |
-|                |                             |                           |
-| route status   | door choices / Hub          | selected decision, room,  |
-| biome status   | decision labels / status    | reward, finding, or       |
-| navigation     | next step                   | repair surface            |
+| Panel          | Biome rail                  | Details                   |
+| navigation     |                             |                           |
+| route panels   | one card per reached stop,  | selected decision, room,  |
+| biome status   | numbered by Location        | reward, or repair surface |
+| indexes        | next step                   |                           |
 +----------------+-----------------------------+---------------------------+
 ```
 
 These are presentation regions, not persisted panels. The desktop layout is
-designed for windows of at least half a 1080p screen. The details region
-stacks under the route structure once side by side it can no longer hold the
-room Overview's row grid; narrower browser windows stay usable without being
-designed for.
+designed for windows of at least half a 1080p screen; how the regions give
+way as the editor narrows is the shell's
+[width policy](APPLICATION_SHELL.md#width-policy). Narrower browser windows
+stay usable without being designed for.
 
-### Route Rail
+### Panel Navigation
 
-The route rail projects the selected route's normalized biome order and
+The panel navigation projects the selected route's normalized biome order and
 current project evaluation. It shows the Route, Draft and Loadout panels
 ([Application Shell](APPLICATION_SHELL.md#editor-panels)), then each
 configured biome with its status and whether contextual evaluation is active,
 complete or blocked by an earlier biome, then nonempty route-local indexes.
-The workspace opens on Route. Loadout carries the same status marker and
-finding count as a biome for route-start owners, and every route-scoped or
-route-start finding opens it; Route carries no marker.
+Each entry has its own icon, a route its route's icon, so the folded
+navigation still names every panel. The workspace opens on Route. Loadout
+carries the same status marker and finding count as a biome for route-start
+owners, and every
+route-scoped or route-start finding opens it; Route carries no marker.
 
 Selecting a biome changes UI-session navigation only. A downstream biome remains
 visible when blocked and its contextual state remains unassessed. Required
@@ -92,10 +94,11 @@ invalidity alone does not.
 
 ### Plan end
 
-Every door footer offers to end the plan at its room, enabled by the engine's
-plan-end availability (a hint only when the room or something before it is not
-settled), beside the way on and at most one contextual repair. The end room's
-footer instead offers to continue planning, which clears the end; the room
+Every room's Leave row, or the end of a Timeline without one, offers to end the
+plan at that room, enabled by the
+engine's plan-end availability (a hint only when the room or something before
+it is not settled); the end room's row instead offers to continue planning,
+which clears the end ([Doors on the Timeline](#doors-on-the-timeline)). The room
 header and the rail say where the plan ends, and the Route panel shows the end
 with its room and removal. The route-owned unreached-end finding repairs at
 that Route row. The end room's doors lie inside the plan, the rooms behind
@@ -116,8 +119,25 @@ Door 1 room picker whose sole candidate is Hub rather than another node family.
 The projected rail
 deliberately exposes only player-facing biome stages and decision points;
 exhaustive node ownership does not imply one rail stop per node.
+
 `HubDecisionWorkbench` is the one N-specific workbench and is nested inside
 that shared workspace; it does not create a second editor surface.
+
+The rail is vertical. Its head holds the fold toggle, the biome's icon and
+title, and a quiet Clear biome action that the folded rail hides. Each stop is
+a one-line card: the room's icon, its name, then its reward icons, several
+rewards sharing one compact slot. A stop still waiting on a choice shows what
+it waits on instead of a room. Beside each card the rail's backbone carries the
+stop's Location, the run-wide room count the game and its players use: the
+engine's run depth on entering that room, read from its Run State snapshot and
+never counted by the application. A stop the evaluation has not reached has no
+Location and shows a plain dot. Folded, the rail keeps only the backbone and
+each card's room icon, with a badge where rooms share an icon (an Ephyra side
+room reads by its short number); opened from the fold, it lies over the room.
+Whether the rail is pinned open is a device-local preference outside plans and
+history. A card shows that it holds a finding only by its outline; finding text
+lives in the editor header's
+[status pill](EDITOR_MODEL.md#outer-layer-the-status-pill-and-dialog-owners).
 
 The rail is a selective decision-highlight and navigation projection, not
 workspace authority. Omitting a semantic owner from the rail changes neither
@@ -170,7 +190,7 @@ these projected owners and never distinguishes them from room names or rendered
 nesting.
 
 The center region does not attempt to make ordinary decision topology and the
-Hub board look structurally identical. It does give both the same route rail,
+Hub board look structurally identical. It does give both the same biome rail,
 semantic focus, finding navigation, coverage, and focused-inspector language.
 
 ### Focused Inspector
@@ -190,7 +210,7 @@ Before a physical offer's room is selected, the pending Reward row remains
 visible, asking for the room first; after selection it explicitly renders
 no reward, one editor, or all active editors for that room. This is one
 projection product, not a biome-specific presentation branch.
-Before a decision has one selected continuation, its numbered rail stop opens
+Before a decision has one selected continuation, its rail stop opens
 that decision surface. Once exactly one target is selected, the same stop opens
 the selected target occurrence stage; the predecessor stage still owns and
 renders the outgoing door editor. Exact target and door-reward focus continues
@@ -213,7 +233,7 @@ Room maps are application-owned reference images keyed by the declared game
 room name. Inspection is available from room headings, authored outgoing
 targets, Hub cards/visits and side-room rows, including unpicked, closed and
 ungenerated destinations, through one icon-only map button named for its room. Viewing a map never edits participation, changes
-semantic focus, adds history or requires complete authoring. The route rail
+semantic focus, adds history or requires complete authoring. The biome rail
 remains the navigation to room details.
 
 One image viewer serves inspection dialogs and inline references. Fields Room
@@ -809,8 +829,8 @@ reason in Notes. The projection supplies these values and notes.
 
 Unpicked targets remain fully visible in the decision workbench because they
 still affect reward bags, sibling conflicts, source support, and possibility
-evaluation. They do not become equal-weight stops on the biome rail. A numbered
-decision stop always shows its decision identity and semantic assessment. When
+evaluation. They do not become equal-weight stops on the biome rail. A
+decision stop always carries its decision identity and semantic assessment. When
 exactly one target is authored as selected, it navigates to that continuation's
 occurrence stage and may progressively add that room label; if its complete
 offer surface has exactly one direct, compactly displayable reward, it may add
@@ -859,7 +879,7 @@ action.
 
 ## Hub Decision Workspace
 
-N uses the same route rail, inspector, semantic focus, finding, and coverage
+N uses the same biome rail, inspector, semantic focus, finding, and coverage
 language, but its center is not an ordinary decision spine. The
 `HubDecisionWorkbench` projects:
 
@@ -962,8 +982,11 @@ not; an entered side room shows its room and its door's reward like a Hub
 visit. The token neither changes focus nor creates another edit path; the Hub
 board remains the sole editable main-reward surface.
 
-Entered side occurrences extend the N rail as nested children of their owning
-main visit. The rail includes only side occurrences in the authored local
+One rail panel holds the Hub card, which counts the authored visits against
+the required ones, and every visit beneath it, each numbered by its Location
+like any other stop. Entered side occurrences extend the N rail as nested
+children of their owning main visit, set slightly in and marked by a thin
+side-room rule. The rail includes only side occurrences in the authored local
 `visitOrder`; unentered side rows stay in the parent Side Rooms workbench and
 do not receive rail entries. Side children retain side-entry order, select the
 side occurrence's Timeline, and do not contribute to the six-main-visit count.

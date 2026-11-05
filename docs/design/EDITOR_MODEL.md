@@ -284,8 +284,8 @@ semantic repair owner and detailed reasons. The application consumes that
 selection directly; it does not sort findings into its own repair agenda.
 Issue and reason owners resolve through the same destination map for navigation
 and inline feedback, never through matching game names or rendered positions.
-The route rail, inspector, tabs and repair banner all reference that one
-destination; summaries never create a second finding location.
+The status pill, panel navigation, biome rail, inspector and tabs all reference
+that one destination; summaries never create a second finding location.
 
 The destination selects route, biome, rail stop, inspector, tab and dialog as
 needed. Navigation must work when entering from another biome and when already
@@ -319,15 +319,26 @@ For example, a missing optional reward choice belongs to its Overview control;
 the later pickup action does not inherit the mark merely because simulation
 encountered the missing value there.
 
-### Outer layer: the repair banner and dialog owners
+### Outer layer: the status pill and dialog owners
 
-The compact repair banner shows a title, its location below, and optional
-detail only when it adds a constraint or repair choice. It sits above the
-biome title in the structure rail, or across the content on Route and
-read-only index panels. A valid route reserves no empty banner. Multiple
-reasons for one repair do not become multiple tasks or an expanded findings
-list, and a blocked or unassessed biome adds no banner of its own; its
-navigation marker and rail show its state.
+The engine-selected issue reads in one status pill in the editor header, the
+same on every panel. Without an issue the pill is the plan's status; with one
+it shows the issue's title and location on one line, a count of the plan's
+other findings, and the plan's status as its colour. Choosing it navigates to
+the issue's destination. Detail that adds a constraint or repair choice is its
+hover hint and accessible description, never a second line. Outside popup editors'
+title rows, findings appear nowhere else as text: rooms, rail cards and panel
+headings carry no finding copy, and a blocked or unassessed biome adds none; its navigation marker and
+rail show its state. Multiple reasons for one repair do not become multiple
+tasks or an expanded findings list.
+
+A location names the biome, then the room's
+[Location](STRUCTURED_EDITOR_WORKSPACE.md#biome-structure) as the rail shows
+it, then the room as the folded rail draws it: its icon and, where rooms share one, its
+badge. The accessible name spells the room out. A finding on a decision not
+yet authored is located at its existing predecessor; a stop without a reached
+room keeps its rail title, the Hub its own name, and route-level owners their
+panel.
 
 Global counts, highlights and selected-repair identity use this one issue;
 detailed explanations and exact child feedback remain in their local editors.
