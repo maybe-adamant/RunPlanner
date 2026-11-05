@@ -284,6 +284,11 @@ function projectHubNode(
   const doorsBySlot = new Map<string, WorkspaceDoorContract>();
   const source = input.source;
   const settledStays = source?.hubStays(owner);
+  const drawPositions = new Map(
+    (source?.hubBoardDrawPositions(owner) ?? []).flatMap((slot) =>
+      slot.open ? [[slot.hubSlotKey, slot.drawPosition] as const] : [],
+    ),
+  );
   const authoredStays = hubStayRows(owner, hub);
   const roomsBySlot = new Map<string, WorkspaceRoomSummary>();
   const projectLocalVisit = (
@@ -577,6 +582,9 @@ function projectHubNode(
       ...(localVisit === undefined ? {} : { localVisit }),
       open: target !== undefined,
       physicalDoorId: slot.physicalDoorId,
+      ...(target === undefined || !drawPositions.has(slot.slotKey)
+        ? {}
+        : { drawPosition: drawPositions.get(slot.slotKey)! }),
       ...(door === undefined ? {} : { door }),
       ...(occurrenceNode === undefined ? {} : { room: occurrenceNode.room }),
       roomKind: slotRoom.kind,
@@ -752,18 +760,28 @@ function projectHubNode(
               stayRows: authored?.rows ?? [],
             });
       if (list.requirement !== undefined) occurrenceInteractionRequirements.push(list.requirement);
-      // Each stay recaps the doors still open: an entered door is closed for the run.
-      const board = settled?.board.map((door) =>
+      // Every open door as the stay leaves it, entered rooms marked cleared.
+      const doors = settled?.doors.map((door) =>
         Object.freeze({
           hubSlotKey: door.hubSlotKey,
           label: openSlots.get(door.hubSlotKey)?.label ?? door.hubSlotKey,
-          summary: summarizeRewardOffer(catalog, door.firstDraw),
-          ...(door.changed ? { rerolledSummary: summarizeRewardOffer(catalog, door.current) } : {}),
-          offer: door.current,
+          firstDraw: door.firstDraw,
+          firstSummary: summarizeRewardOffer(catalog, door.firstDraw),
+          current: door.current,
+          currentSummary: summarizeRewardOffer(catalog, door.current),
+          changed: door.changed,
+          cleared: door.cleared,
+          presses: Object.freeze(
+            door.presses.map((press) =>
+              Object.freeze({
+                key: semanticAddressKey(press.owner),
+                precedingVisitCount: press.precedingVisitCount,
+                summary: summarizeRewardOffer(catalog, press.reward),
+              }),
+            ),
+          ),
         }),
       );
-      // The stay's own presses are what reroll its board.
-      const boardRerolled = (list.rerolls?.rows.length ?? 0) > 0;
       const rows = (authored?.rows ?? []).map((row): WorkspaceHubStayRow =>
         row.kind === 'reroll'
           ? Object.freeze({
@@ -780,8 +798,7 @@ function projectHubNode(
         precedingVisitCount,
         rows: Object.freeze(rows),
         ...(list.rerolls === undefined ? {} : { rerolls: list.rerolls }),
-        ...(board === undefined ? {} : { board: Object.freeze(board) }),
-        ...(boardRerolled ? { boardRerolled: true as const } : {}),
+        ...(doors === undefined ? {} : { doors: Object.freeze(doors) }),
       });
     },
   );

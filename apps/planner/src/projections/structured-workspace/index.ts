@@ -42,7 +42,7 @@ export type {
   WorkspaceBiomeField,
   WorkspaceDoorContract,
   WorkspaceDoorReward,
-  WorkspaceHubBoardDoor,
+  WorkspaceHubStayDoor,
   WorkspaceHubDecisionNode,
   WorkspaceHubFountain,
   WorkspaceHubRequirements,

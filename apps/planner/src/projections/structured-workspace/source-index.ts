@@ -76,6 +76,7 @@ import type {
 import {
   evaluateBiomeCompleteness,
   evaluateOccurrenceOutgoingStatus,
+  hubBoardDrawPositions,
   materializedBiomePrefixCoveragePoint,
   routeResourceAuthoring,
 } from '@run-planner/engine/simulation';
@@ -157,6 +158,10 @@ export interface WorkspaceBiomeSource {
   readonly hubStays: (
     hub: HubDecisionAddress,
   ) => import('@run-planner/engine/simulation').HubStays | undefined;
+  /** Each declared slot of one Hub board, its open doors with their reward draw position. */
+  readonly hubBoardDrawPositions: (
+    hub: HubDecisionAddress,
+  ) => readonly import('@run-planner/engine/simulation').HubBoardSlotDraw[] | undefined;
   /** Whether a new press or Well or Pool reroll fits the run's reroll pool. */
   readonly rerollSpendAllowance: (
     spend: Exclude<
@@ -1008,6 +1013,8 @@ function createWorkspaceBiomeSource(
     phantomExitSettlement,
     rerollSurface,
     hubStays,
+    hubBoardDrawPositions: (hub: HubDecisionAddress) =>
+      hubBoardDrawPositions(catalog, project, hub),
     rerollSpendAllowance,
     screenRerollAllowance,
     roomObjectInteractions,

@@ -338,6 +338,8 @@ export interface WorkspaceHubSlot {
   readonly localVisit?: WorkspaceLocalVisitDecision;
   readonly open: boolean;
   readonly physicalDoorId: number;
+  /** 1-based position at which the game draws this open door's reward. */
+  readonly drawPosition?: number;
   /** Exact immutable main-door handoff owned by the Hub slot. */
   readonly door?: WorkspaceDoorContract;
   readonly room?: WorkspaceRoomSummary;
@@ -399,16 +401,26 @@ export interface WorkspaceHubRequirements {
   };
 }
 
-/** One open Hub board door as a stay leaves it. */
-export interface WorkspaceHubBoardDoor {
+/** One open Hub board door as a settled stay leaves it. */
+export interface WorkspaceHubStayDoor {
   readonly hubSlotKey: string;
   readonly label: string;
   /** The door's first draw. */
-  readonly summary: string;
-  /** Its reward after the rerolls so far, where it differs from the first draw. */
-  readonly rerolledSummary?: string;
-  /** Its current reward, for its icon. */
-  readonly offer: ResolvedRewardOffer;
+  readonly firstDraw: ResolvedRewardOffer;
+  readonly firstSummary: string;
+  /** Its reward after every press so far. */
+  readonly current: ResolvedRewardOffer;
+  readonly currentSummary: string;
+  /** The presses so far left it a different reward. */
+  readonly changed: boolean;
+  /** A visit up to this stay entered its room, closing it for the run. */
+  readonly cleared: boolean;
+  /** Each settled press of it so far, in action order; the last drew `current`. */
+  readonly presses: readonly {
+    readonly key: string;
+    readonly precedingVisitCount: number;
+    readonly summary: string;
+  }[];
 }
 
 /** A row of a Hub stay a move names: one of its presses, by its 1-based place, or the fountain. */
@@ -442,10 +454,8 @@ export interface WorkspaceHubStay {
   /** The stay's presses and fountain use in authored order. */
   readonly rows: readonly WorkspaceHubStayRow[];
   readonly rerolls?: WorkspaceRoomRerolls;
-  /** The doors still open as the stay leaves it; absent while unreached. */
-  readonly board?: readonly WorkspaceHubBoardDoor[];
-  /** The stay holds at least one reroll press. */
-  readonly boardRerolled?: true;
+  /** Every open board door as the stay leaves it; absent while unreached. */
+  readonly doors?: readonly WorkspaceHubStayDoor[];
 }
 
 export interface WorkspaceHubDecisionNode {

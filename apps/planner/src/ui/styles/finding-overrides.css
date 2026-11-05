@@ -1,6 +1,6 @@
 /*
  * Findings mark the control that repairs them. Containers are navigation
- * anchors; only the Hub requirement box carries its own mark.
+ * anchors; only the Hub board status line and door rows carry their own mark.
  * Finding feedback wins over ordinary structural, selection, and drag-state shadows.
  */
 :is(
@@ -9,7 +9,8 @@
     select,
     textarea,
     [role='radiogroup'],
-    .hub-requirement-box
+    .hub-board-status-line,
+    .hub-door-row
   )[data-semantic-owner][data-has-findings='true'],
 .encounter-composition-edit[data-has-findings='true'] {
   box-shadow: inset 0 0 0 2px var(--finding);

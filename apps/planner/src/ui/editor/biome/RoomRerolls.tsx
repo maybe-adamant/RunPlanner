@@ -84,12 +84,17 @@ export function RerollCount({ remaining }: { readonly remaining: number }) {
 
 /** One surface's rerolls in order, with a new press appended at the end. */
 export function RoomRerolls({
+  heading,
   interactions,
+  label = 'Rerolls',
   order,
   rerolls,
   showCount = true,
 }: {
+  /** The list's own header; its die then adds a press from the header. */
+  readonly heading?: ReactNode;
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly label?: string;
   /** The list's rows in order, where other rows stand among the presses. */
   readonly order?: RoomRerollsOrder;
   readonly rerolls: WorkspaceRoomRerolls;
@@ -163,16 +168,34 @@ export function RoomRerolls({
       </button>
     </li>
   );
+  const appendPicker = (
+    <ContextualPicker<string>
+      ariaLabel={`New reroll ${noun.lower}`}
+      {...(lockedHint === undefined ? {} : { disabledHint: lockedHint })}
+      id={`${idPrefix}-target`}
+      label=""
+      model={lockedHint === undefined ? targets : emptyTargets}
+      onSelect={setPendingTarget}
+      placeholder="+"
+      searchable={false}
+      triggerIcon={rerollDieArtwork}
+      triggerLabel="+"
+      triggerSize="content"
+    />
+  );
   return (
     <section
-      aria-label="Rerolls"
+      aria-label={label}
       className="room-rerolls"
       {...(order === undefined ? {} : { 'data-movable': 'true' })}
     >
       <header className="room-rerolls-heading">
-        <h4 className="visually-hidden">Rerolls</h4>
+        {heading === undefined ? <h4 className="visually-hidden">{label}</h4> : heading}
         {rerolls.poolRemaining === undefined || !showCount ? null : (
           <RerollCount remaining={rerolls.poolRemaining} />
+        )}
+        {heading === undefined || pending !== undefined ? null : (
+          <span className="room-reroll-append">{appendPicker}</span>
         )}
       </header>
       <ol className="room-rerolls-list">
@@ -182,21 +205,9 @@ export function RoomRerolls({
               entry.kind === 'row' ? entry.row : pressRow(entry.press, entry.index, entry.move),
             )}
         {pending === undefined ? (
-          <li className="room-reroll-append">
-            <ContextualPicker<string>
-              ariaLabel={`New reroll ${noun.lower}`}
-              {...(lockedHint === undefined ? {} : { disabledHint: lockedHint })}
-              id={`${idPrefix}-target`}
-              label=""
-              model={lockedHint === undefined ? targets : emptyTargets}
-              onSelect={setPendingTarget}
-              placeholder="+"
-              searchable={false}
-              triggerIcon={rerollDieArtwork}
-              triggerLabel="+"
-              triggerSize="content"
-            />
-          </li>
+          heading === undefined ? (
+            <li className="room-reroll-append">{appendPicker}</li>
+          ) : null
         ) : (
           <li className="room-reroll-row room-reroll-pending">
             {order === undefined ? null : (

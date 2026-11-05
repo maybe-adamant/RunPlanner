@@ -57,6 +57,11 @@ function slotDoorKey(project: ProjectDocument, hubSlotKey: string): string {
   return semanticAddressKey(createIncomingRewardAddress(nBiome, target.occurrenceId));
 }
 
+/** The doors a stay leaves open: the ones no visit has entered. */
+function openBoard(stay: WorkspaceHubDecisionNode['stays'][number]) {
+  return stay.doors?.filter((door) => !door.cleared);
+}
+
 async function possibleRewards(resolver: WorkspaceRewardOfferResolver) {
   const model = resolver.model(await resolver.load(), 'type');
   return model.sections
@@ -83,12 +88,12 @@ describe('Hub Timeline details', () => {
     const node = hubOf(projected);
     expect(node.stays.map((stay) => stay.precedingVisitCount)).toEqual([0, 1, 2, 3, 4, 5, 6]);
     // The entry recap lists every open door.
-    expect(node.stays[0]!.board?.map((door) => door.hubSlotKey)).toContain('combat05');
+    expect(openBoard(node.stays[0]!)?.map((door) => door.hubSlotKey)).toContain('combat05');
     expect(stayList(projected, 0).rerolls).toMatchObject({ poolRemaining: 3, rows: [] });
     // The board after a visit drops the door it entered, and its list no longer names it.
     const afterFirst = node.stays[1]!;
-    expect(afterFirst.board?.map((door) => door.hubSlotKey)).not.toContain('combat05');
-    expect(afterFirst.board?.map((door) => door.hubSlotKey)).toContain('combat03');
+    expect(openBoard(afterFirst)?.map((door) => door.hubSlotKey)).not.toContain('combat05');
+    expect(openBoard(afterFirst)?.map((door) => door.hubSlotKey)).toContain('combat03');
     const targets = stayList(projected, 1)
       .interaction.targets(undefined)
       .sections.flatMap((section) => section.items.map((item) => item.value));
@@ -145,7 +150,7 @@ describe('Hub Timeline details', () => {
     // The presses keep their list, pool and board wherever the fountain stands.
     expect(after.rerolls?.rows).toEqual(stay.rerolls?.rows);
     expect(after.rerolls?.poolRemaining).toBe(stay.rerolls?.poolRemaining);
-    expect(after.board).toEqual(stay.board);
+    expect(after.doors).toEqual(stay.doors);
     // A new press still appends at the end of the stay.
     const appended = (await append(moved, 0, 'combat10')).next;
     expect(
@@ -170,14 +175,14 @@ describe('Hub Timeline details', () => {
     expect(rerolls.rows).toMatchObject([{ reward, targetLabel: slot.label }]);
     expect(rerolls.poolRemaining).toBe(2);
     // The door reads first draw → final on the board after the stay and on the map.
-    const door = node.stays[2]!.board!.find((entry) => entry.hubSlotKey === 'combat03')!;
-    expect(door.rerolledSummary).toBeDefined();
-    expect(
-      node.stays[1]!.board!.find((entry) => entry.hubSlotKey === 'combat03'),
-    ).not.toHaveProperty('rerolledSummary');
+    const door = node.stays[2]!.doors!.find((entry) => entry.hubSlotKey === 'combat03')!;
+    expect(door.changed).toBe(true);
+    expect(node.stays[1]!.doors!.find((entry) => entry.hubSlotKey === 'combat03')?.changed).toBe(
+      false,
+    );
     expect(slot.door?.offerRewardSurface.rewards[0]?.rerolledOffer).toEqual(reward);
     // Only the stay that holds a press marks its board; the Hub counts what is left.
-    expect(node.stays.map((stay) => stay.boardRerolled === true)).toEqual([
+    expect(node.stays.map((stay) => (stay.rerolls?.rows.length ?? 0) > 0)).toEqual([
       false,
       false,
       true,

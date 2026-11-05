@@ -112,18 +112,6 @@
   font-size: clamp(0.6rem, 1.15cqi, 0.8rem);
 }
 
-/* Board actions take the top-right corner. */
-.hub-map-board-actions {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.hub-map-board-actions :is(.danger-action, .quiet-action) {
-  background: rgb(17 25 35 / 92%);
-}
-
 .room-map-toolbar {
   flex-wrap: wrap;
   min-height: 32px;
@@ -244,8 +232,7 @@
   transform: translateX(-50%);
 }
 
-.hub-map-marker,
-.hub-map-visit-badge-anchor {
+.hub-map-marker {
   position: absolute;
   width: 5.2%;
   min-width: 34px;
@@ -341,29 +328,6 @@
   filter: drop-shadow(0 1px 1px rgb(0 0 0 / 75%));
 }
 
-.hub-map-visit-badge-anchor {
-  z-index: 3;
-  pointer-events: none;
-}
-
-.hub-map-visit-badge {
-  position: absolute;
-  top: calc(100% + 3px);
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: max-content;
-  padding: 2px 4px;
-  border: 1px solid #f5d386;
-  border-radius: 999px;
-  color: #fff5da;
-  background: rgb(20 29 38 / 92%);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 42%);
-  font-size: clamp(6px, calc(0.65 * var(--app-vw)), 10px);
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-}
-
 .hub-timeline-map-marker[data-visited='false'] {
   --hub-marker-opacity: 56%;
 }
@@ -390,21 +354,6 @@
 .hub-map-overview .hub-map-marker-layer > .hub-map-fountain-marker:not(button) {
   background: color-mix(in srgb, #ed963e 64%, transparent);
   pointer-events: none;
-}
-
-.hub-timeline-fountain-marker[data-used='false'] {
-  opacity: 80%;
-  background: color-mix(in srgb, #ed963e 60%, transparent);
-}
-
-.hub-timeline-fountain-marker[aria-disabled='true']:not(:disabled) {
-  cursor: default;
-}
-
-.hub-timeline-fountain-marker:focus-visible {
-  z-index: 2;
-  outline: 3px solid #fff4c7;
-  outline-offset: 3px;
 }
 
 .hub-map-fountain-content {
@@ -472,35 +421,6 @@
   transform: rotate(45deg);
 }
 
-.hub-map-popover {
-  z-index: 30;
-  width: min(360px, calc(100 * var(--app-vw) - 24px));
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid #5b5c68;
-  border-radius: 10px;
-  color: #f2ede5;
-  background: #1d1e26;
-  box-shadow: 0 14px 34px rgb(0 0 0 / 45%);
-}
-
-.hub-timeline-popover {
-  width: min(240px, calc(100 * var(--app-vw) - 24px));
-}
-
-.hub-map-popover header {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.hub-map-popover h4,
-.hub-map-popover .eyebrow {
-  margin: 0;
-}
-
 .room-map-load-error {
   margin: 0;
   color: #efb1b1;
@@ -525,4 +445,47 @@
 .room-map-reference > .room-map-viewport > .room-map-scroll {
   height: min(30rem, calc(52 * var(--app-vh)));
   min-height: 14rem;
+}
+
+/* A door linked to its hovered or focused row, or the selected visit's door. */
+.hub-map-marker:is([data-linked='true'], [data-selected-visit='true']) {
+  z-index: 2;
+  outline: 3px solid #fff4c7;
+  outline-offset: 2px;
+}
+
+.hub-timeline-map-marker {
+  cursor: default;
+}
+
+.hub-timeline-map-marker[data-cleared='true'] {
+  --hub-marker-opacity: 40%;
+  border-color: #101923;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 48%);
+}
+
+.hub-map-reward-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 65%;
+  min-height: 0;
+}
+
+.hub-map-reward-step {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-width: 0;
+}
+
+.hub-map-reward-icons .hub-map-reward-icon {
+  width: auto;
+  height: 100%;
+  aspect-ratio: 1;
+}
+
+.hub-map-reward-arrow {
+  font-size: 0.8em;
 }
