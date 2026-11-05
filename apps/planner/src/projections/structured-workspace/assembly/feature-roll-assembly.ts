@@ -217,8 +217,9 @@ export function assembleFeatureRollActions(input: {
       Object.freeze({
         key: 'reroll',
         kind: 'reroll' as const,
-        label: `−${interaction.reroll.cost}`,
-        ariaLabel: `Reroll, costs ${interaction.reroll.cost}`,
+        label: 'Reroll Inventory',
+        status: `· ${interaction.reroll.poolRemaining} (−${interaction.reroll.cost})`,
+        ariaLabel: `Reroll Inventory, ${interaction.reroll.poolRemaining} rerolls left, costs ${interaction.reroll.cost}`,
         ...(locked === undefined ? {} : { locked }),
       }),
     );

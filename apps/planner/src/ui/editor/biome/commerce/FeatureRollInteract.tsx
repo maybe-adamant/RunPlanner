@@ -92,6 +92,7 @@ export function FeatureRollEntry({
                     key: option.key,
                     label: option.label,
                     ...(option.ariaLabel === undefined ? {} : { ariaLabel: option.ariaLabel }),
+                    ...(option.status === undefined ? {} : { status: option.status }),
                     selected: false,
                     state:
                       option.locked === undefined ? ('possible' as const) : ('impossible' as const),
@@ -119,7 +120,7 @@ export function FeatureRollEntry({
             ? {}
             : { disabledHint: featureRollLockHint(actions.locked) })}
           id={`${idPrefix}-action`}
-          itemIcon={(item) => (item.value === 'reroll' ? rerollDieArtwork : undefined)}
+          itemTrailIcon={(item) => (item.value === 'reroll' ? rerollDieArtwork : undefined)}
           label=""
           model={model}
           onSelect={(optionKey) => {
