@@ -101,6 +101,8 @@ export function ProjectFindings({
   );
 
   const text = `${copy.title} · ${destinationLabel}`;
+  // Where the pill is too narrow for its second line, the description is on hover.
+  const hint = copy.description === undefined ? text : `${text} — ${copy.description}`;
   return (
     <section
       aria-labelledby="project-findings-title"
@@ -113,19 +115,25 @@ export function ProjectFindings({
         aria-current={selectedKey === issue.regionKey ? 'true' : undefined}
         className="assessment-issue-button finding-pill"
         data-selected={selectedKey === issue.regionKey}
+        data-described={copy.description !== undefined}
         data-status="issue"
         disabled={drafting}
         onClick={navigate}
         type="button"
-        {...hintProps(text, undefined, text)}
+        {...hintProps(hint, undefined, text)}
       >
         <span aria-hidden="true" className="finding-pill-mark">
           !
         </span>
-        <span className="finding-pill-text">
-          <span className="finding-title">{copy.title}</span>
-          {' · '}
-          <span className="finding-destination">{destinationLabel}</span>
+        <span className="finding-pill-lines">
+          <span className="finding-pill-text">
+            <span className="finding-title">{copy.title}</span>
+            {' · '}
+            <span className="finding-destination">{destinationLabel}</span>
+          </span>
+          {copy.description === undefined ? null : (
+            <span className="finding-pill-description">{copy.description}</span>
+          )}
         </span>
       </button>
       {otherFindings > 0 ? <span className="finding-pill-more">+{otherFindings}</span> : null}

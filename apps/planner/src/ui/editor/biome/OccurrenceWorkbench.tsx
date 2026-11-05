@@ -282,14 +282,19 @@ export function OccurrenceWorkbench({
       )}
       tabIndex={-1}
     >
-      <div className="room-title-line">
-        <h3 aria-label={heading} className="room-title-name">
-          <ArtworkIcon className="room-title-icon" source={roomKindIcon(room.roomIcon)} />
-          {heading}
-        </h3>
-        <IncomingRewardSummary incomingDoor={incomingDoor} />
+      <header className="room-head-card">
+        <div className="room-head-identity">
+          <div className="room-head-name-line">
+            <h3 aria-label={heading} className="room-title-name">
+              <ArtworkIcon className="room-title-icon" source={roomKindIcon(room.roomIcon)} />
+              {heading}
+            </h3>
+            <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
+          </div>
+          <IncomingRewardSummary incomingDoor={incomingDoor} />
+        </div>
         {titleAside === undefined ? null : <div className="room-title-aside">{titleAside}</div>}
-      </div>
+      </header>
       <div className="room-workbench-tab-row">
         <nav
           aria-label="Room workbench"
@@ -319,7 +324,6 @@ export function OccurrenceWorkbench({
         <div className="room-workbench-tab-utility">
           {headerActions}
           {showTimelineLegend ? <TimelineLegend /> : null}
-          <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
           {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
           {tabRunState === undefined ? null : <RunStateLauncher launcher={tabRunState} />}
         </div>

@@ -359,7 +359,6 @@ export function IncomingRewardSummary({
         });
   return (
     <section aria-label="Incoming reward" className="room-title-reward">
-      <span aria-hidden="true">·</span>
       {icons.map((icon, index) => (
         <ArtworkIcon className="room-title-icon" key={index} source={icon} />
       ))}

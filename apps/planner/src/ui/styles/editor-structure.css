@@ -43,6 +43,7 @@
 }
 
 .panel-heading {
+  container: finding-host / inline-size;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -675,14 +676,37 @@ select {
   background: #1c1c24;
 }
 
-/* The room's title line above its tabs: icon, name, the reward it offered, and the plan's next repair. */
-.room-title-line {
+/*
+ * The room's slim card above its tabs, always two lines high: its icon, name
+ * and map, then the reward it offered; the plan's next repair on its right.
+ */
+.room-head-card {
+  container: finding-host / inline-size;
+  display: flex;
+  box-sizing: border-box;
+  height: 64px;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 6px;
+  padding: 6px 12px;
+  border: 1px solid #34323f;
+  border-radius: 10px;
+  background: rgb(174 152 202 / 5%);
+}
+
+.room-head-identity {
+  display: grid;
+  min-width: 0;
+  grid-template-rows: 26px 22px;
+  align-items: center;
+}
+
+.room-head-name-line {
   display: flex;
   min-width: 0;
-  min-height: 34px;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 4px;
+  gap: 6px;
 }
 
 .room-title-name {
@@ -703,8 +727,7 @@ select {
 
 .room-title-reward {
   display: flex;
-  flex: 0 1 auto;
-  min-width: min(8rem, 30%);
+  min-width: 0;
   align-items: center;
   gap: 6px;
   overflow: hidden;
@@ -729,9 +752,9 @@ select {
 
 .room-title-aside {
   display: flex;
-  /* The pill gives way before the room's reward does. */
   flex: 0 1 auto;
   min-width: 0;
+  align-self: center;
   justify-content: flex-end;
   margin-left: auto;
 }
@@ -770,6 +793,43 @@ select {
   background: var(--finding);
   font-size: 0.72rem;
   font-weight: 800;
+}
+
+.finding-pill-lines {
+  display: grid;
+  min-width: 0;
+}
+
+/* A described finding takes two lines, centred, wherever its host has the width. */
+.finding-pill[data-described='true'] {
+  border-radius: 14px;
+}
+
+.finding-pill[data-described='true'] .finding-pill-lines {
+  text-align: center;
+}
+
+.finding-pill-description {
+  min-width: 0;
+  overflow: hidden;
+  color: #b9b2c4;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container finding-host (max-width: 760px) {
+  .finding-pill-description {
+    display: none;
+  }
+
+  .finding-pill[data-described='true'] {
+    border-radius: 999px;
+  }
+
+  .finding-pill[data-described='true'] .finding-pill-lines {
+    text-align: left;
+  }
 }
 
 .finding-pill-text {
