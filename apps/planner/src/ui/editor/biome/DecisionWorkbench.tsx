@@ -290,7 +290,7 @@ export function TopologyRemovalAction({
 }: {
   readonly accessibleLabel?: string;
   readonly compact?: boolean;
-  /** A trash icon in place of the label, which then shows on hover. */
+  /** A reset icon in place of the label, which then shows on hover. */
   readonly icon?: boolean;
   readonly interaction: WorkspaceTopologyRemovalInteraction | undefined;
   readonly label: string;
@@ -315,7 +315,8 @@ export function TopologyRemovalAction({
       >
         {icon ? (
           <svg aria-hidden="true" viewBox="0 0 16 16">
-            <path d="M3.5 4.5h9M6 2.5h4l.5 2h-5l.5-2Zm-1 2 .5 9h5l.5-9M7 7v4M9 7v4" />
+            <path d="M12.5 8a4.5 4.5 0 1 1-1.3-3.2" />
+            <path d="M12 2.5v2.8H9.2" />
           </svg>
         ) : (
           label

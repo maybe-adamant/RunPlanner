@@ -238,7 +238,12 @@
   grid-template-columns: 112px minmax(0, 1fr);
 }
 
-/* Folded, the head keeps the biome's icon and its trash action. */
+/* Folded, the head keeps only the biome's icon; clearing waits for the full rail. */
+.biome-workspace[data-rail='folded'] .biome-structure-title-row > .topology-removal-action {
+  display: none;
+}
+
+/* Folded, the title is kept for assistive technology only. */
 .biome-workspace[data-rail='folded'] .biome-structure-head h2 {
   position: absolute;
   width: 1px;
@@ -439,7 +444,7 @@
   gap: 10px;
 }
 
-/* Clear biome: a muted red trash can at the end of the title row. */
+/* Clear biome: a quiet reset glyph matching the rail toggle; red only on hover. */
 .topology-removal-icon {
   display: inline-grid;
   border-color: transparent;
@@ -448,8 +453,8 @@
   height: 28px;
   padding: 0;
   place-items: center;
-  border-radius: 7px;
-  color: #b97777;
+  border-radius: 6px;
+  color: #77757e;
 }
 
 .topology-removal-icon:hover:not(:disabled) {
@@ -464,7 +469,7 @@
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.3;
+  stroke-width: 1.4;
 }
 
 .biome-structure-title-row > .topology-removal-action {
