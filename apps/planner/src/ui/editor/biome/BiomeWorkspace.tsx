@@ -251,12 +251,9 @@ function railRewardIcons(
 /** `[room] Room · [reward] Reward`: each icon sits before the thing it describes. */
 function RailSelectedTarget({
   biomeKey,
-  prefix,
   selectedTarget,
 }: {
   readonly biomeKey: string;
-  /** A Hub visit's or side room's place, before its room. */
-  readonly prefix?: string;
   readonly selectedTarget: WorkspaceRailSelectedTarget;
 }) {
   const rewardIcons = railRewardIcons(biomeKey, selectedTarget).map((icon, index) => (
@@ -264,21 +261,18 @@ function RailSelectedTarget({
   ));
   return (
     <span className="biome-rail-selection">
-      {prefix === undefined ? null : <span className="biome-rail-prefix">{prefix} · </span>}
       <ArtworkIcon
         className="biome-rail-reward-icon"
         source={roomKindIcon(selectedTarget.roomIcon)}
       />
       {selectedTarget.roomLabel}
-      {selectedTarget.reward === undefined ? (
-        rewardIcons.length === 0 ? null : (
-          <> {rewardIcons}</>
-        )
-      ) : (
+      {rewardIcons.length === 0 && selectedTarget.reward === undefined ? null : (
         <>
           {' · '}
           {rewardIcons}
-          <span className="biome-rail-reward">{selectedTarget.reward.label}</span>
+          {selectedTarget.reward === undefined ? null : (
+            <span className="biome-rail-reward">{selectedTarget.reward.label}</span>
+          )}
         </>
       )}
     </span>
@@ -401,14 +395,14 @@ function HubRailVisit({
 }) {
   const selected = selectedRailKey === visit.marker.focusKey;
   return (
-    <li className="biome-hub-rail-visit" data-plan-end={visit.planEnd}>
+    <li
+      className="biome-hub-rail-visit"
+      data-plan-end={visit.planEnd}
+      data-visit={visit.visitIndex}
+    >
       <FocusButton marker={visit.marker} presentationMarker={visit.visitMarker} selected={selected}>
         <RailHeading label={visit.label} marker={visit.visitMarker} planEnd={visit.planEnd} />
-        <RailSelectedTarget
-          biomeKey={biomeKey}
-          prefix={visit.shortLabel}
-          selectedTarget={visit.room}
-        />
+        <RailSelectedTarget biomeKey={biomeKey} selectedTarget={visit.room} />
         <RailTargetIcons biomeKey={biomeKey} target={visit.room} />
       </FocusButton>
       <RailPlanEnd planEnd={visit.planEnd} />
@@ -432,11 +426,7 @@ function HubRailVisit({
                     marker={sideVisit.visitMarker}
                     planEnd={sideVisit.planEnd}
                   />
-                  <RailSelectedTarget
-                    biomeKey={biomeKey}
-                    prefix={sideVisit.shortLabel}
-                    selectedTarget={sideVisit.room}
-                  />
+                  <RailSelectedTarget biomeKey={biomeKey} selectedTarget={sideVisit.room} />
                   <RailTargetIcons biomeKey={biomeKey} target={sideVisit.room} />
                 </FocusButton>
                 <RailPlanEnd planEnd={sideVisit.planEnd} />
@@ -470,7 +460,7 @@ function HubRailGroup({
         <span className="biome-rail-selection">
           <ArtworkIcon className="biome-rail-reward-icon" source={roomKindIcon(entry.roomIcon)} />
           Hub ·{' '}
-          <span className="biome-rail-reward">
+          <span className="biome-rail-count">
             {entry.visits.length} of {entry.node.requiredVisitCount} visits
           </span>
         </span>
@@ -531,10 +521,16 @@ function RailCompletionNode({
     node.room.keepsakeSelection?.marker ??
     node.marker;
   const planEnd = node.planEnd?.relation;
+  const railMarker = node.railMarker ?? node.marker;
   return (
     <div className="biome-rail-stop" data-kind="completion" data-plan-end={planEnd}>
-      <FocusButton focusMarker={focusMarker} marker={node.marker} selected={selected}>
-        <RailHeading label={roleLabel} marker={node.marker} planEnd={planEnd} />
+      <FocusButton
+        focusMarker={focusMarker}
+        marker={node.marker}
+        presentationMarker={railMarker}
+        selected={selected}
+      >
+        <RailHeading label={roleLabel} marker={railMarker} planEnd={planEnd} />
         <RailRoom icon={node.room.roomIcon} label={node.room.label} />
         <RailIcons room={node.room.roomIcon} />
       </FocusButton>

@@ -284,7 +284,7 @@
   width: 100%;
   min-width: 0;
   gap: 2px;
-  padding: 7px 9px;
+  padding: 10px 12px;
   border: 1px solid #393a44;
   border-radius: 9px;
   color: #d8d3cb;
@@ -341,17 +341,29 @@
 
 .biome-hub-rail-visit::before {
   position: absolute;
-  top: 50%;
-  left: -12px;
-  width: 8px;
-  height: 8px;
+  top: 0;
+  left: -14px;
+  width: 12px;
+  height: 22px;
   border-bottom: 1px solid #4b4855;
   border-left: 1px solid #4b4855;
   content: '';
 }
 
+/* The visit's number rides on its connector. */
+.biome-hub-rail-visit::after {
+  position: absolute;
+  top: 7px;
+  left: -10px;
+  color: #8f8c95;
+  content: attr(data-visit);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .biome-hub-rail-visit .biome-rail-node {
-  padding: 6px 8px;
+  padding: 9px 11px;
 }
 
 .biome-hub-rail-side-visits {
@@ -378,7 +390,7 @@
 }
 
 .biome-hub-rail-side-visit .biome-rail-node {
-  padding: 5px 7px;
+  padding: 8px 10px;
 }
 
 .biome-rail-kicker,
@@ -421,19 +433,29 @@
   white-space: nowrap;
 }
 
-/* A card's one line: its room in the card's text colour, its reward in gold. */
+/* A card's one line: its room, then its reward icons; reward names are read, not shown. */
 .biome-rail-node > .biome-rail-selection {
   color: inherit;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
+}
+
+.biome-rail-node > .biome-rail-selection .biome-rail-reward-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+  vertical-align: -0.38rem;
 }
 
 .biome-rail-node > .biome-rail-selection .biome-rail-reward {
-  color: #c3a86f;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.biome-rail-prefix {
-  color: #8f8c95;
-  font-weight: 600;
+.biome-rail-count {
+  color: #c3a86f;
 }
 
 .biome-rail-plan-end {

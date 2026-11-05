@@ -126,13 +126,31 @@ function isDecisionBatchNode(node: WorkspaceNode): node is WorkspaceDecisionBatc
 }
 
 /** The room a stop opens: its own room, or the one room its decision selects. */
-function railRoomOccurrenceId(node: WorkspaceNode): OccurrenceId | undefined {
-  if (node.kind === 'occurrenceWorkbench') return node.room.occurrenceId;
+function railRoom(node: WorkspaceNode): WorkspaceRoomSummary | undefined {
+  if (node.kind === 'occurrenceWorkbench') return node.room;
   if (!isDecisionBatchNode(node)) return undefined;
-  if (node.selectedContinuation !== undefined)
-    return node.selectedContinuation.door.room.occurrenceId;
+  if (node.selectedContinuation !== undefined) return node.selectedContinuation.door.room;
   const selectedTargets = node.targets.filter((target) => target.selected);
-  return selectedTargets.length === 1 ? selectedTargets[0]?.room.occurrenceId : undefined;
+  return selectedTargets.length === 1 ? selectedTargets[0]?.room : undefined;
+}
+
+function railRoomOccurrenceId(node: WorkspaceNode): OccurrenceId | undefined {
+  return railRoom(node)?.occurrenceId;
+}
+
+/** Findings on a room's local owners, such as its encounter, Judgment or keepsake selection. */
+function roomLocalFindingCount(room: WorkspaceRoomSummary): number {
+  return room.localDetailMarkers.reduce((count, marker) => count + marker.findingCount, 0);
+}
+
+/** Findings a room's card carries: on the room itself and on its local owners. */
+function roomFindingCount(room: WorkspaceRoomSummary): number {
+  return room.marker.findingCount + roomLocalFindingCount(room);
+}
+
+/** A room stop's marker carrying its room-local findings too. */
+function withRoomFindings(marker: WorkspaceMarker, room: WorkspaceRoomSummary): WorkspaceMarker {
+  return withRailFindingCount(marker, marker.findingCount + roomLocalFindingCount(room));
 }
 
 function nodeRailPresentation(
@@ -394,14 +412,16 @@ function projectHubRailEntry(
                 key: `${node.key}:visit:${visit.visitIndex}:side:${slot.key}`,
                 ...(sidePlanEnd === undefined ? {} : { planEnd: sidePlanEnd }),
                 label: `Side ${slot.enteredOrdinal ?? 1}`,
-                shortLabel: `S${slot.enteredOrdinal ?? 1}`,
                 marker: sideNode.room.marker,
                 node: sideNode,
                 room: Object.freeze({
                   ...roomRailPresentation(catalog, slot.room, slot.door),
                   roomLabel: `S.Room ${sideRoomId}`,
                 }),
-                visitMarker: slot.marker,
+                visitMarker: withRailFindingCount(
+                  slot.marker,
+                  slot.marker.findingCount + roomFindingCount(sideNode.room),
+                ),
               }),
             ];
           }),
@@ -412,13 +432,15 @@ function projectHubRailEntry(
         key: `${node.key}:visit:${visit.visitIndex}`,
         ...(visitPlanEnd === undefined ? {} : { planEnd: visitPlanEnd }),
         label: `Visit ${visit.visitIndex}`,
-        shortLabel: `V${visit.visitIndex}`,
         marker: workbench.room.marker,
         node: workbench,
         room: roomRailPresentation(catalog, workbench.room, visit.door),
         sideVisits,
         visitIndex: visit.visitIndex,
-        visitMarker: visit.marker,
+        visitMarker: withRailFindingCount(
+          visit.marker,
+          visit.marker.findingCount + roomFindingCount(workbench.room),
+        ),
       }),
     );
   }
@@ -541,11 +563,14 @@ export function presentWorkspaceBiome(
   }
   const railMarker = (node: WorkspaceNode): WorkspaceMarker => {
     const base = railMarkerForNode(node);
-    const ownCount = !isDecisionBatchNode(node)
-      ? base.findingCount
-      : doorsRailKeyByDecision.has(node.key)
-        ? 0
-        : decisionDoorFindingCount(node);
+    const selectedRoom = isDecisionBatchNode(node) ? railRoom(node) : undefined;
+    const ownCount =
+      node.kind === 'occurrenceWorkbench'
+        ? base.findingCount + roomLocalFindingCount(node.room)
+        : !isDecisionBatchNode(node)
+          ? base.findingCount
+          : (doorsRailKeyByDecision.has(node.key) ? 0 : decisionDoorFindingCount(node)) +
+            (selectedRoom === undefined ? 0 : roomFindingCount(selectedRoom));
     return withRailFindingCount(base, ownCount + (hostedDoorFindingCount.get(base.focusKey) ?? 0));
   };
   let decisionIndex = 0;
@@ -794,7 +819,14 @@ export function presentWorkspaceBiome(
       : Object.freeze({ ...defaultSubject, selectedRailKey: defaultRailKey });
   const biome = Object.freeze({
     biomeKey: semantic.biomeKey,
-    completionOutline: semantic.completionOutline,
+    completionOutline: Object.freeze(
+      semantic.completionOutline.map((node) =>
+        Object.freeze({
+          ...node,
+          railMarker: withRoomFindings(railMarkerForNode(node), node.room),
+        }),
+      ),
+    ),
     defaultInspectorDestination: defaultInspector,
     ...(entry === undefined ? {} : { entry }),
     ...(semantic.echoKeepsakeReplay === undefined
