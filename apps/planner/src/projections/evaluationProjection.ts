@@ -1613,36 +1613,83 @@ export function nextRepairSelection(
   };
 }
 
-/** A rail stop as a finding location: its run depth and room, or its title before it has a room. */
-function depthAndRoom(depth: number | undefined, room: string): string {
-  return depth === undefined ? room : `${depth} · ${room}`;
+type WorkspaceRoomIconProduct = import('./structured-workspace').WorkspaceRoomIcon;
+
+/** Where a finding is: its place in words, and the room there in the rail's short form. */
+export interface FindingDestination {
+  /** The place up to its room, such as "Oceanus · Location 15". */
+  readonly place: string;
+  /** The room there, as the folded rail shows it: its icon and number. */
+  readonly room?: {
+    readonly icon: WorkspaceRoomIconProduct;
+    readonly number?: string;
+    readonly label: string;
+  };
+  /** The whole location in words, the room named in full. */
+  readonly label: string;
 }
 
-function railStopLocation(
+function destinationAt(
+  biomeLabel: string,
+  depth: number | undefined,
+  room: FindingDestination['room'],
+): FindingDestination {
+  // The game calls a room's place in the run its Location.
+  const place = depth === undefined ? biomeLabel : `${biomeLabel} · Location ${depth}`;
+  return Object.freeze({
+    place,
+    ...(room === undefined ? {} : { room: Object.freeze(room) }),
+    label: room === undefined ? place : `${place} · ${room.label}`,
+  });
+}
+
+function plainDestination(label: string): FindingDestination {
+  return Object.freeze({ place: label, label });
+}
+
+function railTargetRoom(target: {
+  readonly roomIcon: WorkspaceRoomIconProduct;
+  readonly roomNumber?: string;
+  readonly roomLabel: string;
+}): NonNullable<FindingDestination['room']> {
+  return {
+    icon: target.roomIcon,
+    ...(target.roomNumber === undefined ? {} : { number: target.roomNumber }),
+    label: target.roomLabel,
+  };
+}
+
+function railStopDestination(
+  biomeLabel: string,
   entry: Extract<import('./structured-workspace').WorkspaceRailEntry, { readonly kind: 'node' }>,
-): string {
-  const room =
-    entry.selectedTarget?.roomLabel ??
-    (entry.node.kind === 'occurrenceWorkbench' ? entry.node.room.label : undefined);
-  if (room === undefined) return entry.label;
-  return entry.runDepth === undefined ? room : `${entry.runDepth} · ${room}`;
+): FindingDestination {
+  if (entry.selectedTarget !== undefined)
+    return destinationAt(biomeLabel, entry.runDepth, railTargetRoom(entry.selectedTarget));
+  if (entry.node.kind === 'occurrenceWorkbench' && entry.roomIcon !== undefined)
+    return destinationAt(biomeLabel, entry.runDepth, {
+      icon: entry.roomIcon,
+      ...(entry.roomNumber === undefined ? {} : { number: entry.roomNumber }),
+      label: entry.node.room.label,
+    });
+  // A stop without a room yet keeps its title.
+  return plainDestination(`${biomeLabel} · ${entry.label}`);
 }
 
-export function findingDestinationLabel(
+export function findingDestination(
   catalog: Catalog,
   origin: SemanticAddress,
   destination?: import('./structured-workspace').WorkspaceInspectorDestination,
   route?: import('./structured-workspace').WorkspaceRoute,
-): string {
+): FindingDestination {
   // A destination names the biome that hosts it, e.g. where a timed outcome lands.
-  if (destination?.presentationPanel === 'route') return 'Route';
+  if (destination?.presentationPanel === 'route') return plainDestination('Route');
   const biomeKey =
     destination?.presentationPanel === 'loadout'
       ? undefined
       : (destination?.biomeKey ??
         ('biomeKey' in origin && origin.biomeKey !== 'routeStart' ? origin.biomeKey : undefined));
   if (biomeKey === undefined) {
-    return origin.kind === 'project' ? 'Project' : 'Loadout';
+    return plainDestination(origin.kind === 'project' ? 'Project' : 'Loadout');
   }
   const biome = catalog.biomes.byKey[biomeKey];
   if (biome === undefined) {
@@ -1663,17 +1710,25 @@ export function findingDestinationLabel(
         entry.kind !== 'frontier' &&
         (entry.marker.focusKey === railKey || entry.node.key === predecessorNodeKey)
       ) {
-        return `${biome.label} · ${entry.kind === 'hubGroup' ? 'Hub' : railStopLocation(entry)}`;
+        return entry.kind === 'hubGroup'
+          ? plainDestination(`${biome.label} · Hub`)
+          : railStopDestination(biome.label, entry);
       }
       if (entry.kind === 'hubGroup') {
         for (const visit of entry.visits) {
           if (visit.marker.focusKey === railKey || visit.node.key === predecessorNodeKey)
-            return `${biome.label} · ${depthAndRoom(visit.runDepth, visit.node.room.label)}`;
+            return destinationAt(biome.label, visit.runDepth, {
+              ...railTargetRoom(visit.room),
+              label: visit.node.room.label,
+            });
           const sideVisit = visit.sideVisits.find(
             (side) => side.marker.focusKey === railKey || side.node.key === predecessorNodeKey,
           );
           if (sideVisit !== undefined)
-            return `${biome.label} · ${depthAndRoom(sideVisit.runDepth, sideVisit.node.room.label)}`;
+            return destinationAt(biome.label, sideVisit.runDepth, {
+              ...railTargetRoom(sideVisit.room),
+              label: sideVisit.node.room.label,
+            });
         }
       }
     }
@@ -1685,6 +1740,19 @@ export function findingDestinationLabel(
       ? workspaceBiome?.completionOutline.find((node) => node.key === subject.nodeKey)
       : undefined;
   return completion === undefined
-    ? biome.label
-    : `${biome.label} · ${depthAndRoom(completion.room.runDepth, completion.room.label)}`;
+    ? plainDestination(biome.label)
+    : destinationAt(biome.label, completion.room.runDepth, {
+        icon: completion.room.roomIcon,
+        label: completion.room.label,
+      });
+}
+
+/** Where a finding is, in words. */
+export function findingDestinationLabel(
+  catalog: Catalog,
+  origin: SemanticAddress,
+  destination?: import('./structured-workspace').WorkspaceInspectorDestination,
+  route?: import('./structured-workspace').WorkspaceRoute,
+): string {
+  return findingDestination(catalog, origin, destination, route).label;
 }

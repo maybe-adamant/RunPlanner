@@ -328,23 +328,16 @@
   padding: 3px 4px;
 }
 
-.biome-workspace[data-rail='folded']:not([data-rail-open])
-  .biome-hub-rail-side-visit
-  .biome-rail-icons
-  > .biome-rail-reward-slot {
-  display: none;
-}
-
 .biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-rail-plan-end {
   display: none;
 }
 
-/* Folded, the end room's circle keeps its square plan-end mark. */
+/* Folded, a side room's icons are a size smaller than its main room's. */
 .biome-workspace[data-rail='folded']:not([data-rail-open])
   .biome-hub-rail-side-visit
-  .biome-rail-icons-room {
-  width: 1.2rem;
-  height: 1.2rem;
+  :is(.biome-rail-icons-room, .biome-rail-icons > .biome-rail-reward-slot) {
+  width: 1.1rem;
+  height: 1.1rem;
 }
 
 .biome-rail-icons-room-slot {
@@ -487,14 +480,15 @@
 
 .biome-rail-stop {
   position: relative;
-  padding-left: 22px;
+  /* Room for the backbone's widest number, centred on it at 14px. */
+  padding-left: 30px;
 }
 
 .biome-rail-stop::before {
   position: absolute;
   top: -7px;
   bottom: -7px;
-  left: 8px;
+  left: 13px;
   width: 2px;
   background: #3f3d48;
   content: '';
@@ -511,7 +505,7 @@
 .biome-rail-stop::after {
   position: absolute;
   top: 15px;
-  left: 2px;
+  left: 7px;
   width: 10px;
   height: 10px;
   border: 2px solid #6d6878;
@@ -529,36 +523,40 @@
 :is(.biome-hub-rail-visit, .biome-hub-rail-side-visit)[data-step]::after {
   position: absolute;
   top: 13px;
-  left: 9px;
+  left: 14px;
   box-sizing: border-box;
+  width: auto;
   min-width: 18px;
   height: 18px;
-  padding: 0 3px;
+  padding: 0 4px;
   border: 2px solid #6d6878;
   border-radius: 9px;
   background: #1c1d23;
   color: #c3a86f;
   content: attr(data-step);
-  font-size: 0.62rem;
+  font-size: 0.6rem;
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
+  letter-spacing: -0.02em;
   line-height: 14px;
   text-align: center;
+  white-space: nowrap;
   transform: translateX(-50%);
 }
 
-/* A visit and its side rooms sit inside their group; their circles reach back to the backbone. */
+/* A visit and its side rooms sit inside the Hub's panel; their circles reach back to the backbone. */
 .biome-hub-rail-visit[data-step]::after {
-  top: 15px;
-  left: -13px;
+  top: 13px;
+  left: -21px;
 }
 
 .biome-hub-rail-side-visit[data-step]::after {
-  top: 6px;
-  left: -17px;
+  top: 5px;
+  left: -45px;
   height: 16px;
   min-width: 16px;
   line-height: 12px;
-  font-size: 0.58rem;
+  font-size: 0.56rem;
 }
 
 .biome-rail-stop[data-step][data-plan-end='end']::after {
@@ -638,27 +636,22 @@
 }
 
 /*
- * Each Hub visit is one group on the backbone: its main room on top, its side
- * rooms as slimmer lines under a divider.
+ * The Hub's visits share one panel: each visit's main room is an ordinary row,
+ * its side rooms slimmer sub-rows tucked under it on a thin rule.
  */
 .biome-hub-rail-visits {
   display: grid;
-  gap: 6px;
-  padding: 0;
+  gap: 4px;
+  padding: 4px;
   margin: 7px 0 0;
+  border: 1px solid #34323f;
+  border-radius: 11px;
+  background: rgb(174 152 202 / 4%);
   list-style: none;
 }
 
 .biome-hub-rail-visit {
   position: relative;
-  padding: 3px;
-  border: 1px solid #34323f;
-  border-radius: 11px;
-  background: rgb(174 152 202 / 4%);
-}
-
-.biome-hub-rail-visit:has(.biome-rail-node[data-selected='true']) {
-  border-color: color-mix(in srgb, var(--selection-accent) 35%, transparent);
 }
 
 .biome-hub-rail-visit .biome-rail-node {
@@ -668,9 +661,9 @@
 .biome-hub-rail-side-visits {
   display: grid;
   gap: 1px;
-  padding: 3px 0 0;
-  margin: 3px 0 0;
-  border-top: 1px solid #34323f;
+  padding: 0 0 0 8px;
+  margin: 2px 0 2px 14px;
+  border-left: 2px solid rgb(174 152 202 / 28%);
   list-style: none;
 }
 
@@ -678,9 +671,9 @@
   position: relative;
 }
 
-/* A side room is a slim line in its visit: no frame until it is selected or has a finding. */
+/* A side room is a slim sub-row: no frame until it is hovered, selected or has a finding. */
 .biome-hub-rail-side-visit .biome-rail-node {
-  padding: 5px 11px;
+  padding: 4px 9px;
 }
 
 .biome-hub-rail-side-visit

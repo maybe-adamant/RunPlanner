@@ -1,10 +1,12 @@
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { roomKindIcon } from '@planner/ui/editor/biome/roomIcon';
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type AssessmentIssue } from '@run-planner/engine/simulation';
 
 import {
   catalogFindingLabels,
-  findingDestinationLabel,
+  findingDestination,
   nextRepairSelection,
   presentAssessmentIssue,
   type StatusPresentation,
@@ -89,7 +91,7 @@ export function ProjectFindings({
   if (issue === undefined) return null;
 
   const destination = focusByOwner.get(semanticAddressKey(issue.owner));
-  const destinationLabel = findingDestinationLabel(
+  const place = findingDestination(
     catalog,
     destination?.focusAddress ?? issue.owner,
     destination,
@@ -103,7 +105,7 @@ export function ProjectFindings({
     catalogFindingLabels(catalog),
   );
 
-  const text = `${copy.title} · ${destinationLabel}`;
+  const text = `${copy.title} · ${place.label}`;
   // The pill is one line; its description, where one adds a rule or repair, is on hover.
   const hint = copy.description === undefined ? text : `${text} — ${copy.description}`;
   return (
@@ -131,7 +133,23 @@ export function ProjectFindings({
         <span className="finding-pill-text">
           <span className="finding-title">{copy.title}</span>
           {' · '}
-          <span className="finding-destination">{destinationLabel}</span>
+          <span className="finding-destination">
+            {place.place}
+            {place.room === undefined ? null : (
+              <>
+                {' · '}
+                <span className="finding-room">
+                  <ArtworkIcon
+                    className="finding-room-icon"
+                    source={roomKindIcon(place.room.icon)}
+                  />
+                  {place.room.number === undefined ? null : (
+                    <span className="finding-room-number">{place.room.number}</span>
+                  )}
+                </span>
+              </>
+            )}
+          </span>
         </span>
       </button>
       {otherFindings > 0 ? <span className="finding-pill-more">+{otherFindings}</span> : null}

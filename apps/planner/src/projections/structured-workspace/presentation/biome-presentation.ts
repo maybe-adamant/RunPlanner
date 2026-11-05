@@ -434,10 +434,17 @@ function projectHubRailEntry(
                 ...railRunDepth(sideNode.room),
                 marker: sideNode.room.marker,
                 node: sideNode,
-                room: Object.freeze({
-                  ...roomRailPresentation(catalog, slot.room, slot.door),
-                  roomLabel: `S.Room ${sideRoomId}`,
-                }),
+                room: (() => {
+                  const presented = roomRailPresentation(catalog, slot.room, slot.door);
+                  // Side rooms share their main rooms' icon; an S tells their numbers apart.
+                  return Object.freeze({
+                    ...presented,
+                    ...(presented.roomNumber === undefined
+                      ? {}
+                      : { roomNumber: `S${presented.roomNumber}` }),
+                    roomLabel: `S.Room ${sideRoomId}`,
+                  });
+                })(),
                 visitMarker: withRailFindingCount(
                   slot.marker,
                   slot.marker.findingCount + roomFindingCount(sideNode.room),

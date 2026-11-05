@@ -812,6 +812,32 @@ select {
   color: #c9bfe0;
 }
 
+/* The finding's room as the folded rail shows it: its icon with its number. */
+.finding-room {
+  position: relative;
+  display: inline-flex;
+  margin-right: 0.55rem;
+  vertical-align: -0.28rem;
+}
+
+.finding-room-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.finding-room-number {
+  position: absolute;
+  right: -0.55rem;
+  bottom: -0.2rem;
+  padding: 0 2px;
+  border-radius: 5px;
+  color: #f1e6cf;
+  background: rgb(20 20 26 / 88%);
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
 .finding-pill-more {
   flex: 0 0 auto;
   padding: 1px 7px;
