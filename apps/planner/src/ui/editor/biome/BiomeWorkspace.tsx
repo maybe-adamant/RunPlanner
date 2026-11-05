@@ -236,23 +236,43 @@ function RailMainReward({
   );
 }
 
-/** A horizontal rail card's room icon over its reward icons; the card's text names it. */
+/** A room's rewards in one icon-sized slot: one fills it, two to four share it as a 2×2 grid. */
+function RailRewardSlot({
+  iconClassName,
+  icons,
+}: {
+  readonly iconClassName: string;
+  readonly icons: readonly (ArtworkSource | undefined)[];
+}) {
+  const shown = icons.slice(0, 4);
+  return (
+    <span className="biome-rail-reward-slot" data-count={shown.length}>
+      {shown.map((icon, index) => (
+        <ArtworkIcon className={iconClassName} key={index} source={icon} />
+      ))}
+    </span>
+  );
+}
+
+/** A folded rail card's room icon and reward icons; the card's text names it. */
 function RailIcons({
+  number,
   rewards = [],
   room,
 }: {
+  /** The room's number where many rooms share its icon. */
+  readonly number?: string | undefined;
   readonly rewards?: readonly (ArtworkSource | undefined)[];
   readonly room: WorkspaceRoomIcon;
 }) {
   return (
     <span aria-hidden="true" className="biome-rail-icons">
-      <ArtworkIcon className="biome-rail-icons-room" source={roomKindIcon(room)} />
+      <span className="biome-rail-icons-room-slot">
+        <ArtworkIcon className="biome-rail-icons-room" source={roomKindIcon(room)} />
+        {number === undefined ? null : <span className="biome-rail-icons-number">{number}</span>}
+      </span>
       {rewards.length === 0 ? null : (
-        <span className="biome-rail-icons-rewards">
-          {rewards.map((icon, index) => (
-            <ArtworkIcon className="biome-rail-icons-reward" key={index} source={icon} />
-          ))}
-        </span>
+        <RailRewardSlot iconClassName="biome-rail-icons-reward" icons={rewards} />
       )}
     </span>
   );
@@ -265,7 +285,13 @@ function RailTargetIcons({
   readonly biomeKey: string;
   readonly target: WorkspaceRailSelectedTarget;
 }) {
-  return <RailIcons rewards={railRewardIcons(biomeKey, target)} room={target.roomIcon} />;
+  return (
+    <RailIcons
+      number={target.roomNumber}
+      rewards={railRewardIcons(biomeKey, target)}
+      room={target.roomIcon}
+    />
+  );
 }
 
 /** A room seen without a door: its icon and name. */
@@ -308,9 +334,11 @@ function RailSelectedTarget({
   readonly biomeKey: string;
   readonly selectedTarget: WorkspaceRailSelectedTarget;
 }) {
-  const rewardIcons = railRewardIcons(biomeKey, selectedTarget).map((icon, index) => (
-    <ArtworkIcon className="biome-rail-reward-icon" key={index} source={icon} />
-  ));
+  const rewards = railRewardIcons(biomeKey, selectedTarget);
+  const rewardIcons =
+    rewards.length === 0
+      ? []
+      : [<RailRewardSlot icons={rewards} iconClassName="biome-rail-reward-icon" key="rewards" />];
   return (
     <span className="biome-rail-selection">
       <ArtworkIcon
@@ -404,6 +432,7 @@ function RailNode({
           <RailTargetIcons biomeKey={biomeKey} target={entry.selectedTarget} />
         ) : entry.roomIcon === undefined ? null : (
           <RailIcons
+            number={entry.roomNumber}
             rewards={entry.mainReward === undefined ? [] : [offerIcon(entry.mainReward.offer)]}
             room={entry.roomIcon}
           />

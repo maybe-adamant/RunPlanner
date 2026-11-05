@@ -88,6 +88,15 @@ export function workspaceRoomIcon(input: {
   }
 }
 
+/**
+ * A room's number where many rooms share its icon, such as 13 for Combat 13 or
+ * 01 for Chaos 01; rooms with an icon of their own need none.
+ */
+export function sharedRoomIconNumber(icon: WorkspaceRoomIcon, label: string): string | undefined {
+  if (icon.kind !== 'combat' && icon.kind !== 'chaos' && icon.kind !== 'fountain') return undefined;
+  return /\s(\d+)$/.exec(label)?.[1];
+}
+
 /** The icon of a room a picker offers by game name, before any occurrence exists. */
 export function candidateRoomIcon(
   catalog: Catalog,

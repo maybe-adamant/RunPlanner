@@ -750,6 +750,8 @@ export type WorkspaceRoomIcon =
 
 export interface WorkspaceRailSelectedTarget {
   readonly roomIcon: WorkspaceRoomIcon;
+  /** The room's number where many rooms share its icon. */
+  readonly roomNumber?: string;
   /** Goals remaining shown on the selected Clockwork Goal door. */
   readonly clockworkGoalsRemaining?: number;
   readonly reward?: WorkspaceRailReward;
@@ -774,13 +776,14 @@ export interface WorkspaceDecisionRailEntry {
   readonly mainReward?: never;
   readonly roomIcon?: never;
   readonly roomLabel?: never;
+  readonly roomNumber?: never;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode;
   /** The selected room's place against the plan end. */
   readonly planEnd?: WorkspacePlanEndRelation;
   readonly selectedTarget?: WorkspaceRailSelectedTarget;
-  /** The decision's number in the biome, counted from its first decision. */
-  readonly stepNumber: number;
+  /** The decision's number in the biome, counted from its first decision; absent where named instead. */
+  readonly stepNumber?: number;
 }
 
 export interface WorkspaceStageRailEntry {
@@ -795,6 +798,8 @@ export interface WorkspaceStageRailEntry {
   readonly roomIcon?: WorkspaceRoomIcon;
   /** The room's name on the stage's line, absent where the title already gives it. */
   readonly roomLabel?: string;
+  /** The room's number where many rooms share its icon. */
+  readonly roomNumber?: string;
   readonly stepNumber?: never;
   readonly marker: WorkspaceMarker;
   readonly node: Exclude<WorkspaceNode, WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode>;

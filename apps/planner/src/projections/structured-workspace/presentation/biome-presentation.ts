@@ -12,7 +12,7 @@ import {
   workspaceRailSelection,
 } from '../navigation/inspector-destinations';
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
-import { candidateRoomIcon } from './room-icon';
+import { candidateRoomIcon, sharedRoomIconNumber } from './room-icon';
 import {
   workspaceDecisionOwnedMarkers,
   type WorkspaceDecisionBatchNode,
@@ -183,6 +183,11 @@ function nodeRailPresentation(
   }
 }
 
+function withRoomNumber(room: WorkspaceRoomSummary): { readonly roomNumber?: string } {
+  const roomNumber = sharedRoomIconNumber(room.roomIcon, room.label);
+  return roomNumber === undefined ? {} : { roomNumber };
+}
+
 /** A room stage's line names its room unless the stop's title already does; an Intro by its role. */
 function railRoomLabel(room: WorkspaceRoomSummary, title: string): { readonly roomLabel?: string } {
   if (room.label !== title) return { roomLabel: room.label };
@@ -317,6 +322,7 @@ function roomRailPresentation(
     ),
     roomIcon: room.roomIcon,
     roomLabel: room.label,
+    ...withRoomNumber(room),
     ...(room.roomLocal.kind === 'shop' ? { shop: true as const } : {}),
   });
 }
@@ -584,16 +590,22 @@ export function presentWorkspaceBiome(
       const presentation = nodeRailPresentation(node, decisionIndex, node.key === entry?.key);
       const selectedTarget = selectedTargetRailPresentation(catalog, node);
       const marker = railMarker(node);
+      // A Hub biome's one decision before its Hub is named by the Pre-Hub it leads to,
+      // whichever door is taken; its visits carry the numbers.
+      const preHub =
+        semantic.progressionKind === 'hub'
+          ? node.targets.find((target) => target.room.kind === 'PreHub')?.room.label
+          : undefined;
       return Object.freeze({
         focusMarker: railFocusMarkerForNode(node, marker),
         kind: 'node' as const,
         key: node.key,
-        label: presentation.label,
+        label: preHub ?? presentation.label,
         marker,
         node,
         ...(planEnd === undefined ? {} : { planEnd }),
         ...(selectedTarget === undefined ? {} : { selectedTarget }),
-        stepNumber: decisionIndex,
+        ...(preHub === undefined ? { stepNumber: decisionIndex } : {}),
       });
     }
     const presentation = nodeRailPresentation(node, undefined, node.key === entry?.key);
@@ -632,6 +644,7 @@ export function presentWorkspaceBiome(
         : {
             roomIcon: node.room.roomIcon,
             ...railRoomLabel(node.room, presentation.label),
+            ...withRoomNumber(node.room),
           }),
       marker,
       node,
@@ -768,7 +781,7 @@ export function presentWorkspaceBiome(
             node: withRunStateTitle(entry.node, entry.label),
             ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
-            stepNumber: entry.stepNumber ?? 0,
+            ...(entry.stepNumber === undefined ? {} : { stepNumber: entry.stepNumber }),
           });
         case 'mixedBatch':
           return Object.freeze({
@@ -780,7 +793,7 @@ export function presentWorkspaceBiome(
             node: withRunStateTitle(entry.node, entry.label),
             ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
-            stepNumber: entry.stepNumber ?? 0,
+            ...(entry.stepNumber === undefined ? {} : { stepNumber: entry.stepNumber }),
           });
         case 'takeoverBatch':
           return Object.freeze({
