@@ -304,7 +304,7 @@ describe('OccurrenceRoomFeatures', () => {
           ?.offer.rewardType,
       ).toBeTruthy(),
     );
-    expect(within(actionRow).getByRole('button', { name: 'Reward' }).textContent).toContain(
+    expect(hintOf(within(actionRow).getByRole('button', { name: 'Reward' }))).toContain(
       'Max Health',
     );
     const accept = screen.getByRole('checkbox', { name: 'Accept' });

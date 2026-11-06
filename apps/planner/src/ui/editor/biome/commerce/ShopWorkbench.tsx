@@ -35,6 +35,7 @@ export function ShopWorkbench({
                 interactions={interactions}
                 ariaLabel={`${offer.label} Item`}
                 label={offer.label}
+                triggerSize="icon"
               />
             </div>
           </div>

@@ -76,6 +76,7 @@ function travelDealLineEditor(
           idPrefix={`shop-${line.offer.rewardControl.marker.focusKey}`}
           interactions={interactions}
           label=""
+          triggerSize="icon"
         />
       );
     default: {

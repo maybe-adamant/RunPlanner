@@ -221,7 +221,7 @@ function FeatureRollSlotPicker({
       findingTarget={findingTarget(slot.address)}
       id={`${interaction.key}-picker`}
       itemIcon={(item) => (item.value === null ? undefined : rollIcon(feature, item.value))}
-      label={slot.label}
+      label=""
       layout="inline"
       loading={picker.pending}
       model={picker.result ?? emptyNullablePicker}
@@ -232,6 +232,7 @@ function FeatureRollSlotPicker({
       placeholder="Any"
       triggerIcon={slot.value === null ? undefined : rollIcon(feature, slot.value)}
       {...(slot.valueLabel === undefined ? {} : { triggerLabel: slot.valueLabel })}
+      triggerSize="icon"
     />
   );
 }

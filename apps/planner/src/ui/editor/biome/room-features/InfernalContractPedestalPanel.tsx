@@ -26,6 +26,7 @@ export function InfernalContractPedestalPanel({
             interactions={interactions}
             label="Pedestal"
             labelIcon={traitIcon('InfernalContractBoon')}
+            triggerSize="icon"
           />
         </div>
       </div>

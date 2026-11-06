@@ -25,6 +25,7 @@ import {
   useFindingMark,
   useFindingTarget,
   type FindingAnchorProps,
+  type FindingMarkProps,
 } from '@planner/ui/feedback/useFindingTarget';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
@@ -837,34 +838,107 @@ export function DoorChips({
   if (chips.length === 0) return null;
   return (
     <span aria-label={label} className="timeline-door-chips" role="list">
+      {chips.map((chip) => (
+        <span
+          {...hintProps(chip.label, undefined, chip.label)}
+          aria-label={doorChipName(chip)}
+          className="timeline-door-chip"
+          data-missing={chip.missing}
+          data-note-active={chip.key === activeKey || undefined}
+          data-picked={chip.picked || undefined}
+          data-unavailable={chip.unavailable || undefined}
+          key={chip.key}
+          role="listitem"
+        >
+          <DoorChipFace chip={chip} />
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function doorChipName(chip: DoorChip): string {
+  return chip.locked === true ? `${chip.label} · Locked` : chip.label;
+}
+
+/** A door chip's room icon, its rewards' icons and its lock. */
+function DoorChipFace({ chip }: { readonly chip: DoorChip }) {
+  return (
+    <>
+      {chip.roomIcon === undefined ? (
+        chip.rewards.length > 0 ? null : (
+          <span aria-hidden="true" className="timeline-door-chip-blank">
+            ?
+          </span>
+        )
+      ) : (
+        <ArtworkIcon className="artwork-label-icon" source={roomKindIcon(chip.roomIcon)} />
+      )}
+      {chip.rewards.map((icon, index) => (
+        <ArtworkIcon className="artwork-label-icon" key={index} source={icon} />
+      ))}
+      {chip.locked === true ? <DoorLockIndicator /> : null}
+    </>
+  );
+}
+
+/**
+ * Door chips to pick one from: clicking a chip picks it; the picked chip is lit
+ * and the others dim. The picked chip, or else the first, carries `id` and the
+ * pick's finding mark.
+ */
+export function DoorChipOptions({
+  chips,
+  disabledHint,
+  findingMark,
+  id,
+  label,
+  onPick,
+}: {
+  readonly chips: readonly (DoorChip & { readonly hint?: string })[];
+  /** Disables every chip with this hint. */
+  readonly disabledHint?: string | undefined;
+  readonly findingMark?: FindingMarkProps;
+  readonly id: string;
+  readonly label: string;
+  readonly onPick: (key: string) => void;
+}) {
+  const picked = chips.find((chip) => chip.picked === true);
+  const anchor = picked ?? chips.find((chip) => chip.unavailable !== true) ?? chips[0];
+  return (
+    <span aria-label={label} className="timeline-door-chips" role="group">
       {chips.map((chip) => {
-        const label = chip.locked === true ? `${chip.label} · Locked` : chip.label;
+        const disabled = disabledHint !== undefined || chip.unavailable === true;
+        const name = doorChipName(chip);
+        // The anchor chip takes focus for the pick's findings and carries their mark.
+        const mark =
+          chip !== anchor || findingMark === undefined || !findingMark['data-has-findings']
+            ? undefined
+            : findingMark;
         return (
-          <span
-            {...hintProps(chip.label, undefined, chip.label)}
-            aria-label={label}
-            className="timeline-door-chip"
-            data-missing={chip.missing}
-            data-note-active={chip.key === activeKey || undefined}
+          <button
+            {...mark}
+            {...hintProps(
+              disabledHint ?? chip.hint ?? chip.label,
+              mark?.['aria-description'],
+              name,
+            )}
+            aria-label={name}
+            aria-pressed={chip.picked === true}
+            className="timeline-door-chip timeline-door-option"
+            data-dimmed={(picked !== undefined && chip.picked !== true) || undefined}
             data-picked={chip.picked || undefined}
             data-unavailable={chip.unavailable || undefined}
+            disabled={disabled}
+            {...(chip === anchor ? { id } : {})}
             key={chip.key}
-            role="listitem"
+            onClick={() => {
+              if (chip.picked !== true) onPick(chip.key);
+            }}
+            type="button"
           >
-            {chip.roomIcon === undefined ? (
-              chip.rewards.length > 0 ? null : (
-                <span aria-hidden="true" className="timeline-door-chip-blank">
-                  ?
-                </span>
-              )
-            ) : (
-              <ArtworkIcon className="artwork-label-icon" source={roomKindIcon(chip.roomIcon)} />
-            )}
-            {chip.rewards.map((icon, index) => (
-              <ArtworkIcon className="artwork-label-icon" key={index} source={icon} />
-            ))}
-            {chip.locked === true ? <DoorLockIndicator /> : null}
-          </span>
+            <DoorChipFace chip={chip} />
+          </button>
         );
       })}
     </span>
@@ -922,7 +996,7 @@ export function BatchExitPicker({
       ? requireWorkspaceInteraction(interactions.chaosExits, key).selectIntent
       : requireWorkspaceInteraction(interactions.zagreusContracts, key).selectIntent;
   };
-  const choices = [
+  const chips = [
     ...node.targets
       .filter(
         (target) =>
@@ -931,40 +1005,33 @@ export function BatchExitPicker({
       )
       .map((target) => ({
         key: target.exitKey,
-        value: target.exitKey,
-        label: `Door ${target.index}`,
-        room: target.door.room.label,
+        label: `Door ${target.index} · ${target.door.room.label}`,
+        roomIcon: target.door.room.roomIcon,
         rewards: doorRewardIcons(target, 'final'),
-        icon: roomKindIcon(target.door.room.roomIcon),
         ...(target.physicalState === 'unavailable'
-          ? { disabled: true, explanation: 'This saved room is no longer offered here.' }
+          ? { unavailable: true, hint: 'This saved room is no longer offered here.' }
           : {}),
       })),
     ...additional.map((control) => ({
       key: workspaceInteractionKey(control.owner),
-      value: workspaceInteractionKey(control.owner),
       label: control.exitTypeLabel,
-      room: control.door.room.label,
+      roomIcon: control.door.room.roomIcon,
       rewards: [rewardIcon(control.fixedRewardType)],
-      icon: roomKindIcon(control.door.room.roomIcon),
     })),
   ];
   const selected =
     additional.find((control) => control.selected) === undefined
       ? interaction?.selectedExitKey
       : workspaceInteractionKey(additional.find((control) => control.selected)!.owner);
-  const current = choices.find((choice) => choice.value === selected);
   return (
     <span className="timeline-leave-door">
-      <ContextualPicker<string>
-        ariaLabel="Exit door"
+      <DoorChipOptions
+        chips={chips.map((chip) => ({ ...chip, picked: chip.key === selected }))}
+        disabledHint={interaction === undefined ? 'Fill the remaining doors first.' : undefined}
         findingMark={findingMark(selectionAddress)}
         id={semanticOwnerControlElementId(selectionAddress)}
-        label=""
-        {...(interaction === undefined ? { disabledHint: 'Fill the remaining doors first.' } : {})}
-        layout="inline"
-        model={declaredChoicesPicker(choices, selected)}
-        onSelect={(value) => {
+        label="Exit door"
+        onPick={(value) => {
           const control = additional.find(
             (candidate) => workspaceInteractionKey(candidate.owner) === value,
           );
@@ -981,18 +1048,7 @@ export function BatchExitPicker({
             focus: { owner: selectionAddress, timing: 'after' },
           });
         }}
-        placeholder="Choose a door"
-        searchable={false}
-        {...(current === undefined ? {} : { triggerLabel: current.label })}
-        triggerSize="content"
       />
-      {current === undefined ? null : (
-        <>
-          <span aria-hidden="true">·</span>
-          <FixedValueChip icon={current.icon} label={current.room} />
-          <LeaveRewards icons={current.rewards} />
-        </>
-      )}
     </span>
   );
 }

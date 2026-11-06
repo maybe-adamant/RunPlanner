@@ -23,12 +23,15 @@ export function ShopOfferEditor({
   interactions,
   label,
   labelIcon,
+  triggerSize,
 }: {
   readonly ariaLabel?: string;
   readonly control: WorkspaceRewardControl;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
   readonly labelIcon?: ArtworkSource | undefined;
+  /** `icon` shows the trigger as the item's icon chip alone. */
+  readonly triggerSize?: 'field' | 'icon';
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
@@ -70,6 +73,7 @@ export function ShopOfferEditor({
           : shopItemIcon(interaction.selected.optionKey, interaction.selected.offer)
       }
       triggerLabel={interaction.summary}
+      {...(triggerSize === undefined ? {} : { triggerSize })}
     />
   );
 }

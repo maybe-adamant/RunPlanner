@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { hintOf } from '@planner-test/support/hints';
 import { catalog } from '@run-planner/hades2-catalog';
 import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import {
@@ -993,7 +994,7 @@ describe('BiomeWorkspace', () => {
     ).toContain(firstVisit.room.reward.label);
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
-    expect(screen.getByRole('button', { name: 'Visit 1 room' }).textContent).toContain(
+    expect(hintOf(screen.getByRole('button', { name: 'Visit 1 room' }))).toContain(
       firstVisit.node.room.label,
     );
   });

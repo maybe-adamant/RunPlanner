@@ -2904,6 +2904,16 @@
   line-height: 1;
 }
 
+/*
+ * A row's text holding an icon centres it like a chip: as an inline box it would
+ * sit on the text baseline, a little high.
+ */
+.timeline-cell-label strong:has(> .row-reward-name),
+.timeline-banner-gold {
+  display: inline-flex;
+  align-items: center;
+}
+
 /* A reward named by its icon; a Boosted boon carries a small up-arrow on its icon. */
 .row-reward-name {
   display: inline-flex;
@@ -3076,6 +3086,35 @@
   opacity: 0.5;
 }
 
+/* A door chip to pick: the picked one lit, the others dim until hovered. */
+button.timeline-door-option {
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.timeline-door-option:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--selection-accent) 14%, transparent);
+}
+
+button.timeline-door-option[data-picked] {
+  border-color: var(--selection-accent);
+  background: color-mix(in srgb, var(--selection-accent) 14%, transparent);
+}
+
+button.timeline-door-option[data-dimmed] {
+  opacity: 0.4;
+}
+
+button.timeline-door-option[data-dimmed]:is(:hover, :focus-visible):not(:disabled) {
+  opacity: 0.85;
+}
+
+button.timeline-door-option:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* A Timeline chip: one icon, its name on hover; a trait's rarity is its ring. */
 .timeline-chip-group {
   display: inline-flex;
@@ -3232,11 +3271,17 @@ button.timeline-chip {
 }
 
 /* An effect's object chip keeps its own width beside the effect's verb. */
+.contextual-picker[data-trigger-size='icon'],
 .timeline-cell-editors .contextual-picker[data-trigger-size='icon'] {
   flex: 0 0 auto;
   width: auto;
   min-width: 0;
+  justify-self: start;
   grid-template-columns: auto;
+}
+
+.contextual-picker.field-control-inline[data-trigger-size='icon']:has(> label) {
+  grid-template-columns: max-content max-content;
 }
 
 .transcendent-embryo-values-popover {

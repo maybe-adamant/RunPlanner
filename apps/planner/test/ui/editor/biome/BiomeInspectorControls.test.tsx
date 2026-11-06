@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
+import { hintOf } from '@planner-test/support/hints';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -735,7 +736,7 @@ describe('Biome inspector controls', () => {
     expect(postboss()?.keepsakeRack).toEqual({ keepsakeKey: null });
     const order = postboss()?.roomActions.order;
     // Unchanged reads as the held keepsake; the row moves but cannot be removed.
-    const unchanged = launcher().textContent!;
+    const unchanged = hintOf(launcher())!;
     expect(unchanged).toMatch(/ \(Unchanged\)$/);
     const held = unchanged.replace(/ \(Unchanged\)$/, '');
     expect(within(rackRow()).getByRole('button', { name: 'Reorder Keepsake Rack' })).toBeTruthy();
@@ -771,14 +772,14 @@ describe('Biome inspector controls', () => {
     fireEvent.click(save());
     expect(postboss()?.keepsakeRack).toEqual({ keepsakeKey: 'BossPreDamageKeepsake' });
     expect(postboss()?.roomActions.order).toEqual(order);
-    expect(launcher().textContent).toBe('Knuckle Bones');
+    expect(hintOf(launcher())).toBe('Knuckle Bones');
 
     fireEvent.click(launcher());
     fireEvent.click(await card(held));
     fireEvent.click(save());
     expect(postboss()?.keepsakeRack).toEqual({ keepsakeKey: null });
     expect(postboss()?.roomActions.order).toEqual(order);
-    expect(launcher().textContent).toBe(unchanged);
+    expect(hintOf(launcher())).toBe(unchanged);
 
     // A swap with an equip result shows its outcome picker in the draft; Save waits for it.
     fireEvent.click(launcher());
@@ -789,7 +790,7 @@ describe('Biome inspector controls', () => {
     expect(within(dialog()).getByRole('button', { name: 'Jeweled Pom result' })).toBeTruthy();
     expect(save().disabled).toBe(true);
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Cancel' }));
-    expect(launcher().textContent).toBe(unchanged);
+    expect(hintOf(launcher())).toBe(unchanged);
     expect(postboss()?.roomActions.order).toEqual(order);
     fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
     expect(screen.queryByText('Keepsake Rack')).toBeNull();

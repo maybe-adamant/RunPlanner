@@ -265,6 +265,7 @@ function PurgingPoolTraitPicker({
       placeholder="Unresolved"
       itemIcon={(item) => (item.value === null ? undefined : traitIcon(item.value))}
       triggerIcon={traitKey === null ? undefined : traitIcon(traitKey)}
+      triggerSize="icon"
       {...(selectedLabel === undefined ? {} : { triggerLabel: selectedLabel })}
     />
   );
@@ -308,6 +309,7 @@ export function StygianWellSlotEditor({
         placeholder={placeholder}
         itemIcon={(item) => wellIcon(item.value)}
         triggerIcon={wellIcon(slot.itemKey)}
+        triggerSize="icon"
         {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
       />
     </div>
@@ -354,6 +356,7 @@ export function HermesShrineSlotEditor({
         placeholder={placeholder}
         itemIcon={(item) => rewardIcon(item.value)}
         triggerIcon={rewardType === null ? undefined : rewardIcon(rewardType)}
+        triggerSize="icon"
         {...(rewardLabel === undefined ? {} : { triggerLabel: rewardLabel })}
       />
       <div className="hermes-shrine-purchase-details">

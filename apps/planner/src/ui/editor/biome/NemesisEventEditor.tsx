@@ -1,6 +1,8 @@
 import type { AuthoredNemesisRandomEventOutcome } from '@run-planner/engine/authored-project';
 import type { WorkspaceNemesisEventInteraction } from '@planner/projections/structured-workspace';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -127,7 +129,8 @@ export function NemesisInteractionEditor({
           {...(findingMark === undefined ? {} : { findingMark: findingMark('nemesisTrait') })}
           ariaLabel="Boon offered"
           id={`nemesis-trait-${interaction.key}`}
-          label="Boon offered"
+          itemIcon={(item) => traitIcon(item.value)}
+          label=""
           layout="inline"
           {...waiting}
           loading={candidates.pending}
@@ -140,14 +143,20 @@ export function NemesisInteractionEditor({
           {...(interaction.selectedTraitLabel === undefined
             ? {}
             : { triggerLabel: interaction.selectedTraitLabel })}
+          triggerIcon={value.traitKey == null ? undefined : traitIcon(value.traitKey)}
+          triggerSize="icon"
         />
+      ) : null}
+      {fixedResultLabel === undefined && value.kind === 'traitTrade' ? (
+        <span className="nemesis-fixed-reward">to give</span>
       ) : null}
       {fixedResultLabel === undefined ? (
         <ContextualPicker
           {...(findingMark === undefined ? {} : { findingMark: findingMark('nemesisReward') })}
           ariaLabel="Reward"
           id={`nemesis-reward-${interaction.key}`}
-          label="Reward"
+          itemIcon={(item) => rewardIcon(item.value)}
+          label=""
           layout="inline"
           {...waiting}
           loading={candidates.pending}
@@ -160,6 +169,8 @@ export function NemesisInteractionEditor({
           {...(interaction.selectedRewardLabel === undefined
             ? {}
             : { triggerLabel: interaction.selectedRewardLabel })}
+          triggerIcon={interaction.reward === null ? undefined : offerIcon(interaction.reward)}
+          triggerSize="icon"
         />
       ) : (
         <div className="field-control field-control-inline control-placeholder">

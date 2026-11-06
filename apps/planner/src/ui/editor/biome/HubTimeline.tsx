@@ -45,6 +45,7 @@ import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 import { HubBoardMap, HubDoorFace } from './hub-map/HubBoardMap';
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
 import { RoomRerolls } from './RoomRerolls';
+import { roomKindIcon } from './roomIcon';
 import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderHandle';
 import {
   useTimelineReorder,
@@ -178,6 +179,7 @@ function VisitRoomPicker({
         key: slot.hubSlotKey,
         value: slot.hubSlotKey,
         label: slot.label,
+        icon: slotRoomIcon(slot),
         disabled: elsewhere || refusal !== undefined,
         ...(elsewhere
           ? { explanation: 'Visited' }
@@ -186,6 +188,7 @@ function VisitRoomPicker({
             : {}),
       };
     });
+  const picked = node.slots.find((slot) => slot.hubSlotKey === visit.hubSlotKey);
   return (
     <ContextualPicker<string>
       ariaLabel={`${segmentLabel(visit.visitIndex)} room`}
@@ -202,10 +205,19 @@ function VisitRoomPicker({
       onSelect={(hubSlotKey) => {
         if (hubSlotKey !== visit.hubSlotKey) onApply(actionsWith(hubSlotKey));
       }}
+      itemIcon={(item) => choices.find((choice) => choice.value === item.value)?.icon}
       placeholder="Choose room"
       searchable={false}
+      triggerIcon={picked === undefined ? undefined : slotRoomIcon(picked)}
+      triggerSize="icon"
     />
   );
+}
+
+/** A Hub door's room as its icon. */
+function slotRoomIcon(slot: WorkspaceHubDecisionNode['slots'][number]): string | undefined {
+  const room = slot.room ?? slot.door?.room;
+  return room === undefined ? undefined : roomKindIcon(room.roomIcon);
 }
 
 /** Opens a picked visit's room on its Timeline. */

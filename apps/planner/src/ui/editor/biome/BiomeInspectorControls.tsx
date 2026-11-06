@@ -22,6 +22,7 @@ import {
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -31,6 +32,8 @@ import { TimelineRow } from './TimelineRow';
 import type { TimelineBoundaryContent } from './OccurrenceRoomActions';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { KeepsakeEquipResultPicker, KeepsakeSelectionLauncher } from '../KeepsakePickers';
+
+const wellIcon = (itemKey: string): string | undefined => wellArtwork[itemKey] ?? undefined;
 
 const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
   sections: Object.freeze([]),
@@ -58,6 +61,7 @@ function KeepsakeRackTimelineContent({
     <div className="room-keepsake-action">
       <div className="room-keepsake-control" data-label-hidden>
         <KeepsakeSelectionLauncher
+          chip
           equipResults={equipResult === undefined ? [] : [equipResult]}
           {...(selection.heldKeepsake === undefined ? {} : { held: selection.heldKeepsake })}
           id={`postboss-keepsake-${interaction.key}`}
@@ -217,7 +221,8 @@ function StygianWellTwistTimelineContent({
       findingTarget={findingTarget(twist.address)}
       ariaLabel={`${label} Twist result`}
       id={`${interaction.key}-picker`}
-      label="Result"
+      itemIcon={(item) => (item.value === null ? undefined : wellIcon(item.value))}
+      label=""
       layout="inline"
       loading={picker.pending}
       model={picker.result ?? emptyNullablePicker}
@@ -226,7 +231,9 @@ function StygianWellTwistTimelineContent({
       }}
       onSelect={(itemKey) => executeIntent(interaction.intentFor(itemKey))}
       placeholder="Unresolved"
+      triggerIcon={twist.itemKey === null ? undefined : wellIcon(twist.itemKey)}
       {...(twist.itemLabel === undefined ? {} : { triggerLabel: twist.itemLabel })}
+      triggerSize="icon"
     />
   );
 }

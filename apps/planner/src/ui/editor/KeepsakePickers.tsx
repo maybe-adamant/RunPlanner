@@ -95,6 +95,7 @@ function equipResultIntent(
 
 /** A rack launcher whose dialog also holds the held keepsake's equip-result controls. */
 export function KeepsakeSelectionLauncher({
+  chip = false,
   disabledHint,
   equipResults,
   held,
@@ -103,6 +104,8 @@ export function KeepsakeSelectionLauncher({
   label,
   unavailableHint,
 }: {
+  /** Shows the launcher as the keepsake's icon chip alone. */
+  readonly chip?: boolean;
   readonly disabledHint?: string;
   readonly equipResults: readonly WorkspaceKeepsakeEquipResultInteraction[];
   /** The keepsake held arriving at a rack; choosing it leaves the rack unchanged. */
@@ -124,6 +127,7 @@ export function KeepsakeSelectionLauncher({
   return (
     <>
       <KeepsakeLauncher
+        chip={chip}
         findingTarget={findingTarget(
           interaction.owner,
           id,

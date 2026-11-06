@@ -37,7 +37,7 @@ export function RewardControlEditor({
   readonly offerStartStep?: RewardPickerStep;
   /** A compact fixed-type picker can omit the already-visible reward type. */
   readonly offerSummaryMode?: 'offer' | 'source';
-  /** `icon` shows a reward picker's trigger as the reward's icon chip alone. */
+  /** `icon` shows a reward or Shop item picker's trigger as its icon chip alone. */
   readonly triggerSize?: 'field' | 'icon';
 }) {
   const executeIntent = useCommandIntent();
@@ -66,6 +66,7 @@ export function RewardControlEditor({
           interactions={interactions}
           label={label}
           {...(labelIcon === undefined ? {} : { labelIcon })}
+          {...(triggerSize === undefined ? {} : { triggerSize })}
         />
       ) : control.kind === 'countedReward' ? (
         <CountedRewardEditor

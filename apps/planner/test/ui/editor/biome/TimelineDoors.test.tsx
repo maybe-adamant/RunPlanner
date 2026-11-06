@@ -181,10 +181,8 @@ describe('a room’s doors on its Timeline', () => {
     const details = await openTimeline(view);
     const leave = within(details).getByRole('listitem', { name: 'Leave room' });
     const before = history(view).past.length;
-    await view.user.click(within(leave).getByRole('button', { name: 'Exit door' }));
-    await view.user.click(
-      within(await screen.findByRole('listbox')).getByRole('option', { name: 'Door 2' }),
-    );
+    const exitDoors = within(leave).getByRole('group', { name: 'Exit door' });
+    await view.user.click(within(exitDoors).getByRole('button', { name: /^Door 2 ·/ }));
     expect(history(view).past).toHaveLength(before + 1);
     const decision = history(view)
       .present.route.biomes.find((biome) => biome.biomeKey === 'F')!
@@ -198,8 +196,12 @@ describe('a room’s doors on its Timeline', () => {
       kind: 'normal',
       exitKey: 'exit2',
     });
-    // The chosen door's room stays a plain label beside the picker.
-    expect(within(leave).getByRole('button', { name: 'Exit door' }).textContent).toBe('Door 2');
+    // The chosen door's chip is lit.
+    expect(
+      within(leave)
+        .getByRole('button', { name: /^Door 2 ·/ })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
   });
 
   it('shows each press’s door chips as that press leaves them', async () => {
@@ -371,7 +373,7 @@ describe('a room’s last Timeline row', () => {
     const details = screen.getByRole('complementary', { name: 'Details' });
     await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
     const leave = within(details).getByRole('listitem', { name: 'Leave room' });
-    expect(within(leave).queryByRole('button', { name: 'Exit door' })).toBeNull();
+    expect(within(leave).queryByRole('group', { name: 'Exit door' })).toBeNull();
     expect(within(leave).getByText('Door 1')).toBeTruthy();
     expect(within(leave).getByText('Combat 02')).toBeTruthy();
   });

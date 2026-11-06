@@ -183,21 +183,14 @@ describe('RoomRerolls', () => {
     // The row is edited in place: no link elsewhere.
     expect(within(row).queryByRole('button', { name: 'Doors' })).toBeNull();
     // Picking Door 2 to leave shows its reward as the press left it.
-    await view.user.click(
-      within(details.getByRole('listitem', { name: 'Leave room' })).getByRole('button', {
-        name: 'Exit door',
-      }),
-    );
-    await view.user.click(
-      within(await screen.findByRole('listbox')).getByRole('option', { name: 'Door 2' }),
-    );
-    await waitFor(() =>
-      expect(
-        details
-          .getByRole('listitem', { name: 'Leave room' })
-          .querySelector('.timeline-leave-rewards img'),
-      ).not.toBeNull(),
-    );
+    const exitDoor = () =>
+      within(
+        within(details.getByRole('listitem', { name: 'Leave room' })).getByRole('group', {
+          name: 'Exit door',
+        }),
+      ).getByRole('button', { name: /^Door 2 ·/ });
+    await view.user.click(exitDoor());
+    await waitFor(() => expect(exitDoor().getAttribute('aria-pressed')).toBe('true'));
   });
 
   it("repairs a door row's stale kept rerolled reward from its last reroll", async () => {

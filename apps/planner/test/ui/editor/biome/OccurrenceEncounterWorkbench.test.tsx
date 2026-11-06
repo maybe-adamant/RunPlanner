@@ -2673,7 +2673,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     expect(offerRows()).toHaveLength(2);
     expect(offerRows()[1]?.getAttribute('data-picked')).not.toBe('true');
-    expect(screen.getByRole('button', { name: 'Combat 1 reward offer' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Combat 1 reward offer' })).toBeTruthy();
 
     act(() =>
       view.application.store.dispatch(
@@ -2684,9 +2684,10 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       ),
     );
-    await view.user.click(screen.getByRole('button', { name: 'Combat 1 reward offer' }));
     await view.user.click(
-      within(await screen.findByRole('listbox')).getByRole('option', { name: 'R Offer' }),
+      within(screen.getByRole('group', { name: 'Combat 1 reward offer' })).getByRole('button', {
+        name: 'R Offer',
+      }),
     );
     expect(
       shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
@@ -2737,11 +2738,10 @@ describe('OccurrenceEncounterWorkbench', () => {
       'Hermes',
     );
     expect(screen.queryByRole('combobox', { name: 'Picked offer' })).toBeNull();
-    await view.user.click(screen.getByRole('button', { name: 'Combat 1 reward offer' }));
     expect(
-      within(await screen.findByRole('listbox'))
-        .getAllByRole('option')
-        .map((option) => option.textContent?.replace('✓', '')),
+      within(screen.getByRole('group', { name: 'Combat 1 reward offer' }))
+        .getAllByRole('button')
+        .map((chip) => chip.getAttribute('aria-label')),
     ).toEqual(['L Offer', 'R Offer']);
   });
 
@@ -2799,9 +2799,10 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     await authorOffer('L Offer', 'Big Bones');
     await authorOffer('R Offer', 'Big Ashes');
-    await view.user.click(screen.getByRole('button', { name: 'Combat 1 reward offer' }));
     await view.user.click(
-      within(await screen.findByRole('listbox')).getByRole('option', { name: 'R Offer' }),
+      within(screen.getByRole('group', { name: 'Combat 1 reward offer' })).getByRole('button', {
+        name: 'R Offer',
+      }),
     );
     await waitFor(() =>
       expect(
@@ -2994,7 +2995,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
-    expect(within(line()).getByRole('button', { name: 'Travel Deal Item' }).textContent).toContain(
+    expect(hintOf(within(line()).getByRole('button', { name: 'Travel Deal Item' }))).toContain(
       'Mystery Boon',
     );
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toEqual(

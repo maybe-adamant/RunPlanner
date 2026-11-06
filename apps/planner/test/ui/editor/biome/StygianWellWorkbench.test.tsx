@@ -262,7 +262,7 @@ describe('Stygian Well workbench', () => {
         throw new Error('Twist result missing');
       const resultLabel = result.textContent;
       await view.user.click(result);
-      expect(picker.textContent).toContain(resultLabel);
+      expect(hintOf(picker)).toContain(resultLabel);
       await view.user.click(picker);
       expect(
         screen.getByRole('option', { name: resultLabel }).getAttribute('data-selected-value'),
@@ -294,7 +294,7 @@ describe('Stygian Well workbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrence);
     openOverview();
     const offer = screen.getByRole('button', { name: 'Stygian Well Offer 2 Item' });
-    expect(offer.textContent).toContain('Unresolved');
+    expect(hintOf(offer)).toContain('Unresolved');
     expect(screen.queryByRole('button', { name: /Twist result$/ })).toBeNull();
 
     await view.user.click(offer);

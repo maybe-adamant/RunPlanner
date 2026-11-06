@@ -162,6 +162,7 @@ export function RoomRerolls({
         offer={row.reward}
         onReplace={(reward) => executeIntent(interaction.replaceRewardIntent(row.key, reward))}
         resolver={interaction.rowReward(row.key)}
+        triggerSize="icon"
       />
       <button
         {...findingMark(row.address, 'delete')}
@@ -237,6 +238,7 @@ export function RoomRerolls({
                 executeIntent(interaction.appendIntent(pending, reward));
               }}
               resolver={interaction.pendingReward(pending)}
+              triggerSize="icon"
             />
           </li>
         )}
@@ -395,6 +397,7 @@ export function DoorsRerollEntry({
               executeIntent(interaction.appendIntent(pending, reward));
             }}
             resolver={interaction.pendingReward(pending)}
+            triggerSize="icon"
           />
         )
       }
@@ -455,6 +458,7 @@ export function DoorRerollRowReward({
           offer={row.reward}
           onReplace={(reward) => executeIntent(interaction.replaceRewardIntent(row.key, reward))}
           resolver={interaction.rowReward(row.key)}
+          triggerSize="icon"
         />
       </span>
       {chipsAfter === undefined ? null : (

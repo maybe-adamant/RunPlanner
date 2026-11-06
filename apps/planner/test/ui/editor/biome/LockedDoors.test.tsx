@@ -53,9 +53,8 @@ describe('locked doors', () => {
     const summary = () => screen.getByRole('list', { name: 'Door summary' });
     expect(within(summary()).getByRole('listitem', { name: /^Door 2 .* Locked$/ })).toBeTruthy();
     // A door still locked is not offered for leaving.
-    await user.click(screen.getByRole('button', { name: /Exit door/ }));
-    expect(screen.queryByRole('option', { name: /Door 2/ })).toBeNull();
-    await user.keyboard('{Escape}');
+    const exitDoors = () => screen.getByRole('group', { name: 'Exit door' });
+    expect(within(exitDoors()).queryByRole('button', { name: /Door 2/ })).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'Doors' }));
     await user.click(await screen.findByRole('option', { name: 'Unlock Door 2' }));
@@ -65,8 +64,7 @@ describe('locked doors', () => {
     });
     expect(screen.getByRole('button', { name: /Customize locked door fight/ })).toBeTruthy();
 
-    await user.click(screen.getByRole('button', { name: /Exit door/ }));
-    expect(await screen.findByRole('option', { name: /Door 2/ })).toBeTruthy();
+    expect(within(exitDoors()).getByRole('button', { name: /Door 2/ })).toBeTruthy();
   });
 
   it('unlocks every door as one edit when the gate is unticked', async () => {

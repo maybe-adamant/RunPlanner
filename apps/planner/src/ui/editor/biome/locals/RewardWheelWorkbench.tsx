@@ -17,12 +17,11 @@ import {
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { CandidatePicker } from '../CandidatePicker';
-import { DoorRow, DoorRowsHeader, RewardPoolLine } from '../DecisionWorkbench';
+import { DoorChipOptions, DoorRow, DoorRowsHeader, RewardPoolLine } from '../DecisionWorkbench';
+import { wheelOfferChips } from '../doorSummary';
 import { RerolledRewardRepairs, RowReward } from '../DoorRewardEditor';
 import { RoomRerolls } from '../RoomRerolls';
 import { hintProps } from '@planner/ui/controls/hint';
-import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { LeaveRow } from '../TimelineDoors';
@@ -217,27 +216,18 @@ export function SelectWheelRow({
   const offers = wheel.offers.filter((offer) => offer.active);
   const chosen = offers[wheel.pickedOfferIndex - 1];
   const chosenReward = chosen === undefined ? null : (chosen.rerolledOffer ?? chosen.control.offer);
-  const choices = offers.map((offer, index) => ({
-    key: offer.key,
-    value: index + 1,
-    label: offer.label,
-  }));
   return (
     <LeaveRow label="Select wheel">
       <span className="timeline-leave-door">
         {offers.length > 1 ? (
-          <ContextualPicker<number>
-            ariaLabel={`${wheel.label} offer`}
+          <DoorChipOptions
+            chips={wheelOfferChips(wheel, 'final')}
+            disabledHint={pick.contextReached ? undefined : candidateWaitingHint}
             findingMark={findingMark(wheel.marker.address, 'wheelChoice')}
             id={`wheel-pick-${wheel.key}`}
-            label=""
-            {...(pick.contextReached ? {} : { disabledHint: candidateWaitingHint })}
-            layout="inline"
-            model={declaredChoicesPicker(choices, wheel.pickedOfferIndex)}
-            onOpenChange={(open) => {
-              if (open) pickCandidates.activate();
-            }}
-            onSelect={(pickedOfferIndex) => {
+            label={`${wheel.label} offer`}
+            onPick={(key) => {
+              const pickedOfferIndex = offers.findIndex((offer) => offer.key === key) + 1;
               const results = pickCandidates.result ?? pickCandidates.activate();
               const candidate = results?.find((option) => option.value === pickedOfferIndex);
               if (!candidateMayBeAuthored(candidate)) return;
@@ -249,18 +239,16 @@ export function SelectWheelRow({
                 }),
               );
             }}
-            placeholder="Choose an offer"
-            searchable={false}
-            {...(chosen === undefined ? {} : { triggerLabel: chosen.label })}
-            triggerSize="content"
           />
         ) : (
-          <span>{chosen?.label ?? 'Offer'}</span>
-        )}
-        {chosenReward === null ? null : (
           <>
-            <span aria-hidden="true">·</span>
-            <ArtworkIcon className="artwork-label-icon" source={offerIcon(chosenReward)} />
+            <span>{chosen?.label ?? 'Offer'}</span>
+            {chosenReward === null ? null : (
+              <>
+                <span aria-hidden="true">·</span>
+                <ArtworkIcon className="artwork-label-icon" source={offerIcon(chosenReward)} />
+              </>
+            )}
           </>
         )}
       </span>

@@ -19,8 +19,12 @@ export interface KeepsakeRackEntry {
 
 const rackOrder = new Map(Object.keys(keepsakeArtwork).map((key, index) => [key, index]));
 
-/** A keepsake launcher: the held keepsake's icon and name, plus its target when it has one. */
+/**
+ * A keepsake launcher: the held keepsake's icon and name, plus its target when it has one.
+ * As a `chip` it shows the icon alone, its name and target on hover.
+ */
 export function KeepsakeLauncher({
+  chip = false,
   disabledHint,
   findingTarget,
   id,
@@ -29,6 +33,7 @@ export function KeepsakeLauncher({
   onOpen,
   text,
 }: {
+  readonly chip?: boolean;
   /** Shown on hover while the launcher can't open. */
   readonly disabledHint?: string;
   readonly findingTarget?: FindingTargetProps;
@@ -39,6 +44,25 @@ export function KeepsakeLauncher({
   readonly text: string;
 }) {
   const artwork = keepsakeKey === undefined ? undefined : keepsakeArtwork[keepsakeKey];
+  if (chip)
+    return (
+      <button
+        {...findingTarget}
+        aria-haspopup="dialog"
+        aria-label={label}
+        className="contextual-picker-trigger timeline-chip keepsake-launcher"
+        data-empty={artwork === undefined || undefined}
+        disabled={disabledHint !== undefined}
+        id={id}
+        onClick={onOpen}
+        type="button"
+        {...hintProps(disabledHint ?? text, findingTarget?.['aria-description'], label)}
+      >
+        {artwork === undefined ? null : (
+          <img src={artwork} alt="" className="artwork-label-icon" width={150} height={150} />
+        )}
+      </button>
+    );
   return (
     <div className="field-control field-control-inline loadout-dialog-launcher">
       <label htmlFor={id}>{label}</label>
