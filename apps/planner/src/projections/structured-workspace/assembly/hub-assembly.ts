@@ -488,11 +488,15 @@ function projectHubNode(
         : projectLocalVisit(occurrence, target, detailsActive, occurrenceNode!.key);
     // A board door reads its first draw and what its rerolls left for its visit.
     const onward = settledStays?.offeredOnward.find((entry) => entry.hubSlotKey === slot.slotKey);
-    const door =
+    const boardDoor =
       occurrenceNode === undefined
         ? undefined
+        : projectWorkspaceDoorContract(occurrenceNode.room, 'visible');
+    const door =
+      boardDoor === undefined
+        ? undefined
         : source === undefined
-          ? projectWorkspaceDoorContract(occurrenceNode.room, 'visible')
+          ? boardDoor
           : workspaceRerolledDoor(
               catalog,
               source,
@@ -507,7 +511,7 @@ function projectHubNode(
                         )?.settlement.enabled === true,
                       ...(onward.changed ? { rerolled: onward.current } : {}),
                     }),
-              projectWorkspaceDoorContract(occurrenceNode.room, 'visible'),
+              boardDoor,
             );
     if (occurrenceNode !== undefined) {
       occurrenceInteractionRequirements.push(
@@ -541,7 +545,23 @@ function projectHubNode(
       for (const mainReward of mainRewards) {
         redirectHubMainRewardFocus(markerDestinations, hubMarker, mainReward);
       }
-      markerDestinations.setHubTab(mainRewards, 'overview');
+      // A kept pick its rerolls no longer match is repaired on its visit, in Timeline;
+      // Overview shows only the first draw.
+      const repaired = new Set(
+        door!.offerRewardSurface.rewards.flatMap((reward) =>
+          reward.rerolledRewardRepair === undefined
+            ? []
+            : [semanticAddressKey(reward.marker.address)],
+        ),
+      );
+      markerDestinations.setHubTab(
+        mainRewards.filter((marker) => !repaired.has(semanticAddressKey(marker.address))),
+        'overview',
+      );
+      markerDestinations.setHubTab(
+        mainRewards.filter((marker) => repaired.has(semanticAddressKey(marker.address))),
+        'timeline',
+      );
       const mainRewardAcquisition = workspaceHubMainRewardAcquisitionMarkers(workbench.room);
       markerDestinations.redirect(mainRewardAcquisition, workbench.key);
       markerDestinations.setRoomTab(mainRewardAcquisition, 'actions');
@@ -586,6 +606,7 @@ function projectHubNode(
         ? {}
         : { drawPosition: drawPositions.get(slot.slotKey)! }),
       ...(door === undefined ? {} : { door }),
+      ...(boardDoor === undefined ? {} : { boardDoor }),
       ...(occurrenceNode === undefined ? {} : { room: occurrenceNode.room }),
       roomKind: slotRoom.kind,
       visited: detailsActive,

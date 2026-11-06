@@ -3289,9 +3289,15 @@ span.hub-board-status-line {
   list-style: none;
 }
 
+.hub-door-rows {
+  grid-template-columns: auto auto minmax(0, 1fr);
+}
+
+/* Rows share one grid, so the room column fits the longest room name. */
 .hub-door-row {
   display: grid;
-  grid-template-columns: 1.1rem minmax(0, 5.5rem) minmax(0, 1fr);
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -3390,13 +3396,72 @@ span.hub-board-status-line {
   display: none;
 }
 
-/* Each press's trash sits at the row's right end, as on other reroll rows. */
+/*
+ * In the compact column a press reads on two lines: handle, die, the door in
+ * full and its trash at the right end; then the arrow and the reward picker
+ * across the rest of the row. The fountain row follows the same places.
+ */
+.hub-segment .room-rerolls-list,
 .hub-segment .room-rerolls[data-movable='true'] .room-rerolls-list {
-  grid-template-columns: 24px repeat(4, auto) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.hub-segment .room-reroll-row > .room-action-delete {
+.hub-segment .room-reroll-row {
+  display: grid;
+  grid-template-areas:
+    'move verb door delete'
+    '. arrow reward reward';
+  grid-template-columns: 24px 1.5rem minmax(0, 1fr) auto;
+  column-gap: 6px;
+  row-gap: 2px;
+  align-items: center;
+}
+
+.hub-segment .room-reroll-row > :nth-child(1) {
+  grid-area: move;
+}
+
+.hub-segment .room-reroll-row > :nth-child(2) {
+  grid-area: verb;
+}
+
+.hub-segment .room-reroll-row > :nth-child(3) {
+  grid-area: door;
+  justify-self: start;
+  max-width: 100%;
+}
+
+.hub-segment .room-reroll-row > :nth-child(4) {
+  grid-area: arrow;
+  justify-self: center;
+}
+
+.hub-segment .room-reroll-row > :nth-child(5) {
+  grid-area: reward;
+  min-width: 0;
+}
+
+.hub-segment .room-reroll-row > :nth-child(6) {
+  grid-area: delete;
   justify-self: end;
+}
+
+.hub-segment .room-reroll-row :is(.reward-value-editor, .fountain-rarity-inline) {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+}
+
+.hub-segment .room-reroll-row .contextual-picker,
+.hub-segment .room-reroll-row .contextual-picker.field-control-inline {
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  justify-self: stretch;
+}
+
+.hub-segment .room-reroll-row .contextual-picker-trigger {
+  width: 100%;
 }
 
 .hub-segment-reward,

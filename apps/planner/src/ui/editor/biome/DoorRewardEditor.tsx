@@ -234,7 +234,7 @@ export function RerolledRewardRepairs({
 }
 
 /** The row-sized repair: the reroll die marked with its action, named in full. */
-function RerolledRewardRepairIcon({
+export function RerolledRewardRepairIcon({
   repair,
   target,
 }: {

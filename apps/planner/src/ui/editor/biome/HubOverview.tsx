@@ -32,8 +32,8 @@ function findingMarks(target: FindingTargetProps) {
 
 /** The first draw's icon: Overview shows the board as it is generated. */
 function firstDrawIcon(slot: WorkspaceHubSlot) {
-  if (slot.door?.offerRewardSurface.visibility !== 'visible') return undefined;
-  const rewards = slot.door.offerRewardSurface.rewards;
+  if (slot.boardDoor?.offerRewardSurface.visibility !== 'visible') return undefined;
+  const rewards = slot.boardDoor.offerRewardSurface.rewards;
   const offer = rewards.length === 1 ? rewards[0]?.offer : undefined;
   return offer === null || offer === undefined ? undefined : offerIcon(offer);
 }
@@ -136,11 +136,11 @@ function DoorRow({
     >
       <span className="hub-door-row-draw">{slot.drawPosition ?? ''}</span>
       <span className="hub-door-row-room">{slot.label}</span>
-      {slot.door === undefined ? (
+      {slot.boardDoor === undefined ? (
         <span className="fixed-room-state">No reward</span>
       ) : (
         <DoorRewardEditor
-          door={slot.door}
+          door={slot.boardDoor}
           idPrefix={`hub-${slot.hubSlotKey}`}
           interactions={interactions}
           layout="row"

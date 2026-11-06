@@ -154,6 +154,9 @@ export function bindHubInteractions(
         intent: Object.freeze({
           command: Object.freeze({ kind: 'ResetHubBoard' as const, hub: requirement.owner }),
         }),
+        visitsIntent: Object.freeze({
+          command: Object.freeze({ kind: 'ResetHubVisits' as const, hub: requirement.owner }),
+        }),
         key,
         owner: requirement.owner,
       }),

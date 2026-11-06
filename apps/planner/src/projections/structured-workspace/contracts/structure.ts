@@ -342,6 +342,8 @@ export interface WorkspaceHubSlot {
   readonly drawPosition?: number;
   /** Exact immutable main-door handoff owned by the Hub slot. */
   readonly door?: WorkspaceDoorContract;
+  /** The same door as the board generates it: its first draw, without later rerolls. */
+  readonly boardDoor?: WorkspaceDoorContract;
   readonly room?: WorkspaceRoomSummary;
   readonly roomKind: RoomDeclaration['kind'];
   readonly visited: boolean;
@@ -1040,6 +1042,10 @@ export interface WorkspaceExitSelectionInteraction {
 export interface WorkspaceHubBoardResetInteraction {
   readonly intent: WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ResetHubBoard' }>
+  >;
+  /** Clears the visits and every press after Entry, keeping the board and Entry. */
+  readonly visitsIntent: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ResetHubVisits' }>
   >;
   readonly key: string;
   readonly owner: HubDecisionAddress;

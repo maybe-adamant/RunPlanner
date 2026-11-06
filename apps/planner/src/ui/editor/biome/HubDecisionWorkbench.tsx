@@ -1,9 +1,6 @@
 import { type KeyboardEvent as ReactKeyboardEvent, useRef, useState } from 'react';
 
-import {
-  semanticAddressKey,
-  type HubActionOrderRefusal,
-} from '@run-planner/engine/authored-project';
+import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -13,12 +10,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import {
-  candidateMayBeAuthored,
-  candidateWaitingHint,
-  candidateWaits,
-} from '@planner/ui/feedback/candidatePresentation';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { HubOverview } from './HubOverview';
 import { HubTimeline } from './HubTimeline';
 import { RunStateLauncher } from './RunStateSheet';
@@ -41,14 +33,6 @@ const hubWorkbenchTabs: readonly {
   Object.freeze({ key: 'overview', label: 'Hub Overview', shown: 'Overview' }),
   Object.freeze({ key: 'timeline', label: 'Hub Timeline', shown: 'Timeline' }),
 ]);
-
-/** Why a proposed Hub action order cannot replace the current one. */
-function hubActionOrderRefusalHint(refusal: HubActionOrderRefusal): string {
-  switch (refusal) {
-    case 'rerollsChanged':
-      return 'Remove Hub rerolls first.';
-  }
-}
 
 function domId(value: string): string {
   return value.replaceAll(/[^A-Za-z0-9_-]/g, '-');
@@ -75,8 +59,6 @@ export function HubDecisionWorkbench({
     interactions.hubActionOrders,
     workspaceInteractionKey(node.owner),
   );
-  const resetActionOrder = actionOrderInteraction.proposalFor([]);
-  const resetCandidates = useWorkspaceInteraction(resetActionOrder);
   const resetBoard = requireWorkspaceInteraction(
     interactions.hubBoardResets,
     workspaceInteractionKey(node.owner),
@@ -140,31 +122,19 @@ export function HubDecisionWorkbench({
     const tab = hubWorkbenchTabs[next];
     if (tab !== undefined) activateTab(tab.key);
   };
-  const resetRefusal = resetActionOrder.refusal;
   const resetVisitsControl = (
     <button
-      aria-busy={resetCandidates.pending || undefined}
       className="danger-action action-compact"
       disabled={
         hubTarget.inert ||
-        resetRefusal !== undefined ||
         !actionOrderInteraction.contextReached ||
-        actionOrderInteraction.selectedActions.length === 0 ||
-        resetCandidates.pending ||
-        (resetCandidates.result !== undefined && !candidateMayBeAuthored(resetCandidates.result[0]))
+        actionOrderInteraction.selectedHubSlotKeys.length === 0
       }
-      onClick={() => {
-        const options = resetCandidates.result ?? resetCandidates.activate();
-        if (candidateMayBeAuthored(options?.[0])) executeIntent(resetActionOrder.intent());
-      }}
-      onFocus={() => resetCandidates.activate()}
-      onPointerDown={() => resetCandidates.activate()}
+      onClick={() => executeIntent(resetBoard.visitsIntent)}
       {...hintProps(
-        resetRefusal !== undefined
-          ? hubActionOrderRefusalHint(resetRefusal)
-          : !actionOrderInteraction.contextReached || candidateWaits(resetCandidates.result?.[0])
-            ? candidateWaitingHint
-            : undefined,
+        !hubTarget.inert && !actionOrderInteraction.contextReached
+          ? candidateWaitingHint
+          : undefined,
       )}
       type="button"
     >
