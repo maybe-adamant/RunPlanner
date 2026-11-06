@@ -130,6 +130,20 @@ export const heraclesEncounterKeys = [
   'HeraclesCombatP',
 ] as const;
 
+/**
+ * BaseHeraclesCombat HeraclesBountyValue 20, HeraclesBountyPerWaveMin/Max 2/3
+ * (EncounterData_Heracles.lua:8-10) over its three waves (EncounterLogic.lua:2314-2378).
+ * After combat Heracles drops the credited total as one required `RoomMoneyDrop`
+ * with a bare `CreateConsumableItem` (EnemyAILogic.lua:5332-5338).
+ */
+export const heraclesKillBounty = {
+  goldPerMark: 20,
+  marksPerWave: { min: 2, max: 3 },
+  waves: 3,
+  rewardType: 'RoomMoneyDrop',
+  producerLifecycleKey: 'HeraclesBountyPickup',
+} as const;
+
 export const icarusEncounterKeys = ['IcarusCombatO', 'IcarusCombatP'] as const;
 
 export const athenaEncounterKeys = ['AthenaCombatP'] as const;

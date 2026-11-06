@@ -6,6 +6,7 @@ import {
   artemisIncomingRewardExclusions,
   heraclesEncounterKeys,
   heraclesIncomingRewardExclusions,
+  heraclesKillBounty,
   supportedFieldNpcEncounterKeys,
 } from './shared';
 import { ephyraMoneyStore, godCombatMoneyStore, minibossMoneyStore } from './money-stores';
@@ -76,10 +77,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'HeraclesCombatN',
-    // BaseHeraclesCombat HeraclesBountyValue 20, HeraclesBountyPerWaveMin/Max 2/3
-    // (EncounterData_Heracles.lua:8-10) over its three waves; a credited mark pays one
-    // RoomMoneyDrop after combat (EncounterLogic.lua:2314-2378, EnemyAILogic.lua:5332-5336).
-    killBounty: { goldPerMark: 20, marksPerWave: { min: 2, max: 3 }, waves: 3 },
+    killBounty: heraclesKillBounty,
     moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.HeraclesCombatN],
     label: 'Heracles combat',

@@ -597,6 +597,8 @@ function sourceFamilyPresentation(
       return source('Nemesis', 'From a Nemesis event', addGroup('nemesis', 'Nemesis'));
     case 'erisGift':
       return source('Eris', 'A gift from Eris', addGroup('eris', 'Eris'));
+    case 'heraclesBounty':
+      return source('Heracles', 'Heracles’s bounty', addGroup('heracles', 'Heracles'));
     case 'hermesShrineDelivery':
       return source(
         'Delivery',

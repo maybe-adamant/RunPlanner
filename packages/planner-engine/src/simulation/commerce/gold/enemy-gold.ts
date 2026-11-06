@@ -3,7 +3,6 @@ import type { RunModifiers } from '../../../authored-project/run-modifiers';
 import {
   DROPPED_GOLD_COLLECTION_RATE,
   EGG_HATCH_RATE,
-  HERACLES_BOUNTY_GOLD,
   NATIVE_ENEMY_GOLD_DROP_CHANCE,
   enemyGoldKills,
   enemyGoldPolicy,
@@ -204,16 +203,6 @@ export function enemyGoldAmount(
       );
     }
   }
-}
-
-/** Heracles's credited bounty: one pickup paying the marked kills' gold, unmultiplied. */
-export function heraclesBountyAmount(): GoldAmount {
-  return Object.freeze({
-    mean: HERACLES_BOUNTY_GOLD,
-    variance: 0,
-    min: HERACLES_BOUNTY_GOLD,
-    max: HERACLES_BOUNTY_GOLD,
-  });
 }
 
 /** Moments of `min(Binomial(kills, chance), cap)` for a real expected kill count. */

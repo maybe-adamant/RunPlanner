@@ -6,7 +6,6 @@ import {
   encounterStoreMoments,
   encounterStoreValues,
   enemyGoldAmount,
-  heraclesBountyAmount,
   medeaGoldAmount,
   urnGoldAmount,
 } from '../../../../src/simulation/commerce/gold/enemy-gold';
@@ -174,8 +173,7 @@ describe('enemy gold payout policy', () => {
     expect(fixed.variance).toBeCloseTo(14 ** 2, 12);
   });
 
-  it('pays Heracles’s bounty flat and unmultiplied beside the store drops', () => {
-    expect(heraclesBountyAmount()).toEqual({ mean: 100, variance: 0, min: 100, max: 100 });
+  it('pays a Heracles combat its fraction of the store', () => {
     const p = enemyGoldAmount(catalog, enemyGold('HeraclesCombatP', 'P'), 1, NATIVE);
     expect(p.mean).toBeCloseTo(0.27 * 122.5, 12);
   });

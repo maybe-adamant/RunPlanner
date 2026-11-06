@@ -1,5 +1,6 @@
 import type { Catalog, InRunTraitRarity } from '../../../catalog-schema';
 import {
+  createAcquisitionEntryAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
   createRoomActionAddress,
@@ -13,7 +14,8 @@ import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../../../authored-project/i
 import { purgingPoolSalePoint } from '../../commerce/feature-rolls';
 import type { RouteLoadout } from '../../../authored-project/model';
 import { stygianWellGenerationItemKey } from '../../../authored-project/feature-rolls';
-import { urnAttempts } from '../../commerce/gold/enemy-gold-policy';
+import { HERACLES_BOUNTY_GOLD, urnAttempts } from '../../commerce/gold/enemy-gold-policy';
+import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/acquisition/sea-star';
 import {
   goldGainPublication,
   goldMultipliers,
@@ -332,6 +334,38 @@ function currencyGold(
   return produced?.pickup.goldByAcquisitionOrdinal?.[produced.acquisitionOrdinal - 1];
 }
 
+/** A spawn that multiplies nothing. */
+const UNMULTIPLIED_SPAWN = Object.freeze({ moneyMultiplier: 1, moneyRewardBonus: 1 });
+
+/**
+ * The encounter phase whose end dropped this bounty pickup, or the pickup a
+ * Sea Star duplicate uses again; undefined for any other acquisition.
+ */
+function bountyPhaseKey(
+  room: CanonicalAuthoredRoom,
+  rewardEvent: Extract<RewardEvent, { readonly kind: 'concreteAcquisition' }>,
+): string | undefined {
+  const pointKey = rewardEvent.settlement?.site.pointKey;
+  if (pointKey === undefined) return undefined;
+  const duplicate = parseSeaStarDuplicateSiteKey(pointKey);
+  for (const producer of room.pickupProducers ?? []) {
+    if (producer.source.kind !== 'encounterPhase') continue;
+    if (producer.siteKey === pointKey) return producer.source.phaseKey;
+    const site = room.acquisitionSites[producer.siteKey]?.address;
+    if (
+      duplicate !== undefined &&
+      site !== undefined &&
+      producer.pickups.some(
+        (pickup) =>
+          semanticAddressKey(createAcquisitionEntryAddress(site, pickup.key)) ===
+          duplicate.sourceKey,
+      )
+    )
+      return producer.source.phaseKey;
+  }
+  return undefined;
+}
+
 /** Native spawns a selected trait's coins (`GiveRandomConsumables`) as its screen closes. */
 const SCREEN_SPAWNED_COIN_PRODUCERS = new Set(['GeneratedTraitPickup', 'NarcissusPickup']);
 
@@ -568,20 +602,23 @@ export function withGoldEvents(
   }
   const roomKey = room === undefined ? undefined : semanticAddressKey(room.origin);
   // Spawn contacts a room object's coins are valued at: the room's entry
-  // (Fields cages and optionals) and each encounter end (its reward).
+  // (Fields cages and optionals) and each encounter end (its reward, and
+  // that phase's Heracles bounty).
   if (
     (event.kind === 'roomEntered' ||
       (event.kind === 'encounterCompleted' && event.execution === 'normal')) &&
     roomKey !== undefined &&
     next.branch !== undefined
-  )
-    state = Object.freeze({
-      ...state,
-      goldSpawnReadings: new Map(state.goldSpawnReadings).set(
-        `${roomKey}::${event.kind === 'roomEntered' ? 'entry' : 'encounterEnd'}`,
-        goldSpawnReading(catalog, next.branch.state) ?? 'unresolved',
-      ),
-    });
+  ) {
+    const reading = goldSpawnReading(catalog, next.branch.state) ?? 'unresolved';
+    const readings = new Map(state.goldSpawnReadings).set(
+      `${roomKey}::${event.kind === 'roomEntered' ? 'entry' : 'encounterEnd'}`,
+      reading,
+    );
+    if (event.kind === 'encounterCompleted')
+      readings.set(`${roomKey}::encounterEnd::${event.phaseKey}`, reading);
+    state = Object.freeze({ ...state, goldSpawnReadings: readings });
+  }
   if (next.branch !== undefined) {
     // A selected trait's own coins spawn as its screen closes, after it is equipped.
     const screens = new Map<string, SimulationState>();
@@ -686,7 +723,15 @@ export function withGoldEvents(
     const producerKey = rewardEvent.source.producerLifecycleKey;
     let reading: GoldSpawnReading | 'unresolved' | undefined;
     let roomObject = false;
-    if (SCREEN_SPAWNED_COIN_PRODUCERS.has(producerKey)) {
+    const bounty = bountyPhaseKey(room, rewardEvent);
+    if (bounty !== undefined) {
+      // Heracles's bounty lies among the room's required objects from his
+      // encounter's end; its spawn applies no multiplier (EnemyAILogic.lua:5332-5338).
+      const atEnd = state.goldSpawnReadings.get(`${roomKey}::encounterEnd::${bounty}`);
+      if (atEnd === undefined || atEnd === 'unresolved') return atEnd;
+      reading = Object.freeze({ multipliers: UNMULTIPLIED_SPAWN, sources: atEnd.sources });
+      roomObject = true;
+    } else if (SCREEN_SPAWNED_COIN_PRODUCERS.has(producerKey)) {
       const pointKey = rewardEvent.settlement?.site.pointKey;
       const producer = room.pickupProducers?.find((candidate) => candidate.siteKey === pointKey);
       if (producer?.source.kind !== 'traitOffer') return undefined;
@@ -756,7 +801,11 @@ export function withGoldEvents(
             : {
                 gain: {
                   kind: 'moneyPickup',
-                  gold: declaration.goldGrant,
+                  // GOLD_ESTIMATE_ASSUMPTIONS.md "Heracles bounty".
+                  gold:
+                    room !== undefined && bountyPhaseKey(room, rewardEvent) !== undefined
+                      ? HERACLES_BOUNTY_GOLD
+                      : declaration.goldGrant,
                   npcDrop: producer?.resourceBonusExempt === true,
                   ...(spawned === undefined
                     ? {}
@@ -956,13 +1005,6 @@ export function withGoldEvents(
             { fight: phase, source: storeSlotKey === undefined ? 'enemies' : 'passiveStore' },
           );
         }
-        if (definition?.killBounty !== undefined)
-          detect(
-            `heraclesBounty:${event.phaseKey}`,
-            phase,
-            { gain: { kind: 'heraclesBounty', encounterKey: completedKey } },
-            { fight: phase, source: 'heraclesBounty' },
-          );
         const fights = ({ encounterKey }: { readonly encounterKey: string }) => {
           const kind = catalog.encounterDefinitions.byKey[encounterKey]?.kind;
           return kind === 'combat' || kind === 'miniboss' || kind === 'boss';

@@ -110,7 +110,8 @@ describe('run-impacting trait checkpoint workflows', () => {
         routePosition.ordinal,
         routeStartIncoming ?? undefined,
       ).find((candidate) => candidate.pickups.some((pickup) => pickup.key === entryKey));
-      if (producer === undefined) throw new Error('Generated-pickup producer is missing');
+      const sourceAction = producer?.sourceAction;
+      if (sourceAction === undefined) throw new Error('Generated-pickup producer is missing');
       const child = domain.contributions.find(
         (contribution) =>
           contribution.kind === 'action' &&
@@ -123,10 +124,10 @@ describe('run-impacting trait checkpoint workflows', () => {
           ? child.dependencies.find(
               (candidate) =>
                 candidate.kind === 'afterAction' &&
-                roomActionKey(candidate.action) === roomActionKey(producer.sourceAction),
+                roomActionKey(candidate.action) === roomActionKey(sourceAction),
             )
           : undefined;
-      expect(dependency).toEqual({ kind: 'afterAction', action: producer.sourceAction });
+      expect(dependency).toEqual({ kind: 'afterAction', action: sourceAction });
     }
   });
 

@@ -571,11 +571,17 @@ export interface EncounterDefinition {
    * kill drops pay from it. Absent where native does not generate the encounter.
    */
   readonly moneyStore?: EncounterMoneyStore;
-  /** Heracles marks enemies whose kill the player is credited for, paid as one pickup. */
+  /**
+   * Heracles marks enemies whose kill the player is credited for, paid as one
+   * required pickup of `rewardType` that `producerLifecycleKey` spawns after
+   * the encounter ends.
+   */
   readonly killBounty?: {
     readonly goldPerMark: number;
     readonly marksPerWave: { readonly min: number; readonly max: number };
     readonly waves: number;
+    readonly rewardType: string;
+    readonly producerLifecycleKey: string;
   };
   readonly nemesisRandomEvent?: {
     readonly freeItem: {

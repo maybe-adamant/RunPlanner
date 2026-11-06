@@ -114,8 +114,6 @@ export type GoldGain =
       /** The phase's fully determined roster, which pays in place of the biome policy. */
       readonly roster?: KnownRoster;
     }
-  /** Heracles's bounty for the encounter's credited kills, unmultiplied. */
-  | { readonly kind: 'heraclesBounty'; readonly encounterKey: string }
   /** Wealth from the Dead over the room's completed encounters when its doors open. */
   | {
       readonly kind: 'medeaGold';
@@ -141,7 +139,7 @@ export type GoldGain =
   | { readonly kind: 'challengeSwitchGold'; readonly gold: number };
 
 /** A fight's gold by where it comes from; `passiveStore` is a Fields room's one Passive store. */
-export type GoldFightSource = 'enemies' | 'passiveStore' | 'medea' | 'heraclesBounty';
+export type GoldFightSource = 'enemies' | 'passiveStore' | 'medea';
 
 /**
  * The fight whose gold summary a gain joins: an encounter phase, or the

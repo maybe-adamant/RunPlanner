@@ -311,9 +311,27 @@ describe('gold catalog facts', () => {
     ).toEqual(
       ['HeraclesCombatN', 'HeraclesCombatO', 'HeraclesCombatP'].map((key) => [
         key,
-        { goldPerMark: 20, marksPerWave: { min: 2, max: 3 }, waves: 3 },
+        {
+          goldPerMark: 20,
+          marksPerWave: { min: 2, max: 3 },
+          waves: 3,
+          rewardType: 'RoomMoneyDrop',
+          producerLifecycleKey: 'HeraclesBountyPickup',
+        },
       ]),
     );
+    // The bounty pickup is a bare spawn of the duplicable, last-reward-eligible money drop.
+    expect(
+      catalog.rewards.producerLifecycles.byKey.HeraclesBountyPickup?.rewardTypes.byKey.RoomMoneyDrop
+        ?.acquisitionLifecycle,
+    ).toEqual([{ role: 'self', lifecyclePoint: 'roomRewardPickup' }]);
+    expect(catalog.rewards.producerLifecycles.byKey.HeraclesBountyPickup).not.toHaveProperty(
+      'resourceBonusExempt',
+    );
+    expect(catalog.rewards.acquisitions.byKey.RoomMoneyDrop).toMatchObject({
+      canDuplicate: true,
+      goldGrant: 100,
+    });
     expect(catalog.traits.byKey.MoneyOnDeathCurse?.gold).toEqual({
       kind: 'goldOnKill',
       chance: 0.1,

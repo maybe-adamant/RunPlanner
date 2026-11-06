@@ -96,7 +96,8 @@ describe('run import of the Surface victory', () => {
       seaStarDuplicates(imported.project, occurrenceId)
         .map((entry) => entry.offer.rewardType)
         .sort();
-    // O_Combat12's third money use is wheel1's picked RoomMoneyDrop used again.
+    // O_Combat12's three money uses are wheel1's picked RoomMoneyDrop, Heracles's
+    // bounty and one Sea Star duplicate of either; the record does not say which.
     expect(duplicated('O-r23')).toEqual(['RoomMoneyDrop']);
     expect(
       Object.keys(occurrence(imported.project, 'O-r23').acquisitionSites ?? {}),
@@ -116,7 +117,24 @@ describe('run import of the Surface victory', () => {
     // Only which of the two tiny gold pickups was duplicated is not saved.
     expect(
       imported.report.entries.filter((entry) => entry.area === 'reward').map(describeEntry),
-    ).toEqual(['assumption reward r49 acquisitionRole@Q-r49:self -> ReplaceSeaStarResult(Q-r49)']);
+    ).toEqual([
+      'assumption reward r23 acquisitionRole@O-r23:self -> ReplaceSeaStarResult(O-r23)',
+      'assumption reward r49 acquisitionRole@Q-r49:self -> ReplaceSeaStarResult(Q-r49)',
+    ]);
+  });
+
+  it("collects O_Combat12's Heracles bounty on its own required row", () => {
+    const room = occurrence(imported.project, 'O-r23');
+    const bounty = room.roomActions.order.filter(
+      (action) =>
+        action.kind === 'interactAcquisitionEntry' && action.siteKey.startsWith('heraclesBounty:'),
+    );
+    expect(bounty).toHaveLength(1);
+    const site = bounty[0]!.kind === 'interactAcquisitionEntry' ? bounty[0]!.siteKey : '';
+    expect(room.acquisitionSites?.[site]?.pickupEntries?.bounty?.offer).toEqual({
+      rewardType: 'RoomMoneyDrop',
+    });
+    expect(record.rooms[23]!.uses.RoomMoneyDrop).toBe(3);
   });
 
   it("imports O_MiniBoss01's All Together sets and N_Combat21's Bridal Glow target exactly", () => {
@@ -465,7 +483,7 @@ describe('run import of the Surface victory', () => {
       assumption: {
         conversion: 1,
         encounter: 1,
-        reward: 1,
+        reward: 2,
         roomActionOrder: 19,
         shop: 4,
         traitOffer: 5,
@@ -476,6 +494,7 @@ describe('run import of the Surface victory', () => {
       'assumption traitOffer r17 traitOffer@N-r17:hiddenSource -> ReplaceTraitOffer(N-r17 HeraSpecialBoon|HeraCastBoon|DamageShareRetaliateBoon#option3)',
       'assumption shop r17 shopOffer@N-r17 -> ReplaceShopOfferOption(N-r17)',
       'assumption traitOffer r23 traitOffer@O-r23:hiddenSource -> ReplaceTraitOffer(O-r23 ZeusCastBoon|ZeusManaBoon|BoltRetaliateBoon#option1)',
+      'assumption reward r23 acquisitionRole@O-r23:self -> ReplaceSeaStarResult(O-r23)',
       'assumption traitOffer r27 traitOffer@O-r27:source -> ReplaceTraitOffer(O-r27 PoseidonManaBoon|OmegaPoseidonProjectileBoon|PoseidonExCastBoon#option2)',
       'assumption shop r27 shopOffer@O-r27 -> ReplaceShopOfferOption(O-r27)',
       'assumption encounter r38 encounterPhase@P-r38:Combat -> ReplaceAetosWave(P-r38)',

@@ -1107,7 +1107,6 @@ const FIGHT_GOLD_SOURCE_LABEL: Readonly<
 > = Object.freeze({
   enemies: 'Enemies',
   passiveStore: 'Passive enemies',
-  heraclesBounty: 'Heracles',
   medea: 'Medea',
 });
 

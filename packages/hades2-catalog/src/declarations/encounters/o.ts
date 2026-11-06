@@ -5,6 +5,7 @@ import {
   fieldNpcIncomingRewardExclusions,
   heraclesEncounterKeys,
   heraclesIncomingRewardExclusions,
+  heraclesKillBounty,
   icarusEncounterKeys,
   supportedFieldNpcEncounterKeys,
 } from './shared';
@@ -33,10 +34,7 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'HeraclesCombatO',
-    // BaseHeraclesCombat HeraclesBountyValue 20, HeraclesBountyPerWaveMin/Max 2/3
-    // (EncounterData_Heracles.lua:8-10) over its three waves; a credited mark pays one
-    // RoomMoneyDrop after combat (EncounterLogic.lua:2314-2378, EnemyAILogic.lua:5332-5336).
-    killBounty: { goldPerMark: 20, marksPerWave: { min: 2, max: 3 }, waves: 3 },
+    killBounty: heraclesKillBounty,
     moneyStore: thessalyMoneyStore,
     customization: [generatedEncounterChoices.HeraclesCombatO],
     label: 'Heracles combat',

@@ -28,7 +28,6 @@ import type { RunModifiers } from '../../../authored-project/run-modifiers';
 import {
   affordableProbability,
   enemyGoldAmount,
-  heraclesBountyAmount,
   medeaGoldAmount,
   urnGoldAmount,
 } from './enemy-gold';
@@ -74,8 +73,8 @@ export interface GoldGainEntry {
    * The room's timeline action whose settlement paid it: the pickup, sale,
    * purchase or interaction the player ranked, a challenge switch's or locked
    * door's press for its fight's kills. Absent for gold no ranked action
-   * pays: an encounter phase's kills, urns, Medea's drops, Heracles's bounty,
-   * a Nemesis bet, a loan's payback and run-start gold.
+   * pays: an encounter phase's kills, urns, Medea's drops, a Nemesis bet, a
+   * loan's payback and run-start gold.
    */
   readonly roomAction?: RoomActionAddress;
   /**
@@ -102,8 +101,8 @@ export interface GoldRoomSpending {
   readonly balanceAfter: GoldBalance;
   /**
    * Each fight's gold, summed from its gains: an encounter phase's (its kills,
-   * Fields Passive store, Heracles's bounty and Medea's drops), a challenge
-   * switch's and a locked door's at its press.
+   * Fields Passive store and Medea's drops), a challenge switch's and a
+   * locked door's at its press.
    */
   readonly fights: readonly GoldFightSummary[];
   /**
@@ -161,7 +160,7 @@ export interface BiomeGoldInputs {
  * Gold a held `BlockMoney` curse stops. Every coin collected through
  * `UseMoneyDrop` pays nothing (RoomLogic.lua:2648-2652): money pickups, whose
  * `DropMoney` gushes coins (InteractLogic.lua:1075-1084, 1154-1174), Heracles's
- * bounty pickup, Wealth from the Dead's drops, the `Currency` coins of
+ * bounty among them, Wealth from the Dead's drops, the `Currency` coins of
  * Narcissus and fallback gold (`GiveRandomConsumables`, RoomLogic.lua:2002-2007)
  * and a loan's payback (CombatLogic.lua:3956-3965). Kill drops stop at
  * RoomLogic.lua:2354, urn drops being kill drops of their breakable; the bet
@@ -173,7 +172,6 @@ const BLOCKABLE: ReadonlySet<GoldGain['kind']> = new Set([
   'moneyPickup',
   'currencyPickup',
   'fallbackGold',
-  'heraclesBounty',
   'medeaGold',
   'loanPayback',
   'enemyGold',
@@ -331,8 +329,6 @@ function applyGain(
       return pay(negate(evenInteger(gain.min, gain.max)));
     case 'enemyGold':
       return pay(enemyGoldAmount(catalog, gain, sigma, modifiers));
-    case 'heraclesBounty':
-      return pay(heraclesBountyAmount());
     case 'medeaGold':
       return pay(medeaGoldAmount(catalog, gain, sigma));
     case 'urnGold':

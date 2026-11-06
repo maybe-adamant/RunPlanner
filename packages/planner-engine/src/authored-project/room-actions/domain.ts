@@ -761,7 +761,7 @@ function baseContribution(
                   frozen({ kind: 'standard', phase: 'afterCombat' })
                 : frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey! })
             : producer?.placement === 'roomExit' ||
-                producer?.sourceAction.kind === 'interactChallengeSwitch' ||
+                producer?.sourceAction?.kind === 'interactChallengeSwitch' ||
                 (producer?.source.kind === 'traitOffer' &&
                   producer.source.owner.kind === 'shopOffer') ||
                 reference.siteKey === 'roomExit'
@@ -780,7 +780,16 @@ function baseContribution(
           ),
           ...(producer === undefined
             ? []
-            : [frozen({ kind: 'afterAction' as const, action: producer.sourceAction })]),
+            : producer.sourceAction !== undefined
+              ? [frozen({ kind: 'afterAction' as const, action: producer.sourceAction })]
+              : producer.source.kind === 'encounterPhase'
+                ? [
+                    frozen({
+                      kind: 'afterCheckpoint' as const,
+                      checkpointKey: `combat:${producer.source.phaseKey}`,
+                    }),
+                  ]
+                : []),
         ],
         occurrence.state.kind === 'shop' &&
           reference.siteKey === 'roomExit' &&
@@ -1029,9 +1038,11 @@ export function assembleRoomActionDomain(options: {
             )
           : undefined;
       if (parsed === undefined && seaStar === undefined && producer === undefined) return [action];
+      // An encounter's end spawns it; its own contribution already waits for that phase.
+      if (producer !== undefined && producer.sourceAction === undefined) return [action];
       const source =
         parsed === undefined && seaStar === undefined
-          ? producer === undefined
+          ? producer?.sourceAction === undefined
             ? undefined
             : sourceActionsByReference.get(roomActionKey(producer.sourceAction))
           : sourceActions.get(

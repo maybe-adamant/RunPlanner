@@ -28,6 +28,7 @@ import {
   createTraitOfferAddress,
   semanticAddressKey,
   type BiomeAddress,
+  type EncounterPhaseAddress,
   type NemesisRandomEventAddress,
   type RoomActionAddress,
   type TraitOfferAddress,
@@ -43,7 +44,10 @@ import {
   challengeSwitchClaimPickups,
   challengeSwitchHost,
 } from './challenge-switch';
-import { directEncounterDefinitionKeyForSlot } from '../room-state/encounter-envelope';
+import {
+  directEncounterDefinitionKeyForSlot,
+  encounterEnvelopeSlots,
+} from '../room-state/encounter-envelope';
 import { resolveRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import { routeStartIncomingReward } from '../room-state/starting-reward';
@@ -167,9 +171,14 @@ export interface SelectedPickupProducer {
   readonly producerLifecycleKey: string;
   /** Whether this instance follows its source action or the room-exit placement declared by its lifecycle. */
   readonly placement: 'afterSource' | 'roomExit';
-  /** Exact trait acquisition, event, or interaction that creates this producer instance. */
-  readonly source: TraitOfferAddress | NemesisRandomEventAddress | RoomActionAddress;
-  readonly sourceAction: RoomActionReference;
+  /**
+   * Exact trait acquisition, event, interaction or encounter phase that
+   * creates this producer instance.
+   */
+  readonly source:
+    TraitOfferAddress | NemesisRandomEventAddress | RoomActionAddress | EncounterPhaseAddress;
+  /** The action whose settlement spawns it; absent where an encounter's end spawns it. */
+  readonly sourceAction?: RoomActionReference;
   /** The exact source is a normal participating acquisition, not a conversion or dormant optional. */
   readonly sourceNormal: boolean;
   /** Existing acquisition-site storage owner for this producer instance. */
@@ -187,9 +196,28 @@ export function producerOwnedSiteKey(siteKey: string): boolean {
   return (
     siteKey.startsWith('traitGenerated:') ||
     siteKey.startsWith('nemesisGenerated:') ||
+    siteKey.startsWith('heraclesBounty:') ||
     siteKey === ERIS_GIFT_SITE_KEY ||
     siteKey === CHALLENGE_SWITCH_SITE_KEY
   );
+}
+
+/** The bounty Heracles drops after his encounter phase. */
+export const HERACLES_BOUNTY_ENTRY_KEY = 'bounty';
+
+export function heraclesBountySiteKey(phaseKey: string): string {
+  return `heraclesBounty:${encodeURIComponent(phaseKey)}`;
+}
+
+export function parseHeraclesBountySiteKey(key: string): string | undefined {
+  const [kind, phase, ...rest] = key.split(':');
+  if (kind !== 'heraclesBounty' || phase === undefined || rest.length !== 0) return undefined;
+  try {
+    const value = decodeURIComponent(phase);
+    return value.length === 0 ? undefined : value;
+  } catch {
+    return undefined;
+  }
 }
 
 export function nemesisGeneratedPickupSiteKey(phaseKey: string): string {
@@ -635,7 +663,58 @@ export function selectedPickupProducers(
     ...nemesisPickupProducers(catalog, biome, occurrence, declaration),
     ...erisPickupProducers(biome, occurrence, declaration),
     ...challengeSwitchPickupProducers(catalog, biome, occurrence),
+    ...heraclesBountyPickupProducers(catalog, biome, occurrence, declaration),
   ]);
+}
+
+/**
+ * Each phase whose encounter credits a kill bounty drops it as one required
+ * pickup when the encounter ends (`HeraclesPostCombat`); a Fig Leaf skip
+ * fights nothing, so it drops none.
+ */
+function heraclesBountyPickupProducers(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  occurrence: RoomOccurrence,
+  declaration: RoomDeclaration,
+): readonly SelectedPickupProducer[] {
+  return Object.freeze(
+    encounterEnvelopeSlots(catalog, declaration, occurrence.gameName).flatMap((slot) => {
+      const encounterKey = directEncounterDefinitionKeyForSlot(
+        catalog,
+        declaration,
+        occurrence.encounters,
+        slot.key,
+        occurrence.gameName,
+      );
+      const bounty =
+        encounterKey === undefined
+          ? undefined
+          : catalog.encounterDefinitions.byKey[encounterKey]?.killBounty;
+      if (bounty === undefined || occurrence.encounters.figLeafSkipByPhase[slot.key] === true)
+        return [];
+      return [
+        Object.freeze({
+          producerLifecycleKey: bounty.producerLifecycleKey,
+          placement: 'afterSource' as const,
+          source: createEncounterPhaseAddress(
+            biome,
+            { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+            slot.key,
+          ),
+          sourceNormal: true,
+          siteKey: heraclesBountySiteKey(slot.key),
+          pickups: Object.freeze([
+            Object.freeze({
+              key: HERACLES_BOUNTY_ENTRY_KEY,
+              rewardType: bounty.rewardType,
+              required: true,
+            }),
+          ]),
+        }),
+      ];
+    }),
+  );
 }
 
 /** A claimed switch spawns its reward and, with no damage taken, maybe its bonus Nectar. */

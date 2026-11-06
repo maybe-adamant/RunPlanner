@@ -53,6 +53,7 @@ export function acquisitionSiteStorageKey(site: AcquisitionSiteAddress): string 
   return site.pointKey === 'roomExit' ||
     site.pointKey.startsWith('traitGenerated:') ||
     site.pointKey.startsWith('nemesisGenerated:') ||
+    site.pointKey.startsWith('heraclesBounty:') ||
     site.pointKey === ERIS_GIFT_SITE_KEY ||
     site.pointKey === CHALLENGE_SWITCH_SITE_KEY ||
     site.pointKey === 'hermesShrineDelivery' ||
@@ -74,6 +75,7 @@ export function acquisitionSiteFromStorageKey(
     return createAcquisitionSiteAddress(occurrence, storageKey);
   if (
     storageKey.startsWith('nemesisGenerated:') ||
+    storageKey.startsWith('heraclesBounty:') ||
     storageKey === ERIS_GIFT_SITE_KEY ||
     storageKey === CHALLENGE_SWITCH_SITE_KEY
   )

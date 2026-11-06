@@ -146,9 +146,10 @@ export interface ChronologyWalkState {
   readonly goldRoomEntryMultipliers: ReadonlyMap<string, GoldMultipliers | 'unresolved'>;
   /**
    * What a coin object spawning now would read, at each spawn contact: a
-   * room's entry and latest encounter end (`room::entry`, `room::encounterEnd`)
-   * and a trait screen's close (`trait::<offer>`). A state holding an
-   * unauthored multiplier keeps that reason instead.
+   * room's entry, latest encounter end and each phase's end (`room::entry`,
+   * `room::encounterEnd`, `room::encounterEnd::<phase>`) and a trait screen's
+   * close (`trait::<offer>`). A state holding an unauthored multiplier keeps
+   * that reason instead.
    */
   readonly goldSpawnReadings: ReadonlyMap<string, GoldSpawnReading | 'unresolved'>;
   /** Shared stores already paid by a phase that drains them; by `room::slot`. */

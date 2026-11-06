@@ -179,7 +179,6 @@ describe('gold ledger', () => {
       gain({ kind: 'moneyPickup', gold: 100, npcDrop: true }, blocked),
       gain({ kind: 'currencyPickup', gold: 100 }, blocked),
       gain({ kind: 'fallbackGold', gold: 90 }, blocked),
-      gain({ kind: 'heraclesBounty', encounterKey: 'HeraclesCombatN' }, blocked),
       gain(
         {
           kind: 'medeaGold',
@@ -204,7 +203,6 @@ describe('gold ledger', () => {
       gain({ kind: 'moneyPickup', gold: 100, npcDrop: true }, blocked),
       gain({ kind: 'currencyPickup', gold: 100 }, blocked),
       gain({ kind: 'fallbackGold', gold: 90 }, blocked),
-      gain({ kind: 'heraclesBounty', encounterKey: 'HeraclesCombatN' }, blocked),
       gain(
         {
           kind: 'medeaGold',
@@ -226,7 +224,6 @@ describe('gold ledger', () => {
       ['moneyPickup', 0],
       ['currencyPickup', 0],
       ['fallbackGold', 0],
-      ['heraclesBounty', 0],
       ['medeaGold', 0],
       ['keepsakeGold', 100],
       ['nemesisTrade', -80],

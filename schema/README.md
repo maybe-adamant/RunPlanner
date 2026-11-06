@@ -31,6 +31,14 @@ npm run test:schema:migrate
 
 ## History
 
+Revision 101.2 adds Heracles's bounty as a pickup: a phase whose encounter
+credits a kill bounty owns a `heraclesBounty:<phase>` acquisition site with its
+`bounty` money drop, collected by a required `interactAcquisitionEntry`
+action. The plan wire gains that acquisition (`HeraclesBountyPickup`) and its
+guide row. A room saved earlier has neither until its next edit derives them.
+A revision changes no saved shape, so it has no transition; plans sent under
+101.1 read as outdated.
+
 Revision 101.1 adds the route's optional `planEnd` (the room the plan ends
 after) and a challenge-switch host's optional `challengeSwitch` leaf (variant,
 pressed outcome, bonus Nectar, Time gold, Elite pin and encounter

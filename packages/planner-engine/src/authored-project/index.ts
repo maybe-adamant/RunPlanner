@@ -284,6 +284,9 @@ export {
   clockedTraitGeneratedPickupEntryKey,
   parseClockedTraitGeneratedPickupEntryKey,
   nemesisGeneratedPickupSiteKey,
+  HERACLES_BOUNTY_ENTRY_KEY,
+  heraclesBountySiteKey,
+  parseHeraclesBountySiteKey,
   selectedPickupProducers,
   activeSelectedPickupProducers,
 } from './acquisition/pickup-producers';

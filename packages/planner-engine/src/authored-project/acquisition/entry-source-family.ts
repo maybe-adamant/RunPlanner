@@ -33,6 +33,8 @@ export type AcquisitionEntrySourceFamily =
   | { readonly kind: 'erisGift' }
   /** What a challenge switch's claim spawns. */
   | { readonly kind: 'challengeSwitch' }
+  /** The bounty Heracles drops after his fight. */
+  | { readonly kind: 'heraclesBounty' }
   /** A Hermes Shrine item delivered to its host room. */
   | { readonly kind: 'hermesShrineDelivery' }
   /** The World Shop's Travel Deal restock. */
@@ -45,6 +47,7 @@ const SEA_STAR = Object.freeze({ kind: 'seaStar' as const });
 const NEMESIS_EVENT = Object.freeze({ kind: 'nemesisEvent' as const });
 const ERIS_GIFT = Object.freeze({ kind: 'erisGift' as const });
 const CHALLENGE_SWITCH = Object.freeze({ kind: 'challengeSwitch' as const });
+const HERACLES_BOUNTY = Object.freeze({ kind: 'heraclesBounty' as const });
 const HERMES_SHRINE_DELIVERY = Object.freeze({ kind: 'hermesShrineDelivery' as const });
 const SHOP_TRAVEL_DEAL_REFILL = Object.freeze({ kind: 'shopTravelDealRefill' as const });
 
@@ -104,6 +107,8 @@ export function acquisitionEntrySourceFamily(
   switch (producer.source.kind) {
     case 'nemesisRandomEvent':
       return NEMESIS_EVENT;
+    case 'encounterPhase':
+      return HERACLES_BOUNTY;
     case 'roomAction':
       return producer.siteKey === ERIS_GIFT_SITE_KEY
         ? ERIS_GIFT

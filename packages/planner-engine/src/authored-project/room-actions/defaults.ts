@@ -423,14 +423,15 @@ function activeTraitDroppedPickups(
         resolveEntryDeclaration(rawRoom, routePosition),
         routePosition.ordinal,
         routeStartIncomingReward(document, routePosition, occurrence) ?? undefined,
-      ).flatMap((producer): TraitDroppedPickups[] =>
-        producer.siteKey !== CHALLENGE_SWITCH_SITE_KEY &&
-        (producer.traitKey === undefined || !producer.siteKey.startsWith('traitGenerated:'))
+      ).flatMap(({ sourceAction, ...producer }): TraitDroppedPickups[] =>
+        sourceAction === undefined ||
+        (producer.siteKey !== CHALLENGE_SWITCH_SITE_KEY &&
+          (producer.traitKey === undefined || !producer.siteKey.startsWith('traitGenerated:')))
           ? []
           : [
               frozen({
                 placement: producer.placement,
-                sourceAction: producer.sourceAction,
+                sourceAction,
                 pickups: frozen(
                   producer.pickups
                     .filter((pickup) => !pickup.required)

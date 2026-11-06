@@ -18,6 +18,7 @@ import type { LevelResolutionEffectSource } from '../../../reward-kernel/level-e
 import {
   parseClockedTraitGeneratedPickupEntryKey,
   parseTraitGeneratedPickupSiteKey,
+  parseHeraclesBountySiteKey,
   parseNemesisGeneratedPickupSiteKey,
   type SelectedPickupProducer,
 } from '../../acquisition/pickup-producers';
@@ -76,6 +77,7 @@ export function decodeAcquisitionSites(
   for (const [pointKey, rawSite] of Object.entries(sites)) {
     const generatedTraitSite = parseTraitGeneratedPickupSiteKey(pointKey) !== undefined;
     const generatedNemesisSite = parseNemesisGeneratedPickupSiteKey(pointKey) !== undefined;
+    const heraclesBountySite = parseHeraclesBountySiteKey(pointKey) !== undefined;
     const seaStarDuplicateSite = parseSeaStarDuplicateSiteKey(pointKey) !== undefined;
     if (pointKey.startsWith('traitGenerated:') && !generatedTraitSite)
       failProjectDocument(
@@ -86,6 +88,11 @@ export function decodeAcquisitionSites(
       failProjectDocument(
         `${occurrence.path}.acquisitionSites.${pointKey}`,
         'has an invalid Nemesis generated-pickup site key',
+      );
+    if (pointKey.startsWith('heraclesBounty:') && !heraclesBountySite)
+      failProjectDocument(
+        `${occurrence.path}.acquisitionSites.${pointKey}`,
+        'has an invalid Heracles bounty site key',
       );
     const hermesShrineDeliverySite = pointKey === 'hermesShrineDelivery';
     const hermesDeliveryEntry = (entryKey: string) =>
@@ -100,6 +107,7 @@ export function decodeAcquisitionSites(
       pointKey !== CHALLENGE_SWITCH_SITE_KEY &&
       !generatedTraitSite &&
       !generatedNemesisSite &&
+      !heraclesBountySite &&
       !seaStarDuplicateSite &&
       !hermesShrineDeliverySite;
     const site = expectRecord(rawSite, `${occurrence.path}.acquisitionSites.${pointKey}`);

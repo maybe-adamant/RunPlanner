@@ -341,6 +341,14 @@ export const producerLifecycles = [
     defaultLifecyclePoint: 'roomRewardPickup',
   },
   {
+    key: 'HeraclesBountyPickup',
+    // EnemyAILogic.lua HeraclesPostCombat spawns the bounty with a bare
+    // `CreateConsumableItem`: its `DropMoney` is the credited total, never
+    // multiplied at spawn and not an `NPCDrop`.
+    rewardTypes: ['RoomMoneyDrop'],
+    defaultLifecyclePoint: 'roomRewardPickup',
+  },
+  {
     key: 'ZagPedestal',
     rewardTypes: ['BlindBoxLoot', 'StackUpgradeBig', 'StackUpgrade', 'TalentBigDrop', 'TalentDrop'],
     defaultLifecyclePoint: 'roomExit',

@@ -44,7 +44,6 @@ import {
   loadSurfaceNOProject,
   loadSurfaceNOPQProject,
   nBiome,
-  nOccurrenceId,
   oBiome,
   oOccurrenceIds,
   pBiome,
@@ -727,26 +726,6 @@ describe('gold by fight', () => {
       new Map([[phaseKey(room, 'Encounter'), ['enemies', 'medea']]]),
     );
     expectUrnEntry(gold, room);
-  });
-
-  it('adds Heracles’s bounty to his fight’s kills', () => {
-    const occurrenceId = nOccurrenceId('combat05');
-    const project = authorLegalTraitOffers(
-      applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-        kind: 'SelectEncounter',
-        phase: createEncounterPhaseAddress(
-          nBiome,
-          { kind: 'occurrence', occurrenceId },
-          'Encounter',
-        ),
-        encounterKey: 'HeraclesCombatN',
-      }),
-    );
-    const room = createOccurrenceAddress(nBiome, occurrenceId);
-    expect(fights(ledger(project), room).get(phaseKey(room, 'Encounter'))).toEqual([
-      'enemies',
-      'heraclesBounty',
-    ]);
   });
 
   it('puts a Fields room’s Passive store on the first cage’s fight, which paid it', () => {

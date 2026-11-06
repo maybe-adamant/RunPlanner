@@ -38,6 +38,7 @@ import {
   parseEchoLastRewardPickupEntryKey,
   parseTraitGeneratedPickupSiteKey,
   parseNemesisGeneratedPickupSiteKey,
+  parseHeraclesBountySiteKey,
   nemesisGeneratedPickupSiteKey,
   producerOwnedSiteKey,
   selectedPickupProducers,
@@ -887,6 +888,11 @@ export function decodeRoomOccurrence(input: {
         `${rawOccurrence.path}.acquisitionSites.${siteKey}`,
         'does not name a selected Nemesis event source',
       );
+    if (parseHeraclesBountySiteKey(siteKey) !== undefined && !producerSiteKeys.has(siteKey))
+      failProjectDocument(
+        `${rawOccurrence.path}.acquisitionSites.${siteKey}`,
+        'does not name a phase whose encounter drops a bounty',
+      );
     if (
       parseSeaStarDuplicateSiteKey(siteKey) !== undefined &&
       (Object.keys(site.pickupEntries ?? {}).length !== 1 ||
@@ -908,6 +914,7 @@ export function decodeRoomOccurrence(input: {
       siteKey !== 'roomExit' &&
       parseTraitGeneratedPickupSiteKey(siteKey) === undefined &&
       parseNemesisGeneratedPickupSiteKey(siteKey) === undefined &&
+      parseHeraclesBountySiteKey(siteKey) === undefined &&
       parseSeaStarDuplicateSiteKey(siteKey) === undefined &&
       siteKey !== ERIS_GIFT_SITE_KEY &&
       siteKey !== CHALLENGE_SWITCH_SITE_KEY &&

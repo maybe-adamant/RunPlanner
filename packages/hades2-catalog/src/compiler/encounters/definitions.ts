@@ -705,6 +705,14 @@ export function normalizeEncounterDefinitions(
                   ),
                 }),
                 waves: requirePositiveInteger(raw.killBounty.waves, `${path}.killBounty.waves`),
+                rewardType: requireNonEmpty(
+                  raw.killBounty.rewardType,
+                  `${path}.killBounty.rewardType`,
+                ),
+                producerLifecycleKey: requireNonEmpty(
+                  raw.killBounty.producerLifecycleKey,
+                  `${path}.killBounty.producerLifecycleKey`,
+                ),
               }),
             }),
         ...(blocksKeepsakeSelectionKeys === undefined ? {} : { blocksKeepsakeSelectionKeys }),

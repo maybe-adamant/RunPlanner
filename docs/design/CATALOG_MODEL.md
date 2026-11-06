@@ -410,7 +410,9 @@ a fixed value range), a unit group's member and size, or no drop. Its closure
 rule: every enemy a generated composition, a fixed or miniboss roster or a
 Menace conversion can field, and every unit group's member, has exactly one row; no
 row is unreachable; a unit group's size matches its enemy choice; a kill drops
-one parcel. Heracles's combats declare the bounty marked on their enemies. Medea's
+one parcel. Heracles's combats declare the bounty marked on their enemies and
+the pickup that pays it: its reward type and the producer lifecycle that drops
+it after the encounter. Medea's
 gold-on-kill curse declares its drop chance, per-room drop cap and gold by
 acquisition ordinal, and Hermes's luck boon its luck multiplier by rarity.
 

@@ -893,17 +893,17 @@ room's ranked action whose settlement paid it (a pickup, a Fields cage
 reward, a Time Piece conversion at the converted pickup, a sale, a purchase's
 payout, a keepsake rack, a challenge switch's or locked door's press for its
 fight's kills); gold no ranked action pays (an encounter phase's kills, urns,
-Medea's drops, Heracles's bounty, a Nemesis bet, a loan's payback) names none.
+Medea's drops, a Nemesis bet, a loan's payback) names none.
 It counts fixed and bounded gold exactly and estimates what kills, urns and
 Medea's curse pay (see [Enemy gold](#enemy-gold)).
 
 Each room also sums its fights' gold, a mean and spread with one line per
-source: an encounter phase's kills, Heracles's bounty and Medea's drops, a
-Fields room's Passive store on the cage fight that paid it, and a challenge
-switch's or locked door's kills at its press. Urns belong to no fight: they
-are the room's entry gold, summed apart in every room that swaps them. Each
-ranked action's gold outside a fight and each Nemesis bet are summed the same
-way. These summaries only regroup ledger gains and move no balance. Every assumption and
+source: an encounter phase's kills and Medea's drops, a Fields room's Passive
+store on the cage fight that paid it, and a challenge switch's or locked
+door's kills at its press. Urns belong to no fight: they are the room's entry
+gold, summed apart in every room that swaps them. Each ranked action's gold
+outside a fight and each Nemesis bet are summed the same way. These summaries
+only regroup ledger gains and move no balance. Every assumption and
 tuning value the estimate
 uses is listed with its evidence in
 [Gold estimate assumptions](GOLD_ESTIMATE_ASSUMPTIONS.md).
@@ -923,14 +923,16 @@ Gains read the money multiplier, the sum of every held multiplier's excess
 over one (Quick Buck, Chaos Affluence's authored value), at the contact:
 
 - Money pickups pay their base times the money multiplier plus the money-reward
-  bonus excess (Buried Treasure); an NPC's drop takes no bonus. A coin object
+  bonus excess (Buried Treasure); an NPC's drop takes no bonus. Heracles's
+  bounty spawns at his encounter's end unmultiplied, with neither. A coin object
   is valued when it spawns, not when it is collected. A trait's own coins
   (Quick Buck's, Buried Treasure's, Narcissus's gold) spawn as its screen
   closes, the trait already held, and keep that value. A room's reward and
   Fields cage and optional coins spawn with the room's reward (cages and
   optionals at entry, an incoming reward at its encounter's end); each money
-  multiplier taken in that room before they are collected multiplies their
-  value again, rounding each time, in the order taken.
+  multiplier taken in that room before they are collected, or before
+  Heracles's bounty is, multiplies their value again, rounding each time, in
+  the order taken.
 - Narcissus's gold, fallback gold, a Gold Purse equipped mid-run or repeated
   by Echo, and a Time Piece conversion pay their base times the money
   multiplier. A conversion pays the reward's conversion value, plus a fixed
@@ -1026,7 +1028,7 @@ where the plan determines it, and is an estimate otherwise:
   caps what more drops pay and the paying enemies' native chances differ.
 - The money multiplier scales the store and every drop; a curse that blocks
   gold stops every kill, urn, Medea and bounty drop.
-- Heracles's credited bounty is one unmultiplied pickup after his combat.
+- Heracles's credited bounty is his bounty pickup's gold, not his fight's.
 - Medea's gold-on-kill curse drops at its chance times the held luck, at most
   its cap per room, over the room's kills: a known roster's count, else the
   policy's expected kills.
@@ -1101,8 +1103,8 @@ required. A spawned pickup owns its exact authored reward and acquisition-time
 children at the site; the action row references that payload owner and does
 not duplicate its editor. Its roster row and derived-entry capability name its
 source family (a trait by key, Echo, Artificer, Sea Star, a Nemesis event, Eris's
-gift, a challenge switch, a Hermes Shrine delivery or the Travel Deal
-restock); consumers never read
+gift, a challenge switch, Heracles's bounty, a Hermes Shrine delivery or the
+Travel Deal restock); consumers never read
 it from entry or site keys.
 
 Narcissus demonstrates the producer/acquisition distinction. The selected
@@ -1132,6 +1134,17 @@ optional pickups the claim spawns directly: no counted store draw and no offer
 history. The consumables settle through Sea Star, Time Piece and Artificer as
 usual, and the Nectar is last-reward eligible; the gush is neither duplicable
 nor convertible. A fight left early claims nothing.
+
+Heracles's bounty uses the producer its encounter's kill bounty names
+(`HeraclesBountyPickup`) at the phase's `heraclesBounty` site: one required
+`RoomMoneyDrop` that his encounter's end drops for every phase that fights his
+encounter, and none for a Fig Leaf skip. No action spawns it, so its row
+follows his phase's combat checkpoint rather than a source row. It is an
+ordinary pickup: last-reward eligible, so Echo's replay recreates it, and
+duplicable by Sea Star through the authored duplicate; neither Time Piece nor
+the Artificer converts it. Selecting or replacing his encounter derives the
+site and takes the required row in the same command; a room saved before the
+site existed has neither until its next edit.
 
 Paid Shop entries are a different lifecycle: purchase is their sole atomic
 interaction and cannot open Time Piece, Artificer, Sea Star, or another

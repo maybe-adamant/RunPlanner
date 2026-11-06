@@ -108,14 +108,15 @@ export function settleAuthoredAcquisitionSite(
     );
     // A generated pickup's provider action owns its unpicked or auto-activated
     // roles; an explicit pickup action takes ownership when it is present.
+    const sourceAction = producer?.sourceAction;
     const producerSourceOwner =
-      producer?.sourceAction === undefined
+      sourceAction === undefined
         ? undefined
         : room.roomActionRoster.rows.find(
             (row) =>
               !row.stale &&
               row.rank !== null &&
-              roomActionKey(row.reference) === roomActionKey(producer.sourceAction),
+              roomActionKey(row.reference) === roomActionKey(sourceAction),
           )?.owner;
     const timelineOwnerByEntryKey = Object.freeze(
       Object.fromEntries(
@@ -275,7 +276,7 @@ export function settleAuthoredAcquisitionSite(
       // Time Piece, Artificer, and an unpicked optional source do not create it.
       if (!sourceWasNormallyAcquired) return sourceBranch;
       if (
-        producer.sourceAction.kind === 'interactEris' &&
+        producer.sourceAction?.kind === 'interactEris' &&
         producer.source.kind === 'roomAction' &&
         !erisGiftDropped(catalog, room, producer.source, sourceBranch)
       )
@@ -283,7 +284,7 @@ export function settleAuthoredAcquisitionSite(
       // A Path of Stars claim needs the installed Hex tree `TalentLegal` implies;
       // without one no such switch spawned, and its Overview finding owns the repair.
       if (
-        producer.sourceAction.kind === 'interactChallengeSwitch' &&
+        producer.sourceAction?.kind === 'interactChallengeSwitch' &&
         sourceBranch?.state.hexProgress.tree === undefined &&
         producer.pickups.some(
           (pickup) =>

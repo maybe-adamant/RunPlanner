@@ -1265,8 +1265,13 @@ CostResourceMax)`: heart 105-130 / 230-255, Magick 80-105 / 180-205, Pom
   the player unless Heracles lands it without recent player damage
   (`TrackHeraclesChallengeProgress`, `EncounterLogic.lua:2342-2378`); the
   credited total drops after combat as one `RoomMoneyDrop` whose `DropMoney`
-  is set after creation, so unmultiplied (`EnemyAILogic.lua:5332-5336`).
-  `HeraclesCombatMoneyValue` on enemies is unread.
+  is set after a bare `CreateConsumableItem`, so unmultiplied, and joins
+  `MapState.RoomRequiredObjects` (`EnemyAILogic.lua:5332-5338`): it holds the
+  exit, a money multiplier taken before it is collected multiplies it
+  (`TraitLogic.lua:1045-1058`), and as a `RoomMoneyDrop` it is duplicable by
+  Sea Star and last-reward eligible (`ConsumableData.lua:334-351`,
+  `InteractLogic.lua:1098-1137`). `HeraclesCombatMoneyValue` on enemies is
+  unread.
 - **Not counted.** Arachne's `DoorCash` (`CostumeLogic.lua:36-46`) and
   Selene's `MoneyOnSpell` (`SpellLogic.lua:1728`) are outside planner
   authorship. A challenge switch's Time gold (`EncounterLogic.lua:2138-2141`)

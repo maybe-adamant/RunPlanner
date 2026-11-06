@@ -39,7 +39,6 @@ export interface GoldFightGain {
 const SOURCE_ORDER: readonly GoldFightSource[] = Object.freeze([
   'enemies',
   'passiveStore',
-  'heraclesBounty',
   'medea',
 ]);
 
