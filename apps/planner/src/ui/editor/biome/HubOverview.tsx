@@ -95,7 +95,7 @@ function OverviewDoor({
       type="button"
     >
       <HubDoorFace
-        icons={icon === undefined ? [] : [icon]}
+        icon={icon}
         label={annotation.mapLabel}
         {...(slot.open ? {} : { status: 'Closed' })}
       />

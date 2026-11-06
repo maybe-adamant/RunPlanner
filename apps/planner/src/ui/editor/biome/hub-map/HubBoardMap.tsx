@@ -47,14 +47,14 @@ export function HubBoardMap({
   );
 }
 
-/** A door marker's face: its map label, then its reward icons or its state. */
+/** A door marker's face: its map label, then its reward icon or its state. */
 export function HubDoorFace({
-  icons,
+  icon,
   label,
   status,
 }: {
-  /** First draw, then what rerolls left it, where they changed it. */
-  readonly icons: readonly (ArtworkSource | undefined)[];
+  /** The reward the door offers at the board shown. */
+  readonly icon?: ArtworkSource | undefined;
   readonly label: string;
   readonly status?: string;
 }) {
@@ -62,16 +62,7 @@ export function HubDoorFace({
     <span aria-hidden="true" className="hub-map-marker-content">
       <span>{label}</span>
       {status === undefined ? null : <span className="hub-map-marker-status">{status}</span>}
-      {icons.length === 0 ? null : (
-        <span className="hub-map-reward-icons">
-          {icons.map((icon, index) => (
-            <span className="hub-map-reward-step" key={index}>
-              {index === 0 ? null : <span className="hub-map-reward-arrow">→</span>}
-              <ArtworkIcon className="hub-map-reward-icon" source={icon} />
-            </span>
-          ))}
-        </span>
-      )}
+      {icon === undefined ? null : <ArtworkIcon className="hub-map-reward-icon" source={icon} />}
     </span>
   );
 }

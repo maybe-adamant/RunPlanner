@@ -18,10 +18,11 @@ import {
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
+import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
 import { hubFountainIcon } from '@planner/ui/artwork/roomArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { IconActionButton } from '@planner/ui/controls/IconActionButton';
-import { semanticOwnerOpened } from '@planner/state/editorSessionSlice';
+import { semanticOwnerFocused, semanticOwnerOpened } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { hintProps } from '@planner/ui/controls/hint';
@@ -446,7 +447,7 @@ function TimelineDoor({
   const chain = [door.firstSummary, ...door.presses.map((press) => press.summary)].join(' → ');
   const name = door.cleared
     ? `${door.label}: Cleared`
-    : `${door.label}: ${door.changed ? `${door.firstSummary} → ${door.currentSummary}` : door.currentSummary}`;
+    : `${door.label}: ${door.currentSummary}${door.presses.length === 0 ? '' : ', rerolled'}`;
   return (
     <span
       aria-label={name}
@@ -465,14 +466,15 @@ function TimelineDoor({
       {...hintProps(door.presses.length === 0 ? undefined : chain, undefined, name)}
     >
       <HubDoorFace
-        icons={
-          door.changed
-            ? [offerIcon(door.firstDraw), offerIcon(door.current)]
-            : [offerIcon(door.current)]
-        }
+        icon={offerIcon(door.current)}
         label={annotation.mapLabel}
         {...(door.cleared ? { status: 'Cleared' } : {})}
       />
+      {door.presses.length === 0 ? null : (
+        <span aria-hidden="true" className="hub-map-reroll-badge">
+          <img alt="" draggable={false} src={rerollDieArtwork} />
+        </span>
+      )}
     </span>
   );
 }
@@ -756,7 +758,9 @@ export function HubTimeline({
             />
           </div>
         )}
-        <HubExitRow node={node} />
+        {node.requirements.visits.planned < node.requiredVisitCount ? null : (
+          <HubLeaveSegment node={node} />
+        )}
       </section>
       <HubBoardMap
         door={(annotation) => {
@@ -779,23 +783,35 @@ export function HubTimeline({
 }
 
 /**
- * The Hub always leaves to its Preboss: a fixed last row, quiet until the
- * Hub is complete, that holds the completed-Hub exit's findings.
+ * The Hub always leaves to its Preboss: once every visit is set, a last
+ * segment that opens it and holds the completed-Hub exit's findings.
  */
-function HubExitRow({ node }: { readonly node: WorkspaceHubDecisionNode }) {
+function HubLeaveSegment({ node }: { readonly node: WorkspaceHubDecisionNode }) {
   const findingAnchor = useFindingAnchor();
+  const dispatch = useAppDispatch();
   const ready = !useAuthoringLocked(node.completedExit.target.marker.address);
+  const target = node.completedExit.target;
   return (
     <div
       {...findingAnchor(node.completedExit.marker.address)}
-      aria-label={`Go to ${node.completedExit.target.label}`}
-      className="hub-timeline-row hub-timeline-exit"
-      role="group"
+      aria-label="Leave"
+      className="hub-segment hub-leave-segment"
       data-ready={ready}
+      role="group"
       tabIndex={-1}
     >
-      <span className="hub-timeline-step" />
-      <strong className="hub-timeline-room">Go to {node.completedExit.target.label}</strong>
+      <div className="room-rerolls-heading">
+        <div className="hub-segment-head">
+          <span className="hub-segment-select hub-leave-label">Leave</span>
+          <span className="hub-leave-target">{target.label}</span>
+          <IconActionButton
+            hint={`Open ${target.label}`}
+            icon="openInEditor"
+            label={`Open ${target.label}`}
+            onClick={() => dispatch(semanticOwnerFocused(target.marker.address))}
+          />
+        </div>
+      </div>
     </div>
   );
 }
