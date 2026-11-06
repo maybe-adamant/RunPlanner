@@ -9,6 +9,8 @@ import { useAppDispatch } from '@planner/state/store';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { showTruncatedTitle } from '@planner/ui/controls/truncatedTitle';
 import { TimelineRow } from './TimelineRow';
+import { BannerTitle } from './TimelineDoors';
+import type { BannerToggle } from './doorSummary';
 
 /** Render-only boundary row; timeline placement remains the projection's authority. */
 export function LifecycleBoundaryRow({
@@ -19,6 +21,7 @@ export function LifecycleBoundaryRow({
   fieldsCage,
   identity,
   phase,
+  toggle,
 }: {
   /** The encounter phase this banner belongs to, for the phase's light grouping. */
   readonly phase?: number;
@@ -30,6 +33,8 @@ export function LifecycleBoundaryRow({
   readonly fieldsCage?: WorkspaceFieldsCageLabel;
   /** The phase's settled identity; it navigates to its Overview picker and never edits. */
   readonly identity?: { readonly label: string; readonly owner: EncounterPhaseAddress };
+  /** The title shows or hides the editor under the banner, such as the doors'. */
+  readonly toggle?: BannerToggle | undefined;
 }) {
   const findingAnchor = useFindingAnchor();
   const dispatch = useAppDispatch();
@@ -50,7 +55,7 @@ export function LifecycleBoundaryRow({
       label={
         <>
           <span className="timeline-banner-title">
-            <strong>{label}</strong>
+            <BannerTitle label={label} toggle={toggle} />
             {fieldsCage === undefined ? null : <span aria-hidden="true">·</span>}
             {fieldsCage === undefined ? null : (
               <span

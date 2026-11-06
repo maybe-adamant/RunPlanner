@@ -4,6 +4,7 @@ import type { WorkspaceRoomRerolls } from '@planner/projections/structured-works
 import type { DoorChip } from './doorSummary';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { TimelineRow } from './TimelineRow';
+import { doorsOpenToggle, type BannerToggle } from './doorSummary';
 
 /**
  * A room's doors on its Timeline: the Doors open row (a compact state that
@@ -44,25 +45,34 @@ export interface TimelineDoors extends TimelineDoorsContent {
   readonly onExpandedChange?: (expanded: boolean) => void;
 }
 
-/** The Doors open row's own controls: the door chips, then the disclosure that hides the doors. */
+/** The Doors open row's own controls: the door chips. */
 export function DoorsOpenControls({ doors }: { readonly doors: TimelineDoors }) {
-  const toggle = doors.onExpandedChange;
+  return <span className="timeline-doors-open-controls">{doors.summary}</span>;
+}
+
+/** A banner's title: its name, or the disclosure button carrying it. */
+export function BannerTitle({
+  label,
+  toggle,
+}: {
+  readonly label: string;
+  readonly toggle?: BannerToggle | undefined;
+}) {
+  if (toggle === undefined) return <strong>{label}</strong>;
   return (
-    <span className="timeline-doors-open-controls">
-      {doors.summary}
-      {doors.detail === undefined || toggle === undefined ? null : (
-        <button
-          aria-controls={doors.detailId}
-          aria-expanded={doors.expanded}
-          aria-label={doors.noun === 'door' ? 'Door details' : 'Offer details'}
-          className="text-action timeline-doors-toggle"
-          onClick={() => toggle(!doors.expanded)}
-          type="button"
-        >
-          <span aria-hidden="true">{doors.expanded ? '▾' : '▸'}</span>
-        </button>
-      )}
-    </span>
+    <button
+      aria-controls={toggle.controls}
+      aria-expanded={toggle.expanded}
+      aria-label={toggle.label}
+      className="timeline-banner-toggle"
+      onClick={toggle.onToggle}
+      type="button"
+    >
+      <span aria-hidden="true" className="timeline-banner-toggle-caret">
+        {toggle.expanded ? '▾' : '▸'}
+      </span>
+      <strong>{label}</strong>
+    </button>
   );
 }
 
@@ -98,7 +108,7 @@ export function DoorsOpenBanner({
         label={
           <>
             <span className="timeline-banner-title">
-              <strong>{label}</strong>
+              <BannerTitle label={label} toggle={doorsOpenToggle(doors)} />
             </span>
             <span className="timeline-banner-modifiers">
               <DoorsOpenControls doors={doors} />

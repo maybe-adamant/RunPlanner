@@ -10,6 +10,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
+import type { TimelineDoors } from './TimelineDoors';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
 
@@ -120,4 +121,24 @@ export function wheelOfferChips(
         picked: index + 1 === wheel.pickedOfferIndex,
       };
     });
+}
+
+/** The banner title's disclosure of the doors' editor; absent where it cannot be hidden. */
+export function doorsOpenToggle(doors: TimelineDoors): BannerToggle | undefined {
+  const toggle = doors.onExpandedChange;
+  if (doors.detail === undefined || toggle === undefined) return undefined;
+  return {
+    controls: doors.detailId,
+    expanded: doors.expanded,
+    label: doors.noun === 'door' ? 'Door details' : 'Offer details',
+    onToggle: () => toggle(!doors.expanded),
+  };
+}
+
+/** A banner whose whole title shows or hides the editor under it. */
+export interface BannerToggle {
+  readonly controls: string;
+  readonly expanded: boolean;
+  readonly label: string;
+  readonly onToggle: () => void;
 }

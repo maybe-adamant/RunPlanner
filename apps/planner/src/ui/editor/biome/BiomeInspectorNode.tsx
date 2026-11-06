@@ -49,6 +49,8 @@ type BatchNode = Extract<
 >;
 
 interface BiomeInspectorNodeProps {
+  /** The biome's own settings, on its entry room's Overview above every section. */
+  readonly biomeSettings?: ReactNode;
   readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
@@ -361,6 +363,7 @@ function roomTimelineDoors({
 }
 
 function OccurrenceInspector({
+  biomeSettings,
   defaultToDoors = false,
   doorsRequested = false,
   interactions,
@@ -373,6 +376,7 @@ function OccurrenceInspector({
   sideRoomSlotKey,
 }: Pick<
   BiomeInspectorNodeProps,
+  | 'biomeSettings'
   | 'doorsRequested'
   | 'interactions'
   | 'outgoing'
@@ -416,7 +420,12 @@ function OccurrenceInspector({
           )}
         </>
       }
-      entryIdentity={<StartRoomIdentityEditor interactions={interactions} node={node} />}
+      entryIdentity={
+        <>
+          {biomeSettings}
+          <StartRoomIdentityEditor interactions={interactions} node={node} />
+        </>
+      }
       {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
       interactions={interactions}
       {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}

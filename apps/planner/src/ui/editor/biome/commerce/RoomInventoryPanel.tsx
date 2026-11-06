@@ -15,9 +15,15 @@ import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { hintProps } from '@planner/ui/controls/hint';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+
+/** An unassessed object waits on an earlier choice; the engine names no other refusal. */
+const unreachedHint = (feature: { readonly assessment: 'assessed' | 'unassessed' }) =>
+  feature.assessment === 'unassessed' ? candidateWaitingHint : undefined;
 
 const wellIcon = (itemKey: string | null): string | undefined =>
   itemKey === null ? undefined : (wellArtwork[itemKey] ?? undefined);
@@ -69,7 +75,10 @@ export function RoomInventoryPanel({
               {presence === undefined && feature.presence.kind !== 'optionalAbsent' ? (
                 <FixedObjectHeader object="stygianWell" title="Stygian Well" />
               ) : (
-                <label className="room-feature-presence-row">
+                <label
+                  className="room-feature-presence-row"
+                  {...hintProps(presence === undefined ? unreachedHint(feature) : undefined)}
+                >
                   <input
                     {...findingTarget(feature.presenceAddress)}
                     aria-label="Stygian Well present"
@@ -153,7 +162,10 @@ export function RoomInventoryPanel({
             {presence === undefined && feature.presence.kind !== 'optionalAbsent' ? (
               <FixedObjectHeader object="hermesShrine" title="Hermes Shrine" />
             ) : (
-              <label className="room-feature-presence-row">
+              <label
+                className="room-feature-presence-row"
+                {...hintProps(presence === undefined ? unreachedHint(feature) : undefined)}
+              >
                 <input
                   {...findingTarget(feature.presenceAddress)}
                   aria-label="Hermes Shrine present"

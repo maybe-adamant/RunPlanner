@@ -1055,6 +1055,17 @@ export function assembleWorkspaceBiomeSemantics(
           marker: markerDestinations.marker(echoKeepsakeReplayAddress),
         })
       : undefined;
+  // The biome's settings sit on its entry room's Overview, where their findings land.
+  if (entry !== undefined && fields.length > 0) {
+    markerDestinations.redirect(
+      fields.map((field) => field.marker),
+      entry.key,
+    );
+    markerDestinations.setRoomTab(
+      fields.map((field) => field.marker),
+      'overview',
+    );
+  }
   if (echoKeepsakeReplay !== undefined && entry !== undefined) {
     markerDestinations.redirect([echoKeepsakeReplay.marker], entry.key);
     markerDestinations.setRoomTab([echoKeepsakeReplay.marker], 'overview');

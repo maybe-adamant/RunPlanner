@@ -3194,8 +3194,36 @@
   justify-self: end;
 }
 
-.timeline-doors-toggle {
-  min-width: 1.5rem;
+/* A banner title that shows or hides its editor fills the line up to the banner's controls. */
+.timeline-banner-title:has(> .timeline-banner-toggle) {
+  max-width: none;
+  align-self: stretch;
+}
+
+.timeline-banner-toggle {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  align-self: stretch;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.timeline-banner-toggle:focus-visible {
+  outline: 2px solid var(--selection-accent);
+  outline-offset: 2px;
+}
+
+.timeline-banner-toggle-caret {
+  width: 0.8rem;
+  color: var(--muted);
 }
 
 /* A press row: the door, its reward before, the new reward, then every door as it leaves them. */

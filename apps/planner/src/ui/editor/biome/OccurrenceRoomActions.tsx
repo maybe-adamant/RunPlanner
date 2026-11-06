@@ -48,7 +48,7 @@ import { DoorRerollRowReward, DoorsRerollEntry } from './RoomRerolls';
 import { UnlockExitFightControl } from './UnlockExitFightControl';
 import { DoorChips } from './DecisionWorkbench';
 import { RewardWheelWorkbench, SelectWheelRow } from './locals/RewardWheelWorkbench';
-import { wheelOfferChips } from './doorSummary';
+import { doorsOpenToggle, wheelOfferChips } from './doorSummary';
 import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
 import { RoomObjectEntry } from './commerce/RoomObjectEntry';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
@@ -533,6 +533,7 @@ export function RoomActionsWorkbench({
             </>
           }
           label={entry.label}
+          toggle={doorsOpen === undefined ? undefined : doorsOpenToggle(doorsOpen)}
           {...(entry.fieldsCage === undefined ? {} : { fieldsCage: entry.fieldsCage })}
           {...(entry.supplement?.kind === 'encounterStart' &&
           entry.supplement.identityLabel !== undefined

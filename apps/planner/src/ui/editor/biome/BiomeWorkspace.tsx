@@ -818,7 +818,6 @@ export function BiomeWorkspace({
           </header>
         )}
         <div className="past-plan-end-content" inert={pastPlanEnd}>
-          {biome.entry === undefined ? null : <BiomeFieldControls fields={biome.fields} />}
           <EchoKeepsakeReplayControl biome={biome} interactions={interactions} />
         </div>
         {subject === undefined ? (
@@ -829,6 +828,10 @@ export function BiomeWorkspace({
           ) : null
         ) : (
           <BiomeInspectorNode
+            {...(biome.entry !== undefined &&
+            (subject.kind === 'node' ? subject.node : sourceOccurrence)?.key === biome.entry.key
+              ? { biomeSettings: <BiomeFieldControls fields={biome.fields} /> }
+              : {})}
             navigationRevision={semanticNavigationRevision}
             pastPlanEnd={pastPlanEnd}
             frontier={biome.frontier}
