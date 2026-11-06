@@ -5,6 +5,7 @@ import {
   createOccurrenceAddress,
   semanticAddressKey,
   type BiomeAddress,
+  type HubVisitAddress,
   type SemanticAddress,
 } from '../../authored-project/addresses';
 import type {
@@ -211,6 +212,35 @@ export function compareAuthoringBoundaries(
       : coarseLocation(blockedAfterFallbackLocation));
   if (ownerLocation === undefined || blockedAfterLocation === undefined) return undefined;
   return compareOwnerLocations(ownerLocation, blockedAfterLocation);
+}
+
+/**
+ * Readiness while a Hub's next visit is the missing outgoing decision. The
+ * Hub-owned frontier (board, action order, stay rerolls and fountain) and every
+ * settled visit with its side rooms stay editable; later visits, board rooms no
+ * settled visit entered and everything after the Hub are locked.
+ */
+export function hubNextVisitReadiness(
+  prefix: BiomeMaterialization,
+  owner: SemanticAddress,
+  nextVisit: HubVisitAddress,
+  nextVisitLocation: OwnerLocation,
+): 'editable' | 'locked' {
+  if (
+    owner.kind === 'hubVisit' &&
+    owner.hubKey === nextVisit.hubKey &&
+    owner.visitIndex > nextVisit.visitIndex
+  )
+    return 'locked';
+  const boundary = resolveAuthoringBoundary(prefix, owner);
+  const hub = createHubDecisionAddress(biome(prefix), nextVisit.hubKey);
+  if (semanticAddressKey(boundary) === semanticAddressKey(hub)) return 'editable';
+  const ownerLocation = locateOwner(prefix, boundary);
+  if (ownerLocation === undefined || ownerLocation.hubBoardTargetIndex !== undefined)
+    return 'locked';
+  return compareOwnerLocations(coarseLocation(ownerLocation), coarseLocation(nextVisitLocation)) < 0
+    ? 'editable'
+    : 'locked';
 }
 
 /** Compares two already-normalized boundaries without exact child positions. */

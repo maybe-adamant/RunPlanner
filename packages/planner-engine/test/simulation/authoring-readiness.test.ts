@@ -9,7 +9,9 @@ import {
   createBatchRewardStoreAddress,
   createKeepsakeEquipResultAddress,
   createHubDecisionAddress,
+  createHubFountainAddress,
   createHubOpenSetAddress,
+  createHubRerollAddress,
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
@@ -57,6 +59,7 @@ import {
 import { loadUnderworldIxionChaosCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import { compareOwnerLocations } from '../../src/simulation/progressive/finding-location';
+import { firstSupportedReroll, withArcana } from '../support/rerolls';
 
 import {
   createFProject,
@@ -694,6 +697,96 @@ describe('chronological authoring horizon', () => {
     expect(
       authoringReadinessAt(simulateProjectAssembly(catalog, loadSurfaceNProject()), preboss),
     ).toBe('editable');
+  });
+
+  it('keeps settled Hub visits editable while the next visit is the frontier', () => {
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const visited = (slots: readonly string[]) => {
+      const reset = applyProjectCommand(
+        withArcana(loadSurfaceNProject(), ['DoorReroll']),
+        catalog,
+        { kind: 'ResetHubVisits', hub },
+      );
+      const ordered = applyProjectCommand(reset, catalog, {
+        kind: 'ReplaceHubActionOrder',
+        hub,
+        actions: hubVisitActions(slots),
+      });
+      // A press in the stay after the last settled visit, given a reward it can draw.
+      const inserted = applyProjectCommand(ordered, catalog, {
+        kind: 'InsertHubReroll',
+        hub,
+        hubSlotKey: 'combat09',
+        reward: { rewardType: 'MaxHealthDrop' },
+        index: slots.length + 1,
+      });
+      const reroll = createHubRerollAddress(nBiome, 'hub', 'r1');
+      return applyProjectCommand(inserted, catalog, {
+        kind: 'ReplaceHubRerollReward',
+        reroll,
+        reward: firstSupportedReroll(inserted, reroll, 'HubRewards'),
+      });
+    };
+    const rerollOf = (project: ReturnType<typeof visited>) => {
+      const decision = project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')!
+        .topology!.decisions.find((candidate) => candidate.kind === 'hub');
+      const press =
+        decision?.kind === 'hub'
+          ? decision.actions.find((action) => action.kind === 'reroll')
+          : undefined;
+      if (press?.kind !== 'reroll') throw new Error('Surface N lost its stay press');
+      return createHubRerollAddress(nBiome, 'hub', press.rerollId);
+    };
+    const room = (slot: string) => createOccurrenceAddress(nBiome, nOccurrenceId(slot));
+    const side = (localSlot: string) =>
+      createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat05', localSlot));
+
+    for (const slots of [nVisitSlotKeys.slice(0, 1), nVisitSlotKeys.slice(0, 2)]) {
+      const project = visited(slots);
+      const assembly = simulateProjectAssembly(catalog, project);
+      const next = slots.length + 1;
+      expect(assembly.evaluation.authoringHorizon).toMatchObject({
+        kind: 'incomplete',
+        blockedAfter: hub,
+      });
+      expect(
+        assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N')?.requiredInput,
+      ).toEqual(createHubVisitAddress(nBiome, 'hub', next));
+      const sideRoom = project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')!
+        .topology!.occurrences.find(
+          (candidate) => candidate.occurrenceId === side('sideDoor2').occurrenceId,
+        )!;
+      const sideAction = sideRoom.roomActions.order[0];
+      if (sideAction === undefined) throw new Error('combat05 side room lacks its action');
+
+      for (const owner of [
+        hub,
+        createHubVisitAddress(nBiome, 'hub', next),
+        createHubFountainAddress(nBiome, 'hub'),
+        rerollOf(project),
+        ...slots.flatMap((slot, index) => [
+          createHubVisitAddress(nBiome, 'hub', index + 1),
+          room(slot),
+        ]),
+        createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+        side('sideDoor1'),
+        side('sideDoor2'),
+        createRoomActionAddress(nBiome, side('sideDoor2').occurrenceId, roomActionKey(sideAction)),
+      ]) {
+        expect(authoringReadinessAt(assembly, owner), JSON.stringify(owner)).toBe('editable');
+      }
+      for (const owner of [
+        createHubVisitAddress(nBiome, 'hub', next + 1),
+        // A board room no settled visit entered waits on a later visit.
+        room('combat02' === slots.at(-1) ? 'combat11' : 'combat02'),
+        createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
+        createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
+      ]) {
+        expect(authoringReadinessAt(assembly, owner), JSON.stringify(owner)).toBe('locked');
+      }
+    }
   });
 
   it('keeps a blocking main Hub room repairable while locking side generation', () => {

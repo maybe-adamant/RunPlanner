@@ -231,9 +231,12 @@ readiness.
 
 The same semantic chronology locates the missing owner, normalized horizon and
 queried command owners. Jointly generated products, such as a Hub board or
-side-room sibling generation set, remain atomic. The application applies this
-product; it does not infer chronology from tabs, rail order, a target index or
-the component containing the finding.
+side-room sibling generation set, remain atomic. A Hub's missing next visit is
+its outgoing decision: the Hub's board, stays and fountain and every settled
+visit with its side rooms stay editable, while later visits, the interiors of
+board rooms no settled visit entered and the Hub's exit are locked. The
+application applies this product; it does not infer chronology from tabs, rail
+order, a target index or the component containing the finding.
 
 An unresolved delivery or nested trait child must not prevent arranging and
 repairing actions within the same occurrence. Conversely, opening-room editing
