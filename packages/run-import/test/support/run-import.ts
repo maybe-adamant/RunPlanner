@@ -18,7 +18,7 @@ import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import type { RunImport } from '../../src/import';
 import type { RunImportReport, RunImportReportEntry } from '../../src/report';
 import { decodeRunRecord, type RunRecord } from '../../src/run-record';
-import { occurrenceSnapshot, storeCounts } from '../../src/conformance';
+import { occurrenceSnapshot, recordedEntryStates, storeCounts } from '../../src/conformance';
 
 /**
  * The plan reaches the record's last room: complete, or stopped at a question
@@ -38,6 +38,60 @@ export function fixture(name: string): RunRecord {
       ),
     ),
   );
+}
+
+/** Erebus and Oceanus of run 1010, whose F Boss Arcana draw added The Enchantress. */
+export function oceanus1010(): RunRecord {
+  const record = fixture('underworld-1010');
+  const rooms = record.rooms.slice(0, 25);
+  const { exit: _exit, ...last } = rooms[24]!;
+  void _exit;
+  return {
+    ...record,
+    route: { biomes: ['F', 'G'], dream: false },
+    outcome: { kind: 'abandoned', endingRoom: last.name },
+    rooms: [...rooms.slice(0, 24), last],
+  };
+}
+
+/**
+ * The record as if room `roomIndex` had pressed one more door, wheel or cage
+ * reroll: its count rises unless a gain hid it from the recorder, the pool
+ * falls by one in every later entry save,
+ * and `store` changes by `delta` from the next entry save on wherever a save
+ * holds it.
+ */
+export function withReroll(
+  record: RunRecord,
+  roomIndex: number,
+  store: string,
+  delta: Readonly<Record<string, number>>,
+  counted = true,
+): RunRecord {
+  const states = recordedEntryStates(record);
+  return {
+    ...record,
+    rooms: record.rooms.map((room, index) => {
+      if (index === roomIndex)
+        return counted ? { ...room, rerolls: (room.rerolls ?? 0) + 1 } : room;
+      if (index < roomIndex || room.entry === undefined) return room;
+      const entry = {
+        ...room.entry,
+        ...(room.entry.numRerolls === undefined ? {} : { numRerolls: room.entry.numRerolls - 1 }),
+      };
+      if (index !== roomIndex + 1 && room.entry.rewardStores?.[store] === undefined)
+        return { ...room, entry };
+      const counts: Record<string, number> = { ...states[index]!.rewardStores.get(store) };
+      for (const [name, change] of Object.entries(delta)) {
+        counts[name] = (counts[name] ?? 0) + change;
+        if (counts[name]! < 0) throw new Error(`${store} ${name} below zero at room ${index}`);
+      }
+      return {
+        ...room,
+        entry: { ...entry, rewardStores: { ...entry.rewardStores, [store]: counts } },
+      };
+    }),
+  };
 }
 
 export function occurrence(project: ProjectDocument, occurrenceId: string): RoomOccurrence {

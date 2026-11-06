@@ -23,13 +23,17 @@ export function roomActionAddress(
   );
 }
 
-/** Inserts an optional room action at its native default position, unless that adds a finding. */
-export function insertRoomAction(
+/**
+ * Where an optional room action enters the occurrence's order at its native
+ * default position: its current index when already ordered, undefined when
+ * the occurrence holds no room actions or the schedule places none.
+ */
+export function nativeRoomActionIndex(
   context: RunImportContext,
   biomeKey: string,
   occurrenceId: string,
   reference: RoomActionReference,
-): boolean {
+): { readonly index: number; readonly present: boolean } | undefined {
   const project = context.assembly().project;
   const host = roomActionDomainForOccurrence(
     project,
@@ -37,9 +41,12 @@ export function insertRoomAction(
     createBiomeAddress(project.route.routeKey, biomeKey),
     occurrenceId as OccurrenceId,
   );
-  if (host === undefined) return false;
+  if (host === undefined) return undefined;
   const key = roomActionKey(reference);
-  if (host.occurrence.roomActions.order.some((entry) => roomActionKey(entry) === key)) return true;
+  const current = host.occurrence.roomActions.order.findIndex(
+    (entry) => roomActionKey(entry) === key,
+  );
+  if (current >= 0) return { index: current, present: true };
   const scheduled = scheduleRequiredRoomActions({
     catalog: context.catalog,
     domain: host.domain,
@@ -48,13 +55,25 @@ export function insertRoomAction(
     participation: 'any',
   });
   const index = scheduled.findIndex((entry) => roomActionKey(entry) === key);
+  return index >= 0 ? { index, present: false } : undefined;
+}
+
+/** Inserts an optional room action at its native default position, unless that adds a finding. */
+export function insertRoomAction(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrenceId: string,
+  reference: RoomActionReference,
+): boolean {
+  const native = nativeRoomActionIndex(context, biomeKey, occurrenceId, reference);
+  if (native === undefined) return false;
   return (
-    index >= 0 &&
+    native.present ||
     context.applyValid({
       kind: 'InsertRoomAction',
       action: roomActionAddress(context, biomeKey, occurrenceId, reference),
       reference,
-      index,
+      index: native.index,
     })
   );
 }

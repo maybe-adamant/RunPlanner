@@ -545,6 +545,8 @@ export class RunImportWalk {
       before = this.assembly;
       this.occurrences.bindEngineOccurrences(this.assembly.project);
       this.markDirty();
+      // A room's lock fights precede its rerolls, whose draws read the depth they raise.
+      importLockedDoors(this.context);
       // A bracket's rerolls rewrite its draws before the entered room's pickup is answered.
       importRerolls(this.context);
       importEncounters(this.context);
@@ -554,7 +556,6 @@ export class RunImportWalk {
       importCommerce(this.context);
       // A switch's claim pickups are authored before the room's Sea Star duplicates are placed.
       importChallengeSwitches(this.context);
-      importLockedDoors(this.context);
       importFeatures(this.context);
       importWheels(this.context);
       importWheelConversions(this.context);

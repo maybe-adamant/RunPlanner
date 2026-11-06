@@ -127,11 +127,23 @@ Evidence: the save-file run record audit
     and after the room.
 14. **Oceanus locked doors.** The recorder keeps a lock host's lock flag
     (`lockedExits`) and the locked doors fought open there
-    (`lockedDoorFights`, zero kept); the saves never name the doors. A room
-    with no fight authors no lock. A fight stops the plan before its room
-    (`lockedDoors`, `lockedDoorFight`), since the door it opened cannot be
-    named. A record made before the count was kept reports it `notInRecord`
-    once and authors no lock.
+    (`lockedDoorFights`, zero kept), read at the next room's entry save, the
+    first save after the doors open; the departure record's encounter depth
+    must rise with it, or the count stays unread. The saves never name a
+    fought door, so the plan locks only the doors it fights (an unfought lock
+    changes nothing) and presses each before any reroll of the room: the game
+    forbids rerolling a locked door before its fight and any door during it.
+    The first door never locks, so a two-door room's fight, no fight, and
+    fights filling every lockable door are exact. With fewer fights than
+    lockable doors (one fight in a three-door room) the fight goes to the
+    taken door when it can lock, else to Exit 2, and each such door is
+    reported as an assumption (`lockedDoors`, with its room and door). A
+    count no lockable doors explain stops the plan before its room
+    (`lockedDoorFight`). Encounter depth gates reroll draws only from below
+    (Devotion in RunProgress), so a press placed before a reroll that came
+    first in the game only widens that reroll's legal set. A record made
+    before the count was kept reports it `notInRecord` once and authors no
+    lock.
 
 ## Ownership
 

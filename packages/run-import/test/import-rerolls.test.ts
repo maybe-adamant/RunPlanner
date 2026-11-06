@@ -4,50 +4,17 @@ import { catalog } from '@run-planner/hades2-catalog';
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import { projectFromRunRecord, type RunImport } from '../src/import';
 import type { RunRecord } from '../src/run-record';
-import { recordedEntryStates } from '../src/conformance';
-import { fixture, describeEntry, occurrence, reward, mismatchLines } from './support/run-import';
+import {
+  fixture,
+  describeEntry,
+  occurrence,
+  oceanus1010,
+  reward,
+  mismatchLines,
+  withReroll,
+} from './support/run-import';
 
 describe('run import of door, wheel, cage and Hub rerolls', () => {
-  /**
-   * The record as if room `roomIndex` had pressed one more door, wheel or cage
-   * reroll: its count rises unless a gain hid it from the recorder, the pool
-   * falls by one in every later entry save,
-   * and `store` changes by `delta` from the next entry save on wherever a save
-   * holds it.
-   */
-  function withReroll(
-    record: RunRecord,
-    roomIndex: number,
-    store: string,
-    delta: Readonly<Record<string, number>>,
-    counted = true,
-  ): RunRecord {
-    const states = recordedEntryStates(record);
-    return {
-      ...record,
-      rooms: record.rooms.map((room, index) => {
-        if (index === roomIndex)
-          return counted ? { ...room, rerolls: (room.rerolls ?? 0) + 1 } : room;
-        if (index < roomIndex || room.entry === undefined) return room;
-        const entry = {
-          ...room.entry,
-          ...(room.entry.numRerolls === undefined ? {} : { numRerolls: room.entry.numRerolls - 1 }),
-        };
-        if (index !== roomIndex + 1 && room.entry.rewardStores?.[store] === undefined)
-          return { ...room, entry };
-        const counts: Record<string, number> = { ...states[index]!.rewardStores.get(store) };
-        for (const [name, change] of Object.entries(delta)) {
-          counts[name] = (counts[name] ?? 0) + change;
-          if (counts[name]! < 0) throw new Error(`${store} ${name} below zero at room ${index}`);
-        }
-        return {
-          ...room,
-          entry: { ...entry, rewardStores: { ...entry.rewardStores, [store]: counts } },
-        };
-      }),
-    };
-  }
-
   /** One complete on-route fill of a store, by reward type. */
   function fill(store: string, routeKey: string): Record<string, number> {
     const counts: Record<string, number> = {};
@@ -55,20 +22,6 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
       if (entry.routeKeys === undefined || entry.routeKeys.includes(routeKey))
         counts[entry.rewardType] = (counts[entry.rewardType] ?? 0) + 1;
     return counts;
-  }
-
-  /** Erebus and Oceanus of run 1010, whose F Boss Arcana draw added The Enchantress. */
-  function oceanus(): RunRecord {
-    const record = fixture('underworld-1010');
-    const rooms = record.rooms.slice(0, 25);
-    const { exit: _exit, ...last } = rooms[24]!;
-    void _exit;
-    return {
-      ...record,
-      route: { biomes: ['F', 'G'], dream: false },
-      outcome: { kind: 'abandoned', endingRoom: last.name },
-      rooms: [...rooms.slice(0, 24), last],
-    };
   }
 
   /**
@@ -126,7 +79,7 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
   it("redraws the first door that can have drawn the store's lost reward", () => {
     const imported = projectFromRunRecord(
       catalog,
-      withReroll(oceanus(), 20, 'RunProgress', { MaxHealthDrop: -1 }),
+      withReroll(oceanus1010(), 20, 'RunProgress', { MaxHealthDrop: -1 }),
     );
     expect(rerollLines(imported, 20)).toEqual(['assumption reroll r20 occurrence@G-r20']);
     expect(pressesOf(imported.project, 'G-r20')).toEqual([
@@ -145,7 +98,7 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
   it('finds a press a gain hid from the recorded count by the pool the plan runs ahead', () => {
     const imported = projectFromRunRecord(
       catalog,
-      withReroll(oceanus(), 20, 'RunProgress', { MaxHealthDrop: -1 }, false),
+      withReroll(oceanus1010(), 20, 'RunProgress', { MaxHealthDrop: -1 }, false),
     );
     expect(rerollLines(imported, 20)).toEqual(['assumption reroll r20 occurrence@G-r20']);
     expect(pressesOf(imported.project, 'G-r20')).toHaveLength(1);
@@ -208,7 +161,7 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
   });
 
   it('stops at a pool spend the stores do not show, reporting the pool it leaves ahead', () => {
-    const record = oceanus();
+    const record = oceanus1010();
     const imported = projectFromRunRecord(catalog, {
       ...record,
       rooms: record.rooms.map((room, index) =>
@@ -270,7 +223,7 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
   });
 
   it('reports a Well reroll in a room whose plan holds no Well', () => {
-    const record = oceanus();
+    const record = oceanus1010();
     const imported = projectFromRunRecord(catalog, {
       ...record,
       rooms: record.rooms.map((room, index) =>
@@ -284,7 +237,7 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     // G_Shop01's MiniBoss doors refill RunProgress; the extra Boon is the taken door's first draw.
     const imported = projectFromRunRecord(
       catalog,
-      withReroll(oceanus(), 17, 'RunProgress', { Boon: -1 }),
+      withReroll(oceanus1010(), 17, 'RunProgress', { Boon: -1 }),
     );
     expect(rerollLines(imported, 17)).toEqual(['assumption reroll r17 occurrence@G-r17']);
     const entered = occurrence(imported.project, 'G-r18');
@@ -304,7 +257,7 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     // The saves claim a refill the plan's press, with its reward still in store, does not make.
     const imported = projectFromRunRecord(
       catalog,
-      withReroll(oceanus(), 20, 'RunProgress', {
+      withReroll(oceanus1010(), 20, 'RunProgress', {
         ...fill('RunProgress', 'Underworld'),
         MaxHealthDrop: fill('RunProgress', 'Underworld')['MaxHealthDrop']! - 1,
       }),
