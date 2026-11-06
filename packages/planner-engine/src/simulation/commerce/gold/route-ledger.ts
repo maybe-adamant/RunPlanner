@@ -1,11 +1,18 @@
 import type { Catalog } from '../../../catalog-schema';
 import {
   semanticAddressKey,
+  type EncounterPhaseAddress,
   type OccurrenceAddress,
   type RoomActionAddress,
   type SemanticAddress,
 } from '../../../authored-project/addresses';
-import type { GoldEventContext, GoldEventPublication, GoldGain } from './gain-context';
+import type {
+  GoldEventContext,
+  GoldEventPublication,
+  GoldFightAttribution,
+  GoldGain,
+} from './gain-context';
+import { goldFightSummaries, type GoldFightSummary } from './fight-gold';
 import { GoldLedgerContractError, type BiomeGoldPrices, type GoldPurchaseQuote } from './ledger';
 import type { PurchasePriceContextPublication } from './price-context';
 import { roundGold, sumGold, ZERO_GOLD, type GoldAmount } from './prices';
@@ -57,9 +64,10 @@ export interface GoldGainEntry {
   readonly owner?: SemanticAddress;
   /**
    * The room's timeline action whose settlement paid it: the pickup, sale,
-   * purchase or interaction the player ranked. Absent for gold no ranked
-   * action pays: kills, urns, Medea's drops, a Nemesis bet, a loan's payback
-   * and run-start gold.
+   * purchase or interaction the player ranked, a challenge switch's or locked
+   * door's press for its fight's kills. Absent for gold no ranked action
+   * pays: an encounter phase's kills, urns, Medea's drops, Heracles's bounty,
+   * a Nemesis bet, a loan's payback and run-start gold.
    */
   readonly roomAction?: RoomActionAddress;
   /**
@@ -67,6 +75,8 @@ export interface GoldGainEntry {
    * where the amount follows the balance (a loan, a bet).
    */
   readonly amount?: GoldAmount;
+  /** The fight whose gold it is; urns join their room's main encounter phase. */
+  readonly fight?: GoldFightAttribution;
 }
 
 /** A fully reached room's purchases, gains and balances. */
@@ -82,6 +92,13 @@ export interface GoldRoomSpending {
    */
   readonly doorsOpenBalance: GoldBalance;
   readonly balanceAfter: GoldBalance;
+  /**
+   * Each fight's gold, summed from its gains: an encounter phase's (its kills,
+   * Fields Passive store, Heracles's bounty and Medea's drops, and on the
+   * room's main encounter phase its urns), a challenge switch's and a locked
+   * door's at its press. A room whose urns have no main phase leaves them out.
+   */
+  readonly fights: readonly GoldFightSummary[];
 }
 
 /** Gold the run starts with, before its first room. */
@@ -394,6 +411,8 @@ export function routeGoldLedger(
   };
   const purchases = new Map<string, GoldPurchaseResult>();
   const rooms = new Map<string, RoomWalk>();
+  /** Each room's first combat-bearing phase to start: its main encounter phase. */
+  const mainPhases = new Map<string, EncounterPhaseAddress>();
   const runStartGains: GoldGainEntry[] = [];
   let runStartBalance: GoldBalance | undefined;
   let runStartFault: GoldLedgerContractError | undefined;
@@ -477,6 +496,12 @@ export function routeGoldLedger(
         continue;
       }
       const publication = entry.publication;
+      // Attribution only: it moves no balance and walks no room of its own.
+      if (publication.kind === 'combatStarted') {
+        const key = semanticAddressKey(publication.room);
+        if (!mainPhases.has(key)) mainPhases.set(key, publication.phase);
+        continue;
+      }
       if (publication.kind !== 'gain') {
         const room = roomFor(publication.room);
         if (publication.kind === 'doorsOpen') room.doorsOpenBalance = walk.balance;
@@ -503,6 +528,7 @@ export function routeGoldLedger(
                 ? {}
                 : { roomAction: publication.roomAction }),
               ...(amount === undefined ? {} : { amount }),
+              ...(publication.fight === undefined ? {} : { fight: publication.fight }),
             });
             if (room === undefined) runStartGains.push(gainEntry);
             else room.gains.push(gainEntry);
@@ -527,6 +553,15 @@ export function routeGoldLedger(
       [...rooms].map(([key, room]): [string, GoldRoomResult] => {
         if (room.blocked !== undefined) return [key, Object.freeze(room.blocked)];
         const balanceAfter = room.balanceAfter ?? walk.balance;
+        const mainPhase = mainPhases.get(key);
+        const gains = room.gains.map((gain) =>
+          gain.kind !== 'urnGold' || gain.fight !== undefined || mainPhase === undefined
+            ? gain
+            : Object.freeze({
+                ...gain,
+                fight: Object.freeze({ fight: mainPhase, source: 'urns' as const }),
+              }),
+        );
         return [
           key,
           Object.freeze({
@@ -535,9 +570,16 @@ export function routeGoldLedger(
               room: room.room,
               purchases: Object.freeze([...room.purchases]),
               spending: sumGold(room.purchases.map((purchase) => purchase.price)),
-              gains: Object.freeze([...room.gains]),
+              gains: Object.freeze(gains),
               doorsOpenBalance: room.doorsOpenBalance ?? room.beforeFirstTrade ?? balanceAfter,
               balanceAfter,
+              fights: goldFightSummaries(
+                gains.flatMap(({ fight, amount }) =>
+                  fight === undefined || amount === undefined
+                    ? []
+                    : [{ attribution: fight, amount }],
+                ),
+              ),
             }),
           }),
         ];

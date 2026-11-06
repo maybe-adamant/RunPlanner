@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
   semanticAddressKey,
@@ -361,5 +362,85 @@ describe('gold ledger', () => {
       availability: 'unavailable',
       reason: 'itemUnresolved',
     });
+  });
+
+  it('sums each fight’s gold and joins the urns to the room’s first combat phase, moving no balance', () => {
+    const phase = (phaseKey: string) =>
+      createEncounterPhaseAddress(
+        biome,
+        { kind: 'occurrence', occurrenceId: room.occurrenceId },
+        phaseKey,
+      );
+    const fought = (value: GoldGain, phaseKey: string, source: 'enemies' | 'medea') => {
+      const publication = gain(value);
+      return { ...publication, fight: { fight: phase(phaseKey), source } } as GoldEventPublication;
+    };
+    const started = (phaseKey: string): GoldEventPublication => {
+      sequence += 1;
+      return { kind: 'combatStarted', sequence, room, phase: phase(phaseKey) };
+    };
+    const kills = {
+      kind: 'enemyGold',
+      encounterKey: 'GeneratedF',
+      biomeKey: 'F',
+      runDepth: 1,
+      hordesRank: 0,
+    } as const;
+    const entries = (withStarts: boolean) => [
+      marker('roomEntered'),
+      gain({ kind: 'urnGold', roomGameName: 'F_Combat01' }),
+      ...(withStarts ? [started('Intro'), started('Combat')] : []),
+      fought(kills, 'Intro', 'enemies'),
+      fought(kills, 'Combat', 'enemies'),
+      gain({ kind: 'moneyPickup', gold: 20, npcDrop: false }),
+    ];
+    const attributed = roomOf(ledger(entries(true)));
+    const unattributed = roomOf(ledger(entries(false)));
+    expect(attributed.balanceAfter).toEqual(unattributed.balanceAfter);
+    expect(attributed.gains.map((entry) => entry.amount)).toEqual(
+      unattributed.gains.map((entry) => entry.amount),
+    );
+    const [urns, intro, combat] = attributed.gains;
+    expect(attributed.fights).toEqual([
+      {
+        fight: phase('Intro'),
+        mean: urns!.amount!.mean + intro!.amount!.mean,
+        spread: Math.sqrt(urns!.amount!.variance + intro!.amount!.variance),
+        exact: false,
+        breakdown: [
+          {
+            source: 'enemies',
+            mean: intro!.amount!.mean,
+            spread: Math.sqrt(intro!.amount!.variance),
+            exact: false,
+          },
+          {
+            source: 'urns',
+            mean: urns!.amount!.mean,
+            spread: Math.sqrt(urns!.amount!.variance),
+            exact: false,
+          },
+        ],
+      },
+      {
+        fight: phase('Combat'),
+        mean: combat!.amount!.mean,
+        spread: Math.sqrt(combat!.amount!.variance),
+        exact: false,
+        breakdown: [
+          {
+            source: 'enemies',
+            mean: combat!.amount!.mean,
+            spread: Math.sqrt(combat!.amount!.variance),
+            exact: false,
+          },
+        ],
+      },
+    ]);
+    // Without a combat phase the urns join no fight.
+    expect(unattributed.fights.map((fight) => fight.breakdown.map((line) => line.source))).toEqual([
+      ['enemies'],
+      ['enemies'],
+    ]);
   });
 });

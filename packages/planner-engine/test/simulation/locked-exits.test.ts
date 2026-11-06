@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createExitSelectionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -11,6 +12,7 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   roomActionKey,
+  semanticAddressKey,
   type ProjectCommand,
   type ProjectDocument,
   type RoomActionReference,
@@ -29,6 +31,7 @@ import {
   decodeExecutionPlan,
   encodeExecutionPlan,
 } from '../../src/execution-plan';
+import { checkedGoldFights } from '../support/gold-fights';
 
 let cached: ProjectDocument | undefined;
 const golden = () => (cached ??= loadUnderworldFGHICheckpoint());
@@ -191,6 +194,35 @@ describe('Oceanus locked door simulation', () => {
     expect(paid).toHaveLength(1);
     expect(paid[0]?.amount?.mean).toBeGreaterThan(0);
     expect(enemyGold(locked)).toHaveLength(enemyGold(pressed).length - 1);
+  });
+
+  it('sums a locked door’s fight gold at its press, beside the room’s own encounter', () => {
+    const pressed = pressAt(lock(golden()));
+    const room = goldLedgerForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, pressed),
+    ).roomAt(host(pressed));
+    if (room.availability !== 'available') throw new Error(`room is ${room.reason}`);
+    const pressRow = createRoomActionAddress(
+      g(pressed),
+      createOccurrenceId(HOST),
+      roomActionKey(press('exit2')),
+    );
+    expect(checkedGoldFights(room.room)).toEqual(
+      new Map([
+        [
+          semanticAddressKey(
+            createEncounterPhaseAddress(
+              g(pressed),
+              { kind: 'occurrence', occurrenceId: createOccurrenceId(HOST) },
+              'Encounter',
+            ),
+          ),
+          ['enemies'],
+        ],
+        [semanticAddressKey(pressRow), ['enemies']],
+      ]),
+    );
   });
 
   it('raises the encounter depth only rooms after the press read', () => {

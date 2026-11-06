@@ -36,9 +36,9 @@ export type GoldRoomAvailability =
 /**
  * Gold guidance over one evaluated project: what each reached purchase costs,
  * the gold held before it and the chance that gold covers it, and what each
- * fully reached room gains and spends with its balances. Enemy, urn and Medea
- * gold are estimates under the run modifiers. Never a finding; past coverage
- * a value is unavailable, never zero.
+ * fully reached room gains and spends with its balances and each of its
+ * fights' gold. Enemy, urn and Medea gold are estimates under the run
+ * modifiers. Never a finding; past coverage a value is unavailable, never zero.
  */
 export interface GoldLedger {
   /** Gold the run starts with, before its first room. */
@@ -156,6 +156,7 @@ export function goldLedgerForProjectEvaluationAssembly(
               gains: Object.freeze([]),
               doorsOpenBalance: notWalked,
               balanceAfter: notWalked,
+              fights: Object.freeze([]),
             }),
           });
         }

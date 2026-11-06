@@ -180,6 +180,7 @@ describe('gold ledger query', () => {
         gains: [],
         doorsOpenBalance: notWalked,
         balanceAfter: notWalked,
+        fights: [],
       },
     });
   });

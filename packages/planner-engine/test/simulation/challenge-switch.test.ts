@@ -9,6 +9,7 @@ import {
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
@@ -37,6 +38,7 @@ import {
 import type { RequirementEvaluationContext } from '../../src/requirements/evaluator';
 import { assembleExecutionProduct, compileExecutionPlan } from '../../src/execution-plan';
 import { decodeExecutionPlan, encodeExecutionPlan } from '../../src/execution-plan';
+import { checkedGoldFights } from '../support/gold-fights';
 
 const interaction = Object.freeze({ kind: 'interactChallengeSwitch' as const });
 
@@ -394,6 +396,49 @@ describe('challenge switch claims', () => {
         .filter((gain) => gain.kind === 'challengeSwitchGold')
         .map((gain) => gain.amount?.mean),
     ).toEqual([35]);
+  });
+
+  it('sums a switch fight’s kills at its press and leaves the claimed gold on its pickup', () => {
+    const used = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', {
+      used: true,
+      outcome: { outcome: 'finished', gold: 35 },
+    });
+    const biome = createBiomeAddress('Underworld', 'F');
+    const id = createOccurrenceId('golden-f-b8-e1');
+    const room = goldLedgerForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, used),
+    ).roomAt(createOccurrenceAddress(biome, id));
+    if (room.availability !== 'available') throw new Error(`room is ${room.reason}`);
+    const pressRow = createRoomActionAddress(biome, id, roomActionKey(interaction));
+    expect(checkedGoldFights(room.room)).toEqual(
+      new Map([
+        [
+          semanticAddressKey(
+            createEncounterPhaseAddress(
+              biome,
+              { kind: 'occurrence', occurrenceId: id },
+              'Encounter',
+            ),
+          ),
+          ['enemies', 'urns'],
+        ],
+        [semanticAddressKey(pressRow), ['enemies']],
+      ]),
+    );
+    expect(room.room.gains.filter((gain) => gain.kind === 'enemyGold')[1]?.roomAction).toEqual(
+      pressRow,
+    );
+    // The claim is an exact pickup of its own row, outside the fight.
+    const claim = room.room.gains.find((gain) => gain.kind === 'challengeSwitchGold');
+    expect(claim?.fight).toBeUndefined();
+    expect(claim?.roomAction?.actionKey).toBe(
+      roomActionKey({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'challengeSwitch',
+        entryKey: 'reward',
+      }),
+    );
   });
 
   it('leaves an observed but unused switch without claim actions or acquisitions', () => {

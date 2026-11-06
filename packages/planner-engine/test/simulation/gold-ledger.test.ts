@@ -15,10 +15,13 @@ import {
   createOccurrenceAddress,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createRewardWheelAddress,
+  createRewardWheelOfferAddress,
   NATIVE_RUN_MODIFIERS,
   createShopOfferAddress,
   createTraitOfferAddress,
   roomActionKey,
+  semanticAddressKey,
   type ProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
@@ -38,7 +41,12 @@ import {
   loadSurfacePSteadyGrowthShrineFrontierCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
+  loadSurfaceNOProject,
   loadSurfaceNOPQProject,
+  nBiome,
+  nOccurrenceId,
+  oBiome,
+  oOccurrenceIds,
   pBiome,
   pOccurrenceId,
   surfaceShrineDeliveriesProject,
@@ -50,7 +58,7 @@ import {
   loadUnderworldWorldShopTravelDealCheckpoint,
   underworldCheckpointArtifacts,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGIxionChaosProject,
   createGoldenFGHIProject,
@@ -59,6 +67,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
 import { executionFixtures } from '../execution-plan/support/execution-fixtures';
+import { checkedGoldFights } from '../support/gold-fights';
 
 const f = createBiomeAddress('Underworld', 'F');
 const ledger = (project: ProjectDocument): GoldLedger =>
@@ -84,6 +93,20 @@ const actionGains = (gold: GoldLedger, room: ReturnType<typeof createOccurrenceA
     return [gain.kind, gain.roomAction?.actionKey];
   });
 };
+/** The room's fight summaries by fight, each checked against the gains it sums. */
+const fights = (gold: GoldLedger, room: ReturnType<typeof createOccurrenceAddress>) => {
+  const result = gold.roomAt(room);
+  if (result.availability !== 'available') throw new Error(`room is ${result.reason}`);
+  return checkedGoldFights(result.room);
+};
+const phaseKey = (room: ReturnType<typeof createOccurrenceAddress>, phase: string) =>
+  semanticAddressKey(
+    createEncounterPhaseAddress(
+      createBiomeAddress(room.routeKey, room.biomeKey),
+      { kind: 'occurrence', occurrenceId: room.occurrenceId },
+      phase,
+    ),
+  );
 const fixture = (name: string) => {
   const found = executionFixtures.find((candidate) => candidate.name === name);
   if (found === undefined) throw new Error(`no ${name} fixture`);
@@ -655,5 +678,123 @@ describe('gold by timeline action', () => {
     const nemesisGains = actionGains(ledger(fixture('fg-npc-shopping-protection')), nemesisRoom);
     for (const kind of ['nemesisBet', 'enemyGold', 'urnGold'])
       expect(nemesisGains).toContainEqual([kind, undefined]);
+  });
+});
+
+describe('gold by fight', () => {
+  it('sums a combat room’s kills, Medea’s drops and its urns on its main encounter phase', () => {
+    let project = loadSurfacePSteadyGrowthShrineFrontierCheckpoint();
+    const occurrences = project.route.biomes.find((biome) => biome.biomeKey === 'N')!.topology!
+      .occurrences;
+    const story = occurrences.find((occurrence) => occurrence.gameName === 'N_Story01')!;
+    const offer = story.encounters.traitOffersByPhase?.Encounter?.Story_Medea_01;
+    if (offer?.kind !== 'traits') throw new Error('the fixture offers no Medea curse');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          nBiome,
+          { kind: 'occurrence', occurrenceId: story.occurrenceId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: { ...offer, selectedOptionKey: 'option2' },
+    });
+    const room = createOccurrenceAddress(
+      nBiome,
+      occurrences.find((occurrence) => occurrence.gameName === 'N_Combat11')!.occurrenceId,
+    );
+    expect(fights(ledger(project), room)).toEqual(
+      new Map([[phaseKey(room, 'Encounter'), ['enemies', 'medea', 'urns']]]),
+    );
+  });
+
+  it('adds Heracles’s bounty to his fight’s kills', () => {
+    const occurrenceId = nOccurrenceId('combat05');
+    const project = authorLegalTraitOffers(
+      applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase: createEncounterPhaseAddress(
+          nBiome,
+          { kind: 'occurrence', occurrenceId },
+          'Encounter',
+        ),
+        encounterKey: 'HeraclesCombatN',
+      }),
+    );
+    const room = createOccurrenceAddress(nBiome, occurrenceId);
+    expect(fights(ledger(project), room).get(phaseKey(room, 'Encounter'))).toEqual([
+      'enemies',
+      'heraclesBounty',
+      'urns',
+    ]);
+  });
+
+  it('puts a Fields room’s Passive store on the first cage’s fight, which paid it', () => {
+    const room = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'H'),
+      'golden-h-combat02' as never,
+    );
+    // The room's first cage fought is Cage02. Fields swaps no urns, and the Passive
+    // phase never runs: its store has no fight of its own.
+    expect(fights(ledger(createGoldenFGHProject()), room)).toEqual(
+      new Map([[phaseKey(room, 'Cage02'), ['passiveStore']]]),
+    );
+  });
+
+  it('leaves urns out of every fight in a room without a combat phase', () => {
+    const room = createOccurrenceAddress(f, 'golden-f-preboss-shop' as never);
+    const gold = ledger(createGoldenFGHProject());
+    expect(gains(gold, room).map(([kind]) => kind)).toContain('urnGold');
+    expect(fights(gold, room)).toEqual(new Map());
+  });
+});
+
+describe('gold binding to wheel and cage rows', () => {
+  it('pays a Ship wheel’s money to its pickup, never to the wheel’s choice', () => {
+    const occurrenceId = oOccurrenceIds.combat07;
+    const room = createOccurrenceAddress(oBiome, occurrenceId);
+    const wheel2 = createRewardWheelAddress(oBiome, occurrenceId, 'wheel2');
+    let project = loadSurfaceNOProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel: wheel2,
+      offerCount: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: wheel2,
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, occurrenceId, 'wheel2', 'offer1'),
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: room,
+      encounterCount: 3,
+    });
+    const paid = actionGains(ledger(authorLegalTraitOffers(project)), room);
+    expect(paid).toContainEqual([
+      'moneyPickup',
+      roomActionKey({ kind: 'interactWheelReward', wheelKey: 'wheel2' }),
+    ]);
+    const unpaidRows = ['wheel1', 'wheel2'].map((wheelKey) =>
+      roomActionKey({ kind: 'chooseRewardWheel', wheelKey }),
+    );
+    expect(paid.filter(([, action]) => unpaidRows.includes(action as string))).toEqual([]);
+  });
+
+  it('pays no gold to a Fields cage’s fight row', () => {
+    const paid = actionGains(
+      ledger(createGoldenFGHProject()),
+      createOccurrenceAddress(createBiomeAddress('Underworld', 'H'), 'golden-h-combat05' as never),
+    );
+    expect(paid.map(([, action]) => action)).not.toContain(
+      roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage01' }),
+    );
   });
 });

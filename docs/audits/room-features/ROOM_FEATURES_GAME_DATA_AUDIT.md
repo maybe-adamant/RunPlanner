@@ -260,7 +260,7 @@ The evidence was checked on 2026-08-16. Primary sources are `RoomData.lua` and
 `EncounterSets.lua`, `RequirementsData.lua`, `RequirementsLogic.lua`.
 
 Base eligibility requires `WorldUpgradeSurfaceShops`, `BiomeDepthCache >= 3`,
-no SurfaceShop in the previous three rooms, and a loaded-map
+no SurfaceShop in this room or the two before it, and a loaded-map
 `ChallengeSwitchBase`. Base chance is zero; declarations provide:
 
 | Host family         | Chance / rule                                                                              |

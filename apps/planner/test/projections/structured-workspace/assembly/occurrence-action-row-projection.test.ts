@@ -2103,6 +2103,7 @@ describe('purchase gold', () => {
         gains: [],
         doorsOpenBalance: noBalance,
         balanceAfter: noBalance,
+        fights: [],
         spending: {
           mean: purchases.reduce((sum, price) => sum + price.mean, 0),
           variance: 0,

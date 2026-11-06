@@ -1,4 +1,8 @@
-import type { Catalog, InRunTraitRarity } from '../../../catalog-schema';
+import {
+  isCombatBearingEncounterPhaseKind,
+  type Catalog,
+  type InRunTraitRarity,
+} from '../../../catalog-schema';
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
@@ -22,6 +26,7 @@ import {
   moneyMultiplierSources,
   type GoldSpawnReading,
   type GoldEventPublication,
+  type GoldFightAttribution,
   type GoldGain,
   type GoldMultipliers,
 } from '../../commerce/gold/gain-context';
@@ -51,6 +56,7 @@ type Detection =
 interface Detected {
   readonly owner?: SemanticAddress;
   readonly detection: Detection;
+  readonly fight?: GoldFightAttribution;
 }
 
 function authoredRoom(
@@ -638,6 +644,20 @@ export function withGoldEvents(
         room: enteredRoom.origin,
       }),
     ]);
+  if (event.kind === 'encounterStarted' && isCombatBearingEncounterPhaseKind(event.phaseKind))
+    if (room !== undefined)
+      state = withGoldPublications(state, [
+        Object.freeze({
+          kind: 'combatStarted' as const,
+          sequence: event.sequence,
+          room: room.origin,
+          phase: createEncounterPhaseAddress(
+            createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+            { kind: 'occurrence', occurrenceId: room.occurrenceId },
+            event.phaseKey,
+          ),
+        }),
+      ]);
   const doorsOpenHere = room !== undefined && doorsOpenAt(room, event);
   const roomAction = room === undefined ? undefined : walkedRoomAction(room, event);
   const doorsOpen: readonly GoldEventPublication[] = doorsOpenHere
@@ -652,8 +672,17 @@ export function withGoldEvents(
   const receivedEvents = new Set(received.branch.events);
   const receivedEvaluations = new Set(received.branch.traitEvaluations ?? []);
   const detected = new Map<string, Detected>();
-  const detect = (key: string, owner: SemanticAddress | undefined, detection: Detection) => {
-    detected.set(key, { ...(owner === undefined ? {} : { owner }), detection });
+  const detect = (
+    key: string,
+    owner: SemanticAddress | undefined,
+    detection: Detection,
+    fight?: GoldFightAttribution,
+  ) => {
+    detected.set(key, {
+      ...(owner === undefined ? {} : { owner }),
+      detection,
+      ...(fight === undefined ? {} : { fight }),
+    });
   };
 
   /**
@@ -941,12 +970,17 @@ export function withGoldEvents(
                             },
                             multipliers: entry,
                           },
+            // A Fields room's Passive store joins the fight that paid it, its first cage.
+            { fight: phase, source: storeSlotKey === undefined ? 'enemies' : 'passiveStore' },
           );
         }
         if (definition?.killBounty !== undefined)
-          detect(`heraclesBounty:${event.phaseKey}`, phase, {
-            gain: { kind: 'heraclesBounty', encounterKey: completedKey },
-          });
+          detect(
+            `heraclesBounty:${event.phaseKey}`,
+            phase,
+            { gain: { kind: 'heraclesBounty', encounterKey: completedKey } },
+            { fight: phase, source: 'heraclesBounty' },
+          );
         const fights = ({ encounterKey }: { readonly encounterKey: string }) => {
           const kind = catalog.encounterDefinitions.byKey[encounterKey]?.kind;
           return kind === 'combat' || kind === 'miniboss' || kind === 'boss';
@@ -979,6 +1013,7 @@ export function withGoldEvents(
                     },
                     multipliers: goldMultipliers(catalog, after),
                   },
+            { fight: phase, source: 'medea' },
           );
       }
       // A left fight's kills are not estimated: they pay nothing here.
@@ -987,12 +1022,14 @@ export function withGoldEvents(
           'enemyGold:challengeSwitch',
           createRoomFeatureAddress(room.origin, { kind: 'challengeSwitch' }),
           challengeSwitchEnemyGold(context, state, room, event.encounter),
+          { fight: event.owner, source: 'enemies' },
         );
       if (event.kind === 'exitUnlocked' && event.encounter !== undefined)
         detect(
           'enemyGold:unlockExit',
           event.owner,
           unlockExitEnemyGold(context, state, room, event.encounter, before),
+          { fight: event.owner, source: 'enemies' },
         );
       // GOLD_ESTIMATE_ASSUMPTIONS.md "Urn upgrade owned", "Urns per occurrence".
       const declaration = catalog.rooms.byKey[room.gameName];
@@ -1068,13 +1105,14 @@ export function withGoldEvents(
   }
 
   const publications: GoldEventPublication[] = [];
-  for (const { owner, detection } of detected.values())
+  for (const { owner, detection, fight } of detected.values())
     publications.push(
       goldGainPublication({
         sequence: event.sequence,
         ...(roomOrigin === undefined ? {} : { room: roomOrigin }),
         ...(owner === undefined ? {} : { owner }),
         ...optionalRoomAction(roomAction),
+        ...(fight === undefined ? {} : { fight }),
         ...('unpriced' in detection
           ? { unpriced: detection.unpriced }
           : {

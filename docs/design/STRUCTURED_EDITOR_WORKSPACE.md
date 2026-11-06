@@ -309,8 +309,11 @@ A banner hosts the events of its moment. The start banner carries what the
 game settles as the encounter starts: the Fig Leaf skip, the Aetos appearance
 and its wave, and the Gorgon Amulet's Death Defiance condition, whose Athena
 appears in that fight. The end banner carries what the finished encounter
-settled: a Nemesis kill-race outcome, whose bet gold stands in the money
-column like any other gold row, and an Anomaly's capture-point outcome. A
+settled: its fight gold, a Nemesis kill-race outcome with the gold its bet
+won or lost, and an Anomaly's capture-point outcome. The fight gold is the
+engine's summary for the phase, shown as its estimate and spread, or plainly
+when exact, with its breakdown by source on hover; a challenge switch's or
+locked door's fight shows its summary on its press row the same way. A
 phase with an end event but no end boundary keeps it on its start banner. An
 encounter's end hosts at most one outcome: a Nemesis kill race and an Anomaly
 never share a phase. A banner is one line: its title, then its controls at the
@@ -441,7 +444,7 @@ with the full value on hover and in its accessible name), then Artificer
 output, Fountain and other row decisions. A control appears only where the row
 uses it. The money column carries a purchase's price and chance to afford, or
 the gold the row gains or loses as the engine's gold ledger attributes it to
-that row. The chance to afford tells on hover and focus the gold estimated to
+that row, apart from fight gold, which shows as its fight's summary. The chance to afford tells on hover and focus the gold estimated to
 be held just before the purchase, with its spread; no banner repeats a running
 balance. Narrow timelines move a row's decisions to a second line.
 

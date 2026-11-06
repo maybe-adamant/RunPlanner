@@ -891,10 +891,19 @@ records each room's gains and purchases, the balance before each purchase,
 and the balance when the room's doors open and when it ends. A gain names the
 room's ranked action whose settlement paid it (a pickup, a Fields cage
 reward, a Time Piece conversion at the converted pickup, a sale, a purchase's
-payout, a keepsake rack); gold no ranked action pays (kills, urns, Medea's
-drops, Heracles's bounty, a Nemesis bet, a loan's payback) names none. It counts fixed
-and bounded gold exactly and estimates what kills, urns and Medea's curse pay
-(see [Enemy gold](#enemy-gold)). Every assumption and tuning value the estimate
+payout, a keepsake rack, a challenge switch's or locked door's press for its
+fight's kills); gold no ranked action pays (an encounter phase's kills, urns,
+Medea's drops, Heracles's bounty, a Nemesis bet, a loan's payback) names none.
+It counts fixed and bounded gold exactly and estimates what kills, urns and
+Medea's curse pay (see [Enemy gold](#enemy-gold)).
+
+Each room also sums its fights' gold, a mean and spread with one line per
+source: an encounter phase's kills, Heracles's bounty and Medea's drops, a
+Fields room's Passive store on the cage fight that paid it, and a challenge
+switch's or locked door's kills at its press. The room's urns join its main
+encounter phase, the first combat-bearing phase to start in it; a room with
+none, such as a shop, Story or Postboss room, leaves them out of every fight.
+The summary only regroups ledger gains and moves no balance. Every assumption and tuning value the estimate
 uses is listed with its evidence in
 [Gold estimate assumptions](GOLD_ESTIMATE_ASSUMPTIONS.md).
 

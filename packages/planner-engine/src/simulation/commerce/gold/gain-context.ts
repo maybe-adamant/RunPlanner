@@ -1,5 +1,6 @@
 import type { Catalog, InRunTraitRarity } from '../../../catalog-schema';
 import type {
+  EncounterPhaseAddress,
   OccurrenceAddress,
   RoomActionAddress,
   SemanticAddress,
@@ -95,12 +96,13 @@ export type GoldGain =
   | { readonly kind: 'nemesisTrade'; readonly min: number; readonly max: number }
   /**
    * A completed encounter's kill gold, estimated from its store; a Fields
-   * room's one Passive store is paid at its first cage. Its multipliers are
-   * those held at the door into its room: native chooses and generates every
-   * modelled phase there, Nemesis, god and cage combats included
-   * (RoomLogic.lua:4376-4387, 4423-4427). Stores generated later
-   * (challenge switches, encounter-cost doors, boss spawns) belong to
-   * encounters the plan does not model.
+   * room's one Passive store is paid at its first cage. A room phase's store
+   * reads the multipliers held at the door into its room, where native draws
+   * every modelled phase's store, Nemesis, god and cage combats included
+   * (RoomLogic.lua:4376-4387, 4423-4427); a pressed challenge switch's fight
+   * pays from its own store at the room's entry multipliers, and a locked
+   * door's fight from the store drawn at its press. Boss spawns' stores belong
+   * to encounters the plan does not model.
    */
   | {
       readonly kind: 'enemyGold';
@@ -138,6 +140,18 @@ export type GoldGain =
    */
   | { readonly kind: 'challengeSwitchGold'; readonly gold: number };
 
+/** A fight's gold by where it comes from; `passiveStore` is a Fields room's one Passive store. */
+export type GoldFightSource = 'enemies' | 'passiveStore' | 'medea' | 'heraclesBounty' | 'urns';
+
+/**
+ * The fight whose gold summary a gain joins: an encounter phase, or the
+ * challenge switch press or locked door press that fought.
+ */
+export interface GoldFightAttribution {
+  readonly fight: EncounterPhaseAddress | RoomActionAddress;
+  readonly source: GoldFightSource;
+}
+
 export interface GoldEventContext {
   readonly gain: GoldGain;
   readonly multipliers: GoldMultipliers;
@@ -151,6 +165,8 @@ interface GoldGainContact {
   readonly owner?: SemanticAddress;
   /** The room's ranked action whose settlement paid it; absent for gold no action pays. */
   readonly roomAction?: RoomActionAddress;
+  /** The fight whose gold it is; urns join their room's main encounter phase in the ledger. */
+  readonly fight?: GoldFightAttribution;
 }
 
 /** One reached gold contact: the reached state's reading, or why it has none. */
@@ -167,7 +183,19 @@ export interface GoldRoomMarkerPublication {
   readonly room: OccurrenceAddress;
 }
 
-export type GoldEventPublication = GoldGainPublication | GoldRoomMarkerPublication;
+/**
+ * A combat-bearing encounter phase started in the room. The room's first is
+ * its main encounter phase, whose fight gold summary its urns join.
+ */
+export interface GoldCombatStartPublication {
+  readonly kind: 'combatStarted';
+  readonly sequence: number;
+  readonly room: OccurrenceAddress;
+  readonly phase: EncounterPhaseAddress;
+}
+
+export type GoldEventPublication =
+  GoldGainPublication | GoldRoomMarkerPublication | GoldCombatStartPublication;
 
 /**
  * The gold multipliers a state holds; undefined while a held money multiplier
@@ -307,6 +335,7 @@ export function goldGainPublication(
     ...(inputs.room === undefined ? {} : { room: inputs.room }),
     ...(inputs.owner === undefined ? {} : { owner: inputs.owner }),
     ...(inputs.roomAction === undefined ? {} : { roomAction: inputs.roomAction }),
+    ...(inputs.fight === undefined ? {} : { fight: Object.freeze(inputs.fight) }),
   };
   if ('unpriced' in inputs) return Object.freeze({ ...contact, unpriced: inputs.unpriced });
   const { gain, multipliers } = inputs.reading;
