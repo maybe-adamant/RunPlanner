@@ -322,10 +322,11 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
-    const outcome = () => screen.getByRole('combobox', { name: 'Outcome' }) as HTMLSelectElement;
-    expect(outcome().value).toBe('win');
-    await view.user.selectOptions(outcome(), 'loss');
-    expect(outcome().value).toBe('loss');
+    const outcome = () => screen.getByRole('button', { name: /^Outcome/ });
+    expect(outcome().textContent).toBe('Win');
+    await view.user.click(outcome());
+    await view.user.click(await screen.findByRole('option', { name: 'Loss' }));
+    expect(outcome().textContent).toBe('Loss');
     expect(
       view.application.store
         .getState()
@@ -335,7 +336,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
-    expect(outcome().value).toBe('win');
+    expect(outcome().textContent).toBe('Win');
   });
 
   it('hides later unselected Aetos controls but focuses a retained duplicate for repair', async () => {

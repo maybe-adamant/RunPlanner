@@ -22,22 +22,13 @@ import {
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
-import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
-import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { RoomSelector } from './RoomSelector';
 import { TimelineRow } from './TimelineRow';
 import type { TimelineBoundaryContent } from './OccurrenceRoomActions';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { KeepsakeEquipResultPicker, KeepsakeSelectionLauncher } from '../KeepsakePickers';
-
-const wellIcon = (itemKey: string): string | undefined => wellArtwork[itemKey] ?? undefined;
-
-const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
-  sections: Object.freeze([]),
-});
+import { ArtworkChip } from '../rewards/TimelineChip';
+import { keepsakeArtwork } from '@planner/ui/controls/keepsakes/keepsakeArtwork';
 
 /** A Postboss rack row: the keepsake held there, unchanged or swapped in. */
 function KeepsakeRackTimelineContent({
@@ -57,18 +48,34 @@ function KeepsakeRackTimelineContent({
           workspaceInteractionKey(selection.equipResult.address),
         );
   if (interaction === undefined) return null;
+  const held = selection.heldKeepsake;
   return (
-    <div className="room-keepsake-action">
+    <div className="room-keepsake-action room-keepsake-chips">
+      {held === undefined ? null : (
+        <>
+          <ArtworkChip icon={keepsakeArtwork[held.key]} label={held.label} />
+          <span aria-hidden="true" className="row-reward-arrow">
+            →
+          </span>
+        </>
+      )}
       <div className="room-keepsake-control" data-label-hidden>
         <KeepsakeSelectionLauncher
           chip
           equipResults={equipResult === undefined ? [] : [equipResult]}
-          {...(selection.heldKeepsake === undefined ? {} : { held: selection.heldKeepsake })}
+          {...(held === undefined ? {} : { held })}
           id={`postboss-keepsake-${interaction.key}`}
           interaction={interaction}
           label="Choose Keepsake"
         />
       </div>
+      {equipResult === undefined ? null : (
+        <KeepsakeEquipResultPicker
+          chip
+          id={`postboss-keepsake-${interaction.key}-${equipResult.owner.resultKind}`}
+          interaction={equipResult}
+        />
+      )}
     </div>
   );
 }
@@ -172,15 +179,6 @@ export function inspectorRoomActionContent(
   interactions: WorkspaceInteractionCatalog,
   row: NonNullable<WorkspaceRoomSummary['roomActions']>['rows'][number],
 ): ReactNode {
-  if (row.stygianWellTwist !== undefined) {
-    return (
-      <StygianWellTwistTimelineContent
-        interactions={interactions}
-        label={row.label}
-        twist={row.stygianWellTwist}
-      />
-    );
-  }
   if (row.featureRoll !== undefined)
     return (
       <FeatureRollSlots
@@ -198,45 +196,6 @@ export function inspectorRoomActionContent(
   );
 }
 
-function StygianWellTwistTimelineContent({
-  interactions,
-  label,
-  twist,
-}: {
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly label: string;
-  readonly twist: NonNullable<
-    NonNullable<WorkspaceRoomSummary['roomActions']>['rows'][number]['stygianWellTwist']
-  >;
-}) {
-  const interaction = requireWorkspaceInteraction(
-    interactions.stygianWellTwistResults,
-    twist.interactionKey,
-  );
-  const picker = useWorkspaceInteraction(interaction);
-  const findingTarget = useFindingTarget();
-  const executeIntent = useCommandIntent();
-  return (
-    <ContextualPicker
-      findingTarget={findingTarget(twist.address)}
-      ariaLabel={`${label} Twist result`}
-      id={`${interaction.key}-picker`}
-      itemIcon={(item) => (item.value === null ? undefined : wellIcon(item.value))}
-      label=""
-      layout="inline"
-      loading={picker.pending}
-      model={picker.result ?? emptyNullablePicker}
-      onOpenChange={(open) => {
-        if (open) picker.activate();
-      }}
-      onSelect={(itemKey) => executeIntent(interaction.intentFor(itemKey))}
-      placeholder="Unresolved"
-      triggerIcon={twist.itemKey === null ? undefined : wellIcon(twist.itemKey)}
-      {...(twist.itemLabel === undefined ? {} : { triggerLabel: twist.itemLabel })}
-      triggerSize="icon"
-    />
-  );
-}
 export function inspectorLifecycleBoundaryContent(
   room: WorkspaceRoomSummary,
   interactions: WorkspaceInteractionCatalog,

@@ -32,7 +32,11 @@ import { authoredProjectCommandsDispatched } from '@planner/state/projectWorkspa
 import { useAppDispatch } from '@planner/state/store';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import { NemesisEventSelector } from '../NemesisEventEditor';
+import {
+  NemesisEventOutcomeControl,
+  NemesisEventSelector,
+  WordOutcomePicker,
+} from '../NemesisEventEditor';
 import { compositionIssues, EncounterCompositionControl } from './EncounterCompositionControl';
 import { CocoonCountControl } from './CocoonCountControl';
 import { CocoonRewardPointControl } from './CocoonRewardPointControl';
@@ -836,7 +840,10 @@ export function EncounterStartControls({
   );
 }
 
-/** What a finished phase settled: its kill-race outcome; none renders nothing. */
+/**
+ * What a finished phase settled: its kill-race outcome, or how answering
+ * Nemesis ended her trade or contest; none renders nothing.
+ */
 export function EncounterEndControls({
   interactions,
   phase,
@@ -852,29 +859,29 @@ export function EncounterEndControls({
       : requireWorkspaceInteraction(interactions.nemesisBets, nemesisBet.interactionKey);
   const nemesisBetControl =
     nemesisBetInteraction === undefined ? null : (
-      <label className="encounter-event-control" key="nemesisBet">
-        <span>Outcome</span>
-        <select
-          className="nemesis-contest-result"
-          onChange={(event) => {
-            const choice = nemesisBetInteraction.choices.find(
-              (option) => option.value === event.target.value,
-            );
-            if (choice !== undefined) executeIntent(nemesisBetInteraction.intentFor(choice.value));
-          }}
-          value={nemesisBetInteraction.outcome}
-        >
-          {nemesisBetInteraction.choices.map((choice) => (
-            <option key={choice.value} value={choice.value}>
-              {choice.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <WordOutcomePicker
+        choices={nemesisBetInteraction.choices}
+        id={`nemesis-bet-${nemesisBetInteraction.key}`}
+        key="nemesisBet"
+        name="Outcome"
+        onSelect={(value) => {
+          const choice = nemesisBetInteraction.choices.find((option) => option.value === value);
+          if (choice !== undefined) executeIntent(nemesisBetInteraction.intentFor(choice.value));
+        }}
+        selected={nemesisBetInteraction.outcome}
+      />
+    );
+  const nemesisEvent =
+    phase.nemesisEvent === undefined
+      ? undefined
+      : interactions.nemesisEvents.get(workspaceInteractionKey(phase.nemesisEvent.owner));
+  const nemesisEventControl =
+    nemesisEvent?.outcome === undefined ? null : (
+      <NemesisEventOutcomeControl interaction={nemesisEvent} key="nemesisEvent" />
     );
   return (
     <EncounterEventGroup label={`${phase.identityLabel} end`}>
-      {[nemesisBetControl]}
+      {[nemesisBetControl, nemesisEventControl]}
     </EncounterEventGroup>
   );
 }

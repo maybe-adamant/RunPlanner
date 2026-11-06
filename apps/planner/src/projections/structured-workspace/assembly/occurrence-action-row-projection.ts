@@ -525,9 +525,19 @@ function roomActionsForOccurrence(
             .find((option) => option.key === itemKey)?.label ?? itemKey;
         const itemKey =
           stygianWellGenerationTwistResultKey(input.occurrence, generationKey) ?? null;
+        const well = features.find(
+          (feature): feature is Extract<WorkspaceRoomFeature, { readonly kind: 'stygianWell' }> =>
+            feature.kind === 'stygianWell',
+        );
+        const boughtSlot =
+          well?.slots.find((slot) => slot.generationKey === generationKey) ??
+          (well?.travelDealRefill?.generationKey === generationKey
+            ? well.travelDealRefill
+            : undefined);
         return Object.freeze({
           address: featureAddress,
           generationKey,
+          ...(boughtSlot === undefined ? {} : { boughtSlot }),
           marker,
           itemKey,
           ...(itemKey === null ? {} : { itemLabel: itemLabelFor(itemKey) }),
@@ -564,6 +574,7 @@ function roomActionsForOccurrence(
         ...(sourceFamily === undefined ? {} : { sourceFamily }),
         ...(challengeSwitchKind === undefined ? {} : { challengeSwitchKind }),
         ...(labelParts.slot === undefined ? {} : { slot: labelParts.slot }),
+        ...(labelParts.roll === undefined ? {} : { roll: labelParts.roll }),
         ...(labelParts.travelDeal === undefined
           ? {}
           : {

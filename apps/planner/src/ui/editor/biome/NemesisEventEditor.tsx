@@ -6,19 +6,17 @@ import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
+import { npcPortrait } from '@planner/ui/artwork/npcs/npcArtwork';
+import { ArtworkChip } from '@planner/ui/editor/rewards/TimelineChip';
+import { RowNpcName } from './RowNpcName';
 import { useFindingTarget, type FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 import type { WorkspaceFindingControl } from '@planner/projections/structured-workspace';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 
 const emptyPicker: ContextualPickerModel<string> = Object.freeze({ sections: Object.freeze([]) });
-const interactionPhrases: Record<AuthoredNemesisRandomEventOutcome['kind'], string> = {
-  freeItem: 'Interact with Nemesis to get',
-  goldTrade: 'Nemesis offers to take Gold to give',
-  damageTrade: 'Nemesis offers to hit you to give',
-  traitTrade: 'Nemesis offers to take',
-  damageContest: 'at Nemesis’s damage challenge →',
-};
+const nemesisPortrait = npcPortrait('Nemesis') ?? '';
 
 /** The closed trigger names the chosen type in one word; the list keeps full names. */
 const shortFamilyLabels: Record<AuthoredNemesisRandomEventOutcome['kind'], string> = {
@@ -61,43 +59,11 @@ export function NemesisEventSelector({
   );
 }
 
-/** Action-row sentence head: the contest result and the family's phrase. */
-export function NemesisInteractionPhrase({
-  interaction,
-}: {
-  readonly interaction: WorkspaceNemesisEventInteraction;
-}) {
-  const executeIntent = useCommandIntent();
-  const value = interaction.value;
-  if (value === null) return null;
-  return (
-    <span className="nemesis-interaction-phrase">
-      {value.kind === 'damageContest' ? (
-        <select
-          aria-label="Contest result"
-          className="nemesis-contest-result"
-          onChange={(event) =>
-            executeIntent(
-              interaction.detailIntentFor({
-                ...value,
-                result: event.target.value === 'success' ? 'success' : 'failure',
-                reward: interaction.reward,
-              }),
-            )
-          }
-          value={value.result}
-        >
-          <option value="success">Succeed</option>
-          <option value="failure">Fail</option>
-        </select>
-      ) : null}
-      <strong>{interactionPhrases[value.kind]}</strong>
-    </span>
-  );
-}
-
-/** Action-row detail for the already selected Nemesis family. */
-export function NemesisInteractionEditor({
+/**
+ * The interaction row as one sentence: Nemesis, what she does, and the chips it
+ * trades; how it ends is chosen where her encounter ends.
+ */
+export function NemesisInteractionSentence({
   findingMark,
   interaction,
 }: {
@@ -108,90 +74,175 @@ export function NemesisInteractionEditor({
   const executeIntent = useCommandIntent();
   const candidates = useWorkspaceInteraction(interaction);
   const value = interaction.value;
-  if (value === null)
-    return (
-      <div className="nemesis-interaction-controls">
-        <div className="field-control field-control-inline control-placeholder">
-          <span className="fixed-room-state">Choose a Nemesis event.</span>
-        </div>
-      </div>
-    );
+  if (value === null) return null;
   const commit = (next: AuthoredNemesisRandomEventOutcome, reward = interaction.reward): void =>
     executeIntent(interaction.detailIntentFor({ ...next, reward }));
-  const fixedResultLabel = interaction.fixedResultLabel;
-  const picker = candidates.result?.rewardPicker ?? emptyPicker;
   const waiting = interaction.contextReached ? {} : { disabledHint: candidateWaitingHint };
-  const traitPicker = candidates.result?.traitPicker ?? emptyPicker;
-  return (
-    <div className="nemesis-interaction-controls">
-      {value.kind === 'traitTrade' ? (
-        <ContextualPicker
-          {...(findingMark === undefined ? {} : { findingMark: findingMark('nemesisTrait') })}
-          ariaLabel="Boon offered"
-          id={`nemesis-trait-${interaction.key}`}
-          itemIcon={(item) => traitIcon(item.value)}
-          label=""
-          layout="inline"
-          {...waiting}
-          loading={candidates.pending}
-          model={traitPicker}
-          onOpenChange={(open) => {
-            if (open) candidates.activate();
-          }}
-          onSelect={(traitKey) => commit({ ...value, traitKey })}
-          placeholder="Choose a boon"
-          {...(interaction.selectedTraitLabel === undefined
-            ? {}
-            : { triggerLabel: interaction.selectedTraitLabel })}
-          triggerIcon={value.traitKey == null ? undefined : traitIcon(value.traitKey)}
-          triggerSize="icon"
-        />
-      ) : null}
-      {fixedResultLabel === undefined && value.kind === 'traitTrade' ? (
-        <span className="nemesis-fixed-reward">to give</span>
-      ) : null}
-      {fixedResultLabel === undefined ? (
-        <ContextualPicker
-          {...(findingMark === undefined ? {} : { findingMark: findingMark('nemesisReward') })}
-          ariaLabel="Reward"
-          id={`nemesis-reward-${interaction.key}`}
-          itemIcon={(item) => rewardIcon(item.value)}
-          label=""
-          layout="inline"
-          {...waiting}
-          loading={candidates.pending}
-          model={picker}
-          onOpenChange={(open) => {
-            if (open) candidates.activate();
-          }}
-          onSelect={(rewardType) => commit(value, { rewardType })}
-          placeholder="Choose a reward"
-          {...(interaction.selectedRewardLabel === undefined
-            ? {}
-            : { triggerLabel: interaction.selectedRewardLabel })}
-          triggerIcon={interaction.reward === null ? undefined : offerIcon(interaction.reward)}
-          triggerSize="icon"
-        />
-      ) : (
-        <div className="field-control field-control-inline control-placeholder">
-          <span className="fixed-room-state nemesis-fixed-reward">
-            {value.kind === 'traitTrade' ? 'to give ' : ''}
-            {fixedResultLabel}
-          </span>
-        </div>
-      )}
-      {value.kind === 'goldTrade' || value.kind === 'damageTrade' || value.kind === 'traitTrade' ? (
-        <label className="timeline-checkbox">
-          <input
-            checked={value.response === 'accept'}
-            onChange={(event) =>
-              commit({ ...value, response: event.target.checked ? 'accept' : 'decline' })
-            }
-            type="checkbox"
+  const nemesis = <RowNpcName name="Nemesis" portrait={nemesisPortrait} />;
+  const fixedResult =
+    interaction.fixedResultLabel === undefined ? undefined : (
+      <ArtworkChip
+        icon={
+          interaction.fixedResultRewardType === undefined
+            ? undefined
+            : rewardIcon(interaction.fixedResultRewardType)
+        }
+        label={interaction.fixedResultLabel}
+      />
+    );
+  const reward = fixedResult ?? (
+    <ContextualPicker
+      {...(findingMark === undefined ? {} : { findingMark: findingMark('nemesisReward') })}
+      ariaLabel="Reward"
+      id={`nemesis-reward-${interaction.key}`}
+      itemIcon={(item) => rewardIcon(item.value)}
+      label=""
+      layout="inline"
+      {...waiting}
+      loading={candidates.pending}
+      model={candidates.result?.rewardPicker ?? emptyPicker}
+      onOpenChange={(open) => {
+        if (open) candidates.activate();
+      }}
+      onSelect={(rewardType) => commit(value, { rewardType })}
+      placeholder="Choose a reward"
+      {...(interaction.selectedRewardLabel === undefined
+        ? {}
+        : { triggerLabel: interaction.selectedRewardLabel })}
+      triggerIcon={interaction.reward === null ? undefined : offerIcon(interaction.reward)}
+      triggerSize="icon"
+    />
+  );
+  const words = (text: string) => <strong>{text}</strong>;
+  switch (value.kind) {
+    case 'traitTrade':
+      return (
+        <span className="nemesis-interaction-sentence">
+          {nemesis}
+          {words('takes')}
+          <ContextualPicker
+            {...(findingMark === undefined ? {} : { findingMark: findingMark('nemesisTrait') })}
+            ariaLabel="Boon offered"
+            id={`nemesis-trait-${interaction.key}`}
+            itemIcon={(item) => traitIcon(item.value)}
+            label=""
+            layout="inline"
+            {...waiting}
+            loading={candidates.pending}
+            model={candidates.result?.traitPicker ?? emptyPicker}
+            onOpenChange={(open) => {
+              if (open) candidates.activate();
+            }}
+            onSelect={(traitKey) => commit({ ...value, traitKey })}
+            placeholder="Choose a boon"
+            {...(interaction.selectedTraitLabel === undefined
+              ? {}
+              : { triggerLabel: interaction.selectedTraitLabel })}
+            triggerIcon={value.traitKey == null ? undefined : traitIcon(value.traitKey)}
+            triggerSize="icon"
           />
-          <span>Accept</span>
-        </label>
-      ) : null}
+          {words('to give')}
+          {reward}
+        </span>
+      );
+    case 'freeItem':
+      return (
+        <span className="nemesis-interaction-sentence">
+          {nemesis}
+          {words('gives')}
+          {reward}
+        </span>
+      );
+    case 'goldTrade':
+      return (
+        <span className="nemesis-interaction-sentence">
+          {nemesis}
+          {words('sells')}
+          {reward}
+        </span>
+      );
+    case 'damageTrade':
+      return (
+        <span className="nemesis-interaction-sentence">
+          {nemesis}
+          {words('hits you to get')}
+          {reward}
+        </span>
+      );
+    case 'damageContest':
+      return (
+        <span className="nemesis-interaction-sentence">
+          {words('Hit')}
+          {nemesis}
+          {words('to get')}
+          {reward}
+        </span>
+      );
+  }
+}
+
+/** The interaction row's detail while the Overview has not chosen the event yet. */
+export function NemesisEventPending() {
+  return (
+    <div className="field-control field-control-inline control-placeholder">
+      <span className="fixed-room-state">Choose a Nemesis event.</span>
     </div>
+  );
+}
+
+/** How a Nemesis trade or contest ended, chosen where her encounter ends. */
+export function NemesisEventOutcomeControl({
+  interaction,
+}: {
+  readonly interaction: WorkspaceNemesisEventInteraction;
+}) {
+  const executeIntent = useCommandIntent();
+  const outcome = interaction.outcome;
+  if (outcome === undefined) return null;
+  return (
+    <WordOutcomePicker
+      choices={outcome.choices}
+      id={`nemesis-outcome-${interaction.key}`}
+      name="Nemesis outcome"
+      onSelect={(value) => executeIntent(outcome.intentFor(value))}
+      selected={outcome.selected}
+    />
+  );
+}
+
+/** A settled outcome named by its word, which opens the other words it could be. */
+export function WordOutcomePicker({
+  choices,
+  id,
+  name,
+  onSelect,
+  selected,
+}: {
+  readonly choices: readonly { readonly value: string; readonly label: string }[];
+  readonly id: string;
+  readonly name: string;
+  readonly onSelect: (value: string) => void;
+  readonly selected: string;
+}) {
+  const label = choices.find((choice) => choice.value === selected)?.label ?? selected;
+  return (
+    <ContextualPicker
+      ariaLabel={name}
+      id={id}
+      label=""
+      layout="inline"
+      model={declaredChoicesPicker(
+        choices.map((choice) => ({ key: choice.value, value: choice.value, label: choice.label })),
+        selected,
+      )}
+      onSelect={(value) => {
+        // Picking the current outcome is no edit.
+        if (value !== selected) onSelect(value);
+      }}
+      placeholder={label}
+      searchable={false}
+      triggerLabel={label}
+      triggerSize="content"
+    />
   );
 }

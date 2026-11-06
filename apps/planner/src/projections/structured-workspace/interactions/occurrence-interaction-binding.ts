@@ -149,6 +149,46 @@ const nemesisBetChoices = Object.freeze(
   NEMESIS_BET_OUTCOMES.map((value) => Object.freeze({ label: nemesisBetLabels[value], value })),
 );
 
+const nemesisResponseLabels = Object.freeze({ accept: 'Accepted', decline: 'Declined' });
+const nemesisContestLabels = Object.freeze({ success: 'Succeeded', failure: 'Failed' });
+
+/** A trade ends as Nemesis's offer is answered; the contest, as its timer runs out. */
+function nemesisEventOutcome(
+  event: import('@run-planner/engine/authored-project').NemesisRandomEventAddress,
+  value: Exclude<AuthoredNemesisRandomEventOutcome, { readonly kind: 'freeItem' }>,
+  reward: ResolvedRewardOffer | null,
+): import('../contracts/locals').WorkspaceNemesisEventOutcome {
+  const intent = (next: AuthoredNemesisRandomEventOutcome) =>
+    Object.freeze({
+      command: Object.freeze({
+        kind: 'ReplaceNemesisRandomEventInteraction' as const,
+        event,
+        value: Object.freeze({ ...next, reward }),
+      }),
+    });
+  if (value.kind === 'damageContest')
+    return Object.freeze({
+      selected: value.result,
+      choices: Object.freeze(
+        (['success', 'failure'] as const).map((result) =>
+          Object.freeze({ value: result, label: nemesisContestLabels[result] }),
+        ),
+      ),
+      intentFor: (result: string) =>
+        intent({ ...value, result: result === 'failure' ? 'failure' : 'success' }),
+    });
+  return Object.freeze({
+    selected: value.response,
+    choices: Object.freeze(
+      (['accept', 'decline'] as const).map((response) =>
+        Object.freeze({ value: response, label: nemesisResponseLabels[response] }),
+      ),
+    ),
+    intentFor: (response: string) =>
+      intent({ ...value, response: response === 'decline' ? 'decline' : 'accept' }),
+  });
+}
+
 export function nemesisFamilyLabel(family: AuthoredNemesisRandomEventKind): string {
   switch (family) {
     case 'freeItem':
@@ -639,8 +679,12 @@ export function bindOccurrenceLocalInteractions(
                     : {
                         fixedResultLabel:
                           catalog.rewards.rewardTypes.byKey[rewardType]?.label ?? 'Unknown reward',
+                        fixedResultRewardType: rewardType,
                       };
                 })(),
+                ...(event.value === null || event.value.kind === 'freeItem'
+                  ? {}
+                  : { outcome: nemesisEventOutcome(event.owner, event.value, event.reward) }),
                 ...(event.reward === null
                   ? {}
                   : {

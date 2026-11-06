@@ -303,8 +303,23 @@ export interface WorkspaceNemesisEventInteraction extends WorkspaceNemesisEventS
   readonly reward: ResolvedRewardOffer | null;
   readonly value: AuthoredNemesisRandomEventOutcome | null;
   readonly fixedResultLabel?: string;
+  /** The fixed result's reward type, drawn as its chip. */
+  readonly fixedResultRewardType?: string;
   readonly selectedRewardLabel?: string;
   readonly selectedTraitLabel?: string;
+  /** How the interaction ended its encounter: a trade's answer or the contest's result. */
+  readonly outcome?: WorkspaceNemesisEventOutcome;
+}
+
+/** The settled end of a Nemesis event, chosen where its encounter ends. */
+export interface WorkspaceNemesisEventOutcome {
+  readonly selected: string;
+  readonly choices: readonly { readonly value: string; readonly label: string }[];
+  readonly intentFor: (
+    value: string,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceNemesisRandomEventInteraction' }>
+  >;
 }
 
 /** One concrete family-owned editor domain at the exact Nemesis interaction. */

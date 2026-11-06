@@ -21,6 +21,7 @@ import { introducesIssue } from '@planner/ui/controls/introducesIssue';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { TranscendentEmbryoOutcomeFields } from './rewards/TranscendentEmbryoOutcomeFields';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import {
   KeepsakeLauncher,
   KeepsakeRackDialog,
@@ -342,11 +343,14 @@ const equipResultPlaceholder = {
 } as const;
 
 export function KeepsakeEquipResultPicker({
+  chip = false,
   draft,
   id,
   interaction: requestedInteraction,
   label: labelOverride,
 }: {
+  /** Shows the result as its icon chip alone, its name on hover; a dialog edits the rest. */
+  readonly chip?: boolean;
   /** Inside a draft dialog: the drafted value, undefined while unchanged, and its setter. */
   readonly draft?: {
     readonly value: EquipResultValue | undefined;
@@ -425,6 +429,8 @@ export function KeepsakeEquipResultPicker({
           ? 'Experimental Hammer result'
           : 'Jeweled Pom result'));
   const placeholder = equipResultPlaceholder[resultKind];
+  const shownSelection =
+    current === undefined || current === null ? undefined : equipResultSelection(current);
 
   return (
     <div
@@ -436,7 +442,15 @@ export function KeepsakeEquipResultPicker({
         findingTarget={findingTarget(interaction.owner, id)}
         id={id}
         {...(draft?.incomplete === true ? { invalid: true } : {})}
-        label={label}
+        {...(chip
+          ? {
+              ariaLabel: label,
+              itemIcon: (item: { readonly value: string }) => traitIcon(item.value),
+              triggerIcon: shownSelection === undefined ? undefined : traitIcon(shownSelection),
+              triggerSize: 'icon' as const,
+            }
+          : {})}
+        label={chip ? '' : label}
         layout="inline"
         loading={pending}
         model={domain?.picker ?? emptyModel}
@@ -447,7 +461,9 @@ export function KeepsakeEquipResultPicker({
         placeholder={placeholder}
         {...(triggerLabel === undefined ? {} : { triggerLabel })}
       />
-      {domain?.transcendentEmbryoSummary === undefined || embryoValue === undefined ? null : (
+      {chip ||
+      domain?.transcendentEmbryoSummary === undefined ||
+      embryoValue === undefined ? null : (
         <TranscendentEmbryoOutcomeFields
           onChange={(blessingValues) => select({ ...embryoValue, blessingValues })}
           operands={domain.transcendentEmbryoSummary.operands}

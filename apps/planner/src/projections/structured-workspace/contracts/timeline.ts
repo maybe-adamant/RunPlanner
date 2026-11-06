@@ -100,6 +100,8 @@ export interface WorkspaceRoomActionRow {
   readonly challengeSwitchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
   /** The inventory slot bought from, shown as a badge on the row icon. */
   readonly slot?: number;
+  /** The Well or Pool roll this action belongs to, shown as a badge on the reroll die. */
+  readonly roll?: number;
   /** A Travel Deal refill purchase, marked on its icon; `shownLabel` drops the offer name. */
   readonly travelDeal?: true;
   readonly shownLabel?: string;
@@ -175,6 +177,8 @@ export interface WorkspaceRoomActionRow {
   readonly stygianWellTwist?: {
     readonly address: import('@run-planner/engine/authored-project').RoomFeatureAddress;
     readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
+    /** The Well stock the twisted item was bought from, where its item can be replaced. */
+    readonly boughtSlot?: Omit<import('./features').WorkspaceStygianWellSlot, 'key'>;
     readonly marker: WorkspaceMarker;
     readonly itemKey: string | null;
     /** Catalog-derived presentation for the authored result when the picker is closed. */
@@ -327,8 +331,6 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly supplement?: {
         readonly kind: 'nemesisInteraction';
         readonly owner: NemesisRandomEventAddress;
-        /** Read-only selected family, carried by the movable interaction row. */
-        readonly familyLabel?: string;
       };
     }
   | {

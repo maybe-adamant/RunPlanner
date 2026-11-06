@@ -196,7 +196,10 @@ function projectRoomLifecycleTimeline(
         : [],
     ),
   );
-  const hasEndControls = (phase: WorkspaceEncounterPhase) => phase.nemesisBet !== undefined;
+  // A kill race settles as its fight ends; a trade or contest, as answering Nemesis ends hers.
+  const hasEndControls = (phase: WorkspaceEncounterPhase) =>
+    phase.nemesisBet !== undefined ||
+    (phase.nemesisEvent?.value != null && phase.nemesisEvent.value.kind !== 'freeItem');
   // A banner names its phase role only beside another start banner, and not when its
   // Fields cage already does; phases settled on entry have no start banner of their own.
   const startBannerCount = encounterPhases.filter(
@@ -265,13 +268,11 @@ function projectRoomLifecycleTimeline(
     if (action.kind !== 'action' || action.action.reference.kind !== 'interactEncounter')
       return undefined;
     const phase = encounterByPhase.get(action.action.reference.phaseKey);
-    const family = phase?.nemesisEvent?.value?.kind;
     return phase?.nemesisEvent === undefined
       ? undefined
       : Object.freeze({
           kind: 'nemesisInteraction' as const,
           owner: phase.nemesisEvent.owner,
-          ...(family === undefined ? {} : { familyLabel: nemesisFamilyLabel(family) }),
         });
   };
   const entries: WorkspaceRoomLifecycleTimelineEntry[] = [];

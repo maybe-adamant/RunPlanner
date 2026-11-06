@@ -834,7 +834,7 @@ describe('Biome inspector controls', () => {
       within(timeline)
         .getAllByRole('button', { name: /^Reorder / })[0]
         ?.getAttribute('aria-label'),
-    ).toBe('Reorder Use Fountain');
+    ).toBe('Reorder Fountain');
     keyboardReorder(timeline, 'Keepsake Rack', /After Room entered/);
 
     const phialTarget = await within(timeline).findByRole('button', {

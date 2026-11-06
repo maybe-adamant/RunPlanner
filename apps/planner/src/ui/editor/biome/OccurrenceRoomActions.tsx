@@ -49,12 +49,14 @@ import { DoorRerollRowReward, DoorsRerollEntry } from './RoomRerolls';
 import { UnlockExitFightControl } from './UnlockExitFightControl';
 import { RewardWheelWorkbench, SelectWheelRow } from './locals/RewardWheelWorkbench';
 import { doorsOpenToggle, wheelOfferChips } from './doorSummary';
-import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
+import { NemesisEventPending, NemesisInteractionSentence } from './NemesisEventEditor';
+import { StygianWellTwistChips } from './commerce/StygianWellTwist';
 import { RoomObjectEntry } from './commerce/RoomObjectEntry';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
 import { FightGoldAmount, GoldAmount, PurchaseCost } from './commerce/GoldAmount';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
 import {
   challengeSwitchIcon,
   roomActionIcon,
@@ -442,12 +444,9 @@ export function RoomActionsWorkbench({
     >['supplement'],
   ): ReactNode => {
     if (supplement === undefined) return null;
-    if (supplement.kind !== 'nemesisInteraction')
-      return renderEncounterControls?.(supplement) ?? null;
-    const interaction = interactions.nemesisEvents.get(workspaceInteractionKey(supplement.owner));
-    return interaction === undefined ? null : (
-      <NemesisInteractionEditor interaction={interaction} />
-    );
+    // A Nemesis interaction is its row's own sentence.
+    if (supplement.kind === 'nemesisInteraction') return null;
+    return renderEncounterControls?.(supplement) ?? null;
   };
   const shipPhases = mode.kind === 'shipPhase' ? mode.phases : undefined;
   const phaseOf =
@@ -692,6 +691,41 @@ export function RoomActionsWorkbench({
           {row.participation === 'required' ? 'Restore' : 'Take'}
         </button>
       );
+    // The row's name: a reward's icon, an NPC's portrait, or its words.
+    const rowName =
+      row.labelParts === undefined ? null : (
+        <strong
+          {...(row.labelParts.origin === undefined || row.labelParts.reward !== undefined
+            ? {}
+            : {
+                // A name without an icon carries its origin itself, on hover and focus.
+                ...hintProps(row.labelParts.origin),
+                'aria-label': row.labelParts.name,
+                className: 'timeline-row-origin',
+                role: 'group',
+                tabIndex: 0,
+              })}
+        >
+          {row.labelParts.reward === undefined ? (
+            portrait === undefined ? (
+              row.labelParts.name
+            ) : (
+              <RowNpcName name={row.labelParts.name} portrait={portrait} />
+            )
+          ) : (
+            <RowRewardName
+              boosted={row.labelParts.reward.boosted}
+              {...(row.labelParts.reward.itemKey === undefined
+                ? {}
+                : { itemKey: row.labelParts.reward.itemKey })}
+              name={row.labelParts.name}
+              offer={row.labelParts.reward.offer}
+              {...(row.labelParts.origin === undefined ? {} : { origin: row.labelParts.origin })}
+            />
+          )}
+          {row.travelDeal ? <span className="visually-hidden"> · Travel Deal offer</span> : null}
+        </strong>
+      );
     return (
       <Fragment key={row.key}>
         <TimelineRow
@@ -727,12 +761,6 @@ export function RoomActionsWorkbench({
           }
           label={
             <>
-              {supplement?.kind === 'nemesisInteraction' && supplement.familyLabel !== undefined ? (
-                <>
-                  <span className="timeline-row-family">{supplement.familyLabel}</span>
-                  <span aria-hidden="true">·</span>
-                </>
-              ) : null}
               {icon === undefined ? null : (
                 <span className="timeline-row-icon">
                   <ArtworkIcon className="artwork-label-icon" source={icon} />
@@ -753,7 +781,10 @@ export function RoomActionsWorkbench({
               ) : row.unlockDoorLabel !== undefined ? (
                 <strong>Unlock</strong>
               ) : nemesisInteraction !== undefined && nemesisInteraction.value !== null ? (
-                <NemesisInteractionPhrase interaction={nemesisInteraction} />
+                <NemesisInteractionSentence
+                  findingMark={(control) => findingMark(row.address, control)}
+                  interaction={nemesisInteraction}
+                />
               ) : row.labelParts === undefined ? (
                 <strong>{row.label}</strong>
               ) : (
@@ -766,42 +797,16 @@ export function RoomActionsWorkbench({
                     />
                   )}
                   {mysteryVerb === undefined ? (
-                    <strong
-                      {...(row.labelParts.origin === undefined ||
-                      row.labelParts.reward !== undefined
-                        ? {}
-                        : {
-                            // A name without an icon carries its origin itself, on hover and focus.
-                            ...hintProps(row.labelParts.origin),
-                            'aria-label': row.labelParts.name,
-                            className: 'timeline-row-origin',
-                            role: 'group',
-                            tabIndex: 0,
-                          })}
-                    >
-                      {row.labelParts.reward === undefined ? (
-                        portrait === undefined ? (
-                          row.labelParts.name
-                        ) : (
-                          <RowNpcName name={row.labelParts.name} portrait={portrait} />
-                        )
-                      ) : (
-                        <RowRewardName
-                          boosted={row.labelParts.reward.boosted}
-                          {...(row.labelParts.reward.itemKey === undefined
-                            ? {}
-                            : { itemKey: row.labelParts.reward.itemKey })}
-                          name={row.labelParts.name}
-                          offer={row.labelParts.reward.offer}
-                          {...(row.labelParts.origin === undefined
-                            ? {}
-                            : { origin: row.labelParts.origin })}
-                        />
-                      )}
-                      {row.travelDeal ? (
-                        <span className="visually-hidden"> · Travel Deal offer</span>
-                      ) : null}
-                    </strong>
+                    row.stygianWellTwist === undefined ? (
+                      rowName
+                    ) : (
+                      <StygianWellTwistChips
+                        bought={rowName}
+                        interactions={interactions}
+                        label={row.label}
+                        twist={row.stygianWellTwist}
+                      />
+                    )
                   ) : (
                     <>
                       <RowRewardName name="Mystery Boon" offer={{ rewardType: 'BlindBoxLoot' }} />
@@ -819,6 +824,19 @@ export function RoomActionsWorkbench({
                     <span className="timeline-row-tag">{row.labelParts.tag}</span>
                   )}
                 </>
+              )}
+              {row.roll === undefined ? null : (
+                <span
+                  {...hintProps(`Roll ${row.roll}`, undefined, `Roll ${row.roll}`)}
+                  aria-label={`Roll ${row.roll}`}
+                  className="timeline-row-icon timeline-roll-die"
+                  role="img"
+                >
+                  <img alt="" className="artwork-label-icon" src={rerollDieArtwork} />
+                  <span aria-hidden="true" className="timeline-slot-badge">
+                    {row.roll}
+                  </span>
+                </span>
               )}
               <RoomActionArtificerOutput interactions={interactions} row={row} />
               {row.slot === undefined ? null : (
@@ -860,12 +878,9 @@ export function RoomActionsWorkbench({
               />
               {nemesisInteraction === undefined ? (
                 renderSupplement(supplement)
-              ) : (
-                <NemesisInteractionEditor
-                  findingMark={(control) => findingMark(row.address, control)}
-                  interaction={nemesisInteraction}
-                />
-              )}
+              ) : nemesisInteraction.value === null ? (
+                <NemesisEventPending />
+              ) : null}
             </>
           }
           money={

@@ -455,11 +455,11 @@ export const findingCopy = {
   transcendentEmbryoOutcomeMissing: embryoBlessingMissing,
   transcendentEmbryoOutcomeUnavailable: embryoBlessingUnavailable,
   fountainRarityResultMissing: {
-    title: 'Choose Aromatic Phial target',
+    title: 'Choose Phial target',
     description: 'Choose a Common boon.',
   },
   fountainRarityResultUnavailable: {
-    title: 'Aromatic Phial target unavailable',
+    title: 'Phial target unavailable',
     description: 'Choose a Common boon eligible at this fountain.',
   },
   fieldsOptionalCapacityUnavailable: {

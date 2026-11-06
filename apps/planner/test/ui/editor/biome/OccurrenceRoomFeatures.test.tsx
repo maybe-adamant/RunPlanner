@@ -294,7 +294,7 @@ describe('OccurrenceRoomFeatures', () => {
         roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
     );
     if (actionRow === undefined) throw new Error('Nemesis interaction row is missing');
-    expect(within(actionRow).getByText('Nemesis offers to take Gold to give')).toBeTruthy();
+    expect(within(actionRow).getByText('sells')).toBeTruthy();
     await waitFor(() => expect(actionRow.dataset.selectedFinding).toBe('true'));
     await view.user.click(within(actionRow).getByRole('button', { name: 'Reward' }));
     await view.user.click(await screen.findByRole('option', { name: 'Max Health' }));
@@ -307,14 +307,12 @@ describe('OccurrenceRoomFeatures', () => {
     expect(hintOf(within(actionRow).getByRole('button', { name: 'Reward' }))).toContain(
       'Max Health',
     );
-    const accept = screen.getByRole('checkbox', { name: 'Accept' });
-    expect(accept.closest('.nemesis-interaction-controls')).toBeTruthy();
-    expect(
-      within(actionRow).getByRole('button', { name: 'Reward' }).compareDocumentPosition(accept) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect((accept as HTMLInputElement).checked).toBe(false);
-    await view.user.click(accept);
+    // The answer ends her encounter, so it is chosen on a banner, not on the row.
+    expect(within(actionRow).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
+    const outcome = () => screen.getByRole('button', { name: /^Nemesis outcome/ });
+    expect(outcome().textContent).toBe('Declined');
+    await view.user.click(outcome());
+    await view.user.click(await screen.findByRole('option', { name: 'Accepted' }));
     await waitFor(() =>
       expect(authoredEvent()?.encounters.nemesisRandomEventByPhase?.Encounter).toEqual({
         kind: 'goldTrade',
@@ -337,11 +335,7 @@ describe('OccurrenceRoomFeatures', () => {
       historyBefore,
     );
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    await waitFor(() =>
-      expect((screen.getByRole('checkbox', { name: 'Accept' }) as HTMLInputElement).checked).toBe(
-        false,
-      ),
-    );
+    await waitFor(() => expect(outcome().textContent).toBe('Declined'));
     expect(
       [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].some(
         (row) => row.dataset.roomActionKey === generatedAction,
@@ -471,7 +465,6 @@ describe('OccurrenceRoomFeatures', () => {
     openRoomTab('Room Timeline');
     const hint = screen.getByText('Choose a Nemesis event.');
     expect(hint.closest('.control-placeholder')).toBeTruthy();
-    expect(hint.closest('.nemesis-interaction-controls')).toBeTruthy();
     openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Free item');
     openRoomTab('Room Timeline');
@@ -488,30 +481,21 @@ describe('OccurrenceRoomFeatures', () => {
           row.dataset.roomActionKey ===
           roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
       )!;
-    expect(within(freeAction).getByText('Interact with Nemesis to get')).toBeTruthy();
+    expect(within(freeAction).getByText('gives')).toBeTruthy();
     expect(within(freeAction).getByRole('button', { name: 'Reward' })).toBeTruthy();
-    expect(within(freeAction).queryByRole('checkbox')).toBeNull();
+    // A free item has no answer to settle.
+    expect(screen.queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
     openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Boon trade');
     openRoomTab('Room Timeline');
     freeAction = nemesisAction();
     const trait = await screen.findByRole('button', { name: 'Boon offered' });
-    expect(within(freeAction).getByText('Nemesis offers to take')).toBeTruthy();
-    const fixedReward = within(freeAction).getByText('to give Triple Gold');
-    expect(fixedReward.closest('.control-placeholder')).toBeTruthy();
-    expect(
-      within(freeAction)
-        .getByRole('checkbox', { name: 'Accept' })
-        .closest('.nemesis-interaction-controls'),
-    ).toBeTruthy();
+    expect(within(freeAction).getByText('takes')).toBeTruthy();
+    const fixedReward = within(freeAction).getByRole('img', { name: 'Triple Gold' });
     expect(
       trait.compareDocumentPosition(fixedReward) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(
-      fixedReward.compareDocumentPosition(
-        within(freeAction).getByRole('checkbox', { name: 'Accept' }),
-      ) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(within(freeAction).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
     await view.user.click(trait);
     const listbox = await screen.findByRole('listbox');
     const firstChoice = within(listbox).getAllByRole('option')[0];
@@ -532,21 +516,12 @@ describe('OccurrenceRoomFeatures', () => {
     await chooseNemesisEvent(view.user, 'Damage trade');
     openRoomTab('Room Timeline');
     freeAction = nemesisAction();
-    expect(within(freeAction).getByText('Nemesis offers to hit you to give')).toBeTruthy();
-    expect(
-      within(freeAction)
-        .getByRole('checkbox', { name: 'Accept' })
-        .closest('.nemesis-interaction-controls'),
-    ).toBeTruthy();
-    expect(
-      within(freeAction)
-        .getByRole('button', { name: 'Reward' })
-        .compareDocumentPosition(within(freeAction).getByRole('checkbox', { name: 'Accept' })) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(within(freeAction).getByText('hits you to get')).toBeTruthy();
+    expect(within(freeAction).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Nemesis outcome/ }).textContent).toBe('Declined');
   });
 
-  it('switches the leading contest result between a selectable reward and fixed consolation', async () => {
+  it('switches the contest result between a selectable reward and fixed consolation', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -567,12 +542,15 @@ describe('OccurrenceRoomFeatures', () => {
     openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Damage contest');
     openRoomTab('Room Timeline');
-    const phrase = screen.getByText('at Nemesis’s damage challenge →');
-    const sentence = phrase.closest('li')!;
-    const result = within(sentence).getByRole('combobox', { name: 'Contest result' });
-    expect((result as HTMLSelectElement).value).toBe('failure');
-    expect(result.compareDocumentPosition(phrase) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(within(sentence).getByText('Red Onion')).toBeTruthy();
+    const sentence = screen.getByText('to get').closest<HTMLElement>('[data-room-action-key]')!;
+    const result = () => screen.getByRole('button', { name: /^Nemesis outcome/ });
+    const choose = async (label: string) => {
+      await view.user.click(result());
+      await view.user.click(await screen.findByRole('option', { name: label }));
+    };
+    expect(result().textContent).toBe('Failed');
+    expect(within(sentence).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
+    expect(within(sentence).getByRole('img', { name: 'Red Onion' })).toBeTruthy();
     const authoredOccurrence = () =>
       view.application.store
         .getState()
@@ -582,12 +560,9 @@ describe('OccurrenceRoomFeatures', () => {
       authoredOccurrence()?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result;
     expect(reward()?.offer.rewardType).toBe('RoomRewardConsolationPrize');
 
-    await view.user.selectOptions(result, 'success');
+    await choose('Succeeded');
     await waitFor(() => expect(reward()).toBeNull());
-    expect(
-      result.compareDocumentPosition(within(sentence).getByRole('button', { name: 'Reward' })) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(within(sentence).getByRole('button', { name: 'Reward' })).toBeTruthy();
     expect(authoredOccurrence()?.encounters.nemesisRandomEventByPhase?.Encounter).toEqual({
       kind: 'damageContest',
       result: 'success',
@@ -596,7 +571,7 @@ describe('OccurrenceRoomFeatures', () => {
     await view.user.click(await screen.findByRole('option', { name: 'Max Health' }));
     expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
 
-    await view.user.selectOptions(result, 'failure');
+    await choose('Failed');
     await waitFor(() => expect(reward()?.offer.rewardType).toBe('RoomRewardConsolationPrize'));
     expect(screen.queryByRole('button', { name: 'Reward' })).toBeNull();
   });

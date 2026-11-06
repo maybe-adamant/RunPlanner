@@ -156,7 +156,7 @@ describe('Nemesis interaction family', () => {
     );
   }
 
-  it('carries the selected family on its movable row and names nothing on a banner', () => {
+  it('keeps the interaction on its movable row and settles the trade with its encounter', () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -178,12 +178,18 @@ describe('Nemesis interaction family', () => {
     expect(interactionRows(room)).toEqual([
       expect.objectContaining({
         actionKey: roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
-        supplement: expect.objectContaining({ familyLabel: expect.any(String) }),
+        supplement: { kind: 'nemesisInteraction', owner: createNemesisRandomEventAddress(phase) },
       }),
     ]);
+    // Her non-combat encounter has no end banner, so its start keeps the trade's answer.
+    expect(banners(room, 'encounterEnd')).toEqual([]);
+    expect(banners(room, 'roomEntered')[0]?.supplement).toMatchObject({
+      kind: 'encounterStart',
+      endControls: true,
+    });
   });
 
-  it('keeps the Fields Passive family on its row, off the Room entered banner', () => {
+  it('keeps the Fields Passive interaction on its row, off the Room entered banner', () => {
     const { room } = projectedWhere(loadNemesisFieldsCheckpoint(), (candidate) =>
       candidate.encounterPhases.some(
         (phase) => phase.address.phaseKey === 'Passive' && phase.nemesisEvent !== undefined,
@@ -195,7 +201,7 @@ describe('Nemesis interaction family', () => {
     ).toBeUndefined();
     expect(interactionRows(room)).toEqual([
       expect.objectContaining({
-        supplement: expect.objectContaining({ familyLabel: expect.any(String) }),
+        supplement: expect.objectContaining({ kind: 'nemesisInteraction' }),
       }),
     ]);
   });

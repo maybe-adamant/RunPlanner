@@ -86,6 +86,7 @@ function wellPurchaseLabel(
   readonly name: string;
   readonly suffix?: string;
   readonly slot?: number;
+  readonly roll?: number;
   readonly rewardType?: string;
   readonly itemKey?: string;
 } {
@@ -117,7 +118,7 @@ function wellPurchaseLabel(
     itemOption === undefined ? {} : { rewardType: itemOption.rewardType, itemKey: itemOption.key };
   const slot = slotIndex < 0 ? {} : { slot: slotIndex + 1 };
   if (rollNumber !== undefined)
-    return { name: itemLabel ?? subject, suffix: `roll ${rollNumber}`, ...slot, ...reward };
+    return { name: itemLabel ?? subject, roll: rollNumber, ...slot, ...reward };
   return slotKey === undefined
     ? {
         name: itemLabel ?? subject,
@@ -132,7 +133,7 @@ export interface OccurrenceActionLabelParts {
   readonly label: string;
   readonly verb?: string;
   readonly name?: string;
-  /** Where in the room the action happens (Cage 1, Optional 2, roll 2), shown as a tag. */
+  /** Where in the room the action happens (Cage 1, Optional 2), shown as a tag. */
   readonly suffix?: string;
   /** What produced the pickup, told on hover and focus rather than in the label. */
   readonly origin?: string;
@@ -147,6 +148,8 @@ export interface OccurrenceActionLabelParts {
   readonly npcKey?: string;
   /** The inventory slot the action buys from, shown as a badge rather than in the label. */
   readonly slot?: number;
+  /** The Well or Pool roll the action belongs to, shown as the reroll die's badge. */
+  readonly roll?: number;
   /** A Travel Deal refill purchase, marked on its icon; `shownLabel` omits the offer name. */
   readonly travelDeal?: true;
   readonly shownLabel?: string;
@@ -173,6 +176,13 @@ function labelParts(
     ...(origin === undefined ? {} : { origin }),
     ...(travelDeal ? { travelDeal: true as const, shownLabel: head } : {}),
   });
+}
+
+function withRoll(
+  parts: OccurrenceActionLabelParts,
+  roll: number | undefined,
+): OccurrenceActionLabelParts {
+  return roll === undefined ? parts : Object.freeze({ ...parts, roll });
 }
 
 function talkTo(npcKey: string): OccurrenceActionLabelParts {
@@ -370,7 +380,7 @@ export function occurrenceActionLabelParts(
     }
     case 'purchaseStygianWellOffer': {
       const well = wellPurchaseLabel(catalog, occurrence, reference.generationKey);
-      const parts = labelParts('Buy', well.name, well.suffix, well.slot);
+      const parts = withRoll(labelParts('Buy', well.name, well.suffix, well.slot), well.roll);
       return well.rewardType === undefined
         ? parts
         : withReward(parts, Object.freeze({ rewardType: well.rewardType }), false, well.itemKey);
@@ -416,7 +426,7 @@ export function occurrenceActionLabelParts(
         reference.rerollId,
       );
       const subject = feature === 'stygianWell' ? 'Reroll Well' : 'Reroll Pool';
-      return plain(rollNumber === undefined ? subject : `${subject} · roll ${rollNumber}`);
+      return withRoll(plain(subject), rollNumber);
     }
     case 'sellPurgingPoolTrait': {
       // A rerolled list's trait is the one pinned on its reroll.
@@ -437,8 +447,11 @@ export function occurrenceActionLabelParts(
         'purgingPool',
         reference.rollKey,
       );
-      return plain(
-        `Sell ${traitLabel ?? featureRollCatalog(catalog, 'purgingPool').slotLabel(reference.slotKey)}${rollNumber === undefined ? '' : ` · roll ${rollNumber}`}`,
+      return withRoll(
+        plain(
+          `Sell ${traitLabel ?? featureRollCatalog(catalog, 'purgingPool').slotLabel(reference.slotKey)}`,
+        ),
+        rollNumber,
       );
     }
     case 'interactEncounter': {
@@ -515,7 +528,7 @@ export function occurrenceActionLabelParts(
       );
     }
     case 'useFountain':
-      return plain('Use Fountain');
+      return plain('Fountain');
     case 'interactKeepsakeRack':
       return plain('Keepsake Rack');
     case 'interactEris':

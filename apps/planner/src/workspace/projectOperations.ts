@@ -944,9 +944,7 @@ function migratedPlanMessage(
     project.route.biomes.some((biome) =>
       biome.topology?.decisions.some((decision) => decision.kind === 'hub'),
     )
-      ? [
-          'the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair',
-        ]
+      ? ['the Hub fountain use is placed before the first visit, so a Phial target may need repair']
       : []),
     ...(provenance.some((migration) => migration.sourceSchemaVersion === 86)
       ? ['retained encounter choices may need missing fields repaired']

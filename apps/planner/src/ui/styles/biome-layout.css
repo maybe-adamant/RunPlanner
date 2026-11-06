@@ -933,6 +933,18 @@
   flex: 1 1 20rem;
 }
 
+/* A rack row reads as chips: the keepsake held, an arrow, the one chosen and its result. */
+.room-keepsake-chips {
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.room-keepsake-chips > .room-keepsake-control,
+.room-keepsake-chips > .keepsake-equip-result-control {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
 .room-keepsake-control > .field-control,
 .keepsake-equip-result-control > .field-control {
   min-width: 0;

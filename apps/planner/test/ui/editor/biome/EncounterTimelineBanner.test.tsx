@@ -96,11 +96,11 @@ describe('Encounter Timeline banner', () => {
     // What the game settles as the encounter starts sits on its start banner.
     const start = within(banner('Encounter')).getByRole('group', { name: / start$/ });
     expect(within(start).getByRole('button', { name: 'No Death Defiance' })).toBeTruthy();
-    expect(within(start).queryByRole('combobox', { name: 'Outcome' })).toBeNull();
+    expect(within(start).queryByRole('button', { name: /^Outcome/ })).toBeNull();
     // The kill race is settled when the encounter ends.
     const end = within(banner('Encounter ended')).getByRole('group', { name: / end$/ });
     // Its one outcome control is the end banner's only control.
-    expect(within(end).getByRole('combobox', { name: 'Outcome' })).toBeTruthy();
+    expect(within(end).getByRole('button', { name: /^Outcome/ })).toBeTruthy();
     expect(end.querySelectorAll('button, input, select')).toHaveLength(1);
   });
 });

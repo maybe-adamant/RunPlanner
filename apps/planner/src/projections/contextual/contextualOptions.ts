@@ -797,9 +797,9 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         message: 'Choose a Chaos blessing eligible for Transcendent Embryo.',
       };
     case 'fountainRarityResultMissing':
-      return { kind: 'trait', message: 'Choose the Common boon promoted by Aromatic Phial.' };
+      return { kind: 'trait', message: 'Choose the Common boon promoted by the Phial.' };
     case 'fountainRarityResultUnavailable':
-      return { kind: 'trait', message: 'Choose a boon currently eligible for Aromatic Phial.' };
+      return { kind: 'trait', message: 'Choose a boon currently eligible for the Phial.' };
     case 'concaveStoneResultMissing':
       return { kind: 'trait', message: 'Choose whether Concave Stone procs on this boon screen.' };
     case 'concaveStoneResultUnavailable':

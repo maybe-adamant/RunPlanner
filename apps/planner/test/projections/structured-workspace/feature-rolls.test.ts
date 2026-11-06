@@ -184,7 +184,7 @@ describe('Stygian Well Interact', () => {
     const row = node.room.roomActions!.rows.find(
       (candidate) => candidate.reference.kind === 'rerollStygianWell',
     )!;
-    expect(row.label).toBe('Reroll Well · roll 2');
+    expect(row).toMatchObject({ label: 'Reroll Well', roll: 2 });
     expect(row.featureRoll?.slots.map((slot) => [slot.slotKey, slot.value])).toEqual([
       ['healing', null],
     ]);
@@ -205,7 +205,8 @@ describe('Stygian Well Interact', () => {
         candidate.reference.kind === 'purchaseStygianWellOffer' &&
         candidate.reference.generationKey === 'r1:healing',
     );
-    expect(purchase?.label).toMatch(/^Buy .+ · roll 2$/);
+    expect(purchase?.label).toMatch(/^Buy .+$/);
+    expect(purchase?.roll).toBe(2);
     expect(purchase?.purchaseRemoval?.command).toEqual({
       kind: 'SetStygianWellPurchase',
       occurrence: room,

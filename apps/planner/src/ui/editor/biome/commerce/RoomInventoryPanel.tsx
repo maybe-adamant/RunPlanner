@@ -285,6 +285,30 @@ export function StygianWellSlotEditor({
   readonly slot: Omit<StygianWellFeature['slots'][number], 'key'>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  return (
+    <div className="shop-family-offer-row room-purging-pool-slot">
+      <StygianWellSlotPicker
+        {...(fieldLabel === undefined ? {} : { fieldLabel })}
+        interactions={interactions}
+        placeholder={placeholder}
+        slot={slot}
+      />
+    </div>
+  );
+}
+
+/** One Well inventory slot's item as its icon chip, which opens the slot's item list. */
+export function StygianWellSlotPicker({
+  fieldLabel,
+  placeholder = 'Unresolved',
+  slot,
+  interactions,
+}: {
+  readonly fieldLabel?: string;
+  readonly placeholder?: string;
+  readonly slot: Omit<StygianWellFeature['slots'][number], 'key'>;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const offer = requireWorkspaceInteraction(
@@ -293,26 +317,24 @@ export function StygianWellSlotEditor({
   );
   const offerPicker = useWorkspaceInteraction(offer);
   return (
-    <div className="shop-family-offer-row room-purging-pool-slot">
-      <ContextualPicker
-        findingTarget={findingTarget(slot.address)}
-        ariaLabel={`Stygian Well ${slot.label} Item`}
-        id={`${offer.key}-picker`}
-        label={fieldLabel ?? slot.label}
-        layout="inline"
-        loading={offerPicker.pending}
-        model={offerPicker.result ?? emptyNullablePicker}
-        onOpenChange={(open) => {
-          if (open) offerPicker.activate();
-        }}
-        onSelect={(itemKey) => executeIntent(offer.intentFor(itemKey))}
-        placeholder={placeholder}
-        itemIcon={(item) => wellIcon(item.value)}
-        triggerIcon={wellIcon(slot.itemKey)}
-        triggerSize="icon"
-        {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
-      />
-    </div>
+    <ContextualPicker
+      findingTarget={findingTarget(slot.address)}
+      ariaLabel={`Stygian Well ${slot.label} Item`}
+      id={`${offer.key}-picker`}
+      label={fieldLabel ?? slot.label}
+      layout="inline"
+      loading={offerPicker.pending}
+      model={offerPicker.result ?? emptyNullablePicker}
+      onOpenChange={(open) => {
+        if (open) offerPicker.activate();
+      }}
+      onSelect={(itemKey) => executeIntent(offer.intentFor(itemKey))}
+      placeholder={placeholder}
+      itemIcon={(item) => wellIcon(item.value)}
+      triggerIcon={wellIcon(slot.itemKey)}
+      triggerSize="icon"
+      {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
+    />
   );
 }
 

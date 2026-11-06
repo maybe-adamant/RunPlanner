@@ -254,6 +254,14 @@ describe('Stygian Well workbench', () => {
       const picker = screen.getByRole('button', {
         name: `${label} Twist result`,
       });
+      // The bought item is its own picker, before the item it turned into.
+      const bought = within(picker.closest<HTMLElement>('[data-room-action-key]')!).getByRole(
+        'button',
+        { name: /^Stygian Well .+ Item$/ },
+      );
+      expect(
+        bought.compareDocumentPosition(picker) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
       await view.user.click(picker);
       const result = screen
         .getAllByRole('option')

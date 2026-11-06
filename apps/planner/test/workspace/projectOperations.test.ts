@@ -753,7 +753,7 @@ describe('project operations', () => {
       operation: 'importPlan',
       status: 'success',
       message:
-        'Migrated the plan to schema 101; the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair.',
+        'Migrated the plan to schema 101; the Hub fountain use is placed before the first visit, so a Phial target may need repair.',
     });
 
     // A schema-88 Hub already has its authored fountain placement, so no repair is named.

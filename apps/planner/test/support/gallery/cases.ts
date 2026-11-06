@@ -1,15 +1,18 @@
 import {
   createAcquisitionRoleAddress,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
+  createNemesisRandomEventAddress,
   createOccurrenceId,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createRoomActionAddress,
   rerollAppendIndex,
   roomActionKey,
+  type AuthoredNemesisRandomEventOutcome,
 } from '@run-planner/engine/authored-project';
 import { loadDreamHeraArtificerEchoCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import {
@@ -59,6 +62,53 @@ const traitOrderChecks = {
   artificerCombat: 'e9c1775e-a04b-4ed2-b749-7ef344614cbe',
   preboss: 'e157e3cb-37ae-40d9-92b0-f22621b672c3',
 } as const;
+
+// A plain F combat room that Nemesis takes over in the family cases.
+const nemesisPhase = createEncounterPhaseAddress(
+  createBiomeAddress('Underworld', 'F'),
+  { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-f-b5-e1') },
+  'Encounter',
+);
+
+/** One case per Nemesis event family, each with its setup row and end outcome. */
+function nemesisFamilyCases(): readonly GalleryCase[] {
+  const event = createNemesisRandomEventAddress(nemesisPhase);
+  const entry = (
+    id: string,
+    label: string,
+    value: AuthoredNemesisRandomEventOutcome,
+  ): GalleryCase => ({
+    id,
+    label,
+    shows: ['Nemesis setup row', 'encounter end outcome'],
+    project: loadUnderworldFGCheckpoint,
+    commands: [
+      { kind: 'SelectEncounter', phase: nemesisPhase, encounterKey: 'NemesisRandomEvent' },
+      { kind: 'SelectNemesisRandomEventFamily', event, family: value.kind },
+      { kind: 'ReplaceNemesisRandomEventInteraction', event, value: { ...value, reward: null } },
+    ],
+    target: room('F', 'golden-f-b5-e1'),
+  });
+  return [
+    entry('nemesis-free-item', 'Nemesis free item', { kind: 'freeItem' }),
+    entry('nemesis-gold-trade', 'Nemesis gold trade, declined', {
+      kind: 'goldTrade',
+      response: 'decline',
+    }),
+    entry('nemesis-damage-trade', 'Nemesis damage trade', {
+      kind: 'damageTrade',
+      response: 'accept',
+    }),
+    entry('nemesis-damage-contest', 'Nemesis damage contest', {
+      kind: 'damageContest',
+      result: 'success',
+    }),
+    entry('nemesis-damage-contest-failed', 'Nemesis damage contest, failed', {
+      kind: 'damageContest',
+      result: 'failure',
+    }),
+  ];
+}
 
 /**
  * Every Timeline gallery case, in page order. Adding a case is one entry: a project builder
@@ -189,6 +239,21 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['Nemesis event row', 'Fields cages'],
     project: loadNemesisFieldsCheckpoint,
     target: room('H', 'golden-h-combat05'),
+  },
+  ...nemesisFamilyCases(),
+  {
+    id: 'nemesis-bet',
+    label: 'Nemesis combat with its kill-race bet',
+    shows: ['encounter end outcome (bet)'],
+    project: loadUnderworldFGCheckpoint,
+    commands: [
+      {
+        kind: 'SelectEncounter',
+        phase: nemesisPhase,
+        encounterKey: 'NemesisCombatF',
+      },
+    ],
+    target: room('F', 'golden-f-b5-e1'),
   },
   {
     id: 'anvil-removed',
