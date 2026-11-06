@@ -13,13 +13,21 @@ import {
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { loadSurfaceNOPQProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOPQProject,
+  nBiome,
+  nLocalOccurrenceId,
+  oBiome,
+  oOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 import {
   createCompleteFGProject,
+  createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { findingSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
@@ -236,6 +244,104 @@ describe('a room’s doors on its Timeline', () => {
     expect(
       [...firstDraw.querySelectorAll('img')].map((img) => img.getAttribute('src')),
     ).not.toContain(gold);
+  });
+});
+
+describe('a room’s door notes', () => {
+  const sideRoom = createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat05', 'sideDoor1'));
+
+  async function openRoom(view: ReturnType<typeof renderWorkspace>, room: typeof sideRoom) {
+    act(() => view.application.store.dispatch(semanticOwnerFocused(room)));
+    const details = screen.getByRole('complementary', { name: 'Details' });
+    await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
+    return details;
+  }
+
+  const note = (text: RegExp | string) =>
+    within(screen.getByRole('complementary', { name: 'Notes' }))
+      .getByText(text)
+      .closest('li')!;
+  const lit = (element: Element | null | undefined) => element?.hasAttribute('data-note-active');
+
+  it('lights the hidden door’s chip while the doors are shut, and its row once open', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    const details = await openRoom(view, sideRoom);
+    const disclosure = within(details).getByRole('button', { name: 'Door details' });
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
+    const hiddenNote = within(screen.getByRole('complementary', { name: 'Notes' }))
+      .getAllByRole('listitem')
+      .find((item) => item.querySelector('.door-note-symbol') !== null)!;
+    const chip = () =>
+      within(within(details).getByRole('list', { name: 'Door summary' })).getByRole('listitem', {
+        name: 'Hidden door',
+      });
+
+    fireEvent.mouseEnter(hiddenNote);
+    expect(lit(chip())).toBe(true);
+    expect(lit(disclosure)).toBe(false);
+    // Hovering never opens the doors.
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.mouseLeave(hiddenNote);
+    expect(lit(chip())).toBe(false);
+
+    await view.user.click(disclosure);
+    fireEvent.mouseEnter(hiddenNote);
+    const door = within(details).getByRole('article', { name: 'Hidden return door' });
+    expect(lit(door.querySelector('[aria-describedby]'))).toBe(true);
+    expect(lit(chip())).toBe(false);
+    expect(lit(disclosure)).toBe(false);
+  });
+
+  it('lights the Doors open title for a note on the doors as a whole', async () => {
+    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'H');
+    const details = await openRoom(
+      view,
+      createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-miniboss01')),
+    );
+    const disclosure = within(details).getByRole('button', { name: 'Door details' });
+    const batchNote = note('Cage rewards appear bottom to top on the door');
+    const shut = disclosure.getAttribute('aria-expanded') === 'false';
+    fireEvent.mouseEnter(batchNote);
+    expect(lit(disclosure)).toBe(true);
+    fireEvent.mouseLeave(batchNote);
+    expect(lit(disclosure)).toBe(false);
+
+    // The title stays its target with the doors either way.
+    await view.user.click(disclosure);
+    expect(disclosure.getAttribute('aria-expanded')).toBe(shut ? 'true' : 'false');
+    fireEvent.mouseEnter(batchNote);
+    expect(lit(disclosure)).toBe(true);
+
+    // Opening it lands on the doors themselves.
+    await view.user.click(batchNote);
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true');
+    expect(document.activeElement).toBe(
+      within(details).getByRole('region', { name: 'Door details' }),
+    );
+  });
+
+  it('opens the doors onto a clicked note’s door, keeping the remembered choice', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    const details = await openRoom(view, sideRoom);
+    const disclosure = () => within(details).getByRole('button', { name: 'Door details' });
+    // Shut by choice.
+    await view.user.click(disclosure());
+    await view.user.click(disclosure());
+    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
+    const choices = view.application.store.getState().editorSession.doorEditorChoices;
+
+    const hiddenNote = within(screen.getByRole('complementary', { name: 'Notes' }))
+      .getAllByRole('listitem')
+      .find((item) => item.querySelector('.door-note-symbol') !== null)!;
+    await view.user.click(hiddenNote);
+    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+    const door = within(details).getByRole('article', { name: 'Hidden return door' });
+    expect(door.contains(document.activeElement)).toBe(true);
+    expect(view.application.store.getState().editorSession.doorEditorChoices).toBe(choices);
+
+    // Leaving that navigation brings the choice back.
+    await openRoom(view, sideRoom);
+    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
   });
 });
 

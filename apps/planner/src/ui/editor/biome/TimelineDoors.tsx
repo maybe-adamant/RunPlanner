@@ -3,6 +3,7 @@ import type { SemanticAddress } from '@run-planner/engine/authored-project';
 import type { WorkspaceRoomRerolls } from '@planner/projections/structured-workspace';
 import type { DoorChip } from './doorSummary';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
+import { DoorChips } from './DecisionWorkbench';
 import { TimelineRow } from './TimelineRow';
 import { doorsOpenToggle, type BannerToggle } from './doorSummary';
 
@@ -12,8 +13,18 @@ import { doorsOpenToggle, type BannerToggle } from './doorSummary';
  * left, the batch facts beside the Timeline and the Doors object.
  */
 export interface TimelineDoorsContent {
-  /** The doors' compact state on the Doors open row. */
-  readonly summary?: ReactNode;
+  /** The doors' compact state on the Doors open row: a chip per door. */
+  readonly summary?: {
+    readonly chips: readonly DoorChip[];
+    /** The list's name, where it holds a wheel's offers. */
+    readonly label?: string;
+  };
+  /**
+   * The door note being hovered or focused: the chip it lights while the
+   * editor is shut, and whether the open editor shows it on a row of its own.
+   * A note lights the Doors open title where neither shows it.
+   */
+  readonly activeNote?: { readonly chip?: string; readonly ownRow: boolean };
   /** The owners the editor repairs; a new finding on any opens the doors. */
   readonly findingOwners?: readonly SemanticAddress[];
   /** Owners whose findings of one code also open the doors, such as a locked door picked to leave by. */
@@ -47,7 +58,17 @@ export interface TimelineDoors extends TimelineDoorsContent {
 
 /** The Doors open row's own controls: the door chips. */
 export function DoorsOpenControls({ doors }: { readonly doors: TimelineDoors }) {
-  return <span className="timeline-doors-open-controls">{doors.summary}</span>;
+  return (
+    <span className="timeline-doors-open-controls">
+      {doors.summary === undefined ? null : (
+        <DoorChips
+          activeKey={doors.expanded ? undefined : doors.activeNote?.chip}
+          chips={doors.summary.chips}
+          label={doors.summary.label}
+        />
+      )}
+    </span>
+  );
 }
 
 /** A banner's title: its name, or the disclosure button carrying it. */
@@ -65,6 +86,7 @@ export function BannerTitle({
       aria-expanded={toggle.expanded}
       aria-label={toggle.label}
       className="timeline-banner-toggle"
+      data-note-active={toggle.noteActive || undefined}
       onClick={toggle.onToggle}
       type="button"
     >

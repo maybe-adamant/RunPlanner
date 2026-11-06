@@ -582,13 +582,16 @@ export function NoteMarked({
       onFocus={() => mark.setActive(true)}
       onMouseEnter={() => mark.setActive(true)}
       onMouseLeave={() => mark.setActive(false)}
+      data-door-note-focus={mark.focusKey}
       role="group"
       tabIndex={0}
     >
       {children}
-      <sup aria-hidden="true" className="door-note-symbol">
-        {mark.symbol}
-      </sup>
+      {mark.symbol === undefined ? null : (
+        <sup aria-hidden="true" className="door-note-symbol">
+          {mark.symbol}
+        </sup>
+      )}
     </span>
   );
 }
@@ -657,23 +660,32 @@ export function DoorNotes({ items }: { readonly items: readonly DoorNoteItem[] }
         Notes
       </h4>
       <ul>
-        {items.map(({ key, mark, text }) =>
+        {items.map(({ key, mark, open, text }) =>
           mark === undefined ? (
             <li key={key}>{text}</li>
           ) : (
             <li
               aria-labelledby={mark.noteId}
               data-note-active={mark.active || undefined}
+              data-note-opens={open === undefined ? undefined : true}
               key={key}
               onBlur={() => mark.setActive(false)}
+              onClick={open}
               onFocus={() => mark.setActive(true)}
+              onKeyDown={(event) => {
+                if (open === undefined || event.key !== 'Enter') return;
+                event.preventDefault();
+                open();
+              }}
               onMouseEnter={() => mark.setActive(true)}
               onMouseLeave={() => mark.setActive(false)}
               tabIndex={0}
             >
-              <span aria-hidden="true" className="door-note-symbol">
-                {mark.symbol}
-              </span>
+              {mark.symbol === undefined ? null : (
+                <span aria-hidden="true" className="door-note-symbol">
+                  {mark.symbol}
+                </span>
+              )}
               <span id={mark.noteId}>{text}</span>
             </li>
           ),
@@ -812,12 +824,15 @@ export function BatchDoorsRepair({
 
 /** The doors' compact state on the Doors open row; each chip names its door on hover. */
 export function DoorChips({
+  activeKey,
   chips,
   label = 'Door summary',
 }: {
+  /** The chip of the door whose note is hovered or focused. */
+  readonly activeKey?: string | undefined;
   readonly chips: readonly DoorChip[];
   /** The list's name: a room's doors, or a Ship wheel's offers. */
-  readonly label?: string;
+  readonly label?: string | undefined;
 }) {
   if (chips.length === 0) return null;
   return (
@@ -830,6 +845,7 @@ export function DoorChips({
             aria-label={label}
             className="timeline-door-chip"
             data-missing={chip.missing}
+            data-note-active={chip.key === activeKey || undefined}
             data-picked={chip.picked || undefined}
             data-unavailable={chip.unavailable || undefined}
             key={chip.key}
@@ -1019,6 +1035,8 @@ export function BatchDoorsDetail({
   // Where the doors lie past the plan end every door row is read-only together;
   // the end room's own doors still open inside the plan.
   const locked = useAuthoringLocked(node.owner);
+  // A note about the doors as a whole opens onto them.
+  const batchNote = markFor('batch');
   return (
     <section
       aria-label="Door details"
@@ -1026,6 +1044,7 @@ export function BatchDoorsDetail({
       data-batch-kind={node.kind}
       data-topology-state={node.topologyState}
       {...(node.repairIntent?.markOwner === undefined ? findingAnchor(node.owner) : {})}
+      data-door-note-focus={batchNote?.focusKey}
       tabIndex={-1}
     >
       <div className="door-body" data-authoring-locked={locked || undefined} inert={locked}>

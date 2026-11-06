@@ -18,7 +18,6 @@ import {
   BatchDoorsDetail,
   BatchDoorsRepair,
   BatchExitPicker,
-  DoorChips,
   DoorNotes,
   DoorRowsHeader,
 } from './DecisionWorkbench';
@@ -28,6 +27,9 @@ import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { PhantomExitDoor } from './PhantomExitDoor';
 import { BossDoorRewardPoolRow } from './OccurrenceDirectRoomWorkbench';
 import { useDoorNotes, type DoorNoteMark, type DoorNoteTarget } from './doorNotes';
+
+/** The hidden door's chip on the Doors open row. */
+const hiddenDoorChip = 'hidden';
 import {
   inspectorLifecycleBoundaryContent,
   inspectorRoomActionContent,
@@ -115,6 +117,7 @@ function ReturnButton({ target }: { readonly target: NonNullable<OccurrenceNode[
 }
 
 interface RoomDoorsInput {
+  readonly activeNote: DoorNoteTarget | undefined;
   readonly batch: BatchNode | undefined;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
@@ -130,6 +133,7 @@ interface RoomDoorsInput {
  * way (unreached, past the end, no next room) has no last row.
  */
 function roomTimelineDoors({
+  activeNote,
   batch,
   interactions,
   markFor,
@@ -141,6 +145,16 @@ function roomTimelineDoors({
   const relation = planEnd?.relation;
   // Past the plan end the doors are dormant; only the action that moves the end stays.
   if (relation === 'pastEnd') return undefined;
+  // The hidden door has a chip; a note on the doors as a whole has no row.
+  const noteHighlight =
+    activeNote === undefined
+      ? {}
+      : {
+          activeNote: {
+            ...(activeNote === 'hiddenDoor' ? { chip: hiddenDoorChip } : {}),
+            ownRow: activeNote !== 'batch',
+          },
+        };
   const idPrefix = `occurrence-${node.room.occurrenceId}`;
   const endAction = <PlanEndAction planEnd={planEnd} />;
   const leaveRow = (
@@ -171,6 +185,7 @@ function roomTimelineDoors({
       ? {}
       : {
           ...(store.kind === 'editor' ? { findingOwners: [store.address] } : {}),
+          ...noteHighlight,
           detail: (
             <section aria-label="Door details" className="door-workbench timeline-doors-detail">
               <div className="door-batch">
@@ -204,7 +219,8 @@ function roomTimelineDoors({
   );
   if (batch !== undefined) {
     return {
-      summary: <DoorChips chips={batchDoorChips(batch, lockedAsOpened)} />,
+      ...noteHighlight,
+      summary: { chips: batchDoorChips(batch, lockedAsOpened) },
       findingOwners: [...batchDoorFindingOwners(batch), ...unlockOwners],
       ...(lockedDoors === undefined
         ? {}
@@ -276,21 +292,20 @@ function roomTimelineDoors({
         ...(phantom === undefined
           ? {}
           : {
-              summary: (
-                <DoorChips
-                  chips={[
-                    {
-                      key: 'hidden',
-                      label: 'Hidden door',
-                      ...(phantom.room.icon === undefined ? {} : { roomIcon: phantom.room.icon }),
-                      rewards:
-                        phantom.reward.rewardType === undefined
-                          ? []
-                          : [rewardIcon(phantom.reward.rewardType)],
-                    },
-                  ]}
-                />
-              ),
+              ...noteHighlight,
+              summary: {
+                chips: [
+                  {
+                    key: hiddenDoorChip,
+                    label: 'Hidden door',
+                    ...(phantom.room.icon === undefined ? {} : { roomIcon: phantom.room.icon }),
+                    rewards:
+                      phantom.reward.rewardType === undefined
+                        ? []
+                        : [rewardIcon(phantom.reward.rewardType)],
+                  },
+                ],
+              },
               findingOwners: [phantom.address],
               detail: (
                 <section aria-label="Door details" className="door-workbench timeline-doors-detail">
@@ -340,18 +355,16 @@ function roomTimelineDoors({
       return {
         ...(destination.kind === 'room' && destination.roomIcon !== undefined
           ? {
-              summary: (
-                <DoorChips
-                  chips={[
-                    {
-                      key: 'fixed',
-                      label: destination.label,
-                      roomIcon: destination.roomIcon,
-                      rewards: [],
-                    },
-                  ]}
-                />
-              ),
+              summary: {
+                chips: [
+                  {
+                    key: 'fixed',
+                    label: destination.label,
+                    roomIcon: destination.roomIcon,
+                    rewards: [],
+                  },
+                ],
+              },
             }
           : {}),
         ...storeDetail,
@@ -394,8 +407,16 @@ function OccurrenceInspector({
   const batch =
     outgoingDecision ??
     (outgoing?.kind === 'frontier' ? outgoing.frontier.provisionalBatch : undefined);
-  const doorNotes = useDoorNotes(doorNoteSource(node, batch, outgoing));
+  // A note opens its doors the way navigation does: through the owner they repair.
+  const doorNotes = useDoorNotes(doorNoteSource(node, batch, outgoing), (target) =>
+    outgoingDecision !== undefined
+      ? outgoingDecision.owner
+      : target === 'hiddenDoor'
+        ? node.room.phantomExit?.address
+        : undefined,
+  );
   const doors = roomTimelineDoors({
+    activeNote: doorNotes.active,
     batch,
     interactions,
     markFor: doorNotes.markFor,

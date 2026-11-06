@@ -1859,9 +1859,22 @@ select {
   outline: none;
 }
 
-/* Hovering or focusing a value or its note highlights both. */
-:is(.door-note-marked, .door-notes li)[data-note-active] {
+/* Hovering or focusing a value or its note highlights both; shut doors light the chip or title. */
+:is(
+  .door-note-marked,
+  .door-notes li,
+  .timeline-door-chip,
+  .timeline-banner-toggle
+)[data-note-active] {
   background: color-mix(in srgb, var(--selection-accent) 14%, transparent);
+}
+
+.timeline-banner-toggle[data-note-active] {
+  border-radius: 4px;
+}
+
+.door-notes li[data-note-opens] {
+  cursor: pointer;
 }
 
 :is(.door-note-marked, .door-notes li[tabindex]):focus-visible {

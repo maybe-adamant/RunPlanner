@@ -46,7 +46,6 @@ import {
 import { useTimelineReorder } from './useTimelineReorder';
 import { DoorRerollRowReward, DoorsRerollEntry } from './RoomRerolls';
 import { UnlockExitFightControl } from './UnlockExitFightControl';
-import { DoorChips } from './DecisionWorkbench';
 import { RewardWheelWorkbench, SelectWheelRow } from './locals/RewardWheelWorkbench';
 import { doorsOpenToggle, wheelOfferChips } from './doorSummary';
 import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
@@ -344,7 +343,7 @@ export function RoomActionsWorkbench({
       : {
           noun: 'offer' as const,
           detailId: `wheel-${actions.interactionKey}-${phaseWheel.key}-detail`,
-          summary: <DoorChips chips={wheelOfferChips(phaseWheel, 'first')} label="Offer summary" />,
+          summary: { chips: wheelOfferChips(phaseWheel, 'first'), label: 'Offer summary' },
           detail: (
             <RewardWheelWorkbench
               inTimeline
