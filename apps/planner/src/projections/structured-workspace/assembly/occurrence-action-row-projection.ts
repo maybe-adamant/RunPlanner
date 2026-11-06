@@ -1125,7 +1125,6 @@ const FIGHT_GOLD_SOURCE_LABEL: Readonly<
   passiveStore: 'Passive enemies',
   heraclesBounty: 'Heracles',
   medea: 'Medea',
-  urns: 'Urns',
 });
 
 /** "+N" when exact, else "+N ± S" with its standard deviation. */
@@ -1179,18 +1178,11 @@ function roomEntryGold(
 ): Pick<WorkspaceRoomActions, 'entryGold'> {
   const priced = gold?.roomAt(room);
   if (priced?.availability !== 'available') return {};
-  // The room's one urn entry while it joins no fight.
-  const urns = priced.room.gains.find(
-    (gain) => gain.kind === 'urnGold' && gain.fight === undefined && gain.amount !== undefined,
-  )?.amount;
-  const entry =
-    urns === undefined
-      ? undefined
-      : { mean: urns.mean, spread: Math.sqrt(urns.variance), exact: urns.variance === 0 };
+  const entry = priced.room.entry;
   if (entry === undefined || Math.round(entry.mean) === 0) return {};
   const label = fightGoldAmount(entry);
   return {
-    entryGold: Object.freeze({ label, breakdown: `${FIGHT_GOLD_SOURCE_LABEL.urns} ${label}` }),
+    entryGold: Object.freeze({ label, breakdown: `Urns ${label}` }),
   };
 }
 
