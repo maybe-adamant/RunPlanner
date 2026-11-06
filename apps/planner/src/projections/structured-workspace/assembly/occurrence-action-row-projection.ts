@@ -30,6 +30,7 @@ import {
 } from '@run-planner/engine/simulation';
 import type {
   GoldAmount,
+  GoldFightSummary,
   GoldLedger,
   GoldMoments,
   RoomActionRow,
@@ -38,6 +39,7 @@ import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type {
+  WorkspaceFightGold,
   WorkspaceGoldAmount,
   WorkspacePurchaseAffordability,
   WorkspaceRoomActionRow,
@@ -188,6 +190,7 @@ function roomActionsForOccurrence(
   );
   const presentedActionKeys = new Set(presentedRows.map((row) => row.key));
   const goldGains = roomGoldGains(input.gold, owner);
+  const fightGold = roomFightGold(input.gold, owner);
   const actionLabel = (reference: RoomActionReference): string =>
     allProjectedRows.find((row) => row.key === roomActionKey(reference))?.label ??
     occurrenceActionLabel(
@@ -630,6 +633,7 @@ function roomActionsForOccurrence(
         ...purchaseRowProducts(row.reference, address, sourceFamily),
         ...purchaseGold(input.gold, row.owner),
         ...rowGoldGain(goldGains, address),
+        ...rowFightGold(fightGold, address),
         executable: row.executable,
       });
     }),
@@ -1018,6 +1022,8 @@ function roomActionsForOccurrence(
     ...(steadyGrowth.length === 0 ? {} : { steadyGrowth }),
     ...(transcendentEmbryo.length === 0 ? {} : { transcendentEmbryo }),
     ...phaseGold(input.gold, owner),
+    ...phaseFightGold(fightGold),
+    ...roomEntryGold(input.gold, owner),
   });
 }
 
@@ -1058,7 +1064,10 @@ function purchaseGold(
   };
 }
 
-/** The gold each timeline row in the room gains or loses, summed over its ledger gains. */
+/**
+ * The gold each timeline row in the room gains or loses, summed over its ledger
+ * gains; a fight's gold shows as its fight's summary instead.
+ */
 function roomGoldGains(
   gold: GoldLedger | undefined,
   room: OccurrenceAddress,
@@ -1067,7 +1076,8 @@ function roomGoldGains(
   if (priced?.availability !== 'available') return new Map();
   const gains = new Map<string, { mean: number; variance: number }>();
   for (const gain of priced.room.gains) {
-    if (gain.roomAction === undefined || gain.amount === undefined) continue;
+    if (gain.roomAction === undefined || gain.amount === undefined || gain.fight !== undefined)
+      continue;
     const key = semanticAddressKey(gain.roomAction);
     const sum = gains.get(key) ?? { mean: 0, variance: 0 };
     gains.set(key, {
@@ -1094,6 +1104,94 @@ function phaseGold(
       : [Object.freeze({ phaseKey: gain.owner.phaseKey, gold: goldGainLabel(gain.amount) })],
   );
   return bets.length === 0 ? {} : { phaseGold: Object.freeze(bets) };
+}
+
+/** Each fight the room paid, by its fight's key. */
+function roomFightGold(
+  gold: GoldLedger | undefined,
+  room: OccurrenceAddress,
+): ReadonlyMap<string, GoldFightSummary> {
+  const priced = gold?.roomAt(room);
+  if (priced?.availability !== 'available') return new Map();
+  return new Map(
+    priced.room.fights.map((fight) => [semanticAddressKey(fight.fight), fight] as const),
+  );
+}
+
+const FIGHT_GOLD_SOURCE_LABEL: Readonly<
+  Record<GoldFightSummary['breakdown'][number]['source'], string>
+> = Object.freeze({
+  enemies: 'Enemies',
+  passiveStore: 'Passive enemies',
+  heraclesBounty: 'Heracles',
+  medea: 'Medea',
+  urns: 'Urns',
+});
+
+/** "+N" when exact, else "+N ± S" with its standard deviation. */
+function fightGoldAmount(amount: {
+  readonly mean: number;
+  readonly spread: number;
+  readonly exact: boolean;
+}): string {
+  const mean = goldNumber(Math.round(amount.mean));
+  const signed = amount.mean < 0 ? mean : `+${mean}`;
+  return amount.exact ? signed : `${signed} ± ${Math.max(1, Math.round(amount.spread))}`;
+}
+
+function fightGoldLabel(summary: GoldFightSummary): WorkspaceFightGold | undefined {
+  if (Math.round(summary.mean) === 0) return undefined;
+  return Object.freeze({
+    label: fightGoldAmount(summary),
+    breakdown: summary.breakdown
+      .map((line) => `${FIGHT_GOLD_SOURCE_LABEL[line.source]} ${fightGoldAmount(line)}`)
+      .join(' · '),
+  });
+}
+
+/** The fight gold of a challenge switch's or locked door's press. */
+function rowFightGold(
+  fights: ReadonlyMap<string, GoldFightSummary>,
+  row: SemanticAddress,
+): Pick<WorkspaceRoomActionRow, 'fightGold'> {
+  const fight = fights.get(semanticAddressKey(row));
+  const gold = fight === undefined ? undefined : fightGoldLabel(fight);
+  return gold === undefined ? {} : { fightGold: gold };
+}
+
+/** Each encounter phase's fight gold, for its end banner. */
+function phaseFightGold(
+  fights: ReadonlyMap<string, GoldFightSummary>,
+): Pick<WorkspaceRoomActions, 'phaseFightGold'> {
+  const phases = [...fights.values()].flatMap((fight) => {
+    const gold = fight.fight.kind === 'encounterPhase' ? fightGoldLabel(fight) : undefined;
+    return fight.fight.kind !== 'encounterPhase' || gold === undefined
+      ? []
+      : [Object.freeze({ phaseKey: fight.fight.phaseKey, gold })];
+  });
+  return phases.length === 0 ? {} : { phaseFightGold: Object.freeze(phases) };
+}
+
+/** The room's entry gold, its urns, shown on its Room entered banner. */
+function roomEntryGold(
+  gold: GoldLedger | undefined,
+  room: OccurrenceAddress,
+): Pick<WorkspaceRoomActions, 'entryGold'> {
+  const priced = gold?.roomAt(room);
+  if (priced?.availability !== 'available') return {};
+  // The room's one urn entry while it joins no fight.
+  const urns = priced.room.gains.find(
+    (gain) => gain.kind === 'urnGold' && gain.fight === undefined && gain.amount !== undefined,
+  )?.amount;
+  const entry =
+    urns === undefined
+      ? undefined
+      : { mean: urns.mean, spread: Math.sqrt(urns.variance), exact: urns.variance === 0 };
+  if (entry === undefined || Math.round(entry.mean) === 0) return {};
+  const label = fightGoldAmount(entry);
+  return {
+    entryGold: Object.freeze({ label, breakdown: `${FIGHT_GOLD_SOURCE_LABEL.urns} ${label}` }),
+  };
 }
 
 /** "+N" when exact, "+~N" with spread, "−N" for a loss. */

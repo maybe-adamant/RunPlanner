@@ -1,4 +1,5 @@
 import type {
+  WorkspaceFightGold,
   WorkspaceGoldAmount,
   WorkspacePurchaseAffordability,
 } from '@planner/projections/structured-workspace';
@@ -21,6 +22,24 @@ export function GoldAmount({
         source={rewardArtwork.Currency ?? undefined}
       />
       <span className="gold-amount-value">{amount.label}</span>
+      <span className="visually-hidden"> gold</span>
+    </span>
+  );
+}
+
+/** A fight's gold, its breakdown by source on hover and focus. */
+export function FightGoldAmount({ gold }: { readonly gold: WorkspaceFightGold }) {
+  return (
+    <span
+      className="gold-amount timeline-gold-gained timeline-fight-gold"
+      {...hintProps(gold.breakdown)}
+      tabIndex={0}
+    >
+      <ArtworkIcon
+        className="artwork-label-icon-small"
+        source={rewardArtwork.Currency ?? undefined}
+      />
+      <span className="gold-amount-value">{gold.label}</span>
       <span className="visually-hidden"> gold</span>
     </span>
   );

@@ -1292,6 +1292,8 @@
   grid-row: 1;
   grid-column: 3 / -1;
   grid-template-columns: subgrid;
+  /* The row's column gap, so the banner's money ends where a row's does. */
+  column-gap: inherit;
   align-items: center;
 }
 
@@ -1429,7 +1431,7 @@
     > [data-timeline-cell='editors'] {
     display: flex;
     grid-row: 1;
-    grid-column: 5 / -1;
+    grid-column: 5;
     justify-content: flex-end;
   }
 }

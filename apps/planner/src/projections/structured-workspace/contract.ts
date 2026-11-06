@@ -90,6 +90,7 @@ export type {
   WorkspaceFountainRarityInteraction,
   WorkspaceJudgmentArcanaInteraction,
   WorkspaceRoomActionInteraction,
+  WorkspaceFightGold,
   WorkspaceGoldAmount,
   WorkspacePurchaseAffordability,
   WorkspaceRoomActionProposal,

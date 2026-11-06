@@ -52,7 +52,7 @@ import { doorsOpenToggle, wheelOfferChips } from './doorSummary';
 import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
 import { RoomObjectEntry } from './commerce/RoomObjectEntry';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
-import { GoldAmount, PurchaseCost } from './commerce/GoldAmount';
+import { FightGoldAmount, GoldAmount, PurchaseCost } from './commerce/GoldAmount';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import {
@@ -492,6 +492,13 @@ export function RoomActionsWorkbench({
       }
     }
   }
+  const endedPhaseKeys = new Set(
+    visibleTimeline.flatMap((entry) =>
+      entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd'
+        ? [entry.boundary.phaseKey]
+        : [],
+    ),
+  );
   const renderBoundary = (
     entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>,
   ) => {
@@ -508,6 +515,28 @@ export function RoomActionsWorkbench({
       boundary.kind === 'encounterEnd'
         ? actions?.phaseGold?.find((bet) => bet.phaseKey === boundary.phaseKey)
         : undefined;
+    // A fight's gold sits on its end banner, or where a boss phase has none, on its defeat.
+    // A room's urn gold shows as it is entered.
+    const fightGold =
+      boundary.kind === 'encounterEnd' ||
+      (boundary.kind === 'bossDefeated' && !endedPhaseKeys.has(boundary.phaseKey))
+        ? actions?.phaseFightGold?.find((fight) => fight.phaseKey === boundary.phaseKey)?.gold
+        : boundary.kind === 'roomEntered'
+          ? actions?.entryGold
+          : undefined;
+    const betAmount =
+      phaseBet === undefined ? undefined : (
+        <GoldAmount
+          amount={phaseBet.gold}
+          className={`timeline-gold-gained${phaseBet.gold.loss ? ' timeline-gold-lost' : ''}`}
+        />
+      );
+    // Beside fight gold, the bet ends the banner's controls, just before the money column.
+    const bannerControls = [
+      ...modifiers,
+      ...(fightGold === undefined || betAmount === undefined ? [] : [betAmount]),
+    ];
+    const bannerMoney = fightGold !== undefined ? <FightGoldAmount gold={fightGold} /> : betAmount;
     return (
       <Fragment key={entry.boundary.key}>
         <LifecycleBoundaryRow
@@ -515,22 +544,17 @@ export function RoomActionsWorkbench({
           {...(phaseByKey.get(entry.boundary.key) === undefined
             ? {}
             : { phase: phaseByKey.get(entry.boundary.key)! })}
-          {...(modifiers.length === 0
+          {...(bannerControls.length === 0
             ? {}
             : {
-                controls: modifiers.map((node, index) => <Fragment key={index}>{node}</Fragment>),
+                controls: bannerControls.map((node, index) => (
+                  <Fragment key={index}>{node}</Fragment>
+                )),
               })}
           editors={
-            <>
-              {phaseBet === undefined ? null : (
-                <span className="timeline-banner-gold">
-                  <GoldAmount
-                    amount={phaseBet.gold}
-                    className={`timeline-gold-gained${phaseBet.gold.loss ? ' timeline-gold-lost' : ''}`}
-                  />
-                </span>
-              )}
-            </>
+            bannerMoney === undefined ? undefined : (
+              <span className="timeline-banner-gold">{bannerMoney}</span>
+            )
           }
           label={entry.label}
           toggle={doorsOpen === undefined ? undefined : doorsOpenToggle(doorsOpen)}
@@ -844,7 +868,17 @@ export function RoomActionsWorkbench({
             </>
           }
           money={
-            row.goldGained === undefined || row.price !== undefined ? (
+            row.fightGold !== undefined ? (
+              <span className="purchase-cost">
+                {row.goldGained === undefined ? null : (
+                  <GoldAmount
+                    amount={row.goldGained}
+                    className={`timeline-gold-gained${row.goldGained.loss ? ' timeline-gold-lost' : ''}`}
+                  />
+                )}
+                <FightGoldAmount gold={row.fightGold} />
+              </span>
+            ) : row.goldGained === undefined || row.price !== undefined ? (
               <PurchaseCost
                 {...(row.affordability === undefined ? {} : { affordability: row.affordability })}
                 {...(row.price === undefined ? {} : { price: row.price })}

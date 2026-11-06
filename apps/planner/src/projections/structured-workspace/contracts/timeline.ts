@@ -69,6 +69,12 @@ export interface WorkspaceGoldAmount {
   readonly label: string;
 }
 
+/** The gold one fight paid, with one line per source for its hover. */
+export interface WorkspaceFightGold {
+  readonly label: string;
+  readonly breakdown: string;
+}
+
 /** The chance the gold held covers a purchase, as a whole percent. */
 export interface WorkspacePurchaseAffordability {
   readonly label: string;
@@ -186,8 +192,10 @@ export interface WorkspaceRoomActionRow {
   readonly travelDealLine?: WorkspaceTravelDealLine;
   /** What this purchase costs; absent for a free item or where the plan is not evaluated. */
   readonly price?: WorkspaceGoldAmount;
-  /** Gold this row gains or loses, from the ledger. */
+  /** Gold this row gains or loses, from the ledger, apart from its fight's. */
   readonly goldGained?: WorkspaceGoldAmount & { readonly loss?: true };
+  /** The gold of the fight this row starts: a challenge switch's or locked door's press. */
+  readonly fightGold?: WorkspaceFightGold;
   /** The chance the gold held covers the price; absent where the gold held is unknown. */
   readonly affordability?: WorkspacePurchaseAffordability;
   /** Undoes this purchase or collect with its own command. */
@@ -245,6 +253,13 @@ export interface WorkspaceRoomActions {
   readonly phaseGold?: readonly {
     readonly phaseKey: string;
     readonly gold: WorkspaceGoldAmount & { readonly loss?: true };
+  }[];
+  /** The room's urn gold, shown on its Room entered banner. */
+  readonly entryGold?: WorkspaceFightGold;
+  /** Each encounter phase's fight gold, shown on its end banner. */
+  readonly phaseFightGold?: readonly {
+    readonly phaseKey: string;
+    readonly gold: WorkspaceFightGold;
   }[];
 }
 
