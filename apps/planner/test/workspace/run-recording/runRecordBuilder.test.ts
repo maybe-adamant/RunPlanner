@@ -425,37 +425,58 @@ describe('run record builder', () => {
     });
   });
 
-  it("records a lock host's lock flag and the locked doors fought open in it", () => {
-    const locked = { lockEncounter: 'GeneratedG_ExtraDoor', lockExtraExits: true } as const;
+  it("records a lock host's fights from the next room's entry save", () => {
+    const host = (name: string, values: Partial<SavedRoom> = {}) =>
+      room(name, { lockEncounter: 'GeneratedG_ExtraDoor', ...values });
+    const fought = (count: number) => ({ encountersCompleted: { GeneratedG_ExtraDoor: count } });
     const record = buildRunRecord([
-      save({ history: [], current: room('G_Combat05', locked) }),
+      save({ history: [], current: host('G_Combat05', { lockExtraExits: true }) }),
+      // No save follows the doors opening: the postReward save still holds the room's own depth.
+      save({
+        kind: 'postReward',
+        history: [],
+        current: host('G_Combat05', { lockExtraExits: true, encounterDepth: 2 }),
+      }),
       save({
         history: ['G_Combat05'],
-        current: room('G_Combat09', { lockEncounter: 'GeneratedG_ExtraDoor' }),
-        departure: room('G_Combat05', locked),
-        run: { encountersCompleted: { GeneratedG_ExtraDoor: 2 } },
+        current: host('G_Combat09'),
+        departure: host('G_Combat05', { lockExtraExits: true, encounterDepth: 4 }),
+        run: fought(2),
+      }),
+      save({
+        kind: 'postReward',
+        history: ['G_Combat05'],
+        current: host('G_Combat09', { encounterDepth: 2 }),
+        run: fought(2),
       }),
       save({
         history: ['G_Combat05', 'G_Combat09'],
-        current: room('G_Shop01'),
-        departure: room('G_Combat09', { lockEncounter: 'GeneratedG_ExtraDoor' }),
-        run: { encountersCompleted: { GeneratedG_ExtraDoor: 2 } },
+        current: host('G_Combat10', { lockExtraExits: true }),
+        departure: host('G_Combat09', { encounterDepth: 2 }),
+        run: fought(2),
       }),
       save({
-        history: ['G_Combat05', 'G_Combat09', 'G_Shop01'],
-        current: room('G_PreBoss01'),
-        departure: room('G_Shop01'),
-        run: { encountersCompleted: { GeneratedG_ExtraDoor: 2 } },
+        kind: 'postReward',
+        history: ['G_Combat05', 'G_Combat09'],
+        current: host('G_Combat10', { lockExtraExits: true, encounterDepth: 2 }),
+        run: fought(2),
+      }),
+      // A count its departure depth does not rise with stays unread.
+      save({
+        history: ['G_Combat05', 'G_Combat09', 'G_Combat10'],
+        current: host('G_Combat11'),
+        departure: host('G_Combat10', { lockExtraExits: true, encounterDepth: 2 }),
+        run: fought(3),
       }),
     ]);
-    // A room that can lock keeps its count, zero included; which doors locked is not saved.
+    // Which doors were fought is not saved; the run ends in the last room, which no entry save follows.
     expect(
       record.rooms.map((entry) => [entry.name, entry.lockedExits, entry.lockedDoorFights]),
     ).toEqual([
       ['G_Combat05', true, 2],
       ['G_Combat09', undefined, 0],
-      ['G_Shop01', undefined, undefined],
-      ['G_PreBoss01', undefined, undefined],
+      ['G_Combat10', true, undefined],
+      ['G_Combat11', undefined, undefined],
     ]);
   });
 

@@ -254,4 +254,30 @@ describe('run record capture fixtures', () => {
       record.rooms.flatMap((entry, index) => (entry.olympusEagleSpawn ? [index] : [])),
     ).toEqual([38]);
   });
+
+  // Locks a probe forced: G_Combat04 and G_Combat08 fought and left by door 2 of 2, G_Combat09
+  // fought door 3 of 3 and left by door 1; the saves never name the fought door.
+  it('records each lock fight at the next room entry save, where it first shows', () => {
+    const record = fixture('oceanus-locks');
+    expect(
+      record.rooms.flatMap((entry) =>
+        entry.lockedDoorFights === undefined
+          ? []
+          : [`${entry.name}:${entry.doors.length}:${entry.lockedDoorFights}`],
+      ),
+    ).toEqual([
+      'G_Combat01:3:0',
+      'G_Combat04:2:1',
+      'G_Combat08:2:1',
+      'G_Combat09:3:1',
+      'G_Combat07:2:0',
+      'G_Combat10:2:0',
+      'G_Combat11:2:0',
+      'G_Combat12:2:0',
+      'G_Combat13:2:0',
+      'G_Combat14:3:0',
+    ]);
+    // G_Combat08's rerolls: one before its fight, one on the fought door after it.
+    expect(record.rooms[4]).toMatchObject({ name: 'G_Combat08', rerolls: 2 });
+  });
 });

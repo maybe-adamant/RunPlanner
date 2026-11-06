@@ -151,9 +151,12 @@ export interface RunRecordRoom {
    */
   readonly lockedExits?: true;
   /**
-   * Locked doors fought open in this visit: the gain of the room's
-   * `LockExtraExitsWithEncounter` in `EncountersCompletedCache`, zero kept in a
-   * room that can lock; absent in a record made before it was read.
+   * Locked doors fought open in this visit, zero kept in a room that can lock:
+   * the gain of the room's `LockExtraExitsWithEncounter` in
+   * `EncountersCompletedCache` by the next room's entry save, the first save
+   * after its doors open. Which doors were fought is not saved. Absent in a
+   * room no entry save follows, where the departure record's `EncounterDepth`
+   * rose less than the count, and in a record made before it was read.
    */
   readonly lockedDoorFights?: number;
   /** Run state of the room's entry save, which leaving the previous room writes. */

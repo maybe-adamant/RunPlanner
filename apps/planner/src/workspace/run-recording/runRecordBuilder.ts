@@ -534,9 +534,6 @@ function buildRoom(
         : undefined,
     ),
   });
-  const lockEncounter = entered.lockEncounter ?? settled.lockEncounter;
-  const gainOf = (from: number | undefined, to: number | undefined) =>
-    Math.max(0, (to ?? 0) - (from ?? 0));
   // The Forfeit skip count restarts in each biome.
   const forfeitSkips =
     after.biomeBoonSkipCount >= before.biomeBoonSkipCount
@@ -584,18 +581,35 @@ function buildRoom(
       combatThisVisit && settled.olympusEagleSpawn ? (true as const) : undefined,
     ),
     ...optional('lockedExits', entered.lockExtraExits ?? settled.lockExtraExits),
-    // A room that can lock keeps its count of fights, zero included.
     ...optional(
       'lockedDoorFights',
-      lockEncounter === undefined
-        ? undefined
-        : gainOf(
-            before.encountersCompleted?.[lockEncounter],
-            after.encountersCompleted?.[lockEncounter],
-          ),
+      lockedDoorFights(room, entered.lockEncounter ?? settled.lockEncounter),
     ),
     entry: roomEntry(room.entry, saves[room.index - 1]?.entry),
   };
+}
+
+/**
+ * Locked doors a lock host fought open, zero included. No save follows the
+ * doors opening, so the fights show first at the next room's entry save: the
+ * lock fight's completions gained since the room's entry, and its departure
+ * record's encounter depth over the depth its doors opened at, which each fight
+ * raises. A smaller depth rise contradicts the count, which stays unread, as
+ * it does in a room no entry save follows.
+ */
+function lockedDoorFights(room: RoomSaves, encounter: string | undefined): number | undefined {
+  const next = room.closing;
+  if (encounter === undefined || next?.kind !== 'entry') return undefined;
+  const fights = Math.max(
+    0,
+    (next.run.encountersCompleted?.[encounter] ?? 0) -
+      (room.entry.run.encountersCompleted?.[encounter] ?? 0),
+  );
+  const opened = room.postReward?.currentRoom.encounterDepth;
+  const departed = room.departure?.encounterDepth;
+  if (opened !== undefined && departed !== undefined && departed - opened < fights)
+    return undefined;
+  return fights;
 }
 
 /** Entry counts by name of each reward store. */

@@ -219,6 +219,8 @@ export interface SavedRoom {
   readonly lockEncounter?: string;
   /** `LockExtraExits`: the room locks doors after its first. */
   readonly lockExtraExits?: true;
+  /** `EncounterDepth`: encounters started in the room, each locked-door fight included. */
+  readonly encounterDepth?: number;
 }
 
 export class SaveCheckpointError extends Error {
@@ -465,6 +467,7 @@ function room(value: LuaValue | undefined): SavedRoom | undefined {
     olympusEagleSpawn: value.OlympusEagleSpawn === true,
     ...optional('lockEncounter', text(value.LockExtraExitsWithEncounter)),
     ...optional('lockExtraExits', value.LockExtraExits === true ? (true as const) : undefined),
+    ...optional('encounterDepth', number(value.EncounterDepth)),
     ...optional(
       'spentRerolls',
       Object.keys(counts(value.SpentRerolls)).length > 0 ? counts(value.SpentRerolls) : undefined,

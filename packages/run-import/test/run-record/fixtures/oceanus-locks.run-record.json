@@ -1,0 +1,954 @@
+{
+  "recordVersion": 1,
+  "run": { "runCount": 1020, "startedAt": 1793927973 },
+  "route": { "biomes": ["F", "G"], "dream": false },
+  "outcome": { "kind": "abandoned", "endingRoom": "G_PreBoss01" },
+  "loadout": {
+    "weapon": "WeaponTorch",
+    "aspect": { "name": "TorchDetonateAspect", "rarity": "Legendary" },
+    "familiar": { "name": "RavenFamiliar", "trait": "CritFamiliar", "level": 4 },
+    "keepsake": { "name": "TimedBuffKeepsake", "rarity": "Epic" },
+    "arcana": [
+      { "name": "BonusDodge", "level": 3 },
+      { "name": "BonusHealth", "level": 3 },
+      { "name": "CastBuff", "level": 3 },
+      { "name": "ChanneledBlock", "level": 3 },
+      { "name": "ChanneledCast", "level": 3 },
+      { "name": "DoorReroll", "level": 3 },
+      { "name": "EpicRarityBoost", "level": 3 },
+      { "name": "MaxHealthPerRoom", "level": 3 },
+      { "name": "MetaToRunUpgrade", "level": 3 },
+      { "name": "ScreenReroll", "level": 3 },
+      { "name": "SprintShield", "level": 3 },
+      { "name": "StartingGold", "level": 3 },
+      { "name": "StatusVulnerability", "level": 3 },
+      { "name": "TradeOff", "level": 3 }
+    ],
+    "vows": {
+      "EnemyRespawnShrineUpgrade": 0,
+      "ShopPricesShrineUpgrade": 0,
+      "BossDifficultyShrineUpgrade": 0,
+      "EnemyCountShrineUpgrade": 0,
+      "EnemyShieldShrineUpgrade": 0,
+      "LimitGraspShrineUpgrade": 0,
+      "HealingReductionShrineUpgrade": 0,
+      "BiomeSpeedShrineUpgrade": 3,
+      "BanUnpickedBoonsShrineUpgrade": 0,
+      "MinibossCountShrineUpgrade": 0,
+      "EnemyDamageShrineUpgrade": 0,
+      "BoonSkipShrineUpgrade": 0,
+      "EnemyEliteShrineUpgrade": 0,
+      "NextBiomeEnemyShrineUpgrade": 0,
+      "BoonManaReserveShrineUpgrade": 0,
+      "EnemyHealthShrineUpgrade": 0,
+      "EnemySpeedShrineUpgrade": 2
+    },
+    "startingGold": 300,
+    "startingTraits": []
+  },
+  "rooms": [
+    {
+      "name": "F_Opening01",
+      "reward": { "type": "Boon", "lootName": "HephaestusUpgrade", "store": "RunProgress" },
+      "doors": [{ "door": 560571, "room": "G_Intro" }],
+      "exit": "G_Intro",
+      "encounters": [
+        {
+          "name": "OpeningGeneratedF",
+          "difficulty": 35,
+          "waves": [
+            {
+              "difficulty": 35,
+              "spawns": [
+                { "enemy": "Screamer", "count": 2, "generated": true },
+                { "enemy": "SiegeVine", "count": 1, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Screamer_Elite", "SiegeVine_Elite"]
+        }
+      ],
+      "uses": { "ErebusExitDoor": 1 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [{ "name": "VanillaState", "worldTime": 41.466668829322 }],
+        "removed": [],
+        "upgraded": []
+      },
+      "entry": {
+        "traits": {
+          "TimedBuffKeepsake": { "rarity": "Epic" },
+          "CritFamiliar": { "level": 4 },
+          "FamiliarRavenResourceBonus": { "level": 4 },
+          "FamiliarRavenAttackDuration": { "level": 4 },
+          "TorchDetonateAspect": { "rarity": "Legendary" },
+          "MetaToRunMetaUpgrade": { "rarity": "Epic" },
+          "PanelRerollMetaUpgrade": { "rarity": "Epic" },
+          "HealthManaBonusMetaUpgrade": { "rarity": "Epic" },
+          "EffectVulnerabilityMetaUpgrade": { "rarity": "Epic" },
+          "StartingGoldMetaUpgrade": { "rarity": "Epic" },
+          "DoorRerollMetaUpgrade": { "rarity": "Epic" },
+          "DodgeBonusMetaUpgrade": { "rarity": "Epic" },
+          "SprintShieldMetaUpgrade": { "rarity": "Epic" },
+          "InsideCastBuffMetaUpgrade": { "rarity": "Epic" },
+          "ChannelSlowMetaUpgrade": { "rarity": "Epic" },
+          "BossShieldMetaUpgrade": { "rarity": "Epic" },
+          "ChamberHealthMetaUpgrade": { "rarity": "Epic" },
+          "EpicRarityBoostMetaUpgrade": { "rarity": "Epic" },
+          "RerollTradeOffMetaUpgrade": { "rarity": "Epic" }
+        },
+        "keepsake": "TimedBuffKeepsake",
+        "maxHealth": 70,
+        "rewardStores": {
+          "SubRoomRewards": {
+            "MaxManaDropSmall": 1,
+            "MaxHealthDropSmall": 1,
+            "EmptyMaxHealthSmallDrop": 1,
+            "RoomMoneyTinyDrop": 1,
+            "AirBoost": 1,
+            "EarthBoost": 1,
+            "FireBoost": 1,
+            "WaterBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 2,
+            "MetaCardPointsCommonDrop": 2,
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 2,
+            "MinorTalentDrop": 2
+          },
+          "HubRewards": {
+            "MaxHealthDropBig": 1,
+            "MaxManaDropBig": 1,
+            "WeaponUpgrade": 1,
+            "HermesUpgrade": 1,
+            "SpellDrop": 1,
+            "Boon": 5
+          },
+          "TartarusRewards": {
+            "RoomMoneyTripleDrop": 1,
+            "StackUpgradeTriple": 1,
+            "WeaponUpgrade": 2,
+            "Devotion": 1,
+            "TalentBigDrop": 1,
+            "Boon": 3
+          },
+          "InvalidOverrides": {},
+          "FieldsOptionalRewards": {
+            "MaxManaDropSmall": 3,
+            "MaxHealthDropSmall": 3,
+            "RoomMoneyTinyDrop": 3,
+            "RoomRewardHealDrop": 1,
+            "ArmorBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 1,
+            "MetaCardPointsCommonDrop": 4,
+            "MinorTalentDrop": 2
+          },
+          "Secrets": { "TrialUpgrade": 1 },
+          "MinorRunProgress": {
+            "MaxManaDropSmall": 3,
+            "MaxHealthDropSmall": 3,
+            "EmptyMaxHealthSmallDrop": 2,
+            "MinorTalentDrop": 2,
+            "StoreRewardRandomStack": 1,
+            "ElementalBoost": 1,
+            "ArmorBoost": 1
+          },
+          "SubRoomRewardsHard": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 2
+          },
+          "FieldsCombatRewards": {},
+          "TyphonBossRewards": {
+            "Boon": 2,
+            "TalentBigDrop": 1,
+            "StackUpgradeTriple": 1,
+            "WeaponUpgrade": 2
+          },
+          "PreHubRewards": {},
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 3
+          },
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 4,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 8,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        },
+        "numRerolls": 10,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_Intro",
+      "reward": { "store": "RunProgress" },
+      "doors": [{ "door": 558528, "room": "G_Combat01", "reward": { "type": "GiftDrop" } }],
+      "exit": "G_Combat01",
+      "encounters": [{ "name": "Empty" }],
+      "uses": { "OceanusExitDoor": 1 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": ["VanillaState"], "upgraded": [] },
+      "entry": {
+        "traits": { "VanillaState": {} },
+        "keepsake": "TimedBuffKeepsake",
+        "maxHealth": 70,
+        "numRerolls": 10,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_Combat01",
+      "reward": { "type": "GiftDrop", "store": "MetaProgress" },
+      "doors": [
+        {
+          "door": 558233,
+          "room": "G_Combat04",
+          "reward": { "type": "Boon", "lootName": "HeraUpgrade" }
+        },
+        { "door": 568429, "room": "G_Combat07", "reward": { "type": "WeaponUpgrade" } },
+        { "door": 2000165, "room": "Chaos_02", "reward": { "type": "TrialUpgrade" } }
+      ],
+      "exit": "G_Combat04",
+      "encounters": [
+        {
+          "name": "GeneratedG",
+          "difficulty": 220,
+          "waves": [
+            {
+              "difficulty": 110,
+              "spawns": [{ "enemy": "FishSwarmerSquad", "count": 7, "generated": true }]
+            },
+            {
+              "difficulty": 110,
+              "spawns": [
+                { "enemy": "FishSwarmerSquad", "count": 5, "generated": true },
+                { "enemy": "WaterUnit", "count": 1, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["FishSwarmerSquad", "WaterUnit_Elite"]
+        }
+      ],
+      "uses": { "OceanusExitDoor": 1 },
+      "kills": { "FishSwarmer": 20 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [{ "name": "FireEssence", "worldTime": 59.728892008774 }],
+        "removed": [],
+        "upgraded": []
+      },
+      "toolElements": ["ToolPickaxe2"],
+      "lockedExits": true,
+      "lockedDoorFights": 0,
+      "entry": {
+        "lostTraits": ["VanillaState"],
+        "keepsake": "TimedBuffKeepsake",
+        "maxHealth": 70,
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 4,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 8,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        },
+        "numRerolls": 10,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_Combat04",
+      "reward": { "type": "Boon", "lootName": "HeraUpgrade", "store": "RunProgress" },
+      "doors": [
+        {
+          "door": 558528,
+          "room": "G_Combat07",
+          "reward": { "type": "Boon", "lootName": "DemeterUpgrade" }
+        },
+        { "door": 568712, "room": "G_Combat08", "reward": { "type": "SpellDrop" } }
+      ],
+      "exit": "G_Combat08",
+      "encounters": [
+        {
+          "name": "GeneratedG",
+          "difficulty": 260,
+          "waves": [
+            {
+              "difficulty": 130,
+              "spawns": [{ "enemy": "FishmanMelee", "count": 3, "generated": true }]
+            },
+            {
+              "difficulty": 130,
+              "spawns": [
+                { "enemy": "FishmanMelee", "count": 2, "generated": true },
+                { "enemy": "Radiator2_Elite", "count": 2, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["FishmanMelee", "Radiator2"]
+        }
+      ],
+      "uses": { "OceanusExitDoor": 2 },
+      "kills": { "FishSwarmer": 25, "SteamWallTrap": 2, "FishmanMelee": 3, "Breakable_G": 17 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "lockedExits": true,
+      "lockedDoorFights": 1,
+      "entry": {
+        "traits": { "FireEssence": {} },
+        "keepsake": "TimedBuffKeepsake",
+        "elements": { "Fire": 1 },
+        "maxHealth": 70,
+        "rewardStores": {
+          "Secrets": {},
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 1,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 2
+          }
+        },
+        "numRerolls": 10,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_Combat08",
+      "reward": { "type": "SpellDrop", "store": "RunProgress" },
+      "doors": [
+        { "door": 558528, "room": "G_Combat09", "reward": { "type": "MetaCurrencyBigDrop" } },
+        { "door": 569119, "room": "G_Combat07", "reward": { "type": "GiftDrop" } }
+      ],
+      "exit": "G_Combat09",
+      "encounters": [
+        {
+          "name": "GeneratedG",
+          "difficulty": 300,
+          "waves": [
+            {
+              "difficulty": 90,
+              "spawns": [{ "enemy": "WaterUnit_Elite", "count": 2, "generated": true }]
+            },
+            {
+              "difficulty": 45,
+              "spawns": [
+                { "enemy": "WaterUnit_Elite", "count": 1, "generated": true },
+                { "enemy": "FishmanMelee_Elite", "count": 1, "generated": true }
+              ]
+            },
+            {
+              "difficulty": 165,
+              "spawns": [
+                { "enemy": "WaterUnit_Elite", "count": 1, "generated": true },
+                { "enemy": "FishSwarmerSquad_Elite", "count": 4, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["FishSwarmerSquad", "FishmanMelee", "WaterUnit_Elite"]
+        }
+      ],
+      "uses": { "OceanusExitDoor": 2 },
+      "kills": { "WaterUnit_Elite": 2, "FishmanMelee_Elite": 1, "Breakable_G": 18 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [
+          { "name": "RoomRewardMaxManaTrait", "worldTime": 85.486869557062 },
+          { "name": "RoomRewardMaxHealthTrait", "worldTime": 85.486869557062 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "rerolls": 2,
+      "lockedExits": true,
+      "lockedDoorFights": 1,
+      "entry": {
+        "keepsake": "TimedBuffKeepsake",
+        "elements": { "Fire": 1 },
+        "maxHealth": 70,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 1,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "TalentDrop": 1,
+            "Boon": 1
+          }
+        },
+        "numRerolls": 10,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_Combat09",
+      "reward": { "type": "MetaCurrencyBigDrop", "store": "MetaProgress" },
+      "doors": [
+        { "door": 558528, "room": "G_Combat10", "reward": { "type": "RoomMoneyDrop" } },
+        { "door": 563251, "room": "G_Combat11", "reward": { "type": "MaxManaDrop" } },
+        { "door": 569281, "room": "G_Combat07", "reward": { "type": "HermesUpgrade" } }
+      ],
+      "exit": "G_Combat07",
+      "encounters": [
+        {
+          "name": "GeneratedG",
+          "difficulty": 340,
+          "waves": [
+            {
+              "difficulty": 170,
+              "spawns": [{ "enemy": "FishSwarmerSquad", "count": 11, "generated": true }]
+            },
+            {
+              "difficulty": 170,
+              "spawns": [
+                { "enemy": "FishSwarmerSquad", "count": 7, "generated": true },
+                { "enemy": "Guard2_Elite", "count": 2, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["FishSwarmerSquad", "Guard2"]
+        }
+      ],
+      "uses": { "OceanusExitDoor": 2 },
+      "kills": { "Breakable_G": 4, "FishSwarmer_Elite": 2, "FishmanMelee": 2, "FishSwarmer": 30 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "store": {
+        "kind": "well",
+        "stock": [
+          { "slot": 1, "name": "TemporaryDoorHealTrait", "type": "Trait" },
+          { "slot": 2, "name": "TemporaryImprovedCastTrait", "type": "Trait" },
+          { "slot": 3, "name": "TemporaryImprovedExTrait", "type": "Trait" }
+        ],
+        "purchases": [],
+        "spawned": true
+      },
+      "lockedExits": true,
+      "lockedDoorFights": 1,
+      "entry": {
+        "traits": { "RoomRewardMaxManaTrait": {}, "RoomRewardMaxHealthTrait": {} },
+        "keepsake": "TimedBuffKeepsake",
+        "elements": { "Fire": 1 },
+        "maxHealth": 75,
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 8,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 16,
+            "MetaCardPointsCommonBigDrop": 7
+          }
+        },
+        "numRerolls": 8,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_Combat07",
+      "reward": { "type": "HermesUpgrade", "store": "RunProgress" },
+      "doors": [
+        { "door": 569053, "room": "G_Combat10", "reward": { "type": "MetaCurrencyBigDrop" } },
+        {
+          "door": 569070,
+          "room": "G_Combat11",
+          "reward": { "type": "MetaCardPointsCommonBigDrop" }
+        }
+      ],
+      "exit": "G_Combat10",
+      "encounters": [
+        {
+          "name": "GeneratedG",
+          "difficulty": 380,
+          "waves": [
+            {
+              "difficulty": 380,
+              "spawns": [{ "enemy": "FishSwarmerSquad_Elite", "count": 12, "generated": true }]
+            }
+          ],
+          "blacklist": ["FishSwarmerSquad"]
+        }
+      ],
+      "uses": { "OceanusExitDoor": 1 },
+      "kills": { "FishSwarmer_Elite": 24, "SteamCubeFused": 1, "Breakable_G": 8 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "lockedExits": true,
+      "lockedDoorFights": 0,
+      "entry": {
+        "keepsake": "TimedBuffKeepsake",
+        "elements": { "Fire": 1 },
+        "maxHealth": 75,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 1,
+            "RoomMoneyDrop": 1,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 1,
+            "Devotion": 1,
+            "TalentDrop": 1,
+            "Boon": 1
+          }
+        },
+        "numRerolls": 8,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_Combat10",
+      "reward": { "type": "MetaCurrencyBigDrop", "store": "MetaProgress" },
+      "doors": [
+        { "door": 558528, "room": "G_Combat12", "reward": { "type": "MaxHealthDrop" } },
+        {
+          "door": 563168,
+          "room": "G_Combat11",
+          "reward": { "type": "Boon", "lootName": "HeraUpgrade" }
+        }
+      ],
+      "exit": "G_Combat11",
+      "encounters": [{ "name": "NemesisRandomEvent" }],
+      "uses": { "OceanusExitDoor": 1, "EmptyMaxHealthDrop": 1, "NPC_Nemesis_01": 1 },
+      "kills": { "Breakable_G": 10 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [{ "name": "RoomRewardEmptyMaxHealthTrait", "worldTime": 156.09282566584 }],
+        "removed": [],
+        "upgraded": []
+      },
+      "npcInteractions": { "NPC_Nemesis_01": 1 },
+      "lockedExits": true,
+      "lockedDoorFights": 0,
+      "entry": {
+        "keepsake": "TimedBuffKeepsake",
+        "elements": { "Fire": 1 },
+        "maxHealth": 75,
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 8,
+            "MetaCurrencyBigDrop": 1,
+            "MetaCardPointsCommonDrop": 16,
+            "MetaCardPointsCommonBigDrop": 6
+          }
+        },
+        "numRerolls": 8,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_Combat11",
+      "reward": { "type": "Boon", "lootName": "HeraUpgrade", "store": "RunProgress" },
+      "doors": [
+        {
+          "door": 563168,
+          "room": "G_Combat12",
+          "reward": { "type": "Boon", "lootName": "AresUpgrade" }
+        },
+        { "door": 566324, "room": "G_Combat13", "reward": { "type": "HermesUpgrade" } }
+      ],
+      "exit": "G_Combat12",
+      "encounters": [
+        {
+          "name": "GeneratedG",
+          "difficulty": 460,
+          "waves": [
+            {
+              "difficulty": 230,
+              "spawns": [{ "enemy": "Guard2_Elite", "count": 8, "generated": true }]
+            },
+            {
+              "difficulty": 230,
+              "spawns": [
+                { "enemy": "Guard2_Elite", "count": 5, "generated": true },
+                { "enemy": "FishmanMelee_Elite", "count": 1, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["FishmanMelee", "Guard2_Elite"]
+        }
+      ],
+      "uses": { "OceanusExitDoor": 1 },
+      "kills": { "Guard2_Elite": 8, "Breakable_G": 6 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "lockedExits": true,
+      "lockedDoorFights": 0,
+      "entry": {
+        "traits": { "RoomRewardEmptyMaxHealthTrait": {} },
+        "keepsake": "TimedBuffKeepsake",
+        "elements": { "Fire": 1 },
+        "maxHealth": 100,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 1,
+            "MaxManaDrop": 1,
+            "RoomMoneyDrop": 1,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 1,
+            "Devotion": 1,
+            "TalentDrop": 1
+          }
+        },
+        "numRerolls": 8,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_Combat12",
+      "reward": { "type": "Boon", "lootName": "AresUpgrade", "store": "RunProgress" },
+      "doors": [
+        { "door": 569232, "room": "G_Combat14", "reward": { "type": "MetaCurrencyBigDrop" } },
+        {
+          "door": 608958,
+          "room": "G_Combat13",
+          "reward": { "type": "MetaCardPointsCommonBigDrop" }
+        }
+      ],
+      "exit": "G_Combat13",
+      "encounters": [
+        {
+          "name": "GeneratedG",
+          "difficulty": 500,
+          "waves": [
+            {
+              "difficulty": 150,
+              "spawns": [{ "enemy": "FishSwarmerSquad", "count": 10, "generated": true }]
+            },
+            {
+              "difficulty": 75,
+              "spawns": [
+                { "enemy": "FishSwarmerSquad", "count": 2, "generated": true },
+                { "enemy": "WaterUnit", "count": 2, "generated": true }
+              ]
+            },
+            {
+              "difficulty": 275,
+              "spawns": [
+                { "enemy": "FishSwarmerSquad", "count": 4, "generated": true },
+                { "enemy": "Turtle", "count": 4, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["FishSwarmerSquad", "Turtle_Elite", "WaterUnit_Elite"]
+        }
+      ],
+      "uses": { "OceanusExitDoor": 1 },
+      "kills": { "Breakable_G": 1 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [
+          { "name": "RoomRewardMaxManaTrait", "worldTime": 173.70504881139 },
+          { "name": "RoomRewardMaxHealthTrait", "worldTime": 173.70504881139 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "lockedExits": true,
+      "lockedDoorFights": 0,
+      "entry": {
+        "keepsake": "TimedBuffKeepsake",
+        "elements": { "Fire": 1 },
+        "maxHealth": 100,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 3,
+            "MaxManaDrop": 3,
+            "RoomMoneyDrop": 3,
+            "StackUpgrade": 4,
+            "WeaponUpgrade": 3,
+            "Devotion": 2,
+            "TalentDrop": 2,
+            "SpellDrop": 1,
+            "Boon": 3
+          }
+        },
+        "numRerolls": 8,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_Combat13",
+      "reward": { "type": "MetaCardPointsCommonBigDrop", "store": "MetaProgress" },
+      "doors": [
+        { "door": 569232, "room": "G_Combat15", "reward": { "type": "MaxHealthDrop" } },
+        { "door": 608958, "room": "G_Combat14", "reward": { "type": "WeaponUpgrade" } }
+      ],
+      "exit": "G_Combat14",
+      "encounters": [
+        {
+          "name": "GeneratedG",
+          "difficulty": 540,
+          "waves": [
+            {
+              "difficulty": 270,
+              "spawns": [{ "enemy": "FishSwarmerSquad_Elite", "count": 9, "generated": true }]
+            },
+            {
+              "difficulty": 270,
+              "spawns": [
+                { "enemy": "FishSwarmerSquad_Elite", "count": 3, "generated": true },
+                { "enemy": "WaterUnit", "count": 6, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["FishSwarmerSquad_Elite", "WaterUnit_Elite"]
+        }
+      ],
+      "uses": { "OceanusExitDoor": 1 },
+      "kills": { "Breakable_G": 3 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "lockedDoorFights": 0,
+      "entry": {
+        "keepsake": "TimedBuffKeepsake",
+        "elements": { "Fire": 1 },
+        "maxHealth": 105,
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 8,
+            "MetaCardPointsCommonDrop": 16,
+            "MetaCardPointsCommonBigDrop": 5
+          }
+        },
+        "numRerolls": 8,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_Combat14",
+      "reward": { "type": "WeaponUpgrade", "store": "RunProgress" },
+      "doors": [
+        { "door": 569053, "room": "B_Combat05", "reward": { "type": "RoomMoneyDrop" } },
+        {
+          "door": 609522,
+          "room": "B_Combat05",
+          "reward": { "type": "Boon", "lootName": "PoseidonUpgrade" }
+        },
+        {
+          "door": 609523,
+          "room": "B_Combat21",
+          "reward": { "type": "Boon", "lootName": "AresUpgrade" }
+        }
+      ],
+      "exit": "B_Combat05",
+      "encounters": [
+        {
+          "name": "GeneratedG",
+          "difficulty": 580,
+          "waves": [
+            {
+              "difficulty": 580,
+              "spawns": [
+                { "enemy": "FishmanRanged", "count": 9, "generated": true },
+                { "enemy": "Turtle", "count": 5, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["FishmanRanged_Elite", "Turtle_Elite"]
+        }
+      ],
+      "uses": { "OceanusExitDoor": 1 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [{ "name": "AirEssence", "worldTime": 188.35504957545 }],
+        "removed": [],
+        "upgraded": []
+      },
+      "store": {
+        "kind": "well",
+        "stock": [
+          { "slot": 1, "name": "FirstHitHealTrait", "type": "Trait" },
+          { "slot": 2, "name": "TemporaryForcedSecretDoorTrait", "type": "Trait" },
+          { "slot": 3, "name": "TemporaryImprovedExTrait", "type": "Trait" }
+        ],
+        "purchases": [],
+        "spawned": true
+      },
+      "toolElements": ["ToolExorcismBook2"],
+      "lockedDoorFights": 0,
+      "entry": {
+        "keepsake": "TimedBuffKeepsake",
+        "elements": { "Fire": 1 },
+        "maxHealth": 105,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 3,
+            "RoomMoneyDrop": 3,
+            "StackUpgrade": 4,
+            "WeaponUpgrade": 2,
+            "Devotion": 2,
+            "TalentDrop": 2,
+            "SpellDrop": 1,
+            "Boon": 3
+          }
+        },
+        "numRerolls": 8,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "B_Combat05",
+      "reward": { "type": "Boon", "lootName": "PoseidonUpgrade", "store": "RunProgress" },
+      "doors": [
+        {
+          "door": 554466,
+          "room": "G_MiniBoss03",
+          "reward": { "type": "Boon", "lootName": "HephaestusUpgrade" }
+        }
+      ],
+      "exit": "G_MiniBoss03",
+      "encounters": [
+        {
+          "name": "GeneratedAnomalyB",
+          "difficulty": 30,
+          "waves": [
+            {
+              "difficulty": 30,
+              "spawns": [
+                { "enemy": "BloodlessNaked_Elite", "generated": true, "infinite": true },
+                { "enemy": "BloodlessGrenadier", "generated": true, "infinite": true }
+              ]
+            }
+          ],
+          "blacklist": ["BloodlessGrenadier_Elite", "BloodlessNaked"]
+        }
+      ],
+      "uses": {},
+      "kills": { "AsphodelStalagmite05": 3 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": { "AirEssence": {} },
+        "keepsake": "TimedBuffKeepsake",
+        "elements": { "Fire": 1, "Air": 1 },
+        "maxHealth": 105,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 3,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 4,
+            "WeaponUpgrade": 2,
+            "Devotion": 2,
+            "TalentDrop": 2,
+            "SpellDrop": 1,
+            "Boon": 1
+          }
+        },
+        "numRerolls": 8,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_MiniBoss03",
+      "reward": { "type": "Boon", "lootName": "HephaestusUpgrade", "store": "RunProgress" },
+      "doors": [
+        { "door": 569053, "room": "G_PreBoss01", "reward": { "type": "Shop" } },
+        { "door": 609760, "room": "G_PreBoss01", "reward": { "type": "MaxManaDrop" } }
+      ],
+      "exit": "G_PreBoss01",
+      "encounters": [
+        {
+          "name": "MiniBossJellyfish",
+          "difficulty": 660,
+          "waves": [
+            {
+              "difficulty": 660,
+              "spawns": [
+                { "enemy": "Octofish_Miniboss", "count": 1 },
+                { "enemy": "Octofish_Shadow", "count": 1, "miniBossShrine": true },
+                { "enemy": "Jellyfish", "count": 24 }
+              ]
+            }
+          ]
+        }
+      ],
+      "uses": { "OceanusExitDoor": 1 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "keepsake": "TimedBuffKeepsake",
+        "elements": { "Fire": 1, "Air": 1 },
+        "maxHealth": 105,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 3,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 4,
+            "WeaponUpgrade": 2,
+            "Devotion": 2,
+            "TalentDrop": 2,
+            "SpellDrop": 1
+          }
+        },
+        "numRerolls": 8,
+        "fieldsMaxDoorsRolled": 0
+      }
+    },
+    {
+      "name": "G_PreBoss01",
+      "reward": { "type": "Shop", "store": "RunProgress" },
+      "doors": [],
+      "encounters": [{ "name": "Shop" }],
+      "uses": {},
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "store": {
+        "kind": "worldShop",
+        "stock": [
+          {
+            "slot": 1,
+            "name": "RandomLoot",
+            "type": "Boon",
+            "lootName": "AphroditeUpgrade",
+            "baseCost": 150
+          },
+          { "slot": 2, "name": "ArmorBoost", "type": "Consumable" },
+          { "slot": 3, "name": "MaxManaDrop", "type": "Consumable" }
+        ]
+      },
+      "entry": {
+        "keepsake": "TimedBuffKeepsake",
+        "elements": { "Fire": 1, "Air": 1 },
+        "maxHealth": 105,
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 4,
+            "WeaponUpgrade": 2,
+            "Devotion": 2,
+            "TalentDrop": 2,
+            "SpellDrop": 1
+          }
+        },
+        "numRerolls": 8,
+        "fieldsMaxDoorsRolled": 0
+      }
+    }
+  ]
+}
