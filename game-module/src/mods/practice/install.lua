@@ -557,7 +557,8 @@ function install.records(start)
     run.WellShopPurchases = copy(start.stygianWell.wellShopPurchases)
     run.BannedTraits = {}
     for _, name in ipairs(start.bannedTraits) do run.BannedTraits[name] = true end
-    if start.hex ~= nil then run.NumTalentPoints = start.hex.talentPoints end
+    -- The unspent bank, held with or without a Spell; never re-adds a keepsake's points.
+    run.NumTalentPoints = start.talentPoints
     rewardStores(start)
 end
 

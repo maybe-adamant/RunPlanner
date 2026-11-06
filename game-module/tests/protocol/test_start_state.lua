@@ -56,7 +56,12 @@ function TestStartState.testStartStateShapeIsStrict()
         { function(start) start.point = "hub" end, "point" },
         { function(start) start.gold = 1.5 end, "gold" },
         { function(start) start.roomHistory[1].nextRoomSet = false end, "nextRoomSet" },
-        { function(start) start.traits[1].storedGold = 1 end, "unknown field" },
+        { function(start) start.traits[1].storedGold = -1 end, "storedGold" },
+        { function(start) start.traits[1].storedGold = 2.5 end, "storedGold" },
+        { function(start) start.keepsake.fatedStatus = nil end, "missing fatedStatus" },
+        { function(start) start.keepsake.fatedStatus = "Doomed" end, "fatedStatus is unsupported" },
+        { function(start) start.talentPoints = nil end, "missing talentPoints" },
+        { function(start) start.talentPoints = -1 end, "talentPoints" },
         { function(start) start.traits[2] = start.traits[1] end, "duplicate" },
         { function(start) start.traits[1].rarity = "Mythic" end, "rarity" },
         { function(start) start.traits[1].acquisitionOrdinal = 2 end, "both rarity and acquisitionOrdinal" },
@@ -89,6 +94,17 @@ end
 
 -- An absent BiomeEncounterDepth is native unset; a present one is an integer.
 -- Shape and graph checks precede the fingerprint, so only the stale fingerprint rejects the absent value.
+-- A loan's StoredGold is a valid optional field, so only the stale fingerprint rejects it.
+function TestStartState.testLoanStoredGoldAndTalentPointsAreDecoded()
+    rejected("underworld-start-i-preboss", function(start) start.traits[1].storedGold = 120 end,
+        "fingerprint does not match")
+    -- Talent points are top-level; a Spell row no longer carries them.
+    rejected("surface-start-q-opening", function(start) start.hex.talentPoints = 0 end, "unknown field")
+    local start = assert(protocol.decode(wire("underworld-start-i-preboss"))).startState
+    lu.assertNil(start.hex)
+    lu.assertEquals({ start.keepsake.fatedStatus, start.talentPoints }, { "Unknown", 0 })
+end
+
 function TestStartState.testPrebossBiomeEncounterDepthIsOptional()
     rejected("underworld-start-i-preboss", function(start) start.biome.biomeEncounterDepth = nil end,
         "fingerprint does not match")

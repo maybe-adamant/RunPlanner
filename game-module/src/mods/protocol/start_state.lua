@@ -14,6 +14,7 @@ local traitRarities = {
 }
 local keepsakeRarities = { Common = true, Rare = true, Epic = true, Heroic = true }
 local maxStatSources = { trait = true, arcana = true, keepsake = true }
+local fatedStatuses = { Unknown = true, Fated = true, Unfated = true }
 local wellClocks = { encounters = true, rooms = true, bosses = true }
 local essenceElements = { "Fire", "Air", "Earth", "Water" }
 
@@ -62,7 +63,7 @@ local function trait(value, label)
     local row = exact(value, { "name" }, {
         "rarity", "stackNum", "blockInRunRarify", "upgradedTraitName", "selectedTrait",
         "grantedTrait", "repeatedKeepsake", "currentRoom", "acquisitionOrdinal", "echoIncreaseStats",
-        "durationHammerUses",
+        "durationHammerUses", "storedGold",
     }, label)
     str(row.name, label .. ".name")
     optional(row.rarity, function(entry, entryLabel) one(entry, traitRarities, entryLabel) end, label .. ".rarity")
@@ -89,6 +90,7 @@ local function trait(value, label)
     end, label .. ".echoIncreaseStats")
     optional(row.durationHammerUses, function(entry, entryLabel) int(entry, entryLabel, 1) end,
         label .. ".durationHammerUses")
+    optional(row.storedGold, int, label .. ".storedGold")
 end
 
 local function blessing(row, label)
@@ -151,8 +153,9 @@ local function keepsakeTraits(value, label, frame)
 end
 
 local function keepsake(value, label)
-    local row = exact(value, { "keepsakeCache", "blockedKeepsakes", "traits" },
+    local row = exact(value, { "fatedStatus", "keepsakeCache", "blockedKeepsakes", "traits" },
         { "persistentDionysusSkip" }, label)
+    one(row.fatedStatus, fatedStatuses, label .. ".fatedStatus")
     strings(row.keepsakeCache, label .. ".keepsakeCache")
     strings(row.blockedKeepsakes, label .. ".blockedKeepsakes")
     keepsakeTraits(row.traits, label .. ".traits")
@@ -229,7 +232,7 @@ local function rewardStores(value, label)
 end
 
 local function hex(value, label)
-    local row = exact(value, { "spellTraitName", "investedNodes", "talentPoints", "allSpellInvested" },
+    local row = exact(value, { "spellTraitName", "investedNodes", "allSpellInvested" },
         { "tree" }, label)
     str(row.spellTraitName, label .. ".spellTraitName")
     optional(row.tree, function(entry, entryLabel)
@@ -237,7 +240,6 @@ local function hex(value, label)
         check(treeError == nil, tostring(treeError))
     end, label .. ".tree")
     investedNodes(row.investedNodes, label .. ".investedNodes")
-    int(row.talentPoints, label .. ".talentPoints")
     bool(row.allSpellInvested, label .. ".allSpellInvested")
 end
 
@@ -261,7 +263,7 @@ local function shape(value)
     local row = exact(value, {
         "point", "biomeKey", "occurrenceId", "roomName", "gold", "biomeVisitOrder", "roomHistory",
         "encounterDepth", "aspectPerfect", "traits", "elementEssences", "chaosCurses", "chaosBlessings", "keepsake", "arcana",
-        "disabledVows", "maxStats", "itemArmor", "stygianWell", "hermesDeliveries",
+        "disabledVows", "maxStats", "itemArmor", "stygianWell", "hermesDeliveries", "talentPoints",
         "rewardPriorities", "useRecord", "lootTypeHistory", "consumableRecord", "bannedTraits", "rewardStores",
     }, { "lastDevotionDepth", "biome", "familiar", "hex" }, LABEL)
     check(row.point == "opening" or row.point == "preboss" or row.point == "boss", LABEL .. ".point is unsupported")
@@ -306,6 +308,7 @@ local function shape(value)
         int(delivery.remainingUses, entryLabel .. ".remainingUses")
     end)
     optional(row.hex, hex, LABEL .. ".hex")
+    int(row.talentPoints, LABEL .. ".talentPoints")
     strings(row.rewardPriorities, LABEL .. ".rewardPriorities")
     numbers(row.useRecord, LABEL .. ".useRecord")
     numbers(row.lootTypeHistory, LABEL .. ".lootTypeHistory")
