@@ -383,6 +383,11 @@ export function materializeAuthoredRoom(
     routePosition: context.routePosition,
     lifecycleProfileKey: base.lifecycleProfileKey,
     incomingRewardActive: base.incomingReward?.acquisitionEnabled !== false,
+    // The producer acquires the materialized reward; a retained rerolled reward
+    // that no current press draws stays authored for repair, its rows dormant.
+    ...(base.incomingReward === undefined
+      ? {}
+      : { incomingRewardOffer: base.incomingReward.offer }),
     ...(context.entry === true
       ? { incomingRewardBinding: resolvedEntry.incomingRewardBinding }
       : {}),

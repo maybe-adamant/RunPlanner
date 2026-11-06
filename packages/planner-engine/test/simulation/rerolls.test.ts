@@ -9,6 +9,7 @@ import {
   createLocalRewardAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
+  createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   rerollAppendIndex,
@@ -455,50 +456,57 @@ describe('rerolled reward repair', () => {
     ).toEqual([]);
   });
 
-  it('reports a rerolled reward that outlived its rerolls until it is dropped', () => {
-    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
-    project = applyProjectCommand(
-      project,
-      catalog,
-      insertReroll(project, door('exit2', otherTarget), {
-        rewardType: 'Boon',
-        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
-      }),
-    );
-    // An authored screen makes the rerolled reward more than its unresolved default.
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait: {
-        kind: 'traitOffer',
-        routeKey: 'Underworld',
-        biomeKey: 'F',
-        owner,
-        acquisitionRole: 'source',
-      },
-      value: {
-        kind: 'traits',
-        giverKey: 'Zeus',
-        options: [
-          { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
-          { traitKey: 'ZeusCastBoon', rarity: 'Common' },
-          { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
-        ],
-        selectedOptionKey: 'option1',
-        rarificationActions: [],
-      },
-    });
-    const dormant = applyProjectCommand(project, catalog, {
-      kind: 'RemoveRoomAction',
-      action: pressAt('r1'),
-    });
-    expect(rerolls(dormant)).toEqual([]);
-    expect(rerollFindings(dormant).map((finding) => finding.code)).toEqual([
-      'rerolledRewardMismatch',
-    ]);
-    expect(
-      rerollFindings(applyProjectCommand(dormant, catalog, { kind: 'DropRerolledReward', owner })),
-    ).toEqual([]);
-  });
+  // The entered door's room keeps its Boon pickup row, dormant beside its first draw's.
+  it.each([
+    ['an offered', 'exit2', otherTarget],
+    ['an entered', 'exit1', pickedTarget],
+  ] as const)(
+    'reports %s rerolled reward that outlived its rerolls until it is dropped',
+    (_door, exitKey, target) => {
+      const owner = createIncomingRewardAddress(f, target as never);
+      let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+      project = applyProjectCommand(
+        project,
+        catalog,
+        insertReroll(project, door(exitKey, target), {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+        }),
+      );
+      // An authored screen makes the rerolled reward more than its unresolved default.
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: {
+          kind: 'traitOffer',
+          routeKey: 'Underworld',
+          biomeKey: 'F',
+          owner,
+          acquisitionRole: 'source',
+        },
+        value: {
+          kind: 'traits',
+          giverKey: 'Zeus',
+          options: [
+            { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+            { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+            { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option1',
+          rarificationActions: [],
+        },
+      });
+      const dormant = settle(project, { kind: 'RemoveRoomAction', action: pressAt('r1') });
+      expect(rerolls(dormant)).toEqual([]);
+      expect(rerollFindings(dormant).map((finding) => finding.code)).toEqual([
+        'rerolledRewardMismatch',
+      ]);
+      expect(
+        rerollFindings(
+          applyProjectCommand(dormant, catalog, { kind: 'DropRerolledReward', owner }),
+        ),
+      ).toEqual([]);
+    },
+  );
 });
 
 describe('Fields cage rerolls', () => {
@@ -745,6 +753,65 @@ describe('Hub board rerolls', () => {
     ).toEqual(['reroll r1', 'fountainUsed', 'reroll r2', 'roomDeparted']);
     expect(rerollFindings(project)).toEqual([]);
   });
+
+  // combat09 is the sixth visit and combat05 the first; each first draws a non-Boon reward.
+  it.each([
+    ['a restored board', 'combat09', 5],
+    ['the first entry', 'combat05', 0],
+  ] as const)(
+    'keep a visited Boon pick when its press on %s leaves, and report it',
+    (_stay, hubSlotKey, index) => {
+      const occurrenceId = `surface-n-${hubSlotKey}`;
+      const ares: ResolvedRewardOffer = {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'AresUpgrade' },
+      };
+      const pressed = settle(base(), {
+        kind: 'InsertHubReroll',
+        hub,
+        hubSlotKey,
+        reward: ares,
+        index,
+      });
+      const picked = settle(pressed, {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(
+          createIncomingRewardAddress(n, occurrenceId as never),
+          'source',
+        ),
+        value: {
+          kind: 'traits',
+          giverKey: 'Ares',
+          options: [
+            { traitKey: 'AresWeaponBoon', rarity: 'Common' },
+            { traitKey: 'AresSpecialBoon', rarity: 'Common' },
+            { traitKey: 'AresCastBoon', rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option1',
+          rarificationActions: [],
+        },
+      });
+      const sourceRow = {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source',
+      };
+      expect(occurrence(picked, occurrenceId).roomActions.order).toContainEqual(sourceRow);
+
+      // The visit enters the first draw again; the Boon pick and its pickup stay for repair.
+      const removed = settle(picked, {
+        kind: 'RemoveHubReroll',
+        reroll: createHubRerollAddress(n, 'hub', 'r1'),
+      });
+      expect(occurrence(removed, occurrenceId).rerolledIncomingReward).toEqual(
+        occurrence(picked, occurrenceId).rerolledIncomingReward,
+      );
+      expect(occurrence(removed, occurrenceId).roomActions.order).toContainEqual(sourceRow);
+      expect(rerollFindings(removed).map((finding) => [finding.code, finding.origin])).toEqual([
+        ['rerolledRewardMismatch', createIncomingRewardAddress(n, occurrenceId as never)],
+      ]);
+    },
+  );
 
   it('need a door-reroll card held when a restored board is assigned', () => {
     const project = pressHub(base(), 'combat09', 2).project;
