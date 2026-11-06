@@ -901,8 +901,9 @@ Each room also sums its fights' gold, a mean and spread with one line per
 source: an encounter phase's kills, Heracles's bounty and Medea's drops, a
 Fields room's Passive store on the cage fight that paid it, and a challenge
 switch's or locked door's kills at its press. Urns belong to no fight: they
-are the room's entry gold, summed apart in every room that swaps them. These
-summaries only regroup ledger gains and move no balance. Every assumption and
+are the room's entry gold, summed apart in every room that swaps them. Each
+ranked action's gold outside a fight and each Nemesis bet are summed the same
+way. These summaries only regroup ledger gains and move no balance. Every assumption and
 tuning value the estimate
 uses is listed with its evidence in
 [Gold estimate assumptions](GOLD_ESTIMATE_ASSUMPTIONS.md).

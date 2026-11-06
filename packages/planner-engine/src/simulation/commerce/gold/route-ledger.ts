@@ -12,10 +12,14 @@ import type {
   GoldGain,
 } from './gain-context';
 import {
+  goldBetSummaries,
   goldFightSummaries,
   goldRoomEntrySummary,
+  goldRowSummaries,
+  type GoldBetSummary,
   type GoldFightSummary,
   type GoldRoomEntrySummary,
+  type GoldRowSummary,
 } from './fight-gold';
 import { GoldLedgerContractError, type BiomeGoldPrices, type GoldPurchaseQuote } from './ledger';
 import type { PurchasePriceContextPublication } from './price-context';
@@ -102,6 +106,14 @@ export interface GoldRoomSpending {
    * switch's and a locked door's at its press.
    */
   readonly fights: readonly GoldFightSummary[];
+  /**
+   * The gold each timeline action pays or takes outside its fight, summed
+   * from its gains, in the order its first gain was paid; an action whose
+   * gain follows an unavailable balance has none.
+   */
+  readonly rows: readonly GoldRowSummary[];
+  /** Each encounter phase's Nemesis bet, which belongs to no action. */
+  readonly bets: readonly GoldBetSummary[];
   /**
    * The gold the room pays at its entry, its urns; absent when it has none or
    * an urn gain follows an unavailable balance.
@@ -575,6 +587,8 @@ export function routeGoldLedger(
                     : [{ attribution: fight, amount }],
                 ),
               ),
+              rows: goldRowSummaries(room.gains),
+              bets: goldBetSummaries(room.gains),
               ...(entry === undefined ? {} : { entry }),
             }),
           }),

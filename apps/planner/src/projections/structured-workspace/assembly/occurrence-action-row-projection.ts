@@ -31,6 +31,7 @@ import {
 import type {
   GoldAmount,
   GoldFightSummary,
+  GoldRowSummary,
   GoldLedger,
   GoldMoments,
   RoomActionRow,
@@ -1064,28 +1065,14 @@ function purchaseGold(
   };
 }
 
-/**
- * The gold each timeline row in the room gains or loses, summed over its ledger
- * gains; a fight's gold shows as its fight's summary instead.
- */
+/** The gold each timeline row in the room gains or loses outside its fight, by its row's key. */
 function roomGoldGains(
   gold: GoldLedger | undefined,
   room: OccurrenceAddress,
-): ReadonlyMap<string, { readonly mean: number; readonly variance: number }> {
+): ReadonlyMap<string, GoldRowSummary> {
   const priced = gold?.roomAt(room);
   if (priced?.availability !== 'available') return new Map();
-  const gains = new Map<string, { mean: number; variance: number }>();
-  for (const gain of priced.room.gains) {
-    if (gain.roomAction === undefined || gain.amount === undefined || gain.fight !== undefined)
-      continue;
-    const key = semanticAddressKey(gain.roomAction);
-    const sum = gains.get(key) ?? { mean: 0, variance: 0 };
-    gains.set(key, {
-      mean: sum.mean + gain.amount.mean,
-      variance: sum.variance + gain.amount.variance,
-    });
-  }
-  return gains;
+  return new Map(priced.room.rows.map((row) => [semanticAddressKey(row.roomAction), row] as const));
 }
 
 /** The Nemesis bet each encounter phase settles, which belongs to no row. */
@@ -1095,13 +1082,10 @@ function phaseGold(
 ): Pick<WorkspaceRoomActions, 'phaseGold'> {
   const priced = gold?.roomAt(room);
   if (priced?.availability !== 'available') return {};
-  const bets = priced.room.gains.flatMap((gain) =>
-    gain.kind !== 'nemesisBet' ||
-    gain.owner?.kind !== 'encounterPhase' ||
-    gain.amount === undefined ||
-    Math.round(gain.amount.mean) === 0
+  const bets = priced.room.bets.flatMap((bet) =>
+    Math.round(bet.mean) === 0
       ? []
-      : [Object.freeze({ phaseKey: gain.owner.phaseKey, gold: goldGainLabel(gain.amount) })],
+      : [Object.freeze({ phaseKey: bet.phase.phaseKey, gold: goldGainLabel(bet) })],
   );
   return bets.length === 0 ? {} : { phaseGold: Object.freeze(bets) };
 }
@@ -1186,24 +1170,21 @@ function roomEntryGold(
   };
 }
 
-/** A ledger gain in the fight gold's form; its spread is the standard deviation. */
+/** A row's or bet's gold summary in the fight gold's form. */
 function goldGainLabel(gain: {
   readonly mean: number;
-  readonly variance: number;
+  readonly spread: number;
+  readonly exact: boolean;
 }): WorkspaceGoldAmount {
   return Object.freeze({
-    label: fightGoldAmount({
-      mean: gain.mean,
-      spread: Math.sqrt(gain.variance),
-      exact: gain.variance === 0,
-    }),
+    label: fightGoldAmount(gain),
     ...(Math.round(gain.mean) < 0 ? { loss: true as const } : {}),
   });
 }
 
 /** The gold the ledger books against this row. */
 function rowGoldGain(
-  gains: ReadonlyMap<string, { readonly mean: number; readonly variance: number }>,
+  gains: ReadonlyMap<string, GoldRowSummary>,
   row: SemanticAddress,
 ): Pick<WorkspaceRoomActionRow, 'goldGained'> {
   const gain = gains.get(semanticAddressKey(row));

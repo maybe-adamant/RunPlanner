@@ -67,7 +67,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
 import { executionFixtures } from '../execution-plan/support/execution-fixtures';
-import { checkedGoldFights } from '../support/gold-fights';
+import { checkedGoldFights, checkedGoldRows } from '../support/gold-fights';
 
 const f = createBiomeAddress('Underworld', 'F');
 const ledger = (project: ProjectDocument): GoldLedger =>
@@ -768,6 +768,35 @@ describe('gold by fight', () => {
     const gold = ledger(createGoldenFGHProject());
     expect(fights(gold, room)).toEqual(new Map());
     expectUrnEntry(gold, room);
+  });
+});
+
+describe('gold by action and bet', () => {
+  it('sums each action’s gains outside its fights and publishes each Nemesis bet', () => {
+    let rows = 0;
+    let bets = 0;
+    for (const project of [
+      createGoldenFGHIProject(),
+      loadSurfaceNOPQCheckpoint(),
+      fixture('fg-npc-shopping-protection'),
+    ]) {
+      const assembly = simulateProjectAssembly(catalog, project);
+      const gold = goldLedgerForProjectEvaluationAssembly(catalog, assembly);
+      for (const plan of project.route.biomes)
+        for (const occurrence of plan.topology?.occurrences ?? []) {
+          const result = gold.roomAt(
+            createOccurrenceAddress(
+              createBiomeAddress(project.route.routeKey, plan.biomeKey),
+              occurrence.occurrenceId,
+            ),
+          );
+          if (result.availability !== 'available') continue;
+          rows += checkedGoldRows(result.room).size;
+          bets += result.room.bets.length;
+        }
+    }
+    expect(rows).toBeGreaterThan(0);
+    expect(bets).toBeGreaterThan(0);
   });
 });
 

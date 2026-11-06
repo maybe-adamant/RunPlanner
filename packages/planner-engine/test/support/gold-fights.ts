@@ -38,3 +38,42 @@ export function checkedGoldFights(room: GoldRoomSpending): ReadonlyMap<string, r
   }
   return byFight;
 }
+
+/**
+ * A room's action summaries keyed by action, after checking each against the
+ * ledger gains it sums (its gains outside any fight), and its bet summaries
+ * against its Nemesis bets; every such gain has its summary.
+ */
+export function checkedGoldRows(room: GoldRoomSpending): ReadonlyMap<string, number> {
+  const rows = new Map<string, number>();
+  const owned = room.gains.filter(
+    (gain) => gain.roomAction !== undefined && gain.fight === undefined,
+  );
+  for (const summary of room.rows) {
+    const key = semanticAddressKey(summary.roomAction);
+    const joined = owned.filter((gain) => semanticAddressKey(gain.roomAction!) === key);
+    expect(joined.length).toBeGreaterThan(0);
+    const mean = joined.reduce((sum, gain) => sum + gain.amount!.mean, 0);
+    const variance = joined.reduce((sum, gain) => sum + gain.amount!.variance, 0);
+    expect(summary.mean).toBeCloseTo(mean, 9);
+    expect(summary.spread).toBeCloseTo(Math.sqrt(variance), 9);
+    expect(summary.exact).toBe(variance === 0);
+    rows.set(key, summary.mean);
+  }
+  expect(new Set(rows.keys())).toEqual(
+    new Set(
+      owned
+        .filter((gain) => gain.amount !== undefined)
+        .map((gain) => semanticAddressKey(gain.roomAction!)),
+    ),
+  );
+  const bets = room.gains.filter((gain) => gain.kind === 'nemesisBet' && gain.amount !== undefined);
+  expect(room.bets.map((bet) => [semanticAddressKey(bet.phase), bet.mean, bet.exact])).toEqual(
+    bets.map((gain) => [
+      semanticAddressKey(gain.owner!),
+      gain.amount!.mean,
+      gain.amount!.variance === 0,
+    ]),
+  );
+  return rows;
+}

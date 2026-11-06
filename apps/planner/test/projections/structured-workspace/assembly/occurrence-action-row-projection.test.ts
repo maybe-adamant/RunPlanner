@@ -2104,6 +2104,8 @@ describe('purchase gold', () => {
         doorsOpenBalance: noBalance,
         balanceAfter: noBalance,
         fights: [],
+        rows: [],
+        bets: [],
         spending: {
           mean: purchases.reduce((sum, price) => sum + price.mean, 0),
           variance: 0,
@@ -2213,27 +2215,26 @@ describe('purchase gold', () => {
       .rows;
     if (varying === undefined || losing === undefined || exact === undefined)
       throw new Error('The Well room has too few rows');
-    const gain = (row: typeof varying, amount: GoldAmount) => ({
-      kind: 'midasPayout' as const,
+    // The ledger publishes each row's summed gold as its mean and spread.
+    const summary = (row: typeof varying, mean: number, spread: number) => ({
       roomAction: row.address,
-      amount,
+      mean,
+      spread,
+      exact: spread === 0,
     });
     const base = spending([], 'stygianWell');
     const { actions } = wellActions(
-      ledger(
-        {},
-        {
-          ...base,
-          room: {
-            ...base.room,
-            gains: [
-              gain(varying, rolled),
-              gain(losing, { mean: -30, variance: 30, min: -39, max: -21 }),
-              gain(exact, fixed(100)),
-            ],
-          },
-        } as unknown as GoldRoomAvailability,
-      ),
+      ledger({}, {
+        ...base,
+        room: {
+          ...base.room,
+          rows: [
+            summary(varying, rolled.mean, Math.sqrt(rolled.variance)),
+            summary(losing, -30, Math.sqrt(30)),
+            summary(exact, 100, 0),
+          ],
+        },
+      } as unknown as GoldRoomAvailability),
     );
     const goldOf = (row: typeof varying) =>
       actions.rows.find((candidate) => candidate.key === row.key)?.goldGained;

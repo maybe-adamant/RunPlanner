@@ -2,8 +2,9 @@ import {
   semanticAddressKey,
   type EncounterPhaseAddress,
   type RoomActionAddress,
+  type SemanticAddress,
 } from '../../../authored-project/addresses';
-import type { GoldFightAttribution, GoldFightSource } from './gain-context';
+import type { GoldFightAttribution, GoldFightSource, GoldGain } from './gain-context';
 import { sumGold, type GoldAmount } from './prices';
 
 /** One source's share of a fight's gold: its mean and standard deviation. */
@@ -97,5 +98,68 @@ export function goldFightSummaries(gains: readonly GoldFightGain[]): readonly Go
         breakdown: Object.freeze(breakdown),
       });
     }),
+  );
+}
+
+/** The gold one timeline action paid or took outside a fight. */
+export interface GoldRowSummary {
+  readonly roomAction: RoomActionAddress;
+  readonly mean: number;
+  readonly spread: number;
+  /** No variance: the amount is certain. */
+  readonly exact: boolean;
+}
+
+/** One encounter phase's settled Nemesis bet. */
+export interface GoldBetSummary {
+  readonly phase: EncounterPhaseAddress;
+  readonly mean: number;
+  readonly spread: number;
+  /** No variance: the amount is certain. */
+  readonly exact: boolean;
+}
+
+/** A priced room gain as the summaries read it. */
+interface SummarizedGain {
+  readonly kind: GoldGain['kind'];
+  readonly owner?: SemanticAddress;
+  readonly roomAction?: RoomActionAddress;
+  readonly amount?: GoldAmount;
+  readonly fight?: GoldFightAttribution;
+}
+
+/**
+ * Each action's summed gold outside its fights, in the order its first gain
+ * was paid; an action with a gain past an unavailable balance has none.
+ */
+export function goldRowSummaries(gains: readonly SummarizedGain[]): readonly GoldRowSummary[] {
+  const rows = new Map<
+    string,
+    { readonly roomAction: RoomActionAddress; readonly amounts: (GoldAmount | undefined)[] }
+  >();
+  for (const { roomAction, amount, fight } of gains) {
+    if (roomAction === undefined || fight !== undefined) continue;
+    const key = semanticAddressKey(roomAction);
+    const row = rows.get(key) ?? { roomAction, amounts: [] };
+    row.amounts.push(amount);
+    rows.set(key, row);
+  }
+  return Object.freeze(
+    [...rows.values()].flatMap(({ roomAction, amounts }) =>
+      amounts.every((amount): amount is GoldAmount => amount !== undefined)
+        ? [Object.freeze({ roomAction, ...moments(sumGold(amounts)) })]
+        : [],
+    ),
+  );
+}
+
+/** Each encounter phase's priced Nemesis bet, in settlement order. */
+export function goldBetSummaries(gains: readonly SummarizedGain[]): readonly GoldBetSummary[] {
+  return Object.freeze(
+    gains.flatMap(({ kind, owner, amount }) =>
+      kind !== 'nemesisBet' || owner?.kind !== 'encounterPhase' || amount === undefined
+        ? []
+        : [Object.freeze({ phase: owner, ...moments(amount) })],
+    ),
   );
 }

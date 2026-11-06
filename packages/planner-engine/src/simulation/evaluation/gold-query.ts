@@ -157,6 +157,8 @@ export function goldLedgerForProjectEvaluationAssembly(
               doorsOpenBalance: notWalked,
               balanceAfter: notWalked,
               fights: Object.freeze([]),
+              rows: Object.freeze([]),
+              bets: Object.freeze([]),
             }),
           });
         }
