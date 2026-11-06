@@ -413,7 +413,10 @@ function OccurrenceInspector({
       ? outgoingDecision.owner
       : target === 'hiddenDoor'
         ? node.room.phantomExit?.address
-        : undefined,
+        : // A reported boss pool opens through the fixed exit it explains.
+          (target === 'pool' || target === 'effective') && outgoing?.kind === 'fixedRoom'
+          ? outgoing.marker.address
+          : undefined,
   );
   const doors = roomTimelineDoors({
     activeNote: doorNotes.active,

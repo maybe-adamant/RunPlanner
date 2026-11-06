@@ -343,6 +343,21 @@ describe('a room’s door notes', () => {
     await openRoom(view, sideRoom);
     expect(disclosure().getAttribute('aria-expanded')).toBe('false');
   });
+  it('opens the doors onto a boss door’s fixed pool from its note', async () => {
+    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'H');
+    const details = await openRoom(
+      view,
+      createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop')),
+    );
+    const disclosure = () => within(details).getByRole('button', { name: 'Door details' });
+    if (disclosure().getAttribute('aria-expanded') === 'true') await view.user.click(disclosure());
+    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
+
+    await view.user.click(note('Fixed for this boss'));
+    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+    expect(document.activeElement?.hasAttribute('data-door-note-focus')).toBe(true);
+    expect(document.activeElement?.textContent).toContain('Major Reward');
+  });
 });
 
 describe('a room’s last Timeline row', () => {

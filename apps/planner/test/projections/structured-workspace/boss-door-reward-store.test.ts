@@ -312,3 +312,34 @@ describe('boss-door reward pool row selection', () => {
     expect(byBiome.get('C') ?? []).toEqual([]);
   });
 });
+
+describe('reported boss-door pool navigation', () => {
+  it("routes the Preboss's fixed exit to its open doors where the pool is reported", () => {
+    const workspace = project(createGoldenFGHIProject());
+    const routed = workspace.route.biomes.flatMap((biome) =>
+      biome.nodes.flatMap((node) => {
+        if (node.kind !== 'occurrenceWorkbench') return [];
+        const store = node.room.bossDoorRewardStore;
+        const outgoing = biome.occurrenceStages.find(
+          (stage) => stage.sourceOccurrenceNodeKey === node.key,
+        )?.outgoing;
+        if (store === undefined || outgoing?.kind !== 'fixedRoom') return [];
+        const destination = workspace.focusByOwner.get(outgoing.marker.focusKey);
+        return [
+          {
+            biomeKey: biome.biomeKey,
+            kind: store.kind,
+            nodeKey: destination?.nodeKey === node.key,
+            timelineDoors: destination?.timelineDoors,
+          },
+        ];
+      }),
+    );
+    expect(routed).toEqual([
+      { biomeKey: 'F', kind: 'ignored', nodeKey: true, timelineDoors: 'doorsOpen' },
+      { biomeKey: 'G', kind: 'editor', nodeKey: true, timelineDoors: undefined },
+      { biomeKey: 'H', kind: 'fixed', nodeKey: true, timelineDoors: 'doorsOpen' },
+      { biomeKey: 'I', kind: 'fixed', nodeKey: true, timelineDoors: 'doorsOpen' },
+    ]);
+  });
+});
