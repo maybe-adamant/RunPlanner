@@ -8,12 +8,10 @@ import {
   type WorkspaceSteadyGrowthDomain,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
-import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
-import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
-import { SettledRarityBefore } from './SettledRarityBefore';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
+import { AutomaticEffectTarget } from './AutomaticEffectTarget';
 import { TimelineRow } from './TimelineRow';
 import { hintProps } from '@planner/ui/controls/hint';
 
@@ -25,7 +23,6 @@ export function SteadyGrowthEffectRow({
   readonly control: WorkspaceSteadyGrowthControl;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
-  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const semanticNavigationRevision = useAppSelector(
@@ -62,30 +59,27 @@ export function SteadyGrowthEffectRow({
       aria-description="Automatic effect"
       data-action-accent="automatic"
       editors={
-        <div className="scheduled-trait-effect-identity">
-          <SettledRarityBefore
-            label={selected === '' ? '' : interaction.traitLabel(selected)}
-            settled={control.settledRarity}
-            targetTraitKey={control.targetTraitKey}
-          />
-          <RandomTraitTargetPicker
-            findingTarget={findingTarget(control.address)}
-            ariaLabel="Steady Growth target"
-            disabled={domain?.emptyNoOp === true && selected === ''}
-            placeholder={domain?.emptyNoOp === true ? 'No eligible trait' : 'Choose a trait'}
-            id={semanticOwnerControlElementId(control.address)}
-            interaction={interaction}
-            label=""
-            layout="inline"
-            model={domain?.picker ?? { sections: Object.freeze([]) }}
-            onSelect={(target) => executeIntent(interaction.intentFor(target))}
-            onOpenChange={onOpenChange}
-            open={domain?.emptyNoOp === true && selected === '' ? false : open}
-            selected={selected === '' ? null : selected}
-            triggerRarity={control.settledRarity?.after}
-            triggerSize="icon"
-          />
-        </div>
+        <AutomaticEffectTarget
+          disabledHint={
+            domain?.emptyNoOp === true && selected === '' ? 'No eligible trait' : undefined
+          }
+          owner={control.address}
+          model={domain?.picker ?? { sections: Object.freeze([]) }}
+          name="Steady Growth target"
+          onOpenChange={onOpenChange}
+          onSelect={(target) => executeIntent(interaction.intentFor(target))}
+          open={open}
+          sourceIcon={traitIcon(control.sourceTraitKey)}
+          target={
+            selected === ''
+              ? undefined
+              : {
+                  key: selected,
+                  label: interaction.traitLabel(selected),
+                  ...(control.settledRarity === undefined ? {} : { rarity: control.settledRarity }),
+                }
+          }
+        />
       }
       kind="effect"
       placement={

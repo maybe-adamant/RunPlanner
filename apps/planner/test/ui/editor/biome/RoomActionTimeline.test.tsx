@@ -342,6 +342,7 @@ describe('OccurrenceRoomActions', () => {
         focusKey: 'test-steady-growth-row',
       }),
       phaseKey: 'Encounter',
+      sourceTraitKey: 'BoonGrowthBoon',
     };
     const interaction = {
       key: semanticAddressKey(outcome),
@@ -392,7 +393,7 @@ describe('OccurrenceRoomActions', () => {
         <SteadyGrowthEffectRow control={control} interactions={interactions} />
       </Provider>,
     );
-    const picker = await screen.findByLabelText('Steady Growth target');
+    const picker = await screen.findByRole('button', { name: 'Steady Growth target' });
     await waitFor(() => expect(picker.getAttribute('aria-expanded')).toBe('true'));
     expect(picker.id).toBe(semanticOwnerControlElementId(outcome));
     const emptyInteraction = {
@@ -417,7 +418,7 @@ describe('OccurrenceRoomActions', () => {
       </Provider>,
     );
     await waitFor(() => expect(picker).toHaveProperty('disabled', true));
-    expect(screen.getByLabelText('Steady Growth target')).toBe(picker);
+    expect(screen.getByRole('button', { name: 'Steady Growth target' })).toBe(picker);
     expect(hintOf(picker)).toBe('No eligible trait');
     expect(picker.getAttribute('aria-expanded')).toBe('false');
     application.dispose();
@@ -449,6 +450,7 @@ describe('OccurrenceRoomActions', () => {
         focusKey: 'test-steady-growth-retained-row',
       }),
       phaseKey: 'Encounter',
+      sourceTraitKey: 'BoonGrowthBoon',
       targetTraitKey: 'HestiaWeaponBoon',
     };
     const interaction = {
@@ -501,7 +503,7 @@ describe('OccurrenceRoomActions', () => {
         <SteadyGrowthEffectRow control={control} interactions={interactions} />
       </Provider>,
     );
-    expect(await screen.findByLabelText('Steady Growth target')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Steady Growth target' })).toBeTruthy();
     expect(screen.getByLabelText('Steady Growth').getAttribute('data-action-accent')).toBe(
       'automatic',
     );

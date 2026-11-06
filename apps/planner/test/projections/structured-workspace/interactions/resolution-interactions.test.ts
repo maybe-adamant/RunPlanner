@@ -116,6 +116,7 @@ describe('resolution-interactions', () => {
         focusKey: 'test-steady-growth',
       }),
       phaseKey: 'Encounter',
+      sourceTraitKey: 'BoonGrowthBoon',
     });
     const baseCandidateSession = createCandidateSessionFactory(catalog).bind(
       simulateProjectAssembly(catalog, project),

@@ -970,6 +970,7 @@ function roomActionsForOccurrence(
           address: outcome.address,
           marker: input.markerDestinations.marker(outcome.address),
           phaseKey: outcome.phaseKey,
+          sourceTraitKey: outcome.sourceTraitKey,
           ...(outcome.targetTraitKey === undefined
             ? {}
             : { targetTraitKey: outcome.targetTraitKey }),

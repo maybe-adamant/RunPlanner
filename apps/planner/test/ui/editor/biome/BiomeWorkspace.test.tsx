@@ -762,9 +762,7 @@ describe('BiomeWorkspace', () => {
     const segment = fountains[0]!.closest<HTMLElement>('.hub-segment')!;
     expect(within(segment).getByRole('button', { name: 'Visit 3' })).toBeTruthy();
     // A Phial target appears only while the Aromatic Phial is equipped.
-    expect(
-      within(fountains[0]!).queryByRole('button', { name: /^Aromatic Phial target/ }),
-    ).toBeNull();
+    expect(within(fountains[0]!).queryByRole('button', { name: /^Phial target/ })).toBeNull();
     expect(within(fountains[0]!).getByRole('button', { name: 'Reorder Fountain' })).toBeTruthy();
   });
 

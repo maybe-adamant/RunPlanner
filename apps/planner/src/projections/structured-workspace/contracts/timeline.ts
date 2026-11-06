@@ -349,6 +349,8 @@ export interface WorkspaceSteadyGrowthControl {
   readonly address: SteadyGrowthOutcomeAddress;
   readonly marker: WorkspaceMarker;
   readonly phaseKey: string;
+  /** The Steady Growth trait whose interval this is; its icon opens the target picker. */
+  readonly sourceTraitKey: string;
   readonly targetTraitKey?: string;
   /** Present only when this cycle settled its target. */
   readonly settledRarity?: WorkspaceSettledRarity;

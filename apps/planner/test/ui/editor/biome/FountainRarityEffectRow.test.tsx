@@ -107,7 +107,7 @@ describe('FountainRarityEffectRow', () => {
         <FountainRarityEffectRow control={control} interactions={interactions} />
       </Provider>,
     );
-    expect(await screen.findByRole('button', { name: 'Aromatic Phial target' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Phial target' })).toBeTruthy();
     expect(screen.queryByText('Needs repair')).toBeNull();
     await act(async () => {
       screen.getByRole('button', { name: 'Clear Phial target' }).click();
@@ -116,7 +116,7 @@ describe('FountainRarityEffectRow', () => {
     application.dispose();
   });
 
-  it('shows a settled growth as the target before, then its picker at the new rarity', async () => {
+  it('opens the target from the Phial and shows a settled growth as the target before and after', async () => {
     const application = createApplication();
     const action = createRoomActionAddress(
       goldenFBiome,
@@ -152,19 +152,21 @@ describe('FountainRarityEffectRow', () => {
     );
     const before = await screen.findByRole('img', { name: `${label}, Common` });
     expect(before.getAttribute('data-rarity')).toBe('Common');
-    const picker = screen.getByRole('button', { name: 'Aromatic Phial target' });
-    expect(picker.getAttribute('data-rarity')).toBe('Heroic');
+    expect(screen.getByRole('img', { name: `${label}, Heroic` }).getAttribute('data-rarity')).toBe(
+      'Heroic',
+    );
+    const picker = screen.getByRole('button', { name: 'Phial target' });
+    expect(picker.getAttribute('data-rarity')).toBeNull();
+    expect(hintOf(picker)).toBe(label);
 
-    // Nothing promoted: the one chip stays, without its earlier copy.
+    // Nothing promoted: one chip at its rarity.
     view.rerender(
       <Provider store={application.store}>
         <FountainRarityEffectRow control={control('Common')} interactions={interactions} />
       </Provider>,
     );
-    expect(screen.queryByRole('img', { name: `${label}, Common` })).toBeNull();
-    expect(
-      screen.getByRole('button', { name: 'Aromatic Phial target' }).getAttribute('data-rarity'),
-    ).toBe('Common');
+    expect(screen.getAllByRole('img', { name: `${label}, Common` })).toHaveLength(1);
+    expect(screen.queryByRole('img', { name: `${label}, Heroic` })).toBeNull();
     application.dispose();
   });
 
@@ -205,7 +207,7 @@ describe('FountainRarityEffectRow', () => {
         />
       </Provider>,
     );
-    const picker = await screen.findByRole('button', { name: 'Aromatic Phial target' });
+    const picker = await screen.findByRole('button', { name: 'Phial target' });
     expect(picker).toHaveProperty('disabled', true);
     expect(hintOf(picker)).toBe('Waits on an earlier choice.');
     expect(screen.queryByRole('button', { name: 'Clear Phial target' })).toBeNull();
@@ -251,7 +253,7 @@ describe('FountainRarityEffectRow', () => {
         />
       </Provider>,
     );
-    const picker = await screen.findByRole('button', { name: 'Aromatic Phial target' });
+    const picker = await screen.findByRole('button', { name: 'Phial target' });
     expect(picker).toHaveProperty('disabled', true);
     expect(hintOf(picker)).toBe('No Phial-eligible boon to target here.');
     application.dispose();
@@ -325,7 +327,11 @@ describe('FountainRarityEffectRow', () => {
         />
       </Provider>,
     );
-    await user.click(screen.getByRole('button', { name: 'Aromatic Phial target' }));
+    // The empty slot opens the same picker as the Phial.
+    await user.click(screen.getByRole('button', { name: 'Choose Phial target' }));
+    expect(screen.getByRole('button', { name: 'Phial target' }).getAttribute('aria-expanded')).toBe(
+      'true',
+    );
     await user.click(screen.getByText('Apollo Attack'));
     expect(authorIntent).toHaveBeenCalledWith('ApolloWeaponBoon');
     application.dispose();
@@ -396,7 +402,7 @@ describe('FountainRarityEffectRow', () => {
       </Provider>,
     );
     const historyBefore = application.store.getState().projectWorkspace.history!.past.length;
-    await user.click(screen.getByRole('button', { name: 'Aromatic Phial target' }));
+    await user.click(screen.getByRole('button', { name: 'Phial target' }));
     await user.click(screen.getByText('Apollo Attack'));
     const selected = application.store.getState().projectWorkspace.history!.present;
     const selectedPostboss = selected.route?.biomes[0]?.topology?.occurrences.find(

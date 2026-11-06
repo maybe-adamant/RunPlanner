@@ -2069,33 +2069,19 @@
   display: none;
 }
 
-/* The Aromatic Phial icon labels its target chip on one centre line. */
-.fountain-rarity-target {
+/* An automatic effect's source icon opens its target picker; the target it reached follows. */
+.automatic-effect-target {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
   min-width: 0;
 }
 
-.fountain-rarity-icon {
+.automatic-effect-outcome {
   display: inline-flex;
-  flex: 0 0 auto;
-  border-radius: 4px;
-}
-
-.fountain-rarity-icon > img {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
-.fountain-rarity-target > .field-control {
-  flex: 0 0 auto;
-  min-width: 0;
-}
-
-.fountain-rarity-target > .field-control-inline {
-  grid-template-columns: minmax(0, auto);
+  align-items: center;
+  gap: 6px;
 }
 
 .room-action-delete {

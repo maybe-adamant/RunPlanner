@@ -9,14 +9,11 @@ import {
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
-import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
-import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
 import { hintProps } from '@planner/ui/controls/hint';
 import { keepsakeArtwork } from '@planner/ui/controls/keepsakes/keepsakeArtwork';
-import { SettledRarityBefore } from './SettledRarityBefore';
+import { AutomaticEffectTarget } from './AutomaticEffectTarget';
 
 const pendingPhialTitles = {
   unreached: candidateWaitingHint,
@@ -24,7 +21,7 @@ const pendingPhialTitles = {
   noTargetRequired: 'No Phial-eligible boon to target here.',
 } as const satisfies Record<NonNullable<WorkspaceFountainRarityControl['pending']>, string>;
 
-const phialTargetName = 'Aromatic Phial target';
+const phialTargetName = 'Phial target';
 
 /** Inline editor for the exact target nested under one fountain action row. */
 export function FountainRarityEffectRow({
@@ -34,7 +31,6 @@ export function FountainRarityEffectRow({
   readonly control: WorkspaceFountainRarityControl;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
-  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const semanticNavigationRevision = useAppSelector(
@@ -77,41 +73,27 @@ export function FountainRarityEffectRow({
           : semanticAddressKey(control.address.action)
       }
     >
-      {/* The icon labels the picker, so the two never wrap apart. */}
-      <span className="fountain-rarity-target">
-        <span
-          {...hintProps(phialTargetName, undefined, phialTargetName)}
-          aria-label={phialTargetName}
-          className="fountain-rarity-icon"
-          role="img"
-          tabIndex={0}
-        >
-          <img alt="" src={keepsakeArtwork.FountainRarityKeepsake} />
-        </span>
-        <SettledRarityBefore
-          label={selected === '' ? '' : interaction.traitLabel(selected)}
-          settled={control.settledRarity}
-          targetTraitKey={control.targetTraitKey}
-        />
-        <RandomTraitTargetPicker
-          findingTarget={findingTarget(control.address)}
-          ariaLabel={phialTargetName}
-          {...(control.pending === undefined
-            ? {}
-            : { disabledHint: pendingPhialTitles[control.pending] })}
-          id={semanticOwnerControlElementId(control.address)}
-          interaction={interaction}
-          label=""
-          layout="inline"
-          model={domain?.picker ?? { sections: Object.freeze([]) }}
-          onSelect={(target) => executeIntent(interaction.intentFor(target))}
-          onOpenChange={onOpenChange}
-          open={open}
-          selected={selected === '' ? null : selected}
-          triggerRarity={control.settledRarity?.after}
-          triggerSize="icon"
-        />
-      </span>
+      <AutomaticEffectTarget
+        disabledHint={
+          control.pending === undefined ? undefined : pendingPhialTitles[control.pending]
+        }
+        owner={control.address}
+        model={domain?.picker ?? { sections: Object.freeze([]) }}
+        name={phialTargetName}
+        onOpenChange={onOpenChange}
+        onSelect={(target) => executeIntent(interaction.intentFor(target))}
+        open={open}
+        sourceIcon={keepsakeArtwork.FountainRarityKeepsake}
+        target={
+          selected === ''
+            ? undefined
+            : {
+                key: selected,
+                label: interaction.traitLabel(selected),
+                ...(control.settledRarity === undefined ? {} : { rarity: control.settledRarity }),
+              }
+        }
+      />
       {selected !== '' ? (
         <button
           className="quiet-action effect-repair-action"

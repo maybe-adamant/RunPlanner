@@ -9,11 +9,10 @@ import {
   type WorkspaceTranscendentEmbryoDomain,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
-import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
-import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
+import { keepsakeArtwork } from '@planner/ui/controls/keepsakes/keepsakeArtwork';
+import { AutomaticEffectTarget } from './AutomaticEffectTarget';
 import { TranscendentEmbryoOutcomeFields } from '../rewards/TranscendentEmbryoOutcomeFields';
 import { TimelineRow } from './TimelineRow';
 import { ActionIcon } from '@planner/ui/controls/ActionIcon';
@@ -27,7 +26,6 @@ export function TranscendentEmbryoEffectRow({
   readonly control: WorkspaceTranscendentEmbryoControl;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
-  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const semanticNavigationRevision = useAppSelector(
@@ -78,24 +76,30 @@ export function TranscendentEmbryoEffectRow({
       data-action-accent="automatic"
       editors={
         <div className="transcendent-embryo-outcome-row">
-          <RandomTraitTargetPicker
-            findingTarget={findingTarget(control.address)}
-            ariaLabel="Transcendent Embryo blessing"
-            disabled={domain?.emptyNoOp === true && outcome === undefined}
-            placeholder={domain?.emptyNoOp === true ? 'No eligible blessing' : 'Choose a trait'}
-            id={semanticOwnerControlElementId(control.address)}
-            interaction={{ traitLabel: interaction.blessingLabel }}
-            label=""
-            layout="inline"
+          <AutomaticEffectTarget
+            disabledHint={
+              domain?.emptyNoOp === true && outcome === undefined
+                ? 'No eligible blessing'
+                : undefined
+            }
+            owner={control.address}
             model={domain?.picker ?? { sections: Object.freeze([]) }}
+            name="Embryo blessing"
+            onOpenChange={onOpenChange}
             onSelect={(blessingKey) =>
               executeIntent(interaction.intentFor(interaction.outcomeFor(blessingKey)))
             }
-            onOpenChange={onOpenChange}
-            open={domain?.emptyNoOp === true && outcome === undefined ? false : open}
-            selected={selected === '' ? null : selected}
-            triggerRarity={domain?.rarity}
-            triggerSize="icon"
+            open={open}
+            sourceIcon={keepsakeArtwork.RandomBlessingKeepsake}
+            target={
+              selected === ''
+                ? undefined
+                : {
+                    key: selected,
+                    label: interaction.blessingLabel(selected),
+                    ...(domain?.rarity === undefined ? {} : { rarity: { after: domain.rarity } }),
+                  }
+            }
           />
           {domain?.operands === undefined ||
           domain.operands.length === 0 ||

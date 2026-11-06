@@ -1,6 +1,7 @@
 import {
   createAcquisitionRoleAddress,
   createBiomeAddress,
+  createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
@@ -367,6 +368,31 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-preboss-shop:postboss'),
   },
   {
+    id: 'room-phial-fountain',
+    label: 'Room fountain with its Phial target',
+    shows: ['fountain + Phial target'],
+    project: loadUnderworldTwistScyllaCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        keepsakeKey: 'FountainRarityKeepsake',
+      },
+      {
+        kind: 'ReplaceFountainRarityTarget',
+        outcome: createFountainRarityOutcomeAddress(
+          createRoomActionAddress(
+            createBiomeAddress('Underworld', 'F'),
+            createOccurrenceId('golden-f-preboss-shop:postboss'),
+            roomActionKey({ kind: 'useFountain' }),
+          ),
+        ),
+        targetTraitKey: 'ApolloWeaponBoon',
+      },
+    ],
+    target: room('F', 'golden-f-preboss-shop:postboss'),
+  },
+  {
     id: 'well-pool-rerolls',
     label: 'Well and Pool rerolls',
     shows: ['Well reroll', 'Pool reroll', 'Well purchase'],
@@ -454,7 +480,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'hub-phial-fountain',
-    label: 'Hub fountain with its Aromatic Phial target',
+    label: 'Hub fountain with its Phial target',
     shows: ['fountain + Phial target', 'Hub segments'],
     project: loadSurfaceNPhialIntermediateFountainCheckpoint,
     target: hub('N'),

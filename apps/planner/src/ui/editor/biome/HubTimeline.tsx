@@ -431,12 +431,7 @@ function FountainRow({
       </span>
       <FixedValueChip label="Fountain" />
       {rarity === undefined ? null : (
-        <>
-          <span aria-hidden="true" className="row-reward-arrow">
-            →
-          </span>
-          <FountainRarityEffectRow control={rarity} interactions={interactions} />
-        </>
+        <FountainRarityEffectRow control={rarity} interactions={interactions} />
       )}
     </li>
   );
