@@ -441,7 +441,7 @@ function TestRoomGuide.testRequiredBossDropNamesItsConsumableAndAmount()
         return guide.project(room({ row("collectRequiredReward", nil, { drop = drop }) })).rows[1].instruction
     end
     lu.assertEquals(label({ consumableKey = "DreamPointsDrop", resourceKey = "DreamPoints", amount = 3 }),
-        "Collect Shiny Stars ×3")
+        "Collect Shiny Stars x3")
     lu.assertEquals(label({ consumableKey = "GemPointsBigDrop", resourceKey = "GemPoints", amount = 1 }),
         "Collect Gemstones")
     lu.assertEquals(label({ consumableKey = "UnknownBossDrop", resourceKey = "Unknown", amount = 1 }),
@@ -711,7 +711,7 @@ function TestRoomGuide.testEveryTemplateAtItsLongestInstantiationFits()
         { { "+99 more", "Next: Room 23", "Boss reward", "Anvil of Fates", "Stygian Well",
             "Keepsake Rack", "Encounter", "Fountain", "Sell trait", "Wheel" }, { "%s" } },
     }
-    for _, name in pairs(guide.requiredDropNames) do assertFits("Collect " .. name .. " ×10", name) end
+    for _, name in pairs(guide.requiredDropNames) do assertFits("Collect " .. name .. " x10", name) end
     for _, group in ipairs(templates) do
         for _, template in ipairs(group[2]) do
             for _, name in ipairs(group[1]) do assertFits(template:format(name), template) end
