@@ -664,7 +664,9 @@ uncompleted and unclaimable.
 
 At the claim, Perfect Clear after a hit gives the Onion
 (`RoomRewardConsolationPrize`); Time gives gold, 100 for 8 seconds then
-falling to a floor of 10, times the money multiplier; Elite has no fail state.
+falling to a floor of 10, times the money multiplier held when the challenge
+ends (`EndChallengeEncounter`, `EncounterLogic.lua:2139-2141`); Elite has no
+fail state.
 A fight without damage also rolls a 5% bonus Nectar (`GiftDrop`) for every
 kind, spawned bare, without a `RunProgress` level (owner-settled: kept, with no
 level-up). Rewards spawn directly: no

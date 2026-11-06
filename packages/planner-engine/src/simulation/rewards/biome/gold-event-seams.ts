@@ -619,6 +619,20 @@ export function withGoldEvents(
       readings.set(`${roomKey}::encounterEnd::${event.phaseKey}`, reading);
     state = Object.freeze({ ...state, goldSpawnReadings: readings });
   }
+  // A finished switch challenge fixes its claim's gold as it ends, inside the press.
+  if (
+    event.kind === 'challengeSwitchInteracted' &&
+    event.encounter?.completed === true &&
+    roomKey !== undefined &&
+    next.branch !== undefined
+  )
+    state = Object.freeze({
+      ...state,
+      goldSpawnReadings: new Map(state.goldSpawnReadings).set(
+        `${roomKey}::challengeEnd`,
+        goldSpawnReading(catalog, next.branch.state) ?? 'unresolved',
+      ),
+    });
   if (next.branch !== undefined) {
     // A selected trait's own coins spawn as its screen closes, after it is equipped.
     const screens = new Map<string, SimulationState>();
@@ -819,17 +833,33 @@ export function withGoldEvents(
               },
         );
       } else if (gameName === 'Money') {
-        // Only a Time switch's claim gushes `Money`; its value is authored.
+        // Only a Time switch's claim gushes `Money`; its value is authored and
+        // multiplied when the challenge ends (EncounterLogic.lua:2139-2141);
+        // its coins are blocked at collection.
         const gold = room?.challengeSwitch?.gold;
+        const atEnd =
+          roomKey === undefined
+            ? undefined
+            : state.goldSpawnReadings.get(`${roomKey}::challengeEnd`);
+        const now = goldMultipliers(catalog, after);
         detect(
           key,
           owner,
           gold === undefined
             ? { unpriced: { kind: 'contractFailure', detail: 'a gold claim has no switch value' } }
-            : {
-                gain: { kind: 'challengeSwitchGold', gold },
-                multipliers: goldMultipliers(catalog, after),
-              },
+            : atEnd === undefined
+              ? {
+                  unpriced: {
+                    kind: 'contractFailure',
+                    detail: 'a gold claim has no finished challenge',
+                  },
+                }
+              : atEnd === 'unresolved' || now === undefined
+                ? { unpriced: { kind: 'itemUnresolved' } }
+                : {
+                    gain: { kind: 'challengeSwitchGold', gold },
+                    multipliers: { ...now, moneyMultiplier: atEnd.multipliers.moneyMultiplier },
+                  },
         );
       } else if (gameName === 'Currency') {
         const gold = currencyGold(

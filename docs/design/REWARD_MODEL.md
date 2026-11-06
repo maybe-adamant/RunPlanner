@@ -959,8 +959,9 @@ over one (Quick Buck, Chaos Affluence's authored value), at the contact:
 A room reward collected in another room than the one it spawned in, and
 coins whose spawn the walk does not see (Hermes deliveries, Nemesis and Echo
 results), read the multipliers at collection. A finished Time challenge
-switch's claim pays its authored gold times the money multiplier at the press,
-nothing while gold is blocked; the authored gold is an approximate value.
+switch's claim pays its authored gold times the money multiplier held when its
+challenge ends, inside the press, and nothing while gold is blocked when it is
+collected; the authored gold is an approximate value.
 Arachne's costume and Selene's per-cast gold are not counted.
 
 Each walked contact publishes its gain facts from the reached state, the way
