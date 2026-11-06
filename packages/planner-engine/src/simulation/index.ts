@@ -322,7 +322,11 @@ export type {
   GoldRunStart,
 } from './commerce/gold/route-ledger';
 export type { GoldFightAttribution, GoldFightSource, GoldGain } from './commerce/gold/gain-context';
-export type { GoldFightSourceAmount, GoldFightSummary } from './commerce/gold/fight-gold';
+export type {
+  GoldFightSourceAmount,
+  GoldFightSummary,
+  GoldRoomEntrySummary,
+} from './commerce/gold/fight-gold';
 export type { GoldAmount } from './commerce/gold/prices';
 export { evaluateBiome, materializedBiomePrefixCoveragePoint } from './evaluation/biome-evaluation';
 export { simulateProject, simulateProjectAssembly } from './evaluation/project';

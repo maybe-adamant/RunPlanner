@@ -421,7 +421,7 @@ describe('challenge switch claims', () => {
               'Encounter',
             ),
           ),
-          ['enemies', 'urns'],
+          ['enemies'],
         ],
         [semanticAddressKey(pressRow), ['enemies']],
       ]),

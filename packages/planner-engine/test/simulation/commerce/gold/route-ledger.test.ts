@@ -364,21 +364,13 @@ describe('gold ledger', () => {
     });
   });
 
-  it('sums each fight’s gold and joins the urns to the room’s first combat phase, moving no balance', () => {
+  it('sums each fight’s gold and publishes the urns as the room’s entry gold, moving no balance', () => {
     const phase = (phaseKey: string) =>
       createEncounterPhaseAddress(
         biome,
         { kind: 'occurrence', occurrenceId: room.occurrenceId },
         phaseKey,
       );
-    const fought = (value: GoldGain, phaseKey: string, source: 'enemies' | 'medea') => {
-      const publication = gain(value);
-      return { ...publication, fight: { fight: phase(phaseKey), source } } as GoldEventPublication;
-    };
-    const started = (phaseKey: string): GoldEventPublication => {
-      sequence += 1;
-      return { kind: 'combatStarted', sequence, room, phase: phase(phaseKey) };
-    };
     const kills = {
       kind: 'enemyGold',
       encounterKey: 'GeneratedF',
@@ -386,12 +378,21 @@ describe('gold ledger', () => {
       runDepth: 1,
       hordesRank: 0,
     } as const;
-    const entries = (withStarts: boolean) => [
+    const fought = (phaseKey: string, attributed: boolean) => {
+      const publication = gain(kills);
+      return attributed
+        ? ({
+            ...publication,
+            fight: { fight: phase(phaseKey), source: 'enemies' },
+          } as GoldEventPublication)
+        : publication;
+    };
+    const urns = { kind: 'urnGold', roomGameName: 'F_Combat01' } as const;
+    const entries = (attributed: boolean) => [
       marker('roomEntered'),
-      gain({ kind: 'urnGold', roomGameName: 'F_Combat01' }),
-      ...(withStarts ? [started('Intro'), started('Combat')] : []),
-      fought(kills, 'Intro', 'enemies'),
-      fought(kills, 'Combat', 'enemies'),
+      gain(urns),
+      fought('Intro', attributed),
+      fought('Combat', attributed),
       gain({ kind: 'moneyPickup', gold: 20, npcDrop: false }),
     ];
     const attributed = roomOf(ledger(entries(true)));
@@ -400,47 +401,39 @@ describe('gold ledger', () => {
     expect(attributed.gains.map((entry) => entry.amount)).toEqual(
       unattributed.gains.map((entry) => entry.amount),
     );
-    const [urns, intro, combat] = attributed.gains;
-    expect(attributed.fights).toEqual([
-      {
-        fight: phase('Intro'),
-        mean: urns!.amount!.mean + intro!.amount!.mean,
-        spread: Math.sqrt(urns!.amount!.variance + intro!.amount!.variance),
+    const [urnGain, intro, combat] = attributed.gains;
+    expect(urnGain!.fight).toBeUndefined();
+    expect(attributed.entry).toEqual({
+      mean: urnGain!.amount!.mean,
+      spread: Math.sqrt(urnGain!.amount!.variance),
+      exact: false,
+    });
+    expect(unattributed.entry).toEqual(attributed.entry);
+    expect(attributed.fights).toEqual(
+      [intro!, combat!].map((paid, index) => ({
+        fight: phase(index === 0 ? 'Intro' : 'Combat'),
+        mean: paid.amount!.mean,
+        spread: Math.sqrt(paid.amount!.variance),
         exact: false,
         breakdown: [
           {
             source: 'enemies',
-            mean: intro!.amount!.mean,
-            spread: Math.sqrt(intro!.amount!.variance),
-            exact: false,
-          },
-          {
-            source: 'urns',
-            mean: urns!.amount!.mean,
-            spread: Math.sqrt(urns!.amount!.variance),
+            mean: paid.amount!.mean,
+            spread: Math.sqrt(paid.amount!.variance),
             exact: false,
           },
         ],
-      },
-      {
-        fight: phase('Combat'),
-        mean: combat!.amount!.mean,
-        spread: Math.sqrt(combat!.amount!.variance),
-        exact: false,
-        breakdown: [
-          {
-            source: 'enemies',
-            mean: combat!.amount!.mean,
-            spread: Math.sqrt(combat!.amount!.variance),
-            exact: false,
-          },
-        ],
-      },
-    ]);
-    // Without a combat phase the urns join no fight.
-    expect(unattributed.fights.map((fight) => fight.breakdown.map((line) => line.source))).toEqual([
-      ['enemies'],
-      ['enemies'],
-    ]);
+      })),
+    );
+    expect(unattributed.fights).toEqual([]);
+    // A room's urn gains combine under the ledger's statistics.
+    const twice = roomOf(ledger([marker('roomEntered'), gain(urns), gain(urns)]));
+    const [first, second] = twice.gains;
+    expect(twice.entry?.mean).toBeCloseTo(first!.amount!.mean + second!.amount!.mean, 9);
+    expect(twice.entry?.spread).toBeCloseTo(
+      Math.sqrt(first!.amount!.variance + second!.amount!.variance),
+      9,
+    );
+    expect(roomOf(ledger([marker('roomEntered'), gain(kills)])).entry).toBeUndefined();
   });
 });

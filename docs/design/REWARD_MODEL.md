@@ -900,10 +900,10 @@ Medea's curse pay (see [Enemy gold](#enemy-gold)).
 Each room also sums its fights' gold, a mean and spread with one line per
 source: an encounter phase's kills, Heracles's bounty and Medea's drops, a
 Fields room's Passive store on the cage fight that paid it, and a challenge
-switch's or locked door's kills at its press. The room's urns join its main
-encounter phase, the first combat-bearing phase to start in it; a room with
-none, such as a shop, Story or Postboss room, leaves them out of every fight.
-The summary only regroups ledger gains and moves no balance. Every assumption and tuning value the estimate
+switch's or locked door's kills at its press. Urns belong to no fight: they
+are the room's entry gold, summed apart in every room that swaps them. These
+summaries only regroup ledger gains and move no balance. Every assumption and
+tuning value the estimate
 uses is listed with its evidence in
 [Gold estimate assumptions](GOLD_ESTIMATE_ASSUMPTIONS.md).
 

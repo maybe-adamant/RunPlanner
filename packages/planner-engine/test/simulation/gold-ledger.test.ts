@@ -99,6 +99,23 @@ const fights = (gold: GoldLedger, room: ReturnType<typeof createOccurrenceAddres
   if (result.availability !== 'available') throw new Error(`room is ${result.reason}`);
   return checkedGoldFights(result.room);
 };
+const roomSpending = (gold: GoldLedger, room: ReturnType<typeof createOccurrenceAddress>) => {
+  const result = gold.roomAt(room);
+  if (result.availability !== 'available') throw new Error(`room is ${result.reason}`);
+  return result.room;
+};
+/** The room's one urn gain, which joins no fight and is its whole entry gold. */
+const expectUrnEntry = (gold: GoldLedger, room: ReturnType<typeof createOccurrenceAddress>) => {
+  const spending = roomSpending(gold, room);
+  const urns = spending.gains.filter((gain) => gain.kind === 'urnGold');
+  expect(urns).toHaveLength(1);
+  expect(urns[0]!.fight).toBeUndefined();
+  expect(spending.entry).toEqual({
+    mean: urns[0]!.amount!.mean,
+    spread: Math.sqrt(urns[0]!.amount!.variance),
+    exact: urns[0]!.amount!.variance === 0,
+  });
+};
 const phaseKey = (room: ReturnType<typeof createOccurrenceAddress>, phase: string) =>
   semanticAddressKey(
     createEncounterPhaseAddress(
@@ -682,7 +699,7 @@ describe('gold by timeline action', () => {
 });
 
 describe('gold by fight', () => {
-  it('sums a combat room’s kills, Medea’s drops and its urns on its main encounter phase', () => {
+  it('sums a combat room’s kills and Medea’s drops on its encounter phase, its urns at its entry', () => {
     let project = loadSurfacePSteadyGrowthShrineFrontierCheckpoint();
     const occurrences = project.route.biomes.find((biome) => biome.biomeKey === 'N')!.topology!
       .occurrences;
@@ -705,9 +722,11 @@ describe('gold by fight', () => {
       nBiome,
       occurrences.find((occurrence) => occurrence.gameName === 'N_Combat11')!.occurrenceId,
     );
-    expect(fights(ledger(project), room)).toEqual(
-      new Map([[phaseKey(room, 'Encounter'), ['enemies', 'medea', 'urns']]]),
+    const gold = ledger(project);
+    expect(fights(gold, room)).toEqual(
+      new Map([[phaseKey(room, 'Encounter'), ['enemies', 'medea']]]),
     );
+    expectUrnEntry(gold, room);
   });
 
   it('adds Heracles’s bounty to his fight’s kills', () => {
@@ -727,7 +746,6 @@ describe('gold by fight', () => {
     expect(fights(ledger(project), room).get(phaseKey(room, 'Encounter'))).toEqual([
       'enemies',
       'heraclesBounty',
-      'urns',
     ]);
   });
 
@@ -738,16 +756,18 @@ describe('gold by fight', () => {
     );
     // The room's first cage fought is Cage02. Fields swaps no urns, and the Passive
     // phase never runs: its store has no fight of its own.
-    expect(fights(ledger(createGoldenFGHProject()), room)).toEqual(
-      new Map([[phaseKey(room, 'Cage02'), ['passiveStore']]]),
-    );
+    const gold = ledger(createGoldenFGHProject());
+    expect(fights(gold, room)).toEqual(new Map([[phaseKey(room, 'Cage02'), ['passiveStore']]]));
+    // Nor does a room without urns publish entry gold.
+    expect(gains(gold, room).map(([kind]) => kind)).not.toContain('urnGold');
+    expect(roomSpending(gold, room).entry).toBeUndefined();
   });
 
-  it('leaves urns out of every fight in a room without a combat phase', () => {
+  it('publishes a fightless room’s urns as its entry gold', () => {
     const room = createOccurrenceAddress(f, 'golden-f-preboss-shop' as never);
     const gold = ledger(createGoldenFGHProject());
-    expect(gains(gold, room).map(([kind]) => kind)).toContain('urnGold');
     expect(fights(gold, room)).toEqual(new Map());
+    expectUrnEntry(gold, room);
   });
 });
 

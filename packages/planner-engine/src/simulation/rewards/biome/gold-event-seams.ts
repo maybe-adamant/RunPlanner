@@ -1,8 +1,4 @@
-import {
-  isCombatBearingEncounterPhaseKind,
-  type Catalog,
-  type InRunTraitRarity,
-} from '../../../catalog-schema';
+import type { Catalog, InRunTraitRarity } from '../../../catalog-schema';
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
@@ -644,20 +640,6 @@ export function withGoldEvents(
         room: enteredRoom.origin,
       }),
     ]);
-  if (event.kind === 'encounterStarted' && isCombatBearingEncounterPhaseKind(event.phaseKind))
-    if (room !== undefined)
-      state = withGoldPublications(state, [
-        Object.freeze({
-          kind: 'combatStarted' as const,
-          sequence: event.sequence,
-          room: room.origin,
-          phase: createEncounterPhaseAddress(
-            createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-            { kind: 'occurrence', occurrenceId: room.occurrenceId },
-            event.phaseKey,
-          ),
-        }),
-      ]);
   const doorsOpenHere = room !== undefined && doorsOpenAt(room, event);
   const roomAction = room === undefined ? undefined : walkedRoomAction(room, event);
   const doorsOpen: readonly GoldEventPublication[] = doorsOpenHere

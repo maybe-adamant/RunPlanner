@@ -16,9 +16,9 @@ export interface GoldFightSourceAmount {
 }
 
 /**
- * The gold one fight paid: an encounter phase, with the urns of the room whose
- * main encounter phase it is, or a challenge switch's or locked door's fight at
- * its press. Its terms are independent, so their means and variances add.
+ * The gold one fight paid: an encounter phase, or a challenge switch's or
+ * locked door's fight at its press. Its terms are independent, so their means
+ * and variances add.
  */
 export interface GoldFightSummary {
   readonly fight: EncounterPhaseAddress | RoomActionAddress;
@@ -40,7 +40,6 @@ const SOURCE_ORDER: readonly GoldFightSource[] = Object.freeze([
   'passiveStore',
   'heraclesBounty',
   'medea',
-  'urns',
 ]);
 
 const moments = (amount: GoldAmount) => ({
@@ -48,6 +47,21 @@ const moments = (amount: GoldAmount) => ({
   spread: Math.sqrt(amount.variance),
   exact: amount.variance === 0,
 });
+
+/** The gold a room pays at its entry, its urns: its mean and standard deviation. */
+export interface GoldRoomEntrySummary {
+  readonly mean: number;
+  readonly spread: number;
+  /** No variance: the amount is certain. */
+  readonly exact: boolean;
+}
+
+/** The room-entry summary of these amounts; undefined when there are none. */
+export function goldRoomEntrySummary(
+  amounts: readonly GoldAmount[],
+): GoldRoomEntrySummary | undefined {
+  return amounts.length === 0 ? undefined : Object.freeze(moments(sumGold(amounts)));
+}
 
 /** Each fight's gold summary in the order its first gain was paid. */
 export function goldFightSummaries(gains: readonly GoldFightGain[]): readonly GoldFightSummary[] {

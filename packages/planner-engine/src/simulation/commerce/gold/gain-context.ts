@@ -141,7 +141,7 @@ export type GoldGain =
   | { readonly kind: 'challengeSwitchGold'; readonly gold: number };
 
 /** A fight's gold by where it comes from; `passiveStore` is a Fields room's one Passive store. */
-export type GoldFightSource = 'enemies' | 'passiveStore' | 'medea' | 'heraclesBounty' | 'urns';
+export type GoldFightSource = 'enemies' | 'passiveStore' | 'medea' | 'heraclesBounty';
 
 /**
  * The fight whose gold summary a gain joins: an encounter phase, or the
@@ -165,7 +165,7 @@ interface GoldGainContact {
   readonly owner?: SemanticAddress;
   /** The room's ranked action whose settlement paid it; absent for gold no action pays. */
   readonly roomAction?: RoomActionAddress;
-  /** The fight whose gold it is; urns join their room's main encounter phase in the ledger. */
+  /** The fight whose gold it is. */
   readonly fight?: GoldFightAttribution;
 }
 
@@ -183,19 +183,7 @@ export interface GoldRoomMarkerPublication {
   readonly room: OccurrenceAddress;
 }
 
-/**
- * A combat-bearing encounter phase started in the room. The room's first is
- * its main encounter phase, whose fight gold summary its urns join.
- */
-export interface GoldCombatStartPublication {
-  readonly kind: 'combatStarted';
-  readonly sequence: number;
-  readonly room: OccurrenceAddress;
-  readonly phase: EncounterPhaseAddress;
-}
-
-export type GoldEventPublication =
-  GoldGainPublication | GoldRoomMarkerPublication | GoldCombatStartPublication;
+export type GoldEventPublication = GoldGainPublication | GoldRoomMarkerPublication;
 
 /**
  * The gold multipliers a state holds; undefined while a held money multiplier
