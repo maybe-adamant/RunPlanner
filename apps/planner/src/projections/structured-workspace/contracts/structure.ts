@@ -234,6 +234,8 @@ export interface WorkspaceRerollRow {
     /** Every door's or offer's rewards once this press lands, keyed by exit or offer. */
     readonly after: readonly {
       readonly exitKey: string;
+      /** The door is still locked here: its locked-door press comes later or not at all. */
+      readonly locked?: true;
       readonly rewards: readonly (ResolvedRewardOffer | null)[];
     }[];
   };

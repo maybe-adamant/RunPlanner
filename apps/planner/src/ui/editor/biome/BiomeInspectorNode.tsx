@@ -196,9 +196,13 @@ function roomTimelineDoors({
   const unlockOwners = (node.room.roomActions?.rows ?? []).flatMap((row) =>
     row.reference.kind === 'unlockExit' ? [row.address] : [],
   );
+  // Every locked door is still locked as the doors open: its press follows them.
+  const lockedAsOpened = (lockedDoors?.doors ?? []).flatMap((door) =>
+    door.locked ? [door.exitKey] : [],
+  );
   if (batch !== undefined) {
     return {
-      summary: <DoorChips chips={batchDoorChips(batch)} />,
+      summary: <DoorChips chips={batchDoorChips(batch, lockedAsOpened)} />,
       findingOwners: [...batchDoorFindingOwners(batch), ...unlockOwners],
       ...(lockedDoors === undefined
         ? {}
@@ -208,6 +212,7 @@ function roomTimelineDoors({
       detail: (
         <BatchDoorsDetail
           interactions={interactions}
+          lockedExits={lockedAsOpened}
           markFor={markFor}
           node={batch}
           {...(batch.persistence === 'authored' || batch.repairIntent !== undefined

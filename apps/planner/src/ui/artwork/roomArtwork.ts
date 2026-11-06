@@ -23,7 +23,9 @@ export type RoomObjectKey =
   | 'challengeSwitch'
   | 'infernalTrove'
   | 'moonMonument'
-  | 'unseenSigil';
+  | 'unseenSigil'
+  | 'lockedDoors'
+  | 'doorLock';
 
 /** An in-world room object's icon. */
 export function roomObjectIcon(key: RoomObjectKey): string | undefined {

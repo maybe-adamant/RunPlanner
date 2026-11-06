@@ -129,6 +129,14 @@
   min-width: 0;
 }
 
+/* The Lock Doors gate's doors, one per line under the gate. */
+.locked-doors-list {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding-left: var(--overview-subrow-indent, 1.35rem);
+}
+
 .chaos-feature-row:has(input:disabled) {
   color: #e3dde8;
   opacity: 1;
@@ -3095,6 +3103,20 @@
 
 .timeline-door-chip[data-unavailable] {
   opacity: 0.5;
+}
+
+/* A door locked at this point: the game's lock after the door's icons. */
+.door-lock-indicator {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.door-row-number-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .timeline-door-chip-blank {

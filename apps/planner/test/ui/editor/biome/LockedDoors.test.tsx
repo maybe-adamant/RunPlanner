@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, screen } from '@testing-library/react';
+import { act, cleanup, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
@@ -11,7 +11,10 @@ import {
 import { createGoldenFGHIProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
 import type { PlannerApplication } from '@planner/composition/createApplication';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectUndoRequested,
+} from '@planner/state/projectWorkspaceSlice';
 import { renderWorkspace } from '@planner-test/support/biome-workbench';
 
 afterEach(() => cleanup());
@@ -38,10 +41,17 @@ describe('locked doors', () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'G');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
+    expect(screen.queryByRole('checkbox', { name: 'Door 2 locked' })).toBeNull();
+    await user.click(screen.getByRole('checkbox', { name: 'Lock Doors' }));
+    // The gate only shows the doors; Door 1 never locks.
+    expect(hostRoom(application).lockedExits).toBeUndefined();
+    expect(screen.queryByRole('checkbox', { name: 'Door 1 locked' })).toBeNull();
     await user.click(screen.getByRole('checkbox', { name: 'Door 2 locked' }));
     expect(hostRoom(application).lockedExits).toEqual(['exit2']);
 
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const summary = () => screen.getByRole('list', { name: 'Door summary' });
+    expect(within(summary()).getByRole('listitem', { name: /^Door 2 .* Locked$/ })).toBeTruthy();
     // A door still locked is not offered for leaving.
     await user.click(screen.getByRole('button', { name: /Exit door/ }));
     expect(screen.queryByRole('option', { name: /Door 2/ })).toBeNull();
@@ -57,6 +67,27 @@ describe('locked doors', () => {
 
     await user.click(screen.getByRole('button', { name: /Exit door/ }));
     expect(await screen.findByRole('option', { name: /Door 2/ })).toBeTruthy();
+  });
+
+  it('unlocks every door as one edit when the gate is unticked', async () => {
+    const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'G');
+    openHost(application);
+    await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Lock Doors' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Door 2 locked' }));
+    const gate = screen.getByRole('checkbox', { name: 'Lock Doors' });
+    expect((gate as HTMLInputElement).checked).toBe(true);
+
+    await user.click(gate);
+    expect(hostRoom(application).lockedExits).toBeUndefined();
+    expect(screen.queryByRole('checkbox', { name: 'Door 2 locked' })).toBeNull();
+    act(() => {
+      application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect(hostRoom(application).lockedExits).toEqual(['exit2']);
+    expect(
+      (screen.getByRole('checkbox', { name: 'Door 2 locked' }) as HTMLInputElement).checked,
+    ).toBe(true);
   });
 
   it('opens the door editor when the room is left through a door still locked', async () => {

@@ -66,4 +66,17 @@ describe('a press’s view of its surface', () => {
       ],
     });
   });
+
+  it('marks the doors still locked once each press lands', () => {
+    const states = workspacePressSurfaceStates({
+      entries,
+      presses: [
+        { rowKey: 'p1', ownerKey: 'door1', label: 'Door 1', reward: gold, locked: ['exit2'] },
+        { rowKey: 'p2', ownerKey: 'door1', label: 'Door 1', reward: pom, locked: [] },
+      ],
+      settled: new Map(),
+    });
+    expect(states.get('p1')?.after[1]).toEqual({ exitKey: 'exit2', locked: true, rewards: [] });
+    expect(states.get('p2')?.after[1]).toEqual({ exitKey: 'exit2', rewards: [] });
+  });
 });

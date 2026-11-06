@@ -45,6 +45,7 @@ import {
 } from './RoomAddMenu';
 import { useTimelineReorder } from './useTimelineReorder';
 import { DoorRerollRowReward, DoorsRerollEntry } from './RoomRerolls';
+import { UnlockExitFightControl } from './UnlockExitFightControl';
 import { DoorChips } from './DecisionWorkbench';
 import { RewardWheelWorkbench, SelectWheelRow } from './locals/RewardWheelWorkbench';
 import { wheelOfferChips } from './doorSummary';
@@ -724,6 +725,8 @@ export function RoomActionsWorkbench({
               )}
               {doorPress !== undefined ? (
                 <strong>Reroll</strong>
+              ) : row.unlockDoorLabel !== undefined ? (
+                <strong>Unlock</strong>
               ) : nemesisInteraction !== undefined && nemesisInteraction.value !== null ? (
                 <NemesisInteractionPhrase interaction={nemesisInteraction} />
               ) : row.labelParts === undefined ? (
@@ -803,7 +806,17 @@ export function RoomActionsWorkbench({
           }
           editors={
             <>
-              {doorPress === undefined ? (
+              {row.unlockDoorLabel !== undefined ? (
+                <span className="room-reroll-row-inline">
+                  <span>{row.unlockDoorLabel}</span>
+                  {row.unlockExitEncounter === undefined ? null : (
+                    <UnlockExitFightControl
+                      encounter={row.unlockExitEncounter}
+                      interactions={interactions}
+                    />
+                  )}
+                </span>
+              ) : doorPress === undefined ? (
                 renderRowContent?.(row)
               ) : (
                 <DoorRerollRowReward

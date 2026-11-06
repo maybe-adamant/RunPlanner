@@ -431,6 +431,7 @@ export function DoorRerollRowReward({
             ? chip
             : {
                 ...chip,
+                locked: door.locked === true,
                 rewards: door.rewards.flatMap((offer) =>
                   offer === null ? [] : [offerIcon(offer)],
                 ),

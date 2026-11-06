@@ -22,6 +22,8 @@ export interface DoorChip {
   readonly missing?: true;
   readonly picked?: boolean;
   readonly unavailable?: boolean;
+  /** The door is locked at this point of the Timeline. */
+  readonly locked?: boolean;
 }
 
 /** A door's rewards as first drawn, or after its rerolls; none while hidden. */
@@ -37,8 +39,11 @@ export function doorRewardIcons(
   });
 }
 
-/** The batch's doors as compact chips of their first draws, in door order. */
-export function batchDoorChips(node: BatchNode): readonly DoorChip[] {
+/** The batch's doors as compact chips of their first draws, in door order; `locked` doors as the doors open. */
+export function batchDoorChips(
+  node: BatchNode,
+  locked: readonly string[] = [],
+): readonly DoorChip[] {
   return [
     ...node.targets.map((target): DoorChip => ({
       key: target.exitKey,
@@ -47,12 +52,14 @@ export function batchDoorChips(node: BatchNode): readonly DoorChip[] {
       rewards: doorRewardIcons(target, 'first'),
       picked: target.selected,
       unavailable: target.physicalState === 'unavailable',
+      locked: locked.includes(target.exitKey),
     })),
     ...(node.kind === 'takeoverBatch' ? [] : node.missingTargets).map((target): DoorChip => ({
       key: target.exitKey,
       label: `Door ${target.index}`,
       rewards: [],
       missing: true,
+      locked: locked.includes(target.exitKey),
     })),
     ...[node.zagreusContract, node.chaos].flatMap((control) =>
       control === undefined

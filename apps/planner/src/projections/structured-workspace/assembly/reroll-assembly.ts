@@ -513,6 +513,14 @@ export function assembleRoomRerolls(input: {
             rewardTypes,
           });
         })();
+  // A locked door stays locked until its press; a door reroll can follow only that press.
+  const stillLocked = new Set(occurrence?.lockedExits ?? []);
+  const lockedAt = new Map<string, readonly string[]>();
+  for (const reference of occurrence?.roomActions.order ?? []) {
+    if (reference.kind === 'unlockExit') stillLocked.delete(reference.exitKey);
+    else if (reference.kind === 'reroll' && reference.target.kind !== 'wheelOffer')
+      lockedAt.set(roomActionKey(reference), Object.freeze([...stillLocked]));
+  }
   // Each press reads as its door (a cage is known by its reward), the reward it
   // replaces, and every door once it lands.
   const states = workspacePressSurfaceStates({
@@ -545,6 +553,7 @@ export function assembleRoomRerolls(input: {
                 ),
                 label: index === undefined ? 'Door' : `Door ${index}`,
                 reward: reference.reward,
+                locked: lockedAt.get(roomActionKey(reference)) ?? [],
               },
             ];
           }),
@@ -575,6 +584,8 @@ export interface WorkspaceSurfacePress {
   readonly ownerKey: string;
   readonly label: string;
   readonly reward: ResolvedRewardOffer;
+  /** The entries still locked once the press lands, by key. */
+  readonly locked?: readonly string[];
 }
 
 /**
@@ -614,6 +625,7 @@ export function workspacePressSurfaceStates(input: {
             input.entries.map((entry) =>
               Object.freeze({
                 exitKey: entry.key,
+                ...(press.locked?.includes(entry.key) === true ? { locked: true as const } : {}),
                 rewards: Object.freeze(
                   entry.visible
                     ? entry.owners.map((owner) => current.get(owner.ownerKey) ?? null)

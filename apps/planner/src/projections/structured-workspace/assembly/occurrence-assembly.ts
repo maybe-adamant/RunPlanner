@@ -1,3 +1,4 @@
+import { normalExitOrdinal } from './ordering';
 import { assembleLockedDoors, assembleUnlockExitEncounters } from './locked-doors-assembly';
 import { assembleChallengeSwitch } from './challenge-switch-assembly';
 import {
@@ -574,7 +575,9 @@ export function assembleWorkspaceOccurrence(
   const switchOutcome = challengeSwitch?.outcome;
   const assembledRoomActions =
     actionAssembly.roomActions === undefined ||
-    (switchOutcome === undefined && unlockEncounters.size === 0)
+    (switchOutcome === undefined &&
+      unlockEncounters.size === 0 &&
+      !actionAssembly.roomActions.rows.some((row) => row.reference.kind === 'unlockExit'))
       ? actionAssembly.roomActions
       : Object.freeze({
           ...actionAssembly.roomActions,
@@ -582,10 +585,14 @@ export function assembleWorkspaceOccurrence(
             actionAssembly.roomActions.rows.map((row) => {
               if (row.reference.kind === 'interactChallengeSwitch' && switchOutcome !== undefined)
                 return Object.freeze({ ...row, challengeSwitchOutcome: switchOutcome });
+              if (row.reference.kind !== 'unlockExit') return row;
+              const ordinal = normalExitOrdinal(row.reference.exitKey);
               const unlockExitEncounter = unlockEncounters.get(row.key);
-              return unlockExitEncounter === undefined
-                ? row
-                : Object.freeze({ ...row, unlockExitEncounter });
+              return Object.freeze({
+                ...row,
+                unlockDoorLabel: ordinal === undefined ? 'Door' : `Door ${ordinal}`,
+                ...(unlockExitEncounter === undefined ? {} : { unlockExitEncounter }),
+              });
             }),
           ),
         });

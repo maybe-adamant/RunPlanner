@@ -39,6 +39,7 @@ import { DoorRewardEditor, DoorRewardHiddenTag, RerolledRewardRepairs } from './
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
 import { doorRewardIcons, type DoorChip } from './doorSummary';
@@ -219,13 +220,23 @@ export function DoorRowsHeader({
 export function DoorNumber({
   index,
   exitTypeLabel,
+  locked = false,
 }: {
   readonly index: number;
   readonly exitTypeLabel?: string | undefined;
+  /** The door is locked as the doors open. */
+  readonly locked?: boolean;
 }) {
   return (
     <span className="door-row-number">
-      {`Door ${index}`}
+      {locked ? (
+        <span className="door-row-number-locked">
+          {`Door ${index}`}
+          <DoorLockIndicator />
+        </span>
+      ) : (
+        `Door ${index}`
+      )}
       {exitTypeLabel === undefined ? null : (
         <span className="door-row-sublabel">
           <span className="visually-hidden"> · </span>
@@ -347,10 +358,12 @@ function firstDrawDoor(door: WorkspacePhysicalTarget['door']): WorkspacePhysical
 
 function TargetRow({
   interactions,
+  locked,
   node,
   target,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly locked: boolean;
   readonly node: BatchNode;
   readonly target: WorkspacePhysicalTarget;
 }) {
@@ -384,7 +397,9 @@ function TargetRow({
     <DoorRow
       {...(authorsRoom ? {} : { anchor: findingAnchor(target.marker.address) })}
       ariaLabel={`${door.room.label} room offer`}
-      identity={<DoorNumber exitTypeLabel={target.exitTypeLabel} index={target.index} />}
+      identity={
+        <DoorNumber exitTypeLabel={target.exitTypeLabel} index={target.index} locked={locked} />
+      }
       map={{ gameName: door.room.gameName, hostId: target.marker.focusKey, title: door.room.label }}
       reward={
         <DoorRewardEditor
@@ -441,9 +456,11 @@ const missingTargetWaits = {
 
 function MissingTargetRow({
   interactions,
+  locked,
   target,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly locked: boolean;
   readonly target: WorkspaceMissingPhysicalTarget;
 }) {
   const findingAnchor = useFindingAnchor();
@@ -454,7 +471,9 @@ function MissingTargetRow({
     <DoorRow
       {...(canAuthorRoom ? {} : { anchor: findingAnchor(target.marker.address) })}
       ariaLabel={`Door ${target.index} unspecified room offer`}
-      identity={<DoorNumber exitTypeLabel={target.exitTypeLabel} index={target.index} />}
+      identity={
+        <DoorNumber exitTypeLabel={target.exitTypeLabel} index={target.index} locked={locked} />
+      }
       room={
         canAuthorRoom ? (
           <TargetRoomSelector
@@ -803,33 +822,42 @@ export function DoorChips({
   if (chips.length === 0) return null;
   return (
     <span aria-label={label} className="timeline-door-chips" role="list">
-      {chips.map((chip) => (
-        <span
-          {...hintProps(chip.label, undefined, chip.label)}
-          aria-label={chip.label}
-          className="timeline-door-chip"
-          data-missing={chip.missing}
-          data-picked={chip.picked || undefined}
-          data-unavailable={chip.unavailable || undefined}
-          key={chip.key}
-          role="listitem"
-        >
-          {chip.roomIcon === undefined ? (
-            chip.rewards.length > 0 ? null : (
-              <span aria-hidden="true" className="timeline-door-chip-blank">
-                ?
-              </span>
-            )
-          ) : (
-            <ArtworkIcon className="artwork-label-icon" source={roomKindIcon(chip.roomIcon)} />
-          )}
-          {chip.rewards.map((icon, index) => (
-            <ArtworkIcon className="artwork-label-icon" key={index} source={icon} />
-          ))}
-        </span>
-      ))}
+      {chips.map((chip) => {
+        const label = chip.locked === true ? `${chip.label} · Locked` : chip.label;
+        return (
+          <span
+            {...hintProps(chip.label, undefined, chip.label)}
+            aria-label={label}
+            className="timeline-door-chip"
+            data-missing={chip.missing}
+            data-picked={chip.picked || undefined}
+            data-unavailable={chip.unavailable || undefined}
+            key={chip.key}
+            role="listitem"
+          >
+            {chip.roomIcon === undefined ? (
+              chip.rewards.length > 0 ? null : (
+                <span aria-hidden="true" className="timeline-door-chip-blank">
+                  ?
+                </span>
+              )
+            ) : (
+              <ArtworkIcon className="artwork-label-icon" source={roomKindIcon(chip.roomIcon)} />
+            )}
+            {chip.rewards.map((icon, index) => (
+              <ArtworkIcon className="artwork-label-icon" key={index} source={icon} />
+            ))}
+            {chip.locked === true ? <DoorLockIndicator /> : null}
+          </span>
+        );
+      })}
     </span>
   );
+}
+
+/** The game's lock on a door that is locked at this point. */
+export function DoorLockIndicator() {
+  return <img alt="Locked" className="door-lock-indicator" src={roomObjectIcon('doorLock')} />;
 }
 
 /**
@@ -974,11 +1002,14 @@ function LeaveRewards({ icons }: { readonly icons: readonly (ArtworkSource | und
  */
 export function BatchDoorsDetail({
   interactions,
+  lockedExits = [],
   markFor,
   node,
   repair,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
+  /** The doors locked as they open, by exit key. */
+  readonly lockedExits?: readonly string[];
   readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
   readonly node: BatchNode;
   /** The doors' repair or removal, where it sits under the doors. */
@@ -1007,6 +1038,7 @@ export function BatchDoorsDetail({
             <TargetRow
               interactions={interactions}
               key={target.exitKey}
+              locked={lockedExits.includes(target.exitKey)}
               node={node}
               target={target}
             />
@@ -1017,6 +1049,7 @@ export function BatchDoorsDetail({
                 <MissingTargetRow
                   interactions={interactions}
                   key={target.exitKey}
+                  locked={lockedExits.includes(target.exitKey)}
                   target={target}
                 />
               ))}
