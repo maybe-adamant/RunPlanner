@@ -175,7 +175,6 @@ export function App({
                           (evaluation?.findings.length ?? 0) - repairIssue.reasons.length,
                         )}
                         route={workspace.route}
-                        tone={activeRouteFeedback.status.tone}
                       />
                     ),
                   })}
