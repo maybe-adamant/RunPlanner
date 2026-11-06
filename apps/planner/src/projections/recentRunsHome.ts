@@ -294,6 +294,7 @@ const REASON_TEXT: Readonly<Record<RunImportReason, string>> = {
   inverseMismatch: 'Default foes',
   unsupportedArea: 'Not supported',
   assumption: 'Assumed',
+  equivalent: 'Same run either way',
   stopped: 'Plan ends here',
   mismatch: 'Differs',
   engineFault: 'Planner error',

@@ -135,10 +135,16 @@ Evidence: the save-file run record audit
     forbids rerolling a locked door before its fight and any door during it.
     The first door never locks, so a two-door room's fight, no fight, and
     fights filling every lockable door are exact. With fewer fights than
-    lockable doors (one fight in a three-door room) the fight goes to the
-    taken door when it can lock, else to Exit 2, and each such door is
-    reported as an assumption (`lockedDoors`, with its room and door). A
-    count no lockable doors explain stops the plan before its room
+    lockable doors (one fight in a three-door room) each door set is searched:
+    it is locked and pressed, the room's recorded rerolls and Artificer
+    replacement are authored as for any room, and the set is kept when every
+    press is placed and the stores change as saved. One kept set is exact.
+    Several kept sets leave the same run, since the lock, the fight count and
+    the rerolls are what a later room reads: the taken door is chosen when it
+    can lock, else Exit 2, and noted as `equivalent` (`lockedDoors`, with its
+    room, door and the other doors). With a press first a reroll of either
+    door is legal, so in practice every set the stores admit is kept. No kept
+    set, or a count no lockable doors explain, stops the plan before its room
     (`lockedDoorFight`). Encounter depth gates reroll draws only from below
     (Devotion in RunProgress), so a press placed before a reroll that came
     first in the game only widens that reroll's legal set. A record made

@@ -12,6 +12,8 @@ export type RunImportReason =
   | 'unsupportedArea'
   /** The record holds the fact, but its mapping onto the plan rests on a stated assumption. */
   | 'assumption'
+  /** The record cannot tell the choices apart, and each leaves the same run. */
+  | 'equivalent'
   /** No answer or guess settled this question; the plan ends before it. */
   | 'stopped'
   /** The plan's run state differs from the state the game saved on entering the room. */
