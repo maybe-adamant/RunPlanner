@@ -136,6 +136,16 @@ describe('workspace package boundaries', () => {
     expect(escaping).toEqual([]);
   });
 
+  it('keeps planner source out of its test tree, gallery and fixtures included', () => {
+    const testRoot = join(repositoryRoot, 'apps/planner/test');
+    const reaching = imports('apps/planner', 'src')
+      .filter(({ specifier }) => specifier.startsWith('.'))
+      .filter(({ path, specifier }) => resolve(dirname(path), specifier).startsWith(testRoot + sep))
+      .map(({ file, specifier }) => `${file}: ${specifier}`);
+
+    expect(reaching).toEqual([]);
+  });
+
   it.each(Object.keys(allowedSourcePackages))(
     '%s follows the package dependency direction and declares what it imports',
     (directory) => {

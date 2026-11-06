@@ -56,3 +56,20 @@ strict percentage increase and an inclusive absolute increase: 20%/100 ms for
 non-Undo metrics and 50%/10 ms for cached Undo. The canonical 1,000 ms
 interaction and 50 ms cached-Undo targets are report-only in generic
 comparisons.
+
+## Timeline row gallery
+
+The gallery renders room and Hub Timelines with the real editor components,
+store and projections, one case per heading on one page, for UI work that
+needs to see many row kinds and states at once. It is opt-in tooling, outside
+`npm run check`; a smoke test in the planner lane keeps its cases building.
+
+- `npm run gallery` serves it with hot reload (`GALLERY_PORT`, default 5470,
+  and its own Vite cache); `?case=<substring>` narrows the page.
+- `npm run gallery:capture -- [--out <dir>] [--case <substring>] [--widths 1440,960] [--full]`
+  starts it on a free port and writes one PNG per case and width, by default to
+  the ignored `apps/planner/test-results/gallery/<width>/`.
+
+A case is one entry in `apps/planner/test/support/gallery/cases.ts`: a project
+from a checkpoint or route fixture, optional semantic commands applied through
+the engine, and the room occurrence or Hub it opens on its Timeline.

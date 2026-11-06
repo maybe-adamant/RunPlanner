@@ -1,0 +1,60 @@
+/* The gallery scrolls as one page; the app shell itself fits the window. */
+html,
+body,
+#root {
+  height: auto;
+}
+
+body {
+  overflow: auto;
+}
+
+.gallery {
+  width: min(1800px, calc(100% - 24px));
+  margin: 0 auto;
+  padding: 12px 0 48px;
+  color: #f4efe7;
+}
+
+.gallery-title {
+  margin: 8px 0 4px;
+  font-size: 1.1rem;
+}
+
+.gallery-index {
+  margin: 0 0 12px;
+  color: #98959e;
+  font-size: 0.8rem;
+}
+
+.gallery-index a {
+  margin-right: 10px;
+  color: #bba3d6;
+}
+
+.gallery-case {
+  margin-top: 28px;
+}
+
+.gallery-case-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.gallery-case-heading a {
+  color: #f4efe7;
+  text-decoration: none;
+}
+
+.gallery-case-heading p {
+  margin: 2px 0 0;
+  color: #98959e;
+  font-size: 0.78rem;
+}
+
+.gallery-case-error {
+  padding: 12px;
+  border: 1px solid #a33;
+  color: #f4b4b4;
+  white-space: pre-wrap;
+}
