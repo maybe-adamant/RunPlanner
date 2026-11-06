@@ -273,19 +273,28 @@ export function publishChronology(
     gorgonPhaseCandidates: accumulation.gorgonPhaseCandidates,
     nemesisRandomEventCandidates: accumulation.nemesisRandomEventCandidates,
     steadyGrowthOutcomes: Object.freeze(
-      [...accumulation.steadyGrowthOutcomes.values()].map(({ address, landing, threshold }) =>
-        Object.freeze({
-          address,
-          owner: landing.owner,
-          sourceTraitKey: threshold.traitKey,
-          phaseKey: landing.phaseKey,
-          ...(threshold.targetTraitKey === undefined
-            ? {}
-            : { targetTraitKey: threshold.targetTraitKey }),
-          requiredInterval: threshold.requiredInterval,
-          progressBefore:
-            threshold.before.equippedTraits[threshold.traitKey]?.steadyGrowthProgress ?? 0,
-        }),
+      [...accumulation.steadyGrowthOutcomes.values()].map(
+        ({ address, landing, threshold, rarity }) =>
+          Object.freeze({
+            address,
+            owner: landing.owner,
+            sourceTraitKey: threshold.traitKey,
+            phaseKey: landing.phaseKey,
+            ...(threshold.targetTraitKey === undefined
+              ? {}
+              : { targetTraitKey: threshold.targetTraitKey }),
+            requiredInterval: threshold.requiredInterval,
+            progressBefore:
+              threshold.before.equippedTraits[threshold.traitKey]?.steadyGrowthProgress ?? 0,
+            ...(rarity === undefined
+              ? {}
+              : { rarityBefore: rarity.rarityBefore, rarityAfter: rarity.rarityAfter }),
+          }),
+      ),
+    ),
+    fountainRarityOutcomes: Object.freeze(
+      [...accumulation.fountainRaritySettlements.values()].map(({ address, rarity }) =>
+        Object.freeze({ address, ...rarity }),
       ),
     ),
     transcendentEmbryoOutcomes: Object.freeze(

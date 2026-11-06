@@ -412,6 +412,9 @@ describe('Aromatic Phial fountain lifecycle', () => {
     expect(resolved.findings).not.toContainEqual(
       expect.objectContaining({ code: 'fountainRarityResultMissing' }),
     );
+    expect(resolved.rewards.fountainRarityOutcomes).toEqual([
+      { address: outcome, targetTraitKey, rarityBefore: 'Common', rarityAfter: 'Heroic' },
+    ]);
   });
 
   it('mutates the selected Common god trait directly to Heroic and consumes the source', () => {
@@ -434,6 +437,10 @@ describe('Aromatic Phial fountain lifecycle', () => {
       newRarity: 'Heroic',
     });
     expect(result.findings).toEqual([]);
+    expect(result.settlement).toEqual({
+      address: createFountainRarityOutcomeAddress(fountainAction),
+      rarity: { targetTraitKey: 'ApolloWeaponBoon', rarityBefore: 'Common', rarityAfter: 'Heroic' },
+    });
   });
 
   it('credits Bridal Glow’s missing grant when Phial directly promotes its remembered source', () => {
@@ -470,6 +477,27 @@ describe('Aromatic Phial fountain lifecycle', () => {
       expect.objectContaining({ kind: 'rarityMutation' }),
     );
     expect(result.findings).toEqual([]);
+    expect(result.settlement).toBeUndefined();
+  });
+
+  it('publishes an unchanged rarity for a retained target the capped Phial cannot promote', () => {
+    const result = applyFountainUsedTransition(
+      catalog,
+      fountainEvent(),
+      fountainRoom('HephaestusWeaponBoon'),
+      fountainBranch(
+        equippedTrait('HephaestusWeaponBoon', 'Hephaestus', 1),
+        cappedHephaestusHistory(),
+      ),
+      undefined,
+    );
+    expect(result.findings).toEqual([]);
+    expect(result.branch?.state.keepsakes.phial).toEqual({ status: 'consumed' });
+    expect(result.settlement?.rarity).toEqual({
+      targetTraitKey: 'HephaestusWeaponBoon',
+      rarityBefore: 'Common',
+      rarityAfter: 'Common',
+    });
   });
 
   it('leaves an empty consumption guard pending and does not spend a second use after consumption', () => {
@@ -495,6 +523,11 @@ describe('Aromatic Phial fountain lifecycle', () => {
     expect(later.branch?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.rarity).toBe(
       'Common',
     );
+    expect(later.settlement?.rarity).toEqual({
+      targetTraitKey: 'ApolloWeaponBoon',
+      rarityBefore: 'Common',
+      rarityAfter: 'Common',
+    });
   });
 
   it('marks unopened loot stale whenever the Phial fires, promotion or not', () => {

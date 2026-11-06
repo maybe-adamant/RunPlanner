@@ -402,6 +402,9 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
     readonly targetTraitKey?: string;
     readonly requiredInterval: number;
     readonly progressBefore: number;
+    /** The target's rarity before and after this cycle settled; absent when it blocked or had no target. */
+    readonly rarityBefore?: import('../../catalog-schema').TraitRarity;
+    readonly rarityAfter?: import('../../catalog-schema').TraitRarity;
   }[];
   /** Exact reached automatic Transcendent Embryo checkpoints, each at its landing. */
   readonly transcendentEmbryoOutcomes: readonly {
@@ -414,6 +417,16 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
     readonly value?: import('../../authored-project/traits/state').AuthoredTranscendentEmbryoOutcome;
     readonly transformationRarity: import('../../catalog-schema').InRunTraitRarity;
     readonly progressBefore: number;
+  }[];
+  /**
+   * Each reached fountain use that settled with an authored Phial target, with
+   * that target's rarity before and after it (equal when nothing promoted).
+   */
+  readonly fountainRarityOutcomes: readonly {
+    readonly address: import('../../authored-project/addresses').FountainRarityOutcomeAddress;
+    readonly targetTraitKey: string;
+    readonly rarityBefore: import('../../catalog-schema').TraitRarity;
+    readonly rarityAfter: import('../../catalog-schema').TraitRarity;
   }[];
   readonly derivedAcquisitionEntries: readonly {
     readonly address: import('../../authored-project/addresses').AcquisitionEntryAddress;

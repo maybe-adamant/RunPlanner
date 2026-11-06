@@ -7,7 +7,8 @@ import {
   createTraitOfferAddress,
   type AuthoredTraitOffer,
 } from '@run-planner/engine/authored-project';
-import { foldTraitHistoryEvents } from '@run-planner/engine/simulation';
+import { foldTraitHistoryEvents, simulateProjectAssembly } from '@run-planner/engine/simulation';
+import { loadSurfaceScheduledLifecycleCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { describe, expect, it } from 'vitest';
 
 import { goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures/underworld';
@@ -135,6 +136,11 @@ describe('Steady Growth outcomes by source and cycle', () => {
       phaseKey: 'Encounter',
     });
     expect(first.transition.findings).toEqual([]);
+    expect(first.transition.steadyGrowthThresholds[0]?.rarity).toEqual({
+      targetTraitKey: 'ApolloWeaponBoon',
+      rarityBefore: 'Common',
+      rarityAfter: 'Rare',
+    });
     const promoted = first.transition.branch!;
     expect(promoted.state.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Rare');
 
@@ -146,6 +152,11 @@ describe('Steady Growth outcomes by source and cycle', () => {
     expect(
       second.transition.branch!.state.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity,
     ).toBe('Epic');
+    expect(second.transition.steadyGrowthThresholds[0]?.rarity).toEqual({
+      targetTraitKey: 'ApolloWeaponBoon',
+      rarityBefore: 'Rare',
+      rarityAfter: 'Epic',
+    });
 
     // A later Steady Growth from another offer starts its own cycles with its own targets.
     const sold = second.transition.branch!;
@@ -205,6 +216,7 @@ describe('Steady Growth outcomes by source and cycle', () => {
     );
     const reached = untilInterval(branch, 10);
     expect(reached.transition.branch).toBeUndefined();
+    expect(reached.transition.steadyGrowthThresholds[0]?.rarity).toBeUndefined();
     expect(reached.transition.findings).toMatchObject([
       {
         finding: {
@@ -261,6 +273,85 @@ describe('Steady Growth outcomes by source and cycle', () => {
         },
         chronology: { kind: 'history', occurrence: landing },
       },
+    ]);
+  });
+
+  it('publishes no rarity when every trait is capped, and blocks a capped authored target', () => {
+    // With every boon already Heroic, Steady Growth can promote nothing, itself included.
+    const heroic = (targets: Readonly<Record<string, string>>) => {
+      const acquired = acquire(
+        acquire(
+          initializeTestRewardBranch(),
+          'apollo',
+          offer('Apollo', ['ApolloWeaponBoon', 'ApolloSpecialBoon', 'ApolloCastBoon']),
+          1,
+        ),
+        'capped-source',
+        offer('Demeter', ['BoonGrowthBoon', 'DemeterCastBoon', 'DemeterSprintBoon'], targets),
+        2,
+      );
+      const promote = (targetTraitKey: string) =>
+        Object.freeze({
+          kind: 'rarityMutation' as const,
+          owner: landing,
+          acquisitionRole: 'fountainRarity' as const,
+          sequence: 3,
+          acquisitionPoint: 'fountainUsed' as const,
+          targetTraitKey,
+          oldRarity: 'Common' as const,
+          newRarity: 'Heroic' as const,
+        });
+      return Object.freeze({
+        ...acquired,
+        state: replaceSimulationTraitHistory(
+          acquired.state,
+          foldTraitHistoryEvents(catalog, [
+            ...acquired.state.traitHistory.events,
+            promote('ApolloWeaponBoon'),
+            promote('BoonGrowthBoon'),
+          ]),
+        ),
+      });
+    };
+    const noOp = untilInterval(heroic({}), 10);
+    expect(noOp.transition.findings).toEqual([]);
+    expect(noOp.transition.branch).toBeDefined();
+    expect(noOp.transition.steadyGrowthThresholds).toHaveLength(1);
+    expect(noOp.transition.steadyGrowthThresholds[0]?.rarity).toBeUndefined();
+    expect(noOp.transition.branch!.state.traitHistory.events).not.toContainEqual(
+      expect.objectContaining({ kind: 'rarityMutation', acquisitionRole: 'steadyGrowth' }),
+    );
+
+    const blocked = untilInterval(heroic({ '1': 'ApolloWeaponBoon' }), 10);
+    expect(blocked.transition.branch).toBeUndefined();
+    expect(blocked.transition.findings).toMatchObject([
+      { finding: { code: 'steadyGrowthOutcomeUnavailable' } },
+    ]);
+    expect(blocked.transition.steadyGrowthThresholds[0]?.rarity).toBeUndefined();
+  });
+});
+
+describe('Steady Growth outcome publication', () => {
+  it('publishes each settled cycle with its target’s rarity before and after', () => {
+    const assembly = simulateProjectAssembly(catalog, loadSurfaceScheduledLifecycleCheckpoint());
+    const outcomes = assembly.evaluation.route.biomes.flatMap((biome) =>
+      'rewards' in biome && biome.rewards !== undefined ? biome.rewards.steadyGrowthOutcomes : [],
+    );
+    expect(
+      outcomes.map(({ address, targetTraitKey, rarityBefore, rarityAfter }) => [
+        address.cycle,
+        targetTraitKey,
+        rarityBefore,
+        rarityAfter,
+      ]),
+    ).toEqual([
+      [1, 'ApolloWeaponBoon', 'Common', 'Rare'],
+      [2, 'ApolloWeaponBoon', 'Rare', 'Epic'],
+      [3, 'ApolloWeaponBoon', 'Epic', 'Heroic'],
+      [4, 'AresSpecialBoon', 'Common', 'Rare'],
+      [5, 'HermesWeaponBoon', 'Common', 'Rare'],
+      [6, 'HermesWeaponBoon', 'Rare', 'Epic'],
+      [7, 'HermesWeaponBoon', 'Epic', 'Heroic'],
     ]);
   });
 });

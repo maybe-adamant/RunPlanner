@@ -16,13 +16,14 @@ import { assessPurgingPool, type PurgingPoolAssessment } from '../../../commerce
 import { ownerRegion } from '../../../finding-regions';
 import type { AuthoredFountainRarityResult } from '../../../../authored-project/model';
 import { assessPhialTraitTargets, consumePhial } from '../../../keepsakes/trait-effects';
-import { settleFountainRarityMutation } from '../../../traits';
+import { settleFountainRarityMutation, settledRarityChange } from '../../../traits';
 import { advanceRewardBranch } from '../../branch-lifecycle';
 import type { RewardBranchState } from '../../branch-primitives';
 import { rewardFinding } from '../../findings';
 import { type FountainRarityCandidateCapability } from '../../../keepsakes/candidate-artifacts';
 import type { LifecycleFinding } from './types';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
+import type { FountainRaritySettlement } from '../chronology-accumulator';
 
 export interface FountainUsedTransition {
   readonly branch: RewardBranchState | undefined;
@@ -32,6 +33,8 @@ export interface FountainUsedTransition {
   };
   readonly findings: readonly LifecycleFinding[];
   readonly timelineFacts: PlannerTimelineFacts;
+  /** The authored Phial target's rarity across a use that settled with one. */
+  readonly settlement?: FountainRaritySettlement;
   /** The Purging Pool frontier this fountain unlocked, keyed by its room. */
   readonly purgingPoolAssessment?: {
     readonly key: string;
@@ -217,10 +220,16 @@ function resolveFountainUse(
       Object.freeze({ ...branch, state: replaceSimulationTraitHistory(consumed, settled.history) }),
     );
   };
+  const settled = settle();
+  const rarity =
+    targetTraitKey === undefined
+      ? undefined
+      : settledRarityChange(branch.state.traitHistory, settled.state.traitHistory, targetTraitKey);
   return Object.freeze({
-    branch: advanceRewardBranch(settle(), event.sequence),
+    branch: advanceRewardBranch(settled, event.sequence),
     candidate,
     findings: Object.freeze([]),
     timelineFacts,
+    ...(rarity === undefined ? {} : { settlement: Object.freeze({ address: outcome, rarity }) }),
   });
 }

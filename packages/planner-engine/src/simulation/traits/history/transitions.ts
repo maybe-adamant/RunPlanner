@@ -329,6 +329,26 @@ export function settleFountainRarityMutation(
   });
 }
 
+/** A settled rarity effect's target, read from the history before and after it settled. */
+export interface SettledRarityChange {
+  readonly targetTraitKey: string;
+  readonly rarityBefore: TraitRarity;
+  /** Equal to `rarityBefore` when the effect settled without promoting its target. */
+  readonly rarityAfter: TraitRarity;
+}
+
+/** The target's rarity across one settlement; none when it is not held with a rarity on both sides. */
+export function settledRarityChange(
+  before: TraitHistoryState,
+  after: TraitHistoryState,
+  targetTraitKey: string,
+): SettledRarityChange | undefined {
+  const rarityBefore = before.equippedTraits[targetTraitKey]?.rarity;
+  const rarityAfter = after.equippedTraits[targetTraitKey]?.rarity;
+  if (rarityBefore === undefined || rarityAfter === undefined) return undefined;
+  return Object.freeze({ targetTraitKey, rarityBefore, rarityAfter });
+}
+
 /**
  * Folds the native `RoomsPerUpgrade` pass at one qualifying encounter end:
  * Steady Growth thresholds and declared max-stat growth share this clock.

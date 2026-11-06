@@ -3,6 +3,7 @@ import {
   createBiomeAddress,
   createTravelDealRefillRealizationAddress,
   semanticAddressKey,
+  type FountainRarityOutcomeAddress,
   type HubDecisionAddress,
   type SemanticAddress,
   type SteadyGrowthOutcomeAddress,
@@ -33,7 +34,10 @@ import {
 } from '../../timeline-facts';
 import type { ReachedLevelResolutionEvaluation, TraitOfferCandidateContext } from '../../traits';
 import { traitOfferContextIdentity } from '../../traits';
-import type { ReachedSteadyGrowthThreshold } from '../../traits/history/transitions';
+import type {
+  ReachedSteadyGrowthThreshold,
+  SettledRarityChange,
+} from '../../traits/history/transitions';
 import type { AutomaticOutcomeLanding } from '../model';
 
 /** An automatic outcome with the encounter end its cycle reached and the threshold there. */
@@ -41,6 +45,20 @@ export interface LandedOutcome<Address, Threshold> {
   readonly address: Address;
   readonly landing: AutomaticOutcomeLanding;
   readonly threshold: Threshold;
+}
+
+/** A landed Steady Growth cycle with its settled target's rarity, when one settled. */
+export interface SteadyGrowthLandedOutcome extends LandedOutcome<
+  SteadyGrowthOutcomeAddress,
+  ReachedSteadyGrowthThreshold
+> {
+  readonly rarity?: SettledRarityChange;
+}
+
+/** One fountain use that settled with a Phial target, and that target's rarity across it. */
+export interface FountainRaritySettlement {
+  readonly address: FountainRarityOutcomeAddress;
+  readonly rarity: SettledRarityChange;
 }
 import type {
   AcquisitionRoleFrontier,
@@ -212,11 +230,7 @@ export type ChronologyEmission =
   | { readonly kind: 'rerollSurface'; readonly capture: RerollSurfaceCapture }
   | {
       readonly kind: 'steadyGrowthThresholds';
-      readonly thresholds: readonly {
-        readonly address: SteadyGrowthOutcomeAddress;
-        readonly landing: AutomaticOutcomeLanding;
-        readonly threshold: ReachedSteadyGrowthThreshold;
-      }[];
+      readonly thresholds: readonly SteadyGrowthLandedOutcome[];
     }
   | {
       readonly kind: 'transcendentEmbryoThresholds';
@@ -230,7 +244,8 @@ export type ChronologyEmission =
       readonly kind: 'fountainRarityCandidate';
       readonly key: string;
       readonly candidate: FountainRarityCandidateCapability;
-    };
+    }
+  | { readonly kind: 'fountainRaritySettlement'; readonly settlement: FountainRaritySettlement };
 
 export interface TraitChildSettlementAccumulation {
   readonly address: SemanticAddress;
@@ -275,15 +290,13 @@ export interface ChronologyAccumulation {
   readonly rerollPool: readonly RerollPoolPoint[];
   readonly rerollSurfaces: readonly RerollSurfaceSettlement[];
   readonly rerollSurfaceCapabilities: ReadonlyMap<string, RerollSurfaceCapability>;
-  readonly steadyGrowthOutcomes: ReadonlyMap<
-    string,
-    LandedOutcome<SteadyGrowthOutcomeAddress, ReachedSteadyGrowthThreshold>
-  >;
+  readonly steadyGrowthOutcomes: ReadonlyMap<string, SteadyGrowthLandedOutcome>;
   readonly transcendentEmbryoOutcomes: ReadonlyMap<
     string,
     LandedOutcome<TranscendentEmbryoOutcomeAddress, ReachedTranscendentEmbryoThreshold>
   >;
   readonly fountainRarityCandidateContexts: ReadonlyMap<string, FountainRarityCandidateCapability>;
+  readonly fountainRaritySettlements: ReadonlyMap<string, FountainRaritySettlement>;
 }
 
 /**
@@ -416,21 +429,19 @@ export function createChronologyAccumulator(
     string,
     { readonly capture: RerollSurfaceCapture; readonly poolRemainingAtStart: number }
   >();
-  const steadyGrowthOutcomes = new Map<
-    string,
-    LandedOutcome<SteadyGrowthOutcomeAddress, ReachedSteadyGrowthThreshold>
-  >();
+  const steadyGrowthOutcomes = new Map<string, SteadyGrowthLandedOutcome>();
   const latestSteadyGrowthOutcomes = new Map<string, SteadyGrowthOutcomeAddress>();
   const transcendentEmbryoOutcomes = new Map<
     string,
     LandedOutcome<TranscendentEmbryoOutcomeAddress, ReachedTranscendentEmbryoThreshold>
   >();
   const fountainRarityCandidateContexts = new Map<string, FountainRarityCandidateCapability>();
+  const fountainRaritySettlements = new Map<string, FountainRaritySettlement>();
 
   /** The one reached state lands each timed-outcome cycle once. */
-  function recordLanding<Address extends SemanticAddress, Threshold>(
-    landed: Map<string, LandedOutcome<Address, Threshold>>,
-    outcome: LandedOutcome<Address, Threshold>,
+  function recordLanding<Outcome extends LandedOutcome<SemanticAddress, unknown>>(
+    landed: Map<string, Outcome>,
+    outcome: Outcome,
   ): void {
     const key = semanticAddressKey(outcome.address);
     if (landed.has(key)) fail(`${key} landed more than once`);
@@ -842,6 +853,12 @@ export function createChronologyAccumulator(
       case 'fountainRarityCandidate':
         fountainRarityCandidateContexts.set(emission.key, emission.candidate);
         return;
+      case 'fountainRaritySettlement':
+        fountainRaritySettlements.set(
+          semanticAddressKey(emission.settlement.address),
+          emission.settlement,
+        );
+        return;
       default: {
         const unreachable: never = emission;
         return unreachable;
@@ -923,6 +940,7 @@ export function createChronologyAccumulator(
         steadyGrowthOutcomes,
         transcendentEmbryoOutcomes,
         fountainRarityCandidateContexts,
+        fountainRaritySettlements,
       });
     },
   });

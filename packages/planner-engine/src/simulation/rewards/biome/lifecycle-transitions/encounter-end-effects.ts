@@ -26,7 +26,9 @@ import {
   advanceRoomsPerUpgradeProgress,
   foldTraitHistoryEvents,
   settleSteadyGrowthThreshold,
+  settledRarityChange,
   type ReachedSteadyGrowthThreshold,
+  type SettledRarityChange,
   type ReachedPickupProducerMaturity,
 } from '../../../traits';
 import { advanceStygianWellClock } from '../../../commerce/stygian-well';
@@ -67,11 +69,7 @@ export interface EncounterEndEffectsTransition {
   readonly derivedAcquisitionEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
   /** A due Shrine delivery has no exact ranked/retained host action yet. */
   readonly hermesShrineDeliveryPlacementRequired: boolean;
-  readonly steadyGrowthThresholds: readonly {
-    readonly address: SteadyGrowthOutcomeAddress;
-    readonly landing: AutomaticOutcomeLanding;
-    readonly threshold: ReachedSteadyGrowthThreshold;
-  }[];
+  readonly steadyGrowthThresholds: readonly SteadyGrowthLanding[];
   readonly transcendentEmbryoThresholds: readonly {
     readonly address: TranscendentEmbryoOutcomeAddress;
     readonly landing: AutomaticOutcomeLanding;
@@ -164,6 +162,8 @@ interface SteadyGrowthLanding {
   readonly address: SteadyGrowthOutcomeAddress;
   readonly landing: AutomaticOutcomeLanding;
   readonly threshold: ReachedSteadyGrowthThreshold;
+  /** The settled target's rarity; absent when the cycle blocked or had no target. */
+  readonly rarity?: SettledRarityChange;
 }
 
 /** The state an automatic outcome blocked at, with the threshold it could not settle. */
@@ -191,7 +191,6 @@ function advanceSteadyGrowthAt(
   let traitHistory = advanced.history;
   for (const threshold of advanced.thresholds) {
     const address = createSteadyGrowthOutcomeAddress(threshold.source, threshold.cycle);
-    thresholds.push(Object.freeze({ address, landing, threshold }));
     const settled = settleSteadyGrowthThreshold(
       catalog,
       traitHistory,
@@ -199,6 +198,13 @@ function advanceSteadyGrowthAt(
       sequence,
       threshold,
       threshold.targetTraitKey,
+    );
+    const rarity =
+      !settled.assessment.legal || settled.assessment.targetTraitKey === null
+        ? undefined
+        : settledRarityChange(traitHistory, settled.history, settled.assessment.targetTraitKey);
+    thresholds.push(
+      Object.freeze({ address, landing, threshold, ...(rarity === undefined ? {} : { rarity }) }),
     );
     if (!settled.assessment.legal)
       return Object.freeze({

@@ -1432,6 +1432,9 @@ const fountainUsed: ChronologySeamHandler<'fountainUsed'> = (context, state, eve
               candidate: transition.candidate.value,
             },
           ]),
+      ...(transition.settlement === undefined
+        ? []
+        : [{ kind: 'fountainRaritySettlement' as const, settlement: transition.settlement }]),
       lifecycleFindings(transition.findings),
     ],
   };
