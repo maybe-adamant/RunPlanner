@@ -209,6 +209,12 @@
   width: 100%;
 }
 
+/* The picked offer card carries the app's selection tint, so the choice reads beyond its radio. */
+.trait-offer-option:has(> .trait-option-selected input[type='radio']:checked) {
+  border-color: color-mix(in srgb, var(--selection-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--selection-accent) 9%, transparent);
+}
+
 .spell-offer-slot-heading {
   display: grid;
   gap: 2px;
