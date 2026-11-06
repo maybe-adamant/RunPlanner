@@ -1612,15 +1612,13 @@
 }
 
 /* Object pickers in decisions are as wide as their choice. */
-.timeline-cell-editors :is(.room-action-artificer-output, .travel-deal-item) .contextual-picker,
+.timeline-cell-editors .travel-deal-item .contextual-picker,
 .timeline-row[data-travel-deal-line] .timeline-cell-editors .contextual-picker {
   width: auto;
   grid-template-columns: max-content;
 }
 
-.timeline-cell-editors
-  :is(.room-action-artificer-output, .travel-deal-item)
-  .contextual-picker-trigger,
+.timeline-cell-editors .travel-deal-item .contextual-picker-trigger,
 .timeline-row[data-travel-deal-line] .timeline-cell-editors .contextual-picker-trigger {
   width: auto;
   max-width: none;
@@ -2153,29 +2151,6 @@
   grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
   column-gap: 6px;
-}
-
-.timeline-cell-editors .room-action-artificer-output {
-  display: flex;
-  min-width: 0;
-  max-width: 100%;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-}
-
-.timeline-cell-editors .room-action-artificer-output .field-control-inline {
-  grid-template-columns: max-content minmax(0, 1fr);
-  align-items: center;
-  column-gap: 6px;
-}
-
-.timeline-cell-editors .room-action-artificer-output > .reward-value-editor,
-.timeline-cell-editors .room-action-artificer-output > .counted-reward-editor {
-  min-width: 0;
-  width: max-content;
-  max-width: 100%;
-  flex: 0 1 auto;
 }
 
 /* Banner names share the label's type and differ only in color. */
@@ -3105,6 +3080,108 @@
 
 .timeline-door-chip[data-unavailable] {
   opacity: 0.5;
+}
+
+/* A Timeline chip: one icon, its name on hover; a trait's rarity is its ring. */
+.timeline-chip-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.timeline-chip,
+.contextual-picker-trigger.timeline-chip {
+  display: inline-grid;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  place-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 5%);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.timeline-chip:hover:not(:disabled),
+.contextual-picker-trigger.timeline-chip[data-state='open'] {
+  background: color-mix(in srgb, var(--selection-accent) 14%, transparent);
+  box-shadow: none;
+}
+
+/* The offered rows not picked stay dim until hovered. */
+.timeline-chip-group > .timeline-chip[aria-pressed='false'] {
+  opacity: 0.4;
+}
+
+.timeline-chip-group > .timeline-chip[aria-pressed='false']:is(:hover, :focus-visible) {
+  opacity: 0.85;
+}
+
+.timeline-chip:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+.timeline-chip[data-rarity='Common'] {
+  border-color: #bdb9c4;
+}
+
+.timeline-chip[data-rarity='Rare'] {
+  border-color: #4f8fe8;
+}
+
+.timeline-chip[data-rarity='Epic'] {
+  border-color: #a65be0;
+}
+
+.timeline-chip[data-rarity='Heroic'] {
+  border-color: #e0554f;
+}
+
+.timeline-chip[data-rarity='Legendary'] {
+  border-color: #f0a33a;
+}
+
+.timeline-chip[data-rarity='Duo'] {
+  border-color: #9bd94c;
+}
+
+/* An unset chip is an empty slot. */
+.timeline-cell-editors .trait-offer-launcher.timeline-chip-slot,
+.contextual-picker-trigger.timeline-chip[data-empty] {
+  width: 30px;
+  border: 1px dashed var(--border);
+  background: none;
+}
+
+.timeline-cell-editors .trait-offer-launcher.timeline-chip-edit {
+  display: inline-grid;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--muted);
+}
+
+.timeline-cell-editors .trait-offer-launcher.timeline-chip-edit:hover:not(:disabled) {
+  color: var(--selection-accent);
+}
+
+/* The Artificer's result sits in the label after its arrow. */
+.timeline-cell-label > .room-action-artificer-output,
+.timeline-cell-label > .room-action-artificer-output .contextual-picker {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: auto;
 }
 
 /* A door locked at this point: the game's lock after the door's icons. */

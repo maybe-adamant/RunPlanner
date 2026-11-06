@@ -1254,10 +1254,10 @@ describe('OccurrenceRoomActions', () => {
           name: 'Edit Pom · No eligible traits',
         }),
       ).toBeNull();
-      // The transformed pickup's decision is the Artificer's result.
+      // The transformed pickup reads as its Artificer result after it.
       const output = within(sourceAction).getByRole('button', { name: /^Artificer item/ });
       expect(
-        sourceAction.querySelector(':scope > [data-timeline-cell="editors"]')?.contains(output),
+        sourceAction.querySelector(':scope > [data-timeline-cell="label"]')?.contains(output),
       ).toBe(true);
       expectBefore(outcome, output);
     });

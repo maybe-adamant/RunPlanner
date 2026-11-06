@@ -105,7 +105,9 @@ it.each([
     expect(row.hasAttribute('data-has-findings')).toBe(false);
     // A row's description is only its own hint; findings describe the launcher.
     expect(row.getAttribute('aria-description')).toBe(hintOf(row));
-    await waitFor(() => expect(document.activeElement).toBe(launcher));
+    // Navigation lands on the first marked control: an offer's picked chip, else the launcher.
+    const landing = row.querySelector('[data-has-findings="true"]');
+    await waitFor(() => expect(document.activeElement).toBe(landing));
   },
 );
 

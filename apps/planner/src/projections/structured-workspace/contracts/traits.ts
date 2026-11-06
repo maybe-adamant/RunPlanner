@@ -98,6 +98,17 @@ export interface WorkspaceLauncherPresentation {
   readonly traitKey?: string;
 }
 
+/** One offered row of a final trait screen, shown on its Timeline row as a chip. */
+export interface WorkspaceTraitOfferInlineOption {
+  readonly optionKey: TraitOptionKey;
+  readonly traitKey: string;
+  readonly label: string;
+  readonly rarity?: TraitRarity;
+  readonly selected: boolean;
+  /** Rejected blocks this row, so it cannot be picked. */
+  readonly rejected: boolean;
+}
+
 /** Why one more native reroll of a screen cannot be authored. */
 export type WorkspaceScreenRerollLock = 'unreached' | 'notEnabled' | 'poolEmpty' | 'poolShort';
 
@@ -588,6 +599,11 @@ export interface WorkspaceTraitOfferInteraction {
   /** Present where the screen can be or was rerolled. */
   readonly screenRerolls?: WorkspaceScreenRerolls;
   readonly launcher: WorkspaceLauncherPresentation;
+  /**
+   * The authored screen's rows where picking one is a plain selection change;
+   * absent for Chaos, Hex, Gorgon and unauthored offers.
+   */
+  readonly inlineOptions?: readonly WorkspaceTraitOfferInlineOption[];
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
   /** Dedicated Chaos envelope interaction; ordinary trait choices remain above. */
   readonly chaos?: WorkspaceChaosOfferInteraction;

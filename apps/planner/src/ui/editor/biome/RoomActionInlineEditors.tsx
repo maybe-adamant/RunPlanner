@@ -198,6 +198,40 @@ export function RoomActionInlineReward({
   );
 }
 
+/** The Artificer's result after the transformed pickup: an arrow, then its icon chip. */
+export function RoomActionArtificerOutput({
+  row,
+  interactions,
+}: {
+  readonly row: WorkspaceRoomActionRow;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  const output = row.artificerOutput;
+  if (output === undefined) return null;
+  return (
+    <>
+      <span aria-hidden="true" className="row-reward-arrow">
+        →
+      </span>
+      <div className="room-action-artificer-output">
+        <RewardControlEditor
+          control={output.control}
+          idPrefix={`room-action-artificer-${output.control.marker.focusKey}`}
+          interactions={interactions}
+          {...(output.control.offer === null
+            ? { ariaLabel: `Artificer ${output.label.toLowerCase()}` }
+            : {})}
+          label=""
+          triggerSize="icon"
+          {...(output.control.offerEditStartStep === undefined
+            ? {}
+            : { offerStartStep: output.control.offerEditStartStep })}
+        />
+      </div>
+    </>
+  );
+}
+
 /** The row's decisions in slot order: trait, Pom, Anvil and Path of Stars chips, then the pickup outcome and what follows it. */
 export function RoomActionInlineEditors({
   row,
@@ -268,20 +302,6 @@ export function RoomActionInlineEditors({
               key={workspaceInteractionKey(conversion.address)}
             />
           ))}
-      {row.artificerOutput === undefined ? null : (
-        <div className="room-action-artificer-output">
-          <RewardControlEditor
-            control={row.artificerOutput.control}
-            idPrefix={`room-action-artificer-${row.artificerOutput.control.marker.focusKey}`}
-            interactions={interactions}
-            ariaLabel={`Artificer ${row.artificerOutput.label.toLowerCase()}`}
-            label=""
-            {...(row.artificerOutput.control.offerEditStartStep === undefined
-              ? {}
-              : { offerStartStep: row.artificerOutput.control.offerEditStartStep })}
-          />
-        </div>
-      )}
       {row.fountainRarity === undefined ? null : (
         <FountainRarityEffectRow control={row.fountainRarity} interactions={interactions} />
       )}

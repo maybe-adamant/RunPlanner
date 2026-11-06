@@ -23,8 +23,11 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import {
   DialogFindingScope,
   useFindingAnchor,
+  useFindingMark,
   useFindingTarget,
 } from '@planner/ui/feedback/useFindingTarget';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
+import { hintProps } from '@planner/ui/controls/hint';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { LauncherButton } from './LauncherButton';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
@@ -45,18 +48,54 @@ export function TraitOfferLauncher({
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const findingTarget = useFindingTarget();
+  const findingMark = useFindingMark();
+  const executeIntent = useCommandIntent();
   const dispatch = useAppDispatch();
   const interaction = requireWorkspaceInteraction(
     interactions.traitOffers,
     workspaceInteractionKey(control.address),
   );
-  return (
+  const open = () => dispatch(traitOfferDialogOpened(control.address));
+  const launcher = (presentation: 'label' | 'slot' | 'edit') => (
     <LauncherButton
       contextReached={interaction.contextReached}
       launcher={interaction.launcher}
-      onClick={() => dispatch(traitOfferDialogOpened(control.address))}
+      onClick={open}
+      presentation={presentation}
       target={findingTarget(control.address, launcherId(control.address))}
     />
+  );
+  const options = interaction.contextReached ? interaction.inlineOptions : undefined;
+  if (options === undefined)
+    return launcher(
+      interaction.contextReached && interaction.value === null && interaction.chaos === undefined
+        ? 'slot'
+        : 'label',
+    );
+  // The offered rows as chips: a dimmed one is picked in one click; the picked one opens the offer.
+  const mark = findingMark(control.address);
+  return (
+    <span aria-label={interaction.giver.label} className="timeline-chip-group" role="group">
+      {options.map((option) => (
+        <button
+          {...(option.selected && mark['data-has-findings'] ? mark : {})}
+          {...hintProps(option.label, undefined, option.label)}
+          aria-label={option.label}
+          aria-pressed={option.selected}
+          className="timeline-chip"
+          data-rarity={option.rarity}
+          disabled={option.rejected || undefined}
+          key={option.optionKey}
+          onClick={() =>
+            option.selected ? open() : executeIntent(interaction.selectedIntent(option.optionKey))
+          }
+          type="button"
+        >
+          <ArtworkIcon className="artwork-label-icon" source={traitIcon(option.traitKey)} />
+        </button>
+      ))}
+      {launcher('edit')}
+    </span>
   );
 }
 

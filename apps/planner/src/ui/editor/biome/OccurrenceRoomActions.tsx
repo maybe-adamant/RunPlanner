@@ -30,6 +30,7 @@ import { npcPortrait } from '@planner/ui/artwork/npcs/npcArtwork';
 import { FieldsCageOrderControl } from './FieldsCageOrderControl';
 import { RoomActionAcquisitionRow } from './RoomActionAcquisitionRow';
 import {
+  RoomActionArtificerOutput,
   RoomActionInlineEditors,
   RoomActionInlineReward,
   RoomActionVerb,
@@ -819,6 +820,7 @@ export function RoomActionsWorkbench({
                   )}
                 </>
               )}
+              <RoomActionArtificerOutput interactions={interactions} row={row} />
               {row.slot === undefined ? null : (
                 <span className="visually-hidden">{` · slot ${row.slot}`}</span>
               )}

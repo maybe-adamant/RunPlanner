@@ -22,6 +22,7 @@ export function RewardControlEditor({
   showOffer = true,
   offerStartStep,
   offerSummaryMode = 'offer',
+  triggerSize,
 }: {
   /** The accessible name where the visible label is shortened. */
   readonly ariaLabel?: string;
@@ -36,6 +37,8 @@ export function RewardControlEditor({
   readonly offerStartStep?: RewardPickerStep;
   /** A compact fixed-type picker can omit the already-visible reward type. */
   readonly offerSummaryMode?: 'offer' | 'source';
+  /** `icon` shows a reward picker's trigger as the reward's icon chip alone. */
+  readonly triggerSize?: 'field' | 'icon';
 }) {
   const executeIntent = useCommandIntent();
   const interaction =
@@ -82,6 +85,7 @@ export function RewardControlEditor({
             ? {}
             : { initialStep: offerStartStep ?? control.authoringStartStep })}
           summaryMode={offerSummaryMode}
+          {...(triggerSize === undefined ? {} : { triggerSize })}
         />
       ) : (
         <RewardValueEditor
@@ -101,6 +105,7 @@ export function RewardControlEditor({
             ? {}
             : { initialStep: offerStartStep ?? control.authoringStartStep })}
           summaryMode={offerSummaryMode}
+          {...(triggerSize === undefined ? {} : { triggerSize })}
         />
       )}
     </>

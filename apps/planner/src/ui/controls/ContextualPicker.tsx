@@ -50,8 +50,11 @@ interface ContextualPickerProps<T> {
   readonly triggerLabel?: string;
   /** Every label the trigger can show; it keeps the widest one's width so it never shifts. */
   readonly triggerSizingLabels?: readonly string[];
-  /** `content` sizes the trigger to its shown text, so it reads inline with a label. */
-  readonly triggerSize?: 'field' | 'content';
+  /**
+   * `content` sizes the trigger to its shown text, so it reads inline with a label;
+   * `icon` shows only the value's icon as a chip, its name on hover and as its name.
+   */
+  readonly triggerSize?: 'field' | 'content' | 'icon';
   /** A short fixed list opens without a search field. */
   readonly searchable?: boolean;
   /** What separates trigger parts; a middle dot by default. */
@@ -376,6 +379,7 @@ export function ContextualPicker<T>({
   const authoringLocked = findingTarget?.['data-authoring-locked'] === true;
   const interactionDisabled = disabled || locked || disabledHint !== undefined || authoringLocked;
   const shownLabel = disabled ? placeholder : (triggerLabel ?? selected?.label ?? placeholder);
+  const iconOnly = triggerSize === 'icon';
 
   const triggerText =
     triggerSizingLabels === undefined ? (
@@ -412,7 +416,7 @@ export function ContextualPicker<T>({
   return (
     <div
       className={`field-control contextual-picker${layout === 'inline' ? ' field-control-inline' : ''}`}
-      {...(triggerSize === 'content' ? { 'data-trigger-size': 'content' } : {})}
+      {...(triggerSize === 'field' ? {} : { 'data-trigger-size': triggerSize })}
     >
       {label === '' ? null : (
         <label htmlFor={id}>
@@ -429,18 +433,24 @@ export function ContextualPicker<T>({
             aria-expanded={open}
             aria-haspopup="listbox"
             aria-invalid={invalid || selected?.state === 'impossible' || undefined}
-            {...(ariaLabel === undefined ? {} : { 'aria-label': ariaLabel })}
-            className="contextual-picker-trigger"
+            {...(ariaLabel === undefined && !iconOnly
+              ? {}
+              : { 'aria-label': ariaLabel ?? shownLabel })}
+            className={
+              iconOnly ? 'contextual-picker-trigger timeline-chip' : 'contextual-picker-trigger'
+            }
+            data-empty={(iconOnly && triggerIcon === undefined) || undefined}
             data-candidate-state={selected?.state ?? 'unspecified'}
             data-has-issues={hasIssues || undefined}
             disabled={interactionDisabled}
             {...findingTarget}
             {...(findingMark === undefined || !findingMark['data-has-findings'] ? {} : findingMark)}
             {...hintProps(
-              disabledHint ?? triggerHint,
+              disabledHint ?? triggerHint ?? (iconOnly ? shownLabel : undefined),
               findingMark?.['aria-description'] ??
                 findingTarget?.['aria-description'] ??
                 selected?.explanations?.join(' '),
+              iconOnly ? (ariaLabel ?? shownLabel) : undefined,
             )}
             id={id}
             ref={(node) => {
@@ -449,7 +459,11 @@ export function ContextualPicker<T>({
             }}
             type="button"
           >
-            {triggerParts !== undefined && triggerParts.length > 0 && !disabled ? (
+            {iconOnly ? (
+              triggerIcon === undefined || disabled ? null : (
+                <ArtworkIcon className="artwork-label-icon" source={triggerIcon} />
+              )
+            ) : triggerParts !== undefined && triggerParts.length > 0 && !disabled ? (
               <span className="contextual-picker-trigger-parts" onMouseEnter={showTruncatedTitle}>
                 {triggerParts.map((part, index) => (
                   <Fragment key={index}>

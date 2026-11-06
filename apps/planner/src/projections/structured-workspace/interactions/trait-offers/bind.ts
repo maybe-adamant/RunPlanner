@@ -2,9 +2,11 @@ import type {
   WorkspaceRejectedBlockRule,
   WorkspaceTraitOfferControl,
   WorkspaceTraitOfferFeedback,
+  WorkspaceTraitOfferInlineOption,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace/contracts/traits';
 import {
+  TRAIT_OPTION_KEYS,
   optionIndex,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -20,6 +22,36 @@ import { projectMaxHealthRoll } from './max-health-roll';
 import { projectTraitOfferNotes } from './offer-notes';
 import { bindTraitOfferOptionDomain } from './option-domain';
 import { traitOfferLauncherPresentation } from '../launcher-presentation';
+
+/** An ordinary authored screen's rows; selecting one is a plain selection change. */
+function inlineOptionsFor(
+  catalog: Catalog,
+  control: WorkspaceTraitOfferControl,
+): { readonly inlineOptions?: readonly WorkspaceTraitOfferInlineOption[] } {
+  const offer = control.offer;
+  if (
+    offer?.kind !== 'traits' ||
+    control.giver.providerKind === 'spell' ||
+    control.giver.providerKind === 'chaos' ||
+    control.address.owner.kind === 'gorgonPhase'
+  )
+    return {};
+  return {
+    inlineOptions: Object.freeze(
+      offer.options.map((option, index) => {
+        const optionKey = TRAIT_OPTION_KEYS[index]!;
+        return Object.freeze({
+          optionKey,
+          traitKey: option.traitKey,
+          label: catalog.traits.byKey[option.traitKey]?.label ?? option.traitKey,
+          ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
+          selected: offer.selectedOptionKey === optionKey,
+          rejected: offer.rejectedOptionKey === optionKey,
+        });
+      }),
+    ),
+  };
+}
 
 /** Binds the trait-offer aggregate; focused domain and typed child families stay separate. */
 export function bindTraitOfferInteractions(input: {
@@ -62,6 +94,7 @@ export function bindTraitOfferInteractions(input: {
         acquisitionRoleLabel: control.acquisitionRoleLabel,
         ...(control.screenRerolls === undefined ? {} : { screenRerolls: control.screenRerolls }),
         launcher: traitOfferLauncherPresentation(catalog, control.giver, control.offer),
+        ...inlineOptionsFor(catalog, control),
         choices: control.giver.providerKind === 'chaos' ? Object.freeze([]) : traitChoices,
         ...(chaosInteraction === undefined ? {} : { chaos: chaosInteraction }),
         giver: control.giver,
