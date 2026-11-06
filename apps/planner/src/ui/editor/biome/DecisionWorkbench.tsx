@@ -44,7 +44,6 @@ import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
 import { doorRewardIcons, type DoorChip } from './doorSummary';
-import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { type DoorNoteItem, type DoorNoteMark, type DoorNoteTarget } from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
 
@@ -634,15 +633,18 @@ export function RewardPoolLine({
       )}
       {effective === undefined ? null : (
         <span className="door-pool-effective">
-          <span aria-hidden="true" className="row-reward-arrow">
-            →
-          </span>
+          {/* With no pool to change from, the label names the effective pool itself. */}
+          {picker === undefined && fixedLabel === undefined ? null : (
+            <span aria-hidden="true" className="row-reward-arrow">
+              →
+            </span>
+          )}
           <span className="visually-hidden" id={effectiveLabelId}>
             Effective Pool
           </span>
           <NoteMarked labelledBy={`${effectiveLabelId} ${effectiveValueId}`} mark={effectiveMark}>
             <span aria-labelledby={effectiveLabelId} role="status">
-              <span id={effectiveValueId}>{effective.label}</span>
+              <FixedValueChip label={effective.label} textId={effectiveValueId} />
             </span>
           </NoteMarked>
         </span>
@@ -974,15 +976,21 @@ export function BatchExitPicker({
     node.targets.length === 1 && additional.length === 0 && node.missingTargets.length === 0;
   if (lone) {
     const target = node.targets[0]!;
+    // The lone door is the way out: shown as the picked chip, with nothing to pick.
     return (
       <span className="timeline-leave-door">
-        <span>{`Door ${target.index}`}</span>
-        <span aria-hidden="true">·</span>
-        <FixedValueChip
-          icon={roomKindIcon(target.door.room.roomIcon)}
-          label={target.door.room.label}
+        <DoorChips
+          chips={[
+            {
+              key: target.exitKey,
+              label: `Door ${target.index} · ${target.door.room.label}`,
+              roomIcon: target.door.room.roomIcon,
+              rewards: doorRewardIcons(target, 'final'),
+              picked: true,
+            },
+          ]}
+          label="Exit door"
         />
-        <LeaveRewards icons={doorRewardIcons(target, 'final')} />
       </span>
     );
   }
@@ -1050,21 +1058,6 @@ export function BatchExitPicker({
         }}
       />
     </span>
-  );
-}
-
-/** A door's final rewards after its room on the Leave row. */
-function LeaveRewards({ icons }: { readonly icons: readonly (ArtworkSource | undefined)[] }) {
-  if (icons.length === 0) return null;
-  return (
-    <>
-      <span aria-hidden="true">·</span>
-      <span className="timeline-leave-rewards">
-        {icons.map((icon, index) => (
-          <ArtworkIcon className="artwork-label-icon" key={index} source={icon} />
-        ))}
-      </span>
-    </>
   );
 }
 

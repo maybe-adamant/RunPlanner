@@ -853,12 +853,11 @@ describe('OccurrenceRoomFeatures', () => {
     expect(screen.getByRole('button', { name: 'Passive' }).textContent).toContain('Nemesis event');
     expect(screen.queryByRole('checkbox', { name: /Nemesis/ })).toBeNull();
     openRoomTab('Room Overview');
-    const count = screen.getByRole('radiogroup', { name: 'Optional pickups' });
-    expect((within(count).getByRole('radio', { name: '4' }) as HTMLInputElement).checked).toBe(
-      true,
-    );
+    const count = screen.getByRole('button', { name: /^Optional pickups/ });
+    expect(count.textContent).toContain('4');
 
-    await view.user.click(within(count).getByRole('radio', { name: '3' }));
+    await view.user.click(count);
+    await view.user.click(await screen.findByRole('option', { name: '3' }));
     await waitFor(() => expect(authoredFields()?.state).toMatchObject({ optionalRewardCount: 3 }));
     // The Passive event's family is fixed when Nemesis spawns: it is authored in the Overview.
     const beforeEvent = view.application.store.getState().projectWorkspace.history!.present;

@@ -62,6 +62,7 @@ import {
   challengeSwitchIcon,
   roomActionIcon,
   roomObjectIcon,
+  sourceFamilyIcon,
 } from '@planner/ui/artwork/roomArtwork';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import {
@@ -190,11 +191,16 @@ function WorkbenchAddArea({
   const toGroup = (
     key: string,
     entry: { label: string; rows: (typeof optionalRows)[number][] },
-  ): RoomAddGroup => ({
-    key,
-    label: entry.label,
-    actions: entry.rows.map(addAction),
-  });
+  ): RoomAddGroup => {
+    // A family named after its source shows that source's icon, like an object.
+    const icon = sourceFamilyIcon(entry.rows[0]?.sourceFamily);
+    return {
+      key,
+      label: entry.label,
+      ...(icon === undefined ? {} : { icon }),
+      actions: entry.rows.map(addAction),
+    };
+  };
   const objectNodes = [
     ...objectEntries.map((entry) => ({
       rank: objectOrder.indexOf(entry.object),
@@ -860,9 +866,10 @@ export function RoomActionsWorkbench({
               {row.slot === undefined ? null : (
                 <span className="visually-hidden">{` · slot ${row.slot}`}</span>
               )}
-              {row.stale ? <span className="neutral-status">stale</span> : null}
+              {/* The row's accent and its section show these; only its name says them. */}
+              {row.stale ? <span className="visually-hidden"> stale</span> : null}
               {row.rank === null && row.participation === 'required' ? (
-                <span className="neutral-status">required</span>
+                <span className="visually-hidden"> required</span>
               ) : null}
             </>
           }

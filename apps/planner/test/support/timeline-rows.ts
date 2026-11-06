@@ -39,7 +39,8 @@ export async function findTimelineRow(label: string | RegExp): Promise<HTMLEleme
 /** An Actions-line (or object-beside) source-family group button in the room's Add area. */
 export function addGroupButton(label: string): HTMLButtonElement {
   const button = [...document.querySelectorAll<HTMLButtonElement>('button.room-add-group')].find(
-    (candidate) => candidate.textContent?.trim() === label,
+    // An entry with an icon opens with a caret after its name.
+    (candidate) => candidate.textContent?.replace(/ ▸$/, '').trim() === label,
   );
   if (button === undefined) {
     const shown = [...document.querySelectorAll('button.room-add-group')].map(

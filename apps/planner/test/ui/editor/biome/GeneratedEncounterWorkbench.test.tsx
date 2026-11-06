@@ -899,7 +899,6 @@ describe('generated encounter customization workflows', () => {
     openRoomTab('Room Overview');
     expect(screen.queryByRole('button', { name: /^Customize / })).toBeNull();
     const viewRoster = screen.getByRole('button', { name: /^View roster for .*encounter$/ });
-    expect(viewRoster.textContent).toBe('View roster');
     await view.user.click(viewRoster);
     const dialog = await screen.findByRole('dialog', { name: 'Intro combat' });
     expect(within(dialog).queryByRole('button', { name: 'Reset' })).toBeNull();

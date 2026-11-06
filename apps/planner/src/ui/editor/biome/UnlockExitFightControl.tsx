@@ -19,7 +19,6 @@ export function UnlockExitFightControl({
   return (
     <EncounterCustomizationLauncher
       interaction={interactions.unlockExitEncounters.get(encounter.interactionKey)}
-      pencil
       subject={{
         address: encounter.address,
         controlId: `unlock-exit-customization-${semanticOwnerControlElementId(encounter.address)}`,

@@ -536,10 +536,8 @@ describe('OccurrenceRoomActions', () => {
     expect(fieldsSetup).toBeTruthy();
     expect(within(fieldsSetup).queryByText('Cage reward identities')).toBeNull();
     expect(within(fieldsSetup).queryByLabelText('Cage 1')).toBeNull();
-    expect(within(fieldsSetup).getByRole('radiogroup', { name: 'Optional pickups' })).toBeTruthy();
-    expect(within(fieldsSetup).getByRole('button', { name: 'Optional 1 reward' })).toBe(
-      within(fieldsSetup).getByLabelText('Reward 1'),
-    );
+    expect(within(fieldsSetup).getByRole('button', { name: /^Optional pickups/ })).toBeTruthy();
+    expect(within(fieldsSetup).getByRole('button', { name: /^Optional 1 reward/ })).toBeTruthy();
     openRoomTab('Room Timeline');
     const fieldsActions = screen.getByRole('region', { name: 'Room Timeline' });
     // The legend opens from its button on the timeline's tab row.

@@ -104,6 +104,28 @@ export function roomActionIcon(
   }
 }
 
+/** The icon of what produces a family's pickups: its trait, or the NPC who gives them. */
+export function sourceFamilyIcon(
+  family: AcquisitionEntrySourceFamily | undefined,
+): string | undefined {
+  switch (family?.kind) {
+    case 'trait':
+      return traitIcon(family.traitKey);
+    case 'seaStar':
+      return traitIcon('DoubleRewardBoon');
+    case 'echo':
+      return npcArtwork.Echo ?? undefined;
+    case 'nemesisEvent':
+      return npcArtwork.Nemesis ?? undefined;
+    case 'erisGift':
+      return erisIcon;
+    case 'heraclesBounty':
+      return npcArtwork.Heracles ?? undefined;
+    default:
+      return undefined;
+  }
+}
+
 /** A biome's icon by catalog biome key. */
 export function biomeIcon(biomeKey: string): string | undefined {
   return biomeArtwork[biomeKey] ?? undefined;

@@ -159,7 +159,10 @@ async function optionalActionNames(
       names.push(
         ...within(menu)
           .getAllByRole('button')
-          .map((button) => `${group.textContent ?? ''}: ${button.textContent ?? ''}`),
+          .map(
+            (button) =>
+              `${group.textContent?.replace(/ ▸$/, '') ?? ''}: ${button.textContent ?? ''}`,
+          ),
       );
     await user.keyboard('{Escape}');
   }

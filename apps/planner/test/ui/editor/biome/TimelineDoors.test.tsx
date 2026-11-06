@@ -374,8 +374,7 @@ describe('a room’s last Timeline row', () => {
     await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
     const leave = within(details).getByRole('listitem', { name: 'Leave room' });
     expect(within(leave).queryByRole('group', { name: 'Exit door' })).toBeNull();
-    expect(within(leave).getByText('Door 1')).toBeTruthy();
-    expect(within(leave).getByText('Combat 02')).toBeTruthy();
+    expect(within(leave).getByRole('listitem', { name: 'Door 1 · Combat 02' })).toBeTruthy();
   });
 
   it('puts a Ship room’s doors and last row in its last phase only', async () => {

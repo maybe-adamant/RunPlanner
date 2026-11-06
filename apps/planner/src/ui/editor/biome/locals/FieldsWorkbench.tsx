@@ -19,6 +19,9 @@ import {
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { RoomMapReferencePane } from '@planner/ui/room-maps/RoomMapReferencePane';
 import { hintProps } from '@planner/ui/controls/hint';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
+import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
 
 export function FieldsWorkbench({
   interactions,
@@ -31,52 +34,59 @@ export function FieldsWorkbench({
 }) {
   const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
+  const countId = semanticOwnerControlElementId(room.optionalRewardCountAddress);
   return (
     <section aria-label="Optional Rewards" className="fields-room-editor">
       {nested ? null : <h5 className="room-feature-category-heading">Optional Rewards</h5>}
       <div className="room-overview-panel">
-        <div className="field-control field-control-inline">
-          <span>Rewards</span>
-          <div
-            {...findingTarget(room.optionalRewardCountAddress)}
-            aria-label="Optional pickups"
-            role="radiogroup"
-            tabIndex={-1}
-            className="biome-field-radios"
-          >
-            {room.optionalRewardCountValues.map((value) => (
-              <label key={value}>
-                <input
-                  type="radio"
-                  name={`optional-count-${room.owner.occurrenceId}`}
-                  checked={room.optionalRewardCount === value}
-                  onChange={() =>
-                    dispatch(
-                      authoredProjectCommandDispatched({
-                        kind: 'ReplaceFieldsOptionalRewardCount',
-                        occurrence: room.owner,
-                        optionalRewardCount: value,
-                      }),
-                    )
-                  }
-                />
-                <span>{value}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        <div className="fields-reward-identities">
-          {room.optionalRewards.map((reward, index) => (
-            <div className="fields-reward-identity" key={reward.key}>
-              <RewardControlEditor
-                ariaLabel={`${reward.label} reward`}
-                control={reward.control}
-                idPrefix={`fields-${room.owner.occurrenceId}-optional-${reward.key}`}
-                interactions={interactions}
-                label={`Reward ${index + 1}`}
-              />
-            </div>
-          ))}
+        <div className="field-control field-control-inline fields-optional-line">
+          <span aria-hidden="true">Rewards</span>
+          <span className="fields-optional-rewards">
+            <ContextualPicker
+              ariaLabel="Optional pickups"
+              choiceLabel="Optional pickups"
+              findingTarget={findingTarget(room.optionalRewardCountAddress, countId)}
+              id={countId}
+              label=""
+              layout="inline"
+              model={declaredChoicesPicker(
+                room.optionalRewardCountValues.map((value) => ({
+                  key: String(value),
+                  value,
+                  label: String(value),
+                })),
+                room.optionalRewardCount,
+              )}
+              onSelect={(value) =>
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'ReplaceFieldsOptionalRewardCount',
+                    occurrence: room.owner,
+                    optionalRewardCount: value,
+                  }),
+                )
+              }
+              placeholder="Count"
+              searchable={false}
+              triggerLabel={String(room.optionalRewardCount)}
+            />
+            {room.optionalRewards.length === 0 ? null : (
+              <NumberedSlots label="Optional rewards">
+                {room.optionalRewards.map((reward, index) => (
+                  <NumberedSlot hint={`Reward ${index + 1}`} key={reward.key} number={index + 1}>
+                    <RewardControlEditor
+                      ariaLabel={`${reward.label} reward`}
+                      control={reward.control}
+                      idPrefix={`fields-${room.owner.occurrenceId}-optional-${reward.key}`}
+                      interactions={interactions}
+                      label=""
+                      triggerSize="icon"
+                    />
+                  </NumberedSlot>
+                ))}
+              </NumberedSlots>
+            )}
+          </span>
         </div>
       </div>
     </section>

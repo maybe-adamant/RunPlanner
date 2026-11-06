@@ -62,29 +62,37 @@
   background: none;
 }
 
-.fields-reward-identities {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px 16px;
-}
-
 .shop-editor:has(> .room-feature-category-heading) {
   display: grid;
   gap: 10px;
-}
-
-.fields-reward-identity {
-  min-width: 0;
 }
 
 .fields-room-editor {
   container-type: inline-size;
 }
 
-@container (min-width: 46rem) {
-  .fields-reward-identities {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+/* The count picker, then a numbered chip per optional reward on its line. */
+.fields-optional-rewards {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 14px;
+  justify-self: start;
+}
+
+/* The line outgrows a picker column: it holds a chip per reward. */
+.room-overview-workbench .field-control-inline.fields-optional-line {
+  max-width: none;
+  grid-template-columns: var(--overview-row-label-width) auto;
+}
+
+.room-overview-workbench .fields-optional-rewards > .contextual-picker {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  grid-template-columns: auto;
 }
 
 .room-structure-workbench > .room-feature-category-heading:first-child {
@@ -2606,15 +2614,6 @@
   white-space: nowrap;
 }
 
-.room-overview-workbench .fields-reward-identities {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
-}
-
-.room-overview-workbench .fields-reward-identity > .reward-value-editor {
-  display: block;
-}
-
 /* An encounter fixed on entry reads as plain text in the picker column. */
 .room-overview-workbench .encounter-fixed-value {
   border-color: transparent;
@@ -3195,7 +3194,9 @@ button.timeline-chip {
   background: none;
 }
 
-.timeline-cell-editors .timeline-chip-edit {
+.timeline-cell-editors .timeline-chip-edit,
+.encounter-phase-settings .timeline-chip-edit,
+.shop-family-offer-row .timeline-chip-edit {
   display: inline-grid;
   width: 22px;
   min-width: 22px;
@@ -3209,7 +3210,9 @@ button.timeline-chip {
   color: var(--muted);
 }
 
-.timeline-cell-editors .timeline-chip-edit:hover:not(:disabled) {
+.timeline-cell-editors .timeline-chip-edit:hover:not(:disabled),
+.encounter-phase-settings .timeline-chip-edit:hover:not(:disabled),
+.shop-family-offer-row .timeline-chip-edit:hover:not(:disabled) {
   color: var(--selection-accent);
 }
 
@@ -3326,12 +3329,6 @@ button.timeline-chip {
 
 .timeline-leave-door span.contextual-picker-trigger-part-image:empty {
   display: none;
-}
-
-.timeline-leave-rewards {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
 }
 
 .door-rows-header-action {

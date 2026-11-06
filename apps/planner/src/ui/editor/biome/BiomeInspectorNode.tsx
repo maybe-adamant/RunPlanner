@@ -18,6 +18,7 @@ import {
   BatchDoorsDetail,
   BatchDoorsRepair,
   BatchExitPicker,
+  DoorChips,
   DoorNotes,
   DoorRowsHeader,
 } from './DecisionWorkbench';
@@ -39,7 +40,6 @@ import { PlanEndAction } from './PlanEndAction';
 import { ReadOnlyFindingScope } from '@planner/ui/feedback/useFindingTarget';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { DoorsRerollEntry } from './RoomRerolls';
-import { roomKindIcon } from './roomIcon';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { LeaveRow, type TimelineDoorsContent } from './TimelineDoors';
 import { BiomeWorkspaceContractError } from './workspaceContract';
@@ -339,34 +339,28 @@ function roomTimelineDoors({
     }
     case 'fixedRoom': {
       const destination = outgoing.destination;
+      const chip =
+        destination.kind === 'room' && destination.roomIcon !== undefined
+          ? {
+              key: 'fixed',
+              label: destination.label,
+              roomIcon: destination.roomIcon,
+              rewards: [],
+            }
+          : undefined;
+      // The one way out is the picked door chip, with nothing to pick.
       const value =
         destination.kind === 'complete' ? (
           <span>{destination.message}</span>
+        ) : chip === undefined ? (
+          <FixedValueChip label={destination.label} />
         ) : (
-          <FixedValueChip
-            icon={
-              destination.kind === 'room' && destination.roomIcon !== undefined
-                ? roomKindIcon(destination.roomIcon)
-                : undefined
-            }
-            label={destination.label}
-          />
+          <span className="timeline-leave-door">
+            <DoorChips chips={[{ ...chip, picked: true }]} label="Exit door" />
+          </span>
         );
       return {
-        ...(destination.kind === 'room' && destination.roomIcon !== undefined
-          ? {
-              summary: {
-                chips: [
-                  {
-                    key: 'fixed',
-                    label: destination.label,
-                    roomIcon: destination.roomIcon,
-                    rewards: [],
-                  },
-                ],
-              },
-            }
-          : {}),
+        ...(chip === undefined ? {} : { summary: { chips: [chip] } }),
         ...storeDetail,
         leave: leaveRow('Leave room', value),
         notes,

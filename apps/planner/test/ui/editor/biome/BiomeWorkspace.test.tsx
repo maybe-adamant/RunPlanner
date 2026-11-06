@@ -1422,8 +1422,9 @@ describe('BiomeWorkspace', () => {
 
     await openTimeline(createOccurrenceAddress(nBiome, nOccurrenceId('preboss')));
     expect(
-      within(within(details()).getByRole('listitem', { name: 'Leave room' })).getByText(
-        'Polyphemus',
+      within(within(details()).getByRole('listitem', { name: 'Leave room' })).getByRole(
+        'listitem',
+        { name: 'Polyphemus' },
       ),
     ).toBeTruthy();
 

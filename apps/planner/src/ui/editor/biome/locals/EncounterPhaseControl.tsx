@@ -397,12 +397,9 @@ function EncounterCustomizationDialog({
 /** Opens an encounter's customization dialog, or a fixed roster's read-only view. */
 export function EncounterCustomizationLauncher({
   interaction,
-  pencil = false,
   subject,
 }: {
   readonly interaction: WorkspaceEncounterCustomizationInteraction | undefined;
-  /** On a Timeline row the launcher is the small pencil that opens the dialog. */
-  readonly pencil?: boolean;
   readonly subject: EncounterCustomizationSubject;
 }) {
   const [manualOpen, setManualOpen] = useState(false);
@@ -436,9 +433,7 @@ export function EncounterCustomizationLauncher({
     <>
       <button
         {...triggerTarget}
-        className={
-          pencil ? 'timeline-chip-edit' : 'dialog-launcher quiet-action encounter-launcher'
-        }
+        className="timeline-chip-edit"
         disabled={
           ('aria-disabled' in triggerTarget ? triggerTarget['aria-disabled'] : undefined) ||
           contextUnreached ||
@@ -452,7 +447,7 @@ export function EncounterCustomizationLauncher({
         aria-label={`${editable ? 'Customize' : 'View roster for'} ${subject.identityLabel.toLowerCase()}`}
         type="button"
       >
-        {pencil ? <ActionIcon name="edit" /> : editable ? 'Customize' : 'View roster'}
+        <ActionIcon name="edit" />
       </button>
       {!manualOpen ? null : interaction !== undefined && subject.customization !== undefined ? (
         <EncounterCustomizationDialog

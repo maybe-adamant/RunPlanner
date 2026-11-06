@@ -100,7 +100,7 @@ describe('Room Add area', () => {
     );
     openRoomTab('Room Timeline');
     // The Actions line holds one button per source family.
-    expect(within(lineList('Actions')).getByRole('button', { name: 'Quick Buck' })).toBe(
+    expect(within(lineList('Actions')).getByRole('button', { name: 'Quick Buck ▸' })).toBe(
       addGroupButton('Quick Buck'),
     );
     const actions = room(
