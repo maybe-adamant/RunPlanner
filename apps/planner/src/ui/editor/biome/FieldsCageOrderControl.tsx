@@ -7,7 +7,7 @@ import { declaredChoicesPicker } from '@planner/projections/contextual/contextua
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
+import { NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
 
 function ordinal(position: number): string {
   const tens = position % 100;
@@ -77,7 +77,7 @@ export function FieldsCageOrderControl({
           const choice = control.choices.find((candidate) => candidate.phaseKey === phaseKey);
           const cleared = `Cleared ${ordinal(index + 1)}`;
           return (
-            <NumberedSlot hint={cleared} key={index} number={index + 1}>
+            <span className="numbered-slot" key={index}>
               <ContextualPicker
                 ariaLabel={choice === undefined ? cleared : `${cleared}: ${choice.fullLabel}`}
                 locked={intentFor === undefined}
@@ -106,7 +106,7 @@ export function FieldsCageOrderControl({
                     })}
                 triggerSize="icon"
               />
-            </NumberedSlot>
+            </span>
           );
         })}
       </NumberedSlots>
