@@ -11,6 +11,10 @@ import type {
   ProjectCommand,
   RoomFeatureAddress,
 } from '@run-planner/engine/authored-project';
+import type {
+  HermesShrinePlacementRefusal,
+  StygianWellPlacementRefusal,
+} from '@run-planner/engine/simulation';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceMarker } from './navigation';
 import type { WorkspaceDoorContract } from './structure';
@@ -77,6 +81,8 @@ export type WorkspaceRoomFeature =
       readonly inventoryAddress?: RoomFeatureAddress;
       readonly inventoryMarker?: WorkspaceMarker;
       readonly presenceInteractionKey?: string;
+      /** Why a reached room cannot hold the Shrine; present only while presence is disabled. */
+      readonly presenceRefusals?: readonly HermesShrinePlacementRefusal[];
       readonly slots: readonly {
         readonly key: import('@run-planner/engine/authored-project').HermesShrineSlotKey;
         readonly address: RoomFeatureAddress;
@@ -130,6 +136,8 @@ export type WorkspaceRoomFeature =
       readonly inventoryAddress?: RoomFeatureAddress;
       readonly inventoryMarker?: WorkspaceMarker;
       readonly presenceInteractionKey?: string;
+      /** Why a reached room cannot hold the Well; present only while presence is disabled. */
+      readonly presenceRefusals?: readonly StygianWellPlacementRefusal[];
       /** The initial stock. */
       readonly slots: readonly WorkspaceStygianWellSlot[];
       /** Refill inventory, authored on the timeline under the purchase that triggers it. */

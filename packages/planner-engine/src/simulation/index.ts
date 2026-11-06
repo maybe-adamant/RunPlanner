@@ -226,8 +226,14 @@ export {
 } from './model';
 export { type AcquisitionConversionCandidateCapability } from './rewards/acquisition/artifacts';
 export { type HexActivationCandidateCapability } from './hex-activation';
-export { type HermesShrineCandidateCapability } from './commerce/hermes-shrine';
-export { type StygianWellCandidateCapability } from './commerce/stygian-well';
+export {
+  type HermesShrineCandidateCapability,
+  type HermesShrinePlacementRefusal,
+} from './commerce/hermes-shrine';
+export {
+  type StygianWellCandidateCapability,
+  type StygianWellPlacementRefusal,
+} from './commerce/stygian-well';
 export {
   type ChaosCandidateCapability,
   type ZagreusContractCandidateCapability,

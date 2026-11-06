@@ -15,15 +15,23 @@ import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import {
+  hermesShrineRefusalSentence,
+  stygianWellRefusalSentence,
+} from '@planner/projections/roomObjectPlacementCopy';
 import { hintProps } from '@planner/ui/controls/hint';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
-/** An unassessed object waits on an earlier choice; the engine names no other refusal. */
-const unreachedHint = (feature: { readonly assessment: 'assessed' | 'unassessed' }) =>
-  feature.assessment === 'unassessed' ? candidateWaitingHint : undefined;
+/** A disabled presence waits on an earlier choice, or names the rules refusing it. */
+const presenceLockHint = (feature: StygianWellFeature | HermesShrineFeature): string | undefined =>
+  feature.assessment === 'unassessed'
+    ? candidateWaitingHint
+    : feature.kind === 'stygianWell'
+      ? feature.presenceRefusals?.map(stygianWellRefusalSentence).join(' ')
+      : feature.presenceRefusals?.map(hermesShrineRefusalSentence).join(' ');
 
 const wellIcon = (itemKey: string | null): string | undefined =>
   itemKey === null ? undefined : (wellArtwork[itemKey] ?? undefined);
@@ -42,6 +50,7 @@ const emptyStringPicker: ContextualPickerModel<string> = Object.freeze({
 });
 
 type StygianWellFeature = Extract<WorkspaceRoomFeature, { readonly kind: 'stygianWell' }>;
+type HermesShrineFeature = Extract<WorkspaceRoomFeature, { readonly kind: 'hermesShrine' }>;
 
 type InventoryFeature = Extract<
   WorkspaceRoomFeature,
@@ -77,7 +86,7 @@ export function RoomInventoryPanel({
               ) : (
                 <label
                   className="room-feature-presence-row"
-                  {...hintProps(presence === undefined ? unreachedHint(feature) : undefined)}
+                  {...hintProps(presence === undefined ? presenceLockHint(feature) : undefined)}
                 >
                   <input
                     {...findingTarget(feature.presenceAddress)}
@@ -164,7 +173,7 @@ export function RoomInventoryPanel({
             ) : (
               <label
                 className="room-feature-presence-row"
-                {...hintProps(presence === undefined ? unreachedHint(feature) : undefined)}
+                {...hintProps(presence === undefined ? presenceLockHint(feature) : undefined)}
               >
                 <input
                   {...findingTarget(feature.presenceAddress)}

@@ -117,7 +117,33 @@ export interface StygianWellPlacementAssessment {
   readonly forced: boolean;
   readonly eligible: boolean;
   readonly priorWellCount: number;
+  /** Why an ordinary Well cannot spawn here; empty exactly when it is eligible. */
+  readonly refusals: readonly StygianWellPlacementRefusal[];
 }
+
+/**
+ * One native rule refusing an ordinary Well at a room's entry. A room that
+ * hosts no Well on its route, or a map with no `ChallengeSwitchBase`, is the
+ * whole answer; otherwise the depth and spacing gates follow in that order.
+ */
+export type StygianWellPlacementRefusal =
+  | { readonly reason: 'notHost' }
+  | { readonly reason: 'noAnchor' }
+  | {
+      readonly reason: 'biomeDepth';
+      readonly biomeDepthCache: number;
+      readonly minimumBiomeDepth: number;
+    }
+  | {
+      readonly reason: 'recentWell';
+      readonly roomsSinceLast: number;
+      readonly minimumRoomsSinceLast: number;
+    };
+
+/** Native `WellShopRequirements`: `BiomeDepthCache >= 3`. */
+const WELL_MINIMUM_BIOME_DEPTH = 3;
+/** Native `RequiredMinRoomsSinceEvent` for `WellShop`: a depth gap of at least four. */
+const WELL_MINIMUM_ROOMS_SINCE_LAST = 4;
 
 export interface StygianWellEntryCandidateContext {
   readonly placement: StygianWellPlacementAssessment;
@@ -170,7 +196,7 @@ export function priorThreeRoomShopPresence(
   return Object.freeze(
     appearances
       .slice(0, -1)
-      .slice(-3)
+      .slice(-(WELL_MINIMUM_ROOMS_SINCE_LAST - 1))
       .map((appearance) => appearance.roomShopPresent === true),
   );
 }
@@ -184,16 +210,32 @@ export function assessStygianWellPlacement(
   const roomShop = routeRoomShop(declaration, routeKey);
   const forced = roomShop?.forced === true;
   const priorWellCount = priorEnteredWellFlags.filter(Boolean).length;
+  const refusals: StygianWellPlacementRefusal[] = [];
+  if (!forced) {
+    if (roomShop === undefined || roomShop.spawnChance <= 0) refusals.push({ reason: 'notHost' });
+    else if ((declaration?.challengeSwitchAnchorCount ?? 0) <= 0)
+      refusals.push({ reason: 'noAnchor' });
+    else {
+      if (biomeDepthCache < WELL_MINIMUM_BIOME_DEPTH)
+        refusals.push({
+          reason: 'biomeDepth',
+          biomeDepthCache,
+          minimumBiomeDepth: WELL_MINIMUM_BIOME_DEPTH,
+        });
+      const latest = priorEnteredWellFlags.lastIndexOf(true);
+      if (latest >= 0)
+        refusals.push({
+          reason: 'recentWell',
+          roomsSinceLast: priorEnteredWellFlags.length - latest,
+          minimumRoomsSinceLast: WELL_MINIMUM_ROOMS_SINCE_LAST,
+        });
+    }
+  }
   return Object.freeze({
     forced,
-    eligible:
-      forced ||
-      (roomShop !== undefined &&
-        biomeDepthCache >= 3 &&
-        roomShop.spawnChance > 0 &&
-        (declaration?.challengeSwitchAnchorCount ?? 0) > 0 &&
-        priorWellCount === 0),
+    eligible: refusals.length === 0,
     priorWellCount,
+    refusals: Object.freeze(refusals.map((refusal) => Object.freeze(refusal))),
   });
 }
 
@@ -585,6 +627,8 @@ export interface StygianWellRollCapability {
 export interface StygianWellCandidateCapability {
   readonly entry: StygianWellEntryCandidateContext;
   readonly placementEligible: boolean;
+  /** Why an absent ordinary Well cannot be placed; empty when it can. */
+  readonly placementRefusals: readonly StygianWellPlacementRefusal[];
   readonly required: boolean;
   readonly present: boolean;
   /** The initial roll's candidates. */
@@ -658,6 +702,7 @@ export function createStygianWellCandidateArtifacts(
       return Object.freeze({
         entry,
         placementEligible: entry.placement.eligible,
+        placementRefusals: entry.placement.refusals,
         required: entry.placement.forced,
         present: entry.inventory !== undefined,
         candidateItemKeysBySlot: entry.inventory?.candidateItemKeysBySlot ?? noItemKeysBySlot,

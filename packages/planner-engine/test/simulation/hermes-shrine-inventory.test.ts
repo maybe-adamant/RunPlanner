@@ -395,6 +395,33 @@ describe('Hermes Shrine entry inventory gate', () => {
     });
   });
 
+  it('publishes each rule refusing an ordinary Shrine, statics alone and gates in order', () => {
+    const ordinary = catalog.rooms.byKey.O_Combat02;
+    const refusals = (
+      room: Parameters<typeof assessHermesShrinePlacement>[0],
+      prior: readonly boolean[],
+      depth: number,
+    ) => assessHermesShrinePlacement(room, prior, depth).refusals;
+    expect(refusals(catalog.rooms.byKey.O_Boss01, [], 3)).toEqual([{ reason: 'notHost' }]);
+    expect(refusals(catalog.rooms.byKey.O_Combat01, [], 3)).toEqual([{ reason: 'noAnchor' }]);
+    expect(refusals(ordinary, [true, false], 2)).toEqual([
+      { reason: 'biomeDepth', biomeDepthCache: 2, minimumBiomeDepth: 3 },
+      { reason: 'recentShrine', roomsSinceLast: 2, minimumRoomsSinceLast: 3 },
+    ]);
+    expect(refusals(ordinary, [false, true], 3)).toEqual([
+      { reason: 'recentShrine', roomsSinceLast: 1, minimumRoomsSinceLast: 3 },
+    ]);
+    expect(refusals(ordinary, [false, false], 3)).toEqual([]);
+    expect(refusals(catalog.rooms.byKey.O_PostBoss01, [true, true], 0)).toEqual([]);
+    const owner = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const placement = assessHermesShrinePlacement(ordinary, [false, true], 3);
+    expect(
+      createHermesShrineCandidateArtifacts(
+        new Map([[semanticAddressKey(owner), Object.freeze({ placement })]]),
+      ).at(owner),
+    ).toMatchObject({ placementEligible: false, placementRefusals: placement.refusals });
+  });
+
   it('publishes an O ordinary host through the supported project candidate API', () => {
     const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const absent = simulateProjectAssembly(catalog, loadSurfaceNOProject());

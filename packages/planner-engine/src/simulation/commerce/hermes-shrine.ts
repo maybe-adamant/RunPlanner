@@ -62,7 +62,33 @@ export interface HermesShrinePlacementAssessment {
   readonly eligible: boolean;
   /** The two immediately preceding physical entered positions, without identity collapse. */
   readonly priorShrineCount: number;
+  /** Why an ordinary Shrine cannot spawn here; empty exactly when it is eligible. */
+  readonly refusals: readonly HermesShrinePlacementRefusal[];
 }
+
+/**
+ * One native rule refusing an ordinary Shrine at a room's entry. A room that
+ * hosts no Shrine, or a map with no `ChallengeSwitchBase`, is the whole answer;
+ * otherwise the depth and spacing gates follow in that order.
+ */
+export type HermesShrinePlacementRefusal =
+  | { readonly reason: 'notHost' }
+  | { readonly reason: 'noAnchor' }
+  | {
+      readonly reason: 'biomeDepth';
+      readonly biomeDepthCache: number;
+      readonly minimumBiomeDepth: number;
+    }
+  | {
+      readonly reason: 'recentShrine';
+      readonly roomsSinceLast: number;
+      readonly minimumRoomsSinceLast: number;
+    };
+
+/** Native `SurfaceShopRequirements`: `BiomeDepthCache >= 3`. */
+const SHRINE_MINIMUM_BIOME_DEPTH = 3;
+/** Native `SumPrevRooms = 3`: no Shrine in this room or the two before it. */
+const SHRINE_MINIMUM_ROOMS_SINCE_LAST = 3;
 
 export interface HermesShrineAssessment {
   readonly placement: HermesShrinePlacementAssessment;
@@ -142,7 +168,7 @@ export function priorTwoSurfaceShopPresence(
   return Object.freeze(
     appearances
       .slice(0, -1)
-      .slice(-2)
+      .slice(-(SHRINE_MINIMUM_ROOMS_SINCE_LAST - 1))
       .map((appearance) => appearance.surfaceShopPresent === true),
   );
 }
@@ -155,16 +181,33 @@ export function assessHermesShrinePlacement(
   const surfaceShop = declaration?.surfaceShop;
   const forced = surfaceShop?.forced === true;
   const priorShrineCount = priorEnteredShrineFlags.filter(Boolean).length;
+  const refusals: HermesShrinePlacementRefusal[] = [];
+  if (!forced) {
+    if (surfaceShop === undefined || surfaceShop.spawnChance <= 0)
+      refusals.push({ reason: 'notHost' });
+    else if ((declaration?.challengeSwitchAnchorCount ?? 0) <= 0)
+      refusals.push({ reason: 'noAnchor' });
+    else {
+      if (biomeDepthCache < SHRINE_MINIMUM_BIOME_DEPTH)
+        refusals.push({
+          reason: 'biomeDepth',
+          biomeDepthCache,
+          minimumBiomeDepth: SHRINE_MINIMUM_BIOME_DEPTH,
+        });
+      const latest = priorEnteredShrineFlags.lastIndexOf(true);
+      if (latest >= 0)
+        refusals.push({
+          reason: 'recentShrine',
+          roomsSinceLast: priorEnteredShrineFlags.length - latest,
+          minimumRoomsSinceLast: SHRINE_MINIMUM_ROOMS_SINCE_LAST,
+        });
+    }
+  }
   return Object.freeze({
     forced,
-    eligible:
-      forced ||
-      (surfaceShop !== undefined &&
-        biomeDepthCache >= 3 &&
-        surfaceShop.spawnChance > 0 &&
-        (declaration?.challengeSwitchAnchorCount ?? 0) > 0 &&
-        priorShrineCount === 0),
+    eligible: refusals.length === 0,
     priorShrineCount,
+    refusals: Object.freeze(refusals.map((refusal) => Object.freeze(refusal))),
   });
 }
 
@@ -280,6 +323,8 @@ export function assessHermesShrineInventory(
 export interface HermesShrineCandidateCapability {
   readonly assessment: HermesShrineCandidateContext;
   readonly placementEligible: boolean;
+  /** Why an absent ordinary Shrine cannot be placed; empty when it can. */
+  readonly placementRefusals: readonly HermesShrinePlacementRefusal[];
   readonly required: boolean;
   readonly present: boolean;
   readonly candidateRewardTypesBySlot: Readonly<
@@ -308,6 +353,7 @@ export function createHermesShrineCandidateArtifacts(
       return Object.freeze({
         assessment,
         placementEligible: assessment.placement.eligible,
+        placementRefusals: assessment.placement.refusals,
         required: assessment.placement.forced,
         present: assessment.inventory !== undefined,
         candidateRewardTypesBySlot: Object.freeze(

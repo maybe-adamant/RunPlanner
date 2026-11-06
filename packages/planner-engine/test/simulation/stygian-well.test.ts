@@ -197,6 +197,34 @@ describe('Stygian Well consequential purchase state', () => {
     });
   });
 
+  it('publishes each rule refusing an ordinary Well, statics alone and gates in order', () => {
+    const ordinary = catalog.rooms.byKey.F_Combat01!;
+    const refusals = (
+      room: Parameters<typeof assessStygianWellPlacement>[0],
+      routeKey: string,
+      prior: readonly boolean[],
+      depth: number,
+    ) => assessStygianWellPlacement(room, routeKey, prior, depth).refusals;
+    expect(refusals(catalog.rooms.byKey.F_PreBoss01, 'Underworld', [], 3)).toEqual([
+      { reason: 'notHost' },
+    ]);
+    // The Well's incantation is missing from a Fresh File.
+    expect(refusals(ordinary, 'FreshFile', [], 3)).toEqual([{ reason: 'notHost' }]);
+    // Every catalog Well host has an anchor; the map rule is witnessed on a stripped copy.
+    expect(
+      refusals({ ...ordinary, challengeSwitchAnchorCount: 0 }, 'Underworld', [true], 2),
+    ).toEqual([{ reason: 'noAnchor' }]);
+    expect(refusals(ordinary, 'Underworld', [false, true, false], 2)).toEqual([
+      { reason: 'biomeDepth', biomeDepthCache: 2, minimumBiomeDepth: 3 },
+      { reason: 'recentWell', roomsSinceLast: 2, minimumRoomsSinceLast: 4 },
+    ]);
+    expect(refusals(ordinary, 'Underworld', [true, false, false], 3)).toEqual([
+      { reason: 'recentWell', roomsSinceLast: 3, minimumRoomsSinceLast: 4 },
+    ]);
+    expect(refusals(ordinary, 'Underworld', [false, false, false], 3)).toEqual([]);
+    expect(refusals(catalog.rooms.byKey.F_PostBoss01, 'Underworld', [true], 0)).toEqual([]);
+  });
+
   it('uses room-entry depth rather than physical room count for F Well candidates', () => {
     const assembly = simulateProjectAssembly(catalog, createGoldenFGHProject());
     for (const [decision, eligible] of [
@@ -209,6 +237,9 @@ describe('Stygian Well consequential purchase state', () => {
       );
       expect(stygianWellCandidateForProjectEvaluationAssembly(assembly, owner)).toMatchObject({
         placementEligible: eligible,
+        placementRefusals: eligible
+          ? []
+          : [{ reason: 'biomeDepth', biomeDepthCache: 2, minimumBiomeDepth: 3 }],
         present: false,
       });
     }

@@ -61,6 +61,7 @@ import {
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
 import { RouteShrinesPanel } from '@planner/ui/shell/RouteShrinesPanel';
+import { hintOf } from '@planner-test/support/hints';
 import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
 import {
   addGroupButton,
@@ -754,7 +755,7 @@ describe('Hermes Shrine workbench', () => {
     ).toHaveLength(3);
   });
 
-  it('disables Add at an ineligible absent ordinary host', () => {
+  it('disables Add at an ineligible absent ordinary host and names the refusing rule', () => {
     renderOccurrenceWorkbench(
       loadSurfaceNOProject(),
       'Surface',
@@ -765,6 +766,7 @@ describe('Hermes Shrine workbench', () => {
     const presence = screen.getByRole('checkbox', { name: 'Hermes Shrine present' });
     expect((presence as HTMLInputElement).checked).toBe(false);
     expect((presence as HTMLInputElement).disabled).toBe(true);
+    expect(hintOf(presence.closest('label'))).toBe('This room has no spot for a Hermes Shrine.');
   });
 
   it('keeps a refill purchased without Travel Deal removable on its own row', async () => {

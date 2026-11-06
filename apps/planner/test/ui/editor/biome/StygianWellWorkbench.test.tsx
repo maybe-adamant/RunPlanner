@@ -35,6 +35,7 @@ import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
 import { slotRow, timelineRow } from '@planner-test/support/timeline-rows';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -92,6 +93,20 @@ describe('Stygian Well workbench', () => {
     await view.user.click(presence);
     expect(screen.queryByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);
+  });
+
+  it('disables presence in a reached room too early for a Well and names the rule', () => {
+    const occurrenceId = goldenFOccurrenceId(2, 1);
+    renderOccurrenceWorkbench(loadUnderworldFGProject(), 'Underworld', 'F', (biome) =>
+      biome.nodes.find(
+        (node): node is WorkspaceOccurrenceWorkbenchNode =>
+          node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
+      ),
+    );
+    openOverview();
+    const presence = screen.getByRole('checkbox', { name: 'Stygian Well present' });
+    expect((presence as HTMLInputElement).disabled).toBe(true);
+    expect(hintOf(presence.closest('label'))).toBe('Wells need biome depth 3; this room is at 2.');
   });
 
   it('keeps forced presence fixed with its slots always editable', () => {
