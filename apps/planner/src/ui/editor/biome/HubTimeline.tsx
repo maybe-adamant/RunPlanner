@@ -439,10 +439,9 @@ function TimelineDoor({
   readonly door: WorkspaceHubStayDoor;
   /**
    * `visited`: the shown visit's door; `pending`: the door a visit will enter
-   * from this board; `pickable`: a door the open visit picker can choose;
-   * `linked`: the picker option under its highlight.
+   * from this board; `linked`: the picker option under its highlight.
    */
-  readonly emphasis: readonly ('linked' | 'pending' | 'pickable' | 'visited')[];
+  readonly emphasis: readonly ('linked' | 'pending' | 'visited')[];
 }) {
   const chain = [door.firstSummary, ...door.presses.map((press) => press.summary)].join(' → ');
   const name = door.cleared
@@ -459,7 +458,6 @@ function TimelineDoor({
       data-room-map-overlay-control
       data-linked={emphasis.includes('linked') || undefined}
       data-pending={emphasis.includes('pending') || undefined}
-      data-pickable={emphasis.includes('pickable') || undefined}
       data-selected-visit={emphasis.includes('visited') || undefined}
       role="img"
       style={hubMapPosition(annotation)}
@@ -722,7 +720,6 @@ export function HubTimeline({
     [
       ...(door.hubSlotKey === view.visited ? (['visited'] as const) : []),
       ...(door.hubSlotKey === view.pending ? (['pending'] as const) : []),
-      ...(view.picking && !door.cleared ? (['pickable'] as const) : []),
       ...(view.picking && door.hubSlotKey === hovered ? (['linked'] as const) : []),
     ] as const;
   return (
