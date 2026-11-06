@@ -89,8 +89,12 @@ local function world(traits)
             "Uses", "RemainingUses", "ShrineManaReserve", "CurrentArmor", "RemainingBlocks", "StoredGold" },
         GetProcessedTraitData = function(args)
             local declared = _G.TraitData[args.TraitName]
+            -- BankBoon's ReturnGold scales with rarity.
+            local acquireArgs = args.TraitName == "BankBoon"
+                and { ReturnGold = args.Rarity == "Rare" and 75 or 50 } or nil
             return { Name = args.TraitName, Rarity = args.Rarity, StackNum = args.StackNum,
                 PropertyChanges = { {}, {} }, AcquireFunctionName = declared.AcquireFunctionName,
+                AcquireFunctionArgs = acquireArgs,
                 StartingTime = declared.StartingTime, StoredGold = declared.StoredGold }
         end,
         AddTraitToHero = function(args)
@@ -743,9 +747,9 @@ function TestSnapApply.testASnappedMetallicDropletStartsItsTimer()
     end
 end
 
--- A re-added loan carries its StoredGold; one snap must newly add has no
--- published payout, so snap reports it unwritable instead of inventing one.
-function TestSnapApply.testALoanKeepsItsStoredGoldAndANewOneIsUnwritable()
+-- A re-added loan carries its StoredGold; a newly taken one stores the gold
+-- held before snap plus its return at the installed rarity, as BankGold does.
+function TestSnapApply.testALoanKeepsItsStoredGoldAndANewOneBanksTheHeldGold()
     local hero, _, restore = world({ { Name = "BankBoon", Rarity = "Common", StackNum = 1, StoredGold = 310,
         AcquireFunctionName = "BankGold" } })
     local value = frame()
@@ -755,12 +759,11 @@ function TestSnapApply.testALoanKeepsItsStoredGoldAndANewOneIsUnwritable()
     restore()
 
     local empty, _, restoreEmpty = world({})
-    local ok, failure = apply(value)
+    _G.GameState.Resources = { Money = 140 }
+    lu.assertTrue(apply(value))
     restoreEmpty()
-    lu.assertNil(ok)
-    lu.assertEquals({ failure.checkpoint, failure.expected, failure.observed },
-        { "snap:loan", "BankBoon", "stored gold unknown" })
-    lu.assertEquals(empty.Traits, {})
+    lu.assertEquals({ empty.Traits[1].Name, empty.Traits[1].Rarity, empty.Traits[1].StoredGold },
+        { "BankBoon", "Rare", 140 + 75 })
 end
 
 -- The frame's Fated status settles a status the native rack close left stale.

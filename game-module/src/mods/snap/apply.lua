@@ -276,7 +276,18 @@ local function rowRarity(row) return row.hammerRank == "RankII" and "Legendary" 
 
 -- Modelled traits: exact matches stay, extras go, a wrong level or rarity is a
 -- remove plus a re-add carrying the instance's fields.
-local function modeled(frame)
+-- PowersLogic.BankGold's payout for a loan snap newly takes: the gold held
+-- before snap writes anything, plus the return at its installed rarity. The
+-- take itself is not written; the boss payout stays native.
+local function newLoan(data, goldBefore)
+    if data.AcquireFunctionName == "BankGold" then
+        local args = data.AcquireFunctionArgs or {}
+        data.StoredGold = goldBefore + (args.ReturnGold or 0)
+    end
+    return data
+end
+
+local function modeled(frame, goldBefore)
     local disposable, planned = nativeBindings.conformance.disposableTraits, {}
     for _, row in ipairs(frame.traits.equipped) do
         if universe[row.traitKey] and not disposable[row.traitKey] then planned[row.traitKey] = row end
@@ -299,7 +310,9 @@ local function modeled(frame)
         end
     end
     for name, row in pairs(planned) do
-        if not kept[name] then practice.add(practice.processed(name, rowRarity(row), row.level)) end
+        if not kept[name] then
+            practice.add(newLoan(practice.processed(name, rowRarity(row), row.level), goldBefore))
+        end
     end
 end
 
@@ -527,13 +540,6 @@ local function validate(frame, context)
     for _, name in ipairs(names) do
         if type(_G.TraitData[name]) ~= "table" then return fault("trait", name, "undeclared") end
     end
-    -- A loan's payout is published only at a start; one snap must newly add has none.
-    for _, row in ipairs(frame.traits.equipped) do
-        if universe[row.traitKey] and _G.TraitData[row.traitKey].AcquireFunctionName == "BankGold"
-            and find(row.traitKey) == nil then
-            return fault("loan", row.traitKey, "stored gold unknown")
-        end
-    end
     local spell, progress = hero().SlottedSpell, frame.hexProgress
     local slotting = progress.spellTraitKey ~= nil and next(frame.hexNodes.nodes) ~= nil
         and not (type(spell) == "table" and spell.TraitName == progress.spellTraitKey
@@ -591,12 +597,15 @@ function snap.apply(frame, context)
     local expected = assert(conformance.admissionExpected(frame))
     local unit = hero()
     local captured = { health = unit.Health, lastStands = copy(unit.LastStands), maxLastStands = unit.MaxLastStands }
+    -- Read before any write, as BankGold reads it at the take.
+    local resources = _G.GameState.Resources
+    local goldBefore = type(resources) == "table" and resources.Money or 0
     practice.quietly(function()
         fated(frame, keepsakes(frame))
         equipment(frame, expected)
         arcana(frame)
         vows(frame)
-        modeled(frame)
+        modeled(frame, goldBefore)
         chaosFamily(frame, expected)
         wellFamily(frame, expected)
         interactedGods(frame, expected)
