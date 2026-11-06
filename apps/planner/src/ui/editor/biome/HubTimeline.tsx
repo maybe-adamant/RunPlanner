@@ -40,7 +40,6 @@ import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 import { HubBoardMap, HubDoorFace } from './hub-map/HubBoardMap';
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
 import { RerollCount, RoomRerolls } from './RoomRerolls';
-import { RowRewardName } from './RowRewardName';
 import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderHandle';
 import {
   useTimelineReorder,
@@ -68,26 +67,34 @@ function moveLabel(move: WorkspaceHubRowMove): string {
   }
 }
 
-/** The door's visible rewards as icons, first draw → final where rerolled. */
+/** The visited door's reward as icons, first draw → final where rerolled. */
 function VisitReward({ door }: { readonly door: WorkspaceDoorContract | undefined }) {
   if (door?.offerRewardSurface.visibility !== 'visible') return null;
+  const rewards = door.offerRewardSurface.rewards;
+  if (rewards.length === 0) return null;
+  const name = rewards
+    .map((reward) =>
+      reward.rerolledSummary === undefined
+        ? reward.summary
+        : `${reward.summary} → ${reward.rerolledSummary}`,
+    )
+    .join(', ');
   return (
-    <span className="hub-timeline-reward">
-      {door.offerRewardSurface.rewards.map((reward) => (
-        <span className="hub-timeline-reward-draw" key={reward.key}>
-          {reward.offer === null ? (
-            reward.summary
-          ) : (
-            <RowRewardName name={reward.summary} offer={reward.offer} />
-          )}
+    <span aria-label={name} className="hub-segment-reward" role="img">
+      {rewards.map((reward) => (
+        <span className="hub-segment-reward-draw" key={reward.key}>
+          <ArtworkIcon
+            className="artwork-label-icon"
+            source={reward.offer === null ? undefined : offerIcon(reward.offer)}
+          />
           {reward.rerolledOffer === undefined ? null : (
             <>
               <span aria-hidden="true" className="row-reward-arrow">
                 →
               </span>
-              <RowRewardName
-                name={reward.rerolledSummary ?? reward.summary}
-                offer={reward.rerolledOffer}
+              <ArtworkIcon
+                className="artwork-label-icon"
+                source={offerIcon(reward.rerolledOffer)}
               />
             </>
           )}
@@ -337,7 +344,15 @@ function FountainRow({
   readonly node: WorkspaceHubDecisionNode;
 }) {
   const findingAnchor = useFindingAnchor();
-  const rarity = node.fountain.rarity;
+  const control = node.fountain.rarity;
+  // The Phial target follows only where a Phial reaches the use, or a kept target needs repair.
+  const rarity =
+    control !== undefined &&
+    (control.targetTraitKey !== undefined ||
+      control.pending === undefined ||
+      control.pending === 'noTargetRequired')
+      ? control
+      : undefined;
   return (
     <li
       className="room-reroll-row hub-timeline-fountain"
@@ -416,13 +431,11 @@ export function HubTimeline({
   interactions,
   locked,
   node,
-  resetVisitsControl,
 }: {
   readonly hubIdentity: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly locked: boolean;
   readonly node: WorkspaceHubDecisionNode;
-  readonly resetVisitsControl: ReactNode;
 }) {
   const interaction = requireWorkspaceInteraction(
     interactions.hubActionOrders,
@@ -568,14 +581,11 @@ export function HubTimeline({
     <div className="hub-overview-layout hub-timeline-layout">
       <section aria-label="Ephyra Hub timeline" className="hub-timeline-column" ref={attachRoot}>
         <TimelineReorderStatus session={reorder} />
-        <header className="hub-overview-rewards-heading">
-          {node.rerollsRemaining === undefined ? (
-            <span />
-          ) : (
+        {node.rerollsRemaining === undefined ? null : (
+          <header className="hub-overview-rewards-heading">
             <RerollCount remaining={node.rerollsRemaining} />
-          )}
-          {resetVisitsControl}
-        </header>
+          </header>
+        )}
         <ol className="hub-segments">{node.stays.map(segment)}</ol>
         {node.fountain.useIn === undefined ? null : (
           <div

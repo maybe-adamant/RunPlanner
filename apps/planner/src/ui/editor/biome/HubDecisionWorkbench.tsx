@@ -77,10 +77,6 @@ export function HubDecisionWorkbench({
   );
   const resetActionOrder = actionOrderInteraction.proposalFor([]);
   const resetCandidates = useWorkspaceInteraction(resetActionOrder);
-  const removal = requireWorkspaceInteraction(
-    interactions.topologyRemovals,
-    workspaceInteractionKey(node.owner),
-  );
   const resetBoard = requireWorkspaceInteraction(
     interactions.hubBoardResets,
     workspaceInteractionKey(node.owner),
@@ -228,15 +224,7 @@ export function HubDecisionWorkbench({
         </nav>
         <div className="room-workbench-tab-utility owner-markers">
           {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
-          <button
-            className="danger-action action-compact"
-            data-command={removal.intent.command.kind}
-            disabled={hubTarget.inert}
-            onClick={() => executeIntent(removal.intent)}
-            type="button"
-          >
-            Remove Hub
-          </button>
+          {activeTab === 'overview' ? resetBoardControl : resetVisitsControl}
         </div>
       </div>
       <section
@@ -247,19 +235,13 @@ export function HubDecisionWorkbench({
       >
         <div className="hub-workbench-view">
           {activeTab === 'overview' ? (
-            <HubOverview
-              hubIdentity={hubIdentity}
-              interactions={interactions}
-              node={node}
-              resetBoardControl={resetBoardControl}
-            />
+            <HubOverview hubIdentity={hubIdentity} interactions={interactions} node={node} />
           ) : (
             <HubTimeline
               hubIdentity={hubIdentity}
               interactions={interactions}
               locked={hubTarget.inert}
               node={node}
-              resetVisitsControl={resetVisitsControl}
             />
           )}
         </div>

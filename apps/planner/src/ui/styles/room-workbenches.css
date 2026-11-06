@@ -3220,7 +3220,8 @@
 /* Hub Overview and Timeline: the list beside the map, the map on top when narrow. */
 .hub-overview-layout {
   display: grid;
-  grid-template-columns: minmax(18rem, 2fr) minmax(0, 3fr);
+  /* One compact list width on both tabs, so switching tabs never moves the map. */
+  grid-template-columns: 21rem minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
   margin-top: 12px;
@@ -3232,7 +3233,7 @@
   align-self: start;
 }
 
-@container (max-width: 56rem) {
+@container (max-width: 44rem) {
   .hub-overview-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3290,11 +3291,11 @@ span.hub-board-status-line {
 
 .hub-door-row {
   display: grid;
-  grid-template-columns: 1.4rem minmax(5rem, 0.7fr) minmax(0, 1.3fr);
+  grid-template-columns: 1.1rem minmax(0, 5.5rem) minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-  padding: 5px 7px;
+  padding: 2px 6px;
   border: 1px solid #34353e;
   border-radius: 8px;
   background: rgb(255 255 255 / 2%);
@@ -3336,16 +3337,35 @@ span.hub-board-status-line {
 .hub-door-row-room {
   overflow: hidden;
   color: #e3dde8;
+  font-size: 0.86rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The reward picker fills the rest of its row at a readable size. */
+.hub-door-row :is(.door-row-rewards, .row-reward-value, .reward-value-editor, .contextual-picker) {
+  width: 100%;
+  min-width: 0;
+}
+
+.hub-door-row .contextual-picker,
+.hub-door-row .contextual-picker.field-control-inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-self: stretch;
+}
+
+.hub-door-row .contextual-picker-trigger {
+  width: 100%;
+  font-size: 0.9rem;
 }
 
 /* Each Timeline segment: its stay's header, then its rerolls and fountain. */
 .hub-segment {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
-  padding: 6px 8px;
+  padding: 2px 6px;
   border: 1px solid #34353e;
   border-radius: 8px;
   background: rgb(255 255 255 / 2%);
@@ -3361,29 +3381,57 @@ span.hub-board-status-line {
 }
 
 .hub-segment > .room-rerolls {
+  gap: 2px;
   padding: 0;
   border-top: 0;
+}
+
+.hub-segment .room-rerolls-list:empty {
+  display: none;
+}
+
+/* Each press's trash sits at the row's right end, as on other reroll rows. */
+.hub-segment .room-rerolls[data-movable='true'] .room-rerolls-list {
+  grid-template-columns: 24px repeat(4, auto) minmax(0, 1fr);
+}
+
+.hub-segment .room-reroll-row > .room-action-delete {
+  justify-self: end;
+}
+
+.hub-segment-reward,
+.hub-segment-reward-draw {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .hub-segment .room-rerolls-heading {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  min-height: 30px;
+}
+
+.hub-segment-head .contextual-picker {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .hub-segment-head {
   display: flex;
   flex: 1;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
   min-width: 0;
 }
 
 .hub-segment-select {
-  min-width: 4.5rem;
-  min-height: 28px;
-  padding: 2px 8px;
+  flex: none;
+  min-width: 4rem;
+  min-height: 26px;
+  padding: 0 6px;
   border: 1px solid transparent;
   border-radius: 6px;
   color: #c8b8d8;

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FocusEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FocusEvent } from 'react';
 
 import type {
   WorkspaceHubDecisionNode,
@@ -155,12 +155,10 @@ export function HubOverview({
   hubIdentity,
   interactions,
   node,
-  resetBoardControl,
 }: {
   readonly hubIdentity: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: WorkspaceHubDecisionNode;
-  readonly resetBoardControl: ReactNode;
 }) {
   const findingTarget = useFindingTarget();
   const [linked, setLinked] = useState<string>();
@@ -173,15 +171,20 @@ export function HubOverview({
     );
   const openKeys = openSlots.map((slot) => slot.hubSlotKey);
   const openIdentity = `${hubIdentity}|${[...openKeys].sort().join(',')}`;
-  // The door just opened, highlighted while its row settles into draw order.
+  const requirement = node.requirements.openRooms;
+  // Rewards are drawn once the board is full, so rows wait for its least door count.
+  const boardFull = requirement.current >= requirement.min;
+  // The door just opened onto a full board, highlighted while its row settles into draw order.
   const [recent, setRecent] = useState<{ readonly identity: string; readonly key?: string }>({
     identity: openIdentity,
   });
   if (recent.identity !== openIdentity) {
     const [previousHub, previousKeys = ''] = recent.identity.split('|');
-    const before = new Set(previousKeys.split(','));
+    const before = new Set(previousKeys.split(',').filter((key) => key !== ''));
     const added =
-      previousHub === hubIdentity ? openKeys.find((key) => !before.has(key)) : undefined;
+      previousHub === hubIdentity && before.size >= requirement.min
+        ? openKeys.find((key) => !before.has(key))
+        : undefined;
     setRecent(
       added === undefined ? { identity: openIdentity } : { identity: openIdentity, key: added },
     );
@@ -194,7 +197,6 @@ export function HubOverview({
     );
     return () => window.clearTimeout(timer);
   }, [recent]);
-  const requirement = node.requirements.openRooms;
   // Membership findings land here; a closed door has no row of its own.
   const status = findingTarget(
     node.openSet.address,
@@ -211,36 +213,44 @@ export function HubOverview({
   return (
     <div className="hub-overview-layout">
       <section aria-label="Hub door rewards" className="hub-overview-rewards">
-        <header className="hub-overview-rewards-heading">
-          {requirement.met && !status['data-has-findings'] ? (
-            <span {...findingMarks(status)} className="hub-board-status-line" tabIndex={-1} />
-          ) : (
-            <p
-              {...findingMarks(status)}
-              className="hub-board-status-line"
-              data-met={requirement.met}
-              role="status"
-              tabIndex={-1}
-            >
-              {requirement.met
-                ? `${requirement.current} doors open`
-                : `Open ${range} doors · ${requirement.current} open`}
-            </p>
-          )}
-          {resetBoardControl}
-        </header>
-        <ol aria-label="Doors in draw order" className="hub-door-rows">
-          {openSlots.map((slot) => (
-            <DoorRow
-              interactions={interactions}
-              key={slot.hubSlotKey}
-              linked={linked === slot.hubSlotKey}
-              onLink={setLinked}
-              recent={recent.key === slot.hubSlotKey}
-              slot={slot}
-            />
-          ))}
-        </ol>
+        {!boardFull ? (
+          <p
+            {...findingMarks(status)}
+            className="hub-board-status-line hub-board-placeholder"
+            role="status"
+            tabIndex={-1}
+          >
+            {`Open ${range} doors to set rewards · ${requirement.current} open`}
+          </p>
+        ) : (
+          <>
+            {requirement.met && !status['data-has-findings'] ? (
+              <span {...findingMarks(status)} className="hub-board-status-line" tabIndex={-1} />
+            ) : (
+              <p
+                {...findingMarks(status)}
+                className="hub-board-status-line"
+                data-met={requirement.met}
+                role="status"
+                tabIndex={-1}
+              >
+                {`${requirement.current} doors open`}
+              </p>
+            )}
+            <ol aria-label="Doors in draw order" className="hub-door-rows">
+              {openSlots.map((slot) => (
+                <DoorRow
+                  interactions={interactions}
+                  key={slot.hubSlotKey}
+                  linked={linked === slot.hubSlotKey}
+                  onLink={setLinked}
+                  recent={recent.key === slot.hubSlotKey}
+                  slot={slot}
+                />
+              ))}
+            </ol>
+          </>
+        )}
       </section>
       <HubBoardMap
         door={(annotation) => {
