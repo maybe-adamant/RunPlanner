@@ -186,6 +186,7 @@ export type {
   WorkspaceScreenRerollLock,
   WorkspaceScreenRerolls,
   WorkspaceLauncherPresentation,
+  WorkspaceTimelineChip,
   WorkspaceAspectHexTreeControl,
   WorkspaceTraitCarrierChildControl,
   WorkspaceTraitCarrierChildInteraction,

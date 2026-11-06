@@ -96,17 +96,38 @@ export interface WorkspaceLauncherPresentation {
   readonly detail?: string;
   /** The trait the label names, for its icon. */
   readonly traitKey?: string;
+  /**
+   * The chosen value as Timeline chips; empty while nothing is chosen. Absent
+   * where the value is no object, such as a Pom with no eligible traits.
+   */
+  readonly chips?: readonly WorkspaceTimelineChip[];
+}
+
+/**
+ * How one object chip stands: picked or shown lit; offered but not picked dim;
+ * rejected or removed struck through; unset an empty dashed slot around its icon.
+ */
+export type WorkspaceTimelineChipState =
+  'picked' | 'shown' | 'offered' | 'rejected' | 'removed' | 'unset';
+
+/** One object on a Timeline row, drawn as its icon with its name on hover. */
+export interface WorkspaceTimelineChip {
+  readonly key: string;
+  /** The object's name, such as `Blessing / Curse` for a Chaos pair. */
+  readonly label: string;
+  /** Trait keys of the icon; a pair is drawn as two halves, an undefined half blank. */
+  readonly icon: string | readonly [string | undefined, string | undefined];
+  readonly rarity?: TraitRarity;
+  readonly state: WorkspaceTimelineChipState;
+  /** A short count beside the icon, such as Pom's `+2`. */
+  readonly badge?: string;
 }
 
 /** One offered row of a final trait screen, shown on its Timeline row as a chip. */
-export interface WorkspaceTraitOfferInlineOption {
+export interface WorkspaceTraitOfferInlineOption extends WorkspaceTimelineChip {
   readonly optionKey: TraitOptionKey;
-  readonly traitKey: string;
-  readonly label: string;
-  readonly rarity?: TraitRarity;
-  readonly selected: boolean;
-  /** Rejected blocks this row, so it cannot be picked. */
-  readonly rejected: boolean;
+  /** Whether `pickIntent` picks this row; otherwise clicking it opens the offer. */
+  readonly pickable: boolean;
 }
 
 /** Why one more native reroll of a screen cannot be authored. */
@@ -599,11 +620,21 @@ export interface WorkspaceTraitOfferInteraction {
   /** Present where the screen can be or was rerolled. */
   readonly screenRerolls?: WorkspaceScreenRerolls;
   readonly launcher: WorkspaceLauncherPresentation;
-  /**
-   * The authored screen's rows where picking one is a plain selection change;
-   * absent for Chaos, Hex, Gorgon and unauthored offers.
-   */
+  /** The authored screen's rows as chips; absent while unauthored or a Gold fallback. */
   readonly inlineOptions?: readonly WorkspaceTraitOfferInlineOption[];
+  /** Picks a pickable row in one click, where that is a plain selection change. */
+  readonly pickIntent?: (optionKey: TraitOptionKey) => WorkspacePayloadEditIntent<
+    Extract<
+      ProjectCommand,
+      {
+        readonly kind:
+          | 'ReplaceTraitSelection'
+          | 'ReplaceGorgonAthenaOffer'
+          | 'ReplaceAcquisitionDisposition'
+          | 'EditEchoReplay';
+      }
+    >
+  >;
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
   /** Dedicated Chaos envelope interaction; ordinary trait choices remain above. */
   readonly chaos?: WorkspaceChaosOfferInteraction;

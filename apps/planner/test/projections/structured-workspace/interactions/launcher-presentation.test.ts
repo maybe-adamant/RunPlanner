@@ -75,6 +75,7 @@ describe('launcher presentation', () => {
     expect(levelResolutionLauncherPresentation(catalog, random(null), 1, false)).toEqual({
       label: 'Edit Pom · Pick target +1',
       value: 'Pick +1',
+      chips: [],
     });
     expect(
       levelResolutionLauncherPresentation(catalog, random('ApolloWeaponBoon'), 2, false),
@@ -82,6 +83,15 @@ describe('launcher presentation', () => {
       label: 'Edit Pom · Nova Strike +2',
       value: 'Nova Strike +2',
       traitKey: 'ApolloWeaponBoon',
+      chips: [
+        {
+          key: 'ApolloWeaponBoon',
+          label: 'Nova Strike',
+          icon: 'ApolloWeaponBoon',
+          state: 'picked',
+          badge: '+2',
+        },
+      ],
     });
     expect(levelResolutionLauncherPresentation(catalog, random(null), 1, true).label).toBe(
       'Edit Pom · No eligible traits',
@@ -92,6 +102,7 @@ describe('launcher presentation', () => {
     expect(anvilResultLauncherPresentation(catalog, null)).toEqual({
       label: 'Edit Anvil · Pick result',
       value: 'Pick',
+      chips: [],
     });
     expect(
       anvilResultLauncherPresentation(catalog, {
@@ -102,6 +113,9 @@ describe('launcher presentation', () => {
     ).toEqual({
       label: 'Edit Anvil · No removal · adds Nova Strike',
       value: 'No removal · adds Nova Strike',
+      chips: [
+        { key: 'ApolloWeaponBoon', label: 'Nova Strike', icon: 'ApolloWeaponBoon', state: 'shown' },
+      ],
     });
   });
 });

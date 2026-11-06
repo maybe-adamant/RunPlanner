@@ -1565,7 +1565,7 @@
 
 .timeline-cell-label
   :is(.room-action-inline-reward, .contextual-picker[data-trigger-size='content'])
-  .contextual-picker-trigger {
+  .contextual-picker-trigger:not(.timeline-chip) {
   width: auto;
   min-height: var(--timeline-control-height);
   padding: 2px 7px;
@@ -2931,17 +2931,6 @@
   color: var(--muted);
 }
 
-/* The Mystery Boon's god picker shows only the god's icon; its name stays for assistive tech. */
-.timeline-cell-label > .room-action-inline-reward .contextual-picker-trigger-value > span,
-.timeline-cell-label > .room-action-inline-reward .contextual-picker-trigger > span:not([class]) {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-}
-
 /* Decisions keep a clear gap from the label. */
 .timeline-row:not([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
   > [data-timeline-cell='editors'] {
@@ -3106,24 +3095,85 @@
   cursor: pointer;
 }
 
-.timeline-chip:hover:not(:disabled),
+button.timeline-chip:hover:not(:disabled),
 .contextual-picker-trigger.timeline-chip[data-state='open'] {
   background: color-mix(in srgb, var(--selection-accent) 14%, transparent);
   box-shadow: none;
 }
 
-/* The offered rows not picked stay dim until hovered. */
-.timeline-chip-group > .timeline-chip[aria-pressed='false'] {
+span.timeline-chip {
+  position: relative;
+  cursor: default;
+}
+
+button.timeline-chip {
+  position: relative;
+}
+
+/* Offered rows not picked, rejected rows and removed traits stay dim until hovered. */
+.timeline-chip:is(
+  [data-chip-state='offered'],
+  [data-chip-state='rejected'],
+  [data-chip-state='removed']
+) {
   opacity: 0.4;
 }
 
-.timeline-chip-group > .timeline-chip[aria-pressed='false']:is(:hover, :focus-visible) {
+.timeline-chip:is(
+    [data-chip-state='offered'],
+    [data-chip-state='rejected'],
+    [data-chip-state='removed']
+  ):is(:hover, :focus-visible) {
   opacity: 0.85;
+}
+
+/* Rejected and removed are struck through corner to corner. */
+.timeline-chip:is([data-chip-state='rejected'], [data-chip-state='removed'])::after {
+  position: absolute;
+  inset: 50% -2px auto;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--text);
+  content: '';
+  pointer-events: none;
+  transform: rotate(-45deg);
+}
+
+/* A chosen-nothing-yet chip keeps its icon inside a dashed slot. */
+.timeline-chip[data-chip-state='unset'] {
+  border: 1px dashed var(--border);
+  background: none;
+}
+
+.timeline-chip[data-chip-state='unset'] > .artwork-label-icon {
+  opacity: 0.55;
+}
+
+.timeline-chip-badge {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  min-width: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+  color: var(--text);
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
 }
 
 .timeline-chip:disabled {
   opacity: 0.2;
   cursor: not-allowed;
+}
+
+/* A slot waiting on an earlier choice stays visible as an outline. */
+.timeline-chip.timeline-chip-slot:disabled {
+  opacity: 0.6;
 }
 
 .timeline-chip[data-rarity='Common'] {

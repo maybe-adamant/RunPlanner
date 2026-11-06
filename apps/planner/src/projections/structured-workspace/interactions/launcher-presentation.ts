@@ -6,7 +6,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog, TraitGiverDeclaration } from '@run-planner/engine/catalog-schema';
 
-import type { WorkspaceLauncherPresentation } from '../contracts/traits';
+import type { WorkspaceLauncherPresentation, WorkspaceTimelineChip } from '../contracts/traits';
 
 /**
  * The label names the launcher and its value (`Edit Trait · Ripple Effect`);
@@ -17,6 +17,7 @@ function presentation(
   label: string,
   detail?: string,
   traitKey?: string,
+  chips?: readonly WorkspaceTimelineChip[],
 ): WorkspaceLauncherPresentation {
   const separator = label.indexOf(' · ');
   const value = separator < 0 ? undefined : label.slice(separator + ' · '.length);
@@ -26,6 +27,22 @@ function presentation(
     ...(value === undefined ? {} : { value: value.replace(/^Pick \S+/, 'Pick') }),
     ...(detail === undefined ? {} : { detail }),
     ...(traitKey === undefined ? {} : { traitKey }),
+    ...(chips === undefined ? {} : { chips: Object.freeze(chips) }),
+  });
+}
+
+function traitChip(
+  catalog: Catalog,
+  traitKey: string,
+  state: WorkspaceTimelineChip['state'],
+  badge?: string,
+): WorkspaceTimelineChip {
+  return Object.freeze({
+    key: traitKey,
+    label: traitLabel(catalog, traitKey),
+    icon: traitKey,
+    state,
+    ...(badge === undefined ? {} : { badge }),
   });
 }
 
@@ -75,20 +92,33 @@ export function levelResolutionLauncherPresentation(
   if (settledEmptyNoOp) return presentation('Edit Pom · No eligible traits');
   const target = value.kind === 'choice' ? value.selectedTraitKey : value.targetTraitKey;
   const levels = levelCount === undefined ? '' : ` +${levelCount}`;
-  if (target === null) return presentation(`Edit Pom · Pick target${levels}`);
-  return presentation(`Edit Pom · ${traitLabel(catalog, target)}${levels}`, undefined, target);
+  if (target === null)
+    return presentation(`Edit Pom · Pick target${levels}`, undefined, undefined, []);
+  return presentation(`Edit Pom · ${traitLabel(catalog, target)}${levels}`, undefined, target, [
+    traitChip(catalog, target, 'picked', levelCount === undefined ? undefined : `+${levelCount}`),
+  ]);
 }
 
-/** `Edit Anvil` carries no value; its removal and additions live in the summary. */
+/** `Edit Anvil`: its chips show the struck removal, then the additions. */
 export function anvilResultLauncherPresentation(
   catalog: Catalog,
   value: AuthoredAnvilResult | null,
 ): WorkspaceLauncherPresentation {
-  if (value === null) return presentation('Edit Anvil · Pick result');
+  if (value === null) return presentation('Edit Anvil · Pick result', undefined, undefined, []);
   const removed =
     value.removedTraitKey === null
       ? 'No removal'
       : `Removes ${traitLabel(catalog, value.removedTraitKey)}`;
   const added = value.addedTraitKeys.map((traitKey) => traitLabel(catalog, traitKey)).join(', ');
-  return presentation(`Edit Anvil · ${removed} · adds ${added || 'nothing'}`);
+  return presentation(
+    `Edit Anvil · ${removed} · adds ${added || 'nothing'}`,
+    undefined,
+    undefined,
+    [
+      ...(value.removedTraitKey === null
+        ? []
+        : [traitChip(catalog, value.removedTraitKey, 'removed')]),
+      ...value.addedTraitKeys.map((traitKey) => traitChip(catalog, traitKey, 'shown')),
+    ],
+  );
 }

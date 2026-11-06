@@ -28,7 +28,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import { HexBoard } from './HexBoard';
-import { LauncherButton } from './LauncherButton';
+import { ChipLauncher } from './LauncherButton';
 
 const taken = new Set(['invested', 'selected']);
 
@@ -183,7 +183,7 @@ export function HexActivationLauncher({
   const id = `${semanticOwnerControlElementId(owner)}-hex-activation`;
   return (
     <>
-      <LauncherButton
+      <ChipLauncher
         contextReached={interaction.contextReached}
         launcher={interaction.launcher}
         onClick={() => dispatch(hexActivationDialogOpened(owner))}

@@ -26,10 +26,10 @@ import {
   useFindingMark,
   useFindingTarget,
 } from '@planner/ui/feedback/useFindingTarget';
-import { traitIcon } from '@planner/ui/artwork/traitArtwork';
-import { hintProps } from '@planner/ui/controls/hint';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { LauncherButton } from './LauncherButton';
+import { TimelineChipFace } from './TimelineChip';
+import { timelineChipProps } from './timelineChipProps';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
 
 function launcherId(address: TraitOfferAddress): string {
@@ -67,31 +67,26 @@ export function TraitOfferLauncher({
   );
   const options = interaction.contextReached ? interaction.inlineOptions : undefined;
   if (options === undefined)
-    return launcher(
-      interaction.contextReached && interaction.value === null && interaction.chaos === undefined
-        ? 'slot'
-        : 'label',
-    );
-  // The offered rows as chips: a dimmed one is picked in one click; the picked one opens the offer.
+    return launcher(!interaction.contextReached || interaction.value === null ? 'slot' : 'label');
+  // The offered rows as chips: a pickable one is picked in one click; any other opens the offer.
   const mark = findingMark(control.address);
+  const pickIntent = interaction.pickIntent;
   return (
     <span aria-label={interaction.giver.label} className="timeline-chip-group" role="group">
       {options.map((option) => (
         <button
-          {...(option.selected && mark['data-has-findings'] ? mark : {})}
-          {...hintProps(option.label, undefined, option.label)}
-          aria-label={option.label}
-          aria-pressed={option.selected}
-          className="timeline-chip"
-          data-rarity={option.rarity}
-          disabled={option.rejected || undefined}
+          {...timelineChipProps(option)}
+          {...(option.state === 'picked' && mark['data-has-findings'] ? mark : {})}
+          aria-pressed={option.state === 'picked'}
           key={option.optionKey}
           onClick={() =>
-            option.selected ? open() : executeIntent(interaction.selectedIntent(option.optionKey))
+            option.pickable && pickIntent !== undefined
+              ? executeIntent(pickIntent(option.optionKey))
+              : open()
           }
           type="button"
         >
-          <ArtworkIcon className="artwork-label-icon" source={traitIcon(option.traitKey)} />
+          <TimelineChipFace chip={option} />
         </button>
       ))}
       {launcher('edit')}

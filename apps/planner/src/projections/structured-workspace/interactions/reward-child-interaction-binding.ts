@@ -286,6 +286,7 @@ export function bindRewardChildInteractions(input: {
     [...baseTraitOffers].map(([key, interaction]) => {
       const owner = interaction.owner.owner;
       const entry = owner.kind === 'acquisitionEntry' ? owner : undefined;
+      const pickIntent = interaction.pickIntent;
       return [
         key,
         Object.freeze({
@@ -294,6 +295,12 @@ export function bindRewardChildInteractions(input: {
             withDerivedEchoSeed(interaction.intentFor(value), entry, replaySeeds),
           selectedIntent: (optionKey: Parameters<typeof interaction.selectedIntent>[0]) =>
             withDerivedEchoSeed(interaction.selectedIntent(optionKey), entry, replaySeeds),
+          ...(pickIntent === undefined
+            ? {}
+            : {
+                pickIntent: (optionKey: Parameters<typeof pickIntent>[0]) =>
+                  withDerivedEchoSeed(pickIntent(optionKey), entry, replaySeeds),
+              }),
         }),
       ] as const;
     }),

@@ -190,6 +190,7 @@ export function RoomActionInlineReward({
         idPrefix={`room-action-inline-${row.rewardPayload.control.marker.focusKey}`}
         interactions={interactions}
         offerSummaryMode="source"
+        triggerSize="icon"
         {...(row.rewardPayload.control.offerEditStartStep === undefined
           ? {}
           : { offerStartStep: row.rewardPayload.control.offerEditStartStep })}

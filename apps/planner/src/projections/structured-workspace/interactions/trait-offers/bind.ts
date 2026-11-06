@@ -10,6 +10,7 @@ import {
   optionIndex,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
+  type TraitOfferAddress,
   type TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, TraitRarity } from '@run-planner/engine/catalog-schema';
@@ -23,34 +24,89 @@ import { projectTraitOfferNotes } from './offer-notes';
 import { bindTraitOfferOptionDomain } from './option-domain';
 import { traitOfferLauncherPresentation } from '../launcher-presentation';
 
-/** An ordinary authored screen's rows; selecting one is a plain selection change. */
+/** Whether picking another row is a plain selection change: not a Hex or Chaos screen. */
+function picksInline(control: WorkspaceTraitOfferControl): boolean {
+  return control.giver.providerKind !== 'spell' && control.giver.providerKind !== 'chaos';
+}
+
+/** The authored screen's rows as chips: Chaos rows pair their blessing with their curse. */
 function inlineOptionsFor(
   catalog: Catalog,
   control: WorkspaceTraitOfferControl,
 ): { readonly inlineOptions?: readonly WorkspaceTraitOfferInlineOption[] } {
   const offer = control.offer;
-  if (
-    offer?.kind !== 'traits' ||
-    control.giver.providerKind === 'spell' ||
-    control.giver.providerKind === 'chaos' ||
-    control.address.owner.kind === 'gorgonPhase'
-  )
-    return {};
+  if (offer?.kind === 'chaos') {
+    const blessing = catalog.chaos.blessings.byKey[offer.blessingKey]?.label ?? offer.blessingKey;
+    return {
+      inlineOptions: Object.freeze(
+        offer.curseOptions.map((option, index) => {
+          const optionKey = TRAIT_OPTION_KEYS[index]!;
+          const curse = catalog.chaos.curses.byKey[option.curseKey]?.label ?? option.curseKey;
+          const selected = offer.selectedOptionKey === optionKey;
+          // Only the picked row's blessing is authored.
+          return Object.freeze({
+            key: optionKey,
+            optionKey,
+            label: selected ? `${blessing} / ${curse}` : curse,
+            icon: Object.freeze([
+              selected ? offer.blessingKey : undefined,
+              option.curseKey,
+            ]) as readonly [string | undefined, string],
+            ...(selected ? { rarity: offer.rarity } : {}),
+            state: selected ? ('picked' as const) : ('offered' as const),
+            pickable: false,
+          });
+        }),
+      ),
+    };
+  }
+  if (offer?.kind !== 'traits') return {};
   return {
     inlineOptions: Object.freeze(
       offer.options.map((option, index) => {
         const optionKey = TRAIT_OPTION_KEYS[index]!;
+        const selected = offer.selectedOptionKey === optionKey;
+        const rejected = offer.rejectedOptionKey === optionKey;
         return Object.freeze({
+          key: optionKey,
           optionKey,
-          traitKey: option.traitKey,
           label: catalog.traits.byKey[option.traitKey]?.label ?? option.traitKey,
+          icon: option.traitKey,
           ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
-          selected: offer.selectedOptionKey === optionKey,
-          rejected: offer.rejectedOptionKey === optionKey,
+          state: selected
+            ? ('picked' as const)
+            : rejected
+              ? ('rejected' as const)
+              : ('offered' as const),
+          pickable: !selected && !rejected && picksInline(control),
         });
       }),
     ),
   };
+}
+
+/** A Gorgon screen persists its whole decision; any other screen changes its selection alone. */
+function pickIntentFor(owner: TraitOfferAddress, offer: AuthoredTraitOfferTraits) {
+  return (selectedOptionKey: TraitOptionKey) =>
+    Object.freeze({
+      command:
+        owner.owner.kind === 'gorgonPhase'
+          ? Object.freeze({
+              kind: 'ReplaceGorgonAthenaOffer' as const,
+              trait: owner,
+              value: Object.freeze({
+                traitKeys: Object.freeze(
+                  offer.options.map((option) => option.traitKey),
+                ) as readonly [string, string, string],
+                selectedOptionKey,
+              }),
+            })
+          : Object.freeze({
+              kind: 'ReplaceTraitSelection' as const,
+              selectedOptionKey,
+              trait: owner,
+            }),
+    });
 }
 
 /** Binds the trait-offer aggregate; focused domain and typed child families stay separate. */
@@ -168,6 +224,11 @@ export function bindTraitOfferInteractions(input: {
               trait: control.address,
             }),
           }),
+        ...(control.offer?.kind !== 'traits' || !picksInline(control)
+          ? {}
+          : {
+              pickIntent: pickIntentFor(control.address, control.offer),
+            }),
         value: control.offer,
         // A reached offer with no authored value also needs a representable start.
         contextReached:

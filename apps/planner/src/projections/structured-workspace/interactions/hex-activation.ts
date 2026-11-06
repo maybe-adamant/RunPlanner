@@ -72,8 +72,9 @@ export function projectHexActivationBoard(
 }
 
 /**
- * `Edit Path of Stars`, summarised by the talents the screen invests. The tree
- * naming them is the reached screen's, so a lost context shows no summary.
+ * `Edit Path of Stars`, summarised by the talents the screen invests; its chip
+ * is the screen's Spell with the count of talents chosen. The tree naming them
+ * is the reached screen's, so a lost context shows no summary.
  */
 function launcherFor(
   catalog: Catalog,
@@ -81,11 +82,22 @@ function launcherFor(
   value: AuthoredHexActivation | undefined,
 ): WorkspaceHexActivationInteraction['launcher'] {
   const keys = value?.selectedNodeKeys ?? [];
+  if (capability === undefined)
+    return Object.freeze({ label: 'Edit Path of Stars · Pick talents', value: 'Pick' });
+  const spell = capability.spellTraitKey;
+  const spellChip = Object.freeze({
+    key: spell,
+    label: catalog.traits.byKey[spell]?.label ?? spell,
+    icon: spell,
+    state: keys.length === 0 ? ('unset' as const) : ('picked' as const),
+    ...(keys.length === 0 ? {} : { badge: String(keys.length) }),
+  });
   const unsummarised = Object.freeze({
     label: 'Edit Path of Stars · Pick talents',
     value: 'Pick',
+    chips: Object.freeze([spellChip]),
   });
-  if (capability === undefined || keys.length === 0) return unsummarised;
+  if (keys.length === 0) return unsummarised;
   const hex = catalog.hexes.byKey[capability.spellTraitKey];
   const layout = hex?.layouts.byKey[capability.tree.layoutKey];
   if (hex === undefined || layout === undefined) return unsummarised;
@@ -97,7 +109,11 @@ function launcherFor(
   );
   const talents = condensedTalents(keys.map((key) => labels.get(key) ?? key));
   // The chip shows the talents; the label stays its accessible name.
-  return Object.freeze({ label: `Edit Path of Stars · ${talents}`, value: talents });
+  return Object.freeze({
+    label: `Edit Path of Stars · ${talents}`,
+    value: talents,
+    chips: Object.freeze([spellChip]),
+  });
 }
 
 /** Talents in first-appearance order, a repeat counted once: "Omen ×2, Sting". */

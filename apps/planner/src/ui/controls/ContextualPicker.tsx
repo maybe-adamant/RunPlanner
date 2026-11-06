@@ -380,6 +380,8 @@ export function ContextualPicker<T>({
   const interactionDisabled = disabled || locked || disabledHint !== undefined || authoringLocked;
   const shownLabel = disabled ? placeholder : (triggerLabel ?? selected?.label ?? placeholder);
   const iconOnly = triggerSize === 'icon';
+  // An icon chip keeps its field's label as its name and speaks its value after it.
+  const iconName = ariaLabel ?? (label === '' ? shownLabel : undefined);
 
   const triggerText =
     triggerSizingLabels === undefined ? (
@@ -433,9 +435,13 @@ export function ContextualPicker<T>({
             aria-expanded={open}
             aria-haspopup="listbox"
             aria-invalid={invalid || selected?.state === 'impossible' || undefined}
-            {...(ariaLabel === undefined && !iconOnly
-              ? {}
-              : { 'aria-label': ariaLabel ?? shownLabel })}
+            {...(iconOnly
+              ? iconName === undefined
+                ? {}
+                : { 'aria-label': iconName }
+              : ariaLabel === undefined
+                ? {}
+                : { 'aria-label': ariaLabel })}
             className={
               iconOnly ? 'contextual-picker-trigger timeline-chip' : 'contextual-picker-trigger'
             }
@@ -450,7 +456,7 @@ export function ContextualPicker<T>({
               findingMark?.['aria-description'] ??
                 findingTarget?.['aria-description'] ??
                 selected?.explanations?.join(' '),
-              iconOnly ? (ariaLabel ?? shownLabel) : undefined,
+              iconOnly ? iconName : undefined,
             )}
             id={id}
             ref={(node) => {

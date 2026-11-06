@@ -989,9 +989,11 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
     const initialLauncher = screen.getByRole('button', { name: /Edit Hex/ });
-    expect(initialLauncher.textContent).toBe(
-      initialInteraction.traitLabel(initialSelected.traitKey),
-    );
+    expect(
+      screen
+        .getByRole('button', { name: initialInteraction.traitLabel(initialSelected.traitKey) })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
     expect(initialLauncher.getAttribute('aria-label')).toBe(
       `Edit Hex · ${initialInteraction.traitLabel(initialSelected.traitKey)}`,
     );
@@ -1116,9 +1118,11 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
     const changedLauncher = screen.getByRole('button', { name: /Edit Hex/ });
-    expect(changedLauncher.textContent).toBe(
-      changedInteraction.traitLabel(changedSelected.traitKey),
-    );
+    expect(
+      screen
+        .getByRole('button', { name: changedInteraction.traitLabel(changedSelected.traitKey) })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
     expect(changedLauncher.getAttribute('aria-label')).toBe(
       `Edit Hex · ${changedInteraction.traitLabel(changedSelected.traitKey)}`,
     );

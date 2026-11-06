@@ -52,7 +52,7 @@ import {
   useFindingTarget,
   type FindingTargetProps,
 } from '@planner/ui/feedback/useFindingTarget';
-import { LauncherButton } from './LauncherButton';
+import { ChipLauncher } from './LauncherButton';
 
 function launcherId(address: LevelResolutionAddress): string {
   return `pom-launcher-${encodeURIComponent(semanticAddressKey(address))}`;
@@ -161,7 +161,8 @@ export function PomResolutionLauncher({
     workspaceInteractionKey(control.address),
   );
   return (
-    <LauncherButton
+    <ChipLauncher
+      chipOpens
       contextReached={interaction.contextReached}
       launcher={interaction.launcher}
       onClick={() => dispatch(levelResolutionDialogOpened(control.address))}

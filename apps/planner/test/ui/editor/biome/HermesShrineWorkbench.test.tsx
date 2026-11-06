@@ -310,8 +310,8 @@ describe('Hermes Shrine workbench', () => {
       throw new Error('Mystery Boon label or inline editors are missing');
     expect(within(label).getByRole('img', { name: 'Mystery Boon' })).toBeTruthy();
     const sourcePicker = within(label).getByRole('button', { name: 'Reward' });
-    expect(sourcePicker.textContent).toContain('Apollo');
-    expect(sourcePicker.textContent).not.toContain('Mystery Boon');
+    expect(sourcePicker.getAttribute('data-hint')).toContain('Apollo');
+    expect(sourcePicker.getAttribute('data-hint')).not.toContain('Mystery Boon');
     expect(within(inlineEditors).getByRole('button', { name: /Trait/ })).toBeTruthy();
     const handle = resolvedDeliveryRow.querySelector<HTMLElement>(
       ':scope > [data-timeline-cell="handle"]',

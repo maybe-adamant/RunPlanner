@@ -28,7 +28,7 @@ import { introducesIssue } from '@planner/ui/controls/introducesIssue';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingFeedbackEntries, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
-import { LauncherButton } from './LauncherButton';
+import { ChipLauncher } from './LauncherButton';
 
 type AnvilInteraction = NonNullable<WorkspaceAcquisitionConversionInteraction['anvil']>;
 
@@ -250,7 +250,7 @@ export function AnvilResultLauncher({
   const launcher = findingTarget(owner);
   return (
     <>
-      <LauncherButton
+      <ChipLauncher
         contextReached={interaction.contextReached}
         launcher={interaction.launcher}
         onClick={() => dispatch(anvilResultDialogOpened(owner))}

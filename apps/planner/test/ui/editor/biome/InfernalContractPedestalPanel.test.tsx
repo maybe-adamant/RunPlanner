@@ -108,6 +108,8 @@ describe('Pedestal panel', () => {
     await view.user.click(within(row).getByRole('button', { name: 'Reward' }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Zeus'));
     const resolved = timelineRow(/^Collect Mystery Boon/);
-    expect(within(resolved).getByText(/Zeus/)).toBeTruthy();
+    expect(
+      within(resolved).getByRole('button', { name: 'Reward' }).getAttribute('data-hint'),
+    ).toContain('Zeus');
   });
 });
