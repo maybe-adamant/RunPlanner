@@ -717,6 +717,9 @@ export function RoomActionsWorkbench({
             )
           ) : (
             <RowRewardName
+              {...(row.labelParts.reward.amount === undefined
+                ? {}
+                : { amount: row.labelParts.reward.amount })}
               boosted={row.labelParts.reward.boosted}
               {...(row.labelParts.reward.itemKey === undefined
                 ? {}

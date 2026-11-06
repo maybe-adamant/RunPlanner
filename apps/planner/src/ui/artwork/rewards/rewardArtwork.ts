@@ -12,9 +12,11 @@ import iconBoon2 from './assets/Boon2.webp';
 import iconChampionOfElysium from './assets/ChampionOfElysium.webp';
 import iconChaos from './assets/Chaos.webp';
 import iconDemeter from './assets/Demeter.webp';
+import iconDreamPoints from './assets/DreamPoints.webp';
 import iconEarth from './assets/Earth.webp';
 import iconEmptyMaxHealth from './assets/EmptyMaxHealth.webp';
 import iconFire from './assets/Fire.webp';
+import iconGemPoints from './assets/GemPoints.webp';
 import iconGold from './assets/Gold.webp';
 import iconHammer from './assets/Hammer.webp';
 import iconHeal from './assets/Heal.webp';
@@ -30,6 +32,14 @@ import iconMaxMagick from './assets/MaxMagick.webp';
 import iconMaxManaDropBigPreview from './assets/MaxManaDropBigPreview.webp';
 import iconMetaCardPointsCommonBigDrop from './assets/MetaCardPointsCommonBigDrop.webp';
 import iconMetaCurrencyBigDrop from './assets/MetaCurrencyBigDrop.webp';
+import iconMixerFBoss from './assets/MixerFBoss.webp';
+import iconMixerGBoss from './assets/MixerGBoss.webp';
+import iconMixerHBoss from './assets/MixerHBoss.webp';
+import iconMixerIBoss from './assets/MixerIBoss.webp';
+import iconMixerNBoss from './assets/MixerNBoss.webp';
+import iconMixerOBoss from './assets/MixerOBoss.webp';
+import iconMixerPBoss from './assets/MixerPBoss.webp';
+import iconMixerQBoss from './assets/MixerQBoss.webp';
 import iconMoonDust from './assets/MoonDust.webp';
 import iconMysteryBox from './assets/MysteryBox.webp';
 import iconNectar from './assets/Nectar.webp';
@@ -112,6 +122,16 @@ export const rewardArtwork: Readonly<Record<string, string | null>> = {
   WeaponPointsRareDrop: iconNightmare,
   CardUpgradePointsDrop: iconMoonDust,
   CharonPointsDrop: iconObolPoints,
+  MixerFBossDrop: iconMixerFBoss,
+  MixerGBossDrop: iconMixerGBoss,
+  MixerHBossDrop: iconMixerHBoss,
+  MixerIBossDrop: iconMixerIBoss,
+  MixerNBossDrop: iconMixerNBoss,
+  MixerOBossDrop: iconMixerOBoss,
+  MixerPBossDrop: iconMixerPBoss,
+  MixerQBossDrop: iconMixerQBoss,
+  GemPointsBigDrop: iconGemPoints,
+  DreamPointsDrop: iconDreamPoints,
   Boon: iconBoon2,
   Devotion: null,
   RandomLoot: iconBoon2,

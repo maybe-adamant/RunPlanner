@@ -145,6 +145,8 @@ export interface OccurrenceActionLabelParts {
     readonly boosted: boolean;
     /** A shop item's own key, whose artwork can differ from its reward type's. */
     readonly itemKey?: string;
+    /** How many of a resource drop the pickup gives, marked on its icon when more than one. */
+    readonly amount?: number;
   };
   /** The NPC a Talk row names, by NPC key; the row can show the NPC's portrait for the name. */
   readonly npcKey?: string;
@@ -261,6 +263,8 @@ export function occurrenceActionLabelParts(
   /** What created a generated pickup, as the engine publishes it. */
   sourceFamily?: AcquisitionEntrySourceFamily,
   rerollTargetLabel?: WorkspaceDoorRerollTargetLabel,
+  /** The room's forced boss drop, as the engine derives it for this route position. */
+  requiredReward?: import('@run-planner/engine/simulation').RequiredRewardDrop,
 ): OccurrenceActionLabelParts {
   const plain = (label: string): OccurrenceActionLabelParts => Object.freeze({ label });
   const actionLabel = (
@@ -307,8 +311,20 @@ export function occurrenceActionLabelParts(
       ? encounterPhases.find((candidate) => candidate.address.phaseKey === reference.phaseKey)
       : undefined;
   switch (reference.kind) {
-    case 'collectRequiredReward':
-      return plain('Collect Boss Reward');
+    case 'collectRequiredReward': {
+      if (requiredReward === undefined) return plain('Collect Boss Reward');
+      const name =
+        catalog.requiredRewardDrops.byKey[requiredReward.consumableKey]?.label ??
+        requiredReward.consumableKey;
+      return Object.freeze({
+        ...labelParts('Collect', name),
+        reward: Object.freeze({
+          offer: Object.freeze({ rewardType: requiredReward.consumableKey }),
+          boosted: false,
+          amount: requiredReward.amount,
+        }),
+      });
+    }
     case 'completeFieldsCage':
       return plain(`Clear ${phase?.label ?? reference.phaseKey}`);
     case 'interactIncomingReward': {

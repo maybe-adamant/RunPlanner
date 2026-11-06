@@ -561,6 +561,7 @@ function roomActionsForOccurrence(
         input.occurrence.purgingPool?.traitKeyBySlot,
         sourceFamily,
         input.rerollTargetLabel,
+        input.evaluatedRoom?.requiredReward,
       );
       const challengeSwitchKind =
         row.reference.kind === 'interactChallengeSwitch'

@@ -80,8 +80,12 @@ function runStateRowRight(scope: HTMLElement, name: string): string | undefined 
 /** Picks the exit by its door name on the room's last Timeline row. */
 async function pickExit(user: { click: (element: Element) => Promise<void> }, door: string) {
   const leave = screen.getByRole('listitem', { name: 'Leave room' });
-  await user.click(within(leave).getByRole('button', { name: 'Exit door' }));
-  await user.click(within(await screen.findByRole('listbox')).getByRole('option', { name: door }));
+  const doors = within(leave).getByRole('group', { name: 'Exit door' });
+  await user.click(
+    within(doors).getByRole('button', {
+      name: new RegExp(`^${door.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( ·|$)`),
+    }),
+  );
 }
 
 describe('underworld product loop', () => {
@@ -894,7 +898,7 @@ describe('underworld product loop', () => {
     const automaticReturn = screen.getByRole('group', { name: 'Door rows' });
     expect(within(automaticReturn).getAllByRole('article')).toHaveLength(1);
     // A lone exit has nothing to pick.
-    expect(screen.queryByRole('button', { name: 'Exit door' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Exit door' })).toBeNull();
     expect(within(automaticReturn).getByText('Hidden on door')).toBeTruthy();
     expect(within(automaticReturn).getByRole('button', { name: 'Reward' })).toBeTruthy();
     const returnReward = createIncomingRewardAddress(goldenGBiome, returned);

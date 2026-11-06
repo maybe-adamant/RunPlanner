@@ -119,7 +119,14 @@ const records: [string, Readonly<Record<string, string | null>>, readonly string
   ],
   ['hex-spells', hexSpellArtwork, catalog.hexes.values.map((h) => h.spellTraitKey)],
   ['hex-nodes', hexNodeArtwork, hexNodeKeys],
-  ['rewards', rewardArtwork, catalog.rewards.rewardTypes.values.map((r) => r.gameName)],
+  [
+    'rewards',
+    rewardArtwork,
+    [
+      ...catalog.rewards.rewardTypes.values.map((r) => r.gameName),
+      ...catalog.requiredRewardDrops.values.map((d) => d.key),
+    ],
+  ],
   ['clockwork', clockworkCountdownArtwork, ['0', '1', '2', '3', '4', '5', '6']],
   ['trait-givers', traitGiverArtwork, catalog.traitGivers.values.map((g) => g.key)],
   [

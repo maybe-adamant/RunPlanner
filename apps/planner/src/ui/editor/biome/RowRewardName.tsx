@@ -12,6 +12,7 @@ const ROW_REWARD_NAMES: 'icon' | 'iconAndName' = 'icon';
 
 /** A row's reward as its icon, with the full name as tooltip and accessible name. */
 export function RowRewardName({
+  amount,
   boosted = false,
   itemKey,
   name,
@@ -19,6 +20,8 @@ export function RowRewardName({
   origin,
   place,
 }: {
+  /** A resource drop's amount: marked on the icon's corner and named in the hint when above one. */
+  readonly amount?: number;
   readonly boosted?: boolean;
   readonly itemKey?: string;
   readonly name: string;
@@ -29,7 +32,9 @@ export function RowRewardName({
   readonly place?: { readonly badge: string; readonly label: string };
 }) {
   const spoken = offer.payload?.kind === 'BoonSource' ? `${name} boon` : name;
-  const named = place === undefined ? spoken : `${spoken} · ${place.label}`;
+  const counted = amount === undefined || amount <= 1 ? undefined : amount;
+  const amounted = counted === undefined ? spoken : `${spoken} ×${counted}`;
+  const named = place === undefined ? amounted : `${amounted} · ${place.label}`;
   const hint = origin === undefined ? named : `${named} · ${origin}`;
   return (
     <span className="row-reward-name">
@@ -48,6 +53,11 @@ export function RowRewardName({
         {place === undefined ? null : (
           <span aria-hidden="true" className="timeline-chip-badge">
             {place.badge}
+          </span>
+        )}
+        {counted === undefined || place !== undefined ? null : (
+          <span aria-hidden="true" className="timeline-chip-badge">
+            {counted}
           </span>
         )}
         {boosted ? (

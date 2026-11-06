@@ -49,6 +49,7 @@ import {
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
 import {
   clockedTraitGeneratedPickupEntryKey,
+  createAdditionalExitAddress,
   createAcquisitionRoleAddress,
   createExitDecisionAddress,
   createFountainRarityOutcomeAddress,
@@ -63,8 +64,11 @@ import {
   type RoomActionReference,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
+import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import {
   goldenFOccurrenceId,
+  goldenGBiome,
+  goldenGOccurrenceId,
   replaceNemesisRandomEventInteraction,
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
@@ -670,13 +674,77 @@ describe('structured workspace actions assembly', () => {
     );
 
     expect(collect).toMatchObject({
-      label: 'Collect Boss Reward',
+      label: 'Collect Cinder',
+      labelParts: {
+        verb: 'Collect',
+        name: 'Cinder',
+        reward: { offer: { rewardType: 'MixerFBossDrop' }, boosted: false, amount: 1 },
+      },
       participation: 'required',
       window: { kind: 'standard', phase: 'afterCombat' },
     });
     if (collect === undefined) throw new Error('expected the Boss reward action');
     expect(entryKeys.indexOf('Encounter ended')).toBeLessThan(entryKeys.indexOf(collect.key));
     expect(entryKeys.indexOf(collect.key)).toBeLessThan(entryKeys.indexOf('Doors open'));
+  });
+
+  it("names each Dream boss's Shiny Stars with the amount its route position ramps to", () => {
+    const route = projectStructuredWorkspaceFixture(loadDreamMixedHandoffCheckpoint()).workspace
+      .route!;
+    const collects = route.biomes.flatMap((biome) =>
+      biome.nodes.flatMap((node) =>
+        node.kind === 'occurrenceWorkbench'
+          ? (node.room.roomActions?.rows ?? []).filter(
+              (row) => row.reference.kind === 'collectRequiredReward',
+            )
+          : [],
+      ),
+    );
+    expect(collects.map((row) => [row.labelParts?.name, row.labelParts?.reward])).toEqual(
+      [1, 2, 3].map((amount) => [
+        'Shiny Stars',
+        { offer: { rewardType: 'DreamPointsDrop' }, boosted: false, amount },
+      ]),
+    );
+  });
+
+  it("names a Zagreus contract's forced drop as 50 Gemstones", () => {
+    const shop = goldenGOccurrenceId(5, 1);
+    const contract = createOccurrenceId('projection-zagreus-contract');
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'AddZagreusContract',
+      additional: createAdditionalExitAddress(goldenGBiome, shop, 'zagreusContract'),
+      occurrenceId: contract,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenGBiome, {
+        kind: 'occurrence',
+        occurrenceId: shop,
+      }),
+      value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+    });
+    const route = projectStructuredWorkspaceFixture(authorLegalTraitOffers(project)).workspace
+      .route!;
+    const node = route.biomes
+      .flatMap((biome) => biome.nodes)
+      .find(
+        (candidate) =>
+          candidate.kind === 'occurrenceWorkbench' &&
+          candidate.room.roomActions?.rows.some((row) => row.address.occurrenceId === contract),
+      );
+    if (node?.kind !== 'occurrenceWorkbench') throw new Error('expected the entered contract room');
+    const collect = node.room.roomActions?.rows.find(
+      (row) => row.reference.kind === 'collectRequiredReward',
+    );
+    expect(collect).toMatchObject({
+      label: 'Collect Gemstones',
+      labelParts: {
+        verb: 'Collect',
+        name: 'Gemstones',
+        reward: { offer: { rewardType: 'GemPointsBigDrop' }, amount: 50 },
+      },
+    });
   });
 
   it('labels a stale Shrine delivery without exposing its persisted entry key', () => {

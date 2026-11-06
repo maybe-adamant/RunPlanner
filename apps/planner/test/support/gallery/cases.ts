@@ -14,7 +14,10 @@ import {
   roomActionKey,
   type AuthoredNemesisRandomEventOutcome,
 } from '@run-planner/engine/authored-project';
-import { loadDreamHeraArtificerEchoCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
+import {
+  loadDreamHeraArtificerEchoCheckpoint,
+  loadDreamMixedHandoffCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/dream';
 import {
   loadSurfaceAnvilCheckpoint,
   loadSurfaceEncounterShowcaseCheckpoint,
@@ -278,6 +281,20 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['boss defeated', 'collect required reward (boss)', 'Steady Growth'],
     project: loadSurfaceScheduledLifecycleCheckpoint,
     target: room('O', 'surface-o-preboss:boss'),
+  },
+  {
+    id: 'boss-dream-shiny-stars',
+    label: 'Dream boss room: Shiny Stars ramped by route position',
+    shows: ['collect required reward (Dream boss)'],
+    project: loadDreamMixedHandoffCheckpoint,
+    target: room('N', 'dream-n-preboss:boss'),
+  },
+  {
+    id: 'boss-zagreus-gemstones',
+    label: 'Zagreus contract room: Gemstones',
+    shows: ['collect required reward (Zagreus)'],
+    project: loadUnderworldZagreusContractCheckpoint,
+    target: room('G', 'zagreus-contract-showcase'),
   },
   {
     id: 'boss-judgment-figurine',
