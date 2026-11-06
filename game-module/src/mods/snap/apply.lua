@@ -276,13 +276,16 @@ local function rowRarity(row) return row.hammerRank == "RankII" and "Legendary" 
 
 -- Modelled traits: exact matches stay, extras go, a wrong level or rarity is a
 -- remove plus a re-add carrying the instance's fields.
--- PowersLogic.BankGold's payout for a loan snap newly takes: the gold held
--- before snap writes anything, plus the return at its installed rarity. The
--- take itself is not written; the boss payout stays native.
+-- PowersLogic.BankGold for a loan snap newly takes, without its presentation:
+-- the payout is the gold held before snap writes anything plus the return at
+-- its installed rarity, and that gold is spent as native spends it. The boss
+-- payout stays native.
 local function newLoan(data, goldBefore)
     if data.AcquireFunctionName == "BankGold" then
         local args = data.AcquireFunctionArgs or {}
         data.StoredGold = goldBefore + (args.ReturnGold or 0)
+        _G.SpendResource("Money", goldBefore, "DionysusBank",
+            { NoLifetimeEffect = true, SkipQuestStatusCheck = true, SkipResourceSpendPresentation = true })
     end
     return data
 end

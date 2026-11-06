@@ -747,8 +747,9 @@ function TestSnapApply.testASnappedMetallicDropletStartsItsTimer()
     end
 end
 
--- A re-added loan carries its StoredGold; a newly taken one stores the gold
--- held before snap plus its return at the installed rarity, as BankGold does.
+-- A re-added loan carries its StoredGold and spends nothing; a newly taken one
+-- stores the gold held before snap plus its return at the installed rarity and
+-- spends that gold, as BankGold does.
 function TestSnapApply.testALoanKeepsItsStoredGoldAndANewOneBanksTheHeldGold()
     local hero, _, restore = world({ { Name = "BankBoon", Rarity = "Common", StackNum = 1, StoredGold = 310,
         AcquireFunctionName = "BankGold" } })
@@ -759,11 +760,24 @@ function TestSnapApply.testALoanKeepsItsStoredGoldAndANewOneBanksTheHeldGold()
     restore()
 
     local empty, _, restoreEmpty = world({})
-    _G.GameState.Resources = { Money = 140 }
+    local gameState = _G.GameState
+    gameState.Resources = { Money = 140 }
+    local spends = {}
+    local priorSpend = _G.SpendResource
+    -- ResourceLogic.SpendResource's write, recorded with BankGold's arguments.
+    _G.SpendResource = function(name, amount, source, args)
+        spends[#spends + 1] = { name, amount, source, args }
+        gameState.Resources[name] = gameState.Resources[name] - amount
+        return true
+    end
     lu.assertTrue(apply(value))
+    _G.SpendResource = priorSpend
     restoreEmpty()
     lu.assertEquals({ empty.Traits[1].Name, empty.Traits[1].Rarity, empty.Traits[1].StoredGold },
         { "BankBoon", "Rare", 140 + 75 })
+    lu.assertEquals(gameState.Resources.Money, 0)
+    lu.assertEquals(spends, { { "Money", 140, "DionysusBank",
+        { NoLifetimeEffect = true, SkipQuestStatusCheck = true, SkipResourceSpendPresentation = true } } })
 end
 
 -- The frame's Fated status settles a status the native rack close left stale.
