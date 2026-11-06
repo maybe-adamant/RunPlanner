@@ -263,6 +263,7 @@ export type TopologyCommand =
     }
   | { readonly kind: 'RemoveHubDecision'; readonly hub: HubDecisionAddress }
   | { readonly kind: 'ResetHubBoard'; readonly hub: HubDecisionAddress }
+  | { readonly kind: 'ResetHubVisits'; readonly hub: HubDecisionAddress }
   | {
       readonly kind: 'OpenHubSlot';
       readonly slot: HubSlotAddress;

@@ -609,7 +609,11 @@ visits, one fountain use and any board-door reroll presses, possibly empty.
 New Hubs start empty and decoding
 never infers a use. `ReplaceHubActionOrder` edits it by action identity; visit
 ordinals count room visits only. Reordering keeps the Phial outcome, while
-removing the fountain use removes it. `ResetHubBoard` retains the Hub decision
+removing the fountain use removes it. `ReplaceHubActionOrder` keeps every
+reroll press exactly; `ResetHubVisits` clears the visits and, with them, the
+presses of every stay after the first entry, keeping the entry's presses and
+the fountain use with its outcome, which then stands in that one stay.
+`ResetHubBoard` retains the Hub decision
 and its source while atomically clearing its open slots, actions, fountain
 outcome, and owned main/side rooms; the completed-Hub chain stays.
 Unlike `RemoveHubDecision`, it does not restore the preceding terminal envelope.

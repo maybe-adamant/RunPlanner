@@ -2,14 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
   createBiomeAddress,
+  createFountainRarityOutcomeAddress,
+  createHubFountainAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
   createOccurrenceAddress,
+  createProjectHistory,
   createRoomActionAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   hubActionOrderRefusal,
+  undoProjectHistory,
+  type HubAction,
   type ProjectCommand,
   type ProjectDocument,
   type RerollRoomAction,
@@ -19,7 +25,8 @@ import {
   loadUnderworldFGCheckpoint,
   loadUnderworldFStygianWellCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
+import { hubVisitActions } from '@run-planner/test-fixtures/shared';
+import { loadSurfaceNProject, nVisitSlotKeys } from '@run-planner/test-fixtures/surface';
 import { withArcana } from '../../support/rerolls';
 
 const f = createBiomeAddress('Underworld', 'F');
@@ -226,7 +233,7 @@ describe('Hub rerolls', () => {
         actions: [{ ...hub.actions[0]!, rerollId: 'r2' } as never, ...hub.actions.slice(1)],
       }),
     ).toThrow('Hub action order must keep its rerolls');
-    // Clearing the order would drop the reroll, so the same answer refuses a reset.
+    // Clearing the order would drop the reroll; resetting the visits is its own command.
     expect(hubActionOrderRefusal(hub, [])).toBe('rerollsChanged');
     expect(hubActionOrderRefusal(hub, [...hub.actions.slice(1), hub.actions[0]!])).toBeUndefined();
   });
@@ -279,6 +286,78 @@ describe('Hub rerolls', () => {
         applyProjectCommand(moved, catalog, { kind: 'ReplaceHubActionOrder', hub, actions }),
       ),
     ).toEqual({ rewardType: 'MaxManaDropBig' });
+  });
+});
+
+describe('Hub visit reset', () => {
+  const n = createBiomeAddress('Surface', 'N');
+  const hub = { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const;
+  const hubOf = (project: ProjectDocument) => {
+    const decision = project.route.biomes[0]!.topology!.decisions.find(
+      (candidate) => candidate.kind === 'hub',
+    );
+    if (decision?.kind !== 'hub') throw new Error('Surface N has no Hub');
+    return decision;
+  };
+  const rerolled = (project: ProjectDocument, slot: string) =>
+    project.route.biomes[0]!.topology!.occurrences.find(
+      (room) => room.occurrenceId === `surface-n-${slot}`,
+    )!.rerolledIncomingReward?.offer;
+  const press = (hubSlotKey: string, reward: ResolvedRewardOffer, index: number) =>
+    ({ kind: 'InsertHubReroll', hub, hubSlotKey, reward, index }) as const;
+
+  it('clears the visits with every later stay and its presses in one undoable edit', () => {
+    // Visits with the fountain used after the third, carrying a Phial target.
+    const visited = applyProjectCommand(
+      applyProjectCommand(withArcana(loadSurfaceNProject(), ['DoorReroll']), catalog, {
+        kind: 'ReplaceHubActionOrder',
+        hub,
+        actions: hubVisitActions(nVisitSlotKeys, 3),
+      }),
+      catalog,
+      {
+        kind: 'ReplaceFountainRarityTarget',
+        outcome: createFountainRarityOutcomeAddress(createHubFountainAddress(n, 'hub')),
+        targetTraitKey: 'ApolloWeaponBoon',
+      },
+    );
+    // combat09 is pressed at the first entry and again after the third visit; combat03,
+    // never visited, after the fifth.
+    const project = [
+      press('combat09', { rewardType: 'MaxHealthDropBig' }, 0),
+      press('combat09', { rewardType: 'MaxManaDropBig' }, 4),
+      press('combat03', { rewardType: 'MaxHealthDropBig' }, 8),
+    ].reduce((document, command) => applyProjectCommand(document, catalog, command), visited);
+    expect(hubOf(project).actions.map((action) => action.kind)).toEqual([
+      'reroll',
+      'roomVisit',
+      'roomVisit',
+      'roomVisit',
+      'reroll',
+      'useFountain',
+      'roomVisit',
+      'roomVisit',
+      'reroll',
+      'roomVisit',
+    ]);
+    expect(rerolled(project, 'combat09')).toEqual({ rewardType: 'MaxManaDropBig' });
+
+    const history = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'ResetHubVisits',
+      hub,
+    });
+    const reset = history.present;
+    expect(hubOf(reset).actions).toEqual<readonly HubAction[]>([
+      hubOf(project).actions[0]!,
+      { kind: 'useFountain' },
+    ]);
+    expect(hubOf(reset).fountainRarityResult).toEqual({ targetTraitKey: 'ApolloWeaponBoon' });
+    expect(hubOf(reset).openTargets).toEqual(hubOf(project).openTargets);
+    // The entry press is the last one left on combat09; combat03 has none.
+    expect(rerolled(reset, 'combat09')).toEqual({ rewardType: 'MaxHealthDropBig' });
+    expect(rerolled(reset, 'combat03')).toBeUndefined();
+    expect(undoProjectHistory(history).present).toBe(project);
+    expect(applyProjectCommand(reset, catalog, { kind: 'ResetHubVisits', hub })).toBe(reset);
   });
 });
 

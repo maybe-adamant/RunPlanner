@@ -7,6 +7,7 @@ import {
   describeHubSlotClosureImpact,
 } from '../../topology/impact';
 import type {
+  BiomeTopology,
   ExitDecision,
   ExitDecisionSource,
   HubAction,
@@ -141,7 +142,12 @@ export function updateHub(
   command: Extract<
     TopologyCommand,
     {
-      readonly kind: 'OpenHubSlot' | 'CloseHubSlot' | 'ReplaceHubActionOrder' | 'ResetHubBoard';
+      readonly kind:
+        | 'OpenHubSlot'
+        | 'CloseHubSlot'
+        | 'ReplaceHubActionOrder'
+        | 'ResetHubBoard'
+        | 'ResetHubVisits';
     }
   >,
 ): ProjectDocument {
@@ -311,6 +317,15 @@ export function updateHub(
       ),
     );
   }
+  if (command.kind === 'ResetHubVisits') {
+    const visit = hub.actions.findIndex((action) => action.kind === 'roomVisit');
+    if (visit < 0) return document;
+    // Entry keeps its presses and the fountain use; later stays and their presses are gone.
+    const actions = hub.actions.filter(
+      (action, index) => index < visit || action.kind === 'useFountain',
+    );
+    return replaceHubActions(document, catalog, located, topology, hub, actions);
+  }
   const actions = normalizedHubActions(command);
   const visits = actions.flatMap((action) =>
     action.kind === 'roomVisit' ? [action.hubSlotKey] : [],
@@ -336,6 +351,17 @@ export function updateHub(
   ) {
     return document;
   }
+  return replaceHubActions(document, catalog, located, topology, hub, actions);
+}
+
+function replaceHubActions(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  topology: BiomeTopology,
+  hub: HubDecision,
+  actions: readonly HubAction[],
+): ProjectDocument {
   // An authored Phial target follows the fountain use through reordering, but
   // no outcome survives once the use itself is no longer planned.
   const { fountainRarityResult, ...withoutOutcome } = hub;
@@ -345,11 +371,12 @@ export function updateHub(
     actions: Object.freeze(actions),
     ...(fountainUsed && fountainRarityResult !== undefined ? { fountainRarityResult } : {}),
   });
-  // A slot's rerolls after its visit no longer redraw what that visit enters.
+  // A slot's rerolls after its visit no longer redraw what that visit enters,
+  // and a dropped press no longer redraws its slot.
   return updateTopology(
     document,
     located,
-    reconcileHubRerolledRewards(catalog, located, replaceDecision(topology, reordered), reordered),
+    reconcileHubRerolledRewards(catalog, located, replaceDecision(topology, reordered), hub),
   );
 }
 

@@ -115,6 +115,7 @@ function commandContractAddress(
       return command.additional;
     case 'RemoveHubDecision':
     case 'ResetHubBoard':
+    case 'ResetHubVisits':
       return command.hub;
     case 'OpenHubSlot':
     case 'CloseHubSlot':

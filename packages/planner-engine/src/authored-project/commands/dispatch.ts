@@ -187,6 +187,7 @@ function applyUnchecked(
     case 'ReplaceWithHubDecision':
     case 'RemoveHubDecision':
     case 'ResetHubBoard':
+    case 'ResetHubVisits':
     case 'OpenHubSlot':
     case 'CloseHubSlot':
     case 'ReplaceHubActionOrder':

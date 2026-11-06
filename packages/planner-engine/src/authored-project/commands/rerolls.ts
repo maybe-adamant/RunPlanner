@@ -351,12 +351,15 @@ export function applyRerollCommand(
   }
 }
 
-/** Reconciles every slot a Hub's rerolls target after its actions were reordered. */
+/**
+ * Reconciles every slot the Hub's rerolls targeted before its actions were
+ * replaced, so a slot whose presses were dropped is reconciled too.
+ */
 export function reconcileHubRerolledRewards(
   catalog: Catalog,
   located: LocatedBiome,
   topology: BiomeTopology,
-  hub: HubDecision,
+  previous: HubDecision,
 ): BiomeTopology {
   const biome = createBiomeAddress(located.routeKey, located.plan.biomeKey);
   return reconcileRerolledRewards(
@@ -364,8 +367,8 @@ export function reconcileHubRerolledRewards(
     located.routePosition,
     biome,
     topology,
-    hubRerolls(hub).flatMap((reroll) => {
-      const owner = slotOwner(biome, hub, reroll.hubSlotKey);
+    hubRerolls(previous).flatMap((reroll) => {
+      const owner = slotOwner(biome, previous, reroll.hubSlotKey);
       return owner === undefined ? [] : [owner];
     }),
   );
