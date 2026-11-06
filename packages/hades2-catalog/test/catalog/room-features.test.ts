@@ -93,7 +93,11 @@ describe('room feature declarations', () => {
       /dreamRewardDropKey: is Dream-only/,
     );
     const dreamless = declarations.routes.map((route) =>
-      route.key === 'Dream' ? { ...route, dreamRewardDropKey: undefined } : route,
+      route.key === 'Dream'
+        ? (Object.fromEntries(
+            Object.entries(route).filter(([key]) => key !== 'dreamRewardDropKey'),
+          ) as typeof route)
+        : route,
     );
     expect(() => createCatalog({ ...declarations, routes: dreamless })).toThrow(
       /dreamRewardDropKey: is required for Dream/,
