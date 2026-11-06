@@ -25,6 +25,7 @@ import {
 import {
   createPreparedProjectCandidateSession,
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
+  simulateProject,
   simulateProjectAssembly,
   type NemesisRandomEventAssessment,
 } from '@run-planner/engine/simulation';
@@ -37,6 +38,52 @@ import {
   replaceNemesisRandomEventInteraction,
 } from '@run-planner/test-fixtures/underworld';
 import { reachedFrontier } from '../support/reward-frontier';
+import type {
+  CanonicalAuthoredRoom,
+  CanonicalBiome,
+  MaterializedBiomePrefix,
+} from '../../src/simulation/materialization';
+
+function evaluatedRoom(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
+  const biome = simulateProject(catalog, project).route?.biomes.find(
+    (candidate) => candidate.biomeKey === biomeKey,
+  );
+  const prefix: CanonicalBiome | MaterializedBiomePrefix | undefined =
+    biome === undefined
+      ? undefined
+      : 'snapshot' in biome
+        ? biome.snapshot
+        : 'materializedPrefix' in biome
+          ? biome.materializedPrefix
+          : undefined;
+  const rooms: CanonicalAuthoredRoom[] = prefix?.entryRoom === undefined ? [] : [prefix.entryRoom];
+  for (const decision of prefix?.decisions ?? [])
+    if (decision.kind === 'batch') rooms.push(...decision.targets.map((target) => target.room));
+  const room = rooms.find((candidate) => candidate.occurrenceId === occurrenceId);
+  if (room === undefined) throw new Error(`${occurrenceId} was not evaluated`);
+  return room;
+}
+
+/** Positions of the event's encounter seams, its interaction and its result pickup. */
+function eventTimeline(room: CanonicalAuthoredRoom, phaseKey: string) {
+  const entries = room.roomLifecycleTimeline.entries;
+  const boundary = (key: string) =>
+    entries.findIndex((entry) => entry.kind === 'boundary' && entry.boundary.key === key);
+  const action = (key: string) =>
+    entries.findIndex((entry) => entry.kind === 'action' && entry.action.key === key);
+  return {
+    start: boundary(`encounterStart:${phaseKey}`),
+    interaction: action(roomActionKey({ kind: 'interactEncounter', phaseKey })),
+    end: boundary(`encounterEnd:${phaseKey}`),
+    result: action(
+      roomActionKey({
+        kind: 'interactAcquisitionEntry',
+        siteKey: `nemesisGenerated:${phaseKey}`,
+        entryKey: 'result',
+      }),
+    ),
+  };
+}
 
 const nemesisRandomEventFamilies = [
   'freeItem',
@@ -197,6 +244,16 @@ describe('Nemesis random events', () => {
           ),
         ),
       ).toBe(true);
+      // Answering Nemesis ends the event: her interaction sits inside its encounter
+      // and the result she drops follows the encounter end.
+      const timeline = eventTimeline(
+        evaluatedRoom(project, goldenFBiome.biomeKey, goldenFOccurrenceId(5, 1)),
+        'Encounter',
+      );
+      expect(timeline.start).toBeGreaterThan(0);
+      expect(timeline.interaction).toBeGreaterThan(timeline.start);
+      expect(timeline.end).toBe(timeline.interaction + 1);
+      expect(timeline.result).toBeGreaterThan(timeline.end);
       if (removedTraitKey !== undefined) {
         expect(
           reachedFrontier(f.rewards).every(
@@ -552,6 +609,12 @@ describe('Nemesis random events', () => {
       expect(assembly.evaluation.findings).toContainEqual(
         expect.objectContaining({ code: 'nemesisOutcomeMissing', origin: action }),
       );
+      // The Passive event brackets its interaction wherever it sits among the cages.
+      const room = evaluatedRoom(project, goldenHBiome.biomeKey, occurrenceId);
+      const timeline = eventTimeline(room, 'Passive');
+      expect(timeline.interaction).toBe(timeline.start + 1);
+      expect(timeline.end).toBe(timeline.interaction + 1);
+      expect(room.roomActionRoster.issues).toEqual([]);
     }
 
     project = applyProjectCommand(project, catalog, {

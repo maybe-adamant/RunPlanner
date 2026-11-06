@@ -336,9 +336,11 @@ export function assembleRoomLifecycleTimeline(
         const phase = phaseByKey.get(point.phaseKey);
         if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
         const cage =
-          structure.profileKey === 'FieldsCombatRoom'
-            ? Object.freeze({ kind: 'completeFieldsCage' as const, phaseKey: phase.phaseKey })
-            : undefined;
+          structure.profileKey !== 'FieldsCombatRoom'
+            ? undefined
+            : phase.endsOnInteraction === true
+              ? Object.freeze({ kind: 'interactEncounter' as const, phaseKey: phase.phaseKey })
+              : Object.freeze({ kind: 'completeFieldsCage' as const, phaseKey: phase.phaseKey });
         const choose =
           phase.rewardWheelKey === undefined
             ? undefined
@@ -382,7 +384,12 @@ export function assembleRoomLifecycleTimeline(
       case 'encounterEnd': {
         const phase = phaseByKey.get(point.phaseKey);
         if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
-        if (structure.profileKey === 'FieldsCombatRoom') {
+        const interactionRank =
+          phase.endsOnInteraction === true
+            ? actionRank(roster, { kind: 'interactEncounter', phaseKey: phase.phaseKey })
+            : undefined;
+        if (interactionRank !== undefined) return boundaryEntry(point, interactionRank, 'after');
+        if (structure.profileKey === 'FieldsCombatRoom' && phase.endsOnInteraction !== true) {
           return boundaryEntry(
             point,
             actionRank(roster, {

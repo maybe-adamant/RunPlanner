@@ -24,6 +24,8 @@ export type RoomActionWindow =
 export interface RoomLifecycleStructurePhase {
   readonly phaseKey: string;
   readonly rewardWheelKey?: string;
+  /** A noncombat event its required encounter interaction ends, not a fight. */
+  readonly endsOnInteraction?: true;
 }
 
 export type RoomLifecycleStructurePoint =
@@ -79,54 +81,74 @@ export function assembleRoomLifecycleStructure(options: {
       (options.occurrence.state.kind !== 'shipCombat' ||
         index < options.occurrence.state.encounterCount),
   );
-  const lifecycleSlots = activeSlots.filter((slot) => {
-    if (
-      options.lifecycleProfileKey === 'FieldsCombatRoom' &&
-      slot.rewardAttachment?.kind !== 'localReward'
-    ) {
-      return false;
-    }
-    const encounterKey = selectedEncounterAuthoringProfileKey(
-      options.catalog,
-      options.declaration,
-      options.occurrence.encounters,
-      slot.key,
-      options.occurrence.gameName,
-    );
-    const binding = encounterBindingsBySlot(
-      options.catalog,
-      options.declaration,
-      options.occurrence.gameName,
-    ).get(slot.key);
-    const encounter =
-      binding?.kind === 'fixed'
-        ? options.catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]
-        : binding?.kind === 'set' && encounterKey !== undefined
+  const lifecycleSlots = activeSlots.flatMap(
+    (slot): readonly { readonly slot: typeof slot; readonly endsOnInteraction: boolean }[] => {
+      const encounterKey = selectedEncounterAuthoringProfileKey(
+        options.catalog,
+        options.declaration,
+        options.occurrence.encounters,
+        slot.key,
+        options.occurrence.gameName,
+      );
+      const binding = encounterBindingsBySlot(
+        options.catalog,
+        options.declaration,
+        options.occurrence.gameName,
+      ).get(slot.key);
+      const definition =
+        binding?.kind === 'fixed'
+          ? options.catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]
+          : undefined;
+      const profile =
+        binding?.kind === 'set' && encounterKey !== undefined
           ? encounterAuthoringProfileForKey(
               encounterSetForBinding(options.catalog, binding, options.occurrence.gameName),
               encounterKey,
               options.occurrence.gameName,
             )
           : undefined;
-    return (
-      options.occurrence.state.kind === 'shipCombat' ||
-      (encounter !== undefined && isCombatBearingEncounterPhaseKind(encounter.kind))
-    );
-  });
-  const declaredPhases = lifecycleSlots.map((slot) =>
-    frozen({
-      phaseKey: slot.key,
-      ...(slot.rewardAttachment?.kind === 'rewardWheel'
-        ? { rewardWheelKey: slot.rewardAttachment.key }
-        : {}),
-    }),
+      const encounter = definition ?? profile;
+      const directDefinition =
+        definition ??
+        (profile?.resolution.kind === 'direct'
+          ? options.catalog.encounterDefinitions.byKey[profile.resolution.encounterDefinitionKey]
+          : undefined);
+      // Nemesis keeps the exits locked until answering her resolves the event (EncounterLogic
+      // SpawnNemesisForRandomEvents, InteractLogic UnlockRoomExits), so that interaction ends it.
+      if (directDefinition?.nemesisRandomEvent !== undefined)
+        return [{ slot, endsOnInteraction: true }];
+      if (
+        options.lifecycleProfileKey === 'FieldsCombatRoom' &&
+        slot.rewardAttachment?.kind !== 'localReward'
+      ) {
+        return [];
+      }
+      return options.occurrence.state.kind === 'shipCombat' ||
+        (encounter !== undefined && isCombatBearingEncounterPhaseKind(encounter.kind))
+        ? [{ slot, endsOnInteraction: false }]
+        : [];
+    },
+  );
+  const declaredPhases: RoomLifecycleStructurePhase[] = lifecycleSlots.map(
+    ({ slot, endsOnInteraction }) =>
+      frozen({
+        phaseKey: slot.key,
+        ...(slot.rewardAttachment?.kind === 'rewardWheel'
+          ? { rewardWheelKey: slot.rewardAttachment.key }
+          : {}),
+        ...(endsOnInteraction ? { endsOnInteraction: true as const } : {}),
+      }),
   );
   const phases =
     options.lifecycleProfileKey === 'FieldsCombatRoom'
       ? (() => {
           const byKey = new Map(declaredPhases.map((phase) => [phase.phaseKey, phase]));
+          // Cages order by their completion, a Nemesis event by answering her.
           const ranked = options.occurrence.roomActions.order.flatMap((reference) =>
-            reference.kind === 'completeFieldsCage' && byKey.has(reference.phaseKey)
+            (reference.kind === 'completeFieldsCage' ||
+              (reference.kind === 'interactEncounter' &&
+                byKey.get(reference.phaseKey)?.endsOnInteraction === true)) &&
+            byKey.has(reference.phaseKey)
               ? [byKey.get(reference.phaseKey)!]
               : [],
           );

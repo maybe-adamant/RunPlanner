@@ -956,6 +956,9 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     const byKey = new Map(phases.map((phase) => [phase.slotKey, phase]));
     return Object.freeze(
       lifecycleStructure.phases.flatMap((phase) => {
+        // Native never starts a NonCombat room encounter (RoomLogic StartRoom); a Fields
+        // Nemesis event is recorded at preparation and ended by its interaction alone.
+        if (phase.endsOnInteraction === true) return [];
         const resolved = byKey.get(phase.phaseKey);
         if (resolved === undefined) {
           throw new LifecycleExecutionContractError(

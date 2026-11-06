@@ -279,6 +279,16 @@ omitting the player-facing Encounter and Encounter ended boundaries. The
 same applies to all `nonCombat` phase kinds; only `combat`, `miniboss`, and
 `boss` phase kinds render a combat spine.
 
+The Nemesis random event is the exception: Nemesis is a required room object
+that keeps the exits locked until answering her resolves the event (a trade's
+choice, the free item, or the contest's timer), so her interaction ends that
+encounter. Its phase has Encounter and Encounter ended boundaries, the
+interaction inside them and the event's result pickup after the end. In Fields
+the Passive event orders among the cages by its interaction, each boundary
+directly around it. The boundaries only shape the Timeline and window
+positions: no encounter start or completion is executed for a Fields Passive
+event, and its history is unchanged.
+
 **Automatic outcomes.** Fixed automatic outcomes (Steady Growth, Transcendent
 Embryo, Judgment, Crystal Figurine) settle at their seam (encounter end for
 [timed outcomes](TRAIT_OFFERS.md#timed-outcomes)) and are never

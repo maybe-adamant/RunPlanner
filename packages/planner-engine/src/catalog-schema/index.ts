@@ -429,7 +429,8 @@ export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 
 /**
  * Only these phase kinds create a player-facing combat interval. Story and
  * other noncombat encounters still retain their game encounter identity for
- * history and provider ownership, but never expose Start/End encounter UI.
+ * history and provider ownership; of them only a Nemesis random event, which
+ * her interaction ends, has encounter start and end points.
  */
 export function isCombatBearingEncounterPhaseKind(
   kind: EncounterPhaseKind,
