@@ -2207,6 +2207,40 @@ describe('purchase gold', () => {
     );
     expect(fixedPrices.priceOf('initial:secondRight')).toEqual({ label: '45' });
   });
+
+  it('shows a varying row gain or loss with its spread and an exact gain plainly', () => {
+    const [varying, losing, exact] = wellActions(ledger({}, spending([], 'stygianWell'))).actions
+      .rows;
+    if (varying === undefined || losing === undefined || exact === undefined)
+      throw new Error('The Well room has too few rows');
+    const gain = (row: typeof varying, amount: GoldAmount) => ({
+      kind: 'midasPayout' as const,
+      roomAction: row.address,
+      amount,
+    });
+    const base = spending([], 'stygianWell');
+    const { actions } = wellActions(
+      ledger(
+        {},
+        {
+          ...base,
+          room: {
+            ...base.room,
+            gains: [
+              gain(varying, rolled),
+              gain(losing, { mean: -30, variance: 30, min: -39, max: -21 }),
+              gain(exact, fixed(100)),
+            ],
+          },
+        } as unknown as GoldRoomAvailability,
+      ),
+    );
+    const goldOf = (row: typeof varying) =>
+      actions.rows.find((candidate) => candidate.key === row.key)?.goldGained;
+    expect(goldOf(varying)).toEqual({ label: '+30 ± 5' });
+    expect(goldOf(losing)).toEqual({ label: '−30 ± 5', loss: true });
+    expect(goldOf(exact)).toEqual({ label: '+100' });
+  });
 });
 
 describe('Doors open room gold', () => {

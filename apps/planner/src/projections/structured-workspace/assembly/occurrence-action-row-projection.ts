@@ -1186,16 +1186,18 @@ function roomEntryGold(
   };
 }
 
-/** "+N" when exact, "+~N" with spread, "−N" for a loss. */
+/** A ledger gain in the fight gold's form; its spread is the standard deviation. */
 function goldGainLabel(gain: {
   readonly mean: number;
   readonly variance: number;
 }): WorkspaceGoldAmount {
-  const rounded = Math.round(gain.mean);
-  const sign = rounded < 0 ? '\u2212' : '+';
   return Object.freeze({
-    label: `${sign}${gain.variance === 0 ? '' : '~'}${Math.abs(rounded)}`,
-    ...(rounded < 0 ? { loss: true as const } : {}),
+    label: fightGoldAmount({
+      mean: gain.mean,
+      spread: Math.sqrt(gain.variance),
+      exact: gain.variance === 0,
+    }),
+    ...(Math.round(gain.mean) < 0 ? { loss: true as const } : {}),
   });
 }
 
