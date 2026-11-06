@@ -608,12 +608,12 @@ describe('OccurrenceRoomActions', () => {
       'Encounter 3 ended',
     ]);
     for (const [index, start] of starts.entries()) {
-      // The cage tag shows the cage; its full name with its reward is its accessible name.
-      const cage = start.querySelector('.fields-cage-label');
-      expect(cage?.textContent).toBe(`Cage ${index + 1}`);
+      // The cage's slot is subscripted; its full name with its reward is its accessible name.
+      const cage = start.querySelector('.fields-cage-slot');
+      expect(cage?.textContent).toBe(`${index + 1}`);
       expect(cage?.getAttribute('aria-label')).toMatch(new RegExp(`^Cage ${index + 1} \\(`));
     }
-    const cageOrder = within(actions).getByRole('button', { name: /^Combat order: / });
+    const cageOrder = within(actions).getByRole('group', { name: 'Combat order' });
     expectBefore(cageOrder, within(timeline).getByLabelText('Room entered'));
     expect(within(timeline).queryByText(/^Clear Cage\d+/)).toBeNull();
     for (const row of timeline.querySelectorAll('[data-in-order="true"]')) {
@@ -675,7 +675,7 @@ describe('OccurrenceRoomActions', () => {
       occurrenceId,
       roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage01' }),
     );
-    expect(starts[0]?.querySelector('.fields-cage-label')?.getAttribute('id')).toBe(
+    expect(starts[0]?.querySelector('.fields-cage-slot')?.getAttribute('id')).toBe(
       semanticOwnerControlElementId(cageOneAction),
     );
   });
@@ -692,13 +692,13 @@ describe('OccurrenceRoomActions', () => {
       const phase = within(structure).getByLabelText(`${cage} encounter phase`);
       expect(within(phase).getByRole('button', { name: cage })).toBeTruthy();
     }
-    expect(screen.queryByRole('button', { name: /^Combat order/ })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Combat order' })).toBeNull();
     openRoomTab('Room Timeline');
-    expect(screen.getByRole('button', { name: /^Combat order/ })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Combat order' })).toBeTruthy();
     // Each cage start banner names its encounter read-only; identity stays in Overview.
     for (const ordinal of [1, 2, 3]) {
       const start = screen.getByLabelText(`Encounter ${ordinal}`);
-      expect(start.querySelector('.fields-cage-label')).not.toBeNull();
+      expect(start.querySelector('.fields-cage-slot')).not.toBeNull();
       expect(start.querySelector('.timeline-banner-identity')?.textContent).not.toMatch(/Cage/);
     }
     for (const cage of ['Cage 1', 'Cage 2', 'Cage 3'])
@@ -706,7 +706,7 @@ describe('OccurrenceRoomActions', () => {
     expect(screen.queryByLabelText('Cage 1 encounter phase')).toBeNull();
   });
 
-  it('stages the complete cage order, cancels without editing, and commits two moves in one undo step', async () => {
+  it('swaps the cage of one clear with the clear that had it in one undo step', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const view = renderOccurrenceWorkbench(
       threeCageFieldsProject(),
@@ -715,33 +715,13 @@ describe('OccurrenceRoomActions', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
-    const initial = view.application.store.getState().projectWorkspace.history!.present;
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    const choose = async (number: number) =>
-      view.user.click(
-        within(screen.getByRole('listbox')).getByRole('option', {
-          name: new RegExp(`^Cage ${number}$`),
-        }),
-      );
-    await view.user.click(screen.getByRole('button', { name: /^Combat order/ }));
+    const order = () => screen.getByRole('group', { name: 'Combat order' });
+    await view.user.click(within(order()).getByRole('button', { name: /^Cleared 1st: Cage 1 \(/ }));
     expect(within(screen.getByRole('listbox')).getAllByRole('option')).toHaveLength(3);
-    await choose(3);
-    expect(within(screen.getByRole('listbox')).getAllByRole('option')).toHaveLength(2);
-    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(initial);
-    await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(initial);
-
-    await view.user.click(screen.getByRole('button', { name: /^Combat order/ }));
-    for (const number of [1, 2, 3]) await choose(number);
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      historyBefore,
+    await view.user.click(
+      within(screen.getByRole('listbox')).getByRole('option', { name: /^Cage 3 \(/ }),
     );
-    await view.user.click(screen.getByRole('button', { name: /^Combat order/ }));
-    await choose(3);
-    await choose(2);
-    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(initial);
-    expect(within(screen.getByRole('listbox')).getAllByRole('option')).toHaveLength(1);
-    await choose(1);
 
     const cagePermutation = () =>
       occurrenceRoomActionOrder(
@@ -760,21 +740,22 @@ describe('OccurrenceRoomActions', () => {
       expect(
         screen
           .getByLabelText(`Encounter ${index + 1}`)
-          .querySelector('.fields-cage-label')
+          .querySelector('.fields-cage-slot')
           ?.getAttribute('aria-label'),
       ).toMatch(new RegExp(`^Cage ${number} \\(`));
-    // The order shows the cages in order; its accessible name adds each cage's reward.
-    const order = screen.getByRole('button', {
-      name: /^Combat order: Cage 3 \(.+\) \/ Cage 2 \(.+\) \/ Cage 1 \(.+\)$/,
-    });
-    expect(order.textContent).toBe('Cage 3 / Cage 2 / Cage 1');
+    // The order shows the cages in clear order, each named with its reward.
+    expect(
+      within(order())
+        .getAllByRole('button')
+        .map((chip) => chip.getAttribute('aria-label')?.replace(/ \(.+\)$/, '')),
+    ).toEqual(['Cleared 1st: Cage 3', 'Cleared 2nd: Cage 2', 'Cleared 3rd: Cage 1']);
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() => expect(cagePermutation()).toEqual(['Cage01', 'Cage02', 'Cage03']));
     expect(
       screen
         .getByLabelText('Encounter 1')
-        .querySelector('.fields-cage-label')
+        .querySelector('.fields-cage-slot')
         ?.getAttribute('aria-label'),
     ).toMatch(/^Cage 1 \(/);
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
@@ -790,12 +771,16 @@ describe('OccurrenceRoomActions', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
-    await view.user.click(screen.getByRole('button', { name: /^Combat order/ }));
+    await view.user.click(
+      within(screen.getByRole('group', { name: 'Combat order' })).getByRole('button', {
+        name: /^Cleared 1st/,
+      }),
+    );
     const cageTwoOption = within(screen.getByRole('listbox')).getByRole('option', {
-      name: /^Cage 2$/,
+      name: /^Cage 2 \(/,
     });
     expect(cageTwoOption.getAttribute('aria-disabled')).not.toBe('true');
-    await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await view.user.keyboard('{Escape}');
 
     const projected = workspaceProjection(view.application)
       .route?.biomes.find((biome) => biome.biomeKey === 'H')
@@ -866,12 +851,14 @@ describe('OccurrenceRoomActions', () => {
       ),
     ).toEqual(orderBefore);
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(screen.getByRole('button', { name: /^Combat order/ }));
+    // Cage 2 cleared first swaps it with the clear that had it.
     await view.user.click(
-      within(screen.getByRole('listbox')).getByRole('option', { name: /^Cage 2$/ }),
+      within(screen.getByRole('group', { name: 'Combat order' })).getByRole('button', {
+        name: /^Cleared 1st/,
+      }),
     );
     await view.user.click(
-      within(screen.getByRole('listbox')).getByRole('option', { name: /^Cage 1$/ }),
+      within(screen.getByRole('listbox')).getByRole('option', { name: /^Cage 2 \(/ }),
     );
     await waitFor(() => {
       const order = occurrenceRoomActionOrder(
@@ -1001,12 +988,14 @@ describe('OccurrenceRoomActions', () => {
     expect(within(timeline).queryByText('Clear Cage 3')).toBeNull();
     expect(within(repairs).getByText('Clear Cage 3')).toBeTruthy();
     expect(within(repairs).queryByText('This required action has not been placed.')).toBeNull();
-    const cageOrder = within(actions).getByRole('button', {
-      name: /^Combat order: Cage \d \(.+\) \/ Cage \d \(.+\)/,
-    }) as HTMLButtonElement;
-    expect(cageOrder.disabled).toBe(true);
-    expect(hintOf(cageOrder)).toBe('Restore missing cage actions before changing their order.');
-    expect(cageOrder.textContent).toMatch(/^Cage \d \/ Cage \d/);
+    const clears = within(
+      within(actions).getByRole('group', { name: 'Combat order' }),
+    ).getAllByRole('button') as HTMLButtonElement[];
+    expect(clears[0]?.getAttribute('aria-label')).toMatch(/^Cleared 1st: Cage \d \(/);
+    for (const clear of clears) {
+      expect(clear.disabled).toBe(true);
+      expect(hintOf(clear)).toBe('Restore missing cage actions before changing their order.');
+    }
   });
 
   it('accepts a Fields optional reward directly on the Room entered checkpoint', async () => {

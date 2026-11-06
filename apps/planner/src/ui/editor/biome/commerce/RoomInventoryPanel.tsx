@@ -6,7 +6,11 @@ import {
 } from '@planner/projections/structured-workspace';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
-import type { WorkspacePurgingPoolSlotInteraction } from '@planner/projections/structured-workspace';
+import type {
+  WorkspaceHermesShrineOfferInteraction,
+  WorkspaceMarker,
+  WorkspacePurgingPoolSlotInteraction,
+} from '@planner/projections/structured-workspace';
 import {
   declaredChoicesPicker,
   type ContextualPickerModel,
@@ -24,6 +28,7 @@ import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
 
 /** A disabled presence waits on an earlier choice, or names the rules refusing it. */
 const presenceLockHint = (feature: StygianWellFeature | HermesShrineFeature): string | undefined =>
@@ -78,7 +83,7 @@ export function RoomInventoryPanel({
                 feature.presenceInteractionKey,
               );
         return (
-          <fieldset className="room-purging-pool" key="stygian-well">
+          <fieldset className="room-purging-pool room-inventory-line" key="stygian-well">
             <legend className="visually-hidden">Stygian Well configuration</legend>
             <div className="room-feature-interaction-header">
               {presence === undefined && feature.presence.kind !== 'optionalAbsent' ? (
@@ -108,44 +113,50 @@ export function RoomInventoryPanel({
                 </label>
               )}
             </div>
-            {feature.presence.kind === 'optionalAbsent'
-              ? null
-              : feature.slots.map((slot) => (
-                  <StygianWellSlotEditor
+            {feature.presence.kind === 'optionalAbsent' ? null : (
+              <NumberedSlots label="Stygian Well slots">
+                {feature.slots.map((slot, index) => (
+                  <NumberedSlot
+                    hint={`Slot ${index + 1}`}
                     key={slot.generationKey}
-                    slot={slot}
-                    interactions={interactions}
-                  />
+                    number={index + 1}
+                  >
+                    <StygianWellSlotPicker fieldLabel="" interactions={interactions} slot={slot} />
+                  </NumberedSlot>
                 ))}
+              </NumberedSlots>
+            )}
           </fieldset>
         );
       })();
     case 'purgingPool':
       return (() => {
         return (
-          <fieldset className="room-purging-pool" key="purging-pool">
+          <fieldset className="room-purging-pool room-inventory-line" key="purging-pool">
             <legend className="visually-hidden">Pool of Purging configuration</legend>
             <div className="room-feature-interaction-header">
               <FixedObjectHeader object="purgingPool" title="Pool of Purging" />
             </div>
-            {feature.slots.map((slot) => {
-              const interaction = requireWorkspaceInteraction(
-                interactions.purgingPoolSlots,
-                slot.interactionKey,
-              );
-              return (
-                <div className="shop-family-offer-row room-purging-pool-slot" key={slot.key}>
-                  <PurgingPoolTraitPicker
-                    address={slot.address}
-                    interaction={interaction}
-                    label={slot.label}
-                    traitKey={slot.traitKey}
-                    {...(slot.traitLabel === undefined ? {} : { selectedLabel: slot.traitLabel })}
-                    onSelect={(traitKey) => executeIntent(interaction.intentFor(traitKey))}
-                  />
-                </div>
-              );
-            })}
+            <NumberedSlots label="Pool of Purging slots">
+              {feature.slots.map((slot, index) => {
+                const interaction = requireWorkspaceInteraction(
+                  interactions.purgingPoolSlots,
+                  slot.interactionKey,
+                );
+                return (
+                  <NumberedSlot hint={`Slot ${index + 1}`} key={slot.key} number={index + 1}>
+                    <PurgingPoolTraitPicker
+                      address={slot.address}
+                      interaction={interaction}
+                      label={slot.label}
+                      traitKey={slot.traitKey}
+                      {...(slot.traitLabel === undefined ? {} : { selectedLabel: slot.traitLabel })}
+                      onSelect={(traitKey) => executeIntent(interaction.intentFor(traitKey))}
+                    />
+                  </NumberedSlot>
+                );
+              })}
+            </NumberedSlots>
           </fieldset>
         );
       })();
@@ -164,7 +175,7 @@ export function RoomInventoryPanel({
               ? {}
               : findingAnchor(feature.inventoryAddress))}
             tabIndex={-1}
-            className="room-purging-pool"
+            className="room-purging-pool room-inventory-line"
             key="hermes-shrine"
           >
             <legend className="visually-hidden">Hermes Shrine configuration</legend>
@@ -194,22 +205,34 @@ export function RoomInventoryPanel({
                 <span>Hermes Shrine</span>
               </label>
             )}
-            {feature.slots.map((slot) => {
-              const offer = requireWorkspaceInteraction(
-                interactions.hermesShrineOffers,
-                slot.offerInteractionKey,
-              );
-              return (
-                <HermesShrineSlotEditor
-                  key={slot.key}
-                  marker={slot.marker}
-                  label={slot.label}
-                  rewardType={slot.rewardType}
-                  {...(slot.rewardLabel === undefined ? {} : { rewardLabel: slot.rewardLabel })}
-                  offer={offer}
-                />
-              );
-            })}
+            {feature.slots.length === 0 ? null : (
+              <NumberedSlots label="Hermes Shrine slots">
+                {feature.slots.map((slot, index) => {
+                  const offer = requireWorkspaceInteraction(
+                    interactions.hermesShrineOffers,
+                    slot.offerInteractionKey,
+                  );
+                  return (
+                    <NumberedSlot
+                      hint={`Slot ${index + 1}`}
+                      key={slot.key}
+                      number={index + 1}
+                      trailing={<HermesShrineDelayPicker label={slot.label} offer={offer} />}
+                    >
+                      <HermesShrineItemPicker
+                        label={slot.label}
+                        marker={slot.marker}
+                        offer={offer}
+                        rewardType={slot.rewardType}
+                        {...(slot.rewardLabel === undefined
+                          ? {}
+                          : { rewardLabel: slot.rewardLabel })}
+                      />
+                    </NumberedSlot>
+                  );
+                })}
+              </NumberedSlots>
+            )}
           </fieldset>
         );
       })();
@@ -254,7 +277,7 @@ function PurgingPoolTraitPicker({
       findingTarget={findingTarget(address)}
       ariaLabel={`Pool of Purging ${label} Item`}
       id={`${interaction.key}-picker`}
-      label={label}
+      label=""
       layout="inline"
       loading={picker.pending}
       model={picker.result ?? emptyNullablePicker}
@@ -266,22 +289,20 @@ function PurgingPoolTraitPicker({
       itemIcon={(item) => (item.value === null ? undefined : traitIcon(item.value))}
       triggerIcon={traitKey === null ? undefined : traitIcon(traitKey)}
       triggerSize="icon"
+      triggerUnknown
       {...(selectedLabel === undefined ? {} : { triggerLabel: selectedLabel })}
     />
   );
 }
 
-/** One Well inventory slot's item. */
+/** One Well inventory slot's item, on a line that needs it chosen. */
 export function StygianWellSlotEditor({
   fieldLabel,
-  placeholder = 'Unresolved',
   slot,
   interactions,
 }: {
   /** The visible label where the line already names the slot; the accessible name keeps it. */
   readonly fieldLabel?: string;
-  /** The empty slot's text; a timeline row asks to pick its item. */
-  readonly placeholder?: string;
   readonly slot: Omit<StygianWellFeature['slots'][number], 'key'>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
@@ -290,7 +311,7 @@ export function StygianWellSlotEditor({
       <StygianWellSlotPicker
         {...(fieldLabel === undefined ? {} : { fieldLabel })}
         interactions={interactions}
-        placeholder={placeholder}
+        required
         slot={slot}
       />
     </div>
@@ -300,12 +321,13 @@ export function StygianWellSlotEditor({
 /** One Well inventory slot's item as its icon chip, which opens the slot's item list. */
 export function StygianWellSlotPicker({
   fieldLabel,
-  placeholder = 'Unresolved',
+  required = false,
   slot,
   interactions,
 }: {
   readonly fieldLabel?: string;
-  readonly placeholder?: string;
+  /** A slot this line needs chosen; otherwise its unrevealed item may stay unknown. */
+  readonly required?: boolean;
   readonly slot: Omit<StygianWellFeature['slots'][number], 'key'>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
@@ -329,18 +351,18 @@ export function StygianWellSlotPicker({
         if (open) offerPicker.activate();
       }}
       onSelect={(itemKey) => executeIntent(offer.intentFor(itemKey))}
-      placeholder={placeholder}
+      placeholder={required ? 'Pick' : 'Unresolved'}
       itemIcon={(item) => wellIcon(item.value)}
       triggerIcon={wellIcon(slot.itemKey)}
       triggerSize="icon"
+      triggerUnknown={!required}
       {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
     />
   );
 }
 
-/** One Shrine inventory slot: its item and the delay rolled with it. */
+/** One Shrine slot on a Timeline line: its item and the delay rolled with it. */
 export function HermesShrineSlotEditor({
-  fieldLabel,
   placeholder = 'Unresolved',
   label,
   marker,
@@ -348,51 +370,94 @@ export function HermesShrineSlotEditor({
   rewardType,
   offer,
 }: {
-  /** The visible label where the line already names the slot; the accessible name keeps it. */
-  readonly fieldLabel?: string;
   /** The empty slot's text; a timeline row asks to pick its item. */
   readonly placeholder?: string;
   readonly label: string;
-  readonly marker: import('@planner/projections/structured-workspace').WorkspaceMarker;
+  readonly marker: WorkspaceMarker;
   readonly rewardLabel?: string;
   readonly rewardType: string | null;
-  readonly offer: import('@planner/projections/structured-workspace').WorkspaceHermesShrineOfferInteraction;
+  readonly offer: WorkspaceHermesShrineOfferInteraction;
+}) {
+  return (
+    <div className="shop-family-offer-row hermes-shrine-slot">
+      <HermesShrineItemPicker
+        label={label}
+        marker={marker}
+        offer={offer}
+        placeholder={placeholder}
+        rewardType={rewardType}
+        {...(rewardLabel === undefined ? {} : { rewardLabel })}
+      />
+      <HermesShrineDelayPicker label={label} offer={offer} />
+    </div>
+  );
+}
+
+/** A Shrine slot's item as its icon chip. */
+function HermesShrineItemPicker({
+  placeholder = 'Unresolved',
+  label,
+  marker,
+  rewardLabel,
+  rewardType,
+  offer,
+}: {
+  readonly placeholder?: string;
+  readonly label: string;
+  readonly marker: WorkspaceMarker;
+  readonly rewardLabel?: string;
+  readonly rewardType: string | null;
+  readonly offer: WorkspaceHermesShrineOfferInteraction;
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const offerPicker = useWorkspaceInteraction(offer);
   return (
-    <div className="shop-family-offer-row hermes-shrine-slot">
-      <ContextualPicker
-        findingTarget={findingTarget(marker.address)}
-        ariaLabel={`Hermes Shrine ${label} Item`}
-        id={`${offer.key}-picker`}
-        label={fieldLabel ?? label}
+    <ContextualPicker
+      findingTarget={findingTarget(marker.address)}
+      ariaLabel={`Hermes Shrine ${label} Item`}
+      id={`${offer.key}-picker`}
+      label=""
+      layout="inline"
+      loading={offerPicker.pending}
+      model={offerPicker.result ?? emptyStringPicker}
+      onOpenChange={(open) => {
+        if (open) offerPicker.activate();
+      }}
+      onSelect={(selected) => executeIntent(offer.intentFor(selected))}
+      placeholder={placeholder}
+      itemIcon={(item) => rewardIcon(item.value)}
+      triggerIcon={rewardType === null ? undefined : rewardIcon(rewardType)}
+      triggerSize="icon"
+      {...(rewardLabel === undefined ? {} : { triggerLabel: rewardLabel })}
+    />
+  );
+}
+
+/** The rooms until a Shrine slot's item is delivered, as a compact number after its chip. */
+function HermesShrineDelayPicker({
+  label,
+  offer,
+}: {
+  readonly label: string;
+  readonly offer: WorkspaceHermesShrineOfferInteraction;
+}) {
+  const executeIntent = useCommandIntent();
+  return (
+    <span className="hermes-shrine-delay">
+      <ContextualPicker<HermesShrineDelay>
+        ariaLabel={`Hermes Shrine ${label} delivery delay`}
+        disabled={offer.delay === null}
+        id={`${offer.key}-delay`}
+        label=""
         layout="inline"
-        loading={offerPicker.pending}
-        model={offerPicker.result ?? emptyStringPicker}
-        onOpenChange={(open) => {
-          if (open) offerPicker.activate();
-        }}
-        onSelect={(selected) => executeIntent(offer.intentFor(selected))}
-        placeholder={placeholder}
-        itemIcon={(item) => rewardIcon(item.value)}
-        triggerIcon={rewardType === null ? undefined : rewardIcon(rewardType)}
-        triggerSize="icon"
-        {...(rewardLabel === undefined ? {} : { triggerLabel: rewardLabel })}
+        model={declaredChoicesPicker(shrineDelayChoices, offer.delay ?? undefined)}
+        onSelect={(delay) => executeIntent(offer.delayIntentFor(delay))}
+        placeholder="—"
+        searchable={false}
+        triggerHint="Delivery delay"
+        triggerSize="content"
       />
-      <div className="hermes-shrine-purchase-details">
-        <ContextualPicker<HermesShrineDelay>
-          ariaLabel={`Hermes Shrine ${label} delivery delay`}
-          disabled={offer.delay === null}
-          id={`${offer.key}-delay`}
-          label="Delay"
-          layout="inline"
-          model={declaredChoicesPicker(shrineDelayChoices, offer.delay ?? undefined)}
-          onSelect={(delay) => executeIntent(offer.delayIntentFor(delay))}
-          placeholder="—"
-        />
-      </div>
-    </div>
+    </span>
   );
 }

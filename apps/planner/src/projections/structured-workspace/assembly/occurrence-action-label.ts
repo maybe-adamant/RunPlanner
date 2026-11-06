@@ -133,8 +133,10 @@ export interface OccurrenceActionLabelParts {
   readonly label: string;
   readonly verb?: string;
   readonly name?: string;
-  /** Where in the room the action happens (Cage 1, Optional 2), shown as a tag. */
+  /** What the name stands apart from, shown as a tag. */
   readonly suffix?: string;
+  /** The Fields slot the reward sits in, marked on its chip ("C1") and named in full on hover. */
+  readonly place?: { readonly badge: string; readonly label: string };
   /** What produced the pickup, told on hover and focus rather than in the label. */
   readonly origin?: string;
   /** The reward the name stands for, which the row can show as an icon. */
@@ -332,7 +334,16 @@ export function occurrenceActionLabelParts(
                 candidate.control.owner.address.groupKey === reference.groupKey &&
                 candidate.control.owner.address.slotKey === reference.slotKey,
             );
-      return actionLabel(local?.label ?? reference.slotKey);
+      const parts = actionLabel(local?.label ?? reference.slotKey);
+      // A reward names the row; its cage or optional slot marks the reward's chip.
+      if (local === undefined || parts.suffix !== local.label) return parts;
+      return Object.freeze({
+        label: parts.label,
+        ...(parts.verb === undefined ? {} : { verb: parts.verb }),
+        ...(parts.name === undefined ? {} : { name: parts.name }),
+        ...(parts.reward === undefined ? {} : { reward: parts.reward }),
+        place: Object.freeze({ badge: local.badge, label: local.label }),
+      });
     }
     case 'chooseRewardWheel': {
       const wheel =

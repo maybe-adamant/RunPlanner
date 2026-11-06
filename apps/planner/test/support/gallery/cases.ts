@@ -235,6 +235,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'nemesis-fields',
+    overview: true,
     label: 'Nemesis in a Fields room',
     shows: ['Nemesis event row', 'Fields cages'],
     project: loadNemesisFieldsCheckpoint,
@@ -265,6 +266,7 @@ export const galleryCases: readonly GalleryCase[] = [
   // Rooms and lifecycle.
   {
     id: 'fields-cages',
+    overview: true,
     label: 'Fields room: cage clears, cage order and cage rewards',
     shows: ['Fields cage clear', 'Fields cage order', 'local reward per cage'],
     project: loadUnderworldFGHICheckpoint,
@@ -406,6 +408,7 @@ export const galleryCases: readonly GalleryCase[] = [
   // Shops and room objects.
   {
     id: 'world-shop-travel-deal',
+    overview: true,
     label: 'World Shop purchase with a Travel Deal refill',
     shows: ['shop purchase + affordability', 'Travel Deal continuation'],
     project: loadUnderworldWorldShopTravelDealCheckpoint,
@@ -413,6 +416,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'pedestal-mystery-boon',
+    overview: true,
     label: 'Pedestal Mystery Boon and shop purchases',
     shows: ['Pedestal', 'Mystery Boon god picker', 'shop purchase', 'Travel Deal'],
     project: loadTraitOrderChecks,
@@ -420,6 +424,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'pedestal-contract',
+    overview: true,
     label: 'Pedestal after a Zagreus Contract',
     shows: ['Pedestal'],
     project: loadUnderworldZagreusContractCheckpoint,
@@ -427,6 +432,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'well-twist',
+    overview: true,
     label: 'Stygian Well purchases with a Fateful Twist',
     shows: ['Well purchase', 'Fateful Twist', 'fountain + Phial', 'Keepsake Rack'],
     project: loadUnderworldTwistScyllaCheckpoint,
@@ -459,10 +465,28 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'well-pool-rerolls',
+    overview: true,
     label: 'Well and Pool rerolls',
     shows: ['Well reroll', 'Pool reroll', 'Well purchase'],
     project: loadUnderworldFStygianWellCheckpoint,
     commands: [
+      // The Boss's Judgment holds the screen-reroll card, so both objects can reroll.
+      {
+        kind: 'ReplaceManualArcanaSelection',
+        route: createRouteAddress('Underworld'),
+        arcanaKeys: ['DoorReroll'],
+      },
+      {
+        kind: 'ReplaceJudgmentArcana',
+        judgment: {
+          kind: 'judgmentArcana',
+          routeKey: 'Underworld',
+          biomeKey: 'F',
+          occurrenceId: createOccurrenceId('golden-f-preboss-shop:boss'),
+          phaseKey: 'Encounter',
+        },
+        arcanaKeys: ['ScreenReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
+      },
       (project) => ({
         kind: 'InsertStygianWellReroll',
         occurrence: occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
@@ -480,6 +504,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'pool-sell',
+    overview: true,
     label: 'Purging Pool sales',
     shows: ['Pool sell'],
     project: loadUnderworldFPoolCheckpoint,
@@ -487,6 +512,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'shrine-rush-travel-deal',
+    overview: true,
     label: 'Postboss: Hermes Shrine rush and Travel Deal',
     shows: ['fountain + Phial', 'Keepsake Rack', 'Hermes Shrine rush', 'Travel Deal'],
     project: loadSurfaceShrineTravelDealCheckpoint,
@@ -494,6 +520,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'shrine-purchases',
+    overview: true,
     label: 'Hermes Shrine purchases in a wheel room',
     shows: ['Hermes Shrine purchase', 'Hermes Shrine rush', 'select wheel'],
     project: loadSurfaceNOHermesShrineDeliveryCheckpoint,
@@ -501,6 +528,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'shrine-delivery',
+    overview: true,
     label: 'Hermes Shrine delivery placed',
     shows: ['Hermes Shrine delivery'],
     project: loadSurfaceNOHermesShrineDeliveryCheckpoint,

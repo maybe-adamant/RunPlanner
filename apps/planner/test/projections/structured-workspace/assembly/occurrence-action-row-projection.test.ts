@@ -1049,12 +1049,14 @@ describe('structured workspace actions assembly', () => {
         {
           phaseKey: 'Cage01',
           label: 'Cage 1',
+          slot: 1,
           fullLabel: expect.stringMatching(/^Cage 1 \(/),
           offer: expect.objectContaining({ rewardType: expect.any(String) }),
         },
         {
           phaseKey: 'Cage02',
           label: 'Cage 2',
+          slot: 2,
           fullLabel: expect.stringMatching(/^Cage 2 \(/),
           offer: expect.objectContaining({ rewardType: expect.any(String) }),
         },
@@ -1257,12 +1259,14 @@ describe('structured workspace actions assembly', () => {
         {
           phaseKey: 'Cage01',
           label: 'Cage 1',
+          slot: 1,
           fullLabel: expect.stringMatching(/^Cage 1 \(/),
           offer: expect.objectContaining({ rewardType: expect.any(String) }),
         },
         {
           phaseKey: 'Cage02',
           label: 'Cage 2',
+          slot: 2,
           fullLabel: expect.stringMatching(/^Cage 2 \(/),
           offer: expect.objectContaining({ rewardType: expect.any(String) }),
         },

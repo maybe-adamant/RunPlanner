@@ -7,6 +7,7 @@ import type {
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
+import { hintProps } from '@planner/ui/controls/hint';
 import { showTruncatedTitle } from '@planner/ui/controls/truncatedTitle';
 import { TimelineRow } from './TimelineRow';
 import { BannerTitle } from './TimelineDoors';
@@ -38,6 +39,21 @@ export function LifecycleBoundaryRow({
 }) {
   const findingAnchor = useFindingAnchor();
   const dispatch = useAppDispatch();
+  // A Fields cage is known by its slot, subscripted on its encounter's name.
+  const cageSlot =
+    fieldsCage === undefined ? null : (
+      <span
+        {...hintProps(fieldsCage.cage)}
+        aria-label={fieldsCage.label}
+        className="fields-cage-slot"
+        {...(fieldsCage.owner === undefined
+          ? {}
+          : { ...findingAnchor(fieldsCage.owner), tabIndex: -1 })}
+        role="img"
+      >
+        {fieldsCage.slot}
+      </span>
+    );
   return (
     <TimelineRow
       aria-label={label}
@@ -56,19 +72,7 @@ export function LifecycleBoundaryRow({
         <>
           <span className="timeline-banner-title">
             <BannerTitle label={label} toggle={toggle} />
-            {fieldsCage === undefined ? null : <span aria-hidden="true">·</span>}
-            {fieldsCage === undefined ? null : (
-              <span
-                aria-label={fieldsCage.label}
-                className="fields-cage-label"
-                {...(fieldsCage.owner === undefined
-                  ? {}
-                  : { ...findingAnchor(fieldsCage.owner), tabIndex: -1 })}
-                role="img"
-              >
-                <span className="timeline-row-tag">{fieldsCage.cage}</span>
-              </span>
-            )}
+            {identity === undefined ? cageSlot : null}
             {identity === undefined ? null : (
               <>
                 <span aria-hidden="true">·</span>
@@ -79,6 +83,7 @@ export function LifecycleBoundaryRow({
                   type="button"
                 >
                   {identity.label}
+                  {cageSlot}
                 </button>
               </>
             )}

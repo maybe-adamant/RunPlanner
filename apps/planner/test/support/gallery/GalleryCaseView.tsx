@@ -1,21 +1,30 @@
-import { Component, useMemo, type ReactNode } from 'react';
+import { Component, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import { catalogFindingLabels } from '@planner/projections/evaluationProjection';
-import { semanticOwnerOpened } from '@planner/state/editorSessionSlice';
+import { semanticOwnerFocused, semanticOwnerOpened } from '@planner/state/editorSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { useAppSelector } from '@planner/state/store';
 import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
 import { buildGalleryProject, galleryTargetOwner, type GalleryCase } from './galleryCase';
 
-/** One case's own application, opened on its target as the editor opens it. */
-function openCaseApplication(entry: GalleryCase): PlannerApplication {
+type CaseView = 'timeline' | 'overview';
+
+/**
+ * One case's own application, opened on its target as the editor opens it: on its Timeline, or
+ * focused on the room so it shows its default Overview tab.
+ */
+function openCaseApplication(entry: GalleryCase, view: CaseView): PlannerApplication {
   const project = buildGalleryProject(entry);
   const application = createApplication();
   application.store.dispatch(authoredProjectReplaced(project));
+  if (view === 'overview') {
+    application.store.dispatch(semanticOwnerFocused(galleryTargetOwner(project, entry.target)));
+    return application;
+  }
   application.store.dispatch(
     semanticOwnerOpened({
       owner: galleryTargetOwner(project, entry.target),
@@ -87,23 +96,35 @@ class CaseBoundary extends Component<
   }
 }
 
-// Built once per case, outside render, so Strict Mode's repeated renders reuse it.
-const applications = new Map<GalleryCase, PlannerApplication>();
+// Built once per case and view, outside render, so Strict Mode's repeated renders reuse it.
+const applications = new Map<GalleryCase, Map<CaseView, PlannerApplication>>();
 
-function caseApplication(entry: GalleryCase): PlannerApplication {
-  let application = applications.get(entry);
+function caseApplication(entry: GalleryCase, view: CaseView): PlannerApplication {
+  const views = applications.get(entry) ?? new Map<CaseView, PlannerApplication>();
+  applications.set(entry, views);
+  let application = views.get(view);
   if (application === undefined) {
-    application = openCaseApplication(entry);
-    applications.set(entry, application);
+    application = openCaseApplication(entry, view);
+    views.set(view, application);
   }
   return application;
 }
 
-function OpenedCase({ entry }: { readonly entry: GalleryCase }) {
-  const application = caseApplication(entry);
+function OpenedCase({ entry, view }: { readonly entry: GalleryCase; readonly view: CaseView }) {
+  const application = caseApplication(entry, view);
+  const frame = useRef<HTMLDivElement>(null);
+  // Some rooms open on another tab; the Overview pane switches to its tab as a user would.
+  useEffect(() => {
+    if (view !== 'overview') return;
+    frame.current
+      ?.querySelector<HTMLButtonElement>('[data-room-tab="overview"][aria-selected="false"]')
+      ?.click();
+  }, [view]);
   return (
     <Provider store={application.store}>
-      <CaseWorkspace application={application} entry={entry} />
+      <div ref={frame}>
+        <CaseWorkspace application={application} entry={entry} />
+      </div>
     </Provider>
   );
 }
@@ -120,8 +141,13 @@ export function GalleryCaseView({ entry }: { readonly entry: GalleryCase }) {
         </p>
       </header>
       <CaseBoundary>
-        <OpenedCase entry={entry} />
+        <OpenedCase entry={entry} view="timeline" />
       </CaseBoundary>
+      {entry.overview === true && entry.target.kind === 'room' ? (
+        <CaseBoundary>
+          <OpenedCase entry={entry} view="overview" />
+        </CaseBoundary>
+      ) : null}
     </section>
   );
 }

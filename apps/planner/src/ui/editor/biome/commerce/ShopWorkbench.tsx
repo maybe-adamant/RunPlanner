@@ -2,6 +2,7 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
+import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 
 /** The Shop's stock; purchases are timeline actions, and Travel Deal is authored under its purchase. */
@@ -26,20 +27,20 @@ export function ShopWorkbench({
     <section aria-label="Shop inventory" className="shop-editor">
       <h5 className="room-feature-category-heading">Shop inventory</h5>
       <div className="room-overview-panel shop-family-offer-list">
-        {room.offers.map((offer) => (
-          <div className="shop-family-offer-row" key={offer.key}>
-            <div className="shop-family-item-control">
+        <NumberedSlots label="Shop slots">
+          {room.offers.map((offer, index) => (
+            <NumberedSlot hint={`Slot ${index + 1}`} key={offer.key} number={index + 1}>
               <RewardControlEditor
                 control={offer.rewardControl}
                 idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
                 interactions={interactions}
                 ariaLabel={`${offer.label} Item`}
-                label={offer.label}
+                label=""
                 triggerSize="icon"
               />
-            </div>
-          </div>
-        ))}
+            </NumberedSlot>
+          ))}
+        </NumberedSlots>
       </div>
     </section>
   );

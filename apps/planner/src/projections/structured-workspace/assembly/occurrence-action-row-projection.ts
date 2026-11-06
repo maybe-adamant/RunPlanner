@@ -588,6 +588,7 @@ function roomActionsForOccurrence(
                 name: labelParts.name,
                 ...(labelParts.verb === undefined ? {} : { verb: labelParts.verb }),
                 ...(labelParts.suffix === undefined ? {} : { tag: labelParts.suffix }),
+                ...(labelParts.place === undefined ? {} : { place: labelParts.place }),
                 ...(labelParts.origin === undefined ? {} : { origin: labelParts.origin }),
                 ...(labelParts.npcKey === undefined ? {} : { npcKey: labelParts.npcKey }),
                 ...(labelParts.reward === undefined ? {} : { reward: labelParts.reward }),

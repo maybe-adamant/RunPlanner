@@ -65,6 +65,13 @@ interface ContextualPickerProps<T> {
   readonly triggerHint?: string;
   /** An image shown before the trigger's text. */
   readonly triggerIcon?: ArtworkSource | undefined;
+  /**
+   * An empty icon chip shows `?`: the value may stay unknown. Without it an empty chip is a
+   * dashed slot still to choose.
+   */
+  readonly triggerUnknown?: boolean;
+  /** A short mark on an icon chip's corner, such as its slot ("C1"). */
+  readonly triggerBadge?: string;
   /** A list value shown as each member's icon before its name, joined like the trigger label. */
   readonly triggerParts?: readonly {
     readonly label: string;
@@ -362,6 +369,8 @@ export function ContextualPicker<T>({
   triggerPartsSeparator = ' · ',
   triggerHint,
   triggerIcon,
+  triggerUnknown = false,
+  triggerBadge,
   triggerParts,
   itemIcon,
   itemTrailIcon,
@@ -448,7 +457,8 @@ export function ContextualPicker<T>({
             className={
               iconOnly ? 'contextual-picker-trigger timeline-chip' : 'contextual-picker-trigger'
             }
-            data-empty={(iconOnly && triggerIcon === undefined) || undefined}
+            data-empty={(iconOnly && triggerIcon === undefined && !triggerUnknown) || undefined}
+            data-unknown={(iconOnly && triggerIcon === undefined && triggerUnknown) || undefined}
             data-rarity={(iconOnly && triggerIcon !== undefined && triggerRarity) || undefined}
             data-candidate-state={selected?.state ?? 'unspecified'}
             data-has-issues={hasIssues || undefined}
@@ -470,8 +480,21 @@ export function ContextualPicker<T>({
             type="button"
           >
             {iconOnly ? (
-              triggerIcon === undefined || disabled ? null : (
-                <ArtworkIcon className="artwork-label-icon" source={triggerIcon} />
+              triggerIcon === undefined || disabled ? (
+                triggerUnknown && triggerIcon === undefined ? (
+                  <span aria-hidden="true" className="timeline-chip-unknown">
+                    ?
+                  </span>
+                ) : null
+              ) : (
+                <>
+                  <ArtworkIcon className="artwork-label-icon" source={triggerIcon} />
+                  {triggerBadge === undefined ? null : (
+                    <span aria-hidden="true" className="timeline-chip-badge">
+                      {triggerBadge}
+                    </span>
+                  )}
+                </>
               )
             ) : triggerParts !== undefined && triggerParts.length > 0 && !disabled ? (
               <span className="contextual-picker-trigger-parts" onMouseEnter={showTruncatedTitle}>

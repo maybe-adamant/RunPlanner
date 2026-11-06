@@ -440,6 +440,7 @@ function roomLocalForOccurrence(
             control: requireProjectedRewardControl(controls, address, 'countedReward'),
             key: slotKey,
             label: `Cage ${index + 1}`,
+            badge: `C${index + 1}`,
             summary: (() => {
               const control = requireProjectedRewardControl(controls, address, 'countedReward');
               return control.offer === null
@@ -467,6 +468,7 @@ function roomLocalForOccurrence(
             control: requireProjectedRewardControl(controls, address, 'countedReward'),
             key: slotKey,
             label: `Optional ${index + 1}`,
+            badge: `O${index + 1}`,
             summary: (() => {
               const control = requireProjectedRewardControl(controls, address, 'countedReward');
               return control.offer === null

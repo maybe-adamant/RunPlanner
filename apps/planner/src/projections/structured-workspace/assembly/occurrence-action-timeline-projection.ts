@@ -98,12 +98,13 @@ function projectRoomLifecycleTimeline(
           string,
           {
             readonly name: string;
+            readonly slot: number;
             readonly full: string;
             readonly offer: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer | null;
           }
         >()
       : new Map(
-          roomLocal.cages.map((cage) => {
+          roomLocal.cages.map((cage, cageIndex) => {
             const phase = envelope?.slots.find(
               (slot) =>
                 slot.rewardAttachment?.kind === 'localReward' &&
@@ -118,6 +119,7 @@ function projectRoomLifecycleTimeline(
               phase.key,
               {
                 name: cage.label,
+                slot: cageIndex + 1,
                 full: `${cage.label} (${cage.summary})`,
                 offer: cage.control.rerolledOffer ?? cage.control.offer,
               },
@@ -133,6 +135,7 @@ function projectRoomLifecycleTimeline(
     return Object.freeze({
       phaseKey,
       label: label.name,
+      slot: label.slot,
       bannerLabel: label.full,
       offer: label.offer,
     });
@@ -160,6 +163,7 @@ function projectRoomLifecycleTimeline(
               label: choice.bannerLabel,
               // The banner shows the cage as a tag with its reward's icon.
               cage: choice.label,
+              cageSlot: choice.slot,
               ...(choice.offer === null ? {} : { offer: choice.offer }),
               // A cage action with an ordering issue is its own row, which owns its navigation.
               ...(rosterIssues.some((issue) => roomActionKey(issue.reference) === selected.key)
@@ -307,6 +311,7 @@ function projectRoomLifecycleTimeline(
                 fieldsCage: Object.freeze({
                   label: fieldsCage.label,
                   cage: fieldsCage.cage,
+                  slot: fieldsCage.cageSlot,
                   ...(fieldsCage.offer === undefined ? {} : { offer: fieldsCage.offer }),
                   ...(fieldsCage.owner === undefined ? {} : { owner: fieldsCage.owner }),
                 }),
@@ -379,10 +384,11 @@ function projectRoomLifecycleTimeline(
       : {
           fieldsCageOrder: Object.freeze({
             choices: Object.freeze(
-              cageChoices.map(({ phaseKey, label, bannerLabel, offer }) =>
+              cageChoices.map(({ phaseKey, label, slot, bannerLabel, offer }) =>
                 Object.freeze({
                   phaseKey,
                   label,
+                  slot,
                   fullLabel: bannerLabel,
                   ...(offer === null ? {} : { offer }),
                 }),

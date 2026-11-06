@@ -17,6 +17,7 @@ export function RowRewardName({
   name,
   offer,
   origin,
+  place,
 }: {
   readonly boosted?: boolean;
   readonly itemKey?: string;
@@ -24,14 +25,17 @@ export function RowRewardName({
   readonly offer: ResolvedRewardOffer;
   /** What produced the pickup; it joins the name in the one hint ("Gold · Created by Quick Buck"). */
   readonly origin?: string;
+  /** The Fields slot the reward sits in: its mark on the icon's corner, its name in the hint. */
+  readonly place?: { readonly badge: string; readonly label: string };
 }) {
   const spoken = offer.payload?.kind === 'BoonSource' ? `${name} boon` : name;
-  const hint = origin === undefined ? spoken : `${spoken} · ${origin}`;
+  const named = place === undefined ? spoken : `${spoken} · ${place.label}`;
+  const hint = origin === undefined ? named : `${named} · ${origin}`;
   return (
     <span className="row-reward-name">
       <span
-        {...hintProps(hint, undefined, spoken)}
-        aria-label={spoken}
+        {...hintProps(hint, undefined, named)}
+        aria-label={named}
         // An origin is told by the icon's one hint, so the icon takes focus to show it.
         className={origin === undefined ? 'row-reward-icon' : 'row-reward-icon timeline-row-origin'}
         role="img"
@@ -41,6 +45,11 @@ export function RowRewardName({
           className="artwork-label-icon"
           source={itemKey === undefined ? offerIcon(offer) : wellItemIcon(itemKey)}
         />
+        {place === undefined ? null : (
+          <span aria-hidden="true" className="timeline-chip-badge">
+            {place.badge}
+          </span>
+        )}
         {boosted ? (
           <span aria-hidden="true" className="row-reward-boosted">
             ↑

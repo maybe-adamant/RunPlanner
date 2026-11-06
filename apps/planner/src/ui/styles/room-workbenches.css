@@ -3759,3 +3759,114 @@ span.hub-board-status-line {
   border: 1px solid #34353e;
   border-radius: 8px;
 }
+
+/* Slot chips on one line, each with its order or slot number underneath. */
+.numbered-slots {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.numbered-slot {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.numbered-slot-chip {
+  display: inline-grid;
+  justify-items: center;
+  row-gap: 1px;
+}
+
+.numbered-slot-number {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* A value that may stay unknown shows `?` in a solid chip; a dashed slot still needs a choice. */
+.contextual-picker-trigger.timeline-chip[data-unknown] {
+  width: 30px;
+}
+
+.timeline-chip-unknown {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* A room object's inventory reads as one line: the object, then its slots. */
+.room-inventory-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px 14px;
+  min-width: 0;
+}
+
+.room-inventory-line > .room-feature-presence-row {
+  min-height: 30px;
+}
+
+/* A Shrine slot's delivery delay follows its chip as a compact number. */
+.hermes-shrine-delay .contextual-picker-trigger {
+  min-width: 2rem;
+  min-height: 30px;
+  padding: 0 6px;
+}
+
+/* A Fields cage's slot is subscripted on its encounter's name. */
+.fields-cage-slot {
+  font-size: 0.7em;
+  vertical-align: sub;
+  line-height: 0;
+}
+
+.fields-cage-order {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.fields-cage-order-label {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Slot chips keep their own width; the Overview's label-column layout does not apply. */
+.numbered-slot > .field-control-inline,
+.numbered-slot-chip > .field-control-inline,
+.numbered-slot-chip > .reward-value-editor,
+.room-overview-workbench .numbered-slots .field-control-inline,
+.room-overview-workbench .numbered-slots .reward-value-editor,
+.room-overview-workbench .room-inventory-line > :is(.field-control-inline, .reward-value-editor) {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+}
+
+/* The object's name holds one column so its slots line up under the other objects'. */
+.room-inventory-line > :is(.room-feature-interaction-header, .room-feature-presence-row) {
+  display: flex;
+  flex: 0 0 12rem;
+  min-height: 30px;
+}
+
+.room-overview-workbench .room-inventory-line {
+  display: flex;
+  flex-wrap: wrap;
+}

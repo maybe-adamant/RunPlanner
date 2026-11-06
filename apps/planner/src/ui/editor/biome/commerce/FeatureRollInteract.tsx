@@ -17,6 +17,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
 import { TimelineRow } from '../TimelineRow';
 import { pickSubject } from './pickSubject';
 
@@ -183,17 +184,18 @@ export function FeatureRollSlots({
   readonly slots: readonly WorkspaceFeatureRollSlot[];
 }) {
   return (
-    <div className="feature-roll-slots">
-      {slots.map((slot) => (
-        <FeatureRollSlotPicker
-          feature={feature}
-          interactions={interactions}
-          key={slot.slotKey}
-          rowLabel={label}
-          slot={slot}
-        />
+    <NumberedSlots label={`${label} slots`}>
+      {slots.map((slot, index) => (
+        <NumberedSlot hint={`Slot ${index + 1}`} key={slot.slotKey} number={index + 1}>
+          <FeatureRollSlotPicker
+            feature={feature}
+            interactions={interactions}
+            rowLabel={label}
+            slot={slot}
+          />
+        </NumberedSlot>
       ))}
-    </div>
+    </NumberedSlots>
   );
 }
 
@@ -233,6 +235,8 @@ function FeatureRollSlotPicker({
       triggerIcon={slot.value === null ? undefined : rollIcon(feature, slot.value)}
       {...(slot.valueLabel === undefined ? {} : { triggerLabel: slot.valueLabel })}
       triggerSize="icon"
+      // An unpinned slot restocks whatever the roll gives.
+      triggerUnknown
     />
   );
 }

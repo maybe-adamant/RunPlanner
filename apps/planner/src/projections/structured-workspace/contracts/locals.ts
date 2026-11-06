@@ -393,6 +393,8 @@ export interface WorkspaceFieldsCageDescriptor {
   readonly control: WorkspaceCountedRewardControl;
   readonly key: string;
   readonly label: string;
+  /** The slot's short mark on its reward chip ("C1", "O3"); `label` names it in full. */
+  readonly badge: string;
   readonly summary: string;
 }
 
@@ -400,6 +402,8 @@ export interface WorkspaceFieldsOptionalRewardDescriptor {
   readonly control: WorkspaceCountedRewardControl;
   readonly key: string;
   readonly label: string;
+  /** The slot's short mark on its reward chip ("C1", "O3"); `label` names it in full. */
+  readonly badge: string;
   readonly summary: string;
 }
 

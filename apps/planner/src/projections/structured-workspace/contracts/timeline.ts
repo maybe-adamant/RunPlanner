@@ -113,6 +113,8 @@ export interface WorkspaceRoomActionRow {
     readonly verb?: string;
     readonly name: string;
     readonly tag?: string;
+    /** The Fields slot the reward sits in: a short mark on its chip, its full name on hover. */
+    readonly place?: { readonly badge: string; readonly label: string };
     readonly origin?: string;
     /** The NPC a Talk row names, by NPC key; the row shows its portrait with the name as its title. */
     readonly npcKey?: string;
@@ -444,9 +446,11 @@ export interface WorkspaceFountainRarityInteraction {
 
 export interface WorkspaceFieldsCageLabel {
   readonly label: string;
-  /** The cage's own name ("Cage 1"), shown as a tag. */
+  /** The cage's own name ("Cage 1"), told on hover of its subscript. */
   readonly cage: string;
-  /** The cage's reward, shown as an icon beside its tag. */
+  /** The cage's slot, subscripted on its encounter's name. */
+  readonly slot: number;
+  /** The cage's reward. */
   readonly offer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
   /** The cage action the label stands for; absent while that action is its own row. */
   readonly owner?: RoomActionAddress;
@@ -455,8 +459,10 @@ export interface WorkspaceFieldsCageLabel {
 export interface WorkspaceFieldsCageOrderControl {
   readonly choices: readonly {
     readonly phaseKey: string;
-    /** The cage's name ("Cage 1"); its reward shows as an icon beside it. */
+    /** The cage's name ("Cage 1"). */
     readonly label: string;
+    /** The cage's slot, matching its rewards' `C1` mark. */
+    readonly slot: number;
     /** The cage with its reward named, for the accessible name. */
     readonly fullLabel: string;
     readonly offer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;

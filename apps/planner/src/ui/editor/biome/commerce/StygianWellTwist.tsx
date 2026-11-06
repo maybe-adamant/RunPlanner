@@ -46,7 +46,7 @@ export function StygianWellTwistChips({
         <StygianWellSlotPicker
           fieldLabel=""
           interactions={interactions}
-          placeholder="Pick"
+          required
           slot={twist.boughtSlot}
         />
       )}
@@ -70,6 +70,7 @@ export function StygianWellTwistChips({
         triggerIcon={twist.itemKey === null ? undefined : wellIcon(twist.itemKey)}
         {...(twist.itemLabel === undefined ? {} : { triggerLabel: twist.itemLabel })}
         triggerSize="icon"
+        triggerUnknown
       />
     </>
   );

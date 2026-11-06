@@ -86,11 +86,10 @@ describe('Pedestal panel', () => {
     expect(
       within(screen.getByRole('region', { name: 'Shop inventory' })).queryByText(/Contract/),
     ).toBeNull();
-    const picker = within(panel).getByRole('button', { name: /^Pedestal/ });
+    within(panel).getByRole('button', { name: /^Pedestal/ });
     // The Overview names the pedestal by its Champion of Elysium icon and label.
-    const label = panel.querySelector(`label[for="${picker.id}"]`);
-    expect(label?.textContent).toBe('Pedestal');
-    expect(label?.querySelector('img')).not.toBeNull();
+    const header = within(panel).getByText('Pedestal').parentElement;
+    expect(header?.querySelector('img')).not.toBeNull();
     expect(within(panel).queryByRole('checkbox')).toBeNull();
   });
 

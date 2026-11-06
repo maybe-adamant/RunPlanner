@@ -721,6 +721,7 @@ export function RoomActionsWorkbench({
               name={row.labelParts.name}
               offer={row.labelParts.reward.offer}
               {...(row.labelParts.origin === undefined ? {} : { origin: row.labelParts.origin })}
+              {...(row.labelParts.place === undefined ? {} : { place: row.labelParts.place })}
             />
           )}
           {row.travelDeal ? <span className="visually-hidden"> · Travel Deal offer</span> : null}
@@ -786,7 +787,12 @@ export function RoomActionsWorkbench({
                   interaction={nemesisInteraction}
                 />
               ) : row.labelParts === undefined ? (
-                <strong>{row.label}</strong>
+                // A reroll's object icon and die already say what it does.
+                row.featureRoll === undefined ? (
+                  <strong>{row.label}</strong>
+                ) : (
+                  <span className="visually-hidden">{row.label}</span>
+                )
               ) : (
                 <>
                   {row.labelParts.verb === undefined ? null : (
