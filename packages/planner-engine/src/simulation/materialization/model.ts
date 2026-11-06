@@ -215,6 +215,13 @@ export interface CanonicalRewardWheel {
   readonly pickedOfferIndex: number;
 }
 
+/** A room's required resource drop: its native consumable, resource and amount. */
+export interface RequiredRewardDrop {
+  readonly consumableKey: string;
+  readonly resourceKey: string;
+  readonly amount: number;
+}
+
 export interface CanonicalAuthoredRoom {
   readonly kind: 'authored';
   readonly origin: OccurrenceAddress;
@@ -252,8 +259,8 @@ export interface CanonicalAuthoredRoom {
   readonly entered: boolean;
   /** True only for the route topology's active entry occurrence. */
   readonly entry: boolean;
-  /** Declaration-owned required pickup that does not mutate simulated state. */
-  readonly effectNeutralRequiredReward: boolean;
+  /** The forced drop at this route position; collecting it does not mutate simulated state. */
+  readonly requiredReward?: RequiredRewardDrop;
   /** Declaration-fixed completion rooms inherit selected Preboss reward-store provenance. */
   readonly enteredRewardStoreKey?: string;
   /** A fresh profile's opening draws the run-start reward's type at creation and spawns nothing. */

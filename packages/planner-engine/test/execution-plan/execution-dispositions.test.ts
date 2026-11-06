@@ -90,7 +90,7 @@ const executionDispositions = {
   } satisfies Record<ExecutionAcquisitionDisposition, ExecutionDisposition>,
   overviewFields: {
     incomingReward: 'covered',
-    effectNeutralRequiredReward: 'native-authoritative',
+    requiredReward: 'native-authoritative',
     unmodeledEncounterKeys: 'covered',
     encounterPhases: 'covered',
     rewardWheels: 'covered',
@@ -140,9 +140,7 @@ const executionDispositions = {
 describe('execution semantic dispositions', () => {
   it('keeps every classified family explicit and test-owned', () => {
     expect(executionDispositions.roomActions.completeFieldsCage).toBe('deferred-route');
-    expect(executionDispositions.overviewFields.effectNeutralRequiredReward).toBe(
-      'native-authoritative',
-    );
+    expect(executionDispositions.overviewFields.requiredReward).toBe('native-authoritative');
     expect(executionDispositions.roomExitConformance.stygianWell).toBe('covered');
   });
 });

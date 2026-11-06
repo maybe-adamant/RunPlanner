@@ -2,6 +2,7 @@ import type {
   BiomeDeclaration,
   ExitCompatibilityPolicy,
   GoldCatalogDeclaration,
+  RequiredRewardDropDeclaration,
   RouteDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { RawArcanaCardDeclaration, RawFearVowDeclaration } from './arcana-fear-types';
@@ -46,6 +47,8 @@ export interface RawCatalogInput {
   readonly exitCompatibilityPolicies: readonly ExitCompatibilityPolicy[];
   readonly exitTypes: readonly RawExitTypeDeclaration[];
   readonly rooms: readonly RawRoomDeclaration[];
+  /** ConsumableData resource drops that rooms force as their required reward. */
+  readonly requiredRewardDrops: readonly RequiredRewardDropDeclaration[];
   readonly challengeSwitches: RawChallengeSwitchInput;
   readonly extraExitLocks: RawExtraExitLockInput;
   /** Map exit doors in door-setup order, as [ObjectId, obstacle name], by room game name. */

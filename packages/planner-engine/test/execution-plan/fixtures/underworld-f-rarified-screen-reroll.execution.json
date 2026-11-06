@@ -2856,7 +2856,11 @@
       "gameName": "F_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerFBossDrop",
+          "resourceKey": "MixerFBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossHecate01", "kind": "boss" }
         ],
@@ -2883,7 +2887,13 @@
         ]
       },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerFBossDrop", "resourceKey": "MixerFBoss", "amount": 1 }
+          }
+        }
       ],
       "rerollPoolAtEntry": 0,
       "doors": {
@@ -4549,7 +4559,11 @@
       "gameName": "G_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerGBossDrop",
+          "resourceKey": "MixerGBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossScylla01", "kind": "boss" }
         ],
@@ -4582,7 +4596,13 @@
         ]
       },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerGBossDrop", "resourceKey": "MixerGBoss", "amount": 1 }
+          }
+        }
       ],
       "rerollPoolAtEntry": 7,
       "doors": {
@@ -4721,5 +4741,5 @@
       }
     }
   ],
-  "planFingerprint": "924e039b"
+  "planFingerprint": "ad6c001f"
 }

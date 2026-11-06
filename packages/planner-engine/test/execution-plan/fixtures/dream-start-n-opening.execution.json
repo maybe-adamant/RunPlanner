@@ -1629,7 +1629,11 @@
       "gameName": "Q_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "DreamPointsDrop",
+          "resourceKey": "DreamPoints",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossTyphonHead01", "kind": "boss" }
         ],
@@ -1637,7 +1641,17 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": {
+              "consumableKey": "DreamPointsDrop",
+              "resourceKey": "DreamPoints",
+              "amount": 1
+            }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Dream\",\"Q\",\"dream-q-preboss:boss\"]",
@@ -3679,7 +3693,11 @@
       "gameName": "F_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "DreamPointsDrop",
+          "resourceKey": "DreamPoints",
+          "amount": 2
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossHecate01", "kind": "boss" }
         ],
@@ -3687,7 +3705,17 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": {
+              "consumableKey": "DreamPointsDrop",
+              "resourceKey": "DreamPoints",
+              "amount": 2
+            }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Dream\",\"F\",\"dream-f-free:boss\"]",
@@ -6682,7 +6710,11 @@
       "gameName": "N_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "DreamPointsDrop",
+          "resourceKey": "DreamPoints",
+          "amount": 3
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossPolyphemus01", "kind": "boss" }
         ],
@@ -6690,7 +6722,17 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": {
+              "consumableKey": "DreamPointsDrop",
+              "resourceKey": "DreamPoints",
+              "amount": 3
+            }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Dream\",\"N\",\"dream-n-preboss:boss\"]",
@@ -7256,5 +7298,5 @@
       }
     }
   ],
-  "planFingerprint": "c88378cd"
+  "planFingerprint": "d17f5425"
 }

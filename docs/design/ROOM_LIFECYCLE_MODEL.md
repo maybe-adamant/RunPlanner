@@ -774,6 +774,13 @@ frontier, finding, and semantic command. Encounter ended remains the later seam
 for post-encounter delivery. A reached Steady Growth threshold then settles
 after Encounter ended and before Cleanup.
 
+A Boss room's required `Collect Boss Reward` action collects the drop its
+declaration forces: its biome's boss resource, Zagreus's Gemstones, or on a
+Dream route Shiny Stars, one plus one per biome entered before the room's own.
+The engine derives that drop from the declaration and the route position on
+the canonical room; it is a real required pickup that changes no simulated
+state ([source](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#boss-completion-judgment-and-effect-neutral-rewards)).
+
 The fixed Postboss occurrence uses the same timeline presentation without a
 combat interval. Its active shape is `Room entered -> ranked actions -> Doors
 open`. The route enters it with the keepsake used for the Boss, so Boss

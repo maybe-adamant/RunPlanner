@@ -16,12 +16,13 @@ import {
   numberValue,
   object,
   stringArray,
+  stableJson,
   stringValue,
 } from './primitives';
 import type { ExecutionFieldsLayout } from '../model';
 import { runState } from './diagnostics';
 import { doors } from './doors';
-import { overview } from './overview';
+import { overview, requiredRewardDrop } from './overview';
 import { timeline } from './timeline';
 import { reward } from './rewards';
 
@@ -289,8 +290,8 @@ function roomGuideDescription(value: unknown, label: string) {
     record.reward === undefined ? undefined : reward(record.reward, `${label}.reward`);
   switch (kind) {
     case 'collectRequiredReward':
-      exact(record, ['kind'], [], label);
-      return Object.freeze({ kind });
+      exact(record, ['kind', 'drop'], [], label);
+      return Object.freeze({ kind, drop: requiredRewardDrop(record.drop, `${label}.drop`) });
     case 'completeFieldsCage': {
       exact(record, ['kind', 'phaseKey'], ['reward'], label);
       const parsedReward = optionalReward();
@@ -654,6 +655,14 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     fail(`${label}.biomeKey is unsupported`);
   const parsedTimeline = timeline(record.timeline, `${label}.timeline`);
   const parsedRoomGuide = roomGuide(record.roomGuide, parsedTimeline, `${label}.roomGuide`);
+  for (const [rowIndex, row] of parsedRoomGuide.entries())
+    if (
+      row.description.kind === 'collectRequiredReward' &&
+      stableJson(row.description.drop) !== stableJson(parsedOverview.requiredReward)
+    )
+      fail(
+        `${label}.roomGuide[${rowIndex}].description.drop must be the overview's required reward`,
+      );
   const parsed = Object.freeze({
     ...(suppressedNpcShopping === undefined
       ? {}

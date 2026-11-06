@@ -26,6 +26,7 @@ export { materializeShipCombatState, type MaterializedShipCombatState } from './
 export { forGeneration } from './model';
 export type {
   CanonicalAuthoredRoom,
+  RequiredRewardDrop,
   CanonicalAdditionalContinuation,
   CanonicalBatch,
   CanonicalBatchState,

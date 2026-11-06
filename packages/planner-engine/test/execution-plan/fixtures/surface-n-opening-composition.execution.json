@@ -4132,7 +4132,11 @@
       "gameName": "N_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerNBossDrop",
+          "resourceKey": "MixerNBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossPolyphemus01", "kind": "boss" }
         ],
@@ -4140,7 +4144,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerNBossDrop", "resourceKey": "MixerNBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Surface\",\"N\",\"surface-n-preboss:boss\"]",
@@ -4394,5 +4404,5 @@
       }
     }
   ],
-  "planFingerprint": "284908ef"
+  "planFingerprint": "3d996999"
 }

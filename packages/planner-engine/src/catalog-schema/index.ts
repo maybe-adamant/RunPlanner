@@ -115,6 +115,11 @@ export interface RouteDeclaration {
   };
   /** Present only for the native Dream route, whose itinerary is authored at project creation. */
   readonly dreamItinerary?: DreamItineraryDeclaration;
+  /**
+   * The drop a Dream run forces in place of the required reward of every room
+   * that can spawn the Dream reward. Present only for the Dream route.
+   */
+  readonly dreamRewardDropKey?: string;
   /** The save profile the route's run starts from. */
   readonly initialProfile: RouteInitialProfileDeclaration;
 }
@@ -1110,6 +1115,27 @@ export interface RoomRouteOverlay {
   readonly encounterSlotBindings: readonly EncounterSlotBinding[];
 }
 
+/**
+ * A required reward's resource drop (`ConsumableData`): it adds `amount` of one
+ * profile resource, plus `amountPerClearedBiome` for each biome the run
+ * entered before the drop's own.
+ */
+export interface RequiredRewardDropDeclaration {
+  /** The consumable's native name, which the room's `ChosenRewardType` holds. */
+  readonly key: string;
+  readonly label: string;
+  readonly resourceKey: string;
+  readonly amount: number;
+  readonly amountPerClearedBiome: number;
+}
+
+/** A room's native `ForcedReward` and whether a Dream run may replace it. */
+export interface RoomRequiredRewardDeclaration {
+  readonly dropKey: string;
+  /** Native `CanSpawnDreamReward`. */
+  readonly canSpawnDreamReward: boolean;
+}
+
 export interface RoomDeclaration {
   /** Native cocoon anchors in numbered capture order. */
   readonly cocoonRewardPointIds?: readonly number[];
@@ -1141,8 +1167,8 @@ export interface RoomDeclaration {
   readonly entryContextualEncounterRules?: readonly EntryContextualEncounterRule[];
   /** Route overlays resolved with the route position, like the contextual encounter rules. */
   readonly routeOverlays?: readonly RoomRouteOverlay[];
-  /** A real required pickup whose payload is intentionally outside simulated state. */
-  readonly effectNeutralRequiredReward: boolean;
+  /** The room's forced boss drop: a required pickup whose resource stays outside simulated state. */
+  readonly requiredReward?: RoomRequiredRewardDeclaration;
   /** Declaration-owned binding for the reward surface exposed by this room. */
   readonly offerRewardBinding: RoomOfferRewardBinding;
   /** The normalized room declaration flag that suppresses Gift trait offers. */
@@ -1723,6 +1749,8 @@ export interface Catalog {
   readonly exitCompatibilityPolicies: CatalogCollection<ExitCompatibilityPolicy>;
   readonly exitTypes: CatalogCollection<ExitTypeDeclaration>;
   readonly rooms: CatalogCollection<RoomDeclaration>;
+  /** The resource drops rooms force as their required reward, keyed by consumable name. */
+  readonly requiredRewardDrops: CatalogCollection<RequiredRewardDropDeclaration>;
   readonly challengeSwitches: ChallengeSwitchCatalog;
   readonly extraExitLocks: ExtraExitLockCatalog;
   readonly biomeLayouts: CatalogCollection<BiomeLayout>;

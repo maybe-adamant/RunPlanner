@@ -219,6 +219,13 @@ export type ExecutionRoomExitConformanceFact =
       readonly absentTraitKeys?: readonly string[];
     };
 
+/** A required reward's resource drop: native consumable, profile resource and amount. */
+export interface ExecutionRequiredRewardDrop {
+  readonly consumableKey: string;
+  readonly resourceKey: string;
+  readonly amount: number;
+}
+
 export interface ExecutionReward {
   readonly rewardType: string;
   readonly producerLifecycleKey: string;
@@ -738,8 +745,11 @@ export interface ExecutionOverview {
     readonly reward?: ExecutionReward;
   }[];
   readonly incomingReward?: ExecutionReward;
-  /** Preserve the room's native required reward without treating it as a simulated acquisition. */
-  readonly effectNeutralRequiredReward?: true;
+  /**
+   * The room's native required reward, which the module preserves rather than
+   * treating as a simulated acquisition; `ChosenRewardType` holds its consumable.
+   */
+  readonly requiredReward?: ExecutionRequiredRewardDrop;
   /** Native Encounter carriers intentionally omitted from simulated phases. */
   readonly unmodeledEncounterKeys?: readonly string[];
   readonly encounterPhases: readonly {
@@ -1078,7 +1088,7 @@ export interface ExecutionTimeline {
  * carries no editor labels or authored reference structure.
  */
 export type ExecutionRoomGuideDescription =
-  | { readonly kind: 'collectRequiredReward' }
+  | { readonly kind: 'collectRequiredReward'; readonly drop: ExecutionRequiredRewardDrop }
   | {
       readonly kind: 'completeFieldsCage';
       readonly phaseKey: string;

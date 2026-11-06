@@ -26,6 +26,7 @@ import { oRooms } from './rooms/o';
 import { pRooms } from './rooms/p';
 import { qRooms } from './rooms/q';
 import { rewardKernelDeclarations } from './rewards/declarations';
+import { requiredRewardDrops } from './required-reward-drops';
 import { routes } from './routes';
 import { traitCatalogInput } from './traits/index';
 import { arcanaCards, fearVows } from './arcana-fear';
@@ -79,6 +80,7 @@ export const declarations = {
   exitCompatibilityPolicies,
   exitTypes,
   rooms,
+  requiredRewardDrops,
   challengeSwitches,
   extraExitLocks,
   exitDoorSetupOrders,

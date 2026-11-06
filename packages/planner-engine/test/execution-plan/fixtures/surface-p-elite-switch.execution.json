@@ -4286,7 +4286,11 @@
       "gameName": "N_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerNBossDrop",
+          "resourceKey": "MixerNBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossPolyphemus01", "kind": "boss" }
         ],
@@ -4294,7 +4298,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerNBossDrop", "resourceKey": "MixerNBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Surface\",\"N\",\"surface-n-preboss:boss\"]",
@@ -5615,7 +5625,11 @@
       "gameName": "O_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerOBossDrop",
+          "resourceKey": "MixerOBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossEris01", "kind": "boss" }
         ],
@@ -5623,7 +5637,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerOBossDrop", "resourceKey": "MixerOBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Surface\",\"O\",\"surface-o-preboss:boss\"]",
@@ -7521,5 +7541,5 @@
       }
     }
   ],
-  "planFingerprint": "9a935a27"
+  "planFingerprint": "9ec230c9"
 }

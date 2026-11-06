@@ -1123,7 +1123,7 @@ export function assembleExecutionOverview(
   }
   return Object.freeze({
     ...(incomingReward === undefined ? {} : { incomingReward }),
-    ...(room.effectNeutralRequiredReward ? { effectNeutralRequiredReward: true as const } : {}),
+    ...(room.requiredReward === undefined ? {} : { requiredReward: room.requiredReward }),
     ...(room.unmodeledEncounterKeys === undefined
       ? {}
       : { unmodeledEncounterKeys: room.unmodeledEncounterKeys }),

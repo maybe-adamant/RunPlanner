@@ -2910,7 +2910,11 @@
       "gameName": "F_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerFBossDrop",
+          "resourceKey": "MixerFBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossHecate01", "kind": "boss" }
         ],
@@ -2918,7 +2922,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerFBossDrop", "resourceKey": "MixerFBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-preboss-shop:boss\"]",
@@ -4561,7 +4571,11 @@
       "gameName": "G_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerGBossDrop",
+          "resourceKey": "MixerGBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossScylla01", "kind": "boss" }
         ],
@@ -4569,7 +4583,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerGBossDrop", "resourceKey": "MixerGBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"G\",\"golden-g-preboss-shop:boss\"]",
@@ -5925,7 +5945,11 @@
       "gameName": "H_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerHBossDrop",
+          "resourceKey": "MixerHBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossInfestedCerberus01", "kind": "boss" }
         ],
@@ -5933,7 +5957,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerHBossDrop", "resourceKey": "MixerHBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"H\",\"golden-h-preboss-shop:boss\"]",
@@ -6760,7 +6790,11 @@
       "gameName": "I_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerIBossDrop",
+          "resourceKey": "MixerIBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossChronos01", "kind": "boss" }
         ],
@@ -6768,7 +6802,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerIBossDrop", "resourceKey": "MixerIBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"I\",\"golden-i-preboss:boss\"]",
@@ -6798,5 +6838,5 @@
       }
     }
   ],
-  "planFingerprint": "d874d558"
+  "planFingerprint": "4d10875e"
 }

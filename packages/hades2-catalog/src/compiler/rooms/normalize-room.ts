@@ -11,6 +11,7 @@ import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 
 import type { RawRoomDeclaration } from '../../declarations/index';
 import type { RawRoomRouteOverlay } from '../../declarations/rooms/types';
+import { requireNonEmpty } from '../common';
 import { fail } from '../errors';
 import {
   normalizeRoomCoreFacts,
@@ -113,7 +114,14 @@ export function normalizeRoom(
       : { exitDoorSetupOrder: exits.exitDoorSetupOrder }),
     incomingReward: reward.incomingReward,
     ...entryContextualEncounterRules,
-    effectNeutralRequiredReward: room.effectNeutralRequiredReward ?? false,
+    ...(room.requiredReward === undefined
+      ? {}
+      : {
+          requiredReward: Object.freeze({
+            dropKey: requireNonEmpty(room.requiredReward.dropKey, `${path}.requiredReward.dropKey`),
+            canSpawnDreamReward: room.requiredReward.canSpawnDreamReward === true,
+          }),
+        }),
     offerRewardBinding: reward.offerRewardBinding,
     blockGiftBoons: identity.blockGiftBoons,
     hasKeepsakeRack: features.hasKeepsakeRack,

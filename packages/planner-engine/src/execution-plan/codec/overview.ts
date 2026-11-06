@@ -15,9 +15,20 @@ import type {
   ExecutionFieldsLayout,
   ExecutionHubDepartureConformance,
   ExecutionHubFountainUse,
+  ExecutionRequiredRewardDrop,
 } from '../model';
 import { equippedTraits, runState } from './diagnostics';
 import { generatedEncounter } from './generated-encounter';
+
+export function requiredRewardDrop(value: unknown, label: string): ExecutionRequiredRewardDrop {
+  const record = object(value, label);
+  exact(record, ['consumableKey', 'resourceKey', 'amount'], [], label);
+  return Object.freeze({
+    consumableKey: stringValue(record.consumableKey, `${label}.consumableKey`),
+    resourceKey: stringValue(record.resourceKey, `${label}.resourceKey`),
+    amount: integer(record.amount, `${label}.amount`, 1),
+  });
+}
 
 /** A present native-roll exclusion list is non-empty and distinct. */
 function excludedEnemies(value: unknown, label: string) {
@@ -369,7 +380,7 @@ export function overview(value: unknown, label: string) {
     ['encounterPhases', 'requiredObjects'],
     [
       'incomingReward',
-      'effectNeutralRequiredReward',
+      'requiredReward',
       'unmodeledEncounterKeys',
       'rewardWheels',
       'shop',
@@ -513,12 +524,6 @@ export function overview(value: unknown, label: string) {
       fail(`${label}.rewardWheels has duplicate phase keys`);
   }
   const shop = record.shop === undefined ? undefined : object(record.shop, `${label}.shop`);
-  if (
-    record.effectNeutralRequiredReward !== undefined &&
-    booleanValue(record.effectNeutralRequiredReward, `${label}.effectNeutralRequiredReward`) !==
-      true
-  )
-    fail(`${label}.effectNeutralRequiredReward must be true when present`);
   if (shop !== undefined) exact(shop, ['profileKey', 'offers'], [], `${label}.shop`);
   const contract =
     record.infernalContractPedestal === undefined
@@ -1009,9 +1014,9 @@ export function overview(value: unknown, label: string) {
     ...(record.incomingReward === undefined
       ? {}
       : { incomingReward: reward(record.incomingReward, `${label}.incomingReward`) }),
-    ...(record.effectNeutralRequiredReward === undefined
+    ...(record.requiredReward === undefined
       ? {}
-      : { effectNeutralRequiredReward: true as const }),
+      : { requiredReward: requiredRewardDrop(record.requiredReward, `${label}.requiredReward`) }),
     ...(unmodeledEncounterKeys === undefined
       ? {}
       : { unmodeledEncounterKeys: Object.freeze(unmodeledEncounterKeys) }),

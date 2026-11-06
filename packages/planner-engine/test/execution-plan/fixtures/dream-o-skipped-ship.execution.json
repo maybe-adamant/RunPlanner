@@ -1182,7 +1182,11 @@
           "rewardType": "InfernalContractBoon",
           "producerLifecycleKey": "RoomReward"
         },
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "GemPointsBigDrop",
+          "resourceKey": "GemPoints",
+          "amount": 50
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossZagreus01", "kind": "boss" }
         ],
@@ -1221,7 +1225,14 @@
       "roomGuide": [
         {
           "key": "[\"collectRequiredReward\"]",
-          "description": { "kind": "collectRequiredReward" }
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": {
+              "consumableKey": "GemPointsBigDrop",
+              "resourceKey": "GemPoints",
+              "amount": 50
+            }
+          }
         },
         {
           "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"self\"]",
@@ -1539,7 +1550,11 @@
       "gameName": "O_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "DreamPointsDrop",
+          "resourceKey": "DreamPoints",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossEris01", "kind": "boss" }
         ],
@@ -1547,7 +1562,17 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": {
+              "consumableKey": "DreamPointsDrop",
+              "resourceKey": "DreamPoints",
+              "amount": 1
+            }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-preboss:boss\"]",
@@ -1577,5 +1602,5 @@
       }
     }
   ],
-  "planFingerprint": "002f612e"
+  "planFingerprint": "24ddded6"
 }

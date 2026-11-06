@@ -4420,7 +4420,11 @@
       "gameName": "N_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerNBossDrop",
+          "resourceKey": "MixerNBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossPolyphemus01", "kind": "boss" }
         ],
@@ -4428,7 +4432,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerNBossDrop", "resourceKey": "MixerNBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Surface\",\"N\",\"surface-n-preboss:boss\"]",
@@ -5749,7 +5759,11 @@
       "gameName": "O_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerOBossDrop",
+          "resourceKey": "MixerOBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossEris01", "kind": "boss" }
         ],
@@ -5757,7 +5771,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerOBossDrop", "resourceKey": "MixerOBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Surface\",\"O\",\"surface-o-preboss:boss\"]",
@@ -7536,7 +7556,11 @@
       "gameName": "P_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerPBossDrop",
+          "resourceKey": "MixerPBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossPrometheus01", "kind": "boss" }
         ],
@@ -7544,7 +7568,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerPBossDrop", "resourceKey": "MixerPBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Surface\",\"P\",\"surface-p-preboss-shop:boss\"]",
@@ -8613,7 +8643,11 @@
       "gameName": "Q_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerQBossDrop",
+          "resourceKey": "MixerQBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossTyphonHead01", "kind": "boss" }
         ],
@@ -8621,7 +8655,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerQBossDrop", "resourceKey": "MixerQBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Surface\",\"Q\",\"surface-q-preboss:boss\"]",
@@ -9046,5 +9086,5 @@
       }
     }
   ],
-  "planFingerprint": "396cbb4a"
+  "planFingerprint": "8b5ffc7a"
 }

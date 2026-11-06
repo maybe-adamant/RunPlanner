@@ -56,7 +56,7 @@ export function createDefaultRoomActionState(room: RoomDeclaration): RoomActionS
     (room.mode.kind === 'authored' && room.mode.templateKey === 'Fountain');
   return Object.freeze({
     order: Object.freeze([
-      ...(room.effectNeutralRequiredReward ? [{ kind: 'collectRequiredReward' as const }] : []),
+      ...(room.requiredReward !== undefined ? [{ kind: 'collectRequiredReward' as const }] : []),
       ...(hasFountain ? [{ kind: 'useFountain' as const }] : []),
     ]),
   });

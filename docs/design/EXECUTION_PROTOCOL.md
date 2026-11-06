@@ -151,8 +151,11 @@ additional exit and its binding remain destination-room-owned.
 Fixed continuations, including Zagreus and Anomaly returns, reference the
 destination occurrence rather than repeating its reward inline. Navigation
 resolves that destination's published incoming reward for both realization and
-exit proof; absence of an inline reward does not mean no reward. Native
-required Boss drops retain their explicit preservation policy.
+exit proof; absence of an inline reward does not mean no reward. A room with
+a required Boss drop publishes it in its Overview: the native consumable its
+`ChosenRewardType` holds, the profile resource and the amount at its route
+position. The module preserves the native drop rather than realizing it, and
+the room's `Collect Boss Reward` guide row carries the same drop.
 
 An occurrence's optional `suppressedNpcShopping` names only the native shopping
 events that would invalidate a later planned Nemesis or Heracles encounter.

@@ -32,7 +32,12 @@ function descriptionFor(
 ): ExecutionRoomGuideDescription {
   switch (reference.kind) {
     case 'collectRequiredReward':
-      return Object.freeze({ kind: reference.kind });
+      if (room.requiredReward === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} collects a required reward it does not force`,
+        );
+      return Object.freeze({ kind: reference.kind, drop: room.requiredReward });
     case 'completeFieldsCage': {
       const attachment = room.encounterPhases.find(
         (phase) => phase.slotKey === reference.phaseKey,

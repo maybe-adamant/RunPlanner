@@ -119,8 +119,11 @@ export interface RawRoomDeclaration {
   readonly incomingReward: RawRewardProducerBinding;
   readonly entryContextualEncounterRules?: readonly RawEntryContextualEncounterRule[];
   readonly routeOverlays?: readonly RawRoomRouteOverlay[];
-  /** A real required pickup whose payload is intentionally outside simulated state. */
-  readonly effectNeutralRequiredReward?: boolean;
+  /** Native `ForcedReward` drop and `CanSpawnDreamReward` of a boss room. */
+  readonly requiredReward?: {
+    readonly dropKey: string;
+    readonly canSpawnDreamReward?: true;
+  };
   /** Optional override for a bounded local reward group exposed by this room. */
   readonly offerRewardBinding?: RawRoomOfferRewardBinding;
   /** The game room flag that suppresses Gift trait offers in this room. */

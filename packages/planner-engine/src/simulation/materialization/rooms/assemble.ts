@@ -22,6 +22,7 @@ import { seaStarDuplicateSourceIsActive } from '../../../authored-project/acquis
 import { assembleRoomActionDomain } from '../../../authored-project/room-actions/domain';
 import { scheduleRequiredRoomActions } from '../../../authored-project/room-actions/defaults';
 import { roomActionKey } from '../../../authored-project/room-actions/state';
+import { resolveRequiredRewardDrop } from './required-reward';
 import {
   alwaysActiveEncounterSlotKeys,
   resolveMaterializedEncounterPhase,
@@ -242,6 +243,11 @@ export function materializeAuthoredRoom(
     context.occurrence.stygianWell === undefined
       ? undefined
       : extendedWellItemKeys(context.catalog);
+  const requiredReward = resolveRequiredRewardDrop(
+    context.catalog,
+    context.room,
+    context.routePosition,
+  );
   const base = Object.freeze({
     kind: 'authored',
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
@@ -260,7 +266,7 @@ export function materializeAuthoredRoom(
     counterEffects: context.room.counters,
     entered: context.entered,
     entry: context.entry === true,
-    effectNeutralRequiredReward: context.room.effectNeutralRequiredReward,
+    ...(requiredReward === undefined ? {} : { requiredReward }),
     ...(enteredRewardStoreKey === undefined ? {} : { enteredRewardStoreKey }),
     ...(resolvedEntry.unspawnedRunStartRoll === undefined
       ? {}

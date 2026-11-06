@@ -55,6 +55,8 @@ export const routes = [
         P: 'Q',
       },
     },
+    // RewardLogic.lua:71 forces this drop ahead of ForcedReward in IsDreamRun.
+    dreamRewardDropKey: 'DreamPointsDrop',
     completion: {
       prebossRoomGameNameByBiomeKey: {
         F: 'F_PreBoss01',

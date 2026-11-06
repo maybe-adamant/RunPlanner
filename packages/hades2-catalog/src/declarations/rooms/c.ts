@@ -15,7 +15,7 @@ export const cRooms = [
     advancesExperimentalHammerUses: true,
     skipTimedDropResources: true,
     kind: 'Combat',
-    effectNeutralRequiredReward: true,
+    requiredReward: { dropKey: 'GemPointsBigDrop' },
     mode: { kind: 'authored', templateKey: 'ContractBoss' },
     blockGiftBoons: true,
     structuralTags: [],

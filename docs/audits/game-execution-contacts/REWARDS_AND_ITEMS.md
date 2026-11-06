@@ -110,7 +110,7 @@ Choice construction additionally lives in `Scripts/UpgradeChoiceLogic.lua`.
 `CardUpgradePointsDrop`, and `CharonPointsDrop` are covered when published as
 normal direct acquisitions. Their native effects remain pass-through: amounts
 do not alter simulation, and their appearance must not create a mismatch merely
-because the planner groups required boss drops under one effect-neutral result.
+because required boss drops are preserved natively rather than realized.
 
 ## Composite reward identities
 

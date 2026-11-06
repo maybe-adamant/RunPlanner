@@ -87,6 +87,7 @@ describe('summarizeCatalog', () => {
       exitCompatibilityPolicies: emptyCollection(),
       exitTypes: emptyCollection(),
       rooms: emptyCollection(),
+      requiredRewardDrops: emptyCollection(),
       challengeSwitches: {
         eliteEncounters: emptyCollection(),
         kinds: emptyCollection(),

@@ -40,6 +40,9 @@ The start state gains an unpaid Personal Loan's `storedGold` trait field, the
 keepsake block's required `fatedStatus` and a required top-level
 `talentPoints`, which replaces `hex.talentPoints` so Moon Beam's points
 publish without a Spell.
+A Boss room's `overview.requiredReward` (its forced drop's consumable,
+resource and amount) replaces `overview.effectNeutralRequiredReward`, and its
+`collectRequiredReward` guide row carries the same `drop`.
 A revision changes no saved shape, so it has no transition; plans sent under
 101.1 read as outdated.
 

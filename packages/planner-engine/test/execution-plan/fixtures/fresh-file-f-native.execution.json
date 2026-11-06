@@ -2405,7 +2405,11 @@
       "gameName": "F_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerFBossDrop",
+          "resourceKey": "MixerFBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossHecate01", "kind": "boss" }
         ],
@@ -2413,7 +2417,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerFBossDrop", "resourceKey": "MixerFBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-preboss-shop:boss\"]",
@@ -2520,5 +2530,5 @@
       }
     }
   ],
-  "planFingerprint": "49e25217"
+  "planFingerprint": "ed3f6ce1"
 }

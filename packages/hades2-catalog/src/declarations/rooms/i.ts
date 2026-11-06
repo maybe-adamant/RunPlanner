@@ -1101,7 +1101,7 @@ export const iRooms = [
     advancesExperimentalHammerUses: true,
     skipTimedDropResourcesInDream: true,
     kind: 'Boss',
-    effectNeutralRequiredReward: true,
+    requiredReward: { dropKey: 'MixerIBossDrop', canSpawnDreamReward: true },
     mode: { kind: 'authored', templateKey: 'Boss' },
     structuralTags: [],
     exits: [{ index: 1, type: 'TartarusExitDoor' }],

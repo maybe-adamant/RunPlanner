@@ -1,6 +1,7 @@
 import type {
   BiomeDeclaration,
   CatalogCollection,
+  RequiredRewardDropDeclaration,
   RoomDeclaration,
   RouteDeclaration,
 } from '@run-planner/engine/catalog-schema';
@@ -96,10 +97,27 @@ function normalizeInitialProfile(
   });
 }
 
+function normalizeDreamRewardDropKey(
+  route: RouteDeclaration,
+  routePath: string,
+  requiredRewardDrops: CatalogCollection<RequiredRewardDropDeclaration>,
+): string | undefined {
+  const path = `${routePath}.dreamRewardDropKey`;
+  if (route.key !== 'Dream') {
+    if (route.dreamRewardDropKey !== undefined) fail(path, 'is Dream-only');
+    return undefined;
+  }
+  if (route.dreamRewardDropKey === undefined) fail(path, 'is required for Dream');
+  if (requiredRewardDrops.byKey[route.dreamRewardDropKey] === undefined)
+    fail(path, `unknown required reward drop ${route.dreamRewardDropKey}`);
+  return route.dreamRewardDropKey;
+}
+
 export function normalizeRoutes(
   rawRoutes: readonly RouteDeclaration[],
   biomes: CatalogCollection<BiomeDeclaration>,
   rooms: CatalogCollection<RoomDeclaration>,
+  requiredRewardDrops: CatalogCollection<RequiredRewardDropDeclaration>,
 ): CatalogCollection<RouteDeclaration> {
   const routes = rawRoutes.map((route, routeIndex) => {
     const routePath = `routes[${routeIndex}]`;
@@ -121,6 +139,7 @@ export function normalizeRoutes(
     });
     const dreamItinerary = normalizeDreamItinerary(route, routePath, biomes);
     const initialProfile = normalizeInitialProfile(route, routePath, biomeKeys, rooms);
+    const dreamRewardDropKey = normalizeDreamRewardDropKey(route, routePath, requiredRewardDrops);
 
     const prebossEntries = Object.entries(route.completion.prebossRoomGameNameByBiomeKey);
     if (prebossEntries.length === 0) {
@@ -198,6 +217,7 @@ export function normalizeRoutes(
         postbossRoomGameNamesByOrdinal: Object.freeze(normalizedPostbossRoomGameNamesByOrdinal),
       }),
       ...(dreamItinerary === undefined ? {} : { dreamItinerary }),
+      ...(dreamRewardDropKey === undefined ? {} : { dreamRewardDropKey }),
       initialProfile,
     });
   });

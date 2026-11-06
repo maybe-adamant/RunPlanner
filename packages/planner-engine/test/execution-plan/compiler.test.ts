@@ -1627,14 +1627,26 @@ describe('execution-plan compiler and codec', () => {
     expect(() => decodeExecutionPlan(nonSeleneHex)).toThrow(/requires SuitHexAspect/);
   });
 
-  it('publishes boss rewards as required but simulation-neutral native outcomes', () => {
+  it('publishes boss rewards as required but simulation-neutral native drops', () => {
     const { plan } = planFor(createCompleteFGProject());
     const bosses = plan.occurrences.filter((occurrence) =>
       occurrence.overview.encounterPhases.some((phase) => phase.kind === 'boss'),
     );
 
     expect(bosses.map((boss) => boss.gameName)).toEqual(['F_Boss01', 'G_Boss01']);
-    expect(bosses.every((boss) => boss.overview.effectNeutralRequiredReward === true)).toBe(true);
+    const cinder = { consumableKey: 'MixerFBossDrop', resourceKey: 'MixerFBoss', amount: 1 };
+    const pearl = { consumableKey: 'MixerGBossDrop', resourceKey: 'MixerGBoss', amount: 1 };
+    expect(bosses.map((boss) => boss.overview.requiredReward)).toEqual([cinder, pearl]);
+    expect(
+      bosses.map(
+        (boss) =>
+          boss.roomGuide.find((row) => row.description.kind === 'collectRequiredReward')
+            ?.description,
+      ),
+    ).toEqual([
+      { kind: 'collectRequiredReward', drop: cinder },
+      { kind: 'collectRequiredReward', drop: pearl },
+    ]);
     expect(
       bosses.every((boss) =>
         boss.timeline.transactions.every(

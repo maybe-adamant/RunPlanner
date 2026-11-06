@@ -4331,7 +4331,11 @@
       "gameName": "N_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerNBossDrop",
+          "resourceKey": "MixerNBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossPolyphemus01", "kind": "boss" }
         ],
@@ -4358,7 +4362,13 @@
         ]
       },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerNBossDrop", "resourceKey": "MixerNBoss", "amount": 1 }
+          }
+        }
       ],
       "rerollPoolAtEntry": 1,
       "doors": {
@@ -5724,7 +5734,11 @@
       "gameName": "O_Boss01",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerOBossDrop",
+          "resourceKey": "MixerOBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossEris01", "kind": "boss" }
         ],
@@ -5757,7 +5771,13 @@
         ]
       },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerOBossDrop", "resourceKey": "MixerOBoss", "amount": 1 }
+          }
+        }
       ],
       "rerollPoolAtEntry": 7,
       "doors": {
@@ -6041,5 +6061,5 @@
       }
     }
   ],
-  "planFingerprint": "4f3bae38"
+  "planFingerprint": "9a0cb33c"
 }

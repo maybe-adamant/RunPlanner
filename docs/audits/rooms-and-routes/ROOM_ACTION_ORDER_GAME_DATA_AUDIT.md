@@ -460,7 +460,9 @@ boss-death postboss effects and `MetaUpgradeLogic.lua:499-575`;
 `EncounterSets.lua:446-452` and
 `RoomLogic.lua:1919-1939, 3080-3129, 3778-3790` for encounter completion,
 required-object barriers, and Dream continuation; `RewardLogic.lua:66-73` for
-Dream reward selection; `InteractLogic.lua` for pickup use;
+Dream reward selection; `ConsumableData.lua:1934-2036, 2147-2165` and
+`InteractLogic.lua:916-946, 1192-1242` for boss drops and their amounts
+(rechecked 2026-11-06); `InteractLogic.lua` for pickup use;
 `DreamRunLogic.lua:63-83`; `TraitData_Hermes.lua:181-201` for Quick Buck;
 `TraitLogic.lua:2871-2893` for the separate timed-resource path;
 `RoomDataAnomaly.lua`, `RoomDataC.lua`, and the F/G/H/I/N/O/P/Q boss
@@ -486,19 +488,44 @@ Judgment is therefore a boss-death effect guarded by the entered-biome ordinal
 against the full-run terminal ordinal. It is not an I/Q special case and does
 not use the length of a temporarily shortened authored prefix.
 
-Every supported biome boss spawns a forced resource reward through the
-ordinary encounter path. In a Dream Run, `CanSpawnDreamReward` replaces that
-resource with `DreamPointsDrop`; collecting it records room use and, after the
-required-object barrier clears, `UnlockRoomExits` calls
-`CheckDreamBiomeCompletion` to enter the next Dream biome or end the run. Both
-ordinary boss resources and Dream Points are real required pickups, but they
-are effect-neutral to the current planner: they do not enter run state,
-reward bags, god pools, trait, keepsake, Arcana, or route eligibility.
-The planner therefore retains `Collect Boss Reward` as a required room action
-in the end-encounter window while leaving its native resource identity and
-quantity unmodeled. It is not a lifecycle boundary: it shares that action
-window with matured Hermes deliveries and follows the authored order among
-them.
+Every supported biome boss spawns its room's `ForcedReward` through the
+ordinary encounter path, and Zagreus (`C_Boss01`) spawns his the same way.
+`ChooseRoomReward` (`RewardLogic.lua:71`) checks `CurrentRun.IsDreamRun and
+roomData.CanSpawnDreamReward` before `ForcedReward`, so in a Dream Run every
+boss room that sets the flag forces `DreamPointsDrop` instead; `C_Boss01`
+does not set it. Each drop is a `ConsumableData.lua` consumable adding one
+profile resource; only `DreamPointsDrop` declares
+`AddResourceIncreasePerBiomeCleared = 1`, which `GetRampedConsumableData`
+(`InteractLogic.lua:1240`) applies per `CurrentRun.EnteredBiomes - 1`, so a
+Dream boss drops one Shiny Star plus one for every biome entered before its
+own. `ApplyConsumableItemResourceMultiplier` scales only the resources a held
+`RoomRewardBonus` names (Poseidon's, which names none of these), so every
+amount is fixed by route position. The display names are `HelpText.en.sjson`.
+
+| Rooms (`ForcedReward` line)                                         | Drop               | Resource                  | Amount                    | `CanSpawnDreamReward` |
+| ------------------------------------------------------------------- | ------------------ | ------------------------- | ------------------------- | --------------------- |
+| `F_Boss01`, `F_Boss02` (`RoomDataF.lua:2090, 2344`)                 | `MixerFBossDrop`   | Cinder `MixerFBoss`       | 1                         | yes                   |
+| `G_Boss01`, `G_Boss02` (`RoomDataG.lua:649, 871`)                   | `MixerGBossDrop`   | Pearl `MixerGBoss`        | 1                         | yes                   |
+| `H_Boss01`, `H_Boss02` (`RoomDataH.lua:1484, 1704`)                 | `MixerHBossDrop`   | Tears `MixerHBoss`        | 1                         | yes                   |
+| `I_Boss01` (`RoomDataI.lua:1254`)                                   | `MixerIBossDrop`   | Zodiac Sand `MixerIBoss`  | 1                         | yes                   |
+| `N_Boss01`, `N_Boss02` (`RoomDataN.lua:2250, 2411`)                 | `MixerNBossDrop`   | Wool `MixerNBoss`         | 1                         | yes                   |
+| `O_Boss01`, `O_Boss02` (`RoomDataO.lua:1057, 1272`)                 | `MixerOBossDrop`   | Golden Apple `MixerOBoss` | 1                         | yes                   |
+| `P_Boss01` (`RoomDataP.lua:1001`)                                   | `MixerPBossDrop`   | Feather `MixerPBoss`      | 1                         | yes                   |
+| `Q_Boss01` (`RoomDataQ.lua:2003`), `Q_Boss02` (inherits `Q_Boss01`) | `MixerQBossDrop`   | Void Lens `MixerQBoss`    | 1                         | yes                   |
+| `C_Boss01` (`RoomDataC.lua:14`)                                     | `GemPointsBigDrop` | Gemstones `GemPoints`     | 50                        | no                    |
+| Dream Run replacement (`RewardLogic.lua:71`)                        | `DreamPointsDrop`  | Shiny Stars `DreamPoints` | 1 + biomes entered before | —                     |
+
+Collecting a Dream drop records room use and, after the required-object
+barrier clears, `UnlockRoomExits` calls `CheckDreamBiomeCompletion` to enter
+the next Dream biome or end the run. Every one of these drops is a real
+required pickup but effect-neutral to the planner: it changes only profile
+resources (the Pearl's `UseScyllaPearl` and the Tears' `OnMixerHBossAdded` are
+presentation and profile flags), never run state, reward bags, god pools,
+trait, keepsake, Arcana or route eligibility. The planner therefore retains
+`Collect Boss Reward` as a required room action in the end-encounter window
+that names the drop and its amount without entering simulated state. It is
+not a lifecycle boundary: it shares that action window with matured Hermes
+deliveries and follows the authored order among them.
 
 One source edge is worth retaining because it explains the boundary without
 adding a special rule. Hermes's `MoneyMultiplierBoon` (Quick Buck), when
@@ -517,9 +544,8 @@ occurrences connected by fixed links. Boss and the route-position Postboss
 retain the normal occurrence lifecycle, fixed exits, room features, and one
 room-action chronology. The `bossDefeated` Judgment seam precedes generic
 encounter-end effects, so a due Shrine delivery can use the ordinary Boss
-occurrence as a later host. Boss reward quantities, Dream continuation
-commands, and special Quick Buck rules remain unmodeled because no supported
-consumer observes them.
+occurrence as a later host. Dream continuation commands and special Quick
+Buck rules remain unmodeled because no supported consumer observes them.
 
 ### Fountains, persistent Hub state, and Postboss Cleanup
 

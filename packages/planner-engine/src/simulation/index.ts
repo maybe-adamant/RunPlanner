@@ -197,6 +197,7 @@ export {
   materializeBiomePrefix,
   BiomeMaterializationContractError,
   type CanonicalAuthoredRoom,
+  type RequiredRewardDrop,
   type CanonicalAdditionalContinuation,
   type CanonicalBatch,
   type CanonicalBiome,

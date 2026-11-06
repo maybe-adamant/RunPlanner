@@ -2880,7 +2880,11 @@
       "gameName": "F_Boss02",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerFBossDrop",
+          "resourceKey": "MixerFBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossHecate02", "kind": "boss" }
         ],
@@ -2888,7 +2892,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerFBossDrop", "resourceKey": "MixerFBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-preboss-shop:boss\"]",
@@ -4769,7 +4779,11 @@
       "gameName": "G_Boss02",
       "kind": "SingleEncounter",
       "overview": {
-        "effectNeutralRequiredReward": true,
+        "requiredReward": {
+          "consumableKey": "MixerGBossDrop",
+          "resourceKey": "MixerGBoss",
+          "amount": 1
+        },
         "encounterPhases": [
           {
             "slotKey": "Encounter",
@@ -4789,7 +4803,13 @@
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
-        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": {
+            "kind": "collectRequiredReward",
+            "drop": { "consumableKey": "MixerGBossDrop", "resourceKey": "MixerGBoss", "amount": 1 }
+          }
+        }
       ],
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"G\",\"ixion-chaos-g-preboss-shop:boss\"]",
@@ -4899,5 +4919,5 @@
       }
     }
   ],
-  "planFingerprint": "93c7962c"
+  "planFingerprint": "f3cde3d2"
 }

@@ -30,6 +30,54 @@ import {
   loadDreamMixedHandoffCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/dream';
 
+it("publishes each Dream boss's Shiny Stars, ramped by the biomes entered before it", () => {
+  const assembly = simulateProjectAssembly(catalog, loadDreamMixedHandoffCheckpoint());
+  const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) });
+  const bosses = plan.occurrences.filter(
+    (room) => plan.selectedOccurrenceIds.includes(room.id) && room.overview.requiredReward,
+  );
+  const stars = (amount: number) => ({
+    consumableKey: 'DreamPointsDrop',
+    resourceKey: 'DreamPoints',
+    amount,
+  });
+  expect(bosses.map((room) => [room.gameName, room.overview.requiredReward])).toEqual([
+    ['Q_Boss01', stars(1)],
+    ['F_Boss01', stars(2)],
+    ['N_Boss01', stars(3)],
+  ]);
+  for (const room of bosses)
+    expect(room.roomGuide.map((row) => row.description)).toContainEqual({
+      kind: 'collectRequiredReward',
+      drop: room.overview.requiredReward,
+    });
+  const wire = JSON.parse(encodeExecutionPlan(plan));
+  const bossIndex = wire.occurrences.findIndex((room: { id: string }) => room.id === bosses[0]!.id);
+  const guideIndex = wire.occurrences[bossIndex].roomGuide.findIndex(
+    (row: { description: { kind: string } }) => row.description.kind === 'collectRequiredReward',
+  );
+  const withDrop = (
+    edit: (drop: Record<string, unknown>, overview: Record<string, unknown>) => void,
+  ) => {
+    const copy = JSON.parse(JSON.stringify(wire));
+    const room = copy.occurrences[bossIndex];
+    edit(room.roomGuide[guideIndex].description.drop, room.overview);
+    return () => decodeExecutionPlan(copy);
+  };
+  expect(withDrop(() => undefined)).not.toThrow();
+  expect(withDrop((drop) => void (drop.amount = 0))).toThrow(/amount/);
+  expect(withDrop((drop) => void (drop.amount = 1.5))).toThrow(/amount/);
+  expect(withDrop((drop) => void delete drop.resourceKey)).toThrow(/resourceKey/);
+  expect(withDrop((drop) => void (drop.label = 'Shiny Stars'))).toThrow(/drop/);
+  expect(withDrop((drop) => void (drop.amount = 9))).toThrow(/overview's required reward/);
+  expect(withDrop((_drop, overview) => void delete overview.requiredReward)).toThrow(
+    /overview's required reward/,
+  );
+  expect(withDrop((_drop, overview) => void (overview.requiredReward = true))).toThrow(
+    /requiredReward/,
+  );
+});
+
 it('publishes the saved Dream mixed-handoff route through the strict execution codec', () => {
   const assembly = simulateProjectAssembly(catalog, loadDreamMixedHandoffCheckpoint());
   expect(assembly.evaluation.findings).toEqual([]);

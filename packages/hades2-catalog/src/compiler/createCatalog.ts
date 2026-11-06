@@ -41,6 +41,10 @@ import { createRewardKernelCatalog } from './rewards/normalize';
 import { normalizeRewardBinding } from './rewards/bindings';
 import { fail } from './errors';
 import { validateRewardRouteAndAspectReferences } from './rewards/requirements';
+import {
+  normalizeRequiredRewardDrops,
+  validateRoomRequiredRewardDrops,
+} from './required-reward-drops';
 import { normalizeRoutes } from './routes';
 import {
   createTraitGiverByAcquisitionGameName,
@@ -130,7 +134,9 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     encounterSets,
     exitTypes,
   );
-  const routes = normalizeRoutes(input.routes, biomes, rooms);
+  const requiredRewardDrops = normalizeRequiredRewardDrops(input.requiredRewardDrops);
+  validateRoomRequiredRewardDrops(rooms, requiredRewardDrops);
+  const routes = normalizeRoutes(input.routes, biomes, rooms, requiredRewardDrops);
   const challengeSwitches = normalizeChallengeSwitches(input.challengeSwitches, rooms, rewards, {
     definitions: encounterDefinitions,
     sets: encounterSets,
@@ -188,6 +194,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     exitCompatibilityPolicies,
     exitTypes,
     rooms,
+    requiredRewardDrops,
     challengeSwitches,
     extraExitLocks,
     biomeLayouts,

@@ -271,9 +271,16 @@ it('exports the selected Zagreus Contract return and acquired Preboss Contract i
   const prebossShop = createOccurrenceId('zagreus-contract-preboss-shop');
   const item = createInfernalContractPedestalAddress(goldenGBiome, prebossShop);
   const published = compileEligibleProject(saved);
+  const gems = { consumableKey: 'GemPointsBigDrop', resourceKey: 'GemPoints', amount: 50 };
   expect(published.occurrences.find((room) => room.id === contract)).toMatchObject({
     gameName: 'C_Boss01',
+    overview: { requiredReward: gems },
   });
+  expect(
+    published.occurrences
+      .find((room) => room.id === contract)
+      ?.roomGuide.map((row) => row.description),
+  ).toContainEqual({ kind: 'collectRequiredReward', drop: gems });
   expect(published.occurrences.find((room) => room.id === returned)).toMatchObject({
     gameName: 'G_MiniBoss03',
   });

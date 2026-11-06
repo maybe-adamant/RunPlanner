@@ -996,7 +996,7 @@ export const pRooms = [
     advancesExperimentalHammerUses: true,
     skipTimedDropResourcesInDream: true,
     kind: 'Boss',
-    effectNeutralRequiredReward: true,
+    requiredReward: { dropKey: 'MixerPBossDrop', canSpawnDreamReward: true },
     mode: { kind: 'authored', templateKey: 'Boss' },
     structuralTags: ['Indoor', 'Outdoor'],
     exits: [{ index: 1, type: 'OlympusIndoorExitDoor' }],
