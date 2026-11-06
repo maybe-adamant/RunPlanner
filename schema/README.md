@@ -36,6 +36,10 @@ credits a kill bounty owns a `heraclesBounty:<phase>` acquisition site with its
 `bounty` money drop, collected by a required `interactAcquisitionEntry`
 action. The plan wire gains that acquisition (`HeraclesBountyPickup`) and its
 guide row. A room saved earlier has neither until its next edit derives them.
+The start state gains an unpaid Personal Loan's `storedGold` trait field, the
+keepsake block's required `fatedStatus` and a required top-level
+`talentPoints`, which replaces `hex.talentPoints` so Moon Beam's points
+publish without a Spell.
 A revision changes no saved shape, so it has no transition; plans sent under
 101.1 read as outdated.
 

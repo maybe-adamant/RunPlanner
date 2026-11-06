@@ -136,9 +136,22 @@ export type GoldRoomResult =
   | { readonly kind: 'itemUnresolved' }
   | { readonly kind: 'fault'; readonly error: GoldLedgerContractError };
 
+/**
+ * A loan's stored gold after one of its contacts: the balance at its take
+ * with its return, credited on each rarity change; absent once paid back.
+ */
+export interface GoldLoanStored {
+  readonly traitKey: string;
+  /** The history sequence of the contact. */
+  readonly sequence: number;
+  readonly stored?: GoldBalance;
+}
+
 export interface RouteGoldLedger {
   readonly purchases: ReadonlyMap<string, GoldPurchaseResult>;
   readonly rooms: ReadonlyMap<string, GoldRoomResult>;
+  /** Every loan contact the walk settled, in chronological order. */
+  readonly loans: readonly GoldLoanStored[];
   readonly runStart:
     | { readonly kind: 'priced'; readonly runStart: GoldRunStart }
     | { readonly kind: 'fault'; readonly error: GoldLedgerContractError };
@@ -428,6 +441,7 @@ export function routeGoldLedger(
   const purchases = new Map<string, GoldPurchaseResult>();
   const rooms = new Map<string, RoomWalk>();
   const runStartGains: GoldGainEntry[] = [];
+  const loans: GoldLoanStored[] = [];
   let runStartBalance: GoldBalance | undefined;
   let runStartFault: GoldLedgerContractError | undefined;
   const roomFor = (room: OccurrenceAddress) => {
@@ -528,6 +542,21 @@ export function routeGoldLedger(
           if (room !== undefined && context.gain.kind === 'poolSale')
             room.beforeFirstTrade ??= walk.balance;
           const amount = applyGain(catalog, modifiers, walk, context);
+          const { gain } = context;
+          if (
+            gain.kind === 'loanTake' ||
+            gain.kind === 'loanCredit' ||
+            gain.kind === 'loanPayback'
+          ) {
+            const stored = walk.loans.get(gain.traitKey);
+            loans.push(
+              Object.freeze({
+                traitKey: gain.traitKey,
+                sequence: publication.sequence,
+                ...(stored === undefined ? {} : { stored }),
+              }),
+            );
+          }
           if (context.gain.kind !== 'loanCredit') {
             const gainEntry: GoldGainEntry = Object.freeze({
               kind: context.gain.kind,
@@ -557,6 +586,7 @@ export function routeGoldLedger(
   }
   return Object.freeze({
     purchases,
+    loans: Object.freeze(loans),
     rooms: new Map(
       [...rooms].map(([key, room]): [string, GoldRoomResult] => {
         if (room.blocked !== undefined) return [key, Object.freeze(room.blocked)];

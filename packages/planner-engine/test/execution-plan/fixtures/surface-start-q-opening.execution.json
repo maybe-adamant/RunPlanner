@@ -690,6 +690,7 @@
     "chaosCurses": [],
     "chaosBlessings": [],
     "keepsake": {
+      "fatedStatus": "Unknown",
       "keepsakeCache": ["ManaOverTimeRefundKeepsake"],
       "blockedKeepsakes": [],
       "traits": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
@@ -735,9 +736,9 @@
         }
       },
       "investedNodes": [],
-      "talentPoints": 0,
       "allSpellInvested": false
     },
+    "talentPoints": 0,
     "rewardPriorities": [],
     "useRecord": {
       "ApolloUpgrade": 2,
@@ -10007,5 +10008,5 @@
       }
     }
   ],
-  "planFingerprint": "e6af7b5e"
+  "planFingerprint": "ee298d93"
 }

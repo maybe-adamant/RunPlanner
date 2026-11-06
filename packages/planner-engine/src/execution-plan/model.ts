@@ -1339,6 +1339,11 @@ export interface ExecutionStartTrait {
   };
   /** `GiveDurationHammer`'s `RemainingUses`; the hammer also counts encounters and expires. */
   readonly durationHammerUses?: number;
+  /**
+   * Native `StoredGold` of an unpaid loan (Personal Loan): the plan's estimated
+   * gold at its take, rounded, plus its return at its current rarity.
+   */
+  readonly storedGold?: number;
 }
 
 /** An active Chaos curse: the processed curse trait carrying its blessing in `OnExpire`. */
@@ -1380,6 +1385,8 @@ export interface ExecutionStartKeepsakeTrait {
 }
 
 export interface ExecutionStartKeepsake {
+  /** Native `GameState.FatedStatus`, which Jeweled Pom, Calling Card and Time Piece read. */
+  readonly fatedStatus: 'Unknown' | 'Fated' | 'Unfated';
   /** Native `CurrentRun.KeepsakeCache`. */
   readonly keepsakeCache: readonly string[];
   /** Native `CurrentRun.BlockedKeepsakes`. */
@@ -1435,8 +1442,6 @@ export interface ExecutionStartHex {
   readonly tree?: ExecutionHexTree;
   /** Invested node keys (`depth:slot`) in investment order. */
   readonly investedNodes: readonly string[];
-  /** Native `CurrentRun.NumTalentPoints`. */
-  readonly talentPoints: number;
   /** Native `CurrentRun.AllSpellInvestedCache`. */
   readonly allSpellInvested: boolean;
 }
@@ -1518,6 +1523,8 @@ export interface ExecutionStartState {
     readonly remainingUses: number;
   }[];
   readonly hex?: ExecutionStartHex;
+  /** Native `CurrentRun.NumTalentPoints`: unspent points, held with or without a Spell. */
+  readonly talentPoints: number;
   /** Native `CurrentRun.RewardPriorities`. */
   readonly rewardPriorities: readonly string[];
   readonly useRecord: Readonly<Record<string, number>>;

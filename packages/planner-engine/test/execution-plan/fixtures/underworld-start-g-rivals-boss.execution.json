@@ -460,6 +460,7 @@
       }
     ],
     "keepsake": {
+      "fatedStatus": "Unknown",
       "keepsakeCache": ["ManaOverTimeRefundKeepsake"],
       "blockedKeepsakes": [],
       "traits": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
@@ -481,6 +482,7 @@
       "wellShopPurchases": { "TemporaryForcedSecretDoorTrait": 1, "RandomStoreItem": 1 }
     },
     "hermesDeliveries": [],
+    "talentPoints": 0,
     "rewardPriorities": [],
     "useRecord": {
       "ApolloUpgrade": 1,
@@ -4897,5 +4899,5 @@
       }
     }
   ],
-  "planFingerprint": "9a82c3ae"
+  "planFingerprint": "93c7962c"
 }

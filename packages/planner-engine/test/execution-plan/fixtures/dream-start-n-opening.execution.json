@@ -542,6 +542,7 @@
     "chaosCurses": [],
     "chaosBlessings": [],
     "keepsake": {
+      "fatedStatus": "Unknown",
       "keepsakeCache": ["ManaOverTimeRefundKeepsake"],
       "blockedKeepsakes": [],
       "traits": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
@@ -563,6 +564,7 @@
       "wellShopPurchases": {}
     },
     "hermesDeliveries": [],
+    "talentPoints": 0,
     "rewardPriorities": [],
     "useRecord": {
       "ApolloUpgrade": 1,
@@ -7254,5 +7256,5 @@
       }
     }
   ],
-  "planFingerprint": "bb0a23c7"
+  "planFingerprint": "c88378cd"
 }

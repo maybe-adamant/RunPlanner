@@ -467,6 +467,7 @@ export function projectStartInstallation(
         visitedBiomeKeys: inputs.visitedBiomeKeys,
       }),
       roomHistory: inputs.roomHistory,
+      historySequence: state.reached.historyView.sequence,
       ...installed,
       rewardStores: rewardStores(catalog, state),
     }),

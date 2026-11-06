@@ -14,6 +14,7 @@ import {
 } from './model';
 import { ExecutionCompilerError as CompilerError } from './assembler-errors';
 import { authoredStartPointEligibility } from '../simulation/start-installation/eligibility';
+import { loanStoredGoldForProjectEvaluationAssembly } from '../simulation/evaluation/gold-query';
 import { executionStartState } from './assembly/start-state';
 import { executionKeepsakeEquipResults } from './assembly/overview';
 import {
@@ -323,6 +324,13 @@ export function assembleExecutionProduct({
           selectedOccurrenceIds,
           roomById,
           startingLoadout,
+          (traitKey, throughSequence) =>
+            loanStoredGoldForProjectEvaluationAssembly(
+              catalog,
+              assembly,
+              traitKey,
+              throughSequence,
+            ),
         )
       : undefined;
   // An internal modifier publishes only where internal modifiers are enabled.

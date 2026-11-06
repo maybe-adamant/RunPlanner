@@ -224,10 +224,13 @@ state; assembly translates it, selecting and renaming fields. It carries:
   (`Legendary` for a Rank II Hammer), `stackNum` and only the per-instance
   fields its skipped acquire would have written: `BlockInRunRarify`,
   `UpgradedTraitName`, `SelectedTrait`, `GrantedTrait`, `RepeatedKeepsake`,
-  `CurrentRoom`, the `EchoIncreaseStats` fields, and an Experimental Hammer's
-  remaining uses. A trait picked from the Echo, Arachne, Narcissus, Medea,
-  Circe or Icarus menu carries its biome `acquisitionOrdinal` (1-4) instead of
-  a rarity; the module installs it at `RarityUpgradeOrder[acquisitionOrdinal]`,
+  `CurrentRoom`, the `EchoIncreaseStats` fields, an Experimental Hammer's
+  remaining uses, and an unpaid Personal Loan's `StoredGold` (`storedGold`):
+  the route gold estimate's mean at its take, rounded, plus its return at its
+  current rarity, absent once a boss paid it back. A trait picked from the
+  Echo, Arachne, Narcissus, Medea, Circe or Icarus menu carries its biome
+  `acquisitionOrdinal` (1-4) instead of a rarity; the module installs it at
+  `RarityUpgradeOrder[acquisitionOrdinal]`,
   as those menus set it on Dream runs, so native setup derives its
   `RoomsPerUpgrade` values. Standard menus install at Common, whose values equal
   the mapped rarity's at every standard position. Traits native `StartNewRun`
@@ -239,7 +242,9 @@ state; assembly translates it, selecting and renaming fields. It carries:
   elements come from its installed blessing;
 - active Chaos curses with their remaining uses and blessing (`OnExpire`), and
   matured blessings with `FromChaosKeepsake`;
-- the keepsake: `KeepsakeCache`, `BlockedKeepsakes`, Fig Leaf's
+- the keepsake: `GameState.FatedStatus` (`Unknown`, `Fated` or `Unfated`),
+  which the held Jeweled Pom, Calling Card and Time Piece read, `KeepsakeCache`,
+  `BlockedKeepsakes`, Fig Leaf's
   `PersistentDionysusSkipKeepsake` uses, and `traits`, exactly the keepsake
   traits the hero holds, each with its native rarity and counters
   (`RarityUpgradeData.Uses`, `BoonConversionUses`, `Uses`, `RemainingUses`, the
@@ -265,10 +270,11 @@ state; assembly translates it, selecting and renaming fields. It carries:
 - `itemArmor`: armor from armor items and from Silken Sash armor moved out by an
   unequip or a Cherished Heirloom advance, which the module installs as one
   hidden `MinorArmorBoon` with that `BaseAmount`, none at 0;
-- Well holdings and `WellShopPurchases`, pending Hermes deliveries, and the
-  Spell (`hex.spellTraitName`) with its realised tree, invested nodes, talent
-  points and closure. The module adds the Spell unless native `StartNewRun`
-  already installed it from the aspect;
+- Well holdings and `WellShopPurchases`, pending Hermes deliveries, the
+  unspent talent points (`talentPoints`, `NumTalentPoints`), banked with or
+  without a Spell (Moon Beam's), and the Spell (`hex.spellTraitName`) with its
+  realised tree, invested nodes and closure. The module adds the Spell unless
+  native `StartNewRun` already installed it from the aspect;
 - `RewardPriorities`, `UseRecord`, `LootTypeHistory`, `ConsumableRecord`,
   Denial's `BannedTraits`, and the `RewardStores` the plan drew from, as counts aligned with `RewardStoreData`.
 
@@ -332,7 +338,7 @@ including the Expiring timer and Evade Evade Evade; trait armor, which installed
 armor traits set full at their installed rarity; the Ghost Onion, Silver Wheel,
 Mist Veil and Hades lifesteal pools; spell charges, refilled including
 `BonusSpellUses`; rerolls, unless the plan spends any, when the start
-room's planned reroll pool is installed; Personal Loan gold; Last Gasp eligibility; and the
+room's planned reroll pool is installed; Last Gasp eligibility; and the
 last Challenge depth. Under the Boon Mana Reserve vow, installed boons hold no
 reserved Magick. Current health is set to the maximum. An Opening's weather is
 whatever the native Intro produces. An I Opening leaves Clockwork to the native

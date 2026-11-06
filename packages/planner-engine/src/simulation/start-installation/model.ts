@@ -264,6 +264,8 @@ export interface StartInstallation {
   readonly startRoomGameName: string;
   readonly route: StartInstallationRoute;
   readonly roomHistory: readonly StartRoomHistoryRecord[];
+  /** The last history event the installed state follows, where route-wide gold reads it. */
+  readonly historySequence: number;
   readonly counters: StartInstallationCounters;
   readonly equipment: StartInstallationEquipment;
   readonly traits: readonly StartInstalledTrait[];

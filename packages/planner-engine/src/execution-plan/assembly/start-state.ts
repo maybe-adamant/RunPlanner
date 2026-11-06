@@ -1,5 +1,7 @@
 import type { RunStartPoint } from '../../authored-project/practice-start';
 import type { Catalog } from '../../catalog-schema';
+import type { GoldBalance } from '../../simulation/commerce/gold/route-ledger';
+import { roundGold } from '../../simulation/commerce/gold/prices';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import type {
   StartInstallation,
@@ -58,10 +60,14 @@ function startOccurrence(
   return room;
 }
 
+/** The gold a loan stores once the route has settled through a history sequence. */
+export type LoanStoredGold = (traitKey: string, throughSequence: number) => GoldBalance | undefined;
+
 function traitRow(
   trait: StartInstalledTrait,
   durationHammers: ReadonlyMap<string, number>,
   grantedTraitKey: string | undefined,
+  storedGold?: number,
 ): ExecutionStartTrait {
   const rarity: ExecutionTraitRarity | undefined =
     trait.hammerRank === 'RankII' ? 'Legendary' : trait.rarity;
@@ -103,11 +109,35 @@ function traitRow(
           }),
         }),
     ...(hammerUses === undefined ? {} : { durationHammerUses: hammerUses }),
+    ...(storedGold === undefined ? {} : { storedGold }),
   });
 }
 
+/**
+ * An unpaid loan's `StoredGold`, which its skipped acquire (`BankGold`) sets:
+ * the route's estimated gold at its take plus its return at its current rarity.
+ */
+function loanStoredGold(
+  catalog: Catalog,
+  installation: StartInstallation,
+  trait: StartInstalledTrait,
+  loanStored: LoanStoredGold,
+): number | undefined {
+  if (catalog.traits.byKey[trait.traitKey]?.gold?.kind !== 'loan') return undefined;
+  if (trait.rarityBlockedInRun === true) return undefined;
+  const stored = loanStored(trait.traitKey, installation.historySequence);
+  if (stored?.availability !== 'available')
+    missing(`${trait.traitKey} holds an unpaid loan without its stored gold`);
+  // Native stores the gold held, never a debt.
+  return Math.max(0, roundGold(stored.balance.mean));
+}
+
 /** Installed traits, less those native `StartNewRun` installs and the Spell, which `hex` carries. */
-function traits(installation: StartInstallation): readonly ExecutionStartTrait[] {
+function traits(
+  catalog: Catalog,
+  installation: StartInstallation,
+  loanStored: LoanStoredGold,
+): readonly ExecutionStartTrait[] {
   const { keepsake } = installation;
   const spell = installation.hex.spellTraitKey;
   const durationHammers = new Map(
@@ -129,7 +159,16 @@ function traits(installation: StartInstallation): readonly ExecutionStartTrait[]
     Object.keys(traitRow(spellTrait, durationHammers, granted)).length > 1
   )
     missing(`${spell} carries per-instance fields the Hex section does not`);
-  return Object.freeze(installed.map((trait) => traitRow(trait, durationHammers, granted)));
+  return Object.freeze(
+    installed.map((trait) =>
+      traitRow(
+        trait,
+        durationHammers,
+        granted,
+        loanStoredGold(catalog, installation, trait, loanStored),
+      ),
+    ),
+  );
 }
 
 type KeepsakeCounters = Omit<ExecutionStartKeepsakeTrait, 'name' | 'rarity' | 'slotted'>;
@@ -201,6 +240,7 @@ export function keepsakeState(
   if (slotted.map((row) => row.key).join() !== (keepsake.currentKey ?? ''))
     missing('held keepsakes disagree with the slotted keepsake');
   return Object.freeze({
+    fatedStatus: keepsake.fatedStatus,
     keepsakeCache: keepsake.usedKeys,
     blockedKeepsakes: keepsake.removedKeys,
     traits: Object.freeze(
@@ -224,8 +264,8 @@ export function keepsakeState(
 function hex(catalog: Catalog, value: StartInstallation['hex']): ExecutionStartState['hex'] {
   const spellTraitName = value.spellTraitKey;
   if (spellTraitName === undefined) {
-    if (value.tree !== undefined || value.investedNodeKeys.length > 0 || value.talentPoints > 0)
-      missing('holds Hex progress without a Spell');
+    if (value.tree !== undefined || value.investedNodeKeys.length > 0)
+      missing('holds a Hex path without a Spell');
     return undefined;
   }
   const godSent =
@@ -251,7 +291,6 @@ function hex(catalog: Catalog, value: StartInstallation['hex']): ExecutionStartS
           }),
         }),
     investedNodes: value.investedNodeKeys,
-    talentPoints: value.talentPoints,
     allSpellInvested: value.talentDropsClosed === true,
   });
 }
@@ -281,6 +320,7 @@ export function executionStartState(
   selectedOccurrenceIds: readonly string[],
   roomById: ReadonlyMap<string, CanonicalAuthoredRoom>,
   startingLoadout: ExecutionStartingLoadout,
+  loanStored: LoanStoredGold,
 ): ExecutionStartState {
   const room = startOccurrence(installation, selectedOccurrenceIds, roomById);
   const { equipment, counters, route, biomeRecords, arcana } = installation;
@@ -352,7 +392,7 @@ export function executionStartState(
             stackMultiplier: equipment.familiarStackMultiplier,
           }),
         }),
-    traits: traits(installation),
+    traits: traits(catalog, installation, loanStored),
     elementEssences: elementEssences(installation.essences),
     chaosCurses: Object.freeze(
       installation.chaos.active.map((curse) =>
@@ -426,6 +466,7 @@ export function executionStartState(
       const value = hex(catalog, installation.hex);
       return value === undefined ? {} : { hex: value };
     })(),
+    talentPoints: installation.hex.talentPoints,
     rewardPriorities: installation.rewardPriorities,
     useRecord: installation.runRecords.useRecord,
     lootTypeHistory: installation.runRecords.lootTypeHistory,

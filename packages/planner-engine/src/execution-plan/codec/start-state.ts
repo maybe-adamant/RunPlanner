@@ -35,6 +35,7 @@ import { hexGodSent, hexTreeNodes } from './rewards';
 const BIOME_KEYS: readonly string[] = ['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q'];
 const TRAIT_RARITIES: readonly string[] = ['Common', 'Rare', 'Epic', 'Heroic', 'Legendary', 'Duo'];
 const MAX_STAT_SOURCE_KINDS: readonly string[] = ['trait', 'arcana', 'keepsake'];
+const FATED_STATUSES: readonly string[] = ['Unknown', 'Fated', 'Unfated'];
 const WELL_CLOCKS: readonly string[] = ['encounters', 'rooms', 'bosses'];
 /** Room history grows by one record per departed room, Hub returns included. */
 const MAX_ROOM_HISTORY = 1024;
@@ -92,6 +93,7 @@ function traitRow(value: unknown, label: string): ExecutionStartTrait {
       'acquisitionOrdinal',
       'echoIncreaseStats',
       'durationHammerUses',
+      'storedGold',
     ],
   );
   return Object.freeze({
@@ -142,6 +144,7 @@ function traitRow(value: unknown, label: string): ExecutionStartTrait {
     ...optional('durationHammerUses', row.durationHammerUses, (entry) =>
       integer(entry, `${label}.durationHammerUses`, 1),
     ),
+    ...optional('storedGold', row.storedGold, (entry) => integer(entry, `${label}.storedGold`)),
   });
 }
 
@@ -267,10 +270,15 @@ function keepsake(value: unknown, label: string): ExecutionStartKeepsake {
   const row = record(
     value,
     label,
-    ['keepsakeCache', 'blockedKeepsakes', 'traits'],
+    ['fatedStatus', 'keepsakeCache', 'blockedKeepsakes', 'traits'],
     ['persistentDionysusSkip'],
   );
   return Object.freeze({
+    fatedStatus: oneOf<ExecutionStartKeepsake['fatedStatus']>(
+      row.fatedStatus,
+      FATED_STATUSES,
+      `${label}.fatedStatus`,
+    ),
     keepsakeCache: Object.freeze(stringArray(row.keepsakeCache, `${label}.keepsakeCache`)),
     blockedKeepsakes: Object.freeze(stringArray(row.blockedKeepsakes, `${label}.blockedKeepsakes`)),
     traits: keepsakeTraits(row.traits, `${label}.traits`),
@@ -379,7 +387,7 @@ function hex(value: unknown, label: string): ExecutionStartHex {
   const row = record(
     value,
     label,
-    ['spellTraitName', 'investedNodes', 'talentPoints', 'allSpellInvested'],
+    ['spellTraitName', 'investedNodes', 'allSpellInvested'],
     ['tree'],
   );
   const investedNodes = investedNodeKeys(row.investedNodes, `${label}.investedNodes`);
@@ -396,7 +404,6 @@ function hex(value: unknown, label: string): ExecutionStartHex {
       });
     }),
     investedNodes,
-    talentPoints: integer(row.talentPoints, `${label}.talentPoints`),
     allSpellInvested: booleanValue(row.allSpellInvested, `${label}.allSpellInvested`),
   });
 }
@@ -486,6 +493,7 @@ export function startState(value: unknown): ExecutionStartState {
       'itemArmor',
       'stygianWell',
       'hermesDeliveries',
+      'talentPoints',
       'rewardPriorities',
       'useRecord',
       'lootTypeHistory',
@@ -557,6 +565,7 @@ export function startState(value: unknown): ExecutionStartState {
       },
     ),
     ...optional('hex', row.hex, (entry) => hex(entry, `${label}.hex`)),
+    talentPoints: integer(row.talentPoints, `${label}.talentPoints`),
     rewardPriorities: Object.freeze(stringArray(row.rewardPriorities, `${label}.rewardPriorities`)),
     useRecord: numberRecord(row.useRecord, `${label}.useRecord`),
     lootTypeHistory: numberRecord(row.lootTypeHistory, `${label}.lootTypeHistory`),

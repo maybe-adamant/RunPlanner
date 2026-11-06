@@ -6,7 +6,11 @@ import {
   createEncounterPhaseAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
+  createKeepsakeEquipResultAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
+  createPostbossKeepsakeSelectionAddress,
+  createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   type ProjectDocument,
@@ -17,11 +21,15 @@ import {
   loadUnderworldFGHICheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOPQProject,
+  pBiome,
+  pOccurrenceId,
   surfaceShrineDeliveriesProject,
 } from '@run-planner/test-fixtures/surface';
 import {
+  goldLedgerForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
   startInstallationAt,
@@ -352,6 +360,101 @@ describe('execution start state', () => {
     expect(start.traits).toContainEqual({ name: 'DoubleFamiliarTrait', acquisitionOrdinal: 2 });
   });
 
+  it('publishes an unpaid Personal Loan’s stored gold until a boss pays it back', () => {
+    const storyId = pOccurrenceId('P_Story01', 7, 1);
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          pBiome,
+          { kind: 'occurrence', occurrenceId: storyId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Dionysus',
+        options: [
+          { traitKey: 'BankBoon', rarity: 'Common' },
+          { traitKey: 'HiddenMaxHealthBoon', rarity: 'Epic' },
+          { traitKey: 'FirstHangoverBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const gold = goldLedgerForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).roomAt(createOccurrenceAddress(pBiome, storyId));
+    if (gold.availability !== 'available') throw new Error('P Story gold is unavailable');
+    const taken = -gold.room.gains.find((gain) => gain.kind === 'loanTake')!.amount!.mean;
+    const loan = (point: 'preboss' | 'boss' | 'opening', biomeKey = 'P') =>
+      compile(withStartPoint(project, { biomeKey, point })).startState!.traits.find(
+        (row) => row.name === 'BankBoon',
+      );
+    // `BankGold` stores the gold held at the take plus the Common return.
+    expect(loan('preboss')).toMatchObject({
+      rarity: 'Common',
+      storedGold: Math.round(taken) + 300,
+    });
+    expect(loan('boss')).toMatchObject({ storedGold: Math.round(taken) + 300 });
+    // The P Boss paid it back: no stored gold, and its rarity is locked.
+    const paid = loan('opening', 'Q');
+    expect(paid).toMatchObject({ blockInRunRarify: true });
+    expect(paid).not.toHaveProperty('storedGold');
+  });
+
+  it('publishes the Fated status with the held keepsakes', () => {
+    const fated = applyProjectCommand(
+      applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        keepsakeKey: 'HadesAndPersephoneKeepsake',
+      }),
+      catalog,
+      {
+        kind: 'ReplaceJeweledPomEquipResult',
+        result: createKeepsakeEquipResultAddress(
+          createRouteStartKeepsakeSelectionAddress('Underworld'),
+          'jeweledPom',
+        ),
+        value: { traitKey: 'HadesLifestealBoon' },
+      },
+    );
+    const start = compile(withStartPoint(fated, { biomeKey: 'I', point: 'preboss' })).startState!;
+    expect(start.keepsake.fatedStatus).toBe('Fated');
+    expect(start.traits).toContainEqual(
+      expect.objectContaining({ name: 'HadesLifestealBoon', grantedTrait: true }),
+    );
+    expect(decodeExecutionPlan(iPrebossWire).startState!.keepsake.fatedStatus).toBe('Unknown');
+  });
+
+  it('publishes banked Hex talent points without a Spell', () => {
+    // Moon Beam at the F Postboss rack banks its points before any Spell; the
+    // plan ends before its Selene priority would force G's next reward.
+    const f = createBiomeAddress('Underworld', 'F');
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(
+        createOccurrenceAddress(f, 'golden-f-preboss-shop:postboss' as never),
+      ),
+      keepsakeKey: 'SpellTalentKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePlanEnd',
+      route: createRouteAddress('Underworld'),
+      planEnd: { biomeKey: 'G', occurrenceId: createOccurrenceId('golden-g-b2-e1') },
+    });
+    const plan = compile(withStartPoint(project, { biomeKey: 'G', point: 'opening' }));
+    expect(plan.startState).not.toHaveProperty('hex');
+    // Epic Moon Beam's path points.
+    expect(plan.startState!.talentPoints).toBe(5);
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+    // The Spell's own section does not carry the bank.
+    expect(decodeExecutionPlan(qOpeningWire).startState!.hex).not.toHaveProperty('talentPoints');
+  });
+
   it('round-trips and fingerprints the start state', () => {
     const plan = decodeExecutionPlan(iPrebossWire);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
@@ -387,7 +490,10 @@ describe('execution start state', () => {
       'a false flag',
       (start) => (start.roomHistory = [{ name: 'F_Opening01', nextRoomSet: false }]),
     ],
-    ['an unknown trait field', (start) => (start.traits = [{ name: 'X', storedGold: 1 }])],
+    ['an unknown trait field', (start) => (start.traits = [{ name: 'X', unknown: 1 }])],
+    ['a negative stored gold', (start) => (start.traits = [{ name: 'BankBoon', storedGold: -1 }])],
+    ['a fractional talent bank', (start) => (start.talentPoints = 1.5)],
+    ['a missing talent bank', (start) => delete start.talentPoints],
     ['a duplicate trait', (start) => (start.traits = [{ name: 'X' }, { name: 'X' }])],
     [
       'an acquisition ordinal past the fourth biome',
@@ -414,12 +520,32 @@ describe('execution start state', () => {
     [
       'a keepsake trait without its rarity',
       (start) =>
-        (start.keepsake = { keepsakeCache: [], blockedKeepsakes: [], traits: [{ name: 'X' }] }),
+        (start.keepsake = {
+          fatedStatus: 'Unknown',
+          keepsakeCache: [],
+          blockedKeepsakes: [],
+          traits: [{ name: 'X' }],
+        }),
+    ],
+    [
+      'an unsupported Fated status',
+      (start) =>
+        (start.keepsake = {
+          fatedStatus: 'Valid',
+          keepsakeCache: [],
+          blockedKeepsakes: [],
+          traits: [],
+        }),
+    ],
+    [
+      'a missing Fated status',
+      (start) => (start.keepsake = { keepsakeCache: [], blockedKeepsakes: [], traits: [] }),
     ],
     [
       'two slotted keepsakes',
       (start) =>
         (start.keepsake = {
+          fatedStatus: 'Unknown',
           keepsakeCache: [],
           blockedKeepsakes: [],
           traits: [
@@ -435,6 +561,7 @@ describe('execution start state', () => {
       'a fractional Sash armor',
       (start) =>
         (start.keepsake = {
+          fatedStatus: 'Unknown',
           keepsakeCache: [],
           blockedKeepsakes: [],
           traits: [{ name: 'ArmorGainKeepsake', rarity: 'Epic', slotted: true, currentArmor: 2.5 }],

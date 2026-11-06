@@ -8,6 +8,7 @@ import {
 import { biomeGoldPrices, type BiomeGoldPrices } from '../commerce/gold/ledger';
 import {
   routeGoldLedger,
+  type GoldBalance,
   type GoldPurchasePrice,
   type GoldRoomSpending,
   type GoldRunStart,
@@ -58,6 +59,10 @@ const UNRESOLVED = Object.freeze({
 
 const pricesByCatalog = new WeakMap<Catalog, WeakMap<BiomeRewardSimulation, BiomeGoldPrices>>();
 const ledgersByCatalog = new WeakMap<Catalog, WeakMap<ProjectEvaluationAssembly, GoldLedger>>();
+const routeLedgersByCatalog = new WeakMap<
+  Catalog,
+  WeakMap<ProjectEvaluationAssembly, RouteGoldLedger>
+>();
 
 function memoized<K extends object, V>(
   outer: WeakMap<Catalog, WeakMap<K, V>>,
@@ -78,6 +83,47 @@ function memoized<K extends object, V>(
   return value;
 }
 
+/** The route's gold walk over an evaluated project, priced per biome and walked once. */
+function routeLedgerFor(catalog: Catalog, assembly: ProjectEvaluationAssembly): RouteGoldLedger {
+  const biomePrices = (rewards: BiomeRewardSimulation): BiomeGoldPrices =>
+    memoized(pricesByCatalog, catalog, rewards, () =>
+      biomeGoldPrices(catalog, rewards.purchasePriceContexts),
+    );
+  // The balance carries across biomes, so the route walks once.
+  return memoized(routeLedgersByCatalog, catalog, assembly, () =>
+    routeGoldLedger(
+      catalog,
+      assembly.evaluation.route.biomes.flatMap((biome) =>
+        'rewards' in biome
+          ? [
+              {
+                prices: biomePrices(biome.rewards),
+                purchases: biome.rewards.purchasePriceContexts,
+                events: biome.rewards.goldEvents,
+              },
+            ]
+          : [],
+      ),
+      routeRunModifiers(assembly.project.route.loadout),
+    ),
+  );
+}
+
+/**
+ * The gold a loan stores once the route has settled every history event
+ * through `throughSequence`; undefined when it stores none (untaken or paid back).
+ */
+export function loanStoredGoldForProjectEvaluationAssembly(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  traitKey: string,
+  throughSequence: number,
+): GoldBalance | undefined {
+  return routeLedgerFor(catalog, assembly).loans.findLast(
+    (loan) => loan.traitKey === traitKey && loan.sequence <= throughSequence,
+  )?.stored;
+}
+
 /**
  * The gold ledger of an evaluated project, priced lazily per biome. A lookup
  * throws `GoldLedgerContractError` for a purchase, or its room, whose price
@@ -88,28 +134,7 @@ export function goldLedgerForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
 ): GoldLedger {
   return memoized(ledgersByCatalog, catalog, assembly, () => {
-    const biomePrices = (rewards: BiomeRewardSimulation): BiomeGoldPrices =>
-      memoized(pricesByCatalog, catalog, rewards, () =>
-        biomeGoldPrices(catalog, rewards.purchasePriceContexts),
-      );
-    let route: RouteGoldLedger | undefined;
-    // The balance carries across biomes, so the route walks once, on first use.
-    const ledger = (): RouteGoldLedger =>
-      (route ??= routeGoldLedger(
-        catalog,
-        assembly.evaluation.route.biomes.flatMap((biome) =>
-          'rewards' in biome
-            ? [
-                {
-                  prices: biomePrices(biome.rewards),
-                  purchases: biome.rewards.purchasePriceContexts,
-                  events: biome.rewards.goldEvents,
-                },
-              ]
-            : [],
-        ),
-        routeRunModifiers(assembly.project.route.loadout),
-      ));
+    const ledger = (): RouteGoldLedger => routeLedgerFor(catalog, assembly);
     const sameRoute = (owner: { readonly routeKey: string }) =>
       owner.routeKey === assembly.project.route.routeKey;
     return Object.freeze({
