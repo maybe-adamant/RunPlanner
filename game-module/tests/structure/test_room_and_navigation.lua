@@ -193,11 +193,11 @@ function TestRoomNavigationStructure.testLogicalContractAcquisitionDoesNotReplac
     lu.assertTrue(proveOverview(item, realized, context()))
 end
 
-function TestRoomNavigationStructure.testEffectNeutralRequiredRewardPreservesAndAcceptsNativeBossDrop()
+function TestRoomNavigationStructure.testRequiredRewardPreservesAndProvesNativeBossDrop()
     local item = occurrence()
     item.gameName = "F_Boss01"
     item.overview.incomingReward = nil
-    item.overview.effectNeutralRequiredReward = true
+    item.overview.requiredReward = { consumableKey = "MixerFBossDrop", resourceKey = "MixerFBoss", amount = 1 }
     local game = { RoomData = { F_Boss01 = { ForcedReward = "MixerFBossDrop" } } }
 
     local realized = realizeOverview(item, game)
@@ -211,6 +211,10 @@ function TestRoomNavigationStructure.testEffectNeutralRequiredRewardPreservesAnd
     realized.SurfaceShop = {}
     realized.StoreDataName = "WorldShop"
     lu.assertTrue(proveOverview(item, realized, context()))
+    realized.ChosenRewardType = "DreamPointsDrop"
+    local proved, mismatch = rewards.prove(item, realized)
+    lu.assertNil(proved)
+    lu.assertEquals(mismatch, { kind = "incomingReward", expected = "MixerFBossDrop", observed = "DreamPointsDrop" })
     realized.ChosenRewardType = nil
     lu.assertNil(rewards.prove(item, realized))
 end
@@ -279,7 +283,9 @@ function TestRoomNavigationStructure.testDoorRealizationPreservesAndRequiresNati
         id = "boss", biomeKey = "F", gameName = "F_Boss01",
     } }
     local occurrencesById = {
-        boss = { id = "boss", overview = { effectNeutralRequiredReward = true } },
+        boss = { id = "boss", overview = { requiredReward = {
+            consumableKey = "MixerFBossDrop", resourceKey = "MixerFBoss", amount = 1,
+        } } },
     }
     local game = { RoomData = { F_Boss01 = { ForcedReward = "MixerFBossDrop" } } }
 

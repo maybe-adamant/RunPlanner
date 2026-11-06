@@ -301,7 +301,7 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
             or drawn
             or occurrence and occurrence.overview.incomingReward
         if expected == nil then
-            if occurrence and occurrence.overview.effectNeutralRequiredReward == true then
+            if occurrence and occurrence.overview.requiredReward ~= nil then
                 return base(run, nativeRoom, rewardStore, chosen, args)
             end
             if type(nativeRoom) == "table" then nativeRoom.ForceLootName = nil end

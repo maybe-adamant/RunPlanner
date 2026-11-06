@@ -1442,11 +1442,11 @@ function TestRoomEntryHooks.testContractTraitAcquisitionDoesNotOwnTheNativeMetaR
     lu.assertEquals(mismatches, {})
 end
 
-function TestRoomEntryHooks.testEffectNeutralBossRewardUsesNativeForcedRewardChoice()
+function TestRoomEntryHooks.testRequiredBossRewardUsesNativeForcedRewardChoice()
     local module, _, callbacks = capture()
     local occurrence = {
         id = "boss",
-        overview = { effectNeutralRequiredReward = true },
+        overview = { requiredReward = { consumableKey = "MixerFBossDrop", resourceKey = "MixerFBoss", amount = 1 } },
     }
     local state = { state = "synchronized", plan = { occurrencesById = { boss = occurrence } } }
     local session = stub()

@@ -23,7 +23,7 @@ function rewards.realize(occurrence, nativeRoom)
         nativeRoom.RewardType = expected.incomingReward.rewardType
         nativeRoom.ChosenRewardType = nil
         nativeRoom.ForceLootName = expected.incomingReward.source
-    elseif expected.incomingReward == nil and expected.effectNeutralRequiredReward ~= true then
+    elseif expected.incomingReward == nil and expected.requiredReward == nil then
         nativeRoom.RewardType = nil
         nativeRoom.ChosenRewardType = nil
         nativeRoom.Reward = nil
@@ -36,10 +36,13 @@ function rewards.prove(occurrence, nativeRoom)
     local expected = occurrence.overview
     local actual = rewardName(nativeRoom.ChosenRewardType)
     local expectedReward = expected.incomingReward and expected.incomingReward.rewardType or nil
-    if expected.effectNeutralRequiredReward == true and actual == nil then
-        return nil, { kind = "incomingReward", expected = "native required reward", observed = actual }
+    if expected.requiredReward ~= nil then
+        local consumableKey = expected.requiredReward.consumableKey
+        if actual ~= consumableKey then
+            return nil, { kind = "incomingReward", expected = consumableKey, observed = actual }
+        end
     elseif not rewards.isLogicalRoomAcquisition(expected.incomingReward)
-        and expected.effectNeutralRequiredReward ~= true and actual ~= expectedReward then
+        and actual ~= expectedReward then
         return nil, { kind = "incomingReward", expected = expectedReward, observed = actual }
     end
     return true

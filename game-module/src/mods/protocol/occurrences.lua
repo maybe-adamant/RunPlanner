@@ -253,7 +253,11 @@ local function guideDescription(value, label)
     if not record then return nil, errorMessage end
     local kind = record.kind
     if kind == "collectRequiredReward" then
-        return p.exact(record, { "kind" }, {}, label)
+        local row, rowError = p.exact(record, { "kind", "drop" }, {}, label)
+        if not row then return nil, rowError end
+        local _, dropError = overview.requiredRewardDrop(row.drop, label .. ".drop")
+        if dropError then return nil, dropError end
+        return row
     end
     if kind == "completeFieldsCage" then
         local row, rowError = p.exact(record, { "kind", "phaseKey" }, { "reward" }, label)
@@ -421,7 +425,7 @@ local function guideDescription(value, label)
     return p.fail(label .. ".kind is unsupported")
 end
 
-local function roomGuide(value, transactionsByOwner, label)
+local function roomGuide(value, transactionsByOwner, requiredReward, label)
     local rows, errorMessage = p.arr(value, label)
     if not rows then return nil, errorMessage end
     local keys = {}
@@ -439,6 +443,10 @@ local function roomGuide(value, transactionsByOwner, label)
         end
         local description, descriptionError = guideDescription(row.description, label .. "[" .. index .. "].description")
         if descriptionError then return nil, descriptionError end
+        if description.kind == "collectRequiredReward"
+            and not overview.sameRequiredReward(description.drop, requiredReward) then
+            return p.fail(label .. "[" .. index .. "].description.drop must be the overview's required reward")
+        end
         if description.kind == "purchaseHermesShrineOffer" and row.transactionOwner ~= nil then
             return p.fail(label .. "[" .. index .. "].transactionOwner is not published for Shrine purchases")
         end
@@ -654,7 +662,7 @@ function occurrences.decode(value, selected, label)
         )
         if type(byOwnerOrError) == "string" then return nil, byOwnerOrError end
         row.transactionsByOwner = byOwnerOrError
-        local _, guideError = roomGuide(row.roomGuide, row.transactionsByOwner, label .. "[" .. index .. "].roomGuide")
+        local _, guideError = roomGuide(row.roomGuide, row.transactionsByOwner, row.overview.requiredReward, label .. "[" .. index .. "].roomGuide")
         if guideError then return nil, guideError end
         for _, offer in ipairs((row.overview.shop and row.overview.shop.offers) or {}) do
             if offer.transactionOwner ~= nil and row.transactionsByOwner[offer.transactionOwner] == nil then

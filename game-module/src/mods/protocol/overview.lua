@@ -6,6 +6,27 @@ local diagnostics = type(import) == "function" and import("mods/protocol/diagnos
     or require("mods.protocol.diagnostics")
 
 local overview = {}
+
+-- A Boss room's forced native drop: its consumable, profile resource and amount.
+function overview.requiredRewardDrop(value, label)
+    local record, errorMessage = p.exact(value, { "consumableKey", "resourceKey", "amount" }, {}, label)
+    if not record then return nil, errorMessage end
+    if not p.str(record.consumableKey, label .. ".consumableKey")
+        or not p.str(record.resourceKey, label .. ".resourceKey") then
+        return p.fail(label .. " has invalid consumable or resource key")
+    end
+    if not p.int(record.amount, label .. ".amount", 1) then
+        return p.fail(label .. ".amount must be a positive integer")
+    end
+    return record
+end
+
+function overview.sameRequiredReward(left, right)
+    return type(left) == "table" and type(right) == "table"
+        and left.consumableKey == right.consumableKey
+        and left.resourceKey == right.resourceKey
+        and left.amount == right.amount
+end
 local generatedEncounter = type(import) == "function" and import("mods/protocol/generated_encounter.lua")
     or require("mods.protocol.generated_encounter")
 
@@ -647,7 +668,7 @@ function overview.decode(value, label)
         value,
         { "encounterPhases", "requiredObjects" },
         {
-            "incomingReward", "effectNeutralRequiredReward", "unmodeledEncounterKeys",
+            "incomingReward", "requiredReward", "unmodeledEncounterKeys",
             "rewardWheels",
             "shop", "infernalContractPedestal", "phantomExit", "hermesShrine", "stygianWell",
             "purgingPool", "keepsakeRack", "challengeSwitch", "lockedExits",
@@ -700,10 +721,9 @@ function overview.decode(value, label)
         local _, rewardError = rewards.reward(record.incomingReward, label .. ".incomingReward")
         if rewardError then return nil, rewardError end
     end
-    if record.effectNeutralRequiredReward ~= nil
-        and (not p.bool(record.effectNeutralRequiredReward, label .. ".effectNeutralRequiredReward")
-            or record.effectNeutralRequiredReward ~= true) then
-        return p.fail(label .. ".effectNeutralRequiredReward must be true when present")
+    if record.requiredReward ~= nil then
+        local _, dropError = overview.requiredRewardDrop(record.requiredReward, label .. ".requiredReward")
+        if dropError then return nil, dropError end
     end
     if record.rewardWheels ~= nil then
         local _, wheelsError = rewardWheels(record.rewardWheels, label .. ".rewardWheels")

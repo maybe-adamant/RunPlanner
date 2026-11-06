@@ -58,7 +58,7 @@ local function preservesNativeRequiredReward(target, occurrencesById)
     local targetOccurrence = occurrencesById and occurrencesById[target.room.id]
     return type(targetOccurrence) == "table"
         and type(targetOccurrence.overview) == "table"
-        and targetOccurrence.overview.effectNeutralRequiredReward == true
+        and targetOccurrence.overview.requiredReward ~= nil
 end
 
 -- Fixed links reference the destination's reward instead of repeating it inline.

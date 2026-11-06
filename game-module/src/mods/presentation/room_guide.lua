@@ -37,6 +37,21 @@ local function fit(text)
     return table.concat(kept) .. "…"
 end
 
+-- Native consumables a Boss room's required drop can hold.
+local requiredDropNames = {
+    MixerFBossDrop = "Cinder", MixerGBossDrop = "Pearl", MixerHBossDrop = "Tears",
+    MixerIBossDrop = "Zodiac Sand", MixerNBossDrop = "Wool", MixerOBossDrop = "Golden Apple",
+    MixerPBossDrop = "Feather", MixerQBossDrop = "Void Lens",
+    GemPointsBigDrop = "Gemstones", DreamPointsDrop = "Shiny Stars",
+}
+
+local function requiredDropLabel(drop)
+    local name = type(drop) == "table" and requiredDropNames[drop.consumableKey] or nil
+    if name == nil then return "Boss reward" end
+    if drop.amount > 1 then name = name .. " ×" .. tostring(drop.amount) end
+    return "Collect " .. name
+end
+
 local gods = { Aphrodite = true, Apollo = true, Ares = true, Demeter = true,
     Hephaestus = true, Hera = true, Hestia = true, Poseidon = true, Zeus = true, Hermes = true }
 
@@ -73,6 +88,7 @@ local rewardNames = {
     Story = "Story", Shop = "Shop", ClockworkGoal = "Clockwork Goal",
 }
 guide.rewardNames = rewardNames
+guide.requiredDropNames = requiredDropNames
 
 -- Short forms for god boons whose native names exceed the Sell and Phial rows.
 local traitNames = {
@@ -156,7 +172,7 @@ local function instruction(description, occurrence, transaction)
         local god = hidden and sourceName(hidden.gameName) or nil
         if god then return "Mystery: " .. god end
     end
-    if kind == "collectRequiredReward" then return "Boss reward" end
+    if kind == "collectRequiredReward" then return requiredDropLabel(description.drop) end
     if kind == "completeFieldsCage" then
         local label = cageLabel(description.phaseKey)
         return reward ~= nil and (label .. ": " .. rewardName(reward)) or label

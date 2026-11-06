@@ -1913,7 +1913,7 @@ function TestProtocol.testRecomputedFingerprintCannotHideClosedUnionViolations()
     lu.assertNil(protocol.decode(value))
 
     value = decode("f-opening")
-    value.occurrences[1].overview.effectNeutralRequiredReward = false
+    value.occurrences[1].overview.effectNeutralRequiredReward = true
     refreshFingerprint(value)
     lu.assertNil(protocol.decode(value))
 
@@ -2375,6 +2375,46 @@ local function decodeEdited(name, edit)
     edit(plan)
     plan.planFingerprint = computed or plan.planFingerprint
     return protocol.decode(plan)
+end
+
+local function requiredRewardRoom(plan)
+    for _, occurrence in ipairs(plan.occurrences) do
+        if occurrence.overview.requiredReward ~= nil then
+            for _, row in ipairs(occurrence.roomGuide) do
+                if row.description.kind == "collectRequiredReward" then return occurrence, row.description end
+            end
+        end
+    end
+end
+
+function TestProtocol.testRequiredRewardDropIsClosedAndMatchesItsGuideRow()
+    local plan, errorMessage = protocol.decode(decode("automatic-boss"))
+    lu.assertNil(errorMessage)
+    local occurrence, description = requiredRewardRoom(plan)
+    lu.assertEquals(occurrence.overview.requiredReward,
+        { consumableKey = "MixerFBossDrop", resourceKey = "MixerFBoss", amount = 1 })
+    lu.assertEquals(description.drop, occurrence.overview.requiredReward)
+    for _, edit in ipairs({
+        function(drop) drop.amount = 0 end,
+        function(drop) drop.amount = 1.5 end,
+        function(drop) drop.consumableKey = "" end,
+        function(drop) drop.resourceKey = nil end,
+        function(drop) drop.extra = true end,
+    }) do
+        lu.assertNil(decodeEdited("automatic-boss", function(value)
+            local room, row = requiredRewardRoom(value)
+            edit(room.overview.requiredReward)
+            edit(row.drop)
+        end))
+    end
+    for _, edit in ipairs({
+        function(_, row) row.drop.amount = 2 end,
+        function(_, row) row.drop.consumableKey = "MixerGBossDrop" end,
+        function(_, row) row.drop = nil end,
+        function(room) room.overview.requiredReward = nil end,
+    }) do
+        lu.assertNil(decodeEdited("automatic-boss", function(value) edit(requiredRewardRoom(value)) end))
+    end
 end
 
 local REROLL = '{"owner":"r1","target":{"kind":"door","exitKey":"exit1"},'
