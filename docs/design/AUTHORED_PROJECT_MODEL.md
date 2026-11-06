@@ -630,7 +630,7 @@ The completed-Hub exit exists for the Hub's whole lifetime and is removed only
 with the Hub. Its source is `{ kind: 'hubDecision', decisionKey: 'hub' }`, not
 a rendered visit index or synthetic completion source; decoding rejects a Hub
 without it. Board, visit, fountain and slot edits (`ReplaceHubActionOrder`,
-`OpenHubSlot`, `CloseHubSlot`, `ResetHubBoard`) never touch it, so its Preboss,
+`OpenHubSlot`, `CloseHubSlot`, `ResetHubVisits`, `ResetHubBoard`) never touch it, so its Preboss,
 Boss and Postboss state survives them. The declared open-set and six-visit
 predicate gates only reachability: while it fails, materialization stops at
 the Hub frontier and the chain is an authored, unreached context whose state

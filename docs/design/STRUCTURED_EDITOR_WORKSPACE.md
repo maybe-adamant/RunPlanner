@@ -489,9 +489,11 @@ destination, and an Ephyra room's hidden return door is a chip of its own.
 Beside the chips a disclosure shows or hides the doors' editor, which follows
 the banner as one full-width line: the batch rules (pool line, Fields roll and
 cage facts, a boss door's pool), then the shared door table without selection
-controls. Doors are shown open by default. Hiding them is session state only
-(neither authored nor in history); navigation to a door owner opens them, and
-while any owner in the editor has a finding they stay open with no disclosure.
+controls. The editor stays collapsed until it needs attention: a finding on
+any owner it repairs, the room's doors being the next required input, or
+navigation to a door owner or one of their findings opens it. An explicit open
+or close is remembered per room for the session (neither authored nor in
+history) and yields only to attention it has not yet seen.
 The table's header ends in one quiet red action: **Fix Preboss** where a
 takeover batch can be matched to its source's declared doors, **Fix Doors**
 where an ordinary batch removes its unavailable doors, otherwise **Reset
@@ -511,8 +513,11 @@ editable, since the plan ends only as the room is left. A room with
 no planned way on (the Hub or a side-room visit leads on, or nothing is planned
 past it) has no last row and keeps **End plan here** under its Timeline, with
 any boss-door pool still in its doors; a room past the plan's end shows no
-doors and keeps it under its read-only Timeline. Moving to the next room is
-the rail's job.
+doors and keeps it under its read-only Timeline. Ephyra's Hub rooms are the
+exception that names its way back: a Hub visit's main room ends with **Return
+to Hub**, which opens the Hub Timeline at the next visit's segment, and a side
+room ends with **Return to** its main room, which opens that room's Timeline.
+Otherwise moving to the next room is the rail's job.
 
 Door and Fields cage rerolls are Timeline rows, where their reorder handle is
 the only way to change their position among other post-unlock actions. The
@@ -887,23 +892,26 @@ language, but its center is not an ordinary decision spine. The
 - the persistent board over 26 declaration-fixed Hub slots, with nine or ten
   open members;
 - one complete room and incoming reward for each open slot;
-- Hub Overview for the complete fixed-slot set, open/closed membership, and
-  each open room's reward editor; Hub Timeline for the exact authored action
-  prefix (up to six room visits, one fountain use and board-door rerolls) on
-  the map or in its Details timeline, which ends with the fixed completed-Hub
-  exit. The tabs read Overview and Timeline;
+- Hub Overview for the board: open/closed membership on the Hub map and each
+  open room's reward in draw order; Hub Timeline for the exact authored action
+  prefix (up to six room visits, one fountain use and board-door rerolls),
+  which ends with the completed-Hub exit. Each tab is a column beside the Hub
+  map. The tabs read Overview and Timeline;
 - side-room generation and entry state under visited parents;
 - derived Hub returns and parent restores;
 - the fixed completed-Hub exit to the width-one Preboss Shop and its derived
   completion sequence, authored with the Hub.
 
 The Hub always leaves to its Preboss, so the completed-Hub exit is a hidden
-structural link with nothing to author. The Details timeline ends with one
-fixed, unmovable **Go to Preboss** row after every visit and the fountain,
-read-only and muted until the Hub is complete; it is the exit's finding anchor.
-While the Hub is incomplete the Preboss rooms follow the unreached-context
-policy. A Hub visit's main room and its side rooms have no last row: the Hub
-decides where they lead.
+structural link with nothing to author. Once all six visits are set, the
+Timeline ends with a **Leave** segment naming the Preboss, which opens it; the
+segment is the exit's finding anchor. While the Hub is incomplete the Preboss
+rooms follow the unreached-context policy. The Hub decides where a Hub visit's
+main room and its side rooms lead, so their last row only returns: the main
+room to the Hub Timeline at the next visit's segment, with that visit's room
+picker focused, and a side room to its main room's Timeline (see
+[Doors on the Timeline](#doors-on-the-timeline)). These returns and a visit's
+open action are UI-session navigation only.
 
 Exact Hub inspector destinations also carry their presentation tab: Hub,
 slot-set, and main incoming-reward-identity owners open Hub Overview; main
@@ -913,66 +921,58 @@ parent-owned side generation, side reward identity, and side entry order open
 the parent main occurrence Side Rooms workbench;
 entered side occurrences and their acquisition
 children open the side occurrence Timeline; the completed-Hub exit opens the
-Hub Timeline's Details on its last row; Hub fountain placement opens Hub
-Timeline; and its Phial
-outcome and board-door rerolls open the Hub Timeline's Details. React consumes that explicit destination and
+Preboss; Hub fountain placement, its Phial outcome and board-door rerolls open
+the Hub Timeline. React consumes that explicit destination and
 does not infer tab ownership from semantic-address shapes or rendered ancestry.
 
 The board remains a joint generation region. Open-set membership and the dense
 authored visit prefix are distinct engine-owned products. There is no persisted
 map position or unvisited ordering.
 
-Overview opens in Map. Clicking a closed door lazily invokes its bound opening
-attempt and opens the existing reward editor on success; rendering markers does
-not allocate occurrences or eagerly prepare every candidate. A closed door that
-cannot open stays focusable, states why on hover and focus, and does nothing
-when activated. Open doors expose
-that same editor. **Details** opens the fixed-slot List, which remains the stable
-repair home for membership and reward findings; **Back to Map** returns to the
-visual editor. Finding navigation selects Details even when Map was open. The List shows
-every fixed-slot card in declaration order.
-**Reset Board** dispatches one atomic command that closes all slots and removes
-their owned visits and rooms while retaining the Hub, its source and its
-completed-Hub chain. It differs from Remove Hub and participates in ordinary Undo/Redo.
+Hub Overview's rewards column lists the open doors once the board holds its
+least door count (nine), in the engine's reward draw order: each row its draw
+position, its room and the standard reward picker for the door's first draw,
+since Overview shows the board as generated. Below that count a status line
+stands in for the rows and holds the open-set findings. Opening a tenth door
+re-sorts the rows into the new draw order. The Hub map's door buttons open and
+close the slots, named for what they do; activating a closed door lazily
+invokes its bound opening attempt, so rendering markers does not allocate
+occurrences or eagerly prepare every candidate. A door that cannot open or
+close stays focusable, states why on hover and focus, and does nothing when
+activated. A row and its door highlight each other while either is hovered or
+focused. **Reset Board** dispatches one atomic command that closes all slots and
+removes their owned visits and rooms while retaining the Hub, its source and
+its completed-Hub chain; it participates in ordinary Undo/Redo.
 
-Hub Timeline opens on the map. Open doors retain their stable room labels and reward
-icons; visited markers carry a badge with the combined action order, while room visit ordinals
-stay 1–6. Clicking an unvisited door appends it when fewer than six rooms are
-visited; the fountain's distinct marker appends its one use regardless of room
-capacity. Once all six visits and the fountain are placed, visited doors show
-a room/reward popup with an explicit Open Room action; the fountain shows its
-timing and an Open Interaction action. Clicking outside or Escape dismisses
-the popup without leaving the map. Visited room banners offer a Hub Timeline return beside the map button, regardless of navigation
-entry point. Markers do not reorder
-or open a second reward preview. Overview shows the labeled fountain diamond
-without interaction or board membership. **Reset visits** submits the empty
-action prefix, clearing the
-fountain use and its Phial outcome, as one undoable edit, including normal
-downstream cleanup; it is disabled while the order holds board-door rerolls.
+Hub Timeline's visits column lists the Hub's stays as segments: Entry, then
+Visit 1 to 6, each the stay after that visit. A visit segment picks its room
+from the doors open in the stay before it, shows the visited door's reward
+(first draw → final when rerolled) with any kept-reward repair, and opens the
+picked room's Timeline. Each segment's die appends a board-door reroll to its
+stay. A stay's presses and its fountain use are one ordered list in the reroll
+row style, each led by its reorder handle: a press reads its die, the pressed
+door, then its new reward's picker and its removal; the fountain row reads
+Fountain and, where a Phial reaches it, the Phial target. Every row moves
+within its stay by its handle, and the fountain can also move to the end of any
+other stay; before its use the fountain is a Use row under the segments.
+**Reset visits** dispatches one command that removes every visit and the
+presses of the stays they open, keeps Entry's presses and moves a used
+fountain to Entry, as one undoable edit with normal downstream cleanup.
 
-**Details** opens the Hub timeline as a list: the visits in order, each named
-by its room and its reward icons (first draw → final when rerolled), with each
-gap between them (each Hub stay) holding its Rerolls list for board doors not
-yet entered and a board recap of every door's current reward, first draw →
-final when rerolled. Each recap is collapsed to one line naming how many doors
-are open, marked with the reroll die when the stay holds a press; each stay expands on its own and Show boards expands them all.
-Which recaps are expanded is presentation state, outside authored history. The
-Hub shows one reroll count, on the timeline header: the run's rerolls left
-after its last reached stay; the stays' lists carry none. A stay's presses and
-its fountain use are one ordered list in the reroll row style, each row led by
-its reorder handle: the fountain row is its icon, Fountain as its target and,
-where a Phial reaches it, an arrow and the Phial target. Every row moves within
-its stay by its reorder handle, and the fountain can also be placed at the end
-of any other gap; the stay's die add control appends a press at the end of its
-stay. Before its use the fountain is a Use row at the end. Map and Details send
-the same Hub action-order command; finding navigation to a reroll or the Phial
-outcome selects Details.
+The map beside the Timeline follows the choice being worked on, as
+presentation state only: a visit's room picker shows the stay it picks from
+and links its highlighted option to that door; a reroll row shows its own
+stay; a segment's label shows the stay after its visit once that visit is
+picked and settled, else the stay before it with the picked door pending; a
+stay not yet reached shows no doors and its picker waits. Each door shows its
+current reward, a die badge when rerolled with the reroll chain on hover, and
+a cleared mark once visited; the selected visit's door is emphasized.
 
 The existing Hub-owned interaction assesses complete proposals with Hub-level
 readiness, not the interior readiness of each visited room. Exact visit markers
-and the count target remain available for findings. Map controls, reward icons
-and badges are projections of the same workspace owners as Details; they do not
-create another membership, legality or chronology path.
+and the count target remain available for findings. Map doors, reward icons
+and badges are projections of the same workspace owners as the columns; they
+do not create another membership, legality or chronology path.
 
 The N rail gives its fixed Opening and PreHub stages and each authored Hub
 visit one read-only primary-reward token when the room projects one. This is
@@ -1005,7 +1005,7 @@ completed-Hub exit has no authoring interaction of its own.
 Hub membership changes are batch composition rather than navigation. Their
 bound `OpenHubSlot` and `CloseHubSlot` intents have no semantic-focus product:
 opening or closing a room must not jump the inspector to its room configuration.
-The local reward popover and keyboard focus remain transient presentation state;
+Keyboard focus and map emphasis remain transient presentation state;
 neither changes the rail selection or enters authored history. Explicit rail
 and finding actions retain their exact semantic owner destinations.
 

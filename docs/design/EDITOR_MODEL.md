@@ -363,7 +363,13 @@ maps it to a control:
   selection) names only its next edit;
 - a pick between doors or wheel offers marks its one picker, on the room's
   Leave row or the phase's Select wheel row;
-- a requirement spread across a map marks that map's requirement box;
+- a Hub finding lands on exactly one control: an open-set finding on the
+  Overview's status line (its placeholder below the board's least door
+  count), a door's membership or reward on that door's row or reward picker,
+  a missing or misplaced visit on its visit's room picker, a fountain use on
+  its Use row or reorder handle, a press on its reroll row, and a visited
+  room's kept rerolled reward on the repair beside that visit's reward on the
+  Hub Timeline;
 - an action that should not exist marks its Delete, a misplaced action its
   reorder handle, and an unplaced action its Restore or its Add area entry
   (the object or source-family group that offers it); removing the offending
