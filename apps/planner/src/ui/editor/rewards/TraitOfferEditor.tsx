@@ -79,6 +79,7 @@ export function TraitOfferLauncher({
           {...timelineChipProps(option)}
           {...(option.state === 'picked' && mark['data-has-findings'] ? mark : {})}
           aria-pressed={option.state === 'picked'}
+          className="timeline-chip"
           key={option.optionKey}
           onClick={() =>
             option.pickable && pickIntent !== undefined
@@ -95,7 +96,12 @@ export function TraitOfferLauncher({
           <span aria-hidden="true" className="row-reward-arrow">
             →
           </span>
-          <button {...timelineChipProps(outcome)} onClick={open} type="button">
+          <button
+            {...timelineChipProps(outcome)}
+            className="timeline-chip"
+            onClick={open}
+            type="button"
+          >
             <TimelineChipFace chip={outcome} />
           </button>
         </>
