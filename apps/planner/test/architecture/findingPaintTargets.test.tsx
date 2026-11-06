@@ -50,8 +50,10 @@ afterEach(cleanup);
 
 /** Containers that carry their own mark; every other container is a navigation anchor. */
 const approvedContainers = [
-  // A Hub requirement spread across the whole board or map has no single control.
-  'hub-requirement-box',
+  // The Hub open set spans the whole board: its status line stands in for a control.
+  'hub-board-status-line',
+  // A Hub door's row is the one place its membership and reward meet.
+  'hub-door-row',
 ] as const;
 const controlTags = new Set(['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA']);
 const controlRoles = new Set(['radio', 'radiogroup', 'checkbox', 'combobox']);

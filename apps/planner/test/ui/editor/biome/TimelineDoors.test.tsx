@@ -7,9 +7,10 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createProjectDocument,
   createRoomActionAddress,
+  createStartingRewardAddress,
   semanticAddressKey,
-  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNOPQProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
@@ -22,6 +23,7 @@ import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { findingSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { PurchaseCost } from '@planner/ui/editor/biome/commerce/GoldAmount';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { renderWorkspace } from '@planner-test/support/biome-workbench';
@@ -46,17 +48,12 @@ function history(view: ReturnType<typeof renderWorkspace>) {
 }
 
 describe('a room’s doors on its Timeline', () => {
-  it('opens its doors by default and collapses them without authoring anything', async () => {
+  it('keeps its doors collapsed by default and remembers an explicit choice per room', async () => {
     const view = renderWorkspace(loadUnderworldFGCheckpoint(), 'Underworld', 'F');
     const details = await openTimeline(view);
-    expect(within(details).getByRole('region', { name: 'Door details' })).toBeTruthy();
     const before = history(view);
-
-    const disclosure = within(details).getByRole('button', { name: 'Door details' });
-    expect(disclosure.getAttribute('aria-expanded')).toBe('true');
-    expect(document.getElementById(disclosure.getAttribute('aria-controls')!)).not.toBeNull();
-    await view.user.click(disclosure);
-    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
+    const disclosure = () => within(details).getByRole('button', { name: 'Door details' });
+    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
     expect(within(details).queryByRole('region', { name: 'Door details' })).toBeNull();
     // The closed row still names every door.
     const summary = within(details).getByRole('list', { name: 'Door summary' });
@@ -66,6 +63,30 @@ describe('a room’s doors on its Timeline', () => {
         .getAllByRole('listitem')
         .every((chip) => !chip.hasAttribute('tabindex')),
     ).toBe(true);
+
+    await view.user.click(disclosure());
+    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+    expect(document.getElementById(disclosure().getAttribute('aria-controls')!)).not.toBeNull();
+    expect(within(details).getByRole('region', { name: 'Door details' })).toBeTruthy();
+
+    // The open stays across a tab switch and a visit to another room.
+    await view.user.click(within(details).getByRole('tab', { name: 'Room Overview' }));
+    await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
+    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(f, createOccurrenceId('golden-f-start'))),
+      ),
+    );
+    await openTimeline(view);
+    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+
+    // So does a close.
+    await view.user.click(disclosure());
+    await view.user.click(within(details).getByRole('tab', { name: 'Room Overview' }));
+    await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
+    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
+    // Opening and closing is no authored edit.
     expect(history(view)).toBe(before);
 
     // Navigating to a door's owner opens the doors again.
@@ -75,50 +96,76 @@ describe('a room’s doors on its Timeline', () => {
     expect(within(details).getByRole('region', { name: 'Door details' })).toBeTruthy();
   });
 
-  it('keeps doors with a finding open, with nothing to collapse them', async () => {
-    let project: ProjectDocument = loadUnderworldFGCheckpoint();
-    const room = project.route.biomes[0]!.topology!.occurrences.find(
-      (candidate) => candidate.occurrenceId === doorTo,
-    )!;
-    // A door whose reward is cleared carries a finding on its reward.
-    project = {
-      ...project,
-      route: {
-        ...project.route,
-        biomes: project.route.biomes.map((biome) =>
-          biome.biomeKey !== 'F' || biome.topology === null
-            ? biome
-            : {
-                ...biome,
-                topology: {
-                  ...biome.topology,
-                  occurrences: biome.topology.occurrences.map((occurrence) =>
-                    occurrence.occurrenceId !== room.occurrenceId || !('reward' in occurrence.state)
-                      ? occurrence
-                      : { ...occurrence, state: { ...occurrence.state, reward: null } },
-                  ),
-                },
-              },
-        ),
-      },
-    };
-    const view = renderWorkspace(project, 'Underworld', 'F');
+  it('opens on a door finding, stays closed after a close while it lasts, and reopens on a new one', async () => {
+    const view = renderWorkspace(loadUnderworldFGCheckpoint(), 'Underworld', 'F');
+    const details = await openTimeline(view);
+    const disclosure = () => within(details).getByRole('button', { name: 'Door details' });
+    await view.user.click(disclosure());
+    await view.user.click(disclosure());
+    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
+
+    // A door reward the bag cannot give is new attention: the doors open.
+    const doorTwo = createIncomingRewardAddress(f, createOccurrenceId('golden-f-b3-e2'));
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceIncomingReward',
+          reward: doorTwo,
+          value: { rewardType: 'MaxHealthDrop' },
+        }),
+      ),
+    );
     const finding = view.application.store
       .getState()
       .projectWorkspace.assembly!.evaluation.findings.find(
-        (candidate) =>
-          semanticAddressKey(candidate.origin) ===
-          semanticAddressKey(createIncomingRewardAddress(f, doorTo)),
+        (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(doorTwo),
       );
     if (finding === undefined) throw new Error('missing door reward finding');
+    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+
+    // Closed again with the same finding, the doors stay closed.
+    await view.user.click(disclosure());
+    await view.user.click(within(details).getByRole('tab', { name: 'Room Overview' }));
+    await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
+    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
+
+    // Navigating to the finding opens them, so its target shows.
     act(() =>
       view.application.store.dispatch(
         findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
       ),
     );
-    const details = screen.getByRole('complementary', { name: 'Details' });
     expect(within(details).getByRole('region', { name: 'Door details' })).toBeTruthy();
-    expect(within(details).queryByRole('button', { name: 'Door details' })).toBeNull();
+    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('opens when the room’s doors are the next required input', async () => {
+    const start = createOccurrenceId('timeline-doors-f-start');
+    let project = createProjectDocument(catalog, {
+      projectId: 'timeline-doors-frontier',
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: f,
+      occurrenceId: start,
+      gameName: 'F_Opening01',
+    });
+    const view = renderWorkspace(project, 'Underworld', 'F');
+    act(() =>
+      view.application.store.dispatch(semanticOwnerFocused(createOccurrenceAddress(f, start))),
+    );
+    const details = screen.getByRole('complementary', { name: 'Details' });
+    await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
+    expect(
+      within(details).getByRole('button', { name: 'Door details' }).getAttribute('aria-expanded'),
+    ).toBe('true');
   });
 
   it('picks the exit on the Leave row as one authored step', async () => {

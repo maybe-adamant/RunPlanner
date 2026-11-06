@@ -19,7 +19,7 @@ import {
   nLocalOccurrenceId,
   nOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
-import { renderWorkspace } from '@planner-test/support/biome-workbench';
+import { expandDoors, renderWorkspace } from '@planner-test/support/biome-workbench';
 
 afterEach(cleanup);
 
@@ -41,6 +41,7 @@ async function openDoors(view: ReturnType<typeof renderWorkspace>, occurrenceId:
   );
   const details = screen.getByRole('complementary', { name: 'Details' });
   await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
+  expandDoors(details);
   return within(details).getByRole('article', { name: 'Hidden return door' });
 }
 

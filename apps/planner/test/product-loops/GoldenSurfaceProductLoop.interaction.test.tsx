@@ -157,12 +157,11 @@ describe('surface product loop', () => {
     expect(screen.getByRole('tab', { name: 'Hub Overview' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    expect(screen.getByRole('region', { name: 'Ephyra Hub map' })).toBeTruthy();
-    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
-    expect(screen.getByRole('group', { name: 'Hub room set' })).toBeTruthy();
-    expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(26);
+    const map = screen.getByRole('region', { name: 'Ephyra Hub map' });
+    expect(within(map).getAllByRole('button', { name: /^(Open|Close) / })).toHaveLength(26);
+    expect(within(map).getAllByRole('button', { pressed: true })).toHaveLength(9);
     expect(
-      document.querySelectorAll('[data-hub-card-presentation="overview"][data-open="true"]'),
+      within(screen.getByRole('list', { name: 'Doors in draw order' })).getAllByRole('listitem'),
     ).toHaveLength(9);
     expect(document.body.textContent).not.toContain('N_Combat');
 
@@ -302,7 +301,8 @@ describe('surface product loop', () => {
     const nTopology = edited.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     const hub = nTopology?.decisions.find((decision) => decision.kind === 'hub');
     if (hub === undefined || hub.kind !== 'hub') throw new Error('edited Hub is missing');
-    expect(hub.actions).toEqual([]);
+    // The visits go; the used fountain stays, at Entry.
+    expect(hub.actions).toEqual([{ kind: 'useFountain' }]);
     expect(
       nTopology?.decisions.some(
         (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
@@ -328,6 +328,33 @@ describe('surface product loop', () => {
     expect(await saving.write()).toBe(encodeProjectDocument(edited));
   });
 
+  it('walks a Hub visit to its room and back to the next visit without an edit', async () => {
+    const saving = createSavingApplication();
+    const { application } = saving;
+    await saving.open(loadSurfaceNProject());
+    const view = renderPlannerForInteraction({ application });
+    const historyBefore = currentHistory(application).past.length;
+
+    await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
+    await view.user.click(hubRailButton());
+    await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
+    await view.user.click(screen.getByRole('button', { name: 'Open Combat 05' }));
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const leave = screen.getByRole('listitem', { name: 'Return to Hub' });
+    await view.user.click(within(leave).getByRole('button', { name: 'Open Hub Timeline' }));
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Visit 2 room' })),
+    );
+    expect(currentHistory(application).past).toHaveLength(historyBefore);
+    expect(saving.saves.hasPending()).toBe(false);
+    application.dispose();
+  });
+
   it('closes a ninth unvisited Hub member, keeping its Preboss chain, as one undoable saved command', async () => {
     const saving = createSavingApplication();
     const { application } = saving;
@@ -339,23 +366,18 @@ describe('surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(hubRailButton());
 
-    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
-    const card = screen.getByRole('article', { name: 'Combat 03 Hub room' });
-    const checkbox = within(card).getByRole('checkbox', {
-      name: 'Combat 03 open',
-    }) as HTMLInputElement;
-    expect(checkbox.checked).toBe(true);
-    expect(within(card).queryByText(/Closing this slot removes/)).toBeNull();
+    const door = screen.getByRole('button', { name: 'Close Combat 03' });
+    expect(door.getAttribute('aria-pressed')).toBe('true');
 
     const historyBeforeClose = currentHistory(application).past.length;
     dispatch.mockClear();
-    act(() => checkbox.focus());
-    await view.user.keyboard('[Space]');
+    act(() => door.focus());
+    await view.user.keyboard('{Enter}');
 
     await waitFor(() =>
       expect(
-        (screen.getByRole('checkbox', { name: 'Combat 03 open' }) as HTMLInputElement).checked,
-      ).toBe(false),
+        screen.getByRole('button', { name: 'Open Combat 03' }).getAttribute('aria-pressed'),
+      ).toBe('false'),
     );
     const topology = currentProject(application).route?.biomes.find(
       (biome) => biome.biomeKey === 'N',
@@ -453,7 +475,7 @@ describe('surface product loop', () => {
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
   });
 
-  it('repairs a Hub Phial target on the Hub timeline fountain row and returns to the Hub map', async () => {
+  it('repairs a Hub Phial target on the Hub timeline fountain row and reopens it from the fountain', async () => {
     const application = createApplication();
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const outcome = createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub'));
@@ -486,12 +508,13 @@ describe('surface product loop', () => {
     await waitFor(() => expect(currentEvaluation(application).findings).toEqual([]));
 
     const historyBefore = currentHistory(application).past.length;
-    await view.user.click(screen.getByRole('button', { name: 'Back to Map' }));
     act(() =>
       application.store.dispatch(semanticOwnerFocused(createHubFountainAddress(nBiome, 'hub'))),
     );
-    expect(await screen.findByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
-    expect(screen.queryByRole('region', { name: 'Fountain order' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(await screen.findByRole('region', { name: 'Ephyra Hub timeline' })).toBeTruthy();
     expect(nHub(currentProject(application)).actions).toEqual(hubVisitActions(nVisitSlotKeys, 3));
     expect(nHub(currentProject(application)).fountainRarityResult).toEqual({
       targetTraitKey: 'HermesWeaponBoon',

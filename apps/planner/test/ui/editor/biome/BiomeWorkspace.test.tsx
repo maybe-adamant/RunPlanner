@@ -68,6 +68,7 @@ import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import { RunStateLauncher } from '@planner/ui/editor/biome/RunStateSheet';
 import userEvent from '@testing-library/user-event';
 import {
+  expandDoors,
   renderWorkspace,
   workspaceBiome,
   workspaceProjection,
@@ -458,7 +459,7 @@ describe('BiomeWorkspace', () => {
     );
   });
 
-  it('binds an incomplete Hub visit finding to its next Timeline count and repairs it from the map', async () => {
+  it('binds an incomplete Hub visit finding to its next visit picker and repairs it there', async () => {
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
@@ -487,18 +488,20 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    const box = document.querySelector<HTMLElement>('.hub-requirement-box')!;
-    expect(box.textContent).toBe('Visit 6 rooms · 2 planned · Fountain used');
-    expect(box.getAttribute('data-semantic-owner')).toBe(
+    const picker = screen.getByRole('button', { name: 'Visit 3 room' });
+    expect(picker.getAttribute('data-semantic-owner')).toBe(
       semanticAddressKey(createHubVisitAddress(nBiome, 'hub', 3)),
     );
-    expect(box.getAttribute('data-has-findings')).toBe('true');
-    expect(box.getAttribute('data-selected-finding')).toBe('true');
-    await waitFor(() => expect(document.activeElement).toBe(box));
-    await view.user.click(screen.getByRole('button', { name: 'Combat 01: Unvisited. Add visit.' }));
+    expect(picker.getAttribute('data-has-findings')).toBe('true');
+    expect(picker.getAttribute('data-selected-finding')).toBe('true');
+    await waitFor(() => expect(document.activeElement).toBe(picker));
+    await view.user.click(picker);
+    await view.user.click(
+      within(await screen.findByRole('listbox')).getByRole('option', { name: /Combat 01/ }),
+    );
     await waitFor(() =>
-      expect(document.querySelector('.hub-requirement-box')?.textContent).toBe(
-        'Visit 6 rooms · 3 planned · Fountain used',
+      expect(semanticAddressKey(findingForNextVisit().origin)).toBe(
+        semanticAddressKey(createHubVisitAddress(nBiome, 'hub', 4)),
       ),
     );
 
@@ -511,14 +514,12 @@ describe('BiomeWorkspace', () => {
         }),
       ),
     );
-    const nextBox = document.querySelector<HTMLElement>('.hub-requirement-box')!;
-    expect(nextBox.getAttribute('data-semantic-owner')).toBe(
-      semanticAddressKey(createHubVisitAddress(nBiome, 'hub', 4)),
-    );
-    await waitFor(() => expect(document.activeElement).toBe(nextBox));
+    const nextPicker = screen.getByRole('button', { name: 'Visit 4 room' });
+    expect(nextPicker.getAttribute('data-selected-finding')).toBe('true');
+    await waitFor(() => expect(document.activeElement).toBe(nextPicker));
   });
 
-  it('routes the combined Hub action finding to the Timeline fountain and repairs it there', async () => {
+  it('routes the combined Hub action finding to the unused fountain and repairs it there', async () => {
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
@@ -543,14 +544,17 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    const box = document.querySelector<HTMLElement>('.hub-requirement-box')!;
-    expect(box.textContent).toBe('6 planned · Fountain unused');
-    expect(box.getAttribute('data-semantic-owner')).toBe(semanticAddressKey(fountain));
-    expect(box.getAttribute('data-selected-finding')).toBe('true');
-    await waitFor(() => expect(document.activeElement).toBe(box));
-    const marker = screen.getByRole('button', { name: 'Hub fountain: Unused. Use fountain.' });
-    expect(marker.hasAttribute('data-has-findings')).toBe(false);
-    await view.user.click(marker);
+    const use = screen.getByRole('button', { name: 'Use Fountain' });
+    expect(use.getAttribute('data-has-findings')).toBe('true');
+    expect(
+      [...document.querySelectorAll('[data-has-findings="true"]')].filter(
+        (element) => element.getAttribute('data-semantic-owner') === semanticAddressKey(fountain),
+      ),
+    ).toEqual([use]);
+    await view.user.click(use);
+    await view.user.click(
+      within(await screen.findByRole('listbox')).getByRole('option', { name: 'Visit 6' }),
+    );
     await waitFor(() =>
       expect(
         view.application.store
@@ -587,10 +591,8 @@ describe('BiomeWorkspace', () => {
         semanticOwnerFocused(createHubFountainAddress(nBiome, 'hub')),
       ),
     );
-    if (screen.queryByRole('region', { name: 'Ephyra Hub timeline' }) === null)
-      await view.user.click(await screen.findByRole('button', { name: 'Details →' }));
     const details = await screen.findByRole('region', { name: 'Ephyra Hub timeline' });
-    const list = within(details).getAllByRole('region', { name: 'Rerolls' })[0]!;
+    const list = within(details).getByRole('region', { name: 'Entry rerolls' });
     expect(within(list).getByRole('button', { name: 'Reorder Fountain' })).toBeTruthy();
     keyboardReorder(details, 'Fountain', /^Before Reroll 2/);
     const actions = () => {
@@ -604,16 +606,10 @@ describe('BiomeWorkspace', () => {
     // The fountain row now stands between the two presses in the same list.
     const rows = [
       ...within(details)
-        .getAllByRole('region', { name: 'Rerolls' })[0]!
+        .getByRole('region', { name: 'Entry rerolls' })
         .querySelectorAll('.room-rerolls-list > li'),
-    ].map((row) =>
-      row.classList.contains('hub-timeline-fountain')
-        ? 'Fountain'
-        : row.classList.contains('room-reroll-append')
-          ? 'Append'
-          : 'Reroll',
-    );
-    expect(rows).toEqual(['Reroll', 'Fountain', 'Reroll', 'Append']);
+    ].map((row) => (row.classList.contains('hub-timeline-fountain') ? 'Fountain' : 'Reroll'));
+    expect(rows).toEqual(['Reroll', 'Fountain', 'Reroll']);
     // Keyboard focus stays on the moved row's reorder handle.
     await waitFor(() =>
       expect(document.activeElement).toBe(
@@ -627,8 +623,8 @@ describe('BiomeWorkspace', () => {
         within(details).getByRole('button', { name: 'Reorder Reroll 2' }),
       ),
     );
-    // Leaving the list for a stay without rerolls, it keeps focus too.
-    keyboardReorder(details, 'Fountain', /^After Visit 1/);
+    // Moved to the next stay, it keeps focus too.
+    keyboardReorder(details, 'Fountain', /^Visit 1\b/);
     await waitFor(() => expect(actions()).toEqual(['reroll', 'reroll', 'roomVisit']));
     await waitFor(() =>
       expect(document.activeElement).toBe(
@@ -637,7 +633,7 @@ describe('BiomeWorkspace', () => {
     );
   });
 
-  it('routes a Hub board reroll finding to its stay in the Timeline details', async () => {
+  it('routes a Hub board reroll finding to its stay on the Timeline', async () => {
     const hub = createHubDecisionAddress(nBiome, 'hub');
     // Without the card, the press after the first visit is refused.
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
@@ -668,7 +664,8 @@ describe('BiomeWorkspace', () => {
     );
     const details = screen.getByRole('region', { name: 'Ephyra Hub timeline' });
     // Without the card only the stay holding the press shows its list.
-    const afterFirstVisit = within(details).getByRole('region', { name: 'Rerolls' });
+    expect(within(details).getAllByRole('region', { name: / rerolls$/ })).toHaveLength(1);
+    const afterFirstVisit = within(details).getByRole('region', { name: 'Visit 1 rerolls' });
     const reward = within(afterFirstVisit).getByRole('button', { name: /^Reroll 1 reward/ });
     expect(reward.closest('[data-selected-finding="true"]')).not.toBeNull();
     const remove = within(afterFirstVisit).getByRole('button', { name: 'Remove reroll 1' });
@@ -743,7 +740,7 @@ describe('BiomeWorkspace', () => {
     },
   );
 
-  it('opens the fountain row with its Phial target from the completed map', async () => {
+  it('opens the used fountain as its row in its stay on the Hub Timeline', async () => {
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
@@ -752,47 +749,24 @@ describe('BiomeWorkspace', () => {
     const view = renderWorkspace(project, 'Surface', 'N');
     act(() =>
       view.application.store.dispatch(
-        semanticOwnerFocused(createHubVisitAddress(nBiome, 'hub', 1)),
+        semanticOwnerFocused(createHubFountainAddress(nBiome, 'hub')),
       ),
     );
-    expect(screen.queryByRole('region', { name: 'Fountain order' })).toBeNull();
-    await view.user.click(await screen.findByRole('button', { name: 'Hub fountain: Step 4.' }));
-    expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
-    // The fountain opens as its row in the Hub Timeline's Details; a Phial target
-    // appears there only while the Aromatic Phial is equipped.
-    await view.user.click(screen.getByRole('button', { name: 'Open Interaction →' }));
-    const details = await screen.findByRole('region', { name: 'Ephyra Hub timeline' });
-    const row = details.querySelector<HTMLElement>('.hub-timeline-fountain');
-    if (row === null) throw new Error('the Hub Timeline fountain row is missing');
-    expect(within(row).queryByRole('button', { name: /^Aromatic Phial target/ })).toBeNull();
-    expect(within(row).getByRole('button', { name: 'Reorder Fountain' })).toBeTruthy();
-    await view.user.click(screen.getByRole('button', { name: 'Back to Map' }));
-    expect(await screen.findByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
-  });
-
-  it('returns an Overview finding from Map to its canonical List presentation', async () => {
-    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
-    const projection = workspaceProjection(view.application);
-    const destination = [...projection.focusByOwner.values()].find(
-      (candidate) => candidate.hubTab === 'overview',
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
     );
-    if (destination === undefined) throw new Error('a Hub Overview destination is missing');
-    const selection = {
-      focusAddress: destination.focusAddress,
-      key: 'hub-overview-finding',
-      origin: destination.ownerAddress,
-      traitDialogTarget: destination.traitDialogTarget ?? null,
-      levelResolutionDialogTarget: destination.levelResolutionDialogTarget ?? null,
-    } as const;
-
-    act(() => view.application.store.dispatch(findingSelected(selection)));
-    expect(screen.getByRole('group', { name: 'Hub room set' })).toBeTruthy();
-    await view.user.click(screen.getByRole('button', { name: 'Back to Map' }));
-    expect(screen.getByRole('region', { name: 'Ephyra Hub map' })).toBeTruthy();
-
-    act(() => view.application.store.dispatch(findingSelected(selection)));
-    expect(screen.getByRole('group', { name: 'Hub room set' })).toBeTruthy();
+    const visits = await screen.findByRole('region', { name: 'Ephyra Hub timeline' });
+    const fountains = visits.querySelectorAll<HTMLElement>('.hub-timeline-fountain');
+    expect(fountains).toHaveLength(1);
+    const segment = fountains[0]!.closest<HTMLElement>('.hub-segment')!;
+    expect(within(segment).getByRole('button', { name: 'Visit 3' })).toBeTruthy();
+    // A Phial target appears only while the Aromatic Phial is equipped.
+    expect(
+      within(fountains[0]!).queryByRole('button', { name: /^Aromatic Phial target/ }),
+    ).toBeNull();
+    expect(within(fountains[0]!).getByRole('button', { name: 'Reorder Fountain' })).toBeTruthy();
   });
+
   it('opens an available Run State sheet without changing inspector selection or authored history, and restores launcher focus on close', async () => {
     const evaluationEvents: string[] = [];
     const application = createApplication({
@@ -1019,11 +993,9 @@ describe('BiomeWorkspace', () => {
     ).toContain(firstVisit.room.reward.label);
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
-    expect(
-      screen.getByRole('button', {
-        name: `${firstVisit.node.room.label}: Visit 1, step 2.`,
-      }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Visit 1 room' }).textContent).toContain(
+      firstVisit.node.room.label,
+    );
   });
 
   it('uses a selected decision rail stop to open its continuation occurrence stage', async () => {
@@ -1075,9 +1047,6 @@ describe('BiomeWorkspace', () => {
   it('routes a keyboard-selected Hub rail visit to its occurrence-owned local detail workbench', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
-    await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
-    expect(screen.getByRole('button', { name: 'Combat 02: Visit 3, step 4.' })).toBeTruthy();
-
     const visit = screen.getByRole('button', { name: /Visit 3.*Combat 02/ });
     act(() => visit.focus());
     await view.user.keyboard('{Enter}');
@@ -1321,6 +1290,7 @@ describe('BiomeWorkspace', () => {
     if (before === null) throw new Error('P selected room rail context is missing');
     const beforeText = before.textContent;
     await view.user.click(within(inspector).getByRole('tab', { name: 'Room Timeline' }));
+    expandDoors(inspector);
     const pickedDoor = within(inspector).getByRole('article', {
       name: `${picked.door.room.label} room offer`,
     });
@@ -1447,6 +1417,7 @@ describe('BiomeWorkspace', () => {
     // Its side rooms are edited apart; its open doors keep the hidden return door,
     // and the Hub decides where it leads, so it has no last row.
     await openTimeline(createOccurrenceAddress(nBiome, nOccurrenceId('combat02')));
+    expandDoors(details());
     expect(within(details()).getByRole('article', { name: 'Hidden return door' })).toBeTruthy();
     expect(within(details()).queryByRole('listitem', { name: 'Leave room' })).toBeNull();
 
@@ -1737,15 +1708,14 @@ describe('BiomeWorkspace', () => {
     nApplication.dispose();
   });
 
-  it('closes the Hub Timeline with its fixed Preboss exit, with no removal of its own', async () => {
+  it('closes the Hub Timeline with its Leave segment, which opens the Preboss', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const handoff = createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' });
 
-    // A completed-Hub exit owner opens the Hub Timeline's Details on its last row.
+    // A completed-Hub exit owner opens the Preboss, with no removal of its own.
     act(() => view.application.store.dispatch(semanticOwnerFocused(handoff)));
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    const preboss = within(inspector).getByRole('heading', { name: 'Preboss' });
-    expect(preboss).toBeTruthy();
+    expect(within(inspector).getByRole('heading', { name: 'Preboss' })).toBeTruthy();
     expect(within(inspector).queryByRole('button', { name: 'Remove Preboss' })).toBeNull();
 
     act(() =>
@@ -1754,13 +1724,80 @@ describe('BiomeWorkspace', () => {
       ),
     );
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
-    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
     const timeline = screen.getByRole('region', { name: 'Ephyra Hub timeline' });
-    const exit = within(timeline).getByRole('group', { name: 'Go to Preboss' });
-    expect(exit?.dataset.ready).toBe('true');
-    expect(exit?.querySelector('button')).toBeNull();
-    // It is the timeline's last row, after every visit and the fountain.
-    expect(timeline.lastElementChild).toBe(exit);
+    const leave = within(timeline).getByRole('group', { name: 'Leave' });
+    expect(timeline.lastElementChild).toBe(leave);
+    await view.user.click(within(leave).getByRole('button', { name: 'Open Preboss' }));
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
+    );
+    expect(within(inspector).getByRole('heading', { name: 'Preboss' })).toBeTruthy();
+  });
+
+  it('opens a visit’s room on its Timeline and returns from it to the Hub at the next visit', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    const before = view.application.store.getState().projectWorkspace.history!.past.length;
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createHubDecisionAddress(nBiome, 'hub')),
+      ),
+    );
+    await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
+    await view.user.click(screen.getByRole('button', { name: 'Open Combat 02' }));
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createOccurrenceAddress(nBiome, nOccurrenceId('combat02')),
+    );
+    expect(screen.getByRole('heading', { level: 3, name: 'Combat 02' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+
+    // Combat 02 is the third visit: its last row returns to the fourth's picker.
+    const leave = screen.getByRole('listitem', { name: 'Return to Hub' });
+    await view.user.click(within(leave).getByRole('button', { name: 'Open Hub Timeline' }));
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const picker = screen.getByRole('button', { name: 'Visit 4 room' });
+    await waitFor(() => expect(document.activeElement).toBe(picker));
+    expect(
+      screen
+        .getAllByRole('region')
+        .find((region) => region.getAttribute('aria-label')?.startsWith('Ephyra Hub at '))
+        ?.getAttribute('aria-label'),
+    ).toBe('Ephyra Hub at Visit 3');
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(before);
+  });
+
+  it('returns from a side room to the Hub room it opened from', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    const biome = workspaceBiome(view.application, 'Surface', 'N');
+    const hub = biome.rail.find(
+      (entry): entry is Extract<(typeof biome.rail)[number], { readonly kind: 'hubGroup' }> =>
+        entry.kind === 'hubGroup',
+    );
+    const parentVisit = hub?.visits.find(
+      (visit) => visit.node.room.occurrenceId === nOccurrenceId('combat05'),
+    );
+    const sideVisit = parentVisit?.sideVisits[0];
+    if (parentVisit === undefined || sideVisit === undefined)
+      throw new Error('entered N side visit is missing');
+    act(() =>
+      view.application.store.dispatch(semanticOwnerFocused(sideVisit.node.room.marker.address)),
+    );
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const leave = screen.getByRole('listitem', {
+      name: `Return to ${parentVisit.node.room.label}`,
+    });
+    await view.user.click(
+      within(leave).getByRole('button', { name: `Open ${parentVisit.node.room.label}` }),
+    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createOccurrenceAddress(nBiome, nOccurrenceId('combat05')),
+    );
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
   });
 
   it('keeps the Hub-owned Preboss readable but locked while the Hub is incomplete', async () => {
@@ -1885,6 +1922,7 @@ describe('BiomeWorkspace', () => {
     ]);
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     await view.user.click(within(inspector).getByRole('tab', { name: 'Room Timeline' }));
+    expandDoors(inspector);
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
   });
@@ -2044,7 +2082,9 @@ describe('boss-door reward pool in the Doors open row', () => {
     if (node === undefined) throw new Error(`${biomeKey} has no boss-door room`);
     act(() => view.application.store.dispatch(semanticOwnerFocused(node.room.address)));
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    return { section: screen.getByRole('complementary', { name: 'Details' }), user: view.user };
+    const section = screen.getByRole('complementary', { name: 'Details' });
+    expandDoors(section);
+    return { section, user: view.user };
   }
 
   it('authors a rolling boss pool beside its fixed destination door', async () => {

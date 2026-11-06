@@ -7,8 +7,11 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
+  createHubRerollAddress,
+  createIncomingRewardAddress,
   createNemesisRandomEventAddress,
   createOccurrenceId,
+  createTraitOfferAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -21,6 +24,9 @@ import {
 import {
   createStaleSurfaceHermesDeliveryPlacement,
   loadSurfaceNEntryFrontierResolvedProject,
+  loadSurfaceNProject,
+  nBiome,
+  nOccurrenceId,
   nOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import {
@@ -37,18 +43,21 @@ import {
   artemisSourceAnomalyProject,
   cageBeforeAthenaProject,
 } from '@planner-test/support/finding-states';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, expect, it } from 'vitest';
 import { renderWorkspace, workspaceProjection } from '@planner-test/support/biome-workbench';
 import { ProjectFindings } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { semanticFindingKey } from '@planner/projections/evaluationProjection';
+import { findingSelected } from '@planner/state/editorSessionSlice';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
-/** Opens the first findings-panel entry and returns its rendered navigation target. */
-async function openFirstFinding(view: ReturnType<typeof renderWorkspace>): Promise<HTMLElement> {
+/** Opens the first findings-panel entry. */
+async function selectFirstFinding(view: ReturnType<typeof renderWorkspace>): Promise<void> {
   const workspace = workspaceProjection(view.application);
   const issue = view.application.store.getState().projectWorkspace.assembly!.evaluation.route.issue;
   const findings = render(
@@ -57,6 +66,13 @@ async function openFirstFinding(view: ReturnType<typeof renderWorkspace>): Promi
     </Provider>,
   );
   await view.user.click(findings.container.querySelector('button')!);
+}
+
+/** Opens the first findings-panel entry and returns its rendered navigation target. */
+async function openFirstFinding(view: ReturnType<typeof renderWorkspace>): Promise<HTMLElement> {
+  const workspace = workspaceProjection(view.application);
+  const issue = view.application.store.getState().projectWorkspace.assembly!.evaluation.route.issue;
+  await selectFirstFinding(view);
   const focused = view.application.store.getState().editorSession.focusedSemanticOwner;
   expect(focused).toEqual(
     workspace.focusByOwner.get(semanticAddressKey(issue!.owner))!.focusAddress,
@@ -93,12 +109,12 @@ it.each([
   },
 );
 
-it('marks a Hub main reward picker while navigation keeps the Hub board', async () => {
+it('marks a Hub door row’s reward picker while navigation keeps the Hub board', async () => {
   const view = renderWorkspace(loadSurfaceNTenOpenInvalidCheckpoint(), 'Surface', 'N');
   const board = await openFirstFinding(view);
-  const card = within(board).getByRole('article', { name: 'Combat 04 Hub room' });
-  const picker = within(card).getByRole('button', { name: 'Reward' });
-  expect(picker.dataset.hasFindings).toBe('true');
+  const row = within(board).getByRole('listitem', { name: 'Combat 04' });
+  const picker = within(row).getByRole('button', { name: 'Reward' });
+  expect(paintedFindings()).toEqual([picker]);
   expect(board.hasAttribute('data-has-findings')).toBe(false);
   await waitFor(() => expect(document.activeElement).toBe(picker));
 });
@@ -168,7 +184,7 @@ it('marks the exit picker of a missing selection and focuses it', async () => {
   await waitFor(() => expect(document.activeElement).toBe(exit));
 });
 
-it('marks the Overview requirement box for an incomplete Hub open set', async () => {
+it('marks the Overview status line for an incomplete Hub open set', async () => {
   const biome = createBiomeAddress('Surface', 'N');
   const project = applyProjectCommand(loadSurfaceNEntryFrontierResolvedProject(), catalog, {
     kind: 'ReplaceWithHubDecision',
@@ -180,20 +196,94 @@ it('marks the Overview requirement box for an incomplete Hub open set', async ()
     prebossOccurrenceId: createOccurrenceId('control-n-preboss'),
   });
   const view = renderWorkspace(project, 'Surface', 'N');
-  const box = await openFirstFinding(view);
-  expect(box.getAttribute('role')).toBe('status');
-  expect(box.textContent).toMatch(/^Open 9–10 rooms · \d+ open$/);
-  expect(paintedFindings()).toEqual([box]);
-  await waitFor(() => expect(document.activeElement).toBe(box));
+  const line = await openFirstFinding(view);
+  // Below the board's least door count, the status line stands in for the rows.
+  expect(line.getAttribute('role')).toBe('status');
+  expect(
+    within(screen.getByRole('region', { name: 'Hub door rewards' })).queryByRole('list'),
+  ).toBeNull();
+  expect(paintedFindings()).toEqual([line]);
+  await waitFor(() => expect(document.activeElement).toBe(line));
 });
 
-it('marks the Timeline requirement box for an incomplete Hub visit order', async () => {
+it('marks the next visit’s room picker for an incomplete Hub visit order', async () => {
   const view = renderWorkspace(loadSurfaceNPartialHubCheckpoint(), 'Surface', 'N');
-  const box = await openFirstFinding(view);
-  expect(box.getAttribute('role')).toBe('status');
-  expect(box.textContent).toBe('Visit 6 rooms · 3 planned · Fountain used');
-  expect(paintedFindings()).toEqual([box]);
-  await waitFor(() => expect(document.activeElement).toBe(box));
+  await selectFirstFinding(view);
+  expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+    'true',
+  );
+  const picker = screen.getByRole('button', { name: 'Visit 4 room' });
+  expect(picker.dataset.selectedFinding).toBe('true');
+  expect(paintedFindings()).toEqual([picker]);
+  await waitFor(() => expect(document.activeElement).toBe(picker));
+});
+
+it('marks the visit reward’s repair for a rerolled reward its Hub rerolls no longer reach', async () => {
+  const hub = createHubDecisionAddress(nBiome, 'hub');
+  const reward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat05'));
+  const held = applyProjectCommand(loadSurfaceNProject(), catalog, {
+    kind: 'ReplaceManualArcanaSelection',
+    route: { kind: 'route', routeKey: 'Surface' },
+    arcanaKeys: ['DoorReroll'],
+  });
+  const view = renderWorkspace(
+    applyProjectCommand(held, catalog, {
+      kind: 'InsertHubReroll',
+      hub,
+      hubSlotKey: 'combat05',
+      reward: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+      index: 0,
+    }),
+    'Surface',
+    'N',
+  );
+  // The visit picks the rerolled Boon, then its press goes and the pick stays for repair.
+  act(() => {
+    view.application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(reward, 'source'),
+        value: {
+          kind: 'traits',
+          giverKey: 'Ares',
+          options: [
+            { traitKey: 'AresWeaponBoon', rarity: 'Common' },
+            { traitKey: 'AresSpecialBoon', rarity: 'Common' },
+            { traitKey: 'AresCastBoon', rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option1',
+          rarificationActions: [],
+        },
+      }),
+    );
+    view.application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'RemoveHubReroll',
+        reroll: createHubRerollAddress(nBiome, 'hub', 'r1'),
+      }),
+    );
+  });
+  const finding = view.application.store
+    .getState()
+    .projectWorkspace.assembly!.evaluation.findings.find(
+      (candidate) => candidate.code === 'rerolledRewardMismatch',
+    );
+  if (finding === undefined) throw new Error('the rerolled reward finding is missing');
+  expect(finding.origin).toEqual(reward);
+  act(() =>
+    view.application.store.dispatch(
+      findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+    ),
+  );
+  expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+    'true',
+  );
+  const visits = screen.getByRole('region', { name: 'Ephyra Hub timeline' });
+  const repair = within(visits).getByRole('button', {
+    name: /^Drop rerolled reward for Combat 05/,
+  });
+  expect(paintedFindings()).toEqual([repair]);
+  await waitFor(() => expect(document.activeElement).toBe(repair));
 });
 
 it('marks Restore on an Anomaly its source cannot produce', async () => {

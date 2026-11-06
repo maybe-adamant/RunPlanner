@@ -1,5 +1,5 @@
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
-import { render } from '@testing-library/react';
+import { fireEvent, render, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { configureStore } from '@reduxjs/toolkit';
 import type { ReactNode } from 'react';
@@ -216,6 +216,8 @@ function DecisionDoors({
       outgoing={stage.outgoing}
       {...(subject.kind === 'node' ? { outgoingDecision: subject.node } : {})}
       roomTab={source.room.doorsTab}
+      // Opening a decision is navigating to its doors, as its rail stop does.
+      doorsRequested
       sourceOccurrence={source}
     />
   );
@@ -417,4 +419,10 @@ export function renderBiomeClearAction(
     if (interaction === undefined) return <p>No biome clearing action</p>;
     return <TopologyRemovalAction interaction={interaction} label={`Clear ${biome.label}`} />;
   });
+}
+
+/** Opens a room Timeline's door editor, which stays collapsed until something asks for it. */
+export function expandDoors(scope: HTMLElement = document.body): void {
+  const disclosure = within(scope).getByRole('button', { name: 'Door details' });
+  if (disclosure.getAttribute('aria-expanded') !== 'true') fireEvent.click(disclosure);
 }

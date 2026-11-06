@@ -795,14 +795,13 @@ describe('underworld product loop', () => {
     const hub = nStructure.querySelector<HTMLButtonElement>('[data-kind="hubDecision"] button');
     if (hub === null) throw new Error('N Hub rail node is missing');
     await view.user.click(hub);
-    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
-    const hubSlot = screen.getByRole('checkbox', { name: 'Combat 04 open' }) as HTMLInputElement;
-    act(() => hubSlot.focus());
-    await view.user.keyboard('[Space]');
+    const hubDoor = screen.getByRole('button', { name: 'Open Combat 04' });
+    act(() => hubDoor.focus());
+    await view.user.keyboard('{Enter}');
     await waitFor(() =>
       expect(
-        (screen.getByRole('checkbox', { name: 'Combat 04 open' }) as HTMLInputElement).checked,
-      ).toBe(true),
+        screen.getByRole('button', { name: 'Close Combat 04' }).getAttribute('aria-pressed'),
+      ).toBe('true'),
     );
 
     await view.user.click(screen.getByRole('button', { name: 'Olympus' }));

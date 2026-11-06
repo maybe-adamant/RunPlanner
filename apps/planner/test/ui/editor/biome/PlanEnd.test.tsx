@@ -23,7 +23,7 @@ import {
   authoredProjectReplaced,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
-import { renderWorkspace } from '@planner-test/support/biome-workbench';
+import { expandDoors, renderWorkspace } from '@planner-test/support/biome-workbench';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 
 afterEach(() => cleanup());
@@ -70,6 +70,7 @@ describe('plan end in the biome workspace', () => {
     expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b3-e1' });
 
     // The end room's doors open inside the plan and stay editable.
+    expandDoors();
     expect(document.querySelector('.door-body')?.hasAttribute('data-authoring-locked')).toBe(false);
     // Only its exit selection lies past the end; it must not lock the action that removes the end.
     const continuePlanning = screen.getByRole('button', { name: 'Continue planning' });
@@ -135,6 +136,7 @@ describe('plan end in the biome workspace', () => {
     expect(screen.queryByRole('button', { name: 'End plan here' })).toBeNull();
     expect(within(roomCard()).getByRole('listitem', { name: 'Plan ends here' })).toBeTruthy();
     expect(within(roomCard()).queryByRole('listitem', { name: 'Leave room' })).toBeNull();
+    expandDoors(roomCard());
     expect(screen.getByRole('button', { name: 'Reset Doors' })).toHaveProperty('disabled', false);
     await user.click(screen.getByRole('button', { name: 'Continue planning' }));
     expect(currentPlanEnd(application)).toBeUndefined();
@@ -213,6 +215,7 @@ describe('plan end in the biome workspace', () => {
     );
     openRoom(application, createOccurrenceAddress(nBiome, nOccurrenceId('combat05')));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    expandDoors(roomCard());
     const door = within(roomCard()).getByRole('article', { name: 'Hidden return door' });
     expect(within(door).getByRole('button', { name: 'Choose' })).toHaveProperty('disabled', false);
   });
@@ -235,7 +238,8 @@ describe('plan end in the biome workspace', () => {
     const hub = workspace.history.present.route.biomes
       .find((biome) => biome.biomeKey === 'N')
       ?.topology?.decisions.find((decision) => decision.kind === 'hub');
-    expect(hub?.kind === 'hub' ? hub.actions : undefined).toEqual([]);
+    // The visits go; the used fountain stays, moved to Entry.
+    expect(hub?.kind === 'hub' ? hub.actions : undefined).toEqual([{ kind: 'useFountain' }]);
   });
 });
 
