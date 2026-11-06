@@ -145,8 +145,6 @@ export interface OccurrenceActionLabelParts {
     readonly boosted: boolean;
     /** A shop item's own key, whose artwork can differ from its reward type's. */
     readonly itemKey?: string;
-    /** How many of a resource drop the pickup gives, marked on its icon when more than one. */
-    readonly amount?: number;
   };
   /** The NPC a Talk row names, by NPC key; the row can show the NPC's portrait for the name. */
   readonly npcKey?: string;
@@ -321,7 +319,6 @@ export function occurrenceActionLabelParts(
         reward: Object.freeze({
           offer: Object.freeze({ rewardType: requiredReward.consumableKey }),
           boosted: false,
-          amount: requiredReward.amount,
         }),
       });
     }

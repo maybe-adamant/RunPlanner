@@ -678,7 +678,7 @@ describe('structured workspace actions assembly', () => {
       labelParts: {
         verb: 'Collect',
         name: 'Cinder',
-        reward: { offer: { rewardType: 'MixerFBossDrop' }, boosted: false, amount: 1 },
+        reward: { offer: { rewardType: 'MixerFBossDrop' }, boosted: false },
       },
       participation: 'required',
       window: { kind: 'standard', phase: 'afterCombat' },
@@ -688,7 +688,7 @@ describe('structured workspace actions assembly', () => {
     expect(entryKeys.indexOf(collect.key)).toBeLessThan(entryKeys.indexOf('Doors open'));
   });
 
-  it("names each Dream boss's Shiny Stars with the amount its route position ramps to", () => {
+  it("names each Dream boss's drop as Shiny Stars", () => {
     const route = projectStructuredWorkspaceFixture(loadDreamMixedHandoffCheckpoint()).workspace
       .route!;
     const collects = route.biomes.flatMap((biome) =>
@@ -701,14 +701,14 @@ describe('structured workspace actions assembly', () => {
       ),
     );
     expect(collects.map((row) => [row.labelParts?.name, row.labelParts?.reward])).toEqual(
-      [1, 2, 3].map((amount) => [
+      [1, 2, 3].map(() => [
         'Shiny Stars',
-        { offer: { rewardType: 'DreamPointsDrop' }, boosted: false, amount },
+        { offer: { rewardType: 'DreamPointsDrop' }, boosted: false },
       ]),
     );
   });
 
-  it("names a Zagreus contract's forced drop as 50 Gemstones", () => {
+  it("names a Zagreus contract's forced drop as Gemstones", () => {
     const shop = goldenGOccurrenceId(5, 1);
     const contract = createOccurrenceId('projection-zagreus-contract');
     let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
@@ -742,7 +742,7 @@ describe('structured workspace actions assembly', () => {
       labelParts: {
         verb: 'Collect',
         name: 'Gemstones',
-        reward: { offer: { rewardType: 'GemPointsBigDrop' }, amount: 50 },
+        reward: { offer: { rewardType: 'GemPointsBigDrop' } },
       },
     });
   });

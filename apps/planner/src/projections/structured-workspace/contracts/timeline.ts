@@ -127,8 +127,6 @@ export interface WorkspaceRoomActionRow {
       readonly boosted: boolean;
       /** A Stygian Well item's own key: the row shows that item, not its reward type. */
       readonly itemKey?: string;
-      /** A resource drop's amount, marked on the icon when more than one. */
-      readonly amount?: number;
     };
   };
   readonly marker: WorkspaceMarker;

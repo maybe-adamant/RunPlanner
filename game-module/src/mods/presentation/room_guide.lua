@@ -48,7 +48,6 @@ local requiredDropNames = {
 local function requiredDropLabel(drop)
     local name = type(drop) == "table" and requiredDropNames[drop.consumableKey] or nil
     if name == nil then return "Boss reward" end
-    if drop.amount > 1 then name = name .. " x" .. tostring(drop.amount) end
     return "Collect " .. name
 end
 
