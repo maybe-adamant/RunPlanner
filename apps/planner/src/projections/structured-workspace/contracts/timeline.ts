@@ -288,12 +288,9 @@ export type WorkspaceEncounterBannerSupplement =
       readonly phase: WorkspaceEncounterPhase;
       /**
        * Phase role (when the room has several and no cage names it) and encounter name
-       * of a definitional encounter start; absent for an encounter settled on entry by
-       * interaction (Nemesis event, Empty).
+       * of a definitional encounter start; absent for an encounter settled on entry.
        */
       readonly identityLabel?: string;
-      /** The phase has no end banner, so its start banner also hosts its end controls. */
-      readonly endControls?: true;
     }
   | {
       readonly kind: 'encounterEnd';

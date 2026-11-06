@@ -147,15 +147,19 @@ function projectRoomLifecycleTimeline(
           ? [entry.boundary]
           : [],
       )
-      .flatMap((boundary, index) => {
+      // Cages number among themselves; a Passive Nemesis event's start is not a cage.
+      .flatMap((boundary) => {
         const choice = cageChoices.find((candidate) => candidate.phaseKey === boundary.phaseKey);
+        return choice === undefined ? [] : [{ boundary, choice }];
+      })
+      .flatMap(({ boundary, choice }, index) => {
         const selected = rows.find(
           (row) =>
             row.reference.kind === 'completeFieldsCage' &&
             row.reference.phaseKey === boundary.phaseKey &&
             !row.stale,
         );
-        if (choice === undefined || selected === undefined) return [];
+        if (selected === undefined) return [];
         return [
           [
             boundary.key,
@@ -193,13 +197,6 @@ function projectRoomLifecycleTimeline(
   const encounterByPhase = new Map(
     encounterPhases.map((phase) => [phase.address.phaseKey, phase] as const),
   );
-  const endedPhaseKeys = new Set(
-    timeline.entries.flatMap((entry) =>
-      entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd'
-        ? [entry.boundary.phaseKey]
-        : [],
-    ),
-  );
   // A kill race settles as its fight ends; a trade or contest, as answering Nemesis ends hers.
   const hasEndControls = (phase: WorkspaceEncounterPhase) =>
     phase.nemesisBet !== undefined ||
@@ -224,10 +221,6 @@ function projectRoomLifecycleTimeline(
             identityLabel:
               startBannerCount > 1 && !cageNamed ? `${phase.label} · ${encounter}` : encounter,
           }
-        : {}),
-      // A phase with no end banner keeps what it settled on its start banner.
-      ...(hasEndControls(phase) && !endedPhaseKeys.has(phase.address.phaseKey)
-        ? { endControls: true as const }
         : {}),
     });
   };

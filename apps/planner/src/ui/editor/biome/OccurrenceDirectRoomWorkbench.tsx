@@ -186,12 +186,7 @@ export function DirectRoomWorkbench({
   const workbench = room.workbench;
   const renderEncounterControls = (controls: WorkspaceEncounterBannerSupplement): ReactNode =>
     controls.kind === 'encounterStart' ? (
-      <>
-        <EncounterStartControls interactions={interactions} phase={controls.phase} />
-        {controls.endControls === true ? (
-          <EncounterEndControls interactions={interactions} phase={controls.phase} />
-        ) : null}
-      </>
+      <EncounterStartControls interactions={interactions} phase={controls.phase} />
     ) : (
       <>
         {controls.phase === undefined ? null : (

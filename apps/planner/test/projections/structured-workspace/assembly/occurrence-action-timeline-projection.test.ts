@@ -125,7 +125,6 @@ describe('encounter banner supplements', () => {
       kind: 'encounterStart',
       identityLabel: 'Nemesis combat',
     });
-    expect(start?.supplement).not.toHaveProperty('endControls');
     expect(end?.supplement).toMatchObject({
       kind: 'encounterEnd',
       phase: { address: { phaseKey: 'Encounter' }, nemesisBet: expect.any(Object) },
@@ -174,22 +173,35 @@ describe('Nemesis interaction family', () => {
       family: 'goldTrade',
     });
     const room = roomOf(project, occurrenceId);
-    expect(identityLabels(room).every((label) => label === undefined)).toBe(true);
+    const order = (room.roomActions?.timeline.entries ?? []).flatMap((entry) =>
+      entry.kind === 'boundary'
+        ? [entry.boundary.kind]
+        : entry.kind === 'action' && entry.supplement?.kind === 'nemesisInteraction'
+          ? ['interaction']
+          : [],
+    );
+    // Answering her ends the encounter: start, her interaction, then the end.
+    const start = order.indexOf('encounterStart');
+    expect(order.slice(start, start + 3)).toEqual([
+      'encounterStart',
+      'interaction',
+      'encounterEnd',
+    ]);
     expect(interactionRows(room)).toEqual([
       expect.objectContaining({
         actionKey: roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
         supplement: { kind: 'nemesisInteraction', owner: createNemesisRandomEventAddress(phase) },
       }),
     ]);
-    // Her non-combat encounter has no end banner, so its start keeps the trade's answer.
-    expect(banners(room, 'encounterEnd')).toEqual([]);
-    expect(banners(room, 'roomEntered')[0]?.supplement).toMatchObject({
-      kind: 'encounterStart',
-      endControls: true,
+    expect(banners(room, 'roomEntered')[0]?.supplement).toBeUndefined();
+    expect(identityLabels(room)).toEqual(['Nemesis event · Gold trade']);
+    expect(banners(room, 'encounterEnd')[0]?.supplement).toMatchObject({
+      kind: 'encounterEnd',
+      phase: { nemesisEvent: { value: { kind: 'goldTrade' } } },
     });
   });
 
-  it('keeps the Fields Passive interaction on its row, off the Room entered banner', () => {
+  it('names the Fields Passive event on its start banner and keeps its interaction on its row', () => {
     const { room } = projectedWhere(loadNemesisFieldsCheckpoint(), (candidate) =>
       candidate.encounterPhases.some(
         (phase) => phase.address.phaseKey === 'Passive' && phase.nemesisEvent !== undefined,
@@ -199,6 +211,15 @@ describe('Nemesis interaction family', () => {
     expect(
       entered?.supplement?.kind === 'encounterStart' ? entered.supplement.identityLabel : undefined,
     ).toBeUndefined();
+    expect(identityLabels(room).filter((label) => label?.includes('Nemesis'))).toEqual([
+      expect.stringMatching(/Nemesis event · /),
+    ]);
+    // The event's start banner is not a cage: the cages still number from one.
+    expect(
+      banners(room, 'encounterStart').flatMap((entry) =>
+        entry.label.startsWith('Encounter ') ? [entry.label] : [],
+      ),
+    ).toEqual(['Encounter 1', 'Encounter 2', 'Encounter 3']);
     expect(interactionRows(room)).toEqual([
       expect.objectContaining({
         supplement: expect.objectContaining({ kind: 'nemesisInteraction' }),

@@ -1082,11 +1082,13 @@ export function activeEncounterPhasesForOwner(
         ...(fieldsPassive && nemesisEvent === undefined
           ? {}
           : {
+              // Nemesis keeps the exits locked until answered, so her event has its own start.
               timelineAnchor:
-                fieldsPassive ||
-                (customizable &&
-                  selectedDefinition !== undefined &&
-                  !isCombatBearingEncounterPhaseKind(selectedDefinition.kind))
+                nemesisEvent === undefined &&
+                (fieldsPassive ||
+                  (customizable &&
+                    selectedDefinition !== undefined &&
+                    !isCombatBearingEncounterPhaseKind(selectedDefinition.kind)))
                   ? ('roomEntered' as const)
                   : ('encounterStart' as const),
             }),
