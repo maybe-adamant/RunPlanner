@@ -222,6 +222,8 @@ export interface WorkspaceRerollRow {
   readonly key: string;
   readonly marker: WorkspaceMarker;
   readonly targetLabel: string;
+  /** A Hub board press's door, by its room's icon and shared-icon number. */
+  readonly targetRoom?: { readonly roomIcon: WorkspaceRoomIcon; readonly roomNumber?: string };
   readonly reward: ResolvedRewardOffer;
   /** A press's view of its doors or wheel offers: present on door, cage and wheel presses. */
   readonly doors?: {

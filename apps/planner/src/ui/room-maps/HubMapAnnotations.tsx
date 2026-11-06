@@ -73,13 +73,6 @@ export const hubMapAnnotations = Object.freeze([
   annotation('story', 1744, 986, 'Special'),
 ]);
 
-/** The Hub fountain basin between the two braziers; an action site, not a room slot. */
-export const hubMapFountainAnnotation = Object.freeze({
-  label: 'Fountain',
-  x: 1352,
-  y: 801,
-});
-
 /** Map position in percent of the source image, shared by every interactive Hub marker. */
 export function hubMapPosition(point: { readonly x: number; readonly y: number }): {
   readonly left: string;
@@ -111,7 +104,6 @@ export function HubMapQualityLegend(): ReactNode {
           {category}
         </span>
       ))}
-      <span data-category="Fountain">Fountain</span>
     </div>
   );
 }
@@ -138,22 +130,6 @@ export function HubMapReadOnlyOverlay(): ReactNode {
           </text>
         </g>
       ))}
-      <g transform={`translate(${hubMapFountainAnnotation.x} ${hubMapFountainAnnotation.y})`}>
-        <rect
-          x="-40"
-          y="-40"
-          width="80"
-          height="80"
-          rx="10"
-          fill="#ed963e"
-          stroke="#101923"
-          strokeWidth="4"
-          transform="rotate(45)"
-        />
-        <text dy="0.34em" fill="#101923" fontSize="20" fontWeight="700" textAnchor="middle">
-          Fountain
-        </text>
-      </g>
     </svg>
   );
 }

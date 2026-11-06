@@ -33,6 +33,7 @@ import { RunStateSheet } from './RunStateSheet';
 import { EchoKeepsakeReplayControl } from './BiomeInspectorControls';
 import { BiomeInspectorNode } from './BiomeInspectorNode';
 import { roomKindIcon } from './roomIcon';
+import { RoomNumberIcon } from './RoomNumberIcon';
 import { planEndHereLabel } from './planEndCopy';
 
 interface BiomeWorkspaceProps {
@@ -266,10 +267,7 @@ function RailIcons({
 }) {
   return (
     <span aria-hidden="true" className="biome-rail-icons">
-      <span className="biome-rail-icons-room-slot">
-        <ArtworkIcon className="biome-rail-icons-room" source={roomKindIcon(room)} />
-        {number === undefined ? null : <span className="biome-rail-icons-number">{number}</span>}
-      </span>
+      <RoomNumberIcon number={number} room={room} />
       {rewards.length === 0 ? null : (
         <RailRewardSlot iconClassName="biome-rail-icons-reward" icons={rewards} />
       )}

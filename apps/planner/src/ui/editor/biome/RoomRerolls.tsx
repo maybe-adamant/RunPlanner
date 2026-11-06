@@ -14,6 +14,7 @@ import { RewardOfferPicker } from '../rewards/RewardEditors';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { hintProps } from '@planner/ui/controls/hint';
 import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
+import { RoomNumberIcon } from './RoomNumberIcon';
 import { TimelineRow } from './TimelineRow';
 import { DoorChips } from './DecisionWorkbench';
 import type { DoorChip } from './doorSummary';
@@ -144,7 +145,13 @@ export function RoomRerolls({
     <li className="room-reroll-row" data-reorder-anchor={row.key} key={row.key}>
       {move}
       {verb}
-      <FixedValueChip label={row.targetLabel} />
+      {row.targetRoom === undefined ? (
+        <FixedValueChip label={row.targetLabel} />
+      ) : (
+        <span aria-label={row.targetLabel} className="room-reroll-target-room" role="img">
+          <RoomNumberIcon number={row.targetRoom.roomNumber} room={row.targetRoom.roomIcon} />
+        </span>
+      )}
       {arrow}
       <RewardOfferPicker
         ariaLabel={`Reroll ${index + 1} reward`}

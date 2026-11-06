@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type SyntheticEvent } from 'react';
 
 import type { HubAction } from '@run-planner/engine/authored-project';
 import {
@@ -132,12 +132,15 @@ function VisitRoomPicker({
   interaction,
   node,
   onApply,
+  onHover,
   visit,
 }: {
   readonly disabledHint: string | undefined;
   readonly interaction: WorkspaceHubActionOrderInteraction;
   readonly node: WorkspaceHubDecisionNode;
   readonly onApply: (actions: readonly HubAction[]) => void;
+  /** The room under the list's highlight, or none once the list closes. */
+  readonly onHover: (hubSlotKey: string | undefined) => void;
   readonly visit: WorkspaceHubVisit;
 }) {
   const findingTarget = useFindingTarget();
@@ -188,6 +191,10 @@ function VisitRoomPicker({
       id={`hub-visit-${visit.visitIndex}`}
       label=""
       model={declaredChoicesPicker(choices, visit.hubSlotKey)}
+      onActiveChange={(item) => onHover(item?.value)}
+      onOpenChange={(open) => {
+        if (!open) onHover(undefined);
+      }}
       onSelect={(hubSlotKey) => {
         if (hubSlotKey !== visit.hubSlotKey) onApply(actionsWith(hubSlotKey));
       }}
@@ -406,11 +413,16 @@ function FountainRow({
 function TimelineDoor({
   annotation,
   door,
-  visited,
+  emphasis,
 }: {
   readonly annotation: HubMapAnnotation;
   readonly door: WorkspaceHubStayDoor;
-  readonly visited: boolean;
+  /**
+   * `visited`: the shown visit's door; `pending`: the door a visit will enter
+   * from this board; `pickable`: a door the open visit picker can choose;
+   * `linked`: the picker option under its highlight.
+   */
+  readonly emphasis: readonly ('linked' | 'pending' | 'pickable' | 'visited')[];
 }) {
   const chain = [door.firstSummary, ...door.presses.map((press) => press.summary)].join(' → ');
   const name = door.cleared
@@ -425,7 +437,10 @@ function TimelineDoor({
       data-hub-slot-key={door.hubSlotKey}
       data-open="true"
       data-room-map-overlay-control
-      data-selected-visit={visited || undefined}
+      data-linked={emphasis.includes('linked') || undefined}
+      data-pending={emphasis.includes('pending') || undefined}
+      data-pickable={emphasis.includes('pickable') || undefined}
+      data-selected-visit={emphasis.includes('visited') || undefined}
       role="img"
       style={hubMapPosition(annotation)}
       tabIndex={0}
@@ -444,6 +459,40 @@ function TimelineDoor({
   );
 }
 
+/** Which choice of a segment is being worked on: its label, its visit's room, or its rerolls. */
+type SegmentPart = 'label' | 'picker' | 'rerolls';
+
+function segmentPart(target: Element): SegmentPart {
+  if (target.closest('.hub-segment-head .contextual-picker') !== null) return 'picker';
+  if (target.closest('.room-reroll-append, .room-rerolls-list') !== null) return 'rerolls';
+  return 'label';
+}
+
+/**
+ * The board the map shows for the choice being worked on. A visit's room is
+ * picked from the board before it; rerolls happen on the board after it; the
+ * label shows the board after a picked, settled visit, else the one before it.
+ */
+function mapView(
+  node: WorkspaceHubDecisionNode,
+  segment: number,
+  part: SegmentPart,
+): {
+  readonly stay: number;
+  readonly picking?: true;
+  readonly visited?: string;
+  readonly pending?: string;
+} {
+  if (segment === 0) return { stay: 0 };
+  const visit = node.visits[segment - 1]?.hubSlotKey;
+  if (part === 'picker') return { stay: segment - 1, picking: true };
+  if (part === 'rerolls')
+    return { stay: segment, ...(visit === undefined ? {} : { visited: visit }) };
+  if (visit !== undefined && node.stays[segment]?.doors !== undefined)
+    return { stay: segment, visited: visit };
+  return { stay: segment - 1, ...(visit === undefined ? {} : { pending: visit }) };
+}
+
 /**
  * The Hub's stays in order, Entry then the return after each visit, each with
  * its visit's room and its rerolls; the selected stay's board is on the map.
@@ -453,8 +502,11 @@ export function HubTimeline({
   interactions,
   locked,
   node,
+  resetControl,
 }: {
   readonly hubIdentity: string;
+  /** The tab's reset, beside the map's own controls. */
+  readonly resetControl: ReactNode;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly locked: boolean;
   readonly node: WorkspaceHubDecisionNode;
@@ -475,10 +527,24 @@ export function HubTimeline({
   const { attachRoot } = reorder;
   // Which stay drives the map: presentation only, never authored.
   const frontier = Math.min(interaction.selectedHubSlotKeys.length, node.requiredVisitCount);
-  const [selection, setSelection] = useState({ hubIdentity, stay: frontier });
-  const selected = selection.hubIdentity === hubIdentity ? selection.stay : frontier;
-  const select = (stay: number): void => {
-    if (stay !== selected) setSelection({ hubIdentity, stay });
+  // The segment and which of its choices is being worked on: presentation only.
+  const [selection, setSelection] = useState<{
+    readonly hubIdentity: string;
+    readonly segment: number;
+    readonly part: SegmentPart;
+  }>({ hubIdentity, segment: frontier, part: 'label' });
+  const selected = selection.hubIdentity === hubIdentity ? selection.segment : frontier;
+  const part = selection.hubIdentity === hubIdentity ? selection.part : 'label';
+  const select = (segment: number, nextPart: SegmentPart): void => {
+    if (segment !== selected || nextPart !== part)
+      setSelection({ hubIdentity, segment, part: nextPart });
+  };
+  const [hovered, setHovered] = useState<string>();
+  // An open picker's list is portaled: its events reach the segment, its DOM does not.
+  const workOn = (segment: number, event: SyntheticEvent<HTMLElement>): void => {
+    const target = event.target as Element;
+    if (!event.currentTarget.contains(target)) return;
+    select(segment, segmentPart(target));
   };
   // A Hub the plan ends in takes no visit after its end visit.
   const endsHere = node.planEnd === 'end';
@@ -526,7 +592,7 @@ export function HubTimeline({
         <button
           aria-pressed={selected === stay.precedingVisitCount}
           className="hub-segment-select"
-          onClick={() => select(stay.precedingVisitCount)}
+          onClick={() => select(stay.precedingVisitCount, 'label')}
           type="button"
         >
           {label}
@@ -538,6 +604,7 @@ export function HubTimeline({
               interaction={interaction}
               node={node}
               onApply={replaceActions}
+              onHover={setHovered}
               visit={visit}
             />
             <VisitReward door={visit.door} />
@@ -553,8 +620,8 @@ export function HubTimeline({
         data-reached={stay.doors !== undefined}
         data-selected={selected === stay.precedingVisitCount || undefined}
         key={stay.precedingVisitCount}
-        onFocusCapture={() => select(stay.precedingVisitCount)}
-        onPointerDownCapture={() => select(stay.precedingVisitCount)}
+        onFocusCapture={(event) => workOn(stay.precedingVisitCount, event)}
+        onPointerDownCapture={(event) => workOn(stay.precedingVisitCount, event)}
       >
         {stay.rerolls === undefined ? (
           <>
@@ -596,9 +663,17 @@ export function HubTimeline({
       </li>
     );
   };
-  const shown = node.stays[selected];
-  const shownDoors = new Map((shown?.doors ?? []).map((door) => [door.hubSlotKey, door] as const));
-  const shownVisit = selected === 0 ? undefined : node.visits[selected - 1]?.hubSlotKey;
+  const view = mapView(node, selected, part);
+  const shownDoors = new Map(
+    (node.stays[view.stay]?.doors ?? []).map((door) => [door.hubSlotKey, door] as const),
+  );
+  const emphasisOf = (door: WorkspaceHubStayDoor) =>
+    [
+      ...(door.hubSlotKey === view.visited ? (['visited'] as const) : []),
+      ...(door.hubSlotKey === view.pending ? (['pending'] as const) : []),
+      ...(view.picking && !door.cleared ? (['pickable'] as const) : []),
+      ...(view.picking && door.hubSlotKey === hovered ? (['linked'] as const) : []),
+    ] as const;
   return (
     <div className="hub-overview-layout hub-timeline-layout">
       <section aria-label="Ephyra Hub timeline" className="hub-timeline-column" ref={attachRoot}>
@@ -643,14 +718,15 @@ export function HubTimeline({
             <TimelineDoor
               annotation={annotation}
               door={door}
+              emphasis={emphasisOf(door)}
               key={annotation.hubSlotKey}
-              visited={door.hubSlotKey === shownVisit}
             />
           );
         }}
+        action={resetControl}
         gameName={node.gameName}
         hubIdentity={hubIdentity}
-        label={`Ephyra Hub at ${segmentLabel(selected)}`}
+        label={`Ephyra Hub at ${segmentLabel(view.stay)}`}
       />
     </div>
   );

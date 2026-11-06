@@ -1,26 +1,28 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import {
   HubMapQualityLegend,
   hubMapAnnotations,
-  hubMapFountainAnnotation,
-  hubMapPosition,
   type HubMapAnnotation,
 } from '@planner/ui/room-maps/HubMapAnnotations';
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
+import { useMapHeightCap } from './useMapHeightCap';
 
 /**
  * The Ephyra Hub map with one marker per declared board door. Each consumer
- * supplies its doors; the fountain basin is only located here.
+ * supplies its doors.
  */
 export function HubBoardMap({
+  action,
   door,
   gameName,
   hubIdentity,
   label,
 }: {
+  /** One tab action placed beside the map's own controls. */
+  readonly action?: ReactNode;
   /** The marker of one declared door, or nothing where the map shows none. */
   readonly door: (annotation: HubMapAnnotation) => ReactNode;
   readonly gameName: string;
@@ -28,8 +30,10 @@ export function HubBoardMap({
   readonly hubIdentity: string;
   readonly label: string;
 }) {
+  const section = useRef<HTMLElement>(null);
+  useMapHeightCap(section);
   return (
-    <section aria-label={label} className="hub-map-overview hub-board-map">
+    <section aria-label={label} className="hub-map-overview hub-board-map" ref={section}>
       <RoomMapViewport
         asset={roomMapAssetFor(gameName)}
         controlsPlacement="collapsible-overlay"
@@ -37,20 +41,12 @@ export function HubBoardMap({
         overlay={
           <div aria-label={`${label} doors`} className="hub-map-marker-layer" role="group">
             {hubMapAnnotations.map((annotation) => door(annotation))}
-            <span
-              aria-label="Hub fountain"
-              className="hub-map-fountain-marker"
-              data-hub-fountain
-              role="img"
-              style={hubMapPosition(hubMapFountainAnnotation)}
-            >
-              <span aria-hidden="true" className="hub-map-fountain-content">
-                <span className="hub-map-fountain-label">Fountain</span>
-              </span>
-            </span>
           </div>
         }
         title="Ephyra Hub"
+        {...(action === undefined
+          ? {}
+          : { viewportOverlay: <div className="room-map-controls">{action}</div> })}
         viewportLegend={<HubMapQualityLegend />}
       />
     </section>

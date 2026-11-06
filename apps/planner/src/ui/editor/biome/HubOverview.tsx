@@ -1,4 +1,4 @@
-import { useEffect, useState, type FocusEvent } from 'react';
+import { useEffect, useState, type FocusEvent, type ReactNode } from 'react';
 
 import type {
   WorkspaceHubDecisionNode,
@@ -155,8 +155,11 @@ export function HubOverview({
   hubIdentity,
   interactions,
   node,
+  resetControl,
 }: {
   readonly hubIdentity: string;
+  /** The tab's reset, beside the map's own controls. */
+  readonly resetControl: ReactNode;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: WorkspaceHubDecisionNode;
 }) {
@@ -237,6 +240,9 @@ export function HubOverview({
                 {`${requirement.current} doors open`}
               </p>
             )}
+            <p className="hub-door-order-note">
+              The game draws the Hub rooms' rewards in this order.
+            </p>
             <ol aria-label="Doors in draw order" className="hub-door-rows">
               {openSlots.map((slot) => (
                 <DoorRow
@@ -270,6 +276,7 @@ export function HubOverview({
             />
           );
         }}
+        action={resetControl}
         gameName={node.gameName}
         hubIdentity={hubIdentity}
         label="Ephyra Hub map"

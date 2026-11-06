@@ -5,7 +5,6 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
-import { hubMapFountainAnnotation } from '@planner/ui/room-maps/HubMapAnnotations';
 import {
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
@@ -59,35 +58,6 @@ describe('HubMapOverview', () => {
       historySize + 1,
     );
     expect(screen.getAllByRole('button', { name: /Closed\. Open room\./ })).toHaveLength(26);
-  });
-
-  it('locates the Hub fountain without making it a room, board member, or edit', async () => {
-    const view = renderHubDecisionWorkbench(loadSurfaceNProject());
-    const historySize = view.application.store.getState().projectWorkspace.history!.past.length;
-    const before = nHubState(view.application).decision;
-    const map = screen.getByLabelText('Ephyra Hub room map controls');
-    const fountain = within(map).getByRole('img', { name: 'Hub fountain' });
-
-    expect(fountain.tagName).not.toBe('BUTTON');
-    expect(fountain.hasAttribute('data-hub-slot-key')).toBe(false);
-    expect(fountain.hasAttribute('data-category')).toBe(false);
-    expect(within(fountain).getByText('Fountain')).toBeTruthy();
-    expect(fountain.style.left).toBe(`${(hubMapFountainAnnotation.x / 2560) * 100}%`);
-    expect(fountain.style.top).toBe(`${(hubMapFountainAnnotation.y / 1440) * 100}%`);
-    expect(within(map).queryByRole('button', { name: /fountain/i })).toBeNull();
-    expect(
-      within(screen.getByLabelText('Hub room quality legend'))
-        .getAllByText(/./)
-        .map((entry) => entry.textContent),
-    ).toEqual(['Perfect', 'Good', 'Bad', 'Special', 'Fountain']);
-
-    await view.user.click(fountain);
-    fireEvent.keyDown(fountain, { key: 'Enter' });
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(nHubState(view.application).decision).toBe(before);
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      historySize,
-    );
   });
 
   it('maps every declared Hub slot once and opens a room through one lazy bound attempt', async () => {

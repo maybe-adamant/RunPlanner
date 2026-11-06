@@ -40,6 +40,8 @@ interface ContextualPickerProps<T> {
   readonly layout?: 'inline' | 'stacked';
   readonly loading?: boolean;
   readonly model: ContextualPickerModel<T>;
+  /** The option under the pointer or keyboard highlight while the list is open. */
+  readonly onActiveChange?: (item: ContextualPickerItem<T> | undefined) => void;
   readonly onOpenChange?: (open: boolean) => void;
   readonly onSelect: (value: T) => void;
   readonly open?: boolean;
@@ -341,6 +343,7 @@ export function ContextualPicker<T>({
   layout = 'stacked',
   loading = false,
   model,
+  onActiveChange,
   onOpenChange,
   onSelect,
   open: controlledOpen,
@@ -490,6 +493,7 @@ export function ContextualPicker<T>({
               key={choiceLabel ?? 'default'}
               loading={loading}
               model={model}
+              {...(onActiveChange === undefined ? {} : { onActiveChange })}
               onCancel={() => updateOpen(false)}
               onSelect={select}
               searchable={searchable}

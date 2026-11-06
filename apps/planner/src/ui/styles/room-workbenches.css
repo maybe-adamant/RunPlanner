@@ -3221,7 +3221,7 @@
 .hub-overview-layout {
   display: grid;
   /* One compact list width on both tabs, so switching tabs never moves the map. */
-  grid-template-columns: 21rem minmax(0, 1fr);
+  grid-template-columns: 24rem minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
   margin-top: 12px;
@@ -3250,6 +3250,20 @@
   align-content: start;
   gap: 8px;
   min-width: 0;
+  container: hub-column / inline-size;
+}
+
+.hub-door-order-note {
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hub-board-map > .room-map-viewport > .room-map-canvas {
+  max-width: max(16rem, calc(var(--hub-map-height-cap, 100 * var(--app-vh) - 18rem) * 16 / 9));
 }
 
 .hub-overview-rewards-heading {
@@ -3291,6 +3305,7 @@ span.hub-board-status-line {
 
 .hub-door-rows {
   grid-template-columns: auto auto minmax(0, 1fr);
+  column-gap: 12px;
 }
 
 /* Rows share one grid, so the room column fits the longest room name. */
@@ -3299,9 +3314,9 @@ span.hub-board-status-line {
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
   align-items: center;
-  gap: 6px;
+  column-gap: 12px;
   min-width: 0;
-  padding: 2px 6px;
+  padding: 2px 8px;
   border: 1px solid #34353e;
   border-radius: 8px;
   background: rgb(255 255 255 / 2%);
@@ -3348,24 +3363,6 @@ span.hub-board-status-line {
   white-space: nowrap;
 }
 
-/* The reward picker fills the rest of its row at a readable size. */
-.hub-door-row :is(.door-row-rewards, .row-reward-value, .reward-value-editor, .contextual-picker) {
-  width: 100%;
-  min-width: 0;
-}
-
-.hub-door-row .contextual-picker,
-.hub-door-row .contextual-picker.field-control-inline {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  justify-self: stretch;
-}
-
-.hub-door-row .contextual-picker-trigger {
-  width: 100%;
-  font-size: 0.9rem;
-}
-
 /* Each Timeline segment: its stay's header, then its rerolls and fountain. */
 .hub-segment {
   display: grid;
@@ -3397,9 +3394,9 @@ span.hub-board-status-line {
 }
 
 /*
- * In the compact column a press reads on two lines: handle, die, the door in
- * full and its trash at the right end; then the arrow and the reward picker
- * across the rest of the row. The fountain row follows the same places.
+ * A press reads on one line: handle, die, the door's icon, arrow, the reward
+ * picker at its own size, and the trash at the right end. Where the column is
+ * too narrow, the arrow and picker take a second line under the door.
  */
 .hub-segment .room-rerolls-list,
 .hub-segment .room-rerolls[data-movable='true'] .room-rerolls-list {
@@ -3408,13 +3405,20 @@ span.hub-board-status-line {
 
 .hub-segment .room-reroll-row {
   display: grid;
-  grid-template-areas:
-    'move verb door delete'
-    '. arrow reward reward';
-  grid-template-columns: 24px 1.5rem minmax(0, 1fr) auto;
-  column-gap: 6px;
+  grid-template-areas: 'move verb door arrow reward delete';
+  grid-template-columns: 24px auto auto auto auto minmax(0, 1fr);
+  column-gap: 8px;
   row-gap: 2px;
   align-items: center;
+}
+
+@container hub-column (width < 22rem) {
+  .hub-segment .room-reroll-row {
+    grid-template-areas:
+      'move verb door delete'
+      '. arrow reward reward';
+    grid-template-columns: 24px auto minmax(0, 1fr) auto;
+  }
 }
 
 .hub-segment .room-reroll-row > :nth-child(1) {
@@ -3428,7 +3432,6 @@ span.hub-board-status-line {
 .hub-segment .room-reroll-row > :nth-child(3) {
   grid-area: door;
   justify-self: start;
-  max-width: 100%;
 }
 
 .hub-segment .room-reroll-row > :nth-child(4) {
@@ -3438,6 +3441,7 @@ span.hub-board-status-line {
 
 .hub-segment .room-reroll-row > :nth-child(5) {
   grid-area: reward;
+  justify-self: start;
   min-width: 0;
 }
 
@@ -3446,22 +3450,9 @@ span.hub-board-status-line {
   justify-self: end;
 }
 
-.hub-segment .room-reroll-row :is(.reward-value-editor, .fountain-rarity-inline) {
-  display: grid;
-  width: 100%;
-  min-width: 0;
-}
-
-.hub-segment .room-reroll-row .contextual-picker,
-.hub-segment .room-reroll-row .contextual-picker.field-control-inline {
-  width: 100%;
-  min-width: 0;
-  grid-template-columns: minmax(0, 1fr);
-  justify-self: stretch;
-}
-
-.hub-segment .room-reroll-row .contextual-picker-trigger {
-  width: 100%;
+.room-reroll-target-room {
+  display: inline-flex;
+  padding-right: 6px;
 }
 
 .hub-segment-reward,
@@ -3473,6 +3464,7 @@ span.hub-board-status-line {
 
 .hub-segment .room-rerolls-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   min-height: 30px;
@@ -3486,7 +3478,7 @@ span.hub-board-status-line {
 .hub-segment-head {
   display: flex;
   flex: 1;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   min-width: 0;

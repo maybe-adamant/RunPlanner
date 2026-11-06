@@ -254,8 +254,7 @@
   cursor: pointer;
 }
 
-.hub-map-marker,
-.hub-map-fountain-label {
+.hub-map-marker {
   font-size: clamp(7px, calc(0.85 * var(--app-vw)), 12px);
   font-weight: 700;
   line-height: 1;
@@ -332,44 +331,6 @@
   --hub-marker-opacity: 56%;
 }
 
-/* The fountain is an action site: a sky-blue diamond, never a room-quality circle. */
-.hub-map-fountain-marker {
-  position: absolute;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 4.2%;
-  min-width: 38px;
-  min-height: 0;
-  aspect-ratio: 1;
-  padding: 0;
-  border: 2px solid #101923;
-  border-radius: 22%;
-  color: #0c2233;
-  background: #ed963e;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 48%);
-  transform: translate(-50%, -50%) rotate(45deg);
-}
-
-.hub-map-overview .hub-map-marker-layer > .hub-map-fountain-marker:not(button) {
-  background: color-mix(in srgb, #ed963e 64%, transparent);
-  pointer-events: none;
-}
-
-.hub-map-fountain-content {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  transform: rotate(-45deg);
-  pointer-events: none;
-}
-
-.hub-map-fountain-label {
-  color: #101923;
-  white-space: nowrap;
-}
-
 .hub-map-legend {
   position: absolute;
   z-index: 2;
@@ -412,15 +373,6 @@
   color: #d6b442;
 }
 
-.hub-map-legend span[data-category='Fountain'] {
-  color: #ed963e;
-}
-
-.hub-map-legend span[data-category='Fountain']::before {
-  border-radius: 20%;
-  transform: rotate(45deg);
-}
-
 .room-map-load-error {
   margin: 0;
   color: #efb1b1;
@@ -447,10 +399,10 @@
   min-height: 14rem;
 }
 
-/* A door linked to its hovered or focused row, or the selected visit's door. */
-.hub-map-marker:is([data-linked='true'], [data-selected-visit='true']) {
+/* A door linked to its hovered or focused row: a softer ring than the selection. */
+.hub-map-marker[data-linked='true'] {
   z-index: 2;
-  outline: 3px solid #fff4c7;
+  outline: 2px solid rgb(255 255 255 / 55%);
   outline-offset: 2px;
 }
 
@@ -488,4 +440,34 @@
 
 .hub-map-reward-arrow {
   font-size: 0.8em;
+}
+
+/* While a visit's room is picked, the doors it can choose stand out. */
+.hub-timeline-map-marker[data-pickable='true'] {
+  border-color: #f5d386;
+  box-shadow:
+    0 0 0 2px #f5d386,
+    0 2px 8px rgb(0 0 0 / 48%);
+}
+
+/* The door a picked visit will enter from the board shown. */
+.hub-timeline-map-marker[data-pending='true'] {
+  z-index: 2;
+  outline: 3px dashed #fff4c7;
+  outline-offset: 2px;
+}
+
+/*
+ * The selected visit's door: a bright white ring inside a thin dark one, and a
+ * slight scale-up, so it reads on every quality fill, cleared or not, and on
+ * bright map art. Last, so it wins over every other door state.
+ */
+.hub-map-marker[data-selected-visit='true'] {
+  z-index: 3;
+  outline: 0;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 0 5px #0b0e14,
+    0 2px 10px rgb(0 0 0 / 60%);
+  scale: 1.18;
 }

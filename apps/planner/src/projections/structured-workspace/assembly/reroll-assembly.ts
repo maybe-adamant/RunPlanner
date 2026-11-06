@@ -46,6 +46,7 @@ import type {
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import type { WorkspaceBiomeSource } from '../source-index';
 import { requireWorkspaceRoom } from './catalog-room';
+import { sharedRoomIconNumber } from '../presentation/room-icon';
 import { normalExitOrdinal } from './ordering';
 import { workspaceDeclaredPhysicalExits } from './topology-presentation';
 import { rewardWheelOfferLabel } from '@planner/projections/rewards/wheelOfferLabel';
@@ -185,6 +186,7 @@ interface WorkspacePreparedRerollRow {
   readonly reward: ResolvedRewardOffer;
   readonly rewardTypes: WorkspaceRerollRewardTypes;
   readonly targetLabel: string;
+  readonly targetRoom?: WorkspaceRerollRow['targetRoom'];
 }
 
 /**
@@ -242,8 +244,15 @@ function assembleRerollList(input: {
       ...(settled === undefined ? {} : { poolRemaining: settled.poolRemaining }),
       ...(allowance.kind === 'reached' ? { pressCost: allowance.cost } : {}),
       rows: Object.freeze(
-        rows.map(({ address, key, marker, reward, targetLabel }) =>
-          Object.freeze({ address, key, marker, reward, targetLabel }),
+        rows.map(({ address, key, marker, reward, targetLabel, targetRoom }) =>
+          Object.freeze({
+            address,
+            key,
+            marker,
+            reward,
+            targetLabel,
+            ...(targetRoom === undefined ? {} : { targetRoom }),
+          }),
         ),
       ),
       ...(appendLocked === undefined ? {} : { appendLocked }),
@@ -393,6 +402,7 @@ export function assembleHubStayRerolls(input: {
     input.markerDestinations.redirect([marker], input.nodeKey);
     input.markerDestinations.setHubTab([marker], 'timeline');
     const target = hub.openTargets.find((candidate) => candidate.hubSlotKey === action.hubSlotKey);
+    const room = input.slots.get(action.hubSlotKey)?.door?.room;
     rows.push(
       Object.freeze({
         address,
@@ -404,6 +414,16 @@ export function assembleHubStayRerolls(input: {
             ? noRewardTypes
             : rewardTypes(createIncomingRewardAddress(biome, target.occurrenceId)),
         targetLabel: targetLabel({ kind: 'hubSlot', hubSlotKey: action.hubSlotKey }),
+        ...(room === undefined
+          ? {}
+          : {
+              targetRoom: Object.freeze({
+                roomIcon: room.roomIcon,
+                ...(sharedRoomIconNumber(room.roomIcon, room.label) === undefined
+                  ? {}
+                  : { roomNumber: sharedRoomIconNumber(room.roomIcon, room.label)! }),
+              }),
+            }),
       }),
     );
   }

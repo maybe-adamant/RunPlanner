@@ -124,7 +124,7 @@ export function HubDecisionWorkbench({
   };
   const resetVisitsControl = (
     <button
-      className="danger-action action-compact"
+      className="quiet-action action-compact"
       disabled={
         hubTarget.inert ||
         !actionOrderInteraction.contextReached ||
@@ -143,7 +143,7 @@ export function HubDecisionWorkbench({
   );
   const resetBoardControl = (
     <button
-      className="danger-action action-compact"
+      className="quiet-action action-compact"
       disabled={hubTarget.inert || node.openSlotCount.current === 0}
       onClick={() => executeIntent(resetBoard.intent)}
       type="button"
@@ -194,7 +194,6 @@ export function HubDecisionWorkbench({
         </nav>
         <div className="room-workbench-tab-utility owner-markers">
           {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
-          {activeTab === 'overview' ? resetBoardControl : resetVisitsControl}
         </div>
       </div>
       <section
@@ -205,10 +204,16 @@ export function HubDecisionWorkbench({
       >
         <div className="hub-workbench-view">
           {activeTab === 'overview' ? (
-            <HubOverview hubIdentity={hubIdentity} interactions={interactions} node={node} />
+            <HubOverview
+              hubIdentity={hubIdentity}
+              interactions={interactions}
+              node={node}
+              resetControl={resetBoardControl}
+            />
           ) : (
             <HubTimeline
               hubIdentity={hubIdentity}
+              resetControl={resetVisitsControl}
               interactions={interactions}
               locked={hubTarget.inert}
               node={node}
