@@ -618,6 +618,42 @@ describe('structured workspace actions assembly', () => {
     });
   });
 
+  it('publishes each settled Steady Growth and Phial target rarity before and after', () => {
+    const steadyGrowth = projectStructuredWorkspaceFixture(
+      surfaceCheckpointArtifacts['surface-scheduled-lifecycle'].load(),
+    ).workspace.route!.biomes.flatMap((biome) =>
+      [...biome.nodes, ...biome.completionOutline].flatMap((node) =>
+        node.kind === 'occurrenceWorkbench' ? (node.room.roomActions?.steadyGrowth ?? []) : [],
+      ),
+    );
+    expect(
+      steadyGrowth.some(
+        (control) =>
+          control.settledRarity !== undefined &&
+          control.settledRarity.before !== control.settledRarity.after,
+      ),
+    ).toBe(true);
+    for (const control of steadyGrowth) {
+      if (control.settledRarity !== undefined) expect(control.targetTraitKey).toBeDefined();
+    }
+
+    const phial = projectStructuredWorkspaceFixture(
+      surfaceCheckpointArtifacts['surface-n-phial-intermediate-fountain'].load(),
+    ).workspace.route!.biomes.flatMap((biome) =>
+      biome.nodes.flatMap((node) =>
+        node.kind === 'hubDecision' && node.fountain.rarity !== undefined
+          ? [node.fountain.rarity]
+          : [],
+      ),
+    );
+    expect(phial).toEqual([
+      expect.objectContaining({
+        targetTraitKey: 'AresSpecialBoon',
+        settledRarity: { before: 'Common', after: 'Heroic' },
+      }),
+    ]);
+  });
+
   it('shows the simulation-neutral Boss pickup as a required end-encounter action', () => {
     const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
     const { assembly } = assemble(

@@ -3145,6 +3145,15 @@ button.timeline-chip:hover:not(:disabled),
   box-shadow: none;
 }
 
+/* A chip that opens a picker list keeps the picker's accent underline; option, dialog and display chips do not. */
+.contextual-picker-trigger.timeline-chip:not(:disabled) {
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--selection-accent) 45%, transparent);
+}
+
+.contextual-picker-trigger.timeline-chip:is(:hover, [data-state='open']):not(:disabled) {
+  box-shadow: inset 0 -2px 0 var(--selection-accent);
+}
+
 span.timeline-chip {
   position: relative;
   cursor: default;

@@ -13,6 +13,7 @@ import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwne
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
+import { SettledRarityBefore } from './SettledRarityBefore';
 import { TimelineRow } from './TimelineRow';
 import { hintProps } from '@planner/ui/controls/hint';
 
@@ -62,6 +63,11 @@ export function SteadyGrowthEffectRow({
       data-action-accent="automatic"
       editors={
         <div className="scheduled-trait-effect-identity">
+          <SettledRarityBefore
+            label={selected === '' ? '' : interaction.traitLabel(selected)}
+            settled={control.settledRarity}
+            targetTraitKey={control.targetTraitKey}
+          />
           <RandomTraitTargetPicker
             findingTarget={findingTarget(control.address)}
             ariaLabel="Steady Growth target"
@@ -76,6 +82,7 @@ export function SteadyGrowthEffectRow({
             onOpenChange={onOpenChange}
             open={domain?.emptyNoOp === true && selected === '' ? false : open}
             selected={selected === '' ? null : selected}
+            triggerRarity={control.settledRarity?.after}
             triggerSize="icon"
           />
         </div>

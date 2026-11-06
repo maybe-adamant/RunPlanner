@@ -339,11 +339,19 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly phaseKey: string;
     };
 
+/** The settled target's rarity before and after one timed growth; equal when nothing promoted. */
+export interface WorkspaceSettledRarity {
+  readonly before: import('@run-planner/engine/catalog-schema').TraitRarity;
+  readonly after: import('@run-planner/engine/catalog-schema').TraitRarity;
+}
+
 export interface WorkspaceSteadyGrowthControl {
   readonly address: SteadyGrowthOutcomeAddress;
   readonly marker: WorkspaceMarker;
   readonly phaseKey: string;
   readonly targetTraitKey?: string;
+  /** Present only when this cycle settled its target. */
+  readonly settledRarity?: WorkspaceSettledRarity;
 }
 
 export interface WorkspaceSteadyGrowthDomain {
@@ -400,6 +408,8 @@ export interface WorkspaceFountainRarityControl {
   readonly address: FountainRarityOutcomeAddress;
   readonly marker: WorkspaceMarker;
   readonly targetTraitKey?: string;
+  /** Present only when this fountain use settled with the authored target. */
+  readonly settledRarity?: WorkspaceSettledRarity;
   /**
    * `unreached` while the engine has not evaluated this fountain use;
    * `noPhial` when no unused Phial reaches it; `noTargetRequired` when one

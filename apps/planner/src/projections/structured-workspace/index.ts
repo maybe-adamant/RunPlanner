@@ -161,6 +161,7 @@ export type {
   WorkspaceRewardControl,
   WorkspaceRewardOfferResolver,
   WorkspaceRewardWheelDescriptor,
+  WorkspaceSettledRarity,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthDomain,
   WorkspaceSteadyGrowthInteraction,

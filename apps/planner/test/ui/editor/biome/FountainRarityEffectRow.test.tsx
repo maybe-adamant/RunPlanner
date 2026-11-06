@@ -116,6 +116,58 @@ describe('FountainRarityEffectRow', () => {
     application.dispose();
   });
 
+  it('shows a settled growth as the target before, then its picker at the new rarity', async () => {
+    const application = createApplication();
+    const action = createRoomActionAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+      roomActionKey({ kind: 'useFountain' }),
+    );
+    const outcome = createFountainRarityOutcomeAddress(action);
+    const interaction: WorkspaceFountainRarityInteraction = {
+      key: semanticAddressKey(outcome),
+      owner: outcome,
+      intentFor: (targetTraitKey) => ({
+        command: { kind: 'ReplaceFountainRarityTarget', outcome, targetTraitKey },
+      }),
+      forTarget: () => ({
+        load: () => ({ targetRequired: true, selectedPossible: true, picker: { sections: [] } }),
+      }),
+      traitLabel: (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+    };
+    const interactions = {
+      fountainRarity: new Map([[semanticAddressKey(outcome), interaction]]),
+    } as unknown as WorkspaceInteractionCatalog;
+    const control = (after: 'Common' | 'Heroic'): WorkspaceFountainRarityControl => ({
+      address: outcome,
+      marker: { address: outcome, assessment: 'assessed', findingCount: 0, focusKey: 'phial' },
+      targetTraitKey: 'AresSpecialBoon',
+      settledRarity: { before: 'Common', after },
+    });
+    const label = catalog.traits.byKey.AresSpecialBoon!.label;
+    const view = render(
+      <Provider store={application.store}>
+        <FountainRarityEffectRow control={control('Heroic')} interactions={interactions} />
+      </Provider>,
+    );
+    const before = await screen.findByRole('img', { name: `${label}, Common` });
+    expect(before.getAttribute('data-rarity')).toBe('Common');
+    const picker = screen.getByRole('button', { name: 'Aromatic Phial target' });
+    expect(picker.getAttribute('data-rarity')).toBe('Heroic');
+
+    // Nothing promoted: the one chip stays, without its earlier copy.
+    view.rerender(
+      <Provider store={application.store}>
+        <FountainRarityEffectRow control={control('Common')} interactions={interactions} />
+      </Provider>,
+    );
+    expect(screen.queryByRole('img', { name: `${label}, Common` })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Aromatic Phial target' }).getAttribute('data-rarity'),
+    ).toBe('Common');
+    application.dispose();
+  });
+
   it('keeps a pending Phial target mounted and disabled until the engine requires one', async () => {
     const application = createApplication();
     const action = createRoomActionAddress(

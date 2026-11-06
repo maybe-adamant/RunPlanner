@@ -639,6 +639,7 @@ export function assembleWorkspaceBiomeSemantics(
       roomObjectInteractions: source.roomObjectInteractions,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
       transcendentEmbryoOutcomes: source.transcendentEmbryoOutcomes,
+      fountainRarityOutcome: source.fountainRarityOutcome,
       ...(fountainRarityAssessment === undefined ? {} : { fountainRarityAssessment }),
       isActiveTraitOffer: source.isActiveTraitOffer,
       ...(blockingRowKeys === undefined ? {} : { blockingRowKeys }),

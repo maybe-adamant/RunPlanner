@@ -304,6 +304,8 @@ describe('structured workspace biome semantic assembly', () => {
         targetTraitKey: 'ApolloWeaponBoon',
       }),
     ]);
+    // A cycle the engine did not settle publishes no rarity.
+    expect(boss.room.roomActions?.steadyGrowth?.[0]).not.toHaveProperty('settledRarity');
   });
 
   it('publishes the Postboss keepsake selector independently of successor assessment', () => {

@@ -16,6 +16,7 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
 import { hintProps } from '@planner/ui/controls/hint';
 import { keepsakeArtwork } from '@planner/ui/controls/keepsakes/keepsakeArtwork';
+import { SettledRarityBefore } from './SettledRarityBefore';
 
 const pendingPhialTitles = {
   unreached: candidateWaitingHint,
@@ -87,6 +88,11 @@ export function FountainRarityEffectRow({
         >
           <img alt="" src={keepsakeArtwork.FountainRarityKeepsake} />
         </span>
+        <SettledRarityBefore
+          label={selected === '' ? '' : interaction.traitLabel(selected)}
+          settled={control.settledRarity}
+          targetTraitKey={control.targetTraitKey}
+        />
         <RandomTraitTargetPicker
           findingTarget={findingTarget(control.address)}
           ariaLabel={phialTargetName}
@@ -102,6 +108,7 @@ export function FountainRarityEffectRow({
           onOpenChange={onOpenChange}
           open={open}
           selected={selected === '' ? null : selected}
+          triggerRarity={control.settledRarity?.after}
           triggerSize="icon"
         />
       </span>

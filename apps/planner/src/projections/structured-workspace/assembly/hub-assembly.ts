@@ -715,6 +715,7 @@ function projectHubNode(
           fountainOutcome,
           hub.fountainRarityResult?.targetTraitKey,
           input.fountainRarityAssessment,
+          input.source?.fountainRarityOutcome,
           markerDestinations,
         );
   const fountain: WorkspaceHubFountain = Object.freeze({

@@ -84,6 +84,7 @@ export interface WorkspaceOccurrenceActionsInput {
     | undefined;
   readonly steadyGrowthOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
   readonly transcendentEmbryoOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['transcendentEmbryoOutcomes'][number][];
+  readonly fountainRarityOutcome?: import('../source-index').WorkspaceBiomeSource['fountainRarityOutcome'];
   readonly fountainRarityAssessment?: (
     address: FountainRarityOutcomeAddress,
     targetTraitKey: string | null | undefined,
@@ -112,9 +113,11 @@ export function projectFountainRarityControl(
   outcome: FountainRarityOutcomeAddress,
   targetTraitKey: string | undefined,
   assess: WorkspaceOccurrenceActionsInput['fountainRarityAssessment'],
+  settled: WorkspaceOccurrenceActionsInput['fountainRarityOutcome'],
   markerDestinations: WorkspaceMarkerDestinationEmitter,
 ): WorkspaceFountainRarityControl {
   const evaluated = assess?.(outcome, targetTraitKey);
+  const settledOutcome = settled?.(outcome);
   const pending =
     evaluated?.kind !== 'fountainRarityOutcome'
       ? 'unreached'
@@ -127,6 +130,14 @@ export function projectFountainRarityControl(
     address: outcome,
     marker: markerDestinations.marker(outcome),
     ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+    ...(settledOutcome === undefined || settledOutcome.targetTraitKey !== targetTraitKey
+      ? {}
+      : {
+          settledRarity: Object.freeze({
+            before: settledOutcome.rarityBefore,
+            after: settledOutcome.rarityAfter,
+          }),
+        }),
     ...(pending === undefined ? {} : { pending }),
   });
 }
@@ -455,6 +466,7 @@ function roomActionsForOccurrence(
               createFountainRarityOutcomeAddress(address),
               input.occurrence.fountainRarityResult?.targetTraitKey,
               input.fountainRarityAssessment,
+              input.fountainRarityOutcome,
               input.markerDestinations,
             );
       const artificerConversion = resolvedRewardControl?.conversions?.find(
@@ -961,6 +973,16 @@ function roomActionsForOccurrence(
           ...(outcome.targetTraitKey === undefined
             ? {}
             : { targetTraitKey: outcome.targetTraitKey }),
+          ...(outcome.targetTraitKey === undefined ||
+          outcome.rarityBefore === undefined ||
+          outcome.rarityAfter === undefined
+            ? {}
+            : {
+                settledRarity: Object.freeze({
+                  before: outcome.rarityBefore,
+                  after: outcome.rarityAfter,
+                }),
+              }),
         }),
       ];
     }),

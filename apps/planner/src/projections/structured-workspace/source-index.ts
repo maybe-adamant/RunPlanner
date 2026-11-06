@@ -25,6 +25,7 @@ import {
   type ExitDecision,
   type ExitDecisionAddress,
   type ExitDecisionSourceAddress,
+  type FountainRarityOutcomeAddress,
   type EncounterPhaseAddress,
   type HubDecision,
   type HubDecisionAddress,
@@ -205,6 +206,12 @@ export interface WorkspaceBiomeSource {
   ) => import('@run-planner/engine/simulation').ZagreusContractCandidateCapability | undefined;
   readonly steadyGrowthOutcomes: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
   readonly transcendentEmbryoOutcomes: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['transcendentEmbryoOutcomes'][number][];
+  /** The settled Phial target of one reached fountain use, with its rarity before and after. */
+  readonly fountainRarityOutcome: (
+    address: FountainRarityOutcomeAddress,
+  ) =>
+    | import('@run-planner/engine/simulation').BiomeRewardSimulation['fountainRarityOutcomes'][number]
+    | undefined;
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
   /** Closed engine-owned outgoing state for one exact retained occurrence. */
   readonly outgoingStatus: (occurrenceId: OccurrenceId) => OccurrenceOutgoingStatus;
@@ -874,6 +881,12 @@ function createWorkspaceBiomeSource(
     evaluation !== undefined && 'rewards' in evaluation
       ? evaluation.rewards.transcendentEmbryoOutcomes
       : Object.freeze([]);
+  const fountainRarityOutcomes = new Map(
+    (evaluation !== undefined && 'rewards' in evaluation
+      ? evaluation.rewards.fountainRarityOutcomes
+      : []
+    ).map((outcome) => [semanticAddressKey(outcome.address), outcome] as const),
+  );
   const pastPlanEnd = planEnd.afterPlanEnd.has(plan.biomeKey);
   const endOccurrenceId =
     planEnd.endRoom?.biomeKey === plan.biomeKey ? planEnd.endRoom.occurrenceId : undefined;
@@ -1030,6 +1043,8 @@ function createWorkspaceBiomeSource(
     zagreusContractAssessment,
     steadyGrowthOutcomes,
     transcendentEmbryoOutcomes,
+    fountainRarityOutcome: (address: FountainRarityOutcomeAddress) =>
+      fountainRarityOutcomes.get(semanticAddressKey(address)),
     layout,
     blockedOccurrenceRoom: (occurrenceId: OccurrenceId) =>
       overlay.fixedRooms.get(occurrenceId) ??

@@ -308,6 +308,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly steadyGrowthOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
   readonly transcendentEmbryoOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['transcendentEmbryoOutcomes'][number][];
   readonly fountainRarityAssessment?: import('./occurrence-action-row-projection').WorkspaceOccurrenceActionsInput['fountainRarityAssessment'];
+  readonly fountainRarityOutcome?: import('./occurrence-action-row-projection').WorkspaceOccurrenceActionsInput['fountainRarityOutcome'];
   readonly hermesShrineAssessment?: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').HermesShrineCandidateCapability | undefined;
@@ -524,6 +525,9 @@ export function assembleWorkspaceOccurrence(
     ...(input.fountainRarityAssessment === undefined
       ? {}
       : { fountainRarityAssessment: input.fountainRarityAssessment }),
+    ...(input.fountainRarityOutcome === undefined
+      ? {}
+      : { fountainRarityOutcome: input.fountainRarityOutcome }),
     ...(input.derivedAcquisitionEntries === undefined
       ? {}
       : { derivedAcquisitionEntries: input.derivedAcquisitionEntries }),

@@ -405,6 +405,10 @@ outcomes stored on their source and keyed by cycle from 1:
 - **One landing.** The one reached state lands each cycle once, and its
   candidates answer at that landing's threshold; a second landing of the same
   cycle is an engine contract failure.
+- **Settled rarity.** For each Steady Growth cycle and Aromatic Phial fountain
+  use that settles its target, the engine publishes that target's rarity
+  before and after; they are equal when nothing promoted, and a blocked or
+  no-op cycle publishes none.
 
 ## Equipped state and acquired effects
 

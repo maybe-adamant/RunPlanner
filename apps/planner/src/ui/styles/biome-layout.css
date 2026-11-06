@@ -983,6 +983,14 @@
   flex: 1 1 13rem;
 }
 
+/* A settled growth reads as the target before, an arrow, then its picker. */
+.scheduled-trait-effect-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
 .transcendent-embryo-rarity {
   flex: 0 0 auto;
   white-space: nowrap;

@@ -99,6 +99,7 @@ export type {
   WorkspaceRoomLifecycleBoundary,
   WorkspaceRoomLifecycleTimeline,
   WorkspaceRoomLifecycleTimelineEntry,
+  WorkspaceSettledRarity,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthDomain,
   WorkspaceSteadyGrowthInteraction,
