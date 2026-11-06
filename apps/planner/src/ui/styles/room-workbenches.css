@@ -3482,6 +3482,20 @@ span.hub-board-status-line {
   justify-self: end;
 }
 
+/* A slim trash, sized to the reroll row's pickers rather than a full timeline control. */
+.hub-segment .room-reroll-row .room-action-delete {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 4px;
+}
+
+.hub-segment .room-reroll-row .room-action-delete svg {
+  width: 14px;
+  height: 14px;
+}
+
 .room-reroll-target-room {
   display: inline-flex;
   padding-right: 6px;
