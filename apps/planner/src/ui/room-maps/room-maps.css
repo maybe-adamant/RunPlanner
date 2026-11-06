@@ -442,15 +442,12 @@
   font-size: 0.8em;
 }
 
-/* The visit picker's highlighted option: as strong as the selection, so it reads on every fill. */
+/* The visit picker's highlighted option: a little larger with a gentle ring. */
 .hub-timeline-map-marker[data-linked='true'] {
   z-index: 3;
-  outline: 0;
-  box-shadow:
-    0 0 0 3px #fff,
-    0 0 0 5px #0b0e14,
-    0 2px 10px rgb(0 0 0 / 60%);
-  scale: 1.18;
+  outline: 2px solid rgb(255 255 255 / 70%);
+  outline-offset: 2px;
+  scale: 1.12;
 }
 
 /* The door a picked visit will enter from the board shown. */
