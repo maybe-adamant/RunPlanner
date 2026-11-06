@@ -15,7 +15,9 @@ import {
   type WorkspaceRoomTab,
   type WorkspaceRunStateLauncher,
 } from '@planner/projections/structured-workspace';
-import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor, useFindingKeys } from '@planner/ui/feedback/useFindingTarget';
+import { doorEditorChosen } from '@planner/state/editorSessionSlice';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { RunStateLauncher } from './RunStateSheet';
 import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
@@ -47,6 +49,8 @@ interface OccurrenceWorkbenchProps {
   readonly timelineDoors?: TimelineDoorsContent;
   /** Navigation landed on a door owner, so the Doors open row opens. */
   readonly doorsRequested?: boolean;
+  /** The room's exit is the authoring frontier: its doors are the next required input. */
+  readonly doorsFrontier?: boolean;
   /** The room's place against the plan end; past it, every panel is read-only. */
   readonly planEndRelation?: WorkspacePlanEndRelation;
   /** The action that moves the plan's end here, where no last row holds it. */
@@ -64,6 +68,7 @@ export function OccurrenceWorkbench({
   incomingDoor,
   headerActions,
   doorsRequested = false,
+  doorsFrontier = false,
   timelineDoors,
   pastEndAction,
   entryIdentity,
@@ -110,31 +115,23 @@ export function OccurrenceWorkbench({
     });
   }
   const selectedTab = tabState.active;
-  // The doors stand open unless collapsed in this room; navigation to a door
-  // reopens them, and a finding inside keeps them open.
-  const [doorsState, setDoorsState] = useState({
-    collapsed: false,
-    findingNavigationRevision,
-    navigationRevision,
-    roomIdentity,
-  });
-  if (
-    doorsState.roomIdentity !== roomIdentity ||
-    doorsState.navigationRevision !== navigationRevision ||
-    doorsState.findingNavigationRevision !== findingNavigationRevision
-  ) {
-    setDoorsState({
-      collapsed:
-        !doorsRequested && doorsState.roomIdentity === roomIdentity && doorsState.collapsed,
-      findingNavigationRevision,
-      navigationRevision,
-      roomIdentity,
-    });
-  }
-  const findingMark = useFindingMark();
-  const doorsHoldFindings = (timelineDoors?.findingOwners ?? []).some(
-    (owner) => findingMark(owner)['data-has-findings'],
+  // The door editor stays shut unless it needs attention (a finding inside, or
+  // the doors as the next required input) or navigation asks for it. A
+  // remembered choice holds until attention it has not seen appears.
+  const doorChoice = useAppSelector(
+    (state) => state.editorSession.doorEditorChoices?.[roomIdentity],
   );
+  const dispatch = useAppDispatch();
+  const doorFindingKeys = useFindingKeys(timelineDoors?.findingOwners ?? []);
+  const doorAttention = [...doorFindingKeys, ...(doorsFrontier ? ['frontier'] : [])];
+  const currentNavigation = navigationRevision ?? -1;
+  const doorsExpanded =
+    (doorsRequested &&
+      (doorChoice === undefined || doorChoice.navigationRevision !== currentNavigation)) ||
+    (doorChoice === undefined
+      ? doorAttention.length > 0
+      : doorChoice.expanded ||
+        doorAttention.some((attention) => !doorChoice.attention.includes(attention)));
   const doors: TimelineDoors | undefined =
     timelineDoors === undefined
       ? undefined
@@ -142,13 +139,18 @@ export function OccurrenceWorkbench({
           ...timelineDoors,
           noun: 'door' as const,
           detailId: `occurrence-${room.occurrenceId}-doors-detail`,
-          expanded: doorsHoldFindings || !doorsState.collapsed,
-          ...(doorsHoldFindings
-            ? {}
-            : {
-                onExpandedChange: (expanded: boolean) =>
-                  setDoorsState({ ...doorsState, collapsed: !expanded }),
+          expanded: doorsExpanded,
+          onExpandedChange: (expanded: boolean) =>
+            dispatch(
+              doorEditorChosen({
+                room: roomIdentity,
+                choice: {
+                  expanded,
+                  attention: doorAttention,
+                  navigationRevision: currentNavigation,
+                },
               }),
+            ),
         };
   const setActiveTab = (tab: WorkspaceRoomTab): void =>
     setTabState({

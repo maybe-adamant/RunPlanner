@@ -123,6 +123,20 @@ export function useFindingFeedbackEntries(
   );
 }
 
+/** The keys of every finding these owners carry on any of their controls, in a stable order. */
+// eslint-disable-next-line react-refresh/only-export-components -- Reads the same feedback boundary.
+export function useFindingKeys(owners: readonly SemanticAddress[]): readonly string[] {
+  const { findings } = useContext(feedback);
+  const ownerKeys = new Set(owners.map((owner) => semanticAddressKey(owner)));
+  const keys = new Set<string>();
+  for (const [target, marked] of findings) {
+    // A control's findings are keyed by its owner's key, then `#` and the control.
+    const owner = target.endsWith(']') ? target : target.slice(0, target.lastIndexOf('#'));
+    if (ownerKeys.has(owner)) for (const finding of marked) keys.add(semanticFindingKey(finding));
+  }
+  return [...keys].sort();
+}
+
 /** Explanations of the owner's unavailable encounter customizations, by decision key. */
 // eslint-disable-next-line react-refresh/only-export-components -- Reads the same feedback boundary.
 export function useCustomizationFindingExplanations(

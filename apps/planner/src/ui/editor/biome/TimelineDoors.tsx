@@ -13,7 +13,7 @@ import { TimelineRow } from './TimelineRow';
 export interface TimelineDoorsContent {
   /** The doors' compact state on the Doors open row. */
   readonly summary?: ReactNode;
-  /** The owners the editor repairs; a finding on any keeps the doors open. */
+  /** The owners the editor repairs; a new finding on any opens the doors. */
   readonly findingOwners?: readonly SemanticAddress[];
   /** The doors' editor, shown while the row is expanded. */
   readonly detail?: ReactNode;
@@ -35,7 +35,7 @@ export interface TimelineDoors extends TimelineDoorsContent {
   /** The editor line's id, which the disclosure controls. */
   readonly detailId: string;
   readonly expanded: boolean;
-  /** Absent while a finding inside keeps the doors open. */
+  /** Absent where the editor cannot be hidden. */
   readonly onExpandedChange?: (expanded: boolean) => void;
 }
 

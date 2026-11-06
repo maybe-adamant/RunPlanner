@@ -70,6 +70,17 @@ export interface RoutePanelSelection {
 export type FocusPresentation =
   { readonly kind: 'roomTimeline' } | { readonly kind: 'hubSegment'; readonly segment: number };
 
+/**
+ * A room's explicit open or close of its Timeline door editor, with the
+ * attention (finding keys, the frontier) present when it was made and the
+ * navigation it answered.
+ */
+export interface DoorEditorChoice {
+  readonly expanded: boolean;
+  readonly attention: readonly string[];
+  readonly navigationRevision: number;
+}
+
 export interface EditorSessionState {
   /** Advances only when an accepted document replaces the workspace, clearing local drafts. */
   readonly workspaceReplacementRevision: number;
@@ -98,6 +109,8 @@ export interface EditorSessionState {
   readonly focusPresentation?: FocusPresentation | null;
   /** Open dialogs holding an unsaved local draft; history shortcuts wait while any is open. */
   readonly openDraftEditors: number;
+  /** Each room occurrence's remembered door-editor choice, by room interaction key. */
+  readonly doorEditorChoices?: Readonly<Record<string, DoorEditorChoice>>;
 }
 
 const routeScopePanel: RoutePanel = Object.freeze({ kind: 'route' });
@@ -214,6 +227,16 @@ const editorSessionSlice = createSlice({
       }
       state.activeSection = 'route';
       state.activePanel = panelForOrigin(action.payload);
+    },
+    doorEditorChosen(
+      state,
+      action: PayloadAction<{ readonly room: string; readonly choice: DoorEditorChoice }>,
+    ) {
+      const { attention, expanded, navigationRevision } = action.payload.choice;
+      state.doorEditorChoices = {
+        ...state.doorEditorChoices,
+        [action.payload.room]: { attention: [...attention], expanded, navigationRevision },
+      };
     },
     findingSelected(state, action: PayloadAction<FindingSelection>) {
       state.focusPresentation = null;
@@ -332,6 +355,7 @@ export const {
   arcanaActivationDialogOpened,
   circeResolutionDialogClosed,
   circeResolutionDialogOpened,
+  doorEditorChosen,
   draftEditorClosed,
   draftEditorOpened,
   editorSessionReconciled,

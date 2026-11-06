@@ -397,7 +397,9 @@ function OccurrenceInspector({
       {...(navigationRevision === undefined ? {} : { navigationRevision })}
       {...(findingNavigationRevision === undefined ? {} : { findingNavigationRevision })}
       initialTab={roomTab ?? (defaultToDoors ? node.room.doorsTab : 'overview')}
-      doorsRequested={doorsRequested || (roomTab === undefined && defaultToDoors)}
+      // A selected decision is its doors: selecting it asks for them.
+      doorsRequested={doorsRequested || defaultToDoors}
+      doorsFrontier={outgoing?.kind === 'frontier'}
       {...(sideRoomSlotKey === undefined ? {} : { initialSideRoomSlotKey: sideRoomSlotKey })}
       {...(doors === undefined ? {} : { timelineDoors: doors })}
       // A room with no last row keeps the action that moves the plan's end to it.
