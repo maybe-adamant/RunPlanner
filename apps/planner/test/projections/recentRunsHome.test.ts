@@ -241,6 +241,18 @@ const COMMANDS = {
     trait: createTraitOfferAddress(cage, 'self'),
     value: { kind: 'fallbackGold', giverKey: 'ZeusUpgrade' },
   },
+  locked: {
+    kind: 'ReplaceLockedExit',
+    occurrence,
+    exitKey: 'exit3',
+    locked: true,
+  },
+  opened: {
+    kind: 'ReplaceLockedExit',
+    occurrence,
+    exitKey: 'exit2',
+    locked: false,
+  },
   other: {
     kind: 'InitializeExitDecision',
     decision: createExitDecisionAddress(biome, occurrence),
@@ -258,6 +270,8 @@ describe('applied values', () => {
     expect(label(COMMANDS.wheelBoon)).toBe(
       `${catalog.rewards.rewardTypes.byKey.Boon!.label} · ${catalog.rewards.rewardTypes.byKey.ZeusUpgrade!.label}`,
     );
+    expect(label(COMMANDS.locked)).toBe('Exit 3 locked');
+    expect(label(COMMANDS.opened)).toBe('Exit 2 open');
     expect(label(COMMANDS.fallbackGold)).toBeNull();
     expect(label(COMMANDS.other)).toBeNull();
     expect(label(undefined)).toBeNull();

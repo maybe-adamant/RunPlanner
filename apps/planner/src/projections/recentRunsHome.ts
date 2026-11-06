@@ -332,6 +332,11 @@ export function appliedValue(catalog: Catalog, command: ProjectCommand | undefin
       return rewardOfferLabel(catalog, command.value);
     case 'ReplaceRewardWheelPicked':
       return command.pickedOfferIndex === 1 ? 'left pick' : 'right pick';
+    case 'ReplaceLockedExit': {
+      const ordinal = /^exit(\d+)$/.exec(command.exitKey)?.[1];
+      const door = ordinal === undefined ? command.exitKey : `Exit ${ordinal}`;
+      return command.locked ? `${door} locked` : `${door} open`;
+    }
     case 'ReplaceTraitOffer': {
       const traitKey = selectedTraitKey(command.value);
       return traitKey === undefined
