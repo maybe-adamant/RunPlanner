@@ -402,6 +402,11 @@ function projectHubNode(
           inspectorPresentation: 'doorTarget' as const,
           railMarker: descriptor.marker,
           railVisibility: 'inspectorOnly' as const,
+          hubReturn: Object.freeze({
+            kind: 'room' as const,
+            room: createOccurrenceAddress(biome, sourceOccurrence.occurrenceId),
+            label: routeRoomDeclaration(sourceRoom, biome.routeKey).label,
+          }),
         });
         const sideRewardMarkers = workspaceHubMainRewardMarkers(workbench.room);
         markerDestinations.redirect(sideRewardMarkers, parentWorkbenchKey);
@@ -526,6 +531,15 @@ function projectHubNode(
         ...(localVisit === undefined ? {} : { localVisit }),
         railMarker: slotMarker,
         railVisibility: 'inspectorOnly' as const,
+        ...(visitOrder.includes(slot.slotKey)
+          ? {
+              hubReturn: Object.freeze({
+                kind: 'hub' as const,
+                hub: owner,
+                visitIndex: visitOrder.indexOf(slot.slotKey) + 1,
+              }),
+            }
+          : {}),
       });
       workbenches.push(workbench);
       doorsBySlot.set(slot.slotKey, door!);

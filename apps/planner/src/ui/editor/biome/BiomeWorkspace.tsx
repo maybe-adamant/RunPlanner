@@ -647,6 +647,7 @@ export function BiomeWorkspace({
 }: BiomeWorkspaceProps) {
   const runStateTarget = useAppSelector((state) => state.editorSession.runStateTarget);
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
+  const focusPresentation = useAppSelector((state) => state.editorSession.focusPresentation);
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
   const semanticNavigationRevision = useAppSelector(
     (state) => state.editorSession.semanticNavigationRevision,
@@ -837,12 +838,16 @@ export function BiomeWorkspace({
             {...(selectedStage === undefined ? {} : { outgoing: selectedStage.outgoing })}
             {...(outgoingDecision === undefined ? {} : { outgoingDecision })}
             {...(sourceOccurrence === undefined ? {} : { sourceOccurrence })}
-            {...(explicitDestination?.hubTab === undefined
-              ? {}
-              : { hubTab: explicitDestination.hubTab })}
-            {...(explicitDestination?.roomTab === undefined
-              ? {}
-              : { roomTab: explicitDestination.roomTab })}
+            {...(focusPresentation?.kind === 'hubSegment'
+              ? { hubTab: 'timeline' as const, hubSegment: focusPresentation.segment }
+              : explicitDestination?.hubTab === undefined
+                ? {}
+                : { hubTab: explicitDestination.hubTab })}
+            {...(focusPresentation?.kind === 'roomTimeline'
+              ? { roomTab: 'actions' as const }
+              : explicitDestination?.roomTab === undefined
+                ? {}
+                : { roomTab: explicitDestination.roomTab })}
             doorsRequested={explicitDestination?.timelineDoors === 'doorsOpen'}
             {...(explicitDestination?.sideRoomSlotKey === undefined
               ? {}

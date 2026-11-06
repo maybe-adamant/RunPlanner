@@ -18,6 +18,8 @@ import { hintProps } from '@planner/ui/controls/hint';
 
 interface HubDecisionWorkbenchProps {
   readonly initialTab?: WorkspaceHubTab;
+  /** The Timeline segment an explicit open asked for, applied once per navigation. */
+  readonly initialSegment?: number;
   /** Reapply a finding-owned tab request even when the requested tab is unchanged. */
   readonly navigationRevision?: number;
   readonly findingNavigationRevision?: number;
@@ -40,6 +42,7 @@ function domId(value: string): string {
 
 export function HubDecisionWorkbench({
   initialTab,
+  initialSegment,
   findingNavigationRevision,
   navigationRevision,
   interactions,
@@ -124,7 +127,7 @@ export function HubDecisionWorkbench({
   };
   const resetVisitsControl = (
     <button
-      className="quiet-action action-compact"
+      className="danger-action action-compact"
       disabled={
         hubTarget.inert ||
         !actionOrderInteraction.contextReached ||
@@ -143,7 +146,7 @@ export function HubDecisionWorkbench({
   );
   const resetBoardControl = (
     <button
-      className="quiet-action action-compact"
+      className="danger-action action-compact"
       disabled={hubTarget.inert || node.openSlotCount.current === 0}
       onClick={() => executeIntent(resetBoard.intent)}
       type="button"
@@ -213,6 +216,9 @@ export function HubDecisionWorkbench({
           ) : (
             <HubTimeline
               hubIdentity={hubIdentity}
+              {...(initialSegment === undefined || navigationRevision === undefined
+                ? {}
+                : { requestedSegment: { segment: initialSegment, revision: navigationRevision } })}
               resetControl={resetVisitsControl}
               interactions={interactions}
               locked={hubTarget.inert}

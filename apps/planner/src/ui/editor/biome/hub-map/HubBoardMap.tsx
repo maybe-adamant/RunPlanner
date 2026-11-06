@@ -15,14 +15,11 @@ import { useMapHeightCap } from './useMapHeightCap';
  * supplies its doors.
  */
 export function HubBoardMap({
-  action,
   door,
   gameName,
   hubIdentity,
   label,
 }: {
-  /** One tab action placed beside the map's own controls. */
-  readonly action?: ReactNode;
   /** The marker of one declared door, or nothing where the map shows none. */
   readonly door: (annotation: HubMapAnnotation) => ReactNode;
   readonly gameName: string;
@@ -44,9 +41,6 @@ export function HubBoardMap({
           </div>
         }
         title="Ephyra Hub"
-        {...(action === undefined
-          ? {}
-          : { viewportOverlay: <div className="room-map-controls">{action}</div> })}
         viewportLegend={<HubMapQualityLegend />}
       />
     </section>

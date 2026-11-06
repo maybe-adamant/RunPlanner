@@ -559,6 +559,13 @@ export interface WorkspaceOccurrenceWorkbenchNode {
   readonly room: WorkspaceRoomSummary;
   /** Stable Hub Timeline destination for visited rooms and the fountain's room host. */
   readonly hubTimeline?: WorkspaceMarker;
+  /**
+   * Where leaving this room returns: a Hub visit's main room to its Hub, after
+   * that visit; a side room to the main room it opened from.
+   */
+  readonly hubReturn?:
+    | { readonly kind: 'hub'; readonly hub: HubDecisionAddress; readonly visitIndex: number }
+    | { readonly kind: 'room'; readonly room: OccurrenceAddress; readonly label: string };
 }
 
 export type WorkspaceBiomeField =

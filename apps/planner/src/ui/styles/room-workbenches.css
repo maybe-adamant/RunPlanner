@@ -3253,6 +3253,20 @@
   container: hub-column / inline-size;
 }
 
+/* A column's title, with the tab's reset at its right end. */
+.hub-column-title {
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  margin: 0;
+}
+
+.hub-column-title > h5 {
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
 .hub-door-order-note {
   margin: 0;
   overflow: hidden;

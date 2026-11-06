@@ -158,7 +158,7 @@ export function HubOverview({
   resetControl,
 }: {
   readonly hubIdentity: string;
-  /** The tab's reset, beside the map's own controls. */
+  /** The tab's reset, at the end of its column title. */
   readonly resetControl: ReactNode;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: WorkspaceHubDecisionNode;
@@ -216,6 +216,10 @@ export function HubOverview({
   return (
     <div className="hub-overview-layout">
       <section aria-label="Hub door rewards" className="hub-overview-rewards">
+        <header className="room-feature-category-heading hub-column-title">
+          <h5>Rewards</h5>
+          {resetControl}
+        </header>
         {!boardFull ? (
           <p
             {...findingMarks(status)}
@@ -227,6 +231,9 @@ export function HubOverview({
           </p>
         ) : (
           <>
+            <p className="hub-door-order-note">
+              The game draws the Hub rooms' rewards in this order.
+            </p>
             {requirement.met && !status['data-has-findings'] ? (
               <span {...findingMarks(status)} className="hub-board-status-line" tabIndex={-1} />
             ) : (
@@ -240,9 +247,6 @@ export function HubOverview({
                 {`${requirement.current} doors open`}
               </p>
             )}
-            <p className="hub-door-order-note">
-              The game draws the Hub rooms' rewards in this order.
-            </p>
             <ol aria-label="Doors in draw order" className="hub-door-rows">
               {openSlots.map((slot) => (
                 <DoorRow
@@ -276,7 +280,6 @@ export function HubOverview({
             />
           );
         }}
-        action={resetControl}
         gameName={node.gameName}
         hubIdentity={hubIdentity}
         label="Ephyra Hub map"

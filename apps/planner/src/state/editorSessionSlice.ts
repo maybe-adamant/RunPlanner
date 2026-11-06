@@ -63,6 +63,13 @@ export interface RoutePanelSelection {
   readonly panel: RoutePanel;
 }
 
+/**
+ * How an opened owner is presented, where its destination alone does not say:
+ * a room on its Timeline tab, or the Hub Timeline with one visit's segment.
+ */
+export type FocusPresentation =
+  { readonly kind: 'roomTimeline' } | { readonly kind: 'hubSegment'; readonly segment: number };
+
 export interface EditorSessionState {
   /** Advances only when an accepted document replaces the workspace, clearing local drafts. */
   readonly workspaceReplacementRevision: number;
@@ -87,6 +94,8 @@ export interface EditorSessionState {
   readonly runStateTarget?: RunStateOwner | null;
   /** Advances for every explicit semantic navigation, including repeat visits. */
   readonly semanticNavigationRevision: number;
+  /** The presentation an explicit open asked for; any other navigation clears it. */
+  readonly focusPresentation?: FocusPresentation | null;
   /** Open dialogs holding an unsaved local draft; history shortcuts wait while any is open. */
   readonly openDraftEditors: number;
 }
@@ -143,6 +152,7 @@ const editorSessionSlice = createSlice({
   initialState: emptyState,
   reducers: {
     routeSelected(state, action: PayloadAction<string>) {
+      state.focusPresentation = null;
       void action;
       // The route key is validated by the reducer wrapper. The open project's
       // route is the only route that can be rendered; this action merely
@@ -154,12 +164,14 @@ const editorSessionSlice = createSlice({
       closeDialogs(state);
     },
     settingsSelected(state) {
+      state.focusPresentation = null;
       state.activeSection = 'settings';
       state.focusedSemanticOwner = null;
       state.selectedFinding = null;
       closeDialogs(state);
     },
     routePanelSelected(state, action: PayloadAction<RoutePanelSelection>) {
+      state.focusPresentation = null;
       state.activeSection = 'route';
       state.activePanel = action.payload.panel;
       state.focusedSemanticOwner = null;
@@ -167,12 +179,28 @@ const editorSessionSlice = createSlice({
       closeDialogs(state);
     },
     semanticOwnerFocused(state, action: PayloadAction<SemanticAddress>) {
+      state.focusPresentation = null;
       state.semanticNavigationRevision += 1;
       state.focusedSemanticOwner = action.payload;
       state.selectedFinding = null;
       closeDialogs(state);
     },
+    /** Opens an owner like a focus, presented as asked, such as a room on its Timeline. */
+    semanticOwnerOpened(
+      state,
+      action: PayloadAction<{
+        readonly owner: SemanticAddress;
+        readonly presentation: FocusPresentation;
+      }>,
+    ) {
+      state.semanticNavigationRevision += 1;
+      state.focusedSemanticOwner = action.payload.owner;
+      state.selectedFinding = null;
+      closeDialogs(state);
+      state.focusPresentation = action.payload.presentation;
+    },
     semanticOwnerNavigated(state, action: PayloadAction<SemanticAddress>) {
+      state.focusPresentation = null;
       state.focusedSemanticOwner = action.payload;
       state.selectedFinding = null;
       state.semanticNavigationRevision += 1;
@@ -188,6 +216,7 @@ const editorSessionSlice = createSlice({
       state.activePanel = panelForOrigin(action.payload);
     },
     findingSelected(state, action: PayloadAction<FindingSelection>) {
+      state.focusPresentation = null;
       state.selectedFinding = action.payload;
       const focusAddress = action.payload.focusAddress ?? action.payload.origin;
       state.focusedSemanticOwner = focusAddress;
@@ -215,6 +244,7 @@ const editorSessionSlice = createSlice({
     editorSessionReconciled(state, action: PayloadAction<EditorSessionReconciliation>) {
       if (action.payload.clearFocusedSemanticOwner) {
         state.focusedSemanticOwner = null;
+        state.focusPresentation = null;
       }
       if (action.payload.clearSelectedFinding) {
         state.selectedFinding = null;
@@ -312,6 +342,7 @@ export const {
   routeSelected,
   semanticOwnerFocused,
   semanticOwnerNavigated,
+  semanticOwnerOpened,
   settingsSelected,
   traitOfferDialogClosed,
   traitOfferDialogOpened,

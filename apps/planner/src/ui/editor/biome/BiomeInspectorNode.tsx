@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import type { SemanticAddress } from '@run-planner/engine/authored-project';
 import { useAppDispatch } from '@planner/state/store';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { semanticOwnerFocused, semanticOwnerOpened } from '@planner/state/editorSessionSlice';
+import { IconActionButton } from '@planner/ui/controls/IconActionButton';
 
 import {
   type WorkspaceAuthoringFrontier,
@@ -55,6 +56,8 @@ interface BiomeInspectorNodeProps {
   readonly outgoing?: WorkspaceOccurrenceStageOutgoing;
   readonly outgoingDecision?: BatchNode;
   readonly hubTab?: WorkspaceHubTab;
+  /** The Hub Timeline segment an explicit open asked for. */
+  readonly hubSegment?: number;
   readonly roomTab?: WorkspaceRoomTab;
   /** Navigation landed on a door owner, so the room's Doors open row opens. */
   readonly doorsRequested?: boolean;
@@ -76,6 +79,37 @@ function doorNoteSource(
   if (outgoing?.kind === 'topologyOwned') return outgoing.notes;
   const store = node.room.bossDoorRewardStore;
   return store === undefined || store.kind === 'editor' ? [] : store.notes;
+}
+
+/** Opens where a Hub room returns: the Hub at the next visit, or the side room's main room. */
+function ReturnButton({ target }: { readonly target: NonNullable<OccurrenceNode['hubReturn']> }) {
+  const dispatch = useAppDispatch();
+  return target.kind === 'hub' ? (
+    <IconActionButton
+      hint="Open Hub Timeline"
+      icon="openInEditor"
+      label="Open Hub Timeline"
+      onClick={() =>
+        dispatch(
+          semanticOwnerOpened({
+            owner: target.hub,
+            presentation: { kind: 'hubSegment', segment: target.visitIndex + 1 },
+          }),
+        )
+      }
+    />
+  ) : (
+    <IconActionButton
+      hint={`Open ${target.label}`}
+      icon="openInEditor"
+      label={`Open ${target.label}`}
+      onClick={() =>
+        dispatch(
+          semanticOwnerOpened({ owner: target.room, presentation: { kind: 'roomTimeline' } }),
+        )
+      }
+    />
+  );
 }
 
 interface RoomDoorsInput {
@@ -238,8 +272,19 @@ function roomTimelineDoors({
                 </section>
               ),
             }),
-        // The Hub decides where the room leads; only the plan's end gets a last row.
-        ...(relation === 'end' ? { leave: leaveRow('Leave room', null) } : {}),
+        // The Hub decides where the room leads; its last row returns there.
+        ...(relation === 'end'
+          ? { leave: leaveRow('Leave room', null) }
+          : node.hubReturn === undefined
+            ? {}
+            : {
+                leave: leaveRow(
+                  node.hubReturn.kind === 'hub'
+                    ? 'Return to Hub'
+                    : `Return to ${node.hubReturn.label}`,
+                  <ReturnButton target={node.hubReturn} />,
+                ),
+              }),
         notes,
       };
     }
@@ -390,6 +435,7 @@ export function BiomeInspectorNode(props: BiomeInspectorNodeProps) {
       const hub = (
         <HubDecisionWorkbench
           {...(props.hubTab === undefined ? {} : { initialTab: props.hubTab })}
+          {...(props.hubSegment === undefined ? {} : { initialSegment: props.hubSegment })}
           {...(props.navigationRevision === undefined
             ? {}
             : { navigationRevision: props.navigationRevision })}

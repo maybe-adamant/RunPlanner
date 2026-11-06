@@ -1,4 +1,4 @@
-import { useState, type ReactNode, type SyntheticEvent } from 'react';
+import { useEffect, useState, type ReactNode, type SyntheticEvent } from 'react';
 
 import type { HubAction } from '@run-planner/engine/authored-project';
 import {
@@ -20,6 +20,9 @@ import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { hubFountainIcon } from '@planner/ui/artwork/roomArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { IconActionButton } from '@planner/ui/controls/IconActionButton';
+import { semanticOwnerOpened } from '@planner/state/editorSessionSlice';
+import { useAppDispatch } from '@planner/state/store';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { hintProps } from '@planner/ui/controls/hint';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -40,7 +43,7 @@ import { RerolledRewardRepairIcon } from './DoorRewardEditor';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 import { HubBoardMap, HubDoorFace } from './hub-map/HubBoardMap';
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
-import { RerollCount, RoomRerolls } from './RoomRerolls';
+import { RoomRerolls } from './RoomRerolls';
 import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderHandle';
 import {
   useTimelineReorder,
@@ -200,6 +203,23 @@ function VisitRoomPicker({
       }}
       placeholder="Choose room"
       searchable={false}
+    />
+  );
+}
+
+/** Opens a picked visit's room on its Timeline. */
+function OpenVisitRoom({ room }: { readonly room: NonNullable<WorkspaceHubVisit['room']> }) {
+  const dispatch = useAppDispatch();
+  return (
+    <IconActionButton
+      hint={`Open ${room.label}`}
+      icon="openInEditor"
+      label={`Open ${room.label}`}
+      onClick={() =>
+        dispatch(
+          semanticOwnerOpened({ owner: room.address, presentation: { kind: 'roomTimeline' } }),
+        )
+      }
     />
   );
 }
@@ -502,10 +522,16 @@ export function HubTimeline({
   interactions,
   locked,
   node,
+  requestedSegment,
   resetControl,
 }: {
   readonly hubIdentity: string;
-  /** The tab's reset, beside the map's own controls. */
+  /**
+   * An explicit open of the segment after a visit, such as a room's return to
+   * its Hub: its picker is made ready, or past the last visit, its rerolls.
+   */
+  readonly requestedSegment?: { readonly segment: number; readonly revision: number };
+  /** The tab's reset, at the end of its column title. */
   readonly resetControl: ReactNode;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly locked: boolean;
@@ -533,6 +559,28 @@ export function HubTimeline({
     readonly segment: number;
     readonly part: SegmentPart;
   }>({ hubIdentity, segment: frontier, part: 'label' });
+  const [handledRequest, setHandledRequest] = useState<number>();
+  if (requestedSegment !== undefined && handledRequest !== requestedSegment.revision) {
+    setHandledRequest(requestedSegment.revision);
+    const past = requestedSegment.segment > node.requiredVisitCount;
+    setSelection({
+      hubIdentity,
+      segment: past ? node.requiredVisitCount : requestedSegment.segment,
+      part: past ? 'rerolls' : 'picker',
+    });
+  }
+  // The requested visit's picker takes focus, ready to choose its room.
+  const requestRevision = requestedSegment?.revision;
+  const requestedPicker =
+    requestedSegment !== undefined && requestedSegment.segment <= node.requiredVisitCount
+      ? requestedSegment.segment
+      : undefined;
+  useEffect(() => {
+    if (requestedPicker === undefined) return;
+    document.getElementById(`hub-visit-${requestedPicker}`)?.focus();
+    // Once per explicit open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestRevision]);
   const selected = selection.hubIdentity === hubIdentity ? selection.segment : frontier;
   const part = selection.hubIdentity === hubIdentity ? selection.part : 'label';
   const select = (segment: number, nextPart: SegmentPart): void => {
@@ -608,6 +656,9 @@ export function HubTimeline({
               visit={visit}
             />
             <VisitReward door={visit.door} />
+            {visit.room === undefined || visit.hubSlotKey === undefined ? null : (
+              <OpenVisitRoom room={visit.room} />
+            )}
           </>
         )}
       </div>
@@ -678,11 +729,10 @@ export function HubTimeline({
     <div className="hub-overview-layout hub-timeline-layout">
       <section aria-label="Ephyra Hub timeline" className="hub-timeline-column" ref={attachRoot}>
         <TimelineReorderStatus session={reorder} />
-        {node.rerollsRemaining === undefined ? null : (
-          <header className="hub-overview-rewards-heading">
-            <RerollCount remaining={node.rerollsRemaining} />
-          </header>
-        )}
+        <header className="room-feature-category-heading hub-column-title">
+          <h5>Visits</h5>
+          {resetControl}
+        </header>
         <ol className="hub-segments">{node.stays.map(segment)}</ol>
         {node.fountain.useIn === undefined ? null : (
           <div
@@ -723,7 +773,6 @@ export function HubTimeline({
             />
           );
         }}
-        action={resetControl}
         gameName={node.gameName}
         hubIdentity={hubIdentity}
         label={`Ephyra Hub at ${segmentLabel(view.stay)}`}
