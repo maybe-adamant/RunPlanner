@@ -55,6 +55,8 @@ interface ContextualPickerProps<T> {
    * `icon` shows only the value's icon as a chip, its name on hover and as its name.
    */
   readonly triggerSize?: 'field' | 'content' | 'icon';
+  /** An icon chip's rarity, drawn as its ring. */
+  readonly triggerRarity?: string | undefined;
   /** A short fixed list opens without a search field. */
   readonly searchable?: boolean;
   /** What separates trigger parts; a middle dot by default. */
@@ -355,6 +357,7 @@ export function ContextualPicker<T>({
   triggerLabel,
   triggerSizingLabels,
   triggerSize = 'field',
+  triggerRarity,
   searchable = true,
   triggerPartsSeparator = ' · ',
   triggerHint,
@@ -446,6 +449,7 @@ export function ContextualPicker<T>({
               iconOnly ? 'contextual-picker-trigger timeline-chip' : 'contextual-picker-trigger'
             }
             data-empty={(iconOnly && triggerIcon === undefined) || undefined}
+            data-rarity={(iconOnly && triggerIcon !== undefined && triggerRarity) || undefined}
             data-candidate-state={selected?.state ?? 'unspecified'}
             data-has-issues={hasIssues || undefined}
             disabled={interactionDisabled}

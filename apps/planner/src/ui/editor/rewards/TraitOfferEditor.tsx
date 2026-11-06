@@ -71,6 +71,7 @@ export function TraitOfferLauncher({
   // The offered rows as chips: a pickable one is picked in one click; any other opens the offer.
   const mark = findingMark(control.address);
   const pickIntent = interaction.pickIntent;
+  const outcome = interaction.inlineOutcome;
   return (
     <span aria-label={interaction.giver.label} className="timeline-chip-group" role="group">
       {options.map((option) => (
@@ -89,6 +90,16 @@ export function TraitOfferLauncher({
           <TimelineChipFace chip={option} />
         </button>
       ))}
+      {outcome === undefined ? null : (
+        <>
+          <span aria-hidden="true" className="row-reward-arrow">
+            →
+          </span>
+          <button {...timelineChipProps(outcome)} onClick={open} type="button">
+            <TimelineChipFace chip={outcome} />
+          </button>
+        </>
+      )}
       {launcher('edit')}
     </span>
   );

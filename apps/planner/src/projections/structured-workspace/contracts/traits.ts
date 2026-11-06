@@ -113,10 +113,9 @@ export type WorkspaceTimelineChipState =
 /** One object on a Timeline row, drawn as its icon with its name on hover. */
 export interface WorkspaceTimelineChip {
   readonly key: string;
-  /** The object's name, such as `Blessing / Curse` for a Chaos pair. */
   readonly label: string;
-  /** Trait keys of the icon; a pair is drawn as two halves, an undefined half blank. */
-  readonly icon: string | readonly [string | undefined, string | undefined];
+  /** The trait key whose icon the chip draws. */
+  readonly icon: string;
   readonly rarity?: TraitRarity;
   readonly state: WorkspaceTimelineChipState;
   /** A short count beside the icon, such as Pom's `+2`. */
@@ -622,7 +621,9 @@ export interface WorkspaceTraitOfferInteraction {
   readonly launcher: WorkspaceLauncherPresentation;
   /** The authored screen's rows as chips; absent while unauthored or a Gold fallback. */
   readonly inlineOptions?: readonly WorkspaceTraitOfferInlineOption[];
-  /** Picks a pickable row in one click, where that is a plain selection change. */
+  /** What the picked row becomes, after an arrow: a Chaos curse matures into its blessing. */
+  readonly inlineOutcome?: WorkspaceTimelineChip;
+  /** Picks a pickable row in one click; a Hex spell takes its default Path of Stars. */
   readonly pickIntent?: (optionKey: TraitOptionKey) => WorkspacePayloadEditIntent<
     Extract<
       ProjectCommand,

@@ -69,13 +69,14 @@ export function SteadyGrowthEffectRow({
             placeholder={domain?.emptyNoOp === true ? 'No eligible trait' : 'Choose a trait'}
             id={semanticOwnerControlElementId(control.address)}
             interaction={interaction}
-            label="Target"
+            label=""
             layout="inline"
             model={domain?.picker ?? { sections: Object.freeze([]) }}
             onSelect={(target) => executeIntent(interaction.intentFor(target))}
             onOpenChange={onOpenChange}
             open={domain?.emptyNoOp === true && selected === '' ? false : open}
             selected={selected === '' ? null : selected}
+            triggerSize="icon"
           />
         </div>
       }

@@ -4,6 +4,7 @@ import type {
   WorkspaceTraitOfferFeedback,
   WorkspaceTraitOfferInlineOption,
   WorkspaceTraitOfferInteraction,
+  WorkspaceTimelineChip,
 } from '@planner/projections/structured-workspace/contracts/traits';
 import {
   TRAIT_OPTION_KEYS,
@@ -24,40 +25,42 @@ import { projectTraitOfferNotes } from './offer-notes';
 import { bindTraitOfferOptionDomain } from './option-domain';
 import { traitOfferLauncherPresentation } from '../launcher-presentation';
 
-/** Whether picking another row is a plain selection change: not a Hex or Chaos screen. */
-function picksInline(control: WorkspaceTraitOfferControl): boolean {
-  return control.giver.providerKind !== 'spell' && control.giver.providerKind !== 'chaos';
-}
-
-/** The authored screen's rows as chips: Chaos rows pair their blessing with their curse. */
+/**
+ * The authored screen's rows as chips. A Chaos screen shows its three curses,
+ * the picked one leading to the blessing it matures into.
+ */
 function inlineOptionsFor(
   catalog: Catalog,
   control: WorkspaceTraitOfferControl,
-): { readonly inlineOptions?: readonly WorkspaceTraitOfferInlineOption[] } {
+): {
+  readonly inlineOptions?: readonly WorkspaceTraitOfferInlineOption[];
+  readonly inlineOutcome?: WorkspaceTimelineChip;
+} {
   const offer = control.offer;
   if (offer?.kind === 'chaos') {
-    const blessing = catalog.chaos.blessings.byKey[offer.blessingKey]?.label ?? offer.blessingKey;
     return {
       inlineOptions: Object.freeze(
         offer.curseOptions.map((option, index) => {
           const optionKey = TRAIT_OPTION_KEYS[index]!;
-          const curse = catalog.chaos.curses.byKey[option.curseKey]?.label ?? option.curseKey;
-          const selected = offer.selectedOptionKey === optionKey;
-          // Only the picked row's blessing is authored.
           return Object.freeze({
             key: optionKey,
             optionKey,
-            label: selected ? `${blessing} / ${curse}` : curse,
-            icon: Object.freeze([
-              selected ? offer.blessingKey : undefined,
-              option.curseKey,
-            ]) as readonly [string | undefined, string],
-            ...(selected ? { rarity: offer.rarity } : {}),
-            state: selected ? ('picked' as const) : ('offered' as const),
+            label: catalog.chaos.curses.byKey[option.curseKey]?.label ?? option.curseKey,
+            icon: option.curseKey,
+            state:
+              offer.selectedOptionKey === optionKey ? ('picked' as const) : ('offered' as const),
+            // Switching curses re-authors the whole Chaos screen.
             pickable: false,
           });
         }),
       ),
+      inlineOutcome: Object.freeze({
+        key: offer.blessingKey,
+        label: catalog.chaos.blessings.byKey[offer.blessingKey]?.label ?? offer.blessingKey,
+        icon: offer.blessingKey,
+        rarity: offer.rarity,
+        state: 'picked' as const,
+      }),
     };
   }
   if (offer?.kind !== 'traits') return {};
@@ -78,7 +81,7 @@ function inlineOptionsFor(
             : rejected
               ? ('rejected' as const)
               : ('offered' as const),
-          pickable: !selected && !rejected && picksInline(control),
+          pickable: !selected && !rejected,
         });
       }),
     ),
@@ -224,7 +227,7 @@ export function bindTraitOfferInteractions(input: {
               trait: control.address,
             }),
           }),
-        ...(control.offer?.kind !== 'traits' || !picksInline(control)
+        ...(control.offer?.kind !== 'traits'
           ? {}
           : {
               pickIntent: pickIntentFor(control.address, control.offer),

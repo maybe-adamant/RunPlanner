@@ -418,7 +418,7 @@ describe('OccurrenceRoomActions', () => {
     );
     await waitFor(() => expect(picker).toHaveProperty('disabled', true));
     expect(screen.getByLabelText('Steady Growth target')).toBe(picker);
-    expect(picker.textContent).toContain('No eligible trait');
+    expect(hintOf(picker)).toBe('No eligible trait');
     expect(picker.getAttribute('aria-expanded')).toBe('false');
     application.dispose();
   });

@@ -1,4 +1,5 @@
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
+import * as Popover from '@radix-ui/react-popover';
 import { useLayoutEffect, useMemo, useState } from 'react';
 import {
   requireWorkspaceInteraction,
@@ -15,6 +16,7 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
 import { TranscendentEmbryoOutcomeFields } from '../rewards/TranscendentEmbryoOutcomeFields';
 import { TimelineRow } from './TimelineRow';
+import { ActionIcon } from '@planner/ui/controls/ActionIcon';
 import { hintProps } from '@planner/ui/controls/hint';
 
 /** React owner for the automatic Transcendent Embryo transformation row. */
@@ -83,7 +85,7 @@ export function TranscendentEmbryoEffectRow({
             placeholder={domain?.emptyNoOp === true ? 'No eligible blessing' : 'Choose a trait'}
             id={semanticOwnerControlElementId(control.address)}
             interaction={{ traitLabel: interaction.blessingLabel }}
-            label="Target"
+            label=""
             layout="inline"
             model={domain?.picker ?? { sections: Object.freeze([]) }}
             onSelect={(blessingKey) =>
@@ -92,18 +94,44 @@ export function TranscendentEmbryoEffectRow({
             onOpenChange={onOpenChange}
             open={domain?.emptyNoOp === true && outcome === undefined ? false : open}
             selected={selected === '' ? null : selected}
+            triggerRarity={domain?.rarity}
+            triggerSize="icon"
           />
           {domain?.operands === undefined ||
+          domain.operands.length === 0 ||
           domain.rarity === undefined ||
           outcome === undefined ? null : (
-            <TranscendentEmbryoOutcomeFields
-              onChange={(blessingValues) =>
-                executeIntent(interaction.intentFor(Object.freeze({ ...outcome, blessingValues })))
-              }
-              operands={domain.operands}
-              rarity={domain.rarity}
-              values={outcome.blessingValues}
-            />
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button
+                  aria-label="Edit Transcendent Embryo values"
+                  className="timeline-chip-edit"
+                  type="button"
+                >
+                  <ActionIcon name="edit" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  align="start"
+                  aria-label="Transcendent Embryo values"
+                  className="contextual-picker-popover transcendent-embryo-values-popover"
+                  collisionPadding={12}
+                  sideOffset={6}
+                >
+                  <TranscendentEmbryoOutcomeFields
+                    onChange={(blessingValues) =>
+                      executeIntent(
+                        interaction.intentFor(Object.freeze({ ...outcome, blessingValues })),
+                      )
+                    }
+                    operands={domain.operands}
+                    rarity={domain.rarity}
+                    values={outcome.blessingValues}
+                  />
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
           )}
         </div>
       }

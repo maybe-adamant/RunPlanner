@@ -83,6 +83,7 @@ describe('TranscendentEmbryoEffectRow', () => {
       );
     };
     const view = render(content(initialValue));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Transcendent Embryo values' }));
     const slider = screen.getByLabelText('Property speed');
     slider.focus();
     fireEvent.pointerDown(slider);

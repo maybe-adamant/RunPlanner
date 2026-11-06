@@ -109,6 +109,8 @@ export function RandomTraitTargetPicker({
   onSelect,
   open,
   selected,
+  triggerRarity,
+  triggerSize,
 }: {
   readonly ariaLabel: string;
   readonly disabled?: boolean;
@@ -124,6 +126,8 @@ export function RandomTraitTargetPicker({
   readonly onSelect: (targetTraitKey: string) => void;
   readonly open?: boolean;
   readonly selected: string | null;
+  readonly triggerRarity?: string | undefined;
+  readonly triggerSize?: 'field' | 'icon';
 }) {
   return (
     <ContextualPicker
@@ -140,6 +144,8 @@ export function RandomTraitTargetPicker({
       {...(disabledHint === undefined ? {} : { disabledHint })}
       placeholder={placeholder}
       itemIcon={(item) => traitIcon(item.value)}
+      {...(triggerSize === undefined ? {} : { triggerSize })}
+      triggerRarity={triggerRarity}
       {...(selected === null
         ? {}
         : { triggerLabel: interaction.traitLabel(selected), triggerIcon: traitIcon(selected) })}

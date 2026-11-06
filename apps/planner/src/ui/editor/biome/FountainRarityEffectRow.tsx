@@ -102,6 +102,7 @@ export function FountainRarityEffectRow({
           onOpenChange={onOpenChange}
           open={open}
           selected={selected === '' ? null : selected}
+          triggerSize="icon"
         />
       </span>
       {selected !== '' ? (
