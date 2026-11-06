@@ -132,7 +132,7 @@ local function keepsakes(frame)
         _G.GameState.LastAwardTrait = slottedRow.name
         _G.EquipKeepsake(hero(), slottedRow.name, args)
         local equipped = find(slottedRow.name)
-        if equipped then carry(kept, equipped) end
+        if equipped then practice.restore(carry(kept, equipped)) end
         swapped = true
     end
     for _, row in ipairs(rows) do
@@ -151,11 +151,14 @@ local function keepsakes(frame)
 end
 
 -- The rack close's Fated effects after a slot change, and a spent Jeweled Pom's
--- grant removed with its Fated status settled natively.
+-- grant removed with its Fated status settled natively; then the frame's
+-- status where it still differs.
 local function fated(frame, swapped)
     local pom = frame.retainedEffects.keepsakes.jeweledPom
     local spent = present(pom) and pom.active == false
     if swapped or spent then fate.close(hero(), spent) end
+    local status = frame.keepsakes.fatedStatus
+    if status ~= nil and _G.GameState.FatedStatus ~= status then _G.GameState.FatedStatus = status end
 end
 
 -- Premium Service's re-add (TraitLogic.UpgradeAspect) and Circe's stacks
@@ -523,6 +526,13 @@ local function validate(frame, context)
     end
     for _, name in ipairs(names) do
         if type(_G.TraitData[name]) ~= "table" then return fault("trait", name, "undeclared") end
+    end
+    -- A loan's payout is published only at a start; one snap must newly add has none.
+    for _, row in ipairs(frame.traits.equipped) do
+        if universe[row.traitKey] and _G.TraitData[row.traitKey].AcquireFunctionName == "BankGold"
+            and find(row.traitKey) == nil then
+            return fault("loan", row.traitKey, "stored gold unknown")
+        end
     end
     local spell, progress = hero().SlottedSpell, frame.hexProgress
     local slotting = progress.spellTraitKey ~= nil and next(frame.hexNodes.nodes) ~= nil

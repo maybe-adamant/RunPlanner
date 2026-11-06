@@ -74,6 +74,9 @@ local function world(traits)
             FountainRarityKeepsake = { Slot = "Keepsake" },
             HadesAndPersephoneKeepsake = { Slot = "Keepsake", Permanent = true },
             AthenaEncounterKeepsake = { Slot = "Keepsake" },
+            TimedBuffKeepsake = { Slot = "Keepsake", AcquireFunctionName = "StartHermesKeepsakeTimer",
+                StartingTime = 300 },
+            BankBoon = { AcquireFunctionName = "BankGold", StoredGold = 0 },
             StorePendingDeliveryItem = { Name = "StorePendingDeliveryItem" },
         },
             { __index = function() return {} end }),
@@ -85,8 +88,10 @@ local function world(traits)
         PersistentTraitKeys = { "Activated", "TraitListTextString", "SacrificedTraitName", "UpgradedTraitName",
             "Uses", "RemainingUses", "ShrineManaReserve", "CurrentArmor", "RemainingBlocks", "StoredGold" },
         GetProcessedTraitData = function(args)
+            local declared = _G.TraitData[args.TraitName]
             return { Name = args.TraitName, Rarity = args.Rarity, StackNum = args.StackNum,
-                PropertyChanges = { {}, {} } }
+                PropertyChanges = { {}, {} }, AcquireFunctionName = declared.AcquireFunctionName,
+                StartingTime = declared.StartingTime, StoredGold = declared.StoredGold }
         end,
         AddTraitToHero = function(args)
             -- TraitLogic.AddTraitData runs a trait's AddLastStand whatever FromLoot says.
@@ -129,7 +134,9 @@ local function world(traits)
         end,
         EquipKeepsake = function(_, name, args)
             -- KeepsakeLogic.EquipKeepsake: Reincarnation adds a Death Defiance.
-            table.insert(hero.Traits, { Name = name, Rarity = args.ForceRarity, Slot = "Keepsake" })
+            local declared = _G.TraitData[name]
+            table.insert(hero.Traits, { Name = name, Rarity = args.ForceRarity, Slot = "Keepsake",
+                AcquireFunctionName = declared.AcquireFunctionName, StartingTime = declared.StartingTime })
             if name == "ReincarnationKeepsake" then
                 table.insert(hero.LastStands, { Name = "ReincarnationKeepsake" })
                 hero.MaxLastStands = hero.MaxLastStands + 1
@@ -710,4 +717,62 @@ function TestSnapApply.testAnUnchangedSlotWithoutASpentPomLeavesFateAlone()
     restore()
     lu.assertEquals(names(hero), { "HadesAndPersephoneKeepsake", "HadesDashSweepBoon" })
     lu.assertEquals({ log.removed, log.fateUpdates, gameState.FatedStatus }, { {}, 0, "Fated" })
+end
+
+-- A snapped Metallic Droplet, equipped or held as Echo's copy, starts its full
+-- timer as its skipped acquire would; a rank re-equip starts it again.
+function TestSnapApply.testASnappedMetallicDropletStartsItsTimer()
+    for _, case in ipairs({
+        { held = { { Name = "AthenaEncounterKeepsake", Rarity = "Epic", Slot = "Keepsake" } }, slotted = true },
+        { held = { { Name = "TimedBuffKeepsake", Rarity = "Common", Slot = "Keepsake", CurrentTime = 12,
+            AcquireFunctionName = "StartHermesKeepsakeTimer", StartingTime = 300 } }, slotted = true },
+        { held = { { Name = "AthenaEncounterKeepsake", Rarity = "Epic", Slot = "Keepsake" } }, slotted = false },
+    }) do
+        local hero, _, restore = world(case.held)
+        local value = frame()
+        value.keepsakes.held = case.slotted and { { name = "TimedBuffKeepsake", rarity = "Epic", slotted = true } }
+            or { { name = "AthenaEncounterKeepsake", rarity = "Epic", slotted = true },
+                { name = "TimedBuffKeepsake", rarity = "Common", slotted = false } }
+        lu.assertTrue(apply(value))
+        restore()
+        local droplet
+        for _, trait in ipairs(hero.Traits) do
+            if trait.Name == "TimedBuffKeepsake" then droplet = trait end
+        end
+        lu.assertEquals(droplet.CurrentTime, 300)
+    end
+end
+
+-- A re-added loan carries its StoredGold; one snap must newly add has no
+-- published payout, so snap reports it unwritable instead of inventing one.
+function TestSnapApply.testALoanKeepsItsStoredGoldAndANewOneIsUnwritable()
+    local hero, _, restore = world({ { Name = "BankBoon", Rarity = "Common", StackNum = 1, StoredGold = 310,
+        AcquireFunctionName = "BankGold" } })
+    local value = frame()
+    value.traits.equipped = { { traitKey = "BankBoon", rarity = "Rare", level = 1 } }
+    lu.assertTrue(apply(value))
+    lu.assertEquals({ hero.Traits[1].Rarity, hero.Traits[1].StoredGold }, { "Rare", 310 })
+    restore()
+
+    local empty, _, restoreEmpty = world({})
+    local ok, failure = apply(value)
+    restoreEmpty()
+    lu.assertNil(ok)
+    lu.assertEquals({ failure.checkpoint, failure.expected, failure.observed },
+        { "snap:loan", "BankBoon", "stored gold unknown" })
+    lu.assertEquals(empty.Traits, {})
+end
+
+-- The frame's Fated status settles a status the native rack close left stale.
+function TestSnapApply.testTheFramesFatedStatusSettlesAStaleOne()
+    local _, log, restore = world({ pom("Keepsake"), { Name = "HadesDashSweepBoon", GrantedTrait = true } })
+    local gameState = _G.GameState
+    gameState.FatedStatus, gameState.LastAwardTrait = "Unknown", "HadesAndPersephoneKeepsake"
+    local value = frame()
+    value.keepsakes.held = { { name = "HadesAndPersephoneKeepsake", rarity = "Rare", slotted = true } }
+    value.keepsakes.fatedStatus = "Fated"
+    value.traits.equipped = { { traitKey = "HadesDashSweepBoon" } }
+    lu.assertTrue(apply(value))
+    restore()
+    lu.assertEquals({ gameState.FatedStatus, log.fateUpdates, log.removed }, { "Fated", 0, {} })
 end

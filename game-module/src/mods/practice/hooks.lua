@@ -79,6 +79,7 @@ function hooks.attach(module, session, getState, report, hexTree)
         install.redirect(startArgs, start, plan.routeKey)
         state.practiceStart = { phase = "installing" }
         guarded(session, state, function()
+            install.requireClassified(_G.TraitData)
             install.hero(start, {
                 aspectKey = plan.startingLoadout.aspectKey,
                 hexTree = hexTree,

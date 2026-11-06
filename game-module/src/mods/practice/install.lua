@@ -6,6 +6,8 @@ local nativeBindings = type(import) == "function" and import("mods/native_bindin
 local chaos = type(import) == "function" and import("mods/traits/chaos.lua") or require("mods.traits.chaos")
 local proof = type(import) == "function" and import("mods/room/conformance/proof.lua")
     or require("mods.room.conformance.proof")
+local acquire = type(import) == "function" and import("mods/practice/acquire_hooks.lua")
+    or require("mods.practice.acquire_hooks")
 
 local install = {}
 
@@ -47,7 +49,10 @@ local function processed(name, rarity, stackNum, declaredRarityOnly)
     return data
 end
 
-local function add(data, extra)
+-- Every install restores the state its skipped acquire hook would have
+-- written, from `source`'s published fields.
+local function add(data, extra, source)
+    acquire.restore(data, source)
     local args = { TraitData = data }
     for key, value in pairs(addArgs) do args[key] = value end
     for key, value in pairs(extra or {}) do args[key] = value end
@@ -130,28 +135,12 @@ end
 
 local function applyTraitFields(data, row)
     if row.blockInRunRarify then data.BlockInRunRarify = true end
-    if row.upgradedTraitName then data.UpgradedTraitName = row.upgradedTraitName end
-    if row.selectedTrait then data.SelectedTrait = row.selectedTrait end
-    if row.repeatedKeepsake then data.RepeatedKeepsake = row.repeatedKeepsake end
     if row.currentRoom then data.CurrentRoom = row.currentRoom end
     if row.grantedTrait then
         -- PowersLogic.GiveRandomHadesBoonAndBoostBoons.
         data.GrantedTrait = true
         local lastStand = _G.GameState.MetaUpgradeState and _G.GameState.MetaUpgradeState.LastStand
         if lastStand and lastStand.Equipped then _G.CurrentRun.DeathDefianceDamageBoonEligible = true end
-    end
-    local stats = row.echoIncreaseStats
-    if stats then
-        -- EventLogic.EchoIncreaseStats at the current multiplier (RoomLogic.lua:4245-4256).
-        data.StartMaxHealth, data.StartMaxMana = stats.startMaxHealth, stats.startMaxMana
-        data.StatMultiplier, data.BlockDecay = stats.statMultiplier, stats.blockDecay
-        data.Decay = data.AcquireFunctionArgs and data.AcquireFunctionArgs.Decay
-        data.PropertyChanges = {
-            { LuaProperty = "MaxMana", ChangeValue = stats.startMaxMana * stats.statMultiplier,
-                ChangeType = "Add", AsInt = true },
-            { LuaProperty = "MaxHealth", ChangeValue = stats.startMaxHealth * stats.statMultiplier,
-                ChangeType = "Add", AsInt = true },
-        }
     end
     if row.durationHammerUses then
         -- PowersLogic.AddRandomHammer.
@@ -175,13 +164,7 @@ local function installTraits(start)
     for _, row in ipairs(start.traits) do
         local data = processed(row.name, menuRarity(row), row.stackNum)
         applyTraitFields(data, row)
-        add(data)
-        if row.name == "FocusLastStandBoon" then
-            -- Athena's Death Defiance is added only by its acquire function.
-            local args = copy(held(row.name).AcquireFunctionArgs) or {}
-            args.Silent = true
-            _G.AddLastStand(args)
-        end
+        add(data, nil, row)
     end
 end
 
@@ -202,8 +185,6 @@ local function installChaos(start)
             row.remainingUses, row.curseValues)
         curse.OnExpire = curse.OnExpire or {}
         curse.OnExpire.TraitData = blessing
-        -- PowersLogic.StartChaosTimer: the acquisition that starts the Time curse's timer.
-        if curse.AcquireFunctionName == "StartChaosTimer" then curse.CurrentTime = curse.StartingTime end
         add(curse)
     end
     for _, row in ipairs(start.chaosBlessings) do
@@ -237,14 +218,16 @@ local function installKeepsakes(start)
     for _, row in ipairs(start.keepsake.traits) do
         if row.name == "SkipEncounterKeepsake" then rarity = row.rarity end
         if row.slotted then
-            keepsakeCounters(held(row.name), row)
+            -- Equipped natively without FromLoot before the start state installs.
+            local trait = acquire.restore(held(row.name), row)
+            keepsakeCounters(trait, row)
         else
             -- A kept Permanent keepsake or Echo copy is held without a slot
             -- (KeepsakeLogic.UnequipKeepsake; TraitLogic.AddTrait OverwriteSlot).
             local data = processed(row.name, row.rarity)
             data.Slot, data.ActiveSlotOffsetIndex = nil, nil
             keepsakeCounters(data, row)
-            add(data)
+            add(data, nil, row)
         end
     end
     local skip = start.keepsake.persistentDionysusSkip
@@ -278,6 +261,8 @@ local function installArcana(start)
             add(processed(traitName, card.rarity), { SourceName = card.name })
         end
         local trait = held(traitName)
+        -- The Centaur's count before the start room, whose StartRoom EnterRoom
+        -- setup counts it (RoomLogic.lua:1201).
         if card.currentRoom ~= nil then trait.CurrentRoom = card.currentRoom end
         if card.metaConversionUses ~= nil then
             local capacity = trait.MetaConversionUses or card.metaConversionUses
@@ -525,6 +510,7 @@ end
 install.processed, install.add, install.keepsakeCounters = processed, add, keepsakeCounters
 install.chaos, install.well, install.deliveries = installChaos, installWell, installDeliveries
 install.rewardStores = rewardStores
+install.restore, install.requireClassified = acquire.restore, acquire.requireClassified
 
 -- Barren holds each card it unequipped without its trait. Removed after native
 -- Death Defiance and rerolls and before native StartNewRun credits starting
@@ -554,6 +540,9 @@ function install.records(start)
     run.RewardPriorities = copy(start.rewardPriorities)
     run.KeepsakeCache = copy(start.keepsake.keepsakeCache)
     run.BlockedKeepsakes = copy(start.keepsake.blockedKeepsakes)
+    -- Native StartNewRun resets it (RunLogic.lua:479); the held Jeweled Pom,
+    -- Calling Card and Time Piece read it.
+    _G.GameState.FatedStatus = start.keepsake.fatedStatus
     run.WellShopPurchases = copy(start.stygianWell.wellShopPurchases)
     run.BannedTraits = {}
     for _, name in ipairs(start.bannedTraits) do run.BannedTraits[name] = true end

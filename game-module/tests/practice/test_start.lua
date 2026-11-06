@@ -34,6 +34,14 @@ end
 
 -- A native hero and run whose trait functions record each contact. Max
 -- health and Magick are the declared base plus every flat property change.
+-- TraitData's AcquireFunctionName for the traits these tests install.
+local declaredAcquireHooks = {
+    BoonDecayBoon = "HeraSuperchargeBoon", FocusAttackDamageTrait = "IcarusUpgradeBoon",
+    DiminishingHealthAndManaBoon = "EchoIncreaseStats", EchoRepeatKeepsakeBoon = "EchoRepeatKeepsake",
+    FocusLastStandBoon = "AddLastStand", TimedBuffKeepsake = "StartHermesKeepsakeTimer", BankBoon = "BankGold",
+    HadesAndPersephoneKeepsake = "GiveRandomHadesBoonAndBoostBoons", ChaosTimeCurse = "StartChaosTimer",
+}
+
 local function nativeWorld(base, start)
     local log, hero = {}, {
         Traits = {}, TraitDictionary = { BaseStaffAspect = { { Name = "BaseStaffAspect", Rarity = "Common" } } },
@@ -134,7 +142,11 @@ local function nativeWorld(base, start)
             if args.TraitName:match("^Chaos") then
                 data.PropertyChanges, data.RarityBonus, data.AddOutgoingDamageModifiers = { {}, {} }, {}, {}
             end
+            -- Each trait's declared acquire hook, which installs skip and restore.
+            data.AcquireFunctionName = declaredAcquireHooks[args.TraitName]
             if args.TraitName == "FocusLastStandBoon" then data.AcquireFunctionArgs = { Name = "Athena" } end
+            if args.TraitName == "TimedBuffKeepsake" then data.StartingTime = 300 end
+            if args.TraitName == "BankBoon" then data.StoredGold = 0 end
             -- TraitData_Essence: each <Element>Essence inherits its element boon's Elements.
             local essence = args.TraitName:match("^(%u%l+)Essence$")
             if essence then data.Elements = { essence } end
@@ -155,7 +167,9 @@ local function nativeWorld(base, start)
         end,
         EquipKeepsake = function(_, name, args)
             record("equip", name, tostring(args.ForceRarity), tostring(args.FromLoot))
-            index({ Name = name, Rarity = args.ForceRarity, Slot = "Keepsake" })
+            index({ Name = name, Rarity = args.ForceRarity, Slot = "Keepsake",
+                AcquireFunctionName = declaredAcquireHooks[name],
+                StartingTime = name == "TimedBuffKeepsake" and 300 or nil })
             table.insert(run.KeepsakeCache, name)
         end,
         GetHeroTrait = function(name) return hero.TraitDictionary[name] and hero.TraitDictionary[name][1] end,
@@ -783,12 +797,12 @@ end
 function TestPracticeStart.testInstallAppliesAcquireResultsWithoutAcquiring()
     local start = copy(decode("surface-start-q-opening").startState)
     start.traits = {
-        { name = "HeraWeaponBoon", rarity = "Epic", stackNum = 3, upgradedTraitName = "ZeusWeaponBoon" },
+        { name = "BoonDecayBoon", rarity = "Epic", stackNum = 3, upgradedTraitName = "ZeusWeaponBoon" },
         { name = "StaffDoubleAttackTrait", rarity = "Legendary", durationHammerUses = 4 },
         { name = "FocusLastStandBoon", rarity = "Rare" },
-        { name = "IcarusSlotBoon", selectedTrait = "ApolloWeaponBoon", currentRoom = 2, acquisitionOrdinal = 3 },
+        { name = "FocusAttackDamageTrait", selectedTrait = "ApolloWeaponBoon", currentRoom = 2, acquisitionOrdinal = 3 },
         { name = "SupplyDropBoon", currentRoom = 4, acquisitionOrdinal = 4 },
-        { name = "EchoLastRunBoon", echoIncreaseStats = {
+        { name = "DiminishingHealthAndManaBoon", echoIncreaseStats = {
             statMultiplier = 0.5, blockDecay = false, startMaxHealth = 100, startMaxMana = 80,
         } },
     }
@@ -829,21 +843,23 @@ function TestPracticeStart.testInstallAppliesAcquireResultsWithoutAcquiring()
     restore()
     assert(ok, errorValue)
     local function trait(name) return hero.TraitDictionary[name][1] end
-    lu.assertEquals({ trait("HeraWeaponBoon").StackNum, trait("HeraWeaponBoon").UpgradedTraitName }, { 3, "ZeusWeaponBoon" })
+    lu.assertEquals({ trait("BoonDecayBoon").StackNum, trait("BoonDecayBoon").UpgradedTraitName }, { 3, "ZeusWeaponBoon" })
     lu.assertEquals(trait("StaffDoubleAttackTrait").OnExpire,
         { FunctionName = "HammerKeepsakeLostPresentation", FunctionArgs = "StaffDoubleAttackTrait" })
     lu.assertEquals({ trait("StaffDoubleAttackTrait").RemainingUses, trait("StaffDoubleAttackTrait").UsesAsEncounters },
         { 4, true })
     -- An NPC menu pick installs at RarityUpgradeOrder[biome ordinal], as the menu sets it.
-    lu.assertEquals({ trait("IcarusSlotBoon").Rarity, trait("IcarusSlotBoon").SelectedTrait,
-        trait("IcarusSlotBoon").CurrentRoom }, { "Epic", "ApolloWeaponBoon", 2 })
+    lu.assertEquals({ trait("FocusAttackDamageTrait").Rarity, trait("FocusAttackDamageTrait").SelectedTrait,
+        trait("FocusAttackDamageTrait").CurrentRoom }, { "Epic", "ApolloWeaponBoon", 2 })
     lu.assertEquals({ trait("SupplyDropBoon").Rarity, trait("SupplyDropBoon").CurrentRoom }, { "Heroic", 4 })
-    lu.assertEquals(trait("EchoLastRunBoon").PropertyChanges[2].ChangeValue, 50)
+    lu.assertEquals(trait("DiminishingHealthAndManaBoon").PropertyChanges[2].ChangeValue, 50)
     local curse = trait("ChaosHealthCurse")
     lu.assertEquals({ curse.RemainingUses, curse.OnExpire.TraitData.Name }, { 3, "ChaosManaBlessing" })
     lu.assertTrue(trait("ChaosRarityBlessing").FromChaosKeepsake)
     lu.assertEquals(trait("RarifyKeepsake").RarityUpgradeData.Uses, 1)
     lu.assertNil(trait("RarifyKeepsake").Slot)
+    -- Installed as published, before the start room: native StartRoom's
+    -- EnterRoom setup then counts the start room once.
     lu.assertEquals({ trait("ChamberHealthMetaUpgrade").Rarity, trait("ChamberHealthMetaUpgrade").CurrentRoom },
         { "Epic", 2 })
     lu.assertTrue(world.run.TemporaryMetaUpgrades.Strength)
@@ -1063,4 +1079,61 @@ function TestPracticeStart.testAnInstalledTimeCurseStartsItsTimer()
     restore()
     assert(ok, errorValue)
     lu.assertEquals({ added.ChaosTimeCurse.CurrentTime, added.ChaosTimeCurse.RemainingUses }, { 120, 2 })
+end
+
+-- Metallic Droplet's timer is written only by its skipped acquire; a nil
+-- CurrentTime fails the native gameplay-time tick (RunLogic.lua:2625).
+function TestPracticeStart.testMetallicDropletStartsItsFullTimerSlottedOrHeldUnslotted()
+    for _, slotted in ipairs({ true, false }) do
+        local start = copy(decode("surface-start-q-opening").startState)
+        local row = { name = "TimedBuffKeepsake", rarity = slotted and "Epic" or "Common", slotted = slotted or nil }
+        local equipped = slotted and "TimedBuffKeepsake" or "ManaOverTimeRefundKeepsake"
+        start.keepsake.traits = slotted and { row }
+            or { { name = equipped, rarity = "Epic", slotted = true }, row }
+        local world = nativeWorld({ MaxHealth = 0, MaxMana = 0 })
+        local restore = nativeGame.install(world.bindings)
+        _G.CurrentRun = world.run
+        _G.EquipKeepsake(world.hero, equipped, { ForceRarity = "Epic" })
+        local ok, errorValue = pcall(install.hero, start, {
+            aspectKey = "BaseStaffAspect", hexTree = recordingHexTree(world.log), diagnostic = function() end,
+        })
+        restore()
+        assert(ok, errorValue)
+        local droplet = world.hero.TraitDictionary.TimedBuffKeepsake[1]
+        lu.assertEquals({ droplet.CurrentTime, droplet.Slot }, { 300, slotted and "Keepsake" or nil })
+    end
+end
+
+-- An unpaid loan installs its published payout; a paid-back one keeps native 0.
+function TestPracticeStart.testPersonalLoanInstallsItsStoredGold()
+    for _, case in ipairs({ { storedGold = 245, expected = 245 }, { blockInRunRarify = true, expected = 0 } }) do
+        local start = copy(decode("surface-start-q-opening").startState)
+        start.traits = { { name = "BankBoon", rarity = "Rare", storedGold = case.storedGold,
+            blockInRunRarify = case.blockInRunRarify } }
+        local world = nativeWorld({ MaxHealth = 0, MaxMana = 0 })
+        local restore = nativeGame.install(world.bindings)
+        _G.CurrentRun = world.run
+        _G.EquipKeepsake(world.hero, "ManaOverTimeRefundKeepsake", { ForceRarity = "Epic" })
+        local ok, errorValue = pcall(install.hero, start, {
+            aspectKey = "BaseStaffAspect", hexTree = recordingHexTree(world.log), diagnostic = function() end,
+        })
+        restore()
+        assert(ok, errorValue)
+        lu.assertEquals(world.hero.TraitDictionary.BankBoon[1].StoredGold, case.expected)
+    end
+end
+
+-- The run's Fated status and unspent talent points are run records, written
+-- whether or not a Jeweled Pom or a Spell is held.
+function TestPracticeStart.testRecordsWriteFatedStatusAndTalentPointsWithoutASpell()
+    local start = copy(decode("underworld-start-i-preboss").startState)
+    lu.assertNil(start.hex)
+    start.keepsake.fatedStatus, start.talentPoints, start.rewardStores = "Fated", 3, {}
+    local run = { NumTalentPoints = 6, RewardStores = {} }
+    local gameState = { FatedStatus = "Unknown" }
+    local restore = nativeGame.install({ CurrentRun = run, GameState = gameState, RewardStoreData = {} })
+    local ok, errorValue = pcall(install.records, start)
+    restore()
+    assert(ok, errorValue)
+    lu.assertEquals({ gameState.FatedStatus, run.NumTalentPoints }, { "Fated", 3 })
 end
