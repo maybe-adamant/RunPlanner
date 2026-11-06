@@ -873,7 +873,8 @@ describe('underworld product loop', () => {
     );
 
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await view.user.click(screen.getByRole('checkbox', { name: 'Cleared' }));
+    await view.user.click(screen.getByRole('button', { name: /^Anomaly outcome/ }));
+    await view.user.click(await screen.findByRole('option', { name: 'Not cleared' }));
     const failed = currentProject(application);
     expect(
       failed.route.biomes

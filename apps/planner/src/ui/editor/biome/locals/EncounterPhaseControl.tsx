@@ -43,6 +43,8 @@ import { CocoonRewardPointControl } from './CocoonRewardPointControl';
 import { InfiniteRosterControl } from './InfiniteRosterControl';
 import { isCompositionFinding, isIdentityFinding } from './encounterPhaseFindings';
 import { hintProps } from '@planner/ui/controls/hint';
+import { IconToggle } from '@planner/ui/controls/IconToggle';
+import { ActionIcon } from '@planner/ui/controls/ActionIcon';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { aetosIcon, npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
@@ -395,9 +397,12 @@ function EncounterCustomizationDialog({
 /** Opens an encounter's customization dialog, or a fixed roster's read-only view. */
 export function EncounterCustomizationLauncher({
   interaction,
+  pencil = false,
   subject,
 }: {
   readonly interaction: WorkspaceEncounterCustomizationInteraction | undefined;
+  /** On a Timeline row the launcher is the small pencil that opens the dialog. */
+  readonly pencil?: boolean;
   readonly subject: EncounterCustomizationSubject;
 }) {
   const [manualOpen, setManualOpen] = useState(false);
@@ -431,7 +436,9 @@ export function EncounterCustomizationLauncher({
     <>
       <button
         {...triggerTarget}
-        className="dialog-launcher quiet-action encounter-launcher"
+        className={
+          pencil ? 'timeline-chip-edit' : 'dialog-launcher quiet-action encounter-launcher'
+        }
         disabled={
           ('aria-disabled' in triggerTarget ? triggerTarget['aria-disabled'] : undefined) ||
           contextUnreached ||
@@ -445,7 +452,7 @@ export function EncounterCustomizationLauncher({
         aria-label={`${editable ? 'Customize' : 'View roster for'} ${subject.identityLabel.toLowerCase()}`}
         type="button"
       >
-        {editable ? 'Customize' : 'View roster'}
+        {pencil ? <ActionIcon name="edit" /> : editable ? 'Customize' : 'View roster'}
       </button>
       {!manualOpen ? null : interaction !== undefined && subject.customization !== undefined ? (
         <EncounterCustomizationDialog
@@ -541,7 +548,8 @@ export function CustomizableEncounterPhaseControl({
         isIdentityFinding,
       )}
       id={semanticOwnerControlElementId(phase.address)}
-      label={phase.label}
+      label={phase.shortLabel ?? phase.label}
+      {...(phase.shortLabel === undefined ? {} : { labelHint: phase.label })}
       layout="inline"
       loading={open && candidates.pending}
       model={candidates.result ?? emptyEncounterPicker}
@@ -608,7 +616,14 @@ export function EncounterPhaseControl({
           />
         ) : (
           <div className="field-control field-control-inline">
-            <span>{phase.label}</span>
+            {phase.shortLabel === undefined ? (
+              <span>{phase.label}</span>
+            ) : (
+              <span {...hintProps(phase.label, undefined, phase.label)}>
+                <span aria-hidden="true">{phase.shortLabel}</span>
+                <span className="visually-hidden">{phase.label}</span>
+              </span>
+            )}
             <div className="encounter-fixed-value">
               {selectedEncounterIcon(phase.selectedEncounter) === undefined ? null : (
                 <ArtworkIcon
@@ -655,50 +670,6 @@ function EncounterEventGroup({
 }
 
 /**
- * One encounter event as an icon toggle: dim when off, lit when on. Its icon alone
- * does not say what it means, so its name is also its hint on hover and focus.
- */
-function EncounterEventToggle({
-  icon,
-  inapplicable,
-  inapplicableHint,
-  name,
-  onToggle,
-  pressed,
-  slot,
-  target,
-}: {
-  readonly icon: string | undefined;
-  /** A retained value with no effect here: still clearable, but quiet. */
-  readonly inapplicable?: boolean;
-  readonly inapplicableHint?: string;
-  readonly name: string;
-  /** The fixed banner slot this toggle keeps, so icons line up across banners. */
-  readonly slot: 'gorgon' | 'figLeaf';
-  readonly onToggle: (next: boolean) => void;
-  readonly pressed: boolean;
-  readonly target: ReturnType<ReturnType<typeof useFindingTarget>>;
-}) {
-  const description = 'aria-description' in target ? target['aria-description'] : undefined;
-  const hint = inapplicableHint === undefined ? name : `${name} · ${inapplicableHint}`;
-  return (
-    <button
-      {...target}
-      {...hintProps(hint, description, name)}
-      aria-label={name}
-      aria-pressed={pressed}
-      className="encounter-event-toggle"
-      data-inapplicable={inapplicable === true ? '' : undefined}
-      data-slot={slot}
-      onClick={() => onToggle(!pressed)}
-      type="button"
-    >
-      <ArtworkIcon className="artwork-label-icon" source={icon} />
-    </button>
-  );
-}
-
-/**
  * What is settled as a phase starts, on its banner's line: the Fig Leaf skip and
  * Gorgon condition toggles and the Aetos wave; none renders nothing. A retained
  * condition its skipped phase cannot use stays shown and clearable, marked quiet.
@@ -719,7 +690,7 @@ export function EncounterStartControls({
       : requireWorkspaceInteraction(interactions.figLeafSkips, figLeaf.interactionKey);
   const figLeafControl =
     figLeaf === undefined || figLeafInteraction === undefined ? null : (
-      <EncounterEventToggle
+      <IconToggle
         icon={keepsakeArtwork.SkipEncounterKeepsake ?? undefined}
         key="figLeaf"
         name="Fig Leaf skip"
@@ -741,7 +712,7 @@ export function EncounterStartControls({
   // An unsupported retained condition owns its finding, so it stays clearable.
   const gorgonControl =
     gorgon === undefined || gorgonInteraction === undefined ? null : (
-      <EncounterEventToggle
+      <IconToggle
         icon={keepsakeArtwork.AthenaEncounterKeepsake ?? undefined}
         inapplicable={!gorgon.supported}
         {...(!gorgon.supported && phase.skippedByFigLeaf === true

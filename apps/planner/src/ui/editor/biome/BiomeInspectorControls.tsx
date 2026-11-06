@@ -1,4 +1,3 @@
-import { FeatureRollSlots } from './commerce/FeatureRollInteract';
 import { ArcanaActivationEditor } from './ArcanaActivationEditor';
 /* The inspector-node adapter deliberately exports these projected render products. */
 /* eslint-disable react-refresh/only-export-components */
@@ -8,7 +7,9 @@ import { useCallback, useEffect, type ReactNode } from 'react';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
+  type WorkspaceFigurineArcanaInteraction,
   type WorkspaceInteractionCatalog,
+  type WorkspaceJudgmentArcanaInteraction,
   type WorkspaceNode,
   type WorkspaceRoomLifecycleBoundary,
   type WorkspaceRoomSummary,
@@ -29,6 +30,10 @@ import { BiomeWorkspaceContractError } from './workspaceContract';
 import { KeepsakeEquipResultPicker, KeepsakeSelectionLauncher } from '../KeepsakePickers';
 import { ArtworkChip } from '../rewards/TimelineChip';
 import { keepsakeArtwork } from '@planner/ui/controls/keepsakes/keepsakeArtwork';
+import { arcanaArtwork } from '@planner/ui/controls/arcana-fear/arcanaArtwork';
+import { ActionIcon } from '@planner/ui/controls/ActionIcon';
+import { hintProps } from '@planner/ui/controls/hint';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 
 /** A Postboss rack row: the keepsake held there, unchanged or swapped in. */
 function KeepsakeRackTimelineContent({
@@ -80,6 +85,66 @@ function KeepsakeRackTimelineContent({
   );
 }
 
+/**
+ * The Arcana cards a Judgment or Crystal Figurine activates, as chips in draw
+ * order with dashed slots for those still to choose, then the pencil that edits them.
+ */
+function ArcanaActivationChips({
+  control,
+  launcher,
+  name,
+  onEdit,
+  rarity,
+  requiredCount,
+}: {
+  readonly control: WorkspaceJudgmentArcanaInteraction | WorkspaceFigurineArcanaInteraction;
+  readonly launcher: ReturnType<ReturnType<typeof useFindingTarget>>;
+  readonly name: string;
+  readonly onEdit: () => void;
+  /** The rarity the activated cards take, ringed on their chips. */
+  readonly rarity?: string;
+  readonly requiredCount: number;
+}) {
+  const open = Math.max(0, requiredCount - control.value.length);
+  return (
+    <span className="timeline-chip-group">
+      {control.value.map((key, index) => {
+        const label = control.choices.find((choice) => choice.value === key)?.label ?? key;
+        return (
+          <span
+            {...hintProps(label, undefined, label)}
+            aria-label={label}
+            className="timeline-chip"
+            data-chip-state="shown"
+            data-rarity={rarity}
+            key={`${key}-${index}`}
+            role="img"
+          >
+            <ArtworkIcon className="artwork-label-icon" source={arcanaArtwork[key]} />
+          </span>
+        );
+      })}
+      {Array.from({ length: open }, (_, index) => (
+        <span
+          aria-hidden="true"
+          className="timeline-chip"
+          data-chip-state="unset"
+          key={`open-${index}`}
+        />
+      ))}
+      <button
+        {...launcher}
+        aria-label={`Edit ${name}`}
+        className="timeline-chip-edit"
+        onClick={onEdit}
+        type="button"
+      >
+        <ActionIcon name="edit" />
+      </button>
+    </span>
+  );
+}
+
 /** The Redux-held open state of one Judgment or Crystal Figurine dialog. */
 function useArcanaActivationDialog(owner: ArcanaActivationAddress) {
   const dispatch = useAppDispatch();
@@ -113,22 +178,27 @@ function JudgmentArcanaControl({
     <TimelineRow
       aria-label={`Judgment — choose ${judgment.requiredCount} inactive Arcana cards`}
       editors={
-        open ? (
-          <ArcanaActivationEditor
+        <>
+          <ArcanaActivationChips
             control={control}
-            title="Judgment editor"
+            launcher={launcher}
+            name="Judgment"
+            onEdit={show}
             requiredCount={judgment.requiredCount}
-            onClose={close}
-            returnFocusId={launcher.id}
           />
-        ) : null
+          {open ? (
+            <ArcanaActivationEditor
+              control={control}
+              title="Judgment editor"
+              requiredCount={judgment.requiredCount}
+              onClose={close}
+              returnFocusId={launcher.id}
+            />
+          ) : null}
+        </>
       }
       kind="effect"
-      label={
-        <button {...launcher} className="room-timeline-effect" onClick={show} type="button">
-          Judgment — choose {judgment.requiredCount} inactive Arcana cards
-        </button>
-      }
+      label={<strong>Judgment</strong>}
     />
   );
 }
@@ -153,23 +223,28 @@ function FigurineArcanaControl({
     <TimelineRow
       aria-label={`Crystal Figurine — choose ${figurine.requiredCount} inactive Arcana cards`}
       editors={
-        open ? (
-          <ArcanaActivationEditor
-            title="Crystal Figurine editor"
+        <>
+          <ArcanaActivationChips
             control={control}
+            launcher={launcher}
+            name="Crystal Figurine"
+            onEdit={show}
+            rarity={figurine.rarity}
             requiredCount={figurine.requiredCount}
-            onClose={close}
-            returnFocusId={launcher.id}
           />
-        ) : null
+          {open ? (
+            <ArcanaActivationEditor
+              title="Crystal Figurine editor"
+              control={control}
+              requiredCount={figurine.requiredCount}
+              onClose={close}
+              returnFocusId={launcher.id}
+            />
+          ) : null}
+        </>
       }
       kind="effect"
-      label={
-        <button {...launcher} className="room-timeline-effect" onClick={show} type="button">
-          Crystal Figurine — choose {figurine.requiredCount} inactive Arcana cards (
-          {figurine.rarity})
-        </button>
-      }
+      label={<strong>Crystal Figurine</strong>}
     />
   );
 }
@@ -179,15 +254,6 @@ export function inspectorRoomActionContent(
   interactions: WorkspaceInteractionCatalog,
   row: NonNullable<WorkspaceRoomSummary['roomActions']>['rows'][number],
 ): ReactNode {
-  if (row.featureRoll !== undefined)
-    return (
-      <FeatureRollSlots
-        feature={row.featureRoll.feature}
-        interactions={interactions}
-        label={row.label}
-        slots={row.featureRoll.slots}
-      />
-    );
   // A press is edited on its own row, which the Timeline renders itself.
   if (row.reference.kind === 'reroll') return null;
   return row.reference.kind !== 'interactKeepsakeRack' ||

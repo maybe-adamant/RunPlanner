@@ -1189,7 +1189,7 @@ describe('planner history interaction', () => {
     expect(document.activeElement?.getAttribute('aria-label')).toContain('Edit Path of Stars');
   });
 
-  it('authors and undoes the exact Sea Star checkbox row in the room timeline', async () => {
+  it('authors and undoes the exact Sea Star toggle row in the room timeline', async () => {
     const { project, target, targetAcquisition, targetReward } = seaStarRewardFixture();
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(project));
@@ -1213,14 +1213,12 @@ describe('planner history interaction', () => {
     expect(conversion.seaStarSupported).toBe(true);
     const view = renderPlannerForInteraction({ application });
 
-    const checkbox = await screen.findByRole('checkbox', {
-      name: 'Double Up for Reward',
-    });
-    expect(checkbox).toHaveProperty('checked', false);
+    const toggle = await screen.findByRole('button', { name: 'Double Up' });
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
     const historyBefore = application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(checkbox);
+    await view.user.click(toggle);
 
-    await waitFor(() => expect(checkbox).toHaveProperty('checked', true));
+    await waitFor(() => expect(toggle.getAttribute('aria-pressed')).toBe('true'));
     expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
@@ -1257,7 +1255,7 @@ describe('planner history interaction', () => {
     ).toEqual({ rewardType: 'RoomMoneyDrop' });
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    await waitFor(() => expect(checkbox).toHaveProperty('checked', false));
+    await waitFor(() => expect(toggle.getAttribute('aria-pressed')).toBe('false'));
     expect(childTarget()).toBeNull();
     expect(
       application.store

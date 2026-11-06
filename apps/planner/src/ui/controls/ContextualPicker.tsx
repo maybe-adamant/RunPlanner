@@ -35,6 +35,8 @@ interface ContextualPickerProps<T> {
   readonly locked?: boolean;
   readonly id: string;
   readonly label: string;
+  /** The field label's full name, on hover and as its accessible name, where the label is a short badge. */
+  readonly labelHint?: string;
   /** An image shown before the field label. */
   readonly labelIcon?: ArtworkSource | undefined;
   readonly layout?: 'inline' | 'stacked';
@@ -351,6 +353,7 @@ export function ContextualPicker<T>({
   locked = false,
   id,
   label,
+  labelHint,
   labelIcon,
   layout = 'stacked',
   loading = false,
@@ -433,11 +436,18 @@ export function ContextualPicker<T>({
       {...(triggerSize === 'field' ? {} : { 'data-trigger-size': triggerSize })}
     >
       {label === '' ? null : (
-        <label htmlFor={id}>
+        <label htmlFor={id} {...hintProps(labelHint, undefined, labelHint)}>
           {labelIcon === undefined ? null : (
             <ArtworkIcon className="artwork-label-icon" source={labelIcon} />
           )}
-          {label}
+          {labelHint === undefined ? (
+            label
+          ) : (
+            <>
+              <span aria-hidden="true">{label}</span>
+              <span className="visually-hidden">{labelHint}</span>
+            </>
+          )}
         </label>
       )}
       <Popover.Root open={open} onOpenChange={updateOpen}>

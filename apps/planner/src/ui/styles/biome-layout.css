@@ -886,24 +886,6 @@
   font-size: 0.8rem;
 }
 
-.room-timeline-effect {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 4px 6px;
-  border: 0;
-  color: #e2d0a5;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-}
-
-.room-timeline-effect:hover,
-.room-timeline-effect:focus-visible {
-  color: #f1ddb0;
-  background: rgb(193 169 123 / 14%);
-}
-
 .room-keepsake-control {
   display: flex;
   min-width: min(100%, 16rem);

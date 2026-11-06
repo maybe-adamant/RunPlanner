@@ -106,7 +106,7 @@ describe('OccurrenceRoomFeatures', () => {
       application,
     );
     // The capture-point outcome is decided in the room, not fixed on entry.
-    expect(screen.queryByRole('checkbox', { name: 'Cleared' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Anomaly outcome/ })).toBeNull();
     expect(screen.queryByLabelText('Reward')).toBeNull();
     expect(screen.getByRole('heading', { level: 3 })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Incoming reward' })).toBeTruthy();
@@ -130,7 +130,7 @@ describe('OccurrenceRoomFeatures', () => {
       name: `Restore Combat 01 on Door ${doorNumber}`,
     });
     expect(map.textContent).toContain('Anomaly 01');
-    expect(screen.queryByRole('checkbox', { name: 'Cleared' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Anomaly outcome/ })).toBeNull();
     await door.user.click(map);
     await door.user.click(screen.getByRole('option', { name: 'Anomaly 05' }));
     await door.user.click(restore);
@@ -163,11 +163,11 @@ describe('OccurrenceRoomFeatures', () => {
       occurrenceById(occurrenceId),
       application,
     );
-    expect(screen.queryByRole('checkbox', { name: 'Cleared' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Anomaly outcome/ })).toBeNull();
     openRoomTab('Room Timeline');
     const timeline = screen.getByRole('tabpanel');
-    const cleared = within(timeline).getByRole('checkbox', { name: 'Cleared' });
-    expect((cleared as HTMLInputElement).checked).toBe(true);
+    const cleared = within(timeline).getByRole('button', { name: /^Anomaly outcome/ });
+    expect(cleared.textContent).toBe('Cleared');
     const encounterEnd = within(timeline).getByText('Encounter ended');
     const pickup = within(timeline)
       .getAllByRole('listitem')
@@ -180,6 +180,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(cleared.closest('li')).toBe(within(timeline).getByLabelText('Encounter ended'));
 
     await view.user.click(cleared);
+    await view.user.click(await screen.findByRole('option', { name: 'Not cleared' }));
     expect(
       dispatch.mock.calls
         .map(([action]) => action)

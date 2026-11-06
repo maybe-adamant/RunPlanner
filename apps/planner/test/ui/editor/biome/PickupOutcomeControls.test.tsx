@@ -27,10 +27,10 @@ import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-wo
 
 afterEach(cleanup);
 
-function seaStarCheckboxes(): HTMLInputElement[] {
-  return within(screen.getByRole('region', { name: 'Room Timeline' })).queryAllByRole('checkbox', {
-    name: /^Double Up for /,
-  }) as HTMLInputElement[];
+function seaStarToggles(): HTMLButtonElement[] {
+  return within(screen.getByRole('region', { name: 'Room Timeline' })).queryAllByRole('button', {
+    name: /^Double Up/,
+  }) as HTMLButtonElement[];
 }
 
 describe('Pickup outcome controls', () => {
@@ -42,9 +42,9 @@ describe('Pickup outcome controls', () => {
       occurrenceById(createOccurrenceId('golden-f-b5-e1')),
     );
     openRoomTab('Room Timeline');
-    const [seaStar, ...others] = seaStarCheckboxes();
+    const [seaStar, ...others] = seaStarToggles();
     expect(others).toHaveLength(0);
-    expect(seaStar?.checked).toBe(true);
+    expect(seaStar?.getAttribute('aria-pressed')).toBe('true');
     expect(seaStar?.disabled).toBe(false);
   });
 
@@ -78,11 +78,10 @@ describe('Pickup outcome controls', () => {
     ).toBe(true);
     renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(shopId));
     openRoomTab('Room Timeline');
-    const [seaStar] = seaStarCheckboxes();
-    expect(seaStar?.checked).toBe(true);
+    const [seaStar] = seaStarToggles();
+    expect(seaStar?.getAttribute('aria-pressed')).toBe('true');
     expect(seaStar?.disabled).toBe(false);
-    expect(seaStar?.closest('label')?.hasAttribute('title')).toBe(false);
-    // Unticking Sea Star repairs the stale proc; the pickup outcome picker is not marked.
+    // Turning Sea Star off repairs the stale proc; the pickup outcome picker is not marked.
     expect(seaStar?.dataset.hasFindings).toBe('true');
     expect(
       [...document.querySelectorAll<HTMLElement>('[data-has-findings="true"]')].filter(

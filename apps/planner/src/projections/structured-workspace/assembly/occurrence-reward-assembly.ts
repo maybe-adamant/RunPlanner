@@ -847,7 +847,7 @@ function encounterPhaseLabels(
   room: RoomDeclaration,
   slotKey: string,
   phaseCount: number,
-): { readonly label: string; readonly identityLabel: string } {
+): { readonly label: string; readonly identityLabel: string; readonly shortLabel?: string } {
   const named = (label: string) => ({ label, identityLabel: label });
   const phase = (label: string) => ({ label, identityLabel: `${label} encounter` });
   if (room.encounterEnvelopeKey === 'PEncounter' && slotKey === 'Intro') return phase('Pre-combat');
@@ -855,7 +855,7 @@ function encounterPhaseLabels(
   if (room.mode.kind === 'authored' && room.mode.templateKey === 'ShipCombat')
     return phase(shipPhaseLabels(requireEncounterEnvelope(catalog, room)).get(slotKey) ?? slotKey);
   const cage = slotKey.match(/^Cage0*(\d+)$/)?.[1];
-  if (cage !== undefined) return phase(`Cage ${cage}`);
+  if (cage !== undefined) return { ...phase(`Cage ${cage}`), shortLabel: `C${cage}` };
   return phaseCount === 1 ? named('Encounter') : phase(slotKey);
 }
 

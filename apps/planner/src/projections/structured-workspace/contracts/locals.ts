@@ -497,6 +497,8 @@ export interface WorkspaceEncounterPhase {
   /** Per-wave composition of a combat identity, before any generated assessment. */
   readonly composition?: WorkspaceEncounterComposition;
   readonly label: string;
+  /** A Fields cage's badge ("C1") standing for its label in the room Overview. */
+  readonly shortLabel?: string;
   /** The phase's encounter name, labelling its identity picker. */
   readonly identityLabel: string;
   readonly marker: WorkspaceMarker;

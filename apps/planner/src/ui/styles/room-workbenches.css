@@ -466,8 +466,8 @@
   white-space: nowrap;
 }
 
-/* An encounter event toggle is its icon alone: dim when off, lit when on. */
-.encounter-event-toggle {
+/* A yes/no flag toggle is its icon alone: dim when off, lit when on. */
+.icon-toggle {
   display: inline-grid;
   width: var(--timeline-control-height, 26px);
   height: var(--timeline-control-height, 26px);
@@ -479,17 +479,17 @@
   cursor: pointer;
 }
 
-.encounter-event-toggle > .artwork-label-icon {
+.icon-toggle > .artwork-label-icon {
   opacity: 0.35;
   filter: grayscale(1);
 }
 
-.encounter-event-toggle[aria-pressed='true'] {
+.icon-toggle[aria-pressed='true'] {
   border-color: color-mix(in srgb, var(--selection-accent) 70%, transparent);
   background: color-mix(in srgb, var(--selection-accent) 16%, transparent);
 }
 
-.encounter-event-toggle[aria-pressed='true'] > .artwork-label-icon {
+.icon-toggle[aria-pressed='true'] > .artwork-label-icon {
   opacity: 1;
   filter: none;
 }
@@ -1561,13 +1561,6 @@
   text-underline-offset: 3px;
 }
 
-/* The pickup outcome is a quick list in its own fixed slot. */
-.pickup-outcome-select {
-  width: 100%;
-  min-height: var(--timeline-control-height);
-  padding: 2px 26px 2px 8px;
-}
-
 /* Decisions flow in order: the trait chip, then any other decision, each its own width. */
 .timeline-row:not(
     [data-timeline-row-kind='boundary'],
@@ -1639,7 +1632,6 @@
   justify-content: flex-end;
 }
 
-/* One checkbox presentation for every timeline toggle. */
 .room-action-switch-outcome {
   display: inline-flex;
   min-width: 0;
@@ -1649,31 +1641,29 @@
   gap: 6px 12px;
 }
 
-.room-action-switch-gold > input {
-  width: 3.5rem;
-  min-height: 28px;
-  padding: 3px 7px;
-  border: 1px solid #42434d;
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: right;
-}
-
-.timeline-checkbox {
+.room-action-switch-gold {
   display: inline-flex;
-  flex: 0 0 auto;
-  min-height: var(--timeline-control-height);
   align-items: center;
-  gap: 6px;
-  color: #d8d3cb;
-  font-size: 0.8rem;
-  white-space: nowrap;
+  gap: 4px;
 }
 
-.timeline-checkbox > input {
-  margin: 0;
+/* The claimed gold is a compact number, drawn like the Timeline's number pickers. */
+.room-action-switch-gold > input {
+  width: 3.25rem;
+  min-height: 30px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px 4px 0 0;
+  background: rgb(255 255 255 / 4%);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--selection-accent) 45%, transparent);
+  color: #f2ede5;
+  font: inherit;
+  text-align: center;
+}
+
+.room-action-switch-gold > input:focus-visible {
+  outline: none;
+  box-shadow: inset 0 -2px 0 var(--selection-accent);
 }
 
 /* Row kinds differ only in border, background and type. */
@@ -1975,7 +1965,6 @@
     .secondary-action,
     .quiet-action,
     .danger-action,
-    .room-timeline-effect,
     .encounter-fixed-value,
     select
   ):not(:where(dialog *, [role='dialog'] *)) {
@@ -3767,6 +3756,11 @@ span.hub-board-status-line {
   align-items: flex-start;
   gap: 4px 10px;
   min-width: 0;
+}
+
+/* A reroll's restocked slots follow its die on the label's line. */
+.timeline-cell-label > .numbered-slots {
+  margin-left: 8px;
 }
 
 .numbered-slot {

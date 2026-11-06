@@ -522,7 +522,7 @@ describe('Biome inspector controls', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     const judgmentLauncher = within(inspector).getByRole('button', {
-      name: /Judgment — choose 5 inactive Arcana cards/,
+      name: 'Edit Judgment',
     });
     const finding = view.application.store
       .getState()
@@ -586,11 +586,11 @@ describe('Biome inspector controls', () => {
         semanticOwnerFocused(createOccurrenceAddress(nBiome, nOccurrenceIds.opening)),
       ),
     );
-    expect(within(inspector).queryByText('Judgment — choose 5 inactive Arcana cards')).toBeNull();
+    expect(within(inspector).queryByRole('button', { name: 'Edit Judgment' })).toBeNull();
     act(() => screen.getByRole('button', { name: /^Boss/ }).click());
     expect(
       within(inspector).getByRole('button', {
-        name: /Judgment — choose 5 inactive Arcana cards/,
+        name: 'Edit Judgment',
       }),
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: /^Boss/ }).getAttribute('aria-current')).toBe(
@@ -621,17 +621,13 @@ describe('Biome inspector controls', () => {
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(judgmentOwner)));
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    act(() =>
-      within(inspector)
-        .getByRole('button', { name: /Judgment — choose 5 inactive Arcana cards/ })
-        .click(),
-    );
+    act(() => within(inspector).getByRole('button', { name: 'Edit Judgment' }).click());
     const judgmentPopup = within(inspector).getByRole('dialog', { name: 'Judgment editor' });
     // The board renders inside the fixed-height choice region the loader also fills.
     expect(judgmentPopup.querySelector('.trait-choice-region .arcana-board')).toBeTruthy();
     // At rest the header shows the Judgment's own findings, as its launcher marks them.
     const launcherDescription = within(inspector)
-      .getByRole('button', { name: /Judgment — choose 5 inactive Arcana cards/ })
+      .getByRole('button', { name: 'Edit Judgment' })
       .getAttribute('aria-description');
     expect(launcherDescription).toBe('Choose Judgment cards: Choose inactive Arcana.');
     const atRest = dialogFinding(judgmentPopup);
@@ -658,11 +654,7 @@ describe('Biome inspector controls', () => {
     expect(within(judgmentPopup).getByRole('button', { name: 'Cancel' })).toBeTruthy();
     act(() => within(judgmentPopup).getByRole('button', { name: 'Save' }).click());
     expect(within(inspector).queryByRole('dialog', { name: 'Judgment editor' })).toBeNull();
-    act(() =>
-      within(inspector)
-        .getByRole('button', { name: /Judgment — choose 5 inactive Arcana cards/ })
-        .click(),
-    );
+    act(() => within(inspector).getByRole('button', { name: 'Edit Judgment' }).click());
     const reopenedJudgment = within(inspector).getByRole('dialog', { name: 'Judgment editor' });
     act(() => within(reopenedJudgment).getByRole('button', { name: 'Reset' }).click());
     expect(within(reopenedJudgment).queryAllByRole('button', { pressed: true })).toHaveLength(0);
@@ -672,11 +664,7 @@ describe('Biome inspector controls', () => {
       updatedWorkspace.interactions.figurineArcana.has(semanticAddressKey(figurineOwner)),
     ).toBe(true);
 
-    act(() =>
-      within(inspector)
-        .getByRole('button', { name: /Crystal Figurine — choose 2 inactive Arcana cards/ })
-        .click(),
-    );
+    act(() => within(inspector).getByRole('button', { name: 'Edit Crystal Figurine' }).click());
     const figurinePopup = within(inspector).getByRole('dialog', {
       name: 'Crystal Figurine editor',
     });

@@ -1,4 +1,5 @@
-import { FeatureRollEntry } from './commerce/FeatureRollInteract';
+import { FeatureRollEntry, FeatureRollSlots } from './commerce/FeatureRollInteract';
+import { ArtworkChip } from '../rewards/TimelineChip';
 import { Fragment, useState, type ReactNode } from 'react';
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import {
@@ -693,7 +694,9 @@ export function RoomActionsWorkbench({
       );
     // The row's name: a reward's icon, an NPC's portrait, or its words.
     const rowName =
-      row.labelParts === undefined ? null : (
+      row.labelParts === undefined ? null : row.labelParts.traitKey !== undefined ? (
+        <ArtworkChip icon={traitIcon(row.labelParts.traitKey)} label={row.labelParts.name} />
+      ) : (
         <strong
           {...(row.labelParts.origin === undefined || row.labelParts.reward !== undefined
             ? {}
@@ -843,6 +846,15 @@ export function RoomActionsWorkbench({
                     {row.roll}
                   </span>
                 </span>
+              )}
+              {row.featureRoll === undefined ? null : (
+                // A reroll's restocked slots follow its die on the label's line.
+                <FeatureRollSlots
+                  feature={row.featureRoll.feature}
+                  interactions={interactions}
+                  label={row.label}
+                  slots={row.featureRoll.slots}
+                />
               )}
               <RoomActionArtificerOutput interactions={interactions} row={row} />
               {row.slot === undefined ? null : (

@@ -118,6 +118,8 @@ export interface WorkspaceRoomActionRow {
     readonly origin?: string;
     /** The NPC a Talk row names, by NPC key; the row shows its portrait with the name as its title. */
     readonly npcKey?: string;
+    /** The trait the name stands for, such as a Pool sale's; the row shows it as a chip. */
+    readonly traitKey?: string;
     /** The reward the name stands for; the row shows it as an icon with the name as its title. */
     readonly reward?: {
       readonly offer: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;

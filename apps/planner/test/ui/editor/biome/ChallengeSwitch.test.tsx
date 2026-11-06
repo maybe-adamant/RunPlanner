@@ -87,7 +87,7 @@ describe('challenge switch rows on the room Overview', () => {
     await user.click(screen.getByRole('button', { name: 'Unseen Sigil ▸' }));
     await user.click(await screen.findByRole('button', { name: 'Use Unseen Sigil' }));
 
-    await user.click(screen.getByRole('checkbox', { name: 'Nectar dropped' }));
+    await user.click(screen.getByRole('button', { name: 'Nectar dropped' }));
     expect(hostRoom(application).challengeSwitch?.nectarDropped).toBe(true);
 
     await user.click(screen.getByRole('button', { name: 'Switch outcome: Hitless' }));
@@ -96,6 +96,6 @@ describe('challenge switch rows on the room Overview', () => {
       outcome: 'failed',
       nectarDropped: false,
     });
-    expect(screen.queryByRole('checkbox', { name: 'Nectar dropped' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Nectar dropped' })).toBeNull();
   });
 });

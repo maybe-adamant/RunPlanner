@@ -5,6 +5,8 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import { roomChoiceIcon } from '../roomIcon';
+import { WordOutcomePicker } from '../NemesisEventEditor';
+import { semanticAddressKey } from '@run-planner/engine/authored-project';
 
 /**
  * The workspace has already established this is an authored Anomaly and has
@@ -47,27 +49,31 @@ export function AnomalyRoomControl({
   );
 }
 
+const anomalyOutcomes = [
+  { value: 'cleared', label: 'Cleared' },
+  { value: 'notCleared', label: 'Not cleared' },
+] as const;
+
 export function AnomalyClearedControl({ room }: { readonly room: WorkspaceRoomSummary }) {
   const dispatch = useAppDispatch();
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
   return (
-    <label className="timeline-checkbox">
-      <input
-        checked={anomaly.success}
-        onChange={(event) =>
-          dispatch(
-            authoredProjectCommandDispatched({
-              kind: 'ReplaceAnomalySuccess',
-              occurrence: room.address,
-              success: event.target.checked,
-            }),
-          )
-        }
-        type="checkbox"
-      />
-      <span>Cleared</span>
-    </label>
+    <WordOutcomePicker
+      choices={anomalyOutcomes}
+      id={`anomaly-cleared-${semanticAddressKey(room.address)}`}
+      name="Anomaly outcome"
+      onSelect={(value) =>
+        dispatch(
+          authoredProjectCommandDispatched({
+            kind: 'ReplaceAnomalySuccess',
+            occurrence: room.address,
+            success: value === 'cleared',
+          }),
+        )
+      }
+      selected={anomaly.success ? 'cleared' : 'notCleared'}
+    />
   );
 }
 

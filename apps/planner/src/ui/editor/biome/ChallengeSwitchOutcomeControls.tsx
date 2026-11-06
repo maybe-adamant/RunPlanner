@@ -7,6 +7,10 @@ import {
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { IconToggle } from '@planner/ui/controls/IconToggle';
+import { hintProps } from '@planner/ui/controls/hint';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 
 /** How the pressed switch's fight ended, its bonus Nectar and a Gold Switch's claimed gold. */
 export function ChallengeSwitchOutcomeControls({
@@ -49,14 +53,12 @@ export function ChallengeSwitchOutcomeControls({
         triggerSize="content"
       />
       {outcome.nectar === undefined || interaction.nectarIntent === undefined ? null : (
-        <label className="timeline-checkbox">
-          <input
-            checked={outcome.nectar.dropped}
-            onChange={() => executeIntent(interaction.nectarIntent!)}
-            type="checkbox"
-          />
-          <span>Nectar dropped</span>
-        </label>
+        <IconToggle
+          icon={rewardIcon('GiftDrop')}
+          name="Nectar dropped"
+          onToggle={() => executeIntent(interaction.nectarIntent!)}
+          pressed={outcome.nectar.dropped}
+        />
       )}
       {outcome.gold === undefined || interaction.goldIntentFor === undefined ? null : (
         <SwitchGoldInput
@@ -90,8 +92,8 @@ function SwitchGoldInput({
       onCommit(next);
   };
   return (
-    <label className="timeline-checkbox room-action-switch-gold">
-      <span>Gold</span>
+    <label className="room-action-switch-gold">
+      <ArtworkIcon className="artwork-label-icon" source={rewardIcon('RoomMoneyDrop')} />
       <input
         aria-label="Claimed gold"
         autoComplete="off"
@@ -107,6 +109,7 @@ function SwitchGoldInput({
             setDraft(undefined);
           }
         }}
+        {...hintProps('Claimed gold', undefined, 'Claimed gold')}
         size={4}
         type="text"
         value={draft ?? String(gold.value)}

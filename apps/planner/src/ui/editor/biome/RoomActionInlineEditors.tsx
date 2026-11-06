@@ -11,6 +11,8 @@ import { declaredChoicesPicker } from '@planner/projections/contextual/contextua
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
+import { IconToggle } from '@planner/ui/controls/IconToggle';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { PomResolutionLauncher } from '../rewards/PomResolutionEditor';
 import { AnvilResultLauncher } from '../rewards/AnvilResultEditor';
 import { HexActivationLauncher } from '../rewards/HexActivationEditor';
@@ -19,18 +21,16 @@ import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { ChallengeSwitchOutcomeControls } from './ChallengeSwitchOutcomeControls';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 
-/** Pickup outcome and Sea Star controls for one acquisition role of a timeline row. */
-function PickupOutcomeControls({
+/** The Sea Star toggle for one acquisition role of a timeline row: lit when Double Up procs. */
+function SeaStarToggle({
   conversion,
-  idPrefix,
   interactions,
-  verbOwnsOutcome,
+  roleNamed,
 }: {
-  /** The row's verb picker already chooses this role's outcome. */
-  readonly verbOwnsOutcome: boolean;
   readonly conversion: NonNullable<WorkspaceRewardControl['conversions']>[number];
-  readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
+  /** The row has more than one role, so the toggle names its own. */
+  readonly roleNamed: boolean;
 }) {
   const executeIntent = useCommandIntent();
   const findingMark = useFindingMark();
@@ -38,58 +38,31 @@ function PickupOutcomeControls({
     interactions.acquisitionConversions,
     workspaceInteractionKey(conversion.address),
   );
-  if (!interaction.visible) return null;
-  // Each control renders only where the engine says it applies or an authored value remains.
-  const kind = conversion.value.kind;
-  const timePiece = interaction.timePieceSupported || kind === 'timePiece';
-  const artificer = interaction.artificerSupported || kind === 'artificer';
-  const seaStar = interaction.seaStarSupported || interaction.seaStarProcced;
-  if (!seaStar && (verbOwnsOutcome || !(timePiece || artificer))) return null;
+  // Sea Star renders only where the engine says it applies or an authored proc remains.
+  if (!interaction.visible || !(interaction.seaStarSupported || interaction.seaStarProcced))
+    return null;
   return (
-    <div className="reward-acquisition-conversion">
-      {!verbOwnsOutcome && (timePiece || artificer) ? (
-        <select
-          {...findingMark(conversion.address, 'pickupOutcome')}
-          aria-label={`Pickup outcome for ${conversion.acquisitionRoleLabel}`}
-          className="pickup-outcome-select"
-          id={`${idPrefix}-pickup-outcome-${workspaceInteractionKey(conversion.address)}`}
-          onChange={(event) => {
-            const next = event.target.value;
-            if (next === 'normal' || next === 'timePiece' || next === 'artificer')
-              executeIntent(interaction.intentFor(Object.freeze({ kind: next })));
-          }}
-          value={kind}
-        >
-          <option value="normal">Take</option>
-          {timePiece ? <option value="timePiece">Time Piece</option> : null}
-          {artificer ? <option value="artificer">Artificer</option> : null}
-        </select>
-      ) : null}
-      {seaStar ? (
-        <label className="timeline-checkbox">
-          <input
-            {...findingMark(conversion.address, 'seaStar')}
-            aria-label={`Double Up for ${conversion.acquisitionRoleLabel}`}
-            checked={interaction.seaStarProcced}
-            onChange={(event) => executeIntent(interaction.seaStarIntentFor(event.target.checked))}
-            type="checkbox"
-          />
-          <span>Double Up</span>
-        </label>
-      ) : null}
-    </div>
+    <IconToggle
+      icon={traitIcon('DoubleRewardBoon')}
+      name={roleNamed ? `Double Up · ${conversion.acquisitionRoleLabel}` : 'Double Up'}
+      onToggle={(next) => executeIntent(interaction.seaStarIntentFor(next))}
+      pressed={interaction.seaStarProcced}
+      target={findingMark(conversion.address, 'seaStar')}
+    />
   );
 }
 
+type ConversionKind = 'normal' | 'timePiece' | 'artificer';
+
 const conversionVerbs = { timePiece: 'Goldify', artificer: 'Transform' } as const;
 
-/** The role the row's verb decides: one already goldified or transformed, else the first. */
+/** The role the row's verb shows: one already goldified or transformed, else the first. */
 function verbConversion(conversions: WorkspaceRewardControl['conversions']) {
   return conversions?.find((candidate) => candidate.value.kind !== 'normal') ?? conversions?.[0];
 }
 
 /**
- * The row's verb. Where the engine lets the pickup be goldified or
+ * The row's verb. Where the engine lets any of its pickups be goldified or
  * transformed, the verb is a picker whose trigger reads as the label's text.
  */
 export function RoomActionVerb({
@@ -101,12 +74,12 @@ export function RoomActionVerb({
   readonly row: WorkspaceRoomActionRow;
   readonly verb: string;
 }) {
-  const conversion = verbConversion(row.rewardPayload?.control.conversions);
-  return conversion === undefined ? (
+  const conversions = row.rewardPayload?.control.conversions ?? [];
+  return conversions.length === 0 ? (
     <strong>{verb}</strong>
   ) : (
     <ConversionVerbPicker
-      conversion={conversion}
+      conversions={conversions}
       interactions={interactions}
       row={row}
       verb={verb}
@@ -115,57 +88,88 @@ export function RoomActionVerb({
 }
 
 function ConversionVerbPicker({
-  conversion,
+  conversions,
   interactions,
   row,
   verb,
 }: {
-  readonly conversion: NonNullable<WorkspaceRewardControl['conversions']>[number];
+  readonly conversions: NonNullable<WorkspaceRewardControl['conversions']>;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly row: WorkspaceRoomActionRow;
   readonly verb: string;
 }) {
   const executeIntent = useCommandIntent();
   const findingMark = useFindingMark();
-  const interaction = requireWorkspaceInteraction(
-    interactions.acquisitionConversions,
-    workspaceInteractionKey(conversion.address),
-  );
-  const kind = conversion.value.kind;
-  // Each choice shows only where the engine supports it or an authored value remains.
-  const timePiece = interaction.visible && (interaction.timePieceSupported || kind === 'timePiece');
-  const artificer = interaction.visible && (interaction.artificerSupported || kind === 'artificer');
-  if (!timePiece && !artificer) return <strong>{verb}</strong>;
+  const roles = conversions.map((conversion) => {
+    const interaction = requireWorkspaceInteraction(
+      interactions.acquisitionConversions,
+      workspaceInteractionKey(conversion.address),
+    );
+    const kind = conversion.value.kind;
+    // Each choice shows only where the engine supports it or an authored value remains.
+    return {
+      conversion,
+      interaction,
+      timePiece: interaction.visible && (interaction.timePieceSupported || kind === 'timePiece'),
+      artificer: interaction.visible && (interaction.artificerSupported || kind === 'artificer'),
+    };
+  });
+  const convertible = roles.filter((role) => role.timePiece || role.artificer);
+  if (convertible.length === 0) return <strong>{verb}</strong>;
+  const shownConversion = verbConversion(conversions)!;
+  const shownRole = roles.find((role) => role.conversion === shownConversion)!;
+  const kind = shownConversion.value.kind;
   const shown = kind === 'timePiece' || kind === 'artificer' ? conversionVerbs[kind] : verb;
   const gold =
     kind === 'timePiece' && row.goldGained !== undefined ? ` · ${row.goldGained.label} gold` : '';
   const name = row.labelParts?.name ?? row.label;
+  // A row with several convertible pickups names each choice's own.
+  const roleSuffix = (role: (typeof roles)[number]) =>
+    convertible.length > 1 ? ` · ${role.conversion.acquisitionRoleLabel}` : '';
+  const choiceKey = (role: (typeof roles)[number], next: ConversionKind) =>
+    next === 'normal' ? 'normal' : `${workspaceInteractionKey(role.conversion.address)}:${next}`;
+  const choices = convertible.flatMap((role) => [
+    ...(role.timePiece
+      ? [
+          {
+            key: choiceKey(role, 'timePiece'),
+            value: { role, kind: 'timePiece' as const },
+            label: `Goldify · Time Piece${role === shownRole ? gold : ''}${roleSuffix(role)}`,
+          },
+        ]
+      : []),
+    ...(role.artificer
+      ? [
+          {
+            key: choiceKey(role, 'artificer'),
+            value: { role, kind: 'artificer' as const },
+            label: `Transform · Artificer${roleSuffix(role)}`,
+          },
+        ]
+      : []),
+  ]);
+  const selected = kind === 'normal' ? 'normal' : choiceKey(shownRole, kind);
   return (
-    <ContextualPicker<'normal' | 'timePiece' | 'artificer'>
+    <ContextualPicker<string>
       ariaLabel={`How to take ${name}: ${shown}`}
-      findingMark={findingMark(conversion.address, 'pickupOutcome')}
-      id={`room-action-verb-${workspaceInteractionKey(conversion.address)}`}
+      findingMark={findingMark(shownConversion.address, 'pickupOutcome')}
+      id={`room-action-verb-${workspaceInteractionKey(shownConversion.address)}`}
       label=""
       layout="inline"
       model={declaredChoicesPicker(
         [
-          { key: 'normal', value: 'normal' as const, label: verb },
-          ...(timePiece
-            ? [
-                {
-                  key: 'timePiece',
-                  value: 'timePiece' as const,
-                  label: `Goldify · Time Piece${gold}`,
-                },
-              ]
-            : []),
-          ...(artificer
-            ? [{ key: 'artificer', value: 'artificer' as const, label: 'Transform · Artificer' }]
-            : []),
+          { key: 'normal', value: 'normal', label: verb },
+          ...choices.map((choice) => ({ key: choice.key, value: choice.key, label: choice.label })),
         ],
-        kind,
+        selected,
       )}
-      onSelect={(next) => executeIntent(interaction.intentFor(Object.freeze({ kind: next })))}
+      onSelect={(key) => {
+        if (key === selected) return;
+        // Taking it plainly undoes the shown conversion; a conversion applies to its own pickup.
+        const choice = choices.find((candidate) => candidate.key === key);
+        const target = choice?.value ?? { role: shownRole, kind: 'normal' as const };
+        executeIntent(target.role.interaction.intentFor(Object.freeze({ kind: target.kind })));
+      }}
       placeholder={verb}
       searchable={false}
       triggerLabel={shown}
@@ -295,12 +299,11 @@ export function RoomActionInlineEditors({
       {payload === undefined
         ? null
         : conversions.map((conversion) => (
-            <PickupOutcomeControls
-              verbOwnsOutcome={conversion === verbConversion(conversions)}
+            <SeaStarToggle
               conversion={conversion}
-              idPrefix={`room-action-${payload.control.marker.focusKey}`}
               interactions={interactions}
               key={workspaceInteractionKey(conversion.address)}
+              roleNamed={conversions.length > 1}
             />
           ))}
       {row.fountainRarity === undefined ? null : (

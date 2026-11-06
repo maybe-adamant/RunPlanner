@@ -1161,7 +1161,8 @@ describe('OccurrenceRoomActions', () => {
     await waitFor(() => expect(poolActionOrder()).toEqual(sold));
 
     openRoomTab('Room Timeline');
-    const soldRow = screen.getByText(`Sell ${leftTraitLabel}`).closest('li');
+    // The sold trait is the row's chip, named by the trait.
+    const soldRow = screen.getByRole('img', { name: leftTraitLabel }).closest('li');
     expect(soldRow?.getAttribute('data-action-accent')).toBe('optional');
     reorderByKeyboard(
       screen.getByRole('button', { name: `Reorder Sell ${leftTraitLabel}` }),

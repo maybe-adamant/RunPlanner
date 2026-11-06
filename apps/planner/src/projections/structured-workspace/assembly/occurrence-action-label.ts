@@ -148,6 +148,8 @@ export interface OccurrenceActionLabelParts {
   };
   /** The NPC a Talk row names, by NPC key; the row can show the NPC's portrait for the name. */
   readonly npcKey?: string;
+  /** The trait the name stands for, such as a Pool sale's, which the row can show as a chip. */
+  readonly traitKey?: string;
   /** The inventory slot the action buys from, shown as a badge rather than in the label. */
   readonly slot?: number;
   /** The Well or Pool roll the action belongs to, shown as the reroll die's badge. */
@@ -451,17 +453,19 @@ export function occurrenceActionLabelParts(
         traitKey === null || traitKey === undefined
           ? undefined
           : (catalog.traits.byKey[traitKey]?.label ?? traitKey);
-      if (reference.rollKey === undefined)
-        return plain(`Sell ${traitLabel ?? `${reference.slotKey} Pool trait`}`);
+      // The sold trait names the row as its chip; an unknown one reads plainly.
+      const sold = (fallback: string): OccurrenceActionLabelParts =>
+        traitKey === null || traitKey === undefined || traitLabel === undefined
+          ? plain(`Sell ${fallback}`)
+          : Object.freeze({ ...labelParts('Sell', traitLabel), traitKey });
+      if (reference.rollKey === undefined) return sold(`${reference.slotKey} Pool trait`);
       const rollNumber = featureRollNumber(
         occurrence.roomActions?.order ?? [],
         'purgingPool',
         reference.rollKey,
       );
       return withRoll(
-        plain(
-          `Sell ${traitLabel ?? featureRollCatalog(catalog, 'purgingPool').slotLabel(reference.slotKey)}`,
-        ),
+        sold(featureRollCatalog(catalog, 'purgingPool').slotLabel(reference.slotKey)),
         rollNumber,
       );
     }
