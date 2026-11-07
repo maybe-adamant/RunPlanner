@@ -38,10 +38,10 @@ describe('Encounter Timeline banner', () => {
       .getByRole('button', { name: 'Encounter' })
       .querySelector('span')!.textContent!;
     openRoomTab('Room Timeline');
-    const start = banner('Encounter');
+    const start = banner('Encounter started');
 
     // The banner navigates to the Overview owner; it is never a finding target itself.
-    const identity = within(start).getByRole('button', { name: encounter });
+    const identity = within(start).getByRole('button', { name: `Encounter started: ${encounter}` });
     expect(identity.hasAttribute('data-semantic-owner')).toBe(false);
     fireEvent.click(identity);
     const focused = view.application.store.getState().editorSession.focusedSemanticOwner;
@@ -65,7 +65,7 @@ describe('Encounter Timeline banner', () => {
     renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceIds.preHub));
     openRoomTab('Room Timeline');
     const skip = screen.getByRole('button', { name: 'Fig Leaf skip' });
-    expect(skip.closest('li')).toBe(banner('Encounter'));
+    expect(skip.closest('li')).toBe(banner('Encounter started'));
     expect(skip.hasAttribute('data-semantic-owner')).toBe(true);
   });
 
@@ -94,7 +94,7 @@ describe('Encounter Timeline banner', () => {
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     // What the game settles as the encounter starts sits on its start banner.
-    const start = within(banner('Encounter')).getByRole('group', { name: / start$/ });
+    const start = within(banner('Encounter started')).getByRole('group', { name: / start$/ });
     expect(within(start).getByRole('button', { name: 'No Death Defiance' })).toBeTruthy();
     expect(within(start).queryByRole('button', { name: /^Outcome/ })).toBeNull();
     // The kill race is settled when the encounter ends.

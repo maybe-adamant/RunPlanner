@@ -76,9 +76,11 @@ describe('Fresh File product loop', () => {
     // The rail opens the room the doors lead to.
     await user.click(screen.getByRole('button', { name: /^Decision 1/ }));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    expect(screen.getByRole('region', { name: 'Room Timeline' }).textContent).toContain(
-      'Intro combat',
-    );
+    expect(
+      within(screen.getByRole('region', { name: 'Room Timeline' })).getByRole('button', {
+        name: 'Encounter started: Intro combat',
+      }),
+    ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Edit Trait · Pick trait' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Offer state' }));

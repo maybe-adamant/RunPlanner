@@ -3,8 +3,9 @@ import type { FindingMarkProps, FindingTargetProps } from '@planner/ui/feedback/
 import { hintProps } from './hint';
 
 /**
- * A yes/no flag as its icon alone: dim when off, lit when on. The icon alone
- * does not say what it means, so its name is also its hint on hover and focus.
+ * A yes/no flag as its icon alone: dim when off, lit when on, gray and locked
+ * when it cannot change. The icon alone does not say what it means, so its
+ * name is also its hint on hover and focus.
  */
 export function IconToggle({
   disabled = false,
@@ -51,6 +52,19 @@ export function IconToggle({
       type="button"
     >
       <ArtworkIcon className="artwork-label-icon" source={icon} />
+      {disabled ? (
+        <span aria-hidden="true" className="icon-toggle-lock">
+          <svg viewBox="0 0 10 10">
+            <path
+              d="M3 4.5V3.2a2 2 0 0 1 4 0v1.3"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.2"
+            />
+            <rect fill="currentColor" height="4.5" rx="0.8" width="6.4" x="1.8" y="4.5" />
+          </svg>
+        </span>
+      ) : null}
     </button>
   );
   // A disabled button takes no pointer events, so its hint sits on a wrapper.

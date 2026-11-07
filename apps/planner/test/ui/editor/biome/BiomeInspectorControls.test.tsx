@@ -539,7 +539,7 @@ describe('Biome inspector controls', () => {
       document.getElementById(semanticOwnerControlElementId(owner)),
     );
     expect(within(inspector).queryByRole('dialog', { name: 'Judgment editor' })).toBeNull();
-    expect(within(inspector).getByText('Encounter')).toBeTruthy();
+    expect(within(inspector).getByText('Encounter started')).toBeTruthy();
     expect(within(inspector).getByText('Boss defeated')).toBeTruthy();
     expect(within(inspector).getByText('Encounter ended')).toBeTruthy();
     const timeline = within(inspector).getByRole('region', { name: 'Room Timeline' });

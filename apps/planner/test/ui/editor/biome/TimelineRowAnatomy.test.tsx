@@ -119,7 +119,7 @@ describe('Encounter banners', () => {
     );
     openRoomTab('Room Timeline');
     const skip = () =>
-      within(within(timeline()).getByLabelText('Encounter')).getByRole('button', {
+      within(within(timeline()).getByLabelText('Encounter started')).getByRole('button', {
         name: 'Fig Leaf skip',
       });
     const authored = () =>
@@ -156,9 +156,12 @@ describe('Encounter banners', () => {
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(skipped));
     openRoomTab('Room Timeline');
-    const events = within(within(timeline()).getByLabelText('Encounter')).getByRole('group', {
-      name: 'Encounter start',
-    });
+    const events = within(within(timeline()).getByLabelText('Encounter started')).getByRole(
+      'group',
+      {
+        name: 'Encounter start',
+      },
+    );
     const condition = within(events).getByRole('button', {
       name: 'No Death Defiance',
     }) as HTMLButtonElement;

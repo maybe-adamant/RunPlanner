@@ -8,7 +8,6 @@ import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { hintProps } from '@planner/ui/controls/hint';
-import { showTruncatedTitle } from '@planner/ui/controls/truncatedTitle';
 import { TimelineRow } from './TimelineRow';
 import { BannerTitle } from './TimelineDoors';
 import type { BannerToggle } from './doorSummary';
@@ -33,7 +32,7 @@ export function LifecycleBoundaryRow({
   /** Gold the banner settles, in the Timeline's money column. */
   readonly money?: ReactNode;
   readonly fieldsCage?: WorkspaceFieldsCageLabel;
-  /** The phase's settled identity; it navigates to its Overview picker and never edits. */
+  /** The phase's settled identity: the title's hint, and a link to its Overview picker. */
   readonly identity?: { readonly label: string; readonly owner: EncounterPhaseAddress };
   /** The title shows or hides the editor under the banner, such as the doors'. */
   readonly toggle?: BannerToggle | undefined;
@@ -72,21 +71,22 @@ export function LifecycleBoundaryRow({
       label={
         <>
           <span className="timeline-banner-title">
-            <BannerTitle label={label} toggle={toggle} />
-            {identity === undefined ? cageSlot : null}
-            {identity === undefined ? null : (
+            {identity === undefined ? (
               <>
-                <span aria-hidden="true">·</span>
-                <button
-                  className="timeline-banner-identity"
-                  onMouseEnter={showTruncatedTitle}
-                  onClick={() => dispatch(semanticOwnerNavigated(identity.owner))}
-                  type="button"
-                >
-                  {identity.label}
-                  {cageSlot}
-                </button>
+                <BannerTitle label={label} toggle={toggle} />
+                {cageSlot}
               </>
+            ) : (
+              <button
+                {...hintProps(identity.label, undefined, `${label}: ${identity.label}`)}
+                aria-label={`${label}: ${identity.label}`}
+                className="timeline-banner-identity"
+                onClick={() => dispatch(semanticOwnerNavigated(identity.owner))}
+                type="button"
+              >
+                <strong>{label}</strong>
+                {cageSlot}
+              </button>
             )}
           </span>
           {controls === undefined ? null : (

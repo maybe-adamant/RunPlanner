@@ -465,6 +465,7 @@
 
 /* A yes/no flag toggle is its icon alone: dim when off, lit when on. */
 .icon-toggle {
+  position: relative;
   display: inline-grid;
   width: var(--timeline-control-height, 26px);
   height: var(--timeline-control-height, 26px);
@@ -477,8 +478,7 @@
 }
 
 .icon-toggle > .artwork-label-icon {
-  opacity: 0.35;
-  filter: grayscale(1);
+  opacity: 0.4;
 }
 
 .icon-toggle[aria-pressed='true'] {
@@ -1874,14 +1874,13 @@
   line-height: 1.2;
 }
 
-/* The banner's identity is navigation to its Overview picker, styled as text. */
+/* An encounter's title links to its Overview picker; its identity is the hint. */
 .timeline-banner-identity {
   padding: 0;
   border: 0;
-  color: var(--selection-accent);
+  color: inherit;
   background: transparent;
   font: inherit;
-  font-weight: 700;
   letter-spacing: inherit;
   cursor: pointer;
 }
@@ -1889,6 +1888,8 @@
 .timeline-banner-identity:hover,
 .timeline-banner-identity:focus-visible {
   text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 3px;
 }
 
 /* Editor groups in a sentence keep their own width and flow with its words. */
@@ -3722,9 +3723,34 @@ span.hub-board-status-line {
   flex-wrap: wrap;
 }
 
+/* A toggle that cannot change is gray and locked, apart from a dim off toggle. */
 .icon-toggle:disabled {
   cursor: not-allowed;
-  opacity: 0.7;
+}
+
+.icon-toggle:disabled > .artwork-label-icon {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.icon-toggle-lock {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  display: grid;
+  width: 13px;
+  height: 13px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.icon-toggle-lock > svg {
+  width: 8px;
+  height: 8px;
 }
 
 .icon-toggle-disabled {

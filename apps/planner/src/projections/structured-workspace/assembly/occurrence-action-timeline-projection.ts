@@ -27,7 +27,7 @@ function lifecycleBoundaryLabel(boundary: WorkspaceRoomLifecycleBoundary): strin
     case 'roomEntered':
       return 'Room entered';
     case 'encounterStart':
-      return 'Encounter';
+      return 'Encounter started';
     case 'encounterEnd':
       return 'Encounter ended';
     case 'bossDefeated':
@@ -289,7 +289,7 @@ function projectRoomLifecycleTimeline(
           boundary: entry.boundary,
           label:
             fieldsCage !== undefined
-              ? `Encounter ${fieldsCage.slotOrdinal}`
+              ? `Encounter ${fieldsCage.slotOrdinal} started`
               : endedCageOrdinal(entry.boundary) !== undefined
                 ? `Encounter ${endedCageOrdinal(entry.boundary)} ended`
                 : lifecycleBoundaryLabel(entry.boundary),

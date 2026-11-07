@@ -593,7 +593,7 @@ describe('OccurrenceRoomActions', () => {
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
     const starts = [1, 2, 3].map((ordinal) =>
-      within(timeline).getByLabelText(`Encounter ${ordinal}`),
+      within(timeline).getByLabelText(`Encounter ${ordinal} started`),
     );
     const ends = Array.from(
       timeline.querySelectorAll<HTMLElement>('[data-lifecycle-boundary^="encounterEnd:"]'),
@@ -695,7 +695,7 @@ describe('OccurrenceRoomActions', () => {
     expect(screen.getByRole('group', { name: 'Combat order' })).toBeTruthy();
     // Each cage start banner names its encounter read-only; identity stays in Overview.
     for (const ordinal of [1, 2, 3]) {
-      const start = screen.getByLabelText(`Encounter ${ordinal}`);
+      const start = screen.getByLabelText(`Encounter ${ordinal} started`);
       expect(start.querySelector('.fields-cage-slot')).not.toBeNull();
       expect(start.querySelector('.timeline-banner-identity')?.textContent).not.toMatch(/Cage/);
     }
@@ -737,7 +737,7 @@ describe('OccurrenceRoomActions', () => {
     for (const [index, number] of [3, 2, 1].entries())
       expect(
         screen
-          .getByLabelText(`Encounter ${index + 1}`)
+          .getByLabelText(`Encounter ${index + 1} started`)
           .querySelector('.fields-cage-slot')
           ?.getAttribute('aria-label'),
       ).toMatch(new RegExp(`^Cage ${number} \\(`));
@@ -752,7 +752,7 @@ describe('OccurrenceRoomActions', () => {
     await waitFor(() => expect(cagePermutation()).toEqual(['Cage01', 'Cage02', 'Cage03']));
     expect(
       screen
-        .getByLabelText('Encounter 1')
+        .getByLabelText('Encounter 1 started')
         .querySelector('.fields-cage-slot')
         ?.getAttribute('aria-label'),
     ).toMatch(/^Cage 1 \(/);

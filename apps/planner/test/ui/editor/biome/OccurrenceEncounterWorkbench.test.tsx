@@ -2107,8 +2107,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.keyboard('{Escape}');
     openRoomTab('Combat 2 Timeline');
     // The Timeline banner names the phase read-only; its identity is authored in Overview.
-    const start = screen.getByLabelText('Encounter');
-    expect(start.querySelector('.timeline-banner-identity')?.textContent).toMatch(/^Combat 2 · /);
+    const start = screen.getByLabelText('Encounter started');
+    expect(start.querySelector('.timeline-banner-identity')?.getAttribute('aria-label')).toMatch(
+      /^Encounter started: Combat 2 · /,
+    );
     expect(within(start).queryByRole('button', { name: 'Encounter' })).toBeNull();
     openRoomTab('Room Overview');
     const phase = screen.getByLabelText('Combat 2 encounter phase');
@@ -2234,7 +2236,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(combatOne).toBeTruthy();
     expect(within(combatOne).queryByRole('heading', { name: 'Combat 1' })).toBeNull();
     expect(within(combatOne).queryByRole('heading', { name: 'Timeline' })).toBeNull();
-    expect(within(combatOne).getByText('Encounter')).toBeTruthy();
+    expect(within(combatOne).getByText('Encounter started')).toBeTruthy();
     expect(within(combatOne).queryByLabelText('Combat 1 reward')).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Combat 2 Timeline' })).toBeNull();
     expect(within(combatOne).getByText('Doors open')).toBeTruthy();
@@ -2438,7 +2440,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const combatTwo = screen.getByLabelText('Combat 2 ship phase');
     expect(within(combatTwo).queryByRole('heading', { name: 'Combat 2' })).toBeNull();
     expect(within(combatTwo).queryByRole('heading', { name: 'Timeline' })).toBeNull();
-    expect(within(combatTwo).getByText('Encounter')).toBeTruthy();
+    expect(within(combatTwo).getByText('Encounter started')).toBeTruthy();
     // The wheel reward row keeps its full name; its phase tab already names the phase.
     expect(
       within(combatTwo).getByRole('button', { name: /^Reorder Collect .+ · Combat 2 reward/ }),
