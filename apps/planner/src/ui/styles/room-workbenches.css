@@ -138,7 +138,7 @@
 }
 
 /* An object's toggle leads its line; the controls it reveals follow and wrap. */
-:is(.challenge-switch, .locked-doors) > .room-feature-presence-row {
+.challenge-switch > .room-feature-presence-row {
   flex-wrap: wrap;
 }
 
@@ -2917,15 +2917,6 @@ button.timeline-door-option[data-dimmed]:is(:hover, :focus-visible):not(:disable
 button.timeline-door-option:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-/* A door chip as a yes/no flag; one that cannot change is gray and locked. */
-button.timeline-door-toggle {
-  position: relative;
-}
-
-button.timeline-door-toggle:disabled .artwork-label-icon {
-  filter: grayscale(1);
 }
 
 /* A Timeline chip: one icon, its name on hover; a trait's rarity is its ring. */

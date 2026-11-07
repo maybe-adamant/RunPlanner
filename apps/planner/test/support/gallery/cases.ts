@@ -372,6 +372,7 @@ export const galleryCases: readonly GalleryCase[] = [
   {
     id: 'unlock-exit',
     overview: true,
+    doorsExpanded: true,
     label: 'Locked door pressed open',
     shows: ['unlock exit'],
     project: createGoldenFGHIProject,

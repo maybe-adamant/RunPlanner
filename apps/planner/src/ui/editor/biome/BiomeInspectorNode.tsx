@@ -230,7 +230,7 @@ function roomTimelineDoors({
       detail: (
         <BatchDoorsDetail
           interactions={interactions}
-          lockedExits={lockedAsOpened}
+          lockedDoors={lockedDoors}
           markFor={markFor}
           node={batch}
           {...(batch.persistence === 'authored' || batch.repairIntent !== undefined

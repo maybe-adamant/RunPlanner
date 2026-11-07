@@ -440,7 +440,7 @@ export interface WorkspaceChallengeSwitchKindRow {
 }
 
 /**
- * A lock host's doors: each door that can lock, as an Overview object, and
+ * A lock host's doors: each door that can lock, toggled on its door row, and
  * the presses its Doors object can add. Each toggle and press is an option
  * of a room object entry.
  */

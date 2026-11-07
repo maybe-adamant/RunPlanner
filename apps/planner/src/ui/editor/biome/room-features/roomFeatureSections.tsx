@@ -5,10 +5,8 @@ import type {
   WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
 import type { RoomOverviewSectionContent } from '../RoomOverviewSections';
-import type { DoorChip } from '../doorSummary';
 import { ChallengeSwitchControls } from './ChallengeSwitchControls';
 import { ErisSpawnControl } from './ErisSpawnControl';
-import { LockedDoorsControls } from './LockedDoorsControls';
 import { RoomResourceControls } from './ResourceControls';
 import {
   RoomFeatureSection,
@@ -51,7 +49,6 @@ function objectsGroup(
   features: readonly RoomFeaturePresence[],
   interactions: WorkspaceInteractionCatalog,
   room: WorkspaceRoomSummary,
-  doorChips: readonly DoorChip[] | undefined,
 ): RoomFeatureGroup | undefined {
   const ofKinds = (kinds: readonly RoomObjectKind[]) =>
     kinds.flatMap((kind) => features.filter((feature) => feature.kind === kind));
@@ -76,21 +73,6 @@ function objectsGroup(
           }),
         ]),
     ...after.map((entry, index) => feature(entry, before.length + index)),
-    ...(room.lockedDoors === undefined
-      ? []
-      : [
-          Object.freeze({
-            kind: 'content' as const,
-            key: 'Objects:lockedDoors',
-            content: (
-              <LockedDoorsControls
-                doorChips={doorChips}
-                interactions={interactions}
-                lockedDoors={room.lockedDoors}
-              />
-            ),
-          }),
-        ]),
   ];
   return entries.length === 0
     ? undefined
@@ -99,13 +81,10 @@ function objectsGroup(
 
 /** Room feature products as Overview sections; individual controls retain their semantic owners. */
 export function roomFeatureSections({
-  doorChips,
   features,
   interactions,
   room,
 }: {
-  /** The room's doors as the Doors open row shows them. */
-  readonly doorChips?: readonly DoorChip[] | undefined;
   readonly features: readonly WorkspaceRoomFeature[];
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: WorkspaceRoomSummary;
@@ -122,7 +101,7 @@ export function roomFeatureSections({
     );
   return {
     additionalExits: section(featureGroup('Additional Exits', additionalExits)),
-    objects: section(objectsGroup(features, interactions, room, doorChips)),
+    objects: section(objectsGroup(features, interactions, room)),
     resources:
       room.resources === undefined || room.resources.length === 0
         ? undefined

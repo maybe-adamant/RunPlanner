@@ -6,6 +6,7 @@ import {
   type WorkspaceBatchRepairIntent,
   type WorkspaceEffectiveRewardPool,
   type WorkspaceInteractionCatalog,
+  type WorkspaceLockedDoors,
   type WorkspaceMarker,
   type WorkspaceMissingPhysicalTarget,
   type WorkspacePhysicalTarget,
@@ -46,7 +47,8 @@ import { BiomeEntryPicker } from './BiomeEntryPicker';
 import { doorRewardIcons, type DoorChip } from './doorSummary';
 import { type DoorNoteItem, type DoorNoteMark, type DoorNoteTarget } from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
-import { IconToggleLock } from '@planner/ui/controls/IconToggle';
+import { IconToggle } from '@planner/ui/controls/IconToggle';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
 
@@ -221,22 +223,22 @@ export function DoorRowsHeader({
 export function DoorNumber({
   index,
   exitTypeLabel,
-  locked = false,
+  lock,
 }: {
   readonly index: number;
   readonly exitTypeLabel?: string | undefined;
-  /** The door is locked as the doors open. */
-  readonly locked?: boolean;
+  /** The door's lock toggle, where the door can lock. */
+  readonly lock?: ReactNode;
 }) {
   return (
     <span className="door-row-number">
-      {locked ? (
+      {lock === undefined || lock === null ? (
+        `Door ${index}`
+      ) : (
         <span className="door-row-number-locked">
           {`Door ${index}`}
-          <DoorLockIndicator />
+          {lock}
         </span>
-      ) : (
-        `Door ${index}`
       )}
       {exitTypeLabel === undefined ? null : (
         <span className="door-row-sublabel">
@@ -359,12 +361,12 @@ function firstDrawDoor(door: WorkspacePhysicalTarget['door']): WorkspacePhysical
 
 function TargetRow({
   interactions,
-  locked,
+  lock,
   node,
   target,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly locked: boolean;
+  readonly lock: ReactNode;
   readonly node: BatchNode;
   readonly target: WorkspacePhysicalTarget;
 }) {
@@ -399,7 +401,7 @@ function TargetRow({
       {...(authorsRoom ? {} : { anchor: findingAnchor(target.marker.address) })}
       ariaLabel={`${door.room.label} room offer`}
       identity={
-        <DoorNumber exitTypeLabel={target.exitTypeLabel} index={target.index} locked={locked} />
+        <DoorNumber exitTypeLabel={target.exitTypeLabel} index={target.index} lock={lock} />
       }
       map={{ gameName: door.room.gameName, hostId: target.marker.focusKey, title: door.room.label }}
       reward={
@@ -457,11 +459,11 @@ const missingTargetWaits = {
 
 function MissingTargetRow({
   interactions,
-  locked,
+  lock,
   target,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly locked: boolean;
+  readonly lock: ReactNode;
   readonly target: WorkspaceMissingPhysicalTarget;
 }) {
   const findingAnchor = useFindingAnchor();
@@ -473,7 +475,7 @@ function MissingTargetRow({
       {...(canAuthorRoom ? {} : { anchor: findingAnchor(target.marker.address) })}
       ariaLabel={`Door ${target.index} unspecified room offer`}
       identity={
-        <DoorNumber exitTypeLabel={target.exitTypeLabel} index={target.index} locked={locked} />
+        <DoorNumber exitTypeLabel={target.exitTypeLabel} index={target.index} lock={lock} />
       }
       room={
         canAuthorRoom ? (
@@ -948,57 +950,47 @@ export function DoorChipOptions({
   );
 }
 
-/**
- * A door chip as a yes/no flag: lit when on, dim when off, gray and locked
- * when it cannot change. The chip names its door on hover.
- */
-export function DoorChipToggle({
-  chip,
-  disabledHint,
-  name,
-  onToggle,
-  pressed,
-}: {
-  readonly chip: DoorChip;
-  /** Disables the chip, telling why after its door's name. */
-  readonly disabledHint?: string | undefined;
-  /** The flag's accessible name. */
-  readonly name: string;
-  readonly onToggle: (next: boolean) => void;
-  readonly pressed: boolean;
-}) {
-  const disabled = disabledHint !== undefined;
-  const hint = disabled ? `${chip.label} · ${disabledHint}` : chip.label;
-  const { 'data-hint': shownHint, ...accessibleHint } = hintProps(hint, undefined, name);
-  const button = (
-    <button
-      {...(disabled ? accessibleHint : { ...accessibleHint, 'data-hint': shownHint })}
-      aria-label={name}
-      aria-pressed={pressed}
-      className="timeline-door-chip timeline-door-option timeline-door-toggle"
-      data-dimmed={!pressed || undefined}
-      data-picked={pressed || undefined}
-      disabled={disabled || undefined}
-      onClick={() => onToggle(!pressed)}
-      type="button"
-    >
-      <DoorChipFace chip={chip} />
-      {disabled ? <IconToggleLock /> : null}
-    </button>
-  );
-  // A disabled button takes no pointer events, so its hint sits on a wrapper.
-  return disabled ? (
-    <span className="icon-toggle-disabled" data-hint={shownHint}>
-      {button}
-    </span>
-  ) : (
-    button
-  );
-}
-
 /** The game's lock on a door that is locked at this point. */
 export function DoorLockIndicator() {
   return <img alt="Locked" className="door-lock-indicator" src={roomObjectIcon('doorLock')} />;
+}
+
+/**
+ * A lockable door's lock as the doors open: lit while locked. Locking the
+ * room's first door or unlocking its last is the room's Lock Doors setting.
+ */
+function DoorLockToggle({
+  door,
+  index,
+  interactions,
+  lockedDoors,
+}: {
+  readonly door: WorkspaceLockedDoors['doors'][number];
+  readonly index: number;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly lockedDoors: WorkspaceLockedDoors;
+}) {
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.roomObjectEntries,
+    lockedDoors.interactionKey,
+  );
+  return (
+    <IconToggle
+      disabled={door.lock !== undefined}
+      disabledHint={
+        door.lock === undefined
+          ? undefined
+          : door.lock === 'unreached'
+            ? candidateWaitingHint
+            : 'A room with a challenge switch never locks.'
+      }
+      icon={roomObjectIcon('doorLock')}
+      name={`Lock Door ${index}`}
+      onToggle={() => executeIntent(interaction.intentFor(door.exitKey))}
+      pressed={door.locked}
+    />
+  );
 }
 
 /**
@@ -1116,14 +1108,14 @@ export function BatchExitPicker({
  */
 export function BatchDoorsDetail({
   interactions,
-  lockedExits = [],
+  lockedDoors,
   markFor,
   node,
   repair,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
-  /** The doors locked as they open, by exit key. */
-  readonly lockedExits?: readonly string[];
+  /** The room's lockable doors, each toggled on its row. */
+  readonly lockedDoors?: WorkspaceLockedDoors | undefined;
   readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
   readonly node: BatchNode;
   /** The doors' repair or removal, where it sits under the doors. */
@@ -1135,6 +1127,17 @@ export function BatchDoorsDetail({
   const locked = useAuthoringLocked(node.owner);
   // A note about the doors as a whole opens onto them.
   const batchNote = markFor('batch');
+  const lockFor = (exitKey: string, index: number) => {
+    const door = lockedDoors?.doors.find((candidate) => candidate.exitKey === exitKey);
+    return lockedDoors === undefined || door === undefined ? undefined : (
+      <DoorLockToggle
+        door={door}
+        index={index}
+        interactions={interactions}
+        lockedDoors={lockedDoors}
+      />
+    );
+  };
   return (
     <section
       aria-label="Door details"
@@ -1155,7 +1158,7 @@ export function BatchDoorsDetail({
             <TargetRow
               interactions={interactions}
               key={target.exitKey}
-              locked={lockedExits.includes(target.exitKey)}
+              lock={lockFor(target.exitKey, target.index)}
               node={node}
               target={target}
             />
@@ -1166,7 +1169,7 @@ export function BatchDoorsDetail({
                 <MissingTargetRow
                   interactions={interactions}
                   key={target.exitKey}
-                  locked={lockedExits.includes(target.exitKey)}
+                  lock={lockFor(target.exitKey, target.index)}
                   target={target}
                 />
               ))}

@@ -120,6 +120,15 @@ function OpenedCase({ entry, view }: { readonly entry: GalleryCase; readonly vie
       ?.querySelector<HTMLButtonElement>('[data-room-tab="overview"][aria-selected="false"]')
       ?.click();
   }, [view]);
+  // A case showing the door rows expands the door editor as a user would.
+  useEffect(() => {
+    if (view !== 'timeline' || entry.doorsExpanded !== true) return;
+    frame.current
+      ?.querySelector<HTMLButtonElement>(
+        '.timeline-banner-toggle[aria-controls$="-doors-detail"][aria-expanded="false"]',
+      )
+      ?.click();
+  }, [entry, view]);
   return (
     <Provider store={application.store}>
       <div ref={frame}>

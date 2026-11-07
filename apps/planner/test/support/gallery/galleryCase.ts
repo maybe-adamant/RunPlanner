@@ -37,6 +37,8 @@ export interface GalleryCase {
   readonly target: GalleryTarget;
   /** A room case also shows the room's Overview under its Timeline, such as its inventories. */
   readonly overview?: true;
+  /** A room case opens its Timeline with the door editor expanded. */
+  readonly doorsExpanded?: true;
 }
 
 export function room(biomeKey: string, occurrenceId: string): GalleryTarget {

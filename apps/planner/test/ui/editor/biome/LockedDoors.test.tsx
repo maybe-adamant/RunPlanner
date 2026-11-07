@@ -36,20 +36,27 @@ function openHost(application: PlannerApplication) {
   });
 }
 
+async function openDoorRows(user: ReturnType<typeof renderWorkspace>['user']) {
+  await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+  const disclosure = screen.getByRole('button', { name: 'Door details' });
+  if (disclosure.getAttribute('aria-expanded') !== 'true') await user.click(disclosure);
+}
+
 describe('locked doors', () => {
-  it('locks a door on the Overview, presses it from the Doors object and leaves through it', async () => {
+  it('locks a door on its row, presses it from the Doors object and leaves through it', async () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'G');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    expect(screen.queryByRole('button', { name: 'Door 2 locked' })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Lock Doors' }));
-    // The gate only shows the doors; Door 1 never locks.
-    expect(hostRoom(application).lockedExits).toBeUndefined();
-    expect(screen.queryByRole('button', { name: 'Door 1 locked' })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Door 2 locked' }));
+    expect(screen.queryByRole('button', { name: 'Lock Doors' })).toBeNull();
+    await openDoorRows(user);
+    // Door 1 never locks.
+    expect(screen.queryByRole('button', { name: 'Lock Door 1' })).toBeNull();
+    const lock = () => screen.getByRole('button', { name: 'Lock Door 2' });
+    expect(lock().getAttribute('aria-pressed')).toBe('false');
+    await user.click(lock());
     expect(hostRoom(application).lockedExits).toEqual(['exit2']);
+    expect(lock().getAttribute('aria-pressed')).toBe('true');
 
-    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const summary = () => screen.getByRole('list', { name: 'Door summary' });
     expect(within(summary()).getByRole('listitem', { name: /^Door 2 .* Locked$/ })).toBeTruthy();
     // A door still locked is not offered for leaving.
@@ -67,25 +74,22 @@ describe('locked doors', () => {
     expect(within(exitDoors()).getByRole('button', { name: /Door 2/ })).toBeTruthy();
   });
 
-  it('unlocks every door as one edit when the gate is unticked', async () => {
+  it("unlocking the last locked door turns the room's locks off", async () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'G');
     openHost(application);
-    await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await user.click(screen.getByRole('button', { name: 'Lock Doors' }));
-    await user.click(screen.getByRole('button', { name: 'Door 2 locked' }));
-    const gate = screen.getByRole('button', { name: 'Lock Doors' });
-    expect(gate.getAttribute('aria-pressed')).toBe('true');
+    await openDoorRows(user);
+    const lock = () => screen.getByRole('button', { name: 'Lock Door 2' });
+    await user.click(lock());
+    expect(hostRoom(application).lockedExits).toEqual(['exit2']);
 
-    await user.click(gate);
+    await user.click(lock());
     expect(hostRoom(application).lockedExits).toBeUndefined();
-    expect(screen.queryByRole('button', { name: 'Door 2 locked' })).toBeNull();
+    expect(lock().getAttribute('aria-pressed')).toBe('false');
     act(() => {
       application.store.dispatch(authoredProjectUndoRequested());
     });
     expect(hostRoom(application).lockedExits).toEqual(['exit2']);
-    expect(screen.getByRole('button', { name: 'Door 2 locked' }).getAttribute('aria-pressed')).toBe(
-      'true',
-    );
+    expect(lock().getAttribute('aria-pressed')).toBe('true');
   });
 
   it('opens the door editor when the room is left through a door still locked', async () => {

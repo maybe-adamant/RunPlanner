@@ -261,7 +261,7 @@ export function OccurrenceWorkbench({
         },
   ): ReactNode => (
     <DirectRoomWorkbench
-      {...(view === 'overview' ? { doorChips: timelineDoors?.summary?.chips } : { doors })}
+      {...(view === 'overview' ? {} : { doors })}
       idPrefix={idPrefix}
       interactions={interactions}
       room={room}
