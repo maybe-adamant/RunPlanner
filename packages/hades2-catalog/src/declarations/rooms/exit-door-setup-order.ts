@@ -373,6 +373,12 @@ export const exitDoorSetupOrders: Readonly<
     [560699, 'EphyraExitDoor'],
     [560702, 'EphyraExitDoor'],
   ],
+  // Map ids (map-points.ts); the probe never logged it. One Indoor and one Outdoor
+  // door: the name sort alone fixes their order, so table insertion order is moot.
+  P_Combat01: [
+    [560834, 'OlympusOutdoorExitDoor'],
+    [723012, 'OlympusIndoorExitDoor'],
+  ],
   P_Combat02: [
     [723046, 'OlympusIndoorExitDoor'],
     [560830, 'OlympusIndoorExitDoor'],
@@ -384,6 +390,18 @@ export const exitDoorSetupOrders: Readonly<
   P_Combat04: [
     [560830, 'OlympusIndoorExitDoor'],
     [560834, 'OlympusIndoorExitDoor'],
+  ],
+  // Map ids (map-points.ts); the probe never logged it. One Indoor and one Outdoor
+  // door: the name sort alone fixes their order, so table insertion order is moot.
+  P_Combat05: [
+    [560834, 'OlympusOutdoorExitDoor'],
+    [723012, 'OlympusIndoorExitDoor'],
+  ],
+  // Map ids (map-points.ts); the probe never logged it. One Indoor and one Outdoor
+  // door: the name sort alone fixes their order, so table insertion order is moot.
+  P_Combat06: [
+    [723130, 'OlympusOutdoorExitDoor'],
+    [723131, 'OlympusIndoorExitDoor'],
   ],
   P_Combat07: [
     [560830, 'OlympusIndoorExitDoor'],
@@ -421,6 +439,18 @@ export const exitDoorSetupOrders: Readonly<
     [770558, 'OlympusIndoorExitDoor'],
     [738613, 'OlympusIndoorExitDoor'],
   ],
+  // Map ids (map-points.ts); the probe never logged it. One Indoor and one Outdoor
+  // door: the name sort alone fixes their order, so table insertion order is moot.
+  P_Combat16: [
+    [723130, 'OlympusOutdoorExitDoor'],
+    [723131, 'OlympusIndoorExitDoor'],
+  ],
+  // Map ids (map-points.ts); the probe never logged it. One Indoor and one Outdoor
+  // door: the name sort alone fixes their order, so table insertion order is moot.
+  P_Combat17: [
+    [560834, 'OlympusOutdoorExitDoor'],
+    [780369, 'OlympusIndoorExitDoor'],
+  ],
   P_Combat18: [
     [780124, 'OlympusIndoorExitDoor'],
     [777109, 'OlympusIndoorExitDoor'],
@@ -440,6 +470,12 @@ export const exitDoorSetupOrders: Readonly<
   P_Reprieve01: [
     [744826, 'OlympusIndoorExitDoor'],
     [747468, 'OlympusIndoorExitDoor'],
+  ],
+  // Map ids (map-points.ts); the probe never logged it. One Indoor and one Outdoor
+  // door: the name sort alone fixes their order, so table insertion order is moot.
+  P_Shop01: [
+    [744481, 'OlympusOutdoorExitDoor'],
+    [744826, 'OlympusIndoorExitDoor'],
   ],
   P_Story01: [
     [744818, 'OlympusIndoorExitDoor'],
