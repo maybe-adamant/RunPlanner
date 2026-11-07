@@ -339,15 +339,11 @@
   font-size: 0.9rem;
 }
 
-/* Folded, side rooms sit in a row beside their visit, so they show no depth circle. */
-.biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-hub-rail-side-visit::after {
-  display: none;
-}
-
-/* Folded, a visit keeps its group: main room icons on top, side rooms as a row of smaller icons. */
+/* Folded, a visit keeps its group: main room icons on top, each side room a smaller line under it. */
 .biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-hub-rail-side-visits {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 2px;
 }
 
