@@ -301,7 +301,7 @@
           { "slotKey": "Encounter", "encounterKey": "OpeningEmpty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -506,8 +506,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "FIntroFight", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -685,8 +684,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -1024,8 +1022,7 @@
             ]
           }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -1939,8 +1936,7 @@
             ]
           }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 560632, "endPointId": 560633 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -2421,7 +2417,7 @@
           { "slotKey": "Encounter", "encounterKey": "BossHecate01", "kind": "boss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
@@ -2477,7 +2473,6 @@
           { "slotKey": "Encounter", "encounterKey": "Story_Chronos_01", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 40009, "endPointId": 40012 } },
         "fountain": {}
       },
       "timeline": {
@@ -2539,5 +2534,5 @@
       }
     }
   ],
-  "planFingerprint": "568d17ba"
+  "planFingerprint": "cd342283"
 }

@@ -92,10 +92,11 @@ information the runtime consumes:
 
 ### Room content
 
-Every entered room publishes its layout wherever it is determined: the flip
-and the entry (start and end point) derived from the previous room's exit,
-fixed by the room, or authored where the game rolls; an unset roll or choice
-is absent and stays native. A Well, Pool, Shrine or challenge switch publishes
+Every entered room publishes the layout the runtime steers: the flip and the
+entry (start and end point) where the room or its arrival door fixes them, or
+where the user authored them in a roll or among eligible entries. A value the
+game derives from the previous room's exit, an unset roll and an unset choice
+are absent and stay native. A Well, Pool, Shrine or challenge switch publishes
 its `anchorId` when authored.
 
 Fields door targets carry cage rewards even when unpicked. Cage and

@@ -214,7 +214,7 @@
           { "slotKey": "Encounter", "encounterKey": "OpeningGeneratedN", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": {
         "transactions": [
@@ -572,7 +572,7 @@
           { "slotKey": "Encounter", "encounterKey": "PreHubGeneratedN", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } },
+        "layout": { "flipped": false },
         "hub": {
           "room": { "gameName": "N_Hub" },
           "slots": [
@@ -1023,7 +1023,7 @@
         ],
         "requiredObjects": ["SoulPylon"],
         "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } },
+        "layout": { "flipped": false },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -1286,8 +1286,7 @@
         "phantomExit": {
           "placeholderRoomGameName": "N_Sub01",
           "reward": { "rewardType": "MetaCurrencyDrop", "storeKey": "SubRoomRewards" }
-        },
-        "layout": { "flipped": false, "entry": { "startPointId": 566341, "endPointId": 566339 } }
+        }
       },
       "timeline": {
         "transactions": [
@@ -1419,8 +1418,7 @@
         "phantomExit": {
           "placeholderRoomGameName": "N_Sub01",
           "reward": { "rewardType": "MetaCardPointsCommonDrop", "storeKey": "SubRoomRewards" }
-        },
-        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        }
       },
       "timeline": {
         "transactions": [
@@ -1761,5 +1759,5 @@
       }
     }
   ],
-  "planFingerprint": "cb0729fb"
+  "planFingerprint": "949ae8c4"
 }

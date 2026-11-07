@@ -13,7 +13,7 @@ const room = (gameName: string): RoomDeclaration => {
   if (declaration === undefined) throw new Error(`missing ${gameName}`);
   return declaration;
 };
-const door = (exitDirection?: 'Left' | 'Right' | 'North'): RoomArrival =>
+const door = (exitDirection?: 'Left' | 'Right' | 'North' | 'East'): RoomArrival =>
   exitDirection === undefined ? { kind: 'door' } : { kind: 'door', exitDirection };
 
 describe('room layout derivation', () => {
@@ -90,7 +90,11 @@ describe('room layout derivation', () => {
       entryStartPointId: option.startPointId,
     });
     expect(chosen.flip).toEqual({ kind: 'roll', chance: 0.5, value: option.flipped });
-    expect(chosen.entry).toMatchObject({ point: { startPointId: option.startPointId } });
+    // The authored entry stays a choice even when its flip leaves it alone.
+    expect(chosen.entry).toMatchObject({
+      kind: 'choice',
+      point: { startPointId: option.startPointId },
+    });
     // The other flip rules the entry out: kept and reported, never rewritten.
     const contradicted = deriveRoomLayout(fields, door('Left'), {
       flipped: !option.flipped,
@@ -107,6 +111,22 @@ describe('room layout derivation', () => {
     expect(
       free.entry.kind === 'choice' && free.entry.eligible.every((o) => o.flipped === undefined),
     ).toBe(true);
+  });
+
+  it('mirrors compass entries West to East and keeps North and South', () => {
+    // B_Combat21 pairs face West and North; a forced flip mirrors only the West one.
+    const anomaly = room('B_Combat21');
+    const flippedRoom: RoomDeclaration = {
+      ...anomaly,
+      orientation: { ...anomaly.orientation!, flipChance: 1 },
+    };
+    const starts = (exit: 'North' | 'East') => {
+      const layout = deriveRoomLayout(flippedRoom, door(exit), undefined);
+      expect(layout.flip).toEqual({ kind: 'fixed', value: true });
+      return layout.entry.kind === 'derived' ? layout.entry.point.startPointId : undefined;
+    };
+    expect(starts('North')).toBe(547942);
+    expect(starts('East')).toBe(547939);
   });
 
   it('flags an authored flip where the room does not roll one', () => {
@@ -161,6 +181,15 @@ describe('the previous exit', () => {
         ),
       ).toEqual({ kind: 'door', exitDirection: direction(index) === 'Left' ? 'Right' : 'Left' });
     }
+  });
+
+  it('mirrors a compass exit West to East and keeps North', () => {
+    const exit = (gameName: string, flipped: boolean) =>
+      roomArrivalThrough(catalog, { gameName, flipped }, { kind: 'soleDoor' });
+    expect(exit('B_Combat01', false)).toEqual({ kind: 'door', exitDirection: 'West' });
+    expect(exit('B_Combat01', true)).toEqual({ kind: 'door', exitDirection: 'East' });
+    expect(exit('B_Combat05', false)).toEqual({ kind: 'door', exitDirection: 'North' });
+    expect(exit('B_Combat05', true)).toEqual({ kind: 'door', exitDirection: 'North' });
   });
 
   it('is unknown at run start, while the flip is unset, past an ignoring room or a spawned door', () => {

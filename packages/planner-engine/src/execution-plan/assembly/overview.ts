@@ -702,9 +702,9 @@ function executionFieldsLayout(
 }
 
 /**
- * The entered room's flip and entry wherever the settled layout determines
- * them: derived from the previous exit, fixed by the room, or authored where
- * the game rolls. An unset roll or choice stays native.
+ * The entered room's flip and entry the runtime steers: fixed by the room or
+ * its arrival door, or authored where the game rolls or chooses. A value
+ * derived from the previous exit, an unset roll and an unset choice stay native.
  */
 function executionRoomLayout(
   room: CanonicalAuthoredRoom,
@@ -717,8 +717,11 @@ function executionRoomLayout(
   );
   if (settlement === undefined)
     throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks its layout`);
-  const flipped = settlement.flip.value;
-  const entry = settlement.entry.kind === 'unknown' ? undefined : settlement.entry.point;
+  const flipped = settlement.flip.kind === 'derived' ? undefined : settlement.flip.value;
+  const entry =
+    settlement.entry.kind === 'fixed' || settlement.entry.kind === 'choice'
+      ? settlement.entry.point
+      : undefined;
   if (flipped === undefined && entry === undefined) return undefined;
   return Object.freeze({
     ...(flipped === undefined ? {} : { flipped }),

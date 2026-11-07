@@ -140,23 +140,57 @@ describe('room layout settlement', () => {
     }
   });
 
-  it('publishes each determined flip and entry on the wire', () => {
+  it('publishes only fixed or authored flips and entries on the wire', () => {
+    const steered = (project: ProjectDocument) => {
+      const plan = compileExecutionPlan({
+        product: assembleExecutionProduct({
+          assembly: simulateProjectAssembly(catalog, project),
+          catalog,
+        }),
+      });
+      return settledLayouts(project).map((layout) => ({
+        layout,
+        wire: plan.occurrences.find((entry) => entry.id === layout.owner.occurrenceId)!.overview
+          .layout,
+      }));
+    };
     const project = createGoldenFGHIProject();
-    const assembly = simulateProjectAssembly(catalog, project);
-    const plan = compileExecutionPlan({
-      product: assembleExecutionProduct({ assembly, catalog }),
-    });
-    for (const layout of settledLayouts(project)) {
-      const occurrence = plan.occurrences.find((entry) => entry.id === layout.owner.occurrenceId)!;
-      const entry =
-        layout.entry.kind === 'unknown' || layout.entry.kind === 'choice'
-          ? layout.entry.kind === 'choice'
-            ? layout.entry.point
-            : undefined
-          : layout.entry.point;
-      expect(occurrence.overview.layout?.flipped).toBe(layout.flip.value);
-      expect(occurrence.overview.layout?.entry).toEqual(entry);
+    const published = steered(project);
+    for (const { layout, wire } of published) {
+      expect(wire?.flipped).toBe(layout.flip.kind === 'derived' ? undefined : layout.flip.value);
+      expect(wire?.entry).toEqual(
+        layout.entry.kind === 'fixed' || layout.entry.kind === 'choice'
+          ? layout.entry.point
+          : undefined,
+      );
     }
+    // A derived flip or entry is the game's own result and is never steered.
+    expect(published.some(({ layout }) => layout.flip.kind === 'derived')).toBe(true);
+    expect(published.some(({ layout }) => layout.entry.kind === 'derived')).toBe(true);
+    // An authored entry of a rolled room steers the entry and the flip it needs.
+    const rolled = published.find(
+      ({ layout }) =>
+        layout.flip.kind === 'roll' &&
+        layout.entry.kind === 'choice' &&
+        layout.entry.eligible.some((option) => option.flipped !== undefined),
+    )!.layout;
+    const option =
+      rolled.entry.kind === 'choice'
+        ? rolled.entry.eligible.find((entry) => entry.flipped !== undefined)!
+        : undefined;
+    const authored = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRoomLayout',
+      occurrence: rolled.owner,
+      layout: { entryStartPointId: option!.startPointId },
+    });
+    expect(
+      steered(authored).find(
+        ({ layout }) => layout.owner.occurrenceId === rolled.owner.occurrenceId,
+      )?.wire,
+    ).toEqual({
+      flipped: option!.flipped,
+      entry: { startPointId: option!.startPointId, endPointId: option!.endPointId },
+    });
   });
 });
 

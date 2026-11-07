@@ -264,7 +264,7 @@
           { "slotKey": "Encounter", "encounterKey": "OpeningGeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": {
         "transactions": [
@@ -619,8 +619,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -1006,8 +1005,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -1387,7 +1385,6 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } },
         "challengeSwitch": {
           "variantKey": "PerfectClearChallengeSwitch_MaxHealth",
           "encounterKey": "PerfectClearChallengeF"
@@ -1640,7 +1637,7 @@
           { "slotKey": "Encounter", "encounterKey": "MiniBossTreant", "kind": "miniboss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": {
         "transactions": [
@@ -2016,7 +2013,6 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 560632, "endPointId": 560633 } },
         "challengeSwitch": {
           "variantKey": "TimeChallengeSwitch_Money",
           "encounterKey": "TimeChallengeF",
@@ -2281,8 +2277,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 560632, "endPointId": 560633 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -2493,5 +2488,5 @@
       }
     }
   ],
-  "planFingerprint": "fe9dec4e"
+  "planFingerprint": "b1421ad7"
 }

@@ -137,7 +137,7 @@ local function completedSnapshot(occurrence, nativeRoom, context)
     }
 end
 
--- A Fields room enters at the entry its layout publishes; an unpublished one stays native.
+-- A Fields room enters at the fixed or authored entry its layout publishes; an unpublished one stays native.
 function fields.realize(nativeRoom, overview)
     if type(nativeRoom) ~= "table" or type(overview) ~= "table" or overview.fields == nil then
         return nativeRoom

@@ -224,7 +224,7 @@
           { "slotKey": "Encounter", "encounterKey": "OpeningGeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": {
         "transactions": [
@@ -579,8 +579,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -966,8 +965,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -1346,8 +1344,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -1562,5 +1559,5 @@
       }
     }
   ],
-  "planFingerprint": "a28937ed"
+  "planFingerprint": "dc67dfbf"
 }

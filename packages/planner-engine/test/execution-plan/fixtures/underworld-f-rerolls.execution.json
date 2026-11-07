@@ -308,7 +308,7 @@
           { "slotKey": "Encounter", "encounterKey": "OpeningGeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": {
         "transactions": [
@@ -670,8 +670,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -1082,8 +1081,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -1464,8 +1462,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -1647,7 +1644,7 @@
           { "slotKey": "Encounter", "encounterKey": "MiniBossTreant", "kind": "miniboss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": {
         "transactions": [
@@ -2024,8 +2021,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 560632, "endPointId": 560633 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -2242,8 +2238,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 560632, "endPointId": 560633 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -2421,8 +2416,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 560632, "endPointId": 560633 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -2699,7 +2693,7 @@
           { "slotKey": "Encounter", "encounterKey": "BossHecate01", "kind": "boss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": {
         "transactions": [
@@ -2806,7 +2800,6 @@
             { "rollKey": "r1", "traits": [{ "slotKey": "middle", "traitKey": "HeraCastBoon" }] }
           ]
         },
-        "layout": { "flipped": false, "entry": { "startPointId": 40009, "endPointId": 40012 } },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -3052,5 +3045,5 @@
       }
     }
   ],
-  "planFingerprint": "c7653266"
+  "planFingerprint": "8a95cf6b"
 }

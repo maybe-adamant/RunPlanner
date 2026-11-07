@@ -59,7 +59,7 @@ export type RoomLayoutEntry =
       readonly kind: 'choice';
       /** Every entry the game can pick, across both flips of a roll. */
       readonly eligible: readonly RoomEntryOption[];
-      /** The authored entry when it is eligible; absent leaves it native. */
+      /** The authored entry when it is eligible, even where it alone remains; absent leaves it native. */
       readonly point?: RoomEntryPoint;
     }
   /** The room has no entry points on record. */
@@ -77,8 +77,9 @@ export interface RoomLayoutDerivation {
 }
 
 /**
- * Horizontal mirroring of a direction. Unverified: assumed from the icon code
- * mirroring on `IsHorizontallyFlipped`; the in-game probe confirms or corrects it.
+ * Horizontal mirroring of a direction: Left/Right and West/East swap, North
+ * and South stay. Unverified: assumed from the icon code mirroring on
+ * `IsHorizontallyFlipped`; the in-game probe confirms or corrects it.
  */
 function mirrored(direction: RoomMapDirection): RoomMapDirection {
   switch (direction) {
@@ -86,14 +87,13 @@ function mirrored(direction: RoomMapDirection): RoomMapDirection {
       return 'Right';
     case 'Right':
       return 'Left';
-    case 'North':
-      return 'West';
     case 'West':
-      return 'North';
-    case 'South':
       return 'East';
     case 'East':
-      return 'South';
+      return 'West';
+    case 'North':
+    case 'South':
+      return direction;
   }
 }
 
@@ -287,7 +287,7 @@ export function deriveRoomLayout(
       ? Object.freeze({ kind: 'fixed', point: point(forced) })
       : options.length === 0
         ? Object.freeze({ kind: 'unknown' })
-        : open.length === 1
+        : open.length === 1 && chosen === undefined
           ? Object.freeze({ kind: 'derived', point: point(open[0]!) })
           : Object.freeze({
               kind: 'choice',

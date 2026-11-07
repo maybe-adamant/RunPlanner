@@ -930,7 +930,7 @@ export interface ExecutionOverview {
     };
   }[];
   readonly fountain?: { readonly aromaticPhialTarget?: string };
-  /** The room's flip and entry wherever they are determined; absent ones stay native. */
+  /** The room's fixed or authored flip and entry; absent ones stay native. */
   readonly layout?: ExecutionRoomLayout;
   /** Authored Fields points; cage identities stay on door targets. */
   readonly fields?: ExecutionFieldsLayout;

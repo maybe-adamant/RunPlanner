@@ -575,7 +575,7 @@
           { "slotKey": "Encounter", "encounterKey": "OpeningEmpty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -780,8 +780,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "FIntroFight", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -982,8 +981,7 @@
             ]
           }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -1358,8 +1356,7 @@
             ]
           }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -2341,8 +2338,7 @@
             ]
           }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 560632, "endPointId": 560633 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -2840,7 +2836,7 @@
           { "slotKey": "Encounter", "encounterKey": "BossHecate01", "kind": "boss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
@@ -2896,7 +2892,6 @@
           { "slotKey": "Encounter", "encounterKey": "Story_Chronos_01", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 40009, "endPointId": 40012 } },
         "fountain": {}
       },
       "timeline": {
@@ -2969,7 +2964,7 @@
         "unmodeledEncounterKeys": ["Empty"],
         "encounterPhases": [],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": {
         "transactions": [
@@ -3138,8 +3133,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "FishmanIntro", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -3974,8 +3968,7 @@
               "rewardType": "MaxManaDrop"
             }
           ]
-        },
-        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -4370,8 +4363,7 @@
             "excludedEnemies": [{ "choiceKey": "Turtle_Elite", "nativeId": "Turtle_Elite" }]
           }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -4617,7 +4609,7 @@
             }
           ]
         },
-        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": true }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -4690,7 +4682,7 @@
           { "slotKey": "Encounter", "encounterKey": "BossScylla01", "kind": "boss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
@@ -4746,7 +4738,7 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 40009, "endPointId": 40012 } },
+        "layout": { "flipped": false },
         "fountain": {}
       },
       "timeline": {
@@ -5245,7 +5237,7 @@
           { "slotKey": "Cage02", "encounterKey": "LycanthropeIntro", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": true, "entry": { "startPointId": 755837, "endPointId": 755840 } },
+        "layout": { "entry": { "startPointId": 755837, "endPointId": 755840 } },
         "fields": {
           "cagePoints": [
             { "slotKey": "cage1", "pointId": 621502 },
@@ -5605,7 +5597,7 @@
             }
           ]
         },
-        "layout": { "flipped": false, "entry": { "startPointId": 722881, "endPointId": 722884 } }
+        "layout": { "flipped": false }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -5730,8 +5722,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "MiniBossLamia", "kind": "miniboss" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": true, "entry": { "startPointId": 760473, "endPointId": 760476 } }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -5979,7 +5970,7 @@
             }
           ]
         },
-        "layout": { "flipped": false, "entry": { "startPointId": 680124, "endPointId": 680125 } }
+        "layout": { "flipped": false }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -6051,8 +6042,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossInfestedCerberus01", "kind": "boss" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
@@ -6108,7 +6098,6 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 40009, "endPointId": 40012 } },
         "fountain": {}
       },
       "timeline": {
@@ -6181,7 +6170,7 @@
         "unmodeledEncounterKeys": ["Empty"],
         "encounterPhases": [],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -6243,8 +6232,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "ClockworkIntro", "kind": "combat" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -6392,8 +6380,7 @@
             ]
           }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -6757,8 +6744,7 @@
             ]
           }
         ],
-        "requiredObjects": [],
-        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "requiredObjects": []
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -6967,8 +6953,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossChronos01", "kind": "boss" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 609239, "endPointId": 609240 } }
+        "requiredObjects": []
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
@@ -7008,5 +6993,5 @@
       }
     }
   ],
-  "planFingerprint": "de078906"
+  "planFingerprint": "79ec2e4e"
 }
