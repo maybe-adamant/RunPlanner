@@ -147,7 +147,9 @@ export function normalizeChallengeSwitches(
         rewardType: lifecycleReward(variant.rewardType, `${variantPath}.rewardType`),
         ...(variant.requirement === undefined
           ? {}
-          : { requirement: normalizeRequirement(variant.requirement, `${variantPath}.requirement`) }),
+          : {
+              requirement: normalizeRequirement(variant.requirement, `${variantPath}.requirement`),
+            }),
       });
     }),
     `${path}.variants`,
