@@ -160,36 +160,6 @@ export function routeResourceAuthoring(
     }
     if (prefix.frontier !== undefined) break;
   }
-  const legalTargetsByFamily = Object.fromEntries(
-    (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => {
-      const targets = entered.flatMap((entry) => {
-        if (entry.origin.kind !== 'occurrence') return [];
-        const room = catalog.rooms.byKey[entry.gameName];
-        if (room?.resourcePointSupport.families.includes(family) !== true) return [];
-        const placement = Object.freeze({
-          biomeKey: entry.biomeKey,
-          occurrenceId: entry.origin.occurrenceId,
-        });
-        const proposal = { ...route.resourcePlacements, [family]: placement };
-        const globallyLegal = (
-          Object.entries(proposal) as [ResourceFamily, ResourcePlacement | null][]
-        ).every(
-          ([selectedFamily, selectedPlacement]) =>
-            selectedPlacement === null ||
-            assessResourcePlacement(
-              catalog,
-              route.routeKey,
-              selectedFamily,
-              selectedPlacement,
-              entered,
-              proposal,
-            ).legal,
-        );
-        return globallyLegal ? [placement] : [];
-      });
-      return [family, Object.freeze(targets)] as const;
-    }),
-  ) as RouteResourceAuthoring['legalTargetsByFamily'];
   const assessmentByFamily = Object.fromEntries(
     (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => {
       const placement = route.resourcePlacements[family];
@@ -208,6 +178,40 @@ export function routeResourceAuthoring(
       ] as const;
     }),
   ) as RouteResourceAuthoring['assessmentByFamily'];
+  // Another family's invalid placement keeps its own finding and never locks
+  // this family's targets; conflicts are pairwise, so the target's own
+  // assessment against the legal placements covers both directions.
+  const legalPlacements = Object.fromEntries(
+    (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => [
+      family,
+      assessmentByFamily[family]?.legal === true ? route.resourcePlacements[family] : null,
+    ]),
+  ) as Record<ResourceFamily, ResourcePlacement | null>;
+  const legalTargetsByFamily = Object.fromEntries(
+    (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => {
+      const targets = entered.flatMap((entry) => {
+        if (entry.origin.kind !== 'occurrence') return [];
+        const room = catalog.rooms.byKey[entry.gameName];
+        if (room?.resourcePointSupport.families.includes(family) !== true) return [];
+        const placement = Object.freeze({
+          biomeKey: entry.biomeKey,
+          occurrenceId: entry.origin.occurrenceId,
+        });
+        const proposal = { ...legalPlacements, [family]: placement };
+        return assessResourcePlacement(
+          catalog,
+          route.routeKey,
+          family,
+          placement,
+          entered,
+          proposal,
+        ).legal
+          ? [placement]
+          : [];
+      });
+      return [family, Object.freeze(targets)] as const;
+    }),
+  ) as RouteResourceAuthoring['legalTargetsByFamily'];
   return Object.freeze({
     routeKey: route.routeKey,
     entered: Object.freeze(entered),

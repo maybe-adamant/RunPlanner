@@ -141,6 +141,77 @@ describe('selected resource success legality', () => {
     expect(simulateProject(catalog, repaired).status).toBe('valid');
   });
 
+  const placeAll = (placements: Partial<ResourcePlacements>) =>
+    Object.entries(placements).reduce(
+      (project, [family, value]) =>
+        applyProjectCommand(project, catalog, {
+          kind: 'ReplaceResourcePlacement',
+          route: createRouteAddress('Underworld'),
+          family: family as keyof ResourcePlacements,
+          value: value ?? null,
+        }),
+      createCompleteFGProject(),
+    );
+  const targetIds = (authoring: RouteResourceAuthoring) =>
+    Object.fromEntries(
+      resourceFamilies.map((family) => [
+        family,
+        authoring.legalTargetsByFamily[family].map((target) => target.occurrenceId),
+      ]),
+    );
+
+  it("never locks other families' targets on an unreached placement", () => {
+    const unplaced = targetIds(routeResourceAuthoring(catalog, placeAll({}).route));
+    const authoring = routeResourceAuthoring(
+      catalog,
+      placeAll({ Pickaxe: at('F', goldenFOccurrenceId(3, 2)) }).route,
+    );
+
+    expect(authoring.assessmentByFamily.Pickaxe).toEqual({
+      legal: false,
+      reasons: ['host resource rules unavailable'],
+    });
+    expect(Object.values(unplaced).map((ids) => ids.length)).toEqual([24, 24, 24, 19]);
+    expect(targetIds(authoring)).toEqual(unplaced);
+  });
+
+  it('keeps conflicting reached placements as findings without locking any target', () => {
+    const unplaced = targetIds(routeResourceAuthoring(catalog, placeAll({}).route));
+    const host = at('F', goldenFOccurrenceId(3, 1));
+    const project = placeAll({ Pickaxe: host, Shovel: host });
+    const authoring = routeResourceAuthoring(catalog, project.route);
+
+    for (const family of ['Pickaxe', 'Shovel'] as const)
+      expect(authoring.assessmentByFamily[family]).toEqual({
+        legal: false,
+        reasons: ['room simple/complex capacity'],
+      });
+    expect(
+      simulateProject(catalog, project).findings.filter(
+        (finding) => finding.code === 'resourcePlacementUnavailable',
+      ),
+    ).toHaveLength(2);
+    expect(targetIds(authoring)).toEqual(unplaced);
+  });
+
+  it('excludes targets that conflict with a legal placement of another family', () => {
+    const before = goldenFOccurrenceId(2, 1);
+    const host = goldenFOccurrenceId(3, 1);
+    const after = goldenFOccurrenceId(4, 1);
+    const authoring = routeResourceAuthoring(catalog, placeAll({ Pickaxe: at('F', host) }).route);
+    const ids = targetIds(authoring);
+
+    expect(authoring.assessmentByFamily.Pickaxe?.legal).toBe(true);
+    expect(ids.Pickaxe).toHaveLength(24);
+    for (const family of ['Shovel', 'Exorcism', 'Fishing'] as const) {
+      expect(ids[family]).not.toContain(before);
+      expect(ids[family]).not.toContain(after);
+    }
+    expect(ids.Shovel).not.toContain(host);
+    expect(ids.Exorcism).toContain(host);
+    expect(ids.Fishing).toContain(host);
+  });
+
   it('excludes Dream resources from selected assessment, candidate targets, and execution policy', () => {
     const biome = createBiomeAddress('Dream', 'F');
     const occurrenceId = createOccurrenceId('dream-resource');

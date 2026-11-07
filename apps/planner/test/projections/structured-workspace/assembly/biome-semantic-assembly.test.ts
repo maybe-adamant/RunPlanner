@@ -32,8 +32,10 @@ import { describe, expect, it } from 'vitest';
 
 import { requireTraits } from '@run-planner/test-fixtures/shared';
 import {
+  createCompleteFGProject,
   createGoldenFGHIProject,
   goldenFBiome,
+  goldenFOccurrenceId,
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
@@ -478,6 +480,40 @@ describe('structured workspace biome semantic assembly', () => {
     );
     expect(repairedRoom?.room.resources).toContainEqual(
       expect.objectContaining({ family: 'Pickaxe', action: 'add', legal: false }),
+    );
+  });
+
+  it("keeps other families' resource toggles enabled beside an unreached placement", () => {
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceResourcePlacement',
+      route: createRouteAddress('Underworld'),
+      family: 'Pickaxe',
+      value: { biomeKey: 'F', occurrenceId: goldenFOccurrenceId(3, 2) },
+    });
+    const semantic = assembleWorkspaceBiomeSemantics(
+      catalog,
+      biomeSource(project, 'Underworld', 'F'),
+    );
+    const room = semantic.nodes.find(
+      (
+        node,
+      ): node is Extract<
+        (typeof semantic.nodes)[number],
+        { readonly kind: 'occurrenceWorkbench' }
+      > =>
+        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === goldenFOccurrenceId(3, 1),
+    );
+    if (room === undefined) throw new Error('F Combat04 is missing');
+
+    expect(room.room.resources).toEqual(
+      expect.arrayContaining(
+        (['Exorcism', 'Shovel', 'Fishing'] as const).map((family) =>
+          expect.objectContaining({ family, action: 'add', legal: true }),
+        ),
+      ),
+    );
+    expect(room.room.resources).toContainEqual(
+      expect.objectContaining({ family: 'Pickaxe', action: 'move', legal: true }),
     );
   });
 
