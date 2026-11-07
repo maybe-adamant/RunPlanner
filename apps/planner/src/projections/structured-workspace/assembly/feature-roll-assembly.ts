@@ -131,7 +131,7 @@ export function assembleFeatureRollActions(input: {
           key,
           kind: 'offer' as const,
           label: `Buy ${subject}${blank ? '…' : ''}`,
-          ...(blank ? { needsChoice: true as const } : {}),
+          ...(blank ? { needsChoice: true as const } : { item: offer.itemKey! }),
         }),
       );
       const candidates = !blank
@@ -177,7 +177,7 @@ export function assembleFeatureRollActions(input: {
               ? labels.slotLabel(offer.slotKey)
               : labels.itemLabel(offer.traitKey)
           }${blank ? '…' : ''}`,
-          ...(blank ? { needsChoice: true as const } : {}),
+          ...(blank ? { needsChoice: true as const } : { item: offer.traitKey! }),
         }),
       );
       const candidates = !blank

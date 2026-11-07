@@ -9,25 +9,24 @@ import {
   type WorkspaceRoomObjectEntry,
   type WorkspaceRoomObjectLock,
 } from '@planner/projections/structured-workspace';
-import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
-import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
-import { traitIcon } from '@planner/ui/artwork/traitArtwork';
+import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { wellItemIcon } from '@planner/ui/artwork/roomArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
+import type { RoomAddAction } from '../RoomAddMenu';
+import { combinedFindingMark, roomAddActionItems } from '../roomAddActions';
+import { roomObjectEntryIcon } from './roomObjectEntryIcon';
 import { TimelineRow } from '../TimelineRow';
 import { pickSubject } from './pickSubject';
+
+/** Marks an object's own optional pickup apart from its options. */
+const extraPrefix = 'add:';
 
 const objectName: Readonly<Record<WorkspaceRoomObject, string>> = {
   worldShop: 'World Shop',
   hermesShrine: 'Hermes Shrine',
   championItem: 'Pedestal',
-};
-
-const objectIcon: Readonly<Record<WorkspaceRoomObject, string | undefined>> = {
-  worldShop: rewardIcon('Shop'),
-  hermesShrine: roomObjectIcon('hermesShrine'),
-  championItem: traitIcon('InfernalContractBoon'),
 };
 
 /** Why an entry, or one of its options, cannot be picked here. */
@@ -51,14 +50,21 @@ function roomObjectLockHint(lock: WorkspaceRoomObjectLock): string {
  */
 export function RoomObjectEntry({
   entry,
-  findingMark,
+  extraActions = [],
+  findingMark: rowsMark,
   interactions,
 }: {
   readonly entry: WorkspaceRoomObjectEntry;
+  /** The object's own optional pickups, such as a Shrine delivery, listed after its options. */
+  readonly extraActions?: readonly RoomAddAction[];
   /** Findings of this object's timeline rows (purchases, sales, rerolls). */
   readonly findingMark?: FindingMarkProps;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  const findingMark = combinedFindingMark([
+    rowsMark,
+    ...extraActions.map((action) => action.findingMark),
+  ]);
   const interaction = requireWorkspaceInteraction(
     interactions.roomObjectEntries,
     entry.interactionKey,
@@ -72,9 +78,10 @@ export function RoomObjectEntry({
     entry.options.some((option) => option.key === choosing && option.needsChoice === true)
       ? choosing
       : undefined;
+  const extraItems = roomAddActionItems(extraActions, extraPrefix);
   const model: ContextualPickerModel<string> = Object.freeze({
     sections: Object.freeze(
-      entry.options.length === 0
+      entry.options.length === 0 && extraItems.length === 0
         ? []
         : [
             Object.freeze({
@@ -82,8 +89,8 @@ export function RoomObjectEntry({
               key: 'interact',
               kind: 'category' as const,
               label: name,
-              items: Object.freeze(
-                entry.options.map((option) =>
+              items: Object.freeze([
+                ...entry.options.map((option) =>
                   Object.freeze({
                     disabled: option.locked !== undefined,
                     key: option.key,
@@ -97,12 +104,13 @@ export function RoomObjectEntry({
                       : { explanations: Object.freeze([roomObjectLockHint(option.locked)]) }),
                   }),
                 ),
-              ),
+                ...extraItems,
+              ]),
             }),
           ],
     ),
   });
-  const icon = objectIcon[entry.object];
+  const icon = roomObjectEntryIcon[entry.object];
   return (
     <TimelineRow
       className="room-action-feature-roll"
@@ -112,13 +120,29 @@ export function RoomObjectEntry({
         <ContextualPicker<string>
           {...(findingMark === undefined ? {} : { findingMark })}
           ariaLabel={name}
-          {...(entry.locked === undefined
+          {...(entry.locked === undefined || extraItems.length > 0
             ? {}
             : { disabledHint: roomObjectLockHint(entry.locked) })}
           id={`${idPrefix}-action`}
+          itemIcon={(item) => {
+            if (item.value.startsWith(extraPrefix))
+              return extraActions.find((action) => extraPrefix + action.key === item.value)?.icon;
+            const reward = entry.options.find((option) => option.key === item.value)?.reward;
+            return reward === undefined
+              ? undefined
+              : reward.itemKey === undefined
+                ? offerIcon(reward.offer)
+                : wellItemIcon(reward.itemKey);
+          }}
           label=""
           model={model}
           onSelect={(optionKey) => {
+            const extra = extraActions.find((action) => extraPrefix + action.key === optionKey);
+            if (extra !== undefined) {
+              if (extra.unavailable === undefined)
+                extra.onSelect(document.getElementById(`${idPrefix}-action`) as HTMLButtonElement);
+              return;
+            }
             const option = entry.options.find((candidate) => candidate.key === optionKey);
             if (option === undefined || option.locked !== undefined) return;
             if (option.needsChoice === true) {

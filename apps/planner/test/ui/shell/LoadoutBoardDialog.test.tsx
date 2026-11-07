@@ -55,4 +55,20 @@ describe('loadout Arcana and Fear dialogs', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Death' }));
     expect(save().disabled).toBe(true);
   });
+
+  it('shows a card the draft deactivates as inactive before Save', async () => {
+    const { user } = renderPlannerForInteraction({ application: createOpenTestApplication() });
+    await user.click(screen.getByRole('button', { name: 'Loadout' }));
+    await user.click(screen.getByRole('button', { name: 'Edit Arcana' }));
+    let dialog = screen.getByRole('dialog', { name: 'Arcana' });
+    await user.click(within(dialog).getByRole('button', { name: 'Death' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    await user.click(screen.getByRole('button', { name: 'Edit Arcana' }));
+    dialog = screen.getByRole('dialog', { name: 'Arcana' });
+    const death = () => within(dialog).getByRole('button', { name: 'Death' });
+    expect(death().hasAttribute('data-active')).toBe(true);
+    await user.click(death());
+    expect(death().hasAttribute('data-active')).toBe(false);
+  });
 });

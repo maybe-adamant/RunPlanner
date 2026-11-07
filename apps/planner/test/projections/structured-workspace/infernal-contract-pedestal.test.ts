@@ -107,7 +107,13 @@ describe('Contract pedestal editor', () => {
 
     const chosen = projectStructuredWorkspaceFixture(project);
     const entry = championEntry(room(chosen, peerId));
-    expect(entry?.options).toEqual([{ key: 'collect', label: 'Collect Double Pom' }]);
+    expect(entry?.options).toEqual([
+      {
+        key: 'collect',
+        label: 'Collect Double Pom',
+        reward: { offer: expect.objectContaining({ rewardType: expect.any(String) }) },
+      },
+    ]);
     const collect = chosen.workspace.interactions.roomObjectEntries.get(entry!.interactionKey);
     if (collect === undefined) throw new Error('pedestal collect missing');
     expect(collect.intentFor('collect').command).toEqual({

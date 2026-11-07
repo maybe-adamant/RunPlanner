@@ -276,8 +276,28 @@ function projectRoomLifecycleTimeline(
       ? roomLocal.wheels.filter((wheel) => wheel.active).map((wheel) => wheel.key)
       : [],
   );
+  // A boss defeat directly followed by its encounter's end reads as that one end banner.
+  const foldedDefeats = new Map<
+    string,
+    Extract<WorkspaceRoomLifecycleBoundary, { readonly kind: 'bossDefeated' }>
+  >();
+  timeline.entries.forEach((entry, index) => {
+    const next = timeline.entries[index + 1];
+    if (
+      entry.kind === 'boundary' &&
+      entry.boundary.kind === 'bossDefeated' &&
+      next?.kind === 'boundary' &&
+      next.boundary.kind === 'encounterEnd' &&
+      next.boundary.phaseKey === entry.boundary.phaseKey &&
+      next.rank === entry.rank
+    )
+      foldedDefeats.set(next.boundary.key, entry.boundary);
+  });
+  const foldedDefeatKeys = new Set([...foldedDefeats.values()].map((boundary) => boundary.key));
   for (const entry of timeline.entries) {
+    if (entry.kind === 'boundary' && foldedDefeatKeys.has(entry.boundary.key)) continue;
     if (entry.kind === 'boundary') {
+      const bossDefeated = foldedDefeats.get(entry.boundary.key);
       const runState = launcherForBoundary(entry.boundary);
       const startedCage = cageLabelByBoundaryKey.get(entry.boundary.key);
       const endCage = endedCage(entry.boundary);
@@ -313,6 +333,7 @@ function projectRoomLifecycleTimeline(
                 }),
               }),
           ...(supplement === undefined ? {} : { supplement }),
+          ...(bossDefeated === undefined ? {} : { bossDefeated }),
         }),
       );
       continue;
@@ -400,7 +421,16 @@ function projectRoomLifecycleTimeline(
     entries: Object.freeze(entries),
     suppressedCheckpointKeys: Object.freeze([
       'exitUsable',
-      ...entries.flatMap((entry) => (entry.kind === 'boundary' ? [entry.checkpointKey] : [])),
+      ...entries.flatMap((entry) =>
+        entry.kind !== 'boundary'
+          ? []
+          : [
+              entry.checkpointKey,
+              ...(entry.bossDefeated === undefined
+                ? []
+                : [lifecycleBoundaryCheckpointKey(entry.bossDefeated)]),
+            ],
+      ),
     ]),
   });
 }

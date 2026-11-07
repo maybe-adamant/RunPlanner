@@ -8,12 +8,13 @@ import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { TimelineRow } from './TimelineRow';
+import { combinedFindingMark, roomAddActionItems } from './roomAddActions';
 
 /** One optional action the room can add. */
 export interface RoomAddAction {
   readonly key: string;
   readonly label: string;
-  readonly icon?: string;
+  readonly icon?: ArtworkSource | undefined;
   /** The action's semantic owner, which finding navigation can focus. */
   readonly address: SemanticAddress;
   /** Why the action cannot be added now; the item stays listed and disabled. */
@@ -207,8 +208,8 @@ export function RoomAddGroupMenu({ group }: { readonly group: RoomAddGroup }) {
 }
 
 /**
- * A challenge switch's optional actions (its use and claims), read like the other
- * object entries: picking one adds it.
+ * A room object's optional actions (a challenge switch's use and claims, a
+ * Shrine's delivery), read like the other object entries: picking one adds it.
  */
 export function RoomAddObjectEntry({
   group,
@@ -218,18 +219,7 @@ export function RoomAddObjectEntry({
   readonly object: string;
 }) {
   const id = `room-add-object-${group.key}`;
-  const findings = group.actions.filter((action) => action.findingMark?.['data-has-findings']);
-  const findingMark: FindingMarkProps | undefined =
-    findings[0]?.findingMark === undefined
-      ? undefined
-      : {
-          'data-semantic-owner': findings[0].findingMark['data-semantic-owner'],
-          'data-has-findings': true,
-          'aria-description': findings
-            .map((action) => action.findingMark?.['aria-description'])
-            .filter((text) => text !== undefined)
-            .join(' '),
-        };
+  const findingMark = combinedFindingMark(group.actions.map((action) => action.findingMark));
   const model: ContextualPickerModel<string> = Object.freeze({
     sections: Object.freeze([
       Object.freeze({
@@ -237,22 +227,7 @@ export function RoomAddObjectEntry({
         key: 'actions',
         kind: 'category' as const,
         label: group.label,
-        items: Object.freeze(
-          group.actions.map((action) =>
-            Object.freeze({
-              disabled: action.unavailable !== undefined,
-              key: action.key,
-              label: action.label,
-              selected: false,
-              state:
-                action.unavailable === undefined ? ('possible' as const) : ('impossible' as const),
-              value: action.key,
-              ...(action.unavailable === undefined
-                ? {}
-                : { explanations: Object.freeze([action.unavailable]) }),
-            }),
-          ),
-        ),
+        items: Object.freeze(roomAddActionItems(group.actions)),
       }),
     ]),
   });

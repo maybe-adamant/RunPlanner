@@ -39,6 +39,8 @@ export interface GalleryCase {
   readonly overview?: true;
   /** A room case opens its Timeline with the door editor expanded. */
   readonly doorsExpanded?: true;
+  /** A room case opens the Optional actions picker of this name on its Timeline. */
+  readonly openPicker?: string;
 }
 
 export function room(biomeKey: string, occurrenceId: string): GalleryTarget {

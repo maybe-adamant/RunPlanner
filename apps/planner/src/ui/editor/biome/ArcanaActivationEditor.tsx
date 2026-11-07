@@ -133,7 +133,12 @@ export function ArcanaActivationEditor({
                   rarity={domain.activeArcana.find((card) => card.key === choice.value)?.rarity}
                   resultRarity={domain.rarity}
                   aria-pressed={selected}
-                  disabled={!selected && !domain.inactiveArcanaKeys.includes(choice.value)}
+                  // A full draw adds nothing more; deselecting stays available.
+                  disabled={
+                    !selected &&
+                    (draft.length >= requiredCount ||
+                      !domain.inactiveArcanaKeys.includes(choice.value))
+                  }
                   selectionOrder={selected ? draft.indexOf(choice.value) + 1 : undefined}
                   onClick={() =>
                     setDraft(

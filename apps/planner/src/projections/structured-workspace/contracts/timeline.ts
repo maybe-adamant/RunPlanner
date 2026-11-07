@@ -323,6 +323,14 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly supplement?: WorkspaceEncounterBannerSupplement;
       /** Read-only identity of the cage assigned to this encounter cycle. */
       readonly fieldsCage?: WorkspaceFieldsCageLabel;
+      /**
+       * The boss defeat this encounter end follows directly, read as one banner;
+       * its own content leads the banner's.
+       */
+      readonly bossDefeated?: Extract<
+        WorkspaceRoomLifecycleBoundary,
+        { readonly kind: 'bossDefeated' }
+      >;
     }
   | {
       readonly kind: 'action';

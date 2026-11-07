@@ -443,8 +443,13 @@ describe('Biome inspector controls', () => {
     };
     const toggle = within(resources).getByRole('button', { name: `Collect ${moved.element}` });
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    // A placement in this biome is named by its Location, the number its rail shows.
+    expect(moved.currentPlacement.biomeKey).toBe('N');
+    expect(moved.currentPlacement.locationLabel).toBe(
+      `Location ${moved.currentPlacement.runDepth}`,
+    );
     expect(toggle.getAttribute('data-hint')).toBe(
-      `Collect ${moved.element} · Room ${moved.currentPlacement.runDepth} · ${moved.currentPlacement.locationLabel}`,
+      `Collect ${moved.element} · ${moved.currentPlacement.locationLabel}`,
     );
 
     const historyBeforeMove = view.application.store.getState().projectWorkspace.history!;
@@ -545,8 +550,9 @@ describe('Biome inspector controls', () => {
     );
     expect(within(inspector).queryByRole('dialog', { name: 'Judgment editor' })).toBeNull();
     expect(within(inspector).getByText('Encounter started')).toBeTruthy();
-    expect(within(inspector).getByText('Boss defeated')).toBeTruthy();
-    expect(within(inspector).getByText('Encounter ended')).toBeTruthy();
+    // The boss defeat reads as its encounter's end, which leads with the Judgment.
+    expect(within(inspector).queryByText('Boss defeated')).toBeNull();
+    expect(within(inspector).getAllByText('Encounter ended')).toHaveLength(1);
     const timeline = within(inspector).getByRole('region', { name: 'Room Timeline' });
     expect(timeline.classList.contains('room-actions-workbench')).toBe(true);
     expect(
@@ -555,11 +561,10 @@ describe('Biome inspector controls', () => {
       }),
     ).toBeTruthy();
     const timelineEntries = Array.from(timeline.querySelectorAll('ol > li'));
-    expect(
-      timelineEntries.findIndex((entry) => entry.getAttribute('aria-label') === 'Boss defeated'),
-    ).toBeLessThan(
-      timelineEntries.findIndex((entry) => entry.getAttribute('aria-label') === 'Encounter ended'),
+    const ended = timelineEntries.findIndex(
+      (entry) => entry.getAttribute('aria-label') === 'Encounter ended',
     );
+    expect(timelineEntries[ended + 1]?.getAttribute('aria-label')).toMatch(/^Judgment — /);
     act(() => judgmentLauncher.click());
     const optionList = inspector.querySelector('.room-judgment-options');
     if (optionList === null) throw new Error('Judgment options list is missing');

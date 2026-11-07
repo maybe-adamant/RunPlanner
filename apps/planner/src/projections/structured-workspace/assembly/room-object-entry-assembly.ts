@@ -18,7 +18,23 @@ import type {
   WorkspaceOccurrenceInteractionRequirement,
   WorkspaceRoomObjectActionRequirement,
 } from '../interactions/interaction-requirements';
-import { occurrenceActionLabel, occurrenceActionLabelParts } from './occurrence-action-label';
+import {
+  occurrenceActionLabelParts,
+  type OccurrenceActionLabelParts,
+} from './occurrence-action-label';
+
+/** An option shows the reward its timeline row shows. */
+const optionReward = (
+  parts: OccurrenceActionLabelParts,
+): Pick<WorkspaceRoomObjectOption, 'reward'> =>
+  parts.reward === undefined
+    ? {}
+    : {
+        reward: Object.freeze({
+          offer: parts.reward.offer,
+          ...(parts.reward.itemKey === undefined ? {} : { itemKey: parts.reward.itemKey }),
+        }),
+      };
 
 type EntryRequirement = Extract<
   WorkspaceOccurrenceInteractionRequirement,
@@ -54,8 +70,8 @@ export function assembleRoomObjectEntries(input: {
     ): feature is Extract<WorkspaceRoomFeature, { readonly kind: 'infernalContractPedestal' }> =>
       feature.kind === 'infernalContractPedestal',
   );
-  const label = (reference: RoomActionReference): string =>
-    occurrenceActionLabel(
+  const labelParts = (reference: RoomActionReference): OccurrenceActionLabelParts =>
+    occurrenceActionLabelParts(
       catalog,
       reference,
       roomLocal,
@@ -125,6 +141,7 @@ export function assembleRoomObjectEntries(input: {
             repeated && offerLabel.slot !== undefined
               ? `${offerLabel.label} · slot ${offerLabel.slot}`
               : offerLabel.label,
+          ...optionReward(offerLabel),
         }),
       );
       parts!.bound.push(Object.freeze({ key, command: offer.command }));
@@ -193,7 +210,7 @@ export function assembleRoomObjectEntries(input: {
       const blank = offer.rewardType === null;
       for (const rushed of [false, true]) {
         const key = `${rushed ? 'rush' : 'buy'}:${offer.generationKey}`;
-        const rowLabel = label({
+        const rowLabel = labelParts({
           kind: 'purchaseHermesShrineOffer',
           generationKey: offer.generationKey,
           rushed,
@@ -201,7 +218,8 @@ export function assembleRoomObjectEntries(input: {
         parts!.options.push(
           Object.freeze({
             key,
-            label: blank ? `${rowLabel}…` : rowLabel,
+            label: blank ? `${rowLabel.label}…` : rowLabel.label,
+            ...optionReward(rowLabel),
             ...(blank ? { needsChoice: true as const } : {}),
           }),
         );
@@ -238,10 +256,12 @@ export function assembleRoomObjectEntries(input: {
       champion === undefined ? undefined : { options: [], bound: [] };
     if (collect !== undefined) {
       const key = 'collect';
+      const collectLabel = labelParts({ kind: 'interactInfernalContractPedestal' });
       parts!.options.push(
         Object.freeze({
           key,
-          label: label({ kind: 'interactInfernalContractPedestal' }),
+          label: collectLabel.label,
+          ...optionReward(collectLabel),
           ...('locked' in collect ? { locked: collect.locked } : {}),
         }),
       );

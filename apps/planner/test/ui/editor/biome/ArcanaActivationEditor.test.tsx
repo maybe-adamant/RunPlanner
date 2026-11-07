@@ -217,4 +217,16 @@ describe('Arcana activation editor', () => {
     expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(true);
     application.dispose();
   });
+
+  it('adds no card past the required count while deselecting stays available', async () => {
+    const application = renderEditor(twoCardControl(() => new Promise(() => undefined)));
+    const card = (name: RegExp) => screen.getByRole('button', { name }) as HTMLButtonElement;
+    await screen.findByRole('button', { name: /Arcana A/ });
+    // The saved draw already holds the one required card.
+    expect(card(/Arcana B/).disabled).toBe(true);
+    expect(card(/Arcana A/).disabled).toBe(false);
+    await userEvent.setup().click(card(/Arcana A/));
+    expect(card(/Arcana B/).disabled).toBe(false);
+    application.dispose();
+  });
 });

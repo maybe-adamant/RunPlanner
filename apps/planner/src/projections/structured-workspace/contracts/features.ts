@@ -163,6 +163,8 @@ export interface WorkspaceFeatureRollOption {
   readonly key: string;
   readonly kind: 'offer' | 'reroll';
   readonly label: string;
+  /** The Well item bought or the trait sold; absent on a blank slot and a reroll. */
+  readonly item?: string;
   /** The spoken name where the label is terse, as a reroll's cost. */
   readonly ariaLabel?: string;
   /** Trailing figures after the label, as a reroll's pool and cost. */
@@ -350,6 +352,12 @@ export type WorkspaceRoomObjectLock = 'unreached' | 'allBought' | 'collected' | 
 export interface WorkspaceRoomObjectOption {
   readonly key: string;
   readonly label: string;
+  /** The item the option buys or collects, as its timeline row shows it; absent on a blank item. */
+  readonly reward?: {
+    readonly offer: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+    /** A shop item's own key, whose artwork can differ from its reward type's. */
+    readonly itemKey?: string;
+  };
   /** A blank item: picking it first chooses what it stocks. */
   readonly needsChoice?: true;
   readonly locked?: WorkspaceRoomObjectLock;

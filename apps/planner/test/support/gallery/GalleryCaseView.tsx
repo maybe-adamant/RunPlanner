@@ -129,6 +129,27 @@ function OpenedCase({ entry, view }: { readonly entry: GalleryCase; readonly vie
       )
       ?.click();
   }, [entry, view]);
+  // A case showing an Optional actions list opens its picker once it is enabled, as a user would.
+  const pickerOpened = useRef(false);
+  useEffect(() => {
+    if (view !== 'timeline' || entry.openPicker === undefined) return;
+    const name = entry.openPicker;
+    const timer = window.setInterval(() => {
+      const trigger = frame.current?.querySelector<HTMLButtonElement>(
+        `.room-add button[aria-label="${CSS.escape(name)}"]`,
+      );
+      if (pickerOpened.current || trigger === null || trigger === undefined || trigger.disabled)
+        return;
+      pickerOpened.current = true;
+      window.clearInterval(timer);
+      trigger.click();
+    }, 50);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 3000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
+  }, [entry, view]);
   return (
     <Provider store={application.store}>
       <div ref={frame}>

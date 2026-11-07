@@ -1,4 +1,4 @@
-import type { SemanticAddress } from '@run-planner/engine/authored-project';
+import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import {
   workspaceInteractionKey,
   type WorkspacePhysicalTarget,
@@ -76,6 +76,24 @@ export function batchDoorChips(
           ],
     ),
   ];
+}
+
+/**
+ * The reward a door press acts on, as the doors show it before the press: an
+ * unlock names its door's exit, a reroll its reward's owner.
+ */
+export function batchDoorPressIcon(node: BatchNode): (key: string) => ArtworkSource | undefined {
+  const icons = new Map<string, ArtworkSource | undefined>();
+  for (const target of node.targets) {
+    if (target.door.offerRewardSurface.visibility === 'hidden') continue;
+    for (const reward of target.door.offerRewardSurface.rewards) {
+      const offer = reward.rerolledOffer ?? reward.offer;
+      const icon = offer === null ? undefined : offerIcon(offer);
+      if (!icons.has(target.exitKey)) icons.set(target.exitKey, icon);
+      icons.set(semanticAddressKey(reward.marker.address), icon);
+    }
+  }
+  return (key) => icons.get(key);
 }
 
 /** How far the doors are filled in, while some still need a room. */

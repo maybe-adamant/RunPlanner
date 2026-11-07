@@ -67,7 +67,7 @@ function ResourceToggle({
         ? {}
         : {
             badge: elsewhere.runDepth?.toString(),
-            detail: placementRoom(elsewhere),
+            detail: elsewhere.locationLabel,
             opensDialog: { open: confirming },
           })}
     />
@@ -100,7 +100,7 @@ function ResourceToggle({
             sideOffset={6}
           >
             <p className="resource-move-message">
-              {shortName} is placed in {placementRoom(elsewhere)}.
+              {shortName} is placed in {elsewhere.locationLabel}.
             </p>
             <div className="resource-move-actions">
               <button
@@ -124,10 +124,4 @@ function ResourceToggle({
       )}
     </Popover.Root>
   );
-}
-
-function placementRoom(placement: NonNullable<RoomResource['currentPlacement']>): string {
-  return placement.runDepth === undefined
-    ? placement.locationLabel
-    : `Room ${placement.runDepth} · ${placement.locationLabel}`;
 }

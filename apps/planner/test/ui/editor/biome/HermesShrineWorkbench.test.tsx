@@ -63,9 +63,7 @@ import {
 import { RouteShrinesPanel } from '@planner/ui/shell/RouteShrinesPanel';
 import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
 import {
-  addGroupButton,
   findTimelineRow,
-  openAddGroup,
   queryTimelineRow,
   slotRow,
   timelineRow,
@@ -210,11 +208,14 @@ describe('Hermes Shrine workbench', () => {
     });
     expect(remove).toHaveProperty('disabled', false);
     await view.user.click(remove);
-    // The removed delivery returns to the Add area beside its Shrine.
-    await waitFor(() => expect(addGroupButton('Hermes Shrine')).toBeTruthy());
-    expect((await openAddGroup(view.user, 'Hermes Shrine')).textContent).toContain(
-      'Collect Big Heal',
+    // The removed delivery returns to its Shrine's own entry, the only Shrine entry.
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: 'Hermes Shrine' })).toHaveLength(1),
     );
+    await view.user.click(screen.getByRole('button', { name: 'Hermes Shrine' }));
+    expect(
+      within(await screen.findByRole('listbox')).getByRole('option', { name: /Collect Big Heal/ }),
+    ).toBeTruthy();
     expect(
       application.store
         .getState()

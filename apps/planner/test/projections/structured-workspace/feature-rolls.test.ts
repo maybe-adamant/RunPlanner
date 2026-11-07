@@ -105,7 +105,12 @@ describe('Stygian Well Interact', () => {
       'initial:secondRight',
     ]);
     expect(actions.options).toEqual([
-      { key: 'buy:initial:healing', kind: 'offer', label: 'Buy Splintered Shield' },
+      {
+        key: 'buy:initial:healing',
+        kind: 'offer',
+        label: 'Buy Splintered Shield',
+        item: 'ArmorBoostStore',
+      },
       expect.objectContaining({
         key: 'reroll',
         kind: 'reroll',

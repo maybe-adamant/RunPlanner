@@ -321,11 +321,13 @@ describe('a draft dialog keeps its draft across context changes and follows its 
         .queryAllByRole('button', { pressed: true })
         .map((card) => card.textContent);
     const authored = pressed();
+    // A loaded board enables its cards; a full draw enables only its picks.
     await waitFor(() =>
       expect(
-        within(dialog)
-          .getAllByRole<HTMLButtonElement>('button', { pressed: false })
-          .some((card) => !card.disabled),
+        [
+          ...within(dialog).queryAllByRole<HTMLButtonElement>('button', { pressed: false }),
+          ...within(dialog).queryAllByRole<HTMLButtonElement>('button', { pressed: true }),
+        ].some((card) => !card.disabled),
       ).toBe(true),
     );
     if (authored.length > 0) {

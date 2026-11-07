@@ -22,7 +22,12 @@ import {
   DoorNotes,
   DoorRowsHeader,
 } from './DecisionWorkbench';
-import { batchDoorChips, batchDoorFindingOwners, batchDoorsStatus } from './doorSummary';
+import {
+  batchDoorChips,
+  batchDoorFindingOwners,
+  batchDoorPressIcon,
+  batchDoorsStatus,
+} from './doorSummary';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { PhantomExitDoor } from './PhantomExitDoor';
@@ -258,6 +263,7 @@ function roomTimelineDoors({
               <DoorsRerollEntry
                 interactions={interactions}
                 key="doors"
+                pressIcon={batchDoorPressIcon(batch)}
                 {...(batch.rerolls === undefined ? {} : { rerolls: batch.rerolls })}
                 {...(unlocks.options === undefined ? {} : { unlocks: unlocks.options })}
               />

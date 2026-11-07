@@ -118,6 +118,7 @@ function ArcanaActivationChips({
             {...hintProps(label, undefined, label)}
             aria-label={label}
             className="timeline-chip"
+            data-chip-shape="card"
             data-chip-state="shown"
             data-rarity={rarity}
             key={`${key}-${index}`}
@@ -131,6 +132,7 @@ function ArcanaActivationChips({
         <span
           aria-hidden="true"
           className="timeline-chip"
+          data-chip-shape="card"
           data-chip-state="unset"
           key={`open-${index}`}
         />

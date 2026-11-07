@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import type {
+  ContextualPickerItem,
+  ContextualPickerModel,
+} from '@planner/projections/contextual/contextualPicker';
 import {
   requireWorkspaceInteraction,
   type WorkspaceInteractionCatalog,
@@ -19,7 +22,7 @@ import { RoomNumberIcon } from './RoomNumberIcon';
 import { TimelineRow } from './TimelineRow';
 import { DoorChips } from './DecisionWorkbench';
 import type { DoorChip } from './doorSummary';
-import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 
 const emptyTargets: ContextualPickerModel<string> = Object.freeze({
@@ -257,12 +260,15 @@ const unlockPrefix = 'unlock:';
 export function DoorsRerollEntry({
   interactions,
   name = 'Doors',
+  pressIcon,
   rerolls,
   unlocks,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   /** The object's name: the room's Doors, or a Ship phase's Wheel. */
   readonly name?: string;
+  /** The reward an unlock's door or a reroll's target shows, by option key. */
+  readonly pressIcon?: (key: string) => ArtworkSource | undefined;
   readonly rerolls?: WorkspaceRoomRerolls;
   /** The locked doors' presses the Doors object can add. */
   readonly unlocks?: NonNullable<WorkspaceLockedDoors['unlocks']>;
@@ -361,6 +367,16 @@ export function DoorsRerollEntry({
             ariaLabel={name}
             {...(lockedHint === undefined ? {} : { disabledHint: lockedHint })}
             id={`${idPrefix}-target`}
+            {...(pressIcon === undefined
+              ? {}
+              : {
+                  itemIcon: (item: ContextualPickerItem<string>) =>
+                    pressIcon(
+                      item.value.startsWith(unlockPrefix)
+                        ? item.value.slice(unlockPrefix.length)
+                        : item.value,
+                    ),
+                })}
             itemTrailIcon={(item) =>
               item.value.startsWith(unlockPrefix) ? undefined : rerollDieArtwork
             }

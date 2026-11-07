@@ -134,7 +134,10 @@ function shipWorkbenchPresentation(
       if (checkpoint.key === 'exitUsable') continue;
       const matchingBoundary = roomActions.timeline.entries.find(
         (entry) =>
-          entry.kind === 'boundary' && checkpointKeyForBoundary(entry.boundary) === checkpoint.key,
+          entry.kind === 'boundary' &&
+          (checkpointKeyForBoundary(entry.boundary) === checkpoint.key ||
+            (entry.bossDefeated !== undefined &&
+              checkpointKeyForBoundary(entry.bossDefeated) === checkpoint.key)),
       );
       const phaseIndex =
         matchingBoundary?.kind === 'boundary'

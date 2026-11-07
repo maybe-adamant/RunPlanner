@@ -89,7 +89,8 @@ export function ArcanaBoard({
             <ArcanaCard
               key={card.key}
               cardKey={card.key}
-              rarity={rarityOf?.(card.key)}
+              // The saved rank describes the card only while the board keeps it active.
+              rarity={selected ? rarityOf?.(card.key) : undefined}
               label={`${card.label}${automatic ? ' (automatic)' : ''}`}
               data-automatic={automatic}
               aria-pressed={selected}

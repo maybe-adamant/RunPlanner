@@ -42,7 +42,6 @@ import { roomActionReorderPositions } from './room-action-placement';
 import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderHandle';
 import {
   RoomAddArea,
-  RoomAddGroupMenu,
   RoomAddObjectEntry,
   type RoomAddAction,
   type RoomAddGroup,
@@ -55,6 +54,7 @@ import { doorsOpenToggle, wheelOfferChips } from './doorSummary';
 import { NemesisEventPending, NemesisInteractionSentence } from './NemesisEventEditor';
 import { StygianWellTwistChips } from './commerce/StygianWellTwist';
 import { RoomObjectEntry } from './commerce/RoomObjectEntry';
+import { roomObjectEntryIcon } from './commerce/roomObjectEntryIcon';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
 import { FightGoldAmount, GoldAmount, PurchaseCost } from './commerce/GoldAmount';
 import { hintProps } from '@planner/ui/controls/hint';
@@ -65,7 +65,9 @@ import {
   roomActionIcon,
   roomObjectIcon,
   sourceFamilyIcon,
+  wellItemIcon,
 } from '@planner/ui/artwork/roomArtwork';
+import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import {
   DoorsOpenBanner,
@@ -158,13 +160,17 @@ function WorkbenchAddArea({
     mark === undefined ? {} : { findingMark: mark };
   const groups = new Map<
     string,
-    { label: string; object?: string; rows: (typeof optionalRows)[number][] }
+    {
+      label: string;
+      object?: NonNullable<(typeof optionalRows)[number]['addGroup']>['object'];
+      rows: (typeof optionalRows)[number][];
+    }
   >();
   const objectActionRows: (typeof optionalRows)[number][] = [];
   const switchKind = [...optionalRows, ...objectRows].find(
     (row) => row.challengeSwitchKind !== undefined,
   )?.challengeSwitchKind;
-  const switchGroup = {
+  const switchGroup: NonNullable<(typeof optionalRows)[number]['addGroup']> = {
     key: 'object:challengeSwitch',
     label: switchKind === undefined ? 'Challenge Switch' : challengeSwitchKindLabel(switchKind),
     object: 'challengeSwitch',
@@ -203,18 +209,27 @@ function WorkbenchAddArea({
       actions: entry.rows.map(addAction),
     };
   };
+  // An object's own pickups join its entry where the object is in the room.
+  const hostedGroup = (object: string) =>
+    [...groups.entries()].find(([, entry]) => entry.object === object);
   const objectNodes = [
-    ...objectEntries.map((entry) => ({
-      rank: objectOrder.indexOf(entry.object),
-      node: (
-        <RoomObjectEntry
-          entry={entry}
-          {...withMark(objectMark(entry.object))}
-          interactions={interactions}
-          key={entry.interactionKey}
-        />
-      ),
-    })),
+    ...objectEntries.map((entry) => {
+      const hosted = hostedGroup(entry.object);
+      return {
+        rank: objectOrder.indexOf(entry.object),
+        node: (
+          <RoomObjectEntry
+            entry={entry}
+            {...(hosted === undefined
+              ? {}
+              : { extraActions: toGroup(hosted[0], hosted[1]).actions })}
+            {...withMark(objectMark(entry.object))}
+            interactions={interactions}
+            key={entry.interactionKey}
+          />
+        ),
+      };
+    }),
     ...featureRolls.map((rolls) => ({
       rank: objectOrder.indexOf(rolls.feature),
       node: (
@@ -229,28 +244,32 @@ function WorkbenchAddArea({
     // A room object's own optional pickups (a Shrine delivery) sit beside it; a
     // challenge switch's use and claims are its own object entry.
     ...[...groups.entries()]
-      .filter(([, entry]) => entry.object !== undefined)
-      .map(([key, entry]) => ({
-        rank: objectOrder.indexOf(entry.object!) + 0.5,
-        node:
-          entry.object === 'challengeSwitch' ? (
+      .filter(
+        ([, entry]) =>
+          entry.object !== undefined &&
+          !objectEntries.some((objectEntry) => objectEntry.object === entry.object),
+      )
+      .map(([key, entry]) => {
+        const group = toGroup(key, entry);
+        return {
+          rank: objectOrder.indexOf(entry.object!) + 0.5,
+          node: (
             <RoomAddObjectEntry
               group={{
-                ...toGroup(key, entry),
+                ...group,
                 icon:
-                  switchKind === undefined
-                    ? roomObjectIcon('challengeSwitch')
-                    : challengeSwitchIcon(switchKind),
+                  entry.object === 'challengeSwitch'
+                    ? switchKind === undefined
+                      ? roomObjectIcon('challengeSwitch')
+                      : challengeSwitchIcon(switchKind)
+                    : (group.icon ?? roomObjectEntryIcon[entry.object!]),
               }}
               key={key}
-              object={entry.object}
+              object={entry.object!}
             />
-          ) : (
-            <li key={key}>
-              <RoomAddGroupMenu group={toGroup(key, entry)} />
-            </li>
           ),
-      })),
+        };
+      }),
     ...(doors?.object === undefined ? [] : [{ rank: objectOrder.length + 1, node: doors.object }]),
     ...extraObjects.map((node) => ({ rank: objectOrder.length + 1, node })),
     ...objectActionRows.map((row) => {
@@ -513,9 +532,13 @@ export function RoomActionsWorkbench({
     entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>,
   ) => {
     const content = renderBoundaryContent?.(entry.boundary);
+    // A folded boss defeat's content leads its encounter end's.
+    const defeatContent =
+      entry.bossDefeated === undefined ? undefined : renderBoundaryContent?.(entry.bossDefeated);
     const boundary = entry.boundary;
     const doorsOpen = boundary.kind === 'cleanup' ? roomDoors : undefined;
     const modifiers = [
+      defeatContent?.editors,
       renderSupplement(entry.supplement),
       content?.editors,
       doorsOpen === undefined ? undefined : <DoorsOpenControls doors={doorsOpen} />,
@@ -579,6 +602,7 @@ export function RoomActionsWorkbench({
               }
             : {})}
         />
+        {defeatContent?.rows}
         {content?.rows}
         {doorsOpen?.expanded === true && doorsOpen.detail !== undefined ? (
           <DoorsOpenDetailRow id={doorsOpen.detailId}>{doorsOpen.detail}</DoorsOpenDetailRow>
@@ -982,12 +1006,19 @@ export function RoomActionsWorkbench({
   };
   // An optional action adds in one click where it has one place; otherwise its place is chosen.
   const addAction = (row: WorkspaceRoomActions['rows'][number]): RoomAddAction => {
-    const icon = roomActionIcon(
-      row.reference,
-      row.address.biomeKey,
-      row.sourceFamily,
-      row.challengeSwitchKind,
-    );
+    // An action that collects or buys an item shows that item, as its row does.
+    const reward = row.labelParts?.reward;
+    const icon =
+      reward === undefined
+        ? roomActionIcon(
+            row.reference,
+            row.address.biomeKey,
+            row.sourceFamily,
+            row.challengeSwitchKind,
+          )
+        : reward.itemKey === undefined
+          ? offerIcon(reward.offer)
+          : wellItemIcon(reward.itemKey);
     const base = {
       key: row.key,
       label: row.label,

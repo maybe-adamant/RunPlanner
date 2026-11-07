@@ -697,6 +697,7 @@ export interface WorkspaceRoomSummary {
     readonly currentPlacement?: {
       readonly address: import('@run-planner/engine/authored-project').OccurrenceAddress;
       readonly biomeKey: string;
+      /** Its Location, with its biome where that is another one. */
       readonly locationLabel: string;
       /** The placement room's run depth on entry, where it is reached. */
       readonly runDepth?: number;

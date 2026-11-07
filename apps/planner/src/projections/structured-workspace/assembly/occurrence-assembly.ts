@@ -957,19 +957,29 @@ export function assembleWorkspaceOccurrence(
                           kind: 'roomEntered',
                         }),
                       );
-                      return Object.freeze({
-                        address: placementAddress,
-                        biomeKey: placement.biomeKey,
-                        ...(placementEntered?.availability === 'available'
-                          ? { runDepth: placementEntered.snapshot.counters.runDepthCache }
-                          : {}),
-                        locationLabel:
-                          entry === undefined
+                      const runDepth =
+                        placementEntered?.availability === 'available'
+                          ? placementEntered.snapshot.counters.runDepthCache
+                          : undefined;
+                      // The game calls a room's place in the run its Location; the biome
+                      // is named only when it is another one.
+                      const room =
+                        runDepth !== undefined
+                          ? `Location ${runDepth}`
+                          : entry === undefined
                             ? 'Unavailable room'
                             : routeRoomDeclaration(
                                 requireRoom(input.catalog, entry.gameName),
                                 input.biome.routeKey,
-                              ).label,
+                              ).label;
+                      return Object.freeze({
+                        address: placementAddress,
+                        biomeKey: placement.biomeKey,
+                        ...(runDepth === undefined ? {} : { runDepth }),
+                        locationLabel:
+                          placement.biomeKey === input.biome.biomeKey
+                            ? room
+                            : `${input.catalog.biomes.byKey[placement.biomeKey]?.label ?? placement.biomeKey} · ${room}`,
                       });
                     })()
                   : undefined;
