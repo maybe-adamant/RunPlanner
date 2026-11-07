@@ -642,21 +642,13 @@ const skippedWithFigLeaf = 'Skipped with Fig Leaf';
 function EncounterEventGroup({
   children,
   label,
-  slotted = false,
 }: {
   readonly children: readonly ReactNode[];
   readonly label: string;
-  /** Start events keep fixed slots, so each one lines up across banners. */
-  readonly slotted?: boolean;
 }) {
   if (children.every((child) => child === null)) return null;
   return (
-    <div
-      aria-label={label}
-      className="encounter-event-controls"
-      data-slotted={slotted ? '' : undefined}
-      role="group"
-    >
+    <div aria-label={label} className="encounter-event-controls" role="group">
       {children}
     </div>
   );
@@ -687,7 +679,6 @@ export function EncounterStartControls({
         icon={keepsakeArtwork.SkipEncounterKeepsake ?? undefined}
         key="figLeaf"
         name="Fig Leaf skip"
-        slot="figLeaf"
         onToggle={(next) => executeIntent(figLeafInteraction.intentFor(next))}
         pressed={figLeafInteraction.selected}
         target={findingTarget(
@@ -713,7 +704,6 @@ export function EncounterStartControls({
           : {})}
         key="gorgon"
         name="No Death Defiance"
-        slot="gorgon"
         onToggle={(next) => executeIntent(gorgonInteraction.intentFor(next))}
         pressed={gorgonInteraction.selected}
         target={findingTarget(
@@ -741,7 +731,7 @@ export function EncounterStartControls({
           const retainedUnavailable =
             selected !== undefined && !aetosInteraction.waves.includes(selected);
           return (
-            <span className="encounter-aetos-picker" data-slot="aetos" key="aetos">
+            <span className="encounter-aetos-picker" key="aetos">
               <ContextualPicker<string>
                 ariaLabel={`Aetos appearance: ${selected === undefined ? 'No' : waveLabel(selected)}`}
                 findingTarget={findingTarget(aetos.address, id, phase.address)}
@@ -798,7 +788,7 @@ export function EncounterStartControls({
           );
         })();
   return (
-    <EncounterEventGroup label={`${phase.identityLabel} start`} slotted>
+    <EncounterEventGroup label={`${phase.identityLabel} start`}>
       {[aetosControl, gorgonControl, figLeafControl]}
     </EncounterEventGroup>
   );

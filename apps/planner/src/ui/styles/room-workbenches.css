@@ -489,32 +489,6 @@
   filter: none;
 }
 
-/*
- * Start events keep fixed slots at the end of the banner line, Aetos then the
- * Gorgon condition then the Fig Leaf skip, so each icon lines up across banners;
- * an absent event leaves its slot empty. The Aetos slot fits its widest wave.
- */
-.encounter-event-controls[data-slotted] {
-  display: grid;
-  grid-template-columns:
-    calc(var(--timeline-control-height, 26px) + 8ch) var(--timeline-control-height, 26px)
-    var(--timeline-control-height, 26px);
-  align-items: center;
-  justify-items: end;
-}
-
-.encounter-event-controls[data-slotted] > [data-slot='aetos'] {
-  grid-column: 1;
-}
-
-.encounter-event-controls[data-slotted] > [data-slot='gorgon'] {
-  grid-column: 2;
-}
-
-.encounter-event-controls[data-slotted] > [data-slot='figLeaf'] {
-  grid-column: 3;
-}
-
 /* Aetos is one compact picker: his icon, the wave and the caret. */
 .encounter-aetos-picker {
   display: inline-flex;
@@ -1091,6 +1065,7 @@
   --timeline-gutter: 18px;
   --timeline-row-start: 6px;
   --timeline-title-x: calc(var(--timeline-gutter) + 3px + var(--timeline-row-start));
+  --timeline-banner-title-width: 8.75rem;
   gap: 10px;
   margin-top: 6px;
   /* The timeline sits on the page: its line and banners are its structure. */
@@ -1253,9 +1228,13 @@
  * A banner is one sentence: its title, then its controls. The identity is the
  * one part that gives way, ending in an ellipsis.
  */
+/*
+ * Every banner's controls start in one column after its title, wide enough for
+ * the longest lifecycle title; a longer title pushes them on.
+ */
 .timeline-banner-title {
   display: inline-flex;
-  min-width: 0;
+  min-width: min(var(--timeline-banner-title-width, 0px), 100%);
   max-width: 100%;
   flex: 0 1 auto;
   align-items: center;
@@ -2690,6 +2669,13 @@
   align-items: center;
 }
 
+.timeline-banner-gold-lines {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
 /* A reward named by its icon; a Boosted boon carries a small up-arrow on its icon. */
 .row-reward-name {
   display: inline-flex;
@@ -3151,13 +3137,11 @@ button.timeline-chip {
 }
 
 .timeline-leave-row .timeline-banner-title {
-  min-width: auto;
   flex: 0 0 auto;
 }
 
 .timeline-leave-row .timeline-leave-controls {
   min-width: 0;
-  margin-inline-start: 14px;
   flex: 1 1 0;
   flex-wrap: wrap;
   row-gap: 6px;

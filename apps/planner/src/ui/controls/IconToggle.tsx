@@ -18,7 +18,6 @@ export function IconToggle({
   name,
   onToggle,
   pressed,
-  slot,
   opensDialog,
   target,
 }: {
@@ -36,8 +35,6 @@ export function IconToggle({
   readonly name: string;
   /** Whether a press opens a confirming dialog, and that dialog is open. */
   readonly opensDialog?: { readonly open: boolean } | undefined;
-  /** A fixed slot the toggle keeps in its group, so icons line up across rows. */
-  readonly slot?: string;
   readonly onToggle: (next: boolean) => void;
   readonly pressed: boolean;
   /** The flag's finding target or mark. */
@@ -57,7 +54,6 @@ export function IconToggle({
       aria-pressed={pressed}
       className="icon-toggle"
       data-inapplicable={inapplicable === true ? '' : undefined}
-      data-slot={slot}
       disabled={disabled || undefined}
       onClick={() => onToggle(!pressed)}
       type="button"

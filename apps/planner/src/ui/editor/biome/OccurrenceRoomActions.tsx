@@ -564,12 +564,19 @@ export function RoomActionsWorkbench({
           className={`timeline-gold-gained${phaseBet.gold.loss ? ' timeline-gold-lost' : ''}`}
         />
       );
-    // Beside fight gold, the bet ends the banner's controls, just before the money column.
-    const bannerControls = [
-      ...modifiers,
-      ...(fightGold === undefined || betAmount === undefined ? [] : [betAmount]),
-    ];
-    const bannerMoney = fightGold !== undefined ? <FightGoldAmount gold={fightGold} /> : betAmount;
+    const bannerControls = modifiers;
+    // Fight gold and a settled bet read down the money column, each on its own line.
+    const bannerMoney =
+      fightGold === undefined ? (
+        betAmount
+      ) : betAmount === undefined ? (
+        <FightGoldAmount gold={fightGold} />
+      ) : (
+        <span className="timeline-banner-gold-lines">
+          <FightGoldAmount gold={fightGold} />
+          {betAmount}
+        </span>
+      );
     return (
       <Fragment key={entry.boundary.key}>
         <LifecycleBoundaryRow
