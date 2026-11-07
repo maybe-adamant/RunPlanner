@@ -49,6 +49,32 @@ function lifecycleBoundaryCheckpointKey(boundary: WorkspaceRoomLifecycleBoundary
       return boundary.key;
   }
 }
+/**
+ * A boss defeat directly followed by its encounter's end reads as that one end
+ * banner: each folded defeat keyed by the end boundary that absorbs it.
+ */
+export function foldedBossDefeats(
+  entries: RoomLifecycleTimeline['entries'],
+): ReadonlyMap<string, Extract<WorkspaceRoomLifecycleBoundary, { readonly kind: 'bossDefeated' }>> {
+  const folded = new Map<
+    string,
+    Extract<WorkspaceRoomLifecycleBoundary, { readonly kind: 'bossDefeated' }>
+  >();
+  entries.forEach((entry, index) => {
+    const next = entries[index + 1];
+    if (
+      entry.kind === 'boundary' &&
+      entry.boundary.kind === 'bossDefeated' &&
+      next?.kind === 'boundary' &&
+      next.boundary.kind === 'encounterEnd' &&
+      next.boundary.phaseKey === entry.boundary.phaseKey &&
+      next.rank === entry.rank
+    )
+      folded.set(next.boundary.key, entry.boundary);
+  });
+  return folded;
+}
+
 function projectRoomLifecycleTimeline(
   input: WorkspaceOccurrenceActionsInput,
   timeline: RoomLifecycleTimeline,
@@ -276,23 +302,7 @@ function projectRoomLifecycleTimeline(
       ? roomLocal.wheels.filter((wheel) => wheel.active).map((wheel) => wheel.key)
       : [],
   );
-  // A boss defeat directly followed by its encounter's end reads as that one end banner.
-  const foldedDefeats = new Map<
-    string,
-    Extract<WorkspaceRoomLifecycleBoundary, { readonly kind: 'bossDefeated' }>
-  >();
-  timeline.entries.forEach((entry, index) => {
-    const next = timeline.entries[index + 1];
-    if (
-      entry.kind === 'boundary' &&
-      entry.boundary.kind === 'bossDefeated' &&
-      next?.kind === 'boundary' &&
-      next.boundary.kind === 'encounterEnd' &&
-      next.boundary.phaseKey === entry.boundary.phaseKey &&
-      next.rank === entry.rank
-    )
-      foldedDefeats.set(next.boundary.key, entry.boundary);
-  });
+  const foldedDefeats = foldedBossDefeats(timeline.entries);
   const foldedDefeatKeys = new Set([...foldedDefeats.values()].map((boundary) => boundary.key));
   for (const entry of timeline.entries) {
     if (entry.kind === 'boundary' && foldedDefeatKeys.has(entry.boundary.key)) continue;

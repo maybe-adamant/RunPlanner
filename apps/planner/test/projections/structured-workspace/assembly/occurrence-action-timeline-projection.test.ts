@@ -12,6 +12,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { goldLedgerForProjectEvaluationAssembly } from '@run-planner/engine/simulation';
 import {
+  loadUnderworldAutomaticBossCheckpoint,
   loadUnderworldFigLeafCheckpoint,
   loadUnderworldGAnomalyRosterCheckpoint,
   loadNemesisFieldsCheckpoint,
@@ -38,6 +39,7 @@ import type {
   WorkspaceRoomLifecycleTimelineEntry,
 } from '@planner/projections/structured-workspace';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
+import { foldedBossDefeats } from '@planner/projections/structured-workspace/assembly/occurrence-action-timeline-projection';
 
 function projectedWhere(
   project: ProjectDocument,
@@ -346,5 +348,62 @@ describe('engine-published row facts', () => {
     });
     expect(row?.key).toBe(roomActionKey(row!.reference));
     expect(row?.goldGained).toEqual({ label: '+100' });
+  });
+});
+
+describe('boss defeat fold', () => {
+  it('reads an adjacent boss defeat as its encounter end banner and hides its checkpoint', () => {
+    const room = roomOf(
+      loadUnderworldAutomaticBossCheckpoint(),
+      createOccurrenceId('golden-f-preboss-shop:boss'),
+    );
+    expect(banners(room, 'bossDefeated')).toEqual([]);
+    const ends = banners(room, 'encounterEnd');
+    expect(ends).toHaveLength(1);
+    expect(ends[0]?.bossDefeated).toEqual({
+      kind: 'bossDefeated',
+      key: 'bossDefeated:Encounter',
+      phaseKey: 'Encounter',
+    });
+    expect(room.roomActions?.timeline.suppressedCheckpointKeys).toContain('bossDefeated:Encounter');
+  });
+
+  type Entry = Parameters<typeof foldedBossDefeats>[0][number];
+  const boundary = (
+    kind: 'bossDefeated' | 'encounterEnd' | 'encounterStart',
+    phaseKey: string,
+    rank: number,
+  ): Entry => ({
+    kind: 'boundary',
+    boundary: { kind, key: `${kind}:${phaseKey}`, phaseKey },
+    rank,
+    placement: 'before',
+  });
+  const cleanupBoundary: Entry = {
+    kind: 'boundary',
+    boundary: { kind: 'cleanup', key: 'cleanup' },
+    rank: 2,
+    placement: 'after',
+  };
+
+  it('folds only a defeat whose own phase ends at the same position right after it', () => {
+    expect([
+      ...foldedBossDefeats([
+        boundary('bossDefeated', 'Encounter', 1),
+        boundary('encounterEnd', 'Encounter', 1),
+      ]).keys(),
+    ]).toEqual(['encounterEnd:Encounter']);
+    // Something between them, another phase's end, a later end or no end keeps its own banner.
+    for (const entries of [
+      [
+        boundary('bossDefeated', 'Encounter', 1),
+        boundary('encounterStart', 'Second', 1),
+        boundary('encounterEnd', 'Encounter', 1),
+      ],
+      [boundary('bossDefeated', 'Encounter', 1), boundary('encounterEnd', 'Second', 1)],
+      [boundary('bossDefeated', 'Encounter', 1), boundary('encounterEnd', 'Encounter', 2)],
+      [boundary('bossDefeated', 'Encounter', 1), cleanupBoundary],
+    ])
+      expect(foldedBossDefeats(entries).size).toBe(0);
   });
 });

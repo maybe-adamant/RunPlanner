@@ -61,6 +61,7 @@ import {
   loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { loadUnderworldAutomaticBossCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import {
   renderWorkspace,
@@ -626,6 +627,33 @@ describe('Biome inspector controls', () => {
     expect(screen.getByRole('button', { name: /^Boss/ }).getAttribute('aria-current')).toBe(
       'location',
     );
+  });
+
+  it('reads a boss defeat as its encounter end banner, its fixed effects first and its fight gold on it', () => {
+    const view = renderWorkspace(loadUnderworldAutomaticBossCheckpoint(), 'Underworld', 'F');
+    const bossOccurrence = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:boss'),
+    );
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createJudgmentArcanaAddress(bossOccurrence, 'Encounter')),
+      ),
+    );
+    const timeline = within(screen.getByRole('complementary', { name: 'Details' })).getByRole(
+      'region',
+      { name: 'Room Timeline' },
+    );
+    expect(within(timeline).queryByRole('listitem', { name: 'Boss defeated' })).toBeNull();
+    const ended = within(timeline).getAllByRole('listitem', { name: 'Encounter ended' });
+    expect(ended).toHaveLength(1);
+    expect(within(ended[0]!).getByText(/gold/)).toBeTruthy();
+    const names = within(timeline)
+      .getAllByRole('listitem')
+      .map((item) => item.getAttribute('aria-label') ?? '');
+    const end = names.indexOf('Encounter ended');
+    expect(names[end + 1]).toMatch(/^Judgment/);
+    expect(names[end + 2]).toMatch(/^Crystal Figurine/);
   });
 
   it('keeps Judgment and Crystal Figurine independently authorable and undoable', async () => {
