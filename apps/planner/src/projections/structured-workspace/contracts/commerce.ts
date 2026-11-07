@@ -123,29 +123,6 @@ export interface WorkspaceHermesShrineOfferInteraction {
   >;
 }
 
-export interface WorkspaceHermesShrinePresenceInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly present: boolean;
-  readonly intentFor: (
-    present: boolean,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetHermesShrinePresence' }>
-  >;
-}
-
-export interface WorkspaceStygianWellPresenceInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly present: boolean;
-  readonly intentFor: (
-    present: boolean,
-  ) => WorkspaceCommandIntent<
-    | Extract<ProjectCommand, { readonly kind: 'AddStygianWell' }>
-    | Extract<ProjectCommand, { readonly kind: 'RemoveStygianWell' }>
-  >;
-}
-
 export interface WorkspaceStygianWellOfferInteraction {
   readonly key: string;
   readonly owner: OccurrenceAddress;

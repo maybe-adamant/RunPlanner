@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { ChallengeSwitchKind } from '@run-planner/engine/catalog-schema';
 import {
   requireWorkspaceInteraction,
   type WorkspaceChallengeSwitch,
@@ -12,17 +11,13 @@ import {
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { challengeSwitchRuleSentence } from '@planner/projections/challengeSwitchCopy';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
-import { challengeSwitchIcon, roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { EncounterCustomizationLauncher } from '../locals/EncounterPhaseControl';
 
-const isPlacementFinding = (finding: { readonly code: string }) =>
-  finding.code === 'challengeSwitchPlacementUnavailable';
 const isCustomizationFinding = (finding: { readonly code: string }) =>
   finding.code === 'challengeSwitchCustomizationUnavailable';
 const isEliteFinding = (finding: { readonly code: string }) =>
@@ -32,11 +27,7 @@ function lockHint(lock: WorkspaceChallengeSwitchLock): string {
   return lock.reason === 'unreached' ? candidateWaitingHint : challengeSwitchRuleSentence(lock);
 }
 
-/**
- * A host's one switch line: ticking it observes the first type that can be
- * rolled, picking a type observes that one, and unticking clears the switch.
- * The observed switch's reward, encounter and elite follow on the same line.
- */
+/** The observed switch's settings, after its spot: its type's reward, encounter and elite. */
 export function ChallengeSwitchControls({
   interactions,
   observation,
@@ -48,84 +39,12 @@ export function ChallengeSwitchControls({
     interactions.challengeSwitches,
     observation.interactionKey,
   );
-  const executeIntent = useCommandIntent();
-  const findingTarget = useFindingTarget();
   const row = observation.kinds.find((kind) => kind.selected);
-  const firstRollable = observation.kinds.find((kind) => kind.observeVariantKey !== undefined);
-  // An observed switch stays clearable whatever its rules say.
-  const unavailable =
-    row !== undefined || firstRollable !== undefined
-      ? undefined
-      : observation.kinds.find((kind) => kind.lock !== undefined)?.lock;
-  const target =
-    row === undefined
-      ? undefined
-      : findingTarget(
-          observation.address,
-          semanticOwnerControlElementId(observation.address),
-          observation.address,
-          isPlacementFinding,
-        );
-  const idKey = semanticOwnerControlElementId(observation.address);
+  if (row === undefined) return null;
   return (
-    <fieldset className="room-purging-pool challenge-switch">
+    <fieldset className="room-object-settings challenge-switch">
       <legend className="visually-hidden">Challenge Switch</legend>
-      <div className="room-feature-presence-row challenge-switch-row">
-        <IconToggle
-          disabled={row === undefined && firstRollable === undefined}
-          disabledHint={unavailable === undefined ? undefined : lockHint(unavailable)}
-          icon={roomObjectIcon('challengeSwitch')}
-          name="Challenge Switch"
-          onToggle={(next) => {
-            if (!next) executeIntent(interaction.observeIntentFor(null));
-            else if (firstRollable?.observeVariantKey !== undefined)
-              executeIntent(interaction.observeIntentFor(firstRollable.observeVariantKey));
-          }}
-          pressed={row !== undefined}
-          {...(target === undefined ? {} : { target })}
-        />
-        {row === undefined ? null : (
-          <ContextualPicker<ChallengeSwitchKind>
-            ariaLabel="Switch type"
-            id={`challenge-switch-type-${idKey}`}
-            itemIcon={(item) => challengeSwitchIcon(item.value)}
-            label=""
-            model={declaredChoicesPicker(
-              observation.kinds.map((kind) => ({
-                key: kind.kind,
-                value: kind.kind,
-                label: kind.label,
-                ...(kind.selected || kind.observeVariantKey !== undefined
-                  ? {}
-                  : {
-                      disabled: true,
-                      ...(kind.lock === undefined ? {} : { explanation: lockHint(kind.lock) }),
-                    }),
-              })),
-              row?.kind,
-            )}
-            onSelect={(kind) => {
-              if (kind === row?.kind) return;
-              const variantKey = observation.kinds.find(
-                (candidate) => candidate.kind === kind,
-              )?.observeVariantKey;
-              if (variantKey !== undefined) executeIntent(interaction.observeIntentFor(variantKey));
-            }}
-            placeholder="Type"
-            searchable={false}
-            triggerIcon={challengeSwitchIcon(row.kind)}
-            triggerLabel={row.label}
-            triggerSize="icon"
-          />
-        )}
-        {row === undefined ? null : (
-          <ChallengeSwitchKindOptions
-            interaction={interaction}
-            observation={observation}
-            row={row}
-          />
-        )}
-      </div>
+      <ChallengeSwitchKindOptions interaction={interaction} observation={observation} row={row} />
     </fieldset>
   );
 }

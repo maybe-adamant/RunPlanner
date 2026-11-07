@@ -1,5 +1,6 @@
 import type {
   WorkspaceCommandIntent,
+  WorkspaceCommandsIntent,
   WorkspaceFeatureAssessment,
   WorkspaceFeaturePresence,
   WorkspaceInteractionChoice,
@@ -11,10 +12,6 @@ import type {
   ProjectCommand,
   RoomFeatureAddress,
 } from '@run-planner/engine/authored-project';
-import type {
-  HermesShrinePlacementRefusal,
-  StygianWellPlacementRefusal,
-} from '@run-planner/engine/simulation';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceMarker } from './navigation';
 import type { WorkspaceDoorContract } from './structure';
@@ -80,9 +77,6 @@ export type WorkspaceRoomFeature =
       readonly presenceMarker: WorkspaceMarker;
       readonly inventoryAddress?: RoomFeatureAddress;
       readonly inventoryMarker?: WorkspaceMarker;
-      readonly presenceInteractionKey?: string;
-      /** Why a reached room cannot hold the Shrine; present only while presence is disabled. */
-      readonly presenceRefusals?: readonly HermesShrinePlacementRefusal[];
       readonly slots: readonly {
         readonly key: import('@run-planner/engine/authored-project').HermesShrineSlotKey;
         readonly address: RoomFeatureAddress;
@@ -135,9 +129,6 @@ export type WorkspaceRoomFeature =
       readonly presenceMarker: WorkspaceMarker;
       readonly inventoryAddress?: RoomFeatureAddress;
       readonly inventoryMarker?: WorkspaceMarker;
-      readonly presenceInteractionKey?: string;
-      /** Why a reached room cannot hold the Well; present only while presence is disabled. */
-      readonly presenceRefusals?: readonly StygianWellPlacementRefusal[];
       /** The initial stock. */
       readonly slots: readonly WorkspaceStygianWellSlot[];
       /** Refill inventory, authored on the timeline under the purchase that triggers it. */
@@ -404,6 +395,68 @@ export interface WorkspaceRoomObjectChoice {
   readonly key: string;
   /** The reward its icon shows. */
   readonly rewardType: string;
+}
+
+/** An object native spawns on a room's challenge switch anchors, in its spawn order. */
+export type WorkspaceAnchorObject = import('@run-planner/engine/simulation').RoomAnchorObjectKind;
+
+/** Why an absent object cannot take an anchor slot now. */
+export type WorkspaceAnchorObjectLock =
+  /** The room's entry is not assessed yet. */
+  | { readonly reason: 'unreached' }
+  /** The rules refusing it here, each as one sentence. */
+  | { readonly reason: 'refused'; readonly sentences: readonly string[] };
+
+/** One state an anchor slot can be set to: an object, or empty when null. */
+export interface WorkspaceAnchorSlotChoice {
+  readonly key: string;
+  readonly object: WorkspaceAnchorObject | null;
+  /** The switch type a challenge switch choice observes. */
+  readonly switchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
+}
+
+/** The present object holding an anchor, or left without one. */
+export interface WorkspaceAnchorOccupant {
+  readonly object: WorkspaceAnchorObject;
+  /** The owner of its presence findings. */
+  readonly address: RoomFeatureAddress;
+  /** Present on entry whatever is authored; nothing can change it. */
+  readonly fixed: boolean;
+  /** The observed type of a challenge switch. */
+  readonly switchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
+}
+
+/** One challenge switch anchor: its occupant and the states it can change to. */
+export interface WorkspaceAnchorSlot {
+  readonly index: number;
+  readonly occupant?: WorkspaceAnchorOccupant;
+  /** Each other state reachable now; adding an object can move the others to their native spot. */
+  readonly choices: readonly WorkspaceAnchorSlotChoice[];
+  /** Each absent, unfixed object, or switch type, the slot cannot take now. */
+  readonly unavailable: readonly {
+    readonly object: WorkspaceAnchorObject;
+    readonly switchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
+    readonly lock: WorkspaceAnchorObjectLock;
+  }[];
+}
+
+/** A room's anchor slots, as the engine fills them in native spawn order. */
+export interface WorkspaceRoomObjectSlots {
+  readonly interactionKey: string;
+  readonly slots: readonly WorkspaceAnchorSlot[];
+  /** Present objects native order leaves without an anchor; each repaired by removing it. */
+  readonly unanchored: readonly (WorkspaceAnchorOccupant & {
+    /** The choice that removes it; absent for a fixed object. */
+    readonly removeKey?: string;
+  })[];
+}
+
+/** The commands each anchor slot choice applies, as one edit. */
+export interface WorkspaceRoomObjectSlotsInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  /** A replacement removes the occupant, then adds the newcomer. */
+  readonly intentFor: (choiceKey: string) => WorkspaceCommandsIntent;
 }
 
 /** Why a challenge switch kind or variant cannot be observed at its host's entry. */

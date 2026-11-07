@@ -318,18 +318,6 @@ function roomFeatures(
                     inventoryAddress,
                     inventoryMarker: input.markerDestinations.marker(inventoryAddress),
                   }),
-              ...(wellPresence.kind === 'forcedPresent' ||
-              (wellPresence.kind === 'optionalAbsent' && !wellPresence.enabled)
-                ? {}
-                : {
-                    presenceInteractionKey: `stygianWellPresence:${semanticAddressKey(poolOwner)}`,
-                  }),
-              ...(wellPresence.kind === 'optionalAbsent' &&
-              !wellPresence.enabled &&
-              wellAssessment !== undefined &&
-              wellAssessment.placementRefusals.length > 0
-                ? { presenceRefusals: wellAssessment.placementRefusals }
-                : {}),
               slots: Object.freeze(initialSlots),
               ...(refill === undefined ? {} : { travelDealRefill: refill }),
             });
@@ -368,18 +356,6 @@ function roomFeatures(
                     inventoryAddress,
                     inventoryMarker: input.markerDestinations.marker(inventoryAddress),
                   }),
-              ...(shrinePresence.kind === 'forcedPresent' ||
-              (shrinePresence.kind === 'optionalAbsent' && !shrinePresence.enabled)
-                ? {}
-                : {
-                    presenceInteractionKey: `hermesShrinePresence:${semanticAddressKey(poolOwner)}`,
-                  }),
-              ...(shrinePresence.kind === 'optionalAbsent' &&
-              !shrinePresence.enabled &&
-              shrineAssessment !== undefined &&
-              shrineAssessment.placementRefusals.length > 0
-                ? { presenceRefusals: shrineAssessment.placementRefusals }
-                : {}),
               slots: Object.freeze(
                 shrine === undefined && !shrineForced
                   ? []

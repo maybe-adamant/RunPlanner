@@ -114,6 +114,16 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly options: readonly WorkspaceRoomObjectActionRequirement[];
     }
   | {
+      /** A room's challenge switch anchor slots: each choice's commands, applied as one edit. */
+      readonly kind: 'roomObjectSlots';
+      readonly owner: OccurrenceAddress;
+      readonly interactionKey: string;
+      readonly choices: readonly {
+        readonly key: string;
+        readonly commands: readonly import('@run-planner/engine/authored-project').ProjectCommand[];
+      }[];
+    }
+  | {
       /** A Well or Pool's Interact picker: options appended at `appendIndex`. */
       readonly kind: 'featureRollActions';
       readonly owner: OccurrenceAddress;
@@ -300,8 +310,6 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly assessment: WorkspaceFeatureAssessment;
       readonly kind: 'hermesShrine';
       readonly owner: OccurrenceAddress;
-      readonly present: boolean;
-      readonly presenceInteractionKey?: string;
       readonly slots: readonly {
         readonly slotKey:
           import('@run-planner/engine/authored-project').HermesShrineSlotKey | 'travelDealRefill';
@@ -320,8 +328,6 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly assessment: WorkspaceFeatureAssessment;
       readonly kind: 'stygianWell';
       readonly owner: OccurrenceAddress;
-      readonly present: boolean;
-      readonly presenceInteractionKey?: string;
       readonly slots: readonly {
         readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
         readonly slotKey:
@@ -473,7 +479,8 @@ function occurrenceInteractionRequirementKey(
     requirement.kind === 'roomRerolls' ||
     requirement.kind === 'featureRollSlots' ||
     requirement.kind === 'featureRollActions' ||
-    requirement.kind === 'roomObjectActions'
+    requirement.kind === 'roomObjectActions' ||
+    requirement.kind === 'roomObjectSlots'
   )
     return `${requirement.kind}:${requirement.interactionKey}`;
   if (requirement.kind === 'unlockExitEncounter')

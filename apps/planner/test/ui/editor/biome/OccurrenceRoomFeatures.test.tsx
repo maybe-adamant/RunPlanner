@@ -613,9 +613,6 @@ describe('OccurrenceRoomFeatures', () => {
     expect(well).toMatchObject({ assessment: 'unassessed' });
 
     openRoomTab('Room Overview');
-    const presence = screen.getByRole('button', { name: 'Stygian Well' });
-    expect(presence.getAttribute('aria-pressed')).toBe('true');
-    expect((presence as HTMLButtonElement).disabled).toBe(false);
     const picker = screen.getByRole('button', { name: 'Stygian Well Offer 1 Item' });
     await view.user.click(picker);
     const choice = await screen.findByRole('option', { name: 'Splintered Shield' });

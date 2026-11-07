@@ -183,10 +183,6 @@ export function occurrenceInteractionRequirements(
           assessment: feature.assessment,
           kind: 'stygianWell' as const,
           owner: room.address,
-          present: feature.presence.kind !== 'optionalAbsent',
-          ...(feature.presenceInteractionKey === undefined
-            ? {}
-            : { presenceInteractionKey: feature.presenceInteractionKey }),
           slots: Object.freeze(
             [
               ...feature.slots,
@@ -228,10 +224,6 @@ export function occurrenceInteractionRequirements(
           assessment: feature.assessment,
           kind: 'hermesShrine' as const,
           owner: room.address,
-          present: feature.presence.kind !== 'optionalAbsent',
-          ...(feature.presenceInteractionKey === undefined
-            ? {}
-            : { presenceInteractionKey: feature.presenceInteractionKey }),
           slots: Object.freeze([
             ...feature.slots.map((slot) =>
               Object.freeze({

@@ -61,8 +61,6 @@ import { bindChallengeSwitchInteraction } from './challenge-switch-binding';
 import type {
   WorkspacePurgingPoolSlotInteraction,
   WorkspaceHermesShrineOfferInteraction,
-  WorkspaceHermesShrinePresenceInteraction,
-  WorkspaceStygianWellPresenceInteraction,
   WorkspaceStygianWellOfferInteraction,
   WorkspaceStygianWellTwistResultInteraction,
 } from '../contracts/commerce';
@@ -119,8 +117,6 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
     import('../contracts/locals').WorkspaceEncounterCustomizationInteraction
   >;
   readonly hermesShrineOffers: ReadonlyMap<string, WorkspaceHermesShrineOfferInteraction>;
-  readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
-  readonly stygianWellPresences: ReadonlyMap<string, WorkspaceStygianWellPresenceInteraction>;
   readonly stygianWellOffers: ReadonlyMap<string, WorkspaceStygianWellOfferInteraction>;
   readonly stygianWellTwistResults: ReadonlyMap<string, WorkspaceStygianWellTwistResultInteraction>;
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
@@ -327,8 +323,6 @@ export function bindOccurrenceLocalInteractions(
   >();
   const purgingPoolSlots = new Map<string, WorkspacePurgingPoolSlotInteraction>();
   const hermesShrineOffers = new Map<string, WorkspaceHermesShrineOfferInteraction>();
-  const hermesShrinePresences = new Map<string, WorkspaceHermesShrinePresenceInteraction>();
-  const stygianWellPresences = new Map<string, WorkspaceStygianWellPresenceInteraction>();
   const stygianWellOffers = new Map<string, WorkspaceStygianWellOfferInteraction>();
   const stygianWellTwistResults = new Map<string, WorkspaceStygianWellTwistResultInteraction>();
   const localVisitOrders = new Map<string, WorkspaceLocalVisitOrderInteraction>();
@@ -937,29 +931,6 @@ export function bindOccurrenceLocalInteractions(
         // Bound with the reward picker by the Rerolls binder.
         break;
       case 'hermesShrine': {
-        if (requirement.presenceInteractionKey !== undefined) {
-          if (hermesShrinePresences.has(requirement.presenceInteractionKey)) {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${requirement.presenceInteractionKey} has multiple bound Hermes Shrine presence interactions`,
-            );
-          }
-          hermesShrinePresences.set(
-            requirement.presenceInteractionKey,
-            Object.freeze({
-              key: requirement.presenceInteractionKey,
-              owner: requirement.owner,
-              present: requirement.present,
-              intentFor: (present: boolean) =>
-                Object.freeze({
-                  command: Object.freeze({
-                    kind: 'SetHermesShrinePresence' as const,
-                    occurrence: requirement.owner,
-                    present,
-                  }),
-                }),
-            }),
-          );
-        }
         for (const slot of requirement.slots) {
           if (hermesShrineOffers.has(slot.offerInteractionKey)) {
             throw new StructuredWorkspaceProjectionContractError(
@@ -1021,28 +992,6 @@ export function bindOccurrenceLocalInteractions(
         break;
       }
       case 'stygianWell': {
-        if (requirement.presenceInteractionKey !== undefined) {
-          stygianWellPresences.set(
-            requirement.presenceInteractionKey,
-            Object.freeze({
-              key: requirement.presenceInteractionKey,
-              owner: requirement.owner,
-              present: requirement.present,
-              intentFor: (present: boolean) =>
-                Object.freeze({
-                  command: present
-                    ? Object.freeze({
-                        kind: 'AddStygianWell' as const,
-                        occurrence: requirement.owner,
-                      })
-                    : Object.freeze({
-                        kind: 'RemoveStygianWell' as const,
-                        occurrence: requirement.owner,
-                      }),
-                }),
-            }),
-          );
-        }
         for (const slot of requirement.slots) {
           stygianWellOffers.set(
             slot.offerInteractionKey,
@@ -1333,8 +1282,6 @@ export function bindOccurrenceLocalInteractions(
     challengeSwitches,
     unlockExitEncounters,
     hermesShrineOffers,
-    hermesShrinePresences,
-    stygianWellPresences,
     stygianWellOffers,
     stygianWellTwistResults,
     localVisitOrders,

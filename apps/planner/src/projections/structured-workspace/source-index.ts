@@ -178,6 +178,10 @@ export interface WorkspaceBiomeSource {
   readonly roomObjectInteractions: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomObjectInteractions | undefined;
+  /** A room's challenge switch anchors and the objects on them; undefined for an unknown room. */
+  readonly roomAnchorSlots: (
+    occurrence: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').RoomAnchorSlots | undefined;
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
@@ -762,6 +766,7 @@ function createWorkspaceBiomeSource(
   gold: WorkspaceBiomeSource['gold'],
   assessmentIssue: AssessmentIssue | undefined,
   planEnd: WorkspaceRoutePlanEndSource,
+  roomAnchorSlots: WorkspaceBiomeSource['roomAnchorSlots'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -1031,6 +1036,7 @@ function createWorkspaceBiomeSource(
     rerollSpendAllowance,
     screenRerollAllowance,
     roomObjectInteractions,
+    roomAnchorSlots,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -1124,6 +1130,7 @@ export function createWorkspaceProjectSourceIndex(
   planEndAvailability: (room: OccurrenceAddress) => PlanEndAvailability | undefined = () =>
     undefined,
   authoringReadiness: (owner: SemanticAddress) => AuthoringReadiness = () => 'editable',
+  roomAnchorSlots: WorkspaceBiomeSource['roomAnchorSlots'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -1176,6 +1183,7 @@ export function createWorkspaceProjectSourceIndex(
             gold,
             routeEvaluation?.issue,
             planEnd,
+            roomAnchorSlots,
           ),
         ),
       ),

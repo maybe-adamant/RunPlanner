@@ -4,7 +4,6 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomFeature,
 } from '@planner/projections/structured-workspace';
-import { RoomInventoryPanel } from '../commerce/RoomInventoryPanel';
 import { ChaosSpawnWorkbench, ZagreusSpawnWorkbench } from './AdditionalExitControls';
 import { InfernalContractPedestalPanel } from './InfernalContractPedestalPanel';
 
@@ -62,20 +61,7 @@ export function RoomFeatureSection({
                   )}
                 />
               );
-            case 'hermesShrine':
-            case 'purgingPool':
-            case 'stygianWell':
-              return (
-                <RoomInventoryPanel
-                  feature={feature}
-                  interactions={interactions}
-                  key={workspaceInteractionKey(
-                    feature.kind === 'purgingPool'
-                      ? feature.inventoryAddress
-                      : (feature.inventoryAddress ?? feature.presenceAddress),
-                  )}
-                />
-              );
+            // The Well, Pool and Shrine follow their anchor slot.
             case 'infernalContractPedestal':
               return (
                 <InfernalContractPedestalPanel

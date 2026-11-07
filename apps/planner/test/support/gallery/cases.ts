@@ -22,6 +22,7 @@ import {
   loadSurfaceAnvilCheckpoint,
   loadSurfaceEncounterShowcaseCheckpoint,
   loadSurfaceNCheckpoint,
+  loadSurfaceNOPQCheckpoint,
   loadSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNPhialIntermediateFountainCheckpoint,
   loadSurfaceNResourcesCheckpoint,
@@ -47,6 +48,12 @@ import {
   loadUnderworldZagreusContractCheckpoint,
   underworldCheckpointArtifacts,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { catalog } from '@run-planner/hades2-catalog';
+import {
+  roomObjectAnchorSlotsForProjectEvaluationAssembly,
+  simulateProjectAssembly,
+  type RoomAnchorObjectKind,
+} from '@run-planner/engine/simulation';
 import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { createReachableNaturalChaosProject } from '../structured-workspace/interaction-binding.test-support';
@@ -58,7 +65,25 @@ import {
   room,
   withoutRoomActionOrder,
   type GalleryCase,
+  type GalleryStep,
 } from './galleryCase';
+
+/** Adds an object on a free anchor through the engine's own placement command. */
+function placeAnchorObject(
+  biomeKey: string,
+  occurrenceId: string,
+  kind: RoomAnchorObjectKind,
+): GalleryStep {
+  return (project) => {
+    const place = roomObjectAnchorSlotsForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+      occurrenceAddress(project, biomeKey, occurrenceId),
+    )?.objects.find((object) => object.kind === kind)?.place;
+    if (place === undefined) throw new Error(`${occurrenceId} cannot place ${kind}`);
+    return place;
+  };
+}
 
 // The trait-order-checks F rooms carry generated ids.
 const loadTraitOrderChecks = underworldCheckpointArtifacts['underworld-f-trait-order-checks'].load;
@@ -368,6 +393,38 @@ export const galleryCases: readonly GalleryCase[] = [
       appendRoomAction('F', 'golden-f-b5-e1', { kind: 'interactChallengeSwitch' }),
     ],
     target: room('F', 'golden-f-b5-e1'),
+  },
+  {
+    id: 'anchors-well-switch',
+    overview: true,
+    label: 'Two anchors holding a Stygian Well and a challenge switch',
+    shows: ['anchor slots', 'Well inventory', 'challenge switch'],
+    project: createGoldenFGHIProject,
+    commands: [
+      placeAnchorObject('F', 'golden-f-b5-e1', 'challengeSwitch'),
+      placeAnchorObject('F', 'golden-f-b5-e1', 'stygianWell'),
+    ],
+    target: room('F', 'golden-f-b5-e1'),
+  },
+  {
+    id: 'anchors-shrine-switch',
+    overview: true,
+    label: 'Two anchors holding a Hermes Shrine and a challenge switch',
+    shows: ['anchor slots', 'Shrine inventory', 'challenge switch'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [
+      placeAnchorObject('O', 'surface-o-combat02', 'challengeSwitch'),
+      placeAnchorObject('O', 'surface-o-combat02', 'hermesShrine'),
+    ],
+    target: room('O', 'surface-o-combat02'),
+  },
+  {
+    id: 'anchors-postboss-shrine',
+    overview: true,
+    label: 'Postboss: forced Hermes Shrine on its anchor',
+    shows: ['fixed anchor object', 'Shrine inventory'],
+    project: loadSurfaceNOPQCheckpoint,
+    target: room('O', 'surface-o-preboss:postboss'),
   },
   {
     id: 'unlock-exit',

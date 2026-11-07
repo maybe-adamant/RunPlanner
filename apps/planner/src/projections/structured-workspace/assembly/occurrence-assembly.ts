@@ -1,5 +1,6 @@
 import { normalExitOrdinal } from './ordering';
 import { assembleLockedDoors, assembleUnlockExitEncounters } from './locked-doors-assembly';
+import { assembleRoomObjectSlots } from './room-object-slots-assembly';
 import { assembleChallengeSwitch } from './challenge-switch-assembly';
 import {
   resolveEntryDeclaration,
@@ -320,6 +321,10 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly roomObjectInteractions?: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomObjectInteractions | undefined;
+  /** The room's challenge switch anchors and the objects on them. */
+  readonly roomAnchorSlots?: (
+    occurrence: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').RoomAnchorSlots | undefined;
   /** Whether a new Well or Pool reroll fits the run's reroll pool. */
   readonly rerollSpendAllowance?: import('../source-index').WorkspaceBiomeSource['rerollSpendAllowance'];
   /** A screen's next reroll and how far the pool at its point takes it. */
@@ -558,6 +563,11 @@ export function assembleWorkspaceOccurrence(
         markerDestinations: input.markerDestinations,
         product: input.roomObjectInteractions?.(address)?.challengeSwitch,
       });
+  const objectSlots = assembleRoomObjectSlots({
+    address,
+    product: input.roomAnchorSlots?.(address),
+    switchKind: challengeSwitch?.kinds.find((kind) => kind.selected)?.kind,
+  });
   const lockedDoorsProduct = input.facts.detailsActive
     ? input.roomObjectInteractions?.(address)?.lockedDoors
     : undefined;
@@ -831,6 +841,7 @@ export function assembleWorkspaceOccurrence(
     ...(keepsakeSelection === undefined ? {} : { keepsakeSelection }),
     ...(erisObservation === undefined ? {} : { erisObservation }),
     ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
+    ...(objectSlots === undefined ? {} : { objectSlots: objectSlots.objectSlots }),
     ...(lockedDoors === undefined ? {} : { lockedDoors: lockedDoors.lockedDoors }),
     encounterPhases,
     entered,
@@ -1380,6 +1391,7 @@ export function assembleWorkspaceOccurrence(
     ...featureRollRequirements,
     ...(roomActions?.objectEntries === undefined ? [] : objectEntries.requirements),
     ...(lockedDoors === undefined ? [] : lockedDoors.requirements),
+    ...(objectSlots === undefined ? [] : [objectSlots.requirement]),
     ...[...unlockEncounters.values()].map((encounter) =>
       Object.freeze({ kind: 'unlockExitEncounter' as const, owner: address, encounter }),
     ),

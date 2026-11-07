@@ -1,8 +1,14 @@
 import { useCallback } from 'react';
 
-import type { WorkspaceCommandIntent } from '@planner/projections/structured-workspace';
+import type {
+  WorkspaceCommandIntent,
+  WorkspaceCommandsIntent,
+} from '@planner/projections/structured-workspace';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectCommandsDispatched,
+} from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch, type AppDispatch } from '@planner/state/store';
 
 /** Dispatch one complete interaction intent in its explicitly declared order. */
@@ -19,4 +25,15 @@ export function dispatchCommandIntent(dispatch: AppDispatch, intent: WorkspaceCo
 export function useCommandIntent(): (intent: WorkspaceCommandIntent) => void {
   const dispatch = useAppDispatch();
   return useCallback((intent) => dispatchCommandIntent(dispatch, intent), [dispatch]);
+}
+
+/** Dispatch an intent's commands as one edit and one Undo step. */
+export function useCommandsIntent(): (intent: WorkspaceCommandsIntent) => void {
+  const dispatch = useAppDispatch();
+  return useCallback(
+    (intent) => {
+      if (intent.commands.length > 0) dispatch(authoredProjectCommandsDispatched(intent.commands));
+    },
+    [dispatch],
+  );
 }

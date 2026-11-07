@@ -19,25 +19,11 @@ import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import {
-  hermesShrineRefusalSentence,
-  stygianWellRefusalSentence,
-} from '@planner/projections/roomObjectPlacementCopy';
 import { hintProps } from '@planner/ui/controls/hint';
-import { IconToggle } from '@planner/ui/controls/IconToggle';
-import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
-
-/** A disabled presence waits on an earlier choice, or names the rules refusing it. */
-const presenceLockHint = (feature: StygianWellFeature | HermesShrineFeature): string | undefined =>
-  feature.assessment === 'unassessed'
-    ? candidateWaitingHint
-    : feature.kind === 'stygianWell'
-      ? feature.presenceRefusals?.map(stygianWellRefusalSentence).join(' ')
-      : feature.presenceRefusals?.map(hermesShrineRefusalSentence).join(' ');
 
 const wellIcon = (itemKey: string | null): string | undefined =>
   itemKey === null ? undefined : (wellArtwork[itemKey] ?? undefined);
@@ -56,7 +42,6 @@ const emptyStringPicker: ContextualPickerModel<string> = Object.freeze({
 });
 
 type StygianWellFeature = Extract<WorkspaceRoomFeature, { readonly kind: 'stygianWell' }>;
-type HermesShrineFeature = Extract<WorkspaceRoomFeature, { readonly kind: 'hermesShrine' }>;
 
 type InventoryFeature = Extract<
   WorkspaceRoomFeature,
@@ -70,37 +55,14 @@ export function RoomInventoryPanel({
   readonly feature: InventoryFeature;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
-  const findingTarget = useFindingTarget();
   const findingAnchor = useFindingAnchor();
   const executeIntent = useCommandIntent();
   switch (feature.kind) {
     case 'stygianWell':
       return (() => {
-        const presence =
-          feature.presenceInteractionKey === undefined
-            ? undefined
-            : requireWorkspaceInteraction(
-                interactions.stygianWellPresences,
-                feature.presenceInteractionKey,
-              );
         return (
-          <fieldset className="room-purging-pool room-inventory-line" key="stygian-well">
+          <fieldset className="room-object-settings" key="stygian-well">
             <legend className="visually-hidden">Stygian Well configuration</legend>
-            {presence === undefined && feature.presence.kind !== 'optionalAbsent' ? (
-              <FixedObjectHeader object="stygianWell" title="Stygian Well" />
-            ) : (
-              <IconToggle
-                disabled={presence === undefined}
-                disabledHint={presence === undefined ? presenceLockHint(feature) : undefined}
-                icon={roomObjectIcon('stygianWell')}
-                name="Stygian Well"
-                onToggle={(next) => {
-                  if (presence !== undefined) executeIntent(presence.intentFor(next));
-                }}
-                pressed={feature.presence.kind !== 'optionalAbsent'}
-                target={findingTarget(feature.presenceAddress)}
-              />
-            )}
             {feature.presence.kind === 'optionalAbsent' ? null : (
               <NumberedSlots label="Stygian Well slots">
                 {feature.slots.map((slot, index) => (
@@ -120,9 +82,8 @@ export function RoomInventoryPanel({
     case 'purgingPool':
       return (() => {
         return (
-          <fieldset className="room-purging-pool room-inventory-line" key="purging-pool">
+          <fieldset className="room-object-settings" key="purging-pool">
             <legend className="visually-hidden">Pool of Purging configuration</legend>
-            <FixedObjectHeader object="purgingPool" title="Pool of Purging" />
             <NumberedSlots label="Pool of Purging slots">
               {feature.slots.map((slot, index) => {
                 const interaction = requireWorkspaceInteraction(
@@ -148,38 +109,16 @@ export function RoomInventoryPanel({
       })();
     case 'hermesShrine':
       return (() => {
-        const presence =
-          feature.presenceInteractionKey === undefined
-            ? undefined
-            : requireWorkspaceInteraction(
-                interactions.hermesShrinePresences,
-                feature.presenceInteractionKey,
-              );
         return (
           <fieldset
             {...(feature.inventoryAddress === undefined
               ? {}
               : findingAnchor(feature.inventoryAddress))}
             tabIndex={-1}
-            className="room-purging-pool room-inventory-line"
+            className="room-object-settings"
             key="hermes-shrine"
           >
             <legend className="visually-hidden">Hermes Shrine configuration</legend>
-            {presence === undefined && feature.presence.kind !== 'optionalAbsent' ? (
-              <FixedObjectHeader object="hermesShrine" title="Hermes Shrine" />
-            ) : (
-              <IconToggle
-                disabled={presence === undefined}
-                disabledHint={presence === undefined ? presenceLockHint(feature) : undefined}
-                icon={roomObjectIcon('hermesShrine')}
-                name="Hermes Shrine"
-                onToggle={(next) => {
-                  if (presence !== undefined) executeIntent(presence.intentFor(next));
-                }}
-                pressed={feature.presence.kind !== 'optionalAbsent'}
-                target={findingTarget(feature.presenceAddress)}
-              />
-            )}
             {feature.slots.length === 0 ? null : (
               <NumberedSlots label="Hermes Shrine slots">
                 {feature.slots.map((slot, index) => {
@@ -214,17 +153,20 @@ export function RoomInventoryPanel({
   }
 }
 
-/** A room object the room always has here: its lit icon, named on hover, with nothing to toggle. */
-function FixedObjectHeader({
+/** A room object the room always has here: its lit icon, named on hover, with nothing to pick. */
+export function FixedObjectChip({
   object,
   title,
+  target,
 }: {
-  readonly object: 'hermesShrine' | 'purgingPool' | 'stygianWell';
+  readonly object: 'hermesShrine' | 'purgingPool' | 'stygianWell' | 'challengeSwitch';
   readonly title: string;
+  readonly target?: import('@planner/ui/feedback/useFindingTarget').FindingTargetProps;
 }) {
   return (
     <span
-      {...hintProps(title, undefined, title)}
+      {...target}
+      {...hintProps(title, target?.['aria-description'], title)}
       aria-label={title}
       className="room-object-fixed"
       role="img"

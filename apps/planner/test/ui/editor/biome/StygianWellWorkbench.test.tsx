@@ -75,7 +75,7 @@ function openTimeline(): void {
 }
 
 describe('Stygian Well workbench', () => {
-  it('authors ordinary presence, with its slots editable once present', async () => {
+  it('authors ordinary presence from its anchor spot, with its slots editable once present', async () => {
     const project = loadUnderworldFGProject();
     const occurrenceId = goldenFOccurrenceId(3, 1);
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', (biome) =>
@@ -85,17 +85,14 @@ describe('Stygian Well workbench', () => {
       ),
     );
     openOverview();
-    const presence = screen.getByRole('button', { name: 'Stygian Well' });
-    expect(presence.getAttribute('aria-pressed')).toBe('false');
-    expect((presence as HTMLButtonElement).disabled).toBe(false);
-
     expect(screen.queryAllByRole('button', { name: /^Stygian Well / })).toHaveLength(0);
-    await view.user.click(presence);
+    await view.user.click(screen.getAllByRole('button', { name: /^Spot( 1)?$/ })[0]!);
+    await view.user.click(screen.getByRole('option', { name: /Stygian Well/ }));
     expect(screen.queryByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);
   });
 
-  it('disables presence in a reached room too early for a Well and names the rule', () => {
+  it('disables an empty spot in a reached room too early for a Well and names the rule', () => {
     const occurrenceId = goldenFOccurrenceId(2, 1);
     renderOccurrenceWorkbench(loadUnderworldFGProject(), 'Underworld', 'F', (biome) =>
       biome.nodes.find(
@@ -104,23 +101,19 @@ describe('Stygian Well workbench', () => {
       ),
     );
     openOverview();
-    const presence = screen.getByRole('button', { name: 'Stygian Well' });
-    expect((presence as HTMLButtonElement).disabled).toBe(true);
-    expect(hintOf(presence.closest('[data-hint]'))).toBe(
-      'Stygian Well · Wells need biome depth 3; this room is at 2.',
+    const spot = screen.getAllByRole('button', { name: /^Spot( 1)?$/ })[0]!;
+    expect((spot as HTMLButtonElement).disabled).toBe(true);
+    expect(hintOf(spot.closest('[data-hint]'))).toContain(
+      'Wells need biome depth 3; this room is at 2.',
     );
   });
 
-  it('keeps forced presence fixed with its slots always editable', () => {
+  it('keeps forced presence fixed on its spot with its slots always editable', () => {
     renderOccurrenceWorkbench(loadUnderworldFGProject(), 'Underworld', 'F', occurrence);
     openOverview();
-    // An always-present Well is named without a presence toggle.
-    expect(screen.queryByRole('button', { name: 'Stygian Well' })).toBeNull();
-    expect(
-      within(screen.getByRole('group', { name: 'Stygian Well configuration' })).getByRole('img', {
-        name: 'Stygian Well',
-      }),
-    ).toBeTruthy();
+    // An always-present Well is named on its spot, with nothing to pick.
+    expect(screen.queryByRole('button', { name: /^Spot/ })).toBeNull();
+    expect(screen.getByRole('img', { name: 'Stygian Well' })).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);
   });

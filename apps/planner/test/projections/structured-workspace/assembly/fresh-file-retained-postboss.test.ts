@@ -27,7 +27,7 @@ describe('Fresh File retained Postboss state', () => {
     expect(mature.keepsakeSelection).not.toHaveProperty('unavailableReason');
   });
 
-  it('keeps removal controls for a retained Well and an interacted Pool with its sale', () => {
+  it('keeps a retained Well and an interacted Pool with its sale', () => {
     const room = postbossRoom(
       withRetainedFreshFilePostboss(createFreshFileFProject(), {
         well: true,
@@ -36,7 +36,6 @@ describe('Fresh File retained Postboss state', () => {
     );
     const well = room.workbench.features.find((feature) => feature.kind === 'stygianWell');
     expect(well).toMatchObject({ presence: { kind: 'optionalPresent' } });
-    expect(well).toHaveProperty('presenceInteractionKey');
     const pool = room.workbench.features.find((feature) => feature.kind === 'purgingPool');
     if (pool?.kind !== 'purgingPool') throw new Error('retained Pool is missing');
     expect(pool.slots[0]).toMatchObject({ traitKey: 'ApolloWeaponBoon' });

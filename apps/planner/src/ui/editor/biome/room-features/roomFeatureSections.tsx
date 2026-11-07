@@ -5,9 +5,9 @@ import type {
   WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
 import type { RoomOverviewSectionContent } from '../RoomOverviewSections';
-import { ChallengeSwitchControls } from './ChallengeSwitchControls';
 import { ErisSpawnControl } from './ErisSpawnControl';
 import { RoomResourceControls } from './ResourceControls';
+import { RoomObjectSlots } from './RoomObjectSlots';
 import {
   RoomFeatureSection,
   type RoomFeatureGroup,
@@ -38,41 +38,33 @@ function contentGroup(key: string, label: ReactNode, content: ReactNode): RoomFe
   });
 }
 
-type RoomObjectKind = 'stygianWell' | 'purgingPool' | 'hermesShrine' | 'infernalContractPedestal';
-
-/** The game's secret spawn order: the Well, Pool and Shrine claim spots before the switch. */
-const spawnPriority: readonly RoomObjectKind[] = ['stygianWell', 'purgingPool', 'hermesShrine'];
-const afterSwitch: readonly RoomObjectKind[] = ['infernalContractPedestal'];
-
-/** The Objects section in spawn order, the challenge switch after the objects that outrank it. */
+/** The Objects section: the anchor slots line, then the Pedestal, which needs no anchor. */
 function objectsGroup(
   features: readonly RoomFeaturePresence[],
   interactions: WorkspaceInteractionCatalog,
   room: WorkspaceRoomSummary,
 ): RoomFeatureGroup | undefined {
-  const ofKinds = (kinds: readonly RoomObjectKind[]) =>
-    kinds.flatMap((kind) => features.filter((feature) => feature.kind === kind));
-  const feature = (entry: RoomFeaturePresence, index: number) =>
-    Object.freeze({ kind: 'feature' as const, key: `Objects:${index}`, feature: entry });
-  const before = ofKinds(spawnPriority);
-  const after = ofKinds(afterSwitch);
+  const pedestals = features.filter((feature) => feature.kind === 'infernalContractPedestal');
   const entries = [
-    ...before.map(feature),
-    ...(room.challengeSwitch === undefined
+    ...(room.objectSlots === undefined
       ? []
       : [
           Object.freeze({
             kind: 'content' as const,
-            key: 'Objects:challengeSwitch',
+            key: 'Objects:slots',
             content: (
-              <ChallengeSwitchControls
+              <RoomObjectSlots
+                features={features}
                 interactions={interactions}
-                observation={room.challengeSwitch}
+                objectSlots={room.objectSlots}
+                room={room}
               />
             ),
           }),
         ]),
-    ...after.map((entry, index) => feature(entry, before.length + index)),
+    ...pedestals.map((feature, index) =>
+      Object.freeze({ kind: 'feature' as const, key: `Objects:${index}`, feature }),
+    ),
   ];
   return entries.length === 0
     ? undefined

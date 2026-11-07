@@ -61,7 +61,6 @@ import {
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
 import { RouteShrinesPanel } from '@planner/ui/shell/RouteShrinesPanel';
-import { hintOf } from '@planner-test/support/hints';
 import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
 import {
   addGroupButton,
@@ -121,11 +120,12 @@ describe('Hermes Shrine workbench', () => {
       application,
     );
     openOverview();
-    const presence = screen.getByRole('button', { name: 'Hermes Shrine' });
-    expect((presence as HTMLButtonElement).disabled).toBe(false);
+    const spot = () => screen.getAllByRole('button', { name: /^Spot( 1)?$/ })[0]!;
+    expect((spot() as HTMLButtonElement).disabled).toBe(false);
     expect(screen.queryByRole('checkbox', { name: /Interact.*Hermes Shrine/i })).toBeNull();
 
-    await view.user.click(presence);
+    await view.user.click(spot());
+    await view.user.click(screen.getByRole('option', { name: /Hermes Shrine/ }));
     expect(
       screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
     ).toHaveLength(3);
@@ -137,15 +137,13 @@ describe('Hermes Shrine workbench', () => {
 
     act(() => application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: 'Hermes Shrine' }).getAttribute('aria-pressed'),
-      ).toBe('false'),
+      expect(screen.queryAllByRole('button', { name: /^Hermes Shrine Offer/ })).toHaveLength(0),
     );
     act(() => application.store.dispatch(authoredProjectRedoRequested()));
     await waitFor(() =>
       expect(
-        screen.getByRole('button', { name: 'Hermes Shrine' }).getAttribute('aria-pressed'),
-      ).toBe('true'),
+        screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
+      ).toHaveLength(3),
     );
   });
 
@@ -741,19 +739,15 @@ describe('Hermes Shrine workbench', () => {
     const postbossId = `surface-o-preboss:postboss`;
     renderOccurrenceWorkbench(loadSurfaceNOProject(), 'Surface', 'O', occurrence(postbossId));
     openOverview();
-    // An always-present Shrine is named without a presence toggle.
-    expect(screen.queryByRole('button', { name: 'Hermes Shrine' })).toBeNull();
-    expect(
-      within(screen.getByRole('group', { name: 'Hermes Shrine configuration' })).getByRole('img', {
-        name: 'Hermes Shrine',
-      }),
-    ).toBeTruthy();
+    // An always-present Shrine is named on its spot, with nothing to pick.
+    expect(screen.queryByRole('button', { name: /^Spot/ })).toBeNull();
+    expect(screen.getByRole('img', { name: 'Hermes Shrine' })).toBeTruthy();
     expect(
       screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
     ).toHaveLength(3);
   });
 
-  it('disables Add at an ineligible absent ordinary host and names the refusing rule', () => {
+  it('offers no spot in a Shrine host without anchors', () => {
     renderOccurrenceWorkbench(
       loadSurfaceNOProject(),
       'Surface',
@@ -761,12 +755,8 @@ describe('Hermes Shrine workbench', () => {
       occurrence(oOccurrenceIds.combat01),
     );
     openOverview();
-    const presence = screen.getByRole('button', { name: 'Hermes Shrine' });
-    expect(presence.getAttribute('aria-pressed')).toBe('false');
-    expect((presence as HTMLButtonElement).disabled).toBe(true);
-    expect(hintOf(presence.closest('[data-hint]'))).toBe(
-      'Hermes Shrine · This room has no spot for a Hermes Shrine.',
-    );
+    expect(screen.queryByRole('button', { name: /^Spot/ })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Objects' })).toBeNull();
   });
 
   it('keeps a refill purchased without Travel Deal removable on its own row', async () => {

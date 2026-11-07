@@ -41,6 +41,7 @@ import {
   phantomExitSettlementForProjectEvaluationAssembly,
   rerollSpendAllowanceForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
+  roomObjectAnchorSlotsForProjectEvaluationAssembly,
   goldLedgerForProjectEvaluationAssembly,
   planEndAvailability,
   rerollSurfaceForProjectEvaluationAssembly,
@@ -375,6 +376,16 @@ export function createStructuredWorkspaceProjection(
         goldLedgerForProjectEvaluationAssembly(catalog, assembly),
         (room) => planEndAvailability(catalog, assembly, room),
         (owner) => authoringReadinessAt(assembly, owner),
+        (occurrence) => {
+          try {
+            return roomObjectAnchorSlotsForProjectEvaluationAssembly(catalog, assembly, occurrence);
+          } catch (error) {
+            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
+              return undefined;
+            }
+            throw error;
+          }
+        },
       );
       const routeSource = sources.route;
       const authoredRoute =

@@ -30,6 +30,13 @@ export type {
   WorkspaceRoomObjectEntryInteraction,
   WorkspaceRoomObjectLock,
   WorkspaceRoomObjectOption,
+  WorkspaceRoomObjectSlots,
+  WorkspaceRoomObjectSlotsInteraction,
+  WorkspaceAnchorObject,
+  WorkspaceAnchorObjectLock,
+  WorkspaceAnchorOccupant,
+  WorkspaceAnchorSlot,
+  WorkspaceAnchorSlotChoice,
   WorkspaceZagreusContractControl,
   WorkspaceZagreusSpawnControl,
 } from './contracts/features';
@@ -142,11 +149,9 @@ import type { RewardPickerProjectionService } from '../rewards/rewardPicker';
 import type { TraitDomainProjectionService } from '../rewards/traitDomainProjection';
 import type {
   WorkspaceHermesShrineOfferInteraction,
-  WorkspaceHermesShrinePresenceInteraction,
   WorkspacePurgingPoolSlotInteraction,
   WorkspaceShopOfferInteraction,
   WorkspaceStygianWellOfferInteraction,
-  WorkspaceStygianWellPresenceInteraction,
   WorkspaceStygianWellTwistResultInteraction,
 } from './contracts/commerce';
 import type {
@@ -218,11 +223,9 @@ import type {
 
 export type {
   WorkspaceHermesShrineOfferInteraction,
-  WorkspaceHermesShrinePresenceInteraction,
   WorkspacePurgingPoolSlotInteraction,
   WorkspaceShopOfferInteraction,
   WorkspaceStygianWellOfferInteraction,
-  WorkspaceStygianWellPresenceInteraction,
   WorkspaceStygianWellTwistResultInteraction,
 } from './contracts/commerce';
 export type {
@@ -350,6 +353,11 @@ export interface WorkspaceCommandIntent<Command extends ProjectCommand = Project
   };
 }
 
+/** Several commands applied in order as one edit and one Undo step. */
+export interface WorkspaceCommandsIntent<Command extends ProjectCommand = ProjectCommand> {
+  readonly commands: readonly Command[];
+}
+
 type WorkspaceTargetRoomCommandIntent = WorkspaceCommandIntent<
   Extract<ProjectCommand, { readonly kind: 'CreateTarget' | 'ReplaceOccurrenceRoom' }>
 >;
@@ -434,6 +442,11 @@ export interface WorkspaceInteractionCatalog {
     string,
     import('./contracts/features').WorkspaceRoomObjectEntryInteraction
   >;
+  /** Each room's challenge switch anchor slots. */
+  readonly roomObjectSlots: ReadonlyMap<
+    string,
+    import('./contracts/features').WorkspaceRoomObjectSlotsInteraction
+  >;
   /** Each Well or Pool reroll's slot pins. */
   readonly featureRollSlots: ReadonlyMap<
     string,
@@ -442,8 +455,6 @@ export interface WorkspaceInteractionCatalog {
   /** One declaration-keyed Pool slot, with engine-derived contextual candidates. */
   readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
   readonly hermesShrineOffers: ReadonlyMap<string, WorkspaceHermesShrineOfferInteraction>;
-  readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
-  readonly stygianWellPresences: ReadonlyMap<string, WorkspaceStygianWellPresenceInteraction>;
   readonly stygianWellOffers: ReadonlyMap<string, WorkspaceStygianWellOfferInteraction>;
   readonly stygianWellTwistResults: ReadonlyMap<string, WorkspaceStygianWellTwistResultInteraction>;
   readonly resourcePlacements: ReadonlyMap<string, WorkspaceResourcePlacementInteraction>;
@@ -625,6 +636,8 @@ export type WorkspaceBossDoorRewardStoreControl =
 
 export interface WorkspaceRoomSummary {
   readonly address: OccurrenceAddress;
+  /** The room's challenge switch anchors and the objects on them. */
+  readonly objectSlots?: import('./contracts/features').WorkspaceRoomObjectSlots;
   readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreControl;
   /** Present exactly where the room declares a hidden door back to the Hub. */
   readonly phantomExit?: WorkspacePhantomExitControl;
