@@ -543,8 +543,7 @@ export function CustomizableEncounterPhaseControl({
         isIdentityFinding,
       )}
       id={semanticOwnerControlElementId(phase.address)}
-      label={phase.shortLabel ?? phase.label}
-      {...(phase.shortLabel === undefined ? {} : { labelHint: phase.label })}
+      label={phase.label}
       layout="inline"
       loading={open && candidates.pending}
       model={candidates.result ?? emptyEncounterPicker}
@@ -611,14 +610,7 @@ export function EncounterPhaseControl({
           />
         ) : (
           <div className="field-control field-control-inline">
-            {phase.shortLabel === undefined ? (
-              <span>{phase.label}</span>
-            ) : (
-              <span {...hintProps(phase.label, undefined, phase.label)}>
-                <span aria-hidden="true">{phase.shortLabel}</span>
-                <span className="visually-hidden">{phase.label}</span>
-              </span>
-            )}
+            <span>{phase.label}</span>
             <div className="encounter-fixed-value">
               {selectedEncounterIcon(phase.selectedEncounter) === undefined ? null : (
                 <ArtworkIcon

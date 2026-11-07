@@ -354,6 +354,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'challenge-switch',
+    overview: true,
     label: 'Challenge switch used after the doors open',
     shows: ['challenge switch'],
     project: createGoldenFGHIProject,
@@ -369,6 +370,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'unlock-exit',
+    overview: true,
     label: 'Locked door pressed open',
     shows: ['unlock exit'],
     project: createGoldenFGHIProject,

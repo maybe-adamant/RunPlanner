@@ -372,6 +372,7 @@
 .hermes-shrine-slot {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .hermes-shrine-slot > .field-control {
@@ -3687,11 +3688,20 @@ span.hub-board-status-line {
   min-width: 0;
 }
 
-/* A Shrine slot's delivery delay follows its chip as a compact number. */
+/* A Shrine slot's delivery delay follows its chip as a compact number on the chip's center line. */
+.hermes-shrine-delay {
+  display: inline-flex;
+  height: 30px;
+  align-items: center;
+}
+
 .hermes-shrine-delay .contextual-picker-trigger {
   min-width: 2rem;
+  height: 30px;
   min-height: 30px;
   padding: 0 6px;
+  justify-content: center;
+  line-height: 1;
 }
 
 /* A Fields cage's slot is subscripted on its encounter's name. */
@@ -3817,6 +3827,7 @@ span.hub-board-status-line {
   place-items: center;
 }
 
+/* An object's toggle centers on the 30px row its slot chips and the presence rows share. */
 .room-inventory-line > :is(.icon-toggle, .icon-toggle-disabled, .room-object-fixed) {
-  min-height: 30px;
+  margin-block: 2px;
 }
