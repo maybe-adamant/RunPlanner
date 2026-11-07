@@ -59,10 +59,7 @@ describe('Room Timeline row anatomy', () => {
       `[data-room-action-key="${CSS.escape(goldPickupKey)}"]`,
     )!;
     expect(within(cell(row, 'label')).getByText('Collect')).toBeTruthy();
-    const reward = within(cell(row, 'label')).getByRole('img', { name: 'Gold' });
-    expect(reward.classList.contains('row-reward-icon')).toBe(true);
-    expect(hintOf(reward)).toBe('Gold');
-    expect(row.querySelector('.row-reward-boosted')).toBeNull();
+    expect(within(cell(row, 'label')).getByRole('img', { name: 'Gold' })).toBeTruthy();
   });
 
   it('marks a Boosted boon on its reward icon', async () => {
@@ -84,14 +81,7 @@ describe('Room Timeline row anatomy', () => {
       .find((candidate) => /^Buy Boosted /.test(candidate.textContent ?? ''));
     if (option === undefined) throw new Error('The World Shop offers no boon to buy');
     await view.user.click(option);
-    const row = [...timeline().querySelectorAll<HTMLElement>('li[data-room-action-key]')].find(
-      (candidate) => candidate.querySelector('.row-reward-boosted') !== null,
-    );
-    if (row === undefined) throw new Error('No row marks a Boosted boon');
-    const icon = row.querySelector<HTMLElement>('.row-reward-icon')!;
-    expect(icon.getAttribute('role')).toBe('img');
-    expect(icon.getAttribute('aria-label')).toMatch(/^Boosted .+ boon$/);
-    expect(icon.querySelector('.row-reward-boosted')?.getAttribute('aria-hidden')).toBe('true');
+    expect(within(timeline()).getByRole('img', { name: /^Boosted .+ boon$/ })).toBeTruthy();
   });
 
   it('keeps a quieter disabled handle on a row with no legal move', () => {

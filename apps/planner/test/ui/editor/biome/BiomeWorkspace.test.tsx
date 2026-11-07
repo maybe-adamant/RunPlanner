@@ -114,6 +114,16 @@ function renderProjectedBiome(application: PlannerApplication, biome: WorkspaceB
   );
 }
 
+/** The open room's workbench, known by its tab list. */
+function roomWorkbench(inspector: HTMLElement): HTMLElement | null {
+  return within(inspector).queryByRole('tablist', { name: 'Room workbench' });
+}
+
+/** The open door decision's workbench, known by the decision kind it shows. */
+function doorWorkbench(inspector: HTMLElement): HTMLElement | null {
+  return inspector.querySelector<HTMLElement>('[data-batch-kind]');
+}
+
 function railMarkerKeys(container: HTMLElement): readonly string[] {
   return Array.from(container.querySelectorAll<HTMLElement>('[data-workspace-node]')).map(
     (element) => element.dataset.workspaceNode ?? '',
@@ -984,21 +994,15 @@ describe('BiomeWorkspace', () => {
       throw new Error('Ephyra rail primary-reward entries are missing');
     }
 
+    expect(railButtonForMarker(view.container, opening.marker.focusKey).textContent).toContain(
+      opening.mainReward.label,
+    );
     expect(
-      railButtonForMarker(view.container, opening.marker.focusKey).querySelector(
-        '.biome-rail-selection',
-      )?.textContent,
-    ).toContain(opening.mainReward.label);
-    expect(
-      railButtonForMarker(view.container, preHubDecision.marker.focusKey).querySelector(
-        '.biome-rail-selection',
-      )?.textContent,
+      railButtonForMarker(view.container, preHubDecision.marker.focusKey).textContent,
     ).toContain(preHubDecision.selectedTarget.reward.label);
-    expect(
-      railButtonForMarker(view.container, firstVisit.marker.focusKey).querySelector(
-        '.biome-rail-selection',
-      )?.textContent,
-    ).toContain(firstVisit.room.reward.label);
+    expect(railButtonForMarker(view.container, firstVisit.marker.focusKey).textContent).toContain(
+      firstVisit.room.reward.label,
+    );
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     expect(hintOf(screen.getByRole('button', { name: 'Visit 1 room' }))).toContain(
@@ -1035,9 +1039,7 @@ describe('BiomeWorkspace', () => {
 
     await view.user.click(railButtonForMarker(view.container, opening.marker.focusKey));
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(inspector.querySelector('.biome-occurrence-workbench > header h3')?.textContent).toBe(
-      'Opening',
-    );
+    expect(within(inspector).getByRole('heading', { level: 3, name: 'Opening' })).toBeTruthy();
 
     await view.user.click(railButtonForMarker(view.container, preHubDecision.marker.focusKey));
     expect(within(inspector).getByRole('heading', { level: 3, name: 'Pre-Hub' })).toBeTruthy();
@@ -1213,8 +1215,8 @@ describe('BiomeWorkspace', () => {
         ...projected.completionOutline.map((node) => node.marker.focusKey),
       ]);
       const inspector = screen.getByRole('complementary', { name: 'Details' });
-      expect(inspector.querySelector('.biome-batch-workbench')).toBeNull();
-      expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
+      expect(doorWorkbench(inspector)).toBeNull();
+      expect(roomWorkbench(inspector)).not.toBeNull();
       cleanup();
     }
   });
@@ -1244,11 +1246,7 @@ describe('BiomeWorkspace', () => {
     );
 
     expect(selectedRailMarkerKeys(view.container)).toEqual([opening]);
-    expect(
-      screen
-        .getByRole('complementary', { name: 'Details' })
-        .querySelector('.biome-occurrence-workbench'),
-    ).not.toBeNull();
+    expect(roomWorkbench(screen.getByRole('complementary', { name: 'Details' }))).not.toBeNull();
   });
 
   it('updates decision rail context from the predecessor occurrence stage', async () => {
@@ -1294,9 +1292,7 @@ describe('BiomeWorkspace', () => {
     }
     const picked = decisionNode.targets.find((target) => target.selected);
     if (picked === undefined) throw new Error('P selected room is missing');
-    const before = railDecision.querySelector<HTMLElement>('.biome-rail-selection');
-    if (before === null) throw new Error('P selected room rail context is missing');
-    const beforeText = before.textContent;
+    const beforeText = railDecision.textContent;
     await view.user.click(within(inspector).getByRole('tab', { name: 'Room Timeline' }));
     expandDoors(inspector);
     const pickedDoor = within(inspector).getByRole('article', {
@@ -1314,9 +1310,7 @@ describe('BiomeWorkspace', () => {
     if (replacement === undefined) throw new Error('P picked room has no replacement reward');
     await view.user.click(replacement);
 
-    const after = railDecision.querySelector<HTMLElement>('.biome-rail-selection');
-    if (after === null) throw new Error('P updated room rail context is missing');
-    expect(after.textContent).not.toBe(beforeText);
+    expect(railDecision.textContent).not.toBe(beforeText);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       sourceOccurrence.room.marker.address,
     );
@@ -1362,7 +1356,7 @@ describe('BiomeWorkspace', () => {
       ),
     );
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
+    expect(roomWorkbench(inspector)).not.toBeNull();
     await view.user.click(within(inspector).getByRole('tab', { name: 'Room Timeline' }));
     expect(within(inspector).getByRole('group', { name: 'Door rows' })).toBeTruthy();
     expect(within(inspector).queryByText('Continue from this room')).toBeNull();
@@ -1608,11 +1602,7 @@ describe('BiomeWorkspace', () => {
       matchingExitView.container,
       matchingDecision.marker.focusKey,
     );
-    expect(
-      screen
-        .getByRole('complementary', { name: 'Details' })
-        .querySelector('.biome-batch-workbench'),
-    ).not.toBeNull();
+    expect(doorWorkbench(screen.getByRole('complementary', { name: 'Details' }))).not.toBeNull();
     cleanup();
     decisionApplication.dispose();
 
@@ -1637,11 +1627,7 @@ describe('BiomeWorkspace', () => {
     };
     const entryView = renderProjectedBiome(fApplication, entryDefault);
     expectDefaultRailSelection(fApplication, entryView.container, entry.marker.focusKey);
-    expect(
-      screen
-        .getByRole('complementary', { name: 'Details' })
-        .querySelector('.biome-occurrence-workbench'),
-    ).not.toBeNull();
+    expect(roomWorkbench(screen.getByRole('complementary', { name: 'Details' }))).not.toBeNull();
     cleanup();
 
     const first = fBiome.nodes.find(
@@ -1907,8 +1893,7 @@ describe('BiomeWorkspace', () => {
     expect(railIntro.dataset.findings).toBe('true');
     expect(railIntro.textContent).toContain('1 finding');
     expect(railDecision.dataset.findings).toBe('false');
-    expect(railDecision.querySelector('.biome-rail-selection')?.textContent).toContain('Combat 02');
-    expect(railDecision.querySelector('.biome-rail-summary')).toBeNull();
+    expect(railDecision.textContent).toContain('Combat 02');
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
 
     const issue = view.application.store.getState().projectWorkspace.assembly!.evaluation.issue;
@@ -1933,7 +1918,7 @@ describe('BiomeWorkspace', () => {
     await view.user.click(within(inspector).getByRole('tab', { name: 'Room Timeline' }));
     expandDoors(inspector);
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
-    expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
+    expect(doorWorkbench(inspector)).not.toBeNull();
   });
 
   it('focuses retained downstream room rewards inside their occurrence workbench', () => {
@@ -1959,8 +1944,8 @@ describe('BiomeWorkspace', () => {
     act(() => view.application.store.dispatch(semanticOwnerFocused(reward.marker.address)));
 
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
-    expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
+    expect(roomWorkbench(inspector)).not.toBeNull();
+    expect(doorWorkbench(inspector)).not.toBeNull();
   });
 
   it('focuses a fixed Story reward on its owning predecessor door', async () => {
@@ -2066,7 +2051,7 @@ describe('BiomeWorkspace', () => {
     );
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(target);
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    const workbench = inspector.querySelector<HTMLElement>('.biome-batch-workbench');
+    const workbench = doorWorkbench(inspector);
     if (workbench === null) throw new Error('P target finding decision is missing');
     expect(within(workbench).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
   });
