@@ -137,22 +137,9 @@
   min-width: 0;
 }
 
-/* The Lock Doors gate's doors, one per line under the gate. */
-.locked-doors-list {
-  display: grid;
-  justify-items: start;
-  gap: 4px;
-  padding-left: var(--overview-subrow-indent, 1.35rem);
-}
-
-.chaos-feature-row:has(input:disabled) {
-  color: #e3dde8;
-  opacity: 1;
-}
-
-.chaos-gate-presence:has(input:disabled) {
-  color: #88858e;
-  opacity: 0.68;
+/* An object's toggle leads its line; the controls it reveals follow and wrap. */
+:is(.challenge-switch, .locked-doors) > .room-feature-presence-row {
+  flex-wrap: wrap;
 }
 
 .chaos-position-control {
@@ -2932,6 +2919,15 @@ button.timeline-door-option:disabled {
   cursor: not-allowed;
 }
 
+/* A door chip as a yes/no flag; one that cannot change is gray and locked. */
+button.timeline-door-toggle {
+  position: relative;
+}
+
+button.timeline-door-toggle:disabled .artwork-label-icon {
+  filter: grayscale(1);
+}
+
 /* A Timeline chip: one icon, its name on hover; a trait's rarity is its ring. */
 .timeline-chip-group {
   display: inline-flex;
@@ -3094,7 +3090,8 @@ button.timeline-chip {
 
 .timeline-cell-editors .timeline-chip-edit,
 .encounter-phase-settings .timeline-chip-edit,
-.shop-family-offer-row .timeline-chip-edit {
+.shop-family-offer-row .timeline-chip-edit,
+.challenge-switch .timeline-chip-edit {
   display: inline-grid;
   width: 22px;
   min-width: 22px;
@@ -3110,7 +3107,8 @@ button.timeline-chip {
 
 .timeline-cell-editors .timeline-chip-edit:hover:not(:disabled),
 .encounter-phase-settings .timeline-chip-edit:hover:not(:disabled),
-.shop-family-offer-row .timeline-chip-edit:hover:not(:disabled) {
+.shop-family-offer-row .timeline-chip-edit:hover:not(:disabled),
+.challenge-switch .timeline-chip-edit:hover:not(:disabled) {
   color: var(--selection-accent);
 }
 
@@ -3799,6 +3797,7 @@ span.hub-board-status-line {
 }
 
 .room-overview-workbench .icon-toggle-row,
+.room-overview-workbench .additional-exit-row,
 .room-overview-workbench .shop-editor > .room-overview-panel {
   padding-left: var(--overview-subrow-indent);
 }

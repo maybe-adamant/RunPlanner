@@ -511,7 +511,7 @@ describe('underworld product loop', () => {
         semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, opening)),
       ),
     );
-    await view.user.click(screen.getByRole('checkbox', { name: 'Chaos Gate' }));
+    await view.user.click(screen.getByRole('button', { name: 'Chaos Gate' }));
 
     const topology = () =>
       currentProject(application).route.biomes.find((biome) => biome.biomeKey === 'F')?.topology;

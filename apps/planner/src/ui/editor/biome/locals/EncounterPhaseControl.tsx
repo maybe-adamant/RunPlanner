@@ -113,6 +113,8 @@ export interface EncounterCustomizationSubject {
   readonly label: string;
   /** Names the launcher, as "Customize <identity>". */
   readonly identityLabel: string;
+  /** The encounter's name on hover, where the launcher stands alone for it. */
+  readonly hoverName?: string;
   readonly customization?: readonly CustomizationDecision[];
   readonly composition?: WorkspaceEncounterPhase['composition'];
   /** The owner's findings its launcher repairs. */
@@ -441,7 +443,11 @@ export function EncounterCustomizationLauncher({
         }
         onClick={() => setManualOpen(true)}
         {...hintProps(
-          contextUnreached ? candidateWaitingHint : undefined,
+          contextUnreached
+            ? subject.hoverName === undefined
+              ? candidateWaitingHint
+              : `${subject.hoverName} · ${candidateWaitingHint}`
+            : subject.hoverName,
           'aria-description' in triggerTarget ? triggerTarget['aria-description'] : undefined,
         )}
         aria-label={`${editable ? 'Customize' : 'View roster for'} ${subject.identityLabel.toLowerCase()}`}

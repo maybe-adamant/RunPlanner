@@ -46,6 +46,7 @@ import { BiomeEntryPicker } from './BiomeEntryPicker';
 import { doorRewardIcons, type DoorChip } from './doorSummary';
 import { type DoorNoteItem, type DoorNoteMark, type DoorNoteTarget } from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
+import { IconToggleLock } from '@planner/ui/controls/IconToggle';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
 
@@ -944,6 +945,54 @@ export function DoorChipOptions({
         );
       })}
     </span>
+  );
+}
+
+/**
+ * A door chip as a yes/no flag: lit when on, dim when off, gray and locked
+ * when it cannot change. The chip names its door on hover.
+ */
+export function DoorChipToggle({
+  chip,
+  disabledHint,
+  name,
+  onToggle,
+  pressed,
+}: {
+  readonly chip: DoorChip;
+  /** Disables the chip, telling why after its door's name. */
+  readonly disabledHint?: string | undefined;
+  /** The flag's accessible name. */
+  readonly name: string;
+  readonly onToggle: (next: boolean) => void;
+  readonly pressed: boolean;
+}) {
+  const disabled = disabledHint !== undefined;
+  const hint = disabled ? `${chip.label} · ${disabledHint}` : chip.label;
+  const { 'data-hint': shownHint, ...accessibleHint } = hintProps(hint, undefined, name);
+  const button = (
+    <button
+      {...(disabled ? accessibleHint : { ...accessibleHint, 'data-hint': shownHint })}
+      aria-label={name}
+      aria-pressed={pressed}
+      className="timeline-door-chip timeline-door-option timeline-door-toggle"
+      data-dimmed={!pressed || undefined}
+      data-picked={pressed || undefined}
+      disabled={disabled || undefined}
+      onClick={() => onToggle(!pressed)}
+      type="button"
+    >
+      <DoorChipFace chip={chip} />
+      {disabled ? <IconToggleLock /> : null}
+    </button>
+  );
+  // A disabled button takes no pointer events, so its hint sits on a wrapper.
+  return disabled ? (
+    <span className="icon-toggle-disabled" data-hint={shownHint}>
+      {button}
+    </span>
+  ) : (
+    button
   );
 }
 

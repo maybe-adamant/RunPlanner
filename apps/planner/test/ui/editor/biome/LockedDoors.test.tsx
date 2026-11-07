@@ -41,12 +41,12 @@ describe('locked doors', () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'G');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    expect(screen.queryByRole('checkbox', { name: 'Door 2 locked' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Door 2 locked' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Lock Doors' }));
     // The gate only shows the doors; Door 1 never locks.
     expect(hostRoom(application).lockedExits).toBeUndefined();
-    expect(screen.queryByRole('checkbox', { name: 'Door 1 locked' })).toBeNull();
-    await user.click(screen.getByRole('checkbox', { name: 'Door 2 locked' }));
+    expect(screen.queryByRole('button', { name: 'Door 1 locked' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Door 2 locked' }));
     expect(hostRoom(application).lockedExits).toEqual(['exit2']);
 
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
@@ -72,20 +72,20 @@ describe('locked doors', () => {
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     await user.click(screen.getByRole('button', { name: 'Lock Doors' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Door 2 locked' }));
+    await user.click(screen.getByRole('button', { name: 'Door 2 locked' }));
     const gate = screen.getByRole('button', { name: 'Lock Doors' });
     expect(gate.getAttribute('aria-pressed')).toBe('true');
 
     await user.click(gate);
     expect(hostRoom(application).lockedExits).toBeUndefined();
-    expect(screen.queryByRole('checkbox', { name: 'Door 2 locked' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Door 2 locked' })).toBeNull();
     act(() => {
       application.store.dispatch(authoredProjectUndoRequested());
     });
     expect(hostRoom(application).lockedExits).toEqual(['exit2']);
-    expect(
-      (screen.getByRole('checkbox', { name: 'Door 2 locked' }) as HTMLInputElement).checked,
-    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Door 2 locked' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
   });
 
   it('opens the door editor when the room is left through a door still locked', async () => {

@@ -7,7 +7,8 @@ import {
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { hintProps } from '@planner/ui/controls/hint';
-import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { IconToggle } from '@planner/ui/controls/IconToggle';
+import { ArtworkChip } from '@planner/ui/editor/rewards/TimelineChip';
 import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
 
 /** The selected Midshop owns only the available spawn affordance. */
@@ -22,13 +23,12 @@ export function ZagreusSpawnWorkbench({
   const executeIntent = useCommandIntent();
   const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
   return (
-    <label className="room-feature-presence-row">
-      <input
-        {...(feature.action === 'add' ? findingTarget(owner) : {})}
-        checked={feature.action === 'remove'}
-        data-command={feature.action === 'add' ? 'AddZagreusContract' : 'RemoveZagreusContract'}
+    <div className="room-feature-presence-row additional-exit-row">
+      <IconToggle
         disabled={feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled}
-        onChange={() =>
+        icon={doorArtwork.ZagContract ?? undefined}
+        name="Zagreus Contract"
+        onToggle={() =>
           executeIntent(
             feature.action === 'add'
               ? requireWorkspaceInteraction(
@@ -41,11 +41,10 @@ export function ZagreusSpawnWorkbench({
                 ).removeIntent,
           )
         }
-        type="checkbox"
+        pressed={feature.action === 'remove'}
+        {...(feature.action === 'add' ? { target: findingTarget(owner) } : {})}
       />
-      <ArtworkIcon className="artwork-label-icon" source={doorArtwork.ZagContract ?? undefined} />
-      <span>Zagreus Contract</span>
-    </label>
+    </div>
   );
 }
 
@@ -63,47 +62,44 @@ export function ChaosSpawnWorkbench({
   const position = feature.action === 'remove' ? feature.position : undefined;
   const positionTarget = findingTarget(owner);
   return (
-    <div className="room-feature-presence-row room-resource-row chaos-feature-row">
-      <label className="room-resource-selection chaos-gate-presence">
-        {/* A Chaos Gate the room always has is named, with nothing to toggle. */}
-        {feature.presence.kind === 'forcedPresent' ? null : (
-          <input
-            {...(position === undefined
+    <div className="room-feature-presence-row additional-exit-row">
+      {/* A Chaos Gate the room always has is shown, with nothing to toggle. */}
+      {feature.presence.kind === 'forcedPresent' ? (
+        <ArtworkChip icon={doorArtwork.ChaosExitDoor ?? undefined} label="Chaos Gate" />
+      ) : (
+        <IconToggle
+          disabled={feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled}
+          icon={doorArtwork.ChaosExitDoor ?? undefined}
+          name="Chaos Gate"
+          onToggle={() => {
+            if (feature.action === 'add') {
+              executeIntent(
+                requireWorkspaceInteraction(
+                  interactions.chaosSpawns,
+                  workspaceInteractionKey(owner),
+                ).spawnIntent(),
+              );
+              return;
+            }
+            const removeIntent = requireWorkspaceInteraction(
+              interactions.chaosExits,
+              workspaceInteractionKey(owner),
+            ).removeIntent;
+            if (removeIntent !== undefined) executeIntent(removeIntent);
+          }}
+          pressed={feature.action === 'remove'}
+          target={
+            position === undefined
               ? findingTarget(owner)
               : findingTarget(
                   owner,
                   `chaos-presence-${workspaceInteractionKey(owner)}`,
                   owner,
                   () => false,
-                ))}
-            checked={feature.action === 'remove'}
-            data-command={feature.action === 'add' ? 'AddChaos' : 'RemoveChaos'}
-            disabled={feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled}
-            onChange={() => {
-              if (feature.action === 'add') {
-                executeIntent(
-                  requireWorkspaceInteraction(
-                    interactions.chaosSpawns,
-                    workspaceInteractionKey(owner),
-                  ).spawnIntent(),
-                );
-                return;
-              }
-              const removeIntent = requireWorkspaceInteraction(
-                interactions.chaosExits,
-                workspaceInteractionKey(owner),
-              ).removeIntent;
-              if (removeIntent !== undefined) executeIntent(removeIntent);
-            }}
-            type="checkbox"
-          />
-        )}
-        <ArtworkIcon
-          className="artwork-label-icon"
-          source={doorArtwork.ChaosExitDoor ?? undefined}
+                )
+          }
         />
-        <span>Chaos Gate</span>
-      </label>
+      )}
       {position === undefined ? null : (
         <div
           {...positionTarget}

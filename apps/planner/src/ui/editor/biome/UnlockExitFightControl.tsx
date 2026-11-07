@@ -4,6 +4,8 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { EncounterCustomizationLauncher } from './locals/EncounterPhaseControl';
+import { DoorChips } from './DecisionWorkbench';
+import type { DoorChip } from './doorSummary';
 
 const isCustomizationFinding = (finding: { readonly code: string }) =>
   finding.code === 'unlockExitCustomizationUnavailable';
@@ -25,6 +27,7 @@ export function UnlockExitFightControl({
         definitionKey: encounter.definitionKey,
         label: encounter.label,
         identityLabel: encounter.label,
+        hoverName: encounter.label,
         ...(encounter.customization === undefined
           ? {}
           : { customization: encounter.customization }),
@@ -32,5 +35,20 @@ export function UnlockExitFightControl({
         findingFilter: isCustomizationFinding,
       }}
     />
+  );
+}
+
+/** The locked door a press opens: its door chip, or its name before the doors are known. */
+export function UnlockedDoor({
+  chip,
+  label,
+}: {
+  readonly chip?: DoorChip;
+  readonly label: string;
+}) {
+  return chip === undefined ? (
+    <span>{label}</span>
+  ) : (
+    <DoorChips chips={[{ ...chip, picked: false, locked: false }]} label={label} />
   );
 }

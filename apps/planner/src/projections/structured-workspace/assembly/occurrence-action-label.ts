@@ -563,7 +563,10 @@ export function occurrenceActionLabelParts(
       return talkTo('Eris');
     case 'interactChallengeSwitch': {
       const kind = observedChallengeSwitchKind(catalog, occurrence);
-      return plain(kind === undefined ? 'Use switch' : `Use ${challengeSwitchKindLabel(kind)}`);
+      // The observed switch is named by its own art on the row.
+      return kind === undefined
+        ? plain('Use switch')
+        : labelParts('Use', challengeSwitchKindLabel(kind));
     }
     case 'unlockExit': {
       const ordinal = normalExitOrdinal(reference.exitKey);

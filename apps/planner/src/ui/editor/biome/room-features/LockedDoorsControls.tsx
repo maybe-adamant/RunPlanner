@@ -6,25 +6,29 @@ import {
 } from '@planner/projections/structured-workspace';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
-import { hintProps } from '@planner/ui/controls/hint';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { authoredProjectCommandsDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
+import { DoorChipToggle } from '../DecisionWorkbench';
+import type { DoorChip } from '../doorSummary';
 
 const lockHint = (lock: NonNullable<WorkspaceLockedDoors['doors'][number]['lock']>) =>
   lock === 'unreached' ? candidateWaitingHint : 'A room with a challenge switch never locks.';
 
 /**
- * A lock host's Lock Doors gate: ticking it shows the doors that can lock,
- * each marking its door locked when the doors open; unticking it unlocks
- * every door as one edit.
+ * A lock host's Lock Doors gate: ticking it shows the doors that can lock on
+ * its line, each door chip lit while its door is locked when the doors open;
+ * unticking it unlocks every door as one edit.
  */
 export function LockedDoorsControls({
+  doorChips = [],
   interactions,
   lockedDoors,
 }: {
+  /** The room's doors as the Doors open row shows them, by exit key. */
+  readonly doorChips?: readonly DoorChip[] | undefined;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly lockedDoors: WorkspaceLockedDoors;
 }) {
@@ -69,27 +73,28 @@ export function LockedDoorsControls({
           }}
           pressed={open}
         />
+        {open
+          ? lockedDoors.doors.map((door) => {
+              const shown = doorChips.find((chip) => chip.key === door.exitKey);
+              return (
+                <DoorChipToggle
+                  chip={{
+                    key: door.exitKey,
+                    label: shown?.label ?? door.label,
+                    rewards: shown?.rewards ?? [],
+                    ...(shown?.roomIcon === undefined ? {} : { roomIcon: shown.roomIcon }),
+                    locked: door.locked,
+                  }}
+                  disabledHint={door.lock === undefined ? undefined : lockHint(door.lock)}
+                  key={door.exitKey}
+                  name={`${door.label} locked`}
+                  onToggle={() => executeIntent(interaction.intentFor(door.exitKey))}
+                  pressed={door.locked}
+                />
+              );
+            })
+          : null}
       </div>
-      {open ? (
-        <div className="locked-doors-list">
-          {lockedDoors.doors.map((door) => (
-            <label
-              className="room-resource-selection"
-              key={door.exitKey}
-              {...hintProps(door.lock === undefined ? undefined : lockHint(door.lock))}
-            >
-              <input
-                aria-label={`${door.label} locked`}
-                checked={door.locked}
-                disabled={door.lock !== undefined}
-                onChange={() => executeIntent(interaction.intentFor(door.exitKey))}
-                type="checkbox"
-              />
-              <span>{door.label}</span>
-            </label>
-          ))}
-        </div>
-      ) : null}
     </fieldset>
   );
 }

@@ -48,7 +48,7 @@ import {
 } from './RoomAddMenu';
 import { useTimelineReorder } from './useTimelineReorder';
 import { DoorRerollRowReward, DoorsRerollEntry } from './RoomRerolls';
-import { UnlockExitFightControl } from './UnlockExitFightControl';
+import { UnlockedDoor, UnlockExitFightControl } from './UnlockExitFightControl';
 import { RewardWheelWorkbench, SelectWheelRow } from './locals/RewardWheelWorkbench';
 import { doorsOpenToggle, wheelOfferChips } from './doorSummary';
 import { NemesisEventPending, NemesisInteractionSentence } from './NemesisEventEditor';
@@ -624,8 +624,13 @@ export function RoomActionsWorkbench({
     });
     const portrait = npcPortrait(row.labelParts?.npcKey);
     // A Talk row's portrait names the NPC, so the row leads with no second icon.
+    // A used switch is named by its own chip after the verb, so it leads with no icon.
+    const switchChip =
+      row.challengeSwitchKind === undefined || row.labelParts === undefined
+        ? undefined
+        : challengeSwitchIcon(row.challengeSwitchKind);
     const icon =
-      portrait === undefined
+      portrait === undefined && switchChip === undefined
         ? roomActionIcon(
             row.reference,
             row.address.biomeKey,
@@ -656,6 +661,11 @@ export function RoomActionsWorkbench({
       pressedWheelPhase?.wheel !== undefined
         ? wheelOfferChips(pressedWheelPhase.wheel, 'first')
         : doors?.chips;
+    // A pressed locked door shows as the Doors open row shows it.
+    const unlockedDoorChip =
+      reference.kind === 'unlockExit'
+        ? doors?.summary?.chips.find((chip) => chip.key === reference.exitKey)
+        : undefined;
     const placement = row.placement;
     const actionAccent = row.stale
       ? undefined
@@ -703,6 +713,8 @@ export function RoomActionsWorkbench({
     const rowName =
       row.labelParts === undefined ? null : row.labelParts.traitKey !== undefined ? (
         <ArtworkChip icon={traitIcon(row.labelParts.traitKey)} label={row.labelParts.name} />
+      ) : switchChip !== undefined ? (
+        <ArtworkChip icon={switchChip} label={row.labelParts.name} />
       ) : (
         <strong
           {...(row.labelParts.origin === undefined || row.labelParts.reward !== undefined
@@ -878,7 +890,10 @@ export function RoomActionsWorkbench({
             <>
               {row.unlockDoorLabel !== undefined ? (
                 <span className="room-reroll-row-inline">
-                  <span>{row.unlockDoorLabel}</span>
+                  <UnlockedDoor
+                    {...(unlockedDoorChip === undefined ? {} : { chip: unlockedDoorChip })}
+                    label={row.unlockDoorLabel}
+                  />
                   {row.unlockExitEncounter === undefined ? null : (
                     <UnlockExitFightControl
                       encounter={row.unlockExitEncounter}

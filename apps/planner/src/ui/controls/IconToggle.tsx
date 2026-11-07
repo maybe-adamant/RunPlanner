@@ -64,17 +64,7 @@ export function IconToggle({
     >
       <ArtworkIcon className="artwork-label-icon" source={icon} />
       {disabled ? (
-        <span aria-hidden="true" className="icon-toggle-lock">
-          <svg viewBox="0 0 10 10">
-            <path
-              d="M3 4.5V3.2a2 2 0 0 1 4 0v1.3"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.2"
-            />
-            <rect fill="currentColor" height="4.5" rx="0.8" width="6.4" x="1.8" y="4.5" />
-          </svg>
-        </span>
+        <IconToggleLock />
       ) : badge === undefined ? null : (
         <span aria-hidden="true" className="timeline-chip-badge">
           {badge}
@@ -89,5 +79,22 @@ export function IconToggle({
     </span>
   ) : (
     button
+  );
+}
+
+/** The corner lock of a toggle that cannot change. */
+export function IconToggleLock() {
+  return (
+    <span aria-hidden="true" className="icon-toggle-lock">
+      <svg viewBox="0 0 10 10">
+        <path
+          d="M3 4.5V3.2a2 2 0 0 1 4 0v1.3"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.2"
+        />
+        <rect fill="currentColor" height="4.5" rx="0.8" width="6.4" x="1.8" y="4.5" />
+      </svg>
+    </span>
   );
 }

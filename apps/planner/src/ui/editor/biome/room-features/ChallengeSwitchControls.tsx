@@ -33,9 +33,9 @@ function lockHint(lock: WorkspaceChallengeSwitchLock): string {
 }
 
 /**
- * A host's one switch row: ticking it observes the first type that can be
+ * A host's one switch line: ticking it observes the first type that can be
  * rolled, picking a type observes that one, and unticking clears the switch.
- * The observed switch's reward and encounter are chosen beneath it.
+ * The observed switch's reward, encounter and elite follow on the same line.
  */
 export function ChallengeSwitchControls({
   interactions,
@@ -113,15 +113,19 @@ export function ChallengeSwitchControls({
             }}
             placeholder="Type"
             searchable={false}
-            {...(row === undefined
-              ? {}
-              : { triggerIcon: challengeSwitchIcon(row.kind), triggerLabel: row.label })}
+            triggerIcon={challengeSwitchIcon(row.kind)}
+            triggerLabel={row.label}
+            triggerSize="icon"
+          />
+        )}
+        {row === undefined ? null : (
+          <ChallengeSwitchKindOptions
+            interaction={interaction}
+            observation={observation}
+            row={row}
           />
         )}
       </div>
-      {row === undefined ? null : (
-        <ChallengeSwitchKindOptions interaction={interaction} observation={observation} row={row} />
-      )}
     </fieldset>
   );
 }
@@ -140,66 +144,60 @@ function ChallengeSwitchKindOptions({
   return (
     <>
       {row.variants.length < 2 ? null : (
-        <div className="shop-family-offer-row">
-          <ContextualPicker<string>
-            ariaLabel={`${row.label} Reward`}
-            id={`challenge-switch-${row.kind}-item`}
-            label="Reward"
-            layout="inline"
-            model={declaredChoicesPicker(
-              row.variants.map((variant) => ({
-                key: variant.variantKey,
-                value: variant.variantKey,
-                label: variant.label,
-                ...(variant.lock === undefined || variant.selected
-                  ? {}
-                  : { disabled: true, explanation: lockHint(variant.lock) }),
-              })),
-              selectedVariant?.variantKey,
-            )}
-            itemIcon={(item) =>
-              rewardIcon(
-                row.variants.find((variant) => variant.variantKey === item.value)?.rewardType ?? '',
-              )
-            }
-            onSelect={(variantKey) => {
-              if (variantKey !== selectedVariant?.variantKey)
-                executeIntent(interaction.observeIntentFor(variantKey));
-            }}
-            placeholder="Reward"
-            searchable={false}
-            {...(selectedVariant === undefined
-              ? {}
-              : {
-                  triggerIcon: rewardIcon(selectedVariant.rewardType),
-                  triggerLabel: selectedVariant.label,
-                })}
-          />
-        </div>
+        <ContextualPicker<string>
+          ariaLabel={`${row.label} Reward`}
+          id={`challenge-switch-${row.kind}-item`}
+          label=""
+          model={declaredChoicesPicker(
+            row.variants.map((variant) => ({
+              key: variant.variantKey,
+              value: variant.variantKey,
+              label: variant.label,
+              ...(variant.lock === undefined || variant.selected
+                ? {}
+                : { disabled: true, explanation: lockHint(variant.lock) }),
+            })),
+            selectedVariant?.variantKey,
+          )}
+          itemIcon={(item) =>
+            rewardIcon(
+              row.variants.find((variant) => variant.variantKey === item.value)?.rewardType ?? '',
+            )
+          }
+          onSelect={(variantKey) => {
+            if (variantKey !== selectedVariant?.variantKey)
+              executeIntent(interaction.observeIntentFor(variantKey));
+          }}
+          placeholder="Reward"
+          searchable={false}
+          triggerSize="icon"
+          {...(selectedVariant === undefined
+            ? {}
+            : {
+                triggerIcon: rewardIcon(selectedVariant.rewardType),
+                triggerLabel: selectedVariant.label,
+              })}
+        />
       )}
       {observation.encounter === undefined ? null : (
-        <div className="shop-family-offer-row">
-          <div className="field-control field-control-inline">
-            <span>Combat</span>
-            <EncounterCustomizationLauncher
-              interaction={interaction.customization}
-              subject={{
-                address: observation.address,
-                controlId: `challenge-switch-customization-${semanticOwnerControlElementId(observation.address)}`,
-                definitionKey: observation.encounter.definitionKey,
-                label: observation.encounter.label,
-                identityLabel: `${row.label} encounter`,
-                ...(observation.encounter.customization === undefined
-                  ? {}
-                  : { customization: observation.encounter.customization }),
-                ...(observation.encounter.composition === undefined
-                  ? {}
-                  : { composition: observation.encounter.composition }),
-                findingFilter: isCustomizationFinding,
-              }}
-            />
-          </div>
-        </div>
+        <EncounterCustomizationLauncher
+          interaction={interaction.customization}
+          subject={{
+            address: observation.address,
+            controlId: `challenge-switch-customization-${semanticOwnerControlElementId(observation.address)}`,
+            definitionKey: observation.encounter.definitionKey,
+            label: observation.encounter.label,
+            identityLabel: `${row.label} encounter`,
+            hoverName: observation.encounter.label,
+            ...(observation.encounter.customization === undefined
+              ? {}
+              : { customization: observation.encounter.customization }),
+            ...(observation.encounter.composition === undefined
+              ? {}
+              : { composition: observation.encounter.composition }),
+            findingFilter: isCustomizationFinding,
+          }}
+        />
       )}
       {observation.elite === undefined ? null : (
         <ChallengeSwitchEliteControl
@@ -239,7 +237,7 @@ function ChallengeSwitchEliteControl({
     attribute.key === undefined ? [] : [attribute.label ?? attribute.key],
   );
   return (
-    <div className="shop-family-offer-row">
+    <>
       <ContextualPicker<string>
         ariaLabel="Elite enemy"
         findingTarget={findingTarget(observation.address, id, observation.address, isEliteFinding)}
@@ -313,6 +311,6 @@ function ChallengeSwitchEliteControl({
           triggerLabel={pinnedLabels.length === 0 ? 'Default' : pinnedLabels.join(' + ')}
         />
       )}
-    </div>
+    </>
   );
 }

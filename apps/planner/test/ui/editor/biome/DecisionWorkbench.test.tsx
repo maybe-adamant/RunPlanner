@@ -429,7 +429,7 @@ describe('DecisionWorkbench', () => {
     await sourceView.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const features = screen.getByRole('tabpanel', { name: 'Room Overview' });
     const before = sourceView.application.store.getState().projectWorkspace.history!.past.length;
-    await sourceView.user.click(within(features).getByRole('checkbox', { name: 'Chaos Gate' }));
+    await sourceView.user.click(within(features).getByRole('button', { name: 'Chaos Gate' }));
     expect(sourceView.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
@@ -474,7 +474,7 @@ describe('DecisionWorkbench', () => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
     expect(within(position).getByRole('radio', { name: '2' })).toHaveProperty('checked', true);
-    await view.user.click(screen.getByRole('checkbox', { name: 'Chaos Gate' }));
+    await view.user.click(screen.getByRole('button', { name: 'Chaos Gate' }));
     expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
   });
 
@@ -577,7 +577,7 @@ describe('DecisionWorkbench', () => {
     );
     await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const presence = within(screen.getByRole('tabpanel', { name: 'Room Overview' })).getByRole(
-      'checkbox',
+      'button',
       {
         name: 'Chaos Gate',
       },
@@ -636,17 +636,17 @@ describe('DecisionWorkbench', () => {
     );
 
     fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    // A gate the room always has is named without a toggle.
+    // A gate the room always has is shown without a toggle.
     const overviewPanel = screen.getByRole('tabpanel', { name: 'Room Overview' });
-    expect(within(overviewPanel).queryByRole('checkbox', { name: 'Chaos Gate' })).toBeNull();
-    expect(within(overviewPanel).getByText('Chaos Gate')).toBeTruthy();
+    expect(within(overviewPanel).queryByRole('button', { name: 'Chaos Gate' })).toBeNull();
+    expect(within(overviewPanel).getByRole('img', { name: 'Chaos Gate' })).toBeTruthy();
     const position = screen.getByRole('radiogroup', { name: 'Position' });
     expect(within(position).getByRole('radio', { name: 'Any' })).toHaveProperty('disabled', false);
     expect(position.hasAttribute('inert')).toBe(false);
     await view.user.click(within(position).getByRole('radio', { name: 'Any' }));
     expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
-    expect(within(overviewPanel).getByText('Chaos Gate')).toBeTruthy();
-    expect(within(overviewPanel).queryByRole('checkbox', { name: 'Chaos Gate' })).toBeNull();
+    expect(within(overviewPanel).getByRole('img', { name: 'Chaos Gate' })).toBeTruthy();
+    expect(within(overviewPanel).queryByRole('button', { name: 'Chaos Gate' })).toBeNull();
 
     cleanup();
     renderDecisionWorkbench(
@@ -720,7 +720,7 @@ describe('DecisionWorkbench', () => {
     );
     await sourceView.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     expect(
-      within(screen.getByRole('tabpanel', { name: 'Room Overview' })).getByRole('checkbox', {
+      within(screen.getByRole('tabpanel', { name: 'Room Overview' })).getByRole('button', {
         name: 'Zagreus Contract',
       }),
     ).toBeTruthy();

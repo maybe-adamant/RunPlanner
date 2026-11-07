@@ -16,6 +16,7 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
 import type { TimelineDoors } from './TimelineDoors';
+import type { DoorChip } from './doorSummary';
 import { roomFeatureSections } from './room-features/roomFeatureSections';
 import { RoomOverviewSections, type RoomOverviewSectionContent } from './RoomOverviewSections';
 import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
@@ -156,6 +157,7 @@ export function BossDoorRewardPoolRow({
 }
 
 export function DirectRoomWorkbench({
+  doorChips,
   doors,
   idPrefix,
   interactions,
@@ -164,6 +166,8 @@ export function DirectRoomWorkbench({
   renderRoomActionRowContent,
   renderLifecycleBoundaryContent,
 }: {
+  /** The room's doors as the Doors open row shows them, for the Overview's door controls. */
+  readonly doorChips?: readonly DoorChip[] | undefined;
   /** The room's doors, on the Timeline that opens them. */
   readonly doors?: TimelineDoors | undefined;
   readonly idPrefix: string;
@@ -215,6 +219,7 @@ export function DirectRoomWorkbench({
       sections={{
         ...sections,
         ...roomFeatureSections({
+          doorChips,
           features: workbench.features,
           interactions,
           room,
