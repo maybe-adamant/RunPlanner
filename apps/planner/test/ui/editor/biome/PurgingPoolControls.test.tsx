@@ -89,7 +89,7 @@ it('sells each slot still on the list from its Timeline entry, and removes a sta
 });
 
 // Fresh File hosts no Pool, so the anchor product leaves the retained one out of the Overview.
-it.fails('reports an unusable Pool only once it is used', () => {
+it('reports an unusable Pool only once it is used', () => {
   renderOccurrenceWorkbench(
     withRetainedFreshFilePostboss(createFreshFileFProject(), { poolSaleTraitKey: null }),
     'FreshFile',

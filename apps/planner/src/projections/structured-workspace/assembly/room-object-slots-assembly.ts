@@ -100,11 +100,6 @@ export function assembleRoomObjectSlots(input: {
       object.kind === 'challengeSwitch',
   );
   const switchKinds = switchObject?.kinds ?? [];
-  /** The type a switch command observes, read from the engine's own per-type commands. */
-  const observedKind = (command: ProjectCommand | undefined): ChallengeSwitchKind | undefined =>
-    command?.kind === 'ReplaceChallengeSwitch'
-      ? switchKinds.find((kind) => kind.observe?.variantKey === command.variantKey)?.switchKind
-      : undefined;
   const objectOf = (kind: RoomAnchorObjectKind): RoomAnchorObject => {
     const found = product.objects.find((object) => object.kind === kind);
     if (found === undefined) throw new Error(`${kind} is not an anchor object of this room`);
@@ -123,27 +118,9 @@ export function assembleRoomObjectSlots(input: {
         Object.freeze({ key, object, ...(kind === undefined ? {} : { switchKind: kind }) }),
       );
     };
-    // The first choice is the slot's current state.
-    for (const choice of slot.choices) {
-      if (choice.commands.length === 0) continue;
-      if (choice.kind === 'challengeSwitch' && slot.occupant === undefined) {
-        // An empty anchor takes any type the switch can be observed as.
-        for (const kind of switchKinds)
-          if (kind.observe !== undefined)
-            choose([kind.observe], 'challengeSwitch', kind.switchKind);
-        continue;
-      }
-      choose(
-        choice.commands,
-        choice.kind,
-        choice.kind === 'challengeSwitch' ? observedKind(choice.commands.at(-1)) : undefined,
-      );
-    }
-    // The present switch changes type in place.
-    if (slot.occupant === 'challengeSwitch' && !slot.fixed)
-      for (const kind of switchKinds)
-        if (kind.observe !== undefined && kind.switchKind !== switchKind)
-          choose([kind.observe], 'challengeSwitch', kind.switchKind);
+    // The first choice is the slot's current state; a switch choice names its type.
+    for (const choice of slot.choices)
+      if (choice.commands.length > 0) choose(choice.commands, choice.kind, choice.switchKind);
     const offered = new Set(
       choices.map((choice) => `${choice.object ?? 'none'}:${choice.switchKind ?? ''}`),
     );

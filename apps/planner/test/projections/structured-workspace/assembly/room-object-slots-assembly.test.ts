@@ -69,7 +69,7 @@ describe('room object slots', () => {
     ]);
   });
 
-  it('replaces the Well with the switch the engine offers, removing it first', () => {
+  it('replaces the Well with each switch type the engine offers, removing it first', () => {
     const project = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
       kind: 'AddStygianWell',
       occurrence: owner,
@@ -77,8 +77,12 @@ describe('room object slots', () => {
     const slots = slotsOf(project);
     const [spot] = slots.slots;
     expect(spot?.occupant).toMatchObject({ object: 'stygianWell', fixed: false });
-    expect(spot?.choices.map(held)).toEqual([null, 'challengeSwitch:time']);
-    const replace = spot!.choices.find((choice) => choice.object === 'challengeSwitch')!;
+    expect(spot?.choices.map(held)).toEqual([
+      null,
+      'challengeSwitch:time',
+      'challengeSwitch:perfectClear',
+    ]);
+    const replace = spot!.choices.find((choice) => choice.switchKind === 'time')!;
     expect(
       slots.interaction
         .intentFor(replace.key)
@@ -94,6 +98,9 @@ describe('room object slots', () => {
     });
     const [spot] = slotsOf(project, 'time').slots;
     expect(spot?.occupant).toMatchObject({ object: 'challengeSwitch', switchKind: 'time' });
-    expect(spot?.choices.map(held)).toEqual([null, 'stygianWell', 'challengeSwitch:perfectClear']);
+    expect(spot?.choices.map(held)).toEqual(
+      expect.arrayContaining([null, 'stygianWell', 'challengeSwitch:perfectClear']),
+    );
+    expect(spot?.choices).toHaveLength(3);
   });
 });

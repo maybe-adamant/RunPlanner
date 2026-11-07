@@ -6,7 +6,7 @@ import {
 import { challengeSwitchHost } from '../../authored-project/acquisition/challenge-switch';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import { routePurgingPool, routeRoomShop } from '../../authored-project/route-profile';
-import type { Catalog } from '../../catalog-schema';
+import type { Catalog, ChallengeSwitchKind } from '../../catalog-schema';
 import {
   challengeSwitchKindVariant,
   type ChallengeSwitchPlacementIssue,
@@ -60,6 +60,8 @@ interface RoomAnchorObjectFacts<
   Remove,
 > {
   readonly kind: Kind;
+  /** Native can spawn it in this room on this route; only a hosted object holds an anchor. */
+  readonly hosted: boolean;
   /** Authored in this room. */
   readonly present: boolean;
   /** Present on entry whatever is authored; no command adds or removes it. */
@@ -68,7 +70,8 @@ interface RoomAnchorObjectFacts<
   readonly slotIndex?: number;
   /**
    * Why native could not spawn it here, the anchors included; empty when it
-   * can. Undefined while its entry assessment is unreached.
+   * can. Undefined while its entry assessment is unreached, and for a Pool
+   * the route does not host.
    */
   readonly refusals?: readonly (Refusal | RoomAnchorFullRefusal)[];
   /** Adds the absent object on a free anchor; present only when `refusals` is empty. */
@@ -119,6 +122,8 @@ export type RoomAnchorObject =
 export interface RoomAnchorSlotChoice {
   /** Null clears the slot. */
   readonly kind: RoomAnchorObjectKind | null;
+  /** The switch type a `challengeSwitch` choice observes; one choice per observable type. */
+  readonly switchKind?: ChallengeSwitchKind;
   /** The anchor the chosen object holds after the edit, by native order. */
   readonly slotIndex?: number;
   /** Empty for the slot's current state; a replacement removes the occupant first. */
@@ -139,14 +144,18 @@ export interface RoomAnchorSlot {
 
 /**
  * A room's `ChallengeSwitchBase` anchors and the objects native spawns on
- * them: every object this room can hold on its route in native order, and
- * each anchor slot with its occupant and the choices open to it.
+ * them: every object this room can hold on its route or holds as authored,
+ * in native order, and each anchor slot with its occupant and the choices
+ * open to it.
  */
 export interface RoomAnchorSlots {
   readonly anchorCount: number;
   readonly objects: readonly RoomAnchorObject[];
   readonly slots: readonly RoomAnchorSlot[];
-  /** Present objects native order leaves without an anchor; each carries its placement finding. */
+  /**
+   * Present objects without an anchor, unhosted or past the anchors native
+   * order fills; each carries its existing finding.
+   */
   readonly unanchored: readonly RoomAnchorObjectKind[];
 }
 
@@ -182,6 +191,7 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
 
   type Draft = {
     readonly kind: RoomAnchorObjectKind;
+    readonly hosted: boolean;
     readonly present: boolean;
     readonly fixed: boolean;
     readonly own: OwnPlacement;
@@ -191,13 +201,15 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
   };
   const drafts: Draft[] = [];
 
-  if (roomShop !== undefined && (roomShop.forced || roomShop.spawnChance > 0)) {
+  const wellHosted = roomShop !== undefined && (roomShop.forced || roomShop.spawnChance > 0);
+  if (wellHosted || authored.stygianWell !== undefined) {
     const candidate = stygianWellCandidateForProjectEvaluationAssembly(assembly, origin);
     const present = authored.stygianWell !== undefined;
     drafts.push({
       kind: 'stygianWell',
+      hosted: wellHosted,
       present,
-      fixed: roomShop.forced,
+      fixed: wellHosted && roomShop.forced,
       own:
         candidate === undefined
           ? {}
@@ -213,15 +225,20 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
       candidate,
     });
   }
-  if (routePurgingPool(room, origin.routeKey) !== undefined)
+  const poolHosted = routePurgingPool(room, origin.routeKey) !== undefined;
+  // No command removes a retained Pool; clearing its use settles its finding.
+  if (poolHosted || authored.purgingPool !== undefined)
     drafts.push({
       kind: 'purgingPool',
+      hosted: poolHosted,
       present: authored.purgingPool !== undefined,
-      fixed: true,
+      fixed: poolHosted,
       own: {},
       candidate: purgingPoolCandidateForProjectEvaluationAssembly(assembly, origin),
     });
-  if (surfaceShop !== undefined && (surfaceShop.forced || surfaceShop.spawnChance > 0)) {
+  const shrineHosted =
+    surfaceShop !== undefined && (surfaceShop.forced || surfaceShop.spawnChance > 0);
+  if (shrineHosted || authored.hermesShrine !== undefined) {
     const candidate = hermesShrineCandidateForProjectEvaluationAssembly(assembly, origin);
     const present = authored.hermesShrine !== undefined;
     const presence = (value: boolean) =>
@@ -232,8 +249,9 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
       });
     drafts.push({
       kind: 'hermesShrine',
+      hosted: shrineHosted,
       present,
-      fixed: surfaceShop.forced,
+      fixed: shrineHosted && surfaceShop.forced,
       own:
         candidate === undefined
           ? {}
@@ -247,7 +265,14 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
       candidate,
     });
   }
-  if (room !== undefined && challengeSwitchHost(catalog, room.gameName) !== undefined) {
+  const switchHosted =
+    room !== undefined && challengeSwitchHost(catalog, room.gameName) !== undefined;
+  type SwitchKindRow = Extract<
+    RoomAnchorObject,
+    { readonly kind: 'challengeSwitch' }
+  >['kinds'][number];
+  let switchKinds: readonly SwitchKindRow[] = [];
+  if (switchHosted || authored.challengeSwitch !== undefined) {
     const candidate = roomObjectInteractionsForProjectEvaluationAssembly(
       assembly,
       origin,
@@ -259,7 +284,7 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
     const kinds = Object.freeze(
       candidate === undefined
         ? []
-        : catalog.challengeSwitches.kinds.values.map((kind) => {
+        : catalog.challengeSwitches.kinds.values.map((kind): SwitchKindRow => {
             const chosen =
               sharedIssues.length > 0
                 ? undefined
@@ -280,6 +305,7 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
             });
           }),
     );
+    switchKinds = kinds;
     const observable = kinds.find((kind) => kind.observe !== undefined)?.observe;
     // With no shared rule broken and no kind observable, each kind's own gate is the refusal.
     const kindLocks = [
@@ -293,6 +319,7 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
     ];
     drafts.push({
       kind: 'challengeSwitch',
+      hosted: switchHosted,
       present,
       fixed: false,
       own:
@@ -316,7 +343,10 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
     });
   }
 
-  const presentKinds = drafts.filter((draft) => draft.present).map((draft) => draft.kind);
+  // Only hosted objects take anchors; an unhosted present one carries its host refusal.
+  const holders = drafts
+    .filter((draft) => draft.hosted && draft.present)
+    .map((draft) => draft.kind);
   const full = (occupants: readonly RoomAnchorObjectKind[]): RoomAnchorFullRefusal =>
     Object.freeze({
       reason: 'noFreeAnchor',
@@ -326,16 +356,19 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
   const objects = drafts.map((draft) => {
     const before = drafts
       .slice(0, drafts.indexOf(draft))
-      .filter((earlier) => earlier.present)
+      .filter((earlier) => earlier.hosted && earlier.present)
       .map((earlier) => earlier.kind);
+    const anchored = draft.hosted && draft.present && before.length < anchorCount;
     // A present object holds the anchor after its earlier peers; an absent one needs a spare.
-    const anchorRefusal = draft.present
-      ? before.length >= anchorCount
-        ? full(before)
-        : undefined
-      : presentKinds.length >= anchorCount
-        ? full(presentKinds)
-        : undefined;
+    const anchorRefusal = !draft.hosted
+      ? undefined
+      : draft.present
+        ? before.length >= anchorCount
+          ? full(before)
+          : undefined
+        : holders.length >= anchorCount
+          ? full(holders)
+          : undefined;
     const refusals = draft.fixed
       ? Object.freeze([])
       : draft.own.refusals === undefined
@@ -346,11 +379,16 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
           ]);
     return Object.freeze({
       kind: draft.kind,
+      hosted: draft.hosted,
       present: draft.present,
       fixed: draft.fixed,
-      ...(draft.present && before.length < anchorCount ? { slotIndex: before.length } : {}),
+      ...(anchored ? { slotIndex: before.length } : {}),
       ...(refusals === undefined ? {} : { refusals }),
-      ...(!draft.present && !draft.fixed && refusals?.length === 0 && draft.own.place !== undefined
+      ...(draft.hosted &&
+      !draft.present &&
+      !draft.fixed &&
+      refusals?.length === 0 &&
+      draft.own.place !== undefined
         ? { place: draft.own.place }
         : {}),
       ...(draft.fixed || draft.remove === undefined ? {} : { remove: draft.remove }),
@@ -362,15 +400,41 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
   const order = (kind: RoomAnchorObjectKind) => ROOM_ANCHOR_OBJECT_ORDER.indexOf(kind);
   // Where an added object lands: after the present objects native places before it.
   const landing = (kind: RoomAnchorObjectKind, removed?: RoomAnchorObjectKind) =>
-    presentKinds.filter((present) => present !== removed && order(present) < order(kind)).length;
+    holders.filter((holder) => holder !== removed && order(holder) < order(kind)).length;
   // A replacement frees the occupant's anchor, so only the newcomer's own rules apply.
   const replaceable = drafts.filter(
     (draft) =>
+      draft.hosted &&
       !draft.present &&
       !draft.fixed &&
       draft.own.place !== undefined &&
       draft.own.refusals?.length === 0,
   );
+  const observedSwitchKind =
+    authored.challengeSwitch === undefined
+      ? undefined
+      : catalog.challengeSwitches.variants.byKey[authored.challengeSwitch.variantKey]?.switchKind;
+  /** The choices adding `kind` after `prefix`: one per observable type for a switch. */
+  const additions = (
+    kind: RoomAnchorObjectKind,
+    place: ProjectCommand,
+    slotIndex: number,
+    prefix: readonly ProjectCommand[],
+  ): RoomAnchorSlotChoice[] =>
+    kind === 'challengeSwitch'
+      ? switchKinds.flatMap((row) =>
+          row.observe === undefined
+            ? []
+            : [
+                Object.freeze({
+                  kind,
+                  switchKind: row.switchKind,
+                  slotIndex,
+                  commands: Object.freeze([...prefix, row.observe]),
+                }),
+              ],
+        )
+      : [Object.freeze({ kind, slotIndex, commands: Object.freeze([...prefix, place]) })];
   const slots = Array.from({ length: anchorCount }, (_, index): RoomAnchorSlot => {
     const occupant = objects.find((object) => object.slotIndex === index);
     if (occupant === undefined)
@@ -382,18 +446,15 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
           ...objects.flatMap((object) =>
             object.place === undefined
               ? []
-              : [
-                  Object.freeze({
-                    kind: object.kind,
-                    slotIndex: landing(object.kind),
-                    commands: Object.freeze([object.place]),
-                  }),
-                ],
+              : additions(object.kind, object.place, landing(object.kind), []),
           ),
         ]),
       });
     const current = Object.freeze({
       kind: occupant.kind,
+      ...(occupant.kind === 'challengeSwitch' && observedSwitchKind !== undefined
+        ? { switchKind: observedSwitchKind }
+        : {}),
       slotIndex: index,
       commands: Object.freeze([]),
     });
@@ -405,19 +466,32 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
         choices: Object.freeze([current]),
       });
     const remove = occupant.remove;
+    // The present switch changes type in place.
+    const retyped =
+      occupant.kind === 'challengeSwitch'
+        ? switchKinds.flatMap((row) =>
+            row.observe === undefined || row.switchKind === observedSwitchKind
+              ? []
+              : [
+                  Object.freeze({
+                    kind: occupant.kind,
+                    switchKind: row.switchKind,
+                    slotIndex: index,
+                    commands: Object.freeze([row.observe]),
+                  }),
+                ],
+          )
+        : [];
     return Object.freeze({
       index,
       occupant: occupant.kind,
       fixed: false,
       choices: Object.freeze([
         current,
+        ...retyped,
         Object.freeze({ kind: null, commands: Object.freeze([remove]) }),
-        ...replaceable.map((draft) =>
-          Object.freeze({
-            kind: draft.kind,
-            slotIndex: landing(draft.kind, occupant.kind),
-            commands: Object.freeze([remove, draft.own.place!]),
-          }),
+        ...replaceable.flatMap((draft) =>
+          additions(draft.kind, draft.own.place!, landing(draft.kind, occupant.kind), [remove]),
         ),
       ]),
     });

@@ -16,6 +16,11 @@ import {
 } from '@run-planner/engine/simulation';
 import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  createFreshFileFProject,
+  freshFileFPostbossId,
+  withRetainedFreshFilePostboss,
+} from '@run-planner/test-fixtures/fresh-file';
 
 let cachedUnderworld: ProjectDocument | undefined;
 const underworld = () => (cachedUnderworld ??= loadUnderworldFGHICheckpoint());
@@ -47,13 +52,15 @@ function apply(project: ProjectDocument, commands: readonly ProjectCommand[]): P
   return commands.reduce((next, command) => applyProjectCommand(next, catalog, command), project);
 }
 
-/** Each slot's occupant and its choices as kind@landing slot. */
+/** Each slot's occupant and its choices as kind[:switch kind]@landing slot. */
 function layout(slots: RoomAnchorSlots) {
   return slots.slots.map((slot) => ({
     occupant: slot.occupant ?? null,
     fixed: slot.fixed,
     choices: slot.choices.map((choice) =>
-      choice.kind === null ? null : `${choice.kind}@${String(choice.slotIndex)}`,
+      choice.kind === null
+        ? null
+        : `${choice.kind}${choice.switchKind === undefined ? '' : `:${choice.switchKind}`}@${String(choice.slotIndex)}`,
     ),
   }));
 }
@@ -88,7 +95,12 @@ describe('room object anchor slots', () => {
       {
         occupant: null,
         fixed: false,
-        choices: [null, 'stygianWell@0', 'challengeSwitch@0'],
+        choices: [
+          null,
+          'stygianWell@0',
+          'challengeSwitch:time@0',
+          'challengeSwitch:perfectClear@0',
+        ],
       },
     ]);
     const switchChoice = empty.slots[0]!.choices.find(
@@ -124,18 +136,56 @@ describe('room object anchor slots', () => {
       {
         occupant: 'stygianWell',
         fixed: false,
-        choices: ['stygianWell@0', null, 'challengeSwitch@0'],
+        choices: [
+          'stygianWell@0',
+          null,
+          'challengeSwitch:time@0',
+          'challengeSwitch:perfectClear@0',
+        ],
+      },
+    ]);
+    const owner = address(project, 'H', 'golden-h-combat05');
+    expect(
+      full.slots[0]!.choices.find((choice) => choice.switchKind === 'perfectClear')!.commands,
+    ).toEqual([
+      { kind: 'RemoveStygianWell', occurrence: owner },
+      {
+        kind: 'ReplaceChallengeSwitch',
+        occurrence: owner,
+        variantKey: 'PerfectClearChallengeSwitch_Pom',
       },
     ]);
 
     const replaced = apply(
       withWell,
-      full.slots[0]!.choices.find((choice) => choice.kind === 'challengeSwitch')!.commands,
+      full.slots[0]!.choices.find((choice) => choice.switchKind === 'perfectClear')!.commands,
     );
     const after = slotsOf(replaced, 'H', 'golden-h-combat05');
     expect(object(after, 'stygianWell').present).toBe(false);
     expect(object(after, 'challengeSwitch')).toMatchObject({ present: true, slotIndex: 0 });
     expect(placementFindings(replaced, 'golden-h-combat05')).toEqual([]);
+    // The present switch keeps its anchor and changes type in place.
+    expect(layout(after)).toEqual([
+      {
+        occupant: 'challengeSwitch',
+        fixed: false,
+        choices: [
+          'challengeSwitch:perfectClear@0',
+          'challengeSwitch:time@0',
+          null,
+          'stygianWell@0',
+        ],
+      },
+    ]);
+    expect(
+      after.slots[0]!.choices.find((choice) => choice.switchKind === 'time')!.commands,
+    ).toEqual([
+      {
+        kind: 'ReplaceChallengeSwitch',
+        occurrence: owner,
+        variantKey: 'TimeChallengeSwitch_Money',
+      },
+    ]);
   });
 
   it('leaves a preserved switch past the anchors unanchored, with its finding', () => {
@@ -176,7 +226,12 @@ describe('room object anchor slots', () => {
         {
           occupant: 'challengeSwitch',
           fixed: false,
-          choices: ['challengeSwitch@0', null, 'stygianWell@0'],
+          choices: [
+            'challengeSwitch:time@0',
+            'challengeSwitch:perfectClear@0',
+            null,
+            'stygianWell@0',
+          ],
         },
         { occupant: null, fixed: false, choices: [null, 'stygianWell@0'] },
       ]);
@@ -187,7 +242,11 @@ describe('room object anchor slots', () => {
       const two = slotsOf(both, biomeKey, occurrenceId);
       expect(layout(two)).toEqual([
         { occupant: 'stygianWell', fixed: false, choices: ['stygianWell@0', null] },
-        { occupant: 'challengeSwitch', fixed: false, choices: ['challengeSwitch@1', null] },
+        {
+          occupant: 'challengeSwitch',
+          fixed: false,
+          choices: ['challengeSwitch:time@1', 'challengeSwitch:perfectClear@1', null],
+        },
       ]);
       expect(two.unanchored).toEqual([]);
       expect(placementFindings(both, occurrenceId)).toEqual([]);
@@ -205,7 +264,13 @@ describe('room object anchor slots', () => {
         'hermesShrine',
         'challengeSwitch',
       ]);
-      expect(layout(empty)[0]?.choices).toEqual([null, 'hermesShrine@0', 'challengeSwitch@0']);
+      expect(layout(empty)[0]?.choices).toEqual([
+        null,
+        'hermesShrine@0',
+        'challengeSwitch:time@0',
+        'challengeSwitch:perfectClear@0',
+        'challengeSwitch:elite@0',
+      ]);
       const both = apply(project, [
         empty.slots[0]!.choices.find((choice) => choice.kind === 'challengeSwitch')!.commands[0]!,
         object(empty, 'hermesShrine').place!,
@@ -280,5 +345,40 @@ describe('room object anchor slots', () => {
       { reason: 'noFreeAnchor', anchorCount: 0, occupants: [] },
     ]);
     expect(object(slots, 'hermesShrine').place).toBeUndefined();
+  });
+
+  it('leaves a retained Fresh File Well and Pool unanchored, the Well removable', () => {
+    const project = withRetainedFreshFilePostboss(createFreshFileFProject(), {
+      well: true,
+      poolSaleTraitKey: 'ApolloWeaponBoon',
+    });
+    const biomeKey = project.route.biomes[0]!.biomeKey;
+    const slots = slotsOf(project, biomeKey, freshFileFPostbossId);
+    expect(slots.objects.map((candidate) => [candidate.kind, candidate.hosted])).toEqual([
+      ['stygianWell', false],
+      ['purgingPool', false],
+    ]);
+    expect(slots.unanchored).toEqual(['stygianWell', 'purgingPool']);
+    expect(object(slots, 'stygianWell')).toMatchObject({
+      present: true,
+      fixed: false,
+      refusals: [{ reason: 'notHost' }],
+      remove: { kind: 'RemoveStygianWell' },
+    });
+    // No command removes a retained Pool; its finding clears with its use.
+    expect(object(slots, 'purgingPool')).toMatchObject({ present: true, fixed: false });
+    expect(object(slots, 'purgingPool').remove).toBeUndefined();
+    expect(slots.slots.every((slot) => slot.occupant === undefined)).toBe(true);
+    expect(placementFindings(project, freshFileFPostbossId)).toEqual([
+      'stygianWellPlacementUnavailable',
+    ]);
+
+    const removed = slotsOf(
+      apply(project, [object(slots, 'stygianWell').remove!]),
+      biomeKey,
+      freshFileFPostbossId,
+    );
+    expect(removed.objects.map((candidate) => candidate.kind)).toEqual(['purgingPool']);
+    expect(removed.unanchored).toEqual(['purgingPool']);
   });
 });
