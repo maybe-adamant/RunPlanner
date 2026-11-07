@@ -11,6 +11,7 @@ import type {
   AuthoredChallengeSwitchElite,
 } from '../../authored-project/model';
 import { resolveChallengeSwitch } from '../../authored-project/acquisition/challenge-switch';
+import type { SemanticFinding } from '../model';
 import {
   evaluateRequirement,
   type RequirementEvaluationContext,
@@ -50,6 +51,27 @@ export type ChallengeSwitchPlacementIssue =
     }
   /** The room's doors were observed locked: the game rolls a lock only where no switch spawned. */
   | { readonly reason: 'lockedDoors' };
+
+const placementReasons = Object.freeze({
+  biomeDepth: true,
+  recentSwitch: true,
+  noFreeAnchor: true,
+  kindUnavailable: true,
+  variantUnavailable: true,
+  lockedDoors: true,
+} as const satisfies Record<ChallengeSwitchPlacementIssue['reason'], true>);
+
+/** The placement issue a `challengeSwitchPlacementUnavailable` finding carries as its evidence. */
+export function challengeSwitchPlacementFindingIssue(
+  finding: SemanticFinding,
+): ChallengeSwitchPlacementIssue | undefined {
+  const reason = finding.evidence.reason;
+  return finding.code === 'challengeSwitchPlacementUnavailable' &&
+    typeof reason === 'string' &&
+    Object.hasOwn(placementReasons, reason)
+    ? (finding.evidence as unknown as ChallengeSwitchPlacementIssue)
+    : undefined;
+}
 
 /** Which of a kind's own gates its entry fails: its biome depth first, else its requirement. */
 export type ChallengeSwitchKindGate =

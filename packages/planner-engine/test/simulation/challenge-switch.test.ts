@@ -20,6 +20,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   challengeSwitchEncounterSupportForProjectEvaluationAssembly,
+  challengeSwitchPlacementFindingIssue,
   createPreparedProjectCandidateSession,
   eliteChallengeAttributeOptions,
   goldLedgerForProjectEvaluationAssembly,
@@ -246,6 +247,30 @@ describe('challenge switch spawn rules', () => {
         gate: { kind: 'requirement', requirement: 'talentLegal' },
       },
     ]);
+  });
+
+  it('reads each placement finding’s issue back from its evidence', () => {
+    const findings = simulateProject(
+      catalog,
+      withSwitch(golden(), 'F', 'golden-f-b5-e1', 'EliteChallengeSwitch_MaxMana'),
+    ).findings;
+    const placement = findings.filter(
+      (finding) => finding.code === 'challengeSwitchPlacementUnavailable',
+    );
+    expect(placement.map(challengeSwitchPlacementFindingIssue)).toEqual([
+      {
+        reason: 'kindUnavailable',
+        switchKind: 'elite',
+        gate: { kind: 'requirement', requirement: 'talentLegal' },
+      },
+    ]);
+    const issue = (code: string, evidence: Record<string, unknown>) =>
+      challengeSwitchPlacementFindingIssue({ ...placement[0]!, code, evidence } as never);
+    expect(issue('challengeSwitchPlacementUnavailable', { reason: 'lockedDoors' })).toEqual({
+      reason: 'lockedDoors',
+    });
+    expect(issue('challengeSwitchPlacementUnavailable', { reason: 'constructor' })).toBeUndefined();
+    expect(issue('challengeSwitchEliteUnavailable', { reason: 'lockedDoors' })).toBeUndefined();
   });
 
   it('names an Elite switch’s biome-depth gate before its requirement', () => {

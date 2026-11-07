@@ -127,8 +127,10 @@ export {
   type EncounterPhaseAuthoringDomain,
   type EncounterPhaseAuthoringOwner,
   type EncounterPhaseAuthoringRoomOptions,
+  encounterCustomizationFindingFacts,
   encounterResolutionContext,
   resolveEncounterAuthoringProfile,
+  type EncounterCustomizationFindingFacts,
   type EncounterResolutionContext,
   type EncounterResolutionRoomFacts,
   type GeneratedEncounterAssessment,
@@ -248,6 +250,7 @@ export {
   type RoomObjectInteractions,
 } from './commerce/object-interactions';
 export {
+  challengeSwitchPlacementFindingIssue,
   eliteChallengeAttributeOptions,
   type ChallengeSwitchKindGate,
   type ChallengeSwitchPlacementIssue,

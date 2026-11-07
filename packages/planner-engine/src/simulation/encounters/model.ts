@@ -2,6 +2,7 @@ import type { EncounterPhaseKind, EncounterSlotRewardAttachment } from '../../ca
 import type { AuthoredEncounterCustomization } from '../../authored-project/model';
 import type { EncounterCustomizationDecision } from '../../catalog-schema';
 import type { EncounterPhaseAddress } from '../../authored-project/addresses';
+import type { SemanticFinding } from '../model';
 
 /**
  * Retained materialization for one active envelope slot. It deliberately
@@ -44,6 +45,39 @@ export type EncounterCustomizationUnsupportedReason =
       readonly reason: 'infiniteRosterInvalid';
       readonly rosterIssue: import('./infinite-roster').InfiniteRosterIssue;
     };
+
+const customizationReasons = Object.freeze({
+  contextuallyReplaced: true,
+  valueNotDeclared: true,
+  cocoonCountOutOfRange: true,
+  cocoonRewardPointAbsent: true,
+  routeExcluded: true,
+  compositionInvalid: true,
+  infiniteRosterInvalid: true,
+} as const satisfies Record<EncounterCustomizationUnsupportedReason['reason'], true>);
+
+/** An unavailable customization value's reason with the decision it belongs to. */
+export type EncounterCustomizationFindingFacts = EncounterCustomizationUnsupportedReason & {
+  readonly decisionKey: string;
+};
+
+/**
+ * The reason an encounter, challenge switch or unlock-exit customization
+ * finding carries as its evidence.
+ */
+export function encounterCustomizationFindingFacts(
+  finding: SemanticFinding,
+): EncounterCustomizationFindingFacts | undefined {
+  const { reason, decisionKey } = finding.evidence;
+  return (finding.code === 'encounterCustomizationUnavailable' ||
+    finding.code === 'challengeSwitchCustomizationUnavailable' ||
+    finding.code === 'unlockExitCustomizationUnavailable') &&
+    typeof decisionKey === 'string' &&
+    typeof reason === 'string' &&
+    Object.hasOwn(customizationReasons, reason)
+    ? (finding.evidence as unknown as EncounterCustomizationFindingFacts)
+    : undefined;
+}
 
 /** One declared decision of a resolved phase with its sparse authored value and support. */
 export type ResolvedEncounterCustomizationDecision = EncounterCustomizationDecision & {

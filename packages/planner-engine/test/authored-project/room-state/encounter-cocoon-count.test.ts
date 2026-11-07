@@ -14,7 +14,7 @@ import {
   encodeProjectDocument,
   type ProjectDocument,
 } from '../../../src/authored-project';
-import { simulateProject } from '../../../src/simulation';
+import { encounterCustomizationFindingFacts, simulateProject } from '../../../src/simulation';
 import { createDefaultRoomEncounterState } from '../../../src/authored-project/room-state/encounter-envelope';
 import { reconcileRoomEncounterState } from '../../../src/authored-project/room-state/encounter-reconciliation';
 import { room } from '../support/room-state-codec';
@@ -138,6 +138,9 @@ describe('Arachne combat cocoon count', () => {
           maximum: 14,
         }),
       }),
+    ]);
+    expect(cocoonFindings(decoded).map(encounterCustomizationFindingFacts)).toEqual([
+      expect.objectContaining({ decisionKey: 'cocoonCount', reason: 'cocoonCountOutOfRange' }),
     ]);
     expect(simulateProject(catalog, decoded).route.summary.eligibleForExecutionPlan).toBe(false);
   });

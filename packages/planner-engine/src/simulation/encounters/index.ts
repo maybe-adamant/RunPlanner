@@ -8,7 +8,11 @@ export {
   resolveMaterializedEncounterPhases,
 } from './resolve';
 export type { EncounterResolutionContext, EncounterResolutionRoomFacts } from './resolve';
-export type { ResolvedEncounterPhase } from './model';
+export {
+  encounterCustomizationFindingFacts,
+  type EncounterCustomizationFindingFacts,
+  type ResolvedEncounterPhase,
+} from './model';
 export type { GeneratedEncounterCandidateCapability } from './generation-preparation';
 export {
   assessGeneratedEncounter,

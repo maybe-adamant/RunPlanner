@@ -1,11 +1,9 @@
-import {
-  challengeSwitchRuleSentence,
-  challengeSwitchRuleTitle,
-  type ChallengeSwitchRule,
-} from './challengeSwitchCopy';
+import { challengeSwitchRuleSentence, challengeSwitchRuleTitle } from './challengeSwitchCopy';
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import {
+  challengeSwitchPlacementFindingIssue,
+  encounterCustomizationFindingFacts,
   type AssessmentIssue,
   type FindingCode,
   type LevelResolutionFindingCode,
@@ -937,32 +935,6 @@ export function presentEncounterCustomizationFinding(
   return Object.freeze(presentation);
 }
 
-function encounterCustomizationEvidence(
-  evidence: SemanticFinding['evidence'],
-): EncounterCustomizationUnavailableFacts | undefined {
-  // The engine spreads its closed unsupported reason into the finding evidence.
-  return typeof evidence.reason === 'string'
-    ? (evidence as unknown as EncounterCustomizationUnavailableFacts)
-    : undefined;
-}
-
-const challengeSwitchReasons = new Set([
-  'biomeDepth',
-  'recentSwitch',
-  'noFreeAnchor',
-  'kindUnavailable',
-  'variantUnavailable',
-]);
-
-function challengeSwitchRuleEvidence(
-  evidence: SemanticFinding['evidence'],
-): ChallengeSwitchRule | undefined {
-  // The engine spreads its closed placement issue into the finding evidence.
-  return typeof evidence.reason === 'string' && challengeSwitchReasons.has(evidence.reason)
-    ? (evidence as unknown as ChallengeSwitchRule)
-    : undefined;
-}
-
 /** Why a pinned Elite switch elite or attribute cannot be drawn, naming it where it fits. */
 function presentEliteChallengeFinding(
   evidence: SemanticFinding['evidence'],
@@ -1015,22 +987,15 @@ export function presentFinding(
       traitOfferGenerationEvidence(finding.evidence),
       labels?.trait,
     );
-  if (
-    finding.code === 'encounterCustomizationUnavailable' ||
-    finding.code === 'challengeSwitchCustomizationUnavailable' ||
-    finding.code === 'unlockExitCustomizationUnavailable'
-  ) {
-    const facts = encounterCustomizationEvidence(finding.evidence);
-    if (facts !== undefined) return presentEncounterCustomizationFinding(facts, labels);
-  }
-  if (finding.code === 'challengeSwitchPlacementUnavailable') {
-    const rule = challengeSwitchRuleEvidence(finding.evidence);
-    if (rule !== undefined)
-      return Object.freeze({
-        title: challengeSwitchRuleTitle(rule),
-        description: challengeSwitchRuleSentence(rule),
-      });
-  }
+  const customization = encounterCustomizationFindingFacts(finding);
+  if (customization !== undefined)
+    return presentEncounterCustomizationFinding(customization, labels);
+  const switchRule = challengeSwitchPlacementFindingIssue(finding);
+  if (switchRule !== undefined)
+    return Object.freeze({
+      title: challengeSwitchRuleTitle(switchRule),
+      description: challengeSwitchRuleSentence(switchRule),
+    });
   if (finding.code === 'challengeSwitchEliteUnavailable') {
     const presented = presentEliteChallengeFinding(finding.evidence, labels);
     if (presented !== undefined) return presented;

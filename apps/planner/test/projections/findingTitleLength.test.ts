@@ -315,6 +315,7 @@ describe('challenge switch finding copy', () => {
         variantKey: 'EliteChallengeSwitch_Talent',
         requirement: 'talentLegal',
       },
+      { reason: 'lockedDoors' },
     ];
     const copy = rules.map((rule) =>
       presentFinding(finding('challengeSwitchPlacementUnavailable', rule)),
@@ -329,7 +330,9 @@ describe('challenge switch finding copy', () => {
       'Moon Monuments need biome depth 3; this room is at 2.',
       'Needs a boon a Pom can level.',
       "Needs a Hex whose Path of Stars isn't complete.",
+      'A room with locked doors never holds a switch.',
     ]);
+    expect(copy.at(-1)?.title).toBe('No switch beside locked doors');
   });
 
   it('titles every unavailable elite pin within the limit with the longest names', () => {
