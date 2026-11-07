@@ -175,7 +175,6 @@ export function assembleChallengeSwitch(input: {
         });
       });
     const row = product?.kinds.find((candidate) => candidate.switchKind === kind);
-    const observeVariantKey = row?.observe?.variantKey ?? undefined;
     const lock: WorkspaceChallengeSwitchLock | undefined =
       product === undefined ? Object.freeze({ reason: 'unreached' as const }) : row?.lock;
     return [
@@ -183,7 +182,6 @@ export function assembleChallengeSwitch(input: {
         kind,
         label: challengeSwitchKindLabel(kind),
         selected: kind === observedKind,
-        ...(observeVariantKey === undefined ? {} : { observeVariantKey }),
         ...(lock === undefined ? {} : { lock }),
         variants: Object.freeze(variants),
       }),

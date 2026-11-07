@@ -413,8 +413,7 @@ export interface WorkspaceHubRequirements {
 export interface WorkspaceHubStayDoor {
   readonly hubSlotKey: string;
   readonly label: string;
-  /** The door's first draw. */
-  readonly firstDraw: ResolvedRewardOffer;
+  /** A summary of the door's first draw. */
   readonly firstSummary: string;
   /** Its reward after every press so far. */
   readonly current: ResolvedRewardOffer;

@@ -77,7 +77,6 @@ const kindsOf = (summary: WorkspaceOccurrenceWorkbenchNode['room']) =>
   summary.challengeSwitch?.kinds.map((row) => ({
     kind: row.kind,
     selected: row.selected,
-    observe: row.observeVariantKey,
     lock: row.lock?.reason,
   }));
 
@@ -86,14 +85,9 @@ describe('challenge switch in the structured workspace', () => {
     const { workspace } = projectStructuredWorkspaceFixture(createGoldenFGHIProject());
 
     expect(kindsOf(room(workspace, 'F', 'golden-f-b5-e1'))).toEqual([
-      {
-        kind: 'perfectClear',
-        selected: false,
-        observe: 'PerfectClearChallengeSwitch_Pom',
-        lock: undefined,
-      },
-      { kind: 'time', selected: false, observe: 'TimeChallengeSwitch_Money', lock: undefined },
-      { kind: 'elite', selected: false, observe: undefined, lock: 'kindUnavailable' },
+      { kind: 'perfectClear', selected: false, lock: undefined },
+      { kind: 'time', selected: false, lock: undefined },
+      { kind: 'elite', selected: false, lock: 'kindUnavailable' },
     ]);
     // A shared spawn rule locks every kind.
     expect(kindsOf(room(workspace, 'F', 'golden-f-b1-e1'))?.map((row) => row.lock)).toEqual([

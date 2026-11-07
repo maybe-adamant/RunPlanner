@@ -494,8 +494,6 @@ export interface WorkspaceChallengeSwitchKindRow {
   readonly kind: ChallengeSwitchKind;
   readonly label: string;
   readonly selected: boolean;
-  /** The variant picking this type observes; absent while none can be rolled here. */
-  readonly observeVariantKey?: string;
   /** Why this type is unavailable; absent when a variant can be rolled. */
   readonly lock?: WorkspaceChallengeSwitchLock;
   readonly variants: readonly WorkspaceChallengeSwitchVariant[];

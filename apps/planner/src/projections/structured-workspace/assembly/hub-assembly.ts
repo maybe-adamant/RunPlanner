@@ -801,7 +801,6 @@ function projectHubNode(
         Object.freeze({
           hubSlotKey: door.hubSlotKey,
           label: openSlots.get(door.hubSlotKey)?.label ?? door.hubSlotKey,
-          firstDraw: door.firstDraw,
           firstSummary: summarizeRewardOffer(catalog, door.firstDraw),
           current: door.current,
           currentSummary: summarizeRewardOffer(catalog, door.current),
