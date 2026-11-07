@@ -83,6 +83,11 @@ export function LauncherButton({
   );
 }
 
+/** A thin rule parting a row's source from the option chips it offers. */
+export function SourceOptionsRule() {
+  return <span aria-hidden="true" className="timeline-source-rule" />;
+}
+
 /**
  * A dialog launcher whose value is shown as chips: an empty slot until chosen,
  * or while it waits on an earlier choice. A lone chip opens the dialog itself
@@ -114,10 +119,17 @@ export function ChipLauncher({
   );
   if (!contextReached || chips?.length === 0) return button('slot');
   if (chips === undefined) return button('label');
-  if (chipOpens && chips.length === 1) return button('chip');
+  if (chipOpens && chips.length === 1)
+    return (
+      <span className="timeline-chip-group">
+        <SourceOptionsRule />
+        {button('chip')}
+      </span>
+    );
   const removed = chips.filter((chip) => chip.state === 'removed').length;
   return (
     <span className="timeline-chip-group">
+      <SourceOptionsRule />
       {chips.map((chip, index) => (
         <Fragment key={`${chip.state}-${chip.key}-${index}`}>
           {removed > 0 && index === removed ? (

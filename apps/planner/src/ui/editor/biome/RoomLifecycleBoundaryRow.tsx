@@ -11,6 +11,7 @@ import { hintProps } from '@planner/ui/controls/hint';
 import { TimelineRow } from './TimelineRow';
 import { BannerTitle } from './TimelineDoors';
 import type { BannerToggle } from './doorSummary';
+import { boundarySpokenLabel } from './lifecycleBoundaryLabel';
 
 /** Render-only boundary row; timeline placement remains the projection's authority. */
 export function LifecycleBoundaryRow({
@@ -39,24 +40,28 @@ export function LifecycleBoundaryRow({
 }) {
   const findingAnchor = useFindingAnchor();
   const dispatch = useAppDispatch();
-  // A Fields cage is known by its slot, subscripted on its encounter's name.
+  const accessibleLabel = boundarySpokenLabel(label, fieldsCage);
+  // One hint tells the whole title: its cage, then its encounter's identity.
+  const titleHint = [fieldsCage?.cage, identity?.label]
+    .filter((part) => part !== undefined)
+    .join(' · ');
+  // A Fields cage is known by its slot, subscripted on its encounter's name as its rewards mark it.
   const cageSlot =
     fieldsCage === undefined ? null : (
       <span
-        {...hintProps(fieldsCage.cage)}
-        aria-label={fieldsCage.label}
+        aria-label={fieldsCage.cage}
         className="fields-cage-slot"
         {...(fieldsCage.owner === undefined
           ? {}
           : { ...findingAnchor(fieldsCage.owner), tabIndex: -1 })}
         role="img"
       >
-        {fieldsCage.slot}
+        C{fieldsCage.slot}
       </span>
     );
   return (
     <TimelineRow
-      aria-label={label}
+      aria-label={accessibleLabel}
       data-lifecycle-boundary={boundary.key}
       data-reorder-anchor={boundary.key}
       data-phase={phase}
@@ -72,14 +77,19 @@ export function LifecycleBoundaryRow({
         <>
           <span className="timeline-banner-title">
             {identity === undefined ? (
-              <>
+              cageSlot === null ? (
                 <BannerTitle label={label} toggle={toggle} />
-                {cageSlot}
-              </>
+              ) : (
+                // The slot hugs the title as a subscript, as it does on a start banner.
+                <span {...hintProps(titleHint, undefined, accessibleLabel)}>
+                  <BannerTitle label={label} toggle={toggle} />
+                  {cageSlot}
+                </span>
+              )
             ) : (
               <button
-                {...hintProps(identity.label, undefined, `${label}: ${identity.label}`)}
-                aria-label={`${label}: ${identity.label}`}
+                {...hintProps(titleHint, undefined, `${label}: ${titleHint}`)}
+                aria-label={`${label}: ${titleHint}`}
                 className="timeline-banner-identity"
                 onClick={() => dispatch(semanticOwnerNavigated(identity.owner))}
                 type="button"

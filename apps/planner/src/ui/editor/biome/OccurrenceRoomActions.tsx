@@ -24,6 +24,7 @@ import { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
 export { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { LifecycleBoundaryRow } from './RoomLifecycleBoundaryRow';
+import { boundarySpokenLabel } from './lifecycleBoundaryLabel';
 import { TimelineRow } from './TimelineRow';
 import { RowRewardName } from './RowRewardName';
 import { RowNpcName } from './RowNpcName';
@@ -474,7 +475,7 @@ export function RoomActionsWorkbench({
       ? [
           {
             key: entry.boundary.key,
-            label: entry.label,
+            label: boundarySpokenLabel(entry.label, entry.fieldsCage),
             kind: entry.boundary.kind,
             dropIndex: entry.dropIndex,
           },

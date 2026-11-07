@@ -214,12 +214,15 @@ describe('Nemesis interaction family', () => {
     expect(identityLabels(room).filter((label) => label?.includes('Nemesis'))).toEqual([
       expect.stringMatching(/Nemesis event · /),
     ]);
-    // The event's start banner is not a cage: the cages still number from one.
+    // The event's start banner is not a cage: only the cages' banners carry a slot.
     expect(
-      banners(room, 'encounterStart').flatMap((entry) =>
-        /^Encounter \d/.test(entry.label) ? [entry.label] : [],
-      ),
-    ).toEqual(['Encounter 1 started', 'Encounter 2 started', 'Encounter 3 started']);
+      banners(room, 'encounterStart').map((entry) => [entry.label, entry.fieldsCage?.slot]),
+    ).toEqual([
+      ['Encounter started', undefined],
+      ['Encounter started', 3],
+      ['Encounter started', 2],
+      ['Encounter started', 1],
+    ]);
     expect(interactionRows(room)).toEqual([
       expect.objectContaining({
         supplement: expect.objectContaining({ kind: 'nemesisInteraction' }),

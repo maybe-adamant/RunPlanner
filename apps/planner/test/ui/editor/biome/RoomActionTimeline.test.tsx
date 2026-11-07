@@ -592,24 +592,32 @@ describe('OccurrenceRoomActions', () => {
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
-    const starts = [1, 2, 3].map((ordinal) =>
-      within(timeline).getByLabelText(`Encounter ${ordinal} started`),
+    const starts = [1, 2, 3].map((slot) =>
+      within(timeline).getByLabelText(`Encounter started, Cage ${slot}`),
     );
     const ends = Array.from(
       timeline.querySelectorAll<HTMLElement>('[data-lifecycle-boundary^="encounterEnd:"]'),
     );
     expect(ends).toHaveLength(3);
-    // Each cage's end banner carries its cycle's number, as its start banner does.
+    // Each cage's end banner carries its cage's slot, as its start banner does.
     expect(ends.map((end) => end.getAttribute('aria-label'))).toEqual([
-      'Encounter 1 ended',
-      'Encounter 2 ended',
-      'Encounter 3 ended',
+      'Encounter ended, Cage 1',
+      'Encounter ended, Cage 2',
+      'Encounter ended, Cage 3',
+    ]);
+    expect(ends.map((end) => end.querySelector('.fields-cage-slot')?.textContent)).toEqual([
+      'C1',
+      'C2',
+      'C3',
     ]);
     for (const [index, start] of starts.entries()) {
-      // The cage's slot is subscripted; its full name with its reward is its accessible name.
+      // The cage's slot is subscripted as its rewards mark it; one hint names cage and encounter.
       const cage = start.querySelector('.fields-cage-slot');
-      expect(cage?.textContent).toBe(`${index + 1}`);
-      expect(cage?.getAttribute('aria-label')).toMatch(new RegExp(`^Cage ${index + 1} \\(`));
+      expect(cage?.textContent).toBe(`C${index + 1}`);
+      expect(cage?.hasAttribute('data-hint')).toBe(false);
+      expect(start.querySelector('.timeline-banner-identity')?.getAttribute('data-hint')).toMatch(
+        new RegExp(`^Cage ${index + 1} · `),
+      );
     }
     const cageOrder = within(actions).getByRole('group', { name: 'Combat order' });
     expectBefore(cageOrder, within(timeline).getByLabelText('Room entered'));
@@ -644,9 +652,9 @@ describe('OccurrenceRoomActions', () => {
     });
     expect(movePickupEarlier.getAttribute('aria-disabled')).toBeNull();
     // After the second cage's end, which is before Cage 3.
-    expect(reorderByKeyboard(movePickupEarlier, /^After Encounter 2 ended$/)).toEqual([
-      'After Encounter 1 ended',
-      'After Encounter 2 ended',
+    expect(reorderByKeyboard(movePickupEarlier, /^After Encounter ended, Cage 2$/)).toEqual([
+      'After Encounter ended, Cage 1',
+      'After Encounter ended, Cage 2',
     ]);
     await waitFor(() => {
       const order = occurrenceRoomActionOrder(
@@ -694,8 +702,8 @@ describe('OccurrenceRoomActions', () => {
     openRoomTab('Room Timeline');
     expect(screen.getByRole('group', { name: 'Combat order' })).toBeTruthy();
     // Each cage start banner names its encounter read-only; identity stays in Overview.
-    for (const ordinal of [1, 2, 3]) {
-      const start = screen.getByLabelText(`Encounter ${ordinal} started`);
+    for (const slot of [1, 2, 3]) {
+      const start = screen.getByLabelText(`Encounter started, Cage ${slot}`);
       expect(start.querySelector('.fields-cage-slot')).not.toBeNull();
       expect(start.querySelector('.timeline-banner-identity')?.textContent).not.toMatch(/Cage/);
     }
@@ -734,13 +742,13 @@ describe('OccurrenceRoomActions', () => {
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
-    for (const [index, number] of [3, 2, 1].entries())
-      expect(
-        screen
-          .getByLabelText(`Encounter ${index + 1} started`)
-          .querySelector('.fields-cage-slot')
-          ?.getAttribute('aria-label'),
-      ).toMatch(new RegExp(`^Cage ${number} \\(`));
+    // The start banners, in clear order, carry their cages' slots.
+    const cageStartSlots = () =>
+      Array.from(
+        document.querySelectorAll('[data-lifecycle-boundary^="encounterStart:"] .fields-cage-slot'),
+        (slot) => slot.textContent,
+      );
+    expect(cageStartSlots()).toEqual(['C3', 'C2', 'C1']);
     // The order shows the cages in clear order, each named with its reward.
     expect(
       within(order())
@@ -750,12 +758,7 @@ describe('OccurrenceRoomActions', () => {
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() => expect(cagePermutation()).toEqual(['Cage01', 'Cage02', 'Cage03']));
-    expect(
-      screen
-        .getByLabelText('Encounter 1 started')
-        .querySelector('.fields-cage-slot')
-        ?.getAttribute('aria-label'),
-    ).toMatch(/^Cage 1 \(/);
+    expect(cageStartSlots()).toEqual(['C1', 'C2', 'C3']);
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     await waitFor(() => expect(cagePermutation()).toEqual(['Cage03', 'Cage02', 'Cage01']));
   });

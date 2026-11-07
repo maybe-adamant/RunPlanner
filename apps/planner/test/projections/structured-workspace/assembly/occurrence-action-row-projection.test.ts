@@ -1100,15 +1100,18 @@ describe('structured workspace actions assembly', () => {
         entry.kind === 'boundary' && entry.fieldsCage !== undefined
           ? [
               {
-                phaseKey: entry.boundary.kind === 'encounterStart' ? entry.boundary.phaseKey : '',
+                kind: entry.boundary.kind,
+                phaseKey: 'phaseKey' in entry.boundary ? entry.boundary.phaseKey : '',
                 label: entry.fieldsCage.label,
               },
             ]
           : [],
       ),
     ).toEqual([
-      { phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
-      { phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
+      { kind: 'encounterStart', phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
+      { kind: 'encounterEnd', phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
+      { kind: 'encounterStart', phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
+      { kind: 'encounterEnd', phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
     ]);
     expect(roomActions.timeline.fieldsCageOrder).toEqual({
       phaseKeys: ['Cage02', 'Cage01'],

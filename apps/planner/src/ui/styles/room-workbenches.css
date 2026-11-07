@@ -2930,6 +2930,20 @@ button.timeline-door-option:disabled {
   gap: 4px;
 }
 
+/* On a Timeline row, a thin rule parts the source from the options it offers. */
+.timeline-source-rule {
+  display: none;
+}
+
+.timeline-cell-editors .timeline-source-rule {
+  display: inline-block;
+  width: 1px;
+  height: 22px;
+  margin-inline: 4px 6px;
+  flex: 0 0 auto;
+  background: var(--border);
+}
+
 .timeline-chip,
 .contextual-picker-trigger.timeline-chip {
   display: inline-grid;

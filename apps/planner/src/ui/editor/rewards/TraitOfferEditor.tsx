@@ -27,7 +27,7 @@ import {
   useFindingTarget,
 } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { LauncherButton } from './LauncherButton';
+import { LauncherButton, SourceOptionsRule } from './LauncherButton';
 import { TimelineChipFace } from './TimelineChip';
 import { timelineChipProps } from './timelineChipProps';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
@@ -74,6 +74,7 @@ export function TraitOfferLauncher({
   const outcome = interaction.inlineOutcome;
   return (
     <span aria-label={interaction.giver.label} className="timeline-chip-group" role="group">
+      <SourceOptionsRule />
       {options.map((option) => (
         <button
           {...timelineChipProps(option)}

@@ -152,7 +152,7 @@ function projectRoomLifecycleTimeline(
         const choice = cageChoices.find((candidate) => candidate.phaseKey === boundary.phaseKey);
         return choice === undefined ? [] : [{ boundary, choice }];
       })
-      .flatMap(({ boundary, choice }, index) => {
+      .flatMap(({ boundary, choice }) => {
         const selected = rows.find(
           (row) =>
             row.reference.kind === 'completeFieldsCage' &&
@@ -176,19 +176,17 @@ function projectRoomLifecycleTimeline(
                     owner:
                       selected.address as import('@run-planner/engine/authored-project').RoomActionAddress,
                   }),
-              slotOrdinal: index + 1,
               phaseKey: boundary.phaseKey,
             }),
           ] as const,
         ];
       }),
   );
-  // A Fields cage's end banner carries its cycle's number, as its start banner does.
-  const endedCageOrdinal = (boundary: WorkspaceRoomLifecycleBoundary) =>
+  // A Fields cage's end banner carries its cage's slot, as its start banner does.
+  const endedCage = (boundary: WorkspaceRoomLifecycleBoundary) =>
     boundary.kind !== 'encounterEnd'
       ? undefined
-      : [...cageLabelByBoundaryKey.values()].find((slot) => slot.phaseKey === boundary.phaseKey)
-          ?.slotOrdinal;
+      : [...cageLabelByBoundaryKey.values()].find((slot) => slot.phaseKey === boundary.phaseKey);
   const representedCagePhases = new Set(
     [...cageLabelByBoundaryKey.values()].flatMap((slot) =>
       slot.owner === undefined ? [] : [slot.phaseKey],
@@ -281,32 +279,37 @@ function projectRoomLifecycleTimeline(
   for (const entry of timeline.entries) {
     if (entry.kind === 'boundary') {
       const runState = launcherForBoundary(entry.boundary);
-      const fieldsCage = cageLabelByBoundaryKey.get(entry.boundary.key);
+      const startedCage = cageLabelByBoundaryKey.get(entry.boundary.key);
+      const endCage = endedCage(entry.boundary);
       const supplement = supplementForBoundary(entry.boundary);
       entries.push(
         Object.freeze({
           kind: 'boundary' as const,
           boundary: entry.boundary,
-          label:
-            fieldsCage !== undefined
-              ? `Encounter ${fieldsCage.slotOrdinal} started`
-              : endedCageOrdinal(entry.boundary) !== undefined
-                ? `Encounter ${endedCageOrdinal(entry.boundary)} ended`
-                : lifecycleBoundaryLabel(entry.boundary),
+          label: lifecycleBoundaryLabel(entry.boundary),
           checkpointKey: lifecycleBoundaryCheckpointKey(entry.boundary),
           dropIndex: Math.max(0, entry.rank - (entry.placement === 'before' ? 1 : 0)),
           placement: entry.placement,
           rank: entry.rank,
           ...(runState === undefined ? {} : { runState }),
-          ...(fieldsCage === undefined
-            ? {}
+          ...(startedCage === undefined
+            ? endCage === undefined
+              ? {}
+              : {
+                  // The end banner names its cage; the start banner owns the cage's navigation.
+                  fieldsCage: Object.freeze({
+                    label: endCage.label,
+                    cage: endCage.cage,
+                    slot: endCage.cageSlot,
+                  }),
+                }
             : {
                 fieldsCage: Object.freeze({
-                  label: fieldsCage.label,
-                  cage: fieldsCage.cage,
-                  slot: fieldsCage.cageSlot,
-                  ...(fieldsCage.offer === undefined ? {} : { offer: fieldsCage.offer }),
-                  ...(fieldsCage.owner === undefined ? {} : { owner: fieldsCage.owner }),
+                  label: startedCage.label,
+                  cage: startedCage.cage,
+                  slot: startedCage.cageSlot,
+                  ...(startedCage.offer === undefined ? {} : { offer: startedCage.offer }),
+                  ...(startedCage.owner === undefined ? {} : { owner: startedCage.owner }),
                 }),
               }),
           ...(supplement === undefined ? {} : { supplement }),
