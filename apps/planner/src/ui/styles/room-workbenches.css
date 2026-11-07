@@ -3810,12 +3810,11 @@ span.hub-board-status-line {
   margin-block: 2px;
 }
 
-/* The room's anchors on one line: each spot's object chip, then that object's settings. */
+/* The room's anchors: the spots line, then one line per object present with its settings. */
 .room-object-slots {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 6px 18px;
+  flex-direction: column;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -3823,16 +3822,19 @@ span.hub-board-status-line {
   padding-left: var(--overview-subrow-indent);
 }
 
-.room-object-slots > .numbered-slots {
-  gap: 6px 24px;
+.room-object-spots,
+.room-object-inventory {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px 12px;
+  min-width: 0;
 }
 
-.room-object-slots .numbered-slot,
-.room-object-slot {
+.room-object-spots > .numbered-slots {
   gap: 6px 12px;
 }
 
-.room-object-slot,
 .room-object-settings {
   display: inline-flex;
   flex-wrap: wrap;

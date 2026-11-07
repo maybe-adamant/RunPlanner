@@ -13,6 +13,7 @@ import { declaredChoicesPicker } from '@planner/projections/contextual/contextua
 import type { ChallengeSwitchKind } from '@run-planner/engine/catalog-schema';
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import { challengeSwitchIcon, roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandsIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
@@ -65,9 +66,9 @@ function slotLockHint(slot: WorkspaceAnchorSlot): string | undefined {
 }
 
 /**
- * A room's challenge switch anchors on one line: each anchor's object as an
- * icon chip that picks what the anchor holds, then that object's settings.
- * Objects native order leaves without an anchor follow, each removable.
+ * A room's object anchors: one line of spots, each picking what it holds, with
+ * objects native order leaves without an anchor after them; then one line per
+ * object present, in spot order, holding that object's settings.
  */
 export function RoomObjectSlots({
   features,
@@ -94,50 +95,70 @@ export function RoomObjectSlots({
     );
   };
   const numbered = objectSlots.slots.length >= 2;
+  const present: readonly WorkspaceAnchorOccupant[] = [
+    ...objectSlots.slots.flatMap((slot) => (slot.occupant === undefined ? [] : [slot.occupant])),
+    ...objectSlots.unanchored,
+  ];
+  const unanchored = objectSlots.unanchored.map((occupant) => (
+    <UnanchoredObjectChip
+      interactions={interactions}
+      key={occupant.object}
+      objectSlots={objectSlots}
+      occupant={occupant}
+    />
+  ));
   return (
     <div className="room-object-slots">
-      {numbered ? (
-        <NumberedSlots label="Object spots">
-          {objectSlots.slots.map((slot) => (
-            <NumberedSlot
-              hint={`Spot ${slot.index + 1}`}
-              key={slot.index}
-              number={slot.index + 1}
-              trailing={slot.occupant === undefined ? undefined : settings(slot.occupant.object)}
-            >
-              <AnchorSlotChip
-                interactions={interactions}
-                label={`Spot ${slot.index + 1}`}
-                objectSlots={objectSlots}
-                slot={slot}
-              />
-            </NumberedSlot>
-          ))}
-        </NumberedSlots>
-      ) : (
-        objectSlots.slots.map((slot) => (
-          <span className="room-object-slot" key={slot.index}>
+      <div className="room-object-spots">
+        {numbered ? (
+          <NumberedSlots label="Object spots">
+            {objectSlots.slots.map((slot) => (
+              <NumberedSlot
+                hint={`Spot ${slot.index + 1}`}
+                key={slot.index}
+                number={slot.index + 1}
+              >
+                <AnchorSlotChip
+                  interactions={interactions}
+                  label={`Spot ${slot.index + 1}`}
+                  objectSlots={objectSlots}
+                  slot={slot}
+                />
+              </NumberedSlot>
+            ))}
+          </NumberedSlots>
+        ) : (
+          objectSlots.slots.map((slot) => (
             <AnchorSlotChip
               interactions={interactions}
+              key={slot.index}
               label="Spot"
               objectSlots={objectSlots}
               slot={slot}
             />
-            {slot.occupant === undefined ? null : settings(slot.occupant.object)}
-          </span>
-        ))
-      )}
-      {objectSlots.unanchored.map((occupant) => (
-        <span className="room-object-slot" key={occupant.object}>
-          <UnanchoredObjectChip
-            interactions={interactions}
-            objectSlots={objectSlots}
-            occupant={occupant}
-          />
-          {settings(occupant.object)}
-        </span>
-      ))}
+          ))
+        )}
+        {unanchored}
+      </div>
+      {present.map((occupant) => {
+        const controls = settings(occupant.object);
+        return controls === null ? null : (
+          <div className="room-object-inventory" key={occupant.object}>
+            <ObjectIcon held={occupant} />
+            {controls}
+          </div>
+        );
+      })}
     </div>
+  );
+}
+
+/** The object an inventory line belongs to, named on hover; its controls carry the name for assistive tech. */
+function ObjectIcon({ held }: { readonly held: Held }) {
+  return (
+    <span aria-hidden="true" className="room-object-fixed" data-hint={heldName(held)}>
+      <ArtworkIcon className="artwork-label-icon" source={heldIcon(held)} />
+    </span>
   );
 }
 
