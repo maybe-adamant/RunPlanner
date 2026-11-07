@@ -126,6 +126,17 @@ inside the one derivation rule.
    controls; the map shows them (phase 3 makes them clickable).
 5. In-game probe confirms or corrects the derivation; flipped map display.
 
+## Follow-ups (recorded, not scheduled)
+
+- `HeroStartPointEndPointLinkIds` is not modelled: the no-match fallback
+  always pairs the lowest start with the lowest end, where the game uses the
+  start's linked end when the room declares one.
+- Chaos gates and the Zagreus Contract door are spawned at runtime and have
+  no exit direction on record, so the next room's exit is unknown.
+- N_PreHub01's `nextRoomEntries` keys on `EphyraExitDoorReturn` while its
+  map door is `EphyraExitDoorReturnNE`, so that forced entry is never found;
+  N_Hub's own fixed entry (the same pair) masks it today.
+
 ## Evidence
 
 - Point data spec, orientation table, capture tool assessment:
