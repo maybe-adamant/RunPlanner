@@ -125,7 +125,7 @@ function coordinator.realize(state, occurrence, game, nativeRoom)
 end
 
 function coordinator.realizeFeatures(_, occurrence, nativeRoom)
-    fieldFeatures.realize(nativeRoom, occurrence.overview and occurrence.overview.fields or nil)
+    fieldFeatures.realize(nativeRoom, occurrence.overview)
     return nativeRoom
 end
 

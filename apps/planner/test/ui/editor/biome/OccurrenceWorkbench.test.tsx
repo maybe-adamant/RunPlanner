@@ -340,24 +340,27 @@ describe('OccurrenceWorkbench', () => {
     expect(within(screen.getByRole('complementary')).getByText('100%')).toBeTruthy();
   });
 
-  it('shows a missing active placement finding on its exact Layout row', () => {
+  it('shows a duplicate placement finding on its exact Layout row', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat05');
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
-      spatial: createFieldsSpatialAddress(createOccurrenceAddress(goldenHBiome, occurrenceId), {
-        kind: 'cage',
-        slotKey: 'cage1',
-      }),
-      pointId: null,
+      spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage1' }),
+      pointId: 573087,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage2' }),
+      pointId: 573087,
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(occurrenceId));
     openRoomTab('Room Layout');
-    const row = screen.getByText('Cage 1').closest('.fields-layout-row');
-    if (!(row instanceof HTMLElement)) throw new Error('Cage 1 Layout row is missing');
+    const row = screen.getByText('Cage 2').closest('.fields-layout-row');
+    if (!(row instanceof HTMLElement)) throw new Error('Cage 2 Layout row is missing');
 
     expect(
       within(row)
-        .getByRole('radiogroup', { name: 'Cage 1 position' })
+        .getByRole('radiogroup', { name: 'Cage 2 position' })
         .getAttribute('data-has-findings'),
     ).toBe('true');
   });

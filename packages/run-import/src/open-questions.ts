@@ -138,13 +138,6 @@ function* candidateAnswers(
     ];
     for (const targetTraitKey of targets)
       yield [{ kind: 'ReplaceSteadyGrowthTarget', outcome: origin, targetTraitKey }];
-  } else if (origin.kind === 'fieldsSpatial') {
-    const evaluation = context
-      .candidates()
-      .evaluate({ kind: 'fieldsSpatialPoint', spatial: origin, pointId: null });
-    if (evaluation.kind !== 'fieldsSpatialPoint') return;
-    for (const pointId of evaluation.result.supportPointIds)
-      yield [{ kind: 'ReplaceFieldsSpatialPoint', spatial: origin, pointId }];
   } else if (origin.kind === 'levelResolution') {
     const capability = levelResolutionCandidateForProjectEvaluationAssembly(
       context.assembly(),

@@ -17,11 +17,9 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   type EncounterPhaseAddress,
-  type FieldsSpatialAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  createPreparedProjectCandidateSession,
   generatedEncounterSupportForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -705,23 +703,6 @@ export function authorFreshFileRoomIssues(
         reward: owner,
         value: { rewardType: 'RoomMoneyTinyDrop' },
       });
-    } else if (owner.kind === 'fieldsSpatial') {
-      label = 'spatial';
-      const session = createPreparedProjectCandidateSession(catalog, assembly);
-      const used = new Set<number>();
-      for (const reason of issue.reasons) {
-        const spatial = reason.origin as FieldsSpatialAddress;
-        const result = session.evaluate({ kind: 'fieldsSpatialPoint', spatial, pointId: null });
-        if (result.kind !== 'fieldsSpatialPoint') throw new Error('no spatial candidate');
-        const pointId = result.result.supportPointIds.find((id) => !used.has(id));
-        if (pointId === undefined) throw new Error('no free spatial point');
-        used.add(pointId);
-        current = applyProjectCommand(current, catalog, {
-          kind: 'ReplaceFieldsSpatialPoint',
-          spatial,
-          pointId,
-        });
-      }
     } else if (owner.kind === 'traitOffer') {
       label = `trait:${owner.owner.kind === 'localReward' ? owner.owner.slotKey : owner.owner.kind}`;
       current = authorLegalTraitOffers(current);

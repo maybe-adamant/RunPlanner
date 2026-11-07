@@ -178,6 +178,11 @@ export type {
   EvaluatedFieldsSpatialPointCandidate,
 } from './fields-spatial';
 export type {
+  RoomLayoutEntryCandidateQuery,
+  RoomLayoutEntryCandidateSupport,
+  EvaluatedRoomLayoutEntryCandidate,
+} from './room-layout-entry';
+export type {
   FigurineArcanaCandidateQuery,
   EvaluatedFigurineArcanaCandidate,
 } from './figurine-arcana';

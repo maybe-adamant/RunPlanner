@@ -1,8 +1,8 @@
 {
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
-  "schemaVersion": 101,
-  "schemaRevision": 2,
+  "schemaVersion": 102,
+  "schemaRevision": 0,
   "projectId": "surface-1",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -213,7 +213,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "OpeningGeneratedN", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -571,6 +572,7 @@
           { "slotKey": "Encounter", "encounterKey": "PreHubGeneratedN", "kind": "combat" }
         ],
         "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } },
         "hub": {
           "room": { "gameName": "N_Hub" },
           "slots": [
@@ -1021,6 +1023,7 @@
         ],
         "requiredObjects": ["SoulPylon"],
         "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -1283,7 +1286,8 @@
         "phantomExit": {
           "placeholderRoomGameName": "N_Sub01",
           "reward": { "rewardType": "MetaCurrencyDrop", "storeKey": "SubRoomRewards" }
-        }
+        },
+        "layout": { "flipped": false, "entry": { "startPointId": 566341, "endPointId": 566339 } }
       },
       "timeline": {
         "transactions": [
@@ -1415,7 +1419,8 @@
         "phantomExit": {
           "placeholderRoomGameName": "N_Sub01",
           "reward": { "rewardType": "MetaCardPointsCommonDrop", "storeKey": "SubRoomRewards" }
-        }
+        },
+        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1756,5 +1761,5 @@
       }
     }
   ],
-  "planFingerprint": "71463f22"
+  "planFingerprint": "cb0729fb"
 }

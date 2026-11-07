@@ -299,6 +299,7 @@ export function materializeAuthoredRoom(
     ...(context.occurrence.lockedExits === undefined
       ? {}
       : { lockedExits: context.occurrence.lockedExits }),
+    ...(context.occurrence.layout === undefined ? {} : { layout: context.occurrence.layout }),
     ...(stygianWellOfferEffects === undefined ? {} : { stygianWellOfferEffects }),
     ...(stygianWellExtendedDirectPurchaseItemKeys === undefined
       ? {}
@@ -346,7 +347,6 @@ export function materializeAuthoredRoom(
       ? {}
       : { fieldsOptionalRewards: leaf.fieldsOptionalRewards }),
     ...(leaf.fieldsSpatial === undefined ? {} : { fieldsSpatial: leaf.fieldsSpatial }),
-    ...(leaf.fieldsEntryPair === undefined ? {} : { fieldsEntryPair: leaf.fieldsEntryPair }),
     ...(context.occurrence.state.kind !== 'fieldsCombat'
       ? {}
       : { fieldsOptionalRewardCount: context.occurrence.state.optionalRewardCount }),

@@ -97,8 +97,8 @@ describe('Nemesis random-event checkpoint workflows', () => {
     const selected = occurrence(loadNemesisFieldsCheckpoint(), 'H', id);
     if (selected.state.kind !== 'fieldsCombat') throw new Error('H fixture is not a Fields room');
     expect(selected.state.optionalRewardCount).toBe(3);
+    expect(selected.layout).toEqual({ entryStartPointId: 755863 });
     expect(selected.state.spatial).toEqual({
-      entryStartPointId: 755863,
       cagePointIdBySlot: {
         cage1: 573087,
         cage2: 621494,

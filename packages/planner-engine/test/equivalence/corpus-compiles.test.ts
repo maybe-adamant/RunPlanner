@@ -55,7 +55,6 @@ const notCompiling: Readonly<Record<string, 'incomplete' | 'invalid'>> = {
   'fresh-file/hFieldsIssues/01': 'incomplete',
   'fresh-file/hFieldsIssues/02': 'incomplete',
   'fresh-file/hFieldsIssues/03': 'incomplete',
-  'fresh-file/hFieldsIssues/04': 'incomplete',
   'fresh-file/frontier/00': 'incomplete',
 };
 

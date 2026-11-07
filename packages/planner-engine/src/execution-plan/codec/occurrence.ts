@@ -174,14 +174,15 @@ function validateFieldsCageSlots(
   label: string,
 ): void {
   const activeCagePhases = encounterPhases.filter((phase) => /^Cage\d+$/.test(phase.slotKey));
-  if (activeCagePhases.length !== layout.cagePoints.length)
-    fail(`${label}.cagePoints must match the active cage encounter phases`);
   activeCagePhases.forEach((phase, index) => {
-    const expectedPhase = `Cage${String(index + 1).padStart(2, '0')}`;
-    const expectedSlot = `cage${index + 1}`;
-    if (phase.slotKey !== expectedPhase || layout.cagePoints[index]?.slotKey !== expectedSlot)
+    if (phase.slotKey !== `Cage${String(index + 1).padStart(2, '0')}`)
       fail(`${label}.cagePoints must use canonical ordered cage slots`);
   });
+  // A cage without a point stays native; a listed one names an active cage in order.
+  const activeSlots = activeCagePhases.map((_, index) => `cage${index + 1}`);
+  const ranks = layout.cagePoints.map((point) => activeSlots.indexOf(point.slotKey));
+  if (ranks.some((rank, index) => rank < 0 || (index > 0 && rank <= ranks[index - 1]!)))
+    fail(`${label}.cagePoints must use canonical ordered cage slots`);
 }
 
 function validateShopTransactionOwners(

@@ -1,3 +1,4 @@
+import type { RoomLayoutSettlement } from '../../room-layout/settlement';
 import {
   createAcquisitionRoleAddress,
   createBiomeAddress,
@@ -225,6 +226,7 @@ export type ChronologyEmission =
     }
   | { readonly kind: 'bossArcanaOutcomes'; readonly outcomes: readonly BossArcanaOutcome[] }
   | { readonly kind: 'phantomExitSettlement'; readonly settlement: PhantomExitSettlement }
+  | { readonly kind: 'roomLayoutSettlement'; readonly settlement: RoomLayoutSettlement }
   | { readonly kind: 'rerollSettlement'; readonly settlement: RerollSettlement }
   | { readonly kind: 'rerollPool'; readonly point: RerollPoolPoint }
   | { readonly kind: 'rerollSurface'; readonly capture: RerollSurfaceCapture }
@@ -286,6 +288,7 @@ export interface ChronologyAccumulation {
   readonly figurineArcanaContexts: ReadonlyMap<string, FigurineArcanaCandidateCapability>;
   readonly bossArcanaOutcomes: readonly BossArcanaOutcome[];
   readonly phantomExits: readonly PhantomExitSettlement[];
+  readonly roomLayouts: readonly RoomLayoutSettlement[];
   readonly rerolls: readonly RerollSettlement[];
   readonly rerollPool: readonly RerollPoolPoint[];
   readonly rerollSurfaces: readonly RerollSurfaceSettlement[];
@@ -423,6 +426,7 @@ export function createChronologyAccumulator(
   const figurineArcanaContexts = new Map<string, FigurineArcanaCandidateCapability>();
   const bossArcanaOutcomes = new Map<string, BossArcanaOutcome>();
   const phantomExits = new Map<string, PhantomExitSettlement>();
+  const roomLayouts = new Map<string, RoomLayoutSettlement>();
   const rerolls = new Map<string, RerollSettlement>();
   const rerollPool: RerollPoolPoint[] = [];
   const rerollSurfaces = new Map<
@@ -821,6 +825,9 @@ export function createChronologyAccumulator(
       case 'phantomExitSettlement':
         phantomExits.set(semanticAddressKey(emission.settlement.owner), emission.settlement);
         break;
+      case 'roomLayoutSettlement':
+        roomLayouts.set(semanticAddressKey(emission.settlement.owner), emission.settlement);
+        return;
       case 'rerollSettlement':
         rerolls.set(semanticAddressKey(emission.settlement.owner), emission.settlement);
         return;
@@ -927,6 +934,7 @@ export function createChronologyAccumulator(
         figurineArcanaContexts,
         bossArcanaOutcomes: Object.freeze([...bossArcanaOutcomes.values()]),
         phantomExits: Object.freeze([...phantomExits.values()]),
+        roomLayouts: Object.freeze([...roomLayouts.values()]),
         rerolls: Object.freeze([...rerolls.values()]),
         rerollPool: Object.freeze([...rerollPool]),
         rerollSurfaces: Object.freeze(

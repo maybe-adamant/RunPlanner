@@ -269,19 +269,30 @@ export interface ExecutionReroll {
   readonly reward: ExecutionReward;
 }
 
-/** Exact layout inputs consumed by native Mourning Fields setup. */
-export interface ExecutionFieldsLayout {
-  readonly entryPair: {
+/**
+ * A room's horizontal flip and entry as derived from the previous room's exit
+ * or authored where the game rolls; each is absent while the game decides it.
+ */
+export interface ExecutionRoomLayout {
+  readonly flipped?: boolean;
+  readonly entry?: {
     readonly startPointId: number;
     readonly endPointId: number;
   };
+}
+
+/**
+ * Inputs consumed by native Mourning Fields setup: the authored point of each
+ * slot that has one; a slot without a point stays native.
+ */
+export interface ExecutionFieldsLayout {
   readonly cagePoints: readonly {
     readonly slotKey: string;
     readonly pointId: number;
   }[];
   readonly optionalRewards: readonly {
     readonly slotKey: string;
-    readonly pointId: number;
+    readonly pointId?: number;
     readonly reward: ExecutionReward;
   }[];
   readonly nemesisPointId?: number;
@@ -850,6 +861,8 @@ export interface ExecutionOverview {
         readonly rushed: boolean;
       };
     }[];
+    /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+    readonly anchorId?: number;
   };
   readonly stygianWell?: {
     /** The initial roll's pinned slots; the others stay native. */
@@ -863,6 +876,8 @@ export interface ExecutionOverview {
       readonly rollKey: string;
       readonly offers: readonly ExecutionWellOffer[];
     }[];
+    /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+    readonly anchorId?: number;
   };
   readonly purgingPool?: {
     /** The initial list's pinned slots; the others stay native. */
@@ -881,6 +896,8 @@ export interface ExecutionOverview {
         readonly traitKey: string;
       }[];
     }[];
+    /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+    readonly anchorId?: number;
   };
   readonly keepsakeRack?: { readonly keepsakeKey?: string };
   /**
@@ -896,6 +913,8 @@ export interface ExecutionOverview {
       readonly enemy: { readonly choiceKey: string; readonly nativeId: string };
       readonly attributeKeys: readonly string[];
     };
+    /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+    readonly anchorId?: number;
   };
   /**
    * The doors observed locked when the room's doors open, in exit order
@@ -911,7 +930,9 @@ export interface ExecutionOverview {
     };
   }[];
   readonly fountain?: { readonly aromaticPhialTarget?: string };
-  /** Selected Fields entry/layout facts; cage identities stay on door targets. */
+  /** The room's flip and entry wherever they are determined; absent ones stay native. */
+  readonly layout?: ExecutionRoomLayout;
+  /** Authored Fields points; cage identities stay on door targets. */
   readonly fields?: ExecutionFieldsLayout;
   /** Chaos gates and Zagreus Contract exits are room features, not normal doors. */
   readonly additional?: readonly {

@@ -464,14 +464,23 @@ export const findingCopy = {
     title: 'Nemesis needs a reward position',
     description: 'Remove one optional reward.',
   },
-  fieldsSpatialPointMissing: {
-    title: 'Choose a Fields position',
-  },
   fieldsSpatialPointUnavailable: {
     title: 'Fields position unavailable',
   },
   fieldsSpatialPointDuplicate: {
     title: 'Fields position already used',
+  },
+  roomLayoutEntryUnavailable: {
+    title: 'Room cannot be entered at this point',
+  },
+  roomLayoutFlipUnavailable: {
+    title: 'Room flip is decided by the previous door',
+  },
+  roomObjectAnchorUnavailable: {
+    title: 'Object cannot stand on this anchor',
+  },
+  roomObjectAnchorDuplicate: {
+    title: 'Anchor already holds another object',
   },
   resourcePlacementUnavailable: {
     title: 'Resource success unavailable',
@@ -1173,7 +1182,6 @@ function dialogTitle(
 
 /** A same-code group's title with its count, where the title has a natural plural. */
 const countedTitles: Partial<Record<FindingCode, (count: number) => string>> = {
-  fieldsSpatialPointMissing: (n) => `Choose ${n} Fields positions`,
   fieldsSpatialPointUnavailable: (n) => `${n} Fields positions unavailable`,
   fieldsSpatialPointDuplicate: (n) => `${n} Fields positions already used`,
   rewardMissing: (n) => `Choose ${n} rewards`,

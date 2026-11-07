@@ -668,6 +668,8 @@ export function applyOccurrenceCommand(
         ...(current?.customization === undefined || !sameKind
           ? {}
           : { customization: current.customization }),
+        // The switch stands where it stood whatever variant it shows.
+        ...(current?.anchorId === undefined ? {} : { anchorId: current.anchorId }),
       });
       return updateOccurrence(
         document,
@@ -797,6 +799,7 @@ export function applyOccurrenceCommand(
         nectarDropped: command.nectarDropped,
         ...(current.elite === undefined ? {} : { elite: current.elite }),
         ...(current.customization === undefined ? {} : { customization: current.customization }),
+        ...(current.anchorId === undefined ? {} : { anchorId: current.anchorId }),
       });
       const issue = challengeSwitchShapeIssue(catalog, next);
       if (issue !== undefined) failCommand(command, issue);

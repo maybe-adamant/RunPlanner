@@ -187,17 +187,20 @@ function judged(
  * such a wheel and exchanging its offers clears that wheel from the block, the
  * exchange is kept. `blockOf` is the plan's evaluated blocking stop; only the
  * wheels that stop names are judged, so a wheel behind an earlier stop keeps
- * its offers. Returns the input itself when nothing changes; a document strict
+ * its offers. `toCurrent` lifts the document through the later transitions
+ * so the current codec can judge it; the exchange itself stays in the input's
+ * shape. Returns the input itself when nothing changes; a document strict
  * decoding rejects is left for it to reject.
  */
 export function exchangeBlockedWheelOffers(
   value: unknown,
   catalog: Catalog,
   blockOf: (project: ProjectDocument) => WheelSideOrderBlock | undefined,
+  toCurrent: (document: unknown) => unknown = (document) => document,
 ): unknown {
   const document = rawRecord(value);
   if (document === undefined || !rawShipWheels(document).some(twoOffered)) return value;
-  const project = decodes(document, catalog);
+  const project = decodes(toCurrent(document), catalog);
   if (project === undefined) return value;
   const initial = judged(blockOf, project);
   if (initial === undefined) return value;
@@ -214,7 +217,7 @@ export function exchangeBlockedWheelOffers(
     if (wheel === undefined) return current;
     tried.add(semanticAddressKey(wheel));
     const swapped = swapWheelOffers(current, wheel);
-    const swappedProject = decodes(swapped, catalog);
+    const swappedProject = decodes(toCurrent(swapped), catalog);
     if (swappedProject === undefined) return current;
     const swappedJudgement = judged(blockOf, swappedProject);
     if (swappedJudgement === undefined) return current;

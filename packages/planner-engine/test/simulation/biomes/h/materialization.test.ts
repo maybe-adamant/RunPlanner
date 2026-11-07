@@ -495,12 +495,9 @@ function authorFieldsSpatialLayout(
   const declaration = catalog.rooms.byKey[occurrence.gameName]?.fieldsSpatial;
   if (declaration === undefined)
     throw new Error(`missing Fields spatial declaration for ${occurrence.gameName}`);
-  const entryPair = declaration.entryPairs[0];
-  if (entryPair === undefined) throw new Error(`${occurrence.gameName} has no Fields entry pair`);
   const owner = createOccurrenceAddress(biome, occurrenceId);
-  const assignments: Array<readonly [Parameters<typeof createFieldsSpatialAddress>[1], number]> = [
-    [{ kind: 'entry' }, entryPair.startPointId],
-  ];
+  const assignments: Array<readonly [Parameters<typeof createFieldsSpatialAddress>[1], number]> =
+    [];
   Object.entries(occurrence.state.cages)
     .filter(([, reward]) => reward !== null)
     .forEach(([slotKey], index) => {

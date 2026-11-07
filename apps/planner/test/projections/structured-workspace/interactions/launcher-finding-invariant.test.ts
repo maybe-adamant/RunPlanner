@@ -560,13 +560,14 @@ describe('a finding never disables the launcher that repairs it', () => {
         slot: slot.address,
         generation: 'notGenerated',
       });
+    // A cage point another cage already holds blocks the room's Overview.
     const fieldsSpatial = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
       spatial: createFieldsSpatialAddress(
         createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat02')),
-        { kind: 'entry' },
+        { kind: 'cage', slotKey: 'cage2' },
       ),
-      pointId: null,
+      pointId: 621502,
     });
     const wheelStore = applyProjectCommand(base, catalog, {
       kind: 'ReplaceRewardWheelStore',

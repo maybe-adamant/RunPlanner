@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   createEncounterPhaseAddress,
-  createFieldsSpatialAddress,
   createOccurrenceAddress,
   createRouteStartKeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
@@ -160,12 +159,9 @@ describe('structured workspace composer assembly', () => {
     );
     if (replacement?.value == null) throw new Error('H Fields alternate entry is missing');
     const edited = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceFieldsSpatialPoint',
-      spatial: createFieldsSpatialAddress(
-        createOccurrenceAddress(goldenHBiome, occurrenceId),
-        entry.target,
-      ),
-      pointId: replacement.value,
+      kind: 'ReplaceRoomLayout',
+      occurrence: createOccurrenceAddress(goldenHBiome, occurrenceId),
+      layout: { entryStartPointId: replacement.value },
     });
     const editedRoom = assemble(edited, 'Underworld', 'H', occurrenceId).assembly.node.room;
     expect(editedRoom.roomActions?.timeline.entries).toEqual(room.roomActions?.timeline.entries);

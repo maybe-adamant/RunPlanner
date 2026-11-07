@@ -82,10 +82,12 @@ describe('OccurrenceRoomFeatures', () => {
     reached.unmount();
     const project = applyProjectCommand(loadNemesisFieldsCheckpoint(), catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
+      // A cage point another cage already holds blocks the room's Overview.
       spatial: createFieldsSpatialAddress(createOccurrenceAddress(goldenHBiome, occurrenceId), {
-        kind: 'entry',
+        kind: 'cage',
+        slotKey: 'cage2',
       }),
-      pointId: null,
+      pointId: 573087,
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');

@@ -29,13 +29,13 @@ import {
   forGeneration,
   type CanonicalAuthoredRoom,
   type CanonicalBatch,
-  type CanonicalFieldsEntryPair,
 } from '../../simulation/materialization';
 import type { RewardEvent } from '../../simulation/rewards/model';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { agreement, completeFrontier, executionRoomOwnerKey } from './support';
 import type {
+  ExecutionRoomLayout,
   ExecutionFieldsLayout,
   ExecutionInfernalContract,
   ExecutionPhantomExit,
@@ -667,35 +667,23 @@ function executionFieldsLayout(
   recordedEncounterKeys: ReadonlyMap<string, string>,
 ): ExecutionFieldsLayout | undefined {
   if (!room.entered || room.encounterEnvelopeKey !== 'FieldsEncounter') return undefined;
-  const entryPair: CanonicalFieldsEntryPair | undefined = room.fieldsEntryPair;
   const spatial = room.fieldsSpatial;
-  if (entryPair === undefined || spatial === undefined)
-    throw new CompilerError(
-      'executionCoverageMissing',
-      `${room.gameName} lacks Fields entry layout`,
-    );
-
+  if (spatial === undefined)
+    throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks Fields layout`);
+  // A slot without an authored point stays native.
   const cagePoints = room.encounterPhases.flatMap((phase) => {
     const attachment = phase.rewardAttachment;
     if (attachment?.kind !== 'localReward' || attachment.groupKey !== 'cages') return [];
     const pointId = spatial.cagePointIdBySlot[attachment.slotKey];
-    if (pointId === null || pointId === undefined)
-      throw new CompilerError(
-        'executionCoverageMissing',
-        `${room.gameName} lacks Fields cage point ${attachment.slotKey}`,
-      );
-    return [{ slotKey: attachment.slotKey, pointId }];
+    return pointId === null || pointId === undefined
+      ? []
+      : [Object.freeze({ slotKey: attachment.slotKey, pointId })];
   });
   const optionalRewards = (room.fieldsOptionalRewards ?? []).map((optional) => {
     const pointId = spatial.optionalPointIdBySlot[optional.slotKey];
-    if (pointId === null || pointId === undefined)
-      throw new CompilerError(
-        'executionCoverageMissing',
-        `${room.gameName} lacks Fields optional point ${optional.slotKey}`,
-      );
     return Object.freeze({
       slotKey: optional.slotKey,
-      pointId,
+      ...(pointId === null || pointId === undefined ? {} : { pointId }),
       reward: executionRewardFromOffer(
         optional.offer,
         optional.producerLifecycleKey,
@@ -707,11 +695,49 @@ function executionFieldsLayout(
     ? spatial.nemesisPointId
     : undefined;
   return Object.freeze({
-    entryPair: Object.freeze({ ...entryPair }),
-    cagePoints: Object.freeze(cagePoints.map((point) => Object.freeze(point))),
+    cagePoints: Object.freeze(cagePoints),
     optionalRewards: Object.freeze(optionalRewards),
     ...(nemesisPointId === null || nemesisPointId === undefined ? {} : { nemesisPointId }),
   });
+}
+
+/**
+ * The entered room's flip and entry wherever the settled layout determines
+ * them: derived from the previous exit, fixed by the room, or authored where
+ * the game rolls. An unset roll or choice stays native.
+ */
+function executionRoomLayout(
+  room: CanonicalAuthoredRoom,
+  biome: PublishedBiomeEvaluation,
+): ExecutionRoomLayout | undefined {
+  if (!room.entered) return undefined;
+  const ownerKey = semanticAddressKey(room.origin);
+  const settlement = biome.rewards.roomLayouts.find(
+    (candidate) => semanticAddressKey(candidate.owner) === ownerKey,
+  );
+  if (settlement === undefined)
+    throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks its layout`);
+  const flipped = settlement.flip.value;
+  const entry = settlement.entry.kind === 'unknown' ? undefined : settlement.entry.point;
+  if (flipped === undefined && entry === undefined) return undefined;
+  return Object.freeze({
+    ...(flipped === undefined ? {} : { flipped }),
+    ...(entry === undefined
+      ? {}
+      : {
+          entry: Object.freeze({ startPointId: entry.startPointId, endPointId: entry.endPointId }),
+        }),
+  });
+}
+
+/** An object's publication with the anchor it stands on, when authored. */
+function anchored<T extends object>(
+  published: T | undefined,
+  leaf: { readonly anchorId?: number } | undefined,
+): T | undefined {
+  return published === undefined || leaf?.anchorId === undefined
+    ? published
+    : Object.freeze({ ...published, anchorId: leaf.anchorId });
 }
 
 type ResolvedEncounterCustomization = NonNullable<
@@ -1098,6 +1124,7 @@ export function assembleExecutionOverview(
         : [],
     ),
   );
+  const layout = executionRoomLayout(room, biome);
   const fields = executionFieldsLayout(
     room,
     new Map([...recordedPhases].map(([slotKey, event]) => [slotKey, event.encounterKey])),
@@ -1210,9 +1237,12 @@ export function assembleExecutionOverview(
     ...(shop === undefined ? {} : { shop }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(phantomExit === undefined ? {} : { phantomExit }),
-    ...(hermesShrine === undefined ? {} : { hermesShrine }),
-    ...(stygianWell === undefined ? {} : { stygianWell }),
-    ...(purgingPool === undefined ? {} : { purgingPool }),
+    ...(hermesShrine === undefined
+      ? {}
+      : { hermesShrine: anchored(hermesShrine, room.hermesShrine)! }),
+    ...(stygianWell === undefined ? {} : { stygianWell: anchored(stygianWell, room.stygianWell)! }),
+    ...(purgingPool === undefined ? {} : { purgingPool: anchored(purgingPool, room.purgingPool)! }),
+    ...(layout === undefined ? {} : { layout }),
     ...(fields === undefined ? {} : { fields }),
     ...(!room.hasKeepsakeRack
       ? {}
@@ -1221,7 +1251,9 @@ export function assembleExecutionOverview(
             room.keepsakeRack === undefined ? {} : { keepsakeKey: room.keepsakeRack.keepsakeKey },
           ),
         }),
-    ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
+    ...(challengeSwitch === undefined
+      ? {}
+      : { challengeSwitch: anchored(challengeSwitch, room.challengeSwitch)! }),
     ...(lockedExits === undefined ? {} : { lockedExits }),
     ...(!room.hasRequiredFountain
       ? {}

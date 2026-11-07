@@ -2623,12 +2623,9 @@ describe('execution-plan compiler and codec', () => {
 
   it('publishes grouped Fields cage previews and the selected spatial layout', () => {
     let project = applyProjectCommand(loadUnderworldFGHCheckpoint(), catalog, {
-      kind: 'ReplaceFieldsSpatialPoint',
-      spatial: createFieldsSpatialAddress(
-        createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat03')),
-        { kind: 'entry' },
-      ),
-      pointId: null,
+      kind: 'ReplaceRoomLayout',
+      occurrence: createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat03')),
+      layout: {},
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
@@ -2646,11 +2643,10 @@ describe('execution-plan compiler and codec', () => {
     const selectedFields = fields.find((occurrence) =>
       plan.selectedOccurrenceIds.includes(occurrence.id),
     );
+    expect(selectedFields?.overview.layout).toMatchObject({
+      entry: { startPointId: expect.any(Number), endPointId: expect.any(Number) },
+    });
     expect(selectedFields?.overview.fields).toMatchObject({
-      entryPair: {
-        startPointId: expect.any(Number),
-        endPointId: expect.any(Number),
-      },
       cagePoints: expect.arrayContaining([{ slotKey: 'cage1', pointId: expect.any(Number) }]),
     });
     const unpickedFields = plan.occurrences.find(

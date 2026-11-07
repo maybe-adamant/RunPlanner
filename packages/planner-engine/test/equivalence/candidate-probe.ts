@@ -166,7 +166,6 @@ export function probeCandidates(
               slot,
             );
         const spatial = [
-          { kind: 'entry' } as const,
           { kind: 'nemesis' } as const,
           ...Object.keys(state.spatial.cagePointIdBySlot).map(
             (slotKey) => ({ kind: 'cage', slotKey }) as const,

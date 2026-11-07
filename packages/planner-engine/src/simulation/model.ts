@@ -17,9 +17,12 @@ export type CompletenessFindingCode =
 
 export type RoomGenerationFindingCode =
   | 'fieldsCageOutcomeUnavailable'
-  | 'fieldsSpatialPointMissing'
   | 'fieldsSpatialPointUnavailable'
   | 'fieldsSpatialPointDuplicate'
+  | 'roomLayoutEntryUnavailable'
+  | 'roomLayoutFlipUnavailable'
+  | 'roomObjectAnchorUnavailable'
+  | 'roomObjectAnchorDuplicate'
   | 'hubOpenSlotUnavailable'
   | 'resourcePlacementUnavailable'
   | 'sideRoomGenerationUnavailable'
@@ -220,7 +223,6 @@ export function isRequiredMissingInputFinding(
     case 'pickedTargetMissing':
     case 'roomActionPlacementRequired':
     case 'targetMissing':
-    case 'fieldsSpatialPointMissing':
     case 'chaosRejectedBlockMissing':
     case 'hermesShrineDeliveryPlacementRequired':
     case 'echoGoldPickupPlacementRequired':

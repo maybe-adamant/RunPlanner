@@ -10,9 +10,9 @@ import type { RunModifiersRecord } from './run-modifiers';
 import type { RunStartPoint } from './practice-start';
 import type { PlanEnd } from './plan-end';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 101 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 102 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
-export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 2;
+export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 0;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -163,6 +163,8 @@ export type PurgingPoolSlotKey = 'left' | 'middle' | 'right';
  */
 export interface PurgingPoolState {
   readonly traitKeyBySlot: Readonly<Record<PurgingPoolSlotKey, string | null>>;
+  /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+  readonly anchorId?: number;
 }
 
 export type HermesShrineSlotKey = 'first' | 'secondLeft' | 'secondRight';
@@ -232,6 +234,8 @@ export interface HermesShrineState {
   readonly offerBySlot: Readonly<Record<HermesShrineSlotKey, HermesShrineInventoryOffer | null>>;
   /** Retained for repair even when its qualifying Travel Deal prefix changes. */
   readonly travelDealRefill?: HermesShrineTravelDealRefill;
+  /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+  readonly anchorId?: number;
 }
 
 /** A RoomShop is runtime-random until the player elects to model this visit. */
@@ -253,6 +257,8 @@ export interface StygianWellState {
   >;
   readonly purchasedGenerationKeys?: readonly StygianWellGenerationKey[];
   readonly travelDealRefillKey?: string | null;
+  /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+  readonly anchorId?: number;
 }
 
 /** Occurrence-owned payloads for one exact acquisition point. */
@@ -261,8 +267,8 @@ export interface AuthoredAcquisitionSiteState {
   readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState | null>>;
 }
 
+/** Each Fields point is optional: null leaves the game to place that slot. */
 export interface FieldsSpatialState {
-  readonly entryStartPointId: number | null;
   readonly cagePointIdBySlot: Readonly<Record<string, number | null>>;
   readonly optionalPointIdBySlot: Readonly<Record<string, number | null>>;
   readonly nemesisPointId: number | null;
@@ -622,6 +628,18 @@ export interface RoomOccurrence {
    * repair, never rewritten.
    */
   readonly rerolledIncomingReward?: AuthoredRewardState;
+  /** Where the room stands as entered; absent fields leave the game to decide. */
+  readonly layout?: RoomLayout;
+}
+
+/**
+ * The room's own placement facts: its horizontal flip and the `HeroStart` it
+ * is entered at. Each is optional; whether a value is possible is derived
+ * from the previous room's exit and reported, never refused.
+ */
+export interface RoomLayout {
+  readonly flipped?: boolean;
+  readonly entryStartPointId?: number;
 }
 
 /** A Postboss rack; a null key leaves the held keepsake unchanged. */
@@ -660,6 +678,8 @@ export interface AuthoredChallengeSwitch {
    * declaration decision key, as a room phase's `customizationByPhase` entry.
    */
   readonly customization?: Readonly<Record<string, AuthoredEncounterCustomization>>;
+  /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+  readonly anchorId?: number;
 }
 
 /**

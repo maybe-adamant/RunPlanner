@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 101,
+  "schemaVersion": 102,
   "projectId": "golden-fg",
   "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
@@ -2865,7 +2865,6 @@
                   "optional3": null
                 },
                 "spatial": {
-                  "entryStartPointId": 565481,
                   "cagePointIdBySlot": {
                     "cage1": 621502,
                     "cage2": 622508,
@@ -2934,7 +2933,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 565481
+              }
             },
             {
               "occurrenceId": "golden-h-combat09",
@@ -3047,7 +3049,6 @@
                   }
                 },
                 "spatial": {
-                  "entryStartPointId": 755837,
                   "cagePointIdBySlot": {
                     "cage1": 621502,
                     "cage2": 715348,
@@ -3115,7 +3116,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 755837
+              }
             },
             {
               "occurrenceId": "golden-h-combat03",
@@ -3210,7 +3214,6 @@
                   "optional4": null
                 },
                 "spatial": {
-                  "entryStartPointId": 755842,
                   "cagePointIdBySlot": {
                     "cage1": 40055,
                     "cage2": 568938,
@@ -3280,7 +3283,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 755842
+              }
             },
             {
               "occurrenceId": "golden-h-miniboss01",
@@ -3497,7 +3503,6 @@
                   "optional4": null
                 },
                 "spatial": {
-                  "entryStartPointId": 755863,
                   "cagePointIdBySlot": {
                     "cage1": 573087,
                     "cage2": 621494,
@@ -3601,7 +3606,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 755863
+              }
             },
             {
               "occurrenceId": "golden-h-combat04",
@@ -3658,7 +3666,6 @@
                   "optional4": null
                 },
                 "spatial": {
-                  "entryStartPointId": 755846,
                   "cagePointIdBySlot": {
                     "cage1": 569103,
                     "cage2": 573087,
@@ -3737,7 +3744,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 755846
+              }
             },
             {
               "occurrenceId": "golden-h-preboss-shop",

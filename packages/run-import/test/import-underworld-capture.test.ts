@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { projectFromRunRecord, type RunImport } from '../src/import';
 import {
   fixture,
@@ -174,9 +175,16 @@ describe('run import of the Underworld capture', () => {
       rewardType: 'WeaponUpgrade',
     });
     expect(fields.kind === 'fieldsCombat' && fields.spatial).toMatchObject({
-      entryStartPointId: 760471,
       optionalPointIdBySlot: { optional1: 572849, optional2: 737955 },
     });
+    // The recorded entry is the one the previous door leaves, so nothing is authored.
+    const entered = simulateProject(catalog, imported.project)
+      .route.biomes.flatMap((biome) => ('rewards' in biome ? biome.rewards.roomLayouts : []))
+      .find(
+        (layout) =>
+          layout.owner.occurrenceId === occurrence(imported.project, 'H-r26').occurrenceId,
+      );
+    expect(entered?.entry).toMatchObject({ point: { startPointId: 760471 } });
     expect(occurrence(imported.project, 'G-r18').encounters.nemesisRandomEventByPhase).toEqual({
       Encounter: { kind: 'freeItem' },
     });

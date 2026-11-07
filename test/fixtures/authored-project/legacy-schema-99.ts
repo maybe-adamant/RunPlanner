@@ -1,3 +1,5 @@
+import { legacySchema101Body } from './legacy-schema-101';
+
 type Json = Record<string, unknown>;
 
 function record(value: unknown): Json | undefined {
@@ -61,7 +63,7 @@ function legacyOccurrence(occurrence: Json): Json {
  * current document as an older schema and load it through every transition.
  */
 export function legacySchema99Body<T>(value: T): T {
-  const document = record(value);
+  const document = record(legacySchema101Body(value));
   const route = record(document?.route);
   if (document === undefined || route === undefined || !Array.isArray(route.biomes)) return value;
   return {

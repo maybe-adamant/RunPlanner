@@ -34,6 +34,7 @@ import {
 } from '../acquisition/pickup-producers';
 import { reconcileChaosTopology } from '../chaos-gate-reconciliation';
 import { applyFieldsSpatialCommand } from './occurrence/fields-spatial';
+import { applyRoomLayoutCommand } from './occurrence/room-layout';
 import { retractMissingHermesShrineDeliveryActions } from '../hermes-shrine-delivery';
 import { planEndExists } from '../plan-end';
 import { reconcileLeftChallengeSwitchPresses } from './challenge-switch-press';
@@ -145,6 +146,14 @@ function applyUnchecked(
     }
     case 'ReplaceResourcePlacement':
       return applyResourcePlacementCommand(document, catalog, command);
+    case 'ReplaceRoomLayout':
+    case 'ReplaceRoomObjectAnchor':
+      return applyRoomLayoutCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
     case 'ReplaceFieldsSpatialPoint':
       return applyFieldsSpatialCommand(
         document,

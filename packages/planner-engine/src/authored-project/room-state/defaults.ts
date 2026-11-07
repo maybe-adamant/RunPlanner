@@ -106,7 +106,6 @@ function defaultFieldsSpatial(room: RoomDeclaration, path: string) {
   const cages = requireFieldsCages(room, path);
   const optional = requireFieldsOptionalRewards(room, path);
   return Object.freeze({
-    entryStartPointId: null,
     cagePointIdBySlot: Object.freeze(Object.fromEntries(cages.slotKeys.map((key) => [key, null]))),
     optionalPointIdBySlot: Object.freeze(
       Object.fromEntries(optional.slotKeys.map((key) => [key, null])),

@@ -5,6 +5,7 @@ import {
   createLocalRewardAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
+  createFieldsSpatialAddress,
   type FieldsCombatState,
   type FieldsSpatialAddress,
   type OccurrenceId,
@@ -18,7 +19,10 @@ import {
   locallyValidRewardOffers,
   type ResolvedRewardOffer,
 } from '@run-planner/engine/reward-kernel';
-import type { SemanticFinding } from '@run-planner/engine/simulation';
+import {
+  roomLayoutAuthoringForProjectEvaluationAssembly,
+  type SemanticFinding,
+} from '@run-planner/engine/simulation';
 import type { RunRecordFields, RunRecordRoom } from './run-record/model';
 import type { RunImportContext } from './import';
 import { insertRoomAction } from './actions';
@@ -113,16 +117,105 @@ function optionalRewardTypes(context: RunImportContext, gameName: string): Reado
   ]);
 }
 
-/** Answers Fields cage outcomes, cage and optional rewards and spatial points from the record. */
+/** Answers Fields cage outcomes and cage and optional rewards from the record. */
 export function answerFields(context: RunImportContext, reason: SemanticFinding): boolean {
   const origin = reason.origin;
   if (reason.code === 'batchStateMissing' && origin.kind === 'exitDecision')
     return answerCageOutcome(context, origin);
   if (reason.code === 'rewardMissing' && origin.kind === 'localReward')
     return answerFieldsReward(context, origin);
-  if (reason.code === 'fieldsSpatialPointMissing' && origin.kind === 'fieldsSpatial')
-    return answerSpatialPoint(context, origin);
   return false;
+}
+
+/**
+ * The record's Fields points, which the plan never asks for: each recorded
+ * cage's and optional reward's point on a slot still unset, and the room's
+ * entry where the game picks it.
+ */
+export function importFieldsPoints(context: RunImportContext): void {
+  const project = context.assembly().project;
+  for (const biome of project.route.biomes)
+    for (const occurrence of biome.topology?.occurrences ?? []) {
+      if (occurrence.state.kind !== 'fieldsCombat') continue;
+      const visit = fieldsVisit(context, occurrence.occurrenceId);
+      if (visit === undefined) continue;
+      const address = createOccurrenceAddress(
+        createBiomeAddress(project.route.routeKey, biome.biomeKey),
+        occurrence.occurrenceId,
+      );
+      importFieldsEntry(context, address, visit);
+      const used = `fieldsPoints:${occurrence.occurrenceId}`;
+      if (context.used.has(used) || !context.pending(occurrence.occurrenceId)) continue;
+      context.used.add(used);
+      const optionalCount = optionalRewards(
+        context,
+        visit,
+        optionalRewardTypes(context, occurrence.gameName),
+      ).length;
+      const targets = [
+        ...visit.fields.cages.map((_cage, index) => ({
+          kind: 'cage' as const,
+          slotKey: `cage${index + 1}`,
+        })),
+        ...Array.from({ length: optionalCount }, (_entry, index) => ({
+          kind: 'optional' as const,
+          slotKey: `optional${index + 1}`,
+        })),
+      ];
+      for (const target of targets) {
+        const state = fieldsState(context, biome.biomeKey, occurrence.occurrenceId);
+        const current =
+          target.kind === 'cage'
+            ? state?.spatial.cagePointIdBySlot[target.slotKey]
+            : state?.spatial.optionalPointIdBySlot[target.slotKey];
+        if (current !== null) continue;
+        answerSpatialPoint(context, createFieldsSpatialAddress(address, target));
+      }
+    }
+}
+
+/** The recorded entry, where the room's settled layout leaves the game to pick it. */
+function importFieldsEntry(
+  context: RunImportContext,
+  occurrence: Origin<'occurrence'>,
+  visit: NonNullable<ReturnType<typeof fieldsVisit>>,
+): void {
+  const used = `fieldsEntry:${occurrence.occurrenceId}`;
+  if (context.used.has(used)) return;
+  const layout = roomLayoutAuthoringForProjectEvaluationAssembly(context.assembly(), occurrence);
+  // The entry is settled once the room's entry is reached.
+  if (layout === undefined) return;
+  context.used.add(used);
+  if (layout.authored?.entryStartPointId !== undefined) return;
+  const recorded = visit.fields.entryPoint;
+  if (recorded === undefined) return;
+  // A save may name the entry by its end point.
+  const choice = layout.entries.find(
+    (entry) => entry.option.startPointId === recorded || entry.option.endPointId === recorded,
+  );
+  if (choice === undefined) {
+    const settled = layout.settlement.entry;
+    if (
+      (settled.kind === 'fixed' || settled.kind === 'derived') &&
+      (settled.point.startPointId === recorded || settled.point.endPointId === recorded)
+    )
+      return;
+    context.note({
+      area: 'fields',
+      reason: 'refused',
+      address: createRoomFeatureAddress(occurrence, { kind: 'roomLayoutEntry' }),
+      record: record(visit.roomIndex),
+    });
+    return;
+  }
+  if (!context.applyValid(choice.command))
+    context.note({
+      area: 'fields',
+      reason: 'refused',
+      address: createRoomFeatureAddress(occurrence, { kind: 'roomLayoutEntry' }),
+      applied: choice.command,
+      record: record(visit.roomIndex),
+    });
 }
 
 /** The cage count a source's doors show: the entered Fields room's, or a door never taken. */
@@ -1346,9 +1439,9 @@ export function importFieldsRooms(context: RunImportContext): void {
 }
 
 /**
- * A Fields point from the record: the entry start, a cage's point by its spawn
- * group's representative or by elimination, an optional reward's listed point
- * or else the first free one. Nemesis's point is never saved.
+ * A Fields point from the record: a cage's point by its spawn group's
+ * representative or by elimination, an optional reward's listed point or else
+ * the first free one. Nemesis's point is never saved.
  */
 function answerSpatialPoint(context: RunImportContext, spatial: FieldsSpatialAddress): boolean {
   const visit = fieldsVisit(context, spatial.occurrenceId);
@@ -1370,16 +1463,7 @@ function answerSpatialPoint(context: RunImportContext, spatial: FieldsSpatialAdd
   let pointId: number | undefined;
   let assumed = false;
   const target = spatial.target;
-  if (target.kind === 'entry') {
-    pointId = visit.fields.entryPoint;
-    if (
-      pointId !== undefined &&
-      !declaration.entryPairs.some((pair) => pair.startPointId === pointId)
-    )
-      pointId = declaration.entryPairs.find(
-        (pair) => pair.endPointId === visit.fields.entryPoint,
-      )?.startPointId;
-  } else if (target.kind === 'cage') {
+  if (target.kind === 'cage') {
     const pointOf = (cageIndex: number) => {
       const ids = new Set(visit.fields.cages[cageIndex]?.spawnPointIds ?? []);
       return declaration.cageSpawnRepresentatives.find((entry) => ids.has(entry.spawnPointId))

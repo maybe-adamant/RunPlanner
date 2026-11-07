@@ -23,7 +23,7 @@ import {
 import { reachSimulationHistory } from '../../state/transitions';
 import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
 import { advanceRewardBranch } from '../branch-lifecycle';
-import type { RewardBranchState } from '../branch-primitives';
+import { mapReached, type RewardBranchState } from '../branch-primitives';
 import type { MidBiomeStartPoint } from '../model';
 import { BiomeRewardSimulationContractError } from './biome-contract';
 import {
@@ -61,7 +61,8 @@ import {
 } from './purchase-price-seams';
 import { rewardFindingChronologyForRoom } from './finding-chronology';
 import { rewardFinding } from '../findings';
-import { ownerRegion } from '../../finding-regions';
+import { ownerRegion, type FindingChronology } from '../../finding-regions';
+import type { LifecycleFinding } from './lifecycle-transitions/types';
 import { flushHubBoard } from './generation/hub-board';
 import { applyOutgoingGenerationTransition } from './generation/outgoing-generation';
 import { applyPhantomExitTransition } from './generation/phantom-exit';
@@ -94,6 +95,17 @@ import { createBiomeRewardFacts } from '../facts';
 import { prepareUnlockExitEncounter } from '../../encounters/unlock-exit';
 import { extraExitLockHost } from '../../../authored-project/locked-exits';
 import { rerollKindEnabled } from '../../arcana-fear';
+import {
+  deriveRoomLayout,
+  departureFrom,
+  roomArrivalThrough,
+  type RoomDeparture,
+} from '../../room-layout/derivation';
+import {
+  roomLayoutFindings,
+  roomObjectAnchorFindings,
+  type RoomLayoutSettlement,
+} from '../../room-layout/settlement';
 
 /** Records whether the state holds a door-reroll card as doors, wheels or the board are flagged. */
 function flagRerolls(
@@ -120,6 +132,52 @@ function authoredRoom(
 ): CanonicalAuthoredRoom | undefined {
   const room = context.rooms.get(semanticAddressKey(origin));
   return room?.kind === 'authored' ? room : undefined;
+}
+
+/**
+ * The entered room's layout, settled from the room last left and the door
+ * between them, with the Overview findings of its layout and object anchors.
+ */
+function roomLayoutAtEntry(
+  context: ChronologyWalkContext,
+  state: ChronologyWalkState,
+  event: Extract<HistoryEvent, { readonly kind: 'roomEntered' }>,
+  findingChronology: FindingChronology,
+): {
+  readonly departure?: RoomDeparture;
+  readonly settlement?: RoomLayoutSettlement;
+  readonly findings: readonly LifecycleFinding[];
+} {
+  const key = semanticAddressKey(event.origin);
+  const source = context.rooms.get(key);
+  const declaration =
+    source === undefined ? undefined : context.catalog.rooms.byKey[source.gameName];
+  if (source === undefined || declaration === undefined) return { findings: [] };
+  const arrival = roomArrivalThrough(
+    context.catalog,
+    state.branch?.state.lastDeparture,
+    context.prepared.entryDoors.get(key) ?? Object.freeze({ kind: 'soleDoor' }),
+  );
+  const authored = source.kind === 'authored' ? source.layout : undefined;
+  const derived = deriveRoomLayout(declaration, arrival, authored);
+  const departure = departureFrom(source.gameName, derived);
+  if (source.kind !== 'authored') return { departure, findings: [] };
+  const settlement: RoomLayoutSettlement = Object.freeze({
+    ...derived,
+    owner: source.origin,
+    historySequence: event.sequence,
+  });
+  const region = ownerRegion(source.origin);
+  return {
+    departure,
+    settlement,
+    findings: Object.freeze(
+      [
+        ...roomLayoutFindings(settlement, authored),
+        ...roomObjectAnchorFindings(context.catalog, source),
+      ].map((finding) => Object.freeze({ finding, region, chronology: findingChronology })),
+    ),
+  };
 }
 
 const erisInteracted: ChronologySeamHandler<'erisInteracted'> = (context, state, event) => {
@@ -472,16 +530,30 @@ const roomExited: ChronologySeamHandler<'roomExited'> = (context, state, event) 
 };
 
 /** Native LeaveRoom: a Hub departure captures its Run State before the clocks advance. */
-const roomDeparted: ChronologySeamHandler<'roomDeparted'> = (context, state, event) => ({
-  ...(event.origin.kind === 'hubRoom'
-    ? { leadingEmissions: hubDepartureEmissions(context, state, event.origin, event.sequence) }
-    : {}),
-  state: Object.freeze({
-    ...withBranch(state, applyRoomDepartedTransition(context.catalog, event, state.branch)),
-    ...(event.origin.kind === 'hubRoom' ? { hubStay: undefined } : {}),
-  }),
-  emissions: [],
-});
+const roomDeparted: ChronologySeamHandler<'roomDeparted'> = (context, state, event) => {
+  // The next room reads this room's exit: LeaveRoom records the room it leaves.
+  const departure = state.roomDepartures.get(semanticAddressKey(event.origin));
+  const departed = mapReached(
+    applyRoomDepartedTransition(context.catalog, event, state.branch),
+    (branch) =>
+      departure === undefined || branch.state.lastDeparture === departure
+        ? branch
+        : Object.freeze({
+            ...branch,
+            state: Object.freeze({ ...branch.state, lastDeparture: departure }),
+          }),
+  );
+  return {
+    ...(event.origin.kind === 'hubRoom'
+      ? { leadingEmissions: hubDepartureEmissions(context, state, event.origin, event.sequence) }
+      : {}),
+    state: Object.freeze({
+      ...withBranch(state, departed),
+      ...(event.origin.kind === 'hubRoom' ? { hubStay: undefined } : {}),
+    }),
+    emissions: [],
+  };
+};
 
 /** A Hermes Shrine delivery that still needs a placement halts the walk here. */
 const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsApplied'> = (
@@ -1206,6 +1278,17 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     event.sequence,
     'localRoomLifecycle',
   );
+  const layout = roomLayoutAtEntry(context, state, event, findingChronology);
+  const layoutEmissions: ChronologyEmission[] = [
+    ...(layout.settlement === undefined
+      ? []
+      : [{ kind: 'roomLayoutSettlement' as const, settlement: layout.settlement }]),
+    lifecycleFindings(layout.findings),
+  ];
+  const roomDepartures =
+    layout.departure === undefined
+      ? state.roomDepartures
+      : new Map(state.roomDepartures).set(semanticAddressKey(event.origin), layout.departure);
   // The room's start events spawn the pedestal before entry clears the map's offers.
   const pedestalDeclaration =
     room === undefined ? undefined : context.catalog.rooms.byKey[room.gameName];
@@ -1235,10 +1318,11 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
   if (pedestal.branch === undefined && state.branch !== undefined)
     return {
       leadingEmissions: [
+        ...layoutEmissions,
         generationFindings(pedestal.findings),
         { kind: 'producerFrontiers', frontiers: pedestal.producerFrontiers },
       ],
-      state: withBranch(state, pedestal.branch),
+      state: withBranch(Object.freeze({ ...state, roomDepartures }), pedestal.branch),
       emissions: [],
     };
   const entered = applyRoomEnteredTransition(
@@ -1268,6 +1352,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     );
   return {
     leadingEmissions: [
+      ...layoutEmissions,
       mergedFindings(resourcePlacementFindingRegions(event, context.resourceFindings)),
       generationFindings(pedestal.findings),
       { kind: 'producerFrontiers', frontiers: pedestal.producerFrontiers },
@@ -1281,6 +1366,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     ],
     state: Object.freeze({
       ...state,
+      roomDepartures,
       branch: enteredBranch,
       halted: entered.hermesShrineDeliveryPlacementRequired,
       encounterEntryVowRanks:

@@ -694,8 +694,6 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
             : `An enemy here is not introduced yet and cannot appear until ${introduction} is completed; remove it.`,
       };
     }
-    case 'fieldsSpatialPointMissing':
-      return { kind: 'generic', message: 'Choose a physical point for this active Fields item.' };
     case 'fieldsSpatialPointUnavailable':
       return { kind: 'generic', message: 'Choose a physical point available to this Fields item.' };
     case 'fieldsSpatialPointDuplicate':
@@ -854,6 +852,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'challengeSwitchLeftNotLast':
     case 'unlockExitCustomizationUnavailable':
     case 'lockedExitSelected':
+    case 'roomLayoutEntryUnavailable':
+    case 'roomLayoutFlipUnavailable':
+    case 'roomObjectAnchorUnavailable':
+    case 'roomObjectAnchorDuplicate':
       return presented('generic', finding);
     case 'keepsakeEquipResultMissing':
     case 'keepsakeEquipResultUnavailable':
@@ -1181,6 +1183,11 @@ function unexplainedImpossibility(
       return { kind: 'trait', message: 'This Chaos blessing is not eligible here.' };
     case 'fieldsSpatialPoint':
       return { kind: 'fields', message: 'This point is not available to this Fields item.' };
+    case 'roomLayoutEntry':
+      return {
+        kind: 'generic',
+        message: 'The door into this room does not lead to this entry.',
+      };
   }
 }
 

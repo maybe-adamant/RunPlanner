@@ -190,6 +190,7 @@ export function publishChronology(
     goldEvents: walk.goldEvents,
     bossArcanaOutcomes: accumulation.bossArcanaOutcomes,
     phantomExits: accumulation.phantomExits,
+    roomLayouts: accumulation.roomLayouts,
     rerolls: accumulation.rerolls,
     rerollPool: accumulation.rerollPool,
     rerollSurfaces: accumulation.rerollSurfaces,

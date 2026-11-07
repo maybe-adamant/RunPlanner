@@ -182,12 +182,6 @@ export interface CanonicalFieldsOptionalReward {
   readonly resolvedStoreKey: 'FieldsOptionalRewards';
 }
 
-/** Declaration-paired entry points completed from the authored start point. */
-export interface CanonicalFieldsEntryPair {
-  readonly startPointId: number;
-  readonly endPointId: number;
-}
-
 export interface CanonicalRewardWheelOffer extends CanonicalRerollableReward {
   readonly origin: RewardWheelOfferAddress;
   readonly offerKey: string;
@@ -291,6 +285,8 @@ export interface CanonicalAuthoredRoom {
   readonly challengeSwitch?: import('../../authored-project/model').AuthoredChallengeSwitch;
   /** The doors observed locked when the room's doors open, by exit key. */
   readonly lockedExits?: readonly string[];
+  /** The authored flip and entry; the room's settled layout is derived at its entry. */
+  readonly layout?: import('../../authored-project/model').RoomLayout;
   /** Normalized catalog effects for the authored Well generations only. */
   readonly stygianWellOfferEffects?: Readonly<
     Partial<Record<StygianWellGenerationKey, StygianWellEffect>>
@@ -324,8 +320,6 @@ export interface CanonicalAuthoredRoom {
   >[];
   readonly fieldsOptionalRewards?: readonly CanonicalFieldsOptionalReward[];
   readonly fieldsSpatial?: FieldsSpatialState;
-  /** Canonical Fields entry pair; the authored state stores only its start. */
-  readonly fieldsEntryPair?: CanonicalFieldsEntryPair;
   /** Persisted Fields count, retained independently from resolved optional leaves. */
   readonly fieldsOptionalRewardCount?: number;
   readonly unresolvedFieldsOptionalRewards?: readonly Omit<

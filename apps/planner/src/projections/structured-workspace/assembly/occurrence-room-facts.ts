@@ -484,7 +484,10 @@ function roomLocalForOccurrence(
         );
       }
       const spatialState = occurrence.state.spatial;
-      const pointChoices = (target: FieldsSpatialTarget, pointIds: readonly number[]) =>
+      const pointChoices = (
+        target: FieldsSpatialTarget | { readonly kind: 'entry' },
+        pointIds: readonly number[],
+      ) =>
         Object.freeze([
           Object.freeze({ label: 'Choose point', value: null }),
           ...pointIds.map((pointId, index) =>
@@ -519,13 +522,24 @@ function roomLocalForOccurrence(
           target,
         });
       };
+      // The entry is the room's own layout fact, shown here beside the Fields points.
+      const entryAddress = createRoomFeatureAddress(
+        createOccurrenceAddress(input.biome, occurrence.occurrenceId),
+        { kind: 'roomLayoutEntry' },
+      );
       const spatial = Object.freeze([
-        spatialControl(
-          { kind: 'entry' },
-          'Entry',
-          spatialState.entryStartPointId,
-          spatialDeclaration.entryPairs.map((pair) => pair.startPointId),
-        ),
+        Object.freeze({
+          address: entryAddress,
+          interactionKey: semanticAddressKey(entryAddress),
+          label: 'Entry',
+          marker: input.markerDestinations.marker(entryAddress),
+          pointChoices: pointChoices(
+            { kind: 'entry' },
+            spatialDeclaration.entryPairs.map((pair) => pair.startPointId),
+          ),
+          pointId: occurrence.layout?.entryStartPointId ?? null,
+          target: Object.freeze({ kind: 'entry' as const }),
+        }),
         ...cages.map((cage) =>
           spatialControl(
             { kind: 'cage', slotKey: cage.key },

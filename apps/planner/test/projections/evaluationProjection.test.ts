@@ -929,12 +929,12 @@ describe('grouped repair cards', () => {
       presentAssessmentIssue(
         issueOf(
           ['a', 'b', 'c'].map((key) => ({
-            ...reason('fieldsSpatialPointMissing', well),
+            ...reason('fieldsSpatialPointDuplicate', well),
             evidence: { key },
           })),
         ),
         (finding) => String(finding.evidence.key),
       ),
-    ).toEqual({ title: 'Choose 3 Fields positions' });
+    ).toEqual({ title: '3 Fields positions already used' });
   });
 });

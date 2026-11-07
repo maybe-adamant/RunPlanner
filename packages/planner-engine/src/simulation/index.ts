@@ -316,6 +316,19 @@ export {
   type RoomAnchorSlots,
 } from './evaluation/room-object-anchors';
 export {
+  roomLayoutAuthoringForProjectEvaluationAssembly,
+  type RoomLayoutAuthoring,
+} from './evaluation/room-layout-authoring';
+export type {
+  RoomArrival,
+  RoomEntryOption,
+  RoomEntryPoint,
+  RoomLayoutDerivation,
+  RoomLayoutEntry,
+  RoomLayoutFlip,
+} from './room-layout/derivation';
+export type { RoomLayoutSettlement } from './room-layout/settlement';
+export {
   hubDepartureSnapshotForProjectEvaluationAssembly,
   runStateSnapshotForProjectEvaluationAssembly,
 } from './evaluation/run-state-query';

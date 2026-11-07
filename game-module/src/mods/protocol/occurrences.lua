@@ -157,15 +157,19 @@ local function validateFieldsCageSlots(row, label)
             activeCagePhases[#activeCagePhases + 1] = phase
         end
     end
-    if #activeCagePhases ~= #layout.cagePoints then
-        return p.fail(label .. ".cagePoints must match the active cage encounter phases")
-    end
     for index, phase in ipairs(activeCagePhases) do
-        local expectedPhase = string.format("Cage%02d", index)
-        local expectedSlot = "cage" .. index
-        if phase.slotKey ~= expectedPhase or layout.cagePoints[index].slotKey ~= expectedSlot then
+        if phase.slotKey ~= string.format("Cage%02d", index) then
             return p.fail(label .. ".cagePoints must use canonical ordered cage slots")
         end
+    end
+    -- A cage without a point stays native; a listed one names an active cage, in order.
+    local previous = 0
+    for _, point in ipairs(layout.cagePoints) do
+        local rank = tonumber(string.match(point.slotKey, "^cage(%d+)$"))
+        if rank == nil or rank > #activeCagePhases or rank <= previous then
+            return p.fail(label .. ".cagePoints must use canonical ordered cage slots")
+        end
+        previous = rank
     end
     return true
 end
@@ -707,9 +711,6 @@ function occurrences.decode(value, selected, label)
         selectedSeen[id] = true
     end
     for _, row in ipairs(result) do
-        if selectedSeen[row.id] and row.kind == "FieldsEncounter" and row.overview.fields == nil then
-            return p.fail(label .. "[" .. row.id .. "].overview.fields is required for a selected Fields encounter")
-        end
         -- Only a selected Ship room is entered, so only it spins its wheels.
         if row.kind == "ShipEncounter"
             and #(row.overview.rewardWheels or {}) ~= (selectedSeen[row.id] and shipCombatPhaseCount(row) or 0) then

@@ -31,7 +31,6 @@ export interface OccurrenceAddress extends BiomeOwnedAddress {
   readonly occurrenceId: OccurrenceId;
 }
 export type FieldsSpatialTarget =
-  | { readonly kind: 'entry' }
   | { readonly kind: 'cage'; readonly slotKey: string }
   | { readonly kind: 'optional'; readonly slotKey: string }
   | { readonly kind: 'nemesis' };
@@ -69,7 +68,16 @@ export type RoomFeatureTarget =
   | { readonly kind: 'purgingPoolInventory' }
   | { readonly kind: 'erisSpawn' }
   | { readonly kind: 'challengeSwitch' }
-  | { readonly kind: 'lockedExits' };
+  | { readonly kind: 'lockedExits' }
+  /** The room layout's entry point. */
+  | { readonly kind: 'roomLayoutEntry' }
+  /** The room layout's flip. */
+  | { readonly kind: 'roomLayoutFlip' }
+  /** The `ChallengeSwitchBase` anchor one room object stands on. */
+  | { readonly kind: 'objectAnchor'; readonly object: RoomAnchorObjectKind };
+/** The room objects native places on `ChallengeSwitchBase` anchors. */
+export type RoomAnchorObjectKind =
+  'stygianWell' | 'purgingPool' | 'hermesShrine' | 'challengeSwitch';
 export interface RoomFeatureAddress extends BiomeOwnedAddress {
   readonly kind: 'roomFeature';
   readonly occurrenceId: OccurrenceId;
@@ -549,7 +557,7 @@ export function createFieldsSpatialAddress(
   target: FieldsSpatialTarget,
 ): FieldsSpatialAddress {
   const normalizedTarget =
-    target.kind === 'entry' || target.kind === 'nemesis'
+    target.kind === 'nemesis'
       ? Object.freeze({ kind: target.kind })
       : Object.freeze({ kind: target.kind, slotKey: nonBlank(target.slotKey, 'slotKey') });
   return Object.freeze({
@@ -588,6 +596,8 @@ export function createRoomFeatureAddress(
             'generationKey',
           ) as import('./model').HermesShrineGenerationKey,
         });
+      case 'objectAnchor':
+        return Object.freeze({ kind: target.kind, object: target.object });
       case 'purgingPoolOffer':
         return Object.freeze({
           kind: target.kind,

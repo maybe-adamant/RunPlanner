@@ -32,6 +32,7 @@ export function candidateMayBeAuthored(
   option: CandidateOptionProjection<unknown, CandidateProjectionEvaluation> | undefined,
 ): boolean {
   if (option?.evaluation.kind === 'fieldsSpatialPoint') return option.evaluation.result.assignable;
+  if (option?.evaluation.kind === 'roomLayoutEntry') return option.evaluation.result.assignable;
   return (
     option !== undefined &&
     candidateSupport(option) !== 'impossible' &&

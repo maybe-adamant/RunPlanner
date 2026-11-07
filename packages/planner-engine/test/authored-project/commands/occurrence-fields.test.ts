@@ -74,11 +74,11 @@ describe('authored Fields occurrence payload commands', () => {
     const initial = createGoldenFGHProject();
     const changed = applyProjectCommand(initial, catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
-      spatial: createFieldsSpatialAddress(occurrence, { kind: 'entry' }),
-      pointId: 755863,
+      spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage1' }),
+      pointId: 573087,
     });
     const state = fieldsState(changed, occurrenceId);
-    expect(state.spatial.entryStartPointId).toBe(755863);
+    expect(state.spatial.cagePointIdBySlot.cage1).toBe(573087);
     expect(Object.isFrozen(state.spatial)).toBe(true);
     expect(state.cages).toEqual(fieldsState(initial, occurrenceId).cages);
     expect(changed.route.biomes).toEqual(
@@ -90,15 +90,15 @@ describe('authored Fields occurrence payload commands', () => {
     expect(
       applyProjectCommand(changed, catalog, {
         kind: 'ReplaceFieldsSpatialPoint',
-        spatial: createFieldsSpatialAddress(occurrence, { kind: 'entry' }),
-        pointId: 755863,
+        spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage1' }),
+        pointId: 573087,
       }),
     ).toBe(changed);
 
     const cageChanged = applyProjectCommand(changed, catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
-      spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage1' }),
-      pointId: 573087,
+      spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage2' }),
+      pointId: 621494,
     });
     expect(Object.isFrozen(fieldsState(cageChanged, occurrenceId).spatial.cagePointIdBySlot)).toBe(
       true,
@@ -121,8 +121,8 @@ describe('authored Fields occurrence payload commands', () => {
     const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
     const assigned = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
-      spatial: createFieldsSpatialAddress(occurrence, { kind: 'entry' }),
-      pointId: 755863,
+      spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage1' }),
+      pointId: 573087,
     });
     const replaced = applyProjectCommand(assigned, catalog, {
       kind: 'ReplaceOccurrenceRoom',
@@ -131,7 +131,6 @@ describe('authored Fields occurrence payload commands', () => {
     });
 
     expect(fieldsState(replaced, occurrenceId).spatial).toEqual({
-      entryStartPointId: null,
       cagePointIdBySlot: { cage1: null, cage2: null, cage3: null },
       optionalPointIdBySlot: {
         optional1: null,
@@ -148,8 +147,8 @@ describe('authored Fields occurrence payload commands', () => {
     const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
     const assigned = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
-      spatial: createFieldsSpatialAddress(occurrence, { kind: 'entry' }),
-      pointId: 755863,
+      spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage1' }),
+      pointId: 573087,
     });
     const encoded = encodedProject(assigned);
     expect(fieldsState(decodeProjectDocument(encoded, catalog), occurrenceId).spatial).toEqual(
@@ -158,8 +157,8 @@ describe('authored Fields occurrence payload commands', () => {
 
     const invalid = encodedProject(assigned);
     const state = encodedFieldsState(invalid, occurrenceId);
-    const spatial = state.spatial as Record<string, unknown>;
-    spatial.entryStartPointId = 999_999;
+    const spatial = state.spatial as { cagePointIdBySlot: Record<string, unknown> };
+    spatial.cagePointIdBySlot.cage1 = 999_999;
     expect(() => decodeProjectDocument(invalid, catalog)).toThrow(/declared point set/);
   });
 

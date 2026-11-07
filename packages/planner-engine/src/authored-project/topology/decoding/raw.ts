@@ -45,6 +45,8 @@ export interface RawOccurrence {
   readonly hasRerolledIncomingReward?: boolean;
   readonly figurineArcanaKeysByPhase?: unknown;
   readonly hasFigurineArcanaKeysByPhase?: boolean;
+  readonly layout?: unknown;
+  readonly hasLayout?: boolean;
   readonly path: string;
 }
 

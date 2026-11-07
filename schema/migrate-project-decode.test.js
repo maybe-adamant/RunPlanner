@@ -71,7 +71,7 @@ describe('offline migration to the current schema', () => {
     });
     assert.equal(run.status, 0, run.stderr);
     const written = JSON.parse(readFileSync(outputPath(input), 'utf8'));
-    assert.equal(written.schemaVersion, 101);
+    assert.equal(written.schemaVersion, 102);
     assert.doesNotThrow(() => decode(written));
     const filled = outcomes(written);
     assert.deepEqual(Object.keys(filled).sort(), Object.keys(outcomes(checkpoint)).sort());
@@ -83,7 +83,7 @@ describe('offline migration to the current schema', () => {
     const document = { ...sparse({ [tie]: 'tie', [loss]: 'loss' }), schemaVersion: 100 };
     assert.throws(() => decode(document));
     const migrated = migrateProjectDocumentTo(document);
-    assert.equal(migrated.schemaVersion, 101);
+    assert.equal(migrated.schemaVersion, 102);
     assert.doesNotThrow(() => decode(migrated));
     assert.deepEqual(outcomes(migrated), {
       ...outcomes(checkpoint),

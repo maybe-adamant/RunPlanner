@@ -583,10 +583,6 @@ export class DraftWalk {
         return origin.kind === 'traitOffer' && this.traitOffers.author(origin);
       case 'roomActionPlacementRequired':
         return this.placeRequiredActions(origin);
-      case 'fieldsSpatialPointMissing':
-      case 'fieldsSpatialPointUnavailable':
-      case 'fieldsSpatialPointDuplicate':
-        return origin.kind === 'fieldsSpatial' && this.fieldsSpatialPoint(origin, reason);
       case 'fountainRarityResultMissing':
       case 'fountainRarityResultUnavailable':
         return (
@@ -1577,16 +1573,5 @@ export class DraftWalk {
         }) || changed;
     }
     return changed;
-  }
-
-  private fieldsSpatialPoint(
-    spatial: Extract<SemanticAddress, { readonly kind: 'fieldsSpatial' }>,
-    reason: SemanticFinding,
-  ): boolean {
-    const ids = reason.evidence['supportPointIds'];
-    if (!Array.isArray(ids)) return false;
-    for (const pointId of this.shuffle(ids.filter((id): id is number => typeof id === 'number')))
-      if (this.apply({ kind: 'ReplaceFieldsSpatialPoint', spatial, pointId })) return true;
-    return false;
   }
 }

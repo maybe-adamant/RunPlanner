@@ -115,11 +115,12 @@ local function completedSnapshot(occurrence, nativeRoom, context)
         cage.reward = object(cage.rewardId, nativeReward, getLocation)
     end
     local nemesis = context.sessionMapState and context.sessionMapState.Nemesis
+    local entry = occurrence.overview.layout and occurrence.overview.layout.entry
     return {
         planned = {
             entryPair = {
-                startPoint = point(layout.entryPair and layout.entryPair.startPointId, getLocation),
-                endPoint = point(layout.entryPair and layout.entryPair.endPointId, getLocation),
+                startPoint = point(entry and entry.startPointId, getLocation),
+                endPoint = point(entry and entry.endPointId, getLocation),
             },
             cages = plannedCages, optionalRewards = plannedOptional,
             nemesisPoint = point(layout.nemesisPointId, getLocation),
@@ -136,10 +137,15 @@ local function completedSnapshot(occurrence, nativeRoom, context)
     }
 end
 
-function fields.realize(nativeRoom, layout)
-    if type(nativeRoom) ~= "table" or type(layout) ~= "table" then return nativeRoom end
-    nativeRoom.HeroStartPoint = layout.entryPair.startPointId
-    nativeRoom.HeroEndPoint = layout.entryPair.endPointId
+-- A Fields room enters at the entry its layout publishes; an unpublished one stays native.
+function fields.realize(nativeRoom, overview)
+    if type(nativeRoom) ~= "table" or type(overview) ~= "table" or overview.fields == nil then
+        return nativeRoom
+    end
+    local entry = overview.layout and overview.layout.entry
+    if entry == nil then return nativeRoom end
+    nativeRoom.HeroStartPoint = entry.startPointId
+    nativeRoom.HeroEndPoint = entry.endPointId
     return nativeRoom
 end
 

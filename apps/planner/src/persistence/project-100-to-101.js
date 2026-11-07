@@ -4,6 +4,7 @@ import {
 } from '@run-planner/engine/project-migration';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { dropFeatureInteraction, moveShrineDelays } from './project-99-to-100.js';
+import { migrateProjectDocument as liftSchema101 } from './project-101-to-102.js';
 
 export const SOURCE_SCHEMA_VERSION = 100;
 export const OUTPUT_SCHEMA_VERSION = 101;
@@ -112,7 +113,10 @@ export function migrateProjectDocumentJudgedBy(value, catalog, blockOf) {
     { ...copy, schemaVersion: OUTPUT_SCHEMA_VERSION },
     catalog,
   );
-  return exchangeBlockedWheelOffers(filled, catalog, blockOf);
+  // The judge reads the plan through the current codec, past every later transition.
+  return exchangeBlockedWheelOffers(filled, catalog, blockOf, (document) =>
+    liftSchema101(document),
+  );
 }
 
 // Catalog-aware transform: the plan's own evaluation judges which wheels to exchange.

@@ -87,9 +87,39 @@ function executionLockedExits(value: unknown, label: string) {
   return Object.freeze(exits);
 }
 
+/** An object's optional `ChallengeSwitchBase` anchor. */
+function anchorId(record: Readonly<Record<string, unknown>>, label: string) {
+  return record.anchorId === undefined
+    ? {}
+    : { anchorId: integer(record.anchorId, `${label}.anchorId`, 1) };
+}
+
+/** The room's flip and entry where they are determined. */
+function roomLayout(value: unknown, label: string): import('../model').ExecutionRoomLayout {
+  const record = object(value, label);
+  exact(record, [], ['flipped', 'entry'], label);
+  if (record.flipped === undefined && record.entry === undefined)
+    fail(`${label} must be non-empty when present`);
+  const entry = record.entry === undefined ? undefined : object(record.entry, `${label}.entry`);
+  if (entry !== undefined) exact(entry, ['startPointId', 'endPointId'], [], `${label}.entry`);
+  return Object.freeze({
+    ...(record.flipped === undefined
+      ? {}
+      : { flipped: booleanValue(record.flipped, `${label}.flipped`) }),
+    ...(entry === undefined
+      ? {}
+      : {
+          entry: Object.freeze({
+            startPointId: integer(entry.startPointId, `${label}.entry.startPointId`, 1),
+            endPointId: integer(entry.endPointId, `${label}.entry.endPointId`, 1),
+          }),
+        }),
+  });
+}
+
 function executionChallengeSwitch(value: unknown, label: string) {
   const record = object(value, label);
-  exact(record, ['variantKey', 'encounterKey'], ['customization', 'elite'], label);
+  exact(record, ['variantKey', 'encounterKey'], ['customization', 'elite', 'anchorId'], label);
   const customization =
     record.customization === undefined
       ? undefined
@@ -126,6 +156,7 @@ function executionChallengeSwitch(value: unknown, label: string) {
             attributeKeys: Object.freeze([...attributeKeys]),
           }),
         }),
+    ...anchorId(record, label),
   });
 }
 
@@ -215,14 +246,7 @@ function encounterCustomization(value: unknown, label: string) {
 
 function fields(value: unknown, label: string): ExecutionFieldsLayout {
   const record = object(value, label);
-  exact(record, ['entryPair', 'cagePoints', 'optionalRewards'], ['nemesisPointId'], label);
-
-  const entryPair = object(record.entryPair, `${label}.entryPair`);
-  exact(entryPair, ['startPointId', 'endPointId'], [], `${label}.entryPair`);
-  const parsedEntryPair = Object.freeze({
-    startPointId: integer(entryPair.startPointId, `${label}.entryPair.startPointId`, 1),
-    endPointId: integer(entryPair.endPointId, `${label}.entryPair.endPointId`, 1),
-  });
+  exact(record, ['cagePoints', 'optionalRewards'], ['nemesisPointId'], label);
 
   const cagePoints = Object.freeze(
     array(record.cagePoints, `${label}.cagePoints`).map((entry, index) => {
@@ -234,19 +258,21 @@ function fields(value: unknown, label: string): ExecutionFieldsLayout {
       });
     }),
   );
-  if (cagePoints.length < 2 || cagePoints.length > 3)
-    fail(`${label}.cagePoints must contain two or three active cages`);
+  if (cagePoints.length > 3) fail(`${label}.cagePoints must name at most three cages`);
   if (new Set(cagePoints.map((point) => point.slotKey)).size !== cagePoints.length)
     fail(`${label}.cagePoints has duplicate slot keys`);
   const pointIds = new Set(cagePoints.map((point) => point.pointId));
+  if (pointIds.size !== cagePoints.length) fail(`${label} reuses a Fields point ID`);
 
   const optionalRewards = Object.freeze(
     array(record.optionalRewards, `${label}.optionalRewards`).map((entry, index) => {
       const row = object(entry, `${label}.optionalRewards[${index}]`);
-      exact(row, ['slotKey', 'pointId', 'reward'], [], `${label}.optionalRewards[${index}]`);
+      exact(row, ['slotKey', 'reward'], ['pointId'], `${label}.optionalRewards[${index}]`);
       return Object.freeze({
         slotKey: stringValue(row.slotKey, `${label}.optionalRewards[${index}].slotKey`),
-        pointId: integer(row.pointId, `${label}.optionalRewards[${index}].pointId`, 1),
+        ...(row.pointId === undefined
+          ? {}
+          : { pointId: integer(row.pointId, `${label}.optionalRewards[${index}].pointId`, 1) }),
         reward: reward(row.reward, `${label}.optionalRewards[${index}].reward`),
       });
     }),
@@ -254,6 +280,7 @@ function fields(value: unknown, label: string): ExecutionFieldsLayout {
   if (new Set(optionalRewards.map((entry) => entry.slotKey)).size !== optionalRewards.length)
     fail(`${label}.optionalRewards has duplicate slot keys`);
   for (const entry of optionalRewards) {
+    if (entry.pointId === undefined) continue;
     if (pointIds.has(entry.pointId)) fail(`${label} reuses a Fields point ID`);
     pointIds.add(entry.pointId);
   }
@@ -266,7 +293,6 @@ function fields(value: unknown, label: string): ExecutionFieldsLayout {
     fail(`${label} reuses a Fields point ID`);
 
   return Object.freeze({
-    entryPair: parsedEntryPair,
     cagePoints,
     optionalRewards,
     ...(parsedNemesisPointId === undefined ? {} : { nemesisPointId: parsedNemesisPointId }),
@@ -393,6 +419,7 @@ export function overview(value: unknown, label: string) {
       'challengeSwitch',
       'lockedExits',
       'fountain',
+      'layout',
       'fields',
       'additional',
       'hub',
@@ -693,7 +720,7 @@ export function overview(value: unknown, label: string) {
     shrine === undefined
       ? undefined
       : (() => {
-          exact(shrine, ['offers'], [], `${label}.hermesShrine`);
+          exact(shrine, ['offers'], ['anchorId'], `${label}.hermesShrine`);
           const offers = Object.freeze(
             array(shrine.offers, `${label}.hermesShrine.offers`, 3).map((entry, index) => {
               const row = object(entry, `${label}.hermesShrine.offers[${index}]`);
@@ -755,13 +782,14 @@ export function overview(value: unknown, label: string) {
           if (offers.length !== 3) fail(`${label}.hermesShrine.offers must contain three offers`);
           return Object.freeze({
             offers,
+            ...anchorId(shrine, `${label}.hermesShrine`),
           });
         })();
   const well =
     record.stygianWell === undefined
       ? undefined
       : object(record.stygianWell, `${label}.stygianWell`);
-  if (well !== undefined) exact(well, ['offers'], ['rerolls'], `${label}.stygianWell`);
+  if (well !== undefined) exact(well, ['offers'], ['rerolls', 'anchorId'], `${label}.stygianWell`);
   const parsedWell =
     well === undefined
       ? undefined
@@ -782,12 +810,13 @@ export function overview(value: unknown, label: string) {
                   },
                 ),
               }),
+          ...anchorId(well, `${label}.stygianWell`),
         });
   const pool =
     record.purgingPool === undefined
       ? undefined
       : object(record.purgingPool, `${label}.purgingPool`);
-  if (pool !== undefined) exact(pool, ['traits'], ['rerolls'], `${label}.purgingPool`);
+  if (pool !== undefined) exact(pool, ['traits'], ['rerolls', 'anchorId'], `${label}.purgingPool`);
   const parsedPool =
     pool === undefined
       ? undefined
@@ -808,6 +837,7 @@ export function overview(value: unknown, label: string) {
                   },
                 ),
               }),
+          ...anchorId(pool, `${label}.purgingPool`),
         });
   const rack =
     record.keepsakeRack === undefined
@@ -887,6 +917,8 @@ export function overview(value: unknown, label: string) {
         });
   const parsedFields =
     record.fields === undefined ? undefined : fields(record.fields, `${label}.fields`);
+  const parsedLayout =
+    record.layout === undefined ? undefined : roomLayout(record.layout, `${label}.layout`);
   const hub = record.hub === undefined ? undefined : object(record.hub, `${label}.hub`);
   if (hub !== undefined)
     exact(
@@ -1057,6 +1089,7 @@ export function overview(value: unknown, label: string) {
           ),
         }),
     ...(additional === undefined ? {} : { additional: Object.freeze(additional) }),
+    ...(parsedLayout === undefined ? {} : { layout: parsedLayout }),
     ...(parsedFields === undefined ? {} : { fields: parsedFields }),
     ...(parsedHub === undefined ? {} : { hub: parsedHub }),
     ...(localSlots === undefined ? {} : { localSlots }),

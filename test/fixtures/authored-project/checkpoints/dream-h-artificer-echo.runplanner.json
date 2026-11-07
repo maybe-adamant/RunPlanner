@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 101,
+  "schemaVersion": 102,
   "projectId": "run-plan",
   "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
@@ -228,7 +228,6 @@
                   "optional4": null
                 },
                 "spatial": {
-                  "entryStartPointId": 755842,
                   "cagePointIdBySlot": {
                     "cage1": 40055,
                     "cage2": 568938,
@@ -424,7 +423,10 @@
                   }
                 }
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 755842
+              }
             },
             {
               "occurrenceId": "196e0094-6213-426b-b5d2-f74bf3147ead",
@@ -523,7 +525,6 @@
                   "optional2": null
                 },
                 "spatial": {
-                  "entryStartPointId": 760468,
                   "cagePointIdBySlot": {
                     "cage1": 621502,
                     "cage2": 737521,
@@ -591,7 +592,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 760471
+              }
             },
             {
               "occurrenceId": "78369aea-a352-409f-9ab6-0694e96e0339",
@@ -752,7 +756,6 @@
                   "optional4": null
                 },
                 "spatial": {
-                  "entryStartPointId": 755863,
                   "cagePointIdBySlot": {
                     "cage1": 573087,
                     "cage2": 621494,
@@ -831,7 +834,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 755863
+              }
             },
             {
               "occurrenceId": "dream-user-h-combat04-tail",
@@ -900,7 +906,6 @@
                   "optional4": null
                 },
                 "spatial": {
-                  "entryStartPointId": null,
                   "cagePointIdBySlot": {
                     "cage1": null,
                     "cage2": null,

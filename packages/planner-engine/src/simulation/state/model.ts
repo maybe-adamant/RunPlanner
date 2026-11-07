@@ -21,6 +21,7 @@ import type { HistoryStateView } from '../history';
 import type { HexProgressState } from '../hex-progress';
 import type { KeepsakeState } from '../keepsakes/state';
 import type { TraitHistoryState } from '../traits';
+import type { RoomDeparture } from '../room-layout/derivation';
 
 export interface SimulationEquipmentState {
   readonly weaponKey: string;
@@ -118,6 +119,8 @@ export interface SimulationState {
   readonly pendingResourcePickups: Readonly<
     Record<string, Readonly<Record<string, ResourceAmounts>>>
   >;
+  /** The room last left, whose exit the next room's flip and entry read; absent at run start. */
+  readonly lastDeparture?: RoomDeparture;
 }
 
 export function createEmptyRewardLookups(

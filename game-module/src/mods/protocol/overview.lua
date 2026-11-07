@@ -252,10 +252,41 @@ local function featureRerolls(value, label, decodeRoll)
     return rows
 end
 
+-- An object's optional ChallengeSwitchBase anchor; absent leaves native placement.
+local function anchorId(record, label)
+    if record.anchorId ~= nil and not p.int(record.anchorId, label .. ".anchorId", 1) then
+        return p.fail(label .. " has invalid anchor")
+    end
+    return true
+end
+
+-- The room's flip and entry wherever they are determined; absent ones stay native.
+local function roomLayout(value, label)
+    local record, errorMessage = p.exact(value, {}, { "flipped", "entry" }, label)
+    if not record then return nil, errorMessage end
+    if record.flipped == nil and record.entry == nil then
+        return p.fail(label .. " must be non-empty when present")
+    end
+    if record.flipped ~= nil and not p.bool(record.flipped, label .. ".flipped") then
+        return p.fail(label .. " has invalid flip")
+    end
+    if record.entry ~= nil then
+        local entry, entryError = p.exact(record.entry, { "startPointId", "endPointId" }, {}, label .. ".entry")
+        if not entry then return nil, entryError end
+        if not p.int(entry.startPointId, label .. ".entry.startPointId", 1)
+            or not p.int(entry.endPointId, label .. ".entry.endPointId", 1) then
+            return p.fail(label .. " has invalid entry")
+        end
+    end
+    return record
+end
+
 -- A present Well: its initial roll's pinned slots, then its rerolls'. Unlisted slots stay native.
 local function stygianWell(value, label)
-    local record, errorMessage = p.exact(value, { "offers" }, { "rerolls" }, label)
+    local record, errorMessage = p.exact(value, { "offers" }, { "rerolls", "anchorId" }, label)
     if not record then return nil, errorMessage end
+    local _, anchorError = anchorId(record, label)
+    if anchorError then return nil, anchorError end
     local _, offersError = wellOffers(record.offers, "initial", label .. ".offers")
     if offersError then return nil, offersError end
     if record.rerolls ~= nil then
@@ -279,8 +310,10 @@ local function shrinePurchase(value, label)
 end
 
 local function hermesShrine(value, label)
-    local record, errorMessage = p.exact(value, { "offers" }, {}, label)
+    local record, errorMessage = p.exact(value, { "offers" }, { "anchorId" }, label)
     if not record then return nil, errorMessage end
+    local _, anchorError = anchorId(record, label)
+    if anchorError then return nil, anchorError end
     local offers, offersError = p.arr(record.offers, label .. ".offers")
     if not offers then return nil, offersError end
     if #offers ~= 3 then return p.fail(label .. " must publish three offers") end
@@ -394,8 +427,10 @@ end
 
 -- A present Pool: its initial list's pinned slots, then its rerolls'.
 local function purgingPool(value, label)
-    local record, errorMessage = p.exact(value, { "traits" }, { "rerolls" }, label)
+    local record, errorMessage = p.exact(value, { "traits" }, { "rerolls", "anchorId" }, label)
     if not record then return nil, errorMessage end
+    local _, anchorError = anchorId(record, label)
+    if anchorError then return nil, anchorError end
     local _, traitsError = poolTraits(record.traits, label .. ".traits")
     if traitsError then return nil, traitsError end
     if record.rerolls ~= nil then
@@ -443,29 +478,19 @@ local function additional(value, label)
     return rows
 end
 
+-- Authored Fields points; a slot without one stays native.
 local function fields(value, label)
     local record, errorMessage = p.exact(
         value,
-        { "entryPair", "cagePoints", "optionalRewards" },
+        { "cagePoints", "optionalRewards" },
         { "nemesisPointId" },
         label
     )
     if not record then return nil, errorMessage end
-    local entry, entryError = p.exact(
-        record.entryPair,
-        { "startPointId", "endPointId" },
-        {},
-        label .. ".entryPair"
-    )
-    if not entry then return nil, entryError end
-    if not p.int(entry.startPointId, label .. ".entryPair.startPointId", 1)
-        or not p.int(entry.endPointId, label .. ".entryPair.endPointId", 1) then
-        return p.fail(label .. " has invalid entry pair")
-    end
     local cages, cagesError = p.arr(record.cagePoints, label .. ".cagePoints")
     if not cages then return nil, cagesError end
-    if #cages < 2 or #cages > 3 then
-        return p.fail(label .. ".cagePoints must contain two or three active cages")
+    if #cages > 3 then
+        return p.fail(label .. ".cagePoints must name at most three cages")
     end
     local seenCages = {}
     local pointIds = {}
@@ -492,21 +517,22 @@ local function fields(value, label)
     for index, valueRow in ipairs(optionals) do
         local row, rowError = p.exact(
             valueRow,
-            { "slotKey", "pointId", "reward" },
-            {},
+            { "slotKey", "reward" },
+            { "pointId" },
             label .. ".optionalRewards[" .. index .. "]"
         )
         if not row then return nil, rowError end
         if not p.str(row.slotKey, label .. ".optionalRewards[" .. index .. "].slotKey")
             or seenOptionals[row.slotKey]
-            or not p.int(row.pointId, label .. ".optionalRewards[" .. index .. "].pointId", 1)
-            or pointIds[row.pointId] then
+            or (row.pointId ~= nil
+                and (not p.int(row.pointId, label .. ".optionalRewards[" .. index .. "].pointId", 1)
+                    or pointIds[row.pointId])) then
             return p.fail(label .. " has invalid optional point")
         end
         local _, rewardError = rewards.reward(row.reward, label .. ".optionalRewards[" .. index .. "].reward")
         if rewardError then return nil, rewardError end
         seenOptionals[row.slotKey] = true
-        pointIds[row.pointId] = true
+        if row.pointId ~= nil then pointIds[row.pointId] = true end
     end
     if record.nemesisPointId ~= nil
         and (not p.int(record.nemesisPointId, label .. ".nemesisPointId", 1)
@@ -596,8 +622,12 @@ end
 -- The observed switch: its variant, the encounter native generates at entry, and
 -- either that encounter's composition or an Elite switch's pinned elite.
 local function challengeSwitch(value, label)
-    local record, errorMessage = p.exact(value, { "variantKey", "encounterKey" }, { "customization", "elite" }, label)
+    local record, errorMessage = p.exact(
+        value, { "variantKey", "encounterKey" }, { "customization", "elite", "anchorId" }, label
+    )
     if not record then return nil, errorMessage end
+    local _, anchorError = anchorId(record, label)
+    if anchorError then return nil, anchorError end
     if not p.str(record.variantKey, label .. ".variantKey") or not p.str(record.encounterKey, label .. ".encounterKey") then
         return p.fail(label .. " has invalid switch identity")
     end
@@ -672,7 +702,7 @@ function overview.decode(value, label)
             "rewardWheels",
             "shop", "infernalContractPedestal", "phantomExit", "hermesShrine", "stygianWell",
             "purgingPool", "keepsakeRack", "challengeSwitch", "lockedExits",
-            "fountain", "fields", "additional",
+            "fountain", "layout", "fields", "additional",
             "hub", "localSlots",
         },
         label
@@ -791,6 +821,10 @@ function overview.decode(value, label)
     if record.additional ~= nil then
         local _, additionalError = additional(record.additional, label .. ".additional")
         if additionalError then return nil, additionalError end
+    end
+    if record.layout ~= nil then
+        local _, layoutError = roomLayout(record.layout, label .. ".layout")
+        if layoutError then return nil, layoutError end
     end
     if record.fields ~= nil then
         local _, fieldsError = fields(record.fields, label .. ".fields")

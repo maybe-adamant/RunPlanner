@@ -1,3 +1,5 @@
+import type { MaterializedHubVisitFrontier } from '../../materialization/model';
+import type { RoomEntryDoor } from '../../room-layout/derivation';
 import type { Catalog, BiomeLayout } from '../../../catalog-schema';
 import {
   semanticAddressKey,
@@ -118,6 +120,46 @@ export interface PreparedRewardEvaluationInputs {
   readonly hubTargetByOrigin: ReadonlyMap<string, CanonicalHubTarget>;
   readonly batchesByParent: ReadonlyMap<string, CanonicalBatch>;
   readonly lifecycle: RewardLifecycleReferences;
+  /** The door each room is entered through, by room; absent is the left room's only door. */
+  readonly entryDoors: ReadonlyMap<string, RoomEntryDoor>;
+}
+
+/** The door each structurally entered room of the biome is entered through. */
+function entryDoors(snapshot: BiomeRewardSnapshot): ReadonlyMap<string, RoomEntryDoor> {
+  const doors: (readonly [string, RoomEntryDoor])[] = [];
+  const mapDoor = (room: { readonly origin: CanonicalTarget['room']['origin'] }, doorId: number) =>
+    doors.push([semanticAddressKey(room.origin), Object.freeze({ kind: 'mapDoor', doorId })]);
+  for (const decision of decisions(snapshot)) {
+    if (decision.kind === 'batch') {
+      for (const target of decision.targets)
+        if (target.exit.kind === 'available')
+          doors.push([
+            semanticAddressKey(target.room.origin),
+            Object.freeze({ kind: 'exit', index: target.exit.index }),
+          ]);
+      continue;
+    }
+    for (const target of decision.board.targets) mapDoor(target.room, target.physicalDoorId);
+    for (const visit of decision.visits)
+      for (const room of visit.localSlots) mapDoor(room, room.localVisit.physicalDoorId);
+  }
+  for (const continuation of [
+    ...decisions(snapshot).flatMap((decision) =>
+      decision.kind === 'batch' ? decision.additional : [],
+    ),
+    ...frontierAdditional(snapshot),
+  ])
+    doors.push([
+      semanticAddressKey(continuation.room.origin),
+      Object.freeze({ kind: continuation.key === 'chaos' ? 'chaosGate' : 'zagreusContract' }),
+    ]);
+  const frontier = (snapshot.kind === 'biomePrefix' ? snapshot.frontier : undefined) as
+    MaterializedHubVisitFrontier | { readonly kind: string } | undefined;
+  if (frontier !== undefined && 'localSlots' in frontier) {
+    mapDoor(frontier.target.room, frontier.target.physicalDoorId);
+    for (const room of frontier.localSlots) mapDoor(room, room.localVisit.physicalDoorId);
+  }
+  return new ImmutableMapView(doors);
 }
 
 function frontierBatch(snapshot: BiomeRewardSnapshot): readonly CanonicalBatch[] {
@@ -309,5 +351,6 @@ export function prepareRewardEvaluationInputs(
       batchDecisions.map((batch) => [semanticAddressKey(batch.parent.origin), batch] as const),
     ),
     lifecycle: lifecycleReferences(history.events),
+    entryDoors: entryDoors(snapshot),
   });
 }

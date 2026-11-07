@@ -330,6 +330,10 @@ export interface CandidateProjectionSession {
     spatial: FieldsSpatialAddress,
     pointId: number | null,
   ) => CandidateOptionProjection<number | null>;
+  readonly roomLayoutEntry: (
+    occurrence: import('@run-planner/engine/authored-project').OccurrenceAddress,
+    entryStartPointId: number | null,
+  ) => CandidateOptionProjection<number | null>;
   readonly levelResolution: (
     owner: LevelResolutionAddress,
     value: AuthoredLevelResolution,
@@ -449,6 +453,16 @@ export function createCandidateSessionFactory(
           value: pointId,
           evaluation: core.fieldsSpatialPoint(spatial, pointId),
         }),
+      roomLayoutEntry: (
+        occurrence: import('@run-planner/engine/authored-project').OccurrenceAddress,
+        entryStartPointId: number | null,
+      ) => {
+        const evaluation = core.evaluate([
+          Object.freeze({ kind: 'roomLayoutEntry' as const, occurrence, entryStartPointId }),
+        ])[0];
+        if (evaluation === undefined) throw new Error('Room entry candidate was not evaluated');
+        return Object.freeze({ value: entryStartPointId, evaluation });
+      },
       ...rewardAdapters,
       ...traitAdapters,
     });

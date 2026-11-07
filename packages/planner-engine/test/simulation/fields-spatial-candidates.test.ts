@@ -116,41 +116,23 @@ describe('Fields spatial candidates', () => {
       });
     }
 
+    // Unset points leave the game to place each slot: the room needs none to be complete.
     const assembly = simulateProjectAssembly(catalog, project);
-    expect(assembly.evaluation.findings).toContainEqual(
-      expect.objectContaining({
-        code: 'fieldsSpatialPointMissing',
-        origin: createFieldsSpatialAddress(combat, { kind: 'entry' }),
-      }),
-    );
-    expect(authoringReadinessAt(assembly, target)).toBe('editable');
-    expect(authoringReadinessAt(assembly, combat)).toBe('editable');
-    for (const slotKey of ['optional1', 'optional2'] as const)
-      expect(
-        createPreparedProjectCandidateSession(catalog, assembly).evaluate({
-          kind: 'localReward',
-          reward: createLocalRewardAddress(goldenHBiome, combatId, 'optionalRewards', slotKey),
-          value: { rewardType: 'RoomRewardHealDrop' },
-        }),
-      ).toMatchObject({ kind: 'localReward', result: { supported: true, findings: [] } });
     expect(
-      createPreparedProjectCandidateSession(catalog, assembly).evaluate({
-        kind: 'localReward',
-        reward: createLocalRewardAddress(goldenHBiome, combatId, 'cages', 'cage1'),
-        value: { rewardType: 'MaxHealthDrop' },
-      }),
-    ).toMatchObject({ kind: 'localReward', result: { supported: true, findings: [] } });
+      assembly.evaluation.findings.filter((finding) => finding.origin.kind === 'fieldsSpatial'),
+    ).toEqual([]);
+    expect(authoringReadinessAt(assembly, combat)).toBe('editable');
     expect(
       authoringReadinessAt(
         assembly,
         createExitDecisionAddress(goldenHBiome, { kind: 'occurrence', occurrenceId: combatId }),
       ),
-    ).toBe('locked');
+    ).toBe('editable');
     expect(
       createPreparedProjectCandidateSession(catalog, assembly).evaluate({
         kind: 'fieldsSpatialPoint',
-        spatial: createFieldsSpatialAddress(combat, { kind: 'entry' }),
-        pointId: 760458,
+        spatial: createFieldsSpatialAddress(combat, { kind: 'cage', slotKey: 'cage1' }),
+        pointId: null,
       }),
     ).toMatchObject({ kind: 'fieldsSpatialPoint', result: { selectedPossible: true } });
   });
@@ -162,21 +144,25 @@ describe('Fields spatial candidates', () => {
     );
     const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
-      spatial: createFieldsSpatialAddress(unvisited, { kind: 'entry' }),
+      spatial: createFieldsSpatialAddress(unvisited, { kind: 'cage', slotKey: 'cage1' }),
       pointId: null,
     });
     expect(simulateProjectAssembly(catalog, project).evaluation.status).toBe('valid');
   });
 
-  it('publishes declaration points and a stable occurrence-owned entry address', () => {
-    const result = evaluate(loadNemesisFieldsCheckpoint(), { kind: 'entry' }, 755863);
+  it('publishes declaration points and a stable occurrence-owned point address', () => {
+    const result = evaluate(
+      loadNemesisFieldsCheckpoint(),
+      { kind: 'cage', slotKey: 'cage1' },
+      573087,
+    );
 
     expect(result).toMatchObject({
       kind: 'fieldsSpatialPoint',
       result: {
         spatial: { kind: 'fieldsSpatial', occurrenceId: occurrenceId },
         selectedPossible: true,
-        supportPointIds: [755863, 755866],
+        supportPointIds: expect.arrayContaining([573087]),
         findings: [],
       },
     });
@@ -220,34 +206,22 @@ describe('Fields spatial candidates', () => {
     );
   });
 
-  it('treats an active missing assignment as incomplete and allows dormant values', () => {
-    const missing = evaluate(
-      loadNemesisFieldsCheckpoint(),
-      { kind: 'cage', slotKey: 'cage1' },
-      null,
-    );
-    expect(missing).toMatchObject({
+  it('leaves an unset point to the game and allows dormant values', () => {
+    const unset = evaluate(loadNemesisFieldsCheckpoint(), { kind: 'cage', slotKey: 'cage1' }, null);
+    expect(unset).toMatchObject({
       kind: 'fieldsSpatialPoint',
-      result: {
-        selectedPossible: false,
-        findings: [{ code: 'fieldsSpatialPointMissing' }],
-      },
+      result: { selectedPossible: true, findings: [] },
     });
-    let missingProject = createGoldenFGHProject();
-    missingProject = applyProjectCommand(missingProject, catalog, {
+    const unsetProject = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
       spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage1' }),
       pointId: null,
     });
-    expect(simulateProjectAssembly(catalog, missingProject).evaluation.findings).toContainEqual(
-      expect.objectContaining({
-        code: 'fieldsSpatialPointMissing',
-        origin: createFieldsSpatialAddress(occurrence, {
-          kind: 'cage',
-          slotKey: 'cage1',
-        }),
-      }),
-    );
+    expect(
+      simulateProjectAssembly(catalog, unsetProject).evaluation.findings.filter(
+        (finding) => finding.origin.kind === 'fieldsSpatial',
+      ),
+    ).toEqual([]);
 
     let dormantProject = loadNemesisFieldsCheckpoint();
     dormantProject = applyProjectCommand(dormantProject, catalog, {

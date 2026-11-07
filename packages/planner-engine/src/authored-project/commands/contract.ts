@@ -135,6 +135,9 @@ function commandContractAddress(
       return command.decision;
     case 'ReplaceFieldsSpatialPoint':
       return command.spatial;
+    case 'ReplaceRoomLayout':
+    case 'ReplaceRoomObjectAnchor':
+      return command.occurrence;
     case 'ReplaceOccurrenceRoom':
     case 'ReplaceFieldsCageOrder':
     case 'ReplaceShipEncounterCount':
@@ -330,6 +333,15 @@ export function projectCommandAddress(
       return createRoomFeatureAddress(command.occurrence, { kind: 'challengeSwitch' });
     case 'ReplaceLockedExit':
       return createRoomFeatureAddress(command.occurrence, { kind: 'lockedExits' });
+    case 'ReplaceRoomLayout':
+      return createRoomFeatureAddress(command.occurrence, {
+        kind: command.layout.entryStartPointId === undefined ? 'roomLayoutFlip' : 'roomLayoutEntry',
+      });
+    case 'ReplaceRoomObjectAnchor':
+      return createRoomFeatureAddress(command.occurrence, {
+        kind: 'objectAnchor',
+        object: command.object,
+      });
   }
   return commandContractAddress(command);
 }

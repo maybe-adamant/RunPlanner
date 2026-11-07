@@ -40,17 +40,11 @@ export function decodeFieldsSpatialState(
   path: string,
 ): FieldsSpatialState {
   const raw = expectRecord(value, path);
-  expectExactKeys(
-    raw,
-    ['entryStartPointId', 'cagePointIdBySlot', 'optionalPointIdBySlot', 'nemesisPointId'],
-    path,
-  );
+  expectExactKeys(raw, ['cagePointIdBySlot', 'optionalPointIdBySlot', 'nemesisPointId'], path);
   const declaration: FieldsSpatialDeclaration = requireFieldsSpatial(room, path);
-  const entryStarts = new Set(declaration.entryPairs.map((pair) => pair.startPointId));
   const cages = requireFieldsCages(room, path);
   const optional = requireFieldsOptionalRewards(room, path);
   return Object.freeze({
-    entryStartPointId: decodePoint(raw.entryStartPointId, entryStarts, `${path}.entryStartPointId`),
     cagePointIdBySlot: decodePointMap(
       raw.cagePointIdBySlot,
       cages.slotKeys,

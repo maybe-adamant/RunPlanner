@@ -26,3 +26,4 @@ export { catalogWithEmptyShopGroup } from './empty-shop-group';
 export { legacyRareEpicHexTrees } from './legacy-hex-trees';
 export { legacySchema99Body } from './legacy-schema-99';
 export { legacySchema100Body } from './legacy-schema-100';
+export { legacySchema101Body } from './legacy-schema-101';

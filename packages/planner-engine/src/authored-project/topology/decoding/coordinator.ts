@@ -623,6 +623,7 @@ export function decodeTopologyStructure(
     const hasPhantomExit = Object.hasOwn(occurrence, 'phantomExit');
     const hasRerolledIncomingReward = Object.hasOwn(occurrence, 'rerolledIncomingReward');
     const hasFigurineArcanaKeysByPhase = Object.hasOwn(occurrence, 'figurineArcanaKeysByPhase');
+    const hasLayout = Object.hasOwn(occurrence, 'layout');
     expectExactKeys(
       occurrence,
       [
@@ -647,6 +648,7 @@ export function decodeTopologyStructure(
         ...(hasPhantomExit ? ['phantomExit'] : []),
         ...(hasRerolledIncomingReward ? ['rerolledIncomingReward'] : []),
         ...(hasFigurineArcanaKeysByPhase ? ['figurineArcanaKeysByPhase'] : []),
+        ...(hasLayout ? ['layout'] : []),
       ],
       occurrencePath,
     );
@@ -694,6 +696,8 @@ export function decodeTopologyStructure(
         hasRerolledIncomingReward,
         figurineArcanaKeysByPhase: occurrence.figurineArcanaKeysByPhase,
         hasFigurineArcanaKeysByPhase,
+        layout: occurrence.layout,
+        hasLayout,
         path: occurrencePath,
       }),
     );

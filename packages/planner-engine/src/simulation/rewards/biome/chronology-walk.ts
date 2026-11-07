@@ -1,3 +1,4 @@
+import type { RoomDeparture } from '../../room-layout/derivation';
 import type { Catalog } from '../../../catalog-schema';
 import type { EncounterEntryVowRanks } from '../../arcana-fear';
 import type {
@@ -112,6 +113,8 @@ export interface ChronologyWalkState {
   /** A seam stopped the walk at its own sequence. */
   readonly halted: boolean;
   readonly stygianWellAssessments: ReadonlyMap<string, StygianWellRoomAssessment>;
+  /** Each entered room's departure facts, its settled flip, by room. */
+  readonly roomDepartures: ReadonlyMap<string, RoomDeparture>;
   /** Each reached switch host's entry assessment, by room. */
   readonly challengeSwitchAssessments: ReadonlyMap<
     string,
@@ -239,6 +242,7 @@ export function createChronologyWalkState(
     branch,
     halted: false,
     stygianWellAssessments: new Map(),
+    roomDepartures: new Map(),
     challengeSwitchAssessments: new Map(),
     challengeSwitchEncounters: new Map(),
     enteredLockHosts: new Set<string>(),

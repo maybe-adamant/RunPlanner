@@ -105,6 +105,7 @@ const executionDispositions = {
     challengeSwitch: 'deferred-route',
     lockedExits: 'covered',
     fountain: 'covered',
+    layout: 'covered',
     fields: 'covered',
     additional: 'covered',
     hub: 'covered',

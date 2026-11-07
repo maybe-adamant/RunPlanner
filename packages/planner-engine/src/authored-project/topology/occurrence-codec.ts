@@ -1,4 +1,5 @@
 import { screenRerollSupported } from '../screen-rerolls';
+import { attachObjectAnchor, decodeObjectAnchor, decodeRoomLayout } from '../room-layout';
 import type { ChallengeSwitchOutcome } from '../model';
 import {
   lockedExitsIssue,
@@ -477,18 +478,22 @@ export function decodeRoomOccurrence(input: {
     `${rawOccurrence.path}.encounters`,
     contextualRoom === room ? undefined : room,
   );
+  const anchored = <T extends object>(
+    value: unknown,
+    path: string,
+    decode: (leaf: unknown) => T,
+  ): T => {
+    const { leaf, anchorId } = decodeObjectAnchor(value, room, path);
+    return attachObjectAnchor(decode(leaf), anchorId);
+  };
   const hermesShrine = rawOccurrence.hasHermesShrine
-    ? decodeOrdinaryHermesShrineState(
-        rawOccurrence.hermesShrine,
-        catalog,
-        `${rawOccurrence.path}.hermesShrine`,
+    ? anchored(rawOccurrence.hermesShrine, `${rawOccurrence.path}.hermesShrine`, (leaf) =>
+        decodeOrdinaryHermesShrineState(leaf, catalog, `${rawOccurrence.path}.hermesShrine`),
       )
     : undefined;
   const stygianWell = rawOccurrence.hasStygianWell
-    ? decodeStygianWellState(
-        rawOccurrence.stygianWell,
-        `${rawOccurrence.path}.stygianWell`,
-        catalog,
+    ? anchored(rawOccurrence.stygianWell, `${rawOccurrence.path}.stygianWell`, (leaf) =>
+        decodeStygianWellState(leaf, `${rawOccurrence.path}.stygianWell`, catalog),
       )
     : undefined;
   const fountainRarityResult = rawOccurrence.hasFountainRarityResult
@@ -499,11 +504,8 @@ export function decodeRoomOccurrence(input: {
       )
     : undefined;
   const purgingPool = rawOccurrence.hasPurgingPool
-    ? decodePurgingPoolState(
-        rawOccurrence.purgingPool,
-        catalog,
-        contextualRoom,
-        `${rawOccurrence.path}.purgingPool`,
+    ? anchored(rawOccurrence.purgingPool, `${rawOccurrence.path}.purgingPool`, (leaf) =>
+        decodePurgingPoolState(leaf, catalog, contextualRoom, `${rawOccurrence.path}.purgingPool`),
       )
     : undefined;
   if (
@@ -536,12 +538,17 @@ export function decodeRoomOccurrence(input: {
       )
     : undefined;
   const challengeSwitch = rawOccurrence.hasChallengeSwitch
-    ? decodeChallengeSwitch(
-        rawOccurrence.challengeSwitch,
-        catalog,
-        room.gameName,
-        `${rawOccurrence.path}.challengeSwitch`,
+    ? anchored(rawOccurrence.challengeSwitch, `${rawOccurrence.path}.challengeSwitch`, (leaf) =>
+        decodeChallengeSwitch(
+          leaf,
+          catalog,
+          room.gameName,
+          `${rawOccurrence.path}.challengeSwitch`,
+        ),
       )
+    : undefined;
+  const roomLayout = rawOccurrence.hasLayout
+    ? decodeRoomLayout(rawOccurrence.layout, room, `${rawOccurrence.path}.layout`)
     : undefined;
   const lockedExits = rawOccurrence.hasLockedExits
     ? decodeLockedExits(
@@ -1138,6 +1145,7 @@ export function decodeRoomOccurrence(input: {
     ...(rerolledIncomingReward === undefined ? {} : { rerolledIncomingReward }),
     ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
     additionalExits,
+    ...(roomLayout === undefined ? {} : { layout: roomLayout }),
   });
   if (
     fountainRarityResult !== undefined &&

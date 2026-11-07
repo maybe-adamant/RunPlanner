@@ -431,6 +431,24 @@ export type FieldsSpatialCommand = {
   readonly pointId: number | null;
 };
 
+/**
+ * The room's layout, replaced whole so an entry that implies the flip sets
+ * both in one edit; an absent field leaves the game to decide it.
+ */
+export type RoomLayoutCommand =
+  | {
+      readonly kind: 'ReplaceRoomLayout';
+      readonly occurrence: OccurrenceAddress;
+      readonly layout: import('../model').RoomLayout;
+    }
+  | {
+      /** Places a present room object on one of the room's anchors; null leaves it native. */
+      readonly kind: 'ReplaceRoomObjectAnchor';
+      readonly occurrence: OccurrenceAddress;
+      readonly object: import('../addresses').RoomAnchorObjectKind;
+      readonly anchorId: number | null;
+    };
+
 export type ShipOccurrenceCommand =
   | {
       readonly kind: 'ReplaceShipEncounterCount';
@@ -993,6 +1011,7 @@ export type ProjectCommand =
   | Exclude<RouteDetourCommand, { readonly kind: 'GenerateChaos' | 'RemoveGeneratedChaos' }>
   | OccurrenceLeafCommand
   | FieldsSpatialCommand
+  | RoomLayoutCommand
   | AcquisitionSiteCommand
   | AcquisitionOutcomeCommand
   | EditEchoReplayCommand;

@@ -2,10 +2,12 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   type OccurrenceAddress,
+  type RoomAnchorObjectKind,
 } from '../../authored-project/addresses';
 import { challengeSwitchHost } from '../../authored-project/acquisition/challenge-switch';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import { routePurgingPool, routeRoomShop } from '../../authored-project/route-profile';
+import { roomObjectAnchorIds } from '../../authored-project/room-layout';
 import type { Catalog, ChallengeSwitchKind } from '../../catalog-schema';
 import {
   challengeSwitchKindVariant,
@@ -32,9 +34,7 @@ type CommandOf<Kind extends ProjectCommand['kind']> = Extract<
   { readonly kind: Kind }
 >;
 
-/** The room objects native `HandleSecretSpawns` places on `ChallengeSwitchBase` anchors. */
-export type RoomAnchorObjectKind =
-  'stygianWell' | 'purgingPool' | 'hermesShrine' | 'challengeSwitch';
+export type { RoomAnchorObjectKind } from '../../authored-project/addresses';
 
 /**
  * Native spawn order: each eligible object in turn takes a random free anchor
@@ -83,6 +83,16 @@ interface RoomAnchorObjectFacts<
   readonly remove?: Remove;
   /** The object's existing entry-frontier product; undefined while unreached. */
   readonly candidate?: Candidate;
+  /** The physical anchor it is authored on; absent leaves native placement. */
+  readonly anchorId?: number;
+  /**
+   * For a present object: each anchor it can be placed on (null returns it to
+   * native placement), with the command. A pinned Well has none.
+   */
+  readonly anchorChoices?: readonly {
+    readonly anchorId: number | null;
+    readonly command: CommandOf<'ReplaceRoomObjectAnchor'>;
+  }[];
 }
 
 export type RoomAnchorObject =
@@ -153,6 +163,15 @@ export interface RoomAnchorSlot {
  */
 export interface RoomAnchorSlots {
   readonly anchorCount: number;
+  /**
+   * The room's physical anchors by id, each with the present object authored
+   * on it; the Well pin takes only the Well.
+   */
+  readonly anchors: readonly {
+    readonly anchorId: number;
+    readonly pinned: boolean;
+    readonly occupant?: RoomAnchorObjectKind;
+  }[];
   readonly objects: readonly RoomAnchorObject[];
   readonly slots: readonly RoomAnchorSlot[];
   /**
@@ -500,9 +519,55 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
     });
   });
 
+  const pin = room?.mapPoints?.wellAnchorId;
+  const anchorIds = room === undefined ? [] : roomObjectAnchorIds(room);
+  const authoredAnchor = (kind: RoomAnchorObjectKind) => authored[kind]?.anchorId;
+  const occupantOf = (anchorId: number) =>
+    ROOM_ANCHOR_OBJECT_ORDER.find((kind) => authoredAnchor(kind) === anchorId);
+  const placed = objects.map((object) => {
+    const anchorId = authoredAnchor(object.kind);
+    if (!object.present) return object;
+    const choose = (target: number | null) =>
+      Object.freeze({
+        anchorId: target,
+        command: Object.freeze({
+          kind: 'ReplaceRoomObjectAnchor' as const,
+          occurrence: origin,
+          object: object.kind,
+          anchorId: target,
+        }),
+      });
+    // A pinned Well always stands on its pin; no other object takes it.
+    const anchorChoices =
+      object.kind === 'stygianWell' && pin !== undefined
+        ? []
+        : [
+            choose(null),
+            ...anchorIds
+              .filter((id) => id !== pin && (occupantOf(id) ?? object.kind) === object.kind)
+              .map(choose),
+          ];
+    return Object.freeze({
+      ...object,
+      ...(anchorId === undefined ? {} : { anchorId }),
+      anchorChoices: Object.freeze(anchorChoices),
+    }) as RoomAnchorObject;
+  });
   return Object.freeze({
     anchorCount,
-    objects: Object.freeze(objects),
+    anchors: Object.freeze(
+      anchorIds.map((anchorId) => {
+        const occupant =
+          occupantOf(anchorId) ??
+          (anchorId === pin && authored.stygianWell !== undefined ? 'stygianWell' : undefined);
+        return Object.freeze({
+          anchorId,
+          pinned: anchorId === pin,
+          ...(occupant === undefined ? {} : { occupant }),
+        });
+      }),
+    ),
+    objects: Object.freeze(placed),
     slots: Object.freeze(slots),
     unanchored: Object.freeze(
       objects

@@ -331,6 +331,8 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly bossArcanaOutcomes: readonly BossArcanaOutcome[];
   /** Reached phantom exits in chronological order. */
   readonly phantomExits: readonly PhantomExitSettlement[];
+  /** Each entered room's settled flip and entry, in entry order. */
+  readonly roomLayouts: readonly import('../room-layout/settlement').RoomLayoutSettlement[];
   /** Reached door, cage, wheel and Hub board rerolls in chronological order. */
   readonly rerolls: readonly RerollSettlement[];
   /** The run's reroll pool after each walked event where it changed. */

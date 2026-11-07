@@ -148,7 +148,7 @@ describe('candidate context reachability from retained products', () => {
     const spatial = (occurrenceId: string) =>
       createFieldsSpatialAddress(
         createOccurrenceAddress(goldenHBiome, createOccurrenceId(occurrenceId)),
-        { kind: 'entry' },
+        { kind: 'cage', slotKey: 'cage1' },
       );
     const point = (occurrenceId: string): CandidateContextOwner => ({
       kind: 'fieldsSpatialPoint',

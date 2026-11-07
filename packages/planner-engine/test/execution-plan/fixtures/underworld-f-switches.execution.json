@@ -1,8 +1,8 @@
 {
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
-  "schemaVersion": 101,
-  "schemaRevision": 2,
+  "schemaVersion": 102,
+  "schemaRevision": 0,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -263,7 +263,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "OpeningGeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -618,7 +619,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1004,7 +1006,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1384,6 +1387,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
+        "layout": { "entry": { "startPointId": 50065, "endPointId": 50059 } },
         "challengeSwitch": {
           "variantKey": "PerfectClearChallengeSwitch_MaxHealth",
           "encounterKey": "PerfectClearChallengeF"
@@ -1635,7 +1639,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "MiniBossTreant", "kind": "miniboss" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -2011,6 +2016,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
+        "layout": { "entry": { "startPointId": 560632, "endPointId": 560633 } },
         "challengeSwitch": {
           "variantKey": "TimeChallengeSwitch_Money",
           "encounterKey": "TimeChallengeF",
@@ -2275,7 +2281,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "entry": { "startPointId": 560632, "endPointId": 560633 } }
       },
       "timeline": {
         "transactions": [
@@ -2486,5 +2493,5 @@
       }
     }
   ],
-  "planFingerprint": "6b8f036f"
+  "planFingerprint": "fe9dec4e"
 }

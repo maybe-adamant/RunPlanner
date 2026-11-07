@@ -407,29 +407,33 @@ export interface WorkspaceFieldsOptionalRewardDescriptor {
   readonly summary: string;
 }
 
-/** One occurrence-owned physical placement row for an H Fields combat room. */
-export interface WorkspaceFieldsSpatialControl {
-  readonly address: FieldsSpatialAddress;
+/**
+ * One physical placement row of an H Fields combat room: a slot's point, or
+ * the room's entry, which its layout owns.
+ */
+export type WorkspaceFieldsSpatialControl = {
   readonly interactionKey: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly pointId: number | null;
   readonly pointChoices: readonly { readonly label: string; readonly value: number | null }[];
-  readonly target: FieldsSpatialTarget;
-}
+} & (
+  | { readonly address: FieldsSpatialAddress; readonly target: FieldsSpatialTarget }
+  | { readonly address: RoomFeatureAddress; readonly target: { readonly kind: 'entry' } }
+);
 
 export interface WorkspaceFieldsSpatialPointInteraction {
   /** Read from retained products; the positions wait on an earlier choice when false. */
   readonly contextReached: boolean;
   readonly key: string;
-  readonly owner: FieldsSpatialAddress;
+  readonly owner: FieldsSpatialAddress | RoomFeatureAddress;
   readonly selected: number | null;
   readonly choices: readonly { readonly label: string; readonly value: number | null }[];
   readonly load: () => readonly CandidateOptionProjection<number | null>[];
   readonly intentFor: (
     pointId: number | null,
   ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsSpatialPoint' }>
+    Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsSpatialPoint' | 'ReplaceRoomLayout' }>
   >;
 }
 

@@ -58,10 +58,12 @@ describe('declared domains without a reached context', () => {
       families(
         applyProjectCommand(loadNemesisFieldsCheckpoint(), catalog, {
           kind: 'ReplaceFieldsSpatialPoint',
+          // A cage point another cage already holds blocks the room's Overview.
           spatial: createFieldsSpatialAddress(createOccurrenceAddress(goldenHBiome, occurrenceId), {
-            kind: 'entry',
+            kind: 'cage',
+            slotKey: 'cage2',
           }),
-          pointId: null,
+          pointId: 573087,
         }),
       ),
     ).toEqual(['unassessed']);

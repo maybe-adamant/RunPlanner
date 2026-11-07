@@ -21,8 +21,6 @@ import {
   type PhantomExitAddress,
   type PhantomExitState,
   type SideRoomGeneration,
-  type FieldsSpatialAddress,
-  type FieldsSpatialTarget,
 } from '@run-planner/engine/authored-project';
 
 import type { WorkspaceFeatureAssessment, WorkspaceInteractionChoice } from '../contract';
@@ -152,13 +150,10 @@ export type WorkspaceOccurrenceInteractionRequirement =
   | {
       readonly kind: 'fieldsSpatialPoints';
       readonly owner: OccurrenceAddress;
-      readonly controls: readonly {
-        readonly address: FieldsSpatialAddress;
-        readonly interactionKey: string;
-        readonly pointChoices: readonly { readonly label: string; readonly value: number | null }[];
-        readonly pointId: number | null;
-        readonly target: FieldsSpatialTarget;
-      }[];
+      readonly controls: readonly Pick<
+        import('../contracts/locals').WorkspaceFieldsSpatialControl,
+        'address' | 'interactionKey' | 'pointChoices' | 'pointId' | 'target'
+      >[];
     }
   | {
       readonly kind: 'chaosSpawn';

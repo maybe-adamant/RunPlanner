@@ -25,7 +25,6 @@ import type { MaterializedEncounterPhase } from '../../encounters/model';
 import type {
   CanonicalAuthoredRoom,
   CanonicalFieldsOptionalReward,
-  CanonicalFieldsEntryPair,
   CanonicalLocalReward,
   CanonicalRerollableReward,
   CanonicalResolvedIncomingReward,
@@ -142,7 +141,6 @@ export interface MaterializedRoomLeaf {
   readonly unresolvedLocalRewards?: CanonicalAuthoredRoom['unresolvedLocalRewards'];
   readonly fieldsOptionalRewards?: readonly CanonicalFieldsOptionalReward[];
   readonly fieldsSpatial?: import('../../../authored-project/model').FieldsSpatialState;
-  readonly fieldsEntryPair?: CanonicalFieldsEntryPair;
   readonly unresolvedFieldsOptionalRewards?: CanonicalAuthoredRoom['unresolvedFieldsOptionalRewards'];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
@@ -460,11 +458,6 @@ function materializeFieldsCombat(
   context: AuthoredRoomMaterializationContext,
 ): MaterializedRoomLeaf {
   const state = requireStateKind(context, 'fieldsCombat');
-  const fieldsEntryPair = (() => {
-    const startPointId = state.spatial.entryStartPointId;
-    if (startPointId === null || context.room.fieldsSpatial === undefined) return undefined;
-    return context.room.fieldsSpatial.entryPairs.find((pair) => pair.startPointId === startPointId);
-  })();
   const descriptor = context.room.localChildren[0];
   if (descriptor?.kind !== 'boundedRewardSlots' || descriptor.key !== 'cages') {
     fail(`${context.room.gameName} has no bounded cages descriptor`);
@@ -605,7 +598,6 @@ function materializeFieldsCombat(
       optionalLeaves.flatMap(({ base, reward }) => (reward === null ? [base] : [])),
     ),
     fieldsSpatial: state.spatial,
-    ...(fieldsEntryPair === undefined ? {} : { fieldsEntryPair }),
   });
 }
 

@@ -1,3 +1,5 @@
+import { legacySchema101Body } from './legacy-schema-101';
+
 type Json = Record<string, unknown>;
 
 function record(value: unknown): Json | undefined {
@@ -27,7 +29,7 @@ function sparseOutcomes(occurrence: unknown): unknown {
  * Schema 100's final revision is 0, so the current major's revision is dropped.
  */
 export function legacySchema100Body<T>(value: T): T {
-  const document = record(value);
+  const document = record(legacySchema101Body(value));
   const route = record(document?.route);
   if (document === undefined || route === undefined || !Array.isArray(route.biomes)) return value;
   const { schemaRevision: _revision, ...body } = document;

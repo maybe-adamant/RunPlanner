@@ -39,10 +39,15 @@ const toyDocument = (occurrences) => ({
 
 describe('schema 100 to 101 migration', () => {
   let step;
+  let nextStep;
   let engine;
   before(async () => {
     ({ module: step } = await runnerImport(
       join(root, 'apps/planner/src/persistence/project-100-to-101.js'),
+      runner,
+    ));
+    ({ module: nextStep } = await runnerImport(
+      join(root, 'apps/planner/src/persistence/project-101-to-102.js'),
       runner,
     ));
     ({ module: engine } = await runnerImport(
@@ -51,8 +56,14 @@ describe('schema 100 to 101 migration', () => {
     ));
   });
   const migrate = (document) => step.migrateProjectDocument(document, { catalog: engine.catalog });
+  // A schema 101 result is read by the current codec past the later transitions.
   const decode = (document) =>
-    engine.parseProjectDocument(JSON.stringify(document), engine.catalog);
+    engine.parseProjectDocument(
+      JSON.stringify(
+        document.schemaVersion === 101 ? nextStep.migrateProjectDocument(document) : document,
+      ),
+      engine.catalog,
+    );
   const canonical = (document) => engine.encodeProjectDocument(decode(document));
 
   it('completes a settled schema 100 document into the current project', () => {

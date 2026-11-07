@@ -647,7 +647,8 @@ describe('draftProject', () => {
         ]),
         rackKeepsakeKeys: [null, null, null],
       };
-      const walk = startDraftWalk(dream.base, spec, 1);
+      // A seed whose first Dream biome reaches a Shop.
+      const walk = startDraftWalk(dream.base, spec, 4);
       expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
       // Air for Zeus's waiting Infusion, from the first Dream Shop.
       expect(shopBuys(walk.project)).toContain('H:AirBoost:');

@@ -29,11 +29,9 @@ export function applyFieldsSpatialCommand(
   const cages = requireFieldsCages(room, command.spatial.occurrenceId);
   const optional = requireFieldsOptionalRewards(room, command.spatial.occurrenceId);
   const allowed =
-    target.kind === 'entry'
-      ? new Set(declaration.entryPairs.map((pair) => pair.startPointId))
-      : target.kind === 'cage'
-        ? new Set(declaration.cagePointIds)
-        : new Set(declaration.optionalPointIds);
+    target.kind === 'cage'
+      ? new Set(declaration.cagePointIds)
+      : new Set(declaration.optionalPointIds);
   if (target.kind === 'cage' && !cages.slotKeys.includes(target.slotKey))
     failCommand(command, `unknown cage slot ${target.slotKey}`);
   if (target.kind === 'optional' && !optional.slotKeys.includes(target.slotKey))
@@ -41,27 +39,24 @@ export function applyFieldsSpatialCommand(
   if (command.pointId !== null && !allowed.has(command.pointId))
     failCommand(command, `point ${command.pointId} is outside this target's declaration domain`);
   const next =
-    target.kind === 'entry'
-      ? { ...spatial, entryStartPointId: command.pointId }
-      : target.kind === 'cage'
+    target.kind === 'cage'
+      ? {
+          ...spatial,
+          cagePointIdBySlot: Object.freeze({
+            ...spatial.cagePointIdBySlot,
+            [target.slotKey]: command.pointId,
+          }),
+        }
+      : target.kind === 'optional'
         ? {
             ...spatial,
-            cagePointIdBySlot: Object.freeze({
-              ...spatial.cagePointIdBySlot,
+            optionalPointIdBySlot: Object.freeze({
+              ...spatial.optionalPointIdBySlot,
               [target.slotKey]: command.pointId,
             }),
           }
-        : target.kind === 'optional'
-          ? {
-              ...spatial,
-              optionalPointIdBySlot: Object.freeze({
-                ...spatial.optionalPointIdBySlot,
-                [target.slotKey]: command.pointId,
-              }),
-            }
-          : { ...spatial, nemesisPointId: command.pointId };
+        : { ...spatial, nemesisPointId: command.pointId };
   if (
-    (target.kind === 'entry' && spatial.entryStartPointId === command.pointId) ||
     (target.kind === 'cage' && spatial.cagePointIdBySlot[target.slotKey] === command.pointId) ||
     (target.kind === 'optional' &&
       spatial.optionalPointIdBySlot[target.slotKey] === command.pointId) ||

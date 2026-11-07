@@ -43,8 +43,6 @@ function pointDomain(
   target: FieldsSpatialTarget,
 ): readonly number[] {
   switch (target.kind) {
-    case 'entry':
-      return declaration.entryPairs.map((pair) => pair.startPointId);
     case 'cage':
       return declaration.cagePointIds;
     case 'optional':
@@ -61,8 +59,6 @@ function targetActive(
   const roomDeclaration = catalog.rooms.byKey[room.gameName];
   if (roomDeclaration === undefined) return false;
   switch (target.kind) {
-    case 'entry':
-      return true;
     case 'cage': {
       const cage = roomDeclaration.localChildren.find(
         (child) =>
@@ -100,8 +96,6 @@ function selectedPoint(room: CanonicalAuthoredRoom, target: FieldsSpatialTarget)
   const spatial = room.fieldsSpatial;
   if (spatial === undefined) return null;
   switch (target.kind) {
-    case 'entry':
-      return spatial.entryStartPointId;
     case 'cage':
       return spatial.cagePointIdBySlot[target.slotKey] ?? null;
     case 'optional':
@@ -127,7 +121,6 @@ function activeFieldsSpatialTargets(
       ? new Set<string>()
       : activeSlots(room, roomDeclaration.fieldsOptionalRewards.key, true);
   return Object.freeze([
-    Object.freeze({ kind: 'entry' as const }),
     ...cageSlotKeys
       .filter((slotKey) => activeCages.has(slotKey))
       .map((slotKey) => Object.freeze({ kind: 'cage' as const, slotKey })),
@@ -169,8 +162,7 @@ function occupiedSiblingPoints(
 }
 
 function finding(
-  code:
-    'fieldsSpatialPointMissing' | 'fieldsSpatialPointUnavailable' | 'fieldsSpatialPointDuplicate',
+  code: 'fieldsSpatialPointUnavailable' | 'fieldsSpatialPointDuplicate',
   room: CanonicalAuthoredRoom,
   target: FieldsSpatialTarget,
   evidence: SemanticFinding['evidence'],
@@ -203,14 +195,8 @@ export function assessFieldsSpatialPoint(
     domain.filter((candidate) => !excluded.has(candidate) && !occupied.has(candidate)),
   );
   const findings: SemanticFinding[] = [];
-  if (active && pointId === null) {
-    findings.push(
-      finding('fieldsSpatialPointMissing', room, target, {
-        target: target.kind,
-        supportPointIds,
-      }),
-    );
-  } else if (pointId !== null && !domain.includes(pointId)) {
+  // An unset point leaves the game to place the slot.
+  if (pointId !== null && !domain.includes(pointId)) {
     findings.push(
       finding('fieldsSpatialPointUnavailable', room, target, {
         pointId,
@@ -236,7 +222,7 @@ export function assessFieldsSpatialPoint(
     active,
     assignable: pointId === null || (domain.includes(pointId) && !excluded.has(pointId)),
     findings: Object.freeze(findings),
-    selectedPossible: !active || (pointId !== null && supportPointIds.includes(pointId)),
+    selectedPossible: !active || pointId === null || supportPointIds.includes(pointId),
     supportPointIds,
   });
 }

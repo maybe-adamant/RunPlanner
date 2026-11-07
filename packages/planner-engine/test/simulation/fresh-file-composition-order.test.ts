@@ -35,14 +35,14 @@ import { executionFixturePath } from '../execution-plan/support/execution-fixtur
 import { currentSchemaWire } from '../execution-plan/support/current-schema-wire';
 
 describe('Fresh File room issue chronology with uncustomized compositions', () => {
-  it('asks for no cage composition, only the room features and Timeline', () => {
+  it('asks for no cage composition or point, only the room features and Timeline', () => {
     expect(
       authorFreshFileRoomIssues(
         withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', 'max'),
         'H',
         newHFieldsRoomId,
       ).labels,
-    ).toEqual(['optionalReward', 'spatial', 'trait:cage2', 'continuation']);
+    ).toEqual(['optionalReward', 'trait:cage2', 'continuation']);
   });
 
   it('keeps every phase support in its room while an Overview or Timeline input is the issue', () => {
@@ -69,11 +69,7 @@ describe('Fresh File room issue chronology with uncustomized compositions', () =
         newHFieldsRoomId,
         supported,
       ).labels,
-    ).toEqual(
-      ['optionalReward', 'spatial', 'trait:cage2', 'continuation'].map(
-        (label) => `${label} ${all}`,
-      ),
-    );
+    ).toEqual(['optionalReward', 'trait:cage2', 'continuation'].map((label) => `${label} ${all}`));
   });
 
   it('keeps the mature twin on the same entry, placement and offer order', () => {
@@ -83,7 +79,7 @@ describe('Fresh File room issue chronology with uncustomized compositions', () =
         'H',
         newHFieldsRoomId,
       ).labels,
-    ).toEqual(['optionalReward', 'spatial', 'trait:cage1', 'continuation']);
+    ).toEqual(['optionalReward', 'trait:cage1', 'continuation']);
   });
 
   it('asks a new uncustomized F combat only for its door reward and offer', () => {

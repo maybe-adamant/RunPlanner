@@ -1,8 +1,8 @@
 {
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
-  "schemaVersion": 101,
-  "schemaRevision": 2,
+  "schemaVersion": 102,
+  "schemaRevision": 0,
   "projectId": "dream-o-skipped-ship",
   "routeKey": "Dream",
   "startingLoadout": {
@@ -252,7 +252,8 @@
         },
         "unmodeledEncounterKeys": ["Empty"],
         "encounterPhases": [],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -584,7 +585,8 @@
             "pickedOfferKey": "offer1"
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 691379, "endPointId": 691376 } }
       },
       "timeline": {
         "transactions": [
@@ -754,7 +756,8 @@
             "pickedOfferKey": "offer1"
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 691379, "endPointId": 691376 } }
       },
       "timeline": {
         "transactions": [
@@ -915,7 +918,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "MiniBossCaptain", "kind": "miniboss" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 793044, "endPointId": 793045 } }
       },
       "timeline": {
         "transactions": [
@@ -1105,6 +1109,7 @@
             }
           ]
         },
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 558034 } },
         "additional": [
           {
             "kind": "zagreusContract",
@@ -1190,7 +1195,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossZagreus01", "kind": "boss" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1323,7 +1329,8 @@
             "pickedOfferKey": "offer1"
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 693116, "endPointId": 693117 } }
       },
       "timeline": {
         "transactions": [
@@ -1510,7 +1517,8 @@
         "infernalContractPedestal": {
           "sourceOwner": "[\"infernalContractPedestal\",\"Dream\",\"O\",\"dream-o-preboss\"]",
           "rewardType": "StackUpgrade"
-        }
+        },
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 558034 } }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -1558,7 +1566,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossEris01", "kind": "boss" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
@@ -1602,5 +1611,5 @@
       }
     }
   ],
-  "planFingerprint": "24ddded6"
+  "planFingerprint": "5e80c385"
 }

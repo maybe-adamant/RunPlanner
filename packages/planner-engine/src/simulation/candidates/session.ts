@@ -193,6 +193,12 @@ import {
   type TranscendentEmbryoOutcomeCandidateQuery,
 } from './transcendent-embryo';
 import {
+  evaluateRoomLayoutEntryCandidate,
+  roomLayoutEntryContextReached,
+  type EvaluatedRoomLayoutEntryCandidate,
+  type RoomLayoutEntryCandidateQuery,
+} from './room-layout-entry';
+import {
   fieldsSpatialPointContextReached,
   evaluateFieldsSpatialPointCandidate,
   type EvaluatedFieldsSpatialPointCandidate,
@@ -235,7 +241,8 @@ export type ProjectCandidateQuery =
   | SteadyGrowthOutcomeCandidateQuery
   | FountainRarityOutcomeCandidateQuery
   | TranscendentEmbryoOutcomeCandidateQuery
-  | FieldsSpatialPointCandidateQuery;
+  | FieldsSpatialPointCandidateQuery
+  | RoomLayoutEntryCandidateQuery;
 
 /** Candidate-session-only query vocabulary, including focused trait support. */
 export type ProjectCandidateSessionQuery =
@@ -285,7 +292,8 @@ export type ProjectCandidateEvaluation =
   | EvaluatedSteadyGrowthOutcomeCandidate
   | EvaluatedFountainRarityOutcomeCandidate
   | EvaluatedTranscendentEmbryoOutcomeCandidate
-  | EvaluatedFieldsSpatialPointCandidate;
+  | EvaluatedFieldsSpatialPointCandidate
+  | EvaluatedRoomLayoutEntryCandidate;
 
 /** Result vocabulary corresponding to `ProjectCandidateSessionQuery`. */
 export type ProjectCandidateSessionEvaluation =
@@ -327,7 +335,8 @@ export type CandidateContextOwner =
   | { readonly kind: 'hubActionOrder'; readonly hub: HubDecisionAddress }
   | { readonly kind: 'sideRoomGeneration'; readonly sideRoom: LocalVisitSlotAddress }
   | { readonly kind: 'sideRoomEntryOrder'; readonly group: LocalVisitOrderAddress }
-  | { readonly kind: 'fieldsSpatialPoint'; readonly spatial: FieldsSpatialAddress };
+  | { readonly kind: 'fieldsSpatialPoint'; readonly spatial: FieldsSpatialAddress }
+  | { readonly kind: 'roomLayoutEntry'; readonly occurrence: OccurrenceAddress };
 
 export interface ProjectCandidateSession {
   /**
@@ -453,6 +462,8 @@ function evaluateCandidateQuery(
       );
     case 'fieldsSpatialPoint':
       return evaluateFieldsSpatialPointCandidate(catalog, project, evaluation, query);
+    case 'roomLayoutEntry':
+      return evaluateRoomLayoutEntryCandidate(catalog, project, evaluation, query);
     case 'keepsakeEquipResult':
       return evaluateKeepsakeEquipResultCandidate(
         catalog,
@@ -851,6 +862,8 @@ export function createPreparedProjectCandidateSession(
         return sideRoomEntryOrderContextReached(catalog, project, evaluation, owner.group);
       case 'fieldsSpatialPoint':
         return fieldsSpatialPointContextReached(catalog, evaluation, owner.spatial);
+      case 'roomLayoutEntry':
+        return roomLayoutEntryContextReached(evaluation, owner.occurrence);
     }
   };
   return Object.freeze({
