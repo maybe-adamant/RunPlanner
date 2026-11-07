@@ -337,6 +337,38 @@ describe('challenge switch observation', () => {
     ).toThrow(/more attributes than any Elite switch draws/);
   });
 
+  it('keeps its anchor across variant, outcome and elite edits', () => {
+    const anchorId =
+      catalog.rooms.byKey[occurrenceOf(golden()).gameName]!.mapPoints!.challengeSwitchAnchors[0]!
+        .id;
+    const placed = applyProjectCommand(observe(golden(), 'EliteChallengeSwitch_Talent'), catalog, {
+      kind: 'ReplaceRoomObjectAnchor',
+      occurrence: host,
+      object: 'challengeSwitch',
+      anchorId,
+    });
+    const edits = [
+      observe(placed, 'EliteChallengeSwitch_MaxMana'),
+      observe(placed, 'PerfectClearChallengeSwitch_Pom'),
+      applyProjectCommand(placed, catalog, {
+        kind: 'ReplaceChallengeSwitchOutcome',
+        occurrence: host,
+        outcome: 'left',
+        nectarDropped: false,
+      }),
+      applyProjectCommand(placed, catalog, {
+        kind: 'ReplaceChallengeSwitchElite',
+        occurrence: host,
+        elite: { enemyKey: 'Brawler_Elite', attributeKeys: ['Frenzy'] },
+      }),
+    ];
+    for (const edited of edits) {
+      expect(edited).not.toBe(placed);
+      expect(occurrenceOf(edited).challengeSwitch?.anchorId).toBe(anchorId);
+    }
+    expect(occurrenceOf(observe(placed, null)).challengeSwitch).toBeUndefined();
+  });
+
   it('customizes the switch encounter within its kind and drops it across kinds', () => {
     const composition = Object.freeze({
       kind: 'generated' as const,

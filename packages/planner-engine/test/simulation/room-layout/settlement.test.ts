@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createLocalVisitOrderAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomFeatureAddress,
@@ -22,6 +23,7 @@ import {
   goldenFBiome,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
+import { loadSurfaceNProject, nBiome } from '@run-planner/test-fixtures/surface';
 import { roomObjectAnchorFindings } from '../../../src/simulation/room-layout/settlement';
 import type { CanonicalAuthoredRoom } from '../../../src/simulation/materialization';
 
@@ -191,6 +193,38 @@ describe('room layout settlement', () => {
       flipped: option!.flipped,
       entry: { startPointId: option!.startPointId, endPointId: option!.endPointId },
     });
+  });
+});
+
+describe('room layout across Hub and side-room revisits', () => {
+  it("reads a revisited room's recorded departure, whatever was entered in between", () => {
+    const project = loadSurfaceNProject();
+    const parent = createOccurrenceId('surface-n-combat05');
+    const sideRooms = [
+      createOccurrenceId('surface-n-combat05-sideDoor2'),
+      createOccurrenceId('surface-n-combat05-sideDoor1'),
+    ];
+    const nextBoardRoom = 'surface-n-miniBoss01';
+    const arrivals = (edited: ProjectDocument) =>
+      new Map(
+        settledLayouts(edited).map((layout) => [
+          layout.owner.occurrenceId as string,
+          { ...layout, historySequence: undefined },
+        ]),
+      );
+    const before = arrivals(project);
+    const swapped = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, parent, 'sideRooms'),
+      occurrenceIds: [...sideRooms].reverse(),
+    });
+    const after = arrivals(swapped);
+    // Each side room leaves through its parent's own door, whichever side room came first,
+    // and the next board room leaves the Hub as it was recorded on entry.
+    for (const id of [...sideRooms, nextBoardRoom]) {
+      expect(before.get(id)?.exitDirection).toBeDefined();
+      expect(after.get(id)).toEqual(before.get(id));
+    }
   });
 });
 

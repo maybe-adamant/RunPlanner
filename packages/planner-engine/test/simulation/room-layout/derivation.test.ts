@@ -3,6 +3,7 @@ import { nativeExitDoorOrder, type RoomDeclaration } from '@run-planner/engine/c
 import { describe, expect, it } from 'vitest';
 
 import {
+  departureFrom,
   deriveRoomLayout,
   roomArrivalThrough,
   type RoomArrival,
@@ -111,6 +112,26 @@ describe('room layout derivation', () => {
     expect(
       free.entry.kind === 'choice' && free.entry.eligible.every((o) => o.flipped === undefined),
     ).toBe(true);
+  });
+
+  it('couples a rolled flip to the authored entry that needs it, through to the departure', () => {
+    const fields = room('H_Combat05');
+    const derived = deriveRoomLayout(fields, door('Left'), undefined);
+    if (derived.entry.kind !== 'choice') throw new Error('H_Combat05 offers no entry choice');
+    expect(departureFrom('H_Combat05', derived)).toEqual({ gameName: 'H_Combat05' });
+    for (const option of derived.entry.eligible.filter((entry) => entry.flipped !== undefined)) {
+      const chosen = deriveRoomLayout(fields, door('Left'), {
+        entryStartPointId: option.startPointId,
+      });
+      // The entry decides the roll, so the next room reads its exit through that flip.
+      expect(chosen.flip).toEqual({ kind: 'roll', chance: 0.5, value: option.flipped });
+      expect(chosen.flipUnavailable).toBeUndefined();
+      expect(chosen.entryUnavailable).toBeUndefined();
+      expect(departureFrom('H_Combat05', chosen)).toEqual({
+        gameName: 'H_Combat05',
+        flipped: option.flipped,
+      });
+    }
   });
 
   it('mirrors compass entries West to East and keeps North and South', () => {

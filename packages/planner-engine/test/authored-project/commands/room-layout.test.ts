@@ -140,4 +140,27 @@ describe('room object anchor commands', () => {
       }),
     ).toThrow(/holds no challengeSwitch/);
   });
+
+  it("keeps an object's anchor across edits of its contents", () => {
+    const anchorId = catalog.rooms.byKey.F_PostBoss01!.mapPoints!.challengeSwitchAnchors[1]!.id;
+    const placed = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceRoomObjectAnchor',
+      occurrence: postboss,
+      object: 'purgingPool',
+      anchorId,
+    });
+    const slotted = applyProjectCommand(placed, catalog, {
+      kind: 'ReplacePurgingPoolSlot',
+      occurrence: postboss,
+      slotKey: 'left',
+      traitKey: null,
+    });
+    expect(occurrenceOf(slotted, postboss).purgingPool?.anchorId).toBe(anchorId);
+    const rerolled = applyProjectCommand(placed, catalog, {
+      kind: 'InsertPurgingPoolReroll',
+      occurrence: postboss,
+      index: 0,
+    });
+    expect(occurrenceOf(rerolled, postboss).purgingPool?.anchorId).toBe(anchorId);
+  });
 });
