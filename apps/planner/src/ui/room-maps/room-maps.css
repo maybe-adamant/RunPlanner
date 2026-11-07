@@ -478,25 +478,24 @@
   transform: translate(-50%, -50%);
 }
 
-/* Entries and anchors: small spots that never hide the art under them. */
+/* Anchors: small filled spots that never hide the art under them. */
 .room-map-point {
-  width: max(2%, 12px);
+  width: max(1.6%, 11px);
   aspect-ratio: 1;
-  border: 2px solid #fff;
+  border: 2px solid #0b0e14;
   border-radius: 50%;
-  box-shadow:
-    0 0 0 1px #0b0e14,
-    0 1px 4px rgb(0 0 0 / 60%);
+  background: #4cf2c2;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 60%);
 }
 
-.room-map-point[data-point='entry'] {
-  background: #3d8bff;
-}
-
-.room-map-point[data-point='anchor'] {
-  border-color: #e8d39a;
-  border-style: dashed;
-  background: rgb(16 25 35 / 45%);
+/* An entry: Melinoë's head where she can arrive. */
+.room-map-entry {
+  position: absolute;
+  width: max(2.6%, 18px);
+  height: auto;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 80%));
+  user-select: none;
 }
 
 /* A door: its chip once open, a dashed ring while closed. */
@@ -534,10 +533,8 @@
 
 .room-map-door[data-taken] {
   z-index: 2;
-  box-shadow:
-    0 0 0 3px #fff,
-    0 0 0 5px #0b0e14,
-    0 2px 10px rgb(0 0 0 / 60%);
+  outline: 2px dashed rgb(255 244 199 / 85%);
+  outline-offset: 2px;
 }
 
 .room-map-door-face {

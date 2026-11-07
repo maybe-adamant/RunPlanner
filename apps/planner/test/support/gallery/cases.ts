@@ -483,6 +483,25 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-b4-e1'),
   },
   {
+    id: 'room-map-f-single-chaos-point',
+    overview: true,
+    label: 'F room whose one Chaos point places its Chaos Gate',
+    shows: ['room map', 'Chaos Gate at the only point'],
+    project: createGoldenFGHIProject,
+    commands: [
+      {
+        kind: 'AddChaos',
+        additional: createAdditionalExitAddress(
+          createBiomeAddress('Underworld', 'F'),
+          createOccurrenceId('golden-f-b2-e1'),
+          'chaos',
+        ),
+        occurrenceId: createOccurrenceId('gallery-f-chaos'),
+      },
+    ],
+    target: room('F', 'golden-f-b2-e1'),
+  },
+  {
     id: 'eris',
     label: 'Eris spawned in an entrance',
     shows: ['Eris'],

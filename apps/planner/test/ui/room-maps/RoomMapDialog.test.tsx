@@ -80,6 +80,21 @@ describe('RoomMapLauncher', () => {
     expect(legend.textContent).toContain('Special');
   });
 
+  it('draws the given marks in place of the room image’s own annotations', () => {
+    render(
+      <RoomMapLauncher
+        gameName="N_Hub"
+        hostId="hub-a"
+        overlay={<span aria-label="Door 1" role="img" />}
+        title="Ephyra Hub"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'View map of Ephyra Hub' }));
+    expect(screen.getByRole('img', { name: 'Door 1' })).toBeTruthy();
+    expect(screen.queryByLabelText('Hub room quality legend')).toBeNull();
+  });
+
   it('closes with Close or Escape and returns focus to its launcher', () => {
     render(<RoomMapLauncher gameName="F_Combat01" hostId="occurrence-a" title="Combat 01" />);
     const launcher = screen.getByRole('button', { name: 'View map of Combat 01' });

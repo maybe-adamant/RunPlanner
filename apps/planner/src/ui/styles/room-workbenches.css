@@ -1063,6 +1063,15 @@
   background: rgb(255 255 255 / 3.5%);
 }
 
+/* The row the room map shows, like a Hub segment's pressed label. */
+.room-action-list > .timeline-row[data-map-shown] {
+  background: rgb(245 211 134 / 7%);
+}
+
+.room-action-list > .timeline-row[data-map-shown] [data-timeline-cell='label'] {
+  color: #f5d386;
+}
+
 /* A card's connector tick runs from the spine to its left edge. */
 .timeline-row::before {
   position: absolute;

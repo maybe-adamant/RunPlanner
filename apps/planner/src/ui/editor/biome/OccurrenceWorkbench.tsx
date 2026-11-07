@@ -1,6 +1,7 @@
 import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import {
+  useEffect,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -24,7 +25,6 @@ import {
 import { useFindingAnchor, useFindingKeys } from '@planner/ui/feedback/useFindingTarget';
 import { doorEditorChosen } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
-import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { RunStateLauncher } from './RunStateSheet';
 import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
 import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
@@ -43,10 +43,15 @@ import { RoomMapColumn, type RoomMapStage } from './room-map/RoomMapColumn';
  * from it they are open, from the room's last row it is left. Rows outside the
  * Timeline leave the map as it is.
  */
-function timelineMapStage(target: Element): RoomMapStage | undefined {
-  const row = target.closest('.room-action-list[aria-label="Room timeline"] > li');
-  const list = row?.parentElement;
-  if (row == null || list == null) return undefined;
+function timelineMapRow(target: Element): HTMLElement | undefined {
+  return (
+    target.closest<HTMLElement>('.room-action-list[aria-label="Room timeline"] > li') ?? undefined
+  );
+}
+
+function timelineMapStage(row: Element): RoomMapStage | undefined {
+  const list = row.parentElement;
+  if (list == null) return undefined;
   const rows = [...list.children];
   const index = rows.indexOf(row);
   const leave = rows.findIndex((item) => item.classList.contains('timeline-leave-row'));
@@ -260,12 +265,33 @@ export function OccurrenceWorkbench({
     readonly roomIdentity: string;
     readonly stage: RoomMapStage;
   }>();
-  const shownMapStage =
-    activeTab === 'actions' && mapStage?.roomIdentity === roomIdentity ? mapStage.stage : 'summary';
-  const workOnTimeline = (event: SyntheticEvent<HTMLElement>): void => {
-    const stage = timelineMapStage(event.target as Element);
-    if (stage !== undefined && stage !== shownMapStage) setMapStage({ roomIdentity, stage });
+  const mapRow = useRef<HTMLElement>(undefined);
+  // Leaving the Timeline or the room returns the map to the plan.
+  const mapStageShown = activeTab === 'actions' && mapStage?.roomIdentity === roomIdentity;
+  if (mapStage !== undefined && !mapStageShown) setMapStage(undefined);
+  const shownMapStage = mapStageShown ? mapStage.stage : 'summary';
+  const markMapRow = (row: HTMLElement | undefined): void => {
+    if (mapRow.current === row) return;
+    if (mapRow.current !== undefined) delete mapRow.current.dataset.mapShown;
+    if (row !== undefined) row.dataset.mapShown = '';
+    mapRow.current = row;
   };
+  const workOnTimeline = (event: SyntheticEvent<HTMLElement>): void => {
+    const row = timelineMapRow(event.target as Element);
+    const stage = row === undefined ? undefined : timelineMapStage(row);
+    if (row === undefined || stage === undefined) return;
+    markMapRow(row);
+    if (stage !== mapStage?.stage || mapStage.roomIdentity !== roomIdentity)
+      setMapStage({ roomIdentity, stage });
+  };
+  // The marked row is the one the map reflects; the plan's map marks none.
+  const showsMapRow = shownMapStage !== 'summary';
+  useEffect(() => {
+    if (!showsMapRow && mapRow.current !== undefined) {
+      delete mapRow.current.dataset.mapShown;
+      mapRow.current = undefined;
+    }
+  });
   const withRoomMap = (controls: ReactNode): ReactNode =>
     room.map === undefined || roomMapCalibrations[room.gameName] === undefined ? (
       controls
@@ -355,7 +381,6 @@ export function OccurrenceWorkbench({
             {heading}
           </h3>
           <IncomingRewardSummary incomingDoor={incomingDoor} />
-          <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
         </div>
       </header>
       <div className="room-workbench-tab-row">

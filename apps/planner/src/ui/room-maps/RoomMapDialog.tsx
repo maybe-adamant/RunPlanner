@@ -1,6 +1,6 @@
 import { hintProps } from '@planner/ui/controls/hint';
 import { ActionIcon } from '@planner/ui/controls/ActionIcon';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import { EditorDialog } from '@planner/ui/controls/EditorDialog';
 
@@ -12,11 +12,14 @@ import { RoomMapViewport } from './RoomMapViewport';
 export function RoomMapDialog({
   gameName,
   onClose,
+  overlay,
   returnFocusId,
   title,
 }: {
   readonly gameName: string;
   readonly onClose: () => void;
+  /** Marks drawn over the image in place of the room's own annotations. */
+  readonly overlay?: ReactNode;
   /** The launcher that regains focus after the dialog closes. */
   readonly returnFocusId: string;
   readonly title: string;
@@ -36,7 +39,7 @@ export function RoomMapDialog({
         asset={roomMapAssetFor(gameName)}
         controlsPlacement="collapsible-overlay"
         key={gameName}
-        overlay={roomMapOverlayFor(gameName)}
+        overlay={overlay ?? roomMapOverlayFor(gameName)}
         title={title}
       />
     </EditorDialog>
@@ -47,11 +50,13 @@ export function RoomMapDialog({
 export function RoomMapLauncher({
   gameName,
   hostId,
+  overlay,
   title,
 }: {
   readonly gameName: string;
   /** Changes of the containing owner close an inherited inspection dialog. */
   readonly hostId: string;
+  readonly overlay?: ReactNode;
   readonly title: string;
 }) {
   const launcherId = useId();
@@ -82,6 +87,7 @@ export function RoomMapLauncher({
         <RoomMapDialog
           gameName={gameName}
           onClose={closeDialog}
+          overlay={overlay}
           returnFocusId={launcherId}
           title={title}
         />

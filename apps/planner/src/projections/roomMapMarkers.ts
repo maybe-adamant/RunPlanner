@@ -28,6 +28,7 @@ export interface RoomMapMarkers {
   })[];
   readonly entries: readonly (RoomMapMarkerPosition & { readonly id: number })[];
   readonly anchors: readonly (RoomMapMarkerPosition & { readonly id: number })[];
+  readonly chaosPoints: readonly (RoomMapMarkerPosition & { readonly id: number })[];
   readonly chaosGate?: RoomMapMarkerPosition;
 }
 
@@ -61,6 +62,9 @@ export function roomMapMarkers(
     ),
     anchors: Object.freeze(
       map.anchors.map((anchor) => Object.freeze({ id: anchor.id, ...place(anchor) })),
+    ),
+    chaosPoints: Object.freeze(
+      map.chaosPoints.map((point) => Object.freeze({ id: point.id, ...place(point) })),
     ),
     ...(map.chaosGate === undefined ? {} : { chaosGate: Object.freeze(place(map.chaosGate)) }),
   });

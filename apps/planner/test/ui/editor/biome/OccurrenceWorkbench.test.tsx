@@ -82,13 +82,15 @@ afterEach(() => {
 });
 
 describe('OccurrenceWorkbench', () => {
-  it('opens its static room map without changing authored history or navigation', async () => {
+  it('shows its room map beside the Timeline and marks the row the map reflects', async () => {
     const occurrenceId = goldenFOccurrenceId(1, 1);
     const view = renderOccurrenceWorkbench(
       createGoldenFGHIProject(),
       'Underworld',
       'F',
       occurrenceById(occurrenceId),
+      undefined,
+      { initialTab: 'actions' },
     );
     const node = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
       (candidate): candidate is WorkspaceOccurrenceWorkbenchNode =>
@@ -96,17 +98,17 @@ describe('OccurrenceWorkbench', () => {
     );
     if (node === undefined) throw new Error('ordinary entered occurrence is missing');
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    const focusBefore = view.application.store.getState().editorSession.focusedSemanticOwner;
 
-    await view.user.click(screen.getByRole('button', { name: `View map of ${node.room.label}` }));
+    expect(screen.getByRole('region', { name: `${node.room.label} map` })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: `View map of ${node.room.label}` })).toBeNull();
+    const rows = [...screen.getByRole('list', { name: 'Room timeline' }).children];
+    expect(rows.some((row) => row.hasAttribute('data-map-shown'))).toBe(false);
 
-    const mapDialog = screen.getByRole('dialog');
-    expect(within(mapDialog).getByRole('heading', { name: node.room.label })).toBeTruthy();
-    expect(mapDialog.querySelector(`[data-hint="${node.room.gameName}"]`)).toBeTruthy();
+    await view.user.click(rows[0]!);
+    expect(rows.filter((row) => row.hasAttribute('data-map-shown'))).toEqual([rows[0]]);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBe(focusBefore);
   });
 
   it('presents an incoming ordinary room identity read-only under its target-owned door control', () => {

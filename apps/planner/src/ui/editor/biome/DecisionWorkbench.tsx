@@ -14,6 +14,7 @@ import {
   type WorkspaceOrdinaryBatchNode,
   type WorkspaceMixedBatchNode,
   type WorkspaceRoomIcon,
+  type WorkspaceRoomMap,
   type WorkspaceRoomPlanEnd,
   type WorkspaceTopologyRemovalInteraction,
 } from '@planner/projections/structured-workspace';
@@ -33,6 +34,8 @@ import { declaredChoicesPicker } from '@planner/projections/contextual/contextua
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
+import { RoomFeatureMapPoints } from './room-map/RoomMapPoints';
+import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { CandidatePicker } from './CandidatePicker';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
 import { RoomSelector } from './RoomSelector';
@@ -123,7 +126,13 @@ export function DoorRow({
   readonly anchor?: FindingAnchorProps;
   readonly ariaLabel: string;
   readonly identity: ReactNode;
-  readonly map?: { readonly gameName: string; readonly hostId: string; readonly title: string };
+  readonly map?: {
+    readonly gameName: string;
+    readonly hostId: string;
+    readonly title: string;
+    /** The room's map points, shown alone on its map. */
+    readonly points?: WorkspaceRoomMap | undefined;
+  };
   readonly reward?: ReactNode;
   readonly room: ReactNode;
   readonly secondary?: ReactNode;
@@ -154,7 +163,17 @@ export function DoorRow({
       <span className="door-row-secondary">{secondary}</span>
       <span className="door-row-map">
         {map === undefined ? null : (
-          <RoomMapLauncher gameName={map.gameName} hostId={map.hostId} title={map.title} />
+          <RoomMapLauncher
+            gameName={map.gameName}
+            hostId={map.hostId}
+            overlay={
+              map.points === undefined ||
+              roomMapCalibrations[map.gameName] === undefined ? undefined : (
+                <RoomFeatureMapPoints gameName={map.gameName} map={map.points} title={map.title} />
+              )
+            }
+            title={map.title}
+          />
         )}
       </span>
     </article>
@@ -403,7 +422,12 @@ function TargetRow({
       identity={
         <DoorNumber exitTypeLabel={target.exitTypeLabel} index={target.index} lock={lock} />
       }
-      map={{ gameName: door.room.gameName, hostId: target.marker.focusKey, title: door.room.label }}
+      map={{
+        gameName: door.room.gameName,
+        hostId: target.marker.focusKey,
+        points: door.room.map,
+        title: door.room.label,
+      }}
       reward={
         <DoorRewardEditor
           door={firstDrawDoor(door)}
@@ -520,7 +544,7 @@ function AdditionalExitRow({
       identity={
         <span className="door-row-number">{chaos === undefined ? 'Contract' : 'Chaos Gate'}</span>
       }
-      map={{ gameName: room.gameName, hostId: key, title: room.label }}
+      map={{ gameName: room.gameName, hostId: key, points: room.map, title: room.label }}
       reward={
         <span className="door-row-rewards">
           <span className="row-reward-value">

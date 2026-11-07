@@ -463,6 +463,8 @@ export interface WorkspaceRoomMap {
   readonly doors: readonly (WorkspaceRoomMapPoint & { readonly doorIndex?: number })[];
   readonly entries: readonly WorkspaceRoomMapPoint[];
   readonly anchors: readonly WorkspaceRoomMapPoint[];
+  /** Every SecretPoint a Chaos gate can spawn at. */
+  readonly chaosPoints: readonly WorkspaceRoomMapPoint[];
   /** The SecretPoint an authored Chaos gate is placed at. */
   readonly chaosGate?: WorkspaceRoomMapPoint;
 }

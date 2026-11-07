@@ -1,12 +1,12 @@
-import type { CSSProperties } from 'react';
-
 import type { WorkspaceRoomMap } from '@planner/projections/structured-workspace';
-import { roomMapMarkers, type RoomMapMarkerPosition } from '@planner/projections/roomMapMarkers';
+import { roomMapMarkers } from '@planner/projections/roomMapMarkers';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import { DoorChipFace } from '../DecisionWorkbench';
 import type { DoorChip } from '../doorSummary';
+import { RoomMapSpots } from './RoomMapPoints';
+import { position } from './roomMapPosition';
 
 /**
  * The room at one point of its Timeline: `closed` before its doors open,
@@ -14,11 +14,6 @@ import type { DoorChip } from '../doorSummary';
  * is the room as planned, every door open and the taken one lit.
  */
 export type RoomMapStage = 'closed' | 'open' | 'left' | 'summary';
-
-const position = (marker: RoomMapMarkerPosition): CSSProperties => ({
-  left: `${marker.left}%`,
-  top: `${marker.top}%`,
-});
 
 const chipName = (chip: DoorChip): string =>
   chip.locked === true ? `${chip.label} · Locked` : chip.label;
@@ -59,26 +54,7 @@ export function RoomMapColumn({
         key={roomIdentity}
         overlay={
           <div aria-label={`${title} map points`} className="room-map-marker-layer" role="group">
-            {markers.anchors.map((anchor) => (
-              <span
-                aria-label="Anchor"
-                className="room-map-point"
-                data-point="anchor"
-                key={`anchor:${anchor.id}`}
-                role="img"
-                style={position(anchor)}
-              />
-            ))}
-            {markers.entries.map((entry) => (
-              <span
-                aria-label="Entry"
-                className="room-map-point"
-                data-point="entry"
-                key={`entry:${entry.id}`}
-                role="img"
-                style={position(entry)}
-              />
-            ))}
+            <RoomMapSpots markers={markers} />
             {markers.chaosGate === undefined ? null : (
               <span
                 aria-label={chaosChip === undefined ? 'Chaos gate' : chipName(chaosChip)}

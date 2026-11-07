@@ -30,13 +30,16 @@ export function assembleRoomMap(
           room.gameName,
           points.exitDoors.map((door) => ({ doorId: door.id })),
         );
-  const spawnPointIndex = occurrence.additionalExits?.find(
-    (exit) => exit.kind === 'chaos',
-  )?.spawnPointIndex;
+  const chaos = occurrence.additionalExits?.find((exit) => exit.kind === 'chaos');
+  // A room with one SecretPoint can place its gate only there.
   const chaosGate =
-    spawnPointIndex === undefined || spawnPointIndex === null
+    chaos === undefined
       ? undefined
-      : points.secretPoints[spawnPointIndex - 1];
+      : chaos.spawnPointIndex === undefined || chaos.spawnPointIndex === null
+        ? points.secretPoints.length === 1
+          ? points.secretPoints[0]
+          : undefined
+        : points.secretPoints[chaos.spawnPointIndex - 1];
   return Object.freeze({
     doors: Object.freeze(
       points.exitDoors.map((door) => {
@@ -46,6 +49,7 @@ export function assembleRoomMap(
     ),
     entries: Object.freeze(points.heroStarts.map(point)),
     anchors: Object.freeze(points.challengeSwitchAnchors.map(point)),
+    chaosPoints: Object.freeze(points.secretPoints.map(point)),
     ...(chaosGate === undefined ? {} : { chaosGate: point(chaosGate) }),
   });
 }
