@@ -658,6 +658,8 @@ export interface WorkspaceRoomSummary {
   readonly roomLocal: WorkspaceRoomLocal;
   /** The room's kind icon, as the rail and room pickers show it. */
   readonly roomIcon: WorkspaceRoomIcon;
+  /** The room's number where many rooms share its icon, such as 13 for Combat 13. */
+  readonly roomNumber?: string;
   /**
    * The run's room depth on entering this room, from the engine's room-entered
    * run state; absent while the room is not reached.

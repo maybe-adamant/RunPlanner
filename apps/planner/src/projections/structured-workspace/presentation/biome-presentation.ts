@@ -12,7 +12,7 @@ import {
   workspaceRailSelection,
 } from '../navigation/inspector-destinations';
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
-import { candidateRoomIcon, sharedRoomIconNumber } from './room-icon';
+import { candidateRoomIcon } from './room-icon';
 import { workspaceOccurrenceOwnedMarkers } from '../navigation/marker-ownership';
 import {
   workspaceDecisionOwnedMarkers,
@@ -197,8 +197,7 @@ function railRunDepth(room: WorkspaceRoomSummary | undefined): { readonly runDep
 }
 
 function withRoomNumber(room: WorkspaceRoomSummary): { readonly roomNumber?: string } {
-  const roomNumber = sharedRoomIconNumber(room.roomIcon, room.label);
-  return roomNumber === undefined ? {} : { roomNumber };
+  return room.roomNumber === undefined ? {} : { roomNumber: room.roomNumber };
 }
 
 /** A room stage's line names its room unless the stop's title already does; an Intro by its role. */

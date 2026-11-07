@@ -565,8 +565,11 @@ describe('structured workspace biome presentation', () => {
         entry.kind === 'node' && entry.node.key === directDecision.key,
     );
     if (directRail === undefined) throw new Error('F direct decision rail entry is missing');
+    expect(directTarget.room.gameName).toBe('F_Combat02');
     expect(directRail.selectedTarget).toMatchObject({
       roomIcon: { kind: 'combat', biomeKey: 'F' },
+      // A room sharing its icon carries its number beside it.
+      roomNumber: '02',
       roomLabel: directTarget.room.label,
       roomRewards: [directTarget.room.roomLocal.control.offer],
       reward: {

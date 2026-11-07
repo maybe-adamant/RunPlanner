@@ -46,7 +46,6 @@ import type {
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import type { WorkspaceBiomeSource } from '../source-index';
 import { requireWorkspaceRoom } from './catalog-room';
-import { sharedRoomIconNumber } from '../presentation/room-icon';
 import { normalExitOrdinal } from './ordering';
 import { workspaceDeclaredPhysicalExits } from './topology-presentation';
 import { rewardWheelOfferLabel } from '@planner/projections/rewards/wheelOfferLabel';
@@ -419,9 +418,7 @@ export function assembleHubStayRerolls(input: {
           : {
               targetRoom: Object.freeze({
                 roomIcon: room.roomIcon,
-                ...(sharedRoomIconNumber(room.roomIcon, room.label) === undefined
-                  ? {}
-                  : { roomNumber: sharedRoomIconNumber(room.roomIcon, room.label)! }),
+                ...(room.roomNumber === undefined ? {} : { roomNumber: room.roomNumber }),
               }),
             }),
       }),
