@@ -219,8 +219,17 @@ function withoutWorkspaceEntry({ entry, ...biome }: WorkspaceBiome): Omit<Worksp
 }
 
 describe('BiomeWorkspace', () => {
-  it('authors the required Tartarus non-goal limit with numbered radios', async () => {
+  it("authors the required Tartarus non-goal limit with numbered radios on its entry room's Overview", async () => {
     const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'I');
+    const entry = workspaceBiome(view.application, 'Underworld', 'I').entry;
+    if (entry === undefined) throw new Error('I entry room is missing');
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(
+          createOccurrenceAddress(createBiomeAddress('Underworld', 'I'), entry.room.occurrenceId),
+        ),
+      ),
+    );
     const group = screen.getByRole('radiogroup', { name: 'Rolled non-goal limit' });
     expect(group.getAttribute('aria-required')).toBe('true');
     expect(

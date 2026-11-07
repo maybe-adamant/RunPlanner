@@ -1102,7 +1102,7 @@ describe('workspace inspector destinations', () => {
     expect([...labels]).toEqual(expect.arrayContaining(['Chosen God', 'Spurned God']));
   });
 
-  it('binds exact frontier and ordinary nested focus, and a coarse fallback to the default rail stop', () => {
+  it('binds exact frontier and ordinary nested focus, a coarse fallback to the default rail stop and biome settings to the entry room', () => {
     const empty = project(emptyProject('Underworld', 1));
     const emptyF = biome(empty, 'F');
     if (emptyF.frontier?.kind !== 'start') throw new Error('empty F start frontier is missing');
@@ -1201,11 +1201,14 @@ describe('workspace inspector destinations', () => {
     const i = biome(complete, 'I');
     const field = i.fields[0];
     if (field === undefined) throw new Error('I biome field is missing');
-    for (const owner of [i.marker.address, field.marker.address]) {
-      const fallback = destination(complete, owner);
-      expect(fallback.inspectorSubject).toEqual(defaultSubject(i));
-      expect(fallback.selectedRailKey).toBe(i.defaultInspectorDestination?.selectedRailKey);
-    }
+    const fallback = destination(complete, i.marker.address);
+    expect(fallback.inspectorSubject).toEqual(defaultSubject(i));
+    expect(fallback.selectedRailKey).toBe(i.defaultInspectorDestination?.selectedRailKey);
+    // The biome's settings are edited on its entry room's Overview.
+    expect(destination(complete, field.marker.address)).toMatchObject({
+      inspectorSubject: { kind: 'node', nodeKey: i.entry?.key },
+      roomTab: 'overview',
+    });
   });
 
   it('routes a missing Hub continuation to its current outgoing decision', () => {
