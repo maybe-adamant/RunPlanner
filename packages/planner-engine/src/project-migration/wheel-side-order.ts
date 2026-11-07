@@ -48,9 +48,14 @@ const twoOffered = (wheel: RawRecord) =>
   wheel.offerCount === 2 &&
   ['offer1', 'offer2'].every((key) => rawRecord(rawRecord(wheel.offers)?.[key]) !== undefined);
 
-function decodes(document: unknown, catalog: Catalog): ProjectDocument | undefined {
+/** The document lifted to the current schema and decoded; undefined when either step refuses it. */
+function decodes(
+  document: unknown,
+  catalog: Catalog,
+  toCurrent: (document: unknown) => unknown,
+): ProjectDocument | undefined {
   try {
-    return decodeProjectDocument(document, catalog);
+    return decodeProjectDocument(toCurrent(document), catalog);
   } catch {
     return undefined;
   }
@@ -200,7 +205,7 @@ export function exchangeBlockedWheelOffers(
 ): unknown {
   const document = rawRecord(value);
   if (document === undefined || !rawShipWheels(document).some(twoOffered)) return value;
-  const project = decodes(toCurrent(document), catalog);
+  const project = decodes(document, catalog, toCurrent);
   if (project === undefined) return value;
   const initial = judged(blockOf, project);
   if (initial === undefined) return value;
@@ -217,7 +222,7 @@ export function exchangeBlockedWheelOffers(
     if (wheel === undefined) return current;
     tried.add(semanticAddressKey(wheel));
     const swapped = swapWheelOffers(current, wheel);
-    const swappedProject = decodes(toCurrent(swapped), catalog);
+    const swappedProject = decodes(swapped, catalog, toCurrent);
     if (swappedProject === undefined) return current;
     const swappedJudgement = judged(blockOf, swappedProject);
     if (swappedJudgement === undefined) return current;

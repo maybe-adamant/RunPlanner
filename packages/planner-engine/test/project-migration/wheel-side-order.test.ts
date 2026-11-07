@@ -124,6 +124,25 @@ describe('blocked wheel offer exchange', () => {
     };
     expect(exchangeBlockedWheelOffers(document, catalog, throwsOnExchange)).toBe(document);
   });
+
+  it('keeps the offers of a plan the schema lift refuses', () => {
+    const document = raw(twoOfferProject());
+    const refusing = () => {
+      throw new Error('later transition refuses the plan');
+    };
+    expect(exchangeBlockedWheelOffers(document, catalog, blockWhileLeading(left), refusing)).toBe(
+      document,
+    );
+    let lifts = 0;
+    const refusesExchange = (lifted: unknown) => {
+      lifts += 1;
+      if (lifts > 1) throw new Error('later transition refuses the plan');
+      return lifted;
+    };
+    expect(
+      exchangeBlockedWheelOffers(document, catalog, blockWhileLeading(left), refusesExchange),
+    ).toBe(document);
+  });
 });
 
 describe('blocked wheel offer exchange judged by the plan evaluation', () => {
