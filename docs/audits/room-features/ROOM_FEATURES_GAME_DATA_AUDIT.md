@@ -295,7 +295,8 @@ usable anchor. N/O/P Postboss maps retain one anchor. `HandleSecretSpawns`
 and Meta Reward Stand in that order; each eligible object takes a random free
 anchor (`RemoveRandomValue`), so the order decides which objects fit, not
 where they stand. `F_PostBoss01`, `G_PostBoss01`, `H_PostBoss01` and
-`Dream_PostBoss01` pin the Well to one anchor (`WellShopChallengeBaseId`).
+`Dream_PostBoss01` pin the Well to one anchor (`WellShopChallengeBaseId`);
+`Dream_PostBoss02` and `Dream_PostBoss03` inherit the Dream pin.
 Resources, fountains, Gift Racks, and Nemesis use separate systems. The source exposes no generic `NumRoomFeatures` or
 passive-feature capacity.
 

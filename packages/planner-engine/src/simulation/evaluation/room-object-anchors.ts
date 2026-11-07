@@ -38,7 +38,7 @@ export type RoomAnchorObjectKind =
 
 /**
  * Native spawn order: each eligible object in turn takes a random free anchor
- * (four Postboss rooms pin the Well's), so order decides capacity, not position.
+ * (some Postboss rooms pin the Well's), so order decides capacity, not position.
  */
 export const ROOM_ANCHOR_OBJECT_ORDER = Object.freeze([
   'stygianWell',
