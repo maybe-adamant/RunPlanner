@@ -1415,11 +1415,6 @@ select {
   min-width: 0;
 }
 
-.row-reward-label {
-  color: #9d99a4;
-  font-size: 0.84rem;
-}
-
 .row-reward-arrow {
   color: var(--muted);
 }

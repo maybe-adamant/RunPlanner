@@ -1077,7 +1077,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByLabelText('Open Side Room 01')).toBeTruthy();
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-inspector-heading')).toBeNull();
-    expect(within(inspector).getAllByRole('button', { name: 'Reward' })).toHaveLength(2);
+    expect(within(inspector).getAllByRole('button', { name: /^Reward(: |$)/ })).toHaveLength(2);
     await view.user.click(within(inspector).getByRole('checkbox', { name: 'Open Side Room 03' }));
     const localVisit = view.application.store
       .getState()
@@ -1298,7 +1298,7 @@ describe('BiomeWorkspace', () => {
     const pickedDoor = within(inspector).getByRole('article', {
       name: `${picked.door.room.label} room offer`,
     });
-    await view.user.click(within(pickedDoor).getByRole('button', { name: 'Reward' }));
+    await view.user.click(within(pickedDoor).getByRole('button', { name: /^Reward(: |$)/ }));
     const replacement = within(await screen.findByRole('listbox'))
       .getAllByRole('option')
       .find(
@@ -1973,6 +1973,8 @@ describe('BiomeWorkspace', () => {
       '[aria-label$="door rewards"] [id$="-status"]',
     );
     if (rewardStatus === null) throw new Error('fixed Story reward status is missing');
+    // A fixed reward shows as its read-only chip, named by the reward.
+    expect(within(rewardStatus).getByRole('img', { name: /^Reward: .+/ })).toBeTruthy();
     expect(rewardStatus.getAttribute('tabindex')).toBe('-1');
     expect(rewardStatus.getAttribute('data-semantic-owner')).toBe(
       semanticAddressKey(createIncomingRewardAddress(pBiome, storyOccurrenceId)),

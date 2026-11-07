@@ -408,7 +408,7 @@ describe('DecisionWorkbench', () => {
     expect(within(gate).getByText('Chaos Blessing')).toBeTruthy();
     expect(within(gate).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
     expect(within(gate).queryByRole('button', { name: 'Remove Chaos gate' })).toBeNull();
-    expect(within(gate).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(within(gate).queryByRole('button', { name: /^Reward(: |$)/ })).toBeNull();
     // The gate is taken from the Leave row's exit picker, beside the doors.
     expect(exitChoices()).toContain('Chaos gate');
     await pickExit(view.user, 'Chaos gate');
@@ -714,7 +714,7 @@ describe('DecisionWorkbench', () => {
     expect(within(contract).getByText('Zagreus')).toBeTruthy();
     expect(within(contract).getByText('Champion of Elysium')).toBeTruthy();
     expect(within(contract).queryByRole('button', { name: /Remove/ })).toBeNull();
-    expect(within(contract).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(within(contract).queryByRole('button', { name: /^Reward(: |$)/ })).toBeNull();
     expect(within(contract).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
     expect(contract.querySelector('hr')).toBeNull();
     // The contract is taken from the Leave row, which follows the doors.
@@ -940,7 +940,7 @@ describe('DecisionWorkbench', () => {
       expect(screen.getByRole('button', { name: 'Door 2 room' })).toHaveProperty('disabled', false),
     );
     const readyDoor = screen.getByRole('article', { name: 'Door 2 unspecified room offer' });
-    expect(within(readyDoor).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(within(readyDoor).queryByRole('button', { name: /^Reward(: |$)/ })).toBeNull();
     const rewardTarget = document.querySelector<HTMLElement>(
       'article:not([data-missing="true"]) [aria-label$="door rewards"] [data-semantic-owner]',
     );
@@ -1215,7 +1215,7 @@ describe('DecisionWorkbench', () => {
     expect(prebossOffers).toHaveLength(2);
     expect(
       prebossOffers.filter(
-        (offer) => within(offer).queryByRole('button', { name: 'Reward' }) !== null,
+        (offer) => within(offer).queryByRole('button', { name: /^Reward(: |$)/ }) !== null,
       ),
     ).toHaveLength(1);
   });
@@ -1292,11 +1292,10 @@ describe('DecisionWorkbench', () => {
     );
 
     const trigger = getByHint(document.body, 'Converted by the Vow of Forfeit.');
-    expect(trigger.classList.contains('contextual-picker-trigger')).toBe(true);
     const rewards = trigger.closest<HTMLElement>('[aria-label$=" door rewards"]');
     if (rewards === null) throw new Error('Forfeited door reward surface is missing');
-    expect(within(rewards).getByRole('button', { name: 'Reward' })).toBe(trigger);
-    expect(trigger.textContent).toMatch(/Zeus.*\(Red Onion\)/);
+    expect(within(rewards).getByRole('button', { name: /^Reward(: |$)/ })).toBe(trigger);
+    expect(trigger.getAttribute('aria-label')).toMatch(/Zeus.*\(Red Onion\)/);
     expect(screen.queryByText(/^Forfeit →/)).toBeNull();
     expect(getAllByHint(document.body, 'Converted by the Vow of Forfeit.')).toHaveLength(1);
   });
@@ -1521,7 +1520,7 @@ describe('DecisionWorkbench', () => {
     );
     const door = doorRow('Door 3');
 
-    await view.user.click(within(door).getByRole('button', { name: 'Reward' }));
+    await view.user.click(within(door).getByRole('button', { name: /^Reward(: |$)/ }));
     // This door sits behind a Meta batch run-wide, so the family that
     // stays selectable beside the unresolved Hermes pick is a Meta-bag drop.
     const nectar = within(await screen.findByRole('listbox'))
@@ -1852,7 +1851,7 @@ describe('DecisionWorkbench', () => {
       await view.user.click(preboss);
       if (fixture.biomeKey === 'O') {
         const offer = screen.getByRole('article', { name: / room offer$/ });
-        expect(within(offer).queryByRole('button', { name: 'Reward' })).toBeNull();
+        expect(within(offer).queryByRole('button', { name: /^Reward(: |$)/ })).toBeNull();
       }
       expect(work.filter((event) => event.kind === 'queryBatch')).toHaveLength(2);
       expect(

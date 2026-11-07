@@ -532,7 +532,7 @@ describe('OccurrenceWorkbench', () => {
     const sideRow = screen.getByRole('article', { name: 'Side Room 03 door' });
     // An ungenerated door has no reward editor.
     expect(within(sideRow).getByText('Door closed')).toBeTruthy();
-    expect(within(sideRow).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(within(sideRow).queryByRole('button', { name: /^Reward(: |$)/ })).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
@@ -546,7 +546,7 @@ describe('OccurrenceWorkbench', () => {
     );
     expect(
       within(screen.getByRole('article', { name: 'Side Room 03 door' })).getByRole('button', {
-        name: 'Reward',
+        name: /^Reward(: |$)/,
       }),
     ).toBeTruthy();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(

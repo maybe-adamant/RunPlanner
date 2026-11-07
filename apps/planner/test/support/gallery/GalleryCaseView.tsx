@@ -173,7 +173,7 @@ export function GalleryCaseView({ entry }: { readonly entry: GalleryCase }) {
       <CaseBoundary>
         <OpenedCase entry={entry} view="timeline" />
       </CaseBoundary>
-      {entry.overview === true && entry.target.kind === 'room' ? (
+      {entry.overview === true ? (
         <CaseBoundary>
           <OpenedCase entry={entry} view="overview" />
         </CaseBoundary>

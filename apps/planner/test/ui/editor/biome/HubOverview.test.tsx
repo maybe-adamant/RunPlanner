@@ -234,10 +234,9 @@ describe('HubOverview', () => {
     const plain = loadSurfaceNProject();
     renderHubDecisionWorkbench(plain);
     const rowReward = () =>
-      within(within(rewardRows()).getByRole('listitem', { name: 'Combat 03' })).getByRole(
-        'button',
-        { name: 'Reward' },
-      ).textContent;
+      within(within(rewardRows()).getByRole('listitem', { name: 'Combat 03' }))
+        .getByRole('button', { name: /^Reward(: |$)/ })
+        .getAttribute('aria-label');
     const firstDraw = rowReward();
     cleanup();
 
@@ -283,7 +282,7 @@ describe('HubOverview', () => {
   it('offers a ten-door board no singleton reward already on a peer', async () => {
     const view = renderHubDecisionWorkbench(invalidTenDoorHubProject);
     const row = within(rewardRows()).getByRole('listitem', { name: 'Combat 09' });
-    await view.user.click(within(row).getByRole('button', { name: 'Reward' }));
+    await view.user.click(within(row).getByRole('button', { name: /^Reward(: |$)/ }));
     const listbox = await screen.findByRole('listbox');
     expect(within(listbox).queryByRole('option', { name: /Big Max Health/ })).toBeNull();
   });

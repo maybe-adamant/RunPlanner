@@ -35,7 +35,7 @@ export interface GalleryCase {
    */
   readonly commands?: readonly GalleryStep[];
   readonly target: GalleryTarget;
-  /** A room case also shows the room's Overview under its Timeline, such as its inventories. */
+  /** The case also shows its room's or Hub's Overview under its Timeline, such as inventories. */
   readonly overview?: true;
   /** A room case opens its Timeline with the door editor expanded. */
   readonly doorsExpanded?: true;

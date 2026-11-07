@@ -7,7 +7,7 @@ import {
   type WorkspaceRewardControl,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { clockworkCountdownArtwork } from '@planner/ui/artwork/clockwork/clockworkCountdownArtwork';
 import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -292,6 +292,7 @@ function RowRewardSurface({
     <div aria-label={ariaLabel} className="door-row-rewards" data-multiple={labelled || undefined}>
       {rewards.map((reward, index) => {
         const status = firstEditable < 0 && index === 0;
+        const badge = labelled ? reward.badge : undefined;
         const first =
           reward.control === undefined ? (
             <span
@@ -300,8 +301,8 @@ function RowRewardSurface({
               className="row-reward-fixed"
               {...(status ? { id: `${idPrefix}-status`, tabIndex: -1 } : {})}
             >
-              {labelled ? <span className="row-reward-label">{reward.label}</span> : null}
-              <FixedValueChip
+              <FixedRewardChip
+                badge={badge}
                 icon={
                   reward.clockworkGoalsRemaining !== undefined
                     ? (clockworkCountdownArtwork[String(reward.clockworkGoalsRemaining)] ??
@@ -310,22 +311,18 @@ function RowRewardSurface({
                       ? undefined
                       : offerIcon(reward.offer)
                 }
-                label={reward.summary}
+                name={rewardChipName(reward, labelled)}
               />
             </span>
           ) : (
             <RewardControlEditor
-              ariaLabel={labelled ? cageName(reward, reward.control) : 'Reward'}
+              ariaLabel={rewardChipName(reward, labelled, reward.control)}
               control={reward.control}
               idPrefix={`${idPrefix}-${reward.key}`}
               interactions={interactions}
               label=""
-              {...(labelled
-                ? {
-                    triggerSize: 'icon' as const,
-                    ...(reward.badge === undefined ? {} : { triggerBadge: reward.badge }),
-                  }
-                : {})}
+              triggerSize="icon"
+              {...(badge === undefined ? {} : { triggerBadge: badge })}
             />
           );
         return <RowReward first={first} key={reward.key} reward={reward} />;
@@ -334,11 +331,47 @@ function RowRewardSurface({
   );
 }
 
-/** A cage chip's name: the cage, then its reward and any Vow of Forfeit conversion. */
-function cageName(reward: WorkspaceDoorReward, control: WorkspaceRewardControl): string {
-  if (reward.offer === null) return reward.label;
-  const realized = control.realizedAcquisition?.label;
-  return `${reward.label}: ${reward.summary}${realized === undefined ? '' : ` (${realized})`}`;
+/**
+ * A door reward chip's name: its cage, or Reward on a door with one, then the
+ * reward and any Vow of Forfeit conversion.
+ */
+function rewardChipName(
+  reward: WorkspaceDoorReward,
+  labelled: boolean,
+  control?: WorkspaceRewardControl,
+): string {
+  const owner = labelled ? reward.label : 'Reward';
+  if (reward.offer === null) return owner;
+  const realized = control?.realizedAcquisition?.label;
+  return `${owner}: ${reward.summary}${realized === undefined ? '' : ` (${realized})`}`;
+}
+
+/** A fixed door reward: the editable chip's face, read-only, its name on hover. */
+function FixedRewardChip({
+  badge,
+  icon,
+  name,
+}: {
+  readonly badge: string | undefined;
+  readonly icon: ArtworkSource | undefined;
+  readonly name: string;
+}) {
+  return (
+    <span
+      {...hintProps(name, undefined, name)}
+      aria-label={name}
+      className="timeline-chip"
+      data-chip-state="shown"
+      role="img"
+    >
+      <ArtworkIcon className="artwork-label-icon" source={icon} />
+      {badge === undefined ? null : (
+        <span aria-hidden="true" className="timeline-chip-badge">
+          {badge}
+        </span>
+      )}
+    </span>
+  );
 }
 
 /** A rerolled reward's final draw, and the repair of a kept reward that no longer matches. */

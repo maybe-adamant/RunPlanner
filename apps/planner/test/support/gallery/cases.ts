@@ -341,6 +341,22 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('H', 'golden-h-combat02'),
   },
   {
+    id: 'doors-table',
+    doorsExpanded: true,
+    label: 'Doors table: one reward per door',
+    shows: ['door table', 'door reward chips'],
+    project: createGoldenFGHIProject,
+    target: room('F', 'golden-f-b5-e1'),
+  },
+  {
+    id: 'doors-table-fixed',
+    doorsExpanded: true,
+    label: 'Doors table with a fixed reward door',
+    shows: ['door table', 'fixed door reward chip'],
+    project: loadSurfaceNOPQCheckpoint,
+    target: room('P', 'surface-p-6-1-p_combat10'),
+  },
+  {
     id: 'boss-steady-growth',
     label: 'Boss room: required boss reward and Steady Growth',
     shows: ['boss defeated', 'collect required reward (boss)', 'Steady Growth'],
@@ -800,6 +816,14 @@ export const galleryCases: readonly GalleryCase[] = [
     label: 'Hub Timeline with its fountain',
     shows: ['Hub segments', 'fountain'],
     project: loadSurfaceShrineTravelDealCheckpoint,
+    target: hub('N'),
+  },
+  {
+    id: 'hub-doors',
+    overview: true,
+    label: 'Hub board doors and their rewards',
+    shows: ['Hub door reward chips'],
+    project: loadSurfaceNCheckpoint,
     target: hub('N'),
   },
   {
