@@ -272,7 +272,36 @@ export const galleryCases: readonly GalleryCase[] = [
     project: loadNemesisFieldsCheckpoint,
     target: room('H', 'golden-h-combat05'),
   },
+  {
+    id: 'optional-actions-fields',
+    label: 'Optional actions: the Fields Optional rewards list',
+    shows: ['Optional actions', 'Actions group picker items'],
+    project: loadNemesisFieldsCheckpoint,
+    target: room('H', 'golden-h-combat05'),
+    openPicker: 'Optional rewards',
+  },
   ...nemesisFamilyCases(),
+  {
+    id: 'optional-actions-nemesis',
+    label: 'Optional actions: a Nemesis pickup on the Actions line',
+    shows: ['Optional actions', 'Actions group picker items'],
+    project: loadUnderworldFGCheckpoint,
+    commands: [
+      { kind: 'SelectEncounter', phase: nemesisPhase, encounterKey: 'NemesisRandomEvent' },
+      {
+        kind: 'SelectNemesisRandomEventFamily',
+        event: createNemesisRandomEventAddress(nemesisPhase),
+        family: 'damageContest',
+      },
+      {
+        kind: 'ReplaceNemesisRandomEventInteraction',
+        event: createNemesisRandomEventAddress(nemesisPhase),
+        value: { kind: 'damageContest', result: 'failure', reward: null },
+      },
+    ],
+    target: room('F', 'golden-f-b5-e1'),
+    openPicker: 'Nemesis',
+  },
   {
     id: 'nemesis-bet',
     label: 'Nemesis combat with its kill-race bet',

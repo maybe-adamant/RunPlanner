@@ -28,7 +28,12 @@ import {
   openRoomTab,
   withoutTraitDrops,
 } from '@planner-test/support/occurrence-workbench';
-import { addGroupButton, openAddGroup, timelineRow } from '@planner-test/support/timeline-rows';
+import {
+  addActionOption,
+  addGroupButton,
+  openAddGroup,
+  timelineRow,
+} from '@planner-test/support/timeline-rows';
 
 afterEach(cleanup);
 
@@ -99,8 +104,8 @@ describe('Room Add area', () => {
       occurrenceById(nOccurrenceIds.opening),
     );
     openRoomTab('Room Timeline');
-    // The Actions line holds one button per source family.
-    expect(within(lineList('Actions')).getByRole('button', { name: 'Quick Buck ▸' })).toBe(
+    // The Actions line holds one entry per source family.
+    expect(within(lineList('Actions')).getByRole('button', { name: 'Quick Buck' })).toBe(
       addGroupButton('Quick Buck'),
     );
     const actions = room(
@@ -121,9 +126,9 @@ describe('Room Add area', () => {
         )
         .map((proposal) => proposal.toIndex ?? -1),
     );
-    const menu = await openAddGroup(view.user, 'Quick Buck');
-    const action = within(menu).getByRole('button', { name: pickup.label });
-    await view.user.click(action);
+    await view.user.click(
+      addActionOption(await openAddGroup(view.user, 'Quick Buck'), pickup.label),
+    );
     const order = view.application.store
       .getState()
       .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'N')!
@@ -150,14 +155,17 @@ describe('Room Add area', () => {
       nOccurrenceIds.opening,
     ).roomActions!.rows.find((row) => row.rank === null && row.sourceFamily?.kind === 'trait');
     if (pickup === undefined) throw new Error('Quick Buck pickup is not offered');
-    expect(document.querySelector('[aria-label="Add from Quick Buck"]')).toBeNull();
+    expect(addGroupButton('Quick Buck').getAttribute('aria-expanded')).toBe('false');
     act(() => view.application.store.dispatch(semanticOwnerNavigated(pickup.address)));
     await waitFor(() =>
-      expect(document.querySelector('[aria-label="Add from Quick Buck"]')).not.toBeNull(),
+      expect(addGroupButton('Quick Buck').getAttribute('aria-expanded')).toBe('true'),
     );
-    await waitFor(() =>
-      expect(document.activeElement?.getAttribute('data-room-add-action')).toBe(pickup.key),
-    );
+    expect(
+      addActionOption(
+        document.querySelector<HTMLElement>('.contextual-picker-popover')!,
+        pickup.label,
+      ),
+    ).toBeTruthy();
   });
 
   it('says so when nothing optional can be added', () => {

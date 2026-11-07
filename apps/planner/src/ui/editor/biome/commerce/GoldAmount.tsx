@@ -34,7 +34,7 @@ export function GoldAmount({
 export function FightGoldAmount({ gold }: { readonly gold: WorkspaceFightGold }) {
   return (
     <span
-      className="gold-amount timeline-gold-gained timeline-fight-gold"
+      className={`gold-amount timeline-gold-gained timeline-fight-gold${gold.loss ? ' timeline-gold-lost' : ''}`}
       {...hintProps(gold.breakdown)}
       tabIndex={0}
     >

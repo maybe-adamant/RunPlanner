@@ -13,6 +13,7 @@ import {
   createLocalVisitDecisionAddress,
   createLocalVisitOrderAddress,
   createOccurrenceAddress,
+  createRoomRunStateCheckpointAddress,
   routeStartIncomingReward,
   ixionGeneratedChaosOccurrenceKeys,
   additionalExitsForDecision,
@@ -251,6 +252,8 @@ export interface WorkspaceBiomeSource {
       }
     | undefined;
   readonly resourceAuthoring: RouteResourceAuthoring;
+  /** The run depth (its Location) any room of the route is entered at, where it is reached. */
+  readonly roomEnteredRunDepth: (room: OccurrenceAddress) => number | undefined;
   /** Where a room stands against the plan's end: the end room, or a room past it. */
   readonly planEndRelation: (occurrenceId: OccurrenceId) => WorkspacePlanEndRelation | undefined;
   /** The whole biome lies after the biome the plan ends in. */
@@ -751,6 +754,7 @@ function createWorkspaceBiomeSource(
   hermesShrineAssessment: WorkspaceBiomeSource['hermesShrineAssessment'],
   stygianWellAssessment: WorkspaceBiomeSource['stygianWellAssessment'],
   resourceAuthoring: RouteResourceAuthoring,
+  roomEnteredRunDepth: WorkspaceBiomeSource['roomEnteredRunDepth'],
   acquisitionConversionCandidate: WorkspaceBiomeSource['acquisitionConversionCandidate'],
   chaosAssessment: WorkspaceBiomeSource['chaosAssessment'],
   chaosGateForced: WorkspaceBiomeSource['chaosGateForced'],
@@ -1069,6 +1073,7 @@ function createWorkspaceBiomeSource(
     derivedAcquisitionEntries,
     plan,
     resourceAuthoring,
+    roomEnteredRunDepth,
     runState: (owner: RunStateOwner) => {
       const availability = runStateAvailability.get(semanticAddressKey(owner));
       if (availability === undefined) return undefined;
@@ -1137,6 +1142,20 @@ export function createWorkspaceProjectSourceIndex(
   const resources = routeResourceAuthoring(catalog, route);
   const routeEvaluation =
     evaluation.route.routeKey === route.routeKey ? evaluation.route : undefined;
+  const enteredRunDepths = new Map<string, number>(
+    (routeEvaluation?.biomes ?? []).flatMap((biome) =>
+      'rewards' in biome
+        ? biome.rewards.runStateSnapshots.map(
+            (snapshot) =>
+              [semanticAddressKey(snapshot.owner), snapshot.counters.runDepthCache] as const,
+          )
+        : [],
+    ),
+  );
+  const roomEnteredRunDepth = (room: OccurrenceAddress) =>
+    enteredRunDepths.get(
+      semanticAddressKey(createRoomRunStateCheckpointAddress(room, { kind: 'roomEntered' })),
+    );
   const horizon = evaluation.authoringHorizon;
   const planEnd: WorkspaceRoutePlanEndSource = Object.freeze({
     ...(horizon.kind === 'ended' && horizon.blockedAfter.routeKey === route.routeKey
@@ -1168,6 +1187,7 @@ export function createWorkspaceProjectSourceIndex(
             hermesShrineAssessment,
             stygianWellAssessment,
             resources,
+            roomEnteredRunDepth,
             acquisitionConversionCandidate,
             chaosAssessment,
             (owner) => ixionGeneratedChaos.has(semanticAddressKey(owner)),

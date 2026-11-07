@@ -81,6 +81,7 @@ import {
 } from '@planner-test/support/occurrence-workbench';
 
 import { hintOf, queryByHint } from '@planner-test/support/hints';
+import { openAddGroup, pickAddAction } from '@planner-test/support/timeline-rows';
 
 /** An element's text as read aloud: icons by their names, tags after a separator. */
 function spokenText(element: Element): string {
@@ -518,8 +519,8 @@ describe('OccurrenceRoomActions', () => {
     application.dispose();
   });
 
-  it('renders Optional Rewards before its one Room Timeline board', () => {
-    renderOccurrenceWorkbench(
+  it('renders Optional Rewards before its one Room Timeline board', async () => {
+    const view = renderOccurrenceWorkbench(
       createGoldenFGHIProject(),
       'Underworld',
       'H',
@@ -567,14 +568,12 @@ describe('OccurrenceRoomActions', () => {
     const fieldsEncounter = screen.queryByLabelText('Encounter phase');
     if (fieldsEncounter !== null) expectBefore(fieldsEncounter, fieldsActions);
     const timeline = within(fieldsActions).getByRole('list', { name: 'Room timeline' });
-    const optionalPool = within(fieldsActions).getByRole('region', { name: 'Optional actions' });
     expect(queryActionRow(timeline, /^Collect .+ · Optional 1$/)).toBeNull();
     // The unplaced optional reward is offered from the Add area's Optional rewards group.
-    fireEvent.click(within(optionalPool).getByRole('button', { name: 'Optional rewards' }));
-    const menu = screen.getByRole('dialog', { name: 'Add from Optional rewards' });
-    const optionalAction = within(menu).getByRole('button', { name: /^Collect .+ · Optional 1$/ });
-    expect(optionalAction.getAttribute('aria-disabled')).toBeNull();
-    expect(within(menu).queryByRole('button', { name: 'Reward' })).toBeNull();
+    const menu = await openAddGroup(view.user, 'Optional rewards');
+    const optionalAction = within(menu).getByRole('option', { name: /^Collect .+ · Optional 1$/ });
+    expect(optionalAction.getAttribute('aria-disabled')).not.toBe('true');
+    expect(within(menu).queryByRole('option', { name: 'Reward' })).toBeNull();
     expect(actionRow(timeline, /^Collect .+ · Cage 1$/).getAttribute('data-action-accent')).toBe(
       'room',
     );
@@ -1009,18 +1008,11 @@ describe('OccurrenceRoomActions', () => {
     );
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    const optionalPool = within(actions).getByRole('region', { name: 'Optional actions' });
     const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
     expect(queryActionRow(timeline, /^Collect .+ · Optional 1$/)).toBeNull();
     const historyLength = view.application.store.getState().projectWorkspace.history!.past.length;
     // One pick adds the optional reward at its last legal place; nothing asks where.
-    await view.user.click(within(optionalPool).getByRole('button', { name: 'Optional rewards' }));
-    await view.user.click(
-      within(screen.getByRole('dialog', { name: 'Add from Optional rewards' })).getByRole(
-        'button',
-        { name: /^Collect .+ · Optional 1$/ },
-      ),
-    );
+    await pickAddAction(view.user, 'Optional rewards', /^Collect .+ · Optional 1$/);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyLength + 1,
     );

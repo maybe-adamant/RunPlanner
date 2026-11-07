@@ -121,11 +121,12 @@ export function FeatureRollEntry({
             ? {}
             : { disabledHint: featureRollLockHint(actions.locked) })}
           id={`${idPrefix}-action`}
-          itemIcon={(item) => {
+          insertion
+          itemTrailIcon={(item) => {
+            if (item.value === 'reroll') return rerollDieArtwork;
             const sold = actions.options.find((option) => option.key === item.value)?.item;
             return sold === undefined ? undefined : rollIcon(actions.feature, sold);
           }}
-          itemTrailIcon={(item) => (item.value === 'reroll' ? rerollDieArtwork : undefined)}
           label=""
           model={model}
           onSelect={(optionKey) => {

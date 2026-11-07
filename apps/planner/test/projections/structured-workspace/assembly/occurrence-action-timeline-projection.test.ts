@@ -130,8 +130,8 @@ describe('encounter banner supplements', () => {
       phase: { address: { phaseKey: 'Encounter' }, nemesisBet: expect.any(Object) },
     });
     expect(end?.supplement).not.toHaveProperty('anomalyCleared');
-    // An unauthored race is a win: the bet's gold stands for the phase.
-    expect(room.roomActions?.phaseGold).toEqual([
+    // An unauthored race is a win: the bet's payout joins the phase's fight gold.
+    expect(room.roomActions?.phaseFightGold).toEqual([
       {
         phaseKey: 'Encounter',
         gold: expect.objectContaining({ label: expect.stringMatching(/^\+/) }),

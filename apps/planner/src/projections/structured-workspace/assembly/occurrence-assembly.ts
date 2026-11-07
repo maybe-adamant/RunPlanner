@@ -361,6 +361,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
       }
     | undefined;
   readonly resourceAuthoring?: import('@run-planner/engine/simulation').RouteResourceAuthoring;
+  /** The run depth (its Location) any room of the route is entered at, where it is reached. */
+  readonly roomEnteredRunDepth?: (room: OccurrenceAddress) => number | undefined;
   readonly startingReward?:
     import('@run-planner/engine/authored-project').AuthoredRewardState | null;
   /** Semantic entry ownership, independent of whether the entry room is selectable. */
@@ -952,17 +954,10 @@ export function assembleWorkspaceOccurrence(
                         createBiomeAddress(input.biome.routeKey, placement.biomeKey),
                         placement.occurrenceId,
                       );
-                      const placementEntered = input.runState(
-                        createRoomRunStateCheckpointAddress(placementAddress, {
-                          kind: 'roomEntered',
-                        }),
-                      );
-                      const runDepth =
-                        placementEntered?.availability === 'available'
-                          ? placementEntered.snapshot.counters.runDepthCache
-                          : undefined;
-                      // The game calls a room's place in the run its Location; the biome
-                      // is named only when it is another one.
+                      const runDepth = input.roomEnteredRunDepth?.(placementAddress);
+                      const biomeLabel =
+                        input.catalog.biomes.byKey[placement.biomeKey]?.label ?? placement.biomeKey;
+                      // The game calls a room's place in the run its Location.
                       const room =
                         runDepth !== undefined
                           ? `Location ${runDepth}`
@@ -976,10 +971,7 @@ export function assembleWorkspaceOccurrence(
                         address: placementAddress,
                         biomeKey: placement.biomeKey,
                         ...(runDepth === undefined ? {} : { runDepth }),
-                        locationLabel:
-                          placement.biomeKey === input.biome.biomeKey
-                            ? room
-                            : `${input.catalog.biomes.byKey[placement.biomeKey]?.label ?? placement.biomeKey} · ${room}`,
+                        locationLabel: `${biomeLabel} · ${room}`,
                       });
                     })()
                   : undefined;

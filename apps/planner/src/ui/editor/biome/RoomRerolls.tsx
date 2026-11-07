@@ -367,6 +367,7 @@ export function DoorsRerollEntry({
             ariaLabel={name}
             {...(lockedHint === undefined ? {} : { disabledHint: lockedHint })}
             id={`${idPrefix}-target`}
+            insertion
             {...(pressIcon === undefined
               ? {}
               : {

@@ -525,6 +525,15 @@ select {
   grid-template-columns: 18px 1.6rem minmax(0, 1fr) auto;
 }
 
+/* An add list never shows a selection, so its options start at the label or icon. */
+.contextual-picker-popover [cmdk-item][data-insertion] {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.contextual-picker-popover [cmdk-item][data-insertion][data-has-icon] {
+  grid-template-columns: 1.6rem minmax(0, 1fr) auto;
+}
+
 .contextual-picker-item-icon {
   width: 1.6rem;
   height: 1.6rem;

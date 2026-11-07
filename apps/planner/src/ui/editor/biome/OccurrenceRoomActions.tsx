@@ -40,12 +40,7 @@ import {
 import { RoomActionPlacementControl, RoomActionRemovalControl } from './RoomActionOrderingControls';
 import { roomActionReorderPositions } from './room-action-placement';
 import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderHandle';
-import {
-  RoomAddArea,
-  RoomAddObjectEntry,
-  type RoomAddAction,
-  type RoomAddGroup,
-} from './RoomAddMenu';
+import { RoomAddArea, RoomAddEntry, type RoomAddAction, type RoomAddGroup } from './RoomAddMenu';
 import { useTimelineReorder } from './useTimelineReorder';
 import { DoorRerollRowReward, DoorsRerollEntry } from './RoomRerolls';
 import { UnlockedDoor, UnlockExitFightControl } from './UnlockExitFightControl';
@@ -254,7 +249,7 @@ function WorkbenchAddArea({
         return {
           rank: objectOrder.indexOf(entry.object!) + 0.5,
           node: (
-            <RoomAddObjectEntry
+            <RoomAddEntry
               group={{
                 ...group,
                 icon:
@@ -282,7 +277,7 @@ function WorkbenchAddArea({
               {...action.findingMark}
               {...hintProps(action.unavailable, action.findingMark?.['aria-description'])}
               aria-disabled={action.unavailable === undefined ? undefined : true}
-              className="secondary-action action-compact room-add-group"
+              className="secondary-action action-compact"
               onClick={(event) => {
                 if (action.unavailable === undefined) action.onSelect(event.currentTarget);
               }}
@@ -543,13 +538,8 @@ export function RoomActionsWorkbench({
       content?.editors,
       doorsOpen === undefined ? undefined : <DoorsOpenControls doors={doorsOpen} />,
     ].filter((node) => node !== null && node !== undefined && node !== false);
-    // A Nemesis bet settles as its encounter ends.
-    const phaseBet =
-      boundary.kind === 'encounterEnd'
-        ? actions?.phaseGold?.find((bet) => bet.phaseKey === boundary.phaseKey)
-        : undefined;
-    // A fight's gold sits on its end banner, or where a boss phase has none, on its defeat.
-    // A room's urn gold shows as it is entered.
+    // A fight's gold sits on its end banner, or where a boss phase has none, on its defeat;
+    // a Nemesis bet the phase settles is summed into it. A room's urn gold shows as it is entered.
     const fightGold =
       boundary.kind === 'encounterEnd' ||
       (boundary.kind === 'bossDefeated' && !endedPhaseKeys.has(boundary.phaseKey))
@@ -557,26 +547,8 @@ export function RoomActionsWorkbench({
         : boundary.kind === 'roomEntered'
           ? actions?.entryGold
           : undefined;
-    const betAmount =
-      phaseBet === undefined ? undefined : (
-        <GoldAmount
-          amount={phaseBet.gold}
-          className={`timeline-gold-gained${phaseBet.gold.loss ? ' timeline-gold-lost' : ''}`}
-        />
-      );
     const bannerControls = modifiers;
-    // Fight gold and a settled bet read down the money column, each on its own line.
-    const bannerMoney =
-      fightGold === undefined ? (
-        betAmount
-      ) : betAmount === undefined ? (
-        <FightGoldAmount gold={fightGold} />
-      ) : (
-        <span className="timeline-banner-gold-lines">
-          <FightGoldAmount gold={fightGold} />
-          {betAmount}
-        </span>
-      );
+    const bannerMoney = fightGold === undefined ? undefined : <FightGoldAmount gold={fightGold} />;
     return (
       <Fragment key={entry.boundary.key}>
         <LifecycleBoundaryRow

@@ -75,6 +75,8 @@ export interface WorkspaceGoldAmount {
 export interface WorkspaceFightGold {
   readonly label: string;
   readonly breakdown: string;
+  /** The amount is a loss, such as a lost Nemesis bet outweighing the fight's gold. */
+  readonly loss?: true;
 }
 
 /** The chance the gold held covers a purchase, as a whole percent. */
@@ -261,14 +263,9 @@ export interface WorkspaceRoomActions {
   readonly objectEntries?: readonly import('./features').WorkspaceRoomObjectEntry[];
   readonly steadyGrowth?: readonly WorkspaceSteadyGrowthControl[];
   readonly transcendentEmbryo?: readonly WorkspaceTranscendentEmbryoControl[];
-  /** Gold an encounter phase itself settles (a Nemesis bet), shown on its encounter line. */
-  readonly phaseGold?: readonly {
-    readonly phaseKey: string;
-    readonly gold: WorkspaceGoldAmount & { readonly loss?: true };
-  }[];
   /** The room's urn gold, shown on its Room entered banner. */
   readonly entryGold?: WorkspaceFightGold;
-  /** Each encounter phase's fight gold, shown on its end banner. */
+  /** Each encounter phase's fight gold with the Nemesis bet it settles, shown on its end banner. */
   readonly phaseFightGold?: readonly {
     readonly phaseKey: string;
     readonly gold: WorkspaceFightGold;

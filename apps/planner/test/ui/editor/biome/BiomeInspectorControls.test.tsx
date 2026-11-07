@@ -443,9 +443,9 @@ describe('Biome inspector controls', () => {
     };
     const toggle = within(resources).getByRole('button', { name: `Collect ${moved.element}` });
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
-    // A placement in this biome is named by its Location, the number its rail shows.
+    // A placement is named by its Location, the number its rail shows.
     expect(moved.currentPlacement.biomeKey).toBe('N');
-    expect(moved.currentPlacement.locationLabel).toBe(
+    expect(moved.currentPlacement.locationLabel).toContain(
       `Location ${moved.currentPlacement.runDepth}`,
     );
     expect(toggle.getAttribute('data-hint')).toBe(

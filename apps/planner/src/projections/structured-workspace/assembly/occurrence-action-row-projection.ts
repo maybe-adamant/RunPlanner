@@ -12,6 +12,7 @@ import {
   semanticAddressKey,
   stygianWellGenerationItemKey,
   stygianWellGenerationTwistResultKey,
+  type EncounterPhaseAddress,
   type OccurrenceAddress,
   type RoomOccurrence,
   type RoomActionReference,
@@ -1061,8 +1062,7 @@ function roomActionsForOccurrence(
     rows: allProjectedRows,
     ...(steadyGrowth.length === 0 ? {} : { steadyGrowth }),
     ...(transcendentEmbryo.length === 0 ? {} : { transcendentEmbryo }),
-    ...phaseGold(input.gold, owner),
-    ...phaseFightGold(fightGold),
+    ...phaseFightGold(fightGold, input.gold, owner),
     ...roomEntryGold(input.gold, owner),
   });
 }
@@ -1112,21 +1112,6 @@ function roomGoldGains(
   const priced = gold?.roomAt(room);
   if (priced?.availability !== 'available') return new Map();
   return new Map(priced.room.rows.map((row) => [semanticAddressKey(row.roomAction), row] as const));
-}
-
-/** The Nemesis bet each encounter phase settles, which belongs to no row. */
-function phaseGold(
-  gold: GoldLedger | undefined,
-  room: OccurrenceAddress,
-): Pick<WorkspaceRoomActions, 'phaseGold'> {
-  const priced = gold?.roomAt(room);
-  if (priced?.availability !== 'available') return {};
-  const bets = priced.room.bets.flatMap((bet) =>
-    Math.round(bet.mean) === 0
-      ? []
-      : [Object.freeze({ phaseKey: bet.phase.phaseKey, gold: goldGainLabel(bet) })],
-  );
-  return bets.length === 0 ? {} : { phaseGold: Object.freeze(bets) };
 }
 
 /** Each fight the room paid, by its fight's key. */
@@ -1180,15 +1165,52 @@ function rowFightGold(
   return gold === undefined ? {} : { fightGold: gold };
 }
 
-/** Each encounter phase's fight gold, for its end banner. */
+/**
+ * Each encounter phase's fight gold, for its end banner; a Nemesis bet the phase
+ * settles joins it as one figure, its payout a line of the breakdown.
+ */
 function phaseFightGold(
   fights: ReadonlyMap<string, GoldFightSummary>,
+  gold: GoldLedger | undefined,
+  room: OccurrenceAddress,
 ): Pick<WorkspaceRoomActions, 'phaseFightGold'> {
-  const phases = [...fights.values()].flatMap((fight) => {
-    const gold = fight.fight.kind === 'encounterPhase' ? fightGoldLabel(fight) : undefined;
-    return fight.fight.kind !== 'encounterPhase' || gold === undefined
-      ? []
-      : [Object.freeze({ phaseKey: fight.fight.phaseKey, gold })];
+  const priced = gold?.roomAt(room);
+  const bets =
+    priced?.availability === 'available'
+      ? priced.room.bets.filter((bet) => Math.round(bet.mean) !== 0)
+      : [];
+  const phaseFights = [...fights.values()].filter(
+    (fight): fight is GoldFightSummary & { readonly fight: EncounterPhaseAddress } =>
+      fight.fight.kind === 'encounterPhase' && Math.round(fight.mean) !== 0,
+  );
+  const phaseKeys = new Set([
+    ...phaseFights.map((fight) => fight.fight.phaseKey),
+    ...bets.map((bet) => bet.phase.phaseKey),
+  ]);
+  const phases = [...phaseKeys].map((phaseKey) => {
+    const fight = phaseFights.find((candidate) => candidate.fight.phaseKey === phaseKey);
+    const bet = bets.find((candidate) => candidate.phase.phaseKey === phaseKey);
+    const parts = [...(fight === undefined ? [] : [fight]), ...(bet === undefined ? [] : [bet])];
+    // Independent amounts: the means add and so do their variances.
+    const total = {
+      mean: parts.reduce((sum, part) => sum + part.mean, 0),
+      spread: Math.sqrt(parts.reduce((sum, part) => sum + part.spread ** 2, 0)),
+      exact: parts.every((part) => part.exact),
+    };
+    const breakdown = [
+      ...(fight?.breakdown ?? []).map(
+        (line) => `${FIGHT_GOLD_SOURCE_LABEL[line.source]} ${fightGoldAmount(line)}`,
+      ),
+      ...(bet === undefined ? [] : [`Nemesis bet ${fightGoldAmount(bet)}`]),
+    ];
+    return Object.freeze({
+      phaseKey,
+      gold: Object.freeze({
+        label: fightGoldAmount(total),
+        breakdown: breakdown.join(' · '),
+        ...(Math.round(total.mean) < 0 ? { loss: true as const } : {}),
+      }),
+    });
   });
   return phases.length === 0 ? {} : { phaseFightGold: Object.freeze(phases) };
 }

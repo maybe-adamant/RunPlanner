@@ -227,7 +227,7 @@ it('leaves a Gold Mystery Boon optional and authors its hidden source only after
   // The optional Gold pickup waits in the Add area, with no reward editor, until taken.
   expect(queryGoldRow()).toBeNull();
   const echo = await openAddGroup(view.user, 'Echo');
-  await view.user.click(within(echo).getByRole('button', { name: /Gold Gold Gold/ }));
+  await view.user.click(within(echo).getByRole('option', { name: /Gold Gold Gold/ }));
   await selectGod(goldRow());
   settleTrait('echoDoubleShopReward');
   expect(

@@ -1,9 +1,7 @@
-import * as Popover from '@radix-ui/react-popover';
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
-import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useAppSelector } from '@planner/state/store';
-import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
-import { hintProps } from '@planner/ui/controls/hint';
+import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
@@ -24,7 +22,7 @@ export interface RoomAddAction {
   readonly onSelect: (trigger: HTMLButtonElement | null) => void;
 }
 
-/** The actions of one source family, opened from their own button. */
+/** The actions of one source family or room object, opened from their own entry. */
 export interface RoomAddGroup {
   readonly key: string;
   readonly label: string;
@@ -73,7 +71,7 @@ export function RoomAddArea({
           <span className="room-add-line-label" id={objectsId}>
             Objects
           </span>
-          <ol aria-labelledby={objectsId} className="room-action-list room-add-objects">
+          <ol aria-labelledby={objectsId} className="room-action-list room-add-entries">
             {objects}
           </ol>
         </div>
@@ -83,13 +81,11 @@ export function RoomAddArea({
           <span className="room-add-line-label" id={actionsId}>
             Actions
           </span>
-          <ul aria-labelledby={actionsId} className="room-add-groups">
+          <ol aria-labelledby={actionsId} className="room-action-list room-add-entries">
             {groups.map((group) => (
-              <li key={group.key}>
-                <RoomAddGroupMenu group={group} />
-              </li>
+              <RoomAddEntry group={group} key={group.key} />
             ))}
-          </ul>
+          </ol>
         </div>
       )}
       {footer}
@@ -97,9 +93,21 @@ export function RoomAddArea({
   );
 }
 
-export function RoomAddGroupMenu({ group }: { readonly group: RoomAddGroup }) {
+/**
+ * One entry of the Add area: a room object's optional actions (a challenge
+ * switch's use and claims, a Shrine's delivery) or a source family's pickups,
+ * read like the other object entries: picking one adds it.
+ */
+export function RoomAddEntry({
+  group,
+  object,
+}: {
+  readonly group: RoomAddGroup;
+  /** The room object the entry stands for, when it is one. */
+  readonly object?: string;
+}) {
+  const id = `room-add-entry-${group.key}`;
   const [open, setOpen] = useState(false);
-  const trigger = useRef<HTMLButtonElement>(null);
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const revision = useAppSelector((state) => state.editorSession.semanticNavigationRevision);
   const [openedAt, setOpenedAt] = useState<number>();
@@ -110,115 +118,8 @@ export function RoomAddGroupMenu({ group }: { readonly group: RoomAddGroup }) {
           (action) =>
             semanticAddressKey(action.address) === semanticAddressKey(focusedSemanticOwner),
         );
-  // Finding navigation to an action opens its family's list once per navigation.
+  // Finding navigation to an action opens its entry's list once per navigation.
   const shown = open || (navigated !== undefined && openedAt !== revision);
-  const findings = group.actions.filter((action) => action.findingMark?.['data-has-findings']);
-  const findingText = findings
-    .map((action) => action.findingMark?.['aria-description'])
-    .filter((text) => text !== undefined)
-    .join(' ');
-  const onOpenChange = (next: boolean) => {
-    setOpen(next);
-    if (!next) setOpenedAt(revision);
-  };
-  // Arrows, Home and End move through every item, unavailable ones included, so
-  // their reason can be read; from the panel itself ArrowUp lands on the last item.
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const items = Array.from(
-      event.currentTarget.querySelectorAll<HTMLButtonElement>('button.room-add-action'),
-    );
-    const at = items.indexOf(document.activeElement as HTMLButtonElement);
-    const next =
-      event.key === 'Home'
-        ? items[0]
-        : event.key === 'End'
-          ? items.at(-1)
-          : event.key === 'ArrowDown'
-            ? items[(at + 1) % items.length]
-            : event.key === 'ArrowUp'
-              ? items[at === -1 ? items.length - 1 : (at - 1 + items.length) % items.length]
-              : undefined;
-    if (next === undefined) return;
-    event.preventDefault();
-    next.focus();
-  };
-  return (
-    <Popover.Root onOpenChange={onOpenChange} open={shown}>
-      <Popover.Trigger asChild>
-        <button
-          aria-description={findingText === '' ? undefined : findingText}
-          className="secondary-action action-compact room-add-group"
-          data-has-findings={findings.length > 0 || undefined}
-          data-semantic-owner={findings[0]?.findingMark?.['data-semantic-owner']}
-          ref={trigger}
-          type="button"
-        >
-          {group.icon === undefined ? null : (
-            <ArtworkIcon className="artwork-label-icon" source={group.icon} />
-          )}
-          {group.icon === undefined ? group.label : `${group.label} ▸`}
-        </button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          align="start"
-          aria-label={`Add from ${group.label}`}
-          className="room-add-menu"
-          collisionPadding={12}
-          onKeyDown={onKeyDown}
-          onOpenAutoFocus={(event) => {
-            if (navigated === undefined) return;
-            event.preventDefault();
-            document
-              .querySelector<HTMLButtonElement>(
-                `[data-room-add-action="${CSS.escape(navigated.key)}"]`,
-              )
-              ?.focus();
-          }}
-          sideOffset={6}
-        >
-          <ul className="room-add-actions">
-            {group.actions.map((action) => (
-              <li key={action.key}>
-                <button
-                  {...action.findingMark}
-                  {...hintProps(action.unavailable, action.findingMark?.['aria-description'])}
-                  aria-disabled={action.unavailable === undefined ? undefined : true}
-                  className="room-add-action"
-                  data-room-add-action={action.key}
-                  onClick={() => {
-                    if (action.unavailable !== undefined) return;
-                    onOpenChange(false);
-                    action.onSelect(trigger.current);
-                  }}
-                  type="button"
-                >
-                  {action.icon === undefined ? null : (
-                    <ArtworkIcon className="artwork-label-icon" source={action.icon} />
-                  )}
-                  <span>{action.label}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
-  );
-}
-
-/**
- * A room object's optional actions (a challenge switch's use and claims, a
- * Shrine's delivery), read like the other object entries: picking one adds it.
- */
-export function RoomAddObjectEntry({
-  group,
-  object,
-}: {
-  readonly group: RoomAddGroup;
-  readonly object: string;
-}) {
-  const id = `room-add-object-${group.key}`;
   const findingMark = combinedFindingMark(group.actions.map((action) => action.findingMark));
   const model: ContextualPickerModel<string> = Object.freeze({
     sections: Object.freeze([
@@ -241,14 +142,22 @@ export function RoomAddObjectEntry({
           {...(findingMark === undefined ? {} : { findingMark })}
           ariaLabel={group.label}
           id={id}
-          itemIcon={(item) => group.actions.find((action) => action.key === item.value)?.icon}
+          insertion
+          itemTrailIcon={(item) => group.actions.find((action) => action.key === item.value)?.icon}
           label=""
           model={model}
+          onOpenChange={(next) => {
+            setOpen(next);
+            if (!next) setOpenedAt(revision);
+          }}
           onSelect={(key) => {
             const action = group.actions.find((candidate) => candidate.key === key);
             if (action === undefined || action.unavailable !== undefined) return;
+            setOpen(false);
+            setOpenedAt(revision);
             action.onSelect(document.getElementById(id) as HTMLButtonElement | null);
           }}
+          open={shown}
           placeholder={`${group.label} ▸`}
           searchable={false}
           triggerIcon={group.icon}

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { openAddGroup } from '@planner-test/support/timeline-rows';
 import { catalogFindingLabels } from '@planner/projections/evaluationProjection';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -127,16 +128,23 @@ function queryTimelineRow(label: string | RegExp): HTMLElement | null {
   }
 }
 
+/** The room's Actions-line entries, each opening its list of optional actions. */
+function actionEntries(): HTMLButtonElement[] {
+  const area = screen.getByRole('region', { name: 'Optional actions' });
+  const line = within(area).queryByRole('list', { name: 'Actions' });
+  return line === null
+    ? []
+    : [...line.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="listbox"]')];
+}
+
 /** Adds an optional action from the room's Add area, whichever group offers it. */
 async function addOptionalAction(
   user: ReturnType<typeof renderOccurrenceWorkbench>['user'],
   name: string | RegExp,
 ): Promise<void> {
-  const area = screen.getByRole('region', { name: 'Optional actions' });
-  for (const group of area.querySelectorAll<HTMLButtonElement>('button.room-add-group')) {
-    await user.click(group);
-    const menu = screen.queryByRole('dialog', { name: /^Add from / });
-    const action = menu === null ? null : within(menu).queryByRole('button', { name });
+  for (const group of actionEntries()) {
+    const menu = await openAddGroup(user, group.getAttribute('aria-label') ?? '');
+    const action = within(menu).queryByRole('option', { name });
     if (action !== null) {
       await user.click(action);
       return;
@@ -150,20 +158,15 @@ async function addOptionalAction(
 async function optionalActionNames(
   user: ReturnType<typeof renderOccurrenceWorkbench>['user'],
 ): Promise<string[]> {
-  const area = screen.getByRole('region', { name: 'Optional actions' });
   const names: string[] = [];
-  for (const group of area.querySelectorAll<HTMLButtonElement>('button.room-add-group')) {
-    await user.click(group);
-    const menu = screen.queryByRole('dialog', { name: /^Add from / });
-    if (menu !== null)
-      names.push(
-        ...within(menu)
-          .getAllByRole('button')
-          .map(
-            (button) =>
-              `${group.textContent?.replace(/ ▸$/, '') ?? ''}: ${button.textContent ?? ''}`,
-          ),
-      );
+  for (const group of actionEntries()) {
+    const label = group.getAttribute('aria-label') ?? '';
+    const menu = await openAddGroup(user, label);
+    names.push(
+      ...[...menu.querySelectorAll('[role="option"] .contextual-picker-item-label')].map(
+        (option) => `${label}: ${option.textContent ?? ''}`,
+      ),
+    );
     await user.keyboard('{Escape}');
   }
   return names;

@@ -124,7 +124,8 @@ export function RoomObjectEntry({
             ? {}
             : { disabledHint: roomObjectLockHint(entry.locked) })}
           id={`${idPrefix}-action`}
-          itemIcon={(item) => {
+          insertion
+          itemTrailIcon={(item) => {
             if (item.value.startsWith(extraPrefix))
               return extraActions.find((action) => extraPrefix + action.key === item.value)?.icon;
             const reward = entry.options.find((option) => option.key === item.value)?.reward;

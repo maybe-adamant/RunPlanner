@@ -85,6 +85,8 @@ interface ContextualPickerProps<T> {
   readonly itemIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
   /** An image shown at the start of an option's trailing figures. */
   readonly itemTrailIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
+  /** An add list: nothing in it is ever selected, so its options keep no check column. */
+  readonly insertion?: boolean;
   /** Marks a retained value the current context cannot produce. */
   readonly invalid?: boolean;
   /** Marks a local customization issue this picker repairs. */
@@ -100,6 +102,7 @@ const countHint = 'Entries of this reward left in the bag for this draw.';
 function PickerSection<T>({
   countHinted = false,
   groupRef,
+  insertion = false,
   itemIcon,
   itemTrailIcon,
   onSelect,
@@ -110,6 +113,7 @@ function PickerSection<T>({
   /** Whether this section's heading explains the options' bag counts. */
   readonly countHinted?: boolean;
   readonly groupRef?: Ref<HTMLDivElement>;
+  readonly insertion?: boolean;
   readonly itemIcon?: ((item: ContextualPickerItem<T>) => ArtworkSource | undefined) | undefined;
   readonly onSelect: (item: ContextualPickerItem<T>) => void;
   readonly section: ContextualPickerSection<T>;
@@ -139,6 +143,7 @@ function PickerSection<T>({
             aria-label={item.ariaLabel}
             data-candidate-state={item.state}
             data-has-icon={itemIcon === undefined ? undefined : true}
+            data-insertion={insertion || undefined}
             data-selected-value={item.selected}
             disabled={item.disabled}
             key={item.key}
@@ -146,9 +151,11 @@ function PickerSection<T>({
             onSelect={() => onSelect(item)}
             value={itemValue(item)}
           >
-            <span className="contextual-picker-item-indicator" aria-hidden="true">
-              {item.selected ? '✓' : item.state === 'forced' ? '!' : ''}
-            </span>
+            {insertion ? null : (
+              <span className="contextual-picker-item-indicator" aria-hidden="true">
+                {item.selected ? '✓' : item.state === 'forced' ? '!' : ''}
+              </span>
+            )}
             {itemIcon === undefined ? null : (
               <ArtworkIcon className="contextual-picker-item-icon" source={icon} />
             )}
@@ -190,6 +197,7 @@ function PickerSection<T>({
 function PickerContent<T>({
   cancelLabel,
   choicesLabel,
+  insertion = false,
   itemIcon,
   itemTrailIcon,
   loading,
@@ -202,6 +210,7 @@ function PickerContent<T>({
 }: {
   readonly cancelLabel?: string;
   readonly choicesLabel: string;
+  readonly insertion?: boolean;
   readonly itemIcon?: ((item: ContextualPickerItem<T>) => ArtworkSource | undefined) | undefined;
   readonly itemTrailIcon?:
     ((item: ContextualPickerItem<T>) => ArtworkSource | undefined) | undefined;
@@ -304,6 +313,7 @@ function PickerContent<T>({
             {ordinarySections.map((section) => (
               <PickerSection
                 countHinted={section.key === countHintedKey}
+                insertion={insertion}
                 itemIcon={itemIcon}
                 itemTrailIcon={itemTrailIcon}
                 key={section.key}
@@ -315,6 +325,7 @@ function PickerContent<T>({
               <PickerSection
                 countHinted={collapsible.key === countHintedKey}
                 groupRef={collapsibleGroup}
+                insertion={insertion}
                 itemIcon={itemIcon}
                 itemTrailIcon={itemTrailIcon}
                 onSelect={select}
@@ -380,6 +391,7 @@ export function ContextualPicker<T>({
   triggerParts,
   itemIcon,
   itemTrailIcon,
+  insertion = false,
   invalid = false,
   hasIssues,
   findingMark,
@@ -556,6 +568,7 @@ export function ContextualPicker<T>({
             <PickerContent
               {...(cancelLabel === undefined ? {} : { cancelLabel })}
               choicesLabel={choicesLabel}
+              insertion={insertion}
               itemIcon={itemIcon}
               itemTrailIcon={itemTrailIcon}
               key={choiceLabel ?? 'default'}
