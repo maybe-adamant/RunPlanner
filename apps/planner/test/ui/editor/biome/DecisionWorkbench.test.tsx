@@ -1319,8 +1319,9 @@ describe('DecisionWorkbench', () => {
     const combat09 = screen.getByRole('article', { name: 'Combat 09 room offer' });
     const offers = within(combat09).getByLabelText('Combat 09 door rewards');
     const trigger = getByHint(offers, 'Converted by the Vow of Forfeit.');
-    expect(within(offers).getByRole('button', { name: 'Cage 1' })).toBe(trigger);
-    expect(trigger.textContent).toMatch(/Hermes.*\(Red Onion\)/);
+    expect(within(offers).getByRole('button', { name: /^Cage 1: Hermes.*\(Red Onion\)$/ })).toBe(
+      trigger,
+    );
     expect(within(offers).queryByText(/^Forfeit →/)).toBeNull();
     expect(getAllByHint(offers, 'Converted by the Vow of Forfeit.')).toHaveLength(1);
   });
@@ -1341,16 +1342,19 @@ describe('DecisionWorkbench', () => {
     const combat03 = screen.getByRole('article', { name: 'Combat 03 room offer' });
     const combat09Offers = within(combat09).getByLabelText('Combat 09 door rewards');
     const combat03Offers = within(combat03).getByLabelText('Combat 03 door rewards');
-    expect(combat09Offers.textContent).toContain('Cage 1Hermes');
-    expect(combat09Offers.textContent).toContain('Cage 2Hammer');
-    expect(combat03Offers.textContent).toContain('Cage 1Max Health');
-    expect(combat03Offers.textContent).toContain("Cage 2Selene's Gift");
+    for (const [offers, name] of [
+      [combat09Offers, /^Cage 1: Hermes/],
+      [combat09Offers, /^Cage 2: Hammer/],
+      [combat03Offers, /^Cage 1: Max Health/],
+      [combat03Offers, /^Cage 2: Selene's Gift/],
+    ] as const)
+      expect(within(offers).getByRole('button', { name })).toBeTruthy();
     for (const [card, offers] of [
       [combat09, combat09Offers],
       [combat03, combat03Offers],
     ] as const) {
-      expect(within(card).getByRole('button', { name: 'Cage 1' })).toBeTruthy();
-      expect(within(card).getByRole('button', { name: 'Cage 2' })).toBeTruthy();
+      expect(within(card).getByRole('button', { name: /^Cage 1\b/ })).toBeTruthy();
+      expect(within(card).getByRole('button', { name: /^Cage 2\b/ })).toBeTruthy();
       expect(offers.querySelectorAll('.field-control-inline')).toHaveLength(2);
     }
   });
@@ -1374,7 +1378,7 @@ describe('DecisionWorkbench', () => {
       const card = screen.getByRole('article', { name: `${roomLabel} room offer` });
       const offers = within(card).getByLabelText(`${roomLabel} door rewards`);
       for (const cage of ['Cage 1', 'Cage 2', 'Cage 3']) {
-        expect(within(card).getByRole('button', { name: cage })).toBeTruthy();
+        expect(within(card).getByRole('button', { name: new RegExp(`^${cage}\\b`) })).toBeTruthy();
       }
       expect(offers.querySelectorAll('.field-control-inline')).toHaveLength(3);
       expect(within(card).queryByText(/Optional \d/)).toBeNull();

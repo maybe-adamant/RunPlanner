@@ -86,7 +86,7 @@ describe('Stygian Well workbench', () => {
     );
     openOverview();
     expect(screen.queryAllByRole('button', { name: /^Stygian Well / })).toHaveLength(0);
-    await view.user.click(screen.getAllByRole('button', { name: /^Spot( 1)?$/ })[0]!);
+    await view.user.click(screen.getAllByRole('button', { name: 'Empty spot' })[0]!);
     await view.user.click(screen.getByRole('option', { name: /Stygian Well/ }));
     expect(screen.queryByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);
@@ -101,7 +101,7 @@ describe('Stygian Well workbench', () => {
       ),
     );
     openOverview();
-    const spot = screen.getAllByRole('button', { name: /^Spot( 1)?$/ })[0]!;
+    const spot = screen.getAllByRole('button', { name: 'Empty spot' })[0]!;
     expect((spot as HTMLButtonElement).disabled).toBe(true);
     expect(hintOf(spot.closest('[data-hint]'))).toContain(
       'Wells need biome depth 3; this room is at 2.',
@@ -112,7 +112,7 @@ describe('Stygian Well workbench', () => {
     renderOccurrenceWorkbench(loadUnderworldFGProject(), 'Underworld', 'F', occurrence);
     openOverview();
     // An always-present Well is named on its spot, with nothing to pick.
-    expect(screen.queryByRole('button', { name: /^Spot/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Empty spot' })).toBeNull();
     expect(screen.getByRole('img', { name: 'Stygian Well' })).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);

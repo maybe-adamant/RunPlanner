@@ -655,7 +655,7 @@ export function assembleWorkspaceBiomeSemantics(
         : {}),
       runState: source.runState,
       resourceAuthoring: source.resourceAuthoring,
-      roomEnteredRunDepth: source.roomEnteredRunDepth,
+      roomLocation: source.roomLocation,
       ...(request.isEntry === true ? { isEntry: true } : {}),
       ...(request.roomPicker === undefined ? {} : { roomPicker: request.roomPicker }),
     });

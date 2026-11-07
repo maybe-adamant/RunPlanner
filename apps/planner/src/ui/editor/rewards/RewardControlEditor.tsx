@@ -22,6 +22,7 @@ export function RewardControlEditor({
   showOffer = true,
   offerStartStep,
   offerSummaryMode = 'offer',
+  triggerBadge,
   triggerSize,
 }: {
   /** The accessible name where the visible label is shortened. */
@@ -37,6 +38,8 @@ export function RewardControlEditor({
   readonly offerStartStep?: RewardPickerStep;
   /** A compact fixed-type picker can omit the already-visible reward type. */
   readonly offerSummaryMode?: 'offer' | 'source';
+  /** A short corner mark on an icon trigger, such as a cage's C1. */
+  readonly triggerBadge?: string;
   /** `icon` shows a reward or Shop item picker's trigger as its icon chip alone. */
   readonly triggerSize?: 'field' | 'icon';
 }) {
@@ -86,6 +89,7 @@ export function RewardControlEditor({
             ? {}
             : { initialStep: offerStartStep ?? control.authoringStartStep })}
           summaryMode={offerSummaryMode}
+          {...(triggerBadge === undefined ? {} : { triggerBadge })}
           {...(triggerSize === undefined ? {} : { triggerSize })}
         />
       ) : (
@@ -106,6 +110,7 @@ export function RewardControlEditor({
             ? {}
             : { initialStep: offerStartStep ?? control.authoringStartStep })}
           summaryMode={offerSummaryMode}
+          {...(triggerBadge === undefined ? {} : { triggerBadge })}
           {...(triggerSize === undefined ? {} : { triggerSize })}
         />
       )}

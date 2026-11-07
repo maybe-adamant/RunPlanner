@@ -19,7 +19,6 @@ import { useCommandsIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
-import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
 import { FixedObjectChip, RoomInventoryPanel } from '../commerce/RoomInventoryPanel';
 import { ChallengeSwitchControls } from './ChallengeSwitchControls';
 
@@ -66,9 +65,11 @@ function slotLockHint(slot: WorkspaceAnchorSlot): string | undefined {
 }
 
 /**
- * A room's object anchors: one line of spots, each picking what it holds, with
- * objects native order leaves without an anchor after them; then one line per
- * object present, in spot order, holding that object's settings.
+ * A room's object anchors as one capacity line: the occupied spots in native
+ * order, then the empty ones, each picking what it holds, with objects native
+ * order leaves without an anchor after them; then one line per object present
+ * holding its settings. Native spawns each object on a random free anchor, so
+ * a spot names no physical place.
  */
 export function RoomObjectSlots({
   features,
@@ -94,7 +95,6 @@ export function RoomObjectSlots({
       <RoomInventoryPanel feature={feature} interactions={interactions} />
     );
   };
-  const numbered = objectSlots.slots.length >= 2;
   const present: readonly WorkspaceAnchorOccupant[] = [
     ...objectSlots.slots.flatMap((slot) => (slot.occupant === undefined ? [] : [slot.occupant])),
     ...objectSlots.unanchored,
@@ -110,34 +110,14 @@ export function RoomObjectSlots({
   return (
     <div className="room-object-slots">
       <div className="room-object-spots">
-        {numbered ? (
-          <NumberedSlots label="Object spots">
-            {objectSlots.slots.map((slot) => (
-              <NumberedSlot
-                hint={`Spot ${slot.index + 1}`}
-                key={slot.index}
-                number={slot.index + 1}
-              >
-                <AnchorSlotChip
-                  interactions={interactions}
-                  label={`Spot ${slot.index + 1}`}
-                  objectSlots={objectSlots}
-                  slot={slot}
-                />
-              </NumberedSlot>
-            ))}
-          </NumberedSlots>
-        ) : (
-          objectSlots.slots.map((slot) => (
-            <AnchorSlotChip
-              interactions={interactions}
-              key={slot.index}
-              label="Spot"
-              objectSlots={objectSlots}
-              slot={slot}
-            />
-          ))
-        )}
+        {objectSlots.slots.map((slot) => (
+          <AnchorSlotChip
+            interactions={interactions}
+            key={slot.index}
+            objectSlots={objectSlots}
+            slot={slot}
+          />
+        ))}
         {unanchored}
       </div>
       {present.map((occupant) => {
@@ -178,12 +158,10 @@ function useOccupantTarget() {
 /** One anchor's object chip: a fixed object shows alone; otherwise it picks what the anchor holds. */
 function AnchorSlotChip({
   interactions,
-  label,
   objectSlots,
   slot,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly label: string;
   readonly objectSlots: WorkspaceRoomObjectSlots;
   readonly slot: WorkspaceAnchorSlot;
 }) {
@@ -213,7 +191,7 @@ function AnchorSlotChip({
   const disabledHint = slot.choices.length === 0 ? slotLockHint(slot) : undefined;
   return (
     <ContextualPicker<string>
-      ariaLabel={label}
+      ariaLabel={occupant === undefined ? 'Empty spot' : heldName(occupant)}
       {...(occupant === undefined ? {} : { findingTarget: occupantTarget(occupant) })}
       id={`${objectSlots.interactionKey}-${slot.index}`}
       itemIcon={(item) => heldIcon(heldOf.get(item.value))}

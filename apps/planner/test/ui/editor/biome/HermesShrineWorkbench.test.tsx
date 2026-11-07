@@ -118,7 +118,7 @@ describe('Hermes Shrine workbench', () => {
       application,
     );
     openOverview();
-    const spot = () => screen.getAllByRole('button', { name: /^Spot( 1)?$/ })[0]!;
+    const spot = () => screen.getAllByRole('button', { name: 'Empty spot' })[0]!;
     expect((spot() as HTMLButtonElement).disabled).toBe(false);
     expect(screen.queryByRole('checkbox', { name: /Interact.*Hermes Shrine/i })).toBeNull();
 
@@ -741,7 +741,7 @@ describe('Hermes Shrine workbench', () => {
     renderOccurrenceWorkbench(loadSurfaceNOProject(), 'Surface', 'O', occurrence(postbossId));
     openOverview();
     // An always-present Shrine is named on its spot, with nothing to pick.
-    expect(screen.queryByRole('button', { name: /^Spot/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Empty spot' })).toBeNull();
     expect(screen.getByRole('img', { name: 'Hermes Shrine' })).toBeTruthy();
     expect(
       screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
@@ -756,7 +756,7 @@ describe('Hermes Shrine workbench', () => {
       occurrence(oOccurrenceIds.combat01),
     );
     openOverview();
-    expect(screen.queryByRole('button', { name: /^Spot/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Empty spot' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Objects' })).toBeNull();
   });
 

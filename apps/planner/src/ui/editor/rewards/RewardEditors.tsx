@@ -34,6 +34,8 @@ interface RewardValueEditorProps {
   readonly realizedLabel?: string;
   /** A fixed-type inline editor may present only its selected Boon source. */
   readonly summaryMode?: 'offer' | 'source';
+  /** A short corner mark on an icon trigger, such as a cage's C1. */
+  readonly triggerBadge?: string;
   /** `icon` shows the trigger as the reward's icon chip alone. */
   readonly triggerSize?: 'field' | 'icon';
   readonly unresolvedSeed?: ResolvedRewardOffer;
@@ -88,6 +90,7 @@ export function RewardValueEditor({
   initialStep = 'type',
   realizedLabel,
   summaryMode = 'offer',
+  triggerBadge,
   triggerSize,
   unresolvedSeed,
 }: RewardValueEditorProps) {
@@ -110,6 +113,7 @@ export function RewardValueEditor({
       resolver={resolver}
       resolvesShopItem={candidateOwner.address.kind === 'shopOffer'}
       summaryMode={summaryMode}
+      {...(triggerBadge === undefined ? {} : { triggerBadge })}
       {...(triggerSize === undefined ? {} : { triggerSize })}
       {...(unresolvedSeed === undefined ? {} : { unresolvedSeed })}
     />
@@ -133,6 +137,7 @@ export function RewardOfferPicker({
   resolver,
   resolvesShopItem = false,
   summaryMode = 'offer',
+  triggerBadge,
   triggerSize = 'field',
   unresolvedSeed,
 }: {
@@ -154,6 +159,7 @@ export function RewardOfferPicker({
   /** A Shop slot's type step commits an item resolved at acquisition. */
   readonly resolvesShopItem?: boolean;
   readonly summaryMode?: 'offer' | 'source';
+  readonly triggerBadge?: string;
   readonly triggerSize?: 'field' | 'icon';
   readonly unresolvedSeed?: ResolvedRewardOffer;
 }) {
@@ -273,6 +279,7 @@ export function RewardOfferPicker({
         open={active !== undefined}
         placeholder={summary}
         triggerLabel={triggerLabel}
+        {...(triggerBadge === undefined ? {} : { triggerBadge })}
         triggerSize={triggerSize}
         triggerIcon={activeOffer === undefined ? undefined : triggerIcon(activeOffer, active?.step)}
         itemIcon={(item) => pickerRowIcon(item.value, active?.step)}
@@ -296,6 +303,7 @@ export function CountedRewardEditor({
   initialStep,
   realizedLabel,
   summaryMode,
+  triggerBadge,
   triggerSize,
   unresolvedSeed,
 }: CountedRewardEditorProps) {
@@ -312,6 +320,7 @@ export function CountedRewardEditor({
       {...(initialStep === undefined ? {} : { initialStep })}
       {...(realizedLabel === undefined ? {} : { realizedLabel })}
       {...(summaryMode === undefined ? {} : { summaryMode })}
+      {...(triggerBadge === undefined ? {} : { triggerBadge })}
       {...(triggerSize === undefined ? {} : { triggerSize })}
       {...(unresolvedSeed === undefined ? {} : { unresolvedSeed })}
     />

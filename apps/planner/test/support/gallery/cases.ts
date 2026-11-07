@@ -333,6 +333,14 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('H', 'golden-h-combat09'),
   },
   {
+    id: 'fields-doors-table',
+    doorsExpanded: true,
+    label: 'Fields doors table: each door with its cage rewards',
+    shows: ['door table', 'local reward per cage'],
+    project: createGoldenFGHIProject,
+    target: room('H', 'golden-h-combat02'),
+  },
+  {
     id: 'boss-steady-growth',
     label: 'Boss room: required boss reward and Steady Growth',
     shows: ['boss defeated', 'collect required reward (boss)', 'Steady Growth'],
@@ -500,6 +508,15 @@ export const galleryCases: readonly GalleryCase[] = [
       placeAnchorObject('F', 'golden-f-b5-e1', 'challengeSwitch'),
       placeAnchorObject('F', 'golden-f-b5-e1', 'stygianWell'),
     ],
+    target: room('F', 'golden-f-b5-e1'),
+  },
+  {
+    id: 'anchors-well-empty',
+    overview: true,
+    label: 'Two anchors: a Stygian Well and an empty spot',
+    shows: ['anchor slots', 'empty spot'],
+    project: createGoldenFGHIProject,
+    commands: [placeAnchorObject('F', 'golden-f-b5-e1', 'stygianWell')],
     target: room('F', 'golden-f-b5-e1'),
   },
   {

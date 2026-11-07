@@ -506,11 +506,18 @@ export function ContextualPicker<T>({
           >
             {iconOnly ? (
               triggerIcon === undefined || disabled ? (
-                triggerUnknown && triggerIcon === undefined ? (
-                  <span aria-hidden="true" className="timeline-chip-unknown">
-                    ?
-                  </span>
-                ) : null
+                <>
+                  {triggerUnknown && triggerIcon === undefined ? (
+                    <span aria-hidden="true" className="timeline-chip-unknown">
+                      ?
+                    </span>
+                  ) : null}
+                  {triggerBadge === undefined || disabled ? null : (
+                    <span aria-hidden="true" className="timeline-chip-badge">
+                      {triggerBadge}
+                    </span>
+                  )}
+                </>
               ) : (
                 <>
                   <ArtworkIcon className="artwork-label-icon" source={triggerIcon} />

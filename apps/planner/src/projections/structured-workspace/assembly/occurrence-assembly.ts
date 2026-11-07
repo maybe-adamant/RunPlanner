@@ -225,6 +225,7 @@ function offerRewardRewards(
         if (control === undefined) break;
         rewards.push(
           Object.freeze({
+            badge: `C${index + 1}`,
             control,
             key: slotKey,
             label: `Cage ${index + 1}`,
@@ -361,8 +362,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
       }
     | undefined;
   readonly resourceAuthoring?: import('@run-planner/engine/simulation').RouteResourceAuthoring;
-  /** The run depth (its Location) any room of the route is entered at, where it is reached. */
-  readonly roomEnteredRunDepth?: (room: OccurrenceAddress) => number | undefined;
+  readonly roomLocation?: import('../source-index').WorkspaceBiomeSource['roomLocation'];
   readonly startingReward?:
     import('@run-planner/engine/authored-project').AuthoredRewardState | null;
   /** Semantic entry ownership, independent of whether the entry room is selectable. */
@@ -944,34 +944,29 @@ export function assembleWorkspaceOccurrence(
               const currentPlacement =
                 placement !== null && !here
                   ? (() => {
-                      const entry = input.resourceAuthoring!.entered.find(
-                        (candidate) =>
-                          candidate.biomeKey === placement.biomeKey &&
-                          candidate.origin.kind === 'occurrence' &&
-                          candidate.origin.occurrenceId === placement.occurrenceId,
-                      );
                       const placementAddress = createOccurrenceAddress(
                         createBiomeAddress(input.biome.routeKey, placement.biomeKey),
                         placement.occurrenceId,
                       );
-                      const runDepth = input.roomEnteredRunDepth?.(placementAddress);
+                      const location = input.roomLocation?.(placementAddress);
+                      const runDepth = location?.runDepth;
                       const biomeLabel =
                         input.catalog.biomes.byKey[placement.biomeKey]?.label ?? placement.biomeKey;
-                      // The game calls a room's place in the run its Location.
-                      const room =
-                        runDepth !== undefined
-                          ? `Location ${runDepth}`
-                          : entry === undefined
-                            ? 'Unavailable room'
-                            : routeRoomDeclaration(
-                                requireRoom(input.catalog, entry.gameName),
-                                input.biome.routeKey,
-                              ).label;
+                      // The game calls a room's place in the run its Location; an unreached
+                      // room has none yet and is named instead.
+                      const roomLabel =
+                        runDepth !== undefined || location === undefined
+                          ? undefined
+                          : routeRoomDeclaration(
+                              requireRoom(input.catalog, location.gameName),
+                              input.biome.routeKey,
+                            ).label;
                       return Object.freeze({
                         address: placementAddress,
                         biomeKey: placement.biomeKey,
                         ...(runDepth === undefined ? {} : { runDepth }),
-                        locationLabel: `${biomeLabel} · ${room}`,
+                        locationLabel: `${biomeLabel} · Location ${runDepth ?? '?'}`,
+                        ...(roomLabel === undefined ? {} : { roomLabel }),
                       });
                     })()
                   : undefined;

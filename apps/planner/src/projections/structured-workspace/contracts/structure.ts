@@ -71,6 +71,8 @@ export interface WorkspaceDoorReward {
     readonly owner: RerolledRewardOwner;
     readonly repair: 'adopt' | 'drop';
   };
+  /** The reward's short mark among several on one door, such as C1. */
+  readonly badge?: string;
   readonly control?: WorkspaceRewardControl;
   readonly key: string;
   readonly label: string;

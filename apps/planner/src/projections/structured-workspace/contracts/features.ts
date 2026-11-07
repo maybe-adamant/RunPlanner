@@ -436,6 +436,7 @@ export interface WorkspaceAnchorOccupant {
 
 /** One challenge switch anchor: its occupant and the states it can change to. */
 export interface WorkspaceAnchorSlot {
+  /** Its place on the room's capacity line, occupied spots first in native order; not a physical anchor. */
   readonly index: number;
   readonly occupant?: WorkspaceAnchorOccupant;
   /** Each other state reachable now; adding an object can move the others to their native spot. */

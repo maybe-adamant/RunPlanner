@@ -1548,8 +1548,7 @@ select {
 }
 
 .door-row-rewards[data-multiple='true'] {
-  display: grid;
-  justify-items: start;
+  column-gap: 20px;
 }
 
 .row-reward-value,

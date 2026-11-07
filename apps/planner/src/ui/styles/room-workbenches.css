@@ -3727,8 +3727,8 @@ span.hub-board-status-line {
   min-width: 0;
 }
 
-.room-object-spots > .numbered-slots {
-  gap: 6px 24px;
+.room-object-spots {
+  column-gap: 20px;
 }
 
 .room-object-settings {

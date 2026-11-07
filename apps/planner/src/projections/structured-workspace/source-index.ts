@@ -252,8 +252,13 @@ export interface WorkspaceBiomeSource {
       }
     | undefined;
   readonly resourceAuthoring: RouteResourceAuthoring;
-  /** The run depth (its Location) any room of the route is entered at, where it is reached. */
-  readonly roomEnteredRunDepth: (room: OccurrenceAddress) => number | undefined;
+  /**
+   * Any authored room of the route: its game room, and its run depth (its
+   * Location) on entry where the plan reaches it. Undefined for an unknown room.
+   */
+  readonly roomLocation: (
+    room: OccurrenceAddress,
+  ) => { readonly gameName: string; readonly runDepth?: number } | undefined;
   /** Where a room stands against the plan's end: the end room, or a room past it. */
   readonly planEndRelation: (occurrenceId: OccurrenceId) => WorkspacePlanEndRelation | undefined;
   /** The whole biome lies after the biome the plan ends in. */
@@ -754,7 +759,7 @@ function createWorkspaceBiomeSource(
   hermesShrineAssessment: WorkspaceBiomeSource['hermesShrineAssessment'],
   stygianWellAssessment: WorkspaceBiomeSource['stygianWellAssessment'],
   resourceAuthoring: RouteResourceAuthoring,
-  roomEnteredRunDepth: WorkspaceBiomeSource['roomEnteredRunDepth'],
+  roomLocation: WorkspaceBiomeSource['roomLocation'],
   acquisitionConversionCandidate: WorkspaceBiomeSource['acquisitionConversionCandidate'],
   chaosAssessment: WorkspaceBiomeSource['chaosAssessment'],
   chaosGateForced: WorkspaceBiomeSource['chaosGateForced'],
@@ -1073,7 +1078,7 @@ function createWorkspaceBiomeSource(
     derivedAcquisitionEntries,
     plan,
     resourceAuthoring,
-    roomEnteredRunDepth,
+    roomLocation,
     runState: (owner: RunStateOwner) => {
       const availability = runStateAvailability.get(semanticAddressKey(owner));
       if (availability === undefined) return undefined;
@@ -1152,10 +1157,6 @@ export function createWorkspaceProjectSourceIndex(
         : [],
     ),
   );
-  const roomEnteredRunDepth = (room: OccurrenceAddress) =>
-    enteredRunDepths.get(
-      semanticAddressKey(createRoomRunStateCheckpointAddress(room, { kind: 'roomEntered' })),
-    );
   const horizon = evaluation.authoringHorizon;
   const planEnd: WorkspaceRoutePlanEndSource = Object.freeze({
     ...(horizon.kind === 'ended' && horizon.blockedAfter.routeKey === route.routeKey
@@ -1165,6 +1166,24 @@ export function createWorkspaceProjectSourceIndex(
     availability: planEndAvailability,
     readiness: authoringReadiness,
   });
+  // A room past the plan's end is not reached, whatever the simulation entered.
+  const roomLocation = (room: OccurrenceAddress) => {
+    const gameName = route.biomes
+      .find((plan) => plan.biomeKey === room.biomeKey)
+      ?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === room.occurrenceId,
+      )?.gameName;
+    if (gameName === undefined) return undefined;
+    const pastEnd =
+      planEnd.afterPlanEnd.has(room.biomeKey) ||
+      (planEnd.endRoom?.biomeKey === room.biomeKey && planEnd.readiness(room) === 'locked');
+    const runDepth = pastEnd
+      ? undefined
+      : enteredRunDepths.get(
+          semanticAddressKey(createRoomRunStateCheckpointAddress(room, { kind: 'roomEntered' })),
+        );
+    return Object.freeze({ gameName, ...(runDepth === undefined ? {} : { runDepth }) });
+  };
   return Object.freeze({
     route: Object.freeze({
       biomes: Object.freeze(
@@ -1187,7 +1206,7 @@ export function createWorkspaceProjectSourceIndex(
             hermesShrineAssessment,
             stygianWellAssessment,
             resources,
-            roomEnteredRunDepth,
+            roomLocation,
             acquisitionConversionCandidate,
             chaosAssessment,
             (owner) => ixionGeneratedChaos.has(semanticAddressKey(owner)),

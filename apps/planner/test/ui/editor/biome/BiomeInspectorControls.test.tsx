@@ -409,6 +409,29 @@ describe('Biome inspector controls', () => {
     );
   });
 
+  it('names a placement the plan does not reach by its room, its Location unknown', async () => {
+    const project = applyProjectCommand(loadSurfaceNResourcesProject(), catalog, {
+      kind: 'ReplacePlanEnd',
+      route: createRouteAddress('Surface'),
+      planEnd: { biomeKey: 'N', occurrenceId: createOccurrenceId('surface-n-opening') },
+    });
+    const view = renderWorkspace(project, 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /^Entrance/ }));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
+    const opening = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === 'surface-n-opening',
+    );
+    const unreached = opening?.room.resources?.find(
+      (resource) => resource.currentPlacement !== undefined,
+    )?.currentPlacement;
+    if (unreached === undefined) throw new Error('resource placed past the plan end is missing');
+    expect(unreached.runDepth).toBeUndefined();
+    expect(unreached.locationLabel).toContain('Location ?');
+    expect(unreached.roomLabel).toBeTypeOf('string');
+    expect(unreached.locationLabel).not.toContain(unreached.roomLabel!);
+  });
+
   it('marks a resource placed in another room and confirms before moving it here', async () => {
     const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: /^Entrance/ }));

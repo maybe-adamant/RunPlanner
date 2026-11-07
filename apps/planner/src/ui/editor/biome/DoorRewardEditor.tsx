@@ -4,6 +4,7 @@ import {
   type WorkspaceDoorContract,
   type WorkspaceDoorReward,
   type WorkspaceInteractionCatalog,
+  type WorkspaceRewardControl,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
@@ -314,17 +315,30 @@ function RowRewardSurface({
             </span>
           ) : (
             <RewardControlEditor
-              {...(labelled ? {} : { ariaLabel: 'Reward' })}
+              ariaLabel={labelled ? cageName(reward, reward.control) : 'Reward'}
               control={reward.control}
               idPrefix={`${idPrefix}-${reward.key}`}
               interactions={interactions}
-              label={labelled ? reward.label : ''}
+              label=""
+              {...(labelled
+                ? {
+                    triggerSize: 'icon' as const,
+                    ...(reward.badge === undefined ? {} : { triggerBadge: reward.badge }),
+                  }
+                : {})}
             />
           );
         return <RowReward first={first} key={reward.key} reward={reward} />;
       })}
     </div>
   );
+}
+
+/** A cage chip's name: the cage, then its reward and any Vow of Forfeit conversion. */
+function cageName(reward: WorkspaceDoorReward, control: WorkspaceRewardControl): string {
+  if (reward.offer === null) return reward.label;
+  const realized = control.realizedAcquisition?.label;
+  return `${reward.label}: ${reward.summary}${realized === undefined ? '' : ` (${realized})`}`;
 }
 
 /** A rerolled reward's final draw, and the repair of a kept reward that no longer matches. */

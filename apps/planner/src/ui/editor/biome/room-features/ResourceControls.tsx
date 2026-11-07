@@ -8,6 +8,7 @@ import {
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
+import { hintProps } from '@planner/ui/controls/hint';
 import { elementIcon, gatheringToolIcon } from '@planner/ui/artwork/roomArtwork';
 
 type RoomResource = NonNullable<WorkspaceRoomSummary['resources']>[number];
@@ -66,8 +67,11 @@ function ResourceToggle({
       {...(elsewhere === undefined
         ? {}
         : {
-            badge: elsewhere.runDepth?.toString(),
-            detail: elsewhere.locationLabel,
+            badge: elsewhere.runDepth?.toString() ?? '?',
+            detail:
+              elsewhere.roomLabel === undefined
+                ? elsewhere.locationLabel
+                : `${elsewhere.locationLabel} · ${elsewhere.roomLabel}`,
             opensDialog: { open: confirming },
           })}
     />
@@ -100,7 +104,13 @@ function ResourceToggle({
             sideOffset={6}
           >
             <p className="resource-move-message">
-              {shortName} is placed in {elsewhere.locationLabel}.
+              {shortName} is placed in{' '}
+              {elsewhere.roomLabel === undefined ? (
+                elsewhere.locationLabel
+              ) : (
+                <span {...hintProps(elsewhere.roomLabel)}>{elsewhere.locationLabel}</span>
+              )}
+              .
             </p>
             <div className="resource-move-actions">
               <button

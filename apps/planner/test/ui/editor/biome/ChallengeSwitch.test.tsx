@@ -40,7 +40,8 @@ async function pick(
   spot: string,
   option: string | RegExp,
 ) {
-  await user.click(screen.getByRole('button', { name: spot }));
+  // Spots name what they hold; empty ones are interchangeable.
+  await user.click(screen.getAllByRole('button', { name: spot })[0]!);
   await user.click(screen.getByRole('option', { name: option }));
 }
 
@@ -51,13 +52,13 @@ describe('challenge switch rows on the room Overview', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
 
     // An empty spot offers each switch type the room can roll.
-    await pick(user, 'Spot 1', /Unseen Sigil/);
+    await pick(user, 'Empty spot', /Unseen Sigil/);
     expect(hostRoom(application).challengeSwitch?.variantKey).toBe(
       'PerfectClearChallengeSwitch_Pom',
     );
 
     // The switch's spot changes its type in place.
-    await pick(user, 'Spot 1', /Infernal Trove/);
+    await pick(user, 'Unseen Sigil', /Infernal Trove/);
     expect(hostRoom(application).challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
     expect(
       screen.getByRole<HTMLButtonElement>('button', {
@@ -65,7 +66,7 @@ describe('challenge switch rows on the room Overview', () => {
       }).disabled,
     ).toBe(false);
 
-    await pick(user, 'Spot 1', 'None');
+    await pick(user, 'Infernal Trove', 'None');
     expect(hostRoom(application).challengeSwitch).toBeUndefined();
     act(() => {
       application.store.dispatch(authoredProjectUndoRequested());
@@ -94,10 +95,10 @@ describe('challenge switch rows on the room Overview', () => {
       );
     });
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await pick(user, 'Spot', /Stygian Well/);
+    await pick(user, 'Empty spot', /Stygian Well/);
     expect(room().stygianWell).toBeDefined();
 
-    await pick(user, 'Spot', /Infernal Trove/);
+    await pick(user, 'Stygian Well', /Infernal Trove/);
     expect(room().stygianWell).toBeUndefined();
     expect(room().challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
 
@@ -112,7 +113,7 @@ describe('challenge switch rows on the room Overview', () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await pick(user, 'Spot 1', /Infernal Trove/);
+    await pick(user, 'Empty spot', /Infernal Trove/);
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
     await pickRoomObjectAction(user, 'Infernal Trove', 'Use Infernal Trove');
@@ -127,7 +128,7 @@ describe('challenge switch rows on the room Overview', () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await pick(user, 'Spot 1', /Unseen Sigil/);
+    await pick(user, 'Empty spot', /Unseen Sigil/);
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     await pickRoomObjectAction(user, 'Unseen Sigil', 'Use Unseen Sigil');
 
