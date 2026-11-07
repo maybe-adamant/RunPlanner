@@ -4,6 +4,7 @@ import type {
   GoldCatalogDeclaration,
   RequiredRewardDropDeclaration,
   RoomMapPoints,
+  RoomOrientation,
   RouteDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { RawArcanaCardDeclaration, RawFearVowDeclaration } from './arcana-fear-types';
@@ -60,6 +61,8 @@ export interface RawCatalogInput {
   readonly swappableBreakables: Readonly<Record<string, number>>;
   /** Map points of each room, by room game name. */
   readonly roomMapPoints: Readonly<Record<string, RoomMapPoints>>;
+  /** Orientation facts of each room, by room game name. */
+  readonly roomOrientations: Readonly<Record<string, RoomOrientation>>;
   readonly biomeLayouts: readonly RawBiomeLayoutDeclaration[];
   readonly traitCatalog: RawTraitCatalogInput;
 }

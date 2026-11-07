@@ -22,8 +22,22 @@ describe('room map points', () => {
       expect(Object.isFrozen(points.exitDoors)).toBe(true);
     }
     expect(catalog.rooms.byKey.F_Combat02?.mapPoints?.exitDoors).toEqual([
-      { id: 560571, obstacleName: 'ErebusExitDoor', x: 8154.65, y: 8532.48 },
-      { id: 560574, obstacleName: 'ErebusExitDoor', x: 8749.16, y: 8777.07 },
+      {
+        id: 560571,
+        obstacleName: 'ErebusExitDoor',
+        x: 8154.65,
+        y: 8532.48,
+        heroExitId: 510217,
+        exitDirection: 'Right',
+      },
+      {
+        id: 560574,
+        obstacleName: 'ErebusExitDoor',
+        x: 8749.16,
+        y: 8777.07,
+        heroExitId: 560575,
+        exitDirection: 'Right',
+      },
     ]);
   });
 

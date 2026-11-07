@@ -6,6 +6,7 @@ import type {
   ExitTypeDeclaration,
   RoomDeclaration,
   RoomMapPoints,
+  RoomOrientation,
   RoomRouteOverlay,
 } from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
@@ -49,6 +50,7 @@ export function normalizeRoom(
   exitDoorSetupOrder: readonly (readonly [number, string])[] | undefined,
   swappableBreakables: number | undefined,
   mapPoints: RoomMapPoints | undefined,
+  orientation: RoomOrientation | undefined,
 ): RoomDeclaration {
   const path = `rooms[${roomIndex}]`;
 
@@ -185,6 +187,7 @@ export function normalizeRoom(
       : { fieldsOptionalRewards: fields.fieldsOptionalRewards }),
     ...(fields.fieldsSpatial === undefined ? {} : { fieldsSpatial: fields.fieldsSpatial }),
     ...(mapPoints === undefined ? {} : { mapPoints }),
+    ...(orientation === undefined ? {} : { orientation }),
     ...(infernalContract.infernalContractReward === undefined
       ? {}
       : { infernalContractReward: infernalContract.infernalContractReward }),
@@ -207,6 +210,7 @@ export function normalizeRoom(
           exitDoorSetupOrder,
           swappableBreakables,
           mapPoints,
+          orientation,
         ),
       `${path}.routeOverlays[${overlayIndex}]`,
     ),

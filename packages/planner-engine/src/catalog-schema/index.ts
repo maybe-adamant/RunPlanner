@@ -1251,8 +1251,10 @@ export interface RoomDeclaration {
   readonly fieldsOptionalRewards?: FieldsOptionalRewardDescriptor;
   /** Exact room-scoped physical points for authored Fields combat layouts. */
   readonly fieldsSpatial?: FieldsSpatialDeclaration;
-  /** Positions of the room's map things the editor can place; no simulation reads them. */
+  /** The room's map things with their positions and native entry and exit directions. */
   readonly mapPoints?: RoomMapPoints;
+  /** RoomData facts deciding the room's horizontal flip and entry. */
+  readonly orientation?: RoomOrientation;
   /** Source-owned zero-cost Infernal Contract pedestal at qualifying Preboss rooms. */
   readonly infernalContractReward?: {
     readonly entryKey: 'infernalContractReward';
@@ -1299,8 +1301,31 @@ export interface RoomMapPoint {
   readonly y: number;
 }
 
+/**
+ * A native movement direction on the unflipped map: Left or Right, or the
+ * isometric compass in rooms with `CardinalEntranceDirection`.
+ */
+export type RoomMapDirection = 'Left' | 'Right' | 'North' | 'East' | 'South' | 'West';
+
 export interface RoomMapExitDoor extends RoomMapPoint {
   readonly obstacleName: string;
+  /**
+   * The `HeroExit` nearest the door and the ExitDirection leaving through it
+   * names; both absent in a room without `HeroExit`s.
+   */
+  readonly heroExitId?: number;
+  readonly exitDirection?: RoomMapDirection;
+}
+
+/**
+ * A `HeroStart` with the `HeroEnd` nearest it, as the game pairs them, and the
+ * entrance direction from start to end; the direction is absent where
+ * `StrictLeftRight` names none.
+ */
+export interface RoomMapEntryPair {
+  readonly startPointId: number;
+  readonly endPointId: number;
+  readonly direction?: RoomMapDirection;
 }
 
 /** A room's map things by family, each family ascending by ObjectId. */
@@ -1309,6 +1334,9 @@ export interface RoomMapPoints {
   readonly exitDoors: readonly RoomMapExitDoor[];
   readonly heroStarts: readonly RoomMapPoint[];
   readonly heroEnds: readonly RoomMapPoint[];
+  readonly heroExits: readonly RoomMapPoint[];
+  /** One pair per `HeroStart`, in `heroStarts` order. */
+  readonly entryPairs: readonly RoomMapEntryPair[];
   /** `SecretPoint`s; a Chaos gate's spawn point index is its 1-based position here. */
   readonly secretPoints: readonly RoomMapPoint[];
   readonly challengeSwitchAnchors: readonly RoomMapPoint[];
@@ -1319,6 +1347,31 @@ export interface RoomMapPoints {
   readonly fieldsOptionalPoints?: readonly RoomMapPoint[];
   /** The points of the room's declared cocoon reward point IDs. */
   readonly cocoonRewardPoints?: readonly RoomMapPoint[];
+}
+
+/** RoomData facts, resolved through `InheritFrom`, that decide a room's flip and entry. */
+export interface RoomOrientation {
+  /** `EntranceDirection`: the side the unflipped room is entered from. */
+  readonly entranceDirection?: 'Left' | 'Right' | 'LeftRight';
+  /** `FlipHorizontalChance`; absent leaves the game's default chance. */
+  readonly flipChance?: number;
+  /** `IgnoreExitDirection`: leaving the room names no ExitDirection. */
+  readonly ignoresExitDirection: boolean;
+  /** `CardinalEntranceDirection`: entry and exit directions use the compass. */
+  readonly cardinalEntrance: boolean;
+  /** `StrictLeftRight`: only upward entry pairs name Left or Right. */
+  readonly strictLeftRight: boolean;
+  /** `HeroStartPoint` and `HeroEndPoint`: the entry unless the previous room set one. */
+  readonly entry?: { readonly startPointId: number; readonly endPointId: number };
+  /**
+   * `OnUseSetRunData`: leaving through a door of this obstacle type sets the
+   * next room's entry; each obstacle name once, ascending.
+   */
+  readonly nextRoomEntries?: readonly {
+    readonly obstacleName: string;
+    readonly startPointId: number;
+    readonly endPointId: number;
+  }[];
 }
 
 export type AuthoredFieldInitialization<T> =

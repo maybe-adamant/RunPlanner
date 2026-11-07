@@ -22,6 +22,7 @@ import { iRooms } from './rooms/i';
 import { exitDoorSetupOrders } from './rooms/exit-door-setup-order';
 import { swappableBreakables } from './rooms/swappable-breakables';
 import { roomMapPoints } from './rooms/map-points';
+import { roomOrientations } from './rooms/orientation';
 import { nRooms } from './rooms/n/index';
 import { oRooms } from './rooms/o';
 import { pRooms } from './rooms/p';
@@ -87,6 +88,7 @@ export const declarations = {
   exitDoorSetupOrders,
   swappableBreakables,
   roomMapPoints,
+  roomOrientations,
   biomeLayouts,
   traitCatalog: traitCatalogInput,
 } as const satisfies RawCatalogInput;

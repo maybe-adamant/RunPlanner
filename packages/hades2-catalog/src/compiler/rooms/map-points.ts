@@ -1,4 +1,6 @@
 import type {
+  RoomMapDirection,
+  RoomMapEntryPair,
   RoomMapExitDoor,
   RoomMapPoint,
   RoomMapPoints,
@@ -33,14 +35,70 @@ function normalizeFamily<T extends RoomMapPoint>(
   );
 }
 
-function normalizeExitDoor(door: RoomMapExitDoor, path: string): RoomMapExitDoor {
+const mapDirections: ReadonlySet<string> = new Set<RoomMapDirection>([
+  'Left',
+  'Right',
+  'North',
+  'East',
+  'South',
+  'West',
+]);
+
+function normalizeDirection(direction: RoomMapDirection, path: string): RoomMapDirection {
+  if (!mapDirections.has(direction)) fail(path, 'must be a map direction');
+  return direction;
+}
+
+function normalizeExitDoor(
+  door: RoomMapExitDoor,
+  path: string,
+  heroExitIds: ReadonlySet<number>,
+): RoomMapExitDoor {
+  if (heroExitIds.size === 0 ? door.heroExitId !== undefined : !heroExitIds.has(door.heroExitId!))
+    fail(`${path}.heroExitId`, 'must name the nearest of the room HeroExits, when it has any');
+  if ((door.exitDirection === undefined) !== (door.heroExitId === undefined))
+    fail(`${path}.exitDirection`, 'must accompany heroExitId');
   return Object.freeze({
     ...normalizePoint(door, path),
     obstacleName: requireNonEmpty(door.obstacleName, `${path}.obstacleName`),
+    ...(door.heroExitId === undefined
+      ? {}
+      : {
+          heroExitId: door.heroExitId,
+          exitDirection: normalizeDirection(door.exitDirection!, `${path}.exitDirection`),
+        }),
   });
 }
 
-/** One room's map points: each family ascending, every ObjectId once in the room. */
+function normalizeEntryPairs(
+  pairs: readonly RoomMapEntryPair[],
+  heroStarts: readonly RoomMapPoint[],
+  heroEnds: readonly RoomMapPoint[],
+  path: string,
+): readonly RoomMapEntryPair[] {
+  if (pairs.length !== heroStarts.length) fail(path, 'must pair each HeroStart once');
+  const endIds = new Set(heroEnds.map((end) => end.id));
+  return Object.freeze(
+    pairs.map((pair, index) => {
+      const pairPath = `${path}[${index}]`;
+      if (pair.startPointId !== heroStarts[index]!.id)
+        fail(`${pairPath}.startPointId`, 'must follow heroStarts order');
+      if (!endIds.has(pair.endPointId)) fail(`${pairPath}.endPointId`, 'must name a HeroEnd');
+      return Object.freeze({
+        startPointId: pair.startPointId,
+        endPointId: pair.endPointId,
+        ...(pair.direction === undefined
+          ? {}
+          : { direction: normalizeDirection(pair.direction, `${pairPath}.direction`) }),
+      });
+    }),
+  );
+}
+
+/**
+ * One room's map points: each family ascending, every ObjectId once in the
+ * room, door exits and entry pairs naming the room's own points.
+ */
 export function normalizeRoomMapPoints(raw: RoomMapPoints, path: string): RoomMapPoints {
   const seen = new Set<number>();
   const family = (points: readonly RoomMapPoint[], key: string) =>
@@ -56,10 +114,18 @@ export function normalizeRoomMapPoints(raw: RoomMapPoints, path: string): RoomMa
   const fieldsCagePoints = optionalFamily(raw.fieldsCagePoints, 'fieldsCagePoints');
   const fieldsOptionalPoints = optionalFamily(raw.fieldsOptionalPoints, 'fieldsOptionalPoints');
   const cocoonRewardPoints = optionalFamily(raw.cocoonRewardPoints, 'cocoonRewardPoints');
+  const heroStarts = family(raw.heroStarts, 'heroStarts');
+  const heroEnds = family(raw.heroEnds, 'heroEnds');
+  const heroExits = family(raw.heroExits, 'heroExits');
+  const heroExitIds = new Set(heroExits.map((heroExit) => heroExit.id));
   return Object.freeze({
-    exitDoors: normalizeFamily(raw.exitDoors, seen, `${path}.exitDoors`, normalizeExitDoor),
-    heroStarts: family(raw.heroStarts, 'heroStarts'),
-    heroEnds: family(raw.heroEnds, 'heroEnds'),
+    exitDoors: normalizeFamily(raw.exitDoors, seen, `${path}.exitDoors`, (door, doorPath) =>
+      normalizeExitDoor(door, doorPath, heroExitIds),
+    ),
+    heroStarts,
+    heroEnds,
+    heroExits,
+    entryPairs: normalizeEntryPairs(raw.entryPairs, heroStarts, heroEnds, `${path}.entryPairs`),
     secretPoints: family(raw.secretPoints, 'secretPoints'),
     challengeSwitchAnchors,
     ...(raw.wellAnchorId === undefined ? {} : { wellAnchorId: raw.wellAnchorId }),

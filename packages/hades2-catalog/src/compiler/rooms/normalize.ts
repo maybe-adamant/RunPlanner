@@ -6,6 +6,7 @@ import type {
   ExitTypeDeclaration,
   RoomDeclaration,
   RoomMapPoints,
+  RoomOrientation,
 } from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 
@@ -15,6 +16,7 @@ import { fail } from '../errors';
 import { validateRoomCollectionClosure } from './collection-closure';
 import { normalizeRoomMapPoints } from './map-points';
 import { normalizeRoom } from './normalize-room';
+import { normalizeRoomOrientation } from './orientation';
 import { validateRoomTemplateContracts } from './template-contracts';
 
 /** Produces the compiler-private immutable room collection. */
@@ -23,6 +25,7 @@ export function normalizeRooms(
   rawExitDoorSetupOrders: Readonly<Record<string, readonly (readonly [number, string])[]>>,
   rawSwappableBreakables: Readonly<Record<string, number>>,
   rawRoomMapPoints: Readonly<Record<string, RoomMapPoints>>,
+  rawRoomOrientations: Readonly<Record<string, RoomOrientation>>,
   rewards: RewardKernelCatalog,
   encounterEnvelopes: CatalogCollection<EncounterEnvelope>,
   encounterDefinitions: CatalogCollection<EncounterDefinition>,
@@ -42,8 +45,21 @@ export function normalizeRooms(
   for (const gameName of Object.keys(rawRoomMapPoints))
     if (!declaredGameNames.has(gameName))
       fail(`roomMapPoints.${gameName}`, 'is not a declared room');
-  const rooms = rawRooms.map((room, roomIndex) =>
-    normalizeRoom(
+  for (const gameName of Object.keys(rawRoomOrientations))
+    if (!declaredGameNames.has(gameName))
+      fail(`roomOrientations.${gameName}`, 'is not a declared room');
+  const rooms = rawRooms.map((room, roomIndex) => {
+    const mapPoints = Object.hasOwn(rawRoomMapPoints, room.gameName)
+      ? normalizeRoomMapPoints(rawRoomMapPoints[room.gameName]!, `roomMapPoints.${room.gameName}`)
+      : undefined;
+    const orientation = Object.hasOwn(rawRoomOrientations, room.gameName)
+      ? normalizeRoomOrientation(
+          rawRoomOrientations[room.gameName]!,
+          mapPoints,
+          `roomOrientations.${room.gameName}`,
+        )
+      : undefined;
+    return normalizeRoom(
       room,
       roomIndex,
       rewards,
@@ -57,11 +73,10 @@ export function normalizeRooms(
       Object.hasOwn(rawSwappableBreakables, room.gameName)
         ? rawSwappableBreakables[room.gameName]
         : undefined,
-      Object.hasOwn(rawRoomMapPoints, room.gameName)
-        ? normalizeRoomMapPoints(rawRoomMapPoints[room.gameName]!, `roomMapPoints.${room.gameName}`)
-        : undefined,
-    ),
-  );
+      mapPoints,
+      orientation,
+    );
+  });
   const collection = createCollection(rooms, 'rooms', (room) => room.gameName, 'gameName');
   collection.values.forEach((room, roomIndex) => {
     validateRoomTemplateContracts(room, roomIndex, encounterEnvelopes);

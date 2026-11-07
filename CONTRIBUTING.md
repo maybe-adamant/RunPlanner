@@ -374,12 +374,13 @@ models decisions and their legality, not damage or timing values.
   `game-module/src/execution-compatibility.json` and the decoder together, and
   needs a persistence transition (the loader identifies a project by catalog
   and schema), so treat it like a schema change.
-- **Room map points:** after a patch that touches `Content/Maps/bin`, rerun
+- **Room map points and orientation:** after a patch that touches
+  `Content/Maps/bin` or room orientation data in `RoomData*.lua`, rerun
   `npm run catalog:map-points` (`--game <install>` or `HADES2_GAME_DIR`,
-  default the Steam path); it regenerates
-  `packages/hades2-catalog/src/declarations/rooms/map-points.ts`, and
-  `npm run test:catalog` checks it against the declared doors, anchor counts
-  and point IDs.
+  default the Steam path); it regenerates `map-points.ts` and `orientation.ts`
+  in `packages/hades2-catalog/src/declarations/rooms/`, and
+  `npm run test:catalog` checks them against the declared doors, anchor
+  counts, point IDs and Fields entry pairs.
 - **Gold estimate:** after a patch that touches enemy drops or money stores,
   or when new recorded runs are available, compare the engine's enemy-gold
   policy with recorded runs: `node scripts/gold-calibration.mjs <folder>...`
