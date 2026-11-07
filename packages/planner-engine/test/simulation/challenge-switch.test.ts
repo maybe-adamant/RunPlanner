@@ -10,9 +10,11 @@ import {
   createAcquisitionSiteAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
+  createTraitOfferAddress,
   roomActionKey,
   semanticAddressKey,
   type ProjectCommand,
@@ -464,6 +466,45 @@ describe('challenge switch claims', () => {
         (row) => semanticAddressKey(row.roomAction) === semanticAddressKey(claim!.roomAction!),
       )?.estimates,
     ).toEqual([estimate]);
+  });
+
+  it('multiplies a Time switch’s claimed gold by the Quick Buck held as its challenge ends', () => {
+    // Fields orders the press after every cage, so Common Quick Buck (×1.2) is held at the end.
+    const biome = createBiomeAddress('Underworld', 'H');
+    const id = createOccurrenceId('golden-h-combat09');
+    const cage = createLocalRewardAddress(biome, id, 'cages', 'cage1');
+    let project = applyProjectCommand(golden(), catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: cage,
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(cage, 'self'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: ['MoneyMultiplierBoon', 'DodgeChanceBoon', 'SlowProjectileBoon'].map(
+          (traitKey) => ({ traitKey, rarity: 'Common' as const }),
+        ),
+        selectedOptionKey: 'option1',
+      },
+    } as never);
+    const used = withSwitch(project, 'H', 'golden-h-combat09', 'TimeChallengeSwitch_Money', {
+      used: true,
+      outcome: { outcome: 'finished' },
+    });
+    expect(simulateProject(catalog, used).status).toBe('valid');
+    const room = goldLedgerForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, used),
+    ).roomAt(createOccurrenceAddress(biome, id));
+    if (room.availability !== 'available') throw new Error(`room is ${room.reason}`);
+    expect(
+      room.room.gains
+        .filter((gain) => gain.kind === 'challengeSwitchGold')
+        .map((gain) => gain.amount?.mean),
+    ).toEqual([108]);
   });
 
   it('sums a switch fight’s kills at its press and leaves the claimed gold on its pickup', () => {
