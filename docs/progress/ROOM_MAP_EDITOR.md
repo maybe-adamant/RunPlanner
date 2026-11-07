@@ -32,13 +32,99 @@ map hotspot dispatches the same intent as its left-panel control.
      doors (reward, lock, taken), the authored Chaos gate point, entries and
      anchor spots; Timeline row selection drives door/reward state; Optional
      actions below the Timeline.
-2. Engine slice: anchor identity per object (Well pins), entry point,
-   orientation (derived for door-decided rooms, authored for random rooms,
-   fixed otherwise) as authored data with game-module steering; Draft and
-   run import adapt. Minor schema revision. Verify that a flipped room equals
-   the mirrored clean capture before showing flipped maps.
+2. Room layout data (design below, for owner review).
 3. Interactive map: anchors, Chaos point, entries, doors and rewards open the
    same pickers as their left-panel controls.
+
+## Phase 2 design: room layout (schema 102)
+
+Owner-approved major bump (2026-11-07). Rule: whether something exists is
+never optional; where an existing thing stands is optional when the game is
+free to place it, and unset means the game decides. Each existing thing owns
+its optional position; the room owns only its own facts.
+
+### Who owns which position
+
+| Thing (exists by)               | Optional position                       | Today               |
+| ------------------------------- | --------------------------------------- | ------------------- |
+| Room                            | orientation, entry point (`layout`)     | Fields entry only   |
+| Anchor object (room content)    | `anchorId` on its leaf                  | none                |
+| Fields cage slot (encounter)    | cage point per slot                     | required per slot   |
+| Fields optional reward, Nemesis | optional point per slot / Nemesis point | required per slot   |
+| Chaos gate (exit)               | `spawnPointIndex` on the exit           | optional, unchanged |
+
+Fixed, not positions: exit doors and Ephyra side doors (a side room is bound
+to a fixed door of its parent room; the authored choice is what lies behind
+the door, which is route structure). Cocoon reward points stay in encounter
+customization (keyed by phase; already optional). No position decides
+rewards, encounters, gold or eligibility (Fields, route-detour and encounter
+audits); only the execution assembly requires Fields points today.
+
+### Changes
+
+- **Room layout** `RoomOccurrence.layout?`: `flipped?` (authorable in
+  random-flip rooms only; elsewhere preserved and flagged; door-decided rooms
+  derive it later) and `entryStartPointId?` (a `HeroStart` id; every room).
+  Room replacement clears it.
+- **Fields**: the entry moves to the room layout; cage, optional and Nemesis
+  points stay per slot and become optional. `fieldsSpatialPointMissing` is
+  deleted with its Draft repair, app copy and import handling; the
+  unavailable and duplicate rules already ignore unset siblings.
+- **Anchors**: `anchorId?` must be an anchor of the room; no two objects on
+  one anchor; in the six Well-pinned rooms the Well's anchor is the pin and
+  the pin is never offered to others. Findings `roomObjectAnchorUnavailable`
+  and `roomObjectAnchorDuplicate` preserve stale values. Open: the
+  unmodelled Meta Reward Stand also takes a free anchor.
+- **Chaos**: unchanged.
+- **Editor**: each placement family is one line of spots sized by the map's
+  point count, like the Objects line: cage spots hold C1..Cn, optional spots
+  hold optional rewards or Nemesis, anchor spots hold objects. The spot line
+  is a projection of "occupant -> point"; storage stays per occupant.
+
+### Plan wire and game module
+
+- `layout` block per room (orientation, entry: start plus the declared end
+  where the catalog pairs it, else the module pairs the closest end); Fields
+  points per slot become optional on the wire; objects publish `anchorId`.
+- Steering: entry and orientation preset on the native room at realize;
+  Fields and anchor picks through scoped `RemoveRandomValue` wraps that remove
+  every planned point from the pool before an unset slot draws natively;
+  conformance tolerates unset slots. The Lua decoder stops requiring the
+  Fields block and the cage-count match.
+
+### Migration 101 -> 102
+
+Loss-free and small: `fieldsCombat.state.spatial.entryStartPointId` moves to
+`layout.entryStartPointId` (null omitted); everything else keeps its place.
+Follows the 100 -> 101 pattern (persistence transition, schema test, legacy
+body, README history). Checkpoints and execution fixtures regenerate; Draft
+settings and share codes are unaffected.
+
+### Derivation (orientation and entry are mostly derived)
+
+Native chain: the previous room's door and flip give its exit direction; a
+room with a fixed entrance side flips exactly when that side differs from the
+exit direction; the room's eligible entries are those whose direction matches
+it, and the game picks randomly only among ties. Authorable choices are
+limited to real rolls: flip in rooms without a fixed entrance side, and in
+door-decided rooms entered with no exit direction (after Chaos or Dream)
+unless their chance is 0; entry only among eligible ties. Everything else is
+derived and shown. The rule is implemented from a static read and confirmed
+by the in-game flip probe (capture tool `RCFLIP`/`RCENTRY`); corrections stay
+inside the one derivation rule.
+
+### Slices
+
+1. Catalog: resolved flip facts per room, `HeroExit` points, and entry pairs
+   (start, closest end, canonical direction).
+2. Engine and schema 102: the derivation chain (derived flip and eligible
+   entries per room), room layout, optional Fields points, object `anchorId`,
+   findings, commands, migration, wire, fixtures; Draft and run import adapt.
+3. Game module: layout and anchor steering with partial-plan pools and
+   conformance.
+4. Planner: spot lines for cages/optional/anchors, orientation and entry
+   controls; the map shows them (phase 3 makes them clickable).
+5. In-game probe confirms or corrects the derivation; flipped map display.
 
 ## Evidence
 
