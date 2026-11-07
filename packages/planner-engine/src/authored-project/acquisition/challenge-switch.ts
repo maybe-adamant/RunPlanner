@@ -69,13 +69,13 @@ export function challengeSwitchOutcomeDropsNectar(outcome: ChallengeSwitchOutcom
 
 /**
  * The outcome a variant change keeps: the same one where the new kind has it,
- * else the new kind's default; Nectar and gold follow it.
+ * else the new kind's default; Nectar follows it.
  */
 export function challengeSwitchOutcomeForVariant(
   catalog: Catalog,
   current: AuthoredChallengeSwitch,
   variantKey: string,
-): Pick<AuthoredChallengeSwitch, 'outcome' | 'nectarDropped' | 'gold'> | undefined {
+): Pick<AuthoredChallengeSwitch, 'outcome' | 'nectarDropped'> | undefined {
   const resolved = resolveChallengeSwitch(catalog, variantKey);
   if (resolved === undefined) return undefined;
   const outcome = challengeSwitchOutcomes(resolved.kind).includes(current.outcome)
@@ -84,9 +84,6 @@ export function challengeSwitchOutcomeForVariant(
   return Object.freeze({
     outcome,
     nectarDropped: current.nectarDropped && challengeSwitchOutcomeDropsNectar(outcome),
-    ...(resolved.kind.goldReward && outcome === 'finished'
-      ? { gold: current.gold ?? catalog.challengeSwitches.gold.defaultValue }
-      : {}),
   });
 }
 
@@ -101,7 +98,6 @@ export function defaultChallengeSwitch(
     variantKey,
     outcome: defaultOutcome(resolved.kind),
     nectarDropped: false,
-    ...(resolved.kind.goldReward ? { gold: catalog.challengeSwitches.gold.defaultValue } : {}),
   });
 }
 
@@ -133,8 +129,7 @@ export function challengeSwitchClaimPickups(
 
 /**
  * Why a claim outcome cannot be authored: the outcome must be one the kind's
- * fight can end with, the bonus Nectar needs a claim with no damage taken, and
- * only a finished Time switch claims gold, within its decay range.
+ * fight can end with, and the bonus Nectar needs a claim with no damage taken.
  */
 export function challengeSwitchShapeIssue(
   catalog: Catalog,
@@ -146,16 +141,6 @@ export function challengeSwitchShapeIssue(
     return `${resolved.kind.key} switches cannot end ${challengeSwitch.outcome}`;
   if (challengeSwitch.nectarDropped && !challengeSwitchOutcomeDropsNectar(challengeSwitch.outcome))
     return 'the bonus Nectar drops only on a claim with no damage taken';
-  const gold = catalog.challengeSwitches.gold;
-  if (resolved.kind.goldReward && challengeSwitch.outcome === 'finished') {
-    if (
-      challengeSwitch.gold === undefined ||
-      !Number.isInteger(challengeSwitch.gold) ||
-      challengeSwitch.gold < gold.minimumValue ||
-      challengeSwitch.gold > gold.startingValue
-    )
-      return `gold must be an integer from ${gold.minimumValue} through ${gold.startingValue}`;
-  } else if (challengeSwitch.gold !== undefined) return 'only a finished Time switch claims gold';
   const elite = challengeSwitch.elite;
   if (elite !== undefined) {
     if (resolved.kind.key !== 'elite') return 'only an Elite switch pins its elite';

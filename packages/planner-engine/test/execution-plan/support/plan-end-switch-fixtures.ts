@@ -68,7 +68,6 @@ function pressedSwitch(
     occurrence,
     outcome: current.outcome,
     nectarDropped: false,
-    ...(current.gold === undefined || outcome.outcome === 'left' ? {} : { gold: current.gold }),
     ...outcome,
   } as ProjectCommand);
 }
@@ -118,7 +117,6 @@ export function underworldFSwitchesProject(): ProjectDocument {
   );
   const time = pressedSwitch(perfect, 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', {
     outcome: 'finished',
-    gold: 35,
   });
   return endAt(composedSwitch(time, 'F', 'golden-f-b8-e1'), 'F', 'golden-f-b9-e1');
 }

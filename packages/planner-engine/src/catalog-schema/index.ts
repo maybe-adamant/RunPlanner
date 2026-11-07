@@ -588,6 +588,8 @@ export interface EncounterDefinition {
     readonly waves: number;
     readonly rewardType: string;
     readonly producerLifecycleKey: string;
+    /** The pickup's fixed gold estimate: credited kills depend on play. */
+    readonly goldEstimate: GoldFixedEstimate;
   };
   readonly nemesisRandomEvent?: {
     readonly freeItem: {
@@ -1661,12 +1663,11 @@ export interface ChallengeSwitchCatalog {
   readonly minimumRoomsSinceLast: number;
   /** Lifecycle of the pickups a claim spawns. */
   readonly producerLifecycleKey: string;
-  /** Time-switch gold before the money multiplier. */
-  readonly gold: {
-    readonly startingValue: number;
-    readonly minimumValue: number;
-    readonly defaultValue: number;
-  };
+  /**
+   * A finished Time switch's claimed gold, before the money multiplier: fixed,
+   * since the claim decays with clear time the plan does not model.
+   */
+  readonly claimGoldEstimate: GoldFixedEstimate;
   /** The bonus drop a clean claim may add (`LootDrops`). */
   readonly bonusReward: { readonly rewardType: string; readonly dropChance: number };
 }
@@ -1700,6 +1701,15 @@ export interface ExtraExitLockCatalog {
 }
 
 /** Gold facts with no narrower owner. */
+/**
+ * A fixed gold amount standing for one the game leaves to play, before the
+ * money multiplier, with the range the game can pay.
+ */
+export interface GoldFixedEstimate {
+  readonly value: number;
+  readonly range: { readonly min: number; readonly max: number };
+}
+
 export interface GoldCatalogDeclaration {
   /** Gold a trait screen with no options pays instead, before the money multiplier. */
   readonly fallbackGold: number;

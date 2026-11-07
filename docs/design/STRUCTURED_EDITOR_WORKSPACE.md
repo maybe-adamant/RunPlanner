@@ -650,9 +650,10 @@ engine's lock as its hint; an observed switch lists its kind's variants with
 their locks. Its Combat entry reuses the encounter customization editor for a
 Time or Perfect Clear composition, and an Elite switch edits its pinned elite
 and the attributes each forced draw allows. The press is an optional
-Timeline row whose outcome controls (the kind's outcome, the bonus Nectar
-where allowed, a finished Time switch's gold) bind the engine's outcome
-product; the claim pickups are ordinary pickup rows.
+Timeline row whose outcome controls (the kind's outcome and the bonus Nectar
+where allowed) bind the engine's outcome product; the claim pickups are
+ordinary pickup rows, and a pickup row paying a fixed gold estimate explains
+it from the estimate the engine publishes on that row.
 
 An Oceanus room that can lock its doors gives each door that can lock a lock
 toggle on its row of the door editor, since the game decides the locks as the

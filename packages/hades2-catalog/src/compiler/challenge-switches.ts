@@ -14,6 +14,7 @@ import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 import type { RawChallengeSwitchInput } from '../declarations/challenge-switches-types';
 import { createCollection, requireNonEmpty, requirePositiveInteger } from './common';
 import { fail } from './errors';
+import { normalizeGoldFixedEstimate } from './gold';
 
 function requireChance(value: number, path: string): number {
   if (typeof value !== 'number' || !(value > 0) || value > 1)
@@ -279,12 +280,10 @@ export function normalizeChallengeSwitches(
     encounters.sets,
   );
 
-  const gold = raw.gold;
-  requirePositiveInteger(gold.minimumValue, `${path}.gold.minimumValue`);
-  requirePositiveInteger(gold.startingValue, `${path}.gold.startingValue`);
-  requirePositiveInteger(gold.defaultValue, `${path}.gold.defaultValue`);
-  if (gold.minimumValue > gold.defaultValue || gold.defaultValue > gold.startingValue)
-    fail(`${path}.gold`, 'must order minimumValue <= defaultValue <= startingValue');
+  const claimGoldEstimate = normalizeGoldFixedEstimate(
+    raw.claimGoldEstimate,
+    `${path}.claimGoldEstimate`,
+  );
 
   return Object.freeze({
     eliteEncounters,
@@ -296,11 +295,7 @@ export function normalizeChallengeSwitches(
       `${path}.minimumRoomsSinceLast`,
     ),
     producerLifecycleKey: raw.producerLifecycleKey,
-    gold: Object.freeze({
-      startingValue: gold.startingValue,
-      minimumValue: gold.minimumValue,
-      defaultValue: gold.defaultValue,
-    }),
+    claimGoldEstimate,
     bonusReward: Object.freeze({
       rewardType: lifecycleReward(raw.bonusReward.rewardType, `${path}.bonusReward.rewardType`),
       dropChance: requireChance(raw.bonusReward.dropChance, `${path}.bonusReward.dropChance`),

@@ -13,6 +13,7 @@ import {
   requirePositiveInteger,
 } from '../common';
 import { fail } from '../errors';
+import { normalizeGoldFixedEstimate } from '../gold';
 import { normalizeRequirement } from '../requirements';
 import { normalizeEncounterGeneration, normalizeInfiniteRoster } from './generation';
 
@@ -713,6 +714,10 @@ export function normalizeEncounterDefinitions(
                   raw.killBounty.producerLifecycleKey,
                   `${path}.killBounty.producerLifecycleKey`,
                 ),
+                goldEstimate: normalizeKillBountyGoldEstimate(
+                  raw.killBounty,
+                  `${path}.killBounty.goldEstimate`,
+                ),
               }),
             }),
         ...(blocksKeepsakeSelectionKeys === undefined ? {} : { blocksKeepsakeSelectionKeys }),
@@ -752,4 +757,15 @@ export function normalizeFieldNpcEncounterKeys(
       fail(`fieldNpcEncounterKeys[${index}]`, `duplicate encounter definition ${key}`);
   });
   return Object.freeze([...rawKeys]);
+}
+
+/** A bounty's estimate pays at most every mark of every wave credited. */
+function normalizeKillBountyGoldEstimate(
+  bounty: NonNullable<EncounterDefinition['killBounty']>,
+  path: string,
+) {
+  const estimate = normalizeGoldFixedEstimate(bounty.goldEstimate, path);
+  if (estimate.range.max !== bounty.goldPerMark * bounty.marksPerWave.max * bounty.waves)
+    fail(`${path}.range.max`, 'must be every mark of every wave credited');
+  return estimate;
 }

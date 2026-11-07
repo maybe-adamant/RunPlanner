@@ -116,6 +116,7 @@ function decodeChallengeSwitch(
   if (challengeSwitchHost(catalog, gameName) === undefined)
     failProjectDocument(path, `${gameName} hosts no challenge switch`);
   const raw = expectRecord(value, path);
+  // A legacy Time claim `gold` is ignored: the gold ledger pays the catalog's estimate.
   const hasGold = Object.hasOwn(raw, 'gold');
   const hasElite = Object.hasOwn(raw, 'elite');
   const hasCustomization = Object.hasOwn(raw, 'customization');
@@ -152,8 +153,6 @@ function decodeChallengeSwitch(
     failProjectDocument(`${path}.outcome`, 'must be left, finished, hitless or failed');
   if (typeof raw.nectarDropped !== 'boolean')
     failProjectDocument(`${path}.nectarDropped`, 'must be boolean');
-  if (hasGold && typeof raw.gold !== 'number')
-    failProjectDocument(`${path}.gold`, 'must be a number');
   const customization = hasCustomization
     ? (() => {
         const record = expectRecord(raw.customization, `${path}.customization`);
@@ -185,7 +184,6 @@ function decodeChallengeSwitch(
     variantKey,
     outcome: raw.outcome as ChallengeSwitchOutcome,
     nectarDropped: raw.nectarDropped,
-    ...(hasGold ? { gold: raw.gold as number } : {}),
     ...(elite === undefined ? {} : { elite }),
     ...(customization === undefined ? {} : { customization }),
   });

@@ -664,10 +664,16 @@ during the fight (`EndedEarly`, whose only writer is `LeaveRoom`) leaves it
 uncompleted and unclaimable.
 
 At the claim, Perfect Clear after a hit gives the Onion
-(`RoomRewardConsolationPrize`); Time gives gold, 100 for 8 seconds then
-falling to a floor of 10, times the money multiplier held when the challenge
-ends (`EndChallengeEncounter`, `EncounterLogic.lua:2139-2141`); Elite has no
-fail state.
+(`RoomRewardConsolationPrize`); Time gives gold, times the money multiplier
+held when the challenge ends (`EndChallengeEncounter`,
+`EncounterLogic.lua:2139-2141`); Elite has no fail state. The Time value
+starts at `StartingValue` 100 (`ValueDepthRamp` 0) and, after
+`DecayStartDelay` 8 s, loses `ValueDecayAmount` 1 every `LootDecayInterval`
+1 s × the switch's `IntervalMultiplier` 0.3, down to `MinValue` 10
+(`EncounterData_TimeChallenge.lua:39-44`, `ObstacleData.lua:3103-3110`,
+`HandleChallengeLootDecay`, `EventLogic.lua:576-616`): 100 within 8 s, 90 at
+about 11 s and the floor from about 35 s. A `BlockMoney` curse floors it at 0
+and `ChallengeDecayIncrease` traits speed the decay.
 A fight without damage also rolls a 5% bonus Nectar (`GiftDrop`) for every
 kind, spawned bare, without a `RunProgress` level (owner-settled: kept, with no
 level-up). Rewards spawn directly: no
@@ -680,13 +686,13 @@ goldifiable and Artificer-convertible.
 
 The switch is an observed Overview fact of its host room, authored with its
 variant, the kind's encounter customization or Elite pin, and one press whose
-outcome (left, finished, hitless, failed), bonus Nectar and Time gold are
-authored. Spawn rules are findings on the switch's Overview owner and halt
+outcome (left, finished, hitless, failed) and bonus Nectar are authored. Spawn rules are findings on the switch's Overview owner and halt
 the room at its Overview like the Well and Shrine placement findings (owner
 settled): biome depth by RoomSet, spacing, anchor capacity shared with Well,
 Pool and Shrine, and the kind and variant gates. The planner assumes every
-Crossroads unlock (mature profile). Time gold is an approximate plausibility
-value, defaulting to about 90. Not modeled: a left fight's partial kill gold,
+Crossroads unlock (mature profile). Time gold is not authored: the ledger pays
+a fixed 90 ([gold estimate assumptions](../../design/GOLD_ESTIMATE_ASSUMPTIONS.md#player-behaviour)).
+Not modeled: a left fight's partial kill gold,
 Elite attribute game-state requirements, the run's `BannedEliteAttributes`,
 the H `ChallengeSwitchBlockedByFieldsLoot` exit gate and bounties. Draft
 never authors a switch.

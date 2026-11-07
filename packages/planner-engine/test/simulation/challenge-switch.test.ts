@@ -82,10 +82,6 @@ function withSwitch(
       occurrence: createOccurrenceAddress(biome, id),
       outcome: current.outcome,
       nectarDropped: false,
-      // Gold belongs to a finished Time fight only.
-      ...(current.gold === undefined || (options.outcome as { outcome?: string }).outcome === 'left'
-        ? {}
-        : { gold: current.gold }),
       ...options.outcome,
     } as ProjectCommand);
   return next;
@@ -408,15 +404,14 @@ describe('challenge switch claims', () => {
     expect(result.findings.map((finding) => finding.code)).toEqual(['hexActivationMissing']);
   });
 
-  it('claims a finished Time switch’s gold as a pickup', () => {
+  it('claims a finished Time switch’s gold as a pickup at the catalog estimate', () => {
     const used = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', {
       used: true,
-      outcome: { outcome: 'finished', gold: 35 },
+      outcome: { outcome: 'finished' },
     });
     expect(simulateProject(catalog, used).status).toBe('valid');
-    expect(occurrence(used, 'F', 'golden-f-b8-e1').challengeSwitch?.gold).toBe(35);
     expect(claimAcquisitions(used)).toEqual(['Money']);
-    // The gold ledger pays the authored value at the claim pickup.
+    // The gold ledger pays the fixed estimate at the claim pickup and publishes it on the row.
     const room = goldLedgerForProjectEvaluationAssembly(
       catalog,
       simulateProjectAssembly(catalog, used),
@@ -431,13 +426,21 @@ describe('challenge switch claims', () => {
       room.room.gains
         .filter((gain) => gain.kind === 'challengeSwitchGold')
         .map((gain) => gain.amount?.mean),
-    ).toEqual([35]);
+    ).toEqual([90]);
+    const estimate = { basis: 'timeSwitchClaim', value: 90, range: { min: 10, max: 100 } };
+    const claim = room.room.gains.find((gain) => gain.kind === 'challengeSwitchGold');
+    expect(claim?.estimate).toEqual(estimate);
+    expect(
+      room.room.rows.find(
+        (row) => semanticAddressKey(row.roomAction) === semanticAddressKey(claim!.roomAction!),
+      )?.estimates,
+    ).toEqual([estimate]);
   });
 
   it('sums a switch fight’s kills at its press and leaves the claimed gold on its pickup', () => {
     const used = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', {
       used: true,
-      outcome: { outcome: 'finished', gold: 35 },
+      outcome: { outcome: 'finished' },
     });
     const biome = createBiomeAddress('Underworld', 'F');
     const id = createOccurrenceId('golden-f-b8-e1');
@@ -599,17 +602,16 @@ describe('challenge switch outcome product', () => {
       fHost,
     )?.challengeSwitch?.outcome;
 
-  it('offers the kind’s outcomes with bound commands, Nectar and gold where they apply', () => {
+  it('offers the kind’s outcomes with bound commands and Nectar where it applies', () => {
     expect(product(golden())).toBeUndefined();
     const time = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money');
     const finished = product(time);
     expect(finished).toMatchObject({
       current: 'finished',
       nectarAllowed: true,
-      goldApplies: true,
-      gold: { value: 90, minimum: 10, maximum: 100 },
-      nectarCommand: { outcome: 'finished', nectarDropped: true, gold: 90 },
+      nectarCommand: { outcome: 'finished', nectarDropped: true },
     });
+    expect(finished?.nectarCommand).not.toHaveProperty('gold');
     expect(finished?.choices.map((choice) => choice.outcome)).toEqual(['left', 'finished']);
     const leave = finished!.choices.find((choice) => choice.outcome === 'left')!.command;
     expect(leave).toEqual({
@@ -622,22 +624,13 @@ describe('challenge switch outcome product', () => {
     expect(product(left)).toMatchObject({
       current: 'left',
       nectarAllowed: false,
-      goldApplies: false,
     });
     expect(product(left)?.nectarCommand).toBeUndefined();
-    expect(product(left)?.gold).toBeUndefined();
-    // Choosing finished again needs no gold: the engine supplies the default.
-    const back = product(left)!.choices.find((choice) => choice.outcome === 'finished')!.command;
-    expect(back).not.toHaveProperty('gold');
-    expect(
-      occurrence(applyProjectCommand(left, catalog, back), 'F', 'golden-f-b8-e1').challengeSwitch
-        ?.gold,
-    ).toBe(90);
     const perfect = product(
       withSwitch(golden(), 'F', 'golden-f-b8-e1', 'PerfectClearChallengeSwitch_MaxHealth'),
     );
     expect(perfect?.choices.map((choice) => choice.outcome)).toEqual(['left', 'hitless', 'failed']);
-    expect(perfect).toMatchObject({ current: 'hitless', nectarAllowed: true, goldApplies: false });
+    expect(perfect).toMatchObject({ current: 'hitless', nectarAllowed: true });
   });
 });
 

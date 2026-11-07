@@ -332,7 +332,13 @@ export type {
   GoldRoomSpending,
   GoldRunStart,
 } from './commerce/gold/route-ledger';
-export type { GoldFightAttribution, GoldFightSource, GoldGain } from './commerce/gold/gain-context';
+export type {
+  GoldEstimate,
+  GoldEstimateBasis,
+  GoldFightAttribution,
+  GoldFightSource,
+  GoldGain,
+} from './commerce/gold/gain-context';
 export type {
   GoldBetSummary,
   GoldFightSourceAmount,

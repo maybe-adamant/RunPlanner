@@ -1,4 +1,4 @@
-import type { Catalog, InRunTraitRarity } from '../../../catalog-schema';
+import type { Catalog, GoldFixedEstimate, InRunTraitRarity } from '../../../catalog-schema';
 import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
@@ -14,7 +14,7 @@ import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../../../authored-project/i
 import { purgingPoolSalePoint } from '../../commerce/feature-rolls';
 import type { RouteLoadout } from '../../../authored-project/model';
 import { stygianWellGenerationItemKey } from '../../../authored-project/feature-rolls';
-import { HERACLES_BOUNTY_GOLD, urnAttempts } from '../../commerce/gold/enemy-gold-policy';
+import { urnAttempts } from '../../commerce/gold/enemy-gold-policy';
 import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/acquisition/sea-star';
 import {
   goldGainPublication,
@@ -23,6 +23,8 @@ import {
   goldSpawnReading,
   moneyMultiplierSources,
   type GoldSpawnReading,
+  type GoldEstimate,
+  type GoldEstimateBasis,
   type GoldEventPublication,
   type GoldFightAttribution,
   type GoldGain,
@@ -364,6 +366,10 @@ function bountyPhaseKey(
       return producer.source.phaseKey;
   }
   return undefined;
+}
+
+function goldEstimate(basis: GoldEstimateBasis, estimate: GoldFixedEstimate): GoldEstimate {
+  return Object.freeze({ basis, value: estimate.value, range: estimate.range });
 }
 
 /** Native spawns a selected trait's coins (`GiveRandomConsumables`) as its screen closes. */
@@ -807,36 +813,57 @@ export function withGoldEvents(
       if (declaration?.goldGrant !== undefined) {
         const producer =
           catalog.rewards.producerLifecycles.byKey[rewardEvent.source.producerLifecycleKey];
+        const bounty =
+          room === undefined || roomKey === undefined
+            ? undefined
+            : bountyPhaseKey(room, rewardEvent);
+        // GOLD_ESTIMATE_ASSUMPTIONS.md "Heracles bounty": its encounter's fixed estimate.
+        const bountyEstimate =
+          bounty === undefined
+            ? undefined
+            : catalog.encounterDefinitions.byKey[
+                state.goldEncounterKeys.get(`${roomKey}::${bounty}`) ?? ''
+              ]?.killBounty?.goldEstimate;
         detect(
           key,
           owner,
-          spawned === 'unresolved'
-            ? { unpriced: { kind: 'itemUnresolved' } }
-            : {
-                gain: {
-                  kind: 'moneyPickup',
-                  // GOLD_ESTIMATE_ASSUMPTIONS.md "Heracles bounty".
-                  gold:
-                    room !== undefined && bountyPhaseKey(room, rewardEvent) !== undefined
-                      ? HERACLES_BOUNTY_GOLD
-                      : declaration.goldGrant,
-                  npcDrop: producer?.resourceBonusExempt === true,
-                  ...(spawned === undefined
-                    ? {}
-                    : {
-                        spawn: spawned.multipliers,
-                        ...(spawned.remultipliers.length === 0
-                          ? {}
-                          : { remultipliers: spawned.remultipliers }),
-                      }),
+          bounty !== undefined && bountyEstimate === undefined
+            ? {
+                unpriced: {
+                  kind: 'contractFailure',
+                  detail: 'a bounty pickup has no kill bounty encounter',
                 },
-              },
+              }
+            : spawned === 'unresolved'
+              ? { unpriced: { kind: 'itemUnresolved' } }
+              : {
+                  gain: {
+                    kind: 'moneyPickup',
+                    gold: bountyEstimate?.value ?? declaration.goldGrant,
+                    ...(bountyEstimate === undefined
+                      ? {}
+                      : { estimate: goldEstimate('heraclesBounty', bountyEstimate) }),
+                    npcDrop: producer?.resourceBonusExempt === true,
+                    ...(spawned === undefined
+                      ? {}
+                      : {
+                          spawn: spawned.multipliers,
+                          ...(spawned.remultipliers.length === 0
+                            ? {}
+                            : { remultipliers: spawned.remultipliers }),
+                        }),
+                  },
+                },
         );
       } else if (gameName === 'Money') {
-        // Only a Time switch's claim gushes `Money`; its value is authored and
+        // Only a Time switch's claim gushes `Money`; its value is the catalog's
+        // fixed estimate (GOLD_ESTIMATE_ASSUMPTIONS.md "Time switch claim"),
         // multiplied when the challenge ends (EncounterLogic.lua:2139-2141);
         // its coins are blocked at collection.
-        const gold = room?.challengeSwitch?.gold;
+        const estimate = goldEstimate(
+          'timeSwitchClaim',
+          catalog.challengeSwitches.claimGoldEstimate,
+        );
         const atEnd =
           roomKey === undefined
             ? undefined
@@ -845,21 +872,19 @@ export function withGoldEvents(
         detect(
           key,
           owner,
-          gold === undefined
-            ? { unpriced: { kind: 'contractFailure', detail: 'a gold claim has no switch value' } }
-            : atEnd === undefined
-              ? {
-                  unpriced: {
-                    kind: 'contractFailure',
-                    detail: 'a gold claim has no finished challenge',
-                  },
-                }
-              : atEnd === 'unresolved' || now === undefined
-                ? { unpriced: { kind: 'itemUnresolved' } }
-                : {
-                    gain: { kind: 'challengeSwitchGold', gold },
-                    multipliers: { ...now, moneyMultiplier: atEnd.multipliers.moneyMultiplier },
-                  },
+          atEnd === undefined
+            ? {
+                unpriced: {
+                  kind: 'contractFailure',
+                  detail: 'a gold claim has no finished challenge',
+                },
+              }
+            : atEnd === 'unresolved' || now === undefined
+              ? { unpriced: { kind: 'itemUnresolved' } }
+              : {
+                  gain: { kind: 'challengeSwitchGold', gold: estimate.value, estimate },
+                  multipliers: { ...now, moneyMultiplier: atEnd.multipliers.moneyMultiplier },
+                },
         );
       } else if (gameName === 'Currency') {
         const gold = currencyGold(

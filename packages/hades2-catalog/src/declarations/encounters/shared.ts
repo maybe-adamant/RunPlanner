@@ -142,6 +142,9 @@ export const heraclesKillBounty = {
   waves: 3,
   rewardType: 'RoomMoneyDrop',
   producerLifecycleKey: 'HeraclesBountyPickup',
+  // Credited marks pay 0 (Heracles takes every kill, EncounterLogic.lua:2342-2378)
+  // to 3 × 3 × 20; who kills is play, so a fixed 100 stands for it (GOLD_ESTIMATE_ASSUMPTIONS.md).
+  goldEstimate: { value: 100, range: { min: 0, max: 180 } },
 } as const;
 
 export const icarusEncounterKeys = ['IcarusCombatO', 'IcarusCombatP'] as const;

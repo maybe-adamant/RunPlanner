@@ -103,23 +103,10 @@ function importSwitch(
         occurrenceId,
       )?.challengeSwitch;
       const command = outcomeCommand(candidate);
-      // An omitted gold is the engine's default for a finished Time switch.
       const unchanged =
         current?.outcome === candidate.outcome && current.nectarDropped === candidate.nectarDropped;
       return (unchanged || context.apply(command)) && pressSwitch(context, biomeKey, occurrenceId);
     });
-  const goldUnrecorded = (candidate: SwitchCandidate) => {
-    const kind = switchKind(context, variantKey);
-    // The record holds no gold balance; the plan claims the engine's default, before the money multiplier.
-    if (kind?.goldReward === true && candidate.outcome === 'finished')
-      context.note({
-        area: 'challengeSwitch',
-        reason: 'notInRecord',
-        address: owner,
-        applied: outcomeCommand(candidate),
-        record,
-      });
-  };
   if (pinned !== undefined) {
     if (!author(pinned))
       context.note({
@@ -129,7 +116,6 @@ function importSwitch(
         applied: outcomeCommand(pinned),
         record,
       });
-    else goldUnrecorded(pinned);
     return;
   }
   const search = searchRoom(context, {
@@ -165,7 +151,6 @@ function importSwitch(
       : { alternatives: fit.equivalents.map((equivalent) => outcomeCommand(equivalent.choice)) }),
     record,
   });
-  goldUnrecorded(fit.chosen.choice);
 }
 
 /**

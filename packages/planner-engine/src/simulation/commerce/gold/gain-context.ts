@@ -42,6 +42,19 @@ export interface GoldSpawnReading {
   readonly sources: readonly MoneyMultiplierSource[];
 }
 
+/** What a fixed gold estimate stands for: gold the game leaves to play. */
+export type GoldEstimateBasis = 'timeSwitchClaim' | 'heraclesBounty';
+
+/**
+ * A gain paid at a catalog-declared fixed value, before its multipliers, with
+ * the range the game can pay.
+ */
+export interface GoldEstimate {
+  readonly basis: GoldEstimateBasis;
+  readonly value: number;
+  readonly range: { readonly min: number; readonly max: number };
+}
+
 /** What one walked contact pays or takes, before its multipliers. */
 export type GoldGain =
   /** The Boatman Arcana and Gold Purse at run start, unmultiplied. */
@@ -52,10 +65,12 @@ export type GoldGain =
    * A money pickup; an NPC drop takes no money-reward bonus. `spawn` holds
    * the multipliers it was valued with when it spawned, and `remultipliers`
    * each money multiplier taken while it lay uncollected as a room object.
+   * `estimate` is present where `gold` is a fixed estimate (Heracles's bounty).
    */
   | {
       readonly kind: 'moneyPickup';
       readonly gold: number;
+      readonly estimate?: GoldEstimate;
       readonly npcDrop: boolean;
       readonly spawn?: GoldSpawnMultipliers;
       readonly remultipliers?: readonly number[];
@@ -132,11 +147,22 @@ export type GoldGain =
   /** The room's golden urns, swapped in as it starts. */
   | { readonly kind: 'urnGold'; readonly roomGameName: string }
   /**
-   * A Time switch's claimed coins: its authored approximate value, times the
+   * A Time switch's claimed coins: the catalog's fixed estimate, times the
    * money multiplier held when its encounter clears (EncounterLogic.lua
    * EndChallengeEncounter).
    */
-  | { readonly kind: 'challengeSwitchGold'; readonly gold: number };
+  | {
+      readonly kind: 'challengeSwitchGold';
+      readonly gold: number;
+      readonly estimate: GoldEstimate;
+    };
+
+/** The fixed estimate a gain pays, where it pays one. */
+export function goldGainEstimate(gain: GoldGain): GoldEstimate | undefined {
+  return gain.kind === 'moneyPickup' || gain.kind === 'challengeSwitchGold'
+    ? gain.estimate
+    : undefined;
+}
 
 /** A fight's gold by where it comes from; `passiveStore` is a Fields room's one Passive store. */
 export type GoldFightSource = 'enemies' | 'passiveStore' | 'medea';

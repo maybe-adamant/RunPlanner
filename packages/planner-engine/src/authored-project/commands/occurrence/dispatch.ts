@@ -27,7 +27,6 @@ import {
   challengeSwitchOutcomeForVariant,
   challengeSwitchShapeIssue,
   defaultChallengeSwitch,
-  resolveChallengeSwitch,
 } from '../../acquisition/challenge-switch';
 import { decodeGeneratedEncounterCustomization } from '../../room-state/decoding/generated-encounter-codec';
 import {
@@ -654,11 +653,9 @@ export function applyOccurrenceCommand(
         current !== undefined &&
         catalog.challengeSwitches.variants.byKey[current.variantKey]?.switchKind ===
           catalog.challengeSwitches.variants.byKey[command.variantKey]?.switchKind;
-      // The outcome survives a variant change the new kind can end with; gold follows it.
-      const { gold: _defaultGold, ...observedWithoutGold } = observed;
-      void _defaultGold;
+      // The outcome survives a variant change the new kind can end with.
       const next = Object.freeze({
-        ...(current === undefined ? observed : observedWithoutGold),
+        ...observed,
         ...(current === undefined
           ? {}
           : challengeSwitchOutcomeForVariant(catalog, current, command.variantKey)),
@@ -794,28 +791,16 @@ export function applyOccurrenceCommand(
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       const current = occurrence.challengeSwitch;
       if (current === undefined) failCommand(command, 'occurrence has no challenge switch');
-      // A finished Time fight claims gold: an omitted value keeps the current one or the default.
-      const gold =
-        command.gold ??
-        (command.outcome === 'finished' &&
-        resolveChallengeSwitch(catalog, current.variantKey)?.kind.goldReward === true
-          ? (current.gold ?? catalog.challengeSwitches.gold.defaultValue)
-          : undefined);
       const next = Object.freeze({
         variantKey: current.variantKey,
         outcome: command.outcome,
         nectarDropped: command.nectarDropped,
-        ...(gold === undefined ? {} : { gold }),
         ...(current.elite === undefined ? {} : { elite: current.elite }),
         ...(current.customization === undefined ? {} : { customization: current.customization }),
       });
       const issue = challengeSwitchShapeIssue(catalog, next);
       if (issue !== undefined) failCommand(command, issue);
-      if (
-        current.outcome === next.outcome &&
-        current.nectarDropped === next.nectarDropped &&
-        current.gold === next.gold
-      )
+      if (current.outcome === next.outcome && current.nectarDropped === next.nectarDropped)
         return document;
       return updateOccurrence(
         document,

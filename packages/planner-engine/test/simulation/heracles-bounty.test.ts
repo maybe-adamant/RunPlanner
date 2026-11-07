@@ -135,7 +135,11 @@ describe('Heracles’s bounty', () => {
     expect(order(project)).toEqual([rewardRow, bountyRow]);
     const gold = spending(project);
     const [bounty] = bountyGains(gold);
-    expect(bounty).toMatchObject({ kind: 'moneyPickup', amount: { mean: 100, variance: 0 } });
+    expect(bounty).toMatchObject({
+      kind: 'moneyPickup',
+      amount: { mean: 100, variance: 0 },
+      estimate: { basis: 'heraclesBounty', value: 100, range: { min: 0, max: 180 } },
+    });
     expect(bounty!.roomAction?.actionKey).toBe(roomActionKey(bountyRow));
     // The bounty belongs to its pickup row, not to his fight.
     expect(gold.fights.map((fight) => fight.breakdown.map((line) => line.source))).toEqual([
@@ -259,10 +263,10 @@ describe('Heracles’s bounty', () => {
         .filter((row) =>
           paid.some((gain) => gain.roomAction?.actionKey === row.roomAction.actionKey),
         )
-        .map((row) => [row.mean, row.exact]),
+        .map((row) => [row.mean, row.exact, row.estimates?.map((estimate) => estimate.basis)]),
     ).toEqual([
-      [100, true],
-      [100, true],
+      [100, true, ['heraclesBounty']],
+      [100, true, ['heraclesBounty']],
     ]);
   });
 

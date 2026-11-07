@@ -1270,12 +1270,15 @@ CostResourceMax)`: heart 105-130 / 230-255, Magick 80-105 / 180-205, Pom
   exit, a money multiplier taken before it is collected multiplies it
   (`TraitLogic.lua:1045-1058`), and as a `RoomMoneyDrop` it is duplicable by
   Sea Star and last-reward eligible (`ConsumableData.lua:334-351`,
-  `InteractLogic.lua:1098-1137`). `HeraclesCombatMoneyValue` on enemies is
-  unread.
+  `InteractLogic.lua:1098-1137`). `MaxHeraclesBounties` is rerolled at each
+  spawn check, and an unmarked spawn is forced once the remaining spawns no
+  longer exceed the marks still owed, so a full clear marks 2–3 per wave: the
+  bounty pays 0 (Heracles lands every marked kill) to 180 (all nine marks
+  credited). `HeraclesCombatMoneyValue` on enemies is unread.
 - **Not counted.** Arachne's `DoorCash` (`CostumeLogic.lua:36-46`) and
   Selene's `MoneyOnSpell` (`SpellLogic.lua:1728`) are outside planner
   authorship. A challenge switch's Time gold (`EncounterLogic.lua:2138-2141`)
-  is an authored approximate claim; the
+  depends on clear time and is a fixed estimate; the
   [room features audit](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md#challenge-switches)
   owns it.
 

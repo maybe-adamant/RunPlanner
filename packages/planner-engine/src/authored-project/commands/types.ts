@@ -630,15 +630,11 @@ export type ChallengeSwitchCommand =
       readonly value: import('../model').AuthoredEncounterCustomization | null;
     }
   | {
-      /**
-       * Replaces the fight's outcome; gold is a finished Time switch's only,
-       * and an omitted one keeps the current value or the catalog default.
-       */
+      /** Replaces the fight's outcome. */
       readonly kind: 'ReplaceChallengeSwitchOutcome';
       readonly occurrence: OccurrenceAddress;
       readonly outcome: import('../model').ChallengeSwitchOutcome;
       readonly nectarDropped: boolean;
-      readonly gold?: number;
     };
 
 /** Edits the doors a lock host observed locked and the fights that open them. */

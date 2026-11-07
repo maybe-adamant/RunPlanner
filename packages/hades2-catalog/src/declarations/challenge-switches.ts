@@ -59,9 +59,12 @@ export const challengeSwitches = {
   minimumBiomeDepth: 5,
   minimumRoomsSinceLast: 3,
   producerLifecycleKey: 'ChallengeSwitchLoot',
-  // EncounterData_TimeChallenge.lua StartingValue 100 (ValueDepthRamp 0);
-  // EventLogic.lua HandleChallengeLootDecay floors it at MinValue 10.
-  gold: { startingValue: 100, minimumValue: 10, defaultValue: 90 },
+  // EncounterData_TimeChallenge.lua:39-44 StartingValue 100 (ValueDepthRamp 0),
+  // after DecayStartDelay 8 s losing ValueDecayAmount 1 every LootDecayInterval
+  // 1 s × the switch's IntervalMultiplier 0.3 (ObstacleData.lua:3103-3110),
+  // floored at MinValue 10 (EventLogic.lua:576-616 HandleChallengeLootDecay).
+  // Clear time is play, so a fixed 90 stands for a quick clear (GOLD_ESTIMATE_ASSUMPTIONS.md).
+  claimGoldEstimate: { value: 90, range: { min: 10, max: 100 } },
   // EncounterData_Challenge.lua / _TimeChallenge.lua LootDrops: a hitless
   // claim rolls one GiftDrop at DropChance 0.05 (EventLogic.lua HandleChallengeLoot).
   bonusReward: { rewardType: 'GiftDrop', dropChance: 0.05 },

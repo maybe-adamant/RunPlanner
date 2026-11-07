@@ -3,6 +3,7 @@ import type {
   ChallengeSwitchKind,
   ChallengeSwitchKindDeclaration,
   ChallengeSwitchVariantDeclaration,
+  GoldFixedEstimate,
 } from '@run-planner/engine/catalog-schema';
 
 /** A RoomSet's default switch chance and the one encounter each kind fields there. */
@@ -19,11 +20,7 @@ export interface RawChallengeSwitchInput {
   readonly minimumBiomeDepth: number;
   readonly minimumRoomsSinceLast: number;
   readonly producerLifecycleKey: string;
-  readonly gold: {
-    readonly startingValue: number;
-    readonly minimumValue: number;
-    readonly defaultValue: number;
-  };
+  readonly claimGoldEstimate: GoldFixedEstimate;
   readonly bonusReward: { readonly rewardType: string; readonly dropChance: number };
   readonly kinds: readonly ChallengeSwitchKindDeclaration[];
   readonly variants: readonly ChallengeSwitchVariantDeclaration[];

@@ -87,13 +87,12 @@ describe('challenge switch observation', () => {
     );
   });
 
-  it('defaults Time gold and keeps the outcome across a variant change', () => {
+  it('authors no Time gold and keeps the outcome across a variant change', () => {
     const time = occurrenceOf(observe(golden(), 'TimeChallengeSwitch_Money'));
     expect(time.challengeSwitch).toEqual({
       variantKey: 'TimeChallengeSwitch_Money',
       outcome: 'finished',
       nectarDropped: false,
-      gold: 90,
     });
     expect(time.acquisitionSites?.challengeSwitch?.pickupEntries?.reward?.offer.rewardType).toBe(
       'Money',
@@ -103,20 +102,14 @@ describe('challenge switch observation', () => {
       occurrence: host,
       outcome: 'finished',
       nectarDropped: true,
-      gold: 40,
     });
-    // Elite ends finished as Time does; the claim keeps its Nectar, and gold stays Time's.
+    // Elite ends finished as Time does; the claim keeps its Nectar.
     const elite = occurrenceOf(observe(finished, 'EliteChallengeSwitch_MaxMana'));
     expect(elite.challengeSwitch).toEqual({
       variantKey: 'EliteChallengeSwitch_MaxMana',
       outcome: 'finished',
       nectarDropped: true,
     });
-    expect(
-      occurrenceOf(
-        observe(observe(finished, 'EliteChallengeSwitch_MaxMana'), 'TimeChallengeSwitch_Money'),
-      ).challengeSwitch?.gold,
-    ).toBe(90);
     // PerfectClear cannot end finished: it starts from its own clean claim.
     expect(
       occurrenceOf(observe(finished, 'PerfectClearChallengeSwitch_Pom')).challengeSwitch,
@@ -215,56 +208,27 @@ describe('challenge switch observation', () => {
     expect(() => observe(golden(), 'ChallengeSwitch')).toThrow(/unknown challenge switch/);
     const observed = observe(golden(), 'EliteChallengeSwitch_Talent');
     const outcome =
-      (value: 'left' | 'finished' | 'hitless' | 'failed', nectarDropped: boolean, gold?: number) =>
-      () =>
+      (value: 'left' | 'finished' | 'hitless' | 'failed', nectarDropped: boolean) => () =>
         applyProjectCommand(observed, catalog, {
           kind: 'ReplaceChallengeSwitchOutcome',
           occurrence: host,
           outcome: value,
           nectarDropped,
-          ...(gold === undefined ? {} : { gold }),
         });
     expect(outcome('left', true)).toThrow(/bonus Nectar drops only on a claim with no damage/);
     expect(outcome('hitless', false)).toThrow(/elite switches cannot end hitless/);
     expect(outcome('failed', false)).toThrow(/elite switches cannot end failed/);
-    expect(outcome('finished', false, 50)).toThrow(/only a finished Time switch claims gold/);
+  });
+
+  it('ignores a Time claim gold an earlier draft authored', () => {
     const time = observe(golden(), 'TimeChallengeSwitch_Money');
-    expect(() =>
-      applyProjectCommand(time, catalog, {
-        kind: 'ReplaceChallengeSwitchOutcome',
-        occurrence: host,
-        outcome: 'finished',
-        nectarDropped: false,
-        gold: 120,
+    const decoded = decodeProjectDocument(
+      editOccurrence(time, hostId, (occurrence) => {
+        occurrence.challengeSwitch.gold = 40;
       }),
-    ).toThrow(/gold must be an integer from 10 through 100/);
-    expect(() =>
-      applyProjectCommand(time, catalog, {
-        kind: 'ReplaceChallengeSwitchOutcome',
-        occurrence: host,
-        outcome: 'left',
-        nectarDropped: false,
-        gold: 50,
-      }),
-    ).toThrow(/only a finished Time switch claims gold/);
-    // Finishing a Time fight without a value keeps its gold, or takes the default after a leave.
-    const left = applyProjectCommand(time, catalog, {
-      kind: 'ReplaceChallengeSwitchOutcome',
-      occurrence: host,
-      outcome: 'left',
-      nectarDropped: false,
-    });
-    expect(occurrenceOf(left).challengeSwitch?.gold).toBeUndefined();
-    expect(
-      occurrenceOf(
-        applyProjectCommand(left, catalog, {
-          kind: 'ReplaceChallengeSwitchOutcome',
-          occurrence: host,
-          outcome: 'finished',
-          nectarDropped: false,
-        }),
-      ).challengeSwitch?.gold,
-    ).toBe(catalog.challengeSwitches.gold.defaultValue);
+      catalog,
+    );
+    expect(occurrenceOf(decoded).challengeSwitch).toEqual(occurrenceOf(time).challengeSwitch);
   });
 
   it('decodes strictly: host, shape, and an interaction without a switch', () => {
@@ -276,7 +240,6 @@ describe('challenge switch observation', () => {
             variantKey: 'TimeChallengeSwitch_Money',
             outcome: 'finished',
             nectarDropped: false,
-            gold: 90,
           };
         }),
         catalog,

@@ -713,9 +713,9 @@ A room the catalog declares as a challenge-switch host may carry an optional
 `challengeSwitch` leaf, the observed switch: its `variantKey` (which fixes the
 kind, Time, Perfect Clear or Elite, and the claim reward), and, once pressed,
 its `outcome` (Time and Elite `left` or `finished`; Perfect Clear `left`,
-`hitless` or `failed`), `nectarDropped` (only with a clean claim: `finished`
-or `hitless`) and `gold` (exactly for a finished Time switch, within the
-catalog's range). Optional `elite` pins an Elite switch's enemy and its ordered
+`hitless` or `failed`), and `nectarDropped` (only with a clean claim: `finished`
+or `hitless`). A Time claim's gold is not authored: the gold ledger pays the
+catalog's fixed estimate. Optional `elite` pins an Elite switch's enemy and its ordered
 forced attributes, and optional `customization` holds sparse decisions of the
 kind's encounter at the host. Absence means no switch. The press is one
 optional `interactChallengeSwitch` room action in the doors-open window; the

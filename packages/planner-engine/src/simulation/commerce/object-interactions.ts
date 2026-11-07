@@ -127,8 +127,8 @@ export interface ChallengeSwitchInteraction {
 
 /**
  * The observed switch's outcome: its kind's choices, each with the command
- * that sets it (Nectar kept where the choice can drop it, gold left to the
- * engine), and what the current outcome allows.
+ * that sets it (Nectar kept where the choice can drop it), and what the
+ * current outcome allows.
  */
 export interface ChallengeSwitchOutcomeInteraction {
   readonly current: import('../../authored-project/model').ChallengeSwitchOutcome;
@@ -140,10 +140,6 @@ export interface ChallengeSwitchOutcomeInteraction {
   readonly nectarAllowed: boolean;
   /** Toggles the bonus Nectar; present while it is allowed. */
   readonly nectarCommand?: CommandOf<'ReplaceChallengeSwitchOutcome'>;
-  /** The current outcome claims gold (a finished Time switch). */
-  readonly goldApplies: boolean;
-  /** Present while gold applies: its value, authored within these bounds. */
-  readonly gold?: { readonly value: number; readonly minimum: number; readonly maximum: number };
 }
 
 /** The observed switch's encounter and each declared decision with its authored value. */

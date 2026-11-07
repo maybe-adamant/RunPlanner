@@ -187,22 +187,18 @@ describe('run import of a claimed Time switch and a hit Perfect Clear', () => {
     );
   });
 
-  it("claims the Time switch's gold at the engine's default, which the record does not hold", () => {
+  it("claims a finished Time switch, whose gold the plan leaves to the engine's estimate", () => {
     expect(occurrence(imported.project, 'F-r10').challengeSwitch).toEqual({
       variantKey: 'TimeChallengeSwitch_Money',
       outcome: 'finished',
       nectarDropped: true,
-      // Before the money multiplier, as the engine authors it.
-      gold: catalog.challengeSwitches.gold.defaultValue,
     });
     expect(switchActions(imported, 'F-r10')).toEqual([
       { kind: 'interactChallengeSwitch' },
       { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'reward' },
       { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'nectar' },
     ]);
-    expect(switchLines(imported)).toEqual([
-      'notInRecord challengeSwitch r10 roomFeature@F-r10 -> ReplaceChallengeSwitchOutcome(F-r10)',
-    ]);
+    expect(switchLines(imported)).toEqual([]);
     expect(imported.report.rooms![10]).toMatchObject({ verdict: 'accepted', introduced: [] });
   });
 
@@ -260,11 +256,7 @@ describe('run import of a switch in a Fields room', () => {
         .filter((entry) => entry.record?.roomIndex === FIELDS)
         .map(describeEntry)
         .sort();
-    expect(roomLines(imported.report)).toEqual(
-      [
-        ...roomLines(base.report),
-        'notInRecord challengeSwitch r26 roomFeature@H-r26 -> ReplaceChallengeSwitchOutcome(H-r26)',
-      ].sort(),
-    );
+    // The switch's outcome follows from the record, so it adds no report line.
+    expect(roomLines(imported.report)).toEqual(roomLines(base.report));
   });
 });

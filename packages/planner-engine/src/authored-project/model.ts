@@ -653,8 +653,6 @@ export interface AuthoredChallengeSwitch {
   readonly outcome: ChallengeSwitchOutcome;
   /** The claim's bonus Nectar dropped; only a claim with no damage taken can drop it. */
   readonly nectarDropped: boolean;
-  /** Time switch, finished only: the approximate claimed value before the money multiplier. */
-  readonly gold?: number;
   /** Elite switch only: its pinned elite and attributes; absent leaves both native. */
   readonly elite?: AuthoredChallengeSwitchElite;
   /**

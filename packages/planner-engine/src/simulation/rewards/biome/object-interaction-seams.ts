@@ -311,12 +311,8 @@ function challengeSwitchOutcomeInteraction(
       occurrence,
       outcome,
       nectarDropped,
-      ...(outcome === observed.outcome && observed.gold !== undefined
-        ? { gold: observed.gold }
-        : {}),
     });
   const nectarAllowed = challengeSwitchOutcomeDropsNectar(observed.outcome);
-  const gold = catalog.challengeSwitches.gold;
   return Object.freeze({
     current: observed.outcome,
     choices: Object.freeze(
@@ -331,17 +327,7 @@ function challengeSwitchOutcomeInteraction(
       ),
     ),
     nectarAllowed,
-    goldApplies: observed.gold !== undefined,
     ...(nectarAllowed ? { nectarCommand: command(observed.outcome, !observed.nectarDropped) } : {}),
-    ...(observed.gold === undefined
-      ? {}
-      : {
-          gold: Object.freeze({
-            value: observed.gold,
-            minimum: gold.minimumValue,
-            maximum: gold.startingValue,
-          }),
-        }),
   });
 }
 

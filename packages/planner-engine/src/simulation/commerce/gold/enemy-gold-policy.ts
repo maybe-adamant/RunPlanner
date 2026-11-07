@@ -217,9 +217,6 @@ export const EGG_HATCH_RATE = 0.25;
 /** GOLD_ESTIMATE_ASSUMPTIONS.md "Collection rate". */
 export const DROPPED_GOLD_COLLECTION_RATE = 0.7;
 
-/** GOLD_ESTIMATE_ASSUMPTIONS.md "Heracles bounty". */
-export const HERACLES_BOUNTY_GOLD = 100;
-
 /** One golden-urn swap candidate's gold options, tried in order (`HandleBreakableSwap`). */
 interface UrnPots {
   readonly options: readonly { readonly gold: number; readonly chance: number }[];

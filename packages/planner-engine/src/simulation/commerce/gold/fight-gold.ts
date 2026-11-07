@@ -4,7 +4,7 @@ import {
   type RoomActionAddress,
   type SemanticAddress,
 } from '../../../authored-project/addresses';
-import type { GoldFightAttribution, GoldFightSource, GoldGain } from './gain-context';
+import type { GoldEstimate, GoldFightAttribution, GoldFightSource, GoldGain } from './gain-context';
 import { sumGold, type GoldAmount } from './prices';
 
 /** One source's share of a fight's gold: its mean and standard deviation. */
@@ -107,6 +107,11 @@ export interface GoldRowSummary {
   readonly spread: number;
   /** No variance: the amount is certain. */
   readonly exact: boolean;
+  /**
+   * The fixed estimates its gains paid, in payment order, such as a Time
+   * switch's claim or Heracles's bounty; absent when none is estimated.
+   */
+  readonly estimates?: readonly GoldEstimate[];
 }
 
 /** One encounter phase's settled Nemesis bet. */
@@ -125,6 +130,7 @@ interface SummarizedGain {
   readonly roomAction?: RoomActionAddress;
   readonly amount?: GoldAmount;
   readonly fight?: GoldFightAttribution;
+  readonly estimate?: GoldEstimate;
 }
 
 /**
@@ -134,19 +140,30 @@ interface SummarizedGain {
 export function goldRowSummaries(gains: readonly SummarizedGain[]): readonly GoldRowSummary[] {
   const rows = new Map<
     string,
-    { readonly roomAction: RoomActionAddress; readonly amounts: (GoldAmount | undefined)[] }
+    {
+      readonly roomAction: RoomActionAddress;
+      readonly amounts: (GoldAmount | undefined)[];
+      readonly estimates: GoldEstimate[];
+    }
   >();
-  for (const { roomAction, amount, fight } of gains) {
+  for (const { roomAction, amount, fight, estimate } of gains) {
     if (roomAction === undefined || fight !== undefined) continue;
     const key = semanticAddressKey(roomAction);
-    const row = rows.get(key) ?? { roomAction, amounts: [] };
+    const row = rows.get(key) ?? { roomAction, amounts: [], estimates: [] };
     row.amounts.push(amount);
+    if (estimate !== undefined) row.estimates.push(estimate);
     rows.set(key, row);
   }
   return Object.freeze(
-    [...rows.values()].flatMap(({ roomAction, amounts }) =>
+    [...rows.values()].flatMap(({ roomAction, amounts, estimates }) =>
       amounts.every((amount): amount is GoldAmount => amount !== undefined)
-        ? [Object.freeze({ roomAction, ...moments(sumGold(amounts)) })]
+        ? [
+            Object.freeze({
+              roomAction,
+              ...moments(sumGold(amounts)),
+              ...(estimates.length === 0 ? {} : { estimates: Object.freeze(estimates) }),
+            }),
+          ]
         : [],
     ),
   );

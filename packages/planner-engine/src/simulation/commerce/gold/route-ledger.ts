@@ -5,11 +5,13 @@ import {
   type RoomActionAddress,
   type SemanticAddress,
 } from '../../../authored-project/addresses';
-import type {
-  GoldEventContext,
-  GoldEventPublication,
-  GoldFightAttribution,
-  GoldGain,
+import {
+  goldGainEstimate,
+  type GoldEstimate,
+  type GoldEventContext,
+  type GoldEventPublication,
+  type GoldFightAttribution,
+  type GoldGain,
 } from './gain-context';
 import {
   goldBetSummaries,
@@ -84,6 +86,8 @@ export interface GoldGainEntry {
   readonly amount?: GoldAmount;
   /** The fight whose gold it is; absent for gold no fight pays, such as urns. */
   readonly fight?: GoldFightAttribution;
+  /** Present where the gain pays a fixed estimate the game leaves to play. */
+  readonly estimate?: GoldEstimate;
 }
 
 /** A fully reached room's purchases, gains and balances. */
@@ -558,6 +562,7 @@ export function routeGoldLedger(
             );
           }
           if (context.gain.kind !== 'loanCredit') {
+            const estimate = goldGainEstimate(context.gain);
             const gainEntry: GoldGainEntry = Object.freeze({
               kind: context.gain.kind,
               ...(publication.owner === undefined ? {} : { owner: publication.owner }),
@@ -566,6 +571,7 @@ export function routeGoldLedger(
                 : { roomAction: publication.roomAction }),
               ...(amount === undefined ? {} : { amount }),
               ...(publication.fight === undefined ? {} : { fight: publication.fight }),
+              ...(estimate === undefined ? {} : { estimate }),
             });
             if (room === undefined) runStartGains.push(gainEntry);
             else room.gains.push(gainEntry);

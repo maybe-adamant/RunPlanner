@@ -95,7 +95,7 @@ describe('summarizeCatalog', () => {
         hosts: emptyCollection(),
         minimumRoomsSinceLast: 3,
         producerLifecycleKey: 'ChallengeSwitchLoot',
-        gold: { startingValue: 100, minimumValue: 10, defaultValue: 90 },
+        claimGoldEstimate: { value: 90, range: { min: 10, max: 100 } },
         bonusReward: { rewardType: 'GiftDrop', dropChance: 0.05 },
       },
       extraExitLocks: { hosts: emptyCollection() },

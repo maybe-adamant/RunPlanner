@@ -43,7 +43,7 @@ describe('challenge switch declarations', () => {
     expect(switches.kinds.byKey.elite?.requirement).toBeDefined();
     expect(switches.kinds.byKey.time).toMatchObject({ goldReward: true });
     expect(switches.minimumRoomsSinceLast).toBe(3);
-    expect(switches.gold).toEqual({ startingValue: 100, minimumValue: 10, defaultValue: 90 });
+    expect(switches.claimGoldEstimate).toEqual({ value: 90, range: { min: 10, max: 100 } });
     expect(switches.bonusReward).toEqual({ rewardType: 'GiftDrop', dropChance: 0.05 });
   });
 
@@ -142,9 +142,9 @@ describe('challenge switch declarations', () => {
     ).toThrow(/kinds\[0\]\.defaultVariantKey: is not a time variant/);
     expect(
       withSwitches((raw) => {
-        (raw.gold as { defaultValue: number }).defaultValue = 120;
+        (raw.claimGoldEstimate as { value: number }).value = 120;
       }),
-    ).toThrow(/gold: must order minimumValue <= defaultValue <= startingValue/);
+    ).toThrow(/claimGoldEstimate\.value: must lie within its range/);
   });
 
   it('declares each Elite switch encounter with its elite set and forced attributes', () => {

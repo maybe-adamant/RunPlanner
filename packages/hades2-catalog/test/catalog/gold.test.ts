@@ -317,6 +317,7 @@ describe('gold catalog facts', () => {
           waves: 3,
           rewardType: 'RoomMoneyDrop',
           producerLifecycleKey: 'HeraclesBountyPickup',
+          goldEstimate: { value: 100, range: { min: 0, max: 180 } },
         },
       ]),
     );
