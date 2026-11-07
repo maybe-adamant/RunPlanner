@@ -7,9 +7,10 @@ import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { elementIcon, gatheringToolIcon } from '@planner/ui/artwork/roomArtwork';
 
+/** The room's resources as one row of icon toggles; a resource placed elsewhere says where. */
 export function RoomResourceControls({
   interactions,
   room,
@@ -20,59 +21,50 @@ export function RoomResourceControls({
   const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
+  const resources = room.resources ?? [];
+  const name = (resource: (typeof resources)[number]) =>
+    resource.element === undefined ? resource.label : `Collect ${resource.element}`;
   return (
     <div aria-label="Resources" className="room-feature-action-list" role="region">
-      {room.resources?.map((resource) => (
-        <div className="room-feature-presence-row room-resource-row" key={resource.family}>
-          <label className="room-resource-selection">
-            <input
-              {...findingTarget(resource.address)}
-              checked={resource.action === 'remove'}
-              disabled={!resource.legal && resource.action !== 'remove'}
-              onChange={() =>
-                executeIntent(
-                  requireWorkspaceInteraction(
-                    interactions.resourcePlacements,
-                    resource.interactionKey,
-                  ).intent,
-                )
-              }
-              type="checkbox"
-            />
-            {resource.element === undefined ? (
-              <>
-                <ArtworkIcon
-                  className="artwork-label-icon"
-                  source={gatheringToolIcon(resource.family)}
-                />
-                <span>{resource.label}</span>
-              </>
-            ) : (
-              <>
-                <span>Collect</span>{' '}
-                <ArtworkIcon
-                  className="artwork-label-icon"
-                  source={elementIcon(resource.element)}
-                />{' '}
-                <span>{resource.element}</span>
-              </>
-            )}
-          </label>
-          {resource.action === 'move' && resource.currentPlacement !== undefined ? (
-            <span className="resource-placement-disclosure">
-              Placed at{' '}
-              <button
-                className="semantic-focus-link"
-                onClick={() => dispatch(semanticOwnerNavigated(resource.currentPlacement!.address))}
-                type="button"
-              >
-                {resource.currentPlacement.biomeKey} · {resource.currentPlacement.locationLabel}
-              </button>
-              .
-            </span>
-          ) : null}
-        </div>
-      ))}
+      <div className="icon-toggle-row">
+        {resources.map((resource) => (
+          <IconToggle
+            disabled={!resource.legal && resource.action !== 'remove'}
+            icon={
+              resource.element === undefined
+                ? gatheringToolIcon(resource.family)
+                : elementIcon(resource.element)
+            }
+            key={resource.family}
+            name={name(resource)}
+            onToggle={() =>
+              executeIntent(
+                requireWorkspaceInteraction(
+                  interactions.resourcePlacements,
+                  resource.interactionKey,
+                ).intent,
+              )
+            }
+            pressed={resource.action === 'remove'}
+            target={findingTarget(resource.address)}
+          />
+        ))}
+      </div>
+      {resources.map((resource) =>
+        resource.action === 'move' && resource.currentPlacement !== undefined ? (
+          <span className="resource-placement-disclosure" key={resource.family}>
+            {resource.element ?? resource.label} placed at{' '}
+            <button
+              className="semantic-focus-link"
+              onClick={() => dispatch(semanticOwnerNavigated(resource.currentPlacement!.address))}
+              type="button"
+            >
+              {resource.currentPlacement.biomeKey} · {resource.currentPlacement.locationLabel}
+            </button>
+            .
+          </span>
+        ) : null,
+      )}
     </div>
   );
 }

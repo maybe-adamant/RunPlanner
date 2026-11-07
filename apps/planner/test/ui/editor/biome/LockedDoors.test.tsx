@@ -42,7 +42,7 @@ describe('locked doors', () => {
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     expect(screen.queryByRole('checkbox', { name: 'Door 2 locked' })).toBeNull();
-    await user.click(screen.getByRole('checkbox', { name: 'Lock Doors' }));
+    await user.click(screen.getByRole('button', { name: 'Lock Doors' }));
     // The gate only shows the doors; Door 1 never locks.
     expect(hostRoom(application).lockedExits).toBeUndefined();
     expect(screen.queryByRole('checkbox', { name: 'Door 1 locked' })).toBeNull();
@@ -71,10 +71,10 @@ describe('locked doors', () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'G');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Lock Doors' }));
+    await user.click(screen.getByRole('button', { name: 'Lock Doors' }));
     await user.click(screen.getByRole('checkbox', { name: 'Door 2 locked' }));
-    const gate = screen.getByRole('checkbox', { name: 'Lock Doors' });
-    expect((gate as HTMLInputElement).checked).toBe(true);
+    const gate = screen.getByRole('button', { name: 'Lock Doors' });
+    expect(gate.getAttribute('aria-pressed')).toBe('true');
 
     await user.click(gate);
     expect(hostRoom(application).lockedExits).toBeUndefined();

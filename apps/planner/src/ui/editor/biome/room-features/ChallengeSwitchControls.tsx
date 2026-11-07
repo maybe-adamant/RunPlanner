@@ -12,10 +12,9 @@ import {
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { challengeSwitchRuleSentence } from '@planner/projections/challengeSwitchCopy';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
-import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { challengeSwitchIcon, roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { hintProps } from '@planner/ui/controls/hint';
+import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
@@ -60,7 +59,7 @@ export function ChallengeSwitchControls({
       : observation.kinds.find((kind) => kind.lock !== undefined)?.lock;
   const target =
     row === undefined
-      ? {}
+      ? undefined
       : findingTarget(
           observation.address,
           semanticOwnerControlElementId(observation.address),
@@ -69,28 +68,25 @@ export function ChallengeSwitchControls({
         );
   const idKey = semanticOwnerControlElementId(observation.address);
   return (
-    <fieldset className="room-purging-pool challenge-switch">
+    <fieldset
+      className="room-purging-pool challenge-switch"
+      data-open={row === undefined ? undefined : ''}
+    >
       <legend className="visually-hidden">Challenge Switch</legend>
-      <div className="room-feature-presence-row room-resource-row challenge-switch-row">
-        <label
-          className="room-resource-selection"
-          {...hintProps(unavailable === undefined ? undefined : lockHint(unavailable))}
-        >
-          <input
-            {...target}
-            aria-label="Challenge Switch"
-            checked={row !== undefined}
-            disabled={row === undefined && firstRollable === undefined}
-            onChange={(event) => {
-              if (!event.target.checked) executeIntent(interaction.observeIntentFor(null));
-              else if (firstRollable?.observeVariantKey !== undefined)
-                executeIntent(interaction.observeIntentFor(firstRollable.observeVariantKey));
-            }}
-            type="checkbox"
-          />
-          <ArtworkIcon className="artwork-label-icon" source={roomObjectIcon('challengeSwitch')} />
-          <span>Challenge Switch</span>
-        </label>
+      <div className="room-feature-presence-row challenge-switch-row">
+        <IconToggle
+          disabled={row === undefined && firstRollable === undefined}
+          disabledHint={unavailable === undefined ? undefined : lockHint(unavailable)}
+          icon={roomObjectIcon('challengeSwitch')}
+          name="Challenge Switch"
+          onToggle={(next) => {
+            if (!next) executeIntent(interaction.observeIntentFor(null));
+            else if (firstRollable?.observeVariantKey !== undefined)
+              executeIntent(interaction.observeIntentFor(firstRollable.observeVariantKey));
+          }}
+          pressed={row !== undefined}
+          {...(target === undefined ? {} : { target })}
+        />
         {row === undefined ? null : (
           <ContextualPicker<ChallengeSwitchKind>
             ariaLabel="Switch type"

@@ -4,9 +4,10 @@ export type TimelineRowKind =
   'action' | 'boundary' | 'checkpoint' | 'continuation' | 'effect' | 'insertion';
 
 /**
- * One Room Timeline row: handle, label, decisions (editors), money and the
- * trash. A placement control (Add, Restore, Take) stands in the money zone of
- * a row outside the order. Every cell stays mounted so columns align.
+ * One Room Timeline row: handle, one sentence (its label, then its decisions),
+ * money and the trash. A placement control (Add, Restore, Take) stands in the
+ * money zone of a row outside the order. Every cell stays mounted so the money
+ * and trash columns align down the Timeline.
  */
 export function TimelineRow({
   kind,
@@ -37,11 +38,13 @@ export function TimelineRow({
       <span className="timeline-cell-handle" data-timeline-cell="handle">
         {handle}
       </span>
-      <div className="timeline-cell-label" data-timeline-cell="label">
-        {label}
-      </div>
-      <div className="timeline-cell-editors" data-timeline-cell="editors">
-        {editors}
+      <div className="timeline-cell-sentence" data-timeline-cell="sentence">
+        <div className="timeline-cell-label" data-timeline-cell="label">
+          {label}
+        </div>
+        <div className="timeline-cell-editors" data-timeline-cell="editors">
+          {editors}
+        </div>
       </div>
       <div className="timeline-cell-money" data-timeline-cell="money">
         {money}

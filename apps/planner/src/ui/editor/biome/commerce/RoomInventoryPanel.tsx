@@ -24,6 +24,7 @@ import {
   stygianWellRefusalSentence,
 } from '@planner/projections/roomObjectPlacementCopy';
 import { hintProps } from '@planner/ui/controls/hint';
+import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -83,36 +84,27 @@ export function RoomInventoryPanel({
                 feature.presenceInteractionKey,
               );
         return (
-          <fieldset className="room-purging-pool room-inventory-line" key="stygian-well">
+          <fieldset
+            className="room-purging-pool room-inventory-line"
+            data-open={feature.presence.kind === 'optionalAbsent' ? undefined : ''}
+            key="stygian-well"
+          >
             <legend className="visually-hidden">Stygian Well configuration</legend>
-            <div className="room-feature-interaction-header">
-              {presence === undefined && feature.presence.kind !== 'optionalAbsent' ? (
-                <FixedObjectHeader object="stygianWell" title="Stygian Well" />
-              ) : (
-                <label
-                  className="room-feature-presence-row"
-                  {...hintProps(presence === undefined ? presenceLockHint(feature) : undefined)}
-                >
-                  <input
-                    {...findingTarget(feature.presenceAddress)}
-                    aria-label="Stygian Well present"
-                    checked={feature.presence.kind !== 'optionalAbsent'}
-                    disabled={presence === undefined}
-                    onChange={(event) =>
-                      presence === undefined
-                        ? undefined
-                        : executeIntent(presence.intentFor(event.target.checked))
-                    }
-                    type="checkbox"
-                  />
-                  <ArtworkIcon
-                    className="artwork-label-icon"
-                    source={roomObjectIcon('stygianWell')}
-                  />
-                  <span>Stygian Well</span>
-                </label>
-              )}
-            </div>
+            {presence === undefined && feature.presence.kind !== 'optionalAbsent' ? (
+              <FixedObjectHeader object="stygianWell" title="Stygian Well" />
+            ) : (
+              <IconToggle
+                disabled={presence === undefined}
+                disabledHint={presence === undefined ? presenceLockHint(feature) : undefined}
+                icon={roomObjectIcon('stygianWell')}
+                name="Stygian Well"
+                onToggle={(next) => {
+                  if (presence !== undefined) executeIntent(presence.intentFor(next));
+                }}
+                pressed={feature.presence.kind !== 'optionalAbsent'}
+                target={findingTarget(feature.presenceAddress)}
+              />
+            )}
             {feature.presence.kind === 'optionalAbsent' ? null : (
               <NumberedSlots label="Stygian Well slots">
                 {feature.slots.map((slot, index) => (
@@ -132,11 +124,13 @@ export function RoomInventoryPanel({
     case 'purgingPool':
       return (() => {
         return (
-          <fieldset className="room-purging-pool room-inventory-line" key="purging-pool">
+          <fieldset
+            className="room-purging-pool room-inventory-line"
+            data-open=""
+            key="purging-pool"
+          >
             <legend className="visually-hidden">Pool of Purging configuration</legend>
-            <div className="room-feature-interaction-header">
-              <FixedObjectHeader object="purgingPool" title="Pool of Purging" />
-            </div>
+            <FixedObjectHeader object="purgingPool" title="Pool of Purging" />
             <NumberedSlots label="Pool of Purging slots">
               {feature.slots.map((slot, index) => {
                 const interaction = requireWorkspaceInteraction(
@@ -176,34 +170,24 @@ export function RoomInventoryPanel({
               : findingAnchor(feature.inventoryAddress))}
             tabIndex={-1}
             className="room-purging-pool room-inventory-line"
+            data-open={feature.slots.length === 0 ? undefined : ''}
             key="hermes-shrine"
           >
             <legend className="visually-hidden">Hermes Shrine configuration</legend>
             {presence === undefined && feature.presence.kind !== 'optionalAbsent' ? (
               <FixedObjectHeader object="hermesShrine" title="Hermes Shrine" />
             ) : (
-              <label
-                className="room-feature-presence-row"
-                {...hintProps(presence === undefined ? presenceLockHint(feature) : undefined)}
-              >
-                <input
-                  {...findingTarget(feature.presenceAddress)}
-                  aria-label="Hermes Shrine present"
-                  checked={feature.presence.kind !== 'optionalAbsent'}
-                  disabled={presence === undefined}
-                  onChange={(event) =>
-                    presence === undefined
-                      ? undefined
-                      : executeIntent(presence.intentFor(event.target.checked))
-                  }
-                  type="checkbox"
-                />
-                <ArtworkIcon
-                  className="artwork-label-icon"
-                  source={roomObjectIcon('hermesShrine')}
-                />
-                <span>Hermes Shrine</span>
-              </label>
+              <IconToggle
+                disabled={presence === undefined}
+                disabledHint={presence === undefined ? presenceLockHint(feature) : undefined}
+                icon={roomObjectIcon('hermesShrine')}
+                name="Hermes Shrine"
+                onToggle={(next) => {
+                  if (presence !== undefined) executeIntent(presence.intentFor(next));
+                }}
+                pressed={feature.presence.kind !== 'optionalAbsent'}
+                target={findingTarget(feature.presenceAddress)}
+              />
             )}
             {feature.slots.length === 0 ? null : (
               <NumberedSlots label="Hermes Shrine slots">
@@ -239,7 +223,7 @@ export function RoomInventoryPanel({
   }
 }
 
-/** A room object the room always has here: its name, with nothing to toggle. */
+/** A room object the room always has here: its lit icon, named on hover, with nothing to toggle. */
 function FixedObjectHeader({
   object,
   title,
@@ -248,10 +232,14 @@ function FixedObjectHeader({
   readonly title: string;
 }) {
   return (
-    <div className="room-feature-presence-row">
+    <span
+      {...hintProps(title, undefined, title)}
+      aria-label={title}
+      className="room-object-fixed"
+      role="img"
+    >
       <ArtworkIcon className="artwork-label-icon" source={roomObjectIcon(object)} />
-      <span>{title}</span>
-    </div>
+    </span>
   );
 }
 

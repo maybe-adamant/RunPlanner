@@ -88,8 +88,8 @@ describe('Pedestal panel', () => {
     ).toBeNull();
     within(panel).getByRole('button', { name: /^Pedestal/ });
     // The Overview names the pedestal by its Champion of Elysium icon and label.
-    const header = within(panel).getByText('Pedestal').parentElement;
-    expect(header?.querySelector('img')).not.toBeNull();
+    const header = within(panel).getByRole('img', { name: 'Pedestal' });
+    expect(header.querySelector('img')).not.toBeNull();
     expect(within(panel).queryByRole('checkbox')).toBeNull();
   });
 

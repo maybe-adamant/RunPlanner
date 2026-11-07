@@ -7,6 +7,8 @@ import { hintProps } from './hint';
  * does not say what it means, so its name is also its hint on hover and focus.
  */
 export function IconToggle({
+  disabled = false,
+  disabledHint,
   icon,
   inapplicable,
   inapplicableHint,
@@ -16,6 +18,9 @@ export function IconToggle({
   slot,
   target,
 }: {
+  readonly disabled?: boolean;
+  /** Why a disabled toggle cannot change, shown after its name. */
+  readonly disabledHint?: string | undefined;
   readonly icon: ArtworkSource | undefined;
   /** A retained value with no effect here: still clearable, but quiet. */
   readonly inapplicable?: boolean;
@@ -29,20 +34,31 @@ export function IconToggle({
   readonly target?: FindingMarkProps | FindingTargetProps;
 }) {
   const description = target?.['aria-description'];
-  const hint = inapplicableHint === undefined ? name : `${name} · ${inapplicableHint}`;
-  return (
+  const reason = disabled ? disabledHint : inapplicableHint;
+  const hint = reason === undefined ? name : `${name} · ${reason}`;
+  const { 'data-hint': shownHint, ...accessibleHint } = hintProps(hint, description, name);
+  const button = (
     <button
       {...target}
-      {...hintProps(hint, description, name)}
+      {...(disabled ? accessibleHint : { ...accessibleHint, 'data-hint': shownHint })}
       aria-label={name}
       aria-pressed={pressed}
       className="icon-toggle"
       data-inapplicable={inapplicable === true ? '' : undefined}
       data-slot={slot}
+      disabled={disabled || undefined}
       onClick={() => onToggle(!pressed)}
       type="button"
     >
       <ArtworkIcon className="artwork-label-icon" source={icon} />
     </button>
+  );
+  // A disabled button takes no pointer events, so its hint sits on a wrapper.
+  return disabled ? (
+    <span className="icon-toggle-disabled" data-hint={shownHint}>
+      {button}
+    </span>
+  ) : (
+    button
   );
 }

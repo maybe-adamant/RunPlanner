@@ -85,9 +85,9 @@ describe('Stygian Well workbench', () => {
       ),
     );
     openOverview();
-    const presence = screen.getByRole('checkbox', { name: 'Stygian Well present' });
-    expect((presence as HTMLInputElement).checked).toBe(false);
-    expect((presence as HTMLInputElement).disabled).toBe(false);
+    const presence = screen.getByRole('button', { name: 'Stygian Well' });
+    expect(presence.getAttribute('aria-pressed')).toBe('false');
+    expect((presence as HTMLButtonElement).disabled).toBe(false);
 
     expect(screen.queryAllByRole('button', { name: /^Stygian Well / })).toHaveLength(0);
     await view.user.click(presence);
@@ -104,20 +104,22 @@ describe('Stygian Well workbench', () => {
       ),
     );
     openOverview();
-    const presence = screen.getByRole('checkbox', { name: 'Stygian Well present' });
-    expect((presence as HTMLInputElement).disabled).toBe(true);
-    expect(hintOf(presence.closest('label'))).toBe('Wells need biome depth 3; this room is at 2.');
+    const presence = screen.getByRole('button', { name: 'Stygian Well' });
+    expect((presence as HTMLButtonElement).disabled).toBe(true);
+    expect(hintOf(presence.closest('[data-hint]'))).toBe(
+      'Stygian Well · Wells need biome depth 3; this room is at 2.',
+    );
   });
 
   it('keeps forced presence fixed with its slots always editable', () => {
     renderOccurrenceWorkbench(loadUnderworldFGProject(), 'Underworld', 'F', occurrence);
     openOverview();
     // An always-present Well is named without a presence toggle.
-    expect(screen.queryByRole('checkbox', { name: 'Stygian Well present' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Stygian Well' })).toBeNull();
     expect(
-      within(screen.getByRole('group', { name: 'Stygian Well configuration' })).getByText(
-        'Stygian Well',
-      ),
+      within(screen.getByRole('group', { name: 'Stygian Well configuration' })).getByRole('img', {
+        name: 'Stygian Well',
+      }),
     ).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);

@@ -557,7 +557,7 @@ export function RoomActionsWorkbench({
                   <Fragment key={index}>{node}</Fragment>
                 )),
               })}
-          editors={
+          money={
             bannerMoney === undefined ? undefined : (
               <span className="timeline-banner-gold">{bannerMoney}</span>
             )

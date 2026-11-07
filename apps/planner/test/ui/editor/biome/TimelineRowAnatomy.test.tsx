@@ -30,7 +30,9 @@ function timeline(): HTMLElement {
 }
 
 function cell(row: Element, name: 'label' | 'editors' | 'money' | 'actions'): HTMLElement {
-  return row.querySelector<HTMLElement>(`:scope > [data-timeline-cell="${name}"]`)!;
+  const sentence =
+    name === 'label' || name === 'editors' ? '[data-timeline-cell="sentence"] > ' : '';
+  return row.querySelector<HTMLElement>(`:scope > ${sentence}[data-timeline-cell="${name}"]`)!;
 }
 
 /** The F room whose fixed reward pickup is plain gold. */

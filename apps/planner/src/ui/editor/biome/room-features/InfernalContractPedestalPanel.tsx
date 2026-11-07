@@ -5,6 +5,7 @@ import {
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
+import { hintProps } from '@planner/ui/controls/hint';
 
 type PedestalFeature = Extract<WorkspaceRoomFeature, { readonly kind: 'infernalContractPedestal' }>;
 
@@ -17,12 +18,16 @@ export function InfernalContractPedestalPanel({
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   return (
-    <fieldset className="room-contract-pedestal room-inventory-line">
+    <fieldset className="room-contract-pedestal room-inventory-line" data-open="">
       <legend className="visually-hidden">Pedestal configuration</legend>
-      <div className="room-feature-presence-row">
+      <span
+        {...hintProps('Pedestal', undefined, 'Pedestal')}
+        aria-label="Pedestal"
+        className="room-object-fixed"
+        role="img"
+      >
         <ArtworkIcon className="artwork-label-icon" source={traitIcon('InfernalContractBoon')} />
-        <span>Pedestal</span>
-      </div>
+      </span>
       <RewardControlEditor
         ariaLabel="Pedestal Item"
         control={feature.rewardControl}

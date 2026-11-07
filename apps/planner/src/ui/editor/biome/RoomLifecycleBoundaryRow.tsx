@@ -18,7 +18,7 @@ export function LifecycleBoundaryRow({
   boundary,
   label,
   controls,
-  editors,
+  money,
   fieldsCage,
   identity,
   phase,
@@ -28,9 +28,10 @@ export function LifecycleBoundaryRow({
   readonly phase?: number;
   readonly boundary: WorkspaceRoomLifecycleBoundary;
   readonly label: string;
-  /** The banner's own controls, on its line after its identity; they never shrink. */
+  /** The banner's own controls, flowing on its sentence after its identity. */
   readonly controls?: ReactNode;
-  readonly editors?: ReactNode;
+  /** Gold the banner settles, in the Timeline's money column. */
+  readonly money?: ReactNode;
   readonly fieldsCage?: WorkspaceFieldsCageLabel;
   /** The phase's settled identity; it navigates to its Overview picker and never edits. */
   readonly identity?: { readonly label: string; readonly owner: EncounterPhaseAddress };
@@ -66,8 +67,8 @@ export function LifecycleBoundaryRow({
           ? ''
           : undefined
       }
-      editors={editors}
       kind="boundary"
+      money={money}
       label={
         <>
           <span className="timeline-banner-title">

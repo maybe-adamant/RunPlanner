@@ -402,17 +402,6 @@
   display: flex;
 }
 
-.room-feature-interaction-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-}
-
-.room-feature-interaction-header > .room-feature-presence-row {
-  display: flex;
-}
-
 .room-feature-interact-toggle {
   display: inline-flex;
   align-items: center;
@@ -1119,8 +1108,9 @@
 
 /*
  * Every timeline list shares one column grid that its rows subgrid: handle,
- * label, decisions, money and trash. The decisions column is as wide as the
- * list's widest decisions, so they start at one x on every row.
+ * sentence, money and trash. A row's sentence flows its label and decisions
+ * left to right and wraps under its own start; money and trash keep one right
+ * edge down the Timeline.
  */
 /* The timeline column measures against its whole workbench, beside the Add area or not. */
 :has(> .room-action-list):not(.room-timeline-main),
@@ -1144,9 +1134,7 @@
   --timeline-money-width: 8.2rem;
   /* The Timeline fills its column up to the readable width (see responsive.css). */
   --timeline-working-width: min(60rem, 100%);
-  /* Label and decisions stay together; a spacer keeps money and trash at one right edge. */
-  --timeline-columns: 28px max-content minmax(0, max-content) 1fr var(--timeline-money-width)
-    var(--timeline-control-height);
+  --timeline-columns: 28px minmax(0, 1fr) var(--timeline-money-width) var(--timeline-control-height);
   width: var(--timeline-working-width);
   max-width: 100%;
   position: relative;
@@ -1219,71 +1207,63 @@
   grid-column: 1;
 }
 
-.timeline-row > [data-timeline-cell='label'] {
+.timeline-row > [data-timeline-cell='sentence'] {
   grid-column: 2;
 }
 
-.timeline-row > [data-timeline-cell='editors'] {
-  grid-column: 3;
-}
-
 .timeline-row > [data-timeline-cell='money'] {
-  grid-column: 5;
+  grid-column: 3;
 }
 
 .timeline-row > [data-timeline-cell='actions'] {
-  grid-column: 6;
+  grid-column: 4;
 }
 
-/* A row without decisions lends its name the decisions column; the slots stay put elsewhere. */
-.timeline-row:not(
-    [data-timeline-row-kind='boundary'],
-    [data-timeline-row-kind='checkpoint'],
-    .room-action-feature-roll
-  ):not(:has(> [data-timeline-cell='editors'] > :not([data-empty='true'])))
-  > [data-timeline-cell='label'] {
-  grid-row: 1;
-  grid-column: 2 / 4;
+/* Money and trash sit on a wrapped sentence's first line. */
+.timeline-row > :is([data-timeline-cell='money'], [data-timeline-cell='actions']) {
+  align-self: start;
+  min-height: 32px;
 }
 
-.timeline-row:not(:has(> [data-timeline-cell='editors'] > :not([data-empty='true'])))
-  > [data-timeline-cell='editors'] {
-  /* Stays rendered so an empty finding anchor can still take focus. */
-  grid-row: 1;
-  grid-column: 3;
-}
-
-/* A banner never has actions, so its editors run to the row's end. */
+/* A banner's title starts at the handle column; its gold keeps the money column. */
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='label'] {
-  grid-row: 1;
-  grid-column: 1 / 5;
-  /* A banner title spans the row and never widens the label column. */
-  contain: inline-size;
+  > [data-timeline-cell='sentence'] {
+  grid-column: 1 / 3;
 }
 
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='editors'] {
-  display: grid;
-  grid-row: 1;
-  grid-column: 3 / -1;
-  grid-template-columns: subgrid;
-  /* The row's column gap, so the banner's money ends where a row's does. */
-  column-gap: inherit;
-  align-items: center;
+  > :is([data-timeline-cell='handle'], [data-timeline-cell='actions']) {
+  display: none;
+}
+
+/* A banner without gold runs its sentence to the row's end. */
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']):has(
+    > [data-timeline-cell='money']:empty
+  )
+  > [data-timeline-cell='sentence'] {
+  grid-column: 1 / -1;
+}
+
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > [data-timeline-cell='money']:empty {
+  display: none;
+}
+
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > [data-timeline-cell='money'] {
+  align-self: center;
+  min-height: 0;
 }
 
 /*
- * A banner is one line: its title, then its controls. The title gives way first,
- * ending its identity in an ellipsis; only a line that still cannot fit wraps the
- * controls under it.
+ * A banner is one sentence: its title, then its controls. The identity is the
+ * one part that gives way, ending in an ellipsis.
  */
 .timeline-banner-title {
   display: inline-flex;
-  /* A long title keeps a readable start before the controls wrap under it. */
-  min-width: min(12rem, 100%);
-  max-width: max-content;
-  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
   align-items: center;
   gap: 6px;
   overflow: hidden;
@@ -1294,7 +1274,6 @@
   flex: 0 0 auto;
 }
 
-/* The identity is the one part of a banner that gives way, ending in an ellipsis. */
 .timeline-banner-title > .timeline-banner-identity {
   display: block;
   min-width: 0;
@@ -1306,13 +1285,11 @@
 
 .timeline-banner-modifiers {
   display: flex;
-  flex: 0 0 auto;
-  /* A banner's controls sit at the end of its line, before money and delete. */
-  margin-inline-start: auto;
+  min-width: 0;
+  flex: 0 1 auto;
   align-items: center;
-  flex-wrap: nowrap;
-  gap: 14px;
-  white-space: nowrap;
+  flex-wrap: wrap;
+  gap: 6px 14px;
 }
 
 .timeline-banner-modifiers .encounter-event-controls {
@@ -1330,85 +1307,19 @@
   opacity: 0.6;
 }
 
-/* A banner's gold keeps the money column. */
-
-.timeline-cell-editors > .timeline-banner-gold {
-  grid-column: 3;
-  justify-self: end;
-}
-
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > :is(
-    [data-timeline-cell='handle'],
-    [data-timeline-cell='money'],
-    [data-timeline-cell='actions']
-  ) {
-  display: none;
-}
-
-/* A banner with nothing beside it takes the whole row. */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']):not(
-    :has(> [data-timeline-cell='editors'] > :not([data-empty='true']))
-  )
-  > [data-timeline-cell='label'] {
-  grid-column: 1 / -1;
-}
-
 /* Object and feature entries start where the Optional actions heading does. */
 .timeline-row.room-action-feature-roll > [data-timeline-cell='handle'] {
   display: none;
 }
 
-.timeline-row.room-action-feature-roll > [data-timeline-cell='label'] {
+.timeline-row.room-action-feature-roll > [data-timeline-cell='sentence'] {
   grid-column: 1 / 3;
 }
 
-/*
- * Narrow lists keep handle, label, money and trash on the first line and move
- * the whole decisions zone to a second line under the label.
- */
+/* Narrow lists keep their columns; a narrower money column leaves the sentence more room. */
 @container timeline-list (max-width: 46rem) {
   .room-action-list {
-    --timeline-columns: 28px minmax(0, 1fr) 0 0 var(--timeline-money-width)
-      var(--timeline-control-height);
-  }
-
-  .timeline-row:not(
-      [data-timeline-row-kind='boundary'],
-      [data-timeline-row-kind='checkpoint'],
-      .room-action-feature-roll
-    ):has(> [data-timeline-cell='editors'] > :not([data-empty='true']))
-    > [data-timeline-cell='label'] {
-    grid-row: 1;
-    grid-column: 2 / 4;
-  }
-
-  .timeline-row:not(
-      [data-timeline-row-kind='boundary'],
-      [data-timeline-row-kind='checkpoint'],
-      .room-action-feature-roll
-    ):has(> [data-timeline-cell='editors'] > :not([data-empty='true']))
-    > [data-timeline-cell='editors'] {
-    grid-row: 2;
-    grid-column: 2 / 6;
-  }
-
-  .timeline-row > :is([data-timeline-cell='money'], [data-timeline-cell='actions']) {
-    grid-row: 1;
-  }
-
-  /* A banner keeps its gold at the money column; its controls drop to a second line. */
-  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-    > [data-timeline-cell='label'] {
-    grid-column: 1 / 5;
-  }
-
-  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-    > [data-timeline-cell='editors'] {
-    display: flex;
-    grid-row: 1;
-    grid-column: 5;
-    justify-content: flex-end;
+    --timeline-money-width: 6.8rem;
   }
 }
 
@@ -1418,12 +1329,18 @@
   place-items: center;
 }
 
-.timeline-cell-label {
+.timeline-cell-sentence {
+  position: relative;
   display: flex;
   min-width: 0;
   align-items: center;
   flex-wrap: wrap;
   gap: 4px 6px;
+}
+
+/* Label and decisions are one flow: each item wraps under the sentence's start. */
+.timeline-cell-sentence > :is(.timeline-cell-label, .timeline-cell-editors) {
+  display: contents;
 }
 
 .timeline-cell-label > strong {
@@ -1569,17 +1486,6 @@
   text-underline-offset: 3px;
 }
 
-/* Decisions flow in order: the trait chip, then any other decision, each its own width. */
-.timeline-row:not(
-    [data-timeline-row-kind='boundary'],
-    [data-timeline-row-kind='checkpoint'],
-    [data-timeline-row-kind='continuation']
-  )
-  > .timeline-cell-editors {
-  position: relative;
-  flex-wrap: wrap;
-}
-
 /* Object pickers in decisions are as wide as their choice. */
 .timeline-cell-editors .travel-deal-item .contextual-picker,
 .timeline-row[data-travel-deal-line] .timeline-cell-editors .contextual-picker {
@@ -1616,21 +1522,8 @@
 
 /* Row titles are semibold; banner titles stay bold as the headings above them. */
 .timeline-cell-label > strong,
-.nemesis-interaction-sentence > strong,
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > .timeline-cell-label
-  > strong {
+.nemesis-interaction-sentence > strong {
   font-weight: 700;
-}
-
-.timeline-cell-editors {
-  display: flex;
-  min-width: 0;
-  max-width: 100%;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: 5px;
 }
 
 .timeline-cell-actions {
@@ -1998,9 +1891,20 @@
   text-decoration: underline;
 }
 
-/* Sized or wrapping editor groups fill their editors cell instead of their widest item. */
+/* Editor groups in a sentence keep their own width and flow with its words. */
 .timeline-cell-editors > :is(.transcendent-embryo-outcome-row, .shop-family-offer-row) {
-  flex: 1 1 auto;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+
+.timeline-cell-editors > .shop-family-offer-row > .field-control {
+  flex: 0 0 auto;
+  width: auto;
 }
 
 .room-action-inline-reward {
@@ -2420,11 +2324,10 @@
 }
 
 /*
- * Room Overview grid: every row is label | picker | secondary, and every
- * picker starts at the same x in every section and room. The picker width
- * fits common encounter names with their icon and caret; rarer longer names
- * ellipsize. Label and secondary columns are fixed;
- * where the inspector is narrower, the picker alone shrinks to its minimum.
+ * Room Overview lines: a label word, then its picker at its own width, then
+ * anything that edits it (a pencil, a count's chips). Every picker starts at
+ * the same x; a picker never grows past the picker width, where longer names
+ * ellipsize.
  */
 .room-overview-workbench {
   --overview-label-width: 5.6rem;
@@ -2508,16 +2411,14 @@
 .room-overview-workbench .hermes-shrine-slot > .field-control,
 .room-overview-workbench .shop-family-item-control > .field-control,
 .room-overview-workbench .shop-family-item-control > .reward-value-editor {
-  flex: 0 1 var(--overview-row-main-width);
+  flex: 0 1 auto;
   width: auto;
-  min-width: var(--overview-row-main-min-width);
+  min-width: 0;
   max-width: var(--overview-row-main-width);
 }
 
 .room-overview-workbench .field-control-inline {
-  grid-template-columns:
-    var(--overview-row-label-width)
-    minmax(var(--overview-picker-min-width), var(--overview-picker-width));
+  grid-template-columns: var(--overview-row-label-width) minmax(0, max-content);
   column-gap: var(--overview-column-gap);
 }
 
@@ -2576,11 +2477,6 @@
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
-}
-
-.room-overview-workbench .room-feature-interaction-header {
-  grid-template-columns: var(--overview-main-width) auto;
-  column-gap: var(--overview-column-gap);
 }
 
 /*
@@ -2750,18 +2646,6 @@
   display: none;
 }
 
-/* A banner's editors overlap its title's span; only their own controls take the pointer. */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='editors'] {
-  pointer-events: none;
-}
-
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='editors']
-  > * {
-  pointer-events: auto;
-}
-
 /* An encounter phase reads as one light group: its rows share a tint. */
 .timeline-row[data-phase] {
   background: rgb(255 255 255 / 2%);
@@ -2811,19 +2695,15 @@
 }
 
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='label'] {
-  display: flex;
-  min-width: 0;
+  > [data-timeline-cell='sentence'] {
   /* A title line is as tall as one control, so every banner title sits alike. */
   min-height: var(--timeline-control-height, 26px);
-  align-items: center;
-  /* The controls wrap under the title only as a last resort. */
-  flex-wrap: wrap;
   gap: 4px 14px;
   line-height: 1.25;
 }
 
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > [data-timeline-cell='sentence']
   > [data-timeline-cell='label']
   > * {
   display: inline-flex;
@@ -2877,12 +2757,6 @@
 
 .row-reward-arrow {
   color: var(--muted);
-}
-
-/* Decisions keep a clear gap from the label. */
-.timeline-row:not([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='editors'] {
-  margin-inline-start: 0.5rem;
 }
 
 /* Below the timeline the Add area has no title and hides when there is nothing to add. */
@@ -3372,12 +3246,9 @@ button.timeline-chip {
   display: none;
 }
 
-.timeline-row[data-door-press] > [data-timeline-cell='editors'] {
-  display: flex;
-  grid-row: 1;
-  grid-column: 3 / 6;
-  align-items: center;
-  gap: 10px;
+.timeline-row[data-door-press] > [data-timeline-cell='sentence'] {
+  grid-column: 2 / 4;
+  column-gap: 10px;
 }
 
 .room-reroll-row-inline .contextual-picker,
@@ -3801,10 +3672,6 @@ span.hub-board-status-line {
   min-width: 0;
 }
 
-.room-inventory-line > .room-feature-presence-row {
-  min-height: 30px;
-}
-
 /* A Shrine slot's delivery delay follows its chip as a compact number. */
 .hermes-shrine-delay .contextual-picker-trigger {
   min-width: 2rem;
@@ -3850,14 +3717,66 @@ span.hub-board-status-line {
   max-width: none;
 }
 
-/* The object's name holds one column so its slots line up under the other objects'. */
-.room-inventory-line > :is(.room-feature-interaction-header, .room-feature-presence-row) {
-  display: flex;
-  flex: 0 0 12rem;
-  min-height: 30px;
-}
-
 .room-overview-workbench .room-inventory-line {
   display: flex;
   flex-wrap: wrap;
+}
+
+.icon-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.icon-toggle-disabled {
+  display: inline-flex;
+}
+
+/* Yes/no room flags as one compact row of icon toggles. */
+.icon-toggle-row {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.room-overview-workbench .icon-toggle-row,
+.room-overview-workbench .shop-editor > .room-overview-panel {
+  padding-left: var(--overview-subrow-indent);
+}
+
+/*
+ * Objects that are off share one row of icon toggles; an object that is on
+ * follows on its own line: its toggle, then its slots and choices.
+ */
+.room-overview-panel[data-layout='toggles'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 4px;
+}
+
+.room-overview-workbench .room-overview-panel[data-layout='toggles'] {
+  padding-left: var(--overview-subrow-indent);
+}
+
+.room-overview-panel[data-layout='toggles'] > * {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.room-overview-panel[data-layout='toggles'] > :is([data-open], :has(> [data-open])) {
+  flex: 1 0 100%;
+  order: 1;
+}
+
+.room-object-fixed {
+  display: inline-grid;
+  width: var(--timeline-control-height, 26px);
+  height: var(--timeline-control-height, 26px);
+  place-items: center;
+}
+
+.room-inventory-line > :is(.icon-toggle, .icon-toggle-disabled, .room-object-fixed) {
+  min-height: 30px;
 }

@@ -35,7 +35,7 @@ describe('challenge switch rows on the room Overview', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
 
     // Ticking the row observes the first type the room can roll.
-    await user.click(screen.getByRole('checkbox', { name: 'Challenge Switch' }));
+    await user.click(screen.getByRole('button', { name: 'Challenge Switch' }));
     expect(hostRoom(application).challengeSwitch?.variantKey).toBe(
       'PerfectClearChallengeSwitch_Pom',
     );
@@ -50,7 +50,7 @@ describe('challenge switch rows on the room Overview', () => {
       }).disabled,
     ).toBe(false);
 
-    await user.click(screen.getByRole('checkbox', { name: 'Challenge Switch' }));
+    await user.click(screen.getByRole('button', { name: 'Challenge Switch' }));
     expect(hostRoom(application).challengeSwitch).toBeUndefined();
     act(() => {
       application.store.dispatch(authoredProjectUndoRequested());
@@ -64,7 +64,7 @@ describe('challenge switch rows on the room Overview', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     // The type picker appears once the switch is ticked.
     expect(screen.queryByRole('button', { name: 'Switch type' })).toBeNull();
-    await user.click(screen.getByRole('checkbox', { name: 'Challenge Switch' }));
+    await user.click(screen.getByRole('button', { name: 'Challenge Switch' }));
     await user.click(screen.getByRole('button', { name: /Switch type/ }));
     await user.click(screen.getByRole('option', { name: /Infernal Trove/ }));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
@@ -82,7 +82,7 @@ describe('challenge switch rows on the room Overview', () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Challenge Switch' }));
+    await user.click(screen.getByRole('button', { name: 'Challenge Switch' }));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     await user.click(screen.getByRole('button', { name: 'Unseen Sigil ▸' }));
     await user.click(await screen.findByRole('button', { name: 'Use Unseen Sigil' }));

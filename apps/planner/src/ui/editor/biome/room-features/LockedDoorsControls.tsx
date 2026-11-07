@@ -4,7 +4,7 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceLockedDoors,
 } from '@planner/projections/structured-workspace';
-import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { hintProps } from '@planner/ui/controls/hint';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -46,35 +46,33 @@ export function LockedDoorsControls({
     locked.length === 0 && lockedDoors.doors.every((door) => door.lock !== undefined);
   const idKey = semanticOwnerControlElementId(lockedDoors.address);
   return (
-    <fieldset className="room-purging-pool locked-doors" id={idKey}>
+    <fieldset
+      className="room-purging-pool locked-doors"
+      data-open={open ? '' : undefined}
+      id={idKey}
+    >
       <legend className="visually-hidden">Lock Doors</legend>
       <div className="room-feature-presence-row">
-        <label
-          className="room-resource-selection"
-          {...hintProps(disabled && unavailable !== undefined ? lockHint(unavailable) : undefined)}
-        >
-          <input
-            aria-label="Lock Doors"
-            checked={open}
-            disabled={disabled}
-            onChange={(event) => {
-              if (event.target.checked) {
-                setRevealed(true);
-                return;
-              }
-              setRevealed(false);
-              if (locked.length > 0)
-                dispatch(
-                  authoredProjectCommandsDispatched(
-                    locked.map((door) => interaction.intentFor(door.exitKey).command),
-                  ),
-                );
-            }}
-            type="checkbox"
-          />
-          <ArtworkIcon className="artwork-label-icon" source={roomObjectIcon('lockedDoors')} />
-          <span>Lock Doors</span>
-        </label>
+        <IconToggle
+          disabled={disabled}
+          disabledHint={disabled && unavailable !== undefined ? lockHint(unavailable) : undefined}
+          icon={roomObjectIcon('lockedDoors')}
+          name="Lock Doors"
+          onToggle={(next) => {
+            if (next) {
+              setRevealed(true);
+              return;
+            }
+            setRevealed(false);
+            if (locked.length > 0)
+              dispatch(
+                authoredProjectCommandsDispatched(
+                  locked.map((door) => interaction.intentFor(door.exitKey).command),
+                ),
+              );
+          }}
+          pressed={open}
+        />
       </div>
       {open ? (
         <div className="locked-doors-list">

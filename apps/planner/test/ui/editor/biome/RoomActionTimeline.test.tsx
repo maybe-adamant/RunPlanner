@@ -1226,10 +1226,14 @@ describe('OccurrenceRoomActions', () => {
     const pickupRow = pomLauncher.closest<HTMLElement>('[data-room-action-key]');
     if (pickupRow === null) throw new Error('Nectar pickup row is missing');
     expect(
-      pickupRow.querySelector(':scope > [data-timeline-cell="label"]')?.contains(disposition),
+      pickupRow
+        .querySelector(':scope > [data-timeline-cell="sentence"] > [data-timeline-cell="label"]')
+        ?.contains(disposition),
     ).toBe(true);
     expect(
-      pickupRow.querySelector(':scope > [data-timeline-cell="editors"]')?.contains(pomLauncher),
+      pickupRow
+        .querySelector(':scope > [data-timeline-cell="sentence"] > [data-timeline-cell="editors"]')
+        ?.contains(pomLauncher),
     ).toBe(true);
     expectBefore(disposition, pomLauncher);
 
@@ -1247,7 +1251,9 @@ describe('OccurrenceRoomActions', () => {
       // The transformed pickup reads as its Artificer result after it.
       const output = within(sourceAction).getByRole('button', { name: /^Artificer item/ });
       expect(
-        sourceAction.querySelector(':scope > [data-timeline-cell="label"]')?.contains(output),
+        sourceAction
+          .querySelector(':scope > [data-timeline-cell="sentence"] > [data-timeline-cell="label"]')
+          ?.contains(output),
       ).toBe(true);
       expectBefore(outcome, output);
     });
@@ -1285,9 +1291,11 @@ describe('OccurrenceRoomActions', () => {
     // The realized pickup keeps its editable outcome as the row's verb.
     const outcome = within(row).getByRole('button', { name: /^How to take .+: Collect$/ });
     expect(outcome.textContent).toBe('Collect');
-    expect(row.querySelector(':scope > [data-timeline-cell="label"]')?.contains(outcome)).toBe(
-      true,
-    );
+    expect(
+      row
+        .querySelector(':scope > [data-timeline-cell="sentence"] > [data-timeline-cell="label"]')
+        ?.contains(outcome),
+    ).toBe(true);
     expect(within(row).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
     expect(queryByHint(actions, 'Converted by the Vow of Forfeit.')).toBeNull();
   });

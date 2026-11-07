@@ -39,8 +39,8 @@ describe('Fresh File retained Postboss controls', () => {
         ),
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    const presence = screen.getByRole('checkbox', { name: 'Stygian Well present' });
-    expect(presence).toHaveProperty('checked', true);
+    const presence = screen.getByRole('button', { name: 'Stygian Well' });
+    expect(presence.getAttribute('aria-pressed')).toBe('true');
     expect(presence).toHaveProperty('disabled', false);
     await view.user.click(presence);
     expect(postbossOccurrence(view.application)?.stygianWell).toBeUndefined();

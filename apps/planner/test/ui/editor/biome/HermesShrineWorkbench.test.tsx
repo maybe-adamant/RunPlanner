@@ -121,8 +121,8 @@ describe('Hermes Shrine workbench', () => {
       application,
     );
     openOverview();
-    const presence = screen.getByRole('checkbox', { name: 'Hermes Shrine present' });
-    expect((presence as HTMLInputElement).disabled).toBe(false);
+    const presence = screen.getByRole('button', { name: 'Hermes Shrine' });
+    expect((presence as HTMLButtonElement).disabled).toBe(false);
     expect(screen.queryByRole('checkbox', { name: /Interact.*Hermes Shrine/i })).toBeNull();
 
     await view.user.click(presence);
@@ -138,16 +138,14 @@ describe('Hermes Shrine workbench', () => {
     act(() => application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
       expect(
-        (screen.getByRole('checkbox', { name: 'Hermes Shrine present' }) as HTMLInputElement)
-          .checked,
-      ).toBe(false),
+        screen.getByRole('button', { name: 'Hermes Shrine' }).getAttribute('aria-pressed'),
+      ).toBe('false'),
     );
     act(() => application.store.dispatch(authoredProjectRedoRequested()));
     await waitFor(() =>
       expect(
-        (screen.getByRole('checkbox', { name: 'Hermes Shrine present' }) as HTMLInputElement)
-          .checked,
-      ).toBe(true),
+        screen.getByRole('button', { name: 'Hermes Shrine' }).getAttribute('aria-pressed'),
+      ).toBe('true'),
     );
   });
 
@@ -301,10 +299,10 @@ describe('Hermes Shrine workbench', () => {
     expect(within(resolvedDeliveryRow).queryByText('Collect Mystery Boon · Apollo')).toBeNull();
     // The god picker stands in the label after the Mystery Boon; decisions follow it.
     const label = resolvedDeliveryRow.querySelector<HTMLElement>(
-      ':scope > [data-timeline-cell="label"]',
+      ':scope > [data-timeline-cell="sentence"] > [data-timeline-cell="label"]',
     );
     const inlineEditors = resolvedDeliveryRow.querySelector<HTMLElement>(
-      ':scope > [data-timeline-cell="editors"]',
+      ':scope > [data-timeline-cell="sentence"] > [data-timeline-cell="editors"]',
     );
     if (label === null || inlineEditors === null)
       throw new Error('Mystery Boon label or inline editors are missing');
@@ -744,11 +742,11 @@ describe('Hermes Shrine workbench', () => {
     renderOccurrenceWorkbench(loadSurfaceNOProject(), 'Surface', 'O', occurrence(postbossId));
     openOverview();
     // An always-present Shrine is named without a presence toggle.
-    expect(screen.queryByRole('checkbox', { name: 'Hermes Shrine present' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Hermes Shrine' })).toBeNull();
     expect(
-      within(screen.getByRole('group', { name: 'Hermes Shrine configuration' })).getByText(
-        'Hermes Shrine',
-      ),
+      within(screen.getByRole('group', { name: 'Hermes Shrine configuration' })).getByRole('img', {
+        name: 'Hermes Shrine',
+      }),
     ).toBeTruthy();
     expect(
       screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
@@ -763,10 +761,12 @@ describe('Hermes Shrine workbench', () => {
       occurrence(oOccurrenceIds.combat01),
     );
     openOverview();
-    const presence = screen.getByRole('checkbox', { name: 'Hermes Shrine present' });
-    expect((presence as HTMLInputElement).checked).toBe(false);
-    expect((presence as HTMLInputElement).disabled).toBe(true);
-    expect(hintOf(presence.closest('label'))).toBe('This room has no spot for a Hermes Shrine.');
+    const presence = screen.getByRole('button', { name: 'Hermes Shrine' });
+    expect(presence.getAttribute('aria-pressed')).toBe('false');
+    expect((presence as HTMLButtonElement).disabled).toBe(true);
+    expect(hintOf(presence.closest('[data-hint]'))).toBe(
+      'Hermes Shrine · This room has no spot for a Hermes Shrine.',
+    );
   });
 
   it('keeps a refill purchased without Travel Deal removable on its own row', async () => {

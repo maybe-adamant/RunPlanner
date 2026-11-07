@@ -2374,7 +2374,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     const actionRow = traitLauncher.closest<HTMLElement>('[data-room-action-key]');
     if (actionRow === null) throw new Error('Wheel reward action row is missing');
     expect(
-      actionRow.querySelector(':scope > [data-timeline-cell="editors"]')?.contains(traitLauncher),
+      actionRow
+        .querySelector(':scope > [data-timeline-cell="sentence"] > [data-timeline-cell="editors"]')
+        ?.contains(traitLauncher),
     ).toBe(true);
     expect(
       actionRow.querySelector('.acquisition-entry-resolution')?.getAttribute('data-empty'),
