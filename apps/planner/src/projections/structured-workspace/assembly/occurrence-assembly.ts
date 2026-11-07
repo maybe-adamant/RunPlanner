@@ -6,7 +6,6 @@ import {
   resolveEntryDeclaration,
   routeErisHost,
   routeHasKeepsakeRack,
-  routeRoomDeclaration,
   type ResolvedRoutePosition,
 } from '@run-planner/engine/authored-project';
 import {
@@ -59,6 +58,7 @@ import {
   occurrenceRoomIcon,
   sharedRoomIconNumber,
 } from '../presentation/room-icon';
+import { roomLocationLabel } from '../presentation/room-location';
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceBossDoorRewardStoreControl,
@@ -955,25 +955,10 @@ export function assembleWorkspaceOccurrence(
                         createBiomeAddress(input.biome.routeKey, placement.biomeKey),
                         placement.occurrenceId,
                       );
-                      const location = input.roomLocation?.(placementAddress);
-                      const runDepth = location?.runDepth;
-                      const biomeLabel =
-                        input.catalog.biomes.byKey[placement.biomeKey]?.label ?? placement.biomeKey;
-                      // The game calls a room's place in the run its Location; an unreached
-                      // room has none yet and is named instead.
-                      const roomLabel =
-                        runDepth !== undefined || location === undefined
-                          ? undefined
-                          : routeRoomDeclaration(
-                              requireRoom(input.catalog, location.gameName),
-                              input.biome.routeKey,
-                            ).label;
                       return Object.freeze({
                         address: placementAddress,
                         biomeKey: placement.biomeKey,
-                        ...(runDepth === undefined ? {} : { runDepth }),
-                        locationLabel: `${biomeLabel} · Location ${runDepth ?? '?'}`,
-                        ...(roomLabel === undefined ? {} : { roomLabel }),
+                        ...roomLocationLabel(input.catalog, placementAddress, input.roomLocation),
                       });
                     })()
                   : undefined;

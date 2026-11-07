@@ -4,6 +4,7 @@ import { useAppDispatch } from '@planner/state/store';
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { elementIcon, gatheringToolIcon } from '@planner/ui/artwork/roomArtwork';
+import { hintProps } from '@planner/ui/controls/hint';
 
 function resourceFamilyLabel(family: WorkspaceRoute['resources'][number]['family']): string {
   switch (family) {
@@ -50,10 +51,13 @@ export function RouteResourcesPanel({ route }: { readonly route: WorkspaceRoute 
                     />
                   )}
                 </span>
-                <span className="route-trait-meta">
+                <span
+                  className="route-trait-meta"
+                  {...(placement?.roomLabel === undefined ? {} : hintProps(placement.roomLabel))}
+                >
                   {placement === undefined
                     ? 'No selected success'
-                    : `${placement.biomeKey} · ${placement.locationLabel}${placement.pastPlanEnd === true ? ' · Past the plan end' : ''}`}
+                    : `${placement.locationLabel}${placement.pastPlanEnd === true ? ' · Past the plan end' : ''}`}
                 </span>
               </div>
               {placement === undefined ? null : (

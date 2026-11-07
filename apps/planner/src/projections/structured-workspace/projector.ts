@@ -6,6 +6,7 @@ import type {
 import {
   createBiomeAddress,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
@@ -13,7 +14,6 @@ import {
   createHexTreeAddress,
   routeInitialProfile,
   routeLoadoutEditDomain,
-  routeRoomDeclaration,
   semanticAddressKey,
   type AuthoredHexTreeConfiguration,
   type SemanticAddress,
@@ -59,6 +59,7 @@ import { assembleWorkspaceBiomeSemantics } from './assembly/biome-semantic-assem
 import { requireWorkspaceRoom } from './assembly/catalog-room';
 import { projectRoutePlanEnd } from './assembly/plan-end-assembly';
 import { presentWorkspaceBiome } from './presentation/biome-presentation';
+import { roomLocationLabel } from './presentation/room-location';
 import { registerWorkspaceFindingDestinations } from './navigation/finding-routing';
 import {
   indexFindingsByRepairTarget,
@@ -761,41 +762,29 @@ export function createStructuredWorkspaceProjection(
         resources: Object.freeze(
           (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => {
             const placement = routeSource.resourceAuthoring.placements[family];
+            const placementAddress =
+              placement === null
+                ? undefined
+                : createOccurrenceAddress(
+                    createBiomeAddress(routeSource.routeKey, placement.biomeKey),
+                    placement.occurrenceId,
+                  );
             const presentedPlacement =
-              placement === null
+              placement === null || placementAddress === undefined
                 ? undefined
-                : (() => {
-                    const entry = routeSource.resourceAuthoring.entered.find(
-                      (candidate) =>
-                        candidate.biomeKey === placement.biomeKey &&
-                        candidate.origin.kind === 'occurrence' &&
-                        candidate.origin.occurrenceId === placement.occurrenceId,
-                    );
-                    const pastPlanEnd =
-                      routeSource.biomes
-                        .find((source) => source.biome.biomeKey === placement.biomeKey)
-                        ?.planEndRelation(placement.occurrenceId) === 'pastEnd';
-                    return Object.freeze({
-                      ...placement,
-                      ...(pastPlanEnd ? { pastPlanEnd: true as const } : {}),
-                      locationLabel:
-                        entry === undefined
-                          ? 'Unavailable room'
-                          : routeRoomDeclaration(
-                              requireWorkspaceRoom(catalog, entry.gameName),
-                              routeSource.routeKey,
-                            ).label,
-                    });
-                  })();
+                : Object.freeze({
+                    ...placement,
+                    ...(routeSource.biomes
+                      .find((source) => source.biome.biomeKey === placement.biomeKey)
+                      ?.planEndRelation(placement.occurrenceId) === 'pastEnd'
+                      ? { pastPlanEnd: true as const }
+                      : {}),
+                    ...roomLocationLabel(catalog, placementAddress, routeSource.roomLocation),
+                  });
             const placementRoom =
-              placement === null
+              placementAddress === undefined
                 ? undefined
-                : routeSource.resourceAuthoring.entered.find(
-                    (candidate) =>
-                      candidate.biomeKey === placement.biomeKey &&
-                      candidate.origin.kind === 'occurrence' &&
-                      candidate.origin.occurrenceId === placement.occurrenceId,
-                  )?.gameName;
+                : routeSource.roomLocation(placementAddress)?.gameName;
             const element = (
               placementRoom === undefined
                 ? catalog.rooms.values.find((room) =>

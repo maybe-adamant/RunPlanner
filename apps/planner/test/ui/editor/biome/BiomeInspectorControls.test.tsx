@@ -431,6 +431,29 @@ describe('Biome inspector controls', () => {
     expect(unreached.locationLabel).toContain('Location ?');
     expect(unreached.roomLabel).toBeTypeOf('string');
     expect(unreached.locationLabel).not.toContain(unreached.roomLabel!);
+    // The route's Resources index names the placement as the marker does.
+    const indexed = workspaceProjection(view.application).route.resources.find(
+      (resource) =>
+        resource.placement?.biomeKey === unreached.biomeKey &&
+        resource.placement.occurrenceId === unreached.address.occurrenceId,
+    )?.placement;
+    expect(indexed).toMatchObject({
+      locationLabel: unreached.locationLabel,
+      roomLabel: unreached.roomLabel,
+    });
+  });
+
+  it('names a reached placement in the route Resources index by its biome and Location', () => {
+    const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
+    const placed = workspaceProjection(view.application).route.resources.flatMap((resource) =>
+      resource.placement === undefined ? [] : [resource.placement],
+    );
+    expect(placed.length).toBeGreaterThan(0);
+    for (const placement of placed) {
+      expect(placement.runDepth).toBeTypeOf('number');
+      expect(placement.locationLabel).toBe(`Ephyra · Location ${placement.runDepth}`);
+      expect(placement.roomLabel).toBeUndefined();
+    }
   });
 
   it('marks a resource placed in another room and confirms before moving it here', async () => {

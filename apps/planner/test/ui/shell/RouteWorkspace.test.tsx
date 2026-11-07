@@ -155,7 +155,7 @@ describe('RouteWorkspace', () => {
     expect(indexPositions.every((position) => position > separatorPosition)).toBe(true);
   });
 
-  it('presents a selected resource placement by room name instead of occurrence identity', () => {
+  it('presents a selected resource placement by its Location instead of occurrence identity', () => {
     const application = createOpenTestApplication('Surface');
     application.store.dispatch(authoredProjectReplaced(loadSurfaceNResourcesProject()));
     application.store.dispatch(
@@ -163,7 +163,7 @@ describe('RouteWorkspace', () => {
     );
 
     const markup = routeWorkspaceMarkup(application, 'Surface');
-    expect(markup).toContain('N · Opening');
+    expect(markup).toMatch(/Ephyra · Location \d+/);
     expect(markup).not.toContain('surface-n-opening');
   });
 

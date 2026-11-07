@@ -973,10 +973,15 @@ export interface WorkspaceRoute {
     readonly element?: 'Fire' | 'Air' | 'Earth' | 'Water';
     readonly placement?: {
       readonly biomeKey: string;
+      /** Its biome and Location; the Location is unknown while the plan does not reach it. */
       readonly locationLabel: string;
       readonly occurrenceId: OccurrenceId;
       /** The placement room lies past the plan end, so the placement is inactive. */
       readonly pastPlanEnd?: true;
+      /** The placement room's run depth on entry, where it is reached. */
+      readonly runDepth?: number;
+      /** The room's name, where its Location is unknown. */
+      readonly roomLabel?: string;
     };
   }[];
   readonly routeKey: string;

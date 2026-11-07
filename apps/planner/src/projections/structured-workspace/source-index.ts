@@ -285,6 +285,7 @@ export interface WorkspaceRouteSource {
   readonly biomes: readonly WorkspaceBiomeSource[];
   readonly evaluation: ProjectEvaluation['route'] | undefined;
   readonly resourceAuthoring: RouteResourceAuthoring;
+  readonly roomLocation: WorkspaceBiomeSource['roomLocation'];
   readonly routeKey: string;
 }
 
@@ -1228,6 +1229,7 @@ export function createWorkspaceProjectSourceIndex(
       ),
       evaluation: routeEvaluation,
       resourceAuthoring: resources,
+      roomLocation,
       routeKey: route.routeKey,
     }),
   });
