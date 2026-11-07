@@ -559,8 +559,6 @@ export interface WorkspaceChallengeSwitchOutcome {
   }[];
   /** Present while the outcome can drop the bonus Nectar. */
   readonly nectar?: { readonly dropped: boolean };
-  /** Present while the outcome claims gold. */
-  readonly gold?: { readonly value: number; readonly minimum: number; readonly maximum: number };
 }
 
 /** A challenge switch host's Overview rows and the observed switch's encounter. */
@@ -614,6 +612,4 @@ export interface WorkspaceChallengeSwitchInteraction {
   ) => WorkspaceCommandIntent<OutcomeCommand> | undefined;
   /** Toggles the bonus Nectar; present while the outcome can drop it. */
   readonly nectarIntent?: WorkspaceCommandIntent<OutcomeCommand>;
-  /** Changes the claimed gold; present while the outcome claims gold. */
-  readonly goldIntentFor?: (gold: number) => WorkspaceCommandIntent<OutcomeCommand>;
 }

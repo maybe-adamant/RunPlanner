@@ -142,11 +142,6 @@
   flex-wrap: wrap;
 }
 
-.chaos-position-control {
-  min-width: 0;
-  padding-block: 3px;
-}
-
 .resource-toggle-anchor {
   display: inline-flex;
 }
@@ -687,24 +682,20 @@
 .encounter-wave-count,
 .encounter-wave-count > label,
 .biome-field-radios,
-.biome-field-radios > label,
-.chaos-position-control,
-.chaos-position-control > label {
+.biome-field-radios > label {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .encounter-wave-count,
-.biome-field-radios,
-.chaos-position-control {
+.biome-field-radios {
   flex-wrap: wrap;
   gap: 16px;
 }
 
 .encounter-wave-count input,
-.biome-field-radios input,
-.chaos-position-control input {
+.biome-field-radios input {
   margin: 0;
   accent-color: var(--selection-accent);
 }
@@ -1543,31 +1534,6 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 6px 12px;
-}
-
-.room-action-switch-gold {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* The claimed gold is a compact number, drawn like the Timeline's number pickers. */
-.room-action-switch-gold > input {
-  width: 3.25rem;
-  min-height: 30px;
-  padding: 0 6px;
-  border: 0;
-  border-radius: 4px 4px 0 0;
-  background: rgb(255 255 255 / 4%);
-  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--selection-accent) 45%, transparent);
-  color: #f2ede5;
-  font: inherit;
-  text-align: center;
-}
-
-.room-action-switch-gold > input:focus-visible {
-  outline: none;
-  box-shadow: inset 0 -2px 0 var(--selection-accent);
 }
 
 /* Row kinds differ only in border, background and type. */
@@ -3635,13 +3601,14 @@ span.hub-board-status-line {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 4px 10px;
+  gap: 4px 20px;
   min-width: 0;
 }
 
-/* A reroll's restocked slots follow its die on the label's line. */
+/* A reroll's restocked slots follow its die on the label's line; they are read, not picked. */
 .timeline-cell-label > .numbered-slots {
   margin-left: 8px;
+  column-gap: 10px;
 }
 
 .numbered-slot {
@@ -3832,7 +3799,7 @@ span.hub-board-status-line {
 }
 
 .room-object-spots > .numbered-slots {
-  gap: 6px 12px;
+  gap: 6px 24px;
 }
 
 .room-object-settings {

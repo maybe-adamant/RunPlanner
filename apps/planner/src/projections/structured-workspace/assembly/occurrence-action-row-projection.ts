@@ -30,6 +30,7 @@ import {
 } from '@run-planner/engine/simulation';
 import type {
   GoldAmount,
+  GoldEstimate,
   GoldFightSummary,
   GoldRowSummary,
   GoldLedger,
@@ -593,6 +594,7 @@ function roomActionsForOccurrence(
                 ...(labelParts.origin === undefined ? {} : { origin: labelParts.origin }),
                 ...(labelParts.npcKey === undefined ? {} : { npcKey: labelParts.npcKey }),
                 ...(labelParts.traitKey === undefined ? {} : { traitKey: labelParts.traitKey }),
+                ...(labelParts.object === undefined ? {} : { object: labelParts.object }),
                 ...(labelParts.reward === undefined ? {} : { reward: labelParts.reward }),
               }),
             }),
@@ -1224,9 +1226,21 @@ function rowGoldGain(
   row: SemanticAddress,
 ): Pick<WorkspaceRoomActionRow, 'goldGained'> {
   const gain = gains.get(semanticAddressKey(row));
-  return gain === undefined || Math.round(gain.mean) === 0
-    ? {}
-    : { goldGained: goldGainLabel(gain) };
+  if (gain === undefined || Math.round(gain.mean) === 0) return {};
+  const hint = [...new Set((gain.estimates ?? []).map(goldEstimateHint))].join(' · ');
+  return {
+    goldGained: Object.freeze({ ...goldGainLabel(gain), ...(hint === '' ? {} : { hint }) }),
+  };
+}
+
+/** Why an estimated gain pays the amount planned: the game's range is left to play. */
+function goldEstimateHint(estimate: GoldEstimate): string {
+  switch (estimate.basis) {
+    case 'timeSwitchClaim':
+      return `Pays up to ${goldNumber(estimate.range.max)} by finish time; planned at ${goldNumber(estimate.value)}`;
+    case 'heraclesBounty':
+      return `Pays up to ${goldNumber(estimate.range.max)} by marked kills; planned at ${goldNumber(estimate.value)}`;
+  }
 }
 
 /**

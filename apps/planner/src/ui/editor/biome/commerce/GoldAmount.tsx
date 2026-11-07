@@ -16,7 +16,10 @@ export function GoldAmount({
   readonly className?: string;
 }) {
   return (
-    <span className={className === undefined ? 'gold-amount' : `gold-amount ${className}`}>
+    <span
+      className={className === undefined ? 'gold-amount' : `gold-amount ${className}`}
+      {...(amount.hint === undefined ? {} : { ...hintProps(amount.hint), tabIndex: 0 })}
+    >
       <ArtworkIcon
         className="artwork-label-icon-small"
         source={rewardArtwork.Currency ?? undefined}

@@ -6,7 +6,8 @@ import {
 } from '@planner/projections/structured-workspace';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { hintProps } from '@planner/ui/controls/hint';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { ArtworkChip } from '@planner/ui/editor/rewards/TimelineChip';
 import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
@@ -101,40 +102,54 @@ export function ChaosSpawnWorkbench({
         />
       )}
       {position === undefined ? null : (
-        <div
-          {...positionTarget}
-          aria-label="Position"
-          aria-invalid={position.invalid || undefined}
-          className="chaos-position-control"
-          role="radiogroup"
-          tabIndex={-1}
-          {...hintProps(
-            position.invalid
-              ? `Position ${position.value} isn’t available in this room.`
-              : undefined,
-            positionTarget['aria-description'],
+        <ContextualPicker<number | null>
+          ariaLabel="Chaos Gate position"
+          findingTarget={positionTarget}
+          id={`chaos-position-${workspaceInteractionKey(owner)}`}
+          invalid={position.invalid}
+          label=""
+          layout="inline"
+          model={declaredChoicesPicker(
+            [
+              { key: 'any', value: null, label: 'Any position' },
+              ...(position.invalid && position.value !== null
+                ? [
+                    {
+                      key: String(position.value),
+                      value: position.value,
+                      label: `Position ${position.value}`,
+                      disabled: true,
+                    },
+                  ]
+                : []),
+              ...position.choices.map((value) => ({
+                key: String(value),
+                value,
+                label: `Position ${value}`,
+              })),
+            ],
+            position.value,
+            'Gate position',
           )}
-        >
-          <span>Position</span>
-          {[null, ...position.choices].map((value) => (
-            <label key={value ?? 'default'}>
-              <input
-                type="radio"
-                name={`chaos-position-${workspaceInteractionKey(owner)}`}
-                checked={position.value === value}
-                onChange={() =>
-                  executeIntent(
-                    requireWorkspaceInteraction(
-                      interactions.chaosExits,
-                      workspaceInteractionKey(owner),
-                    ).positionIntent(value),
-                  )
-                }
-              />
-              {value ?? 'Any'}
-            </label>
-          ))}
-        </div>
+          onSelect={(value) => {
+            if (value === position.value) return;
+            executeIntent(
+              requireWorkspaceInteraction(
+                interactions.chaosExits,
+                workspaceInteractionKey(owner),
+              ).positionIntent(value),
+            );
+          }}
+          placeholder="Any"
+          searchable={false}
+          triggerHint={
+            position.invalid
+              ? `Position ${position.value} isn’t available in this room`
+              : 'Gate position'
+          }
+          triggerLabel={position.value === null ? 'Any' : String(position.value)}
+          triggerSize="content"
+        />
       )}
     </div>
   );

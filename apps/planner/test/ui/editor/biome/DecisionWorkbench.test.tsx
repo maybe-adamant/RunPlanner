@@ -162,6 +162,18 @@ function occurrenceForId(occurrenceId: string) {
     );
 }
 
+const positionPicker = () => screen.queryByRole('button', { name: 'Chaos Gate position' });
+
+async function openPositionOptions(user: { click: (element: Element) => Promise<void> }) {
+  await user.click(positionPicker()!);
+  return within(await screen.findByRole('listbox')).getAllByRole('option');
+}
+
+const positionOption = (point: number) =>
+  within(screen.getByRole('listbox')).getByRole('option', { name: new RegExp(`\\b${point}$`) });
+
+const positionAny = () => within(screen.getByRole('listbox')).getByRole('option', { name: /any/i });
+
 function authoredNaturalChaosFixture(pointCount?: 'single' | 'multiple') {
   const base = createGoldenFGHIProject();
   const located = base.route.biomes.flatMap((plan) =>
@@ -454,28 +466,37 @@ describe('DecisionWorkbench', () => {
       located.plan.biomeKey,
       occurrenceForId(source.occurrenceId),
     );
-    const position = screen.getByRole('radiogroup', { name: 'Position' });
     const points = chaosGateSpawnPointIndices(catalog.rooms.byKey[located.occurrence.gameName]!);
-    expect(
-      within(position)
-        .getAllByRole('radio')
-        .map((option) => option.closest('label')?.textContent?.trim()),
-    ).toEqual(['Any', ...points.map(String)]);
-    expect(position.closest('label')).toBeNull();
+    const spawnPoint = () =>
+      chaosExitOf(view.application.store.getState().projectWorkspace.history!.present)
+        ?.spawnPointIndex;
+    const options = await openPositionOptions(view.user);
+    // Any position, then each spawn point.
+    expect(options).toHaveLength(points.length + 1);
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(within(position).getByRole('radio', { name: '2' }));
-    expect(within(position).getByRole('radio', { name: '2' })).toHaveProperty('checked', true);
+    await view.user.click(positionOption(2));
+    expect(spawnPoint()).toBe(2);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
-    await view.user.click(within(position).getByRole('radio', { name: 'Any' }));
-    expect(within(position).getByRole('radio', { name: 'Any' })).toHaveProperty('checked', true);
+    await openPositionOptions(view.user);
+    await view.user.click(positionAny());
+    expect(spawnPoint()).toBeUndefined();
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
-    expect(within(position).getByRole('radio', { name: '2' })).toHaveProperty('checked', true);
+    expect(spawnPoint()).toBe(2);
     await view.user.click(screen.getByRole('button', { name: 'Chaos Gate' }));
-    expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
+    expect(positionPicker()).toBeNull();
+
+    function chaosExitOf(project: ProjectDocument) {
+      return project.route.biomes
+        .find((biomePlan) => biomePlan.biomeKey === located.plan.biomeKey)
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === source.occurrenceId,
+        )
+        ?.additionalExits?.find((exit) => exit.kind === 'chaos');
+    }
   });
 
   it('hides routine single-point positioning but retains invalid values for source-room repair', async () => {
@@ -486,7 +507,7 @@ describe('DecisionWorkbench', () => {
       located.plan.biomeKey,
       occurrenceForId(source.occurrenceId),
     );
-    expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
+    expect(positionPicker()).toBeNull();
     cleanup();
     const retained = {
       ...project,
@@ -533,19 +554,16 @@ describe('DecisionWorkbench', () => {
         findingSelected({ key: semanticFindingKey(finding), origin: owner }),
       ),
     );
-    await waitFor(() =>
-      expect(document.activeElement).toBe(screen.getByRole('radiogroup', { name: 'Position' })),
+    await waitFor(() => expect(document.activeElement).toBe(positionPicker()));
+    expect(positionPicker()!.getAttribute('aria-description')).toContain(
+      'Chaos gate position unavailable',
     );
-    expect(
-      screen.getByRole('radiogroup', { name: 'Position' }).getAttribute('aria-description'),
-    ).toContain('Chaos gate position unavailable');
-    const position = screen.getByRole('radiogroup', { name: 'Position' });
-    expect(within(position).queryByText('Position 4 isn’t available in this room.')).toBeNull();
-    expect(hintOf(position)).toBe('Position 4 isn’t available in this room.');
-    expect(within(position).queryByRole('radio', { name: '4' })).toBeNull();
-    expect(position.getAttribute('aria-invalid')).toBe('true');
-    await view.user.click(within(position).getByRole('radio', { name: 'Any' }));
-    expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
+    expect(positionPicker()!.getAttribute('aria-invalid')).toBe('true');
+    await openPositionOptions(view.user);
+    // The retained point is listed but cannot be picked again.
+    expect(positionOption(4).getAttribute('aria-disabled')).toBe('true');
+    await view.user.click(positionAny());
+    expect(positionPicker()).toBeNull();
   });
 
   it('keeps Chaos presence editable inside an incomplete source occurrence', async () => {
@@ -640,11 +658,10 @@ describe('DecisionWorkbench', () => {
     const overviewPanel = screen.getByRole('tabpanel', { name: 'Room Overview' });
     expect(within(overviewPanel).queryByRole('button', { name: 'Chaos Gate' })).toBeNull();
     expect(within(overviewPanel).getByRole('img', { name: 'Chaos Gate' })).toBeTruthy();
-    const position = screen.getByRole('radiogroup', { name: 'Position' });
-    expect(within(position).getByRole('radio', { name: 'Any' })).toHaveProperty('disabled', false);
-    expect(position.hasAttribute('inert')).toBe(false);
-    await view.user.click(within(position).getByRole('radio', { name: 'Any' }));
-    expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
+    expect(positionPicker()).toHaveProperty('disabled', false);
+    await openPositionOptions(view.user);
+    await view.user.click(positionAny());
+    expect(positionPicker()).toBeNull();
     expect(within(overviewPanel).getByRole('img', { name: 'Chaos Gate' })).toBeTruthy();
     expect(within(overviewPanel).queryByRole('button', { name: 'Chaos Gate' })).toBeNull();
 

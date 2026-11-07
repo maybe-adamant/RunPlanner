@@ -150,6 +150,8 @@ export interface OccurrenceActionLabelParts {
   readonly npcKey?: string;
   /** The trait the name stands for, such as a Pool sale's, which the row can show as a chip. */
   readonly traitKey?: string;
+  /** The name is the room object used, which the row can show as its icon chip. */
+  readonly object?: true;
   /** The inventory slot the action buys from, shown as a badge rather than in the label. */
   readonly slot?: number;
   /** The Well or Pool roll the action belongs to, shown as the reroll die's badge. */
@@ -556,9 +558,9 @@ export function occurrenceActionLabelParts(
       );
     }
     case 'useFountain':
-      return plain('Fountain');
+      return Object.freeze({ ...labelParts('Use', 'Fountain'), object: true as const });
     case 'interactKeepsakeRack':
-      return plain('Keepsake Rack');
+      return Object.freeze({ ...labelParts('Use', 'Keepsake Rack'), object: true as const });
     case 'interactEris':
       return talkTo('Eris');
     case 'interactChallengeSwitch': {
@@ -566,7 +568,10 @@ export function occurrenceActionLabelParts(
       // The observed switch is named by its own art on the row.
       return kind === undefined
         ? plain('Use switch')
-        : labelParts('Use', challengeSwitchKindLabel(kind));
+        : Object.freeze({
+            ...labelParts('Use', challengeSwitchKindLabel(kind)),
+            object: true as const,
+          });
     }
     case 'unlockExit': {
       const ordinal = normalExitOrdinal(reference.exitKey);

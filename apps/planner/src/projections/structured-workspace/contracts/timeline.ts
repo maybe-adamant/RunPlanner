@@ -67,6 +67,8 @@ export interface WorkspaceRoomActionProposal {
 /** A gold amount as shown: one number, or the range of a rolled price. */
 export interface WorkspaceGoldAmount {
   readonly label: string;
+  /** Why an estimated amount is planned at this value, for its hover. */
+  readonly hint?: string;
 }
 
 /** The gold one fight paid, with one line per source for its hover. */
@@ -120,6 +122,8 @@ export interface WorkspaceRoomActionRow {
     readonly npcKey?: string;
     /** The trait the name stands for, such as a Pool sale's; the row shows it as a chip. */
     readonly traitKey?: string;
+    /** The name is the room object used; the row shows its icon as a chip after the verb. */
+    readonly object?: true;
     /** The reward the name stands for; the row shows it as an icon with the name as its title. */
     readonly reward?: {
       readonly offer: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;

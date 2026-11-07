@@ -717,7 +717,7 @@ describe('Biome inspector controls', () => {
     ).not.toContain('Keepsake Rack');
     const rackRow = () => {
       const row = within(timeline)
-        .getByText('Keepsake Rack')
+        .getByRole('img', { name: 'Keepsake Rack' })
         .closest<HTMLElement>('[data-in-order="true"]');
       if (row === null) throw new Error('the rack is not a ranked timeline row');
       return row;
@@ -729,10 +729,12 @@ describe('Biome inspector controls', () => {
     const unchanged = hintOf(launcher())!;
     expect(unchanged).toMatch(/ \(Unchanged\)$/);
     const held = unchanged.replace(/ \(Unchanged\)$/, '');
-    expect(within(rackRow()).getByRole('button', { name: 'Reorder Keepsake Rack' })).toBeTruthy();
+    expect(
+      within(rackRow()).getByRole('button', { name: 'Reorder Use Keepsake Rack' }),
+    ).toBeTruthy();
     // Like other mandatory rows, its delete slot holds a disabled removal without a hint.
     const removal = within(rackRow()).getByRole<HTMLButtonElement>('button', {
-      name: 'Remove Keepsake Rack from timeline',
+      name: 'Remove Use Keepsake Rack from timeline',
     });
     expect(removal.disabled).toBe(true);
     expect(removal.closest('[data-timeline-cell]')?.getAttribute('data-timeline-cell')).toBe(
@@ -783,7 +785,7 @@ describe('Biome inspector controls', () => {
     expect(hintOf(launcher())).toBe(unchanged);
     expect(postboss()?.roomActions.order).toEqual(order);
     fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    expect(screen.queryByText('Keepsake Rack')).toBeNull();
+    expect(screen.queryByRole('img', { name: 'Keepsake Rack' })).toBeNull();
   });
 
   it('publishes the Aromatic Phial target after moving the swapped rack before the fountain', async () => {
@@ -799,7 +801,7 @@ describe('Biome inspector controls', () => {
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
     const timeline = screen.getByRole('region', { name: 'Room Timeline' });
     const rack = within(timeline)
-      .getByText('Keepsake Rack')
+      .getByRole('img', { name: 'Keepsake Rack' })
       .closest<HTMLElement>('[data-in-order="true"]')!;
     fireEvent.click(within(rack).getByRole('button', { name: 'Choose Keepsake' }));
     const keepsakes = await within(
@@ -818,14 +820,14 @@ describe('Biome inspector controls', () => {
         name: 'Save',
       }),
     );
-    await within(timeline).findByRole('button', { name: 'Reorder Keepsake Rack' });
+    await within(timeline).findByRole('button', { name: 'Reorder Use Keepsake Rack' });
     // The fountain is the room's first action, so its place is the section start.
     expect(
       within(timeline)
         .getAllByRole('button', { name: /^Reorder / })[0]
         ?.getAttribute('aria-label'),
-    ).toBe('Reorder Fountain');
-    keyboardReorder(timeline, 'Keepsake Rack', /After Room entered/);
+    ).toBe('Reorder Use Fountain');
+    keyboardReorder(timeline, 'Use Keepsake Rack', /After Room entered/);
 
     const phialTarget = await within(timeline).findByRole('button', {
       name: 'Phial target',

@@ -168,7 +168,7 @@ describe('Hermes Shrine workbench', () => {
     expect(delay).toHaveProperty('disabled', false);
     await view.user.click(delay);
     await view.user.click(
-      within(await screen.findByRole('listbox')).getByRole('option', { name: '8' }),
+      within(await screen.findByRole('listbox')).getByRole('option', { name: /^8\b/ }),
     );
     expect(
       screen.getByRole('button', { name: 'Hermes Shrine Offer 1 delivery delay' }).textContent,

@@ -59,7 +59,6 @@ function outcomeProduct(
     ...(outcome.nectarAllowed
       ? { nectar: Object.freeze({ dropped: occurrence.challengeSwitch?.nectarDropped === true }) }
       : {}),
-    ...(outcome.goldApplies && outcome.gold !== undefined ? { gold: outcome.gold } : {}),
   });
 }
 

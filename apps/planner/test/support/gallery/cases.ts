@@ -1,5 +1,6 @@
 import {
   createAcquisitionRoleAddress,
+  createAdditionalExitAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
   createFountainRarityOutcomeAddress,
@@ -370,6 +371,34 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['Echo', 'generated pickup'],
     project: loadDreamHeraArtificerEchoCheckpoint,
     target: room('H', '78369aea-a352-409f-9ab6-0694e96e0339'),
+  },
+  {
+    id: 'chaos-gate-position',
+    overview: true,
+    label: 'Chaos Gate with a chosen spawn position',
+    shows: ['Chaos Gate', 'gate position picker'],
+    project: createGoldenFGHIProject,
+    commands: [
+      {
+        kind: 'AddChaos',
+        additional: createAdditionalExitAddress(
+          createBiomeAddress('Underworld', 'G'),
+          createOccurrenceId('golden-g-b2-e1'),
+          'chaos',
+        ),
+        occurrenceId: createOccurrenceId('gallery-chaos'),
+      },
+      {
+        kind: 'SetChaosSpawnPoint',
+        additional: createAdditionalExitAddress(
+          createBiomeAddress('Underworld', 'G'),
+          createOccurrenceId('golden-g-b2-e1'),
+          'chaos',
+        ),
+        spawnPointIndex: 3,
+      },
+    ],
+    target: room('G', 'golden-g-b2-e1'),
   },
   {
     id: 'eris',

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   requireWorkspaceInteraction,
   type WorkspaceChallengeSwitchOutcome,
@@ -8,11 +7,9 @@ import { declaredChoicesPicker } from '@planner/projections/contextual/contextua
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
-import { hintProps } from '@planner/ui/controls/hint';
-import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 
-/** How the pressed switch's fight ended, its bonus Nectar and a Gold Switch's claimed gold. */
+/** How the pressed switch's fight ended, and its bonus Nectar. */
 export function ChallengeSwitchOutcomeControls({
   interactions,
   outcome,
@@ -60,60 +57,6 @@ export function ChallengeSwitchOutcomeControls({
           pressed={outcome.nectar.dropped}
         />
       )}
-      {outcome.gold === undefined || interaction.goldIntentFor === undefined ? null : (
-        <SwitchGoldInput
-          gold={outcome.gold}
-          onCommit={(value) => executeIntent(interaction.goldIntentFor!(value))}
-        />
-      )}
     </div>
-  );
-}
-
-function SwitchGoldInput({
-  gold,
-  onCommit,
-}: {
-  readonly gold: NonNullable<WorkspaceChallengeSwitchOutcome['gold']>;
-  readonly onCommit: (value: number) => void;
-}) {
-  const [draft, setDraft] = useState<string | undefined>();
-  const commit = () => {
-    if (draft === undefined) return;
-    const next = draft.trim() === '' ? NaN : Number(draft);
-    setDraft(undefined);
-    // An entry outside the claim's range reverts to the saved value.
-    if (
-      Number.isInteger(next) &&
-      next >= gold.minimum &&
-      next <= gold.maximum &&
-      next !== gold.value
-    )
-      onCommit(next);
-  };
-  return (
-    <label className="room-action-switch-gold">
-      <ArtworkIcon className="artwork-label-icon" source={rewardIcon('RoomMoneyDrop')} />
-      <input
-        aria-label="Claimed gold"
-        autoComplete="off"
-        inputMode="numeric"
-        onBlur={commit}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            commit();
-          } else if (event.key === 'Escape') {
-            event.preventDefault();
-            setDraft(undefined);
-          }
-        }}
-        {...hintProps('Claimed gold', undefined, 'Claimed gold')}
-        size={4}
-        type="text"
-        value={draft ?? String(gold.value)}
-      />
-    </label>
   );
 }

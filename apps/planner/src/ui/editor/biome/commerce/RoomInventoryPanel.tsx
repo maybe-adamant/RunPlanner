@@ -30,7 +30,7 @@ const wellIcon = (itemKey: string | null): string | undefined =>
 
 const shrineDelayChoices = Object.freeze(
   HERMES_SHRINE_DELAYS.map((delay) =>
-    Object.freeze({ key: String(delay), value: delay, label: String(delay) }),
+    Object.freeze({ key: String(delay), value: delay, label: `${delay} rooms` }),
   ),
 );
 
@@ -372,11 +372,16 @@ function HermesShrineDelayPicker({
         id={`${offer.key}-delay`}
         label=""
         layout="inline"
-        model={declaredChoicesPicker(shrineDelayChoices, offer.delay ?? undefined)}
+        model={declaredChoicesPicker(
+          shrineDelayChoices,
+          offer.delay ?? undefined,
+          'Delivery delay',
+        )}
         onSelect={(delay) => executeIntent(offer.delayIntentFor(delay))}
         placeholder="—"
         searchable={false}
         triggerHint="Delivery delay"
+        {...(offer.delay === null ? {} : { triggerLabel: String(offer.delay) })}
         triggerSize="content"
       />
     </span>

@@ -624,13 +624,18 @@ export function RoomActionsWorkbench({
     });
     const portrait = npcPortrait(row.labelParts?.npcKey);
     // A Talk row's portrait names the NPC, so the row leads with no second icon.
-    // A used switch is named by its own chip after the verb, so it leads with no icon.
-    const switchChip =
-      row.challengeSwitchKind === undefined || row.labelParts === undefined
-        ? undefined
-        : challengeSwitchIcon(row.challengeSwitchKind);
+    // A used object is named by its own chip after the verb, so it leads with no icon.
+    const objectChip =
+      row.labelParts?.object === true
+        ? roomActionIcon(
+            row.reference,
+            row.address.biomeKey,
+            row.sourceFamily,
+            row.challengeSwitchKind,
+          )
+        : undefined;
     const icon =
-      portrait === undefined && switchChip === undefined
+      portrait === undefined && objectChip === undefined
         ? roomActionIcon(
             row.reference,
             row.address.biomeKey,
@@ -713,8 +718,8 @@ export function RoomActionsWorkbench({
     const rowName =
       row.labelParts === undefined ? null : row.labelParts.traitKey !== undefined ? (
         <ArtworkChip icon={traitIcon(row.labelParts.traitKey)} label={row.labelParts.name} />
-      ) : switchChip !== undefined ? (
-        <ArtworkChip icon={switchChip} label={row.labelParts.name} />
+      ) : objectChip !== undefined ? (
+        <ArtworkChip icon={objectChip} label={row.labelParts.name} />
       ) : (
         <strong
           {...(row.labelParts.origin === undefined || row.labelParts.reward !== undefined

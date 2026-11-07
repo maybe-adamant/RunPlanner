@@ -52,6 +52,8 @@ export function declaredChoicesPicker<T>(
   }[],
   /** Absent when no choice is current. */
   selected: T | undefined,
+  /** What the open choices pick, as their heading; "Available" by default. */
+  heading = 'Available',
 ): ContextualPickerModel<T> {
   const items: ContextualPickerItem<T>[] = choices.map(({ explanation, ...choice }) =>
     Object.freeze({
@@ -73,7 +75,7 @@ export function declaredChoicesPicker<T>(
     {
       key: 'available',
       kind: 'category' as const,
-      label: 'Available',
+      label: heading,
       collapsible: false,
       items: items.filter((item) => !item.disabled),
     },
