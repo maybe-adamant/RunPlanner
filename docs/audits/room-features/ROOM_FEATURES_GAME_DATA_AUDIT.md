@@ -291,9 +291,12 @@ Declaration-eligible zero-anchor exceptions are `N_Shop01`, `N_Sub05`,
 `O_Combat01`, `O_MiniBoss01`, `P_Combat04`, `Q_Combat14`, and `Q_Combat15`.
 Intro, Hub, Story, ordinary Shop, Boss, Preboss, and Q Postboss maps have no
 usable anchor. N/O/P Postboss maps retain one anchor. `HandleSecretSpawns`
-consumes anchors sequentially across Well, Sell Shop, Shrine, Challenge
-Switch, and Meta Reward Stand; Resources, fountains, Gift Racks, and Nemesis
-use separate systems. The source exposes no generic `NumRoomFeatures` or
+(`RoomLogic.lua:4891-5045`) visits Well, Sell Shop, Shrine, Challenge Switch
+and Meta Reward Stand in that order; each eligible object takes a random free
+anchor (`RemoveRandomValue`), so the order decides which objects fit, not
+where they stand. `F_PostBoss01`, `G_PostBoss01`, `H_PostBoss01` and
+`Dream_PostBoss01` pin the Well to one anchor (`WellShopChallengeBaseId`).
+Resources, fountains, Gift Racks, and Nemesis use separate systems. The source exposes no generic `NumRoomFeatures` or
 passive-feature capacity.
 
 ### Inventory and effect matrix

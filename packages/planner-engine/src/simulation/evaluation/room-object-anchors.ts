@@ -36,7 +36,10 @@ type CommandOf<Kind extends ProjectCommand['kind']> = Extract<
 export type RoomAnchorObjectKind =
   'stygianWell' | 'purgingPool' | 'hermesShrine' | 'challengeSwitch';
 
-/** Native spawn order: each object takes the next free anchor. */
+/**
+ * Native spawn order: each eligible object in turn takes a random free anchor
+ * (four Postboss rooms pin the Well's), so order decides capacity, not position.
+ */
 export const ROOM_ANCHOR_OBJECT_ORDER = Object.freeze([
   'stygianWell',
   'purgingPool',
@@ -66,7 +69,7 @@ interface RoomAnchorObjectFacts<
   readonly present: boolean;
   /** Present on entry whatever is authored; no command adds or removes it. */
   readonly fixed: boolean;
-  /** The anchor native order gives a present object; absent past the room's anchors. */
+  /** The object's place in native spawn order among the room's anchors; absent past them. Not a physical anchor. */
   readonly slotIndex?: number;
   /**
    * Why native could not spawn it here, the anchors included; empty when it
