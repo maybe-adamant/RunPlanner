@@ -26,6 +26,7 @@ import {
 import type { Catalog } from '../../../catalog-schema';
 import type { ShopOptionSelection } from '../../../reward-kernel';
 import {
+  challengeSwitchKindVariant,
   eliteChallengeAttributeOptions,
   type ChallengeSwitchEntryAssessment,
 } from '../../commerce/challenge-switch';
@@ -383,10 +384,7 @@ function challengeSwitchInteraction(
     sharedIssues.length === 0 && variant.lock === undefined;
   const kinds = catalog.challengeSwitches.kinds.values.map((kind) => {
     const variants = assessment.variants.filter((variant) => variant.switchKind === kind.key);
-    const chosen =
-      variants.find(
-        (variant) => variant.variantKey === kind.defaultVariantKey && rollable(variant),
-      ) ?? variants.find(rollable);
+    const chosen = challengeSwitchKindVariant(kind, variants, rollable);
     const lock = chosen === undefined ? (sharedIssues[0] ?? variants[0]?.issue) : undefined;
     return Object.freeze({
       switchKind: kind.key,

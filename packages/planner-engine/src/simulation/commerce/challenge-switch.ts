@@ -3,6 +3,7 @@ import type {
   ChallengeSwitchEliteEncounterDeclaration,
   ChallengeSwitchHostDeclaration,
   ChallengeSwitchKind,
+  ChallengeSwitchKindDeclaration,
 } from '../../catalog-schema';
 import type {
   AuthoredChallengeSwitch,
@@ -168,6 +169,21 @@ export function assessChallengeSwitchEntry(
       }),
     ),
   });
+}
+
+/** The variant observing one kind: its default when rollable, else its first rollable one. */
+export function challengeSwitchKindVariant<
+  Variant extends { readonly variantKey: string; readonly switchKind: ChallengeSwitchKind },
+>(
+  kind: Pick<ChallengeSwitchKindDeclaration, 'key' | 'defaultVariantKey'>,
+  variants: readonly Variant[],
+  rollable: (variant: Variant) => boolean,
+): Variant | undefined {
+  const own = variants.filter((variant) => variant.switchKind === kind.key);
+  return (
+    own.find((variant) => variant.variantKey === kind.defaultVariantKey && rollable(variant)) ??
+    own.find(rollable)
+  );
 }
 
 /** Each spawn rule the observed switch breaks at its entry; empty when native could place it. */

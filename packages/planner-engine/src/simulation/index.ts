@@ -303,6 +303,16 @@ export {
   type HubBoardSlotDraw,
 } from './rewards/biome/generation/hub-board-order';
 export {
+  roomObjectAnchorSlotsForProjectEvaluationAssembly,
+  ROOM_ANCHOR_OBJECT_ORDER,
+  type RoomAnchorFullRefusal,
+  type RoomAnchorObject,
+  type RoomAnchorObjectKind,
+  type RoomAnchorSlot,
+  type RoomAnchorSlotChoice,
+  type RoomAnchorSlots,
+} from './evaluation/room-object-anchors';
+export {
   hubDepartureSnapshotForProjectEvaluationAssembly,
   runStateSnapshotForProjectEvaluationAssembly,
 } from './evaluation/run-state-query';

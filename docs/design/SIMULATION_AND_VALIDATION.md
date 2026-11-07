@@ -517,7 +517,10 @@ Hermes Shrine's unbought items to buy or rush with its live refill,
 whether the Pedestal can be collected or why not, and an Oceanus lock host's
 lockable doors with each one's lock command (from entry), each locked door's
 press to append or its pressed fight, and the doors still locked when the
-room is left.
+room is left. A room's anchor query publishes its `ChallengeSwitchBase`
+anchors: each object it can hold in native spawn order (Well, Pool, Shrine,
+then switch), whether it is fixed, the anchor it takes, why native could not
+spawn it and the commands placing or removing it, and each anchor's choices.
 
 The gold query prices each reached purchase from the price facts its
 settlement published and walks the [gold ledger](REWARD_MODEL.md#gold-ledger)
