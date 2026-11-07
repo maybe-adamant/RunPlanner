@@ -18,7 +18,7 @@ export function InfernalContractPedestalPanel({
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   return (
-    <fieldset className="room-contract-pedestal room-inventory-line" data-open="">
+    <fieldset className="room-contract-pedestal room-inventory-line">
       <legend className="visually-hidden">Pedestal configuration</legend>
       <span
         {...hintProps('Pedestal', undefined, 'Pedestal')}

@@ -409,7 +409,7 @@ describe('Biome inspector controls', () => {
     );
   });
 
-  it('discloses and navigates an existing resource placement before moving it', async () => {
+  it('marks a resource placed in another room and confirms before moving it here', async () => {
     const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: /^Entrance/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
@@ -419,33 +419,49 @@ describe('Biome inspector controls', () => {
         node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === 'surface-n-opening',
     );
     if (opening === undefined) throw new Error('resource host room is missing');
-    const moved = opening.room.resources?.find((resource) => resource.action === 'move');
+    const moved = opening.room.resources?.find(
+      (resource) => resource.action === 'move' && resource.legal,
+    );
     if (moved?.currentPlacement === undefined)
-      throw new Error('resource move disclosure is missing');
+      throw new Error('resource placed elsewhere is missing');
+    expect(moved.currentPlacement.runDepth).toBeTypeOf('number');
     const illegalMove = opening.room.resources?.find(
       (resource) => resource.action === 'move' && !resource.legal,
     );
     if (illegalMove === undefined) throw new Error('resource illegal-target witness is missing');
-
-    const disclosure = resources.querySelector('.resource-placement-disclosure');
-    expect(disclosure?.textContent).toBe(
-      `${moved.element} placed at ${moved.currentPlacement.biomeKey} · ${moved.currentPlacement.locationLabel}.`,
-    );
-    expect(disclosure?.textContent).not.toContain('Selecting this room moves it here.');
-    const placementLink = within(resources).getByRole('button', {
-      name: `${moved.currentPlacement.biomeKey} · ${moved.currentPlacement.locationLabel}`,
-    });
-    expect(placementLink.classList.contains('semantic-focus-link')).toBe(true);
     for (const label of ['Collect Fire', 'Collect Air', 'Collect Earth', 'Collect Water']) {
       expect(within(resources).getByRole('button', { name: label })).toBeTruthy();
     }
-    const historyBeforeMove = view.application.store.getState().projectWorkspace.history!;
-    const legalMove = within(resources).getByRole('button', { name: `Collect ${moved.element}` });
-    await view.user.click(legalMove);
+
     const movedPlacement = () =>
       view.application.store.getState().projectWorkspace.history!.present.route?.resourcePlacements[
         moved.family
       ];
+    const origin = {
+      biomeKey: moved.currentPlacement.biomeKey,
+      occurrenceId: moved.currentPlacement.address.occurrenceId,
+    };
+    const toggle = within(resources).getByRole('button', { name: `Collect ${moved.element}` });
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(toggle.getAttribute('data-hint')).toBe(
+      `Collect ${moved.element} · Room ${moved.currentPlacement.runDepth} · ${moved.currentPlacement.locationLabel}`,
+    );
+
+    const historyBeforeMove = view.application.store.getState().projectWorkspace.history!;
+    await view.user.click(toggle);
+    expect(screen.getByRole('dialog', { name: `Move ${moved.element}` })).toBeTruthy();
+    expect(view.application.store.getState().projectWorkspace.history!).toBe(historyBeforeMove);
+    await view.user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(toggle);
+    await view.user.click(toggle);
+    await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(movedPlacement()).toEqual(origin);
+    expect(view.application.store.getState().projectWorkspace.history!).toBe(historyBeforeMove);
+
+    await view.user.click(toggle);
+    await view.user.click(screen.getByRole('button', { name: 'Move here' }));
     expect(movedPlacement()).toEqual({
       biomeKey: opening.room.address.biomeKey,
       occurrenceId: opening.room.occurrenceId,
@@ -453,36 +469,25 @@ describe('Biome inspector controls', () => {
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforeMove.past.length + 1,
     );
+    expect(
+      within(resources)
+        .getByRole('button', { name: `Collect ${moved.element}` })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(movedPlacement()).toEqual({
-      biomeKey: moved.currentPlacement.biomeKey,
-      occurrenceId: moved.currentPlacement.address.occurrenceId,
-    });
+    expect(movedPlacement()).toEqual(origin);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforeMove.past.length,
     );
 
-    const historyBeforeNavigation = view.application.store.getState().projectWorkspace.history!;
-    const illegalCheckbox = within(resources).getByRole('button', {
-      name: 'Collect Earth',
+    const historyBeforeIllegal = view.application.store.getState().projectWorkspace.history!;
+    const illegalToggle = within(resources).getByRole('button', {
+      name: `Collect ${illegalMove.element}`,
     });
-    expect(illegalCheckbox).toHaveProperty('disabled', true);
-    await view.user.click(illegalCheckbox);
-    expect(view.application.store.getState().projectWorkspace.history!).toBe(
-      historyBeforeNavigation,
-    );
-
-    const currentPlacementLink = within(resources).getByRole('button', {
-      name: `${moved.currentPlacement.biomeKey} · ${moved.currentPlacement.locationLabel}`,
-    });
-    await view.user.click(currentPlacementLink);
-
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      moved.currentPlacement.address,
-    );
-    expect(view.application.store.getState().projectWorkspace.history!).toBe(
-      historyBeforeNavigation,
-    );
+    expect(illegalToggle).toHaveProperty('disabled', true);
+    await view.user.click(illegalToggle);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(view.application.store.getState().projectWorkspace.history!).toBe(historyBeforeIllegal);
   });
 
   it('keeps the reached Judgment editor on the fixed Boss timeline and directly reopenable', () => {

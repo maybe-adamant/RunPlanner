@@ -18,8 +18,6 @@ export type RoomFeatureGroup = {
   readonly key: string;
   readonly label: ReactNode;
   readonly entries: readonly RoomFeatureEntry[];
-  /** Yes/no entries share one row of icon toggles; an entry with choices takes its own line. */
-  readonly toggles?: boolean;
 };
 
 /** One titled Overview section of room feature controls. */
@@ -33,10 +31,7 @@ export function RoomFeatureSection({
   return (
     <section className="room-overview-section">
       <h5 className="room-feature-category-heading">{group.label}</h5>
-      <div
-        className="room-overview-panel"
-        data-layout={group.toggles === true ? 'toggles' : undefined}
-      >
+      <div className="room-overview-panel">
         {group.entries.map((entry) => {
           if (entry.kind === 'content') {
             return (

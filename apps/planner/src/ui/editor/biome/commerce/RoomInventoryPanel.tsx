@@ -84,11 +84,7 @@ export function RoomInventoryPanel({
                 feature.presenceInteractionKey,
               );
         return (
-          <fieldset
-            className="room-purging-pool room-inventory-line"
-            data-open={feature.presence.kind === 'optionalAbsent' ? undefined : ''}
-            key="stygian-well"
-          >
+          <fieldset className="room-purging-pool room-inventory-line" key="stygian-well">
             <legend className="visually-hidden">Stygian Well configuration</legend>
             {presence === undefined && feature.presence.kind !== 'optionalAbsent' ? (
               <FixedObjectHeader object="stygianWell" title="Stygian Well" />
@@ -124,11 +120,7 @@ export function RoomInventoryPanel({
     case 'purgingPool':
       return (() => {
         return (
-          <fieldset
-            className="room-purging-pool room-inventory-line"
-            data-open=""
-            key="purging-pool"
-          >
+          <fieldset className="room-purging-pool room-inventory-line" key="purging-pool">
             <legend className="visually-hidden">Pool of Purging configuration</legend>
             <FixedObjectHeader object="purgingPool" title="Pool of Purging" />
             <NumberedSlots label="Pool of Purging slots">
@@ -170,7 +162,6 @@ export function RoomInventoryPanel({
               : findingAnchor(feature.inventoryAddress))}
             tabIndex={-1}
             className="room-purging-pool room-inventory-line"
-            data-open={feature.slots.length === 0 ? undefined : ''}
             key="hermes-shrine"
           >
             <legend className="visually-hidden">Hermes Shrine configuration</legend>

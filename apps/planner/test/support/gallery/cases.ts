@@ -24,6 +24,7 @@ import {
   loadSurfaceNCheckpoint,
   loadSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNPhialIntermediateFountainCheckpoint,
+  loadSurfaceNResourcesCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
   loadSurfaceSeleneHexPathCheckpoint,
   loadSurfaceShrineTravelDealCheckpoint,
@@ -448,6 +449,14 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['Pedestal'],
     project: loadUnderworldZagreusContractCheckpoint,
     target: room('G', 'zagreus-contract-preboss-shop'),
+  },
+  {
+    id: 'resource-placed-elsewhere',
+    overview: true,
+    label: 'Resources placed in other rooms',
+    shows: ['resource placed elsewhere', 'resource unavailable here'],
+    project: loadSurfaceNResourcesCheckpoint,
+    target: room('N', 'surface-n-opening'),
   },
   {
     id: 'well-twist',

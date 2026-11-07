@@ -160,13 +160,28 @@
   padding-block: 3px;
 }
 
-.resource-placement-disclosure {
+.resource-toggle-anchor {
+  display: inline-flex;
+}
+
+/* A resource placed in another room asks before it moves here. */
+.contextual-picker-popover.resource-move-popover {
+  display: grid;
+  width: auto;
+  max-width: 22rem;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.resource-move-message {
+  margin: 0;
+  color: #e3dde8;
+}
+
+.resource-move-actions {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.35ch;
-  min-width: 0;
-  color: #aaa4af;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .room-feature-category-content > .ephyra-side-editor,
@@ -2505,13 +2520,6 @@
   padding-left: var(--overview-subrow-indent);
 }
 
-.room-overview-workbench .resource-placement-disclosure {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* An encounter fixed on entry reads as plain text in the picker column. */
 .room-overview-workbench .encounter-fixed-value {
   border-color: transparent;
@@ -3795,29 +3803,9 @@ span.hub-board-status-line {
   padding-left: var(--overview-subrow-indent);
 }
 
-/*
- * Objects that are off share one row of icon toggles; an object that is on
- * follows on its own line: its toggle, then its slots and choices.
- */
-.room-overview-panel[data-layout='toggles'] {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 4px;
-}
-
-.room-overview-workbench .room-overview-panel[data-layout='toggles'] {
+/* Each object keeps its own line: its toggle, then its slots and choices when on. */
+.room-overview-workbench .room-overview-panel :is(.room-purging-pool, .room-contract-pedestal) {
   padding-left: var(--overview-subrow-indent);
-}
-
-.room-overview-panel[data-layout='toggles'] > * {
-  flex: 0 0 auto;
-  min-width: 0;
-}
-
-.room-overview-panel[data-layout='toggles'] > :is([data-open], :has(> [data-open])) {
-  flex: 1 0 100%;
-  order: 1;
 }
 
 .room-object-fixed {

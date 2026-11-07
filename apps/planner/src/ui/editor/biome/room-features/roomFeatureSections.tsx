@@ -88,7 +88,7 @@ function objectsGroup(
   ];
   return entries.length === 0
     ? undefined
-    : Object.freeze({ key: 'Objects', label: 'Objects', entries, toggles: true });
+    : Object.freeze({ key: 'Objects', label: 'Objects', entries });
 }
 
 /** Room feature products as Overview sections; individual controls retain their semantic owners. */

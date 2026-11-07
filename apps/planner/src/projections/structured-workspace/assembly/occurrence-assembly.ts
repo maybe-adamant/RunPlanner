@@ -937,12 +937,21 @@ export function assembleWorkspaceOccurrence(
                           candidate.origin.kind === 'occurrence' &&
                           candidate.origin.occurrenceId === placement.occurrenceId,
                       );
+                      const placementAddress = createOccurrenceAddress(
+                        createBiomeAddress(input.biome.routeKey, placement.biomeKey),
+                        placement.occurrenceId,
+                      );
+                      const placementEntered = input.runState(
+                        createRoomRunStateCheckpointAddress(placementAddress, {
+                          kind: 'roomEntered',
+                        }),
+                      );
                       return Object.freeze({
-                        address: createOccurrenceAddress(
-                          createBiomeAddress(input.biome.routeKey, placement.biomeKey),
-                          placement.occurrenceId,
-                        ),
+                        address: placementAddress,
                         biomeKey: placement.biomeKey,
+                        ...(placementEntered?.availability === 'available'
+                          ? { runDepth: placementEntered.snapshot.counters.runDepthCache }
+                          : {}),
                         locationLabel:
                           entry === undefined
                             ? 'Unavailable room'

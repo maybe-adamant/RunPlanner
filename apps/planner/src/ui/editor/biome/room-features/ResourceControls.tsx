@@ -1,16 +1,21 @@
+import * as Popover from '@radix-ui/react-popover';
+import { useRef, useState } from 'react';
 import {
   requireWorkspaceInteraction,
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
-import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
-import { useAppDispatch } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { elementIcon, gatheringToolIcon } from '@planner/ui/artwork/roomArtwork';
 
-/** The room's resources as one row of icon toggles; a resource placed elsewhere says where. */
+type RoomResource = NonNullable<WorkspaceRoomSummary['resources']>[number];
+
+/**
+ * The room's resources as one row of icon toggles: dim when not placed, lit
+ * when placed here, dim with its room's number when placed in another room.
+ */
 export function RoomResourceControls({
   interactions,
   room,
@@ -18,53 +23,111 @@ export function RoomResourceControls({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: WorkspaceRoomSummary;
 }) {
-  const findingTarget = useFindingTarget();
-  const dispatch = useAppDispatch();
-  const executeIntent = useCommandIntent();
-  const resources = room.resources ?? [];
-  const name = (resource: (typeof resources)[number]) =>
-    resource.element === undefined ? resource.label : `Collect ${resource.element}`;
   return (
     <div aria-label="Resources" className="room-feature-action-list" role="region">
       <div className="icon-toggle-row">
-        {resources.map((resource) => (
-          <IconToggle
-            disabled={!resource.legal && resource.action !== 'remove'}
-            icon={
-              resource.element === undefined
-                ? gatheringToolIcon(resource.family)
-                : elementIcon(resource.element)
-            }
-            key={resource.family}
-            name={name(resource)}
-            onToggle={() =>
-              executeIntent(
-                requireWorkspaceInteraction(
-                  interactions.resourcePlacements,
-                  resource.interactionKey,
-                ).intent,
-              )
-            }
-            pressed={resource.action === 'remove'}
-            target={findingTarget(resource.address)}
-          />
+        {(room.resources ?? []).map((resource) => (
+          <ResourceToggle interactions={interactions} key={resource.family} resource={resource} />
         ))}
       </div>
-      {resources.map((resource) =>
-        resource.action === 'move' && resource.currentPlacement !== undefined ? (
-          <span className="resource-placement-disclosure" key={resource.family}>
-            {resource.element ?? resource.label} placed at{' '}
-            <button
-              className="semantic-focus-link"
-              onClick={() => dispatch(semanticOwnerNavigated(resource.currentPlacement!.address))}
-              type="button"
-            >
-              {resource.currentPlacement.biomeKey} · {resource.currentPlacement.locationLabel}
-            </button>
-            .
-          </span>
-        ) : null,
-      )}
     </div>
   );
+}
+
+function ResourceToggle({
+  interactions,
+  resource,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly resource: RoomResource;
+}) {
+  const findingTarget = useFindingTarget();
+  const executeIntent = useCommandIntent();
+  const [confirming, setConfirming] = useState(false);
+  const anchor = useRef<HTMLSpanElement>(null);
+  const disabled = !resource.legal && resource.action !== 'remove';
+  const place = () =>
+    executeIntent(
+      requireWorkspaceInteraction(interactions.resourcePlacements, resource.interactionKey).intent,
+    );
+  const elsewhere = resource.action === 'move' && !disabled ? resource.currentPlacement : undefined;
+  const toggle = (
+    <IconToggle
+      disabled={disabled}
+      icon={
+        resource.element === undefined
+          ? gatheringToolIcon(resource.family)
+          : elementIcon(resource.element)
+      }
+      name={resource.element === undefined ? resource.label : `Collect ${resource.element}`}
+      onToggle={() => (elsewhere === undefined ? place() : setConfirming((open) => !open))}
+      pressed={resource.action === 'remove'}
+      target={findingTarget(resource.address)}
+      {...(elsewhere === undefined
+        ? {}
+        : {
+            badge: elsewhere.runDepth?.toString(),
+            detail: placementRoom(elsewhere),
+            opensDialog: { open: confirming },
+          })}
+    />
+  );
+  const shortName = resource.element ?? resource.label;
+  // One stable tree, so the toggle keeps focus when its placement moves here.
+  return (
+    <Popover.Root open={confirming && elsewhere !== undefined} onOpenChange={setConfirming}>
+      <Popover.Anchor asChild>
+        <span className="resource-toggle-anchor" ref={anchor}>
+          {toggle}
+        </span>
+      </Popover.Anchor>
+      {elsewhere === undefined ? null : (
+        <Popover.Portal>
+          <Popover.Content
+            aria-label={`Move ${shortName}`}
+            className="contextual-picker-popover resource-move-popover"
+            collisionPadding={12}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              anchor.current?.querySelector('button')?.focus();
+            }}
+            onInteractOutside={(event) => {
+              // The toggle itself closes the popover through its own press.
+              if (anchor.current?.contains(event.target as Node)) event.preventDefault();
+            }}
+            side="bottom"
+            align="start"
+            sideOffset={6}
+          >
+            <p className="resource-move-message">
+              {shortName} is placed in {placementRoom(elsewhere)}.
+            </p>
+            <div className="resource-move-actions">
+              <button
+                className="secondary-action"
+                onClick={() => {
+                  setConfirming(false);
+                  place();
+                }}
+                type="button"
+              >
+                Move here
+              </button>
+              <Popover.Close asChild>
+                <button className="quiet-action" type="button">
+                  Cancel
+                </button>
+              </Popover.Close>
+            </div>
+          </Popover.Content>
+        </Popover.Portal>
+      )}
+    </Popover.Root>
+  );
+}
+
+function placementRoom(placement: NonNullable<RoomResource['currentPlacement']>): string {
+  return placement.runDepth === undefined
+    ? placement.locationLabel
+    : `Room ${placement.runDepth} · ${placement.locationLabel}`;
 }

@@ -46,11 +46,7 @@ export function LockedDoorsControls({
     locked.length === 0 && lockedDoors.doors.every((door) => door.lock !== undefined);
   const idKey = semanticOwnerControlElementId(lockedDoors.address);
   return (
-    <fieldset
-      className="room-purging-pool locked-doors"
-      data-open={open ? '' : undefined}
-      id={idKey}
-    >
+    <fieldset className="room-purging-pool locked-doors" id={idKey}>
       <legend className="visually-hidden">Lock Doors</legend>
       <div className="room-feature-presence-row">
         <IconToggle

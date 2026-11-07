@@ -68,10 +68,7 @@ export function ChallengeSwitchControls({
         );
   const idKey = semanticOwnerControlElementId(observation.address);
   return (
-    <fieldset
-      className="room-purging-pool challenge-switch"
-      data-open={row === undefined ? undefined : ''}
-    >
+    <fieldset className="room-purging-pool challenge-switch">
       <legend className="visually-hidden">Challenge Switch</legend>
       <div className="room-feature-presence-row challenge-switch-row">
         <IconToggle
