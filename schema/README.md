@@ -31,6 +31,23 @@ npm run test:schema:migrate
 
 ## History
 
+Schema 102 gives every room an optional `layout`: whether it is flipped
+horizontally and the `HeroStart` it is entered at, each optional. A Stygian
+Well, Pool of Purging, Shrine of Hermes or challenge switch may carry an
+optional `anchorId`, the room's `ChallengeSwitchBase` it stands on. A Fields
+room's cage, optional-reward and Nemesis points are optional per slot, and its
+entry point moves from its spatial state to the room's layout. Whether a flip,
+entry or anchor is possible where the room is entered is reported, never
+refused. The plan wire gains each room's `layout` (its determined flip and
+entry) and each object's `anchorId`; a Fields block no longer carries the
+entry, and a slot without a point is omitted.
+
+The migration moves each Fields room's `spatial.entryStartPointId` to
+`layout.entryStartPointId`, omitting an unset one; nothing else changes. It
+needs no catalog and accepts schema 101 through its final revision 2. An entry
+saved before the derivation existed may now be reported unavailable where the
+previous room's door rules it out.
+
 Revision 101.2 adds Heracles's bounty as a pickup: a phase whose encounter
 credits a kill bounty owns a `heraclesBounty:<phase>` acquisition site with its
 `bounty` money drop, collected by a required `interactAcquisitionEntry`

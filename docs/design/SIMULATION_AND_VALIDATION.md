@@ -338,12 +338,12 @@ engine contract.
 Where the cut falls follows the room's
 [stages](ROOM_LIFECYCLE_MODEL.md#room-stages):
 
-| Block                                                                                                                                                                                                                                                      | Cut and published products                                                                                                                                                                                                                                                                                             |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Overview: anything fixed on entry, such as Shop, Shrine, Well or Contract inventory, a challenge switch's placement, encounter or elite, any phase's encounter identity, composition, customization or introduction, or a picked host's resource placement | After the whole Overview. The room is entered with its `roomEntered` snapshot, its entry effects (Preboss delivery flush, forced-Chaos spark, Fields forfeits) and the continuations created on entry, as on success minus the failed product. The Overview is the repair region; the Timeline and Exit are unreached. |
-| Timeline, including the doors opening                                                                                                                                                                                                                      | At the start of the blocking product. Earlier Timeline products are kept. Coverage publishes the room's `roomTimeline.blockingRowKeys`: every Timeline row that settles an owner of the blocking region, whether or not it carries a finding. Later rows, the Exit and later rooms are unreached.                      |
-| Exit work                                                                                                                                                                                                                                                  | At the failing exit contact. The Timeline, door selection, commit and `beforeRoomExit` snapshot are kept; the room does not exit.                                                                                                                                                                                      |
-| The next room                                                                                                                                                                                                                                              | The source room has committed and exited first: its Shop completion, resource element grants and `beforeRoomExit` snapshot are kept. Nothing in the next room changes the source room's door selection.                                                                                                                |
+| Block                                                                                                                                                                                                                                                                                               | Cut and published products                                                                                                                                                                                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview: anything fixed on entry, such as the room's layout, its objects' anchors, Shop, Shrine, Well or Contract inventory, a challenge switch's placement, encounter or elite, any phase's encounter identity, composition, customization or introduction, or a picked host's resource placement | After the whole Overview. The room is entered with its `roomEntered` snapshot, its entry effects (Preboss delivery flush, forced-Chaos spark, Fields forfeits) and the continuations created on entry, as on success minus the failed product. The Overview is the repair region; the Timeline and Exit are unreached. |
+| Timeline, including the doors opening                                                                                                                                                                                                                                                               | At the start of the blocking product. Earlier Timeline products are kept. Coverage publishes the room's `roomTimeline.blockingRowKeys`: every Timeline row that settles an owner of the blocking region, whether or not it carries a finding. Later rows, the Exit and later rooms are unreached.                      |
+| Exit work                                                                                                                                                                                                                                                                                           | At the failing exit contact. The Timeline, door selection, commit and `beforeRoomExit` snapshot are kept; the room does not exit.                                                                                                                                                                                      |
+| The next room                                                                                                                                                                                                                                                                                       | The source room has committed and exited first: its Shop completion, resource element grants and `beforeRoomExit` snapshot are kept. Nothing in the next room changes the source room's door selection.                                                                                                                |
 
 Overview assessments read only entry state, never a Timeline product. The
 blocking product is the engine atomic region of the blocking finding, so every
@@ -428,6 +428,46 @@ must never be collapsed into a generic room number:
 
 Exact timing and source concordance belong to
 [Room Lifecycle Model](ROOM_LIFECYCLE_MODEL.md#counter-and-cache-timing).
+
+### Room layout
+
+Each entered room's horizontal flip and entry settle at its entry, from the
+room the walk last left and the door between them; the reached state carries
+that left room and its settled flip across rooms and biomes, and nothing else
+reads it. One derivation rule owns the chain:
+
+- The previous exit direction is the taken door's canonical direction,
+  mirrored when the left room was flipped. It is unknown at run start, while
+  the left room's flip is an unset roll, where the left room ignores exit
+  direction (Chaos, Dream Postboss), has no `HeroExit` for the door, or left
+  through a door spawned at runtime (a Chaos gate or the Contract door). An
+  ordinary exit is its door in the game's door order, a Hub slot or side room
+  its map door, and a fixed link or biome transition the left room's only
+  door.
+- The room's flip is unflipped at run start; decided by the door where the
+  room has a Left or Right entrance and the exit is known (flipped exactly
+  when they differ, and always after a compass exit); otherwise a roll,
+  fixed where its chance is 0 or 1.
+- The entry is forced where the left room's door or the room itself names
+  one. Otherwise the eligible entries are the pairs whose live direction (the
+  canonical one, mirrored when the room is flipped; a pair naming no
+  direction never matches a known exit) equals the exit, every pair when the
+  exit is unknown, and the lowest start with the lowest end when none
+  matches. While the flip is a roll and the exit known, each entry names the
+  flip that makes it eligible, so choosing it decides the flip.
+
+The mirror rule is a static read the in-game probe confirms or corrects
+inside this one rule. Each settlement publishes the arrival, the exit
+direction it read, the flip (fixed, derived or a roll with its authored or
+entry-implied value) and the entry (fixed, derived, a choice among the
+eligible ones with its authored value, or unknown for a room without entry
+points). Authored values the settlement cannot hold are Overview findings of
+the room: a flip where the room does not roll one, and an entry outside the
+eligible set; both are kept, never rewritten. The same Overview reports
+object anchors the room cannot hold. The candidate session answers each
+entry with the whole-layout edit that picks it, and the layout query adds
+both rolled flips, so no offered edit reaches a combination the rule rules
+out.
 
 ### Persistent and multi-phase rooms
 

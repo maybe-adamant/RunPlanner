@@ -403,12 +403,12 @@ or an authored assignment.
 
 ## Current planner contact
 
-Schema 78 and catalog normalization now carry each audited room's finite,
-room-scoped entry, cage, and optional point declarations into one
-occurrence-owned Fields spatial state. The catalog also declares each mapped
+Catalog normalization carries each audited room's finite, room-scoped entry,
+cage, and optional point declarations. The catalog also declares each mapped
 cage point's spawn representative; unmapped `H_Combat13` point `621502` has
-none. That state retains the selected entry,
-slot-keyed cage and optional assignments, and a Nemesis assignment. The engine
+none. The occurrence-owned Fields spatial state retains optional slot-keyed
+cage and optional assignments and a Nemesis assignment; the selected entry is
+the room's layout entry, shared with every other room. The engine
 derives activation and uniqueness from the existing logical cage prefix,
 optional prefix, and Passive encounter rather than introducing a second room
 chronology.

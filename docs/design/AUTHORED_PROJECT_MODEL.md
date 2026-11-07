@@ -869,15 +869,44 @@ engine-owned canonical restore intent. Dormant and stale rows likewise remain
 authored until an explicit owning command removes them; reactivation of the
 same key reuses its retained position rather than adding a duplicate.
 
+### Room layout and positions
+
+Whether something exists is never optional; where an existing thing stands is
+optional when the game is free to place it, and an unset position leaves the
+game to place it. Each thing owns its own position: the room its layout, an
+anchor object its anchor, a Fields slot its point, a Chaos gate its spawn
+point.
+
+An occurrence may carry an optional `layout`: whether the room is flipped
+horizontally and the `HeroStart` it is entered at. Each field is optional and
+the layout is absent when neither is set. Decoding admits only one of the
+room's `HeroStart`s as the entry; whether the flip or entry is possible where
+the room is entered is derived from the previous room's exit and reported as a
+finding, never refused ([room layout](SIMULATION_AND_VALIDATION.md#room-layout)).
+`ReplaceRoomLayout` replaces the whole layout in one history step, so an entry
+that needs one flip of a rolled room is stored with that flip; room
+replacement clears it.
+
+A Stygian Well, Pool of Purging, Shrine of Hermes or challenge switch may carry
+an optional `anchorId`: the room's `ChallengeSwitchBase` it stands on. Decoding
+admits only the room's own anchors; `ReplaceRoomObjectAnchor` sets or clears
+it on a present object, and every edit of the object keeps it. Where the room
+pins the Well's anchor, that anchor is the Well's alone. An object on another
+object's anchor, a Well off its pin and another object on the pin are kept and
+reported.
+
 ### Fields rooms
 
 Every Fields combat occurrence owns one selected optional-reward count,
 complete retained optional-reward values through the declaration's exact
-capacity, its declaration-bounded spatial layout, and one mixed room-action
-order. Entry, cage, optional-reward, and Passive Nemesis points remain
-room-local placement facts; the action order alone owns cage completion and
-pickup chronology. [H rules](../biomes/H_GAME_RULES.md#authored-shape) own
-participation and default ordering.
+capacity, its declaration-bounded spatial points, and one mixed room-action
+order. Cage, optional-reward and Passive Nemesis points are room-local
+placement facts, each optional per slot; the room's entry is its layout's.
+Only an assigned point is assessed: an undeclared one, Nemesis on its excluded
+point, or two active slots on one point are findings. The action order alone
+owns cage completion and pickup chronology.
+[H rules](../biomes/H_GAME_RULES.md#authored-shape) own participation and
+default ordering.
 
 `ReplaceFieldsCageOrder` accepts an exact permutation of the active cage
 identities. It resolves that permutation left-to-right with insertion-style

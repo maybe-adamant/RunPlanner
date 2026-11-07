@@ -92,9 +92,16 @@ information the runtime consumes:
 
 ### Room content
 
-Fields door targets carry cage rewards even when unpicked. Physical entry,
-cage and optional-reward placements are entered-room facts: they are required
-only for selected Fields occurrences, not for their unpicked door alternatives.
+Every entered room publishes its layout wherever it is determined: the flip
+and the entry (start and end point) derived from the previous room's exit,
+fixed by the room, or authored where the game rolls; an unset roll or choice
+is absent and stays native. A Well, Pool, Shrine or challenge switch publishes
+its `anchorId` when authored.
+
+Fields door targets carry cage rewards even when unpicked. Cage and
+optional-reward points are entered-room facts published only for selected
+Fields occurrences; each slot's point is optional, and a slot without one
+stays native.
 Reward wheels follow the same selection boundary: a selected Ship occurrence
 publishes one wheel per active combat phase, and an unselected Ship door
 target, which is never entered, publishes none.
