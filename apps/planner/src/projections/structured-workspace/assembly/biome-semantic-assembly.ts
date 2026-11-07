@@ -823,19 +823,6 @@ export function assembleWorkspaceBiomeSemantics(
         tab,
       );
   };
-  // A boss door's fixed or ignored pool has no owner of its own: the fixed
-  // exit it explains opens the doors that show it.
-  const routeReportedBossPoolToTimeline = (
-    occurrenceId: OccurrenceId,
-    exit: WorkspaceMarker,
-  ): void => {
-    const store = nodes.find(
-      (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
-        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
-    )?.room.bossDoorRewardStore;
-    if (store === undefined || store.kind === 'editor') return;
-    markerDestinations.setTimelineDoors([exit], doorsTimelineTab(occurrenceId), 'doorsOpen');
-  };
   for (const node of nodes) {
     if (
       node.kind === 'ordinaryBatch' ||
@@ -1016,11 +1003,13 @@ export function assembleWorkspaceBiomeSemantics(
               });
           }
         })();
-        const exit = markerDestinations.marker(status.owner);
-        routeReportedBossPoolToTimeline(occurrence.occurrenceId, exit);
         occurrenceOutgoing.set(
           occurrence.occurrenceId,
-          Object.freeze({ kind: 'fixedRoom' as const, destination, marker: exit }),
+          Object.freeze({
+            kind: 'fixedRoom' as const,
+            destination,
+            marker: markerDestinations.marker(status.owner),
+          }),
         );
         break;
       }

@@ -402,16 +402,19 @@ function OccurrenceInspector({
     outgoingDecision ??
     (outgoing?.kind === 'frontier' ? outgoing.frontier.provisionalBatch : undefined);
   // A note opens its doors the way navigation does: through the owner they repair.
-  const doorNotes = useDoorNotes(doorNoteSource(node, batch, outgoing), (target) =>
-    outgoingDecision !== undefined
-      ? outgoingDecision.owner
-      : target === 'hiddenDoor'
-        ? node.room.phantomExit?.address
-        : // A reported boss pool opens through the fixed exit it explains.
-          (target === 'pool' || target === 'effective') && outgoing?.kind === 'fixedRoom'
-          ? outgoing.marker.address
-          : undefined,
-  );
+  const doorNotes = useDoorNotes(doorNoteSource(node, batch, outgoing), (target) => {
+    const owner =
+      outgoingDecision !== undefined
+        ? outgoingDecision.owner
+        : target === 'hiddenDoor'
+          ? node.room.phantomExit?.address
+          : undefined;
+    if (owner !== undefined) return { kind: 'owner', owner };
+    // A reported boss pool has no owner of its own: its note opens the fixed exit's doors.
+    return (target === 'pool' || target === 'effective') && outgoing?.kind === 'fixedRoom'
+      ? { kind: 'doors', room: node.room.address }
+      : undefined;
+  });
   const doors = roomTimelineDoors({
     activeNote: doorNotes.active,
     batch,

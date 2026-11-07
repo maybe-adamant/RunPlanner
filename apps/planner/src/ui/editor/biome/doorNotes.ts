@@ -1,12 +1,21 @@
 import type { SemanticAddress } from '@run-planner/engine/authored-project';
 import type { WorkspaceDoorNote } from '@planner/projections/structured-workspace';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
-import { useAppDispatch } from '@planner/state/store';
+import { workspaceInteractionKey } from '@planner/projections/structured-workspace';
+import { doorEditorChosen, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { useId, useState } from 'react';
 import { flushSync } from 'react-dom';
 
 /** What a note explains: one pool value, the hidden door, or the doors as a whole. */
 export type DoorNoteTarget = WorkspaceDoorNote['target'];
+
+/**
+ * Where opening a note leads: navigation to the owner it repairs, or, for a
+ * value with no owner of its own, the doors of the room that shows it.
+ */
+export type DoorNoteOpening =
+  | { readonly kind: 'owner'; readonly owner: SemanticAddress }
+  | { readonly kind: 'doors'; readonly room: SemanticAddress };
 
 /** The link between one explained value and its note. */
 export interface DoorNoteMark {
@@ -33,12 +42,13 @@ const symbols = ['*', '†', '‡'] as const;
 /**
  * Marks each note that explains a value with the next footnote symbol, in
  * order of appearance, tracks which note is highlighted, and opens a note's
- * value by navigating to its owner, the way a finding does.
+ * value by navigating to its owner, the way a finding does, or by opening the
+ * room's doors.
  */
 export function useDoorNotes(
   notes: readonly WorkspaceDoorNote[],
-  /** The owner whose navigation opens the doors on a note's value. */
-  ownerFor: (target: DoorNoteTarget) => SemanticAddress | undefined,
+  /** How a note's value is opened, if anything opens it. */
+  openingFor: (target: DoorNoteTarget) => DoorNoteOpening | undefined,
 ): {
   readonly items: readonly DoorNoteItem[];
   readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
@@ -47,6 +57,9 @@ export function useDoorNotes(
 } {
   const prefix = useId();
   const dispatch = useAppDispatch();
+  const navigationRevision = useAppSelector(
+    (state) => state.editorSession.semanticNavigationRevision,
+  );
   const [active, setActiveTarget] = useState<DoorNoteTarget>();
   let next = 0;
   const marks = new Map<DoorNoteTarget, DoorNoteMark>();
@@ -63,17 +76,26 @@ export function useDoorNotes(
       focusKey: `${prefix}-${target}`,
     };
     marks.set(target, mark);
-    const owner = ownerFor(target);
+    const opening = openingFor(target);
     return {
       key,
       text: note.text,
       mark,
-      ...(owner === undefined
+      ...(opening === undefined
         ? {}
         : {
             open: () => {
-              // The navigation shows the value before it takes focus.
-              flushSync(() => dispatch(semanticOwnerFocused(owner)));
+              // The value is shown before it takes focus.
+              flushSync(() =>
+                dispatch(
+                  opening.kind === 'owner'
+                    ? semanticOwnerFocused(opening.owner)
+                    : doorEditorChosen({
+                        room: workspaceInteractionKey(opening.room),
+                        choice: { expanded: true, attention: [], navigationRevision },
+                      }),
+                ),
+              );
               document
                 .querySelector<HTMLElement>(`[data-door-note-focus="${mark.focusKey}"]`)
                 ?.focus();
