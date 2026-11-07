@@ -866,7 +866,7 @@ function doorChipName(chip: DoorChip): string {
 }
 
 /** A door chip's room icon, its rewards' icons and its lock. */
-function DoorChipFace({ chip }: { readonly chip: DoorChip }) {
+export function DoorChipFace({ chip }: { readonly chip: DoorChip }) {
   return (
     <>
       {chip.roomIcon === undefined ? (

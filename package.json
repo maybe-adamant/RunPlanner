@@ -61,7 +61,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "node scripts/check.mjs",
-    "catalog:map-points": "node scripts/extract-room-map-points.mjs"
+    "catalog:map-points": "node scripts/extract-room-map-points.mjs",
+    "planner:room-map-calibration": "node scripts/generate-room-map-calibration.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

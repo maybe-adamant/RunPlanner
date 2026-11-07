@@ -1,6 +1,12 @@
 import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import {
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  type SyntheticEvent,
+} from 'react';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -29,6 +35,28 @@ import { SideRoomsWorkbench } from './locals/SideRoomsWorkbench';
 import { TimelineLegend } from './TimelineLegend';
 import type { TimelineDoors, TimelineDoorsContent } from './TimelineDoors';
 import { createRouteAddress } from '@run-planner/engine/authored-project';
+import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
+import { RoomMapColumn, type RoomMapStage } from './room-map/RoomMapColumn';
+
+/**
+ * The map's stage for a Timeline row: before Doors open the doors are closed,
+ * from it they are open, from the room's last row it is left. Rows outside the
+ * Timeline leave the map as it is.
+ */
+function timelineMapStage(target: Element): RoomMapStage | undefined {
+  const row = target.closest('.room-action-list[aria-label="Room timeline"] > li');
+  const list = row?.parentElement;
+  if (row == null || list == null) return undefined;
+  const rows = [...list.children];
+  const index = rows.indexOf(row);
+  const leave = rows.findIndex((item) => item.classList.contains('timeline-leave-row'));
+  const open = rows.findIndex((item) =>
+    item.matches('[data-doors-open], [data-boundary-kind="cleanup"]'),
+  );
+  if (leave >= 0 && index >= leave) return 'left';
+  if (open >= 0 && index >= open) return 'open';
+  return 'closed';
+}
 
 interface OccurrenceWorkbenchProps {
   readonly headerActions?: ReactNode;
@@ -227,6 +255,42 @@ export function OccurrenceWorkbench({
     </button>
   );
   const heading = room.label;
+  // The Timeline row being worked on sets the map's stage: presentation only, never authored.
+  const [mapStage, setMapStage] = useState<{
+    readonly roomIdentity: string;
+    readonly stage: RoomMapStage;
+  }>();
+  const shownMapStage =
+    activeTab === 'actions' && mapStage?.roomIdentity === roomIdentity ? mapStage.stage : 'summary';
+  const workOnTimeline = (event: SyntheticEvent<HTMLElement>): void => {
+    const stage = timelineMapStage(event.target as Element);
+    if (stage !== undefined && stage !== shownMapStage) setMapStage({ roomIdentity, stage });
+  };
+  const withRoomMap = (controls: ReactNode): ReactNode =>
+    room.map === undefined || roomMapCalibrations[room.gameName] === undefined ? (
+      controls
+    ) : (
+      <div className="room-map-workbench">
+        <div className="room-map-columns">
+          <div
+            className="room-map-controls-column"
+            {...(activeTab === 'actions'
+              ? { onFocusCapture: workOnTimeline, onPointerDownCapture: workOnTimeline }
+              : {})}
+          >
+            {controls}
+          </div>
+          <RoomMapColumn
+            chips={timelineDoors?.summary?.chips}
+            gameName={room.gameName}
+            map={room.map}
+            roomIdentity={roomIdentity}
+            stage={shownMapStage}
+            title={room.label}
+          />
+        </div>
+      </div>
+    );
   const tabRunState = room.runStateByTab[activeTab];
   const showTimelineLegend =
     activeTab === 'actions' ||
@@ -340,10 +404,12 @@ export function OccurrenceWorkbench({
           inert={planEndRelation === 'pastEnd'}
         >
           {activeTab === 'overview' ? (
-            <div className="room-overview-workbench">
-              {entryIdentity}
-              {renderDirectRoomWorkbench('overview')}
-            </div>
+            withRoomMap(
+              <div className="room-overview-workbench">
+                {entryIdentity}
+                {renderDirectRoomWorkbench('overview')}
+              </div>,
+            )
           ) : activeTab === 'sideRooms' && localVisit !== undefined ? (
             <SideRoomsWorkbench
               interactions={interactions}
@@ -374,7 +440,7 @@ export function OccurrenceWorkbench({
           ) : room.workbench.kind === 'ship' ? (
             renderDirectRoomWorkbench(shipPhaseView())
           ) : (
-            renderDirectRoomWorkbench('actions')
+            withRoomMap(renderDirectRoomWorkbench('actions'))
           )}
           {showTimelineLegend && room.placementRepairs !== undefined ? (
             <section aria-label="Placement repairs">

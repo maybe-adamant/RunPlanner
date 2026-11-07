@@ -465,3 +465,88 @@
   height: 80%;
   object-fit: contain;
 }
+
+.room-map-marker-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.room-map-point,
+.room-map-door {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+/* Entries and anchors: small spots that never hide the art under them. */
+.room-map-point {
+  width: max(2%, 12px);
+  aspect-ratio: 1;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px #0b0e14,
+    0 1px 4px rgb(0 0 0 / 60%);
+}
+
+.room-map-point[data-point='entry'] {
+  background: #3d8bff;
+}
+
+.room-map-point[data-point='anchor'] {
+  border-color: #e8d39a;
+  border-style: dashed;
+  background: rgb(16 25 35 / 45%);
+}
+
+/* A door: its chip once open, a dashed ring while closed. */
+.room-map-door {
+  display: inline-flex;
+  min-width: 2.2%;
+  min-height: 2.2%;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border: 2px solid #f0a35e;
+  border-radius: 999px;
+  background: rgb(17 25 35 / 88%);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 48%);
+}
+
+.room-map-door[data-chaos] {
+  border-color: #b58cff;
+}
+
+/* A closed door, or one with no chip: a plain ring at the door. */
+.room-map-door[data-closed],
+.room-map-door:empty {
+  width: max(2.6%, 16px);
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
+  padding: 0;
+}
+
+.room-map-door[data-closed] {
+  background: rgb(17 25 35 / 70%);
+  opacity: 0.8;
+}
+
+.room-map-door[data-taken] {
+  z-index: 2;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 0 5px #0b0e14,
+    0 2px 10px rgb(0 0 0 / 60%);
+}
+
+.room-map-door-face {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.room-map-door-face .artwork-label-icon {
+  width: 20px;
+  height: 20px;
+}

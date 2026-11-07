@@ -450,6 +450,23 @@ export interface WorkspaceAnchorSlot {
 }
 
 /** A room's anchor slots, as the engine fills them in native spawn order. */
+/** A point on the room's unflipped map, in world units. */
+export interface WorkspaceRoomMapPoint {
+  readonly id: number;
+  readonly x: number;
+  readonly y: number;
+}
+
+/** The room's map things its map shows, each at its world position. */
+export interface WorkspaceRoomMap {
+  /** Each exit door, with the Door number the game realizes there where it is known. */
+  readonly doors: readonly (WorkspaceRoomMapPoint & { readonly doorIndex?: number })[];
+  readonly entries: readonly WorkspaceRoomMapPoint[];
+  readonly anchors: readonly WorkspaceRoomMapPoint[];
+  /** The SecretPoint an authored Chaos gate is placed at. */
+  readonly chaosGate?: WorkspaceRoomMapPoint;
+}
+
 export interface WorkspaceRoomObjectSlots {
   readonly interactionKey: string;
   readonly slots: readonly WorkspaceAnchorSlot[];

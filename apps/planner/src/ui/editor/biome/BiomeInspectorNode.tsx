@@ -349,6 +349,7 @@ function roomTimelineDoors({
         destination.kind === 'room' && destination.roomIcon !== undefined
           ? {
               key: 'fixed',
+              doorIndex: 1,
               label: destination.label,
               roomIcon: destination.roomIcon,
               rewards: [],

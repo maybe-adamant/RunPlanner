@@ -3532,3 +3532,49 @@ span.hub-board-status-line {
 .room-object-slots .room-object-fixed {
   margin-block: 2px;
 }
+
+/* A room with a calibrated map: its controls beside the map, the map below them when narrow. */
+.room-map-workbench {
+  container: room-map-workbench / inline-size;
+}
+
+.room-map-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+/* The controls measure their own column, so the Add area stacks under the Timeline. */
+.room-map-controls-column {
+  min-width: 0;
+  container: room-panel / inline-size;
+}
+
+.room-map-column {
+  position: sticky;
+  top: 52px;
+  min-width: 0;
+}
+
+.room-map-column > .room-map-viewport > .room-map-canvas {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.room-map-column > .room-map-viewport > .room-map-canvas > .room-map-scroll {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  min-height: 0;
+}
+
+@container room-map-workbench (max-width: 56rem) {
+  .room-map-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .room-map-column {
+    position: static;
+  }
+}

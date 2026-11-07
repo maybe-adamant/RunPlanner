@@ -126,6 +126,7 @@ export function DoorsOpenBanner({
     <>
       <TimelineRow
         aria-label={label}
+        data-doors-open
         kind="boundary"
         label={
           <>

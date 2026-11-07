@@ -25,6 +25,10 @@ export interface DoorChip {
   readonly unavailable?: boolean;
   /** The door is locked at this point of the Timeline. */
   readonly locked?: boolean;
+  /** The ordinary door's number, which places it on the room's map. */
+  readonly doorIndex?: number;
+  /** The additional exit the chip is, such as the Chaos gate. */
+  readonly additionalExit?: 'chaos' | 'zagreusContract';
 }
 
 /** A door's rewards as first drawn, or after its rerolls; none while hidden. */
@@ -49,6 +53,7 @@ export function batchDoorChips(
     ...node.targets.map((target): DoorChip => ({
       key: target.exitKey,
       label: `Door ${target.index} · ${target.door.room.label}`,
+      doorIndex: target.index,
       roomIcon: target.door.room.roomIcon,
       rewards: doorRewardIcons(target, 'first'),
       picked: target.selected,
@@ -58,6 +63,7 @@ export function batchDoorChips(
     ...(node.kind === 'takeoverBatch' ? [] : node.missingTargets).map((target): DoorChip => ({
       key: target.exitKey,
       label: `Door ${target.index}`,
+      doorIndex: target.index,
       rewards: [],
       missing: true,
       locked: locked.includes(target.exitKey),
@@ -68,6 +74,8 @@ export function batchDoorChips(
         : [
             {
               key: workspaceInteractionKey(control.owner),
+              additionalExit:
+                control === node.chaos ? ('chaos' as const) : ('zagreusContract' as const),
               label: control.exitTypeLabel,
               roomIcon: control.door.room.roomIcon,
               rewards: [],

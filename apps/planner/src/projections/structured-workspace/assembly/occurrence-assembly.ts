@@ -1,6 +1,7 @@
 import { normalExitOrdinal } from './ordering';
 import { assembleLockedDoors, assembleUnlockExitEncounters } from './locked-doors-assembly';
 import { assembleRoomObjectSlots } from './room-object-slots-assembly';
+import { assembleRoomMap } from './room-map-assembly';
 import { assembleChallengeSwitch } from './challenge-switch-assembly';
 import {
   resolveEntryDeclaration,
@@ -574,6 +575,7 @@ export function assembleWorkspaceOccurrence(
     product: input.roomAnchorSlots?.(address),
     switchKind: challengeSwitch?.kinds.find((kind) => kind.selected)?.kind,
   });
+  const roomMap = assembleRoomMap(input.catalog, room, occurrence);
   const lockedDoorsProduct = input.facts.detailsActive
     ? input.roomObjectInteractions?.(address)?.lockedDoors
     : undefined;
@@ -851,6 +853,7 @@ export function assembleWorkspaceOccurrence(
     ...(erisObservation === undefined ? {} : { erisObservation }),
     ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
     ...(objectSlots === undefined ? {} : { objectSlots: objectSlots.objectSlots }),
+    ...(roomMap === undefined ? {} : { map: roomMap }),
     ...(lockedDoors === undefined ? {} : { lockedDoors: lockedDoors.lockedDoors }),
     encounterPhases,
     entered,

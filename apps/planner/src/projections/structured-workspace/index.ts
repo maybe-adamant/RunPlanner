@@ -159,6 +159,8 @@ export type {
   WorkspaceRoomObjectLock,
   WorkspaceRoomObjectOption,
   WorkspaceRoomObjectSlots,
+  WorkspaceRoomMap,
+  WorkspaceRoomMapPoint,
   WorkspaceAnchorObject,
   WorkspaceAnchorSlot,
   WorkspaceAnchorOccupant,

@@ -63,6 +63,7 @@ export function LifecycleBoundaryRow({
     <TimelineRow
       aria-label={accessibleLabel}
       data-lifecycle-boundary={boundary.key}
+      data-boundary-kind={boundary.kind}
       data-reorder-anchor={boundary.key}
       data-phase={phase}
       data-phase-start={

@@ -31,6 +31,8 @@ export type {
   WorkspaceRoomObjectLock,
   WorkspaceRoomObjectOption,
   WorkspaceRoomObjectSlots,
+  WorkspaceRoomMap,
+  WorkspaceRoomMapPoint,
   WorkspaceRoomObjectSlotsInteraction,
   WorkspaceAnchorObject,
   WorkspaceAnchorObjectLock,
@@ -638,6 +640,8 @@ export interface WorkspaceRoomSummary {
   readonly address: OccurrenceAddress;
   /** The room's challenge switch anchors and the objects on them. */
   readonly objectSlots?: import('./contracts/features').WorkspaceRoomObjectSlots;
+  /** The room's map points, where the catalog declares them. */
+  readonly map?: import('./contracts/features').WorkspaceRoomMap;
   readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreControl;
   /** Present exactly where the room declares a hidden door back to the Hub. */
   readonly phantomExit?: WorkspacePhantomExitControl;
