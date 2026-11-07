@@ -310,7 +310,9 @@ game settles as the encounter starts: the Fig Leaf skip, the Aetos appearance
 and its wave, and the Gorgon Amulet's Death Defiance condition, whose Athena
 appears in that fight. The end banner carries what the finished encounter
 settled: its fight gold, a Nemesis kill-race outcome with the gold its bet
-won or lost, and an Anomaly's capture-point outcome. The fight gold is the
+won or lost, and an Anomaly's capture-point outcome. A Boss's defeat directly
+followed by its encounter's end reads as that one end banner, its
+defeat-owned fixed effects (Judgment, Crystal Figurine) first. The fight gold is the
 engine's summary for the phase, shown as its estimate and spread, or plainly
 when exact, with its breakdown by source on hover; a challenge switch's or
 locked door's fight shows its summary on its press row the same way. A
