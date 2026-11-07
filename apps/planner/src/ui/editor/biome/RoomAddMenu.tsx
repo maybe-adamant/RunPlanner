@@ -5,6 +5,9 @@ import { useAppSelector } from '@planner/state/store';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { hintProps } from '@planner/ui/controls/hint';
 import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { TimelineRow } from './TimelineRow';
 
 /** One optional action the room can add. */
 export interface RoomAddAction {
@@ -200,5 +203,82 @@ export function RoomAddGroupMenu({ group }: { readonly group: RoomAddGroup }) {
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
+  );
+}
+
+/**
+ * A challenge switch's optional actions (its use and claims), read like the other
+ * object entries: picking one adds it.
+ */
+export function RoomAddObjectEntry({
+  group,
+  object,
+}: {
+  readonly group: RoomAddGroup;
+  readonly object: string;
+}) {
+  const id = `room-add-object-${group.key}`;
+  const findings = group.actions.filter((action) => action.findingMark?.['data-has-findings']);
+  const findingMark: FindingMarkProps | undefined =
+    findings[0]?.findingMark === undefined
+      ? undefined
+      : {
+          'data-semantic-owner': findings[0].findingMark['data-semantic-owner'],
+          'data-has-findings': true,
+          'aria-description': findings
+            .map((action) => action.findingMark?.['aria-description'])
+            .filter((text) => text !== undefined)
+            .join(' '),
+        };
+  const model: ContextualPickerModel<string> = Object.freeze({
+    sections: Object.freeze([
+      Object.freeze({
+        collapsible: false,
+        key: 'actions',
+        kind: 'category' as const,
+        label: group.label,
+        items: Object.freeze(
+          group.actions.map((action) =>
+            Object.freeze({
+              disabled: action.unavailable !== undefined,
+              key: action.key,
+              label: action.label,
+              selected: false,
+              state:
+                action.unavailable === undefined ? ('possible' as const) : ('impossible' as const),
+              value: action.key,
+              ...(action.unavailable === undefined
+                ? {}
+                : { explanations: Object.freeze([action.unavailable]) }),
+            }),
+          ),
+        ),
+      }),
+    ]),
+  });
+  return (
+    <TimelineRow
+      className="room-action-feature-roll"
+      data-object={object}
+      kind="insertion"
+      label={
+        <ContextualPicker<string>
+          {...(findingMark === undefined ? {} : { findingMark })}
+          ariaLabel={group.label}
+          id={id}
+          itemIcon={(item) => group.actions.find((action) => action.key === item.value)?.icon}
+          label=""
+          model={model}
+          onSelect={(key) => {
+            const action = group.actions.find((candidate) => candidate.key === key);
+            if (action === undefined || action.unavailable !== undefined) return;
+            action.onSelect(document.getElementById(id) as HTMLButtonElement | null);
+          }}
+          placeholder={`${group.label} ▸`}
+          searchable={false}
+          triggerIcon={group.icon}
+        />
+      }
+    />
   );
 }

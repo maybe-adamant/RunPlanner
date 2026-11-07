@@ -549,16 +549,18 @@ export interface WorkspaceChallengeSwitchElite {
   }[];
 }
 
-/** How a pressed switch's fight ended, edited on its use row. */
+/** How a pressed switch's fight ended and whether its claim dropped the bonus Nectar, picked on its use row. */
 export interface WorkspaceChallengeSwitchOutcome {
   readonly interactionKey: string;
-  readonly current: import('@run-planner/engine/simulation').ChallengeSwitchOutcomeInteraction['current'];
+  /** The current choice's key. */
+  readonly current: string;
+  /** Each outcome, followed by the same outcome with the Nectar where its claim can drop it. */
   readonly choices: readonly {
+    readonly key: string;
     readonly outcome: import('@run-planner/engine/simulation').ChallengeSwitchOutcomeInteraction['current'];
+    readonly nectar: boolean;
     readonly label: string;
   }[];
-  /** Present while the outcome can drop the bonus Nectar. */
-  readonly nectar?: { readonly dropped: boolean };
 }
 
 /** A challenge switch host's Overview rows and the observed switch's encounter. */
@@ -606,10 +608,12 @@ export interface WorkspaceChallengeSwitchInteraction {
   >;
   /** The observed Time or Perfect Clear switch's encounter customization. */
   readonly customization?: import('./locals').WorkspaceEncounterCustomizationInteraction;
-  /** Sets the fight's outcome; absent for an outcome the kind cannot end with. */
+  /**
+   * Sets the fight's outcome and its bonus Nectar, which only an outcome listed with it can
+   * drop; absent for an outcome the kind cannot end with.
+   */
   readonly outcomeIntentFor: (
     outcome: import('@run-planner/engine/simulation').ChallengeSwitchOutcomeInteraction['current'],
+    nectarDropped: boolean,
   ) => WorkspaceCommandIntent<OutcomeCommand> | undefined;
-  /** Toggles the bonus Nectar; present while the outcome can drop it. */
-  readonly nectarIntent?: WorkspaceCommandIntent<OutcomeCommand>;
 }

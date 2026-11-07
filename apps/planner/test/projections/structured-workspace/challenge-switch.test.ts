@@ -215,17 +215,39 @@ describe('challenge switch in the structured workspace', () => {
     const outcome = row.challengeSwitchOutcome!;
     const interaction = workspace.interactions.challengeSwitches.get(outcome.interactionKey)!;
 
-    expect(outcome.current).toBe('finished');
-    expect(outcome.choices.map((choice) => [choice.outcome, choice.label])).toEqual([
-      ['left', 'Left'],
-      ['finished', 'Finished'],
+    // Only a finished fight's claim can also drop the Nectar, so it is listed both ways.
+    expect(outcome.choices.map((choice) => [choice.outcome, choice.nectar])).toEqual([
+      ['left', false],
+      ['finished', false],
+      ['finished', true],
     ]);
-    expect(outcome.nectar).toEqual({ dropped: false });
-    expect(interaction.outcomeIntentFor('left')?.command).toMatchObject({
+    expect(outcome.choices.find((choice) => choice.key === outcome.current)).toMatchObject({
+      outcome: 'finished',
+      nectar: false,
+    });
+    expect(interaction.outcomeIntentFor('left', false)?.command).toMatchObject({
       kind: 'ReplaceChallengeSwitchOutcome',
       outcome: 'left',
+      nectarDropped: false,
     });
-    expect(interaction.outcomeIntentFor('hitless')).toBeUndefined();
+    expect(interaction.outcomeIntentFor('finished', true)?.command).toMatchObject({
+      outcome: 'finished',
+      nectarDropped: true,
+    });
+    expect(interaction.outcomeIntentFor('hitless', false)).toBeUndefined();
+    const withNectar = projectStructuredWorkspaceFixture(
+      applyProjectCommand(
+        project,
+        catalog,
+        interaction.outcomeIntentFor('finished', true)!.command,
+      ),
+    ).workspace;
+    const nectarOutcome = room(withNectar, 'F', 'golden-f-b5-e1').roomActions!.rows.find(
+      (candidate) => candidate.reference.kind === 'interactChallengeSwitch',
+    )!.challengeSwitchOutcome!;
+    expect(
+      nectarOutcome.choices.find((choice) => choice.key === nectarOutcome.current),
+    ).toMatchObject({ outcome: 'finished', nectar: true });
     // The claim's gold sits on its Collect row with the estimate's hover, not on the use row.
     expect(row.goldGained).toBeUndefined();
     const claim = room(workspace, 'F', 'golden-f-b5-e1').roomActions!.rows.find(
@@ -234,13 +256,16 @@ describe('challenge switch in the structured workspace', () => {
     expect(claim?.goldGained?.hint).toEqual(expect.any(String));
 
     const left = projectStructuredWorkspaceFixture(
-      applyProjectCommand(project, catalog, interaction.outcomeIntentFor('left')!.command),
+      applyProjectCommand(project, catalog, interaction.outcomeIntentFor('left', false)!.command),
     ).workspace;
     const leftRows = room(left, 'F', 'golden-f-b5-e1').roomActions!.rows;
     const leftOutcome = leftRows.find(
       (candidate) => candidate.reference.kind === 'interactChallengeSwitch',
     )!.challengeSwitchOutcome!;
-    expect(leftOutcome.nectar).toBeUndefined();
+    expect(leftOutcome.choices.find((choice) => choice.key === leftOutcome.current)).toMatchObject({
+      outcome: 'left',
+      nectar: false,
+    });
     // A left fight claims nothing.
     expect(leftRows.some((candidate) => candidate.sourceFamily?.kind === 'challengeSwitch')).toBe(
       false,

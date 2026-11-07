@@ -30,7 +30,7 @@ const wellIcon = (itemKey: string | null): string | undefined =>
 
 const shrineDelayChoices = Object.freeze(
   HERMES_SHRINE_DELAYS.map((delay) =>
-    Object.freeze({ key: String(delay), value: delay, label: `${delay} rooms` }),
+    Object.freeze({ key: String(delay), value: delay, label: `${delay} encounters` }),
   ),
 );
 

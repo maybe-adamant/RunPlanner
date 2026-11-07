@@ -348,7 +348,7 @@ function roomTimelineDoors({
               rewards: [],
             }
           : undefined;
-      // The one way out is the picked door chip, with nothing to pick.
+      // The one way out is its door chip, with nothing to pick.
       const value =
         destination.kind === 'complete' ? (
           <span>{destination.message}</span>
@@ -356,7 +356,7 @@ function roomTimelineDoors({
           <FixedValueChip label={destination.label} />
         ) : (
           <span className="timeline-leave-door">
-            <DoorChips chips={[{ ...chip, picked: true }]} label="Exit door" />
+            <DoorChips chips={[chip]} label="Exit door" />
           </span>
         );
       return {

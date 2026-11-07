@@ -14,6 +14,7 @@ import type { PlannerApplication } from '@planner/composition/createApplication'
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectUndoRequested } from '@planner/state/projectWorkspaceSlice';
 import { renderWorkspace } from '@planner-test/support/biome-workbench';
+import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
 
 afterEach(() => cleanup());
 
@@ -114,8 +115,7 @@ describe('challenge switch rows on the room Overview', () => {
     await pick(user, 'Spot 1', /Infernal Trove/);
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
-    await user.click(screen.getByRole('button', { name: 'Infernal Trove ▸' }));
-    await user.click(await screen.findByRole('button', { name: 'Use Infernal Trove' }));
+    await pickRoomObjectAction(user, 'Infernal Trove', 'Use Infernal Trove');
     expect(
       hostRoom(application).roomActions.order.some(
         (reference) => reference.kind === 'interactChallengeSwitch',
@@ -123,24 +123,26 @@ describe('challenge switch rows on the room Overview', () => {
     ).toBe(true);
   });
 
-  it("edits a pressed switch's outcome and Nectar on its Timeline row", async () => {
+  it("picks a pressed switch's outcome with or without its Nectar on its Timeline row", async () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     await pick(user, 'Spot 1', /Unseen Sigil/);
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await user.click(screen.getByRole('button', { name: 'Unseen Sigil ▸' }));
-    await user.click(await screen.findByRole('button', { name: 'Use Unseen Sigil' }));
+    await pickRoomObjectAction(user, 'Unseen Sigil', 'Use Unseen Sigil');
 
-    await user.click(screen.getByRole('button', { name: 'Nectar dropped' }));
-    expect(hostRoom(application).challengeSwitch?.nectarDropped).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Switch outcome: succeed' }));
+    await user.click(screen.getByRole('option', { name: 'succeed with Nectar' }));
+    expect(hostRoom(application).challengeSwitch).toMatchObject({
+      outcome: 'hitless',
+      nectarDropped: true,
+    });
 
-    await user.click(screen.getByRole('button', { name: 'Switch outcome: Hitless' }));
-    await user.click(screen.getByRole('option', { name: 'Failed' }));
+    await user.click(screen.getByRole('button', { name: 'Switch outcome: succeed with Nectar' }));
+    await user.click(screen.getByRole('option', { name: 'fail' }));
     expect(hostRoom(application).challengeSwitch).toMatchObject({
       outcome: 'failed',
       nectarDropped: false,
     });
-    expect(screen.queryByRole('button', { name: 'Nectar dropped' })).toBeNull();
   });
 });

@@ -850,7 +850,6 @@ export function DoorChips({
           className="timeline-door-chip"
           data-missing={chip.missing}
           data-note-active={chip.key === activeKey || undefined}
-          data-picked={chip.picked || undefined}
           data-unavailable={chip.unavailable || undefined}
           key={chip.key}
           role="listitem"
@@ -1017,7 +1016,7 @@ export function BatchExitPicker({
     node.targets.length === 1 && additional.length === 0 && node.missingTargets.length === 0;
   if (lone) {
     const target = node.targets[0]!;
-    // The lone door is the way out: shown as the picked chip, with nothing to pick.
+    // The lone door is the way out: shown as its chip, with nothing to pick.
     return (
       <span className="timeline-leave-door">
         <DoorChips
@@ -1027,7 +1026,6 @@ export function BatchExitPicker({
               label: `Door ${target.index} · ${target.door.room.label}`,
               roomIcon: target.door.room.roomIcon,
               rewards: doorRewardIcons(target, 'final'),
-              picked: true,
             },
           ]}
           label="Exit door"

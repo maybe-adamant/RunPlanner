@@ -35,7 +35,7 @@ import { ActionIcon } from '@planner/ui/controls/ActionIcon';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 
-/** A Postboss rack row: the keepsake held there, unchanged or swapped in. */
+/** A Postboss rack row: "and swap" the keepsake held going in for the picked one, or "and equip" it. */
 function KeepsakeRackTimelineContent({
   interactions,
   selection,
@@ -56,8 +56,11 @@ function KeepsakeRackTimelineContent({
   const held = selection.heldKeepsake;
   return (
     <div className="room-keepsake-action room-keepsake-chips">
-      {held === undefined ? null : (
+      {held === undefined ? (
+        <strong>and equip</strong>
+      ) : (
         <>
+          <strong>and swap</strong>
           <ArtworkChip icon={keepsakeArtwork[held.key]} label={held.label} />
           <span aria-hidden="true" className="row-reward-arrow">
             →

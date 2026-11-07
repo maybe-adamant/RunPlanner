@@ -49,6 +49,6 @@ export function UnlockedDoor({
   return chip === undefined ? (
     <span>{label}</span>
   ) : (
-    <DoorChips chips={[{ ...chip, picked: false, locked: false }]} label={label} />
+    <DoorChips chips={[{ ...chip, locked: false }]} label={label} />
   );
 }

@@ -43,6 +43,7 @@ import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderH
 import {
   RoomAddArea,
   RoomAddGroupMenu,
+  RoomAddObjectEntry,
   type RoomAddAction,
   type RoomAddGroup,
 } from './RoomAddMenu';
@@ -225,28 +226,30 @@ function WorkbenchAddArea({
         />
       ),
     })),
-    // A room object's own optional pickups (a Shrine delivery) sit beside it.
+    // A room object's own optional pickups (a Shrine delivery) sit beside it; a
+    // challenge switch's use and claims are its own object entry.
     ...[...groups.entries()]
       .filter(([, entry]) => entry.object !== undefined)
       .map(([key, entry]) => ({
         rank: objectOrder.indexOf(entry.object!) + 0.5,
-        node: (
-          <li key={key}>
-            <RoomAddGroupMenu
+        node:
+          entry.object === 'challengeSwitch' ? (
+            <RoomAddObjectEntry
               group={{
                 ...toGroup(key, entry),
-                ...(entry.object === 'challengeSwitch'
-                  ? {
-                      icon:
-                        switchKind === undefined
-                          ? roomObjectIcon('challengeSwitch')
-                          : challengeSwitchIcon(switchKind),
-                    }
-                  : {}),
+                icon:
+                  switchKind === undefined
+                    ? roomObjectIcon('challengeSwitch')
+                    : challengeSwitchIcon(switchKind),
               }}
+              key={key}
+              object={entry.object}
             />
-          </li>
-        ),
+          ) : (
+            <li key={key}>
+              <RoomAddGroupMenu group={toGroup(key, entry)} />
+            </li>
+          ),
       })),
     ...(doors?.object === undefined ? [] : [{ rank: objectOrder.length + 1, node: doors.object }]),
     ...extraObjects.map((node) => ({ rank: objectOrder.length + 1, node })),

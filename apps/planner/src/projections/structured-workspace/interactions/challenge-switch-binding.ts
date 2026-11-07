@@ -34,13 +34,12 @@ export function bindChallengeSwitchInteraction(
   })();
   const intent = <Command>(command: Command) => Object.freeze({ command });
   return Object.freeze({
-    outcomeIntentFor: (value: NonNullable<typeof outcome>['current']) => {
+    outcomeIntentFor: (value: NonNullable<typeof outcome>['current'], nectarDropped: boolean) => {
       const choice = outcome?.choices.find((candidate) => candidate.outcome === value);
-      return choice === undefined ? undefined : intent(choice.command);
+      return choice === undefined
+        ? undefined
+        : intent(Object.freeze({ ...choice.command, nectarDropped }));
     },
-    ...(outcome?.nectarCommand === undefined
-      ? {}
-      : { nectarIntent: intent(outcome.nectarCommand) }),
     key: requirement.interactionKey,
     owner,
     observeIntentFor: (variantKey: string | null) =>

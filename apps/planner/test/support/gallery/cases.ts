@@ -8,6 +8,7 @@ import {
   createIncomingRewardAddress,
   createNemesisRandomEventAddress,
   createOccurrenceId,
+  createPostbossKeepsakeSelectionAddress,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createRoomActionAddress,
@@ -422,6 +423,43 @@ export const galleryCases: readonly GalleryCase[] = [
       appendRoomAction('F', 'golden-f-b5-e1', { kind: 'interactChallengeSwitch' }),
     ],
     target: room('F', 'golden-f-b5-e1'),
+  },
+  {
+    id: 'perfect-clear-switch',
+    label: 'Unseen Sigil used, succeeding with its Nectar',
+    shows: ['challenge switch outcome'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceChallengeSwitch',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b5-e1'),
+        variantKey: 'PerfectClearChallengeSwitch_Pom',
+      }),
+      (project) => ({
+        kind: 'ReplaceChallengeSwitchOutcome',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b5-e1'),
+        outcome: 'hitless',
+        nectarDropped: true,
+      }),
+      appendRoomAction('F', 'golden-f-b5-e1', { kind: 'interactChallengeSwitch' }),
+    ],
+    target: room('F', 'golden-f-b5-e1'),
+  },
+  {
+    id: 'keepsake-rack-swap',
+    label: 'Keepsake Rack swapping the held keepsake',
+    shows: ['Keepsake Rack'],
+    project: loadUnderworldFGCheckpoint,
+    commands: [
+      (project) => ({
+        kind: 'ReplacePostbossKeepsake',
+        selection: createPostbossKeepsakeSelectionAddress(
+          occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
+        ),
+        keepsakeKey: 'BlockDeathKeepsake',
+      }),
+    ],
+    target: room('F', 'golden-f-preboss-shop:postboss'),
   },
   {
     id: 'anchors-well-switch',

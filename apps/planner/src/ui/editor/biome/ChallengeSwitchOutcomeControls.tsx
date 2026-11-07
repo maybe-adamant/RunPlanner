@@ -6,10 +6,11 @@ import {
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 
-/** How the pressed switch's fight ended, and its bonus Nectar. */
+const nectarIcon = rewardIcon('GiftDrop');
+
+/** How the pressed switch's fight ended, with the bonus Nectar as its own choice. */
 export function ChallengeSwitchOutcomeControls({
   interactions,
   outcome,
@@ -22,41 +23,46 @@ export function ChallengeSwitchOutcomeControls({
     interactions.challengeSwitches,
     outcome.interactionKey,
   );
-  const currentLabel =
-    outcome.choices.find((choice) => choice.outcome === outcome.current)?.label ?? outcome.current;
+  const spoken = (choice: WorkspaceChallengeSwitchOutcome['choices'][number]) =>
+    choice.nectar ? `${choice.label} with Nectar` : choice.label;
+  const current = outcome.choices.find((choice) => choice.key === outcome.current);
+  const currentLabel = current?.label ?? outcome.current;
   return (
     <div className="room-action-switch-outcome">
+      <strong>and</strong>
       <ContextualPicker<string>
-        ariaLabel={`Switch outcome: ${currentLabel}`}
+        ariaLabel={`Switch outcome: ${current === undefined ? currentLabel : spoken(current)}`}
         id={`switch-outcome-${outcome.interactionKey}`}
+        itemTrailIcon={(item) =>
+          outcome.choices.find((choice) => choice.key === item.value)?.nectar === true
+            ? nectarIcon
+            : undefined
+        }
         label=""
         layout="inline"
         model={declaredChoicesPicker(
           outcome.choices.map((choice) => ({
-            key: choice.outcome,
-            value: choice.outcome,
+            key: choice.key,
+            value: choice.key,
             label: choice.label,
+            ...(choice.nectar ? { ariaLabel: spoken(choice) } : {}),
           })),
           outcome.current,
+          'Outcome',
         )}
-        onSelect={(value) => {
-          if (value === outcome.current) return;
-          const intent = interaction.outcomeIntentFor(value as typeof outcome.current);
+        onSelect={(key) => {
+          if (key === outcome.current) return;
+          const choice = outcome.choices.find((candidate) => candidate.key === key);
+          if (choice === undefined) return;
+          const intent = interaction.outcomeIntentFor(choice.outcome, choice.nectar);
           if (intent !== undefined) executeIntent(intent);
         }}
         placeholder={currentLabel}
         searchable={false}
         triggerLabel={currentLabel}
         triggerSize="content"
+        {...(current?.nectar === true ? { triggerTrailIcon: nectarIcon } : {})}
       />
-      {outcome.nectar === undefined || interaction.nectarIntent === undefined ? null : (
-        <IconToggle
-          icon={rewardIcon('GiftDrop')}
-          name="Nectar dropped"
-          onToggle={() => executeIntent(interaction.nectarIntent!)}
-          pressed={outcome.nectar.dropped}
-        />
-      )}
     </div>
   );
 }

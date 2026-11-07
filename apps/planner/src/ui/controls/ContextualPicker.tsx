@@ -67,6 +67,8 @@ interface ContextualPickerProps<T> {
   readonly triggerHint?: string;
   /** An image shown before the trigger's text. */
   readonly triggerIcon?: ArtworkSource | undefined;
+  /** An image shown after the trigger's text, such as a pickup the value adds. */
+  readonly triggerTrailIcon?: ArtworkSource | undefined;
   /**
    * An empty icon chip shows `?`: the value may stay unknown. Without it an empty chip is a
    * dashed slot still to choose.
@@ -372,6 +374,7 @@ export function ContextualPicker<T>({
   triggerPartsSeparator = ' · ',
   triggerHint,
   triggerIcon,
+  triggerTrailIcon,
   triggerUnknown = false,
   triggerBadge,
   triggerParts,
@@ -523,12 +526,20 @@ export function ContextualPicker<T>({
                   </Fragment>
                 ))}
               </span>
-            ) : triggerIcon === undefined || disabled ? (
+            ) : (triggerIcon === undefined && triggerTrailIcon === undefined) || disabled ? (
               triggerText
             ) : (
               <span className="contextual-picker-trigger-value">
-                <ArtworkIcon className="contextual-picker-trigger-image" source={triggerIcon} />
+                {triggerIcon === undefined ? null : (
+                  <ArtworkIcon className="contextual-picker-trigger-image" source={triggerIcon} />
+                )}
                 {triggerText}
+                {triggerTrailIcon === undefined ? null : (
+                  <ArtworkIcon
+                    className="contextual-picker-trigger-image"
+                    source={triggerTrailIcon}
+                  />
+                )}
               </span>
             )}
           </button>

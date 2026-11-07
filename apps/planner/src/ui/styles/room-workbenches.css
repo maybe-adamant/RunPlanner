@@ -2842,10 +2842,6 @@
   background: rgb(255 255 255 / 5%);
 }
 
-.timeline-door-chip[data-picked] {
-  border-color: color-mix(in srgb, var(--selection-accent) 70%, transparent);
-}
-
 .timeline-door-chip[data-missing] {
   border-style: dashed;
   border-color: var(--border);
