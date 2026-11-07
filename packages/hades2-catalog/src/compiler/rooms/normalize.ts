@@ -5,6 +5,7 @@ import type {
   EncounterSet,
   ExitTypeDeclaration,
   RoomDeclaration,
+  RoomMapPoints,
 } from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 
@@ -12,6 +13,7 @@ import type { RawRoomDeclaration } from '../../declarations/index';
 import { createCollection } from '../common';
 import { fail } from '../errors';
 import { validateRoomCollectionClosure } from './collection-closure';
+import { normalizeRoomMapPoints } from './map-points';
 import { normalizeRoom } from './normalize-room';
 import { validateRoomTemplateContracts } from './template-contracts';
 
@@ -20,6 +22,7 @@ export function normalizeRooms(
   rawRooms: readonly RawRoomDeclaration[],
   rawExitDoorSetupOrders: Readonly<Record<string, readonly (readonly [number, string])[]>>,
   rawSwappableBreakables: Readonly<Record<string, number>>,
+  rawRoomMapPoints: Readonly<Record<string, RoomMapPoints>>,
   rewards: RewardKernelCatalog,
   encounterEnvelopes: CatalogCollection<EncounterEnvelope>,
   encounterDefinitions: CatalogCollection<EncounterDefinition>,
@@ -36,6 +39,9 @@ export function normalizeRooms(
     if (!Number.isInteger(count) || count <= 0)
       fail(`swappableBreakables.${gameName}`, 'must be a positive integer');
   }
+  for (const gameName of Object.keys(rawRoomMapPoints))
+    if (!declaredGameNames.has(gameName))
+      fail(`roomMapPoints.${gameName}`, 'is not a declared room');
   const rooms = rawRooms.map((room, roomIndex) =>
     normalizeRoom(
       room,
@@ -50,6 +56,9 @@ export function normalizeRooms(
         : undefined,
       Object.hasOwn(rawSwappableBreakables, room.gameName)
         ? rawSwappableBreakables[room.gameName]
+        : undefined,
+      Object.hasOwn(rawRoomMapPoints, room.gameName)
+        ? normalizeRoomMapPoints(rawRoomMapPoints[room.gameName]!, `roomMapPoints.${room.gameName}`)
         : undefined,
     ),
   );

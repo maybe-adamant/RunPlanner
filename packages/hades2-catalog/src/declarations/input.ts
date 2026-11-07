@@ -3,6 +3,7 @@ import type {
   ExitCompatibilityPolicy,
   GoldCatalogDeclaration,
   RequiredRewardDropDeclaration,
+  RoomMapPoints,
   RouteDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { RawArcanaCardDeclaration, RawFearVowDeclaration } from './arcana-fear-types';
@@ -57,6 +58,8 @@ export interface RawCatalogInput {
   >;
   /** Golden-urn swap candidates on each room's map, by room game name. */
   readonly swappableBreakables: Readonly<Record<string, number>>;
+  /** Map points of each room, by room game name. */
+  readonly roomMapPoints: Readonly<Record<string, RoomMapPoints>>;
   readonly biomeLayouts: readonly RawBiomeLayoutDeclaration[];
   readonly traitCatalog: RawTraitCatalogInput;
 }

@@ -128,6 +128,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     input.rooms,
     input.exitDoorSetupOrders,
     input.swappableBreakables,
+    input.roomMapPoints,
     rewards,
     encounterEnvelopes,
     encounterDefinitions,

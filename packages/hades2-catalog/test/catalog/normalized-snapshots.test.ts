@@ -59,7 +59,8 @@ function normalizedBiomeSnapshot(biomeKey: string) {
   ].filter((key): key is string => key !== undefined);
   return {
     layout: catalog.biomeLayouts.byKey[biomeKey],
-    rooms,
+    // Map points are display positions with their own regeneration witness.
+    rooms: rooms.map((room) => ({ ...room, mapPoints: undefined })),
     encounterEnvelopes: encounterEnvelopeKeys.map((key) => catalog.encounterEnvelopes.byKey[key]),
     encounterDefinitions: encounterDefinitionKeys.map(
       (key) => catalog.encounterDefinitions.byKey[key],

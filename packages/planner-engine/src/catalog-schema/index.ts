@@ -1251,6 +1251,8 @@ export interface RoomDeclaration {
   readonly fieldsOptionalRewards?: FieldsOptionalRewardDescriptor;
   /** Exact room-scoped physical points for authored Fields combat layouts. */
   readonly fieldsSpatial?: FieldsSpatialDeclaration;
+  /** Positions of the room's map things the editor can place; no simulation reads them. */
+  readonly mapPoints?: RoomMapPoints;
   /** Source-owned zero-cost Infernal Contract pedestal at qualifying Preboss rooms. */
   readonly infernalContractReward?: {
     readonly entryKey: 'infernalContractReward';
@@ -1285,6 +1287,38 @@ export interface FieldsSpatialDeclaration {
     readonly cagePointId: number;
     readonly spawnPointId: number;
   }[];
+}
+
+/**
+ * A thing placed on a room's map: its native ObjectId, unique only within that
+ * map, at its world position in map units on the unflipped map.
+ */
+export interface RoomMapPoint {
+  readonly id: number;
+  readonly x: number;
+  readonly y: number;
+}
+
+export interface RoomMapExitDoor extends RoomMapPoint {
+  readonly obstacleName: string;
+}
+
+/** A room's map things by family, each family ascending by ObjectId. */
+export interface RoomMapPoints {
+  /** Obstacles whose type inherits `ExitDoor`. */
+  readonly exitDoors: readonly RoomMapExitDoor[];
+  readonly heroStarts: readonly RoomMapPoint[];
+  readonly heroEnds: readonly RoomMapPoint[];
+  /** `SecretPoint`s; a Chaos gate's spawn point index is its 1-based position here. */
+  readonly secretPoints: readonly RoomMapPoint[];
+  readonly challengeSwitchAnchors: readonly RoomMapPoint[];
+  /** RoomData `WellShopChallengeBaseId`: the anchor the Well always takes. */
+  readonly wellAnchorId?: number;
+  /** The points of the room's declared Fields cage and optional reward point IDs. */
+  readonly fieldsCagePoints?: readonly RoomMapPoint[];
+  readonly fieldsOptionalPoints?: readonly RoomMapPoint[];
+  /** The points of the room's declared cocoon reward point IDs. */
+  readonly cocoonRewardPoints?: readonly RoomMapPoint[];
 }
 
 export type AuthoredFieldInitialization<T> =

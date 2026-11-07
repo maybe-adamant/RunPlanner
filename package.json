@@ -60,7 +60,8 @@
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "node scripts/check.mjs"
+    "check": "node scripts/check.mjs",
+    "catalog:map-points": "node scripts/extract-room-map-points.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
