@@ -127,6 +127,7 @@ modeled counter transitions, not scheduler rows:
 - Experimental Hammer expiry;
 - Chaos curse clocks and blessing maturation;
 - Stygian Well duration and consumption state;
+- Lion Fang decay and Discordant Bell growth;
 - Traces of Spirit's Magick grants, folded into the Run State maxima; and
 - other declaration-owned encounter-use expiry.
 
@@ -168,10 +169,8 @@ domain owners.
 | Judgment                      | Active Judgment Arcana exists before the boss                                                              | Eligible non-final boss defeat                                                         | One ordered authored Arcana set                                  | Fixed `bossDefeated` automatic outcome                                    | It is an event-triggered maturity sharing the boss signal already needed by Extended Well effects.                                   |
 | Crystal Figurine              | Equip or volatile Gift Gift Gift replay records one pending use                                            | Eligible non-final boss defeat, after Judgment                                         | One ordered authored Arcana set, then consume the pending use    | Fixed `bossDefeated` automatic outcome                                    | It is another event-triggered maturity and its order relative to Judgment is semantic.                                               |
 
-The boss signal has its own fixed order: boss-counted Well instances advance
-first, Judgment settles second, and Crystal Figurine settles from the resulting
-Arcana state. The encounter-end order remains the separate order documented
-below.
+The boss signal and the encounter-end signal each have a fixed order, given
+in [One end-of-combat order](#one-end-of-combat-order).
 
 ### Explicitly excluded adjacent effects
 
@@ -205,19 +204,33 @@ continue to obey these invariants:
 
 ## Shared contract
 
-### One encounter-end transition owns all clocks
+### One end-of-combat order
 
-For each emitted `encounterEndEffectsApplied` event, the engine currently
-applies effects in this order:
+A Boss's combat ends at two seams, the boss seam first; every other combat
+phase has only the encounter-end seam.
+
+The boss seam settles on each `bossDefeated` event, before the phase's
+completion and end effects:
+
+1. boss-counted Stygian Well instances (Extended Well effects) advance and
+   White Antler's max-health cap expires, at every boss, final ones included;
+2. on a non-final Boss only, Personal Loan's retained rarity block folds;
+3. Judgment settles its authored Arcana set; and
+4. Crystal Figurine settles from the resulting Arcana state and consumes its
+   pending use.
+
+The encounter-end seam then settles on each emitted
+`encounterEndEffectsApplied` event:
 
 1. Experimental Hammer expiry;
 2. Chaos clocks;
-3. Stygian Well encounter-use expiry;
+3. Stygian Well encounter-use expiry, the encounter-counted instances only;
 4. declaration-clocked pickup producer progress, currently Supply Chain;
-5. Shrine delivery countdown;
-6. Steady Growth progress and resolved rarity target;
-7. Transcendent Embryo progress and resolved replacement; and
-8. publication of Supply Chain and Shrine acquisition frontiers from the final
+5. Shrine delivery countdown, a delivery falling due spawning here;
+6. Lion Fang decay and Discordant Bell growth;
+7. Steady Growth progress and resolved rarity target;
+8. Transcendent Embryo progress and resolved replacement; and
+9. publication of Supply Chain and Shrine acquisition frontiers from the final
    post-automatic state.
 
 The last step is important. A generated pickup cannot expose a frontier which a
@@ -227,9 +240,10 @@ enough to change another automatic effect at that same encounter end.
 
 Catalog flags, not biome-name branches, control advancement:
 
-- `ignoreEncounterUses` suppresses encounter-use clocks;
-- `skipRoomsPerUpgrade` suppresses Steady Growth, Embryo, and trait pickup
-  producer clocks;
+- `ignoreEncounterUses` suppresses encounter-use clocks (Hammer, Chaos, Well
+  encounter uses and the Shrine countdown);
+- `skipRoomsPerUpgrade` suppresses trait pickup producer clocks, Lion Fang and
+  Discordant Bell, Steady Growth and Embryo;
 - `skipTimedDropResources` holds a due Supply Chain drop at interval−1 in Chaos
   and Zagreus rooms; `skipTimedDropResourcesInDream` does the same in declared
   boss rooms only on Dream routes. Before the threshold, progress still advances.
@@ -258,8 +272,9 @@ Planner disposition for the lifecycle seams these effects consume:
   settles its authored rarity target at that checkpoint and publishes one fixed
   automatic timeline effect inside End Encounter, after any required pre-effect
   phase actions. It introduces no second lifecycle clock or scheduler.
-- One encounter-end checkpoint settles every fixed automatic outcome, in the
-  order above, before it publishes any pickup created by a matured clock.
+- The boss seam settles Judgment and Crystal Figurine; the encounter-end
+  checkpoint then settles Steady Growth and Embryo, in the order above, before
+  it publishes any pickup created by a matured clock.
   Supply Chain and Shrine pickup frontiers observe the final post-automatic
   state and become ordinary acquisitions only after the checkpoint; their
   rows may interleave with other pickups permitted in that interval, and

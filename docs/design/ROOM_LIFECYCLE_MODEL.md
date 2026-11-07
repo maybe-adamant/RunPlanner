@@ -153,7 +153,7 @@ observe it.
 | `spawnRequiredObjects`                                    |                                    | Entered-room state                                       | Emits declaration-owned required-object spawns and activates their exit blockers                                                                                                                                                                                              |
 | `startEncounter(phase)` (editor **Encounter**)            | Grouped around an exact transition | State before the declared phase                          | Begins the closed mandatory start sequence and ends with the encounter active; emits occurrence/start and increments declared encounter-depth axes. A required pre-combat choice may share the sequence only when no unrelated player action can interleave                   |
 | `completeEncounter(phase)`                                | Exact internal checkpoint          | State after the phase's combat or noncombat work         | Completion identity, encounter-local offers and phase blockers settle, even for noncombat, Fig Leaf-skipped and end-effect-suppressed phases; releases phase-local blockers. Not a player-facing row                                                                          |
-| `encounterEndEffectsApplied` (editor **Encounter ended**) | Distinct effect checkpoint         | State after completion and any intervening required work | The visible boundary starts the post-combat interval; end effects apply at the profile's declared point, after required rewards in O ship phases. Suppressed phases keep the boundary without the effect event                                                                |
+| `encounterEndEffectsApplied` (editor **Encounter ended**) | Distinct effect checkpoint         | State after completion and any intervening required work | The visible boundary starts the post-combat interval; end effects follow completion, but a reward-wheel O ship phase defers only them past its required post-combat actions. Suppressed phases keep the boundary without the effect event                                     |
 | `completeRequiredObjects`                                 |                                    | State after the declared required-object work            | Emits paired completion facts and releases the corresponding blockers                                                                                                                                                                                                         |
 | Required-object barrier cleared                           | Derived                            | Room Action dependencies and fixed roster checkpoints    | No authored clear-barrier action: required object and encounter completion change the inputs until the fixed next transition becomes available                                                                                                                                |
 | `advanceProducer(point)`                                  |                                    | State at the producer's named point                      | Advances an already-resolved producer, emitting its acquisition roles; projects loot/use history and updates acquisition-driven counters. Never regenerates an offer                                                                                                          |
@@ -290,12 +290,15 @@ positions: no encounter start or completion is executed for a Fields Passive
 event, and its history is unchanged.
 
 **Automatic outcomes.** Fixed automatic outcomes (Steady Growth, Transcendent
-Embryo, Judgment, Crystal Figurine) settle at their seam (encounter end for
-[timed outcomes](TRAIT_OFFERS.md#timed-outcomes)) and are never
-reorderable Room Actions. One encounter-end checkpoint settles every fixed
-outcome before it publishes pickups created by matured clocks; the
-[scheduled-outcomes audit](../audits/rooms-and-routes/SCHEDULED_AND_AUTOMATIC_TIMELINE_OUTCOMES_AUDIT.md#encounter-end-and-boss-contacts)
-owns the order and the Personal Loan and Steady Growth contacts.
+Embryo, Judgment, Crystal Figurine) settle at their seam and are never
+reorderable Room Actions: Judgment and Crystal Figurine at a non-final Boss's
+`bossDefeated` seam, the [timed outcomes](TRAIT_OFFERS.md#timed-outcomes) at
+encounter end. At a Boss the boss seam settles first; the encounter-end
+checkpoint then settles its effects before it publishes pickups created by
+matured clocks. The
+[scheduled-outcomes audit](../audits/rooms-and-routes/SCHEDULED_AND_AUTOMATIC_TIMELINE_OUTCOMES_AUDIT.md#one-end-of-combat-order)
+owns the full end-of-combat order and the Personal Loan and Steady Growth
+contacts.
 
 ## Room Stages
 
