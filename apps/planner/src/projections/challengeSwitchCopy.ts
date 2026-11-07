@@ -1,4 +1,7 @@
-import type { ChallengeSwitchKind } from '@run-planner/engine/catalog-schema';
+import type {
+  ChallengeSwitchKind,
+  ChallengeSwitchRequirementGate,
+} from '@run-planner/engine/catalog-schema';
 import type { ChallengeSwitchPlacementIssue } from '@run-planner/engine/simulation';
 
 /** Each switch kind's in-game name. */
@@ -27,13 +30,12 @@ const occupantNames: Readonly<Record<ChallengeSwitchAnchorOccupant, string>> = O
   hermesShrine: 'Hermes Shrine',
 });
 
-const hexGate = "Needs a Hex whose Path of Stars isn't complete.";
-
-/** The variants whose own gate is not the kind's, by native obstacle name. */
-const variantGates: Readonly<Record<string, string>> = Object.freeze({
-  PerfectClearChallengeSwitch_Pom: 'Needs a boon a Pom can level.',
-  EliteChallengeSwitch_Talent: hexGate,
-});
+/** Each native switch requirement as the need it names. */
+const requirementSentences: Readonly<Record<ChallengeSwitchRequirementGate, string>> =
+  Object.freeze({
+    pomLegal: 'Needs a boon a Pom can level.',
+    talentLegal: "Needs a Hex whose Path of Stars isn't complete.",
+  });
 
 function joined(names: readonly string[]): string {
   return names.length <= 1
@@ -57,9 +59,9 @@ export function challengeSwitchRuleSentence(rule: ChallengeSwitchRule): string {
     case 'kindUnavailable':
       return rule.gate.kind === 'biomeDepth'
         ? `${challengeSwitchKindLabel(rule.switchKind)}s need biome depth ${rule.gate.minimumBiomeDepth}; this room is at ${rule.gate.biomeDepthCache}.`
-        : hexGate;
+        : requirementSentences[rule.gate.requirement];
     case 'variantUnavailable':
-      return variantGates[rule.variantKey] ?? "This reward can't be rolled here.";
+      return requirementSentences[rule.requirement];
     case 'lockedDoors':
       return 'A room with locked doors never holds a switch.';
   }

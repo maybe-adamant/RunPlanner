@@ -295,13 +295,26 @@ describe('challenge switch finding copy', () => {
       { reason: 'biomeDepth', biomeDepthCache: 1, minimumBiomeDepth: 5 },
       { reason: 'recentSwitch', roomsSinceLast: 2, minimumRoomsSinceLast: 3 },
       { reason: 'noFreeAnchor', anchorCount: 2, occupants: ['stygianWell', 'hermesShrine'] },
-      { reason: 'kindUnavailable', switchKind: 'elite', gate: { kind: 'requirement' } },
+      {
+        reason: 'kindUnavailable',
+        switchKind: 'elite',
+        gate: { kind: 'requirement', requirement: 'talentLegal' },
+      },
       {
         reason: 'kindUnavailable',
         switchKind: 'elite',
         gate: { kind: 'biomeDepth', biomeDepthCache: 2, minimumBiomeDepth: 3 },
       },
-      { reason: 'variantUnavailable', variantKey: 'PerfectClearChallengeSwitch_Pom' },
+      {
+        reason: 'variantUnavailable',
+        variantKey: 'PerfectClearChallengeSwitch_Pom',
+        requirement: 'pomLegal',
+      },
+      {
+        reason: 'variantUnavailable',
+        variantKey: 'EliteChallengeSwitch_Talent',
+        requirement: 'talentLegal',
+      },
     ];
     const copy = rules.map((rule) =>
       presentFinding(finding('challengeSwitchPlacementUnavailable', rule)),
@@ -315,6 +328,7 @@ describe('challenge switch finding copy', () => {
       "Needs a Hex whose Path of Stars isn't complete.",
       'Moon Monuments need biome depth 3; this room is at 2.',
       'Needs a boon a Pom can level.',
+      "Needs a Hex whose Path of Stars isn't complete.",
     ]);
   });
 

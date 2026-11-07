@@ -1573,6 +1573,23 @@ export const CHALLENGE_SWITCH_KINDS = Object.freeze([
   'elite',
 ] as const satisfies readonly ChallengeSwitchKind[]);
 
+/**
+ * What a switch gate's native requirement asks of the run: `StackLegal` (a
+ * trait a Pom can level) or `TalentLegal` (a Hex whose Path of Stars is open).
+ */
+export type ChallengeSwitchRequirementGate = 'pomLegal' | 'talentLegal';
+
+export const CHALLENGE_SWITCH_REQUIREMENT_GATES = Object.freeze([
+  'pomLegal',
+  'talentLegal',
+] as const satisfies readonly ChallengeSwitchRequirementGate[]);
+
+/** A kind's or variant's native requirement, named by the gate it is. */
+export interface ChallengeSwitchRequirement {
+  readonly gate: ChallengeSwitchRequirementGate;
+  readonly expression: RequirementExpression;
+}
+
 /** One switch kind's gates beyond the shared spawn rules. */
 export interface ChallengeSwitchKindDeclaration {
   readonly key: ChallengeSwitchKind;
@@ -1581,7 +1598,7 @@ export interface ChallengeSwitchKindDeclaration {
   /** The kind's own `BiomeDepthCache` floor, below the shared one when lower. */
   readonly minimumBiomeDepth?: number;
   /** The room's kind-level requirement (`EliteSwitchRequirements`). */
-  readonly requirement?: RequirementExpression;
+  readonly requirement?: ChallengeSwitchRequirement;
   /** The reward a hit turns the claim into; absent where a hit changes no reward. */
   readonly hitRewardType?: string;
   /** The claim pays gold that decays with the clear time instead of a consumable. */
@@ -1597,7 +1614,7 @@ export interface ChallengeSwitchVariantDeclaration {
   readonly weight: number;
   /** The reward its clean claim spawns. */
   readonly rewardType: string;
-  readonly requirement?: RequirementExpression;
+  readonly requirement?: ChallengeSwitchRequirement;
 }
 
 /** A room able to hold a switch: a `ChallengeSwitchBase` anchor and a nonzero chance. */

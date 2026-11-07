@@ -83,7 +83,7 @@ export const challengeSwitches = {
       // ObstacleData.lua EliteChallengeSwitch BiomeDepthCache >= 3;
       // RoomData.lua EliteSwitchRequirements TalentLegal.
       minimumBiomeDepth: 3,
-      requirement: talentLegal,
+      requirement: { gate: 'talentLegal', expression: talentLegal },
       goldReward: false,
     },
   ],
@@ -101,7 +101,7 @@ export const challengeSwitches = {
       switchKind: 'perfectClear',
       weight: 3,
       rewardType: 'StackUpgrade',
-      requirement: stackLegal,
+      requirement: { gate: 'pomLegal', expression: stackLegal },
     },
     {
       key: 'PerfectClearChallengeSwitch_MaxHealth',
@@ -114,7 +114,7 @@ export const challengeSwitches = {
       switchKind: 'elite',
       weight: 5,
       rewardType: 'TalentDrop',
-      requirement: talentLegal,
+      requirement: { gate: 'talentLegal', expression: talentLegal },
     },
     {
       key: 'EliteChallengeSwitch_MaxMana',

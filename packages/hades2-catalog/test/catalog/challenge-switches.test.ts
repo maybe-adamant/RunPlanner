@@ -25,14 +25,14 @@ describe('challenge switch declarations', () => {
         variant.switchKind,
         variant.weight,
         variant.rewardType,
-        variant.requirement !== undefined,
+        variant.requirement?.gate,
       ]),
     ).toEqual([
-      ['TimeChallengeSwitch_Money', 'time', 4, 'Money', false],
-      ['PerfectClearChallengeSwitch_Pom', 'perfectClear', 3, 'StackUpgrade', true],
-      ['PerfectClearChallengeSwitch_MaxHealth', 'perfectClear', 1, 'MaxHealthDrop', false],
-      ['EliteChallengeSwitch_Talent', 'elite', 5, 'TalentDrop', true],
-      ['EliteChallengeSwitch_MaxMana', 'elite', 2, 'MaxManaDrop', false],
+      ['TimeChallengeSwitch_Money', 'time', 4, 'Money', undefined],
+      ['PerfectClearChallengeSwitch_Pom', 'perfectClear', 3, 'StackUpgrade', 'pomLegal'],
+      ['PerfectClearChallengeSwitch_MaxHealth', 'perfectClear', 1, 'MaxHealthDrop', undefined],
+      ['EliteChallengeSwitch_Talent', 'elite', 5, 'TalentDrop', 'talentLegal'],
+      ['EliteChallengeSwitch_MaxMana', 'elite', 2, 'MaxManaDrop', undefined],
     ]);
     expect(switches.kinds.byKey.perfectClear).toMatchObject({
       defaultVariantKey: 'PerfectClearChallengeSwitch_Pom',
@@ -40,7 +40,7 @@ describe('challenge switch declarations', () => {
       goldReward: false,
     });
     expect(switches.kinds.byKey.elite?.minimumBiomeDepth).toBe(3);
-    expect(switches.kinds.byKey.elite?.requirement).toBeDefined();
+    expect(switches.kinds.byKey.elite?.requirement?.gate).toBe('talentLegal');
     expect(switches.kinds.byKey.time).toMatchObject({ goldReward: true });
     expect(switches.minimumRoomsSinceLast).toBe(3);
     expect(switches.claimGoldEstimate).toEqual({ value: 90, range: { min: 10, max: 100 } });
@@ -126,6 +126,14 @@ describe('challenge switch declarations', () => {
         raw.noSpawnRoomGameNames = [...(raw.noSpawnRoomGameNames as string[]), 'F_Boss01'];
       }),
     ).toThrow(/noSpawnRoomGameNames\[\d+\]: F_Boss01 is not an anchored room/);
+  });
+
+  it('refuses a requirement that names no switch gate', () => {
+    expect(
+      withSwitches((raw) => {
+        (raw.variants as { requirement?: { gate: string } }[])[1]!.requirement!.gate = 'stackLegal';
+      }),
+    ).toThrow(/variants\[1\]\.requirement\.gate: unknown requirement gate stackLegal/);
   });
 
   it('refuses a reward outside the lifecycle and a default from another kind', () => {

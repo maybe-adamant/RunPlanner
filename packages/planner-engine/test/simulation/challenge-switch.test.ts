@@ -243,7 +243,7 @@ describe('challenge switch spawn rules', () => {
         occurrenceId: 'golden-f-b5-e1',
         reason: 'kindUnavailable',
         switchKind: 'elite',
-        gate: { kind: 'requirement' },
+        gate: { kind: 'requirement', requirement: 'talentLegal' },
       },
     ]);
   });
@@ -281,7 +281,11 @@ describe('challenge switch spawn rules', () => {
         { variantKey: 'PerfectClearChallengeSwitch_Pom', outcome: 'hitless', nectarDropped: false },
       );
     expect(assess(0)).toEqual([
-      { reason: 'variantUnavailable', variantKey: 'PerfectClearChallengeSwitch_Pom' },
+      {
+        reason: 'variantUnavailable',
+        variantKey: 'PerfectClearChallengeSwitch_Pom',
+        requirement: 'pomLegal',
+      },
     ]);
     expect(assess(1)).toEqual([]);
   });

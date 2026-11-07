@@ -1,9 +1,11 @@
 import {
   CHALLENGE_SWITCH_KINDS,
+  CHALLENGE_SWITCH_REQUIREMENT_GATES,
   type CatalogCollection,
   type ChallengeSwitchCatalog,
   type ChallengeSwitchHostDeclaration,
   type ChallengeSwitchKindDeclaration,
+  type ChallengeSwitchRequirement,
   type ChallengeSwitchVariantDeclaration,
   type EncounterDefinition,
   type EncounterSet,
@@ -27,6 +29,15 @@ function requireRewardType(rewards: RewardKernelCatalog, rewardType: string, pat
   if (rewards.rewardTypes.byKey[rewardType] === undefined)
     fail(path, `unknown reward type ${rewardType}`);
   return rewardType;
+}
+
+function normalizeRequirement(
+  requirement: ChallengeSwitchRequirement,
+  path: string,
+): ChallengeSwitchRequirement {
+  if (!CHALLENGE_SWITCH_REQUIREMENT_GATES.includes(requirement.gate))
+    fail(`${path}.gate`, `unknown requirement gate ${String(requirement.gate)}`);
+  return Object.freeze({ gate: requirement.gate, expression: requirement.expression });
 }
 
 /**
@@ -134,7 +145,9 @@ export function normalizeChallengeSwitches(
         switchKind: variant.switchKind,
         weight: requirePositiveInteger(variant.weight, `${variantPath}.weight`),
         rewardType: lifecycleReward(variant.rewardType, `${variantPath}.rewardType`),
-        ...(variant.requirement === undefined ? {} : { requirement: variant.requirement }),
+        ...(variant.requirement === undefined
+          ? {}
+          : { requirement: normalizeRequirement(variant.requirement, `${variantPath}.requirement`) }),
       });
     }),
     `${path}.variants`,
@@ -169,7 +182,9 @@ export function normalizeChallengeSwitches(
                 `${kindPath}.minimumBiomeDepth`,
               ),
             }),
-        ...(kind.requirement === undefined ? {} : { requirement: kind.requirement }),
+        ...(kind.requirement === undefined
+          ? {}
+          : { requirement: normalizeRequirement(kind.requirement, `${kindPath}.requirement`) }),
         ...(kind.hitRewardType === undefined
           ? {}
           : { hitRewardType: lifecycleReward(kind.hitRewardType, `${kindPath}.hitRewardType`) }),

@@ -4,6 +4,7 @@ import type {
   ChallengeSwitchHostDeclaration,
   ChallengeSwitchKind,
   ChallengeSwitchKindDeclaration,
+  ChallengeSwitchRequirementGate,
 } from '../../catalog-schema';
 import type {
   AuthoredChallengeSwitch,
@@ -42,7 +43,11 @@ export type ChallengeSwitchPlacementIssue =
       readonly gate: ChallengeSwitchKindGate;
     }
   /** The variant's own gate (Pom: an upgradable trait; Path of Stars: `TalentLegal`). */
-  | { readonly reason: 'variantUnavailable'; readonly variantKey: string }
+  | {
+      readonly reason: 'variantUnavailable';
+      readonly variantKey: string;
+      readonly requirement: ChallengeSwitchRequirementGate;
+    }
   /** The room's doors were observed locked: the game rolls a lock only where no switch spawned. */
   | { readonly reason: 'lockedDoors' };
 
@@ -53,7 +58,7 @@ export type ChallengeSwitchKindGate =
       readonly biomeDepthCache: number;
       readonly minimumBiomeDepth: number;
     }
-  | { readonly kind: 'requirement' };
+  | { readonly kind: 'requirement'; readonly requirement: ChallengeSwitchRequirementGate };
 
 export interface ChallengeSwitchEntryFacts {
   readonly biomeDepthCache: number;
@@ -139,8 +144,8 @@ export function assessChallengeSwitchEntry(
               minimumBiomeDepth: kind.minimumBiomeDepth,
             })
           : kind.requirement !== undefined &&
-              !evaluateRequirement(kind.requirement, facts.requirements)
-            ? Object.freeze({ kind: 'requirement' as const })
+              !evaluateRequirement(kind.requirement.expression, facts.requirements)
+            ? Object.freeze({ kind: 'requirement' as const, requirement: kind.requirement.gate })
             : undefined,
       ],
     ),
@@ -158,8 +163,12 @@ export function assessChallengeSwitchEntry(
                 gate,
               })
             : variant.requirement !== undefined &&
-                !evaluateRequirement(variant.requirement, facts.requirements)
-              ? Object.freeze({ reason: 'variantUnavailable' as const, variantKey: variant.key })
+                !evaluateRequirement(variant.requirement.expression, facts.requirements)
+              ? Object.freeze({
+                  reason: 'variantUnavailable' as const,
+                  variantKey: variant.key,
+                  requirement: variant.requirement.gate,
+                })
               : undefined;
         return Object.freeze({
           variantKey: variant.key,
