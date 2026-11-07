@@ -308,7 +308,7 @@
 
 .biome-workspace[data-rail='folded']:not([data-rail-open])
   .biome-rail-node
-  > :is(.biome-rail-selection, .biome-rail-summary) {
+  > .biome-rail-selection {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -730,21 +730,10 @@
   vertical-align: -0.3rem;
 }
 
-.biome-rail-kicker,
-.biome-rail-summary,
 .biome-rail-selection,
 .biome-rail-status {
   color: #8f8c95;
   font-size: 0.7rem;
-}
-
-.biome-rail-kicker {
-  overflow: hidden;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
 }
 
 .biome-rail-heading {
@@ -762,7 +751,6 @@
   white-space: nowrap;
 }
 
-.biome-rail-summary,
 .biome-rail-selection {
   color: #c3a86f;
   overflow: hidden;
@@ -801,18 +789,6 @@
   color: var(--plan-end);
   font-size: 0.72rem;
   font-weight: 600;
-}
-
-.biome-rail-reward-row {
-  display: inline-flex;
-  gap: 0.1rem;
-  margin-right: 0.2rem;
-  vertical-align: -0.2rem;
-}
-
-.biome-rail-reward-row .biome-rail-reward-icon {
-  margin-right: 0;
-  vertical-align: baseline;
 }
 
 .biome-rail-reward-icon {
@@ -856,30 +832,6 @@
 
 .topology-removal-action {
   margin: 12px 14px 14px;
-}
-
-.exit-selection-control {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  margin: 12px 0;
-  padding: 8px 10px;
-  border: 1px solid #393a44;
-  border-radius: 8px;
-}
-
-.exit-selection-control legend {
-  padding: 0 4px;
-  color: #aaa7af;
-  font-size: 0.78rem;
-}
-
-.exit-selection-control label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: #d8d3cb;
-  font-size: 0.8rem;
 }
 
 .room-keepsake-control {
@@ -946,11 +898,6 @@
 .keepsake-equip-result-control > .field-control-inline {
   grid-template-columns: auto minmax(0, 1fr);
   column-gap: 6px;
-}
-
-.keepsake-equip-result-control > .field-description {
-  margin: 0;
-  white-space: normal;
 }
 
 .transcendent-embryo-outcome-row {

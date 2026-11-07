@@ -1,31 +1,3 @@
-.catalog-summary {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-}
-
-.catalog-summary div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 9px 0;
-  border-bottom: 1px solid #363741;
-}
-
-.catalog-summary dt {
-  color: #8e8c94;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.catalog-summary dd {
-  margin: 0;
-  color: #f3ede4;
-  font-variant-numeric: tabular-nums;
-}
-
 .about-popover {
   z-index: 100;
   width: min(480px, calc(100 * var(--app-vw) - 24px));

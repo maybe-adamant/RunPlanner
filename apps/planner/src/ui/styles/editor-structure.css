@@ -61,10 +61,6 @@
   gap: 6px;
 }
 
-.frontier-owner {
-  justify-content: flex-start;
-}
-
 .neutral-status {
   padding: 4px 8px;
   border: 1px solid #3b3c46;
@@ -72,14 +68,6 @@
   color: #aaa7af;
   background: rgb(255 255 255 / 3%);
   font-size: 0.75rem;
-}
-
-.panel-description {
-  max-width: 55ch;
-  margin: 10px 0 0;
-  color: #b9b6bd;
-  font-size: 0.92rem;
-  line-height: 1.5;
 }
 
 .route-index-panel {
@@ -149,18 +137,6 @@
   font-weight: 500;
 }
 
-.empty-topology {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.8fr);
-  gap: 24px;
-  margin-top: 24px;
-  padding: 20px;
-  border: 1px dashed #464752;
-  border-radius: 12px;
-  background: rgb(12 13 17 / 28%);
-}
-
-.empty-topology h3,
 .room-card h3 {
   margin: 0;
   color: #f4efe7;
@@ -168,20 +144,6 @@
   font-weight: 600;
 }
 
-.empty-topology p,
-.frontier-placeholder p:last-child {
-  margin: 7px 0 0;
-  color: #9f9ca5;
-  line-height: 1.45;
-}
-
-.start-room-form {
-  display: grid;
-  align-content: start;
-  gap: 7px;
-}
-
-.start-room-form > label,
 .room-card > label,
 .field-control > span,
 .loadout-dialog-launcher > label,
@@ -902,20 +864,6 @@ select {
   min-width: 0;
 }
 
-.card-kicker {
-  margin: 0 0 4px;
-  color: #8e8b95;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-}
-
-.room-kind {
-  color: #ae98ca;
-  font-size: 0.78rem;
-}
-
 .field-control {
   display: grid;
   gap: 5px;
@@ -928,9 +876,7 @@ select {
 }
 
 .door-fixed-reward > .fixed-room-state,
-.door-reward-list > .fixed-room-state,
-.pending-room-status > .fixed-room-state,
-.pending-reward-status > .fixed-room-state {
+.door-reward-list > .fixed-room-state {
   margin: 0;
   padding: 0;
   border: 0;
@@ -955,19 +901,6 @@ select {
   height: 1.4rem;
 }
 
-.start-room-fixed > .fixed-room-state {
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.room-selector {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.counted-reward-editor,
 .reward-value-editor {
   display: grid;
   gap: 8px;
@@ -985,7 +918,6 @@ select {
   border-radius: 8px;
 }
 
-.counted-reward-editor,
 .shop-editor,
 .fixed-room-state {
   margin-top: 12px;
@@ -1007,45 +939,15 @@ select {
   text-transform: none;
 }
 
-.topology-editor {
-  display: grid;
-  gap: 12px;
-  margin-top: 12px;
-}
-
 .frontier-actions h3 {
   margin: 0;
   color: #f4efe7;
   font-size: 1rem;
 }
 
-.start-room-entry-reward {
-  margin-top: 12px;
-}
-
 .door-reward-list {
   display: grid;
   gap: 8px;
-}
-
-.door-status-note {
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.shop-offer-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.shop-offer h4 {
-  margin: 0;
-  color: #f2ede5;
-  font-size: 0.98rem;
 }
 
 .workbench-action-row {
@@ -1081,26 +983,6 @@ select {
   display: grid;
   gap: 8px;
   min-width: 0;
-}
-
-.shop-family-item-control {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 6px;
-}
-
-.shop-family-item-control > .field-control {
-  width: 100%;
-}
-
-.shop-family-item-control > .reward-value-editor {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.shop-family-item-control > .reward-value-editor > .field-control {
-  width: 100%;
 }
 
 .acquisition-entry-resolution {
@@ -1162,21 +1044,6 @@ select {
   line-height: 1.4;
 }
 
-.local-reward-editor {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #353640;
-}
-
-.local-reward-slot {
-  padding: 10px;
-  border: 1px solid #373842;
-  border-radius: 9px;
-  background: rgb(255 255 255 / 2%);
-}
-
 .local-reward-heading {
   display: flex;
   align-items: center;
@@ -1194,14 +1061,6 @@ select {
 .ship-combat-editor {
   display: grid;
   gap: 10px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #353640;
-}
-
-.encounter-editor {
-  display: grid;
-  gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #353640;
@@ -1312,17 +1171,13 @@ select {
 }
 
 .door-workbench > .workbench-action-row,
-:is(.door-workbench, .outgoing-occurrence-state, .past-plan-end-content) + .workbench-action-row {
+:is(.door-workbench, .past-plan-end-content) + .workbench-action-row {
   padding-top: 12px;
   border-top: 1px solid #34353e;
 }
 
-:is(.door-workbench, .outgoing-occurrence-state, .past-plan-end-content) + .workbench-action-row {
+:is(.door-workbench, .past-plan-end-content) + .workbench-action-row {
   margin-top: 12px;
-}
-
-.door-workbench-markers {
-  justify-content: flex-end;
 }
 
 .door-pool-line {
@@ -1889,20 +1744,6 @@ select {
 :is(.door-note-marked, .door-notes li[tabindex]):focus-visible {
   outline: 2px solid color-mix(in srgb, var(--selection-accent) 80%, transparent);
   outline-offset: 2px;
-}
-
-/* The plan's end: the end room says so. */
-.plan-end-pill {
-  display: inline-flex;
-  align-items: center;
-  align-self: center;
-  padding: 1px 9px;
-  border: 1px solid color-mix(in srgb, var(--plan-end) 55%, transparent);
-  border-radius: 999px;
-  color: var(--plan-end);
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 .plan-end-action {

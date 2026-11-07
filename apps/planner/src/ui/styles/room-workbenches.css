@@ -24,13 +24,6 @@
   text-transform: uppercase;
 }
 
-.room-feature-heading-note {
-  color: #99939f;
-  font-size: 0.7rem;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
 /* Overview slots only carry their section key; the section owns its layout. */
 .room-overview-slot {
   display: contents;
@@ -53,7 +46,6 @@
 }
 
 .room-overview-panel .room-feature-presence-row,
-.room-overview-panel > .room-purging-pool,
 .room-overview-panel > .room-contract-pedestal,
 .room-overview-panel > .encounter-phase-control {
   padding: 0;
@@ -122,19 +114,6 @@
 .room-feature-presence-row:has(input:disabled) {
   color: #88858e;
   opacity: 0.68;
-}
-
-.room-resource-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  column-gap: 16px;
-}
-
-.room-resource-selection {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
 }
 
 /* An object's toggle leads its line; the controls it reveals follow and wrap. */
@@ -337,7 +316,6 @@
   border-top: 0;
 }
 
-.room-purging-pool,
 .room-contract-pedestal {
   display: grid;
   gap: 8px;
@@ -355,13 +333,6 @@
   min-width: 0;
 }
 
-.shop-family-participation {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-
 .room-purging-pool-slot > .field-control:last-child {
   grid-column: 1 / -1;
 }
@@ -377,46 +348,10 @@
   max-width: 100%;
 }
 
-.hermes-shrine-purchase-details {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  min-width: 0;
-  max-width: 100%;
-  gap: 8px 12px;
-}
-
-.hermes-shrine-purchase-details > .field-control-inline {
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 6px;
-}
-
-.room-purging-pool > label {
-  display: grid;
-  gap: 4px;
-}
-
-.room-purging-pool > .room-feature-presence-row {
-  display: flex;
-}
-
-.room-feature-interact-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.ship-phase .encounter-editor,
 .ship-combat-editor:has(> .room-actions-workbench) {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
-}
-
-.encounter-phase-list {
-  display: grid;
-  gap: 8px;
 }
 
 .encounter-phase-control {
@@ -451,14 +386,6 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 20px;
-}
-
-.encounter-event-control {
-  display: inline-flex;
-  align-items: center;
-  flex: 0 0 auto;
-  gap: 7px;
-  white-space: nowrap;
 }
 
 /* A yes/no flag toggle is its icon alone: dim when off, lit when on. */
@@ -603,7 +530,6 @@
   flex-shrink: 0;
 }
 
-.encounter-composition-reset,
 .encounter-composition-edit {
   margin-left: auto;
 }
@@ -978,12 +904,6 @@
   border-radius: 8px;
 }
 
-.encounter-customization-repair {
-  margin: 0;
-  color: var(--danger);
-  font-size: 0.88rem;
-}
-
 /* The Nemesis row's sentence: her portrait, its words and its chips on one line. */
 .nemesis-interaction-sentence {
   display: inline-flex;
@@ -1030,24 +950,6 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-}
-
-.hub-roster-rank {
-  display: grid;
-  min-block-size: 32px;
-  place-items: center;
-  color: var(--attention);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-
-.hub-rank-actions {
-  display: flex;
-  min-height: 32px;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 4px;
-  margin: 0;
 }
 
 .room-overview-workbench,
@@ -1460,13 +1362,11 @@
 }
 
 /* Object pickers in decisions are as wide as their choice. */
-.timeline-cell-editors .travel-deal-item .contextual-picker,
 .timeline-row[data-travel-deal-line] .timeline-cell-editors .contextual-picker {
   width: auto;
   grid-template-columns: max-content;
 }
 
-.timeline-cell-editors .travel-deal-item .contextual-picker-trigger,
 .timeline-row[data-travel-deal-line] .timeline-cell-editors .contextual-picker-trigger {
   width: auto;
   max-width: none;
@@ -1944,33 +1844,8 @@
   border: 0;
 }
 
-.timeline-cell-editors .pickup-outcome-control {
-  gap: 4px 6px;
-}
-
-.timeline-cell-editors .pickup-outcome-control > .contextual-picker {
-  width: 12rem;
-  max-width: 100%;
-  min-width: 0;
-  grid-template-columns: max-content minmax(0, 1fr);
-  align-items: center;
-  column-gap: 6px;
-}
-
-/* Banner names share the label's type and differ only in color. */
-.fields-cage-label,
-.fields-cage-label {
-  font-weight: 700;
-}
-
 .fields-cage-order {
   padding-left: var(--timeline-title-x);
-}
-
-.fields-cage-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 
 /* Pools are grouped by a light heading, not another box. */
@@ -2151,14 +2026,6 @@
   min-height: 0;
 }
 
-.purchase-control {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: #aaa7af;
-  font-size: 0.8rem;
-}
-
 .frontier-actions {
   display: flex;
   align-items: center;
@@ -2174,12 +2041,6 @@
   margin: 5px 0 0;
   color: #96939c;
   font-size: 0.86rem;
-}
-
-.frontier-buttons {
-  display: flex;
-  flex-shrink: 0;
-  gap: 6px;
 }
 
 .visually-hidden,
@@ -2208,10 +2069,6 @@
   visibility: hidden;
 }
 
-.shop-family-item-status {
-  min-height: 36px;
-}
-
 .encounter-enemy-label {
   display: inline-flex;
   align-items: center;
@@ -2238,11 +2095,6 @@
   font-size: 0.92rem;
 }
 
-.hub-timeline-reward {
-  color: var(--text);
-  font-size: 0.88rem;
-}
-
 .hub-timeline-fountain .room-action-placement-picker {
   grid-column: 4;
 }
@@ -2257,19 +2109,6 @@
 /* Zero-height mark where a moved fountain lands at the end of its stay. */
 .hub-timeline-stay-end {
   height: 0;
-}
-
-.hub-timeline-reward {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 12px;
-}
-
-.hub-timeline-reward-draw {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 
 /*
@@ -2301,7 +2140,7 @@
  * Sub-rows sit under their section or object header. Their label column gives
  * up the indent, so every picker and secondary keeps the same x.
  */
-.room-overview-workbench :is(.room-purging-pool, .shop-family-offer-list) > .shop-family-offer-row,
+.room-overview-workbench .shop-family-offer-list > .shop-family-offer-row,
 .room-overview-workbench
   :is(.room-structure-workbench, .fields-room-editor)
   > .room-overview-panel
@@ -2335,18 +2174,13 @@
 }
 
 .room-overview-workbench .encounter-phase-control,
-.room-overview-workbench :is(.room-purging-pool, .room-contract-pedestal),
+.room-overview-workbench .room-contract-pedestal,
 .room-overview-workbench .shop-family-offer-list {
   gap: 6px;
 }
 
 .room-overview-workbench
-  :is(
-    .encounter-phase-settings,
-    .shop-family-offer-row,
-    .hermes-shrine-slot,
-    .shop-family-item-control
-  ) {
+  :is(.encounter-phase-settings, .shop-family-offer-row, .hermes-shrine-slot) {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -2357,9 +2191,7 @@
 
 .room-overview-workbench .field-control-inline,
 .room-overview-workbench .encounter-phase-settings > .field-control-inline,
-.room-overview-workbench .hermes-shrine-slot > .field-control,
-.room-overview-workbench .shop-family-item-control > .field-control,
-.room-overview-workbench .shop-family-item-control > .reward-value-editor {
+.room-overview-workbench .hermes-shrine-slot > .field-control {
   flex: 0 1 auto;
   width: auto;
   min-width: 0;
@@ -2403,20 +2235,6 @@
   white-space: nowrap;
 }
 
-/* Delay follows its item directly, compact. */
-.room-overview-workbench .hermes-shrine-purchase-details {
-  flex: 0 0 auto;
-  flex-wrap: nowrap;
-}
-
-.room-overview-workbench .hermes-shrine-purchase-details > .field-control-inline {
-  flex: 0 0 auto;
-  min-width: 0;
-  max-width: none;
-  grid-template-columns: auto 4rem;
-  column-gap: 6px;
-}
-
 /* Object header rows (checkbox, icon, name) carry no card of their own. */
 .room-overview-workbench .room-feature-presence-row {
   min-height: 30px;
@@ -2426,30 +2244,6 @@
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
-}
-
-/*
- * Additional exits and resources: the name spans label and picker and its
- * detail sits beside it. As room runs out the detail first moves closer to the
- * name, then drops onto its own line under it; a placement link ellipsizes only
- * when even that line is narrower than its text.
- */
-.room-overview-workbench .room-resource-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px var(--overview-column-gap);
-}
-
-.room-overview-workbench .room-resource-row > .room-resource-selection {
-  flex: 1 0 auto;
-  max-width: calc(var(--overview-main-width) - var(--overview-subrow-indent));
-}
-
-.room-overview-workbench .room-resource-row > :not(.room-resource-selection) {
-  flex: 0 1 auto;
-  min-width: 0;
-  padding-left: var(--overview-subrow-indent);
 }
 
 /* An encounter fixed on entry reads as plain text in the picker column. */
@@ -3268,14 +3062,6 @@ button.timeline-chip {
   max-width: max(16rem, calc(var(--hub-map-height-cap, 100 * var(--app-vh) - 18rem) * 16 / 9));
 }
 
-.hub-overview-rewards-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 32px;
-}
-
 .hub-board-status-line {
   margin: 0;
   padding: 5px 10px;
@@ -3690,7 +3476,7 @@ span.hub-board-status-line {
 }
 
 /* Each object keeps its own line: its toggle, then its slots and choices when on. */
-.room-overview-workbench .room-overview-panel :is(.room-purging-pool, .room-contract-pedestal) {
+.room-overview-workbench .room-overview-panel .room-contract-pedestal {
   padding-left: var(--overview-subrow-indent);
 }
 

@@ -145,8 +145,7 @@ textarea {
   font: inherit;
 }
 
-select[data-candidate-support='impossible'],
-.purchase-control[data-candidate-support='impossible'] {
+select[data-candidate-support='impossible'] {
   border-color: #ee8f8f;
   color: #f2a0a0;
 }

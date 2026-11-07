@@ -1,17 +1,3 @@
-.pickup-outcome-control {
-  display: inline-flex;
-  min-width: 0;
-  max-width: 100%;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.pickup-outcome-control > .contextual-picker {
-  min-width: min(100%, 13rem);
-  max-width: 100%;
-}
-
 .anvil-result-pickers {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -128,8 +114,7 @@
   margin: 0;
 }
 
-.trait-offer-state-values,
-.trait-offer-state-replacement {
+.trait-offer-state-values {
   display: grid;
   gap: 0.4rem 0.8rem;
 }
@@ -138,24 +123,17 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.trait-offer-state-replacement {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.trait-offer-state-values > div,
-.trait-offer-state-replacement > div {
+.trait-offer-state-values > div {
   display: grid;
   gap: 0.15rem;
 }
 
-.trait-offer-state-values dt,
-.trait-offer-state-replacement dt {
+.trait-offer-state-values dt {
   color: var(--muted, #98a2b3);
   font-size: 0.75rem;
 }
 
-.trait-offer-state-values dd,
-.trait-offer-state-replacement dd {
+.trait-offer-state-values dd {
   font-weight: 700;
   margin: 0;
 }
@@ -216,30 +194,6 @@
   font-weight: 500;
 }
 
-.trait-option-effective-summary {
-  display: grid;
-  font-size: 0.88rem;
-  gap: 0.2rem 0.65rem;
-  grid-template-columns: minmax(0, 1fr) auto;
-  margin: 0;
-}
-
-.trait-option-effective-summary dt,
-.trait-option-effective-summary dd {
-  margin: 0;
-}
-
-.trait-option-effective-summary dd {
-  color: #f2ede5;
-  font-weight: 600;
-  text-align: right;
-}
-
-.trait-option-persephone-bonus {
-  align-items: center;
-  min-height: 36px;
-}
-
 /* A column, so rows keep their height and Selected sits at the card's foot. */
 .trait-offer-ordinary-option {
   display: flex;
@@ -272,11 +226,6 @@
 .trait-selected-outcome h3 {
   font-size: 1em;
   font-weight: 600;
-}
-
-.trait-outcome-draft {
-  color: var(--muted, #98a2b3);
-  font-size: 0.84rem;
 }
 
 .trait-outcome-rows {
@@ -665,12 +614,6 @@ button.hex-column-deal[data-has-findings='true'] {
   min-height: 18rem;
 }
 
-.trait-outcome-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
 .trait-offer-fixed-rarity {
   min-width: 0;
 }
@@ -700,15 +643,6 @@ button.hex-column-deal[data-has-findings='true'] {
   font-size: 0.82rem;
 }
 
-.trait-option-feedback {
-  color: var(--danger, #b42318);
-  font-size: 0.82rem;
-  margin: 0;
-  min-width: 0;
-  padding-left: 1.1rem;
-}
-
-.trait-option-feedback li,
 .trait-option-replacement {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -724,8 +658,7 @@ button.hex-column-deal[data-has-findings='true'] {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .trait-offer-state-values,
-  .trait-offer-state-replacement {
+  .trait-offer-state-values {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -923,11 +856,6 @@ button.hex-column-deal[data-has-findings='true'] {
 
 .screen-reroll-tabs {
   align-content: start;
-}
-
-/* The held feedback box itself grows, so the space reads as part of it. */
-.screen-reroll-feedback {
-  display: grid;
 }
 
 .screen-reroll-panel {

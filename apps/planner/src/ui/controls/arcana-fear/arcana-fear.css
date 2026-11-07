@@ -101,11 +101,6 @@
   outline-offset: 2px;
 }
 
-/* The board opens with its hint, directly under the presets or the title. */
-.route-loadout-section > .panel-description:first-child {
-  margin-top: 0;
-}
-
 .fear-rank-list {
   display: grid;
   width: 100%;
