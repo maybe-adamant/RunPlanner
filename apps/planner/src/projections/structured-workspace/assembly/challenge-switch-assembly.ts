@@ -50,17 +50,6 @@ const outcomeLabels: Readonly<Record<SwitchOutcome, string>> = Object.freeze({
   hitless: 'succeed',
 });
 
-/** The picker reads from quitting to the full claim. */
-const outcomeRank: Readonly<Record<SwitchOutcome, number>> = Object.freeze({
-  left: 0,
-  failed: 1,
-  finished: 2,
-  hitless: 2,
-});
-
-// The claim drops the bonus Nectar only after a finished or hitless fight (`HandleChallengeLoot`).
-const nectarOutcomes: ReadonlySet<SwitchOutcome> = new Set(['finished', 'hitless']);
-
 /** The picker's key for one outcome, with or without the bonus Nectar. */
 export function challengeSwitchOutcomeKey(outcome: SwitchOutcome, nectar: boolean): string {
   return nectar ? `${outcome}:nectar` : outcome;
@@ -68,34 +57,21 @@ export function challengeSwitchOutcomeKey(outcome: SwitchOutcome, nectar: boolea
 
 function outcomeProduct(
   outcome: ChallengeSwitchOutcomeInteraction,
-  occurrence: RoomOccurrence,
   interactionKey: string,
 ): WorkspaceChallengeSwitchOutcome {
-  const choices = [...outcome.choices]
-    .sort((left, right) => outcomeRank[left.outcome] - outcomeRank[right.outcome])
-    .flatMap((choice) => [
-      Object.freeze({
-        key: challengeSwitchOutcomeKey(choice.outcome, false),
-        outcome: choice.outcome,
-        nectar: false,
-        label: outcomeLabels[choice.outcome],
-      }),
-      ...(nectarOutcomes.has(choice.outcome)
-        ? [
-            Object.freeze({
-              key: challengeSwitchOutcomeKey(choice.outcome, true),
-              outcome: choice.outcome,
-              nectar: true,
-              label: outcomeLabels[choice.outcome],
-            }),
-          ]
-        : []),
-    ]);
-  const nectar = outcome.nectarAllowed && occurrence.challengeSwitch?.nectarDropped === true;
   return Object.freeze({
     interactionKey,
-    current: challengeSwitchOutcomeKey(outcome.current, nectar),
-    choices: Object.freeze(choices),
+    current: challengeSwitchOutcomeKey(outcome.current, outcome.nectarDropped),
+    choices: Object.freeze(
+      outcome.choices.map((choice) =>
+        Object.freeze({
+          key: challengeSwitchOutcomeKey(choice.outcome, choice.nectarDropped),
+          outcome: choice.outcome,
+          nectar: choice.nectarDropped,
+          label: outcomeLabels[choice.outcome],
+        }),
+      ),
+    ),
   });
 }
 
@@ -223,9 +199,7 @@ export function assembleChallengeSwitch(input: {
       : eliteProduct(catalog, product, occurrence);
   const interactionKey = semanticAddressKey(address);
   const outcome =
-    product?.outcome === undefined
-      ? undefined
-      : outcomeProduct(product.outcome, occurrence, interactionKey);
+    product?.outcome === undefined ? undefined : outcomeProduct(product.outcome, interactionKey);
   return Object.freeze({
     address,
     marker: input.markerDestinations.marker(address),

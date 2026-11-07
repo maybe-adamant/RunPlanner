@@ -45,16 +45,16 @@ export function resolveChallengeSwitch(
 }
 
 /**
- * The outcomes a kind's fight can end with: a kind whose hit changes its
- * reward (PerfectClear) ends hitless or failed, the others finished; any
- * pressed fight may be left.
+ * The outcomes a kind's fight can end with, from leaving to the full claim: a
+ * kind whose hit changes its reward (PerfectClear) ends failed or hitless, the
+ * others finished; any pressed fight may be left.
  */
 export function challengeSwitchOutcomes(
   kind: ChallengeSwitchKindDeclaration,
 ): readonly ChallengeSwitchOutcome[] {
   return kind.hitRewardType === undefined
     ? Object.freeze(['left', 'finished'] as const)
-    : Object.freeze(['left', 'hitless', 'failed'] as const);
+    : Object.freeze(['left', 'failed', 'hitless'] as const);
 }
 
 /** The outcome a newly observed switch starts from: the claim of a clean fight. */
@@ -65,6 +65,22 @@ function defaultOutcome(kind: ChallengeSwitchKindDeclaration): ChallengeSwitchOu
 /** Whether the fight ended so the claim can drop the bonus Nectar (`HandleChallengeLoot`). */
 export function challengeSwitchOutcomeDropsNectar(outcome: ChallengeSwitchOutcome): boolean {
   return outcome === 'finished' || outcome === 'hitless';
+}
+
+/**
+ * Every claim a kind's switch can be authored with, in its outcome order, each
+ * outcome that can drop the bonus Nectar followed by the same outcome with it.
+ */
+export function challengeSwitchOutcomeChoices(
+  kind: ChallengeSwitchKindDeclaration,
+): readonly Pick<AuthoredChallengeSwitch, 'outcome' | 'nectarDropped'>[] {
+  return Object.freeze(
+    challengeSwitchOutcomes(kind).flatMap((outcome) =>
+      (challengeSwitchOutcomeDropsNectar(outcome) ? [false, true] : [false]).map((nectarDropped) =>
+        Object.freeze({ outcome, nectarDropped }),
+      ),
+    ),
+  );
 }
 
 /**

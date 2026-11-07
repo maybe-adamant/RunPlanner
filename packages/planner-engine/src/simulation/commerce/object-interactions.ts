@@ -126,20 +126,20 @@ export interface ChallengeSwitchInteraction {
 }
 
 /**
- * The observed switch's outcome: its kind's choices, each with the command
- * that sets it (Nectar kept where the choice can drop it), and what the
- * current outcome allows.
+ * The observed switch's claim and the closed list of claims its kind can be
+ * authored with, in the kind's outcome order: each outcome, then that outcome
+ * with the bonus Nectar where its claim can drop it, each with the command that
+ * sets it.
  */
 export interface ChallengeSwitchOutcomeInteraction {
   readonly current: import('../../authored-project/model').ChallengeSwitchOutcome;
+  /** The current claim dropped the bonus Nectar. */
+  readonly nectarDropped: boolean;
   readonly choices: readonly {
     readonly outcome: import('../../authored-project/model').ChallengeSwitchOutcome;
+    readonly nectarDropped: boolean;
     readonly command: CommandOf<'ReplaceChallengeSwitchOutcome'>;
   }[];
-  /** The current outcome can drop the bonus Nectar. */
-  readonly nectarAllowed: boolean;
-  /** Toggles the bonus Nectar; present while it is allowed. */
-  readonly nectarCommand?: CommandOf<'ReplaceChallengeSwitchOutcome'>;
 }
 
 /** The observed switch's encounter and each declared decision with its authored value. */

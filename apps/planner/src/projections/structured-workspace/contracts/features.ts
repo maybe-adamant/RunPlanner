@@ -608,10 +608,7 @@ export interface WorkspaceChallengeSwitchInteraction {
   >;
   /** The observed Time or Perfect Clear switch's encounter customization. */
   readonly customization?: import('./locals').WorkspaceEncounterCustomizationInteraction;
-  /**
-   * Sets the fight's outcome and its bonus Nectar, which only an outcome listed with it can
-   * drop; absent for an outcome the kind cannot end with.
-   */
+  /** Sets the fight's outcome and its bonus Nectar; absent for a claim the kind cannot be authored with. */
   readonly outcomeIntentFor: (
     outcome: import('@run-planner/engine/simulation').ChallengeSwitchOutcomeInteraction['current'],
     nectarDropped: boolean,

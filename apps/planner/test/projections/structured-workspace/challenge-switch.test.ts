@@ -215,7 +215,7 @@ describe('challenge switch in the structured workspace', () => {
     const outcome = row.challengeSwitchOutcome!;
     const interaction = workspace.interactions.challengeSwitches.get(outcome.interactionKey)!;
 
-    // Only a finished fight's claim can also drop the Nectar, so it is listed both ways.
+    // The engine's claim list, in its order, each keyed with its Nectar.
     expect(outcome.choices.map((choice) => [choice.outcome, choice.nectar])).toEqual([
       ['left', false],
       ['finished', false],
@@ -235,6 +235,7 @@ describe('challenge switch in the structured workspace', () => {
       nectarDropped: true,
     });
     expect(interaction.outcomeIntentFor('hitless', false)).toBeUndefined();
+    expect(interaction.outcomeIntentFor('left', true)).toBeUndefined();
     const withNectar = projectStructuredWorkspaceFixture(
       applyProjectCommand(
         project,

@@ -45,8 +45,7 @@ import type { HistoryEvent } from '../../history';
 import type { CanonicalAuthoredRoom } from '../../materialization';
 import type { PreparedChallengeSwitchEncounter } from '../../encounters/challenge-switch';
 import {
-  challengeSwitchOutcomeDropsNectar,
-  challengeSwitchOutcomes,
+  challengeSwitchOutcomeChoices,
   resolveChallengeSwitch,
 } from '../../../authored-project/acquisition/challenge-switch';
 import type { RewardBranchState } from '../branch-primitives';
@@ -305,29 +304,23 @@ function challengeSwitchOutcomeInteraction(
   if (observed === undefined || resolved === undefined || room.origin.kind !== 'occurrence')
     return undefined;
   const occurrence = room.origin;
-  const command = (outcome: ChallengeSwitchOutcomeInteraction['current'], nectarDropped: boolean) =>
-    Object.freeze({
-      kind: 'ReplaceChallengeSwitchOutcome' as const,
-      occurrence,
-      outcome,
-      nectarDropped,
-    });
-  const nectarAllowed = challengeSwitchOutcomeDropsNectar(observed.outcome);
   return Object.freeze({
     current: observed.outcome,
+    nectarDropped: observed.nectarDropped,
     choices: Object.freeze(
-      challengeSwitchOutcomes(resolved.kind).map((outcome) =>
+      challengeSwitchOutcomeChoices(resolved.kind).map(({ outcome, nectarDropped }) =>
         Object.freeze({
           outcome,
-          command: command(
+          nectarDropped,
+          command: Object.freeze({
+            kind: 'ReplaceChallengeSwitchOutcome' as const,
+            occurrence,
             outcome,
-            observed.nectarDropped && challengeSwitchOutcomeDropsNectar(outcome),
-          ),
+            nectarDropped,
+          }),
         }),
       ),
     ),
-    nectarAllowed,
-    ...(nectarAllowed ? { nectarCommand: command(observed.outcome, !observed.nectarDropped) } : {}),
   });
 }
 

@@ -602,35 +602,46 @@ describe('challenge switch outcome product', () => {
       fHost,
     )?.challengeSwitch?.outcome;
 
-  it('offers the kind’s outcomes with bound commands and Nectar where it applies', () => {
+  const claims = (interaction: ReturnType<typeof product>) =>
+    interaction?.choices.map((choice) => [choice.outcome, choice.nectarDropped]);
+
+  it('publishes each claim the kind allows, Nectar only after a clean fight, with bound commands', () => {
     expect(product(golden())).toBeUndefined();
     const time = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money');
     const finished = product(time);
-    expect(finished).toMatchObject({
+    expect(finished).toMatchObject({ current: 'finished', nectarDropped: false });
+    expect(claims(finished)).toEqual([
+      ['left', false],
+      ['finished', false],
+      ['finished', true],
+    ]);
+    for (const choice of finished!.choices)
+      expect(choice.command).toEqual({
+        kind: 'ReplaceChallengeSwitchOutcome',
+        occurrence: fHost,
+        outcome: choice.outcome,
+        nectarDropped: choice.nectarDropped,
+      });
+    const nectar = finished!.choices.find((choice) => choice.nectarDropped)!.command;
+    expect(product(applyProjectCommand(time, catalog, nectar))).toMatchObject({
       current: 'finished',
-      nectarAllowed: true,
-      nectarCommand: { outcome: 'finished', nectarDropped: true },
+      nectarDropped: true,
     });
-    expect(finished?.nectarCommand).not.toHaveProperty('gold');
-    expect(finished?.choices.map((choice) => choice.outcome)).toEqual(['left', 'finished']);
     const leave = finished!.choices.find((choice) => choice.outcome === 'left')!.command;
-    expect(leave).toEqual({
-      kind: 'ReplaceChallengeSwitchOutcome',
-      occurrence: fHost,
-      outcome: 'left',
-      nectarDropped: false,
-    });
-    const left = applyProjectCommand(time, catalog, leave);
-    expect(product(left)).toMatchObject({
-      current: 'left',
-      nectarAllowed: false,
-    });
-    expect(product(left)?.nectarCommand).toBeUndefined();
+    const left = product(applyProjectCommand(time, catalog, leave));
+    expect(left).toMatchObject({ current: 'left', nectarDropped: false });
+    // The list is the kind's, whichever claim is current.
+    expect(claims(left)).toEqual(claims(finished));
     const perfect = product(
       withSwitch(golden(), 'F', 'golden-f-b8-e1', 'PerfectClearChallengeSwitch_MaxHealth'),
     );
-    expect(perfect?.choices.map((choice) => choice.outcome)).toEqual(['left', 'hitless', 'failed']);
-    expect(perfect).toMatchObject({ current: 'hitless', nectarAllowed: true });
+    expect(perfect).toMatchObject({ current: 'hitless', nectarDropped: false });
+    expect(claims(perfect)).toEqual([
+      ['left', false],
+      ['failed', false],
+      ['hitless', false],
+      ['hitless', true],
+    ]);
   });
 });
 
