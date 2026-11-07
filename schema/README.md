@@ -43,8 +43,8 @@ publish without a Spell.
 A Boss room's `overview.requiredReward` (its forced drop's consumable,
 resource and amount) replaces `overview.effectNeutralRequiredReward`, and its
 `collectRequiredReward` guide row carries the same `drop`.
-A revision changes no saved shape, so it has no transition; plans sent under
-101.1 read as outdated.
+A revision adds only saved entries an earlier save may lack, so it has no
+transition; plans sent under 101.1 read as outdated.
 
 Revision 101.1 adds the route's optional `planEnd` (the room the plan ends
 after) and a challenge-switch host's optional `challengeSwitch` leaf (variant,
@@ -57,8 +57,8 @@ switch's guide row and claim acquisitions, and the shape of a plan that ends
 before its biome's terminal room (a terminal end room and a partial Hub
 block), the plan's `rewardStoreComparison` that every room exit checks, each Fields door
 batch's `cageCountOutcome`, and an Oceanus room's `overview.lockedExits` with its `unlockExit`
-guide rows. A revision changes no saved shape, so
-it has no transition; plans sent under 101.0 read as outdated.
+guide rows. A revision adds only optional saved fields, so it has no
+transition; plans sent under 101.0 read as outdated.
 
 Schema 101 makes each phase whose binding can field a Nemesis bet combat own
 a complete `nemesisBetOutcomeByPhase` entry (`win`, `tie` or `loss`), and
@@ -130,8 +130,8 @@ The migration drops the phase-keyed outcomes; each reached interval then reports
 its missing target or blessing until it is chosen again.
 
 Revision 98.1 adds the draft spec's `roomForcing`, `purchasesPerBiome`,
-`retriesPerBiome` and `resourceRoomChance`. A revision changes no saved shape,
-so it has no transition.
+`retriesPerBiome` and `resourceRoomChance`. A revision adds only optional saved
+fields, so it has no transition.
 
 Schema 98 adds the plan's `name`.
 
