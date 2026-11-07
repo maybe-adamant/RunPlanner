@@ -775,6 +775,31 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   room with one state, as after a refill, the order is judged at the room's
   entry save once the room is entered; other accepted orders are reported,
   and none accepted stops the plan.
+- A pressed challenge switch (its name in the room's uses) is authored with
+  its variant once the room's other pickups settle; one the engine refuses is
+  reported and its possible claim pickups are absorbed. A leftover Onion pins a
+  failed Perfect Clear, the variant's reward a clean claim, and a leftover
+  bonus Nectar a clean claim (alone, a finished Time switch). With no claim
+  shown, the next entry save chooses among a left fight, a finished Time fight
+  and a press that started nothing, reported as not in the record with the
+  others as alternatives. A finished Time switch takes the engine's default
+  gold, reported. The press takes its native position, or last where that does
+  not run (Fields exits wait for the cage loot); the elite and customization
+  stay native. An unused switch leaves no trace. The entry save's
+  `CurrentRoom.ChallengeSwitch`, the next save's
+  `CurrentRoom.ChallengeEncounter` and the gold before and after the room would
+  settle these guesses but are not recorded.
+- Oceanus locked doors: the saves never name a fought door, so the plan locks
+  only the doors the recorded fight count fights and presses each before any
+  reroll of the room (the game forbids rerolling a locked door before its fight
+  and any door during it). The first door never locks, so a two-door room, no
+  fight, or fights filling every lockable door are exact. Otherwise each door
+  set is locked, pressed and authored with the room's recorded rerolls, and
+  kept when every press is placed and the stores change as saved; several kept
+  sets leave the same run, so the taken door is chosen when it can lock, else
+  the second exit, noted as equivalent. No kept set, or a count no lockable
+  doors explain, stops the plan before its room; a record made before the
+  count was kept reports it as not in the record and authors no lock.
 - A Pool listed trait the engine refuses leaves its slot open; a recorded
   sale from that slot stops the plan.
 - A hidden return door's placeholder and reward are pinned exactly from the

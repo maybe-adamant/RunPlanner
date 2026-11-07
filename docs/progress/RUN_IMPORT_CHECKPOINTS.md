@@ -1,7 +1,7 @@
 # Run Import Checkpoints
 
-Status: started 2026-11-03 after the single-state simulation closed. Temporary
-plan; delete at delivery after promoting the durable result.
+Status: started 2026-11-03, after one reached state replaced reward branches.
+Temporary plan; delete at delivery after promoting the durable result.
 
 ## Objective
 

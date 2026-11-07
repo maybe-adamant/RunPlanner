@@ -14,7 +14,7 @@ workspace itself.
 
 The app opens on Home with no plan open. Home has About (build identity, the
 update check, a bug report and keyboard shortcuts) and the Library, Catalog
-(desktop only), Game and Settings tabs. Each screen's first panel heading
+(desktop only), Recent runs (desktop only), Game and Settings tabs. Each screen's first panel heading
 carries its context from its projection (counts, module state, next slot),
 leaving out what is not known. The Game tab marks a module update or an active
 community event. App notices (an update, an ended event) show under the
@@ -76,6 +76,27 @@ with Open, or Needs a newer planner for a schema the loader does not open. An en
 plan holds the `projectId` recorded when it was added, so renaming or moving
 the copy keeps the link and deleting it offers the entry again; a Duplicate of
 that copy is a plan of its own.
+
+### Recent runs screen
+
+Recent runs lets a player of an unmodded run replicate it without stepping
+through a video. A save cannot rebuild a past run, so runs are captured live:
+while recording is on, the desktop planner watches the Hades II save folder
+and follows each run's saves between the
+[run boundaries](../audits/rooms-and-routes/SAVE_FILE_RUN_RECORD_GAME_DATA_AUDIT.md#run-boundaries-and-identity).
+A new run starting while one is open, without its end save, closes the open
+run as abandoned at its last checkpoint. A run is kept only once it reached
+its first biome's Preboss; one whose profile fails the
+[mature-profile gates](../audits/rooms-and-routes/SAVE_FILE_RUN_RECORD_GAME_DATA_AUDIT.md#profile-progression)
+is listed with the gates it failed and no plan. The plan is built when the
+run ends, never while it is open.
+
+The screen lists the latest recorded runs, a fixed number kept. Each row keeps
+its run record beside its plan and the import's report of guesses, which is
+stored with the run, never in the plan. Add to library copies the plan the way
+the Catalog does, and Rebuild imports the record again with the current
+importer. Release builds never keep raw saves; a dev build keeps each run's
+saves and rebuilds the record from them first.
 
 ## Plan operations
 
