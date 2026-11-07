@@ -1,7 +1,7 @@
 export const surfaceShopHost = (
   spawnChance: number,
-  forced = false,
-  challengeSwitchAnchorCount = 1,
+  forced: boolean,
+  challengeSwitchAnchorCount: number,
 ) => ({
   challengeSwitchAnchorCount,
   surfaceShop: {

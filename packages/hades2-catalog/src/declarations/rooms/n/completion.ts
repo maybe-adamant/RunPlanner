@@ -113,7 +113,7 @@ export const nCompletionRooms = [
     label: 'Postboss',
     hasKeepsakeRack: true,
     hasRequiredFountain: true,
-    ...surfaceShopHost(1, true),
+    ...surfaceShopHost(1, true, 1),
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
     kind: 'PostBoss',

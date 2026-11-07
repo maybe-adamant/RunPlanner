@@ -203,6 +203,42 @@ describe('challenge switch spawn rules', () => {
     ]);
   });
 
+  it('counts each surface map’s own anchors when a Shrine shares the room', () => {
+    const anchorIssues = (biomeKey: string, occurrenceId: string) => {
+      const observed = withSwitch(surface(), biomeKey, occurrenceId, 'TimeChallengeSwitch_Money');
+      const shrine = applyProjectCommand(observed, catalog, {
+        kind: 'SetHermesShrinePresence',
+        occurrence: createOccurrenceAddress(
+          createBiomeAddress(observed.route.routeKey, biomeKey),
+          createOccurrenceId(occurrenceId),
+        ),
+        present: true,
+      });
+      return placementIssues(shrine).filter(
+        (issue) =>
+          issue.occurrenceId === occurrenceId &&
+          'reason' in issue &&
+          issue.reason === 'noFreeAnchor',
+      );
+    };
+    // Two `ChallengeSwitchBase` anchors: O_Combat02, P_Combat12, Q_Combat10.
+    for (const [biomeKey, occurrenceId] of [
+      ['O', 'surface-o-combat02'],
+      ['P', 'surface-p-8-1-p_combat12'],
+      ['Q', 'surface-q-foyer'],
+    ] as const)
+      expect(anchorIssues(biomeKey, occurrenceId)).toEqual([]);
+    // One anchor: O_Combat07, P_Combat03, Q_Combat01.
+    for (const [biomeKey, occurrenceId] of [
+      ['O', 'surface-o-combat07'],
+      ['P', 'surface-p-1-1-p_combat03'],
+      ['Q', 'surface-q-ordinary'],
+    ] as const)
+      expect(anchorIssues(biomeKey, occurrenceId)).toEqual([
+        { occurrenceId, reason: 'noFreeAnchor', anchorCount: 1, occupants: ['hermesShrine'] },
+      ]);
+  });
+
   it('reports an Elite switch whose kind gate (TalentLegal) fails', () => {
     expect(
       placementIssues(withSwitch(golden(), 'F', 'golden-f-b5-e1', 'EliteChallengeSwitch_MaxMana')),

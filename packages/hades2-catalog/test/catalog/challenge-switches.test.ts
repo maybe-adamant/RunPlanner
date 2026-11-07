@@ -93,6 +93,26 @@ describe('challenge switch declarations', () => {
       expect(catalog.rooms.byKey[host.gameName]?.challengeSwitchAnchorCount).toBeGreaterThan(0);
   });
 
+  it('declares each surface map’s own ChallengeSwitchBase count', () => {
+    const counts = (prefix: string, values: readonly number[], first = 1) =>
+      values.map(
+        (count, index) => [`${prefix}${String(first + index).padStart(2, '0')}`, count] as const,
+      );
+    const expected = [
+      ...counts('O_Combat', [0, 2, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1]),
+      ['O_MiniBoss01', 0],
+      ['O_MiniBoss02', 2],
+      ...counts('P_Combat', [1, 2, 1, 0, 2, 2, 2, 1, 2, 2, 1, 2, 2, 1, 2, 2, 1, 2, 1]),
+      ...counts('Q_Combat', [1, 1, 1, 2, 1, 1, 1, 2, 2, 2, 2, 1, 1, 0, 0, 1]),
+    ] as const;
+    expect(
+      expected.map(([gameName]) => [
+        gameName,
+        catalog.rooms.byKey[gameName]?.challengeSwitchAnchorCount ?? 0,
+      ]),
+    ).toEqual(expected);
+  });
+
   it('refuses an anchored room without a chance and a spawn-free room without anchors', () => {
     expect(
       withSwitches((raw) => {

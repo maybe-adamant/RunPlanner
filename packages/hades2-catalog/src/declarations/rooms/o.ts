@@ -1,7 +1,11 @@
 import type { RawRoomDeclaration } from './types';
 import { normalResourcePointSupport } from '../resources';
 
-const surfaceShopHost = (spawnChance: number, forced = false, challengeSwitchAnchorCount = 1) => ({
+const surfaceShopHost = (
+  spawnChance: number,
+  forced: boolean,
+  challengeSwitchAnchorCount: number,
+) => ({
   challengeSwitchAnchorCount,
   surfaceShop: {
     profileKey: 'SurfaceShop' as const,
@@ -60,7 +64,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat02',
-    ...surfaceShopHost(0.125, false, 1),
+    ...surfaceShopHost(0.125, false, 2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 02',
     roomSetKey: 'O',
@@ -166,7 +170,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat06',
-    ...surfaceShopHost(0.125, false, 1),
+    ...surfaceShopHost(0.125, false, 2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 06',
     roomSetKey: 'O',
@@ -322,7 +326,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat12',
-    ...surfaceShopHost(0.125, false, 1),
+    ...surfaceShopHost(0.125, false, 2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 12',
     roomSetKey: 'O',
@@ -475,7 +479,7 @@ export const oRooms = [
   {
     gameName: 'O_MiniBoss02',
     forceDoorAllowReroll: true,
-    ...surfaceShopHost(0.125, false, 1),
+    ...surfaceShopHost(0.125, false, 2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'The Yargonaut',
@@ -784,7 +788,7 @@ export const oRooms = [
     label: 'Postboss',
     hasKeepsakeRack: true,
     hasRequiredFountain: true,
-    ...surfaceShopHost(1, true),
+    ...surfaceShopHost(1, true, 1),
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
     kind: 'PostBoss',

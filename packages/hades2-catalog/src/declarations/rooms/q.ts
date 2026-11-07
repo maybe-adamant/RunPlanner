@@ -1,7 +1,11 @@
 import type { RawRoomDeclaration } from './types';
 import { normalResourcePointSupport } from '../resources';
 
-const surfaceShopHost = (spawnChance: number, forced = false, challengeSwitchAnchorCount = 1) => ({
+const surfaceShopHost = (
+  spawnChance: number,
+  forced: boolean,
+  challengeSwitchAnchorCount: number,
+) => ({
   challengeSwitchAnchorCount,
   surfaceShop: {
     profileKey: 'SurfaceShop' as const,
@@ -112,7 +116,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat04',
-    ...surfaceShopHost(0.1, false, 1),
+    ...surfaceShopHost(0.1, false, 2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 04',
     roomSetKey: 'Q',
@@ -211,7 +215,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat08',
-    ...surfaceShopHost(0.1, false, 1),
+    ...surfaceShopHost(0.1, false, 2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 08',
     roomSetKey: 'Q',
@@ -235,7 +239,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat09',
-    ...surfaceShopHost(0.1, false, 1),
+    ...surfaceShopHost(0.1, false, 2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 09',
     roomSetKey: 'Q',
@@ -259,7 +263,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat10',
-    ...surfaceShopHost(0.1, false, 1),
+    ...surfaceShopHost(0.1, false, 2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
     roomSetKey: 'Q',
@@ -283,7 +287,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat11',
-    ...surfaceShopHost(0.1, false, 1),
+    ...surfaceShopHost(0.1, false, 2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
     roomSetKey: 'Q',

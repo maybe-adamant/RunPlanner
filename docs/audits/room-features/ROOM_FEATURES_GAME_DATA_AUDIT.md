@@ -277,19 +277,20 @@ no SurfaceShop in this room or the two before it, and a loaded-map
 The `SumPrevRooms = 3` requirement reads the current room plus the two latest
 `RoomHistory` entries without filtering biome, encounter, room class, Hub,
 side room, Shop, Boss/Postboss, or Chaos. A forced room bypasses the ordinary
-eligibility requirement. The exact map-anchor matrix is:
+eligibility requirement. The exact map-anchor matrix, counted from
+`Maps/bin/<Room>.thing_bin` like the Well matrix below, is:
 
-| Route | Ordinary maps with a `ChallengeSwitchBase`                                |
-| ----- | ------------------------------------------------------------------------- |
-| N     | `N_Sub01`-`N_Sub04`, `N_Sub06`-`N_Sub15`                                  |
-| O     | `O_Combat02`-`O_Combat15`, `O_Devotion01`, `O_MiniBoss02`, `O_Reprieve01` |
-| P     | `P_Combat01`-`P_Combat03`, `P_Combat05`-`P_Combat19`, `P_Reprieve01`      |
-| Q     | `Q_Combat01`-`Q_Combat13`, `Q_Combat16`                                   |
+| Route | Ordinary maps with a `ChallengeSwitchBase`                                | Counts in host order                                                      |
+| ----- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| N     | `N_Sub01`-`N_Sub04`, `N_Sub06`-`N_Sub15`                                  | each 1                                                                    |
+| O     | `O_Combat02`-`O_Combat15`, `O_Devotion01`, `O_MiniBoss02`, `O_Reprieve01` | combats `2,1,1,1,2,1,1,1,1,1,2,1,1,1`; Devotion 1; miniboss 2; Reprieve 1 |
+| P     | `P_Combat01`-`P_Combat03`, `P_Combat05`-`P_Combat19`, `P_Reprieve01`      | `1,2,1`; `2,2,2,1,2,2,1,2,2,1,2,2,1,2,1`; Reprieve 1                      |
+| Q     | `Q_Combat01`-`Q_Combat13`, `Q_Combat16`                                   | `1,1,1,2,1,1,1,2,2,2,2,1,1`; `Q_Combat16` 1                               |
 
 Declaration-eligible zero-anchor exceptions are `N_Shop01`, `N_Sub05`,
 `O_Combat01`, `O_MiniBoss01`, `P_Combat04`, `Q_Combat14`, and `Q_Combat15`.
 Intro, Hub, Story, ordinary Shop, Boss, Preboss, and Q Postboss maps have no
-usable anchor. N/O/P Postboss maps retain an anchor. `HandleSecretSpawns`
+usable anchor. N/O/P Postboss maps retain one anchor. `HandleSecretSpawns`
 consumes anchors sequentially across Well, Sell Shop, Shrine, Challenge
 Switch, and Meta Reward Stand; Resources, fountains, Gift Racks, and Nemesis
 use separate systems. The source exposes no generic `NumRoomFeatures` or

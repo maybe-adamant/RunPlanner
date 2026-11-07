@@ -8,9 +8,9 @@ const normalizedBiomeSnapshotHashes = [
   ['H', 'c68188f23db1dc02'],
   ['I', '110591de50ef644b'],
   ['N', 'ad33cf712fc866f6'],
-  ['O', '835b17435c87d793'],
-  ['P', '824c6d55834f442f'],
-  ['Q', 'b8c510f590c4b813'],
+  ['O', '11383bff81b186c3'],
+  ['P', '1d86197ac0880c5a'],
+  ['Q', '37b19320ed0c104c'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
