@@ -11,6 +11,7 @@ import {
 import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import type { TimelineDoors } from './TimelineDoors';
+import type { RoomMapHighlight } from './room-map/roomMapHighlight';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
 
@@ -29,6 +30,13 @@ export interface DoorChip {
   readonly doorIndex?: number;
   /** The additional exit the chip is, such as the Chaos gate. */
   readonly additionalExit?: 'chaos' | 'zagreusContract';
+}
+
+/** The chip's point on its room's map: its door by number, or the Chaos gate. */
+export function doorChipMapLink(chip: DoorChip): RoomMapHighlight | undefined {
+  if (chip.additionalExit === 'chaos') return { kind: 'chaosGate' };
+  if (chip.additionalExit !== undefined || chip.doorIndex === undefined) return undefined;
+  return { kind: 'door', doorIndex: chip.doorIndex };
 }
 
 /** A door's rewards as first drawn, or after its rerolls; none while hidden. */

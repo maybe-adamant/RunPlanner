@@ -11,12 +11,15 @@ import { RoomMapViewport } from './RoomMapViewport';
 /** A room's map as a read-only dialog: its readable name, the code name on hover. */
 export function RoomMapDialog({
   gameName,
+  legend,
   onClose,
   overlay,
   returnFocusId,
   title,
 }: {
   readonly gameName: string;
+  /** A key to the overlay's marks, under the map. */
+  readonly legend?: ReactNode;
   readonly onClose: () => void;
   /** Marks drawn over the image in place of the room's own annotations. */
   readonly overlay?: ReactNode;
@@ -42,6 +45,7 @@ export function RoomMapDialog({
         overlay={overlay ?? roomMapOverlayFor(gameName)}
         title={title}
       />
+      {legend}
     </EditorDialog>
   );
 }
@@ -50,12 +54,14 @@ export function RoomMapDialog({
 export function RoomMapLauncher({
   gameName,
   hostId,
+  legend,
   overlay,
   title,
 }: {
   readonly gameName: string;
   /** Changes of the containing owner close an inherited inspection dialog. */
   readonly hostId: string;
+  readonly legend?: ReactNode;
   readonly overlay?: ReactNode;
   readonly title: string;
 }) {
@@ -86,6 +92,7 @@ export function RoomMapLauncher({
       {open ? (
         <RoomMapDialog
           gameName={gameName}
+          legend={legend}
           onClose={closeDialog}
           overlay={overlay}
           returnFocusId={launcherId}

@@ -34,7 +34,8 @@ import { declaredChoicesPicker } from '@planner/projections/contextual/contextua
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
-import { RoomFeatureMapPoints } from './room-map/RoomMapPoints';
+import { RoomFeatureMapLegend, RoomFeatureMapPoints } from './room-map/RoomMapPoints';
+import { useRoomMapLinks, type RoomMapHighlight } from './room-map/roomMapHighlight';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { CandidatePicker } from './CandidatePicker';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
@@ -47,7 +48,7 @@ import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
-import { doorRewardIcons, type DoorChip } from './doorSummary';
+import { doorChipMapLink, doorRewardIcons, type DoorChip } from './doorSummary';
 import { type DoorNoteItem, type DoorNoteMark, type DoorNoteTarget } from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
@@ -117,6 +118,7 @@ export function DoorRow({
   ariaLabel,
   identity,
   map,
+  mapLink,
   reward,
   room,
   secondary,
@@ -133,6 +135,8 @@ export function DoorRow({
     /** The room's map points, shown alone on its map. */
     readonly points?: WorkspaceRoomMap | undefined;
   };
+  /** The exit's point on its own room's map, previewed while the row is hovered or focused. */
+  readonly mapLink?: RoomMapHighlight;
   readonly reward?: ReactNode;
   readonly room: ReactNode;
   readonly secondary?: ReactNode;
@@ -145,8 +149,10 @@ export function DoorRow({
     readonly retained?: boolean;
   };
 }) {
+  const mapLinks = useRoomMapLinks();
   return (
     <article
+      {...mapLinks(mapLink)}
       aria-label={ariaLabel}
       className="door-row"
       data-available={state.available}
@@ -166,12 +172,18 @@ export function DoorRow({
           <RoomMapLauncher
             gameName={map.gameName}
             hostId={map.hostId}
-            overlay={
-              map.points === undefined ||
-              roomMapCalibrations[map.gameName] === undefined ? undefined : (
-                <RoomFeatureMapPoints gameName={map.gameName} map={map.points} title={map.title} />
-              )
-            }
+            {...(map.points === undefined || roomMapCalibrations[map.gameName] === undefined
+              ? {}
+              : {
+                  legend: <RoomFeatureMapLegend gameName={map.gameName} map={map.points} />,
+                  overlay: (
+                    <RoomFeatureMapPoints
+                      gameName={map.gameName}
+                      map={map.points}
+                      title={map.title}
+                    />
+                  ),
+                })}
             title={map.title}
           />
         )}
@@ -428,6 +440,7 @@ function TargetRow({
         points: door.room.map,
         title: door.room.label,
       }}
+      mapLink={{ kind: 'door', doorIndex: target.index }}
       reward={
         <DoorRewardEditor
           door={firstDrawDoor(door)}
@@ -498,6 +511,7 @@ function MissingTargetRow({
     <DoorRow
       {...(canAuthorRoom ? {} : { anchor: findingAnchor(target.marker.address) })}
       ariaLabel={`Door ${target.index} unspecified room offer`}
+      mapLink={{ kind: 'door', doorIndex: target.index }}
       identity={
         <DoorNumber exitTypeLabel={target.exitTypeLabel} index={target.index} lock={lock} />
       }
@@ -545,6 +559,7 @@ function AdditionalExitRow({
         <span className="door-row-number">{chaos === undefined ? 'Contract' : 'Chaos Gate'}</span>
       }
       map={{ gameName: room.gameName, hostId: key, points: room.map, title: room.label }}
+      {...(chaos === undefined ? {} : { mapLink: { kind: 'chaosGate' } as const })}
       reward={
         <span className="door-row-rewards">
           <span className="row-reward-value">
@@ -864,11 +879,13 @@ export function DoorChips({
   /** The list's name: a room's doors, or a Ship wheel's offers. */
   readonly label?: string | undefined;
 }) {
+  const mapLinks = useRoomMapLinks();
   if (chips.length === 0) return null;
   return (
     <span aria-label={label} className="timeline-door-chips" role="list">
       {chips.map((chip) => (
         <span
+          {...mapLinks(doorChipMapLink(chip))}
           {...hintProps(chip.label, undefined, chip.label)}
           aria-label={doorChipName(chip)}
           className="timeline-door-chip"
@@ -931,6 +948,7 @@ export function DoorChipOptions({
   readonly label: string;
   readonly onPick: (key: string) => void;
 }) {
+  const mapLinks = useRoomMapLinks();
   const picked = chips.find((chip) => chip.picked === true);
   const anchor = picked ?? chips.find((chip) => chip.unavailable !== true) ?? chips[0];
   return (
@@ -945,6 +963,7 @@ export function DoorChipOptions({
             : findingMark;
         return (
           <button
+            {...mapLinks(doorChipMapLink(chip))}
             {...mark}
             {...hintProps(
               disabledHint ?? chip.hint ?? chip.label,

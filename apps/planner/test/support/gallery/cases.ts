@@ -7,6 +7,7 @@ import {
   createHubDecisionAddress,
   createIncomingRewardAddress,
   createNemesisRandomEventAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createRouteAddress,
@@ -500,6 +501,43 @@ export const galleryCases: readonly GalleryCase[] = [
       },
     ],
     target: room('F', 'golden-f-b2-e1'),
+  },
+  {
+    id: 'room-map-f-chaos-points',
+    overview: true,
+    doorsExpanded: true,
+    label: 'F room with three Chaos points, its gate at the second',
+    shows: ['room map', 'Chaos Gate position picker preview', 'door rows'],
+    project: createGoldenFGHIProject,
+    commands: [
+      {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(
+          createBiomeAddress('Underworld', 'F'),
+          createOccurrenceId('golden-f-b4-e1'),
+        ),
+        gameName: 'F_Combat17',
+      },
+      {
+        kind: 'AddChaos',
+        additional: createAdditionalExitAddress(
+          createBiomeAddress('Underworld', 'F'),
+          createOccurrenceId('golden-f-b4-e1'),
+          'chaos',
+        ),
+        occurrenceId: createOccurrenceId('gallery-f-chaos'),
+      },
+      {
+        kind: 'SetChaosSpawnPoint',
+        additional: createAdditionalExitAddress(
+          createBiomeAddress('Underworld', 'F'),
+          createOccurrenceId('golden-f-b4-e1'),
+          'chaos',
+        ),
+        spawnPointIndex: 2,
+      },
+    ],
+    target: room('F', 'golden-f-b4-e1'),
   },
   {
     id: 'eris',

@@ -37,6 +37,7 @@ import type { TimelineDoors, TimelineDoorsContent } from './TimelineDoors';
 import { createRouteAddress } from '@run-planner/engine/authored-project';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapColumn, type RoomMapStage } from './room-map/RoomMapColumn';
+import { RoomMapHighlightScope } from './room-map/RoomMapHighlightScope';
 
 /**
  * The map's stage for a Timeline row: before Doors open the doors are closed,
@@ -296,26 +297,28 @@ export function OccurrenceWorkbench({
     room.map === undefined || roomMapCalibrations[room.gameName] === undefined ? (
       controls
     ) : (
-      <div className="room-map-workbench">
-        <div className="room-map-columns">
-          <div
-            className="room-map-controls-column"
-            {...(activeTab === 'actions'
-              ? { onFocusCapture: workOnTimeline, onPointerDownCapture: workOnTimeline }
-              : {})}
-          >
-            {controls}
+      <RoomMapHighlightScope scope={`${roomIdentity}:${activeTab}`}>
+        <div className="room-map-workbench">
+          <div className="room-map-columns">
+            <div
+              className="room-map-controls-column"
+              {...(activeTab === 'actions'
+                ? { onFocusCapture: workOnTimeline, onPointerDownCapture: workOnTimeline }
+                : {})}
+            >
+              {controls}
+            </div>
+            <RoomMapColumn
+              chips={timelineDoors?.summary?.chips}
+              gameName={room.gameName}
+              map={room.map}
+              roomIdentity={roomIdentity}
+              stage={shownMapStage}
+              title={room.label}
+            />
           </div>
-          <RoomMapColumn
-            chips={timelineDoors?.summary?.chips}
-            gameName={room.gameName}
-            map={room.map}
-            roomIdentity={roomIdentity}
-            stage={shownMapStage}
-            title={room.label}
-          />
         </div>
-      </div>
+      </RoomMapHighlightScope>
     );
   const tabRunState = room.runStateByTab[activeTab];
   const showTimelineLegend =

@@ -11,6 +11,7 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { ArtworkChip } from '@planner/ui/editor/rewards/TimelineChip';
 import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
+import { useRoomMapHighlightActions } from '../room-map/roomMapHighlight';
 
 /** The selected Midshop owns only the available spawn affordance. */
 export function ZagreusSpawnWorkbench({
@@ -62,6 +63,8 @@ export function ChaosSpawnWorkbench({
   const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
   const position = feature.action === 'remove' ? feature.position : undefined;
   const positionTarget = findingTarget(owner);
+  // The open position list shows the room's Chaos points on its map, previewing the highlighted one.
+  const mapPreview = useRoomMapHighlightActions();
   return (
     <div className="room-feature-presence-row additional-exit-row">
       {/* A Chaos Gate the room always has is shown, with nothing to toggle. */}
@@ -131,6 +134,14 @@ export function ChaosSpawnWorkbench({
             position.value,
             'Gate position',
           )}
+          onActiveChange={(item) =>
+            mapPreview?.show({ kind: 'chaosPoints', position: item?.value ?? undefined })
+          }
+          onOpenChange={(open) =>
+            open
+              ? mapPreview?.show({ kind: 'chaosPoints' })
+              : mapPreview?.release({ kind: 'chaosPoints' })
+          }
           onSelect={(value) => {
             if (value === position.value) return;
             executeIntent(

@@ -478,14 +478,15 @@
   transform: translate(-50%, -50%);
 }
 
-/* Anchors: small filled spots that never hide the art under them. */
+/* Anchors: a ring like a closed door's, in their own mint. */
 .room-map-point {
-  width: max(1.6%, 11px);
+  width: max(2.6%, 16px);
   aspect-ratio: 1;
-  border: 2px solid #0b0e14;
+  border: 2px solid #4cf2c2;
   border-radius: 50%;
-  background: #4cf2c2;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 60%);
+  background: rgb(17 25 35 / 70%);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 48%);
+  opacity: 0.8;
 }
 
 /* An entry: Melinoë's head where she can arrive. */
@@ -518,7 +519,7 @@
 
 /* A closed door, or one with no chip: a plain ring at the door. */
 .room-map-door[data-closed],
-.room-map-door:empty {
+.room-map-door[data-ring] {
   width: max(2.6%, 16px);
   min-width: 0;
   min-height: 0;
@@ -531,9 +532,10 @@
   opacity: 0.8;
 }
 
+/* The taken door: a solid ring; dashed rings are previews. */
 .room-map-door[data-taken] {
   z-index: 2;
-  outline: 2px dashed rgb(255 244 199 / 85%);
+  outline: 2px solid rgb(255 244 199 / 85%);
   outline-offset: 2px;
 }
 
@@ -546,4 +548,77 @@
 .room-map-door-face .artwork-label-icon {
   width: 20px;
   height: 20px;
+}
+
+/* The point a hovered or focused control, or a highlighted picker option, previews. */
+.room-map-door[data-preview] {
+  z-index: 3;
+  opacity: 1;
+  outline: 3px dashed #fff4c7;
+  outline-offset: 3px;
+  scale: 1.2;
+}
+
+/* A door's number, or a Chaos point's position, on its marker's corner. */
+.room-map-number {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  display: grid;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  place-items: center;
+  border: 1px solid #0b0e14;
+  border-radius: 999px;
+  color: #0b0e14;
+  background: #f0a35e;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.room-map-door[data-chaos] > .room-map-number {
+  background: #b58cff;
+}
+
+/* The map's key: one swatch per kind of point it shows. */
+.room-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin: 6px 0 0;
+  padding: 0;
+  color: #d7d2ca;
+  font-size: 0.76rem;
+  list-style: none;
+}
+
+.room-map-legend > li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.room-map-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #f0a35e;
+  border-radius: 50%;
+  background: rgb(17 25 35 / 88%);
+}
+
+.room-map-legend > li[data-kind='chaos'] > .room-map-legend-swatch {
+  border-color: #b58cff;
+}
+
+.room-map-legend > li[data-kind='anchor'] > .room-map-legend-swatch {
+  border-color: #4cf2c2;
+}
+
+.room-map-legend-entry {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }

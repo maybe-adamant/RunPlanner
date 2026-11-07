@@ -3,6 +3,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
   createFieldsSpatialAddress,
@@ -106,6 +107,52 @@ describe('OccurrenceWorkbench', () => {
 
     await view.user.click(rows[0]!);
     expect(rows.filter((row) => row.hasAttribute('data-map-shown'))).toEqual([rows[0]]);
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyBefore,
+    );
+  });
+
+  it('shows every Chaos point while the gate position is picked, previewing the highlighted one', async () => {
+    const occurrenceId = goldenFOccurrenceId(4, 1);
+    const occurrence = createOccurrenceAddress(createBiomeAddress('Underworld', 'F'), occurrenceId);
+    const withRoom = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence,
+      gameName: 'F_Combat17',
+    });
+    const project = applyProjectCommand(withRoom, catalog, {
+      kind: 'AddChaos',
+      additional: createAdditionalExitAddress(
+        createBiomeAddress('Underworld', 'F'),
+        occurrenceId,
+        'chaos',
+      ),
+      occurrenceId: createOccurrenceId('map-preview-chaos'),
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    const map = screen
+      .getAllByRole('region')
+      .find((region) => region.getAttribute('aria-label')?.endsWith(' map'))!;
+    const points = () => within(map).queryAllByRole('img', { name: /^Chaos gate position/ });
+    const previewed = () =>
+      points()
+        .filter((point) => point.hasAttribute('data-preview'))
+        .map((point) => point.getAttribute('aria-label'));
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
+    expect(points()).toEqual([]);
+
+    await view.user.click(screen.getByRole('button', { name: 'Chaos Gate position' }));
+    expect(points().length).toBeGreaterThan(1);
+    expect(previewed()).toEqual([]);
+    await view.user.keyboard('{ArrowDown}');
+    expect(previewed()).toEqual(['Chaos gate position 1']);
+    await view.user.keyboard('{Escape}');
+    expect(points()).toEqual([]);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );

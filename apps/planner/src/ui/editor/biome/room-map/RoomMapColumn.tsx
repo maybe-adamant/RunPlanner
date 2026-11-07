@@ -5,7 +5,8 @@ import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import { DoorChipFace } from '../DecisionWorkbench';
 import type { DoorChip } from '../doorSummary';
-import { RoomMapSpots } from './RoomMapPoints';
+import { RoomMapNumber, RoomMapLegend, RoomMapSpots } from './RoomMapPoints';
+import { useRoomMapHighlight } from './roomMapHighlight';
 import { position } from './roomMapPosition';
 
 /**
@@ -36,9 +37,18 @@ export function RoomMapColumn({
   readonly stage: RoomMapStage;
   readonly title: string;
 }) {
+  const highlight = useRoomMapHighlight();
   const calibration = roomMapCalibrations[gameName];
   if (calibration === undefined) return null;
   const markers = roomMapMarkers(map, calibration);
+  // While the gate's position is being picked, every Chaos point shows with its position.
+  const chaosPoints = highlight?.kind === 'chaosPoints' ? markers.chaosPoints : [];
+  const previewedChaosPoint =
+    highlight?.kind === 'chaosPoints' && highlight.position !== undefined
+      ? markers.chaosPoints[highlight.position - 1]
+      : undefined;
+  const gateRank = chaosPoints.findIndex((point) => point.id === markers.chaosGate?.id);
+  const gatePosition = gateRank < 0 ? undefined : gateRank + 1;
   const open = stage !== 'closed';
   const taken = stage === 'left' || stage === 'summary';
   const chipFor = (doorIndex: number | undefined) =>
@@ -55,12 +65,35 @@ export function RoomMapColumn({
         overlay={
           <div aria-label={`${title} map points`} className="room-map-marker-layer" role="group">
             <RoomMapSpots markers={markers} />
+            {chaosPoints.map((point, index) =>
+              point.id === markers.chaosGate?.id ? null : (
+                <span
+                  aria-label={`Chaos gate position ${index + 1}`}
+                  className="room-map-door"
+                  data-chaos
+                  data-closed
+                  data-preview={point === previewedChaosPoint || undefined}
+                  key={`chaos:${point.id}`}
+                  role="img"
+                  style={position(point)}
+                >
+                  <RoomMapNumber value={index + 1} />
+                </span>
+              ),
+            )}
             {markers.chaosGate === undefined ? null : (
               <span
                 aria-label={chaosChip === undefined ? 'Chaos gate' : chipName(chaosChip)}
                 className="room-map-door"
                 data-chaos
                 data-closed={!open || undefined}
+                data-preview={
+                  highlight?.kind === 'chaosGate' ||
+                  (previewedChaosPoint !== undefined &&
+                    previewedChaosPoint.id === markers.chaosGate.id) ||
+                  undefined
+                }
+                data-ring={(open && chaosChip === undefined) || undefined}
                 data-taken={(taken && chaosChip?.picked) || undefined}
                 role="img"
                 style={position(markers.chaosGate)}
@@ -70,6 +103,7 @@ export function RoomMapColumn({
                     <DoorChipFace chip={chaosChip} />
                   </span>
                 )}
+                <RoomMapNumber value={gatePosition} />
               </span>
             )}
             {markers.doors.map((door) => {
@@ -86,6 +120,11 @@ export function RoomMapColumn({
                   className="room-map-door"
                   data-closed={!open || undefined}
                   data-locked={(open && chip?.locked) || undefined}
+                  data-preview={
+                    (highlight?.kind === 'door' && highlight.doorIndex === door.doorIndex) ||
+                    undefined
+                  }
+                  data-ring={(open && chip === undefined) || undefined}
                   data-taken={(taken && chip?.picked) || undefined}
                   key={`door:${door.id}`}
                   role="img"
@@ -96,12 +135,17 @@ export function RoomMapColumn({
                       <DoorChipFace chip={chip} />
                     </span>
                   ) : null}
+                  <RoomMapNumber value={door.doorIndex} />
                 </span>
               );
             })}
           </div>
         }
         title={title}
+      />
+      <RoomMapLegend
+        chaos={markers.chaosGate !== undefined || chaosPoints.length > 0}
+        markers={markers}
       />
     </section>
   );
