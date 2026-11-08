@@ -126,7 +126,18 @@ inside the one derivation rule.
    controls; the map shows them (phase 3 makes them clickable).
 5. In-game probe confirms or corrects the derivation; flipped map display.
 
-## N pass (owner-settled 2026-11-07, after O)
+## O pass (owner-settled 2026-11-08)
+
+- Each ship phase's map shows the wheel for the next phase: one offer sits
+  on the wheel, two offers on its Left/Right spots (ShipsEncounterSetup
+  spawns them at fixed offsets from the wheel). Filling and rerolling the
+  offers in a phase's Timeline updates the wheel chips at the selected row;
+  the last phase shows the exit door.
+- Catalog: wheel point and its two offer spots per ship room, from the map
+  file plus the native offsets. O_MiniBoss01 (Charybdis) never sets up its
+  wheel, so a wheel shows only in a phase that has wheel offers.
+
+## N pass (owner-settled 2026-11-07)
 
 - The Side Rooms tab goes away. The Ephyra main room's Overview (Spawns)
   authors which side doors open and what each side room rewards; the game
