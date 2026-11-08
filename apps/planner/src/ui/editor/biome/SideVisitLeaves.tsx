@@ -22,7 +22,7 @@ import {
   candidateWaits,
 } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
-import { doorRewardIcons } from './doorSummary';
+import { doorRewardIcons, hubReturnChip } from './doorSummary';
 import { LeavePicker, type LeaveOption } from './LeavePicker';
 import { LeaveRow } from './TimelineDoors';
 import { TimelineRow } from './TimelineRow';
@@ -76,20 +76,8 @@ export function OpenRoomTimeline({
   );
 }
 
-/** The way back to the Hub, the room's Door 1: its room icon and name. */
 function hubOption(hub: HubDecisionAddress): LeaveOption {
-  return {
-    key: 'hub',
-    label: 'Hub',
-    name: 'Hub',
-    mapLink: { kind: 'door', doorIndex: 1 },
-    chip: {
-      key: 'hub',
-      label: 'Hub',
-      roomIcon: { kind: 'hub', biomeKey: hub.biomeKey },
-      rewards: [],
-    },
-  };
+  return { key: 'hub', label: 'Hub', name: 'Hub', chip: hubReturnChip(hub) };
 }
 
 /** A side room by its number alone, as SR 10. */

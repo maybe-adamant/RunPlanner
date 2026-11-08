@@ -170,7 +170,7 @@ describe('main room side visits on its Timeline', () => {
     await view.user.hover(within(list).getByRole('option', { name: secondLabel }));
     expect(ringed()).toEqual([`${secondLabel} · Visit 2`]);
     await view.user.hover(within(list).getByRole('option', { name: 'Hub' }));
-    expect(ringed()).toEqual(['Door 1']);
+    expect(ringed()).toEqual(['Hub']);
   });
 
   it('keeps a later visit that an earlier change repeats, marked on its own exit', async () => {

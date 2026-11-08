@@ -19,6 +19,7 @@ import {
   batchDoorFindingOwners,
   batchDoorPressIcon,
   batchDoorsStatus,
+  hubReturnChip,
 } from './doorSummary';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
@@ -444,6 +445,9 @@ function OccurrenceInspector({
       {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
       interactions={interactions}
       {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
+      {...(node.hubReturn?.kind === 'hub'
+        ? { hubReturnChip: { ...hubReturnChip(node.hubReturn.hub), picked: true } }
+        : {})}
       room={node.room}
       renderRoomActionRowContent={(row) => inspectorRoomActionContent(node.room, interactions, row)}
       renderLifecycleBoundaryContent={(boundary) =>

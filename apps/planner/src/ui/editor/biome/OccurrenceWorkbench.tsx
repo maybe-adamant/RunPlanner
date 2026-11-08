@@ -34,7 +34,7 @@ import { SideDoorSpawns } from './locals/SideDoorSpawns';
 import { sideDoorMapDoors } from './locals/sideDoorMapDoors';
 import { TimelineLegend } from './TimelineLegend';
 import type { TimelineDoors, TimelineDoorsContent } from './TimelineDoors';
-import { doorChipsAt, wheelOfferChips, wheelOfferSteps } from './doorSummary';
+import { doorChipsAt, wheelOfferChips, wheelOfferSteps, type DoorChip } from './doorSummary';
 import { createRouteAddress } from '@run-planner/engine/authored-project';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapColumn, type RoomMapStage } from './room-map/RoomMapColumn';
@@ -86,6 +86,8 @@ interface OccurrenceWorkbenchProps {
   readonly interactions: WorkspaceInteractionCatalog;
   /** The main room's side doors, among its Overview spawns. */
   readonly localVisit?: WorkspaceLocalVisitDecision;
+  /** A Hub room's way back to the Hub, on its map. */
+  readonly hubReturnChip?: DoorChip;
   readonly room: WorkspaceRoomSummary;
   readonly runState?: WorkspaceRunStateLauncher;
   readonly initialTab?: WorkspaceRoomTab;
@@ -124,6 +126,7 @@ export function OccurrenceWorkbench({
   navigationRevision,
   interactions,
   localVisit,
+  hubReturnChip,
   room,
   renderRoomActionRowContent,
   renderLifecycleBoundaryContent,
@@ -328,10 +331,11 @@ export function OccurrenceWorkbench({
       ? stepsShown.at(-1)?.actionKey
       : undefined;
   const stepDoors = stepsShown.find((candidate) => candidate.actionKey === stepKey)?.doors;
-  const mapChips =
+  const doorChips =
     openChips === undefined || stepDoors === undefined
       ? openChips
       : doorChipsAt(openChips, stepDoors);
+  const mapChips = hubReturnChip === undefined ? doorChips : [...(doorChips ?? []), hubReturnChip];
   // The marked row is the one the map reflects; the plan's map marks none.
   const showsMapRow = shownMapStage !== 'summary';
   useEffect(() => {

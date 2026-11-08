@@ -1,4 +1,8 @@
-import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
+import {
+  semanticAddressKey,
+  type HubDecisionAddress,
+  type SemanticAddress,
+} from '@run-planner/engine/authored-project';
 import {
   workspaceInteractionKey,
   type WorkspacePhysicalTarget,
@@ -34,6 +38,17 @@ export interface DoorChip {
   readonly additionalExit?: 'chaos' | 'zagreusContract';
   /** The chip is a Ship wheel's offer, keyed by its offer key. */
   readonly wheelOffer?: true;
+}
+
+/** The way back to the Hub, the main room's Door 1, by the Hub's room icon. */
+export function hubReturnChip(hub: HubDecisionAddress): DoorChip {
+  return {
+    key: 'hub',
+    doorIndex: 1,
+    label: 'Hub',
+    roomIcon: { kind: 'hub', biomeKey: hub.biomeKey },
+    rewards: [],
+  };
 }
 
 /** The chip's point on its room's map: its door by number, its wheel offer, or the Chaos gate. */
