@@ -3445,9 +3445,14 @@ span.hub-board-status-line {
   container: room-map-workbench / inline-size;
 }
 
+/*
+ * The controls grow to the widest row they hold (an expanded door row, measured with
+ * `npm run gallery:measure-columns`), the map takes the rest and never narrows past its
+ * minimum; where the controls would fall below a typical Timeline row, the two stack.
+ */
 .room-map-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 43.5rem) minmax(26rem, 1fr);
   align-items: start;
   gap: 16px;
 }

@@ -56,6 +56,7 @@
     "test:product": "vitest run apps/planner/test/product-loops --exclude apps/planner/test/product-loops/UnifiedBiomePerformance.test.ts",
     "gallery": "vite --config apps/planner/vite.gallery.config.ts",
     "gallery:capture": "node scripts/gallery-capture.mjs",
+    "gallery:measure-columns": "node scripts/measure-room-columns.mjs",
     "test:watch": "vitest",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",

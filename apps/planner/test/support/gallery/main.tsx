@@ -8,8 +8,14 @@ import { GalleryCaseView } from './GalleryCaseView';
 import { galleryCases } from './cases';
 import { filterGalleryCases } from './galleryCase';
 
-const filter = new URLSearchParams(globalThis.location.search).get('case');
+const search = new URLSearchParams(globalThis.location.search);
+const filter = search.get('case');
 const shown = filterGalleryCases(galleryCases, filter);
+// Layout measurement opens every case's Overview too, with no picker opened.
+const options = {
+  everyOverview: search.get('views') === 'all',
+  pickersClosed: search.get('pickers') === 'closed',
+};
 
 function Gallery() {
   // Capture waits for this mark: every case has rendered or shown its error.
@@ -29,7 +35,7 @@ function Gallery() {
         ))}
       </nav>
       {shown.map((entry) => (
-        <GalleryCaseView entry={entry} key={entry.id} />
+        <GalleryCaseView entry={entry} key={entry.id} {...options} />
       ))}
       <HintLayer />
     </main>

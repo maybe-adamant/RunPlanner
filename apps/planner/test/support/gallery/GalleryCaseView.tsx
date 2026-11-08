@@ -110,7 +110,15 @@ function caseApplication(entry: GalleryCase, view: CaseView): PlannerApplication
   return application;
 }
 
-function OpenedCase({ entry, view }: { readonly entry: GalleryCase; readonly view: CaseView }) {
+function OpenedCase({
+  entry,
+  pickersClosed,
+  view,
+}: {
+  readonly entry: GalleryCase;
+  readonly pickersClosed: boolean;
+  readonly view: CaseView;
+}) {
   const application = caseApplication(entry, view);
   const frame = useRef<HTMLDivElement>(null);
   // Some rooms open on another tab; the Overview pane switches to its tab as a user would.
@@ -132,7 +140,7 @@ function OpenedCase({ entry, view }: { readonly entry: GalleryCase; readonly vie
   // A case showing an Optional actions list opens its picker once it is enabled, as a user would.
   const pickerOpened = useRef(false);
   useEffect(() => {
-    if (view !== 'timeline' || entry.openPicker === undefined) return;
+    if (view !== 'timeline' || pickersClosed || entry.openPicker === undefined) return;
     const name = entry.openPicker;
     const timer = window.setInterval(() => {
       const trigger = frame.current?.querySelector<HTMLButtonElement>(
@@ -149,11 +157,11 @@ function OpenedCase({ entry, view }: { readonly entry: GalleryCase; readonly vie
       window.clearInterval(timer);
       window.clearTimeout(stop);
     };
-  }, [entry, view]);
+  }, [entry, pickersClosed, view]);
   // A case showing an Overview list opens that picker once the Overview shows it.
   const overviewPickerOpened = useRef(false);
   useEffect(() => {
-    if (view !== 'overview' || entry.openOverviewPicker === undefined) return;
+    if (view !== 'overview' || pickersClosed || entry.openOverviewPicker === undefined) return;
     const name = entry.openOverviewPicker;
     const timer = window.setInterval(() => {
       const trigger = frame.current?.querySelector<HTMLButtonElement>(
@@ -169,7 +177,7 @@ function OpenedCase({ entry, view }: { readonly entry: GalleryCase; readonly vie
       window.clearInterval(timer);
       window.clearTimeout(stop);
     };
-  }, [entry, view]);
+  }, [entry, pickersClosed, view]);
   return (
     <Provider store={application.store}>
       <div ref={frame}>
@@ -179,7 +187,17 @@ function OpenedCase({ entry, view }: { readonly entry: GalleryCase; readonly vie
   );
 }
 
-export function GalleryCaseView({ entry }: { readonly entry: GalleryCase }) {
+export function GalleryCaseView({
+  entry,
+  everyOverview = false,
+  pickersClosed = false,
+}: {
+  readonly entry: GalleryCase;
+  /** Shows the Overview under the Timeline even where the case does not ask for it. */
+  readonly everyOverview?: boolean;
+  /** Leaves every picker the case would open closed. */
+  readonly pickersClosed?: boolean;
+}) {
   return (
     <section className="gallery-case" data-gallery-case={entry.id} id={entry.id}>
       <header className="gallery-case-heading">
@@ -191,11 +209,11 @@ export function GalleryCaseView({ entry }: { readonly entry: GalleryCase }) {
         </p>
       </header>
       <CaseBoundary>
-        <OpenedCase entry={entry} view="timeline" />
+        <OpenedCase entry={entry} pickersClosed={pickersClosed} view="timeline" />
       </CaseBoundary>
-      {entry.overview === true ? (
+      {entry.overview === true || everyOverview ? (
         <CaseBoundary>
-          <OpenedCase entry={entry} view="overview" />
+          <OpenedCase entry={entry} pickersClosed={pickersClosed} view="overview" />
         </CaseBoundary>
       ) : null}
     </section>
