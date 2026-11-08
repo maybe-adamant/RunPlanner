@@ -3403,8 +3403,18 @@ span.hub-board-status-line {
   justify-self: start;
 }
 
-.room-layout-detail {
-  color: #9d99a4;
+/* A row of position chips: each object's anchor, each Fields slot's point. */
+.room-layout-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.room-layout-chip {
+  display: inline-flex;
+  min-width: 0;
 }
 
 /* A room with a calibrated map: its controls beside the map, the map below them when narrow. */

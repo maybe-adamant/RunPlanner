@@ -7,10 +7,10 @@ import { useRoomMapLinks, type RoomMapHighlight } from './room-map/roomMapHighli
  * it, what each thing holds, and where each thing stands.
  */
 const roomOverviewSections = [
-  ['entry', 'On entry'],
-  ['present', 'In the room'],
-  ['contents', 'Contents'],
-  ['positions', 'Positions'],
+  ['entry', 'Encounter'],
+  ['present', 'Spawns'],
+  ['contents', 'Offers'],
+  ['positions', 'Layout'],
 ] as const;
 
 export type RoomOverviewSectionKey = (typeof roomOverviewSections)[number][0];

@@ -550,8 +550,8 @@ export const galleryCases: readonly GalleryCase[] = [
   {
     id: 'room-map-f-overview',
     overview: true,
-    label: 'F combat room: the Well stood on A2, a switch the game places',
-    shows: ['Overview sections', 'object anchor rows', 'anchor occupants on the map'],
+    label: 'F combat room: the Well stood on A2, the switch on the last free spot',
+    shows: ['Overview sections', 'Anchors chip row', 'anchor occupants on the map'],
     project: createGoldenFGHIProject,
     commands: [
       placeAnchorObject('F', 'golden-f-b5-e1', 'stygianWell'),
@@ -568,8 +568,8 @@ export const galleryCases: readonly GalleryCase[] = [
   {
     id: 'room-map-f-postboss-pinned',
     overview: true,
-    label: 'F Postboss: the Well on its pinned spot, the Pool placed by the game',
-    shows: ['pinned Well anchor', 'Pool anchor left to the game'],
+    label: 'F Postboss: the Well on its pinned spot, the Pool on the spot it leaves',
+    shows: ['pinned Well chip', 'derived Pool chip', 'derived occupant on the map'],
     project: createGoldenFGHIProject,
     target: room('F', 'golden-f-preboss-shop:postboss'),
   },
@@ -619,8 +619,8 @@ export const galleryCases: readonly GalleryCase[] = [
   {
     id: 'room-map-h-fields-slots',
     overview: true,
-    label: 'H Fields room: each cage, pickup and Nemesis point on its own row',
-    shows: ['Fields slot rows', 'Nemesis'],
+    label: 'H Fields room: cage and reward points as chip rows',
+    shows: ['Cages chip row', 'Rewards chip row', 'Nemesis'],
     project: loadNemesisFieldsCheckpoint,
     target: room('H', 'golden-h-combat05'),
   },

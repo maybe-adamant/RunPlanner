@@ -152,6 +152,9 @@ export function assembleRoomObjectSlots(input: {
               anchor: Object.freeze({
                 ...(object.anchorId === undefined ? {} : { anchorId: object.anchorId }),
                 ...(pinned === undefined ? {} : { pinned }),
+                ...(object.derivedAnchorId === undefined
+                  ? {}
+                  : { derivedAnchorId: object.derivedAnchorId }),
                 choices: Object.freeze(
                   (object.anchorChoices ?? [])
                     .filter((choice) => choice.anchorId !== (object.anchorId ?? null))
@@ -179,6 +182,7 @@ export function assembleRoomObjectSlots(input: {
         ...(anchor.occupant === undefined
           ? {}
           : { occupant: Object.freeze({ object: anchor.occupant, ...kindOf(anchor.occupant) }) }),
+        ...(anchor.derived === true ? { derived: true as const } : {}),
       }),
     );
   return Object.freeze({

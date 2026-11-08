@@ -205,14 +205,14 @@ describe('OccurrenceWorkbench', () => {
         .getAllByRole('heading', { level: 5 })
         .map((heading) => heading.textContent),
     ).toEqual(
-      ['On entry', 'In the room', 'Contents', 'Positions'].filter((name) =>
+      ['Encounter', 'Spawns', 'Offers', 'Layout'].filter((name) =>
         within(standardFeatures).queryByRole('region', { name }),
       ),
     );
-    const present = within(standardFeatures).getByRole('region', { name: 'In the room' });
+    const present = within(standardFeatures).getByRole('region', { name: 'Spawns' });
     for (const line of ['Exits', 'Objects', 'Resources'])
       expect(within(present).getByRole('group', { name: line })).toBeTruthy();
-    expect(within(standardFeatures).getByRole('region', { name: 'Positions' })).toBeTruthy();
+    expect(within(standardFeatures).getByRole('region', { name: 'Layout' })).toBeTruthy();
     expect(document.querySelector('.room-overview-workbench')).not.toBeNull();
     expect(screen.queryByRole('tab', { name: 'Room Doors' })).toBeNull();
     const overviewRunState = screen.getByRole('button', { name: 'Run State' });
@@ -259,7 +259,7 @@ describe('OccurrenceWorkbench', () => {
       screen.getAllByRole('tab').map((tab) => tab.getAttribute('aria-label') ?? tab.textContent),
     ).toEqual(['Room Overview', 'Room Timeline']);
     openRoomTab('Room Overview');
-    const positions = screen.getByRole('region', { name: 'Positions' });
+    const positions = screen.getByRole('region', { name: 'Layout' });
     expect(within(positions).getAllByRole('button', { name: /^Cage \d point/ })).not.toHaveLength(
       0,
     );
@@ -388,7 +388,7 @@ describe('OccurrenceWorkbench', () => {
     openRoomTab('Room Overview');
 
     await view.user.click(screen.getByRole('button', { name: /^Entry/ }));
-    await view.user.click(screen.getByRole('option', { name: /⇋$/ }));
+    await view.user.click(screen.getByRole('option', { name: /Flipped/ }));
 
     const present = view.application.store.getState().projectWorkspace.history!.present;
     const edited = present.route.biomes

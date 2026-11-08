@@ -11,6 +11,7 @@ import {
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
+import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent, useCommandsIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -18,7 +19,11 @@ import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { heldObjectIcon, heldObjectShortName } from '../room-features/roomObjectFace';
-import { useRoomMapHighlightActions, type RoomMapHighlight } from '../room-map/roomMapHighlight';
+import {
+  useRoomMapHighlightActions,
+  useRoomMapLinks,
+  type RoomMapHighlight,
+} from '../room-map/roomMapHighlight';
 import { fieldsSlotBadge, fieldsSlotIcon } from './fieldsSlotFace';
 
 /** An unset position: the game places it. */
@@ -44,6 +49,7 @@ function PositionPicker<T>({
   ariaLabel,
   choices,
   current,
+  currentOption,
   disabledHint,
   findingTarget,
   id,
@@ -51,10 +57,13 @@ function PositionPicker<T>({
   onOpen,
   onSelect,
   openPreview,
+  triggerIcon,
 }: {
   readonly ariaLabel: string;
   readonly choices: readonly PositionChoice<T>[];
   readonly current: string;
+  /** The current value as the open list spells it; the trigger's own text by default. */
+  readonly currentOption?: string | undefined;
   readonly disabledHint?: string | undefined;
   readonly findingTarget?: FindingTargetProps | undefined;
   readonly id: string;
@@ -63,6 +72,8 @@ function PositionPicker<T>({
   readonly onSelect: (value: T) => void;
   /** What the map shows while the list is open and no choice is highlighted. */
   readonly openPreview?: RoomMapHighlight | undefined;
+  /** The thing it places, before its value. */
+  readonly triggerIcon?: ArtworkSource | undefined;
 }) {
   const mapPreview = useRoomMapHighlightActions();
   const shownRef = useRef<RoomMapHighlight | undefined>(undefined);
@@ -84,7 +95,7 @@ function PositionPicker<T>({
       locked={disabledHint === undefined && choices.length === 0}
       model={declaredChoicesPicker(
         [
-          { key: 'current', value: 'current', label: current },
+          { key: 'current', value: 'current', label: currentOption ?? current },
           ...choices.map((choice) => ({
             key: choice.key,
             value: choice.key,
@@ -114,6 +125,7 @@ function PositionPicker<T>({
       }}
       placeholder={current}
       searchable={false}
+      triggerIcon={triggerIcon}
       triggerLabel={current}
       triggerSize="content"
     />
@@ -121,8 +133,8 @@ function PositionPicker<T>({
 }
 
 /**
- * The room's Positions rows: its entry with orientation, each present
- * object's anchor, each Fields slot's point, and the Chaos gate's point.
+ * The room's Layout rows: its entry with orientation, the present objects'
+ * anchors, the Fields slots' points, and the Chaos gate's point.
  */
 export function RoomPositions({
   chaosGate,
@@ -135,51 +147,78 @@ export function RoomPositions({
   readonly room: WorkspaceRoomSummary;
 }) {
   const fields = room.roomLocal.kind === 'fields' ? room.roomLocal : undefined;
-  const objects = room.objectSlots?.objects.filter((object) => object.present) ?? [];
+  const objectSlots = room.objectSlots;
+  const objects =
+    objectSlots?.objects.filter((object) => object.present && object.anchor !== undefined) ?? [];
+  const cages = fields?.spatial.filter((control) => control.target.kind === 'cage') ?? [];
+  const rewards = fields?.spatial.filter((control) => control.target.kind !== 'cage') ?? [];
   if (
     room.layout === undefined &&
     objects.length === 0 &&
-    (fields?.spatial.length ?? 0) === 0 &&
+    cages.length === 0 &&
+    rewards.length === 0 &&
     chaosGate == null
   )
     return null;
-  return (
-    <div className="room-layout-controls">
-      {room.layout === undefined ? null : (
-        <EntryRow interactions={interactions} layout={room.layout} />
-      )}
-      {room.objectSlots === undefined
-        ? null
-        : objects.map((object) => (
-            <ObjectAnchorRow
-              interactions={interactions}
-              key={object.object}
-              object={object}
-              objectSlots={room.objectSlots!}
-            />
-          ))}
-      {fields === undefined
-        ? null
-        : fields.spatial.map((control) => (
-            <FieldsSlotRow
+  const fieldsRow = (label: string, controls: readonly WorkspaceFieldsSpatialControl[]) =>
+    fields === undefined || controls.length === 0 ? null : (
+      <OverviewRow label={label}>
+        <div className="room-layout-chips">
+          {controls.map((control) => (
+            <FieldsSlotChip
               control={control}
               fields={fields}
               interactions={interactions}
               key={control.interactionKey}
             />
           ))}
+        </div>
+      </OverviewRow>
+    );
+  return (
+    <div className="room-layout-controls">
+      {room.layout === undefined ? null : (
+        <EntryRow interactions={interactions} layout={room.layout} />
+      )}
+      {objectSlots === undefined || objects.length === 0 ? null : (
+        <OverviewRow label="Anchors">
+          <div className="room-layout-chips">
+            {objects.map((object) => (
+              <ObjectAnchorChip
+                interactions={interactions}
+                key={object.object}
+                object={object}
+                objectSlots={objectSlots}
+              />
+            ))}
+          </div>
+        </OverviewRow>
+      )}
+      {fieldsRow('Cages', cages)}
+      {fieldsRow('Rewards', rewards)}
       {chaosGate}
     </div>
   );
 }
 
-function entryName(layout: WorkspaceRoomLayout, pair: WorkspaceRoomEntryPair): string {
+function entryNumber(layout: WorkspaceRoomLayout, pair: WorkspaceRoomEntryPair): string {
   const number = layout.entries.find((entry) => entry.pointId === pair.pointId)?.number;
-  const name = number === undefined ? 'Entry' : `E${number}`;
+  return number === undefined ? 'Entry' : `E${number}`;
+}
+
+/** The compact entry the closed control shows: `E1 ⇋`. */
+function entryName(layout: WorkspaceRoomLayout, pair: WorkspaceRoomEntryPair): string {
+  const name = entryNumber(layout, pair);
   return pair.flipped ? `${name} ${mirrored}` : name;
 }
 
-const settledBy = { fixed: 'Fixed', door: 'Decided by the door' } as const;
+/** The entry as the open list spells it: `E1 · Flipped (⇋)`. */
+function entryOption(layout: WorkspaceRoomLayout, pair: WorkspaceRoomEntryPair): string {
+  const name = entryNumber(layout, pair);
+  return pair.flipped ? `${name} · Flipped (${mirrored})` : name;
+}
+
+const settledHint = { fixed: 'The room has one entry', door: 'Decided by the door' } as const;
 
 /** The room's entry with the way it faces: shown where it is settled, picked where the game picks. */
 function EntryRow({
@@ -231,10 +270,15 @@ function EntryRow({
     case 'settled':
       if (state.stale === undefined)
         return row(
-          <span className="room-layout-value" {...target}>
-            {entryName(layout, state.value)}
-            <span className="room-layout-detail"> · {settledBy[state.by]}</span>
-          </span>,
+          <PositionPicker<string>
+            ariaLabel="Entry"
+            choices={[]}
+            current={entryName(layout, state.value)}
+            disabledHint={settledHint[state.by]}
+            findingTarget={target}
+            id={id}
+            onSelect={() => undefined}
+          />,
         );
       return row(
         <PositionPicker<string>
@@ -242,12 +286,13 @@ function EntryRow({
           choices={[
             {
               key: state.stale.clearKey,
-              label: `${entryName(layout, state.value)} · ${settledBy[state.by]}`,
+              label: entryOption(layout, state.value),
               value: state.stale.clearKey,
               preview: pairPreview(state.value),
             },
           ]}
           current={entryName(layout, state.value)}
+          currentOption={entryOption(layout, state.value)}
           findingTarget={target}
           id={id}
           invalid
@@ -257,24 +302,23 @@ function EntryRow({
       );
     case 'choice': {
       const stale = state.stale;
-      const current =
+      const shown: WorkspaceRoomEntryPair | undefined =
         stale !== undefined
           ? stale.pointId === undefined
-            ? unset
-            : entryName(layout, { pointId: stale.pointId, flipped: stale.flipped === true })
-          : state.value === undefined
-            ? unset
-            : entryName(layout, state.value);
+            ? undefined
+            : { pointId: stale.pointId, flipped: stale.flipped === true }
+          : state.value;
       return row(
         <PositionPicker<string>
           ariaLabel="Entry"
           choices={state.choices.map((choice) => ({
             key: choice.key,
-            label: choice.pair === null ? unset : entryName(layout, choice.pair),
+            label: choice.pair === null ? unset : entryOption(layout, choice.pair),
             value: choice.key,
             preview: choice.pair === null ? picking : pairPreview(choice.pair),
           }))}
-          current={current}
+          current={shown === undefined ? unset : entryName(layout, shown)}
+          currentOption={shown === undefined ? unset : entryOption(layout, shown)}
           findingTarget={target}
           id={id}
           invalid={stale !== undefined}
@@ -286,8 +330,27 @@ function EntryRow({
   }
 }
 
-/** A present object's anchor: picked among the free anchors, `?` leaving it to the game. */
-function ObjectAnchorRow({
+/** A chip whose hover previews its point on the map. */
+function LayoutChip({
+  children,
+  preview,
+}: {
+  readonly children: ReactNode;
+  readonly preview: RoomMapHighlight | undefined;
+}) {
+  const mapLinks = useRoomMapLinks();
+  return (
+    <span className="room-layout-chip" {...mapLinks(preview)}>
+      {children}
+    </span>
+  );
+}
+
+/**
+ * A present object's anchor chip: picked among the free anchors, `?` leaving
+ * it to the game. The Well's pin and a last free anchor are shown, not picked.
+ */
+function ObjectAnchorChip({
   interactions,
   object,
   objectSlots,
@@ -309,46 +372,51 @@ function ObjectAnchorRow({
     const number = objectSlots.anchors.find((candidate) => candidate.anchorId === anchorId)?.number;
     return number === undefined ? unset : `A${number}`;
   };
-  const at = anchor.pinned ?? anchor.anchorId;
+  const at = anchor.pinned ?? anchor.derivedAnchorId ?? anchor.anchorId;
   const label = heldObjectShortName(object.object);
   const id = semanticOwnerControlElementId(object.anchorAddress);
   const target = findingTarget(object.anchorAddress, id);
   const preview =
     at === undefined ? undefined : ({ kind: 'anchor', anchorId: at } satisfies RoomMapHighlight);
+  const shownHint =
+    anchor.pinned !== undefined
+      ? 'Always stands here'
+      : anchor.derivedAnchorId !== undefined
+        ? 'Last free spot'
+        : undefined;
   return (
-    <OverviewRow icon={heldObjectIcon(object)} label={label} preview={preview}>
-      {anchor.pinned !== undefined ? (
-        <span className="room-layout-value" {...target}>
-          {nameOf(anchor.pinned)}
-          <span className="room-layout-detail"> · Fixed</span>
-        </span>
-      ) : (
-        <PositionPicker<string>
-          ariaLabel={`${label} spot`}
-          choices={anchor.choices.map((choice) => ({
-            key: choice.key,
-            label: nameOf(choice.anchorId),
-            value: choice.key,
-            ...(choice.anchorId === null
-              ? {}
-              : { preview: { kind: 'anchor' as const, anchorId: choice.anchorId } }),
-          }))}
-          current={nameOf(anchor.anchorId)}
-          findingTarget={target}
-          id={id}
-          onSelect={(key) => executeIntent(interaction.intentFor(key))}
-          openPreview={preview}
-        />
-      )}
-    </OverviewRow>
+    <LayoutChip preview={preview}>
+      <PositionPicker<string>
+        ariaLabel={`${label} spot`}
+        choices={
+          shownHint !== undefined
+            ? []
+            : anchor.choices.map((choice) => ({
+                key: choice.key,
+                label: nameOf(choice.anchorId),
+                value: choice.key,
+                ...(choice.anchorId === null
+                  ? {}
+                  : { preview: { kind: 'anchor' as const, anchorId: choice.anchorId } }),
+              }))
+        }
+        current={nameOf(at)}
+        disabledHint={shownHint}
+        findingTarget={target}
+        id={id}
+        onSelect={(key) => executeIntent(interaction.intentFor(key))}
+        openPreview={preview}
+        triggerIcon={heldObjectIcon(object)}
+      />
+    </LayoutChip>
   );
 }
 
 /**
- * A Fields slot's point: picked among the points the engine leaves it, `?`
- * leaving it to the game. A point a sibling holds is not offered.
+ * A Fields slot's point chip: picked among the points the engine leaves it,
+ * `?` leaving it to the game. A point a sibling holds is not offered.
  */
-function FieldsSlotRow({
+function FieldsSlotChip({
   control,
   fields,
   interactions,
@@ -389,24 +457,26 @@ function FieldsSlotRow({
       },
     ];
   });
+  const point = nameOf(control.pointId);
+  const icon = fieldsSlotIcon(fields, control.target);
+  // A slot's short mark, as the map wears it: C1, O2; the Nemesis by its artwork.
+  const mark =
+    fieldsSlotBadge(fields, control.target) ?? (icon === undefined ? control.label : undefined);
   return (
-    <OverviewRow
-      icon={fieldsSlotIcon(fields, control.target)}
-      // A slot's short mark, as the map wears it: C1, O2; the Nemesis by name.
-      label={fieldsSlotBadge(fields, control.target) ?? control.label}
-      preview={preview(control.pointId)}
-    >
+    <LayoutChip preview={preview(control.pointId)}>
       <PositionPicker<number | null>
         ariaLabel={`${control.label} point`}
         choices={choices}
-        current={nameOf(control.pointId)}
+        current={mark === undefined ? point : `${mark} ${point}`}
+        currentOption={point}
         {...(interaction.contextReached ? {} : { disabledHint: candidateWaitingHint })}
         findingTarget={findingTarget(control.address, id)}
         id={id}
         onOpen={() => candidates.activate()}
         onSelect={(pointId) => executeIntent(interaction.intentFor(pointId))}
         openPreview={preview(control.pointId)}
+        triggerIcon={icon}
       />
-    </OverviewRow>
+    </LayoutChip>
   );
 }

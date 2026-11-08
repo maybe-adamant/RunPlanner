@@ -80,7 +80,7 @@ describe('room objects', () => {
     ]);
   });
 
-  it('offers a present object the free anchors and the game, then removes it', () => {
+  it('stands a lone unplaced object on the one free anchor, then removes it', () => {
     const project = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
       kind: 'AddStygianWell',
       occurrence: oneSpot,
@@ -88,16 +88,8 @@ describe('room objects', () => {
     const slots = spotsOf(project);
     const [anchor] = slots.anchors;
     const well = objectOf(slots, 'stygianWell');
-    expect(well.anchor?.anchorId).toBeUndefined();
-    expect(well.anchor?.choices.map((choice) => choice.anchorId)).toEqual([anchor!.anchorId]);
-    expect(slots.commandsOf(well.anchor!.choices[0]!.key)).toEqual([
-      {
-        kind: 'ReplaceRoomObjectAnchor',
-        occurrence: oneSpot,
-        object: 'stygianWell',
-        anchorId: anchor!.anchorId,
-      },
-    ]);
+    expect(well.anchor).toEqual({ derivedAnchorId: anchor!.anchorId, choices: [] });
+    expect(anchor).toMatchObject({ occupant: { object: 'stygianWell' }, derived: true });
     expect(slots.commandsOf(well.toggleKey!)).toEqual([
       { kind: 'RemoveStygianWell', occurrence: oneSpot },
     ]);
@@ -137,17 +129,15 @@ describe('room objects', () => {
     expect(switchObject.kinds?.map((kind) => kind.switchKind)).toEqual(['perfectClear']);
   });
 
-  it('pins the Well and offers the Pool the other anchors', () => {
+  it('pins the Well and stands the Pool on the anchor it leaves', () => {
     const slots = spotsOf(createGoldenFGHIProject(), postboss);
     const well = objectOf(slots, 'stygianWell');
     const pool = objectOf(slots, 'purgingPool');
     expect(well).toMatchObject({ present: true, fixed: true });
     expect(well.anchor).toMatchObject({ choices: [] });
     expect(well.anchor?.pinned).toBeDefined();
-    expect(pool.anchor?.choices.map((choice) => choice.anchorId)).toEqual(
-      slots.anchors.flatMap((anchor) =>
-        anchor.anchorId === well.anchor?.pinned ? [] : [anchor.anchorId],
-      ),
-    );
+    const free = slots.anchors.find((anchor) => anchor.anchorId !== well.anchor?.pinned);
+    expect(pool.anchor).toEqual({ derivedAnchorId: free!.anchorId, choices: [] });
+    expect(free).toMatchObject({ occupant: { object: 'purgingPool' }, derived: true });
   });
 });

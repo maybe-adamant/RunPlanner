@@ -421,6 +421,8 @@ export interface WorkspaceRoomObjectAnchor {
   readonly anchorId?: number;
   /** The Well always stands on the room's pin; nothing moves it. */
   readonly pinned?: number;
+  /** The one anchor the game can give it, every other being taken; nothing moves it. */
+  readonly derivedAnchorId?: number;
   /** Each free anchor it can move to, or null to leave it to the game. */
   readonly choices: readonly { readonly key: string; readonly anchorId: number | null }[];
 }
@@ -479,11 +481,13 @@ export interface WorkspaceRoomObjectSlots {
   readonly anchors: readonly {
     readonly anchorId: number;
     readonly number: number;
-    /** The object authored on it, with a switch's observed type. */
+    /** The object standing on it, with a switch's observed type. */
     readonly occupant?: {
       readonly object: WorkspaceAnchorObject;
       readonly switchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
     };
+    /** The occupant stands here because no other anchor is left to it. */
+    readonly derived?: true;
   }[];
   /** Each object present, or one the room can hold on its route, in native spawn order. */
   readonly objects: readonly WorkspaceRoomAnchorObject[];
