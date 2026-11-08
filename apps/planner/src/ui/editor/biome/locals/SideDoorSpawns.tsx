@@ -18,6 +18,7 @@ import { roomKindIcon } from '../roomIcon';
 import { DoorRewardEditor, DoorRewardHiddenTag, RerolledRewardRepairs } from '../DoorRewardEditor';
 import { DoorRow, DoorRowsHeader } from '../DecisionWorkbench';
 import { RoomFeatureMapLegend, RoomFeatureMapPoints } from '../room-map/RoomMapPoints';
+import { OverviewRow } from '../RoomOverviewSections';
 import { sideDoorMapDoors } from './sideDoorMapDoors';
 
 type LocalSlot = WorkspaceLocalVisitDecision['slots'][number];
@@ -167,47 +168,49 @@ export function SideDoorSpawns({
   const findingAnchor = useFindingAnchor();
   const mapped = map !== undefined && roomMapCalibrations[parentGameName] !== undefined;
   return (
-    <section
-      {...findingAnchor(localVisit.address)}
-      aria-label="Side doors"
-      className="door-workbench"
-      tabIndex={-1}
-    >
-      <div
-        aria-label="Side doors by generation priority"
-        className="door-rows side-door-spawns"
-        role="group"
+    <OverviewRow label="Side rooms">
+      <section
+        {...findingAnchor(localVisit.address)}
+        aria-label="Side doors"
+        className="door-workbench side-door-spawns-workbench"
+        tabIndex={-1}
       >
-        <DoorRowsHeader
-          action={
-            <RoomMapLauncher
-              gameName={parentGameName}
-              hostId={localVisit.marker.focusKey}
-              {...(mapped
-                ? {
-                    legend: <RoomFeatureMapLegend gameName={parentGameName} map={map} />,
-                    mirrored: flipped,
-                    overlay: (
-                      <RoomFeatureMapPoints
-                        flipped={flipped}
-                        gameName={parentGameName}
-                        map={map}
-                        sideDoors={sideDoorMapDoors(localVisit)}
-                        title={title}
-                      />
-                    ),
-                  }
-                : {})}
-              title={title}
-            />
-          }
-          identity="Priority"
-          select="Open"
-        />
-        {localVisit.slots.map((slot) => (
-          <SideDoorRow interactions={interactions} key={slot.key} slot={slot} />
-        ))}
-      </div>
-    </section>
+        <div
+          aria-label="Side doors by generation priority"
+          className="door-rows side-door-spawns"
+          role="group"
+        >
+          <DoorRowsHeader
+            action={
+              <RoomMapLauncher
+                gameName={parentGameName}
+                hostId={localVisit.marker.focusKey}
+                {...(mapped
+                  ? {
+                      legend: <RoomFeatureMapLegend gameName={parentGameName} map={map} />,
+                      mirrored: flipped,
+                      overlay: (
+                        <RoomFeatureMapPoints
+                          flipped={flipped}
+                          gameName={parentGameName}
+                          map={map}
+                          sideDoors={sideDoorMapDoors(localVisit)}
+                          title={title}
+                        />
+                      ),
+                    }
+                  : {})}
+                title={title}
+              />
+            }
+            identity="Priority"
+            select="Open"
+          />
+          {localVisit.slots.map((slot) => (
+            <SideDoorRow interactions={interactions} key={slot.key} slot={slot} />
+          ))}
+        </div>
+      </section>
+    </OverviewRow>
   );
 }

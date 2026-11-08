@@ -1269,6 +1269,11 @@ select {
   --door-select-track: 3rem;
 }
 
+/* The side doors' table fits its Spawns row's value column on one line at any panel width. */
+.side-door-spawns-workbench {
+  container: none;
+}
+
 /* A lone door has no radio, and its column keeps only the row's inset. */
 .door-rows:not(:has(.door-row-select > *)) {
   --door-select-track: 8px;
