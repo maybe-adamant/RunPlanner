@@ -64,7 +64,7 @@
     "check": "node scripts/check.mjs",
     "catalog:map-points": "node scripts/extract-room-map-points.mjs",
     "planner:room-map-calibration": "node scripts/generate-room-map-calibration.mjs",
-    "planner:map-marker-artwork": "node scripts/measure-map-marker-artwork.mjs"
+    "planner:artwork-visual-centres": "node scripts/measure-artwork-visual-centres.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
