@@ -45,7 +45,19 @@ Buck, Buried Treasure and Fields optional rewards first; then Artificer (an
 action row under the transform), Sea Star (an inline duplicate badge on the
 copied pickup's row, never a row per proc), Echo, Nemesis, Eris, Heracles,
 switch loot, the rushed same-room delivery and other trait-created pickups.
+A World Shop Travel Deal refill is a paid World Shop purchase and stays an
+object interaction.
 With the interactive map, the object pins then move onto their map objects.
+
+## Locked loot (owner 2026-11-08)
+
+Loot that spawns before it can be taken shows in its spawn row with a lock
+badge, and an **Unlocks** row at the moment it becomes takeable lists the
+same items: Fields cage rewards (spawned on room entry, unlocked at their
+cage encounter's end), the H miniboss reward (caged at encounter start,
+unlocked at its end) and Trial (Devotion) rooms (all rewards spawned, the
+fought one unlocked by the combat). Needs the spawned-loot product to give
+each locked item the moment that unlocks it (read-only, no behaviour change).
 
 ## Part 2: no automatic insertion (separate, revertible)
 
