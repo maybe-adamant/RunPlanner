@@ -127,6 +127,9 @@ export const gEncounterDefinitions = [
   {
     key: 'ArachneCombatG',
     customization: [arachneCombatCocoonCount, arachneCombatCocoonRewardPoint],
+    // SetupArachneCombatEncounter makes one cocoon's death call SpawnRoomReward
+    // (EncounterLogic.lua:2722-2732).
+    createsIncomingRewardInCombat: true,
     label: 'Arachne cocoon',
     kind: 'combat',
     countsEncounterDepth: false,

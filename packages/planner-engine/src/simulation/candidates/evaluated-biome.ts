@@ -7,7 +7,11 @@ import type {
   PrefixIncompleteBiomeProjectEvaluation,
   ProjectEvaluation,
 } from '../evaluation/evaluation-products';
-import type { CanonicalAuthoredRoom, MaterializedBiomePrefix } from '../materialization';
+import type {
+  CanonicalAuthoredRoom,
+  CanonicalBiome,
+  MaterializedBiomePrefix,
+} from '../materialization';
 import { CandidateEvaluationContractError } from './contract';
 
 export function completeBiome(
@@ -136,4 +140,41 @@ export function prefixAuthoredRooms(
       return true;
     }),
   );
+}
+
+/** Every authored room of a canonical biome snapshot, each once. */
+export function snapshotAuthoredRooms(snapshot: CanonicalBiome): readonly CanonicalAuthoredRoom[] {
+  const rooms: CanonicalAuthoredRoom[] = [snapshot.entryRoom];
+  for (const decision of snapshot.decisions) {
+    if (decision.kind === 'batch') {
+      rooms.push(
+        ...decision.targets.map((target) => target.room),
+        ...decision.additional.map((continuation) => continuation.room),
+      );
+      continue;
+    }
+    rooms.push(
+      ...decision.board.targets.map((target) => target.room),
+      ...decision.visits.flatMap((visit) => [visit.target.room, ...visit.enteredLocalRooms]),
+    );
+  }
+  rooms.push(...snapshot.fixedRoomLinks.map((link) => link.target));
+  const seen = new Set<string>();
+  return Object.freeze(
+    rooms.filter((room) => {
+      const key = semanticAddressKey(room.origin);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }),
+  );
+}
+
+/** Every authored room of a candidate biome: its snapshot's, or its materialized prefix's. */
+export function candidateBiomeRooms(
+  biome: CandidateBiomeEvaluation,
+): readonly CanonicalAuthoredRoom[] {
+  return 'snapshot' in biome
+    ? snapshotAuthoredRooms(biome.snapshot)
+    : prefixAuthoredRooms(biome.materializedPrefix);
 }

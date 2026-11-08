@@ -8,10 +8,10 @@ import {
 import type { ProjectDocument } from '../../authored-project/model';
 import type { SemanticFinding } from '../model';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
-import type { CanonicalAuthoredRoom, CanonicalBiome } from '../materialization';
+import type { CanonicalAuthoredRoom } from '../materialization';
 import {
   candidateBiome,
-  prefixAuthoredRooms,
+  candidateBiomeRooms,
   type CandidateBiomeEvaluation,
 } from './evaluated-biome';
 import type { CandidateContextUnavailable } from './availability';
@@ -45,38 +45,6 @@ export interface EvaluatedFieldsSpatialPointCandidate {
 export type FieldsSpatialPointCandidateEvaluation =
   CandidateContextUnavailable | EvaluatedFieldsSpatialPointCandidate;
 
-function canonicalRooms(biome: CandidateBiomeEvaluation): readonly CanonicalAuthoredRoom[] {
-  if ('snapshot' in biome) return snapshotRooms(biome.snapshot);
-  return prefixAuthoredRooms(biome.materializedPrefix);
-}
-
-function snapshotRooms(snapshot: CanonicalBiome): readonly CanonicalAuthoredRoom[] {
-  const rooms: CanonicalAuthoredRoom[] = [snapshot.entryRoom];
-  for (const decision of snapshot.decisions) {
-    if (decision.kind === 'batch') {
-      rooms.push(
-        ...decision.targets.map((target) => target.room),
-        ...decision.additional.map((continuation) => continuation.room),
-      );
-      continue;
-    }
-    rooms.push(
-      ...decision.board.targets.map((target) => target.room),
-      ...decision.visits.flatMap((visit) => [visit.target.room, ...visit.enteredLocalRooms]),
-    );
-  }
-  rooms.push(...snapshot.fixedRoomLinks.map((link) => link.target));
-  const seen = new Set<string>();
-  return Object.freeze(
-    rooms.filter((room) => {
-      const key = semanticAddressKey(room.origin);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }),
-  );
-}
-
 /** Memoizes each immutable biome product's rooms by occurrence key. */
 const roomIndexes = new WeakMap<
   CandidateBiomeEvaluation,
@@ -89,7 +57,9 @@ function roomFor(
 ): CanonicalAuthoredRoom | undefined {
   let index = roomIndexes.get(biome);
   if (index === undefined) {
-    index = new Map(canonicalRooms(biome).map((room) => [semanticAddressKey(room.origin), room]));
+    index = new Map(
+      candidateBiomeRooms(biome).map((room) => [semanticAddressKey(room.origin), room]),
+    );
     roomIndexes.set(biome, index);
   }
   return index.get(semanticAddressKey(occurrence));

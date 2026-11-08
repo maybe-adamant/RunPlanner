@@ -474,6 +474,30 @@ rank as a draw from the target's store
 refuse spends nothing and reports at the press. Screen rerolls are not
 actions: an offer's earlier screens settle with the offer.
 
+### Spawned loot
+
+An engine-owned read-only query publishes, for each entered room, the loot
+the game spawns on its own, grouped by the moment it appears, each moment
+keyed by its kind and phase and listing its items in spawn order. The room
+reward spawns at the encounter's end; on entry for a role taken before combat
+(an Opening reward, Devotion's choice) or a room without combat; at the start
+of an encounter that spawns it first (the H minibosses); and during an
+encounter whose chosen enemy carries it (Arachne's cocoon). A Boss's forced
+drop and a Ship wheel's reward spawn at their phase's end. After the reward,
+an encounter's end spawns its due Hermes deliveries in purchase order, then
+matured clock drops such as Supply Chain's, then Heracles's bounty; in a Ship
+phase those follow the wheel reward as a separate moment. Fields cage and
+optional rewards spawn on entry, each cage marked by the phase that frees it,
+and the fourth-biome Preboss flush delivers on entry. Loot an action's
+settlement spawns (a boon's own drops, Echo's last reward and Gold Gold Gold
+duplicate, a Nemesis event's result, Eris's gift, a challenge switch's claim)
+is listed under that source action instead. Each item carries its reward owner,
+source, participation and placement: its ranked action, or the command that
+places it. Items come from the active action domain and the reached due
+contacts rather than the authored order, so an unplaced item still appears.
+Conversions (Artificer, Sea Star), refills and same-room Shrine rushes are not
+spawned loot.
+
 ## Canonical Lifecycle Profiles
 
 ### Standard Reward Room

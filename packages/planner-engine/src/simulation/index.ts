@@ -340,6 +340,16 @@ export {
   type GoldRoomAvailability,
   type GoldUnavailableReason,
 } from './evaluation/gold-query';
+export {
+  spawnedLootForProjectEvaluationAssembly,
+  type ActionSpawn,
+  type RoomSpawnedLoot,
+  type SpawnMoment,
+  type SpawnMomentKind,
+  type SpawnedLootItem,
+  type SpawnedLootPlacement,
+  type SpawnedLootSource,
+} from './evaluation/spawned-loot';
 export { GoldLedgerContractError } from './commerce/gold/ledger';
 export type {
   GoldBalance,

@@ -1166,6 +1166,13 @@ describe('encounter envelope catalog', () => {
         .map((definition) => definition.key)
         .sort(),
     ).toEqual(['MiniBossLamia', 'MiniBossVampire']);
+    // Only Arachne's cocoon fights spawn it during combat.
+    expect(
+      catalog.encounterDefinitions.values
+        .filter((definition) => definition.createsIncomingRewardInCombat === true)
+        .map((definition) => definition.key)
+        .sort(),
+    ).toEqual(['ArachneCombatF', 'ArachneCombatG']);
     expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('BridgeNemesisRandomEvent');
     expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('NemesisShopping');
     const artemisRequirements = catalog.encounterDefinitions.byKey.ArtemisCombatF?.requirements;

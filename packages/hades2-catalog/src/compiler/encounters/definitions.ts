@@ -367,6 +367,11 @@ export function normalizeEncounterDefinitions(
       )
         fail(`${path}.createsIncomingRewardAtStart`, 'must be boolean');
       if (
+        raw.createsIncomingRewardInCombat !== undefined &&
+        typeof raw.createsIncomingRewardInCombat !== 'boolean'
+      )
+        fail(`${path}.createsIncomingRewardInCombat`, 'must be boolean');
+      if (
         raw.enemyTriggeredIntroduction !== undefined &&
         typeof raw.enemyTriggeredIntroduction !== 'boolean'
       )
@@ -676,6 +681,9 @@ export function normalizeEncounterDefinitions(
           : {}),
         ...(raw.createsIncomingRewardAtStart === true
           ? { createsIncomingRewardAtStart: true as const }
+          : {}),
+        ...(raw.createsIncomingRewardInCombat === true
+          ? { createsIncomingRewardInCombat: true as const }
           : {}),
         ...(raw.goldBet === undefined
           ? {}
