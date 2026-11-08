@@ -3,6 +3,7 @@ import { roomMapMarkers, type RoomMapMarkers } from '@planner/projections/roomMa
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { melinoeIcon } from '@planner/ui/artwork/player/playerArtwork';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
+import { mapMarkerArtworkStyle } from './mapMarkerArtwork';
 import type { RoomMapPointMark } from './roomMapHighlight';
 import { position } from './roomMapPosition';
 
@@ -68,7 +69,11 @@ export function RoomMapSpots({
   const occupantMark = (occupant: RoomMapOccupant | undefined) =>
     occupant === undefined ? null : (
       <>
-        <ArtworkIcon className="artwork-label-icon" source={occupant.icon} />
+        <ArtworkIcon
+          className="artwork-label-icon"
+          source={occupant.icon}
+          style={mapMarkerArtworkStyle(occupant.icon)}
+        />
         {occupant.badge === undefined ? null : (
           <span aria-hidden="true" className="room-map-number">
             {occupant.badge}

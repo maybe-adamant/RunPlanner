@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 /** One icon, or a pair drawn as two overlapping halves of the same slot. */
 export type ArtworkSource = string | readonly [string | undefined, string | undefined];
 
@@ -5,12 +7,16 @@ export type ArtworkSource = string | readonly [string | undefined, string | unde
 export function ArtworkIcon({
   className,
   source,
+  style,
 }: {
   readonly className: string;
   readonly source: ArtworkSource | undefined;
+  /** Placement of a single image within its slot. */
+  readonly style?: CSSProperties | undefined;
 }) {
   if (source === undefined) return <span className={className} aria-hidden="true" />;
-  if (typeof source === 'string') return <img src={source} alt="" className={className} />;
+  if (typeof source === 'string')
+    return <img src={source} alt="" className={className} style={style} />;
   return (
     <span className={`${className} artwork-pair`} aria-hidden="true">
       {source.map((part, index) =>
