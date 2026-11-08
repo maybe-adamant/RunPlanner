@@ -289,7 +289,7 @@ function RowRewardSurface({
   }
   const labelled = rewards.length > 1;
   return (
-    <div aria-label={ariaLabel} className="door-row-rewards" data-multiple={labelled || undefined}>
+    <div aria-label={ariaLabel} className="door-row-rewards">
       {rewards.map((reward, index) => {
         const status = firstEditable < 0 && index === 0;
         const badge = labelled ? reward.badge : undefined;

@@ -1742,16 +1742,9 @@
     align-items: start;
   }
 
-  /* The column is narrower than the doors' two-line threshold, yet keeps the table. */
+  /* The column is narrower than the doors' two-line threshold, yet holds their table. */
   .ephyra-side-layout > .door-workbench {
     container-type: normal;
-  }
-
-  .ephyra-side-layout .door-rows.side-room-doors {
-    width: 100%;
-    grid-template-columns:
-      var(--door-select-track) minmax(3.75rem, auto) max-content
-      minmax(8rem, 1fr) minmax(0, auto) 2.5rem;
   }
 }
 
@@ -2742,8 +2735,11 @@ button.timeline-chip {
   display: none;
 }
 
+/* The header's action spans the actions zone and the map, ending where the rows do. */
 .door-rows-header-action {
+  grid-column: 5 / -1;
   justify-self: end;
+  padding-left: 12px;
 }
 
 /* A banner title that shows or hides its editor fills the line up to the banner's controls. */
@@ -3446,13 +3442,14 @@ span.hub-board-status-line {
 }
 
 /*
- * The controls grow to the widest row they hold (an expanded door row, measured with
- * `npm run gallery:measure-columns`), the map takes the rest and never narrows past its
- * minimum; where the controls would fall below a typical Timeline row, the two stack.
+ * The controls grow to the widest row they hold (a Leave room row with its door chips,
+ * measured with `npm run gallery:measure-columns`), the map takes the rest and never
+ * narrows past its minimum; where the controls would fall below a typical Timeline row,
+ * the two stack.
  */
 .room-map-columns {
   display: grid;
-  grid-template-columns: minmax(0, 43.5rem) minmax(26rem, 1fr);
+  grid-template-columns: minmax(0, 38rem) minmax(26rem, 1fr);
   align-items: start;
   gap: 16px;
 }

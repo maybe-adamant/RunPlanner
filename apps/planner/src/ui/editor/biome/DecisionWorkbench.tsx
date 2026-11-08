@@ -244,7 +244,6 @@ export function DoorRowsHeader({
       <span aria-hidden="true">{identity}</span>
       <span aria-hidden="true">{room}</span>
       <span aria-hidden="true">Reward</span>
-      <span aria-hidden="true" />
       <span className="door-rows-header-action">{action}</span>
     </div>
   );

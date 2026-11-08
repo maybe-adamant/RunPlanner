@@ -1174,7 +1174,7 @@ select {
 
 /*
  * A door editor: the pool line, then one row per exit in a shared grid of
- * select | door number or exit art | room | reward | map | secondary. Every
+ * select | door number or exit art | room | reward | secondary | map. Every
  * column is as wide as its widest value, and pickers size to their choice.
  */
 .door-workbench {
@@ -1233,14 +1233,16 @@ select {
   --door-select-track: 36px;
   display: grid;
   /*
-   * A working width like the timeline's, so room, reward and map read as one
-   * row. Between the reward and the map, pinned last, a flexible zone holds
-   * the row's actions and notices, so neither moves when a row has some.
+   * The table is as wide as its content; in a narrower panel each cell narrows
+   * only as far as its content wraps. Between the reward and the map, pinned
+   * last, a zone as wide as the widest row's actions and notices holds them, so
+   * no row moves when another has some.
    */
-  width: min(46rem, 100%);
+  width: max-content;
+  max-width: 100%;
   grid-template-columns:
-    var(--door-select-track) minmax(4.5rem, 0.8fr) minmax(8rem, 1.6fr)
-    minmax(10rem, 2.6fr) minmax(max-content, 1fr) 2.5rem;
+    var(--door-select-track) repeat(4, minmax(min-content, auto))
+    2.5rem;
   align-items: center;
   min-width: 0;
 }
@@ -1248,8 +1250,8 @@ select {
 /* A wheel's offers: select | offer | reward | actions; the room and map columns take no room. */
 .door-rows[data-columns='offer'] {
   grid-template-columns:
-    var(--door-select-track) minmax(4.5rem, max-content) 0 minmax(10rem, 1fr)
-    minmax(0, auto) 0;
+    var(--door-select-track) minmax(min-content, auto) 0 repeat(2, minmax(min-content, auto))
+    0;
 }
 
 /* The pool and the offer count read as one line. */
@@ -1413,11 +1415,7 @@ select {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 12px;
-}
-
-.door-row-rewards[data-multiple='true'] {
-  column-gap: 20px;
+  gap: 6px;
 }
 
 .row-reward-value,
@@ -1502,10 +1500,14 @@ select {
   height: 1.3rem;
 }
 
-/* Narrow panels give each exit two lines: identity and room, then reward and actions. */
-@container door-workbench (max-width: 40rem) {
+/*
+ * Panels narrower than the widest one-line table (a Chaos Gate row with its blessing) give
+ * each exit two lines: identity and room, then reward and actions.
+ */
+@container door-workbench (max-width: 32rem) {
   .door-rows,
   .door-rows[data-columns='offer'] {
+    width: 100%;
     grid-template-columns: auto minmax(0, 1fr);
   }
 
@@ -1597,8 +1599,10 @@ select {
   gap: 6px 18px;
 }
 
+/* Each fact keeps its label and value together; the facts wrap as wholes. */
 .door-workbench .fields-batch-summary div {
   display: inline-flex;
+  white-space: nowrap;
   align-items: baseline;
   gap: 6px;
   padding: 0;
