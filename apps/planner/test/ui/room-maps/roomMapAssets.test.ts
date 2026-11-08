@@ -53,12 +53,34 @@ describe('room map assets', () => {
       expect(roomMapCalibrations[room.gameName], room.gameName).toBeDefined();
   });
 
-  it('calibrates every declared room except the O ships', () => {
+  it('calibrates every declared room', () => {
     expect(
       Object.keys(catalog.rooms.byKey).filter(
-        (gameName) => roomMapCalibrations[gameName] === undefined && !gameName.startsWith('O_'),
+        (gameName) => roomMapCalibrations[gameName] === undefined,
       ),
     ).toEqual([]);
+  });
+
+  it('places the wheel and its two offer spots inside the map of every room with wheel offers', () => {
+    const ships = catalog.rooms.values.filter((room) =>
+      catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey]?.slots.some(
+        (slot) => slot.rewardAttachment?.kind === 'rewardWheel',
+      ),
+    );
+    expect(ships.length).toBeGreaterThan(0);
+    for (const room of ships) {
+      const calibration = roomMapCalibrations[room.gameName]!;
+      const wheel = room.mapPoints?.shipWheel;
+      expect(wheel, room.gameName).toBeDefined();
+      if (wheel === undefined) continue;
+      for (const point of [wheel, wheel.leftOffer, wheel.rightOffer]) {
+        const { left, top } = roomMapPosition(point, calibration);
+        expect(
+          [left, top].every((value) => value > 0 && value < 100),
+          room.gameName,
+        ).toBe(true);
+      }
+    }
   });
 
   it('places every Ephyra side door and Hub door at a map door inside its calibrated image', () => {

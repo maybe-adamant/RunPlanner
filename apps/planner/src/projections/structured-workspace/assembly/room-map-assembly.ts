@@ -68,5 +68,14 @@ export function assembleRoomMap(
     fieldsCagePoints: Object.freeze((points.fieldsCagePoints ?? []).map(point)),
     fieldsOptionalPoints: Object.freeze((points.fieldsOptionalPoints ?? []).map(point)),
     ...(chaosGate === undefined ? {} : { chaosGate: point(chaosGate) }),
+    ...(points.shipWheel === undefined
+      ? {}
+      : {
+          wheel: Object.freeze({
+            ...point(points.shipWheel),
+            leftOffer: points.shipWheel.leftOffer,
+            rightOffer: points.shipWheel.rightOffer,
+          }),
+        }),
   });
 }

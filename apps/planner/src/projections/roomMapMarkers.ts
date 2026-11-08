@@ -36,11 +36,16 @@ export interface RoomMapMarkers {
   readonly chaosGate?: RoomMapMarkerPosition & { readonly id: number };
   readonly fieldsCagePoints: readonly (RoomMapMarkerPosition & { readonly id: number })[];
   readonly fieldsOptionalPoints: readonly (RoomMapMarkerPosition & { readonly id: number })[];
+  readonly wheel?: RoomMapMarkerPosition & {
+    readonly id: number;
+    readonly leftOffer: RoomMapMarkerPosition;
+    readonly rightOffer: RoomMapMarkerPosition;
+  };
 }
 
 /** One world point's place on its room's calibrated, unflipped image. */
 export function roomMapPosition(
-  point: WorkspaceRoomMapPoint,
+  point: Pick<WorkspaceRoomMapPoint, 'x' | 'y'>,
   calibration: RoomMapCalibration,
 ): RoomMapMarkerPosition {
   return {
@@ -64,7 +69,7 @@ export function roomMapMarkers(
   calibration: RoomMapCalibration,
   flipped = false,
 ): RoomMapMarkers {
-  const place = (point: WorkspaceRoomMapPoint): RoomMapMarkerPosition => {
+  const place = (point: Pick<WorkspaceRoomMapPoint, 'x' | 'y'>): RoomMapMarkerPosition => {
     const { left, top } = roomMapPosition(point, calibration);
     return { left: flipped ? 100 - left : left, top };
   };
@@ -101,5 +106,15 @@ export function roomMapMarkers(
     ...(map.chaosGate === undefined
       ? {}
       : { chaosGate: Object.freeze({ id: map.chaosGate.id, ...place(map.chaosGate) }) }),
+    ...(map.wheel === undefined
+      ? {}
+      : {
+          wheel: Object.freeze({
+            id: map.wheel.id,
+            ...place(map.wheel),
+            leftOffer: Object.freeze(place(map.wheel.leftOffer)),
+            rightOffer: Object.freeze(place(map.wheel.rightOffer)),
+          }),
+        }),
   });
 }

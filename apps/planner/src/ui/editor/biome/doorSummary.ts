@@ -7,6 +7,7 @@ import {
   type WorkspaceOrdinaryBatchNode,
   type WorkspaceDoorStep,
   type WorkspaceRoomIcon,
+  type WorkspaceRoomRerolls,
   type WorkspaceTakeoverBatchNode,
 } from '@planner/projections/structured-workspace';
 import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
@@ -31,10 +32,13 @@ export interface DoorChip {
   readonly doorIndex?: number;
   /** The additional exit the chip is, such as the Chaos gate. */
   readonly additionalExit?: 'chaos' | 'zagreusContract';
+  /** The chip is a Ship wheel's offer, keyed by its offer key. */
+  readonly wheelOffer?: true;
 }
 
-/** The chip's point on its room's map: its door by number, or the Chaos gate. */
+/** The chip's point on its room's map: its door by number, its wheel offer, or the Chaos gate. */
 export function doorChipMapLink(chip: DoorChip): RoomMapHighlight | undefined {
+  if (chip.wheelOffer === true) return { kind: 'wheelOffer', offerKey: chip.key };
   if (chip.additionalExit === 'chaos') return { kind: 'chaosGate' };
   if (chip.additionalExit !== undefined || chip.doorIndex === undefined) return undefined;
   return { kind: 'door', doorIndex: chip.doorIndex };
@@ -156,6 +160,15 @@ export function batchDoorFindingOwners(node: BatchNode): readonly SemanticAddres
   ];
 }
 
+/** A wheel's offers after each of its offer rerolls, by its Timeline row's action key. */
+export function wheelOfferSteps(
+  rerolls: WorkspaceRoomRerolls | undefined,
+): readonly WorkspaceDoorStep[] {
+  return (rerolls?.rows ?? []).flatMap((row) =>
+    row.doors === undefined ? [] : [{ actionKey: row.key, doors: row.doors.after }],
+  );
+}
+
 /** A wheel's active offers as chips: each its first draw, or its reward after rerolls. */
 export function wheelOfferChips(
   wheel: WorkspaceRewardWheelDescriptor,
@@ -171,6 +184,7 @@ export function wheelOfferChips(
         label: offer.label,
         rewards: reward === null ? [] : [offerIcon(reward)],
         picked: index + 1 === wheel.pickedOfferIndex,
+        wheelOffer: true as const,
       };
     });
 }

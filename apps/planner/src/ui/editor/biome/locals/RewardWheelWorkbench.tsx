@@ -149,6 +149,7 @@ export function RewardWheelWorkbench({
                   ariaLabel={offer.label}
                   identity={<span className="door-row-number">{offer.label}</span>}
                   key={offer.key}
+                  mapLink={{ kind: 'wheelOffer', offerKey: offer.key }}
                   reward={
                     <span className="door-row-rewards">
                       <RowReward

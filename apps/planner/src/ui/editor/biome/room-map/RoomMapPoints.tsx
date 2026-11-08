@@ -263,13 +263,17 @@ export function RoomMapSideDoors({
 export function RoomMapLegend({
   chaos,
   markers,
+  wheel = false,
 }: {
   /** Whether the map shows a Chaos gate or Chaos points. */
   readonly chaos: boolean;
   readonly markers: RoomMapMarkers;
+  /** Whether the map shows a Ship wheel's offers. */
+  readonly wheel?: boolean;
 }) {
   const kinds = [
     ...(markers.doors.length > 0 ? (['exit'] as const) : []),
+    ...(wheel ? (['wheel'] as const) : []),
     ...(markers.sideDoors.length > 0 ? (['side'] as const) : []),
     ...(chaos ? (['chaos'] as const) : []),
     ...(markers.entries.length > 0 ? (['entry'] as const) : []),
@@ -280,6 +284,7 @@ export function RoomMapLegend({
   if (kinds.length === 0) return null;
   const names = {
     exit: 'Exit',
+    wheel: 'Wheel offer',
     side: 'Side door',
     chaos: 'Chaos',
     entry: 'Entry',

@@ -34,7 +34,7 @@ import { SideDoorSpawns } from './locals/SideDoorSpawns';
 import { sideDoorMapDoors } from './locals/sideDoorMapDoors';
 import { TimelineLegend } from './TimelineLegend';
 import type { TimelineDoors, TimelineDoorsContent } from './TimelineDoors';
-import { doorChipsAt } from './doorSummary';
+import { doorChipsAt, wheelOfferChips, wheelOfferSteps } from './doorSummary';
 import { createRouteAddress } from '@run-planner/engine/authored-project';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapColumn, type RoomMapStage } from './room-map/RoomMapColumn';
@@ -42,13 +42,14 @@ import { RoomMapHighlightScope } from './room-map/RoomMapHighlightScope';
 import { roomMapPlacements } from './room-map/roomMapPlacements';
 
 /**
- * The map's stage for a Timeline row: before Doors open the doors are closed,
- * from it they are open, from the room's last row it is left. Rows outside the
- * Timeline leave the map as it is.
+ * The map's stage for a Timeline row: before Doors open (or a Ship phase's
+ * Next phase ready) the doors are closed, from it they are open, from the
+ * room's last row (or Select wheel) it is left. Rows outside the Timeline
+ * leave the map as it is.
  */
 function timelineMapRow(target: Element): HTMLElement | undefined {
   return (
-    target.closest<HTMLElement>('.room-action-list[aria-label="Room timeline"] > li') ?? undefined
+    target.closest<HTMLElement>('.room-action-list[aria-label$=" timeline"] > li') ?? undefined
   );
 }
 
@@ -273,13 +274,24 @@ export function OccurrenceWorkbench({
   // The Timeline row being worked on sets the map's stage: presentation only, never authored.
   const [mapStage, setMapStage] = useState<{
     readonly roomIdentity: string;
+    readonly tab: WorkspaceRoomTab;
     readonly stage: RoomMapStage;
     /** The door press whose doors the map shows; none shows them as they open. */
     readonly step?: string;
   }>();
   const mapRow = useRef<HTMLElement>(undefined);
-  // Leaving the Timeline or the room returns the map to the plan.
-  const mapStageShown = activeTab === 'actions' && mapStage?.roomIdentity === roomIdentity;
+  const shipPhases = room.workbench.kind === 'ship' ? room.workbench.phases : [];
+  const shipPhase = shipPhases.find((phase) => phase.tab === activeTab);
+  const timelineTab = activeTab === 'actions' || shipPhase !== undefined;
+  // A Ship phase before the last shows the wheel the next phase is chosen at; the last its doors.
+  const wheelPhase = shipPhase === shipPhases.at(-1) ? undefined : shipPhase;
+  const stepsShown =
+    wheelPhase === undefined
+      ? (timelineDoors?.steps ?? [])
+      : wheelOfferSteps(wheelPhase.wheelRerolls);
+  // Leaving the Timeline tab or the room returns the map to the plan.
+  const mapStageShown =
+    timelineTab && mapStage?.roomIdentity === roomIdentity && mapStage.tab === activeTab;
   if (mapStage !== undefined && !mapStageShown) setMapStage(undefined);
   const shownMapStage = mapStageShown ? mapStage.stage : 'summary';
   const markMapRow = (row: HTMLElement | undefined): void => {
@@ -293,21 +305,24 @@ export function OccurrenceWorkbench({
     const stage = row === undefined ? undefined : timelineMapStage(row);
     if (row === undefined || stage === undefined) return;
     markMapRow(row);
-    const step = timelineDoorStep(
-      row,
-      new Set((timelineDoors?.steps ?? []).map((candidate) => candidate.actionKey)),
-    );
+    const step = timelineDoorStep(row, new Set(stepsShown.map((candidate) => candidate.actionKey)));
     if (
       stage !== mapStage?.stage ||
       step !== mapStage.step ||
+      mapStage.tab !== activeTab ||
       mapStage.roomIdentity !== roomIdentity
     )
-      setMapStage({ roomIdentity, stage, ...(step === undefined ? {} : { step }) });
+      setMapStage({ roomIdentity, tab: activeTab, stage, ...(step === undefined ? {} : { step }) });
   };
-  // The doors as they stand at the marked row: the latest press's, else as they open.
-  const openChips = timelineDoors?.summary?.chips;
+  // The doors or wheel offers as they stand at the marked row: the latest press's, else as they open.
+  const openChips =
+    wheelPhase === undefined
+      ? timelineDoors?.summary?.chips
+      : wheelPhase.wheel === undefined
+        ? []
+        : wheelOfferChips(wheelPhase.wheel, 'first');
   const stepDoors = mapStageShown
-    ? timelineDoors?.steps?.find((candidate) => candidate.actionKey === mapStage.step)?.doors
+    ? stepsShown.find((candidate) => candidate.actionKey === mapStage.step)?.doors
     : undefined;
   const mapChips =
     openChips === undefined || stepDoors === undefined
@@ -330,14 +345,14 @@ export function OccurrenceWorkbench({
           <div className="room-map-columns">
             <div
               className="room-map-controls-column"
-              {...(activeTab === 'actions'
+              {...(timelineTab
                 ? { onFocusCapture: workOnTimeline, onPointerDownCapture: workOnTimeline }
                 : {})}
             >
               {controls}
             </div>
             <RoomMapColumn
-              chips={mapChips}
+              {...(wheelPhase === undefined ? { chips: mapChips } : { wheelChips: mapChips })}
               flipped={room.layout?.flipped === true}
               gameName={room.gameName}
               map={room.map}
@@ -488,7 +503,7 @@ export function OccurrenceWorkbench({
               mode={{ kind: 'shipRepairs', rows: room.workbench.repairRows }}
             />
           ) : room.workbench.kind === 'ship' ? (
-            renderDirectRoomWorkbench(shipPhaseView())
+            withRoomMap(renderDirectRoomWorkbench(shipPhaseView()))
           ) : (
             withRoomMap(renderDirectRoomWorkbench('actions'))
           )}

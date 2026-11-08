@@ -24,8 +24,7 @@ WebPs unless replacing them from a source image. For example:
 convert source.png -quality 90 -define webp:method=6 -define webp:lossless=false RoomName.webp
 ```
 
-F, G, H, I, N, P, Q, the `B_Combat` anomalies and the `Special/` rooms are clean
-captures: `roomMapCalibration.ts` records each image's capture camera and the
+Every map is a clean capture: `roomMapCalibration.ts` records each image's capture camera and the
 editor draws their points from the catalog's map points. Regenerate it from the
 capture manifests with `npm run planner:room-map-calibration` whenever one of
 those images is replaced; an image without calibration shows no points.
@@ -35,7 +34,9 @@ carries the stitched image's own calibration. Package it at most 2560 wide
 (`-resize '2560x1440>'` before the WebP options above); the script scales its
 calibration to match.
 
-On the remaining O maps, annotations are baked into the image.
+A Ship's wheel is a catalog map point too: each phase a wheel follows shows its
+offers there (one on the wheel, two on its left and right spots), and the last
+phase shows the exit doors.
 
 Ephyra side doors and Hub board doors are catalog map doors too: a side door
 stands at its local slot's physical door, each Hub slot at its door on the

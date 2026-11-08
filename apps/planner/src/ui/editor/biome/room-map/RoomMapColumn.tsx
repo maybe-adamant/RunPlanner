@@ -28,11 +28,13 @@ const chipName = (chip: DoorChip): string =>
 
 /**
  * The room's map beside its controls: its doors, Chaos gate, entries, anchors
- * and Fields points, mirrored when the room is flipped.
+ * and Fields points, mirrored when the room is flipped. A Ship phase a wheel
+ * follows shows the wheel's offers in place of the doors.
  */
 export function RoomMapColumn({
   chips = [],
   flipped = false,
+  wheelChips,
   gameName,
   map,
   placements,
@@ -49,6 +51,8 @@ export function RoomMapColumn({
   readonly placements?: Omit<RoomMapPlacements, 'preview'> | undefined;
   /** The room's doors as its Timeline shows them. */
   readonly chips?: readonly DoorChip[] | undefined;
+  /** The wheel's active offers, shown instead of the doors: one on the wheel, two on its sides. */
+  readonly wheelChips?: readonly DoorChip[] | undefined;
   readonly gameName: string;
   readonly map: WorkspaceRoomMap;
   /** A different room never inherits this map's pan and zoom. */
@@ -91,6 +95,21 @@ export function RoomMapColumn({
       ? undefined
       : chips.find((chip) => chip.additionalExit === undefined && chip.doorIndex === doorIndex);
   const chaosChip = chips.find((chip) => chip.additionalExit === 'chaos');
+  const wheel = markers.wheel;
+  const wheelSpots =
+    wheelChips === undefined
+      ? undefined
+      : wheel === undefined
+        ? []
+        : wheelChips.length === 1
+          ? [{ chip: wheelChips[0]!, at: wheel }]
+          : wheelChips
+              .slice(0, 2)
+              .map((chip, index) => ({
+                chip,
+                at: index === 0 ? wheel.leftOffer : wheel.rightOffer,
+              }));
+  const doors = wheelSpots === undefined ? markers.doors : [];
   return (
     <section aria-label={`${title} map`} className="room-map-column">
       <RoomMapViewport
@@ -149,7 +168,29 @@ export function RoomMapColumn({
                 <RoomMapNumber value={gatePosition} />
               </span>
             )}
-            {markers.doors.map((door) => {
+            {(wheelSpots ?? []).map(({ at, chip }) => (
+              <span
+                aria-label={open ? chip.label : `${chip.label} · Closed`}
+                className="room-map-door"
+                data-closed={!open || undefined}
+                data-preview={
+                  (highlight?.kind === 'wheelOffer' && highlight.offerKey === chip.key) || undefined
+                }
+                data-taken={(taken && chip.picked) || undefined}
+                data-wheel
+                key={`wheel:${chip.key}`}
+                role="img"
+                style={position(at)}
+                {...pointers({ kind: 'wheelOffer', offerKey: chip.key })}
+              >
+                {open ? (
+                  <span aria-hidden="true" className="room-map-door-face">
+                    <DoorChipFace chip={chip} />
+                  </span>
+                ) : null}
+              </span>
+            ))}
+            {doors.map((door) => {
               const chip = chipFor(door.doorIndex);
               const name =
                 chip === undefined
@@ -193,7 +234,8 @@ export function RoomMapColumn({
       />
       <RoomMapLegend
         chaos={markers.chaosGate !== undefined || chaosPoints.length > 0}
-        markers={markers}
+        markers={wheelSpots === undefined ? markers : { ...markers, doors }}
+        wheel={wheelSpots !== undefined && wheelSpots.length > 0}
       />
     </section>
   );

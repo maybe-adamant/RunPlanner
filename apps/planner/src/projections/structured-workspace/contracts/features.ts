@@ -480,6 +480,11 @@ export interface WorkspaceRoomMap {
   /** Fields cage and optional reward points. */
   readonly fieldsCagePoints: readonly WorkspaceRoomMapPoint[];
   readonly fieldsOptionalPoints: readonly WorkspaceRoomMapPoint[];
+  /** A Ship's wheel: one offer stands on it, two on its left and right spots. */
+  readonly wheel?: WorkspaceRoomMapPoint & {
+    readonly leftOffer: { readonly x: number; readonly y: number };
+    readonly rightOffer: { readonly x: number; readonly y: number };
+  };
 }
 
 /** A room's anchor objects and its physical anchors, numbered A1..An by ascending id. */
