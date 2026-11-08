@@ -940,7 +940,7 @@ export function activeEncounterPhasesForOwner(
         ? undefined
         : Object.freeze(
             domain.customization.map((decision) =>
-              projectEncounterCustomizationDecision(decision, room.gameName),
+              projectEncounterCustomizationDecision(decision, room),
             ),
           );
     const compositionView = encounterCompositionView(input.catalog, domain);
@@ -1168,7 +1168,7 @@ function requiredNemesisBetOutcome(
 /** One declared customization decision of an encounter as the editor's decision product. */
 export function projectEncounterCustomizationDecision(
   decision: NonNullable<EncounterPhaseAuthoringDomain['customization']>[number],
-  roomGameName: string,
+  room: RoomDeclaration,
 ): WorkspaceEncounterCustomizationDecision {
   const common = {
     key: decision.key,
@@ -1287,8 +1287,16 @@ export function projectEncounterCustomizationDecision(
       ...common,
       selection: Object.freeze({
         kind: 'cocoonRewardPoint' as const,
-        gameName: roomGameName,
+        gameName: room.gameName,
         spawnPointIds: decision.cocoonRewardPointIds ?? Object.freeze([]),
+        points: Object.freeze(
+          (decision.cocoonRewardPointIds ?? []).flatMap((pointId) => {
+            const point = room.mapPoints?.cocoonRewardPoints?.find(({ id }) => id === pointId);
+            return point === undefined
+              ? []
+              : [Object.freeze({ id: point.id, x: point.x, y: point.y })];
+          }),
+        ),
       }),
     });
   }

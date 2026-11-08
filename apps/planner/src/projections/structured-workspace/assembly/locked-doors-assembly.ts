@@ -15,6 +15,7 @@ import type { WorkspaceLockedDoors, WorkspaceUnlockExitEncounter } from '../cont
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 import { projectEncounterComposition } from '../interactions/generated-encounter-projection';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
+import { requireWorkspaceRoom } from './catalog-room';
 import { projectEncounterCustomizationDecision } from './occurrence-reward-assembly';
 import { normalExitOrdinal } from './ordering';
 
@@ -138,7 +139,10 @@ export function assembleUnlockExitEncounters(
           : {
               customization: Object.freeze(
                 encounter.customization.map((decision) =>
-                  projectEncounterCustomizationDecision(decision, occurrence.gameName),
+                  projectEncounterCustomizationDecision(
+                    decision,
+                    requireWorkspaceRoom(catalog, occurrence.gameName),
+                  ),
                 ),
               ),
             }),

@@ -29,6 +29,7 @@ import type { WorkspaceDoorContract } from './structure';
 import type { WorkspaceTraitOfferControl } from './traits';
 import type { WorkspaceCountedRewardControl, WorkspaceExplicitRewardControl } from './rewards';
 import type { WorkspaceShopOfferDescriptor, WorkspaceShopSupplementalDescriptor } from './commerce';
+import type { WorkspaceRoomMapPoint } from './features';
 import type {
   WorkspaceNativeCandidateInteraction,
   WorkspaceCommandIntent,
@@ -573,6 +574,8 @@ export type WorkspaceEncounterCustomizationDecision =
         readonly kind: 'cocoonRewardPoint';
         readonly gameName: string;
         readonly spawnPointIds: readonly number[];
+        /** Each spawn point's place on the room's map, in `spawnPointIds` order. */
+        readonly points: readonly WorkspaceRoomMapPoint[];
       };
     })
   | (WorkspaceEncounterCustomizationDecisionBase & {

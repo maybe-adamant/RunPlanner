@@ -23,6 +23,7 @@ import type {
 } from '../contracts/features';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import { projectEncounterComposition } from '../interactions/generated-encounter-projection';
+import { requireWorkspaceRoom } from './catalog-room';
 import { projectEncounterCustomizationDecision } from './occurrence-reward-assembly';
 
 /** The switch type order: Unseen Sigil, Infernal Trove, then Moon Monument. */
@@ -133,7 +134,10 @@ function encounterProduct(
       : {
           customization: Object.freeze(
             encounter.customization.map((decision) =>
-              projectEncounterCustomizationDecision(decision, gameName),
+              projectEncounterCustomizationDecision(
+                decision,
+                requireWorkspaceRoom(catalog, gameName),
+              ),
             ),
           ),
         }),

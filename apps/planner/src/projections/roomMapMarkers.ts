@@ -34,6 +34,23 @@ export interface RoomMapMarkers {
   readonly fieldsOptionalPoints: readonly (RoomMapMarkerPosition & { readonly id: number })[];
 }
 
+/** One world point's place on its room's calibrated, unflipped image. */
+export function roomMapPosition(
+  point: WorkspaceRoomMapPoint,
+  calibration: RoomMapCalibration,
+): RoomMapMarkerPosition {
+  return {
+    left:
+      ((calibration.width / 2 + calibration.scale * (point.x - calibration.targetX)) /
+        calibration.width) *
+      100,
+    top:
+      ((calibration.height / 2 + calibration.scale * (point.y - calibration.targetY)) /
+        calibration.height) *
+      100,
+  };
+}
+
 /**
  * Places the room's map points on its calibrated image. A flipped room shows
  * its image mirrored, each point at the mirrored pixel (x' = width - x).
@@ -44,17 +61,8 @@ export function roomMapMarkers(
   flipped = false,
 ): RoomMapMarkers {
   const place = (point: WorkspaceRoomMapPoint): RoomMapMarkerPosition => {
-    const left =
-      ((calibration.width / 2 + calibration.scale * (point.x - calibration.targetX)) /
-        calibration.width) *
-      100;
-    return {
-      left: flipped ? 100 - left : left,
-      top:
-        ((calibration.height / 2 + calibration.scale * (point.y - calibration.targetY)) /
-          calibration.height) *
-        100,
-    };
+    const { left, top } = roomMapPosition(point, calibration);
+    return { left: flipped ? 100 - left : left, top };
   };
   return Object.freeze({
     doors: Object.freeze(

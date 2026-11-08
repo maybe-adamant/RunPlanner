@@ -616,7 +616,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         within(dialog)
           .getByRole('img', { name: `Map of ${host.gameName} cocoons` })
           .getAttribute('src'),
-      ).toContain('/cocoons/assets/');
+      ).toContain(`/assets/${biomeKey}/${host.gameName}.`);
       await view.user.click(marker);
       expect(marker.getAttribute('aria-pressed')).toBe('true');
       const selector = within(dialog).getByRole('button', { name: 'Reward position' });

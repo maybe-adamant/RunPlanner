@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
+import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { roomMapAssets } from '@planner/ui/room-maps/roomMapAssets';
 
 describe('room map assets', () => {
@@ -28,6 +29,17 @@ describe('room map assets', () => {
             ? 'Special'
             : prefix;
       expect(asset.src).toContain(`/assets/${folder}/${asset.gameName}.`);
+    }
+  });
+
+  it('places every cocoon reward point on its room calibrated map', () => {
+    const hosts = catalog.rooms.values.filter((room) => room.cocoonRewardPointIds !== undefined);
+    expect(hosts).toHaveLength(41);
+    for (const room of hosts) {
+      expect(roomMapCalibrations[room.gameName], room.gameName).toBeDefined();
+      expect(room.mapPoints?.cocoonRewardPoints?.map(({ id }) => id)).toEqual(
+        room.cocoonRewardPointIds,
+      );
     }
   });
 });

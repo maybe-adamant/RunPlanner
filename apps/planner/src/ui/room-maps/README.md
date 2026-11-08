@@ -24,8 +24,14 @@ WebPs unless replacing them from a source image. For example:
 convert source.png -quality 90 -define webp:method=6 -define webp:lossless=false RoomName.webp
 ```
 
-Fields annotations belong in the image itself and identify Entry, Cage, Optional,
-and Exit positions. Stitch split captures and verify the full room's markers
+F, G, I, P, Q, the `B_Combat` anomalies and the `Special/` rooms are clean
+captures: `roomMapCalibration.ts` records each image's capture camera and the
+editor draws their points from the catalog's map points. Regenerate it from the
+capture manifests with `npm run planner:room-map-calibration` whenever one of
+those images is replaced; an image without calibration shows no points.
+
+On the remaining maps, annotations are baked into the image. Fields annotations
+identify Entry, Cage, Optional, and Exit positions. Stitch split captures and verify the full room's markers
 before exporting the final image; never use one half as the complete map.
 
 `N_Hub.webp` is a clean background. `HubMapAnnotations.tsx` owns the door positions
@@ -45,9 +51,8 @@ not duplicate the baked numbers or read the external capture directory at runtim
 Its integrity test checks the complete, unique correspondence with declared local
 slots.
 
-Captured map legends include only categories present: Entry (blue), Exit (red),
-Chaos (purple), Cage (cyan), Optional and Side (yellow). P maps distinguish
-Indoor and Outdoor exits with solid and hatched red circles. Circle sizes are
+Baked map legends include only categories present: Entry (blue), Exit (red),
+Chaos (purple), Cage (cyan), Optional and Side (yellow). Circle sizes are
 uniform within each category on a map; numbers retain a consistent font size.
 The Hub uses its own room-quality categories, with an orange fountain marker.
 
@@ -55,14 +60,9 @@ Hub reward icons are separate transparent editor assets, mapped from structured
 reward identity. They are not room-map files and do not participate in room
 asset discovery or declaration coverage.
 
-Cocoon reward selection uses its own tagged maps under `cocoons/assets/{F,G}`,
-outside ordinary room-map discovery. `cocoons/cocoonMapAnnotations.ts` stores
-native-ID-keyed screen positions and marker radii from the final tagged overlays,
-including small display offsets at crowded points. These coordinates are only
-presentation; the engine supplies the room's legal IDs and numbered order.
-When replacing a cocoon map, update its visual metadata together. The asset
-integrity test checks coverage and ID correspondence with the catalog. Raw
-captures and processing review sheets remain outside the repository.
+Cocoon reward selection draws the room's catalog cocoon points on its calibrated
+map; the engine supplies the room's legal IDs and numbered order. The asset test
+checks that every cocoon host is calibrated.
 
 After a swap, run the asset test and check the viewer:
 

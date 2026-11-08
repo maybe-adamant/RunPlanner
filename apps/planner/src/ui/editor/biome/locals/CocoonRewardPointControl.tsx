@@ -1,8 +1,10 @@
 import { useRef } from 'react';
 import type { AuthoredEncounterCustomization } from '@run-planner/engine/authored-project';
 import type { WorkspaceEncounterPhase } from '@planner/projections/structured-workspace';
+import { roomMapPosition } from '@planner/projections/roomMapMarkers';
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
-import { cocoonMapFor } from '@planner/ui/room-maps/cocoons/cocoonMapAssets';
+import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
+import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 
@@ -55,9 +57,14 @@ function CocoonMarker({
         if (event.detail === 0 || pointer.current?.moved !== true) select();
         pointer.current = undefined;
       }}
-    />
+    >
+      <span aria-hidden="true">{number}</span>
+    </button>
   );
 }
+
+/** A cocoon marker's widest diameter, in image pixels. */
+const markerPixels = 80;
 
 export function CocoonRewardPointControl({
   decision,
@@ -72,7 +79,29 @@ export function CocoonRewardPointControl({
   const selected = decision.value?.kind === 'cocoonRewardPoint' ? decision.value.spawnPointId : '';
   const select = (spawnPointId: number | null) =>
     onValue(spawnPointId === null ? null : { kind: 'cocoonRewardPoint', spawnPointId });
-  const map = cocoonMapFor(decision.selection.gameName);
+  const { gameName, points } = decision.selection;
+  const calibration = roomMapCalibrations[gameName];
+  const markers =
+    calibration === undefined
+      ? []
+      : points.map((point) => ({ id: point.id, ...roomMapPosition(point, calibration) }));
+  // Markers keep separate hit targets where cocoons crowd.
+  const diameter =
+    calibration === undefined
+      ? 0
+      : Math.min(
+          markerPixels,
+          ...markers.flatMap((marker, index) =>
+            markers
+              .slice(index + 1)
+              .map((other) =>
+                Math.hypot(
+                  ((marker.left - other.left) * calibration.width) / 100,
+                  ((marker.top - other.top) * calibration.height) / 100,
+                ),
+              ),
+          ),
+        ) / calibration.width;
   return (
     <section className="encounter-cocoon-position" aria-label="Cocoon reward position">
       <div>
@@ -108,25 +137,24 @@ export function CocoonRewardPointControl({
         />
       </div>
       <RoomMapViewport
-        key={decision.selection.gameName}
-        asset={map?.asset}
+        key={gameName}
+        asset={calibration === undefined ? undefined : roomMapAssetFor(gameName)}
         controlsPlacement="collapsible-overlay"
-        title={`${decision.selection.gameName} cocoons`}
+        title={`${gameName} cocoons`}
         overlay={
-          map === undefined ? undefined : (
+          markers.length === 0 ? undefined : (
             <div className="cocoon-map-markers">
-              {decision.selection.spawnPointIds.map((nativeId, index) => {
-                const point = map.annotations.points.find(([id]) => id === nativeId);
-                if (point === undefined) return null;
+              {markers.map((marker) => {
+                const index = decision.selection.spawnPointIds.indexOf(marker.id);
                 return (
                   <CocoonMarker
-                    key={nativeId}
+                    key={marker.id}
                     number={index + 1}
-                    selected={selected === nativeId}
-                    x={(point[1] / map.annotations.width) * 100}
-                    y={(point[2] / map.annotations.height) * 100}
-                    diameter={((2 * map.annotations.radius) / map.annotations.width) * 100}
-                    select={() => select(nativeId)}
+                    selected={selected === marker.id}
+                    x={marker.left}
+                    y={marker.top}
+                    diameter={diameter * 100}
+                    select={() => select(marker.id)}
                   />
                 );
               })}
