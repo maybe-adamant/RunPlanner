@@ -103,8 +103,10 @@ exit checkpoint can observe the late harvest through named element conformance.
 ### Fields placement evidence
 
 The Fields adapter reads the coordinator's current room session through its
-`occurrence`, then steers published entry points, cage points, optional reward
-count/identities/points, and Nemesis's native spawn-point selection. Native
+`occurrence`, then steers each planned slot's cage or optional point, optional
+reward count and identities, and Nemesis's native spawn-point selection; the
+entry is the room layout's. An unplanned slot draws natively from its pool
+without the planned points, so native never takes one. Native
 `SpawnRewardCages` retains object construction and encounters; native Forfeit
 retains Boon/Hermes-to-Onion substitution. Original cage offers remain the
 navigation input, not a physical-object assertion.

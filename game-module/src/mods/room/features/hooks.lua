@@ -6,6 +6,12 @@ local resources = type(import) == "function"
 local fields = type(import) == "function"
     and import("mods/room/features/fields.lua")
     or require("mods.room.features.fields")
+local layout = type(import) == "function"
+    and import("mods/room/features/layout.lua")
+    or require("mods.room.features.layout")
+local anchors = type(import) == "function"
+    and import("mods/room/features/anchors.lua")
+    or require("mods.room.features.anchors")
 local npcShopping = type(import) == "function"
     and import("mods/room/features/npc_shopping.lua")
     or require("mods.room.features.npc_shopping")
@@ -124,6 +130,9 @@ function hooks.attach(module, session, getState, report, room)
 
     resources.attach(module, getState, report)
     fields.attach(module, session, getState, report, room)
+    layout.attach(module, session, getState, report, room)
+    -- After the presence predicates, so each anchor marker sees their final answer.
+    anchors.attach(module, session, getState, report, room)
     npcShopping.attach(module, session, getState, report, room)
 
     return {

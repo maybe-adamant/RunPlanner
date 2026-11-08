@@ -1,25 +1,35 @@
 -- Mourning Fields realization. Native code remains responsible for creating
 -- cages, optional rewards, and encounters; this adapter only steers the
--- published point and reward choices for the active Fields room.
+-- published point and reward choices for the active Fields room. A slot
+-- without a published point draws natively from its pool without the planned
+-- points, so native never takes a planned point.
 local rerolls = type(import) == "function" and import("mods/navigation/rerolls.lua")
     or require("mods.navigation.rerolls")
+local placement = type(import) == "function" and import("mods/room/features/placement.lua")
+    or require("mods.room.features.placement")
 local fields = {}
 
-local function contains(values, wanted)
-    for _, value in ipairs(values or {}) do
-        if value == wanted then return true end
+-- Planned points by one-based slot rank ("cage2" -> 2) and their reserved set.
+local function cageSlots(layout)
+    local byRank, reserved = {}, {}
+    for _, cage in ipairs(layout.cagePoints or {}) do
+        local rank = tonumber(string.match(cage.slotKey or "", "(%d+)$"))
+        if rank ~= nil then byRank[rank] = cage.pointId end
+        reserved[cage.pointId] = true
     end
-    return false
+    return byRank, reserved
 end
 
-local function removeExpected(values, wanted)
-    for index, value in ipairs(values or {}) do
-        if value == wanted then
-            table.remove(values, index)
-            return wanted
+local function optionalSlots(layout)
+    local byIndex, reserved = {}, {}
+    for index, optional in ipairs(layout.optionalRewards or {}) do
+        if optional.pointId ~= nil then
+            byIndex[index] = optional.pointId
+            reserved[optional.pointId] = true
         end
     end
-    return nil
+    if layout.nemesisPointId ~= nil then reserved[layout.nemesisPointId] = true end
+    return byIndex, reserved
 end
 
 local function copyArgs(args)
@@ -81,14 +91,53 @@ local function sortedObjects(values, predicate, getLocation)
     return result
 end
 
+local function encounterName(value)
+    return type(value) == "table" and (value.GenusName or value.Name) or value
+end
+
+-- Each planned slot's point holds that slot's object: the cage of its
+-- CageRewards entry, or an optional reward. Unplanned slots are not checked.
+local function unplacedSlots(layout, nativeRoom, activeObstacles)
+    local cagesAt = {}
+    for _, value in pairs(activeObstacles or {}) do
+        if type(value) == "table" and value.Name == "FieldsRewardCage" and value.SpawnPointId ~= nil then
+            cagesAt[value.SpawnPointId] = value
+        end
+    end
+    local result = {}
+    for _, cage in ipairs(layout.cagePoints or {}) do
+        local rank = tonumber(string.match(cage.slotKey or "", "(%d+)$"))
+        local planned = rank and type(nativeRoom.CageRewards) == "table" and nativeRoom.CageRewards[rank] or nil
+        local observed = cagesAt[cage.pointId]
+        local wanted = type(planned) == "table" and encounterName(planned.Encounter) or nil
+        if observed == nil or (wanted ~= nil and encounterName(observed.Encounter) ~= wanted) then
+            result[#result + 1] = { slotKey = cage.slotKey, pointId = cage.pointId,
+                observed = observed and encounterName(observed.Encounter) or nil }
+        end
+    end
+    local restoredAt = {}
+    local restores = type(nativeRoom.Encounter) == "table" and nativeRoom.Encounter.RewardsToRestore or {}
+    for _, restore in pairs(restores) do
+        if type(restore) == "table" and restore.SpawnRewardOnId ~= nil then restoredAt[restore.SpawnRewardOnId] = true end
+    end
+    for _, optional in ipairs(layout.optionalRewards or {}) do
+        if optional.pointId ~= nil and not restoredAt[optional.pointId] then
+            result[#result + 1] = { slotKey = optional.slotKey, pointId = optional.pointId }
+        end
+    end
+    return result
+end
+
 local function completedSnapshot(occurrence, nativeRoom, context)
     local layout = occurrence.overview.fields
     local getLocation = context.getLocation
     local priorRewards = context.cageRewards or {}
     local plannedCages, plannedOptional = {}, {}
-    for index, cage in ipairs(layout.cagePoints or {}) do
+    for _, cage in ipairs(layout.cagePoints or {}) do
+        local rank = tonumber(string.match(cage.slotKey or "", "(%d+)$"))
         plannedCages[#plannedCages + 1] = {
-            slotKey = scalar(cage.slotKey), point = point(cage.pointId, getLocation), reward = reward(priorRewards[index]),
+            slotKey = scalar(cage.slotKey), point = point(cage.pointId, getLocation),
+            reward = reward(rank and priorRewards[rank]),
         }
     end
     for _, optional in ipairs(layout.optionalRewards or {}) do
@@ -137,18 +186,6 @@ local function completedSnapshot(occurrence, nativeRoom, context)
     }
 end
 
--- A Fields room enters at the fixed or authored entry its layout publishes; an unpublished one stays native.
-function fields.realize(nativeRoom, overview)
-    if type(nativeRoom) ~= "table" or type(overview) ~= "table" or overview.fields == nil then
-        return nativeRoom
-    end
-    local entry = overview.layout and overview.layout.entry
-    if entry == nil then return nativeRoom end
-    nativeRoom.HeroStartPoint = entry.startPointId
-    nativeRoom.HeroEndPoint = entry.endPointId
-    return nativeRoom
-end
-
 function fields.attach(module, session, getState, report, room)
     local active
     local activeNemesis
@@ -177,30 +214,37 @@ function fields.attach(module, session, getState, report, room)
         return nil
     end
 
+    -- SpawnRewardCages draws every cage from its LootPoint pool, then every
+    -- optional reward from its BonusRewardSpawnPoints pool; other draws pass.
+    local function pool(scope, values)
+        if values == scope.cagePool or values == scope.optionalPool then return values end
+        if scope.cagePool == nil and placement.within(values, scope.cagePoints) then
+            scope.cagePool = values
+        elseif scope.optionalPool == nil and scope.cagePool ~= nil and placement.within(values, scope.optionalPoints) then
+            scope.optionalPool = values
+        end
+        return (values == scope.cagePool or values == scope.optionalPool) and values or nil
+    end
+
     module.hooks.wrap("RemoveRandomValue", "run-planner-fields-point-selection", function(_, runtime, base,
         values, ...)
         local scope = active
-        if scope == nil then return base(values, ...) end
-
-        local expected
-        local cage = scope.cagePoints[scope.cageIndex + 1]
-        if cage ~= nil and contains(values, cage.pointId) then
-            expected = cage.pointId
-            scope.cageIndex = scope.cageIndex + 1
-        elseif scope.cageIndex == #scope.cagePoints then
-            local optional = scope.optionalRewards[scope.optionalPointIndex + 1]
-            if optional ~= nil and contains(values, optional.pointId) then
-                expected = optional.pointId
-                scope.optionalPointIndex = scope.optionalPointIndex + 1
-            end
+        if scope == nil or type(values) ~= "table" or pool(scope, values) == nil then return base(values, ...) end
+        local wanted, reserved
+        if values == scope.cagePool then
+            scope.cageDraws = scope.cageDraws + 1
+            wanted, reserved = scope.cageByRank[scope.cageDraws], scope.cageReserved
+        else
+            scope.optionalDraws = scope.optionalDraws + 1
+            wanted, reserved = scope.optionalByIndex[scope.optionalDraws], scope.optionalReserved
         end
-        if expected == nil then return base(values, ...) end
-        local result = removeExpected(values, expected)
-        if result == nil then
-            session.diagnostic(getState(runtime), "fields-point", { expected = expected, observed = nil })
-            return base(values, ...)
+        if wanted ~= nil then
+            reserved[wanted] = nil
+            local taken = placement.take(values, wanted)
+            if taken ~= nil then return taken end
+            session.diagnostic(getState(runtime), "fields-point", { expected = wanted, observed = nil })
         end
-        return result
+        return placement.drawExcluding(base, values, reserved, ...)
     end)
 
     module.hooks.wrap("RandomChance", "run-planner-fields-optional-count", function(_, _runtime, base,
@@ -271,12 +315,17 @@ function fields.attach(module, session, getState, report, room)
         local state = getState(runtime)
         local layout = currentLayout(state, nativeRoom)
         if layout == nil then return base(nativeRoom, args) end
+        local cageByRank, cageReserved = cageSlots(layout)
+        local optionalByIndex, optionalReserved = optionalSlots(layout)
         local scope = {
-            cagePoints = layout.cagePoints or {},
             optionalRewards = layout.optionalRewards or {},
+            cageByRank = cageByRank, cageReserved = cageReserved,
+            optionalByIndex = optionalByIndex, optionalReserved = optionalReserved,
+            cagePoints = placement.set(_G.GetIdsByType and _G.GetIdsByType({ Name = "LootPoint" })),
+            optionalPoints = placement.set(_G.GetIds and _G.GetIds({ Name = "BonusRewardSpawnPoints" })),
+            cageDraws = 0,
+            optionalDraws = 0,
             chances = type(nativeRoom) == "table" and nativeRoom.OptionalRewardChances or {},
-            cageIndex = 0,
-            optionalPointIndex = 0,
             chanceIndex = 0,
             optionalChanceResults = 0,
             rewardIndex = 0,
@@ -288,15 +337,10 @@ function fields.attach(module, session, getState, report, room)
         local ok, result = pcall(base, nativeRoom, args)
         active = prior
         if not ok then error(result, 0) end
-        if scope.cageIndex ~= #scope.cagePoints
-            or scope.optionalPointIndex ~= #scope.optionalRewards
-            or scope.rewardIndex ~= #scope.optionalRewards then
+        if scope.rewardIndex ~= #scope.optionalRewards then
             session.diagnostic(state, "fields-spawn", {
-                expected = { cages = #scope.cagePoints, optional = #scope.optionalRewards },
-                observed = {
-                cages = scope.cageIndex, optionalPoints = scope.optionalPointIndex,
-                optionalRewards = scope.rewardIndex,
-                },
+                expected = { optionalRewards = #scope.optionalRewards },
+                observed = { optionalRewards = scope.rewardIndex },
             })
         end
         report(runtime)
@@ -339,6 +383,9 @@ function fields.attach(module, session, getState, report, room)
         local state = getState(runtime)
         local occurrence = currentOccurrence(state, nativeRoom)
         if occurrence ~= nil then
+            local unplaced = unplacedSlots(occurrence.overview.fields, nativeRoom,
+                _G.MapState and _G.MapState.ActiveObstacles)
+            if #unplaced > 0 then session.diagnostic(state, "fields-placement", unplaced) end
             session.diagnostic(state, "fields-completed-product", completedSnapshot(occurrence, nativeRoom, {
                 cageRewards = cageRewards(state, occurrence),
                 activeObstacles = _G.MapState and _G.MapState.ActiveObstacles,

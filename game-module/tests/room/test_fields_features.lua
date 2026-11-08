@@ -8,6 +8,26 @@ local support = require("tests.harness.hook_composition")
 
 TestFieldsFeatures = {}
 
+-- The room's cage (LootPoint) and optional (BonusRewardSpawnPoints) point sets.
+local points = { cages = {}, optional = {} }
+
+function TestFieldsFeatures:setUp()
+    self.getIdsByType, self.getIds = _G.GetIdsByType, _G.GetIds
+    points = { cages = { 11, 12, 13, 31, 32, 33, 34, 81, 82, 83 }, optional = { 21, 22, 23, 51 } }
+    _G.GetIdsByType = function(args)
+        lu.assertEquals(args.Name, "LootPoint")
+        return points.cages
+    end
+    _G.GetIds = function(args)
+        lu.assertEquals(args.Name, "BonusRewardSpawnPoints")
+        return points.optional
+    end
+end
+
+function TestFieldsFeatures:tearDown()
+    _G.GetIdsByType, _G.GetIds = self.getIdsByType, self.getIds
+end
+
 local function fixture(layout, occurrenceId)
     local module, _, callbacks = support.capture()
     local occurrence = { id = occurrenceId or "fields", overview = { fields = layout } }
@@ -19,8 +39,9 @@ local function fixture(layout, occurrenceId)
             mismatches[#mismatches + 1] = type(kind) == "table" and kind
                 or { kind = kind, expected = expected, observed = observed }
         end,
-        diagnostic = function(_, _, observed)
+        diagnostic = function(_, kind, observed)
             diagnostics[#diagnostics + 1] = observed
+            diagnostics[kind] = observed
         end,
     }
     fields.attach(module, session, function() return state end, function() reports = reports + 1 end, coordinator)
@@ -29,7 +50,6 @@ end
 
 function TestFieldsFeatures.testTwoCagesAndOptionalConsumableUsePublishedPlacements()
     local callbacks, _, mismatches, _, reports = fixture({
-        entryPair = { startPointId = 101, endPointId = 102 },
         cagePoints = {
             { slotKey = "cage1", pointId = 11 },
             { slotKey = "cage2", pointId = 12 },
@@ -87,7 +107,6 @@ end
 
 function TestFieldsFeatures.testThreeCagesAreBoundedToTheThreePublishedPoints()
     local callbacks, _, mismatches = fixture({
-        entryPair = { startPointId = 201, endPointId = 202 },
         cagePoints = {
             { slotKey = "cage1", pointId = 31 },
             { slotKey = "cage2", pointId = 32 },
@@ -111,7 +130,6 @@ end
 
 function TestFieldsFeatures.testHCombat13UsesTheSameFieldsAdapter()
     local callbacks, _, mismatches = fixture({
-        entryPair = { startPointId = 251, endPointId = 252 },
         cagePoints = {
             { slotKey = "cage1", pointId = 81 },
             { slotKey = "cage2", pointId = 82 },
@@ -138,7 +156,6 @@ end
 
 function TestFieldsFeatures.testNemesisUsesPublishedPointAndMustInvokeTheNativeSelector()
     local callbacks, state, mismatches, _, reports = fixture({
-        entryPair = { startPointId = 301, endPointId = 302 },
         cagePoints = {
             { slotKey = "cage1", pointId = 41 },
             { slotKey = "cage2", pointId = 42 },
@@ -163,7 +180,6 @@ end
 
 function TestFieldsFeatures.testMissingNemesisSelectorDiagnosesWithoutBlockingNativeCall()
     local callbacks, _, _, diagnostics = fixture({
-        entryPair = { startPointId = 401, endPointId = 402 },
         cagePoints = {
             { slotKey = "cage1", pointId = 61 },
             { slotKey = "cage2", pointId = 62 },
@@ -178,7 +194,6 @@ end
 
 local function completedFixture()
     local layout = {
-        entryPair = { startPointId = 101, endPointId = 102 },
         cagePoints = {
             { slotKey = "cage1", pointId = 11 },
             { slotKey = "cage2", pointId = 12 },
@@ -255,7 +270,7 @@ function TestFieldsFeatures.testCompletedFieldsProductSnapshotsTheRealSessionBef
     end)
     lu.assertEquals(mismatches, {})
     lu.assertEquals(reports(), 1)
-    local snapshot = diagnostics[1]
+    local snapshot = diagnostics["fields-completed-product"]
     lu.assertEquals(snapshot.planned.cages[1].reward, { rewardType = "Boon", source = "DemeterUpgrade" })
     lu.assertEquals(snapshot.observed.cages[1].reward, {
         objectId = 401, name = "DemeterUpgrade", spawnPointId = nil, rewardId = nil,
@@ -275,8 +290,8 @@ function TestFieldsFeatures.testCompletedFieldsProductRecordsMissingObjectsWitho
     end)
     lu.assertEquals(mismatches, {})
     lu.assertEquals(state.state, "synchronized")
-    lu.assertEquals(#diagnostics[1].observed.cages, 1)
-    lu.assertEquals(diagnostics[1].observed.optionalRewards, {})
+    lu.assertEquals(#diagnostics["fields-completed-product"].observed.cages, 1)
+    lu.assertEquals(diagnostics["fields-completed-product"].observed.optionalRewards, {})
 end
 
 function TestFieldsFeatures.testCompletedFieldsProductRecordsDisplacedObjectsWithoutMismatch()
@@ -293,8 +308,9 @@ function TestFieldsFeatures.testCompletedFieldsProductRecordsDisplacedObjectsWit
     end)
     lu.assertEquals(mismatches, {})
     lu.assertEquals(state.state, "synchronized")
-    lu.assertEquals(diagnostics[1].observed.cages[1].spawnPointId, 99)
-    lu.assertEquals(diagnostics[1].observed.nemesis.location, { X = 8, Y = 8, Z = nil })
+    lu.assertEquals(diagnostics["fields-completed-product"].observed.cages[1].spawnPointId, 99)
+    lu.assertEquals(diagnostics["fields-completed-product"].observed.nemesis.location, { X = 8, Y = 8, Z = nil })
+    lu.assertEquals(diagnostics["fields-placement"], { { slotKey = "cage1", pointId = 11 } })
 end
 
 function TestFieldsFeatures.testCompletedFieldsProductRecordsOnionBesideOriginalBoonOffer()
@@ -305,7 +321,79 @@ function TestFieldsFeatures.testCompletedFieldsProductRecordsOnionBesideOriginal
     end)
     lu.assertEquals(mismatches, {})
     lu.assertEquals(state.state, "synchronized")
-    lu.assertEquals(diagnostics[1].planned.cages[1].reward,
+    lu.assertEquals(diagnostics["fields-completed-product"].planned.cages[1].reward,
         { rewardType = "Boon", source = "DemeterUpgrade" })
-    lu.assertEquals(diagnostics[1].observed.cages[1].reward.name, "RoomRewardConsolationPrize")
+    lu.assertEquals(diagnostics["fields-completed-product"].observed.cages[1].reward.name, "RoomRewardConsolationPrize")
+end
+
+-- A native-like draw that takes the second remaining point and leaves a hole.
+local function secondDraw(values)
+    local keys = {}
+    for key in pairs(values) do keys[#keys + 1] = key end
+    table.sort(keys)
+    local key = keys[2] or keys[1]
+    local value = values[key]
+    values[key] = nil
+    return value
+end
+
+function TestFieldsFeatures.testUnplannedSlotsDrawNativelyWithoutPlannedPoints()
+    local callbacks, _, mismatches, diagnostics = fixture({
+        cagePoints = { { slotKey = "cage2", pointId = 12 } },
+        optionalRewards = {
+            { slotKey = "optional1", reward = { rewardType = "MaxHealthDrop" } },
+            { slotKey = "optional2", pointId = 21, reward = { rewardType = "MaxHealthDrop" } },
+        },
+        nemesisPointId = 23,
+    })
+    local nativeRoom = { OptionalRewardChances = { 0.5, 0.5 }, BonusRewardStoreName = "FieldsOptionalRewards" }
+    -- Native pools may already hold holes.
+    local cages = { [1] = 11, [3] = 13, [4] = 12 }
+    local optional = { 21, 22, 23 }
+    local drawn = {}
+    callbacks.SpawnRewardCages(nil, {}, function()
+        for _ = 1, 3 do drawn[#drawn + 1] = callbacks.RemoveRandomValue(nil, {}, secondDraw, cages) end
+        -- An unrelated draw inside the scope stays native.
+        local other = { 900, 901 }
+        lu.assertEquals(callbacks.RemoveRandomValue(nil, {}, secondDraw, other), 901)
+        for _ = 1, 2 do drawn[#drawn + 1] = callbacks.RemoveRandomValue(nil, {}, secondDraw, optional) end
+        return true
+    end, nativeRoom, {})
+    -- cage1 draws over {11, 13} (12 is planned), cage2 takes 12, cage3 the rest;
+    -- optional1 draws over {22} (21 planned, 23 the Nemesis point), optional2 takes 21.
+    lu.assertEquals(drawn, { 13, 12, 11, 22, 21 })
+    lu.assertEquals(cages, {})
+    lu.assertEquals(optional, { 23 })
+    lu.assertEquals(mismatches, {})
+    lu.assertNil(diagnostics["fields-point"])
+end
+
+function TestFieldsFeatures.testUnavailablePlannedPointDiagnosesAndDrawsNatively()
+    local callbacks, _, _, diagnostics = fixture({
+        cagePoints = { { slotKey = "cage1", pointId = 13 } },
+        optionalRewards = {},
+    })
+    local cages = { 11, 12 }
+    points.cages = { 11, 12, 13 }
+    local drawn
+    callbacks.SpawnRewardCages(nil, {}, function()
+        drawn = callbacks.RemoveRandomValue(nil, {}, secondDraw, cages)
+        return true
+    end, { OptionalRewardChances = {}, BonusRewardStoreName = "FieldsOptionalRewards" }, {})
+    lu.assertEquals(drawn, 12)
+    lu.assertEquals(diagnostics["fields-point"], { expected = 13, observed = nil })
+end
+
+function TestFieldsFeatures.testPlacementChecksOnlyPlannedSlotsAgainstTheirCage()
+    local callbacks, _, mismatches, diagnostics, _, nativeRoom = completedFixture()
+    nativeRoom.CageRewards[1].Encounter = { Name = "CageA" }
+    nativeRoom.CageRewards[2].Encounter = { Name = "CageB" }
+    withCompletedNativeProduct(function()
+        -- cage1's point holds cage2's encounter; the planned optional holds its point.
+        _G.MapState.ActiveObstacles[101].Encounter = { Name = "CageB" }
+        _G.MapState.ActiveObstacles[102].Encounter = { Name = "CageB" }
+        present(callbacks, nativeRoom)
+    end)
+    lu.assertEquals(mismatches, {})
+    lu.assertEquals(diagnostics["fields-placement"], { { slotKey = "cage1", pointId = 11, observed = "CageB" } })
 end

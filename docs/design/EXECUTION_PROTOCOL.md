@@ -479,10 +479,10 @@ The runtime may use several native calls to build one product. Conformance is
 decided against the completed semantic product rather than by requiring each
 construction callback to mirror an execution-plan row.
 
-Fields layout steering publishes planned versus observed entry points, cage
-rewards/points, optional rewards/points and Nemesis placement as diagnostics.
-Positional differences do not themselves invalidate the remaining simulation
-and are not mismatches. Record original reward inputs and actual spawned
+Layout steering publishes planned versus observed room entry and flip, object
+anchors, Fields cage rewards/points, optional rewards/points and Nemesis
+placement as diagnostics. Positional differences do not themselves invalidate
+the remaining simulation and are not mismatches. Record original reward inputs and actual spawned
 objects without reconstructing native substitutions such as Forfeit. Existing
 room-exit conformance remains responsible for the modeled resulting state.
 

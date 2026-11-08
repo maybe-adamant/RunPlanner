@@ -13,8 +13,8 @@ local switchFeature = type(import) == "function" and import("mods/room/features/
     or require("mods.room.features.challenge_switch")
 local lockedDoors = type(import) == "function" and import("mods/room/features/locked_doors.lua")
     or require("mods.room.features.locked_doors")
-local fieldFeatures = type(import) == "function" and import("mods/room/features/fields.lua")
-    or require("mods.room.features.fields")
+local roomLayout = type(import) == "function" and import("mods/room/features/layout.lua")
+    or require("mods.room.features.layout")
 local conformance = type(import) == "function" and import("mods/room/conformance/proof.lua")
     or require("mods.room.conformance.proof")
 local encounterPhaseFactory = type(import) == "function"
@@ -125,7 +125,7 @@ function coordinator.realize(state, occurrence, game, nativeRoom)
 end
 
 function coordinator.realizeFeatures(_, occurrence, nativeRoom)
-    fieldFeatures.realize(nativeRoom, occurrence.overview)
+    roomLayout.realize(nativeRoom, occurrence.overview)
     return nativeRoom
 end
 
