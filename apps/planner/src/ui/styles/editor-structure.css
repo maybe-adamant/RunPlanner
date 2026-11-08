@@ -1263,15 +1263,15 @@ select {
   min-width: 0;
 }
 
+/* The side doors' table measures its fit against the whole of its Spawns row's value. */
+.side-door-spawns-workbench {
+  flex: 1 1 100%;
+}
+
 /* Side-room doors select with two toggles, Open then Visit, under their names. */
 /* Side doors pick whether each opens, under an Open heading. */
 .door-rows.side-door-spawns {
   --door-select-track: 3rem;
-}
-
-/* The side doors' table fits its Spawns row's value column on one line at any panel width. */
-.side-door-spawns-workbench {
-  container: none;
 }
 
 /* A lone door has no radio, and its column keeps only the row's inset. */
@@ -1494,38 +1494,36 @@ select {
 }
 
 /*
- * Panels narrower than the widest one-line table (a Chaos Gate row with its blessing, which
- * cannot narrow) give each exit two lines: identity and room, then reward and actions. The
- * room column's fixed width holds every table on one line.
+ * A table wider than its space gives each exit two lines: identity and room, then reward
+ * and actions. Each table measures its own fit, so a short one stays on one line.
  */
-@container door-workbench (max-width: 33rem) {
-  .door-rows,
-  .door-rows[data-columns='offer'] {
-    width: 100%;
-    grid-template-columns: auto minmax(0, 1fr);
-  }
+.door-rows[data-layout='two-line'] {
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr);
+}
 
-  .door-rows-header {
-    display: none;
-  }
+.door-rows[data-layout='two-line'] .door-rows-header {
+  display: none;
+}
 
-  .door-row {
-    grid-template-columns: auto minmax(0, 1fr);
-    row-gap: 6px;
-  }
+.door-rows[data-layout='two-line'] .door-row {
+  grid-template-columns: auto minmax(0, 1fr);
+  row-gap: 6px;
+}
 
-  .door-row-select {
-    grid-row: 1 / span 2;
-  }
+.door-rows[data-layout='two-line'] .door-row-select {
+  grid-row: 1 / span 2;
+}
 
-  .door-row > span:not(.door-row-select) {
-    grid-column: 2;
-    flex-wrap: wrap;
-  }
+.door-rows[data-layout='two-line'] .door-row > span:not(.door-row-select) {
+  grid-column: 2;
+  flex-wrap: wrap;
+}
 
-  .door-rows[data-columns='offer'] .door-row > span:empty:not(.door-row-select) {
-    display: none;
-  }
+.door-rows[data-layout='two-line'][data-columns='offer']
+  .door-row
+  > span:empty:not(.door-row-select) {
+  display: none;
 }
 
 /*

@@ -17,6 +17,7 @@ import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { roomKindIcon } from '../roomIcon';
 import { DoorRewardEditor, DoorRewardHiddenTag, RerolledRewardRepairs } from '../DoorRewardEditor';
 import { DoorRow, DoorRowsHeader } from '../DecisionWorkbench';
+import { DoorRows } from '../DoorRows';
 import { RoomFeatureMapLegend, RoomFeatureMapPoints } from '../room-map/RoomMapPoints';
 import { OverviewRow } from '../RoomOverviewSections';
 import { sideDoorMapDoors } from './sideDoorMapDoors';
@@ -175,9 +176,9 @@ export function SideDoorSpawns({
         className="door-workbench side-door-spawns-workbench"
         tabIndex={-1}
       >
-        <div
-          aria-label="Side doors by generation priority"
-          className="door-rows side-door-spawns"
+        <DoorRows
+          ariaLabel="Side doors by generation priority"
+          className="side-door-spawns"
           role="group"
         >
           <DoorRowsHeader
@@ -209,7 +210,7 @@ export function SideDoorSpawns({
           {localVisit.slots.map((slot) => (
             <SideDoorRow interactions={interactions} key={slot.key} slot={slot} />
           ))}
-        </div>
+        </DoorRows>
       </section>
     </OverviewRow>
   );

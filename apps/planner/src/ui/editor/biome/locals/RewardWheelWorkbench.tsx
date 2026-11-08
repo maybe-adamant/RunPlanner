@@ -18,6 +18,7 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { CandidatePicker } from '../CandidatePicker';
 import { DoorChipOptions, DoorRow, DoorRowsHeader, RewardPoolLine } from '../DecisionWorkbench';
+import { DoorRows } from '../DoorRows';
 import { wheelOfferChips } from '../doorSummary';
 import { RerolledRewardRepairs, RowReward } from '../DoorRewardEditor';
 import { RoomRerolls } from '../RoomRerolls';
@@ -126,10 +127,9 @@ export function RewardWheelWorkbench({
             />
           </div>
         </div>
-        <div
-          aria-label="Wheel offers"
-          className="door-rows"
-          data-columns="offer"
+        <DoorRows
+          ariaLabel="Wheel offers"
+          columns="offer"
           // The rows stay named articles; their radios group natively by name.
           role="group"
         >
@@ -190,7 +190,7 @@ export function RewardWheelWorkbench({
                 />
               );
             })}
-        </div>
+        </DoorRows>
         {rerolls === undefined || inTimeline ? null : (
           <RoomRerolls interactions={interactions} rerolls={rerolls} />
         )}

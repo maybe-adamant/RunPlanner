@@ -14,6 +14,7 @@ import {
   type WorkspaceRoomTab,
 } from '@planner/projections/structured-workspace';
 import { BatchDoorsDetail, BatchDoorsRepair, DoorNotes, DoorRowsHeader } from './DecisionWorkbench';
+import { DoorRows } from './DoorRows';
 import {
   batchDoorChips,
   batchDoorFindingOwners,
@@ -310,7 +311,7 @@ function roomTimelineDoors({
               findingOwners: [phantom.address],
               detail: (
                 <section aria-label="Door details" className="door-workbench timeline-doors-detail">
-                  <div className="door-rows">
+                  <DoorRows>
                     <DoorRowsHeader />
                     <PhantomExitDoor
                       control={phantom}
@@ -318,7 +319,7 @@ function roomTimelineDoors({
                       interactions={interactions}
                       mark={markFor('hiddenDoor')}
                     />
-                  </div>
+                  </DoorRows>
                 </section>
               ),
             }),

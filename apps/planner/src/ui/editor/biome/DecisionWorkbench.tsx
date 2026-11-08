@@ -48,6 +48,7 @@ import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
 import { doorChipMapLink, type DoorChip } from './doorSummary';
+import { DoorRows } from './DoorRows';
 import { type DoorNoteItem, type DoorNoteMark, type DoorNoteTarget } from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
@@ -1076,7 +1077,7 @@ export function BatchDoorsDetail({
         <div className="door-batch">
           <BatchSettings interactions={interactions} markFor={markFor} node={node} />
         </div>
-        <div className="door-rows" role="group" aria-label="Door rows">
+        <DoorRows ariaLabel="Door rows" role="group">
           <DoorRowsHeader {...(repair === undefined ? {} : { action: repair })} />
           {node.targets.map((target) => (
             <TargetRow
@@ -1106,7 +1107,7 @@ export function BatchDoorsDetail({
               />
             ),
           )}
-        </div>
+        </DoorRows>
       </div>
     </section>
   );

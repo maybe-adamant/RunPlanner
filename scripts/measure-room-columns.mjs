@@ -175,6 +175,15 @@ function measureFrame({ frameIndex, kinds }) {
     if (columns) columns.style.gridTemplateColumns = `${width}px 400px`;
     else panel.style.width = `${width}px`;
   };
+  // A doors table gives its rows two lines only where it does not fit, measured as it
+  // resizes; the forced widths below come and go before it measures, so every table is held
+  // on one line while they apply and takes its own layout back at the stylesheet's column.
+  const tables = [...column.querySelectorAll('.door-rows')].map((table) => ({
+    table,
+    layout: table.getAttribute('data-layout'),
+  }));
+  const twoLineTables = tables.filter(({ layout }) => layout === 'two-line').length;
+  for (const { table } of tables) table.removeAttribute('data-layout');
   // What the room needs where it is free to lay everything on one line.
   const unconstrained = 1600;
   force(unconstrained);
@@ -222,6 +231,8 @@ function measureFrame({ frameIndex, kinds }) {
   }
   // The layout as the stylesheet gives it, against the unconstrained heights.
   force(undefined);
+  for (const { table, layout } of tables)
+    if (layout !== null) table.setAttribute('data-layout', layout);
   const atNatural = failures();
   return {
     caseId,
@@ -235,6 +246,7 @@ function measureFrame({ frameIndex, kinds }) {
       .slice(0, 3)
       .map((failure) => `${failure.kind}: ${describe(failure.element)}`),
     atNaturalCount: atNatural.length,
+    twoLineTables,
     seen: [...new Set(rows.map((row) => row.kind))],
   };
 }
@@ -313,6 +325,10 @@ for (const { width, results } of report) {
     console.log(
       `   ${String(result.required).padStart(5)}  ${result.caseId}/${result.view}${result.hasMap ? '' : ' (no map)'}\n          ${result.binding.join('\n          ')}`,
     );
+  const twoLine = measured.filter((result) => result.twoLineTables > 0);
+  console.log(
+    `   doors tables on two lines: ${twoLine.length === 0 ? 'none' : twoLine.map((result) => `${result.caseId}/${result.view}`).join(', ')}`,
+  );
   const wrappedNow = measured.filter((result) => result.atNaturalCount > 0);
   console.log(`   wrapping or overflowing at today's column: ${wrappedNow.length}`);
   for (const result of wrappedNow.slice(0, 12))
