@@ -128,6 +128,15 @@ function OpenedCase({
       ?.querySelector<HTMLButtonElement>('[data-room-tab="overview"][aria-selected="false"]')
       ?.click();
   }, [view]);
+  // A case showing another room tab opens it as a user would.
+  useEffect(() => {
+    if (view !== 'timeline' || entry.roomTab === undefined) return;
+    frame.current
+      ?.querySelector<HTMLButtonElement>(
+        `[data-room-tab="${CSS.escape(entry.roomTab)}"][aria-selected="false"]`,
+      )
+      ?.click();
+  }, [entry, view]);
   // A case showing the door rows expands the door editor as a user would.
   useEffect(() => {
     if (view !== 'timeline' || entry.doorsExpanded !== true) return;

@@ -80,7 +80,8 @@ function chromiumExecutable() {
 
 /**
  * The row kinds the left column can hold. Timeline rows are keyed by their row kind; the
- * rest by the element that lays one line out.
+ * rest by the element that lays one line out. Trait outcome and encounter customization
+ * rows open in popovers and dialogs, outside the column.
  */
 const rowKinds = [
   ['Timeline boundary row', '.timeline-row[data-timeline-row-kind="boundary"]'],
@@ -103,12 +104,10 @@ const rowKinds = [
   ['Numbered slots', '.numbered-slots'],
   ['Icon toggle row', '.icon-toggle-row'],
   ['Encounter settings', '.encounter-phase-settings'],
-  ['Encounter customization row', '.encounter-customization-row'],
   ['Shop offer row', '.shop-family-offer-row'],
   ['Shrine slot', '.hermes-shrine-slot'],
   ['Pedestal', '.room-contract-pedestal'],
   ['Reroll row', '.room-reroll-row-inline'],
-  ['Trait outcome row', '.trait-outcome-row'],
   ['Ship phase', '.ship-phase'],
   ['Ship combat editor', '.ship-combat-editor'],
 ];
@@ -130,6 +129,9 @@ function measureFrame({ frameIndex, kinds }) {
   const room = frame.querySelector('.biome-occurrence-workbench');
   if (room === null) return { caseId, view, skipped: 'no room workbench' };
   const panel = room.querySelector('.room-workbench-panel');
+  // Side rooms lay their map out beside their own doors, in no measured column.
+  if (panel.querySelector('.ephyra-side-layout') !== null)
+    return { caseId, view, skipped: 'side rooms' };
   const columns = panel.querySelector('.room-map-columns');
   const column = columns?.querySelector(':scope > .room-map-controls-column') ?? panel;
   const mapColumn = columns?.querySelector(':scope > .room-map-column');
@@ -334,5 +336,6 @@ const skipped = [
     ),
   ),
 ];
-if (skipped.length > 0) console.log(`Skipped (no room workbench): ${skipped.join(', ')}`);
+if (skipped.length > 0)
+  console.log(`Skipped (no room workbench, or side rooms): ${skipped.join(', ')}`);
 if (options.json !== undefined) writeFileSync(options.json, JSON.stringify(report, null, 2));

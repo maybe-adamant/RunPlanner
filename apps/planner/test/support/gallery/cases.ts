@@ -3,6 +3,7 @@ import {
   createAdditionalExitAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createExitDecisionAddress,
   createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
@@ -13,6 +14,7 @@ import {
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createRoomActionAddress,
+  createRewardWheelAddress,
   rerollAppendIndex,
   roomActionKey,
   type AuthoredNemesisRandomEventOutcome,
@@ -351,6 +353,33 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('H', 'golden-h-combat02'),
   },
   {
+    id: 'fields-doors-table-max',
+    doorsExpanded: true,
+    label: 'Fields doors table rolled at its maximum: three cage rewards per door',
+    shows: ['door table', 'three cage rewards', 'Fields settings line'],
+    project: createGoldenFGHIProject,
+    commands: [
+      // Combat 09 holds two cages; a three-cage room lets the roll reach three.
+      {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(
+          createBiomeAddress('Underworld', 'H'),
+          createOccurrenceId('golden-h-combat09'),
+        ),
+        gameName: 'H_Combat10',
+      },
+      {
+        kind: 'ReplaceFieldsCageOutcome',
+        decision: createExitDecisionAddress(createBiomeAddress('Underworld', 'H'), {
+          kind: 'occurrence',
+          occurrenceId: createOccurrenceId('golden-h-combat02'),
+        }),
+        cageOutcome: 'max',
+      },
+    ],
+    target: room('H', 'golden-h-combat02'),
+  },
+  {
     id: 'doors-table',
     doorsExpanded: true,
     label: 'Doors table: one reward per door',
@@ -365,6 +394,14 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['door table', 'fixed door reward chip'],
     project: loadSurfaceNOPQCheckpoint,
     target: room('P', 'surface-p-6-1-p_combat10'),
+  },
+  {
+    id: 'side-room-doors',
+    roomTab: 'sideRooms',
+    label: 'Ephyra side-room doors: Open and Visit toggles, priority, room and reward',
+    shows: ['side-room door table'],
+    project: loadSurfaceNOPQCheckpoint,
+    target: room('N', 'surface-n-combat05'),
   },
   {
     id: 'boss-steady-growth',
@@ -405,6 +442,33 @@ export const galleryCases: readonly GalleryCase[] = [
     id: 'wheel-next-phase',
     label: 'Wheel room: select wheel, wheel reward and next phase',
     shows: ['select wheel', 'wheel reward', 'next phase'],
+    project: loadSurfaceEncounterShowcaseCheckpoint,
+    target: room('O', 'surface-o-combat04'),
+  },
+  {
+    id: 'ship-phase-wheel',
+    roomTab: 'shipIntroActions',
+    label: 'Ship room Intro phase: the wheel and its offers',
+    shows: ['ship phase', 'wheel offers table'],
+    project: loadSurfaceEncounterShowcaseCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceRewardWheelOfferCount',
+        wheel: createRewardWheelAddress(
+          createBiomeAddress('Surface', 'O'),
+          createOccurrenceId('surface-o-combat04'),
+          'wheel1',
+        ),
+        offerCount: 2,
+      },
+    ],
+    target: room('O', 'surface-o-combat04'),
+  },
+  {
+    id: 'ship-phase-combat',
+    roomTab: 'shipCombat1Actions',
+    label: 'Ship room combat phase with its doors',
+    shows: ['ship phase', 'doors'],
     project: loadSurfaceEncounterShowcaseCheckpoint,
     target: room('O', 'surface-o-combat04'),
   },
