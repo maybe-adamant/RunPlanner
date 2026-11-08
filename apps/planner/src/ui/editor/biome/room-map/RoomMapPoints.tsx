@@ -59,9 +59,12 @@ const unplanned: RoomMapPlacements = Object.freeze({
  * shows its number.
  */
 export function RoomMapSpots({
+  away = false,
   markers,
   placements = unplanned,
 }: {
+  /** Melinoë stands elsewhere in the room, so no entry shows her. */
+  readonly away?: boolean;
   readonly markers: RoomMapMarkers;
   readonly placements?: RoomMapPlacements;
 }) {
@@ -88,6 +91,7 @@ export function RoomMapSpots({
   const eligible = new Set(placements.entryEligible);
   // Picking shows every entry it can pick, numbered; otherwise the settled entry alone, or the tie.
   const entryMark = (id: number): { readonly mark?: string } | undefined => {
+    if (away && picking === undefined) return undefined;
     if (picking !== undefined) {
       if (!eligible.has(id) && picking.id !== id) return undefined;
       const number = placements.entryNumbers.get(id);
@@ -210,14 +214,20 @@ export interface RoomMapSideDoor {
   readonly visit?: number | undefined;
 }
 
-/** The room's side doors: a chip while open, a ring while shut, the visit number once visited. */
+/**
+ * The room's side doors: a chip while open, a ring while shut, the visit
+ * number once visited, and Melinoë at the one she is back from.
+ */
 export function RoomMapSideDoors({
   doors,
+  hero,
   markers,
   open = true,
   taken = true,
 }: {
   readonly doors: readonly RoomMapSideDoor[];
+  /** The side door Melinoë stands at, back from its side room. */
+  readonly hero?: string | undefined;
   readonly markers: RoomMapMarkers;
   /** The room's doors have opened. */
   readonly open?: boolean;
@@ -233,9 +243,10 @@ export function RoomMapSideDoors({
     const visited = taken && door.visit !== undefined;
     const state =
       door.face === undefined ? 'Closed' : visited ? `Visit ${door.visit}` : 'Not visited';
+    const here = hero === door.slotKey;
     return (
       <span
-        aria-label={`${door.label} · ${state}`}
+        aria-label={`${door.label} · ${state}${here ? ' · Melinoë' : ''}`}
         className="room-map-door"
         data-closed={!shown || undefined}
         data-preview={
@@ -254,6 +265,9 @@ export function RoomMapSideDoors({
           </span>
         ) : null}
         <RoomMapNumber value={visited ? door.visit : undefined} />
+        {here ? (
+          <img alt="" className="room-map-door-hero" draggable={false} src={melinoeIcon} />
+        ) : null}
       </span>
     );
   });

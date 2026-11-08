@@ -245,7 +245,12 @@ actions at the top right, the legend at the bottom right. The Hub map fills
 its frame, so the overlays sit on the image. An Ephyra main room's side-door
 map is an illustrative parent map with each declared side slot's status
 (closed, not visited, or its visit number); opening and visiting are edited
-in the controls. Images support zoom and
+in the controls. On a Timeline, Melinoë stands where the marked row finds
+her: at the entry, at a side room's door from its Returned row, and at the
+entry again for the way back to the Hub. The door an Ephyra room is left back
+through (a main room's entry door, a side room's door to its main room) shows
+the room's hidden door as the simulation settles it: its placeholder room and
+reward, dimmed. Images support zoom and
 pan, and Close/Escape returns focus to the invoking control when it still
 exists. Visibility and zoom belong to the local host, not the project: edits
 within that host keep the reference, changing its room image resets the zoom,
@@ -532,14 +537,15 @@ still in its doors; a room past the plan's end shows no doors and keeps it
 under its read-only Timeline. Ephyra's Hub rooms leave by their way back: a
 side room's Leave room picker holds **Back to** its main room and **End plan
 here**, with a link to that room's Timeline. A Hub visit's main room has one
-Leave room picker per side visit, each followed by a **Back from** row for
-that side room's return, and a last one back to the Hub. Each picker offers
+Leave room picker per side visit, each followed by a **Returned** row with
+that side room's chip, and a last one back to the Hub. Each picker offers
 the Hub and every open side room not visited before it; picking a side room
 replaces that visit and keeps the later ones, and picking the Hub ends the
 visits there. The last picker, back to the Hub, holds the main room's **End
 plan here**, since ending the plan there ends its whole visit; each earlier
 picker after a side visit holds that side room's, the plan ending as the hero
-leaves it, with the later pickers kept as authored past the end. A later visit an
+leaves it, with the rows after it kept as authored past the end, dimmed as
+not walked. A later visit an
 earlier change repeats stays, its finding on its own picker. Each picker links
 to the side room it picks or to the Hub Timeline at the next visit's segment.
 Otherwise moving to the next room is the rail's job.

@@ -36,6 +36,7 @@ export function RoomMapColumn({
   flipped = false,
   wheelChips,
   gameName,
+  heroSideDoor,
   map,
   placements,
   roomIdentity,
@@ -54,6 +55,8 @@ export function RoomMapColumn({
   /** The wheel's active offers, shown instead of the doors: one on the wheel, two on its sides. */
   readonly wheelChips?: readonly DoorChip[] | undefined;
   readonly gameName: string;
+  /** The side door Melinoë stands at, back from its side room; absent, she is at the entry. */
+  readonly heroSideDoor?: string | undefined;
   readonly map: WorkspaceRoomMap;
   /** A different room never inherits this map's pan and zoom. */
   readonly roomIdentity: string;
@@ -108,6 +111,10 @@ export function RoomMapColumn({
               at: index === 0 ? wheel.leftOffer : wheel.rightOffer,
             }));
   const doors = wheelSpots === undefined ? markers.doors : [];
+  const heroAtSideDoor =
+    heroSideDoor !== undefined &&
+    markers.sideDoors.some((marker) => marker.slotKey === heroSideDoor) &&
+    sideDoors.some((door) => door.slotKey === heroSideDoor);
   return (
     <section aria-label={`${title} map`} className="room-map-column">
       <RoomMapViewport
@@ -118,6 +125,7 @@ export function RoomMapColumn({
         overlay={
           <div aria-label={`${title} map points`} className="room-map-marker-layer" role="group">
             <RoomMapSpots
+              {...(heroAtSideDoor ? { away: true } : {})}
               markers={markers}
               {...(placements === undefined
                 ? {}
@@ -139,7 +147,13 @@ export function RoomMapColumn({
                 </span>
               ),
             )}
-            <RoomMapSideDoors doors={sideDoors} markers={markers} open={open} taken={taken} />
+            <RoomMapSideDoors
+              doors={sideDoors}
+              {...(heroAtSideDoor ? { hero: heroSideDoor } : {})}
+              markers={markers}
+              open={open}
+              taken={taken}
+            />
             {markers.chaosGate === undefined ? null : (
               <span
                 aria-label={chaosChip === undefined ? 'Chaos gate' : chipName(chaosChip)}
@@ -201,6 +215,7 @@ export function RoomMapColumn({
                   aria-label={open ? name : `${name} · Closed`}
                   className="room-map-door"
                   data-closed={!open || undefined}
+                  data-hidden={chip?.hidden}
                   data-locked={(open && chip?.locked) || undefined}
                   data-preview={
                     (highlight?.kind === 'door' && highlight.doorIndex === door.doorIndex) ||

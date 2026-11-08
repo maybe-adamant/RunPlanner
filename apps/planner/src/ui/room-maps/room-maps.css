@@ -604,6 +604,23 @@
   opacity: 0.8;
 }
 
+/* A hidden door: dimmed and dashed, never entered. */
+.room-map-door[data-hidden] {
+  border-style: dashed;
+  opacity: 0.72;
+}
+
+/* Melinoë on the corner of the side door she is back from. */
+.room-map-door-hero {
+  position: absolute;
+  right: -14px;
+  bottom: -14px;
+  width: 26px;
+  height: auto;
+  filter: drop-shadow(0 0 4px #fff4c7) drop-shadow(0 1px 2px rgb(0 0 0 / 80%));
+  user-select: none;
+}
+
 /* The taken door: a solid ring; dashed rings are previews. */
 .room-map-door[data-taken] {
   z-index: 2;

@@ -27,6 +27,8 @@ import {
   workspaceBiome,
 } from '@planner-test/support/biome-workbench';
 import { hintOf } from '@planner-test/support/hints';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { roomKindIcon } from '@planner/ui/editor/biome/roomIcon';
 
 afterEach(() => cleanup());
 
@@ -77,7 +79,54 @@ function rowNames(): readonly string[] {
   return within(screen.getByRole('list', { name: 'Room timeline' }))
     .getAllByRole('listitem')
     .map((row) => row.getAttribute('aria-label') ?? '')
-    .filter((name) => name === 'Leave room' || name.startsWith('Back from'));
+    .filter((name) => name === 'Leave room' || name.startsWith('Returned from'));
+}
+
+function pastEndRows(): readonly string[] {
+  return within(screen.getByRole('list', { name: 'Room timeline' }))
+    .getAllByRole('listitem')
+    .filter((row) => row.getAttribute('data-plan-end') === 'pastEnd')
+    .map((row) => row.getAttribute('aria-label') ?? '');
+}
+
+function mapPoints(): readonly HTMLElement[] {
+  return [...roomCard().querySelectorAll<HTMLElement>('.room-map-column [role="img"]')];
+}
+
+/** The side room whose door Melinoë stands at on the map, or Entry. */
+function whereIsMelinoe(): string {
+  const at = mapPoints().flatMap((point) => {
+    const name = point.getAttribute('aria-label') ?? '';
+    if (point.classList.contains('room-map-entry')) return ['Entry'];
+    return name.endsWith(' · Melinoë') ? [name.split(' · ')[0]!] : [];
+  });
+  expect(at).toHaveLength(1);
+  return at[0]!;
+}
+
+/** The map's hidden door at Door 1 shows the engine-settled placeholder room and its reward. */
+function expectHiddenDoorOnMap(
+  application: PlannerApplication,
+  room: ReturnType<typeof createOccurrenceAddress>,
+  draws: boolean,
+) {
+  const node = workspaceBiome(application, 'Surface', 'N').nodes.find(
+    (candidate) =>
+      candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === room.occurrenceId,
+  );
+  const phantom = node?.kind === 'occurrenceWorkbench' ? node.room.phantomExit : undefined;
+  expect(phantom?.room.icon).toBeDefined();
+  // A main room's placeholder is the no-draw Preboss; a side room's draws a reward.
+  expect(phantom?.reward.rewardType !== undefined).toBe(draws);
+  const door = mapPoints().find((point) => point.getAttribute('aria-label') === 'Hidden door');
+  expect(door?.hasAttribute('data-hidden')).toBe(true);
+  const icons = [...door!.querySelectorAll('img')].map((icon) => icon.getAttribute('src'));
+  expect(icons).toEqual([
+    ...(typeof roomKindIcon(phantom!.room.icon!) === 'string'
+      ? [roomKindIcon(phantom!.room.icon!)]
+      : []),
+    ...(draws ? [rewardIcon(phantom!.reward.rewardType!)] : []),
+  ]);
 }
 
 function exitDoor(index: number): HTMLElement {
@@ -94,9 +143,9 @@ describe('main room side visits on its Timeline', () => {
     const secondLabel = sideLabel(view.application, second!);
     expect(rowNames()).toEqual([
       'Leave room',
-      `Back from ${firstLabel}`,
+      `Returned from ${firstLabel}`,
       'Leave room',
-      `Back from ${secondLabel}`,
+      `Returned from ${secondLabel}`,
       'Leave room',
     ]);
     // The first exit offers the Hub and every open side room; it cannot end the plan.
@@ -121,7 +170,7 @@ describe('main room side visits on its Timeline', () => {
       within(await openLeavePicker(view.user, roomCard(), 1)).getByRole('option', { name: 'Hub' }),
     );
     expect(visitOrder(view.application)).toEqual([first]);
-    expect(rowNames()).toEqual(['Leave room', `Back from ${firstLabel}`, 'Leave room']);
+    expect(rowNames()).toEqual(['Leave room', `Returned from ${firstLabel}`, 'Leave room']);
     // The Hub return then picks a further side visit.
     await view.user.click(
       within(await openLeavePicker(view.user, roomCard(), 1)).getByRole('option', {
@@ -144,8 +193,9 @@ describe('main room side visits on its Timeline', () => {
     );
     expect(planEnd()).toEqual({ biomeKey: 'N', occurrenceId: first });
     expect(visitOrder(view.application)).toEqual([first, second]);
-    // The later exit stays as authored, past the end.
+    // The later exit stays as authored, past the end, and every row after the end reads as not walked.
     expect(exitDoor(2).hasAttribute('disabled')).toBe(true);
+    expect(pastEndRows()).toEqual([`Returned from ${secondLabel}`, 'Leave room']);
     expect(leaveOptionNames(await openLeavePicker(view.user, roomCard(), 1)).at(-1)).toBe(
       'End plan here (picked)',
     );
@@ -155,6 +205,58 @@ describe('main room side visits on its Timeline', () => {
     expect(planEnd()).toBeUndefined();
     expect(visitOrder(view.application)).toEqual([first, second]);
     expect(exitDoor(2).hasAttribute('disabled')).toBe(false);
+    expect(pastEndRows()).toEqual([]);
+  });
+
+  it('names each return Returned with its side room', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    await openTimeline(view, combat05);
+    const [first] = visitOrder(view.application);
+    const firstLabel = sideLabel(view.application, first!);
+    const row = within(roomCard()).getByRole('listitem', { name: `Returned from ${firstLabel}` });
+    expect(row.querySelector('.timeline-banner-title')?.textContent).toBe('Returned');
+    expect(row.querySelector('.timeline-leave-text')?.textContent).toBe(
+      firstLabel.replace(/^Side Room /, 'SR '),
+    );
+  });
+
+  it('puts Melinoë where the marked row finds her: the entry, then each side door she is back from', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    await openTimeline(view, combat05);
+    const [first, second] = visitOrder(view.application);
+    const firstLabel = sideLabel(view.application, first!);
+    const secondLabel = sideLabel(view.application, second!);
+    const rows = () =>
+      [...screen.getByRole('list', { name: 'Room timeline' }).children] as HTMLElement[];
+    const mark = (row: HTMLElement) => fireEvent.pointerDown(row);
+    const named = (name: string) => rows().find((row) => row.getAttribute('aria-label') === name)!;
+    const leaves = () => rows().filter((row) => row.getAttribute('aria-label') === 'Leave room');
+    // With no row marked she stands at the entry, as the room is left.
+    expect(whereIsMelinoe()).toBe('Entry');
+    mark(rows()[0]!);
+    expect(whereIsMelinoe()).toBe('Entry');
+    mark(named(`Returned from ${firstLabel}`));
+    expect(whereIsMelinoe()).toBe(firstLabel);
+    // She leaves for the next side room from where she came back.
+    mark(leaves()[1]!);
+    expect(whereIsMelinoe()).toBe(firstLabel);
+    mark(named(`Returned from ${secondLabel}`));
+    expect(whereIsMelinoe()).toBe(secondLabel);
+    // The way back to the Hub is taken at the entry.
+    mark(leaves().at(-1)!);
+    expect(whereIsMelinoe()).toBe('Entry');
+  });
+
+  it('shows the hidden door at the entry with its settled room and reward, and no Hub chip', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    await openTimeline(view, combat05);
+    expectHiddenDoorOnMap(view.application, combat05, false);
+    expect(mapPoints().some((point) => point.getAttribute('aria-label') === 'Hub')).toBe(false);
+    // A side room's way back to its main room is its own hidden door.
+    const [first] = visitOrder(view.application);
+    const side = createOccurrenceAddress(nBiome, first!);
+    await openTimeline(view, side);
+    expectHiddenDoorOnMap(view.application, side, true);
   });
 
   it('rings the side door or the Hub return of the Leave room option under the highlight', async () => {
@@ -169,8 +271,9 @@ describe('main room side visits on its Timeline', () => {
     const list = await openLeavePicker(view.user, roomCard(), 0);
     await view.user.hover(within(list).getByRole('option', { name: secondLabel }));
     expect(ringed()).toEqual([`${secondLabel} · Visit 2`]);
+    // The Hub is left through the entry, where the hidden door stands.
     await view.user.hover(within(list).getByRole('option', { name: 'Hub' }));
-    expect(ringed()).toEqual(['Hub']);
+    expect(ringed()).toEqual(['Hidden door']);
   });
 
   it('hangs a side door chip at the map top edge below its point', async () => {

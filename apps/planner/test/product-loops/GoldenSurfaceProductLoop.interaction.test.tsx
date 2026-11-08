@@ -362,7 +362,7 @@ describe('surface product loop', () => {
       expect(heading()).toBe('Combat 05');
       timelineShown();
       // The main room's Timeline continues from that side room's return.
-      expect(screen.getByRole('listitem', { name: `Back from ${sideRooms[index]}` })).toBeTruthy();
+      expect(screen.getByRole('listitem', { name: `Returned from ${sideRooms[index]}` })).toBeTruthy();
     }
     expect(new Set(sideRooms).size).toBe(2);
     const leave = leaves().at(-1)!;

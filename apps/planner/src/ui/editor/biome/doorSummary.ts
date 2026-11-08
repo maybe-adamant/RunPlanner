@@ -38,9 +38,11 @@ export interface DoorChip {
   readonly additionalExit?: 'chaos' | 'zagreusContract';
   /** The chip is a Ship wheel's offer, keyed by its offer key. */
   readonly wheelOffer?: true;
+  /** The room's hidden door: its placeholder room and reward, never entered. */
+  readonly hidden?: true;
 }
 
-/** The way back to the Hub, the main room's Door 1, by the Hub's room icon. */
+/** The way back to the Hub through the main room's Door 1, by the Hub's room icon. */
 export function hubReturnChip(hub: HubDecisionAddress): DoorChip {
   return {
     key: 'hub',

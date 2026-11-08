@@ -156,14 +156,20 @@ export function LeaveRow({
   actions,
   anchorOwner,
   children,
+  heroDoor,
   label,
+  pastEnd = false,
   status,
 }: {
   readonly actions?: ReactNode;
   /** The owner the row repairs, such as the exit selection; navigation lands on its picker. */
   readonly anchorOwner?: SemanticAddress;
   readonly children?: ReactNode;
+  /** Where Melinoë stands on the room's map from this row: a side door's slot key, empty for the entry. */
+  readonly heroDoor?: string | undefined;
   readonly label: string;
+  /** The plan ends before this row: it stays as authored, not walked. */
+  readonly pastEnd?: boolean;
   /** A quiet note on the doors' state. */
   readonly status?: string | undefined;
 }) {
@@ -191,6 +197,8 @@ export function LeaveRow({
       {...anchor()}
       aria-label={label}
       className="timeline-leave-row"
+      {...(heroDoor === undefined ? {} : { 'data-hero-door': heroDoor })}
+      {...(pastEnd ? { 'data-plan-end': 'pastEnd' } : {})}
       kind="boundary"
       label={
         <>

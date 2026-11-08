@@ -23,6 +23,7 @@ import {
 } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import { doorRewardIcons, hubReturnChip } from './doorSummary';
+import { DoorChipFace } from './DecisionWorkbench';
 import { LeavePicker, type LeaveOption } from './LeavePicker';
 import { LeaveRow } from './TimelineDoors';
 import { TimelineRow } from './TimelineRow';
@@ -166,7 +167,10 @@ function SideVisitLeaveRow({
         ) : undefined
       }
       {...(anchored ? { anchorOwner: order } : {})}
+      // The way back to the Hub is taken at the entry door.
+      {...(picked === undefined ? { heroDoor: '' } : {})}
       label="Leave room"
+      pastEnd={pastEnd}
     >
       {/* The picker's choices are assessed as it is reached for, before it opens. */}
       <span
@@ -243,18 +247,38 @@ export function SideVisitLeaves({
     );
     if (last) return [row];
     const visited = localVisit.slots.find((slot) => slot.key === leave.selectedKey);
-    const back = `Back from ${visited?.label ?? 'side room'}`;
+    const name = visited === undefined ? undefined : sideRoomName(visited.label);
     return [
       row,
       <TimelineRow
-        aria-label={back}
+        aria-label={visited === undefined ? 'Returned' : `Returned from ${visited.label}`}
         className="timeline-return-row"
+        // Melinoë re-enters the main room at the side room's door.
+        {...(visited === undefined ? {} : { 'data-hero-door': visited.key })}
+        {...(endedAt >= 0 && index >= endedAt ? { 'data-plan-end': 'pastEnd' } : {})}
         key={`return-${leave.position}`}
         kind="boundary"
         label={
-          <span className="timeline-banner-title">
-            <strong>{back}</strong>
-          </span>
+          <>
+            <span className="timeline-banner-title">
+              <strong>Returned</strong>
+            </span>
+            {visited?.generation !== 'generated' ? null : (
+              <span className="timeline-banner-modifiers timeline-return-room">
+                <span className="timeline-door-chip">
+                  <DoorChipFace
+                    chip={{
+                      key: visited.key,
+                      label: visited.label,
+                      roomIcon: visited.roomIcon,
+                      rewards: doorRewardIcons(visited, 'final'),
+                    }}
+                  />
+                </span>
+                <span className="timeline-leave-text">{name}</span>
+              </span>
+            )}
+          </>
         }
       />,
     ];

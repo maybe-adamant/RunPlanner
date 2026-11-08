@@ -34,7 +34,7 @@ import { SideDoorSpawns } from './locals/SideDoorSpawns';
 import { sideDoorMapDoors } from './locals/sideDoorMapDoors';
 import { TimelineLegend } from './TimelineLegend';
 import type { TimelineDoors, TimelineDoorsContent } from './TimelineDoors';
-import { doorChipsAt, wheelOfferChips, wheelOfferSteps, type DoorChip } from './doorSummary';
+import { doorChipsAt, wheelOfferChips, wheelOfferSteps } from './doorSummary';
 import { createRouteAddress } from '@run-planner/engine/authored-project';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapColumn, type RoomMapStage } from './room-map/RoomMapColumn';
@@ -77,6 +77,20 @@ function timelineDoorStep(row: Element, stepKeys: ReadonlySet<string>): string |
   return undefined;
 }
 
+/**
+ * The side door Melinoë stands at from the row: the latest row at or before
+ * it that places her says where (a side door's slot key, empty for the
+ * entry); with none she is at the entry.
+ */
+function timelineHeroDoor(row: Element): string | undefined {
+  const rows = [...(row.parentElement?.children ?? [])];
+  for (let index = rows.indexOf(row); index >= 0; index -= 1) {
+    const door = (rows[index] as HTMLElement).dataset.heroDoor;
+    if (door !== undefined) return door === '' ? undefined : door;
+  }
+  return undefined;
+}
+
 interface OccurrenceWorkbenchProps {
   readonly headerActions?: ReactNode;
   /** The door the room was entered through, for its reward on the title line. */
@@ -86,8 +100,6 @@ interface OccurrenceWorkbenchProps {
   readonly interactions: WorkspaceInteractionCatalog;
   /** The main room's side doors, among its Overview spawns. */
   readonly localVisit?: WorkspaceLocalVisitDecision;
-  /** A Hub room's way back to the Hub, on its map. */
-  readonly hubReturnChip?: DoorChip;
   readonly room: WorkspaceRoomSummary;
   readonly runState?: WorkspaceRunStateLauncher;
   readonly initialTab?: WorkspaceRoomTab;
@@ -126,7 +138,6 @@ export function OccurrenceWorkbench({
   navigationRevision,
   interactions,
   localVisit,
-  hubReturnChip,
   room,
   renderRoomActionRowContent,
   renderLifecycleBoundaryContent,
@@ -281,6 +292,8 @@ export function OccurrenceWorkbench({
     readonly stage: RoomMapStage;
     /** The door press whose doors the map shows; none shows them as they open. */
     readonly step?: string;
+    /** The side door Melinoë stands at; none puts her at the entry. */
+    readonly heroDoor?: string;
   }>();
   const mapRow = useRef<HTMLElement>(undefined);
   const shipPhases = room.workbench.kind === 'ship' ? room.workbench.phases : [];
@@ -309,13 +322,21 @@ export function OccurrenceWorkbench({
     if (row === undefined || stage === undefined) return;
     markMapRow(row);
     const step = timelineDoorStep(row, new Set(stepsShown.map((candidate) => candidate.actionKey)));
+    const heroDoor = timelineHeroDoor(row);
     if (
       stage !== mapStage?.stage ||
       step !== mapStage.step ||
+      heroDoor !== mapStage.heroDoor ||
       mapStage.tab !== activeTab ||
       mapStage.roomIdentity !== roomIdentity
     )
-      setMapStage({ roomIdentity, tab: activeTab, stage, ...(step === undefined ? {} : { step }) });
+      setMapStage({
+        roomIdentity,
+        tab: activeTab,
+        stage,
+        ...(step === undefined ? {} : { step }),
+        ...(heroDoor === undefined ? {} : { heroDoor }),
+      });
   };
   // The doors or wheel offers as they stand at the marked row: the latest press's, else as they open.
   const openChips =
@@ -331,11 +352,10 @@ export function OccurrenceWorkbench({
       ? stepsShown.at(-1)?.actionKey
       : undefined;
   const stepDoors = stepsShown.find((candidate) => candidate.actionKey === stepKey)?.doors;
-  const doorChips =
+  const mapChips =
     openChips === undefined || stepDoors === undefined
       ? openChips
       : doorChipsAt(openChips, stepDoors);
-  const mapChips = hubReturnChip === undefined ? doorChips : [...(doorChips ?? []), hubReturnChip];
   // The marked row is the one the map reflects; the plan's map marks none.
   const showsMapRow = shownMapStage !== 'summary';
   useEffect(() => {
@@ -363,6 +383,9 @@ export function OccurrenceWorkbench({
               {...(wheelPhase === undefined ? { chips: mapChips } : { wheelChips: mapChips })}
               flipped={room.layout?.flipped === true}
               gameName={room.gameName}
+              {...(mapStageShown && mapStage.heroDoor !== undefined
+                ? { heroSideDoor: mapStage.heroDoor }
+                : {})}
               map={room.map}
               placements={roomMapPlacements(room)}
               roomIdentity={roomIdentity}

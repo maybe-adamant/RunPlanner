@@ -2611,6 +2611,16 @@ button.timeline-chip {
   border-top: 0;
 }
 
+/* The side room a Returned row comes back from: its chip and short name together. */
+.timeline-return-room {
+  gap: 6px;
+}
+
+/* A row past the plan's end within the room: authored, not walked. */
+.timeline-row[data-plan-end='pastEnd'] {
+  opacity: 0.55;
+}
+
 .timeline-leave-row .timeline-banner-title {
   flex: 0 0 auto;
 }
