@@ -35,6 +35,18 @@ Two independent parts, delivered separately so part 2 can be rolled back.
   publishes the spawned set per moment (or the planner composes it from
   existing products if they suffice).
 
+## Optional actions end state (owner 2026-11-08)
+
+The Timeline's Optional actions area shrinks to object interactions only
+(Well, Pool, Hermes Shrine and World Shop purchases, Challenge Switch use,
+Well/Pool rolls, door unlocks and rerolls). Every spawned pickup is placed
+from the spawn row or action row where it appears: Supply Chain, Quick
+Buck, Buried Treasure and Fields optional rewards first; then Artificer (an
+action row under the transform), Sea Star (an inline duplicate badge on the
+copied pickup's row, never a row per proc), Echo, Nemesis, Eris, Heracles,
+switch loot, the rushed same-room delivery and other trait-created pickups.
+With the interactive map, the object pins then move onto their map objects.
+
 ## Part 2: no automatic insertion (separate, revertible)
 
 - Edit settlement and default room state stop inserting spawned loot (room
