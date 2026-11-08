@@ -14,7 +14,7 @@ import {
   type RoomMapSideDoor,
 } from './RoomMapPoints';
 import { useRoomMapHighlight, useRoomMapPointers } from './roomMapHighlight';
-import { position } from './roomMapPosition';
+import { markerPlacement, position } from './roomMapPosition';
 
 /**
  * The room at one point of its Timeline: `closed` before its doors open,
@@ -155,7 +155,7 @@ export function RoomMapColumn({
                 data-ring={(open && chaosChip === undefined) || undefined}
                 data-taken={(taken && chaosChip?.picked) || undefined}
                 role="img"
-                style={position(markers.chaosGate)}
+                {...markerPlacement(markers.chaosGate, open && chaosChip !== undefined)}
                 {...pointers({ kind: 'chaosGate' })}
               >
                 {!open || chaosChip === undefined ? null : (
@@ -178,7 +178,7 @@ export function RoomMapColumn({
                 data-wheel
                 key={`wheel:${chip.key}`}
                 role="img"
-                style={position(at)}
+                {...markerPlacement(at, open)}
                 {...pointers({ kind: 'wheelOffer', offerKey: chip.key })}
               >
                 {open ? (
@@ -210,7 +210,7 @@ export function RoomMapColumn({
                   data-taken={(taken && chip?.picked) || undefined}
                   key={`door:${door.id}`}
                   role="img"
-                  style={position(door)}
+                  {...markerPlacement(door, open && chip !== undefined)}
                   {...pointers(
                     door.doorIndex === undefined
                       ? undefined

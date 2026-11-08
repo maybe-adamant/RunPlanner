@@ -173,6 +173,18 @@ describe('main room side visits on its Timeline', () => {
     expect(ringed()).toEqual(['Hub']);
   });
 
+  it('hangs a side door chip at the map top edge below its point', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    await openTimeline(view, combat05);
+    const points = [...roomCard().querySelectorAll<HTMLElement>('.room-map-column [data-side]')];
+    const top = points.find((point) => parseFloat(point.style.top) < 5);
+    expect(top?.getAttribute('aria-label')).toMatch(/^Side Room 07/);
+    expect(top?.getAttribute('data-chip-y')).toBe('below');
+    const inner = points.filter((point) => parseFloat(point.style.top) > 10);
+    expect(inner.length).toBeGreaterThan(0);
+    expect(inner.every((point) => !point.hasAttribute('data-chip-y'))).toBe(true);
+  });
+
   it('keeps a later visit that an earlier change repeats, marked on its own exit', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await openTimeline(view, combat05);

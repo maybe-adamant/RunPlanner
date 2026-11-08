@@ -6,7 +6,7 @@ import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon
 import { melinoeIcon } from '@planner/ui/artwork/player/playerArtwork';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { useRoomMapHighlight, useRoomMapPointers, type RoomMapPointMark } from './roomMapHighlight';
-import { position } from './roomMapPosition';
+import { markerPlacement, position } from './roomMapPosition';
 
 /** What stands on a map point: its name, icon and corner mark. */
 export interface RoomMapOccupant {
@@ -245,7 +245,7 @@ export function RoomMapSideDoors({
         data-taken={visited || undefined}
         key={`side:${marker.id}`}
         role="img"
-        style={position(marker)}
+        {...markerPlacement(marker, shown)}
         {...pointers({ kind: 'sideDoor', slotKey: door.slotKey })}
       >
         {shown ? (

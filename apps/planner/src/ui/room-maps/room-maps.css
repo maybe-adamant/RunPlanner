@@ -428,6 +428,27 @@
   transform: translate(-50%, -50%);
 }
 
+/* A chip near an edge extends away from it, its own edge on its point. */
+.room-map-door {
+  transform: translate(var(--chip-x, -50%), var(--chip-y, -50%));
+}
+
+.room-map-door[data-chip-x='right'] {
+  --chip-x: 0%;
+}
+
+.room-map-door[data-chip-x='left'] {
+  --chip-x: -100%;
+}
+
+.room-map-door[data-chip-y='below'] {
+  --chip-y: 0%;
+}
+
+.room-map-door[data-chip-y='above'] {
+  --chip-y: -100%;
+}
+
 /* Anchors: a ring like a closed door's, in their own mint. */
 .room-map-point {
   width: max(2.6%, 16px);
