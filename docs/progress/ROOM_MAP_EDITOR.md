@@ -136,9 +136,12 @@ inside the one derivation rule.
   open side room; a side room page leaves back to its main room, whose
   Timeline shows the next Leave choice, until the Hub is picked
   (`LocalVisitDecision.visitOrder`).
-- Changing an earlier visit keeps later visits; a repeated room stays
-  authored with an "already visited" finding (engine: allow repeats in the
-  visit order and add the finding; no save becomes invalid).
+- Each Leave choice offers only rooms not visited before that point. Changing
+  an earlier visit keeps later visits; a later visit the change makes a
+  repeat stays authored with an "already visited" finding. Engine: the visit
+  order command stops refusing a stored repeat (today it rejects any repeated
+  occurrence in the whole list) and the repeat becomes a finding; no save
+  becomes invalid.
 
 ## Follow-ups (recorded, not scheduled)
 
