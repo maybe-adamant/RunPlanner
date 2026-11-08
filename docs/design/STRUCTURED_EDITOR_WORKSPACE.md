@@ -97,8 +97,9 @@ invalidity alone does not.
 Every room's Leave row, or the end of a Timeline without one, offers to end the
 plan at that room, enabled by the
 engine's plan-end availability (a hint only when the room or something before
-it is not settled); the end room's row instead offers to continue planning,
-which clears the end ([Doors on the Timeline](#doors-on-the-timeline)). The room
+it is not settled); in the end room's row, picking a way out again clears the
+end, and a room with no way out of its own offers to continue planning instead
+([Doors on the Timeline](#doors-on-the-timeline)). The room
 header and the rail say where the plan ends, and the Route panel shows the end
 with its room and removal. The route-owned unreached-end finding repairs at
 that Route row. The end room's doors lie inside the plan, the rooms behind

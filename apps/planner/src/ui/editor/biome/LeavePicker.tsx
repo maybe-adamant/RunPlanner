@@ -184,8 +184,8 @@ export function LeavePicker({
       ),
     );
     const availability = planEnd === undefined || ended ? undefined : planEnd.availability();
-    // Where no way out can be picked, continuing the plan is its own choice.
-    const continues = ended && ways.every((way) => way.disabled);
+    // A room with no way out of its own, such as the Pre-Hub, continues the plan only here.
+    const continues = ended && ways.length === 0;
     const endings =
       planEnd === undefined
         ? []

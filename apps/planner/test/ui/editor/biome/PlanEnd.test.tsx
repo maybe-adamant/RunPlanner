@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
@@ -19,6 +21,8 @@ import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoin
 import type { PlannerApplication } from '@planner/composition/createApplication';
 import { createApplication } from '@planner/composition/createApplication';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import type { WorkspaceRoomPlanEnd } from '@planner/projections/structured-workspace';
+import { LeavePicker } from '@planner/ui/editor/biome/LeavePicker';
 import {
   authoredProjectReplaced,
   authoredProjectUndoRequested,
@@ -325,6 +329,50 @@ describe('plan end in the biome workspace', () => {
     expect(leaveOptionNames(options).at(-1)).toBe('End plan here (picked)');
     await user.click(within(options).getByRole('option', { name: 'Hub' }));
     expect(currentPlanEnd(application)).toBeUndefined();
+  });
+
+  it('continues planning from the Pre-Hub, which has no way out of its own to pick', async () => {
+    const { application, user } = renderWorkspace(
+      endedAt(loadSurfaceNOPQProject(), 'N', 'surface-n-prehub'),
+      'Surface',
+      'N',
+    );
+    openRoom(application, createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-prehub')));
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const options = await openLeavePicker(user, roomCard());
+    expect(leaveOptionNames(options)).toEqual(['End plan here (picked)', 'Continue planning']);
+    await user.click(within(options).getByRole('option', { name: 'Continue planning' }));
+    expect(currentPlanEnd(application)).toBeUndefined();
+  });
+
+  it('offers only its ways to continue an end room whose ways wait on its doors', async () => {
+    const user = userEvent.setup();
+    const intent = {} as WorkspaceRoomPlanEnd['endIntent'];
+    render(
+      <Provider store={createApplication().store}>
+        <LeavePicker
+          chosenKey="one"
+          id="leave"
+          options={['one', 'two'].map((key) => ({
+            key,
+            label: `Door ${key}`,
+            disabledHint: 'Fill the remaining doors first.',
+          }))}
+          planEnd={{
+            relation: 'end',
+            availability: () => ({ available: true }),
+            endIntent: intent,
+            removeIntent: intent,
+          }}
+        />
+      </Provider>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Exit door' }));
+    expect(leaveOptionNames(await screen.findByRole('listbox'))).toEqual([
+      'Door one (disabled)',
+      'Door two (disabled)',
+      'End plan here (picked)',
+    ]);
   });
 
   it('resets the visits of a Hub the plan ends in', async () => {
