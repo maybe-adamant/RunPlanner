@@ -1193,6 +1193,35 @@
   text-underline-offset: 3px;
 }
 
+/* What the game spawned: a quiet note, its items as chips in spawn order. */
+.timeline-row[data-spawned-loot] {
+  border-color: transparent;
+  background: transparent;
+}
+
+.timeline-row[data-spawned-loot] .spawned-loot-label {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* An optional item is dashed; one not collected yet stays dim until hovered. */
+.timeline-chip[data-spawn-participation='optional'] {
+  border: 1px dashed var(--border);
+}
+
+.timeline-chip[data-spawn-participation]:not([data-spawn-placed]) > .artwork-label-icon {
+  opacity: 0.5;
+}
+
+.timeline-chip[data-spawn-participation]:not([data-spawn-placed]):is(:hover, :focus-visible)
+  > .artwork-label-icon {
+  opacity: 0.9;
+}
+
+.timeline-chip[data-spawn-participation][aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
 /* Object pickers in decisions are as wide as their choice. */
 .timeline-row[data-travel-deal-line] .timeline-cell-editors .contextual-picker {
   width: auto;

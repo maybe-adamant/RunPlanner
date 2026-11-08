@@ -337,6 +337,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly roomLayout?: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomLayoutAuthoring | undefined;
+  /** The loot the room spawns on its own; undefined while unentered. */
+  readonly spawnedLoot?: import('../source-index').WorkspaceBiomeSource['spawnedLoot'];
   /** Whether a new Well or Pool reroll fits the run's reroll pool. */
   readonly rerollSpendAllowance?: import('../source-index').WorkspaceBiomeSource['rerollSpendAllowance'];
   /** A screen's next reroll and how far the pool at its point takes it. */
@@ -525,8 +527,12 @@ export function assembleWorkspaceOccurrence(
       createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
     ),
   });
+  const spawnedLoot = input.spawnedLoot?.(
+    createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
+  );
   const actionAssembly = assembleOccurrenceActions({
     roomActionPlacementRoster: input.roomActionPlacementRoster,
+    ...(spawnedLoot === undefined ? {} : { spawnedLoot }),
     biome: input.biome,
     catalog: input.catalog,
     encounterPhaseStatus: input.encounterPhaseStatus,

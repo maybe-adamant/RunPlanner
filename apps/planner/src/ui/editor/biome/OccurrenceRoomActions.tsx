@@ -51,6 +51,8 @@ import { StygianWellTwistChips } from './commerce/StygianWellTwist';
 import { RoomObjectEntry } from './commerce/RoomObjectEntry';
 import { roomObjectEntryIcon } from './commerce/roomObjectEntryIcon';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
+import { SpawnedLootRow } from './SpawnedLootRow';
+import { roomActionItemIcon } from './roomActionItemIcon';
 import { FightGoldAmount, GoldAmount, PurchaseCost } from './commerce/GoldAmount';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
@@ -60,9 +62,7 @@ import {
   roomActionIcon,
   roomObjectIcon,
   sourceFamilyIcon,
-  wellItemIcon,
 } from '@planner/ui/artwork/roomArtwork';
-import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import {
   DoorsOpenBanner,
@@ -591,6 +591,16 @@ export function RoomActionsWorkbench({
       </Fragment>
     );
   };
+  const renderSpawned = (
+    entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'spawned' }>,
+  ) => (
+    <SpawnedLootRow
+      items={entry.items}
+      key={`spawned:${entry.key}`}
+      label={entry.label}
+      rows={actions?.rows ?? []}
+    />
+  );
   // The wheel opens once the phase's own actions are done: before its first offer reroll,
   // or else just before the pick that starts the next phase.
   const phaseTimelineWithWheel = (
@@ -981,25 +991,24 @@ export function RoomActionsWorkbench({
         {row.travelDealLine === undefined ? null : (
           <TravelDealLine interactions={interactions} line={row.travelDealLine} />
         )}
+        {actions.actionSpawns
+          ?.filter((spawn) => spawn.sourceActionKey === row.key)
+          .map((spawn) => (
+            <SpawnedLootRow
+              items={spawn.items}
+              key={spawn.key}
+              label={spawn.label}
+              rows={actions.rows}
+              source
+            />
+          ))}
         {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
       </Fragment>
     );
   };
   // An optional action adds in one click where it has one place; otherwise its place is chosen.
   const addAction = (row: WorkspaceRoomActions['rows'][number]): RoomAddAction => {
-    // An action that collects or buys an item shows that item, as its row does.
-    const reward = row.labelParts?.reward;
-    const icon =
-      reward === undefined
-        ? roomActionIcon(
-            row.reference,
-            row.address.biomeKey,
-            row.sourceFamily,
-            row.challengeSwitchKind,
-          )
-        : reward.itemKey === undefined
-          ? offerIcon(reward.offer)
-          : wellItemIcon(reward.itemKey);
+    const icon = roomActionItemIcon(row);
     const base = {
       key: row.key,
       label: row.label,
@@ -1073,6 +1082,7 @@ export function RoomActionsWorkbench({
                     />,
                   ];
                 if (entry.kind === 'boundary') return [renderBoundary(entry)];
+                if (entry.kind === 'spawned') return [renderSpawned(entry)];
                 if (entry.kind === 'automaticEffect') {
                   if (entry.effect === 'steadyGrowth') {
                     const control = actions?.steadyGrowth?.find(
@@ -1204,6 +1214,7 @@ export function RoomActionsWorkbench({
     if (entry.kind === 'boundary') {
       return [renderBoundary(entry)];
     }
+    if (entry.kind === 'spawned') return [renderSpawned(entry)];
     if (entry.kind === 'automaticEffect') {
       if (entry.effect === 'steadyGrowth') {
         const control = actions.steadyGrowth?.find(

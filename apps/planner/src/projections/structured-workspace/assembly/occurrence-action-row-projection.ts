@@ -58,6 +58,7 @@ import {
 } from './occurrence-action-label';
 import { assembleFeatureRerollSlots } from './feature-roll-assembly';
 import { projectRoomLifecycleTimeline } from './occurrence-action-timeline-projection';
+import { projectSpawnedLoot } from './occurrence-spawned-loot-projection';
 import type { WorkspaceRoomTab } from '../contracts/navigation';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 
@@ -108,6 +109,8 @@ export interface WorkspaceOccurrenceActionsInput {
   /** Engine-published Timeline rows of the product this room's assessment stops at. */
   readonly blockingRowKeys?: ReadonlySet<string>;
   readonly rerollTargetLabel?: import('./occurrence-action-label').WorkspaceDoorRerollTargetLabel;
+  /** The loot the room spawns on its own, by moment and source action. */
+  readonly spawnedLoot?: import('@run-planner/engine/simulation').RoomSpawnedLoot;
 }
 
 /** The Phial target control for one fountain use; pending until the engine requires a target. */
@@ -1040,8 +1043,17 @@ function roomActionsForOccurrence(
     steadyGrowth,
     transcendentEmbryo,
   );
+  const spawned = projectSpawnedLoot(
+    input.catalog,
+    input.spawnedLoot,
+    projectedTimeline.entries,
+    allProjectedRows,
+    proposals,
+    roomLocal,
+  );
   return Object.freeze({
-    timeline: projectedTimeline,
+    timeline: Object.freeze({ ...projectedTimeline, entries: spawned.entries }),
+    ...(spawned.actionSpawns.length === 0 ? {} : { actionSpawns: spawned.actionSpawns }),
     checkpoints: Object.freeze(
       roster.checkpoints
         .filter((checkpoint) => checkpoint.checkpointKey !== 'outgoingGeneration')

@@ -47,6 +47,7 @@ import {
   planEndAvailability,
   rerollSurfaceForProjectEvaluationAssembly,
   hubStaysForProjectEvaluationAssembly,
+  spawnedLootForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -389,6 +390,16 @@ export function createStructuredWorkspaceProjection(
           }
         },
         (occurrence) => roomLayoutAuthoringForProjectEvaluationAssembly(assembly, occurrence),
+        (occurrence) => {
+          try {
+            return spawnedLootForProjectEvaluationAssembly(catalog, assembly, occurrence);
+          } catch (error) {
+            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
+              return undefined;
+            }
+            throw error;
+          }
+        },
       );
       const routeSource = sources.route;
       const authoredRoute =

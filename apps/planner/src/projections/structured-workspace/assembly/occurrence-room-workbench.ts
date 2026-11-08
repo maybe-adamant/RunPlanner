@@ -111,16 +111,24 @@ function shipWorkbenchPresentation(
   );
   if (roomActions !== undefined) {
     let currentPhaseIndex = 0;
+    // A spawn notice stays in the phase of the entry it follows.
+    let lastPhaseIndex = 0;
     for (const entry of roomActions.timeline.entries) {
       if (entry.kind === 'boundary') {
         const phaseIndex = boundaryPhaseIndex(entry.boundary);
         phaseBoundaryEntries[phaseIndex]!.push(entry);
         phaseTimelineEntries[phaseIndex]!.push(entry);
         if (entry.boundary.kind === 'encounterStart') currentPhaseIndex = phaseIndex;
+        lastPhaseIndex = phaseIndex;
         continue;
       }
       if (entry.kind === 'automaticEffect') {
-        phaseTimelineEntries[phaseIndexForKey(entry.phaseKey)]!.push(entry);
+        lastPhaseIndex = phaseIndexForKey(entry.phaseKey);
+        phaseTimelineEntries[lastPhaseIndex]!.push(entry);
+        continue;
+      }
+      if (entry.kind === 'spawned') {
+        phaseTimelineEntries[lastPhaseIndex]!.push(entry);
         continue;
       }
       const row = actionByKey.get(entry.actionKey);
@@ -129,6 +137,7 @@ function shipWorkbenchPresentation(
         entry.phaseKey === undefined ? currentPhaseIndex : phaseIndexForKey(entry.phaseKey);
       phaseTimelineEntries[phaseIndex]!.push(entry);
       phaseRows[phaseIndex]!.push(row);
+      lastPhaseIndex = phaseIndex;
     }
     for (const checkpoint of roomActions.checkpoints) {
       if (checkpoint.key === 'exitUsable') continue;

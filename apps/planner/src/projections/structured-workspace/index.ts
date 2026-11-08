@@ -107,6 +107,8 @@ export type {
   WorkspacePurchaseAffordability,
   WorkspaceRoomActionProposal,
   WorkspaceRoomActionRow,
+  WorkspaceActionSpawn,
+  WorkspaceSpawnedItem,
   WorkspaceRoomFeature,
   WorkspaceRoomWorkbenchPresentation,
   WorkspaceShipPhasePresentation,

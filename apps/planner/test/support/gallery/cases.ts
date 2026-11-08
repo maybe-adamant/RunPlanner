@@ -29,6 +29,7 @@ import {
   loadSurfaceAnvilCheckpoint,
   loadSurfaceEncounterShowcaseCheckpoint,
   loadSurfaceNCheckpoint,
+  loadSurfaceNQuickBuckCheckpoint,
   loadSurfaceNOPQCheckpoint,
   loadSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNPhialIntermediateFountainCheckpoint,
@@ -44,6 +45,7 @@ import {
   loadUnderworldArachneCocoonsCheckpoint,
   loadUnderworldAutomaticBossCheckpoint,
   loadUnderworldFGCheckpoint,
+  loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
   loadUnderworldFMidshopPomFrontierCheckpoint,
   loadUnderworldFPoolCheckpoint,
@@ -62,10 +64,12 @@ import {
   roomLayoutAuthoringForProjectEvaluationAssembly,
   roomObjectAnchorSlotsForProjectEvaluationAssembly,
   simulateProjectAssembly,
+  spawnedLootForProjectEvaluationAssembly,
   type RoomAnchorObjectKind,
 } from '@run-planner/engine/simulation';
 import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
+import { surfaceShrineDeliveriesProject } from '@run-planner/test-fixtures/surface';
 import { createReachableNaturalChaosProject } from '../structured-workspace/interaction-binding.test-support';
 import {
   appendRoomAction,
@@ -94,6 +98,27 @@ function placeAnchorObject(
     )?.objects.find((object) => object.kind === kind)?.place;
     if (place === undefined) throw new Error(`${occurrenceId} cannot place ${kind}`);
     return place;
+  };
+}
+
+/** Places a room's last unplaced spawned item through the engine's own placement command. */
+function placeLastSpawned(biomeKey: string, occurrenceId: string): GalleryStep {
+  return (project) => {
+    const spawned = spawnedLootForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+      occurrenceAddress(project, biomeKey, occurrenceId),
+    );
+    const command = spawned?.moments
+      .flatMap((moment) => moment.items)
+      .flatMap((item) =>
+        item.placement.kind === 'unplaced' && item.placement.command !== undefined
+          ? [item.placement.command]
+          : [],
+      )
+      .at(-1);
+    if (command === undefined) throw new Error(`${occurrenceId} has no unplaced spawned item`);
+    return command;
   };
 }
 
@@ -494,6 +519,43 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['select wheel', 'wheel reward', 'next phase'],
     project: loadSurfaceEncounterShowcaseCheckpoint,
     target: room('O', 'surface-o-combat04'),
+  },
+  {
+    id: 'spawned-combat-end',
+    label: 'Spawned at an encounter end: reward, delivery and Supply Chain drops',
+    shows: ['spawn notice', 'unplaced optional spawned item'],
+    project: loadSurfaceScheduledLifecycleCheckpoint,
+    target: room('P', 'surface-p-1-1-p_combat03'),
+  },
+  {
+    id: 'spawned-combat-end-placed',
+    label: 'Spawned at an encounter end: the second Supply Chain drop placed from its chip',
+    shows: ['spawn notice'],
+    project: loadSurfaceScheduledLifecycleCheckpoint,
+    commands: [placeLastSpawned('P', 'surface-p-1-1-p_combat03')],
+    target: room('P', 'surface-p-1-1-p_combat03'),
+  },
+  {
+    id: 'spawned-ship-phase',
+    roomTab: 'shipCombat1Actions',
+    label: 'Ship combat phase: spawned at its end and after its wheel reward',
+    shows: ['spawn notice', 'ship phase'],
+    project: surfaceShrineDeliveriesProject,
+    target: room('O', 'surface-o-combat04'),
+  },
+  {
+    id: 'spawned-fields-entry',
+    label: 'Fields room: cage and optional rewards spawned on entry',
+    shows: ['spawn notice', 'Fields slot marks'],
+    project: loadUnderworldFGHCheckpoint,
+    target: room('H', 'golden-h-combat02'),
+  },
+  {
+    id: 'spawned-quick-buck',
+    label: 'Quick Buck’s gold spawned under its boon pickup',
+    shows: ['action spawn row'],
+    project: loadSurfaceNQuickBuckCheckpoint,
+    target: room('N', 'surface-n-opening'),
   },
   {
     id: 'ship-phase-wheel',

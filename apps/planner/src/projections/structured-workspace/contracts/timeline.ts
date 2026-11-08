@@ -270,6 +270,37 @@ export interface WorkspaceRoomActions {
     readonly phaseKey: string;
     readonly gold: WorkspaceFightGold;
   }[];
+  /** Loot a source action's settlement spawns, shown under that action's row. */
+  readonly actionSpawns?: readonly WorkspaceActionSpawn[];
+}
+
+/** One item the game spawned, as a chip that leads to the action collecting it. */
+export interface WorkspaceSpawnedItem {
+  readonly key: string;
+  /** The collect action's Timeline row. */
+  readonly actionKey: string;
+  readonly label: string;
+  readonly participation: 'required' | 'optional';
+  /** The Fields cage or optional slot it sits in, marked on its chip. */
+  readonly place?: { readonly badge: string; readonly label: string };
+  readonly placement:
+    /** Collected in the order: its row is focused. */
+    | {
+        readonly kind: 'placed';
+        readonly owner: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
+      }
+    /** Not collected yet: one edit places it. */
+    | { readonly kind: 'unplaced'; readonly intent: WorkspaceCommandIntent }
+    /** Not collected yet and no place takes it now. */
+    | { readonly kind: 'unavailable'; readonly reason: string };
+}
+
+/** What one source action's settlement spawned, read under its row. */
+export interface WorkspaceActionSpawn {
+  readonly key: string;
+  readonly sourceActionKey: string;
+  readonly label: string;
+  readonly items: readonly WorkspaceSpawnedItem[];
 }
 
 export type WorkspaceRoomLifecycleBoundary =
@@ -349,6 +380,15 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly address: SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress;
       readonly rank: number;
       readonly phaseKey: string;
+    }
+  /** Read-only: what the game spawned at one moment, in its spawn order. */
+  | {
+      readonly kind: 'spawned';
+      readonly key: string;
+      readonly moment: import('@run-planner/engine/simulation').SpawnMomentKind;
+      readonly phaseKey?: string;
+      readonly label: string;
+      readonly items: readonly WorkspaceSpawnedItem[];
     };
 
 /** The settled target's rarity before and after one timed growth; equal when nothing promoted. */
