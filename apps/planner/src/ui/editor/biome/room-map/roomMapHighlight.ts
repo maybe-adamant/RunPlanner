@@ -13,8 +13,8 @@ import {
  * What the room's map previews for the control being worked on: one door by
  * its number, an Ephyra side door by its slot, a Ship wheel offer, the Chaos gate, every Chaos point with one position previewed,
  * the entry being picked (one entry with the flip choosing it sets), an
- * object anchor, a Fields slot's point with the free points it can pick
- * numbered, or an item the game places with the points it can take.
+ * object anchor, or a Fields slot's point with the free points it can pick
+ * numbered.
  */
 export type RoomMapHighlight =
   | { readonly kind: 'door'; readonly doorIndex: number }
@@ -24,9 +24,6 @@ export type RoomMapHighlight =
   | { readonly kind: 'chaosPoints'; readonly position?: number | undefined }
   | { readonly kind: 'entry'; readonly pointId?: number; readonly flipped?: boolean | undefined }
   | { readonly kind: 'anchor'; readonly anchorId: number }
-  | { readonly kind: 'unplaced'; readonly key: string }
-  /** A point some items the game places may take, by their keys; only ever pointed at. */
-  | { readonly kind: 'candidate'; readonly pointId: number; readonly keys: readonly string[] }
   | {
       readonly kind: 'fieldsPoint';
       readonly pointId?: number | undefined;
@@ -71,10 +68,6 @@ export const highlightOwner = (highlight: RoomMapHighlight): string => {
       return `anchor:${highlight.anchorId}`;
     case 'fieldsPoint':
       return `fieldsPoint:${highlight.pointId ?? '?'}`;
-    case 'unplaced':
-      return `unplaced:${highlight.key}`;
-    case 'candidate':
-      return `candidate:${highlight.pointId}`;
     case 'chaosGate':
     case 'chaosPoints':
     case 'entry':
@@ -97,13 +90,6 @@ function sameDetail(left: RoomMapHighlight, right: RoomMapHighlight): boolean {
   return true;
 }
 
-/** Whether the point pointed at belongs to this control: its own point, or one its item may take. */
-function pointsAt(pointed: RoomMapHighlight, target: RoomMapHighlight): boolean {
-  if (pointed.kind === 'candidate' && target.kind === 'unplaced')
-    return pointed.keys.includes(target.key);
-  return highlightOwner(pointed) === highlightOwner(target);
-}
-
 /** The map's current preview; none outside a room workbench with a map. */
 export function useRoomMapHighlight(): RoomMapHighlight | undefined {
   return useContext(RoomMapHighlightValue);
@@ -115,7 +101,8 @@ export function useRoomMapPointedAmong(
 ): boolean {
   const pointed = useContext(RoomMapPointedValue);
   if (pointed === undefined) return false;
-  return targets.some((target) => target !== undefined && pointsAt(pointed, target));
+  const owner = highlightOwner(pointed);
+  return targets.some((target) => target !== undefined && highlightOwner(target) === owner);
 }
 
 /**
@@ -173,6 +160,7 @@ export interface RoomMapLinkProps {
 export function useRoomMapLinks(): (target: RoomMapHighlight | undefined) => RoomMapLinkProps {
   const actions = useOwnedActions(useContext(RoomMapHighlightChannel));
   const pointed = useContext(RoomMapPointedValue);
+  const pointedOwner = pointed === undefined ? undefined : highlightOwner(pointed);
   return useCallback(
     (target) =>
       target === undefined || actions === undefined
@@ -182,11 +170,9 @@ export function useRoomMapLinks(): (target: RoomMapHighlight | undefined) => Roo
             onPointerLeave: () => actions.release(target),
             onFocus: () => actions.show(target),
             onBlur: () => actions.release(target),
-            ...(pointed !== undefined && pointsAt(pointed, target)
-              ? { 'data-map-pointed': true }
-              : {}),
+            ...(highlightOwner(target) === pointedOwner ? { 'data-map-pointed': true } : {}),
           },
-    [actions, pointed],
+    [actions, pointedOwner],
   );
 }
 

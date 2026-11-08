@@ -389,18 +389,10 @@ of positions: Anchors (one chip per present object, the Well's pin and an
 anchor the engine derives shown, not picked), and the Fields Cages and Rewards
 (optional and Nemesis slots, each its reward's icon numbered by slot, then its
 point); an unset position is `?`, left to the game, and a point or anchor
-another occupant holds is not offered. While a placed Fields chip is hovered or
-a Fields chip's list is open, the map numbers the free points of that slot's
-family. An item with no position
-(a Chaos Gate, an object on `?`, an unplaced Fields slot) never leaves the map:
-it is listed under the map as not placed, and each point it can take (the
-gate's positions, the object's offered anchors, the free points of the slot's
-family) shows a `?` ring. Items compete, so a `?` ring means one of them may
-land there, never which. The link runs both ways: hovering a control previews
-its point, or every point an unplaced item can take, and pointing at a map
-point marks the controls that own it or could take it (an anchor's or Fields
-point's chip, a not-placed item, Entry, the Chaos Gate, a door's chips and
-rows). Overview contains read-only
+another occupant holds is not offered. While a Fields chip is hovered or its
+list is open, the map numbers the free points of that slot's family. The link runs both ways:
+hovering a control previews its point, and pointing at a map point marks the control that owns
+it (an anchor's or Fields point's chip, Entry, the Chaos Gate, a door's chips and rows). Overview contains read-only
 incoming context and meaningful room-local setup: Fields identities, World
 Shop inventory, and Room features, whose Shrine and Well inventories likewise
 hold only their fixed slots (a Shrine slot shows its item and the delay rolled

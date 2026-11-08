@@ -5,13 +5,7 @@ import { roomMapMarkers, type RoomMapMarkers } from '@planner/projections/roomMa
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { melinoeIcon } from '@planner/ui/artwork/player/playerArtwork';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
-import {
-  useRoomMapHighlight,
-  useRoomMapLinks,
-  useRoomMapPointers,
-  type RoomMapHighlight,
-  type RoomMapPointMark,
-} from './roomMapHighlight';
+import { useRoomMapHighlight, useRoomMapPointers, type RoomMapPointMark } from './roomMapHighlight';
 import { markerPlacement, position } from './roomMapPosition';
 
 /** What stands on a map point: its name, icon and corner mark. */
@@ -22,25 +16,8 @@ export interface RoomMapOccupant {
 }
 
 /**
- * An item the game places: its face, the control that links it to the map,
- * and the points it can take. Items compete, so a point may serve several.
- */
-export interface RoomMapUnplaced {
-  readonly key: string;
-  readonly label: string;
-  readonly icon?: ArtworkSource | undefined;
-  readonly badge?: string | undefined;
-  /** The kind of point it takes, as the map's key names it. */
-  readonly family: 'chaos' | 'anchor' | 'cage' | 'pickup';
-  /** What its controls preview: the Chaos gate, or the item by its key. */
-  readonly target: RoomMapHighlight;
-  readonly pointIds: readonly number[];
-}
-
-/**
  * The room as planned on its points: the entry it is entered at, what stands
- * on each anchor and Fields point, what the game places, and the point a
- * control previews.
+ * on each anchor and Fields point, and the point a control previews.
  */
 export interface RoomMapPlacements {
   /** The settled or chosen entry; absent while the game picks. */
@@ -51,7 +28,6 @@ export interface RoomMapPlacements {
   readonly anchors: ReadonlyMap<number, RoomMapOccupant>;
   readonly anchorNumbers: ReadonlyMap<number, number>;
   readonly fieldsPoints: ReadonlyMap<number, RoomMapOccupant>;
-  readonly unplaced: readonly RoomMapUnplaced[];
   /**
    * The point a control previews; an entry without one while the entry is
    * being picked, and a Fields point with its family's free points numbered.
@@ -64,7 +40,6 @@ export interface RoomMapPlacements {
         readonly id?: number | undefined;
         readonly marks?: readonly RoomMapPointMark[] | undefined;
       }
-    | { readonly kind: 'candidates'; readonly ids: readonly number[] }
     | undefined;
 }
 
@@ -74,7 +49,6 @@ const unplanned: RoomMapPlacements = Object.freeze({
   anchors: new Map(),
   anchorNumbers: new Map(),
   fieldsPoints: new Map(),
-  unplaced: [],
 });
 
 /**
@@ -82,8 +56,7 @@ const unplanned: RoomMapPlacements = Object.freeze({
  * stands there, and Melinoë at the entry. While the entry is picked, each
  * entry it can pick shows its number; while the game picks among several,
  * each shows `?`. While a Fields slot is placed, each free point it can take
- * shows its number; otherwise each free point an item the game places can take
- * shows `?`.
+ * shows its number.
  */
 export function RoomMapSpots({
   away = false,
@@ -97,29 +70,7 @@ export function RoomMapSpots({
 }) {
   const pointers = useRoomMapPointers();
   const previewed = (kind: 'entry' | 'anchor' | 'fieldsPoint', id: number) =>
-    (placements.preview?.kind === kind && placements.preview.id === id) ||
-    (kind !== 'entry' &&
-      placements.preview?.kind === 'candidates' &&
-      placements.preview.ids.includes(id)) ||
-    undefined;
-  // The items the game places that may take each free point.
-  const takers = new Map<number, string[]>();
-  for (const item of placements.unplaced)
-    if (item.family !== 'chaos')
-      for (const pointId of item.pointIds) {
-        const keys = takers.get(pointId) ?? [];
-        keys.push(item.key);
-        takers.set(pointId, keys);
-      }
-  const candidate = (id: number): RoomMapHighlight | undefined => {
-    const keys = takers.get(id);
-    return keys === undefined ? undefined : { kind: 'candidate', pointId: id, keys };
-  };
-  const unsetMark = (
-    <span aria-hidden="true" className="room-map-number">
-      ?
-    </span>
-  );
+    (placements.preview?.kind === kind && placements.preview.id === id) || undefined;
   const occupantMark = (occupant: RoomMapOccupant | undefined) =>
     occupant === undefined ? null : (
       <>
@@ -154,28 +105,23 @@ export function RoomMapSpots({
       {markers.anchors.map((anchor) => {
         const occupant = placements.anchors.get(anchor.id);
         const number = placements.anchorNumbers.get(anchor.id);
-        const open = occupant === undefined ? candidate(anchor.id) : undefined;
         return (
           <span
             aria-label={
               occupant === undefined
-                ? open === undefined
-                  ? 'Object spot'
-                  : 'Object spot ?'
+                ? 'Object spot'
                 : `${occupant.label}${number === undefined ? '' : ` on A${number}`}`
             }
             className="room-map-point"
             data-occupied={occupant !== undefined || undefined}
             data-point="anchor"
             data-preview={previewed('anchor', anchor.id)}
-            data-unset={open !== undefined || undefined}
             key={`anchor:${anchor.id}`}
-            {...pointers(open ?? { kind: 'anchor', anchorId: anchor.id })}
+            {...pointers({ kind: 'anchor', anchorId: anchor.id })}
             role="img"
             style={position(anchor)}
           >
             {occupantMark(occupant)}
-            {open === undefined ? null : unsetMark}
           </span>
         );
       })}
@@ -185,18 +131,14 @@ export function RoomMapSpots({
       ].map(([kind, point]) => {
         const occupant = placements.fieldsPoints.get(point.id);
         const mark = occupant === undefined ? pointMarks.get(point.id) : undefined;
-        const open =
-          occupant === undefined && pointMarks.size === 0 ? candidate(point.id) : undefined;
         return (
           <span
             aria-label={
               occupant !== undefined
                 ? occupant.label
-                : mark !== undefined
-                  ? `Fields ${kind} point ${mark.mark}`
-                  : open !== undefined
-                    ? `Fields ${kind} point ?`
-                    : `Fields ${kind} point`
+                : mark === undefined
+                  ? `Fields ${kind} point`
+                  : `Fields ${kind} point ${mark.mark}`
             }
             className="room-map-point"
             data-dim={mark?.disabled === true || undefined}
@@ -204,14 +146,12 @@ export function RoomMapSpots({
             data-occupied={occupant !== undefined || undefined}
             data-point={kind}
             data-preview={previewed('fieldsPoint', point.id)}
-            data-unset={open !== undefined || undefined}
             key={`fields:${point.id}`}
-            {...pointers(open ?? { kind: 'fieldsPoint', pointId: point.id })}
+            {...pointers({ kind: 'fieldsPoint', pointId: point.id })}
             role="img"
             style={position(point)}
           >
             {occupantMark(occupant)}
-            {open === undefined ? null : unsetMark}
             {mark === undefined ? null : (
               <span aria-hidden="true" className="room-map-number">
                 {mark.mark}
@@ -331,44 +271,6 @@ export function RoomMapSideDoors({
       </span>
     );
   });
-}
-
-/**
- * Every item the game places, under the map: hovering one rings the points
- * it can take, and pointing at such a point marks it.
- */
-export function RoomMapUnplacedStrip({ items }: { readonly items: readonly RoomMapUnplaced[] }) {
-  const mapLinks = useRoomMapLinks();
-  if (items.length === 0) return null;
-  return (
-    <div className="room-map-unplaced">
-      <span className="room-map-unplaced-label">Not placed</span>
-      <ul aria-label="Not placed" className="room-map-unplaced-items">
-        {items.map((item) => (
-          <li
-            aria-label={`${item.label} ?`}
-            data-kind={item.family}
-            key={item.key}
-            {...mapLinks(item.target)}
-          >
-            <span className="room-map-unplaced-face">
-              {item.icon === undefined ? (
-                <span aria-hidden="true">{item.label}</span>
-              ) : (
-                <ArtworkIcon className="artwork-label-icon" source={item.icon} />
-              )}
-              {item.badge === undefined || item.icon === undefined ? null : (
-                <span aria-hidden="true" className="timeline-chip-badge">
-                  {item.badge}
-                </span>
-              )}
-            </span>
-            <span aria-hidden="true">?</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
 }
 
 /** The kinds of point a map shows, one swatch each, under the map. */
