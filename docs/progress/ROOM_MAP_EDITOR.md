@@ -140,8 +140,10 @@ inside the one derivation rule.
   an earlier visit keeps later visits; a later visit the change makes a
   repeat stays authored with an "already visited" finding. Engine: the visit
   order command stops refusing a stored repeat (today it rejects any repeated
-  occurrence in the whole list) and the repeat becomes a finding; no save
-  becomes invalid.
+  occurrence in the whole list) and the repeat becomes a finding owned by
+  that visit's place in the sequence; no save becomes invalid. The Hub's
+  visit list ("distinct room visits") moves to the same rule in the same
+  engine slice.
 
 ## Follow-ups (recorded, not scheduled)
 
