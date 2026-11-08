@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 
 import type {
@@ -62,9 +62,11 @@ function sourceIcon(source: WorkspaceSpawnSource): string | undefined {
 }
 
 function SpawnedItemChip({
+  announce,
   item,
   row,
 }: {
+  readonly announce: (message: string) => void;
   readonly item: WorkspaceSpawnedItem;
   readonly row: WorkspaceRoomActionRow | undefined;
 }) {
@@ -117,6 +119,7 @@ function SpawnedItemChip({
         } else if (placement.kind === 'unplaced') {
           opening.current = true;
           executeIntent(placement.intent);
+          announce(`${item.label} added to the timeline.`);
         }
       }}
       ref={chip}
@@ -140,14 +143,17 @@ function SpawnedItemChip({
 }
 
 function SpawnGroup({
+  announce,
   group,
   rows,
 }: {
+  readonly announce: (message: string) => void;
   readonly group: WorkspaceSpawnGroup;
   readonly rows: readonly WorkspaceRoomActionRow[];
 }) {
   const items = group.items.map((item) => (
     <SpawnedItemChip
+      announce={announce}
       item={item}
       key={item.key}
       row={rows.find((candidate) => candidate.key === item.actionKey)}
@@ -183,6 +189,7 @@ export function SpawnedLootRow({
   /** Spawned by its source action's settlement, under that action's row. */
   readonly source?: true;
 }) {
+  const [announcement, setAnnouncement] = useState('');
   return (
     <TimelineRow
       aria-label={label}
@@ -196,9 +203,12 @@ export function SpawnedLootRow({
                   ·
                 </span>
               )}
-              <SpawnGroup group={group} rows={rows} />
+              <SpawnGroup announce={setAnnouncement} group={group} rows={rows} />
             </Fragment>
           ))}
+          <span aria-live="polite" className="visually-hidden">
+            {announcement}
+          </span>
         </span>
       }
       kind="continuation"

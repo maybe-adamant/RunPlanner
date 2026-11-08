@@ -57,6 +57,9 @@ describe('spawn notice items', () => {
     await view.user.click(drop);
     await waitFor(() => expect(unplaced()).toHaveLength(0));
     expect(spawnedItems().at(-1)!.hasAttribute('data-spawn-placed')).toBe(true);
+    expect(
+      drop.closest('[data-spawned-loot]')?.querySelector('[aria-live="polite"]')?.textContent,
+    ).toMatch(/added to the timeline\.$/);
   });
 
   it('opens a placed Pom Slice’s Pom choice at once', async () => {
