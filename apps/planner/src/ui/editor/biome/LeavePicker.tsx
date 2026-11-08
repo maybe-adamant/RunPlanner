@@ -102,6 +102,7 @@ export function LeavePicker({
   findingMark,
   id,
   options,
+  pastEnd = false,
   planEnd,
   readinessOwner,
 }: {
@@ -110,6 +111,8 @@ export function LeavePicker({
   readonly findingMark?: FindingMarkProps | undefined;
   readonly id: string;
   readonly options: readonly LeaveOption[];
+  /** The plan ends before this way out: its pick stays as authored, not walked. */
+  readonly pastEnd?: boolean;
   readonly planEnd: WorkspaceRoomPlanEnd | undefined;
   /** The owner whose readiness says whether the pick is reached yet. */
   readonly readinessOwner?: SemanticAddress | undefined;
@@ -123,6 +126,7 @@ export function LeavePicker({
   const ended = planEnd?.relation === 'end';
   // Past the end the pick is locked as unreached; it still continues the plan from here.
   const waiting = useAuthoringLocked(readinessOwner) && !ended;
+  const closed = waiting || pastEnd;
   const pointed = useRoomMapPointedAmong(options.map(optionMapLink));
   const chosen = options.find((option) => option.key === chosenKey);
   const chosenLink = ended || chosen === undefined ? undefined : optionMapLink(chosen);
@@ -230,10 +234,10 @@ export function LeavePicker({
         }}
         onOpenChange={(next) => {
           if (!next) preview(undefined);
-          setOpen(next && !waiting);
+          setOpen(next && !closed);
         }}
         onSelect={pick}
-        open={open && !waiting}
+        open={open && !closed}
         searchable={false}
         side="bottom"
       >
@@ -245,12 +249,12 @@ export function LeavePicker({
             marked ? findingMark['aria-description'] : undefined,
             'Exit door',
           )}
-          aria-expanded={open && !waiting}
+          aria-expanded={open && !closed}
           aria-haspopup="listbox"
           aria-label="Exit door"
           className="timeline-door-chip timeline-door-option timeline-leave-picker"
           data-map-pointed={pointed || undefined}
-          disabled={waiting}
+          disabled={closed}
           id={id}
           type="button"
         >

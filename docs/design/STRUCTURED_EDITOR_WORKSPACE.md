@@ -535,8 +535,10 @@ Leave room picker per side visit, each followed by a **Back from** row for
 that side room's return, and a last one back to the Hub. Each picker offers
 the Hub and every open side room not visited before it; picking a side room
 replaces that visit and keeps the later ones, and picking the Hub ends the
-visits there. Only the last picker, back to the Hub, holds **End plan here**,
-since ending the plan at the main room ends its whole visit. A later visit an
+visits there. The last picker, back to the Hub, holds the main room's **End
+plan here**, since ending the plan there ends its whole visit; each earlier
+picker after a side visit holds that side room's, the plan ending as the hero
+leaves it, with the later pickers kept as authored past the end. A later visit an
 earlier change repeats stays, its finding on its own picker. Each picker links
 to the side room it picks or to the Hub Timeline at the next visit's segment.
 Otherwise moving to the next room is the rail's job.

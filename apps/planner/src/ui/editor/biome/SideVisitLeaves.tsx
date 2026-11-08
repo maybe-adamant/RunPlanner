@@ -105,6 +105,7 @@ function SideVisitLeaveRow({
   interactions,
   leave,
   order,
+  pastEnd,
   planEnd,
   slots,
   visitIndex,
@@ -116,7 +117,9 @@ function SideVisitLeaveRow({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly leave: WorkspaceLocalVisitLeave;
   readonly order: LocalVisitOrderAddress;
-  /** Only the last exit, back to the Hub, ends the main room's visit. */
+  /** The plan ends in an earlier side visit. */
+  readonly pastEnd: boolean;
+  /** The last exit ends the main room's visit; one after a side visit ends that side room's. */
   readonly planEnd: WorkspaceRoomPlanEnd | undefined;
   readonly slots: readonly LocalSlot[];
   readonly visitIndex: number;
@@ -188,6 +191,7 @@ function SideVisitLeaveRow({
           findingMark={mark}
           id={id}
           options={options}
+          pastEnd={pastEnd}
           planEnd={planEnd}
           readinessOwner={order}
         />
@@ -199,8 +203,8 @@ function SideVisitLeaveRow({
 /**
  * The main room's exits on its Timeline: one Leave room picker per side
  * visit, the room's return from that side room after it, and a last one
- * back to the Hub. The Hub return ends the main room's visit, so only it
- * can end the plan.
+ * back to the Hub. The last ends the plan in the main room; one after a
+ * side visit ends it as the hero leaves that side room.
  */
 export function SideVisitLeaves({
   hub,
@@ -223,7 +227,16 @@ export function SideVisitLeaves({
     (leave) => findingMark(localVisit.order, sideVisitControl(leave.position))['data-has-findings'],
   );
   const anchored = marked?.position ?? 1;
-  return localVisit.leaves.flatMap((leave) => {
+  const visitedBefore = (index: number) => {
+    const slot = localVisit.slots.find(
+      (candidate) => candidate.key === localVisit.leaves[index - 1]?.selectedKey,
+    );
+    return slot?.generation === 'generated' ? slot : undefined;
+  };
+  const endedAt = localVisit.leaves.findIndex(
+    (_, index) => visitedBefore(index)?.planEnd?.relation === 'end',
+  );
+  return localVisit.leaves.flatMap((leave, index) => {
     const last = leave.position === localVisit.leaves.length;
     const row = (
       <SideVisitLeaveRow
@@ -234,7 +247,8 @@ export function SideVisitLeaves({
         key={`leave-${leave.position}`}
         leave={leave}
         order={localVisit.order}
-        planEnd={last ? planEnd : undefined}
+        pastEnd={endedAt >= 0 && index > endedAt}
+        planEnd={last ? planEnd : visitedBefore(index)?.planEnd}
         slots={localVisit.slots}
         visitIndex={visitIndex}
       />

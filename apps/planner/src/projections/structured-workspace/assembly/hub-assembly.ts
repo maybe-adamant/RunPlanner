@@ -414,6 +414,7 @@ function projectHubNode(
           door,
           generation: 'generated' as const,
           room: workbench.room,
+          ...(workbench.planEnd === undefined ? {} : { planEnd: workbench.planEnd }),
         });
       });
     if (canonicalByOccurrence.size > 0) {

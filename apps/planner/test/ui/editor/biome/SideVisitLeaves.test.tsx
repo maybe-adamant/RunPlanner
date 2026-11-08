@@ -99,7 +99,7 @@ describe('main room side visits on its Timeline', () => {
       `Back from ${secondLabel}`,
       'Leave room',
     ]);
-    // The first exit offers the Hub and every open side room; only the Hub return ends the plan.
+    // The first exit offers the Hub and every open side room; it cannot end the plan.
     const firstOptions = leaveOptionNames(await openLeavePicker(view.user, roomCard(), 0));
     expect(firstOptions[0]).toBe('Hub');
     expect(firstOptions).toContain(`${firstLabel} (picked)`);
@@ -129,6 +129,32 @@ describe('main room side visits on its Timeline', () => {
       }),
     );
     expect(visitOrder(view.application)).toEqual([first, second]);
+  });
+
+  it('ends the plan at an exit after a side visit as that side room, and continues it', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    await openTimeline(view, combat05);
+    const [first, second] = visitOrder(view.application);
+    const secondLabel = sideLabel(view.application, second!);
+    const planEnd = () => presentProject(view.application).route.planEnd;
+    await view.user.click(
+      within(await openLeavePicker(view.user, roomCard(), 1)).getByRole('option', {
+        name: 'End plan here',
+      }),
+    );
+    expect(planEnd()).toEqual({ biomeKey: 'N', occurrenceId: first });
+    expect(visitOrder(view.application)).toEqual([first, second]);
+    // The later exit stays as authored, past the end.
+    expect(exitDoor(2).hasAttribute('disabled')).toBe(true);
+    expect(leaveOptionNames(await openLeavePicker(view.user, roomCard(), 1)).at(-1)).toBe(
+      'End plan here (picked)',
+    );
+    await view.user.click(
+      within(screen.getByRole('listbox')).getByRole('option', { name: secondLabel }),
+    );
+    expect(planEnd()).toBeUndefined();
+    expect(visitOrder(view.application)).toEqual([first, second]);
+    expect(exitDoor(2).hasAttribute('disabled')).toBe(false);
   });
 
   it('rings the side door or the Hub return of the Leave room option under the highlight', async () => {

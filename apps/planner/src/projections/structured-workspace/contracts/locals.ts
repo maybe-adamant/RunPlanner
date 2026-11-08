@@ -674,6 +674,8 @@ export type WorkspaceLocalVisitSlot =
       readonly door: WorkspaceDoorContract;
       readonly generation: 'generated';
       readonly room: WorkspaceRoomSummary;
+      /** Ending the plan as the hero leaves this side room back into its main room. */
+      readonly planEnd?: import('./structure').WorkspaceRoomPlanEnd;
     })
   | (WorkspaceLocalVisitSlotBase & {
       readonly generation: 'notGenerated';
