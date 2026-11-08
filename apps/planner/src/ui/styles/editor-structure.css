@@ -1494,12 +1494,15 @@ select {
 }
 
 /*
- * A table wider than its space gives each exit two lines: identity and room, then reward
- * and actions. Each table measures its own fit, so a short one stays on one line.
+ * A table wider than its space gives each exit two lines: identity and room, then reward,
+ * actions and map. Each table measures its own fit, so a short one stays on one line. Its
+ * columns stay shared, so identities, actions and maps line up across exits.
  */
 .door-rows[data-layout='two-line'] {
   width: 100%;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns:
+    var(--door-select-track) minmax(min-content, auto) minmax(0, 1fr)
+    minmax(min-content, auto) 2.5rem;
 }
 
 .door-rows[data-layout='two-line'] .door-rows-header {
@@ -1507,17 +1510,37 @@ select {
 }
 
 .door-rows[data-layout='two-line'] .door-row {
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
   row-gap: 6px;
 }
 
-.door-rows[data-layout='two-line'] .door-row-select {
-  grid-row: 1 / span 2;
+.door-rows[data-layout='two-line'] .door-row > span {
+  flex-wrap: wrap;
 }
 
-.door-rows[data-layout='two-line'] .door-row > span:not(.door-row-select) {
-  grid-column: 2;
-  flex-wrap: wrap;
+.door-rows[data-layout='two-line'] .door-row-select {
+  grid-area: 1 / 1 / span 2;
+}
+
+.door-rows[data-layout='two-line'] .door-row-identity {
+  grid-area: 1 / 2;
+}
+
+.door-rows[data-layout='two-line'] .door-row-room {
+  grid-area: 1 / 3 / auto / span 3;
+}
+
+/* The reward leads the second line, under the identity. */
+.door-rows[data-layout='two-line'] .door-row-reward {
+  grid-area: 2 / 2 / auto / span 2;
+}
+
+.door-rows[data-layout='two-line'] .door-row-secondary {
+  grid-area: 2 / 4;
+}
+
+.door-rows[data-layout='two-line'] .door-row-map {
+  grid-area: 2 / 5;
 }
 
 .door-rows[data-layout='two-line'][data-columns='offer']
