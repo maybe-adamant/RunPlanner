@@ -108,6 +108,10 @@ export function assembleRoomLayout(input: {
     const clear = (): RoomLayout => ({});
     const eligible = [...new Set(pairs.map((pair) => pair.pointId))];
     const shownFlip = value?.flipped ?? flip.value;
+    const held = {
+      ...(authored?.entryStartPointId === undefined ? {} : { pointId: authored.entryStartPointId }),
+      ...(authored?.flipped === undefined ? {} : { flipped: authored.flipped }),
+    };
     if (pairs.length === 1 && entry.kind !== 'choice') {
       const only = pairs[0]!;
       return {
@@ -115,7 +119,7 @@ export function assembleRoomLayout(input: {
           kind: 'settled',
           by: entry.kind === 'fixed' ? 'fixed' : 'door',
           value: only,
-          ...(stale ? { stale: { clearKey: bind('entry:clear', clear()) } } : {}),
+          ...(stale ? { stale: { clearKey: bind('entry:clear', clear()), ...held } } : {}),
         },
         eligible,
         entryId: only.pointId,
@@ -134,16 +138,7 @@ export function assembleRoomLayout(input: {
       state: {
         kind: 'choice',
         ...(value === undefined ? {} : { value }),
-        ...(stale
-          ? {
-              stale: {
-                ...(authored?.entryStartPointId === undefined
-                  ? {}
-                  : { pointId: authored.entryStartPointId }),
-                ...(authored?.flipped === undefined ? {} : { flipped: authored.flipped }),
-              },
-            }
-          : {}),
+        ...(stale ? { stale: held } : {}),
         choices: Object.freeze([
           ...(authoring.clear === undefined
             ? []

@@ -136,6 +136,10 @@ describe('room entry', () => {
     });
     const layout = layoutOf(project, doorDecided);
     if (layout.state.kind !== 'settled') throw new Error('expected a settled entry');
+    expect(layout.state.value.flipped).toBe(true);
+    expect(layout.state.stale).toMatchObject({ flipped: false });
+    expect(layout.state.stale).not.toHaveProperty('pointId');
+    expect(layout.flipped).toBe(true);
     expect(layout.commandOf(layout.state.stale!.clearKey)).toEqual({
       kind: 'ReplaceRoomLayout',
       occurrence: doorDecided,

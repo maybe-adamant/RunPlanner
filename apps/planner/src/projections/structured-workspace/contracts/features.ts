@@ -518,7 +518,11 @@ export type WorkspaceRoomEntryState =
       readonly by: 'fixed' | 'door';
       readonly value: WorkspaceRoomEntryPair;
       /** A held entry or flip the room cannot take, with the choice clearing it. */
-      readonly stale?: { readonly clearKey: string };
+      readonly stale?: {
+        readonly clearKey: string;
+        readonly pointId?: number;
+        readonly flipped?: boolean;
+      };
     }
   | {
       readonly kind: 'choice';

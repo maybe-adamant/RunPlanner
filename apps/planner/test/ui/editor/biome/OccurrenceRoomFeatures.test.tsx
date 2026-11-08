@@ -623,6 +623,34 @@ describe('OccurrenceRoomFeatures', () => {
     expect(choice.getAttribute('aria-disabled')).not.toBe('true');
   });
 
+  it('shows the entry flip the plan holds where the door settles another, and clears it', async () => {
+    const occurrenceId = goldenFOccurrenceId(1, 1);
+    const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceRoomLayout',
+      occurrence,
+      layout: { flipped: false },
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Overview');
+    const entry = screen.getByRole('button', { name: 'Entry' });
+    expect(entry.getAttribute('aria-invalid')).toBe('true');
+    expect(entry.textContent).not.toContain('⇋');
+    await view.user.click(entry);
+    await view.user.click(await screen.findByRole('option', { name: /Flipped/ }));
+    const layout = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')!
+        .topology!.occurrences.find((entry) => entry.occurrenceId === occurrenceId)!.layout;
+    expect(layout()).toBeUndefined();
+  });
+
   it('marks a reached stale Pool trait as selected-invalid', async () => {
     const occurrenceId = createOccurrenceId('golden-f-preboss-shop:postboss');
     const owner = createOccurrenceAddress(goldenFBiome, occurrenceId);

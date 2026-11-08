@@ -267,7 +267,7 @@ function EntryRow({
           onSelect={() => undefined}
         />,
       );
-    case 'settled':
+    case 'settled': {
       if (state.stale === undefined)
         return row(
           <PositionPicker<string>
@@ -280,6 +280,11 @@ function EntryRow({
             onSelect={() => undefined}
           />,
         );
+      // The control shows what the plan holds; clearing it takes the settled pair.
+      const held: WorkspaceRoomEntryPair = {
+        pointId: state.stale.pointId ?? state.value.pointId,
+        flipped: state.stale.flipped ?? state.value.flipped,
+      };
       return row(
         <PositionPicker<string>
           ariaLabel="Entry"
@@ -291,8 +296,8 @@ function EntryRow({
               preview: pairPreview(state.value),
             },
           ]}
-          current={entryName(layout, state.value)}
-          currentOption={entryOption(layout, state.value)}
+          current={entryName(layout, held)}
+          currentOption={entryOption(layout, held)}
           findingTarget={target}
           id={id}
           invalid
@@ -300,6 +305,7 @@ function EntryRow({
           openPreview={picking}
         />,
       );
+    }
     case 'choice': {
       const stale = state.stale;
       const shown: WorkspaceRoomEntryPair | undefined =
