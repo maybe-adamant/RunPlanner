@@ -782,14 +782,16 @@
   background: transparent;
 }
 
+/* The Overview and the Timeline sit on the page: their headings and rows are their structure. */
 .room-overview-workbench,
 .room-actions-workbench {
   display: grid;
   gap: 10px;
-  padding: 12px;
-  border: 1px solid #34353e;
-  border-radius: 10px;
-  background: rgb(10 11 14 / 35%);
+  margin-top: 6px;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
 }
 
 .room-actions-workbench {
@@ -798,13 +800,6 @@
   --timeline-row-start: 6px;
   --timeline-title-x: calc(var(--timeline-gutter) + 3px + var(--timeline-row-start));
   --timeline-banner-title-width: 8.75rem;
-  gap: 10px;
-  margin-top: 6px;
-  /* The timeline sits on the page: its line and banners are its structure. */
-  padding: 4px 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
 }
 
 /*
@@ -2182,6 +2177,11 @@
   margin-top: 8px;
 }
 
+/* The first phase needs no space above it. */
+.room-action-list > .timeline-row[data-phase-start]:first-child {
+  margin-top: 0;
+}
+
 /* The Add area and Timeline repairs share the timeline's width and its content edge. */
 .room-actions-workbench > .room-add,
 .room-actions-workbench .room-action-repairs,
@@ -3429,6 +3429,19 @@ span.hub-board-status-line {
 .room-map-controls-column {
   min-width: 0;
   container: room-panel / inline-size;
+}
+
+/* The controls' first line sits level with the map's top. */
+.room-map-controls-column > :is(.room-overview-workbench, .room-actions-workbench) {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.room-map-controls-column
+  > .room-overview-workbench
+  > .room-overview-section:first-child
+  > .room-feature-category-heading {
+  margin-top: 0;
 }
 
 .room-map-column {
