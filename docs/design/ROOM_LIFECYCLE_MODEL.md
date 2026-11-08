@@ -490,13 +490,14 @@ phase those follow the wheel reward as a separate moment. Fields cage and
 optional rewards spawn on entry, each cage marked by the phase that frees it,
 and the fourth-biome Preboss flush delivers on entry. Loot an action's
 settlement spawns (a boon's own drops, Echo's last reward and Gold Gold Gold
-duplicate, a Nemesis event's result, Eris's gift, a challenge switch's claim)
-is listed under that source action instead. Each item carries its reward owner,
+duplicate, a Nemesis event's result, Eris's gift, a challenge switch's claim,
+the Artificer's replacement under the converted pickup, Sea Star's copy under
+the pickup it copies, a rushed Shrine item under its purchase in the Shrine's
+own room) is listed under that source action instead. Each item carries its reward owner,
 source, participation and placement: its ranked action, or the command that
 places it. Items come from the active action domain and the reached due
 contacts rather than the authored order, so an unplaced item still appears.
-Conversions (Artificer, Sea Star), refills and same-room Shrine rushes are not
-spawned loot.
+A Travel Deal refill is a purchase, not spawned loot.
 
 ## Canonical Lifecycle Profiles
 

@@ -108,6 +108,7 @@ export type {
   WorkspaceRoomActionProposal,
   WorkspaceRoomActionRow,
   WorkspaceActionSpawn,
+  WorkspaceSpawnCopy,
   WorkspaceSpawnGroup,
   WorkspaceSpawnSource,
   WorkspaceSpawnedItem,

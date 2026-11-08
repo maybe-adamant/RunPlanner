@@ -1173,13 +1173,18 @@ export function assembleWorkspaceOccurrence(
             ...workbench.phases.flatMap((phase) => {
               const actionKeys = new Set(phase.actionRows.map((row) => row.key));
               return [
-                ...phase.timeline.flatMap((entry) =>
-                  entry.kind === 'spawned' ? entry.groups : [],
+                ...[
+                  ...phase.timeline.flatMap((entry) =>
+                    entry.kind === 'spawned' ? entry.groups : [],
+                  ),
+                  ...(roomActions.actionSpawns ?? []).flatMap((spawn) =>
+                    actionKeys.has(spawn.sourceActionKey) ? spawn.groups : [],
+                  ),
+                ].flatMap((group) => group.items),
+                ...(roomActions.spawnCopies ?? []).flatMap((copy) =>
+                  actionKeys.has(copy.sourceActionKey) ? [copy.item] : [],
                 ),
-                ...(roomActions.actionSpawns ?? []).flatMap((spawn) =>
-                  actionKeys.has(spawn.sourceActionKey) ? spawn.groups : [],
-                ),
-              ].flatMap((group) => group.items.map((item) => [item.actionKey, phase.tab] as const));
+              ].map((item) => [item.actionKey, phase.tab] as const);
             }),
             ...workbench.phases.flatMap((phase) =>
               [...phase.actionRows, ...phase.optionalRows, ...phase.unplacedRows].map(

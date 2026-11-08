@@ -23,10 +23,14 @@ import {
   loadSurfaceNQuickBuckCheckpoint,
   loadSurfaceNShrineSideRoomDeliveryCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
+  loadSurfaceShrineTravelDealCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
+  loadNemesisPomSeaStarCheckpoint,
   loadUnderworldArachneCocoonsCheckpoint,
   loadUnderworldFGHCheckpoint,
+  loadUnderworldWorldShopTravelDealCheckpoint,
+  underworldCheckpointArtifacts,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   nBiome,
@@ -279,5 +283,49 @@ describe('spawned loot', () => {
       kind: 'acquisitionEntry',
       entryKey: 'quickBuckGold',
     });
+  });
+
+  /** Each source action's kind with what it spawned. */
+  const actionSpawns = (spawned: RoomSpawnedLoot) =>
+    spawned.actionSpawns.map((spawn) => [spawn.source.kind, spawn.items.map(describeItem)]);
+
+  it('lists the Artificer’s replacement under the reward it transforms', () => {
+    const project = underworldCheckpointArtifacts['underworld-f-trait-order-checks'].load();
+    const { spawned } = loot(project, 'F', 'e9c1775e-a04b-4ed2-b749-7ef344614cbe');
+    expect(actionSpawns(spawned)).toEqual([
+      ['interactIncomingReward', [expect.stringMatching(/^artificer required #\d+$/)]],
+    ]);
+  });
+
+  it('lists Sea Star’s copy under the pickup it copies', () => {
+    const { spawned } = loot(loadNemesisPomSeaStarCheckpoint(), 'F', 'golden-f-b5-e1');
+    expect(actionSpawns(spawned)).toEqual([
+      ['interactEncounter', [expect.stringMatching(/^nemesisEvent required #\d+$/)]],
+      ['interactAcquisitionEntry', [expect.stringMatching(/^seaStar required #\d+$/)]],
+    ]);
+  });
+
+  it('lists a rushed Shrine item under its purchase in the Shrine’s own room', () => {
+    const { spawned } = loot(
+      loadSurfaceShrineTravelDealCheckpoint(),
+      'N',
+      'surface-n-preboss:postboss',
+    );
+    expect(actionSpawns(spawned)).toEqual([
+      [
+        'purchaseHermesShrineOffer',
+        [expect.stringMatching(/^hermesShrineDelivery optional #\d+$/)],
+      ],
+    ]);
+    expect(spawned.moments).toEqual([]);
+  });
+
+  it('spawns nothing for a World Shop Travel Deal refill, which is a purchase', () => {
+    const { spawned } = loot(
+      loadUnderworldWorldShopTravelDealCheckpoint(),
+      'F',
+      'golden-f-preboss-shop',
+    );
+    expect(spawned.actionSpawns).toEqual([]);
   });
 });

@@ -112,6 +112,7 @@ export type {
   WorkspaceRoomLifecycleTimelineEntry,
   WorkspaceSettledRarity,
   WorkspaceActionSpawn,
+  WorkspaceSpawnCopy,
   WorkspaceSpawnGroup,
   WorkspaceSpawnSource,
   WorkspaceSpawnedItem,

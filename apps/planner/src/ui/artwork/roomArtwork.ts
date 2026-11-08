@@ -113,6 +113,8 @@ export function sourceFamilyIcon(
       return traitIcon(family.traitKey);
     case 'seaStar':
       return traitIcon('DoubleRewardBoon');
+    case 'artificer':
+      return traitIcon('MetaToRunMetaUpgrade');
     case 'echo':
       return npcArtwork.Echo ?? undefined;
     case 'nemesisEvent':

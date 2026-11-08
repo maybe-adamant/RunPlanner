@@ -505,7 +505,11 @@ boon, keepsake, NPC, Hermes or a switch, shown by its icon before its items);
 the room's own reward and Fields slots stand alone, a slot marked by its cage
 or optional badge. A chip leads to its collect row; an optional item not yet
 collected is dashed and one click places it, opening the row's unfinished
-choice (a Pom Slice's Pom) at once. Its hover says what clicking does.
+choice (a Pom Slice's Pom) at once. Its hover says what clicking does. The
+Artificer's new reward reads under its Transform row and a rushed Shrine item
+under its Rush row; a Sea Star copy is instead a ×2 chip on the copied
+pickup's own row. A World Shop Travel Deal refill is a purchase, added from
+the World Shop.
 
 ### Doors on the Timeline
 

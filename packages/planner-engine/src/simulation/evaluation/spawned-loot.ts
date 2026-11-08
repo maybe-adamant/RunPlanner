@@ -451,11 +451,14 @@ export function spawnedLootForProjectEvaluationAssembly(
           add('encounterEnd', phaseKey, fromRow(row, { kind: 'generated', family }));
         break;
       }
+      // The Artificer's replacement spawns as its source converts; Sea Star's copy as its source is collected.
       case 'trait':
       case 'nemesisEvent':
       case 'erisGift':
       case 'challengeSwitch':
-      case 'echo': {
+      case 'echo':
+      case 'artificer':
+      case 'seaStar': {
         if (family.kind === 'echo' && family.effect !== 'lastReward') break;
         const source = row.dependencies.find(
           (dependency) => dependency.kind === 'afterAction' && dependency.authoringOnly !== true,
@@ -464,10 +467,26 @@ export function spawnedLootForProjectEvaluationAssembly(
           addActionSpawn(source.action, fromRow(row, { kind: 'generated', family }));
         break;
       }
-      // Conversions, refills and deliveries are not spawned here.
-      case 'artificer':
-      case 'seaStar':
-      case 'hermesShrineDelivery':
+      case 'hermesShrineDelivery': {
+        // A rushed item spawns in its Shrine's own room as the purchase settles.
+        const delivery = parseHermesShrineDeliveryEntryKey(reference.entryKey);
+        if (
+          delivery === undefined ||
+          delivery.routeKey !== occurrence.routeKey ||
+          delivery.biomeKey !== occurrence.biomeKey ||
+          delivery.sourceOccurrenceId !== occurrence.occurrenceId
+        )
+          break;
+        const purchase = row.dependencies.find(
+          (dependency) =>
+            dependency.kind === 'afterAction' &&
+            dependency.action.kind === 'purchaseHermesShrineOffer',
+        );
+        if (purchase?.kind === 'afterAction' && rowByKey.has(roomActionKey(purchase.action)))
+          addActionSpawn(purchase.action, fromRow(row, { kind: 'generated', family }));
+        break;
+      }
+      // A Travel Deal refill is a purchase, not spawned loot.
       case 'shopTravelDealRefill':
         break;
     }

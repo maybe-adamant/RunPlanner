@@ -51,7 +51,7 @@ import { StygianWellTwistChips } from './commerce/StygianWellTwist';
 import { RoomObjectEntry } from './commerce/RoomObjectEntry';
 import { roomObjectEntryIcon } from './commerce/roomObjectEntryIcon';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
-import { SpawnedLootRow } from './SpawnedLootRow';
+import { SpawnCopyChips, SpawnedLootRow } from './SpawnedLootRow';
 import { roomActionItemIcon } from './roomActionItemIcon';
 import { FightGoldAmount, GoldAmount, PurchaseCost } from './commerce/GoldAmount';
 import { hintProps } from '@planner/ui/controls/hint';
@@ -899,6 +899,12 @@ export function RoomActionsWorkbench({
                 />
               )}
               <RoomActionArtificerOutput interactions={interactions} row={row} />
+              <SpawnCopyChips
+                copies={
+                  actions.spawnCopies?.filter((copy) => copy.sourceActionKey === row.key) ?? []
+                }
+                rows={actions.rows}
+              />
               {row.slot === undefined ? null : (
                 <span className="visually-hidden">{` · slot ${row.slot}`}</span>
               )}

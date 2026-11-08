@@ -1072,20 +1072,24 @@ function roomActionsForOccurrence(
       entry.kind === 'action' && entry.presentation === 'row' ? [entry.actionKey] : [],
     ),
   );
-  const spawnPlacedKeys = new Set(
-    [
+  const spawnPlacedKeys = new Set([
+    ...[
       ...spawned.entries.flatMap((entry) => (entry.kind === 'spawned' ? entry.groups : [])),
       ...spawned.actionSpawns.flatMap((spawn) =>
         shownRowKeys.has(spawn.sourceActionKey) ? spawn.groups : [],
       ),
     ].flatMap((group) => group.items.map((item) => item.actionKey)),
-  );
+    ...spawned.copies.flatMap((copy) =>
+      shownRowKeys.has(copy.sourceActionKey) ? [copy.item.actionKey] : [],
+    ),
+  ]);
   const optionalRows = Object.freeze(
     unplacedOptionalRows.filter((row) => !spawnPlacedKeys.has(row.key)),
   );
   return Object.freeze({
     timeline: Object.freeze({ ...projectedTimeline, entries: spawned.entries }),
     ...(spawned.actionSpawns.length === 0 ? {} : { actionSpawns: spawned.actionSpawns }),
+    ...(spawned.copies.length === 0 ? {} : { spawnCopies: spawned.copies }),
     checkpoints: Object.freeze(
       roster.checkpoints
         .filter((checkpoint) => checkpoint.checkpointKey !== 'outgoingGeneration')

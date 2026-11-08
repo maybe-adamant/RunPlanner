@@ -1041,6 +1041,49 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('O', 'surface-o-combat02'),
   },
   {
+    id: 'optional-actions-rush-unplaced',
+    label: 'Optional actions: a rushed Shrine item left behind beside a challenge switch',
+    shows: ['Optional actions', 'Hermes Shrine rush', 'spawned row unplaced chip'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [
+      placeAnchorObject('O', 'surface-o-combat02', 'challengeSwitch'),
+      placeAnchorObject('O', 'surface-o-combat02', 'hermesShrine'),
+      (project) => ({
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: occurrenceAddress(project, 'O', 'surface-o-combat02'),
+        slotKey: 'first',
+        value: { rewardType: 'HealBigDrop' },
+      }),
+      (project) => ({
+        kind: 'PurchaseHermesShrineOffer',
+        occurrence: occurrenceAddress(project, 'O', 'surface-o-combat02'),
+        generationKey: 'initial:first',
+        rushed: true,
+      }),
+      (project) => {
+        const pickup = authoredOccurrence(
+          project,
+          'O',
+          'surface-o-combat02',
+        ).roomActions.order.find(
+          (reference) =>
+            reference.kind === 'interactAcquisitionEntry' &&
+            reference.siteKey === 'hermesShrineDelivery',
+        );
+        if (pickup === undefined) throw new Error('the rush placed no pickup');
+        return {
+          kind: 'RemoveRoomAction',
+          action: createRoomActionAddress(
+            createBiomeAddress('Surface', 'O'),
+            createOccurrenceId('surface-o-combat02'),
+            roomActionKey(pickup),
+          ),
+        };
+      },
+    ],
+    target: room('O', 'surface-o-combat02'),
+  },
+  {
     id: 'anchors-postboss-shrine',
     overview: true,
     label: 'Postboss: forced Hermes Shrine on its anchor',

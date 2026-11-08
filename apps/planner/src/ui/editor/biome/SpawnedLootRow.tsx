@@ -3,6 +3,7 @@ import { semanticAddressKey } from '@run-planner/engine/authored-project';
 
 import type {
   WorkspaceRoomActionRow,
+  WorkspaceSpawnCopy,
   WorkspaceSpawnGroup,
   WorkspaceSpawnSource,
   WorkspaceSpawnedItem,
@@ -63,10 +64,13 @@ function sourceIcon(source: WorkspaceSpawnSource): string | undefined {
 
 function SpawnedItemChip({
   announce,
+  copy,
   item,
   row,
 }: {
   readonly announce: (message: string) => void;
+  /** A copy's chip shows its source and the doubled count instead of the item. */
+  readonly copy?: WorkspaceSpawnSource;
   readonly item: WorkspaceSpawnedItem;
   readonly row: WorkspaceRoomActionRow | undefined;
 }) {
@@ -78,7 +82,12 @@ function SpawnedItemChip({
   const opening = useRef(false);
   const navigatedAt = useRef<number>(undefined);
   const placement = item.placement;
-  const name = item.place === undefined ? item.label : `${item.label} · ${item.place.label}`;
+  const name =
+    copy !== undefined
+      ? `${copy.name} copy`
+      : item.place === undefined
+        ? item.label
+        : `${item.label} · ${item.place.label}`;
   const unavailable = placement.kind === 'unavailable';
   // Placed from this chip, the new row opens its choice once it is on the Timeline.
   useEffect(() => {
@@ -109,7 +118,7 @@ function SpawnedItemChip({
       {...hintProps(item.hint, mark?.['aria-description'], name)}
       aria-disabled={unavailable || undefined}
       aria-label={name}
-      className="timeline-chip"
+      className={copy === undefined ? 'timeline-chip' : 'timeline-chip spawn-copy-chip'}
       data-spawn-participation={item.participation}
       data-spawn-placed={placement.kind === 'placed' || undefined}
       onClick={(event) => {
@@ -128,11 +137,18 @@ function SpawnedItemChip({
       <ArtworkIcon
         className="artwork-label-icon"
         source={
-          row === undefined
-            ? undefined
-            : (roomActionItemIcon(row) ?? sourceFamilyIcon(row.sourceFamily))
+          copy !== undefined
+            ? sourceIcon(copy)
+            : row === undefined
+              ? undefined
+              : (roomActionItemIcon(row) ?? sourceFamilyIcon(row.sourceFamily))
         }
       />
+      {copy === undefined ? null : (
+        <span aria-hidden="true" className="spawn-copy-count">
+          ×2
+        </span>
+      )}
       {item.place === undefined ? null : (
         <span aria-hidden="true" className="timeline-chip-badge">
           {item.place.badge}
@@ -214,5 +230,33 @@ export function SpawnedLootRow({
       kind="continuation"
       label={<strong className="spawned-loot-label">{label}</strong>}
     />
+  );
+}
+
+/** Sea Star's copies of a row's pickup, each a chip that leads to the copy's collect. */
+export function SpawnCopyChips({
+  copies,
+  rows,
+}: {
+  readonly copies: readonly WorkspaceSpawnCopy[];
+  readonly rows: readonly WorkspaceRoomActionRow[];
+}) {
+  const [announcement, setAnnouncement] = useState('');
+  if (copies.length === 0) return null;
+  return (
+    <span className="spawn-copies">
+      {copies.map((copy) => (
+        <SpawnedItemChip
+          announce={setAnnouncement}
+          copy={copy.source}
+          item={copy.item}
+          key={copy.key}
+          row={rows.find((candidate) => candidate.key === copy.item.actionKey)}
+        />
+      ))}
+      <span aria-live="polite" className="visually-hidden">
+        {announcement}
+      </span>
+    </span>
   );
 }

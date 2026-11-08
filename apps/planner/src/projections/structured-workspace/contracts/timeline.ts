@@ -275,6 +275,8 @@ export interface WorkspaceRoomActions {
   }[];
   /** Loot a source action's settlement spawns, shown under that action's row. */
   readonly actionSpawns?: readonly WorkspaceActionSpawn[];
+  /** Sea Star copies, each marked on the row collecting the pickup it copies. */
+  readonly spawnCopies?: readonly WorkspaceSpawnCopy[];
 }
 
 /** One item the game spawned, as a chip that leads to the action collecting it. */
@@ -314,6 +316,14 @@ export interface WorkspaceSpawnGroup {
   /** Absent for the room's own reward or a Fields slot, which stand alone. */
   readonly source?: WorkspaceSpawnSource;
   readonly items: readonly WorkspaceSpawnedItem[];
+}
+
+/** Sea Star's copy of a pickup, marked on the row that collects the original. */
+export interface WorkspaceSpawnCopy {
+  readonly key: string;
+  readonly sourceActionKey: string;
+  readonly source: WorkspaceSpawnSource;
+  readonly item: WorkspaceSpawnedItem;
 }
 
 /** What one source action's settlement spawned, read under its row. */

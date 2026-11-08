@@ -22,6 +22,8 @@ import type {
   WorkspaceSpawnedItem,
 } from '@planner/projections/structured-workspace';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
+import { galleryCases } from '@planner-test/support/gallery/cases';
+import { buildGalleryProject } from '@planner-test/support/gallery/galleryCase';
 
 function roomOf(project: ProjectDocument, biomeKey: string, occurrenceId: OccurrenceId) {
   const node = projectStructuredWorkspaceFixture(project)
@@ -184,5 +186,99 @@ describe('spawn notices', () => {
         room.roomActions!.rows.find((row) => row.sourceFamily?.kind === 'trait')!.reference,
       ),
     );
+  });
+});
+
+/** A gallery case's project, opened on its room. */
+function galleryRoom(id: string, biomeKey: string, occurrenceId: string) {
+  const entry = galleryCases.find((candidate) => candidate.id === id);
+  if (entry === undefined) throw new Error(`No gallery case ${id}`);
+  return roomOf(buildGalleryProject(entry), biomeKey, createOccurrenceId(occurrenceId));
+}
+
+describe('converted and copied loot', () => {
+  it('lists the Artificer’s new reward under the transform', () => {
+    const actions = galleryRoom(
+      'artificer-transform',
+      'F',
+      'e9c1775e-a04b-4ed2-b749-7ef344614cbe',
+    ).roomActions!;
+    const transform = actions.rows.find(
+      (row) => row.reference.kind === 'interactIncomingReward' && !row.stale,
+    )!;
+    expect(transform.artificerOutput).toBeDefined();
+    const spawn = actions.actionSpawns?.find((entry) => entry.sourceActionKey === transform.key);
+    expect(grouped(spawn!.groups)).toEqual(['[Artificer]: Hermes']);
+    const replacement = actions.rows.find((row) => row.sourceFamily?.kind === 'artificer')!;
+    expect(items(spawn!.groups)[0]).toMatchObject({
+      actionKey: replacement.key,
+      placement: { kind: 'placed', owner: replacement.address },
+    });
+  });
+
+  it('marks Sea Star’s copy on the copied pickup’s row, not as a spawn row', () => {
+    const actions = galleryRoom('pom-sea-star-nemesis', 'F', 'golden-f-b5-e1').roomActions!;
+    const original = actions.rows.find((row) => row.sourceFamily?.kind === 'nemesisEvent')!;
+    const copy = actions.rows.find((row) => row.sourceFamily?.kind === 'seaStar')!;
+    expect(actions.spawnCopies).toEqual([
+      expect.objectContaining({
+        sourceActionKey: original.key,
+        source: expect.objectContaining({ name: 'Sea Star' }),
+        item: expect.objectContaining({
+          actionKey: copy.key,
+          placement: { kind: 'placed', owner: copy.address },
+        }),
+      }),
+    ]);
+    expect(
+      (actions.actionSpawns ?? []).flatMap((spawn) =>
+        spawn.groups.flatMap((group) => (group.source === undefined ? [] : [group.source.name])),
+      ),
+    ).toEqual(['Nemesis']);
+  });
+
+  it('lists a rushed Shrine item under the purchase that rushes it', () => {
+    const actions = galleryRoom(
+      'shrine-rush-travel-deal',
+      'N',
+      'surface-n-preboss:postboss',
+    ).roomActions!;
+    const rush = actions.rows.find(
+      (row) =>
+        row.reference.kind === 'purchaseHermesShrineOffer' &&
+        row.reference.generationKey === 'initial:first',
+    )!;
+    const spawn = actions.actionSpawns?.find((entry) => entry.sourceActionKey === rush.key);
+    expect(grouped(spawn!.groups)).toEqual(['[Hermes]: Big Heal']);
+    expect(items(spawn!.groups).map(placement)).toEqual(['optional placed']);
+  });
+
+  it('places a rushed item left behind from its spawn row; the Add area keeps only objects', () => {
+    const room = galleryRoom('optional-actions-rush-unplaced', 'O', 'surface-o-combat02');
+    const actions = room.roomActions!;
+    const pickup = actions.rows.find((row) => row.sourceFamily?.kind === 'hermesShrineDelivery')!;
+    expect(pickup.rank).toBeNull();
+    const rush = actions.rows.find((row) => row.reference.kind === 'purchaseHermesShrineOffer')!;
+    const spawn = actions.actionSpawns!.find((entry) => entry.sourceActionKey === rush.key)!;
+    const item = items(spawn.groups)[0]!;
+    expect(item.actionKey).toBe(pickup.key);
+    if (item.placement.kind !== 'unplaced') throw new Error('the rushed item is placed');
+    expect(item.placement.intent.command.kind).toBe('InsertRoomAction');
+    // Beside the Shrine and switch objects, only the switch's use remains to add.
+    expect(actions.optionalRows.map((row) => row.reference.kind)).toEqual([
+      'interactChallengeSwitch',
+    ]);
+  });
+
+  it('leaves the World Shop’s Travel Deal refill a World Shop purchase', () => {
+    const actions = galleryRoom(
+      'world-shop-travel-deal',
+      'F',
+      'golden-f-preboss-shop',
+    ).roomActions!;
+    const refill = actions.rows.find((row) => row.sourceFamily?.kind === 'shopTravelDealRefill')!;
+    expect(refill.addGroup).toMatchObject({ object: 'worldShop' });
+    expect(actions.actionSpawns ?? []).toEqual([]);
+    expect(actions.optionalRows).toEqual([]);
   });
 });

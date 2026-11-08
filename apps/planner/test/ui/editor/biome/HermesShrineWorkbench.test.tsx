@@ -207,14 +207,17 @@ describe('Hermes Shrine workbench', () => {
     });
     expect(remove).toHaveProperty('disabled', false);
     await view.user.click(remove);
-    // The removed delivery returns to its Shrine's own entry, the only Shrine entry.
-    await waitFor(() =>
-      expect(screen.getAllByRole('button', { name: 'Hermes Shrine' })).toHaveLength(1),
-    );
-    await view.user.click(screen.getByRole('button', { name: 'Hermes Shrine' }));
-    expect(
-      within(await screen.findByRole('listbox')).getByRole('option', { name: /Collect Big Heal/ }),
-    ).toBeTruthy();
+    // The removed item is re-added from the spawn row under its Rush.
+    const chip = await waitFor(() => {
+      const found = screen
+        .getAllByRole('listitem', { name: 'Spawned' })
+        .flatMap((row) => within(row).queryAllByRole('button', { name: 'Big Heal' }));
+      expect(found).toHaveLength(1);
+      return found[0]!;
+    });
+    expect(chip.hasAttribute('data-spawn-placed')).toBe(false);
+    await view.user.click(chip);
+    await waitFor(() => expect(timelineRow('Collect Big Heal')).toBeTruthy());
     expect(
       application.store
         .getState()

@@ -1255,6 +1255,28 @@
   color: var(--muted);
 }
 
+/* Sea Star's copy on the copied pickup's row: its icon, then "×2". */
+.spawn-copies {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: 6px;
+}
+
+.timeline-chip.spawn-copy-chip {
+  display: inline-flex;
+  width: auto;
+  align-items: center;
+  gap: 2px;
+  padding-inline: 3px 5px;
+}
+
+.spawn-copy-count {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 /* Object pickers in decisions are as wide as their choice. */
 .timeline-row[data-travel-deal-line] .timeline-cell-editors .contextual-picker {
   width: auto;

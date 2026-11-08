@@ -9,6 +9,7 @@ import type {
   WorkspaceRoomActionRow,
   WorkspaceRoomLifecycleTimelineEntry,
   WorkspaceSpawnGroup,
+  WorkspaceSpawnCopy,
   WorkspaceSpawnSource,
   WorkspaceSpawnedItem,
 } from '../contracts/timeline';
@@ -151,8 +152,10 @@ function spawnSource(
             challengeSwitchKind: kind,
           });
     }
-    case 'seaStar':
     case 'artificer':
+      return source(family.kind, 'Artificer');
+    case 'seaStar':
+      return source(family.kind, 'Sea Star');
     case 'shopTravelDealRefill':
       return undefined;
   }
@@ -250,7 +253,8 @@ function momentAnchor(
 
 /**
  * Places each spawn moment's notice in the room's Timeline where the game
- * spawns it, and groups each source action's spawned loot under its row.
+ * spawns it, groups each source action's spawned loot under its row, and
+ * marks each Sea Star copy on the row of the pickup it copies.
  */
 export function projectSpawnedLoot(
   catalog: Catalog,
@@ -262,8 +266,10 @@ export function projectSpawnedLoot(
 ): {
   readonly entries: readonly TimelineEntry[];
   readonly actionSpawns: readonly WorkspaceActionSpawn[];
+  readonly copies: readonly WorkspaceSpawnCopy[];
 } {
-  if (loot === undefined) return { entries, actionSpawns: Object.freeze([]) };
+  if (loot === undefined)
+    return { entries, actionSpawns: Object.freeze([]), copies: Object.freeze([]) };
   const rowByKey = new Map(rows.map((row) => [row.key, row]));
   const item = (spawned: SpawnedLootItem) => projectItem(spawned, rowByKey, proposals, roomLocal);
   const notices: SpawnedEntry[] = loot.moments.map((moment) =>
@@ -324,14 +330,43 @@ export function projectSpawnedLoot(
     if (identity !== undefined) pushAfter(identity);
   }
   out.push(...unanchored);
-  const actionSpawns = loot.actionSpawns.map((spawn) => {
+  // Sea Star's copy reads on the row of the pickup it copies, not as a spawn row.
+  const isCopy = (spawned: SpawnedLootItem) =>
+    spawned.source.kind === 'generated' && spawned.source.family.kind === 'seaStar';
+  const actionSpawns = loot.actionSpawns.flatMap((spawn) => {
     const sourceRow = rowByKey.get(roomActionKey(spawn.source));
-    return Object.freeze({
-      key: semanticAddressKey(spawn.sourceAction),
-      sourceActionKey: roomActionKey(spawn.source),
-      label: 'Spawned',
-      groups: spawnGroups(spawn.items, item, (spawned) => spawnSource(catalog, spawned, sourceRow)),
-    });
+    const spawnedItems = spawn.items.filter((spawned) => !isCopy(spawned));
+    return spawnedItems.length === 0
+      ? []
+      : [
+          Object.freeze({
+            key: semanticAddressKey(spawn.sourceAction),
+            sourceActionKey: roomActionKey(spawn.source),
+            label: 'Spawned',
+            groups: spawnGroups(spawnedItems, item, (spawned) =>
+              spawnSource(catalog, spawned, sourceRow),
+            ),
+          }),
+        ];
   });
-  return { entries: Object.freeze(out), actionSpawns: Object.freeze(actionSpawns) };
+  const copies = loot.actionSpawns.flatMap((spawn) =>
+    spawn.items.flatMap((spawned) => {
+      const source = isCopy(spawned) ? spawnSource(catalog, spawned, undefined) : undefined;
+      if (source === undefined) return [];
+      const projected = item(spawned);
+      return [
+        Object.freeze({
+          key: projected.key,
+          sourceActionKey: roomActionKey(spawn.source),
+          source,
+          item: projected,
+        }),
+      ];
+    }),
+  );
+  return {
+    entries: Object.freeze(out),
+    actionSpawns: Object.freeze(actionSpawns),
+    copies: Object.freeze(copies),
+  };
 }
