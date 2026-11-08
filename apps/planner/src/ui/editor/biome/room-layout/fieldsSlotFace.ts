@@ -20,13 +20,17 @@ export function fieldsSlotIcon(
   return slot?.control.offer == null ? undefined : offerIcon(slot.control.offer);
 }
 
-/** A Fields slot's corner mark on the map: C1, O2; the Nemesis wears none. */
+/**
+ * A Fields slot's corner mark: its number among the cages or the optional
+ * rewards, which its ring or row tells apart; the Nemesis wears none.
+ */
 export function fieldsSlotBadge(
   fields: FieldsRoom,
   target: WorkspaceFieldsSpatialControl['target'],
 ): string | undefined {
   if (target.kind === 'nemesis') return undefined;
-  return (target.kind === 'cage' ? fields.cages : fields.optionalRewards).find(
+  const index = (target.kind === 'cage' ? fields.cages : fields.optionalRewards).findIndex(
     (candidate) => candidate.key === target.slotKey,
-  )?.badge;
+  );
+  return index < 0 ? undefined : String(index + 1);
 }

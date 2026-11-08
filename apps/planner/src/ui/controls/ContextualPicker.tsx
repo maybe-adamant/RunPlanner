@@ -74,7 +74,7 @@ interface ContextualPickerProps<T> {
    * dashed slot still to choose.
    */
   readonly triggerUnknown?: boolean;
-  /** A short mark on an icon chip's corner, such as its slot ("C1"). */
+  /** A short mark on the trigger icon's corner, such as its slot ("C1"). */
   readonly triggerBadge?: string;
   /** A list value shown as each member's icon before its name, joined like the trigger label. */
   readonly triggerParts?: readonly {
@@ -549,8 +549,15 @@ export function ContextualPicker<T>({
               triggerText
             ) : (
               <span className="contextual-picker-trigger-value">
-                {triggerIcon === undefined ? null : (
+                {triggerIcon === undefined ? null : triggerBadge === undefined ? (
                   <ArtworkIcon className="contextual-picker-trigger-image" source={triggerIcon} />
+                ) : (
+                  <span className="contextual-picker-trigger-badged">
+                    <ArtworkIcon className="contextual-picker-trigger-image" source={triggerIcon} />
+                    <span aria-hidden="true" className="timeline-chip-badge">
+                      {triggerBadge}
+                    </span>
+                  </span>
                 )}
                 {triggerText}
                 {triggerTrailIcon === undefined ? null : (

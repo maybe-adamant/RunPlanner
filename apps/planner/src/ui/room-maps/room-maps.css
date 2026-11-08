@@ -503,6 +503,30 @@
   border-color: #8fd3ff;
 }
 
+/* A free point numbered while a Fields slot is placed; one the slot cannot take dims. */
+.room-map-point[data-marked] {
+  display: grid;
+  width: max(3%, 20px);
+  place-items: center;
+  opacity: 1;
+}
+
+.room-map-point[data-marked] > .room-map-number {
+  position: static;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  color: #fff4c7;
+  background: none;
+  font-size: 0.74rem;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 90%);
+}
+
+.room-map-point[data-dim] {
+  opacity: 0.4;
+}
+
 .room-map-point[data-preview] {
   z-index: 3;
   opacity: 1;

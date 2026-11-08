@@ -23,6 +23,7 @@ import {
   useRoomMapHighlightActions,
   useRoomMapLinks,
   type RoomMapHighlight,
+  type RoomMapPointMark,
 } from '../room-map/roomMapHighlight';
 import { fieldsSlotBadge, fieldsSlotIcon } from './fieldsSlotFace';
 
@@ -47,6 +48,7 @@ interface PositionChoice<T> {
  */
 function PositionPicker<T>({
   ariaLabel,
+  choiceLabel,
   choices,
   current,
   currentOption,
@@ -57,9 +59,12 @@ function PositionPicker<T>({
   onOpen,
   onSelect,
   openPreview,
+  triggerBadge,
   triggerIcon,
 }: {
   readonly ariaLabel: string;
+  /** What the open list picks, where the trigger's name also speaks its value. */
+  readonly choiceLabel?: string | undefined;
   readonly choices: readonly PositionChoice<T>[];
   readonly current: string;
   /** The current value as the open list spells it; the trigger's own text by default. */
@@ -74,6 +79,8 @@ function PositionPicker<T>({
   readonly openPreview?: RoomMapHighlight | undefined;
   /** The thing it places, before its value. */
   readonly triggerIcon?: ArtworkSource | undefined;
+  /** The placed thing's slot number, on its icon's corner. */
+  readonly triggerBadge?: string | undefined;
 }) {
   const mapPreview = useRoomMapHighlightActions();
   const shownRef = useRef<RoomMapHighlight | undefined>(undefined);
@@ -86,6 +93,7 @@ function PositionPicker<T>({
   return (
     <ContextualPicker<string>
       ariaLabel={ariaLabel}
+      {...(choiceLabel === undefined ? {} : { choiceLabel })}
       {...(disabledHint === undefined ? {} : { disabledHint })}
       {...(findingTarget === undefined ? {} : { findingTarget })}
       id={id}
@@ -125,6 +133,7 @@ function PositionPicker<T>({
       }}
       placeholder={current}
       searchable={false}
+      {...(triggerBadge === undefined ? {} : { triggerBadge })}
       triggerIcon={triggerIcon}
       triggerLabel={current}
       triggerSize="content"
@@ -419,8 +428,10 @@ function ObjectAnchorChip({
 }
 
 /**
- * A Fields slot's point chip: picked among the points the engine leaves it,
- * `?` leaving it to the game. A point a sibling holds is not offered.
+ * A Fields slot's point chip: its reward's icon wearing the slot's number,
+ * then its point, picked among the points the engine leaves it, `?` leaving
+ * it to the game. A point a sibling holds is not offered. While the chip is
+ * hovered or its list is open, the map numbers the free points of its family.
  */
 function FieldsSlotChip({
   control,
@@ -442,8 +453,14 @@ function FieldsSlotChip({
   const id = semanticOwnerControlElementId(control.address);
   const nameOf = (pointId: number | null): string =>
     interaction.choices.find((choice) => choice.value === pointId)?.label ?? unset;
-  const preview = (pointId: number | null): RoomMapHighlight | undefined =>
-    pointId === null ? undefined : { kind: 'fieldsPoint', pointId };
+  // Points the slot's siblings stand on; the map shows their occupants instead.
+  const held = new Set(
+    fields.spatial.flatMap((sibling) =>
+      sibling.interactionKey === control.interactionKey || sibling.pointId === null
+        ? []
+        : [sibling.pointId],
+    ),
+  );
   const choices = interaction.choices.flatMap((choice) => {
     if (choice.value === interaction.selected) return [];
     const option = assessed?.find((candidate) => candidate.value === choice.value);
@@ -456,24 +473,38 @@ function FieldsSlotChip({
         key: String(choice.value),
         label: choice.label,
         value: choice.value,
-        preview: preview(choice.value),
         ...(result === undefined || result.assignable
           ? {}
           : { disabled: true, explanation: `${control.label} can’t stand here.` }),
       },
     ];
   });
+  const marks: readonly RoomMapPointMark[] = choices.flatMap((choice) =>
+    choice.value === null || held.has(choice.value)
+      ? []
+      : [
+          {
+            pointId: choice.value,
+            mark: choice.label,
+            ...(choice.disabled === true ? { disabled: true } : {}),
+          },
+        ],
+  );
+  const preview = (pointId: number | null): RoomMapHighlight => ({
+    kind: 'fieldsPoint',
+    ...(pointId === null ? {} : { pointId }),
+    marks,
+  });
   const point = nameOf(control.pointId);
   const icon = fieldsSlotIcon(fields, control.target);
-  // A slot's short mark, as the map wears it: C1, O2; the Nemesis by its artwork.
-  const mark =
-    fieldsSlotBadge(fields, control.target) ?? (icon === undefined ? control.label : undefined);
+  const badge = fieldsSlotBadge(fields, control.target);
   return (
     <LayoutChip preview={preview(control.pointId)}>
       <PositionPicker<number | null>
-        ariaLabel={`${control.label} point`}
-        choices={choices}
-        current={mark === undefined ? point : `${mark} ${point}`}
+        ariaLabel={`${control.label}, point ${point}`}
+        choiceLabel={`${control.label} point`}
+        choices={choices.map((choice) => ({ ...choice, preview: preview(choice.value) }))}
+        current={icon === undefined ? `${control.label} ${point}` : point}
         currentOption={point}
         {...(interaction.contextReached ? {} : { disabledHint: candidateWaitingHint })}
         findingTarget={findingTarget(control.address, id)}
@@ -481,6 +512,7 @@ function FieldsSlotChip({
         onOpen={() => candidates.activate()}
         onSelect={(pointId) => executeIntent(interaction.intentFor(pointId))}
         openPreview={preview(control.pointId)}
+        triggerBadge={icon === undefined ? undefined : badge}
         triggerIcon={icon}
       />
     </LayoutChip>

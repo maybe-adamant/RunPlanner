@@ -488,7 +488,7 @@ function roomLocalForOccurrence(
         Object.freeze([
           Object.freeze({ label: '?', value: null }),
           ...pointIds.map((pointId, index) =>
-            Object.freeze({ label: `P${index + 1}`, value: pointId }),
+            Object.freeze({ label: `${index + 1}`, value: pointId }),
           ),
         ]);
       const spatialControl = (

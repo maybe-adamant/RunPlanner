@@ -13,7 +13,8 @@ import {
  * What the room's map previews for the control being worked on: one door by
  * its number, the Chaos gate, every Chaos point with one position previewed,
  * the entry being picked (one entry with the flip choosing it sets), an
- * object anchor, or a Fields point.
+ * object anchor, or a Fields slot's point with the free points it can pick
+ * numbered.
  */
 export type RoomMapHighlight =
   | { readonly kind: 'door'; readonly doorIndex: number }
@@ -21,7 +22,19 @@ export type RoomMapHighlight =
   | { readonly kind: 'chaosPoints'; readonly position?: number | undefined }
   | { readonly kind: 'entry'; readonly pointId?: number; readonly flipped?: boolean | undefined }
   | { readonly kind: 'anchor'; readonly anchorId: number }
-  | { readonly kind: 'fieldsPoint'; readonly pointId: number };
+  | {
+      readonly kind: 'fieldsPoint';
+      readonly pointId?: number | undefined;
+      /** Each free point of the slot's family with its number; a disabled one cannot take it. */
+      readonly marks?: readonly RoomMapPointMark[] | undefined;
+    };
+
+/** A map point's number while its slot is being placed. */
+export interface RoomMapPointMark {
+  readonly pointId: number;
+  readonly mark: string;
+  readonly disabled?: boolean | undefined;
+}
 
 export interface RoomMapHighlightActions {
   readonly show: (highlight: RoomMapHighlight) => void;
@@ -42,7 +55,7 @@ export const highlightOwner = (highlight: RoomMapHighlight): string => {
     case 'anchor':
       return `anchor:${highlight.anchorId}`;
     case 'fieldsPoint':
-      return `fieldsPoint:${highlight.pointId}`;
+      return `fieldsPoint:${highlight.pointId ?? '?'}`;
     case 'chaosGate':
     case 'chaosPoints':
     case 'entry':

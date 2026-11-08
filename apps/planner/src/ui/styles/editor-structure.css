@@ -323,6 +323,20 @@ select {
   height: 1.4rem;
 }
 
+/* A trigger icon wearing its slot mark on its corner. */
+.contextual-picker-trigger-value > .contextual-picker-trigger-badged {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-right: 5px;
+  overflow: visible;
+}
+
+.contextual-picker-trigger-badged > .timeline-chip-badge {
+  right: -7px;
+  bottom: -3px;
+}
+
 .contextual-picker-popover {
   z-index: 50;
   width: max(calc(var(--radix-popover-trigger-width) / var(--app-scale, 1)), 320px);

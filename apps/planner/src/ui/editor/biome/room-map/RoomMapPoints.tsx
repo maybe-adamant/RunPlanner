@@ -3,6 +3,7 @@ import { roomMapMarkers, type RoomMapMarkers } from '@planner/projections/roomMa
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { melinoeIcon } from '@planner/ui/artwork/player/playerArtwork';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
+import type { RoomMapPointMark } from './roomMapHighlight';
 import { position } from './roomMapPosition';
 
 /** What stands on a map point: its name, icon and corner mark. */
@@ -25,10 +26,18 @@ export interface RoomMapPlacements {
   readonly anchors: ReadonlyMap<number, RoomMapOccupant>;
   readonly anchorNumbers: ReadonlyMap<number, number>;
   readonly fieldsPoints: ReadonlyMap<number, RoomMapOccupant>;
-  /** The point a control previews; an entry without one while the entry is being picked. */
+  /**
+   * The point a control previews; an entry without one while the entry is
+   * being picked, and a Fields point with its family's free points numbered.
+   */
   readonly preview?:
     | { readonly kind: 'entry'; readonly id?: number | undefined }
-    | { readonly kind: 'anchor' | 'fieldsPoint'; readonly id: number }
+    | { readonly kind: 'anchor'; readonly id: number }
+    | {
+        readonly kind: 'fieldsPoint';
+        readonly id?: number | undefined;
+        readonly marks?: readonly RoomMapPointMark[] | undefined;
+      }
     | undefined;
 }
 
@@ -44,7 +53,8 @@ const unplanned: RoomMapPlacements = Object.freeze({
  * Anchors, Fields points and entries: a ring at each anchor or point with what
  * stands there, and Melinoë at the entry. While the entry is picked, each
  * entry it can pick shows its number; while the game picks among several,
- * each shows `?`.
+ * each shows `?`. While a Fields slot is placed, each free point it can take
+ * shows its number.
  */
 export function RoomMapSpots({
   markers,
@@ -67,6 +77,11 @@ export function RoomMapSpots({
       </>
     );
   const picking = placements.preview?.kind === 'entry' ? placements.preview : undefined;
+  const pointMarks = new Map(
+    (placements.preview?.kind === 'fieldsPoint' ? (placements.preview.marks ?? []) : []).map(
+      (mark) => [mark.pointId, mark] as const,
+    ),
+  );
   const eligible = new Set(placements.entryEligible);
   // Picking shows every entry it can pick, numbered; otherwise the settled entry alone, or the tie.
   const entryMark = (id: number): { readonly mark?: string } | undefined => {
@@ -107,10 +122,19 @@ export function RoomMapSpots({
         ...markers.fieldsOptionalPoints.map((point) => ['pickup', point] as const),
       ].map(([kind, point]) => {
         const occupant = placements.fieldsPoints.get(point.id);
+        const mark = occupant === undefined ? pointMarks.get(point.id) : undefined;
         return (
           <span
-            aria-label={occupant === undefined ? `Fields ${kind} point` : occupant.label}
+            aria-label={
+              occupant !== undefined
+                ? occupant.label
+                : mark === undefined
+                  ? `Fields ${kind} point`
+                  : `Fields ${kind} point ${mark.mark}`
+            }
             className="room-map-point"
+            data-dim={mark?.disabled === true || undefined}
+            data-marked={mark !== undefined || undefined}
             data-occupied={occupant !== undefined || undefined}
             data-point={kind}
             data-preview={previewed('fieldsPoint', point.id)}
@@ -119,6 +143,11 @@ export function RoomMapSpots({
             style={position(point)}
           >
             {occupantMark(occupant)}
+            {mark === undefined ? null : (
+              <span aria-hidden="true" className="room-map-number">
+                {mark.mark}
+              </span>
+            )}
           </span>
         );
       })}

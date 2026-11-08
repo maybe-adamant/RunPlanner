@@ -64,7 +64,11 @@ export function RoomMapColumn({
       : highlight?.kind === 'anchor'
         ? { kind: 'anchor' as const, id: highlight.anchorId }
         : highlight?.kind === 'fieldsPoint'
-          ? { kind: 'fieldsPoint' as const, id: highlight.pointId }
+          ? {
+              kind: 'fieldsPoint' as const,
+              ...(highlight.pointId === undefined ? {} : { id: highlight.pointId }),
+              ...(highlight.marks === undefined ? {} : { marks: highlight.marks }),
+            }
           : undefined;
   // While the gate's position is being picked, every Chaos point shows with its position.
   const chaosPoints = highlight?.kind === 'chaosPoints' ? markers.chaosPoints : [];

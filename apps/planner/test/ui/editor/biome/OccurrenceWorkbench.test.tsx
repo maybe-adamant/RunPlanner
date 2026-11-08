@@ -260,11 +260,11 @@ describe('OccurrenceWorkbench', () => {
     ).toEqual(['Room Overview', 'Room Timeline']);
     openRoomTab('Room Overview');
     const positions = screen.getByRole('region', { name: 'Layout' });
-    expect(within(positions).getAllByRole('button', { name: /^Cage \d point/ })).not.toHaveLength(
+    expect(within(positions).getAllByRole('button', { name: /^Cage \d, point / })).not.toHaveLength(
       0,
     );
     expect(
-      within(positions).getAllByRole('button', { name: /^Optional \d point/ }),
+      within(positions).getAllByRole('button', { name: /^Optional \d, point / }),
     ).not.toHaveLength(0);
     expect(positions.textContent).not.toMatch(/\b\d{5,}\b/);
   });
@@ -302,7 +302,7 @@ describe('OccurrenceWorkbench', () => {
     )!;
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
 
-    await view.user.click(screen.getByRole('button', { name: 'Cage 1 point' }));
+    await view.user.click(screen.getByRole('button', { name: /^Cage 1, point / }));
     const listbox = await screen.findByRole('listbox');
     await waitFor(() =>
       expect(within(listbox).queryByRole('option', { name: labelOf(622508) })).toBeNull(),
@@ -339,7 +339,7 @@ describe('OccurrenceWorkbench', () => {
 
     expect(
       screen
-        .getByRole('button', { name: 'Cage 2 point' })
+        .getByRole('button', { name: /^Cage 2, point / })
         .closest('[data-has-findings]')
         ?.getAttribute('data-has-findings'),
     ).toBe('true');
@@ -371,10 +371,10 @@ describe('OccurrenceWorkbench', () => {
     );
     openRoomTab('Room Overview');
 
-    await view.user.click(screen.getByRole('button', { name: 'Nemesis point' }));
+    await view.user.click(screen.getByRole('button', { name: /^Nemesis, point / }));
     await view.user.click(await screen.findByRole('button', { name: /^Unavailable/ }));
 
-    expect(screen.getByRole('option', { name: /^P4/ }).getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByRole('option', { name: /^4/ }).getAttribute('aria-disabled')).toBe('true');
   });
 
   it('chooses an entry in a room whose flip rolls, authoring the flip it needs', async () => {

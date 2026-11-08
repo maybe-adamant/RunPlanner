@@ -116,7 +116,7 @@ describe('native settings whose candidate context is unreached, on first render'
         occurrenceById(createOccurrenceId('golden-h-combat02')),
       );
       openRoomTab('Room Overview');
-      return screen.getAllByRole('button', { name: /^Cage \d point/ }) as HTMLButtonElement[];
+      return screen.getAllByRole('button', { name: /^Cage \d, point / }) as HTMLButtonElement[];
     };
     const reached = spots(createGoldenFGHIProject());
     const shown = reached.map((spot) => spot.textContent);
