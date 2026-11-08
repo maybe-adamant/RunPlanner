@@ -347,7 +347,7 @@ function rewardChipName(
 }
 
 /** A fixed door reward: the editable chip's face, read-only, its name on hover. */
-function FixedRewardChip({
+export function FixedRewardChip({
   badge,
   icon,
   name,

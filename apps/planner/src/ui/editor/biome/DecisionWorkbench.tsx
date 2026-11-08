@@ -40,7 +40,12 @@ import { CandidatePicker } from './CandidatePicker';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
 import { RoomSelector } from './RoomSelector';
 import { roomKindIcon } from './roomIcon';
-import { DoorRewardEditor, DoorRewardHiddenTag, RerolledRewardRepairs } from './DoorRewardEditor';
+import {
+  DoorRewardEditor,
+  DoorRewardHiddenTag,
+  FixedRewardChip,
+  RerolledRewardRepairs,
+} from './DoorRewardEditor';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
@@ -554,10 +559,11 @@ function AdditionalExitRow({
       {...(chaos === undefined ? {} : { mapLink: { kind: 'chaosGate' } as const })}
       reward={
         <span className="door-row-rewards">
-          <span className="row-reward-value">
-            <FixedValueChip
+          <span className="row-reward-fixed">
+            <FixedRewardChip
+              badge={undefined}
               icon={rewardIcon(control.fixedRewardType)}
-              label={control.fixedRewardLabel}
+              name={`Reward: ${control.fixedRewardLabel}`}
             />
           </span>
         </span>

@@ -420,7 +420,7 @@ describe('DecisionWorkbench', () => {
     expect(within(gate).getByRole('button', { name: 'Chaos gate room' }).textContent).toContain(
       'Chaos 01',
     );
-    expect(within(gate).getByText('Chaos Blessing')).toBeTruthy();
+    expect(within(gate).getByRole('img', { name: 'Reward: Chaos Blessing' })).toBeTruthy();
     expect(within(gate).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
     expect(within(gate).queryByRole('button', { name: 'Remove Chaos gate' })).toBeNull();
     expect(within(gate).queryByRole('button', { name: /^Reward(: |$)/ })).toBeNull();
@@ -727,13 +727,13 @@ describe('DecisionWorkbench', () => {
     expect(contract.dataset.picked).toBe('false');
     expect(within(contract).getByText('Contract')).toBeTruthy();
     expect(within(contract).getByText('Zagreus')).toBeTruthy();
-    expect(within(contract).getByText('Champion of Elysium')).toBeTruthy();
+    expect(within(contract).getByRole('img', { name: 'Reward: Champion of Elysium' })).toBeTruthy();
     expect(within(contract).queryByRole('button', { name: /Remove/ })).toBeNull();
     expect(within(contract).queryByRole('button', { name: /^Reward(: |$)/ })).toBeNull();
     expect(within(contract).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
     expect(contract.querySelector('hr')).toBeNull();
     // The contract is taken from the Leave row, which follows the doors.
-    const room = within(contract).getByText('Champion of Elysium');
+    const room = within(contract).getByRole('img', { name: 'Reward: Champion of Elysium' });
     expect(room.compareDocumentPosition(leaveRow()) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
     expect(await exitChoices()).toContain('Infernal Contract');
     await pickExit(decisionView.user, 'Infernal Contract');
