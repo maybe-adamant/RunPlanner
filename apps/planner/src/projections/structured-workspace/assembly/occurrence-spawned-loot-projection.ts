@@ -1,6 +1,11 @@
 import { roomActionKey, semanticAddressKey } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import type { RoomSpawnedLoot, SpawnMoment, SpawnedLootItem } from '@run-planner/engine/simulation';
+import type {
+  RoomSpawnedLoot,
+  SpawnMoment,
+  SpawnUnlock,
+  SpawnedLootItem,
+} from '@run-planner/engine/simulation';
 import type { WorkspaceRoomLocal } from '../contracts/locals';
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import type {
@@ -82,6 +87,7 @@ function projectItem(
   rowByKey: ReadonlyMap<string, WorkspaceRoomActionRow>,
   proposals: readonly WorkspaceRoomActionProposal[],
   roomLocal: WorkspaceRoomLocal,
+  unlocked: boolean,
 ): WorkspaceSpawnedItem {
   const actionKey = roomActionKey(item.reference);
   const row = rowByKey.get(actionKey);
@@ -113,6 +119,7 @@ function projectItem(
     hint: itemHint(item, place === undefined ? label : `${label} · ${place.label}`, row, placement),
     participation: item.participation,
     ...(place === undefined ? {} : { place }),
+    ...(item.lockedUntil === undefined || unlocked ? {} : { locked: true as const }),
     placement,
   });
 }
@@ -188,6 +195,8 @@ function spawnGroups(
   );
 }
 
+type NoticeMoment = Pick<SpawnMoment, 'kind' | 'phaseKey'>;
+
 function momentLabel(moment: SpawnMoment): string {
   return moment.kind === 'deliveryFlush' ? 'Delivered' : 'Spawned';
 }
@@ -212,7 +221,7 @@ const boundaryAt = (kind: string, phaseKey?: string) => `boundary:${kind}:${phas
  * before the boundary it precedes, by the first one present.
  */
 function momentAnchor(
-  moment: SpawnMoment,
+  moment: NoticeMoment,
   present: ReadonlySet<string>,
   rewardActionByPhase: ReadonlyMap<string, string>,
 ): { readonly placement: 'after' | 'before'; readonly identity: string } | undefined {
@@ -253,7 +262,7 @@ function momentAnchor(
 
 /**
  * Places each spawn moment's notice in the room's Timeline where the game
- * spawns it, groups each source action's spawned loot under its row, and
+ * spawns it and each unlock's where its locked loot becomes takeable, groups each source action's spawned loot under its row, and
  * marks each Sea Star copy on the row of the pickup it copies.
  */
 export function projectSpawnedLoot(
@@ -271,19 +280,39 @@ export function projectSpawnedLoot(
   if (loot === undefined)
     return { entries, actionSpawns: Object.freeze([]), copies: Object.freeze([]) };
   const rowByKey = new Map(rows.map((row) => [row.key, row]));
-  const item = (spawned: SpawnedLootItem) => projectItem(spawned, rowByKey, proposals, roomLocal);
-  const notices: SpawnedEntry[] = loot.moments.map((moment) =>
+  const item = (spawned: SpawnedLootItem) =>
+    projectItem(spawned, rowByKey, proposals, roomLocal, false);
+  const unlockedItem = (spawned: SpawnedLootItem) =>
+    projectItem(spawned, rowByKey, proposals, roomLocal, true);
+  const unlockNotice = (unlock: SpawnUnlock): SpawnedEntry =>
     Object.freeze({
       kind: 'spawned' as const,
-      key: moment.key,
-      moment: moment.kind,
-      ...(moment.phaseKey === undefined ? {} : { phaseKey: moment.phaseKey }),
-      label: momentLabel(moment),
-      groups: spawnGroups(moment.items, item, (spawned) =>
+      key: `unlock:${unlock.key}`,
+      moment: unlock.kind,
+      phaseKey: unlock.phaseKey,
+      label: 'Unlocks',
+      unlocks: true as const,
+      groups: spawnGroups(unlock.items, unlockedItem, (spawned) =>
         spawnSource(catalog, spawned, undefined),
       ),
-    }),
-  );
+    });
+  // An unlock reads before what the same moment spawns: the freed reward comes first.
+  const noticeMoments: readonly NoticeMoment[] = [...loot.unlocks, ...loot.moments];
+  const notices: SpawnedEntry[] = [
+    ...loot.unlocks.map(unlockNotice),
+    ...loot.moments.map((moment) =>
+      Object.freeze({
+        kind: 'spawned' as const,
+        key: moment.key,
+        moment: moment.kind,
+        ...(moment.phaseKey === undefined ? {} : { phaseKey: moment.phaseKey }),
+        label: momentLabel(moment),
+        groups: spawnGroups(moment.items, item, (spawned) =>
+          spawnSource(catalog, spawned, undefined),
+        ),
+      }),
+    ),
+  ];
   // A phase's wheel reward, collected before what its end effects spawn.
   const rewardActionByPhase = new Map(
     loot.moments.flatMap((moment) => {
@@ -306,7 +335,7 @@ export function projectSpawnedLoot(
   const after = new Map<string, SpawnedEntry[]>();
   const unanchored: SpawnedEntry[] = [];
   for (const [index, notice] of notices.entries()) {
-    const anchor = momentAnchor(loot.moments[index]!, present, rewardActionByPhase);
+    const anchor = momentAnchor(noticeMoments[index]!, present, rewardActionByPhase);
     if (anchor === undefined) {
       unanchored.push(notice);
       continue;

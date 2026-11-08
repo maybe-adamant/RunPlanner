@@ -599,6 +599,7 @@ export function RoomActionsWorkbench({
       key={`spawned:${entry.key}`}
       label={entry.label}
       rows={actions?.rows ?? []}
+      {...(entry.unlocks ? { unlocks: true } : {})}
     />
   );
   // The wheel opens once the phase's own actions are done: before its first offer reroll,

@@ -54,10 +54,11 @@ With the interactive map, the object pins then move onto their map objects.
 Loot that spawns before it can be taken shows in its spawn row with a lock
 badge, and an **Unlocks** row at the moment it becomes takeable lists the
 same items: Fields cage rewards (spawned on room entry, unlocked at their
-cage encounter's end), the H miniboss reward (caged at encounter start,
-unlocked at its end) and Trial (Devotion) rooms (all rewards spawned, the
-fought one unlocked by the combat). Needs the spawned-loot product to give
-each locked item the moment that unlocks it (read-only, no behaviour change).
+cage encounter's end) and the H miniboss reward (caged at encounter start,
+unlocked at its end). The spawned-loot product gives each locked item the
+unlock that frees it (read-only, no behaviour change). Trial (Devotion) rooms
+stay as the game spawns them, with no lock: the chosen boon is taken on entry
+and the spurned god's reward spawns afresh at the combat's end.
 
 ## Part 2: no automatic insertion (separate, revertible)
 

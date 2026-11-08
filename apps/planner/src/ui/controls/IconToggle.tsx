@@ -79,9 +79,13 @@ export function IconToggle({
 }
 
 /** The corner lock of a toggle that cannot change. */
-export function IconToggleLock() {
+export function IconToggleLock({
+  className = 'icon-toggle-lock',
+}: {
+  readonly className?: string;
+}) {
   return (
-    <span aria-hidden="true" className="icon-toggle-lock">
+    <span aria-hidden="true" className={className}>
       <svg viewBox="0 0 10 10">
         <path
           d="M3 4.5V3.2a2 2 0 0 1 4 0v1.3"

@@ -290,6 +290,8 @@ export interface WorkspaceSpawnedItem {
   readonly participation: 'required' | 'optional';
   /** The Fields cage or optional slot it sits in, marked on its chip. */
   readonly place?: { readonly badge: string; readonly label: string };
+  /** Spawned before it can be taken; its unlock row lists it again. */
+  readonly locked?: true;
   readonly placement:
     /** Collected in the order: its row is focused. */
     | {
@@ -419,6 +421,8 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly moment: import('@run-planner/engine/simulation').SpawnMomentKind;
       readonly phaseKey?: string;
       readonly label: string;
+      /** Lists locked loot as it becomes takeable rather than as it spawns. */
+      readonly unlocks?: true;
       readonly groups: readonly WorkspaceSpawnGroup[];
     };
 

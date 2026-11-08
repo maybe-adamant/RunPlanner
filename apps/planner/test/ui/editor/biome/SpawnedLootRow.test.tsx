@@ -16,7 +16,10 @@ import {
   loadSurfaceScheduledLifecycleCheckpoint,
   loadSurfaceShrineTravelDealCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
-import { loadNemesisPomSeaStarCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadNemesisPomSeaStarCheckpoint,
+  loadUnderworldFGHCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import { renderOccurrenceWorkbench, workspaceBiome } from '@planner-test/support/biome-workbench';
 import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
 
@@ -154,5 +157,69 @@ describe('converted and copied loot', () => {
         document.querySelector(`[data-room-action-key="${CSS.escape(roomActionKey(pickup))}"]`),
       ).not.toBeNull(),
     );
+  });
+});
+
+describe('locked loot', () => {
+  function renderRoom(
+    project: Parameters<typeof renderOccurrenceWorkbench>[0],
+    routeKey: string,
+    biomeKey: string,
+    occurrenceId: string,
+  ) {
+    const view = renderOccurrenceWorkbench(
+      project,
+      routeKey,
+      biomeKey,
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const node = workspaceBiome(view.application, routeKey, biomeKey).nodes.find(
+      (candidate): candidate is WorkspaceOccurrenceWorkbenchNode =>
+        candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === occurrenceId,
+    )!;
+    return { view, actions: node.room.roomActions! };
+  }
+  const spawnRows = (kind: 'moment' | 'unlocks') => [
+    ...document.querySelectorAll<HTMLElement>(`[data-spawned-loot="${kind}"]`),
+  ];
+  const chips = (row: HTMLElement) => within(row).getAllByRole('button');
+  const chipLocks = (row: HTMLElement) =>
+    chips(row).map((chip) => chip.hasAttribute('data-spawn-locked'));
+
+  it('locks Fields cage rewards on entry and frees each at its cage fight’s end', async () => {
+    const { view, actions } = renderRoom(
+      loadUnderworldFGHCheckpoint(),
+      'Underworld',
+      'H',
+      'golden-h-combat02',
+    );
+    const [entry] = spawnRows('moment');
+    // Two cages, then two optional rewards that are takeable at once.
+    expect(chipLocks(entry!)).toEqual([true, true, false, false]);
+    const unlocks = spawnRows('unlocks');
+    expect(unlocks.map((row) => chips(row).length)).toEqual([1, 1]);
+    for (const row of unlocks) expect(chipLocks(row)).toEqual([false]);
+    const cage = actions.rows.find(
+      (row) => row.reference.kind === 'interactLocalReward' && row.reference.slotKey === 'cage2',
+    )!;
+    await view.user.click(chips(unlocks[0]!)[0]!);
+    expect(document.activeElement?.getAttribute('data-room-action-key')).toBe(cage.key);
+  });
+
+  it('locks an H miniboss reward at its encounter start until the encounter ends', async () => {
+    const { view, actions } = renderRoom(
+      loadUnderworldFGHCheckpoint(),
+      'Underworld',
+      'H',
+      'golden-h-miniboss01',
+    );
+    expect(spawnRows('moment').map(chipLocks)).toEqual([[true]]);
+    const [unlock] = spawnRows('unlocks');
+    const reward = actions.rows.find(
+      (row) => row.reference.kind === 'interactIncomingReward' && !row.stale,
+    )!;
+    await view.user.click(chips(unlock!)[0]!);
+    expect(document.activeElement?.getAttribute('data-room-action-key')).toBe(reward.key);
   });
 });

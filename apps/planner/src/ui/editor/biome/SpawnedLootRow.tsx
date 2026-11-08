@@ -15,6 +15,7 @@ import {
   sourceFamilyIcon,
 } from '@planner/ui/artwork/roomArtwork';
 import { hintProps } from '@planner/ui/controls/hint';
+import { IconToggleLock } from '@planner/ui/controls/IconToggle';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import { useAppSelector } from '@planner/state/store';
@@ -119,6 +120,7 @@ function SpawnedItemChip({
       aria-disabled={unavailable || undefined}
       aria-label={name}
       className={copy === undefined ? 'timeline-chip' : 'timeline-chip spawn-copy-chip'}
+      data-spawn-locked={item.locked}
       data-spawn-participation={item.participation}
       data-spawn-placed={placement.kind === 'placed' || undefined}
       onClick={(event) => {
@@ -154,6 +156,7 @@ function SpawnedItemChip({
           {item.place.badge}
         </span>
       )}
+      {item.locked ? <IconToggleLock className="spawn-lock-badge" /> : null}
     </button>
   );
 }
@@ -198,18 +201,21 @@ export function SpawnedLootRow({
   label,
   rows,
   source,
+  unlocks,
 }: {
   readonly groups: readonly WorkspaceSpawnGroup[];
   readonly label: string;
   readonly rows: readonly WorkspaceRoomActionRow[];
   /** Spawned by its source action's settlement, under that action's row. */
   readonly source?: true;
+  /** Lists locked loot as it becomes takeable. */
+  readonly unlocks?: true;
 }) {
   const [announcement, setAnnouncement] = useState('');
   return (
     <TimelineRow
       aria-label={label}
-      data-spawned-loot={source ? 'action' : 'moment'}
+      data-spawned-loot={source ? 'action' : unlocks ? 'unlocks' : 'moment'}
       editors={
         <span className="timeline-chip-group spawned-loot-groups">
           {groups.map((group, index) => (

@@ -544,10 +544,17 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'spawned-fields-entry',
-    label: 'Fields room: cage and optional rewards spawned on entry',
-    shows: ['spawn notice', 'Fields slot marks'],
+    label: 'Fields room: cage rewards locked on entry, each unlocked at its cage fight’s end',
+    shows: ['spawn notice', 'Fields slot marks', 'locked loot', 'unlocks row'],
     project: loadUnderworldFGHCheckpoint,
     target: room('H', 'golden-h-combat02'),
+  },
+  {
+    id: 'spawned-h-miniboss',
+    label: 'H miniboss: reward caged at the encounter start, unlocked at its end',
+    shows: ['spawn notice', 'locked loot', 'unlocks row'],
+    project: loadUnderworldFGHCheckpoint,
+    target: room('H', 'golden-h-miniboss01'),
   },
   {
     id: 'spawned-quick-buck',

@@ -86,6 +86,8 @@ export interface SpawnedLootItem {
   readonly source: SpawnedLootSource;
   readonly participation: RoomActionParticipation;
   readonly placement: SpawnedLootPlacement;
+  /** The key of the unlock that frees it, for loot that spawns before it can be taken. */
+  readonly lockedUntil?: string;
 }
 
 export interface SpawnMoment {
@@ -94,6 +96,16 @@ export interface SpawnMoment {
   readonly kind: SpawnMomentKind;
   readonly phaseKey?: string;
   /** In the game's spawn order. */
+  readonly items: readonly SpawnedLootItem[];
+}
+
+/** The moment locked loot becomes takeable: a Fields cage's or an H miniboss's encounter end. */
+export interface SpawnUnlock {
+  /** The `lockedUntil` its items carry. */
+  readonly key: string;
+  readonly kind: 'encounterEnd';
+  readonly phaseKey: string;
+  /** The same items as their spawn moments list, in spawn order. */
   readonly items: readonly SpawnedLootItem[];
 }
 
@@ -108,6 +120,8 @@ export interface RoomSpawnedLoot {
   readonly owner: OccurrenceAddress;
   /** Moments that spawn something, in room chronology. */
   readonly moments: readonly SpawnMoment[];
+  /** Unlocks of loot spawned before it can be taken, in room chronology. */
+  readonly unlocks: readonly SpawnUnlock[];
   /** Source actions that spawn something, in roster order. */
   readonly actionSpawns: readonly ActionSpawn[];
 }
@@ -222,7 +236,11 @@ export function spawnedLootForProjectEvaluationAssembly(
   const liveRows = roster.rows.filter((row) => !row.stale);
   const rowByKey = new Map(liveRows.map((row) => [row.key, row]));
 
-  const fromRow = (row: RoomActionRow, source: SpawnedLootSource): SpawnedLootItem => {
+  const fromRow = (
+    row: RoomActionRow,
+    source: SpawnedLootSource,
+    lockedUntil?: string,
+  ): SpawnedLootItem => {
     const action = actionAddress(row.reference);
     const command = row.rank === null ? insertion(room, row, action) : undefined;
     return frozen({
@@ -237,6 +255,7 @@ export function spawnedLootForProjectEvaluationAssembly(
               kind: 'unplaced' as const,
               ...(command === undefined ? {} : { command }),
             }),
+      ...(lockedUntil === undefined ? {} : { lockedUntil }),
     });
   };
   /** A derived pickup joins its ranked row only for placement. */
@@ -312,19 +331,30 @@ export function spawnedLootForProjectEvaluationAssembly(
       ? 'afterEncounterReward'
       : 'encounterEnd';
 
+  const unlockKey = (phaseKey: string) => momentKey('encounterEnd', phaseKey);
+  const beforeCombat = (row: RoomActionRow) =>
+    row.window.kind === 'standard' && row.window.phase === 'beforeCombat';
+
   // Rewards, which each moment spawns before its other loot.
   for (const row of liveRows) {
     const reference = row.reference;
     switch (reference.kind) {
       case 'interactIncomingReward': {
-        const item = fromRow(row, { kind: 'roomReward' });
+        const roomReward = { kind: 'roomReward' } as const;
         // Roles before combat (an Opening reward, Devotion's choice) are there on entry.
-        if (row.window.kind === 'standard' && row.window.phase === 'beforeCombat')
-          add('roomEntered', undefined, item);
-        else if (startSpawnPhase !== undefined) add('encounterStart', startSpawnPhase, item);
-        else if (combatSpawnPhase !== undefined) add('duringEncounter', combatSpawnPhase, item);
-        else if (lastPhaseKey !== undefined) add('encounterEnd', lastPhaseKey, item);
-        else add('roomEntered', undefined, item);
+        if (beforeCombat(row)) add('roomEntered', undefined, fromRow(row, roomReward));
+        else if (startSpawnPhase !== undefined)
+          // An H miniboss cages its reward until the encounter ends.
+          add(
+            'encounterStart',
+            startSpawnPhase,
+            fromRow(row, roomReward, unlockKey(startSpawnPhase)),
+          );
+        else if (combatSpawnPhase !== undefined)
+          add('duringEncounter', combatSpawnPhase, fromRow(row, roomReward));
+        else if (lastPhaseKey !== undefined)
+          add('encounterEnd', lastPhaseKey, fromRow(row, roomReward));
+        else add('roomEntered', undefined, fromRow(row, roomReward));
         break;
       }
       case 'collectRequiredReward':
@@ -351,12 +381,17 @@ export function spawnedLootForProjectEvaluationAssembly(
         add(
           'roomEntered',
           undefined,
-          fromRow(row, {
-            kind: 'fieldsReward',
-            groupKey: reference.groupKey,
-            slotKey: reference.slotKey,
-            ...(cagePhaseKey === undefined ? {} : { cagePhaseKey }),
-          }),
+          fromRow(
+            row,
+            {
+              kind: 'fieldsReward',
+              groupKey: reference.groupKey,
+              slotKey: reference.slotKey,
+              ...(cagePhaseKey === undefined ? {} : { cagePhaseKey }),
+            },
+            // A cage holds its reward until its encounter ends.
+            cagePhaseKey === undefined ? undefined : unlockKey(cagePhaseKey),
+          ),
         );
         break;
       }
@@ -537,6 +572,14 @@ export function spawnedLootForProjectEvaluationAssembly(
       momentKey('afterEncounterReward', phaseKey),
     );
   const unknown = [...moments.keys()].filter((key) => !chronology.includes(key));
+  const spawnOrder = [...chronology, ...unknown].flatMap((key) => momentItems.get(key) ?? []);
+  const unlocks = phaseKeys.flatMap((phaseKey) => {
+    const key = unlockKey(phaseKey);
+    const items = spawnOrder.filter((item) => item.lockedUntil === key);
+    return items.length === 0
+      ? []
+      : [frozen({ key, kind: 'encounterEnd' as const, phaseKey, items: frozen(items) })];
+  });
   const rosterOrder = new Map(roster.rows.map((row, index) => [row.key, index]));
   return frozen({
     owner,
@@ -553,6 +596,7 @@ export function spawnedLootForProjectEvaluationAssembly(
         ];
       }),
     ),
+    unlocks: frozen(unlocks),
     actionSpawns: frozen(
       [...actionSpawns.values()]
         .sort(

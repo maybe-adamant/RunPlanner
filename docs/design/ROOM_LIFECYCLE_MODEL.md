@@ -488,7 +488,12 @@ an encounter's end spawns its due Hermes deliveries in purchase order, then
 matured clock drops such as Supply Chain's, then Heracles's bounty; in a Ship
 phase those follow the wheel reward as a separate moment. Fields cage and
 optional rewards spawn on entry, each cage marked by the phase that frees it,
-and the fourth-biome Preboss flush delivers on entry. Loot an action's
+and the fourth-biome Preboss flush delivers on entry. Loot spawned before it
+can be taken is locked until an unlock frees it: a Fields cage's reward at its
+cage encounter's end, and an H miniboss's caged reward at that encounter's
+end. The query lists each unlock with the items it frees. Devotion locks
+nothing: the chosen boon is taken on entry, both entry loots are then
+destroyed, and the spurned god's reward spawns afresh at the combat's end. Loot an action's
 settlement spawns (a boon's own drops, Echo's last reward and Gold Gold Gold
 duplicate, a Nemesis event's result, Eris's gift, a challenge switch's claim,
 the Artificer's replacement under the converted pickup, Sea Star's copy under

@@ -20,6 +20,7 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   loadSurfaceNCheckpoint,
+  loadSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNQuickBuckCheckpoint,
   loadSurfaceNShrineSideRoomDeliveryCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
@@ -82,7 +83,13 @@ function describeItem(item: SpawnedLootItem): string {
     item.placement.kind === 'placed'
       ? `#${item.placement.rank}`
       : `unplaced${item.placement.command === undefined ? '' : `:${item.placement.command.kind}`}`;
-  return `${source} ${item.participation} ${placement}`;
+  const lock = item.lockedUntil === undefined ? '' : ` locked:${item.lockedUntil}`;
+  return `${source} ${item.participation} ${placement}${lock}`;
+}
+
+/** What each unlock frees, in spawn order. */
+function unlocks(spawned: RoomSpawnedLoot) {
+  return spawned.unlocks.map((unlock) => [unlock.key, unlock.items.map(describeItem)]);
 }
 
 const pCombat03 = 'surface-p-1-1-p_combat03';
@@ -198,24 +205,53 @@ describe('spawned loot', () => {
     ).toEqual([['duringEncounter:Encounter', ['roomReward required #1']]]);
   });
 
-  it('spawns an H miniboss reward at its encounter start', () => {
-    expect(
-      moments(loot(loadUnderworldFGHCheckpoint(), 'H', 'golden-h-miniboss01').spawned),
-    ).toEqual([['encounterStart:Encounter', ['roomReward required #1']]]);
+  it('spawns an H miniboss reward caged at its encounter start, freed at its end', () => {
+    const { spawned } = loot(loadUnderworldFGHCheckpoint(), 'H', 'golden-h-miniboss01');
+    expect(moments(spawned)).toEqual([
+      ['encounterStart:Encounter', ['roomReward required #1 locked:encounterEnd:Encounter']],
+    ]);
+    expect(unlocks(spawned)).toEqual([
+      ['encounterEnd:Encounter', ['roomReward required #1 locked:encounterEnd:Encounter']],
+    ]);
   });
 
-  it('spawns Fields cage and optional rewards on entry, each cage marked', () => {
-    expect(moments(loot(loadUnderworldFGHCheckpoint(), 'H', 'golden-h-combat02').spawned)).toEqual([
+  it('spawns Fields cage and optional rewards on entry, each cage locked until its fight ends', () => {
+    const { spawned } = loot(loadUnderworldFGHCheckpoint(), 'H', 'golden-h-combat02');
+    expect(moments(spawned)).toEqual([
       [
         'roomEntered',
         [
-          'cage2@Cage02 required #2',
-          'cage1@Cage01 required #4',
+          'cage2@Cage02 required #2 locked:encounterEnd:Cage02',
+          'cage1@Cage01 required #4 locked:encounterEnd:Cage01',
           'optional1 optional unplaced:InsertRoomAction',
           'optional2 optional unplaced:InsertRoomAction',
         ],
       ],
     ]);
+    // In the order the cage fights run.
+    expect(unlocks(spawned)).toEqual([
+      ['encounterEnd:Cage02', ['cage2@Cage02 required #2 locked:encounterEnd:Cage02']],
+      ['encounterEnd:Cage01', ['cage1@Cage01 required #4 locked:encounterEnd:Cage01']],
+    ]);
+  });
+
+  it('spawns a Trial’s chosen boon on entry and its spurned boon at the fight’s end, unlocked', () => {
+    const { spawned } = loot(
+      loadSurfaceNOHermesShrineDeliveryCheckpoint(),
+      'O',
+      'surface-o-devotion',
+    );
+    expect(moments(spawned)).toEqual([
+      ['roomEntered', ['roomReward required #1']],
+      ['encounterEnd:Encounter', ['roomReward required #2', 'hermesShrineDelivery required #3']],
+    ]);
+    expect(unlocks(spawned)).toEqual([]);
+  });
+
+  it('locks nothing in an ordinary reward room', () => {
+    expect(unlocks(loot(loadSurfaceNCheckpoint(), 'N', nOccurrenceIds.opening).spawned)).toEqual(
+      [],
+    );
   });
 
   it('spawns nothing but its reward in an N side room while a delivery is pending', () => {

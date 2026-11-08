@@ -345,6 +345,7 @@ export {
   type ActionSpawn,
   type RoomSpawnedLoot,
   type SpawnMoment,
+  type SpawnUnlock,
   type SpawnMomentKind,
   type SpawnedLootItem,
   type SpawnedLootPlacement,
