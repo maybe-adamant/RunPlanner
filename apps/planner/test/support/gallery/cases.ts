@@ -978,6 +978,20 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-b5-e1'),
   },
   {
+    id: 'optional-actions-switch',
+    label: 'Optional actions: an unused challenge switch',
+    shows: ['Optional actions', 'challenge switch'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceChallengeSwitch',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b5-e1'),
+        variantKey: 'TimeChallengeSwitch_Money',
+      }),
+    ],
+    target: room('F', 'golden-f-b5-e1'),
+  },
+  {
     id: 'perfect-clear-switch',
     label: 'Unseen Sigil used, succeeding with its Nectar',
     shows: ['challenge switch outcome'],
