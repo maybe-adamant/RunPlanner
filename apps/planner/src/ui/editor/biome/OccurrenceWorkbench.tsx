@@ -321,9 +321,13 @@ export function OccurrenceWorkbench({
       : wheelPhase.wheel === undefined
         ? []
         : wheelOfferChips(wheelPhase.wheel, 'first');
-  const stepDoors = mapStageShown
-    ? stepsShown.find((candidate) => candidate.actionKey === mapStage.step)?.doors
-    : undefined;
+  // With no row marked, the Timeline shows them as the room is left; Overview as they open.
+  const stepKey = mapStageShown
+    ? mapStage.step
+    : timelineTab
+      ? stepsShown.at(-1)?.actionKey
+      : undefined;
+  const stepDoors = stepsShown.find((candidate) => candidate.actionKey === stepKey)?.doors;
   const mapChips =
     openChips === undefined || stepDoors === undefined
       ? openChips

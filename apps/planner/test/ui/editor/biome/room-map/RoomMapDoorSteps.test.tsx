@@ -39,7 +39,8 @@ function timelineRows(): HTMLElement[] {
   return [...screen.getByRole('list', { name: 'Room timeline' }).children] as HTMLElement[];
 }
 
-const doorsOpenRow = () => timelineRows().find((row) => row.hasAttribute('data-doors-open'))!;
+const doorsOpenRow = () =>
+  timelineRows().find((row) => row.matches('[data-doors-open], [data-boundary-kind="cleanup"]'))!;
 
 function mapDoor(doorIndex: number): HTMLElement {
   const map = screen
@@ -68,6 +69,8 @@ describe('room map door steps', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     await user.click(screen.getByRole('button', { name: 'Doors' }));
     await user.click(await screen.findByRole('option', { name: 'Unlock Door 2' }));
+    // With no row marked, the Timeline's map shows the doors as the room is left.
+    expect(mapDoor(2).getAttribute('data-locked')).toBeNull();
 
     await user.click(doorsOpenRow());
     expect(mapDoor(2).getAttribute('data-locked')).not.toBeNull();
