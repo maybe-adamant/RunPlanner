@@ -407,33 +407,60 @@ export interface WorkspaceFieldsOptionalRewardDescriptor {
   readonly summary: string;
 }
 
-/**
- * One physical placement row of an H Fields combat room: a slot's point, or
- * the room's entry, which its layout owns.
- */
-export type WorkspaceFieldsSpatialControl = {
+/** One H Fields slot's optional point: a cage, an optional reward or the Nemesis event. */
+export interface WorkspaceFieldsSpatialControl {
+  readonly address: FieldsSpatialAddress;
+  readonly target: FieldsSpatialTarget;
   readonly interactionKey: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly pointId: number | null;
   readonly pointChoices: readonly { readonly label: string; readonly value: number | null }[];
-} & (
-  | { readonly address: FieldsSpatialAddress; readonly target: FieldsSpatialTarget }
-  | { readonly address: RoomFeatureAddress; readonly target: { readonly kind: 'entry' } }
-);
+}
+
+/** A slot standing on a Fields point, by its short mark ("C1", "O2", "Nemesis"). */
+export interface WorkspaceFieldsSpotOccupant {
+  readonly key: string;
+  readonly badge: string;
+  readonly label: string;
+  readonly address: FieldsSpatialAddress;
+  /** Its spatial control, which says whether its points are reached. */
+  readonly interactionKey: string;
+}
+
+/**
+ * One family of Fields points as a line of spots: each spot holds the slot
+ * placed there, and each slot on no spot is left to the game.
+ */
+export interface WorkspaceFieldsSpotLine {
+  readonly kind: 'cage' | 'optional';
+  /** The room choices binding each spot choice. */
+  readonly interactionKey: string;
+  readonly spots: readonly {
+    readonly pointId: number;
+    readonly number: number;
+    readonly occupant?: WorkspaceFieldsSpotOccupant;
+    /** Each slot that can stand here, or null to empty the spot. */
+    readonly choices: readonly {
+      readonly key: string;
+      readonly occupant: WorkspaceFieldsSpotOccupant | null;
+    }[];
+  }[];
+  readonly unplaced: readonly WorkspaceFieldsSpotOccupant[];
+}
 
 export interface WorkspaceFieldsSpatialPointInteraction {
   /** Read from retained products; the positions wait on an earlier choice when false. */
   readonly contextReached: boolean;
   readonly key: string;
-  readonly owner: FieldsSpatialAddress | RoomFeatureAddress;
+  readonly owner: FieldsSpatialAddress;
   readonly selected: number | null;
   readonly choices: readonly { readonly label: string; readonly value: number | null }[];
   readonly load: () => readonly CandidateOptionProjection<number | null>[];
   readonly intentFor: (
     pointId: number | null,
   ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsSpatialPoint' | 'ReplaceRoomLayout' }>
+    Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsSpatialPoint' }>
   >;
 }
 
@@ -699,6 +726,7 @@ export type WorkspaceRoomLocal =
       readonly kind: 'fields';
       readonly cages: readonly WorkspaceFieldsCageDescriptor[];
       readonly spatial: readonly WorkspaceFieldsSpatialControl[];
+      readonly spotLines: readonly WorkspaceFieldsSpotLine[];
       readonly optionalRewardCount: number;
       readonly optionalRewardCapacity: number;
       readonly optionalRewardCountValues: readonly number[];

@@ -78,12 +78,7 @@ describe('fine-grained finding routing', () => {
     expect(() =>
       assertFineGrainedFindingDestination(action.address, withoutTab, workspace.route),
     ).toThrow(/no explicit room tab/);
-    for (const roomTab of [
-      'actions',
-      'shipCombat2Actions',
-      'shipInactiveRepair',
-      'layout',
-    ] as const) {
+    for (const roomTab of ['actions', 'shipCombat2Actions', 'shipInactiveRepair'] as const) {
       expect(() =>
         assertFineGrainedFindingDestination(
           action.address,

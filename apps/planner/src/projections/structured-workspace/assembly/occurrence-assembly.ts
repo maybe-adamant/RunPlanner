@@ -1,6 +1,7 @@
 import { normalExitOrdinal } from './ordering';
 import { assembleLockedDoors, assembleUnlockExitEncounters } from './locked-doors-assembly';
 import { assembleRoomObjectSlots } from './room-object-slots-assembly';
+import { assembleRoomLayout } from './room-layout-assembly';
 import { assembleRoomMap } from './room-map-assembly';
 import { assembleChallengeSwitch } from './challenge-switch-assembly';
 import {
@@ -88,6 +89,7 @@ import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/
 import {
   workspaceLocalDetailMarkers,
   workspaceOccurrenceOwnedMarkers,
+  workspaceRoomPlacementMarkers,
   workspaceRoomFeatureMarkers,
 } from '../navigation/marker-ownership';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
@@ -331,6 +333,10 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly roomAnchorSlots?: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomAnchorSlots | undefined;
+  /** The room's settled flip and entry with their choices; undefined while unreached. */
+  readonly roomLayout?: (
+    occurrence: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').RoomLayoutAuthoring | undefined;
   /** Whether a new Well or Pool reroll fits the run's reroll pool. */
   readonly rerollSpendAllowance?: import('../source-index').WorkspaceBiomeSource['rerollSpendAllowance'];
   /** A screen's next reroll and how far the pool at its point takes it. */
@@ -574,6 +580,14 @@ export function assembleWorkspaceOccurrence(
     address,
     product: input.roomAnchorSlots?.(address),
     switchKind: challengeSwitch?.kinds.find((kind) => kind.selected)?.kind,
+    marker: (owner) => input.markerDestinations.marker(owner),
+  });
+  const roomLayout = assembleRoomLayout({
+    address,
+    room,
+    occurrence,
+    authoring: input.roomLayout?.(address),
+    marker: (owner) => input.markerDestinations.marker(owner),
   });
   const roomMap = assembleRoomMap(input.catalog, room, occurrence);
   const lockedDoorsProduct = input.facts.detailsActive
@@ -853,6 +867,7 @@ export function assembleWorkspaceOccurrence(
     ...(erisObservation === undefined ? {} : { erisObservation }),
     ...(challengeSwitch === undefined ? {} : { challengeSwitch }),
     ...(objectSlots === undefined ? {} : { objectSlots: objectSlots.objectSlots }),
+    ...(roomLayout === undefined ? {} : { layout: roomLayout.layout }),
     ...(roomMap === undefined ? {} : { map: roomMap }),
     ...(lockedDoors === undefined ? {} : { lockedDoors: lockedDoors.lockedDoors }),
     encounterPhases,
@@ -1014,6 +1029,7 @@ export function assembleWorkspaceOccurrence(
       ...(roomSummary.resources?.map((resource) => resource.marker) ?? []),
       ...(erisObservation === undefined ? [] : [erisObservation.marker]),
       ...(challengeSwitch === undefined ? [] : [challengeSwitch.marker]),
+      ...workspaceRoomPlacementMarkers(roomSummary),
       ...(input.isEntry === true && roomLocal.kind === 'incomingReward'
         ? [roomLocal.control.marker]
         : []),
@@ -1077,12 +1093,9 @@ export function assembleWorkspaceOccurrence(
       [
         ...roomLocal.optionalRewards.map((reward) => reward.control.marker),
         roomLocal.optionalRewardCountMarker,
+        ...roomLocal.spatial.map((control) => control.marker),
       ],
       'overview',
-    );
-    input.markerDestinations.setRoomTab(
-      roomLocal.spatial.map((control) => control.marker),
-      'layout',
     );
   }
   for (const phase of encounterPhases) {
@@ -1384,6 +1397,7 @@ export function assembleWorkspaceOccurrence(
     ...(roomActions?.objectEntries === undefined ? [] : objectEntries.requirements),
     ...(lockedDoors === undefined ? [] : lockedDoors.requirements),
     ...(objectSlots === undefined ? [] : [objectSlots.requirement]),
+    ...(roomLayout === undefined ? [] : [roomLayout.requirement]),
     ...[...unlockEncounters.values()].map((encounter) =>
       Object.freeze({ kind: 'unlockExitEncounter' as const, owner: address, encounter }),
     ),

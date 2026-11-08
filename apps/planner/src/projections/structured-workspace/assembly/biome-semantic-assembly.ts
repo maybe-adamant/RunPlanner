@@ -638,6 +638,7 @@ export function assembleWorkspaceBiomeSemantics(
       screenRerollAllowance: source.screenRerollAllowance,
       roomObjectInteractions: source.roomObjectInteractions,
       roomAnchorSlots: source.roomAnchorSlots,
+      roomLayout: source.roomLayout,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
       transcendentEmbryoOutcomes: source.transcendentEmbryoOutcomes,
       fountainRarityOutcome: source.fountainRarityOutcome,

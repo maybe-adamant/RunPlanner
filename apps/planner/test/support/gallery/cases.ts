@@ -53,6 +53,7 @@ import {
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  roomLayoutAuthoringForProjectEvaluationAssembly,
   roomObjectAnchorSlotsForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type RoomAnchorObjectKind,
@@ -86,6 +87,13 @@ function placeAnchorObject(
     if (place === undefined) throw new Error(`${occurrenceId} cannot place ${kind}`);
     return place;
   };
+}
+
+/** A room's object anchors by ascending id, as the Objects line numbers them. */
+function anchorIds(gameName: string): readonly number[] {
+  return (catalog.rooms.byKey[gameName]?.mapPoints?.challengeSwitchAnchors ?? [])
+    .map((anchor) => anchor.id)
+    .sort((left, right) => left - right);
 }
 
 // The trait-order-checks F rooms carry generated ids.
@@ -538,6 +546,75 @@ export const galleryCases: readonly GalleryCase[] = [
       },
     ],
     target: room('F', 'golden-f-b4-e1'),
+  },
+  {
+    id: 'room-map-f-objects-spots',
+    overview: true,
+    label: 'F combat room: the Well stood on A2, a switch the game places',
+    shows: ['Objects spot line', 'unplaced object', 'anchor occupants on the map'],
+    project: createGoldenFGHIProject,
+    commands: [
+      placeAnchorObject('F', 'golden-f-b5-e1', 'stygianWell'),
+      (project) => ({
+        kind: 'ReplaceRoomObjectAnchor',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b5-e1'),
+        object: 'stygianWell',
+        anchorId: anchorIds('F_Combat06')[1]!,
+      }),
+      placeAnchorObject('F', 'golden-f-b5-e1', 'challengeSwitch'),
+    ],
+    target: room('F', 'golden-f-b5-e1'),
+  },
+  {
+    id: 'room-map-f-postboss-pinned',
+    overview: true,
+    label: 'F Postboss: the Well on its pinned spot, the Pool placed by the game',
+    shows: ['Objects spot line', 'pinned spot', 'unplaced object'],
+    project: createGoldenFGHIProject,
+    target: room('F', 'golden-f-preboss-shop:postboss'),
+  },
+  {
+    id: 'room-map-f-roll-entry',
+    overview: true,
+    label: 'F room whose flip rolls: each entry names the flip it needs',
+    shows: ['Orientation picker', 'Entry picker', 'entries on the map'],
+    project: createGoldenFGHIProject,
+    target: room('F', 'golden-f-b7-e1'),
+  },
+  {
+    id: 'room-map-f-roll-entry-flipped',
+    overview: true,
+    label: 'F room entered at the entry that flips it: the map mirrored',
+    shows: ['Entry chosen', 'flipped map'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => {
+        const occurrence = occurrenceAddress(project, 'F', 'golden-f-b7-e1');
+        const entry = roomLayoutAuthoringForProjectEvaluationAssembly(
+          simulateProjectAssembly(catalog, project),
+          occurrence,
+        )?.entries.find((choice) => choice.option.flipped === true);
+        if (entry === undefined) throw new Error('golden-f-b7-e1 has no entry that flips it');
+        return entry.command;
+      },
+    ],
+    target: room('F', 'golden-f-b7-e1'),
+  },
+  {
+    id: 'room-map-f-door-decided',
+    overview: true,
+    label: 'F room whose door decides its flip and entry: shown, mirrored',
+    shows: ['derived orientation', 'derived entry', 'flipped map'],
+    project: createGoldenFGHIProject,
+    target: room('F', 'golden-f-b1-e1'),
+  },
+  {
+    id: 'room-map-h-fields-spots',
+    overview: true,
+    label: 'H Fields room: cage and pickup points as spot lines',
+    shows: ['Cages spot line', 'Pickups spot line', 'Nemesis'],
+    project: loadNemesisFieldsCheckpoint,
+    target: room('H', 'golden-h-combat05'),
   },
   {
     id: 'eris',

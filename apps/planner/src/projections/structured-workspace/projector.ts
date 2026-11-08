@@ -42,6 +42,7 @@ import {
   rerollSpendAllowanceForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   roomObjectAnchorSlotsForProjectEvaluationAssembly,
+  roomLayoutAuthoringForProjectEvaluationAssembly,
   goldLedgerForProjectEvaluationAssembly,
   planEndAvailability,
   rerollSurfaceForProjectEvaluationAssembly,
@@ -387,6 +388,7 @@ export function createStructuredWorkspaceProjection(
             throw error;
           }
         },
+        (occurrence) => roomLayoutAuthoringForProjectEvaluationAssembly(assembly, occurrence),
       );
       const routeSource = sources.route;
       const authoredRoute =

@@ -51,11 +51,12 @@ describe('challenge switch rows on the room Overview', () => {
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
 
-    // An empty spot offers each switch type the room can roll.
+    // An empty spot offers each switch type the room can roll, and stands it there.
     await pick(user, 'Empty spot', /Unseen Sigil/);
     expect(hostRoom(application).challengeSwitch?.variantKey).toBe(
       'PerfectClearChallengeSwitch_Pom',
     );
+    expect(hostRoom(application).challengeSwitch?.anchorId).toBeDefined();
 
     // The switch's spot changes its type in place.
     await pick(user, 'Unseen Sigil', /Infernal Trove/);
@@ -66,7 +67,7 @@ describe('challenge switch rows on the room Overview', () => {
       }).disabled,
     ).toBe(false);
 
-    await pick(user, 'Infernal Trove', 'None');
+    await pick(user, 'Infernal Trove', 'Remove');
     expect(hostRoom(application).challengeSwitch).toBeUndefined();
     act(() => {
       application.store.dispatch(authoredProjectUndoRequested());

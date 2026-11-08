@@ -22,6 +22,7 @@ export function RoomMapViewport({
   toolbarActions,
   toolbarEnd,
   controlsPlacement = 'toolbar',
+  mirrored = false,
   viewportLegend,
   viewportOverlay,
 }: {
@@ -33,6 +34,8 @@ export function RoomMapViewport({
   readonly toolbarActions?: ReactNode;
   readonly toolbarEnd?: ReactNode;
   readonly controlsPlacement?: 'toolbar' | 'overlay' | 'collapsible-overlay';
+  /** The room is flipped: its image shows mirrored, under an overlay placed for it. */
+  readonly mirrored?: boolean;
   /** Fixed beside overlaid controls, outside the image's pan/zoom space. */
   readonly viewportOverlay?: ReactNode;
   /** Fixed in the frame's bottom-right corner, outside the image's pan/zoom space. */
@@ -277,6 +280,7 @@ export function RoomMapViewport({
           <img
             alt={`Map of ${title}`}
             className="room-map-image"
+            data-mirrored={mirrored || undefined}
             draggable={false}
             onError={() => setImageFailed(true)}
             onLoad={(event) => {

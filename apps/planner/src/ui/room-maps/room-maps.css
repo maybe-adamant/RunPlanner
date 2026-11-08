@@ -378,27 +378,6 @@
   color: #efb1b1;
 }
 
-.room-map-reference,
-.room-map-reference-reopen {
-  min-width: 0;
-}
-
-.room-map-reference {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
-}
-
-.room-map-reference > .room-map-viewport,
-.room-map-reference > .room-map-viewport > .room-map-scroll {
-  min-width: 0;
-}
-
-.room-map-reference > .room-map-viewport > .room-map-scroll {
-  height: min(30rem, calc(52 * var(--app-vh)));
-  min-height: 14rem;
-}
-
 /* A door linked to its hovered or focused row: a softer ring than the selection. */
 .hub-map-marker[data-linked='true'] {
   z-index: 2;
@@ -466,6 +445,11 @@
   object-fit: contain;
 }
 
+/* A flipped room: the game mirrors it horizontally. */
+.room-map-image[data-mirrored] {
+  transform: scaleX(-1);
+}
+
 .room-map-marker-layer {
   position: absolute;
   inset: 0;
@@ -489,14 +473,87 @@
   opacity: 0.8;
 }
 
+/* A point something stands on: the ring grows to hold its icon. */
+.room-map-point[data-occupied] {
+  display: grid;
+  width: max(3.6%, 28px);
+  place-items: center;
+  opacity: 1;
+}
+
+.room-map-point[data-occupied] > .artwork-label-icon {
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
+}
+
+/* Fields cage points ring in gold, pickup points in pale blue. */
+.room-map-point[data-point='cage'] {
+  border-color: #f2c94c;
+}
+
+.room-map-point[data-point='pickup'] {
+  border-color: #8fd3ff;
+}
+
+.room-map-point[data-preview] {
+  z-index: 3;
+  opacity: 1;
+  outline: 3px dashed #fff4c7;
+  outline-offset: 3px;
+  scale: 1.2;
+}
+
+.room-map-point > .room-map-number {
+  top: -9px;
+  left: auto;
+  right: -9px;
+  background: #4cf2c2;
+}
+
 /* An entry: Melinoë's head where she can arrive. */
 .room-map-entry {
   position: absolute;
   width: max(2.6%, 18px);
   height: auto;
   transform: translate(-50%, -50%);
-  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 80%));
   user-select: none;
+}
+
+.room-map-entry > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 80%));
+}
+
+.room-map-entry > .room-map-number {
+  top: -8px;
+  left: auto;
+  right: -12px;
+  background: #e9d8ff;
+}
+
+/* The entry she arrives at stands out; the others dim. A previewed one rings dashed. */
+.room-map-entry[data-chosen] {
+  z-index: 2;
+  width: max(3.4%, 24px);
+}
+
+.room-map-entry[data-chosen] > img {
+  filter: drop-shadow(0 0 4px #fff4c7) drop-shadow(0 1px 2px rgb(0 0 0 / 80%));
+}
+
+.room-map-entry[data-dim] {
+  opacity: 0.4;
+}
+
+.room-map-entry[data-preview] {
+  z-index: 3;
+  opacity: 1;
+  border-radius: 50%;
+  outline: 3px dashed #fff4c7;
+  outline-offset: 3px;
 }
 
 /* A door: its chip once open, a dashed ring while closed. */
@@ -615,6 +672,14 @@
 
 .room-map-legend > li[data-kind='anchor'] > .room-map-legend-swatch {
   border-color: #4cf2c2;
+}
+
+.room-map-legend > li[data-kind='cage'] > .room-map-legend-swatch {
+  border-color: #f2c94c;
+}
+
+.room-map-legend > li[data-kind='pickup'] > .room-map-legend-swatch {
+  border-color: #8fd3ff;
 }
 
 .room-map-legend-entry {

@@ -183,6 +183,10 @@ export interface WorkspaceBiomeSource {
   readonly roomAnchorSlots: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomAnchorSlots | undefined;
+  /** A room's settled flip and entry with their choices; undefined while unreached. */
+  readonly roomLayout: (
+    occurrence: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').RoomLayoutAuthoring | undefined;
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
@@ -777,6 +781,7 @@ function createWorkspaceBiomeSource(
   assessmentIssue: AssessmentIssue | undefined,
   planEnd: WorkspaceRoutePlanEndSource,
   roomAnchorSlots: WorkspaceBiomeSource['roomAnchorSlots'],
+  roomLayout: WorkspaceBiomeSource['roomLayout'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -1047,6 +1052,7 @@ function createWorkspaceBiomeSource(
     screenRerollAllowance,
     roomObjectInteractions,
     roomAnchorSlots,
+    roomLayout,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -1142,6 +1148,7 @@ export function createWorkspaceProjectSourceIndex(
     undefined,
   authoringReadiness: (owner: SemanticAddress) => AuthoringReadiness = () => 'editable',
   roomAnchorSlots: WorkspaceBiomeSource['roomAnchorSlots'] = () => undefined,
+  roomLayout: WorkspaceBiomeSource['roomLayout'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -1224,6 +1231,7 @@ export function createWorkspaceProjectSourceIndex(
             routeEvaluation?.issue,
             planEnd,
             roomAnchorSlots,
+            roomLayout,
           ),
         ),
       ),

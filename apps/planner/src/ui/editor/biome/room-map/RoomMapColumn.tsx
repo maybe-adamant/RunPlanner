@@ -5,7 +5,12 @@ import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import { DoorChipFace } from '../DecisionWorkbench';
 import type { DoorChip } from '../doorSummary';
-import { RoomMapNumber, RoomMapLegend, RoomMapSpots } from './RoomMapPoints';
+import {
+  RoomMapNumber,
+  RoomMapLegend,
+  RoomMapSpots,
+  type RoomMapPlacements,
+} from './RoomMapPoints';
 import { useRoomMapHighlight } from './roomMapHighlight';
 import { position } from './roomMapPosition';
 
@@ -19,15 +24,24 @@ export type RoomMapStage = 'closed' | 'open' | 'left' | 'summary';
 const chipName = (chip: DoorChip): string =>
   chip.locked === true ? `${chip.label} · Locked` : chip.label;
 
-/** The room's map beside its controls: its doors, Chaos gate, entries and anchors. */
+/**
+ * The room's map beside its controls: its doors, Chaos gate, entries, anchors
+ * and Fields points, mirrored when the room is flipped.
+ */
 export function RoomMapColumn({
   chips = [],
+  flipped = false,
   gameName,
   map,
+  placements,
   roomIdentity,
   stage,
   title,
 }: {
+  /** The room's settled flip; a previewed flip or entry shows its own. */
+  readonly flipped?: boolean | undefined;
+  /** What stands on the room's points as planned. */
+  readonly placements?: Omit<RoomMapPlacements, 'preview'> | undefined;
   /** The room's doors as its Timeline shows them. */
   readonly chips?: readonly DoorChip[] | undefined;
   readonly gameName: string;
@@ -40,7 +54,22 @@ export function RoomMapColumn({
   const highlight = useRoomMapHighlight();
   const calibration = roomMapCalibrations[gameName];
   if (calibration === undefined) return null;
-  const markers = roomMapMarkers(map, calibration);
+  // A previewed flip, or the flip a previewed entry sets, shows the room that way.
+  const shownFlip =
+    highlight?.kind === 'flip' && highlight.flipped !== undefined
+      ? highlight.flipped
+      : highlight?.kind === 'entry' && highlight.flipped !== undefined
+        ? highlight.flipped
+        : flipped;
+  const markers = roomMapMarkers(map, calibration, shownFlip);
+  const preview =
+    highlight?.kind === 'entry' && highlight.pointId !== undefined
+      ? { kind: 'entry' as const, id: highlight.pointId }
+      : highlight?.kind === 'anchor'
+        ? { kind: 'anchor' as const, id: highlight.anchorId }
+        : highlight?.kind === 'fieldsPoint'
+          ? { kind: 'fieldsPoint' as const, id: highlight.pointId }
+          : undefined;
   // While the gate's position is being picked, every Chaos point shows with its position.
   const chaosPoints = highlight?.kind === 'chaosPoints' ? markers.chaosPoints : [];
   const previewedChaosPoint =
@@ -62,9 +91,15 @@ export function RoomMapColumn({
         asset={roomMapAssetFor(gameName)}
         controlsPlacement="collapsible-overlay"
         key={roomIdentity}
+        mirrored={shownFlip}
         overlay={
           <div aria-label={`${title} map points`} className="room-map-marker-layer" role="group">
-            <RoomMapSpots markers={markers} />
+            <RoomMapSpots
+              markers={markers}
+              {...(placements === undefined
+                ? {}
+                : { placements: { ...placements, ...(preview === undefined ? {} : { preview }) } })}
+            />
             {chaosPoints.map((point, index) =>
               point.id === markers.chaosGate?.id ? null : (
                 <span

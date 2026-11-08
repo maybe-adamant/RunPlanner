@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   createEncounterPhaseAddress,
-  createOccurrenceAddress,
   createRouteStartKeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
 import {
@@ -11,7 +10,6 @@ import {
   createGoldenFGHIProject,
   createIncomingRewardAddress,
   createOccurrenceId,
-  goldenHBiome,
   loadSurfaceNOPQProject,
   nBiome,
   nOccurrenceId,
@@ -139,7 +137,7 @@ describe('structured workspace composer assembly', () => {
     ).toBe(ordinary.assembly.node.key);
   });
 
-  it('routes H Fields placement markers to Layout and keeps Timeline unchanged', () => {
+  it('routes H Fields placement markers to Overview and lines each family up by point', () => {
     const project = createGoldenFGHIProject();
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const result = assemble(project, 'Underworld', 'H', occurrenceId);
@@ -149,26 +147,26 @@ describe('structured workspace composer assembly', () => {
       expect(result.markers.destinations().get(control.marker.focusKey)).toMatchObject({
         focusAddress: control.address,
         nodeKey: result.assembly.node.key,
-        roomTab: 'layout',
+        roomTab: 'overview',
       });
     }
-    const entry = room.roomLocal.spatial.find((control) => control.target.kind === 'entry');
-    if (entry === undefined) throw new Error('H Fields entry placement is missing');
-    const replacement = entry.pointChoices.find(
-      (choice) => choice.value !== null && choice.value !== entry.pointId,
-    );
-    if (replacement?.value == null) throw new Error('H Fields alternate entry is missing');
+    const cageLine = room.roomLocal.spotLines.find((line) => line.kind === 'cage');
+    if (cageLine === undefined) throw new Error('H Fields cage line is missing');
+    const cage = room.roomLocal.spatial.find((control) => control.target.kind === 'cage')!;
+    const spot = cageLine.spots.find((candidate) => candidate.occupant === undefined)!;
     const edited = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceRoomLayout',
-      occurrence: createOccurrenceAddress(goldenHBiome, occurrenceId),
-      layout: { entryStartPointId: replacement.value },
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: cage.address,
+      pointId: spot.pointId,
     });
     const editedRoom = assemble(edited, 'Underworld', 'H', occurrenceId).assembly.node.room;
     expect(editedRoom.roomActions?.timeline.entries).toEqual(room.roomActions?.timeline.entries);
     if (editedRoom.roomLocal.kind !== 'fields') throw new Error('edited H Fields room is missing');
+    const editedLine = editedRoom.roomLocal.spotLines.find((line) => line.kind === 'cage')!;
     expect(
-      editedRoom.roomLocal.spatial.find((control) => control.target.kind === 'entry')?.pointId,
-    ).toBe(replacement.value);
+      editedLine.spots.find((candidate) => candidate.pointId === spot.pointId)?.occupant,
+    ).toMatchObject({ key: cage.interactionKey, badge: 'C1' });
+    expect(editedLine.unplaced.map((occupant) => occupant.key)).not.toContain(cage.interactionKey);
   });
 
   it('routes H Passive selection and combat customization to Overview', () => {
@@ -232,7 +230,7 @@ describe('structured workspace composer assembly', () => {
     }
   });
 
-  it('publishes an active Nemesis placement on Layout and hides it when dormant', () => {
+  it('publishes an active Nemesis placement on the Overview pickup line and hides it when dormant', () => {
     const active = assemble(
       loadNemesisFieldsCheckpoint(),
       'Underworld',
@@ -245,8 +243,14 @@ describe('structured workspace composer assembly', () => {
     expect(nemesis).toBeDefined();
     expect(nemesis?.pointChoices.map((choice) => choice.label)).toContain('Optional Point 1');
     expect(active.markers.destinations().get(nemesis!.marker.focusKey)).toMatchObject({
-      roomTab: 'layout',
+      roomTab: 'overview',
     });
+    const pickups = activeFields.spotLines.find((line) => line.kind === 'optional')!;
+    expect(
+      [...pickups.spots.flatMap((spot) => spot.occupant ?? []), ...pickups.unplaced].map(
+        (occupant) => occupant.badge,
+      ),
+    ).toContain('N');
 
     const dormant = assemble(
       createGoldenFGHIProject(),

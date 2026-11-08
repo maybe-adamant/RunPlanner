@@ -40,7 +40,7 @@ describe('Fresh File retained Postboss controls', () => {
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
     await view.user.click(screen.getByRole('button', { name: 'Stygian Well' }));
-    await view.user.click(screen.getByRole('option', { name: 'None' }));
+    await view.user.click(screen.getByRole('option', { name: 'Remove' }));
     expect(postbossOccurrence(view.application)?.stygianWell).toBeUndefined();
 
     // The Pool has no Interact gate: its slots stay editable.

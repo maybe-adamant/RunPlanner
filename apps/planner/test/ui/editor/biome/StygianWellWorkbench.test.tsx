@@ -111,8 +111,8 @@ describe('Stygian Well workbench', () => {
   it('keeps forced presence fixed on its spot with its slots always editable', () => {
     renderOccurrenceWorkbench(loadUnderworldFGProject(), 'Underworld', 'F', occurrence);
     openOverview();
-    // An always-present Well is named on its spot, with nothing to pick.
-    expect(screen.queryByRole('button', { name: 'Empty spot' })).toBeNull();
+    // An always-present Well is named on its pinned spot, with nothing to pick.
+    expect(screen.queryByRole('button', { name: 'Stygian Well' })).toBeNull();
     expect(screen.getByRole('img', { name: 'Stygian Well' })).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);

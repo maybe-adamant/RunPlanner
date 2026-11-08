@@ -94,6 +94,23 @@ export function workspaceRoomFeatureMarkers(
   );
 }
 
+/** The room's flip, entry and object anchors: Overview controls. */
+export function workspaceRoomPlacementMarkers(
+  room: Pick<WorkspaceRoomSummary, 'layout' | 'objectSlots'>,
+): readonly WorkspaceMarker[] {
+  return Object.freeze([
+    ...(room.layout === undefined ? [] : [room.layout.flip.marker, room.layout.entry.marker]),
+    ...(room.objectSlots === undefined
+      ? []
+      : [
+          ...room.objectSlots.spots.flatMap((spot) =>
+            spot.occupant === undefined ? [] : [spot.occupant.anchorMarker],
+          ),
+          ...room.objectSlots.unplaced.map((occupant) => occupant.anchorMarker),
+        ]),
+  ]);
+}
+
 /**
  * Exact occurrence owners may be nested in a decision workbench, but they
  * retain one shared marker package for containment routing.
@@ -151,6 +168,7 @@ export function workspaceOccurrenceOwnedMarkers(
     ...(room.resources?.map((resource) => resource.marker) ?? []),
     ...(room.erisObservation === undefined ? [] : [room.erisObservation.marker]),
     ...(room.challengeSwitch === undefined ? [] : [room.challengeSwitch.marker]),
+    ...workspaceRoomPlacementMarkers(room),
     ...workspaceRoomFeatureMarkers(room.workbench.features),
     ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),
   ]);

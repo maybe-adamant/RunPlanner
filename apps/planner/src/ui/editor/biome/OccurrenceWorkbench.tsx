@@ -30,7 +30,6 @@ import { RoomActionsWorkbench, type TimelineBoundaryContent } from './Occurrence
 import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomKindIcon } from './roomIcon';
-import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 import { SideRoomsWorkbench } from './locals/SideRoomsWorkbench';
 import { TimelineLegend } from './TimelineLegend';
 import type { TimelineDoors, TimelineDoorsContent } from './TimelineDoors';
@@ -38,6 +37,7 @@ import { createRouteAddress } from '@run-planner/engine/authored-project';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapColumn, type RoomMapStage } from './room-map/RoomMapColumn';
 import { RoomMapHighlightScope } from './room-map/RoomMapHighlightScope';
+import { roomMapPlacements, settledLayoutValue } from './room-map/roomMapPlacements';
 
 /**
  * The map's stage for a Timeline row: before Doors open the doors are closed,
@@ -204,7 +204,6 @@ export function OccurrenceWorkbench({
   const tabOrder: WorkspaceRoomTab[] = [
     'overview',
     ...(localVisit === undefined ? [] : (['sideRooms'] as const)),
-    ...(room.workbench.kind === 'fields' ? (['layout'] as const) : []),
     ...(room.workbench.kind === 'ship'
       ? room.workbench.phases.map((phase) => phase.tab)
       : ['actions' as const]),
@@ -310,8 +309,10 @@ export function OccurrenceWorkbench({
             </div>
             <RoomMapColumn
               chips={timelineDoors?.summary?.chips}
+              flipped={room.layout === undefined ? false : settledLayoutValue(room.layout.flip)}
               gameName={room.gameName}
               map={room.map}
+              placements={roomMapPlacements(room)}
               roomIdentity={roomIdentity}
               stage={shownMapStage}
               title={room.label}
@@ -399,9 +400,6 @@ export function OccurrenceWorkbench({
         >
           {tabButton('overview', 'Room Overview', undefined, 'Overview')}
           {localVisit === undefined ? null : tabButton('sideRooms', 'Side Rooms')}
-          {room.workbench.kind === 'fields'
-            ? tabButton('layout', 'Room Layout', undefined, 'Layout')
-            : null}
           {room.workbench.kind === 'ship'
             ? // Each Ship phase is one Timeline tab, named by its phase.
               room.workbench.phases.map((phase) =>
@@ -448,14 +446,6 @@ export function OccurrenceWorkbench({
                 : { selectedSlotKey: initialSideRoomSlotKey })}
               title={room.label}
               {...(findingNavigationRevision === undefined ? {} : { findingNavigationRevision })}
-            />
-          ) : activeTab === 'layout' && room.workbench.kind === 'fields' ? (
-            <FieldsLayoutWorkbench
-              gameName={room.gameName}
-              hostId={roomIdentity}
-              interactions={interactions}
-              room={room.workbench.fields}
-              title={room.label}
             />
           ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (
             <RoomActionsWorkbench

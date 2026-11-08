@@ -4,7 +4,7 @@ import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type {
   WorkspaceRoomObjectChoice,
   WorkspaceRoomObjectEntryInteraction,
-  WorkspaceRoomObjectSlotsInteraction,
+  WorkspaceRoomChoicesInteraction,
 } from '../contracts/features';
 import type {
   WorkspaceOccurrenceInteractionRequirement,
@@ -77,12 +77,12 @@ function bindEntry(requirement: EntryRequirement): WorkspaceRoomObjectEntryInter
   });
 }
 
-type SlotsRequirement = Extract<
+type ChoicesRequirement = Extract<
   WorkspaceOccurrenceInteractionRequirement,
-  { readonly kind: 'roomObjectSlots' }
+  { readonly kind: 'roomChoices' }
 >;
 
-function bindSlots(requirement: SlotsRequirement): WorkspaceRoomObjectSlotsInteraction {
+function bindChoices(requirement: ChoicesRequirement): WorkspaceRoomChoicesInteraction {
   return Object.freeze({
     key: requirement.interactionKey,
     owner: requirement.owner,
@@ -97,22 +97,22 @@ function bindSlots(requirement: SlotsRequirement): WorkspaceRoomObjectSlotsInter
   });
 }
 
-/** Binds each World Shop, Hermes Shrine and Pedestal entry, and each room's anchor slots. */
+/** Binds each World Shop, Hermes Shrine and Pedestal entry, and each room's keyed placement choices. */
 export function bindRoomObjectInteractions(
   requirements: Iterable<WorkspaceOccurrenceInteractionRequirement>,
 ): {
   readonly roomObjectEntries: ReadonlyMap<string, WorkspaceRoomObjectEntryInteraction>;
-  readonly roomObjectSlots: ReadonlyMap<string, WorkspaceRoomObjectSlotsInteraction>;
+  readonly roomChoices: ReadonlyMap<string, WorkspaceRoomChoicesInteraction>;
 } {
   const roomObjectEntries = new Map<string, WorkspaceRoomObjectEntryInteraction>();
-  const roomObjectSlots = new Map<string, WorkspaceRoomObjectSlotsInteraction>();
+  const roomChoices = new Map<string, WorkspaceRoomChoicesInteraction>();
   for (const requirement of requirements) {
-    if (requirement.kind === 'roomObjectSlots') {
-      if (roomObjectSlots.has(requirement.interactionKey))
+    if (requirement.kind === 'roomChoices') {
+      if (roomChoices.has(requirement.interactionKey))
         throw new StructuredWorkspaceProjectionContractError(
-          `${requirement.interactionKey} has multiple bound anchor slots`,
+          `${requirement.interactionKey} has multiple bound room choices`,
         );
-      roomObjectSlots.set(requirement.interactionKey, bindSlots(requirement));
+      roomChoices.set(requirement.interactionKey, bindChoices(requirement));
       continue;
     }
     if (requirement.kind !== 'roomObjectActions') continue;
@@ -122,5 +122,5 @@ export function bindRoomObjectInteractions(
       );
     roomObjectEntries.set(requirement.interactionKey, bindEntry(requirement));
   }
-  return Object.freeze({ roomObjectEntries, roomObjectSlots });
+  return Object.freeze({ roomObjectEntries, roomChoices });
 }

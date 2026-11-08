@@ -11,12 +11,18 @@ import {
 
 /**
  * What the room's map previews for the control being worked on: one door by
- * its number, the Chaos gate, or every Chaos point with one position previewed.
+ * its number, the Chaos gate, every Chaos point with one position previewed,
+ * an entry (with the flip choosing it sets), the room flipped one way, an
+ * object anchor, or a Fields point.
  */
 export type RoomMapHighlight =
   | { readonly kind: 'door'; readonly doorIndex: number }
   | { readonly kind: 'chaosGate' }
-  | { readonly kind: 'chaosPoints'; readonly position?: number | undefined };
+  | { readonly kind: 'chaosPoints'; readonly position?: number | undefined }
+  | { readonly kind: 'entry'; readonly pointId?: number; readonly flipped?: boolean | undefined }
+  | { readonly kind: 'flip'; readonly flipped?: boolean }
+  | { readonly kind: 'anchor'; readonly anchorId: number }
+  | { readonly kind: 'fieldsPoint'; readonly pointId: number };
 
 export interface RoomMapHighlightActions {
   readonly show: (highlight: RoomMapHighlight) => void;
@@ -30,16 +36,37 @@ export const RoomMapHighlightChannel = createContext<RoomMapHighlightActions | u
 );
 
 // One picker's preview stays one owner while its highlighted position moves.
-export const highlightOwner = (highlight: RoomMapHighlight): string =>
-  highlight.kind === 'door' ? `door:${highlight.doorIndex}` : highlight.kind;
+export const highlightOwner = (highlight: RoomMapHighlight): string => {
+  switch (highlight.kind) {
+    case 'door':
+      return `door:${highlight.doorIndex}`;
+    case 'anchor':
+      return `anchor:${highlight.anchorId}`;
+    case 'fieldsPoint':
+      return `fieldsPoint:${highlight.pointId}`;
+    case 'chaosGate':
+    case 'chaosPoints':
+    case 'entry':
+    case 'flip':
+      return highlight.kind;
+  }
+};
 
 export const sameHighlight = (
   left: RoomMapHighlight | undefined,
   right: RoomMapHighlight,
 ): boolean =>
-  left !== undefined &&
-  highlightOwner(left) === highlightOwner(right) &&
-  (left.kind !== 'chaosPoints' || right.kind !== 'chaosPoints' || left.position === right.position);
+  left !== undefined && highlightOwner(left) === highlightOwner(right) && sameDetail(left, right);
+
+/** The previewed position within one owner: a Chaos point, an entry or a flip. */
+function sameDetail(left: RoomMapHighlight, right: RoomMapHighlight): boolean {
+  if (left.kind === 'chaosPoints' && right.kind === 'chaosPoints')
+    return left.position === right.position;
+  if (left.kind === 'entry' && right.kind === 'entry')
+    return left.pointId === right.pointId && left.flipped === right.flipped;
+  if (left.kind === 'flip' && right.kind === 'flip') return left.flipped === right.flipped;
+  return true;
+}
 
 /** The map's current preview; none outside a room workbench with a map. */
 export function useRoomMapHighlight(): RoomMapHighlight | undefined {

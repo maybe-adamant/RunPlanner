@@ -19,6 +19,8 @@ const map: WorkspaceRoomMap = {
   entries: [],
   anchors: [],
   chaosPoints: [],
+  fieldsCagePoints: [],
+  fieldsOptionalPoints: [],
 };
 
 const chips: readonly DoorChip[] = [

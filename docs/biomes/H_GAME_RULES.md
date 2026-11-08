@@ -250,14 +250,14 @@ Fields source may omit that action and leave the replacement behind. Several
 conversions may therefore precede every generated replacement acquisition,
 all within the same room chronology.
 
-The editor preserves three distinct occurrence views plus the doors on the
+The editor preserves two distinct occurrence views plus the doors on the
 Timeline. The source room's Doors open row authors the outgoing decision and
 projects each target's active cage reward group.
 Room Overview authors every phase's encounter and composition, optional reward
-identities/count and Nemesis activation.
-Room Layout is the sole editor for player entry and physical cage, optional,
-and Nemesis assignments; reward and event identities shown there are read-only
-context. Room Timeline retains the single mixed action chronology and brackets
+identities/count and Nemesis activation, and, in its Layout section, the
+room's entry and the physical cage, optional and Nemesis points as spot lines;
+reward and event identities shown on the spots are read-only context. Room
+Timeline retains the single mixed action chronology and brackets
 each ranked active `completeFieldsCage` with the exact ordinal Start/End
 boundaries. An unranked retained cage is repair work, not an active encounter
 cycle. These views reference the same occurrence-owned leaves without creating

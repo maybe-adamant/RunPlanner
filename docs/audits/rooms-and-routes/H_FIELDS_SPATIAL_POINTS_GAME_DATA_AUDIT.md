@@ -413,11 +413,11 @@ derives activation and uniqueness from the existing logical cage prefix,
 optional prefix, and Passive encounter rather than introducing a second room
 chronology.
 
-The Room Layout editor is the single mutation surface for these placements.
-It shows cage rewards, optional rewards, and Nemesis identity as read-only
-context while their existing Overview, Doors, and Timeline authorities remain
-unchanged. Candidate legality and project findings share one engine assessment,
-and exact findings navigate to the corresponding Layout control.
+The Overview's Layout spot lines are the single mutation surface for these
+placements. They show cage rewards, optional rewards, and Nemesis identity as
+read-only context while their existing Overview, Doors, and Timeline
+authorities remain unchanged. Candidate legality and project findings share one
+engine assessment, and exact findings navigate to the corresponding spot.
 
 No existing logical slot was reinterpreted as a physical location:
 

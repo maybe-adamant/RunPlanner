@@ -376,9 +376,10 @@ or child ownership moves to a composite editor.
 
 The application publishes one closed occurrence-presentation union rather than
 a generic room-details disclosure. Standard, Fields, and Shop occurrences
-render Room Overview and Room Timeline; Fields adds Room Layout,
-which edits the spawn-point placement of the entry, cages, optionals and
-Nemesis beside the room map. Overview contains read-only
+render Room Overview and Room Timeline. Overview's Layout section shows each
+room's flip and entry as the engine settles them, picking them where the game
+rolls, and, in Fields, the cage, optional and Nemesis points as spot lines;
+its Objects line stands each object on a physical anchor. Overview contains read-only
 incoming context and meaningful room-local setup: Fields identities, World
 Shop inventory, and Room features, whose Shrine and Well inventories likewise
 hold only their fixed slots (a Shrine slot shows its item and the delay rolled
@@ -578,7 +579,8 @@ occurrence. Exact semantic focus overrides it: setup and fixed-slot purchase
 markers and encounter identity and customization owners open Overview, Travel
 Deal refill markers, Fig Leaf, Gorgon, Aetos and Nemesis-response owners and
 action owners open the matching Room Timeline tab,
-inactive Ship actions open repair, Fields spawn-point owners open Room Layout,
+inactive Ship actions open repair, Fields spawn-point and room layout owners
+open Overview,
 door owners open the Timeline with its doors open, and the exit selection its
 Leave row. The
 application publishes that closed destination; React does not parse addresses

@@ -2,7 +2,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import { requireRewardWheelAttachment } from './occurrence-reward-assembly';
 import { type WorkspaceRoomSummary } from '../contract';
-import type { WorkspaceEncounterPhase } from '../contracts/locals';
+import type { WorkspaceEncounterPhase, WorkspaceFieldsSpotOccupant } from '../contracts/locals';
 import { workspaceRewardStoreLabel } from './reward-labels';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 
@@ -83,6 +83,34 @@ export function occurrenceInteractionRequirements(
         ),
       }),
     );
+    // A spot's choice places its slot there, first emptying the point of its occupant.
+    for (const line of room.roomLocal.spotLines)
+      requirements.push(
+        Object.freeze({
+          kind: 'roomChoices' as const,
+          owner: room.address,
+          interactionKey: line.interactionKey,
+          choices: Object.freeze(
+            line.spots.flatMap((spot) =>
+              spot.choices.map((choice) => {
+                const point = (spatial: WorkspaceFieldsSpotOccupant, pointId: number | null) =>
+                  Object.freeze({
+                    kind: 'ReplaceFieldsSpatialPoint' as const,
+                    spatial: spatial.address,
+                    pointId,
+                  });
+                return Object.freeze({
+                  key: choice.key,
+                  commands: Object.freeze([
+                    ...(spot.occupant === undefined ? [] : [point(spot.occupant, null)]),
+                    ...(choice.occupant === null ? [] : [point(choice.occupant, spot.pointId)]),
+                  ]),
+                });
+              }),
+            ),
+          ),
+        }),
+      );
   }
   const topLevelEncounterRequirement = encounterPhaseInteractionRequirement(
     room.address,

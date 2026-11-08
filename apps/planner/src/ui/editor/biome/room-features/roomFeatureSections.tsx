@@ -8,6 +8,7 @@ import type { RoomOverviewSectionContent } from '../RoomOverviewSections';
 import { ErisSpawnControl } from './ErisSpawnControl';
 import { RoomResourceControls } from './ResourceControls';
 import { RoomObjectSlots } from './RoomObjectSlots';
+import { RoomLayoutControls } from '../room-layout/RoomLayoutControls';
 import {
   RoomFeatureSection,
   type RoomFeatureGroup,
@@ -80,7 +81,10 @@ export function roomFeatureSections({
   readonly features: readonly WorkspaceRoomFeature[];
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: WorkspaceRoomSummary;
-}): Pick<RoomOverviewSectionContent, 'additionalExits' | 'objects' | 'resources' | 'npcs'> {
+}): Pick<
+  RoomOverviewSectionContent,
+  'layout' | 'additionalExits' | 'objects' | 'resources' | 'npcs'
+> {
   const additionalExits = features.filter(
     (
       feature,
@@ -91,7 +95,19 @@ export function roomFeatureSections({
     group === undefined ? undefined : (
       <RoomFeatureSection group={group} interactions={interactions} />
     );
+  const hasLayout =
+    room.layout !== undefined ||
+    (room.roomLocal.kind === 'fields' && room.roomLocal.spotLines.length > 0);
   return {
+    layout: hasLayout
+      ? section(
+          contentGroup(
+            'Layout',
+            'Layout',
+            <RoomLayoutControls interactions={interactions} room={room} />,
+          ),
+        )
+      : undefined,
     additionalExits: section(featureGroup('Additional Exits', additionalExits)),
     objects: section(objectsGroup(features, interactions, room)),
     resources:

@@ -112,8 +112,8 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly options: readonly WorkspaceRoomObjectActionRequirement[];
     }
   | {
-      /** A room's challenge switch anchor slots: each choice's commands, applied as one edit. */
-      readonly kind: 'roomObjectSlots';
+      /** A room's keyed placement choices: each choice's commands, applied as one edit. */
+      readonly kind: 'roomChoices';
       readonly owner: OccurrenceAddress;
       readonly interactionKey: string;
       readonly choices: readonly {
@@ -475,7 +475,7 @@ function occurrenceInteractionRequirementKey(
     requirement.kind === 'featureRollSlots' ||
     requirement.kind === 'featureRollActions' ||
     requirement.kind === 'roomObjectActions' ||
-    requirement.kind === 'roomObjectSlots'
+    requirement.kind === 'roomChoices'
   )
     return `${requirement.kind}:${requirement.interactionKey}`;
   if (requirement.kind === 'unlockExitEncounter')

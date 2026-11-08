@@ -107,23 +107,22 @@ describe('native settings whose candidate context is unreached, on first render'
     expect(waiting.checked).toBe(checked);
   });
 
-  it('disables Fields positions with the waiting title and keeps the chosen point', () => {
-    const positions = (project: ProjectDocument) => {
+  it('disables Fields spots and the room layout with the waiting title, keeping what they show', () => {
+    const spots = (project: ProjectDocument) => {
       renderOccurrenceWorkbench(
         project,
         'Underworld',
         'H',
         occurrenceById(createOccurrenceId('golden-h-combat02')),
       );
-      openRoomTab('Room Layout');
-      return screen.getAllByRole('radiogroup', { name: /position$/ })[0]!;
+      openRoomTab('Room Overview');
+      return screen.getAllByRole('button', { name: /^Cage point \d/ }) as HTMLButtonElement[];
     };
-    const reached = positions(createGoldenFGHIProject());
-    const radios = () => [...reached.querySelectorAll('input')] as HTMLInputElement[];
-    const chosen = radios().findIndex((radio) => radio.checked);
-    expect(radios().some((radio) => !radio.disabled)).toBe(true);
+    const reached = spots(createGoldenFGHIProject());
+    const shown = reached.map((spot) => spot.textContent);
+    expect(reached.some((spot) => !spot.disabled)).toBe(true);
     cleanup();
-    const waiting = positions(
+    const waiting = spots(
       withInvalidEncounter(
         createGoldenFGHIProject(),
         goldenFBiome.routeKey,
@@ -132,10 +131,16 @@ describe('native settings whose candidate context is unreached, on first render'
         'ArtemisCombatF',
       ),
     );
-    const waitingRadios = () => [...waiting.querySelectorAll('input')] as HTMLInputElement[];
-    expect(waitingRadios().every((radio) => radio.disabled)).toBe(true);
-    expect(waitingRadios().every((radio) => hintOf(radio) === waitingTitle)).toBe(true);
-    expect(waitingRadios().findIndex((radio) => radio.checked)).toBe(chosen);
+    expect(waiting.every((spot) => spot.disabled)).toBe(true);
+    expect(waiting.every((spot) => hintOf(spot.closest('[data-hint]')) === waitingTitle)).toBe(
+      true,
+    );
+    expect(waiting.map((spot) => spot.textContent)).toEqual(shown);
+    for (const name of ['Orientation', 'Entry']) {
+      const control = screen.getByRole('button', { name: new RegExp(`^${name}`) });
+      expect((control as HTMLButtonElement).disabled).toBe(true);
+      expect(hintOf(control.closest('[data-hint]'))).toBe(waitingTitle);
+    }
   });
 
   it('keeps a reward wheel reached at its own frontier and withholds one past the stop', () => {

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 /** The one Overview section order shared by every room kind. */
 const roomOverviewSectionOrder = [
+  'layout',
   'encounters',
   'contents',
   'additionalExits',

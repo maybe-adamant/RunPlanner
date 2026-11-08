@@ -1,6 +1,5 @@
 import {
   createBiomeAddress,
-  createOccurrenceAddress,
   createNemesisRandomEventAddress,
   createRoomActionAddress,
   NEMESIS_BET_OUTCOMES,
@@ -10,7 +9,6 @@ import {
   type AuthoredNemesisBetOutcome,
   type AuthoredNemesisRandomEventKind,
   type AuthoredNemesisRandomEventOutcome,
-  type FieldsSpatialAddress,
   type OccurrenceId,
   type SideRoomGeneration,
 } from '@run-planner/engine/authored-project';
@@ -359,44 +357,7 @@ export function bindOccurrenceLocalInteractions(
                 number | null
               >[]
             | undefined;
-          if (control.target.kind === 'entry') {
-            // The room's entry belongs to its layout: the engine's candidate names the whole edit.
-            const occurrence = createOccurrenceAddress(
-              createBiomeAddress(control.address.routeKey, control.address.biomeKey),
-              control.address.occurrenceId,
-            );
-            fieldsSpatialPoints.set(
-              control.interactionKey,
-              Object.freeze({
-                choices: control.pointChoices,
-                contextReached: candidates.contextReached({ kind: 'roomLayoutEntry', occurrence }),
-                intentFor: (pointId: number | null) => {
-                  const evaluation = candidates.roomLayoutEntry(occurrence, pointId).evaluation;
-                  return Object.freeze({
-                    command:
-                      evaluation.kind === 'roomLayoutEntry'
-                        ? evaluation.result.command
-                        : Object.freeze({
-                            kind: 'ReplaceRoomLayout' as const,
-                            occurrence,
-                            layout: Object.freeze(
-                              pointId === null ? {} : { entryStartPointId: pointId },
-                            ),
-                          }),
-                  });
-                },
-                key: control.interactionKey,
-                load: () =>
-                  (options ??= control.pointChoices.map((choice) =>
-                    candidates.roomLayoutEntry(occurrence, choice.value),
-                  )),
-                owner: control.address,
-                selected: control.pointId,
-              }),
-            );
-            continue;
-          }
-          const spatial = control.address as FieldsSpatialAddress;
+          const spatial = control.address;
           fieldsSpatialPoints.set(
             control.interactionKey,
             Object.freeze({

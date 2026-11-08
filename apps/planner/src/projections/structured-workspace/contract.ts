@@ -33,12 +33,15 @@ export type {
   WorkspaceRoomObjectSlots,
   WorkspaceRoomMap,
   WorkspaceRoomMapPoint,
-  WorkspaceRoomObjectSlotsInteraction,
+  WorkspaceRoomChoicesInteraction,
+  WorkspaceRoomLayout,
+  WorkspaceRoomLayoutControl,
   WorkspaceAnchorObject,
   WorkspaceAnchorObjectLock,
   WorkspaceAnchorOccupant,
-  WorkspaceAnchorSlot,
-  WorkspaceAnchorSlotChoice,
+  WorkspaceAnchorSpot,
+  WorkspaceAnchorSpotAction,
+  WorkspaceAnchorSpotChoice,
   WorkspaceZagreusContractControl,
   WorkspaceZagreusSpawnControl,
 } from './contracts/features';
@@ -57,6 +60,8 @@ export type {
   WorkspaceFieldsOptionalRewardDescriptor,
   WorkspaceFieldsSpatialControl,
   WorkspaceFieldsSpatialPointInteraction,
+  WorkspaceFieldsSpotLine,
+  WorkspaceFieldsSpotOccupant,
   WorkspaceErisObservationInteraction,
   WorkspaceFigLeafInteraction,
   WorkspaceGorgonConditionInteraction,
@@ -444,10 +449,10 @@ export interface WorkspaceInteractionCatalog {
     string,
     import('./contracts/features').WorkspaceRoomObjectEntryInteraction
   >;
-  /** Each room's challenge switch anchor slots. */
-  readonly roomObjectSlots: ReadonlyMap<
+  /** Each room's keyed placement choices: object anchors, layout and Fields points. */
+  readonly roomChoices: ReadonlyMap<
     string,
-    import('./contracts/features').WorkspaceRoomObjectSlotsInteraction
+    import('./contracts/features').WorkspaceRoomChoicesInteraction
   >;
   /** Each Well or Pool reroll's slot pins. */
   readonly featureRollSlots: ReadonlyMap<
@@ -640,6 +645,8 @@ export interface WorkspaceRoomSummary {
   readonly address: OccurrenceAddress;
   /** The room's challenge switch anchors and the objects on them. */
   readonly objectSlots?: import('./contracts/features').WorkspaceRoomObjectSlots;
+  /** The room's flip and entry; absent for a room without map points. */
+  readonly layout?: import('./contracts/features').WorkspaceRoomLayout;
   /** The room's map points, where the catalog declares them. */
   readonly map?: import('./contracts/features').WorkspaceRoomMap;
   readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreControl;

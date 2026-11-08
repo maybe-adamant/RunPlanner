@@ -153,162 +153,6 @@
   border-top: 0;
 }
 
-.fields-layout-editor {
-  display: grid;
-  gap: 12px;
-  container: fields-layout / inline-size;
-  padding: 12px 14px;
-  border: 1px solid #34353e;
-  border-radius: 10px;
-  background: rgb(10 11 14 / 35%);
-}
-
-.fields-layout-reference-layout {
-  display: grid;
-  grid-template-columns: minmax(20rem, 3fr) minmax(0, 7fr);
-  gap: 12px;
-  min-width: 0;
-}
-
-.fields-layout-controls {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  min-width: 0;
-}
-
-@container fields-layout (width > 64rem) {
-  .fields-layout-reference-layout > .room-map-reference {
-    position: sticky;
-    top: 12px;
-    align-self: start;
-  }
-
-  .fields-layout-reference-layout > .room-map-reference > .room-map-viewport > .room-map-scroll {
-    min-height: 0;
-    max-height: max(8rem, calc(100 * var(--app-vh) - 22rem));
-  }
-}
-
-.fields-layout-controls .local-reward-heading.fields-layout-heading,
-.fields-layout-controls .fields-layout-row {
-  grid-template-columns: minmax(6rem, 0.8fr) minmax(0, 1.2fr);
-}
-
-.fields-layout-reference-layout:has(.room-map-reference-reopen) {
-  display: flex;
-  flex-direction: column;
-}
-
-.fields-layout-reference-layout > .room-map-reference-reopen {
-  order: -1;
-}
-
-.fields-layout-group {
-  display: grid;
-  gap: 6px;
-}
-
-.fields-layout-group h5 {
-  margin: 0;
-  color: #c8b8d8;
-  font-size: 0.76rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.local-reward-heading.fields-layout-heading,
-.fields-layout-row {
-  display: grid;
-  grid-template-columns: minmax(9rem, 1fr) minmax(12rem, 1fr);
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.fields-layout-heading {
-  min-height: 32px;
-  margin-bottom: 0;
-  padding: 0 8px;
-}
-
-.fields-layout-heading h4:last-child {
-  padding-left: 5px;
-}
-
-.fields-layout-row {
-  padding: 5px 7px;
-  border: 1px solid #34353e;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 2%);
-}
-
-.fields-layout-context {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  color: #e3dde8;
-}
-
-.fields-layout-context-detail {
-  overflow: hidden;
-  color: #99939f;
-  font-size: 0.76rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fields-layout-positions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 12px;
-  min-width: 0;
-  padding: 5px;
-  border-radius: 6px;
-}
-
-.fields-layout-position {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #aaa7af;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.fields-layout-position input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--selection-accent);
-}
-
-.fields-layout-position:has(input:disabled) {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-@container app-viewport (max-width: 700px) {
-  .fields-layout-controls .local-reward-heading.fields-layout-heading {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .fields-layout-controls .fields-layout-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@container fields-layout (max-width: 64rem) {
-  .fields-layout-reference-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .fields-layout-reference-layout > .room-map-reference {
-    order: -1;
-  }
-}
-
 .room-overview-slot > :is(.room-structure-workbench, .shop-editor, .fields-room-editor),
 .room-overview-workbench > .ephyra-side-editor {
   margin-top: 0;
@@ -3540,6 +3384,70 @@ span.hub-board-status-line {
 
 .room-object-slots .room-object-fixed {
   margin-block: 2px;
+}
+
+/* Present objects on no authored spot: the game places them, after the spots. */
+.room-object-unplaced {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-left: 14px;
+  border-left: 1px solid rgb(255 255 255 / 14%);
+}
+
+.room-object-unplaced-label {
+  color: #9d99a4;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+/* A spot nothing can change keeps its mark like a chip does. */
+.placement-spot {
+  display: inline-flex;
+}
+
+.placement-spot-fixed {
+  position: relative;
+}
+
+/*
+ * The room's layout: orientation and entry, then the Fields point lines. Its
+ * labels take the whole label column, so its values share the other pickers' x.
+ */
+.room-layout-controls {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.room-layout-row {
+  display: grid;
+  grid-template-columns: var(--overview-label-width, 5.6rem) minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--overview-column-gap, 10px);
+  min-height: 30px;
+}
+
+.room-layout-row > .room-object-spots {
+  align-items: center;
+}
+
+.room-layout-label {
+  overflow: hidden;
+  color: #9d99a4;
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-layout-row > .contextual-picker {
+  justify-self: start;
+}
+
+.room-layout-detail {
+  color: #9d99a4;
 }
 
 /* A room with a calibrated map: its controls beside the map, the map below them when narrow. */

@@ -141,7 +141,10 @@ describe('occurrence room facts', () => {
     expect(dormant.node.room.roomLocal.kind).toBe('shop');
     if (dormant.node.room.roomLocal.kind !== 'shop') throw new Error('dormant Shop is missing');
     expect(dormant.node.room.roomLocal.materialized).toBe(false);
-    expect(dormant.occurrenceInteractionRequirements).toHaveLength(0);
+    // Only the room's layout choices remain, waiting on its entry.
+    expect(
+      dormant.occurrenceInteractionRequirements.map((requirement) => requirement.kind),
+    ).toEqual(['roomChoices']);
   });
 
   it('projects a reached Gold duplicate as one supplemental row and ordered peer pickup', () => {

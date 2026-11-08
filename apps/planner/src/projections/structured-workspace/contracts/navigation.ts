@@ -10,7 +10,6 @@ import type { WorkspaceAssessment } from '../contract';
 export type WorkspaceRoomTab =
   | 'overview'
   | 'sideRooms'
-  | 'layout'
   | 'actions'
   | 'shipIntroActions'
   | 'shipCombat1Actions'

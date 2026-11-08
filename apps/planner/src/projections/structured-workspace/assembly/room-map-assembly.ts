@@ -50,6 +50,8 @@ export function assembleRoomMap(
     entries: Object.freeze(points.heroStarts.map(point)),
     anchors: Object.freeze(points.challengeSwitchAnchors.map(point)),
     chaosPoints: Object.freeze(points.secretPoints.map(point)),
+    fieldsCagePoints: Object.freeze((points.fieldsCagePoints ?? []).map(point)),
+    fieldsOptionalPoints: Object.freeze((points.fieldsOptionalPoints ?? []).map(point)),
     ...(chaosGate === undefined ? {} : { chaosGate: point(chaosGate) }),
   });
 }

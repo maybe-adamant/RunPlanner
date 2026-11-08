@@ -736,13 +736,20 @@ describe('Hermes Shrine workbench', () => {
     });
   });
 
-  it('keeps forced Shrine inventory visible and non-removable', () => {
+  it('keeps forced Shrine inventory visible and non-removable', async () => {
     const postbossId = `surface-o-preboss:postboss`;
-    renderOccurrenceWorkbench(loadSurfaceNOProject(), 'Surface', 'O', occurrence(postbossId));
+    const view = renderOccurrenceWorkbench(
+      loadSurfaceNOProject(),
+      'Surface',
+      'O',
+      occurrence(postbossId),
+    );
     openOverview();
-    // An always-present Shrine is named on its spot, with nothing to pick.
-    expect(screen.queryByRole('button', { name: 'Empty spot' })).toBeNull();
-    expect(screen.getByRole('img', { name: 'Hermes Shrine' })).toBeTruthy();
+    // An always-present Shrine the game places offers only spots to stand it on.
+    await view.user.click(screen.getByRole('button', { name: 'Hermes Shrine' }));
+    expect(screen.getAllByRole('option').map((option) => option.textContent?.trim())).not.toContain(
+      'Remove',
+    );
     expect(
       screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
     ).toHaveLength(3);

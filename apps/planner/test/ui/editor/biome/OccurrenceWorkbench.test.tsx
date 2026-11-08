@@ -32,7 +32,6 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
   goldenHBiome,
-  loadNemesisFieldsCheckpoint,
   replaceNemesisRandomEventInteraction,
 } from '@run-planner/test-fixtures/underworld';
 import {
@@ -238,7 +237,7 @@ describe('OccurrenceWorkbench', () => {
     expectBefore(standardEnd, within(standardActions).getByLabelText('Doors open'));
   });
 
-  it('gives H Fields a dedicated Layout tab without changing the Timeline surface', () => {
+  it('lines H Fields points up on the Overview, with no Layout tab', () => {
     renderStaticOccurrenceWorkbench(
       createGoldenFGHIProject(),
       'Underworld',
@@ -249,168 +248,84 @@ describe('OccurrenceWorkbench', () => {
     // Tabs show short names; their accessible names stay the full ones.
     expect(
       screen.getAllByRole('tab').map((tab) => tab.getAttribute('aria-label') ?? tab.textContent),
-    ).toEqual(['Room Overview', 'Room Layout', 'Room Timeline']);
-    openRoomTab('Room Layout');
-    const layout = screen.getByRole('region', { name: 'Fields Layout' });
-    expect(within(layout).getByRole('heading', { name: 'Position' })).toBeTruthy();
-    expect(within(layout).getByText('Entry')).toBeTruthy();
-    expect(within(layout).getByRole('heading', { name: 'Cage placements' })).toBeTruthy();
-    expect(within(layout).getByRole('heading', { name: 'Optional pickups' })).toBeTruthy();
-    expect(within(layout).queryByRole('heading', { name: 'Nemesis' })).toBeNull();
-    expect(within(layout).getByRole('radio', { name: 'Entry 1' })).toBeTruthy();
-    expect(within(layout).getAllByRole('radio', { name: 'Cage Point 1' })).not.toHaveLength(0);
-    expect(within(layout).getAllByRole('radio', { name: 'Optional Point 1' })).not.toHaveLength(0);
+    ).toEqual(['Room Overview', 'Room Timeline']);
+    openRoomTab('Room Overview');
+    const layout = screen.getByRole('heading', { name: 'Layout' }).closest('section')!;
+    expect(within(layout).getByText('Cages')).toBeTruthy();
+    expect(within(layout).getByText('Pickups')).toBeTruthy();
+    expect(within(layout).getAllByRole('button', { name: /^Cage point \d/ })).not.toHaveLength(0);
+    expect(within(layout).getAllByRole('button', { name: /^Pickup point \d/ })).not.toHaveLength(0);
     expect(layout.textContent).not.toMatch(/\b\d{5,}\b/);
-
-    openRoomTab('Room Timeline');
-    expect(screen.getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
-    expect(screen.queryByRole('region', { name: 'Fields Layout' })).toBeNull();
   });
 
-  it('does not add the H Fields Layout tab to ordinary rooms', () => {
-    renderStaticOccurrenceWorkbench(
-      createGoldenFGHIProject(),
-      'Underworld',
-      'F',
-      occurrenceById(goldenFOccurrenceId(1, 1)),
-    );
-
-    expect(screen.queryByRole('tab', { name: 'Room Layout' })).toBeNull();
-    expect(screen.queryByRole('region', { name: 'Fields Layout' })).toBeNull();
-  });
-
-  it('edits an entry point through its candidate-backed Layout control', async () => {
+  it('stands a cage on a point as one edit, taking the point from its occupant', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
+    let project = createGoldenFGHIProject();
+    for (const [index, pointId] of [621502, 622508].entries())
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFieldsSpatialPoint',
+        spatial: createFieldsSpatialAddress(occurrence, {
+          kind: 'cage',
+          slotKey: `cage${index + 1}`,
+        }),
+        pointId,
+      });
     const view = renderOccurrenceWorkbench(
-      createGoldenFGHIProject(),
+      project,
       'Underworld',
       'H',
       occurrenceById(occurrenceId),
     );
-    openRoomTab('Room Layout');
-    const point = screen.getByRole('radiogroup', { name: 'Entry position' });
-    const alternate = within(point).getByRole('radio', { name: 'Entry 2' });
-
-    await view.user.click(alternate);
-
-    expect((alternate as HTMLInputElement).checked).toBe(true);
-  });
-
-  it('keeps the H Fields reference open across position edits and resets it for room replacement', async () => {
-    const occurrenceId = createOccurrenceId('golden-h-combat02');
-    const view = renderOccurrenceWorkbench(
-      createGoldenFGHIProject(),
-      'Underworld',
-      'H',
-      occurrenceById(occurrenceId),
-    );
-    openRoomTab('Room Layout');
+    openRoomTab('Room Overview');
+    const room = occurrenceById(occurrenceId)(
+      workspaceBiome(view.application, 'Underworld', 'H'),
+    )!.room;
+    if (room.roomLocal.kind !== 'fields') throw new Error('H Fields room is missing');
+    const held = room.roomLocal.spotLines
+      .find((line) => line.kind === 'cage')!
+      .spots.find((spot) => spot.pointId === 622508)!;
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    const reference = screen.getByRole('complementary', { name: 'Combat 02 map reference' });
-    const point = screen.getByRole('radiogroup', { name: 'Entry position' });
-    const alternate = within(point).getByRole('radio', { name: 'Entry 2' });
 
-    expect(within(reference).getByText('100%')).toBeTruthy();
-    await view.user.click(within(reference).getByRole('button', { name: 'Zoom in' }));
-    await view.user.click(alternate);
+    await view.user.click(screen.getByRole('button', { name: `Cage point ${held.number}` }));
+    await view.user.click(screen.getByRole('option', { name: 'Cage 1' }));
 
-    expect((alternate as HTMLInputElement).checked).toBe(true);
-    expect(screen.getByRole('complementary', { name: 'Combat 02 map reference' })).toBeTruthy();
-    expect(within(screen.getByRole('complementary')).getByText('125%')).toBeTruthy();
+    const spatial = () => {
+      const present = view.application.store.getState().projectWorkspace.history!.present;
+      const edited = present.route.biomes
+        .find((biome) => biome.biomeKey === 'H')!
+        .topology!.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)!;
+      if (!('spatial' in edited.state)) throw new Error('H Fields state is missing');
+      return edited.state.spatial;
+    };
+    expect(spatial().cagePointIdBySlot.cage1).toBe(622508);
+    expect(spatial().cagePointIdBySlot.cage2 ?? null).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
-
-    await act(async () => {
-      view.application.store.dispatch(authoredProjectUndoRequested());
-    });
-    expect((screen.getByRole('radio', { name: 'Entry 1' }) as HTMLInputElement).checked).toBe(true);
-    expect(within(screen.getByRole('complementary')).getByText('125%')).toBeTruthy();
-
-    await act(async () => {
-      view.application.store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ReplaceOccurrenceRoom',
-          occurrence: createOccurrenceAddress(goldenHBiome, occurrenceId),
-          gameName: 'H_Combat03',
-        }),
-      );
-    });
-    expect(screen.getByRole('complementary', { name: 'Combat 03 map reference' })).toBeTruthy();
-    expect(within(screen.getByRole('complementary')).getByText('100%')).toBeTruthy();
   });
 
-  it('shows a duplicate placement finding on its exact Layout row', () => {
+  it('marks a duplicate placement on the slot its point cannot show', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat05');
     const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
-    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
-      kind: 'ReplaceFieldsSpatialPoint',
-      spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage1' }),
-      pointId: 573087,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceFieldsSpatialPoint',
-      spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage2' }),
-      pointId: 573087,
-    });
+    let project = createGoldenFGHIProject();
+    for (const slotKey of ['cage1', 'cage2'])
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFieldsSpatialPoint',
+        spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey }),
+        pointId: 573087,
+      });
     renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(occurrenceId));
-    openRoomTab('Room Layout');
-    const row = screen.getByText('Cage 2').closest('.fields-layout-row');
-    if (!(row instanceof HTMLElement)) throw new Error('Cage 2 Layout row is missing');
+    openRoomTab('Room Overview');
 
     expect(
-      within(row)
-        .getByRole('radiogroup', { name: 'Cage 2 position' })
+      screen
+        .getByRole('img', { name: 'Cage 2, placed by the game' })
         .getAttribute('data-has-findings'),
     ).toBe('true');
   });
 
-  it.each([
-    ['cage', 'Cage', [621502, 622508]],
-    ['optional', 'Optional', [572849, 622840]],
-  ] as const)(
-    'reverses two %s placements through a repairable conflict',
-    async (kind, label, points) => {
-      const occurrenceId = createOccurrenceId('golden-h-combat02');
-      const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
-      let project = createGoldenFGHIProject();
-      for (const [index, pointId] of points.entries())
-        project = applyProjectCommand(project, catalog, {
-          kind: 'ReplaceFieldsSpatialPoint',
-          spatial: createFieldsSpatialAddress(occurrence, { kind, slotKey: `${kind}${index + 1}` }),
-          pointId,
-        });
-      const view = renderOccurrenceWorkbench(
-        project,
-        'Underworld',
-        'H',
-        occurrenceById(occurrenceId),
-      );
-      openRoomTab('Room Layout');
-      const group = (index: number) =>
-        screen.getByRole('radiogroup', { name: `${label} ${index} position` });
-      const point = (row: number, index: number) =>
-        within(group(row)).getByRole('radio', {
-          name: `${label} Point ${index}`,
-        }) as HTMLInputElement;
-
-      await view.user.click(point(1, 2));
-
-      expect(point(1, 2).checked).toBe(true);
-      expect(point(2, 2).checked).toBe(true);
-      expect(group(1).getAttribute('data-has-findings')).toBe('true');
-      expect(group(2).getAttribute('data-has-findings')).toBe('true');
-
-      await view.user.click(point(2, 1));
-
-      expect(point(1, 2).checked).toBe(true);
-      expect(point(2, 1).checked).toBe(true);
-      expect(group(1).getAttribute('data-has-findings')).toBe('false');
-      expect(group(2).getAttribute('data-has-findings')).toBe('false');
-    },
-  );
-
-  it('keeps the Nemesis source-excluded position disabled', async () => {
+  it('keeps the Nemesis off a pickup point its source excludes', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat04');
     const phase = createEncounterPhaseAddress(
       goldenHBiome,
@@ -434,38 +349,37 @@ describe('OccurrenceWorkbench', () => {
       'H',
       occurrenceById(occurrenceId),
     );
-    openRoomTab('Room Layout');
-    const group = screen.getByRole('radiogroup', { name: 'Nemesis position' });
-    const excluded = within(group).getByRole('radio', {
-      name: 'Optional Point 4',
-    }) as HTMLInputElement;
+    openRoomTab('Room Overview');
+    expect(screen.getAllByRole('button', { name: /^Pickup point \d/ })).toHaveLength(7);
 
-    await view.user.click(excluded);
+    await view.user.click(screen.getByRole('button', { name: 'Pickup point 4' }));
+    await view.user.click(screen.getByRole('button', { name: /^Unavailable/ }));
 
-    expect(excluded.disabled).toBe(true);
-    expect(excluded.checked).toBe(false);
-    expect(within(group).getAllByRole('radio')).toHaveLength(7);
+    expect(screen.getByRole('option', { name: /Nemesis/ }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
   });
 
-  it('adds the active Nemesis placement to Layout without moving its Overview authoring', () => {
-    renderStaticOccurrenceWorkbench(
-      loadNemesisFieldsCheckpoint(),
+  it('chooses an entry in a room whose flip rolls, authoring the flip it needs', async () => {
+    const occurrenceId = goldenFOccurrenceId(7, 1);
+    const view = renderOccurrenceWorkbench(
+      createGoldenFGHIProject(),
       'Underworld',
-      'H',
-      occurrenceById(createOccurrenceId('golden-h-combat05')),
+      'F',
+      occurrenceById(occurrenceId),
     );
-
-    const overview = screen.getByRole('tab', { name: 'Room Overview' });
     openRoomTab('Room Overview');
-    expect(
-      within(screen.getByLabelText('Encounter structure')).getByRole('button', { name: 'Passive' })
-        .textContent,
-    ).toContain('Nemesis event');
-    openRoomTab('Room Layout');
-    const layout = screen.getByRole('region', { name: 'Fields Layout' });
-    expect(within(layout).getByRole('heading', { name: 'Nemesis' })).toBeTruthy();
-    expect(within(layout).getAllByRole('radio', { name: 'Optional Point 1' })).not.toHaveLength(0);
-    expect(overview.getAttribute('aria-selected')).toBe('false');
+
+    await view.user.click(screen.getByRole('button', { name: /^Entry/ }));
+    await view.user.click(screen.getByRole('option', { name: /· Flipped$/ }));
+
+    const present = view.application.store.getState().projectWorkspace.history!.present;
+    const edited = present.route.biomes
+      .find((biome) => biome.biomeKey === 'F')!
+      .topology!.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)!;
+    expect(edited.layout).toMatchObject({ flipped: true });
+    expect(edited.layout?.entryStartPointId).toBeDefined();
+    expect(screen.getByRole('button', { name: /^Orientation/ }).textContent).toContain('Flipped');
   });
 
   it.each([
