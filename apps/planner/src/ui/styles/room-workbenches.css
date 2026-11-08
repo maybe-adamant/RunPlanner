@@ -1678,10 +1678,6 @@
   border: 0;
 }
 
-.fields-cage-order {
-  padding-left: var(--timeline-title-x);
-}
-
 /* Pools are grouped by a light heading, not another box. */
 .room-action-optional-pool,
 .room-action-repairs {
@@ -3229,14 +3225,21 @@ span.hub-board-status-line {
   line-height: 0;
 }
 
+/*
+ * The Combat order header: one Timeline row's height, its label where row titles
+ * start, its chips where banner decisions start, and no more gap than between rows.
+ */
 .fields-cage-order {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  min-height: 35px;
+  align-items: center;
+  column-gap: 14px;
+  margin-bottom: -8px;
+  padding-left: var(--timeline-title-x);
 }
 
 .fields-cage-order-label {
-  min-height: 30px;
+  min-width: var(--timeline-banner-title-width);
   display: inline-flex;
   align-items: center;
   color: var(--muted);
@@ -3244,6 +3247,30 @@ span.hub-board-status-line {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.fields-cage-order-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Header chips take the Timeline's control height, the cage's number inside the chip. */
+.fields-cage-order-chips .contextual-picker-trigger.timeline-chip {
+  width: var(--timeline-control-height);
+  min-width: var(--timeline-control-height);
+  height: var(--timeline-control-height);
+  min-height: var(--timeline-control-height);
+}
+
+.fields-cage-order-chips .timeline-chip-badge {
+  right: 0;
+  bottom: 0;
+  min-width: 0;
+  padding: 0 2px;
+  border-radius: 4px;
+  font-size: 0.56rem;
+  line-height: 11px;
 }
 
 /* Slot chips keep their own width; the Overview's label-column layout does not apply. */

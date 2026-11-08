@@ -7,7 +7,6 @@ import { declaredChoicesPicker } from '@planner/projections/contextual/contextua
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
 
 function ordinal(position: number): string {
   const tens = position % 100;
@@ -25,7 +24,7 @@ function ordinal(position: number): string {
 }
 
 /**
- * The cages in clear order, one chip per clear. Picking a cage for a clear swaps it with the
+ * The cages in clear order, one chip per clear, as a header on the Timeline's row rhythm. Picking a cage for a clear swaps it with the
  * clear that had it; until every clear has a cage the order stays local.
  */
 export function FieldsCageOrderControl({
@@ -72,44 +71,43 @@ export function FieldsCageOrderControl({
       <span aria-hidden="true" className="fields-cage-order-label">
         Combat Order
       </span>
-      <NumberedSlots label="Combat order">
+      <span aria-label="Combat order" className="fields-cage-order-chips" role="group">
         {shown.map((phaseKey, index) => {
           const choice = control.choices.find((candidate) => candidate.phaseKey === phaseKey);
           const cleared = `Cleared ${ordinal(index + 1)}`;
           return (
-            <span className="numbered-slot" key={index}>
-              <ContextualPicker
-                ariaLabel={choice === undefined ? cleared : `${cleared}: ${choice.fullLabel}`}
-                locked={intentFor === undefined}
-                {...(control.unavailableReason !== undefined
-                  ? { disabledHint: control.unavailableReason }
-                  : {})}
-                id={`${id}-${index + 1}`}
-                itemIcon={(item) => {
-                  const offer = control.choices.find(
-                    (candidate) => candidate.phaseKey === item.value,
-                  )?.offer;
-                  return offer === undefined ? undefined : offerIcon(offer);
-                }}
-                label=""
-                layout="inline"
-                model={declaredChoicesPicker(items, phaseKey ?? undefined)}
-                onSelect={(selected) => choose(index, selected)}
-                placeholder="Choose cage"
-                searchable={false}
-                {...(choice === undefined
-                  ? {}
-                  : {
-                      triggerBadge: `C${choice.slot}`,
-                      triggerIcon: choice.offer === undefined ? undefined : offerIcon(choice.offer),
-                      triggerLabel: choice.fullLabel,
-                    })}
-                triggerSize="icon"
-              />
-            </span>
+            <ContextualPicker
+              ariaLabel={choice === undefined ? cleared : `${cleared}: ${choice.fullLabel}`}
+              locked={intentFor === undefined}
+              {...(control.unavailableReason !== undefined
+                ? { disabledHint: control.unavailableReason }
+                : {})}
+              id={`${id}-${index + 1}`}
+              itemIcon={(item) => {
+                const offer = control.choices.find(
+                  (candidate) => candidate.phaseKey === item.value,
+                )?.offer;
+                return offer === undefined ? undefined : offerIcon(offer);
+              }}
+              label=""
+              layout="inline"
+              model={declaredChoicesPicker(items, phaseKey ?? undefined)}
+              onSelect={(selected) => choose(index, selected)}
+              placeholder="Choose cage"
+              searchable={false}
+              {...(choice === undefined
+                ? {}
+                : {
+                    triggerBadge: `C${choice.slot}`,
+                    triggerIcon: choice.offer === undefined ? undefined : offerIcon(choice.offer),
+                    triggerLabel: choice.fullLabel,
+                  })}
+              key={index}
+              triggerSize="icon"
+            />
           );
         })}
-      </NumberedSlots>
+      </span>
     </div>
   );
 }
