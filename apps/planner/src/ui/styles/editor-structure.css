@@ -1501,10 +1501,11 @@ select {
 }
 
 /*
- * Panels narrower than the widest one-line table (a Chaos Gate row with its blessing) give
- * each exit two lines: identity and room, then reward and actions.
+ * Panels narrower than the widest one-line table (a Chaos Gate row with its blessing, which
+ * cannot narrow) give each exit two lines: identity and room, then reward and actions. The
+ * room column's fixed width holds every table on one line.
  */
-@container door-workbench (max-width: 32rem) {
+@container door-workbench (max-width: 33rem) {
   .door-rows,
   .door-rows[data-columns='offer'] {
     width: 100%;

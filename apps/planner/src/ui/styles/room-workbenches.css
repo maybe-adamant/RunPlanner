@@ -3485,14 +3485,15 @@ span.hub-board-status-line {
 }
 
 /*
- * The controls grow to the widest row they hold (a Leave room row with its door chips,
- * measured with `npm run gallery:measure-columns`), the map takes the rest and never
- * narrows past its minimum; where the controls would fall below a typical Timeline row,
- * the two stack.
+ * The controls take one fixed width, the widest row they hold (a door table with its
+ * Chaos Gate and blessing on one line, measured with `npm run gallery:measure-columns`)
+ * and a small margin; the map takes the rest and never narrows past its minimum, the
+ * controls giving way first; where they would fall below a typical Timeline row, the two
+ * stack.
  */
 .room-map-columns {
   display: grid;
-  grid-template-columns: minmax(0, 38rem) minmax(26rem, 1fr);
+  grid-template-columns: minmax(0, 36rem) minmax(26rem, 1fr);
   align-items: start;
   gap: 16px;
 }
