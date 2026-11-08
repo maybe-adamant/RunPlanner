@@ -387,19 +387,14 @@ the relative shape and point relationships directly visible. Screenshot pixel
 positions are properties of a replaceable visual asset and crop, not facts to
 persist as part of a run outcome.
 
-## Non-authoritative visual captures
+## Visual captures
 
-A non-versioned working capture set was observed at
-`%USERPROFILE%\Desktop\Hades\Maps\Field`. It contains all 15 H
-combat rooms plus Boss, Bridge, Miniboss, and Preboss captures. Every file is a
-2560 by 1440 WebP; the complete set is approximately 5.9 MiB.
-
-`H_Combat01` currently has top and bottom captures, and `H_Combat05` has left
-and right captures. The remaining H combat rooms have one capture each. These
-images establish that a static whole-room visual is practical, but they are
-not game-data authority. Their crops, stitching, incidental actors, and marker
-pixel positions may be replaced without changing the source point inventory
-or an authored assignment.
+The planner's H room maps are clean in-game captures, four of them
+(`H_Combat01`, `H_Combat04`, `H_Combat05`, `H_Combat06`) stitched from tiles.
+Each image carries a calibration from its capture camera that places the
+catalog's world points on it. The images are not game-data authority: their
+crops, stitching and incidental actors may be replaced without changing the
+source point inventory or an authored assignment.
 
 ## Current planner contact
 
@@ -414,7 +409,7 @@ optional prefix, and Passive encounter rather than introducing a second room
 chronology.
 
 The Overview's Layout spot lines are the single mutation surface for these
-placements. They show cage rewards, optional rewards, and Nemesis identity as
+placements; the room map beside them draws each point with its occupant. They show cage rewards, optional rewards, and Nemesis identity as
 read-only context while their existing Overview, Doors, and Timeline
 authorities remain unchanged. Candidate legality and project findings share one
 engine assessment, and exact findings navigate to the corresponding spot.
@@ -447,11 +442,8 @@ chronology. The durable semantic facts are:
 - numeric point labels are presentation vocabulary rather than persisted game
   identity.
 
-The delivered product does not persist mirroring, distance values, distance
-calculation, pathfinding, or automatic route optimization. A future static-map
-view may project the same stable point identities onto replaceable visual
-assets without changing the authored model. Native H realization remains a
-separate execution-boundary slice.
+The delivered product does not persist distance values, distance
+calculation, pathfinding, or automatic route optimization.
 
 ## Remaining bounded questions
 
@@ -459,8 +451,6 @@ separate execution-boundary slice.
   evidence. The planner exposes the observed map point with no invented enemy
   group mapping; later native testing or corrected game data may resolve the
   source discrepancy.
-- Static capture-to-point marker positions have not been audited. They are
-  replaceable visual calibration data rather than game-script facts.
 - The current scope does not establish physical points for noncombat H rooms,
   doors, room features, NPCs, resource points, or generated Artificer
   replacements. An Artificer replacement inherits its source object's

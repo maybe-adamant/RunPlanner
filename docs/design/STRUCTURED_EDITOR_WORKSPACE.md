@@ -236,8 +236,8 @@ ungenerated destinations, through one icon-only map button named for its room. V
 semantic focus, adds history or requires complete authoring. The biome rail
 remains the navigation to room details.
 
-One image viewer serves inspection dialogs and inline references. Fields Room
-Layout and Ephyra Side Rooms keep controls beside a larger reference;
+One image viewer serves inspection dialogs and inline references. Ephyra Side
+Rooms keeps controls beside a larger reference;
 individual main/side-room dialogs remain independent of the Hub editor. A
 map's controls, status chips and legend are overlays pinned to its frame at
 one inset from its edges in every corner: zoom and status at the top left,
@@ -249,7 +249,7 @@ pan, and Close/Escape returns focus to the invoking control when it still
 exists. Visibility and zoom belong to the local host, not the project: edits
 within that host keep the reference, changing its room image resets the zoom,
 and a new host cannot inherit another room's open reference. Images, including
-placeholders and Fields annotations, are replaceable static assets
+placeholders, are replaceable static assets
 ([asset note](../../apps/planner/src/ui/room-maps/README.md)). The Hub's
 read-only inspection and interactive Overview/Timeline draw their own markers
 over one shared background with shared door and fountain coordinates;

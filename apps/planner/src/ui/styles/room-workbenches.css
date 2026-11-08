@@ -86,7 +86,6 @@
   margin-top: 0;
 }
 
-.room-feature-category-content,
 .room-feature-action-list {
   display: grid;
   gap: 7px;
@@ -138,14 +137,6 @@
   display: flex;
   justify-content: flex-end;
   gap: 6px;
-}
-
-.room-feature-category-content > .ephyra-side-editor,
-.room-feature-category-content > .fields-room-editor,
-.room-feature-category-content > .ship-combat-editor {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: 0;
 }
 
 .room-overview-panel > :is(.room-structure-workbench, .shop-editor, .fields-room-editor),

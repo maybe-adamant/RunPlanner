@@ -35,9 +35,7 @@ carries the stitched image's own calibration. Package it at most 2560 wide
 (`-resize '2560x1440>'` before the WebP options above); the script scales its
 calibration to match.
 
-On the remaining maps, annotations are baked into the image. Fields annotations
-identify Entry, Cage, Optional, and Exit positions. Stitch split captures and verify the full room's markers
-before exporting the final image; never use one half as the complete map.
+On the remaining N and O maps, annotations are baked into the image.
 
 `N_Hub.webp` is a clean background. `HubMapAnnotations.tsx` owns the door positions
 shared by read-only inspection and both interactive Hub maps, and the fountain
@@ -57,7 +55,7 @@ Its integrity test checks the complete, unique correspondence with declared loca
 slots.
 
 Baked map legends include only categories present: Entry (blue), Exit (red),
-Chaos (purple), Cage (cyan), Optional and Side (yellow). Circle sizes are
+Chaos (purple) and Side (yellow). Circle sizes are
 uniform within each category on a map; numbers retain a consistent font size.
 The Hub uses its own room-quality categories, with an orange fountain marker.
 
