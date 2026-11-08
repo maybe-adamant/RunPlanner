@@ -103,12 +103,10 @@ export function RoomMapColumn({
         ? []
         : wheelChips.length === 1
           ? [{ chip: wheelChips[0]!, at: wheel }]
-          : wheelChips
-              .slice(0, 2)
-              .map((chip, index) => ({
-                chip,
-                at: index === 0 ? wheel.leftOffer : wheel.rightOffer,
-              }));
+          : wheelChips.slice(0, 2).map((chip, index) => ({
+              chip,
+              at: index === 0 ? wheel.leftOffer : wheel.rightOffer,
+            }));
   const doors = wheelSpots === undefined ? markers.doors : [];
   return (
     <section aria-label={`${title} map`} className="room-map-column">
