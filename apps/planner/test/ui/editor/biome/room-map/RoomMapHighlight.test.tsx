@@ -1,8 +1,12 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { createApplication } from '@planner/composition/createApplication';
+import { LeavePicker } from '@planner/ui/editor/biome/LeavePicker';
 import type { WorkspaceRoomMap } from '@planner/projections/structured-workspace';
 import { DoorChips } from '@planner/ui/editor/biome/DecisionWorkbench';
 import { RoomMapColumn } from '@planner/ui/editor/biome/room-map/RoomMapColumn';
@@ -80,5 +84,47 @@ describe('room map highlight', () => {
     expect(previewed()).toEqual([]);
     fireEvent.pointerLeave(marker);
     expect(pointed()).toEqual([]);
+  });
+
+  it('rings the door of the Leave room option under the highlight, and marks the picker from the map', async () => {
+    const user = userEvent.setup();
+    render(
+      <Provider store={createApplication().store}>
+        <RoomMapHighlightScope scope="room:actions">
+          <LeavePicker
+            chosenKey="one"
+            id="leave"
+            options={chips.map((chip) => ({ key: chip.key, label: chip.label, chip }))}
+            planEnd={undefined}
+          />
+          <RoomMapColumn
+            chips={chips}
+            gameName="F_Combat01"
+            map={map}
+            roomIdentity="room"
+            stage="closed"
+            title="Combat 01"
+          />
+        </RoomMapHighlightScope>
+      </Provider>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Exit door' });
+    const marker = screen.getByRole('img', { name: 'Door 2 · Combat 03 · Closed' });
+    fireEvent.pointerEnter(marker);
+    expect(trigger.hasAttribute('data-map-pointed')).toBe(true);
+    fireEvent.pointerLeave(marker);
+    expect(trigger.hasAttribute('data-map-pointed')).toBe(false);
+
+    await user.click(trigger);
+    await screen.findByRole('listbox');
+    await user.keyboard('{ArrowDown}');
+    expect(previewed().map((point) => point.getAttribute('aria-label'))).toEqual([
+      'Door 2 · Combat 03 · Closed',
+    ]);
+    // Closing returns focus to the picker, which previews the chosen door.
+    await user.keyboard('{Escape}');
+    expect(previewed().map((point) => point.getAttribute('aria-label'))).toEqual([
+      'Door 1 · Combat 02 · Closed',
+    ]);
   });
 });

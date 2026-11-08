@@ -2425,6 +2425,49 @@ button.timeline-door-option:disabled {
   cursor: not-allowed;
 }
 
+/* The Leave room picker: the chosen way's chip with a picker's accent underline. */
+button.timeline-leave-picker:not(:disabled) {
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--selection-accent) 45%, transparent);
+}
+
+button.timeline-leave-picker:is(:hover, [data-state='open']):not(:disabled) {
+  background: color-mix(in srgb, var(--selection-accent) 14%, transparent);
+  box-shadow: inset 0 -2px 0 var(--selection-accent);
+}
+
+/* Ending the plan as a way out: a lavender square holding a stop glyph. */
+.plan-end-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--plan-end) 70%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--plan-end) 22%, transparent);
+}
+
+.plan-end-chip-glyph {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  background: var(--plan-end);
+}
+
+.timeline-leave-text {
+  padding-inline: 3px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.contextual-picker-item-face {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* A Timeline chip: one icon, its name on hover; a trait's rarity is its ring. */
 .timeline-chip-group {
   display: inline-flex;

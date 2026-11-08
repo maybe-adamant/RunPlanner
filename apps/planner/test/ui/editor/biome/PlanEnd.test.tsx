@@ -23,7 +23,12 @@ import {
   authoredProjectReplaced,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
-import { expandDoors, renderWorkspace } from '@planner-test/support/biome-workbench';
+import {
+  expandDoors,
+  leaveOptionNames,
+  openLeavePicker,
+  renderWorkspace,
+} from '@planner-test/support/biome-workbench';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 
 afterEach(() => cleanup());
@@ -42,6 +47,29 @@ function currentPlanEnd(application: PlannerApplication) {
   return workspace.history.present.route.planEnd;
 }
 
+/** The exit picked from a room, kept whether or not the plan ends there. */
+function exitSelection(application: PlannerApplication, occurrenceId: string) {
+  const workspace = application.store.getState().projectWorkspace;
+  if (workspace.kind !== 'openProject') throw new Error('expected an open project');
+  const decision = workspace.history.present.route.biomes
+    .flatMap((biome) => biome.topology?.decisions ?? [])
+    .find(
+      (candidate) =>
+        candidate.kind === 'exit' &&
+        candidate.source.kind === 'occurrence' &&
+        candidate.source.occurrenceId === occurrenceId,
+    );
+  return decision?.kind === 'exit' ? decision.selection : undefined;
+}
+
+/** The Leave room picker's closed face. */
+function leaveTrigger(): HTMLElement {
+  return within(within(roomCard()).getByRole('listitem', { name: 'Leave room' })).getByRole(
+    'button',
+    { name: 'Exit door' },
+  );
+}
+
 function openRoom(
   application: PlannerApplication,
   room: ReturnType<typeof createOccurrenceAddress>,
@@ -58,30 +86,71 @@ function roomCard(): HTMLElement {
 }
 
 describe('plan end in the biome workspace', () => {
-  it('ends the plan after a room from its doors and removes it again, one step each', async () => {
+  it('ends the plan from the Leave room picker, keeping the exit, and continues through it', async () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openRoom(
       application,
       createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-b3-e1')),
     );
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const exit = exitSelection(application, 'golden-f-b3-e1');
+    expect(exit).toEqual({ kind: 'normal', exitKey: expect.any(String) });
 
-    await user.click(screen.getByRole('button', { name: 'End plan here' }));
+    const options = await openLeavePicker(user, roomCard());
+    const picked = leaveOptionNames(options).find((name) => name.endsWith(' (picked)'))!;
+    expect(leaveOptionNames(options).at(-1)).toBe('End plan here');
+    await user.click(within(options).getByRole('option', { name: 'End plan here' }));
     expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b3-e1' });
+    // Ending the plan keeps the exit underneath.
+    expect(exitSelection(application, 'golden-f-b3-e1')).toEqual(exit);
+    expect(leaveTrigger().textContent).toBe('End plan');
 
     // The end room's doors open inside the plan and stay editable.
     expandDoors();
     expect(document.querySelector('.door-body')?.hasAttribute('data-authoring-locked')).toBe(false);
-    // Only its exit selection lies past the end; it must not lock the action that removes the end.
-    const continuePlanning = screen.getByRole('button', { name: 'Continue planning' });
-    expect(continuePlanning.closest('[inert]')).toBeNull();
-    await user.click(continuePlanning);
+    // Only its exit selection lies past the end; it must not lock the picker that continues the plan.
+    expect(leaveTrigger().closest('[inert]')).toBeNull();
+    expect(leaveTrigger()).toHaveProperty('disabled', false);
+    const ended = await openLeavePicker(user, roomCard());
+    expect(leaveOptionNames(ended).at(-1)).toBe('End plan here (picked)');
+    // Picking the kept door continues the plan through it.
+    await user.click(within(ended).getByRole('option', { name: picked.replace(' (picked)', '') }));
     expect(currentPlanEnd(application)).toBeUndefined();
+    expect(exitSelection(application, 'golden-f-b3-e1')).toEqual(exit);
 
     act(() => {
       application.store.dispatch(authoredProjectUndoRequested());
     });
     expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b3-e1' });
+    expect(exitSelection(application, 'golden-f-b3-e1')).toEqual(exit);
+  });
+
+  it('continues the plan through another door as one step', async () => {
+    const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
+    openRoom(
+      application,
+      createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-b3-e1')),
+    );
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const exit = exitSelection(application, 'golden-f-b3-e1');
+    const options = await openLeavePicker(user, roomCard());
+    const other = leaveOptionNames(options).find(
+      (name) => name.startsWith('Door ') && !name.endsWith(')'),
+    )!;
+    await user.click(within(options).getByRole('option', { name: 'End plan here' }));
+    const past = () => {
+      const workspace = application.store.getState().projectWorkspace;
+      if (workspace.kind !== 'openProject') throw new Error('expected an open project');
+      return workspace.history.past.length;
+    };
+    const before = past();
+
+    await user.click(
+      within(await openLeavePicker(user, roomCard())).getByRole('option', { name: other }),
+    );
+    expect(currentPlanEnd(application)).toBeUndefined();
+    expect(exitSelection(application, 'golden-f-b3-e1')).not.toEqual(exit);
+    expect(past()).toBe(before + 1);
   });
 
   it('marks the end and the rooms past it on the rail', () => {
@@ -134,11 +203,18 @@ describe('plan end in the biome workspace', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
     expect(screen.queryByRole('button', { name: 'End plan here' })).toBeNull();
-    expect(within(roomCard()).getByRole('listitem', { name: 'Plan ends here' })).toBeTruthy();
-    expect(within(roomCard()).queryByRole('listitem', { name: 'Leave room' })).toBeNull();
+    expect(leaveTrigger().textContent).toBe('End plan');
     expandDoors(roomCard());
     expect(screen.getByRole('button', { name: 'Reset Doors' })).toHaveProperty('disabled', false);
-    await user.click(screen.getByRole('button', { name: 'Continue planning' }));
+    const options = await openLeavePicker(user, roomCard());
+    const way = within(options)
+      .getAllByRole('option')
+      .find(
+        (option) =>
+          option.getAttribute('aria-disabled') !== 'true' &&
+          option.getAttribute('aria-label') !== 'End plan here',
+      )!;
+    await user.click(way);
     expect(currentPlanEnd(application)).toBeUndefined();
   });
 
@@ -158,7 +234,7 @@ describe('plan end in the biome workspace', () => {
       createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-b2-e1')),
     );
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    expect(within(roomCard()).getByRole('listitem', { name: 'Plan ends here' })).toBeTruthy();
+    expect(leaveTrigger().textContent).toBe('End plan');
     await user.click(screen.getByRole('button', { name: 'Doors' }));
     await user.click(
       within(await screen.findByRole('listbox')).getByRole('option', { name: /^Reroll Door 2/ }),
@@ -187,12 +263,19 @@ describe('plan end in the biome workspace', () => {
       createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-shop')),
     );
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    const leave = within(roomCard()).getByRole('listitem', { name: 'Leave room' });
-    await user.click(within(leave).getByRole('button', { name: 'End plan here' }));
+    const options = await openLeavePicker(user, roomCard());
+    expect(leaveOptionNames(options)).toEqual([
+      expect.stringMatching(/ \(picked\)$/),
+      'End plan here',
+    ]);
+    await user.click(within(options).getByRole('option', { name: 'End plan here' }));
     expect(currentPlanEnd(application)).toEqual({
       biomeKey: 'F',
       occurrenceId: 'golden-f-preboss-shop',
     });
+    // Its one way out continues the plan again.
+    await user.click(within(await openLeavePicker(user, roomCard())).getAllByRole('option')[0]!);
+    expect(currentPlanEnd(application)).toBeUndefined();
   });
 
   it('ends the plan with a Hub visit from its main room', async () => {
@@ -218,6 +301,20 @@ describe('plan end in the biome workspace', () => {
     expandDoors(roomCard());
     const door = within(roomCard()).getByRole('article', { name: 'Hidden return door' });
     expect(within(door).getByRole('button', { name: 'Choose' })).toHaveProperty('disabled', false);
+  });
+
+  it('continues planning from an end room with no way out of its own to pick', async () => {
+    const { application, user } = renderWorkspace(
+      endedAt(loadSurfaceNOPQProject(), 'N', nOccurrenceId('combat05')),
+      'Surface',
+      'N',
+    );
+    openRoom(application, createOccurrenceAddress(nBiome, nOccurrenceId('combat05')));
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const options = await openLeavePicker(user, roomCard());
+    expect(leaveOptionNames(options)).toEqual(['End plan here (picked)', 'Continue planning']);
+    await user.click(within(options).getByRole('option', { name: 'Continue planning' }));
+    expect(currentPlanEnd(application)).toBeUndefined();
   });
 
   it('resets the visits of a Hub the plan ends in', async () => {

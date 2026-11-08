@@ -267,8 +267,9 @@ function navigationFocus(anchor: HTMLElement, markKeys: ReadonlySet<string>): HT
 
 /** Whether the engine's authoring readiness locks this owner. */
 // eslint-disable-next-line react-refresh/only-export-components -- The scope and hook form one feedback boundary.
-export function useAuthoringLocked(owner: SemanticAddress): boolean {
-  return useContext(feedback).authoringReadiness?.(owner) === 'locked';
+export function useAuthoringLocked(owner: SemanticAddress | undefined): boolean {
+  const readiness = useContext(feedback).authoringReadiness;
+  return owner !== undefined && readiness?.(owner) === 'locked';
 }
 
 /** Binds feedback directly to an existing control or truthful group, including mapped controls. */

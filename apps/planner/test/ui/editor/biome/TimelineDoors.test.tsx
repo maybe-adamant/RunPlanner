@@ -34,7 +34,11 @@ import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { PurchaseCost } from '@planner/ui/editor/biome/commerce/GoldAmount';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
-import { renderWorkspace } from '@planner-test/support/biome-workbench';
+import {
+  leaveOptionNames,
+  openLeavePicker,
+  renderWorkspace,
+} from '@planner-test/support/biome-workbench';
 
 afterEach(cleanup);
 
@@ -179,10 +183,9 @@ describe('a room’s doors on its Timeline', () => {
   it('picks the exit on the Leave row as one authored step', async () => {
     const view = renderWorkspace(loadUnderworldFGCheckpoint(), 'Underworld', 'F');
     const details = await openTimeline(view);
-    const leave = within(details).getByRole('listitem', { name: 'Leave room' });
     const before = history(view).past.length;
-    const exitDoors = within(leave).getByRole('group', { name: 'Exit door' });
-    await view.user.click(within(exitDoors).getByRole('button', { name: /^Door 2 ·/ }));
+    const options = await openLeavePicker(view.user, details);
+    await view.user.click(within(options).getByRole('option', { name: /^Door 2 ·/ }));
     expect(history(view).past).toHaveLength(before + 1);
     const decision = history(view)
       .present.route.biomes.find((biome) => biome.biomeKey === 'F')!
@@ -196,12 +199,11 @@ describe('a room’s doors on its Timeline', () => {
       kind: 'normal',
       exitKey: 'exit2',
     });
-    // The chosen door's chip is lit.
-    expect(
-      within(leave)
-        .getByRole('button', { name: /^Door 2 ·/ })
-        .getAttribute('aria-pressed'),
-    ).toBe('true');
+    // The chosen door is the picked option.
+    const names = leaveOptionNames(await openLeavePicker(view.user, details));
+    expect(names.filter((name) => name.endsWith('(picked)'))).toEqual([
+      expect.stringMatching(/^Door 2 · /),
+    ]);
   });
 
   it('shows each press’s door chips as that press leaves them', async () => {
@@ -363,7 +365,7 @@ describe('a room’s door notes', () => {
 });
 
 describe('a room’s last Timeline row', () => {
-  it('shows a lone door plainly, with nothing to pick', async () => {
+  it('offers a lone door as the way out, with ending the plan', async () => {
     const view = renderWorkspace(loadUnderworldFGCheckpoint(), 'Underworld', 'F');
     act(() =>
       view.application.store.dispatch(
@@ -372,9 +374,10 @@ describe('a room’s last Timeline row', () => {
     );
     const details = screen.getByRole('complementary', { name: 'Details' });
     await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
-    const leave = within(details).getByRole('listitem', { name: 'Leave room' });
-    expect(within(leave).queryByRole('group', { name: 'Exit door' })).toBeNull();
-    expect(within(leave).getByRole('listitem', { name: 'Door 1 · Combat 02' })).toBeTruthy();
+    expect(leaveOptionNames(await openLeavePicker(view.user, details))).toEqual([
+      'Door 1 · Combat 02 (picked)',
+      'End plan here',
+    ]);
   });
 
   it('puts a Ship room’s doors and last row in its last phase only', async () => {

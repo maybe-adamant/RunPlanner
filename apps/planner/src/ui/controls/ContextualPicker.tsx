@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ReactElement,
+  type ReactNode,
   type Ref,
 } from 'react';
 import type { FindingMarkProps, FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
@@ -103,11 +104,15 @@ function PickerSection<T>({
   countHinted = false,
   groupRef,
   insertion = false,
+  itemFace,
+  itemHint,
   itemIcon,
   itemTrailIcon,
   onSelect,
   section,
 }: {
+  readonly itemFace?: ((item: ContextualPickerItem<T>) => ReactNode) | undefined;
+  readonly itemHint?: ((item: ContextualPickerItem<T>) => string | undefined) | undefined;
   readonly itemTrailIcon?:
     ((item: ContextualPickerItem<T>) => ArtworkSource | undefined) | undefined;
   /** Whether this section's heading explains the options' bag counts. */
@@ -137,8 +142,10 @@ function PickerSection<T>({
       )}
       {section.items.map((item) => {
         const icon = itemIcon?.(item);
+        const face = itemFace?.(item);
         return (
           <Command.Item
+            {...hintProps(itemHint?.(item), undefined, item.ariaLabel ?? item.label)}
             aria-description={item.count === undefined ? undefined : `${item.count} left in bag`}
             aria-label={item.ariaLabel}
             data-candidate-state={item.state}
@@ -160,7 +167,11 @@ function PickerSection<T>({
               <ArtworkIcon className="contextual-picker-item-icon" source={icon} />
             )}
             <span className="contextual-picker-item-copy">
-              <span className="contextual-picker-item-label">{item.label}</span>
+              {face === undefined ? (
+                <span className="contextual-picker-item-label">{item.label}</span>
+              ) : (
+                <span className="contextual-picker-item-face">{face}</span>
+              )}
               {item.explanations?.map((reason) => (
                 <span className="contextual-picker-item-explanation" key={reason}>
                   {reason}
@@ -198,6 +209,8 @@ function PickerContent<T>({
   cancelLabel,
   choicesLabel,
   insertion = false,
+  itemFace,
+  itemHint,
   itemIcon,
   itemTrailIcon,
   loading,
@@ -211,6 +224,10 @@ function PickerContent<T>({
   readonly cancelLabel?: string;
   readonly choicesLabel: string;
   readonly insertion?: boolean;
+  /** What an option shows in place of its name, such as a door's icons. */
+  readonly itemFace?: ((item: ContextualPickerItem<T>) => ReactNode) | undefined;
+  /** An option's hover hint, such as why it cannot be picked. */
+  readonly itemHint?: ((item: ContextualPickerItem<T>) => string | undefined) | undefined;
   readonly itemIcon?: ((item: ContextualPickerItem<T>) => ArtworkSource | undefined) | undefined;
   readonly itemTrailIcon?:
     ((item: ContextualPickerItem<T>) => ArtworkSource | undefined) | undefined;
@@ -314,6 +331,8 @@ function PickerContent<T>({
               <PickerSection
                 countHinted={section.key === countHintedKey}
                 insertion={insertion}
+                itemFace={itemFace}
+                itemHint={itemHint}
                 itemIcon={itemIcon}
                 itemTrailIcon={itemTrailIcon}
                 key={section.key}
@@ -326,6 +345,8 @@ function PickerContent<T>({
                 countHinted={collapsible.key === countHintedKey}
                 groupRef={collapsibleGroup}
                 insertion={insertion}
+                itemFace={itemFace}
+                itemHint={itemHint}
                 itemIcon={itemIcon}
                 itemTrailIcon={itemTrailIcon}
                 onSelect={select}
@@ -604,13 +625,16 @@ export function ContextualPicker<T>({
 /**
  * The same picker opened from a trigger the caller renders, such as a node on a
  * board; the popover opens to the trigger's right under a heading naming it,
- * flipping or shifting within the caller's collision boundary.
+ * or below a trigger whose own face names it, flipping or shifting within the
+ * caller's collision boundary.
  */
 export function ContextualPickerPopover<T>({
   children,
   choiceLabel,
   collisionBoundary,
   heading,
+  itemFace,
+  itemHint,
   itemIcon,
   model,
   onActiveChange,
@@ -618,13 +642,17 @@ export function ContextualPickerPopover<T>({
   onSelect,
   open,
   searchable,
+  side = 'right',
 }: {
   /** The trigger element; it keeps its own name, marks and position. */
   readonly children: ReactElement;
   readonly choiceLabel: string;
   /** The element the popover stays within, such as its editor; the viewport when absent. */
   readonly collisionBoundary?: Element | null;
-  readonly heading: string;
+  /** The list's visible heading; without one the list is named by `choiceLabel`. */
+  readonly heading?: string;
+  readonly itemFace?: (item: ContextualPickerItem<T>) => ReactNode;
+  readonly itemHint?: (item: ContextualPickerItem<T>) => string | undefined;
   readonly itemIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
   readonly model: ContextualPickerModel<T>;
   readonly onActiveChange?: (item: ContextualPickerItem<T> | undefined) => void;
@@ -633,6 +661,7 @@ export function ContextualPickerPopover<T>({
   readonly open: boolean;
   /** Whether the list offers a search box. */
   readonly searchable: boolean;
+  readonly side?: 'right' | 'bottom';
 }) {
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const captureTrigger = useCallback((node: HTMLElement | null): void => {
@@ -647,17 +676,19 @@ export function ContextualPickerPopover<T>({
       <Popover.Portal container={portalContainer ?? undefined}>
         <Popover.Content
           align="start"
-          aria-label={heading}
+          aria-label={heading ?? choiceLabel}
           className="contextual-picker-popover"
           {...(collisionBoundary == null ? {} : { collisionBoundary })}
           collisionPadding={12}
-          side="right"
-          sideOffset={8}
+          side={side}
+          sideOffset={side === 'right' ? 8 : 6}
           sticky="always"
         >
-          <p className="contextual-picker-step-label">{heading}</p>
+          {heading === undefined ? null : <p className="contextual-picker-step-label">{heading}</p>}
           <PickerContent
             choicesLabel={choiceLabel}
+            itemFace={itemFace}
+            itemHint={itemHint}
             itemIcon={itemIcon}
             loading={false}
             model={model}

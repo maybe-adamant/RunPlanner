@@ -17,7 +17,7 @@ import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { renderWorkspace } from '@planner-test/support/biome-workbench';
+import { openLeavePicker, renderWorkspace } from '@planner-test/support/biome-workbench';
 
 afterEach(cleanup);
 
@@ -174,7 +174,7 @@ describe('RoomRerolls', () => {
       'Underworld',
       'F',
     );
-    const details = await openDoors(view);
+    await openDoors(view);
     await appendPress(view, /^Reroll Door 2/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(1));
     const [press] = presses(view.application);
@@ -183,14 +183,12 @@ describe('RoomRerolls', () => {
     // The row is edited in place: no link elsewhere.
     expect(within(row).queryByRole('button', { name: 'Doors' })).toBeNull();
     // Picking Door 2 to leave shows its reward as the press left it.
-    const exitDoor = () =>
+    const exitDoor = async () =>
       within(
-        within(details.getByRole('listitem', { name: 'Leave room' })).getByRole('group', {
-          name: 'Exit door',
-        }),
-      ).getByRole('button', { name: /^Door 2 ·/ });
-    await view.user.click(exitDoor());
-    await waitFor(() => expect(exitDoor().getAttribute('aria-pressed')).toBe('true'));
+        await openLeavePicker(view.user, screen.getByRole('complementary', { name: 'Details' })),
+      ).getByRole('option', { name: /^Door 2 ·/ });
+    await view.user.click(await exitDoor());
+    expect((await exitDoor()).getAttribute('data-selected-value')).toBe('true');
   });
 
   it("repairs a door row's stale kept rerolled reward from its last reroll", async () => {

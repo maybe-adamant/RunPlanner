@@ -24,6 +24,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -319,28 +320,42 @@ function leaveRow(): HTMLElement {
   return screen.getByRole('listitem', { name: 'Leave room' });
 }
 
-/** The Leave row's exit door chips. */
-function exitDoors(): HTMLElement {
-  return within(leaveRow()).getByRole('group', { name: 'Exit door' });
+/** Opens the Leave row's picker and returns its options. */
+async function exitOptions(): Promise<HTMLElement> {
+  if (screen.queryByRole('listbox') === null)
+    await userEvent.setup().click(within(leaveRow()).getByRole('button', { name: 'Exit door' }));
+  return screen.findByRole('listbox');
 }
 
-/** One exit door chip by its door name. */
-function exitChip(door: string): HTMLElement {
-  return within(exitDoors()).getByRole('button', {
+/** Closes the Leave row's picker. */
+async function closeExitOptions(): Promise<void> {
+  await userEvent.setup().keyboard('{Escape}');
+}
+
+/** One exit option by its door name. */
+async function exitChip(door: string): Promise<HTMLElement> {
+  return within(await exitOptions()).getByRole('option', {
     name: new RegExp(`^${door.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( ·|$)`),
   });
 }
 
-/** The exit chips' door names, in order. */
-function exitChoices(): string[] {
-  return within(exitDoors())
-    .getAllByRole('button')
-    .map((chip) => chip.getAttribute('aria-label') ?? '');
+/** The exit options' door names, in order, before ending the plan. */
+async function exitChoices(): Promise<string[]> {
+  const names = within(await exitOptions())
+    .getAllByRole('option')
+    .map((option) => option.getAttribute('aria-label') ?? '');
+  await closeExitOptions();
+  return names;
+}
+
+/** Whether the exit option is the picked one. */
+function picked(option: HTMLElement): boolean {
+  return option.getAttribute('data-selected-value') === 'true';
 }
 
 /** Picks the exit by its door name on the Leave row. */
 async function pickExit(user: ReturnType<typeof renderDecisionWorkbench>['user'], door: string) {
-  await user.click(exitChip(door));
+  await user.click(await exitChip(door));
 }
 
 /** A door row by its door number. */
@@ -410,7 +425,7 @@ describe('DecisionWorkbench', () => {
     expect(within(gate).queryByRole('button', { name: 'Remove Chaos gate' })).toBeNull();
     expect(within(gate).queryByRole('button', { name: /^Reward(: |$)/ })).toBeNull();
     // The gate is taken from the Leave row's exit picker, beside the doors.
-    expect(exitChoices()).toContain('Chaos gate');
+    expect(await exitChoices()).toContain('Chaos gate');
     await pickExit(view.user, 'Chaos gate');
     const decision = view.application.store
       .getState()
@@ -427,7 +442,7 @@ describe('DecisionWorkbench', () => {
       kind: 'additional',
       additionalExitKey: 'chaos',
     });
-    expect(exitChip('Chaos gate').getAttribute('aria-pressed')).toBe('true');
+    expect(picked(await exitChip('Chaos gate'))).toBe(true);
   });
 
   it('removes an authored natural Chaos exit from its source Room features', async () => {
@@ -679,7 +694,7 @@ describe('DecisionWorkbench', () => {
     );
     const gate = screen.getByRole('article', { name: 'Chaos gate exit' });
     expect(within(gate).getByRole('button', { name: 'Chaos gate room' })).toBeTruthy();
-    expect(exitDoors()).toBeTruthy();
+    expect(within(leaveRow()).getByRole('button', { name: 'Exit door' })).toBeTruthy();
   });
 
   it('renders an authored Zagreus exit in its owning decision, not the Midshop workbench', async () => {
@@ -720,7 +735,7 @@ describe('DecisionWorkbench', () => {
     // The contract is taken from the Leave row, which follows the doors.
     const room = within(contract).getByText('Champion of Elysium');
     expect(room.compareDocumentPosition(leaveRow()) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
-    expect(exitChoices()).toContain('Infernal Contract');
+    expect(await exitChoices()).toContain('Infernal Contract');
     await pickExit(decisionView.user, 'Infernal Contract');
     await waitFor(() =>
       expect(screen.getByRole('article', { name: 'Infernal Contract exit' }).dataset.picked).toBe(
@@ -958,9 +973,10 @@ describe('DecisionWorkbench', () => {
     if (authoredOffer === null) throw new Error('F authored room offer is missing');
     expect(within(authoredOffer).queryByRole('button', { name: /^Open .+ room$/ })).toBeNull();
     // The sibling door is still missing, so the exit cannot be picked yet.
-    const waitingExit = within(exitDoors()).getAllByRole('button')[0]!;
-    expect(waitingExit).toHaveProperty('disabled', true);
+    const waitingExit = within(await exitOptions()).getAllByRole('option')[0]!;
+    expect(waitingExit.getAttribute('aria-disabled')).toBe('true');
     expect(hintOf(waitingExit)).toBe('Fill the remaining doors first.');
+    await closeExitOptions();
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
@@ -1093,9 +1109,8 @@ describe('DecisionWorkbench', () => {
     const historyBeforePick =
       view.application.store.getState().projectWorkspace.history!.past.length;
     await pickExit(view.user, `Door ${unpicked.index}`);
-    await waitFor(() =>
-      expect(exitChip(`Door ${unpicked.index}`).getAttribute('aria-pressed')).toBe('true'),
-    );
+    expect(picked(await exitChip(`Door ${unpicked.index}`))).toBe(true);
+    await closeExitOptions();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforePick + 1,
     );
@@ -1776,10 +1791,18 @@ describe('DecisionWorkbench', () => {
       );
       return node === undefined ? undefined : { kind: 'node', node };
     };
-    renderStaticDecisionWorkbench(blocked, 'Underworld', 'F', selector);
-    const exit = within(exitDoors()).getAllByRole('button');
-    expect(exit.some((chip) => !(chip as HTMLButtonElement).disabled)).toBe(true);
-    expect(exit.some((chip) => chip.getAttribute('aria-pressed') === 'true')).toBe(true);
+    let shown: DecisionWorkbenchNode | undefined;
+    renderStaticDecisionWorkbench(blocked, 'Underworld', 'F', (biome) => {
+      const subject = selector(biome);
+      if (subject?.kind === 'node') shown = subject.node;
+      return subject;
+    });
+    // The retained room stays an offered way out, and the picker shows it as the pick.
+    expect(
+      shown?.targets.some((target) => target.selected && target.physicalState !== 'unavailable'),
+    ).toBe(true);
+    const trigger = within(leaveRow()).getByRole('button', { name: 'Exit door' });
+    expect(trigger.querySelector('.timeline-door-chip-blank')).toBeNull();
     expect(document.querySelector('[data-command="ReconcileBatchExitCapacity"]')).toBeNull();
   });
 
@@ -2059,9 +2082,10 @@ describe('DecisionWorkbench', () => {
     expect(repair.dataset.tone).toBe('danger');
     expect(doorRow('Door 2').dataset.available).toBe('false');
     // The unavailable door stays listed as an exit that cannot be picked.
-    const unavailable = exitChip('Door 2');
-    expect(unavailable).toHaveProperty('disabled', true);
+    const unavailable = await exitChip('Door 2');
+    expect(unavailable.getAttribute('aria-disabled')).toBe('true');
     expect(hintOf(unavailable)).toBe('This saved room is no longer offered here.');
+    await closeExitOptions();
     await ordinary.user.click(repair);
     expect(
       workspaceBiome(ordinary.application, 'Underworld', 'F').nodes.find(

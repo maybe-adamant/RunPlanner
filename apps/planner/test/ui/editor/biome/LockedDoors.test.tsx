@@ -15,7 +15,11 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
-import { renderWorkspace } from '@planner-test/support/biome-workbench';
+import {
+  leaveOptionNames,
+  openLeavePicker,
+  renderWorkspace,
+} from '@planner-test/support/biome-workbench';
 
 afterEach(() => cleanup());
 
@@ -60,8 +64,12 @@ describe('locked doors', () => {
     const summary = () => screen.getByRole('list', { name: 'Door summary' });
     expect(within(summary()).getByRole('listitem', { name: /^Door 2 .* Locked$/ })).toBeTruthy();
     // A door still locked is not offered for leaving.
-    const exitDoors = () => screen.getByRole('group', { name: 'Exit door' });
-    expect(within(exitDoors()).queryByRole('button', { name: /Door 2/ })).toBeNull();
+    const exitNames = async () => {
+      const names = leaveOptionNames(await openLeavePicker(user));
+      await user.keyboard('{Escape}');
+      return names;
+    };
+    expect((await exitNames()).some((name) => name.startsWith('Door 2'))).toBe(false);
 
     await user.click(screen.getByRole('button', { name: 'Doors' }));
     await user.click(await screen.findByRole('option', { name: 'Unlock Door 2' }));
@@ -71,7 +79,7 @@ describe('locked doors', () => {
     });
     expect(screen.getByRole('button', { name: /Customize locked door fight/ })).toBeTruthy();
 
-    expect(within(exitDoors()).getByRole('button', { name: /Door 2/ })).toBeTruthy();
+    expect((await exitNames()).some((name) => name.startsWith('Door 2'))).toBe(true);
   });
 
   it("unlocking the last locked door turns the room's locks off", async () => {

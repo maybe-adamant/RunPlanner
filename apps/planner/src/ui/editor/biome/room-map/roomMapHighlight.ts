@@ -86,6 +86,16 @@ export function useRoomMapHighlight(): RoomMapHighlight | undefined {
   return useContext(RoomMapHighlightValue);
 }
 
+/** Whether the map point under the pointer is one of these; never outside a map scope. */
+export function useRoomMapPointedAmong(
+  targets: readonly (RoomMapHighlight | undefined)[],
+): boolean {
+  const pointed = useContext(RoomMapPointedValue);
+  if (pointed === undefined) return false;
+  const owner = highlightOwner(pointed);
+  return targets.some((target) => target !== undefined && highlightOwner(target) === owner);
+}
+
 /** Shows and releases a preview directly, such as a picker's highlighted option. */
 export function useRoomMapHighlightActions(): RoomMapHighlightActions | undefined {
   const channel = useContext(RoomMapHighlightChannel);

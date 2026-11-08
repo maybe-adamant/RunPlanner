@@ -517,22 +517,26 @@ Doors**, which removes the batch. A repair draws the eye, as does each door row
 it removes. The batch's notes sit in the Timeline's side column, under the Add
 area.
 
-The room's last Timeline row says how it is left. **Leave room** picks the exit
-door by its name only (Door 1, or Chaos gate or Infernal Contract) and shows
-the chosen door's room icon and name and its final reward icons as fixed
-labels beside it; a lone door, a fixed exit or the completed run is shown
-plainly, and a partly filled batch says how many doors are set. The picker is
-the exit selection's finding anchor. The row ends with **End plan here**; on
-the end room it reads **Plan ends here** with **Continue planning** in place of
-the picker: the end room's doors, their rerolls and its other doors stay
-editable, since the plan ends only as the room is left. A room with
-no planned way on (the Hub or a side-room visit leads on, or nothing is planned
-past it) has no last row and keeps **End plan here** under its Timeline, with
-any boss-door pool still in its doors; a room past the plan's end shows no
-doors and keeps it under its read-only Timeline. Ephyra's Hub rooms are the
-exception that names its way back: a Hub visit's main room ends with **Return
-to Hub**, which opens the Hub Timeline at the next visit's segment, and a side
-room ends with **Return to** its main room, which opens that room's Timeline.
+The room's last Timeline row says how it is left. **Leave room** is one picker
+whose closed face is the chosen way out: the door's room and final reward
+icons, the plan's end, or `?` while none is chosen. Its options are each door
+(and the Chaos gate or Infernal Contract where offered) with the same face, then
+ending the plan, last; a lone door or a fixed exit is its one way out, and a
+partly filled batch says how many doors are set beside it. Highlighting an
+option previews its door on the map. The picker is the exit selection's
+finding anchor and waits on an earlier choice while the selection is unreached.
+Ending the plan keeps the chosen door underneath: picking any door again
+continues the plan through it as one edit, and an end room with no way out of
+its own to pick offers continuing the plan instead. The end room's doors, their
+rerolls and its other doors stay editable, since the plan ends only as the room
+is left. A room with no planned way on (nothing is planned past it) has no last
+row and keeps **End plan here** under its Timeline, with any boss-door pool
+still in its doors; a room past the plan's end shows no doors and keeps it
+under its read-only Timeline. Ephyra's Hub rooms are the exception that names
+its way back: a Hub visit's main room ends with **Return to Hub**, which opens
+the Hub Timeline at the next visit's segment, and a side room ends with
+**Return to** its main room, which opens that room's Timeline; both keep **End
+plan here** beside it.
 Otherwise moving to the next room is the rail's job.
 
 Door and Fields cage rerolls are Timeline rows, where their reorder handle is

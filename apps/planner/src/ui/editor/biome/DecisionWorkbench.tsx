@@ -1,4 +1,4 @@
-import type { ExitSelectionAddress, TargetAddress } from '@run-planner/engine/authored-project';
+import type { TargetAddress } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -24,7 +24,6 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import {
   useAuthoringLocked,
   useFindingAnchor,
-  useFindingMark,
   useFindingTarget,
   type FindingAnchorProps,
   type FindingMarkProps,
@@ -48,20 +47,13 @@ import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
-import { doorChipMapLink, doorRewardIcons, type DoorChip } from './doorSummary';
+import { doorChipMapLink, type DoorChip } from './doorSummary';
 import { type DoorNoteItem, type DoorNoteMark, type DoorNoteTarget } from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
-
-function exitSelectionAddress(marker: WorkspaceMarker): ExitSelectionAddress {
-  if (marker.address.kind !== 'exitSelection') {
-    throw new BiomeWorkspaceContractError('A batch selection must own an exit-selection address.');
-  }
-  return marker.address;
-}
 
 function targetAddress(marker: WorkspaceMarker): TargetAddress {
   if (marker.address.kind !== 'target') {
@@ -1031,117 +1023,6 @@ function DoorLockToggle({
       onToggle={() => executeIntent(interaction.intentFor(door.exitKey))}
       pressed={door.locked}
     />
-  );
-}
-
-/**
- * The exit door pick on the room's last Timeline row: every door the batch
- * offers, plus its Chaos Gate or Contract.
- */
-export function BatchExitPicker({
-  interactions,
-  lockedAtLeave = [],
-  node,
-}: {
-  readonly interactions: WorkspaceInteractionCatalog;
-  /** Doors still locked when the room is left: offered only while one is the saved pick. */
-  readonly lockedAtLeave?: readonly string[];
-  readonly node: BatchNode;
-}) {
-  const executeIntent = useCommandIntent();
-  const findingMark = useFindingMark();
-  const selectionAddress = exitSelectionAddress(node.selection);
-  const additional = [node.zagreusContract, node.chaos].flatMap((control) =>
-    control === undefined ? [] : [control],
-  );
-  const lone =
-    node.targets.length === 1 && additional.length === 0 && node.missingTargets.length === 0;
-  if (lone) {
-    const target = node.targets[0]!;
-    // The lone door is the way out: shown as its chip, with nothing to pick.
-    return (
-      <span className="timeline-leave-door">
-        <DoorChips
-          chips={[
-            {
-              key: target.exitKey,
-              doorIndex: target.index,
-              label: `Door ${target.index} · ${target.door.room.label}`,
-              roomIcon: target.door.room.roomIcon,
-              rewards: doorRewardIcons(target, 'final'),
-            },
-          ]}
-          label="Exit door"
-        />
-      </span>
-    );
-  }
-  const selectable = node.targets.length > 1 || additional.length > 0;
-  const interaction = selectable
-    ? interactions.exitSelections.get(workspaceInteractionKey(node.selection.address))
-    : undefined;
-  const additionalIntent = (control: (typeof additional)[number]) => {
-    const key = workspaceInteractionKey(control.owner);
-    return 'kind' in control
-      ? requireWorkspaceInteraction(interactions.chaosExits, key).selectIntent
-      : requireWorkspaceInteraction(interactions.zagreusContracts, key).selectIntent;
-  };
-  const chips = [
-    ...node.targets
-      .filter(
-        (target) =>
-          !lockedAtLeave.includes(target.exitKey) ||
-          interaction?.selectedExitKey === target.exitKey,
-      )
-      .map((target) => ({
-        key: target.exitKey,
-        doorIndex: target.index,
-        label: `Door ${target.index} · ${target.door.room.label}`,
-        roomIcon: target.door.room.roomIcon,
-        rewards: doorRewardIcons(target, 'final'),
-        ...(target.physicalState === 'unavailable'
-          ? { unavailable: true, hint: 'This saved room is no longer offered here.' }
-          : {}),
-      })),
-    ...additional.map((control) => ({
-      key: workspaceInteractionKey(control.owner),
-      additionalExit: 'kind' in control ? ('chaos' as const) : ('zagreusContract' as const),
-      label: control.exitTypeLabel,
-      roomIcon: control.door.room.roomIcon,
-      rewards: [rewardIcon(control.fixedRewardType)],
-    })),
-  ];
-  const selected =
-    additional.find((control) => control.selected) === undefined
-      ? interaction?.selectedExitKey
-      : workspaceInteractionKey(additional.find((control) => control.selected)!.owner);
-  return (
-    <span className="timeline-leave-door">
-      <DoorChipOptions
-        chips={chips.map((chip) => ({ ...chip, picked: chip.key === selected }))}
-        disabledHint={interaction === undefined ? 'Fill the remaining doors first.' : undefined}
-        findingMark={findingMark(selectionAddress)}
-        id={semanticOwnerControlElementId(selectionAddress)}
-        label="Exit door"
-        onPick={(value) => {
-          const control = additional.find(
-            (candidate) => workspaceInteractionKey(candidate.owner) === value,
-          );
-          if (control !== undefined) {
-            executeIntent(additionalIntent(control));
-            return;
-          }
-          executeIntent({
-            command: {
-              kind: 'SetExitSelection',
-              selection: selectionAddress,
-              value: { kind: 'normal', exitKey: value },
-            },
-            focus: { owner: selectionAddress, timing: 'after' },
-          });
-        }}
-      />
-    </span>
   );
 }
 

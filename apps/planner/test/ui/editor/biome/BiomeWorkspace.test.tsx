@@ -1424,12 +1424,15 @@ describe('BiomeWorkspace', () => {
     expect(within(details()).queryByRole('listitem', { name: 'Leave room' })).toBeNull();
 
     await openTimeline(createOccurrenceAddress(nBiome, nOccurrenceId('preboss')));
+    // Its fixed exit is the Leave room picker's one way out, already picked.
     expect(
-      within(within(details()).getByRole('listitem', { name: 'Leave room' })).getByRole(
-        'listitem',
-        { name: 'Polyphemus' },
+      hintOf(
+        within(within(details()).getByRole('listitem', { name: 'Leave room' })).getByRole(
+          'button',
+          { name: 'Exit door' },
+        ),
       ),
-    ).toBeTruthy();
+    ).toBe('Polyphemus');
 
     // A mid-route Postboss continues to the next biome's display name, never
     // its internal key.

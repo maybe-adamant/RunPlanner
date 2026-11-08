@@ -1,6 +1,6 @@
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
-import { fireEvent, render, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { configureStore } from '@reduxjs/toolkit';
 import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
@@ -425,4 +425,24 @@ export function renderBiomeClearAction(
 export function expandDoors(scope: HTMLElement = document.body): void {
   const disclosure = within(scope).getByRole('button', { name: 'Door details' });
   if (disclosure.getAttribute('aria-expanded') !== 'true') fireEvent.click(disclosure);
+}
+
+/** Opens the room's Leave room picker and returns its options. */
+export async function openLeavePicker(
+  user: UserEvent,
+  scope: HTMLElement = document.body,
+): Promise<HTMLElement> {
+  const leave = within(scope).getByRole('listitem', { name: 'Leave room' });
+  await user.click(within(leave).getByRole('button', { name: 'Exit door' }));
+  return screen.findByRole('listbox');
+}
+
+/** The Leave room picker's options by name, the picked one marked. */
+export function leaveOptionNames(options: HTMLElement): readonly string[] {
+  return within(options)
+    .getAllByRole('option')
+    .map(
+      (option) =>
+        `${option.getAttribute('aria-label') ?? ''}${option.getAttribute('data-selected-value') === 'true' ? ' (picked)' : ''}${option.getAttribute('aria-disabled') === 'true' ? ' (disabled)' : ''}`,
+    );
 }

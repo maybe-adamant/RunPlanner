@@ -14,14 +14,7 @@ import {
   type WorkspaceRoomPlanEnd,
   type WorkspaceRoomTab,
 } from '@planner/projections/structured-workspace';
-import {
-  BatchDoorsDetail,
-  BatchDoorsRepair,
-  BatchExitPicker,
-  DoorChips,
-  DoorNotes,
-  DoorRowsHeader,
-} from './DecisionWorkbench';
+import { BatchDoorsDetail, BatchDoorsRepair, DoorNotes, DoorRowsHeader } from './DecisionWorkbench';
 import {
   batchDoorChips,
   batchDoorFindingOwners,
@@ -43,9 +36,9 @@ import {
 } from './BiomeInspectorControls';
 import { PlanEndAction } from './PlanEndAction';
 import { ReadOnlyFindingScope } from '@planner/ui/feedback/useFindingTarget';
-import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { DoorsRerollEntry } from './RoomRerolls';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { BatchExitPicker, LeavePicker } from './LeavePicker';
 import { LeaveRow, type TimelineDoorsContent } from './TimelineDoors';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 
@@ -161,26 +154,22 @@ function roomTimelineDoors({
           },
         };
   const idPrefix = `occurrence-${node.room.occurrenceId}`;
-  const endAction = <PlanEndAction planEnd={planEnd} />;
-  const leaveRow = (
-    label: string,
-    value: ReactNode,
-    status?: string,
-    anchorOwner?: SemanticAddress,
-  ) =>
-    relation === 'end' ? (
-      // Its exit selection lies past the end; anchoring it would lock Continue planning.
-      <LeaveRow actions={endAction} key="leave" label="Plan ends here" />
-    ) : (
-      <LeaveRow
-        actions={endAction}
-        {...(anchorOwner === undefined ? {} : { anchorOwner })}
-        key="leave"
-        label={label}
-        status={status}
-      >
-        {value}
-      </LeaveRow>
+  const ended = relation === 'end';
+  const leaveRow = (value: ReactNode, status?: string, anchorOwner?: SemanticAddress) => (
+    <LeaveRow
+      // Its exit selection lies past the end; anchoring it would lock continuing the plan.
+      {...(anchorOwner === undefined || ended ? {} : { anchorOwner })}
+      key="leave"
+      label="Leave room"
+      status={ended ? undefined : status}
+    >
+      {value}
+    </LeaveRow>
+  );
+  // A room with no way out of its own to pick: ending the plan, and continuing it from there.
+  const endOnly = () =>
+    leaveRow(
+      <LeavePicker chosenKey={undefined} id={`${idPrefix}-leave`} options={[]} planEnd={planEnd} />,
     );
 
   // A boss door's pool is authored or reported with the room's doors.
@@ -244,11 +233,11 @@ function roomTimelineDoors({
         />
       ),
       leave: leaveRow(
-        'Leave room',
         <BatchExitPicker
           interactions={interactions}
           lockedAtLeave={unlocks.lockedAtLeave}
           node={batch}
+          planEnd={planEnd}
         />,
         batchDoorsStatus(batch),
         batch.selection.address,
@@ -281,7 +270,7 @@ function roomTimelineDoors({
         ? undefined
         : {
             ...storeDetail,
-            ...(relation === 'end' ? { leave: leaveRow('Leave room', null) } : {}),
+            ...(ended ? { leave: endOnly() } : {}),
             notes,
           };
     case 'authoredDecision':
@@ -291,7 +280,7 @@ function roomTimelineDoors({
     case 'frontier':
       throw new BiomeWorkspaceContractError('An exit frontier must carry its provisional doors.');
     case 'planEnd':
-      return { leave: leaveRow('Leave room', null) };
+      return { leave: endOnly() };
     case 'topologyOwned': {
       const phantom = node.room.phantomExit;
       return {
@@ -328,16 +317,23 @@ function roomTimelineDoors({
               ),
             }),
         // The Hub decides where the room leads; its last row returns there.
-        ...(relation === 'end'
-          ? { leave: leaveRow('Leave room', null) }
+        ...(ended
+          ? { leave: endOnly() }
           : node.hubReturn === undefined
             ? {}
             : {
-                leave: leaveRow(
-                  node.hubReturn.kind === 'hub'
-                    ? 'Return to Hub'
-                    : `Return to ${node.hubReturn.label}`,
-                  <ReturnButton target={node.hubReturn} />,
+                leave: (
+                  <LeaveRow
+                    actions={<PlanEndAction planEnd={planEnd} />}
+                    key="leave"
+                    label={
+                      node.hubReturn.kind === 'hub'
+                        ? 'Return to Hub'
+                        : `Return to ${node.hubReturn.label}`
+                    }
+                  >
+                    <ReturnButton target={node.hubReturn} />
+                  </LeaveRow>
                 ),
               }),
         notes,
@@ -355,21 +351,23 @@ function roomTimelineDoors({
               rewards: [],
             }
           : undefined;
-      // The one way out is its door chip, with nothing to pick.
-      const value =
-        destination.kind === 'complete' ? (
-          <span>{destination.message}</span>
-        ) : chip === undefined ? (
-          <FixedValueChip label={destination.label} />
-        ) : (
-          <span className="timeline-leave-door">
-            <DoorChips chips={[chip]} label="Exit door" />
-          </span>
-        );
+      // The one way out, with nothing else to pick but the plan's end.
+      const way = {
+        key: 'fixed',
+        label: destination.kind === 'complete' ? destination.message : destination.label,
+        ...(chip === undefined ? {} : { chip }),
+      };
       return {
         ...(chip === undefined ? {} : { summary: { chips: [chip] } }),
         ...storeDetail,
-        leave: leaveRow('Leave room', value),
+        leave: leaveRow(
+          <LeavePicker
+            chosenKey={way.key}
+            id={`${idPrefix}-leave`}
+            options={[way]}
+            planEnd={planEnd}
+          />,
+        ),
         notes,
       };
     }

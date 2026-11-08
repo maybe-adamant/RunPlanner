@@ -180,9 +180,7 @@ it('marks the exit picker of a missing selection and focuses it', async () => {
   await view.user.click(findings.container.querySelector('button')!);
   // The exit is picked on the room's last row; its picker carries the mark and takes focus.
   const leave = screen.getByRole('listitem', { name: 'Leave room' });
-  const exit = within(within(leave).getByRole('group', { name: 'Exit door' })).getAllByRole(
-    'button',
-  )[0]!;
+  const exit = within(leave).getByRole('button', { name: 'Exit door' });
   expect(paintedFindings()).toEqual([exit]);
   expect(leave.hasAttribute('data-has-findings')).toBe(false);
   await waitFor(() => expect(document.activeElement).toBe(exit));

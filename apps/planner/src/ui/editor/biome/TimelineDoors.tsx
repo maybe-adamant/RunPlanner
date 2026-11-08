@@ -163,20 +163,27 @@ export function LeaveRow({
   readonly status?: string | undefined;
 }) {
   const findingAnchor = useFindingAnchor();
-  const anchor =
-    anchorOwner === undefined
-      ? {}
-      : {
-          ...findingAnchor(anchorOwner, {
-            // Navigation lands on the exit picker, never on End plan here; else on the row.
-            focusTarget: (row) =>
-              row.querySelector<HTMLElement>('.timeline-leave-door button:not(:disabled)') ?? row,
-          }),
-          tabIndex: -1,
-        };
+  const anchor = () => {
+    if (anchorOwner === undefined) return {};
+    // The picker shows its own waiting state, so the row never locks around it.
+    const {
+      inert: _inert,
+      'aria-disabled': _disabled,
+      'data-authoring-locked': _locked,
+      ...props
+    } = findingAnchor(anchorOwner, {
+      // Navigation lands on the Leave room picker; else on the row.
+      focusTarget: (row) =>
+        row.querySelector<HTMLElement>('.timeline-leave-door button:not(:disabled)') ?? row,
+    });
+    void _inert;
+    void _disabled;
+    void _locked;
+    return { ...props, tabIndex: -1 };
+  };
   return (
     <TimelineRow
-      {...anchor}
+      {...anchor()}
       aria-label={label}
       className="timeline-leave-row"
       kind="boundary"
