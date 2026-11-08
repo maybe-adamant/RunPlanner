@@ -74,7 +74,8 @@ describe('HubBoardMap', () => {
       const { left, top } = roomMapPosition(door, calibration);
       const marker = markers.find((entry) => entry.dataset.hubSlotKey === slot.slotKey)!;
       expect(marker.style.left).toBe(`${left}%`);
-      expect(marker.style.top).toBe(`${top}%`);
+      // A few overlapping doors are nudged apart vertically for display only.
+      expect(Math.abs(parseFloat(marker.style.top) - top)).toBeLessThan(3);
     }
   });
 });
