@@ -19,7 +19,18 @@ Two independent parts, delivered separately so part 2 can be rolled back.
 - Pickups spawned together can be taken in any order; the Timeline order
   stays the authored order and works as today. Clicking an item opens or
   places its action (collect, Time Piece goldify, Artificer transform).
+- Fields: cage and optional rewards notify at room entry, where they spawn,
+  each item marked by its cage.
+- Action-driven spawns (Quick Buck and Buried Treasure on taking their boon,
+  Echo gold on a World Shop purchase, Echo's last reward, Nemesis and Eris
+  gifts after their dialogue, challenge-switch loot when claimed) get a
+  read-only row under their source action, like the Travel Deal follow-up
+  row: "Gold spawned", "Buried Treasure spawned X, Y, Z".
 - Intentional conversions (Artificer) are not spawned loot.
+- Engine: one read-only spawn-moments query per room (moment kind, phase,
+  stable key, items in game spawn order with participation, placed state and
+  placement command) plus each action's spawned children, built from what
+  spawned rather than from placed rows so Part 2 needs no new source.
 - Engine behaviour is unchanged: automatic insertion stays. The engine
   publishes the spawned set per moment (or the planner composes it from
   existing products if they suffice).
