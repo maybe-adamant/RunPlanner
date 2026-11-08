@@ -42,4 +42,13 @@ describe('room map assets', () => {
       );
     }
   });
+
+  it('calibrates every Fields room so its cage and reward points show on its map', () => {
+    const fields = catalog.rooms.values.filter(
+      (room) => (room.mapPoints?.fieldsCagePoints?.length ?? 0) > 0,
+    );
+    expect(fields.length).toBeGreaterThan(0);
+    for (const room of fields)
+      expect(roomMapCalibrations[room.gameName], room.gameName).toBeDefined();
+  });
 });

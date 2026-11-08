@@ -714,6 +714,51 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('H', 'golden-h-combat05'),
   },
   {
+    id: 'room-map-h-fields-flipped',
+    overview: true,
+    label: 'H Fields room entered at the entry that flips it: cages mirrored with the map',
+    shows: ['flipped map', 'cage and reward occupants'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => {
+        const occurrence = occurrenceAddress(project, 'H', 'golden-h-combat02');
+        const entry = roomLayoutAuthoringForProjectEvaluationAssembly(
+          simulateProjectAssembly(catalog, project),
+          occurrence,
+        )?.entries.find((choice) => choice.option.flipped === true);
+        if (entry === undefined) throw new Error('golden-h-combat02 has no entry that flips it');
+        return entry.command;
+      },
+    ],
+    target: room('H', 'golden-h-combat02'),
+  },
+  {
+    id: 'room-map-h-postboss-pinned',
+    overview: true,
+    label: 'H Postboss: the Well on its pinned spot, the Pool on the spot it leaves',
+    shows: ['pinned Well chip', 'derived Pool chip', 'occupants on the map'],
+    project: createGoldenFGHIProject,
+    target: room('H', 'golden-h-preboss-shop:postboss'),
+  },
+  {
+    id: 'room-map-q-combat05',
+    overview: true,
+    label: 'Q Combat05 beside its map',
+    shows: ['room map', 'doors', 'entries', 'anchors'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(
+          createBiomeAddress('Surface', 'Q'),
+          createOccurrenceId('surface-q-ordinary'),
+        ),
+        gameName: 'Q_Combat05',
+      },
+    ],
+    target: room('Q', 'surface-q-ordinary'),
+  },
+  {
     id: 'eris',
     label: 'Eris spawned in an entrance',
     shows: ['Eris'],

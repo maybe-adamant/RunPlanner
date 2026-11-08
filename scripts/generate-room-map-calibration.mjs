@@ -15,6 +15,10 @@ import * as prettier from 'prettier';
  * planner does not package. A world
  * point lands at image pixel centre + scale * (world - camera target), where
  * scale is the applied zoom times the render width over the 1920-wide UI.
+ *
+ * A stitched entry carries its own calibration instead of a camera record:
+ * pixel = (pixelX, pixelY) + scale * (world - (worldX, worldY)). Its image is
+ * packaged no wider than `packagedWidth`, so the calibration is scaled with it.
  */
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -22,12 +26,34 @@ const outputPath = join(repositoryRoot, 'apps/planner/src/ui/room-maps/roomMapCa
 
 const round = (value) => Math.round(value * 1e4) / 1e4;
 
+/** The widest packaged room image; wider stitched captures are downscaled to it. */
+const packagedWidth = 2560;
+
+function stitchedCalibration(calibration) {
+  const factor = Math.min(1, packagedWidth / calibration.width);
+  const width = Math.round(calibration.width * factor);
+  const height = Math.round(calibration.height * factor);
+  const scale = calibration.scale * factor;
+  return {
+    width,
+    height,
+    targetX: round(calibration.worldX + (width / 2 - calibration.pixelX * factor) / scale),
+    targetY: round(calibration.worldY + (height / 2 - calibration.pixelY * factor) / scale),
+    scale: round(scale),
+  };
+}
+
 export function calibrationEntries(manifest) {
   return Object.entries(manifest)
     .map(([room, entry]) => {
       const record = entry.rcmap;
       if (record?.room !== room) throw new Error(`${room}: manifest record names ${record?.room}`);
       if (record.flipped !== false) throw new Error(`${room}: capture is flipped`);
+      if (entry.stitched === true) {
+        if (entry.calibration === undefined)
+          throw new Error(`${room}: stitched without calibration`);
+        return [room, stitchedCalibration(entry.calibration)];
+      }
       const width = record.screen.renderWidth;
       const height = record.screen.renderHeight;
       return [

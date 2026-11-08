@@ -24,11 +24,16 @@ WebPs unless replacing them from a source image. For example:
 convert source.png -quality 90 -define webp:method=6 -define webp:lossless=false RoomName.webp
 ```
 
-F, G, I, P, Q, the `B_Combat` anomalies and the `Special/` rooms are clean
+F, G, H, I, P, Q, the `B_Combat` anomalies and the `Special/` rooms are clean
 captures: `roomMapCalibration.ts` records each image's capture camera and the
 editor draws their points from the catalog's map points. Regenerate it from the
 capture manifests with `npm run planner:room-map-calibration` whenever one of
 those images is replaced; an image without calibration shows no points.
+
+A room too large for one screen is stitched from tiles; its manifest entry
+carries the stitched image's own calibration. Package it at most 2560 wide
+(`-resize '2560x1440>'` before the WebP options above); the script scales its
+calibration to match.
 
 On the remaining maps, annotations are baked into the image. Fields annotations
 identify Entry, Cage, Optional, and Exit positions. Stitch split captures and verify the full room's markers
