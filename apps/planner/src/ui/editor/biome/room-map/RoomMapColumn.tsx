@@ -10,10 +10,16 @@ import {
   RoomMapLegend,
   RoomMapSideDoors,
   RoomMapSpots,
+  RoomMapUnplacedStrip,
   type RoomMapPlacements,
   type RoomMapSideDoor,
 } from './RoomMapPoints';
-import { useRoomMapHighlight, useRoomMapPointers } from './roomMapHighlight';
+import {
+  highlightOwner,
+  useRoomMapHighlight,
+  useRoomMapPointers,
+  type RoomMapHighlight,
+} from './roomMapHighlight';
 import { markerPlacement, position } from './roomMapPosition';
 
 /**
@@ -22,6 +28,9 @@ import { markerPlacement, position } from './roomMapPosition';
  * is the room as planned, every door open and the taken one lit.
  */
 export type RoomMapStage = 'closed' | 'open' | 'left' | 'summary';
+
+const sameTarget = (left: RoomMapHighlight, right: RoomMapHighlight): boolean =>
+  highlightOwner(left) === highlightOwner(right);
 
 const chipName = (chip: DoorChip): string =>
   chip.locked === true ? `${chip.label} · Locked` : chip.label;
@@ -71,6 +80,16 @@ export function RoomMapColumn({
   const shownFlip =
     highlight?.kind === 'entry' && highlight.flipped !== undefined ? highlight.flipped : flipped;
   const markers = roomMapMarkers(map, calibration, shownFlip);
+  const unplaced = placements?.unplaced ?? [];
+  const unplacedChaos = unplaced.find((item) => item.family === 'chaos');
+  // A control of an item the game places rings every point it can take.
+  const previewedItem = unplaced.find(
+    (item) =>
+      highlight !== undefined &&
+      (highlight.kind === 'chaosGate'
+        ? item.family === 'chaos'
+        : sameTarget(item.target, highlight)),
+  );
   const preview =
     highlight?.kind === 'entry'
       ? { kind: 'entry' as const, id: highlight.pointId }
@@ -82,13 +101,20 @@ export function RoomMapColumn({
               ...(highlight.pointId === undefined ? {} : { id: highlight.pointId }),
               ...(highlight.marks === undefined ? {} : { marks: highlight.marks }),
             }
-          : undefined;
+          : previewedItem !== undefined && previewedItem.family !== 'chaos'
+            ? { kind: 'candidates' as const, ids: previewedItem.pointIds }
+            : undefined;
   // While the gate's position is being picked, every Chaos point shows with its position.
   const chaosPoints = highlight?.kind === 'chaosPoints' ? markers.chaosPoints : [];
   const previewedChaosPoint =
     highlight?.kind === 'chaosPoints' && highlight.position !== undefined
       ? markers.chaosPoints[highlight.position - 1]
       : undefined;
+  // While the game places the gate, each point it can take shows `?`.
+  const chaosCandidates =
+    unplacedChaos === undefined || chaosPoints.length > 0
+      ? []
+      : markers.chaosPoints.filter((point) => unplacedChaos.pointIds.includes(point.id));
   const gateRank = chaosPoints.findIndex((point) => point.id === markers.chaosGate?.id);
   const gatePosition = gateRank < 0 ? undefined : gateRank + 1;
   const open = stage !== 'closed';
@@ -147,6 +173,24 @@ export function RoomMapColumn({
                 </span>
               ),
             )}
+            {chaosCandidates.map((point) => (
+              <span
+                aria-label="Chaos gate position ?"
+                className="room-map-door"
+                data-chaos
+                data-closed
+                data-preview={previewedItem === unplacedChaos || undefined}
+                data-unset
+                key={`chaos:${point.id}`}
+                role="img"
+                style={position(point)}
+                {...pointers({ kind: 'chaosGate' })}
+              >
+                <span aria-hidden="true" className="room-map-number">
+                  ?
+                </span>
+              </span>
+            ))}
             <RoomMapSideDoors
               doors={sideDoors}
               {...(heroAtSideDoor ? { hero: heroSideDoor } : {})}
@@ -245,8 +289,11 @@ export function RoomMapColumn({
         }
         title={title}
       />
+      <RoomMapUnplacedStrip items={unplaced} />
       <RoomMapLegend
-        chaos={markers.chaosGate !== undefined || chaosPoints.length > 0}
+        chaos={
+          markers.chaosGate !== undefined || chaosPoints.length > 0 || chaosCandidates.length > 0
+        }
         markers={wheelSpots === undefined ? markers : { ...markers, doors }}
         wheel={wheelSpots !== undefined && wheelSpots.length > 0}
       />

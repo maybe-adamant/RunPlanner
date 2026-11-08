@@ -4,6 +4,7 @@ import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
+  createFieldsSpatialAddress,
   createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
@@ -662,6 +663,42 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-b4-e1'),
   },
   {
+    id: 'room-map-f-chaos-unplaced',
+    overview: true,
+    label: 'F room with three Chaos points, its gate left to the game',
+    shows: ['Not placed strip', 'Chaos candidate rings', 'Leave room picker'],
+    project: createGoldenFGHIProject,
+    commands: [
+      {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(
+          createBiomeAddress('Underworld', 'F'),
+          createOccurrenceId('golden-f-b4-e1'),
+        ),
+        gameName: 'F_Combat17',
+      },
+      {
+        kind: 'AddChaos',
+        additional: createAdditionalExitAddress(
+          createBiomeAddress('Underworld', 'F'),
+          createOccurrenceId('golden-f-b4-e1'),
+          'chaos',
+        ),
+        occurrenceId: createOccurrenceId('gallery-f-chaos'),
+      },
+    ],
+    target: room('F', 'golden-f-b4-e1'),
+  },
+  {
+    id: 'room-map-f-switch-unplaced',
+    overview: true,
+    label: 'F combat room: its switch left to the game among the free spots',
+    shows: ['Not placed strip', 'anchor candidate rings'],
+    project: createGoldenFGHIProject,
+    commands: [placeAnchorObject('F', 'golden-f-b5-e1', 'challengeSwitch')],
+    target: room('F', 'golden-f-b5-e1'),
+  },
+  {
     id: 'room-map-f-overview',
     overview: true,
     label: 'F combat room: the Well stood on A2, the switch on the last free spot',
@@ -838,6 +875,33 @@ export const galleryCases: readonly GalleryCase[] = [
     label: 'H Fields room: cage and reward points as chip rows',
     shows: ['Cages chip row', 'Rewards chip row', 'Nemesis'],
     project: loadNemesisFieldsCheckpoint,
+    target: room('H', 'golden-h-combat05'),
+  },
+  {
+    id: 'room-map-h-fields-unplaced',
+    overview: true,
+    label: 'H Fields room: its first cage and first reward left to the game',
+    shows: ['Not placed strip', 'free cage and pickup points as candidates'],
+    project: loadNemesisFieldsCheckpoint,
+    commands: (['cage', 'optional'] as const).map((kind): GalleryStep => (project) => {
+      const occurrence = authoredOccurrence(project, 'H', 'golden-h-combat05');
+      if (occurrence.state?.kind !== 'fieldsCombat')
+        throw new Error('golden-h-combat05 is no Fields room');
+      const slots =
+        kind === 'cage'
+          ? occurrence.state.spatial.cagePointIdBySlot
+          : occurrence.state.spatial.optionalPointIdBySlot;
+      const slotKey = Object.keys(slots)[0];
+      if (slotKey === undefined) throw new Error(`golden-h-combat05 has no ${kind} slot`);
+      return {
+        kind: 'ReplaceFieldsSpatialPoint',
+        spatial: createFieldsSpatialAddress(occurrenceAddress(project, 'H', 'golden-h-combat05'), {
+          kind,
+          slotKey,
+        }),
+        pointId: null,
+      };
+    }),
     target: room('H', 'golden-h-combat05'),
   },
   {

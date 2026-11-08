@@ -522,6 +522,15 @@
   background: #4cf2c2;
 }
 
+/* A free point an item the game places can take: its `?` in the ring's own colour. */
+.room-map-point[data-point='cage'] > .room-map-number {
+  background: #f2c94c;
+}
+
+.room-map-point[data-point='pickup'] > .room-map-number {
+  background: #8fd3ff;
+}
+
 /* An entry: Melinoë's head where she can arrive. */
 .room-map-entry {
   position: absolute;
@@ -673,6 +682,64 @@
 
 .room-map-door[data-side] > .room-map-number {
   background: #f5d76e;
+}
+
+/* What the game places, under the map: each item's face and `?`. */
+.room-map-unplaced {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 6px 0 0;
+  color: #d7d2ca;
+  font-size: 0.76rem;
+}
+
+.room-map-unplaced-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.room-map-unplaced-items > li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 4px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.room-map-unplaced-items > li[data-kind='chaos'] {
+  border-color: #b58cff;
+}
+
+.room-map-unplaced-items > li[data-kind='anchor'] {
+  border-color: #4cf2c2;
+}
+
+.room-map-unplaced-items > li[data-kind='cage'] {
+  border-color: #f2c94c;
+}
+
+.room-map-unplaced-items > li[data-kind='pickup'] {
+  border-color: #8fd3ff;
+}
+
+.room-map-unplaced-face {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.room-map-unplaced-face > .artwork-label-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
 }
 
 /* The map's key: one swatch per kind of point it shows. */

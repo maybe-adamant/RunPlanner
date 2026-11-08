@@ -25,6 +25,7 @@ import {
   type RoomMapHighlight,
   type RoomMapPointMark,
 } from '../room-map/roomMapHighlight';
+import { unplacedObjectKey } from '../room-map/roomMapPlacements';
 import { fieldsSlotBadge, fieldsSlotIcon } from './fieldsSlotFace';
 
 /** An unset position: the game places it. */
@@ -391,8 +392,11 @@ function ObjectAnchorChip({
   const label = heldObjectShortName(object.object);
   const id = semanticOwnerControlElementId(object.anchorAddress);
   const target = findingTarget(object.anchorAddress, id);
-  const preview =
-    at === undefined ? undefined : ({ kind: 'anchor', anchorId: at } satisfies RoomMapHighlight);
+  // Left to the game, it rings every free anchor it can take.
+  const preview: RoomMapHighlight =
+    at === undefined
+      ? { kind: 'unplaced', key: unplacedObjectKey(object.object) }
+      : { kind: 'anchor', anchorId: at };
   const shownHint =
     anchor.pinned !== undefined
       ? 'Always stands here'
@@ -499,7 +503,13 @@ function FieldsSlotChip({
   const icon = fieldsSlotIcon(fields, control.target);
   const badge = fieldsSlotBadge(fields, control.target);
   return (
-    <LayoutChip preview={preview(control.pointId)}>
+    <LayoutChip
+      preview={
+        control.pointId === null
+          ? { kind: 'unplaced', key: control.interactionKey }
+          : preview(control.pointId)
+      }
+    >
       <PositionPicker<number | null>
         ariaLabel={`${control.label}, point ${point}`}
         choiceLabel={`${control.label} point`}
