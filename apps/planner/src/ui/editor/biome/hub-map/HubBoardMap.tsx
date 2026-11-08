@@ -1,7 +1,7 @@
 import { useRef, type CSSProperties, type ReactNode } from 'react';
 
 import type { WorkspaceHubSlot } from '@planner/projections/structured-workspace';
-import { roomMapPosition } from '@planner/projections/roomMapMarkers';
+import { roomMapPosition, type RoomMapMarkerPosition } from '@planner/projections/roomMapMarkers';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
@@ -18,6 +18,21 @@ export interface HubMapDoor {
   readonly style: CSSProperties;
 }
 
+/**
+ * Display-only vertical nudges, in map image pixels, for doors whose true
+ * map positions overlap their neighbour's marker.
+ */
+const markerNudges: Readonly<Record<string, number>> = Object.freeze({
+  combat22: -32,
+  combat11: 32,
+  combat13: -38,
+  combat10: 6,
+  combat23: -12,
+  combat01: 12,
+  combat07: -14,
+  combat08: 14,
+});
+
 /** Visible, noninteractive colour key of the board's doors. */
 function HubMapQualityLegend() {
   return (
@@ -29,6 +44,14 @@ function HubMapQualityLegend() {
       ))}
     </div>
   );
+}
+
+function nudged(
+  marker: RoomMapMarkerPosition,
+  image: { readonly height: number },
+  dy: number | undefined,
+): RoomMapMarkerPosition {
+  return dy === undefined ? marker : { ...marker, top: marker.top + (dy / image.height) * 100 };
 }
 
 /**
@@ -70,7 +93,13 @@ export function HubBoardMap({
                         hubSlotKey: slot.hubSlotKey,
                         category: hubDoorQuality(slot.hubSlotKey),
                         mapLabel: hubDoorMapLabel(slot.hubSlotKey),
-                        style: position(roomMapPosition(slot.mapDoor, calibration)),
+                        style: position(
+                          nudged(
+                            roomMapPosition(slot.mapDoor, calibration),
+                            calibration,
+                            markerNudges[slot.hubSlotKey],
+                          ),
+                        ),
                       }),
                 )}
           </div>
