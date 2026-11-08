@@ -10,6 +10,7 @@ import {
   createHubRoomAddress,
   createHubSlotAddress,
   createHubVisitAddress,
+  createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
   createOccurrenceAddress,
   type BiomeAddress,
@@ -36,8 +37,10 @@ import type {
 import { materializeAuthoredRoom } from './rooms/assemble';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
+  firstRepeatedVisitIndex,
   hubFountainPrecedingVisitCount,
   hubVisitSlotKeys,
+  visitsBeforeRepeat,
 } from '../../authored-project/topology/query';
 
 export class HubMaterializationContractError extends Error {
@@ -175,6 +178,8 @@ function materializeLocalSlots(
   ) {
     fail(`${room.gameName} has no materializable fixed side-room group`);
   }
+  // Side rooms are entered only up to the first repeated entry.
+  const reachedOrder = visitsBeforeRepeat(localDecision.visitOrder);
   return Object.freeze(
     descriptor.slots.map((slot): CanonicalLocalVisitRoom => {
       const target = localDecision.targetsBySlot[slot.slotKey];
@@ -184,7 +189,7 @@ function materializeLocalSlots(
       if (sideRoom.mode.kind !== 'authored' || sideRoom.mode.templateKey !== 'EphyraSideRoom') {
         fail(`${sideRoom.gameName} is not an Ephyra side room`);
       }
-      const enteredOrdinal = localDecision.visitOrder.indexOf(authored.occurrenceId);
+      const enteredOrdinal = reachedOrder.indexOf(authored.occurrenceId);
       const materialized = materializeAuthoredRoom({
         catalog,
         biome,
@@ -306,6 +311,22 @@ function materializeVisits(
       );
       const origin = createHubVisitAddress(biome, descriptor.hubKey, index + 1);
       const parent = authoredRoomReference(target.room);
+      const localRepeat =
+        localDecision === undefined ? undefined : firstRepeatedVisitIndex(localDecision.visitOrder);
+      const repeatedLocalVisit =
+        localDecision === undefined || localRepeat === undefined
+          ? undefined
+          : Object.freeze({
+              origin: createLocalVisitOrderAddress(
+                biome,
+                localDecision.sourceOccurrenceId,
+                localDecision.groupKey,
+              ),
+              visitIndex: localRepeat + 1,
+              occurrenceId: localDecision.visitOrder[localRepeat]!,
+              firstVisitIndex:
+                localDecision.visitOrder.indexOf(localDecision.visitOrder[localRepeat]!) + 1,
+            });
       return Object.freeze({
         origin,
         visitIndex: index + 1,
@@ -326,9 +347,20 @@ function materializeVisits(
           after: origin,
           room: hubRoomReference(board.room),
         }),
+        ...(repeatedLocalVisit === undefined ? {} : { repeatedLocalVisit }),
       });
     }),
   );
+}
+
+/** Index in the action order of the zero-based room visit. */
+function hubVisitActionIndex(decision: HubDecision, visitIndex: number): number {
+  let visits = -1;
+  const index = decision.actions.findIndex(
+    (action) => action.kind === 'roomVisit' && (visits += 1) === visitIndex,
+  );
+  if (index < 0) fail(`${decision.hubKey} has no room visit ${visitIndex + 1}`);
+  return index;
 }
 
 export function materializeHubDecision(
@@ -336,7 +368,7 @@ export function materializeHubDecision(
   biome: BiomeAddress,
   routePosition: ResolvedRoutePosition,
   descriptor: HubDecisionDescriptor,
-  decision: HubDecision,
+  authored: HubDecision,
   localDecisions: readonly LocalVisitDecision[],
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   loadout: RouteWeaponAspectLoadout,
@@ -344,9 +376,28 @@ export function materializeHubDecision(
   if (loadout.weaponKey?.length === 0 || loadout.aspectKey?.length === 0) {
     fail(`${descriptor.hubKey} Hub materialization requires a route loadout`);
   }
-  if (decision.hubKey !== descriptor.hubKey) {
-    fail(`Hub decision ${decision.hubKey} does not match ${descriptor.hubKey}`);
+  if (authored.hubKey !== descriptor.hubKey) {
+    fail(`Hub decision ${authored.hubKey} does not match ${descriptor.hubKey}`);
   }
+  // The walk stops before the first visit repeating an earlier one; no action
+  // from it on is reached.
+  const storedVisits = hubVisitSlotKeys(authored);
+  const repeat = firstRepeatedVisitIndex(storedVisits);
+  const decision =
+    repeat === undefined
+      ? authored
+      : Object.freeze({
+          ...authored,
+          actions: Object.freeze(authored.actions.slice(0, hubVisitActionIndex(authored, repeat))),
+        });
+  const repeatedVisit =
+    repeat === undefined
+      ? undefined
+      : Object.freeze({
+          origin: createHubVisitAddress(biome, descriptor.hubKey, repeat + 1),
+          hubSlotKey: storedVisits[repeat]!,
+          firstVisitIndex: storedVisits.indexOf(storedVisits[repeat]!) + 1,
+        });
   const room = materializeHubRoom(catalog, biome, descriptor);
   const board = materializeBoard(
     catalog,
@@ -407,5 +458,6 @@ export function materializeHubDecision(
       board,
       loadout,
     ),
+    ...(repeatedVisit === undefined ? {} : { repeatedVisit }),
   });
 }

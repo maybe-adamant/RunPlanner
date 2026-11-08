@@ -736,8 +736,10 @@ export interface HubTerminalTakeoverForSource {
 /**
  * The completed-Hub Preboss handoff is structurally available only after the
  * persisted board satisfies the declaration's open-set bound and room-visit
- * count.  This deliberately does not inspect fountain placement, reward or
- * generation validity: those remain editable without hiding the handoff.
+ * count, counting visits up to the first one repeating an earlier visit, where
+ * the walk stops. This deliberately does not inspect fountain placement,
+ * reward or generation validity: those remain editable without hiding the
+ * handoff.
  */
 export type HubDecisionHandoffReadiness =
   | { readonly kind: 'missing' }
@@ -776,7 +778,7 @@ export function hubDecisionHandoffReadiness(
       maximumCount: descriptor.openCount.max,
     });
   }
-  const visits = hubVisitSlotKeys(decision);
+  const visits = visitsBeforeRepeat(hubVisitSlotKeys(decision));
   if (visits.length !== descriptor.requiredVisits) {
     return Object.freeze({
       kind: 'visitOrderIncomplete',
@@ -785,6 +787,45 @@ export function hubDecisionHandoffReadiness(
     });
   }
   return Object.freeze({ kind: 'ready' });
+}
+
+/**
+ * Zero-based index of the first visit repeating an earlier one, or undefined.
+ * A stored order may hold such a repeat left by an earlier edit; it is a
+ * finding of that later visit and the walk stops before it.
+ */
+export function firstRepeatedVisitIndex<T>(visits: readonly T[]): number | undefined {
+  const seen = new Set<T>();
+  for (const [index, visit] of visits.entries()) {
+    if (seen.has(visit)) return index;
+    seen.add(visit);
+  }
+  return undefined;
+}
+
+/** The visits the walk reaches: those before the first repeat. */
+export function visitsBeforeRepeat<T>(visits: readonly T[]): readonly T[] {
+  const repeat = firstRepeatedVisitIndex(visits);
+  return repeat === undefined ? visits : Object.freeze(visits.slice(0, repeat));
+}
+
+/**
+ * Zero-based index of the first visit a proposed order changes or adds that
+ * enters a room visited before it, adding a visit to that room, or undefined.
+ * Each visit chooses among rooms not visited before it; a repeat the proposal
+ * only keeps or moves was left by an earlier edit and stays a finding.
+ */
+export function newlyRepeatedVisitIndex<T>(
+  current: readonly T[],
+  proposed: readonly T[],
+): number | undefined {
+  const count = (list: readonly T[], visit: T) => list.filter((entry) => entry === visit).length;
+  for (const [index, visit] of proposed.entries()) {
+    if (index < current.length && current[index] === visit) continue;
+    if (proposed.slice(0, index).includes(visit) && count(proposed, visit) > count(current, visit))
+      return index;
+  }
+  return undefined;
 }
 
 /** Room-only view of the Hub action order; visit ordinals count room visits only. */
@@ -814,9 +855,10 @@ export function isHubAction(value: unknown): value is HubAction {
 /**
  * Why a proposed action order cannot replace a Hub's: reordering keeps every
  * reroll exactly, since rerolls are added and removed only by their own
- * commands. Undefined when the order may replace it.
+ * commands, and a visit the proposal changes or adds cannot enter a room
+ * visited before it. Undefined when the order may replace it.
  */
-export type HubActionOrderRefusal = 'rerollsChanged';
+export type HubActionOrderRefusal = 'rerollsChanged' | 'alreadyVisited';
 
 export function hubActionOrderRefusal(
   decision: Pick<HubDecision, 'actions'>,
@@ -828,7 +870,11 @@ export function hubActionOrderRefusal(
         .flatMap((action) => (action.kind === 'reroll' ? [action] : []))
         .sort((left, right) => left.rerollId.localeCompare(right.rerollId)),
     );
-  return rerolls(actions) === rerolls(decision.actions) ? undefined : 'rerollsChanged';
+  if (rerolls(actions) !== rerolls(decision.actions)) return 'rerollsChanged';
+  return newlyRepeatedVisitIndex(hubVisitSlotKeys(decision), hubVisitSlotKeys({ actions })) ===
+    undefined
+    ? undefined
+    : 'alreadyVisited';
 }
 
 /** Room visits completed before the Hub fountain use, or undefined while it is unplaced. */

@@ -4,6 +4,7 @@ import {
   createFountainRarityOutcomeAddress,
   createHubFountainAddress,
   createHubOpenSetAddress,
+  createHubVisitAddress,
   semanticAddressKey,
   type HubDecisionAddress,
   type HubSlotAddress,
@@ -27,6 +28,7 @@ import {
   hubActionOrderRefusal,
   hubVisitSlotKeys,
   isHubAction,
+  newlyRepeatedVisitIndex,
   type HubActionOrderRefusal,
 } from '../../authored-project/topology/query';
 import {
@@ -646,7 +648,6 @@ export function evaluateHubActionOrderCandidate(
   const structurallyPossible =
     refusal === undefined &&
     candidateHubSlotKeys.length <= state.descriptor.requiredVisits &&
-    new Set(candidateHubSlotKeys).size === candidateHubSlotKeys.length &&
     candidateHubSlotKeys.every((hubSlotKey) => openHubSlotKeys.includes(hubSlotKey)) &&
     candidateActions.filter((action) => action.kind === 'useFountain').length <= 1;
   const proposal = structurallyPossible
@@ -690,6 +691,17 @@ export function evaluateHubActionOrderCandidate(
       )
       ?.visits.map((visit) => semanticAddressKey(visit.origin)) ?? [],
   );
+  // A visit repeating an earlier one stops the walk, so it is past the materialized visits.
+  for (const visitIndex of candidateHubSlotKeys.keys())
+    visitOrigins.add(
+      semanticAddressKey(
+        createHubVisitAddress(
+          createBiomeAddress(query.hub.routeKey, query.hub.biomeKey),
+          query.hub.hubKey,
+          visitIndex + 1,
+        ),
+      ),
+    );
   // The fountain use and its Phial outcome belong to the Hub action order itself.
   const fountain = createHubFountainAddress(
     createBiomeAddress(query.hub.routeKey, query.hub.biomeKey),
@@ -709,8 +721,8 @@ export function evaluateHubActionOrderCandidate(
       openHubSlotKeys,
       ...(refusal === undefined ? {} : { refusal }),
       findings,
-      // Downstream room-local work is feedback, not a reason to reject an
-      // otherwise distinct open Hub visit order from authorship.
+      // Downstream room-local work, and a repeat an earlier edit left, are
+      // feedback, not a reason to reject an otherwise possible visit order.
       selectedPossible: structurallyPossible && proposal !== undefined,
     }),
   });
@@ -854,11 +866,6 @@ export function evaluateSideRoomEntryOrderCandidate(
       `${semanticAddressKey(query.group)} has no declared Ephyra side-room group`,
     );
   }
-  if (new Set(query.occurrenceIds).size !== query.occurrenceIds.length) {
-    throw new CandidateEvaluationContractError(
-      'local visit order must contain distinct occurrences',
-    );
-  }
   const generatedSlotKeys = Object.freeze(
     group.slots.flatMap((slot) =>
       localDecision.targetsBySlot[slot.slotKey]?.generation === 'generated' ? [slot.slotKey] : [],
@@ -874,7 +881,11 @@ export function evaluateSideRoomEntryOrderCandidate(
     }
     if (target.generation !== 'generated') includesUngeneratedSlot = true;
   }
-  if (includesUngeneratedSlot) {
+  // Each side visit chooses among side rooms not visited before it.
+  if (
+    includesUngeneratedSlot ||
+    newlyRepeatedVisitIndex(localDecision.visitOrder, query.occurrenceIds) !== undefined
+  ) {
     return Object.freeze({
       kind: 'sideRoomEntryOrder',
       result: Object.freeze({
@@ -951,11 +962,14 @@ export function evaluateSideRoomEntryOrderCandidate(
       ),
       generatedSlotKeys,
       findings,
-      // Missing room-local authorship is repair feedback; only invalid
-      // authored values in the replayed region reject the order.
+      // Missing room-local authorship and a repeat an earlier edit left are
+      // repair feedback; only other invalid values in the region reject the order.
       selectedPossible:
         proposal !== undefined &&
-        findings.every((finding) => isRequiredMissingInputFinding(finding)),
+        findings.every(
+          (finding) =>
+            finding.code === 'roomAlreadyVisited' || isRequiredMissingInputFinding(finding),
+        ),
     }),
   });
 }

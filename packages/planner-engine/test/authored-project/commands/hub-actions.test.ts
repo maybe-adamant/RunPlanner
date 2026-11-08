@@ -10,6 +10,7 @@ import {
   createProjectHistory,
   decodeProjectDocument,
   encodeProjectDocument,
+  hubActionOrderRefusal,
   hubFountainPrecedingVisitCount,
   hubVisitSlotKeys,
   ProjectCommandContractError,
@@ -101,7 +102,7 @@ describe('Hub action order commands', () => {
     );
   });
 
-  it('structurally rejects a second fountain use and closed or repeated visits', () => {
+  it('rejects a second fountain use, closed visits and a new visit to a room visited before it', () => {
     const project = loadSurfaceNProject();
     for (const actions of [
       [{ kind: 'useFountain' }, ...hubVisitActions(['combat05'], null), { kind: 'useFountain' }],
@@ -194,6 +195,38 @@ describe('Hub action order commands', () => {
   });
 });
 
+describe('repeated Hub visits', () => {
+  const [first, second, ...rest] = nVisitSlotKeys;
+  const repeatedOrder = [second, second, ...rest];
+
+  it('stores the repeat a change to an earlier visit leaves behind', () => {
+    const project = loadSurfaceNProject();
+    const changed = hubVisitActions(repeatedOrder);
+    expect(hubActionOrderRefusal(authoredHub(project), changed)).toBeUndefined();
+    const repeated = replaceActions(project, changed);
+    expect(hubVisitSlotKeys(authoredHub(repeated))).toEqual(repeatedOrder);
+
+    // Unrelated edits keep the stored repeat; repairing the later visit clears it.
+    const moved = replaceActions(repeated, hubVisitActions(repeatedOrder, 3));
+    expect(hubVisitSlotKeys(authoredHub(moved))).toEqual(repeatedOrder);
+    expect(hubFountainPrecedingVisitCount(authoredHub(moved))).toBe(3);
+    const repaired = hubVisitActions([second, first, ...rest], 3);
+    expect(hubActionOrderRefusal(authoredHub(moved), repaired)).toBeUndefined();
+    expect(hubVisitSlotKeys(authoredHub(replaceActions(moved, repaired)))).toEqual([
+      second,
+      first,
+      ...rest,
+    ]);
+  });
+
+  it('refuses a changed visit that enters a room visited before it', () => {
+    const project = loadSurfaceNProject();
+    const changed = hubVisitActions([first, first, ...rest]);
+    expect(hubActionOrderRefusal(authoredHub(project), changed)).toBe('alreadyVisited');
+    expect(() => replaceActions(project, changed)).toThrow(ProjectCommandContractError);
+  });
+});
+
 describe('new Hub decisions', () => {
   it('start with an empty action order after the Hub is recreated', () => {
     const removed = applyProjectCommand(loadSurfaceNProject(), catalog, {
@@ -251,15 +284,6 @@ describe('Hub action order codec', () => {
       },
     ],
     [
-      'a repeated room visit',
-      (hub: Record<string, unknown>) => {
-        hub.actions = [
-          { kind: 'roomVisit', hubSlotKey: 'combat05' },
-          { kind: 'roomVisit', hubSlotKey: 'combat05' },
-        ];
-      },
-    ],
-    [
       'an unknown action',
       (hub: Record<string, unknown>) => {
         hub.actions = [{ kind: 'usePylon' }];
@@ -296,6 +320,18 @@ describe('Hub action order codec', () => {
     const { raw, decision } = rawHub(loadSurfaceNProject());
     mutate(decision);
     expect(() => decodeProjectDocument(raw, catalog)).toThrow(ProjectDocumentContractError);
+  });
+
+  it('decodes a repeated room visit left by an earlier edit', () => {
+    const { raw, decision } = rawHub(loadSurfaceNProject());
+    decision.actions = [
+      { kind: 'roomVisit', hubSlotKey: 'combat05' },
+      { kind: 'roomVisit', hubSlotKey: 'combat05' },
+    ];
+    expect(hubVisitSlotKeys(authoredHub(decodeProjectDocument(raw, catalog)))).toEqual([
+      'combat05',
+      'combat05',
+    ]);
   });
 
   it('decodes an empty action order without an implicit fountain use', () => {

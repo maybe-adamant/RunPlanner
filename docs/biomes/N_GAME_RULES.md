@@ -112,9 +112,10 @@ occurrence-sourced candidate.
 - The Hub decision records the PreHub occurrence as its source and owns its
   open slot membership, one ordered action list, and the fountain's Phial
   outcome; it does not own room-local target state.
-- Nine or ten declaration-fixed Hub slots may be open. The action list holds
-  exactly six distinct open-slot room visits and one fountain use in authored
-  order. A target occurrence remains owned
+- Nine or ten declaration-fixed Hub slots may be open. A complete action list
+  holds six distinct open-slot room visits and one fountain use in authored
+  order; a stored repeat is a finding of the later visit. A target occurrence
+  remains owned
   by its slot while its incoming reward belongs to that occurrence. Its local
   generation and visit order belong to a parent-sourced `LocalVisitDecision`;
   each generated side target is a distinct occurrence.

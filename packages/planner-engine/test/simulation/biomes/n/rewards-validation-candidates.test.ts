@@ -1439,8 +1439,8 @@ describe('N Hub rewards, validation, and candidates', () => {
         kind: 'hubActionOrder',
         hub: createHubDecisionAddress(nBiome, 'hub'),
         actions: hubVisitActions([
-          'miniBoss01',
-          'miniBoss01',
+          'combat05',
+          'combat05',
           'combat02',
           'combat11',
           'combat23',
@@ -1512,7 +1512,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     });
     expect(duplicateVisit).toMatchObject({
       kind: 'hubActionOrder',
-      result: { selectedPossible: false },
+      result: { selectedPossible: false, refusal: 'alreadyVisited' },
     });
     // Forced generation needs an earlier visit's pylon that no side room yet covers.
     const forcedSideGeneration = createPreparedProjectCandidateSession(

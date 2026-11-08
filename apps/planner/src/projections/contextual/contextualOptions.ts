@@ -911,6 +911,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'fields', message: 'This Fields door outcome cannot occur at this point.' };
     case 'hubOpenSlotUnavailable':
       return { kind: 'hub', message: 'This Hub room conflicts with the selected open set.' };
+    case 'roomAlreadyVisited':
+      return presented(finding.origin.kind === 'localVisitOrder' ? 'sideRoom' : 'hub', finding);
     case 'sideRoomGenerationUnavailable':
       return {
         kind: 'sideRoom',

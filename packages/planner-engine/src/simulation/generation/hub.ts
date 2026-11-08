@@ -52,7 +52,7 @@ function fail(detail: string): never {
 }
 
 function finding(
-  code: 'hubOpenSlotUnavailable' | 'sideRoomGenerationUnavailable',
+  code: 'hubOpenSlotUnavailable' | 'roomAlreadyVisited' | 'sideRoomGenerationUnavailable',
   origin: SemanticFinding['origin'],
   evidence: FindingEvidence,
 ): SemanticFinding {
@@ -258,6 +258,82 @@ function validateVisit(
   return Object.freeze(entries);
 }
 
+/** The sequence of the restore that follows a visit, once the walk reached it. */
+function restoreSequence(
+  history: HubGenerationHistory,
+  after: SemanticAddress,
+): number | undefined {
+  return history.events.find(
+    (event) =>
+      event.kind === 'roomRestored' &&
+      semanticAddressKey(event.after) === semanticAddressKey(after),
+  )?.sequence;
+}
+
+/**
+ * A stored visit entering a room visited before it is a finding of that later
+ * visit. The walk stops before it, so its stop is where that visit would
+ * start: the Hub stay after the previous visit returned, or the parent room
+ * restored after the previous side room.
+ */
+function repeatedVisitFindings(
+  decision: CanonicalHubDecision,
+  history: HubGenerationHistory,
+  findings: SemanticFinding[],
+  findingRegions: FindingRegionEntry[],
+): void {
+  for (const visit of decision.visits) {
+    const repeat = visit.repeatedLocalVisit;
+    const previous = visit.enteredLocalRooms.at(-1);
+    if (repeat === undefined || previous === undefined) continue;
+    const sequence = restoreSequence(history, previous.localVisit.origin);
+    if (sequence === undefined) continue;
+    const value = finding('roomAlreadyVisited', repeat.origin, {
+      visitIndex: repeat.visitIndex,
+      firstVisitIndex: repeat.firstVisitIndex,
+      occurrenceId: repeat.occurrenceId,
+    });
+    findings.push(value);
+    findingRegions.push(
+      findingRegion(
+        value,
+        ownerRegion(value.origin),
+        {
+          kind: 'hubVisit',
+          visitIndex: visit.visitIndex - 1,
+          phase: 'localRoomLifecycle',
+          localLifecycleIndex: visit.enteredLocalRooms.length,
+          history: { kind: 'history', sequence, boundary: 'after' },
+        },
+        'generation',
+      ),
+    );
+  }
+  const repeat = decision.repeatedVisit;
+  const previous = decision.visits.at(-1);
+  if (repeat === undefined || previous === undefined) return;
+  // The Hub stay after the previous visit runs to the end of the reached walk.
+  const sequence = restoreSequence(history, previous.origin);
+  const last = history.events.at(-1)?.sequence;
+  if (sequence === undefined || last === undefined) return;
+  const target = decision.board.targets.find((entry) => entry.hubSlotKey === repeat.hubSlotKey);
+  const value = finding('roomAlreadyVisited', repeat.origin, {
+    visitIndex: repeat.origin.visitIndex,
+    firstVisitIndex: repeat.firstVisitIndex,
+    hubSlotKey: repeat.hubSlotKey,
+    ...(target === undefined ? {} : { occurrenceId: target.room.occurrenceId }),
+  });
+  findings.push(value);
+  findingRegions.push(
+    findingRegion(
+      value,
+      ownerRegion(value.origin),
+      { kind: 'history', sequence: last, boundary: 'after' },
+      'generation',
+    ),
+  );
+}
+
 export function evaluateHubDecisionGenerationInternal(
   catalog: Catalog,
   snapshot: HubGenerationSnapshot,
@@ -311,6 +387,7 @@ export function evaluateHubDecisionGenerationInternal(
   const sideRoomGenerations = Object.freeze(
     visits.flatMap((visit) => validateVisit(descriptor, visit, views, findings, findingRegions)),
   );
+  repeatedVisitFindings(decision, history, findings, findingRegions);
   return Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',

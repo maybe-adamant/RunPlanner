@@ -61,7 +61,37 @@ describe('authored-project Ephyra local-visit commands', () => {
     ).toBe(project);
   });
 
-  it('requires generated, distinct occurrences and removal before disabling generation', () => {
+  it('stores the repeat a change to an earlier side visit leaves behind', () => {
+    let project = createCompleteNProject();
+    for (const slotKey of ['sideDoor1', 'sideDoor2']) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(nBiome, combatId, 'sideRooms', slotKey),
+        generation: 'generated',
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalVisitOrder',
+      order,
+      occurrenceIds: [sideDoor1, sideDoor2],
+    });
+    const repeated = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalVisitOrder',
+      order,
+      occurrenceIds: [sideDoor2, sideDoor2],
+    });
+    expect(localVisit(repeated).visitOrder).toEqual([sideDoor2, sideDoor2]);
+    // A changed side visit still chooses only among side rooms not visited before it.
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceLocalVisitOrder',
+        order,
+        occurrenceIds: [sideDoor1, sideDoor1],
+      }),
+    ).toThrowError(expect.objectContaining({ commandKind: 'ReplaceLocalVisitOrder' }));
+  });
+
+  it('requires generated occurrences, new visits to unvisited rooms and removal before disabling generation', () => {
     const initial = createCompleteNProject();
     expect(() =>
       applyProjectCommand(initial, catalog, {

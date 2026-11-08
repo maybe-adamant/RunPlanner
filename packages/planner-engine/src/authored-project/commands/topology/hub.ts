@@ -333,7 +333,6 @@ export function updateHub(
   if (visits.some((hubSlotKey) => hubSlotKey.trim().length === 0)) {
     failCommand(command, 'Hub visit order must contain non-blank slot keys');
   }
-  if (new Set(visits).size !== visits.length) failCommand(command, 'Hub visits must be distinct');
   if (actions.filter((action) => action.kind === 'useFountain').length > 1)
     failCommand(command, 'Hub fountain can be used only once');
   if (
@@ -343,8 +342,10 @@ export function updateHub(
   }
   if (visits.length > descriptor.requiredVisits)
     failCommand(command, `Hub supports ${descriptor.requiredVisits} visits`);
-  if (hubActionOrderRefusal(hub, actions) !== undefined)
-    failCommand(command, 'Hub action order must keep its rerolls');
+  const refusal = hubActionOrderRefusal(hub, actions);
+  if (refusal === 'rerollsChanged') failCommand(command, 'Hub action order must keep its rerolls');
+  if (refusal === 'alreadyVisited')
+    failCommand(command, 'a changed Hub visit cannot enter a room visited before it');
   if (
     actions.length === hub.actions.length &&
     actions.every((action, index) => sameHubAction(action, hub.actions[index]!))

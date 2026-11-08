@@ -512,7 +512,7 @@ export function decodeHubDecision(
       });
     },
   );
-  const visited = new Set<string>();
+  let visitCount = 0;
   const rerollIds = new Set<string>();
   let fountainUsed = false;
   for (const [index, action] of actions.entries()) {
@@ -531,11 +531,10 @@ export function decodeHubDecision(
     }
     if (!seenSlots.has(action.hubSlotKey))
       failProjectDocument(`${actionPath}.hubSlotKey`, `${action.hubSlotKey} is not open`);
-    if (visited.has(action.hubSlotKey))
-      failProjectDocument(`${actionPath}.hubSlotKey`, `duplicates Hub visit ${action.hubSlotKey}`);
-    visited.add(action.hubSlotKey);
+    // A repeated visit left by an earlier edit is kept for repair; the simulation reports it.
+    visitCount += 1;
   }
-  if (visited.size > hub.requiredVisits)
+  if (visitCount > hub.requiredVisits)
     failProjectDocument(`${raw.path}.actions`, `exceeds ${hub.requiredVisits} Hub visits`);
   const fountainRarityResult = hasFountainRarityResult
     ? decodeFountainRarityResult(
@@ -621,9 +620,7 @@ export function decodeLocalVisitDecision(
   const visitOrder = expectArray(value.visitOrder, `${raw.path}.visitOrder`).map((entry, index) =>
     occurrenceId(entry, `${raw.path}.visitOrder[${index}]`),
   );
-  if (new Set(visitOrder).size !== visitOrder.length) {
-    failProjectDocument(`${raw.path}.visitOrder`, 'must contain distinct local occurrences');
-  }
+  // A repeated entry left by an earlier edit is kept for repair; the simulation reports it.
   for (const id of visitOrder) {
     const target = Object.values(targetsBySlot).find((candidate) => candidate.occurrenceId === id);
     if (target === undefined)

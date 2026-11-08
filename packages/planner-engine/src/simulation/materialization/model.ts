@@ -18,6 +18,7 @@ import type {
   IncomingRewardAddress,
   InfernalContractPedestalAddress,
   PhantomExitAddress,
+  LocalVisitOrderAddress,
   LocalVisitSlotAddress,
   LocalRewardAddress,
   OccurrenceAddress,
@@ -507,9 +508,30 @@ export interface CanonicalHubVisit {
   readonly visitIndex: number;
   readonly target: CanonicalHubTarget;
   readonly localSlots: readonly CanonicalLocalVisitRoom[];
+  /** Side rooms entered in visit order, through the last before a repeated side visit. */
   readonly enteredLocalRooms: readonly CanonicalLocalVisitRoom[];
   readonly parentRestores: readonly CanonicalRoomRestore[];
   readonly hubRestore: CanonicalRoomRestore;
+  /** The first stored side visit entering a side room visited before it; nothing from it on is entered. */
+  readonly repeatedLocalVisit?: CanonicalRepeatedLocalVisit;
+}
+
+/** A stored Hub visit entering a room visited before it; the Hub's actions stop before it. */
+export interface CanonicalRepeatedHubVisit {
+  readonly origin: HubVisitAddress;
+  readonly hubSlotKey: string;
+  /** One-based ordinal of the earlier visit to the same room. */
+  readonly firstVisitIndex: number;
+}
+
+/** A stored side visit entering a side room visited before it, owned by its group's order. */
+export interface CanonicalRepeatedLocalVisit {
+  readonly origin: LocalVisitOrderAddress;
+  /** One-based ordinal of the repeated entry in the stored order. */
+  readonly visitIndex: number;
+  readonly occurrenceId: OccurrenceId;
+  /** One-based ordinal of the earlier visit to the same side room. */
+  readonly firstVisitIndex: number;
 }
 
 export interface CanonicalHubDecision {
@@ -524,6 +546,8 @@ export interface CanonicalHubDecision {
   readonly fountain?: CanonicalHubFountainUse;
   /** Board rerolls in authored order, each pressed in the Hub stay it is authored in. */
   readonly rerolls: readonly CanonicalHubReroll[];
+  /** The first stored visit entering a room visited before it; visits, rerolls and fountain stop before it. */
+  readonly repeatedVisit?: CanonicalRepeatedHubVisit;
 }
 
 /** One Hub board reroll, pressed in the Hub after its preceding room visits returned. */

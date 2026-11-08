@@ -127,6 +127,9 @@ export const findingCopy = {
   hubOpenSlotUnavailable: {
     title: 'Hub rooms conflict',
   },
+  roomAlreadyVisited: {
+    title: 'Room already visited',
+  },
   pickedTargetMissing: {
     title: 'Choose the door taken',
   },

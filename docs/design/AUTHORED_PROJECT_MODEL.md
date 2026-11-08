@@ -604,8 +604,11 @@ ordered room visits, the one fountain use, side-room policy, restores, and the
 dedicated completed-Hub exit. An open slot creates one occurrence; its room
 identity is not replaceable. Open unvisited slots remain real offered leaves.
 
-The action list is a chronological prefix: at most six distinct open-slot
-visits, one fountain use and any board-door reroll presses, possibly empty.
+The action list is a chronological prefix: at most six open-slot visits, one
+fountain use and any board-door reroll presses, possibly empty. A visit an
+edit changes or adds enters only a room not visited before it; a repeat that
+an earlier visit's change leaves behind is stored and is a finding of the
+later visit. A side-room visit order follows the same rule.
 New Hubs start empty and decoding
 never infers a use. `ReplaceHubActionOrder` edits it by action identity; visit
 ordinals count room visits only. Reordering keeps the Phial outcome, while

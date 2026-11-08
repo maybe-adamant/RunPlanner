@@ -780,7 +780,10 @@ export interface HubDecision {
   readonly hubKey: string;
   readonly source: Extract<ExitDecisionSource, { readonly kind: 'occurrence' }>;
   readonly openTargets: readonly HubTargetReference[];
-  /** Chronological prefix of distinct room visits and at most one fountain use. */
+  /**
+   * Chronological prefix of room visits and at most one fountain use; a visit
+   * repeating an earlier one, left by an earlier edit, is kept as a finding.
+   */
   readonly actions: readonly HubAction[];
   /** Present only when the Hub fountain use owns an authored Phial target. */
   readonly fountainRarityResult?: AuthoredFountainRarityResult;

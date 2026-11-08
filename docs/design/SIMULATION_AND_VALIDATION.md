@@ -718,6 +718,14 @@ longer matches its last press at the rerolled owner, and an earlier-screen
 finding at that screen of the offer. A hidden return door's unavailable
 placeholder or reward belongs to its room's door.
 
+A Hub visit or side-room visit that enters a room visited before it, a
+repeat left by an earlier edit, is a finding of that later visit: the Hub
+visit, or the side-room group's visit order with the entry's ordinal in
+evidence. The walk stops before it, where that visit would start: earlier
+visits stay settled, and the repeat and everything authored after it are
+unreached, so no room is entered twice. Candidates offer each visit only rooms
+not visited before it.
+
 Leaving through an Oceanus door still locked is exit work: the finding is on
 the exit selection, at the room's exit, and the room's Timeline stays
 evaluated.

@@ -24,6 +24,8 @@ export type RoomGenerationFindingCode =
   | 'roomObjectAnchorUnavailable'
   | 'roomObjectAnchorDuplicate'
   | 'hubOpenSlotUnavailable'
+  /** A stored Hub or side visit entering a room visited before it. */
+  | 'roomAlreadyVisited'
   | 'resourcePlacementUnavailable'
   | 'sideRoomGenerationUnavailable'
   | 'targetRoomSupportEmpty'

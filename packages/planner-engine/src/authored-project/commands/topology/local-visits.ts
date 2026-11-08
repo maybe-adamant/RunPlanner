@@ -10,6 +10,7 @@ import {
 } from '../contract';
 import type { TopologyCommand } from '../types';
 import { replaceDecision, updateTopology } from './construction';
+import { newlyRepeatedVisitIndex } from '../../topology/query';
 
 function localVisitDecisionForSource(
   topology: BiomeTopology,
@@ -77,8 +78,8 @@ export function updateLocalVisit(
       ),
     );
   }
-  if (new Set(command.occurrenceIds).size !== command.occurrenceIds.length) {
-    failCommand(command, 'local visit order must contain distinct occurrences');
+  if (newlyRepeatedVisitIndex(decision.visitOrder, command.occurrenceIds) !== undefined) {
+    failCommand(command, 'a changed local visit cannot enter a room visited before it');
   }
   const targets = Object.values(decision.targetsBySlot);
   for (const occurrenceId of command.occurrenceIds) {
