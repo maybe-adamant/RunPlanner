@@ -126,7 +126,12 @@ describe('room objects', () => {
     });
     const switchObject = objectOf(spotsOf(project, oneSpot, 'time'), 'challengeSwitch');
     expect(switchObject).toMatchObject({ present: true, switchKind: 'time' });
-    expect(switchObject.kinds?.map((kind) => kind.switchKind)).toEqual(['perfectClear']);
+    // The observed kind removes it; another observable kind takes its place; a locked one says why.
+    expect(switchObject.switchKinds).toMatchObject([
+      { switchKind: 'time', toggleKey: switchObject.toggleKey },
+      { switchKind: 'perfectClear', toggleKey: 'kind:perfectClear' },
+      { switchKind: 'elite', lock: { reason: 'refused' } },
+    ]);
   });
 
   it('pins the Well and stands the Pool on the anchor it leaves', () => {

@@ -446,10 +446,15 @@ export interface WorkspaceRoomAnchorObject {
   readonly lock?: WorkspaceAnchorObjectLock;
   /** A present object's anchor. */
   readonly anchor?: WorkspaceRoomObjectAnchor;
-  /** A present switch's other observable types, each changing it in place. */
-  readonly kinds?: readonly {
-    readonly key: string;
+  /**
+   * A switch host's kinds, one toggle each: the observed kind's removes the
+   * switch, another kind's observes it in place of the current one.
+   */
+  readonly switchKinds?: readonly {
     readonly switchKind: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
+    readonly toggleKey?: string;
+    /** Why this kind cannot be observed now. */
+    readonly lock?: WorkspaceAnchorObjectLock;
   }[];
 }
 

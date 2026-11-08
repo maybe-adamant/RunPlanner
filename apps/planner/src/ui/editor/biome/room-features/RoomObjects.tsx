@@ -7,11 +7,7 @@ import {
   type WorkspaceRoomObjectSlots,
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
-import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
-import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
-import { challengeSwitchIcon } from '@planner/ui/artwork/roomArtwork';
 import { ArtworkChip } from '@planner/ui/editor/rewards/TimelineChip';
-import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { useCommandsIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
@@ -26,7 +22,9 @@ import { heldObjectIcon, heldObjectName, heldObjectShortName } from './roomObjec
 const isSwitchPlacementFinding = (finding: { readonly code: string }) =>
   finding.code === 'challengeSwitchPlacementUnavailable';
 
-function lockHint(object: WorkspaceRoomAnchorObject): string | undefined {
+function lockHint(object: {
+  readonly lock?: WorkspaceRoomAnchorObject['lock'];
+}): string | undefined {
   const lock = object.lock;
   if (lock === undefined) return undefined;
   return lock.reason === 'unreached' ? candidateWaitingHint : lock.sentences.join(' ');
@@ -56,6 +54,30 @@ export function RoomObjectPresence({
           object.address,
           object.object === 'challengeSwitch' ? isSwitchPlacementFinding : undefined,
         );
+        if (object.switchKinds !== undefined) {
+          // One toggle per kind; the observed one, else the first, carries the switch's findings.
+          const owner =
+            object.switchKinds.find((kind) => kind.switchKind === object.switchKind) ??
+            object.switchKinds[0];
+          return object.switchKinds.map((kind) => {
+            const toggleKey = kind.toggleKey;
+            const held = { object: object.object, switchKind: kind.switchKind };
+            return (
+              <IconToggle
+                disabled={toggleKey === undefined}
+                disabledHint={lockHint(kind)}
+                icon={heldObjectIcon(held)}
+                key={`${object.object}:${kind.switchKind}`}
+                name={heldObjectName(held)}
+                onToggle={() => {
+                  if (toggleKey !== undefined) executeIntent(interaction.intentFor(toggleKey));
+                }}
+                pressed={object.present && object.switchKind === kind.switchKind}
+                {...(kind === owner ? { target } : {})}
+              />
+            );
+          });
+        }
         if (object.fixed || (object.present && object.toggleKey === undefined))
           return (
             <span key={object.object} {...target}>
@@ -82,7 +104,7 @@ export function RoomObjectPresence({
   );
 }
 
-/** Each present object's contents: Well and Pool stock, Shrine offers, the switch's type and reward. */
+/** Each present object's contents: Well and Pool stock, Shrine offers, the switch's reward. */
 export function RoomObjectContents({
   features,
   interactions,
@@ -97,10 +119,7 @@ export function RoomObjectContents({
   const settings = (object: WorkspaceRoomAnchorObject): ReactNode => {
     if (object.object === 'challengeSwitch')
       return room.challengeSwitch === undefined ? null : (
-        <>
-          <SwitchKindPicker interactions={interactions} object={object} objectSlots={objectSlots} />
-          <ChallengeSwitchControls interactions={interactions} observation={room.challengeSwitch} />
-        </>
+        <ChallengeSwitchControls interactions={interactions} observation={room.challengeSwitch} />
       );
     const kind = object.object;
     const feature = features.find(
@@ -118,7 +137,7 @@ export function RoomObjectContents({
       ? []
       : [
           <OverviewRow
-            icon={object.object === 'challengeSwitch' ? undefined : heldObjectIcon(object)}
+            icon={heldObjectIcon(object)}
             key={object.object}
             label={heldObjectShortName(object.object)}
           >
@@ -127,58 +146,4 @@ export function RoomObjectContents({
         ];
   });
   return lines.length === 0 ? null : <div className="room-layout-controls">{lines}</div>;
-}
-
-/** A present switch's type, changed in place among the types the room can roll. */
-function SwitchKindPicker({
-  interactions,
-  object,
-  objectSlots,
-}: {
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly object: WorkspaceRoomAnchorObject;
-  readonly objectSlots: WorkspaceRoomObjectSlots;
-}) {
-  const executeIntent = useCommandsIntent();
-  const interaction = requireWorkspaceInteraction(
-    interactions.roomChoices,
-    objectSlots.interactionKey,
-  );
-  const current = object.switchKind;
-  const kinds = object.kinds ?? [];
-  if (current === undefined) return null;
-  const icon = challengeSwitchIcon(current);
-  return (
-    <ContextualPicker<string>
-      ariaLabel="Challenge Switch type"
-      id={`${objectSlots.interactionKey}-switch-kind`}
-      itemIcon={(item) =>
-        item.value === 'current'
-          ? icon
-          : challengeSwitchIcon(kinds.find((kind) => kind.key === item.value)!.switchKind)
-      }
-      label=""
-      layout="inline"
-      locked={kinds.length === 0}
-      model={declaredChoicesPicker(
-        [
-          { key: 'current', value: 'current', label: challengeSwitchKindLabel(current) },
-          ...kinds.map((kind) => ({
-            key: kind.key,
-            value: kind.key,
-            label: challengeSwitchKindLabel(kind.switchKind),
-          })),
-        ],
-        'current',
-      )}
-      onSelect={(key) => {
-        if (key !== 'current') executeIntent(interaction.intentFor(key));
-      }}
-      placeholder={challengeSwitchKindLabel(current)}
-      searchable={false}
-      triggerIcon={icon}
-      triggerLabel={challengeSwitchKindLabel(current)}
-      triggerSize="icon"
-    />
-  );
 }

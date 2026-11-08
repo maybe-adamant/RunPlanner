@@ -402,8 +402,9 @@ order is light timeline rows, each its reorder handle, its visit number and
 its room.
 Every Overview renders its sections in game order, showing only those the room
 has: Encounter (encounters), Spawns (Fields optional rewards, additional
-exits, room objects, resources, NPCs, as existence only), Offers (Shop, Well,
-Pool and Shrine stock, the challenge switch's type and reward, the Pedestal's
+exits, room objects, resources, NPCs, as existence only; the challenge switch
+is one toggle per kind, turning one on replacing the switch), Offers (Shop,
+Well, Pool and Shrine stock, the challenge switch's reward, the Pedestal's
 item) and Layout. Its rows share one column grid of
 label, value picker and secondary action, so each picker starts at the same
 place in every section and room. A room object or Chaos Gate the room always

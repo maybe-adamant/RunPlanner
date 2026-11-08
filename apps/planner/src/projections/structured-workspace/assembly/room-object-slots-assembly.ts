@@ -49,6 +49,54 @@ function presenceAddress(
 
 const fullSentence = 'The room’s other objects take every spot.';
 
+/** The switch kinds in the order their toggles stand. */
+const switchKindOrder: readonly ChallengeSwitchKind[] = ['time', 'perfectClear', 'elite'];
+
+type SwitchObject = Extract<RoomAnchorObject, { readonly kind: 'challengeSwitch' }>;
+
+/**
+ * One toggle per switch kind: the observed kind's removes the switch, another
+ * observable kind's observes it in place of the current one, and a kind the
+ * engine locks carries its rule. While the entry is unreached, only the
+ * observed kind can change.
+ */
+function switchKindToggles(
+  object: SwitchObject,
+  observed: ChallengeSwitchKind | undefined,
+  bind: (key: string, commands: readonly ProjectCommand[]) => string,
+  objectLock: WorkspaceAnchorObjectLock | undefined,
+  /** The present switch's removal. */
+  removeKey: string | undefined,
+): NonNullable<WorkspaceRoomAnchorObject['switchKinds']> {
+  const unreached: WorkspaceAnchorObjectLock = { reason: 'unreached' };
+  return switchKindOrder.map((switchKind) => {
+    const row = object.kinds.find((candidate) => candidate.switchKind === switchKind);
+    if (object.present && switchKind === observed)
+      return Object.freeze({
+        switchKind,
+        ...(removeKey === undefined ? {} : { toggleKey: removeKey }),
+      });
+    // An absent switch with no spot left is refused whatever its kind.
+    const lock: WorkspaceAnchorObjectLock | undefined =
+      row === undefined || object.refusals === undefined
+        ? unreached
+        : !object.present && object.refusals.some((refusal) => refusal.reason === 'noFreeAnchor')
+          ? (objectLock ?? unreached)
+          : row.lock === undefined
+            ? undefined
+            : {
+                reason: 'refused',
+                sentences: Object.freeze([challengeSwitchRuleSentence(row.lock)]),
+              };
+    if (lock === undefined && row?.observe !== undefined)
+      return Object.freeze({
+        switchKind,
+        toggleKey: bind(`kind:${switchKind}`, [row.observe]),
+      });
+    return Object.freeze({ switchKind, lock: Object.freeze(lock ?? unreached) });
+  });
+}
+
 /** Why an absent object cannot be added now, each rule as one sentence; undefined while unreached. */
 function refusalLock(object: RoomAnchorObject): WorkspaceAnchorObjectLock | undefined {
   if (object.refusals === undefined) return { reason: 'unreached' };
@@ -119,22 +167,14 @@ export function assembleRoomObjectSlots(input: {
       const toggle = object.fixed ? undefined : object.present ? object.remove : object.place;
       const lock = object.present || object.fixed ? undefined : refusalLock(object);
       const pinned = object.kind === 'stygianWell' && pin !== undefined ? pin : undefined;
-      const switchSlot =
-        object.kind === 'challengeSwitch' && object.present
-          ? product.slots.find((slot) => slot.occupant === 'challengeSwitch')
-          : undefined;
-      const kinds = (switchSlot?.choices ?? []).flatMap((choice) =>
-        choice.kind !== 'challengeSwitch' ||
-        choice.switchKind === undefined ||
-        choice.commands.length === 0
-          ? []
-          : [
-              Object.freeze({
-                key: bind(`kind:${choice.switchKind}`, choice.commands),
-                switchKind: choice.switchKind,
-              }),
-            ],
-      );
+      const toggleKey =
+        toggle === undefined
+          ? undefined
+          : bind(`${object.present ? 'remove' : 'add'}:${object.kind}`, [toggle]);
+      const switchKinds =
+        object.kind === 'challengeSwitch'
+          ? switchKindToggles(object, switchKind, bind, lock, toggleKey)
+          : [];
       return Object.freeze({
         object: object.kind,
         ...kindOf(object.kind),
@@ -143,9 +183,7 @@ export function assembleRoomObjectSlots(input: {
         anchorMarker: input.marker(anchorAddress),
         present: object.present,
         fixed: object.fixed,
-        ...(toggle === undefined
-          ? {}
-          : { toggleKey: bind(`${object.present ? 'remove' : 'add'}:${object.kind}`, [toggle]) }),
+        ...(toggleKey === undefined ? {} : { toggleKey }),
         ...(lock === undefined ? {} : { lock: Object.freeze(lock) }),
         ...(object.present
           ? {
@@ -170,7 +208,7 @@ export function assembleRoomObjectSlots(input: {
               }),
             }
           : {}),
-        ...(kinds.length === 0 ? {} : { kinds: Object.freeze(kinds) }),
+        ...(switchKinds.length === 0 ? {} : { switchKinds: Object.freeze(switchKinds) }),
       });
     });
   const anchors = [...product.anchors]

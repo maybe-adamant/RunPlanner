@@ -35,29 +35,24 @@ function openHost(application: PlannerApplication) {
   });
 }
 
-/** Adds the switch from its toggle, then sets its type when the first one is not wanted. */
+/** Adds the switch of one kind from that kind's toggle. */
 async function addSwitch(user: ReturnType<typeof renderWorkspace>['user'], kind: string) {
-  await user.click(screen.getByRole('button', { name: 'Challenge Switch' }));
-  const type = screen.getByRole('button', { name: 'Challenge Switch type' });
-  if (type.textContent?.includes(kind) === true) return;
-  await user.click(type);
-  await user.click(screen.getByRole('option', { name: kind }));
+  await user.click(screen.getByRole('button', { name: kind }));
 }
 
 describe('challenge switch rows on the room Overview', () => {
-  it('adds a switch, changes its type, stands it on an anchor and removes it again', async () => {
+  it('adds a switch, replaces its kind, stands it on an anchor and removes it again', async () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
 
-    // The toggle adds the first type the room can roll, which the game places.
-    await user.click(screen.getByRole('button', { name: 'Challenge Switch' }));
+    // A kind's toggle adds that kind, which the game places.
+    await user.click(screen.getByRole('button', { name: 'Infernal Trove' }));
     expect(hostRoom(application).challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
     expect(hostRoom(application).challengeSwitch?.anchorId).toBeUndefined();
 
-    // Its type changes in place.
-    await user.click(screen.getByRole('button', { name: 'Challenge Switch type' }));
-    await user.click(screen.getByRole('option', { name: 'Unseen Sigil' }));
+    // Another kind's toggle replaces it.
+    await user.click(screen.getByRole('button', { name: 'Unseen Sigil' }));
     expect(hostRoom(application).challengeSwitch?.variantKey).toBe(
       'PerfectClearChallengeSwitch_Pom',
     );
@@ -100,9 +95,8 @@ describe('challenge switch rows on the room Overview', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     await user.click(screen.getByRole('button', { name: 'Stygian Well' }));
     expect(room().stygianWell).toBeDefined();
-    expect(
-      screen.getByRole<HTMLButtonElement>('button', { name: 'Challenge Switch' }).disabled,
-    ).toBe(true);
+    for (const kind of ['Infernal Trove', 'Unseen Sigil', 'Moon Monument'])
+      expect(screen.getByRole<HTMLButtonElement>('button', { name: kind }).disabled).toBe(true);
 
     await user.click(screen.getByRole('button', { name: 'Stygian Well' }));
     expect(room().stygianWell).toBeUndefined();
