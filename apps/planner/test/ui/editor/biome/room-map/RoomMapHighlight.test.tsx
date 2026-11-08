@@ -20,6 +20,7 @@ const map: WorkspaceRoomMap = {
     { id: 11, x: 6700, y: 9000, doorIndex: 1 },
     { id: 12, x: 6800, y: 9100, doorIndex: 2 },
   ],
+  sideDoors: [],
   entries: [],
   anchors: [],
   chaosPoints: [],

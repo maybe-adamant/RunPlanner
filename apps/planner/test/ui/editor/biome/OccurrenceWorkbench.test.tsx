@@ -475,15 +475,15 @@ describe('OccurrenceWorkbench', () => {
     expect((generation as HTMLInputElement).checked).toBe(true);
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
 
-    // The main room's map shows each side door's state over its painted circle.
+    // The main room's map shows each side door's state at its map door.
     await view.user.click(within(sideDoors).getByRole('button', { name: 'View map of Combat 05' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('img', { name: 'Map of Combat 05' }).getAttribute('src')).toBe(
       roomMapAssetFor('N_Combat05')?.src,
     );
-    const mapStatus = within(dialog).getByLabelText('Side-room map status');
-    expect(within(mapStatus).getByLabelText('Side Room 03: Not visited')).toBeTruthy();
-    expect(within(mapStatus).queryByRole('button')).toBeNull();
+    const mapPoints = within(dialog).getByRole('group', { name: 'Combat 05 map points' });
+    expect(within(mapPoints).getByRole('img', { name: 'Side Room 03 · Not visited' })).toBeTruthy();
+    expect(within(mapPoints).queryByRole('button')).toBeNull();
     fireEvent.keyDown(dialog, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
@@ -520,6 +520,23 @@ describe('OccurrenceWorkbench', () => {
     await waitFor(() =>
       expect((screen.getByLabelText('Open Side Room 03') as HTMLInputElement).checked).toBe(true),
     );
+  });
+
+  it('shows an N main room with its side doors on its map, each previewed from its row', () => {
+    renderOccurrenceWorkbench(
+      loadSurfaceNOPQProject(),
+      'Surface',
+      'N',
+      occurrenceById(nOccurrenceId('combat05')),
+    );
+    const map = screen.getByRole('region', { name: 'Combat 05 map' });
+    const points = within(map).getByRole('group', { name: 'Combat 05 map points' });
+    expect(within(points).getByRole('img', { name: 'Side Room 07 · Visit 1' })).toBeTruthy();
+    expect(within(points).getByRole('img', { name: 'Door 1' })).toBeTruthy();
+    const door = within(points).getByRole('img', { name: 'Side Room 03 · Not visited' });
+    expect(door.dataset.preview).toBeUndefined();
+    fireEvent.pointerEnter(screen.getByRole('article', { name: 'Side Room 03 door' }));
+    expect(door.dataset.preview).toBe('true');
   });
 
   it('allows invalid generation edits, reports checkbox findings, and repairs them without changing visit order', async () => {

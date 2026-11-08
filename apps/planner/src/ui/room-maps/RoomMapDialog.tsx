@@ -5,13 +5,13 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { EditorDialog } from '@planner/ui/controls/EditorDialog';
 
 import { roomMapAssetFor } from './roomMapAssets';
-import { roomMapOverlayFor } from './HubMapAnnotations';
 import { RoomMapViewport } from './RoomMapViewport';
 
 /** A room's map as a read-only dialog: its readable name, the code name on hover. */
 export function RoomMapDialog({
   gameName,
   legend,
+  mirrored = false,
   onClose,
   overlay,
   returnFocusId,
@@ -20,8 +20,10 @@ export function RoomMapDialog({
   readonly gameName: string;
   /** A key to the overlay's marks, under the map. */
   readonly legend?: ReactNode;
+  /** The room shows flipped: its image mirrored under an overlay placed for it. */
+  readonly mirrored?: boolean;
   readonly onClose: () => void;
-  /** Marks drawn over the image in place of the room's own annotations. */
+  /** Marks drawn over the image. */
   readonly overlay?: ReactNode;
   /** The launcher that regains focus after the dialog closes. */
   readonly returnFocusId: string;
@@ -42,7 +44,8 @@ export function RoomMapDialog({
         asset={roomMapAssetFor(gameName)}
         controlsPlacement="collapsible-overlay"
         key={gameName}
-        overlay={overlay ?? roomMapOverlayFor(gameName)}
+        mirrored={mirrored}
+        overlay={overlay}
         title={title}
       />
       {legend}
@@ -55,6 +58,7 @@ export function RoomMapLauncher({
   gameName,
   hostId,
   legend,
+  mirrored = false,
   overlay,
   title,
 }: {
@@ -62,6 +66,7 @@ export function RoomMapLauncher({
   /** Changes of the containing owner close an inherited inspection dialog. */
   readonly hostId: string;
   readonly legend?: ReactNode;
+  readonly mirrored?: boolean;
   readonly overlay?: ReactNode;
   readonly title: string;
 }) {
@@ -93,6 +98,7 @@ export function RoomMapLauncher({
         <RoomMapDialog
           gameName={gameName}
           legend={legend}
+          mirrored={mirrored}
           onClose={closeDialog}
           overlay={overlay}
           returnFocusId={launcherId}

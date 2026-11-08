@@ -1,9 +1,11 @@
+import type { ReactNode } from 'react';
+
 import type { WorkspaceRoomMap } from '@planner/projections/structured-workspace';
 import { roomMapMarkers, type RoomMapMarkers } from '@planner/projections/roomMapMarkers';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { melinoeIcon } from '@planner/ui/artwork/player/playerArtwork';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
-import { useRoomMapPointers, type RoomMapPointMark } from './roomMapHighlight';
+import { useRoomMapHighlight, useRoomMapPointers, type RoomMapPointMark } from './roomMapHighlight';
 import { position } from './roomMapPosition';
 
 /** What stands on a map point: its name, icon and corner mark. */
@@ -198,6 +200,65 @@ export function RoomMapNumber({ value }: { readonly value: number | undefined })
   );
 }
 
+/** An Ephyra side door as planned: shut, or open on its side room, and its visit. */
+export interface RoomMapSideDoor {
+  readonly slotKey: string;
+  readonly label: string;
+  /** The open door's face: its side room and reward; absent while the door stays shut. */
+  readonly face?: ReactNode;
+  /** Which of the main room's side visits enters it. */
+  readonly visit?: number | undefined;
+}
+
+/** The room's side doors: a chip while open, a ring while shut, the visit number once visited. */
+export function RoomMapSideDoors({
+  doors,
+  markers,
+  open = true,
+  taken = true,
+}: {
+  readonly doors: readonly RoomMapSideDoor[];
+  readonly markers: RoomMapMarkers;
+  /** The room's doors have opened. */
+  readonly open?: boolean;
+  /** The side visits have been made. */
+  readonly taken?: boolean;
+}) {
+  const highlight = useRoomMapHighlight();
+  const pointers = useRoomMapPointers();
+  return markers.sideDoors.map((marker) => {
+    const door = doors.find((candidate) => candidate.slotKey === marker.slotKey);
+    if (door === undefined) return null;
+    const shown = open && door.face !== undefined;
+    const visited = taken && door.visit !== undefined;
+    const state =
+      door.face === undefined ? 'Closed' : visited ? `Visit ${door.visit}` : 'Not visited';
+    return (
+      <span
+        aria-label={`${door.label} · ${state}`}
+        className="room-map-door"
+        data-closed={!shown || undefined}
+        data-preview={
+          (highlight?.kind === 'sideDoor' && highlight.slotKey === door.slotKey) || undefined
+        }
+        data-side
+        data-taken={visited || undefined}
+        key={`side:${marker.id}`}
+        role="img"
+        style={position(marker)}
+        {...pointers({ kind: 'sideDoor', slotKey: door.slotKey })}
+      >
+        {shown ? (
+          <span aria-hidden="true" className="room-map-door-face">
+            {door.face}
+          </span>
+        ) : null}
+        <RoomMapNumber value={visited ? door.visit : undefined} />
+      </span>
+    );
+  });
+}
+
 /** The kinds of point a map shows, one swatch each, under the map. */
 export function RoomMapLegend({
   chaos,
@@ -209,6 +270,7 @@ export function RoomMapLegend({
 }) {
   const kinds = [
     ...(markers.doors.length > 0 ? (['exit'] as const) : []),
+    ...(markers.sideDoors.length > 0 ? (['side'] as const) : []),
     ...(chaos ? (['chaos'] as const) : []),
     ...(markers.entries.length > 0 ? (['entry'] as const) : []),
     ...(markers.anchors.length > 0 ? (['anchor'] as const) : []),
@@ -218,6 +280,7 @@ export function RoomMapLegend({
   if (kinds.length === 0) return null;
   const names = {
     exit: 'Exit',
+    side: 'Side door',
     chaos: 'Chaos',
     entry: 'Entry',
     anchor: 'Object spot',
@@ -256,20 +319,25 @@ export function RoomFeatureMapLegend({
 
 /**
  * The room's map points alone, with no plan: its doors, every Chaos point,
- * entries and anchors, on a calibrated image.
+ * entries and anchors, on a calibrated image. Side doors show as planned
+ * where they are given, else as plain rings.
  */
 export function RoomFeatureMapPoints({
+  flipped = false,
   gameName,
   map,
+  sideDoors,
   title,
 }: {
+  readonly flipped?: boolean;
   readonly gameName: string;
   readonly map: WorkspaceRoomMap;
+  readonly sideDoors?: readonly RoomMapSideDoor[];
   readonly title: string;
 }) {
   const calibration = roomMapCalibrations[gameName];
   if (calibration === undefined) return null;
-  const markers = roomMapMarkers(map, calibration);
+  const markers = roomMapMarkers(map, calibration, flipped);
   return (
     <div aria-label={`${title} map points`} className="room-map-marker-layer" role="group">
       <RoomMapSpots markers={markers} />
@@ -284,6 +352,20 @@ export function RoomFeatureMapPoints({
           style={position(point)}
         />
       ))}
+      {sideDoors === undefined
+        ? markers.sideDoors.map((door) => (
+            <span
+              aria-label="Side door"
+              className="room-map-door"
+              data-closed
+              data-side
+              key={`side:${door.id}`}
+              role="img"
+              style={position(door)}
+            />
+          ))
+        : null}
+      {sideDoors === undefined ? null : <RoomMapSideDoors doors={sideDoors} markers={markers} />}
       {markers.doors.map((door) => (
         <span
           aria-label={door.doorIndex === undefined ? 'Door' : `Door ${door.doorIndex}`}

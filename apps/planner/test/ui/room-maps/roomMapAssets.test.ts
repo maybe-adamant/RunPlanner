@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
+import { roomMapPosition } from '@planner/projections/roomMapMarkers';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { roomMapAssets } from '@planner/ui/room-maps/roomMapAssets';
 
@@ -50,5 +51,50 @@ describe('room map assets', () => {
     expect(fields.length).toBeGreaterThan(0);
     for (const room of fields)
       expect(roomMapCalibrations[room.gameName], room.gameName).toBeDefined();
+  });
+
+  it('calibrates every declared room except the O ships', () => {
+    expect(
+      Object.keys(catalog.rooms.byKey).filter(
+        (gameName) => roomMapCalibrations[gameName] === undefined && !gameName.startsWith('O_'),
+      ),
+    ).toEqual([]);
+  });
+
+  it('places every Ephyra side door and Hub door at a map door inside its calibrated image', () => {
+    const doorsOn = (gameName: string, doorIds: readonly number[]) => {
+      const room = catalog.rooms.byKey[gameName]!;
+      const calibration = roomMapCalibrations[gameName];
+      expect(calibration, gameName).toBeDefined();
+      for (const doorId of doorIds) {
+        const door = room.mapPoints?.exitDoors.find((candidate) => candidate.id === doorId);
+        expect(door, `${gameName} door ${doorId}`).toBeDefined();
+        const { left, top } = roomMapPosition(door!, calibration!);
+        expect(left, `${gameName} door ${doorId}`).toBeGreaterThan(0);
+        expect(left, `${gameName} door ${doorId}`).toBeLessThan(100);
+        expect(top, `${gameName} door ${doorId}`).toBeGreaterThan(0);
+        expect(top, `${gameName} door ${doorId}`).toBeLessThan(100);
+      }
+    };
+    const parents = catalog.rooms.values.filter((room) =>
+      room.localChildren.some((child) => child.kind === 'fixedRoomSlots'),
+    );
+    expect(parents).toHaveLength(16);
+    for (const room of parents)
+      doorsOn(
+        room.gameName,
+        room.localChildren.flatMap((child) =>
+          child.kind === 'fixedRoomSlots' ? child.slots.map((slot) => slot.physicalDoorId) : [],
+        ),
+      );
+    const hubs = catalog.biomeLayouts.values.flatMap((layout) =>
+      layout.progression.kind === 'hub' ? [layout.progression] : [],
+    );
+    expect(hubs).toHaveLength(1);
+    for (const hub of hubs)
+      doorsOn(
+        hub.terminal.roomGameName,
+        hub.slots.map((slot) => slot.physicalDoorId),
+      );
   });
 });

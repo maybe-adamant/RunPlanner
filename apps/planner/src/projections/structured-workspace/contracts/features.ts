@@ -469,6 +469,8 @@ export interface WorkspaceRoomMapPoint {
 export interface WorkspaceRoomMap {
   /** Each exit door, with the Door number the game realizes there where it is known. */
   readonly doors: readonly (WorkspaceRoomMapPoint & { readonly doorIndex?: number })[];
+  /** Each Ephyra side door, by the local slot whose side room lies behind it. */
+  readonly sideDoors: readonly (WorkspaceRoomMapPoint & { readonly slotKey: string })[];
   readonly entries: readonly WorkspaceRoomMapPoint[];
   readonly anchors: readonly WorkspaceRoomMapPoint[];
   /** Every SecretPoint a Chaos gate can spawn at. */

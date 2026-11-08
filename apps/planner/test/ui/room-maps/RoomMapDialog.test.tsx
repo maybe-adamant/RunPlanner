@@ -68,18 +68,7 @@ describe('RoomMapLauncher', () => {
     expect(screen.getByText('100%')).toBeTruthy();
   });
 
-  it('keeps the Hub quality categories visible beside its live readonly annotations', () => {
-    render(<RoomMapLauncher gameName="N_Hub" hostId="hub-a" title="Ephyra Hub" />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'View map of Ephyra Hub' }));
-    const legend = screen.getByLabelText('Hub room quality legend');
-    expect(legend.textContent).toContain('Perfect');
-    expect(legend.textContent).toContain('Good');
-    expect(legend.textContent).toContain('Bad');
-    expect(legend.textContent).toContain('Special');
-  });
-
-  it('draws the given marks in place of the room image’s own annotations', () => {
+  it('draws the given marks over the room image', () => {
     render(
       <RoomMapLauncher
         gameName="N_Hub"
@@ -91,7 +80,6 @@ describe('RoomMapLauncher', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'View map of Ephyra Hub' }));
     expect(screen.getByRole('img', { name: 'Door 1' })).toBeTruthy();
-    expect(screen.queryByLabelText('Hub room quality legend')).toBeNull();
   });
 
   it('closes with Close or Escape and returns focus to its launcher', () => {

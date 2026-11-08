@@ -76,12 +76,13 @@ export function OpenRoomTimeline({
   );
 }
 
-/** The way back to the Hub: its room icon and name. */
+/** The way back to the Hub, the room's Door 1: its room icon and name. */
 function hubOption(hub: HubDecisionAddress): LeaveOption {
   return {
     key: 'hub',
     label: 'Hub',
     name: 'Hub',
+    mapLink: { kind: 'door', doorIndex: 1 },
     chip: {
       key: 'hub',
       label: 'Hub',
@@ -151,6 +152,7 @@ function SideVisitLeaveRow({
         key: option.key,
         label: slot.label,
         name: sideRoomName(slot.label),
+        mapLink: { kind: 'sideDoor', slotKey: slot.key },
         chip: {
           key: option.key,
           label: slot.label,
@@ -267,7 +269,11 @@ export function SideRoomLeave({
   readonly mainRoom: { readonly room: OccurrenceAddress; readonly label: string };
   readonly planEnd: WorkspaceRoomPlanEnd | undefined;
 }) {
-  const way = { key: 'back', label: `Back to ${mainRoom.label}` };
+  const way: LeaveOption = {
+    key: 'back',
+    label: `Back to ${mainRoom.label}`,
+    mapLink: { kind: 'door', doorIndex: 1 },
+  };
   return (
     <LeaveRow
       actions={<OpenRoomTimeline label={mainRoom.label} room={mainRoom.room} />}

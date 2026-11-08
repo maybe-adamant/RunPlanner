@@ -11,13 +11,14 @@ import {
 
 /**
  * What the room's map previews for the control being worked on: one door by
- * its number, the Chaos gate, every Chaos point with one position previewed,
+ * its number, an Ephyra side door by its slot, the Chaos gate, every Chaos point with one position previewed,
  * the entry being picked (one entry with the flip choosing it sets), an
  * object anchor, or a Fields slot's point with the free points it can pick
  * numbered.
  */
 export type RoomMapHighlight =
   | { readonly kind: 'door'; readonly doorIndex: number }
+  | { readonly kind: 'sideDoor'; readonly slotKey: string }
   | { readonly kind: 'chaosGate' }
   | { readonly kind: 'chaosPoints'; readonly position?: number | undefined }
   | { readonly kind: 'entry'; readonly pointId?: number; readonly flipped?: boolean | undefined }
@@ -58,6 +59,8 @@ export const highlightOwner = (highlight: RoomMapHighlight): string => {
   switch (highlight.kind) {
     case 'door':
       return `door:${highlight.doorIndex}`;
+    case 'sideDoor':
+      return `sideDoor:${highlight.slotKey}`;
     case 'anchor':
       return `anchor:${highlight.anchorId}`;
     case 'fieldsPoint':

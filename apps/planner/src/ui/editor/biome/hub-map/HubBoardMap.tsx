@@ -1,34 +1,58 @@
-import { useRef, type ReactNode } from 'react';
+import { useRef, type CSSProperties, type ReactNode } from 'react';
 
+import type { WorkspaceHubSlot } from '@planner/projections/structured-workspace';
+import { roomMapPosition } from '@planner/projections/roomMapMarkers';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
-import {
-  HubMapQualityLegend,
-  hubMapAnnotations,
-  type HubMapAnnotation,
-} from '@planner/ui/room-maps/HubMapAnnotations';
+import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
+import { position } from '../room-map/roomMapPosition';
+import { hubDoorMapLabel, hubDoorQuality, hubDoorQualityKey } from './hubDoorQuality';
 import { useMapHeightCap } from './useMapHeightCap';
 
+/** One Hub slot's door on the board map: where it stands, its rating and short name. */
+export interface HubMapDoor {
+  readonly hubSlotKey: string;
+  readonly category: string | undefined;
+  readonly mapLabel: string;
+  readonly style: CSSProperties;
+}
+
+/** Visible, noninteractive colour key of the board's doors. */
+function HubMapQualityLegend() {
+  return (
+    <div aria-label="Hub room quality legend" className="hub-map-legend">
+      {hubDoorQualityKey.map((quality) => (
+        <span data-category={quality} key={quality}>
+          {quality}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /**
- * The Ephyra Hub map with one marker per declared board door. Each consumer
- * supplies its doors.
+ * The Ephyra Hub map with one marker per declared board door, each at its
+ * map door. Each consumer supplies its doors.
  */
 export function HubBoardMap({
   door,
   gameName,
   hubIdentity,
   label,
+  slots,
 }: {
   /** The marker of one declared door, or nothing where the map shows none. */
-  readonly door: (annotation: HubMapAnnotation) => ReactNode;
+  readonly door: (door: HubMapDoor) => ReactNode;
   readonly gameName: string;
   /** A different Hub never inherits this map's pan and zoom. */
   readonly hubIdentity: string;
   readonly label: string;
+  readonly slots: readonly WorkspaceHubSlot[];
 }) {
   const section = useRef<HTMLElement>(null);
   useMapHeightCap(section);
+  const calibration = roomMapCalibrations[gameName];
   return (
     <section aria-label={label} className="hub-map-overview hub-board-map" ref={section}>
       <RoomMapViewport
@@ -37,7 +61,18 @@ export function HubBoardMap({
         key={hubIdentity}
         overlay={
           <div aria-label={`${label} doors`} className="hub-map-marker-layer" role="group">
-            {hubMapAnnotations.map((annotation) => door(annotation))}
+            {calibration === undefined
+              ? null
+              : slots.map((slot) =>
+                  slot.mapDoor === undefined
+                    ? null
+                    : door({
+                        hubSlotKey: slot.hubSlotKey,
+                        category: hubDoorQuality(slot.hubSlotKey),
+                        mapLabel: hubDoorMapLabel(slot.hubSlotKey),
+                        style: position(roomMapPosition(slot.mapDoor, calibration)),
+                      }),
+                )}
           </div>
         }
         title="Ephyra Hub"

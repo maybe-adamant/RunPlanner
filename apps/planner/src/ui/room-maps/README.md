@@ -24,7 +24,7 @@ WebPs unless replacing them from a source image. For example:
 convert source.png -quality 90 -define webp:method=6 -define webp:lossless=false RoomName.webp
 ```
 
-F, G, H, I, P, Q, the `B_Combat` anomalies and the `Special/` rooms are clean
+F, G, H, I, N, P, Q, the `B_Combat` anomalies and the `Special/` rooms are clean
 captures: `roomMapCalibration.ts` records each image's capture camera and the
 editor draws their points from the catalog's map points. Regenerate it from the
 capture manifests with `npm run planner:room-map-calibration` whenever one of
@@ -35,29 +35,12 @@ carries the stitched image's own calibration. Package it at most 2560 wide
 (`-resize '2560x1440>'` before the WebP options above); the script scales its
 calibration to match.
 
-On the remaining N and O maps, annotations are baked into the image.
+On the remaining O maps, annotations are baked into the image.
 
-`N_Hub.webp` is a clean background. `HubMapAnnotations.tsx` owns the door positions
-shared by read-only inspection and both interactive Hub maps, and the fountain
-position shared by both interactive maps. When replacing
-this image, align those coordinates to the new capture rather than baking labels
-into it. Individual main and side rooms keep their own images.
-Main-room side-door annotations are baked into their images: yellow circles identify
-the destination side-room number, not door priority or visit order.
-
-`EphyraSideRoomAnnotations.ts` owns the illustrative status-label geometry for those
-painted circles on the 16 Ephyra parent maps. Its values are normalized from the
-640 × 360 capture annotation inventory into the packaged 2560 × 1440 image space
-and bind declaration slot keys, not painted destination numbers or visit positions.
-The main room's side-door map adds non-interactive status labels only; it must
-not duplicate the baked numbers or read the external capture directory at runtime.
-Its integrity test checks the complete, unique correspondence with declared local
-slots.
-
-Baked map legends include only categories present: Entry (blue), Exit (red),
-Chaos (purple) and Side (yellow). Circle sizes are
-uniform within each category on a map; numbers retain a consistent font size.
-The Hub uses its own room-quality categories, with an orange fountain marker.
+Ephyra side doors and Hub board doors are catalog map doors too: a side door
+stands at its local slot's physical door, each Hub slot at its door on the
+`N_Hub` map. Only the Hub board's quality rating of each slot's room is
+planner-owned, keyed by Hub slot.
 
 Hub reward icons are separate transparent editor assets, mapped from structured
 reward identity. They are not room-map files and do not participate in room

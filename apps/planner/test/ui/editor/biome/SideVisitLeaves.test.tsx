@@ -131,6 +131,22 @@ describe('main room side visits on its Timeline', () => {
     expect(visitOrder(view.application)).toEqual([first, second]);
   });
 
+  it('rings the side door or the Hub return of the Leave room option under the highlight', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    await openTimeline(view, combat05);
+    const [, second] = visitOrder(view.application);
+    const secondLabel = sideLabel(view.application, second!);
+    const ringed = () =>
+      [...roomCard().querySelectorAll('.room-map-column [data-preview]')].map((point) =>
+        point.getAttribute('aria-label'),
+      );
+    const list = await openLeavePicker(view.user, roomCard(), 0);
+    await view.user.hover(within(list).getByRole('option', { name: secondLabel }));
+    expect(ringed()).toEqual([`${secondLabel} · Visit 2`]);
+    await view.user.hover(within(list).getByRole('option', { name: 'Hub' }));
+    expect(ringed()).toEqual(['Door 1']);
+  });
+
   it('keeps a later visit that an earlier change repeats, marked on its own exit', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await openTimeline(view, combat05);

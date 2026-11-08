@@ -1,5 +1,9 @@
 import type { WorkspaceAspectHexTreeControl } from './traits';
-import type { WorkspaceChaosExitControl, WorkspaceZagreusContractControl } from './features';
+import type {
+  WorkspaceChaosExitControl,
+  WorkspaceRoomMapPoint,
+  WorkspaceZagreusContractControl,
+} from './features';
 import type { WorkspaceLocalVisitDecision } from './locals';
 import type { WorkspaceRewardControl, WorkspaceRewardOfferResolver } from './rewards';
 import type {
@@ -356,6 +360,8 @@ export interface WorkspaceHubSlot {
   readonly localVisit?: WorkspaceLocalVisitDecision;
   readonly open: boolean;
   readonly physicalDoorId: number;
+  /** The slot's door on the Hub's map. */
+  readonly mapDoor?: WorkspaceRoomMapPoint;
   /** 1-based position at which the game draws this open door's reward. */
   readonly drawPosition?: number;
   /** Exact immutable main-door handoff owned by the Hub slot. */

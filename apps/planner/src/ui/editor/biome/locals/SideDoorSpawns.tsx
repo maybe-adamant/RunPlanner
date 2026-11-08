@@ -4,6 +4,7 @@ import {
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
   type WorkspaceLocalVisitDecision,
+  type WorkspaceRoomMap,
 } from '@planner/projections/structured-workspace';
 import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { candidateWaitingHint, candidateWaits } from '@planner/ui/feedback/candidatePresentation';
@@ -11,14 +12,13 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { hintProps } from '@planner/ui/controls/hint';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
-import {
-  ephyraSideRoomAnnotationsFor,
-  ephyraSideRoomMapPosition,
-} from '@planner/ui/room-maps/EphyraSideRoomAnnotations';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
+import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { roomKindIcon } from '../roomIcon';
 import { DoorRewardEditor, DoorRewardHiddenTag, RerolledRewardRepairs } from '../DoorRewardEditor';
 import { DoorRow, DoorRowsHeader } from '../DecisionWorkbench';
+import { RoomFeatureMapLegend, RoomFeatureMapPoints } from '../room-map/RoomMapPoints';
+import { sideDoorMapDoors } from './sideDoorMapDoors';
 
 type LocalSlot = WorkspaceLocalVisitDecision['slots'][number];
 
@@ -95,7 +95,13 @@ function SideDoorRow({
           {slot.availabilityRank}
         </span>
       }
-      map={{ gameName: slot.gameName, hostId: slot.marker.focusKey, title: slot.label }}
+      map={{
+        gameName: slot.gameName,
+        hostId: slot.marker.focusKey,
+        title: slot.label,
+        ...(slot.generation === 'generated' ? { points: slot.room.map } : {}),
+      }}
+      mapLink={{ kind: 'sideDoor', slotKey: slot.key }}
       reward={
         generated ? (
           <DoorRewardEditor
@@ -136,65 +142,30 @@ function SideDoorRow({
   );
 }
 
-/** Each side door's state as a label over its painted circle on the main room's map. */
-function SideDoorMapMarkers({
-  localVisit,
-  parentGameName,
-}: {
-  readonly localVisit: WorkspaceLocalVisitDecision;
-  readonly parentGameName: string;
-}) {
-  return (
-    <div aria-label="Side-room map status" className="ephyra-side-map-marker-layer">
-      {ephyraSideRoomAnnotationsFor(parentGameName).map((annotation) => {
-        const slot = localVisit.slots.find((candidate) => candidate.key === annotation.slotKey);
-        if (slot === undefined)
-          throw new Error(
-            `${parentGameName} map annotation ${annotation.slotKey} has no side slot`,
-          );
-        const state =
-          slot.generation !== 'generated'
-            ? 'Closed'
-            : slot.enteredOrdinal === null
-              ? 'Not visited'
-              : `Visit ${slot.enteredOrdinal}`;
-        return (
-          <div
-            aria-label={`${slot.label}: ${state}`}
-            className="ephyra-side-map-marker"
-            data-generation={slot.generation}
-            data-side-room-slot={slot.key}
-            data-visited={slot.entered || undefined}
-            key={annotation.slotKey}
-            style={ephyraSideRoomMapPosition(annotation)}
-          >
-            <span aria-hidden="true" className="ephyra-side-map-visit-badge">
-              {state}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 /**
  * The main room's side doors as Overview spawns: which open, the side room
  * behind each and its reward, by the game's generation priority. Visits are
  * picked on the room's Timeline.
  */
 export function SideDoorSpawns({
+  flipped,
   interactions,
   localVisit,
+  map,
   parentGameName,
   title,
 }: {
+  /** The main room shows flipped. */
+  readonly flipped: boolean;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly localVisit: WorkspaceLocalVisitDecision;
+  /** The main room's map points. */
+  readonly map: WorkspaceRoomMap | undefined;
   readonly parentGameName: string;
   readonly title: string;
 }) {
   const findingAnchor = useFindingAnchor();
+  const mapped = map !== undefined && roomMapCalibrations[parentGameName] !== undefined;
   return (
     <section
       {...findingAnchor(localVisit.address)}
@@ -212,9 +183,21 @@ export function SideDoorSpawns({
             <RoomMapLauncher
               gameName={parentGameName}
               hostId={localVisit.marker.focusKey}
-              overlay={
-                <SideDoorMapMarkers localVisit={localVisit} parentGameName={parentGameName} />
-              }
+              {...(mapped
+                ? {
+                    legend: <RoomFeatureMapLegend gameName={parentGameName} map={map} />,
+                    mirrored: flipped,
+                    overlay: (
+                      <RoomFeatureMapPoints
+                        flipped={flipped}
+                        gameName={parentGameName}
+                        map={map}
+                        sideDoors={sideDoorMapDoors(localVisit)}
+                        title={title}
+                      />
+                    ),
+                  }
+                : {})}
               title={title}
             />
           }

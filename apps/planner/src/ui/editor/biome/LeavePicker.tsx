@@ -51,7 +51,13 @@ export interface LeaveOption {
   readonly disabledHint?: string | undefined;
   /** Picks it; absent where it is the room's only way out. */
   readonly intent?: WorkspaceCommandIntent;
+  /** Its door on the room's map, where its chip does not place it. */
+  readonly mapLink?: RoomMapHighlight;
 }
+
+/** The option's door on the room's map. */
+const optionMapLink = (option: LeaveOption): RoomMapHighlight | undefined =>
+  option.mapLink ?? (option.chip === undefined ? undefined : doorChipMapLink(option.chip));
 
 const endKey = 'plan-end';
 const continueKey = 'plan-continue';
@@ -117,11 +123,9 @@ export function LeavePicker({
   const ended = planEnd?.relation === 'end';
   // Past the end the pick is locked as unreached; it still continues the plan from here.
   const waiting = useAuthoringLocked(readinessOwner) && !ended;
-  const pointed = useRoomMapPointedAmong(
-    options.map((option) => (option.chip === undefined ? undefined : doorChipMapLink(option.chip))),
-  );
+  const pointed = useRoomMapPointedAmong(options.map(optionMapLink));
   const chosen = options.find((option) => option.key === chosenKey);
-  const chosenLink = ended || chosen?.chip === undefined ? undefined : doorChipMapLink(chosen.chip);
+  const chosenLink = ended || chosen === undefined ? undefined : optionMapLink(chosen);
 
   const preview = (link: RoomMapHighlight | undefined) => {
     const last = previewed.current;
@@ -222,7 +226,7 @@ export function LeavePicker({
         model={open ? model() : { sections: [] }}
         onActiveChange={(item) => {
           const option = options.find((candidate) => candidate.key === item?.key);
-          preview(option?.chip === undefined ? undefined : doorChipMapLink(option.chip));
+          preview(option === undefined ? undefined : optionMapLink(option));
         }}
         onOpenChange={(next) => {
           if (!next) preview(undefined);

@@ -39,10 +39,9 @@ import {
   useFindingTarget,
   type FindingMarkProps,
 } from '@planner/ui/feedback/useFindingTarget';
-import { hubMapPosition, type HubMapAnnotation } from '@planner/ui/room-maps/HubMapAnnotations';
 import { RerolledRewardRepairIcon } from './DoorRewardEditor';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
-import { HubBoardMap, HubDoorFace } from './hub-map/HubBoardMap';
+import { HubBoardMap, HubDoorFace, type HubMapDoor } from './hub-map/HubBoardMap';
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
 import { RoomRerolls } from './RoomRerolls';
 import { roomKindIcon } from './roomIcon';
@@ -438,11 +437,11 @@ function FountainRow({
 
 /** One board door as the selected stay leaves it: cleared, or its draw and rerolls. */
 function TimelineDoor({
-  annotation,
   door,
   emphasis,
+  spot,
 }: {
-  readonly annotation: HubMapAnnotation;
+  readonly spot: HubMapDoor;
   readonly door: WorkspaceHubStayDoor;
   /**
    * `visited`: the shown visit's door; `pending`: the door a visit will enter
@@ -458,7 +457,7 @@ function TimelineDoor({
     <span
       aria-label={name}
       className="hub-map-marker hub-timeline-map-marker"
-      data-category={annotation.category}
+      data-category={spot.category}
       data-cleared={door.cleared || undefined}
       data-hub-slot-key={door.hubSlotKey}
       data-open="true"
@@ -467,13 +466,13 @@ function TimelineDoor({
       data-pending={emphasis.includes('pending') || undefined}
       data-selected-visit={emphasis.includes('visited') || undefined}
       role="img"
-      style={hubMapPosition(annotation)}
+      style={spot.style}
       tabIndex={0}
       {...hintProps(door.presses.length === 0 ? undefined : chain, undefined, name)}
     >
       <HubDoorFace
         icon={offerIcon(door.current)}
-        label={annotation.mapLabel}
+        label={spot.mapLabel}
         {...(door.cleared ? { status: 'Cleared' } : {})}
       />
       {door.presses.length === 0 ? null : (
@@ -769,20 +768,21 @@ export function HubTimeline({
         )}
       </section>
       <HubBoardMap
-        door={(annotation) => {
-          const door = shownDoors.get(annotation.hubSlotKey);
+        door={(spot) => {
+          const door = shownDoors.get(spot.hubSlotKey);
           return door === undefined ? null : (
             <TimelineDoor
-              annotation={annotation}
               door={door}
               emphasis={emphasisOf(door)}
-              key={annotation.hubSlotKey}
+              key={spot.hubSlotKey}
+              spot={spot}
             />
           );
         }}
         gameName={node.gameName}
         hubIdentity={hubIdentity}
         label={`Ephyra Hub at ${segmentLabel(view.stay)}`}
+        slots={node.slots}
       />
     </div>
   );

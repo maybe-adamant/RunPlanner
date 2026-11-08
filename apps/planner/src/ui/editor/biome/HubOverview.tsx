@@ -9,9 +9,8 @@ import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { hintProps } from '@planner/ui/controls/hint';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
-import { hubMapPosition, type HubMapAnnotation } from '@planner/ui/room-maps/HubMapAnnotations';
 import { DoorRewardEditor } from './DoorRewardEditor';
-import { HubBoardMap, HubDoorFace } from './hub-map/HubBoardMap';
+import { HubBoardMap, HubDoorFace, type HubMapDoor } from './hub-map/HubBoardMap';
 import { useHubSlotMembership } from './hub-map/useHubSlotMembership';
 import { useMapMarkerActivation } from './hub-map/useMapMarkerActivation';
 
@@ -39,13 +38,13 @@ function firstDrawIcon(slot: WorkspaceHubSlot) {
 }
 
 function OverviewDoor({
-  annotation,
+  door,
   interactions,
   linked,
   onLink,
   slot,
 }: {
-  readonly annotation: HubMapAnnotation;
+  readonly door: HubMapDoor;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly linked: boolean;
   readonly onLink: (slotKey: string | undefined) => void;
@@ -77,7 +76,7 @@ function OverviewDoor({
       aria-label={name}
       aria-pressed={slot.open}
       className="hub-map-marker"
-      data-category={annotation.category}
+      data-category={door.category}
       data-hub-slot-key={slot.hubSlotKey}
       data-linked={linked || undefined}
       data-open={slot.open}
@@ -90,15 +89,11 @@ function OverviewDoor({
       onPointerEnter={() => onLink(slot.open ? slot.hubSlotKey : undefined)}
       onPointerLeave={() => onLink(undefined)}
       {...pointer}
-      style={hubMapPosition(annotation)}
+      style={door.style}
       {...hintProps(reason, undefined, name)}
       type="button"
     >
-      <HubDoorFace
-        icon={icon}
-        label={annotation.mapLabel}
-        {...(slot.open ? {} : { status: 'Closed' })}
-      />
+      <HubDoorFace icon={icon} label={door.mapLabel} {...(slot.open ? {} : { status: 'Closed' })} />
     </button>
   );
 }
@@ -263,17 +258,13 @@ export function HubOverview({
         )}
       </section>
       <HubBoardMap
-        door={(annotation) => {
-          const slot = slotsByKey.get(annotation.hubSlotKey);
-          if (slot === undefined || slot.gameName !== annotation.gameName)
-            throw new Error(
-              `Hub map annotation ${annotation.hubSlotKey} has no matching Hub slot.`,
-            );
+        door={(door) => {
+          const slot = slotsByKey.get(door.hubSlotKey)!;
           return (
             <OverviewDoor
-              annotation={annotation}
+              door={door}
               interactions={interactions}
-              key={annotation.hubSlotKey}
+              key={door.hubSlotKey}
               linked={linked === slot.hubSlotKey}
               onLink={setLinked}
               slot={slot}
@@ -283,6 +274,7 @@ export function HubOverview({
         gameName={node.gameName}
         hubIdentity={hubIdentity}
         label="Ephyra Hub map"
+        slots={node.slots}
       />
     </div>
   );

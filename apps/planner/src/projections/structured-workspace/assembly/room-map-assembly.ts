@@ -13,7 +13,8 @@ const point = ({ id, x, y }: { readonly id: number; readonly x: number; readonly
 /**
  * The room's map points for its map. Door N's target is realized at the Nth
  * map door in the game's door order; a room without a declared order names
- * its Door only where it has one door.
+ * its Door only where it has one door. An Ephyra side door is no exit of the
+ * room: it is bound to the local slot whose side room lies behind it.
  */
 export function assembleRoomMap(
   catalog: Pick<Catalog, 'rooms' | 'exitTypes'>,
@@ -22,13 +23,21 @@ export function assembleRoomMap(
 ): WorkspaceRoomMap | undefined {
   const points = room.mapPoints;
   if (points === undefined) return undefined;
+  const sideSlots = new Map(
+    room.localChildren.flatMap((child) =>
+      child.kind === 'fixedRoomSlots'
+        ? child.slots.map((slot) => [slot.physicalDoorId, slot.slotKey] as const)
+        : [],
+    ),
+  );
+  const exitDoors = points.exitDoors.filter((door) => !sideSlots.has(door.id));
   const order =
-    points.exitDoors.length === 1
-      ? [points.exitDoors[0]!.id]
+    exitDoors.length === 1
+      ? [exitDoors[0]!.id]
       : nativeExitDoorOrder(
           catalog,
           room.gameName,
-          points.exitDoors.map((door) => ({ doorId: door.id })),
+          exitDoors.map((door) => ({ doorId: door.id })),
         );
   const chaos = occurrence.additionalExits?.find((exit) => exit.kind === 'chaos');
   // A room with one SecretPoint can place its gate only there.
@@ -42,9 +51,15 @@ export function assembleRoomMap(
         : points.secretPoints[chaos.spawnPointIndex - 1];
   return Object.freeze({
     doors: Object.freeze(
-      points.exitDoors.map((door) => {
+      exitDoors.map((door) => {
         const rank = order?.indexOf(door.id) ?? -1;
         return Object.freeze({ ...point(door), ...(rank < 0 ? {} : { doorIndex: rank + 1 }) });
+      }),
+    ),
+    sideDoors: Object.freeze(
+      points.exitDoors.flatMap((door) => {
+        const slotKey = sideSlots.get(door.id);
+        return slotKey === undefined ? [] : [Object.freeze({ ...point(door), slotKey })];
       }),
     ),
     entries: Object.freeze(points.heroStarts.map(point)),

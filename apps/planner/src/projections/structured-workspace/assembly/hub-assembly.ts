@@ -453,8 +453,11 @@ function projectHubNode(
       leaves,
     });
   };
+  const hubMapDoors = requireWorkspaceRoom(catalog, descriptor.terminal.roomGameName).mapPoints
+    ?.exitDoors;
   const slots = descriptor.slots.map((slot) => {
     const slotRoom = requireWorkspaceRoom(catalog, slot.roomGameName);
+    const mapDoor = hubMapDoors?.find((door) => door.id === slot.physicalDoorId);
     const localSlotKeys = Object.freeze(
       slotRoom.localChildren
         .filter((child) => child.kind === 'fixedRoomSlots')
@@ -610,6 +613,9 @@ function projectHubNode(
       ...(localVisit === undefined ? {} : { localVisit }),
       open: target !== undefined,
       physicalDoorId: slot.physicalDoorId,
+      ...(mapDoor === undefined
+        ? {}
+        : { mapDoor: Object.freeze({ id: mapDoor.id, x: mapDoor.x, y: mapDoor.y }) }),
       ...(target === undefined || !drawPositions.has(slot.slotKey)
         ? {}
         : { drawPosition: drawPositions.get(slot.slotKey)! }),

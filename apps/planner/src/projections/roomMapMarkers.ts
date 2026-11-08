@@ -26,6 +26,10 @@ export interface RoomMapMarkers {
     readonly id: number;
     readonly doorIndex?: number;
   })[];
+  readonly sideDoors: readonly (RoomMapMarkerPosition & {
+    readonly id: number;
+    readonly slotKey: string;
+  })[];
   readonly entries: readonly (RoomMapMarkerPosition & { readonly id: number })[];
   readonly anchors: readonly (RoomMapMarkerPosition & { readonly id: number })[];
   readonly chaosPoints: readonly (RoomMapMarkerPosition & { readonly id: number })[];
@@ -72,6 +76,11 @@ export function roomMapMarkers(
           ...(door.doorIndex === undefined ? {} : { doorIndex: door.doorIndex }),
           ...place(door),
         }),
+      ),
+    ),
+    sideDoors: Object.freeze(
+      map.sideDoors.map((door) =>
+        Object.freeze({ id: door.id, slotKey: door.slotKey, ...place(door) }),
       ),
     ),
     entries: Object.freeze(

@@ -8,8 +8,10 @@ import type { DoorChip } from '../doorSummary';
 import {
   RoomMapNumber,
   RoomMapLegend,
+  RoomMapSideDoors,
   RoomMapSpots,
   type RoomMapPlacements,
+  type RoomMapSideDoor,
 } from './RoomMapPoints';
 import { useRoomMapHighlight, useRoomMapPointers } from './roomMapHighlight';
 import { position } from './roomMapPosition';
@@ -35,9 +37,12 @@ export function RoomMapColumn({
   map,
   placements,
   roomIdentity,
+  sideDoors = [],
   stage,
   title,
 }: {
+  /** The room's Ephyra side doors as planned. */
+  readonly sideDoors?: readonly RoomMapSideDoor[] | undefined;
   /** The room's settled flip; a previewed entry shows its own. */
   readonly flipped?: boolean | undefined;
   /** What stands on the room's points as planned. */
@@ -117,6 +122,7 @@ export function RoomMapColumn({
                 </span>
               ),
             )}
+            <RoomMapSideDoors doors={sideDoors} markers={markers} open={open} taken={taken} />
             {markers.chaosGate === undefined ? null : (
               <span
                 aria-label={chaosChip === undefined ? 'Chaos gate' : chipName(chaosChip)}

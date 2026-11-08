@@ -31,6 +31,7 @@ import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRo
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomKindIcon } from './roomIcon';
 import { SideDoorSpawns } from './locals/SideDoorSpawns';
+import { sideDoorMapDoors } from './locals/sideDoorMapDoors';
 import { TimelineLegend } from './TimelineLegend';
 import type { TimelineDoors, TimelineDoorsContent } from './TimelineDoors';
 import { doorChipsAt } from './doorSummary';
@@ -342,6 +343,7 @@ export function OccurrenceWorkbench({
               map={room.map}
               placements={roomMapPlacements(room)}
               roomIdentity={roomIdentity}
+              {...(localVisit === undefined ? {} : { sideDoors: sideDoorMapDoors(localVisit) })}
               stage={shownMapStage}
               title={room.label}
             />
@@ -389,8 +391,10 @@ export function OccurrenceWorkbench({
         : {
             spawns: (
               <SideDoorSpawns
+                flipped={room.layout?.flipped === true}
                 interactions={interactions}
                 localVisit={localVisit}
+                map={room.map}
                 parentGameName={room.gameName}
                 title={room.label}
               />
