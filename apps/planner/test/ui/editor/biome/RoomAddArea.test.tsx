@@ -28,12 +28,7 @@ import {
   openRoomTab,
   withoutTraitDrops,
 } from '@planner-test/support/occurrence-workbench';
-import {
-  addActionOption,
-  addGroupButton,
-  openAddGroup,
-  timelineRow,
-} from '@planner-test/support/timeline-rows';
+import { timelineRow } from '@planner-test/support/timeline-rows';
 
 afterEach(cleanup);
 
@@ -57,7 +52,12 @@ function lineList(label: string): HTMLElement {
   return within(addArea()).getByRole('list', { name: label });
 }
 
-/** The Quick Buck checkpoint with its gold not yet taken, so the Add area offers it. */
+/** What a source action's settlement spawned, under its row. */
+function spawnedUnder(): HTMLElement {
+  return document.querySelector<HTMLElement>('[data-spawned-loot="action"]')!;
+}
+
+/** The Quick Buck checkpoint with its gold not yet taken. */
 function untakenQuickBuck() {
   return withoutTraitDrops(loadSurfaceNQuickBuckCheckpoint(), nBiome, nOccurrenceIds.opening);
 }
@@ -96,7 +96,7 @@ describe('Room Add area', () => {
     expect(within(lineList('Objects')).getByRole('button', { name: 'Hermes Shrine' })).toBeTruthy();
   });
 
-  it('groups optional pickups by source family and appends a pick at its last legal position', async () => {
+  it('places untaken Quick Buck gold from its spawn chip at its last legal position', async () => {
     const view = renderOccurrenceWorkbench(
       untakenQuickBuck(),
       'Surface',
@@ -104,10 +104,8 @@ describe('Room Add area', () => {
       occurrenceById(nOccurrenceIds.opening),
     );
     openRoomTab('Room Timeline');
-    // The Actions line holds one entry per source family.
-    expect(within(lineList('Actions')).getByRole('button', { name: 'Quick Buck' })).toBe(
-      addGroupButton('Quick Buck'),
-    );
+    // The spawned gold has no entry among the optional actions.
+    expect(within(addArea()).queryByRole('button', { name: /Quick Buck/ })).toBeNull();
     const actions = room(
       workspaceBiome(view.application, 'Surface', 'N'),
       nOccurrenceIds.opening,
@@ -126,9 +124,7 @@ describe('Room Add area', () => {
         )
         .map((proposal) => proposal.toIndex ?? -1),
     );
-    await view.user.click(
-      addActionOption(await openAddGroup(view.user, 'Quick Buck'), pickup.label),
-    );
+    await view.user.click(within(spawnedUnder()).getByRole('button', { name: 'Gold' }));
     const order = view.application.store
       .getState()
       .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'N')!
@@ -142,7 +138,7 @@ describe('Room Add area', () => {
     expect(timelineRow(pickup.label)).toBeTruthy();
   });
 
-  it('opens the family list of an optional action that navigation focuses', async () => {
+  it('focuses the spawn chip of an unplaced pickup that navigation focuses', async () => {
     const view = renderOccurrenceWorkbench(
       untakenQuickBuck(),
       'Surface',
@@ -155,17 +151,12 @@ describe('Room Add area', () => {
       nOccurrenceIds.opening,
     ).roomActions!.rows.find((row) => row.rank === null && row.sourceFamily?.kind === 'trait');
     if (pickup === undefined) throw new Error('Quick Buck pickup is not offered');
-    expect(addGroupButton('Quick Buck').getAttribute('aria-expanded')).toBe('false');
     act(() => view.application.store.dispatch(semanticOwnerNavigated(pickup.address)));
     await waitFor(() =>
-      expect(addGroupButton('Quick Buck').getAttribute('aria-expanded')).toBe('true'),
-    );
-    expect(
-      addActionOption(
-        document.querySelector<HTMLElement>('.contextual-picker-popover')!,
-        pickup.label,
+      expect(document.activeElement).toBe(
+        within(spawnedUnder()).getByRole('button', { name: 'Gold' }),
       ),
-    ).toBeTruthy();
+    );
   });
 
   it('says so when nothing optional can be added', () => {

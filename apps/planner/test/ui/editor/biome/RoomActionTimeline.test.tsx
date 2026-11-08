@@ -81,7 +81,6 @@ import {
 } from '@planner-test/support/occurrence-workbench';
 
 import { hintOf, queryByHint } from '@planner-test/support/hints';
-import { openAddGroup, pickAddAction } from '@planner-test/support/timeline-rows';
 
 /** An element's text as read aloud: icons by their names, tags after a separator. */
 function spokenText(element: Element): string {
@@ -519,8 +518,8 @@ describe('OccurrenceRoomActions', () => {
     application.dispose();
   });
 
-  it('renders Optional Rewards before its one Room Timeline board', async () => {
-    const view = renderOccurrenceWorkbench(
+  it('renders Optional Rewards before its one Room Timeline board', () => {
+    renderOccurrenceWorkbench(
       createGoldenFGHIProject(),
       'Underworld',
       'H',
@@ -569,11 +568,17 @@ describe('OccurrenceRoomActions', () => {
     if (fieldsEncounter !== null) expectBefore(fieldsEncounter, fieldsActions);
     const timeline = within(fieldsActions).getByRole('list', { name: 'Room timeline' });
     expect(queryActionRow(timeline, /^Collect .+ · Optional 1$/)).toBeNull();
-    // The unplaced optional reward is offered from the Add area's Optional rewards group.
-    const menu = await openAddGroup(view.user, 'Optional rewards');
-    const optionalAction = within(menu).getByRole('option', { name: /^Collect .+ · Optional 1$/ });
-    expect(optionalAction.getAttribute('aria-disabled')).not.toBe('true');
-    expect(within(menu).queryByRole('option', { name: 'Reward' })).toBeNull();
+    // The unplaced optional reward is placed from its chip where it spawns.
+    const optionalChip = within(
+      within(timeline).getByRole('listitem', { name: 'Spawned' }),
+    ).getByRole('button', { name: /· Optional 1$/ });
+    expect(optionalChip.getAttribute('aria-disabled')).not.toBe('true');
+    expect(
+      within(within(fieldsActions).getByRole('region', { name: 'Optional actions' })).queryByRole(
+        'button',
+        { name: 'Optional rewards' },
+      ),
+    ).toBeNull();
     expect(actionRow(timeline, /^Collect .+ · Cage 1$/).getAttribute('data-action-accent')).toBe(
       'room',
     );
@@ -1001,12 +1006,15 @@ describe('OccurrenceRoomActions', () => {
     const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
     expect(queryActionRow(timeline, /^Collect .+ · Optional 1$/)).toBeNull();
     const historyLength = view.application.store.getState().projectWorkspace.history!.past.length;
-    // One pick adds the optional reward at its last legal place; nothing asks where.
-    await pickAddAction(view.user, 'Optional rewards', /^Collect .+ · Optional 1$/);
+    // One click on its spawn chip adds the optional reward at its last legal place.
+    await view.user.click(
+      within(within(timeline).getByRole('listitem', { name: 'Spawned' })).getByRole('button', {
+        name: /· Optional 1$/,
+      }),
+    );
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyLength + 1,
     );
-    expect(within(actions).getByText(/ added to the timeline\.$/)).toBeTruthy();
     const orderedOptional = actionRow(timeline, /^Collect .+ · Optional 1$/);
     expect(orderedOptional.getAttribute('data-action-accent')).toBe('optional');
     expectBefore(within(actions).getByLabelText('Doors open'), orderedOptional);

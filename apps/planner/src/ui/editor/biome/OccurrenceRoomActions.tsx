@@ -595,7 +595,7 @@ export function RoomActionsWorkbench({
     entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'spawned' }>,
   ) => (
     <SpawnedLootRow
-      items={entry.items}
+      groups={entry.groups}
       key={`spawned:${entry.key}`}
       label={entry.label}
       rows={actions?.rows ?? []}
@@ -995,7 +995,7 @@ export function RoomActionsWorkbench({
           ?.filter((spawn) => spawn.sourceActionKey === row.key)
           .map((spawn) => (
             <SpawnedLootRow
-              items={spawn.items}
+              groups={spawn.groups}
               key={spawn.key}
               label={spawn.label}
               rows={actions.rows}

@@ -1166,13 +1166,27 @@ export function assembleWorkspaceOccurrence(
         roomLocal.kind === 'ship' ? roomTabForPhase(roomLocal, effect.phaseKey) : 'actions',
       );
     }
+    // Spawned loot is placed from the phase showing its spawn row; a row's own phase wins.
     const shipActionTabs = new Map(
       workbench.kind === 'ship'
-        ? workbench.phases.flatMap((phase) =>
-            [...phase.actionRows, ...phase.optionalRows, ...phase.unplacedRows].map(
-              (row) => [row.key, phase.tab] as const,
+        ? [
+            ...workbench.phases.flatMap((phase) => {
+              const actionKeys = new Set(phase.actionRows.map((row) => row.key));
+              return [
+                ...phase.timeline.flatMap((entry) =>
+                  entry.kind === 'spawned' ? entry.groups : [],
+                ),
+                ...(roomActions.actionSpawns ?? []).flatMap((spawn) =>
+                  actionKeys.has(spawn.sourceActionKey) ? spawn.groups : [],
+                ),
+              ].flatMap((group) => group.items.map((item) => [item.actionKey, phase.tab] as const));
+            }),
+            ...workbench.phases.flatMap((phase) =>
+              [...phase.actionRows, ...phase.optionalRows, ...phase.unplacedRows].map(
+                (row) => [row.key, phase.tab] as const,
+              ),
             ),
-          )
+          ]
         : [],
     );
     const artificerOfferTargets = new Set(

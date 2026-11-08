@@ -2,11 +2,14 @@ import { roomActionKey, semanticAddressKey } from '@run-planner/engine/authored-
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RoomSpawnedLoot, SpawnMoment, SpawnedLootItem } from '@run-planner/engine/simulation';
 import type { WorkspaceRoomLocal } from '../contracts/locals';
+import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import type {
   WorkspaceActionSpawn,
   WorkspaceRoomActionProposal,
   WorkspaceRoomActionRow,
   WorkspaceRoomLifecycleTimelineEntry,
+  WorkspaceSpawnGroup,
+  WorkspaceSpawnSource,
   WorkspaceSpawnedItem,
 } from '../contracts/timeline';
 
@@ -37,6 +40,42 @@ function fieldsPlace(
     : Object.freeze({ badge: local.badge, label: local.label });
 }
 
+/** The choice an item's pickup asks for, named in its hint. */
+function pickupChoice(row: WorkspaceRoomActionRow | undefined): string | undefined {
+  switch (row?.labelParts?.reward?.offer.rewardType) {
+    case 'StoreRewardRandomStack':
+    case 'StackUpgrade':
+    case 'StackUpgradeBig':
+    case 'StackUpgradeTriple':
+      return 'Pom';
+    default:
+      return undefined;
+  }
+}
+
+function itemHint(
+  item: SpawnedLootItem,
+  name: string,
+  row: WorkspaceRoomActionRow | undefined,
+  placement: WorkspaceSpawnedItem['placement'],
+): string {
+  switch (placement.kind) {
+    case 'placed':
+      return `Go to ${name}`;
+    case 'unavailable':
+      return `${name}: ${placement.reason}`;
+    case 'unplaced': {
+      if (item.participation === 'required')
+        return item.source.kind === 'generated' &&
+          item.source.family.kind === 'hermesShrineDelivery'
+          ? 'Collect the delivery'
+          : `Collect ${name}`;
+      const choice = pickupChoice(row);
+      return choice === undefined ? `Pick up ${name}` : `Pick up ${name} — choose its ${choice}`;
+    }
+  }
+}
+
 function projectItem(
   item: SpawnedLootItem,
   rowByKey: ReadonlyMap<string, WorkspaceRoomActionRow>,
@@ -65,34 +104,85 @@ function projectItem(
                   proposal.explanations.length > 0,
               )?.explanations[0] ?? NO_POSITION,
           });
+  const label = itemLabel(row);
   return Object.freeze({
     key: semanticAddressKey(item.owner),
     actionKey,
-    label: itemLabel(row),
+    label,
+    hint: itemHint(item, place === undefined ? label : `${label} · ${place.label}`, row, placement),
     participation: item.participation,
     ...(place === undefined ? {} : { place }),
     placement,
   });
 }
 
-/** What spawned an action's loot, by its source family. */
-function spawnSourceName(catalog: Catalog, item: SpawnedLootItem | undefined): string | undefined {
-  if (item?.source.kind !== 'generated') return undefined;
+/** The boon, keepsake, NPC or room object that spawned an item; the room's own rewards have none. */
+function spawnSource(
+  catalog: Catalog,
+  item: SpawnedLootItem,
+  sourceRow: WorkspaceRoomActionRow | undefined,
+): WorkspaceSpawnSource | undefined {
+  if (item.source.kind !== 'generated') return undefined;
   const family = item.source.family;
+  const source = (key: string, name: string): WorkspaceSpawnSource =>
+    Object.freeze({ key, name, family });
   switch (family.kind) {
     case 'trait':
-      return catalog.traits.byKey[family.traitKey]?.label ?? family.traitKey;
+      return source(
+        `trait:${family.traitKey}`,
+        catalog.traits.byKey[family.traitKey]?.label ?? family.traitKey,
+      );
+    case 'hermesShrineDelivery':
+      return source(family.kind, 'Hermes');
     case 'echo':
-      return 'Echo';
+      return source(family.kind, 'Echo');
     case 'nemesisEvent':
-      return 'Nemesis';
+      return source(family.kind, 'Nemesis');
     case 'erisGift':
-      return 'Eris';
-    case 'challengeSwitch':
-      return 'Switch';
-    default:
+      return source(family.kind, 'Eris');
+    case 'heraclesBounty':
+      return source(family.kind, 'Heracles');
+    case 'challengeSwitch': {
+      const kind = sourceRow?.challengeSwitchKind;
+      return kind === undefined
+        ? source(family.kind, 'Challenge Switch')
+        : Object.freeze({
+            ...source(family.kind, challengeSwitchKindLabel(kind)),
+            challengeSwitchKind: kind,
+          });
+    }
+    case 'seaStar':
+    case 'artificer':
+    case 'shopTravelDealRefill':
       return undefined;
   }
+}
+
+/** Items in spawn order, each run from one source read as one group. */
+function spawnGroups(
+  items: readonly SpawnedLootItem[],
+  project: (item: SpawnedLootItem) => WorkspaceSpawnedItem,
+  source: (item: SpawnedLootItem) => WorkspaceSpawnSource | undefined,
+): readonly WorkspaceSpawnGroup[] {
+  const groups: { key: string; source?: WorkspaceSpawnSource; items: WorkspaceSpawnedItem[] }[] =
+    [];
+  for (const item of items) {
+    const itemSource = source(item);
+    const projected = project(item);
+    const last = groups.at(-1);
+    if (last !== undefined && last.source?.key === itemSource?.key) {
+      last.items.push(projected);
+      continue;
+    }
+    groups.push({
+      key: `${itemSource?.key ?? 'own'}:${projected.key}`,
+      ...(itemSource === undefined ? {} : { source: itemSource }),
+      items: [projected],
+    });
+  }
+  return Object.freeze(
+    groups.map((group) => Object.freeze({ ...group, items: Object.freeze(group.items) })),
+  );
 }
 
 function momentLabel(moment: SpawnMoment): string {
@@ -183,7 +273,9 @@ export function projectSpawnedLoot(
       moment: moment.kind,
       ...(moment.phaseKey === undefined ? {} : { phaseKey: moment.phaseKey }),
       label: momentLabel(moment),
-      items: Object.freeze(moment.items.map(item)),
+      groups: spawnGroups(moment.items, item, (spawned) =>
+        spawnSource(catalog, spawned, undefined),
+      ),
     }),
   );
   // A phase's wheel reward, collected before what its end effects spawn.
@@ -233,21 +325,12 @@ export function projectSpawnedLoot(
   }
   out.push(...unanchored);
   const actionSpawns = loot.actionSpawns.map((spawn) => {
-    const items = spawn.items.map(item);
-    const names = new Set(items.map((candidate) => candidate.label));
-    // One kind of item names the row; several are named by what spawned them.
-    const sourceName = spawnSourceName(catalog, spawn.items[0]);
-    const label =
-      names.size === 1
-        ? `${items[0]!.label} spawned`
-        : sourceName === undefined
-          ? 'Spawned'
-          : `${sourceName} spawned`;
+    const sourceRow = rowByKey.get(roomActionKey(spawn.source));
     return Object.freeze({
       key: semanticAddressKey(spawn.sourceAction),
       sourceActionKey: roomActionKey(spawn.source),
-      label,
-      items: Object.freeze(items),
+      label: 'Spawned',
+      groups: spawnGroups(spawn.items, item, (spawned) => spawnSource(catalog, spawned, sourceRow)),
     });
   });
   return { entries: Object.freeze(out), actionSpawns: Object.freeze(actionSpawns) };

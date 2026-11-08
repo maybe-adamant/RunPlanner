@@ -787,6 +787,16 @@ function roomActionsForOccurrence(
         input.occurrence.occurrenceId,
         roomActionKey(reference),
       );
+      const labelParts = occurrenceActionLabelParts(
+        input.catalog,
+        reference,
+        roomLocal,
+        encounterPhases,
+        control,
+        input.occurrence,
+        input.occurrence.purgingPool?.traitKeyBySlot,
+        capability.sourceFamily,
+      );
       return [
         Object.freeze({
           address: actionAddress,
@@ -797,16 +807,21 @@ function roomActionsForOccurrence(
             roomLocal,
             capability.sourceFamily,
           ),
-          label: occurrenceActionLabel(
-            input.catalog,
-            reference,
-            roomLocal,
-            encounterPhases,
-            control,
-            input.occurrence,
-            input.occurrence.purgingPool?.traitKeyBySlot,
-            capability.sourceFamily,
-          ),
+          label: labelParts.label,
+          // Its one reward type names and shows the drop before it is placed.
+          ...(labelParts.name === undefined
+            ? {}
+            : {
+                labelParts: Object.freeze({
+                  name: labelParts.name,
+                  ...(labelParts.verb === undefined ? {} : { verb: labelParts.verb }),
+                  ...(labelParts.origin === undefined ? {} : { origin: labelParts.origin }),
+                  reward: Object.freeze({
+                    offer: Object.freeze({ rewardType }),
+                    boosted: false,
+                  }),
+                }),
+              }),
           marker: input.markerDestinations.marker(actionAddress),
           proposalKeys: Object.freeze([]),
           reference,
@@ -925,7 +940,7 @@ function roomActionsForOccurrence(
         : [projected];
     }),
   );
-  const optionalRows = Object.freeze([
+  const unplacedOptionalRows = Object.freeze([
     ...unrankedOrStaleRows.filter(
       (row) =>
         row.rank === null &&
@@ -937,7 +952,7 @@ function roomActionsForOccurrence(
     ...clockedTraitPickupRows,
     ...goldPickupRows.filter((row) => row.participation === 'optional'),
   ]);
-  const optionalKeys = new Set(optionalRows.map((row) => row.key));
+  const optionalKeys = new Set(unplacedOptionalRows.map((row) => row.key));
   const repairRows = Object.freeze([
     ...unrankedOrStaleRows.filter(
       (row) =>
@@ -1050,6 +1065,23 @@ function roomActionsForOccurrence(
     allProjectedRows,
     proposals,
     roomLocal,
+  );
+  // Spawned loot is placed from its spawn row, where that row is shown.
+  const shownRowKeys = new Set(
+    spawned.entries.flatMap((entry) =>
+      entry.kind === 'action' && entry.presentation === 'row' ? [entry.actionKey] : [],
+    ),
+  );
+  const spawnPlacedKeys = new Set(
+    [
+      ...spawned.entries.flatMap((entry) => (entry.kind === 'spawned' ? entry.groups : [])),
+      ...spawned.actionSpawns.flatMap((spawn) =>
+        shownRowKeys.has(spawn.sourceActionKey) ? spawn.groups : [],
+      ),
+    ].flatMap((group) => group.items.map((item) => item.actionKey)),
+  );
+  const optionalRows = Object.freeze(
+    unplacedOptionalRows.filter((row) => !spawnPlacedKeys.has(row.key)),
   );
   return Object.freeze({
     timeline: Object.freeze({ ...projectedTimeline, entries: spawned.entries }),

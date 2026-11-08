@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 
-import { openAddGroup } from '@planner-test/support/timeline-rows';
 import { catalogFindingLabels } from '@planner/projections/evaluationProjection';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -128,48 +127,34 @@ function queryTimelineRow(label: string | RegExp): HTMLElement | null {
   }
 }
 
-/** The room's Actions-line entries, each opening its list of optional actions. */
-function actionEntries(): HTMLButtonElement[] {
-  const area = screen.getByRole('region', { name: 'Optional actions' });
-  const line = within(area).queryByRole('list', { name: 'Actions' });
-  return line === null
-    ? []
-    : [...line.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="listbox"]')];
+/** Spawned items not yet collected, each a chip in its spawn row. */
+function unplacedSpawnChips(): HTMLButtonElement[] {
+  return [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '[data-spawned-loot] button.timeline-chip:not([data-spawn-placed])',
+    ),
+  ];
 }
 
-/** Adds an optional action from the room's Add area, whichever group offers it. */
+/** Places a spawned optional pickup from its chip. */
 async function addOptionalAction(
   user: ReturnType<typeof renderOccurrenceWorkbench>['user'],
   name: string | RegExp,
 ): Promise<void> {
-  for (const group of actionEntries()) {
-    const menu = await openAddGroup(user, group.getAttribute('aria-label') ?? '');
-    const action = within(menu).queryByRole('option', { name });
-    if (action !== null) {
-      await user.click(action);
-      return;
-    }
-    await user.keyboard('{Escape}');
-  }
-  throw new Error(`no optional action ${String(name)}`);
+  const chip = unplacedSpawnChips().find((candidate) => {
+    const label = candidate.getAttribute('aria-label') ?? '';
+    return typeof name === 'string' ? label === name : name.test(label);
+  });
+  if (chip === undefined) throw new Error(`no spawned pickup ${String(name)}`);
+  await user.click(chip);
 }
 
-/** The optional actions a group lists, read without adding any. */
-async function optionalActionNames(
-  user: ReturnType<typeof renderOccurrenceWorkbench>['user'],
-): Promise<string[]> {
-  const names: string[] = [];
-  for (const group of actionEntries()) {
-    const label = group.getAttribute('aria-label') ?? '';
-    const menu = await openAddGroup(user, label);
-    names.push(
-      ...[...menu.querySelectorAll('[role="option"] .contextual-picker-item-label')].map(
-        (option) => `${label}: ${option.textContent ?? ''}`,
-      ),
-    );
-    await user.keyboard('{Escape}');
-  }
-  return names;
+/** The spawned pickups not yet collected, each named by its source and itself. */
+function optionalActionNames(): string[] {
+  return unplacedSpawnChips().map(
+    (chip) =>
+      `${chip.closest('[role="group"]')?.getAttribute('aria-label') ?? ''}: ${chip.getAttribute('aria-label') ?? ''}`,
+  );
 }
 
 type EncounterUser = ReturnType<typeof renderOccurrenceWorkbench>['user'];
@@ -1511,13 +1496,13 @@ describe('OccurrenceEncounterWorkbench', () => {
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         );
-    // The optional pickup waits in the Add area; it has no source picker until it is taken.
+    // The optional pickup waits as a spawn chip; it has no source picker until it is taken.
     expect(queryTimelineRow(/^Collect Mystery Boon/)).toBeNull();
-    expect(await optionalActionNames(view.user)).toContain('Mixed Blessings: Collect Mystery Boon');
+    expect(optionalActionNames()).toContain('Mixed Blessings: Mystery Boon');
     expect(
       authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.mysteryBoon,
     ).toBeNull();
-    await addOptionalAction(view.user, 'Collect Mystery Boon');
+    await addOptionalAction(view.user, 'Mystery Boon');
     const placedRow = timelineRow(/^Collect Mystery Boon/);
     await view.user.click(within(placedRow).getByRole('button', { name: 'Reward' }));
     await view.user.click(await within(await screen.findByRole('listbox')).findByText('Hestia'));
@@ -1575,7 +1560,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     ]);
     expect(hasAcquiredMysteryBoon()).toBe(false);
     expect(queryTimelineRow(/^Collect Mystery Boon/)).toBeNull();
-    expect(await optionalActionNames(view.user)).toContain('Mixed Blessings: Collect Mystery Boon');
+    expect(optionalActionNames()).toContain('Mixed Blessings: Mystery Boon');
     expect(
       workspaceProjection(view.application).interactions.traitOffers.has(
         semanticAddressKey(createTraitOfferAddress(mysteryBoon, 'hiddenSource')),
@@ -1590,7 +1575,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(hasAcquiredMysteryBoon()).toBe(true);
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     expect(hasAcquiredMysteryBoon()).toBe(false);
-    expect(await optionalActionNames(view.user)).toContain('Mixed Blessings: Collect Mystery Boon');
+    expect(optionalActionNames()).toContain('Mixed Blessings: Mystery Boon');
   });
 
   it('activates and retires a Narcissus Pom target with its timeline pickup', async () => {
@@ -1631,10 +1616,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     openRoomTab('Room Timeline');
     const pickupRow = () => timelineRow('Collect Pom Slice');
-    // The untaken pickup has no Pom editor: it waits in the Add area.
+    // The untaken pickup has no Pom editor: it waits as a spawn chip.
     expect(queryTimelineRow('Collect Pom Slice')).toBeNull();
-    expect(await optionalActionNames(view.user)).toContain('Verdure Sampler: Collect Pom Slice');
-    await addOptionalAction(view.user, 'Collect Pom Slice');
+    expect(optionalActionNames()).toContain('Verdure Sampler: Pom Slice');
+    await addOptionalAction(view.user, 'Pom Slice');
     await view.user.click(
       within(pickupRow()).getByRole('button', { name: /^Edit Pom · Pick target/ }),
     );
@@ -1717,10 +1702,10 @@ describe('OccurrenceEncounterWorkbench', () => {
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         );
 
-    // The untaken pickup has no outcome choice: it waits in the Add area.
+    // The untaken pickup has no outcome choice: it waits as a spawn chip.
     expect(queryTimelineRow(/^Collect Psyche/)).toBeNull();
     expect(screen.queryByRole('button', { name: /^How to take Psyche/ })).toBeNull();
-    await addOptionalAction(view.user, /^Collect Psyche/);
+    await addOptionalAction(view.user, /^Psyche/);
     expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual({
       kind: 'interactAcquisitionEntry',
       siteKey: narcissusSite,
@@ -1815,7 +1800,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     openRoomTab('Room Timeline');
     // Adding appends the pickup at its last legal position.
-    await addOptionalAction(view.user, /^Collect Max Magick/);
+    await addOptionalAction(view.user, /^Max Magick/);
 
     expect(
       view.application.store

@@ -1222,6 +1222,39 @@
   cursor: not-allowed;
 }
 
+/* A source's items follow its icon: "[Supply Chain]: Pom Slice, Pom Slice". */
+.spawned-loot-groups {
+  flex-wrap: wrap;
+}
+
+.spawned-loot-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.spawned-loot-source {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+}
+
+.spawned-loot-source > .artwork-label-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.spawned-loot-colon {
+  margin-inline: -2px 2px;
+  color: var(--muted);
+}
+
+.spawned-loot-separator {
+  margin-inline: 4px;
+  color: var(--muted);
+}
+
 /* Object pickers in decisions are as wide as their choice. */
 .timeline-row[data-travel-deal-line] .timeline-cell-editors .contextual-picker {
   width: auto;

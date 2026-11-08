@@ -36,53 +36,6 @@ export async function findTimelineRow(label: string | RegExp): Promise<HTMLEleme
   return waitFor(() => timelineRow(label));
 }
 
-/** An entry's picker trigger in the room's Add area: a source family or a room object. */
-export function addGroupButton(label: string): HTMLButtonElement {
-  const button = document.querySelector<HTMLButtonElement>(
-    `.room-add button[aria-label="${CSS.escape(label)}"]`,
-  );
-  if (button === null) {
-    const shown = [...document.querySelectorAll('.room-add button[aria-label]')].map((candidate) =>
-      candidate.getAttribute('aria-label'),
-    );
-    throw new Error(`No Add group ${label}; groups: ${shown.join(', ')}`);
-  }
-  return button;
-}
-
-/** Opens one Add entry and returns its list of optional actions. */
-export async function openAddGroup(
-  user: { click: (element: Element) => Promise<void> },
-  label: string,
-): Promise<HTMLElement> {
-  await user.click(addGroupButton(label));
-  return waitFor(() => {
-    const menu = document.querySelector<HTMLElement>('.contextual-picker-popover');
-    if (menu === null) throw new Error(`${label} did not open`);
-    return menu;
-  });
-}
-
-/** One optional action's option in an open Add list, by its label. */
-export function addActionOption(menu: HTMLElement, action: string | RegExp): HTMLElement {
-  const option = [...menu.querySelectorAll<HTMLElement>('[role="option"]')].find((candidate) => {
-    const text =
-      candidate.querySelector('.contextual-picker-item-label')?.textContent?.trim() ?? '';
-    return typeof action === 'string' ? text === action : action.test(text);
-  });
-  if (option === undefined) throw new Error(`No ${String(action)} in the open Add list`);
-  return option;
-}
-
-/** Adds one optional action from its Add group; it appends at its last legal position. */
-export async function pickAddAction(
-  user: { click: (element: Element) => Promise<void> },
-  group: string,
-  action: string | RegExp,
-): Promise<void> {
-  await user.click(addActionOption(await openAddGroup(user, group), action));
-}
-
 /** The one timeline action row that buys from inventory slot `slot`, named on its icon badge. */
 export function slotRow(slot: number): HTMLElement {
   const rows = [...document.querySelectorAll<HTMLElement>('li[data-room-action-key]')].filter(

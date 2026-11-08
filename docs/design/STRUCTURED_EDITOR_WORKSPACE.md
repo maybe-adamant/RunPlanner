@@ -480,7 +480,8 @@ rerolls may be pressed, listing what the engine publishes as possible at
 the end of the room's current actions, each option named by the row it
 appends. Its Actions line groups the room's other optional actions by source
 family, each group opening its short list; the optional pickups a room object
-produces sit beside that object. A finding on an action marks its object or
+produces sit beside that object. Loot the game spawns is not listed there: it
+is placed from its spawn row. A finding on an action marks its object or
 group entry, and navigating to the action opens its list. A Well
 or Pool offers buy or sell for each offered slot (a blank initial slot takes
 its item or trait in the same pick) and Reroll with its cost, disabled with a
@@ -495,6 +496,16 @@ that cannot be made, the item collected or not yet chosen, the pedestal
 inactive). One pick appends one action at its last legal position, which its
 reorder handle then moves. A reroll row carries an optional picker for each restocked
 slot, pinned or native.
+
+Where the game spawns loot, a read-only spawn row follows the moment (room
+entry, an encounter's end, an O phase's wheel reward, the Preboss delivery
+flush, read as Delivered) or sits under the action whose settlement spawns it.
+It lists the items in spawn order as chips, grouped by what spawned them (a
+boon, keepsake, NPC, Hermes or a switch, shown by its icon before its items);
+the room's own reward and Fields slots stand alone, a slot marked by its cage
+or optional badge. A chip leads to its collect row; an optional item not yet
+collected is dashed and one click places it, opening the row's unfinished
+choice (a Pom Slice's Pom) at once. Its hover says what clicking does.
 
 ### Doors on the Timeline
 
@@ -723,7 +734,8 @@ rewards. Only the final selection commits the complete permutation as one
 semantic edit; closing an unfinished picker leaves the chronology unchanged.
 Encounter-cycle headings show their assigned cage as a read-only label.
 Inventory rows own reward payload and acquisition disposition. An optional
-pickup joins or leaves the chronology from the Timeline's optional actions; the
+pickup joins the chronology from its chip on the room-entry spawn row and leaves
+it by its row's removal; the
 chronology owns all completion, interaction, movement, and source-before-replacement
 constraints. Dormant optional values and inactive cage payloads retain authored
 state but publish no control, marker, or finding destination. A retained

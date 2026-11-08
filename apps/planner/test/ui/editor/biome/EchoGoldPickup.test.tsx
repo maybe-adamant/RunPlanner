@@ -17,7 +17,7 @@ import {
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { act, cleanup, screen, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
-import { openAddGroup, slotRow } from '@planner-test/support/timeline-rows';
+import { slotRow } from '@planner-test/support/timeline-rows';
 import {
   createEchoGoldHPrebossProject,
   createEchoGoldIAnvilDuplicateProject,
@@ -224,10 +224,13 @@ it('leaves a Gold Mystery Boon optional and authors its hidden source only after
       semanticAddressKey(finding.origin).includes('echoDoubleShopReward'),
     ),
   ).toBe(false);
-  // The optional Gold pickup waits in the Add area, with no reward editor, until taken.
+  // The optional Gold pickup waits as a chip under its purchase, with no reward editor, until taken.
   expect(queryGoldRow()).toBeNull();
-  const echo = await openAddGroup(view.user, 'Echo');
-  await view.user.click(within(echo).getByRole('option', { name: /Gold Gold Gold/ }));
+  const spawnedGold = () =>
+    within(document.querySelector<HTMLElement>('[data-spawned-loot="action"]')!).getByRole(
+      'button',
+    );
+  await view.user.click(spawnedGold());
   await selectGod(goldRow());
   settleTrait('echoDoubleShopReward');
   expect(
@@ -236,8 +239,9 @@ it('leaves a Gold Mystery Boon optional and authors its hidden source only after
     ),
   ).toBe(false);
   await view.user.click(goldRow().getByRole('button', { name: /Remove .* from timeline/ }));
-  // Removed, it returns to the Add area and its reward editor leaves with the row.
+  // Removed, its chip waits again and its reward editor leaves with the row.
   expect(queryGoldRow()).toBeNull();
+  expect(spawnedGold().hasAttribute('data-spawn-placed')).toBe(false);
   expect(
     workspaceProjection(view.application).interactions.traitOffers.has(
       semanticAddressKey(createTraitOfferAddress(gold, 'hiddenSource')),

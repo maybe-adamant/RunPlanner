@@ -18,6 +18,7 @@ import {
 import type {
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceRoomLifecycleTimelineEntry,
+  WorkspaceSpawnGroup,
   WorkspaceSpawnedItem,
 } from '@planner/projections/structured-workspace';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
@@ -49,6 +50,15 @@ function sequence(entries: readonly WorkspaceRoomLifecycleTimelineEntry[]) {
   });
 }
 
+/** Each group as "[source]: items", the room's own rewards with no source. */
+const grouped = (groups: readonly WorkspaceSpawnGroup[]) =>
+  groups.map(
+    (group) =>
+      `${group.source === undefined ? '' : `[${group.source.name}]: `}${group.items.map((item) => item.label).join(', ')}`,
+  );
+
+const items = (groups: readonly WorkspaceSpawnGroup[]) => groups.flatMap((group) => group.items);
+
 const placement = (item: WorkspaceSpawnedItem) =>
   `${item.participation} ${item.placement.kind}${item.place === undefined ? '' : ` ${item.place.badge}`}`;
 
@@ -77,7 +87,12 @@ describe('spawn notices', () => {
     ]);
     const spawned = notice(entries, 'encounterEnd:Combat');
     expect(spawned.label).toBe('Spawned');
-    expect(spawned.items.map(placement)).toEqual([
+    expect(grouped(spawned.groups)).toEqual([
+      'Max Health',
+      '[Hermes]: Max Health',
+      '[Supply Chain]: Pom Slice, Pom Slice',
+    ]);
+    expect(items(spawned.groups).map(placement)).toEqual([
       'required placed',
       'required placed',
       'optional placed',
@@ -87,13 +102,26 @@ describe('spawn notices', () => {
     const reward = room.roomActions!.rows.find(
       (row) => row.reference.kind === 'interactIncomingReward',
     )!;
-    expect(spawned.items[0]).toMatchObject({
+    expect(items(spawned.groups)[0]).toMatchObject({
       actionKey: reward.key,
       placement: { kind: 'placed', owner: reward.address },
     });
-    const drop = spawned.items[3]!;
+    const drop = items(spawned.groups)[3]!;
     if (drop.placement.kind !== 'unplaced') throw new Error('the second drop is placed');
     expect(drop.placement.intent.command.kind).toBe('PlaceClockedTraitPickup');
+  });
+
+  it('places spawned optional loot from its spawn row, not the Optional actions', () => {
+    const room = roomOf(
+      loadSurfaceScheduledLifecycleCheckpoint(),
+      'P',
+      createOccurrenceId('surface-p-1-1-p_combat03'),
+    );
+    const actions = room.roomActions!;
+    const drop = items(notice(actions.timeline.entries, 'encounterEnd:Combat').groups)[3]!;
+    expect(drop.placement.kind).toBe('unplaced');
+    expect(actions.rows.find((row) => row.key === drop.actionKey)?.rank).toBeNull();
+    expect(actions.optionalRows.map((row) => row.key)).not.toContain(drop.actionKey);
   });
 
   it('notifies an O combat phase at its end and again after its wheel reward', () => {
@@ -124,12 +152,19 @@ describe('spawn notices', () => {
     );
     const entries = room.roomActions!.timeline.entries;
     expect(sequence(entries).slice(0, 2)).toEqual(['roomEntered', 'spawned roomEntered']);
-    expect(notice(entries, 'roomEntered').items.map(placement)).toEqual([
+    const spawned = items(notice(entries, 'roomEntered').groups);
+    expect(spawned.map(placement)).toEqual([
       'required placed C2',
       'required placed C1',
       'optional unplaced O1',
       'optional unplaced O2',
     ]);
+    // Its optional rewards are placed from their chips alone.
+    const optionalKeys = room.roomActions!.optionalRows.map((row) => row.key);
+    for (const item of spawned.filter((candidate) => candidate.participation === 'optional')) {
+      expect(item.placement.kind).toBe('unplaced');
+      expect(optionalKeys).not.toContain(item.actionKey);
+    }
   });
 
   it('lists Quick Buck’s gold under the reward pickup that grants it', () => {
@@ -138,13 +173,12 @@ describe('spawn notices', () => {
       (row) => row.reference.kind === 'interactIncomingReward' && !row.stale,
     )!;
     expect(room.roomActions!.actionSpawns).toEqual([
-      expect.objectContaining({
-        sourceActionKey: reward.key,
-        label: 'Gold spawned',
-        items: [expect.objectContaining({ label: 'Gold', participation: 'optional' })],
-      }),
+      expect.objectContaining({ sourceActionKey: reward.key, label: 'Spawned' }),
     ]);
-    const gold = room.roomActions!.actionSpawns![0]!.items[0]!;
+    const spawn = room.roomActions!.actionSpawns![0]!;
+    expect(grouped(spawn.groups)).toEqual(['[Quick Buck]: Gold']);
+    const gold = items(spawn.groups)[0]!;
+    expect(gold.participation).toBe('optional');
     expect(gold.actionKey).toBe(
       roomActionKey(
         room.roomActions!.rows.find((row) => row.sourceFamily?.kind === 'trait')!.reference,

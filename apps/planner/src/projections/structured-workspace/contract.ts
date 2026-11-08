@@ -112,6 +112,8 @@ export type {
   WorkspaceRoomLifecycleTimelineEntry,
   WorkspaceSettledRarity,
   WorkspaceActionSpawn,
+  WorkspaceSpawnGroup,
+  WorkspaceSpawnSource,
   WorkspaceSpawnedItem,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthDomain,

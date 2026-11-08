@@ -58,4 +58,26 @@ describe('spawn notice items', () => {
     await waitFor(() => expect(unplaced()).toHaveLength(0));
     expect(spawnedItems().at(-1)!.hasAttribute('data-spawn-placed')).toBe(true);
   });
+
+  it('opens a placed Pom Slice’s Pom choice at once', async () => {
+    const view = render();
+    expect(
+      within(screen.getByRole('listitem', { name: 'Spawned' })).getByRole('group', {
+        name: 'Supply Chain',
+      }),
+    ).toBeTruthy();
+    await view.user.click(spawnedItems().at(-1)!);
+    await waitFor(() =>
+      expect(view.application.store.getState().editorSession.levelResolutionDialogTarget).toEqual(
+        expect.objectContaining({ kind: 'levelResolution' }),
+      ),
+    );
+  });
+
+  it('leaves spawned pickups out of the Optional actions', () => {
+    render();
+    const optional = screen.getByRole('region', { name: 'Optional actions' });
+    expect(within(optional).queryByRole('button', { name: /Supply Chain/ })).toBeNull();
+    expect(within(optional).getByText('Nothing optional to add here')).toBeTruthy();
+  });
 });

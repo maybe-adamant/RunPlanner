@@ -50,10 +50,15 @@ export function RoomAddArea({
   const objectsId = useId();
   const actionsId = useId();
   const titleId = useId();
-  // Beside a wide timeline the area is a side column that stays put even when empty.
+  // Beside a wide timeline the area is a side column that stays put even when empty;
+  // below it, an empty area shows only for its notes.
   if (groups.length === 0 && objects.length === 0)
     return (
-      <section aria-labelledby={titleId} className="room-add" data-empty="">
+      <section
+        aria-labelledby={titleId}
+        className="room-add"
+        data-empty={footer === undefined || footer === null ? '' : undefined}
+      >
         <h4 className="room-add-title" id={titleId}>
           Optional actions
         </h4>

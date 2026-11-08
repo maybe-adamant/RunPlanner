@@ -253,7 +253,10 @@ export interface WorkspaceRoomActions {
   readonly owner: OccurrenceAddress;
   readonly proposals: readonly WorkspaceRoomActionProposal[];
   readonly rows: readonly WorkspaceRoomActionRow[];
-  /** Active optional actions that have not been inserted into the lifecycle order. */
+  /**
+   * Active optional actions that have not been inserted into the lifecycle order,
+   * apart from spawned loot, which its spawn row places.
+   */
   readonly optionalRows: readonly WorkspaceRoomActionRow[];
   /** Missing required or retained stale rows rendered once outside active lifecycle order. */
   readonly repairRows: readonly WorkspaceRoomActionRow[];
@@ -280,6 +283,8 @@ export interface WorkspaceSpawnedItem {
   /** The collect action's Timeline row. */
   readonly actionKey: string;
   readonly label: string;
+  /** What using its chip does, said on hover. */
+  readonly hint: string;
   readonly participation: 'required' | 'optional';
   /** The Fields cage or optional slot it sits in, marked on its chip. */
   readonly place?: { readonly badge: string; readonly label: string };
@@ -295,12 +300,28 @@ export interface WorkspaceSpawnedItem {
     | { readonly kind: 'unavailable'; readonly reason: string };
 }
 
+/** The boon, keepsake, NPC or room object that spawned a group of items. */
+export interface WorkspaceSpawnSource {
+  readonly key: string;
+  readonly name: string;
+  readonly family: import('@run-planner/engine/authored-project').AcquisitionEntrySourceFamily;
+  readonly challengeSwitchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
+}
+
+/** Consecutive spawned items with one source, in spawn order. */
+export interface WorkspaceSpawnGroup {
+  readonly key: string;
+  /** Absent for the room's own reward or a Fields slot, which stand alone. */
+  readonly source?: WorkspaceSpawnSource;
+  readonly items: readonly WorkspaceSpawnedItem[];
+}
+
 /** What one source action's settlement spawned, read under its row. */
 export interface WorkspaceActionSpawn {
   readonly key: string;
   readonly sourceActionKey: string;
   readonly label: string;
-  readonly items: readonly WorkspaceSpawnedItem[];
+  readonly groups: readonly WorkspaceSpawnGroup[];
 }
 
 export type WorkspaceRoomLifecycleBoundary =
@@ -388,7 +409,7 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly moment: import('@run-planner/engine/simulation').SpawnMomentKind;
       readonly phaseKey?: string;
       readonly label: string;
-      readonly items: readonly WorkspaceSpawnedItem[];
+      readonly groups: readonly WorkspaceSpawnGroup[];
     };
 
 /** The settled target's rarity before and after one timed growth; equal when nothing promoted. */

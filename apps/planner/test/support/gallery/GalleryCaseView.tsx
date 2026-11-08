@@ -2,12 +2,14 @@ import { Component, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import { projectFindingLabels } from '@planner/projections/evaluationProjection';
 import { semanticOwnerFocused, semanticOwnerOpened } from '@planner/state/editorSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { selectPresentProject, useAppSelector } from '@planner/state/store';
 import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
+import { PomResolutionDialog } from '@planner/ui/editor/rewards/PomResolutionEditor';
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
 import { buildGalleryProject, galleryTargetOwner, type GalleryCase } from './galleryCase';
 
@@ -46,6 +48,9 @@ function CaseWorkspace({
 }) {
   const workspace = useAppSelector(application.selectStructuredWorkspace);
   const project = useAppSelector(selectPresentProject);
+  const levelResolutionTarget = useAppSelector(
+    (state) => state.editorSession.levelResolutionDialogTarget ?? null,
+  );
   const labels = useMemo(
     () => (project === undefined ? undefined : projectFindingLabels(catalog, project)),
     [project],
@@ -75,6 +80,14 @@ function CaseWorkspace({
           </div>
         </div>
       </div>
+      {/* A Pom choice opens as the app opens it, so a chip that opens one can be seen. */}
+      {levelResolutionTarget === null ? null : (
+        <PomResolutionDialog
+          interactions={workspace.interactions}
+          key={semanticAddressKey(levelResolutionTarget)}
+          target={levelResolutionTarget}
+        />
+      )}
     </FindingTargetScope>
   );
 }
