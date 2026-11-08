@@ -216,6 +216,8 @@ interface WorkspaceBatchNodeBase {
   readonly runState?: WorkspaceRunStateLauncher;
   /** The source room's ordered door and cage rerolls, where it can or did reroll. */
   readonly rerolls?: WorkspaceRoomRerolls;
+  /** The doors after each of the source room's unlocks and door rerolls, in action order. */
+  readonly doorSteps?: readonly WorkspaceDoorStep[];
 }
 
 /** One authored press in its room's or Hub's action order. */
@@ -234,13 +236,23 @@ export interface WorkspaceRerollRow {
     /** The pressed reward as the earlier presses left it. */
     readonly before: ResolvedRewardOffer | null;
     /** Every door's or offer's rewards once this press lands, keyed by exit or offer. */
-    readonly after: readonly {
-      readonly exitKey: string;
-      /** The door is still locked here: its locked-door press comes later or not at all. */
-      readonly locked?: true;
-      readonly rewards: readonly (ResolvedRewardOffer | null)[];
-    }[];
+    readonly after: WorkspaceDoorsState;
   };
+}
+
+/** Every door's or offer's rewards at one point of its room, keyed by exit or offer. */
+export type WorkspaceDoorsState = readonly {
+  readonly exitKey: string;
+  /** The door is still locked here: its locked-door press comes later or not at all. */
+  readonly locked?: true;
+  readonly rewards: readonly (ResolvedRewardOffer | null)[];
+}[];
+
+/** The room's doors once one of its door presses (an unlock or a reroll) lands. */
+export interface WorkspaceDoorStep {
+  /** The press's room action key. */
+  readonly actionKey: string;
+  readonly doors: WorkspaceDoorsState;
 }
 
 /** One surface's presses in action order, with a press appended at the end. */

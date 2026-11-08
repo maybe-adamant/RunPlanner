@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 import type { SemanticAddress } from '@run-planner/engine/authored-project';
-import type { WorkspaceRoomRerolls } from '@planner/projections/structured-workspace';
+import type {
+  WorkspaceDoorStep,
+  WorkspaceRoomRerolls,
+} from '@planner/projections/structured-workspace';
 import type { DoorChip } from './doorSummary';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { DoorChips } from './DecisionWorkbench';
@@ -44,6 +47,8 @@ export interface TimelineDoorsContent {
   readonly rerolls?: WorkspaceRoomRerolls;
   /** The doors as first drawn, which each press row shows as it leaves them. */
   readonly chips?: readonly DoorChip[];
+  /** The doors after each unlock and door reroll, by its Timeline row's action key. */
+  readonly steps?: readonly WorkspaceDoorStep[];
 }
 
 export interface TimelineDoors extends TimelineDoorsContent {

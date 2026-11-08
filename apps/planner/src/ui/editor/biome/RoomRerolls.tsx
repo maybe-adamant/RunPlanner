@@ -21,7 +21,7 @@ import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
 import { RoomNumberIcon } from './RoomNumberIcon';
 import { TimelineRow } from './TimelineRow';
 import { DoorChips } from './DecisionWorkbench';
-import type { DoorChip } from './doorSummary';
+import { doorChipsAt, type DoorChip } from './doorSummary';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 
@@ -443,20 +443,7 @@ export function DoorRerollRowReward({
   const doors = row.doors;
   const after = doors?.after;
   const chipsAfter =
-    chips === undefined || after === undefined
-      ? undefined
-      : chips.map((chip) => {
-          const door = after.find((candidate) => candidate.exitKey === chip.key);
-          return door === undefined
-            ? chip
-            : {
-                ...chip,
-                locked: door.locked === true,
-                rewards: door.rewards.flatMap((offer) =>
-                  offer === null ? [] : [offerIcon(offer)],
-                ),
-              };
-        });
+    chips === undefined || after === undefined ? undefined : doorChipsAt(chips, after);
   return (
     <>
       <span className="room-reroll-row-inline">

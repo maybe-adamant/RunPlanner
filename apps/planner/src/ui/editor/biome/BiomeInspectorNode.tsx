@@ -244,6 +244,7 @@ function roomTimelineDoors({
       ),
       notes,
       ...(batch.rerolls === undefined ? {} : { rerolls: batch.rerolls }),
+      ...(batch.doorSteps === undefined ? {} : { steps: batch.doorSteps }),
       ...(batch.rerolls === undefined && unlocks.options === undefined
         ? {}
         : {

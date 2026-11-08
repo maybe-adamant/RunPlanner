@@ -5,6 +5,7 @@ import {
   type WorkspaceRewardWheelDescriptor,
   type WorkspaceMixedBatchNode,
   type WorkspaceOrdinaryBatchNode,
+  type WorkspaceDoorStep,
   type WorkspaceRoomIcon,
   type WorkspaceTakeoverBatchNode,
 } from '@planner/projections/structured-workspace';
@@ -92,6 +93,23 @@ export function batchDoorChips(
           ],
     ),
   ];
+}
+
+/** The chips as the doors stand at one step: each door's rewards and lock there. */
+export function doorChipsAt(
+  chips: readonly DoorChip[],
+  doors: WorkspaceDoorStep['doors'],
+): readonly DoorChip[] {
+  return chips.map((chip) => {
+    const door = doors.find((candidate) => candidate.exitKey === chip.key);
+    return door === undefined
+      ? chip
+      : {
+          ...chip,
+          locked: door.locked === true,
+          rewards: door.rewards.flatMap((offer) => (offer === null ? [] : [offerIcon(offer)])),
+        };
+  });
 }
 
 /**

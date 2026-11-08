@@ -34,6 +34,8 @@ import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type {
   WorkspaceDoorContract,
   WorkspaceDoorReward,
+  WorkspaceDoorStep,
+  WorkspaceDoorsState,
   WorkspacePhysicalTarget,
   WorkspaceRerollRow,
   WorkspaceRoomRerolls,
@@ -443,6 +445,8 @@ export interface WorkspaceRoomRerollsAssembly {
   readonly requirement?: RerollListRequirement;
   /** The batch's doors with each rerolled reward's final draw and repair. */
   readonly targets: readonly WorkspacePhysicalTarget[];
+  /** The doors after each unlock and door reroll, in action order; absent without any. */
+  readonly doorSteps?: readonly WorkspaceDoorStep[];
 }
 
 /** A room's door and cage rerolls beside its doors. */
@@ -557,10 +561,58 @@ export function assembleRoomRerolls(input: {
     settled: settledRewards(settled),
   });
   const withDoors = withPressStates(list, states);
+  const doorSteps = roomDoorSteps(occurrence, input.targets, states);
   return Object.freeze({
     ...(withDoors === undefined ? {} : withDoors),
     targets: Object.freeze(targets),
+    ...(doorSteps.length === 0 ? {} : { doorSteps }),
   });
+}
+
+/**
+ * The doors after each unlock and door reroll in action order: a reroll as its
+ * press leaves them, an unlock as the press before it left them with its door
+ * open. Before any press the doors show their first draws and authored locks.
+ */
+function roomDoorSteps(
+  occurrence: RoomOccurrence | undefined,
+  targets: readonly WorkspacePhysicalTarget[],
+  presses: ReadonlyMap<string, NonNullable<WorkspaceRerollRow['doors']>>,
+): readonly WorkspaceDoorStep[] {
+  if (occurrence === undefined) return Object.freeze([]);
+  const lockedExits = occurrence.lockedExits ?? [];
+  let doors: WorkspaceDoorsState = Object.freeze(
+    targets.map((target) =>
+      Object.freeze({
+        exitKey: target.exitKey,
+        ...(lockedExits.includes(target.exitKey) ? { locked: true as const } : {}),
+        rewards: Object.freeze(
+          target.door.offerRewardSurface.visibility === 'hidden'
+            ? []
+            : target.door.offerRewardSurface.rewards.map((reward) => reward.offer),
+        ),
+      }),
+    ),
+  );
+  const steps: WorkspaceDoorStep[] = [];
+  for (const reference of occurrence.roomActions.order) {
+    const actionKey = roomActionKey(reference);
+    if (reference.kind === 'unlockExit') {
+      doors = Object.freeze(
+        doors.map((door) =>
+          door.exitKey === reference.exitKey
+            ? Object.freeze({ exitKey: door.exitKey, rewards: door.rewards })
+            : door,
+        ),
+      );
+    } else {
+      const press = presses.get(actionKey);
+      if (press === undefined) continue;
+      doors = press.after;
+    }
+    steps.push(Object.freeze({ actionKey, doors }));
+  }
+  return Object.freeze(steps);
 }
 
 /** One door or wheel offer a press may change: each reward it shows, by owner. */

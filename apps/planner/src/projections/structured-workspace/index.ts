@@ -68,6 +68,7 @@ export type {
   WorkspaceRoutePlanEnd,
   WorkspaceRoomRerolls,
   WorkspaceRoomRerollsInteraction,
+  WorkspaceDoorStep,
   WorkspacePhysicalTarget,
   WorkspaceRailEntry,
   WorkspaceRailReward,

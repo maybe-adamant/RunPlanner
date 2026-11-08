@@ -1118,6 +1118,7 @@ function assembleBatchDecision(
     persistence: input.persistence,
     ...(repairIntent === undefined ? {} : { repairIntent }),
     ...(rerolls.rerolls === undefined ? {} : { rerolls: rerolls.rerolls }),
+    ...(rerolls.doorSteps === undefined ? {} : { doorSteps: rerolls.doorSteps }),
     ...(rewardPool === undefined ? {} : { rewardPool }),
     ...(hasEditableAuthoredRewardStore
       ? {

@@ -33,6 +33,7 @@ import { roomKindIcon } from './roomIcon';
 import { SideRoomsWorkbench } from './locals/SideRoomsWorkbench';
 import { TimelineLegend } from './TimelineLegend';
 import type { TimelineDoors, TimelineDoorsContent } from './TimelineDoors';
+import { doorChipsAt } from './doorSummary';
 import { createRouteAddress } from '@run-planner/engine/authored-project';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapColumn, type RoomMapStage } from './room-map/RoomMapColumn';
@@ -62,6 +63,16 @@ function timelineMapStage(row: Element): RoomMapStage | undefined {
   if (leave >= 0 && index >= leave) return 'left';
   if (open >= 0 && index >= open) return 'open';
   return 'closed';
+}
+
+/** The room's latest door press (an unlock or a reroll) at or before the row. */
+function timelineDoorStep(row: Element, stepKeys: ReadonlySet<string>): string | undefined {
+  const rows = [...(row.parentElement?.children ?? [])];
+  for (let index = rows.indexOf(row); index >= 0; index -= 1) {
+    const key = (rows[index] as HTMLElement).dataset.roomActionKey;
+    if (key !== undefined && stepKeys.has(key)) return key;
+  }
+  return undefined;
 }
 
 interface OccurrenceWorkbenchProps {
@@ -264,6 +275,8 @@ export function OccurrenceWorkbench({
   const [mapStage, setMapStage] = useState<{
     readonly roomIdentity: string;
     readonly stage: RoomMapStage;
+    /** The door press whose doors the map shows; none shows them as they open. */
+    readonly step?: string;
   }>();
   const mapRow = useRef<HTMLElement>(undefined);
   // Leaving the Timeline or the room returns the map to the plan.
@@ -281,9 +294,26 @@ export function OccurrenceWorkbench({
     const stage = row === undefined ? undefined : timelineMapStage(row);
     if (row === undefined || stage === undefined) return;
     markMapRow(row);
-    if (stage !== mapStage?.stage || mapStage.roomIdentity !== roomIdentity)
-      setMapStage({ roomIdentity, stage });
+    const step = timelineDoorStep(
+      row,
+      new Set((timelineDoors?.steps ?? []).map((candidate) => candidate.actionKey)),
+    );
+    if (
+      stage !== mapStage?.stage ||
+      step !== mapStage.step ||
+      mapStage.roomIdentity !== roomIdentity
+    )
+      setMapStage({ roomIdentity, stage, ...(step === undefined ? {} : { step }) });
   };
+  // The doors as they stand at the marked row: the latest press's, else as they open.
+  const openChips = timelineDoors?.summary?.chips;
+  const stepDoors = mapStageShown
+    ? timelineDoors?.steps?.find((candidate) => candidate.actionKey === mapStage.step)?.doors
+    : undefined;
+  const mapChips =
+    openChips === undefined || stepDoors === undefined
+      ? openChips
+      : doorChipsAt(openChips, stepDoors);
   // The marked row is the one the map reflects; the plan's map marks none.
   const showsMapRow = shownMapStage !== 'summary';
   useEffect(() => {
@@ -308,7 +338,7 @@ export function OccurrenceWorkbench({
               {controls}
             </div>
             <RoomMapColumn
-              chips={timelineDoors?.summary?.chips}
+              chips={mapChips}
               flipped={room.layout?.flipped === true}
               gameName={room.gameName}
               map={room.map}
