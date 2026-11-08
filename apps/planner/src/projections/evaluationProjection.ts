@@ -1,5 +1,10 @@
 import { challengeSwitchRuleSentence, challengeSwitchRuleTitle } from './challengeSwitchCopy';
-import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
+import {
+  routeRoomDeclaration,
+  semanticAddressKey,
+  type ProjectDocument,
+  type SemanticAddress,
+} from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import {
   challengeSwitchPlacementFindingIssue,
@@ -688,6 +693,8 @@ export interface FindingLabels extends EncounterIssueNames {
   readonly customizationOwner: (decisionKey: string) => string | undefined;
   /** A native elite attribute an Elite switch forces. */
   readonly eliteAttribute: (attributeKey: string) => string | undefined;
+  /** A room of the open project, by its biome and occurrence. */
+  readonly room?: (biomeKey: string, occurrenceId: string) => string | undefined;
 }
 
 const labelsByCatalog = new WeakMap<Catalog, FindingLabels>();
@@ -752,6 +759,24 @@ export function catalogFindingLabels(catalog: Catalog): FindingLabels {
   });
   labelsByCatalog.set(catalog, labels);
   return labels;
+}
+
+/** The catalog's names, and the open project's rooms by occurrence. */
+export function projectFindingLabels(catalog: Catalog, project: ProjectDocument): FindingLabels {
+  const base = catalogFindingLabels(catalog);
+  const { route } = project;
+  return Object.freeze({
+    ...base,
+    room: (biomeKey: string, occurrenceId: string) => {
+      const gameName = route.biomes
+        .find((biome) => biome.biomeKey === biomeKey)
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === occurrenceId,
+        )?.gameName;
+      const room = gameName === undefined ? undefined : catalog.rooms.byKey[gameName];
+      return room === undefined ? undefined : routeRoomDeclaration(room, route.routeKey).label;
+    },
+  });
 }
 
 /** Why the game cannot show a trait offer screen, as its finding or candidate finding carries it. */
@@ -1022,6 +1047,14 @@ export function presentFinding(
           findingCopy.encounterUnavailable.title,
         ]),
       });
+  }
+  if (finding.code === 'roomAlreadyVisited') {
+    const occurrenceId = evidenceString(finding.evidence.occurrenceId);
+    const room =
+      occurrenceId === undefined || !('biomeKey' in finding.origin)
+        ? undefined
+        : labels?.room?.(finding.origin.biomeKey, occurrenceId);
+    if (room !== undefined) return Object.freeze({ title: `${room} is already visited` });
   }
   if (finding.code === 'hubOpenSetIncomplete') {
     const min = count(finding.evidence.minimumCount);

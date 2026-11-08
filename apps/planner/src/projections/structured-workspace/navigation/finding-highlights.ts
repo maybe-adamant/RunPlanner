@@ -78,8 +78,19 @@ function ownerControl(finding: SemanticFinding): WorkspaceFindingControl | undef
   return undefined;
 }
 
+/** The Leave room picker that starts one side visit, the place a repeat is repaired. */
+export function sideVisitControl(position: number): WorkspaceFindingControl {
+  return `sideVisit:${position}`;
+}
+
 /** A finding repaired by one addressless control of its own owner, chosen by its code. */
 function codeControl(finding: SemanticFinding): WorkspaceFindingControl | undefined {
+  if (
+    finding.origin.kind === 'localVisitOrder' &&
+    finding.code === 'roomAlreadyVisited' &&
+    typeof finding.evidence.visitIndex === 'number'
+  )
+    return sideVisitControl(finding.evidence.visitIndex);
   if (finding.origin.kind === 'acquisitionRole' && finding.code === 'seaStarDuplicationUnavailable')
     return 'seaStar';
   if (

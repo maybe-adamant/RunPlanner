@@ -30,7 +30,7 @@ import { RoomActionsWorkbench, type TimelineBoundaryContent } from './Occurrence
 import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomKindIcon } from './roomIcon';
-import { SideRoomsWorkbench } from './locals/SideRoomsWorkbench';
+import { SideDoorSpawns } from './locals/SideDoorSpawns';
 import { TimelineLegend } from './TimelineLegend';
 import type { TimelineDoors, TimelineDoorsContent } from './TimelineDoors';
 import { doorChipsAt } from './doorSummary';
@@ -82,8 +82,8 @@ interface OccurrenceWorkbenchProps {
   /** Entry identity is an Overview-only biome authoring control. */
   readonly entryIdentity?: ReactNode;
   readonly interactions: WorkspaceInteractionCatalog;
+  /** The main room's side doors, among its Overview spawns. */
   readonly localVisit?: WorkspaceLocalVisitDecision;
-  readonly initialSideRoomSlotKey?: string;
   readonly room: WorkspaceRoomSummary;
   readonly runState?: WorkspaceRunStateLauncher;
   readonly initialTab?: WorkspaceRoomTab;
@@ -122,7 +122,6 @@ export function OccurrenceWorkbench({
   navigationRevision,
   interactions,
   localVisit,
-  initialSideRoomSlotKey,
   room,
   renderRoomActionRowContent,
   renderLifecycleBoundaryContent,
@@ -214,7 +213,6 @@ export function OccurrenceWorkbench({
   const tabRefs = useRef<Partial<Record<WorkspaceRoomTab, HTMLButtonElement | null>>>({});
   const tabOrder: WorkspaceRoomTab[] = [
     'overview',
-    ...(localVisit === undefined ? [] : (['sideRooms'] as const)),
     ...(room.workbench.kind === 'ship'
       ? room.workbench.phases.map((phase) => phase.tab)
       : ['actions' as const]),
@@ -386,6 +384,18 @@ export function OccurrenceWorkbench({
   ): ReactNode => (
     <DirectRoomWorkbench
       {...(view === 'overview' ? {} : { doors })}
+      {...(view !== 'overview' || localVisit === undefined
+        ? {}
+        : {
+            spawns: (
+              <SideDoorSpawns
+                interactions={interactions}
+                localVisit={localVisit}
+                parentGameName={room.gameName}
+                title={room.label}
+              />
+            ),
+          })}
       idPrefix={idPrefix}
       interactions={interactions}
       room={room}
@@ -429,7 +439,6 @@ export function OccurrenceWorkbench({
           role="tablist"
         >
           {tabButton('overview', 'Room Overview', undefined, 'Overview')}
-          {localVisit === undefined ? null : tabButton('sideRooms', 'Side Rooms')}
           {room.workbench.kind === 'ship'
             ? // Each Ship phase is one Timeline tab, named by its phase.
               room.workbench.phases.map((phase) =>
@@ -466,17 +475,6 @@ export function OccurrenceWorkbench({
                 {renderDirectRoomWorkbench('overview')}
               </div>,
             )
-          ) : activeTab === 'sideRooms' && localVisit !== undefined ? (
-            <SideRoomsWorkbench
-              interactions={interactions}
-              localVisit={localVisit}
-              parentGameName={room.gameName}
-              {...(initialSideRoomSlotKey === undefined
-                ? {}
-                : { selectedSlotKey: initialSideRoomSlotKey })}
-              title={room.label}
-              {...(findingNavigationRevision === undefined ? {} : { findingNavigationRevision })}
-            />
           ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (
             <RoomActionsWorkbench
               {...(room.workbench.roomActions === undefined

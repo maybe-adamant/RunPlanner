@@ -109,7 +109,6 @@ export function assertFineGrainedFindingDestination(
     const tab = destination.roomTab;
     const valid =
       tab === 'overview' ||
-      tab === 'sideRooms' ||
       (tab === 'actions' && workbench.kind !== 'ship') ||
       (workbench.kind === 'ship' &&
         (workbench.phases.some((phase) => phase.tab === tab) ||

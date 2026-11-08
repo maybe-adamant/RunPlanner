@@ -50,7 +50,6 @@ export interface WorkspaceMarkerDestinationEmitter {
     tab: WorkspaceRoomTab,
     row: 'doorsOpen' | 'leave',
   ): void;
-  setSideRoomDestination(markers: Iterable<WorkspaceMarker>, slotKey: string): void;
 }
 
 export interface WorkspaceBiomeMarkerDestinationBuilder {
@@ -225,15 +224,6 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
         destinations.set(
           marker.focusKey,
           Object.freeze({ ...destination, roomTab: tab, timelineDoors: row }),
-        );
-      }
-    },
-    setSideRoomDestination(markers: Iterable<WorkspaceMarker>, slotKey: string): void {
-      for (const marker of markers) {
-        const destination = requireRegistered(marker);
-        destinations.set(
-          marker.focusKey,
-          Object.freeze({ ...destination, roomTab: 'sideRooms', sideRoomSlotKey: slotKey }),
         );
       }
     },

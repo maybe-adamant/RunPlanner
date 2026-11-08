@@ -45,6 +45,8 @@ export interface LeaveOption {
   readonly label: string;
   /** Its face: the door's room and rewards. */
   readonly chip?: DoorChip;
+  /** A short name beside the chip, where the chip alone does not tell the rooms apart. */
+  readonly name?: string;
   /** Why it cannot be picked here. */
   readonly disabledHint?: string | undefined;
   /** Picks it; absent where it is the room's only way out. */
@@ -70,12 +72,17 @@ function OptionFace({ option }: { readonly option: LeaveOption }) {
   return option.chip === undefined ? (
     <span className="timeline-leave-text">{option.label}</span>
   ) : (
-    <span
-      className="timeline-door-chip"
-      data-unavailable={option.chip.unavailable || option.disabledHint !== undefined || undefined}
-    >
-      <DoorChipFace chip={option.chip} />
-    </span>
+    <>
+      <span
+        className="timeline-door-chip"
+        data-unavailable={option.chip.unavailable || option.disabledHint !== undefined || undefined}
+      >
+        <DoorChipFace chip={option.chip} />
+      </span>
+      {option.name === undefined ? null : (
+        <span className="timeline-leave-text">{option.name}</span>
+      )}
+    </>
   );
 }
 
@@ -252,7 +259,12 @@ export function LeavePicker({
           ) : chosen.chip === undefined ? (
             <span className="timeline-leave-text">{chosen.label}</span>
           ) : (
-            <DoorChipFace chip={chosen.chip} />
+            <>
+              <DoorChipFace chip={chosen.chip} />
+              {chosen.name === undefined ? null : (
+                <span className="timeline-leave-text">{chosen.name}</span>
+              )}
+            </>
           )}
         </button>
       </ContextualPickerPopover>

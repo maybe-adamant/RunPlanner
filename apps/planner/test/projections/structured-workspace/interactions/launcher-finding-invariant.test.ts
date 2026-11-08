@@ -245,7 +245,7 @@ function blockedNativeSettings(
     ['wheel', interactions.rewardWheelPicks.get(key)],
     ['ship', interactions.shipCombatPhaseCounts.get(key)],
     ['localVisit', interactions.localVisitGenerations.get(key)],
-    ['localVisit', interactions.localVisitOrders.get(`${key}:visit-order`)],
+    ['localVisit', interactions.localVisitOrders.get(`${key}:leave:1`)],
     ['fieldsSpatial', interactions.fieldsSpatialPoints.get(key)],
     ['hubSlot', interactions.hubSlots.get(key)],
     ['hubSlot', interactions.hubActionOrders.get(hubOrderKey(owner) ?? key)],

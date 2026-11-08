@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 
 import {
   catalogFindingLabels,
+  projectFindingLabels,
   nextRepairSelection,
   projectFeedbackHierarchy,
 } from '@planner/projections/evaluationProjection';
@@ -115,7 +116,13 @@ export function App({
     (state) => state.editorSession.levelResolutionDialogTarget ?? null,
   );
   const feedback = evaluation === undefined ? undefined : projectFeedbackHierarchy(evaluation);
-  const findingLabels = useMemo(() => catalogFindingLabels(catalog), [catalog]);
+  const findingLabels = useMemo(
+    () =>
+      project === undefined
+        ? catalogFindingLabels(catalog)
+        : projectFindingLabels(catalog, project),
+    [catalog, project],
+  );
   const activeRouteNavigation =
     project === undefined ? undefined : projectRouteNavigation(catalog, project.route);
   const activeRouteFeedback = feedback?.route;
@@ -169,6 +176,7 @@ export function App({
                         catalog={catalog}
                         focusByOwner={workspace.focusByOwner}
                         issue={repairIssue}
+                        labels={findingLabels}
                         // The plan's findings beyond those of the repair shown.
                         otherFindings={Math.max(
                           0,

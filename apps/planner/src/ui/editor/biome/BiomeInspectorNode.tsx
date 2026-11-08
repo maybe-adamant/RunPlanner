@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
 import type { SemanticAddress } from '@run-planner/engine/authored-project';
 import { useAppDispatch } from '@planner/state/store';
-import { semanticOwnerFocused, semanticOwnerOpened } from '@planner/state/editorSessionSlice';
-import { IconActionButton } from '@planner/ui/controls/IconActionButton';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 
 import {
   type WorkspaceAuthoringFrontier,
@@ -39,6 +38,7 @@ import { ReadOnlyFindingScope } from '@planner/ui/feedback/useFindingTarget';
 import { DoorsRerollEntry } from './RoomRerolls';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { BatchExitPicker, LeavePicker } from './LeavePicker';
+import { HubRoomLeave, SideRoomLeave, SideVisitLeaves } from './SideVisitLeaves';
 import { LeaveRow, type TimelineDoorsContent } from './TimelineDoors';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 
@@ -63,7 +63,6 @@ interface BiomeInspectorNodeProps {
   readonly roomTab?: WorkspaceRoomTab;
   /** Navigation landed on a door owner, so the room's Doors open row opens. */
   readonly doorsRequested?: boolean;
-  readonly sideRoomSlotKey?: string;
   readonly navigationRevision?: number;
   readonly findingNavigationRevision?: number;
   readonly sourceOccurrence?: OccurrenceNode;
@@ -83,37 +82,6 @@ function doorNoteSource(
   return store === undefined || store.kind === 'editor' ? [] : store.notes;
 }
 
-/** Opens where a Hub room returns: the Hub at the next visit, or the side room's main room. */
-function ReturnButton({ target }: { readonly target: NonNullable<OccurrenceNode['hubReturn']> }) {
-  const dispatch = useAppDispatch();
-  return target.kind === 'hub' ? (
-    <IconActionButton
-      hint="Open Hub Timeline"
-      icon="openInEditor"
-      label="Open Hub Timeline"
-      onClick={() =>
-        dispatch(
-          semanticOwnerOpened({
-            owner: target.hub,
-            presentation: { kind: 'hubSegment', segment: target.visitIndex + 1 },
-          }),
-        )
-      }
-    />
-  ) : (
-    <IconActionButton
-      hint={`Open ${target.label}`}
-      icon="openInEditor"
-      label={`Open ${target.label}`}
-      onClick={() =>
-        dispatch(
-          semanticOwnerOpened({ owner: target.room, presentation: { kind: 'roomTimeline' } }),
-        )
-      }
-    />
-  );
-}
-
 interface RoomDoorsInput {
   readonly activeNote: DoorNoteTarget | undefined;
   readonly batch: BatchNode | undefined;
@@ -127,9 +95,45 @@ interface RoomDoorsInput {
 
 /**
  * The room's doors on its Timeline, by how it is left: a batch of doors, a
- * fixed room, a Hub or side-room return, or the plan's end. A room left no
+ * fixed room, a Hub room's ways back, or the plan's end. A room left no
  * way (unreached, past the end, no next room) has no last row.
  */
+/**
+ * How a Hub room is left: a side room back to its main room; a main room
+ * through each side visit, then back to the Hub.
+ */
+function hubRoomLeaves(
+  node: OccurrenceNode,
+  hubReturn: NonNullable<OccurrenceNode['hubReturn']>,
+  interactions: WorkspaceInteractionCatalog,
+  idPrefix: string,
+  planEnd: WorkspaceRoomPlanEnd | undefined,
+): ReactNode {
+  if (hubReturn.kind === 'room')
+    return (
+      <SideRoomLeave id={`${idPrefix}-leave`} key="leave" mainRoom={hubReturn} planEnd={planEnd} />
+    );
+  return node.localVisit === undefined ? (
+    <HubRoomLeave
+      hub={hubReturn.hub}
+      id={`${idPrefix}-leave`}
+      key="leave"
+      planEnd={planEnd}
+      visitIndex={hubReturn.visitIndex}
+    />
+  ) : (
+    <SideVisitLeaves
+      hub={hubReturn.hub}
+      idPrefix={idPrefix}
+      interactions={interactions}
+      key="leave"
+      localVisit={node.localVisit}
+      planEnd={planEnd}
+      visitIndex={hubReturn.visitIndex}
+    />
+  );
+}
+
 function roomTimelineDoors({
   activeNote,
   batch,
@@ -317,26 +321,12 @@ function roomTimelineDoors({
                 </section>
               ),
             }),
-        // The Hub decides where the room leads; its last row returns there.
-        ...(ended
-          ? { leave: endOnly() }
-          : node.hubReturn === undefined
-            ? {}
-            : {
-                leave: (
-                  <LeaveRow
-                    actions={<PlanEndAction planEnd={planEnd} />}
-                    key="leave"
-                    label={
-                      node.hubReturn.kind === 'hub'
-                        ? 'Return to Hub'
-                        : `Return to ${node.hubReturn.label}`
-                    }
-                  >
-                    <ReturnButton target={node.hubReturn} />
-                  </LeaveRow>
-                ),
-              }),
+        // The Hub decides where the room leads; its last rows pick the way back there.
+        ...(node.hubReturn === undefined
+          ? ended
+            ? { leave: endOnly() }
+            : {}
+          : { leave: hubRoomLeaves(node, node.hubReturn, interactions, idPrefix, planEnd) }),
         notes,
       };
     }
@@ -386,7 +376,6 @@ function OccurrenceInspector({
   findingNavigationRevision,
   navigationRevision,
   roomTab,
-  sideRoomSlotKey,
 }: Pick<
   BiomeInspectorNodeProps,
   | 'biomeSettings'
@@ -397,7 +386,6 @@ function OccurrenceInspector({
   | 'navigationRevision'
   | 'findingNavigationRevision'
   | 'roomTab'
-  | 'sideRoomSlotKey'
 > & {
   readonly defaultToDoors?: boolean;
   readonly node: OccurrenceNode;
@@ -468,7 +456,6 @@ function OccurrenceInspector({
       // A selected decision is its doors: selecting it asks for them.
       doorsRequested={doorsRequested || defaultToDoors}
       doorsFrontier={outgoing?.kind === 'frontier'}
-      {...(sideRoomSlotKey === undefined ? {} : { initialSideRoomSlotKey: sideRoomSlotKey })}
       {...(doors === undefined ? {} : { timelineDoors: doors })}
       // A room with no last row keeps the action that moves the plan's end to it.
       {...(planEnd?.relation === 'pastEnd' ||

@@ -383,7 +383,8 @@ export function expectedWorkspaceLeafRequirements(
     requireLeaf(decisionAddress);
     requireLeaf(
       orderAddress,
-      expectedLeafInteraction('localVisitOrder', workspaceTestOwnerKey(orderAddress)),
+      // The main room's first Leave room picker always exists.
+      expectedLeafInteraction('localVisitOrder', `${workspaceTestOwnerKey(orderAddress)}:leave:1`),
     );
     for (const slotKey of Object.keys(decision.targetsBySlot)) {
       const slotAddress = createLocalVisitSlotAddress(

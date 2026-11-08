@@ -20,7 +20,7 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { createEditorSessionReducer } from '@planner/state/editorSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
-import { useAppSelector } from '@planner/state/store';
+import { selectPresentProject, useAppSelector } from '@planner/state/store';
 import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import {
   AuthoringFrontier,
@@ -33,7 +33,10 @@ import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbenc
 import { TraitOfferDialog } from '@planner/ui/editor/rewards/TraitOfferEditor';
 import { PomResolutionDialog } from '@planner/ui/editor/rewards/PomResolutionEditor';
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
-import { catalogFindingLabels } from '@planner/projections/evaluationProjection';
+import {
+  catalogFindingLabels,
+  projectFindingLabels,
+} from '@planner/projections/evaluationProjection';
 import { projectStructuredWorkspaceFixture } from '../fixtures/structuredWorkspace';
 
 interface ProjectedHarnessProps {
@@ -54,14 +57,16 @@ function ProjectedHarness({ application, biomeKey, renderBiome, routeKey }: Proj
   const pomDialogTarget = useAppSelector(
     (state) => state.editorSession.levelResolutionDialogTarget ?? null,
   );
-  if (workspace === undefined) throw new Error('workspace projection is unavailable');
+  const project = useAppSelector(selectPresentProject);
+  if (workspace === undefined || project === undefined)
+    throw new Error('workspace projection is unavailable');
   const biome = workspace.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (biome === undefined) throw new Error(`${routeKey}/${biomeKey} has no workspace biome`);
   return (
     <FindingTargetScope
       authoringReadiness={workspace.authoringReadiness}
       findings={workspace.findingsByRepairTarget}
-      labels={catalogFindingLabels(catalog)}
+      labels={projectFindingLabels(catalog, project)}
     >
       {renderBiome(biome, workspace)}
       {traitDialogTarget === null ? null : (
@@ -427,12 +432,14 @@ export function expandDoors(scope: HTMLElement = document.body): void {
   if (disclosure.getAttribute('aria-expanded') !== 'true') fireEvent.click(disclosure);
 }
 
-/** Opens the room's Leave room picker and returns its options. */
+/** Opens the room's Leave room picker, or its nth where it has several, and returns its options. */
 export async function openLeavePicker(
   user: UserEvent,
   scope: HTMLElement = document.body,
+  index = 0,
 ): Promise<HTMLElement> {
-  const leave = within(scope).getByRole('listitem', { name: 'Leave room' });
+  const leave = within(scope).getAllByRole('listitem', { name: 'Leave room' })[index];
+  if (leave === undefined) throw new Error(`the room has no Leave room row ${index + 1}`);
   await user.click(within(leave).getByRole('button', { name: 'Exit door' }));
   return screen.findByRole('listbox');
 }

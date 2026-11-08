@@ -42,7 +42,7 @@ export function doorChipMapLink(chip: DoorChip): RoomMapHighlight | undefined {
 
 /** A door's rewards as first drawn, or after its rerolls; none while hidden. */
 export function doorRewardIcons(
-  target: WorkspacePhysicalTarget,
+  target: { readonly door: WorkspacePhysicalTarget['door'] },
   draw: 'first' | 'final',
 ): readonly (ArtworkSource | undefined)[] {
   const surface = target.door.offerRewardSurface;

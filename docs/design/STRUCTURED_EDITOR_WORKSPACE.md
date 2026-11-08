@@ -236,15 +236,15 @@ ungenerated destinations, through one icon-only map button named for its room. V
 semantic focus, adds history or requires complete authoring. The biome rail
 remains the navigation to room details.
 
-One image viewer serves inspection dialogs and inline references. Ephyra Side
-Rooms keeps controls beside a larger reference;
+One image viewer serves inspection dialogs and inline references;
 individual main/side-room dialogs remain independent of the Hub editor. A
 map's controls, status chips and legend are overlays pinned to its frame at
 one inset from its edges in every corner: zoom and status at the top left,
-actions at the top right, the legend at the bottom right. The Hub and Side
-Rooms maps fill their frames, so the overlays sit on the image. Side
-Rooms uses an illustrative parent map with declared local slot status;
-generation and traversal are edited in the controls. Images support zoom and
+actions at the top right, the legend at the bottom right. The Hub map fills
+its frame, so the overlays sit on the image. An Ephyra main room's side-door
+map is an illustrative parent map with each declared side slot's status
+(closed, not visited, or its visit number); opening and visiting are edited
+in the controls. Images support zoom and
 pan, and Close/Escape returns focus to the invoking control when it still
 exists. Visibility and zoom belong to the local host, not the project: edits
 within that host keep the reference, changing its room image resets the zoom,
@@ -394,16 +394,12 @@ with it) and whose Pedestal holds the Contract pedestal's item. Overview
 authors content only: buying, rushing, collecting and every Travel Deal refill
 are authored on the Room Timeline. A Stygian Well or Pool of Purging Overview
 shows only its presence and initial stock, whose slots are always editable and
-optional; using it starts on the Timeline. Ephyra parents with declared
-side-room groups add a dedicated Side Rooms workbench beside the Timeline: its
-doors table has a row per side-room door (generation, visit, generation
-priority, room by its short number such as SR 10, reward and map) with the
-visit order under it, and the
-illustrative parent map. Where the panel is wide the table, at a narrowed
-working width, and the visit order form a column beside the map; where it is
-narrow the map comes first, then the table, then the visit order. The visit
-order is light timeline rows, each its reorder handle, its visit number and
-its room.
+optional; using it starts on the Timeline. An Ephyra parent with declared
+side-room groups lists its side doors among its Spawns: a row per side-room
+door in generation priority (open, priority, room by its short number such as
+SR 10, reward and map), the header opening the illustrative parent map. A
+visited door stays open until its visit is removed; which doors are visited,
+and in what order, is the room's Timeline.
 Every Overview renders its sections in game order, showing only those the room
 has: Encounter (encounters), Spawns (Fields optional rewards, additional
 exits, room objects, resources, NPCs, as existence only; the challenge switch
@@ -532,11 +528,17 @@ rerolls and its other doors stay editable, since the plan ends only as the room
 is left. A room with no planned way on (nothing is planned past it) has no last
 row and keeps **End plan here** under its Timeline, with any boss-door pool
 still in its doors; a room past the plan's end shows no doors and keeps it
-under its read-only Timeline. Ephyra's Hub rooms are the exception that names
-its way back: a Hub visit's main room ends with **Return to Hub**, which opens
-the Hub Timeline at the next visit's segment, and a side room ends with
-**Return to** its main room, which opens that room's Timeline; both keep **End
-plan here** beside it.
+under its read-only Timeline. Ephyra's Hub rooms leave by their way back: a
+side room's Leave room picker holds **Back to** its main room and **End plan
+here**, with a link to that room's Timeline. A Hub visit's main room has one
+Leave room picker per side visit, each followed by a **Back from** row for
+that side room's return, and a last one back to the Hub. Each picker offers
+the Hub and every open side room not visited before it; picking a side room
+replaces that visit and keeps the later ones, and picking the Hub ends the
+visits there. Only the last picker, back to the Hub, holds **End plan here**,
+since ending the plan at the main room ends its whole visit. A later visit an
+earlier change repeats stays, its finding on its own picker. Each picker links
+to the side room it picks or to the Hub Timeline at the next visit's segment.
 Otherwise moving to the next room is the rail's job.
 
 Door and Fields cage rerolls are Timeline rows, where their reorder handle is

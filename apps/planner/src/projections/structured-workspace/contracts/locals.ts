@@ -465,16 +465,26 @@ export interface WorkspaceRewardWheelDescriptor {
   readonly storeKey: string;
 }
 
-export interface WorkspaceLocalVisitOrderOption {
+/** One way the main room can be left at one of its exits: the Hub, or an open side room. */
+export interface WorkspaceLocalVisitLeaveOption {
+  /** `hub`, or the side room's slot key. */
   readonly key: string;
-  readonly label: string;
-  readonly position: number | null;
+  /** The side room entered; absent for the Hub. */
+  readonly occurrenceId?: OccurrenceId;
+  /** The visit order this pick authors: later visits are kept, the Hub ends the list here. */
   readonly proposedOccurrenceIds: readonly OccurrenceId[];
 }
 
-export interface WorkspaceLocalVisitOrderControl {
+/**
+ * One exit of the main room in its visit sequence: the first exit, then one
+ * after each side room's return, the last leading back to the Hub.
+ */
+export interface WorkspaceLocalVisitLeave {
+  /** One-based: the side visit this exit starts, or the Hub return after the last. */
+  readonly position: number;
   readonly interactionKey: string;
-  readonly options: readonly WorkspaceLocalVisitOrderOption[];
+  readonly options: readonly WorkspaceLocalVisitLeaveOption[];
+  /** The option picked here: a visited side room's slot key, or `hub`. */
   readonly selectedKey: string;
 }
 
@@ -650,7 +660,6 @@ interface WorkspaceLocalVisitSlotBase {
   /** Fixed side-room declaration identity, including ungenerated slots. */
   readonly gameName: string;
   readonly occurrenceId: OccurrenceId;
-  readonly order: WorkspaceLocalVisitOrderControl;
   readonly key: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
@@ -677,6 +686,8 @@ export interface WorkspaceLocalVisitDecision {
   readonly orderMarker: WorkspaceMarker;
   readonly slots: readonly WorkspaceLocalVisitSlot[];
   readonly visitOrder: readonly OccurrenceId[];
+  /** The main room's exits in order: one per side visit, then the Hub return. */
+  readonly leaves: readonly WorkspaceLocalVisitLeave[];
 }
 
 export type WorkspaceRoomLocal =

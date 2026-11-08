@@ -169,19 +169,18 @@ function VisitRoomPicker({
         (right.drawPosition ?? Number.POSITIVE_INFINITY),
     )
     .map((slot) => {
-      const elsewhere =
-        slot.hubSlotKey !== visit.hubSlotKey &&
-        interaction.selectedHubSlotKeys.includes(slot.hubSlotKey);
-      const refusal = elsewhere
-        ? undefined
-        : interaction.proposalFor(actionsWith(slot.hubSlotKey)).refusal;
+      // Each visit chooses among rooms not visited before it; a later visit may repeat it.
+      const refusal =
+        slot.hubSlotKey === visit.hubSlotKey
+          ? undefined
+          : interaction.proposalFor(actionsWith(slot.hubSlotKey)).refusal;
       return {
         key: slot.hubSlotKey,
         value: slot.hubSlotKey,
         label: slot.label,
         icon: slotRoomIcon(slot),
-        disabled: elsewhere || refusal !== undefined,
-        ...(elsewhere
+        disabled: refusal !== undefined,
+        ...(refusal === 'alreadyVisited'
           ? { explanation: 'Visited' }
           : refusal === 'rerollsChanged'
             ? { explanation: 'Remove Hub rerolls first.' }

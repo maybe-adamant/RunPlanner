@@ -3,10 +3,10 @@ import { Provider } from 'react-redux';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
-import { catalogFindingLabels } from '@planner/projections/evaluationProjection';
+import { projectFindingLabels } from '@planner/projections/evaluationProjection';
 import { semanticOwnerFocused, semanticOwnerOpened } from '@planner/state/editorSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
-import { useAppSelector } from '@planner/state/store';
+import { selectPresentProject, useAppSelector } from '@planner/state/store';
 import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
 import { buildGalleryProject, galleryTargetOwner, type GalleryCase } from './galleryCase';
@@ -45,7 +45,11 @@ function CaseWorkspace({
   readonly entry: GalleryCase;
 }) {
   const workspace = useAppSelector(application.selectStructuredWorkspace);
-  const labels = useMemo(() => catalogFindingLabels(catalog), []);
+  const project = useAppSelector(selectPresentProject);
+  const labels = useMemo(
+    () => (project === undefined ? undefined : projectFindingLabels(catalog, project)),
+    [project],
+  );
   if (workspace === undefined) throw new Error('the project has no workspace projection');
   const biome = workspace.route.biomes.find(
     (candidate) => candidate.biomeKey === entry.target.biomeKey,
@@ -55,7 +59,7 @@ function CaseWorkspace({
     <FindingTargetScope
       authoringReadiness={workspace.authoringReadiness}
       findings={workspace.findingsByRepairTarget}
-      labels={labels}
+      {...(labels === undefined ? {} : { labels })}
     >
       {/* The editor's own frame, so container widths match the app at the same viewport. */}
       <div className="editor-workspace" data-navigation-pinned="true">

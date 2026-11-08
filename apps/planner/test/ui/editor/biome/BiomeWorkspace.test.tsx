@@ -1070,10 +1070,13 @@ describe('BiomeWorkspace', () => {
       'Big Max Magick',
     );
     await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    expect(screen.queryByRole('heading', { name: /^Side Rooms/ })).toBeNull();
     expect(screen.queryByText('Door 558353')).toBeNull();
-    await view.user.click(screen.getByRole('tab', { name: 'Side Rooms' }));
-    expect(screen.getByRole('region', { name: 'Side Rooms' })).toBeTruthy();
+    // Its side doors are among the Overview's spawns.
+    expect(
+      within(screen.getByRole('region', { name: 'Spawns' })).getByRole('region', {
+        name: 'Side doors',
+      }),
+    ).toBeTruthy();
     expect(screen.getByLabelText('Open Side Room 01')).toBeTruthy();
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-inspector-heading')).toBeNull();
@@ -1416,12 +1419,15 @@ describe('BiomeWorkspace', () => {
       await view.user.click(within(details()).getByRole('tab', { name: 'Room Timeline' }));
     };
 
-    // Its side rooms are edited apart; its open doors keep the hidden return door,
-    // and the Hub decides where it leads, so it has no last row.
+    // Its open doors keep the hidden return door; it is left through its side visits,
+    // the last way out leading back to the Hub.
     await openTimeline(createOccurrenceAddress(nBiome, nOccurrenceId('combat02')));
     expandDoors(details());
     expect(within(details()).getByRole('article', { name: 'Hidden return door' })).toBeTruthy();
-    expect(within(details()).queryByRole('listitem', { name: 'Leave room' })).toBeNull();
+    const exits = within(details()).getAllByRole('listitem', { name: 'Leave room' });
+    expect(within(exits.at(-1)!).getByRole('button', { name: 'Exit door' }).textContent).toBe(
+      'Hub',
+    );
 
     await openTimeline(createOccurrenceAddress(nBiome, nOccurrenceId('preboss')));
     // Its fixed exit is the Leave room picker's one way out, already picked.
@@ -1750,8 +1756,8 @@ describe('BiomeWorkspace', () => {
       'true',
     );
 
-    // Combat 02 is the third visit: its last row returns to the fourth's picker.
-    const leave = screen.getByRole('listitem', { name: 'Return to Hub' });
+    // Combat 02 is the third visit: its last exit returns to the fourth's picker.
+    const leave = screen.getAllByRole('listitem', { name: 'Leave room' }).at(-1)!;
     await view.user.click(within(leave).getByRole('button', { name: 'Open Hub Timeline' }));
     expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
@@ -1784,9 +1790,10 @@ describe('BiomeWorkspace', () => {
       view.application.store.dispatch(semanticOwnerFocused(sideVisit.node.room.marker.address)),
     );
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    const leave = screen.getByRole('listitem', {
-      name: `Return to ${parentVisit.node.room.label}`,
-    });
+    const leave = screen.getByRole('listitem', { name: 'Leave room' });
+    expect(within(leave).getByRole('button', { name: 'Exit door' }).textContent).toBe(
+      `Back to ${parentVisit.node.room.label}`,
+    );
     await view.user.click(
       within(leave).getByRole('button', { name: `Open ${parentVisit.node.room.label}` }),
     );

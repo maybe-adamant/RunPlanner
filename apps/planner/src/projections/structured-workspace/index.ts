@@ -13,6 +13,7 @@ export {
   echoLastRunOptionControl,
   findingControlKey,
   findingRepairTarget,
+  sideVisitControl,
 } from './navigation/finding-highlights';
 export type {
   WorkspaceDefaultInspectorDestination,
@@ -96,8 +97,8 @@ export type {
   WorkspaceLocalVisitDecision,
   WorkspaceLocalVisitGenerationInteraction,
   WorkspaceLocalVisitOrderInteraction,
-  WorkspaceLocalVisitOrderControl,
-  WorkspaceLocalVisitOrderOption,
+  WorkspaceLocalVisitLeave,
+  WorkspaceLocalVisitLeaveOption,
   WorkspaceLocalVisitSlot,
   WorkspaceExitSelectionInteraction,
   WorkspaceRoomActionInteraction,

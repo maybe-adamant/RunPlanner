@@ -9,6 +9,7 @@ import {
   findingDestination,
   nextRepairSelection,
   presentAssessmentIssue,
+  type FindingLabels,
   type StatusPresentation,
 } from '@planner/projections/evaluationProjection';
 import {
@@ -69,10 +70,13 @@ export function ProjectFindings({
   issue,
   focusByOwner,
   route,
+  labels,
   otherFindings = 0,
 }: {
   readonly catalog: Catalog;
   readonly issue: AssessmentIssue | undefined;
+  /** Names in finding titles; the catalog's alone where absent. */
+  readonly labels?: FindingLabels;
   readonly focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>;
   readonly route?: WorkspaceRoute;
   /** The plan's findings beyond those of the repair shown, counted on the pill. */
@@ -99,7 +103,7 @@ export function ProjectFindings({
   const copy = presentAssessmentIssue(
     issue,
     (finding) => findingRepairTarget(finding, focusByOwner) ?? semanticAddressKey(finding.origin),
-    catalogFindingLabels(catalog),
+    labels ?? catalogFindingLabels(catalog),
   );
 
   const text = `${copy.title} · ${place.label}`;

@@ -283,7 +283,11 @@ describe('plan end in the biome workspace', () => {
     openRoom(application, createOccurrenceAddress(nBiome, nOccurrenceId('combat02')));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
-    await user.click(screen.getByRole('button', { name: 'End plan here' }));
+    // Its last way out, back to the Hub, ends the whole visit.
+    const exits = within(roomCard()).getAllByRole('listitem', { name: 'Leave room' });
+    const options = await openLeavePicker(user, roomCard(), exits.length - 1);
+    expect(leaveOptionNames(options)[0]).toBe('Hub (picked)');
+    await user.click(within(options).getByRole('option', { name: 'End plan here' }));
     expect(currentPlanEnd(application)).toEqual({
       biomeKey: 'N',
       occurrenceId: nOccurrenceId('combat02'),
@@ -303,7 +307,7 @@ describe('plan end in the biome workspace', () => {
     expect(within(door).getByRole('button', { name: 'Choose' })).toHaveProperty('disabled', false);
   });
 
-  it('continues planning from an end room with no way out of its own to pick', async () => {
+  it('continues planning from a Hub main room the plan ends in through its way back', async () => {
     const { application, user } = renderWorkspace(
       endedAt(loadSurfaceNOPQProject(), 'N', nOccurrenceId('combat05')),
       'Surface',
@@ -311,9 +315,15 @@ describe('plan end in the biome workspace', () => {
     );
     openRoom(application, createOccurrenceAddress(nBiome, nOccurrenceId('combat05')));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    const options = await openLeavePicker(user, roomCard());
-    expect(leaveOptionNames(options)).toEqual(['End plan here (picked)', 'Continue planning']);
-    await user.click(within(options).getByRole('option', { name: 'Continue planning' }));
+    const exits = within(roomCard()).getAllByRole('listitem', { name: 'Leave room' });
+    // Its side visits stay inside the plan; only the way back to the Hub ends it.
+    expect(within(exits[0]!).getByRole('button', { name: 'Exit door' }).textContent).not.toBe(
+      'End plan',
+    );
+    const options = await openLeavePicker(user, roomCard(), exits.length - 1);
+    expect(leaveOptionNames(options)[0]).toBe('Hub');
+    expect(leaveOptionNames(options).at(-1)).toBe('End plan here (picked)');
+    await user.click(within(options).getByRole('option', { name: 'Hub' }));
     expect(currentPlanEnd(application)).toBeUndefined();
   });
 

@@ -160,6 +160,7 @@ export function DirectRoomWorkbench({
   idPrefix,
   interactions,
   room,
+  spawns,
   view,
   renderRoomActionRowContent,
   renderLifecycleBoundaryContent,
@@ -169,6 +170,8 @@ export function DirectRoomWorkbench({
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: WorkspaceRoomSummary;
+  /** Spawns the room shows beside its own, such as an Ephyra room's side doors. */
+  readonly spawns?: ReactNode;
   readonly view:
     | 'overview'
     | 'actions'
@@ -218,7 +221,7 @@ export function DirectRoomWorkbench({
       <RoomOverviewSections
         sections={{
           entry: [['encounters', local.encounters]],
-          present: [['local', local.present], ...shared.present],
+          present: [['local', local.present], ['spawns', spawns], ...shared.present],
           contents: [['local', local.contents], ...shared.contents],
           positions: shared.positions,
         }}

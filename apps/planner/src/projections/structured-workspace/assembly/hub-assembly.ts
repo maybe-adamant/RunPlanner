@@ -26,7 +26,7 @@ import {
   type HubStayRow,
   type HubStayRows,
   type LocalVisitDecision,
-  type LocalVisitSlotAddress,
+  type LocalVisitOrderAddress,
   type OccurrenceId,
   type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
@@ -42,14 +42,11 @@ import { requireWorkspaceRoom } from './catalog-room';
 import { candidateRoomIcon } from '../presentation/room-icon';
 import {
   StructuredWorkspaceProjectionContractError,
-  workspaceLocalVisitOrderKey,
+  workspaceLocalVisitLeaveKey,
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
 } from '../contract';
-import type {
-  WorkspaceLocalVisitOrderControl,
-  WorkspaceLocalVisitOrderOption,
-} from '../contracts/locals';
+import type { WorkspaceLocalVisitLeave, WorkspaceLocalVisitLeaveOption } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type {
   WorkspaceHubInteractionRequirement,
@@ -120,58 +117,54 @@ interface ProjectedHubTarget {
   readonly occurrenceId: OccurrenceId;
 }
 
-function ordinalLabel(position: number): string {
-  const remainder = position % 100;
-  if (remainder >= 11 && remainder <= 13) return `${position}th`;
-  switch (position % 10) {
-    case 1:
-      return `${position}st`;
-    case 2:
-      return `${position}nd`;
-    case 3:
-      return `${position}rd`;
-    default:
-      return `${position}th`;
-  }
-}
-
-function localVisitOrderControl(
-  address: LocalVisitSlotAddress,
+/**
+ * The main room's exits in visit order: picking a side room at one replaces
+ * that visit and keeps the later ones; picking the Hub ends the visits there.
+ */
+function localVisitLeaves(
+  order: LocalVisitOrderAddress,
   visitOrder: readonly OccurrenceId[],
-  occurrenceId: OccurrenceId,
-): WorkspaceLocalVisitOrderControl {
-  const index = visitOrder.indexOf(occurrenceId);
-  const withoutOccurrence = Object.freeze(
-    visitOrder.filter((candidate) => candidate !== occurrenceId),
-  );
-  const options: WorkspaceLocalVisitOrderOption[] = [
-    Object.freeze({
-      key: 'notEntered',
-      label: 'Not visited',
-      position: null,
-      proposedOccurrenceIds: withoutOccurrence,
+  slots: readonly {
+    readonly key: string;
+    readonly generation: string;
+    readonly occurrenceId: OccurrenceId;
+  }[],
+): readonly WorkspaceLocalVisitLeave[] {
+  const generated = slots.filter((slot) => slot.generation === 'generated');
+  return Object.freeze(
+    Array.from({ length: visitOrder.length + 1 }, (_, index) => {
+      const selected = visitOrder[index];
+      const options: WorkspaceLocalVisitLeaveOption[] = [
+        Object.freeze({
+          key: 'hub',
+          proposedOccurrenceIds: Object.freeze(visitOrder.slice(0, index)),
+        }),
+        ...generated.map((slot) =>
+          Object.freeze({
+            key: slot.key,
+            occurrenceId: slot.occurrenceId,
+            proposedOccurrenceIds: Object.freeze([
+              ...visitOrder.slice(0, index),
+              slot.occurrenceId,
+              ...visitOrder.slice(index + 1),
+            ]),
+          }),
+        ),
+      ];
+      const selectedKey =
+        selected === undefined ? 'hub' : slots.find((slot) => slot.occurrenceId === selected)?.key;
+      if (selectedKey === undefined)
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(order)} visits a room outside its side slots`,
+        );
+      return Object.freeze({
+        position: index + 1,
+        interactionKey: workspaceLocalVisitLeaveKey(order, index + 1),
+        options: Object.freeze(options),
+        selectedKey,
+      });
     }),
-  ];
-  for (let insertionIndex = 0; insertionIndex <= withoutOccurrence.length; insertionIndex += 1) {
-    const position = insertionIndex + 1;
-    options.push(
-      Object.freeze({
-        key: `position:${position}`,
-        label: ordinalLabel(position),
-        position,
-        proposedOccurrenceIds: Object.freeze([
-          ...withoutOccurrence.slice(0, insertionIndex),
-          occurrenceId,
-          ...withoutOccurrence.slice(insertionIndex),
-        ]),
-      }),
-    );
-  }
-  return Object.freeze({
-    interactionKey: workspaceLocalVisitOrderKey(address),
-    options: Object.freeze(options),
-    selectedKey: index < 0 ? 'notEntered' : `position:${index + 1}`,
-  });
+  );
 }
 
 function hubOccurrenceMap(
@@ -378,7 +371,6 @@ function projectHubNode(
           roomIcon: candidateRoomIcon(catalog, address.biomeKey, room),
           marker: markerDestinations.marker(address),
           occurrenceId: localOccurrence.occurrenceId,
-          order: localVisitOrderControl(address, decision.visitOrder, localOccurrence.occurrenceId),
           physicalDoorId: slot.physicalDoorId,
         };
         if (targetReference.generation === 'notGenerated') {
@@ -429,6 +421,7 @@ function projectHubNode(
         `${semanticAddressKey(owner)} has evaluated local rooms outside its authored slots`,
       );
     }
+    const leaves = localVisitLeaves(order, decision.visitOrder, slots);
     occurrenceInteractionRequirements.push(
       Object.freeze({
         kind: 'localVisits' as const,
@@ -444,10 +437,10 @@ function projectHubNode(
               address: slot.address,
               generation: slot.generation,
               entered: slot.entered,
-              order: slot.order,
             }),
           ),
         ),
+        leaves,
       }),
     );
     return Object.freeze({
@@ -457,6 +450,7 @@ function projectHubNode(
       orderMarker: markerDestinations.marker(order),
       slots: Object.freeze(slots),
       visitOrder: Object.freeze([...decision.visitOrder]),
+      leaves,
     });
   };
   const slots = descriptor.slots.map((slot) => {
@@ -922,14 +916,9 @@ function projectHubNode(
       [...doorsMarkers, slot.localVisit.orderMarker],
       parentWorkbench.key,
     );
-    markerDestinations.setRoomTab([...doorsMarkers, slot.localVisit.orderMarker], 'sideRooms');
-    for (const local of slot.localVisit.slots) {
-      const markers =
-        local.generation === 'generated'
-          ? [local.marker, ...workspaceHubMainRewardMarkers(local.room)]
-          : [local.marker];
-      markerDestinations.setSideRoomDestination(markers, local.key);
-    }
+    // The side doors are spawns on the main room's Overview; its visits are its Leave rows.
+    markerDestinations.setRoomTab(doorsMarkers, 'overview');
+    markerDestinations.setTimelineDoors([slot.localVisit.orderMarker], 'actions', 'leave');
   }
   markerDestinations.setHubTab(
     Object.freeze([node.marker, node.openSet, ...node.slots.map((slot) => slot.marker)]),

@@ -8,6 +8,8 @@ import {
   createRoomActionAddress,
   decodeProjectDocument,
   roomActionKey,
+  type HubAction,
+  type OccurrenceId,
   type ProjectCommand,
   type ProjectDocument,
   type RoomActionReference,
@@ -62,6 +64,34 @@ export function buildGalleryProject(entry: GalleryCase): ProjectDocument {
       applyProjectCommand(current, catalog, typeof step === 'function' ? step(current) : step),
     entry.project(),
   );
+}
+
+/** A main room's stored side-visit order. */
+export function localVisitOrder(
+  project: ProjectDocument,
+  biomeKey: string,
+  occurrenceId: string,
+): readonly OccurrenceId[] {
+  const decision = project.route.biomes
+    .find((biome) => biome.biomeKey === biomeKey)
+    ?.topology?.decisions.find(
+      (candidate) =>
+        candidate.kind === 'localVisit' && candidate.sourceOccurrenceId === occurrenceId,
+    );
+  if (decision?.kind !== 'localVisit') throw new Error(`${occurrenceId} has no side visits`);
+  return decision.visitOrder;
+}
+
+/** A biome's stored Hub action order. */
+export function authoredHubActions(
+  project: ProjectDocument,
+  biomeKey: string,
+): readonly HubAction[] {
+  const decision = project.route.biomes
+    .find((biome) => biome.biomeKey === biomeKey)
+    ?.topology?.decisions.find((candidate) => candidate.kind === 'hub');
+  if (decision?.kind !== 'hub') throw new Error(`${biomeKey} has no Hub`);
+  return decision.actions;
 }
 
 /** One occurrence as the project currently authors it. */

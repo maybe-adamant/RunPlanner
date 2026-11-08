@@ -1089,7 +1089,7 @@ export function bindOccurrenceLocalInteractions(
                 slot.generation,
                 () => candidates.localVisitGenerations(slot.address, generationValues),
               ),
-              ...(slot.entered ? { disabledReason: 'Uncheck Visited first.' } : {}),
+              ...(slot.entered ? { disabledReason: 'Remove its visit first.' } : {}),
               contextReached: candidates.contextReached({
                 kind: 'sideRoomGeneration',
                 sideRoom: slot.address,
@@ -1106,32 +1106,27 @@ export function bindOccurrenceLocalInteractions(
             }),
             'local-visit generation',
           );
-          const selected = slot.order.options.find(
-            (option) => option.key === slot.order.selectedKey,
-          );
-          if (selected === undefined) {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${generationKey} has no selected local-visit position`,
-            );
-          }
-          const entryChoices = Object.freeze(
-            slot.order.options.map((option) =>
-              Object.freeze({ label: option.label, value: option.proposedOccurrenceIds }),
+        }
+        for (const leave of requirement.leaves) {
+          const selected = leave.options.find((option) => option.key === leave.selectedKey);
+          const choices = Object.freeze(
+            leave.options.map((option) =>
+              Object.freeze({ label: option.key, value: option.proposedOccurrenceIds }),
             ),
           );
           const proposals = Object.freeze(
-            slot.order.options.map((option) => option.proposedOccurrenceIds),
+            leave.options.map((option) => option.proposedOccurrenceIds),
           );
           set(
             localVisitOrders,
-            slot.order.interactionKey,
+            leave.interactionKey,
             Object.freeze({
               ...candidateInteraction(
                 requirement.order,
-                entryChoices,
-                selected.proposedOccurrenceIds,
+                choices,
+                selected?.proposedOccurrenceIds ?? [],
                 () => candidates.localVisitOrders(requirement.order, proposals),
-                slot.order.interactionKey,
+                leave.interactionKey,
               ),
               contextReached: candidates.contextReached({
                 kind: 'sideRoomEntryOrder',
@@ -1147,7 +1142,7 @@ export function bindOccurrenceLocalInteractions(
                 }),
               owner: requirement.order,
             }),
-            'local-visit order',
+            'local-visit leave',
           );
         }
         break;

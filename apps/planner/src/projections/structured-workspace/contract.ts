@@ -64,9 +64,9 @@ export type {
   WorkspaceGorgonConditionInteraction,
   WorkspaceLocalVisitDecision,
   WorkspaceLocalVisitGenerationInteraction,
-  WorkspaceLocalVisitOrderControl,
+  WorkspaceLocalVisitLeave,
   WorkspaceLocalVisitOrderInteraction,
-  WorkspaceLocalVisitOrderOption,
+  WorkspaceLocalVisitLeaveOption,
   WorkspaceLocalVisitSlot,
   WorkspaceNemesisEventDomain,
   WorkspaceNemesisEventInteraction,
@@ -126,7 +126,7 @@ import {
   type JudgmentArcanaAddress,
   type KeepsakeEquipResultAddress,
   type KeepsakeSelectionAddress,
-  type LocalVisitSlotAddress,
+  type LocalVisitOrderAddress,
   type OccurrenceAddress,
   type OccurrenceId,
   type ProjectCommand,
@@ -479,8 +479,12 @@ export function workspaceInteractionKey(owner: SemanticAddress): string {
   return semanticAddressKey(owner);
 }
 
-export function workspaceLocalVisitOrderKey(owner: LocalVisitSlotAddress): string {
-  return `${semanticAddressKey(owner)}:visit-order`;
+/** The main room's exit at one place of its side-visit sequence. */
+export function workspaceLocalVisitLeaveKey(
+  order: LocalVisitOrderAddress,
+  position: number,
+): string {
+  return `${semanticAddressKey(order)}:leave:${position}`;
 }
 
 export function requireWorkspaceInteraction<T>(

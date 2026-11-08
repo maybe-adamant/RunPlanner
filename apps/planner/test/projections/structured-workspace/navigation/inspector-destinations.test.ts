@@ -1426,9 +1426,9 @@ describe('workspace inspector destinations', () => {
       (candidate) => candidate.node.room.occurrenceId === nOccurrenceId('combat05'),
     );
     if (sideParentVisit === undefined) throw new Error('N Combat 05 Hub visit is missing');
+    // The side doors are the main room's Overview spawns; its visits are its Leave rows.
     expect(destination(complete, sideRoom)).toMatchObject({
-      roomTab: 'sideRooms',
-      sideRoomSlotKey: 'sideDoor1',
+      roomTab: 'overview',
       inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
       selectedRailKey: sideParentVisit.marker.focusKey,
     });
@@ -1438,7 +1438,8 @@ describe('workspace inspector destinations', () => {
         createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
       ),
     ).toMatchObject({
-      roomTab: 'sideRooms',
+      roomTab: 'actions',
+      timelineDoors: 'leave',
       inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
       selectedRailKey: sideParentVisit.marker.focusKey,
     });
@@ -1453,8 +1454,7 @@ describe('workspace inspector destinations', () => {
       nLocalOccurrenceId('combat05', 'sideDoor1'),
     );
     expect(destination(complete, sideReward)).toMatchObject({
-      roomTab: 'sideRooms',
-      sideRoomSlotKey: 'sideDoor1',
+      roomTab: 'overview',
       inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
       selectedRailKey: sideParentVisit.marker.focusKey,
     });

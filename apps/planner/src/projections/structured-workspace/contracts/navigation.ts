@@ -9,7 +9,6 @@ import type { WorkspaceAssessment } from '../contract';
 /** Transient destination for an entered-room workbench. */
 export type WorkspaceRoomTab =
   | 'overview'
-  | 'sideRooms'
   | 'actions'
   | 'shipIntroActions'
   | 'shipCombat1Actions'
@@ -58,7 +57,9 @@ export type WorkspaceFindingControl =
   /** The selected Boon Boon Boon row's acquisition target. */
   | 'echoLastRunTarget'
   /** One Boon Boon Boon row's trait picker, named by its giver, trait and rarity. */
-  | `echoLastRunOption:${string}`;
+  | `echoLastRunOption:${string}`
+  /** The main room's Leave room picker that starts one side visit, by its ordinal. */
+  | `sideVisit:${number}`;
 
 export interface WorkspaceInspectorDestination {
   readonly biomeKey?: string;
@@ -94,8 +95,6 @@ export interface WorkspaceInspectorDestination {
   readonly presentationPanel?: 'loadout' | 'route';
   /** Present when this owner belongs to a specific room-workbench tab. */
   readonly roomTab?: WorkspaceRoomTab;
-  /** Declared parent-local slot selected by a side-room destination. */
-  readonly sideRoomSlotKey?: string;
   /** Present when this owner belongs to a specific Hub-workbench tab. */
   readonly hubTab?: WorkspaceHubTab;
   readonly region: 'inspector' | 'routeRail' | 'structure';

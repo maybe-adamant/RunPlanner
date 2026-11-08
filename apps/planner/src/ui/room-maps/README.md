@@ -49,7 +49,7 @@ the destination side-room number, not door priority or visit order.
 painted circles on the 16 Ephyra parent maps. Its values are normalized from the
 640 × 360 capture annotation inventory into the packaged 2560 × 1440 image space
 and bind declaration slot keys, not painted destination numbers or visit positions.
-The Side Rooms editor adds non-interactive status labels only; it must
+The main room's side-door map adds non-interactive status labels only; it must
 not duplicate the baked numbers or read the external capture directory at runtime.
 Its integrity test checks the complete, unique correspondence with declared local
 slots.

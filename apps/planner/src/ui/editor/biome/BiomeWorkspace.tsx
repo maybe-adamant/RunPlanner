@@ -852,9 +852,6 @@ export function BiomeWorkspace({
                 ? {}
                 : { roomTab: explicitDestination.roomTab })}
             doorsRequested={explicitDestination?.timelineDoors === 'doorsOpen'}
-            {...(explicitDestination?.sideRoomSlotKey === undefined
-              ? {}
-              : { sideRoomSlotKey: explicitDestination.sideRoomSlotKey })}
             {...(findingOrigin === undefined
               ? {}
               : { findingNavigationRevision: semanticNavigationRevision })}

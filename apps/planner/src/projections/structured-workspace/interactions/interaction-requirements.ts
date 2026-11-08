@@ -24,7 +24,7 @@ import {
 } from '@run-planner/engine/authored-project';
 
 import type { WorkspaceFeatureAssessment, WorkspaceInteractionChoice } from '../contract';
-import type { WorkspaceEncounterPhase, WorkspaceLocalVisitOrderControl } from '../contracts/locals';
+import type { WorkspaceEncounterPhase, WorkspaceLocalVisitLeave } from '../contracts/locals';
 import type { WorkspaceRoomActionProposal } from '../contracts/timeline';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 
@@ -170,10 +170,10 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly order: LocalVisitOrderAddress;
       readonly slots: readonly {
         readonly address: LocalVisitSlotAddress;
-        readonly order: WorkspaceLocalVisitOrderControl;
         readonly generation: SideRoomGeneration;
         readonly entered: boolean;
       }[];
+      readonly leaves: readonly WorkspaceLocalVisitLeave[];
     }
   | {
       /** One active exact pool-backed phase, never a profile or rendered ordinal. */

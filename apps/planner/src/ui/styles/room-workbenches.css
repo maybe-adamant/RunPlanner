@@ -1,6 +1,5 @@
 .room-structure-workbench,
 .fields-room-editor,
-.ephyra-side-editor,
 .room-overview-workbench,
 .room-actions-workbench {
   display: grid;
@@ -139,8 +138,7 @@
   gap: 6px;
 }
 
-.room-overview-panel > :is(.room-structure-workbench, .shop-editor, .fields-room-editor),
-.room-overview-workbench > .ephyra-side-editor {
+.room-overview-panel > :is(.room-structure-workbench, .shop-editor, .fields-room-editor) {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
@@ -1706,143 +1704,19 @@
   text-transform: uppercase;
 }
 
-.ephyra-side-editor {
-  container: side-rooms / inline-size;
-  min-width: 0;
-}
-
-/* Narrow: map, then the doors, then the visit order. */
-.ephyra-side-layout {
-  display: grid;
-  grid-template-areas: 'map' 'doors' 'visits';
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-  min-width: 0;
-}
-
-.ephyra-side-layout > .door-workbench {
-  grid-area: doors;
-}
-
-.ephyra-side-layout > .ephyra-side-controls {
-  grid-area: visits;
-}
-
-.ephyra-side-layout > .ephyra-side-map-reference {
-  grid-area: map;
-}
-
-/* Wide: the doors and visit order in a left column, the map beside them. */
-@container side-rooms (min-width: 60rem) {
-  .ephyra-side-layout {
-    grid-template-areas: 'doors map' 'visits map';
-    grid-template-columns: minmax(0, 30rem) minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
-    gap: 12px 20px;
-    align-items: start;
-  }
-
-  /* The column is narrower than the doors' two-line threshold, yet holds their table. */
-  .ephyra-side-layout > .door-workbench {
-    container-type: normal;
-  }
-}
-
-.ephyra-side-controls,
-.ephyra-side-map-reference {
-  min-width: 0;
-}
-
-.ephyra-side-controls {
-  display: grid;
-  align-content: start;
-  gap: 4px;
-}
-
-.ephyra-side-visit-title {
-  margin: 0 0 2px;
-  color: #aaa7af;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-/* Light timeline rows: handle, Visit n, room. */
-.ephyra-side-visit-list {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ephyra-side-visit-row {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto 4.5rem minmax(0, 1fr);
-  align-items: center;
-  gap: 6px;
-  min-height: 2.25rem;
-  padding: 4px 6px 4px 0;
-  border-top: 1px solid #2c2d35;
-}
-
-.ephyra-side-visit-row:last-child {
-  border-bottom: 1px solid #2c2d35;
-}
-
-.ephyra-side-visit-ordinal {
-  color: var(--muted);
-  font-size: 0.82rem;
-  white-space: nowrap;
-}
-
-.ephyra-side-visit-room {
-  min-width: 0;
-  color: #f2ede5;
-  font-size: 0.92rem;
-  overflow-wrap: anywhere;
-}
-
-.ephyra-side-empty {
-  margin: 0;
-  color: #99939f;
-  font-size: 0.82rem;
-}
-
-.ephyra-side-generation-control {
-  display: flex;
-  min-height: 28px;
-  align-items: center;
-}
-
-.ephyra-side-generation-control > label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.ephyra-side-generation-control[aria-disabled='true'] > label {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
 /*
  * The map fills its frame, so overlays pinned to the frame sit on the image.
  * Its width is capped so its height fits the window under the header and room
  * heading: extra width never makes the room scroll.
  */
-:is(.ephyra-side-map-reference, .hub-map-overview) > .room-map-viewport > .room-map-canvas {
+.hub-map-overview > .room-map-viewport > .room-map-canvas {
   width: 100%;
   aspect-ratio: 16 / 9;
   max-width: max(24rem, calc((100 * var(--app-vh) - 18rem) * 16 / 9));
   margin-inline: auto;
 }
 
-:is(.ephyra-side-map-reference, .hub-map-overview)
-  > .room-map-viewport
-  > .room-map-canvas
-  > .room-map-scroll {
+.hub-map-overview > .room-map-viewport > .room-map-canvas > .room-map-scroll {
   position: absolute;
   inset: 0;
   height: 100%;
@@ -2776,6 +2650,11 @@ button.timeline-chip {
 
 .timeline-leave-door span.contextual-picker-trigger-part-image:empty {
   display: none;
+}
+
+/* A side-visit picker's assessment host adds no box of its own. */
+.timeline-leave-assessed {
+  display: contents;
 }
 
 /* The header's action spans the actions zone and the map, ending where the rows do. */

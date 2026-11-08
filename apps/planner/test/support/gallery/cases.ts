@@ -7,6 +7,7 @@ import {
   createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
+  createLocalVisitOrderAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -71,6 +72,8 @@ import {
   occurrenceAddress,
   room,
   withoutRoomActionOrder,
+  authoredHubActions,
+  localVisitOrder,
   type GalleryCase,
   type GalleryStep,
 } from './galleryCase';
@@ -397,10 +400,31 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'side-room-doors',
-    roomTab: 'sideRooms',
-    label: 'Ephyra side-room doors: Open and Visit toggles, priority, room and reward',
-    shows: ['side-room door table'],
+    overview: true,
+    label: 'Ephyra main room: side doors in Spawns, a Leave room picker per side visit',
+    shows: ['side-door spawns', 'side-visit Leave rows', 'side-room returns'],
     project: loadSurfaceNOPQCheckpoint,
+    target: room('N', 'surface-n-combat05'),
+  },
+  {
+    id: 'side-visit-repeat',
+    label: 'Ephyra main room whose later side visit repeats an earlier one',
+    shows: ['side-visit Leave rows', 'already visited finding'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [
+      (project) => {
+        const visits = localVisitOrder(project, 'N', 'surface-n-combat05');
+        return {
+          kind: 'ReplaceLocalVisitOrder',
+          order: createLocalVisitOrderAddress(
+            createBiomeAddress('Surface', 'N'),
+            createOccurrenceId('surface-n-combat05'),
+            'sideRooms',
+          ),
+          occurrenceIds: [visits[1]!, ...visits.slice(1)],
+        };
+      },
+    ],
     target: room('N', 'surface-n-combat05'),
   },
   {
@@ -1200,6 +1224,31 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['fountain + Phial target', 'Hub segments'],
     project: loadSurfaceNPhialIntermediateFountainCheckpoint,
     target: hub('N'),
+  },
+  {
+    id: 'hub-repeat-visit',
+    label: 'Hub Timeline whose second visit repeats the first',
+    shows: ['Hub segments', 'already visited finding'],
+    project: loadSurfaceNCheckpoint,
+    commands: [
+      (project) => {
+        const surfaceHub = createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub');
+        const actions = authoredHubActions(project, 'N');
+        const visits = actions.flatMap((action) => (action.kind === 'roomVisit' ? [action] : []));
+        const first = visits[0];
+        const second = visits[1];
+        if (first === undefined || second === undefined)
+          throw new Error('the N Hub has fewer than two visits');
+        return {
+          kind: 'ReplaceHubActionOrder',
+          hub: surfaceHub,
+          actions: actions.map((action) =>
+            action === first ? { kind: 'roomVisit', hubSlotKey: second.hubSlotKey } : action,
+          ),
+        };
+      },
+    ],
+    target: hub('N', 2),
   },
   {
     id: 'hub-reroll',

@@ -328,7 +328,7 @@ describe('surface product loop', () => {
     expect(await saving.write()).toBe(encodeProjectDocument(edited));
   });
 
-  it('walks a Hub visit to its room and back to the next visit without an edit', async () => {
+  it('walks a Hub visit through its side rooms and back to the next visit without an edit', async () => {
     const saving = createSavingApplication();
     const { application } = saving;
     await saving.open(loadSurfaceNProject());
@@ -339,10 +339,33 @@ describe('surface product loop', () => {
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     await view.user.click(screen.getByRole('button', { name: 'Open Combat 05' }));
-    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
-      'true',
-    );
-    const leave = screen.getByRole('listitem', { name: 'Return to Hub' });
+    const timelineShown = () =>
+      expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+        'true',
+      );
+    const heading = () => screen.getByRole('heading', { level: 3 }).getAttribute('aria-label');
+    const leaves = () => screen.getAllByRole('listitem', { name: 'Leave room' });
+    timelineShown();
+    // Each side visit's Leave room row opens that side room, whose own leads back.
+    const sideRooms: string[] = [];
+    for (const index of [0, 1]) {
+      const open = within(leaves()[index]!).getByRole('button', { name: /^Open Side Room/ });
+      sideRooms.push(open.getAttribute('aria-label')!.replace(/^Open /, ''));
+      await view.user.click(open);
+      expect(heading()).toBe(sideRooms[index]);
+      timelineShown();
+      await view.user.click(
+        within(screen.getByRole('listitem', { name: 'Leave room' })).getByRole('button', {
+          name: 'Open Combat 05',
+        }),
+      );
+      expect(heading()).toBe('Combat 05');
+      timelineShown();
+      // The main room's Timeline continues from that side room's return.
+      expect(screen.getByRole('listitem', { name: `Back from ${sideRooms[index]}` })).toBeTruthy();
+    }
+    expect(new Set(sideRooms).size).toBe(2);
+    const leave = leaves().at(-1)!;
     await view.user.click(within(leave).getByRole('button', { name: 'Open Hub Timeline' }));
     expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
       'true',

@@ -1264,21 +1264,9 @@ select {
 }
 
 /* Side-room doors select with two toggles, Open then Visit, under their names. */
-.door-rows.side-room-doors {
-  --door-select-track: 6rem;
-}
-
-.side-room-toggles {
-  display: grid;
-  grid-template-columns: 3rem 2.75rem;
-  align-items: center;
-}
-
-.side-room-toggles input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--selection-accent);
+/* Side doors pick whether each opens, under an Open heading. */
+.door-rows.side-door-spawns {
+  --door-select-track: 3rem;
 }
 
 /* A lone door has no radio, and its column keeps only the row's inset. */
