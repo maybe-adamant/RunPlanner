@@ -126,6 +126,20 @@ inside the one derivation rule.
    controls; the map shows them (phase 3 makes them clickable).
 5. In-game probe confirms or corrects the derivation; flipped map display.
 
+## N pass (owner-settled 2026-11-07, after O)
+
+- The Side Rooms tab goes away. The Ephyra main room's Overview (Spawns)
+  authors which side doors open and what each side room rewards; the game
+  forces the open count by biome depth (0/1/1/2/2/3), so open-but-unvisited
+  doors stay valid.
+- The main room's Timeline owns the visits: Leave room picks the Hub or an
+  open side room; a side room page leaves back to its main room, whose
+  Timeline shows the next Leave choice, until the Hub is picked
+  (`LocalVisitDecision.visitOrder`).
+- Changing an earlier visit keeps later visits; a repeated room stays
+  authored with an "already visited" finding (engine: allow repeats in the
+  visit order and add the finding; no save becomes invalid).
+
 ## Follow-ups (recorded, not scheduled)
 
 - `HeroStartPointEndPointLinkIds` is not modelled: the no-match fallback
