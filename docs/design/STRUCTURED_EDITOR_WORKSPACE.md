@@ -376,10 +376,12 @@ or child ownership moves to a composite editor.
 
 The application publishes one closed occurrence-presentation union rather than
 a generic room-details disclosure. Standard, Fields, and Shop occurrences
-render Room Overview and Room Timeline. Overview's Layout section shows each
-room's flip and entry as the engine settles them, picking them where the game
-rolls, and, in Fields, the cage, optional and Nemesis points as spot lines;
-its Objects line stands each object on a physical anchor. Overview contains read-only
+render Room Overview and Room Timeline. Overview's Positions section shows the
+room's entry with its orientation as one choice of the (entry, flip) pairs the
+engine leaves open, shown where the door or the room settles it, and one row
+per present object's anchor and per Fields cage, optional and Nemesis slot's
+point; an unset position is `?`, left to the game, and a point or anchor
+another occupant holds is not offered. Overview contains read-only
 incoming context and meaningful room-local setup: Fields identities, World
 Shop inventory, and Room features, whose Shrine and Well inventories likewise
 hold only their fixed slots (a Shrine slot shows its item and the delay rolled
@@ -397,9 +399,11 @@ working width, and the visit order form a column beside the map; where it is
 narrow the map comes first, then the table, then the visit order. The visit
 order is light timeline rows, each its reorder handle, its visit number and
 its room.
-Every Overview renders its sections in one order, showing only those the room
-has: Encounters, room contents (Shop inventory, Fields optional rewards),
-Additional Exits, Objects, Resources, NPCs. Its rows share one column grid of
+Every Overview renders its sections in game order, showing only those the room
+has: On entry (encounters), In the room (Fields optional rewards, additional
+exits, room objects, resources, NPCs, as existence only), Contents (Shop, Well,
+Pool and Shrine stock, the challenge switch's type and reward, the Pedestal's
+item) and Positions. Its rows share one column grid of
 label, value picker and secondary action, so each picker starts at the same
 place in every section and room. A room object or Chaos Gate the room always
 has is named without a presence toggle.

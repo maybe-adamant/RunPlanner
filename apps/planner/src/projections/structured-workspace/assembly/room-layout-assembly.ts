@@ -8,9 +8,18 @@ import {
   type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
-import type { RoomLayoutAuthoring } from '@run-planner/engine/simulation';
+import {
+  layoutWithEntry,
+  layoutWithFlip,
+  roomEntryOptions,
+  type RoomLayoutAuthoring,
+} from '@run-planner/engine/simulation';
 
-import type { WorkspaceRoomLayout, WorkspaceRoomLayoutControl } from '../contracts/features';
+import type {
+  WorkspaceRoomEntryPair,
+  WorkspaceRoomEntryState,
+  WorkspaceRoomLayout,
+} from '../contracts/features';
 import type { WorkspaceMarker } from '../contracts/navigation';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 
@@ -19,11 +28,15 @@ type ChoicesRequirement = Extract<
   { readonly kind: 'roomChoices' }
 >;
 
+const pairKey = (pair: WorkspaceRoomEntryPair): string =>
+  `entry:${pair.pointId}:${pair.flipped ? 'flipped' : 'unflipped'}`;
+
 /**
- * The room's flip and entry as its entry settles them, with the choices the
- * engine leaves open and the commands it names for each. Returning one value
- * to the game keeps the rest of the authored layout. Absent for a room
- * without map points.
+ * The room's entry and orientation as one choice of (entry, flip) pairs, as
+ * its entry settles them: an entry that needs one flip is one pair, an entry
+ * either flip of a roll allows is two, and a settled flip gives one pair per
+ * entry. Each pair's command composes the engine's own entry and flip
+ * layouts. Absent for a room without map points.
  */
 export function assembleRoomLayout(input: {
   readonly address: OccurrenceAddress;
@@ -38,105 +51,115 @@ export function assembleRoomLayout(input: {
   if (starts === undefined) return undefined;
   const interactionKey = `roomLayout:${semanticAddressKey(address)}`;
   const bound: { key: string; commands: readonly ProjectCommand[] }[] = [];
-  const bind = (key: string, command: ProjectCommand): string => {
-    bound.push({ key, commands: Object.freeze([command]) });
+  const bind = (key: string, layout: RoomLayout): string => {
+    bound.push({
+      key,
+      commands: Object.freeze([
+        Object.freeze({
+          kind: 'ReplaceRoomLayout' as const,
+          occurrence: address,
+          layout: Object.freeze(layout),
+        }),
+      ]),
+    });
     return key;
   };
-  const replace = (layout: RoomLayout): ProjectCommand =>
-    Object.freeze({
-      kind: 'ReplaceRoomLayout',
-      occurrence: address,
-      layout: Object.freeze(layout),
-    });
-  const authored = input.occurrence.layout;
-  const withoutFlip = (): RoomLayout =>
-    authored?.entryStartPointId === undefined
-      ? {}
-      : { entryStartPointId: authored.entryStartPointId };
-  const withoutEntry = (): RoomLayout =>
-    authored?.flipped === undefined ? {} : { flipped: authored.flipped };
-  const flipAddress = createRoomFeatureAddress(address, { kind: 'roomLayoutFlip' });
   const entryAddress = createRoomFeatureAddress(address, { kind: 'roomLayoutEntry' });
-  const control = <T>(
-    owner: RoomFeatureAddress,
-    state: WorkspaceRoomLayoutControl<T>['state'],
-  ): WorkspaceRoomLayoutControl<T> =>
-    Object.freeze({ address: owner, marker: input.marker(owner), state: Object.freeze(state) });
+  const flipAddress = createRoomFeatureAddress(address, { kind: 'roomLayoutFlip' });
 
-  const flipState = (): WorkspaceRoomLayoutControl<boolean>['state'] => {
-    if (authoring === undefined) return { kind: 'unreached' };
-    const flip = authoring.settlement.flip;
-    if (flip.kind !== 'roll')
+  const settled = (): {
+    readonly state: WorkspaceRoomEntryState;
+    readonly eligible: readonly number[];
+    readonly entryId?: number;
+    readonly flipped?: boolean;
+  } => {
+    if (authoring === undefined) return { state: { kind: 'unreached' }, eligible: [] };
+    const { settlement } = authoring;
+    const authored = authoring.authored;
+    const flip = settlement.flip;
+    const entry = settlement.entry;
+    if (entry.kind === 'unknown')
       return {
-        kind: flip.kind,
-        value: flip.value,
-        ...(authored?.flipped === undefined || authoring.settlement.flipUnavailable !== true
-          ? {}
-          : {
-              stale: {
-                value: authored.flipped,
-                clearKey: bind('flip:clear', replace(withoutFlip())),
-              },
-            }),
+        state: { kind: 'unknown' },
+        eligible: [],
+        ...(flip.value === undefined ? {} : { flipped: flip.value }),
       };
+    const roll = flip.kind === 'roll';
+    // A derived entry under an authored rolled flip keeps no list across the other flip: its one pair is all that is known.
+    const narrowed = roll && entry.kind === 'derived' && authored?.flipped !== undefined;
+    const pairs: WorkspaceRoomEntryPair[] = roomEntryOptions(settlement).flatMap((option) =>
+      option.flipped !== undefined
+        ? [{ pointId: option.startPointId, flipped: option.flipped }]
+        : !roll
+          ? [{ pointId: option.startPointId, flipped: flip.value === true }]
+          : narrowed
+            ? [{ pointId: option.startPointId, flipped: authored.flipped === true }]
+            : [
+                { pointId: option.startPointId, flipped: false },
+                { pointId: option.startPointId, flipped: true },
+              ],
+    );
+    const pointId = entry.kind === 'choice' ? entry.point?.startPointId : entry.point.startPointId;
+    const value =
+      pointId === undefined || flip.value === undefined
+        ? undefined
+        : pairs.find((pair) => pair.pointId === pointId && pair.flipped === flip.value);
+    const stale = settlement.flipUnavailable === true || settlement.entryUnavailable !== undefined;
+    const clear = (): RoomLayout => ({});
+    const eligible = [...new Set(pairs.map((pair) => pair.pointId))];
+    const shownFlip = value?.flipped ?? flip.value;
+    if (pairs.length === 1 && entry.kind !== 'choice') {
+      const only = pairs[0]!;
+      return {
+        state: {
+          kind: 'settled',
+          by: entry.kind === 'fixed' ? 'fixed' : 'door',
+          value: only,
+          ...(stale ? { stale: { clearKey: bind('entry:clear', clear()) } } : {}),
+        },
+        eligible,
+        entryId: only.pointId,
+        flipped: only.flipped,
+      };
+    }
+    // The entry is authored only where the game picks among entries; a fixed entry keeps its own.
+    const pickEntry = entry.kind !== 'fixed';
+    const layoutFor = (pair: WorkspaceRoomEntryPair): RoomLayout => {
+      const withEntry = pickEntry
+        ? layoutWithEntry(settlement, authored, pair.pointId)
+        : (authored ?? {});
+      return roll ? layoutWithFlip(settlement, withEntry, pair.flipped) : withEntry;
+    };
     return {
-      kind: 'choice',
-      ...(flip.value === undefined ? {} : { value: flip.value }),
-      choices: Object.freeze([
-        ...(authored?.flipped === undefined
-          ? []
-          : [{ key: bind('flip:game', replace(withoutFlip())), value: null }]),
-        ...authoring.flips.map((choice) => ({
-          key: bind(`flip:${choice.flipped}`, choice.command),
-          value: choice.flipped,
-        })),
-      ]),
+      state: {
+        kind: 'choice',
+        ...(value === undefined ? {} : { value }),
+        ...(stale
+          ? {
+              stale: {
+                ...(authored?.entryStartPointId === undefined
+                  ? {}
+                  : { pointId: authored.entryStartPointId }),
+                ...(authored?.flipped === undefined ? {} : { flipped: authored.flipped }),
+              },
+            }
+          : {}),
+        choices: Object.freeze([
+          ...(authoring.clear === undefined
+            ? []
+            : [{ key: bind('entry:game', clear()), pair: null }]),
+          ...pairs
+            .filter((pair) => stale || pair !== value)
+            .map((pair) => ({ key: bind(pairKey(pair), layoutFor(pair)), pair })),
+        ]),
+      },
+      eligible,
+      ...(pointId === undefined ? {} : { entryId: pointId }),
+      ...(shownFlip === undefined ? {} : { flipped: shownFlip }),
     };
   };
 
-  const entryState = (): WorkspaceRoomLayoutControl<number>['state'] => {
-    if (authoring === undefined) return { kind: 'unreached' };
-    const entry = authoring.settlement.entry;
-    const staleEntry =
-      authoring.settlement.entryUnavailable === undefined ? undefined : authored?.entryStartPointId;
-    switch (entry.kind) {
-      case 'unknown':
-        return { kind: 'unknown' };
-      case 'fixed':
-      case 'derived':
-        return {
-          kind: entry.kind,
-          value: entry.point.startPointId,
-          ...(staleEntry === undefined
-            ? {}
-            : {
-                stale: {
-                  value: staleEntry,
-                  clearKey: bind('entry:clear', replace(withoutEntry())),
-                },
-              }),
-        };
-      case 'choice':
-        return {
-          kind: 'choice',
-          ...(entry.point === undefined ? {} : { value: entry.point.startPointId }),
-          ...(staleEntry === undefined ? {} : { stale: staleEntry }),
-          choices: Object.freeze([
-            ...(authored?.entryStartPointId === undefined
-              ? []
-              : [{ key: bind('entry:game', replace(withoutEntry())), value: null }]),
-            ...authoring.entries.map((choice) => ({
-              key: bind(`entry:${choice.option.startPointId}`, choice.command),
-              value: choice.option.startPointId,
-              ...(choice.option.flipped === undefined ? {} : { flipped: choice.option.flipped }),
-            })),
-          ]),
-        };
-    }
-  };
-
-  const flip = control<boolean>(flipAddress, flipState());
-  const entry = control<number>(entryAddress, entryState());
+  const { state, eligible, entryId, flipped } = settled();
   return Object.freeze({
     layout: Object.freeze({
       interactionKey,
@@ -146,8 +169,14 @@ export function assembleRoomLayout(input: {
           .sort((left, right) => left - right)
           .map((pointId, index) => Object.freeze({ pointId, number: index + 1 })),
       ),
-      flip,
-      entry,
+      eligible: Object.freeze(eligible),
+      ...(entryId === undefined ? {} : { entryId }),
+      ...(flipped === undefined ? {} : { flipped }),
+      address: entryAddress,
+      flipAddress,
+      marker: input.marker(entryAddress),
+      flipMarker: input.marker(flipAddress),
+      state: Object.freeze(state),
     }),
     requirement: Object.freeze({
       kind: 'roomChoices' as const,

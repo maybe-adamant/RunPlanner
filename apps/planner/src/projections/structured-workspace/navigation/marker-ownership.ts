@@ -99,15 +99,12 @@ export function workspaceRoomPlacementMarkers(
   room: Pick<WorkspaceRoomSummary, 'layout' | 'objectSlots'>,
 ): readonly WorkspaceMarker[] {
   return Object.freeze([
-    ...(room.layout === undefined ? [] : [room.layout.flip.marker, room.layout.entry.marker]),
+    ...(room.layout === undefined ? [] : [room.layout.flipMarker, room.layout.marker]),
     ...(room.objectSlots === undefined
       ? []
-      : [
-          ...room.objectSlots.spots.flatMap((spot) =>
-            spot.occupant === undefined ? [] : [spot.occupant.anchorMarker],
-          ),
-          ...room.objectSlots.unplaced.map((occupant) => occupant.anchorMarker),
-        ]),
+      : room.objectSlots.objects.flatMap((object) =>
+          object.present ? [object.anchorMarker] : [],
+        )),
   ]);
 }
 

@@ -56,130 +56,98 @@ function spotsOf(
   return { ...assembled.objectSlots, commandsOf };
 }
 
-const held = (choice: {
-  readonly action: string;
-  readonly object: string;
-  readonly switchKind?: string;
-}) =>
-  [
-    choice.action,
-    choice.object,
-    ...(choice.switchKind === undefined ? [] : [choice.switchKind]),
-  ].join(':');
+const objectOf = (slots: ReturnType<typeof spotsOf>, kind: string) =>
+  slots.objects.find((object) => object.object === kind)!;
 
-describe('room object spots', () => {
-  it('places an absent object on the chosen physical anchor', () => {
-    const spots = spotsOf(loadUnderworldFGHICheckpoint());
-    const [spot] = spots.spots;
-    expect(spot).toMatchObject({ number: 1, pinned: false });
-    expect(spot?.choices.map(held)).toEqual([
-      'place:stygianWell',
-      'place:challengeSwitch:time',
-      'place:challengeSwitch:perfectClear',
+describe('room objects', () => {
+  it('adds an absent object with its own command and keeps a refused one locked', () => {
+    const slots = spotsOf(loadUnderworldFGHICheckpoint());
+    expect(slots.anchors).toEqual([expect.objectContaining({ number: 1 })]);
+    const well = objectOf(slots, 'stygianWell');
+    expect(well).toMatchObject({ present: false, fixed: false });
+    expect(well.anchor).toBeUndefined();
+    expect(slots.commandsOf(well.toggleKey!)).toEqual([
+      { kind: 'AddStygianWell', occurrence: oneSpot },
     ]);
-    // A type the room cannot roll is listed with its rule.
-    expect(spot?.unavailable).toEqual([
-      expect.objectContaining({
-        object: 'challengeSwitch',
-        switchKind: 'elite',
-        lock: expect.objectContaining({ reason: 'refused' }),
-      }),
-    ]);
-    const time = spot!.choices.find((choice) => choice.switchKind === 'time')!;
-    expect(spots.commandsOf(time.key)).toEqual([
+    // The switch adds as its first observable type.
+    const switchObject = objectOf(slots, 'challengeSwitch');
+    expect(slots.commandsOf(switchObject.toggleKey!)).toEqual([
       {
         kind: 'ReplaceChallengeSwitch',
         occurrence: oneSpot,
         variantKey: 'TimeChallengeSwitch_Money',
       },
-      {
-        kind: 'ReplaceRoomObjectAnchor',
-        occurrence: oneSpot,
-        object: 'challengeSwitch',
-        anchorId: spot!.anchorId,
-      },
     ]);
   });
 
-  it('lists an object the game places after the spots, moving it onto one or removing it', () => {
+  it('offers a present object the free anchors and the game, then removes it', () => {
     const project = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
       kind: 'AddStygianWell',
       occurrence: oneSpot,
     });
-    const spots = spotsOf(project);
-    const [spot] = spots.spots;
-    expect(spot?.occupant).toBeUndefined();
-    expect(spot?.choices.map(held)).toEqual(['move:stygianWell']);
-    const [well] = spots.unplaced;
-    expect(well).toMatchObject({ object: 'stygianWell', fixed: false });
-    expect(well?.choices.map(held)).toEqual(['move:stygianWell', 'remove:stygianWell']);
-    expect(spots.commandsOf(well!.choices[0]!.key)).toEqual([
+    const slots = spotsOf(project);
+    const [anchor] = slots.anchors;
+    const well = objectOf(slots, 'stygianWell');
+    expect(well.anchor?.anchorId).toBeUndefined();
+    expect(well.anchor?.choices.map((choice) => choice.anchorId)).toEqual([anchor!.anchorId]);
+    expect(slots.commandsOf(well.anchor!.choices[0]!.key)).toEqual([
       {
         kind: 'ReplaceRoomObjectAnchor',
         occurrence: oneSpot,
         object: 'stygianWell',
-        anchorId: spot!.anchorId,
+        anchorId: anchor!.anchorId,
       },
+    ]);
+    expect(slots.commandsOf(well.toggleKey!)).toEqual([
+      { kind: 'RemoveStygianWell', occurrence: oneSpot },
     ]);
   });
 
-  it('replaces, returns to the game or removes the object standing on a spot', () => {
+  it('does not offer an anchor another object holds, and returns its own to the game', () => {
     let project = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
       kind: 'AddStygianWell',
       occurrence: oneSpot,
     });
-    const anchorId = spotsOf(project).spots[0]!.anchorId;
+    const anchorId = spotsOf(project).anchors[0]!.anchorId;
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceRoomObjectAnchor',
       occurrence: oneSpot,
       object: 'stygianWell',
       anchorId,
     });
-    const spots = spotsOf(project);
-    const [spot] = spots.spots;
-    expect(spot?.occupant?.object).toBe('stygianWell');
-    expect(spots.unplaced).toEqual([]);
-    expect(spot?.choices.map(held)).toEqual([
-      'replace:challengeSwitch:time',
-      'replace:challengeSwitch:perfectClear',
-      'native:stygianWell',
-      'remove:stygianWell',
-    ]);
-    const replace = spot!.choices.find((choice) => choice.switchKind === 'time')!;
-    expect(spots.commandsOf(replace.key).map((command) => command.kind)).toEqual([
-      'RemoveStygianWell',
-      'ReplaceChallengeSwitch',
-      'ReplaceRoomObjectAnchor',
-    ]);
+    const slots = spotsOf(project);
+    expect(slots.anchors[0]?.occupant).toEqual({ object: 'stygianWell' });
+    const well = objectOf(slots, 'stygianWell');
+    expect(well.anchor).toMatchObject({ anchorId, choices: [{ anchorId: null }] });
+    // The only anchor is the Well's: the switch has nowhere to go.
+    expect(objectOf(slots, 'challengeSwitch')).toMatchObject({
+      present: false,
+      lock: { reason: 'refused' },
+    });
   });
 
-  it("changes a standing switch's type in place", () => {
-    let project = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
+  it("changes a present switch's type in place", () => {
+    const project = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
       kind: 'ReplaceChallengeSwitch',
       occurrence: oneSpot,
       variantKey: 'TimeChallengeSwitch_Money',
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceRoomObjectAnchor',
-      occurrence: oneSpot,
-      object: 'challengeSwitch',
-      anchorId: spotsOf(project).spots[0]!.anchorId,
-    });
-    const [spot] = spotsOf(project, oneSpot, 'time').spots;
-    expect(spot?.occupant).toMatchObject({ object: 'challengeSwitch', switchKind: 'time' });
-    expect(spot?.choices.map(held)).toEqual(
-      expect.arrayContaining(['retype:challengeSwitch:perfectClear', 'replace:stygianWell']),
-    );
+    const switchObject = objectOf(spotsOf(project, oneSpot, 'time'), 'challengeSwitch');
+    expect(switchObject).toMatchObject({ present: true, switchKind: 'time' });
+    expect(switchObject.kinds?.map((kind) => kind.switchKind)).toEqual(['perfectClear']);
   });
 
-  it('keeps the pinned spot for the Well and offers the others to the Pool', () => {
-    const spots = spotsOf(createGoldenFGHIProject(), postboss);
-    const pinned = spots.spots.find((spot) => spot.pinned)!;
-    const free = spots.spots.find((spot) => !spot.pinned)!;
-    expect(pinned.occupant).toMatchObject({ object: 'stygianWell', fixed: true });
-    expect(pinned.choices).toEqual([]);
-    expect(spots.unplaced.map((occupant) => occupant.object)).toEqual(['purgingPool']);
-    expect(spots.unplaced[0]!.choices.map((choice) => choice.anchorId)).toEqual([free.anchorId]);
-    expect(free.choices.map(held)).toEqual(['move:purgingPool']);
+  it('pins the Well and offers the Pool the other anchors', () => {
+    const slots = spotsOf(createGoldenFGHIProject(), postboss);
+    const well = objectOf(slots, 'stygianWell');
+    const pool = objectOf(slots, 'purgingPool');
+    expect(well).toMatchObject({ present: true, fixed: true });
+    expect(well.anchor).toMatchObject({ choices: [] });
+    expect(well.anchor?.pinned).toBeDefined();
+    expect(pool.anchor?.choices.map((choice) => choice.anchorId)).toEqual(
+      slots.anchors.flatMap((anchor) =>
+        anchor.anchorId === well.anchor?.pinned ? [] : [anchor.anchorId],
+      ),
+    );
   });
 });

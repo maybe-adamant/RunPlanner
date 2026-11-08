@@ -38,7 +38,7 @@ export function RoomMapColumn({
   stage,
   title,
 }: {
-  /** The room's settled flip; a previewed flip or entry shows its own. */
+  /** The room's settled flip; a previewed entry shows its own. */
   readonly flipped?: boolean | undefined;
   /** What stands on the room's points as planned. */
   readonly placements?: Omit<RoomMapPlacements, 'preview'> | undefined;
@@ -54,16 +54,12 @@ export function RoomMapColumn({
   const highlight = useRoomMapHighlight();
   const calibration = roomMapCalibrations[gameName];
   if (calibration === undefined) return null;
-  // A previewed flip, or the flip a previewed entry sets, shows the room that way.
+  // The flip a previewed entry sets shows the room that way.
   const shownFlip =
-    highlight?.kind === 'flip' && highlight.flipped !== undefined
-      ? highlight.flipped
-      : highlight?.kind === 'entry' && highlight.flipped !== undefined
-        ? highlight.flipped
-        : flipped;
+    highlight?.kind === 'entry' && highlight.flipped !== undefined ? highlight.flipped : flipped;
   const markers = roomMapMarkers(map, calibration, shownFlip);
   const preview =
-    highlight?.kind === 'entry' && highlight.pointId !== undefined
+    highlight?.kind === 'entry'
       ? { kind: 'entry' as const, id: highlight.pointId }
       : highlight?.kind === 'anchor'
         ? { kind: 'anchor' as const, id: highlight.anchorId }

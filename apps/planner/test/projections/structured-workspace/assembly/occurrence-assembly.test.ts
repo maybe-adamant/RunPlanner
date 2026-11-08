@@ -137,7 +137,7 @@ describe('structured workspace composer assembly', () => {
     ).toBe(ordinary.assembly.node.key);
   });
 
-  it('routes H Fields placement markers to Overview and lines each family up by point', () => {
+  it('routes H Fields placement markers to Overview and keeps each slot point', () => {
     const project = createGoldenFGHIProject();
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const result = assemble(project, 'Underworld', 'H', occurrenceId);
@@ -150,23 +150,22 @@ describe('structured workspace composer assembly', () => {
         roomTab: 'overview',
       });
     }
-    const cageLine = room.roomLocal.spotLines.find((line) => line.kind === 'cage');
-    if (cageLine === undefined) throw new Error('H Fields cage line is missing');
     const cage = room.roomLocal.spatial.find((control) => control.target.kind === 'cage')!;
-    const spot = cageLine.spots.find((candidate) => candidate.occupant === undefined)!;
+    const pointId = cage.pointChoices.find(
+      (choice) => choice.value !== null && choice.value !== cage.pointId,
+    )!.value;
     const edited = applyProjectCommand(project, catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
       spatial: cage.address,
-      pointId: spot.pointId,
+      pointId,
     });
     const editedRoom = assemble(edited, 'Underworld', 'H', occurrenceId).assembly.node.room;
     expect(editedRoom.roomActions?.timeline.entries).toEqual(room.roomActions?.timeline.entries);
     if (editedRoom.roomLocal.kind !== 'fields') throw new Error('edited H Fields room is missing');
-    const editedLine = editedRoom.roomLocal.spotLines.find((line) => line.kind === 'cage')!;
     expect(
-      editedLine.spots.find((candidate) => candidate.pointId === spot.pointId)?.occupant,
-    ).toMatchObject({ key: cage.interactionKey, badge: 'C1' });
-    expect(editedLine.unplaced.map((occupant) => occupant.key)).not.toContain(cage.interactionKey);
+      editedRoom.roomLocal.spatial.find((control) => control.interactionKey === cage.interactionKey)
+        ?.pointId,
+    ).toBe(pointId);
   });
 
   it('routes H Passive selection and combat customization to Overview', () => {
@@ -230,7 +229,7 @@ describe('structured workspace composer assembly', () => {
     }
   });
 
-  it('publishes an active Nemesis placement on the Overview pickup line and hides it when dormant', () => {
+  it('publishes an active Nemesis placement on the Overview and hides it when dormant', () => {
     const active = assemble(
       loadNemesisFieldsCheckpoint(),
       'Underworld',
@@ -241,16 +240,14 @@ describe('structured workspace composer assembly', () => {
     if (activeFields.kind !== 'fields') throw new Error('active H Fields room is missing');
     const nemesis = activeFields.spatial.find((control) => control.target.kind === 'nemesis');
     expect(nemesis).toBeDefined();
-    expect(nemesis?.pointChoices.map((choice) => choice.label)).toContain('Optional Point 1');
+    expect(nemesis?.pointChoices.map((choice) => choice.value)).toEqual([
+      null,
+      ...(catalog.rooms.byKey[active.assembly.node.room.gameName]?.fieldsSpatial
+        ?.optionalPointIds ?? []),
+    ]);
     expect(active.markers.destinations().get(nemesis!.marker.focusKey)).toMatchObject({
       roomTab: 'overview',
     });
-    const pickups = activeFields.spotLines.find((line) => line.kind === 'optional')!;
-    expect(
-      [...pickups.spots.flatMap((spot) => spot.occupant ?? []), ...pickups.unplaced].map(
-        (occupant) => occupant.badge,
-      ),
-    ).toContain('N');
 
     const dormant = assemble(
       createGoldenFGHIProject(),

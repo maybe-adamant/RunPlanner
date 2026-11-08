@@ -359,7 +359,7 @@ describe('Biome inspector controls', () => {
       }),
     ).toBeNull();
     const resources = screen.getByRole('region', { name: 'Resources' });
-    expect(screen.getByRole('heading', { name: 'Resources' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'In the room' })).toBeTruthy();
     const resourceActions = within(resources).getAllByRole('button', { name: /^Collect / });
     expect(resourceActions.length).toBeGreaterThan(1);
     expect(within(resources).queryByText(/Repair required/)).toBeNull();

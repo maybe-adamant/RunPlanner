@@ -16,17 +16,13 @@ export function ShopWorkbench({
   if (!room.materialized) {
     return (
       <section aria-label="Shop inventory" className="shop-editor">
-        <h5 className="room-feature-category-heading">Shop inventory</h5>
-        <div className="room-overview-panel">
-          <p className="fixed-room-state">Shop inventory appears when you select this room.</p>
-        </div>
+        <p className="fixed-room-state">Shop inventory appears when you select this room.</p>
       </section>
     );
   }
   return (
     <section aria-label="Shop inventory" className="shop-editor">
-      <h5 className="room-feature-category-heading">Shop inventory</h5>
-      <div className="room-overview-panel shop-family-offer-list">
+      <div className="shop-family-offer-list">
         <NumberedSlots label="Shop slots">
           {room.offers.map((offer, index) => (
             <NumberedSlot hint={`Slot ${index + 1}`} key={offer.key} number={index + 1}>

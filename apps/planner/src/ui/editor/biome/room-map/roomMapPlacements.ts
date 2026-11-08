@@ -1,57 +1,44 @@
-import type {
-  WorkspaceRoomLayoutControl,
-  WorkspaceRoomSummary,
-} from '@planner/projections/structured-workspace';
+import type { WorkspaceRoomSummary } from '@planner/projections/structured-workspace';
 import { heldObjectIcon, heldObjectName } from '../room-features/roomObjectFace';
-import { fieldsOccupantIcon } from '../room-layout/fieldsOccupantIcon';
+import { fieldsSlotBadge, fieldsSlotIcon } from '../room-layout/fieldsSlotFace';
 import type { RoomMapPlacements } from './RoomMapPoints';
-
-/** The value a layout fact settles to, where it is known. */
-export function settledLayoutValue<T>(control: WorkspaceRoomLayoutControl<T>): T | undefined {
-  const state = control.state;
-  return state.kind === 'fixed' || state.kind === 'derived' || state.kind === 'choice'
-    ? state.value
-    : undefined;
-}
 
 /** The room's planned entry, anchor occupants and Fields slots, as its map shows them. */
 export function roomMapPlacements(room: WorkspaceRoomSummary): Omit<RoomMapPlacements, 'preview'> {
   const layout = room.layout;
-  const spots = room.objectSlots?.spots ?? [];
+  const anchors = room.objectSlots?.anchors ?? [];
   const fields = room.roomLocal.kind === 'fields' ? room.roomLocal : undefined;
-  const entryId = layout === undefined ? undefined : settledLayoutValue(layout.entry);
   return {
-    ...(entryId === undefined ? {} : { entryId }),
+    ...(layout?.entryId === undefined ? {} : { entryId: layout.entryId }),
+    entryEligible: layout?.eligible ?? [],
     entryNumbers: new Map(layout?.entries.map((entry) => [entry.pointId, entry.number]) ?? []),
     anchors: new Map(
-      spots.flatMap((spot) =>
-        spot.occupant === undefined
+      anchors.flatMap((anchor) =>
+        anchor.occupant === undefined
           ? []
           : [
               [
-                spot.anchorId,
-                { label: heldObjectName(spot.occupant), icon: heldObjectIcon(spot.occupant) },
+                anchor.anchorId,
+                { label: heldObjectName(anchor.occupant), icon: heldObjectIcon(anchor.occupant) },
               ] as const,
             ],
       ),
     ),
-    anchorNumbers: new Map(spots.map((spot) => [spot.anchorId, spot.number])),
+    anchorNumbers: new Map(anchors.map((anchor) => [anchor.anchorId, anchor.number])),
     fieldsPoints: new Map(
-      (fields?.spotLines ?? []).flatMap((line) =>
-        line.spots.flatMap((spot) =>
-          spot.occupant === undefined || fields === undefined
-            ? []
-            : [
-                [
-                  spot.pointId,
-                  {
-                    label: spot.occupant.label,
-                    icon: fieldsOccupantIcon(fields, spot.occupant),
-                    badge: spot.occupant.badge,
-                  },
-                ] as const,
-              ],
-        ),
+      (fields?.spatial ?? []).flatMap((control) =>
+        control.pointId === null || fields === undefined
+          ? []
+          : [
+              [
+                control.pointId,
+                {
+                  label: control.label,
+                  icon: fieldsSlotIcon(fields, control.target),
+                  badge: fieldsSlotBadge(fields, control.target),
+                },
+              ] as const,
+            ],
       ),
     ),
   };

@@ -24,11 +24,6 @@
   text-transform: uppercase;
 }
 
-/* Overview slots only carry their section key; the section owns its layout. */
-.room-overview-slot {
-  display: contents;
-}
-
 .room-overview-section {
   display: grid;
   gap: 10px;
@@ -153,7 +148,7 @@
   border-top: 0;
 }
 
-.room-overview-slot > :is(.room-structure-workbench, .shop-editor, .fields-room-editor),
+.room-overview-panel > :is(.room-structure-workbench, .shop-editor, .fields-room-editor),
 .room-overview-workbench > .ephyra-side-editor {
   margin-top: 0;
   padding-top: 0;
@@ -3345,29 +3340,12 @@ span.hub-board-status-line {
   margin-block: 2px;
 }
 
-/* The room's anchors: the spots line, then one line per object present with its settings. */
-.room-object-slots {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-.room-overview-workbench .room-overview-panel .room-object-slots {
-  padding-left: var(--overview-subrow-indent);
-}
-
-.room-object-spots,
 .room-object-inventory {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 6px 12px;
   min-width: 0;
-}
-
-.room-object-spots {
-  column-gap: 20px;
 }
 
 .room-object-settings {
@@ -3382,38 +3360,10 @@ span.hub-board-status-line {
   border: 0;
 }
 
-.room-object-slots .room-object-fixed {
-  margin-block: 2px;
-}
-
-/* Present objects on no authored spot: the game places them, after the spots. */
-.room-object-unplaced {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding-left: 14px;
-  border-left: 1px solid rgb(255 255 255 / 14%);
-}
-
-.room-object-unplaced-label {
-  color: #9d99a4;
-  font-size: 0.78rem;
-  white-space: nowrap;
-}
-
-/* A spot nothing can change keeps its mark like a chip does. */
-.placement-spot {
-  display: inline-flex;
-}
-
-.placement-spot-fixed {
-  position: relative;
-}
-
 /*
- * The room's layout: orientation and entry, then the Fields point lines. Its
- * labels take the whole label column, so its values share the other pickers' x.
+ * A section's labelled rows: the entry, each object's contents or anchor, each
+ * Fields slot's point. Labels take the whole label column, so values share the
+ * other pickers' x.
  */
 .room-layout-controls {
   display: grid;
@@ -3429,11 +3379,10 @@ span.hub-board-status-line {
   min-height: 30px;
 }
 
-.room-layout-row > .room-object-spots {
-  align-items: center;
-}
-
 .room-layout-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   overflow: hidden;
   color: #9d99a4;
   font-size: 0.84rem;
@@ -3442,7 +3391,15 @@ span.hub-board-status-line {
   white-space: nowrap;
 }
 
-.room-layout-row > .contextual-picker {
+.room-layout-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  min-width: 0;
+}
+
+.room-layout-value > .contextual-picker {
   justify-self: start;
 }
 

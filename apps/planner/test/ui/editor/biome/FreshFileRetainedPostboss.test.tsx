@@ -24,7 +24,7 @@ function postbossOccurrence(application: PlannerApplication) {
 }
 
 describe('Fresh File retained Postboss controls', () => {
-  it('removes a retained Well from its chip and keeps the retained Pool editable', async () => {
+  it('removes a retained Well from its toggle and keeps the retained Pool editable', async () => {
     const view = renderOccurrenceWorkbench(
       withRetainedFreshFilePostboss(createFreshFileFProject(), {
         well: true,
@@ -40,7 +40,6 @@ describe('Fresh File retained Postboss controls', () => {
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
     await view.user.click(screen.getByRole('button', { name: 'Stygian Well' }));
-    await view.user.click(screen.getByRole('option', { name: 'Remove' }));
     expect(postbossOccurrence(view.application)?.stygianWell).toBeUndefined();
 
     // The Pool has no Interact gate: its slots stay editable.

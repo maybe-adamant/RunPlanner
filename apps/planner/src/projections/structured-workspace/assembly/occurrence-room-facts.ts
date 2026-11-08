@@ -486,13 +486,9 @@ function roomLocalForOccurrence(
       const spatialState = occurrence.state.spatial;
       const pointChoices = (target: FieldsSpatialTarget, pointIds: readonly number[]) =>
         Object.freeze([
-          Object.freeze({ label: 'Choose point', value: null }),
+          Object.freeze({ label: '?', value: null }),
           ...pointIds.map((pointId, index) =>
-            Object.freeze({
-              label:
-                target.kind === 'cage' ? `Cage Point ${index + 1}` : `Optional Point ${index + 1}`,
-              value: pointId,
-            }),
+            Object.freeze({ label: `P${index + 1}`, value: pointId }),
           ),
         ]);
       const spatialControl = (
@@ -551,89 +547,10 @@ function roomLocalForOccurrence(
           ]
         : [];
       const spatial = Object.freeze([...cageControls, ...optionalControls, ...nemesisControls]);
-      const occurrenceKey = semanticAddressKey(
-        createOccurrenceAddress(input.biome, occurrence.occurrenceId),
-      );
-      const spotLines = Object.freeze(
-        (
-          [
-            ['cage', spatialDeclaration.cagePointIds, cageControls, cages],
-            [
-              'optional',
-              spatialDeclaration.optionalPointIds,
-              [...optionalControls, ...nemesisControls],
-              optionalRewards,
-            ],
-          ] as const
-        ).flatMap(([kind, pointIds, controls, slots]) => {
-          if (controls.length === 0) return [];
-          const occupants = controls.map((control) => {
-            const target = control.target;
-            const badge =
-              target.kind === 'nemesis'
-                ? 'N'
-                : (slots.find((slot) => slot.key === target.slotKey)?.badge ?? control.label);
-            return Object.freeze({
-              key: control.interactionKey,
-              badge,
-              label: control.label,
-              address: control.address,
-              interactionKey: control.interactionKey,
-              pointId: control.pointId,
-            });
-          });
-          const occupant = ({ pointId: _point, ...rest }: (typeof occupants)[number]) => {
-            void _point;
-            return Object.freeze(rest);
-          };
-          const interactionKey = `fieldsSpots:${kind}:${occurrenceKey}`;
-          // A point two slots hold shows the first; the other waits beside the line with its finding.
-          const heldAt = new Map(
-            pointIds.flatMap((pointId) => {
-              const held = occupants.find((candidate) => candidate.pointId === pointId);
-              return held === undefined ? [] : [[pointId, held] as const];
-            }),
-          );
-          const shown = new Set(heldAt.values());
-          return [
-            Object.freeze({
-              kind,
-              interactionKey,
-              spots: Object.freeze(
-                pointIds.map((pointId, index) => {
-                  const held = heldAt.get(pointId);
-                  return Object.freeze({
-                    pointId,
-                    number: index + 1,
-                    ...(held === undefined ? {} : { occupant: occupant(held) }),
-                    choices: Object.freeze([
-                      ...(held === undefined
-                        ? []
-                        : [Object.freeze({ key: `${pointId}:none`, occupant: null })]),
-                      ...occupants
-                        .filter((candidate) => candidate !== held)
-                        .map((candidate) =>
-                          Object.freeze({
-                            key: `${pointId}:${candidate.key}`,
-                            occupant: occupant(candidate),
-                          }),
-                        ),
-                    ]),
-                  });
-                }),
-              ),
-              unplaced: Object.freeze(
-                occupants.filter((candidate) => !shown.has(candidate)).map(occupant),
-              ),
-            }),
-          ];
-        }),
-      );
       return Object.freeze({
         kind: 'fields' as const,
         cages: Object.freeze(cages),
         spatial,
-        spotLines,
         owner: createOccurrenceAddress(input.biome, occurrence.occurrenceId),
         optionalRewardCount: occurrence.state.optionalRewardCount,
         optionalRewardCapacity: optionalDescriptor.optionalRewardCapacity,

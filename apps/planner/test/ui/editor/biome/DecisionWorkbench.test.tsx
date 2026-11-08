@@ -170,9 +170,9 @@ async function openPositionOptions(user: { click: (element: Element) => Promise<
 }
 
 const positionOption = (point: number) =>
-  within(screen.getByRole('listbox')).getByRole('option', { name: new RegExp(`\\b${point}$`) });
+  within(screen.getByRole('listbox')).getByRole('option', { name: new RegExp(`P${point}$`) });
 
-const positionAny = () => within(screen.getByRole('listbox')).getByRole('option', { name: /any/i });
+const positionAny = () => within(screen.getByRole('listbox')).getByRole('option', { name: /\?$/ });
 
 function authoredNaturalChaosFixture(pointCount?: 'single' | 'multiple') {
   const base = createGoldenFGHIProject();
@@ -458,7 +458,7 @@ describe('DecisionWorkbench', () => {
     ).toBe(false);
   });
 
-  it('edits a multi-point Chaos position, resets to Any, and restores it with Undo', async () => {
+  it('edits a multi-point Chaos position, returns it to the game, and restores it with Undo', async () => {
     const { located, project, source } = authoredNaturalChaosFixture('multiple');
     const view = renderOccurrenceWorkbench(
       project,
@@ -471,7 +471,7 @@ describe('DecisionWorkbench', () => {
       chaosExitOf(view.application.store.getState().projectWorkspace.history!.present)
         ?.spawnPointIndex;
     const options = await openPositionOptions(view.user);
-    // Any position, then each spawn point.
+    // Unset, then each spawn point.
     expect(options).toHaveLength(points.length + 1);
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(positionOption(2));

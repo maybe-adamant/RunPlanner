@@ -107,7 +107,7 @@ describe('native settings whose candidate context is unreached, on first render'
     expect(waiting.checked).toBe(checked);
   });
 
-  it('disables Fields spots and the room layout with the waiting title, keeping what they show', () => {
+  it('disables Fields points and the entry with the waiting title, keeping what they show', () => {
     const spots = (project: ProjectDocument) => {
       renderOccurrenceWorkbench(
         project,
@@ -116,7 +116,7 @@ describe('native settings whose candidate context is unreached, on first render'
         occurrenceById(createOccurrenceId('golden-h-combat02')),
       );
       openRoomTab('Room Overview');
-      return screen.getAllByRole('button', { name: /^Cage point \d/ }) as HTMLButtonElement[];
+      return screen.getAllByRole('button', { name: /^Cage \d point/ }) as HTMLButtonElement[];
     };
     const reached = spots(createGoldenFGHIProject());
     const shown = reached.map((spot) => spot.textContent);
@@ -136,11 +136,9 @@ describe('native settings whose candidate context is unreached, on first render'
       true,
     );
     expect(waiting.map((spot) => spot.textContent)).toEqual(shown);
-    for (const name of ['Orientation', 'Entry']) {
-      const control = screen.getByRole('button', { name: new RegExp(`^${name}`) });
-      expect((control as HTMLButtonElement).disabled).toBe(true);
-      expect(hintOf(control.closest('[data-hint]'))).toBe(waitingTitle);
-    }
+    const entry = screen.getByRole('button', { name: /^Entry/ });
+    expect((entry as HTMLButtonElement).disabled).toBe(true);
+    expect(hintOf(entry.closest('[data-hint]'))).toBe(waitingTitle);
   });
 
   it('keeps a reward wheel reached at its own frontier and withholds one past the stop', () => {

@@ -13,22 +13,27 @@ export interface RoomMapOccupant {
 }
 
 /**
- * The room as planned on its points: the entry it is entered at (others dim),
- * what stands on each anchor and Fields point, and the point a control
- * previews.
+ * The room as planned on its points: the entry it is entered at, what stands
+ * on each anchor and Fields point, and the point a control previews.
  */
 export interface RoomMapPlacements {
   /** The settled or chosen entry; absent while the game picks. */
   readonly entryId?: number | undefined;
+  /** The entries the game can pick from. */
+  readonly entryEligible: readonly number[];
   readonly entryNumbers: ReadonlyMap<number, number>;
   readonly anchors: ReadonlyMap<number, RoomMapOccupant>;
   readonly anchorNumbers: ReadonlyMap<number, number>;
   readonly fieldsPoints: ReadonlyMap<number, RoomMapOccupant>;
+  /** The point a control previews; an entry without one while the entry is being picked. */
   readonly preview?:
-    { readonly kind: 'entry' | 'anchor' | 'fieldsPoint'; readonly id: number } | undefined;
+    | { readonly kind: 'entry'; readonly id?: number | undefined }
+    | { readonly kind: 'anchor' | 'fieldsPoint'; readonly id: number }
+    | undefined;
 }
 
 const unplanned: RoomMapPlacements = Object.freeze({
+  entryEligible: [],
   entryNumbers: new Map(),
   anchors: new Map(),
   anchorNumbers: new Map(),
@@ -36,8 +41,10 @@ const unplanned: RoomMapPlacements = Object.freeze({
 });
 
 /**
- * Anchors, Fields points and entries: Melinoë's head at each entry, a ring at
- * each anchor or point, with what stands there.
+ * Anchors, Fields points and entries: a ring at each anchor or point with what
+ * stands there, and Melinoë at the entry. While the entry is picked, each
+ * entry it can pick shows its number; while the game picks among several,
+ * each shows `?`.
  */
 export function RoomMapSpots({
   markers,
@@ -59,9 +66,18 @@ export function RoomMapSpots({
         )}
       </>
     );
-  // An entry the game picks leaves every entry lit; a settled one dims the others.
-  const entryShown =
-    placements.preview?.kind === 'entry' ? placements.preview.id : placements.entryId;
+  const picking = placements.preview?.kind === 'entry' ? placements.preview : undefined;
+  const eligible = new Set(placements.entryEligible);
+  // Picking shows every entry it can pick, numbered; otherwise the settled entry alone, or the tie.
+  const entryMark = (id: number): { readonly mark?: string } | undefined => {
+    if (picking !== undefined) {
+      if (!eligible.has(id) && picking.id !== id) return undefined;
+      const number = placements.entryNumbers.get(id);
+      return number === undefined ? {} : { mark: `E${number}` };
+    }
+    if (placements.entryId !== undefined) return placements.entryId === id ? {} : undefined;
+    return eligible.size > 1 && eligible.has(id) ? { mark: '?' } : undefined;
+  };
   return (
     <>
       {markers.anchors.map((anchor) => {
@@ -107,22 +123,27 @@ export function RoomMapSpots({
         );
       })}
       {markers.entries.map((entry) => {
+        const shown = entryMark(entry.id);
+        if (shown === undefined) return null;
         const number = placements.entryNumbers.get(entry.id);
+        const chosen =
+          picking === undefined ? placements.entryId === entry.id : picking.id === entry.id;
         return (
           <span
             aria-label={number === undefined ? 'Entry' : `Entry E${number}`}
             className="room-map-entry"
-            data-chosen={(entryShown !== undefined && entryShown === entry.id) || undefined}
-            data-dim={(entryShown !== undefined && entryShown !== entry.id) || undefined}
+            data-chosen={chosen || undefined}
+            data-dim={(picking?.id !== undefined && picking.id !== entry.id) || undefined}
             data-preview={previewed('entry', entry.id)}
+            data-unset={shown.mark === '?' || undefined}
             key={`entry:${entry.id}`}
             role="img"
             style={position(entry)}
           >
             <img alt="" draggable={false} src={melinoeIcon} />
-            {number === undefined ? null : (
+            {shown.mark === undefined ? null : (
               <span aria-hidden="true" className="room-map-number">
-                E{number}
+                {shown.mark}
               </span>
             )}
           </span>

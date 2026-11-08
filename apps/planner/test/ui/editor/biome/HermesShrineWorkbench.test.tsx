@@ -118,12 +118,11 @@ describe('Hermes Shrine workbench', () => {
       application,
     );
     openOverview();
-    const spot = () => screen.getAllByRole('button', { name: 'Empty spot' })[0]!;
-    expect((spot() as HTMLButtonElement).disabled).toBe(false);
+    const toggle = () => screen.getByRole('button', { name: 'Hermes Shrine' });
+    expect((toggle() as HTMLButtonElement).disabled).toBe(false);
     expect(screen.queryByRole('checkbox', { name: /Interact.*Hermes Shrine/i })).toBeNull();
 
-    await view.user.click(spot());
-    await view.user.click(screen.getByRole('option', { name: /Hermes Shrine/ }));
+    await view.user.click(toggle());
     expect(
       screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
     ).toHaveLength(3);
@@ -736,20 +735,13 @@ describe('Hermes Shrine workbench', () => {
     });
   });
 
-  it('keeps forced Shrine inventory visible and non-removable', async () => {
+  it('keeps forced Shrine inventory visible and non-removable', () => {
     const postbossId = `surface-o-preboss:postboss`;
-    const view = renderOccurrenceWorkbench(
-      loadSurfaceNOProject(),
-      'Surface',
-      'O',
-      occurrence(postbossId),
-    );
+    renderOccurrenceWorkbench(loadSurfaceNOProject(), 'Surface', 'O', occurrence(postbossId));
     openOverview();
-    // An always-present Shrine the game places offers only spots to stand it on.
-    await view.user.click(screen.getByRole('button', { name: 'Hermes Shrine' }));
-    expect(screen.getAllByRole('option').map((option) => option.textContent?.trim())).not.toContain(
-      'Remove',
-    );
+    // An always-present Shrine is shown, with nothing to toggle.
+    expect(screen.queryByRole('button', { name: 'Hermes Shrine' })).toBeNull();
+    expect(screen.getByRole('img', { name: 'Hermes Shrine' })).toBeTruthy();
     expect(
       screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
     ).toHaveLength(3);

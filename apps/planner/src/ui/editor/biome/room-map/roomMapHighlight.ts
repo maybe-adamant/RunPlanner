@@ -12,7 +12,7 @@ import {
 /**
  * What the room's map previews for the control being worked on: one door by
  * its number, the Chaos gate, every Chaos point with one position previewed,
- * an entry (with the flip choosing it sets), the room flipped one way, an
+ * the entry being picked (one entry with the flip choosing it sets), an
  * object anchor, or a Fields point.
  */
 export type RoomMapHighlight =
@@ -20,7 +20,6 @@ export type RoomMapHighlight =
   | { readonly kind: 'chaosGate' }
   | { readonly kind: 'chaosPoints'; readonly position?: number | undefined }
   | { readonly kind: 'entry'; readonly pointId?: number; readonly flipped?: boolean | undefined }
-  | { readonly kind: 'flip'; readonly flipped?: boolean }
   | { readonly kind: 'anchor'; readonly anchorId: number }
   | { readonly kind: 'fieldsPoint'; readonly pointId: number };
 
@@ -47,7 +46,6 @@ export const highlightOwner = (highlight: RoomMapHighlight): string => {
     case 'chaosGate':
     case 'chaosPoints':
     case 'entry':
-    case 'flip':
       return highlight.kind;
   }
 };
@@ -58,13 +56,12 @@ export const sameHighlight = (
 ): boolean =>
   left !== undefined && highlightOwner(left) === highlightOwner(right) && sameDetail(left, right);
 
-/** The previewed position within one owner: a Chaos point, an entry or a flip. */
+/** The previewed position within one owner: a Chaos point or an entry. */
 function sameDetail(left: RoomMapHighlight, right: RoomMapHighlight): boolean {
   if (left.kind === 'chaosPoints' && right.kind === 'chaosPoints')
     return left.position === right.position;
   if (left.kind === 'entry' && right.kind === 'entry')
     return left.pointId === right.pointId && left.flipped === right.flipped;
-  if (left.kind === 'flip' && right.kind === 'flip') return left.flipped === right.flipped;
   return true;
 }
 

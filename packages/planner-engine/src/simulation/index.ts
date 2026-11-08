@@ -328,6 +328,7 @@ export type {
   RoomLayoutFlip,
 } from './room-layout/derivation';
 export type { RoomLayoutSettlement } from './room-layout/settlement';
+export { layoutWithEntry, layoutWithFlip, roomEntryOptions } from './room-layout/choices';
 export {
   hubDepartureSnapshotForProjectEvaluationAssembly,
   runStateSnapshotForProjectEvaluationAssembly,

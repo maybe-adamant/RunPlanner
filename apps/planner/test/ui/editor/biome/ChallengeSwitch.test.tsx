@@ -35,47 +35,49 @@ function openHost(application: PlannerApplication) {
   });
 }
 
-async function pick(
-  user: ReturnType<typeof renderWorkspace>['user'],
-  spot: string,
-  option: string | RegExp,
-) {
-  // Spots name what they hold; empty ones are interchangeable.
-  await user.click(screen.getAllByRole('button', { name: spot })[0]!);
-  await user.click(screen.getByRole('option', { name: option }));
+/** Adds the switch from its toggle, then sets its type when the first one is not wanted. */
+async function addSwitch(user: ReturnType<typeof renderWorkspace>['user'], kind: string) {
+  await user.click(screen.getByRole('button', { name: 'Challenge Switch' }));
+  const type = screen.getByRole('button', { name: 'Challenge Switch type' });
+  if (type.textContent?.includes(kind) === true) return;
+  await user.click(type);
+  await user.click(screen.getByRole('option', { name: kind }));
 }
 
 describe('challenge switch rows on the room Overview', () => {
-  it('observes one switch type at a time and clears it again', async () => {
+  it('adds a switch, changes its type, stands it on an anchor and removes it again', async () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
 
-    // An empty spot offers each switch type the room can roll, and stands it there.
-    await pick(user, 'Empty spot', /Unseen Sigil/);
+    // The toggle adds the first type the room can roll, which the game places.
+    await user.click(screen.getByRole('button', { name: 'Challenge Switch' }));
+    expect(hostRoom(application).challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
+    expect(hostRoom(application).challengeSwitch?.anchorId).toBeUndefined();
+
+    // Its type changes in place.
+    await user.click(screen.getByRole('button', { name: 'Challenge Switch type' }));
+    await user.click(screen.getByRole('option', { name: 'Unseen Sigil' }));
     expect(hostRoom(application).challengeSwitch?.variantKey).toBe(
       'PerfectClearChallengeSwitch_Pom',
     );
+
+    // Its anchor is picked among the free ones.
+    await user.click(screen.getByRole('button', { name: 'Switch spot' }));
+    await user.click(screen.getByRole('option', { name: 'A1' }));
     expect(hostRoom(application).challengeSwitch?.anchorId).toBeDefined();
 
-    // The switch's spot changes its type in place.
-    await pick(user, 'Unseen Sigil', /Infernal Trove/);
-    expect(hostRoom(application).challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
-    expect(
-      screen.getByRole<HTMLButtonElement>('button', {
-        name: 'Customize infernal trove encounter',
-      }).disabled,
-    ).toBe(false);
-
-    await pick(user, 'Infernal Trove', 'Remove');
+    await user.click(screen.getByRole('button', { name: 'Unseen Sigil' }));
     expect(hostRoom(application).challengeSwitch).toBeUndefined();
     act(() => {
       application.store.dispatch(authoredProjectUndoRequested());
     });
-    expect(hostRoom(application).challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
+    expect(hostRoom(application).challengeSwitch?.variantKey).toBe(
+      'PerfectClearChallengeSwitch_Pom',
+    );
   });
 
-  it('replaces the Well with a switch on a one-spot room as one Undo step', async () => {
+  it('refuses a second object on a one-spot room until the first leaves', async () => {
     const { application, user } = renderWorkspace(
       loadUnderworldFGHICheckpoint(),
       'Underworld',
@@ -96,25 +98,23 @@ describe('challenge switch rows on the room Overview', () => {
       );
     });
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await pick(user, 'Empty spot', /Stygian Well/);
+    await user.click(screen.getByRole('button', { name: 'Stygian Well' }));
     expect(room().stygianWell).toBeDefined();
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: 'Challenge Switch' }).disabled,
+    ).toBe(true);
 
-    await pick(user, 'Stygian Well', /Infernal Trove/);
+    await user.click(screen.getByRole('button', { name: 'Stygian Well' }));
     expect(room().stygianWell).toBeUndefined();
+    await addSwitch(user, 'Infernal Trove');
     expect(room().challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
-
-    act(() => {
-      application.store.dispatch(authoredProjectUndoRequested());
-    });
-    expect(room().stygianWell).toBeDefined();
-    expect(room().challengeSwitch).toBeUndefined();
   });
 
   it("adds the observed switch's use from its object entry", async () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await pick(user, 'Empty spot', /Infernal Trove/);
+    await addSwitch(user, 'Infernal Trove');
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
     await pickRoomObjectAction(user, 'Infernal Trove', 'Use Infernal Trove');
@@ -129,7 +129,7 @@ describe('challenge switch rows on the room Overview', () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await pick(user, 'Empty spot', /Unseen Sigil/);
+    await addSwitch(user, 'Unseen Sigil');
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     await pickRoomObjectAction(user, 'Unseen Sigil', 'Use Unseen Sigil');
 

@@ -19,9 +19,7 @@ import {
 } from '@planner/projections/roomObjectPlacementCopy';
 import type {
   WorkspaceAnchorObjectLock,
-  WorkspaceAnchorOccupant,
-  WorkspaceAnchorSpot,
-  WorkspaceAnchorSpotChoice,
+  WorkspaceRoomAnchorObject,
   WorkspaceRoomObjectSlots,
 } from '../contracts/features';
 import type { WorkspaceMarker } from '../contracts/navigation';
@@ -51,32 +49,40 @@ function presenceAddress(
 
 const fullSentence = 'The room’s other objects take every spot.';
 
-/** Why an absent object cannot be added now; a switch is refused per type, a fixed Pool never added. */
-function ownRefusalSentences(object: RoomAnchorObject): readonly string[] {
-  switch (object.kind) {
-    case 'stygianWell':
-      return (object.refusals ?? []).map((refusal) =>
-        refusal.reason === 'noFreeAnchor' ? fullSentence : stygianWellRefusalSentence(refusal),
-      );
-    case 'hermesShrine':
-      return (object.refusals ?? []).map((refusal) =>
-        refusal.reason === 'noFreeAnchor' ? fullSentence : hermesShrineRefusalSentence(refusal),
-      );
-    case 'challengeSwitch':
-    case 'purgingPool':
-      return [];
-  }
+/** Why an absent object cannot be added now, each rule as one sentence; undefined while unreached. */
+function refusalLock(object: RoomAnchorObject): WorkspaceAnchorObjectLock | undefined {
+  if (object.refusals === undefined) return { reason: 'unreached' };
+  const sentences = (() => {
+    switch (object.kind) {
+      case 'stygianWell':
+        return object.refusals.map((refusal) =>
+          refusal.reason === 'noFreeAnchor' ? fullSentence : stygianWellRefusalSentence(refusal),
+        );
+      case 'hermesShrine':
+        return object.refusals.map((refusal) =>
+          refusal.reason === 'noFreeAnchor' ? fullSentence : hermesShrineRefusalSentence(refusal),
+        );
+      case 'challengeSwitch':
+        if (object.refusals.some((refusal) => refusal.reason === 'noFreeAnchor'))
+          return [fullSentence];
+        return object.kinds.flatMap((kind) =>
+          kind.lock === undefined ? [] : [challengeSwitchRuleSentence(kind.lock)],
+        );
+      case 'purgingPool':
+        return [];
+    }
+  })();
+  return sentences.length === 0
+    ? undefined
+    : { reason: 'refused', sentences: Object.freeze([...new Set(sentences)]) };
 }
 
 /**
- * A room's physical anchors, numbered by ascending id, as the engine reads
- * them: each spot's authored occupant and the choices it offers, with the
- * commands each applies, and the present objects left to the game. An empty
- * spot adds an object there or moves a present one there; an occupied spot
- * changes or replaces its object, returns it to the game or removes it. A
- * placement composes the engine's own add command with the anchor it names.
- * Absent for an unknown room or
- * one with neither anchors nor present objects.
+ * A room's anchor objects as the engine reads them: whether each stands here
+ * with the command adding or removing it, a present object's anchor with the
+ * free anchors it can move to, and a present switch's other types. The
+ * physical anchors carry what stands on each, for the map. Absent for an
+ * unknown room or one with neither anchors nor present objects.
  */
 export function assembleRoomObjectSlots(input: {
   readonly address: OccurrenceAddress;
@@ -95,251 +101,91 @@ export function assembleRoomObjectSlots(input: {
     return undefined;
   const interactionKey = `roomObjects:${semanticAddressKey(address)}`;
   const bound: { key: string; commands: readonly ProjectCommand[] }[] = [];
-  const occupant = (object: RoomAnchorObject): WorkspaceAnchorOccupant => {
-    const anchorAddress = createRoomFeatureAddress(address, {
-      kind: 'objectAnchor',
-      object: object.kind,
-    });
-    return Object.freeze({
-      object: object.kind,
-      address: presenceAddress(address, object.kind),
-      anchorAddress,
-      anchorMarker: input.marker(anchorAddress),
-      fixed: object.fixed,
-      ...(object.kind === 'challengeSwitch' && switchKind !== undefined ? { switchKind } : {}),
-    });
+  const bind = (key: string, commands: readonly ProjectCommand[]): string => {
+    bound.push({ key, commands: Object.freeze([...commands]) });
+    return key;
   };
-  const switchObject = product.objects.find(
-    (object): object is Extract<RoomAnchorObject, { readonly kind: 'challengeSwitch' }> =>
-      object.kind === 'challengeSwitch',
-  );
-  const switchKinds = switchObject?.kinds ?? [];
-  const objectOf = (kind: RoomAnchorObjectKind): RoomAnchorObject => {
-    const found = product.objects.find((object) => object.kind === kind);
-    if (found === undefined) throw new Error(`${kind} is not an anchor object of this room`);
-    return found;
-  };
-  const choose = (
-    scope: string,
-    commands: readonly ProjectCommand[],
-    choice: Omit<WorkspaceAnchorSpotChoice, 'key'>,
-  ): WorkspaceAnchorSpotChoice => {
-    const key = `${scope}:${choice.action}:${choice.object}${choice.switchKind === undefined ? '' : `:${choice.switchKind}`}${choice.anchorId === undefined ? '' : `@${choice.anchorId}`}`;
-    bound.push({ key, commands });
-    return Object.freeze({ key, ...choice });
-  };
-  const anchorCommand = (object: RoomAnchorObject, anchorId: number | null) =>
-    object.anchorChoices?.find((choice) => choice.anchorId === anchorId)?.command;
-  // The Well's pin takes only the Well, which needs no anchor of its own there.
-  const pinOf = product.anchors.find((anchor) => anchor.pinned)?.anchorId;
-  /** Each absent object's placement on this anchor: one per observable type for a switch. */
-  const placements = (spot: number, pinned: boolean): WorkspaceAnchorSpotChoice[] =>
-    product.objects.flatMap((object) => {
-      if (object.present || object.place === undefined) return [];
-      if (pinOf !== undefined && pinned !== (object.kind === 'stygianWell')) return [];
-      const anchor = (commands: readonly ProjectCommand[]): readonly ProjectCommand[] =>
-        pinned
-          ? commands
-          : [
-              ...commands,
-              Object.freeze({
-                kind: 'ReplaceRoomObjectAnchor' as const,
-                occurrence: address,
-                object: object.kind,
-                anchorId: spot,
-              }),
-            ];
-      if (object.kind === 'challengeSwitch')
-        return switchKinds.flatMap((row) =>
-          row.observe === undefined
-            ? []
-            : [
-                choose(String(spot), anchor([row.observe]), {
-                  action: 'place',
-                  object: object.kind,
-                  switchKind: row.switchKind,
-                  anchorId: spot,
-                }),
-              ],
-        );
-      return [
-        choose(String(spot), anchor([object.place]), {
-          action: 'place',
-          object: object.kind,
-          anchorId: spot,
-        }),
-      ];
-    });
-  const unavailableAt = (offered: readonly WorkspaceAnchorSpotChoice[], pinned: boolean) =>
-    product.objects.flatMap((object) => {
-      if (pinOf !== undefined && pinned !== (object.kind === 'stygianWell')) return [];
-      if (object.kind === 'challengeSwitch' && object.refusals !== undefined) {
-        if (object.present) return [];
-        if (object.refusals.some((refusal) => refusal.reason === 'noFreeAnchor'))
-          return [
-            Object.freeze({
-              object: object.kind,
-              lock: Object.freeze({
-                reason: 'refused' as const,
-                sentences: Object.freeze([fullSentence]),
-              }),
-            }),
-          ];
-        return switchKinds.flatMap((kind) =>
-          kind.lock === undefined ||
-          offered.some(
-            (choice) =>
-              choice.object === 'challengeSwitch' && choice.switchKind === kind.switchKind,
-          )
-            ? []
-            : [
-                Object.freeze({
-                  object: object.kind,
-                  switchKind: kind.switchKind,
-                  lock: Object.freeze({
-                    reason: 'refused' as const,
-                    sentences: Object.freeze([challengeSwitchRuleSentence(kind.lock)]),
-                  }),
-                }),
-              ],
-        );
-      }
-      if (object.present || object.fixed || offered.some((choice) => choice.object === object.kind))
-        return [];
-      const sentences = ownRefusalSentences(object);
-      const lock: WorkspaceAnchorObjectLock | undefined =
-        object.refusals === undefined
-          ? { reason: 'unreached' }
-          : sentences.length === 0
-            ? undefined
-            : { reason: 'refused', sentences: Object.freeze(sentences) };
-      return lock === undefined ? [] : [Object.freeze({ object: object.kind, lock })];
-    });
-  /**
-   * An occupied spot's own changes, as the engine offers them on the occupant's
-   * native slot: a switch's other types, and each object replacing it, which
-   * then stands here.
-   */
-  const changes = (
-    anchorId: number,
-    pinned: boolean,
-    object: RoomAnchorObject,
-  ): WorkspaceAnchorSpotChoice[] => {
-    const slot = product.slots.find((candidate) => candidate.occupant === object.kind);
-    if (slot === undefined) return [];
-    const scope = String(anchorId);
-    return slot.choices.flatMap((choice) => {
-      if (choice.kind === null || choice.commands.length === 0) return [];
-      const kind = choice.kind;
-      if (kind === object.kind)
-        return [
-          choose(scope, choice.commands, {
-            action: 'retype',
-            object: kind,
-            ...(choice.switchKind === undefined ? {} : { switchKind: choice.switchKind }),
-          }),
-        ];
-      if (pinOf !== undefined && pinned !== (kind === 'stygianWell')) return [];
-      return [
-        choose(
-          scope,
-          pinned
-            ? choice.commands
-            : [
-                ...choice.commands,
-                Object.freeze({
-                  kind: 'ReplaceRoomObjectAnchor' as const,
-                  occurrence: address,
-                  object: kind,
-                  anchorId,
-                }),
-              ],
-          {
-            action: 'replace',
-            object: kind,
-            ...(choice.switchKind === undefined ? {} : { switchKind: choice.switchKind }),
-            anchorId,
-          },
-        ),
-      ];
-    });
-  };
-  /** What leaves an occupied spot: back to the game, then removal. */
-  const departures = (scope: string, object: RoomAnchorObject): WorkspaceAnchorSpotChoice[] => {
-    const native = object.anchorId === undefined ? undefined : anchorCommand(object, null);
-    return [
-      ...(native === undefined
-        ? []
-        : [choose(scope, [native], { action: 'native', object: object.kind })]),
-      ...(object.remove === undefined
-        ? []
-        : [choose(scope, [object.remove], { action: 'remove', object: object.kind })]),
-    ];
-  };
-  const anchors = [...product.anchors].sort((left, right) => left.anchorId - right.anchorId);
-  const spots = anchors.map((anchor, index): WorkspaceAnchorSpot => {
-    const scope = String(anchor.anchorId);
-    if (anchor.occupant !== undefined) {
-      const object = objectOf(anchor.occupant);
-      return Object.freeze({
-        anchorId: anchor.anchorId,
-        number: index + 1,
-        pinned: anchor.pinned,
-        occupant: occupant(object),
-        choices: Object.freeze([
-          ...changes(anchor.anchorId, anchor.pinned, object),
-          ...departures(scope, object),
-        ]),
-        unavailable: Object.freeze([]),
+  const kindOf = (kind: RoomAnchorObjectKind) =>
+    kind === 'challengeSwitch' && switchKind !== undefined ? { switchKind } : {};
+  const pin = product.anchors.find((anchor) => anchor.pinned)?.anchorId;
+  const objects = product.objects
+    // An object the route never hosts here and the plan does not hold has nothing to show.
+    .filter((object) => object.present || object.hosted)
+    .map((object): WorkspaceRoomAnchorObject => {
+      const anchorAddress = createRoomFeatureAddress(address, {
+        kind: 'objectAnchor',
+        object: object.kind,
       });
-    }
-    const moves = product.objects.flatMap((object) => {
-      const command = object.present ? anchorCommand(object, anchor.anchorId) : undefined;
-      return command === undefined
-        ? []
-        : [
-            choose(scope, [command], {
-              action: 'move',
-              object: object.kind,
-              anchorId: anchor.anchorId,
-            }),
-          ];
-    });
-    const offered = [...placements(anchor.anchorId, anchor.pinned), ...moves];
-    return Object.freeze({
-      anchorId: anchor.anchorId,
-      number: index + 1,
-      pinned: anchor.pinned,
-      choices: Object.freeze(offered),
-      unavailable: Object.freeze(unavailableAt(offered, anchor.pinned)),
-    });
-  });
-  const held = new Set(product.anchors.flatMap((anchor) => anchor.occupant ?? []));
-  const unplaced = product.objects
-    .filter((object) => object.present && !held.has(object.kind))
-    .map((object) => {
-      const scope = `unplaced:${object.kind}`;
-      const moves = (object.anchorChoices ?? []).flatMap((choice) =>
-        choice.anchorId === null
+      const toggle = object.fixed ? undefined : object.present ? object.remove : object.place;
+      const lock = object.present || object.fixed ? undefined : refusalLock(object);
+      const pinned = object.kind === 'stygianWell' && pin !== undefined ? pin : undefined;
+      const switchSlot =
+        object.kind === 'challengeSwitch' && object.present
+          ? product.slots.find((slot) => slot.occupant === 'challengeSwitch')
+          : undefined;
+      const kinds = (switchSlot?.choices ?? []).flatMap((choice) =>
+        choice.kind !== 'challengeSwitch' ||
+        choice.switchKind === undefined ||
+        choice.commands.length === 0
           ? []
           : [
-              choose(scope, [choice.command], {
-                action: 'move',
-                object: object.kind,
-                anchorId: choice.anchorId,
+              Object.freeze({
+                key: bind(`kind:${choice.switchKind}`, choice.commands),
+                switchKind: choice.switchKind,
               }),
             ],
       );
       return Object.freeze({
-        ...occupant(object),
-        choices: Object.freeze([...moves, ...departures(scope, object)]),
+        object: object.kind,
+        ...kindOf(object.kind),
+        address: presenceAddress(address, object.kind),
+        anchorAddress,
+        anchorMarker: input.marker(anchorAddress),
+        present: object.present,
+        fixed: object.fixed,
+        ...(toggle === undefined
+          ? {}
+          : { toggleKey: bind(`${object.present ? 'remove' : 'add'}:${object.kind}`, [toggle]) }),
+        ...(lock === undefined ? {} : { lock: Object.freeze(lock) }),
+        ...(object.present
+          ? {
+              anchor: Object.freeze({
+                ...(object.anchorId === undefined ? {} : { anchorId: object.anchorId }),
+                ...(pinned === undefined ? {} : { pinned }),
+                choices: Object.freeze(
+                  (object.anchorChoices ?? [])
+                    .filter((choice) => choice.anchorId !== (object.anchorId ?? null))
+                    .map((choice) =>
+                      Object.freeze({
+                        key: bind(`anchor:${object.kind}@${choice.anchorId ?? 'game'}`, [
+                          choice.command,
+                        ]),
+                        anchorId: choice.anchorId,
+                      }),
+                    ),
+                ),
+              }),
+            }
+          : {}),
+        ...(kinds.length === 0 ? {} : { kinds: Object.freeze(kinds) }),
       });
     });
+  const anchors = [...product.anchors]
+    .sort((left, right) => left.anchorId - right.anchorId)
+    .map((anchor, index) =>
+      Object.freeze({
+        anchorId: anchor.anchorId,
+        number: index + 1,
+        ...(anchor.occupant === undefined
+          ? {}
+          : { occupant: Object.freeze({ object: anchor.occupant, ...kindOf(anchor.occupant) }) }),
+      }),
+    );
   return Object.freeze({
     objectSlots: Object.freeze({
       interactionKey,
-      spots: Object.freeze(spots),
-      unplaced: Object.freeze(unplaced),
+      anchors: Object.freeze(anchors),
+      objects: Object.freeze(objects),
     }),
     requirement: Object.freeze({
       kind: 'roomChoices' as const,

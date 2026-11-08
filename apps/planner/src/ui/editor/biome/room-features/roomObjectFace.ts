@@ -25,3 +25,14 @@ export const heldObjectIcon = (held: HeldObject) =>
   held.switchKind === undefined
     ? roomObjectIcon(held.object)
     : challengeSwitchIcon(held.switchKind);
+
+const objectShortNames: Readonly<Record<WorkspaceAnchorObject, string>> = Object.freeze({
+  stygianWell: 'Well',
+  purgingPool: 'Pool',
+  hermesShrine: 'Shrine',
+  challengeSwitch: 'Switch',
+});
+
+/** An object's row name, its icon beside it. */
+export const heldObjectShortName = (object: WorkspaceAnchorObject): string =>
+  objectShortNames[object];

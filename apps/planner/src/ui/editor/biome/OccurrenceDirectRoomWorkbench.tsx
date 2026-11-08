@@ -17,7 +17,7 @@ import type {
 import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
 import type { TimelineDoors } from './TimelineDoors';
 import { roomFeatureSections } from './room-features/roomFeatureSections';
-import { RoomOverviewSections, type RoomOverviewSectionContent } from './RoomOverviewSections';
+import { RoomOverviewSections } from './RoomOverviewSections';
 import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
 import {
   EncounterEndControls,
@@ -207,21 +207,24 @@ export function DirectRoomWorkbench({
             phase={phase}
           />
         ));
-  // Each room kind contributes its sections; RoomOverviewSections owns their order.
-  const renderOverview = (
-    sections: Pick<RoomOverviewSectionContent, 'encounters' | 'contents'>,
-  ): ReactNode => (
-    <RoomOverviewSections
-      sections={{
-        ...sections,
-        ...roomFeatureSections({
-          features: workbench.features,
-          interactions,
-          room,
-        }),
-      }}
-    />
-  );
+  // Each room kind contributes its blocks; RoomOverviewSections owns their order.
+  const renderOverview = (local: {
+    readonly encounters: ReactNode;
+    readonly present?: ReactNode;
+    readonly contents?: ReactNode;
+  }): ReactNode => {
+    const shared = roomFeatureSections({ features: workbench.features, interactions, room });
+    return (
+      <RoomOverviewSections
+        sections={{
+          entry: [['encounters', local.encounters]],
+          present: [['local', local.present], ...shared.present],
+          contents: [['local', local.contents], ...shared.contents],
+          positions: shared.positions,
+        }}
+      />
+    );
+  };
   const renderEncounterStructure = (children?: ReactNode): ReactNode => (
     <RoomEncounterStructureWorkbench>{children}</RoomEncounterStructureWorkbench>
   );
@@ -253,7 +256,7 @@ export function DirectRoomWorkbench({
       if (view === 'overview') {
         return renderOverview({
           encounters: renderEncounterStructure(renderOverviewEncounterPhases()),
-          contents: <FieldsWorkbench interactions={interactions} room={workbench.fields} />,
+          present: <FieldsWorkbench interactions={interactions} room={workbench.fields} />,
         });
       }
       return (

@@ -52,7 +52,15 @@ function layoutOf(project: ProjectDocument, address = rolled) {
   return { ...assembled.layout, commandOf };
 }
 
-describe('room layout', () => {
+// Its entries each allow either flip of the roll.
+const independent = createOccurrenceAddress(fBiome, createOccurrenceId('golden-f-b4-e1'));
+
+function choicesOf(layout: ReturnType<typeof layoutOf>) {
+  if (layout.state.kind !== 'choice') throw new Error('expected an entry choice');
+  return layout.state.choices;
+}
+
+describe('room entry', () => {
   it('numbers the entries by ascending HeroStart id', () => {
     const layout = layoutOf(createGoldenFGHIProject());
     const ids = layout.entries.map((entry) => entry.pointId);
@@ -60,49 +68,64 @@ describe('room layout', () => {
     expect(layout.entries.map((entry) => entry.number)).toEqual(ids.map((_, index) => index + 1));
   });
 
-  it('offers a rolled flip and each eligible entry with the flip it needs', () => {
+  it('offers each entry of a rolled flip once, with the flip it needs', () => {
     const layout = layoutOf(createGoldenFGHIProject());
-    expect(layout.flip.state).toMatchObject({
-      kind: 'choice',
-      choices: [{ value: false }, { value: true }],
-    });
-    if (layout.entry.state.kind !== 'choice') throw new Error('expected an entry choice');
-    const choices = layout.entry.state.choices;
-    expect(choices.map((choice) => choice.flipped)).toEqual([true, false]);
-    // Choosing an entry authors the flip it needs with it.
-    const flipping = choices.find((choice) => choice.flipped === true)!;
+    const pairs = choicesOf(layout).map((choice) => choice.pair);
+    expect(pairs.map((pair) => pair?.flipped)).toEqual([true, false]);
+    expect(layout.state).not.toHaveProperty('value');
+    // The game still picks between the two entries.
+    expect(layout.entryId).toBeUndefined();
+    expect(layout.eligible).toHaveLength(2);
+    const flipping = choicesOf(layout).find((choice) => choice.pair?.flipped === true)!;
     expect(layout.commandOf(flipping.key)).toEqual({
       kind: 'ReplaceRoomLayout',
       occurrence: rolled,
-      layout: { flipped: true, entryStartPointId: flipping.value },
+      layout: { flipped: true, entryStartPointId: flipping.pair!.pointId },
     });
   });
 
-  it('settles the chosen entry and returns it to the game keeping the flip', () => {
+  it('offers both flips of an entry either flip allows', () => {
+    const layout = layoutOf(createGoldenFGHIProject(), independent);
+    const pairs = choicesOf(layout).map((choice) => choice.pair!);
+    expect(pairs).toHaveLength(4);
+    const [first] = layout.eligible;
+    expect(pairs.filter((pair) => pair.pointId === first).map((pair) => pair.flipped)).toEqual([
+      false,
+      true,
+    ]);
+    const unflipped = choicesOf(layout).find(
+      (choice) => choice.pair?.pointId === first && choice.pair?.flipped === false,
+    )!;
+    expect(layout.commandOf(unflipped.key)).toEqual({
+      kind: 'ReplaceRoomLayout',
+      occurrence: independent,
+      layout: { flipped: false, entryStartPointId: first },
+    });
+  });
+
+  it('settles a chosen pair and returns the entry and flip to the game together', () => {
     const first = layoutOf(createGoldenFGHIProject());
-    if (first.entry.state.kind !== 'choice') throw new Error('expected an entry choice');
-    const flipping = first.entry.state.choices.find((choice) => choice.flipped === true)!;
+    const flipping = choicesOf(first).find((choice) => choice.pair?.flipped === true)!;
     const project = applyProjectCommand(
       createGoldenFGHIProject(),
       catalog,
       first.commandOf(flipping.key),
     );
     const layout = layoutOf(project);
-    expect(layout.flip.state).toMatchObject({ kind: 'choice', value: true });
-    if (layout.entry.state.kind !== 'choice') throw new Error('expected an entry choice');
-    expect(layout.entry.state.value).toBe(flipping.value);
-    const game = layout.entry.state.choices.find((choice) => choice.value === null)!;
+    expect(layout.state).toMatchObject({ kind: 'choice', value: flipping.pair });
+    expect(layout).toMatchObject({ entryId: flipping.pair!.pointId, flipped: true });
+    const game = choicesOf(layout).find((choice) => choice.pair === null)!;
     expect(layout.commandOf(game.key)).toEqual({
       kind: 'ReplaceRoomLayout',
       occurrence: rolled,
-      layout: { flipped: true },
+      layout: {},
     });
   });
 
-  it('shows a door-decided flip and entry with nothing to choose', () => {
+  it('shows a door-decided entry and flip as one settled pair', () => {
     const layout = layoutOf(createGoldenFGHIProject(), doorDecided);
-    expect(layout.flip.state).toEqual({ kind: 'derived', value: true });
-    expect(layout.entry.state).toMatchObject({ kind: 'derived' });
+    expect(layout.state).toMatchObject({ kind: 'settled', by: 'door', value: { flipped: true } });
+    expect(layout.flipped).toBe(true);
   });
 
   it('keeps a flip the door decides as a stale value its choice clears', () => {
@@ -112,9 +135,8 @@ describe('room layout', () => {
       layout: { flipped: false },
     });
     const layout = layoutOf(project, doorDecided);
-    if (layout.flip.state.kind !== 'derived') throw new Error('expected a derived flip');
-    expect(layout.flip.state.stale?.value).toBe(false);
-    expect(layout.commandOf(layout.flip.state.stale!.clearKey)).toEqual({
+    if (layout.state.kind !== 'settled') throw new Error('expected a settled entry');
+    expect(layout.commandOf(layout.state.stale!.clearKey)).toEqual({
       kind: 'ReplaceRoomLayout',
       occurrence: doorDecided,
       layout: {},
@@ -123,7 +145,6 @@ describe('room layout', () => {
 
   it('waits while the room is unreached', () => {
     const layout = layoutOf(createGoldenFGHIProject(), unreached);
-    expect(layout.flip.state).toEqual({ kind: 'unreached' });
-    expect(layout.entry.state).toEqual({ kind: 'unreached' });
+    expect(layout.state).toEqual({ kind: 'unreached' });
   });
 });

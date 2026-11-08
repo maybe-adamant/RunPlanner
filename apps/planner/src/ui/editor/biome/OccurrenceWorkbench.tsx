@@ -37,7 +37,7 @@ import { createRouteAddress } from '@run-planner/engine/authored-project';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapColumn, type RoomMapStage } from './room-map/RoomMapColumn';
 import { RoomMapHighlightScope } from './room-map/RoomMapHighlightScope';
-import { roomMapPlacements, settledLayoutValue } from './room-map/roomMapPlacements';
+import { roomMapPlacements } from './room-map/roomMapPlacements';
 
 /**
  * The map's stage for a Timeline row: before Doors open the doors are closed,
@@ -309,7 +309,7 @@ export function OccurrenceWorkbench({
             </div>
             <RoomMapColumn
               chips={timelineDoors?.summary?.chips}
-              flipped={room.layout === undefined ? false : settledLayoutValue(room.layout.flip)}
+              flipped={room.layout?.flipped === true}
               gameName={room.gameName}
               map={room.map}
               placements={roomMapPlacements(room)}

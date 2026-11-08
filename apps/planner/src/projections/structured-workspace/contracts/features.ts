@@ -415,52 +415,39 @@ export type WorkspaceAnchorObjectLock =
   /** The rules refusing it here, each as one sentence. */
   | { readonly reason: 'refused'; readonly sentences: readonly string[] };
 
-/**
- * What an anchor spot choice does: add an object here, move a present one
- * here, change a switch's type, replace the occupant, return it to the game,
- * or remove it.
- */
-export type WorkspaceAnchorSpotAction =
-  'place' | 'move' | 'retype' | 'replace' | 'native' | 'remove';
-
-/** One choice an anchor spot or an unplaced object offers. */
-export interface WorkspaceAnchorSpotChoice {
-  readonly key: string;
-  readonly action: WorkspaceAnchorSpotAction;
-  readonly object: WorkspaceAnchorObject;
-  /** The switch type a challenge switch placement observes. */
-  readonly switchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
-  /** The anchor a move or placement stands the object on. */
+/** A present object's anchor: authored, pinned, or left to the game, and where it can move. */
+export interface WorkspaceRoomObjectAnchor {
+  /** The authored anchor; absent leaves it to the game. */
   readonly anchorId?: number;
+  /** The Well always stands on the room's pin; nothing moves it. */
+  readonly pinned?: number;
+  /** Each free anchor it can move to, or null to leave it to the game. */
+  readonly choices: readonly { readonly key: string; readonly anchorId: number | null }[];
 }
 
-/** A present object: on an anchor, or left to the game. */
-export interface WorkspaceAnchorOccupant {
+/** One object a room can hold on its anchors: whether it stands here, and where. */
+export interface WorkspaceRoomAnchorObject {
   readonly object: WorkspaceAnchorObject;
+  /** The observed type of a challenge switch. */
+  readonly switchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
   /** The owner of its presence findings. */
   readonly address: RoomFeatureAddress;
   /** The owner of its anchor findings. */
   readonly anchorAddress: RoomFeatureAddress;
   readonly anchorMarker: WorkspaceMarker;
-  /** Present on entry whatever is authored; nothing can remove it. */
+  readonly present: boolean;
+  /** Present on entry whatever is authored; nothing adds or removes it. */
   readonly fixed: boolean;
-  /** The observed type of a challenge switch. */
-  readonly switchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
-}
-
-/** One physical `ChallengeSwitchBase` anchor, numbered by ascending id. */
-export interface WorkspaceAnchorSpot {
-  readonly anchorId: number;
-  readonly number: number;
-  /** The Well always stands here, and nothing else does. */
-  readonly pinned: boolean;
-  readonly occupant?: WorkspaceAnchorOccupant;
-  readonly choices: readonly WorkspaceAnchorSpotChoice[];
-  /** Each absent object, or switch type, an empty spot cannot take now. */
-  readonly unavailable: readonly {
-    readonly object: WorkspaceAnchorObject;
-    readonly switchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
-    readonly lock: WorkspaceAnchorObjectLock;
+  /** The choice adding it while absent, or removing it while present. */
+  readonly toggleKey?: string;
+  /** Why an absent object cannot be added now. */
+  readonly lock?: WorkspaceAnchorObjectLock;
+  /** A present object's anchor. */
+  readonly anchor?: WorkspaceRoomObjectAnchor;
+  /** A present switch's other observable types, each changing it in place. */
+  readonly kinds?: readonly {
+    readonly key: string;
+    readonly switchKind: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
   }[];
 }
 
@@ -486,14 +473,20 @@ export interface WorkspaceRoomMap {
   readonly fieldsOptionalPoints: readonly WorkspaceRoomMapPoint[];
 }
 
-/** A room's objects on its physical anchors, and the present objects the game places. */
+/** A room's anchor objects and its physical anchors, numbered A1..An by ascending id. */
 export interface WorkspaceRoomObjectSlots {
   readonly interactionKey: string;
-  readonly spots: readonly WorkspaceAnchorSpot[];
-  /** Present objects on no authored anchor, each with its own choices. */
-  readonly unplaced: readonly (WorkspaceAnchorOccupant & {
-    readonly choices: readonly WorkspaceAnchorSpotChoice[];
-  })[];
+  readonly anchors: readonly {
+    readonly anchorId: number;
+    readonly number: number;
+    /** The object authored on it, with a switch's observed type. */
+    readonly occupant?: {
+      readonly object: WorkspaceAnchorObject;
+      readonly switchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
+    };
+  }[];
+  /** Each object present, or one the room can hold on its route, in native spawn order. */
+  readonly objects: readonly WorkspaceRoomAnchorObject[];
 }
 
 /** A room's keyed choices, each applying its commands as one edit. */
@@ -503,43 +496,55 @@ export interface WorkspaceRoomChoicesInteraction {
   readonly intentFor: (choiceKey: string) => WorkspaceCommandsIntent;
 }
 
-/** One of the room's layout facts as its entry settles it. */
-export interface WorkspaceRoomLayoutControl<T> {
-  readonly address: RoomFeatureAddress;
-  readonly marker: WorkspaceMarker;
-  readonly state:
-    /** The room's entry is not reached yet. */
-    | { readonly kind: 'unreached' }
-    /** The room has no entry points on record. */
-    | { readonly kind: 'unknown' }
-    | {
-        readonly kind: 'fixed' | 'derived';
-        readonly value: T;
-        /** A held value the room cannot take; its choice clears it. */
-        readonly stale?: { readonly value: T; readonly clearKey: string };
-      }
-    | {
-        readonly kind: 'choice';
-        /** The settled value; absent leaves it to the game. */
-        readonly value?: T;
-        /** A held value outside the choices. */
-        readonly stale?: T;
-        readonly choices: readonly {
-          readonly key: string;
-          /** Null returns it to the game. */
-          readonly value: T | null;
-          /** The flip an entry needs; choosing the entry sets it. */
-          readonly flipped?: boolean;
-        }[];
-      };
+/** An entry point with the way the room faces when entered there. */
+export interface WorkspaceRoomEntryPair {
+  readonly pointId: number;
+  readonly flipped: boolean;
 }
 
-/** A room's horizontal flip and entry, with the entries numbered by ascending `HeroStart` id. */
+/** The room's entry with its orientation, as its entry settles them. */
+export type WorkspaceRoomEntryState =
+  /** The room's entry is not reached yet. */
+  | { readonly kind: 'unreached' }
+  /** The room has no entry points on record. */
+  | { readonly kind: 'unknown' }
+  /** One pair only: the room fixes it or the previous door decides it. */
+  | {
+      readonly kind: 'settled';
+      readonly by: 'fixed' | 'door';
+      readonly value: WorkspaceRoomEntryPair;
+      /** A held entry or flip the room cannot take, with the choice clearing it. */
+      readonly stale?: { readonly clearKey: string };
+    }
+  | {
+      readonly kind: 'choice';
+      /** The settled pair; absent leaves part of it to the game. */
+      readonly value?: WorkspaceRoomEntryPair;
+      /** A held entry or flip outside the choices. */
+      readonly stale?: { readonly pointId?: number; readonly flipped?: boolean };
+      readonly choices: readonly {
+        readonly key: string;
+        /** Null returns the entry and flip to the game. */
+        readonly pair: WorkspaceRoomEntryPair | null;
+      }[];
+    };
+
+/** A room's entry, numbered E1..En by ascending `HeroStart` id. */
 export interface WorkspaceRoomLayout {
   readonly interactionKey: string;
   readonly entries: readonly { readonly pointId: number; readonly number: number }[];
-  readonly flip: WorkspaceRoomLayoutControl<boolean>;
-  readonly entry: WorkspaceRoomLayoutControl<number>;
+  /** Each entry point a pair names. */
+  readonly eligible: readonly number[];
+  /** The settled entry point, whatever the flip; absent while the game picks among entries. */
+  readonly entryId?: number;
+  /** The flip the room is shown with; unknown while the game rolls it. */
+  readonly flipped?: boolean;
+  /** The owner of entry findings; flip findings mark the same control. */
+  readonly address: RoomFeatureAddress;
+  readonly flipAddress: RoomFeatureAddress;
+  readonly marker: WorkspaceMarker;
+  readonly flipMarker: WorkspaceMarker;
+  readonly state: WorkspaceRoomEntryState;
 }
 
 /** Why a challenge switch kind or variant cannot be observed at its host's entry. */
