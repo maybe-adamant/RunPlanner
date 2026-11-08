@@ -3323,6 +3323,11 @@ span.hub-board-status-line {
   padding-left: var(--overview-subrow-indent);
 }
 
+/* A labelled row's value column already aligns its content. */
+.room-overview-workbench .room-layout-value :is(.icon-toggle-row, .additional-exit-row) {
+  padding-left: 0;
+}
+
 /* Each object keeps its own line: its toggle, then its slots and choices when on. */
 .room-overview-workbench .room-overview-panel .room-contract-pedestal {
   padding-left: var(--overview-subrow-indent);
