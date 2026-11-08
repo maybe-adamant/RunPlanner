@@ -4,7 +4,7 @@ import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon
 import { melinoeIcon } from '@planner/ui/artwork/player/playerArtwork';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { mapMarkerArtworkStyle } from './mapMarkerArtwork';
-import type { RoomMapPointMark } from './roomMapHighlight';
+import { useRoomMapPointers, type RoomMapPointMark } from './roomMapHighlight';
 import { position } from './roomMapPosition';
 
 /** What stands on a map point: its name, icon and corner mark. */
@@ -64,6 +64,7 @@ export function RoomMapSpots({
   readonly markers: RoomMapMarkers;
   readonly placements?: RoomMapPlacements;
 }) {
+  const pointers = useRoomMapPointers();
   const previewed = (kind: 'entry' | 'anchor' | 'fieldsPoint', id: number) =>
     (placements.preview?.kind === kind && placements.preview.id === id) || undefined;
   const occupantMark = (occupant: RoomMapOccupant | undefined) =>
@@ -115,6 +116,7 @@ export function RoomMapSpots({
             data-point="anchor"
             data-preview={previewed('anchor', anchor.id)}
             key={`anchor:${anchor.id}`}
+            {...pointers({ kind: 'anchor', anchorId: anchor.id })}
             role="img"
             style={position(anchor)}
           >
@@ -144,6 +146,7 @@ export function RoomMapSpots({
             data-point={kind}
             data-preview={previewed('fieldsPoint', point.id)}
             key={`fields:${point.id}`}
+            {...pointers({ kind: 'fieldsPoint', pointId: point.id })}
             role="img"
             style={position(point)}
           >
@@ -171,6 +174,7 @@ export function RoomMapSpots({
             data-preview={previewed('entry', entry.id)}
             data-unset={shown.mark === '?' || undefined}
             key={`entry:${entry.id}`}
+            {...pointers({ kind: 'entry', pointId: entry.id })}
             role="img"
             style={position(entry)}
           >

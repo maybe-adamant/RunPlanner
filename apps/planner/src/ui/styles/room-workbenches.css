@@ -3477,6 +3477,33 @@ span.hub-board-status-line {
   min-width: 0;
 }
 
+/* Its points answer the pointer, which marks the control that owns the point. */
+.room-map-column .room-map-marker-layer > :is(.room-map-point, .room-map-door, .room-map-entry) {
+  pointer-events: auto;
+}
+
+/* A Timeline row holding the control whose map point is under the pointer takes the map row's tint. */
+.room-action-list > .timeline-row:has([data-map-pointed]) {
+  background: rgb(245 211 134 / 7%);
+}
+
+/* A point under the pointer rings like a previewed one. */
+.room-map-column
+  .room-map-marker-layer
+  > :is(.room-map-point, .room-map-door, .room-map-entry):hover {
+  z-index: 3;
+  outline: 3px dashed #fff4c7;
+  outline-offset: 3px;
+}
+
+/* The control whose map point is under the pointer, in the map preview's dashed ring. */
+[data-map-pointed]:not(.room-layout-row),
+.room-layout-row[data-map-pointed] > :not(.room-layout-label) {
+  border-radius: 7px;
+  outline: 2px dashed #fff4c7;
+  outline-offset: 2px;
+}
+
 .room-map-column > .room-map-viewport > .room-map-canvas {
   width: 100%;
   aspect-ratio: 16 / 9;

@@ -11,7 +11,7 @@ import {
   RoomMapSpots,
   type RoomMapPlacements,
 } from './RoomMapPoints';
-import { useRoomMapHighlight } from './roomMapHighlight';
+import { useRoomMapHighlight, useRoomMapPointers } from './roomMapHighlight';
 import { position } from './roomMapPosition';
 
 /**
@@ -52,6 +52,7 @@ export function RoomMapColumn({
   readonly title: string;
 }) {
   const highlight = useRoomMapHighlight();
+  const pointers = useRoomMapPointers();
   const calibration = roomMapCalibrations[gameName];
   if (calibration === undefined) return null;
   // The flip a previewed entry sets shows the room that way.
@@ -132,6 +133,7 @@ export function RoomMapColumn({
                 data-taken={(taken && chaosChip?.picked) || undefined}
                 role="img"
                 style={position(markers.chaosGate)}
+                {...pointers({ kind: 'chaosGate' })}
               >
                 {!open || chaosChip === undefined ? null : (
                   <span aria-hidden="true" className="room-map-door-face">
@@ -164,6 +166,11 @@ export function RoomMapColumn({
                   key={`door:${door.id}`}
                   role="img"
                   style={position(door)}
+                  {...pointers(
+                    door.doorIndex === undefined
+                      ? undefined
+                      : { kind: 'door', doorIndex: door.doorIndex },
+                  )}
                 >
                   {open && chip !== undefined ? (
                     <span aria-hidden="true" className="room-map-door-face">

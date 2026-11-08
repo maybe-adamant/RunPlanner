@@ -1066,6 +1066,7 @@ export function BatchExitPicker({
           chips={[
             {
               key: target.exitKey,
+              doorIndex: target.index,
               label: `Door ${target.index} · ${target.door.room.label}`,
               roomIcon: target.door.room.roomIcon,
               rewards: doorRewardIcons(target, 'final'),
@@ -1095,6 +1096,7 @@ export function BatchExitPicker({
       )
       .map((target) => ({
         key: target.exitKey,
+        doorIndex: target.index,
         label: `Door ${target.index} · ${target.door.room.label}`,
         roomIcon: target.door.room.roomIcon,
         rewards: doorRewardIcons(target, 'final'),
@@ -1104,6 +1106,7 @@ export function BatchExitPicker({
       })),
     ...additional.map((control) => ({
       key: workspaceInteractionKey(control.owner),
+      additionalExit: 'kind' in control ? ('chaos' as const) : ('zagreusContract' as const),
       label: control.exitTypeLabel,
       roomIcon: control.door.room.roomIcon,
       rewards: [rewardIcon(control.fixedRewardType)],

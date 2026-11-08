@@ -65,4 +65,20 @@ describe('room map highlight', () => {
     view.rerender(<Workbench scope="room:overview" />);
     expect(previewed()).toEqual([]);
   });
+
+  it('marks the controls that own a map point while the pointer is on it, without previewing it', () => {
+    render(<Workbench scope="room:actions" />);
+    const marker = screen.getByRole('img', { name: 'Door 2 · Combat 03 · Closed' });
+    const pointed = () =>
+      screen
+        .getAllByRole('listitem')
+        .filter((chip) => chip.hasAttribute('data-map-pointed'))
+        .map((chip) => chip.getAttribute('aria-label'));
+
+    fireEvent.pointerEnter(marker);
+    expect(pointed()).toEqual(['Door 2 · Combat 03']);
+    expect(previewed()).toEqual([]);
+    fireEvent.pointerLeave(marker);
+    expect(pointed()).toEqual([]);
+  });
 });

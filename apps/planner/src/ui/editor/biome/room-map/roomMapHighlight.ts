@@ -46,6 +46,9 @@ export const RoomMapHighlightValue = createContext<RoomMapHighlight | undefined>
 export const RoomMapHighlightChannel = createContext<RoomMapHighlightActions | undefined>(
   undefined,
 );
+/** The map point under the pointer, which lights the control that owns it. */
+export const RoomMapPointedValue = createContext<RoomMapHighlight | undefined>(undefined);
+export const RoomMapPointedChannel = createContext<RoomMapHighlightActions | undefined>(undefined);
 
 // One picker's preview stays one owner while its highlighted position moves.
 export const highlightOwner = (highlight: RoomMapHighlight): string => {
@@ -118,14 +121,19 @@ export interface RoomMapLinkProps {
   readonly onPointerLeave?: PointerEventHandler<HTMLElement>;
   readonly onFocus?: FocusEventHandler<HTMLElement>;
   readonly onBlur?: FocusEventHandler<HTMLElement>;
+  /** The map point this element owns is under the pointer. */
+  readonly 'data-map-pointed'?: true;
 }
 
 /**
- * Hovering or focusing an element linked to a map point previews that point;
- * nothing where the element has no point or no map.
+ * Hovering or focusing an element linked to a map point previews that point,
+ * and pointing at that point on the map marks the element; nothing where the
+ * element has no point or no map.
  */
 export function useRoomMapLinks(): (target: RoomMapHighlight | undefined) => RoomMapLinkProps {
   const actions = useRoomMapHighlightActions();
+  const pointed = useContext(RoomMapPointedValue);
+  const pointedOwner = pointed === undefined ? undefined : highlightOwner(pointed);
   return useCallback(
     (target) =>
       target === undefined || actions === undefined
@@ -135,7 +143,30 @@ export function useRoomMapLinks(): (target: RoomMapHighlight | undefined) => Roo
             onPointerLeave: () => actions.release(target),
             onFocus: () => actions.show(target),
             onBlur: () => actions.release(target),
+            ...(highlightOwner(target) === pointedOwner ? { 'data-map-pointed': true } : {}),
           },
-    [actions],
+    [actions, pointedOwner],
+  );
+}
+
+export interface RoomMapPointerProps {
+  readonly onPointerEnter?: PointerEventHandler<HTMLElement>;
+  readonly onPointerLeave?: PointerEventHandler<HTMLElement>;
+}
+
+/** Pointing at a map point marks the controls linked to it; nothing outside a map scope. */
+export function useRoomMapPointers(): (
+  target: RoomMapHighlight | undefined,
+) => RoomMapPointerProps {
+  const channel = useContext(RoomMapPointedChannel);
+  return useCallback(
+    (target) =>
+      target === undefined || channel === undefined
+        ? {}
+        : {
+            onPointerEnter: () => channel.show(target),
+            onPointerLeave: () => channel.release(target),
+          },
+    [channel],
   );
 }
