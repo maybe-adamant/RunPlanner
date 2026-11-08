@@ -296,7 +296,9 @@ and Meta Reward Stand in that order; each eligible object takes a random free
 anchor (`RemoveRandomValue`), so the order decides which objects fit, not
 where they stand. `F_PostBoss01`, `G_PostBoss01`, `H_PostBoss01` and
 `Dream_PostBoss01` pin the Well to one anchor (`WellShopChallengeBaseId`);
-`Dream_PostBoss02` and `Dream_PostBoss03` inherit the Dream pin.
+`Dream_PostBoss02` and `Dream_PostBoss03` inherit the Dream pin. An object
+drawing from a single remaining anchor has no roll: in the two-anchor F, G and H
+Postboss maps the Pool always stands on the anchor the pinned Well leaves.
 Resources, fountains, Gift Racks, and Nemesis use separate systems. The source exposes no generic `NumRoomFeatures` or
 passive-feature capacity.
 

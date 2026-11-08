@@ -86,8 +86,14 @@ interface RoomAnchorObjectFacts<
   /** The physical anchor it is authored on; absent leaves native placement. */
   readonly anchorId?: number;
   /**
+   * The one anchor native can give this unauthored object: every other
+   * present object stands somewhere and a single anchor is left free.
+   */
+  readonly derivedAnchorId?: number;
+  /**
    * For a present object: each anchor it can be placed on (null returns it to
-   * native placement), with the command. A pinned Well has none.
+   * native placement), with the command. A pinned Well and an object with a
+   * derived anchor have none.
    */
   readonly anchorChoices?: readonly {
     readonly anchorId: number | null;
@@ -165,12 +171,15 @@ export interface RoomAnchorSlots {
   readonly anchorCount: number;
   /**
    * The room's physical anchors by id, each with the present object authored
-   * on it; the Well pin takes only the Well.
+   * on it, the Well on its pin or the object derived onto it; the Well pin
+   * takes only the Well.
    */
   readonly anchors: readonly {
     readonly anchorId: number;
     readonly pinned: boolean;
     readonly occupant?: RoomAnchorObjectKind;
+    /** The occupant is the object's `derivedAnchorId`, not authored. */
+    readonly derived?: true;
   }[];
   readonly objects: readonly RoomAnchorObject[];
   readonly slots: readonly RoomAnchorSlot[];
@@ -524,6 +533,23 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
   const authoredAnchor = (kind: RoomAnchorObjectKind) => authored[kind]?.anchorId;
   const occupantOf = (anchorId: number) =>
     ROOM_ANCHOR_OBJECT_ORDER.find((kind) => authoredAnchor(kind) === anchorId);
+  const wellPinned = pin !== undefined && authored.stygianWell !== undefined;
+  // Native draws each object's anchor from those left, so the only unplaced
+  // object facing a single free anchor has no roll.
+  const unplaced = objects.filter(
+    (object) =>
+      object.hosted &&
+      object.present &&
+      authoredAnchor(object.kind) === undefined &&
+      !(object.kind === 'stygianWell' && wellPinned),
+  );
+  const freeAnchors = anchorIds.filter(
+    (id) => !(wellPinned && id === pin) && occupantOf(id) === undefined,
+  );
+  const derived =
+    unplaced.length === 1 && unplaced[0]!.slotIndex !== undefined && freeAnchors.length === 1
+      ? { kind: unplaced[0]!.kind, anchorId: freeAnchors[0]! }
+      : undefined;
   const placed = objects.map((object) => {
     const anchorId = authoredAnchor(object.kind);
     if (!object.present) return object;
@@ -537,9 +563,10 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
           anchorId: target,
         }),
       });
+    const derivedAnchorId = derived?.kind === object.kind ? derived.anchorId : undefined;
     // A pinned Well always stands on its pin; no other object takes it.
     const anchorChoices =
-      object.kind === 'stygianWell' && pin !== undefined
+      (object.kind === 'stygianWell' && pin !== undefined) || derivedAnchorId !== undefined
         ? []
         : [
             choose(null),
@@ -550,6 +577,7 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
     return Object.freeze({
       ...object,
       ...(anchorId === undefined ? {} : { anchorId }),
+      ...(derivedAnchorId === undefined ? {} : { derivedAnchorId }),
       anchorChoices: Object.freeze(anchorChoices),
     }) as RoomAnchorObject;
   });
@@ -557,13 +585,16 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
     anchorCount,
     anchors: Object.freeze(
       anchorIds.map((anchorId) => {
+        const isDerived = derived?.anchorId === anchorId;
         const occupant =
           occupantOf(anchorId) ??
-          (anchorId === pin && authored.stygianWell !== undefined ? 'stygianWell' : undefined);
+          (anchorId === pin && wellPinned ? 'stygianWell' : undefined) ??
+          (isDerived ? derived.kind : undefined);
         return Object.freeze({
           anchorId,
           pinned: anchorId === pin,
           ...(occupant === undefined ? {} : { occupant }),
+          ...(isDerived ? { derived: true as const } : {}),
         });
       }),
     ),

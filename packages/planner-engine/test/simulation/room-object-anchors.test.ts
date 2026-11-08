@@ -48,6 +48,12 @@ function slotsOf(
   return slots;
 }
 
+function occurrenceGameName(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
+  return project.route.biomes
+    .find((biome) => biome.biomeKey === biomeKey)!
+    .topology!.occurrences.find((entry) => entry.occurrenceId === occurrenceId)!.gameName;
+}
+
 function apply(project: ProjectDocument, commands: readonly ProjectCommand[]): ProjectDocument {
   return commands.reduce((next, command) => applyProjectCommand(next, catalog, command), project);
 }
@@ -380,5 +386,127 @@ describe('room object anchor slots', () => {
     );
     expect(removed.objects.map((candidate) => candidate.kind)).toEqual(['purgingPool']);
     expect(removed.unanchored).toEqual(['purgingPool']);
+  });
+});
+
+describe('derived object anchors', () => {
+  const anchorIdsOf = (gameName: string) =>
+    catalog.rooms.byKey[gameName]!.mapPoints!.challengeSwitchAnchors.map((anchor) => anchor.id);
+
+  it('derives the Pool onto the anchor the Postboss Well pin leaves free', () => {
+    for (const [biomeKey, gameName] of [
+      ['F', 'F_PostBoss01'],
+      ['G', 'G_PostBoss01'],
+      ['H', 'H_PostBoss01'],
+    ] as const) {
+      const occurrenceId = `golden-${biomeKey.toLowerCase()}-preboss-shop:postboss`;
+      const slots = slotsOf(underworld(), biomeKey, occurrenceId);
+      const pin = catalog.rooms.byKey[gameName]!.mapPoints!.wellAnchorId!;
+      const free = anchorIdsOf(gameName).find((id) => id !== pin)!;
+      expect(object(slots, 'purgingPool')).toMatchObject({
+        derivedAnchorId: free,
+        anchorChoices: [],
+      });
+      expect(object(slots, 'purgingPool').anchorId).toBeUndefined();
+      expect(object(slots, 'stygianWell').derivedAnchorId).toBeUndefined();
+      expect(slots.anchors).toEqual(
+        expect.arrayContaining([
+          { anchorId: pin, pinned: true, occupant: 'stygianWell' },
+          { anchorId: free, pinned: false, occupant: 'purgingPool', derived: true },
+        ]),
+      );
+    }
+  });
+
+  it('derives the one unplaced object once the others stand and one anchor is free', () => {
+    const project = underworld();
+    const owner = address(project, 'F', 'golden-f-b5-e1');
+    const [first, second] = anchorIdsOf(occurrenceGameName(project, 'F', 'golden-f-b5-e1'));
+    const both = apply(project, [
+      {
+        kind: 'ReplaceChallengeSwitch',
+        occurrence: owner,
+        variantKey: 'TimeChallengeSwitch_Money',
+      },
+      { kind: 'AddStygianWell', occurrence: owner },
+    ]);
+    // Two unplaced objects on two free anchors stay a roll.
+    const rolled = slotsOf(both, 'F', 'golden-f-b5-e1');
+    expect(rolled.objects.map((entry) => entry.derivedAnchorId)).toEqual([undefined, undefined]);
+    expect(rolled.anchors.every((anchor) => anchor.occupant === undefined)).toBe(true);
+    expect(object(rolled, 'challengeSwitch').anchorChoices?.length).toBe(3);
+
+    const placed = apply(both, [
+      {
+        kind: 'ReplaceRoomObjectAnchor',
+        occurrence: owner,
+        object: 'challengeSwitch',
+        anchorId: first!,
+      },
+    ]);
+    const derived = slotsOf(placed, 'F', 'golden-f-b5-e1');
+    expect(object(derived, 'challengeSwitch')).toMatchObject({ anchorId: first });
+    expect(object(derived, 'challengeSwitch').derivedAnchorId).toBeUndefined();
+    expect(object(derived, 'stygianWell')).toMatchObject({
+      derivedAnchorId: second,
+      anchorChoices: [],
+    });
+    expect(derived.anchors).toEqual(
+      expect.arrayContaining([
+        { anchorId: first, pinned: false, occupant: 'challengeSwitch' },
+        { anchorId: second, pinned: false, occupant: 'stygianWell', derived: true },
+      ]),
+    );
+  });
+
+  it('never overrides an authored anchor', () => {
+    const project = underworld();
+    const owner = address(project, 'F', 'golden-f-preboss-shop:postboss');
+    const pin = catalog.rooms.byKey.F_PostBoss01!.mapPoints!.wellAnchorId!;
+    const free = anchorIdsOf('F_PostBoss01').find((id) => id !== pin)!;
+    for (const anchorId of [free, pin]) {
+      const slots = slotsOf(
+        apply(project, [
+          { kind: 'ReplaceRoomObjectAnchor', occurrence: owner, object: 'purgingPool', anchorId },
+        ]),
+        'F',
+        'golden-f-preboss-shop:postboss',
+      );
+      const pool = object(slots, 'purgingPool');
+      expect(pool.anchorId).toBe(anchorId);
+      expect(pool.derivedAnchorId).toBeUndefined();
+      expect(slots.anchors.some((anchor) => anchor.derived === true)).toBe(false);
+    }
+  });
+
+  it('leaves the Pool a roll in a pinned room whose Well is absent', () => {
+    const project = withRetainedFreshFilePostboss(createFreshFileFProject(), {
+      well: false,
+      poolSaleTraitKey: 'ApolloWeaponBoon',
+    });
+    const owner = address(project, project.route.biomes[0]!.biomeKey, freshFileFPostbossId);
+    const room = catalog.rooms.byKey.F_PostBoss01!;
+    // Host the Pool on this route while the Well stays unhosted and absent.
+    const hosting = {
+      ...catalog,
+      rooms: {
+        ...catalog.rooms,
+        byKey: {
+          ...catalog.rooms.byKey,
+          F_PostBoss01: { ...room, purgingPool: { ...room.purgingPool!, excludedRouteKeys: [] } },
+        },
+      },
+    } as typeof catalog;
+    const slots = roomObjectAnchorSlotsForProjectEvaluationAssembly(
+      hosting,
+      simulateProjectAssembly(catalog, project),
+      owner,
+    )!;
+    expect(slots.objects.map((entry) => [entry.kind, entry.hosted, entry.present])).toEqual([
+      ['purgingPool', true, true],
+    ]);
+    expect(object(slots, 'purgingPool').slotIndex).toBe(0);
+    expect(object(slots, 'purgingPool').derivedAnchorId).toBeUndefined();
+    expect(slots.anchors.every((anchor) => anchor.occupant === undefined)).toBe(true);
   });
 });
