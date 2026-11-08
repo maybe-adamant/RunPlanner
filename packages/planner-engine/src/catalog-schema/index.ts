@@ -1328,6 +1328,15 @@ export interface RoomMapEntryPair {
   readonly direction?: RoomMapDirection;
 }
 
+/**
+ * The room's `ShipsSteeringWheel` and the world positions where a two-offer
+ * setup spawns its `ShipsSteeringWheelLeft` and `ShipsSteeringWheelRight`.
+ */
+export interface RoomMapShipWheel extends RoomMapPoint {
+  readonly leftOffer: { readonly x: number; readonly y: number };
+  readonly rightOffer: { readonly x: number; readonly y: number };
+}
+
 /** A room's map things by family, each family ascending by ObjectId. */
 export interface RoomMapPoints {
   /** Obstacles whose type inherits `ExitDoor`. */
@@ -1347,6 +1356,8 @@ export interface RoomMapPoints {
   readonly fieldsOptionalPoints?: readonly RoomMapPoint[];
   /** The points of the room's declared cocoon reward point IDs. */
   readonly cocoonRewardPoints?: readonly RoomMapPoint[];
+  /** Present wherever the map places a wheel, whether or not the room runs a wheel setup. */
+  readonly shipWheel?: RoomMapShipWheel;
 }
 
 /** RoomData facts, resolved through `InheritFrom`, that decide a room's flip and entry. */

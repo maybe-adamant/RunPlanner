@@ -4,6 +4,7 @@ import type {
   RoomMapExitDoor,
   RoomMapPoint,
   RoomMapPoints,
+  RoomMapShipWheel,
 } from '@run-planner/engine/catalog-schema';
 
 import { requireNonEmpty, requirePositiveInteger } from '../common';
@@ -33,6 +34,26 @@ function normalizeFamily<T extends RoomMapPoint>(
       return normalized;
     }),
   );
+}
+
+function normalizeShipWheel(
+  wheel: RoomMapShipWheel,
+  seen: Set<number>,
+  path: string,
+): RoomMapShipWheel {
+  const point = normalizePoint(wheel, path);
+  if (seen.has(point.id)) fail(`${path}.id`, `duplicates ${point.id}`);
+  seen.add(point.id);
+  const offer = (spot: { readonly x: number; readonly y: number }, spotPath: string) => {
+    if (!Number.isFinite(spot.x)) fail(`${spotPath}.x`, 'must be a finite number');
+    if (!Number.isFinite(spot.y)) fail(`${spotPath}.y`, 'must be a finite number');
+    return Object.freeze({ x: spot.x, y: spot.y });
+  };
+  return Object.freeze({
+    ...point,
+    leftOffer: offer(wheel.leftOffer, `${path}.leftOffer`),
+    rightOffer: offer(wheel.rightOffer, `${path}.rightOffer`),
+  });
 }
 
 const mapDirections: ReadonlySet<string> = new Set<RoomMapDirection>([
@@ -132,5 +153,8 @@ export function normalizeRoomMapPoints(raw: RoomMapPoints, path: string): RoomMa
     ...(fieldsCagePoints === undefined ? {} : { fieldsCagePoints }),
     ...(fieldsOptionalPoints === undefined ? {} : { fieldsOptionalPoints }),
     ...(cocoonRewardPoints === undefined ? {} : { cocoonRewardPoints }),
+    ...(raw.shipWheel === undefined
+      ? {}
+      : { shipWheel: normalizeShipWheel(raw.shipWheel, seen, `${path}.shipWheel`) }),
   });
 }

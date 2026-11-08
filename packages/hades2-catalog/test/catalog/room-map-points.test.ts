@@ -121,6 +121,35 @@ describe('room map points', () => {
     });
   });
 
+  it('places the ship wheel and its two-offer spots in the wheel rooms', () => {
+    const wheelRooms = catalog.rooms.values
+      .filter((room) => room.mapPoints?.shipWheel !== undefined)
+      .map((room) => room.gameName)
+      .sort();
+    expect(wheelRooms).toEqual([
+      ...Array.from({ length: 15 }, (_, index) => `O_Combat${String(index + 1).padStart(2, '0')}`),
+      'O_MiniBoss01',
+      'O_MiniBoss02',
+      'O_PreBoss01',
+      'O_Shop01',
+    ]);
+    expect(catalog.rooms.byKey.O_Combat01?.mapPoints?.shipWheel).toEqual({
+      id: 690894,
+      x: 7706.47,
+      y: 8663.03,
+      leftOffer: { x: 7521.47, y: 8558.03 },
+      rightOffer: { x: 7881.47, y: 8743.03 },
+    });
+    for (const gameName of wheelRooms) {
+      const wheel = catalog.rooms.byKey[gameName]!.mapPoints!.shipWheel!;
+      expect(Object.isFrozen(wheel)).toBe(true);
+      expect(wheel.leftOffer.x - wheel.x).toBeCloseTo(-185);
+      expect(wheel.leftOffer.y - wheel.y).toBeCloseTo(-105);
+      expect(wheel.rightOffer.x - wheel.x).toBeCloseTo(175);
+      expect(wheel.rightOffer.y - wheel.y).toBeCloseTo(80);
+    }
+  });
+
   it.each([
     [
       'an undeclared room',
@@ -160,6 +189,24 @@ describe('room map points', () => {
         (input.F_Combat02!.heroStarts[0] as { x: unknown }).x = null;
       },
       /roomMapPoints\.F_Combat02\.heroStarts\[0\]\.x: must be a finite number/,
+    ],
+    [
+      'a ship wheel reusing another ObjectId',
+      (input: Record<string, RoomMapPoints>) => {
+        const wheel = input.O_Combat01!.shipWheel!;
+        (input.O_Combat01 as { shipWheel: unknown }).shipWheel = {
+          ...wheel,
+          id: input.O_Combat01!.heroStarts[0]!.id,
+        };
+      },
+      /roomMapPoints\.O_Combat01\.shipWheel\.id: duplicates/,
+    ],
+    [
+      'a non-finite ship wheel offer spot',
+      (input: Record<string, RoomMapPoints>) => {
+        (input.O_Combat01!.shipWheel!.rightOffer as { y: unknown }).y = null;
+      },
+      /roomMapPoints\.O_Combat01\.shipWheel\.rightOffer\.y: must be a finite number/,
     ],
   ])('rejects %s', (_label, change, message) => {
     const input = cloneCatalogInput();
