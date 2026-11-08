@@ -716,7 +716,7 @@ export type WorkspaceOccurrenceStageOutgoing =
             /** The fixed room's occurrence, opened as the way on. */
             readonly continuation?: { readonly marker: WorkspaceMarker };
           }
-        | { readonly kind: 'biome'; readonly label: string }
+        | { readonly kind: 'biome'; readonly biomeKey: string; readonly label: string }
         | { readonly kind: 'complete'; readonly message: string };
       readonly marker: WorkspaceMarker;
     };
@@ -791,6 +791,8 @@ export type WorkspaceRoomIcon =
     }
   /** `keepsakeRack`: a Postboss room, shown by its Keepsake Rack. */
   | { readonly kind: 'shop' | 'chaos' | 'contract' | 'keepsakeRack' }
+  /** The next biome, entered from a Postboss, shown by the biome's own icon. */
+  | { readonly kind: 'nextBiome'; readonly biomeKey: string }
   | { readonly kind: 'miniboss'; readonly encounterDefinitionKey?: string }
   | { readonly kind: 'story'; readonly npcKey?: string };
 

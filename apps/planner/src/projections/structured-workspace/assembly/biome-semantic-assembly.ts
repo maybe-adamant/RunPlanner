@@ -996,6 +996,7 @@ export function assembleWorkspaceBiomeSemantics(
             case 'nextBiomeIntro':
               return Object.freeze({
                 kind: 'biome' as const,
+                biomeKey: targetStatus.biomeKey,
                 label: catalog.biomes.byKey[targetStatus.biomeKey]?.label ?? targetStatus.biomeKey,
               });
             case 'routeBoundary':

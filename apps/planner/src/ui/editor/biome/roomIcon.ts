@@ -9,7 +9,7 @@ import { hubRoomArtwork } from '@planner/ui/artwork/hub-rooms/hubRoomArtwork';
 import { minibossIcon } from '@planner/ui/artwork/encounterArtwork';
 import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
-import { fountainIcon } from '@planner/ui/artwork/roomArtwork';
+import { biomeIcon, fountainIcon } from '@planner/ui/artwork/roomArtwork';
 import { roomObjectArtwork } from '@planner/ui/artwork/room-objects/roomObjectArtwork';
 
 const bossIcon = (biomeKey: string): string | undefined => bossArtwork[biomeKey] ?? undefined;
@@ -36,6 +36,8 @@ export function roomKindIcon(room: WorkspaceRoomIcon): string | undefined {
       return npcArtwork.Zagreus ?? undefined;
     case 'keepsakeRack':
       return roomObjectArtwork.keepsakeRack ?? undefined;
+    case 'nextBiome':
+      return biomeIcon(room.biomeKey);
     case 'miniboss':
       return room.encounterDefinitionKey === undefined
         ? undefined

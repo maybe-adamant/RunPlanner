@@ -10,6 +10,7 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceNode,
   type WorkspaceOccurrenceStageOutgoing,
+  type WorkspaceRoomIcon,
   type WorkspaceRoomPlanEnd,
   type WorkspaceRoomTab,
 } from '@planner/projections/structured-workspace';
@@ -334,13 +335,20 @@ function roomTimelineDoors({
     }
     case 'fixedRoom': {
       const destination = outgoing.destination;
+      // A Postboss leads into the next biome, shown by that biome's icon.
+      const roomIcon: WorkspaceRoomIcon | undefined =
+        destination.kind === 'room'
+          ? destination.roomIcon
+          : destination.kind === 'biome'
+            ? { kind: 'nextBiome', biomeKey: destination.biomeKey }
+            : undefined;
       const chip =
-        destination.kind === 'room' && destination.roomIcon !== undefined
+        destination.kind !== 'complete' && roomIcon !== undefined
           ? {
               key: 'fixed',
               doorIndex: 1,
               label: destination.label,
-              roomIcon: destination.roomIcon,
+              roomIcon,
               rewards: [],
             }
           : undefined;

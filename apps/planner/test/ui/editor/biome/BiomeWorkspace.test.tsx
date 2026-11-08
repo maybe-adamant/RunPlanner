@@ -70,6 +70,8 @@ import { RunStateLauncher } from '@planner/ui/editor/biome/RunStateSheet';
 import userEvent from '@testing-library/user-event';
 import {
   expandDoors,
+  leaveOptionNames,
+  openLeavePicker,
   renderWorkspace,
   workspaceBiome,
   workspaceProjection,
@@ -1440,16 +1442,16 @@ describe('BiomeWorkspace', () => {
       ),
     ).toBe('Polyphemus');
 
-    // A mid-route Postboss continues to the next biome's display name, never
+    // A mid-route Postboss continues to the next biome by its display name, never
     // its internal key.
     const postboss = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
       (node) => node.kind === 'occurrenceWorkbench' && node.room.kind === 'PostBoss',
     );
     if (postboss?.kind !== 'occurrenceWorkbench') throw new Error('N Postboss node is missing');
     await openTimeline(postboss.room.address);
-    expect(
-      within(within(details()).getByRole('listitem', { name: 'Leave room' })).getByText('Thessaly'),
-    ).toBeTruthy();
+    expect(leaveOptionNames(await openLeavePicker(view.user, details()))[0]).toBe(
+      'Thessaly (picked)',
+    );
   });
 
   it('celebrates the completed run beyond the final biome boss chain', async () => {

@@ -26,6 +26,7 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenHBiome,
+  goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -34,6 +35,7 @@ import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { PurchaseCost } from '@planner/ui/editor/biome/commerce/GoldAmount';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { biomeIcon } from '@planner/ui/artwork/roomArtwork';
 import {
   leaveOptionNames,
   openLeavePicker,
@@ -248,6 +250,47 @@ describe('a room’s doors on its Timeline', () => {
     expect(
       [...firstDraw.querySelectorAll('img')].map((img) => img.getAttribute('src')),
     ).not.toContain(gold);
+  });
+});
+
+describe('a fixed exit on its Leave room row', () => {
+  async function leaveTrigger(
+    view: ReturnType<typeof renderWorkspace>,
+    room: ReturnType<typeof createOccurrenceAddress>,
+  ) {
+    act(() => view.application.store.dispatch(semanticOwnerFocused(room)));
+    const details = screen.getByRole('complementary', { name: 'Details' });
+    await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
+    return within(within(details).getByRole('listitem', { name: 'Leave room' })).getByRole(
+      'button',
+      { name: 'Exit door' },
+    );
+  }
+
+  const sources = (element: HTMLElement) =>
+    [...element.querySelectorAll('img')].map((img) => img.getAttribute('src'));
+
+  it('shows a Postboss leading into the next biome by that biome', async () => {
+    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
+    const trigger = await leaveTrigger(
+      view,
+      createOccurrenceAddress(f, createOccurrenceId('golden-f-preboss-shop:postboss')),
+    );
+    expect(sources(trigger)).toEqual([biomeIcon('G')]);
+    const options = await openLeavePicker(view.user, screen.getByRole('complementary'));
+    const way = within(options).getAllByRole('option')[0]!;
+    expect(way.getAttribute('aria-label')).toBe('Oceanus');
+    expect(sources(way)).toEqual([biomeIcon('G')]);
+  });
+
+  it('keeps the run’s completion as words', async () => {
+    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'I');
+    const trigger = await leaveTrigger(
+      view,
+      createOccurrenceAddress(goldenIBiome, createOccurrenceId('golden-i-preboss:boss')),
+    );
+    expect(sources(trigger)).toEqual([]);
+    expect(trigger.textContent).toBe('The run is complete — congratulations.');
   });
 });
 

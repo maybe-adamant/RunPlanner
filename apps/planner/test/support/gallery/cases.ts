@@ -810,6 +810,20 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('G', 'golden-g-b3-e2'),
   },
   {
+    id: 'postboss-next-biome',
+    label: 'F Postboss: its way on into Oceanus, shown by the biome',
+    shows: ['next-biome exit chip', 'Leave room picker'],
+    project: createGoldenFGHIProject,
+    target: room('F', 'golden-f-preboss-shop:postboss'),
+  },
+  {
+    id: 'run-complete-exit',
+    label: 'Tartarus boss: the run complete as its way on',
+    shows: ['run-complete Leave room picker'],
+    project: createGoldenFGHIProject,
+    target: room('I', 'golden-i-preboss:boss'),
+  },
+  {
     id: 'room-map-dream-postboss',
     overview: true,
     label: 'Dream Postboss beside its map: the Well on its pinned spot',
