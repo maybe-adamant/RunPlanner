@@ -41,6 +41,7 @@ import {
   openLeavePicker,
   renderWorkspace,
 } from '@planner-test/support/biome-workbench';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -442,7 +443,7 @@ describe('a room’s last Timeline row', () => {
 });
 
 describe('a room with no way on planned yet', () => {
-  it('has no last row but keeps the plan-end action', async () => {
+  it('keeps a last row whose picker waits on the door that leads there', async () => {
     const view = renderWorkspace(createCompleteFGProject(), 'Underworld', 'F');
     // An unpicked door's room is not on the route: nothing leads on from it.
     act(() =>
@@ -452,8 +453,11 @@ describe('a room with no way on planned yet', () => {
     );
     const details = screen.getByRole('complementary', { name: 'Details' });
     await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
-    expect(within(details).queryByRole('listitem', { name: 'Leave room' })).toBeNull();
-    expect(within(details).getByRole('button', { name: 'End plan here' })).toBeTruthy();
+    const leave = within(details).getByRole('listitem', { name: 'Leave room' });
+    const picker = within(leave).getByRole('button', { name: 'Exit door' });
+    expect(picker).toHaveProperty('disabled', true);
+    expect(hintOf(picker)).toBe('Waits on an earlier choice.');
+    expect(within(details).queryByRole('button', { name: 'End plan here' })).toBeNull();
   });
 });
 

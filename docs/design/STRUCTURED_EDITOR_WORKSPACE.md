@@ -94,12 +94,12 @@ invalidity alone does not.
 
 ### Plan end
 
-Every room's Leave row, or the end of a Timeline without one, offers to end the
-plan at that room, enabled by the
+Every room's Leave row offers to end the plan at that room, enabled by the
 engine's plan-end availability (a hint only when the room or something before
 it is not settled); in the end room's row, picking a way out again clears the
-end, and a room with no way out of its own offers to continue planning instead
-([Doors on the Timeline](#doors-on-the-timeline)). The room
+end ([Doors on the Timeline](#doors-on-the-timeline)). A saved end shows in its
+room even while the plan up to it is not settled enough for the engine to end
+there, so it can always be continued from its room. The room
 header and the rail say where the plan ends, and the Route panel shows the end
 with its room and removal. The route-owned unreached-end finding repairs at
 that Route row. The end room's doors lie inside the plan, the rooms behind
@@ -528,13 +528,16 @@ partly filled batch says how many doors are set beside it. Highlighting an
 option previews its door on the map. The picker is the exit selection's
 finding anchor and waits on an earlier choice while the selection is unreached.
 Ending the plan keeps the chosen door underneath: picking any door again
-continues the plan through it as one edit, and an end room with no way out of
-its own to pick offers continuing the plan instead. The end room's doors, their
-rerolls and its other doors stay editable, since the plan ends only as the room
-is left. A room with no planned way on (nothing is planned past it) has no last
-row and keeps **End plan here** under its Timeline, with any boss-door pool
-still in its doors; a room past the plan's end shows no doors and keeps it
-under its read-only Timeline. Ephyra's Hub rooms leave by their way back: a
+continues the plan through it as one edit, and a room ended before its doors
+are planned offers its **Doors**, `?`, which continue the plan into them. The
+end room's doors, their rerolls and its other doors stay editable, since the
+plan ends only as the room is left. A room with no way out to pick (nothing is
+planned past it) keeps a Leave room picker that only ends the plan there, with
+any boss-door pool still in its doors; the whole picker waits on an earlier
+choice in a room the plan does not reach. A room past the plan's end shows no
+doors, and that picker is the one live control of its read-only Timeline, so
+the end can move to it. The Pre-Hub leaves into the **Hub**, with a link to the
+Hub Timeline at the first visit. Ephyra's Hub rooms leave by their way back: a
 side room's Leave room picker holds **Back to** its main room and **End plan
 here**, with a link to that room's Timeline. A Hub visit's main room has one
 Leave room picker per side visit, each followed by a **Returned** row with
@@ -544,8 +547,8 @@ replaces that visit and keeps the later ones, and picking the Hub ends the
 visits there. The last picker, back to the Hub, holds the main room's **End
 plan here**, since ending the plan there ends its whole visit; each earlier
 picker after a side visit holds that side room's, the plan ending as the hero
-leaves it, with the rows after it kept as authored past the end, dimmed as
-not walked. A later visit an
+leaves it, with the rows after it, from that side room's own return, kept as
+authored past the end, dimmed as not walked. A later visit an
 earlier change repeats stays, its finding on its own picker. Each picker links
 to the side room it picks or to the Hub Timeline at the next visit's segment.
 Otherwise moving to the next room is the rail's job.

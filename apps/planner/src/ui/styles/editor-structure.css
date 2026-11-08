@@ -964,31 +964,6 @@ select {
   gap: 8px;
 }
 
-.workbench-action-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.workbench-action-end {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-inline-start: auto;
-}
-
-.workbench-action-row > .topology-removal-action {
-  margin: 0;
-}
-
-.room-card > .workbench-action-row {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid #34353e;
-}
-
 .shop-editor {
   display: block;
 }
@@ -1182,16 +1157,6 @@ select {
   display: grid;
   gap: 12px;
   min-width: 0;
-}
-
-.door-workbench > .workbench-action-row,
-:is(.door-workbench, .past-plan-end-content) + .workbench-action-row {
-  padding-top: 12px;
-  border-top: 1px solid #34353e;
-}
-
-:is(.door-workbench, .past-plan-end-content) + .workbench-action-row {
-  margin-top: 12px;
 }
 
 .door-pool-line {
@@ -1774,32 +1739,12 @@ select {
   outline-offset: 2px;
 }
 
-.plan-end-action {
-  display: inline-flex;
-  min-height: 36px;
-  align-items: center;
-  justify-content: center;
-  padding: 7px 12px;
-  border: 1px solid color-mix(in srgb, var(--plan-end) 55%, transparent);
-  border-radius: 8px;
-  color: var(--plan-end);
-  background: color-mix(in srgb, var(--plan-end) 12%, #1c1b24);
-  font-weight: 600;
-  line-height: 1.2;
-  cursor: pointer;
-}
-
-.plan-end-action:hover:not(:disabled) {
-  border-color: var(--plan-end);
-  color: #e6defb;
-  background: color-mix(in srgb, var(--plan-end) 22%, #1c1b24);
-}
-
 .room-workbench-panel-content {
   display: contents;
 }
 
-:is(.room-workbench-panel-content, .past-plan-end-content)[inert] > * {
+:is(.room-workbench-panel-content, .past-plan-end-content)[inert] > *,
+.room-workbench-panel-content[data-plan-end='pastEnd']:not([inert]) .room-map-column {
   opacity: 0.6;
 }
 

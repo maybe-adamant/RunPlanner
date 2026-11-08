@@ -17,7 +17,10 @@ import {
 } from '@run-planner/engine/authored-project';
 import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
-import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFGCheckpoint,
+  loadUnderworldFMidshopPomFrontierCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import type { PlannerApplication } from '@planner/composition/createApplication';
 import { createApplication } from '@planner/composition/createApplication';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
@@ -34,8 +37,14 @@ import {
   renderWorkspace,
 } from '@planner-test/support/biome-workbench';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(() => cleanup());
+
+/** The Midshop whose Pom target is unset, so the plan cannot end there yet. */
+const midshop = 'midshop-pom-b5-e1';
+/** A room behind a door not taken. */
+const offPath = 'midshop-pom-b4-e2';
 
 function endedAt(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
   return applyProjectCommand(project, catalog, {
@@ -170,7 +179,7 @@ describe('plan end in the biome workspace', () => {
     expect(relation('Preboss')).toBe('pastEnd');
   });
 
-  it('keeps a room past the end read-only while its doors can move the end to it', async () => {
+  it('keeps a room past the end read-only while its Leave room picker moves the end to it', async () => {
     const { application, user } = renderWorkspace(
       endedAt(createGoldenFGHIProject(), 'F', 'golden-f-b5-e1'),
       'Underworld',
@@ -184,14 +193,48 @@ describe('plan end in the biome workspace', () => {
     const overview = roomCard().querySelector('.room-workbench-panel-content');
     expect(overview?.hasAttribute('inert')).toBe(true);
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    // Its Timeline is read-only and its doors, dormant past the end, are not shown.
-    expect(roomCard().querySelector('.room-workbench-panel-content')?.hasAttribute('inert')).toBe(
-      true,
-    );
+    // Its doors, dormant past the end, are not shown: its Timeline is its last row alone.
     expect(within(roomCard()).queryByLabelText('Doors open')).toBeNull();
+    expect(
+      within(within(roomCard()).getByRole('list', { name: 'Room timeline' }))
+        .getAllByRole('listitem')
+        .map((row) => row.getAttribute('aria-label')),
+    ).toEqual(['Leave room']);
+    expect(screen.queryByRole('button', { name: 'End plan here' })).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: 'End plan here' }));
+    const options = await openLeavePicker(user, roomCard());
+    expect(leaveOptionNames(options)).toEqual(['End plan here']);
+    await user.click(within(options).getByRole('option', { name: 'End plan here' }));
     expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b7-e1' });
+  });
+
+  it('waits on an earlier choice in a room the plan does not reach', async () => {
+    const { application, user } = renderWorkspace(
+      loadUnderworldFMidshopPomFrontierCheckpoint(),
+      'Underworld',
+      'F',
+    );
+    openRoom(application, createOccurrenceAddress(goldenFBiome, createOccurrenceId(offPath)));
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    expect(screen.queryByRole('button', { name: 'End plan here' })).toBeNull();
+    expect(leaveTrigger()).toHaveProperty('disabled', true);
+    expect(hintOf(leaveTrigger())).toBe('Waits on an earlier choice.');
+  });
+
+  it('shows a saved end in its room while the plan up to it is incomplete, and continues it', async () => {
+    const { application, user } = renderWorkspace(
+      endedAt(loadUnderworldFMidshopPomFrontierCheckpoint(), 'F', midshop),
+      'Underworld',
+      'F',
+    );
+    openRoom(application, createOccurrenceAddress(goldenFBiome, createOccurrenceId(midshop)));
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    expect(leaveTrigger().textContent).toBe('End plan');
+    // Ended before its doors are planned, it continues through them.
+    const options = await openLeavePicker(user, roomCard());
+    expect(leaveOptionNames(options)).toEqual(['Doors', 'End plan here (picked)']);
+    await user.click(within(options).getByRole('option', { name: 'Doors' }));
+    expect(currentPlanEnd(application)).toBeUndefined();
   });
 
   it('continues planning from the end room, which offers no way on but keeps its door repair', async () => {
@@ -331,17 +374,21 @@ describe('plan end in the biome workspace', () => {
     expect(currentPlanEnd(application)).toBeUndefined();
   });
 
-  it('continues planning from the Pre-Hub, which has no way out of its own to pick', async () => {
-    const { application, user } = renderWorkspace(
-      endedAt(loadSurfaceNOPQProject(), 'N', 'surface-n-prehub'),
-      'Surface',
-      'N',
-    );
+  it('leaves the Pre-Hub into its Hub, which continues a plan ended there', async () => {
+    const { application, user } = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     openRoom(application, createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-prehub')));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    const options = await openLeavePicker(user, roomCard());
-    expect(leaveOptionNames(options)).toEqual(['End plan here (picked)', 'Continue planning']);
-    await user.click(within(options).getByRole('option', { name: 'Continue planning' }));
+    let options = await openLeavePicker(user, roomCard());
+    expect(leaveOptionNames(options)).toEqual(['Hub (picked)', 'End plan here']);
+    await user.click(within(options).getByRole('option', { name: 'End plan here' }));
+    expect(currentPlanEnd(application)).toEqual({
+      biomeKey: 'N',
+      occurrenceId: 'surface-n-prehub',
+    });
+
+    options = await openLeavePicker(user, roomCard());
+    expect(leaveOptionNames(options)).toEqual(['Hub', 'End plan here (picked)']);
+    await user.click(within(options).getByRole('option', { name: 'Hub' }));
     expect(currentPlanEnd(application)).toBeUndefined();
   });
 
@@ -373,6 +420,31 @@ describe('plan end in the biome workspace', () => {
       'Door two (disabled)',
       'End plan here (picked)',
     ]);
+  });
+
+  it('offers ending the plan in a room with no way out to pick once the plan up to it is complete', async () => {
+    const user = userEvent.setup();
+    const intent = {} as WorkspaceRoomPlanEnd['endIntent'];
+    render(
+      <Provider store={createApplication().store}>
+        <LeavePicker
+          chosenKey={undefined}
+          id="leave"
+          options={[]}
+          planEnd={{
+            availability: () => ({ available: false, reason: 'notSettled' }),
+            endIntent: intent,
+            removeIntent: intent,
+          }}
+        />
+      </Provider>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Exit door' }));
+    const options = await screen.findByRole('listbox');
+    expect(leaveOptionNames(options)).toEqual(['End plan here (disabled)']);
+    expect(hintOf(within(options).getByRole('option'))).toBe(
+      'Complete the plan up to this room first.',
+    );
   });
 
   it('resets the visits of a Hub the plan ends in', async () => {

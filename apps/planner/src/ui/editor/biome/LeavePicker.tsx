@@ -12,6 +12,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import type { WorkspacePlanEndAvailability } from '@planner/projections/structured-workspace';
 import type {
   ContextualPickerItem,
   ContextualPickerModel,
@@ -29,7 +30,6 @@ import {
 import { DoorChipFace } from './DecisionWorkbench';
 import { doorChipMapLink, doorRewardIcons, type DoorChip } from './doorSummary';
 import { BiomeWorkspaceContractError } from './workspaceContract';
-import { planEndUnavailableHint } from './PlanEndAction';
 import {
   highlightOwner,
   useRoomMapHighlightActions,
@@ -45,6 +45,8 @@ export interface LeaveOption {
   readonly label: string;
   /** Its face: the door's room and rewards. */
   readonly chip?: DoorChip;
+  /** The room's doors, not planned yet: a blank chip. */
+  readonly unplanned?: true;
   /** A short name beside the chip, where the chip alone does not tell the rooms apart. */
   readonly name?: string;
   /** Why it cannot be picked here. */
@@ -60,7 +62,13 @@ const optionMapLink = (option: LeaveOption): RoomMapHighlight | undefined =>
   option.mapLink ?? (option.chip === undefined ? undefined : doorChipMapLink(option.chip));
 
 const endKey = 'plan-end';
-const continueKey = 'plan-continue';
+
+/** Only an unsettled plan needs explaining; a room off the path already says so. */
+function planEndUnavailableHint(availability: WorkspacePlanEndAvailability): string | undefined {
+  return !availability.available && availability.reason === 'notSettled'
+    ? 'Complete the plan up to this room first.'
+    : undefined;
+}
 
 /** Ending the plan as a way out: a stop chip and its name. */
 function PlanEndFace() {
@@ -75,6 +83,17 @@ function PlanEndFace() {
 }
 
 function OptionFace({ option }: { readonly option: LeaveOption }) {
+  if (option.unplanned === true)
+    return (
+      <>
+        <span className="timeline-door-chip">
+          <span aria-hidden="true" className="timeline-door-chip-blank">
+            ?
+          </span>
+        </span>
+        <span className="timeline-leave-text">{option.label}</span>
+      </>
+    );
   return option.chip === undefined ? (
     <span className="timeline-leave-text">{option.label}</span>
   ) : (
@@ -105,6 +124,7 @@ export function LeavePicker({
   pastEnd = false,
   planEnd,
   readinessOwner,
+  unreached = false,
 }: {
   /** The way out picked, kept while the plan ends here. */
   readonly chosenKey: string | undefined;
@@ -116,6 +136,8 @@ export function LeavePicker({
   readonly planEnd: WorkspaceRoomPlanEnd | undefined;
   /** The owner whose readiness says whether the pick is reached yet. */
   readonly readinessOwner?: SemanticAddress | undefined;
+  /** The plan does not reach the room: nothing is picked here yet. */
+  readonly unreached?: boolean;
 }) {
   const executeIntent = useCommandIntent();
   const executeCommands = useCommandsIntent();
@@ -125,7 +147,8 @@ export function LeavePicker({
   const previewed = useRef<RoomMapHighlight | undefined>(undefined);
   const ended = planEnd?.relation === 'end';
   // Past the end the pick is locked as unreached; it still continues the plan from here.
-  const waiting = useAuthoringLocked(readinessOwner) && !ended;
+  const locked = useAuthoringLocked(readinessOwner);
+  const waiting = (unreached || locked) && !ended;
   const closed = waiting || pastEnd;
   const pointed = useRoomMapPointedAmong(options.map(optionMapLink));
   const chosen = options.find((option) => option.key === chosenKey);
@@ -142,10 +165,6 @@ export function LeavePicker({
   const pick = (key: string) => {
     if (planEnd !== undefined && key === endKey) {
       if (!ended) executeIntent(planEnd.endIntent);
-      return;
-    }
-    if (planEnd !== undefined && key === continueKey) {
-      executeIntent(planEnd.removeIntent);
       return;
     }
     const option = options.find((candidate) => candidate.key === key);
@@ -184,16 +203,12 @@ export function LeavePicker({
       ),
     );
     const availability = planEnd === undefined || ended ? undefined : planEnd.availability();
-    // A room with no way out of its own, such as the Pre-Hub, continues the plan only here.
-    const continues = ended && ways.length === 0;
-    const endings =
-      planEnd === undefined
+    const items = [
+      ...ways,
+      ...(planEnd === undefined
         ? []
-        : [
-            item(endKey, 'End plan here', ended, availability?.available === false),
-            ...(continues ? [item(continueKey, 'Continue planning', false, false)] : []),
-          ];
-    const items = [...ways, ...endings];
+        : [item(endKey, 'End plan here', ended, availability?.available === false)]),
+    ];
     const selected = items.find((candidate) => candidate.selected);
     const section: ContextualPickerSection<string> = {
       key: 'ways',

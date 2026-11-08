@@ -184,6 +184,7 @@ describe('main room side visits on its Timeline', () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await openTimeline(view, combat05);
     const [first, second] = visitOrder(view.application);
+    const firstLabel = sideLabel(view.application, first!);
     const secondLabel = sideLabel(view.application, second!);
     const planEnd = () => presentProject(view.application).route.planEnd;
     await view.user.click(
@@ -193,9 +194,14 @@ describe('main room side visits on its Timeline', () => {
     );
     expect(planEnd()).toEqual({ biomeKey: 'N', occurrenceId: first });
     expect(visitOrder(view.application)).toEqual([first, second]);
-    // The later exit stays as authored, past the end, and every row after the end reads as not walked.
+    // The later exit stays as authored, past the end, and every row after the end reads as not
+    // walked, the return from the side room the plan ends in among them.
     expect(exitDoor(2).hasAttribute('disabled')).toBe(true);
-    expect(pastEndRows()).toEqual([`Returned from ${secondLabel}`, 'Leave room']);
+    expect(pastEndRows()).toEqual([
+      `Returned from ${firstLabel}`,
+      `Returned from ${secondLabel}`,
+      'Leave room',
+    ]);
     expect(leaveOptionNames(await openLeavePicker(view.user, roomCard(), 1)).at(-1)).toBe(
       'End plan here (picked)',
     );

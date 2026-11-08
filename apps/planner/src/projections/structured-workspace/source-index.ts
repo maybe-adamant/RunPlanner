@@ -835,14 +835,12 @@ function createWorkspaceBiomeSource(
   // Reject malformed authored identity cheaply before asking the evaluator to
   // traverse the biome. Completeness remains one explicit source product, but
   // it is not the structural contract validator for workspace construction.
-  const completeness = evaluateBiomeCompleteness(
-    catalog,
-    biome,
-    plan,
+  // The saved end room, whether or not the plan up to it is settled enough to end there.
+  const savedEndOccurrenceId =
     project.route.planEnd?.biomeKey === plan.biomeKey
       ? project.route.planEnd.occurrenceId
-      : undefined,
-  );
+      : undefined;
+  const completeness = evaluateBiomeCompleteness(catalog, biome, plan, savedEndOccurrenceId);
   const exitDecisions = authoredExitDecisionsInTopologyOrder(
     catalog,
     biome,
@@ -913,24 +911,36 @@ function createWorkspaceBiomeSource(
   // In the biome the plan ends in, the engine locks exactly what lies past the end.
   const pastPlanEndAt = (owner: SemanticAddress): boolean =>
     pastPlanEnd || (endOccurrenceId !== undefined && planEnd.readiness(owner) === 'locked');
+  const planEndAvailabilityByRoom = new Map<OccurrenceId, PlanEndAvailability | undefined>();
+  const planEndAvailability = (occurrenceId: OccurrenceId) => {
+    if (!planEndAvailabilityByRoom.has(occurrenceId)) {
+      planEndAvailabilityByRoom.set(
+        occurrenceId,
+        planEnd.availability(createOccurrenceAddress(biome, occurrenceId)),
+      );
+    }
+    return planEndAvailabilityByRoom.get(occurrenceId);
+  };
+  const offRoute = (availability: PlanEndAvailability | undefined) =>
+    availability !== undefined && !availability.available && availability.reason === 'notOnRoute';
   const planEndRelation = (occurrenceId: OccurrenceId): WorkspacePlanEndRelation | undefined => {
     if (!pastPlanEnd && occurrenceId === endOccurrenceId) return 'end';
+    // A saved end on the path that the engine does not apply yet, as the plan up to it is
+    // unsettled, still shows in its room; one off the path is the Route panel's to repair.
+    if (
+      !pastPlanEnd &&
+      endOccurrenceId === undefined &&
+      occurrenceId === savedEndOccurrenceId &&
+      !offRoute(planEndAvailability(occurrenceId))
+    )
+      return 'end';
     return pastPlanEndAt(createOccurrenceAddress(biome, occurrenceId)) ? 'pastEnd' : undefined;
   };
-  const planEndAvailabilityByRoom = new Map<OccurrenceId, PlanEndAvailability | undefined>();
   return Object.freeze({
     planEndRelation,
     pastPlanEnd,
     pastPlanEndAt,
-    planEndAvailability: (occurrenceId: OccurrenceId) => {
-      if (!planEndAvailabilityByRoom.has(occurrenceId)) {
-        planEndAvailabilityByRoom.set(
-          occurrenceId,
-          planEnd.availability(createOccurrenceAddress(biome, occurrenceId)),
-        );
-      }
-      return planEndAvailabilityByRoom.get(occurrenceId);
-    },
+    planEndAvailability,
     configuredRivalsRank,
     routePosition,
     ...(startingReward === undefined ? {} : { startingReward }),

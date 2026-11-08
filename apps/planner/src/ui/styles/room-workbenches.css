@@ -2606,11 +2606,6 @@ button.timeline-chip {
   gap: 8px;
 }
 
-.timeline-doors-detail-row .workbench-action-row {
-  padding-top: 4px;
-  border-top: 0;
-}
-
 /* The side room a Returned row comes back from: its chip and short name together. */
 .timeline-return-room {
   gap: 6px;
@@ -2639,7 +2634,7 @@ button.timeline-chip {
   gap: 8px;
 }
 
-.timeline-leave-actions > :is(.primary-action, .plan-end-action) {
+.timeline-leave-actions > .primary-action {
   min-height: var(--action-compact-height);
   padding-block: 2px;
 }

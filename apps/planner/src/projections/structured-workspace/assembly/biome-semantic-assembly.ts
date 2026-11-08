@@ -925,6 +925,7 @@ export function assembleWorkspaceBiomeSemantics(
           Object.freeze({
             kind: 'blockedOrUnentered' as const,
             marker: markerDestinations.marker(status.owner),
+            unentered: status.reason === 'unentered',
             message:
               status.reason === 'unentered'
                 ? 'Enter this room before authoring its outgoing doors.'
@@ -933,10 +934,20 @@ export function assembleWorkspaceBiomeSemantics(
         );
         break;
       case 'topologyOwned': {
+        // A Pre-Hub is the Hub's source: it is left into the Hub.
+        const hubEntry =
+          status.owner.kind === 'hubDecision' &&
+          (plan.topology?.decisions ?? []).some(
+            (decision) =>
+              decision.kind === 'hub' && decision.source.occurrenceId === occurrence.occurrenceId,
+          )
+            ? status.owner
+            : undefined;
         occurrenceOutgoing.set(
           occurrence.occurrenceId,
           Object.freeze({
             kind: 'topologyOwned' as const,
+            ...(hubEntry === undefined ? {} : { hubEntry }),
             marker: markerDestinations.marker(status.owner),
             notes: Object.freeze([
               ...(occurrence.phantomExit === undefined

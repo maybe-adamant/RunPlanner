@@ -133,24 +133,6 @@
     flex-wrap: wrap;
   }
 
-  .workbench-action-row {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .workbench-action-end {
-    flex-direction: column;
-    align-items: stretch;
-    margin-inline-start: 0;
-  }
-
-  .workbench-action-row > button,
-  .workbench-action-end > button,
-  .workbench-action-row > .topology-removal-action,
-  .workbench-action-row > .topology-removal-action > .danger-action {
-    width: 100%;
-  }
-
   .fields-batch-editor,
   .fields-batch-summary {
     grid-template-columns: 1fr;

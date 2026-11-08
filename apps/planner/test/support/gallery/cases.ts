@@ -44,6 +44,7 @@ import {
   loadUnderworldAutomaticBossCheckpoint,
   loadUnderworldFGCheckpoint,
   loadUnderworldFGHICheckpoint,
+  loadUnderworldFMidshopPomFrontierCheckpoint,
   loadUnderworldFPoolCheckpoint,
   loadUnderworldFStygianWellCheckpoint,
   loadUnderworldFigLeafCheckpoint,
@@ -1041,6 +1042,72 @@ export const galleryCases: readonly GalleryCase[] = [
       },
     ],
     target: room('F', 'golden-f-b3-e1'),
+  },
+  {
+    id: 'plan-end-past-end-room',
+    label: 'Room past the plan end: its Leave room picker moves the end here',
+    shows: ['leave row', 'End plan'],
+    project: loadUnderworldFGCheckpoint,
+    commands: [
+      {
+        kind: 'ReplacePlanEnd',
+        route: createRouteAddress('Underworld'),
+        planEnd: { biomeKey: 'F', occurrenceId: createOccurrenceId('golden-f-b3-e1') },
+      },
+    ],
+    target: room('F', 'golden-f-b5-e1'),
+  },
+  {
+    id: 'plan-end-unentered-room',
+    label: 'Room behind a door not taken: its Leave room picker waits',
+    shows: ['leave row', 'waiting'],
+    project: loadUnderworldFMidshopPomFrontierCheckpoint,
+    target: room('F', 'midshop-pom-b4-e2'),
+  },
+  {
+    id: 'plan-end-pending',
+    label: 'Saved plan end in a room still to be completed',
+    shows: ['leave row', 'End plan'],
+    project: loadUnderworldFMidshopPomFrontierCheckpoint,
+    commands: [
+      {
+        kind: 'ReplacePlanEnd',
+        route: createRouteAddress('Underworld'),
+        planEnd: { biomeKey: 'F', occurrenceId: createOccurrenceId('midshop-pom-b5-e1') },
+      },
+    ],
+    target: room('F', 'midshop-pom-b5-e1'),
+  },
+  {
+    id: 'plan-end-prehub',
+    label: 'Plan ends in the Ephyra PreHub, continued through its Hub',
+    shows: ['leave row', 'End plan', 'Hub'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [
+      {
+        kind: 'ReplacePlanEnd',
+        route: createRouteAddress('Surface'),
+        planEnd: { biomeKey: 'N', occurrenceId: createOccurrenceId('surface-n-prehub') },
+      },
+    ],
+    target: room('N', 'surface-n-prehub'),
+  },
+  {
+    id: 'plan-end-side-visit',
+    label: 'Plan ends as the hero leaves a side room: its return is past the end',
+    shows: ['side-visit Leave rows', 'side-room returns', 'End plan'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [
+      (project) => ({
+        kind: 'ReplacePlanEnd',
+        route: createRouteAddress('Surface'),
+        planEnd: {
+          biomeKey: 'N',
+          occurrenceId: localVisitOrder(project, 'N', 'surface-n-combat05')[0]!,
+        },
+      }),
+    ],
+    target: room('N', 'surface-n-combat05'),
   },
   // Shops and room objects.
   {

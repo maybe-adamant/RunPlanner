@@ -22,7 +22,11 @@ import {
   type WorkspaceRoomTab,
   type WorkspaceRunStateLauncher,
 } from '@planner/projections/structured-workspace';
-import { useFindingAnchor, useFindingKeys } from '@planner/ui/feedback/useFindingTarget';
+import {
+  ReadOnlyFindingScope,
+  useFindingAnchor,
+  useFindingKeys,
+} from '@planner/ui/feedback/useFindingTarget';
 import { doorEditorChosen } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { RunStateLauncher } from './RunStateSheet';
@@ -112,10 +116,8 @@ interface OccurrenceWorkbenchProps {
   readonly doorsRequested?: boolean;
   /** The room's exit is the authoring frontier: its doors are the next required input. */
   readonly doorsFrontier?: boolean;
-  /** The room's place against the plan end; past it, every panel is read-only. */
+  /** The room's place against the plan end; past it, every panel is read-only but its last row. */
   readonly planEndRelation?: WorkspacePlanEndRelation;
-  /** The action that moves the plan's end here, where no last row holds it. */
-  readonly pastEndAction?: ReactNode;
   /** Exact room-owned additions to ordinary lifecycle rows. */
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   /** Exact room-owned additions to ordinary lifecycle boundaries. */
@@ -131,7 +133,6 @@ export function OccurrenceWorkbench({
   doorsRequested = false,
   doorsFrontier = false,
   timelineDoors,
-  pastEndAction,
   entryIdentity,
   initialTab,
   findingNavigationRevision,
@@ -301,6 +302,11 @@ export function OccurrenceWorkbench({
   const timelineTab = activeTab === 'actions' || shipPhase !== undefined;
   // A Ship phase before the last shows the wheel the next phase is chosen at; the last its doors.
   const wheelPhase = shipPhase === shipPhases.at(-1) ? undefined : shipPhase;
+  const leaveTab = timelineTab && wheelPhase === undefined;
+  const pastEnd = planEndRelation === 'pastEnd';
+  // Past the plan end every control is locked; only the last row's own picker stays live.
+  const readOnlyPastEnd = (panel: ReactNode): ReactNode =>
+    pastEnd ? <ReadOnlyFindingScope>{panel}</ReadOnlyFindingScope> : panel;
   const stepsShown =
     wheelPhase === undefined
       ? (timelineDoors?.steps ?? [])
@@ -515,31 +521,34 @@ export function OccurrenceWorkbench({
       >
         <div
           className="room-workbench-panel-content"
-          // Past the plan end the room is read-only but for its plan-end action.
-          inert={planEndRelation === 'pastEnd'}
+          // Past the plan end the room is read-only but for its last row, which moves the end here.
+          inert={pastEnd && !leaveTab}
+          data-plan-end={pastEnd ? 'pastEnd' : undefined}
         >
-          {activeTab === 'overview' ? (
-            withRoomMap(
-              <div className="room-overview-workbench">
-                {entryIdentity}
-                {renderDirectRoomWorkbench('overview')}
-              </div>,
-            )
-          ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (
-            <RoomActionsWorkbench
-              {...(room.workbench.roomActions === undefined
-                ? {}
-                : { actions: room.workbench.roomActions })}
-              interactions={interactions}
-              mode={{ kind: 'shipRepairs', rows: room.workbench.repairRows }}
-            />
-          ) : room.workbench.kind === 'ship' ? (
-            withRoomMap(renderDirectRoomWorkbench(shipPhaseView()))
-          ) : (
-            withRoomMap(renderDirectRoomWorkbench('actions'))
+          {readOnlyPastEnd(
+            activeTab === 'overview' ? (
+              withRoomMap(
+                <div className="room-overview-workbench">
+                  {entryIdentity}
+                  {renderDirectRoomWorkbench('overview')}
+                </div>,
+              )
+            ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (
+              <RoomActionsWorkbench
+                {...(room.workbench.roomActions === undefined
+                  ? {}
+                  : { actions: room.workbench.roomActions })}
+                interactions={interactions}
+                mode={{ kind: 'shipRepairs', rows: room.workbench.repairRows }}
+              />
+            ) : room.workbench.kind === 'ship' ? (
+              withRoomMap(renderDirectRoomWorkbench(shipPhaseView()))
+            ) : (
+              withRoomMap(renderDirectRoomWorkbench('actions'))
+            ),
           )}
           {showTimelineLegend && room.placementRepairs !== undefined ? (
-            <section aria-label="Placement repairs">
+            <section aria-label="Placement repairs" inert={pastEnd}>
               {room.placementRepairs.map((repair) => (
                 <div className="room-placement-repair" key={repair.proposalKey}>
                   <span>{repair.label}</span>
@@ -561,7 +570,6 @@ export function OccurrenceWorkbench({
             </section>
           ) : null}
         </div>
-        {pastEndAction}
       </section>
     </article>
   );

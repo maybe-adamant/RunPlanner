@@ -255,7 +255,8 @@ export function SideVisitLeaves({
         className="timeline-return-row"
         // Melinoë re-enters the main room at the side room's door.
         {...(visited === undefined ? {} : { 'data-hero-door': visited.key })}
-        {...(endedAt >= 0 && index >= endedAt ? { 'data-plan-end': 'pastEnd' } : {})}
+        // The plan ending in a side room ends before the hero returns from it.
+        {...(endedAt >= 0 && index >= endedAt - 1 ? { 'data-plan-end': 'pastEnd' } : {})}
         key={`return-${leave.position}`}
         kind="boundary"
         label={
@@ -310,7 +311,10 @@ export function SideRoomLeave({
   );
 }
 
-/** A Hub room's only exit with no side doors: back to the Hub, or ending the plan there. */
+/**
+ * A Hub room's only exit with no side doors, or the Pre-Hub's: into the Hub, or
+ * ending the plan there.
+ */
 export function HubRoomLeave({
   hub,
   id,
@@ -320,6 +324,7 @@ export function HubRoomLeave({
   readonly hub: HubDecisionAddress;
   readonly id: string;
   readonly planEnd: WorkspaceRoomPlanEnd | undefined;
+  /** The Hub visit the room ends; 0 for the Pre-Hub, which enters the Hub. */
   readonly visitIndex: number;
 }) {
   return (

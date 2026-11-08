@@ -687,10 +687,14 @@ export type WorkspaceOccurrenceStageOutgoing =
       readonly kind: 'blockedOrUnentered';
       readonly marker: WorkspaceMarker;
       readonly message: string;
+      /** The plan does not reach the room yet. */
+      readonly unentered: boolean;
     }
   | {
       /** The Hub or a side-room visit decides where the room leads; its notes say so. */
       readonly kind: 'topologyOwned';
+      /** The Hub a Pre-Hub is left into. */
+      readonly hubEntry?: HubDecisionAddress;
       readonly marker: WorkspaceMarker;
       readonly notes: readonly WorkspaceDoorNote[];
     }

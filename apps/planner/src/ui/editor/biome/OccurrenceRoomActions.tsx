@@ -396,7 +396,9 @@ export function RoomActionsWorkbench({
   const doorsTail = (hasDoorsOpenRow: boolean): ReactNode =>
     roomDoors === undefined ? null : (
       <>
-        {hasDoorsOpenRow ? null : <DoorsOpenBanner doors={roomDoors} />}
+        {hasDoorsOpenRow || roomDoors.doorsOpenRow === false ? null : (
+          <DoorsOpenBanner doors={roomDoors} />
+        )}
         {roomDoors.leave}
       </>
     );

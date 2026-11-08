@@ -35,11 +35,10 @@ import {
   inspectorRoomActionContent,
   StartRoomIdentityEditor,
 } from './BiomeInspectorControls';
-import { PlanEndAction } from './PlanEndAction';
 import { ReadOnlyFindingScope } from '@planner/ui/feedback/useFindingTarget';
 import { DoorsRerollEntry } from './RoomRerolls';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
-import { BatchExitPicker, LeavePicker } from './LeavePicker';
+import { BatchExitPicker, LeavePicker, type LeaveOption } from './LeavePicker';
 import { HubRoomLeave, SideRoomLeave, SideVisitLeaves } from './SideVisitLeaves';
 import { LeaveRow, type TimelineDoorsContent } from './TimelineDoors';
 import { BiomeWorkspaceContractError } from './workspaceContract';
@@ -95,11 +94,9 @@ interface RoomDoorsInput {
   readonly planEnd: WorkspaceRoomPlanEnd | undefined;
 }
 
-/**
- * The room's doors on its Timeline, by how it is left: a batch of doors, a
- * fixed room, a Hub room's ways back, or the plan's end. A room left no
- * way (unreached, past the end, no next room) has no last row.
- */
+/** A room the plan ends in before its doors are planned continues the plan through them. */
+const unplannedDoors: LeaveOption = { key: 'doors', label: 'Doors', unplanned: true };
+
 /**
  * How a Hub room is left: a side room back to its main room; a main room
  * through each side visit, then back to the Hub.
@@ -136,6 +133,12 @@ function hubRoomLeaves(
   );
 }
 
+/**
+ * The room's doors on its Timeline, by how it is left: a batch of doors, a
+ * fixed room, a Hub room's ways back, or the plan's end. A room with no way
+ * out to pick (unreached, past the end, no next room) keeps a last row that
+ * ends the plan there.
+ */
 function roomTimelineDoors({
   activeNote,
   batch,
@@ -147,8 +150,27 @@ function roomTimelineDoors({
   planEnd,
 }: RoomDoorsInput): TimelineDoorsContent | undefined {
   const relation = planEnd?.relation;
-  // Past the plan end the doors are dormant; only the action that moves the end stays.
-  if (relation === 'pastEnd') return undefined;
+  const idPrefix = `occurrence-${node.room.occurrenceId}`;
+  // A room with no way out of its own to pick: ending the plan here.
+  const endPicker = (ways: readonly LeaveOption[] = [], unreached = false) =>
+    planEnd === undefined ? undefined : (
+      <LeaveRow key="leave" label="Leave room">
+        <LeavePicker
+          chosenKey={undefined}
+          id={`${idPrefix}-leave`}
+          options={ways}
+          planEnd={planEnd}
+          unreached={unreached}
+        />
+      </LeaveRow>
+    );
+  // The last row alone, where the room shows no doors.
+  const endOnlyRow = (unreached = false): TimelineDoorsContent | undefined => {
+    const leave = endPicker([], unreached);
+    return leave === undefined ? undefined : { leave, doorsOpenRow: false };
+  };
+  // Past the plan end the doors are dormant; only the row that moves the end here stays.
+  if (relation === 'pastEnd') return endOnlyRow();
   // The hidden door has a chip; a note on the doors as a whole has no row.
   const noteHighlight =
     activeNote === undefined
@@ -159,7 +181,6 @@ function roomTimelineDoors({
             ownRow: activeNote !== 'batch',
           },
         };
-  const idPrefix = `occurrence-${node.room.occurrenceId}`;
   const ended = relation === 'end';
   const leaveRow = (value: ReactNode, status?: string, anchorOwner?: SemanticAddress) => (
     <LeaveRow
@@ -172,11 +193,6 @@ function roomTimelineDoors({
       {value}
     </LeaveRow>
   );
-  // A room with no way out of its own to pick: ending the plan, and continuing it from there.
-  const endOnly = () =>
-    leaveRow(
-      <LeavePicker chosenKey={undefined} id={`${idPrefix}-leave`} options={[]} planEnd={planEnd} />,
-    );
 
   // A boss door's pool is authored or reported with the room's doors.
   const store = node.room.bossDoorRewardStore;
@@ -269,25 +285,25 @@ function roomTimelineDoors({
   }
   switch (outgoing?.kind) {
     case undefined:
-      return undefined;
+      return endOnlyRow();
     case 'blockedOrUnentered':
-    case 'terminal':
+    case 'terminal': {
       // No way on is planned from here; a boss door's pool and the plan's end still are.
-      return store === undefined && relation === undefined
-        ? undefined
-        : {
-            ...storeDetail,
-            ...(ended ? { leave: endOnly() } : {}),
-            notes,
-          };
+      const unreached = outgoing.kind === 'blockedOrUnentered' && outgoing.unentered;
+      if (store === undefined) return endOnlyRow(unreached);
+      const leave = endPicker([], unreached);
+      return { ...storeDetail, ...(leave === undefined ? {} : { leave }), notes };
+    }
     case 'authoredDecision':
       throw new BiomeWorkspaceContractError(
         `${outgoing.decisionNodeKey} authored outgoing decision was not joined to its node.`,
       );
     case 'frontier':
       throw new BiomeWorkspaceContractError('An exit frontier must carry its provisional doors.');
-    case 'planEnd':
-      return { leave: endOnly() };
+    case 'planEnd': {
+      const leave = endPicker([unplannedDoors]);
+      return leave === undefined ? {} : { leave };
+    }
     case 'topologyOwned': {
       const phantom = node.room.phantomExit;
       return {
@@ -327,11 +343,24 @@ function roomTimelineDoors({
               ),
             }),
         // The Hub decides where the room leads; its last rows pick the way back there.
-        ...(node.hubReturn === undefined
-          ? ended
-            ? { leave: endOnly() }
-            : {}
-          : { leave: hubRoomLeaves(node, node.hubReturn, interactions, idPrefix, planEnd) }),
+        ...(node.hubReturn !== undefined
+          ? { leave: hubRoomLeaves(node, node.hubReturn, interactions, idPrefix, planEnd) }
+          : outgoing.hubEntry !== undefined
+            ? {
+                leave: (
+                  <HubRoomLeave
+                    hub={outgoing.hubEntry}
+                    id={`${idPrefix}-leave`}
+                    key="leave"
+                    planEnd={planEnd}
+                    visitIndex={0}
+                  />
+                ),
+              }
+            : (() => {
+                const leave = endPicker();
+                return leave === undefined ? {} : { leave };
+              })()),
         notes,
       };
     }
@@ -469,19 +498,6 @@ function OccurrenceInspector({
       doorsRequested={doorsRequested || defaultToDoors}
       doorsFrontier={outgoing?.kind === 'frontier'}
       {...(doors === undefined ? {} : { timelineDoors: doors })}
-      // A room with no last row keeps the action that moves the plan's end to it.
-      {...(planEnd?.relation === 'pastEnd' ||
-      (planEnd !== undefined && planEnd.relation === undefined && doors?.leave === undefined)
-        ? {
-            pastEndAction: (
-              <div className="workbench-action-row">
-                <span className="workbench-action-end">
-                  <PlanEndAction planEnd={planEnd} />
-                </span>
-              </div>
-            ),
-          }
-        : {})}
     />
   );
 }
