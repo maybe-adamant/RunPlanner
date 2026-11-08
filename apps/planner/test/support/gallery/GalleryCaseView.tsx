@@ -150,6 +150,26 @@ function OpenedCase({ entry, view }: { readonly entry: GalleryCase; readonly vie
       window.clearTimeout(stop);
     };
   }, [entry, view]);
+  // A case showing an Overview list opens that picker once the Overview shows it.
+  const overviewPickerOpened = useRef(false);
+  useEffect(() => {
+    if (view !== 'overview' || entry.openOverviewPicker === undefined) return;
+    const name = entry.openOverviewPicker;
+    const timer = window.setInterval(() => {
+      const trigger = frame.current?.querySelector<HTMLButtonElement>(
+        `.room-overview-workbench button[aria-label="${CSS.escape(name)}"]`,
+      );
+      if (overviewPickerOpened.current || trigger === null || trigger === undefined) return;
+      overviewPickerOpened.current = true;
+      window.clearInterval(timer);
+      trigger.click();
+    }, 50);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 3000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
+  }, [entry, view]);
   return (
     <Provider store={application.store}>
       <div ref={frame}>

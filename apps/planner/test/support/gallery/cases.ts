@@ -609,6 +609,38 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-b1-e1'),
   },
   {
+    id: 'room-map-f-stale-entry',
+    overview: true,
+    label: 'F room holding a flip its door no longer gives: the Entry list clears it',
+    shows: ['door-decided entry held unflipped', 'clearing option'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceRoomLayout',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b1-e1'),
+        layout: { flipped: false },
+      }),
+    ],
+    target: room('F', 'golden-f-b1-e1'),
+    openOverviewPicker: 'Entry',
+  },
+  {
+    id: 'room-map-f-stale-fixed-entry',
+    overview: true,
+    label: 'F Postboss, one entry, holding the flip it never takes: the Entry list clears it',
+    shows: ['fixed entry held with the other flip', 'clearing option'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceRoomLayout',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
+        layout: { flipped: true },
+      }),
+    ],
+    target: room('F', 'golden-f-preboss-shop:postboss'),
+    openOverviewPicker: 'Entry',
+  },
+  {
     id: 'room-map-f-independent-pairs',
     overview: true,
     label: 'F room whose entries allow either flip: two pairs per entry',
