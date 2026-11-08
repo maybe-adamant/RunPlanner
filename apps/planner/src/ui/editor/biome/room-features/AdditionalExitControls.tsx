@@ -11,7 +11,6 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { ArtworkChip } from '@planner/ui/editor/rewards/TimelineChip';
 import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
-import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { useRoomMapHighlightActions, useRoomMapLinks } from '../room-map/roomMapHighlight';
 
 /** The selected Midshop owns only the available spawn affordance. */
@@ -125,13 +124,7 @@ export function ChaosGatePosition({
   const position = feature.position;
   return (
     <div className="room-layout-row" {...mapLinks({ kind: 'chaosGate' })}>
-      <span className="room-layout-label">
-        <ArtworkIcon
-          className="artwork-label-icon"
-          source={doorArtwork.ChaosExitDoor ?? undefined}
-        />
-        Chaos Gate
-      </span>
+      <span className="room-layout-label">Chaos Gate</span>
       <ContextualPicker<number | null>
         ariaLabel="Chaos Gate position"
         findingTarget={findingTarget(owner)}
