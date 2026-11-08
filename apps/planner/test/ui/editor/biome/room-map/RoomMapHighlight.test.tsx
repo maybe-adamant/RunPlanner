@@ -127,4 +127,36 @@ describe('room map highlight', () => {
       'Door 1 · Combat 02 · Closed',
     ]);
   });
+
+  it('keeps the Leave room picker’s active option ringed as the pointer moves from the trigger onto it', async () => {
+    const user = userEvent.setup();
+    render(
+      <Provider store={createApplication().store}>
+        <RoomMapHighlightScope scope="room:actions">
+          <LeavePicker
+            chosenKey="one"
+            id="leave"
+            options={chips.map((chip) => ({ key: chip.key, label: chip.label, chip }))}
+            planEnd={undefined}
+          />
+          <RoomMapColumn
+            chips={chips}
+            gameName="F_Combat01"
+            map={map}
+            roomIdentity="room"
+            stage="closed"
+            title="Combat 01"
+          />
+        </RoomMapHighlightScope>
+      </Provider>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Exit door' });
+    await user.hover(trigger);
+    await user.click(trigger);
+    const list = await screen.findByRole('listbox');
+    const ringed = () => previewed().map((point) => point.getAttribute('aria-label'));
+    expect(ringed()).toEqual(['Door 1 · Combat 02 · Closed']);
+    await user.hover(within(list).getByRole('option', { name: 'Door 1 · Combat 02' }));
+    expect(ringed()).toEqual(['Door 1 · Combat 02 · Closed']);
+  });
 });

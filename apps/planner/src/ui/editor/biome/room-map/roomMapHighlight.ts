@@ -43,9 +43,12 @@ export interface RoomMapHighlightActions {
 }
 
 export const RoomMapHighlightValue = createContext<RoomMapHighlight | undefined>(undefined);
+/** Hovered or focused linked controls; an open list's preview stands over theirs. */
 export const RoomMapHighlightChannel = createContext<RoomMapHighlightActions | undefined>(
   undefined,
 );
+/** An open picker list's preview, which follows its active option until the list closes. */
+export const RoomMapListChannel = createContext<RoomMapHighlightActions | undefined>(undefined);
 /** The map point under the pointer, which lights the control that owns it. */
 export const RoomMapPointedValue = createContext<RoomMapHighlight | undefined>(undefined);
 export const RoomMapPointedChannel = createContext<RoomMapHighlightActions | undefined>(undefined);
@@ -96,9 +99,17 @@ export function useRoomMapPointedAmong(
   return targets.some((target) => target !== undefined && highlightOwner(target) === owner);
 }
 
-/** Shows and releases a preview directly, such as a picker's highlighted option. */
+/**
+ * Shows and releases an open picker list's preview, its highlighted option:
+ * leaving or blurring the controls around it never clears it.
+ */
 export function useRoomMapHighlightActions(): RoomMapHighlightActions | undefined {
-  const channel = useContext(RoomMapHighlightChannel);
+  return useOwnedActions(useContext(RoomMapListChannel));
+}
+
+function useOwnedActions(
+  channel: RoomMapHighlightActions | undefined,
+): RoomMapHighlightActions | undefined {
   const owned = useRef<RoomMapHighlight | undefined>(undefined);
   useEffect(
     () => () => {
@@ -141,7 +152,7 @@ export interface RoomMapLinkProps {
  * element has no point or no map.
  */
 export function useRoomMapLinks(): (target: RoomMapHighlight | undefined) => RoomMapLinkProps {
-  const actions = useRoomMapHighlightActions();
+  const actions = useOwnedActions(useContext(RoomMapHighlightChannel));
   const pointed = useContext(RoomMapPointedValue);
   const pointedOwner = pointed === undefined ? undefined : highlightOwner(pointed);
   return useCallback(
