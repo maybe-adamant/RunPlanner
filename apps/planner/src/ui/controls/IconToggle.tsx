@@ -62,7 +62,7 @@ export function IconToggle({
       {disabled ? (
         <IconToggleLock />
       ) : badge === undefined ? null : (
-        <span aria-hidden="true" className="timeline-chip-badge">
+        <span aria-hidden="true" className="corner-badge timeline-chip-badge">
           {badge}
         </span>
       )}
@@ -85,7 +85,7 @@ export function IconToggleLock({
   readonly className?: string;
 }) {
   return (
-    <span aria-hidden="true" className={className}>
+    <span aria-hidden="true" className={`corner-badge corner-badge-top ${className}`}>
       <svg viewBox="0 0 10 10">
         <path
           d="M3 4.5V3.2a2 2 0 0 1 4 0v1.3"

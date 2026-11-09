@@ -11,7 +11,7 @@ export function TimelineChipFace({ chip }: { readonly chip: WorkspaceTimelineChi
     <>
       <ArtworkIcon className="artwork-label-icon" source={traitIcon(chip.icon)} />
       {chip.badge === undefined ? null : (
-        <span aria-hidden="true" className="timeline-chip-badge">
+        <span aria-hidden="true" className="corner-badge timeline-chip-badge">
           {chip.badge}
         </span>
       )}

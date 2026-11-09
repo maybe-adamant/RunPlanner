@@ -378,9 +378,6 @@
 
 /* The room's number on a shared icon, such as 13 on the foes of Combat 13. */
 .biome-rail-icons-number {
-  position: absolute;
-  right: -6px;
-  bottom: -4px;
   padding: 0 3px;
   border-radius: 6px;
   color: #f1e6cf;

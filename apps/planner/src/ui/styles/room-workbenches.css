@@ -1114,7 +1114,7 @@
   white-space: nowrap;
 }
 
-/* The row's object icon carries its inventory slot as a small number. */
+/* An object's icon carries its inventory slot as a small number. */
 .timeline-row-icon {
   position: relative;
   display: inline-flex;
@@ -1122,43 +1122,36 @@
 }
 
 .timeline-slot-badge {
-  position: absolute;
-  right: var(--timeline-badge-offset, -5px);
-  bottom: calc(var(--timeline-badge-offset, -5px) + 1px);
-  min-width: var(--timeline-badge-small, 13px);
-  height: var(--timeline-badge-small, 13px);
+  min-width: var(--badge-small);
+  height: var(--badge-small);
   padding: 0 2px;
   border: 1px solid #4a4855;
   border-radius: 7px;
   background: #1b1c22;
   color: #d9d4dc;
-  font-size: calc(var(--timeline-badge-font, 0.65rem) * 0.923);
+  font-size: calc(var(--badge-font) * 0.923);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  line-height: calc(var(--timeline-badge-small, 13px) - 2px);
+  line-height: calc(var(--badge-small) - 2px);
   text-align: center;
 }
 
 /* An icon's bottom corner tells its origin (what created it, its slot or the Travel Deal mark); its top corner, its status. */
 .timeline-source-badge {
-  position: absolute;
   z-index: 1;
-  right: var(--timeline-badge-offset, -5px);
-  bottom: var(--timeline-badge-offset, -5px);
-  width: var(--timeline-badge-size, 14px);
-  height: var(--timeline-badge-size, 14px);
+  width: var(--badge-size);
+  height: var(--badge-size);
   border-radius: 50%;
   background: #1b1c22;
   box-shadow: 0 0 0 1px #4a4855;
   object-fit: contain;
-  pointer-events: none;
 }
 
 /* A Travel Deal purchase carries the Travel Deal boon on its icon in place of a slot. */
 .timeline-travel-deal-badge {
-  width: calc(var(--timeline-badge-size, 14px) + 1px);
-  min-width: calc(var(--timeline-badge-size, 14px) + 1px);
-  height: calc(var(--timeline-badge-size, 14px) + 1px);
+  width: calc(var(--badge-size) + 1px);
+  min-width: calc(var(--badge-size) + 1px);
+  height: calc(var(--badge-size) + 1px);
   padding: 0;
   border-radius: 50%;
   object-fit: contain;
@@ -1247,13 +1240,13 @@
 /* Spawned chips stand far enough apart that their corner badges never touch. */
 .timeline-chip-group.spawned-loot-groups {
   flex-wrap: wrap;
-  gap: var(--timeline-badged-chip-gap, 8px);
+  gap: var(--badged-chip-gap);
 }
 
 .spawned-loot-group {
   display: inline-flex;
   align-items: center;
-  gap: var(--timeline-badged-chip-gap, 8px);
+  gap: var(--badged-chip-gap);
 }
 
 .spawned-loot-separator {
@@ -1634,59 +1627,15 @@
   --timeline-icon-size: 23px;
   --timeline-notice-line: rgb(255 255 255 / 16%);
   --timeline-chip-size: calc(var(--timeline-icon-size) + 9px);
-  --timeline-badge-size: calc(var(--timeline-icon-size) * 2 / 3);
-  --timeline-badge-small: calc(var(--timeline-icon-size) * 13 / 21);
-  --timeline-badge-offset: calc(var(--timeline-icon-size) * -5 / 21);
-  --timeline-badge-font: calc(var(--timeline-icon-size) * 0.65 / 1.4);
-  /* The share of a corner badge's own width that hangs past its icon's right edge. */
-  --timeline-badge-overhang: 0.5;
-  /* Badged chips stand far enough apart that an overhanging badge never meets the next chip. */
-  --timeline-badged-chip-gap: 12px;
+  --badge-size: calc(var(--timeline-icon-size) * 2 / 3);
+  --badge-small: calc(var(--timeline-icon-size) * 13 / 21);
+  --badge-offset: calc(var(--timeline-icon-size) * -5 / 21);
+  --badge-font: calc(var(--timeline-icon-size) * 0.65 / 1.4);
 }
 
 /* A chip's badges sit on its icon's top and bottom, not its padding, so they stay inside the row. */
-.room-actions-workbench .timeline-chip {
-  --timeline-badge-offset: calc(var(--timeline-icon-size) * -5 / 21 + 4.5px);
-}
-
-/* Corner badges read like superscripts and subscripts: partly outside their icon on the right. */
-.room-actions-workbench
-  :is(
-    .timeline-chip-badge,
-    .timeline-slot-badge,
-    .timeline-source-badge,
-    .row-reward-boosted,
-    .spawn-lock-badge,
-    .icon-toggle-lock
-  ):not(.fields-cage-order-chips *) {
-  right: 0;
-  translate: calc(var(--timeline-badge-overhang) * 100%) 0;
-}
-
-.room-actions-workbench
-  .timeline-chip-group:has(.timeline-chip-badge, .timeline-source-badge, .spawn-lock-badge) {
-  gap: var(--timeline-badged-chip-gap);
-}
-
-/* Outside a chip group, a badged icon keeps room for its overhang before what follows it. */
-.room-actions-workbench
-  :is(
-    .timeline-row-icon,
-    .row-reward-icon,
-    .timeline-chip,
-    .contextual-picker-trigger-badged,
-    .icon-toggle
-  ):has(
-    > :is(
-      .timeline-chip-badge,
-      .timeline-slot-badge,
-      .timeline-source-badge,
-      .row-reward-boosted,
-      .spawn-lock-badge,
-      .icon-toggle-lock
-    )
-  ):not(.timeline-chip-group > *, .spawned-loot-group > *, .fields-cage-order-chips *) {
-  margin-inline-end: calc(var(--timeline-badge-overhang) * var(--timeline-badge-size));
+.room-actions-workbench :is(.timeline-chip, .numbered-slot-chip) {
+  --badge-offset: calc(var(--timeline-icon-size) * -5 / 21 + 4.5px);
 }
 
 .room-actions-workbench .artwork-label-icon {
@@ -2277,17 +2226,14 @@
 }
 
 .row-reward-boosted {
-  position: absolute;
-  top: var(--timeline-badge-offset, -5px);
-  right: calc(var(--timeline-badge-offset, -5px) - 1px);
   display: grid;
-  width: var(--timeline-badge-small, 13px);
-  height: var(--timeline-badge-small, 13px);
+  width: var(--badge-small);
+  height: var(--badge-small);
   place-items: center;
   border-radius: 50%;
   background: var(--selection-accent);
   color: #1b1c22;
-  font-size: calc(var(--timeline-badge-font, 0.65rem) * 0.923);
+  font-size: calc(var(--badge-font) * 0.923);
   font-weight: 800;
   line-height: 1;
 }
@@ -2612,20 +2558,16 @@ button.timeline-chip {
 }
 
 .timeline-chip-badge {
-  position: absolute;
-  right: var(--timeline-badge-offset, -5px);
-  bottom: var(--timeline-badge-offset, -5px);
-  min-width: var(--timeline-badge-size, 14px);
+  min-width: var(--badge-size);
   padding: 0 3px;
   border-radius: 7px;
   background: var(--surface);
   box-shadow: 0 0 0 1px var(--border);
   color: var(--text);
-  font-size: var(--timeline-badge-font, 0.65rem);
+  font-size: var(--badge-font);
   font-weight: 600;
-  line-height: var(--timeline-badge-size, 14px);
+  line-height: var(--badge-size);
   text-align: center;
-  pointer-events: none;
 }
 
 .timeline-chip:disabled {
@@ -3229,7 +3171,7 @@ span.hub-board-status-line {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 4px 20px;
+  gap: 4px 12px;
   min-width: 0;
 }
 
@@ -3245,18 +3187,10 @@ span.hub-board-status-line {
   gap: 4px;
 }
 
+/* A slot's chip carries its number on its corner, like a Timeline row's slot. */
 .numbered-slot-chip {
-  display: inline-grid;
-  justify-items: center;
-  row-gap: 1px;
-}
-
-.numbered-slot-number {
-  color: var(--muted);
-  font-size: 0.65rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  line-height: 1;
+  position: relative;
+  display: inline-flex;
 }
 
 /* A value that may stay unknown shows `?` in a solid chip; a dashed slot still needs a choice. */
@@ -3333,7 +3267,7 @@ span.hub-board-status-line {
   gap: 4px;
 }
 
-/* Header chips take the Timeline's control height, the cage's number inside the chip. */
+/* Header chips take the Timeline's control height, the cage's number a smaller badge. */
 .fields-cage-order-chips .contextual-picker-trigger.timeline-chip {
   width: var(--timeline-control-height);
   min-width: var(--timeline-control-height);
@@ -3342,8 +3276,6 @@ span.hub-board-status-line {
 }
 
 .fields-cage-order-chips .timeline-chip-badge {
-  right: 0;
-  bottom: 0;
   min-width: 0;
   padding: 0 2px;
   border-radius: 4px;
@@ -3381,40 +3313,32 @@ span.hub-board-status-line {
 }
 
 .icon-toggle-lock {
-  position: absolute;
-  top: var(--timeline-badge-offset, -5px);
-  right: var(--timeline-badge-offset, -5px);
   display: grid;
-  width: var(--timeline-badge-small, 13px);
-  height: var(--timeline-badge-small, 13px);
+  width: var(--badge-small);
+  height: var(--badge-small);
   place-items: center;
   border-radius: 7px;
   background: var(--surface);
   box-shadow: 0 0 0 1px var(--border);
   color: var(--muted);
-  pointer-events: none;
 }
 
 /* Loot spawned before it can be taken: a lock on its chip's top corner. */
 .spawn-lock-badge {
-  position: absolute;
-  top: var(--timeline-badge-offset, -5px);
-  right: var(--timeline-badge-offset, -5px);
   display: grid;
-  width: var(--timeline-badge-small, 13px);
-  height: var(--timeline-badge-small, 13px);
+  width: var(--badge-small);
+  height: var(--badge-small);
   place-items: center;
   border-radius: 7px;
   background: var(--surface);
   box-shadow: 0 0 0 1px var(--border);
   color: var(--muted);
-  pointer-events: none;
 }
 
 .spawn-lock-badge > svg,
 .icon-toggle-lock > svg {
-  width: calc(var(--timeline-badge-small, 13px) * 0.615);
-  height: calc(var(--timeline-badge-small, 13px) * 0.615);
+  width: calc(var(--badge-small) * 0.615);
+  height: calc(var(--badge-small) * 0.615);
 }
 
 .icon-toggle-disabled {

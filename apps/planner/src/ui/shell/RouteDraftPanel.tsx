@@ -466,12 +466,12 @@ function BasketLine({
                 )}
                 {chip.partnerGiverKey === undefined ? null : (
                   <ArtworkIcon
-                    className="draft-chip-partner"
+                    className="corner-badge corner-badge-top draft-chip-partner"
                     source={traitGiverArtwork[chip.partnerGiverKey] ?? undefined}
                   />
                 )}
                 {group.queued ? (
-                  <span className="draft-chip-order" aria-hidden="true">
+                  <span className="corner-badge draft-chip-order" aria-hidden="true">
                     {index + 1}
                   </span>
                 ) : null}
@@ -694,7 +694,10 @@ export function RouteDraftPanel({
                       />
                       {catalog.traitGivers.byKey[godKey]?.label ?? godKey}
                       {poolNumber === undefined ? null : (
-                        <span className="draft-order-number" aria-hidden="true">
+                        <span
+                          className="corner-badge corner-badge-top draft-order-number"
+                          aria-hidden="true"
+                        >
                           {poolNumber}
                         </span>
                       )}
@@ -1037,7 +1040,10 @@ export function RouteDraftPanel({
                           />
                           {label}
                           {rank === 0 ? null : (
-                            <span className="draft-order-number" aria-hidden="true">
+                            <span
+                              className="corner-badge corner-badge-top draft-order-number"
+                              aria-hidden="true"
+                            >
                               {rank}
                             </span>
                           )}

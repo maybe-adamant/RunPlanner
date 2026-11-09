@@ -816,11 +816,11 @@ export function RoomActionsWorkbench({
                   <ArtworkIcon className="artwork-label-icon" source={icon} />
                   {row.travelDeal ? (
                     <ArtworkIcon
-                      className="timeline-slot-badge timeline-travel-deal-badge"
+                      className="corner-badge timeline-slot-badge timeline-travel-deal-badge"
                       source={traitIcon('RestockBoon')}
                     />
                   ) : row.slot === undefined ? null : (
-                    <span aria-hidden="true" className="timeline-slot-badge">
+                    <span aria-hidden="true" className="corner-badge timeline-slot-badge">
                       {row.slot}
                     </span>
                   )}
@@ -888,7 +888,7 @@ export function RoomActionsWorkbench({
                   role="img"
                 >
                   <img alt="" className="artwork-label-icon" src={rerollDieArtwork} />
-                  <span aria-hidden="true" className="timeline-slot-badge">
+                  <span aria-hidden="true" className="corner-badge timeline-slot-badge">
                     {row.roll}
                   </span>
                 </span>

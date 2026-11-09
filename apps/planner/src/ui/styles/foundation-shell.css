@@ -25,6 +25,15 @@
   --finding: #da7373;
   /* Lavender of the plan's end: the end room and the rooms past it. */
   --plan-end: #b9a8e6;
+  /* A corner badge marks an icon's corner with its count, slot, origin or lock. */
+  --badge-size: 14px;
+  --badge-small: 13px;
+  --badge-offset: -5px;
+  --badge-font: 0.65rem;
+  /* The share of a corner badge's own width that hangs past its icon's right edge. */
+  --badge-overhang: 0.5;
+  /* Badged chips stand far enough apart that an overhanging badge never meets the next chip. */
+  --badged-chip-gap: 12px;
 
   color: var(--text);
   background: #111216;
@@ -313,6 +322,51 @@ input[type='checkbox']:checked:disabled {
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+/*
+ * Corner badges read like superscripts and subscripts: partly outside their icon on the right,
+ * an origin, count or slot at the bottom and a status at the top.
+ */
+.corner-badge,
+.trait-option-roll .contextual-picker-trigger-value > :not(.contextual-picker-trigger-image) {
+  position: absolute;
+  right: 0;
+  bottom: var(--badge-offset);
+  translate: calc(var(--badge-overhang) * 100%) 0;
+  pointer-events: none;
+}
+
+.corner-badge-top {
+  top: var(--badge-offset);
+  bottom: auto;
+}
+
+/* Chips in a row of chips stand apart by the group's gap, wide enough for an overhang. */
+:is(
+  .timeline-chip-group,
+  .spawned-loot-group,
+  .fields-cage-order-chips,
+  .icon-toggle-row,
+  .trait-option-level-sources,
+  .draft-toggle-row
+):has(.corner-badge) {
+  gap: var(--badged-chip-gap);
+}
+
+/* Elsewhere a badged icon keeps room for its overhang before what follows it. */
+:has(> .corner-badge):not(
+  :is(
+      .timeline-chip-group,
+      .spawned-loot-group,
+      .fields-cage-order-chips,
+      .icon-toggle-row,
+      .trait-option-level-sources,
+      .draft-toggle-row
+    )
+    *
+) {
+  margin-inline-end: calc(var(--badge-overhang) * var(--badge-size));
 }
 
 .status-badge {

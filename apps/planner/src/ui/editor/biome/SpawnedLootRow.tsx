@@ -143,10 +143,15 @@ function SpawnedItemChip({
         </span>
       )}
       {sourceBadge === undefined ? null : (
-        <img alt="" aria-hidden="true" className="timeline-source-badge" src={sourceBadge} />
+        <img
+          alt=""
+          aria-hidden="true"
+          className="corner-badge timeline-source-badge"
+          src={sourceBadge}
+        />
       )}
       {item.place === undefined ? null : (
-        <span aria-hidden="true" className="timeline-chip-badge">
+        <span aria-hidden="true" className="corner-badge timeline-chip-badge">
           {item.place.badge}
         </span>
       )}

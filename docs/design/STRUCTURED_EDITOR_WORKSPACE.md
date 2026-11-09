@@ -505,10 +505,11 @@ It lists the items in spawn order as chips, grouped by what spawned them (a
 boon, keepsake, NPC, the Hermes Shrine, the Artificer, Sea Star or a switch);
 the room's own reward and Fields slots stand alone. A derived pickup's chip and
 its collect row's item carry that source as a badge. Every item and object
-icon follows one badge scheme: the bottom corner tells its origin (a cage or
-optional slot, the source that created it, a store slot or the Travel Deal
-mark; a caged reward's origin is its cage, so it carries no source) and the top
-corner its status (a lock). A chip leads
+icon, in every view, follows one badge scheme: the bottom corner tells its
+origin (a cage or optional slot, the source that created it, a store slot or
+the Travel Deal mark; a caged reward's origin is its cage, so it carries no
+source) and the top corner its status (a lock); a badge hangs half outside its
+icon on the right, and badged icons leave room for it. A chip leads
 to its collect row; an optional item not yet collected is dashed and one
 click places it, opening the row's unfinished choice (a Pom Slice's Pom) at
 once. Its hover says what clicking does. The

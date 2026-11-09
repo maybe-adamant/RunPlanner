@@ -89,6 +89,13 @@ describe('Stygian Well workbench', () => {
     await view.user.click(screen.getByRole('button', { name: 'Stygian Well' }));
     expect(screen.queryByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);
+    // Each slot's number is a corner badge on its chip.
+    const slots = screen.getByRole('group', { name: 'Stygian Well slots' });
+    expect(
+      [...slots.querySelectorAll('.numbered-slot-chip')].map(
+        (chip) => chip.querySelector(':scope > .corner-badge')?.textContent,
+      ),
+    ).toEqual(['1', '2', '3']);
   });
 
   it('disables the Well toggle in a reached room too early for a Well and names the rule', () => {
@@ -102,6 +109,8 @@ describe('Stygian Well workbench', () => {
     openOverview();
     const toggle = screen.getByRole('button', { name: 'Stygian Well' });
     expect((toggle as HTMLButtonElement).disabled).toBe(true);
+    // Its lock is a top corner badge, like a locked Timeline pickup's.
+    expect(toggle.querySelector(':scope > .corner-badge.corner-badge-top')).not.toBeNull();
     expect(hintOf(toggle.closest('[data-hint]'))).toContain(
       'Wells need biome depth 3; this room is at 2.',
     );

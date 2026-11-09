@@ -25,7 +25,7 @@ export function ShopWorkbench({
       <div className="shop-family-offer-list">
         <NumberedSlots label="Shop slots">
           {room.offers.map((offer, index) => (
-            <NumberedSlot hint={`Slot ${index + 1}`} key={offer.key} number={index + 1}>
+            <NumberedSlot key={offer.key} number={index + 1}>
               <RewardControlEditor
                 control={offer.rewardControl}
                 idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}

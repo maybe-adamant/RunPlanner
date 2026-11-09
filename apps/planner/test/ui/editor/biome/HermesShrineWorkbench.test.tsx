@@ -126,6 +126,14 @@ describe('Hermes Shrine workbench', () => {
     expect(
       screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
     ).toHaveLength(3);
+    // Each offer's slot number is a corner badge on its own item chip.
+    const slots = screen.getByRole('group', { name: 'Hermes Shrine slots' });
+    expect(
+      [...slots.querySelectorAll('.numbered-slot-chip')].map((chip) => [
+        chip.querySelector('button')?.getAttribute('aria-label'),
+        chip.querySelector(':scope > .corner-badge')?.textContent,
+      ]),
+    ).toEqual([1, 2, 3].map((slot) => [`Hermes Shrine Offer ${slot} Item`, String(slot)]));
     expect(
       occurrence(oOccurrenceIds.combat07)(
         workspaceBiome(application, 'Surface', 'O'),

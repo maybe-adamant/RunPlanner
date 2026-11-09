@@ -193,7 +193,7 @@ export function RowReward({
                 reward.rerolledOffer === undefined ? undefined : offerIcon(reward.rerolledOffer)
               }
             />
-            <img alt="" className="row-reward-rerolled-die" src={rerollDieArtwork} />
+            <img alt="" className="corner-badge row-reward-rerolled-die" src={rerollDieArtwork} />
           </span>
         </>
       )}
@@ -366,7 +366,7 @@ export function FixedRewardChip({
     >
       <ArtworkIcon className="artwork-label-icon" source={icon} />
       {badge === undefined ? null : (
-        <span aria-hidden="true" className="timeline-chip-badge">
+        <span aria-hidden="true" className="corner-badge timeline-chip-badge">
           {badge}
         </span>
       )}

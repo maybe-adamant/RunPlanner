@@ -146,7 +146,7 @@ export function ProjectFindings({
                     source={roomKindIcon(place.room.icon)}
                   />
                   {place.room.number === undefined ? null : (
-                    <span className="finding-room-number">{place.room.number}</span>
+                    <span className="corner-badge finding-room-number">{place.room.number}</span>
                   )}
                 </span>
               </>

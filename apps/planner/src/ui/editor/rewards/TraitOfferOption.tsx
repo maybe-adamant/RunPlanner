@@ -292,7 +292,7 @@ export function TraitOfferOption<TraitValue>({
                 {...hintProps(replacedTraitLabel)}
               >
                 <ArtworkIcon className="trait-option-level-image" source={replacedTraitIcon} />
-                <span className="trait-option-level-badge">{effectiveLevel}</span>
+                <span className="corner-badge trait-option-level-badge">{effectiveLevel}</span>
               </span>
             ) : jeweledPomLevels === undefined && !rollShown ? (
               <FixedValueChip label="1" />
@@ -305,7 +305,9 @@ export function TraitOfferOption<TraitValue>({
                     {...hintProps('Jeweled Pom')}
                   >
                     <img alt="" src={keepsakeArtwork.HadesAndPersephoneKeepsake} />
-                    <span className="trait-option-level-badge">+{jeweledPomLevels}</span>
+                    <span className="corner-badge trait-option-level-badge">
+                      +{jeweledPomLevels}
+                    </span>
                   </span>
                 )}
                 {!rollShown ||

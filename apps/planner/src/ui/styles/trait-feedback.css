@@ -1015,21 +1015,6 @@ button.hex-column-deal[data-has-findings='true'] {
   width: 1.6rem;
 }
 
-.trait-option-roll .contextual-picker-trigger-value > :not(.contextual-picker-trigger-image) {
-  background: var(--selection-accent);
-  border-radius: 999px;
-  bottom: -0.3rem;
-  color: var(--surface);
-  font-size: 0.7rem;
-  font-weight: 700;
-  line-height: 1;
-  min-width: 1rem;
-  padding: 0.15rem 0.25rem;
-  position: absolute;
-  right: -0.3rem;
-  text-align: center;
-}
-
 /* The Level line: each level source as an icon with its levels as a badge. */
 .trait-option-level-sources {
   align-items: center;
@@ -1057,17 +1042,15 @@ button.hex-column-deal[data-has-findings='true'] {
   width: 1.6rem;
 }
 
-.trait-option-level-badge {
+.trait-option-level-badge,
+.trait-option-roll .contextual-picker-trigger-value > :not(.contextual-picker-trigger-image) {
   background: var(--selection-accent);
   border-radius: 999px;
-  bottom: -0.3rem;
   color: var(--surface);
   font-size: 0.7rem;
   font-weight: 700;
   line-height: 1;
   min-width: 1rem;
   padding: 0.15rem 0.25rem;
-  position: absolute;
-  right: -0.3rem;
   text-align: center;
 }

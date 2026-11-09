@@ -57,7 +57,7 @@ export function FieldsWorkbench({
           {room.optionalRewards.length === 0 ? null : (
             <NumberedSlots label="Optional rewards">
               {room.optionalRewards.map((reward, index) => (
-                <NumberedSlot hint={`Reward ${index + 1}`} key={reward.key} number={index + 1}>
+                <NumberedSlot key={reward.key} number={index + 1}>
                   <RewardControlEditor
                     ariaLabel={`${reward.label} reward`}
                     control={reward.control}

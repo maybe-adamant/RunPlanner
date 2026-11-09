@@ -534,7 +534,7 @@ export function ContextualPicker<T>({
                     </span>
                   ) : null}
                   {triggerBadge === undefined || disabled ? null : (
-                    <span aria-hidden="true" className="timeline-chip-badge">
+                    <span aria-hidden="true" className="corner-badge timeline-chip-badge">
                       {triggerBadge}
                     </span>
                   )}
@@ -543,7 +543,7 @@ export function ContextualPicker<T>({
                 <>
                   <ArtworkIcon className="artwork-label-icon" source={triggerIcon} />
                   {triggerBadge === undefined ? null : (
-                    <span aria-hidden="true" className="timeline-chip-badge">
+                    <span aria-hidden="true" className="corner-badge timeline-chip-badge">
                       {triggerBadge}
                     </span>
                   )}
@@ -575,7 +575,7 @@ export function ContextualPicker<T>({
                 ) : (
                   <span className="contextual-picker-trigger-badged">
                     <ArtworkIcon className="contextual-picker-trigger-image" source={triggerIcon} />
-                    <span aria-hidden="true" className="timeline-chip-badge">
+                    <span aria-hidden="true" className="corner-badge timeline-chip-badge">
                       {triggerBadge}
                     </span>
                   </span>

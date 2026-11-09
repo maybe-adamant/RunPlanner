@@ -1054,10 +1054,11 @@
   text-transform: none;
 }
 
+/* A toggle's order badge comes and goes; the row keeps room for it either way. */
 .draft-toggle-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: var(--badged-chip-gap);
 }
 
 .draft-toggle {
@@ -1501,9 +1502,6 @@ label.draft-row-label {
 
 /* A queued trait's place in its giver's order, small in the chip's lower corner. */
 .draft-chip-order {
-  position: absolute;
-  right: -0.3rem;
-  bottom: -0.35rem;
   min-width: 0.85rem;
   height: 0.85rem;
   padding: 0 0.15rem;
@@ -1519,20 +1517,13 @@ label.draft-row-label {
 
 /* A Duo chip's other god, pinned to the corner like an order number. */
 .draft-chip-partner {
-  position: absolute;
-  top: -0.5rem;
-  right: -0.4rem;
   width: 1.25rem;
   height: 1.25rem;
   object-fit: contain;
-  pointer-events: none;
 }
 
 /* A selected god trait's acquisition order, pinned to the corner so rows never shift. */
 .draft-order-number {
-  position: absolute;
-  top: -0.45rem;
-  right: -0.35rem;
   min-width: 1.05rem;
   height: 1.05rem;
   padding: 0 0.2rem;

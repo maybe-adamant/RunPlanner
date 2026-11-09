@@ -66,11 +66,7 @@ export function RoomInventoryPanel({
             {feature.presence.kind === 'optionalAbsent' ? null : (
               <NumberedSlots label="Stygian Well slots">
                 {feature.slots.map((slot, index) => (
-                  <NumberedSlot
-                    hint={`Slot ${index + 1}`}
-                    key={slot.generationKey}
-                    number={index + 1}
-                  >
+                  <NumberedSlot key={slot.generationKey} number={index + 1}>
                     <StygianWellSlotPicker fieldLabel="" interactions={interactions} slot={slot} />
                   </NumberedSlot>
                 ))}
@@ -91,7 +87,7 @@ export function RoomInventoryPanel({
                   slot.interactionKey,
                 );
                 return (
-                  <NumberedSlot hint={`Slot ${index + 1}`} key={slot.key} number={index + 1}>
+                  <NumberedSlot key={slot.key} number={index + 1}>
                     <PurgingPoolTraitPicker
                       address={slot.address}
                       interaction={interaction}
@@ -128,7 +124,6 @@ export function RoomInventoryPanel({
                   );
                   return (
                     <NumberedSlot
-                      hint={`Slot ${index + 1}`}
                       key={slot.key}
                       number={index + 1}
                       trailing={<HermesShrineDelayPicker label={slot.label} offer={offer} />}

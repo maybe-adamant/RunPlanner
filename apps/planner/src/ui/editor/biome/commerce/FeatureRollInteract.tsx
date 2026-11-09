@@ -191,7 +191,7 @@ export function FeatureRollSlots({
   return (
     <NumberedSlots label={`${label} slots`}>
       {slots.map((slot, index) => (
-        <NumberedSlot hint={`Slot ${index + 1}`} key={slot.slotKey} number={index + 1}>
+        <NumberedSlot key={slot.slotKey} number={index + 1}>
           <FeatureRollSlotPicker
             feature={feature}
             interactions={interactions}

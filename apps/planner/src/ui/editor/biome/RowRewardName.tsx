@@ -49,15 +49,20 @@ export function RowRewardName({
           source={itemKey === undefined ? offerIcon(offer) : wellItemIcon(itemKey)}
         />
         {sourceBadge === undefined ? null : (
-          <img alt="" aria-hidden="true" className="timeline-source-badge" src={sourceBadge} />
+          <img
+            alt=""
+            aria-hidden="true"
+            className="corner-badge timeline-source-badge"
+            src={sourceBadge}
+          />
         )}
         {place === undefined ? null : (
-          <span aria-hidden="true" className="timeline-chip-badge">
+          <span aria-hidden="true" className="corner-badge timeline-chip-badge">
             {place.badge}
           </span>
         )}
         {boosted ? (
-          <span aria-hidden="true" className="row-reward-boosted">
+          <span aria-hidden="true" className="corner-badge corner-badge-top row-reward-boosted">
             ↑
           </span>
         ) : null}

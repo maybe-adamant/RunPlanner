@@ -13,7 +13,9 @@ export function RoomNumberIcon({
   return (
     <span className="biome-rail-icons-room-slot">
       <ArtworkIcon className="biome-rail-icons-room" source={roomKindIcon(room)} />
-      {number === undefined ? null : <span className="biome-rail-icons-number">{number}</span>}
+      {number === undefined ? null : (
+        <span className="corner-badge biome-rail-icons-number">{number}</span>
+      )}
     </span>
   );
 }

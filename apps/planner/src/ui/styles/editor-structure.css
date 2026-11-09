@@ -323,18 +323,17 @@ select {
   height: 1.4rem;
 }
 
-/* A trigger icon wearing its slot mark on its corner. */
+/*
+ * A trigger icon wearing its slot mark on its corner. The trigger's value clips to its line, so
+ * the mark rests on the icon's bottom edge.
+ */
 .contextual-picker-trigger-value > .contextual-picker-trigger-badged {
+  --badge-offset: 0px;
+
   position: relative;
   display: inline-flex;
   flex: 0 0 auto;
-  margin-right: 5px;
   overflow: visible;
-}
-
-.contextual-picker-trigger-badged > .timeline-chip-badge {
-  right: -7px;
-  bottom: -3px;
 }
 
 .contextual-picker-popover {
@@ -801,7 +800,6 @@ select {
 .finding-room {
   position: relative;
   display: inline-flex;
-  margin-right: 0.55rem;
   vertical-align: -0.28rem;
 }
 
@@ -811,9 +809,6 @@ select {
 }
 
 .finding-room-number {
-  position: absolute;
-  right: -0.55rem;
-  bottom: -0.2rem;
   padding: 0 2px;
   border-radius: 5px;
   color: #f1e6cf;
@@ -1442,9 +1437,6 @@ select {
 }
 
 .row-reward-rerolled-die {
-  position: absolute;
-  right: -5px;
-  bottom: -4px;
   width: 13px;
   height: 13px;
   border-radius: 3px;

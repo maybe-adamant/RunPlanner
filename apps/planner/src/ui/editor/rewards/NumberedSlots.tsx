@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
-import { hintProps } from '@planner/ui/controls/hint';
 
-/** Slot chips on one line, each numbered underneath. */
+/** Slot chips on one line, each numbered on its corner. */
 export function NumberedSlots({
   children,
   label,
@@ -17,15 +16,13 @@ export function NumberedSlots({
   );
 }
 
-/** One chip with its number under it; the number tells what it counts on hover. */
+/** One chip with its number as a corner badge. */
 export function NumberedSlot({
   children,
-  hint,
   number,
   trailing,
 }: {
   readonly children: ReactNode;
-  readonly hint: string;
   readonly number: number;
   /** A value that belongs to this slot, after its chip on the same line. */
   readonly trailing?: ReactNode;
@@ -34,7 +31,7 @@ export function NumberedSlot({
     <span className="numbered-slot" data-slot-number={number}>
       <span className="numbered-slot-chip">
         {children}
-        <span {...hintProps(hint)} aria-hidden="true" className="numbered-slot-number">
+        <span aria-hidden="true" className="corner-badge timeline-slot-badge">
           {number}
         </span>
       </span>

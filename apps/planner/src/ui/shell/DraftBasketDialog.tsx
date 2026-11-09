@@ -54,7 +54,7 @@ function BasketRows({
             <ArtworkIcon className="draft-toggle-icon" source={traitIcon(row.traitKey)} />
             {row.label}
             {row.orderNumber === undefined ? null : (
-              <span className="draft-order-number" aria-hidden="true">
+              <span className="corner-badge corner-badge-top draft-order-number" aria-hidden="true">
                 {row.orderNumber}
               </span>
             )}
