@@ -1238,15 +1238,15 @@
 }
 
 /* Spawned chips stand far enough apart that their corner badges never touch. */
-.spawned-loot-groups {
+.timeline-chip-group.spawned-loot-groups {
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .spawned-loot-group {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .spawned-loot-separator {
