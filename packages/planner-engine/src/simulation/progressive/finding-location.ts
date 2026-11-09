@@ -737,10 +737,10 @@ export function roomActionOwns(action: RoomActionRow, address: SemanticAddress):
 
 /**
  * The room-local owners a row settles: the Keepsake Rack its selection and equip
- * result, a fountain use its rarity outcome, a Well purchase the item at its
- * generation with its Fateful Twist, and a Shrine purchase its initial item. A
- * Shrine Travel Deal refill is realized by an earlier rush, and a Pool list is
- * judged as the fountain opens it or by its own sale, so no row settles them here.
+ * result, a fountain use its rarity outcome, a Well purchase its Fateful Twist and
+ * its initial or rolled item, and a Shrine purchase its initial item. A Travel Deal
+ * refill is judged at the earlier purchase that restocks it, and a Pool list as the
+ * fountain opens it or by its own sale, so no row settles them here.
  */
 function roomLocalOwnerSettledBy(action: RoomActionRow, address: SemanticAddress): boolean {
   const reference = action.reference;
@@ -770,6 +770,7 @@ function roomLocalOwnerSettledBy(action: RoomActionRow, address: SemanticAddress
         case 'stygianWellOffer':
         case 'stygianWellTwist':
           return (
+            (target.kind === 'stygianWellTwist' || target.generationKey !== 'travelDealRefill') &&
             reference.kind === 'purchaseStygianWellOffer' &&
             reference.generationKey === target.generationKey
           );

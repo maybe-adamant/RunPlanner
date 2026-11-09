@@ -782,22 +782,6 @@ function roomStop(
     passed.some((event) => event.kind === 'roomCommitted')
   )
     return stop('exit', entries.length, 'before');
-  const firstRow = entries.findIndex(
-    (entry) => entry.kind === 'action' && rowKeys?.includes(entry.action.key) === true,
-  );
-  if (firstRow >= 0) return stop('timeline', firstRow, 'entry');
-  if (
-    located.roomOccurrenceId === room.occurrenceId &&
-    located.roomTimelineIndex !== undefined &&
-    located.roomTimelineIndex >= 0 &&
-    located.roomTimelineIndex < entries.length
-  )
-    return stop('timeline', located.roomTimelineIndex, 'entry');
-  const cleanup = entries.findIndex(
-    (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
-  );
-  if (cleanup < 0)
-    throw new BiomeMaterializationContractError(`${room.gameName} has no Doors open boundary`);
   const generation = profile.operations.findIndex(
     (operation) => operation.kind === 'generateOutgoingBatch',
   );
@@ -805,15 +789,6 @@ function roomStop(
     (operation) => operation.kind === 'settleAcquisitionPoint' || operation.kind === 'commitRoom',
   );
   const generated = generation >= 0 && passed.some((event) => event.operationIndex >= generation);
-  // A door's generation or offer, or the store they draw from, blocks inside the doors
-  // opening. A missing Timeline action blocks only after the doors opened (its window
-  // follows outgoing generation).
-  if (
-    (generated || (generation >= 0 && atContact?.operationIndex === generation)) &&
-    located.finding.origin.kind !== 'roomAction' &&
-    !passed.some((event) => event.operationIndex > generation)
-  )
-    return stop('timeline', cleanup, 'entry');
   const phaseEvent = (kind: HistoryEvent['kind'], phaseKey: string, event: HistoryEvent) =>
     event.kind === kind && 'phaseKey' in event && event.phaseKey === phaseKey;
   /** Whether an event is the boundary's own: the walk settles that boundary with it. */
@@ -846,8 +821,22 @@ function roomStop(
         return true;
       case 'encounterStart':
       case 'bossDefeated':
-      case 'encounterEnd':
         return passed.some((event) => boundaryEvent(index, event));
+      case 'encounterEnd': {
+        // A phase without end effects (a Nemesis interaction, a story phase) ends at its
+        // completion, passed once the walk goes on from it.
+        const completed = passed.find((event) =>
+          phaseEvent('encounterCompleted', boundary.phaseKey, event),
+        );
+        return (
+          passed.some((event) => boundaryEvent(index, event)) ||
+          (completed !== undefined &&
+            passed.some(
+              (event) =>
+                event.sequence > completed.sequence && event.kind !== 'encounterEndEffectsApplied',
+            ))
+        );
+      }
       case 'nextPhase': {
         // The next phase is ready once its encounter starts.
         const start = entries.findIndex(
@@ -864,6 +853,36 @@ function roomStop(
           : exitWork >= 0 && passed.some((event) => event.operationIndex >= exitWork);
     }
   };
+  // An entry is reached at the contact only when every boundary before it was passed: a
+  // row or entry tied to the block, but past a boundary the walk has not passed, is not.
+  const reachable = (index: number): boolean =>
+    entries.every((entry, earlier) => earlier >= index || boundaryPassed(earlier));
+  const firstRow = entries.findIndex(
+    (entry) => entry.kind === 'action' && rowKeys?.includes(entry.action.key) === true,
+  );
+  if (firstRow >= 0 && reachable(firstRow)) return stop('timeline', firstRow, 'entry');
+  if (
+    located.roomOccurrenceId === room.occurrenceId &&
+    located.roomTimelineIndex !== undefined &&
+    located.roomTimelineIndex >= 0 &&
+    located.roomTimelineIndex < entries.length &&
+    reachable(located.roomTimelineIndex)
+  )
+    return stop('timeline', located.roomTimelineIndex, 'entry');
+  const cleanup = entries.findIndex(
+    (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+  );
+  if (cleanup < 0)
+    throw new BiomeMaterializationContractError(`${room.gameName} has no Doors open boundary`);
+  // A door's generation or offer, or the store they draw from, blocks inside the doors
+  // opening. A missing Timeline action blocks only after the doors opened (its window
+  // follows outgoing generation).
+  if (
+    (generated || (generation >= 0 && atContact?.operationIndex === generation)) &&
+    located.finding.origin.kind !== 'roomAction' &&
+    !passed.some((event) => event.operationIndex > generation)
+  )
+    return stop('timeline', cleanup, 'entry');
   const unpassed = entries.findIndex(
     (entry, index) => entry.kind === 'boundary' && !boundaryPassed(index),
   );

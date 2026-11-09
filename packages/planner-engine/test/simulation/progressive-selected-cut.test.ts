@@ -51,6 +51,7 @@ import {
 import {
   createCompleteFGProject,
   createUnderworldFPoolCheckpoint,
+  createUnderworldFWellCheckpoint,
   loadUnderworldFGProject,
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
@@ -59,6 +60,7 @@ import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
 import {
   loadUnderworldFGCheckpoint,
   loadUnderworldFGHICheckpoint,
+  loadNemesisPomSeaStarCheckpoint,
   loadUnderworldFigLeafCheckpoint,
   loadUnderworldTwistScyllaCheckpoint,
   underworldCheckpointArtifacts,
@@ -1387,6 +1389,15 @@ describe('room stop', () => {
   }
   const poolSaleRow = roomActionKey({ kind: 'sellPurgingPoolTrait', slotKey: 'left' });
 
+  /** F's Postboss Travel Deal restock pinned to an item its first purchase's roll still shows. */
+  function duplicateWellRefill() {
+    return applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+      kind: 'ReplaceStygianWellTravelDealRefill',
+      occurrence: createOccurrenceAddress(goldenFBiome, fPostboss),
+      itemKey: 'TemporaryBoonRarityTrait',
+    });
+  }
+
   /** F's Postboss fountain used with a Phial and no rarity target. */
   function fountainWithoutRarityTarget() {
     return applyProjectCommand(loadUnderworldTwistScyllaCheckpoint(), catalog, {
@@ -1537,15 +1548,10 @@ describe('room stop', () => {
       },
     ],
     [
-      "a Ship wheel offer: the wheel's own row, past its next phase",
+      "a Ship wheel offer: its next phase, reached; the wheel's later choice row is not",
       partialWheel,
       'O',
-      {
-        room: oOccurrenceIds.combat07,
-        kind: 'timeline',
-        at: 'entry',
-        entry: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
-      },
+      { room: oOccurrenceIds.combat07, kind: 'timeline', at: 'entry', entry: 'nextPhase' },
     ],
     [
       'exit work after the room committed (a locked door taken)',
@@ -1600,6 +1606,32 @@ describe('room stop', () => {
       { room: fPostboss, kind: 'timeline', at: 'entry', entry: poolSaleRow },
     ],
     [
+      'a Nemesis pickup row past an encounter end without end effects',
+      loadNemesisPomSeaStarCheckpoint,
+      'F',
+      {
+        room: 'golden-f-b5-e1',
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey({
+          kind: 'interactAcquisitionEntry',
+          siteKey: 'nemesisGenerated:Encounter',
+          entryKey: 'result',
+        }),
+      },
+    ],
+    [
+      'a Well restock judged at the first purchase: not its later refill row',
+      duplicateWellRefill,
+      'F',
+      {
+        room: fPostboss,
+        kind: 'timeline',
+        at: 'before',
+        entry: roomActionKey({ kind: 'interactKeepsakeRack' }),
+      },
+    ],
+    [
       "a Postboss fountain's rarity outcome unset: the fountain row",
       fountainWithoutRarityTarget,
       'F',
@@ -1614,6 +1646,14 @@ describe('room stop', () => {
 
   it.each(cases)('%s', (_name, build, biomeKey, expected) => {
     expect(stopAt(biomeEvaluation(build(), biomeKey))).toEqual(expected);
+  });
+
+  it('marks no row for a Well restock judged at the first purchase', () => {
+    const evaluation = biomeEvaluation(duplicateWellRefill(), 'F');
+    expect(evaluation.findings.map((finding) => [finding.code, finding.evidence])).toEqual([
+      ['stygianWellTravelDealRefillUnavailable', { reason: 'refillDuplicate' }],
+    ]);
+    expect(evaluation.coverage.roomTimeline?.blockingRowKeys).toEqual([]);
   });
 
   it.each([
