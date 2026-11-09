@@ -65,7 +65,13 @@ export function LauncherButton({
       onClick={onClick}
       type="button"
     >
-      {presentation === 'slot' ? null : chip !== undefined ? (
+      {presentation === 'slot' ? (
+        launcher.slotBadge === undefined ? null : (
+          <span aria-hidden="true" className="timeline-chip-badge">
+            {launcher.slotBadge}
+          </span>
+        )
+      ) : chip !== undefined ? (
         <TimelineChipFace chip={chip} />
       ) : presentation === 'edit' ? (
         <ActionIcon name="edit" />

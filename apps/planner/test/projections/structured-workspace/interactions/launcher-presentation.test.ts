@@ -76,6 +76,7 @@ describe('launcher presentation', () => {
       label: 'Edit Pom · Pick target +1',
       value: 'Pick +1',
       chips: [],
+      slotBadge: '+1',
     });
     expect(
       levelResolutionLauncherPresentation(catalog, random('ApolloWeaponBoon'), 2, false),

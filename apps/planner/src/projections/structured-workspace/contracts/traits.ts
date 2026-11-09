@@ -101,6 +101,8 @@ export interface WorkspaceLauncherPresentation {
    * where the value is no object, such as a Pom with no eligible traits.
    */
   readonly chips?: readonly WorkspaceTimelineChip[];
+  /** What an empty slot's value will add, such as a Pom's levels, on the slot's corner. */
+  readonly slotBadge?: string;
 }
 
 /**

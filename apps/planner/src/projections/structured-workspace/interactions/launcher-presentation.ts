@@ -92,8 +92,13 @@ export function levelResolutionLauncherPresentation(
   if (settledEmptyNoOp) return presentation('Edit Pom · No eligible traits');
   const target = value.kind === 'choice' ? value.selectedTraitKey : value.targetTraitKey;
   const levels = levelCount === undefined ? '' : ` +${levelCount}`;
-  if (target === null)
-    return presentation(`Edit Pom · Pick target${levels}`, undefined, undefined, []);
+  if (target === null) {
+    const empty = presentation(`Edit Pom · Pick target${levels}`, undefined, undefined, []);
+    // The levels sit on the target's slot before a target is picked, never on the Pom.
+    return levelCount === undefined
+      ? empty
+      : Object.freeze({ ...empty, slotBadge: `+${levelCount}` });
+  }
   return presentation(`Edit Pom · ${traitLabel(catalog, target)}${levels}`, undefined, target, [
     traitChip(catalog, target, 'picked', levelCount === undefined ? undefined : `+${levelCount}`),
   ]);

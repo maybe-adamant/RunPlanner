@@ -444,7 +444,8 @@ rerolls) followed by what it takes. A reward is shown by its icon, with its
 name as the icon's accessible name and a mark for a Boosted variant; tags name
 where in the room the action happens (a cage, an optional reward). Pom actions
 use their pickup names (Pom, Double Pom, Triple Pom, Pom Slice) without
-changing catalog names. What produced a generated pickup is the engine's
+changing catalog names; the levels a Pom adds sit on its target's chip (or its
+empty slot), never on the Pom. What produced a generated pickup is the engine's
 published source family: the row tells it as an origin hint shown on hover and
 focus and carried in its accessible description, and the Add area groups by
 it. Where the engine lets a pickup be goldified or transformed, the verb itself
