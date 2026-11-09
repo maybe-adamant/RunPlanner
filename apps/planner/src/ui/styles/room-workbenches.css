@@ -1123,19 +1123,19 @@
 
 .timeline-slot-badge {
   position: absolute;
-  right: -5px;
-  bottom: -4px;
-  min-width: 13px;
-  height: 13px;
+  right: var(--timeline-badge-offset, -5px);
+  bottom: calc(var(--timeline-badge-offset, -5px) + 1px);
+  min-width: var(--timeline-badge-small, 13px);
+  height: var(--timeline-badge-small, 13px);
   padding: 0 2px;
   border: 1px solid #4a4855;
   border-radius: 7px;
   background: #1b1c22;
   color: #d9d4dc;
-  font-size: 0.6rem;
+  font-size: calc(var(--timeline-badge-font, 0.65rem) * 0.923);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  line-height: 11px;
+  line-height: calc(var(--timeline-badge-small, 13px) - 2px);
   text-align: center;
 }
 
@@ -1143,10 +1143,10 @@
 .timeline-source-badge {
   position: absolute;
   z-index: 1;
-  right: -5px;
-  bottom: -5px;
-  width: 14px;
-  height: 14px;
+  right: var(--timeline-badge-offset, -5px);
+  bottom: var(--timeline-badge-offset, -5px);
+  width: var(--timeline-badge-size, 14px);
+  height: var(--timeline-badge-size, 14px);
   border-radius: 50%;
   background: #1b1c22;
   box-shadow: 0 0 0 1px #4a4855;
@@ -1156,9 +1156,9 @@
 
 /* A Travel Deal purchase carries the Travel Deal boon on its icon in place of a slot. */
 .timeline-travel-deal-badge {
-  width: 15px;
-  min-width: 15px;
-  height: 15px;
+  width: calc(var(--timeline-badge-size, 14px) + 1px);
+  min-width: calc(var(--timeline-badge-size, 14px) + 1px);
+  height: calc(var(--timeline-badge-size, 14px) + 1px);
   padding: 0;
   border-radius: 50%;
   object-fit: contain;
@@ -1620,6 +1620,18 @@
 /* Inline timeline controls share a baseline; expanded editors retain their own sizing. */
 .room-actions-workbench {
   --timeline-control-height: 26px;
+  /* One knob sizes the Timeline's item icons; their chips and corner badges follow it. */
+  --timeline-icon-size: 1.4rem;
+  --timeline-chip-size: calc(var(--timeline-icon-size) + 9px);
+  --timeline-badge-size: calc(var(--timeline-icon-size) * 2 / 3);
+  --timeline-badge-small: calc(var(--timeline-icon-size) * 13 / 21);
+  --timeline-badge-offset: calc(var(--timeline-icon-size) * -5 / 21);
+  --timeline-badge-font: calc(var(--timeline-icon-size) * 0.65 / 1.4);
+}
+
+.room-actions-workbench .artwork-label-icon {
+  width: var(--timeline-icon-size);
+  height: var(--timeline-icon-size);
 }
 
 .room-actions-workbench
@@ -2206,16 +2218,16 @@
 
 .row-reward-boosted {
   position: absolute;
-  top: -5px;
-  right: -6px;
+  top: var(--timeline-badge-offset, -5px);
+  right: calc(var(--timeline-badge-offset, -5px) - 1px);
   display: grid;
-  width: 13px;
-  height: 13px;
+  width: var(--timeline-badge-small, 13px);
+  height: var(--timeline-badge-small, 13px);
   place-items: center;
   border-radius: 50%;
   background: var(--selection-accent);
   color: #1b1c22;
-  font-size: 0.6rem;
+  font-size: calc(var(--timeline-badge-font, 0.65rem) * 0.923);
   font-weight: 800;
   line-height: 1;
 }
@@ -2449,10 +2461,10 @@ button.timeline-leave-picker:is(:hover, [data-state='open']):not(:disabled) {
 .timeline-chip,
 .contextual-picker-trigger.timeline-chip {
   display: inline-grid;
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  min-height: 30px;
+  width: var(--timeline-chip-size, 30px);
+  min-width: var(--timeline-chip-size, 30px);
+  height: var(--timeline-chip-size, 30px);
+  min-height: var(--timeline-chip-size, 30px);
   place-items: center;
   justify-content: center;
   padding: 0;
@@ -2541,17 +2553,17 @@ button.timeline-chip {
 
 .timeline-chip-badge {
   position: absolute;
-  right: -5px;
-  bottom: -5px;
-  min-width: 14px;
+  right: var(--timeline-badge-offset, -5px);
+  bottom: var(--timeline-badge-offset, -5px);
+  min-width: var(--timeline-badge-size, 14px);
   padding: 0 3px;
   border-radius: 7px;
   background: var(--surface);
   box-shadow: 0 0 0 1px var(--border);
   color: var(--text);
-  font-size: 0.65rem;
+  font-size: var(--timeline-badge-font, 0.65rem);
   font-weight: 600;
-  line-height: 14px;
+  line-height: var(--timeline-badge-size, 14px);
   text-align: center;
   pointer-events: none;
 }
@@ -2593,7 +2605,7 @@ button.timeline-chip {
 /* An unset chip is an empty slot. */
 .timeline-cell-editors .trait-offer-launcher.timeline-chip-slot,
 .contextual-picker-trigger.timeline-chip[data-empty] {
-  width: 30px;
+  width: var(--timeline-chip-size, 30px);
   border: 1px dashed var(--border);
   background: none;
 }
@@ -3310,11 +3322,11 @@ span.hub-board-status-line {
 
 .icon-toggle-lock {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: var(--timeline-badge-offset, -5px);
+  right: var(--timeline-badge-offset, -5px);
   display: grid;
-  width: 13px;
-  height: 13px;
+  width: var(--timeline-badge-small, 13px);
+  height: var(--timeline-badge-small, 13px);
   place-items: center;
   border-radius: 7px;
   background: var(--surface);
@@ -3326,11 +3338,11 @@ span.hub-board-status-line {
 /* Loot spawned before it can be taken: a lock on its chip's top corner. */
 .spawn-lock-badge {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: var(--timeline-badge-offset, -5px);
+  right: var(--timeline-badge-offset, -5px);
   display: grid;
-  width: 13px;
-  height: 13px;
+  width: var(--timeline-badge-small, 13px);
+  height: var(--timeline-badge-small, 13px);
   place-items: center;
   border-radius: 7px;
   background: var(--surface);
@@ -3341,8 +3353,8 @@ span.hub-board-status-line {
 
 .spawn-lock-badge > svg,
 .icon-toggle-lock > svg {
-  width: 8px;
-  height: 8px;
+  width: calc(var(--timeline-badge-small, 13px) * 0.615);
+  height: calc(var(--timeline-badge-small, 13px) * 0.615);
 }
 
 .icon-toggle-disabled {
