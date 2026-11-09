@@ -89,7 +89,7 @@ export function roomActionResetApplies(plan: RoomActionResetPlan | undefined): b
 }
 
 /** The semantic command that takes one row out of the room's actions with its own state. */
-function removalCommand(
+export function roomActionRemovalCommand(
   occurrence: OccurrenceAddress,
   reference: RoomActionReference,
 ): ProjectCommand {
@@ -168,7 +168,7 @@ export function applyRoomActionReset(
         )?.roomActions.order ?? [];
     const key = roomActionKey(reference);
     return order.some((candidate) => roomActionKey(candidate) === key)
-      ? apply(current, removalCommand(occurrence, reference))
+      ? apply(current, roomActionRemovalCommand(occurrence, reference))
       : current;
   }, document);
   // A rack after the point returns to its default: the held keepsake stays.

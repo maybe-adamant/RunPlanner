@@ -543,9 +543,8 @@ function locateStructuralOwner(
           }),
     });
   }
-  // Retained Pool sales are occurrence-owned Postboss actions. They remain
-  // repairable at their room even when their slot was cleared and therefore
-  // no longer has an active contribution.
+  // A Postboss action, such as a Pool sale whose slot was cleared, is
+  // repairable at its fixed-linked room.
   const automaticRoomAction = address.kind === 'roomAction' ? address : undefined;
   const automaticFixedRoomIndex =
     automaticRoomAction === undefined

@@ -398,8 +398,11 @@ communicate action membership through sidecar state.
 Roster assembly reconciles every authored and derived key exactly once: ranked
 active actions become the executable chronology, active but unranked actions
 remain explicit incomplete rows, and ranked keys whose action is no longer
-active remain stale repair rows. Invalid or incomplete authorship is therefore
-retained for correction rather than dropped or silently reordered. There is no
+active are stale rows: never executed and without a finding, and removed by
+the edit that leaves them stale
+([settlement](SIMULATION_AND_VALIDATION.md#the-evaluation-pipeline)). Invalid
+or incomplete authorship is retained for correction rather than dropped or
+silently reordered. There is no
 parallel Fields, Shop, Acquisitions, or presentation-owned action assembler and
 no second order authority.
 

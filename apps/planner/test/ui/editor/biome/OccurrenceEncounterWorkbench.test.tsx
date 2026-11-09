@@ -2441,14 +2441,15 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       ),
     );
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'Inactive Actions' })).toBeTruthy());
-    openRoomTab('Inactive Actions');
-    const repairs = screen.getByLabelText('Ship action repairs');
-    expect(within(repairs).getByText('Choose Combat 2 wheel')).toBeTruthy();
-    const rewardRow = { name: /^Reorder Collect .+ · Combat 2 reward/ };
-    expect(within(repairs).getByRole('button', rewardRow)).toBeTruthy();
-    expect(screen.getAllByText('Choose Combat 2 wheel')).toHaveLength(1);
-    expect(screen.getAllByRole('button', rewardRow)).toHaveLength(1);
+    // The edit that orphans the Combat 2 wheel rows removes them; the wheel's configuration stays.
+    await waitFor(() =>
+      expect(screen.queryByRole('tab', { name: 'Combat 2 Timeline' })).toBeNull(),
+    );
+    expect(screen.queryByRole('tab', { name: 'Inactive Actions' })).toBeNull();
+    expect(screen.queryByText('Choose Combat 2 wheel')).toBeNull();
+    expect(shipWheel2(view.application.store.getState().projectWorkspace.history!.present)).toEqual(
+      shipWheel2(project),
+    );
 
     act(() =>
       view.application.store.dispatch(

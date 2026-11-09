@@ -631,15 +631,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     row.reference.kind === 'interactEncounter' &&
     figLeafSkipsPhase(context, row.reference.phaseKey);
   const rankedRows = roster.rows
-    // A retained Pool sale must reach its declared lifecycle point even when
-    // its slot was later cleared. Reward simulation owns the precise stale
-    // finding and deliberately leaves the authored action intact.
-    .filter(
-      (row) =>
-        row.rank !== null &&
-        !skippedInteraction(row) &&
-        (!row.stale || row.reference.kind === 'sellPurgingPoolTrait'),
-    )
+    .filter((row) => row.rank !== null && !skippedInteraction(row) && !row.stale)
     .sort((left, right) => left.rank! - right.rank!);
   let cursor = 0;
   let shrineScheduled = false;

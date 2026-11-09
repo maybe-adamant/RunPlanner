@@ -105,6 +105,13 @@ the final project and its exact assembly.
   removed. Deliveries and clocked pickups are keyed by their source, so no
   inherited choice is reset for being newly reached; one that is invalid where
   it lands keeps its finding.
+- A room-action row the edit leaves stale, one its evaluated room no longer
+  offers, is removed through its owning removal command; in a room the edit
+  changes, stale rows retained from before it (an older save) go too. The
+  settlement names each room's removed rows for the editor to announce.
+  Unchanged rooms and rooms the evaluation does not reach keep theirs, and an
+  installed route keeps its rows exactly. Invalid rows stay with their
+  findings.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
   assembly with a settlement fault naming the owner. A fault signals an engine
@@ -723,7 +730,9 @@ candidate is impossible is a candidate product, not a finding: see
 Instance identity belongs in the address, not the code. Messages and display
 labels are application products. An actual lifecycle action block retains each
 matching dependency or window violation as invalid ordering; a missing required
-action remains incomplete. Dormant stale roster rows do not create findings.
+action remains incomplete. Stale roster rows are never executed and create no
+findings; a Purging Pool sale of a trait the game cannot sell is an active,
+invalid row with its finding, like a Shop purchase past the god cap.
 The walk enforces the [roster's](ROOM_LIFECYCLE_MODEL.md#roster) required-first
 order as placement does: a row ranked before a required action of an earlier
 window is not reached, because that action's deadline passes before the row's

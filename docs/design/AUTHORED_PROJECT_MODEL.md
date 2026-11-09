@@ -878,9 +878,16 @@ canonical index or at any other index the
 placement commands `PlaceHermesShrineDelivery`, `PlaceClockedTraitPickup` and
 `PlaceEchoGoldPickup` take the same optional index for a pickup they newly
 place; absent, it lands at the command's default, and an index for a pickup
-already placed is refused. Dormant and stale rows likewise remain
-authored until an explicit owning command removes them; reactivation of the
-same key reuses its retained position rather than adding a duplicate.
+already placed is refused. Dormant rows, such as those of a room not
+entered, remain authored, and reactivation of the same key reuses its
+retained position rather than adding a duplicate. A stale row, one its
+entered room no longer offers, has nothing to repair: the edit that leaves it
+stale removes it through its owning removal command, in the same edit and
+Undo step, and names it
+([settlement](SIMULATION_AND_VALIDATION.md#the-evaluation-pipeline)). A
+loaded document keeps the stale rows it holds until an edit changes their
+room. A row that is merely invalid, such as a Shop purchase past the god cap
+or a Purging Pool sale the game refuses, stays with its finding.
 
 `ResetRoomActionsAfter` takes one occurrence's actions back to a point:
 it names an ordered action by its key, or none for the room's entry, and

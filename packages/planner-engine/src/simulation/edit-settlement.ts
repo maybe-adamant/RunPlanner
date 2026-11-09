@@ -15,10 +15,15 @@ import {
   projectCommandAddress,
 } from '../authored-project/commands/contract';
 import { applyProjectCommand } from '../authored-project/commands/dispatch';
+import { roomActionRemovalCommand } from '../authored-project/commands/room-action-reset';
 import { authoredLevelResolutionAt } from '../authored-project/commands/level-resolution';
 import { authoredTraitOfferAt } from '../authored-project/commands/trait-offer';
 import type { ProjectCommand } from '../authored-project/commands/types';
-import type { ProjectDocument, RoomOccurrence } from '../authored-project/model';
+import type {
+  ProjectDocument,
+  RoomActionReference,
+  RoomOccurrence,
+} from '../authored-project/model';
 import { roomActionKey } from '../authored-project/room-actions/state';
 import { rerolledScreenCount } from '../authored-project/screen-rerolls';
 import {
@@ -34,6 +39,7 @@ import {
   attestClockedTraitPickupPlacementForProjectEvaluationAssembly,
 } from './evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from './evaluation/evaluation-products';
+import { candidateBiome, candidateBiomeRooms } from './candidates/evaluated-biome';
 
 function occurrences(project: ProjectDocument) {
   return project.route.biomes.flatMap((biome) =>
@@ -95,9 +101,78 @@ export interface SettlementFault {
   readonly owner: SemanticAddress;
 }
 
+/** The stale actions one room lost to an edit, in their former order. */
+export interface RemovedStaleRoomActions {
+  readonly occurrence: OccurrenceAddress;
+  readonly actions: readonly RoomActionReference[];
+}
+
 export interface ProjectEditSettlement {
   readonly assembly: ProjectEvaluationAssembly;
   readonly fault?: SettlementFault;
+  /** Rows the edit left with no context, removed by the same edit; absent when none. */
+  readonly removedStaleActions?: readonly RemovedStaleRoomActions[];
+}
+
+/** Each evaluated room's roster rows by room, with whether each is stale. */
+function evaluatedRosters(assembly: ProjectEvaluationAssembly) {
+  const rosters = new Map<
+    string,
+    { readonly owner: OccurrenceAddress; readonly stale: ReadonlyMap<string, boolean> }
+  >();
+  const routeKey = assembly.project.route.routeKey;
+  for (const plan of assembly.project.route.biomes) {
+    const biome = candidateBiome(assembly.evaluation, routeKey, plan.biomeKey);
+    if (biome === undefined) continue;
+    for (const room of candidateBiomeRooms(biome)) {
+      if (room.origin.kind !== 'occurrence') continue;
+      const key = semanticAddressKey(room.origin);
+      if (rosters.has(key)) continue;
+      rosters.set(
+        key,
+        Object.freeze({
+          owner: room.origin,
+          stale: new Map(room.roomActionRoster.rows.map((row) => [row.key, row.stale])),
+        }),
+      );
+    }
+  }
+  return rosters;
+}
+
+/** Whether the edit changed the room's authored occurrence. */
+function roomEdited(before: ProjectDocument, after: ProjectDocument, owner: OccurrenceAddress) {
+  const previous = occurrenceAt(before, owner);
+  const next = occurrenceAt(after, owner);
+  return previous !== next && JSON.stringify(previous) !== JSON.stringify(next);
+}
+
+/**
+ * The stale rows an edit removes: every row the edit left with no context, and
+ * in each room the edit changed, every stale row retained from before it.
+ * Rooms the evaluation does not reach keep their rows until it does.
+ */
+function staleRowsToRemove(
+  before: ProjectEvaluationAssembly,
+  beforeRosters: ReturnType<typeof evaluatedRosters>,
+  assembly: ProjectEvaluationAssembly,
+) {
+  const removals: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
+  for (const [roomKey, { owner, stale }] of evaluatedRosters(assembly)) {
+    const current = occurrenceAt(assembly.project, owner);
+    if (current === undefined) continue;
+    const prior = beforeRosters.get(roomKey)?.stale;
+    let edited: boolean | undefined;
+    for (const reference of current.roomActions.order) {
+      const key = roomActionKey(reference);
+      if (stale.get(key) !== true || reference.kind === 'interactKeepsakeRack') continue;
+      const orphaned = prior?.get(key) === false;
+      if (!orphaned && (edited ??= roomEdited(before.project, assembly.project, owner)) === false)
+        continue;
+      removals.push({ owner, reference });
+    }
+  }
+  return removals;
 }
 
 /** The fixed reroll pool refusing a new spend; known only once the edit is evaluated. */
@@ -126,6 +201,33 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
     return result;
   };
   const beforeArtifacts = candidateArtifactsForProjectEvaluationAssembly(before);
+  const beforeRosters = evaluatedRosters(before);
+  const removedStale: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
+  const settled = (
+    assembly: ProjectEvaluationAssembly,
+    fault?: SettlementFault,
+  ): ProjectEditSettlement => {
+    const byRoom = new Map<string, RemovedStaleRoomActions>();
+    for (const { owner, reference } of removedStale) {
+      const key = semanticAddressKey(owner);
+      const room = byRoom.get(key);
+      byRoom.set(key, {
+        occurrence: owner,
+        actions: Object.freeze([...(room?.actions ?? []), reference]),
+      });
+    }
+    return Object.freeze({
+      assembly,
+      ...(fault === undefined ? {} : { fault }),
+      ...(byRoom.size === 0
+        ? {}
+        : {
+            removedStaleActions: Object.freeze(
+              [...byRoom.values()].map((room) => Object.freeze(room)),
+            ),
+          }),
+    });
+  };
   const beforeExitedOwners = new Set(
     before.evaluation.route.biomes.flatMap((biome) =>
       'history' in biome
@@ -248,7 +350,7 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
           `displaced:${semanticAddressKey(displaced.address)}`,
           displaced.address,
         );
-        if (fault !== undefined) return Object.freeze({ assembly, fault });
+        if (fault !== undefined) return settled(assembly, fault);
         project = applyProjectCommand(project, catalog, {
           kind:
             displaced.address.site.pointKey === 'hermesShrineDelivery'
@@ -298,7 +400,7 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
     if (newlyRequiredGold.length > 0) {
       for (const { address, sourceOfferKey } of newlyRequiredGold) {
         const fault = consume(`gold:${semanticAddressKey(address)}`, address);
-        if (fault !== undefined) return Object.freeze({ assembly, fault });
+        if (fault !== undefined) return settled(assembly, fault);
         project = applyProjectCommand(project, catalog, {
           kind: 'PlaceEchoGoldPickup',
           site: address.site,
@@ -345,10 +447,54 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
         return ranked ? [] : [{ address, capability, incompatible }];
       });
     });
-    if (due.length === 0) return Object.freeze({ assembly });
+    if (due.length === 0) {
+      // A row with no context has nothing to repair: the edit that orphans it removes it.
+      // An installed route keeps exactly the rows it was authored with.
+      const stale =
+        command.kind === 'ReplaceRoute' ? [] : staleRowsToRemove(before, beforeRosters, assembly);
+      if (stale.length === 0) return settled(assembly);
+      const pass: { owner: OccurrenceAddress; reference: RoomActionReference; index: number }[] =
+        [];
+      // Last first, each through its owning removal, as a reset removes rows.
+      for (const { owner, reference } of stale.reverse()) {
+        const key = roomActionKey(reference);
+        const order = occurrenceAt(project, owner)?.roomActions.order ?? [];
+        // A removal can take another row with it, such as a pickup with its purchase.
+        if (!order.some((candidate) => roomActionKey(candidate) === key)) continue;
+        const address = createRoomActionAddress(
+          createBiomeAddress(owner.routeKey, owner.biomeKey),
+          owner.occurrenceId,
+          key,
+        );
+        const fault = consume(`stale:${semanticAddressKey(address)}`, address);
+        if (fault !== undefined) return settled(assembly, fault);
+        try {
+          project = applyProjectCommand(
+            project,
+            catalog,
+            roomActionRemovalCommand(owner, reference),
+          );
+        } catch (error) {
+          // The roster and the removal command disagree: an engine defect.
+          if (error instanceof ProjectCommandContractError)
+            return settled(assembly, Object.freeze({ key: `stale:${key}`, owner: address }));
+          throw error;
+        }
+        const remaining = new Set(
+          (occurrenceAt(project, owner)?.roomActions.order ?? []).map(roomActionKey),
+        );
+        order.forEach((candidate, index) => {
+          if (!remaining.has(roomActionKey(candidate)))
+            pass.push({ owner, reference: candidate, index });
+        });
+      }
+      removedStale.push(...pass.sort((left, right) => left.index - right.index));
+      assembly = evaluate(project);
+      continue;
+    }
     for (const { address, capability, incompatible } of due) {
       const fault = consume(`delivery:${semanticAddressKey(address)}`, address);
-      if (fault !== undefined) return Object.freeze({ assembly, fault });
+      if (fault !== undefined) return settled(assembly, fault);
       if (incompatible)
         project = discardDisplacedHermesShrineDelivery(catalog, project, address.entryKey);
       project = applyProjectCommand(project, catalog, {

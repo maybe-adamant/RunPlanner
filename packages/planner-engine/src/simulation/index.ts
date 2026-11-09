@@ -462,6 +462,7 @@ export { assessmentRepairOwner, findingsAddedSince } from './finding-regions';
 export {
   settleProjectEdit,
   type ProjectEditSettlement,
+  type RemovedStaleRoomActions,
   type SettlementFault,
 } from './edit-settlement';
 export type { RequirementEvaluationEvidence } from '../requirements/evidence';
