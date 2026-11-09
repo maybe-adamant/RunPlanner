@@ -1247,13 +1247,13 @@
 /* Spawned chips stand far enough apart that their corner badges never touch. */
 .timeline-chip-group.spawned-loot-groups {
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--timeline-badged-chip-gap, 8px);
 }
 
 .spawned-loot-group {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--timeline-badged-chip-gap, 8px);
 }
 
 .spawned-loot-separator {
@@ -1638,11 +1638,55 @@
   --timeline-badge-small: calc(var(--timeline-icon-size) * 13 / 21);
   --timeline-badge-offset: calc(var(--timeline-icon-size) * -5 / 21);
   --timeline-badge-font: calc(var(--timeline-icon-size) * 0.65 / 1.4);
+  /* The share of a corner badge's own width that hangs past its icon's right edge. */
+  --timeline-badge-overhang: 0.5;
+  /* Badged chips stand far enough apart that an overhanging badge never meets the next chip. */
+  --timeline-badged-chip-gap: 12px;
 }
 
-/* A chip's badges overhang its icon, not its padding, so they stay inside the row. */
+/* A chip's badges sit on its icon's top and bottom, not its padding, so they stay inside the row. */
 .room-actions-workbench .timeline-chip {
   --timeline-badge-offset: calc(var(--timeline-icon-size) * -5 / 21 + 4.5px);
+}
+
+/* Corner badges read like superscripts and subscripts: partly outside their icon on the right. */
+.room-actions-workbench
+  :is(
+    .timeline-chip-badge,
+    .timeline-slot-badge,
+    .timeline-source-badge,
+    .row-reward-boosted,
+    .spawn-lock-badge,
+    .icon-toggle-lock
+  ):not(.fields-cage-order-chips *) {
+  right: 0;
+  translate: calc(var(--timeline-badge-overhang) * 100%) 0;
+}
+
+.room-actions-workbench
+  .timeline-chip-group:has(.timeline-chip-badge, .timeline-source-badge, .spawn-lock-badge) {
+  gap: var(--timeline-badged-chip-gap);
+}
+
+/* Outside a chip group, a badged icon keeps room for its overhang before what follows it. */
+.room-actions-workbench
+  :is(
+    .timeline-row-icon,
+    .row-reward-icon,
+    .timeline-chip,
+    .contextual-picker-trigger-badged,
+    .icon-toggle
+  ):has(
+    > :is(
+      .timeline-chip-badge,
+      .timeline-slot-badge,
+      .timeline-source-badge,
+      .row-reward-boosted,
+      .spawn-lock-badge,
+      .icon-toggle-lock
+    )
+  ):not(.timeline-chip-group > *, .spawned-loot-group > *, .fields-cage-order-chips *) {
+  margin-inline-end: calc(var(--timeline-badge-overhang) * var(--timeline-badge-size));
 }
 
 .room-actions-workbench .artwork-label-icon {
