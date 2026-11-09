@@ -321,7 +321,9 @@ function roomActionsForOccurrence(
     );
   const existingBlockers = new Set(
     roster.issues.flatMap((issue) =>
-      issue.kind === 'dependency' || issue.kind === 'window' ? [blockerIdentity(issue)] : [],
+      issue.kind === 'dependency' || issue.kind === 'window' || issue.kind === 'requiredFirst'
+        ? [blockerIdentity(issue)]
+        : [],
     ),
   );
   const explanationFor = (

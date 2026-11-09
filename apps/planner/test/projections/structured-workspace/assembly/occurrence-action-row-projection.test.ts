@@ -1471,6 +1471,36 @@ describe('structured workspace actions assembly', () => {
     });
   });
 
+  it('reads a required-first problem already in the order as an existing issue', () => {
+    const postboss = createOccurrenceId('golden-f-preboss-shop:postboss');
+    const initial = createUnderworldFWellCheckpoint(false);
+    const purchase = initial.route.biomes
+      .find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === postboss)
+      ?.roomActions.order.find((reference) => reference.kind === 'purchaseStygianWellOffer');
+    if (purchase === undefined) throw new Error('missing Well purchase');
+    // The saved order already buys at the Well before the fountain.
+    const project = applyProjectCommand(initial, catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(goldenFBiome, postboss, roomActionKey(purchase)),
+      toIndex: 0,
+    });
+    const room = assemble(project, 'Underworld', 'F', postboss).assembly.node.room;
+    const fountain = room.roomActions?.rows.find((row) => row.reference.kind === 'useFountain');
+    // The rack takes no part in window order; moving it right after the purchase keeps the
+    // purchase ahead of the fountain, a problem the move did not make.
+    const rack = room.roomActions?.proposals.find(
+      (proposal) =>
+        proposal.kind === 'move' &&
+        proposal.reference.kind === 'interactKeepsakeRack' &&
+        proposal.toIndex === 1,
+    );
+    expect(rack).toMatchObject({
+      structurallyAuthorable: false,
+      explanations: [`Existing timeline issue: ${fountain?.label} must come first.`],
+    });
+  });
+
   it('proposes an unranked Travel refill immediately after its source purchase', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     let base = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');

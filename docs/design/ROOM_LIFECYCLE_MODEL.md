@@ -408,11 +408,11 @@ past it. The walk applies the same rule to the authored order, stopping at the
 first row such an action follows, before that row settles: a Postboss Well,
 Pool, Shrine or switch row before the fountain use that unlocks the exits is
 never reached. A required action placed at a phase the room does not play
-sets no deadline; its placement is its own finding. An unplaced required action of an earlier window does not refuse k;
-the walk's own deadline stop leaves k unreached. Every other row after k
-takes no part: a later row the edit invalidates carries its own issue when
-the walk reaches it. A prefix that is already invalid stops
-the walk before k, so k is refused unless the edit repairs that prefix. A
+sets no deadline; its placement is its own finding. An unplaced required
+action of an earlier window does not refuse k; the walk's own deadline stop
+leaves k unreached. Every other row after k takes no part: a later row the
+edit invalidates carries its own issue when the walk reaches it. A prefix that
+is already invalid stops the walk before k, so k is refused unless the edit repairs that prefix. A
 move is judged as an insertion at its target, and a group placed together is
 judged through its last row, each row by its own prefix. The judgement is
 structural; it never reads affordability or other simulated state, which

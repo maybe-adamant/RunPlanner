@@ -214,14 +214,24 @@ describe('Shrine purchases after the doors open', () => {
       purchase = order[2];
       return [order[2]!, order[0]!, order[1]!, ...order.slice(3)];
     });
-    expect(evaluatedRoom(beforeFountain, 'N', nPostbossId).roomActionRoster.issues).toContainEqual(
-      expect.objectContaining({
-        kind: 'requiredFirst',
-        reference: purchase,
-        requiredAction: { kind: 'useFountain' },
-      }),
+    // The order holds both the purchase's required-first issue and the fountain's
+    // window crossing that names the purchase as the row before it.
+    expect(evaluatedRoom(beforeFountain, 'N', nPostbossId).roomActionRoster.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'requiredFirst',
+          reference: purchase,
+          requiredAction: { kind: 'useFountain' },
+        }),
+        expect.objectContaining({
+          kind: 'window',
+          reference: { kind: 'useFountain' },
+          precedingAction: purchase,
+        }),
+      ]),
     );
-    // The walk stops at the purchase, before anything is bought; the fountain is not reached.
+    // The walk stops at the purchase, before anything is bought, with one finding: the
+    // crossing is not reported again as a window reason.
     expect(
       simulateProject(catalog, beforeFountain).findings.filter(
         (finding) => finding.code === 'roomActionOrderUnavailable',
