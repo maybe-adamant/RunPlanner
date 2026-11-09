@@ -225,9 +225,6 @@ export function SideVisitLeaves({
     );
     return slot?.generation === 'generated' ? slot : undefined;
   };
-  const endedAt = localVisit.leaves.findIndex(
-    (_, index) => visitedBefore(index)?.planEnd?.relation === 'end',
-  );
   return localVisit.leaves.flatMap((leave, index) => {
     const last = leave.position === localVisit.leaves.length;
     const row = (
@@ -239,7 +236,7 @@ export function SideVisitLeaves({
         key={`leave-${leave.position}`}
         leave={leave}
         order={localVisit.order}
-        pastEnd={endedAt >= 0 && index > endedAt}
+        pastEnd={leave.pastPlanEnd}
         planEnd={last ? planEnd : visitedBefore(index)?.planEnd}
         slots={localVisit.slots}
         visitIndex={visitIndex}
@@ -256,7 +253,7 @@ export function SideVisitLeaves({
         // Melinoë re-enters the main room at the side room's door.
         {...(visited === undefined ? {} : { 'data-hero-door': visited.key })}
         // The plan ending in a side room ends before the hero returns from it.
-        {...(endedAt >= 0 && index >= endedAt - 1 ? { 'data-plan-end': 'pastEnd' } : {})}
+        {...(leave.returnPastPlanEnd ? { 'data-plan-end': 'pastEnd' } : {})}
         key={`return-${leave.position}`}
         kind="boundary"
         label={

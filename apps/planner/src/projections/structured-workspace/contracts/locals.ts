@@ -486,6 +486,10 @@ export interface WorkspaceLocalVisitLeave {
   readonly options: readonly WorkspaceLocalVisitLeaveOption[];
   /** The option picked here: a visited side room's slot key, or `hub`. */
   readonly selectedKey: string;
+  /** This exit comes after the side visit the plan ends in. */
+  readonly pastPlanEnd: boolean;
+  /** The return from the side room picked here comes after the plan's end. */
+  readonly returnPastPlanEnd: boolean;
 }
 
 /**

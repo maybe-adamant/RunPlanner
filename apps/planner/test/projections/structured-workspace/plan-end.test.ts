@@ -9,7 +9,11 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
-import { loadSurfaceNOPQProject, nOccurrenceId } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOPQProject,
+  nLocalOccurrenceId,
+  nOccurrenceId,
+} from '@run-planner/test-fixtures/surface';
 import type {
   WorkspaceBiome,
   WorkspaceOccurrenceWorkbenchNode,
@@ -199,6 +203,20 @@ describe('plan end in the structured workspace', () => {
     // golden-f-b5-e2 was offered beside the end room; golden-f-b6-e2 by the end room's doors.
     expect(roomNode(erebus, 'golden-f-b5-e2').planEnd?.relation).toBeUndefined();
     expect(roomNode(erebus, 'golden-f-b6-e2').planEnd?.relation).toBe('pastEnd');
+  });
+
+  it('puts the exits and returns after the side visit the plan ends in past the end', () => {
+    // Combat 05 visits side room 2, then side room 1, then returns to the Hub.
+    const ephyra = requireWorkspaceBiome(
+      projectStructuredWorkspaceFixture(
+        endedAt(loadSurfaceNOPQProject(), 'N', nLocalOccurrenceId('combat05', 'sideDoor2')),
+      ).workspace,
+      'N',
+    );
+    const leaves = roomNode(ephyra, nOccurrenceId('combat05')).localVisit?.leaves ?? [];
+
+    expect(leaves.map((leave) => leave.pastPlanEnd)).toEqual([false, false, true]);
+    expect(leaves.map((leave) => leave.returnPastPlanEnd)).toEqual([true, true, true]);
   });
 
   it("keeps the end room's hidden door with its doors, inside the plan", () => {

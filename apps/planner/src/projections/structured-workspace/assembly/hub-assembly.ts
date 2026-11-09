@@ -128,9 +128,15 @@ function localVisitLeaves(
     readonly key: string;
     readonly generation: string;
     readonly occurrenceId: OccurrenceId;
+    readonly planEnd?: { readonly relation?: string };
   }[],
 ): readonly WorkspaceLocalVisitLeave[] {
   const generated = slots.filter((slot) => slot.generation === 'generated');
+  // The side visit the plan ends in: its return and every later exit lie past the end.
+  const endingVisit = visitOrder.findIndex(
+    (occurrenceId) =>
+      slots.find((slot) => slot.occurrenceId === occurrenceId)?.planEnd?.relation === 'end',
+  );
   return Object.freeze(
     Array.from({ length: visitOrder.length + 1 }, (_, index) => {
       const selected = visitOrder[index];
@@ -162,6 +168,8 @@ function localVisitLeaves(
         interactionKey: workspaceLocalVisitLeaveKey(order, index + 1),
         options: Object.freeze(options),
         selectedKey,
+        pastPlanEnd: endingVisit >= 0 && index > endingVisit + 1,
+        returnPastPlanEnd: endingVisit >= 0 && index >= endingVisit,
       });
     }),
   );
