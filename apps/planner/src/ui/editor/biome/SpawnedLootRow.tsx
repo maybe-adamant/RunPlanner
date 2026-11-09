@@ -202,6 +202,7 @@ export function SpawnedLootRow({
   return (
     <TimelineRow
       aria-label={label}
+      className="timeline-row-frame"
       data-spawned-loot={source ? 'action' : unlocks ? 'unlocks' : 'moment'}
       editors={
         <span className="timeline-chip-group spawned-loot-groups">

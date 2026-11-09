@@ -307,6 +307,8 @@ describe('locked loot', () => {
     const unlocks = spawnRows('unlocks');
     expect(unlocks.map((row) => chips(row).length)).toEqual([1, 1]);
     for (const row of unlocks) expect(chipLocks(row)).toEqual([false]);
+    // Spawned and Unlocks rows share the collect rows' Timeline frame.
+    for (const row of [entry!, ...unlocks]) expect(row.classList).toContain('timeline-row-frame');
     const cage = actions.rows.find(
       (row) => row.reference.kind === 'interactLocalReward' && row.reference.slotKey === 'cage2',
     )!;

@@ -1208,10 +1208,9 @@
   text-underline-offset: 3px;
 }
 
-/* What the game spawned: a quiet note, its items as chips in spawn order. */
-.timeline-row[data-spawned-loot] {
-  border-color: transparent;
-  background: transparent;
+/* What the game spawned or unlocked: a framed row like a collect, its items as chips in spawn order. */
+.timeline-row.timeline-row-frame {
+  background: rgb(255 255 255 / 2%);
 }
 
 .timeline-row[data-spawned-loot] .spawned-loot-label {
