@@ -1398,6 +1398,19 @@ describe('room stop', () => {
     });
   }
 
+  /** F's Postboss Travel Deal restocks a Fateful Twist whose result is not set. */
+  function unsetRefillTwist() {
+    return applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+      kind: 'ReplaceStygianWellTravelDealRefill',
+      occurrence: createOccurrenceAddress(goldenFBiome, fPostboss),
+      itemKey: 'RandomStoreItem',
+    });
+  }
+  const refillPurchaseRow = roomActionKey({
+    kind: 'purchaseStygianWellOffer',
+    generationKey: 'travelDealRefill',
+  });
+
   /** F's Postboss moves `reference` ahead of its fountain, which opens the doors. */
   function beforeFountain(reference: RoomActionReference) {
     return applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
@@ -1704,6 +1717,8 @@ describe('room stop', () => {
 
   it.each([
     ['a Well Twist', unsetWellTwist, [wellPurchaseRow]],
+    // A refill's Twist is judged at the refill purchase, not the purchase that restocks it.
+    ['a Travel Deal refill Twist', unsetRefillTwist, [refillPurchaseRow]],
     [
       'a rack equip result',
       rackWithoutEquipResult,

@@ -375,9 +375,10 @@ The blocking product's rows are the row whose own contact the blocking region
 is (a Well or Pool reroll's list, a Pool sale, a wheel's choice) and every row
 that settles an owner of the region: besides a row's own acquisition or
 reward, the Keepsake Rack settles its selection and equip result, a fountain
-use its rarity outcome, a Well purchase its Fateful Twist and its initial or
-rolled item, and a Shrine purchase its initial item. A Travel Deal restock is
-judged at the earlier purchase that restocks it and a Pool list as the
+use its rarity outcome, a Well purchase its Fateful Twist (a Travel Deal refill's
+Twist is judged at the refill purchase, so its row) and its initial or rolled
+item, and a Shrine purchase its initial item. A Travel Deal restock is judged at
+the earlier purchase that restocks it and a Pool list as the
 fountain opens it, so neither has a row. A row or contact entry lies past the
 contact when a boundary before it was not passed, such as a wheel's choice row
 while its offers block at **Next phase ready**; the stop then never claims it
