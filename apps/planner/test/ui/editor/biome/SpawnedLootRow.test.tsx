@@ -20,6 +20,7 @@ import {
   loadNemesisPomSeaStarCheckpoint,
   loadUnderworldFGHCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
 import { renderOccurrenceWorkbench, workspaceBiome } from '@planner-test/support/biome-workbench';
 import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
 
@@ -157,6 +158,112 @@ describe('converted and copied loot', () => {
         document.querySelector(`[data-room-action-key="${CSS.escape(roomActionKey(pickup))}"]`),
       ).not.toBeNull(),
     );
+  });
+});
+
+function actionRow(key: string): HTMLElement {
+  return document.querySelector<HTMLElement>(`[data-room-action-key="${CSS.escape(key)}"]`)!;
+}
+
+function sourceBadge(element: Element): string | null | undefined {
+  return element.querySelector('.timeline-source-badge')?.getAttribute('src');
+}
+
+describe('source badges', () => {
+  it('marks Supply Chain drops with their source and leaves the room reward bare', async () => {
+    const view = render();
+    const drops = () =>
+      roomActions(view).rows.filter(
+        (row) => row.sourceFamily?.kind === 'trait' && !row.stale && row.rank !== null,
+      );
+    await view.user.click(spawnedItems().at(-1)!);
+    await waitFor(() => expect(drops().length).toBeGreaterThan(0));
+    const drop = drops()[0]!;
+    const badge = pickupSourceBadgeIcon(drop.sourceFamily);
+    expect(badge).toBeDefined();
+    expect(sourceBadge(actionRow(drop.key))).toBe(badge);
+    const group = within(screen.getByRole('listitem', { name: 'Spawned' })).getByRole('group', {
+      name: 'Supply Chain',
+    });
+    for (const chip of within(group).getAllByRole('button')) expect(sourceBadge(chip)).toBe(badge);
+    const reward = roomActions(view).rows.find(
+      (row) => row.reference.kind === 'interactIncomingReward' && !row.stale,
+    )!;
+    expect(sourceBadge(actionRow(reward.key))).toBeUndefined();
+    expect(sourceBadge(spawnedItems()[0]!)).toBeUndefined();
+  });
+
+  it('marks a Sea Star copy’s collect with Sea Star, not the copy chip', () => {
+    const view = renderOccurrenceWorkbench(
+      loadNemesisPomSeaStarCheckpoint(),
+      'Underworld',
+      'F',
+      occurrenceById('golden-f-b5-e1'),
+    );
+    openRoomTab('Room Timeline');
+    const node = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
+      (candidate): candidate is WorkspaceOccurrenceWorkbenchNode =>
+        candidate.kind === 'occurrenceWorkbench' &&
+        candidate.room.occurrenceId === 'golden-f-b5-e1',
+    )!;
+    const actions = node.room.roomActions!;
+    const original = actions.rows.find((row) => row.sourceFamily?.kind === 'nemesisEvent')!;
+    const copy = actions.rows.find((row) => row.sourceFamily?.kind === 'seaStar')!;
+    expect(pickupSourceBadgeIcon({ kind: 'seaStar' })).toBeDefined();
+    expect(sourceBadge(actionRow(copy.key))).toBe(pickupSourceBadgeIcon({ kind: 'seaStar' }));
+    const copyChip = within(actionRow(original.key)).getByRole('button', {
+      name: 'Sea Star copy',
+    });
+    expect(sourceBadge(copyChip)).toBeUndefined();
+  });
+});
+
+describe('Hermes Shrine rows', () => {
+  const postboss = 'surface-n-preboss:postboss';
+
+  function renderPostboss() {
+    const view = renderOccurrenceWorkbench(
+      loadSurfaceShrineTravelDealCheckpoint(),
+      'Surface',
+      'N',
+      occurrenceById(postboss),
+    );
+    openRoomTab('Room Timeline');
+    const node = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
+      (candidate): candidate is WorkspaceOccurrenceWorkbenchNode =>
+        candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === postboss,
+    )!;
+    return node.room.roomActions!.rows;
+  }
+
+  it('marks a delivered item with the Shrine', () => {
+    const rows = renderPostboss();
+    const delivery = rows.find((row) => row.sourceFamily?.kind === 'hermesShrineDelivery')!;
+    expect(pickupSourceBadgeIcon(delivery.sourceFamily)).toBeDefined();
+    expect(sourceBadge(actionRow(delivery.key))).toBe(
+      pickupSourceBadgeIcon({ kind: 'hermesShrineDelivery' }),
+    );
+  });
+
+  it('leads a purchase with the Shrine carrying its slot or Travel Deal mark, then the item', () => {
+    const rows = renderPostboss();
+    const rush = rows.find((row) => row.slot !== undefined && !row.stale)!;
+    const rushLabel = actionRow(rush.key).querySelector('[data-timeline-cell="label"]')!;
+    const store = rushLabel.querySelector('.timeline-row-icon')!;
+    expect(store.querySelector('.timeline-slot-badge')?.textContent).toBe(String(rush.slot));
+    const item = rushLabel.querySelector('.row-reward-icon')!;
+    expect(store.compareDocumentPosition(item) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(item.querySelector('.timeline-slot-badge, .timeline-source-badge')).toBeNull();
+
+    const refill = rows.find((row) => row.travelDeal === true && !row.stale)!;
+    const refillLabel = actionRow(refill.key).querySelector('[data-timeline-cell="label"]')!;
+    const refillStore = refillLabel.querySelector('.timeline-row-icon')!;
+    expect(refillStore.querySelector('.timeline-travel-deal-badge')).not.toBeNull();
+    expect(refillStore.querySelector('span.timeline-slot-badge')).toBeNull();
+    const refillItem = refillLabel.querySelector('.row-reward-icon')!;
+    expect(
+      refillItem.querySelector('.timeline-travel-deal-badge, .timeline-source-badge'),
+    ).toBeNull();
   });
 });
 

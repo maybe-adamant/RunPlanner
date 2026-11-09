@@ -1139,6 +1139,21 @@
   text-align: center;
 }
 
+/* What created a derived pickup: a small icon on its top corner, where a lock would sit. */
+.timeline-source-badge {
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #1b1c22;
+  box-shadow: 0 0 0 1px #4a4855;
+  object-fit: contain;
+  pointer-events: none;
+}
+
 /* A Travel Deal purchase carries the Travel Deal boon on its icon in place of a slot. */
 .timeline-travel-deal-badge {
   width: 15px;
@@ -1222,32 +1237,16 @@
   cursor: not-allowed;
 }
 
-/* A source's items follow its icon: "[Supply Chain]: Pom Slice, Pom Slice". */
+/* Spawned chips stand far enough apart that their corner badges never touch. */
 .spawned-loot-groups {
   flex-wrap: wrap;
+  gap: 6px;
 }
 
 .spawned-loot-group {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-}
-
-.spawned-loot-source {
-  display: inline-grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-}
-
-.spawned-loot-source > .artwork-label-icon {
-  width: 22px;
-  height: 22px;
-}
-
-.spawned-loot-colon {
-  margin-inline: -2px 2px;
-  color: var(--muted);
+  gap: 6px;
 }
 
 .spawned-loot-separator {
@@ -3311,8 +3310,8 @@ span.hub-board-status-line {
 
 .icon-toggle-lock {
   position: absolute;
+  top: -5px;
   right: -5px;
-  bottom: -5px;
   display: grid;
   width: 13px;
   height: 13px;

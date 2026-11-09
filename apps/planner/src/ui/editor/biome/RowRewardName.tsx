@@ -18,6 +18,7 @@ export function RowRewardName({
   offer,
   origin,
   place,
+  sourceBadge,
 }: {
   readonly boosted?: boolean;
   readonly itemKey?: string;
@@ -27,6 +28,8 @@ export function RowRewardName({
   readonly origin?: string;
   /** The Fields slot the reward sits in: its mark on the icon's corner, its name in the hint. */
   readonly place?: { readonly badge: string; readonly label: string };
+  /** What created a derived pickup, as a badge on the icon's top corner. */
+  readonly sourceBadge?: string;
 }) {
   const spoken = offer.payload?.kind === 'BoonSource' ? `${name} boon` : name;
   const named = place === undefined ? spoken : `${spoken} · ${place.label}`;
@@ -45,6 +48,9 @@ export function RowRewardName({
           className="artwork-label-icon"
           source={itemKey === undefined ? offerIcon(offer) : wellItemIcon(itemKey)}
         />
+        {sourceBadge === undefined ? null : (
+          <img alt="" aria-hidden="true" className="timeline-source-badge" src={sourceBadge} />
+        )}
         {place === undefined ? null : (
           <span aria-hidden="true" className="timeline-chip-badge">
             {place.badge}

@@ -501,11 +501,15 @@ Where the game spawns loot, a read-only spawn row follows the moment (room
 entry, an encounter's end, an O phase's wheel reward, the Preboss delivery
 flush, read as Delivered) or sits under the action whose settlement spawns it.
 It lists the items in spawn order as chips, grouped by what spawned them (a
-boon, keepsake, NPC, Hermes or a switch, shown by its icon before its items);
-the room's own reward and Fields slots stand alone, a slot marked by its cage
-or optional badge. A chip leads to its collect row; an optional item not yet
-collected is dashed and one click places it, opening the row's unfinished
-choice (a Pom Slice's Pom) at once. Its hover says what clicking does. The
+boon, keepsake, NPC, the Hermes Shrine, the Artificer, Sea Star or a switch);
+the room's own reward and Fields slots stand alone. A derived pickup's chip and
+its collect row's item carry that source as a badge. Every item and object
+icon follows one badge scheme: the top corner holds a lock or a source (never
+both, since locked loot has no source) and the bottom corner holds a number
+(a cage or optional slot, a store slot or the Travel Deal mark). A chip leads
+to its collect row; an optional item not yet collected is dashed and one
+click places it, opening the row's unfinished choice (a Pom Slice's Pom) at
+once. Its hover says what clicking does. The
 Artificer's new reward reads under its Transform row and a rushed Shrine item
 under its Rush row; a Sea Star copy is instead a ×2 chip on the copied
 pickup's own row. A World Shop Travel Deal refill is a purchase, added from

@@ -9,11 +9,8 @@ import type {
   WorkspaceSpawnedItem,
 } from '@planner/projections/structured-workspace';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
-import {
-  challengeSwitchIcon,
-  roomObjectIcon,
-  sourceFamilyIcon,
-} from '@planner/ui/artwork/roomArtwork';
+import { sourceFamilyIcon } from '@planner/ui/artwork/roomArtwork';
+import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
 import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggleLock } from '@planner/ui/controls/IconToggle';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -50,30 +47,20 @@ function openPlacedRow(row: HTMLElement): void {
   choice.click();
 }
 
-function sourceIcon(source: WorkspaceSpawnSource): string | undefined {
-  switch (source.family.kind) {
-    case 'hermesShrineDelivery':
-      return roomObjectIcon('hermesShrine');
-    case 'challengeSwitch':
-      return source.challengeSwitchKind === undefined
-        ? roomObjectIcon('challengeSwitch')
-        : challengeSwitchIcon(source.challengeSwitchKind);
-    default:
-      return sourceFamilyIcon(source.family);
-  }
-}
-
 function SpawnedItemChip({
   announce,
   copy,
   item,
   row,
+  source,
 }: {
   readonly announce: (message: string) => void;
   /** A copy's chip shows its source and the doubled count instead of the item. */
   readonly copy?: WorkspaceSpawnSource;
   readonly item: WorkspaceSpawnedItem;
   readonly row: WorkspaceRoomActionRow | undefined;
+  /** What created the item, as a badge on the chip's top corner. */
+  readonly source?: WorkspaceSpawnSource | undefined;
 }) {
   const executeIntent = useCommandIntent();
   const findingMark = useFindingMark();
@@ -89,6 +76,10 @@ function SpawnedItemChip({
       : item.place === undefined
         ? item.label
         : `${item.label} · ${item.place.label}`;
+  const sourceBadge =
+    source === undefined
+      ? undefined
+      : pickupSourceBadgeIcon(source.family, source.challengeSwitchKind);
   const unavailable = placement.kind === 'unavailable';
   // Placed from this chip, the new row opens its choice once it is on the Timeline.
   useEffect(() => {
@@ -140,7 +131,7 @@ function SpawnedItemChip({
         className="artwork-label-icon"
         source={
           copy !== undefined
-            ? sourceIcon(copy)
+            ? sourceFamilyIcon(copy.family)
             : row === undefined
               ? undefined
               : (roomActionItemIcon(row) ?? sourceFamilyIcon(row.sourceFamily))
@@ -150,6 +141,9 @@ function SpawnedItemChip({
         <span aria-hidden="true" className="spawn-copy-count">
           ×2
         </span>
+      )}
+      {sourceBadge === undefined ? null : (
+        <img alt="" aria-hidden="true" className="timeline-source-badge" src={sourceBadge} />
       )}
       {item.place === undefined ? null : (
         <span aria-hidden="true" className="timeline-chip-badge">
@@ -176,20 +170,13 @@ function SpawnGroup({
       item={item}
       key={item.key}
       row={rows.find((candidate) => candidate.key === item.actionKey)}
+      source={group.source}
     />
   ));
   if (group.source === undefined) return <>{items}</>;
+  // Each item's badge shows the source; the group only names it.
   return (
     <span aria-label={group.source.name} className="spawned-loot-group" role="group">
-      <span
-        {...hintProps(group.source.name, undefined, group.source.name)}
-        className="spawned-loot-source"
-      >
-        <ArtworkIcon className="artwork-label-icon" source={sourceIcon(group.source)} />
-      </span>
-      <span aria-hidden="true" className="spawned-loot-colon">
-        :
-      </span>
       {items}
     </span>
   );

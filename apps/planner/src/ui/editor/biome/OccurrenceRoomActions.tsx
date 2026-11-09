@@ -63,6 +63,7 @@ import {
   roomObjectIcon,
   sourceFamilyIcon,
 } from '@planner/ui/artwork/roomArtwork';
+import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import {
   DoorsOpenBanner,
@@ -733,6 +734,7 @@ export function RoomActionsWorkbench({
           {row.participation === 'required' ? 'Restore' : 'Take'}
         </button>
       );
+    const sourceBadge = pickupSourceBadgeIcon(row.sourceFamily, row.challengeSwitchKind);
     // The row's name: a reward's icon, an NPC's portrait, or its words.
     const rowName =
       row.labelParts === undefined ? null : row.labelParts.traitKey !== undefined ? (
@@ -768,6 +770,7 @@ export function RoomActionsWorkbench({
               offer={row.labelParts.reward.offer}
               {...(row.labelParts.origin === undefined ? {} : { origin: row.labelParts.origin })}
               {...(row.labelParts.place === undefined ? {} : { place: row.labelParts.place })}
+              {...(sourceBadge === undefined ? {} : { sourceBadge })}
             />
           )}
           {row.travelDeal ? <span className="visually-hidden"> · Travel Deal offer</span> : null}
