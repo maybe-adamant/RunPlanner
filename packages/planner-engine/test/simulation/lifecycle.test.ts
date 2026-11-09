@@ -748,6 +748,54 @@ describe('single-room lifecycle execution', () => {
     );
   });
 
+  it('stops at a later-window row ranked before a required action of an earlier window', () => {
+    const reward = {
+      kind: 'interactIncomingReward' as const,
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source' as const,
+    };
+    const purchase = {
+      kind: 'purchaseStygianWellOffer' as const,
+      generationKey: 'initial:secondLeft' as const,
+    };
+    const collect = { kind: 'collectRequiredReward' as const };
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({
+        roomActionRoster: actionRoster(
+          origin,
+          [reward, purchase, collect],
+          [
+            {
+              reference: reward,
+              participation: 'required',
+              window: { kind: 'standard', phase: 'afterCombat' },
+              dependencies: [],
+            },
+            {
+              reference: purchase,
+              participation: 'optional',
+              window: { kind: 'postOutgoing' },
+              dependencies: [],
+            },
+            {
+              reference: collect,
+              participation: 'required',
+              window: { kind: 'standard', phase: 'afterCombat' },
+              dependencies: [],
+            },
+          ],
+        ),
+      }),
+    );
+
+    // The required pickup's deadline passes before the purchase's window opens:
+    // the purchase is not reached, so nothing is bought.
+    expect(fragment.blockedAt?.actionKey).toBe(roomActionKey(purchase));
+    expect(fragment.events.some((event) => event.kind === 'wellPurchase')).toBe(false);
+    expect(fragment.events.some((event) => event.kind === 'producerRoleAdvanced')).toBe(true);
+  });
+
   it('advances the standard producer role before outgoing generation and commit effects', () => {
     const fragment = executeRoomLifecycle(catalog, input());
 

@@ -316,6 +316,29 @@ export function roomLifecycleWindowOrdinal(
   }
 }
 
+/**
+ * Whether the window names a phase or wheel this room's structure has; a
+ * retained placement at a phase the room no longer plays names none.
+ */
+export function roomLifecycleWindowResolves(
+  structure: RoomLifecycleStructure,
+  window: RoomActionWindow,
+): boolean {
+  switch (window.kind) {
+    case 'encounterEnd':
+      return structure.points.some(
+        (point) => point.kind === 'encounterEnd' && point.phaseKey === window.phaseKey,
+      );
+    case 'shipPreCombat':
+    case 'shipPostCombat':
+      return structure.phases.some((phase) => phase.rewardWheelKey === window.wheelKey);
+    case 'standard':
+    case 'fields':
+    case 'postOutgoing':
+      return true;
+  }
+}
+
 /** Declaration/state-owned lifecycle selection before simulation materialization. */
 export function authoredRoomLifecycleProfileKey(
   declaration: RoomDeclaration,

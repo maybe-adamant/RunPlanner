@@ -404,7 +404,11 @@ follow it, and the press itself is refused at k while any row follows it,
 which is the press's own validity rather than a veto from a later row. A
 required action's window closes at its deadline, so a ranked required action
 of an earlier window placed after k also refuses k: the walk cannot progress
-past it. An unplaced required action of an earlier window does not refuse k;
+past it. The walk applies the same rule to the authored order, stopping at the
+first row such an action follows, before that row settles: a Postboss Well,
+Pool, Shrine or switch row before the fountain use that unlocks the exits is
+never reached. A required action placed at a phase the room does not play
+sets no deadline; its placement is its own finding. An unplaced required action of an earlier window does not refuse k;
 the walk's own deadline stop leaves k unreached. Every other row after k
 takes no part: a later row the edit invalidates carries its own issue when
 the walk reaches it. A prefix that is already invalid stops
@@ -418,7 +422,8 @@ Insert and move proposals carry the typed dependency and fixed-window
 blockers of that prefix, each naming its affected action and its prerequisite
 or conflicting action windows; a required action of an earlier window after k
 is its own blocker naming the action that must come first. An action marked
-`windowFollowsOrder` (the Postboss rack) never takes part in window crossing.
+`windowFollowsOrder` (the Postboss rack) never takes part in window crossing
+or required-first order.
 The application labels this evidence for placement explanations; it neither
 infers legality nor attributes an existing blocker to the proposed action.
 Authorable proposals, canonical required restores, and removals carry no

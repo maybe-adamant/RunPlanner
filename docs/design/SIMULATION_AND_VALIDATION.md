@@ -716,6 +716,12 @@ Instance identity belongs in the address, not the code. Messages and display
 labels are application products. An actual lifecycle action block retains each
 matching dependency or window violation as invalid ordering; a missing required
 action remains incomplete. Dormant stale roster rows do not create findings.
+The walk enforces the [roster's](ROOM_LIFECYCLE_MODEL.md#roster) required-first
+order as placement does: a row ranked before a required action of an earlier
+window is not reached, because that action's deadline passes before the row's
+window opens. The walk stops at that row before it settles, and its one
+invalid-ordering finding names the required action that must come first; the
+same crossing is not reported again as a window violation of the later action.
 
 Three responsibilities stay separate:
 

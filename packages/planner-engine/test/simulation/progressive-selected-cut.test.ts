@@ -1398,6 +1398,19 @@ describe('room stop', () => {
     });
   }
 
+  /** F's Postboss moves `reference` ahead of its fountain, which opens the doors. */
+  function beforeFountain(reference: RoomActionReference) {
+    return applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(goldenFBiome, fPostboss, roomActionKey(reference)),
+      toIndex: 0,
+    });
+  }
+  const wellPurchase: RoomActionReference = {
+    kind: 'purchaseStygianWellOffer',
+    generationKey: 'initial:secondLeft',
+  };
+
   /** F's Postboss fountain used with a Phial and no rarity target. */
   function fountainWithoutRarityTarget() {
     return applyProjectCommand(loadUnderworldTwistScyllaCheckpoint(), catalog, {
@@ -1632,6 +1645,12 @@ describe('room stop', () => {
       },
     ],
     [
+      'a Postboss Well purchase ranked before the fountain: the purchase row',
+      () => beforeFountain(wellPurchase),
+      'F',
+      { room: fPostboss, kind: 'timeline', at: 'entry', entry: wellPurchaseRow },
+    ],
+    [
       "a Postboss fountain's rarity outcome unset: the fountain row",
       fountainWithoutRarityTarget,
       'F',
@@ -1646,6 +1665,33 @@ describe('room stop', () => {
 
   it.each(cases)('%s', (_name, build, biomeKey, expected) => {
     expect(stopAt(biomeEvaluation(build(), biomeKey))).toEqual(expected);
+  });
+
+  it('stops at a Postboss Well purchase the required fountain must precede', () => {
+    const evaluation = biomeEvaluation(beforeFountain(wellPurchase), 'F');
+    // Using the fountain unlocks the exits; only then is the Well usable.
+    expect(evaluation.findings).toEqual([
+      {
+        code: 'roomActionOrderUnavailable',
+        phase: 'encounterResolution',
+        origin: createRoomActionAddress(goldenFBiome, fPostboss, wellPurchaseRow),
+        evidence: {
+          reason: 'requiredFirst',
+          detail: `must follow ${roomActionKey({ kind: 'useFountain' })}, a required action of an earlier window`,
+          requiredAction: roomActionKey({ kind: 'useFountain' }),
+        },
+      },
+    ]);
+    expect(evaluation.coverage.roomTimeline?.blockingRowKeys).toEqual([wellPurchaseRow]);
+  });
+
+  it('runs a Postboss Keepsake Rack used before the fountain', () => {
+    const project = beforeFountain({ kind: 'interactKeepsakeRack' });
+    const biome = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'F',
+    );
+    expect(biome?.findings ?? []).toEqual([]);
+    expect(biome?.coverage.kind).toBe('complete');
   });
 
   it('marks no row for a Well restock judged at the first purchase', () => {

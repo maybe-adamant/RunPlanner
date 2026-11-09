@@ -180,6 +180,7 @@ describe('room action insertion legality', () => {
     expect(issueKinds(order)).toEqual([
       ['dependency', roomActionKey(press)],
       ['window', roomActionKey(dependent)],
+      ['requiredFirst', roomActionKey(press)],
     ]);
     expect(legalIndexes(order, optional)).toEqual([1, 2]);
     expect(assessRoomActionInsertion(order, optional, 3, context()).blockers).toEqual([
@@ -261,6 +262,51 @@ describe('room action insertion legality', () => {
     ]);
     // A placed row's prefix ends at that row: the reward at 2 is judged before the press.
     expect(assessRoomActionPlacement(reversed, 1, context()).structurallyAuthorable).toBe(true);
+  });
+
+  it('stops the authored order at each row a later required action of an earlier window must precede', () => {
+    // The walk reaches the optional after-combat row before the before-combat
+    // action's deadline, and the reward after it no earlier; the issue names the
+    // earliest-window required action after each row.
+    expect(
+      assessRoomActionOrder([optional, reward, before], context()).filter(
+        (issue) => issue.kind === 'requiredFirst',
+      ),
+    ).toEqual([
+      expect.objectContaining({ reference: optional, requiredAction: before }),
+      {
+        kind: 'requiredFirst',
+        reference: reward,
+        detail: `must follow ${roomActionKey(before)}, a required action of an earlier window`,
+        window: { kind: 'standard', phase: 'afterCombat' },
+        requiredAction: before,
+        requiredWindow: { kind: 'standard', phase: 'beforeCombat' },
+      },
+    ]);
+    // Only a required action sets a deadline: an optional earlier-window row
+    // after a later one is that row's own window issue.
+    expect(issueKinds([before, optional, prep])).toEqual([['window', roomActionKey(prep)]]);
+  });
+
+  it('sets no deadline for a required action placed at a phase the room does not play', () => {
+    const delivery: RoomActionReference = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey: 'delivery',
+      encounterPhaseKey: 'Gone',
+    };
+    const retained = roomActionOrderContext({
+      lifecycleStructure: structure,
+      contributions: [
+        action(reward, 'required', { kind: 'standard', phase: 'afterCombat' }),
+        action(delivery, 'required', { kind: 'encounterEnd', phaseKey: 'Gone' }),
+      ],
+    });
+    expect(
+      assessRoomActionOrder([reward, delivery], retained).some(
+        (issue) => issue.kind === 'requiredFirst',
+      ),
+    ).toBe(false);
   });
 
   it('names a refused index and its blocker, and the accepted range', () => {

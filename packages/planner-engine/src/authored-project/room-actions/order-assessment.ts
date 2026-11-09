@@ -9,6 +9,7 @@ import type {
 } from './domain';
 import {
   roomLifecycleWindowOrdinal,
+  roomLifecycleWindowResolves,
   type RoomActionWindow,
   type RoomLifecycleStructure,
 } from './lifecycle-structure';
@@ -35,15 +36,11 @@ export type RoomActionOrderIssue =
       readonly window: RoomActionWindow;
       readonly precedingAction: RoomActionReference;
       readonly precedingWindow: RoomActionWindow;
-    };
-
-/**
- * A placement's blockers: the prefix's dependency and window issues, and each
- * prefix row a ranked required action of an earlier window, ordered after the
- * placement, must come before: its deadline passes before the row's window opens.
- */
-export type RoomActionPlacementBlocker =
-  | Extract<RoomActionOrderIssue, { kind: 'dependency' | 'window' }>
+    }
+  /**
+   * A row ordered before a ranked required action of an earlier window: that
+   * action's deadline passes before the row's window opens, so the walk stops here.
+   */
   | {
       readonly kind: 'requiredFirst';
       readonly reference: RoomActionReference;
@@ -52,6 +49,12 @@ export type RoomActionPlacementBlocker =
       readonly requiredAction: RoomActionReference;
       readonly requiredWindow: RoomActionWindow;
     };
+
+/** A placement's blockers: the prefix's dependency, window and required-first issues. */
+export type RoomActionPlacementBlocker = Extract<
+  RoomActionOrderIssue,
+  { kind: 'dependency' | 'window' | 'requiredFirst' }
+>;
 
 /** The structural facts one occurrence's action order is judged against. */
 export interface RoomActionOrderContext {
@@ -240,7 +243,10 @@ function rowAndWindowIssues(
   return { rows, windows };
 }
 
-/** Every structural issue of one authored order: stale, missing required, dependency and window. */
+/**
+ * Every structural issue of one authored order: stale, missing required,
+ * dependency, window and required-first.
+ */
 export function assessRoomActionOrder(
   order: readonly RoomActionReference[],
   context: RoomActionOrderContext,
@@ -252,47 +258,85 @@ export function assessRoomActionOrder(
     .map((key) =>
       frozen({ kind: 'unrankedRequired' as const, reference: context.active.get(key)!.reference }),
     );
-  return frozen([...rows, ...unranked, ...windows]);
+  const deadlines = requiredDeadlinesAfter(order, context);
+  const requiredFirst = order.flatMap((reference, index) => {
+    const issue = requiredFirstIssue(reference, deadlines[index], context);
+    return issue === undefined ? [] : [issue];
+  });
+  return frozen([...rows, ...unranked, ...windows, ...requiredFirst]);
+}
+
+interface RequiredDeadline {
+  readonly entry: RoomActionContribution;
+  readonly ordinal: number;
 }
 
 /**
- * A ranked required action's window closes at its deadline, so a row at or
- * before `lastIndex` whose window is later than that of a required action
- * ordered after `lastIndex` is not reached: the required action must come first.
+ * For each row, the ranked required action ordered after it whose window
+ * closes first (the earliest such row on a tie). An action whose window names
+ * a phase the room does not play has no deadline here; its placement is its
+ * own finding.
  */
+function requiredDeadlinesAfter(
+  order: readonly RoomActionReference[],
+  context: RoomActionOrderContext,
+): readonly (RequiredDeadline | undefined)[] {
+  const deadlines: (RequiredDeadline | undefined)[] = new Array(order.length);
+  let earliest: RequiredDeadline | undefined;
+  for (let index = order.length - 1; index >= 0; index -= 1) {
+    deadlines[index] = earliest;
+    const key = keyOf(order[index]!);
+    const entry = context.active.get(key);
+    if (
+      entry?.participation !== 'required' ||
+      entry.windowFollowsOrder === true ||
+      !roomLifecycleWindowResolves(context.lifecycleStructure, entry.window)
+    )
+      continue;
+    const ordinal = context.windowOrdinals.get(key)!;
+    if (earliest === undefined || ordinal <= earliest.ordinal) earliest = { entry, ordinal };
+  }
+  return deadlines;
+}
+
+/**
+ * A ranked required action's window closes at its deadline, so a row whose
+ * window is later than that of a required action ordered after it is not
+ * reached: the required action must come first.
+ */
+function requiredFirstIssue(
+  reference: RoomActionReference,
+  deadline: RequiredDeadline | undefined,
+  context: RoomActionOrderContext,
+): Extract<RoomActionOrderIssue, { kind: 'requiredFirst' }> | undefined {
+  const key = keyOf(reference);
+  const entry = context.active.get(key);
+  if (entry === undefined || deadline === undefined || entry.windowFollowsOrder === true)
+    return undefined;
+  if (context.windowOrdinals.get(key)! <= deadline.ordinal) return undefined;
+  const required = deadline.entry;
+  return frozen({
+    kind: 'requiredFirst',
+    reference: entry.reference,
+    detail: `must follow ${keyOf(required.reference)}, a required action of an earlier window`,
+    window: entry.window,
+    requiredAction: required.reference,
+    requiredWindow: required.window,
+  });
+}
+
+/** Each row at or before `lastIndex` that a required action ordered after it must precede. */
 function requiredFirstBlockers(
   order: readonly RoomActionReference[],
   lastIndex: number,
   context: RoomActionOrderContext,
 ): RoomActionPlacementBlocker[] {
-  let earliest: { readonly entry: RoomActionContribution; readonly ordinal: number } | undefined;
-  for (let index = lastIndex + 1; index < order.length; index += 1) {
-    const key = keyOf(order[index]!);
-    const entry = context.active.get(key);
-    if (entry?.participation !== 'required' || entry.windowFollowsOrder === true) continue;
-    const ordinal = context.windowOrdinals.get(key)!;
-    if (earliest === undefined || ordinal < earliest.ordinal) earliest = { entry, ordinal };
-  }
-  if (earliest === undefined) return [];
-  const required = earliest.entry;
-  const blockers: RoomActionPlacementBlocker[] = [];
-  for (let index = 0; index <= lastIndex && index < order.length; index += 1) {
-    const key = keyOf(order[index]!);
-    const entry = context.active.get(key);
-    if (entry === undefined || entry.windowFollowsOrder === true) continue;
-    if (context.windowOrdinals.get(key)! <= earliest.ordinal) continue;
-    blockers.push(
-      frozen({
-        kind: 'requiredFirst',
-        reference: entry.reference,
-        detail: `must follow ${keyOf(required.reference)}, a required action of an earlier window`,
-        window: entry.window,
-        requiredAction: required.reference,
-        requiredWindow: required.window,
-      }),
-    );
-  }
-  return blockers;
+  const deadline = requiredDeadlinesAfter(order, context)[lastIndex];
+  if (deadline === undefined) return [];
+  return order.slice(0, lastIndex + 1).flatMap((reference) => {
+    const issue = requiredFirstIssue(reference, deadline, context);
+    return issue === undefined ? [] : [issue];
+  });
 }
 
 /** A proposed order, judged as the walk reaches its last placed action. */
