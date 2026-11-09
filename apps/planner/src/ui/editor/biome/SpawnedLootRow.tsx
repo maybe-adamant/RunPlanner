@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 
 import type {
@@ -47,6 +47,17 @@ function openPlacedRow(row: HTMLElement): void {
   choice.click();
 }
 
+/** A polite announcement that speaks again when the same message repeats. */
+function useAnnouncement(): readonly [string, (message: string) => void] {
+  const [announcement, setAnnouncement] = useState('');
+  const announce = useCallback(
+    (message: string) =>
+      setAnnouncement((previous) => (previous === message ? `${message}\u00a0` : message)),
+    [],
+  );
+  return [announcement, announce];
+}
+
 function SpawnedItemChip({
   announce,
   copy,
@@ -70,12 +81,14 @@ function SpawnedItemChip({
   const opening = useRef(false);
   const navigatedAt = useRef<number>(undefined);
   const placement = item.placement;
-  const name =
+  const shown =
     copy !== undefined
-      ? `${copy.name} copy`
+      ? `${copy.name} copy of ${item.label}`
       : item.place === undefined
         ? item.label
         : `${item.label} · ${item.place.label}`;
+  // The lock badge is drawn only; its name says it.
+  const name = item.locked ? `${shown}, locked` : shown;
   const sourceBadge =
     source === undefined
       ? undefined
@@ -121,6 +134,10 @@ function SpawnedItemChip({
         } else if (placement.kind === 'unplaced') {
           opening.current = true;
           executeIntent(placement.intent);
+          // A placement that did not land leaves nothing to open later.
+          setTimeout(() => {
+            opening.current = false;
+          }, 0);
           announce(`${item.label} added to the timeline.`);
         }
       }}
@@ -155,7 +172,7 @@ function SpawnedItemChip({
           {item.place.badge}
         </span>
       )}
-      {item.locked ? <IconToggleLock className="spawn-lock-badge" /> : null}
+      {item.locked ? <IconToggleLock /> : null}
     </button>
   );
 }
@@ -203,7 +220,7 @@ export function SpawnedLootRow({
   /** Lists locked loot as it becomes takeable. */
   readonly unlocks?: true;
 }) {
-  const [announcement, setAnnouncement] = useState('');
+  const [announcement, announce] = useAnnouncement();
   return (
     <TimelineRow
       aria-label={label}
@@ -218,7 +235,7 @@ export function SpawnedLootRow({
                   ·
                 </span>
               )}
-              <SpawnGroup announce={setAnnouncement} group={group} rows={rows} />
+              <SpawnGroup announce={announce} group={group} rows={rows} />
             </Fragment>
           ))}
           <span aria-live="polite" className="visually-hidden">
@@ -240,13 +257,13 @@ export function SpawnCopyChips({
   readonly copies: readonly WorkspaceSpawnCopy[];
   readonly rows: readonly WorkspaceRoomActionRow[];
 }) {
-  const [announcement, setAnnouncement] = useState('');
+  const [announcement, announce] = useAnnouncement();
   if (copies.length === 0) return null;
   return (
     <span className="spawn-copies">
       {copies.map((copy) => (
         <SpawnedItemChip
-          announce={setAnnouncement}
+          announce={announce}
           copy={copy.source}
           item={copy.item}
           key={copy.key}

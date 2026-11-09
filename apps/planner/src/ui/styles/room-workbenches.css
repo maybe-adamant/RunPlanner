@@ -3335,19 +3335,6 @@ span.hub-board-status-line {
   color: var(--muted);
 }
 
-/* Loot spawned before it can be taken: a lock on its chip's top corner. */
-.spawn-lock-badge {
-  display: grid;
-  width: var(--badge-small);
-  height: var(--badge-small);
-  place-items: center;
-  border-radius: 7px;
-  background: var(--surface);
-  box-shadow: 0 0 0 1px var(--border);
-  color: var(--muted);
-}
-
-.spawn-lock-badge > svg,
 .icon-toggle-lock > svg {
   width: calc(var(--badge-small) * 0.615);
   height: calc(var(--badge-small) * 0.615);

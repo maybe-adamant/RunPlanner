@@ -125,8 +125,8 @@ describe('converted and copied loot', () => {
     const editors = originalRow.querySelector<HTMLElement>('[data-timeline-cell="editors"]')!;
     const controls = within(editors).getAllByRole('button');
     expect(controls.length).toBeGreaterThan(1);
-    expect(controls.at(-1)!.getAttribute('aria-label')).toBe('Sea Star copy');
-    await view.user.click(within(originalRow).getByRole('button', { name: 'Sea Star copy' }));
+    expect(controls.at(-1)!.getAttribute('aria-label')).toMatch(/^Sea Star copy of \S/);
+    await view.user.click(within(originalRow).getByRole('button', { name: /^Sea Star copy of / }));
     expect(document.activeElement?.getAttribute('data-room-action-key')).toBe(copy.key);
   });
 
@@ -217,7 +217,7 @@ describe('source badges', () => {
     expect(pickupSourceBadgeIcon({ kind: 'seaStar' })).toBeDefined();
     expect(sourceBadge(actionRow(copy.key))).toBe(pickupSourceBadgeIcon({ kind: 'seaStar' }));
     const copyChip = within(actionRow(original.key)).getByRole('button', {
-      name: 'Sea Star copy',
+      name: /^Sea Star copy of /,
     });
     expect(sourceBadge(copyChip)).toBeUndefined();
   });
@@ -296,8 +296,9 @@ describe('locked loot', () => {
     ...document.querySelectorAll<HTMLElement>(`[data-spawned-loot="${kind}"]`),
   ];
   const chips = (row: HTMLElement) => within(row).getAllByRole('button');
+  // A locked chip says so in its name; the lock badge itself is only drawn.
   const chipLocks = (row: HTMLElement) =>
-    chips(row).map((chip) => chip.hasAttribute('data-spawn-locked'));
+    chips(row).map((chip) => chip.getAttribute('aria-label')?.endsWith(', locked') ?? false);
 
   it('locks Fields cage rewards on entry and frees each at its cage fight’s end', async () => {
     const { view, actions } = renderRoom(
