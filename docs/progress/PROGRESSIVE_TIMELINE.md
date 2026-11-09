@@ -9,6 +9,18 @@ index (room action insert proposals, the purchase commands' optional index and
 their insertion-index query); Part 2 of [spawned loot](ENCOUNTER_END_PICKUPS.md)
 follows it.
 
+## Banners are events the engine announces
+
+A phase banner (Room entered, Encounter started/ended, Next phase ready,
+Doors open, Leave room) is never placed by the owner: it is an event the
+engine announces when the walk reaches it, brought about by the rows before
+it (clearing the encounter announces Encounter ended; using the fountain or
+completing the last required action announces Doors open). Banners share the
+Timeline with rows and can host choices, but cannot be inserted, moved or
+deleted. Insert here on a banner places a row right after that event; Reset
+from here removes rows, and banners those rows would have brought about
+disappear until the walk reaches them again.
+
 ## Progressive phases
 
 - A phase banner (Room entered, Encounter started/ended, ship and Fields
