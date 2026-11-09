@@ -172,6 +172,23 @@ export function fieldsSpatialPositions(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
 ): readonly FieldsSpatialPosition[] {
+  const cached = positionsByRoom.get(room);
+  if (cached?.catalog === catalog) return cached.positions;
+  const positions = claimFieldsSpatialPositions(catalog, room);
+  positionsByRoom.set(room, { catalog, positions });
+  return positions;
+}
+
+/** Memoizes each immutable room's claimed positions, so every assessed slot shares one claim. */
+const positionsByRoom = new WeakMap<
+  CanonicalAuthoredRoom,
+  { readonly catalog: Catalog; readonly positions: readonly FieldsSpatialPosition[] }
+>();
+
+function claimFieldsSpatialPositions(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+): readonly FieldsSpatialPosition[] {
   const declaration = declarationFor(catalog, room);
   if (declaration === undefined) return Object.freeze([]);
   const targets = activeFieldsSpatialTargets(catalog, room);

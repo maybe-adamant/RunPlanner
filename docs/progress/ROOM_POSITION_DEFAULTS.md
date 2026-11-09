@@ -1,6 +1,7 @@
 # Room position defaults
 
-Status: shape settled by the owner (2026-11-09); not started. Temporary plan;
+Status: engine slice delivered on main (schema 102.1); game module and
+planner steps pending. Temporary plan;
 delete at delivery after promoting durable results.
 
 Replaces the approved schema 103 bump: every positioned item always has a
@@ -15,8 +16,8 @@ position, without storing defaults.
   every evaluation like the last-free-anchor rule: each item scores every
   eligible point by a stable hash of (item identity, point) and takes its best
   free one, items claiming in a fixed declaration order (rendezvous hashing),
-  so choosing one item's position moves only the defaults whose own best
-  point it took. Flip and tied entry use the same hash over their choices.
+  so choosing one item's position moves only the defaults it displaces,
+  directly or in turn. Flip and tied entry use the same hash over their choices.
 - A stored position is the owner's choice. It is kept when it becomes
   invalid and raises a finding; a default never does, since it re-derives.
 - "The game decides" (`?`) is no longer offered: a planned run is

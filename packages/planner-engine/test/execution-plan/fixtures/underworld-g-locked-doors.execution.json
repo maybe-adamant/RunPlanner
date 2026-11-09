@@ -1274,7 +1274,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 510330, "endPointId": 510331 } }
+        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1879,7 +1879,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 560632, "endPointId": 560633 } }
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -2931,7 +2931,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false },
+        "layout": { "flipped": true },
         "lockedExits": [
           {
             "exitKey": "exit2",
@@ -3119,7 +3119,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 568557, "endPointId": 568554 } },
+        "layout": { "flipped": true, "entry": { "startPointId": 568557, "endPointId": 568554 } },
         "lockedExits": [{ "exitKey": "exit2" }, { "exitKey": "exit3" }]
       },
       "timeline": {
@@ -3515,7 +3515,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 560841, "endPointId": 560840 } }
+        "layout": { "flipped": true, "entry": { "startPointId": 569272, "endPointId": 569273 } }
       },
       "timeline": {
         "transactions": [
@@ -3702,5 +3702,5 @@
       }
     }
   ],
-  "planFingerprint": "4fba4a2c"
+  "planFingerprint": "6e324c41"
 }

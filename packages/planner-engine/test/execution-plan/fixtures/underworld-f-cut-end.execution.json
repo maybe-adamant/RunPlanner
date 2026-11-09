@@ -1144,7 +1144,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 510330, "endPointId": 510331 } }
+        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1561,5 +1561,5 @@
       }
     }
   ],
-  "planFingerprint": "99dda378"
+  "planFingerprint": "e071a5a6"
 }

@@ -9,7 +9,10 @@ import {
   semanticAddressKey,
 } from '../../src/authored-project';
 import { createCompleteFGProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
-import { simulateProjectAssembly } from '../../src/simulation';
+import {
+  chaosGatePositionForProjectEvaluationAssembly,
+  simulateProjectAssembly,
+} from '../../src/simulation';
 import {
   assembleExecutionProduct,
   compileExecutionPlan,
@@ -54,6 +57,12 @@ describe('Chaos position publication', () => {
       expect(fallback?.source).toBe('default');
       expect(chaosGateSpawnPointIndices(room)).toContain(fallback?.spawnPointIndex);
       expect(gate.spawnPointIndex).toBe(spawnPointIndex ?? fallback?.spawnPointIndex);
+      // The authoring product marks the same point chosen or default.
+      expect(chaosGatePositionForProjectEvaluationAssembly(catalog, assembly, additional)).toEqual({
+        spawnPointIndex: gate.spawnPointIndex,
+        source: spawnPointIndex === null ? 'default' : 'chosen',
+        spawnPointIndices: chaosGateSpawnPointIndices(room),
+      });
       expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
     }
   });

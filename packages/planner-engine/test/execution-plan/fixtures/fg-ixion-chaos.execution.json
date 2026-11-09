@@ -1334,7 +1334,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 510330, "endPointId": 510331 } }
+        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1939,7 +1939,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 560632, "endPointId": 560633 } }
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -3308,7 +3308,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 568557, "endPointId": 568554 } }
+        "layout": { "flipped": true, "entry": { "startPointId": 568557, "endPointId": 568554 } }
       },
       "timeline": {
         "transactions": [
@@ -3511,7 +3511,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -3727,7 +3727,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": true, "entry": { "startPointId": 568813, "endPointId": 568810 } }
       },
       "timeline": {
         "transactions": [
@@ -4733,5 +4733,5 @@
       }
     }
   ],
-  "planFingerprint": "18ff1035"
+  "planFingerprint": "c26647a2"
 }

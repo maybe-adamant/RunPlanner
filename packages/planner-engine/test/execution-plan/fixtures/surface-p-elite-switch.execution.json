@@ -6847,7 +6847,7 @@
             "enemy": { "choiceKey": "Dragon_Elite", "nativeId": "Dragon_Elite" },
             "attributeKeys": ["Frenzy", "Blink"]
           },
-          "anchorId": 722933
+          "anchorId": 723046
         }
       },
       "timeline": {
@@ -7558,5 +7558,5 @@
       }
     }
   ],
-  "planFingerprint": "d2cfac62"
+  "planFingerprint": "08e93a9d"
 }

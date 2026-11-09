@@ -57,9 +57,13 @@ describe('challenge switch rows on the room Overview', () => {
       'PerfectClearChallengeSwitch_Pom',
     );
 
-    // Its anchor is picked among the free ones.
+    // Its anchor is picked among the free ones, its default A1 included.
     await user.click(screen.getByRole('button', { name: 'Switch spot' }));
-    await user.click(screen.getByRole('option', { name: 'A1' }));
+    await user.click(
+      screen
+        .getAllByRole('option', { name: 'A1' })
+        .find((option) => option.getAttribute('data-selected-value') !== 'true')!,
+    );
     expect(hostRoom(application).challengeSwitch?.anchorId).toBeDefined();
 
     await user.click(screen.getByRole('button', { name: 'Unseen Sigil' }));

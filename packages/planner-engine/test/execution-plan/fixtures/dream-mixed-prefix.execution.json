@@ -1667,7 +1667,7 @@
           { "slotKey": "Encounter", "encounterKey": "OpeningEmpty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": true }
+        "layout": { "flipped": false }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -1927,7 +1927,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
+        "layout": { "flipped": false, "entry": { "startPointId": 510322, "endPointId": 510320 } }
       },
       "timeline": {
         "transactions": [
@@ -3300,7 +3300,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 566303, "endPointId": 566306 } }
+        "layout": { "flipped": true, "entry": { "startPointId": 566301, "endPointId": 566304 } }
       },
       "timeline": {
         "transactions": [
@@ -7210,5 +7210,5 @@
       }
     }
   ],
-  "planFingerprint": "b26e85a3"
+  "planFingerprint": "65c32e8e"
 }

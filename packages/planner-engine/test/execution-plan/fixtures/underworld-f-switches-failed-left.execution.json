@@ -1184,7 +1184,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 510330, "endPointId": 510331 } }
+        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1390,7 +1390,7 @@
         "challengeSwitch": {
           "variantKey": "PerfectClearChallengeSwitch_MaxHealth",
           "encounterKey": "PerfectClearChallengeF",
-          "anchorId": 566974
+          "anchorId": 566972
         }
       },
       "timeline": {
@@ -1833,7 +1833,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false, "entry": { "startPointId": 560632, "endPointId": 560633 } }
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1990,7 +1990,7 @@
         "challengeSwitch": {
           "variantKey": "TimeChallengeSwitch_Money",
           "encounterKey": "TimeChallengeF",
-          "anchorId": 566968
+          "anchorId": 566967
         }
       },
       "timeline": {
@@ -2415,5 +2415,5 @@
       }
     }
   ],
-  "planFingerprint": "456e887d"
+  "planFingerprint": "e6efbf79"
 }

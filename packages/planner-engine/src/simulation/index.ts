@@ -316,6 +316,10 @@ export {
   type RoomAnchorSlots,
 } from './evaluation/room-object-anchors';
 export {
+  chaosGatePositionForProjectEvaluationAssembly,
+  type ChaosGatePositionAuthoring,
+} from './evaluation/chaos-gate-authoring';
+export {
   roomLayoutAuthoringForProjectEvaluationAssembly,
   type RoomLayoutAuthoring,
 } from './evaluation/room-layout-authoring';

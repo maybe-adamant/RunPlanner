@@ -482,12 +482,12 @@ point that no stored position or earlier claim holds. Items of one room
 claim in the game's spawn order: anchor objects in native order (the Well's
 pin is its own, never a default), Fields cages, then optional rewards, then
 Nemesis off its excluded points. Choosing one item's position therefore moves
-only the defaults whose best point it took. A rolled flip defaults first and
+only the defaults it displaces, directly or in turn. A rolled flip defaults first and
 the entry among those the flip allows, without narrowing the entries offered.
 A stored position is kept when it becomes invalid and raises its finding; a
 default re-derives and raises none. An item left no free point has no
 position, which only an invalid or over-capacity room can reach. Authoring
-products mark each position chosen or default; execution publishes both
+products, the Chaos gate's included, mark each position chosen or default; execution publishes both
 alike, so the runtime steers every one.
 
 ### Persistent and multi-phase rooms
