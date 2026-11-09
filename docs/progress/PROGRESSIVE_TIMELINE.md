@@ -88,7 +88,11 @@ only once the walk has settled its source and actually produced the item: an
 unresolved source (e.g. an Artificer transform whose output is not chosen)
 shows no notice, its own row marks what is missing (owner 2026-11-09). The
 engine's spawned-loot product publishes only settled spawns; the planner does
-not filter.
+not filter. Spawning and resolving are separate: when the walk reaches a
+moment, everything the game spawns there together is listed, even while one
+item's resolution (a Pom target, a delivery's boon) is what blocks; the
+Artificer differs because its unchosen output is the spawn itself. Ship wheel
+deferred items spawn only after the wheel reward is collected.
 
 ## Required pickups: window and deadline
 
