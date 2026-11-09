@@ -23,7 +23,7 @@ export function TravelDealLine({
 }) {
   return (
     <TimelineRow
-      aria-label="Travel Deal"
+      aria-label="Restock"
       editors={travelDealLineEditor(interactions, line)}
       data-travel-deal-line=""
       kind="continuation"

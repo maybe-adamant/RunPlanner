@@ -789,7 +789,7 @@ describe('Hermes Shrine workbench', () => {
     expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
-    expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
+    expect(screen.queryByRole('listitem', { name: 'Restock' })).toBeNull();
     const refillRow = () => timelineRow(/Travel Deal Offer$/);
     expect(within(refillRow()).queryByRole('checkbox')).toBeNull();
 
@@ -857,7 +857,7 @@ describe('Hermes Shrine workbench', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
     // The slot shows as a badge on the row icon; the row's accessible text keeps it.
     const sourceRow = () => slotRow(1);
-    const travelDealLine = () => screen.getByRole('listitem', { name: 'Travel Deal' });
+    const travelDealLine = () => screen.getByRole('listitem', { name: 'Restock' });
     const line = travelDealLine();
     expect(line.previousElementSibling).toBe(sourceRow());
     expect(within(line).getByText('Restock')).toBeTruthy();
@@ -890,7 +890,7 @@ describe('Hermes Shrine workbench', () => {
     await view.user.click(
       within(sourceRow()).getByRole('button', { name: /^Remove .* from timeline$/ }),
     );
-    expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
+    expect(screen.queryByRole('listitem', { name: 'Restock' })).toBeNull();
     expect(stockedRefill?.rewardType).toBe('ArmorBoost');
     expect(shrine().hermesShrine?.travelDealRefill?.offer).toEqual(stockedRefill);
     await pickRoomObjectAction(view.user, 'Hermes Shrine', sourceAction);

@@ -144,7 +144,7 @@ describe('Stygian Well workbench', () => {
     ).toMatchObject({ roomTab: 'actions', focusAddress: { kind: 'roomAction' } });
 
     openTimeline();
-    expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
+    expect(screen.queryByRole('listitem', { name: 'Restock' })).toBeNull();
     const refillRow = timelineRow(/Travel Deal Offer$/);
     const remove = within(refillRow).getByRole('button', { name: /^Remove .* from timeline$/ });
     expect(remove).toHaveProperty('disabled', false);
@@ -178,7 +178,7 @@ describe('Stygian Well workbench', () => {
     openOverview();
     expect(screen.queryByRole('button', { name: 'Stygian Well Travel Deal Item' })).toBeNull();
     openTimeline();
-    const line = screen.getByRole('listitem', { name: 'Travel Deal' });
+    const line = screen.getByRole('listitem', { name: 'Restock' });
     // The line sits under the purchase of slot 2, named on its icon badge.
     expect(line.previousElementSibling).toBe(slotRow(2));
     expect(within(line).getByText('Restock')).toBeTruthy();
@@ -192,7 +192,7 @@ describe('Stygian Well workbench', () => {
     await view.user.click(
       within(slotRow(2)).getByRole('button', { name: /^Remove Buy .* from timeline$/ }),
     );
-    await waitFor(() => expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('listitem', { name: 'Restock' })).toBeNull());
     expect(
       view.application.store
         .getState()
@@ -205,7 +205,7 @@ describe('Stygian Well workbench', () => {
     await view.user.click(within(listbox).getAllByRole('option')[1]!);
     openTimeline();
     expect(
-      within(await screen.findByRole('listitem', { name: 'Travel Deal' })).getByRole('button', {
+      within(await screen.findByRole('listitem', { name: 'Restock' })).getByRole('button', {
         name: 'Stygian Well Travel Deal Item',
       }).textContent,
     ).toBe(refillLabel);

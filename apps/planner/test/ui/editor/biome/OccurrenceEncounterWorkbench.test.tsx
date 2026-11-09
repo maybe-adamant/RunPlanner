@@ -2929,7 +2929,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.queryByRole('button', { name: 'Travel Deal Item' })).toBeNull();
     expect(screen.queryByRole('checkbox', { name: /^Purchased/ })).toBeNull();
     openRoomTab('Room Timeline');
-    const line = () => screen.getByRole('listitem', { name: 'Travel Deal' });
+    const line = () => screen.getByRole('listitem', { name: 'Restock' });
     expect(within(line()).queryByRole('checkbox')).toBeNull();
     expect(line().previousElementSibling?.textContent).toContain('slot 1');
     // The line reads Restock beside the Travel Deal icon; its picker shows no label of its own.
@@ -2977,7 +2977,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       }),
     );
     // Without its source purchase the retained refill purchase loses its line and keeps removal.
-    expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
+    expect(screen.queryByRole('listitem', { name: 'Restock' })).toBeNull();
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toEqual(
       restoredChild,
     );
@@ -3012,7 +3012,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(qOccurrenceIds.preboss),
     );
     openRoomTab('Room Timeline');
-    const line = screen.getByRole('listitem', { name: 'Travel Deal' });
+    const line = screen.getByRole('listitem', { name: 'Restock' });
     expect(within(line).queryByRole('button', { name: /^Edit Anvil/ })).toBeNull();
     const refill = timelineRow('Buy Anvil of Fates · Travel Deal Offer');
     expect(within(refill).getByRole('button', { name: /^Edit Anvil/ })).toHaveProperty(
