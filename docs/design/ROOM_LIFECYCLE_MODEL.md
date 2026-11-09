@@ -408,11 +408,17 @@ required one), and puts nothing after a terminal action. A required action
 may therefore be inserted anywhere inside its window, exactly as a placed one
 may be moved; its canonical restore is marked and stays authorable even when
 an unrelated retained issue blocks every other index. Restoring a required
-action or placing a generated pickup at a chosen position accepts exactly the
-authorable indices and the command's own default, and refuses any other with a
-contract error; a generic optional insertion still accepts any index and
-reports a bad position as a finding. Legality never reads affordability or
-other simulated state, which stays a finding.
+action, placing a generated pickup, or buying at a Shop, Shrine or Well at a
+chosen position accepts exactly the authorable indices and the command's own
+default, and refuses any other with a contract error; a generic optional
+insertion, such as a challenge switch press or a locked door press, still
+accepts any index and reports a bad position as a finding. A purchase is
+judged with the room's actions as they would stand after it, and a rushed
+Shrine item's optional pickup moves with its purchase, directly after it,
+since the item spawns as the Shrine closes. An engine authoring query
+publishes each purchase command's authorable indices, judged the same way.
+Legality never reads affordability or other simulated state, which stays a
+finding.
 
 Defaults are anchored differently. When a command newly activates required
 actions, or restores one without a chosen position, the engine extends the

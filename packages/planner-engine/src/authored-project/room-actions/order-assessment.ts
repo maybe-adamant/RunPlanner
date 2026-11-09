@@ -228,14 +228,34 @@ export function keepsTerminalActionLast(
   return following(after) <= following(before);
 }
 
-/** One insertion position and the order it yields, judged by window, dependencies and checkpoints. */
-export interface RoomActionInsertionAssessment {
-  readonly toIndex: number;
+/** A proposed order, judged by window, dependencies, checkpoints and the terminal action. */
+export interface RoomActionPlacementAssessment {
   readonly order: readonly RoomActionReference[];
   readonly blockers: readonly RoomActionPlacementBlocker[];
-  /** The insertion would put an action after the terminal one. */
+  /** The proposed order puts an action after the terminal one. */
   readonly followsTerminal: boolean;
   readonly structurallyAuthorable: boolean;
+}
+
+/** One insertion position and the order it yields. */
+export interface RoomActionInsertionAssessment extends RoomActionPlacementAssessment {
+  readonly toIndex: number;
+}
+
+/** Judges the order that results from placing actions into `before`. */
+export function assessRoomActionPlacement(
+  before: readonly RoomActionReference[],
+  after: readonly RoomActionReference[],
+  context: RoomActionOrderContext,
+): RoomActionPlacementAssessment {
+  const blockers = roomActionPlacementBlockers(after, context);
+  const followsTerminal = !keepsTerminalActionLast(before, after, context.terminalActionKey);
+  return frozen({
+    order: frozen([...after]),
+    blockers,
+    followsTerminal,
+    structurallyAuthorable: blockers.length === 0 && !followsTerminal,
+  });
 }
 
 export function assessRoomActionInsertion(
@@ -246,15 +266,22 @@ export function assessRoomActionInsertion(
 ): RoomActionInsertionAssessment {
   const next = [...order];
   next.splice(toIndex, 0, reference);
-  const blockers = roomActionPlacementBlockers(next, context);
-  const followsTerminal = !keepsTerminalActionLast(order, next, context.terminalActionKey);
-  return frozen({
-    toIndex,
-    order: frozen(next),
-    blockers,
-    followsTerminal,
-    structurallyAuthorable: blockers.length === 0 && !followsTerminal,
-  });
+  return frozen({ toIndex, ...assessRoomActionPlacement(order, next, context) });
+}
+
+/** The contract error for an index whose placement is not structurally authorable. */
+export function roomActionPlacementRefusal(
+  index: number,
+  reference: RoomActionReference,
+  assessment: RoomActionPlacementAssessment,
+): string | undefined {
+  if (assessment.structurallyAuthorable) return undefined;
+  if (assessment.followsTerminal)
+    return `index ${index} follows leaving the switch fight, which ends the room`;
+  const detail = assessment.blockers
+    .map((blocker) => `${roomActionKey(blocker.reference)} ${blocker.detail}`)
+    .join('; ');
+  return `index ${index} is not a legal position for ${roomActionKey(reference)}: ${detail}`;
 }
 
 /**
@@ -269,14 +296,11 @@ export function roomActionInsertionRefusal(
 ): string | undefined {
   if (!Number.isInteger(index) || index < 0 || index > order.length)
     return `index must be an integer from 0 through ${order.length}`;
-  const assessment = assessRoomActionInsertion(order, reference, index, context);
-  if (assessment.structurallyAuthorable) return undefined;
-  if (assessment.followsTerminal)
-    return `index ${index} follows leaving the switch fight, which ends the room`;
-  const detail = assessment.blockers
-    .map((blocker) => `${roomActionKey(blocker.reference)} ${blocker.detail}`)
-    .join('; ');
-  return `index ${index} is not a legal position for ${roomActionKey(reference)}: ${detail}`;
+  return roomActionPlacementRefusal(
+    index,
+    reference,
+    assessRoomActionInsertion(order, reference, index, context),
+  );
 }
 
 /** The order context a command judges an occurrence's insertion against. */

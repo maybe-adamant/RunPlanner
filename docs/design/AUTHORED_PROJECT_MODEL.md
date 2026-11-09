@@ -815,7 +815,10 @@ Removing participation remains accepted for a retained stale purchase after
 its Shop owner disappears, allowing exact repair without deleting unrelated
 actions. `PurchaseShopTravelDealRefill` appends the purchase of the Shop's
 Travel Deal item and, given a value, first stocks a blank item, as one Undo
-step.
+step. Every purchase command here and below, including Well purchases, takes
+an optional index that places a new purchase at any structurally authorable
+position instead of its default ([roster](ROOM_LIFECYCLE_MODEL.md#roster)), in
+the same edit; an index without a new purchase is refused.
 
 `SetHermesShrineOfferDelay` sets the delay of one stocked Shrine item, initial
 slot or refill; stocking an empty slot gives it the default delay, and
@@ -825,7 +828,8 @@ position, and clearing removes that action, its pickup and placed deliveries
 while retaining delivery payload. `PurchaseHermesShrineOffer` instead appends
 the purchase of one unbought item at the end of the room's actions, bought or
 rushed, first stocking a blank Travel Deal refill when given its reward, as one
-Undo step. `SetHermesShrinePurchaseRush` changes rush on one exact purchase
+Undo step; given an index, a rushed purchase's pickup follows it directly.
+`SetHermesShrinePurchaseRush` changes rush on one exact purchase
 action, ranking or retracting its optional same-room pickup. When any of these
 commands changes the first rushed initial purchase, the refill's purchase
 action and pickup are rescheduled after it; when no rushed initial purchase

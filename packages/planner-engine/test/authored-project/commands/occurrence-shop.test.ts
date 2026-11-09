@@ -5,6 +5,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
+  objectCommandInsertionIndexes,
   activeRoomActionReferences,
   createProjectHistory,
   createAcquisitionEntryAddress,
@@ -413,6 +414,29 @@ describe('authored-project Shop occurrence commands', () => {
     );
     expect(bought.acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeNull();
     expect(undoProjectHistory(history).present).toBe(project);
+
+    const purchase = {
+      kind: 'PurchaseShopTravelDealRefill' as const,
+      occurrence: shop,
+      value: { optionKey: option.key, offer: { rewardType: 'BlindBoxLoot' } },
+    };
+    let withPurchases = project;
+    for (const offerKey of ['Boon', 'MajorNonBoon', 'Minor'])
+      withPurchases = applyProjectCommand(withPurchases, catalog, {
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: createShopOfferAddress(nBiome, shopId, offerKey),
+        purchased: true,
+      });
+    const before = room(withPurchases).roomActions.order;
+    // Bought after the first purchase, whose Travel Deal stocks it, up to the end.
+    expect(objectCommandInsertionIndexes(withPurchases, catalog, purchase)).toEqual([1, 2, 3]);
+    expect(
+      room(applyProjectCommand(withPurchases, catalog, { ...purchase, index: 1 })).roomActions
+        .order,
+    ).toEqual([before[0], reference, ...before.slice(1)]);
+    expect(() => applyProjectCommand(withPurchases, catalog, { ...purchase, index: 0 })).toThrow(
+      /index 0 is not a legal position/,
+    );
   });
 
   it('reconciles a Travel Mystery child with its sole purchase participant and item identity', () => {

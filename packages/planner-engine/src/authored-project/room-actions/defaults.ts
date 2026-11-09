@@ -358,7 +358,7 @@ export function reconcileNewRequiredRoomActions(
   return replaceOccurrenceOrders(proposed, replacements);
 }
 
-function replaceOccurrenceOrders(
+export function replaceOccurrenceOrders(
   proposed: ProjectDocument,
   replacements: ReadonlyMap<string, readonly RoomActionReference[]>,
 ): ProjectDocument {

@@ -20,6 +20,7 @@ import {
 } from '../../feature-rolls';
 import type { OccurrenceLeafCommand } from '../types';
 import { requireOccurrence, failCommand } from '../contract';
+import { withChosenIndex } from '../chosen-index';
 import { updateOccurrence } from './mutation';
 import {
   challengeSwitchCustomizationIssue,
@@ -321,6 +322,8 @@ export function applyOccurrenceCommand(
         command.generationKey,
       );
       if (!command.purchased) {
+        if (command.index !== undefined)
+          failCommand(command, 'an index places only a new purchase');
         const nextOrder = order.filter((reference) => reference !== existing);
         // Clearing retracts the purchase's pickup and every placed delivery;
         // authored delivery payload remains for repair.
@@ -346,7 +349,11 @@ export function applyOccurrenceCommand(
             )
           : followRefillTrigger(updated, catalog, located, command.occurrence);
       }
-      if (existing !== undefined) return document;
+      if (existing !== undefined) {
+        if (command.index !== undefined)
+          failCommand(command, 'an index places only a new purchase');
+        return document;
+      }
       // A new purchase starts unrushed at its canonical timeline position.
       const reference = Object.freeze({
         kind: 'purchaseHermesShrineOffer' as const,
@@ -381,16 +388,20 @@ export function applyOccurrenceCommand(
       });
       if (!scheduled.some((candidate) => roomActionKey(candidate) === purchaseKey))
         failCommand(command, 'Shrine purchase has no active room action');
-      return unplaceHermesShrineDelivery(
-        updateOccurrence(
-          appended,
-          { ...located, plan: appended.route.biomes[located.biomeIndex]! },
-          Object.freeze({
-            ...host.occurrence,
-            roomActions: Object.freeze({ ...host.occurrence.roomActions, order: scheduled }),
-          }),
+      return withChosenIndex(
+        unplaceHermesShrineDelivery(
+          updateOccurrence(
+            appended,
+            { ...located, plan: appended.route.biomes[located.biomeIndex]! },
+            Object.freeze({
+              ...host.occurrence,
+              roomActions: Object.freeze({ ...host.occurrence.roomActions, order: scheduled }),
+            }),
+          ),
+          deliveryEntryKey,
         ),
-        deliveryEntryKey,
+        catalog,
+        command,
       );
     }
     case 'SetHermesShrinePurchaseRush': {
@@ -537,20 +548,25 @@ export function applyOccurrenceCommand(
         ),
         hermesShrineDeliveryEntryKey(command.occurrence, command.generationKey),
       );
-      if (!command.rushed) return bought;
-      return applyOccurrenceCommand(
-        bought,
+      const purchaseKey = roomActionKey(reference);
+      if (!command.rushed) return withChosenIndex(bought, catalog, command);
+      return withChosenIndex(
+        applyOccurrenceCommand(
+          bought,
+          catalog,
+          { ...located, plan: bought.route.biomes[located.biomeIndex]! },
+          {
+            kind: 'SetHermesShrinePurchaseRush',
+            action: createRoomActionAddress(
+              createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey),
+              command.occurrence.occurrenceId,
+              purchaseKey,
+            ),
+            rushed: true,
+          },
+        ),
         catalog,
-        { ...located, plan: bought.route.biomes[located.biomeIndex]! },
-        {
-          kind: 'SetHermesShrinePurchaseRush',
-          action: createRoomActionAddress(
-            createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey),
-            command.occurrence.occurrenceId,
-            roomActionKey(reference),
-          ),
-          rushed: true,
-        },
+        command,
       );
     }
     case 'ReplaceHermesShrineTravelDealRefill': {
@@ -1026,6 +1042,11 @@ export function applyOccurrenceCommand(
         if (item === null || item === undefined)
           failCommand(command, 'Stygian Well offer is unresolved');
       }
+      const alreadyOrdered = occurrence.roomActions.order.some(
+        (r) => r.kind === 'purchaseStygianWellOffer' && r.generationKey === generation,
+      );
+      if (command.index !== undefined && (!command.purchased || alreadyOrdered))
+        failCommand(command, 'an index places only a new purchase');
       const purchased = new Set(well.purchasedGenerationKeys ?? []);
       if (command.purchased) purchased.add(generation);
       else purchased.delete(generation);
@@ -1056,17 +1077,21 @@ export function applyOccurrenceCommand(
         : occurrence.roomActions.order.filter(
             (r) => !(r.kind === 'purchaseStygianWellOffer' && r.generationKey === generation),
           );
-      return updateOccurrence(
-        document,
-        located,
-        Object.freeze({
-          ...occurrence,
-          roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
-          stygianWell: Object.freeze({
-            ...well,
-            purchasedGenerationKeys: Object.freeze([...purchased]),
+      return withChosenIndex(
+        updateOccurrence(
+          document,
+          located,
+          Object.freeze({
+            ...occurrence,
+            roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
+            stygianWell: Object.freeze({
+              ...well,
+              purchasedGenerationKeys: Object.freeze([...purchased]),
+            }),
           }),
-        }),
+        ),
+        catalog,
+        command,
       );
     }
     case 'ReplaceStygianWellTwistResult': {

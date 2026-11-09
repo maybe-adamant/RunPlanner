@@ -18,6 +18,7 @@ import {
   createOccurrenceId,
   createProjectHistory,
   createRoomActionAddress,
+  objectCommandInsertionIndexes,
   decodeProjectDocument,
   defaultHermesShrineDeliveryReward,
   encodeProjectDocument,
@@ -247,6 +248,65 @@ describe('Hermes Shrine delivery placement', () => {
     expect(() => applyProjectCommand(placed, catalog, { ...placement, index: 0 })).toThrow(
       'is already placed; move its action instead',
     );
+  });
+
+  it('buys a Shrine item at a chosen legal index, a rushed one with its pickup right after', () => {
+    const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const order = (document: typeof project) =>
+      document.route.biomes
+        .flatMap((biome) => biome.topology?.occurrences ?? [])
+        .find((occurrence) => occurrence.occurrenceId === source.occurrenceId)!.roomActions.order;
+    const before = order(project);
+    const purchase = (rushed: boolean) =>
+      ({
+        kind: 'PurchaseHermesShrineOffer',
+        occurrence: source,
+        generationKey: 'initial:secondRight',
+        rushed,
+      }) as const;
+    const bought = (rushed: boolean) => ({
+      kind: 'purchaseHermesShrineOffer' as const,
+      generationKey: 'initial:secondRight',
+      rushed,
+    });
+    const pickup = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(source, 'initial:secondRight'),
+    };
+    // After the wheel, among the Shrine's purchases; the default is the end.
+    expect(objectCommandInsertionIndexes(project, catalog, purchase(false))).toEqual([2, 3, 4, 5]);
+    expect(objectCommandInsertionIndexes(project, catalog, purchase(true))).toEqual([2, 3, 4, 5]);
+    expect(order(applyProjectCommand(project, catalog, purchase(false)))).toEqual([
+      ...before,
+      bought(false),
+    ]);
+    expect(order(applyProjectCommand(project, catalog, { ...purchase(false), index: 3 }))).toEqual([
+      ...before.slice(0, 3),
+      bought(false),
+      ...before.slice(3),
+    ]);
+    expect(order(applyProjectCommand(project, catalog, { ...purchase(true), index: 2 }))).toEqual([
+      ...before.slice(0, 2),
+      bought(true),
+      pickup,
+      ...before.slice(2),
+    ]);
+    expect(() => applyProjectCommand(project, catalog, { ...purchase(true), index: 1 })).toThrow(
+      /index 1 is not a legal position .* crosses a fixed lifecycle window/,
+    );
+    const set = {
+      kind: 'SetHermesShrinePurchase' as const,
+      occurrence: source,
+      generationKey: 'initial:secondRight' as const,
+      purchased: true,
+    };
+    expect(order(applyProjectCommand(project, catalog, { ...set, index: 4 }))).toEqual([
+      ...before.slice(0, 4),
+      bought(false),
+      ...before.slice(4),
+    ]);
   });
 
   it('matures a delayed P Postboss Shrine delivery at final Q Preboss entry', () => {

@@ -36,6 +36,7 @@ import type { TraitOfferEvent } from './shop-trait-purchase-support';
 import {
   applyProjectCommand,
   createAcquisitionRoleAddress,
+  objectCommandInsertionIndexes,
 } from '@run-planner/engine/authored-project';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
@@ -597,6 +598,42 @@ describe('Gold Gold Gold Shop pickups', () => {
     });
     expect(frontier?.fixedReward).toBeUndefined();
     expect(frontier?.roleFrontiers).toBeUndefined();
+  });
+
+  it('buys a Shop item at a chosen legal index, at the end by default', () => {
+    const project = createGoldenFGHIProject();
+    const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');
+    const order = (document: typeof project) =>
+      document.route.biomes
+        .find((biome) => biome.biomeKey === 'F')!
+        .topology!.occurrences.find((room) => room.occurrenceId === shopOccurrenceId)!.roomActions
+        .order;
+    const buy = (offerKey: string, index?: number) =>
+      Object.freeze({
+        kind: 'ReplaceShopPurchaseParticipation' as const,
+        offer: createShopOfferAddress(goldenFBiome, shopOccurrenceId, offerKey),
+        purchased: true,
+        ...(index === undefined ? {} : { index }),
+      });
+    const purchase = (offerKey: string) => ({ kind: 'interactShopOffer' as const, offerKey });
+    const bought = applyProjectCommand(
+      applyProjectCommand(project, catalog, buy('Boon')),
+      catalog,
+      buy('Minor'),
+    );
+    expect(order(bought)).toEqual([purchase('Boon'), purchase('Minor')]);
+    expect(objectCommandInsertionIndexes(bought, catalog, buy('MajorNonBoon'))).toEqual([0, 1, 2]);
+    expect(order(applyProjectCommand(bought, catalog, buy('MajorNonBoon', 1)))).toEqual([
+      purchase('Boon'),
+      purchase('MajorNonBoon'),
+      purchase('Minor'),
+    ]);
+    expect(() => applyProjectCommand(bought, catalog, buy('MajorNonBoon', 3))).toThrow(
+      'index must be an integer from 0 through 2',
+    );
+    expect(() =>
+      applyProjectCommand(bought, catalog, { ...buy('Boon', 0), purchased: false }),
+    ).toThrow('an index places only a new purchase');
   });
 
   it('places the Echo Gold pickup at a chosen legal index, at the end by default', () => {

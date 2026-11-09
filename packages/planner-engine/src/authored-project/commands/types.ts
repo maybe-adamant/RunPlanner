@@ -331,6 +331,8 @@ export type RoomActionCommand =
       readonly kind: 'ReplaceShopPurchaseParticipation';
       readonly offer: ShopOfferAddress;
       readonly purchased: boolean;
+      /** Where a new purchase enters the room's actions: any structurally legal index; absent, the end. */
+      readonly index?: number;
     }
   | {
       /**
@@ -340,6 +342,8 @@ export type RoomActionCommand =
       readonly kind: 'PurchaseShopTravelDealRefill';
       readonly occurrence: OccurrenceAddress;
       readonly value?: ShopOptionSelection;
+      /** Where the purchase enters the room's actions: any structurally legal index; absent, the end. */
+      readonly index?: number;
     };
 
 /**
@@ -701,6 +705,8 @@ export type HermesShrineCommand =
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').HermesShrineGenerationKey;
       readonly purchased: boolean;
+      /** Where a new purchase enters instead: any structurally legal index. */
+      readonly index?: number;
     }
   | {
       /** Rushing delivers the item in the Shrine room and offers its optional pickup. */
@@ -718,6 +724,11 @@ export type HermesShrineCommand =
       readonly generationKey: import('../model').HermesShrineGenerationKey;
       readonly rushed: boolean;
       readonly rewardType?: string;
+      /**
+       * Where the purchase enters instead of the end: any structurally legal
+       * index; a rushed item's pickup then follows it directly.
+       */
+      readonly index?: number;
     }
   | {
       /** Stocks the Travel Deal refill; its delay is kept, or defaulted when first stocked. */
@@ -755,6 +766,8 @@ export type StygianWellCommand =
       readonly purchased: boolean;
       /** The bought slot's item, pinned in the same edit as its purchase. */
       readonly itemKey?: string;
+      /** Where a new purchase enters instead of its default: any structurally legal index. */
+      readonly index?: number;
     }
   | {
       readonly kind: 'ReplaceStygianWellTwistResult';

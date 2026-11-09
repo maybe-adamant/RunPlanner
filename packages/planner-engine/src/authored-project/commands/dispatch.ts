@@ -38,6 +38,7 @@ import { applyRoomLayoutCommand } from './occurrence/room-layout';
 import { retractMissingHermesShrineDeliveryActions } from '../hermes-shrine-delivery';
 import { planEndExists } from '../plan-end';
 import { reconcileLeftChallengeSwitchPresses } from './challenge-switch-press';
+import { chosenIndexesFor, type PositionedObjectCommand } from './chosen-index';
 
 /** Topology owns occurrence lifetime. A route-owned resource singleton retains
  * through room replacement, but is removed atomically when its exact target is
@@ -489,3 +490,22 @@ export type {
   ProjectCommand,
   RoomActionCommand,
 } from './types';
+
+/**
+ * Every index an object command may place its new action at, ascending: the
+ * order its actions leave behind, judged structurally as the command judges
+ * a chosen index. Empty when the command places no new action. The command
+ * must be applicable without an index (a blank Travel Deal item takes a value).
+ */
+export function objectCommandInsertionIndexes(
+  document: ProjectDocument,
+  catalog: Catalog,
+  command: PositionedObjectCommand,
+): readonly number[] {
+  const { index: _index, ...withoutIndex } = command;
+  void _index;
+  const placed = applyUnchecked(document, catalog, withoutIndex as PositionedObjectCommand);
+  return placed === document
+    ? Object.freeze([])
+    : chosenIndexesFor(document, placed, catalog, command);
+}

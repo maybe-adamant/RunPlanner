@@ -30,6 +30,7 @@ import {
   roomActionOrderContextForOccurrence,
 } from '../room-actions/order-assessment';
 import { applyShopOccurrenceCommand } from './occurrence/shop';
+import { withChosenIndex } from './chosen-index';
 
 function requireIndex(
   command: RoomActionCommand,
@@ -71,7 +72,7 @@ function purchaseShopTravelDealRefill(
     siteKey: 'roomExit',
     entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
   });
-  return applyRoomActionCommand(stocked, catalog, relocated, {
+  const bought = applyRoomActionCommand(stocked, catalog, relocated, {
     kind: 'InsertRoomAction',
     action: createRoomActionAddress(
       biome,
@@ -81,6 +82,7 @@ function purchaseShopTravelDealRefill(
     reference,
     index: occurrence.roomActions.order.length,
   });
+  return withChosenIndex(bought, catalog, command);
 }
 
 export function applyRoomActionCommand(
@@ -168,6 +170,8 @@ export function applyRoomActionCommand(
     const key = roomActionKey(reference);
     const existingIndex = order.findIndex((candidate) => roomActionKey(candidate) === key);
     const participationChanges = command.purchased ? existingIndex < 0 : existingIndex >= 0;
+    if (command.index !== undefined && !(command.purchased && participationChanges))
+      failCommand(command, 'an index places only a new purchase');
     if (command.purchased && participationChanges) {
       if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) {
         failCommand(command, `${occurrence.gameName} has no materialized shop inventory`);
@@ -198,7 +202,7 @@ export function applyRoomActionCommand(
         : undefined,
     );
     if (nextOccurrence === occurrence) return document;
-    return updateOccurrence(document, located, nextOccurrence);
+    return withChosenIndex(updateOccurrence(document, located, nextOccurrence), catalog, command);
   }
   const existingIndex = order.findIndex(
     (reference) => roomActionKey(reference) === command.action.actionKey,

@@ -5,6 +5,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
+  objectCommandInsertionIndexes,
   assembleRoomActionDomain,
   activeRoomActionReferences,
   authoredAcquisitionSources,
@@ -1473,6 +1474,71 @@ describe('room-action commands', () => {
           },
         ],
       }),
+    );
+  });
+
+  it('buys a Well item at a chosen legal index, the refill only after the first purchase', () => {
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    let project = createUnderworldFWellCheckpoint(false);
+    for (const generationKey of [
+      'initial:secondLeft',
+      'initial:secondRight',
+      'travelDealRefill',
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetStygianWellPurchase',
+        occurrence: well,
+        generationKey,
+        purchased: false,
+      });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'initial:secondLeft',
+      purchased: true,
+    });
+    const order = (document: ProjectDocument) =>
+      document.route.biomes
+        .find((candidate) => candidate.biomeKey === 'F')!
+        .topology!.occurrences.find((candidate) => candidate.occurrenceId === well.occurrenceId)!
+        .roomActions.order;
+    const refill = {
+      kind: 'SetStygianWellPurchase' as const,
+      occurrence: well,
+      generationKey: 'travelDealRefill' as const,
+      purchased: true,
+    };
+    const fountain = { kind: 'useFountain' as const };
+    const rack = { kind: 'interactKeepsakeRack' as const };
+    const bought = (generationKey: string) => ({
+      kind: 'purchaseStygianWellOffer' as const,
+      generationKey,
+    });
+    expect(order(project)).toEqual([fountain, rack, bought('initial:secondLeft')]);
+    const secondRight = { ...refill, generationKey: 'initial:secondRight' as const };
+    // Anywhere after the fountain unlocks the Well; the default is the end.
+    expect(objectCommandInsertionIndexes(project, catalog, secondRight)).toEqual([1, 2, 3]);
+    expect(order(applyProjectCommand(project, catalog, { ...secondRight, index: 1 }))).toEqual([
+      fountain,
+      bought('initial:secondRight'),
+      rack,
+      bought('initial:secondLeft'),
+    ]);
+    expect(() => applyProjectCommand(project, catalog, { ...secondRight, index: 0 })).toThrow(
+      /index 0 is not a legal position .* crosses a fixed lifecycle window/,
+    );
+    // The refill restocks only after the first purchase.
+    expect(objectCommandInsertionIndexes(project, catalog, refill)).toEqual([3]);
+    expect(() => applyProjectCommand(project, catalog, { ...refill, index: 2 })).toThrow(
+      /must follow/,
+    );
+    const placed = applyProjectCommand(project, catalog, secondRight);
+    expect(objectCommandInsertionIndexes(placed, catalog, secondRight)).toEqual([]);
+    expect(() => applyProjectCommand(placed, catalog, { ...secondRight, index: 1 })).toThrow(
+      'an index places only a new purchase',
     );
   });
 
