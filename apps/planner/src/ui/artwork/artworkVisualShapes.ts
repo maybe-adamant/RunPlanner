@@ -706,7 +706,7 @@ export const artworkVisualShapes: Readonly<
   'artwork/rewards/assets/KissOfStyx.webp': [0.49, 0.5, 0.986],
   'artwork/rewards/assets/MaxHealth.webp': [0.497, 0.5, 1],
   'artwork/rewards/assets/MaxHealthDropBigPreview.webp': [0.5, 0.5, 0.983],
-  'artwork/rewards/assets/MaxMagick.webp': [0.6, 0.608, 0.777],
+  'artwork/rewards/assets/MaxMagick.webp': [0.6, 0.608, 0.657],
   'artwork/rewards/assets/MaxManaDropBigPreview.webp': [0.581, 0.594, 0.803],
   'artwork/rewards/assets/MetaCardPointsCommonBigDrop.webp': [0.494, 0.589, 0.809],
   'artwork/rewards/assets/MetaCurrencyBigDrop.webp': [0.444, 0.576, 0.764],

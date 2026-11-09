@@ -30,7 +30,10 @@ export const artworkRoots = Object.freeze(['artwork', 'controls']);
  * Artwork whose measured shape looks wrong in its slot, by path under the
  * UI folder, with the shape it is drawn at instead.
  */
-const shapeOverrides = Object.freeze({});
+const shapeOverrides = Object.freeze({
+  // A round bottle: its bounding box's empty corners read as margin, so it is drawn at the cap.
+  'artwork/rewards/assets/MaxMagick.webp': [0.6, 0.608, 0.657],
+});
 
 const opaque = 128;
 
