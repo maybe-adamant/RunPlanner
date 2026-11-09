@@ -193,6 +193,7 @@ function commandContractAddress(
     case 'ReplaceShopPurchaseParticipation':
       return command.offer;
     case 'PurchaseShopTravelDealRefill':
+    case 'ResetRoomActionsAfter':
       return command.occurrence;
     case 'ReplaceIncomingReward':
       return command.reward;

@@ -344,6 +344,17 @@ export type RoomActionCommand =
       readonly value?: ShopOptionSelection;
       /** Where the purchase enters the room's actions: any structurally legal index; absent, the end. */
       readonly index?: number;
+    }
+  | {
+      /**
+       * Removes the room's actions after one of them, stale rows included, each
+       * as its own removal would, in one edit. Active required rows and the
+       * Postboss keepsake rack cannot leave the order and stay.
+       */
+      readonly kind: 'ResetRoomActionsAfter';
+      readonly occurrence: OccurrenceAddress;
+      /** The ordered action the room keeps through; null resets from the room's entry. */
+      readonly afterActionKey: string | null;
     };
 
 /**

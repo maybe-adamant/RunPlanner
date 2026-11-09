@@ -882,6 +882,20 @@ already placed is refused. Dormant and stale rows likewise remain
 authored until an explicit owning command removes them; reactivation of the
 same key reuses its retained position rather than adding a duplicate.
 
+`ResetRoomActionsAfter` takes one occurrence's actions back to a point:
+it names an ordered action by its key, or none for the room's entry, and
+removes every row after it, stale rows included, each through the command
+that owns that row's removal (a Shop, Well or Shrine purchase is
+un-purchased, the Contract pedestal uncollected, a cross-room delivery
+unplaced, any other row removed), in one edit and one Undo step. Rows that
+cannot leave the order stay in their relative order after the point: active
+required rows, which automatic placement keeps, and the Postboss keepsake rack.
+Door picks, encounter settings, Ephyra visit order, Hub actions and other
+rooms are not touched. An anchor that is not an ordered action is refused,
+and a reset with nothing to remove leaves the document unchanged. A Timeline
+banner is not an address: the engine's reset query maps each Timeline entry
+to its command, a banner to the ranked actions before it.
+
 ### Room layout and positions
 
 Whether something exists is never optional; where an existing thing stands is

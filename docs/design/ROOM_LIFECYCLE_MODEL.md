@@ -380,6 +380,13 @@ decision never adopts the source room's chronology: the editor derives
 per-row membership and one ranked Room Timeline surface on the producing
 occurrence.
 
+Resetting a room from a point keeps the order up to that point and lets
+everything after it go, so the walk's frontier returns there. Banners are
+events the walk announces and are never removed; a reset from a banner keeps
+the actions that bring it about and drops those after it, and later banners
+reappear only as the walk reaches them again. Required rows stay in place
+until automatic placement is withdrawn, since the order may not omit them.
+
 ### Roster
 
 Semantic action producers contribute explicit action contributions. One roster

@@ -22,6 +22,7 @@ import { applyResourcePlacementCommand } from './resources';
 import type { ProjectCommand } from './types';
 import { semanticAddressKey } from '../addresses';
 import { applyRoomActionCommand } from './room-actions';
+import { applyRoomActionReset } from './room-action-reset';
 import { applyRerollCommand } from './rerolls';
 import {
   reconcileNewRequiredRoomActions,
@@ -234,6 +235,14 @@ function applyUnchecked(
         catalog,
         locateBiome(document, catalog, command),
         command,
+      );
+    case 'ResetRoomActionsAfter':
+      return applyRoomActionReset(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+        (current, removal) => applyUnchecked(current, catalog, removal),
       );
     case 'InsertRoomAction':
     case 'UnplaceGeneratedDelivery':

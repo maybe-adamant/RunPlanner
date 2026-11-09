@@ -344,6 +344,7 @@ export {
   type GoldRoomAvailability,
   type GoldUnavailableReason,
 } from './evaluation/gold-query';
+export { roomActionResetsForProjectEvaluationAssembly } from './evaluation/room-action-reset';
 export {
   spawnedLootForProjectEvaluationAssembly,
   type ActionSpawn,
