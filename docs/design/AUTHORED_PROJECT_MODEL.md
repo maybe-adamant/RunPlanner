@@ -890,9 +890,15 @@ un-purchased, the Contract pedestal uncollected, a cross-room delivery
 unplaced, any other row removed), in one edit and one Undo step. Rows that
 cannot leave the order stay in their relative order after the point: active
 required rows, which automatic placement keeps, and the Postboss keepsake rack.
-Door picks, encounter settings, Ephyra visit order, Hub actions and other
-rooms are not touched. An anchor that is not an ordered action is refused,
-and a reset with nothing to remove leaves the document unchanged. A Timeline
+A removal never depends on its item still resolving. No other room's actions,
+and no door pick, encounter setting, Ephyra visit order or Hub action, change,
+except that removing a Shrine purchase retracts that purchase's deliveries
+placed in later rooms, as a manual un-purchase does. A reset is a clean slate
+for the Postboss rack too: from a point before the rack it clears the rack's
+keepsake choice back to keeping the held keepsake, through the rack's own
+command, while the rack row stays; a reset after the rack leaves the choice
+alone. An anchor that is not an ordered action is refused, and a reset that
+would remove no row and clear no choice leaves the document unchanged. A Timeline
 banner is not an address: the engine's reset query maps each Timeline entry
 to its command, a banner to the ranked actions before it.
 

@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createOccurrenceAddress,
   createOccurrenceId,
+  createPostbossKeepsakeSelectionAddress,
   roomActionKey,
 } from '@run-planner/engine/authored-project';
 import {
@@ -85,5 +86,30 @@ describe('room action resets', () => {
     )!;
     // Only the required fountain and the permanent rack remain: no entry has anything to reset.
     expect(after.every((entry) => entry === undefined)).toBe(true);
+  });
+
+  it('offers a reset before the rack that only clears its keepsake choice', () => {
+    let project = applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(postboss),
+      keepsakeKey: 'BossPreDamageKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ResetRoomActionsAfter',
+      occurrence: postboss,
+      afterActionKey: rack,
+    });
+    const resets = roomActionResetsForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+      postboss,
+    )!;
+    // Entry, fountain and the doors-open banner precede the rack; nothing follows the rack.
+    expect(resets.map((entry) => entry?.afterActionKey)).toEqual([
+      null,
+      fountain,
+      fountain,
+      undefined,
+    ]);
   });
 });

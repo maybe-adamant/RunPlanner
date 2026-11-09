@@ -3,6 +3,7 @@ import {
   createBiomeAddress,
   createInfernalContractPedestalAddress,
   createOccurrenceAddress,
+  createPostbossKeepsakeSelectionAddress,
   createRoomActionAddress,
   createShopOfferAddress,
   type OccurrenceAddress,
@@ -25,17 +26,24 @@ import type { ProjectCommand, RoomActionCommand } from './types';
 type ResetCommand = Extract<RoomActionCommand, { readonly kind: 'ResetRoomActionsAfter' }>;
 
 /**
- * The rows of an occurrence's actions a reset after `afterActionKey` removes,
- * last first: every row after it except those that cannot leave the order (an
+ * What a reset after `afterActionKey` takes back: the rows it removes, last
+ * first (every row after it except those that cannot leave the order: an
  * active required row, which automatic placement keeps, and the Postboss
- * keepsake rack). Undefined when the anchor is not an ordered action.
+ * keepsake rack), and whether it clears a chosen keepsake on a rack after the
+ * point.
  */
-export function roomActionResetRemovals(
+export interface RoomActionResetPlan {
+  readonly removals: readonly RoomActionReference[];
+  readonly clearsKeepsake: boolean;
+}
+
+/** A reset's plan; undefined when the anchor is not an ordered action. */
+export function roomActionResetPlan(
   document: ProjectDocument,
   catalog: Catalog,
   occurrence: OccurrenceAddress,
   afterActionKey: string | null,
-): readonly RoomActionReference[] | undefined {
+): RoomActionResetPlan | undefined {
   const biome = createBiomeAddress(occurrence.routeKey, occurrence.biomeKey);
   const located = roomActionDomainForOccurrence(document, catalog, biome, occurrence.occurrenceId);
   if (located === undefined) return undefined;
@@ -59,15 +67,25 @@ export function roomActionResetRemovals(
         )
       : [],
   );
-  return Object.freeze(
-    order
-      .slice(anchor + 1)
-      .filter(
-        (reference) =>
-          reference.kind !== 'interactKeepsakeRack' && !required.has(roomActionKey(reference)),
-      )
-      .reverse(),
-  );
+  const after = order.slice(anchor + 1);
+  return Object.freeze({
+    removals: Object.freeze(
+      after
+        .filter(
+          (reference) =>
+            reference.kind !== 'interactKeepsakeRack' && !required.has(roomActionKey(reference)),
+        )
+        .reverse(),
+    ),
+    clearsKeepsake:
+      (located.occurrence.keepsakeRack?.keepsakeKey ?? null) !== null &&
+      after.some((reference) => reference.kind === 'interactKeepsakeRack'),
+  });
+}
+
+/** Whether a reset plan changes anything. */
+export function roomActionResetApplies(plan: RoomActionResetPlan | undefined): boolean {
+  return plan !== undefined && (plan.removals.length > 0 || plan.clearsKeepsake);
 }
 
 /** The semantic command that takes one row out of the room's actions with its own state. */
@@ -122,7 +140,8 @@ function removalCommand(
 
 /**
  * Removes the occurrence's actions after one of them, or all of them, each by
- * its own removal command, as one edit; rows that cannot leave stay in order.
+ * its own removal command, as one edit; rows that cannot leave stay in order,
+ * and a rack after the point drops its keepsake choice.
  */
 export function applyRoomActionReset(
   document: ProjectDocument,
@@ -137,9 +156,9 @@ export function applyRoomActionReset(
     createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey),
     command.occurrence.occurrenceId,
   );
-  const removals = roomActionResetRemovals(document, catalog, occurrence, command.afterActionKey);
-  if (removals === undefined) failCommand(command, 'afterActionKey is not an ordered room action');
-  return removals.reduce((current, reference) => {
+  const plan = roomActionResetPlan(document, catalog, occurrence, command.afterActionKey);
+  if (plan === undefined) failCommand(command, 'afterActionKey is not an ordered room action');
+  const removed = plan.removals.reduce((current, reference) => {
     // A removal can take a later row with it, such as a rushed pickup with its purchase.
     const order =
       current.route.biomes
@@ -152,4 +171,12 @@ export function applyRoomActionReset(
       ? apply(current, removalCommand(occurrence, reference))
       : current;
   }, document);
+  // A rack after the point returns to its default: the held keepsake stays.
+  return plan.clearsKeepsake
+    ? apply(removed, {
+        kind: 'ReplacePostbossKeepsake',
+        selection: createPostbossKeepsakeSelectionAddress(occurrence),
+        keepsakeKey: null,
+      })
+    : removed;
 }

@@ -4,9 +4,13 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
+  createLocalVisitOrderAddress,
+  createLocalVisitSlotAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createPostbossKeepsakeSelectionAddress,
   createProjectHistory,
+  createShopOfferAddress,
   decodeProjectDocument,
   roomActionKey,
   undoProjectHistory,
@@ -14,7 +18,11 @@ import {
   type ProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
-import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
+import {
+  roomActionResetsForProjectEvaluationAssembly,
+  settleProjectEdit,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import {
   createGoldenFGHProject,
   createUnderworldFWellCheckpoint,
@@ -23,10 +31,15 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOProject,
+  nBiome as surfaceNBiome,
   oBiome,
   oOccurrenceIds,
   surfaceShrineDeliveriesProject,
+  surfaceShrineTravelDealProject,
 } from '@run-planner/test-fixtures/surface';
+
+import { createCompleteNProject } from '../support/complete-n-project';
+import { nBiome } from '../support/configured-projects';
 
 const fPostboss = createOccurrenceAddress(
   goldenFBiome,
@@ -50,11 +63,11 @@ const reset = (occurrence: OccurrenceAddress, after: RoomActionReference | null)
     afterActionKey: after === null ? null : roomActionKey(after),
   }) as const;
 
-/** The room's order with `extra` appended, as a loaded document retains it. */
-function withAppended(
+/** The room's order rewritten by `edit`, as a loaded document retains it. */
+function withOrder(
   project: ProjectDocument,
   room: OccurrenceAddress,
-  extra: readonly RoomActionReference[],
+  edit: (order: readonly RoomActionReference[]) => readonly RoomActionReference[],
 ): ProjectDocument {
   return decodeProjectDocument(
     {
@@ -73,7 +86,7 @@ function withAppended(
                       ? candidate
                       : {
                           ...candidate,
-                          roomActions: { order: [...candidate.roomActions.order, ...extra] },
+                          roomActions: { order: edit(candidate.roomActions.order) },
                         },
                   ),
                 },
@@ -84,6 +97,12 @@ function withAppended(
     catalog,
   );
 }
+
+const withAppended = (
+  project: ProjectDocument,
+  room: OccurrenceAddress,
+  extra: readonly RoomActionReference[],
+) => withOrder(project, room, (current) => [...current, ...extra]);
 
 describe('ResetRoomActionsAfter', () => {
   const fountain: RoomActionReference = { kind: 'useFountain' };
@@ -166,7 +185,7 @@ describe('ResetRoomActionsAfter', () => {
     ).toEqual(original);
   });
 
-  it('keeps required automatic placements through settlement: a due delivery stays', () => {
+  it('keeps a due delivery and its required wheel rows, and settles a reset without a fault', () => {
     const combat04 = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
     const project = surfaceShrineDeliveriesProject();
     // Wheel choice, its pickup and the due delivery are all automatic required placements.
@@ -183,5 +202,203 @@ describe('ResetRoomActionsAfter', () => {
       roomActionKey(fountain),
       roomActionKey(rack),
     ]);
+  });
+
+  it('removes a Shop purchase with the Travel Deal refill it stocked', () => {
+    const shop = createOccurrenceAddress(nBiome, createOccurrenceId('round-trip-n-preboss'));
+    const project = createCompleteNProject();
+    const room = project.route.biomes
+      .find((plan) => plan.biomeKey === 'N')!
+      .topology!.occurrences.find((candidate) => candidate.occurrenceId === shop.occurrenceId)!;
+    const option = catalog.rewards.shops.byKey[
+      room.state.kind === 'shop' ? (room.state.shop?.profileKey ?? '') : ''
+    ]?.groups.values
+      .flatMap((group) => group.options.values)
+      .find((candidate) => candidate.rewardType === 'BlindBoxLoot');
+    if (option === undefined) throw new Error('expected a Mystery Shop option');
+    const before = order(project, shop);
+    const boon: RoomActionReference = { kind: 'interactShopOffer', offerKey: 'Boon' };
+    const bought = applyProjectCommand(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: createShopOfferAddress(nBiome, shop.occurrenceId, 'Boon'),
+        purchased: true,
+      }),
+      catalog,
+      {
+        kind: 'PurchaseShopTravelDealRefill',
+        occurrence: shop,
+        value: { optionKey: option.key, offer: { rewardType: 'BlindBoxLoot' } },
+      },
+    );
+    const refill = roomActionKey({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'roomExit',
+      entryKey: 'travelDealRefill',
+    });
+    expect(order(bought, shop)).toEqual([...before, roomActionKey(boon), refill]);
+    // The refill after the purchase goes; the purchase stays.
+    expect(order(applyProjectCommand(bought, catalog, reset(shop, boon)), shop)).toEqual([
+      ...before,
+      roomActionKey(boon),
+    ]);
+    const anchor =
+      before.length === 0
+        ? null
+        : bought.route.biomes
+            .find((plan) => plan.biomeKey === 'N')!
+            .topology!.occurrences.find(
+              (candidate) => candidate.occurrenceId === shop.occurrenceId,
+            )!.roomActions.order[before.length - 1]!;
+    const cleared = applyProjectCommand(bought, catalog, reset(shop, anchor));
+    expect(order(cleared, shop)).toEqual(before);
+    const clearedRoom = cleared.route.biomes
+      .find((plan) => plan.biomeKey === 'N')!
+      .topology!.occurrences.find((candidate) => candidate.occurrenceId === shop.occurrenceId)!;
+    expect(clearedRoom.acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
+  });
+
+  it('removes a rushed Shrine purchase with its pickup and the refill it triggered', () => {
+    const shrine = createOccurrenceAddress(
+      surfaceNBiome,
+      createOccurrenceId('surface-n-preboss:postboss'),
+    );
+    const project = surfaceShrineTravelDealProject();
+    const rushed: RoomActionReference = {
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'initial:first',
+      rushed: true,
+    };
+    expect(order(project, shrine).slice(0, 3)).toEqual([
+      roomActionKey(fountain),
+      roomActionKey(rack),
+      roomActionKey(rushed),
+    ]);
+    expect(order(project, shrine)).toHaveLength(5);
+    expect(order(applyProjectCommand(project, catalog, reset(shrine, rack)), shrine)).toEqual([
+      roomActionKey(fountain),
+      roomActionKey(rack),
+    ]);
+  });
+
+  it('removes a Shrine purchase whose offer no longer resolves', () => {
+    const shrine = createOccurrenceAddress(
+      surfaceNBiome,
+      createOccurrenceId('surface-n-preboss:postboss'),
+    );
+    const project = surfaceShrineTravelDealProject();
+    // A document the codec would refuse: the purchased slot lost its offer.
+    const unresolved: ProjectDocument = {
+      ...project,
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((plan) =>
+          plan.biomeKey !== shrine.biomeKey || plan.topology === null
+            ? plan
+            : {
+                ...plan,
+                topology: {
+                  ...plan.topology,
+                  occurrences: plan.topology.occurrences.map((candidate) =>
+                    candidate.occurrenceId !== shrine.occurrenceId ||
+                    candidate.hermesShrine === undefined
+                      ? candidate
+                      : {
+                          ...candidate,
+                          hermesShrine: {
+                            ...candidate.hermesShrine,
+                            offerBySlot: { ...candidate.hermesShrine.offerBySlot, first: null },
+                          },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    expect(order(applyProjectCommand(unresolved, catalog, reset(shrine, rack)), shrine)).toEqual([
+      roomActionKey(fountain),
+      roomActionKey(rack),
+    ]);
+  });
+
+  it('removes a stale row between the last ranked row and a banner', () => {
+    const project = withOrder(createUnderworldFWellCheckpoint(), fPostboss, (current) => [
+      current[0]!,
+      invented,
+      ...current.slice(1),
+    ]);
+    const assembly = simulateProjectAssembly(catalog, project);
+    const resets = roomActionResetsForProjectEvaluationAssembly(catalog, assembly, fPostboss)!;
+    // The doors-open banner follows the fountain; its reset takes the stale row after it.
+    const fromFountain = resets.filter(
+      (entry) => entry !== undefined && entry.afterActionKey === roomActionKey(fountain),
+    );
+    // The fountain's own entry and the banner after it.
+    expect(fromFountain).toHaveLength(2);
+    expect(order(applyProjectCommand(project, catalog, fromFountain[1]!), fPostboss)).toEqual([
+      roomActionKey(fountain),
+      roomActionKey(rack),
+    ]);
+  });
+
+  it('leaves an Ephyra room’s side visit order untouched', () => {
+    const combatId = createOccurrenceId('round-trip-n-combat02');
+    const sideDoor1 = createOccurrenceId('round-trip-n-combat02-sideDoor1');
+    const sideDoor2 = createOccurrenceId('round-trip-n-combat02-sideDoor2');
+    let project = createCompleteNProject();
+    for (const slotKey of ['sideDoor1', 'sideDoor2'])
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(nBiome, combatId, 'sideRooms', slotKey),
+        generation: 'generated',
+      });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, combatId, 'sideRooms'),
+      occurrenceIds: [sideDoor2, sideDoor1],
+    });
+    const combat = createOccurrenceAddress(nBiome, combatId);
+    const original = order(project, combat);
+    const retained = withAppended(project, combat, [invented]);
+    const after = applyProjectCommand(retained, catalog, reset(combat, null));
+    expect(order(after, combat)).toEqual(original);
+    const decisions = (document: ProjectDocument) =>
+      document.route.biomes.find((plan) => plan.biomeKey === 'N')!.topology!.decisions;
+    expect(decisions(after)).toEqual(decisions(retained));
+  });
+
+  it('clears a chosen keepsake on a rack after the point; the held keepsake stays', () => {
+    const chosen = applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(fPostboss),
+      keepsakeKey: 'BossPreDamageKeepsake',
+    });
+    const keepsake = (project: ProjectDocument) =>
+      project.route.biomes
+        .find((plan) => plan.biomeKey === fPostboss.biomeKey)!
+        .topology!.occurrences.find(
+          (candidate) => candidate.occurrenceId === fPostboss.occurrenceId,
+        )!.keepsakeRack?.keepsakeKey;
+    expect(keepsake(chosen)).toBe('BossPreDamageKeepsake');
+    const history = applyProjectHistoryCommand(
+      createProjectHistory(chosen),
+      catalog,
+      reset(fPostboss, fountain),
+    );
+    expect(keepsake(history.present)).toBeNull();
+    expect(order(history.present, fPostboss)).toEqual([
+      roomActionKey(fountain),
+      roomActionKey(rack),
+    ]);
+    expect(undoProjectHistory(history).present).toBe(chosen);
+    // A reset after the rack leaves its choice alone.
+    const afterRack = applyProjectCommand(chosen, catalog, reset(fPostboss, rack));
+    expect(keepsake(afterRack)).toBe('BossPreDamageKeepsake');
+    expect(order(afterRack, fPostboss)).toEqual([roomActionKey(fountain), roomActionKey(rack)]);
+    // With no row left to remove, clearing the choice is still a change.
+    const cleared = applyProjectCommand(afterRack, catalog, reset(fPostboss, fountain));
+    expect(keepsake(cleared)).toBeNull();
+    expect(applyProjectCommand(cleared, catalog, reset(fPostboss, fountain))).toBe(cleared);
   });
 });

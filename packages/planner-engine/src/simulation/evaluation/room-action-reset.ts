@@ -1,5 +1,8 @@
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
-import { roomActionResetRemovals } from '../../authored-project/commands/room-action-reset';
+import {
+  roomActionResetApplies,
+  roomActionResetPlan,
+} from '../../authored-project/commands/room-action-reset';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { Catalog } from '../../catalog-schema';
 import { candidateBiome, candidateBiomeRooms } from '../candidates/evaluated-biome';
@@ -10,7 +13,7 @@ type ResetCommand = Extract<ProjectCommand, { readonly kind: 'ResetRoomActionsAf
 /**
  * Reset from here for each entry of a room's lifecycle Timeline, aligned with
  * `roomLifecycleTimeline.entries`: the command that removes the room's actions
- * after that entry, or undefined when nothing it can remove follows. An
+ * after that entry, or undefined when it would change nothing. An
  * action keeps itself; a banner (an event the walk announces) keeps the ranked
  * actions before it. An automatic effect has none. Undefined for a room the
  * evaluated biome does not hold.
@@ -31,8 +34,9 @@ export function roomActionResetsForProjectEvaluationAssembly(
     .filter((row) => row.rank !== null && !row.stale)
     .sort((left, right) => left.rank! - right.rank!);
   const reset = (afterActionKey: string | null): ResetCommand | undefined =>
-    (roomActionResetRemovals(assembly.project, catalog, occurrence, afterActionKey)?.length ?? 0) >
-    0
+    roomActionResetApplies(
+      roomActionResetPlan(assembly.project, catalog, occurrence, afterActionKey),
+    )
       ? Object.freeze({ kind: 'ResetRoomActionsAfter' as const, occurrence, afterActionKey })
       : undefined;
   return Object.freeze(
