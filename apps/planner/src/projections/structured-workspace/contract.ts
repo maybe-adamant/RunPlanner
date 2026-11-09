@@ -570,6 +570,8 @@ export interface WorkspaceShipPhasePresentation {
   readonly label: string;
   /** Engine-ordered lifecycle entries owned by this phase, including automatic effects. */
   readonly timeline: readonly WorkspaceRoomLifecycleTimelineEntry[];
+  /** This phase's authored rows past the room's stop, waiting until the walk reaches them. */
+  readonly notReached?: WorkspaceRoomActions['timeline']['notReached'];
   /** Active optional actions owned by this phase but not yet inserted. */
   readonly optionalRows: readonly WorkspaceRoomActionRow[];
   /** The room objects' entries, on the last phase, where a new action is appended. */

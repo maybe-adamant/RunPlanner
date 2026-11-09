@@ -450,7 +450,7 @@ function OccurrenceInspector({
       ? { kind: 'doors', room: node.room.address }
       : undefined;
   });
-  const doors = roomTimelineDoors({
+  const roomDoors = roomTimelineDoors({
     activeNote: doorNotes.active,
     batch,
     interactions,
@@ -460,6 +460,10 @@ function OccurrenceInspector({
     outgoing,
     planEnd,
   });
+  const doors =
+    roomDoors === undefined || planEnd?.relation !== 'end'
+      ? roomDoors
+      : { ...roomDoors, endsPlan: true as const };
   return (
     <OccurrenceWorkbench
       {...(planEnd?.relation === undefined ? {} : { planEndRelation: planEnd.relation })}

@@ -57,7 +57,10 @@ import {
   occurrenceActionLabelParts,
 } from './occurrence-action-label';
 import { assembleFeatureRerollSlots } from './feature-roll-assembly';
-import { projectRoomLifecycleTimeline } from './occurrence-action-timeline-projection';
+import {
+  projectRoomLifecycleTimeline,
+  splitAtRoomStop,
+} from './occurrence-action-timeline-projection';
 import { projectSpawnedLoot } from './occurrence-spawned-loot-projection';
 import type { WorkspaceRoomTab } from '../contracts/navigation';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
@@ -108,6 +111,8 @@ export interface WorkspaceOccurrenceActionsInput {
   readonly gold?: import('@run-planner/engine/simulation').GoldLedger;
   /** Engine-published Timeline rows of the product this room's assessment stops at. */
   readonly blockingRowKeys?: ReadonlySet<string>;
+  /** The room's assessment stops in its Overview: its Timeline waits past entry. */
+  readonly stoppedInOverview?: true;
   readonly rerollTargetLabel?: import('./occurrence-action-label').WorkspaceDoorRerollTargetLabel;
   /** The loot the room spawns on its own, by moment and source action. */
   readonly spawnedLoot?: import('@run-planner/engine/simulation').RoomSpawnedLoot;
@@ -1108,8 +1113,14 @@ function roomActionsForOccurrence(
   const optionalRows = Object.freeze(
     unplacedOptionalRows.filter((row) => !spawnPlacedKeys.has(row.key)),
   );
+  // The Timeline ends where the room's walk stops; what spawns past it is not yet shown.
+  const stop = splitAtRoomStop(spawned.entries, input);
   return Object.freeze({
-    timeline: Object.freeze({ ...projectedTimeline, entries: spawned.entries }),
+    timeline: Object.freeze({
+      ...projectedTimeline,
+      entries: stop?.reached ?? spawned.entries,
+      ...(stop === undefined ? {} : { notReached: stop.notReached }),
+    }),
     ...(spawned.actionSpawns.length === 0 ? {} : { actionSpawns: spawned.actionSpawns }),
     ...(spawned.copies.length === 0 ? {} : { spawnCopies: spawned.copies }),
     checkpoints: Object.freeze(

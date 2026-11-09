@@ -10,6 +10,7 @@ import {
   createProjectDocument,
   createRoomActionAddress,
   createStartingRewardAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
@@ -171,6 +172,21 @@ describe('a room’s doors on its Timeline', () => {
       biome: f,
       occurrenceId: start,
       gameName: 'F_Opening01',
+    });
+    // The starting boon is settled, so the room's walk reaches its doors.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(createIncomingRewardAddress(f, start), 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
     });
     const view = renderWorkspace(project, 'Underworld', 'F');
     act(() =>

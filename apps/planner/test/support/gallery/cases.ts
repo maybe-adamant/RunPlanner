@@ -16,6 +16,7 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createRoomActionAddress,
   createRewardWheelAddress,
+  createRewardWheelOfferAddress,
   rerollAppendIndex,
   roomActionKey,
   type AuthoredNemesisRandomEventOutcome,
@@ -62,6 +63,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   roomLayoutAuthoringForProjectEvaluationAssembly,
   roomObjectAnchorSlotsForProjectEvaluationAssembly,
+  simulateProject,
   simulateProjectAssembly,
   spawnedLootForProjectEvaluationAssembly,
   type RoomAnchorObjectKind,
@@ -118,6 +120,49 @@ function placeLastSpawned(biomeKey: string, occurrenceId: string): GalleryStep {
       .at(-1);
     if (command === undefined) throw new Error(`${occurrenceId} has no unplaced spawned item`);
     return command;
+  };
+}
+
+/**
+ * Gives one settled boon offer in a room a rarity its giver cannot offer there, through the
+ * engine's own offer command: the room's walk stops at the row collecting it.
+ */
+function unofferableRarity(
+  biomeKey: string,
+  occurrenceId: string,
+  acquisitionRole: string,
+  slotKey?: string,
+): GalleryStep {
+  return (project) => {
+    const evaluation = simulateProject(catalog, project).route.biomes.find(
+      (biome) => biome.biomeKey === biomeKey,
+    );
+    const selected = (
+      evaluation !== undefined && 'rewards' in evaluation
+        ? evaluation.rewards.selectedTraitOffers
+        : []
+    ).find((trace) => {
+      const owner = trace.address.owner;
+      return (
+        'occurrenceId' in owner &&
+        owner.occurrenceId === occurrenceId &&
+        trace.address.acquisitionRole === acquisitionRole &&
+        (slotKey === undefined || ('slotKey' in owner && owner.slotKey === slotKey))
+      );
+    });
+    const offer = selected?.offer;
+    if (selected === undefined || offer?.kind !== 'traits')
+      throw new Error(`${occurrenceId} has no settled ${acquisitionRole} boon offer`);
+    const [first, ...rest] = offer.options;
+    if (first === undefined) throw new Error(`${occurrenceId} offers no boon`);
+    return {
+      kind: 'ReplaceTraitOffer',
+      trait: selected.address,
+      value: {
+        ...offer,
+        options: [{ ...first, rarity: first.rarity === 'Heroic' ? 'Common' : 'Heroic' }, ...rest],
+      },
+    };
   };
 }
 
@@ -1513,5 +1558,74 @@ export const galleryCases: readonly GalleryCase[] = [
       },
     ],
     target: hub('N', 1),
+  },
+  // Progressive Timeline: a room's Timeline ends where its walk stops.
+  {
+    id: 'progressive-stop-at-entry',
+    label: 'Room stopped at entry: its Timeline waits on the Overview',
+    shows: ['Room entered only', 'Not reached yet'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceRoomLayout',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b1-e1'),
+        layout: { flipped: false },
+      }),
+    ],
+    target: room('F', 'golden-f-b1-e1'),
+  },
+  {
+    id: 'progressive-stop-encounter-end',
+    label: 'Room stopped at its encounter end: a boon it cannot offer, later rows waiting',
+    shows: ['stop at a row', 'Not reached yet', 'no Doors open'],
+    project: loadSurfaceNOHermesShrineDeliveryCheckpoint,
+    commands: [unofferableRarity('O', 'surface-o-devotion', 'spurnedSource')],
+    target: room('O', 'surface-o-devotion'),
+  },
+  {
+    id: 'progressive-stop-before-encounter',
+    label: 'Room stopped before its encounter: the first pickup cannot be offered',
+    shows: ['stop at a row', 'Not reached yet', 'no encounter banners'],
+    project: loadSurfaceNOHermesShrineDeliveryCheckpoint,
+    commands: [unofferableRarity('O', 'surface-o-devotion', 'chosenSource')],
+    target: room('O', 'surface-o-devotion'),
+  },
+  {
+    id: 'progressive-stop-fields',
+    label: 'Fields room stopped at its first cage reward: later cages waiting',
+    shows: ['stop at a row', 'Not reached yet', 'Fields cages'],
+    project: loadUnderworldFGHICheckpoint,
+    commands: [unofferableRarity('H', 'golden-h-combat05', 'source', 'cage3')],
+    target: room('H', 'golden-h-combat05'),
+  },
+  ...(['shipIntroActions', 'shipCombat1Actions'] as const).map(
+    (roomTab): GalleryCase => ({
+      id: `progressive-stop-ship-${roomTab.replace('ship', '').replace('Actions', '').toLowerCase()}`,
+      roomTab,
+      label: `Ship room stopped at its first wheel reward, a boon not offered yet: ${roomTab}`,
+      shows: ['stop at a row', 'Not reached yet per phase', 'no later phase banners'],
+      project: loadSurfaceEncounterShowcaseCheckpoint,
+      commands: [
+        (project) => ({
+          kind: 'ReplaceRewardWheelOffer',
+          offer: createRewardWheelOfferAddress(
+            createBiomeAddress(project.route.routeKey, 'O'),
+            createOccurrenceId('surface-o-combat04'),
+            'wheel1',
+            'offer1',
+          ),
+          value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+        }),
+      ],
+      target: room('O', 'surface-o-combat04'),
+    }),
+  ),
+  {
+    id: 'progressive-stop-ephyra',
+    label: 'Ephyra main room stopped at its reward: doors and side visits waiting',
+    shows: ['stop at a row', 'no Doors open', 'no side-visit Leave rows'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [unofferableRarity('N', 'surface-n-combat05', 'self')],
+    target: room('N', 'surface-n-combat05'),
   },
 ];

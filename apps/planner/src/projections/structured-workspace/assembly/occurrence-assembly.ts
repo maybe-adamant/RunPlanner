@@ -346,6 +346,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
   /** Engine-published Timeline rows of the product this room's assessment stops at. */
   readonly blockingRowKeys?: ReadonlySet<string>;
+  /** The room's assessment stops in its Overview: its Timeline waits past entry. */
+  readonly stoppedInOverview?: true;
   readonly judgmentArcanaCapability?: (
     address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
   ) =>
@@ -563,6 +565,7 @@ export function assembleWorkspaceOccurrence(
       : { purgingPoolAssessment: input.purgingPoolAssessment }),
     ...(input.gold === undefined ? {} : { gold: input.gold }),
     ...(input.blockingRowKeys === undefined ? {} : { blockingRowKeys: input.blockingRowKeys }),
+    ...(input.stoppedInOverview === true ? { stoppedInOverview: true as const } : {}),
     ...(input.rerollTargetLabel === undefined
       ? {}
       : { rerollTargetLabel: input.rerollTargetLabel }),
@@ -1171,7 +1174,12 @@ export function assembleWorkspaceOccurrence(
       workbench.kind === 'ship'
         ? [
             ...workbench.phases.flatMap((phase) => {
-              const actionKeys = new Set(phase.actionRows.map((row) => row.key));
+              const actionKeys = new Set([
+                ...phase.actionRows.map((row) => row.key),
+                ...(phase.notReached ?? []).flatMap((entry) =>
+                  entry.kind === 'action' ? [entry.actionKey] : [],
+                ),
+              ]);
               return [
                 ...[
                   ...phase.timeline.flatMap((entry) =>
@@ -1189,6 +1197,11 @@ export function assembleWorkspaceOccurrence(
             ...workbench.phases.flatMap((phase) =>
               [...phase.actionRows, ...phase.optionalRows, ...phase.unplacedRows].map(
                 (row) => [row.key, phase.tab] as const,
+              ),
+            ),
+            ...workbench.phases.flatMap((phase) =>
+              (phase.notReached ?? []).flatMap((entry) =>
+                entry.kind === 'action' ? [[entry.actionKey, phase.tab] as const] : [],
               ),
             ),
           ]

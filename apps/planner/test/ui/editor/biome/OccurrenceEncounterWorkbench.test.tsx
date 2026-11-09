@@ -2094,12 +2094,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     await waitFor(() => expect(count.dataset.candidateState).toBe('impossible'));
     await view.user.keyboard('{Escape}');
     openRoomTab('Combat 2 Timeline');
-    // The Timeline banner names the phase read-only; its identity is authored in Overview.
-    const start = screen.getByLabelText('Encounter started');
-    expect(start.querySelector('.timeline-banner-identity')?.getAttribute('aria-label')).toMatch(
-      /^Encounter started: Combat 2 · /,
-    );
-    expect(within(start).queryByRole('button', { name: 'Encounter' })).toBeNull();
+    // The room stops at its Overview, so the phase's banner waits until it is repaired there.
+    expect(screen.queryByLabelText('Encounter started')).toBeNull();
     openRoomTab('Room Overview');
     const phase = screen.getByLabelText('Combat 2 encounter phase');
     const phaseAddress = createEncounterPhaseAddress(

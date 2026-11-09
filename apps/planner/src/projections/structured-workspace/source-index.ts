@@ -139,6 +139,11 @@ export interface WorkspaceBiomeSource {
   readonly isAssessed: (owner: SemanticAddress) => boolean;
   /** Engine-published Timeline rows of the product a room's assessment stops at. */
   readonly blockingRowKeys: (owner: OccurrenceAddress) => ReadonlySet<string> | undefined;
+  /**
+   * The assessment stops in this room's Overview: the engine names the room as blocked and
+   * publishes no Timeline coverage, so its Timeline is unreached past entry.
+   */
+  readonly stoppedInOverview: (owner: OccurrenceAddress) => boolean;
   /** Exact engine-reached trait child coverage; authored dormant children stay retained. */
   readonly isActiveTraitOffer: (
     owner: import('@run-planner/engine/authored-project').TraitOfferAddress,
@@ -1055,6 +1060,11 @@ function createWorkspaceBiomeSource(
         ? new Set(timeline.blockingRowKeys)
         : undefined;
     },
+    stoppedInOverview: (owner: OccurrenceAddress) =>
+      evaluation?.coverage.kind === 'prefix' &&
+      evaluation.coverage.blockedAt !== undefined &&
+      evaluation.coverage.roomTimeline === undefined &&
+      blockedOccurrenceRoom(owner) !== undefined,
     isActiveTraitOffer,
     isActiveInventoryOffer,
     shopOfferAssessment,

@@ -1789,9 +1789,20 @@
 
 /* Pools are grouped by a light heading, not another box. */
 .room-action-optional-pool,
-.room-action-repairs {
+.room-action-repairs,
+.room-action-not-reached {
   display: grid;
   gap: 6px;
+}
+
+/* Rows past the room's stop wait, dimmed, without the chronology's spine or ticks. */
+.room-action-not-reached > .room-action-list {
+  opacity: 0.55;
+}
+
+.room-action-not-reached > .room-action-list::before,
+.room-action-not-reached > .room-action-list > .timeline-row::before {
+  display: none;
 }
 
 /* Unplaced pools sit outside the chronology, so their lists draw no spine or ticks. */
@@ -1800,12 +1811,22 @@
   display: none;
 }
 
-:is(.room-action-optional-pool, .room-action-repairs, .ship-action-repairs)
+:is(
+    .room-action-optional-pool,
+    .room-action-repairs,
+    .room-action-not-reached,
+    .ship-action-repairs
+  )
   > .local-reward-heading {
   padding-inline: var(--timeline-title-x) 0;
 }
 
-:is(.room-action-optional-pool, .room-action-repairs, .ship-action-repairs)
+:is(
+    .room-action-optional-pool,
+    .room-action-repairs,
+    .room-action-not-reached,
+    .ship-action-repairs
+  )
   > .local-reward-heading
   :is(h4, h5) {
   color: #aaa7af;
@@ -2164,16 +2185,19 @@
 /* The Add area and Timeline repairs share the timeline's width and its content edge. */
 .room-actions-workbench > .room-add,
 .room-actions-workbench .room-action-repairs,
+.room-actions-workbench .room-action-not-reached,
 .ship-phase > .room-add {
   width: var(--timeline-working-width, min(60rem, 100%));
   padding-left: var(--timeline-title-x);
 }
 
-.room-actions-workbench .room-action-repairs {
+.room-actions-workbench :is(.room-action-repairs, .room-action-not-reached) {
   padding-left: 0;
 }
 
-.room-actions-workbench .room-action-repairs > .local-reward-heading {
+.room-actions-workbench
+  :is(.room-action-repairs, .room-action-not-reached)
+  > .local-reward-heading {
   padding-left: var(--timeline-title-x);
 }
 

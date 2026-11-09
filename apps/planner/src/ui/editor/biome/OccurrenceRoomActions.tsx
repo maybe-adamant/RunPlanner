@@ -11,6 +11,7 @@ import {
   type WorkspaceRoomActions,
   type WorkspaceRoomLifecycleBoundary,
   type WorkspaceRoomLifecycleTimelineEntry,
+  type WorkspaceNotReachedEntry,
   type WorkspaceShipPhasePresentation,
 } from '@planner/projections/structured-workspace';
 import {
@@ -306,6 +307,20 @@ function WorkbenchAddArea({
   );
 }
 
+/** Authored rows past the room's stop, dimmed in Timeline order until the walk reaches them. */
+function NotReachedGroup({ children }: { readonly children: ReactNode }) {
+  return (
+    <section aria-label="Not reached yet" className="room-action-not-reached">
+      <div className="local-reward-heading">
+        <h5>Not reached yet</h5>
+      </div>
+      <ol aria-label="Not reached yet" className="room-action-list">
+        {children}
+      </ol>
+    </section>
+  );
+}
+
 export function RoomActionsWorkbench({
   actions,
   children,
@@ -393,8 +408,13 @@ export function RoomActionsWorkbench({
                   }),
               }),
         };
+  // A room whose walk stops in it has not reached its doors; a saved end keeps its last row.
   const doorsTail = (hasDoorsOpenRow: boolean): ReactNode =>
-    roomDoors === undefined ? null : (
+    roomDoors === undefined ? null : actions?.timeline.notReached !== undefined ? (
+      roomDoors.endsPlan === true ? (
+        roomDoors.leave
+      ) : null
+    ) : (
       <>
         {hasDoorsOpenRow || roomDoors.doorsOpenRow === false ? null : (
           <DoorsOpenBanner doors={roomDoors} />
@@ -1048,6 +1068,55 @@ export function RoomActionsWorkbench({
       },
     };
   };
+  const renderAutomaticEffect = (
+    entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'automaticEffect' }>,
+  ): ReactNode[] => {
+    if (entry.effect === 'steadyGrowth') {
+      const control = actions?.steadyGrowth?.find(
+        (candidate) =>
+          workspaceInteractionKey(candidate.address) === workspaceInteractionKey(entry.address),
+      );
+      return control === undefined
+        ? []
+        : [
+            <SteadyGrowthEffectRow
+              control={control}
+              interactions={interactions}
+              key={workspaceInteractionKey(control.address)}
+            />,
+          ];
+    }
+    const control = actions?.transcendentEmbryo?.find(
+      (candidate) =>
+        workspaceInteractionKey(candidate.address) === workspaceInteractionKey(entry.address),
+    );
+    return control === undefined
+      ? []
+      : [
+          <TranscendentEmbryoEffectRow
+            control={control}
+            interactions={interactions}
+            key={workspaceInteractionKey(control.address)}
+          />,
+        ];
+  };
+  // Past the stop: each authored row, and the authored encounter events of an unreached banner.
+  const renderNotReached = (entry: WorkspaceNotReachedEntry): ReactNode[] => {
+    if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);
+    if (entry.kind === 'events')
+      return [
+        <TimelineRow
+          editors={renderSupplement(entry.supplement)}
+          key={entry.key}
+          kind="action"
+          label={<strong>{entry.label}</strong>}
+        />,
+      ];
+    const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
+    return row === undefined
+      ? []
+      : [<Fragment key={entry.actionKey}>{renderRow(row, [], entry.supplement)}</Fragment>];
+  };
   if (mode.kind !== 'roomTimeline') {
     return (
       <section aria-label="Ship combat structure" className="ship-combat-editor">
@@ -1093,38 +1162,7 @@ export function RoomActionsWorkbench({
                   ];
                 if (entry.kind === 'boundary') return [renderBoundary(entry)];
                 if (entry.kind === 'spawned') return [renderSpawned(entry)];
-                if (entry.kind === 'automaticEffect') {
-                  if (entry.effect === 'steadyGrowth') {
-                    const control = actions?.steadyGrowth?.find(
-                      (candidate) =>
-                        workspaceInteractionKey(candidate.address) ===
-                        workspaceInteractionKey(entry.address),
-                    );
-                    return control === undefined
-                      ? []
-                      : [
-                          <SteadyGrowthEffectRow
-                            control={control}
-                            interactions={interactions}
-                            key={workspaceInteractionKey(control.address)}
-                          />,
-                        ];
-                  }
-                  const control = actions?.transcendentEmbryo?.find(
-                    (candidate) =>
-                      workspaceInteractionKey(candidate.address) ===
-                      workspaceInteractionKey(entry.address),
-                  );
-                  return control === undefined
-                    ? []
-                    : [
-                        <TranscendentEmbryoEffectRow
-                          control={control}
-                          interactions={interactions}
-                          key={workspaceInteractionKey(control.address)}
-                        />,
-                      ];
-                }
+                if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);
                 if (entry.presentation !== 'row') return [];
                 const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
                 return row === undefined
@@ -1163,6 +1201,11 @@ export function RoomActionsWorkbench({
                         ))}
                         {doorsTail(opensDoors(phase.timeline))}
                       </ol>
+                    )}
+                    {phase.notReached === undefined || phase.notReached.length === 0 ? null : (
+                      <NotReachedGroup>
+                        {phase.notReached.flatMap(renderNotReached)}
+                      </NotReachedGroup>
                     )}
                     {phase.unplacedRows.length === 0 ? null : (
                       <section aria-label="Required actions" className="room-action-optional-pool">
@@ -1220,47 +1263,19 @@ export function RoomActionsWorkbench({
   }
   if (actions === undefined) return null;
   const actionByKey = new Map(actions.rows.map((row) => [row.key, row]));
-  const timelineRows = actions.timeline.entries.flatMap((entry) => {
+  const renderTimelineEntry = (entry: WorkspaceRoomLifecycleTimelineEntry): ReactNode[] => {
     if (entry.kind === 'boundary') {
       return [renderBoundary(entry)];
     }
     if (entry.kind === 'spawned') return [renderSpawned(entry)];
-    if (entry.kind === 'automaticEffect') {
-      if (entry.effect === 'steadyGrowth') {
-        const control = actions.steadyGrowth?.find(
-          (candidate) =>
-            workspaceInteractionKey(candidate.address) === workspaceInteractionKey(entry.address),
-        );
-        return control === undefined
-          ? []
-          : [
-              <SteadyGrowthEffectRow
-                control={control}
-                interactions={interactions}
-                key={workspaceInteractionKey(control.address)}
-              />,
-            ];
-      }
-      const control = actions.transcendentEmbryo?.find(
-        (candidate) =>
-          workspaceInteractionKey(candidate.address) === workspaceInteractionKey(entry.address),
-      );
-      return control === undefined
-        ? []
-        : [
-            <TranscendentEmbryoEffectRow
-              control={control}
-              interactions={interactions}
-              key={workspaceInteractionKey(control.address)}
-            />,
-          ];
-    }
+    if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);
     if (entry.presentation !== 'row') return [];
     const row = actionByKey.get(entry.actionKey);
     return row === undefined
       ? []
       : [<Fragment key={entry.actionKey}>{renderRow(row, [], entry.supplement)}</Fragment>];
-  });
+  };
+  const timelineRows = actions.timeline.entries.flatMap(renderTimelineEntry);
   return (
     <section
       aria-label="Room Timeline"
@@ -1285,6 +1300,11 @@ export function RoomActionsWorkbench({
           {rankedRows.length === 0 ? checkpointRows(0) : null}
           {doorsTail(opensDoors(actions.timeline.entries))}
         </ol>
+        {(actions.timeline.notReached?.length ?? 0) === 0 ? null : (
+          <NotReachedGroup>
+            {(actions.timeline.notReached ?? []).flatMap(renderNotReached)}
+          </NotReachedGroup>
+        )}
         {children}
         {actions.repairRows.length === 0 ? null : (
           <section aria-label="Timeline repairs" className="room-action-repairs">

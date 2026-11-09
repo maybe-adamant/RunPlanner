@@ -426,6 +426,20 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly groups: readonly WorkspaceSpawnGroup[];
     };
 
+/**
+ * One authored entry past a room's stop: a row, an automatic effect's target, or the authored
+ * encounter events (Fig Leaf, Aetos, Gorgon, an outcome) of a banner not reached yet.
+ */
+export type WorkspaceNotReachedEntry =
+  | Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'action' | 'automaticEffect' }>
+  | {
+      readonly kind: 'events';
+      readonly key: string;
+      readonly label: string;
+      readonly phaseKey: string;
+      readonly supplement: WorkspaceEncounterBannerSupplement;
+    };
+
 /** The settled target's rarity before and after one timed growth; equal when nothing promoted. */
 export interface WorkspaceSettledRarity {
   readonly before: import('@run-planner/engine/catalog-schema').TraitRarity;
@@ -556,7 +570,13 @@ export interface WorkspaceFieldsCageOrderControl {
 
 export interface WorkspaceRoomLifecycleTimeline {
   readonly fieldsCageOrder?: WorkspaceFieldsCageOrderControl;
+  /** Up to the room's stop when the walk stops here: its doors and exit are then unreached. */
   readonly entries: readonly WorkspaceRoomLifecycleTimelineEntry[];
+  /**
+   * Present when the room's walk stops in this room: the authored rows past the stop, in
+   * Timeline order and without their phase banners, until the walk reaches them.
+   */
+  readonly notReached?: readonly WorkspaceNotReachedEntry[];
   readonly boundaries: readonly WorkspaceRoomLifecycleBoundary[];
   /** Checkpoints represented by lifecycle boundary rows rather than duplicate list items. */
   readonly suppressedCheckpointKeys: readonly string[];

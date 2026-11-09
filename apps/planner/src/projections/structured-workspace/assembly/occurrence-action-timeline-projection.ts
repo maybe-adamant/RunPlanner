@@ -13,6 +13,7 @@ import type {
   WorkspaceRoomLifecycleBoundary,
   WorkspaceRoomLifecycleTimeline,
   WorkspaceRoomLifecycleTimelineEntry,
+  WorkspaceNotReachedEntry,
   WorkspaceRoomActionRow,
   WorkspaceSteadyGrowthControl,
   WorkspaceTranscendentEmbryoControl,
@@ -73,6 +74,85 @@ export function foldedBossDefeats(
       folded.set(next.boundary.key, entry.boundary);
   });
   return folded;
+}
+
+type NotReachedEntry = WorkspaceNotReachedEntry;
+
+/** A banner's encounter events that hold an authored value, which never vanishes. */
+function authoredBannerEvents(
+  entry: WorkspaceRoomLifecycleTimelineEntry,
+): Extract<NotReachedEntry, { readonly kind: 'events' }> | undefined {
+  if (entry.kind !== 'boundary' || entry.supplement === undefined) return undefined;
+  const supplement = entry.supplement;
+  const phase = supplement.phase;
+  if (phase === undefined) return undefined;
+  const authored =
+    supplement.kind === 'encounterStart'
+      ? phase.figLeaf?.selected === true ||
+        phase.aetos?.selectedWave !== undefined ||
+        phase.gorgonCondition?.selected === true
+      : true;
+  return authored
+    ? Object.freeze({
+        kind: 'events' as const,
+        key: `events:${entry.boundary.key}`,
+        label: entry.label,
+        phaseKey: phase.address.phaseKey,
+        supplement,
+      })
+    : undefined;
+}
+
+/**
+ * Splits a room's Timeline at the stop the engine publishes for it: just past entry when its
+ * Overview blocks, or at the first row of the blocking product. The blocking rows stay at the
+ * stop for repair; the authored rows after it wait, without their banners, until the walk
+ * reaches them. Undefined while the walk passes through the room or names no row to stop at.
+ */
+export function splitAtRoomStop(
+  entries: readonly WorkspaceRoomLifecycleTimelineEntry[],
+  input: Pick<WorkspaceOccurrenceActionsInput, 'blockingRowKeys' | 'stoppedInOverview'>,
+):
+  | {
+      readonly reached: readonly WorkspaceRoomLifecycleTimelineEntry[];
+      readonly notReached: readonly NotReachedEntry[];
+    }
+  | undefined {
+  const blocking = input.blockingRowKeys ?? new Set<string>();
+  const stop =
+    input.stoppedInOverview === true
+      ? entries.findIndex(
+          (entry) =>
+            entry.kind !== 'spawned' &&
+            !(entry.kind === 'boundary' && entry.boundary.kind === 'roomEntered'),
+        )
+      : entries.findIndex((entry) => entry.kind === 'action' && blocking.has(entry.actionKey));
+  if (stop < 0 && input.stoppedInOverview !== true) return undefined;
+  const cut = stop < 0 ? entries.length : stop;
+  // Past the stop no banner stands for a row, so each row is its own.
+  const asRow = (
+    entry: Extract<NotReachedEntry, { readonly kind: 'action' }>,
+  ): Extract<NotReachedEntry, { readonly kind: 'action' }> =>
+    entry.kind === 'action' && entry.presentation !== 'row'
+      ? Object.freeze({ ...entry, presentation: 'row' as const })
+      : entry;
+  const after = entries.slice(cut);
+  return Object.freeze({
+    reached: Object.freeze([
+      ...entries.slice(0, cut),
+      ...after.flatMap((entry) =>
+        entry.kind === 'action' && blocking.has(entry.actionKey) ? [asRow(entry)] : [],
+      ),
+    ]),
+    notReached: Object.freeze(
+      after.flatMap((entry): NotReachedEntry[] => {
+        if (entry.kind === 'action') return blocking.has(entry.actionKey) ? [] : [asRow(entry)];
+        if (entry.kind === 'automaticEffect') return [entry];
+        const events = authoredBannerEvents(entry);
+        return events === undefined ? [] : [events];
+      }),
+    ),
+  });
 }
 
 function projectRoomLifecycleTimeline(

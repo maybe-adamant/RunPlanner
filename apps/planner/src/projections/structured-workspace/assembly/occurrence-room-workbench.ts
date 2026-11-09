@@ -106,6 +106,9 @@ function shipWorkbenchPresentation(
   const phaseTimelineEntries = roomLocal.phases.map(
     () => [] as WorkspaceRoomLifecycleTimelineEntry[],
   );
+  const phaseNotReached = roomLocal.phases.map(
+    () => [] as NonNullable<WorkspaceRoomActions['timeline']['notReached']>[number][],
+  );
   const phaseCheckpointEntries = roomLocal.phases.map(
     () => [] as WorkspaceRoomActions['checkpoints'][number][],
   );
@@ -138,6 +141,16 @@ function shipWorkbenchPresentation(
       phaseTimelineEntries[phaseIndex]!.push(entry);
       phaseRows[phaseIndex]!.push(row);
       lastPhaseIndex = phaseIndex;
+    }
+    for (const entry of roomActions.timeline.notReached ?? []) {
+      const row = entry.kind === 'action' ? actionByKey.get(entry.actionKey) : undefined;
+      const phaseIndex =
+        entry.phaseKey !== undefined
+          ? phaseIndexForKey(entry.phaseKey)
+          : row === undefined
+            ? roomLocal.phases.length - 1
+            : phaseIndexForWindow(row.window);
+      phaseNotReached[phaseIndex < 0 ? roomLocal.phases.length - 1 : phaseIndex]!.push(entry);
     }
     for (const checkpoint of roomActions.checkpoints) {
       if (checkpoint.key === 'exitUsable') continue;
@@ -184,6 +197,9 @@ function shipWorkbenchPresentation(
       key: phase.key,
       label: phase.label,
       timeline: Object.freeze(phaseTimelineEntries[index]!),
+      ...(roomActions?.timeline.notReached === undefined
+        ? {}
+        : { notReached: Object.freeze(phaseNotReached[index]!) }),
       optionalRows: Object.freeze(phaseOptionalRows[index]!),
       ...(index !== roomLocal.phases.length - 1 || roomActions?.objectEntries === undefined
         ? {}

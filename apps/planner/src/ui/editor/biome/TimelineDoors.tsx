@@ -39,6 +39,8 @@ export interface TimelineDoorsContent {
   readonly detail?: ReactNode;
   /** The room's last row: how the room is left, or where the plan ends. */
   readonly leave?: ReactNode;
+  /** The plan's saved end: its last row stays, to continue from, while the room is unsettled. */
+  readonly endsPlan?: true;
   /** False where the room shows no doors, only its last row. */
   readonly doorsOpenRow?: false;
   /** Batch facts, beside the Timeline. */

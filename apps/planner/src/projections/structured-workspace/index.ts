@@ -250,6 +250,7 @@ export type {
 export { createStructuredWorkspaceProjection } from './projector';
 export type {
   WorkspaceEncounterBannerSupplement,
+  WorkspaceNotReachedEntry,
   WorkspaceJudgmentArcanaInteraction,
   WorkspaceFigurineArcanaInteraction,
 } from './contracts/timeline';

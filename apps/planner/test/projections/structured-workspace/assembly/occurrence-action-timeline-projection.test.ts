@@ -39,6 +39,8 @@ import type {
   WorkspaceRoomLifecycleTimelineEntry,
 } from '@planner/projections/structured-workspace';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
+import { galleryCases } from '@planner-test/support/gallery/cases';
+import { buildGalleryProject } from '@planner-test/support/gallery/galleryCase';
 import { foldedBossDefeats } from '@planner/projections/structured-workspace/assembly/occurrence-action-timeline-projection';
 
 function projectedWhere(
@@ -182,13 +184,9 @@ describe('Nemesis interaction family', () => {
           ? ['interaction']
           : [],
     );
-    // Answering her ends the encounter: start, her interaction, then the end.
+    // Answering her ends the encounter; until her offer is settled the room stops at her row.
     const start = order.indexOf('encounterStart');
-    expect(order.slice(start, start + 3)).toEqual([
-      'encounterStart',
-      'interaction',
-      'encounterEnd',
-    ]);
+    expect(order.slice(start)).toEqual(['encounterStart', 'interaction']);
     expect(interactionRows(room)).toEqual([
       expect.objectContaining({
         actionKey: roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
@@ -197,10 +195,20 @@ describe('Nemesis interaction family', () => {
     ]);
     expect(banners(room, 'roomEntered')[0]?.supplement).toBeUndefined();
     expect(identityLabels(room)).toEqual(['Nemesis event · Gold trade']);
-    expect(banners(room, 'encounterEnd')[0]?.supplement).toMatchObject({
-      kind: 'encounterEnd',
-      phase: { nemesisEvent: { value: { kind: 'goldTrade' } } },
-    });
+    // The trade's outcome, settled as her encounter ends, waits with that end.
+    expect(room.roomActions?.timeline.notReached).toContainEqual(
+      expect.objectContaining({
+        kind: 'events',
+        supplement: expect.objectContaining({
+          kind: 'encounterEnd',
+          phase: expect.objectContaining({
+            nemesisEvent: expect.objectContaining({
+              value: expect.objectContaining({ kind: 'goldTrade' }),
+            }),
+          }),
+        }),
+      }),
+    );
   });
 
   it('names the Fields Passive event on its start banner and keeps its interaction on its row', () => {
@@ -405,5 +413,46 @@ describe('boss defeat fold', () => {
       [boundary('bossDefeated', 'Encounter', 1), cleanupBoundary],
     ])
       expect(foldedBossDefeats(entries).size).toBe(0);
+  });
+});
+
+describe('a room whose walk stops in it', () => {
+  function galleryTimeline(id: string, occurrenceId: string) {
+    const entry = galleryCases.find((candidate) => candidate.id === id);
+    if (entry === undefined) throw new Error(`No gallery case ${id}`);
+    return roomOf(buildGalleryProject(entry), createOccurrenceId(occurrenceId)).roomActions!
+      .timeline;
+  }
+  const shape = (entries: readonly { readonly kind: string }[]) =>
+    entries.flatMap((entry) =>
+      entry.kind === 'boundary'
+        ? [(entry as BoundaryEntry).boundary.kind]
+        : entry.kind === 'action' || entry.kind === 'events'
+          ? [entry.kind]
+          : [],
+    );
+
+  it('ends at the blocking row, its later rows waiting without banners', () => {
+    const timeline = galleryTimeline('progressive-stop-encounter-end', 'surface-o-devotion');
+    expect(shape(timeline.entries)).toEqual([
+      'roomEntered',
+      'action',
+      'encounterStart',
+      'encounterEnd',
+      'action',
+    ]);
+    expect(shape(timeline.notReached ?? [])).toEqual(['action']);
+  });
+
+  it('keeps only its entry when its Overview blocks', () => {
+    const timeline = galleryTimeline('progressive-stop-at-entry', 'golden-f-b1-e1');
+    expect(shape(timeline.entries)).toEqual(['roomEntered']);
+    expect(shape(timeline.notReached ?? [])).toEqual(['action']);
+  });
+
+  it('shows every phase of a room the walk passes', () => {
+    const timeline = galleryTimeline('boon-offer-picked', 'golden-f-start');
+    expect(timeline.notReached).toBeUndefined();
+    expect(shape(timeline.entries)).toContain('cleanup');
   });
 });
