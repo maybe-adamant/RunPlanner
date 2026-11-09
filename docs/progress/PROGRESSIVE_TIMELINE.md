@@ -69,6 +69,15 @@ fountain rather than flag the fountain (to fix).
 - A missing required pickup's stop is where the walk actually stops (its
   spawn) until Part 2 moves the walk's stop to the deadline.
 
+## Notices follow settled sources
+
+A spawn notice (Spawned, Unlocks, Delivered, an action's spawned row) appears
+only once the walk has settled its source and actually produced the item: an
+unresolved source (e.g. an Artificer transform whose output is not chosen)
+shows no notice, its own row marks what is missing (owner 2026-11-09). The
+engine's spawned-loot product publishes only settled spawns; the planner does
+not filter.
+
 ## Required pickups: window and deadline
 
 - A required pickup's window opens when it spawns and closes at its deadline,
