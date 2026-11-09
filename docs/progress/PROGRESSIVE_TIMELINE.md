@@ -45,9 +45,20 @@ H Fields, an O ship room and a Postboss.
   Encounter ended hosts the choices about how the encounter went (candidates:
   Fig Leaf skip, Nemesis outcome and kill race, Aetos wave, Gorgon condition,
   timed outcomes), which today sit on the start or end banner without a clear
-  home. Starts with an inventory of every choice on those banners and where
-  each belongs; then an engine lifecycle-event change, used by the
-  presentation round.
+  home. Inventory done; shape (owner 2026-11-09):
+  - Encounter started keeps Aetos and the Gorgon condition.
+  - Encounter outcome holds, in order: Fig Leaf first when eligible (skipped
+    or fought; a skip short-circuits every later outcome choice and makes the
+    start's Aetos and Gorgon moot), then the Nemesis bet, the Nemesis trade or
+    contest result, Anomaly cleared.
+  - Boss rooms: Boss defeated returns as its own event, the Boss room's
+    outcome, carrying Judgment and Figurine.
+  - Timed outcomes (Steady Growth, Embryo), the Gorgon's Athena offer and
+    trait offers stay rows after Encounter ended.
+  - Engine point: the walk's existing encounter-completed event, published
+    as a Timeline boundary; no new walk event and no plan-wire change while it
+    stays a Timeline event. Room stop rules get an outcome case. Order: after
+    the stale-row task, before the presentation round.
 
 ## Progressive phases
 
