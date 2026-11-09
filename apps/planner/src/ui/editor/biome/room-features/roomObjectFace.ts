@@ -22,9 +22,11 @@ export const heldObjectName = (held: HeldObject): string =>
     : challengeSwitchKindLabel(held.switchKind);
 
 export const heldObjectIcon = (held: HeldObject) =>
-  held.switchKind === undefined
-    ? roomObjectIcon(held.object)
-    : challengeSwitchIcon(held.switchKind);
+  held.switchKind !== undefined
+    ? challengeSwitchIcon(held.switchKind)
+    : held.object === 'challengeSwitch'
+      ? undefined
+      : roomObjectIcon(held.object);
 
 const objectShortNames: Readonly<Record<WorkspaceAnchorObject, string>> = Object.freeze({
   stygianWell: 'Well',

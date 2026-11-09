@@ -60,7 +60,6 @@ import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
 import {
   challengeSwitchIcon,
   roomActionIcon,
-  roomObjectIcon,
   sourceFamilyIcon,
 } from '@planner/ui/artwork/roomArtwork';
 import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
@@ -256,7 +255,7 @@ function WorkbenchAddArea({
                 icon:
                   entry.object === 'challengeSwitch'
                     ? switchKind === undefined
-                      ? roomObjectIcon('challengeSwitch')
+                      ? undefined
                       : challengeSwitchIcon(switchKind)
                     : (group.icon ?? roomObjectEntryIcon[entry.object!]),
               }}

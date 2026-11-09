@@ -20,7 +20,6 @@ export type RoomObjectKey =
   | 'purgingPool'
   | 'hermesShrine'
   | 'keepsakeRack'
-  | 'challengeSwitch'
   | 'infernalTrove'
   | 'moonMonument'
   | 'unseenSigil'

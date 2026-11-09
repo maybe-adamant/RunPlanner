@@ -154,7 +154,7 @@ export function FixedObjectChip({
   title,
   target,
 }: {
-  readonly object: 'hermesShrine' | 'purgingPool' | 'stygianWell' | 'challengeSwitch';
+  readonly object: 'hermesShrine' | 'purgingPool' | 'stygianWell';
   readonly title: string;
   readonly target?: import('@planner/ui/feedback/useFindingTarget').FindingTargetProps;
 }) {

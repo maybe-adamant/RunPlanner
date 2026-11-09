@@ -1,4 +1,3 @@
-import iconChallengeSwitch from './assets/ChallengeSwitch.webp';
 import iconDoorLock from './assets/DoorLock.webp';
 import iconHermesShrine from './assets/HermesShrine.webp';
 import iconInfernalTrove from './assets/InfernalTrove.webp';
@@ -15,7 +14,6 @@ export const roomObjectArtwork: Readonly<Record<string, string | null>> = {
   purgingPool: iconPoolOfPurging,
   hermesShrine: iconHermesShrine,
   keepsakeRack: iconKeepsakeRack,
-  challengeSwitch: iconChallengeSwitch,
   infernalTrove: iconInfernalTrove,
   moonMonument: iconMoonMonument,
   unseenSigil: iconUnseenSigil,

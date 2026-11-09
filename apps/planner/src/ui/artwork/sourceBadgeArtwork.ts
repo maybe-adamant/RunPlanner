@@ -2,6 +2,7 @@ import type { AcquisitionEntrySourceFamily } from '@run-planner/engine/authored-
 import type { ChallengeSwitchKind } from '@run-planner/engine/catalog-schema';
 
 import { npcBoonArtwork } from './npc-boons/npcBoonArtwork';
+import artificerBadge from './source-badges/assets/ArtificerBadge.webp';
 import { challengeSwitchIcon, roomObjectIcon, sourceFamilyIcon } from './roomArtwork';
 
 /**
@@ -22,11 +23,14 @@ export function pickupSourceBadgeIcon(
         npcBoonArtwork[family.effect === 'lastReward' ? 'EchoLastReward' : 'EchoDoubleShop'] ??
         sourceFamilyIcon(family)
       );
+    // The Artificer's art is a tall Arcana card; its badge is a square crop of the hammer.
+    case 'artificer':
+      return artificerBadge;
     case 'hermesShrineDelivery':
       return roomObjectIcon('hermesShrine');
     case 'challengeSwitch':
       return challengeSwitchKind === undefined
-        ? roomObjectIcon('challengeSwitch')
+        ? undefined
         : challengeSwitchIcon(challengeSwitchKind);
     default:
       return sourceFamilyIcon(family);
