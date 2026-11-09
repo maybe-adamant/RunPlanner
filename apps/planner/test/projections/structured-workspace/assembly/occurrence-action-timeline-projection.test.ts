@@ -41,7 +41,10 @@ import type {
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 import { galleryCases } from '@planner-test/support/gallery/cases';
 import { buildGalleryProject } from '@planner-test/support/gallery/galleryCase';
-import { foldedBossDefeats } from '@planner/projections/structured-workspace/assembly/occurrence-action-timeline-projection';
+import {
+  foldedBossDefeats,
+  splitAtRoomStop,
+} from '@planner/projections/structured-workspace/assembly/occurrence-action-timeline-projection';
 
 function projectedWhere(
   project: ProjectDocument,
@@ -478,6 +481,37 @@ describe('a room whose walk stops in it', () => {
     const timeline = galleryTimeline('side-visit-repeat', 'surface-n-combat05');
     expect(timeline.notReached).toBeUndefined();
     expect(shape(timeline.entries)).toContain('cleanup');
+  });
+
+  it('keeps a reached stop only when it shows the engine entry or the end it folds into', () => {
+    type Engine = Parameters<typeof splitAtRoomStop>[1][number];
+    type Shown = Parameters<typeof splitAtRoomStop>[0][number];
+    const engine = (kind: string, phaseKey?: string): Engine =>
+      ({
+        kind: 'boundary',
+        boundary: { kind, key: phaseKey === undefined ? kind : `${kind}:${phaseKey}`, phaseKey },
+        rank: 1,
+        placement: 'before',
+      }) as unknown as Engine;
+    const shown = (entry: Engine): Shown => entry as unknown as Shown;
+    const keys = (split: ReturnType<typeof splitAtRoomStop>) =>
+      split?.reached.map((entry) => (entry.kind === 'boundary' ? entry.boundary.key : entry.kind));
+    const stopAt = { kind: 'timeline', entryIndex: 1, at: 'entry' } as const;
+    // The Boss defeat folds into its encounter end, which stays as the stop.
+    const boss = [
+      engine('roomEntered'),
+      engine('bossDefeated', 'Encounter'),
+      engine('encounterEnd', 'Encounter'),
+      engine('cleanup'),
+    ];
+    expect(
+      keys(splitAtRoomStop([boss[0]!, boss[2]!, boss[3]!].map(shown), boss, { roomStop: stopAt })),
+    ).toEqual(['roomEntered', 'encounterEnd:Encounter']);
+    // A later entry shown in place of the stop entry is not reached.
+    const start = [engine('roomEntered'), engine('encounterStart', 'Encounter'), engine('cleanup')];
+    expect(
+      keys(splitAtRoomStop([start[0]!, start[2]!].map(shown), start, { roomStop: stopAt })),
+    ).toEqual(['roomEntered']);
   });
 
   it('shows every phase of a room the walk passes', () => {

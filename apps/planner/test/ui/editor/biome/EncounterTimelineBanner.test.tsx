@@ -97,8 +97,12 @@ describe('Encounter Timeline banner', () => {
     const start = within(banner('Encounter started')).getByRole('group', { name: / start$/ });
     expect(within(start).getByRole('button', { name: 'No Death Defiance' })).toBeTruthy();
     expect(within(start).queryByRole('button', { name: /^Outcome/ })).toBeNull();
-    // The kill race is settled when the encounter ends.
-    const end = within(banner('Encounter ended')).getByRole('group', { name: / end$/ });
+    // The kill race is settled when the encounter ends. The Gorgon condition stops the walk at
+    // the encounter's start, so the end's authored events wait in Not reached yet.
+    expect(screen.queryByLabelText('Encounter ended')).toBeNull();
+    const end = within(screen.getByRole('region', { name: 'Not reached yet' })).getByRole('group', {
+      name: / end$/,
+    });
     // Its one outcome control is the end banner's only control.
     expect(within(end).getByRole('button', { name: /^Outcome/ })).toBeTruthy();
     expect(end.querySelectorAll('button, input, select')).toHaveLength(1);

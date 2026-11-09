@@ -148,8 +148,20 @@ export function splitAtRoomStop(
   };
   const stop = entries.findIndex(isUnreached);
   // A stop at its entry reached it (a banner whose contact blocks, a blocking row), so that
-  // entry, or the banner it folds into, stays as the stop to repair it there.
-  const cut = stop < 0 ? entries.length : roomStop.at === 'entry' ? stop + 1 : stop;
+  // entry, or the encounter end a Boss defeat folds into, stays as the stop to repair it there.
+  // Any other first unreached entry was not reached, so the stop never claims it.
+  const stopEntry = lifecycleEntries[roomStop.entryIndex];
+  const shown = entries[stop];
+  const showsStopEntry =
+    stopEntry !== undefined &&
+    shown !== undefined &&
+    (lifecycleEntryKey(shown) === lifecycleEntryKey(stopEntry) ||
+      (shown.kind === 'boundary' &&
+        stopEntry.kind === 'boundary' &&
+        foldedBossDefeats(lifecycleEntries).get(shown.boundary.key)?.key ===
+          stopEntry.boundary.key));
+  const cut =
+    stop < 0 ? entries.length : roomStop.at === 'entry' && showsStopEntry ? stop + 1 : stop;
   // Past the stop no banner stands for a row, so each row is its own.
   const asRow = (
     entry: Extract<NotReachedEntry, { readonly kind: 'action' }>,
