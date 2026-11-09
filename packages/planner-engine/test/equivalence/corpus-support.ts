@@ -8,6 +8,8 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
+  createRewardWheelAddress,
+  createRewardWheelOfferAddress,
   createRouteStartKeepsakeSelectionAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -28,7 +30,9 @@ import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
   createUnderworldFPoolCheckpoint,
+  createUnderworldFWellCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
+import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 import { assessTraitOption, createTraitHistoryState } from '../../src/simulation/traits';
 import { traitFrontierState } from '../support/simulation-state';
@@ -256,5 +260,45 @@ export function createEchoReplayUnresolvedHammerProject(): ProjectDocument {
       echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
     ),
     value: { rewardType: 'MaxHealthDrop' },
+  });
+}
+
+/**
+ * O's third Ship phase offers a Boon on Wheel 2 with no trait offer: the walk
+ * stops at that reached pickup, before the encounter's deferred end effects.
+ */
+export function createOShipWheelPickupBeforeDeferredEndEffectsProject(): ProjectDocument {
+  const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+  let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+    kind: 'ReplaceRewardWheelOfferCount',
+    wheel,
+    offerCount: 1,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceRewardWheelStore',
+    wheel,
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceRewardWheelOffer',
+    offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShipEncounterCount',
+    occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+    encounterCount: 3,
+  });
+}
+
+/** F's Postboss Travel Deal restocks a Boon rarity item the Well already sold: judged at the first purchase. */
+export function createFWellDuplicateRefillProject(): ProjectDocument {
+  return applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+    kind: 'ReplaceStygianWellTravelDealRefill',
+    occurrence: createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    ),
+    itemKey: 'TemporaryBoonRarityTrait',
   });
 }
