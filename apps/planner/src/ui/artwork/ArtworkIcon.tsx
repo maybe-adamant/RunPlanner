@@ -1,9 +1,9 @@
-import { artworkVisualCentreStyle } from './artworkVisualCentre';
+import { artworkVisualShapeStyle } from './artworkVisualShape';
 
 /** One icon, or a pair drawn as two overlapping halves of the same slot. */
 export type ArtworkSource = string | readonly [string | undefined, string | undefined];
 
-/** An icon slot that stays the same size when its icon is missing; a single icon sits on its visible centre. */
+/** An icon slot that stays the same size when its icon is missing; a single icon sits on its visible centre, enlarged when its visible shape is small. */
 export function ArtworkIcon({
   className,
   source,
@@ -14,7 +14,7 @@ export function ArtworkIcon({
   if (source === undefined) return <span className={className} aria-hidden="true" />;
   if (typeof source === 'string')
     return (
-      <img src={source} alt="" className={className} style={artworkVisualCentreStyle(source)} />
+      <img src={source} alt="" className={className} style={artworkVisualShapeStyle(source)} />
     );
   return (
     <span className={`${className} artwork-pair`} aria-hidden="true">
