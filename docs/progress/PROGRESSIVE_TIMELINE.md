@@ -4,9 +4,10 @@ Status: shape settled by the owner (2026-11-09); not started. Temporary plan;
 delete at delivery after promoting durable results.
 
 The room Timeline shows how far the room has settled, and pickups and objects
-are authored from a live row at the selected position. Builds on
-[Timeline insertion](TIMELINE_INSERTION.md); Part 2 of
-[spawned loot](ENCOUNTER_END_PICKUPS.md) follows it.
+are authored from a live row. Builds on the engine's insertion at any legal
+index (room action insert proposals, the purchase commands' optional index and
+their insertion-index query); Part 2 of [spawned loot](ENCOUNTER_END_PICKUPS.md)
+follows it.
 
 ## Progressive phases
 
@@ -33,19 +34,35 @@ are authored from a live row at the selected position. Builds on
 
 ## Live row
 
-- Shows what is live at the selected Timeline position: spawned and untaken
-  loot, plus the objects usable there. Clicking places the pickup or object
-  at that position, through the engine's insert-at-index commands and query.
-- Follows the selected row; by default it sits at the room's stop or end.
-  Selection is UI-session state, never history.
+- Shows what is live at a Timeline position: spawned and untaken loot, plus
+  the objects usable there. Clicking places the pickup or object at that
+  position, through the engine's insert-at-index commands and query.
+- By default it sits at the room's frontier (its stop or end). **Insert here**
+  (`+`) on any row or phase banner opens it right after that row, or at the
+  phase's start; which one is open is UI-session state, never history.
 - One per ship phase. Optional actions disappears into it.
+
+## Reset from here
+
+- **Reset from here** on a row removes this room's Timeline actions after it,
+  as one engine command, one edit and one Undo step, no dialog: the frontier
+  returns to that row. Door picks, encounter settings and other rooms are
+  untouched; later rooms re-settle.
+- Until Part 2, required pickups placed automatically return at once; the
+  reset fully restores the frontier only once automatic placement is off.
+
+## Row actions
+
+`+` and reset sit beside the trash can, in its quiet style, shown on the
+hovered or focused row only; the trash can keeps its current visibility.
 
 ## Order
 
 1. Progressive phases and Not reached yet (planner, over existing engine
    stop and reached-phase products; engine additions only if a reached-phase
    fact is missing).
-2. Live row, with automatic placement still on.
+2. Live row, Insert here and Reset from here, with automatic placement still
+   on.
 3. Part 2: automatic placement off for spawned loot, "Collect all required",
    the missing-pickup finding. Separate, revertible; starts with an inventory
    investigation recording the decision for each pickup kind.
