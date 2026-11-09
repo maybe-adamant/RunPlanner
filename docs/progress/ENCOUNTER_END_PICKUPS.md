@@ -63,8 +63,10 @@ and the spurned god's reward spawns afresh at the combat's end.
 ## Part 2: no automatic insertion (separate, revertible)
 
 - Edit settlement and default room state stop inserting spawned loot (room
-  reward collect, required deliveries, Echo gold); other required actions
-  (cage completions, unlock presses, fountain, Nemesis) keep theirs.
+  reward collect, required deliveries, Echo gold, and the optional pickup a
+  rushed Shrine purchase drops, which until then lands right after its
+  purchase); other required actions (cage completions, unlock presses,
+  fountain, Nemesis) keep theirs.
 - One generic "required pickups not collected" finding.
 - **Collect all required** on a notification places every remaining
   required pickup as a plain collect in spawn order, in one edit; optional

@@ -41,6 +41,9 @@ only at one engine-chosen slot. The live row (Timeline UI) and Part 2 of
 3. Object interactions take an optional index (Well and Shrine purchases,
    Shrine offer purchase, World Shop purchase participation and Travel Deal
    refill, challenge switch use, door unlock); absent keeps today's append.
+   A rushed Shrine purchase at a chosen index places the optional pickup it
+   drops immediately after it (owner 2026-11-09); Part 2 later stops placing
+   that pickup at all.
 4. The read side publishes the legal insertion indices for each of these, as
    the generic insert proposals do for optional rows, so the planner can offer
    a position without probing.
