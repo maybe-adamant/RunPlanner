@@ -9,11 +9,13 @@ import {
   createOccurrenceAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
+  createRewardWheelOfferAddress,
   hermesShrineDeliveryEntryKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
+  roomObjectAnchorSlotsForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
   spawnedLootForProjectEvaluationAssembly,
@@ -23,6 +25,7 @@ import {
 import {
   loadSurfaceNCheckpoint,
   loadSurfaceNOHermesShrineDeliveryCheckpoint,
+  loadSurfaceNOPQCheckpoint,
   loadSurfaceNQuickBuckCheckpoint,
   loadSurfaceNShrineSideRoomDeliveryCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
@@ -47,7 +50,11 @@ import {
   surfaceShrineDeliverySources,
 } from '@run-planner/test-fixtures/surface';
 import {
+  createEchoGoldIAnvilDuplicateProject,
+  createEchoTalentDropReplayProject,
   createFConversionFrontierProject,
+  echoGoldIDuplicateAnvilResult,
+  echoGoldIPrebossShopId,
   goldenFBiome,
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
@@ -457,5 +464,108 @@ describe('spawned loot', () => {
       'golden-f-preboss-shop',
     );
     expect(spawned.actionSpawns).toEqual([]);
+  });
+
+  it('spawns an O phase’s deliveries only once its wheel reward is collected', () => {
+    // Wheel 1 offers a Boon whose trait offer is unset: the walk stops at its pickup.
+    const project = applyProjectCommand(surfaceShrineDeliveriesProject(), catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    expect(moments(loot(project, 'O', oOccurrenceIds.combat04).spawned)).toEqual([
+      ['encounterEnd:Combat1', ['rewardWheel required #2']],
+    ]);
+  });
+
+  it('spawns Heracles’s bounty with the rest of an encounter end a due delivery blocks', () => {
+    const combat09 = nOccurrenceId('combat09');
+    const project = authorLegalTraitOffers(
+      applyProjectCommand(loadSurfaceNShrineSideRoomDeliveryCheckpoint(), catalog, {
+        kind: 'SelectEncounter',
+        phase: createEncounterPhaseAddress(
+          nBiome,
+          { kind: 'occurrence', occurrenceId: combat09 },
+          'Encounter',
+        ),
+        encounterKey: 'HeraclesCombatN',
+      }),
+    );
+    const { assembly, spawned } = loot(project, 'N', combat09);
+    const n = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
+    expect(n?.coverage.kind === 'prefix' ? n.coverage.roomStop : undefined).toMatchObject({
+      room: { occurrenceId: combat09 },
+      at: 'entry',
+    });
+    expect(moments(spawned)).toEqual([
+      [
+        'encounterEnd:Encounter',
+        [
+          'roomReward required #1',
+          'hermesShrineDelivery required unplaced:PlaceHermesShrineDelivery',
+          expect.stringMatching(/^heraclesBounty required #\d+$/),
+        ],
+      ],
+    ]);
+  });
+
+  it('lists Echo’s last reward under its encounter while the copy’s own choice is unset', () => {
+    const { spawned } = loot(createEchoTalentDropReplayProject(), 'H', 'golden-h-bridge01');
+    expect(actionSpawns(spawned)).toEqual([
+      ['interactEncounter', [expect.stringMatching(/^echo:lastReward /)]],
+    ]);
+  });
+
+  it('lists Gold Gold Gold’s duplicate under its purchase, its own result set or not', () => {
+    for (const project of [
+      createEchoGoldIAnvilDuplicateProject(),
+      createEchoGoldIAnvilDuplicateProject(echoGoldIDuplicateAnvilResult),
+    ])
+      expect(actionSpawns(loot(project, 'I', echoGoldIPrebossShopId).spawned)).toEqual([
+        ['interactShopOffer', [expect.stringMatching(/^echo:doubleShop /)]],
+      ]);
+  });
+
+  it('lists a rushed Shrine item only once the walk settles its purchase', () => {
+    const combat02 = createOccurrenceId('surface-o-combat02');
+    const shrine = createOccurrenceAddress(oBiome, combat02);
+    let project = loadSurfaceNOPQCheckpoint();
+    const place = roomObjectAnchorSlotsForProjectEvaluationAssembly(
+      catalog,
+      evaluate(project),
+      shrine,
+    )?.objects.find((object) => object.kind === 'hermesShrine')?.place;
+    if (place === undefined) throw new Error('O Combat02 cannot place a Hermes Shrine');
+    project = applyProjectCommand(project, catalog, place);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: shrine,
+      slotKey: 'first',
+      value: { rewardType: 'HealBigDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'PurchaseHermesShrineOffer',
+      occurrence: shrine,
+      generationKey: 'initial:first',
+      rushed: true,
+    });
+    // Its other offers unset, the walk stops at the room's Overview, before the purchase.
+    expect(loot(project, 'O', combat02).spawned.actionSpawns).toEqual([]);
+    for (const [slotKey, rewardType] of [
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'BlindBoxLoot'],
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: shrine,
+        slotKey,
+        value: { rewardType },
+      });
+    expect(actionSpawns(loot(project, 'O', combat02).spawned)).toEqual([
+      [
+        'purchaseHermesShrineOffer',
+        [expect.stringMatching(/^hermesShrineDelivery optional #\d+$/)],
+      ],
+    ]);
   });
 });

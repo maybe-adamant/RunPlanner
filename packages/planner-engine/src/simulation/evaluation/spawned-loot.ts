@@ -269,18 +269,15 @@ function insertion(
 /**
  * How far the walk went through a room's Timeline: every entry of a room it
  * walked through, none of a room its assessed history does not reach, and in
- * the room it stopped in, the entries before its stop. An entry at the stop is
- * reached but not settled: the walk blocks on its own contact there.
+ * the room it stopped in, the entries before its stop. An entry at an `entry`
+ * stop is blocking: the walk reached it and blocks on its own contact there.
  */
 interface RoomWalk {
-  /** The walk passed the entry. */
-  readonly settled: (entryIndex: number) => boolean;
-  /** The walk got to the entry, settled or blocking on it. */
-  readonly reached: (entryIndex: number) => boolean;
+  readonly entry: (entryIndex: number) => 'settled' | 'blocking' | 'unreached';
 }
 
 function roomWalk(assembly: ProjectEvaluationAssembly, occurrence: OccurrenceAddress): RoomWalk {
-  const all: RoomWalk = { settled: () => true, reached: () => true };
+  const all: RoomWalk = { entry: () => 'settled' };
   const biome = assembly.evaluation.route.biomes.find(
     (candidate) => candidate.biomeKey === occurrence.biomeKey,
   );
@@ -290,13 +287,16 @@ function roomWalk(assembly: ProjectEvaluationAssembly, occurrence: OccurrenceAdd
     'history' in biome &&
     !biome.history.rooms.some((room) => semanticAddressKey(room.origin) === key)
   )
-    return { settled: () => false, reached: () => false };
+    return { entry: () => 'unreached' };
   const stop = biome.coverage.roomStop;
   if (stop === undefined || semanticAddressKey(stop.room) !== key) return all;
   return {
-    settled: (entryIndex) => entryIndex < stop.entryIndex,
-    reached: (entryIndex) =>
-      entryIndex < stop.entryIndex || (entryIndex === stop.entryIndex && stop.at === 'entry'),
+    entry: (entryIndex) =>
+      entryIndex < stop.entryIndex
+        ? 'settled'
+        : entryIndex === stop.entryIndex && stop.at === 'entry'
+          ? 'blocking'
+          : 'unreached',
   };
 }
 
@@ -305,10 +305,11 @@ function roomWalk(assembly: ProjectEvaluationAssembly, occurrence: OccurrenceAdd
  * moment it appears or the action whose settlement spawns it. Items are what
  * spawned, from the active action domain and the reached due contacts, placed
  * or not; undefined for a room the evaluated biome does not enter. Only what
- * the walk produced is published: a moment once the walk reached its Timeline
- * boundary (an item still missing a choice there marks it on its own row), an
- * action's spawn once the walk settled that action, so nothing past the room's
- * stop and nothing from a source action still unresolved at it.
+ * the walk produced is published: a moment's items once the walk reaches its
+ * Timeline boundary, all together even while it blocks there (how each item
+ * resolves is its own row's question), and an action's spawn once the walk
+ * settled that action. Nothing past the room's stop and nothing from a source
+ * action still unresolved at it is listed.
  */
 export function spawnedLootForProjectEvaluationAssembly(
   catalog: Catalog,
@@ -439,8 +440,9 @@ export function spawnedLootForProjectEvaluationAssembly(
 
   const walk = roomWalk(assembly, occurrence);
   const entries = room.roomLifecycleTimeline.entries;
-  /** A boundary the room lacks is reached with its last entry. */
-  const boundaryReached = (kind: string, phaseKey?: string): boolean => {
+  type EntryState = ReturnType<RoomWalk['entry']>;
+  /** A boundary the room lacks stands at its last entry. */
+  const boundaryState = (kind: string, phaseKey?: string): EntryState => {
     const index = entries.findIndex(
       (entry) =>
         entry.kind === 'boundary' &&
@@ -448,63 +450,60 @@ export function spawnedLootForProjectEvaluationAssembly(
         (phaseKey === undefined ||
           ('phaseKey' in entry.boundary && entry.boundary.phaseKey === phaseKey)),
     );
-    return walk.reached(index >= 0 ? index : entries.length - 1);
+    return walk.entry(index >= 0 ? index : entries.length - 1);
   };
   /** An action the walk never ranks never runs, so it settles nothing. */
   const actionSettled = (reference: RoomActionReference): boolean => {
     const key = roomActionKey(reference);
     const index = entries.findIndex((entry) => entry.kind === 'action' && entry.action.key === key);
-    return index >= 0 && walk.settled(index);
+    return index >= 0 && walk.entry(index) === 'settled';
   };
-  const encounterEndReached = (phaseKey: string): boolean =>
+  const encounterEndState = (phaseKey: string): EntryState =>
     entries.some(
       (entry) =>
         entry.kind === 'boundary' &&
         entry.boundary.kind === 'encounterEnd' &&
         entry.boundary.phaseKey === phaseKey,
     )
-      ? boundaryReached('encounterEnd', phaseKey)
-      : boundaryReached('bossDefeated', phaseKey);
-  const momentReached = (kind: SpawnMomentKind, phaseKey: string | undefined): boolean => {
+      ? boundaryState('encounterEnd', phaseKey)
+      : boundaryState('bossDefeated', phaseKey);
+  const momentState = (kind: SpawnMomentKind, phaseKey: string | undefined): EntryState => {
     switch (kind) {
       case 'roomEntered':
       case 'deliveryFlush':
-        return boundaryReached('roomEntered');
+        return boundaryState('roomEntered');
       case 'encounterStart':
       case 'duringEncounter':
         return phaseKey === undefined
-          ? boundaryReached('roomEntered')
-          : boundaryReached('encounterStart', phaseKey);
+          ? boundaryState('roomEntered')
+          : boundaryState('encounterStart', phaseKey);
       case 'encounterEnd':
         return phaseKey === undefined
-          ? walk.reached(entries.length - 1)
-          : encounterEndReached(phaseKey);
+          ? walk.entry(entries.length - 1)
+          : encounterEndState(phaseKey);
       case 'afterEncounterReward': {
-        if (phaseKey === undefined) return walk.reached(entries.length - 1);
-        // A Ship wheel's end effects wait for its reward's pickup.
+        const end =
+          phaseKey === undefined ? walk.entry(entries.length - 1) : encounterEndState(phaseKey);
+        // A Ship wheel's end effects spawn only once its reward is collected.
         const wheelKey = structure.phases.find(
           (phase) => phase.phaseKey === phaseKey,
         )?.rewardWheelKey;
-        const reward =
-          wheelKey === undefined
-            ? undefined
-            : frozen({ kind: 'interactWheelReward' as const, wheelKey });
-        const rewardRanked =
-          reward !== undefined &&
-          entries.some(
-            (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(reward),
-          );
-        return encounterEndReached(phaseKey) && (!rewardRanked || actionSettled(reward));
+        const collected =
+          wheelKey !== undefined &&
+          actionSettled(frozen({ kind: 'interactWheelReward' as const, wheelKey }));
+        return collected ? end : 'unreached';
       }
     }
   };
+  /** Everything a moment spawns spawns together once the walk reaches it. */
+  const reached = (state: EntryState): boolean => state !== 'unreached';
 
   const moments = new Map<string, { kind: SpawnMomentKind; phaseKey?: string }>();
   const momentItems = new Map<string, SpawnedLootItem[]>();
   const momentKey = (kind: SpawnMomentKind, phaseKey?: string) =>
     phaseKey === undefined ? kind : `${kind}:${phaseKey}`;
   const add = (kind: SpawnMomentKind, phaseKey: string | undefined, item: SpawnedLootItem) => {
-    if (!momentReached(kind, phaseKey)) return;
+    if (!reached(momentState(kind, phaseKey))) return;
     const key = momentKey(kind, phaseKey);
     if (!moments.has(key)) moments.set(key, phaseKey === undefined ? { kind } : { kind, phaseKey });
     const items = momentItems.get(key) ?? [];
@@ -764,7 +763,7 @@ export function spawnedLootForProjectEvaluationAssembly(
   const unknown = [...moments.keys()].filter((key) => !chronology.includes(key));
   const spawnOrder = [...chronology, ...unknown].flatMap((key) => momentItems.get(key) ?? []);
   const unlocks = phaseKeys.flatMap((phaseKey) => {
-    if (!encounterEndReached(phaseKey)) return [];
+    if (!reached(encounterEndState(phaseKey))) return [];
     const key = unlockKey(phaseKey);
     const items = spawnOrder.filter((item) => item.lockedUntil === key);
     return items.length === 0
