@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createAcquisitionRoleAddress,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createAdditionalExitAddress,
   createEncounterPhaseAddress,
@@ -12,7 +13,9 @@ import {
   createShopOfferAddress,
   createLocalVisitOrderAddress,
   createExitSelectionAddress,
+  createPostbossKeepsakeSelectionAddress,
   createRewardWheelAddress,
+  createStartingRewardAddress,
   decodeProjectDocument,
   type RoomActionReference,
   type OccurrenceId,
@@ -57,8 +60,11 @@ import {
   loadUnderworldFGCheckpoint,
   loadUnderworldFGHICheckpoint,
   loadUnderworldFigLeafCheckpoint,
+  loadUnderworldTwistScyllaCheckpoint,
+  underworldCheckpointArtifacts,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
+  loadSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNOPQCheckpoint,
   loadSurfaceNSteadyGrowthFrontierCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
@@ -260,7 +266,10 @@ function biomeEvaluation(project: ProjectDocument, biomeKey: string) {
   return Object.freeze({ ...evaluation, coverage: evaluation.coverage });
 }
 
-/** The entry the walk stopped at in its blocked room, named by kind or row key; `end` past every entry. */
+/**
+ * The entry the walk stopped at in its blocked room, named by kind or row key (`end` past
+ * every entry), and whether the walk reached it.
+ */
 function stopAt(evaluation: ReturnType<typeof biomeEvaluation>) {
   const stop = evaluation.coverage.roomStop;
   if (stop === undefined) return undefined;
@@ -280,7 +289,8 @@ function stopAt(evaluation: ReturnType<typeof biomeEvaluation>) {
   return {
     room: stop.room.occurrenceId,
     kind: stop.kind,
-    at:
+    at: stop.at,
+    entry:
       entry === undefined
         ? 'end'
         : entry.kind === 'boundary'
@@ -1245,11 +1255,157 @@ describe('room stop', () => {
     });
   }
 
+  /** O's Trial with its due Hermes Shrine delivery not placed. */
+  function shrineDeliveryUnplaced() {
+    const project = loadSurfaceNOHermesShrineDeliveryCheckpoint();
+    const trial = createOccurrenceId('surface-o-devotion');
+    const delivery = project.route.biomes
+      .find((biome) => biome.biomeKey === 'O')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === trial)
+      ?.roomActions.order.find(
+        (reference) =>
+          reference.kind === 'interactAcquisitionEntry' &&
+          reference.siteKey === 'hermesShrineDelivery',
+      );
+    if (delivery === undefined) throw new Error('O Trial lost its Shrine delivery');
+    return applyProjectCommand(project, catalog, {
+      kind: 'UnplaceGeneratedDelivery',
+      action: createRoomActionAddress(oBiome, trial, roomActionKey(delivery)),
+    });
+  }
+
+  /** A Chaos room whose reward is taken as Time Piece, leaving its door store unavailable. */
+  function chaosTimePiece() {
+    let project = underworldCheckpointArtifacts['natural-chaos-unresolved-trial'].load();
+    const opening = createOccurrenceId('fixture-chaos-opening');
+    const target = createOccurrenceId('interaction-chaos-target');
+    const commands: readonly Parameters<typeof applyProjectCommand>[2][] = [
+      {
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      },
+      {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(
+          createIncomingRewardAddress(goldenFBiome, opening),
+          'source',
+        ),
+        value: {
+          kind: 'traits',
+          giverKey: 'Apollo',
+          options: [
+            { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+            { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+            { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option1',
+        },
+      },
+      {
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(goldenFBiome, source(opening)),
+        storeKey: 'MetaProgress',
+      },
+      {
+        kind: 'CreateTarget',
+        target: createTargetAddress(goldenFBiome, source(opening), 'exit1'),
+        occurrenceId: target,
+        gameName: 'F_Combat01',
+      },
+      {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(goldenFBiome, target),
+        value: { rewardType: 'MaxHealthDrop' },
+      },
+      {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        keepsakeKey: 'GoldifyKeepsake',
+      },
+      {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition: createAcquisitionRoleAddress(
+          createIncomingRewardAddress(goldenFBiome, createOccurrenceId('fixture-chaos-room')),
+          'self',
+        ),
+        value: { kind: 'timePiece' },
+      },
+    ];
+    for (const command of commands) project = applyProjectCommand(project, catalog, command);
+    return project;
+  }
+
+  const fPostboss = createOccurrenceId('golden-f-preboss-shop:postboss');
+  const wellPurchaseRow = roomActionKey({
+    kind: 'purchaseStygianWellOffer',
+    generationKey: 'initial:secondLeft',
+  });
+
+  /** F's Postboss buys a Fateful Twist whose result is not set. */
+  function unsetWellTwist() {
+    const owner = createOccurrenceAddress(goldenFBiome, fPostboss);
+    let project = loadUnderworldFGProject();
+    for (const [slotKey, itemKey] of [
+      ['healing', 'ArmorBoostStore'],
+      ['secondLeft', 'RandomStoreItem'],
+      ['secondRight', 'TemporaryBoonRarityTrait'],
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceStygianWellOffer',
+        occurrence: owner,
+        slotKey,
+        itemKey,
+      });
+    return applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: owner,
+      generationKey: 'initial:secondLeft',
+      purchased: true,
+    });
+  }
+
+  /** F's Postboss rack takes the Jeweled Pom without its equip result. */
+  function rackWithoutEquipResult() {
+    return applyProjectCommand(loadUnderworldFGCheckpoint(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(
+        createOccurrenceAddress(goldenFBiome, fPostboss),
+      ),
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
+    });
+  }
+
+  /** F's Postboss sells its Pool's left slot, whose trait is cleared. */
+  function poolSaleWithoutTrait() {
+    return applyProjectCommand(createUnderworldFPoolCheckpoint(), catalog, {
+      kind: 'ReplacePurgingPoolSlot',
+      occurrence: createOccurrenceAddress(goldenFBiome, fPostboss),
+      slotKey: 'left',
+      traitKey: null,
+    });
+  }
+  const poolSaleRow = roomActionKey({ kind: 'sellPurgingPoolTrait', slotKey: 'left' });
+
+  /** F's Postboss fountain used with a Phial and no rarity target. */
+  function fountainWithoutRarityTarget() {
+    return applyProjectCommand(loadUnderworldTwistScyllaCheckpoint(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'FountainRarityKeepsake',
+    });
+  }
+
   const cases: readonly (readonly [
     string,
     () => ProjectDocument,
     string,
-    { readonly room: string; readonly kind: string; readonly at: string },
+    {
+      readonly room: string;
+      readonly kind: string;
+      readonly at: 'entry' | 'before';
+      readonly entry: string;
+    },
   ])[] = [
     [
       'Overview: past Room entered, its entry effects reached',
@@ -1263,19 +1419,24 @@ describe('room stop', () => {
           },
         }),
       'P',
-      { room: prebossShop, kind: 'overview', at: 'cleanup' },
+      { room: prebossShop, kind: 'overview', at: 'before', entry: 'cleanup' },
     ],
     [
       'a Timeline row: the first row of the blocking product',
       failingQShopRefill,
       'Q',
-      { room: qOccurrenceIds.preboss, kind: 'timeline', at: roomActionKey(qRefillRow) },
+      {
+        room: qOccurrenceIds.preboss,
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey(qRefillRow),
+      },
     ],
     [
       'an unplaced required pickup: where the walk stopped, at its spawn after the encounter',
       () => withRoomActions(loadUnderworldFGCheckpoint(), 'F', 'golden-f-b1-e1', () => false),
       'F',
-      { room: 'golden-f-b1-e1', kind: 'timeline', at: 'cleanup' },
+      { room: 'golden-f-b1-e1', kind: 'timeline', at: 'before', entry: 'cleanup' },
     ],
     [
       'an unplaced Fields cage: the walk stops before that cage starts',
@@ -1294,10 +1455,15 @@ describe('room stop', () => {
           (reference) => reference.kind !== 'completeFieldsCage' || reference.phaseKey !== 'Cage03',
         ),
       'H',
-      { room: 'golden-h-combat02', kind: 'timeline', at: 'encounterStart:Cage03' },
+      {
+        room: 'golden-h-combat02',
+        kind: 'timeline',
+        at: 'before',
+        entry: 'encounterStart:Cage03',
+      },
     ],
     [
-      "an invalid door offer: the source room's doors opening",
+      "an invalid door offer: the source room's doors opening, reached",
       () =>
         applyProjectCommand(loadUnderworldFGCheckpoint(), catalog, {
           kind: 'ReplaceIncomingReward',
@@ -1305,10 +1471,10 @@ describe('room stop', () => {
           value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
         }),
       'F',
-      { room: 'golden-f-start', kind: 'timeline', at: 'cleanup' },
+      { room: 'golden-f-start', kind: 'timeline', at: 'entry', entry: 'cleanup' },
     ],
     [
-      'a phase-start contact: its own entry (Fig Leaf)',
+      'a phase-start contact: its own entry, reached (Fig Leaf)',
       () =>
         figLeafSkip(
           loadUnderworldFigLeafCheckpoint(),
@@ -1316,7 +1482,12 @@ describe('room stop', () => {
           createOccurrenceId('golden-f-b3-e1'),
         ),
       'F',
-      { room: 'golden-f-b3-e1', kind: 'timeline', at: 'encounterStart:Encounter' },
+      {
+        room: 'golden-f-b3-e1',
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'encounterStart:Encounter',
+      },
     ],
     [
       'a Hub side room phase-start contact (Fig Leaf)',
@@ -1334,11 +1505,12 @@ describe('room stop', () => {
       {
         room: nLocalOccurrenceId('combat02', 'sideDoor1'),
         kind: 'timeline',
-        at: 'encounterStart:Encounter',
+        at: 'entry',
+        entry: 'encounterStart:Encounter',
       },
     ],
     [
-      'Boss defeated: the first boundary not passed (Judgment)',
+      'Boss defeated: reached, blocked on its due Judgment',
       () =>
         applyProjectCommand(loadSurfaceNOProject(), catalog, {
           kind: 'ReplaceManualArcanaSelection',
@@ -1346,36 +1518,121 @@ describe('room stop', () => {
           arcanaKeys: ['CastCount'],
         }),
       'N',
-      { room: 'surface-n-preboss:boss', kind: 'timeline', at: 'bossDefeated:Encounter' },
+      {
+        room: 'surface-n-preboss:boss',
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'bossDefeated:Encounter',
+      },
     ],
     [
-      "an encounter end's due outcome: that end (Steady Growth, Hub main room)",
+      "an encounter end's due outcome: that end, reached (Steady Growth, Hub main room)",
       loadSurfaceNSteadyGrowthFrontierCheckpoint,
       'N',
-      { room: 'surface-n-combat11', kind: 'timeline', at: 'encounterEnd:Encounter' },
+      {
+        room: 'surface-n-combat11',
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'encounterEnd:Encounter',
+      },
     ],
     [
-      'a Ship wheel offer: its next phase',
+      "a Ship wheel offer: the wheel's own row, past its next phase",
       partialWheel,
       'O',
-      { room: oOccurrenceIds.combat07, kind: 'timeline', at: 'nextPhase' },
+      {
+        room: oOccurrenceIds.combat07,
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
+      },
     ],
     [
       'exit work after the room committed (a locked door taken)',
       lockedExitTaken,
       'G',
-      { room: 'golden-g-b1-e1', kind: 'exit', at: 'end' },
+      { room: 'golden-g-b1-e1', kind: 'exit', at: 'before', entry: 'end' },
     ],
     [
       'exit work as a restored room departs again (a repeated side visit)',
       repeatedSideVisit,
       'N',
-      { room: 'surface-n-combat05', kind: 'exit', at: 'end' },
+      { room: 'surface-n-combat05', kind: 'exit', at: 'before', entry: 'end' },
+    ],
+    [
+      "an encounter end's due Shrine delivery not placed: that end, reached",
+      shrineDeliveryUnplaced,
+      'O',
+      {
+        room: 'surface-o-devotion',
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'encounterEnd:Encounter',
+      },
+    ],
+    [
+      "the doors' store unavailable at generation: the doors opening, reached (Chaos)",
+      chaosTimePiece,
+      'F',
+      { room: 'fixture-chaos-room', kind: 'timeline', at: 'entry', entry: 'cleanup' },
+    ],
+    [
+      'a Well Twist result unset: its purchase row',
+      unsetWellTwist,
+      'F',
+      { room: fPostboss, kind: 'timeline', at: 'entry', entry: wellPurchaseRow },
+    ],
+    [
+      "a Postboss rack's equip result unset: the rack row",
+      rackWithoutEquipResult,
+      'F',
+      {
+        room: fPostboss,
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey({ kind: 'interactKeepsakeRack' }),
+      },
+    ],
+    [
+      "a Pool sale's trait unset: the sale row whose own contact blocks",
+      poolSaleWithoutTrait,
+      'F',
+      { room: fPostboss, kind: 'timeline', at: 'entry', entry: poolSaleRow },
+    ],
+    [
+      "a Postboss fountain's rarity outcome unset: the fountain row",
+      fountainWithoutRarityTarget,
+      'F',
+      {
+        room: fPostboss,
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey({ kind: 'useFountain' }),
+      },
     ],
   ];
 
   it.each(cases)('%s', (_name, build, biomeKey, expected) => {
     expect(stopAt(biomeEvaluation(build(), biomeKey))).toEqual(expected);
+  });
+
+  it.each([
+    ['a Well Twist', unsetWellTwist, [wellPurchaseRow]],
+    [
+      'a rack equip result',
+      rackWithoutEquipResult,
+      [roomActionKey({ kind: 'interactKeepsakeRack' })],
+    ],
+    ['a Pool sale', poolSaleWithoutTrait, [poolSaleRow]],
+    [
+      'a fountain rarity outcome',
+      fountainWithoutRarityTarget,
+      [roomActionKey({ kind: 'useFountain' })],
+    ],
+  ] as const)('marks the row that settles %s, where the walk stops', (_name, build, rows) => {
+    const evaluation = biomeEvaluation(build(), 'F');
+    expect(evaluation.coverage.roomTimeline?.blockingRowKeys).toEqual(rows);
+    expect(stopAt(evaluation)?.entry).toBe(rows[0]);
   });
 
   it('publishes no stop for a settled route', () => {

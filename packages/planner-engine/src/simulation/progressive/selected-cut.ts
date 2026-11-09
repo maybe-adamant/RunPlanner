@@ -16,6 +16,7 @@ import { createBiomeCandidateArtifacts } from '../evaluation/candidate-artifacts
 import {
   assessmentRepairOwner,
   overviewRegion,
+  ownerRegion,
   type FindingRegionEntry,
   type HistoryFindingChronology,
 } from '../finding-regions';
@@ -689,7 +690,8 @@ function exitFrontier(
 
 /**
  * The Timeline rows the blocking region owns, whether or not a row carries a
- * finding: every row that settles an owner of the region.
+ * finding: every row that settles an owner of the region, and the row whose
+ * own contact the region is (a reroll's list, a Pool sale).
  */
 function blockingRowKeys(
   room: CanonicalAuthoredRoom,
@@ -703,7 +705,9 @@ function blockingRowKeys(
   );
   return Object.freeze(
     room.roomLifecycleTimeline.entries.flatMap((entry) =>
-      entry.kind === 'action' && owners.some((owner) => roomActionOwns(entry.action, owner))
+      entry.kind === 'action' &&
+      (ownerRegion(entry.action.owner) === regionKey ||
+        owners.some((owner) => roomActionOwns(entry.action, owner)))
         ? [entry.action.key]
         : [],
     ),
@@ -716,7 +720,9 @@ function blockingRowKeys(
  * the room committed or when a restored room departs again, past every entry.
  * A Timeline block stops at the first row of its blocking product, else at the
  * blocking contact's own entry, at Doors open for a contact inside the doors
- * opening, or just past the last boundary the walk passed before the contact.
+ * opening, at a boundary whose own event is the contact, or just past the last
+ * boundary the walk passed before the contact. Only that last stop is before
+ * its entry; every other Timeline stop reached its entry and blocks on it.
  */
 function roomStop(
   catalog: Catalog,
@@ -728,14 +734,18 @@ function roomStop(
   if (block.owner.kind === 'start' || block.owner.kind === 'hub') return undefined;
   const room = block.owner.room;
   const entries = room.roomLifecycleTimeline.entries;
-  const stop = (kind: RoomStopCoverage['kind'], entryIndex: number): RoomStopCoverage =>
-    Object.freeze({ room: room.origin, kind, entryIndex });
+  const stop = (
+    kind: RoomStopCoverage['kind'],
+    entryIndex: number,
+    at: RoomStopCoverage['at'],
+  ): RoomStopCoverage => Object.freeze({ room: room.origin, kind, entryIndex, at });
   if (!block.timeline)
     return stop(
       'overview',
       entries.findIndex(
         (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'roomEntered',
       ) + 1,
+      'before',
     );
   const position = blockPosition(located);
   const roomKey = key(room.origin);
@@ -748,30 +758,41 @@ function roomStop(
     throw new BiomeMaterializationContractError(
       `${room.gameName} has unknown lifecycle profile ${room.lifecycleProfileKey}`,
     );
+  const ownEvent = (event: HistoryEvent): event is LifecycleEvent =>
+    lifecycleEvent(event) &&
+    key(event.origin) === roomKey &&
+    event.sequence > (arrivalEvent?.sequence ?? Number.NEGATIVE_INFINITY);
   // The room's events the walk passed before the contact; an event at it is passed only after it.
   const passed = history.events.filter(
     (event): event is LifecycleEvent =>
-      lifecycleEvent(event) &&
-      key(event.origin) === roomKey &&
-      event.sequence > (arrivalEvent?.sequence ?? Number.NEGATIVE_INFINITY) &&
+      ownEvent(event) &&
       (event.sequence < position.sequence ||
         (event.sequence === position.sequence && position.boundary === 'after')),
   );
+  // The room's event the contact lies at: the walk reached it and blocks on it.
+  const atContact =
+    position.boundary === 'at'
+      ? history.events.find(
+          (event): event is LifecycleEvent =>
+            ownEvent(event) && event.sequence === position.sequence,
+        )
+      : undefined;
   if (
     arrivalEvent?.kind === 'roomRestored' ||
     passed.some((event) => event.kind === 'roomCommitted')
   )
-    return stop('exit', entries.length);
+    return stop('exit', entries.length, 'before');
   const firstRow = entries.findIndex(
     (entry) => entry.kind === 'action' && rowKeys?.includes(entry.action.key) === true,
   );
-  if (firstRow >= 0) return stop('timeline', firstRow);
+  if (firstRow >= 0) return stop('timeline', firstRow, 'entry');
   if (
     located.roomOccurrenceId === room.occurrenceId &&
     located.roomTimelineIndex !== undefined &&
-    located.roomTimelineIndex >= 0
+    located.roomTimelineIndex >= 0 &&
+    located.roomTimelineIndex < entries.length
   )
-    return stop('timeline', Math.min(located.roomTimelineIndex, entries.length));
+    return stop('timeline', located.roomTimelineIndex, 'entry');
   const cleanup = entries.findIndex(
     (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
   );
@@ -784,18 +805,38 @@ function roomStop(
     (operation) => operation.kind === 'settleAcquisitionPoint' || operation.kind === 'commitRoom',
   );
   const generated = generation >= 0 && passed.some((event) => event.operationIndex >= generation);
-  // A door's generation or offer blocks inside the doors opening. A missing Timeline
-  // action blocks only after the doors opened (its window follows outgoing generation).
+  // A door's generation or offer, or the store they draw from, blocks inside the doors
+  // opening. A missing Timeline action blocks only after the doors opened (its window
+  // follows outgoing generation).
   if (
-    generated &&
+    (generated || (generation >= 0 && atContact?.operationIndex === generation)) &&
     located.finding.origin.kind !== 'roomAction' &&
     !passed.some((event) => event.operationIndex > generation)
   )
-    return stop('timeline', cleanup);
-  const phaseEvent = (kind: HistoryEvent['kind'], phaseKey: string) =>
-    passed.some(
-      (event) => event.kind === kind && 'phaseKey' in event && event.phaseKey === phaseKey,
-    );
+    return stop('timeline', cleanup, 'entry');
+  const phaseEvent = (kind: HistoryEvent['kind'], phaseKey: string, event: HistoryEvent) =>
+    event.kind === kind && 'phaseKey' in event && event.phaseKey === phaseKey;
+  /** Whether an event is the boundary's own: the walk settles that boundary with it. */
+  const boundaryEvent = (index: number, event: LifecycleEvent): boolean => {
+    const entry = entries[index];
+    if (entry?.kind !== 'boundary') return false;
+    const boundary = entry.boundary;
+    switch (boundary.kind) {
+      case 'roomEntered':
+        return event.kind === 'roomEntered';
+      case 'encounterStart':
+        return phaseEvent('encounterStarted', boundary.phaseKey, event);
+      case 'bossDefeated':
+        return phaseEvent('bossDefeated', boundary.phaseKey, event);
+      case 'encounterEnd':
+        return phaseEvent('encounterEndEffectsApplied', boundary.phaseKey, event);
+      case 'nextPhase':
+        // A wheel's offers materialize as its next phase gets ready.
+        return event.kind === 'offerPointMaterialized';
+      case 'cleanup':
+        return false;
+    }
+  };
   const boundaryPassed = (index: number): boolean => {
     const entry = entries[index];
     if (entry?.kind !== 'boundary') return true;
@@ -804,11 +845,9 @@ function roomStop(
       case 'roomEntered':
         return true;
       case 'encounterStart':
-        return phaseEvent('encounterStarted', boundary.phaseKey);
       case 'bossDefeated':
-        return phaseEvent('bossDefeated', boundary.phaseKey);
       case 'encounterEnd':
-        return phaseEvent('encounterEndEffectsApplied', boundary.phaseKey);
+        return passed.some((event) => boundaryEvent(index, event));
       case 'nextPhase': {
         // The next phase is ready once its encounter starts.
         const start = entries.findIndex(
@@ -828,10 +867,12 @@ function roomStop(
   const unpassed = entries.findIndex(
     (entry, index) => entry.kind === 'boundary' && !boundaryPassed(index),
   );
+  if (unpassed >= 0 && atContact !== undefined && boundaryEvent(unpassed, atContact))
+    return stop('timeline', unpassed, 'entry');
   const lastPassed = entries.findLastIndex(
     (entry, index) => entry.kind === 'boundary' && (unpassed < 0 || index < unpassed),
   );
-  return stop('timeline', lastPassed + 1);
+  return stop('timeline', lastPassed + 1, 'before');
 }
 
 /**

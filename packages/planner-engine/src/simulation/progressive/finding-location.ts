@@ -716,12 +716,15 @@ function locateStructuralOwner(
   });
 }
 
-/** Whether a Timeline action row is the one that settles this owner. */
-export function roomActionOwns(
-  action: CanonicalAuthoredRoom['roomActionRoster']['rows'][number],
-  address: SemanticAddress,
-): boolean {
+type RoomActionRow = CanonicalAuthoredRoom['roomActionRoster']['rows'][number];
+
+/**
+ * Whether a Timeline action row is one that settles this owner: the row itself,
+ * the acquisition or reward it settles, or a room-local owner it settles.
+ */
+export function roomActionOwns(action: RoomActionRow, address: SemanticAddress): boolean {
   if (address.kind === 'roomAction') return action.key === address.actionKey;
+  if (roomLocalOwnerSettledBy(action, address)) return true;
   const owner = semanticAddressKey(action.owner);
   const role = acquisitionRoleAncestor(address);
   const reward = rewardOwnerAddress(address);
@@ -730,6 +733,59 @@ export function roomActionOwns(
     (role !== undefined && owner === semanticAddressKey(role)) ||
     (reward !== undefined && owner === semanticAddressKey(reward))
   );
+}
+
+/**
+ * The room-local owners a row settles: the Keepsake Rack its selection and equip
+ * result, a fountain use its rarity outcome, a Well purchase the item at its
+ * generation with its Fateful Twist, and a Shrine purchase its initial item. A
+ * Shrine Travel Deal refill is realized by an earlier rush, and a Pool list is
+ * judged as the fountain opens it or by its own sale, so no row settles them here.
+ */
+function roomLocalOwnerSettledBy(action: RoomActionRow, address: SemanticAddress): boolean {
+  const reference = action.reference;
+  const room = occurrenceOwnerAddress(action.owner);
+  const inRoom = (occurrence: SemanticAddress | undefined) =>
+    room !== undefined &&
+    occurrence !== undefined &&
+    semanticAddressKey(room) === semanticAddressKey(occurrence);
+  switch (address.kind) {
+    case 'fountainRarityOutcome':
+      return address.action.kind === 'roomAction' && roomActionOwns(action, address.action);
+    case 'keepsakeSelection':
+      return (
+        address.owner !== 'routeStart' &&
+        reference.kind === 'interactKeepsakeRack' &&
+        inRoom(address.owner)
+      );
+    case 'keepsakeEquipResult':
+      return (
+        address.selection.kind === 'keepsakeSelection' &&
+        roomLocalOwnerSettledBy(action, address.selection)
+      );
+    case 'roomFeature': {
+      if (!inRoom(occurrenceOwnerAddress(address))) return false;
+      const target = address.target;
+      switch (target.kind) {
+        case 'stygianWellOffer':
+        case 'stygianWellTwist':
+          return (
+            reference.kind === 'purchaseStygianWellOffer' &&
+            reference.generationKey === target.generationKey
+          );
+        case 'hermesShrineOffer':
+          return (
+            target.generationKey !== 'travelDealRefill' &&
+            reference.kind === 'purchaseHermesShrineOffer' &&
+            reference.generationKey === target.generationKey
+          );
+        default:
+          return false;
+      }
+    }
+    default:
+      return false;
+  }
 }
 
 /** Shared finding/edit locator over materialization's existing timeline and Hub phases. */
