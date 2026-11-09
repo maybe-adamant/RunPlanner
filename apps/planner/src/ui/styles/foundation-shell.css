@@ -354,17 +354,22 @@ input[type='checkbox']:checked:disabled {
   gap: var(--badged-chip-gap);
 }
 
-/* Elsewhere a badged icon keeps room for its overhang before what follows it. */
-:has(> .corner-badge):not(
-  :is(
-      .timeline-chip-group,
-      .spawned-loot-group,
-      .fields-cage-order-chips,
-      .icon-toggle-row,
-      .trait-option-level-sources,
-      .draft-toggle-row
-    )
-    *
+/*
+ * Elsewhere a badged icon keeps room for its overhang before what follows it; at no
+ * specificity, so a component's own margin still wins.
+ */
+:where(
+  :has(> .corner-badge):not(
+    :is(
+        .timeline-chip-group,
+        .spawned-loot-group,
+        .fields-cage-order-chips,
+        .icon-toggle-row,
+        .trait-option-level-sources,
+        .draft-toggle-row
+      )
+      *
+  )
 ) {
   margin-inline-end: calc(var(--badge-overhang) * var(--badge-size));
 }
