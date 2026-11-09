@@ -167,6 +167,13 @@ deferred items spawn only after the wheel reward is collected.
   past the god cap, a Purging Pool sale of a trait that cannot be sold, a row
   out of order) stays visible with a finding to repair or remove it. The
   Purging Pool sale is reclassified from stale to invalid.
+- A reward swap re-keys its pickup rows in place: settlement pairs the old
+  rows with the reward's new pickup roles by the catalog's declared role
+  order, keeping each row's position; leftover old rows are removed and new
+  roles placed at their default. Rows of the owner an edit addresses change
+  silently; only rows orphaned elsewhere are announced.
+- Rooms the run stops entering keep their rows (an unselected leaf keeps its
+  room-local state, as reanchoring does); cleanup applies to entered rooms.
 - Reset from here is a clean slate: before the Postboss keepsake rack it also
   returns the rack's keepsake choice to its default (keep the held keepsake).
 
