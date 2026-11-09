@@ -1598,28 +1598,43 @@ export const galleryCases: readonly GalleryCase[] = [
     commands: [unofferableRarity('H', 'golden-h-combat05', 'source', 'cage3')],
     target: room('H', 'golden-h-combat05'),
   },
-  ...(['shipIntroActions', 'shipCombat1Actions'] as const).map(
-    (roomTab): GalleryCase => ({
-      id: `progressive-stop-ship-${roomTab.replace('ship', '').replace('Actions', '').toLowerCase()}`,
-      roomTab,
-      label: `Ship room stopped at its first wheel reward, a boon not offered yet: ${roomTab}`,
-      shows: ['stop at a row', 'Not reached yet per phase', 'no later phase banners'],
-      project: loadSurfaceEncounterShowcaseCheckpoint,
-      commands: [
-        (project) => ({
-          kind: 'ReplaceRewardWheelOffer',
-          offer: createRewardWheelOfferAddress(
-            createBiomeAddress(project.route.routeKey, 'O'),
-            createOccurrenceId('surface-o-combat04'),
-            'wheel1',
-            'offer1',
-          ),
-          value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
-        }),
-      ],
-      target: room('O', 'surface-o-combat04'),
-    }),
-  ),
+  ...(['shipIntroActions', 'shipCombat1Actions'] as const).map((roomTab): GalleryCase => ({
+    id: `progressive-stop-ship-${roomTab.replace('ship', '').replace('Actions', '').toLowerCase()}`,
+    roomTab,
+    label: `Ship room stopped at its first wheel reward, a boon not offered yet: ${roomTab}`,
+    shows: ['stop at a row', 'Not reached yet per phase', 'no later phase banners'],
+    project: loadSurfaceEncounterShowcaseCheckpoint,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceRewardWheelOffer',
+        offer: createRewardWheelOfferAddress(
+          createBiomeAddress(project.route.routeKey, 'O'),
+          createOccurrenceId('surface-o-combat04'),
+          'wheel1',
+          'offer1',
+        ),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      }),
+    ],
+    target: room('O', 'surface-o-combat04'),
+  })),
+  {
+    id: 'progressive-stop-door-offer',
+    label: 'Room stopped at its doors opening: a door reward with no offer chosen',
+    shows: ['stop at Doors open', 'doors kept for repair', 'Not reached yet'],
+    project: loadUnderworldFGCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(
+          createBiomeAddress('Underworld', 'F'),
+          createOccurrenceId('golden-f-b1-e1'),
+        ),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+      },
+    ],
+    target: room('F', 'golden-f-start'),
+  },
   {
     id: 'progressive-stop-ephyra',
     label: 'Ephyra main room stopped at its reward: doors and side visits waiting',

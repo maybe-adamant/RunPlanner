@@ -589,7 +589,7 @@ export function assembleWorkspaceBiomeSemantics(
     const blockingRowKeys = source.blockingRowKeys(
       createOccurrenceAddress(biome, request.occurrence.occurrenceId),
     );
-    const stoppedInOverview = source.stoppedInOverview(
+    const roomStop = source.roomStop(
       createOccurrenceAddress(biome, request.occurrence.occurrenceId),
     );
     const bossDoorRewardStore = bossDoorRewardStoreControl(request.occurrence.occurrenceId);
@@ -649,7 +649,7 @@ export function assembleWorkspaceBiomeSemantics(
       ...(fountainRarityAssessment === undefined ? {} : { fountainRarityAssessment }),
       isActiveTraitOffer: source.isActiveTraitOffer,
       ...(blockingRowKeys === undefined ? {} : { blockingRowKeys }),
-      ...(stoppedInOverview ? { stoppedInOverview: true as const } : {}),
+      ...(roomStop === undefined ? {} : { roomStop }),
       judgmentArcanaCapability,
       figurineArcanaCapability,
       keepsakeEquipResultSupported,

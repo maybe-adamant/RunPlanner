@@ -450,6 +450,24 @@ describe('a room whose walk stops in it', () => {
     expect(shape(timeline.notReached ?? [])).toEqual(['action']);
   });
 
+  it('ends before the doors open while a required pickup is not placed', () => {
+    const timeline = galleryTimeline('required-unplaced', 'golden-f-b1-e1');
+    expect(shape(timeline.entries)).toEqual(['roomEntered', 'encounterStart', 'encounterEnd']);
+    expect(timeline.notReached).toEqual([]);
+  });
+
+  it('keeps the doors opening as its stop when a door offer blocks', () => {
+    const timeline = galleryTimeline('progressive-stop-door-offer', 'golden-f-start');
+    expect(shape(timeline.entries).at(-1)).toBe('cleanup');
+    expect(timeline.notReached).toBeDefined();
+  });
+
+  it('shows every entry when it stops only in its exit work', () => {
+    const timeline = galleryTimeline('side-visit-repeat', 'surface-n-combat05');
+    expect(timeline.notReached).toBeUndefined();
+    expect(shape(timeline.entries)).toContain('cleanup');
+  });
+
   it('shows every phase of a room the walk passes', () => {
     const timeline = galleryTimeline('boon-offer-picked', 'golden-f-start');
     expect(timeline.notReached).toBeUndefined();

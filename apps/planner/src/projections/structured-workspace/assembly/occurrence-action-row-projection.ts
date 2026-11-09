@@ -111,8 +111,8 @@ export interface WorkspaceOccurrenceActionsInput {
   readonly gold?: import('@run-planner/engine/simulation').GoldLedger;
   /** Engine-published Timeline rows of the product this room's assessment stops at. */
   readonly blockingRowKeys?: ReadonlySet<string>;
-  /** The room's assessment stops in its Overview: its Timeline waits past entry. */
-  readonly stoppedInOverview?: true;
+  /** Where the walk stopped inside this room, when the assessment blocks in it. */
+  readonly roomStop?: import('../source-index').WorkspaceRoomStop;
   readonly rerollTargetLabel?: import('./occurrence-action-label').WorkspaceDoorRerollTargetLabel;
   /** The loot the room spawns on its own, by moment and source action. */
   readonly spawnedLoot?: import('@run-planner/engine/simulation').RoomSpawnedLoot;
@@ -1114,7 +1114,7 @@ function roomActionsForOccurrence(
     unplacedOptionalRows.filter((row) => !spawnPlacedKeys.has(row.key)),
   );
   // The Timeline ends where the room's walk stops; what spawns past it is not yet shown.
-  const stop = splitAtRoomStop(spawned.entries, input);
+  const stop = splitAtRoomStop(spawned.entries, lifecycleTimeline.entries, input);
   return Object.freeze({
     timeline: Object.freeze({
       ...projectedTimeline,

@@ -408,9 +408,15 @@ export function RoomActionsWorkbench({
                   }),
               }),
         };
-  // A room whose walk stops in it has not reached its doors; a saved end keeps its last row.
-  const doorsTail = (hasDoorsOpenRow: boolean): ReactNode =>
-    roomDoors === undefined ? null : actions?.timeline.notReached !== undefined ? (
+  // A room whose walk stops in it has not reached its doors, unless it stops at their opening,
+  // which keeps its doors and Leave row to repair; a saved end keeps its last row.
+  const doorsTail = (timeline: readonly WorkspaceRoomLifecycleTimelineEntry[]): ReactNode => {
+    const opensDoorsHere = (entry: WorkspaceRoomLifecycleTimelineEntry | undefined) =>
+      entry?.kind === 'boundary' && entry.boundary.kind === 'cleanup';
+    const hasDoorsOpenRow = timeline.some(opensDoorsHere);
+    const stopsAtDoors = opensDoorsHere(timeline.at(-1));
+    return roomDoors === undefined ? null : actions?.timeline.notReached !== undefined &&
+      !stopsAtDoors ? (
       roomDoors.endsPlan === true ? (
         roomDoors.leave
       ) : null
@@ -422,6 +428,7 @@ export function RoomActionsWorkbench({
         {roomDoors.leave}
       </>
     );
+  };
   if (actions === undefined && mode.kind === 'roomTimeline') {
     if ((encounterPhases === undefined || idPrefix === undefined) && roomDoors === undefined)
       return null;
@@ -439,7 +446,7 @@ export function RoomActionsWorkbench({
           <>
             <div className="room-timeline-main">
               <ol aria-label="Room timeline" className="room-action-list">
-                {doorsTail(false)}
+                {doorsTail([])}
               </ol>
             </div>
             {/* Its notes and Doors object stay beside the doors without any room actions. */}
@@ -642,8 +649,6 @@ export function RoomActionsWorkbench({
     if (opensBefore < 0) return [...timeline, 'wheelOpen'];
     return [...timeline.slice(0, opensBefore), 'wheelOpen', ...timeline.slice(opensBefore)];
   };
-  const opensDoors = (timeline: readonly WorkspaceRoomLifecycleTimelineEntry[]): boolean =>
-    timeline.some((entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup');
   const renderRow = (
     row: WorkspaceRoomActions['rows'][number],
     checkpoints: WorkspaceRoomActions['checkpoints'] = actions?.checkpoints ?? [],
@@ -1199,7 +1204,7 @@ export function RoomActionsWorkbench({
                             label={<strong>{checkpoint.label}</strong>}
                           />
                         ))}
-                        {doorsTail(opensDoors(phase.timeline))}
+                        {doorsTail(phase.timeline)}
                       </ol>
                     )}
                     {phase.notReached === undefined || phase.notReached.length === 0 ? null : (
@@ -1298,7 +1303,7 @@ export function RoomActionsWorkbench({
         <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
           {timelineRows}
           {rankedRows.length === 0 ? checkpointRows(0) : null}
-          {doorsTail(opensDoors(actions.timeline.entries))}
+          {doorsTail(actions.timeline.entries)}
         </ol>
         {(actions.timeline.notReached?.length ?? 0) === 0 ? null : (
           <NotReachedGroup>

@@ -103,32 +103,58 @@ function authoredBannerEvents(
     : undefined;
 }
 
+/** One lifecycle entry's identity, shared by the engine's Timeline and its projection. */
+function lifecycleEntryKey(
+  entry: RoomLifecycleTimeline['entries'][number] | WorkspaceRoomLifecycleTimelineEntry,
+): string | undefined {
+  switch (entry.kind) {
+    case 'boundary':
+      return `boundary:${entry.boundary.key}`;
+    case 'action':
+      return `action:${'action' in entry ? entry.action.key : entry.actionKey}`;
+    case 'automaticEffect':
+      return `effect:${semanticAddressKey(entry.address)}`;
+    case 'spawned':
+      return undefined;
+  }
+}
+
 /**
- * Splits a room's Timeline at the stop the engine publishes for it: just past entry when its
- * Overview blocks, or at the first row of the blocking product. The blocking rows stay at the
- * stop for repair; the authored rows after it wait, without their banners, until the walk
- * reaches them. Undefined while the walk passes through the room or names no row to stop at.
+ * Splits a room's Timeline at the stop the engine publishes for it: the entries before its
+ * first unreached lifecycle entry are reached. The blocking rows stay at the stop for repair;
+ * the authored rows after it wait, without their banners, until the walk reaches them.
+ * Undefined while the walk passes through the room or stops only in its exit work.
  */
 export function splitAtRoomStop(
   entries: readonly WorkspaceRoomLifecycleTimelineEntry[],
-  input: Pick<WorkspaceOccurrenceActionsInput, 'blockingRowKeys' | 'stoppedInOverview'>,
+  lifecycleEntries: RoomLifecycleTimeline['entries'],
+  input: Pick<WorkspaceOccurrenceActionsInput, 'blockingRowKeys' | 'roomStop'>,
 ):
   | {
       readonly reached: readonly WorkspaceRoomLifecycleTimelineEntry[];
       readonly notReached: readonly NotReachedEntry[];
     }
   | undefined {
+  const roomStop = input.roomStop;
+  if (roomStop === undefined || roomStop.kind === 'exit') return undefined;
   const blocking = input.blockingRowKeys ?? new Set<string>();
-  const stop =
-    input.stoppedInOverview === true
-      ? entries.findIndex(
-          (entry) =>
-            entry.kind !== 'spawned' &&
-            !(entry.kind === 'boundary' && entry.boundary.kind === 'roomEntered'),
-        )
-      : entries.findIndex((entry) => entry.kind === 'action' && blocking.has(entry.actionKey));
-  if (stop < 0 && input.stoppedInOverview !== true) return undefined;
-  const cut = stop < 0 ? entries.length : stop;
+  const unreached = new Set(
+    lifecycleEntries.slice(roomStop.entryIndex).flatMap((entry) => lifecycleEntryKey(entry) ?? []),
+  );
+  const isUnreached = (entry: WorkspaceRoomLifecycleTimelineEntry) => {
+    const key = lifecycleEntryKey(entry);
+    return key !== undefined && unreached.has(key);
+  };
+  const stop = entries.findIndex(isUnreached);
+  // A Timeline stop at a banner whose contact blocks (the doors opening, an encounter's start
+  // or its due outcome, a wheel's offers) keeps that banner as the stop, to repair it there.
+  const stopEntry = entries[stop];
+  const cut =
+    stop < 0
+      ? entries.length
+      : roomStop.kind === 'timeline' && !roomStop.unplacedRow && stopEntry?.kind === 'boundary'
+        ? stop + 1
+        : stop;
   // Past the stop no banner stands for a row, so each row is its own.
   const asRow = (
     entry: Extract<NotReachedEntry, { readonly kind: 'action' }>,

@@ -91,6 +91,15 @@ export interface WorkspaceEvaluatedBatchOverlay {
   readonly partial: boolean;
 }
 
+/** Where the walk stopped inside the room an assessment blocks in, as the engine publishes it. */
+export interface WorkspaceRoomStop {
+  readonly kind: 'overview' | 'timeline' | 'exit';
+  /** The room's first lifecycle Timeline entry the walk did not get past. */
+  readonly entryIndex: number;
+  /** The block is a required row or delivery not placed yet, rather than a banner's contact. */
+  readonly unplacedRow: boolean;
+}
+
 export interface WorkspaceBiomeSource {
   readonly structuralPlacementRepairs: (
     owner: OccurrenceAddress,
@@ -139,11 +148,8 @@ export interface WorkspaceBiomeSource {
   readonly isAssessed: (owner: SemanticAddress) => boolean;
   /** Engine-published Timeline rows of the product a room's assessment stops at. */
   readonly blockingRowKeys: (owner: OccurrenceAddress) => ReadonlySet<string> | undefined;
-  /**
-   * The assessment stops in this room's Overview: the engine names the room as blocked and
-   * publishes no Timeline coverage, so its Timeline is unreached past entry.
-   */
-  readonly stoppedInOverview: (owner: OccurrenceAddress) => boolean;
+  /** Where the walk stopped inside this room, when the assessment blocks in it. */
+  readonly roomStop: (owner: OccurrenceAddress) => WorkspaceRoomStop | undefined;
   /** Exact engine-reached trait child coverage; authored dormant children stay retained. */
   readonly isActiveTraitOffer: (
     owner: import('@run-planner/engine/authored-project').TraitOfferAddress,
@@ -1060,11 +1066,19 @@ function createWorkspaceBiomeSource(
         ? new Set(timeline.blockingRowKeys)
         : undefined;
     },
-    stoppedInOverview: (owner: OccurrenceAddress) =>
-      evaluation?.coverage.kind === 'prefix' &&
-      evaluation.coverage.blockedAt !== undefined &&
-      evaluation.coverage.roomTimeline === undefined &&
-      blockedOccurrenceRoom(owner) !== undefined,
+    roomStop: (owner: OccurrenceAddress) => {
+      const stop =
+        evaluation?.coverage.kind === 'prefix' ? evaluation.coverage.roomStop : undefined;
+      if (stop === undefined || semanticAddressKey(stop.room) !== semanticAddressKey(owner))
+        return undefined;
+      const blockedAt =
+        evaluation?.coverage.kind === 'prefix' ? evaluation.coverage.blockedAt : undefined;
+      return Object.freeze({
+        kind: stop.kind,
+        entryIndex: stop.entryIndex,
+        unplacedRow: blockedAt?.kind === 'roomAction' || blockedAt?.kind === 'acquisitionEntry',
+      });
+    },
     isActiveTraitOffer,
     isActiveInventoryOffer,
     shopOfferAssessment,

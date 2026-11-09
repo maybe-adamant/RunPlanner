@@ -346,8 +346,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
   /** Engine-published Timeline rows of the product this room's assessment stops at. */
   readonly blockingRowKeys?: ReadonlySet<string>;
-  /** The room's assessment stops in its Overview: its Timeline waits past entry. */
-  readonly stoppedInOverview?: true;
+  /** Where the walk stopped inside this room, when the assessment blocks in it. */
+  readonly roomStop?: import('../source-index').WorkspaceRoomStop;
   readonly judgmentArcanaCapability?: (
     address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
   ) =>
@@ -565,7 +565,7 @@ export function assembleWorkspaceOccurrence(
       : { purgingPoolAssessment: input.purgingPoolAssessment }),
     ...(input.gold === undefined ? {} : { gold: input.gold }),
     ...(input.blockingRowKeys === undefined ? {} : { blockingRowKeys: input.blockingRowKeys }),
-    ...(input.stoppedInOverview === true ? { stoppedInOverview: true as const } : {}),
+    ...(input.roomStop === undefined ? {} : { roomStop: input.roomStop }),
     ...(input.rerollTargetLabel === undefined
       ? {}
       : { rerollTargetLabel: input.rerollTargetLabel }),
