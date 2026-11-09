@@ -29,6 +29,7 @@ import type {
   HistoryEvent,
   HistoryStateView,
   BiomeHistoryPrefix,
+  ReachedHistoryRoomAction,
   RoomDepartureDestination,
 } from './model';
 import type { ResolvedEncounterPhase } from '../encounters/model';
@@ -56,6 +57,7 @@ type SegmentHistoryEventData = HistoryEventData<SegmentHistoryEvent>;
 
 interface EventBuilder {
   readonly events: HistoryEvent[];
+  readonly reachedActions: ReachedHistoryRoomAction[];
   readonly sequenceBase: number;
   readonly seed?: HistoryStateView;
   readonly validateEncounterResolution: boolean;
@@ -72,6 +74,10 @@ interface EventBuilder {
 
 export interface HistorySegmentWriter {
   append(event: SegmentHistoryEventData): void;
+  /** The sequence the next appended event takes. */
+  nextSequence(): number;
+  /** Records room actions the lifecycle walk reached, in walk order. */
+  reach(actions: readonly ReachedHistoryRoomAction[]): void;
   current(): HistoryStateView;
   rewardGeneration(origin: CanonicalLifecycleRoom['origin']): HistoryStateView | undefined;
   /** The room's entry view once it is entered. */
@@ -88,7 +94,12 @@ export interface HistorySegmentWriter {
 }
 
 export type EncounterValidatedBiomeHistory =
-  | { readonly kind: 'complete'; readonly history: CanonicalBiomeHistory }
+  | {
+      readonly kind: 'complete';
+      readonly history: CanonicalBiomeHistory;
+      /** The room actions the walk reached, placed in that history. */
+      readonly reachedActions: readonly ReachedHistoryRoomAction[];
+    }
   | {
       readonly kind: 'rewardBlocked';
       readonly history: BiomeHistoryPrefix;
@@ -98,6 +109,8 @@ export type EncounterValidatedBiomeHistory =
 /** A prefix history and the room action, when present, at which its lifecycle stopped. */
 export interface EncounterValidatedBiomeHistoryPrefix {
   readonly history: BiomeHistoryPrefix;
+  /** The room actions the walk reached, placed in that history. */
+  readonly reachedActions: readonly ReachedHistoryRoomAction[];
   readonly blockedAt?: import('../../authored-project/addresses').SemanticAddress;
 }
 
@@ -180,6 +193,12 @@ function segmentWriter(builder: EventBuilder): HistorySegmentWriter {
           sequence: builder.sequenceBase + builder.events.length + 1,
         }) as SegmentHistoryEvent,
       );
+    },
+    nextSequence(): number {
+      return builder.sequenceBase + builder.events.length + 1;
+    },
+    reach(actions: readonly ReachedHistoryRoomAction[]): void {
+      builder.reachedActions.push(...actions);
     },
     current(): HistoryStateView {
       return foldBiomeHistoryPrefixEvents(builder.events, builder.seed).current;
@@ -340,83 +359,48 @@ export function appendRoomLifecycle(
   options.prepare?.(fragment.events);
   let projectedOutgoing = false;
   let reachedOutgoing = false;
-  for (const sourceEvent of fragment.events) {
-    const event =
-      sourceEvent.kind === 'encounterStarted'
-        ? (() => {
-            const phase = effectiveEncounterPhases.find(
-              (candidate) => candidate.slotKey === sourceEvent.phaseKey,
-            )!;
-            if (phase.aetosWaves === undefined && phase.aetosWave === undefined) return sourceEvent;
-            const prior = writer
-              .current()
-              .ledgers.encounterStarts.some(
-                (entry) =>
-                  entry.origin.routeKey === room.origin.routeKey &&
-                  entry.origin.biomeKey === room.origin.biomeKey &&
-                  entry.aetosWave !== undefined,
-              );
-            return Object.freeze({
-              ...sourceEvent,
-              aetos: assessAetosAppearance(
-                phase,
-                declaration.structuralTags.includes('Outdoor'),
-                sourceEvent.execution === 'skippedByFigLeaf',
-                prior,
-              ),
-            });
-          })()
-        : sourceEvent.kind === 'challengeSwitchInteracted' && room.kind === 'authored'
-          ? withChallengeSwitchEncounter(catalog, room, writer, sourceEvent, fail)
-          : sourceEvent.kind === 'exitUnlocked' && room.kind === 'authored'
-            ? withUnlockExitEncounter(catalog, room, writer, sourceEvent, fail)
-            : sourceEvent;
-    if (
-      options.stopAfterOutgoing &&
-      options.continueThroughPostOutgoingActions === true &&
-      event.kind === 'roomCommitted'
-    ) {
-      return;
-    }
-    options.beforeEvent?.(writer, event);
-    appendLifecycleEvent(writer, event, fail);
-    if (event.kind === 'roomExited' && options.deferDeparture !== true && options.planEnd !== true)
-      writer.append({
-        kind: 'roomDeparted',
-        origin: room.origin,
-        destination: options.departureDestination ?? 'newRoom',
-      });
-    options.afterEvent?.(writer, event);
-    if (
-      event.kind === 'outgoingGenerationCheckpoint' &&
-      options.planEnd === true &&
-      options.outgoing === undefined
-    ) {
-      reachedOutgoing = true;
-      writer.append({ kind: 'emptyOutgoingGenerationCompleted', origin: room.origin });
-    } else if (event.kind === 'outgoingGenerationCheckpoint') {
-      reachedOutgoing = true;
-      if ((options.outgoing === undefined && !options.stopAfterOutgoing) || projectedOutgoing) {
-        fail(`${room.gameName} has no unique canonical outgoing projection`);
-      }
-      options.outgoing?.(writer, room);
-      projectedOutgoing = options.outgoing !== undefined;
-      if (
-        options.stopAfterOutgoing &&
-        options.continueThroughAcquisitionPoint === undefined &&
-        options.continueThroughPostOutgoingActions !== true
-      ) {
-        return;
-      }
-    }
-    if (
-      options.stopAfterOutgoing &&
-      event.kind === 'acquisitionPointReached' &&
-      event.point === options.continueThroughAcquisitionPoint
-    ) {
-      return;
-    }
+  // Where each of the room's events landed in biome history, by local sequence: the
+  // first sequence its step took (its hooks included) and the event's own.
+  const placed = new Map<number, number>();
+  const appended = new Map<number, number>();
+  let stopped = true;
+  try {
+    stopped = composeLifecycleEvents() === 'stopped';
+  } finally {
+    // An action is reached before its next event; one the composed history cuts off is not.
+    writer.reach(
+      fragment.reachedActions.flatMap((action): ReachedHistoryRoomAction[] => {
+        const sequence = placed.get(action.sequence);
+        const through = action.through === undefined ? undefined : appended.get(action.through);
+        if (sequence !== undefined)
+          return [
+            Object.freeze({
+              room: room.origin,
+              actionKey: action.actionKey,
+              sequence,
+              ...(action.through === undefined
+                ? { boundary: 'after' as const }
+                : {
+                    boundary: 'before' as const,
+                    // Its last own event, or the end of the composed room when cut off.
+                    through: through ?? writer.nextSequence() - 1,
+                  }),
+            }),
+          ];
+        return !stopped && action.sequence > fragment.events.length
+          ? [
+              Object.freeze({
+                room: room.origin,
+                actionKey: action.actionKey,
+                sequence: writer.nextSequence() - 1,
+                boundary: 'after' as const,
+              }),
+            ]
+          : [];
+      }),
+    );
   }
+  if (stopped) return;
   if (fragment.blockedAt !== undefined) {
     throw new RewardAuthorshipBlocked(fragment.blockedAt);
   }
@@ -425,6 +409,95 @@ export function appendRoomLifecycle(
   }
   if (options.planEnd !== true && (options.outgoing !== undefined) !== projectedOutgoing) {
     fail(`${room.gameName} canonical outgoing projection does not match its lifecycle`);
+  }
+
+  /** Appends the room's events; `stopped` when a prefix stop ends the room early. */
+  function composeLifecycleEvents(): 'stopped' | 'done' {
+    for (const sourceEvent of fragment.events) {
+      placed.set(sourceEvent.sequence, writer.nextSequence());
+      const event =
+        sourceEvent.kind === 'encounterStarted'
+          ? (() => {
+              const phase = effectiveEncounterPhases.find(
+                (candidate) => candidate.slotKey === sourceEvent.phaseKey,
+              )!;
+              if (phase.aetosWaves === undefined && phase.aetosWave === undefined)
+                return sourceEvent;
+              const prior = writer
+                .current()
+                .ledgers.encounterStarts.some(
+                  (entry) =>
+                    entry.origin.routeKey === room.origin.routeKey &&
+                    entry.origin.biomeKey === room.origin.biomeKey &&
+                    entry.aetosWave !== undefined,
+                );
+              return Object.freeze({
+                ...sourceEvent,
+                aetos: assessAetosAppearance(
+                  phase,
+                  declaration.structuralTags.includes('Outdoor'),
+                  sourceEvent.execution === 'skippedByFigLeaf',
+                  prior,
+                ),
+              });
+            })()
+          : sourceEvent.kind === 'challengeSwitchInteracted' && room.kind === 'authored'
+            ? withChallengeSwitchEncounter(catalog, room, writer, sourceEvent, fail)
+            : sourceEvent.kind === 'exitUnlocked' && room.kind === 'authored'
+              ? withUnlockExitEncounter(catalog, room, writer, sourceEvent, fail)
+              : sourceEvent;
+      if (
+        options.stopAfterOutgoing &&
+        options.continueThroughPostOutgoingActions === true &&
+        event.kind === 'roomCommitted'
+      ) {
+        return 'stopped';
+      }
+      options.beforeEvent?.(writer, event);
+      appendLifecycleEvent(writer, event, fail);
+      appended.set(sourceEvent.sequence, writer.nextSequence() - 1);
+      if (
+        event.kind === 'roomExited' &&
+        options.deferDeparture !== true &&
+        options.planEnd !== true
+      )
+        writer.append({
+          kind: 'roomDeparted',
+          origin: room.origin,
+          destination: options.departureDestination ?? 'newRoom',
+        });
+      options.afterEvent?.(writer, event);
+      if (
+        event.kind === 'outgoingGenerationCheckpoint' &&
+        options.planEnd === true &&
+        options.outgoing === undefined
+      ) {
+        reachedOutgoing = true;
+        writer.append({ kind: 'emptyOutgoingGenerationCompleted', origin: room.origin });
+      } else if (event.kind === 'outgoingGenerationCheckpoint') {
+        reachedOutgoing = true;
+        if ((options.outgoing === undefined && !options.stopAfterOutgoing) || projectedOutgoing) {
+          fail(`${room.gameName} has no unique canonical outgoing projection`);
+        }
+        options.outgoing?.(writer, room);
+        projectedOutgoing = options.outgoing !== undefined;
+        if (
+          options.stopAfterOutgoing &&
+          options.continueThroughAcquisitionPoint === undefined &&
+          options.continueThroughPostOutgoingActions !== true
+        ) {
+          return 'stopped';
+        }
+      }
+      if (
+        options.stopAfterOutgoing &&
+        event.kind === 'acquisitionPointReached' &&
+        event.point === options.continueThroughAcquisitionPoint
+      ) {
+        return 'stopped';
+      }
+    }
+    return 'done';
   }
 }
 
@@ -522,6 +595,7 @@ function composeBiomeHistoryPrefixResult({
 }: BiomeHistoryPrefixOptions): EncounterValidatedBiomeHistoryPrefix {
   const builder: EventBuilder = {
     events: [],
+    reachedActions: [],
     sequenceBase: seed?.sequence ?? 0,
     ...(seed === undefined ? {} : { seed }),
     validateEncounterResolution,
@@ -550,10 +624,14 @@ function composeBiomeHistoryPrefixResult({
     if (!(error instanceof RewardAuthorshipBlocked)) throw error;
     return Object.freeze({
       history: foldBiomeHistoryPrefixEvents(builder.events, seed),
+      reachedActions: Object.freeze([...builder.reachedActions]),
       blockedAt: error.blockedAt,
     });
   }
-  return Object.freeze({ history: foldBiomeHistoryPrefixEvents(builder.events, seed) });
+  return Object.freeze({
+    history: foldBiomeHistoryPrefixEvents(builder.events, seed),
+    reachedActions: Object.freeze([...builder.reachedActions]),
+  });
 }
 
 export function composeBiomeHistoryPrefix({
@@ -664,6 +742,7 @@ function composeBiomeHistoryEnvelopeResult<
   const biome = createBiomeAddress(routeKey, biomeKey);
   const builder: EventBuilder = {
     events: [],
+    reachedActions: [],
     sequenceBase: seed?.sequence ?? 0,
     ...(seed === undefined ? {} : { seed }),
     validateEncounterResolution,
@@ -720,7 +799,11 @@ function composeBiomeHistoryEnvelopeResult<
     }
     throw error;
   }
-  return Object.freeze({ kind: 'complete', history: foldHistoryEvents(builder.events, seed) });
+  return Object.freeze({
+    kind: 'complete',
+    history: foldHistoryEvents(builder.events, seed),
+    reachedActions: Object.freeze([...builder.reachedActions]),
+  });
 }
 
 export function composeBiomeHistoryEnvelope<

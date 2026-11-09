@@ -807,6 +807,7 @@ export function evaluateBiomeAssembly(
       roomGeneration: roomGeneration.validation,
       findingRegions: selectedFindingRegions,
       rewardsThrough: rewards.through,
+      reachedActions: composed.reachedActions,
     }),
   );
   if (progressive === null) {

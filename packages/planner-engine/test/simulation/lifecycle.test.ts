@@ -794,6 +794,22 @@ describe('single-room lifecycle execution', () => {
     expect(fragment.blockedAt?.actionKey).toBe(roomActionKey(purchase));
     expect(fragment.events.some((event) => event.kind === 'wellPurchase')).toBe(false);
     expect(fragment.events.some((event) => event.kind === 'producerRoleAdvanced')).toBe(true);
+    // The reward settles with its producer point's events; the walk stops at the
+    // purchase, which emits nothing, past every event.
+    const rewardReached = fragment.reachedActions[0]!;
+    expect(fragment.events[rewardReached.sequence - 1]?.kind).toBe('producerPointReached');
+    expect(fragment.events[rewardReached.through! - 1]?.kind).toBe('producerRoleAdvanced');
+    expect(fragment.reachedActions).toEqual([
+      {
+        actionKey: roomActionKey(reward),
+        sequence: rewardReached.sequence,
+        through: rewardReached.through,
+      },
+      { actionKey: roomActionKey(purchase), sequence: fragment.events.length + 1 },
+    ]);
+    expect(fragment.events.find((event) => event.kind === 'encounterCompleted')).toMatchObject({
+      endEffects: 'applied',
+    });
   });
 
   it('advances the standard producer role before outgoing generation and commit effects', () => {
@@ -1049,6 +1065,15 @@ describe('single-room lifecycle execution', () => {
     );
 
     expect(fragment.blockedAt?.actionKey).toBe(roomActionKey(pickup1));
+    // A wheel phase's end effects wait for its post-combat actions.
+    expect(
+      fragment.events.flatMap((event) =>
+        event.kind === 'encounterCompleted' ? [[event.phaseKey, event.endEffects]] : [],
+      ),
+    ).toEqual([
+      ['Intro', 'applied'],
+      ['Combat1', 'deferred'],
+    ]);
     expect(
       fragment.events
         .filter((event) => event.kind === 'offerPointMaterialized')

@@ -1049,6 +1049,7 @@ describe('room rewards created before combat', () => {
         phaseKind: 'miniboss' as const,
         execution: 'skippedByFigLeaf' as const,
         figLeafSkipOwner: true,
+        endEffects: 'applied' as const,
         operationIndex: sequence,
         sequence,
       });

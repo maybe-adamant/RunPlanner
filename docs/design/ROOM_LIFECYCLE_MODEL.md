@@ -265,7 +265,11 @@ wait for them before applying end effects. Completion still makes those
 interactions available; it does not imply that end effects have already run,
 and the visible End Encounter boundary stays before this interval. The event
 is absent for noncombat and `skipEndEncounterEffects` phases; Fig Leaf's
-skipped execution does not by itself remove it. N entered side-room
+skipped execution does not by itself remove it. The completion itself records
+which case holds: end effects applied at once, deferred past those
+interactions, or none. The walk also publishes each ranked action it reached,
+settled or stopped at, with where it reached it, so coverage never infers
+reach from the Timeline's boundaries. N entered side-room
 occurrences execute their own preparation and lifecycle in authored
 `enteredOrdinal` order before the corresponding parent restore. The same
 ordered history therefore supports ordinary rooms, O/P/H multi-phase rooms,

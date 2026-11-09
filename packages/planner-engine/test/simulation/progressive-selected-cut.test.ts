@@ -15,6 +15,7 @@ import {
   createExitSelectionAddress,
   createPostbossKeepsakeSelectionAddress,
   createRewardWheelAddress,
+  createRewardWheelOfferAddress,
   createStartingRewardAddress,
   decodeProjectDocument,
   type RoomActionReference,
@@ -50,6 +51,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import {
   createCompleteFGProject,
+  createFConversionFrontierProject,
   createUnderworldFPoolCheckpoint,
   createUnderworldFWellCheckpoint,
   loadUnderworldFGProject,
@@ -72,6 +74,10 @@ import {
 } from '@run-planner/test-fixtures/checkpoints/surface';
 
 import * as fixture from './support/progressive-biome-fixtures';
+import {
+  roomActionAtPosition,
+  roomActionReachedAt,
+} from '../../src/simulation/progressive/selected-cut';
 import { reachedFrontier } from '../support/reward-frontier';
 
 const {
@@ -1241,6 +1247,45 @@ describe('room stop', () => {
     });
   }
 
+  /** F's first room turns its Bones into an Artificer item whose reward is unset. */
+  function artificerWithoutReward() {
+    const source = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    return applyProjectCommand(
+      createFConversionFrontierProject('MetaCurrencyDrop').project,
+      catalog,
+      {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition: createAcquisitionRoleAddress(source, 'self'),
+        value: { kind: 'artificer' },
+      },
+    );
+  }
+
+  /** O's third Ship phase offers a Boon on Wheel 2 whose trait offer is unset. */
+  function wheel2BoonWithoutTraits() {
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel,
+      offerCount: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel,
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    return applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+      encounterCount: 3,
+    });
+  }
+
   function lockedExitTaken() {
     const g = goldenGBiome;
     const host = createOccurrenceId('golden-g-b1-e1');
@@ -1580,6 +1625,33 @@ describe('room stop', () => {
       { room: oOccurrenceIds.combat07, kind: 'timeline', at: 'entry', entry: 'nextPhase' },
     ],
     [
+      // The replacement's row comes later; the walk stops inside the source's settlement.
+      "an Artificer replacement judged as its source converts: the source's pickup row",
+      artificerWithoutReward,
+      'F',
+      {
+        room: goldenFOccurrenceId(1, 1),
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey({
+          kind: 'interactIncomingReward',
+          producerPoint: 'roomRewardPickup',
+          acquisitionRole: 'self',
+        }),
+      },
+    ],
+    [
+      "a Ship wheel pickup before its encounter's deferred end effects: the pickup row, reached",
+      wheel2BoonWithoutTraits,
+      'O',
+      {
+        room: oOccurrenceIds.combat07,
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey({ kind: 'interactWheelReward', wheelKey: 'wheel2' }),
+      },
+    ],
+    [
       'exit work after the room committed (a locked door taken)',
       lockedExitTaken,
       'G',
@@ -1647,15 +1719,10 @@ describe('room stop', () => {
       },
     ],
     [
-      'a Well restock judged at the first purchase: not its later refill row',
+      'a Well restock judged at the first purchase: that purchase, not its later refill row',
       duplicateWellRefill,
       'F',
-      {
-        room: fPostboss,
-        kind: 'timeline',
-        at: 'before',
-        entry: roomActionKey({ kind: 'interactKeepsakeRack' }),
-      },
+      { room: fPostboss, kind: 'timeline', at: 'entry', entry: wellPurchaseRow },
     ],
     [
       'a Postboss Well purchase ranked before the fountain: the purchase row',
@@ -1734,6 +1801,59 @@ describe('room stop', () => {
     const evaluation = biomeEvaluation(build(), 'F');
     expect(evaluation.coverage.roomTimeline?.blockingRowKeys).toEqual(rows);
     expect(stopAt(evaluation)?.entry).toBe(rows[0]);
+  });
+
+  it("defers a Ship wheel encounter's end effects past its pickup, where the walk stops", () => {
+    const evaluation = biomeEvaluation(wheel2BoonWithoutTraits(), 'O');
+    const combat2 = evaluation.history.events.filter(
+      (event) =>
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === oOccurrenceIds.combat07 &&
+        'phaseKey' in event &&
+        event.phaseKey === 'Combat2',
+    );
+    expect(combat2.find((event) => event.kind === 'encounterCompleted')).toMatchObject({
+      endEffects: 'deferred',
+    });
+    // The pickup is reached; the encounter end it precedes is not passed.
+    expect(combat2.some((event) => event.kind === 'encounterEndEffectsApplied')).toBe(false);
+  });
+
+  it('claims a reached action only at or after the position the walk reached it', () => {
+    const room = createOccurrenceAddress(goldenFBiome, createOccurrenceId('reached-at'));
+    const reached = [
+      { room, actionKey: 'first', sequence: 10, boundary: 'before' as const },
+      // A later row of the same stretch, reached at its own later event.
+      { room, actionKey: 'second', sequence: 12, boundary: 'before' as const },
+      // A row with no event of its own settles with the next one.
+      { room, actionKey: 'silent', sequence: 14, boundary: 'after' as const },
+    ];
+    const at = (sequence: number, boundary: 'before' | 'at' | 'after') =>
+      ({ kind: 'history', sequence, boundary }) as const;
+    const claimed = (position: ReturnType<typeof at>) =>
+      ['first', 'second', 'silent', 'unreached'].filter((actionKey) =>
+        roomActionReachedAt(reached, room, actionKey, position),
+      );
+    expect(claimed(at(10, 'at'))).toEqual(['first']);
+    expect(claimed(at(10, 'before'))).toEqual(['first']);
+    expect(claimed(at(12, 'at'))).toEqual(['first', 'second']);
+    expect(claimed(at(14, 'at'))).toEqual(['first', 'second']);
+    expect(claimed(at(14, 'after'))).toEqual(['first', 'second', 'silent']);
+    // The walk is at a row while the contact lies inside its own events.
+    const spanning = [
+      { room, actionKey: 'pickup', sequence: 20, through: 21, boundary: 'before' as const },
+    ];
+    expect(roomActionAtPosition(spanning, room, at(21, 'at'))).toBe('pickup');
+    expect(roomActionAtPosition(spanning, room, at(22, 'at'))).toBeUndefined();
+    expect(roomActionAtPosition(reached, room, at(14, 'after'))).toBeUndefined();
+    expect(
+      roomActionReachedAt(
+        reached,
+        createOccurrenceAddress(goldenFBiome, createOccurrenceId('another-room')),
+        'first',
+        at(20, 'at'),
+      ),
+    ).toBe(false);
   });
 
   it('publishes no stop for a settled route', () => {

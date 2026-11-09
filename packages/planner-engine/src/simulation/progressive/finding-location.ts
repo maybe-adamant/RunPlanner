@@ -144,6 +144,8 @@ export function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddr
 export interface ProgressiveBiomeSelectedProducts {
   /** The complete history assembled before the block is located. */
   readonly history: BiomeHistoryPrefix;
+  /** The room actions the lifecycle walk reached, placed in that history. */
+  readonly reachedActions: readonly import('../history/model').ReachedHistoryRoomAction[];
   /** Generation validation already evaluated against that complete history. */
   readonly roomGeneration: BiomeGenerationValidation;
   readonly rewards: BiomeRewardSimulation;

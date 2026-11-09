@@ -677,7 +677,11 @@ function composeBiomeHistoryResult(
   };
   return validateEncounterResolution
     ? composeBiomeHistoryEnvelopeWithEncounterValidation(options)
-    : Object.freeze({ kind: 'complete' as const, history: composeBiomeHistoryEnvelope(options) });
+    : Object.freeze({
+        kind: 'complete' as const,
+        history: composeBiomeHistoryEnvelope(options),
+        reachedActions: [],
+      });
 }
 
 export function composeBiomeHistory(
@@ -900,7 +904,7 @@ function composeBiomeHistoryPrefixResult(
   };
   return validateEncounterResolution
     ? composeValidatedPrefixHistoryEnvelope(options)
-    : Object.freeze({ history: composePrefixHistoryEnvelope(options) });
+    : Object.freeze({ history: composePrefixHistoryEnvelope(options), reachedActions: [] });
 }
 
 export function composeBiomeHistoryPrefix(

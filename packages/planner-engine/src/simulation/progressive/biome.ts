@@ -198,6 +198,7 @@ interface ProgressiveProducts {
   readonly candidateArtifacts: BiomeCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
   readonly rewardsThrough: ProgressiveBiomeSelectedProducts['rewardsThrough'];
+  readonly reachedActions: ProgressiveBiomeSelectedProducts['reachedActions'];
 }
 
 function generation(
@@ -393,6 +394,7 @@ function products(
       ...rewards.findingRegions,
     ]),
     rewardsThrough: rewards.through,
+    reachedActions: composed.reachedActions,
   });
 }
 
@@ -515,6 +517,7 @@ export function evaluateProgressiveBiomeAssembly(
         candidateArtifacts: evaluated.candidateArtifacts,
         findingRegions: evaluated.findingRegions,
         rewardsThrough: evaluated.rewardsThrough,
+        reachedActions: evaluated.reachedActions,
       }),
       unsupported,
     );

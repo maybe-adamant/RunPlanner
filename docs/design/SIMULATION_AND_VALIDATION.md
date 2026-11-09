@@ -364,7 +364,7 @@ past it: it claims no entry the walk did not pass.
 | Stop                                                                                                                                            | Entry                                                                                                      | Reached |
 | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------- |
 | Overview                                                                                                                                        | The entry after **Room entered**: entry and its entry effects are reached, nothing the Timeline settles is | Before  |
-| A Timeline row                                                                                                                                  | The first row of the blocking product                                                                      | At      |
+| A Timeline row                                                                                                                                  | The first row of the blocking product the walk reached by the contact                                      | At      |
 | A contact with its own entry (a Fig Leaf, Aetos or Gorgon phase start)                                                                          | That entry                                                                                                 | At      |
 | A door's generation or offer, or the store the doors draw from                                                                                  | **Doors open**                                                                                             | At      |
 | A boundary's own contact: Boss defeated's Judgment, an encounter end's due outcome or Shrine delivery, a wheel's offers at **Next phase ready** | That boundary                                                                                              | At      |
@@ -373,16 +373,23 @@ past it: it claims no entry the walk did not pass.
 
 The blocking product's rows are the row whose own contact the blocking region
 is (a Well or Pool reroll's list, a Pool sale, a wheel's choice) and every row
-that settles an owner of the region: besides a row's own acquisition or
-reward, the Keepsake Rack settles its selection and equip result, a fountain
-use its rarity outcome, a Well purchase its Fateful Twist (a Travel Deal refill's
-Twist is judged at the refill purchase, so its row) and its initial or rolled
-item, and a Shrine purchase its initial item. A Travel Deal restock is judged at
-the earlier purchase that restocks it and a Pool list as the
-fountain opens it, so neither has a row. A row or contact entry lies past the
-contact when a boundary before it was not passed, such as a wheel's choice row
-while its offers block at **Next phase ready**; the stop then never claims it
-and takes the boundary rule instead.
+that settles an owner of the region: besides a row's own acquisition or reward,
+the Keepsake Rack settles its selection and equip result, a fountain use its
+rarity outcome, a Well purchase its Fateful Twist (a Travel Deal refill's Twist
+is judged at the refill purchase, so its row) and its initial or rolled item,
+and a Shrine purchase its initial item. A Travel Deal restock is judged at the
+earlier purchase that restocks it and a Pool list as the fountain opens it, so
+neither has a row. A row is claimed only when the walk reached it at or before
+the blocking contact: never a later row of the same stretch of the Timeline,
+nor a wheel's choice row while its offers block at **Next phase ready**, which
+settles with them. A deferred Ship wheel's post-combat rows run before its
+encounter's end effects, so the walk reaches them while that encounter end is
+not yet passed. A contact inside a reached row's own settlement, such as a
+Travel Deal restock judged at its purchase or an Artificer item judged as its
+source's pickup converts, stops at that row. A contact entry lies past the
+contact when a boundary before it was not passed; an encounter end is passed
+once its end effects apply, or, for a phase without them, once the walk goes
+on. A stop that claims neither takes the boundary rule instead.
 
 A Hub board or its Handoff and a block at the biome start have no room stop.
 

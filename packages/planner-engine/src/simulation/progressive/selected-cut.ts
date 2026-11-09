@@ -22,6 +22,7 @@ import {
 } from '../finding-regions';
 import type { OrdinaryBatchGenerationAssessment } from '../generation/model';
 import { biomeHistoryThrough, type BiomeHistoryPrefix, type HistoryEvent } from '../history';
+import type { ReachedHistoryRoomAction } from '../history/model';
 import { roomOverviewOperationCount } from '../lifecycle';
 import type { RoomStopCoverage } from '../evaluation/evaluation-products';
 import {
@@ -714,21 +715,63 @@ function blockingRowKeys(
   );
 }
 
+const boundaryRank = { before: 0, at: 1, after: 2 } as const;
+
+/**
+ * Whether the walk reached a room's action at or before a chronology position:
+ * an action reached later in the same stretch of the Timeline is not reached there.
+ */
+export function roomActionReachedAt(
+  reachedActions: readonly ReachedHistoryRoomAction[],
+  room: SemanticAddress,
+  actionKey: string,
+  position: HistoryFindingChronology,
+): boolean {
+  const roomKey = key(room);
+  return reachedActions.some(
+    (action) =>
+      key(action.room) === roomKey &&
+      action.actionKey === actionKey &&
+      (action.sequence < position.sequence ||
+        (action.sequence === position.sequence &&
+          boundaryRank[action.boundary] <= boundaryRank[position.boundary])),
+  );
+}
+
+/** The room's action whose own events span a chronology position: the walk is at it there. */
+export function roomActionAtPosition(
+  reachedActions: readonly ReachedHistoryRoomAction[],
+  room: SemanticAddress,
+  position: HistoryFindingChronology,
+): string | undefined {
+  const roomKey = key(room);
+  return reachedActions.find(
+    (action) =>
+      key(action.room) === roomKey &&
+      action.through !== undefined &&
+      action.sequence <= position.sequence &&
+      position.sequence <= action.through,
+  )?.actionKey;
+}
+
 /**
  * Where the walk stopped inside the room a block lies in, never claiming an
  * entry it did not pass. An Overview block stops past entry; exit work, after
  * the room committed or when a restored room departs again, past every entry.
- * A Timeline block stops at the first row of its blocking product, else at the
- * blocking contact's own entry, at Doors open for a contact inside the doors
- * opening, at a boundary whose own event is the contact, or just past the last
- * boundary the walk passed before the contact. Only that last stop is before
- * its entry; every other Timeline stop reached its entry and blocks on it.
+ * A Timeline block stops at the first row of its blocking product the walk
+ * reached by the contact, else at the blocking contact's own entry (a row only
+ * when reached by then), at the row whose own settlement holds the contact, at
+ * Doors open for a contact inside the doors opening,
+ * at a boundary whose own event is the contact, or just past the last boundary
+ * the walk passed before the contact. Only that last stop is before its entry;
+ * every other Timeline stop reached its entry and blocks on it.
  */
 function roomStop(
   catalog: Catalog,
   block: SelectedCut,
   located: LocatedFinding,
   history: BiomeHistoryPrefix,
+  reachedActions: readonly ReachedHistoryRoomAction[],
   rowKeys: readonly string[] | undefined,
 ): RoomStopCoverage | undefined {
   if (block.owner.kind === 'start' || block.owner.kind === 'hub') return undefined;
@@ -823,18 +866,16 @@ function roomStop(
       case 'bossDefeated':
         return passed.some((event) => boundaryEvent(index, event));
       case 'encounterEnd': {
+        if (passed.some((event) => boundaryEvent(index, event))) return true;
         // A phase without end effects (a Nemesis interaction, a story phase) ends at its
-        // completion, passed once the walk goes on from it.
-        const completed = passed.find((event) =>
-          phaseEvent('encounterCompleted', boundary.phaseKey, event),
+        // completion, passed once the walk goes on from it; deferred effects must apply.
+        const completed = passed.find(
+          (event): event is Extract<LifecycleEvent, { readonly kind: 'encounterCompleted' }> =>
+            event.kind === 'encounterCompleted' && event.phaseKey === boundary.phaseKey,
         );
         return (
-          passed.some((event) => boundaryEvent(index, event)) ||
-          (completed !== undefined &&
-            passed.some(
-              (event) =>
-                event.sequence > completed.sequence && event.kind !== 'encounterEndEffectsApplied',
-            ))
+          completed?.endEffects === 'none' &&
+          passed.some((event) => event.sequence > completed.sequence)
         );
       }
       case 'nextPhase': {
@@ -855,8 +896,15 @@ function roomStop(
   };
   // An entry is reached at the contact only when every boundary before it was passed: a
   // row or entry tied to the block, but past a boundary the walk has not passed, is not.
-  const reachable = (index: number): boolean =>
-    entries.every((entry, earlier) => earlier >= index || boundaryPassed(earlier));
+  // A row is reached at the contact only when the walk reached it at or before the
+  // contact's position, a deferred Ship wheel's post-combat rows included.
+  const rowReached = (actionKey: string): boolean =>
+    roomActionReachedAt(reachedActions, room.origin, actionKey, position);
+  const reachable = (index: number): boolean => {
+    const entry = entries[index];
+    if (entry?.kind === 'action') return rowReached(entry.action.key);
+    return entries.every((candidate, earlier) => earlier >= index || boundaryPassed(earlier));
+  };
   const firstRow = entries.findIndex(
     (entry) => entry.kind === 'action' && rowKeys?.includes(entry.action.key) === true,
   );
@@ -869,6 +917,12 @@ function roomStop(
     reachable(located.roomTimelineIndex)
   )
     return stop('timeline', located.roomTimelineIndex, 'entry');
+  // A contact inside a reached row's own settlement stops at that row.
+  const atRow = roomActionAtPosition(reachedActions, room.origin, position);
+  const atRowIndex = entries.findIndex(
+    (entry) => entry.kind === 'action' && entry.action.key === atRow,
+  );
+  if (atRowIndex >= 0) return stop('timeline', atRowIndex, 'entry');
   const cleanup = entries.findIndex(
     (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
   );
@@ -1174,7 +1228,14 @@ export function publishSelectedCut(
     !block.timeline || block.owner.kind === 'start' || block.owner.kind === 'hub'
       ? undefined
       : blockingRowKeys(block.owner.room, located.regionKey, selected.findingRegions);
-  const stopInRoom = roomStop(catalog, block, located, selected.history, rowKeys);
+  const stopInRoom = roomStop(
+    catalog,
+    block,
+    located,
+    selected.history,
+    selected.reachedActions,
+    rowKeys,
+  );
   const evaluation = Object.freeze({
     history,
     rewards: rewards.simulation,

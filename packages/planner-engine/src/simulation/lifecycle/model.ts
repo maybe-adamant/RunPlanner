@@ -123,6 +123,11 @@ export type RoomLifecycleEvent =
       readonly phaseKey: string;
       readonly execution: 'normal' | 'skippedByFigLeaf';
       readonly figLeafSkipOwner: boolean;
+      /**
+       * Whether the phase's EndEncounterEffects follow at once, wait for its
+       * Ship wheel's post-combat actions, or do not run at all.
+       */
+      readonly endEffects: 'applied' | 'deferred' | 'none';
     })
   | (RoomLifecycleEventBase & {
       /**
@@ -253,10 +258,25 @@ export interface RoomLifecycleExecutionInput {
   readonly keepsakeRackReplaces?: true;
 }
 
+/**
+ * A ranked room action the walk reached, settled or stopped at, by local
+ * sequence. One that settles with its own events (an incoming reward with its
+ * producer point's) spans them from `sequence` through `through`; one that
+ * emits none settles with the next event the walk emitted, or one past the
+ * last when none followed.
+ */
+export interface ReachedRoomAction {
+  readonly actionKey: string;
+  readonly sequence: number;
+  readonly through?: number;
+}
+
 export interface RoomHistoryFragment {
   readonly origin: RoomHistoryOrigin;
   readonly lifecycleProfileKey: string;
   readonly encounterEnvelopeKey: string;
   readonly events: readonly RoomLifecycleEvent[];
+  /** Every ranked action the walk reached, in walk order. */
+  readonly reachedActions: readonly ReachedRoomAction[];
   readonly blockedAt?: RoomActionSemanticAddress;
 }
