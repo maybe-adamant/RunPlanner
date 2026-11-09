@@ -36,6 +36,19 @@ commands, insert and move proposals and the purchase insertion query
 (owner 2026-11-09). Engine step on this branch, independently reviewed,
 before the planner work.
 
+## Owner answers (2026-11-09 morning)
+
+- Doors, door picks, side-visit picks and the Leave row appear only once the
+  walk reaches Doors open (the door unlock event); a stop after Doors open in
+  a Postboss also hides them until the earlier rows are correct.
+- A room stopped before its Timeline starts (an Overview issue), or a ship
+  phase waiting on an earlier phase, shows one plain line on its Timeline
+  saying issues before it must be fixed first.
+- Not reached yet rows cannot be reordered (no drag handle); deleting them
+  stays, as clean-up. The group is collapsed by default and expands on click.
+- A missing required pickup's stop is where the walk actually stops (its
+  spawn) until Part 2 moves the walk's stop to the deadline.
+
 ## Required pickups: window and deadline
 
 - A required pickup's window opens when it spawns and closes at its deadline,
