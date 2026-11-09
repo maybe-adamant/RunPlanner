@@ -113,10 +113,11 @@ the final project and its exact assembly.
   reach and an installed route keep theirs. Invalid rows stay with their
   findings.
 - A changed incoming reward keeps its pickups where they were: the stale
-  pickup rows, in order, take the roles the edit newly placed, in the reward's
-  declared role order (its main pickup first), each at its old position when
-  the roster allows it there and otherwise at the role's default. Leftover
-  stale pickups are removed and leftover roles keep their default places.
+  pickup rows, in their former reward's declared role order, take the roles
+  the edit newly placed, in the new reward's (each main pickup first), each
+  at its old position when the roster allows it there and otherwise at the
+  role's default. Leftover stale pickups are removed and leftover roles keep
+  their default places.
 - The settlement names each room's removed rows for the editor to announce,
   except rows owned by the owner the edit addresses or an owner nested in it
   (an orphaned row keeps the owner it had before the edit), which change

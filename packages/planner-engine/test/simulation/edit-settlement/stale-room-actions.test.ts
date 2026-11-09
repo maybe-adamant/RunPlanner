@@ -6,6 +6,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRoomActionAddress,
   createShopOfferAddress,
   roomActionKey,
   type OccurrenceAddress,
@@ -26,6 +27,7 @@ import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-
 import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 
 import { createAuthoringSession } from '../../../src/simulation/authoring/session';
+import { underworldGLockedDoorsProject } from '../../execution-plan/support/plan-end-switch-fixtures';
 
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
 const settle = (project: ProjectDocument, command: ProjectCommand) =>
@@ -181,6 +183,75 @@ describe('stale room actions in edit settlement', () => {
         spurnedSource: 'ZeusUpgrade',
       },
     } as const;
+
+    describe('beside other rows', () => {
+      // G Combat 2 holds two lockable doors whose optional presses stand around its pickup.
+      const room = createOccurrenceAddress(goldenGBiome, createOccurrenceId('golden-g-b2-e1'));
+      const lockedReward = createIncomingRewardAddress(goldenGBiome, room.occurrenceId);
+      const press = (exitKey: string) => roomActionKey({ kind: 'unlockExit', exitKey } as never);
+      const insertPress = (project: ProjectDocument, exitKey: string, index: number) =>
+        settle(project, {
+          kind: 'InsertRoomAction',
+          action: createRoomActionAddress(goldenGBiome, room.occurrenceId, press(exitKey)),
+          reference: { kind: 'unlockExit', exitKey },
+          index,
+        }).assembly.project;
+      const replace = (
+        project: ProjectDocument,
+        value: Extract<ProjectCommand, { kind: 'ReplaceIncomingReward' }>['value'],
+      ) => settle(project, { kind: 'ReplaceIncomingReward', reward: lockedReward, value });
+
+      it('keeps each changed pickup at its place among them', () => {
+        let project = replace(underworldGLockedDoorsProject(), devotion).assembly.project;
+        project = insertPress(insertPress(project, 'exit2', 1), 'exit3', 3);
+        expect(order(project, room)).toEqual([
+          pickup('beforeCombat', 'chosenSource'),
+          press('exit2'),
+          pickup('afterCombat', 'spurnedSource'),
+          press('exit3'),
+        ]);
+        // The chosen pickup becomes the Boon's; the spurned one leaves silently.
+        const toBoon = replace(project, boon);
+        expect(toBoon.fault).toBeUndefined();
+        expect(toBoon.removedStaleActions).toBeUndefined();
+        expect(order(toBoon.assembly.project, room)).toEqual([
+          pickup('roomRewardPickup', 'source'),
+          press('exit2'),
+          press('exit3'),
+        ]);
+        // Back to Devotion: the Boon's pickup becomes the chosen one; the spurned one is new.
+        const toDevotion = replace(toBoon.assembly.project, devotion);
+        expect(toDevotion.removedStaleActions).toBeUndefined();
+        expect(order(toDevotion.assembly.project, room)).toEqual([
+          pickup('beforeCombat', 'chosenSource'),
+          pickup('afterCombat', 'spurnedSource'),
+          press('exit2'),
+          press('exit3'),
+        ]);
+      });
+
+      it('leaves the new role at its default where the old place is refused', () => {
+        // A press authored before the pickup holds the pickup at a place no new placement may take.
+        const project = insertPress(
+          insertPress(underworldGLockedDoorsProject(), 'exit2', 0),
+          'exit3',
+          2,
+        );
+        expect(order(project, room)).toEqual([
+          press('exit2'),
+          pickup('roomRewardPickup', 'self'),
+          press('exit3'),
+        ]);
+        const settled = replace(project, boon);
+        expect(settled.fault).toBeUndefined();
+        expect(settled.removedStaleActions).toBeUndefined();
+        expect(order(settled.assembly.project, room)).toEqual([
+          pickup('roomRewardPickup', 'source'),
+          press('exit2'),
+          press('exit3'),
+        ]);
+      });
+    });
 
     it('rekeys its pickup in place between one-role rewards, silently', () => {
       const project = createGoldenFGHProject();

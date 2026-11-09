@@ -161,13 +161,19 @@ function roomEdited(before: ProjectDocument, after: ProjectDocument, owner: Occu
   return previous !== next && JSON.stringify(previous) !== JSON.stringify(next);
 }
 
-/** An address and the owners it nests, short of the room itself. */
-function ownerLineage(address: unknown, keys = new Set<string>()): Set<string> {
-  if (typeof address !== 'object' || address === null) return keys;
-  const { kind } = address as { readonly kind?: unknown };
-  if (typeof kind !== 'string' || kind === 'occurrence') return keys;
-  keys.add(semanticAddressKey(address as SemanticAddress));
-  for (const value of Object.values(address)) ownerLineage(value, keys);
+/** A biome-owned semantic address: a string kind beside its route and biome keys. */
+function isSemanticAddress(value: unknown): value is SemanticAddress {
+  if (typeof value !== 'object' || value === null) return false;
+  const { kind, routeKey, biomeKey } = value as Record<string, unknown>;
+  return typeof kind === 'string' && typeof routeKey === 'string' && typeof biomeKey === 'string';
+}
+
+/** An address and the semantic owners it nests, short of the room itself. */
+function ownerLineage(address: SemanticAddress | undefined, keys = new Set<string>()): Set<string> {
+  if (address === undefined || address.kind === 'occurrence') return keys;
+  keys.add(semanticAddressKey(address));
+  for (const value of Object.values(address))
+    if (isSemanticAddress(value)) ownerLineage(value, keys);
   return keys;
 }
 
@@ -200,11 +206,28 @@ function staleRowsToRemove(
   return removals;
 }
 
+/** The room's action keys as its producers contribute them: a reward's roles in declared order. */
+function declaredActionKeys(
+  catalog: Catalog,
+  project: ProjectDocument,
+  owner: OccurrenceAddress,
+): readonly string[] {
+  return (
+    roomActionDomainForOccurrence(
+      project,
+      catalog,
+      createBiomeAddress(owner.routeKey, owner.biomeKey),
+      owner.occurrenceId,
+    )?.domain.contributions ?? []
+  ).flatMap((entry) => (entry.kind === 'action' ? [roomActionKey(entry.reference)] : []));
+}
+
 /**
  * Incoming-reward pickups an edit gives new roles: in each entered room, its
- * stale pickup rows in order paired with the pickup roles the edit newly
- * placed, in the roles' declared order. A paired row takes the new role's
- * place, so a changed reward keeps its pickup where it was.
+ * stale pickup rows, in their former reward's declared role order, paired
+ * with the pickup roles the edit newly placed, in the new reward's. A paired
+ * row takes the new role's place, so a changed reward keeps its pickup where
+ * it was.
  */
 function incomingRewardRekeys(
   catalog: Catalog,
@@ -222,11 +245,24 @@ function incomingRewardRekeys(
     const previous = occurrenceAt(before, owner);
     if (current === undefined || previous === undefined) continue;
     const known = new Set(previous.roomActions.order.map(roomActionKey));
-    const stale = current.roomActions.order.filter(
-      (reference) =>
-        reference.kind === 'interactIncomingReward' &&
-        rows.get(roomActionKey(reference))?.stale === true,
-    );
+    // The old reward's roles in its declared order, its main pickup first.
+    const formerlyDeclared = declaredActionKeys(catalog, before, owner);
+    const declaredRank = (reference: RoomActionReference) => {
+      const index = formerlyDeclared.indexOf(roomActionKey(reference));
+      return index < 0 ? formerlyDeclared.length : index;
+    };
+    const stale = current.roomActions.order
+      .filter(
+        (reference) =>
+          reference.kind === 'interactIncomingReward' &&
+          rows.get(roomActionKey(reference))?.stale === true,
+      )
+      .map((reference, index) => ({ reference, index }))
+      .sort(
+        (left, right) =>
+          declaredRank(left.reference) - declaredRank(right.reference) || left.index - right.index,
+      )
+      .map(({ reference }) => reference);
     if (stale.length === 0) continue;
     const placed = current.roomActions.order.filter(
       (reference) =>
@@ -236,15 +272,7 @@ function incomingRewardRekeys(
         !rekeyed.has(`${semanticAddressKey(owner)}|${roomActionKey(reference)}`),
     );
     if (placed.length === 0) continue;
-    // The producer contributes its roles in the reward's declared order.
-    const declared = (
-      roomActionDomainForOccurrence(
-        assembly.project,
-        catalog,
-        createBiomeAddress(owner.routeKey, owner.biomeKey),
-        owner.occurrenceId,
-      )?.domain.contributions ?? []
-    ).flatMap((entry) => (entry.kind === 'action' ? [roomActionKey(entry.reference)] : []));
+    const declared = declaredActionKeys(catalog, assembly.project, owner);
     const roles = [...placed].sort(
       (left, right) =>
         declared.indexOf(roomActionKey(left)) - declared.indexOf(roomActionKey(right)),
@@ -586,7 +614,17 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
           );
           const fault = consume(`rekey:${semanticAddressKey(address)}`, address);
           if (fault !== undefined) return settled(assembly, fault);
-          project = rekeyIncomingRewardPickup(catalog, project, owner, stale, role);
+          try {
+            project = rekeyIncomingRewardPickup(catalog, project, owner, stale, role);
+          } catch (error) {
+            // The roster and the room-action commands disagree: an engine defect.
+            if (error instanceof ProjectCommandContractError)
+              return settled(
+                assembly,
+                Object.freeze({ key: `rekey:${roomActionKey(stale)}`, owner: address }),
+              );
+            throw error;
+          }
         }
         assembly = evaluate(project);
         continue;
