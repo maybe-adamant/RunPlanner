@@ -754,9 +754,12 @@ the exit selection, at the room's exit, and the room's Timeline stays
 evaluated.
 
 Toggling a participant at its default position changes membership without
-replaying chronological legality; a chosen insertion position or a move is
-judged only by the roster's structural order rule, so an unresolved earlier item
-cannot prevent adding the action that repairs the room.
+replaying chronological legality. A chosen insertion position or a move is
+judged by the [roster's prefix rule](ROOM_LIFECYCLE_MODEL.md#roster): the rows
+up to it must be structurally valid as the walk reaches it, and rows after it
+take no part, so an edit is never refused for a downstream problem. The rule
+reads structure, never simulated state, so an unresolved earlier item cannot
+prevent adding the action that repairs the room.
 
 ## Run-State Snapshots
 

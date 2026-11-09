@@ -392,33 +392,46 @@ retained for correction rather than dropped or silently reordered. There is no
 parallel Fields, Shop, Acquisitions, or presentation-owned action assembler and
 no second order authority.
 
-Insert and move proposals retain all typed dependency and fixed-window blockers
-from their existing order assessment, including the affected action and its
-prerequisite or conflicting action windows; an action marked
+An insertion or a move is judged by its prefix, the way the walk reaches it.
+An action placed at position k is legal when the rows before it, with it at k,
+are valid as the walk reaches k: no row up to k follows a row of a later
+window, every explicit dependency of those rows is among the rows before them,
+every checkpoint they wait on is met there (a doors-open action after every
+required one), and nothing up to k follows a terminal action. A required
+action's window closes at its deadline, so a ranked required action of an
+earlier window placed after k also refuses k: the walk cannot progress past
+it. Every other row after k takes no part: a later row the edit invalidates
+carries its own issue when the walk reaches it, and an unplaced required
+action is left to the walk's own stop. A prefix that is already invalid stops
+the walk before k, so k is refused unless the edit repairs that prefix. A
+move is judged as an insertion at its target, and a group placed together is
+judged through its last row, each row by its own prefix. The judgement is
+structural; it never reads affordability or other simulated state, which
+stays a finding.
+
+Insert and move proposals carry the typed dependency and fixed-window
+blockers of that prefix, each naming its affected action and its prerequisite
+or conflicting action windows; a required action of an earlier window after k
+is a dependency the placed row must follow. An action marked
 `windowFollowsOrder` (the Postboss rack) never takes part in window crossing.
 The application labels this evidence for placement explanations; it neither
 infers legality nor attributes an existing blocker to the proposed action.
 Authorable proposals, canonical required restores, and removals carry no
-blocker evidence.
+blocker evidence. The roster's issues for the authored order stay whole-order.
 
 An unranked action, required or optional, has an insert proposal at every
-index. One structural rule judges each: the resulting order keeps every
-window, explicit dependency and checkpoint (a doors-open action after every
-required one), and puts nothing after a terminal action. A required action
-may therefore be inserted anywhere inside its window, exactly as a placed one
-may be moved; its canonical restore is marked and stays authorable even when
-an unrelated retained issue blocks every other index. Restoring a required
-action, placing a generated pickup, or buying at a Shop, Shrine or Well at a
-chosen position accepts exactly the authorable indices and the command's own
-default, and refuses any other with a contract error; a generic optional
-insertion, such as a challenge switch press or a locked door press, still
-accepts any index and reports a bad position as a finding. A purchase is
-judged with the room's actions as they would stand after it, and a rushed
-Shrine item's optional pickup moves with its purchase, directly after it,
-since the item spawns as the Shrine closes. An engine authoring query
-publishes each purchase command's authorable indices, judged the same way.
-Legality never reads affordability or other simulated state, which stays a
-finding.
+index, judged by the same rule, so a required action may be inserted anywhere
+its prefix allows, exactly as a placed one may be moved; its canonical restore
+is marked and stays authorable even when a retained issue blocks every other
+index. Restoring a required action, placing a generated pickup, or buying at a
+Shop, Shrine or Well at a chosen position accepts exactly the authorable
+indices and the command's own default, and refuses any other with a contract
+error; a generic optional insertion, such as a challenge switch press or a
+locked door press, still accepts any index and reports a bad position as a
+finding. A rushed Shrine item's optional pickup moves with its purchase,
+directly after it, since the item spawns as the Shrine closes. An engine
+authoring query publishes each purchase command's authorable indices, judged
+the same way.
 
 Defaults are anchored differently. When a command newly activates required
 actions, or restores one without a chosen position, the engine extends the

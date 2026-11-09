@@ -15,10 +15,9 @@ import {
 } from '../../authored-project/room-actions/lifecycle-structure';
 import {
   assessRoomActionInsertion,
+  assessRoomActionMove,
   assessRoomActionOrder,
-  keepsTerminalActionLast,
   roomActionOrderContext,
-  roomActionPlacementBlockers,
 } from '../../authored-project/room-actions/order-assessment';
 import type {
   RoomActionCheckpoint,
@@ -212,11 +211,8 @@ export function assembleRoomActionRoster(options: {
     if (!active.has(roomActionKey(reference))) continue;
     for (let toIndex = 0; toIndex < options.order.length; toIndex += 1) {
       if (fromIndex === toIndex) continue;
-      const order = [...options.order];
-      order.splice(fromIndex, 1);
-      order.splice(toIndex, 0, reference);
-      if (!keepsTerminalActionLast(options.order, order, options.terminalActionKey)) continue;
-      const blockers = roomActionPlacementBlockers(order, context);
+      const assessment = assessRoomActionMove(options.order, fromIndex, toIndex, context);
+      if (assessment.followsTerminal) continue;
       proposals.push(
         frozen({
           kind: 'move',
@@ -224,9 +220,9 @@ export function assembleRoomActionRoster(options: {
           fromIndex,
           toIndex,
           anchorIndex: toIndex < fromIndex ? toIndex : toIndex + 1,
-          order: frozen(order),
-          structurallyAuthorable: blockers.length === 0,
-          blockers,
+          order: assessment.order,
+          structurallyAuthorable: assessment.structurallyAuthorable,
+          blockers: assessment.blockers,
         }),
       );
     }

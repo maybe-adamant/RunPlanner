@@ -53,10 +53,9 @@ function placedOrder(placed: PlacedRoomActions) {
 }
 
 /**
- * Moves the placed actions to `index` of the order they leave behind. The
- * resulting order is judged with the room's actions as they would then be,
- * by window, dependencies, checkpoints and the terminal action; an order equal
- * to the default placement is always accepted.
+ * Moves the placed actions to `index` of the order they leave behind. Each
+ * placed action is judged by its prefix in the room's actions as they would
+ * then be; an order equal to the default placement is always accepted.
  */
 export function placeRoomActionsAtChosenIndex(
   catalog: Catalog,
@@ -100,8 +99,8 @@ export function placeRoomActionsAtChosenIndex(
     index,
     moved[0]!,
     assessRoomActionPlacement(
-      remaining,
       next,
+      index + moved.length - 1,
       roomActionOrderContextForOccurrence(host.domain, host.occurrence),
     ),
   );

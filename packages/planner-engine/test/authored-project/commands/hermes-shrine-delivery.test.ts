@@ -294,7 +294,7 @@ describe('Hermes Shrine delivery placement', () => {
       ...before.slice(2),
     ]);
     expect(() => applyProjectCommand(project, catalog, { ...purchase(true), index: 1 })).toThrow(
-      /index 1 is not a legal position .* crosses a fixed lifecycle window/,
+      /index 1 is not a legal position .* a required action of an earlier window/,
     );
     const set = {
       kind: 'SetHermesShrinePurchase' as const,
