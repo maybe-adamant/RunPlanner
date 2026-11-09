@@ -21,6 +21,18 @@ deleted. Insert here on a banner places a row right after that event; Reset
 from here removes rows, and banners those rows would have brought about
 disappear until the walk reaches them again.
 
+## Presentation direction (owner 2026-11-09, after the engine work)
+
+Banners stop being the Timeline's spine. The Timeline is one chronology of
+three tiers: events the engine announces (Room entered, Encounter
+started/ended, Next phase ready, Doors open) styled as emphasized notices,
+which may host choices; notices (Spawned, Unlocks, Delivered, Restock) in the
+quiet notice style; and authored actions with handle and trash. No nesting of
+rows under banners; ship phase tabs and the Combat order header stay. Shape
+iteration with two or three styling candidates (emphasis levels; optionally a
+moment's spawn chips folded into its event line) on an ordinary combat room,
+H Fields, an O ship room and a Postboss.
+
 ## Progressive phases
 
 - A phase banner (Room entered, Encounter started/ended, ship and Fields
