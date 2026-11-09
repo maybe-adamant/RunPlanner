@@ -174,6 +174,13 @@ deferred items spawn only after the wheel reward is collected.
   silently; only rows orphaned elsewhere are announced.
 - Rooms the run stops entering keep their rows (an unselected leaf keeps its
   room-local state, as reanchoring does); cleanup applies to entered rooms.
+- Policy recorded durably in ROOM_LIFECYCLE_MODEL "Rows whose context or
+  source is gone". Engine still to align: Echo's Gold Gold Gold duplicate and
+  the Travel Deal refill stay invalid when their source is gone (should be
+  source-gone removals); Hermes delivery and matured-pickup removals are
+  silent (should be announced); a trait drop whose trait is held but now
+  matures elsewhere should stay invalid; door rerolls after their door is gone
+  are untraced.
 - Reset from here is a clean slate: before the Postboss keepsake rack it also
   returns the rack's keepsake choice to its default (keep the held keepsake).
 

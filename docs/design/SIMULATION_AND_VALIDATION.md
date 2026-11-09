@@ -105,7 +105,9 @@ the final project and its exact assembly.
   removed. Deliveries and clocked pickups are keyed by their source, so no
   inherited choice is reset for being newly reached; one that is invalid where
   it lands keeps its finding.
-- In each room the run enters, a room-action row the edit leaves stale, one
+- Settlement carries out the policy for
+  [rows whose context or source is gone](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
+  In each room the run enters, a room-action row the edit leaves stale, one
   the room no longer offers, is removed through its owning removal command;
   in a room the edit changes, stale rows retained from before it (an older
   save) go too. A room the run stops entering keeps its rows untouched, so

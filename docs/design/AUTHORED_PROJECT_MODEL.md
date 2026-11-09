@@ -880,15 +880,8 @@ placement commands `PlaceHermesShrineDelivery`, `PlaceClockedTraitPickup` and
 place; absent, it lands at the command's default, and an index for a pickup
 already placed is refused. Rows of a room the run does not enter remain
 authored untouched, and reactivation of the same key reuses its retained
-position rather than adding a duplicate. A stale row, one its entered room no
-longer offers, has nothing to repair: the edit that leaves it stale removes
-it through its owning removal command, in the same edit and Undo step, and
-names it unless it belongs to the owner the edit addresses; a changed
-incoming reward's pickup instead takes its new role in place
-([settlement](SIMULATION_AND_VALIDATION.md#the-evaluation-pipeline)). A
-loaded document keeps the stale rows it holds until an edit changes their
-room. A row that is merely invalid, such as a Shop purchase past the god cap
-or a Purging Pool sale the game refuses, stays with its finding.
+position rather than adding a duplicate. Stale, source-gone and invalid rows follow
+[rows whose context or source is gone](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
 
 `ResetRoomActionsAfter` takes one occurrence's actions back to a point:
 it names an ordered action by its key, or none for the room's entry, and

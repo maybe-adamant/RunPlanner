@@ -398,9 +398,8 @@ communicate action membership through sidecar state.
 Roster assembly reconciles every authored and derived key exactly once: ranked
 active actions become the executable chronology, active but unranked actions
 remain explicit incomplete rows, and ranked keys whose action is no longer
-active are stale rows: never executed and without a finding, and, in a room
-the run enters, removed or given their new role by the edit that leaves them
-stale ([settlement](SIMULATION_AND_VALIDATION.md#the-evaluation-pipeline)). Invalid
+active are stale rows: never executed and without a finding, and handled as
+[rows whose context or source is gone](#rows-whose-context-or-source-is-gone). Invalid
 or incomplete authorship is retained for correction rather than dropped or
 silently reordered. There is no
 parallel Fields, Shop, Acquisitions, or presentation-owned action assembler and
@@ -477,6 +476,55 @@ classification does not change participation, legal order, or authored state.
 Fields cage rewards remain room-scoped despite their source phase; a contact
 that blocks a later cage inherits a phase obligation. Scope is recomputed when
 the active lifecycle is narrowed and is independent of an action's placed rank.
+
+### Rows whose context or source is gone
+
+What the Timeline shows is what is saved: a room-action row never lingers
+hidden, and never comes back on its own. Every row that can no longer apply
+falls in one of three classes, decided by one question — is there anything to
+do with it other than delete it?
+
+- **Stale**: the row's context is gone; its entered room no longer offers the
+  action at all (a phase or wheel the room no longer plays, an action whose
+  owner was removed). Nothing can repair it.
+- **Source gone**: the row exists only as the product of a source elsewhere —
+  a boon, trait, purchase or action in this or an earlier room — and that
+  source no longer produces it (Echo's Gold Gold Gold duplicate, a Travel Deal
+  refill, a Hermes delivery, a matured trait drop once the trait is not held,
+  a Sea Star copy, an Artificer replacement, a gift or switch loot). Nothing
+  can repair it except restoring the source upstream.
+- **Invalid**: the row still means something and can be repaired another way
+  (a Shop purchase past the god cap, a Purging Pool sale the game refuses, a
+  Well or Pool purchase whose roll changed, a row out of order, a trait drop
+  whose trait is still held but now matures in another room).
+
+Stale and source-gone rows are removed by the edit that causes it, in the same
+edit and Undo step, each through the command that owns its removal. The
+editor announces the removal, with Undo, unless the row belongs to the owner
+the edit addresses: changing a thing changes its own rows silently, and only
+side effects elsewhere are announced. Invalid rows stay, with a finding.
+
+Refinements:
+
+- A changed reward keeps its pickup rows: they take the new reward's pickup
+  roles in declared order (main pickup first), each at its old position where
+  the order allows, instead of being removed and placed again.
+- A room the run stops entering (another door picked upstream) keeps its rows
+  untouched, as an unselected target keeps its room-local state; they return
+  with its door. Only rooms the run enters are cleaned.
+- A loaded document keeps the stale rows it holds until an edit changes their
+  room, which then removes and announces them.
+- Feature state a removed row carried (a Shop's chosen refill item, a
+  delivery's payload) stays with its feature, so restoring the source restores
+  the choice; the row itself is placed afresh.
+- Never removed: a row whose source has not been reached or assessed yet (an
+  unassessed matured pickup, a pickup the run import places before its source
+  is known), and required obligations being placed.
+- `ResetRoomActionsAfter` is the explicit way to clear rows that are still
+  valid.
+
+Why: removal and return as side effects of unrelated edits are hidden
+behaviour, and retained dead rows bloat projects over a long edit history.
 
 ### Lifecycle structure and authoring timeline
 
