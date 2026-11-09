@@ -521,6 +521,8 @@ Every removal:
   source restores them; only the row goes;
 - is silent in the room the edit addresses, where it happens on the Timeline
   being edited, and announced prominently in any other room, naming the room;
+  an edit that addresses no single room (a route, biome or Hub owner)
+  announces every removal;
 - yields to continuity: when a producer changes rather than disappears (a
   reward swapped for another kind), its spawn rows take the new pickup roles
   in declared order (main pickup first), each at its old position where the

@@ -20,6 +20,7 @@ import { authoredLevelResolutionAt } from '../authored-project/commands/level-re
 import { authoredTraitOfferAt } from '../authored-project/commands/trait-offer';
 import type { ProjectCommand } from '../authored-project/commands/types';
 import type {
+  OccurrenceId,
   ProjectDocument,
   RoomActionReference,
   RoomOccurrence,
@@ -124,7 +125,7 @@ export interface ProjectEditSettlement {
   readonly fault?: SettlementFault;
   /**
    * Rows the edit left with no context or source, removed by the same edit,
-   * except the addressed owner's own; absent when none.
+   * in every room but the one it addresses; absent when none.
    */
   readonly removedStaleActions?: readonly RemovedStaleRoomActions[];
 }
@@ -132,7 +133,6 @@ export interface ProjectEditSettlement {
 interface RosterRow {
   readonly reference: RoomActionReference;
   readonly stale: boolean;
-  readonly owner: SemanticAddress;
 }
 
 /**
@@ -171,20 +171,28 @@ function roomEdited(before: ProjectDocument, after: ProjectDocument, owner: Occu
   return previous !== next && JSON.stringify(previous) !== JSON.stringify(next);
 }
 
-/** A biome-owned semantic address: a string kind beside its route and biome keys. */
-function isSemanticAddress(value: unknown): value is SemanticAddress {
-  if (typeof value !== 'object' || value === null) return false;
-  const { kind, routeKey, biomeKey } = value as Record<string, unknown>;
-  return typeof kind === 'string' && typeof routeKey === 'string' && typeof biomeKey === 'string';
-}
-
-/** An address and the semantic owners it nests, short of the room itself. */
-function ownerLineage(address: SemanticAddress | undefined, keys = new Set<string>()): Set<string> {
-  if (address === undefined || address.kind === 'occurrence') return keys;
-  keys.add(semanticAddressKey(address));
-  for (const value of Object.values(address))
-    if (isSemanticAddress(value)) ownerLineage(value, keys);
-  return keys;
+/**
+ * The room an address belongs to: the occurrence it names or nests. Route,
+ * biome and Hub owners belong to no single room.
+ */
+function addressedRoom(
+  value: unknown,
+  routeKey?: string,
+  biomeKey?: string,
+): OccurrenceAddress | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const fields = value as Record<string, unknown>;
+  const route = typeof fields.routeKey === 'string' ? fields.routeKey : routeKey;
+  const biome = typeof fields.biomeKey === 'string' ? fields.biomeKey : biomeKey;
+  if (route === undefined || biome === undefined) return undefined;
+  const occurrenceId = fields.occurrenceId ?? fields.sourceOccurrenceId;
+  if (typeof occurrenceId === 'string')
+    return createOccurrenceAddress(createBiomeAddress(route, biome), occurrenceId as OccurrenceId);
+  for (const nested of Object.values(fields)) {
+    const room = addressedRoom(nested, route, biome);
+    if (room !== undefined) return room;
+  }
+  return undefined;
 }
 
 /**
@@ -218,10 +226,14 @@ function staleRowsToRemove(
 
 type CandidateArtifacts = ReturnType<typeof candidateArtifactsForProjectEvaluationAssembly>;
 
-/** Shop rows that exist only as a source's product: Gold Gold Gold's duplicate and a Travel Deal refill. */
-const SOURCED_SHOP_ENTRY_KEYS: ReadonlySet<string> = new Set([
-  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-  TRAVEL_DEAL_REFILL_ENTRY_KEY,
+/**
+ * Shop rows that exist only as a source's product, by what each is: Travel
+ * Deal's refill is the owner's purchase relying on Travel Deal, Gold Gold
+ * Gold's duplicate an automatic product of the boon.
+ */
+const SOURCED_SHOP_ROWS: ReadonlyMap<string, 'decision' | 'product'> = new Map([
+  [ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, 'product'],
+  [TRAVEL_DEAL_REFILL_ENTRY_KEY, 'decision'],
 ]);
 /** The walk reached such a row and found nothing for it to take. */
 const SOURCED_SHOP_ENTRY_UNAVAILABLE: ReadonlySet<unknown> = new Set([
@@ -229,11 +241,23 @@ const SOURCED_SHOP_ENTRY_UNAVAILABLE: ReadonlySet<unknown> = new Set([
   'travelDealRefillUnavailable',
 ]);
 
+/** The room action that buys a Shop offer: its inventory purchase or the Travel Deal refill. */
+function shopPurchaseRowKey(offerKey: string): string {
+  return roomActionKey(
+    offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+      ? { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: offerKey }
+      : { kind: 'interactShopOffer', offerKey },
+  );
+}
+
 /**
  * Shop rows whose source the edit took away: the walk reaches the row, no
- * source produces it any more, and one produced it before the edit. A row
- * placed before its source existed, or one whose source still produces it with
- * other terms, stays with its finding.
+ * source produces it any more, and one produced it before the edit. The
+ * source's trigger is the purchase that produced the row before the edit; when
+ * that purchase is still in the room, what went is the enabler (the held boon),
+ * and an owner's purchase relying on it stays with its finding while an
+ * automatic product goes. A row placed before its source existed, or one whose
+ * source still produces it with other terms, stays with its finding.
  */
 function sourceGoneShopRows(
   beforeArtifacts: CandidateArtifacts,
@@ -270,6 +294,13 @@ function sourceGoneShopRows(
       if (derived(artifacts) !== undefined) continue;
       const prior = derived(beforeArtifacts);
       if (prior?.kind !== 'echoDoubleShopReward' && prior?.kind !== 'travelDealRefill') continue;
+      const triggerGone =
+        prior.sourceOfferKey !== undefined &&
+        !occurrence.roomActions.order.some(
+          (candidate) => roomActionKey(candidate) === shopPurchaseRowKey(prior.sourceOfferKey!),
+        );
+      // Enabler gone: the owner's purchase stays, invalid, for the owner to remove or restore.
+      if (!triggerGone && SOURCED_SHOP_ROWS.get(reference.entryKey) === 'decision') continue;
       removals.push({ owner, reference });
     }
   }
@@ -281,7 +312,7 @@ function sourcedShopRow(reference: RoomActionReference): boolean {
   return (
     reference.kind === 'interactAcquisitionEntry' &&
     reference.siteKey === 'roomExit' &&
-    SOURCED_SHOP_ENTRY_KEYS.has(reference.entryKey)
+    SOURCED_SHOP_ROWS.has(reference.entryKey)
   );
 }
 
@@ -515,7 +546,9 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
   const beforeArtifacts = candidateArtifactsForProjectEvaluationAssembly(before);
   const beforeRosters = enteredRosters(before);
   const rekeyed = new Set<string>();
-  const addressed = semanticAddressKey(projectCommandAddress(command) as SemanticAddress);
+  // A removal in the room the edit addresses shows on the Timeline being edited; any other is announced.
+  const room = addressedRoom(projectCommandAddress(command));
+  const silentRoom = room === undefined ? undefined : semanticAddressKey(room);
   const removedStale: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
   // Sourced rows the command or a displaced placement took; a delivery placed again elsewhere moved.
   const removedElsewhere: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
@@ -530,31 +563,16 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
     );
     const announced = [
       ...removedStale,
-      ...removedElsewhere.filter(({ owner, reference }) => {
-        const key = roomActionKey(reference);
-        // Only a delivery is placed again elsewhere, as a move.
-        if (
-          reference.kind === 'interactAcquisitionEntry' &&
-          reference.siteKey === HERMES_SHRINE_DELIVERY_SITE_KEY &&
-          placed.has(key)
-        )
-          return false;
-        // A reset removes the rows it addresses.
-        if (
-          command.kind === 'ResetRoomActionsAfter' &&
-          semanticAddressKey(command.occurrence) === semanticAddressKey(owner)
-        )
-          return false;
-        const action = createRoomActionAddress(
-          createBiomeAddress(owner.routeKey, owner.biomeKey),
-          owner.occurrenceId,
-          key,
-        );
-        if (addressed === semanticAddressKey(action)) return false;
-        const rowOwner = beforeRosters.get(semanticAddressKey(owner))?.rows.get(key)?.owner;
-        return !ownerLineage(rowOwner).has(addressed);
-      }),
-    ];
+      // Only a delivery is placed again elsewhere, as a move.
+      ...removedElsewhere.filter(
+        ({ reference }) =>
+          !(
+            reference.kind === 'interactAcquisitionEntry' &&
+            reference.siteKey === HERMES_SHRINE_DELIVERY_SITE_KEY &&
+            placed.has(roomActionKey(reference))
+          ),
+      ),
+    ].filter(({ owner }) => semanticAddressKey(owner) !== silentRoom);
     const byRoom = new Map<string, RemovedStaleRoomActions>();
     for (const { owner, reference } of announced) {
       const key = semanticAddressKey(owner);
@@ -854,7 +872,6 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
         ...sourceGoneShopRows(beforeArtifacts, artifacts, assembly),
       ];
       if (stale.length === 0) return settled(assembly);
-      const rosters = enteredRosters(assembly);
       const pass: { owner: OccurrenceAddress; reference: RoomActionReference; index: number }[] =
         [];
       // Last first, each through its owning removal, as a reset removes rows.
@@ -894,17 +911,9 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
         const remaining = new Set(
           (occurrenceAt(project, owner)?.roomActions.order ?? []).map(roomActionKey),
         );
-        const rows = rosters.get(semanticAddressKey(owner))?.rows;
         order.forEach((candidate, index) => {
-          const candidateKey = roomActionKey(candidate);
-          if (remaining.has(candidateKey)) return;
-          // The addressed owner's own rows change silently with it.
-          // A stale row has no owner of its own; one the edit orphaned keeps its former one.
-          const rowOwner =
-            beforeRosters.get(semanticAddressKey(owner))?.rows.get(candidateKey)?.owner ??
-            rows?.get(candidateKey)?.owner;
-          if (ownerLineage(rowOwner).has(addressed)) return;
-          pass.push({ owner, reference: candidate, index });
+          if (!remaining.has(roomActionKey(candidate)))
+            pass.push({ owner, reference: candidate, index });
         });
       }
       removedStale.push(...pass.sort((left, right) => left.index - right.index));

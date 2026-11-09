@@ -66,7 +66,7 @@ const retainedPickup = {
 } as const;
 
 describe('stale room actions in edit settlement', () => {
-  it('removes the rows an edit orphans in the same edit and names them', () => {
+  it('removes the rows an edit orphans in the same edit, silently in the room it addresses', () => {
     const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const three = settle(loadSurfaceNOProject(), {
       kind: 'ReplaceShipEncounterCount',
@@ -84,8 +84,7 @@ describe('stale room actions in edit settlement', () => {
     const after = order(settled.assembly.project, ship);
     expect(after.filter((key) => key.includes('wheel2'))).toEqual([]);
     expect(after).toEqual(order(three, ship).filter((key) => !wheel2.includes(key)));
-    expect(settled.removedStaleActions).toEqual([{ occurrence: ship, actions: expect.any(Array) }]);
-    expect(settled.removedStaleActions![0]!.actions.map(roomActionKey)).toEqual(wheel2);
+    expect(settled.removedStaleActions).toBeUndefined();
     // The before snapshot, which Undo restores, keeps them.
     expect(order(three, ship)).toEqual(expect.arrayContaining(wheel2));
   });
@@ -108,12 +107,10 @@ describe('stale room actions in edit settlement', () => {
     });
     expect(edited.fault).toBeUndefined();
     expect(order(edited.assembly.project, gOpening)).not.toContain(roomActionKey(retainedPickup));
-    expect(edited.removedStaleActions).toEqual([
-      { occurrence: gOpening, actions: [retainedPickup] },
-    ]);
+    expect(edited.removedStaleActions).toBeUndefined();
   });
 
-  it('reports the removed rows on an authoring session edit, and restoring returns them', () => {
+  it('removes them on an authoring session edit, and restoring returns them', () => {
     const start = evaluate(createGoldenFGHProject());
     const session = createAuthoringSession(catalog, start);
     const outcome = session.apply({
@@ -121,10 +118,8 @@ describe('stale room actions in edit settlement', () => {
       occurrence: gOpening,
       layout: { flipped: true },
     });
-    expect(outcome).toMatchObject({
-      kind: 'applied',
-      removedStaleActions: [{ occurrence: gOpening, actions: [retainedPickup] }],
-    });
+    expect(outcome).toMatchObject({ kind: 'applied' });
+    expect(order(session.current().project, gOpening)).not.toContain(roomActionKey(retainedPickup));
     session.restore(start);
     expect(order(session.current().project, gOpening)).toContain(roomActionKey(retainedPickup));
   });
@@ -462,39 +457,61 @@ describe('stale room actions in edit settlement', () => {
       );
     });
 
-    it('removes and reports a Travel Deal refill once Travel Deal is gone, keeping its item', () => {
+    describe('a Travel Deal refill', () => {
       const shop = createOccurrenceAddress(
         goldenFBiome,
         createOccurrenceId('golden-f-preboss-shop'),
       );
-      const refill = {
+      const refill = roomActionKey({
         kind: 'interactAcquisitionEntry',
         siteKey: 'roomExit',
         entryKey: 'travelDealRefill',
-      } as const;
-      const project = underworldWorldShopTravelDealProject();
+      });
       const refillItem = (document: ProjectDocument) => {
         const room = document.route.biomes
           .find((plan) => plan.biomeKey === shop.biomeKey)
           ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shop.occurrenceId);
         return room?.state.kind === 'shop' ? room.state.shop?.travelDealRefill : undefined;
       };
-      expect(order(project, shop)).toContain(roomActionKey(refill));
-      expect(refillItem(project)).toBeDefined();
-      const settled = settle(project, swapTravelDealAway);
-      expect(settled.fault).toBeUndefined();
-      expect(order(settled.assembly.project, shop)).not.toContain(roomActionKey(refill));
-      expect(removedIn(settled, shop)).toEqual([roomActionKey(refill)]);
-      expect(refillItem(settled.assembly.project)).toEqual(refillItem(project));
-      // The refill's own pickup state stays with the Shop.
       const site = (document: ProjectDocument) =>
         document.route.biomes
           .find((plan) => plan.biomeKey === shop.biomeKey)
           ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shop.occurrenceId)
           ?.acquisitionSites?.roomExit;
-      expect(site(settled.assembly.project)).toEqual(site(project));
-      const { undone } = settleAndUndo(project, swapTravelDealAway);
-      expect(order(undone, shop)).toContain(roomActionKey(refill));
+
+      it('stays invalid once Travel Deal is no longer held', () => {
+        const project = underworldWorldShopTravelDealProject();
+        expect(order(project, shop)).toContain(refill);
+        const settled = settle(project, swapTravelDealAway);
+        expect(settled.fault).toBeUndefined();
+        expect(order(settled.assembly.project, shop)).toEqual(order(project, shop));
+        expect(removedIn(settled, shop)).toBeUndefined();
+        expect(settled.assembly.evaluation.findings).toContainEqual(
+          expect.objectContaining({
+            code: 'shopPurchaseUnavailable',
+            evidence: { kind: 'travelDealRefillUnavailable' },
+          }),
+        );
+      });
+
+      it('leaves silently with the purchase that restocked it, keeping its item', () => {
+        const project = underworldWorldShopTravelDealProject();
+        expect(refillItem(project)).toBeDefined();
+        const undoPurchase: ProjectCommand = {
+          kind: 'ReplaceShopPurchaseParticipation',
+          offer: createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'MajorNonBoon'),
+          purchased: false,
+        };
+        const settled = settle(project, undoPurchase);
+        expect(settled.fault).toBeUndefined();
+        expect(order(settled.assembly.project, shop)).toEqual([]);
+        expect(settled.removedStaleActions).toBeUndefined();
+        // The refill's item and pickup state stay with the Shop.
+        expect(refillItem(settled.assembly.project)).toEqual(refillItem(project));
+        expect(site(settled.assembly.project)).toEqual(site(project));
+        const { undone } = settleAndUndo(project, undoPurchase);
+        expect(order(undone, shop)).toContain(refill);
+      });
     });
 
     it('keeps a refill placed before Travel Deal was held', () => {

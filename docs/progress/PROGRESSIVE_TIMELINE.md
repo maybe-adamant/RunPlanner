@@ -176,11 +176,8 @@ deferred items spawn only after the wheel reward is collected.
   room-local state, as reanchoring does); cleanup applies to entered rooms.
 - Policy recorded durably in ROOM_LIFECYCLE_MODEL "Rows whose context or
   source is gone" (enabler / trigger / spawn procedure, owner-approved
-  2026-11-09). Engine still to align: a Travel Deal refill purchase stays
-  invalid when Travel Deal is no longer held (removed today); announcement by
-  distance (silent in the addressed room, announced elsewhere, naming the
-  room) instead of by addressed-owner lineage; door and cage rerolls whose
-  target is gone (stale; needs the domain to see exit targets).
+  2026-11-09). Engine still to align: door and cage rerolls whose target is
+  gone (stale; needs the domain to see exit targets).
 - Reset from here is a clean slate: before the Postboss keepsake rack it also
   returns the rack's keepsake choice to its default (keep the held keepsake).
 

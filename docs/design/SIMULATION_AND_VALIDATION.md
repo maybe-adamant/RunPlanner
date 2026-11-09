@@ -112,26 +112,29 @@ the final project and its exact assembly.
   In each room the run enters, a room-action row the edit leaves stale, one
   the room no longer offers, is removed through its owning removal command;
   in a room the edit changes, stale rows retained from before it (an older
-  save) go too. A Shop row whose source the edit took away goes the same way:
-  a Gold Gold Gold duplicate or Travel Deal refill the walk reaches with no
-  source producing it, where one did before the edit; one placed before its
-  source existed stays with its finding, and the row's own payload stays with
-  the Shop. A room the run stops entering keeps
-  its rows untouched, so they return with its door; unchanged rooms, rooms the
-  evaluation does not reach and an installed route keep theirs. Invalid rows
-  stay with their findings.
+  save) go too. A Shop row the walk reaches with no source producing it, where
+  one did before the edit, is judged by what the edit took: when the purchase
+  that produced it is gone (the trigger) it is removed; when that purchase
+  remains, the enabler went, so a Gold Gold Gold duplicate, an automatic
+  product, is removed while a Travel Deal refill, the owner's purchase, stays
+  with its finding. One placed before its source existed stays with its
+  finding, and a removed row's own payload stays with the Shop. A room the run
+  stops entering keeps its rows untouched, so they return with its door;
+  unchanged rooms, rooms the evaluation does not reach and an installed route
+  keep theirs. Invalid rows stay with their findings.
 - A changed incoming reward keeps its pickups where they were: the stale
   pickup rows, in their former reward's declared role order, take the roles
   the edit newly placed, in the new reward's (each main pickup first), each
   at its old position when the roster allows it there and otherwise at the
   role's default. Leftover stale pickups are removed and leftover roles keep
   their default places.
-- The settlement names each room's removed rows for the editor to announce,
-  including the countdown deliveries and trait drops a command takes from
-  other rooms with their source, except rows owned by the owner the edit
-  addresses or an owner nested in it (an orphaned row keeps the owner it had
-  before the edit), which change silently with that owner, rows a reset
-  removes, rows a rekey replaced and a delivery placed again elsewhere.
+- The settlement names, by room, the removed rows the editor announces: every
+  removal outside the room the edit addresses, including the countdown
+  deliveries and trait drops a command takes from other rooms with their
+  source. Removals in the addressed room show on the Timeline being edited and
+  are not named, a reset's included; an edit that addresses no single room (a
+  route, biome or Hub owner) names every removal. Rows a rekey replaced and a
+  delivery placed again elsewhere are never named.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
   assembly with a settlement fault naming the owner. A fault signals an engine
